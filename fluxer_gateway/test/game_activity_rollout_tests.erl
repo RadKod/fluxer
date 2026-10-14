@@ -132,8 +132,8 @@ bounded_subscriber_notification_test() ->
 authoritative_fetch_is_async_and_bounded_test() ->
     reset(),
     Parent = self(),
-    meck:new(api_rpc_client, [non_strict]),
-    meck:expect(api_rpc_client, call, fun(#{<<"type">> := <<"get_gateway_rollout_config">>}) ->
+    meck:new(rpc_client, [non_strict]),
+    meck:expect(rpc_client, call, fun(#{<<"type">> := <<"get_gateway_rollout_config">>}) ->
         Parent ! {fetch_started, self()},
         receive
             release ->
@@ -165,9 +165,9 @@ authoritative_fetch_is_async_and_bounded_test() ->
         after 1000 -> ?assert(false)
         end,
         ?assert(gateway_rollout_config:game_activity_allowed()),
-        ?assertEqual(1, meck:num_calls(api_rpc_client, call, '_'))
+        ?assertEqual(1, meck:num_calls(rpc_client, call, '_'))
     after
-        meck:unload(api_rpc_client)
+        meck:unload(rpc_client)
     end.
 
 fetch_timeout_cannot_extend_permission_test() ->
@@ -175,8 +175,8 @@ fetch_timeout_cannot_extend_permission_test() ->
     apply_api(true, 1),
     Stamp = set_age(45000),
     Parent = self(),
-    meck:new(api_rpc_client, [non_strict]),
-    meck:expect(api_rpc_client, call, fun(_) ->
+    meck:new(rpc_client, [non_strict]),
+    meck:expect(rpc_client, call, fun(_) ->
         Parent ! {fetch_started, self()},
         receive
             never -> {error, timeout}
@@ -201,7 +201,7 @@ fetch_timeout_cannot_extend_permission_test() ->
         ?assertNot(maps:is_key(fetch_worker, Finished)),
         ?assertNot(gateway_rollout_config:game_activity_allowed())
     after
-        meck:unload(api_rpc_client)
+        meck:unload(rpc_client)
     end.
 
 out_of_order_game_epoch_preserves_other_rollouts_test() ->

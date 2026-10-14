@@ -33,13 +33,6 @@ class GuildReadStateEntry {
 	bumpChangeTicket(): void {
 		this.changeTicket.set(this.changeTicket.get() + 1);
 	}
-
-	reset(): void {
-		this.unread.set(false);
-		this.firstUnreadChannelId.set(null);
-		this.mentionCount.set(0);
-		this.mentionChannels.clear();
-	}
 }
 
 type ContributeChannel = {
@@ -387,21 +380,6 @@ class GuildReadState {
 		return total;
 	}
 
-	directMessageMentionCount(): number {
-		const state = this.guildStates.get(PRIVATE_CHANNEL_SENTINEL as GuildId);
-		return state?.mentionCount.get() ?? 0;
-	}
-
-	directMessageMentionCountFor(channelId: string): number {
-		return ReadStates.getMentionCount(channelId);
-	}
-
-	guildChangeTicketFor(guildId: string | null): number {
-		const id = guildId ?? PRIVATE_CHANNEL_SENTINEL;
-		const state = this.guildStates.get(id as GuildId);
-		return state?.changeTicket.get() ?? 0;
-	}
-
 	guildUnreadIgnoringMute(guildId: string): boolean {
 		const channels = Channels.getGuildChannels(guildId);
 		for (const channel of channels) {
@@ -455,48 +433,10 @@ class GuildReadState {
 		this.notifyChange();
 	}
 
-	handleChannelUpdate(action: {
-		channel: {
-			id: string;
-			guildId?: string;
-		};
-	}): void {
-		this.recomputeChannels(action.channel.guildId ?? null, [action.channel.id as ChannelId]);
-	}
-
 	handleGenericUpdate(channelId: string): void {
 		const channel = Channels.getChannel(channelId);
 		if (channel == null) return;
 		this.recomputeChannels(channel.guildId ?? null, [channelId as ChannelId]);
-	}
-
-	handleBulkChannelUpdate(action: {
-		channels: Array<{
-			id: string;
-			guildId?: string;
-		}>;
-	}): void {
-		const byGuild = new Map<GuildId | null, Array<ChannelId>>();
-		for (const channel of action.channels) {
-			const guildId = channel.guildId ?? null;
-			let channels = byGuild.get(guildId as GuildId | null);
-			if (channels == null) {
-				channels = [];
-				byGuild.set(guildId as GuildId | null, channels);
-			}
-			channels.push(channel.id as ChannelId);
-		}
-		for (const [guildId, channelIds] of byGuild.entries()) {
-			this.recomputeChannels(guildId, channelIds);
-		}
-	}
-
-	handleGuildSettingsUpdate(action: {guildId: string}): void {
-		this.recomputeAll(action.guildId);
-	}
-
-	handleRecomputeAll(): void {
-		this.handleGatewayReady();
 	}
 
 	handleWindowFocused(): void {

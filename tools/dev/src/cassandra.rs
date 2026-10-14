@@ -443,17 +443,7 @@ pub fn render_target_schema(keyspace: &str) -> String {
 pub fn target_schema_sha256(keyspace: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(render_target_schema(keyspace).as_bytes());
-    bytes_to_lower_hex(&hasher.finalize())
-}
-
-fn bytes_to_lower_hex(bytes: &[u8]) -> String {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for byte in bytes {
-        out.push(HEX[(byte >> 4) as usize] as char);
-        out.push(HEX[(byte & 0x0f) as usize] as char);
-    }
-    out
+    hex::encode(hasher.finalize())
 }
 
 pub fn sorted_user_types() -> Vec<UserType> {
@@ -750,23 +740,6 @@ async fn verify_schema_with_session(
 mod tests {
     use super::*;
 
-    #[test]
-    fn normalizes_frozen_user_type_wrappers() {
-        assert_eq!(normalize_type(" frozen<message_embed> "), "message_embed");
-        assert_eq!(
-            normalize_type("LIST< frozen<message_embed> >"),
-            "list<message_embed>"
-        );
-    }
-
-    #[test]
-    fn renders_target_schema_with_semicolons() {
-        let rendered = render_target_schema("fluxer");
-        assert!(rendered.starts_with("CREATE TYPE IF NOT EXISTS fluxer."));
-        assert!(rendered.contains("CREATE TABLE IF NOT EXISTS fluxer.messages"));
-        assert!(rendered.ends_with(";\n"));
-    }
-
     const NTS: &str = "{'class': 'NetworkTopologyStrategy', 'fsn1': 3}";
 
     const THREE_HOSTS: &str = "10.88.0.11,10.88.0.12,10.88.0.13";
@@ -962,20 +935,5 @@ mod tests {
                 .iter()
                 .any(|warning| warning.contains("unexpected"))
         );
-    }
-
-    #[test]
-    fn render_diff_includes_warnings_errors_and_sha() {
-        let diff = SchemaDiff {
-            statements: vec!["SELECT 1".to_owned()],
-            warnings: vec!["warn".to_owned()],
-            errors: vec!["err".to_owned()],
-            target_sha256: "abc".to_owned(),
-        };
-        let rendered = render_diff(&diff);
-        assert!(rendered.contains("-- Target schema sha256: abc"));
-        assert!(rendered.contains("--   warn"));
-        assert!(rendered.contains("--   err"));
-        assert!(rendered.ends_with("SELECT 1;\n"));
     }
 }

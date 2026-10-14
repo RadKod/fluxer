@@ -20,6 +20,7 @@ import {
 } from '@app/features/voice/utils/ScreenShareOptions';
 import {
 	canSelectManualAudioSources,
+	canSelectWindowsDesktopAudioSource,
 	manualAudioSourcesGovernShare,
 	resolveWindowShareAudioScope,
 	type ScreenShareAudioSourceMode,
@@ -37,20 +38,20 @@ export const CAPTURE_DEVICES_USE_THE_GAMING_PRESET_DESCRIPTOR = msg({
 		'Note shown beside the stored Screen share preset in the stream settings menu and the video settings tab of a capture device share, explaining why that preset is not used.',
 });
 
-export type StreamSettingsAudioControlStateValue =
+type StreamSettingsAudioControlStateValue =
 	| 'hidden'
 	| 'unsupported'
 	| 'prestartNativePickerOwned'
 	| 'restartRequired'
 	| 'toggle';
-export type StreamSettingsAudioControlLabelKey =
+type StreamSettingsAudioControlLabelKey =
 	| 'captureAppAudio'
 	| 'captureDesktopAudio'
 	| 'captureDeviceAudio'
 	| 'captureSystemAudio';
 type StreamSettingsNativeAudioUnsupportedScope = 'process' | 'system';
 
-export interface StreamSettingsNativeAudioSignals {
+interface StreamSettingsNativeAudioSignals {
 	shareContext: StreamSettingsShareContext;
 	platform?: string | null;
 	nativeAudioAvailability: NativeAudioAvailability | null;
@@ -67,7 +68,7 @@ export interface StreamSettingsAudioControlSignals extends StreamSettingsNativeA
 	windowAudioScope?: WindowShareAudioScope;
 }
 
-export interface StreamSettingsAudioControlViewState {
+interface StreamSettingsAudioControlViewState {
 	value: StreamSettingsAudioControlStateValue;
 	checked: boolean;
 	labelKey: StreamSettingsAudioControlLabelKey;
@@ -76,6 +77,7 @@ export interface StreamSettingsAudioControlViewState {
 export interface StreamSettingsAudioMenuViewState {
 	control: StreamSettingsAudioControlViewState;
 	showManualAudioSources: boolean;
+	showWindowsAudioSourceMenu: boolean;
 	showDeviceAudioMenu: boolean;
 }
 
@@ -130,7 +132,7 @@ function shouldDisablePrestartNativeAudioToggle(signals: StreamSettingsAudioCont
 	);
 }
 
-export const streamSettingsAudioControlStateMachine = setup({
+const streamSettingsAudioControlStateMachine = setup({
 	types: {} as {
 		events: StreamSettingsAudioControlEvent;
 	},
@@ -161,7 +163,7 @@ export const streamSettingsAudioControlStateMachine = setup({
 	},
 });
 
-export function selectStreamSettingsAudioControlState(
+function selectStreamSettingsAudioControlState(
 	signals: StreamSettingsAudioControlSignals,
 ): StreamSettingsAudioControlStateValue {
 	const [snapshot] = transition(
@@ -202,6 +204,14 @@ export function selectStreamSettingsAudioMenuState(
 			manualAudioSourcesGovernShare(signals) &&
 			canSelectManualAudioSources({
 				platform: signals.platform,
+				nativeAudioAvailability: signals.nativeAudioAvailability,
+			}),
+		showWindowsAudioSourceMenu:
+			signals.supportsStreamAudio &&
+			signals.captureAudioEnabled &&
+			canSelectWindowsDesktopAudioSource({
+				platform: signals.platform,
+				shareContext: signals.shareContext,
 				nativeAudioAvailability: signals.nativeAudioAvailability,
 			}),
 		showDeviceAudioMenu: signals.shareContext === 'device' && signals.captureAudioEnabled,
@@ -247,7 +257,7 @@ const STREAM_SETTINGS_PREMIUM_RESOLUTIONS: ReadonlyArray<OfferedScreenShareResol
 const STREAM_SETTINGS_FREE_FRAME_RATES: ReadonlyArray<SupportedScreenShareFrameRate> = [15, 30];
 const STREAM_SETTINGS_PREMIUM_FRAME_RATES: ReadonlyArray<SupportedScreenShareFrameRate> = [60];
 
-export interface StreamSettingsQualityOption<T> {
+interface StreamSettingsQualityOption<T> {
 	value: T;
 	premium: boolean;
 	selected: boolean;

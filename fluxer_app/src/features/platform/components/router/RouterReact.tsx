@@ -17,9 +17,9 @@ import * as React from 'react';
 import {useCallback, useContext, useEffect, useMemo, useSyncExternalStore} from 'react';
 
 const RouterContext = React.createContext<Router | null>(null);
-export const RouterProvider: React.FC<RouterProviderProps> = ({router, children, linkContainerRef}) => {
+export const RouterProvider: React.FC<RouterProviderProps> = ({router, children}) => {
 	useEffect(() => {
-		const container = linkContainerRef?.current ?? document.body;
+		const container = document.body;
 		const onClick = (event: MouseEvent) => {
 			if (event.defaultPrevented) return;
 			if (event.button !== 0) return;
@@ -46,7 +46,7 @@ export const RouterProvider: React.FC<RouterProviderProps> = ({router, children,
 		};
 		container.addEventListener('click', onClick);
 		return () => container.removeEventListener('click', onClick);
-	}, [router, linkContainerRef]);
+	}, [router]);
 	useEffect(
 		() => () => {
 			router.destroy();
@@ -56,13 +56,13 @@ export const RouterProvider: React.FC<RouterProviderProps> = ({router, children,
 	return <RouterContext.Provider value={router}>{children ?? <Outlet />}</RouterContext.Provider>;
 };
 
-export function useRouter(): Router {
+function useRouter(): Router {
 	const ctx = useContext(RouterContext);
 	if (!ctx) throw new Error('useRouter must be used within a RouterProvider');
 	return ctx;
 }
 
-export function useRouterState<T>(selector: (state: RouterState) => T): T {
+function useRouterState<T>(selector: (state: RouterState) => T): T {
 	const router = useRouter();
 	return useSyncExternalStore(
 		useCallback((onChange) => router.subscribe(onChange), [router]),
@@ -75,11 +75,11 @@ export function useLocation(): URL {
 	return useRouterState((s) => s.location);
 }
 
-export function useMatches(): Array<Match> {
+function useMatches(): Array<Match> {
 	return useRouterState((s) => s.matches);
 }
 
-export function useMatch(): Match | undefined {
+function useMatch(): Match | undefined {
 	const matches = useMatches();
 	return matches[matches.length - 1];
 }

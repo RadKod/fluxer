@@ -3,7 +3,7 @@
 import styles from '@app/features/app/components/layout/AppLayout.module.css';
 import {useAppLayoutState} from '@app/features/app/components/layout/app_layout/AppLayoutHooks';
 import Authentication from '@app/features/auth/state/Authentication';
-import GatewayConnection from '@app/features/gateway/transport/GatewayConnection';
+import GatewaySessions from '@app/features/gateway/transport/GatewaySessionPool';
 import {StoreAutostartPromptManager} from '@app/features/platform/components/StoreAutostartPromptManager';
 import {RecoveryKitReminderGate} from '@app/features/user/components/RecoveryKitReminderGate';
 import {MediaDeviceStartupPreloadManager} from '@app/features/voice/components/MediaDeviceStartupPreloadManager';
@@ -15,7 +15,7 @@ import type React from 'react';
 
 export const AppLayout = observer(({children}: {children: React.ReactNode}) => {
 	const isAuthenticated = Authentication.isAuthenticated;
-	const socket = GatewayConnection.socket;
+	const socket = GatewaySessions.foregroundConnection.socket;
 	const appState = useAppLayoutState();
 	return (
 		<>

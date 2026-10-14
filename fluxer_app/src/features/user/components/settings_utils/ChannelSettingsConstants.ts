@@ -99,18 +99,13 @@ export const CATEGORY_SETTINGS_LABEL_DESCRIPTOR = msg({
 	comment: 'Root label for category settings modal and settings search paths.',
 });
 
-export function getChannelSettingsTabLabel(i18n: I18n, tabType: ChannelSettingsTabType): string {
+function getChannelSettingsTabLabel(i18n: I18n, tabType: ChannelSettingsTabType): string {
 	const tab = CHANNEL_SETTINGS_TABS_DESCRIPTORS.find((candidate) => candidate.type === tabType);
 	return tab ? i18n._(tab.label) : '';
 }
 
-export function formatChannelSettingsPath(
-	i18n: I18n,
-	tabType: ChannelSettingsTabType,
-	kind: 'channel' | 'category' = 'channel',
-): string {
-	const rootLabel =
-		kind === 'category' ? i18n._(CATEGORY_SETTINGS_LABEL_DESCRIPTOR) : i18n._(CHANNEL_SETTINGS_LABEL_DESCRIPTOR);
+export function formatChannelSettingsPath(i18n: I18n, tabType: ChannelSettingsTabType): string {
+	const rootLabel = i18n._(CHANNEL_SETTINGS_LABEL_DESCRIPTOR);
 	return [rootLabel, getChannelSettingsTabLabel(i18n, tabType)].filter(Boolean).join(' > ');
 }
 

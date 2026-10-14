@@ -290,7 +290,7 @@ interface ForwardedMessageContentProps {
 	onDelete?: (bypassConfirm?: boolean) => void;
 }
 
-export const ForwardedMessageContent = observer(({message, snapshot, onDelete}: ForwardedMessageContentProps) => {
+const ForwardedMessageContent = observer(({message, snapshot, onDelete}: ForwardedMessageContentProps) => {
 	const {i18n} = useLingui();
 	const snapshotIndex = 0;
 	const snapshotEditedTimestamp = snapshot.edited_timestamp ? new Date(snapshot.edited_timestamp) : null;
@@ -403,7 +403,7 @@ export const ForwardedMessageContent = observer(({message, snapshot, onDelete}: 
 						})()}
 					</div>
 				)}
-				{snapshot.embeds && snapshot.embeds.length > 0 && UserSettings.getRenderEmbeds() && (
+				{snapshot.embeds && snapshot.embeds.length > 0 && UserSettings.renderEmbeds && (
 					<div
 						className={styles.attachmentsContainer}
 						data-flx="channel.message-attachments.forwarded-message-content.attachments-container--2"
@@ -699,7 +699,7 @@ export const MessageAttachments = observer(() => {
 					</>
 				);
 			})()}
-			{UserSettings.getRenderEmbeds() &&
+			{UserSettings.renderEmbeds &&
 				!message.suppressEmbeds &&
 				message.embeds.map((embed, index) => {
 					const embedKey = `${embed.id}-${index}`;
@@ -720,7 +720,7 @@ export const MessageAttachments = observer(() => {
 				isPreview={reactionsIsPreview}
 				data-flx="channel.message-attachments.message-components"
 			/>
-			{UserSettings.getRenderReactions() && reactions.length > 0 && (
+			{UserSettings.renderReactions && reactions.length > 0 && (
 				<MessageReactions
 					message={message}
 					isPreview={reactionsIsPreview}

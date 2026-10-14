@@ -2,10 +2,9 @@
 
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {BadRequestError} from '@fluxer/errors/src/domains/core/BadRequestError';
-import {AppErrorHandler} from '@fluxer/errors/src/domains/core/ErrorHandlers';
+import {AppErrorHandler, type BaseHonoEnv} from '@fluxer/errors/src/domains/core/ErrorHandlers';
+import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
 import {ShopBusyError} from '@fluxer/errors/src/domains/payment/ShopBusyError';
-import {ServiceUnavailableError} from '@fluxer/errors/src/HttpErrors';
-import type {BaseHonoEnv} from '@fluxer/hono_types/src/HonoTypes';
 import {Hono} from 'hono';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 

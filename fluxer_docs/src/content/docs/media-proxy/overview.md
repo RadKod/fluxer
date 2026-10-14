@@ -91,9 +91,11 @@ An operator can limit which web origins read media through CORS. `FLUXER_MEDIA_P
 | `report` | Every response is the same as under `off`, and each read `enforce` would refuse is logged |
 | `enforce` | A read from an origin outside the allowlist returns 403 |
 
-Under `enforce`, an `Origin` is allowed when it equals the serialised form of an entry in `FLUXER_MEDIA_PROXY_CORS_ALLOWED_ORIGINS` byte for byte. Anything else is refused, including `null`, a repeated `Origin` header, and a value that is not ASCII. A refused read returns 403 on every read path, and the Media Proxy reads no object and fetches no external URL for it. [Media Proxy settings](/operator/configuration/#media-proxy-settings) defines how an entry is parsed and serialised.
+Under `enforce`, an `Origin` is allowed when it equals the serialised form of an entry in `FLUXER_MEDIA_PROXY_CORS_ALLOWED_ORIGINS` byte for byte. The desktop app origin `fluxer-app://app` is always allowed and needs no entry. Anything else is refused, including `null`, a repeated `Origin` header, and a value that is not ASCII. A refused read returns 403 on every read path, and the Media Proxy reads no object and fetches no external URL for it. [Media Proxy settings](/operator/configuration/#media-proxy-settings) defines how an entry is parsed and serialised.
 
 A read with no `Origin` is served without `Access-Control-Allow-Origin`. A browser sends no `Origin` for an `<img>` or a `<video>` without `crossorigin`, so those elements still load. An allowed read gets its own origin back in `Access-Control-Allow-Origin` on a media representation and on a 416. No error has CORS headers.
+
+A preflight `OPTIONS` request from an allowed origin gets a 204 that allows `GET` and `HEAD` with the `Range` header. A preflight from a refused origin gets the same 403 as a read.
 
 Under `enforce`, every response to a `GET` or `HEAD` on a read path has `Vary: Accept-Encoding, Origin`, the 403 for a refused `Origin` included.
 
@@ -103,7 +105,7 @@ The policy applies to a response the Media Proxy generates, and a shared cache i
 
 A `static` or `relay` endpoint ignores the policy. The [upload relay](/media-proxy/upload-relay/) and the [operator and internal endpoints](/media-proxy/routes/#operator-and-internal-endpoints) are exempt from it. A method other than `GET` or `HEAD` on a read path returns 405 whatever its `Origin`.
 
-The reference self-hosted deployment leaves the policy `off`. An operator who turns it on gets the instance public origin as the only entry, and [Media Proxy settings](/operator/configuration/#media-proxy-settings) states how to allow `https://web.fluxer.app` as well.
+The reference self-hosted deployment leaves the policy `off`. An operator who turns it on gets the instance public origin as the only entry.
 
 ## Signed attachment URLs
 
@@ -181,11 +183,15 @@ This contract controls every range the Media Proxy resolves itself. A range is r
 
 A reversed range, a zero-length suffix, a start outside the representation, or any range over an empty representation returns 416 with `Content-Range: bytes */{size}` and `Accept-Ranges: bytes`. A satisfiable range returns 206, `Accept-Ranges: bytes`, and exact `Content-Range` and `Content-Length` values.
 
+### Transformed representations
+
+A transformed representation is never served by range. Two Media Proxy instances can encode the same source to different bytes, so ranges answered by different instances do not join into one valid image. A response whose bytes a transformation produced ignores `Range`, returns the complete representation with 200, and has no `Accept-Ranges` header. `HEAD` does the same with an empty body. A rasterised SVG is a transformed representation, including the one an `mp` endpoint returns for a read that requests no transformation. A response that returns stored or origin bytes unchanged follows the contract above.
+
 ### Ranges on the signed external route
 
 The route forwards a range to the origin only when no transformation is requested. It sends the range verbatim when the value after `bytes=` is non-empty and every byte of it is an ASCII graphic character. A multiple range therefore reaches the origin, and the origin decides how to answer it. A value with a space anywhere is dropped, and no range is sent. The route relays the origin partial response with the origin `Content-Range` unchanged.
 
-A range on a transformed response selects bytes from the result and returns 206 or 416. Without a transformation, an origin that ignores the range can produce a complete 200 response. Always check the response status and range headers.
+A transformed response ignores the range and returns the complete result, as [Transformed representations](#transformed-representations) states. Without a transformation, an origin that ignores the range can produce a complete 200 response. Always check the response status and range headers.
 
 :::caution[A mislabelled SVG reaches the client as bytes]
 An origin that answers a forwarded range with SVG bytes under another media type can produce a 206 containing raw SVG.
@@ -201,7 +207,7 @@ Content disposition follows the media type the origin declared, so SVG mislabell
 | Content-Length?<sup>2</sup> | integer | The selected body length, including on HEAD |
 | Content-Range? | string | Present on 206 as `bytes {start}-{end}/{size}` and on 416 as `bytes */{size}` |
 | Content-Disposition?<sup>3</sup> | string | The route-selected inline or attachment disposition |
-| Accept-Ranges | string | The literal `bytes` on every media representation |
+| Accept-Ranges? | string | The literal `bytes`. Absent on a [transformed representation](#transformed-representations) |
 | Access-Control-Allow-Origin? | string | The literal `*` on media responses. Under `enforce` it is the request origin, or absent with no `Origin` |
 | Cache-Control<sup>4</sup> | string | The browser cache policy for the representation |
 | CDN-Cache-Control | string | The matching shared cache policy |

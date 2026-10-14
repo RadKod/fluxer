@@ -56,7 +56,7 @@ describe('Message reaction user counts (K10)', () => {
 		for (let i = 0; i < count; i++) {
 			await interactions.addReaction(channelId, messageId, createUserID(BigInt(10000 + i)), emoji);
 		}
-		const channel = await repository.findUnique(channelId);
+		const channel = await repository.channelData.findUnique(channelId);
 		if (!channel) throw new Error('Missing test channel');
 		const authChannel: AuthenticatedChannel = {
 			channel,
@@ -89,8 +89,8 @@ describe('Message reaction user counts (K10)', () => {
 	it('the zero check reads at most one reaction row', async () => {
 		const f = await fixture(101);
 		const queries = vi.spyOn(InMemoryCassandraQueryExecutor.prototype, 'executeQuery');
-		expect(await f.repository.hasReactionUsers(f.channelId, f.messageId, emoji, undefined)).toBe(true);
-		expect(await f.repository.hasReactionUsers(f.channelId, f.messageId, '✅', undefined)).toBe(false);
+		expect(await f.interactions.hasReactionUsers(f.channelId, f.messageId, emoji, undefined)).toBe(true);
+		expect(await f.interactions.hasReactionUsers(f.channelId, f.messageId, '✅', undefined)).toBe(false);
 		for (const [query] of queries.mock.calls) {
 			expect(query.cql).toContain('LIMIT :limit_bind');
 			expect(query.params.limit_bind).toBe(1);
@@ -213,7 +213,7 @@ describe('Message reaction user counts (K10)', () => {
 
 	it('the registered flusher seeds a bounded count and expires it through the shared flush', async () => {
 		const f = await fixture(101);
-		const rows = vi.spyOn(f.repository, 'countReactionUsersUpTo');
+		const rows = vi.spyOn(f.interactions, 'countReactionUsersUpTo');
 		const counters = getKVCounterService();
 		expect(await counters.add(namespace, f.id, 0)).toBe(101);
 		expect(rows).toHaveBeenCalledWith(f.channelId, f.messageId, emoji, undefined, MAX_USERS_PER_MESSAGE_REACTION + 1);

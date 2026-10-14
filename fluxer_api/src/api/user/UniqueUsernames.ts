@@ -5,7 +5,7 @@ import {createUserID, type UserID} from '@app/api/BrandedTypes';
 import {getUsernameOwnershipService} from '@app/api/middleware/ServiceRegistry';
 import {getCacheService, getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
 import type {User} from '@app/api/models/User';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {USERNAME_MODE_DISCRIMINATOR} from '@app/api/user/UserTag';
 import {USERNAME_CLAIM_ERROR_CODES} from '@app/api/user/username/UsernameOwnershipService';
 import {UsernamePolicyService} from '@app/api/user/username/UsernamePolicyService';
@@ -17,7 +17,7 @@ import {FluxerError} from '@fluxer/errors/src/FluxerError';
 import type {ICacheService} from '@pkgs/cache/src/ICacheService';
 import {ms} from 'itty-time';
 
-type UsernameLookup = Pick<IUserRepository, 'findUsersByUsername'>;
+type UsernameLookup = Pick<UserRepository, 'findUsersByUsername'>;
 
 interface UniqueUsernameDeps {
 	users: UsernameLookup;
@@ -242,7 +242,7 @@ async function findUsernameHolders(users: UsernameLookup, username: string): Pro
 	return [...holders.values()];
 }
 
-export async function findPeopleByUsername(users: UsernameLookup, username: string): Promise<Array<User>> {
+async function findPeopleByUsername(users: UsernameLookup, username: string): Promise<Array<User>> {
 	return (await findUsernameHolders(users, username)).filter(isPerson);
 }
 

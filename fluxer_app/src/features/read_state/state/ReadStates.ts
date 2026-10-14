@@ -28,7 +28,6 @@ import {
 	type PendingAck,
 	parseTimestamp,
 	type ReadStateAckRequestEntry,
-	type ReadStateAckResponse,
 	type Timer,
 } from '@app/features/read_state/state/read_states/shared';
 import Relationships from '@app/features/relationship/state/Relationships';
@@ -42,8 +41,8 @@ import {
 } from '@fluxer/constants/src/ChannelConstants';
 import {THREAD_FEATURE_CHANNEL_TYPES, THREAD_ONLY_CHANNEL_TYPES} from '@fluxer/constants/src/ThreadConstants';
 import type {ChannelId, GuildId} from '@fluxer/schema/src/branded/WireIds';
+import type {ReadStateAckResponse} from '@fluxer/schema/src/domains/channel/ChannelRequestSchemas';
 import type {Message as WireMessage} from '@fluxer/schema/src/domains/message/MessageResponseSchemas';
-import {decodeReadStateProto} from '@fluxer/schema/src/domains/read_state/ReadStateProtoCodec';
 import {observable, runInAction} from 'mobx';
 
 export type {GatewayReadState};
@@ -411,15 +410,11 @@ class ReadStates {
 		this.notifyChange(channelId);
 	}
 
-	handleGatewayReady(action: {
-		readState: Array<GatewayReadState>;
-		readStateProto?: string;
-		channels: Array<ChannelPayload>;
-	}): void {
+	handleGatewayReady(action: {readState: Array<GatewayReadState>; channels: Array<ChannelPayload>}): void {
 		this.suppressVersionBumps(() => {
 			const preservedAcks = this.capturePendingAcks();
 			this.reset();
-			const readStates = this.decodeReadStateBundle(action.readStateProto, action.readState);
+			const readStates = action.readState;
 			const channelsWithReadState = new Set<ChannelId>();
 			for (const readState of readStates) {
 				channelsWithReadState.add(readState.id as ChannelId);
@@ -1146,7 +1141,7 @@ class ReadStates {
 		if (response == null) {
 			return;
 		}
-		for (const readState of this.decodeReadStateBundle(response.read_state_proto, response.read_states)) {
+		for (const readState of response.read_states) {
 			if (readState.last_message_id == null) {
 				continue;
 			}
@@ -1157,21 +1152,6 @@ class ReadStates {
 				manual,
 				version: readState.version,
 			});
-		}
-	}
-
-	private decodeReadStateBundle(
-		readStateProto: string | null | undefined,
-		fallbackReadStates: Array<GatewayReadState>,
-	): Array<GatewayReadState> {
-		if (readStateProto == null) {
-			return fallbackReadStates;
-		}
-		try {
-			return decodeReadStateProto(readStateProto);
-		} catch (error) {
-			logger.warn('Failed to decode read_state_proto, falling back to read_states:', error);
-			return fallbackReadStates;
 		}
 	}
 }

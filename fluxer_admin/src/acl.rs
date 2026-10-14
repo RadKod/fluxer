@@ -45,7 +45,6 @@ pub const BULK_DELETE_USER_MESSAGES: &str = "bulk:delete:user_messages";
 pub const BULK_UPDATE_GUILD_FEATURES: &str = "bulk:update:guild_features";
 pub const BULK_UPDATE_USER_FLAGS: &str = "bulk:update:user_flags";
 pub const COSMETICS_MANAGE: &str = "cosmetics:manage";
-pub const CSAM_SUBMIT_NCMEC: &str = "csam:submit_ncmec";
 pub const DISCOVERY_REMOVE: &str = "discovery:remove";
 pub const DISCOVERY_REVIEW: &str = "discovery:review";
 pub const FEED_MODERATE: &str = "feed:moderate";
@@ -74,6 +73,8 @@ pub const MESSAGE_DELETE_ALL: &str = "message:delete_all";
 pub const MESSAGE_DELETE: &str = "message:delete";
 pub const MESSAGE_LOOKUP: &str = "message:lookup";
 pub const MESSAGE_SHRED: &str = "message:shred";
+pub const REGISTRATION_REVIEW: &str = "registration:review";
+pub const REPORT_DELETE: &str = "report:delete";
 pub const REPORT_RESOLVE: &str = "report:resolve";
 pub const REPORT_VIEW: &str = "report:view";
 pub const REPORT_VIEW_REPORTER_PII: &str = "report:view:reporter_pii";
@@ -95,6 +96,7 @@ pub const USER_VIEW_DOB: &str = "user:view:dob";
 pub const USER_VIEW_EMAIL: &str = "user:view:email";
 pub const USER_VIEW_IP: &str = "user:view:ip";
 pub const USER_TEMP_BAN: &str = "user:temp_ban";
+pub const USER_UPDATE_BOT_STATUS: &str = "user:update:bot_status";
 pub const USER_UPDATE_DOB: &str = "user:update:dob";
 pub const USER_UPDATE_EMAIL: &str = "user:update:email";
 pub const USER_UPDATE_FLAGS: &str = "user:update:flags";
@@ -159,7 +161,6 @@ pub const ALL_ACLS: &[&str] = &[
     BULK_UPDATE_GUILD_FEATURES,
     BULK_UPDATE_USER_FLAGS,
     COSMETICS_MANAGE,
-    CSAM_SUBMIT_NCMEC,
     DISCOVERY_REMOVE,
     DISCOVERY_REVIEW,
     FEED_MODERATE,
@@ -188,6 +189,8 @@ pub const ALL_ACLS: &[&str] = &[
     MESSAGE_DELETE,
     MESSAGE_LOOKUP,
     MESSAGE_SHRED,
+    REGISTRATION_REVIEW,
+    REPORT_DELETE,
     REPORT_RESOLVE,
     REPORT_VIEW,
     REPORT_VIEW_REPORTER_PII,
@@ -209,6 +212,7 @@ pub const ALL_ACLS: &[&str] = &[
     USER_VIEW_EMAIL,
     USER_VIEW_IP,
     USER_TEMP_BAN,
+    USER_UPDATE_BOT_STATUS,
     USER_UPDATE_DOB,
     USER_UPDATE_EMAIL,
     USER_UPDATE_FLAGS,

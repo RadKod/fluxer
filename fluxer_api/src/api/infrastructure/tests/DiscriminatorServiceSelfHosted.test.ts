@@ -8,7 +8,7 @@ import {DiscriminatorService} from '@app/api/infrastructure/DiscriminatorService
 import {getCachedInstancePremiumMode, setCachedInstancePremiumMode} from '@app/api/limits/InstancePremiumModeCache';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {User} from '@app/api/models/User';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {ICacheService} from '@pkgs/cache/src/ICacheService';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 
@@ -20,7 +20,7 @@ function createService(): DiscriminatorService {
 		async findDiscriminatorsByUsername() {
 			return new Set<number>([42]);
 		},
-	} as unknown as IUserRepository;
+	} as unknown as UserRepository;
 	const cacheService = {
 		async acquireLock() {
 			return 'token';

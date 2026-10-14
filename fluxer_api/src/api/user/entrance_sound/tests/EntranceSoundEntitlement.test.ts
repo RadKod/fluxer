@@ -9,7 +9,7 @@ import {
 	type UserID,
 } from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
-import type {IChannelRepository} from '@app/api/channel/IChannelRepository';
+import type {ChannelRepository} from '@app/api/channel/ChannelRepository';
 import {createDefaultLimitConfig} from '@app/api/constants/LimitConfig';
 import {EMPTY_USER_ROW, type UserRow} from '@app/api/database/types/UserTypes';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
@@ -189,7 +189,7 @@ function createApp(
 	const playService = new EntranceSoundPlayService(
 		service,
 		gateway as unknown as IGatewayService,
-		channels as unknown as IChannelRepository,
+		channels as unknown as ChannelRepository,
 	);
 	const app = new Hono<HonoEnv>();
 	app.onError(AppErrorHandler);

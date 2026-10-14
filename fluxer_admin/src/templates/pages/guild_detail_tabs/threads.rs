@@ -20,24 +20,21 @@ pub fn threads_tab(
     current_cursor: Option<&str>,
     next_cursor: Option<&str>,
     can_delete: bool,
-    can_reindex: bool,
     csrf_token: &str,
 ) -> Markup {
     let base = &config.base_path;
     html! {
-        @if can_reindex {
-            (card_with_header("Thread search index", html! {
-                form method="post"
-                    action={(base) "/guilds/" (guild.id) "?tab=threads&action=refresh_search_index"}
-                    class="w-full" {
-                    (csrf_input(csrf_token))
-                    input type="hidden" name="index_type" value="threads";
-                    (form_actions(html! {
-                        (submit_button("Refresh threads"))
-                    }))
-                }
-            }))
-        }
+        (card_with_header("Thread search index", html! {
+            form method="post"
+                action={(base) "/guilds/" (guild.id) "?tab=threads&action=refresh_search_index"}
+                class="w-full" {
+                (csrf_input(csrf_token))
+                input type="hidden" name="index_type" value="threads";
+                (form_actions(html! {
+                    (submit_button("Refresh threads"))
+                }))
+            }
+        }))
         (card_with_header(
             &format!("Threads on this page ({})", threads.len()),
             html! {

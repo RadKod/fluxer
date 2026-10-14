@@ -6,14 +6,10 @@ use crate::metrics::Metrics;
 use crate::relay;
 use crate::relay_consent::{self, RelayConsentStore};
 use crate::rpc::RpcClient;
-use crate::secret::SecretString;
 use crate::tokens::TokenCache;
 use crate::vendor;
-use axum::extract::{ConnectInfo, State};
-use axum::http::{HeaderValue, StatusCode, header};
-use axum::response::{IntoResponse, Response};
-use axum::routing::get;
 use axum::{Extension, Router};
+use fluxer_common::secret::SecretString;
 use fluxer_svc::server::MetricsAllowList;
 use fluxer_svc::shutdown::{DEFAULT_DRAIN_TIMEOUT, drain_with_timeout, wait_for_shutdown};
 use fluxer_svc::transport::NatsTransport;
@@ -30,28 +26,25 @@ const JOB_DRAIN_TIMEOUT: Duration = Duration::from_secs(25);
 
 pub struct Sidecar {
     metrics: Arc<Metrics>,
-    serving: AtomicBool,
+    serving: Arc<AtomicBool>,
 }
 
 impl Sidecar {
     pub fn new(metrics: Arc<Metrics>) -> Self {
         Self {
             metrics,
-            serving: AtomicBool::new(false),
+            serving: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    pub fn router(&self) -> Router {
+        let metrics = self.metrics.clone();
+        fluxer_svc::server::ops_router(self.serving.clone(), Arc::new(move || metrics.render()))
     }
 
     pub fn set_serving(&self, serving: bool) {
         self.serving.store(serving, Ordering::SeqCst);
     }
-}
-
-pub fn sidecar_router(sidecar: Arc<Sidecar>) -> Router {
-    Router::new()
-        .route("/_health", get(readiness))
-        .route("/_healthz", get(async || "OK"))
-        .route("/_metrics", get(metrics_handler))
-        .with_state(sidecar)
 }
 
 pub struct Serving {
@@ -133,7 +126,7 @@ pub async fn run(cfg: Config) -> anyhow::Result<()> {
 async fn run_delivery(cfg: DeliveryConfig) -> anyhow::Result<()> {
     let state = Arc::new(AppState::try_new(cfg)?);
     let addr = state.cfg.bind_addr;
-    let serving = serve(addr, sidecar_router(Arc::clone(&state.sidecar))).await?;
+    let serving = serve(addr, state.sidecar.router()).await?;
     info!(%addr, vapid_subject = state.cfg.vapid.email, "push sidecar listening");
 
     let transport = NatsTransport::connect(
@@ -181,62 +174,10 @@ async fn drain_jobs(state: &AppState, jobs: JoinHandle<()>, timeout: Duration) {
     running.abort();
 }
 
-async fn readiness(State(sidecar): State<Arc<Sidecar>>) -> impl IntoResponse {
-    if sidecar.serving.load(Ordering::SeqCst) {
-        (StatusCode::OK, "OK")
-    } else {
-        (StatusCode::SERVICE_UNAVAILABLE, "NOT READY")
-    }
-}
-
-async fn metrics_handler(
-    ConnectInfo(peer): ConnectInfo<SocketAddr>,
-    Extension(allowed): Extension<Arc<MetricsAllowList>>,
-    State(sidecar): State<Arc<Sidecar>>,
-) -> Response {
-    if !allowed.is_metrics_peer_allowed(&peer) {
-        return (StatusCode::FORBIDDEN, "FORBIDDEN").into_response();
-    }
-    (
-        [(
-            header::CONTENT_TYPE,
-            HeaderValue::from_static("text/plain; version=0.0.4; charset=utf-8"),
-        )],
-        sidecar.metrics.render(),
-    )
-        .into_response()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
-
-    async fn metrics_status(allowed: &str, peer: &str) -> StatusCode {
-        let sidecar = Arc::new(Sidecar::new(Arc::new(Metrics::new())));
-        let allowed = Arc::new(MetricsAllowList::parse(allowed).expect("valid allow list"));
-        let peer = peer.parse().expect("valid socket address");
-        metrics_handler(ConnectInfo(peer), Extension(allowed), State(sidecar))
-            .await
-            .status()
-    }
-
-    #[tokio::test]
-    async fn metrics_are_served_to_loopback_and_allowed_networks_only() {
-        assert_eq!(StatusCode::OK, metrics_status("", "127.0.0.1:5000").await);
-        assert_eq!(
-            StatusCode::FORBIDDEN,
-            metrics_status("", "10.77.0.3:5000").await
-        );
-        assert_eq!(
-            StatusCode::OK,
-            metrics_status("10.77.0.0/24", "10.77.0.3:5000").await
-        );
-        assert_eq!(
-            StatusCode::FORBIDDEN,
-            metrics_status("10.77.0.0/24", "10.77.1.3:5000").await
-        );
-    }
 
     #[tokio::test]
     async fn serve_installs_the_metrics_allow_list() {
@@ -244,9 +185,7 @@ mod tests {
             .and_then(|listener| listener.local_addr())
             .expect("free loopback port");
         let sidecar = Arc::new(Sidecar::new(Arc::new(Metrics::new())));
-        let serving = serve(addr, sidecar_router(sidecar))
-            .await
-            .expect("sidecar serves");
+        let serving = serve(addr, sidecar.router()).await.expect("sidecar serves");
         let mut stream = tokio::net::TcpStream::connect(addr)
             .await
             .expect("connects to the sidecar");

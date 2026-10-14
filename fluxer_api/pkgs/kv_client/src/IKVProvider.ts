@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 export interface IKVPipeline {
-	get(key: string): this;
-	set(key: string, value: string): this;
 	setex(key: string, ttlSeconds: number, value: string): this;
 	del(key: string): this;
 	expire(key: string, ttlSeconds: number): this;
@@ -13,7 +11,6 @@ export interface IKVPipeline {
 	hgetall(key: string): this;
 	hset(key: string, field: string, value: string): this;
 	hdel(key: string, ...fields: Array<string>): this;
-	mset(...args: Array<string>): this;
 	exec(): Promise<Array<[Error | null, unknown]>>;
 }
 
@@ -24,10 +21,8 @@ export interface IKVSubscription {
 	off(event: 'message', callback: (channel: string, message: string) => void): void;
 	off(event: 'error', callback: (error: Error) => void): void;
 	subscribe(...channels: Array<string>): Promise<void>;
-	unsubscribe(...channels: Array<string>): Promise<void>;
 	quit(): Promise<void>;
 	disconnect(): Promise<void>;
-	removeAllListeners(event?: 'message' | 'error'): void;
 }
 
 export interface KVPurgeBatchResult {
@@ -50,7 +45,6 @@ export interface IKVProvider {
 	setex(key: string, ttlSeconds: number, value: string): Promise<void>;
 	setnx(key: string, value: string, ttlSeconds?: number): Promise<boolean>;
 	mget(...keys: Array<string>): Promise<Array<string | null>>;
-	mset(...args: Array<string>): Promise<void>;
 	del(...keys: Array<string>): Promise<number>;
 	exists(key: string): Promise<number>;
 	expire(key: string, ttlSeconds: number): Promise<number>;
@@ -99,7 +93,6 @@ export interface IKVProvider {
 	acquireLock(key: string, token: string, ttlSeconds: number): Promise<boolean>;
 	releaseLock(key: string, token: string): Promise<boolean>;
 	extendLock(key: string, token: string, ttlSeconds: number): Promise<boolean>;
-	renewSnowflakeNode(key: string, instanceId: string, ttlSeconds: number): Promise<boolean>;
 	checkLeakyBucketLimit(key: string, limit: number, windowMs: number, cost: number): Promise<KVRateLimitResult>;
 	tryConsumeTokens(
 		key: string,
@@ -123,5 +116,4 @@ export interface IKVProvider {
 	pipeline(): IKVPipeline;
 	multi(): IKVPipeline;
 	isClustered(): boolean;
-	health(): Promise<boolean>;
 }

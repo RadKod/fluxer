@@ -16,7 +16,7 @@ import {
 } from '@app/api/stripe/BillingConfigCache';
 import {getProductRegistry, ProductRegistry, ProductType} from '@app/api/stripe/ProductRegistry';
 import {getStripeClient} from '@app/api/stripe/StripeClient';
-import {setupSyncStripeWebhookWorker} from '@app/api/stripe/tests/StripeWebhookTestUtils';
+import {setupSyncStripeWebhookWorker, signStripeWebhook} from '@app/api/stripe/tests/StripeWebhookTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {
@@ -31,13 +31,12 @@ import {getCurrencyPreferences, getGiftCurrencyPreferences, isLocalizedCurrency}
 import processStripeWebhook from '@app/api/worker/tasks/ProcessStripeWebhook';
 import {setWorkerDependenciesForTest} from '@app/api/worker/WorkerContext';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
-import {UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import type {PremiumStateResponse} from '@fluxer/schema/src/domains/premium/PremiumSchemas';
 import type {WorkerTaskHelpers} from '@pkgs/worker/src/contracts/WorkerTask';
 import {HttpResponse, http} from 'msw';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest';
 
-const ENV_CURRENCIES = ['USD', 'EUR', 'BRL', 'DKK', 'INR', 'NOK', 'PLN', 'SEK', 'TRY'] as const;
+const ENV_CURRENCIES = ['USD', 'EUR', 'BRL', 'DKK', 'INR', 'ISK', 'NOK', 'PLN', 'SEK', 'TRY'] as const;
 
 function buildFullEnvPrices(): NonNullable<typeof Config.stripe.prices> {
 	const prices: Record<string, string> = {};
@@ -129,11 +128,6 @@ function useOperatorBilling(overrides: Partial<StoredBillingConfig> = {}): void 
 	setStoredBillingConfig(operatorBilling(overrides));
 }
 
-function signWebhook(payload: string, timestamp: number, secret: string): string {
-	const signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${payload}`).digest('hex');
-	return `t=${timestamp},v1=${signature}`;
-}
-
 // COZ-API karar 10: yap?land?r?lm?? anahtarlar ve kataloglar Micup ?zerinde Stripe hizmetini a?maz.
 describe('operator billing catalog', () => {
 	let harness: ApiTestHarness;
@@ -192,7 +186,6 @@ describe('operator billing catalog', () => {
 				const lower = currency.toLowerCase();
 				expect(registry.getProduct(`price_envmonthly${lower}`)).toEqual({
 					type: ProductType.MONTHLY_SUBSCRIPTION,
-					premiumType: UserPremiumTypes.SUBSCRIPTION,
 					durationMonths: 1,
 					isGift: false,
 					currency,
@@ -200,7 +193,6 @@ describe('operator billing catalog', () => {
 				});
 				expect(registry.getProduct(`price_envyearly${lower}`)).toEqual({
 					type: ProductType.YEARLY_SUBSCRIPTION,
-					premiumType: UserPremiumTypes.SUBSCRIPTION,
 					durationMonths: 12,
 					isGift: false,
 					currency,
@@ -208,14 +200,12 @@ describe('operator billing catalog', () => {
 				});
 				expect(registry.getProduct(`price_envgiftmonth${lower}`)).toEqual({
 					type: ProductType.GIFT_1_MONTH,
-					premiumType: UserPremiumTypes.SUBSCRIPTION,
 					durationMonths: 1,
 					isGift: true,
 					currency,
 				});
 				expect(registry.getProduct(`price_envgiftyear${lower}`)).toEqual({
 					type: ProductType.GIFT_1_YEAR,
-					premiumType: UserPremiumTypes.SUBSCRIPTION,
 					durationMonths: 12,
 					isGift: true,
 					currency,
@@ -226,15 +216,6 @@ describe('operator billing catalog', () => {
 				expect(registry.getGiftPriceId('gift_1_year', currency)).toBe(`price_envgiftyear${lower}`);
 			}
 			expect(registry.getRecurringSubscriptionPriceId('monthly', 'GBP')).toBeNull();
-		});
-
-		test('keeps the hosted country routing and localized currency rules', () => {
-			expect(getCurrencyPreferences('SE')).toEqual(['SEK', 'EUR', 'USD']);
-			expect(getCurrencyPreferences('GB')).toEqual(['USD', 'EUR']);
-			expect(getGiftCurrencyPreferences('BR')).toEqual(['USD', 'EUR']);
-			expect(isLocalizedCurrency('BRL')).toBe(true);
-			expect(isLocalizedCurrency('USD')).toBe(false);
-			expect(isLocalizedCurrency('EUR')).toBe(false);
 		});
 
 		test('ignores legacy slots outside the hosted currencies', () => {
@@ -298,7 +279,6 @@ describe('operator billing catalog', () => {
 			expect(getEffectiveBillingConfig().catalogMode).toBe('operator');
 			expect(registry.getProduct('price_opgbpmonthly')).toEqual({
 				type: ProductType.MONTHLY_SUBSCRIPTION,
-				premiumType: UserPremiumTypes.SUBSCRIPTION,
 				durationMonths: 1,
 				isGift: false,
 				currency: 'GBP',
@@ -546,7 +526,7 @@ describe('operator billing catalog', () => {
 			});
 			const {response} = await createBuilder(harness, '')
 				.post('/stripe/webhook')
-				.header('stripe-signature', signWebhook(payload, timestamp, secret))
+				.header('stripe-signature', signStripeWebhook(payload, timestamp, secret))
 				.header('content-type', 'application/json')
 				.body(payload)
 				.executeRaw();
@@ -566,7 +546,7 @@ describe('operator billing catalog', () => {
 				type: 'customer.created',
 				data: {object: {id: `cus_operator_${crypto.randomBytes(4).toString('hex')}`}},
 			});
-			return {body: payload, signature: signWebhook(payload, timestamp, secret)};
+			return {body: payload, signature: signStripeWebhook(payload, timestamp, secret)};
 		}
 
 		test('accepts a queued event signed with the previous secret in the worker after a rotation', async () => {

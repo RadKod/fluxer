@@ -32,6 +32,7 @@ pub fn deserialize_string_or_u64<'de, D: Deserializer<'de>>(d: D) -> Result<u64,
 #[derive(Clone, Debug, Deserialize)]
 pub struct AdminUserMeResponse {
     pub user: AdminUser,
+    pub pending_registration_count: Option<u32>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -59,11 +60,6 @@ pub struct SearchGuildsResponse {
 #[derive(Clone, Debug, Deserialize)]
 pub struct LookupGuildResponse {
     pub guild: Option<GuildDetailInfo>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct GuildUpdateResponse {
-    pub guild: GuildInfo,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -282,11 +278,6 @@ pub struct BlocklistEntryPage {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BulkBanResult {
     pub job_id: String,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct BanAvatarResult {
-    pub hash_short: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

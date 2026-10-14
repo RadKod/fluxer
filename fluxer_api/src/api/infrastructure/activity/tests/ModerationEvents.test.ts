@@ -6,10 +6,10 @@ import {resetActivityEventsForTests, startActivityEvents} from '@app/api/infrast
 import type {ActivityPublisher} from '@app/api/infrastructure/activity/ActivitySpool';
 import type {Event} from '@app/api/infrastructure/activity/Contract.generated';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 
 class CapturingPublisher implements ActivityPublisher {
@@ -146,6 +146,22 @@ describe('moderation activity events', () => {
 			});
 			expect(resolved?.meta.ip).toBeNull();
 		});
+
+		test.each(['actioned', 'no_violation', 'duplicate'] as const)(
+			'a staff resolve with %s publishes that outcome even when the account is under enforcement',
+			async (resolution) => {
+				const {reported, reportId} = await fileReport();
+				await createBuilder(harness, admin.token)
+					.put(`/admin/users/${reported.userId}/ban`)
+					.body({duration_hours: 24, notify_user: false})
+					.expect(HTTP_STATUS.OK)
+					.execute();
+				await resolve(reportId, {resolution});
+				expect(publisher.of('report_resolved').map((event) => event.data)).toEqual([
+					expect.objectContaining({report_id: reportId, outcome: resolution, resolved_by: 'staff'}),
+				]);
+			},
+		);
 
 		test('without a chosen outcome the reported account state decides between actioned and unspecified', async () => {
 			const first = await fileReport();

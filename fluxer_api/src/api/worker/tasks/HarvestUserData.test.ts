@@ -14,7 +14,6 @@ import {
 	type UserID,
 } from '@app/api/BrandedTypes';
 import {EMPTY_USER_ROW} from '@app/api/database/types/UserTypes';
-import {syncChannelThreadsConfig} from '@app/api/experiment/ChannelThreadsGate';
 import {ThreadMember} from '@app/api/models/ThreadMember';
 import {User} from '@app/api/models/User';
 import {mapStorePurchaseToResponse} from '@app/api/store_billing/StoreBillingMappers';
@@ -22,7 +21,6 @@ import {buildStorePurchaseRow} from '@app/api/store_billing/tests/StoreBillingTe
 import * as harvestTask from '@app/api/worker/tasks/HarvestUserData';
 import {buildUserDataJson, collectThreadMemberships, harvestMessages} from '@app/api/worker/tasks/HarvestUserData';
 import {createArchiveJsonBuffer} from '@app/api/worker/utils/ArchiveJson';
-import {ChannelThreadsConfigSchema} from '@fluxer/schema/src/domains/admin/ChannelThreadsSchemas';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 
 const tainted = vi.hoisted(() => new Set<string>());
@@ -166,29 +164,12 @@ describe('collectThreadMemberships', () => {
 		},
 		getMember: async () => member,
 	};
-	const setEverEnabled = (everEnabled: boolean) =>
-		syncChannelThreadsConfig(JSON.stringify({ever_enabled: everEnabled}), (raw) =>
-			ChannelThreadsConfigSchema.parse(JSON.parse(raw ?? '{}')),
-		);
-
 	afterEach(() => {
 		reads = 0;
 		tainted.clear();
-		syncChannelThreadsConfig(null, () => ChannelThreadsConfigSchema.parse({}));
-	});
-
-	it('reads nothing on an instance that never enabled threads', async () => {
-		setEverEnabled(false);
-		const collected: Array<ThreadMember> = [];
-		await collectThreadMemberships(threads, AUTHOR, [guildId], async (page) => {
-			collected.push(...page);
-		});
-		expect(collected).toEqual([]);
-		expect(reads).toBe(0);
 	});
 
 	it('collects the joined thread memberships of every tainted guild and skips the rest', async () => {
-		setEverEnabled(true);
 		tainted.add(guildId.toString());
 		const collected: Array<ThreadMember> = [];
 		await collectThreadMemberships(threads, AUTHOR, [guildId, createGuildID(1400000000000000002n)], async (page) => {
@@ -222,7 +203,6 @@ describe('collectThreadMemberships', () => {
 	}
 
 	it('emits a large membership history in bounded pages with an opaque cursor', async () => {
-		setEverEnabled(true);
 		tainted.add(guildId.toString());
 		const repo = pagedThreads(2505);
 		const pages: Array<Array<ThreadMember>> = [];
@@ -237,7 +217,6 @@ describe('collectThreadMemberships', () => {
 	});
 
 	it('shares one read concurrency bound across simultaneous exports', async () => {
-		setEverEnabled(true);
 		tainted.add(guildId.toString());
 		let active = 0;
 		let maximum = 0;
@@ -261,7 +240,6 @@ describe('collectThreadMemberships', () => {
 	});
 
 	it('awaits each output page before reading the next page', async () => {
-		setEverEnabled(true);
 		tainted.add(guildId.toString());
 		const repo = pagedThreads(2001);
 		let outputPages = 0;
@@ -274,7 +252,6 @@ describe('collectThreadMemberships', () => {
 	});
 
 	it('follows a cursor even when Cassandra returns an empty intermediate page', async () => {
-		setEverEnabled(true);
 		tainted.add(guildId.toString());
 		const repo = pagedThreads(1);
 		repo.listJoinedThreadIdsPage = async (_userId, _guildId, opts) =>
@@ -287,7 +264,6 @@ describe('collectThreadMemberships', () => {
 	});
 
 	it('releases the shared read slots after a membership read fails', async () => {
-		setEverEnabled(true);
 		tainted.add(guildId.toString());
 		const broken = pagedThreads(30, async () => {
 			throw new Error('membership read failed');
@@ -303,7 +279,6 @@ describe('collectThreadMemberships', () => {
 	});
 
 	it('stages paged memberships in user.json with the existing JSON shape and ASCII escaping', async () => {
-		setEverEnabled(true);
 		tainted.add(guildId.toString());
 		expect(typeof harvestTask.writeUserDataJson).toBe('function');
 		const directory = await mkdtemp(path.join(os.tmpdir(), 'fluxer-harvest-test-'));
@@ -333,7 +308,6 @@ describe('collectThreadMemberships', () => {
 	});
 
 	it('omits an empty membership array and closes the staged file after a read failure', async () => {
-		setEverEnabled(true);
 		tainted.add(guildId.toString());
 		expect(typeof harvestTask.writeUserDataJson).toBe('function');
 		const directory = await mkdtemp(path.join(os.tmpdir(), 'fluxer-harvest-test-'));

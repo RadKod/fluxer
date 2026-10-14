@@ -2,14 +2,14 @@
 
 import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
 import type {GameActivity} from '@app/features/gateway/types/GatewayPresenceTypes';
+import type {GatewayCustomStatusPayload} from '@app/features/user/state/CustomStatus';
 import type {
 	DesktopGameActivityCandidates,
 	DesktopGameActivityRuleInput,
 	DesktopGameActivityRules,
 	DesktopGameActivityState,
 	ElectronAPI,
-} from '@app/features/platform/types/Electron';
-import type {GatewayCustomStatusPayload} from '@app/features/user/state/CustomStatus';
+} from '@app/types/electron.d';
 import {makeObservable, observable, observableRef, runInAction} from 'mobx';
 
 export interface GameActivityPresence {

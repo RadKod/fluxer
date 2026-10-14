@@ -8,8 +8,8 @@ import {act, useImperativeHandle, useRef, useState} from 'react';
 import {createRoot, type Root} from 'react-dom/client';
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 
-vi.mock('@app/features/typing/utils/TypingUtils', () => ({
-	TypingUtils: {handleComposerChange: vi.fn(), clear: vi.fn(), handleOwnMessageSent: vi.fn()},
+vi.mock('@app/features/typing/rolling/RollingTypingSender', () => ({
+	default: {handleComposerChange: vi.fn(), stopTyping: vi.fn(), handleOwnMessageSent: vi.fn()},
 }));
 
 type StorageModule = typeof import('@app/features/platform/state/PersistentStorage');
@@ -89,7 +89,14 @@ async function loadClient(): Promise<Client> {
 
 async function render(client: Client, owner: string, handle: React.RefObject<ComposerHandle | null>): Promise<void> {
 	await act(async () => {
-		root?.render(<client.Composer key={owner} owner={owner} handle={handle} />);
+		root?.render(
+			<client.Composer
+				key={owner}
+				owner={owner}
+				handle={handle}
+				data-flx="messaging.use-textarea-draft-and-typing-test.client-composer"
+			/>,
+		);
 	});
 }
 

@@ -6,7 +6,7 @@ import {
 } from '@app/features/voice/utils/noise_suppression/NoiseSuppressionBackends';
 import {makeAutoObservable} from 'mobx';
 
-export type DeepFilterAssetState = 'idle' | 'loading' | 'ready';
+type DeepFilterAssetState = 'idle' | 'loading' | 'ready';
 
 export type NoiseSuppressionFailureReason =
 	| 'assets'
@@ -16,9 +16,9 @@ export type NoiseSuppressionFailureReason =
 	| 'sample_rate'
 	| 'cpu_budget';
 
-export type NoiseSuppressionFallback = 'loading' | 'failed' | 'cpu_budget';
+type NoiseSuppressionFallback = 'loading' | 'failed' | 'cpu_budget';
 
-export interface NoiseSuppressionFailure {
+interface NoiseSuppressionFailure {
 	count: number;
 	retryAtMs: number;
 	reason: NoiseSuppressionFailureReason;

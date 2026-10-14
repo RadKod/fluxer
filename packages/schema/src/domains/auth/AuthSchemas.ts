@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {ThemeTypes} from '@fluxer/constants/src/UserConstants';
+import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {
 	WebAuthnAuthenticationOptions,
 	WebAuthnAuthenticationResponse,
@@ -46,6 +47,9 @@ export const RegisterRequest = z.object({
 		.nullish()
 		.describe('Admin-issued registration URL code to use for this registration'),
 	theme: RegisterThemeType.optional().describe('Initial UI theme preference for the new account'),
+	setup_token: createStringType(1, 256)
+		.nullish()
+		.describe('Setup token of a new self-hosted instance. Required until the first admin account exists'),
 });
 
 export type RegisterRequest = z.infer<typeof RegisterRequest>;
@@ -236,11 +240,7 @@ export const RecoverAccountResponse = z.union([
 
 export type RecoverAccountResponse = z.infer<typeof RecoverAccountResponse>;
 
-export const AuthRegisterResponse = z.union([
-	AuthTokenWithUserIdResponse,
-	AuthMfaRequiredResponse,
-	AuthRegistrationPendingApprovalResponse,
-]);
+export const AuthRegisterResponse = z.union([AuthTokenWithUserIdResponse, AuthRegistrationPendingApprovalResponse]);
 
 export type AuthRegisterResponse = z.infer<typeof AuthRegisterResponse>;
 
@@ -294,10 +294,30 @@ export const UsernameAvailabilityResponse = z.object({
 
 export type UsernameAvailabilityResponse = z.infer<typeof UsernameAvailabilityResponse>;
 
+export const DESKTOP_HANDOFF_RETURN_URI_PATTERN = /^fluxer(?:-canary|-development)?:\/\/handoff$/u;
+
+export const DesktopHandoffReturnMethod = z.enum(['deep_link', 'code']);
+
+export type DesktopHandoffReturnMethod = z.infer<typeof DesktopHandoffReturnMethod>;
+
+export const HandoffInitiateRequest = z
+	.object({
+		return_uri: createStringType(1, 64)
+			.refine((value) => DESKTOP_HANDOFF_RETURN_URI_PATTERN.test(value), ValidationErrorCodes.INVALID_FORMAT)
+			.optional()
+			.describe('Deep link the approving browser opens to return the sign-in to the initiating desktop app'),
+	})
+	.nullish();
+
+export type HandoffInitiateRequest = z.infer<typeof HandoffInitiateRequest>;
+
 export const HandoffInitiateResponse = z.object({
 	code: z.string().describe('Handoff code to share with the receiving device'),
 	expires_at: z.iso.datetime().describe('ISO 8601 timestamp when the handoff code expires'),
 	poll_secret: z.string().optional().describe('Secret the initiating device must present to retrieve the token'),
+	return_method: DesktopHandoffReturnMethod.optional().describe(
+		'deep_link when the approving browser will hand the sign-in back through the return deep link, code otherwise',
+	),
 });
 
 export type HandoffInitiateResponse = z.infer<typeof HandoffInitiateResponse>;
@@ -312,12 +332,15 @@ const HandoffInfoClientInfo = z.object({
 export const HandoffInfoResponse = z.object({
 	status: z.string().describe('Current status of the handoff (pending, expired)'),
 	client_info: HandoffInfoClientInfo.nullish().describe('Client information of the initiating device'),
+	return_method: DesktopHandoffReturnMethod.optional().describe(
+		'How the approving browser hands the sign-in back. deep_link opens the initiating app, code relies on the user comparing the code',
+	),
 });
 
 export type HandoffInfoResponse = z.infer<typeof HandoffInfoResponse>;
 
 export const HandoffStatusResponse = z.object({
-	status: z.string().describe('Current status of the handoff (pending, completed, expired)'),
+	status: z.string().describe('Current status of the handoff (pending, completed, denied, expired)'),
 	token: z.string().nullish().describe('Authentication token if handoff is complete'),
 	user_id: SnowflakeStringType.nullish().describe('User ID if handoff is complete'),
 	user: UserPartialResponse.nullish().describe('Partial user data if handoff is complete'),
@@ -392,6 +415,9 @@ export const HandoffCompleteRequest = z.object({
 	code: createStringType().describe('The handoff code from the initiating session'),
 	token: createStringType().optional().describe('The authentication token to transfer'),
 	user_id: createStringType().describe('The user ID associated with the authenticated session'),
+	return_method: DesktopHandoffReturnMethod.optional().describe(
+		'deep_link returns a one-time grant the initiating app must present, code releases the token to the poll secret alone',
+	),
 });
 
 export type HandoffCompleteRequest = z.infer<typeof HandoffCompleteRequest>;
@@ -402,8 +428,15 @@ export const HandoffCodeParam = z.object({
 
 export type HandoffCodeParam = z.infer<typeof HandoffCodeParam>;
 
+export const HandoffCompleteResponse = z.object({
+	return_url: z.string().describe('Deep link that returns the sign-in to the initiating app, with its one-time grant'),
+});
+
+export type HandoffCompleteResponse = z.infer<typeof HandoffCompleteResponse>;
+
 export const HandoffStatusRequest = z.object({
 	poll_secret: createStringType().describe('The poll secret issued when the handoff was initiated'),
+	grant: createStringType(1, 128).optional().describe('The one-time grant delivered to the app through the deep link'),
 });
 
 export type HandoffStatusRequest = z.infer<typeof HandoffStatusRequest>;

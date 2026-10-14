@@ -64,8 +64,6 @@ import {
 	SkeletonGuildRailItemKind,
 	SkeletonNagbarTone,
 } from '@app/features/app/components/skeleton/SkeletonLayoutMemory';
-import {WHATS_NEW_ENTRIES} from '@app/features/app/components/whats_new/WhatsNewEntries';
-import {openWhatsNewModal} from '@app/features/app/components/whats_new/WhatsNewModal';
 import {ConnectionNoticeTone, resolveConnectionNoticeShape} from '@app/features/app/hooks/useConnectionNotice';
 import {useMergeRefs} from '@app/features/app/hooks/useMergeRefs';
 import {
@@ -88,12 +86,13 @@ import GuildListState, {type OrganizedItem} from '@app/features/guild/state/Guil
 import GuildReadState from '@app/features/guild/state/GuildReadState';
 import HiddenGuildListButtons from '@app/features/guild/state/HiddenGuildListButtons';
 import {PRIMARY_NAVIGATION_LANDMARK_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
+import {preloadMacPermissionsModal} from '@app/features/permissions/system/commands/MacPermissionsModalCommands';
 import {useLocation} from '@app/features/platform/components/router/RouterReact';
 import {Platform} from '@app/features/platform/types/Platform';
 import {ComponentBus} from '@app/features/platform/utils/ComponentBus';
 import ReadStates from '@app/features/read_state/state/ReadStates';
 import {getRemScaleForDocument} from '@app/features/theme/layout/RemFromPx';
-import {AxisOrientation, type VerticalEdge} from '@app/features/ui/AxisOrientation';
+import type {VerticalEdge} from '@app/features/ui/AxisOrientation';
 import * as DimensionCommands from '@app/features/ui/commands/DimensionCommands';
 import {Scroller, type ScrollerHandle} from '@app/features/ui/components/Scroller';
 import {useHoverDeferredOrderedItems} from '@app/features/ui/hooks/UseHoverDeferredOrderedItems';
@@ -105,7 +104,6 @@ import MobileLayout from '@app/features/ui/state/MobileLayout';
 import Nagbar from '@app/features/ui/state/Nagbar';
 import SidebarPreferences from '@app/features/ui/state/SidebarPreferences';
 import SidebarWidth from '@app/features/ui/state/SidebarWidth';
-import WhatsNew from '@app/features/ui/state/WhatsNew';
 import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
 import * as UserSettingsCommands from '@app/features/user/commands/UserSettingsCommands';
 import StatusPage from '@app/features/user/state/StatusPage';
@@ -220,7 +218,7 @@ function useGuildNavigationVisibility(): GuildNavigationVisibility {
 	const favoritesVisible = Accessibility.showFavorites;
 	const feedVisible = FEED_RAIL_BUTTON_ENABLED && LimitResolver.resolve({key: 'feature_feed', fallback: 0}) > 0;
 	const downloadVisible = !Platform.isElectron && !Platform.isPWA && !HiddenGuildListButtons.downloadButtonHidden;
-	const helpVisible = !HiddenGuildListButtons.helpButtonHidden;
+	const helpVisible = !HiddenGuildListButtons.helpButtonHidden && Routes.help() != null;
 	return useMemo(
 		() =>
 			Object.freeze({
@@ -1298,7 +1296,6 @@ const SKELETON_NAGBAR_ROW_SHAPES: Record<NagbarType, SkeletonNagbarRowShape> = {
 	[NagbarType.LEGACY_PRICE_OPT_IN]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 	[NagbarType.GIFT_INVENTORY]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 	[NagbarType.DESKTOP_DOWNLOAD]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
-	[NagbarType.DESKTOP_UPDATE_READY]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 	[NagbarType.GUILD_MEMBERSHIP_CTA]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 	[NagbarType.VISIONARY_MFA]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 	[NagbarType.VOICE_SESSION_RESTORE]: {tone: SkeletonNagbarTone.VOICE, hasActions: true},
@@ -1309,6 +1306,7 @@ const SKELETON_NAGBAR_ROW_SHAPES: Record<NagbarType, SkeletonNagbarRowShape> = {
 	[NagbarType.PROFILE_PRIVACY_WIDENED]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 	[NagbarType.PROFILE_PUBLIC_OFFER]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 	[NagbarType.DOMAIN_MOVED]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
+	[NagbarType.WINDOWS_FONT]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 };
 
 const CONNECTION_SKELETON_NAGBAR_TONES: Record<ConnectionNoticeTone, SkeletonNagbarTone> = {
@@ -1676,11 +1674,9 @@ const GuildList = observer(() => {
 	}, []);
 	const guildListNavigationRef = useRovingFocusList<HTMLElement>({
 		focusableSelector: GUILD_LIST_FOCUSABLE_SELECTOR,
-		orientation: AxisOrientation.VERTICAL,
-		loop: true,
+
 		enabled: keyboardModeEnabled,
 		restoreFocusOnWindowFocus: false,
-		manageTabIndex: true,
 	});
 	useEffect(() => {
 		const controller = new DMChannelVisibilityController({
@@ -1780,7 +1776,6 @@ const GuildList = observer(() => {
 		focusableSelector: GUILD_LIST_FOCUSABLE_SELECTOR,
 		keyboardNavigationEnabled: keyboardModeEnabled,
 		preferredActiveKey: selectedGuildNavigationKey,
-		resolveMissingActiveKey: null,
 	});
 	const mergedGuildNavigationRef = useMergeRefs<HTMLElement>([guildListNavigationRef, guildNavigationListRef]);
 	const previousSelectedGuildNavigationKeyRef = useRef(selectedGuildNavigationKey);
@@ -2257,14 +2252,8 @@ export const GuildsLayout = observer(({children}: {children: React.ReactNode}) =
 		openClaimAccountModal();
 	}, [isReady, user, location.pathname]);
 	useEffect(() => {
-		if (!isReady) return;
-		if (!user) return;
-		if (RuntimeConfig.isSelfHosted()) return;
-		const latestEntry = WHATS_NEW_ENTRIES[0];
-		if (!latestEntry) return;
-		if (!WhatsNew.shouldShow(latestEntry.id, latestEntry.date, user.createdAt)) return;
-		openWhatsNewModal();
-	}, [isReady, user]);
+		preloadMacPermissionsModal();
+	}, []);
 	const shouldShowSidebarDivider = !mobileLayout.enabled;
 	return (
 		<div

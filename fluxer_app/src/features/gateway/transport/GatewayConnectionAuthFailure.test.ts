@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Authentication from '@app/features/auth/state/Authentication';
-import GatewayConnection from '@app/features/gateway/transport/GatewayConnection';
 import GatewaySessions from '@app/features/gateway/transport/GatewaySessionPool';
 import type {GatewaySocket, GatewaySocketProperties} from '@app/features/gateway/transport/GatewaySocket';
 import {resetClientState} from '@app/features/platform/state/ResetClientState';
@@ -63,10 +62,6 @@ vi.mock('@app/features/app/state/RuntimeConfig', () => ({
 
 vi.mock('@app/features/gateway/transport/ForegroundGatewayHandoff', () => ({
 	ForegroundGatewayHandoff: class ForegroundGatewayHandoff {},
-}));
-
-vi.mock('@app/features/gateway/transport/BackgroundAccountPresence', () => ({
-	default: {appearOffline: true},
 }));
 
 vi.mock('@app/features/gateway/events/EventRouter', () => ({createHandlerRegistry: () => new Map()}));
@@ -145,7 +140,7 @@ vi.mock('@app/features/presence/state/LocalPresence', () => ({
 
 vi.mock('@app/features/search/state/QuickSwitcher', () => ({default: {recomputeIfOpen: vi.fn()}}));
 
-vi.mock('@app/features/typing/state/TypingIndicator', () => ({default: {reset: vi.fn()}}));
+vi.mock('@app/features/typing/rolling/RollingTypingStore', () => ({default: {reset: vi.fn()}}));
 
 vi.mock('@app/features/ui/state/MobileLayout', () => ({default: {isMobileLayout: () => false}}));
 
@@ -227,9 +222,9 @@ describe('gateway authentication failure', () => {
 		expect(mocks.sequence).toEqual(['resetClientState', 'closeAllLayers', 'logout', 'handleConnectionClosed']);
 		expect(resetClientState).toHaveBeenCalledWith({reason: 'gateway-auth-failure', keepDrafts: true});
 		expect(Authentication.handleConnectionClosed).toHaveBeenCalledWith({code: 4004, accountKey: ACCOUNT_KEY});
-		expect(GatewayConnection.socket).toBeNull();
-		expect(GatewayConnection.isReady).toBe(false);
-		expect(GatewayConnection.sessionId).toBeNull();
+		expect(GatewaySessions.foregroundConnection.socket).toBeNull();
+		expect(GatewaySessions.foregroundConnection.isReady).toBe(false);
+		expect(GatewaySessions.foregroundConnection.sessionId).toBeNull();
 	});
 
 	test('any other close code leaves the account signed in', () => {
@@ -246,7 +241,7 @@ describe('gateway authentication failure', () => {
 	test('a gateway logout leaves mature content consent unchanged', () => {
 		adoptSocket();
 
-		GatewayConnection.logout();
+		GatewaySessions.foregroundConnection.logout();
 
 		expect(matureContentConsent.agreedChannelIds).toEqual(['channel']);
 		expect(matureContentConsent.agreedCategoryIds).toEqual(['category']);

@@ -9,13 +9,12 @@ import {getCachedInstancePremiumMode, setCachedInstancePremiumMode} from '@app/a
 import {User} from '@app/api/models/User';
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
 import {buildStorePurchaseRow} from '@app/api/store_billing/tests/StoreBillingTestUtils';
-import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
+import {createTestWorkerHelpers} from '@app/api/test/SyncTaskWorkerService';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import processExpiredPremiumSweep from '@app/api/worker/tasks/ProcessExpiredPremiumSweep';
 import {clearWorkerDependencies, setWorkerDependenciesForTest} from '@app/api/worker/WorkerContext';
 import {UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import type {IWorkerService} from '@pkgs/worker/src/contracts/IWorkerService';
-import type {WorkerTaskHelpers} from '@pkgs/worker/src/contracts/WorkerTask';
 import {ms} from 'itty-time';
 import {afterEach, describe, expect, test} from 'vitest';
 
@@ -83,17 +82,6 @@ function createExpiredStoreUserHarness(storeRows: Array<StorePurchaseRow>) {
 	return {patches, jobs};
 }
 
-function createHelpers(): WorkerTaskHelpers {
-	return {
-		logger: new NoopLogger(),
-		jobId: 1n,
-		addJob: async () => 0n,
-		reportProgress: async () => {},
-		shouldCancel: async () => false,
-		setContextLink: async () => {},
-	};
-}
-
 async function withSelfHosted(
 	selfHosted: boolean,
 	callback: () => Promise<void>,
@@ -121,7 +109,7 @@ describe('processExpiredPremiumSweep', () => {
 		const harness = createHarness();
 
 		await withSelfHosted(true, async () => {
-			await processExpiredPremiumSweep({}, createHelpers());
+			await processExpiredPremiumSweep({}, createTestWorkerHelpers());
 		});
 
 		expect(harness.scanLimits).toEqual([]);
@@ -133,7 +121,7 @@ describe('processExpiredPremiumSweep', () => {
 		await withSelfHosted(
 			true,
 			async () => {
-				await processExpiredPremiumSweep({}, createHelpers());
+				await processExpiredPremiumSweep({}, createTestWorkerHelpers());
 			},
 			'mirror',
 		);
@@ -150,7 +138,7 @@ describe('processExpiredPremiumSweep', () => {
 		const harness = createExpiredStoreUserHarness([row]);
 
 		await withSelfHosted(false, async () => {
-			await processExpiredPremiumSweep({}, createHelpers());
+			await processExpiredPremiumSweep({}, createTestWorkerHelpers());
 		});
 
 		expect(harness.patches).toEqual([]);
@@ -179,7 +167,7 @@ describe('processExpiredPremiumSweep', () => {
 		]);
 
 		await withSelfHosted(false, async () => {
-			await processExpiredPremiumSweep({}, createHelpers());
+			await processExpiredPremiumSweep({}, createTestWorkerHelpers());
 		});
 
 		expect(harness.jobs).toEqual([]);
@@ -198,7 +186,7 @@ describe('processExpiredPremiumSweep', () => {
 		]);
 
 		await withSelfHosted(false, async () => {
-			await processExpiredPremiumSweep({}, createHelpers());
+			await processExpiredPremiumSweep({}, createTestWorkerHelpers());
 		});
 
 		expect(harness.jobs).toEqual([]);
@@ -215,7 +203,7 @@ describe('processExpiredPremiumSweep', () => {
 		]);
 
 		await withSelfHosted(false, async () => {
-			await processExpiredPremiumSweep({}, createHelpers());
+			await processExpiredPremiumSweep({}, createTestWorkerHelpers());
 		});
 
 		expect(harness.jobs).toEqual([]);
@@ -235,7 +223,7 @@ describe('processExpiredPremiumSweep', () => {
 		try {
 			config.appStore.enabled = false;
 			await withSelfHosted(false, async () => {
-				await processExpiredPremiumSweep({}, createHelpers());
+				await processExpiredPremiumSweep({}, createTestWorkerHelpers());
 			});
 		} finally {
 			config.appStore.enabled = originalEnabled;
@@ -249,7 +237,7 @@ describe('processExpiredPremiumSweep', () => {
 		const harness = createHarness();
 
 		await withSelfHosted(false, async () => {
-			await processExpiredPremiumSweep({}, createHelpers());
+			await processExpiredPremiumSweep({}, createTestWorkerHelpers());
 		});
 
 		expect(harness.scanLimits).toEqual([100]);

@@ -2,16 +2,20 @@
 
 import {ConfirmModal} from '@app/features/app/components/dialogs/ConfirmModal';
 import {SettingsTabSection} from '@app/features/app/components/dialogs/shared/SettingsTabLayout';
-import {DESKTOP_DOWNLOAD_URL, PRODUCT_NAME} from '@app/features/app/config/I18nDisplayConstants';
+import {DESKTOP_DOWNLOAD_URL} from '@app/features/app/config/I18nDisplayConstants';
+import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
+import {VOLUME_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {getCachedNumberFormat} from '@app/features/i18n/utils/IntlCache';
 import {KeybindRecorder} from '@app/features/input/components/KeybindRecorder';
 import Keybind, {getDefaultKeybind} from '@app/features/input/state/InputKeybind';
 import {openMacPermissionsModal} from '@app/features/permissions/system/commands/MacPermissionsModalCommands';
 import {macPermissionNameDescriptor} from '@app/features/permissions/system/components/useMacPermissionControl';
+import MacPermissions from '@app/features/permissions/system/state/MacPermissions';
 import NativePermission from '@app/features/permissions/system/state/NativePermission';
 import {Button} from '@app/features/ui/button/Button';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {modal} from '@app/features/ui/commands/ModalCommands';
+import {parseNumericInput} from '@app/features/ui/components/form/ComboboxNumericInput';
 import type {ComboboxOption} from '@app/features/ui/components/form/FormCombobox';
 import {Switch} from '@app/features/ui/components/form/FormSwitch';
 import {RESET_SLIDER_TO_DEFAULT_VALUE_DESCRIPTOR, Slider} from '@app/features/ui/components/Slider';
@@ -27,6 +31,11 @@ import {SystemShortcutsPushToTalkAlert} from '@app/features/user/components/moda
 import {useMediaPermission} from '@app/features/user/components/modals/tabs/hooks/useMediaPermission';
 import {SystemShortcutRowHint} from '@app/features/user/components/modals/tabs/keybinds_tab/SystemShortcutRowHint';
 import styles from '@app/features/user/components/modals/tabs/UserVoiceTab.module.css';
+import {
+	ENTRANCE_SOUND_DESCRIPTOR,
+	MIC_TEST_DESCRIPTOR,
+	RELEASE_DELAY_DESCRIPTOR,
+} from '@app/features/user/utils/UserMessageDescriptors';
 import * as VoiceSettingsCommands from '@app/features/voice/commands/VoiceSettingsCommands';
 import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
 import {supportsVoiceOutputDeviceSelection} from '@app/features/voice/engine/VoiceSharedAudioContext';
@@ -66,16 +75,12 @@ import {
 } from '@app/features/voice/utils/VoiceMessageDescriptors';
 import type {VoiceProcessingMode} from '@app/features/voice/utils/VoiceProcessingProfile';
 import {VOICE_VOLUME_MAX_PERCENT} from '@app/features/voice/utils/VoiceVolumeUtils';
-import {msg} from '@lingui/core/macro';
+import {msg, ph} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {useCallback, useEffect, useMemo} from 'react';
 
-const RELEASE_DELAY_DESCRIPTOR = msg({
-	message: 'Release delay',
-	comment: 'Short label for push-to-talk release delay.',
-});
 const RELEASE_DELAY_DESCRIPTION_DESCRIPTOR = msg({
 	message: 'Keep transmitting briefly after release.',
 	comment: 'Description for push-to-talk release delay.',
@@ -158,10 +163,8 @@ const resolvePushToTalkReleaseDelayInput = (
 	options: ReadonlyArray<ComboboxOption<number>>,
 ): number | undefined => {
 	const normalized = inputValue.trim().toLowerCase();
-	const numericMatch = normalized.match(/([0-9]+(?:\.[0-9]+)?)/);
-	if (!numericMatch) return undefined;
-	const parsedValue = Number(numericMatch[1]);
-	if (!Number.isFinite(parsedValue)) return undefined;
+	const parsedValue = parseNumericInput(normalized);
+	if (parsedValue === undefined) return undefined;
 	const unitMatch = normalized.match(/[0-9.]\s*([a-z]+)/);
 	const unit = unitMatch?.[1] ?? 'ms';
 	const valueInMs = unit.startsWith('s') ? parsedValue * 1000 : parsedValue;
@@ -177,26 +180,12 @@ const INPUT_AND_OUTPUT_DESCRIPTOR = msg({
 	message: 'Input and output',
 	comment: 'Subsection title in the voice tab. Keep it concise.',
 });
-const VOLUME_DESCRIPTOR = msg({
-	message: 'Volume',
-	comment: 'Subsection title in the voice tab. Keep it concise.',
-});
-const MIC_TEST_DESCRIPTOR = msg({
-	message: 'Mic test',
-	comment: 'Subsection title in the voice tab. Keep it concise.',
-});
-const ENTRANCE_SOUND_DESCRIPTOR = msg({
-	message: 'Entrance sound',
-	comment: 'Subsection title in the voice tab. Keep it concise.',
-});
 
 interface VoiceTabProps {
 	voiceSettings: typeof VoiceSettings;
-	hasPremium: boolean;
-	autoRequestPermission?: boolean;
 }
 
-export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoRequestPermission = false}) => {
+export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings}) => {
 	const {i18n} = useLingui();
 	const formatPercentage = useCallback(
 		(value: number) => formatRoundedPercentage(i18n.locale, value),
@@ -215,17 +204,10 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 		vadThreshold,
 		vadAutoSensitivity,
 	} = voiceSettings;
-	const {
-		devices,
-		deviceState,
-		status: permissionStatus,
-		requestPermission,
-	} = useMediaPermission('audio', {
-		autoRequest: autoRequestPermission,
-	});
+	const {devices, deviceState, status: permissionStatus, requestPermission} = useMediaPermission('audio');
 	const isNativeDesktop = NativePermission.isDesktop;
 	const isNativeMac = NativePermission.isMacOS;
-	const inputMonitoringGranted = NativePermission.isInputMonitoringGranted;
+	const inputMonitoringGranted = MacPermissions.statuses['input-monitoring'] === 'granted';
 	const inputDevices = useMemo(() => devices.filter((d) => d.kind === 'audioinput'), [devices]);
 	const outputDevices = useMemo(() => devices.filter((d) => d.kind === 'audiooutput'), [devices]);
 	const transmitMode = Keybind.transmitMode;
@@ -318,8 +300,8 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 						description={
 							<p data-flx="user.voice-tab.set-push-to-talk-enabled.p">
 								<Trans>
-									In a browser, push-to-talk only works while the {PRODUCT_NAME} tab is focused. Install the desktop app
-									for system-wide push-to-talk.
+									In a browser, push-to-talk only works while the {ph({PRODUCT_NAME: RuntimeConfig.productName})} tab is
+									focused. Install the desktop app for system-wide push-to-talk.
 								</Trans>
 							</p>
 						}
@@ -440,7 +422,7 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 					{!isNativeDesktop
 						? i18n._(PUSH_TO_TALK_BROWSER_LIMITED_DESCRIPTION_DESCRIPTOR)
 						: i18n._(PUSH_TO_TALK_PERMISSION_LIMITED_DESCRIPTION_DESCRIPTOR, {
-								productName: PRODUCT_NAME,
+								productName: RuntimeConfig.productName,
 								permissionName: i18n._(macPermissionNameDescriptor('input-monitoring')),
 							})}
 				</WarningAlert>
@@ -548,19 +530,20 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 							<p className={styles.deviceNoticeDescription} data-flx="user.voice-tab.device-notice-description">
 								{permissionStatus === 'denied' ? (
 									isNativeDesktop ? (
-										<Trans comment="Shown in voice settings on the macOS app when microphone access is denied. {PRODUCT_NAME} is the app name. Keep 'System Settings', 'Privacy & Security' and the permission name as macOS shows them in this language.">
-											Allow {PRODUCT_NAME} to access your microphone in System Settings → Privacy & Security →
-											Microphone.
+										<Trans comment="Shown in voice settings on the macOS app when microphone access is denied. {ph({PRODUCT_NAME: RuntimeConfig.productName})} is the app name. Keep 'System Settings', 'Privacy & Security' and the permission name as macOS shows them in this language.">
+											Allow {ph({PRODUCT_NAME: RuntimeConfig.productName})} to access your microphone in System Settings
+											→ Privacy & Security → Microphone.
 										</Trans>
 									) : (
 										<Trans>
-											Allow {PRODUCT_NAME} to access your microphone. Check your browser's address bar or settings.
+											Allow {ph({PRODUCT_NAME: RuntimeConfig.productName})} to access your microphone. Check your
+											browser's address bar or settings.
 										</Trans>
 									)
 								) : permissionStatus === 'granted' ? (
 									<Trans>Connect a microphone and try again.</Trans>
 								) : (
-									i18n._(PRODUCT_NEEDS_MICROPHONE_ACCESS_DESCRIPTOR, {productName: PRODUCT_NAME})
+									i18n._(PRODUCT_NEEDS_MICROPHONE_ACCESS_DESCRIPTOR, {productName: RuntimeConfig.productName})
 								)}
 							</p>
 						</div>
@@ -676,8 +659,9 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 							data-flx="user.voice-tab.warning-alert"
 						>
 							<Trans>
-								Looks like you're using {externalProcessor.name}. Stacking {PRODUCT_NAME}'s processing on top can cause
-								pumping or distortion. Direct input passes your audio through untouched.
+								Looks like you're using {externalProcessor.name}. Stacking{' '}
+								{ph({PRODUCT_NAME: RuntimeConfig.productName})}'s processing on top can cause pumping or distortion.
+								Direct input passes your audio through untouched.
 							</Trans>
 						</WarningAlert>
 					)}
@@ -690,7 +674,12 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 							data-flx="user.voice-tab.radio-group.voice-processing-mode-change"
 						/>
 						{voiceProcessingMode === 'voice' && noiseSuppressionFallbackMessage && (
-							<p className={styles.pttSettingDescription}>{noiseSuppressionFallbackMessage}</p>
+							<p
+								className={styles.pttSettingDescription}
+								data-flx="user.user-voice-tab.voice-tab.ptt-setting-description"
+							>
+								{noiseSuppressionFallbackMessage}
+							</p>
 						)}
 						{voiceProcessingMode === 'voice' && (
 							<div className={styles.profileSubSection} data-flx="user.voice-tab.profile-sub-section">

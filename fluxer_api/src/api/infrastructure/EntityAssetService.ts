@@ -3,25 +3,19 @@
 import crypto from 'node:crypto';
 import {setTimeout as delay} from 'node:timers/promises';
 import {Config} from '@app/api/Config';
+import {stripAnimationPrefix} from '@app/api/infrastructure/AssetEntitlementUtils';
 import type {IAssetDeletionQueue, QueuedAssetReference} from '@app/api/infrastructure/IAssetDeletionQueue';
 import type {IMediaService, MediaProxyMetadataResponse} from '@app/api/infrastructure/IMediaService';
+import {decodeValidatedImage, resolveAssetSizeLimit} from '@app/api/infrastructure/ImageUploadValidation';
 import type {IStorageService} from '@app/api/infrastructure/IStorageService';
 import {stripNonJpegImageMetadata} from '@app/api/infrastructure/StorageObjectHelpers';
 import {Logger} from '@app/api/Logger';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
-import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import {awaitAll} from '@app/api/utils/ConcurrencyUtils';
-import {
-	type AssetKind,
-	COSMETIC_ASSET_POLICY,
-	formatAssetUploadExtensions,
-	getPolicy,
-	isExtensionAllowed,
-} from '@fluxer/constants/src/AssetFormatPolicy';
+import {type AssetKind, COSMETIC_ASSET_POLICY} from '@fluxer/constants/src/AssetFormatPolicy';
 import {AVATAR_MAX_SIZE} from '@fluxer/constants/src/LimitConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
-import {resolveLimit} from '@fluxer/limits/src/LimitResolver';
 import {ms} from 'itty-time';
 import sharp from 'sharp';
 
@@ -142,7 +136,7 @@ export class EntityAssetService {
 		}
 		const s3KeyBase = this.buildS3KeyBase(assetType, entityType, entityId, guildId);
 		const cdnUrlBase = `${Config.endpoints.media}/${s3KeyBase}`;
-		const previousS3Key = previousHash ? `${s3KeyBase}/${this.stripAnimationPrefix(previousHash)}` : null;
+		const previousS3Key = previousHash ? `${s3KeyBase}/${stripAnimationPrefix(previousHash)}` : null;
 		const previousCdnUrl = previousHash ? `${cdnUrlBase}/${previousHash}` : null;
 		const previousReference = previousHash
 			? this.buildQueuedAssetReference(assetType, entityType, entityId, previousHash, guildId)
@@ -256,15 +250,6 @@ export class EntityAssetService {
 		}
 	}
 
-	private resolveAvatarSizeLimit(): number {
-		const ctx = createLimitMatchContext({user: null});
-		const resolved = resolveLimit(this.limitConfigService.getConfigSnapshot(), ctx, 'avatar_max_size');
-		if (!Number.isFinite(resolved) || resolved < 0) {
-			return AVATAR_MAX_SIZE;
-		}
-		return Math.floor(resolved);
-	}
-
 	private async verifyAssetExistsWithRetry(
 		assetType: AssetType,
 		entityType: EntityType,
@@ -308,10 +293,6 @@ export class EntityAssetService {
 		};
 	}
 
-	private stripAnimationPrefix(hash: string): string {
-		return hash.startsWith('a_') ? hash.substring(2) : hash;
-	}
-
 	private buildS3KeyBase(
 		assetType: AssetType,
 		entityType: EntityType,
@@ -343,26 +324,19 @@ export class EntityAssetService {
 		contentType: string | null;
 		animated: boolean;
 	}> {
-		const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
-		const imageBuffer = new Uint8Array(Buffer.from(base64Data, 'base64'));
-		const maxAvatarSize = cosmetic
-			? (cosmeticMaxBytes ?? COSMETIC_ASSET_POLICY.maxBytes)
-			: this.resolveAvatarSizeLimit();
-		if (imageBuffer.length > maxAvatarSize) {
-			throw InputValidationError.fromCode(errorPath, ValidationErrorCodes.IMAGE_SIZE_EXCEEDS_LIMIT, {
-				maxSize: maxAvatarSize,
-			});
-		}
-		const kind = this.mapAssetTypeToAssetKind(assetType);
-		const rawMetadata = await this.mediaService.getMetadata({
-			type: 'base64',
-			base64: base64Data,
-			version: 2,
-			nsfw: 'allow',
-		});
-		const metadata = cosmetic
-			? this.requireCosmeticMetadata(rawMetadata, errorPath, cosmeticShape)
-			: this.requireAllowedMetadata({metadata: rawMetadata, kind, errorPath});
+		const {imageBuffer, metadata} = cosmetic
+			? await this.decodeCosmeticImage(
+					base64Image,
+					errorPath,
+					cosmeticMaxBytes ?? COSMETIC_ASSET_POLICY.maxBytes,
+					cosmeticShape,
+				)
+			: await decodeValidatedImage(this.mediaService, {
+					base64Image,
+					errorPath,
+					kind: this.mapAssetTypeToAssetKind(assetType),
+					maxSize: resolveAssetSizeLimit(this.limitConfigService, 'avatar_max_size', AVATAR_MAX_SIZE),
+				});
 		const isAnimatedImage = metadata.animated ?? false;
 		const keepDimensions = !isSvgMetadata(metadata);
 		return {
@@ -375,21 +349,24 @@ export class EntityAssetService {
 		};
 	}
 
-	private requireAllowedMetadata(params: {
-		metadata: MediaProxyMetadataResponse | null;
-		kind: AssetKind;
-		errorPath: string;
-	}): MediaProxyMetadataResponse {
-		const {metadata, kind, errorPath} = params;
-		if (metadata == null || !isExtensionAllowed(kind, metadata.format)) {
-			this.throwInvalidImageFormat(errorPath, kind);
+	private async decodeCosmeticImage(
+		base64Image: string,
+		errorPath: string,
+		maxSize: number,
+		shape?: CosmeticImageShape,
+	): Promise<{imageBuffer: Uint8Array; metadata: MediaProxyMetadataResponse}> {
+		const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+		if (Buffer.byteLength(base64Data, 'base64') > maxSize) {
+			throw InputValidationError.fromCode(errorPath, ValidationErrorCodes.IMAGE_SIZE_EXCEEDS_LIMIT, {maxSize});
 		}
-		const animated = metadata.animated ?? false;
-		if (!animated) return metadata;
-		if (getPolicy(kind).animated === 'never' || this.isAnimatedAvif(metadata)) {
-			this.throwInvalidImageFormat(errorPath, kind);
-		}
-		return metadata;
+		const imageBuffer = new Uint8Array(Buffer.from(base64Data, 'base64'));
+		const metadata = await this.mediaService.getMetadata({
+			type: 'base64',
+			base64: base64Data,
+			version: 2,
+			nsfw: 'allow',
+		});
+		return {imageBuffer, metadata: this.requireCosmeticMetadata(metadata, errorPath, shape)};
 	}
 
 	private requireCosmeticMetadata(
@@ -417,22 +394,6 @@ export class EntityAssetService {
 			});
 		}
 		return metadata;
-	}
-
-	private isAnimatedAvif(metadata: MediaProxyMetadataResponse): boolean {
-		const format = metadata.format.toLowerCase();
-		const contentType = metadata.content_type.toLowerCase();
-		return format === 'avif' || contentType === 'image/avif' || contentType === 'image/avif-sequence';
-	}
-
-	private throwInvalidImageFormat(errorPath: string, kind: AssetKind): never {
-		throw InputValidationError.fromCode(errorPath, ValidationErrorCodes.INVALID_IMAGE_FORMAT, {
-			supportedExtensions: this.formatSupportedExtensions(kind),
-		});
-	}
-
-	private formatSupportedExtensions(kind: AssetKind): string {
-		return formatAssetUploadExtensions(kind, {labelStyle: 'extension'});
 	}
 
 	private async uploadToS3(

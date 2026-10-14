@@ -13,10 +13,7 @@
     queue_synced_connection_change/2,
     presence_change_resyncs_lists/2,
     flush_pending_member_list_syncs/1,
-    resync_hoisted_member_lists/1,
-    rebuild_channels_for_permission_change/2,
-    resync_channels_for_permission_change/2,
-    resync_all_channels_for_permission_change/1
+    rebuild_channels_for_permission_change/2
 ]).
 
 -type guild_state() :: map().
@@ -136,7 +133,7 @@ member_list_presence_fields(Presence) ->
 
 -spec find_member_in_state_data(user_id(), guild_state()) -> map() | undefined.
 find_member_in_state_data(UserId, State) ->
-    guild_data_index:get_member(UserId, maps:get(data, State, #{})).
+    guild_data_index_members:get_member(UserId, maps:get(data, State, #{})).
 
 -spec broadcast_all_member_list_updates(guild_state()) -> {ok, guild_state()}.
 broadcast_all_member_list_updates(State) ->
@@ -146,39 +143,9 @@ broadcast_all_member_list_updates(State) ->
         {ok, guild_member_list_sync_batch:queue_subscribed_list_syncs(Rebuilt, SubsTab)}
     end).
 
--spec resync_channels_for_permission_change([channel_id()], guild_state()) -> guild_state().
-resync_channels_for_permission_change(ChannelIds, State) ->
-    State1 = rebuild_channels_for_permission_change(ChannelIds, State),
-    lists:foldl(
-        fun(ChannelId, Acc) ->
-            {ok, Next} = broadcast_member_list_updates_for_channel(ChannelId, Acc),
-            Next
-        end,
-        State1,
-        ChannelIds
-    ).
-
 -spec rebuild_channels_for_permission_change([channel_id()], guild_state()) -> guild_state().
 rebuild_channels_for_permission_change(ChannelIds, State) ->
     guild_member_list_channel_engine:rebuild_channels(ChannelIds, State).
-
--spec resync_all_channels_for_permission_change(guild_state()) -> guild_state().
-resync_all_channels_for_permission_change(State) ->
-    State1 = guild_member_list_channel_engine:rebuild_all(State),
-    resync_hoisted_member_lists(State1).
-
--spec resync_hoisted_member_lists(guild_state()) -> guild_state().
-resync_hoisted_member_lists(State) ->
-    case maps:get(member_list_subscriptions, State, undefined) of
-        undefined ->
-            State;
-        SubsTab ->
-            resync_hoisted_member_lists(State, SubsTab)
-    end.
-
--spec resync_hoisted_member_lists(guild_state(), ets:table()) -> guild_state().
-resync_hoisted_member_lists(State, SubsTab) ->
-    guild_member_list_sync_batch:queue_subscribed_list_syncs(State, SubsTab).
 
 -spec broadcast_member_list_updates_for_channel(channel_id(), guild_state()) ->
     {ok, guild_state()}.
@@ -604,23 +571,6 @@ subscribed_list_sync_is_skipped_only_for_absent_member_test() ->
         end)
     after
         guild_member_list_engine:destroy(Ref)
-    end.
-
-list_id_fold_matches_fold_lists_test() ->
-    Tab = guild_member_list_subs:new(),
-    try
-        guild_member_list_subs:subscribe(<<"s1">>, <<"500">>, [{0, 99}], Tab),
-        guild_member_list_subs:subscribe(<<"s2">>, <<"500">>, [{0, 9}], Tab),
-        guild_member_list_subs:subscribe(<<"s1">>, <<"600">>, [{0, 99}], Tab),
-        Sizes = guild_member_list_subs:fold_lists(
-            fun(ListId, ListSubs, Acc) -> Acc#{ListId => map_size(ListSubs)} end,
-            #{},
-            Tab
-        ),
-        ?assertEqual(lists:sort(maps:keys(Sizes)), guild_member_list_subs:list_ids(Tab)),
-        ?assertEqual([], [ListId || {ListId, 0} <- maps:to_list(Sizes)])
-    after
-        guild_member_list_subs:destroy(Tab)
     end.
 
 presence_change_resyncs_lists_on_status_custom_status_or_mobile_test() ->

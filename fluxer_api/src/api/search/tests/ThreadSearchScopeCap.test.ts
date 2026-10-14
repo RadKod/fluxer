@@ -2,12 +2,8 @@
 
 import {createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createChannel, createGuild} from '@app/api/channel/tests/ChannelTestUtils';
-import {
-	ALL_THREADS_ACTIVE,
-	resetChannelThreadsConfig,
-	setChannelThreadsConfig,
-	threadsRequest,
-} from '@app/api/channel/tests/ThreadTestUtils';
+import {threadsRequest} from '@app/api/channel/tests/ThreadTestUtils';
+import {clearChannelThreadsTaintCacheForTesting} from '@app/api/experiment/ChannelThreadsGate';
 import {ensureSessionStarted, markGuildChannelsAsIndexed, sendMessage} from '@app/api/message/tests/MessageTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {TEST_TIMEOUTS, wait} from '@app/api/test/TestConstants';
@@ -30,7 +26,7 @@ describe('thread search scope cap', () => {
 	beforeEach(async () => {
 		vi.spyOn(ThreadConstants as {THREAD_SCOPE_MAX: number}, 'THREAD_SCOPE_MAX', 'get').mockReturnValue(1);
 		await harness.reset();
-		resetChannelThreadsConfig();
+		clearChannelThreadsTaintCacheForTesting();
 	});
 
 	afterEach(() => {
@@ -38,12 +34,11 @@ describe('thread search scope cap', () => {
 	});
 
 	afterAll(async () => {
-		resetChannelThreadsConfig();
+		clearChannelThreadsTaintCacheForTesting();
 		await harness.shutdown();
 	});
 
 	it('caps the thread scope across every guild of a global search', async () => {
-		await setChannelThreadsConfig(ALL_THREADS_ACTIVE);
 		const owner = await createTestAccount(harness);
 		await ensureSessionStarted(harness, owner.token);
 		const channelIds = new Set<string>();
@@ -81,7 +76,6 @@ describe('thread search scope cap', () => {
 	});
 
 	it('keeps the newest thread of the guild when the cap drops older ones in earlier channels', async () => {
-		await setChannelThreadsConfig(ALL_THREADS_ACTIVE);
 		const owner = await createTestAccount(harness);
 		await ensureSessionStarted(harness, owner.token);
 		const guild = await createGuild(harness, owner.token, 'spread');
@@ -119,7 +113,6 @@ describe('thread search scope cap', () => {
 		['all_guilds', () => ({scope: 'all_guilds'})],
 		['all', () => ({scope: 'all'})],
 	] as const)('searches an explicitly named older thread past the scope cap in %s search', async (_scope, body) => {
-		await setChannelThreadsConfig(ALL_THREADS_ACTIVE);
 		const owner = await createTestAccount(harness);
 		await ensureSessionStarted(harness, owner.token);
 		const guild = await createGuild(harness, owner.token, 'capped');

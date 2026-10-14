@@ -1,30 +1,51 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
-import DeveloperOptions from '@app/features/devtools/state/DeveloperOptions';
 import {
 	buildMediaProxyURL,
+	buildMediaProxyURLForInstance,
 	LARGEST_MEDIA_PROXY_IMAGE_SIZE,
 	MEDIA_PROXY_IMAGE_SIZE_LADDER,
 	snapMediaProxyImageSize,
 } from '@app/features/messaging/utils/MediaProxyUtils';
 import {mediaUrl, setPathQueryParams} from '@app/features/messaging/utils/MessagingUrlUtils';
 import type {User} from '@app/features/user/models/User';
-import {
-	getDefaultAvatarIndex,
-	getDefaultAvatarPrimaryColor as getSharedDefaultAvatarPrimaryColor,
-	normalizeEndpoint,
-	parseAvatarHash,
-} from '@app/features/user/utils/AvatarMediaUtils';
-import {getDefaultAvatarAssetURL} from '@app/features/user/utils/DefaultAvatars';
+import avatar0 from '@app/media/images/avatars/0.png';
+import avatar1 from '@app/media/images/avatars/1.png';
+import avatar2 from '@app/media/images/avatars/2.png';
+import avatar3 from '@app/media/images/avatars/3.png';
+import avatar4 from '@app/media/images/avatars/4.png';
+import avatar5 from '@app/media/images/avatars/5.png';
+import {FLUXERBOT_ID} from '@fluxer/constants/src/AppConstants';
 import {
 	MEDIA_PROXY_AVATAR_SIZE_DEFAULT,
 	MEDIA_PROXY_ICON_SIZE_DEFAULT,
 } from '@fluxer/constants/src/MediaProxyAssetSizes';
 import type {MediaProxyImageSize} from '@fluxer/constants/src/MediaProxyImageSizes';
-import {SOUNDBOARD_SOUND_PATH_PREFIX} from '@fluxer/constants/src/SoundboardConstants';
 
-export {MEDIA_PROXY_IMAGE_SIZE_LADDER, snapMediaProxyImageSize};
+const DEFAULT_AVATAR_PRIMARY_COLORS = [0x4641d9, 0xf0b100, 0x00bba7, 0x2b7fff, 0xad46ff, 0x6a7282];
+const DEFAULT_AVATAR_COUNT = BigInt(DEFAULT_AVATAR_PRIMARY_COLORS.length);
+export const normalizeEndpoint = (endpoint: string): string => endpoint.replace(/\/$/, '');
+export const parseAvatarHash = (value: string) => {
+	const animated = value.startsWith('a_');
+	const hash = animated ? value.slice(2) : value;
+	return {animated, hash};
+};
+export const getDefaultAvatarIndex = (id: string): number => Number(BigInt(id) % DEFAULT_AVATAR_COUNT);
+export const getDefaultAvatarPrimaryColor = (id: string): number =>
+	DEFAULT_AVATAR_PRIMARY_COLORS[getDefaultAvatarIndex(id)];
+
+const DEFAULT_AVATARS: ReadonlyArray<string> = [avatar0, avatar1, avatar2, avatar3, avatar4, avatar5];
+
+const DEFAULT_AVATAR_ASSET_COUNT = DEFAULT_AVATARS.length;
+
+export function getDefaultAvatarURLForIndex(index: number): string {
+	return DEFAULT_AVATARS[
+		((index % DEFAULT_AVATAR_ASSET_COUNT) + DEFAULT_AVATAR_ASSET_COUNT) % DEFAULT_AVATAR_ASSET_COUNT
+	];
+}
+
+export {snapMediaProxyImageSize};
 
 const GUILD_BANNER_CSS_WIDTH = 360;
 const GUILD_EMBED_SPLASH_CSS_WIDTH = 360;
@@ -73,10 +94,15 @@ const getViewportSplashSize = (): MediaProxyImageSize => {
 	return snapWideAssetImageSize(cssWidth);
 };
 
-export const getDefaultAvatarURLForIndex = (index: number): string => getDefaultAvatarAssetURL(index);
+export function getSystemUserBrandingAvatarURL(userId: string): string | null {
+	if (userId !== FLUXERBOT_ID || !RuntimeConfig.isSelfHosted()) return null;
+	const branding = RuntimeConfig.getSnapshotOrNull()?.appPublic.branding;
+	return branding?.icon_url ?? branding?.logo_url ?? null;
+}
 
-export function getDefaultAvatarPrimaryColor(id: string) {
-	return getSharedDefaultAvatarPrimaryColor(id);
+export function getSystemUserBrandingColor(userId: string): string | null {
+	if (userId !== FLUXERBOT_ID || !RuntimeConfig.isSelfHosted()) return null;
+	return RuntimeConfig.getSnapshotOrNull()?.appPublic.branding.theme_color ?? null;
 }
 
 export function getDefaultAvatarURL(id: string) {
@@ -99,6 +125,7 @@ type MediaURLParams = {
 	format: string;
 	animated?: boolean;
 	endpoint?: string;
+	instanceKey?: string;
 };
 
 const parseMediaHashForRequest = (value: string, animated = false) => {
@@ -109,10 +136,7 @@ const parseMediaHashForRequest = (value: string, animated = false) => {
 		animated: shouldAnimate ? true : undefined,
 	};
 };
-const getMediaURL = ({path, id, hash, size, format, animated, endpoint}: MediaURLParams) => {
-	if (DeveloperOptions.forceRenderPlaceholders) {
-		return '';
-	}
+const getMediaURL = ({path, id, hash, size, format, animated, endpoint, instanceKey}: MediaURLParams) => {
 	const baseEndpoint = endpoint === undefined ? RuntimeConfig.mediaEndpoint : endpoint;
 	if (!baseEndpoint) {
 		return '';
@@ -120,7 +144,10 @@ const getMediaURL = ({path, id, hash, size, format, animated, endpoint}: MediaUR
 	const basePath = `${path}/${id}/${hash}.${format}`;
 	const url = size ? setPathQueryParams(basePath, {size}) : basePath;
 	const proxyOptions = animated === undefined ? undefined : {animated};
-	return buildMediaProxyURL(`${normalizeEndpoint(baseEndpoint)}/${url}`, proxyOptions);
+	const target = `${normalizeEndpoint(baseEndpoint)}/${url}`;
+	return instanceKey === undefined
+		? buildMediaProxyURL(target, proxyOptions)
+		: buildMediaProxyURLForInstance(target, instanceKey, proxyOptions);
 };
 
 type GuildMemberMediaURLParams = {
@@ -134,9 +161,6 @@ type GuildMemberMediaURLParams = {
 };
 
 const getGuildMemberMediaURL = ({path, guildId, userId, hash, size, format, animated}: GuildMemberMediaURLParams) => {
-	if (DeveloperOptions.forceRenderPlaceholders) {
-		return '';
-	}
 	const baseEndpoint = RuntimeConfig.mediaEndpoint;
 	if (!baseEndpoint) {
 		return '';
@@ -252,21 +276,7 @@ export function getUserBannerURL({id, banner}: BannerOptions, animated = false, 
 	});
 }
 
-const SOUNDBOARD_SOUND_URL_CACHE = new Map<string, string>();
-const SOUNDBOARD_SOUND_URL_CACHE_LIMIT = 4096;
-
-export function getSoundboardSoundURL(soundId: string): string {
-	if (DeveloperOptions.forceRenderPlaceholders) {
-		return '';
-	}
-	const key = `${RuntimeConfig.mediaEndpoint}:${soundId}`;
-	const cached = SOUNDBOARD_SOUND_URL_CACHE.get(key);
-	if (cached !== undefined) return cached;
-	const result = mediaUrl(`${SOUNDBOARD_SOUND_PATH_PREFIX}/${soundId}`);
-	if (SOUNDBOARD_SOUND_URL_CACHE.size >= SOUNDBOARD_SOUND_URL_CACHE_LIMIT) SOUNDBOARD_SOUND_URL_CACHE.clear();
-	SOUNDBOARD_SOUND_URL_CACHE.set(key, result);
-	return result;
-}
+const mediaURLCacheScope = (): string => `${RuntimeConfig.apiEndpoint} ${RuntimeConfig.mediaEndpoint}`;
 
 export function getGuildIconURL({id, icon}: IconOptions, animated = false) {
 	if (!icon) {
@@ -423,16 +433,17 @@ export function getGuildMemberBannerURL({
 	return '';
 }
 
-export function getUserAvatarURLWithProxy(
-	options: AvatarOptions,
-	endpoint: string,
+export interface AvatarMediaInstance {
+	readonly mediaEndpoint: string;
+	readonly instanceKey: string;
+}
+
+export function getUserAvatarURLForInstance(
+	{id, avatar}: AvatarOptions,
+	instance: AvatarMediaInstance,
 	animated = false,
 	size: MediaProxyImageSize = MEDIA_PROXY_AVATAR_SIZE_DEFAULT,
 ) {
-	if (!endpoint) {
-		return getUserAvatarURL(options, animated, size);
-	}
-	const {id, avatar} = options;
 	if (!avatar) {
 		return getDefaultAvatarURLForIndex(getDefaultAvatarIndex(id));
 	}
@@ -443,7 +454,8 @@ export function getUserAvatarURLWithProxy(
 		hash,
 		size: snapIconImageSize(size),
 		animated: shouldAnimate,
-		endpoint,
+		endpoint: instance.mediaEndpoint,
+		instanceKey: instance.instanceKey,
 	});
 }
 
@@ -495,11 +507,8 @@ const EMOJI_URL_CACHE = new Map<string, string>();
 const EMOJI_URL_CACHE_LIMIT = 4096;
 
 export function getEmojiURL({id, animated, isAnimatable}: {id: string; animated?: boolean; isAnimatable?: boolean}) {
-	if (DeveloperOptions.forceRenderPlaceholders) {
-		return '';
-	}
 	const animatedFlag = isAnimatable === false ? false : animated === true;
-	const key = `${RuntimeConfig.mediaEndpoint}:${animatedFlag ? 'a' : 's'}:${id}`;
+	const key = `${mediaURLCacheScope()}:${animatedFlag ? 'a' : 's'}:${id}`;
 	const cached = EMOJI_URL_CACHE.get(key);
 	if (cached !== undefined) return cached;
 	const result = mediaUrl(`emojis/${id}.webp`, {animated: animatedFlag});
@@ -524,25 +533,13 @@ export function getStickerURL({
 	isAnimatable?: boolean;
 	size?: StickerSize;
 }) {
-	if (DeveloperOptions.forceRenderPlaceholders) {
-		return '';
-	}
 	const animatedFlag = isAnimatable === false ? false : animated === true;
 	const safeSize: StickerSize = size === 320 ? 320 : 160;
-	const key = `${RuntimeConfig.mediaEndpoint}:${animatedFlag ? 'a' : 's'}:${safeSize}:${id}`;
+	const key = `${mediaURLCacheScope()}:${animatedFlag ? 'a' : 's'}:${safeSize}:${id}`;
 	const cached = STICKER_URL_CACHE.get(key);
 	if (cached !== undefined) return cached;
 	const result = mediaUrl(setPathQueryParams(`stickers/${id}.webp`, {size: safeSize}), {animated: animatedFlag});
 	if (STICKER_URL_CACHE.size >= STICKER_URL_CACHE_LIMIT) STICKER_URL_CACHE.clear();
 	STICKER_URL_CACHE.set(key, result);
 	return result;
-}
-
-export function fileToBase64(file: File) {
-	return new Promise<string>((resolve, reject) => {
-		const reader = new FileReader();
-		reader.onload = () => resolve(reader.result as string);
-		reader.onerror = reject;
-		reader.readAsDataURL(file);
-	});
 }

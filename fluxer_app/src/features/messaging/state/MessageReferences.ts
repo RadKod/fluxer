@@ -16,7 +16,7 @@ export const MessageReferenceState = {
 
 export type MessageReferenceState = ValueOf<typeof MessageReferenceState>;
 
-export type MessageReferenceResolution =
+type MessageReferenceResolution =
 	| {readonly state: typeof MessageReferenceState.LOADED; readonly message: MessageRecord}
 	| {readonly state: typeof MessageReferenceState.NOT_LOADED}
 	| {readonly state: typeof MessageReferenceState.DELETED};

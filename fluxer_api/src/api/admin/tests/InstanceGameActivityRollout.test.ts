@@ -3,18 +3,18 @@
 import type {TestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createTestAccount, setUserACLs} from '@app/api/auth/tests/AuthTestUtils';
 import {setCassandraQueryExecutorForTesting} from '@app/api/database/CassandraQueryExecution';
-import {GatewayRolloutConfigPublisher} from '@app/api/instance/GatewayRolloutConfigPublisher';
 import {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
+import {NatsConfigPublisher} from '@app/api/instance/NatsConfigPublisher';
 import {InstanceConfigWriteRaceExecutor} from '@app/api/instance/tests/InstanceConfigWriteRaceExecutor';
 import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
 import type {ApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
 import type {InstanceConfigResponse} from '@fluxer/schema/src/domains/admin/AdminSchemas';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const CONFIG_KEY = 'gateway_rollout_config';
@@ -46,7 +46,7 @@ describe('instance game activity rollout', () => {
 		]);
 	const patch = (admin: TestAccount, gateway_rollout: Record<string, unknown>) =>
 		createBuilder<InstanceConfigResponse>(harness, admin.token).patch('/admin/instance/config').body({gateway_rollout});
-	const spyPublish = () => vi.spyOn(GatewayRolloutConfigPublisher.prototype, 'publish').mockResolvedValue(undefined);
+	const spyPublish = () => vi.spyOn(NatsConfigPublisher.prototype, 'publish').mockResolvedValue(undefined);
 
 	it('legacy_config_is_disabled', async () => {
 		await executor.writeDirectly(CONFIG_KEY, JSON.stringify({session_rollout_percentage: 25}));
@@ -119,7 +119,7 @@ describe('instance game activity rollout', () => {
 		const authoritative = await getInstanceConfigRepository().getGatewayRolloutConfig();
 		expect(authoritative).toMatchObject({game_activity_enabled: true, game_activity_epoch: 1});
 		expect(response.gateway_rollout).toEqual(authoritative);
-		expect(publish).toHaveBeenCalledWith(authoritative);
+		expect(publish).toHaveBeenCalledWith('config.gateway.rollout', 'gateway_rollout_config', authoritative);
 		expect(JSON.parse((await executor.readDirectly(CONFIG_KEY)) ?? 'null')).toEqual(authoritative);
 	});
 	it('connection cap patches preserve game activity and reject server-owned epochs', async () => {
@@ -137,7 +137,11 @@ describe('instance game activity rollout', () => {
 			game_activity_enabled: true,
 			game_activity_epoch: 1,
 		});
-		expect(publish).toHaveBeenLastCalledWith(capacity.gateway_rollout);
+		expect(publish).toHaveBeenLastCalledWith(
+			'config.gateway.rollout',
+			'gateway_rollout_config',
+			capacity.gateway_rollout,
+		);
 		publish.mockClear();
 		await patch(admin, {max_connections: 1, game_activity_epoch: 99}).expect(HTTP_STATUS.BAD_REQUEST).execute();
 		expect(publish).not.toHaveBeenCalled();

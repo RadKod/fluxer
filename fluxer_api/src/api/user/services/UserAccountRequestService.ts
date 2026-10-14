@@ -17,17 +17,16 @@ import type {AuthSession} from '@app/api/models/AuthSession';
 import type {User} from '@app/api/models/User';
 import type {HonoEnv} from '@app/api/types/HonoEnv';
 import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
 import {isProfileHidden} from '@app/api/user/ProfileVisibility';
 import type {ProfileViewer} from '@app/api/user/profile/ProfileAccessRules';
 import {applyProfileExtensions} from '@app/api/user/profile/ProfileExtensionProviders';
 import type {ProfileViewConnection} from '@app/api/user/profile/ProfileViewProjection';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {EmailChangeService} from '@app/api/user/services/EmailChangeService';
 import {propagateIfPartialChanged} from '@app/api/user/services/PartialUserChangePropagation';
 import type {UserAccountService} from '@app/api/user/services/UserAccountService';
 import type {UserChannelService} from '@app/api/user/services/UserChannelService';
 import {readUsernameMigration} from '@app/api/user/UniqueUsernames';
-import {mapUserToPartialResponseWithCache} from '@app/api/user/UserCacheHelpers';
 import {createPremiumClearPatch, isAccountClosed, shouldStripExpiredPremium} from '@app/api/user/UserHelpers';
 import {
 	mapGuildMemberToProfileResponse,
@@ -111,7 +110,7 @@ export class UserAccountRequestService {
 		private readonly emailChangeService: EmailChangeService,
 		private readonly userAccountService: UserAccountService,
 		private readonly userChannelService: UserChannelService,
-		private readonly userRepository: IUserRepository,
+		private readonly userRepository: UserRepository,
 		private readonly userCacheService: UserCacheService,
 	) {}
 
@@ -434,22 +433,18 @@ export class UserAccountRequestService {
 		const timezoneOffset =
 			profile.timezoneVisible && !hidden ? getCurrentTimeZoneOffsetMinutes(profileUser.timezone) : null;
 		const mutualFriends = profile.mutualFriends
-			? profile.mutualFriends.map((user) =>
-					mapUserToPartialResponseWithCache({
-						user,
-						userCacheService: this.userCacheService,
-						requestCache: params.requestCache,
-					}),
+			? profile.mutualFriends.map(
+					(user) =>
+						params.requestCache.userPartials.get(user.id) ??
+						this.userCacheService.setUserPartialResponseFromUserInRequestCache(user, params.requestCache),
 				)
 			: undefined;
 		const connectedAccounts =
 			profile.connections && !hidden ? this.mapConnectionsToResponse(profile.connections) : undefined;
 		const response: UserProfileFullResponse = {
-			user: mapUserToPartialResponseWithCache({
-				user: profileUser,
-				userCacheService: this.userCacheService,
-				requestCache: params.requestCache,
-			}),
+			user:
+				params.requestCache.userPartials.get(profileUser.id) ??
+				this.userCacheService.setUserPartialResponseFromUserInRequestCache(profileUser, params.requestCache),
 			user_profile: userProfile,
 			guild_member: profile.guildMember ?? undefined,
 			guild_member_profile: guildMemberProfile ?? undefined,

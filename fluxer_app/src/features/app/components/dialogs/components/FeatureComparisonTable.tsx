@@ -1,25 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {ComparisonCheckRow} from '@app/features/app/components/dialogs/components/ComparisonCheckRow';
-import {ComparisonRow} from '@app/features/app/components/dialogs/components/ComparisonRow';
-import styles from '@app/features/app/components/dialogs/components/FeatureComparisonTable.module.css';
 import {Limits} from '@app/features/app/utils/UserLimits';
 import {COMMUNITIES_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
+import {formatNumber} from '@app/features/i18n/utils/IntlCache';
 import {formatFileSize} from '@app/features/messaging/utils/FileUtils';
-import {getPremiumProductName} from '@app/features/premium/utils/PremiumUtils';
-import {
-	isBooleanTierPerk,
-	isNumericTierPerk,
-	isTextTierPerk,
-	LIMIT_TIER_PERKS,
-	type LimitTierPerk,
-} from '@fluxer/constants/src/LimitTierPerks';
+import {isNumericTierPerk, type LimitTierPerk} from '@fluxer/constants/src/LimitTierPerks';
 import type {I18n, MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
-import {Trans, useLingui} from '@lingui/react/macro';
-import {formatNumber} from '@pkgs/number_utils/src/NumberFormatting';
-import {observer} from 'mobx-react-lite';
-import {useMemo} from 'react';
 
 const PER_COMMUNITY_PROFILES_DESCRIPTOR = msg({
 	message: 'Per-community profiles',
@@ -121,72 +108,3 @@ export function formatPerkValue(i18n: I18n, perk: LimitTierPerk, value: number, 
 	}
 	return formatNumber(resolvedValue, i18n.locale);
 }
-
-export const FeatureComparisonTable = observer(() => {
-	const {i18n} = useLingui();
-	const availablePerks = useMemo(
-		() => LIMIT_TIER_PERKS.filter((perk) => perk.status === 'available' && perk.id !== 'custom_discriminator'),
-		[],
-	);
-	const renderPerkRow = (perk: LimitTierPerk) => {
-		const label = getPerkLabel(i18n, perk.i18nKey);
-		if (isBooleanTierPerk(perk)) {
-			return (
-				<ComparisonCheckRow
-					key={perk.id}
-					feature={label}
-					restrictedHas={perk.restrictedValue}
-					stockHas={perk.stockValue}
-					data-flx="app.feature-comparison-table.render-perk-row.comparison-check-row"
-				/>
-			);
-		}
-		if (isNumericTierPerk(perk)) {
-			return (
-				<ComparisonRow
-					key={perk.id}
-					feature={label}
-					restrictedValue={formatPerkValue(i18n, perk, perk.restrictedValue, false)}
-					stockValue={formatPerkValue(i18n, perk, perk.stockValue, true)}
-					data-flx="app.feature-comparison-table.render-perk-row.comparison-row"
-				/>
-			);
-		}
-		if (isTextTierPerk(perk)) {
-			const restrictedLabel = getPerkLabel(i18n, perk.restrictedValueI18nKey);
-			const stockLabel = getPerkLabel(i18n, perk.stockValueI18nKey);
-			return (
-				<ComparisonRow
-					key={perk.id}
-					feature={label}
-					restrictedValue={restrictedLabel}
-					stockValue={stockLabel}
-					data-flx="app.feature-comparison-table.render-perk-row.comparison-row--2"
-				/>
-			);
-		}
-		return null;
-	};
-	return (
-		<div className={styles.table} data-flx="app.feature-comparison-table.table">
-			<div className={styles.header} data-flx="app.feature-comparison-table.header">
-				<div className={styles.headerFeature} data-flx="app.feature-comparison-table.header-feature">
-					<p className={styles.headerFeatureText} data-flx="app.feature-comparison-table.header-feature-text">
-						<Trans>Feature</Trans>
-					</p>
-				</div>
-				<div className={styles.headerValues} data-flx="app.feature-comparison-table.header-values">
-					<div className={styles.headerRestricted} data-flx="app.feature-comparison-table.header-restricted">
-						<Trans>Free</Trans>
-					</div>
-					<div className={styles.headerStock} data-flx="app.feature-comparison-table.header-stock">
-						{getPremiumProductName()}
-					</div>
-				</div>
-			</div>
-			<div className={styles.rows} data-flx="app.feature-comparison-table.rows">
-				{availablePerks.map(renderPerkRow)}
-			</div>
-		</div>
-	);
-});

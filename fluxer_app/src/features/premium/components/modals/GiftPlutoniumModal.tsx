@@ -5,7 +5,11 @@ import {useCheckoutActions} from '@app/features/app/components/dialogs/component
 import {usePremiumData} from '@app/features/app/components/dialogs/components/plutonium/hooks/usePremiumData';
 import * as Modal from '@app/features/app/components/dialogs/Modal';
 import GeoIP from '@app/features/app/state/GeoIP';
-import {CANCEL_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
+import {
+	CANCEL_DESCRIPTOR,
+	ONE_MONTH_DURATION_DESCRIPTOR as ONE_MONTH_DESCRIPTOR,
+	SAVE_PERCENT_DESCRIPTOR,
+} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import * as PremiumCommands from '@app/features/premium/commands/PremiumCommands';
 import styles from '@app/features/premium/components/modals/GiftPlutoniumModal.module.css';
 import PremiumState from '@app/features/premium/state/PremiumState';
@@ -27,18 +31,12 @@ const GIFT_DESCRIPTION_DESCRIPTOR = msg({
 	message: 'Pay once and get a gift link to share. Gifts never renew.',
 	comment: 'Description at the top of the gift purchase dialog.',
 });
-const ONE_MONTH_DESCRIPTOR = msg({
-	message: '1 month',
-	comment: 'Gift purchase dialog option for a one-month gift.',
-});
+
 const ONE_YEAR_DESCRIPTOR = msg({
 	message: '1 year',
 	comment: 'Gift purchase dialog option for a one-year gift.',
 });
-const SAVE_PERCENT_DESCRIPTOR = msg({
-	message: 'Save {percent}%',
-	comment: 'Badge on the one-year option in the gift purchase dialog. percent is a whole number such as 17.',
-});
+
 const GIFT_PLAN_LABEL_DESCRIPTOR = msg({
 	message: 'Gift length',
 	comment: 'Accessible label of the gift length options in the gift purchase dialog.',
@@ -70,7 +68,7 @@ export const GiftPlutoniumModal = observer(() => {
 	const premiumState = PremiumState.loadedForUserId === currentUser?.id ? PremiumState.state : null;
 	const countryCode = GeoIP.countryCode;
 	const {priceIds, giftMonthlyPrice, giftYearlyPrice} = usePremiumData({premiumState});
-	const {loadingCheckout, handleSelectPlan} = useCheckoutActions(priceIds, countryCode, false, MobileLayout.enabled);
+	const {loadingCheckout, handleSelectPlan} = useCheckoutActions(priceIds, countryCode, MobileLayout.enabled);
 	const [plan, setPlan] = useState<GiftPlan>('gift_1_year');
 	useEffect(() => {
 		if (!currentUser?.id) return;
@@ -113,15 +111,20 @@ export const GiftPlutoniumModal = observer(() => {
 								aria-label={i18n._(GIFT_PLAN_LABEL_DESCRIPTOR)}
 								renderContent={(option) => (
 									<div className={styles.option} data-flx="premium.gift-plutonium-modal.option">
-										<span className={styles.optionName}>
-											<span>{option.name}</span>
+										<span className={styles.optionName} data-flx="premium.gift-plutonium-modal.option-name">
+											<span data-flx="premium.gift-plutonium-modal.span">{option.name}</span>
 											{option.value === 'gift_1_year' && percent != null && (
-												<span className={styles.badge}>{i18n._(SAVE_PERCENT_DESCRIPTOR, {percent})}</span>
+												<span className={styles.badge} data-flx="premium.gift-plutonium-modal.badge">
+													{i18n._(SAVE_PERCENT_DESCRIPTOR, {percent})}
+												</span>
 											)}
 										</span>
-										<span className={styles.optionPrice}>{option.desc}</span>
+										<span className={styles.optionPrice} data-flx="premium.gift-plutonium-modal.option-price">
+											{option.desc}
+										</span>
 									</div>
 								)}
+								data-flx="premium.gift-plutonium-modal.radio-group.set-plan"
 							/>
 							{blockedNote && (
 								<p className={styles.note} role="note" data-flx="premium.gift-plutonium-modal.blocked-note">

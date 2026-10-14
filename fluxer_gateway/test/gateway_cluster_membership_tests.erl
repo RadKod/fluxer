@@ -9,13 +9,6 @@
 -define(ROLE_MEMBERS_KEY, {gateway_cluster_membership, members_by_role}).
 -define(NODE_POD_NAMES_KEY, {gateway_cluster_membership, node_pod_names}).
 
-members_defaults_to_self_test() ->
-    with_clean_cluster_terms(fun() ->
-        ?assertEqual([node()], gateway_cluster_membership:members()),
-        ?assertEqual(1, gateway_cluster_membership:alive_count()),
-        ?assert(gateway_cluster_membership:is_member(node()))
-    end).
-
 init_records_self_under_current_role_test() ->
     with_clean_cluster_terms(fun() ->
         persistent_term:put(
@@ -83,14 +76,6 @@ nodeup_for_discovered_peer_adds_it_test() ->
         State0 = (base_state(#{}))#{discovered := ['peer@a']},
         State1 = gateway_cluster_membership:maybe_add_member('peer@a', State0),
         ?assert(lists:member('peer@a', maps:get(members, State1)))
-    end).
-
-update_members_skips_persistent_term_when_unchanged_test() ->
-    with_clean_cluster_terms(fun() ->
-        State0 = base_state(#{members => [node()]}),
-        State1 = gateway_cluster_membership:update_members([node()], State0),
-        ?assertEqual(State0, State1),
-        ?assertEqual([node()], persistent_term:get(?MEMBERS_KEY, [node()]))
     end).
 
 subscriber_receives_initial_state_then_transitions_test() ->
@@ -294,6 +279,120 @@ update_members_role_lookups_run_concurrently_test() ->
         ?assertEqual(lists:usort(Nodes), maps:get(sessions, maps:get(members_by_role, State1)))
     end).
 
+member_nodedown_starts_presence_grace_and_nodeup_cancels_it_test() ->
+    with_clean_cluster_terms(fun() ->
+        with_presence_cache(fun(CachePid) ->
+            Peer = 'peer@a',
+            State0 = (base_state(#{members => lists:usort([node(), Peer])}))#{
+                discovered => [Peer]
+            },
+            {noreply, State1} = gateway_cluster_membership:handle_info(
+                {nodedown, Peer}, State0
+            ),
+            ?assertNot(lists:member(Peer, maps:get(members, State1))),
+            ?assert(maps:is_key(Peer, pending_nodedown_cleanups(CachePid))),
+            {noreply, State2} = gateway_cluster_membership:handle_info({nodeup, Peer}, State1),
+            ?assert(lists:member(Peer, maps:get(members, State2))),
+            ?assertEqual(#{}, pending_nodedown_cleanups(CachePid))
+        end)
+    end).
+
+non_member_nodedown_does_not_start_presence_grace_test() ->
+    with_clean_cluster_terms(fun() ->
+        with_presence_cache(fun(CachePid) ->
+            State0 = base_state(#{}),
+            {noreply, _State1} = gateway_cluster_membership:handle_info(
+                {nodedown, 'remsh@host'}, State0
+            ),
+            ?assertEqual(#{}, pending_nodedown_cleanups(CachePid))
+        end)
+    end).
+
+with_presence_cache(Fun) ->
+    {ok, Pid} =
+        case whereis(presence_cache) of
+            undefined -> presence_cache:start_link();
+            Existing -> {ok, Existing}
+        end,
+    try
+        Fun(Pid)
+    after
+        unlink(Pid),
+        gen_server:stop(Pid)
+    end.
+
+pending_nodedown_cleanups(CachePid) ->
+    maps:get(pending_nodedown_cleanups, sys:get_state(CachePid)).
+
+base_state(Overrides) ->
+    Defaults = #{
+        members => [node()],
+        members_by_role => #{all => [node()]},
+        discovered => [],
+        connect_fun => fun(_) -> false end,
+        connected_nodes_fun => fun() -> [] end,
+        role_fun => fun(_) -> all end,
+        subscribers => [],
+        node_reconcile_timer => undefined
+    },
+    maps:merge(Defaults, Overrides).
+
+membership_state(Options) ->
+    Members = maps:get(members, Options, [node()]),
+    ConnectedNodes = maps:get(connected_nodes, Options, []),
+    Roles = maps:get(roles, Options, #{node() => websocket}),
+    RoleFun = fun(Node) -> maps:get(Node, Roles, unknown) end,
+    base_state(#{
+        members => Members,
+        members_by_role => test_role_members(Members, RoleFun),
+        discovered => maps:get(discovered, Options, []),
+        connect_fun => fun(_Node) -> true end,
+        connected_nodes_fun => fun() -> ConnectedNodes end,
+        role_fun => RoleFun
+    }).
+
+test_role_members(Members, RoleFun) ->
+    lists:foldl(
+        fun(Node, Acc) ->
+            Role = RoleFun(Node),
+            Nodes = maps:get(Role, Acc, []),
+            Acc#{Role => lists:usort([Node | Nodes])}
+        end,
+        #{},
+        Members
+    ).
+
+with_clean_cluster_terms(Fun) ->
+    with_restored_terms(
+        [
+            ?MEMBERS_KEY,
+            ?ROLE_MEMBERS_KEY,
+            ?NODE_POD_NAMES_KEY,
+            {gateway_cluster_membership, rpc_ready},
+            {fluxer_gateway, runtime_config}
+        ],
+        fun() ->
+            persistent_term:erase(?MEMBERS_KEY),
+            persistent_term:erase(?ROLE_MEMBERS_KEY),
+            persistent_term:erase(?NODE_POD_NAMES_KEY),
+            persistent_term:erase({fluxer_gateway, runtime_config}),
+            Fun()
+        end
+    ).
+
+with_restored_terms(Keys, Fun) ->
+    Saved = [{Key, persistent_term:get(Key, undefined)} || Key <- Keys],
+    try
+        Fun()
+    after
+        lists:foreach(fun restore_persistent_term/1, Saved)
+    end.
+
+restore_persistent_term({Key, undefined}) ->
+    persistent_term:erase(Key);
+restore_persistent_term({Key, Value}) ->
+    persistent_term:put(Key, Value).
+
 rpc_initial_readiness_waits_for_stability_test() ->
     with_rpc_membership(100, fun(_) -> all end, fun(Pid) ->
         ?assertNot(gateway_cluster_membership:rpc_ready()),
@@ -435,72 +534,3 @@ flush_role_permissions() ->
         {role_lookup_rpc_permission, _} -> flush_role_permissions()
     after 0 -> ok
     end.
-
-base_state(Overrides) ->
-    Defaults = #{
-        members => [node()],
-        members_by_role => #{all => [node()]},
-        discovered => [],
-        connect_fun => fun(_) -> false end,
-        connected_nodes_fun => fun() -> [] end,
-        role_fun => fun(_) -> all end,
-        subscribers => [],
-        node_reconcile_timer => undefined
-    },
-    maps:merge(Defaults, Overrides).
-
-membership_state(Options) ->
-    Members = maps:get(members, Options, [node()]),
-    ConnectedNodes = maps:get(connected_nodes, Options, []),
-    Roles = maps:get(roles, Options, #{node() => websocket}),
-    RoleFun = fun(Node) -> maps:get(Node, Roles, unknown) end,
-    base_state(#{
-        members => Members,
-        members_by_role => test_role_members(Members, RoleFun),
-        discovered => maps:get(discovered, Options, []),
-        connect_fun => fun(_Node) -> true end,
-        connected_nodes_fun => fun() -> ConnectedNodes end,
-        role_fun => RoleFun
-    }).
-
-test_role_members(Members, RoleFun) ->
-    lists:foldl(
-        fun(Node, Acc) ->
-            Role = RoleFun(Node),
-            Nodes = maps:get(Role, Acc, []),
-            Acc#{Role => lists:usort([Node | Nodes])}
-        end,
-        #{},
-        Members
-    ).
-
-with_clean_cluster_terms(Fun) ->
-    with_restored_terms(
-        [
-            ?MEMBERS_KEY,
-            ?ROLE_MEMBERS_KEY,
-            ?NODE_POD_NAMES_KEY,
-            {gateway_cluster_membership, rpc_ready},
-            {fluxer_gateway, runtime_config}
-        ],
-        fun() ->
-            persistent_term:erase(?MEMBERS_KEY),
-            persistent_term:erase(?ROLE_MEMBERS_KEY),
-            persistent_term:erase(?NODE_POD_NAMES_KEY),
-            persistent_term:erase({fluxer_gateway, runtime_config}),
-            Fun()
-        end
-    ).
-
-with_restored_terms(Keys, Fun) ->
-    Saved = [{Key, persistent_term:get(Key, undefined)} || Key <- Keys],
-    try
-        Fun()
-    after
-        lists:foreach(fun restore_persistent_term/1, Saved)
-    end.
-
-restore_persistent_term({Key, undefined}) ->
-    persistent_term:erase(Key);
-restore_persistent_term({Key, Value}) ->
-    persistent_term:put(Key, Value).

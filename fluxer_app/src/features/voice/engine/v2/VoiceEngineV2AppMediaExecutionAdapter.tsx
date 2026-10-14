@@ -116,7 +116,7 @@ import type {
 	VoiceEngineV2AudioMode,
 	VoiceEngineV2CameraEncodingOptions,
 	VoiceEngineV2MicrophoneOptions,
-} from '@fluxer/voice_engine_v2';
+} from '@fluxer/voice_engine_v2/src/protocol/types';
 import type {
 	AudioCaptureOptions,
 	LocalAudioTrack,
@@ -131,15 +131,15 @@ import {ConnectionState, Track, TrackEvent} from 'livekit-client';
 
 const logger = new Logger('VoiceEngineV2AppMediaExecutionAdapter');
 const CAMERA_PUBLISH_CODEC_CORRECTION_MAX = 1;
-export const REPUBLISH_MICROPHONE_GUARD_MS = 150;
+const REPUBLISH_MICROPHONE_GUARD_MS = 150;
 type VoiceMuteReason = VoiceEngineV2AppVoiceMuteReason;
 
-export interface SetCameraEnabledOptions {
+interface SetCameraEnabledOptions {
 	deviceId?: string;
 	sendUpdate?: boolean;
 }
 
-export interface MicrophoneRefreshRequest {
+interface MicrophoneRefreshRequest {
 	republish: boolean;
 }
 
@@ -201,7 +201,7 @@ function applyMicrophoneFailureLatchEvent(event: VoiceMicrophoneFailureLatchEven
 	return true;
 }
 
-export function isMicrophoneEnableFailureLatched(): boolean {
+function isMicrophoneEnableFailureLatched(): boolean {
 	return isVoiceMicrophoneFailureLatchActive(microphoneFailureLatchSnapshot);
 }
 
@@ -550,15 +550,7 @@ export class VoiceEngineV2AppMediaExecutionAdapter extends Store {
 			await this.enforceSpeakPermissionMute(room);
 			return;
 		}
-		const pttActive = isPushToTalkActiveFromAppState();
-		const ptmActive = isPushToMuteActiveFromAppState();
-		const effectiveMute =
-			audioState.effectiveDeaf ||
-			audioState.serverMute ||
-			audioState.selfMute ||
-			(pttActive && !Keybind.pushToTalkHeld) ||
-			(ptmActive && Keybind.pushToMuteHeld);
-		if (effectiveMute) {
+		if (audioState.effectiveDeaf || audioState.serverMute || audioState.selfMute) {
 			this.setAudioPublicationsMuted(room, true, 'voice state update');
 			this.syncLocalSpeakingOverride(room);
 			return;
@@ -1495,21 +1487,6 @@ export class VoiceEngineV2AppMediaExecutionAdapter extends Store {
 		updateLocalParticipantFromRoom(activeRoom);
 	}
 
-	async toggleCameraFromKeybind(): Promise<void> {
-		assert.equal(
-			typeof LocalVoiceState.getSelfVideo,
-			'function',
-			'toggleCameraFromKeybind pre-condition: LocalVoiceState present',
-		);
-		assert.equal(
-			typeof VoiceSettings.getVideoDeviceId,
-			'function',
-			'toggleCameraFromKeybind pre-condition: VoiceSettings present',
-		);
-		const current = LocalVoiceState.getSelfVideo();
-		await this.setCameraEnabled(!current, {deviceId: VoiceSettings.getVideoDeviceId()});
-	}
-
 	async playEntranceSound(): Promise<void> {
 		assert.ok(this.mediaStateSnapshot !== null, 'playEntranceSound pre-condition: snapshot present');
 		const connection = getVoiceConnectionContextFromMediaEngine();
@@ -1653,7 +1630,7 @@ export class VoiceEngineV2AppMediaExecutionAdapter extends Store {
 			serverDeaf: serverVoiceState?.deaf,
 		});
 		if (isMutedOrDeafened(audioState)) return;
-		const targetMute = audioState.selfMute || !held;
+		const targetMute = getEffectiveSelfMuteForVoiceStatePayloadFromV2AudioControls();
 		const ok = this.setMicrophonePublicationsMuted(room, targetMute, 'push to talk');
 		if (!ok) {
 			this.syncVoiceState({self_mute: true});
@@ -1692,11 +1669,7 @@ export class VoiceEngineV2AppMediaExecutionAdapter extends Store {
 		this.syncLocalSpeakingOverride(room);
 	}
 
-	handlePushToTalkModeChange(
-		room: Room | null,
-		getCurrentUserVoiceState: () => VoiceState | null,
-		options: {preserveSelfMute?: boolean} = {},
-	): void {
+	handlePushToTalkModeChange(room: Room | null, getCurrentUserVoiceState: () => VoiceState | null): void {
 		assertNullableObjectLike<Room>(room, 'handlePushToTalkModeChange.room');
 		assert.equal(
 			typeof getCurrentUserVoiceState,
@@ -1705,9 +1678,6 @@ export class VoiceEngineV2AppMediaExecutionAdapter extends Store {
 		);
 		Keybind.resetPushToTalkState();
 		Keybind.resetPushToMuteState();
-		if (!options.preserveSelfMute && isPushToTalkActiveFromAppState() && LocalVoiceState.getSelfMute()) {
-			LocalVoiceState.updateSelfMute(false);
-		}
 		const serverVoiceState = getCurrentUserVoiceState();
 		const audioState = this.getEffectiveAudioState({
 			serverMute: serverVoiceState?.mute ?? false,

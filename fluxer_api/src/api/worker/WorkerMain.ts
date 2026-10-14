@@ -4,7 +4,6 @@ import {Config} from '@app/api/Config';
 import {createApiContext} from '@app/api/CreateApiContext';
 import {setDatabaseQueryExecutor} from '@app/api/database/CassandraQueryExecution';
 import {ensurePostgresKvSchema, PostgresKvQueryExecutor} from '@app/api/database/PostgresKvQueryExecutor';
-import {channelThreadsEnabled, everEnabled} from '@app/api/experiment/ChannelThreadsGate';
 import {
 	jetStreamActivityPublisher,
 	shutdownActivityEvents,
@@ -43,7 +42,11 @@ import {CronScheduler} from '@app/api/worker/CronScheduler';
 import {JetStreamWorkerQueue, JOBS_STREAM_MAX_AGE_MS} from '@app/api/worker/JetStreamWorkerQueue';
 import {queueShopTryRateStartupJob} from '@app/api/worker/ShopTryRateStartup';
 import {clearWorkerDependencies, setWorkerDependencies} from '@app/api/worker/WorkerContext';
-import {initializeWorkerDependencies, type WorkerDependencies} from '@app/api/worker/WorkerDependencies';
+import {
+	guildInvitePauseDeps,
+	initializeWorkerDependencies,
+	type WorkerDependencies,
+} from '@app/api/worker/WorkerDependencies';
 import {WorkerHeartbeat} from '@app/api/worker/WorkerHeartbeat';
 import {
 	queuesUnconsumedPurgeRuns,
@@ -104,6 +107,7 @@ export function registerCronJobs(cron: CronScheduler, jobsStreamMaxAgeMs: number
 	});
 	cron.upsert('processInactivityDeletions', 'processInactivityDeletions', {}, '0 0 */6 * * *', {ledger: false});
 	cron.upsert('expireAttachments', 'expireAttachments', {}, '0 0 */12 * * *', {ledger: false});
+	cron.upsert('expireReportSnapshots', 'expireReportSnapshots', {}, '0 15 5 * * *', {ledger: false});
 	if (jobsStreamMaxAgeMs > 0 && jobsStreamMaxAgeMs <= JOBS_STREAM_MAX_AGE_MS) {
 		cron.upsert('expireStaleJobs', 'expireStaleJobs', {}, '0 45 3 * * *', {ledger: false});
 	} else {
@@ -148,9 +152,10 @@ export function registerCronJobs(cron: CronScheduler, jobsStreamMaxAgeMs: number
 		cron.upsert('drainFeedVideoJobs', 'drainFeedVideoJobs', {}, '30 * * * * *', {ledger: false});
 	}
 	cron.upsert('drainActivitySpool', 'drainActivitySpool', {}, '*/5 * * * * *', {ledger: false});
+	cron.upsert('liftExpiredGuildInvitePauses', 'liftExpiredGuildInvitePauses', {}, '0 * * * * *', {ledger: false});
 	cron.upsert('archiveInactiveThreads', 'archiveInactiveThreads', {}, '0 * * * * *', {
 		ledger: false,
-		enabled: () => everEnabled() || channelThreadsEnabled(),
+		enabled: () => true,
 	});
 	Logger.info(
 		{
@@ -355,6 +360,14 @@ export async function startWorkerMain(): Promise<void> {
 		await startContentBlocklistCaches({kvClient: dependencies.kvClient, storageService: dependencies.storageService});
 		Logger.info('Content blocklist caches initialised for worker backend');
 		await queueBlocklistFeedStartupJobs(dependencies.kvClient, workerService, Config.blocklistFeeds.enabled);
+		try {
+			const normalized = await getInstanceConfigRepository().normalizeStoredBrandingAssets(dependencies.storageService);
+			if (normalized > 0) {
+				Logger.info({normalized}, 'Normalised stored instance branding assets to references');
+			}
+		} catch (error) {
+			Logger.warn({err: error}, 'Failed to normalise stored instance branding assets');
+		}
 		setActivityProcessChannel('worker');
 		await startActivityEvents({
 			publisher: jetStreamActivityPublisher(jsConnectionManager.getJetStreamClient()),
@@ -380,6 +393,7 @@ export async function startWorkerMain(): Promise<void> {
 					},
 					dependencies.channelRepository,
 				),
+				guildInvites: guildInvitePauseDeps(dependencies),
 			});
 			Logger.info('Account action consumer started');
 		}

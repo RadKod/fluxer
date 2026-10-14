@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {EXPERIMENT_BUCKET_RESOLUTION, experimentBucket} from '@fluxer/schema/src/domains/experiment/ExperimentBucket';
+import {EXPERIMENT_BUCKET_RESOLUTION} from '@fluxer/schema/src/domains/experiment/ExperimentBucket';
 import {z} from 'zod';
 
 const CHANNEL_THREADS_BASIS_POINTS_MAX = EXPERIMENT_BUCKET_RESOLUTION;
@@ -47,94 +47,23 @@ export type ChannelThreadsConfig = z.infer<typeof ChannelThreadsConfigSchema>;
 
 export const DEFAULT_CHANNEL_THREADS_CONFIG: ChannelThreadsConfig = ChannelThreadsConfigSchema.parse({});
 
-export const ChannelThreadsConfigUpdateRequest = z
-	.object(channelThreadsConfigFields)
-	.omit({config_version: true, ever_enabled: true})
-	.partial();
-
-export type ChannelThreadsConfigUpdateRequest = z.infer<typeof ChannelThreadsConfigUpdateRequest>;
-
 export const ChannelThreadsConfigResponse = ChannelThreadsConfigSchema;
 
 export type ChannelThreadsConfigResponse = z.infer<typeof ChannelThreadsConfigResponse>;
 
-export function applyChannelThreadsConfigUpdate(
-	current: ChannelThreadsConfig,
-	update: ChannelThreadsConfigUpdateRequest,
-): ChannelThreadsConfig {
-	const next = ChannelThreadsConfigSchema.parse({
-		...current,
-		...update,
-		config_version: current.config_version + 1,
-	});
-	return {...next, ever_enabled: current.ever_enabled || next.enabled};
-}
-
-export interface CompiledChannelThreadsConfig {
-	config: ChannelThreadsConfig;
-	enabledGuildIds: ReadonlySet<string>;
-	disabledGuildIds: ReadonlySet<string>;
-	includedUserIds: ReadonlySet<string>;
-	excludedUserIds: ReadonlySet<string>;
-}
-
-export function compileChannelThreadsConfig(config: ChannelThreadsConfig): CompiledChannelThreadsConfig {
+export function everyoneChannelThreadsConfig(configVersion: number): ChannelThreadsConfig {
 	return {
-		config,
-		enabledGuildIds: new Set(config.enabled_guild_ids),
-		disabledGuildIds: new Set(config.disabled_guild_ids),
-		includedUserIds: new Set(config.included_user_ids),
-		excludedUserIds: new Set(config.excluded_user_ids),
+		...DEFAULT_CHANNEL_THREADS_CONFIG,
+		enabled: true,
+		config_version: configVersion,
+		ever_enabled: true,
+		guild_basis_points: CHANNEL_THREADS_BASIS_POINTS_MAX,
+		user_basis_points: CHANNEL_THREADS_BASIS_POINTS_MAX,
+		enabled_guild_ids: [],
+		disabled_guild_ids: [],
+		included_user_ids: [],
+		excluded_user_ids: [],
 	};
-}
-
-export const DEFAULT_COMPILED_CHANNEL_THREADS_CONFIG: CompiledChannelThreadsConfig =
-	compileChannelThreadsConfig(DEFAULT_CHANNEL_THREADS_CONFIG);
-
-export function channelThreadsGuildActive(compiled: CompiledChannelThreadsConfig, guildId: string): boolean {
-	const {config} = compiled;
-	if (!config.enabled) return false;
-	if (compiled.disabledGuildIds.has(guildId)) return false;
-	if (compiled.enabledGuildIds.has(guildId)) return true;
-	return config.guild_basis_points > 0 && experimentBucket(guildId, config.guild_salt) < config.guild_basis_points;
-}
-
-export function channelThreadsUserExcluded(compiled: CompiledChannelThreadsConfig, userId: string): boolean {
-	return compiled.excludedUserIds.has(userId);
-}
-
-export function channelThreadsUserActive(compiled: CompiledChannelThreadsConfig, userId: string): boolean {
-	const {config} = compiled;
-	if (!config.enabled) return false;
-	if (compiled.excludedUserIds.has(userId)) return false;
-	if (compiled.includedUserIds.has(userId)) return true;
-	return config.user_basis_points > 0 && experimentBucket(userId, config.user_salt) < config.user_basis_points;
-}
-
-function sameIds(a: ReadonlyArray<string>, b: ReadonlyArray<string>): boolean {
-	const left = new Set(a);
-	const right = new Set(b);
-	return left.size === right.size && [...right].every((id) => left.has(id));
-}
-
-export function channelThreadsGuildFieldsChanged(a: ChannelThreadsConfig, b: ChannelThreadsConfig): boolean {
-	return (
-		a.enabled !== b.enabled ||
-		a.guild_basis_points !== b.guild_basis_points ||
-		a.guild_salt !== b.guild_salt ||
-		!sameIds(a.enabled_guild_ids, b.enabled_guild_ids) ||
-		!sameIds(a.disabled_guild_ids, b.disabled_guild_ids)
-	);
-}
-
-export function channelThreadsUserFieldsChanged(a: ChannelThreadsConfig, b: ChannelThreadsConfig): boolean {
-	return (
-		a.enabled !== b.enabled ||
-		a.user_basis_points !== b.user_basis_points ||
-		a.user_salt !== b.user_salt ||
-		!sameIds(a.included_user_ids, b.included_user_ids) ||
-		!sameIds(a.excluded_user_ids, b.excluded_user_ids)
-	);
 }
 
 export const ChannelThreadsAssignmentResponse = z.object({
@@ -143,11 +72,3 @@ export const ChannelThreadsAssignmentResponse = z.object({
 });
 
 export type ChannelThreadsAssignmentResponse = z.infer<typeof ChannelThreadsAssignmentResponse>;
-
-export function resolveChannelThreadsAssignment(
-	compiled: CompiledChannelThreadsConfig,
-	userId: string,
-): ChannelThreadsAssignmentResponse | undefined {
-	if (!channelThreadsUserActive(compiled, userId)) return undefined;
-	return {active: true, config_version: compiled.config.config_version};
-}

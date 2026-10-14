@@ -8,7 +8,6 @@ import {SettingsModalContainer} from '@app/features/app/components/dialogs/share
 import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
 import {ComponentBus} from '@app/features/platform/utils/ComponentBus';
 import * as PlutoniumPageCommands from '@app/features/premium/commands/PlutoniumPageCommands';
-import PlutoniumPageRollout from '@app/features/premium/state/PlutoniumPageRollout';
 import {isPremiumPageAvailable} from '@app/features/premium/utils/PremiumUtils';
 import {isShopPageAvailable} from '@app/features/shop/utils/ShopAvailability';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
@@ -126,27 +125,23 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = observer(
 				mobileNav.navigateBack();
 			}
 		}, [currentTab?.type, mobileNav, unsavedChangesState.unsavedChanges]);
-		const plutoniumPageEnabled = PlutoniumPageRollout.enabled;
 		const handleTabSelect = useCallback(
 			(tabType: string, title: string) => {
-				if (plutoniumPageEnabled && tabType === 'plutonium') {
+				if (tabType === 'plutonium') {
 					PlutoniumPageCommands.openPlutoniumPage();
 					return;
 				}
 				mobileNav.navigateTo(tabType as UserSettingsTabType, title);
 			},
-			[mobileNav, plutoniumPageEnabled],
+			[mobileNav],
 		);
-		const handleDesktopTabSelect = useCallback(
-			(tabType: UserSettingsTabType) => {
-				if (plutoniumPageEnabled && tabType === 'plutonium') {
-					PlutoniumPageCommands.openPlutoniumPage();
-					return;
-				}
-				setSelectedTab(tabType);
-			},
-			[plutoniumPageEnabled],
-		);
+		const handleDesktopTabSelect = useCallback((tabType: UserSettingsTabType) => {
+			if (tabType === 'plutonium') {
+				PlutoniumPageCommands.openPlutoniumPage();
+				return;
+			}
+			setSelectedTab(tabType);
+		}, []);
 		const handleClose = useCallback(() => {
 			const checkTabId = selectedTab;
 			if (checkTabId && unsavedChangesState.unsavedChanges[checkTabId]) {

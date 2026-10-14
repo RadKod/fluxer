@@ -7,7 +7,7 @@ import {OriginHandoffController} from '@app/api/auth/OriginHandoffController';
 import {PasskeyBridgeController} from '@app/api/auth/PasskeyBridgeController';
 import {registerBadgeProfileExtension} from '@app/api/badge/BadgeProfileProvider';
 import {BlueskyOAuthController} from '@app/api/bluesky/BlueskyOAuthController';
-import {ChannelController} from '@app/api/channel/ChannelController';
+import {registerChannelControllers} from '@app/api/channel/controllers/index';
 import type {APIConfig} from '@app/api/config/APIConfig';
 import {ConnectionController} from '@app/api/connection/ConnectionController';
 import {CosmeticController} from '@app/api/cosmetics/CosmeticController';
@@ -30,7 +30,7 @@ import {GatewayController} from '@app/api/gateway/GatewayController';
 import {GeolocationController} from '@app/api/geolocation/GeolocationController';
 import {GifController} from '@app/api/gif/GifController';
 import {GuildBoostController} from '@app/api/guild/boost/GuildBoostController';
-import {GuildController} from '@app/api/guild/GuildController';
+import {GuildController} from '@app/api/guild/controllers/index';
 import {MicupBotController} from '@app/api/guild/micupbot/MicupBotController';
 import {GuildRosterController} from '@app/api/guild/roster/GuildRosterController';
 import {InstanceController} from '@app/api/instance/InstanceController';
@@ -57,6 +57,7 @@ import type {HonoApp} from '@app/api/types/HonoEnv';
 import {UnfurlController} from '@app/api/unfurl/UnfurlController';
 import {UserController} from '@app/api/user/controllers/UserController';
 import {registerMicupUserLifecycleHooks} from '@app/api/user/lifecycle/MicupUserLifecycleHooks';
+import {VoiceP2pConnectionReportController} from '@app/api/voice/VoiceP2pConnectionReportController';
 import {VoiceSeatController} from '@app/api/voice_seat/VoiceSeatController';
 import {WebhookController} from '@app/api/webhook/WebhookController';
 
@@ -69,7 +70,7 @@ export function registerControllers(routes: HonoApp, config: APIConfig): void {
 	OriginHandoffController(routes);
 	PasskeyBridgeController(routes);
 	AttachmentController(routes);
-	ChannelController(routes);
+	registerChannelControllers(routes);
 	ConnectionController(routes);
 	BlueskyOAuthController(routes);
 	InstanceController(routes);
@@ -90,6 +91,7 @@ export function registerControllers(routes: HonoApp, config: APIConfig): void {
 		TestHarnessController(routes);
 	}
 	UserController(routes);
+	VoiceP2pConnectionReportController(routes);
 	StoreBillingController(routes);
 	WebhookController(routes);
 	OAuth2Controller(routes);

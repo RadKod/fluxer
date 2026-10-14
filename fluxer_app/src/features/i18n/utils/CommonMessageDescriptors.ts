@@ -515,7 +515,7 @@ export const DESCRIPTION_DESCRIPTOR = msg({
 });
 export const INCOMING_CALL_DESCRIPTOR = msg({
 	message: 'Incoming call',
-	comment: 'Generic label for an incoming voice or video call.',
+	comment: 'Notification sound setting label. Ringtone for an incoming DM or group DM call.',
 });
 export const TURN_OFF_CAMERA_DESCRIPTOR = msg({
 	message: 'Turn off camera',
@@ -711,10 +711,6 @@ export const HIDE_FAVORITES_DESCRIPTOR = msg({
 	message: 'Hide favorites',
 	comment: 'Toggle / action label that collapses or hides the favorites section.',
 });
-export const NOTIFICATIONS_DESCRIPTOR = msg({
-	message: 'Notifications',
-	comment: 'Generic section header / tab label for the notifications area.',
-});
 export const FAILED_TO_SEND_INVITE_DESCRIPTOR = msg({
 	message: "Couldn't send invite. Try again.",
 	comment: 'Toast shown when sending an invite (group DM or community) fails.',
@@ -737,7 +733,7 @@ export const CAMERA_DESCRIPTOR = msg({
 });
 export const CAMERA_ON_DESCRIPTOR = msg({
 	message: 'Camera on',
-	comment: 'Generic action label that enables the local camera.',
+	comment: 'Notification sound setting label. Sound played when the user turns their camera on in a call.',
 });
 export const COPY_COMMUNITY_ID_DESCRIPTOR = msg({
 	message: 'Copy community ID',
@@ -769,7 +765,7 @@ export const EXPRESSION_PICKER_CATEGORIES_DESCRIPTOR = msg({
 });
 export const UNKNOWN_DESCRIPTOR = msg({
 	message: 'Unknown',
-	comment: 'Generic fallback label when a more specific value is unavailable.',
+	comment: 'Fallback version label when the installed desktop version is unknown.',
 });
 export const CHANNEL_DELETED_DESCRIPTOR = msg({
 	message: 'Channel deleted',
@@ -794,10 +790,6 @@ export const APP_ZOOM_LEVEL_DESCRIPTOR = msg({
 export const ENABLE_NOTIFICATIONS_DESCRIPTOR = msg({
 	message: 'Enable notifications',
 	comment: 'Generic action label / toggle that turns on push or desktop notifications.',
-});
-export const ENHANCED_DESCRIPTOR = msg({
-	message: 'Enhanced',
-	comment: 'Generic radio / dropdown option label for an "enhanced" tier.',
 });
 export const CHANNEL_REMOVED_FROM_FAVORITES_DESCRIPTOR = msg({
 	message: 'Channel removed from favorites',
@@ -833,7 +825,7 @@ export const BACKUP_CODE_DESCRIPTOR = msg({
 });
 export const BACK_DESCRIPTOR = msg({
 	message: 'Back',
-	comment: 'Generic secondary button label that returns to the previous step or screen.',
+	comment: 'Accessible label of the back button on the Plutonium page in the mobile layout.',
 });
 export const DONE_DESCRIPTOR = msg({
 	message: 'Done',
@@ -903,7 +895,33 @@ export const ADD_ACCOUNT_DESCRIPTOR = msg({
 	message: 'Add account',
 	comment: 'Generic action label that starts signing in to an additional account.',
 });
-export const SWITCH_ACCOUNT_DESCRIPTOR = msg({
-	message: 'Switch account',
-	comment: 'Short button label that opens the account switcher overlay.',
+
+export const MESSAGE_COUNT_DESCRIPTOR = msg({
+	message: '{count, plural, one {# message} other {# messages}}',
+	comment: 'Message count on a thread chip and in the thread browser. count is the number of messages.',
+});
+
+export const SAVE_DESCRIPTOR = msg({
+	message: 'Save',
+	comment: 'Button that saves the forum tag editor or tag picker.',
+});
+
+export const SEARCH_INDEXING_DESCRIPTOR = msg({
+	message: 'Search is getting ready for this community. Trying again shortly...',
+	comment: 'Notice in a forum channel while the server is still building the post search index.',
+});
+
+export const RETRY_SEARCH_DESCRIPTOR = msg({
+	message: 'Retry',
+	comment: 'Button that retries a failed thread search.',
+});
+
+export const AVAILABLE_DESCRIPTOR = msg({
+	message: 'Available',
+	comment: 'Screen reader text for a check mark in the Plutonium page comparison table.',
+});
+
+export const SAVE_PERCENT_DESCRIPTOR = msg({
+	message: 'Save {percent}%',
+	comment: 'Badge on the one-year option in the gift purchase dialog. percent is a whole number such as 17.',
 });

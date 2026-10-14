@@ -67,21 +67,6 @@ function fakePublication(track: ReturnType<typeof fakeTrack>) {
 	return {source: 'microphone', isSubscribed: true, track};
 }
 
-function fakeRoom(publication: ReturnType<typeof fakePublication>) {
-	return {
-		remoteParticipants: new Map([
-			[participant.identity, {...participant, audioTrackPublications: new Map([['TR_1', publication]])}],
-		]),
-	};
-}
-
-const visibility = new EventTarget() as EventTarget & {hidden: boolean};
-
-function setHidden(hidden: boolean): void {
-	visibility.hidden = hidden;
-	visibility.dispatchEvent(new Event('visibilitychange'));
-}
-
 type Adapter = InstanceType<typeof VoiceEngineV2AppRemoteSpeakingAdapter>;
 type AttachArgs = Parameters<Adapter['attachIfApplicable']>;
 
@@ -99,9 +84,7 @@ function detachOnMute(adapter: Adapter, publication: ReturnType<typeof fakePubli
 
 beforeEach(() => {
 	context = new FakeAudioContext();
-	visibility.hidden = false;
 	vi.stubGlobal('window', {setInterval, clearInterval});
-	vi.stubGlobal('document', visibility);
 	vi.stubGlobal(
 		'MediaStream',
 		class {
@@ -123,20 +106,6 @@ describe('remote speaking analyser source nodes', () => {
 			detachOnMute(adapter, publication);
 			expect(adapter.analyserCount).toBe(0);
 			attach(adapter, publication);
-			expect(adapter.analyserCount).toBe(1);
-		}
-		expect(context.createMediaStreamSource).toHaveBeenCalledTimes(1);
-	});
-
-	it('hiding and showing the window reuse one source node per track', () => {
-		const adapter = new VoiceEngineV2AppRemoteSpeakingAdapter({autoSchedule: false});
-		const publication = fakePublication(fakeTrack());
-		adapter.hydrateFromRoom(fakeRoom(publication) as unknown as Parameters<Adapter['hydrateFromRoom']>[0]);
-		expect(adapter.analyserCount).toBe(1);
-		for (let i = 0; i < 10; i++) {
-			setHidden(true);
-			expect(adapter.analyserCount).toBe(0);
-			setHidden(false);
 			expect(adapter.analyserCount).toBe(1);
 		}
 		expect(context.createMediaStreamSource).toHaveBeenCalledTimes(1);

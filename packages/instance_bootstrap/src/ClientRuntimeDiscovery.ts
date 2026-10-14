@@ -140,6 +140,7 @@ function projectAppPublic(appPublic: InstanceDiscoveryDocument['appPublic']): In
 			premium_info_url: value.branding.premium_info_url ?? null,
 		},
 		setup: {
+			...value.setup,
 			configured: requireDefined(value.setup.configured, 'app_public.setup.configured'),
 			admin_url: requireDefined(value.setup.admin_url, 'app_public.setup.admin_url'),
 		},
@@ -147,6 +148,7 @@ function projectAppPublic(appPublic: InstanceDiscoveryDocument['appPublic']): In
 			terms_url: requireDefined(value.legal.terms_url, 'app_public.legal.terms_url'),
 			privacy_url: requireDefined(value.legal.privacy_url, 'app_public.legal.privacy_url'),
 			source_url: value.legal.source_url ?? null,
+			guidelines_url: value.legal.guidelines_url ?? null,
 		},
 		registration: {
 			collect_date_of_birth: requireDefined(

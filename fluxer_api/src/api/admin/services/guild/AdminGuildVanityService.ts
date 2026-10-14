@@ -4,7 +4,7 @@ import {mapGuildToAdminResponse} from '@app/api/admin/models/GuildTypes';
 import type {AdminAuditService} from '@app/api/admin/services/AdminAuditService';
 import type {AdminGuildUpdatePropagator} from '@app/api/admin/services/guild/AdminGuildUpdatePropagator';
 import {createGuildID, type UserID} from '@app/api/BrandedTypes';
-import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import {setGuildVanityCode, withGuildVanityLock} from '@app/api/guild/services/data/GuildVanityService';
 import type {InviteRepository} from '@app/api/invite/InviteRepository';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
@@ -14,7 +14,7 @@ import type {UpdateGuildVanityRequest} from '@fluxer/schema/src/domains/admin/Ad
 import {isReservedVanityCode} from '@fluxer/schema/src/primitives/MicupBrandGuard';
 
 interface AdminGuildVanityServiceDeps {
-	guildRepository: IGuildRepositoryAggregate;
+	guildRepository: GuildRepository;
 	inviteRepository: InviteRepository;
 	auditService: AdminAuditService;
 	updatePropagator: AdminGuildUpdatePropagator;

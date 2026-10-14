@@ -17,6 +17,7 @@ pub mod jobs;
 mod message_actions;
 pub mod messages;
 pub mod referral;
+pub mod registrations;
 pub mod reports;
 pub mod shop;
 pub mod system;
@@ -47,7 +48,7 @@ pub struct ActionQuery {
 use axum::{
     Json, Router,
     extract::{Path, Request, State},
-    http::{HeaderMap, HeaderName, HeaderValue, StatusCode, header},
+    http::{HeaderValue, StatusCode, header},
     middleware::{Next, from_fn, from_fn_with_state},
     response::{Html, IntoResponse, Response},
     routing::get,
@@ -65,9 +66,6 @@ const HTMX_JS: &str = include_str!("../../static/htmx.min.js");
 
 const IMMUTABLE_CACHE_CONTROL: &str = "public, max-age=31536000, immutable";
 
-const STRICT_TRANSPORT_SECURITY_VALUE: &str = "max-age=31536000; includeSubDomains; preload";
-const REFERRER_POLICY_VALUE: &str = "strict-origin-when-cross-origin";
-const X_FRAME_OPTIONS_VALUE: &str = "DENY";
 const PERMISSIONS_POLICY_VALUE: &str = "accelerometer=(), camera=(), geolocation=(), \
     gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()";
 
@@ -125,6 +123,7 @@ pub fn build_router(config: AdminConfig) -> Router {
         .merge(badges::router())
         .merge(feed_moderation::router())
         .merge(discovery::router())
+        .merge(registrations::router())
         .merge(jobs::router())
         .merge(messages::router())
         .merge(system::router())
@@ -178,19 +177,7 @@ async fn security_headers_middleware(
     let headers = response.headers_mut();
     let config = state.config();
 
-    set_static_header(
-        headers,
-        header::STRICT_TRANSPORT_SECURITY,
-        STRICT_TRANSPORT_SECURITY_VALUE,
-    );
-    set_static_header(headers, header::X_CONTENT_TYPE_OPTIONS, "nosniff");
-    set_static_header(headers, header::REFERRER_POLICY, REFERRER_POLICY_VALUE);
-    set_static_header(headers, header::X_FRAME_OPTIONS, X_FRAME_OPTIONS_VALUE);
-    set_static_header(
-        headers,
-        HeaderName::from_static("permissions-policy"),
-        PERMISSIONS_POLICY_VALUE,
-    );
+    fluxer_common::server::set_baseline_security_headers(headers, PERMISSIONS_POLICY_VALUE);
 
     let csp = build_admin_csp(config);
     if let Ok(value) = HeaderValue::from_str(&csp) {
@@ -209,7 +196,10 @@ fn build_admin_csp(config: &AdminConfig) -> String {
         "default-src 'self'".to_owned(),
         "script-src 'self' 'unsafe-inline'".to_owned(),
         "style-src 'self' 'unsafe-inline'".to_owned(),
-        format!("img-src 'self' data: blob: {static_cdn} {media} https://fluxer-reports.ewr1.vultrobjects.com"),
+        format!(
+            "img-src 'self' data: blob: {static_cdn} {media} {}",
+            config.reports_bucket_origin
+        ),
         "font-src 'self'".to_owned(),
         "connect-src 'self'".to_owned(),
         "object-src 'none'".to_owned(),
@@ -226,12 +216,6 @@ fn csp_origin(endpoint: &str) -> String {
         Ok(u) => u.origin().ascii_serialization(),
         Err(_) => endpoint.trim_end_matches('/').to_owned(),
     }
-}
-
-fn set_static_header(headers: &mut HeaderMap, name: HeaderName, value: &'static str) {
-    headers
-        .entry(name)
-        .or_insert(HeaderValue::from_static(value));
 }
 
 async fn cache_headers_middleware(request: Request, next: Next) -> Response {

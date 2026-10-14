@@ -7,13 +7,14 @@ import {
 	type UserID,
 	vanityCodeToInviteCode,
 } from '@app/api/BrandedTypes';
-import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import type {GuildDataHelpers} from '@app/api/guild/services/data/GuildDataHelpers';
 import {type InviteRepository, isUnownedInvite} from '@app/api/invite/InviteRepository';
 import {Logger} from '@app/api/Logger';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import {getCacheService} from '@app/api/middleware/ServiceSingletons';
 import type {Guild} from '@app/api/models/Guild';
+import {serializeGuildForAudit} from '@app/api/utils/AuditSerializationUtils';
 import {AuditLogActionType} from '@fluxer/constants/src/AuditLogActionType';
 import {InviteTypes, Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
@@ -28,7 +29,7 @@ const VANITY_AUDIT_KEYS: ReadonlySet<string> = new Set(['vanity_url_code']);
 const VANITY_LOCK_TTL_SECONDS = 30;
 
 interface VanityRepositories {
-	guildRepository: IGuildRepositoryAggregate;
+	guildRepository: GuildRepository;
 	inviteRepository: InviteRepository;
 }
 
@@ -103,7 +104,7 @@ async function releaseClaim(repositories: VanityRepositories, guildId: GuildID, 
 
 export class GuildVanityService {
 	constructor(
-		private readonly guildRepository: IGuildRepositoryAggregate,
+		private readonly guildRepository: GuildRepository,
 		private readonly inviteRepository: InviteRepository,
 		private readonly helpers: GuildDataHelpers,
 	) {}
@@ -143,7 +144,7 @@ export class GuildVanityService {
 			requestCache.guilds.delete(guildId);
 			const guild = await this.guildRepository.findUnique(guildId);
 			if (!guild) throw new UnknownGuildError();
-			const previousSnapshot = this.helpers.serializeGuildForAudit(guild);
+			const previousSnapshot = serializeGuildForAudit(guild);
 			if (code && !guild.features.has(GuildFeatures.VANITY_URL)) {
 				throw InputValidationError.fromCode('code', ValidationErrorCodes.VANITY_URL_REQUIRES_FEATURE);
 			}
@@ -165,7 +166,7 @@ export class GuildVanityService {
 				throw InputValidationError.fromCode('code', ValidationErrorCodes.VANITY_URL_CODE_ALREADY_TAKEN);
 			}
 			await this.helpers.dispatchGuildUpdate(updatedGuild);
-			await this.helpers.recordAuditLog({
+			await this.helpers.guildAuditLogService.record({
 				guildId,
 				userId,
 				action: AuditLogActionType.GUILD_UPDATE,

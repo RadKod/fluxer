@@ -21,6 +21,7 @@ import {COMPOSER_SLASH_SLOT_STATE_MAX_ID_LENGTH} from '@app/features/lexical/com
 import {ParserFlags} from '@app/features/messaging/utils/markdown/parser/Enums';
 import type {MentionSegment} from '@app/features/messaging/utils/TextareaSegmentManager';
 import {randomUuid} from '@app/features/platform/utils/RandomUuid';
+import {isRecord} from '@fluxer/record_utils/src/RecordGuards';
 import {mergeRegister} from '@lexical/utils';
 import {
 	$addUpdateTag,
@@ -46,11 +47,11 @@ import {
 } from 'lexical';
 
 export const FLUXER_COMPOSER_CLIPBOARD_MIME = 'application/x-fluxer-composer+json';
-export const COMPOSER_CLIPBOARD_VERSION = 1;
-export const COMPOSER_CLIPBOARD_MAX_PAYLOAD_LENGTH = 262_144;
+const COMPOSER_CLIPBOARD_VERSION = 1;
+const COMPOSER_CLIPBOARD_MAX_PAYLOAD_LENGTH = 262_144;
 export const COMPOSER_CLIPBOARD_MAX_DISPLAY_LENGTH = 65_536;
-export const COMPOSER_CLIPBOARD_MAX_SEGMENTS = 512;
-export const COMPOSER_CLIPBOARD_MAX_TRUSTED_PAYLOADS = 32;
+const COMPOSER_CLIPBOARD_MAX_SEGMENTS = 512;
+const COMPOSER_CLIPBOARD_MAX_TRUSTED_PAYLOADS = 32;
 
 const COMPOSER_CLIPBOARD_MAX_SEGMENT_ID_LENGTH = COMPOSER_SLASH_SLOT_STATE_MAX_ID_LENGTH;
 const COMPOSER_CLIPBOARD_MAX_SEGMENT_TEXT_LENGTH = 65_536;
@@ -68,7 +69,7 @@ export interface ComposerClipboardSlice {
 	segments: Array<MentionSegment>;
 }
 
-export interface ComposerClipboardSelection extends ComposerClipboardSlice {
+interface ComposerClipboardSelection extends ComposerClipboardSlice {
 	textPlain: string;
 }
 
@@ -83,10 +84,6 @@ interface SerializedComposerClipboardPayload {
 	token: string;
 	display: string;
 	segments: Array<MentionSegment>;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value != null && !Array.isArray(value);
 }
 
 function hasExactKeys<const T extends ReadonlyArray<string>>(value: Record<string, unknown>, keys: T): boolean {
@@ -213,7 +210,7 @@ export function getComposerClipboardTextPlain(slice: ComposerClipboardSlice): st
 	return validated == null ? null : sliceToWire(validated);
 }
 
-export function $getComposerClipboardSelection(): ComposerClipboardSelection | null {
+function $getComposerClipboardSelection(): ComposerClipboardSelection | null {
 	const offsets = $getSelectionOffsets();
 	if (offsets == null) {
 		return null;
@@ -251,7 +248,7 @@ function mintTrustedPayload(slice: ComposerClipboardSlice): {token: string; seri
 	return serialized.length > COMPOSER_CLIPBOARD_MAX_PAYLOAD_LENGTH ? null : {token, serialized};
 }
 
-export function serializeComposerClipboardSlice(slice: ComposerClipboardSlice): string | null {
+function serializeComposerClipboardSlice(slice: ComposerClipboardSlice): string | null {
 	const minted = mintTrustedPayload(slice);
 	if (minted == null) {
 		return null;

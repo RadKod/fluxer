@@ -14,7 +14,6 @@ import {
 	LINUX_AUDIO_TARGET_OBJECTS_PATTERN_KEY,
 	toNativeLinuxAudioPatterns,
 } from '@app/features/voice/utils/LinuxAudioSourceRules';
-import {disarmVirtmic} from '@app/features/voice/utils/LinuxScreenShareAudio';
 import {
 	armNativeAudioForLinuxRouting,
 	armNativeAudioForNextCapture,
@@ -130,14 +129,12 @@ export async function reconfigureActiveLinuxScreenShareAudioLink(): Promise<bool
 	const userIncludeSources = VoiceSettings.getEffectiveScreenShareAudioIncludeSources().map((entry) => ({...entry}));
 	const userExcludeSources = VoiceSettings.getEffectiveScreenShareAudioExcludeSources().map((entry) => ({...entry}));
 	if (sourceMode === 'none') {
-		disarmVirtmic();
 		disarmNativeAudio();
 		await virtmicApi?.stop();
 		return true;
 	}
 	const nativeRule = buildLinuxNativeAudioRule(sourceMode, userIncludeSources, userExcludeSources);
 	if (await MediaEngine.ensureLinuxScreenShareAudioPublication(nativeRule).catch(() => false)) {
-		disarmVirtmic();
 		await virtmicApi?.stop();
 		return true;
 	}
@@ -157,9 +154,7 @@ async function getManualAudioSourceSelectionInput(shareContext: StreamSettingsSh
 	};
 }
 
-export async function shouldRouteManualAudioSourcesForShare(
-	shareContext: StreamSettingsShareContext,
-): Promise<boolean> {
+async function shouldRouteManualAudioSourcesForShare(shareContext: StreamSettingsShareContext): Promise<boolean> {
 	return routesManualAudioSources(await getManualAudioSourceSelectionInput(shareContext));
 }
 
@@ -244,7 +239,6 @@ export async function stopActiveLinuxScreenShareAudioLink(): Promise<boolean> {
 	if (electronApi?.platform !== 'linux') {
 		return false;
 	}
-	disarmVirtmic();
 	disarmNativeAudio();
 	await virtmicApi?.stop();
 	return true;
@@ -337,6 +331,7 @@ export function buildConfiguredScreenShareOptions(input: ScreenShareOptionsBuild
 	const {captureOptions, publishOptions} = buildScreenShareOptions({
 		resolution: input.target.resolution,
 		frameRate: input.target.frameRate,
+		maxBitrate: input.target.maxBitrate,
 		context: input.target.context,
 		includeAudio: input.includeAudio,
 		contentHint: input.target.contentHint,
@@ -495,7 +490,14 @@ async function runConfiguredDisplayScreenShare(
 			}
 		} else if (requestedNativeDesktopAudio) {
 			try {
-				nativeAudioArmed = await armNativeSystemAudioForNextCapture();
+				nativeAudioArmed = await armNativeSystemAudioForNextCapture(
+					electronApi.platform === 'win32'
+						? {
+								all: VoiceSettings.getWindowsDesktopAudioAll(),
+								devices: VoiceSettings.getWindowsDesktopAudioDevices(),
+							}
+						: undefined,
+				);
 			} catch (error) {
 				logger.warn('Failed to arm native desktop audio capture', {
 					sourceId,

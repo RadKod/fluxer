@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {RuntimeConfigSnapshot} from '@app/features/app/state/RuntimeConfig';
-import type {AccountPresenceIntent, UserData} from '@app/features/auth/state/AccountStorage';
+import type {AccountPresenceIntent, UserData} from '@app/features/auth/state/AccountStorageContract';
 import type {ValueOf} from '@fluxer/constants/src/ValueOf';
 import {assign, initialTransition, type SnapshotFrom, setup, transition} from 'xstate';
 
@@ -29,7 +29,7 @@ export interface Account {
 	isValid: boolean;
 }
 
-export interface AuthSessionMachineContext {
+interface AuthSessionMachineContext {
 	token: string | null;
 	userId: string | null;
 	accountKey: string | null;
@@ -63,7 +63,7 @@ export type AuthSessionMachineEvent =
 	| {type: 'logout.complete'}
 	| {type: 'reset'};
 
-export function createInitialAuthSessionContext(): AuthSessionMachineContext {
+function createInitialAuthSessionContext(): AuthSessionMachineContext {
 	return {
 		token: null,
 		userId: null,
@@ -111,7 +111,7 @@ function accountList(accounts: Map<string, Account>): Array<Account> {
 	return Array.from(accounts.values()).sort((a, b) => b.lastActive - a.lastActive);
 }
 
-export const authSessionStateMachine = setup({
+const authSessionStateMachine = setup({
 	types: {
 		context: {} as AuthSessionMachineContext,
 		events: {} as AuthSessionMachineEvent,

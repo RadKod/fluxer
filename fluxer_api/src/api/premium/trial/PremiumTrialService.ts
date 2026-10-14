@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createHmac, randomUUID} from 'node:crypto';
-import type {IAdminRepository} from '@app/api/admin/IAdminRepository';
+import type {AdminRepository} from '@app/api/admin/AdminRepository';
 import {Config} from '@app/api/Config';
 import type {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
 import type {User} from '@app/api/models/User';
@@ -23,7 +23,7 @@ interface PremiumTrialServiceDeps {
 	ledgerService: Pick<PremiumLedgerService, 'grant'>;
 	ledgerRepository: Pick<PremiumLedgerRepository, 'find'>;
 	instanceConfigRepository: Pick<InstanceConfigRepository, 'getInstancePolicyConfig'>;
-	adminRepository: Pick<IAdminRepository, 'isEmailDomainSuspicious' | 'isEmailDomainDisposable'>;
+	adminRepository: Pick<AdminRepository, 'isEmailDomainSuspicious' | 'isEmailDomainDisposable'>;
 	kvClient: IKVProvider;
 }
 

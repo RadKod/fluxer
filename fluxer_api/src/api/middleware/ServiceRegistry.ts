@@ -2,7 +2,6 @@
 
 import {BillingRepository} from '@app/api/billing/repositories/BillingRepository';
 import {BlueskyOAuthService} from '@app/api/bluesky/BlueskyOAuthService';
-import {DisabledBlueskyOAuthService} from '@app/api/bluesky/DisabledBlueskyOAuthService';
 import type {IBlueskyOAuthService} from '@app/api/bluesky/IBlueskyOAuthService';
 import {Config} from '@app/api/Config';
 import type {BlueskyOAuthConfig} from '@app/api/config/APIConfig';
@@ -21,8 +20,7 @@ import {VoiceRoomStore} from '@app/api/infrastructure/VoiceRoomStore';
 import {getCachedAccountIdentity} from '@app/api/instance/AccountIdentityModeCache';
 import type {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
 import {Logger} from '@app/api/Logger';
-import {setInjectedSearchProvider} from '@app/api/SearchFactory';
-import type {ISearchProvider} from '@app/api/search/ISearchProvider';
+import {singleton} from '@app/api/middleware/Singleton';
 import {
 	type UsernameOwnershipService,
 	UsernameOwnershipUnavailableError,
@@ -205,18 +203,7 @@ export async function releaseSnowflakeService({service, owned}: SnowflakeService
 	}
 }
 
-let _billingRepository: BillingRepository | null = null;
-let _injectedBillingRepository: BillingRepository | undefined;
-
-export function getBillingRepository(): BillingRepository {
-	if (_injectedBillingRepository) {
-		return _injectedBillingRepository;
-	}
-	if (!_billingRepository) {
-		_billingRepository = new BillingRepository(getSnowflakeService(), getKVClient());
-	}
-	return _billingRepository;
-}
+export const getBillingRepository = singleton(() => new BillingRepository(getKVClient()));
 
 let _injectedMediaService: IMediaService | undefined;
 
@@ -231,28 +218,15 @@ export function getMediaService(): IMediaService {
 	return new ProdMediaService();
 }
 
-let _injectedSearchProvider: ISearchProvider | undefined;
-
-export function setInjectedSearchProviderService(provider: ISearchProvider | undefined): void {
-	_injectedSearchProvider = provider;
-	setInjectedSearchProvider(provider);
-}
-
-export function getInjectedSearchProvider(): ISearchProvider | undefined {
-	return _injectedSearchProvider;
-}
-
 interface BlueskyOAuthServiceSelection {
 	readonly config: BlueskyOAuthConfig;
 	readonly signature: string;
-	readonly service: Promise<IBlueskyOAuthService>;
+	readonly service: Promise<IBlueskyOAuthService | null>;
 }
 
 let _injectedBlueskyOAuthService: IBlueskyOAuthService | undefined;
 let _blueskyOAuthSelection: BlueskyOAuthServiceSelection | undefined;
 let _blueskyOAuthGeneration = Symbol();
-let _disabledBlueskyOAuthService: DisabledBlueskyOAuthService | undefined;
-
 export function setInjectedBlueskyOAuthService(service: IBlueskyOAuthService | undefined): void {
 	_injectedBlueskyOAuthService = service;
 	resetBlueskyOAuthServiceCache();
@@ -261,34 +235,25 @@ export function setInjectedBlueskyOAuthService(service: IBlueskyOAuthService | u
 function resetBlueskyOAuthServiceCache(): void {
 	_blueskyOAuthSelection = undefined;
 	_blueskyOAuthGeneration = Symbol();
-	_disabledBlueskyOAuthService = undefined;
 }
 
-function getDisabledBlueskyOAuthService(): DisabledBlueskyOAuthService {
-	if (!_disabledBlueskyOAuthService) {
-		_disabledBlueskyOAuthService = new DisabledBlueskyOAuthService();
-	}
-	return _disabledBlueskyOAuthService;
-}
-
-async function createBlueskyOAuthService(config: BlueskyOAuthConfig): Promise<IBlueskyOAuthService> {
-	const disabledService = getDisabledBlueskyOAuthService();
-	if (!config.enabled) return disabledService;
+async function createBlueskyOAuthService(config: BlueskyOAuthConfig): Promise<IBlueskyOAuthService | null> {
+	if (!config.enabled) return null;
 	if (config.keys.length === 0) {
 		Logger.warn('Bluesky OAuth is enabled but no signing keys are configured; disabling Bluesky OAuth.');
-		return disabledService;
+		return null;
 	}
 	try {
 		return await BlueskyOAuthService.create(config, getKVClient(), Config.endpoints.apiPublic);
 	} catch (error) {
 		Logger.error({error}, 'Bluesky OAuth initialization failed; disabling Bluesky OAuth for this configuration.');
-		return disabledService;
+		return null;
 	}
 }
 
 export async function resolveBlueskyOAuthService(
 	instanceConfigRepository?: Pick<InstanceConfigRepository, 'getEffectiveBlueskyConfig'>,
-): Promise<IBlueskyOAuthService> {
+): Promise<IBlueskyOAuthService | null> {
 	if (_injectedBlueskyOAuthService) {
 		return _injectedBlueskyOAuthService;
 	}
@@ -434,7 +399,6 @@ export function resetServiceRegistryForTesting(): void {
 	_usernameMigrationPreconditions = undefined;
 	_kvClient = null;
 	_snowflakeService = null;
-	_billingRepository = null;
 	resetBlueskyOAuthServiceCache();
 	const previousVoiceSession = voiceSession;
 	voiceSession = null;

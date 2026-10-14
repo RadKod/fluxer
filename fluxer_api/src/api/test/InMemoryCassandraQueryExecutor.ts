@@ -10,6 +10,7 @@ import type {
 	WhereExpr,
 } from '@app/api/database/CassandraTypes';
 import {isConditionalQuery} from '@app/api/database/CassandraTypes';
+import {normalizeCql, rowComparator, valuesEqual} from '@app/api/database/PostgresKvQueryExecutor';
 import {MAX_TOKEN, MIN_TOKEN} from '@app/api/database/TokenRangeScan';
 import cassandra from 'cassandra-driver';
 
@@ -52,10 +53,6 @@ function cellBytes(value: unknown): Buffer {
 		return bytes;
 	}
 	throw new Error('In-memory equal-timestamp comparison requires text, int32, bigint, boolean, Date or Buffer');
-}
-
-function normalizeCql(cql: string): string {
-	return cql.replace(/\s+/g, ' ').trim();
 }
 
 function compareValues(a: unknown, b: unknown): number {
@@ -105,15 +102,6 @@ function murmur3Token(key: unknown): bigint {
 	h2 = BigInt.asUintN(64, h2 + h1);
 	const token = BigInt.asIntN(64, fmix64(h1) + fmix64(h2));
 	return token === MIN_TOKEN ? MAX_TOKEN : token;
-}
-
-function valuesEqual(a: unknown, b: unknown): boolean {
-	if (a == null && b == null) return true;
-	if (a instanceof cassandra.types.LocalDate && b instanceof cassandra.types.LocalDate)
-		return a.toString() === b.toString();
-	if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
-	if (Buffer.isBuffer(a) && Buffer.isBuffer(b)) return a.equals(b);
-	return a === b;
 }
 
 function matchesConditions(
@@ -220,7 +208,8 @@ function projectRow(row: Row, columns: ReadonlyArray<string> | undefined): Row {
 	if (!columns) return cloneRow(row);
 	const projected: Row = {};
 	for (const column of columns) {
-		projected[column] = cloneValue(row[column]);
+		// Cassandra returns null for selected columns that have never been written.
+		projected[column] = cloneValue(row[column] ?? null);
 	}
 	return projected;
 }
@@ -264,11 +253,18 @@ export class InMemoryCassandraQueryExecutor implements CassandraQueryExecutorFor
 	private clock = 0n;
 
 	constructor(private readonly options: InMemoryCassandraOptions = {}) {}
+	readonly executed: Array<KvQueryMeta> = [];
+	readonly batchAtomicity: Array<boolean> = [];
+	countStatements(statement: string): number {
+		return this.executed.filter((meta) => `${meta.action}:${meta.table.name}` === statement).length;
+	}
 
 	reset(): void {
 		this.tables.clear();
 		this.timestampedTables.clear();
 		this.clock = 0n;
+		this.executed.length = 0;
+		this.batchAtomicity.length = 0;
 	}
 
 	private table(meta: KvQueryMeta): Map<string, Row> {
@@ -305,6 +301,8 @@ export class InMemoryCassandraQueryExecutor implements CassandraQueryExecutorFor
 			return [{coordinator_time: new Date()}] as Array<T>;
 		}
 		const meta = this.meta(query);
+		const recordedMeta = query.kvMeta ?? getKvMeta(query.cql);
+		if (recordedMeta) this.executed.push(recordedMeta);
 		switch (meta.action) {
 			case 'select':
 				return this.select(meta, query.params) as Array<T>;
@@ -338,8 +336,10 @@ export class InMemoryCassandraQueryExecutor implements CassandraQueryExecutorFor
 
 	async executeBatch(
 		queries: Array<{query: string; params: object; meta?: KvQueryMeta}>,
-		_atomic?: boolean,
+		atomic?: boolean,
 	): Promise<void> {
+		this.batchAtomicity.push(atomic ?? true);
+
 		for (const query of queries) {
 			if (isConditionalQuery({cql: query.query, params: query.params as CassandraParams, kvMeta: query.meta})) {
 				throw new Error('Conditional writes must use executeConditional to preserve their result');
@@ -520,20 +520,9 @@ export class InMemoryCassandraQueryExecutor implements CassandraQueryExecutorFor
 	}
 
 	private select(meta: KvQueryMeta, params: CassandraParams): Array<Row> {
-		let rows = [...this.table(meta).values()].filter((row) => matchesWhere(row, meta.where, params));
-		if (meta.orderBy) {
-			const direction = meta.orderBy.direction === 'DESC' ? -1 : 1;
-			const column = meta.orderBy.col as string;
-			const primaryKey = meta.table.primaryKey as ReadonlyArray<string>;
-			const columns = [column, ...primaryKey.slice(primaryKey.indexOf(column) + 1)];
-			rows = rows.sort((a, b) => {
-				for (const c of columns) {
-					const cmp = compareValues(a[c], b[c]);
-					if (cmp !== 0) return cmp * direction;
-				}
-				return 0;
-			});
-		}
+		let rows = [...this.table(meta).values()]
+			.filter((row) => matchesWhere(row, meta.where, params))
+			.sort(rowComparator(meta));
 		if (typeof meta.limit === 'number') {
 			rows = rows.slice(0, meta.limit);
 		}

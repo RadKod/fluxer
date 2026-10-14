@@ -9,7 +9,7 @@ import {expect, test} from 'vitest';
 const sourceRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const snapshotOnlyFiles = new Set(['features/voice/utils/StatsForNerdsCopy.ts']);
 const statsRead =
-	/\bMediaEngine\.(currentLatency|mediaLatency|signalLatency|averageLatency|latencyHistory|voiceStats|perTrackStats|statsTimeSeries|publisherTransport|subscriberTransport|reconnectionCount|localConnectionQuality|displayLatency|estimatedLatency)\b/;
+	/\bMediaEngine\.(currentLatency|mediaLatency|signalLatency|averageLatency|latencyHistory|voiceStats|perTrackStats|statsTimeSeries|publisherTransport|subscriberTransport|reconnectionCount|localConnectionQuality|displayLatency|estimatedLatency)\b|\bcollectStatsForNerdsSnapshot\s*\(/;
 
 function sourceFiles(directory: string): Array<string> {
 	return readdirSync(directory, {withFileTypes: true}).flatMap((entry) => {

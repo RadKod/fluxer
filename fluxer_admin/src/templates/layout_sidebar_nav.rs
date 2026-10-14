@@ -7,8 +7,9 @@ pub struct NavItem {
     pub path: &'static str,
     pub active_key: &'static str,
     pub required_acls: &'static [&'static str],
-    pub hosted_only: bool,
 }
+
+pub const PENDING_REGISTRATIONS_KEY: &str = "pending-registrations";
 
 pub struct NavSection {
     pub title: &'static str,
@@ -17,10 +18,7 @@ pub struct NavSection {
 
 macro_rules! item {
     ($t:expr, $p:expr, $k:expr, [ $($a:expr),+ $(,)? ]) => {
-        NavItem { title: $t, path: $p, active_key: $k, required_acls: &[$($a),+], hosted_only: false }
-    };
-    ($t:expr, $p:expr, $k:expr, [ $($a:expr),+ $(,)? ], hosted) => {
-        NavItem { title: $t, path: $p, active_key: $k, required_acls: &[$($a),+], hosted_only: true }
+        NavItem { title: $t, path: $p, active_key: $k, required_acls: &[$($a),+] }
     };
 }
 
@@ -59,6 +57,12 @@ pub const NAV_SECTIONS: &[NavSection] = &[
                 "/discovery",
                 "discovery",
                 [acl::DISCOVERY_REVIEW]
+            ),
+            item!(
+                "Pending Registrations",
+                "/pending-registrations",
+                PENDING_REGISTRATIONS_KEY,
+                [acl::REGISTRATION_REVIEW]
             ),
             item!(
                 "Bulk Actions",

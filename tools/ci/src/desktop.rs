@@ -5,17 +5,19 @@ use crate::common::{
     collect_files, command_succeeds, copy_dir_contents, count_files, download_file, env_bool,
     env_string, output_bytes, output_text, parse_bool, path_to_s3_key, remove_dir_if_exists,
     remove_empty_dirs_below, remove_file_if_exists, require_any_env, require_env, require_home,
-    resolve_calver, run_command, runner_temp, title_case, trim_option,
+    resolve_calver, run_command, runner_temp, title_case,
 };
 use crate::functions::{sha256_file, write_json_pretty};
 use crate::release::{
-    DESKTOP_RELEASE_DESCRIPTOR_SCHEMA_VERSION, DesktopReleaseAsset, DesktopReleaseDescriptor,
-    desktop_module_manifest_release_asset_name, desktop_module_manifest_storage_key,
-    desktop_module_package_release_asset_name, desktop_module_package_storage_key,
-    desktop_release_asset_name, desktop_release_coordinates, desktop_release_descriptor_filename,
-    desktop_release_product, desktop_release_shipped_formats,
-    desktop_release_update_payload_suffix, desktop_release_updater_feeds,
-    validate_desktop_release_descriptor, validate_desktop_release_module_files,
+    DESKTOP_RELEASE_DESCRIPTOR_SCHEMA_VERSION, DesktopPublishedRelease, DesktopReleaseAsset,
+    DesktopReleaseDescriptor, DesktopReleaseKind, desktop_module_manifest_release_asset_name,
+    desktop_module_manifest_storage_key, desktop_module_package_release_asset_name,
+    desktop_module_package_storage_key, desktop_release_asset_name, desktop_release_coordinates,
+    desktop_release_descriptor_filename, desktop_release_kind, desktop_release_product,
+    desktop_release_shipped_formats, desktop_release_update_payload_suffix,
+    desktop_release_updater_feeds, desktop_releases, download_desktop_release_asset,
+    resolve_commit_sha, validate_desktop_release_descriptor, validate_desktop_release_module_files,
+    validate_full_sha,
 };
 use anyhow::{Context, Result, anyhow, bail, ensure};
 use chrono::{DateTime, Utc};
@@ -50,7 +52,7 @@ const LINUX_LIBFIDO2_VERSION: &str = "1.16.0";
 const LINUX_LIBFIDO2_SOURCE_SHA256: &str =
     "8c2b6fb279b5b42e9ac92ade71832e485852647b53607c43baaafbbcecea04e4";
 pub(crate) const MACOS_UNIVERSAL_ARCH: &str = "universal";
-const MACOS_MINIMUM_SYSTEM_VERSION: &str = "13.0";
+pub(crate) const MACOS_MINIMUM_SYSTEM_VERSION: &str = "13.0";
 const DESKTOP_PAYLOAD_PREFIX: &str = "desktop";
 const DESKTOP_SHARED_ASSETS_DIR_NAME: &str = "desktop-shared-assets";
 const DESKTOP_SHARED_ASSETS_PAYLOAD_DIR_NAME: &str = "renderer";
@@ -90,6 +92,8 @@ const DESKTOP_DICTIONARY_MODULE_PREFIX: &str = "fluxer_dict_";
 const DESKTOP_DICTIONARY_PACKAGE_PREFIX: &str = "dictionary-";
 const DESKTOP_DICTIONARY_FILE_NAMES: &[&str] = &["index.aff", "index.dic"];
 const DESKTOP_MODULE_MINIMUM_SHELL_VERSION: &str = "0.0.0";
+const DESKTOP_CONTENT_MODULE_BUILD_VERSION: &str = "0.0.0";
+const DESKTOP_RENDERER_VERSION_FILE_NAME: &str = "version.json";
 const DESKTOP_REQUIRED_MODULES: &[&str] = &[DESKTOP_RENDERER_MODULE];
 const DESKTOP_MODULES_ENV: &str = "FLUXER_MODULES";
 
@@ -101,20 +105,6 @@ pub struct BuildDesktopArgs {
     channel: Option<String>,
     #[arg(long)]
     skip_targets: Option<String>,
-    #[arg(long)]
-    skip_windows: Option<String>,
-    #[arg(long)]
-    skip_windows_x64: Option<String>,
-    #[arg(long)]
-    skip_windows_arm64: Option<String>,
-    #[arg(long)]
-    skip_macos: Option<String>,
-    #[arg(long)]
-    skip_linux: Option<String>,
-    #[arg(long)]
-    skip_linux_x64: Option<String>,
-    #[arg(long)]
-    skip_linux_arm64: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -141,7 +131,9 @@ enum DesktopStep {
     RestoreSharedAssets,
     SplitModules,
     PackModules,
-    StripShellRenderer,
+    PruneShellRenderer,
+    VerifyBundledRendererLinux,
+    VerifyBundledRendererWindows,
     BuildElectronMain,
     InstallVelopackCli,
     BuildAppMacos,
@@ -167,6 +159,9 @@ enum DesktopStep {
     BuildModuleManifest,
     PrepareReleaseAssets,
     BuildSummary,
+    CheckShellContract,
+    BuildModulesOnlyManifest,
+    PrepareModulesReleaseAssets,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -249,7 +244,9 @@ pub async fn run(args: BuildDesktopArgs) -> Result<()> {
         DesktopStep::RestoreSharedAssets => restore_shared_assets_step(),
         DesktopStep::SplitModules => split_modules_step(),
         DesktopStep::PackModules => pack_modules_step(),
-        DesktopStep::StripShellRenderer => strip_shell_renderer_step(),
+        DesktopStep::PruneShellRenderer => prune_shell_renderer_step(),
+        DesktopStep::VerifyBundledRendererLinux => verify_bundled_renderer_linux_step(),
+        DesktopStep::VerifyBundledRendererWindows => verify_bundled_renderer_windows_step(),
         DesktopStep::BuildElectronMain => build_electron_main_step(),
         DesktopStep::InstallVelopackCli => install_velopack_cli_step(),
         DesktopStep::BuildAppMacos => build_app_step(DesktopBuildPlatform::Macos),
@@ -287,19 +284,14 @@ pub async fn run(args: BuildDesktopArgs) -> Result<()> {
         DesktopStep::BuildModuleManifest => build_module_manifest_step(),
         DesktopStep::PrepareReleaseAssets => prepare_release_assets_step(),
         DesktopStep::BuildSummary => build_summary_step(),
-    }
-}
-
-fn calver_env_from_process() -> CalverEnv {
-    CalverEnv {
-        build_version: trim_option(env::var("BUILD_VERSION").ok()),
-        fluxer_build_version: trim_option(env::var("FLUXER_BUILD_VERSION").ok()),
-        fluxer_build_date: trim_option(env::var("FLUXER_BUILD_DATE").ok()),
+        DesktopStep::CheckShellContract => check_shell_contract_step().await,
+        DesktopStep::BuildModulesOnlyManifest => build_modules_only_manifest_step(),
+        DesktopStep::PrepareModulesReleaseAssets => prepare_modules_release_assets_step(),
     }
 }
 
 fn set_metadata_step(channel: &str) -> Result<()> {
-    let version = resolve_calver(&calver_env_from_process(), Utc::now())?;
+    let version = resolve_calver(&CalverEnv::from_process(), Utc::now())?;
     let pub_date = Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
     let build_channel = if channel == "canary" {
         "canary"
@@ -413,17 +405,12 @@ fn selected_platforms(args: &BuildDesktopArgs) -> Result<Vec<Platform>> {
     Ok(PLATFORMS
         .iter()
         .copied()
-        .filter(|platform| !skip_platform(*platform, args, &skip_targets))
+        .filter(|platform| !skip_platform(*platform, &skip_targets))
         .collect())
 }
 
 fn skip_target_set(args: &BuildDesktopArgs) -> Result<BTreeSet<String>> {
-    let raw = args
-        .skip_targets
-        .clone()
-        .filter(|value| !value.is_empty())
-        .or_else(|| env_string("SKIP_TARGETS"))
-        .unwrap_or_default();
+    let raw = args.skip_targets.clone().unwrap_or_default();
     let valid = BTreeSet::from([
         "windows",
         "windows-x64",
@@ -450,35 +437,9 @@ fn skip_target_set(args: &BuildDesktopArgs) -> Result<BTreeSet<String>> {
     Ok(targets)
 }
 
-fn skip_platform(
-    platform: Platform,
-    args: &BuildDesktopArgs,
-    skip_targets: &BTreeSet<String>,
-) -> bool {
-    let flag = |arg: &Option<String>, env_name: &str| {
-        arg.as_deref()
-            .map(parse_bool)
-            .unwrap_or_else(|| env_bool(env_name))
-    };
+fn skip_platform(platform: Platform, skip_targets: &BTreeSet<String>) -> bool {
     let platform_arch = format!("{}-{}", platform.platform, platform.arch);
-    if skip_targets.contains(platform.platform) || skip_targets.contains(platform_arch.as_str()) {
-        return true;
-    }
-    match platform.platform {
-        "windows" => {
-            flag(&args.skip_windows, "SKIP_WINDOWS")
-                || (platform.arch == "x64" && flag(&args.skip_windows_x64, "SKIP_WINDOWS_X64"))
-                || (platform.arch == "arm64"
-                    && flag(&args.skip_windows_arm64, "SKIP_WINDOWS_ARM64"))
-        }
-        "macos" => flag(&args.skip_macos, "SKIP_MACOS"),
-        "linux" => {
-            flag(&args.skip_linux, "SKIP_LINUX")
-                || (platform.arch == "x64" && flag(&args.skip_linux_x64, "SKIP_LINUX_X64"))
-                || (platform.arch == "arm64" && flag(&args.skip_linux_arm64, "SKIP_LINUX_ARM64"))
-        }
-        _ => false,
-    }
+    skip_targets.contains(platform.platform) || skip_targets.contains(platform_arch.as_str())
 }
 
 fn platform_json(platform: Platform) -> String {
@@ -821,6 +782,7 @@ DPkg::Lock::Timeout "120";
         "libclang-dev",
         "clang",
         "libpulse-dev",
+        "xvfb",
     ])?;
     install_linux_pipewire_headers().await?;
     install_linux_libfido2().await?;
@@ -1539,6 +1501,12 @@ fn restore_shared_assets_step() -> Result<()> {
     remove_dir_if_exists(&renderer_dir)?;
     copy_dir_contents(&payload_dir, &renderer_dir)?;
     ensure_renderer_assets_ready(&renderer_dir)?;
+    let bundled_version = read_bundled_renderer_version(&renderer_dir)?;
+    ensure!(
+        bundled_version == build_version,
+        "The shared renderer in {} reports version {bundled_version}, this shell is {build_version}",
+        renderer_dir.display()
+    );
     println!(
         "Restored {} shared renderer file(s) into {}",
         manifest.files.len(),
@@ -1812,44 +1780,110 @@ fn classify_renderer_files(renderer_dir: &Path) -> Result<Vec<DesktopClassifiedR
     Ok(classified)
 }
 
-fn strip_renderer_tree_owned_by_modules(
+fn is_content_addressed_desktop_module(module: &str) -> bool {
+    module != DESKTOP_RENDERER_MODULE && module != DESKTOP_SOURCEMAP_MODULE
+}
+
+fn desktop_content_module_source_sha(files: &[DesktopSharedAssetFile]) -> String {
+    let mut entries = files
+        .iter()
+        .map(|entry| (entry.path.as_str(), entry.sha256.as_str(), entry.bytes))
+        .collect::<Vec<_>>();
+    entries.sort();
+    let mut digest = Sha256::new();
+    for (path, sha256, bytes) in entries {
+        digest.update(path.as_bytes());
+        digest.update([0]);
+        digest.update(sha256.as_bytes());
+        digest.update([0]);
+        digest.update(bytes.to_string().as_bytes());
+        digest.update(b"\n");
+    }
+    hex::encode(digest.finalize())[..40].to_string()
+}
+
+fn desktop_module_manifest(
+    module: &str,
+    build_version: &str,
+    release_channel: &str,
+    source_sha: &str,
+    files: Vec<DesktopSharedAssetFile>,
+) -> DesktopModuleManifest {
+    if is_content_addressed_desktop_module(module) {
+        return DesktopModuleManifest {
+            module: module.to_string(),
+            build_version: DESKTOP_CONTENT_MODULE_BUILD_VERSION.to_string(),
+            release_channel: release_channel.to_string(),
+            source_sha: desktop_content_module_source_sha(&files),
+            files,
+        };
+    }
+    DesktopModuleManifest {
+        module: module.to_string(),
+        build_version: build_version.to_string(),
+        release_channel: release_channel.to_string(),
+        source_sha: source_sha.to_string(),
+        files,
+    }
+}
+
+fn read_bundled_renderer_version(renderer_dir: &Path) -> Result<String> {
+    let path = renderer_dir.join(DESKTOP_RENDERER_VERSION_FILE_NAME);
+    let bytes = fs::read(&path).with_context(|| {
+        format!(
+            "Failed to read {}, the shell picks between its bundled renderer and an installed module by this version",
+            path.display()
+        )
+    })?;
+    let value: Value = serde_json::from_slice(&bytes)
+        .with_context(|| format!("Failed to parse {}", path.display()))?;
+    let version = value
+        .get("version")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|version| !version.is_empty())
+        .with_context(|| format!("{} names no version", path.display()))?;
+    Ok(version.to_string())
+}
+
+fn prune_on_demand_modules_from_renderer_tree(
     renderer_dir: &Path,
 ) -> Result<BTreeMap<String, Vec<DesktopSharedAssetFile>>> {
     ensure_renderer_assets_ready(renderer_dir)?;
     let mut removed: BTreeMap<String, Vec<DesktopSharedAssetFile>> = BTreeMap::new();
+    let mut kept = 0usize;
     for file in classify_renderer_files(renderer_dir)? {
+        if file.module == DESKTOP_RENDERER_MODULE {
+            kept += 1;
+            continue;
+        }
         fs::remove_file(&file.source)
             .with_context(|| format!("Failed to remove {}", file.source.display()))?;
         removed.entry(file.module).or_default().push(file.entry);
     }
     ensure!(
-        removed
-            .get(DESKTOP_RENDERER_MODULE)
-            .is_some_and(|entries| !entries.is_empty()),
-        "{DESKTOP_RENDERER_MODULE} claimed no file in {}, refusing to publish a shell whose renderer module is empty",
-        renderer_dir.display()
-    );
-    let left = count_files(renderer_dir)?;
-    ensure!(
-        left == 0,
-        "{left} renderer file(s) survived the strip in {}, every packed file must belong to a module",
+        kept > 0,
+        "{DESKTOP_RENDERER_MODULE} claimed no file in {}, refusing to package a shell with no bundled renderer",
         renderer_dir.display()
     );
     remove_empty_dirs_below(renderer_dir)?;
-    let surviving_entries = fs::read_dir(renderer_dir)
-        .with_context(|| format!("Failed to read {}", renderer_dir.display()))?
-        .count();
+    ensure_renderer_assets_ready(renderer_dir)?;
+    let survivors = classify_renderer_files(renderer_dir)?;
     ensure!(
-        surviving_entries == 0,
-        "{surviving_entries} entries survived the strip in {}, the packed renderer directory must be left empty",
-        renderer_dir.display()
+        survivors.len() == kept
+            && survivors
+                .iter()
+                .all(|file| file.module == DESKTOP_RENDERER_MODULE),
+        "{} keeps {} file(s) after the prune, {kept} belong to {DESKTOP_RENDERER_MODULE}",
+        renderer_dir.display(),
+        survivors.len()
     );
     Ok(removed)
 }
 
-fn strip_shell_renderer_step() -> Result<()> {
+fn prune_shell_renderer_step() -> Result<()> {
     let renderer_dir = desktop_renderer_dir();
-    let removed = strip_renderer_tree_owned_by_modules(&renderer_dir)?;
+    let removed = prune_on_demand_modules_from_renderer_tree(&renderer_dir)?;
     let mut total_files = 0usize;
     let mut total_bytes = 0u64;
     for (module, entries) in &removed {
@@ -1861,9 +1895,77 @@ fn strip_shell_renderer_step() -> Result<()> {
             entries.len()
         );
     }
+    let bundled_version = read_bundled_renderer_version(&renderer_dir)?;
     println!(
-        "Stripped {total_files} module file(s), {total_bytes} bytes from {}, the shell now ships no renderer",
-        renderer_dir.display()
+        "Pruned {total_files} on-demand module file(s), {total_bytes} bytes from {}, the shell bundles renderer {bundled_version} in {} file(s)",
+        renderer_dir.display(),
+        count_files(&renderer_dir)?
+    );
+    Ok(())
+}
+
+fn verify_bundled_renderer_linux_step() -> Result<()> {
+    let channel = require_env("BUILD_CHANNEL")?;
+    let version = require_env("BUILD_VERSION")?;
+    let dist = Path::new("dist-electron");
+    let unpacked = sorted_child_directories(dist)?
+        .into_iter()
+        .find(|entry| {
+            file_name_string(entry)
+                .is_ok_and(|name| name.starts_with("linux") && name.ends_with("unpacked"))
+        })
+        .with_context(|| format!("No unpacked Linux app found in {}", dist.display()))?;
+    run_command(
+        CommandSpec::new("xvfb-run")
+            .args(["-a", "node", "scripts/release-check.mjs", "--app"])
+            .arg(unpacked.as_os_str())
+            .args([
+                "--channel",
+                channel.as_str(),
+                "--expect-renderer",
+                version.as_str(),
+                "--expect-source",
+                "bundled",
+                "--package-origin",
+                "http://127.0.0.1:9",
+                "--app-arg=--no-sandbox",
+                "--app-arg=--disable-gpu",
+                "--timeout-seconds",
+                "180",
+            ]),
+    )?;
+    println!(
+        "The packaged {channel} shell {version} boots its bundled renderer with no package feed"
+    );
+    Ok(())
+}
+
+fn verify_bundled_renderer_windows_step() -> Result<()> {
+    let channel = require_env("BUILD_CHANNEL")?;
+    let version = require_env("BUILD_VERSION")?;
+    let arch = require_env("ARCH")?;
+    let config = windows_package_config(&channel, &arch)?;
+    let unpacked = resolve_windows_unpacked_dir(&arch, &config.main_exe)?;
+    run_command(
+        CommandSpec::new("node")
+            .args(["scripts/release-check.mjs", "--app"])
+            .arg(unpacked.as_os_str())
+            .args([
+                "--channel",
+                channel.as_str(),
+                "--expect-renderer",
+                version.as_str(),
+                "--expect-source",
+                "bundled",
+                "--package-origin",
+                "http://127.0.0.1:9",
+                "--app-arg=--disable-gpu",
+                "--timeout-seconds",
+                "240",
+            ]),
+    )?;
+    println!(
+        "The packaged {channel} shell {version} for windows {arch} passes its native module preflight and boots its bundled renderer"
     );
     Ok(())
 }
@@ -1917,13 +2019,13 @@ fn split_modules_step() -> Result<()> {
         }
         write_json_pretty(
             &module_dir.join(DESKTOP_MODULE_FILE_LIST_NAME),
-            &DesktopModuleManifest {
-                module: module.clone(),
-                build_version: build_version.clone(),
-                release_channel: release_channel.clone(),
-                source_sha: source_sha.clone(),
-                files: entries.iter().map(|(_, entry)| entry.clone()).collect(),
-            },
+            &desktop_module_manifest(
+                module,
+                &build_version,
+                &release_channel,
+                &source_sha,
+                entries.iter().map(|(_, entry)| entry.clone()).collect(),
+            ),
         )?;
         summaries.push(DesktopModuleClassificationSummary {
             module: module.clone(),
@@ -1998,6 +2100,13 @@ fn desktop_dictionary_source_root() -> PathBuf {
 }
 
 fn desktop_dictionary_sources() -> Result<Vec<(String, PathBuf)>> {
+    run_command(
+        CommandSpec::new("sh").arg(
+            workdir()
+                .join("fluxer_static")
+                .join("fetch-spellcheck-dictionaries.sh"),
+        ),
+    )?;
     let source_root = desktop_dictionary_source_root();
     ensure!(
         source_root.is_dir(),
@@ -2066,13 +2175,8 @@ fn write_desktop_dictionary_modules(
                     .len(),
             });
         }
-        let manifest = DesktopModuleManifest {
-            module,
-            build_version: build_version.to_string(),
-            release_channel: release_channel.to_string(),
-            source_sha: source_sha.to_string(),
-            files,
-        };
+        let manifest =
+            desktop_module_manifest(&module, build_version, release_channel, source_sha, files);
         write_json_pretty(&module_dir.join(DESKTOP_MODULE_FILE_LIST_NAME), &manifest)?;
         manifests.push(manifest);
     }
@@ -3400,7 +3504,6 @@ const WINDOWS_NATIVE_ADDON_STEMS: &[&str] = &[
     "win-process-loopback",
     "win-clipboard",
     "win-shell",
-    "win-toast",
     "windows-input-hook",
     "platform-info",
 ];
@@ -4679,6 +4782,7 @@ fn prepare_release_assets_step() -> Result<()> {
     descriptor_modules.sort_by(|left, right| left.storage_key.cmp(&right.storage_key));
     let descriptor = DesktopReleaseDescriptor {
         schema_version: DESKTOP_RELEASE_DESCRIPTOR_SCHEMA_VERSION,
+        kind: DesktopReleaseKind::Full,
         channel: channel.clone(),
         version: version.clone(),
         release_tag: format!("fluxer-desktop-{channel}@{version}"),
@@ -5210,6 +5314,8 @@ pub(crate) struct DesktopChannelManifest {
     pub(crate) shell: DesktopChannelManifestShell,
     pub(crate) modules: BTreeMap<String, DesktopChannelManifestEntry>,
     pub(crate) required_modules: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) shell_compatibility: Option<DesktopShellCompatibility>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -5250,9 +5356,14 @@ fn read_packed_desktop_modules(
             manifest.module,
             manifest.release_channel
         );
+        let expected_version = if is_content_addressed_desktop_module(&manifest.module) {
+            DESKTOP_CONTENT_MODULE_BUILD_VERSION
+        } else {
+            build_version
+        };
         ensure!(
-            manifest.build_version == build_version,
-            "Desktop module {} was packed for version {}, expected {build_version}",
+            manifest.build_version == expected_version,
+            "Desktop module {} was packed for version {}, expected {expected_version}",
             manifest.module,
             manifest.build_version
         );
@@ -5327,18 +5438,23 @@ fn stage_desktop_module_packages(
 fn desktop_channel_manifest_entries(
     channel: &str,
     packed: &[DesktopPackedModule],
+    compatibility: &DesktopShellCompatibility,
+    live: Option<&Value>,
 ) -> Result<BTreeMap<String, DesktopChannelManifestEntry>> {
     packed
         .iter()
         .map(|module| {
+            let (minimum_shell_version, maximum_shell_version) =
+                inherited_shell_range(live, &module.module, &module.sha256)
+                    .unwrap_or_else(|| (compatibility.minimum_shell_version.clone(), None));
             Ok((
                 module.module.clone(),
                 DesktopChannelManifestEntry {
                     sha256: module.sha256.clone(),
                     bytes: module.bytes,
                     url: desktop_module_package_url(channel, &module.module, &module.sha256)?,
-                    minimum_shell_version: DESKTOP_MODULE_MINIMUM_SHELL_VERSION.to_string(),
-                    maximum_shell_version: None,
+                    minimum_shell_version,
+                    maximum_shell_version,
                 },
             ))
         })
@@ -5419,13 +5535,20 @@ fn desktop_channel_manifest_path(
 }
 
 fn write_desktop_channel_manifest(path: &Path, manifest: &DesktopChannelManifest) -> Result<()> {
-    let mut bytes = serde_json::to_vec(manifest)?;
+    let bytes = serde_json::to_vec(manifest)?;
+    write_desktop_channel_manifest_bytes(path, &manifest.platform, &manifest.arch, bytes)
+}
+
+fn write_desktop_channel_manifest_bytes(
+    path: &Path,
+    platform: &str,
+    arch: &str,
+    mut bytes: Vec<u8>,
+) -> Result<()> {
     bytes.push(b'\n');
     ensure!(
         bytes.len() <= DESKTOP_CHANNEL_MANIFEST_MAX_BYTES,
-        "The module manifest for {} {} is {} bytes, above the {DESKTOP_CHANNEL_MANIFEST_MAX_BYTES} byte client limit",
-        manifest.platform,
-        manifest.arch,
+        "The module manifest for {platform} {arch} is {} bytes, above the {DESKTOP_CHANNEL_MANIFEST_MAX_BYTES} byte client limit",
         bytes.len()
     );
     if let Some(parent) = path.parent() {
@@ -5442,6 +5565,7 @@ fn write_desktop_channel_manifests(
     pub_date: &str,
     packed: &[DesktopPackedModule],
     targets: &[(String, String)],
+    coordinates: &BTreeMap<String, DesktopShellContractCoordinate>,
 ) -> Result<()> {
     ensure!(
         !targets.is_empty(),
@@ -5450,8 +5574,11 @@ fn write_desktop_channel_manifests(
     );
     let metadata_version = desktop_module_metadata_version(pub_date)?;
     stage_desktop_module_packages(payload_root, channel, packed)?;
-    let modules = desktop_channel_manifest_entries(channel, packed)?;
     for (platform, arch) in targets {
+        let key = desktop_coordinate_key(platform, arch);
+        let coordinate = coordinates
+            .get(&key)
+            .with_context(|| format!("The shell contract holds no {key} decision"))?;
         let manifest = DesktopChannelManifest {
             manifest_version: DESKTOP_CHANNEL_MANIFEST_VERSION,
             release_channel: channel.to_string(),
@@ -5464,11 +5591,17 @@ fn write_desktop_channel_manifests(
                 latest_version: build_version.to_string(),
                 minimum_version: DESKTOP_MODULE_MINIMUM_SHELL_VERSION.to_string(),
             },
-            modules: modules.clone(),
+            modules: desktop_channel_manifest_entries(
+                channel,
+                packed,
+                &coordinate.compatibility,
+                coordinate.live.as_ref(),
+            )?,
             required_modules: DESKTOP_REQUIRED_MODULES
                 .iter()
                 .map(|module| (*module).to_string())
                 .collect(),
+            shell_compatibility: Some(coordinate.compatibility.clone()),
         };
         let manifest_path = desktop_channel_manifest_path(payload_root, channel, platform, arch);
         write_desktop_channel_manifest(&manifest_path, &manifest)?;
@@ -5492,6 +5625,29 @@ fn build_module_manifest_step() -> Result<()> {
     let pub_date = require_env("PUB_DATE")?;
     let packed = read_packed_desktop_modules(&desktop_modules_dir(), &channel, &build_version)?;
     let targets = desktop_module_manifest_targets(&payload_root, &channel)?;
+    let coordinates = match read_shell_contract(&channel)? {
+        Some(contract) => contract.coordinates,
+        None => {
+            ensure!(
+                env_bool("DESKTOP_MODULE_ONLY"),
+                "Missing {}, run the check_shell_contract step first",
+                shell_contract_path().display()
+            );
+            let source_sha = env_string("SOURCE_SHA").unwrap_or_else(|| "development".to_string());
+            targets
+                .iter()
+                .map(|(platform, arch)| {
+                    (
+                        desktop_coordinate_key(platform, arch),
+                        DesktopShellContractCoordinate {
+                            live: None,
+                            compatibility: baseline_shell_compatibility(&source_sha),
+                        },
+                    )
+                })
+                .collect()
+        }
+    };
     write_desktop_channel_manifests(
         &payload_root,
         &channel,
@@ -5499,6 +5655,7 @@ fn build_module_manifest_step() -> Result<()> {
         &pub_date,
         &packed,
         &targets,
+        &coordinates,
     )?;
     for module in &packed {
         println!(
@@ -5512,6 +5669,1227 @@ fn build_module_manifest_step() -> Result<()> {
         targets.len()
     );
     Ok(())
+}
+
+const DESKTOP_SHELL_CONTRACT_ENV: &str = "SHELL_CONTRACT";
+const DESKTOP_SHELL_CONTRACT_INPUT: &str = "shell_contract";
+const DESKTOP_MODULES_ONLY_RELEASE_ENV: &str = "DESKTOP_MODULES_ONLY_RELEASE";
+const DESKTOP_SHELL_CONTRACT_FILE: &str = "shell-contract.json";
+const DESKTOP_LIVE_MANIFEST_TIMEOUT: Duration = Duration::from_secs(30);
+const DESKTOP_FIRST_MODULE_SHELL_COMMIT: &str = "7c5fa2180a60e4d39bb06c3c384557fd9a3eabc4";
+const DESKTOP_CONTRACT_ROOTS: &[&str] = &[
+    "fluxer_desktop/src/preload/index.ts",
+    "fluxer_app/src/types/electron.d.ts",
+];
+const DESKTOP_CONTRACT_MAIN_DIR: &str = "fluxer_desktop/src/main/";
+const DESKTOP_CONTRACT_MAIN_BOUNDARY_PREFIX: &str = "LocalApp";
+const DESKTOP_CONTRACT_IPC_CALLS: &[&str] = &[
+    "ipcMain.handle(",
+    "ipcMain.handleOnce(",
+    "ipcMain.on(",
+    "ipcMain.once(",
+    ".send(",
+];
+const DESKTOP_CONTRACT_PROBE_SUFFIXES: &[&str] = &[
+    "",
+    ".ts",
+    ".tsx",
+    ".d.ts",
+    ".mts",
+    ".cts",
+    ".mjs",
+    ".cjs",
+    ".js",
+    "/index.ts",
+];
+const DESKTOP_CONTRACT_ELECTRON_ALIAS: &str = "@electron/";
+const DESKTOP_CONTRACT_ELECTRON_ROOT: &str = "fluxer_desktop/src/";
+const DESKTOP_CONTRACT_PACKAGE_ALIAS: &str = "@fluxer/";
+const DESKTOP_CONTRACT_EXPORT_CONDITIONS: &[&str] = &["types", "import", "default"];
+const DESKTOP_CONTRACT_GENERATED_MODULES: &[&str] = &["@electron/common/BuildChannel"];
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum DesktopShellContractChoice {
+    Unchanged,
+    Compatible,
+    Raise,
+    Baseline,
+}
+
+impl DesktopShellContractChoice {
+    fn parse_input(value: &str) -> Result<Self> {
+        match value {
+            "unchanged" => Ok(Self::Unchanged),
+            "compatible" => Ok(Self::Compatible),
+            "raise" => Ok(Self::Raise),
+            other => bail!(
+                "{DESKTOP_SHELL_CONTRACT_INPUT} must be unchanged, compatible or raise, got {other:?}"
+            ),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+pub(crate) struct DesktopShellCompatibility {
+    pub(crate) minimum_shell_version: String,
+    pub(crate) source_sha: String,
+    pub(crate) previous_source_sha: String,
+    pub(crate) floor_source_sha: Option<String>,
+    pub(crate) decision: DesktopShellContractChoice,
+    pub(crate) contract_base_sha: String,
+    pub(crate) contract_changes: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+struct DesktopShellContractCoordinate {
+    live: Option<Value>,
+    compatibility: DesktopShellCompatibility,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+struct DesktopShellContract {
+    channel: String,
+    source_sha: String,
+    choice: DesktopShellContractChoice,
+    coordinates: BTreeMap<String, DesktopShellContractCoordinate>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum DesktopLiveFeed {
+    Missing,
+    Served(Value),
+}
+
+fn desktop_coordinate_key(platform: &str, arch: &str) -> String {
+    format!("{platform}/{arch}")
+}
+
+fn desktop_live_manifest_url(channel: &str, platform: &str, arch: &str) -> Result<String> {
+    Ok(format!(
+        "{}/{DESKTOP_PAYLOAD_PREFIX}/{channel}/{platform}/{arch}/{DESKTOP_CHANNEL_MANIFEST_NAME}",
+        package_origin_base()?
+    ))
+}
+
+async fn fetch_live_channel_feeds(channel: &str) -> Result<BTreeMap<String, DesktopLiveFeed>> {
+    let client = reqwest::Client::builder()
+        .timeout(DESKTOP_LIVE_MANIFEST_TIMEOUT)
+        .build()
+        .context("Failed to build the HTTP client")?;
+    let mut feeds = BTreeMap::new();
+    for (platform, arch) in desktop_release_coordinates() {
+        let url = desktop_live_manifest_url(channel, platform, arch)?;
+        let response = client
+            .get(&url)
+            .send()
+            .await
+            .with_context(|| format!("Failed to fetch {url}"))?;
+        let feed = if response.status() == reqwest::StatusCode::NOT_FOUND {
+            DesktopLiveFeed::Missing
+        } else {
+            DesktopLiveFeed::Served(
+                response
+                    .error_for_status()
+                    .with_context(|| format!("{url} did not serve a module manifest"))?
+                    .json()
+                    .await
+                    .with_context(|| format!("{url} is not JSON"))?,
+            )
+        };
+        feeds.insert(desktop_coordinate_key(platform, arch), feed);
+    }
+    Ok(feeds)
+}
+
+fn newest_release_with_manifest<'a>(
+    releases: &'a [DesktopPublishedRelease],
+    channel: &str,
+    platform: &str,
+    arch: &str,
+) -> Result<Option<(&'a DesktopPublishedRelease, String)>> {
+    for release in releases.iter().rev() {
+        let asset =
+            desktop_module_manifest_release_asset_name(channel, &release.version, platform, arch)?;
+        if release.assets.contains(&asset) {
+            return Ok(Some((release, asset)));
+        }
+    }
+    Ok(None)
+}
+
+fn published_channel_manifest(
+    releases: &[DesktopPublishedRelease],
+    channel: &str,
+    platform: &str,
+    arch: &str,
+) -> Result<Option<Value>> {
+    let Some((release, asset)) = newest_release_with_manifest(releases, channel, platform, arch)?
+    else {
+        return Ok(None);
+    };
+    let manifest: Value =
+        serde_json::from_slice(&download_desktop_release_asset(&release.tag, &asset)?)
+            .with_context(|| format!("{asset} from {} is not JSON", release.tag))?;
+    ensure!(
+        manifest["release_channel"] == channel
+            && manifest["platform"] == platform
+            && manifest["arch"] == arch
+            && manifest["build_version"] == release.version.as_str(),
+        "{asset} from {} describes another channel, coordinate or build",
+        release.tag
+    );
+    Ok(Some(manifest))
+}
+
+fn check_live_feed(
+    releases: &[DesktopPublishedRelease],
+    channel: &str,
+    platform: &str,
+    arch: &str,
+    feed: DesktopLiveFeed,
+) -> Result<Option<Value>> {
+    let url = desktop_live_manifest_url(channel, platform, arch)?;
+    let newest = newest_release_with_manifest(releases, channel, platform, arch)?
+        .map(|(release, _)| release);
+    let manifest = match feed {
+        DesktopLiveFeed::Missing => {
+            if let Some(release) = newest {
+                bail!(
+                    "{url} is missing although {} published it, the package mirror has not caught up with {}, re-run once it has",
+                    release.tag,
+                    release.tag
+                );
+            }
+            return Ok(None);
+        }
+        DesktopLiveFeed::Served(manifest) => manifest,
+    };
+    ensure!(
+        manifest["release_channel"] == channel
+            && manifest["platform"] == platform
+            && manifest["arch"] == arch,
+        "{url} describes another channel or coordinate"
+    );
+    let release = newest.with_context(|| {
+        format!("{url} serves a module manifest that no published {channel} release carries")
+    })?;
+    let build_version = manifest["build_version"]
+        .as_str()
+        .with_context(|| format!("{url} names no build version"))?;
+    ensure!(
+        build_version == release.version,
+        "{url} serves {build_version}, the package mirror has not caught up with {}, re-run once it has",
+        release.tag
+    );
+    Ok(Some(manifest))
+}
+
+fn live_shell_version(manifest: &Value) -> Option<&str> {
+    manifest["shell"]["latest_version"].as_str()
+}
+
+fn common_live_shell_version(manifests: &BTreeMap<String, Value>) -> Result<String> {
+    let versions = manifests
+        .iter()
+        .map(|(coordinate, manifest)| {
+            live_shell_version(manifest)
+                .map(str::to_string)
+                .with_context(|| format!("The live {coordinate} manifest names no shell version"))
+        })
+        .collect::<Result<BTreeSet<_>>>()?;
+    let mut iter = versions.iter();
+    let first = iter
+        .next()
+        .context("No live module manifest was fetched")?
+        .clone();
+    ensure!(
+        iter.next().is_none(),
+        "The live feeds disagree on the shell version ({}), finish publishing the last full desktop release before a modules-only release",
+        versions.iter().cloned().collect::<Vec<_>>().join(", ")
+    );
+    crate::common::parse_version_instant(&first)
+        .with_context(|| format!("The live shell version {first:?} is not a CalVer"))?;
+    Ok(first)
+}
+
+fn is_shell_irrelevant_path(path: &str) -> bool {
+    path.contains(".test.")
+        || path.contains("/__tests__/")
+        || path.contains("/__fixtures__/")
+        || path.ends_with(".md")
+}
+
+fn is_import_identifier_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'$' | b'.')
+}
+
+fn contract_import_specifiers(source: &str) -> Vec<String> {
+    let bytes = source.as_bytes();
+    let mut specifiers = Vec::new();
+    let mut index = 0;
+    while index < bytes.len() {
+        let keyword = ["from", "import", "require"]
+            .into_iter()
+            .find(|keyword| bytes[index..].starts_with(keyword.as_bytes()));
+        let Some(keyword) = keyword else {
+            index += 1;
+            continue;
+        };
+        let end = index + keyword.len();
+        let bounded = (index == 0 || !is_import_identifier_byte(bytes[index - 1]))
+            && bytes
+                .get(end)
+                .is_none_or(|byte| !is_import_identifier_byte(*byte));
+        if !bounded {
+            index = end;
+            continue;
+        }
+        let mut cursor = end;
+        while bytes.get(cursor).is_some_and(u8::is_ascii_whitespace) {
+            cursor += 1;
+        }
+        if keyword != "from" && bytes.get(cursor) == Some(&b'(') {
+            cursor += 1;
+            while bytes.get(cursor).is_some_and(u8::is_ascii_whitespace) {
+                cursor += 1;
+            }
+        }
+        if let Some(&quote) = bytes.get(cursor)
+            && matches!(quote, b'\'' | b'"' | b'`')
+            && let Some(length) = bytes[cursor + 1..].iter().position(|byte| *byte == quote)
+        {
+            specifiers.push(source[cursor + 1..cursor + 1 + length].to_string());
+            cursor += length + 2;
+        }
+        index = cursor.max(end);
+    }
+    specifiers
+}
+
+fn normalize_repo_path(path: &str) -> Option<String> {
+    let mut parts: Vec<&str> = Vec::new();
+    for part in path.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => {
+                parts.pop()?;
+            }
+            other => parts.push(other),
+        }
+    }
+    Some(parts.join("/"))
+}
+
+fn probe_contract_path(
+    read: &dyn Fn(&str) -> Result<Option<String>>,
+    base: &str,
+) -> Result<Option<String>> {
+    for suffix in DESKTOP_CONTRACT_PROBE_SUFFIXES {
+        let candidate = format!("{base}{suffix}");
+        if read(&candidate)?.is_some() {
+            return Ok(Some(candidate));
+        }
+    }
+    Ok(None)
+}
+
+fn package_export_target(manifest: &Value, subpath: &str) -> Option<String> {
+    let key = if subpath.is_empty() {
+        ".".to_string()
+    } else {
+        format!("./{subpath}")
+    };
+    let target = &manifest["exports"][&key];
+    target.as_str().map(str::to_string).or_else(|| {
+        DESKTOP_CONTRACT_EXPORT_CONDITIONS
+            .iter()
+            .find_map(|condition| target[*condition].as_str().map(str::to_string))
+    })
+}
+
+fn resolve_contract_specifier(
+    read: &dyn Fn(&str) -> Result<Option<String>>,
+    importer: &str,
+    specifier: &str,
+) -> Result<Option<String>> {
+    if DESKTOP_CONTRACT_GENERATED_MODULES.contains(&specifier) {
+        return Ok(None);
+    }
+    let candidates = if let Some(rest) = specifier.strip_prefix(DESKTOP_CONTRACT_ELECTRON_ALIAS) {
+        vec![format!("{DESKTOP_CONTRACT_ELECTRON_ROOT}{rest}")]
+    } else if let Some(rest) = specifier.strip_prefix(DESKTOP_CONTRACT_PACKAGE_ALIAS) {
+        let (package, subpath) = rest.split_once('/').unwrap_or((rest, ""));
+        let package_root = format!("packages/{package}");
+        let exported = read(&format!("{package_root}/package.json"))?
+            .map(|manifest| {
+                serde_json::from_str::<Value>(&manifest)
+                    .with_context(|| format!("Failed to parse {package_root}/package.json"))
+            })
+            .transpose()?
+            .and_then(|manifest| package_export_target(&manifest, subpath));
+        match exported {
+            Some(target) => vec![format!(
+                "{package_root}/{}",
+                target.trim_start_matches("./")
+            )],
+            None if subpath.is_empty() => {
+                vec![package_root.clone(), format!("{package_root}/src/index")]
+            }
+            None => vec![format!("{package_root}/{subpath}")],
+        }
+    } else if specifier.starts_with("./") || specifier.starts_with("../") {
+        let directory = importer
+            .rsplit_once('/')
+            .map_or("", |(directory, _)| directory);
+        vec![format!("{directory}/{specifier}")]
+    } else {
+        return Ok(None);
+    };
+    for candidate in candidates {
+        let Some(normalized) = normalize_repo_path(&candidate) else {
+            continue;
+        };
+        if let Some(resolved) = probe_contract_path(read, &normalized)? {
+            return Ok(Some(resolved));
+        }
+    }
+    bail!("{importer} imports {specifier}, which does not resolve to a file")
+}
+
+fn is_contract_main_file(path: &str) -> bool {
+    path.strip_prefix(DESKTOP_CONTRACT_MAIN_DIR)
+        .is_some_and(|name| !name.contains('/') && name.ends_with(".ts"))
+        && !is_shell_irrelevant_path(path)
+}
+
+fn desktop_shell_contract_surface(
+    read: &dyn Fn(&str) -> Result<Option<String>>,
+    main_files: &[String],
+) -> Result<BTreeSet<String>> {
+    let mut surface = BTreeSet::new();
+    let mut pending = DESKTOP_CONTRACT_ROOTS
+        .iter()
+        .map(|root| (*root).to_string())
+        .collect::<Vec<_>>();
+    while let Some(path) = pending.pop() {
+        if is_shell_irrelevant_path(&path) || surface.contains(&path) {
+            continue;
+        }
+        let source = read(&path)?
+            .with_context(|| format!("The shell contract file {path} does not exist"))?;
+        surface.insert(path.clone());
+        for specifier in contract_import_specifiers(&source) {
+            if let Some(resolved) = resolve_contract_specifier(read, &path, &specifier)? {
+                pending.push(resolved);
+            }
+        }
+    }
+    for path in main_files.iter().filter(|path| is_contract_main_file(path)) {
+        if path[DESKTOP_CONTRACT_MAIN_DIR.len()..]
+            .starts_with(DESKTOP_CONTRACT_MAIN_BOUNDARY_PREFIX)
+        {
+            surface.insert(path.clone());
+        }
+    }
+    Ok(surface)
+}
+
+fn call_arguments_end(source: &str, open: usize) -> usize {
+    let bytes = source.as_bytes();
+    let mut depth = 0usize;
+    let mut index = open;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'(' => depth += 1,
+            b')' => {
+                depth -= 1;
+                if depth == 0 {
+                    return index + 1;
+                }
+            }
+            quote @ (b'\'' | b'"' | b'`') => {
+                index += 1;
+                while index < bytes.len() && bytes[index] != quote {
+                    if bytes[index] == b'\\' {
+                        index += 1;
+                    }
+                    index += 1;
+                }
+            }
+            b'/' if bytes.get(index + 1) == Some(&b'/') => {
+                while index < bytes.len() && bytes[index] != b'\n' {
+                    index += 1;
+                }
+            }
+            b'/' if bytes.get(index + 1) == Some(&b'*') => {
+                index += 2;
+                while index + 1 < bytes.len() && !(bytes[index] == b'*' && bytes[index + 1] == b'/')
+                {
+                    index += 1;
+                }
+                index += 1;
+            }
+            _ => {}
+        }
+        index += 1;
+    }
+    bytes.len()
+}
+
+fn desktop_ipc_call_sites(source: &str) -> Vec<String> {
+    let mut sites = DESKTOP_CONTRACT_IPC_CALLS
+        .iter()
+        .flat_map(|call| {
+            source.match_indices(call).map(|(start, call)| {
+                let end = call_arguments_end(source, start + call.len() - 1);
+                source[start..end]
+                    .split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            })
+        })
+        .collect::<Vec<_>>();
+    sites.sort();
+    sites
+}
+
+fn git_output(args: &[&str]) -> Result<Vec<u8>> {
+    let output = CommandSpec::new("git")
+        .args(args)
+        .to_command()
+        .output()
+        .with_context(|| format!("Failed to run git {}", args.join(" ")))?;
+    ensure!(
+        output.status.success(),
+        "git {} failed: {}",
+        args.join(" "),
+        String::from_utf8_lossy(&output.stderr).trim()
+    );
+    Ok(output.stdout)
+}
+
+fn git_text(args: &[&str]) -> Result<String> {
+    String::from_utf8(git_output(args)?)
+        .map(|text| text.trim().to_string())
+        .with_context(|| format!("git {} printed invalid UTF-8", args.join(" ")))
+}
+
+fn git_is_ancestor(ancestor: &str, descendant: &str) -> Result<bool> {
+    let status = CommandSpec::new("git")
+        .args(["merge-base", "--is-ancestor", ancestor, descendant])
+        .to_command()
+        .status()
+        .context("Failed to run git merge-base")?;
+    match status.code() {
+        Some(0) => Ok(true),
+        Some(1) => Ok(false),
+        _ => bail!("git merge-base --is-ancestor {ancestor} {descendant} failed"),
+    }
+}
+
+fn changes_shell_contract(
+    path: &str,
+    base_surface: &BTreeSet<String>,
+    head_surface: &BTreeSet<String>,
+    base_read: &dyn Fn(&str) -> Result<Option<String>>,
+    head_read: &dyn Fn(&str) -> Result<Option<String>>,
+) -> Result<bool> {
+    if base_surface.contains(path) || head_surface.contains(path) {
+        return Ok(true);
+    }
+    if !is_contract_main_file(path) {
+        return Ok(false);
+    }
+    let sites = |read: &dyn Fn(&str) -> Result<Option<String>>| -> Result<Vec<String>> {
+        Ok(read(path)?
+            .as_deref()
+            .map(desktop_ipc_call_sites)
+            .unwrap_or_default())
+    };
+    Ok(sites(base_read)? != sites(head_read)?)
+}
+
+fn read_worktree_file(root: &Path, path: &str) -> Result<Option<String>> {
+    let full = root.join(path);
+    if !full.is_file() {
+        return Ok(None);
+    }
+    fs::read_to_string(&full)
+        .map(Some)
+        .with_context(|| format!("Failed to read {}", full.display()))
+}
+
+struct DesktopContractWorkspace {
+    root: PathBuf,
+    head: String,
+    head_surface: BTreeSet<String>,
+    changes: BTreeMap<String, Vec<String>>,
+}
+
+impl DesktopContractWorkspace {
+    fn open(source_sha: &str) -> Result<Self> {
+        let head = git_text(&["rev-parse", "HEAD"])?;
+        ensure!(
+            head == source_sha,
+            "The checkout is at {head}, not at SOURCE_SHA {source_sha}"
+        );
+        let root = env::current_dir().context("Failed to resolve the repository root")?;
+        let main_dir = root.join(DESKTOP_CONTRACT_MAIN_DIR);
+        let main_files = fs::read_dir(&main_dir)
+            .with_context(|| format!("Failed to read {}", main_dir.display()))?
+            .map(|entry| {
+                Ok(format!(
+                    "{DESKTOP_CONTRACT_MAIN_DIR}{}",
+                    file_name_string(&entry?.path())?
+                ))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let read = |path: &str| read_worktree_file(&root, path);
+        let head_surface = desktop_shell_contract_surface(&read, &main_files)?;
+        Ok(Self {
+            root,
+            head,
+            head_surface,
+            changes: BTreeMap::new(),
+        })
+    }
+
+    fn shell_contract_changes(&mut self, base: &str) -> Result<Vec<String>> {
+        if let Some(changes) = self.changes.get(base) {
+            return Ok(changes.clone());
+        }
+        let files = String::from_utf8(git_output(&["ls-tree", "-r", "--name-only", base])?)
+            .context("git ls-tree printed invalid UTF-8")?
+            .lines()
+            .map(str::to_string)
+            .collect::<BTreeSet<_>>();
+        let read = |path: &str| -> Result<Option<String>> {
+            if !files.contains(path) {
+                return Ok(None);
+            }
+            let bytes = git_output(&["show", &format!("{base}:{path}")])?;
+            String::from_utf8(bytes)
+                .map(Some)
+                .with_context(|| format!("{path} at {base} is not UTF-8"))
+        };
+        let main_files = files
+            .iter()
+            .filter(|path| path.starts_with(DESKTOP_CONTRACT_MAIN_DIR))
+            .cloned()
+            .collect::<Vec<_>>();
+        let base_surface = desktop_shell_contract_surface(&read, &main_files)
+            .with_context(|| format!("Failed to compute the shell contract at {base}"))?;
+        let head_read = |path: &str| read_worktree_file(&self.root, path);
+        let mut changes = Vec::new();
+        for path in git_text(&["diff", "--name-only", base, &self.head])?.lines() {
+            if changes_shell_contract(path, &base_surface, &self.head_surface, &read, &head_read)? {
+                changes.push(path.to_string());
+            }
+        }
+        self.changes.insert(base.to_string(), changes.clone());
+        Ok(changes)
+    }
+}
+
+struct DesktopShellHistory {
+    channel: String,
+    releases: Vec<DesktopPublishedRelease>,
+    shas: BTreeMap<usize, String>,
+    module_era: BTreeMap<usize, bool>,
+    full: BTreeMap<usize, bool>,
+}
+
+impl DesktopShellHistory {
+    fn new(channel: &str, releases: Vec<DesktopPublishedRelease>) -> Self {
+        Self {
+            channel: channel.to_string(),
+            releases,
+            shas: BTreeMap::new(),
+            module_era: BTreeMap::new(),
+            full: BTreeMap::new(),
+        }
+    }
+
+    fn sha(&mut self, index: usize) -> Result<String> {
+        if let Some(sha) = self.shas.get(&index) {
+            return Ok(sha.clone());
+        }
+        let tag = &self.releases[index].tag;
+        let sha = resolve_commit_sha(tag)
+            .with_context(|| format!("Failed to resolve the published release {tag}"))?;
+        self.shas.insert(index, sha.clone());
+        Ok(sha)
+    }
+
+    fn is_module_era(&mut self, index: usize) -> Result<bool> {
+        if let Some(module_era) = self.module_era.get(&index) {
+            return Ok(*module_era);
+        }
+        let module_era = git_is_ancestor(DESKTOP_FIRST_MODULE_SHELL_COMMIT, &self.sha(index)?)?;
+        self.module_era.insert(index, module_era);
+        Ok(module_era)
+    }
+
+    fn is_full(&mut self, index: usize) -> Result<bool> {
+        if let Some(full) = self.full.get(&index) {
+            return Ok(*full);
+        }
+        let full = desktop_release_kind(&self.channel, &self.releases[index].version)?.is_full();
+        self.full.insert(index, full);
+        Ok(full)
+    }
+
+    fn index_of(&self, version: &str) -> Option<usize> {
+        self.releases
+            .iter()
+            .position(|release| release.version == version)
+    }
+
+    fn shell(&mut self, index: usize) -> Result<(String, String)> {
+        Ok((self.releases[index].version.clone(), self.sha(index)?))
+    }
+
+    fn oldest_module_era_full_shell(&mut self) -> Result<Option<(String, String)>> {
+        let (mut low, mut high) = (0, self.releases.len());
+        while low < high {
+            let middle = low + (high - low) / 2;
+            if self.is_module_era(middle)? {
+                high = middle;
+            } else {
+                low = middle + 1;
+            }
+        }
+        for index in low..self.releases.len() {
+            if self.is_full(index)? {
+                return self.shell(index).map(Some);
+            }
+        }
+        Ok(None)
+    }
+
+    fn older_full_shell(&mut self, below: usize) -> Result<Option<usize>> {
+        let mut index = below;
+        while index > 0 {
+            index -= 1;
+            if !self.is_module_era(index)? {
+                return Ok(None);
+            }
+            if self.is_full(index)? {
+                return Ok(Some(index));
+            }
+        }
+        Ok(None)
+    }
+}
+
+fn oldest_shell_carrying_contract(
+    start: (String, String),
+    mut next_older: impl FnMut() -> Result<Option<(String, String)>>,
+    mut carries: impl FnMut(&str) -> Result<bool>,
+) -> Result<(String, String)> {
+    let mut floor = start;
+    while let Some(candidate) = next_older()? {
+        if !carries(&candidate.1)? {
+            break;
+        }
+        floor = candidate;
+    }
+    Ok(floor)
+}
+
+fn walk_contract_floor(
+    history: &mut DesktopShellHistory,
+    workspace: &mut DesktopContractWorkspace,
+    start: (String, String),
+    start_index: usize,
+) -> Result<(String, String)> {
+    let mut cursor = start_index;
+    oldest_shell_carrying_contract(
+        start,
+        || match history.older_full_shell(cursor)? {
+            Some(index) => {
+                cursor = index;
+                history.shell(index).map(Some)
+            }
+            None => Ok(None),
+        },
+        |sha| Ok(workspace.shell_contract_changes(sha)?.is_empty()),
+    )
+}
+
+fn raised_shell_floor(
+    history: &mut DesktopShellHistory,
+    workspace: &mut DesktopContractWorkspace,
+    live: &BTreeMap<String, Option<Value>>,
+    version: &str,
+    source_sha: &str,
+    modules_only: bool,
+) -> Result<(String, String)> {
+    if !modules_only {
+        let start_index = history.releases.len();
+        return walk_contract_floor(
+            history,
+            workspace,
+            (version.to_string(), source_sha.to_string()),
+            start_index,
+        );
+    }
+    let manifests = live
+        .iter()
+        .filter_map(|(key, manifest)| Some((key.clone(), manifest.clone()?)))
+        .collect::<BTreeMap<_, _>>();
+    let live_version = common_live_shell_version(&manifests)?;
+    let index = history.index_of(&live_version).with_context(|| {
+        format!("The live shell {live_version} is not a published release of this channel")
+    })?;
+    let live_shell = history.shell(index)?;
+    ensure_live_shell_carries_contract(
+        &live_shell,
+        &workspace.shell_contract_changes(&live_shell.1)?,
+    )?;
+    walk_contract_floor(history, workspace, live_shell, index)
+}
+
+fn ensure_live_shell_carries_contract(
+    live_shell: &(String, String),
+    missing: &[String],
+) -> Result<()> {
+    ensure!(
+        missing.is_empty(),
+        "No published shell carries these contract changes, ship a full desktop release. The live shell {} from {} lacks:\n  {}",
+        live_shell.0,
+        live_shell.1,
+        missing.join("\n  ")
+    );
+    Ok(())
+}
+
+fn shell_floor_instant(version: &str) -> Result<Option<DateTime<Utc>>> {
+    if version == DESKTOP_MODULE_MINIMUM_SHELL_VERSION {
+        return Ok(None);
+    }
+    crate::common::parse_version_instant(version)
+        .map(Some)
+        .with_context(|| format!("{version:?} is not a shell version"))
+}
+
+fn is_full_commit_sha(value: &str) -> bool {
+    value.len() == 40 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn baseline_shell_compatibility(source_sha: &str) -> DesktopShellCompatibility {
+    DesktopShellCompatibility {
+        minimum_shell_version: DESKTOP_MODULE_MINIMUM_SHELL_VERSION.to_string(),
+        source_sha: source_sha.to_string(),
+        previous_source_sha: source_sha.to_string(),
+        floor_source_sha: None,
+        decision: DesktopShellContractChoice::Baseline,
+        contract_base_sha: source_sha.to_string(),
+        contract_changes: Vec::new(),
+    }
+}
+
+fn previous_shell_compatibility(
+    live: Option<&Value>,
+    baseline_sha: impl FnOnce() -> Result<String>,
+) -> Result<DesktopShellCompatibility> {
+    match live
+        .map(|manifest| &manifest["shell_compatibility"])
+        .filter(|record| !record.is_null())
+    {
+        Some(record) => parse_shell_compatibility(record),
+        None => Ok(baseline_shell_compatibility(&baseline_sha()?)),
+    }
+}
+
+fn parse_shell_compatibility(value: &Value) -> Result<DesktopShellCompatibility> {
+    let record: DesktopShellCompatibility =
+        serde_json::from_value(value.clone()).context("The record does not parse")?;
+    shell_floor_instant(&record.minimum_shell_version)?;
+    for sha in [
+        &record.source_sha,
+        &record.previous_source_sha,
+        &record.contract_base_sha,
+    ]
+    .into_iter()
+    .chain(record.floor_source_sha.as_ref())
+    {
+        ensure!(is_full_commit_sha(sha), "{sha:?} is not a full commit SHA");
+    }
+    Ok(record)
+}
+
+fn shell_contract_base(previous: &DesktopShellCompatibility, baseline_sha: &str) -> String {
+    previous
+        .floor_source_sha
+        .clone()
+        .unwrap_or_else(|| baseline_sha.to_string())
+}
+
+fn decide_shell_compatibility(
+    previous: &DesktopShellCompatibility,
+    contract_base_sha: &str,
+    changes: &[String],
+    choice: DesktopShellContractChoice,
+    raised_to: Option<(&str, &str)>,
+    source_sha: &str,
+) -> Result<DesktopShellCompatibility> {
+    let mut minimum_shell_version = previous.minimum_shell_version.clone();
+    let mut floor_source_sha = previous.floor_source_sha.clone();
+    match choice {
+        DesktopShellContractChoice::Unchanged => ensure!(
+            changes.is_empty(),
+            "The shell contract changed since {contract_base_sha}, the source of the oldest shell these modules still reach:\n  {}\nOlder shells may not run these modules, re-run with {DESKTOP_SHELL_CONTRACT_INPUT} set to compatible if the renderer still works on them, or raise to cut them off",
+            changes.join("\n  ")
+        ),
+        DesktopShellContractChoice::Compatible => {}
+        DesktopShellContractChoice::Raise => {
+            ensure!(
+                !changes.is_empty(),
+                "Nothing in the shell contract changed since {contract_base_sha}, the source of the oldest shell these modules still reach, there is no reason to raise"
+            );
+            let (version, sha) =
+                raised_to.context("Raising the floor needs the shell that carries the contract")?;
+            if shell_floor_instant(version)? > shell_floor_instant(&minimum_shell_version)? {
+                minimum_shell_version = version.to_string();
+                floor_source_sha = Some(sha.to_string());
+            }
+        }
+        DesktopShellContractChoice::Baseline => {
+            bail!("A release states its shell contract as unchanged, compatible or raise")
+        }
+    }
+    Ok(DesktopShellCompatibility {
+        minimum_shell_version,
+        source_sha: source_sha.to_string(),
+        previous_source_sha: previous.source_sha.clone(),
+        floor_source_sha,
+        decision: choice,
+        contract_base_sha: contract_base_sha.to_string(),
+        contract_changes: changes.to_vec(),
+    })
+}
+
+fn parse_strict_bool(name: &str, value: &str) -> Result<bool> {
+    match value {
+        "true" => Ok(true),
+        "false" => Ok(false),
+        other => bail!("{name} must be true or false, got {other:?}"),
+    }
+}
+
+fn shell_contract_path() -> PathBuf {
+    desktop_modules_dir().join(DESKTOP_SHELL_CONTRACT_FILE)
+}
+
+fn read_shell_contract(channel: &str) -> Result<Option<DesktopShellContract>> {
+    let path = shell_contract_path();
+    if !path.is_file() {
+        return Ok(None);
+    }
+    let contract: DesktopShellContract = serde_json::from_slice(
+        &fs::read(&path).with_context(|| format!("Failed to read {}", path.display()))?,
+    )
+    .with_context(|| format!("Failed to parse {}", path.display()))?;
+    ensure!(
+        contract.channel == channel,
+        "{} describes the {} channel, not {channel}",
+        path.display(),
+        contract.channel
+    );
+    if let Some(source_sha) = env_string("SOURCE_SHA") {
+        ensure!(
+            contract.source_sha == source_sha,
+            "{} was decided for {}, not {source_sha}",
+            path.display(),
+            contract.source_sha
+        );
+    }
+    Ok(Some(contract))
+}
+
+fn channel_baseline_sha(
+    history: &mut DesktopShellHistory,
+    cache: &mut Option<String>,
+    source_sha: &str,
+) -> Result<String> {
+    if let Some(sha) = cache {
+        return Ok(sha.clone());
+    }
+    let sha = history
+        .oldest_module_era_full_shell()?
+        .map_or_else(|| source_sha.to_string(), |(_, sha)| sha);
+    *cache = Some(sha.clone());
+    Ok(sha)
+}
+
+async fn check_shell_contract_step() -> Result<()> {
+    let channel = require_env("CHANNEL")?;
+    let source_sha = validate_full_sha("SOURCE_SHA", &require_env("SOURCE_SHA")?)?;
+    let version = require_env("VERSION")?;
+    crate::common::parse_version_instant(&version)?;
+    let choice =
+        DesktopShellContractChoice::parse_input(&require_env(DESKTOP_SHELL_CONTRACT_ENV)?)?;
+    let modules_only = parse_strict_bool(
+        DESKTOP_MODULES_ONLY_RELEASE_ENV,
+        &require_env(DESKTOP_MODULES_ONLY_RELEASE_ENV)?,
+    )?;
+    let releases = desktop_releases(&channel)?;
+    let mut feeds = if modules_only {
+        fetch_live_channel_feeds(&channel).await?
+    } else {
+        BTreeMap::new()
+    };
+    let mut live = BTreeMap::new();
+    for (platform, arch) in desktop_release_coordinates() {
+        let key = desktop_coordinate_key(platform, arch);
+        let manifest = if modules_only {
+            let feed = feeds.remove(&key).unwrap_or(DesktopLiveFeed::Missing);
+            check_live_feed(&releases, &channel, platform, arch, feed)?
+        } else {
+            published_channel_manifest(&releases, &channel, platform, arch)?
+        };
+        live.insert(key, manifest);
+    }
+    if modules_only {
+        for (key, manifest) in &live {
+            ensure!(
+                manifest.is_some(),
+                "No {channel} shell serves {key} yet, ship a full desktop release before a modules-only release"
+            );
+        }
+    }
+    let mut history = DesktopShellHistory::new(&channel, releases);
+    let mut workspace = DesktopContractWorkspace::open(&source_sha)?;
+    let mut baseline: Option<String> = None;
+    let mut planned = Vec::new();
+    for (key, manifest) in &live {
+        let previous = previous_shell_compatibility(manifest.as_ref(), || {
+            channel_baseline_sha(&mut history, &mut baseline, &source_sha)
+        })
+        .with_context(|| format!("Failed to establish the previous {key} shell floor"))?;
+        let base = shell_contract_base(
+            &previous,
+            &channel_baseline_sha(&mut history, &mut baseline, &source_sha)?,
+        );
+        let changes = workspace.shell_contract_changes(&base)?;
+        planned.push((key.clone(), previous, base, changes));
+    }
+    let raised_to = if choice == DesktopShellContractChoice::Raise
+        && planned.iter().any(|(_, _, _, changes)| !changes.is_empty())
+    {
+        Some(raised_shell_floor(
+            &mut history,
+            &mut workspace,
+            &live,
+            &version,
+            &source_sha,
+            modules_only,
+        )?)
+    } else {
+        None
+    };
+    let mut coordinates = BTreeMap::new();
+    for (key, previous, base, changes) in planned {
+        let compatibility = decide_shell_compatibility(
+            &previous,
+            &base,
+            &changes,
+            choice,
+            raised_to
+                .as_ref()
+                .map(|(version, sha)| (version.as_str(), sha.as_str())),
+            &source_sha,
+        )
+        .with_context(|| format!("The {key} feed cannot take this release"))?;
+        println!(
+            "{key}: {:?} with a floor of {} (floor commit {}), {} contract change(s) since {}",
+            compatibility.decision,
+            compatibility.minimum_shell_version,
+            compatibility.floor_source_sha.as_deref().unwrap_or("none"),
+            compatibility.contract_changes.len(),
+            compatibility.contract_base_sha
+        );
+        for path in &compatibility.contract_changes {
+            println!("  {path}");
+        }
+        coordinates.insert(
+            key.clone(),
+            DesktopShellContractCoordinate {
+                live: live.get(&key).cloned().flatten(),
+                compatibility,
+            },
+        );
+    }
+    let contract = DesktopShellContract {
+        channel,
+        source_sha,
+        choice,
+        coordinates,
+    };
+    let modules_dir = desktop_modules_dir();
+    fs::create_dir_all(&modules_dir)
+        .with_context(|| format!("Failed to create {}", modules_dir.display()))?;
+    write_json_pretty(&shell_contract_path(), &contract)
+}
+
+fn inherited_shell_range(
+    live: Option<&Value>,
+    module: &str,
+    sha256: &str,
+) -> Option<(String, Option<String>)> {
+    let live = live.filter(|manifest| !manifest["shell_compatibility"].is_null())?;
+    let entry = &live["modules"][module];
+    if entry["sha256"].as_str() != Some(sha256) {
+        return None;
+    }
+    Some((
+        entry["minimum_shell_version"].as_str()?.to_string(),
+        entry["maximum_shell_version"].as_str().map(str::to_string),
+    ))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn modules_only_channel_manifest(
+    live: &Value,
+    channel: &str,
+    platform: &str,
+    arch: &str,
+    build_version: &str,
+    pub_date: &str,
+    metadata_version: u64,
+    packed: &[DesktopPackedModule],
+    compatibility: &DesktopShellCompatibility,
+) -> Result<Value> {
+    let mut manifest = live
+        .as_object()
+        .cloned()
+        .with_context(|| format!("The live {platform} {arch} manifest is not an object"))?;
+    live_shell_version(live)
+        .with_context(|| format!("The live {platform} {arch} manifest names no shell version"))?;
+    let modules = desktop_channel_manifest_entries(channel, packed, compatibility, Some(live))?;
+    manifest.insert(
+        "manifest_version".to_string(),
+        json!(DESKTOP_CHANNEL_MANIFEST_VERSION),
+    );
+    manifest.insert("release_channel".to_string(), json!(channel));
+    manifest.insert("platform".to_string(), json!(platform));
+    manifest.insert("arch".to_string(), json!(arch));
+    manifest.insert("build_version".to_string(), json!(build_version));
+    manifest.insert("pub_date".to_string(), json!(pub_date));
+    manifest.insert("metadata_version".to_string(), json!(metadata_version));
+    manifest.insert("modules".to_string(), serde_json::to_value(modules)?);
+    manifest.insert(
+        "required_modules".to_string(),
+        json!(DESKTOP_REQUIRED_MODULES),
+    );
+    manifest.remove("linux_security_minimum");
+    manifest.insert(
+        "shell_compatibility".to_string(),
+        serde_json::to_value(compatibility)?,
+    );
+    Ok(Value::Object(manifest))
+}
+
+fn build_modules_only_manifest_step() -> Result<()> {
+    let channel = require_env("CHANNEL")?;
+    let build_version = require_env("VERSION")?;
+    let pub_date = require_env("PUB_DATE")?;
+    let modules_dir = desktop_modules_dir();
+    let contract = read_shell_contract(&channel)?.with_context(|| {
+        format!(
+            "Missing {}, run the check_shell_contract step first",
+            shell_contract_path().display()
+        )
+    })?;
+    let payload_root = Path::new("payload_tree").join(DESKTOP_PAYLOAD_PREFIX);
+    remove_dir_if_exists(Path::new("payload_tree"))?;
+    fs::create_dir_all(&payload_root)
+        .with_context(|| format!("Failed to create {}", payload_root.display()))?;
+    let packed = read_packed_desktop_modules(&modules_dir, &channel, &build_version)?;
+    let metadata_version = desktop_module_metadata_version(&pub_date)?;
+    stage_desktop_module_packages(&payload_root, &channel, &packed)?;
+    for (platform, arch) in desktop_release_coordinates() {
+        let key = desktop_coordinate_key(platform, arch);
+        let coordinate = contract
+            .coordinates
+            .get(&key)
+            .with_context(|| format!("The shell contract holds no {key} decision"))?;
+        let live_manifest = coordinate.live.as_ref().with_context(|| {
+            format!("No live {key} manifest, ship a full desktop release first")
+        })?;
+        let manifest = modules_only_channel_manifest(
+            live_manifest,
+            &channel,
+            platform,
+            arch,
+            &build_version,
+            &pub_date,
+            metadata_version,
+            &packed,
+            &coordinate.compatibility,
+        )?;
+        let manifest_path = desktop_channel_manifest_path(&payload_root, &channel, platform, arch);
+        if let Some(parent) = manifest_path.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create {}", parent.display()))?;
+        }
+        write_desktop_channel_manifest_bytes(
+            &manifest_path,
+            platform,
+            arch,
+            serde_json::to_vec(&manifest)?,
+        )?;
+        println!(
+            "Wrote the {platform} {arch} modules-only manifest for shells from {}",
+            coordinate.compatibility.minimum_shell_version
+        );
+    }
+    println!(
+        "Staged {} module(s) for {build_version} on the {channel} channel",
+        packed.len()
+    );
+    Ok(())
+}
+
+fn prepare_modules_release_assets_step() -> Result<()> {
+    let channel = require_env("CHANNEL")?;
+    let version = require_env("VERSION")?;
+    let source_sha = require_env("SOURCE_SHA")?;
+    let product = desktop_release_product(&channel)?;
+    let payload_root = Path::new("payload_tree")
+        .join(DESKTOP_PAYLOAD_PREFIX)
+        .join(&channel);
+    let release_assets = Path::new("release_assets");
+    remove_dir_if_exists(release_assets)?;
+    fs::create_dir_all(release_assets)?;
+    let mut release_builder =
+        DesktopReleaseAssetBuilder::new(&channel, &version, product, release_assets);
+    add_desktop_module_release_assets(&mut release_builder, &payload_root)?;
+    let (descriptor_assets, mut descriptor_modules) = release_builder.finish();
+    ensure!(
+        descriptor_assets.is_empty(),
+        "A modules-only release staged shell assets"
+    );
+    descriptor_modules.sort_by(|left, right| left.storage_key.cmp(&right.storage_key));
+    let descriptor = DesktopReleaseDescriptor {
+        schema_version: DESKTOP_RELEASE_DESCRIPTOR_SCHEMA_VERSION,
+        kind: DesktopReleaseKind::Modules,
+        channel: channel.clone(),
+        version: version.clone(),
+        release_tag: format!("fluxer-desktop-{channel}@{version}"),
+        source_sha,
+        assets: Vec::new(),
+        modules: descriptor_modules,
+    };
+    validate_desktop_release_descriptor(&descriptor, &channel, &version, &descriptor.source_sha)?;
+    validate_desktop_release_module_files(&descriptor, release_assets)?;
+    let descriptor_path =
+        release_assets.join(desktop_release_descriptor_filename(&channel, &version)?);
+    write_json_pretty(&descriptor_path, &descriptor)?;
+    println!("GitHub release asset tree:");
+    print_tree(release_assets, 2)
 }
 
 fn build_summary_step() -> Result<()> {
@@ -5533,7 +6911,33 @@ fn build_summary_step() -> Result<()> {
         file,
         "\n**Version:** {version}\n\n**Download prefix:** {DESKTOP_PAYLOAD_PREFIX}/{channel}/\n\n**Redirect endpoint shape:** /dl/{DESKTOP_PAYLOAD_PREFIX}/{channel}/{{plat}}/{{arch}}/{{format}}"
     )?;
+    if let Some(contract) = read_shell_contract(&channel)? {
+        write!(file, "{}", shell_contract_summary(&contract))?;
+    }
     Ok(())
+}
+
+fn shell_contract_summary(contract: &DesktopShellContract) -> String {
+    let mut summary = format!(
+        "\n### Shell contract\n\n**Decision:** {:?}\n\n| Feed | Oldest shell | Floor commit | Contract changes |\n| --- | --- | --- | --- |\n",
+        contract.choice
+    );
+    let mut changes = BTreeSet::new();
+    for (key, coordinate) in &contract.coordinates {
+        let compatibility = &coordinate.compatibility;
+        summary.push_str(&format!(
+            "| {key} | {} | {} | {} |\n",
+            compatibility.minimum_shell_version,
+            compatibility.floor_source_sha.as_deref().unwrap_or("none"),
+            compatibility.contract_changes.len()
+        ));
+        changes.extend(compatibility.contract_changes.iter().cloned());
+    }
+    for path in changes {
+        summary.push_str(&format!("\n- `{path}`"));
+    }
+    summary.push('\n');
+    summary
 }
 
 fn find_dist_file<F>(dist: &Path, predicate: F) -> Option<PathBuf>
@@ -5688,38 +7092,743 @@ fn print_tree(root: &Path, max_depth: usize) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::parse_version_instant;
-    use chrono::{DateTime, TimeZone, Utc};
 
-    fn dt(year: i32, month: u32, day: u32, hour: u32, minute: u32, second: u32) -> DateTime<Utc> {
-        Utc.with_ymd_and_hms(year, month, day, hour, minute, second)
-            .single()
-            .unwrap()
+    fn live_manifest(platform: &str, arch: &str, shell: &str) -> Value {
+        json!({
+            "manifest_version": 1,
+            "release_channel": "canary",
+            "platform": platform,
+            "arch": arch,
+            "build_version": shell,
+            "pub_date": "2026-10-08T03:23:23Z",
+            "metadata_version": 1791433225,
+            "shell": {"latest_version": shell, "minimum_version": "0.0.0"},
+            "linux_security_minimum": {"version": "2026.1001.1", "required_modules": ["fluxer_renderer"]},
+            "modules": {},
+            "required_modules": ["fluxer_renderer"],
+        })
     }
 
     #[test]
-    fn bare_drive_workdir_resolves_to_the_drive_root() {
-        assert_eq!(workdir_path("W:"), PathBuf::from("W:\\"));
-        assert_eq!(workdir_path("w:"), PathBuf::from("w:\\"));
-        assert_eq!(workdir_path("W:\\src"), PathBuf::from("W:\\src"));
+    fn live_shell_version_must_agree_across_coordinates() {
+        let mut manifests = BTreeMap::new();
+        for (platform, arch) in desktop_release_coordinates() {
+            manifests.insert(
+                desktop_coordinate_key(platform, arch),
+                live_manifest(platform, arch, "2026.1008.32323"),
+            );
+        }
         assert_eq!(
-            workdir_path("/home/runner/work"),
-            PathBuf::from("/home/runner/work")
+            common_live_shell_version(&manifests).unwrap(),
+            "2026.1008.32323"
+        );
+        manifests.insert(
+            "linux/arm64".to_string(),
+            live_manifest("linux", "arm64", "2026.1008.12411"),
+        );
+        let error = common_live_shell_version(&manifests)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("disagree"), "{error}");
+        manifests.insert("linux/arm64".to_string(), json!({"shell": {}}));
+        assert!(common_live_shell_version(&manifests).is_err());
+    }
+
+    const SHA_LIVE: &str = "1111111111111111111111111111111111111111";
+    const SHA_SOURCE: &str = "2222222222222222222222222222222222222222";
+    const SHA_BASELINE: &str = "3333333333333333333333333333333333333333";
+
+    fn contract_reader(files: &[(&str, &str)]) -> impl Fn(&str) -> Result<Option<String>> {
+        let files = files
+            .iter()
+            .map(|(path, contents)| ((*path).to_string(), (*contents).to_string()))
+            .collect::<BTreeMap<_, _>>();
+        move |path: &str| Ok(files.get(path).cloned())
+    }
+
+    fn contract_fixture() -> Vec<(&'static str, &'static str)> {
+        vec![
+            (
+                "fluxer_desktop/src/preload/index.ts",
+                "import {isRecord} from '@fluxer/record_utils/src/RecordGuards';\nimport {BUILD_CHANNEL} from '@electron/common/BuildChannel';\nimport type {DesktopApi} from '@electron/common/Types';\nimport {bridge} from '@fluxer/voice_engine_v2/bridge';\nexport {helper} from './Helper';\nimport {contextBridge} from 'electron';\nconst later = import.meta.url;\nconst lazy = () => import('@electron/preload/Lazy');\n",
+            ),
+            (
+                "fluxer_desktop/src/preload/Helper.ts",
+                "export const helper = 1;\n",
+            ),
+            (
+                "fluxer_desktop/src/preload/Lazy.ts",
+                "export const lazy = 1;\n",
+            ),
+            (
+                "fluxer_desktop/src/preload/splash.cjs",
+                "require('electron');\n",
+            ),
+            (
+                "fluxer_desktop/src/common/Types.ts",
+                "export type * from '@fluxer/desktop_ipc/src/DesktopBridgeTypes';\n",
+            ),
+            (
+                "packages/desktop_ipc/src/DesktopBridgeTypes.ts",
+                "export interface A {}\n",
+            ),
+            (
+                "packages/desktop_ipc/src/ModuleContract.ts",
+                "export interface B {}\n",
+            ),
+            (
+                "packages/record_utils/src/RecordGuards.ts",
+                "export const isRecord = 1;\n",
+            ),
+            (
+                "packages/voice_engine_v2/package.json",
+                r#"{"name":"@fluxer/voice_engine_v2","exports":{"./bridge":"./src/bridge/index.ts"}}"#,
+            ),
+            (
+                "packages/voice_engine_v2/src/bridge/index.ts",
+                "import type {Frame} from '@fluxer/voice_engine_v2/src/protocol/types';\n",
+            ),
+            (
+                "packages/voice_engine_v2/src/protocol/types.ts",
+                "export interface Frame {}\n",
+            ),
+            (
+                "fluxer_app/src/types/electron.d.ts",
+                "import type {B} from '@fluxer/desktop_ipc/src/ModuleContract';\nimport type {C} from '@simplewebauthn/browser';\nimport type {D} from '@app/features/Thing';\n",
+            ),
+            (
+                "fluxer_desktop/src/main/LocalAppProtocol.ts",
+                "export const protocol = 1;\n",
+            ),
+            (
+                "fluxer_desktop/src/main/Updater.ts",
+                "ipcMain.handle('updater-check', async () => {});\n",
+            ),
+            (
+                "fluxer_desktop/src/main/Window.ts",
+                "export const window = 1;\n",
+            ),
+            (
+                "fluxer_desktop/src/main/Ipc.test.ts",
+                "ipcMain.on('test', () => {});\n",
+            ),
+            ("fluxer_desktop/src/main/README.md", "ipcMain.on(\n"),
+        ]
+    }
+
+    fn contract_main_files(files: &[(&str, &str)]) -> Vec<String> {
+        files
+            .iter()
+            .map(|(path, _)| (*path).to_string())
+            .filter(|path| path.starts_with(DESKTOP_CONTRACT_MAIN_DIR))
+            .collect()
+    }
+
+    #[test]
+    fn the_contract_surface_follows_preload_imports() {
+        let files = contract_fixture();
+        let surface =
+            desktop_shell_contract_surface(&contract_reader(&files), &contract_main_files(&files))
+                .unwrap();
+        assert_eq!(
+            surface.into_iter().collect::<Vec<_>>(),
+            vec![
+                "fluxer_app/src/types/electron.d.ts",
+                "fluxer_desktop/src/common/Types.ts",
+                "fluxer_desktop/src/main/LocalAppProtocol.ts",
+                "fluxer_desktop/src/preload/Helper.ts",
+                "fluxer_desktop/src/preload/Lazy.ts",
+                "fluxer_desktop/src/preload/index.ts",
+                "packages/desktop_ipc/src/DesktopBridgeTypes.ts",
+                "packages/desktop_ipc/src/ModuleContract.ts",
+                "packages/record_utils/src/RecordGuards.ts",
+                "packages/voice_engine_v2/src/bridge/index.ts",
+                "packages/voice_engine_v2/src/protocol/types.ts",
+            ]
         );
     }
 
-    fn matrix_args() -> BuildDesktopArgs {
-        BuildDesktopArgs {
-            step: DesktopStep::SetMatrix,
-            channel: None,
-            skip_targets: None,
-            skip_windows: Some("false".to_string()),
-            skip_windows_x64: Some("false".to_string()),
-            skip_windows_arm64: Some("false".to_string()),
-            skip_macos: Some("false".to_string()),
-            skip_linux: Some("false".to_string()),
-            skip_linux_x64: Some("false".to_string()),
-            skip_linux_arm64: Some("false".to_string()),
+    #[test]
+    fn main_process_files_count_only_where_their_ipc_calls_change() {
+        let surface = BTreeSet::from(["fluxer_desktop/src/main/LocalAppProtocol.ts".to_string()]);
+        let updater = "fluxer_desktop/src/main/Updater.ts";
+        let base = "ipcMain.handle('updater-check', async (_event, context) => {\n\treturn check(context);\n});\nfunction poll() {\n\treturn 1;\n}\n";
+        let changed = |base: &str, head: &str, path: &str| {
+            let base = base.to_string();
+            let head = head.to_string();
+            changes_shell_contract(
+                path,
+                &surface,
+                &surface,
+                &move |_: &str| Ok(Some(base.clone())),
+                &move |_: &str| Ok(Some(head.clone())),
+            )
+            .unwrap()
+        };
+        assert!(!changed(
+            base,
+            &base.replace("return 1", "return 2"),
+            updater
+        ));
+        assert!(!changed(
+            base,
+            &base.replace(
+                "async (_event, context) => {",
+                "async (_event, context) =>   {"
+            ),
+            updater
+        ));
+        assert!(changed(
+            base,
+            &base.replace("check(context)", "check({manual: true})"),
+            updater
+        ));
+        assert!(changed(
+            base,
+            &base.replace("'updater-check'", "'updater-probe'"),
+            updater
+        ));
+        let tray = "fluxer_desktop/src/main/DesktopTray.ts";
+        let send =
+            "client.webContents.send('tray-action', {id: 'quit', label: ')'});\nconst other = 1;\n";
+        assert!(!changed(
+            send,
+            &send.replace("other = 1", "other = 2"),
+            tray
+        ));
+        assert!(changed(
+            send,
+            &send.replace("id: 'quit'", "action: 'quit'"),
+            tray
+        ));
+        assert!(changed(send, "", tray));
+        assert!(changed(
+            "a",
+            "b",
+            "fluxer_desktop/src/main/LocalAppProtocol.ts"
+        ));
+        assert!(!changed(
+            send,
+            "",
+            "fluxer_desktop/src/main/fixtures/Tray.ts"
+        ));
+    }
+
+    #[test]
+    fn ipc_call_sites_end_at_the_matching_parenthesis() {
+        assert_eq!(
+            desktop_ipc_call_sites(
+                "ipcMain.on('a', () => fn(')', \"(\", `)`)); // )\nother();\nsender.send(/* ) */ 'b'\n);\n"
+            ),
+            vec![
+                ".send(/* ) */ 'b' )".to_string(),
+                "ipcMain.on('a', () => fn(')', \"(\", `)`))".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn an_alias_import_that_does_not_resolve_is_an_error() {
+        let files = contract_fixture()
+            .into_iter()
+            .map(|(path, contents)| {
+                if path == "fluxer_desktop/src/preload/Helper.ts" {
+                    (path, "import {gone} from '@electron/common/Gone';\n")
+                } else {
+                    (path, contents)
+                }
+            })
+            .collect::<Vec<_>>();
+        let error =
+            desktop_shell_contract_surface(&contract_reader(&files), &contract_main_files(&files))
+                .unwrap_err()
+                .to_string();
+        assert!(error.contains("@electron/common/Gone"), "{error}");
+    }
+
+    #[test]
+    fn the_import_scan_reads_every_specifier_form() {
+        assert_eq!(
+            contract_import_specifiers(
+                "import a from 'a';\nimport type {B} from \"b\";\nexport * from 'c';\nexport {d} from './d';\nconst e = import('e');\nconst f = require(\n  'f'\n);\nimport 'g';\nconst h = Array.from(list);\nconst i = import.meta.url;\nconst fromage = 'cheese';\n"
+            ),
+            vec!["a", "b", "c", "./d", "e", "f", "g"]
+        );
+    }
+
+    #[test]
+    fn the_real_preload_closure_resolves() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let main_dir = root.join(DESKTOP_CONTRACT_MAIN_DIR);
+        let main_files = fs::read_dir(&main_dir)
+            .unwrap()
+            .map(|entry| {
+                format!(
+                    "{DESKTOP_CONTRACT_MAIN_DIR}{}",
+                    file_name_string(&entry.unwrap().path()).unwrap()
+                )
+            })
+            .collect::<Vec<_>>();
+        let read = |path: &str| read_worktree_file(&root, path);
+        let surface = desktop_shell_contract_surface(&read, &main_files).unwrap();
+        for path in [
+            "fluxer_desktop/src/preload/index.ts",
+            "fluxer_desktop/src/preload/LocalAppPreload.ts",
+            "fluxer_desktop/src/common/Types.ts",
+            "packages/desktop_ipc/src/ModuleContract.ts",
+            "packages/voice_engine_v2/src/bridge/index.ts",
+            "packages/voice_engine_v2/src/protocol/types.ts",
+            "fluxer_app/src/types/electron.d.ts",
+        ] {
+            assert!(
+                surface.contains(path),
+                "{path} is missing from the contract"
+            );
+        }
+        for path in [
+            "fluxer_desktop/src/preload/splash.cjs",
+            "fluxer_desktop/src/preload/LegacyHarvestPreload.ts",
+        ] {
+            assert!(
+                !surface.contains(path),
+                "{path} must not be in the contract"
+            );
+        }
+        assert!(surface.iter().all(|path| !is_shell_irrelevant_path(path)));
+    }
+
+    fn compatibility(floor: &str, source_sha: &str) -> DesktopShellCompatibility {
+        DesktopShellCompatibility {
+            minimum_shell_version: floor.to_string(),
+            source_sha: source_sha.to_string(),
+            previous_source_sha: source_sha.to_string(),
+            floor_source_sha: None,
+            decision: DesktopShellContractChoice::Compatible,
+            contract_base_sha: SHA_BASELINE.to_string(),
+            contract_changes: Vec::new(),
+        }
+    }
+
+    fn packed_module(module: &str, sha256: &str) -> DesktopPackedModule {
+        DesktopPackedModule {
+            module: module.to_string(),
+            sha256: sha256.to_string(),
+            bytes: 42,
+            directory: PathBuf::from("unused"),
+        }
+    }
+
+    #[test]
+    fn an_unchanged_contract_keeps_the_floor_below_the_live_shell() {
+        let previous = baseline_shell_compatibility(SHA_BASELINE);
+        let decided = decide_shell_compatibility(
+            &previous,
+            SHA_BASELINE,
+            &[],
+            DesktopShellContractChoice::Unchanged,
+            None,
+            SHA_SOURCE,
+        )
+        .unwrap();
+        assert_eq!(decided.minimum_shell_version, "0.0.0");
+        assert_eq!(decided.decision, DesktopShellContractChoice::Unchanged);
+        assert_eq!(decided.source_sha, SHA_SOURCE);
+        assert_eq!(decided.previous_source_sha, SHA_BASELINE);
+        let live = live_manifest("linux", "x64", "2026.1009.45608");
+        let manifest = modules_only_channel_manifest(
+            &live,
+            "canary",
+            "linux",
+            "x64",
+            "2026.1010.1",
+            "2026-10-10T00:00:01Z",
+            1791590401,
+            &[packed_module("fluxer_renderer", &"a".repeat(64))],
+            &decided,
+        )
+        .unwrap();
+        assert_eq!(
+            manifest["modules"]["fluxer_renderer"]["minimum_shell_version"], "0.0.0",
+            "a modules-only release must not cut off the shell 2026.1008.32323 the AUR package ships"
+        );
+    }
+
+    #[test]
+    fn a_contract_change_marked_unchanged_refuses_the_release() {
+        let changes = vec!["fluxer_desktop/src/preload/index.ts".to_string()];
+        let error = decide_shell_compatibility(
+            &baseline_shell_compatibility(SHA_BASELINE),
+            SHA_BASELINE,
+            &changes,
+            DesktopShellContractChoice::Unchanged,
+            None,
+            SHA_SOURCE,
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("shell_contract"), "{error}");
+        assert!(
+            error.contains("fluxer_desktop/src/preload/index.ts"),
+            "{error}"
+        );
+        assert!(error.contains(SHA_BASELINE), "{error}");
+    }
+
+    #[test]
+    fn a_compatible_contract_change_keeps_the_floor_and_records_the_paths() {
+        let changes = vec!["fluxer_desktop/src/main/Updater.ts".to_string()];
+        let mut previous = compatibility("2026.1009.1", SHA_LIVE);
+        previous.floor_source_sha = Some(SHA_BASELINE.to_string());
+        let decided = decide_shell_compatibility(
+            &previous,
+            SHA_BASELINE,
+            &changes,
+            DesktopShellContractChoice::Compatible,
+            None,
+            SHA_SOURCE,
+        )
+        .unwrap();
+        assert_eq!(decided.minimum_shell_version, "2026.1009.1");
+        assert_eq!(decided.floor_source_sha.as_deref(), Some(SHA_BASELINE));
+        assert_eq!(decided.contract_changes, changes);
+        assert_eq!(decided.previous_source_sha, SHA_LIVE);
+    }
+
+    #[test]
+    fn every_release_states_changes_since_the_oldest_shell_the_floor_admits() {
+        let changes = vec!["fluxer_desktop/src/preload/index.ts".to_string()];
+        let acknowledged = decide_shell_compatibility(
+            &baseline_shell_compatibility(SHA_BASELINE),
+            SHA_BASELINE,
+            &changes,
+            DesktopShellContractChoice::Compatible,
+            None,
+            SHA_LIVE,
+        )
+        .unwrap();
+        let base = shell_contract_base(&acknowledged, SHA_BASELINE);
+        assert_eq!(base, SHA_BASELINE);
+        let error = decide_shell_compatibility(
+            &acknowledged,
+            &base,
+            &changes,
+            DesktopShellContractChoice::Unchanged,
+            None,
+            SHA_SOURCE,
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains(SHA_BASELINE), "{error}");
+        let raised = decide_shell_compatibility(
+            &acknowledged,
+            &base,
+            &changes,
+            DesktopShellContractChoice::Raise,
+            Some(("2026.1013.1", SHA_LIVE)),
+            SHA_SOURCE,
+        )
+        .unwrap();
+        assert_eq!(raised.minimum_shell_version, "2026.1013.1");
+        assert_eq!(raised.contract_base_sha, SHA_BASELINE);
+        assert_eq!(shell_contract_base(&raised, SHA_BASELINE), SHA_LIVE);
+    }
+
+    #[test]
+    fn a_raise_to_a_malformed_shell_version_is_an_error() {
+        let error = decide_shell_compatibility(
+            &compatibility("2026.1009.1", SHA_LIVE),
+            SHA_BASELINE,
+            &["fluxer_desktop/src/preload/index.ts".to_string()],
+            DesktopShellContractChoice::Raise,
+            Some(("2026.10x9.1", SHA_SOURCE)),
+            SHA_SOURCE,
+        )
+        .unwrap_err();
+        assert!(
+            format!("{error:#}").contains("is not a shell version"),
+            "{error:#}"
+        );
+    }
+
+    #[test]
+    fn raise_without_a_contract_change_is_refused() {
+        let error = decide_shell_compatibility(
+            &baseline_shell_compatibility(SHA_BASELINE),
+            SHA_BASELINE,
+            &[],
+            DesktopShellContractChoice::Raise,
+            Some(("2026.1013.1", SHA_SOURCE)),
+            SHA_SOURCE,
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("no reason to raise"), "{error}");
+    }
+
+    #[test]
+    fn raise_moves_the_floor_to_the_oldest_shell_carrying_the_contract_and_never_lowers_it() {
+        let mut older = vec![
+            ("2026.1012.1".to_string(), "a".repeat(40)),
+            ("2026.1011.1".to_string(), "b".repeat(40)),
+            ("2026.1010.1".to_string(), "c".repeat(40)),
+            ("2026.1009.1".to_string(), "d".repeat(40)),
+        ]
+        .into_iter();
+        let mut checked = Vec::new();
+        let floor = oldest_shell_carrying_contract(
+            ("2026.1013.1".to_string(), SHA_SOURCE.to_string()),
+            || Ok(older.next()),
+            |sha| {
+                checked.push(sha.to_string());
+                Ok(sha != "c".repeat(40))
+            },
+        )
+        .unwrap();
+        assert_eq!(floor, ("2026.1011.1".to_string(), "b".repeat(40)));
+        assert_eq!(
+            checked,
+            vec!["a".repeat(40), "b".repeat(40), "c".repeat(40)]
+        );
+        let changes = vec!["fluxer_desktop/src/preload/index.ts".to_string()];
+        let raised = decide_shell_compatibility(
+            &baseline_shell_compatibility(SHA_BASELINE),
+            SHA_BASELINE,
+            &changes,
+            DesktopShellContractChoice::Raise,
+            Some((&floor.0, &floor.1)),
+            SHA_SOURCE,
+        )
+        .unwrap();
+        assert_eq!(raised.minimum_shell_version, "2026.1011.1");
+        assert_eq!(raised.floor_source_sha, Some("b".repeat(40)));
+        let mut higher = compatibility("2026.1012.5", SHA_LIVE);
+        higher.floor_source_sha = Some(SHA_LIVE.to_string());
+        let kept = decide_shell_compatibility(
+            &higher,
+            SHA_LIVE,
+            &changes,
+            DesktopShellContractChoice::Raise,
+            Some((&floor.0, &floor.1)),
+            SHA_SOURCE,
+        )
+        .unwrap();
+        assert_eq!(kept.minimum_shell_version, "2026.1012.5");
+        assert_eq!(kept.floor_source_sha.as_deref(), Some(SHA_LIVE));
+    }
+
+    #[test]
+    fn a_feed_without_a_record_diffs_from_the_first_module_era_shell() {
+        let live = live_manifest("linux", "x64", "2026.1009.45608");
+        let mut asked = 0;
+        let previous = previous_shell_compatibility(Some(&live), || {
+            asked += 1;
+            Ok(SHA_BASELINE.to_string())
+        })
+        .unwrap();
+        assert_eq!(asked, 1);
+        assert_eq!(previous, baseline_shell_compatibility(SHA_BASELINE));
+        assert_eq!(
+            previous_shell_compatibility(None, || Ok(SHA_BASELINE.to_string())).unwrap(),
+            baseline_shell_compatibility(SHA_BASELINE)
+        );
+        let mut recorded = live.clone();
+        recorded["shell_compatibility"] =
+            serde_json::to_value(compatibility("2026.1009.1", SHA_LIVE)).unwrap();
+        assert_eq!(
+            previous_shell_compatibility(Some(&recorded), || bail!("the baseline is not needed"))
+                .unwrap(),
+            compatibility("2026.1009.1", SHA_LIVE)
+        );
+        recorded["shell_compatibility"]["source_sha"] = json!("main");
+        assert!(
+            previous_shell_compatibility(Some(&recorded), || Ok(SHA_BASELINE.to_string())).is_err()
+        );
+        recorded["shell_compatibility"] = json!({"minimum_shell_version": "0.0.0"});
+        assert!(
+            previous_shell_compatibility(Some(&recorded), || Ok(SHA_BASELINE.to_string())).is_err()
+        );
+    }
+
+    #[test]
+    fn a_modules_only_raise_refuses_changes_no_live_shell_carries() {
+        let live_shell = ("2026.1013.15209".to_string(), SHA_LIVE.to_string());
+        ensure_live_shell_carries_contract(&live_shell, &[]).unwrap();
+        let error = ensure_live_shell_carries_contract(
+            &live_shell,
+            &["packages/desktop_ipc/src/ModuleContract.ts".to_string()],
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("ship a full desktop release"), "{error}");
+        assert!(
+            error.contains("packages/desktop_ipc/src/ModuleContract.ts"),
+            "{error}"
+        );
+    }
+
+    #[test]
+    fn the_shell_contract_input_accepts_only_known_values() {
+        assert_eq!(
+            DesktopShellContractChoice::parse_input("unchanged").unwrap(),
+            DesktopShellContractChoice::Unchanged
+        );
+        assert_eq!(
+            DesktopShellContractChoice::parse_input("compatible").unwrap(),
+            DesktopShellContractChoice::Compatible
+        );
+        assert_eq!(
+            DesktopShellContractChoice::parse_input("raise").unwrap(),
+            DesktopShellContractChoice::Raise
+        );
+        for value in ["", "baseline", "Raise", "true", " compatible"] {
+            assert!(
+                DesktopShellContractChoice::parse_input(value).is_err(),
+                "{value:?}"
+            );
+        }
+        assert!(parse_strict_bool("X", "true").unwrap());
+        assert!(!parse_strict_bool("X", "false").unwrap());
+        for value in ["", "1", "yes", "True"] {
+            assert!(parse_strict_bool("X", value).is_err(), "{value:?}");
+        }
+    }
+
+    fn published(version: &str, coordinates: &[(&str, &str)]) -> DesktopPublishedRelease {
+        DesktopPublishedRelease {
+            version: version.to_string(),
+            tag: format!("fluxer-desktop-canary@{version}"),
+            assets: coordinates
+                .iter()
+                .map(|(platform, arch)| {
+                    desktop_module_manifest_release_asset_name("canary", version, platform, arch)
+                        .unwrap()
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn a_live_feed_must_match_the_newest_release_that_published_it() {
+        let releases = vec![
+            published("2026.1009.45608", &[("linux", "x64")]),
+            published("2026.1010.1", &[("linux", "x64")]),
+            published("2026.1011.1", &[]),
+        ];
+        assert_eq!(
+            check_live_feed(
+                &releases,
+                "canary",
+                "linux",
+                "arm64",
+                DesktopLiveFeed::Missing
+            )
+            .unwrap(),
+            None
+        );
+        let error = check_live_feed(
+            &releases,
+            "canary",
+            "linux",
+            "x64",
+            DesktopLiveFeed::Missing,
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("2026.1010.1"), "{error}");
+        let lagging = live_manifest("linux", "x64", "2026.1009.45608");
+        let error = check_live_feed(
+            &releases,
+            "canary",
+            "linux",
+            "x64",
+            DesktopLiveFeed::Served(lagging),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(error.contains("has not caught up"), "{error}");
+        let current = live_manifest("linux", "x64", "2026.1010.1");
+        assert_eq!(
+            check_live_feed(
+                &releases,
+                "canary",
+                "linux",
+                "x64",
+                DesktopLiveFeed::Served(current.clone())
+            )
+            .unwrap(),
+            Some(current.clone())
+        );
+        assert!(
+            check_live_feed(
+                &releases,
+                "canary",
+                "linux",
+                "arm64",
+                DesktopLiveFeed::Served(current)
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn modules_only_manifest_inherits_the_floor() {
+        let live = live_manifest("linux", "x64", "2026.1009.45608");
+        let renderer = "a".repeat(64);
+        let dictionary = "b".repeat(64);
+        let packed = vec![
+            packed_module("fluxer_renderer", &renderer),
+            packed_module("fluxer_dict_en", &dictionary),
+        ];
+        let decided = compatibility("2026.1009.1", SHA_SOURCE);
+        let mut recorded = live.clone();
+        recorded["modules"] = json!({
+            "fluxer_dict_en": {"sha256": dictionary, "bytes": 42, "url": "https://pkgs.invalid/x", "minimum_shell_version": "2026.1001.1", "maximum_shell_version": "2026.1100.1"},
+            "fluxer_renderer": {"sha256": "c".repeat(64), "bytes": 42, "url": "https://pkgs.invalid/y", "minimum_shell_version": "2026.1001.1", "maximum_shell_version": null},
+        });
+        let mut unrecorded = recorded.clone();
+        recorded["shell_compatibility"] =
+            serde_json::to_value(compatibility("0.0.0", SHA_LIVE)).unwrap();
+        unrecorded["modules"]["fluxer_dict_en"]["minimum_shell_version"] = json!("2026.1009.45608");
+        for (live, dictionary_floor, dictionary_ceiling) in [
+            (&recorded, "2026.1001.1", json!("2026.1100.1")),
+            (&unrecorded, "2026.1009.1", Value::Null),
+        ] {
+            let manifest = modules_only_channel_manifest(
+                live,
+                "canary",
+                "linux",
+                "x64",
+                "2026.1010.1",
+                "2026-10-10T00:00:01Z",
+                1791590401,
+                &packed,
+                &decided,
+            )
+            .unwrap();
+            assert_eq!(manifest["shell"], live["shell"]);
+            assert_eq!(manifest["build_version"], "2026.1010.1");
+            assert_eq!(manifest["metadata_version"], 1791590401);
+            assert!(manifest.get("linux_security_minimum").is_none());
+            assert_eq!(
+                manifest["shell_compatibility"],
+                serde_json::to_value(&decided).unwrap()
+            );
+            assert_eq!(
+                manifest["modules"]["fluxer_renderer"]["minimum_shell_version"],
+                "2026.1009.1"
+            );
+            assert!(manifest["modules"]["fluxer_renderer"]["maximum_shell_version"].is_null());
+            assert_eq!(
+                manifest["modules"]["fluxer_dict_en"]["minimum_shell_version"],
+                dictionary_floor
+            );
+            assert_eq!(
+                manifest["modules"]["fluxer_dict_en"]["maximum_shell_version"],
+                dictionary_ceiling
+            );
+            let parsed: DesktopChannelManifest = serde_json::from_value(manifest).unwrap();
+            assert_eq!(parsed.shell.latest_version, "2026.1009.45608");
+            assert_eq!(parsed.shell_compatibility, Some(decided.clone()));
         }
     }
 
@@ -5730,195 +7839,28 @@ mod tests {
         fs::write(path, contents).unwrap();
     }
 
-    #[test]
-    fn resolves_explicit_calver_with_precedence() {
-        let calver_env = CalverEnv {
-            build_version: Some("2026.520.1".to_string()),
-            fluxer_build_version: Some("2026.521.2".to_string()),
-            fluxer_build_date: Some("2026-05-22T03:04:05Z".to_string()),
-        };
-        assert_eq!(
-            resolve_calver(&calver_env, dt(2026, 5, 1, 0, 0, 0)).unwrap(),
-            "2026.520.1"
-        );
-    }
-
-    #[test]
-    fn resolves_generated_calver_from_date_override() {
-        let calver_env = CalverEnv {
-            fluxer_build_date: Some("2026-05-20T01:02:03Z".to_string()),
-            ..CalverEnv::default()
-        };
-        assert_eq!(
-            resolve_calver(&calver_env, dt(2026, 1, 1, 0, 0, 0)).unwrap(),
-            "2026.520.10203"
-        );
-    }
-
-    #[test]
-    fn rejects_invalid_explicit_time() {
-        let error = parse_version_instant("2026.520.246000").unwrap_err();
-        assert_eq!(
-            error.to_string(),
-            "Invalid build version date/time: 2026.520.246000"
-        );
-    }
-
-    #[test]
-    fn matrix_skip_flags_filter_individual_arches() {
-        let mut args = matrix_args();
-        args.skip_windows_x64 = Some("true".to_string());
-        args.skip_macos = Some("true".to_string());
-
-        let selected = selected_platforms(&args)
-            .unwrap()
-            .into_iter()
-            .map(platform_json)
-            .collect::<Vec<_>>();
-
-        assert_eq!(
-            selected,
-            vec![
-                "{\"platform\":\"windows\",\"arch\":\"arm64\",\"os\":\"windows-2025\",\"electron_arch\":\"arm64\"}",
-                "{\"platform\":\"linux\",\"arch\":\"x64\",\"os\":\"ubuntu-22.04\",\"electron_arch\":\"x64\"}",
-                "{\"platform\":\"linux\",\"arch\":\"arm64\",\"os\":\"ubuntu-22.04-arm\",\"electron_arch\":\"arm64\"}",
-            ]
-        );
-    }
-
-    #[test]
-    fn matrix_selects_one_row_per_platform_arch_by_default() {
-        let selected = selected_platforms(&matrix_args()).unwrap();
-
-        assert_eq!(selected.len(), 5);
-        assert_eq!(
-            selected
-                .iter()
-                .filter(|platform| platform.platform == "windows")
-                .count(),
-            2
-        );
-    }
-
-    #[test]
-    fn matrix_skip_targets_filter_platforms_and_arches() {
-        let mut args = matrix_args();
-        args.skip_targets = Some("windows-x64, macos".to_string());
-
-        let selected = selected_platforms(&args)
-            .unwrap()
-            .into_iter()
-            .map(platform_json)
-            .collect::<Vec<_>>();
-
-        assert_eq!(
-            selected,
-            vec![
-                "{\"platform\":\"windows\",\"arch\":\"arm64\",\"os\":\"windows-2025\",\"electron_arch\":\"arm64\"}",
-                "{\"platform\":\"linux\",\"arch\":\"x64\",\"os\":\"ubuntu-22.04\",\"electron_arch\":\"x64\"}",
-                "{\"platform\":\"linux\",\"arch\":\"arm64\",\"os\":\"ubuntu-22.04-arm\",\"electron_arch\":\"arm64\"}",
-            ]
-        );
-    }
-
-    #[test]
-    fn matrix_skip_targets_drop_every_windows_row() {
-        let mut args = matrix_args();
-        args.skip_targets = Some("windows".to_string());
-
-        let selected = selected_platforms(&args).unwrap();
-
-        assert!(
-            selected
-                .iter()
-                .all(|platform| platform.platform != "windows")
-        );
-        assert_eq!(selected.len(), 3);
-    }
-
-    #[test]
-    fn matrix_skip_targets_reject_unknown_values() {
-        let mut args = matrix_args();
-        args.skip_targets = Some("windows-riscv".to_string());
-
-        let error = selected_platforms(&args).unwrap_err();
-
-        assert!(error.to_string().contains("Unknown desktop skip target"));
-    }
-
     const BUILD_DESKTOP_WORKFLOW: &str =
         include_str!("../../../.github/workflows/build-desktop.yaml");
+    const BUILD_DESKTOP_MODULES_WORKFLOW: &str =
+        include_str!("../../../.github/workflows/build-desktop-modules.yaml");
 
     fn workflow_job(job: &str) -> &'static str {
+        workflow_job_in(BUILD_DESKTOP_WORKFLOW, job)
+    }
+
+    fn workflow_job_in(workflow: &'static str, job: &str) -> &'static str {
         let header = format!("\n  {job}:\n");
-        let start = BUILD_DESKTOP_WORKFLOW
+        let start = workflow
             .find(&header)
-            .unwrap_or_else(|| panic!("build-desktop.yaml has no {job} job"))
+            .unwrap_or_else(|| panic!("the workflow has no {job} job"))
             + header.len();
-        let body = &BUILD_DESKTOP_WORKFLOW[start..];
+        let body = &workflow[start..];
         let end = body
             .match_indices('\n')
             .map(|(index, _)| index + 1)
             .find(|&index| body[index..].starts_with("  ") && !body[index..].starts_with("   "))
             .unwrap_or(body.len());
         &body[..end]
-    }
-
-    fn workflow_step_names(job: &str) -> Vec<&str> {
-        job.lines()
-            .filter_map(|line| line.strip_prefix("      - name: "))
-            .collect()
-    }
-
-    #[test]
-    fn every_build_desktop_workflow_step_dispatches_to_a_desktop_step() {
-        let steps = BUILD_DESKTOP_WORKFLOW
-            .lines()
-            .filter_map(|line| line.trim().strip_prefix("--step "))
-            .collect::<Vec<_>>();
-
-        assert!(steps.contains(&"stage_handoff"));
-        for step in steps {
-            assert!(
-                <DesktopStep as ValueEnum>::from_str(step, false).is_ok(),
-                "build-desktop.yaml dispatches unknown desktop step {step}"
-            );
-        }
-        assert!(matches!(
-            <DesktopStep as ValueEnum>::from_str("stage_handoff", false),
-            Ok(DesktopStep::StageHandoff)
-        ));
-    }
-
-    #[test]
-    fn the_github_release_is_the_only_destination_for_built_artifacts() {
-        for job in ["build", "upload", "publish_release"] {
-            let body = workflow_job(job);
-            for forbidden in [
-                "S3_BUCKET",
-                "S3_ENDPOINT",
-                "AWS_ACCESS_KEY_ID",
-                "AWS_SECRET_ACCESS_KEY",
-                "DOWNLOADS_S3",
-                "_handoff/",
-            ] {
-                assert!(
-                    !body.contains(forbidden),
-                    "{job} must not reference {forbidden} now that the downloads bucket is gone"
-                );
-            }
-        }
-
-        assert_eq!(
-            workflow_step_names(workflow_job("publish_release")),
-            vec![
-                "Checkout source",
-                "Set up Rust toolchain (CI helpers)",
-                "Download GitHub release assets",
-                "Create token",
-                "Publish GitHub desktop release",
-            ]
-        );
     }
 
     #[test]
@@ -5966,86 +7908,81 @@ mod tests {
         }
     }
 
-    #[test]
-    fn parses_handoff_artifact_dir_names() {
-        assert_eq!(
-            parse_artifact_dir_name("fluxer-desktop-canary-windows-arm64", "canary").unwrap(),
-            ArtifactIdentity {
-                platform: "windows".to_string(),
-                arch: "arm64".to_string(),
-                signed: false,
-            }
-        );
-        assert!(parse_artifact_dir_name("fluxer-desktop-stable-linux-x64", "canary").is_none());
-        assert_eq!(
-            parse_artifact_dir_name("fluxer-desktop-canary-windows-x64-signed", "canary").unwrap(),
-            ArtifactIdentity {
-                platform: "windows".to_string(),
-                arch: "x64".to_string(),
-                signed: true,
-            }
-        );
+    fn workflow_step_index(body: &str, step: &str) -> usize {
+        body.find(&format!("--step {step}\n"))
+            .unwrap_or_else(|| panic!("no {step} step in {body}"))
     }
 
     #[test]
-    fn handoff_artifact_name_only_marks_signed_windows_uploads() {
-        assert_eq!(
-            handoff_artifact_name("canary", "windows", "x64", true),
-            "fluxer-desktop-canary-windows-x64-signed"
-        );
-        assert_eq!(
-            handoff_artifact_name("canary", "linux", "x64", true),
-            "fluxer-desktop-canary-linux-x64"
-        );
-        assert_eq!(
-            handoff_artifact_name("stable", "windows", "arm64", false),
-            "fluxer-desktop-stable-windows-arm64"
-        );
-    }
-
-    #[test]
-    fn build_channel_content_matches_expected_typescript() {
-        assert_eq!(
-            build_channel_content("canary"),
-            "// SPDX-License-Identifier: AGPL-3.0-or-later\n\n\
-export type BuildChannel = 'stable' | 'canary' | 'development';\n\n\
-export const BUILD_CHANNEL = 'canary' as BuildChannel;\n\
-export const IS_CANARY = BUILD_CHANNEL === 'canary';\n\
-export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
-        );
+    fn shell_contract_reaches_the_contract_check_in_both_workflows() {
+        for workflow in [BUILD_DESKTOP_WORKFLOW, BUILD_DESKTOP_MODULES_WORKFLOW] {
+            let input = workflow
+                .split("\n      shell_contract:\n")
+                .nth(1)
+                .expect("both workflows take a shell_contract input");
+            let input = &input[..input.find("\npermissions:").unwrap_or(input.len())];
+            assert!(input.contains("type: choice"), "{input}");
+            assert!(input.contains("required: true"), "{input}");
+            assert!(input.contains("default: unchanged"), "{input}");
+            for option in ["- unchanged", "- compatible", "- raise"] {
+                assert!(input.contains(option), "{input}");
+            }
+        }
+        for (body, modules_only) in [
+            (workflow_job("meta"), "false"),
+            (workflow_job("upload"), "false"),
+            (
+                workflow_job_in(BUILD_DESKTOP_MODULES_WORKFLOW, "assemble"),
+                "true",
+            ),
+        ] {
+            let check = workflow_step_index(body, "check_shell_contract");
+            assert!(body.contains("fetch-depth: 0"), "{body}");
+            assert!(
+                body.contains("SHELL_CONTRACT: ${{ inputs.shell_contract }}"),
+                "{body}"
+            );
+            assert!(
+                body.contains(&format!("DESKTOP_MODULES_ONLY_RELEASE: {modules_only}")),
+                "{body}"
+            );
+            assert!(
+                body[..check].contains("GH_TOKEN: ${{ steps.create-token.outputs.token }}"),
+                "{body}"
+            );
+            assert!(body[..check].contains("actions/create-github-app-token@"));
+        }
+        let meta = workflow_job("meta");
         assert!(
-            build_channel_content("development")
-                .contains("export const BUILD_CHANNEL = 'development' as BuildChannel;")
+            workflow_step_index(meta, "set_metadata")
+                < workflow_step_index(meta, "check_shell_contract")
+        );
+        let upload = workflow_job("upload");
+        let check = workflow_step_index(upload, "check_shell_contract");
+        assert!(
+            check
+                > upload
+                    .find("name: Download desktop module packages")
+                    .unwrap()
+        );
+        assert!(check < workflow_step_index(upload, "build_module_manifest"));
+        let assemble = workflow_job_in(BUILD_DESKTOP_MODULES_WORKFLOW, "assemble");
+        assert!(
+            workflow_step_index(assemble, "check_shell_contract")
+                < workflow_step_index(assemble, "build_modules_only_manifest")
         );
     }
 
     #[test]
-    fn write_build_channel_file_rejects_invalid_channels() {
-        let temp = tempfile::tempdir().unwrap();
-        assert_eq!(
-            write_build_channel_file(temp.path(), "nightly")
-                .unwrap_err()
-                .to_string(),
-            "Invalid BUILD_CHANNEL: nightly. Must be one of: stable, canary, development."
-        );
-        write_build_channel_file(temp.path(), "development").unwrap();
-    }
-
-    #[test]
-    fn write_build_channel_file_creates_and_updates_file() {
-        let temp = tempfile::tempdir().unwrap();
-        write_build_channel_file(temp.path(), "stable").unwrap();
-        let path = temp.path().join("src/common/BuildChannel.ts");
-        assert_eq!(
-            fs::read_to_string(&path).unwrap(),
-            build_channel_content("stable")
-        );
-
-        write_build_channel_file(temp.path(), "canary").unwrap();
-        assert_eq!(
-            fs::read_to_string(&path).unwrap(),
-            build_channel_content("canary")
-        );
+    fn both_desktop_workflows_share_one_concurrency_group() {
+        for workflow in [BUILD_DESKTOP_WORKFLOW, BUILD_DESKTOP_MODULES_WORKFLOW] {
+            assert!(
+                workflow.contains(
+                    "\nconcurrency:\n  group: desktop-${{ inputs.channel }}\n  cancel-in-progress: false\n"
+                ),
+                "a release on one channel must wait for the other instead of deciding a floor beside it or cancelling its publish"
+            );
+        }
     }
 
     #[test]
@@ -6271,83 +8208,6 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
     }
 
     #[test]
-    fn create_zip_from_dir_preserves_relative_paths() {
-        let temp = tempfile::tempdir().unwrap();
-        let source = temp.path().join("source");
-        write_file(&source.join(".portable"), "");
-        write_file(&source.join("resources/app.asar"), "asar");
-        let zip_path = temp.path().join("portable.zip");
-
-        create_zip_from_dir(&source, &zip_path).unwrap();
-
-        let file = File::open(zip_path).unwrap();
-        let mut zip = zip::ZipArchive::new(file).unwrap();
-        assert!(zip.by_name(".portable").is_ok());
-        assert!(zip.by_name("resources/app.asar").is_ok());
-    }
-
-    #[test]
-    fn velopack_portable_archives_are_removed_from_the_release_directory() {
-        let temp = tempfile::tempdir().unwrap();
-        let output_dir = temp.path();
-        write_file(
-            &output_dir.join("fluxer_desktop_canary-2026.810.1-Portable.zip"),
-            "velopack",
-        );
-        write_file(
-            &output_dir.join("fluxer_desktop_canary-2026.810.1-full.nupkg"),
-            "payload",
-        );
-        write_file(
-            &output_dir.join("Fluxer Canary-2026.810.1-win-arm64.exe"),
-            "setup",
-        );
-        write_file(&output_dir.join("RELEASES"), "feed");
-
-        remove_velopack_portable_archives(output_dir).unwrap();
-
-        let remaining = collect_files(output_dir)
-            .unwrap()
-            .into_iter()
-            .filter_map(|path| file_name_string(&path).ok())
-            .collect::<BTreeSet<_>>();
-        assert!(!remaining.iter().any(|name| name.ends_with(".zip")));
-        assert!(remaining.contains("fluxer_desktop_canary-2026.810.1-full.nupkg"));
-        assert!(remaining.contains("Fluxer Canary-2026.810.1-win-arm64.exe"));
-        assert!(remaining.contains("RELEASES"));
-    }
-
-    #[test]
-    fn percent_encoded_archive_names_match_their_decoded_inventory_entry() {
-        assert_eq!(
-            percent_decode_archive_name("Fluxer%20Canary.exe"),
-            "Fluxer Canary.exe"
-        );
-        assert_eq!(percent_decode_archive_name("Fluxer.exe"), "Fluxer.exe");
-        assert_eq!(
-            percent_decode_archive_name("win-game-capture.win32-arm64-msvc.node"),
-            "win-game-capture.win32-arm64-msvc.node"
-        );
-        assert_eq!(percent_decode_archive_name("100%.dll"), "100%.dll");
-        assert_eq!(percent_decode_archive_name("a%zz.dll"), "a%zz.dll");
-    }
-
-    #[test]
-    fn canary_nupkg_inventory_accepts_percent_encoded_main_executable() {
-        let root = Path::new("lib").join("app");
-        let files = expected_windows_pe_inventory("arm64", "Fluxer Canary.exe")
-            .into_iter()
-            .map(|name| {
-                if name == "Fluxer Canary.exe" {
-                    return root.join("Fluxer%20Canary.exe");
-                }
-                root.join(name)
-            })
-            .collect::<Vec<_>>();
-        assert_expected_windows_pe_inventory(&root, &files, "arm64", "Fluxer Canary.exe").unwrap();
-    }
-
-    #[test]
     fn shipped_account_switching_addons_are_required_windows_binaries() {
         for arch in ["x64", "arm64"] {
             let inventory = expected_windows_pe_inventory(arch, "Fluxer.exe");
@@ -6370,19 +8230,6 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
                 assert!(
                     targets.iter().any(|(relative, _)| relative == &expected),
                     "{expected} must be Mach-O architecture verified"
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn known_optional_windows_pe_inventory_never_repeats_a_required_binary() {
-        for arch in ["x64", "arm64"] {
-            for main_exe in ["Fluxer.exe", "Fluxer Canary.exe"] {
-                assert_eq!(
-                    contradictory_optional_windows_pe_inventory(arch, main_exe),
-                    Vec::<String>::new(),
-                    "{arch}/{main_exe} declares a binary as both required and known-optional"
                 );
             }
         }
@@ -6504,14 +8351,6 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
     }
 
     #[test]
-    fn module_package_urls_point_at_the_content_addressed_package() {
-        assert_eq!(
-            desktop_module_package_url("canary", "fluxer_renderer", "5c1e").unwrap(),
-            "https://pkgs.fluxer.com/desktop/canary/modules/fluxer_renderer/5c1e/package.br"
-        );
-    }
-
-    #[test]
     fn metadata_version_is_the_publication_instant() {
         assert_eq!(
             desktop_module_metadata_version("2026-05-20T01:02:03Z").unwrap(),
@@ -6567,6 +8406,18 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
         }
     }
 
+    fn layout_compatibility() -> DesktopShellCompatibility {
+        DesktopShellCompatibility {
+            minimum_shell_version: "2026.1001.1".to_string(),
+            source_sha: SHA_SOURCE.to_string(),
+            previous_source_sha: SHA_LIVE.to_string(),
+            floor_source_sha: Some(SHA_BASELINE.to_string()),
+            decision: DesktopShellContractChoice::Raise,
+            contract_base_sha: SHA_BASELINE.to_string(),
+            contract_changes: vec!["fluxer_desktop/src/preload/index.ts".to_string()],
+        }
+    }
+
     fn write_fake_module_payload(root: &Path) -> (PathBuf, Vec<DesktopPackedModule>) {
         let packed = ["fluxer_renderer", "fluxer_sourcemaps"]
             .into_iter()
@@ -6577,6 +8428,18 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
             .into_iter()
             .map(|(platform, arch)| (platform.to_string(), arch.to_string()))
             .collect::<Vec<_>>();
+        let coordinates = targets
+            .iter()
+            .map(|(platform, arch)| {
+                (
+                    desktop_coordinate_key(platform, arch),
+                    DesktopShellContractCoordinate {
+                        live: None,
+                        compatibility: layout_compatibility(),
+                    },
+                )
+            })
+            .collect();
         write_desktop_channel_manifests(
             &payload_root,
             "canary",
@@ -6584,6 +8447,7 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
             LAYOUT_PUB_DATE,
             &packed,
             &targets,
+            &coordinates,
         )
         .unwrap();
         (payload_root, packed)
@@ -6604,6 +8468,8 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
             assert_eq!(manifest.arch, arch);
             assert_eq!(manifest.build_version, LAYOUT_VERSION);
             assert_eq!(manifest.required_modules, vec!["fluxer_renderer"]);
+            assert_eq!(manifest.shell.minimum_version, "0.0.0");
+            assert_eq!(manifest.shell_compatibility, Some(layout_compatibility()));
             assert_eq!(
                 manifest.modules.keys().collect::<Vec<_>>(),
                 vec!["fluxer_renderer", "fluxer_sourcemaps"]
@@ -6612,6 +8478,8 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
                 let entry = &manifest.modules[&module.module];
                 assert_eq!(entry.sha256, module.sha256);
                 assert_eq!(entry.bytes, module.bytes);
+                assert_eq!(entry.minimum_shell_version, "2026.1001.1");
+                assert_eq!(entry.maximum_shell_version, None);
                 assert_eq!(
                     entry.url,
                     format!(
@@ -6723,6 +8591,7 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
         assert_eq!(on_disk, names);
         let descriptor = DesktopReleaseDescriptor {
             schema_version: DESKTOP_RELEASE_DESCRIPTOR_SCHEMA_VERSION,
+            kind: DesktopReleaseKind::Full,
             channel: "canary".to_string(),
             version: LAYOUT_VERSION.to_string(),
             release_tag: format!("fluxer-desktop-canary@{LAYOUT_VERSION}"),
@@ -6787,16 +8656,67 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
     }
 
     #[test]
-    fn the_module_payload_ships_only_through_the_github_release() {
-        let upload = workflow_job("upload");
-        assert!(!upload.contains("fluxer-desktop-module-payload"));
-        assert!(!upload.contains("payload_tree/desktop/*/modules/"));
-        let steps = workflow_step_names(upload);
-        let manifest = steps
-            .iter()
-            .position(|step| *step == "Build desktop module manifest")
-            .unwrap();
-        assert_eq!(steps[manifest + 1], "Prepare GitHub release assets");
+    fn pruning_the_shell_renderer_keeps_the_renderer_and_drops_on_demand_modules() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("renderer");
+        write_file(&root.join("index.html"), "<html></html>");
+        write_file(&root.join("version.json"), "{\"version\":\"2026.1009.1\"}");
+        write_file(&root.join("assets/main.js"), "main");
+        write_file(&root.join("assets/main.js.map"), "{}");
+        write_file(&root.join("assets/fluxer_fonts_jp/a.woff2"), "font");
+        write_file(&root.join("assets/fluxer_grammar_rust/b.wasm"), "wasm");
+
+        let removed = prune_on_demand_modules_from_renderer_tree(&root).unwrap();
+
+        assert_eq!(
+            removed.keys().map(String::as_str).collect::<Vec<_>>(),
+            vec![
+                "fluxer_fonts_jp",
+                "fluxer_grammar_rust",
+                "fluxer_sourcemaps"
+            ]
+        );
+        assert!(root.join("index.html").is_file());
+        assert!(root.join("assets/main.js").is_file());
+        assert!(!root.join("assets/main.js.map").exists());
+        assert!(!root.join("assets/fluxer_fonts_jp").exists());
+        assert_eq!(read_bundled_renderer_version(&root).unwrap(), "2026.1009.1");
+    }
+
+    #[test]
+    fn on_demand_module_manifests_do_not_change_between_builds() {
+        let files = vec![DesktopSharedAssetFile {
+            path: "assets/fluxer_fonts_jp/a.woff2".to_string(),
+            sha256: "a".repeat(64),
+            bytes: 4,
+        }];
+        let first = desktop_module_manifest(
+            "fluxer_fonts_jp",
+            "2026.1009.1",
+            "canary",
+            &"1".repeat(40),
+            files.clone(),
+        );
+        let second = desktop_module_manifest(
+            "fluxer_fonts_jp",
+            "2026.1010.7",
+            "canary",
+            &"2".repeat(40),
+            files.clone(),
+        );
+        assert_eq!(first, second);
+        assert_eq!(first.build_version, DESKTOP_CONTENT_MODULE_BUILD_VERSION);
+        assert_eq!(first.source_sha.len(), 40);
+
+        let renderer = desktop_module_manifest(
+            DESKTOP_RENDERER_MODULE,
+            "2026.1009.1",
+            "canary",
+            &"1".repeat(40),
+            files,
+        );
+        assert_eq!(renderer.build_version, "2026.1009.1");
+        assert_eq!(renderer.source_sha, "1".repeat(40));
     }
 
     #[test]
@@ -6831,16 +8751,6 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
         assert!(desktop_module_for_relative_path("assets/fluxer_renderer/app.js").is_err());
         assert!(desktop_module_for_relative_path("assets/Bad/app.js").is_err());
         assert!(desktop_module_for_relative_path("assets/a/b/c.js").is_err());
-    }
-
-    #[test]
-    fn dictionary_directories_map_to_module_names() {
-        assert_eq!(
-            desktop_dictionary_module_name("dictionary-en-gb@3.0.0").as_deref(),
-            Some("fluxer_dict_en_gb")
-        );
-        assert_eq!(desktop_dictionary_module_name("dictionary-en@"), None);
-        assert_eq!(desktop_dictionary_module_name("NOTICE.md"), None);
     }
 
     #[test]
@@ -6944,21 +8854,57 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
         assert!(ensure_renderer_assets_ready(&root).is_err());
     }
 
+    fn matrix_args() -> BuildDesktopArgs {
+        BuildDesktopArgs {
+            step: DesktopStep::SetMatrix,
+            channel: None,
+            skip_targets: None,
+        }
+    }
+
     #[test]
-    fn pipewire_header_overlay_presence_skips_only_a_complete_install() {
-        let temp = TempDir::new().unwrap();
-        let include_dir = temp.path();
-        assert!(!linux_pipewire_header_overlay_present(include_dir).unwrap());
+    fn matrix_skip_targets_filter_platforms_and_arches() {
+        let mut args = matrix_args();
+        args.skip_targets = Some("windows-x64, macos".to_string());
 
-        fs::create_dir_all(include_dir.join(LINUX_PIPEWIRE_HEADER_DIR)).unwrap();
-        let partial = linux_pipewire_header_overlay_present(include_dir).unwrap_err();
-        assert!(partial.to_string().contains("partially installed"));
+        let selected = selected_platforms(&args)
+            .unwrap()
+            .into_iter()
+            .map(platform_json)
+            .collect::<Vec<_>>();
 
-        fs::create_dir_all(include_dir.join(LINUX_SPA_HEADER_DIR)).unwrap();
-        assert!(linux_pipewire_header_overlay_present(include_dir).unwrap());
+        assert_eq!(
+            selected,
+            vec![
+                "{\"platform\":\"windows\",\"arch\":\"arm64\",\"os\":\"windows-2025\",\"electron_arch\":\"arm64\"}",
+                "{\"platform\":\"linux\",\"arch\":\"x64\",\"os\":\"ubuntu-22.04\",\"electron_arch\":\"x64\"}",
+                "{\"platform\":\"linux\",\"arch\":\"arm64\",\"os\":\"ubuntu-22.04-arm\",\"electron_arch\":\"arm64\"}",
+            ]
+        );
+    }
 
-        fs::remove_dir(include_dir.join(LINUX_PIPEWIRE_HEADER_DIR)).unwrap();
-        let partial = linux_pipewire_header_overlay_present(include_dir).unwrap_err();
-        assert!(partial.to_string().contains("partially installed"));
+    #[test]
+    fn matrix_skip_targets_drop_every_windows_row() {
+        let mut args = matrix_args();
+        args.skip_targets = Some("windows".to_string());
+
+        let selected = selected_platforms(&args).unwrap();
+
+        assert!(
+            selected
+                .iter()
+                .all(|platform| platform.platform != "windows")
+        );
+        assert_eq!(selected.len(), 3);
+    }
+
+    #[test]
+    fn matrix_skip_targets_reject_unknown_values() {
+        let mut args = matrix_args();
+        args.skip_targets = Some("windows-riscv".to_string());
+
+        let error = selected_platforms(&args).unwrap_err();
+
+        assert!(error.to_string().contains("Unknown desktop skip target"));
     }
 }

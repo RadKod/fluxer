@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import '@app/api/stripe/tests/DormantStripeTestFixture';
-import crypto from 'node:crypto';
 import {AdminRepository} from '@app/api/admin/AdminRepository';
 import {findLastTestEmail, listTestEmails} from '@app/api/auth/tests/AuthTestUtils';
 import {createApplicationID, createUserID} from '@app/api/BrandedTypes';
@@ -10,16 +9,12 @@ import {OAuth2TokenRepository} from '@app/api/oauth/repositories/OAuth2TokenRepo
 import {
 	createTestPayment,
 	createTestUserWithPremium,
+	sendStripeWebhook,
 	setupSyncStripeWebhookWorker,
 } from '@app/api/stripe/tests/StripeWebhookTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
-import {
-	createMockWebhookPayload,
-	createStripeApiHandlers,
-	type StripeWebhookEventData,
-} from '@app/api/test/msw/handlers/StripeApiHandlers';
+import {createStripeApiHandlers} from '@app/api/test/msw/handlers/StripeApiHandlers';
 import {server} from '@app/api/test/msw/server';
-import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {DeletionReasons} from '@fluxer/constants/src/Core';
 import {UserFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
@@ -44,25 +39,6 @@ describe('Stripe Webhook Early Fraud Warning', () => {
 	afterEach(() => {
 		server.resetHandlers();
 	});
-	function createWebhookSignature(payload: string, timestamp: number, secret: string): string {
-		const signedPayload = `${timestamp}.${payload}`;
-		const signature = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
-		return `t=${timestamp},v1=${signature}`;
-	}
-	async function sendWebhook(eventData: StripeWebhookEventData): Promise<{
-		received: boolean;
-	}> {
-		const {payload, timestamp} = createMockWebhookPayload(eventData);
-		const signature = createWebhookSignature(payload, timestamp, Config.stripe.webhookSecret!);
-		return await createBuilder<{
-			received: boolean;
-		}>(harness, '')
-			.post('/stripe/webhook')
-			.header('content-type', 'application/json')
-			.header('stripe-signature', signature)
-			.body(payload)
-			.execute();
-	}
 	async function createDirectPurchaseUser({
 		customerId,
 		paymentIntentId,
@@ -127,7 +103,7 @@ describe('Stripe Webhook Early Fraud Warning', () => {
 			scope: new Set(['identify']),
 			created_at: new Date(),
 		});
-		await sendWebhook({
+		await sendStripeWebhook(harness, {
 			type: 'radar.early_fraud_warning.created',
 			data: {
 				object: {
@@ -202,7 +178,7 @@ describe('Stripe Webhook Early Fraud Warning', () => {
 			paymentIntentId,
 			subscriptionId,
 		});
-		await sendWebhook({
+		await sendStripeWebhook(harness, {
 			type: 'radar.early_fraud_warning.created',
 			data: {
 				object: {
@@ -246,7 +222,7 @@ describe('Stripe Webhook Early Fraud Warning', () => {
 			paymentIntentId,
 			subscriptionId,
 		});
-		await sendWebhook({
+		await sendStripeWebhook(harness, {
 			type: 'radar.early_fraud_warning.created',
 			data: {
 				object: {
@@ -265,7 +241,7 @@ describe('Stripe Webhook Early Fraud Warning', () => {
 		const userAfterEarlyWarning = await userRepository.findUnique(createUserID(BigInt(account.userId)));
 		expect(userAfterEarlyWarning?.pendingDeletionAt).not.toBeNull();
 		const firstPendingDeletionAt = userAfterEarlyWarning!.pendingDeletionAt!.toISOString();
-		await sendWebhook({
+		await sendStripeWebhook(harness, {
 			type: 'charge.dispute.created',
 			data: {
 				object: {

@@ -5,14 +5,11 @@ import Theme from '@app/features/theme/state/Theme';
 import {ColorPickerField} from '@app/features/ui/components/form/ColorPickerField';
 import myProfileTabStyles from '@app/features/user/components/modals/tabs/MyProfileTab.module.css';
 import styles from '@app/features/user/components/modals/tabs/my_profile_tab/AccentColorPicker.module.css';
+import {ACCENT_COLOR_DESCRIPTOR} from '@app/features/user/utils/UserMessageDescriptors';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {observer} from 'mobx-react-lite';
 
-const ACCENT_COLOR_DESCRIPTOR = msg({
-	message: 'Accent color',
-	comment: 'Short label in the accent color picker. Keep it concise.',
-});
 const CUSTOMIZES_THE_BORDER_AND_BANNER_COLOR_ON_YOUR_DESCRIPTOR = msg({
 	message: 'Customizes the border and banner color on your profile',
 	comment: 'Label in the accent color picker. Keep the tone plain and specific.',

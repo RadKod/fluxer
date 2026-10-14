@@ -257,7 +257,7 @@ async function fetchFirstPngBlob(urls: Array<string>): Promise<Blob> {
 	let lastError: unknown = null;
 	for (const url of urls) {
 		try {
-			const response = await fetch(url);
+			const response = await fetch(wrapDesktopLocalResourceURL(url));
 			if (!response.ok) {
 				throw new Error(`Unexpected response status ${response.status} for ${url}`);
 			}
@@ -310,15 +310,9 @@ export interface MediaMenuData {
 }
 
 export interface MediaMenuHandlers {
-	handleAddToFavorites: () => void;
-	handleRemoveFromFavorites: () => Promise<void>;
-	handleEditAltText: () => void;
-	handleCopyMedia: () => Promise<void>;
-	handleDownloadMedia: () => void;
 	handleCopyLink: () => Promise<void>;
 	handleOpenLink: () => void;
 	handleCopyAttachmentId: () => Promise<void>;
-	canEditAltText: boolean;
 	canCopyAttachmentId: boolean;
 	copyLinkLabel: string;
 	openLinkLabel: string;
@@ -331,11 +325,9 @@ export const mediaMenuItemIds = {
 	openLink: 'media-open-link',
 	favorite: 'media-favorite',
 	editAltText: 'media-edit-alt-text',
-	copyAttachmentId: 'media-copy-attachment-id',
 } as const;
 
-export interface MediaMenuState {
-	isFavorited: boolean;
+interface MediaMenuState {
 	copyLabel: string;
 	downloadLabel: string;
 }
@@ -716,37 +708,17 @@ export function useMediaMenuData(props: MediaMenuDataProps, options: MediaMenuDa
 	const openLinkLabel = useMemo(() => getOpenLinkLabel(type, i18n), [type, i18n.locale]);
 	const handlers: MediaMenuHandlers = useMemo(
 		() => ({
-			handleAddToFavorites,
-			handleRemoveFromFavorites,
-			handleEditAltText,
-			handleCopyMedia,
-			handleDownloadMedia,
 			handleCopyLink,
 			handleOpenLink,
 			handleCopyAttachmentId,
-			canEditAltText,
 			canCopyAttachmentId: Boolean(attachmentId),
 			copyLinkLabel,
 			openLinkLabel,
 		}),
-		[
-			handleAddToFavorites,
-			handleRemoveFromFavorites,
-			handleEditAltText,
-			handleCopyMedia,
-			handleDownloadMedia,
-			handleCopyLink,
-			handleOpenLink,
-			handleCopyAttachmentId,
-			canEditAltText,
-			attachmentId,
-			copyLinkLabel,
-			openLinkLabel,
-		],
+		[handleCopyLink, handleOpenLink, handleCopyAttachmentId, attachmentId, copyLinkLabel, openLinkLabel],
 	);
 	const state: MediaMenuState = useMemo(
 		() => ({
-			isFavorited,
 			copyLabel,
 			downloadLabel,
 		}),

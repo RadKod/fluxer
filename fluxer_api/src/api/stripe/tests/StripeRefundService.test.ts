@@ -1,21 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import '@app/api/stripe/tests/DormantStripeTestFixture';
-import crypto from 'node:crypto';
 import {createTestAccount, type TestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createUserID} from '@app/api/BrandedTypes';
-import {Config} from '@app/api/Config';
 import {getUserRepository} from '@app/api/middleware/ServiceSingletons';
 import {getStripeClient} from '@app/api/stripe/StripeClient';
 import {StripeRefundService} from '@app/api/stripe/services/StripeRefundService';
 import {createDormantStripeSubscriptionService} from '@app/api/stripe/tests/DormantStripeServiceTestUtils';
-import {setupSyncStripeWebhookWorker} from '@app/api/stripe/tests/StripeWebhookTestUtils';
+import {sendStripeWebhook, setupSyncStripeWebhookWorker} from '@app/api/stripe/tests/StripeWebhookTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
-import {
-	createMockWebhookPayload,
-	createStripeApiHandlers,
-	type StripeWebhookEventData,
-} from '@app/api/test/msw/handlers/StripeApiHandlers';
+import {createStripeApiHandlers, type StripeWebhookEventData} from '@app/api/test/msw/handlers/StripeApiHandlers';
 import {server} from '@app/api/test/msw/server';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {UserRepository} from '@app/api/user/repositories/UserRepository';
@@ -172,25 +166,6 @@ describe('StripeRefundService self-serve refund', () => {
 		harness = await createApiTestHarness();
 		setupSyncStripeWebhookWorker();
 	});
-	function createWebhookSignature(payload: string, timestamp: number, secret: string): string {
-		const signedPayload = `${timestamp}.${payload}`;
-		const signature = crypto.createHmac('sha256', secret).update(signedPayload).digest('hex');
-		return `t=${timestamp},v1=${signature}`;
-	}
-	async function sendWebhook(eventData: StripeWebhookEventData): Promise<{
-		received: boolean;
-	}> {
-		const {payload, timestamp} = createMockWebhookPayload(eventData);
-		const signature = createWebhookSignature(payload, timestamp, Config.stripe.webhookSecret!);
-		return createBuilder<{
-			received: boolean;
-		}>(harness, '')
-			.post('/stripe/webhook')
-			.header('stripe-signature', signature)
-			.header('content-type', 'application/json')
-			.body(payload)
-			.execute();
-	}
 	beforeEach(async () => {
 		await harness.reset();
 	});
@@ -414,8 +389,8 @@ describe('StripeRefundService self-serve refund', () => {
 					},
 				},
 			};
-			await sendWebhook({...chargeEvent, id: 'evt_cross_path_1'});
-			await sendWebhook({...chargeEvent, id: 'evt_cross_path_2'});
+			await sendStripeWebhook(harness, {...chargeEvent, id: 'evt_cross_path_1'});
+			await sendStripeWebhook(harness, {...chargeEvent, id: 'evt_cross_path_2'});
 			const afterWebhook = await userRepository.findUnique(userId);
 			expect(afterWebhook!.firstRefundAt!.getTime()).toBe(afterSelfServe!.firstRefundAt!.getTime());
 			expect(afterWebhook!.premiumFlags & PremiumFlags.PURCHASE_DISABLED).toBe(0);
@@ -435,7 +410,7 @@ describe('StripeRefundService self-serve refund', () => {
 			const userRepository = new UserRepository();
 			const afterSelfServe = await userRepository.findUnique(userId);
 			expect(afterSelfServe!.firstRefundAt).not.toBeNull();
-			await sendWebhook({
+			await sendStripeWebhook(harness, {
 				id: 'evt_double_confirm_1',
 				type: 'refund.updated',
 				data: {
@@ -519,7 +494,8 @@ describe('StripeRefundService self-serve refund', () => {
 				stripe_customer_id: MOCK_CUSTOMER_ID,
 				stripe_subscription_id: 'sub_bought_after_the_refund',
 			});
-			await sendWebhook(
+			await sendStripeWebhook(
+				harness,
 				buildRefundUpdatedEvent({
 					eventId: 'evt_stale_teardown',
 					refundId: 're_stale_teardown',
@@ -544,7 +520,8 @@ describe('StripeRefundService self-serve refund', () => {
 				stripe_customer_id: MOCK_CUSTOMER_ID,
 				stripe_subscription_id: MOCK_SUBSCRIPTION_ID,
 			});
-			await sendWebhook(
+			await sendStripeWebhook(
+				harness,
 				buildRefundUpdatedEvent({
 					eventId: 'evt_current_teardown',
 					refundId: 're_current_teardown',

@@ -11,10 +11,9 @@ import {enqueueThreadSearchSync} from '@app/api/channel/threads/ThreadJobs';
 import {
 	setThreadArchiveSweepLag,
 	threadArchiveSweepBatch,
-	threadArchiveSweepSkippedInactiveTotal,
 	threadsArchivedTotal,
 } from '@app/api/channel/threads/ThreadMetrics';
-import {everEnabled, guildActive, isTainted} from '@app/api/experiment/ChannelThreadsGate';
+import {isTainted} from '@app/api/experiment/ChannelThreadsGate';
 import {
 	KVThreadAutoArchiveQueueService,
 	threadAutoArchiveDueAt,
@@ -22,14 +21,12 @@ import {
 import {Logger} from '@app/api/Logger';
 import {deleteChannelMessageSearchDocuments} from '@app/api/search/MessageSearchIndexCleanup';
 import {deleteThreadSearchDocuments} from '@app/api/search/thread/ThreadSearchService';
-import {ensureChannelThreadsConfigVersion} from '@app/api/worker/tasks/SeedThreadPermissions';
 import {getWorkerDependencies} from '@app/api/worker/WorkerContext';
 import {MAX_THREAD_ARCHIVES_PER_SWEEP_TICK} from '@fluxer/constants/src/ThreadConstants';
 import type {WorkerTaskHandler} from '@pkgs/worker/src/contracts/WorkerTask';
 import {z} from 'zod';
 
 const SnowflakeString = z.string().regex(/^\d{1,20}$/);
-const GuildPayload = z.object({guildId: SnowflakeString, configVersion: z.number().int().min(0).optional()});
 const RepairPayload = z.object({threadIds: z.array(SnowflakeString).min(1).max(1000)});
 const ParentPayload = z.object({guildId: SnowflakeString, parentId: SnowflakeString});
 const MemberPayload = z.object({guildId: SnowflakeString, userId: SnowflakeString});
@@ -37,8 +34,8 @@ const MemberPayload = z.object({guildId: SnowflakeString, userId: SnowflakeStrin
 const PARENT_PAGE_SIZE = 100;
 
 function archiveQueue(): KVThreadAutoArchiveQueueService {
-	const {kvClient, channelRepository} = getWorkerDependencies();
-	return new KVThreadAutoArchiveQueueService(kvClient, channelRepository.threads, channelRepository.channelData);
+	const {kvClient} = getWorkerDependencies();
+	return new KVThreadAutoArchiveQueueService(kvClient);
 }
 
 async function archiveDueThreads(
@@ -86,17 +83,13 @@ async function archiveDueThreads(
 }
 
 export const archiveInactiveThreads: WorkerTaskHandler = async () => {
-	if (!everEnabled()) return;
 	const queue = archiveQueue();
 	const nowMs = Date.now();
 	let budget = MAX_THREAD_ARCHIVES_PER_SWEEP_TICK;
 	let oldestDueMs: number | null = null;
 	for (const guildId of await queue.listGuilds()) {
 		if (budget <= 0) break;
-		if (!guildActive(guildId)) {
-			threadArchiveSweepSkippedInactiveTotal.inc();
-			continue;
-		}
+
 		const result = await archiveDueThreads(queue, guildId, nowMs, budget);
 		budget -= result.archived;
 		if (result.oldestDueMs !== null) {
@@ -109,15 +102,6 @@ export const archiveInactiveThreads: WorkerTaskHandler = async () => {
 	if (archived > 0) Logger.info({archived}, 'Archived inactive threads');
 };
 
-export const rebuildThreadAutoArchiveQueue: WorkerTaskHandler = async (payload) => {
-	const validated = GuildPayload.parse(payload);
-	await ensureChannelThreadsConfigVersion(validated.configVersion);
-	const guildId = createGuildID(BigInt(validated.guildId));
-	if (!guildActive(guildId)) return;
-	const scheduled = await archiveQueue().rebuildGuild(guildId);
-	Logger.info({guildId: guildId.toString(), scheduled}, 'Rebuilt thread auto-archive queue');
-};
-
 export const repairThreadIndexes: WorkerTaskHandler = async (payload) => {
 	const {threadIds} = RepairPayload.parse(payload);
 	const {channelRepository} = getWorkerDependencies();
@@ -128,7 +112,7 @@ export const deleteChannelThreads: WorkerTaskHandler = async (payload) => {
 	const validated = ParentPayload.parse(payload);
 	const guildId = createGuildID(BigInt(validated.guildId));
 	const parentId = createChannelID(BigInt(validated.parentId));
-	if (!everEnabled() || !(await isTainted(guildId, {fresh: true}))) return;
+	if (!(await isTainted(guildId, {fresh: true}))) return;
 	const {channelRepository, channelService} = getWorkerDependencies();
 	const queue = archiveQueue();
 	let deleted = 0;
@@ -157,7 +141,7 @@ export const removeThreadMembershipsForGuildMember: WorkerTaskHandler = async (p
 	const validated = MemberPayload.parse(payload);
 	const guildId = createGuildID(BigInt(validated.guildId));
 	const userId = createUserID(BigInt(validated.userId));
-	if (!everEnabled() || !(await isTainted(guildId, {fresh: true}))) return;
+	if (!(await isTainted(guildId, {fresh: true}))) return;
 	const {channelRepository, guildRepository, gatewayService} = getWorkerDependencies();
 	if (await guildRepository.getMember(guildId, userId)) return;
 	const threadIds = await channelRepository.threads.listJoinedThreadIds(userId, guildId);

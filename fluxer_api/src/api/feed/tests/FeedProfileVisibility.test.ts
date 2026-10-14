@@ -31,8 +31,8 @@ import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHa
 import {BUNNY_TEST_SETTINGS, fakeBunnyStream} from '@app/api/test/msw/handlers/BunnyStreamHandlers';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
-import {UserAccountRepository} from '@app/api/user/repositories/UserAccountRepository';
 import {UserChannelRepository} from '@app/api/user/repositories/UserChannelRepository';
+import {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {ProfileAccessService} from '@app/api/user/services/ProfileAccessService';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
@@ -396,7 +396,7 @@ describe('feed posts and the author profile level (Kapı 2 Ş2, Ş4)', () => {
 			aDayLater();
 			const viewerId = createUserID(BigInt(viewer.userId));
 			const budget = strangerBudget();
-			const guildReads = vi.spyOn(UserAccountRepository.prototype, 'getUserGuildIds');
+			const guildReads = vi.spyOn(UserRepository.prototype, 'getUserGuildIds');
 			const channelReads = vi.spyOn(UserChannelRepository.prototype, 'listPrivateChannels');
 
 			expect(await homeIds(viewer)).toEqual(posted);

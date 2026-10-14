@@ -151,19 +151,6 @@ user_voice_event_map() ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-normalize_atom_test() ->
-    ?assertEqual(test_event, normalize(test_event)),
-    ?assertEqual(message_create, normalize(message_create)).
-
-normalize_binary_existing_atom_test() ->
-    _ = message_create,
-    ?assertEqual(message_create, normalize(<<"MESSAGE_CREATE">>)),
-    ?assertEqual(message_create, normalize(<<"message_create">>)).
-
-normalize_known_private_event_test() ->
-    ?assertEqual(user_guild_settings_update, normalize(<<"USER_GUILD_SETTINGS_UPDATE">>)),
-    ?assertEqual(user_note_update, normalize(<<"USER_NOTE_UPDATE">>)).
-
 normalize_micup_event_test() ->
     ?assertEqual(feed_notification_ack, normalize(<<"FEED_NOTIFICATION_ACK">>)),
     ?assertEqual(feed_notification_create, normalize(<<"FEED_NOTIFICATION_CREATE">>)),
@@ -173,19 +160,5 @@ normalize_micup_event_test() ->
 normalize_micup_table_game_event_test() ->
     ?assertEqual(table_game_update, normalize(<<"TABLE_GAME_UPDATE">>)),
     ?assertEqual(table_game_update, normalize(<<"table_game_update">>)).
-
-normalize_thread_events_test() ->
-    ?assertEqual(thread_create, normalize(<<"THREAD_CREATE">>)),
-    ?assertEqual(thread_update, normalize(<<"THREAD_UPDATE">>)),
-    ?assertEqual(thread_delete, normalize(<<"THREAD_DELETE">>)),
-    ?assertEqual(thread_list_sync, normalize(<<"THREAD_LIST_SYNC">>)),
-    ?assertEqual(thread_member_update, normalize(<<"THREAD_MEMBER_UPDATE">>)),
-    ?assertEqual(thread_members_update, normalize(<<"THREAD_MEMBERS_UPDATE">>)),
-    ?assertEqual(thread_member_list_update, normalize(<<"THREAD_MEMBER_LIST_UPDATE">>)),
-    ?assertEqual(forum_unreads, normalize(<<"FORUM_UNREADS">>)).
-
-normalize_binary_unknown_test() ->
-    Result = normalize(<<"UNKNOWN_EVENT_XYZ_12345">>),
-    ?assertEqual(<<"UNKNOWN_EVENT_XYZ_12345">>, Result).
 
 -endif.

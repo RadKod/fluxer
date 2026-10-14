@@ -17,9 +17,11 @@ import AppStorage, {flushAppStorageWrites} from '@app/features/platform/state/Pe
 import {http} from '@app/features/platform/transport/RestTransport';
 import {HttpError} from '@app/features/platform/types/EndpointError';
 import {Logger} from '@app/features/platform/utils/AppLogger';
+import {isAbortError} from '@app/features/platform/utils/PlatformHelpers';
 import LocalPresence, {setLocalPresenceUserSettings} from '@app/features/presence/state/LocalPresence';
 import Theme from '@app/features/theme/state/Theme';
 import MobileLayout from '@app/features/ui/state/MobileLayout';
+import {PRIVACY_SETUP_VERSION} from '@app/features/user/constants/PrivacySetupConstants';
 import {
 	type CustomStatus,
 	normalizeCustomStatus,
@@ -28,9 +30,6 @@ import {
 import {setSyncedFieldUserSettings} from '@app/features/user/state/SyncedField';
 import {
 	changedSyncedPreferenceFields,
-	createEmptySyncedPreferences,
-	decodeSyncedPreferencesLenient,
-	encodeSyncedPreferences,
 	isSyncedPreferencesField,
 	mergeIncomingSyncedPreferences as mergeIncomingSyncedPreferencesWithEngine,
 	preferencesFromBytes,
@@ -56,6 +55,11 @@ import {
 	ThemeTypes,
 	TimeFormatTypes,
 } from '@fluxer/constants/src/UserConstants';
+import {
+	createEmptySyncedPreferences,
+	decodeSyncedPreferencesLenient,
+	encodeSyncedPreferences,
+} from '@fluxer/schema/src/domains/user/SyncedPreferencesCodec';
 import type {UserSettingsResponse} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import {i18n} from '@lingui/core';
 import camelCase from 'lodash/camelCase';
@@ -118,6 +122,7 @@ export interface UserSettings {
 	profilePrivacy: ProfilePrivacyLevel;
 	defaultShareVoiceActivity: boolean;
 	gameActivityVisibility: 'off' | 'friends';
+	privacySetupVersion: number | null;
 	guildFolders: Array<GuildFolder>;
 	customStatus: CustomStatus | null;
 	afkTimeout: number;
@@ -183,15 +188,14 @@ const SETTINGS_WITHOUT_SERVER_RECORD = {
 	default_share_voice_activity: true,
 	game_activity_visibility: 'off',
 	game_activity_policy_revision: '0',
+	// Micup: such an account cannot save a privacy review (every settings write returns 404), so treat it as reviewed.
+	privacy_setup_version: PRIVACY_SETUP_VERSION,
+	privacy_setup_completed_at: null,
 } satisfies Omit<UserSettingsResponse, 'locale'>;
 
 type UserSettingsUpdateOptions =
 	| {settingsEpoch: number | null; hydrate?: never; fields?: Array<keyof UserSettings>}
 	| {hydrate: false; settingsEpoch?: never; fields?: Array<keyof UserSettings>};
-
-function isAbortError(error: unknown): boolean {
-	return (error instanceof DOMException || error instanceof Error) && error.name === 'AbortError';
-}
 
 function readDirtySyncedPreferenceFields(): Set<SyncedPreferencesField> {
 	try {
@@ -357,6 +361,7 @@ class UserSettingsState {
 	profilePrivacy: ProfilePrivacyLevel = ProfilePrivacyLevels.ALL_GUILDS;
 	defaultShareVoiceActivity: boolean = true;
 	gameActivityVisibility: 'off' | 'friends' = 'off';
+	privacySetupVersion: number | null = null;
 	guildFolders: Array<GuildFolder> = [];
 	customStatus: CustomStatus | null = null;
 	afkTimeout: number = 600;
@@ -449,14 +454,6 @@ class UserSettingsState {
 		writePersistedSyncedPreferences(SYNCED_PREFERENCES_WIRE_KEY, this.wireSyncedPreferences);
 	}
 
-	getFlags(): number {
-		return this.flags;
-	}
-
-	getStatus(): StatusType {
-		return this.status;
-	}
-
 	getStatusResetsAt(): string | null {
 		return this.statusResetsAt;
 	}
@@ -465,44 +462,8 @@ class UserSettingsState {
 		return this.statusResetsTo;
 	}
 
-	getTimeFormat(): number {
-		return this.timeFormat;
-	}
-
-	getGuildPositions(): ReadonlyArray<string> {
-		return this.guildFolders.flatMap((folder) => folder.guildIds);
-	}
-
-	getLocale(): string {
-		return this.locale;
-	}
-
 	applyLocalLocale(locale: string): void {
 		this.locale = applyLocaleChange(locale);
-	}
-
-	getRestrictedGuilds(): ReadonlyArray<string> {
-		return this.restrictedGuilds;
-	}
-
-	getBotRestrictedGuilds(): ReadonlyArray<string> {
-		return this.botRestrictedGuilds;
-	}
-
-	getBotDefaultGuildsRestricted(): boolean {
-		return this.botDefaultGuildsRestricted;
-	}
-
-	getDefaultGuildsRestricted(): boolean {
-		return this.defaultGuildsRestricted;
-	}
-
-	getInlineAttachmentMedia(): boolean {
-		return this.inlineAttachmentMedia;
-	}
-
-	getInlineEmbedMedia(): boolean {
-		return this.inlineEmbedMedia;
 	}
 
 	getMotionPreferencesInput(): MotionPreferencesInput {
@@ -531,14 +492,6 @@ class UserSettingsState {
 		return selectEffectiveGifAutoPlay(createMotionPreferencesContext(this.getMotionPreferencesInput()));
 	}
 
-	getRenderEmbeds(): boolean {
-		return this.renderEmbeds;
-	}
-
-	getRenderReactions(): boolean {
-		return this.renderReactions;
-	}
-
 	getAnimateEmoji(): boolean {
 		return selectEffectiveAnimateEmoji(createMotionPreferencesContext(this.getMotionPreferencesInput()));
 	}
@@ -547,27 +500,11 @@ class UserSettingsState {
 		return selectEffectiveAnimateStickers(createMotionPreferencesContext(this.getMotionPreferencesInput()));
 	}
 
-	getRenderSpoilers(): number {
-		return this.renderSpoilers;
-	}
-
 	getMessageDisplayCompact(): boolean {
 		if (MobileLayout.isMobileLayout()) {
 			return false;
 		}
 		return this.messageDisplayCompact;
-	}
-
-	getFriendSourceFlags(): number {
-		return this.friendSourceFlags;
-	}
-
-	getIncomingCallFlags(): number {
-		return this.incomingCallFlags;
-	}
-
-	getGroupDmAddPermissionFlags(): number {
-		return this.groupDmAddPermissionFlags;
 	}
 
 	getProfilePrivacy(): ProfilePrivacyLevel {
@@ -586,16 +523,12 @@ class UserSettingsState {
 		return this.accountReleased;
 	}
 
-	getDefaultShareVoiceActivity(): boolean {
-		return this.defaultShareVoiceActivity;
-	}
-
 	getGameActivityVisibility(): 'off' | 'friends' {
 		return this.gameActivityVisibility;
 	}
 
-	getGuildFolders(): ReadonlyArray<GuildFolder> {
-		return this.guildFolders;
+	isPrivacySetupPending(): boolean {
+		return this.hydrated && this.privacySetupVersion !== null && this.privacySetupVersion < PRIVACY_SETUP_VERSION;
 	}
 
 	getCustomStatus(): CustomStatus | null {
@@ -606,48 +539,8 @@ class UserSettingsState {
 		return this.afkTimeout;
 	}
 
-	getDeveloperMode(): boolean {
-		return this.developerMode;
-	}
-
-	getTrustedDomains(): ReadonlyArray<string> {
-		return this.trustedDomains;
-	}
-
 	trustAllDomains(): boolean {
 		return this.trustedDomains.includes('*');
-	}
-
-	getDefaultHideMutedChannels(): boolean {
-		return this.defaultHideMutedChannels;
-	}
-
-	getSensitiveContentFriendDmFilter(): number {
-		return this.sensitiveContentFriendDmFilter;
-	}
-
-	getSensitiveContentNonFriendDmFilter(): number {
-		return this.sensitiveContentNonFriendDmFilter;
-	}
-
-	getSensitiveContentGuildFilter(): number {
-		return this.sensitiveContentGuildFilter;
-	}
-
-	getSuppressUnprivilegedSelfMentions(): boolean {
-		return this.suppressUnprivilegedSelfMentions;
-	}
-
-	getSuppressUnprivilegedSelfMentionsBypassUserIds(): ReadonlyArray<string> {
-		return this.suppressUnprivilegedSelfMentionsBypassUserIds;
-	}
-
-	getSuppressUnprivilegedSelfMentionBypassUserIds(): ReadonlyArray<string> {
-		return this.getSuppressUnprivilegedSelfMentionsBypassUserIds();
-	}
-
-	getStaffDmAccessUserIds(): ReadonlyArray<string> {
-		return this.staffDmAccessUserIds;
 	}
 
 	isHydrated(): boolean {
@@ -791,6 +684,7 @@ class UserSettingsState {
 		}
 		const previousStatus = this.status;
 		const previousCustomStatus = this.customStatus;
+		const previousAfkTimeout = this.afkTimeout;
 		const wasHydrated = this.hydrated;
 		const recordWasMissing = this.isSettingsRecordMissing();
 		if (userSettings === null || userSettings === undefined) {
@@ -847,6 +741,7 @@ class UserSettingsState {
 			this.defaultShareVoiceActivity = camelCaseSettings.defaultShareVoiceActivity;
 		}
 		this.gameActivityVisibility = camelCaseSettings.gameActivityVisibility === 'friends' ? 'friends' : 'off';
+		this.privacySetupVersion = camelCaseSettings.privacySetupVersion ?? null;
 		this.guildFolders = camelCaseSettings.guildFolders.map((folder) => ({
 			...folder,
 			flags: folder.flags ?? 0,
@@ -893,13 +788,11 @@ class UserSettingsState {
 		) {
 			this.mergeIncomingSyncedPreferences(decodeSyncedPreferencesLenient(incomingSyncedPreferences));
 		}
-		if (normalizedStatus !== previousStatus) {
-			const presence = LocalPresence.getPresence();
-			if (!presence.afk) {
-				LocalPresence.updatePresence();
-			}
-		}
-		if (!isEqual(this.customStatus, previousCustomStatus)) {
+		if (
+			normalizedStatus !== previousStatus ||
+			!isEqual(this.customStatus, previousCustomStatus) ||
+			this.afkTimeout !== previousAfkTimeout
+		) {
 			LocalPresence.updatePresence();
 		}
 		if (hydrate && !wasHydrated) {
@@ -939,6 +832,7 @@ class UserSettingsState {
 			profilePrivacy: this.profilePrivacy,
 			defaultShareVoiceActivity: this.defaultShareVoiceActivity,
 			gameActivityVisibility: this.gameActivityVisibility,
+			privacySetupVersion: this.privacySetupVersion,
 			guildFolders: this.guildFolders.map((folder) => ({
 				...folder,
 				guildIds: [...folder.guildIds],

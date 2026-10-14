@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::metrics::ServiceMetrics;
-use axum::Router;
 use axum::body::Body;
 use axum::extract::{ConnectInfo, Request, State};
 use axum::http::{HeaderValue, StatusCode, header};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
+use axum::{Extension, Router};
 use std::net::{IpAddr, SocketAddr};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, OnceLock};
@@ -87,9 +87,7 @@ fn network_contains(network: IpAddr, prefix: u8, ip: IpAddr) -> bool {
 #[derive(Clone)]
 pub struct HttpState {
     pub is_serving: Arc<AtomicBool>,
-    pub metrics: Arc<ServiceMetrics>,
-    pub service_name: String,
-    pub metrics_allowed: Arc<MetricsAllowList>,
+    pub render: Arc<dyn Fn() -> String + Send + Sync>,
 }
 
 pub async fn run_http(
@@ -98,17 +96,10 @@ pub async fn run_http(
     metrics: Arc<ServiceMetrics>,
     service_name: String,
 ) -> anyhow::Result<()> {
-    let state = HttpState {
-        is_serving,
-        metrics,
-        service_name,
-        metrics_allowed: Arc::new(MetricsAllowList::from_env()?),
-    };
-    let app = Router::new()
-        .route("/_health", get(readiness_check))
-        .route("/_healthz", get(|| async { "OK" }))
-        .route("/_metrics", get(metrics_handler))
-        .with_state(state)
+    let metrics_allowed = Arc::new(MetricsAllowList::from_env()?);
+    let render = Arc::new(move || metrics.render_prometheus(&service_name));
+    let app = ops_router(is_serving, render)
+        .layer(Extension(metrics_allowed))
         .layer(middleware::from_fn(add_version_header));
     let listener = TcpListener::bind(addr).await?;
     tracing::info!(addr = %addr, "health HTTP server listening");
@@ -120,6 +111,17 @@ pub async fn run_http(
     Ok(())
 }
 
+pub fn ops_router(
+    is_serving: Arc<AtomicBool>,
+    render: Arc<dyn Fn() -> String + Send + Sync>,
+) -> Router {
+    Router::new()
+        .route("/_health", get(readiness_check))
+        .route("/_healthz", get(|| async { "OK" }))
+        .route("/_metrics", get(metrics_handler))
+        .with_state(HttpState { is_serving, render })
+}
+
 async fn readiness_check(State(state): State<HttpState>) -> impl IntoResponse {
     if state.is_serving.load(Ordering::SeqCst) {
         (StatusCode::OK, "OK")
@@ -128,14 +130,20 @@ async fn readiness_check(State(state): State<HttpState>) -> impl IntoResponse {
     }
 }
 
+// A router served without an allow list extension admits loopback scrapers only.
 async fn metrics_handler(
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    allowed: Option<Extension<Arc<MetricsAllowList>>>,
     State(state): State<HttpState>,
 ) -> Response {
-    if !state.metrics_allowed.is_metrics_peer_allowed(&peer) {
+    let allowed = allowed.map_or_else(
+        || MetricsAllowList::default().is_metrics_peer_allowed(&peer),
+        |Extension(list)| list.is_metrics_peer_allowed(&peer),
+    );
+    if !allowed {
         return (StatusCode::FORBIDDEN, "FORBIDDEN").into_response();
     }
-    let body = state.metrics.render_prometheus(&state.service_name);
+    let body = (state.render)();
     (
         [(
             header::CONTENT_TYPE,
@@ -165,8 +173,7 @@ async fn add_version_header(request: Request<Body>, next: Next) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use super::MetricsAllowList;
-    use std::net::SocketAddr;
+    use super::*;
 
     fn peer(value: &str) -> SocketAddr {
         value.parse().expect("valid socket address")
@@ -221,6 +228,46 @@ mod tests {
         assert_eq!(
             MetricsAllowList::default(),
             MetricsAllowList::parse(" , ").expect("blank list")
+        );
+    }
+
+    async fn metrics_status(allowed: Option<&str>, remote: &str) -> StatusCode {
+        let state = HttpState {
+            is_serving: Arc::new(AtomicBool::new(true)),
+            render: Arc::new(String::new),
+        };
+        let allowed = allowed.map(|value| {
+            Extension(Arc::new(
+                MetricsAllowList::parse(value).expect("valid allow list"),
+            ))
+        });
+        metrics_handler(ConnectInfo(peer(remote)), allowed, State(state))
+            .await
+            .status()
+    }
+
+    #[tokio::test]
+    async fn metrics_are_served_to_loopback_and_allowed_networks_only() {
+        assert_eq!(
+            StatusCode::OK,
+            metrics_status(Some(""), "127.0.0.1:5000").await
+        );
+        assert_eq!(
+            StatusCode::FORBIDDEN,
+            metrics_status(Some(""), "10.77.0.3:5000").await
+        );
+        assert_eq!(
+            StatusCode::OK,
+            metrics_status(Some("10.77.0.0/24"), "10.77.0.3:5000").await
+        );
+        assert_eq!(
+            StatusCode::FORBIDDEN,
+            metrics_status(Some("10.77.0.0/24"), "10.77.1.3:5000").await
+        );
+        assert_eq!(StatusCode::OK, metrics_status(None, "127.0.0.1:5000").await);
+        assert_eq!(
+            StatusCode::FORBIDDEN,
+            metrics_status(None, "10.77.0.3:5000").await
         );
     }
 

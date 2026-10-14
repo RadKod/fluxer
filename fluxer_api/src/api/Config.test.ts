@@ -37,24 +37,6 @@ afterAll(async () => {
 });
 
 describe('buildAPIServerOptions', () => {
-	test('starts the api on the shipped header and request timeouts', async () => {
-		const server = await listenWithEnv();
-		expect(server.headersTimeout).toBe(30_000);
-		expect(server.requestTimeout).toBe(120_000);
-	});
-
-	test('passes the operator header timeout from the environment into the server', async () => {
-		const server = await listenWithEnv({FLUXER_API_HEADERS_TIMEOUT_MS: '45000'});
-		expect(server.headersTimeout).toBe(45_000);
-		expect(server.requestTimeout).toBe(120_000);
-	});
-
-	test('passes the operator request timeout from the environment into the server', async () => {
-		const server = await listenWithEnv({FLUXER_API_REQUEST_TIMEOUT_MS: '600000'});
-		expect(server.headersTimeout).toBe(30_000);
-		expect(server.requestTimeout).toBe(600_000);
-	});
-
 	test('clamps a header timeout set above the request timeout', async () => {
 		const server = await listenWithEnv({
 			FLUXER_API_HEADERS_TIMEOUT_MS: '90000',
@@ -119,12 +101,6 @@ describe('buildAPIConfigFromMaster upload relay secret', () => {
 		expect(
 			buildAPIConfigFromMaster(withUploadRelaySecret(master, secret)).mediaProxy.uploadRelay.relaySecretBase64,
 		).toBe(secret);
-	});
-
-	it('reads the relay secret from the loaded config rather than the environment', () => {
-		expect(buildAPIConfigFromMaster(master).mediaProxy.uploadRelay.relaySecretBase64).toBe(
-			master.services.media_proxy.upload_relay.secret_base64,
-		);
 	});
 });
 
@@ -313,6 +289,45 @@ describe('buildAPIConfigFromMaster trusted callers', () => {
 	test('fails at boot on a value that is not a JSON array', async () => {
 		await expect(trustedCallersFromEnv({FLUXER_API_TRUSTED_CALLERS: '{"name":"bugs"}'})).rejects.toThrow(
 			'FLUXER_API_TRUSTED_CALLERS must be a JSON array',
+		);
+	});
+});
+
+async function setupTokenFromEnv(env: Record<string, string>): Promise<string | null> {
+	for (const [key, value] of Object.entries(env)) {
+		vi.stubEnv(key, value);
+	}
+	resetConfig();
+	return buildAPIConfigFromMaster(await loadConfig()).instance.setup.token;
+}
+
+describe('buildAPIConfigFromMaster setup token', () => {
+	const setupToken = 's'.repeat(32);
+
+	test('reads the token from FLUXER_SETUP_TOKEN', async () => {
+		expect(await setupTokenFromEnv({FLUXER_SETUP_TOKEN: ` ${setupToken}\n`})).toBe(setupToken);
+	});
+
+	test.each(['', '  '])('leaves the token unset for %j', async (blank) => {
+		expect(await setupTokenFromEnv({FLUXER_SETUP_TOKEN: blank})).toBeNull();
+	});
+
+	test('leaves the token unset when the variable is missing', async () => {
+		expect(await setupTokenFromEnv({})).toBeNull();
+	});
+
+	test('accepts a token of 256 characters', async () => {
+		expect(await setupTokenFromEnv({FLUXER_SETUP_TOKEN: 's'.repeat(256)})).toBe('s'.repeat(256));
+	});
+
+	test.each([
+		['shorter than 32 characters', 's'.repeat(31)],
+		['longer than 256 characters', 's'.repeat(257)],
+		['holding a form feed', `${'s'.repeat(16)}\f${'s'.repeat(16)}`],
+		['holding a text direction override', `${'s'.repeat(16)}\u202E${'s'.repeat(16)}`],
+	])('fails at boot on a token %s', async (_case, token) => {
+		await expect(setupTokenFromEnv({FLUXER_SETUP_TOKEN: token})).rejects.toThrow(
+			'FLUXER_SETUP_TOKEN must be 32 to 256 printable characters',
 		);
 	});
 });

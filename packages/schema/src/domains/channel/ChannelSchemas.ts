@@ -69,6 +69,10 @@ export const ChannelResponse = z.object({
 		.string()
 		.nullish()
 		.describe('Room theme of a voice channel; null inherits the default, none disables the 3D room view'),
+	rtc_p2p: z
+		.boolean()
+		.optional()
+		.describe('Whether calls in the voice channel connect participants directly instead of through a voice server'),
 	last_message_id: SnowflakeStringType.nullish().describe('The ID of the last message sent in this channel'),
 	last_pin_timestamp: z.iso
 		.datetime()
@@ -165,6 +169,7 @@ export interface Channel {
 	readonly voice_connection_limit?: number | null;
 	readonly rtc_region?: string | null;
 	readonly room_theme?: string | null;
+	readonly rtc_p2p?: boolean;
 	readonly last_message_id?: string | null;
 	readonly last_pin_timestamp?: string | null;
 	readonly permission_overwrites?: ReadonlyArray<ChannelOverwrite>;

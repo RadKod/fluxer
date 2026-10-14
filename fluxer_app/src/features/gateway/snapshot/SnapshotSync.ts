@@ -21,8 +21,6 @@ import type {
 	FeedNotificationStateResponse,
 } from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 
-export type {ReadyPayload, SnapshotDispatch};
-
 export type SnapshotAccountMode = 'foreground' | 'background';
 
 interface SnapshotAccount {

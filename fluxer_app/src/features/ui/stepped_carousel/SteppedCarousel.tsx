@@ -14,21 +14,14 @@ import {AnimatePresence, motion, type Transition, type Variants} from 'framer-mo
 import type React from 'react';
 import {useCallback, useLayoutEffect, useRef, useState} from 'react';
 
-export const SteppedCarouselARIALive = Object.freeze({
-	OFF: 'off',
-	POLITE: 'polite',
-} as const);
-
-export type SteppedCarouselARIALive = (typeof SteppedCarouselARIALive)[keyof typeof SteppedCarouselARIALive];
-
 interface SteppedCarouselProps<Step extends string> {
 	step: Step;
 	steps: ReadonlyArray<Step>;
 	children: React.ReactNode;
 	direction?: number;
 	focusOnStepChange?: boolean;
+	onStepShown?: (step: Step) => void;
 	ariaLabel?: string;
-	ariaLive?: SteppedCarouselARIALive;
 	'data-flx'?: string;
 }
 
@@ -95,8 +88,8 @@ export function SteppedCarousel<Step extends string>({
 	children,
 	direction: directionProp,
 	focusOnStepChange = false,
+	onStepShown,
 	ariaLabel,
-	ariaLive,
 	'data-flx': dataFlx,
 }: SteppedCarouselProps<Step>): React.ReactElement {
 	const shouldReduceMotion = Accessibility.useReducedMotion;
@@ -122,6 +115,10 @@ export function SteppedCarousel<Step extends string>({
 	}
 	const model = selectSteppedCarouselModel(nextSnapshot);
 	const paneRef = useRef<HTMLDivElement | null>(null);
+	const pendingFocusRequestRef = useRef(0);
+	const handledFocusRequestRef = useRef(0);
+	const onStepShownRef = useRef(onStepShown);
+	const paneStep = step;
 	const measureNode = useCallback((node: HTMLElement) => {
 		const offsetHeight = node.offsetHeight;
 		const scrollHeight = node.scrollHeight;
@@ -135,6 +132,14 @@ export function SteppedCarousel<Step extends string>({
 	const setMeasureNode = useCallback(
 		(node: HTMLDivElement) => {
 			paneRef.current = node;
+			const focusRequestId = pendingFocusRequestRef.current;
+			if (focusRequestId !== handledFocusRequestRef.current) {
+				handledFocusRequestRef.current = focusRequestId;
+				if (!node.contains(document.activeElement)) {
+					(node.querySelector<HTMLElement>(focusableSelector) ?? node).focus({preventScroll: true});
+				}
+			}
+			onStepShownRef.current?.(paneStep);
 			let observer: ResizeObserver | null = null;
 			if (typeof ResizeObserver !== 'undefined') {
 				observer = new ResizeObserver(() => {
@@ -151,27 +156,20 @@ export function SteppedCarousel<Step extends string>({
 				}
 			};
 		},
-		[measureNode],
+		[measureNode, paneStep],
 	);
 	useLayoutEffect(() => {
-		if (!focusOnStepChange || model.focusRequestId === 0) return;
-		const frame = window.requestAnimationFrame(() => {
-			const pane = paneRef.current;
-			if (!pane) return;
-			if (pane.contains(document.activeElement)) return;
-			const focusTarget = pane.querySelector<HTMLElement>(focusableSelector) ?? pane;
-			focusTarget.focus({preventScroll: true});
-		});
-		return () => window.cancelAnimationFrame(frame);
-	}, [focusOnStepChange, model.focusRequestId]);
+		pendingFocusRequestRef.current = model.focusRequestId;
+	}, [model.focusRequestId]);
+	useLayoutEffect(() => {
+		onStepShownRef.current = onStepShown;
+	});
 	return (
 		<motion.div
 			className={styles.container}
 			animate={{height: model.contentHeight}}
 			transition={shouldReduceMotion ? instantTransition : heightTransition}
 			aria-label={ariaLabel}
-			aria-live={ariaLive}
-			aria-atomic={ariaLive ? true : undefined}
 			role={ariaLabel ? 'group' : undefined}
 			data-flx={dataFlx ?? 'ui.stepped-carousel.container'}
 		>

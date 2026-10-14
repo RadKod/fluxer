@@ -1,21 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {identityLocale} from '@fluxer/i18n/src/normalization/IdentityLocale';
+import {compileMessage} from '@fluxer/i18n/src/runtime/CompileMessage';
 import {createStaticI18n} from '@fluxer/i18n/src/runtime/CreateStaticI18n';
 import type {I18nResult} from '@fluxer/i18n/src/runtime/I18nTypes';
 import {validateMessageTemplateVariables} from '@fluxer/i18n/src/runtime/MessageCatalogTypes';
 import {EMAIL_I18N_LOCALE_MESSAGES} from '@pkgs/email/src/email_i18n/EmailI18nLocales';
 import {EMAIL_I18N_MESSAGES} from '@pkgs/email/src/email_i18n/EmailI18nMessages';
+import type {EmailTemplateVariables} from '@pkgs/email/src/email_i18n/EmailI18nTypes';
 import type {EmailTemplate, EmailTemplateKey} from '@pkgs/email/src/email_i18n/EmailI18nTypes.generated';
 
 const DEFAULT_LOCALE = 'en-US';
-// Micup support address; appeals and safety share it.
-const MICUP_CONTACT_EMAIL = 'info@sanalyer.com';
-const DEFAULT_EMAIL_TEMPLATE_VARIABLES = {
-	product_name: 'sanalyer',
-	appeals_email: MICUP_CONTACT_EMAIL,
-	safety_email: MICUP_CONTACT_EMAIL,
-} satisfies Record<string, string>;
 
 function formatEmailDate(value: unknown, locale: string, style: string | null): string {
 	const options: Intl.DateTimeFormatOptions = {timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric'};
@@ -48,7 +42,6 @@ const emailI18n = createStaticI18n<EmailTemplateKey, EmailTemplate, Record<strin
 		defaultLocale: DEFAULT_LOCALE,
 		defaultMessages: EMAIL_I18N_MESSAGES,
 		localeMessages: EMAIL_I18N_LOCALE_MESSAGES,
-		normalizeLocale: (locale) => identityLocale(locale),
 		onWarning: (message) => {
 			if (message.startsWith('Unsupported locale, falling back to en-US:')) {
 				console.warn(
@@ -65,24 +58,21 @@ const emailI18n = createStaticI18n<EmailTemplateKey, EmailTemplate, Record<strin
 		messageFormatOptions: {customFormatters: {date: formatEmailDate, time: formatEmailTime}},
 	},
 	(template, variables, mf) => {
-		const compiledSubject = String(mf.compile(template.subject)(variables));
-		const compiledBody = String(mf.compile(template.body)(variables));
+		const compiledSubject = String(compileMessage(mf, template.subject)(variables));
+		const compiledBody = String(compileMessage(mf, template.body)(variables));
 		return {
 			subject: compiledSubject,
 			body: compiledBody,
-			...(template.button !== undefined && {button: String(mf.compile(template.button)(variables))}),
+			...(template.button !== undefined && {button: String(compileMessage(mf, template.button)(variables))}),
 		};
 	},
 );
 
-export function getEmailTemplate(
-	templateKey: EmailTemplateKey,
+export function getEmailTemplate<T extends EmailTemplateKey>(
+	templateKey: T,
 	locale: string | null,
-	variables: Record<string, unknown>,
+	variables: EmailTemplateVariables[T],
+	productName: string,
 ): I18nResult<EmailTemplateKey, EmailTemplate> {
-	return emailI18n.getTemplate(templateKey, locale, {...DEFAULT_EMAIL_TEMPLATE_VARIABLES, ...variables});
-}
-
-export function resetEmailI18n(): void {
-	emailI18n.reset();
+	return emailI18n.getTemplate(templateKey, locale, {...variables, product_name: productName});
 }

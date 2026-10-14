@@ -12,6 +12,7 @@ import * as ToastCommands from '@app/features/ui/commands/ToastCommands';
 import * as UserProfileCommands from '@app/features/user/commands/UserProfileCommands';
 import {handleAccountLimitedError} from '@app/features/user/utils/AccountLimitUtils';
 import type {ConnectionType} from '@fluxer/constants/src/ConnectionConstants';
+import type {BlueskyAuthorizeResponse} from '@fluxer/schema/src/domains/connection/BlueskyOAuthSchemas';
 import type {
 	ConnectionListResponse,
 	ConnectionResponse,
@@ -54,10 +55,6 @@ const CONNECTIONS_REORDERED_DESCRIPTOR = msg({
 	comment: 'Short label in the connection connection commands.',
 });
 const logger = new Logger('Connections');
-
-interface BlueskyAuthorizeResponse {
-	authorize_url: string;
-}
 
 function connectionCreateRequest(type: ConnectionType, identifier: string): CreateConnectionRequest {
 	return {
@@ -187,21 +184,6 @@ export async function deleteConnection(i18n: I18n, type: string, connectionId: s
 		logger.debug(`Successfully deleted connection: ${type}/${connectionId}`);
 	} catch (error) {
 		logger.error(`Failed to delete connection ${type}/${connectionId}:`, error);
-		throw error;
-	}
-}
-
-export async function verifyConnection(i18n: I18n, type: string, connectionId: string): Promise<void> {
-	try {
-		const response = await http.post<ConnectionResponse>(Endpoints.CONNECTION_VERIFY(type, connectionId), {
-			body: {},
-		});
-		UserConnection.updateConnection(connectionId, response.body);
-		UserProfileCommands.clearCurrentUserProfiles();
-		successToast(i18n, CONNECTION_VERIFIED_DESCRIPTOR);
-		logger.debug(`Successfully verified connection: ${type}/${connectionId}`);
-	} catch (error) {
-		logger.error(`Failed to verify connection ${type}/${connectionId}:`, error);
 		throw error;
 	}
 }

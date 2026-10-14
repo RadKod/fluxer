@@ -14,9 +14,9 @@ import {ApplicationRepository} from '@app/api/oauth/repositories/ApplicationRepo
 import {PremiumTrialService} from '@app/api/premium/trial/PremiumTrialService';
 import {Applications} from '@app/api/Tables';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import type {HonoEnv} from '@app/api/types/HonoEnv';
 import {DEFAULT_DOMAIN_MIGRATION_CONFIG} from '@fluxer/schema/src/domains/admin/DomainMigrationSchemas';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {Hono} from 'hono';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 

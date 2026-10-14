@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {hasVisibleMessageContent} from '@app/features/messaging/utils/VisibleMessageContent';
+import {hasVisibleContent as hasVisibleMessageContent} from '@fluxer/schema/src/primitives/MessageValidators';
 import {assign, initialTransition, type SnapshotFrom, setup, transition} from 'xstate';
 
-export type MobileTextareaVisibleButton = 'send' | 'voice';
-export type MobileTextareaButtonMode = 'voice' | 'sendReady' | 'sendBlocked';
+type MobileTextareaVisibleButton = 'send' | 'voice';
+type MobileTextareaButtonMode = 'voice' | 'sendReady' | 'sendBlocked';
 
 export interface MobileTextareaButtonSignals {
 	disabled: boolean;
@@ -27,12 +27,10 @@ export interface MobileTextareaButtonModel {
 	voiceButton: {
 		disabled: boolean;
 	};
-	hasTypedText: boolean;
 	hasTextContent: boolean;
-	hasSubmissionContent: boolean;
 }
 
-export type MobileTextareaButtonEvent = {
+type MobileTextareaButtonEvent = {
 	type: 'mobileTextareaButtons.evaluate';
 	signals: MobileTextareaButtonSignals;
 };
@@ -46,7 +44,7 @@ function hasTypedText(value: string): boolean {
 	return hasVisibleMessageContent(value.trim());
 }
 
-export function selectMobileTextareaButtonModel(signals: MobileTextareaButtonSignals): MobileTextareaButtonModel {
+function selectMobileTextareaButtonModel(signals: MobileTextareaButtonSignals): MobileTextareaButtonModel {
 	const typedText = hasTypedText(signals.value);
 	const hasTextContent = signals.hasContent || typedText;
 	const hasSubmissionContent = hasTextContent || signals.hasAttachments || signals.hasPendingSticker;
@@ -64,9 +62,7 @@ export function selectMobileTextareaButtonModel(signals: MobileTextareaButtonSig
 		visibleButton,
 		sendButton: {disabled: sendDisabled},
 		voiceButton: {disabled: voiceDisabled},
-		hasTypedText: typedText,
 		hasTextContent,
-		hasSubmissionContent,
 	};
 }
 
@@ -100,7 +96,7 @@ const evaluateTransitions = [
 	},
 ] as const;
 
-export const mobileTextareaButtonStateMachine = setup({
+const mobileTextareaButtonStateMachine = setup({
 	types: {} as {
 		context: MobileTextareaButtonContext;
 		events: MobileTextareaButtonEvent;
@@ -141,13 +137,13 @@ export const mobileTextareaButtonStateMachine = setup({
 	},
 });
 
-export type MobileTextareaButtonSnapshot = SnapshotFrom<typeof mobileTextareaButtonStateMachine>;
+type MobileTextareaButtonSnapshot = SnapshotFrom<typeof mobileTextareaButtonStateMachine>;
 
-export function createMobileTextareaButtonSnapshot(): MobileTextareaButtonSnapshot {
+function createMobileTextareaButtonSnapshot(): MobileTextareaButtonSnapshot {
 	return initialTransition(mobileTextareaButtonStateMachine)[0];
 }
 
-export function transitionMobileTextareaButtonSnapshot(
+function transitionMobileTextareaButtonSnapshot(
 	snapshot: MobileTextareaButtonSnapshot,
 	event: MobileTextareaButtonEvent,
 ): MobileTextareaButtonSnapshot {

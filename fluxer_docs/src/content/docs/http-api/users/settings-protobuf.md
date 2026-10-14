@@ -83,8 +83,10 @@ An over-length string draws two entries for the one path.
 | save_camera_uploads_to_device?<sup>4</sup> | bool | Whether a camera upload is also written to the device |
 | double_tap_reaction? | [reaction emoji](#reaction-emoji-object) object | Emoji a double tap on a message adds as a reaction |
 | announcement_prompts? | [announcement prompts state](#announcement-prompts-state-object) object | Hidden announcement channel prompt state |
+| double_tap_action | int32 | [Double tap action](#double-tap-actions) on a message |
+| swipe_right_to_left_action | int32 | [Swipe right to left action](#swipe-right-to-left-actions) in a channel |
 
-<sup>1</sup> The entries live inside the snapshot, and the account [memes](/http-api/memes/) collection holds none of them
+<sup>1</sup> The entries are inside the snapshot, and the account [memes](/http-api/memes/) collection holds none of them
 
 <sup>2</sup> The only bare scalar on the root message, so it has no presence and reads as false until a client stores true. It applies to the content a client is about to send, and the first-party client leaves the URLs inside inline code and code blocks unchanged
 
@@ -874,3 +876,24 @@ The `double_tap_reaction` field stores the emoji that a double tap on a message 
 | name | string | Unicode emoji, or the custom emoji's name |
 
 <sup>1</sup> The decimal form of a [snowflake](/snowflakes/). Fluxer never resolves it, so it can name a custom emoji the account can no longer use
+
+## Double tap actions
+
+The `double_tap_action` field selects what a double tap on a message does in the mobile client.
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | DOUBLE_TAP_ACTION_UNSPECIFIED | No explicit action is selected, so the client uses its default of adding the `double_tap_reaction` emoji |
+| 1 | DOUBLE_TAP_ACTION_REACT | Add the `double_tap_reaction` emoji as a reaction |
+| 2 | DOUBLE_TAP_ACTION_EDIT | Edit the message, when it is the account's own message |
+| 3 | DOUBLE_TAP_ACTION_NONE | Do nothing |
+
+## Swipe right to left actions
+
+The `swipe_right_to_left_action` field selects what a right to left swipe in a channel does in the mobile client.
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 0 | SWIPE_ACTION_UNSPECIFIED | No explicit action is selected |
+| 1 | SWIPE_ACTION_CHANNEL_DETAILS | Open the channel details |
+| 2 | SWIPE_ACTION_REPLY | Reply to the swiped message |

@@ -3,16 +3,16 @@
 import type {ApplicationID, UserID} from '@app/api/BrandedTypes';
 import {micupBotApplicationId} from '@app/api/guild/micupbot/MicupBotBot';
 import {rosterBotApplicationId} from '@app/api/guild/roster/GuildRosterBot';
-import {generateOAuthTokenSecret} from '@app/api/oauth/OAuthTokenSecret';
-import type {IApplicationRepository} from '@app/api/oauth/repositories/IApplicationRepository';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {ApplicationRepository} from '@app/api/oauth/repositories/ApplicationRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {canOwnerRunBots} from '@app/api/user/UserHelpers';
 import {hashPassword, verifyPassword} from '@app/api/utils/PasswordUtils';
+import {randomBase64Url} from '@app/api/utils/SecretHash';
 
 export class BotAuthService {
 	constructor(
-		private readonly applicationRepository: IApplicationRepository,
-		private readonly users: Pick<IUserRepository, 'findUnique'>,
+		private readonly applicationRepository: ApplicationRepository,
+		private readonly users: Pick<UserRepository, 'findUnique'>,
 	) {}
 
 	private parseBotToken(token: string): {
@@ -43,7 +43,7 @@ export class BotAuthService {
 		const {applicationId, secret} = parsed;
 		if (applicationId === rosterBotApplicationId() || applicationId === micupBotApplicationId()) return null;
 		const application = await this.applicationRepository.getApplication(applicationId);
-		if (!application?.hasBotUser() || !application.botTokenHash) {
+		if (!application || application.botUserId === null || !application.botTokenHash) {
 			return null;
 		}
 		const [isValid, owner] = await Promise.all([
@@ -51,7 +51,7 @@ export class BotAuthService {
 			this.users.findUnique(application.ownerUserId),
 		]);
 		if (!isValid || (owner && !canOwnerRunBots(owner))) return null;
-		return application.getBotUserId();
+		return application.botUserId;
 	}
 
 	async generateBotToken(applicationId: ApplicationID): Promise<{
@@ -59,7 +59,7 @@ export class BotAuthService {
 		hash: string;
 		preview: string;
 	}> {
-		const secret = generateOAuthTokenSecret();
+		const secret = randomBase64Url(32);
 		const hash = await hashPassword(secret);
 		const preview = secret.slice(0, 8);
 		const token = `${applicationId.toString()}.${secret}`;

@@ -17,12 +17,12 @@ legacy_zero_version_accepts_unversioned_rename_through_actual_writers_test() ->
     ?assertEqual(<<"renamed">>, maps:get(<<"username">>, maps:get(user_data, Presence))),
     State0 = guild_state(),
     State = State0#{
-        data => guild_data_index:put_member(
+        data => guild_data_index_members:put_member(
             #{<<"user">> => Zero, <<"roles">> => []}, #{}
         )
     },
     try
-        {noreply, Renamed} = guild_user_data:update_user_data(Rename, State),
+        Renamed = guild_user_data:handle_user_data_update(100, Rename, State),
         [#{<<"member">> := Member}] = guild_member_list_read:hydrate_engine_items(
             [{member, 100}], Renamed
         ),
@@ -37,10 +37,6 @@ legacy_zero_version_accepts_unversioned_rename_through_actual_writers_test() ->
 
 guild_user_data_writers_keep_identity_for_new_session_test() ->
     Writers = [
-        fun(User, State) ->
-            {noreply, Updated} = guild_user_data:update_user_data(User, State),
-            Updated
-        end,
         fun(User, State) -> guild_user_data:handle_user_data_update(100, User, State) end,
         fun(User, State) ->
             guild_user_data:maybe_update_cached_user_data(
@@ -59,14 +55,6 @@ guild_presence_writer_keeps_identity_for_new_session_test() ->
     assert_guild_writer(fun(User, State) ->
         {noreply, Updated} = guild_presence:handle_bus_presence(
             100, #{<<"user">> => User, <<"user_update">> => true}, State
-        ),
-        Updated
-    end).
-
-member_list_writer_keeps_identity_for_new_session_test() ->
-    assert_guild_writer(fun(User, State) ->
-        {_, _, Updated} = guild_member_list_common:upsert_member_in_state(
-            100, #{<<"user">> => User}, State
         ),
         Updated
     end).
@@ -183,7 +171,7 @@ identity(Name, Version) ->
 guild_state() ->
     #{
         id => 42,
-        data => guild_data_index:put_member(
+        data => guild_data_index_members:put_member(
             #{<<"user">> => identity(<<"legacy">>, <<"6">>), <<"roles">> => []}, #{}
         ),
         sessions => #{},

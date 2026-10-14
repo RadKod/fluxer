@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import '@fluxer/schema/src/ZodJitless';
+import '@app/app/AbortSignalPolyfill';
 import '@app/app/BootShell.css';
 import {startAppStorage} from '@app/features/platform/state/AppStorageBootstrap';
 import {installBrowserStorageAccessProtection} from '@app/features/platform/state/ProtectedWebStorage';
@@ -19,6 +21,7 @@ import {
 } from '@app/features/app/domain_migration/DomainMigrationCore';
 import {runDomainMigrationPreMount} from '@app/features/app/domain_migration/DomainMigrationPreMount';
 import {installRuntimeConfigEffects} from '@app/features/app/state/RuntimeConfigEffects';
+import {installImageRetention} from '@app/features/messaging/utils/ImageRetention';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {loadLazyModule} from '@app/features/platform/utils/LazyModuleLoader';
 import {installUnhandledRejectionReporter} from '@app/features/platform/utils/UnhandledRejectionReporter';
@@ -38,6 +41,7 @@ function loadAppBootstrap() {
 
 async function bootstrap(): Promise<void> {
 	installRuntimeConfigEffects();
+	installImageRetention(document);
 	const passkeyBridgeSide =
 		DOMAIN_MIGRATION_ENABLED && window.location.pathname === PASSKEY_BRIDGE_PATH
 			? resolveDomainMigrationSide(window.location.origin)

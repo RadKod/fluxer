@@ -6,7 +6,7 @@ import ForumPosts, {canRequestForumPosts, type ForumListState} from '@app/featur
 import ForumReadState from '@app/features/forum/state/ForumReadState';
 import {getDefaultTagSetting} from '@app/features/forum/utils/ForumChannelUtils';
 import {buildForumPostList} from '@app/features/forum/utils/ForumPostList';
-import GatewayConnection from '@app/features/gateway/transport/GatewayConnection';
+import GatewaySessions from '@app/features/gateway/transport/GatewaySessionPool';
 import * as ReadStateCommands from '@app/features/read_state/commands/ReadStateCommands';
 import ReadStates from '@app/features/read_state/state/ReadStates';
 import ChannelThreads from '@app/features/threads/state/ChannelThreads';
@@ -38,7 +38,7 @@ export function getForumPostListView(forum: Channel): ForumPostListView {
 	}
 	const list = ForumPosts.getList(forum.id, 'archived');
 	const {pinned, active, archived} = buildForumPostList({
-		active: ChannelThreads.getActiveThreadsForParent(forum.id),
+		known: ChannelThreads.getThreadsForParent(forum.id),
 		extra: resolvePosts(forum.id, list.ids),
 		sortOrder: ForumPosts.getSortOrder(forum),
 		tagIds: ForumPosts.getTagFilter(forum.id),
@@ -49,7 +49,7 @@ export function getForumPostListView(forum: Channel): ForumPostListView {
 
 function requestPostUnreads(forum: Channel, postIds: ReadonlyArray<string>): void {
 	if (!forum.guildId || !canRequestForumPosts(forum)) return;
-	if (!GatewayConnection.socket?.isConnected()) return;
+	if (!GatewaySessions.foregroundConnection.socket?.isConnected()) return;
 	ForumReadState.requestPostUnreads(forum.guildId, forum.id, postIds);
 }
 

@@ -71,6 +71,8 @@ export class UserSettings {
 	readonly gameActivityPolicyRevision: bigint;
 	private readonly storedGameActivityPolicyRevision: bigint | null;
 	readonly defaultShareVoiceActivity: boolean;
+	readonly privacySetupVersion: number;
+	readonly privacySetupCompletedAt: Date | null;
 	readonly version: number;
 
 	constructor(row: UserSettingsRow) {
@@ -121,15 +123,9 @@ export class UserSettings {
 		this.storedGameActivityPolicyRevision = row.game_activity_policy_revision ?? null;
 		this.gameActivityPolicyRevision = this.storedGameActivityPolicyRevision ?? 0n;
 		this.defaultShareVoiceActivity = row.default_share_voice_activity ?? true;
+		this.privacySetupVersion = row.privacy_setup_version ?? 0;
+		this.privacySetupCompletedAt = row.privacy_setup_completed_at ?? null;
 		this.version = row.version;
-	}
-
-	getUncategorizedFolder(): UserGuildFolder | null {
-		return this.guildFolders.find((folder) => folder.folderId === UNCATEGORIZED_FOLDER_ID) ?? null;
-	}
-
-	getOrderedGuildIds(): Array<GuildID> {
-		return this.guildFolders.flatMap((folder) => folder.guildIds);
 	}
 
 	toRow(): UserSettingsRow {
@@ -179,6 +175,8 @@ export class UserSettings {
 			game_activity_visibility: this.gameActivityVisibility,
 			game_activity_policy_revision: this.storedGameActivityPolicyRevision,
 			default_share_voice_activity: this.defaultShareVoiceActivity,
+			privacy_setup_version: this.privacySetupVersion,
+			privacy_setup_completed_at: this.privacySetupCompletedAt,
 			version: this.version,
 		};
 	}
@@ -226,7 +224,7 @@ export class UserSettings {
 			friend_source_flags: friendSourceFlags,
 			incoming_call_flags: IncomingCallFlags.FRIENDS_ONLY,
 			group_dm_add_permission_flags: GroupDmAddPermissionFlags.FRIENDS_ONLY,
-			default_guilds_restricted: true,
+			default_guilds_restricted: false,
 			bot_default_guilds_restricted: false,
 			restricted_guilds: new Set(),
 			bot_restricted_guilds: new Set(),
@@ -256,6 +254,8 @@ export class UserSettings {
 			game_activity_visibility: 'off',
 			game_activity_policy_revision: null,
 			default_share_voice_activity: true,
+			privacy_setup_version: 0,
+			privacy_setup_completed_at: null,
 			version: 1,
 		};
 	}

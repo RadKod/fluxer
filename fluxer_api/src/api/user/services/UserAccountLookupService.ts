@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createGuildID, type GuildID, type UserID} from '@app/api/BrandedTypes';
-import type {IConnectionRepository} from '@app/api/connection/IConnectionRepository';
-import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import type {ConnectionRepository} from '@app/api/connection/ConnectionRepository';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import type {GuildService} from '@app/api/guild/services/GuildService';
-import type {IDiscriminatorService} from '@app/api/infrastructure/DiscriminatorService';
+import type {DiscriminatorService} from '@app/api/infrastructure/DiscriminatorService';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import {getBadgeRepository, getBadgeService, getProfileAccessCache} from '@app/api/middleware/ServiceSingletons';
 import type {GuildMember} from '@app/api/models/GuildMember';
@@ -20,10 +20,10 @@ import {
 	type ProfileViewConnection,
 	projectedUser,
 } from '@app/api/user/profile/ProfileViewProjection';
-import type {IUserAccountRepository} from '@app/api/user/repositories/IUserAccountRepository';
-import type {IUserRelationshipRepository} from '@app/api/user/repositories/IUserRelationshipRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {ProfileAccessService, ProfileSide} from '@app/api/user/services/ProfileAccessService';
 import {checkUsernameClaimAvailability, isUsernameTaken, readUsernameMigration} from '@app/api/user/UniqueUsernames';
+import {getBadgePremiumType} from '@app/api/user/UserHelpers';
 import {hasFixedDiscriminator} from '@app/api/user/UserTag';
 import {
 	PremiumFlags,
@@ -45,12 +45,11 @@ interface ProfileFieldPrivacyContext {
 }
 
 interface UserAccountLookupServiceDeps {
-	userAccountRepository: IUserAccountRepository;
-	userRelationshipRepository: IUserRelationshipRepository;
-	guildRepository: IGuildRepositoryAggregate;
+	userAccountRepository: UserRepository;
+	guildRepository: GuildRepository;
 	guildService: GuildService;
-	discriminatorService: IDiscriminatorService;
-	connectionRepository: IConnectionRepository;
+	discriminatorService: DiscriminatorService;
+	connectionRepository: ConnectionRepository;
 	profileAccess: ProfileAccessService;
 }
 
@@ -151,7 +150,7 @@ export class UserAccountLookupService {
 				}
 			}
 		}
-		let premiumType = user.premiumType ?? undefined;
+		let premiumType = getBadgePremiumType(user);
 		let premiumSince = user.premiumSince ?? undefined;
 		let premiumLifetimeSequence = user.premiumLifetimeSequence ?? undefined;
 		if (restrictProfile || user.premiumFlags & PremiumFlags.BADGE_HIDDEN) {
@@ -232,8 +231,8 @@ export class UserAccountLookupService {
 	// relationships partition, or with_mutual_friends on more than 20 % of profile requests.
 	private async getMutualFriends(userId: UserID, targetId: UserID): Promise<Array<User>> {
 		const [userRelationships, targetRelationships] = await Promise.all([
-			this.deps.userRelationshipRepository.listRelationships(userId),
-			this.deps.userRelationshipRepository.listRelationships(targetId),
+			this.deps.userAccountRepository.listRelationships(userId),
+			this.deps.userAccountRepository.listRelationships(targetId),
 		]);
 		const userFriendIds = new Set(
 			userRelationships

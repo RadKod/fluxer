@@ -8,12 +8,7 @@ import type {HonoEnv} from '@app/api/types/HonoEnv';
 import {CHANNEL_THREADS_CLIENT_FEATURE} from '@app/api/utils/featureUtils';
 import {
 	type ChannelThreadsConfig,
-	type CompiledChannelThreadsConfig,
-	channelThreadsGuildActive,
-	channelThreadsUserActive,
-	channelThreadsUserExcluded,
-	compileChannelThreadsConfig,
-	DEFAULT_COMPILED_CHANNEL_THREADS_CONFIG,
+	everyoneChannelThreadsConfig,
 } from '@fluxer/schema/src/domains/admin/ChannelThreadsSchemas';
 import type {Context} from 'hono';
 
@@ -39,56 +34,26 @@ const FETCH_GUILD_THREAD_STATE_CQL = GuildThreadState.selectCql({
 
 const taintCache = new Map<string, {tainted: boolean; checkedAt: number}>();
 
-let compiled: CompiledChannelThreadsConfig = DEFAULT_COMPILED_CHANNEL_THREADS_CONFIG;
-let compiledSource: string | null | undefined;
+let currentConfig: ChannelThreadsConfig = everyoneChannelThreadsConfig(0);
 
 export function syncChannelThreadsConfig(
 	raw: string | null,
 	parse: (raw: string | null) => ChannelThreadsConfig,
-): CompiledChannelThreadsConfig {
-	if (raw === compiledSource) return compiled;
-	compiled = raw === null ? DEFAULT_COMPILED_CHANNEL_THREADS_CONFIG : compileChannelThreadsConfig(parse(raw));
-	compiledSource = raw;
-	return compiled;
+): ChannelThreadsConfig {
+	currentConfig = everyoneChannelThreadsConfig(parse(raw).config_version);
+	return currentConfig;
 }
 
-export function getCompiledChannelThreadsConfig(): CompiledChannelThreadsConfig {
-	return compiled;
-}
-
-export function channelThreadsEnabled(): boolean {
-	return compiled.config.enabled;
-}
-
-export function everEnabled(): boolean {
-	return compiled.config.ever_enabled;
-}
-
-export function guildActive(guildId: GuildID | bigint | string): boolean {
-	return compiled.config.enabled && channelThreadsGuildActive(compiled, guildId.toString());
-}
-
-export function userActive(userId: UserID | bigint | string): boolean {
-	return compiled.config.enabled && channelThreadsUserActive(compiled, userId.toString());
-}
-
-export function userExcluded(userId: UserID | bigint | string): boolean {
-	return channelThreadsUserExcluded(compiled, userId.toString());
+export function getChannelThreadsConfig(): ChannelThreadsConfig {
+	return currentConfig;
 }
 
 export function userViewerActive(viewer: ThreadViewer): boolean {
-	if (!compiled.config.enabled) return false;
-	if (viewer.kind === 'system') return true;
-	return viewer.bot ? !userExcluded(viewer.userId) : viewer.capable && userActive(viewer.userId);
+	return viewer.kind === 'system' || viewer.bot || viewer.capable;
 }
 
-export function viewerActive(viewer: ThreadViewer, guildId: GuildID | bigint | string): boolean {
-	return userViewerActive(viewer) && guildActive(guildId);
-}
-
-export function recipientActive(guildId: GuildID | bigint | string, userId: UserID, bot: boolean): boolean {
-	if (!guildActive(guildId)) return false;
-	return bot ? !userExcluded(userId) : userActive(userId);
+export function viewerActive(viewer: ThreadViewer, _guildId: GuildID | bigint | string): boolean {
+	return userViewerActive(viewer);
 }
 
 export function viewerFromCtx(ctx: Context<HonoEnv>): ThreadViewer {
@@ -109,7 +74,6 @@ function rememberTaint(key: string, tainted: boolean): void {
 }
 
 export async function isTainted(guildId: GuildID, opts?: {fresh?: boolean}): Promise<boolean> {
-	if (!everEnabled()) return false;
 	const key = guildId.toString();
 	const cached = taintCache.get(key);
 	if (
@@ -143,7 +107,7 @@ export async function insertGuildThreadMarker(guildId: GuildID, permsSeededAt: D
 }
 
 export async function ensureActiveGuildTainted(guildId: GuildID): Promise<void> {
-	if (!guildActive(guildId) || (await isTainted(guildId))) return;
+	if (await isTainted(guildId)) return;
 	await insertGuildThreadMarker(guildId, null);
 }
 

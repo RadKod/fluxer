@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {ApiContext} from '@app/api/ApiContext';
+import {sendVerificationEmail} from '@app/api/auth/AuthEmail';
 import * as AuthPassword from '@app/api/auth/AuthPassword';
 import * as AuthSession from '@app/api/auth/AuthSession';
 import * as AuthUtility from '@app/api/auth/AuthUtility';
@@ -10,12 +11,12 @@ import {
 	getPrimaryInstanceHost,
 	usernameFromInstanceLocalPart,
 } from '@app/api/auth/InstanceAddress';
-import {createEmailVerificationToken, createInviteCode, createUserID, type UserID} from '@app/api/BrandedTypes';
+import {createInviteCode, createUserID, type UserID} from '@app/api/BrandedTypes';
 import type {APIConfig} from '@app/api/config/APIConfig';
-import type {UserRow} from '@app/api/database/types/UserTypes';
+import {EMPTY_USER_ROW, type UserRow} from '@app/api/database/types/UserTypes';
 import {emitActivity} from '@app/api/infrastructure/activity/ActivityEvents';
 import {isBlockedEmailDomain} from '@app/api/infrastructure/activity/SharedLists';
-import type {IDiscriminatorService} from '@app/api/infrastructure/DiscriminatorService';
+import type {DiscriminatorService} from '@app/api/infrastructure/DiscriminatorService';
 import type {KVActivityTracker} from '@app/api/infrastructure/KVActivityTracker';
 import {withAccountIdentitySetupLock} from '@app/api/instance/AccountIdentitySetupLock';
 import {
@@ -24,6 +25,7 @@ import {
 	REGISTRATION_PENDING_APPROVAL_TRAIT,
 	type RegistrationUrlClaim,
 } from '@app/api/instance/InstanceConfigRepository';
+import {assertSetupToken, clearUsedSetupToken, isSetupTokenEnforced} from '@app/api/instance/SetupToken';
 import type {SingleCommunityService} from '@app/api/instance/SingleCommunityService';
 import type {InviteService} from '@app/api/invite/InviteService';
 import {Logger} from '@app/api/Logger';
@@ -46,7 +48,9 @@ import {UsernamePolicyService} from '@app/api/user/username/UsernamePolicyServic
 import * as AgeUtils from '@app/api/utils/AgeUtils';
 import {extractEmailDomain} from '@app/api/utils/EmailDomainUtils';
 import {lookupGeoip} from '@app/api/utils/IpUtils';
+import {hashPassword} from '@app/api/utils/PasswordUtils';
 import {createRateLimitError} from '@app/api/utils/RateLimitUtils';
+import {requireConfiguredClientIp} from '@app/api/utils/RequestClientIp';
 import {generateRandomUsername} from '@app/api/utils/UsernameGenerator';
 import {deriveUsernameFromDisplayName} from '@app/api/utils/UsernameSuggestionUtils';
 import {inputValidationErrorFromZodIssues} from '@app/api/Validator';
@@ -54,18 +58,18 @@ import {AccountIdentityModes, TagStyles} from '@fluxer/constants/src/AccountIden
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {getRegionalMinimumAge} from '@fluxer/constants/src/RegionalMinimumAge';
-import {ProfileFieldPrivacyFlags, UserFlags} from '@fluxer/constants/src/UserConstants';
+import {ProfileFieldPrivacyFlags} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {RegistrationClosedError} from '@fluxer/errors/src/domains/auth/RegistrationClosedError';
+import {RegistrationCredentialsRequiredError} from '@fluxer/errors/src/domains/auth/RegistrationCredentialsRequiredError';
 import {RegistrationUrlInvalidError} from '@fluxer/errors/src/domains/auth/RegistrationUrlInvalidError';
 import {ContentBlockedError} from '@fluxer/errors/src/domains/content/ContentBlockedError';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {FluxerError} from '@fluxer/errors/src/FluxerError';
-import {requireClientIp} from '@fluxer/ip_utils/src/ClientIp';
+import {parseAcceptLanguage} from '@fluxer/i18n/src/locale/resolution/AcceptLanguageNegotiation';
 import {getSameIpDecisionKey, getSubnet} from '@fluxer/ip_utils/src/IpAddress';
 import type {RegisterRequest} from '@fluxer/schema/src/domains/auth/AuthSchemas';
 import {UsernameType} from '@fluxer/schema/src/primitives/UserValidators';
-import {parseAcceptLanguage} from '@pkgs/locale/src/LocaleService';
 import {types} from 'cassandra-driver';
 import {ms} from 'itty-time';
 
@@ -98,11 +102,16 @@ interface RegisterParams {
 	requestCache: RequestCache;
 }
 
+interface RegisterAccountParams extends RegisterParams {
+	clientIp: string;
+	setupTokenVerified: boolean;
+}
+
 export interface RegistrationDependencies {
-	inviteService: InviteService | null;
+	inviteService: InviteService;
 	instanceConfigRepository: InstanceConfigRepository;
 	singleCommunityService: SingleCommunityService;
-	discriminatorService: IDiscriminatorService;
+	discriminatorService: DiscriminatorService;
 	kvActivityTracker: KVActivityTracker;
 	isEmailDomainSuspicious: (domain: string) => Promise<boolean>;
 	isEmailDomainDisposable: (domain: string) => Promise<boolean>;
@@ -131,16 +140,26 @@ export async function register(
 	deps: RegistrationDependencies,
 	params: RegisterParams,
 ): Promise<RegisterResult> {
-	if (!ctx.services.config.instance.selfHosted || (await deps.instanceConfigRepository.isAccountIdentityLocked())) {
-		return await registerAccount(ctx, deps, params);
+	const {config, rateLimit, cache} = ctx.services;
+	const clientIp = requireConfiguredClientIp(params.request, config.proxy);
+	const setupTokenVerified = await assertSetupToken({
+		rateLimit,
+		config,
+		repository: deps.instanceConfigRepository,
+		presented: params.data.setup_token,
+		clientIp,
+	});
+	const account = {...params, clientIp, setupTokenVerified};
+	if (!config.instance.selfHosted || (await deps.instanceConfigRepository.isAccountIdentityLocked())) {
+		return await registerAccount(ctx, deps, account);
 	}
-	return await withAccountIdentitySetupLock(ctx.services.cache, () => registerAccount(ctx, deps, params));
+	return await withAccountIdentitySetupLock(cache, () => registerAccount(ctx, deps, account));
 }
 
 async function registerAccount(
 	ctx: ApiContext,
 	deps: RegistrationDependencies,
-	{data, request, requestCache}: RegisterParams,
+	{data, request, requestCache, clientIp, setupTokenVerified}: RegisterAccountParams,
 ): Promise<RegisterResult> {
 	const {users, snowflake, emailDnsValidation, config} = ctx.services;
 	const {inviteService, instanceConfigRepository, singleCommunityService, discriminatorService, kvActivityTracker} =
@@ -181,11 +200,12 @@ async function registerAccount(
 		throw InputValidationError.fromCode('consent', ValidationErrorCodes.MUST_AGREE_TO_TOS_AND_PRIVACY_POLICY);
 	}
 	const now = new Date();
-	const registrationAccess = await resolveRegistrationAccess(instanceConfigRepository, data.registration_url_code);
-	const clientIp = requireClientIp(request, {
-		trustClientIpHeader: config.proxy.trust_client_ip_header,
-		clientIpHeaderName: config.proxy.client_ip_header,
-	});
+	const registrationAccess = setupTokenVerified
+		? {pendingApproval: false, registrationUrl: null}
+		: await resolveRegistrationAccess(instanceConfigRepository, data.registration_url_code);
+	if (registrationAccess.pendingApproval && !hasSignInCredentials(data, usernameMode)) {
+		throw new RegistrationCredentialsRequiredError();
+	}
 	const geoipResult = await lookupGeoip(clientIp);
 	const countryCode = geoipResult.countryCode;
 	const collectDateOfBirth = appPublicConfig.registration.collect_date_of_birth;
@@ -210,7 +230,7 @@ async function registerAccount(
 	}
 	const rawEmail = usernameMode ? null : (data.email ?? null);
 	const emailKey = rawEmail ? rawEmail.toLowerCase() : null;
-	const enforceRateLimits = !config.dev.relaxRegistrationRateLimits;
+	const enforceRateLimits = !config.dev.relaxRegistrationRateLimits && !setupTokenVerified;
 	await enforceRegistrationRateLimits(ctx, {enforceRateLimits, clientIp, emailKey});
 	let contactDomainAdminListed = false;
 	let contactDomainDisposable = false;
@@ -284,13 +304,14 @@ async function registerAccount(
 				status: rejection === 'UNAVAILABLE' ? 503 : 400,
 			});
 	}
-	const grantBootstrapAdmin =
+	const bootstrapAdminEligible =
 		shouldAttemptBootstrapAdminGrant(config, {
 			rawEmail,
 			hasPassword: Boolean(data.password),
 			usernameMode,
 			pendingApproval: registrationAccess.pendingApproval,
 			setupConfigured: appPublicConfig.setup.configured,
+			setupTokenVerified,
 		}) && !(await instanceConfigRepository.isAdminBootstrapped());
 	if (
 		profileSubstringBlocklistCache.containsBannedSubstring('username', username) ||
@@ -301,9 +322,9 @@ async function registerAccount(
 	const userId = createUserID(await snowflake.generate());
 	const acceptLanguage = request.headers.get('accept-language');
 	const userLocale = parseAcceptLanguage(acceptLanguage);
-	const passwordHash = data.password ? await AuthPassword.hashPassword(ctx, data.password) : null;
-	const flags = config.nodeEnv === 'development' ? UserFlags.STAFF : 0n;
+	const passwordHash = data.password ? await hashPassword(data.password) : null;
 	const userRow: UserRow = {
+		...EMPTY_USER_ROW,
 		user_id: userId,
 		username,
 		discriminator,
@@ -316,51 +337,17 @@ async function registerAccount(
 		email_bounced: false,
 		password_hash: passwordHash,
 		password_last_changed_at: passwordHash ? now : null,
-		totp_secret: null,
 		authenticator_types: new Set(),
-		avatar_hash: null,
-		avatar_color: null,
-		banner_hash: null,
-		banner_color: null,
-		bio: null,
-		pronouns: null,
-		accent_color: null,
-		timezone: null,
 		timezone_privacy_flags: ProfileFieldPrivacyFlags.EVERYONE,
 		date_of_birth: dateOfBirth,
 		locale: userLocale,
-		flags,
-		premium_type: null,
-		premium_since: null,
-		premium_until: null,
-		premium_gift_extension_ends_at: null,
-		premium_will_cancel: null,
-		premium_billing_cycle: null,
-		premium_lifetime_sequence: null,
-		premium_grace_ends_at: null,
-		stripe_subscription_id: null,
-		stripe_customer_id: null,
-		has_ever_purchased: null,
+		flags: 0n,
 		terms_agreed_at: requiresTermsConsent ? now : null,
 		privacy_agreed_at: requiresPrivacyConsent ? now : null,
 		last_active_at: now,
 		last_active_ip: clientIp,
-		temp_banned_until: null,
-		pending_deletion_at: null,
-		pending_bulk_message_deletion_at: null,
-		pending_bulk_message_deletion_channel_count: null,
-		pending_bulk_message_deletion_message_count: null,
-		deletion_reason_code: null,
-		deletion_public_reason: null,
-		deletion_audit_log_reason: null,
-		acls: grantBootstrapAdmin ? new Set([AdminACLs.WILDCARD]) : null,
+		acls: null,
 		traits: registrationAccess.pendingApproval ? new Set([REGISTRATION_PENDING_APPROVAL_TRAIT]) : null,
-		first_refund_at: null,
-		gift_inventory_server_seq: null,
-		gift_inventory_client_seq: null,
-		premium_onboarding_dismissed_at: null,
-		mention_flags: null,
-		last_voice_activity_sharing_change_at: null,
 		version: 1,
 	};
 	const registrationUrlUse = await claimRegistrationUrlUse(
@@ -370,6 +357,7 @@ async function registerAccount(
 	);
 	let user: User;
 	let createAttempted = false;
+	let grantBootstrapAdmin = false;
 	let usernameReservation: UsernameReservation | null = null;
 	try {
 		if (uniqueUsernames) {
@@ -385,10 +373,12 @@ async function registerAccount(
 				requested_at: now.toISOString(),
 				registration_url_id: registrationAccess.registrationUrl?.id ?? null,
 				client_ip: clientIp,
+				invite_code: data.invite_code?.trim() || config.instance.autoJoinInviteCode || null,
 			});
 		}
+		grantBootstrapAdmin = bootstrapAdminEligible && (await instanceConfigRepository.claimAdminBootstrap(userId));
 		createAttempted = true;
-		user = await users.create(userRow);
+		user = await users.create(grantBootstrapAdmin ? {...userRow, acls: new Set([AdminACLs.WILDCARD])} : userRow);
 		if (selectingUsername) {
 			try {
 				const claimed = await getUsernameOwnershipService().claimSelf(user.id, username);
@@ -404,10 +394,15 @@ async function registerAccount(
 				registrationUrlUse,
 				pendingApproval: registrationAccess.pendingApproval,
 			});
+		} else if (grantBootstrapAdmin) {
+			await releaseBootstrapAdminOfUncreatedAccount(instanceConfigRepository, userId);
 		}
 		throw error;
 	} finally {
 		await usernameReservation?.release();
+	}
+	if (grantBootstrapAdmin) {
+		await clearUsedSetupToken(instanceConfigRepository);
 	}
 	await users.upsertSettings(
 		UserSettings.getDefaultUserSettings({
@@ -435,11 +430,12 @@ async function registerAccount(
 			timezone: null,
 			invite_code: data.invite_code?.trim() || null,
 			flags: user.flags.toString(),
+			date_of_birth: user.dateOfBirth,
 		},
 		null,
 		user.id.toString(),
 	);
-	if (rawEmail && emailEnabled) await maybeSendVerificationEmail(ctx, {user, email: rawEmail});
+	if (rawEmail && emailEnabled) await sendVerificationEmail(ctx, {user, email: rawEmail});
 	await users.createAuthorizedIp(userId, clientIp);
 	void deps.registrationEventsRepository
 		.recordEvent({
@@ -471,9 +467,6 @@ async function registerAccount(
 		user,
 		origin: AuthSession.resolveSessionOrigin(ctx, request),
 	});
-	if (grantBootstrapAdmin) {
-		await instanceConfigRepository.markAdminBootstrapped();
-	}
 	return {
 		user_id: user.id.toString(),
 		token,
@@ -488,11 +481,13 @@ function shouldAttemptBootstrapAdminGrant(
 		usernameMode: boolean;
 		pendingApproval: boolean;
 		setupConfigured: boolean;
+		setupTokenVerified: boolean;
 	},
 ): boolean {
+	const claimedAccount = params.usernameMode ? params.hasPassword : params.rawEmail !== null;
+	if (isSetupTokenEnforced(config)) return params.setupTokenVerified && claimedAccount;
 	const localDevInstance = config.nodeEnv === 'development' && !config.dev.testModeEnabled;
 	const setupBootstrapOpen = !params.setupConfigured;
-	const claimedAccount = params.usernameMode ? params.hasPassword : params.rawEmail !== null;
 	return (
 		(config.instance.selfHosted || localDevInstance || setupBootstrapOpen) && claimedAccount && !params.pendingApproval
 	);
@@ -502,6 +497,11 @@ function assertUsernameModeRegistration(data: RegisterRequest): void {
 	if (data.password && !data.username && data.email == null) {
 		throw InputValidationError.fromCode('username', ValidationErrorCodes.USERNAME_LENGTH_INVALID);
 	}
+}
+
+function hasSignInCredentials(data: RegisterRequest, usernameMode: boolean): boolean {
+	if (!data.password) return false;
+	return usernameMode || Boolean(data.email);
 }
 
 function requestedUsernameFromOlderApp(config: APIConfig, email: string | null | undefined): string | undefined {
@@ -555,6 +555,20 @@ async function withdrawSignupOfUncreatedAccount(
 	}
 }
 
+async function releaseBootstrapAdminOfUncreatedAccount(
+	instanceConfigRepository: InstanceConfigRepository,
+	userId: UserID,
+): Promise<void> {
+	try {
+		await instanceConfigRepository.releaseAdminBootstrap();
+	} catch (error) {
+		Logger.error(
+			{userId: userId.toString(), error},
+			'[AuthRegistration] Failed to release the admin bootstrap claim of an account that was never created',
+		);
+	}
+}
+
 async function resolveRegistrationAccess(
 	instanceConfigRepository: InstanceConfigRepository,
 	registrationUrlCode: string | null | undefined,
@@ -580,20 +594,8 @@ async function resolveRegistrationAccess(
 	};
 }
 
-async function maybeSendVerificationEmail(ctx: ApiContext, params: {user: User; email: string}): Promise<void> {
-	const {users, email: emailService} = ctx.services;
-	const {user, email} = params;
-	const token = createEmailVerificationToken(await AuthUtility.generateSecureToken(ctx));
-	await users.createEmailVerificationToken({
-		token_: token,
-		user_id: user.id,
-		email,
-	});
-	await emailService.sendEmailVerification(email, user.username, token, user.locale);
-}
-
-async function maybeAutoJoinInvite(
-	inviteService: InviteService | null,
+export async function maybeAutoJoinInvite(
+	inviteService: InviteService,
 	params: {
 		userId: UserID;
 		inviteCode: string | null | undefined;
@@ -603,7 +605,6 @@ async function maybeAutoJoinInvite(
 	const {userId, inviteCode, requestCache} = params;
 	const normalizedInviteCode = inviteCode?.trim();
 	if (!normalizedInviteCode) return;
-	if (!inviteService) return;
 	try {
 		await inviteService.acceptInvite({
 			userId,
@@ -611,7 +612,7 @@ async function maybeAutoJoinInvite(
 			requestCache,
 		});
 	} catch (error) {
-		Logger.warn({inviteCode: normalizedInviteCode, error}, 'Failed to auto-join invite on registration');
+		Logger.warn({inviteCode: normalizedInviteCode, error}, 'Failed to auto-join invite');
 	}
 }
 
@@ -651,7 +652,7 @@ async function enforceRegistrationRateLimits(
 	}
 }
 
-async function allocateDiscriminator(discriminatorService: IDiscriminatorService, username: string): Promise<number> {
+async function allocateDiscriminator(discriminatorService: DiscriminatorService, username: string): Promise<number> {
 	const result = await discriminatorService.generateDiscriminator({username});
 	if (!result.available || result.discriminator <= 0) {
 		throw InputValidationError.fromCode('username', ValidationErrorCodes.TOO_MANY_USERS_WITH_THIS_USERNAME);

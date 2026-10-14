@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {ChannelID} from '@app/api/BrandedTypes';
-import type {ICrosspostedMessageRepository} from '@app/api/channel/repositories/ICrosspostedMessageRepository';
+import type {CrosspostedMessageRepository} from '@app/api/channel/repositories/CrosspostedMessageRepository';
 import {Logger} from '@app/api/Logger';
 import {getSnowflakeService, getWorkerService} from '@app/api/middleware/ServiceRegistry';
 import type {Channel} from '@app/api/models/Channel';
@@ -14,7 +14,7 @@ const CHANNEL_FOLLOW_LOCK_TTL_SECONDS = 5;
 const CHANNEL_FOLLOW_LOCK_ACQUIRE_ATTEMPTS = 6;
 const CHANNEL_FOLLOW_LOCK_RETRY_DELAY_MS = 50;
 
-export type ChannelFollowerRemovalReason = 'deleted' | 'converted';
+type ChannelFollowerRemovalReason = 'deleted' | 'converted';
 export type ChannelFollowerRemovalCopyMode = 'source_deleted' | 'purge';
 
 export async function withChannelFollowLock<T>(
@@ -62,7 +62,7 @@ interface ChannelFollowerRemovalParams {
 	copyMode?: ChannelFollowerRemovalCopyMode;
 }
 
-export async function addChannelFollowerRemovalJob(params: ChannelFollowerRemovalParams): Promise<void> {
+async function addChannelFollowerRemovalJob(params: ChannelFollowerRemovalParams): Promise<void> {
 	const {sourceChannelId, reason, copyMode} = params;
 	const uniqueSuffix = await getSnowflakeService().generate();
 	await getWorkerService().addJob(
@@ -87,9 +87,9 @@ export async function enqueueChannelFollowerRemoval(params: ChannelFollowerRemov
 	}
 }
 
-export async function channelMayHaveFollowerCopies(
+async function channelMayHaveFollowerCopies(
 	channel: Pick<Channel, 'id' | 'type'>,
-	crossposts: Pick<ICrosspostedMessageRepository, 'listSourcesByChannel'>,
+	crossposts: Pick<CrosspostedMessageRepository, 'listSourcesByChannel'>,
 ): Promise<boolean> {
 	if (channel.type === ChannelTypes.GUILD_ANNOUNCEMENT) return true;
 	const sources = await crossposts.listSourcesByChannel(channel.id, {limit: 1});
@@ -98,7 +98,7 @@ export async function channelMayHaveFollowerCopies(
 
 export async function scheduleDeletedChannelFollowerRemoval(params: {
 	channel: Pick<Channel, 'id' | 'type'>;
-	crossposts: Pick<ICrosspostedMessageRepository, 'listSourcesByChannel'>;
+	crossposts: Pick<CrosspostedMessageRepository, 'listSourcesByChannel'>;
 	copyMode: ChannelFollowerRemovalCopyMode;
 }): Promise<void> {
 	if (!(await channelMayHaveFollowerCopies(params.channel, params.crossposts))) return;

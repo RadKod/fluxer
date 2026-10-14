@@ -61,19 +61,19 @@ validate(Extra) ->
 game(Activity) -> validate(#{<<"game_activity">> => Activity}).
 
 session_rpc_nonce_echo_test() ->
-    meck:new(api_rpc_client, [non_strict]),
+    meck:new(rpc_client, [non_strict]),
     try
         lists:foreach(
             fun assert_session_rpc_nonce_echo/1,
             [matching, wrong, missing]
         ),
-        ?assertEqual(3, meck:num_calls(api_rpc_client, call_with_retry, '_'))
+        ?assertEqual(3, meck:num_calls(rpc_client, call_with_retry, '_'))
     after
-        meck:unload(api_rpc_client)
+        meck:unload(rpc_client)
     end.
 
 assert_session_rpc_nonce_echo(Echo) ->
-    meck:expect(api_rpc_client, call_with_retry, fun(Request, _) ->
+    meck:expect(rpc_client, call_with_retry, fun(Request, _) ->
         Nonce = maps:get(<<"game_activity_request_nonce">>, Request, undefined),
         self() ! {requested_nonce, Nonce},
         Data = #{<<"game_activity_policy">> => bootstrap_policy()},

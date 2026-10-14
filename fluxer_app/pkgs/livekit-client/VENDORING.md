@@ -18,6 +18,10 @@ Every file went through the same mechanical steps, so a fresh upstream tree can 
 
 `connectionHelper`, `createLocalScreenTracks`, `getStereoAudioStreamTrack`, `isLocalPub`, the frame metadata worker, `room/token-source/test-tokens.ts`, `utils/subscribeToEvents.ts`, and the `DataTrackPacket`, data track packet extension and `LocalTrackRecorder` exports. `createV0RtcUrl`, `truncateBytes`, `videoQualityForRid` and `STOP_REFETCH_DELAY_MS` are no longer exported.
 
+## Added seams
+
+`InternalRoomOptions.createEngine` lets a caller build the engine, and `Room` uses it in place of `new RTCEngine`. The index exports `RTCEngine`, `SignalClient`, `SignalConnectionState`, `PCTransportState`, `selectPublisherCodecPreferences` and the protocol messages a substitute engine has to build. The P2P mesh engine in `fluxer_app/src/features/voice/engine/mesh` depends on all of them. `room/Room.test.ts` covers the option.
+
 ## Behaviour changes to carry forward
 
 `DeviceManager.getDevices` stops every track of its temporary permission stream in `finally`, including when the second `enumerateDevices` fails. The stream is owned by device enumeration and is never handed to a caller. Keep this cleanup on each update; `DeviceManager.test.ts` covers failure and successful enumeration, with no-capture controls.

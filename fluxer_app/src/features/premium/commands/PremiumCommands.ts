@@ -1,41 +1,35 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {showPremiumActionErrorModal} from '@app/features/app/components/dialogs/components/plutonium/utils/PremiumActionErrorModal';
 import {Endpoints} from '@app/features/app/constants/Endpoints';
 import GeoIP from '@app/features/app/state/GeoIP';
 import {AccountScopedWork, accountScopedWorkAbortError} from '@app/features/platform/state/AccountScopedWork';
 import {http} from '@app/features/platform/transport/RestTransport';
 import {Logger} from '@app/features/platform/utils/AppLogger';
+import {isAbortError} from '@app/features/platform/utils/PlatformHelpers';
 import PremiumState from '@app/features/premium/state/PremiumState';
+import {
+	CUSTOMER_PORTAL_FAILED_MESSAGE_DESCRIPTOR,
+	CUSTOMER_PORTAL_FAILED_TITLE_DESCRIPTOR,
+} from '@app/features/premium/utils/PremiumMessageDescriptors';
+import {openExternalUrl} from '@app/features/ui/utils/NativeUtils';
 import Users from '@app/features/user/state/Users';
 import type {
 	CurrentSubscriptionPriceResponse,
 	PremiumStateResponse,
 	PriceIdsResponse,
-	SelfServeRefundEligibilityResponse,
 	SelfServeRefundResponse,
 	SwitchToListPriceResponse,
+	UrlResponse,
 } from '@fluxer/schema/src/domains/premium/PremiumSchemas';
 
 const logger = new Logger('Premium');
-const PRICE_IDS_CACHE_TTL_MS = 5 * 60 * 1000;
-
 export type PriceIds = PriceIdsResponse;
-
-interface CachedPriceIdsEntry {
-	value?: PriceIds;
-	fetchedAt?: number;
-	promise?: Promise<PriceIds>;
-}
-
-interface UrlResponse {
-	url: string;
-}
 
 interface PremiumPerksDisabledRequest {
 	disabled: boolean;
 }
 
-const priceIdsCache = new Map<string, CachedPriceIdsEntry>();
 let generation = 0;
 
 function normalizedCountryCode(countryCode?: string): string | undefined {
@@ -49,14 +43,6 @@ async function resolvePremiumStateCountryCode(countryCode?: string): Promise<str
 	}
 	await GeoIP.ready();
 	return normalizedCountryCode(GeoIP.countryCode ?? undefined);
-}
-
-function priceIdsCacheKey(countryCode: string | undefined): string {
-	return countryCode ?? 'default';
-}
-
-function priceIdsQuery(countryCode: string | undefined): Record<string, string> {
-	return countryCode ? {country_code: countryCode} : {};
 }
 
 function checkoutEndpoint(isGift: boolean): string {
@@ -77,86 +63,11 @@ function checkoutSessionBody(
 	};
 }
 
-async function postAndInvalidate(endpoint: string, body?: Record<string, string>): Promise<void> {
+async function post(endpoint: string, body?: Record<string, string>): Promise<void> {
 	await http.post(endpoint, body ? {body} : undefined);
-	invalidateCurrentSubscriptionPriceCache();
-}
-
-export async function fetchPriceIds(countryCode?: string): Promise<PriceIds> {
-	if (AccountScopedWork.isSuspended) throw accountScopedWorkAbortError();
-	const requestGeneration = generation;
-	const country = normalizedCountryCode(countryCode);
-	const cacheKey = priceIdsCacheKey(country);
-	const cachedEntry = priceIdsCache.get(cacheKey);
-	if (cachedEntry?.value && cachedEntry.fetchedAt && Date.now() - cachedEntry.fetchedAt < PRICE_IDS_CACHE_TTL_MS) {
-		return cachedEntry.value;
-	}
-	if (cachedEntry?.promise) {
-		return cachedEntry.promise;
-	}
-	const request = (async () => {
-		try {
-			const response = await http.get<PriceIds>(Endpoints.PREMIUM_PRICE_IDS, {
-				query: priceIdsQuery(country),
-			});
-			if (requestGeneration !== generation) throw accountScopedWorkAbortError();
-			logger.debug('Price IDs fetched', response.body);
-			priceIdsCache.set(cacheKey, {
-				value: response.body,
-				fetchedAt: Date.now(),
-			});
-			return response.body;
-		} catch (error) {
-			if (requestGeneration === generation) priceIdsCache.delete(cacheKey);
-			logger.error('Price IDs fetch failed', error);
-			throw error;
-		}
-	})();
-	priceIdsCache.set(cacheKey, {promise: request});
-	return await request;
 }
 
 export type CurrentSubscriptionPrice = NonNullable<CurrentSubscriptionPriceResponse>;
-
-const CURRENT_SUBSCRIPTION_PRICE_CACHE_TTL_MS = 5 * 60 * 1000;
-
-interface CachedCurrentSubscriptionPrice {
-	value?: CurrentSubscriptionPriceResponse;
-	fetchedAt?: number;
-	promise?: Promise<CurrentSubscriptionPriceResponse>;
-}
-
-let currentSubscriptionPriceCache: CachedCurrentSubscriptionPrice | null = null;
-
-export async function fetchCurrentSubscriptionPrice(): Promise<CurrentSubscriptionPriceResponse> {
-	if (AccountScopedWork.isSuspended) throw accountScopedWorkAbortError();
-	const requestGeneration = generation;
-	const cached = currentSubscriptionPriceCache;
-	if (cached && cached.fetchedAt != null && Date.now() - cached.fetchedAt < CURRENT_SUBSCRIPTION_PRICE_CACHE_TTL_MS) {
-		return cached.value ?? null;
-	}
-	if (cached?.promise) {
-		return cached.promise;
-	}
-	const request = (async () => {
-		try {
-			const response = await http.get<CurrentSubscriptionPriceResponse>(Endpoints.PREMIUM_CURRENT_SUBSCRIPTION_PRICE);
-			if (requestGeneration !== generation) throw accountScopedWorkAbortError();
-			currentSubscriptionPriceCache = {value: response.body, fetchedAt: Date.now()};
-			return response.body;
-		} catch (error) {
-			if (requestGeneration === generation) currentSubscriptionPriceCache = null;
-			logger.error('Current subscription price fetch failed', error);
-			throw error;
-		}
-	})();
-	currentSubscriptionPriceCache = {promise: request};
-	return request;
-}
-
-export function invalidateCurrentSubscriptionPriceCache(): void {
-	currentSubscriptionPriceCache = null;
-}
 
 function applyPremiumStateToCurrentUser(state: PremiumStateResponse): void {
 	const user = Users.currentUser;
@@ -184,7 +95,7 @@ function applyPremiumStateToCurrentUser(state: PremiumStateResponse): void {
 	});
 }
 
-export async function fetchPremiumState(countryCode?: string): Promise<PremiumStateResponse> {
+async function fetchPremiumState(countryCode?: string): Promise<PremiumStateResponse> {
 	if (AccountScopedWork.isSuspended) throw accountScopedWorkAbortError();
 	const requestGeneration = generation;
 	const country = await resolvePremiumStateCountryCode(countryCode);
@@ -193,10 +104,6 @@ export async function fetchPremiumState(countryCode?: string): Promise<PremiumSt
 		...(country ? {query: {country_code: country}} : {}),
 	});
 	return response.body;
-}
-
-function isAbortError(error: unknown): boolean {
-	return (error instanceof DOMException || error instanceof Error) && error.name === 'AbortError';
 }
 
 export async function refreshPremiumState(countryCode?: string): Promise<PremiumStateResponse> {
@@ -275,7 +182,7 @@ export async function createCheckoutSession(
 
 export async function cancelSubscriptionAtPeriodEnd(): Promise<void> {
 	try {
-		await postAndInvalidate(Endpoints.PREMIUM_CANCEL_SUBSCRIPTION);
+		await post(Endpoints.PREMIUM_CANCEL_SUBSCRIPTION);
 		logger.info('Subscription set to cancel at period end');
 	} catch (error) {
 		logger.error('Failed to cancel subscription at period end', error);
@@ -285,7 +192,7 @@ export async function cancelSubscriptionAtPeriodEnd(): Promise<void> {
 
 export async function reactivateSubscription(): Promise<void> {
 	try {
-		await postAndInvalidate(Endpoints.PREMIUM_REACTIVATE_SUBSCRIPTION);
+		await post(Endpoints.PREMIUM_REACTIVATE_SUBSCRIPTION);
 		logger.info('Subscription reactivated');
 	} catch (error) {
 		logger.error('Failed to reactivate subscription', error);
@@ -295,7 +202,7 @@ export async function reactivateSubscription(): Promise<void> {
 
 export async function endPremiumGracePeriod(): Promise<void> {
 	try {
-		await postAndInvalidate(Endpoints.PREMIUM_GRACE_END);
+		await post(Endpoints.PREMIUM_GRACE_END);
 		logger.info('Premium grace period ended');
 	} catch (error) {
 		logger.error('Failed to end premium grace period', error);
@@ -310,7 +217,7 @@ export async function changeSubscriptionBillingCycle(
 	effectiveAt: SubscriptionBillingCycleChangeEffectiveAt = 'now',
 ): Promise<void> {
 	try {
-		await postAndInvalidate(Endpoints.PREMIUM_CHANGE_SUBSCRIPTION, {
+		await post(Endpoints.PREMIUM_CHANGE_SUBSCRIPTION, {
 			billing_cycle: billingCycle,
 			effective_at: effectiveAt,
 		});
@@ -324,7 +231,6 @@ export async function changeSubscriptionBillingCycle(
 export async function switchSubscriptionToListPrice(): Promise<SwitchToListPriceResponse> {
 	try {
 		const response = await http.post<SwitchToListPriceResponse>(Endpoints.PREMIUM_SWITCH_TO_LIST_PRICE);
-		invalidateCurrentSubscriptionPriceCache();
 		logger.info('Subscription list price switch requested', response.body);
 		return response.body;
 	} catch (error) {
@@ -335,7 +241,7 @@ export async function switchSubscriptionToListPrice(): Promise<SwitchToListPrice
 
 export async function cancelPendingSubscriptionChange(): Promise<void> {
 	try {
-		await postAndInvalidate(Endpoints.PREMIUM_CANCEL_PENDING_SUBSCRIPTION_CHANGE);
+		await post(Endpoints.PREMIUM_CANCEL_PENDING_SUBSCRIPTION_CHANGE);
 		logger.info('Pending subscription billing-cycle change canceled');
 	} catch (error) {
 		logger.error('Failed to cancel pending subscription billing-cycle change', error);
@@ -343,20 +249,9 @@ export async function cancelPendingSubscriptionChange(): Promise<void> {
 	}
 }
 
-export async function fetchSelfServeRefundEligibility(): Promise<SelfServeRefundEligibilityResponse> {
-	try {
-		const response = await http.get<SelfServeRefundEligibilityResponse>(Endpoints.PREMIUM_REFUND_ELIGIBILITY);
-		return response.body;
-	} catch (error) {
-		logger.error('Failed to fetch self-serve refund eligibility', error);
-		throw error;
-	}
-}
-
 export async function refundLatestPurchase(): Promise<SelfServeRefundResponse> {
 	try {
 		const response = await http.post<SelfServeRefundResponse>(Endpoints.PREMIUM_REFUND_LATEST);
-		invalidateCurrentSubscriptionPriceCache();
 		logger.info('Self-serve refund issued', response.body);
 		return response.body;
 	} catch (error) {
@@ -375,8 +270,23 @@ export async function rejoinVisionaryGuild(): Promise<void> {
 	}
 }
 
+export async function openCustomerPortalWithErrorModal(dataFlx: string): Promise<void> {
+	try {
+		const url = await createCustomerPortalSession();
+		await openExternalUrl(url);
+	} catch (error) {
+		logger.error('Failed to open customer portal', error);
+		showPremiumActionErrorModal(
+			error,
+			{
+				fallbackTitle: CUSTOMER_PORTAL_FAILED_TITLE_DESCRIPTOR,
+				fallbackMessage: CUSTOMER_PORTAL_FAILED_MESSAGE_DESCRIPTOR,
+			},
+			dataFlx,
+		);
+	}
+}
+
 AccountScopedWork.registerCancellation(() => {
 	generation += 1;
-	priceIdsCache.clear();
-	currentSubscriptionPriceCache = null;
 });

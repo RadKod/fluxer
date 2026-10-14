@@ -25,6 +25,8 @@ vi.mock('@app/features/app/components/dialogs/Modal', () => ({
 	Footer: ({children}: {children: ReactNode}) => children,
 }));
 vi.mock('@app/features/i18n/utils/CommonMessageDescriptors', () => ({
+	CANCEL_DESCRIPTOR: {message: 'Cancel'},
+	PAUSE_DESCRIPTOR: {message: 'Pause'},
 	SOMETHING_WENT_WRONG_DESCRIPTOR: {message: 'Error'},
 }));
 vi.mock('@app/features/i18n/utils/IntlCache', () => ({getCachedNumberFormat: () => new Intl.NumberFormat('en')}));

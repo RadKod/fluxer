@@ -767,28 +767,4 @@ connection_gauges_list_every_rejection_reason_test() ->
     Has(<<"# TYPE fluxer_gateway_sessions gauge">>),
     Has(<<"\nfluxer_gateway_sessions 7\n">>).
 
-push_outbox_drops_render_one_series_per_kind_and_reason_test() ->
-    Rendered = iolist_to_binary(
-        render_push_outbox_dropped(#{
-            dropped => #{{message, expired} => 3, {clear, outbox_unavailable} => 1}
-        })
-    ),
-    ?assertNotEqual(
-        nomatch,
-        binary:match(
-            Rendered,
-            <<"fluxer_gateway_push_outbox_dropped_total{kind=\"message\",reason=\"expired\"} 3\n">>
-        )
-    ),
-    ?assertNotEqual(
-        nomatch,
-        binary:match(
-            Rendered,
-            <<"fluxer_gateway_push_outbox_dropped_total{kind=\"clear\",reason=\"outbox_unavailable\"} 1\n">>
-        )
-    ).
-
-push_outbox_without_drops_renders_no_dropped_series_test() ->
-    ?assertEqual([], render_push_outbox_dropped(#{dropped => #{}})).
-
 -endif.

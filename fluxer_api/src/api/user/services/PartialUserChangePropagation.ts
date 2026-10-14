@@ -3,7 +3,7 @@
 import {randomUUID} from 'node:crypto';
 import type {GuildID, UserID} from '@app/api/BrandedTypes';
 import {mapGuildMemberToResponse} from '@app/api/guild/GuildModel';
-import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import type {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
@@ -11,9 +11,8 @@ import {Logger} from '@app/api/Logger';
 import {createRequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import {getKVClient, getWorkerService} from '@app/api/middleware/ServiceRegistry';
 import type {User} from '@app/api/models/User';
-import {updateUserCache} from '@app/api/user/UserCacheHelpers';
-import {hasPartialUserFieldsChanged} from '@app/api/user/UserMappers';
-import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
+import {dispatchUserUpdate, hasPartialUserFieldsChanged} from '@app/api/user/UserMappers';
+import {mapWithConcurrency, runAllInOrder} from '@app/api/utils/ConcurrencyUtils';
 import {USERNAME_CAPACITY_LIMITS} from '@app/api/worker/tasks/UsernameCapacityMonitor';
 import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
 
@@ -41,13 +40,20 @@ interface UserGuildReader {
 	getUserGuildIds(userId: UserID): Promise<Array<GuildID>>;
 }
 
-interface PartialUserChangePropagationDeps {
+interface PartialUserChangeDeps {
 	userCacheService: Pick<UserCacheService, 'setUserPartialResponseFromUser'>;
 	usernameOwnership?: true;
 }
 
-export async function propagatePartialUserChange(deps: PartialUserChangePropagationDeps, user: User): Promise<void> {
-	await updateUserCache({user, userCacheService: deps.userCacheService});
+export interface PartialUserChangePropagationDeps extends PartialUserChangeDeps {
+	userCacheService: UserCacheService;
+	gatewayService: IGatewayService;
+	userRepository: Pick<UserGuildReader, 'getUserGuildIds'>;
+	guildRepository: Pick<GuildRepository, 'getMember'>;
+}
+
+export async function propagatePartialUserChange(deps: PartialUserChangeDeps, user: User): Promise<void> {
+	await deps.userCacheService.setUserPartialResponseFromUser(user);
 	const kv = getKVClient();
 	if (deps.usernameOwnership)
 		await kv.setex(`username:propagate:capacity:{${user.id}}`, DIRTY_TTL_SECONDS, randomUUID());
@@ -59,7 +65,7 @@ export async function propagatePartialUserChange(deps: PartialUserChangePropagat
 // flags). `oldUser` null means the public state before the write is unknown, so it is announced anyway. A failed
 // announcement is logged and dropped: it never fails the premium write, session or profile read it follows.
 export async function propagateIfPartialChanged(
-	deps: PartialUserChangePropagationDeps,
+	deps: PartialUserChangeDeps,
 	oldUser: User | null,
 	newUser: User,
 	context: string,
@@ -70,6 +76,24 @@ export async function propagateIfPartialChanged(
 		}
 	} catch (error) {
 		Logger.warn({userId: newUser.id.toString(), context, error}, 'Failed to propagate the premium badge change');
+	}
+}
+
+export async function propagateUserUpdate(
+	deps: PartialUserChangePropagationDeps,
+	oldUser: User,
+	updatedUser: User,
+	options: {continueAfterDispatchFailure?: boolean} = {},
+): Promise<void> {
+	const dispatch = () => dispatchUserUpdate(deps.gatewayService, updatedUser);
+	const partial = async () => {
+		if (hasPartialUserFieldsChanged(oldUser, updatedUser)) await propagatePartialUserChange(deps, updatedUser);
+	};
+	if (options.continueAfterDispatchFailure) {
+		await runAllInOrder([dispatch, partial], 'Failed to propagate user update');
+	} else {
+		await dispatch();
+		await partial();
 	}
 }
 
@@ -90,7 +114,7 @@ export interface PendingPartialUserChangeDeps {
 	userCacheService: UserCacheService;
 	gatewayService: IGatewayService;
 	userRepository: UserGuildReader;
-	guildRepository: Pick<IGuildRepositoryAggregate, 'getMember' | 'findUnique'>;
+	guildRepository: Pick<GuildRepository, 'getMember' | 'findUnique'>;
 	instanceConfigRepository?: Pick<InstanceConfigRepository, 'getUsernameMigrationConfig' | 'setUsernamePolicyConfig'>;
 }
 

@@ -7,7 +7,10 @@ import {ChannelHeaderIcon} from '@app/features/channel/components/channel_header
 import {MemberListContainer} from '@app/features/channel/components/MemberListContainer';
 import type {Channel} from '@app/features/channel/models/Channel';
 import {getPostForum} from '@app/features/forum/utils/ForumChannelUtils';
-import {BACK_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
+import {
+	BACK_DESCRIPTOR,
+	CLOSE_DESCRIPTOR as D_CLOSE_THREAD_PANEL_DESCRIPTOR,
+} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import Navigation from '@app/features/navigation/state/Navigation';
 import {remFromPx} from '@app/features/theme/layout/RemFromPx';
 import {closeThreadPanel, openThreadFullView} from '@app/features/threads/commands/ThreadNavigation';
@@ -61,7 +64,11 @@ const ThreadMembersButton = observer(({thread}: {thread: Channel}) => {
 			position="bottom-end"
 			render={() => (
 				<div className={styles.membersPopout} data-flx="threads.thread-side-panel.members-popout">
-					<MemberListContainer channelId={thread.id} data-flx="threads.thread-side-panel.member-list-container">
+					<MemberListContainer
+						channelId={thread.id}
+						className={styles.membersPopoutList}
+						data-flx="threads.thread-side-panel.member-list-container"
+					>
 						<ThreadMembersList thread={thread} data-flx="threads.thread-side-panel.thread-members-list" />
 					</MemberListContainer>
 				</div>
@@ -148,7 +155,7 @@ const PanelHeader = observer(({thread, title}: {thread?: Channel; title: string}
 					<ChannelHeaderIcon
 						icon={XIcon}
 						iconWeight="bold"
-						label={i18n._(D.CLOSE_THREAD_PANEL_DESCRIPTOR)}
+						label={i18n._(D_CLOSE_THREAD_PANEL_DESCRIPTOR)}
 						onClick={closeThreadPanel}
 						className={headerStyles.iconButtonDefault}
 						data-flx="threads.thread-side-panel.panel-header.channel-header-icon.close"

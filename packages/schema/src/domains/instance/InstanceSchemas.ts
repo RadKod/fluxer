@@ -4,7 +4,7 @@ import {AccountIdentityModes, TagStyles} from '@fluxer/constants/src/AccountIden
 import {DomainMigrationDiscoveryResponse} from '@fluxer/schema/src/domains/admin/DomainMigrationSchemas';
 import {UsernameTiersSchema} from '@fluxer/schema/src/domains/admin/UsernameSchemas';
 import {SsoStatusResponse} from '@fluxer/schema/src/domains/auth/AuthSchemas';
-import {createNamedStringLiteralUnion} from '@fluxer/schema/src/primitives/SchemaPrimitives';
+import {createNamedStringLiteralUnion, createStringType} from '@fluxer/schema/src/primitives/SchemaPrimitives';
 import {z} from 'zod';
 
 const LimitFilterResponse = z.object({
@@ -57,6 +57,12 @@ export const InstanceSetupSchema = z
 			.describe(
 				'Present only while a self-hosted instance is unconfigured. True when the sign-in method can no longer change',
 			),
+		setup_token_required: z
+			.boolean()
+			.optional()
+			.describe(
+				'Present only while a self-hosted instance is unconfigured. True when registration needs the setup token',
+			),
 	})
 	.describe('Initial setup state for self-hosted instances');
 export type InstanceSetup = z.infer<typeof InstanceSetupSchema>;
@@ -69,8 +75,12 @@ const InstanceLegalSchema = z
 			.string()
 			.nullable()
 			.describe('Optional public URL where the instance offers its corresponding source code'),
+		guidelines_url: z
+			.string()
+			.nullable()
+			.describe('Optional public community guidelines URL linked from reporting and enforcement notices'),
 	})
-	.describe('Optional legal document URLs shown during public registration');
+	.describe('Optional legal and policy document URLs shown to users');
 
 const InstanceAppRegistrationSchema = z
 	.object({
@@ -361,6 +371,9 @@ export const InstanceAccountIdentityUpdateRequest = z.object({
 	tag_style: TagStyleSchema.optional().describe(
 		'How usernames are tagged. Defaults to none. Username sign-in accepts only none',
 	),
+	setup_token: createStringType(1, 256)
+		.nullish()
+		.describe('Setup token of a new self-hosted instance. Required until the first admin account exists'),
 });
 
 export type InstanceAccountIdentityUpdateRequest = z.infer<typeof InstanceAccountIdentityUpdateRequest>;

@@ -5,7 +5,7 @@ import {initializeStore} from '@app/features/platform/utils/StoreInitialization'
 import type {SearchHints} from '@app/features/search/utils/SearchQueryParser';
 import {makeAutoObservable} from 'mobx';
 
-export const SEARCH_HISTORY_LIMIT = 10;
+const SEARCH_HISTORY_LIMIT = 10;
 export const SEARCH_HISTORY_DISPLAY_LIMIT = 5;
 
 export interface SearchHistoryEntry {
@@ -85,10 +85,6 @@ class SearchHistory {
 	clear(channelId?: string): void {
 		if (!channelId) return;
 		delete this.entriesByChannel[channelId];
-	}
-
-	clearAll(): void {
-		this.entriesByChannel = {};
 	}
 }
 

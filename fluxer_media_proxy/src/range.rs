@@ -1,18 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ByteRange {
-    pub start: usize,
-    pub end: usize,
-}
-
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub enum RangeSelection {
-    #[default]
-    Full,
-    Partial(ByteRange),
-    Unsatisfiable,
-}
+pub use fluxer_common::http_range::{ByteRange, RangeSelection, parse_decimal_usize, parse_range};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ContentRange {
@@ -26,101 +14,6 @@ pub enum RequestRange<'a> {
     Absent,
     Forwardable(&'a str),
     Unsatisfiable,
-}
-
-pub fn parse_range(header: Option<&str>, file_size: usize) -> RangeSelection {
-    let Some(raw) = header else {
-        return RangeSelection::Full;
-    };
-    let trimmed = raw.trim_matches([' ', '\t']);
-    // The unit is matched the way classify_request_range matches it, which is what decides
-    // whether a GET forwards the Range upstream at all. Accepting more units here alone would
-    // answer 206 on a HEAD whose GET serves the whole body.
-    let Some(spec) = trimmed.strip_prefix("bytes=") else {
-        return RangeSelection::Full;
-    };
-    if spec.contains(',') {
-        return RangeSelection::Full;
-    }
-    let Some(dash) = spec.find('-') else {
-        return RangeSelection::Full;
-    };
-    let end_offset = dash
-        .checked_add(1)
-        .expect("range delimiter offset must fit usize");
-    let start_part = &spec[..dash];
-    let end_part = &spec[end_offset..];
-    if start_part.is_empty() && end_part.is_empty() {
-        return RangeSelection::Full;
-    }
-    // A range-spec that does not parse is ignored outright and the full resource is served
-    // (RFC 9110 s14.2). That check has to happen before the zero-length shortcut below, or a
-    // malformed spec against an empty object reports 416 instead of 200.
-    if !start_part.is_empty() {
-        let Some(start) = parse_decimal_usize(start_part) else {
-            return RangeSelection::Full;
-        };
-        let parsed_end = if end_part.is_empty() {
-            None
-        } else if let Some(end) = parse_decimal_usize(end_part) {
-            Some(end)
-        } else {
-            return RangeSelection::Full;
-        };
-        if file_size == 0 {
-            return RangeSelection::Unsatisfiable;
-        }
-        let last_byte = file_size
-            .checked_sub(1)
-            .expect("nonempty media resource must have a last byte");
-        let requested_end = parsed_end.unwrap_or(last_byte);
-        if start >= file_size || requested_end < start {
-            return RangeSelection::Unsatisfiable;
-        }
-        return RangeSelection::Partial(ByteRange {
-            start,
-            end: requested_end.min(last_byte),
-        });
-    }
-    let Some(suffix_len) = parse_decimal_usize(end_part) else {
-        return RangeSelection::Full;
-    };
-    if file_size == 0 {
-        return RangeSelection::Unsatisfiable;
-    }
-    let last_byte = file_size
-        .checked_sub(1)
-        .expect("nonempty media resource must have a last byte");
-    if suffix_len == 0 {
-        return RangeSelection::Unsatisfiable;
-    }
-    let resolved_len = suffix_len.min(file_size);
-    RangeSelection::Partial(ByteRange {
-        start: file_size
-            .checked_sub(resolved_len)
-            .expect("resolved suffix length must not exceed the media resource"),
-        end: last_byte,
-    })
-}
-
-pub fn parse_bounded_request_range(header: Option<&str>, max_len: usize) -> Option<ByteRange> {
-    let raw = header?.trim_matches([' ', '\t']);
-    let spec = raw.strip_prefix("bytes=")?;
-    if spec.contains(',') {
-        return None;
-    }
-    let dash = spec.find('-')?;
-    let end_offset = dash.checked_add(1)?;
-    let start = parse_decimal_usize(spec[..dash].trim_matches([' ', '\t']))?;
-    let end = parse_decimal_usize(spec[end_offset..].trim_matches([' ', '\t']))?;
-    if end < start {
-        return None;
-    }
-    let len = end.checked_sub(start)?.checked_add(1)?;
-    if len > max_len {
-        return None;
-    }
-    Some(ByteRange { start, end })
 }
 
 pub fn classify_request_range(header: Option<&str>) -> RequestRange<'_> {
@@ -208,13 +101,6 @@ pub fn parse_content_range(header: Option<&str>) -> Option<ContentRange> {
     })
 }
 
-pub(crate) fn parse_decimal_usize(raw: &str) -> Option<usize> {
-    if raw.is_empty() || !raw.bytes().all(|byte| byte.is_ascii_digit()) {
-        return None;
-    }
-    raw.parse().ok()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -249,14 +135,6 @@ mod tests {
         assert_eq!(
             RangeSelection::Partial(ByteRange { start: 0, end: 99 }),
             parse_range(Some("bytes=-9999"), 100)
-        );
-    }
-
-    #[test]
-    fn zero_length_suffix_is_unsatisfiable() {
-        assert_eq!(
-            RangeSelection::Unsatisfiable,
-            parse_range(Some("bytes=-0"), 100)
         );
     }
 
@@ -308,34 +186,6 @@ mod tests {
     }
 
     #[test]
-    fn multi_range_not_supported() {
-        assert_eq!(
-            RangeSelection::Full,
-            parse_range(Some("bytes=0-1, 2-3"), 100)
-        );
-    }
-
-    #[test]
-    fn reversed_start_end_is_unsatisfiable() {
-        assert_eq!(
-            RangeSelection::Unsatisfiable,
-            parse_range(Some("bytes=10-5"), 100)
-        );
-    }
-
-    #[test]
-    fn empty_file_is_unsatisfiable_for_any_byte_range() {
-        assert_eq!(
-            RangeSelection::Unsatisfiable,
-            parse_range(Some("bytes=0-9"), 0)
-        );
-        assert_eq!(
-            RangeSelection::Unsatisfiable,
-            parse_range(Some("bytes=-5"), 0)
-        );
-    }
-
-    #[test]
     fn end_past_eof_clamps() {
         assert_eq!(
             RangeSelection::Partial(ByteRange { start: 0, end: 99 }),
@@ -355,7 +205,6 @@ mod tests {
             RequestRange::Absent,
             classify_request_range(Some("BYTES=0-1"))
         );
-        assert_eq!(None, parse_bounded_request_range(Some("BYTES=0-1"), 32));
         // The response side reads the object store's own reply rather than client input, so a
         // lenient unit there only rescues a Content-Range the strict match would drop.
         assert_eq!(
@@ -387,26 +236,6 @@ mod tests {
             RequestRange::Forwardable("bytes=+5-"),
             classify_request_range(Some("bytes=+5-")),
             "forwarding is unchanged: the object store still settles the spec it always saw"
-        );
-    }
-
-    #[test]
-    fn bounded_request_range_only_accepts_explicit_spans_within_cap() {
-        assert_eq!(
-            Some(ByteRange { start: 10, end: 19 }),
-            parse_bounded_request_range(Some("bytes=10-19"), 32)
-        );
-        assert_eq!(None, parse_bounded_request_range(Some("bytes=10-"), 32));
-        assert_eq!(None, parse_bounded_request_range(Some("bytes=-10"), 32));
-        assert_eq!(None, parse_bounded_request_range(Some("bytes=10-9"), 32));
-        assert_eq!(None, parse_bounded_request_range(Some("bytes=0-32"), 32));
-        assert_eq!(
-            None,
-            parse_bounded_request_range(Some("bytes=0-1, 2-3"), 32)
-        );
-        assert_eq!(
-            None,
-            parse_bounded_request_range(Some("bytes=0-18446744073709551615"), usize::MAX)
         );
     }
 
@@ -519,11 +348,6 @@ mod tests {
                     );
                     assert!(selected.end < file_size, "range beyond file from {header}");
                 }
-                assert!(
-                    parse_bounded_request_range(Some(header), file_size)
-                        .is_none_or(|selected| selected.start <= selected.end
-                            && selected.end - selected.start < file_size)
-                );
             }
             if let Some(parsed) = parse_content_range(Some(header)) {
                 assert!(

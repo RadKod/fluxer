@@ -17,7 +17,7 @@ import backfillReferralTier from '@app/api/worker/tasks/BackfillReferralTier';
 import batchGuildAuditLogMessageDeletes from '@app/api/worker/tasks/BatchGuildAuditLogMessageDeletes';
 import bulkDeleteSelfMessagesImmediate from '@app/api/worker/tasks/BulkDeleteSelfMessagesImmediate';
 import bulkDeleteUserMessages from '@app/api/worker/tasks/BulkDeleteUserMessages';
-import bulkDeleteUserMessagesScoped from '@app/api/worker/tasks/BulkDeleteUserMessagesScoped';
+import clearAuthenticatedReporterEmails from '@app/api/worker/tasks/ClearAuthenticatedReporterEmails';
 import crosspostMessage from '@app/api/worker/tasks/CrosspostMessage';
 import crosspostMessageChunk from '@app/api/worker/tasks/CrosspostMessageChunk';
 import deleteFeedVideo from '@app/api/worker/tasks/DeleteFeedVideo';
@@ -27,11 +27,11 @@ import drainFeedVideoJobs from '@app/api/worker/tasks/DrainFeedVideoJobs';
 import ensureUserPremium from '@app/api/worker/tasks/EnsureUserPremium';
 import evaluateReferral from '@app/api/worker/tasks/EvaluateReferral';
 import expireAttachments from '@app/api/worker/tasks/ExpireAttachments';
+import expireReportSnapshots from '@app/api/worker/tasks/ExpireReportSnapshots';
 import expireStaleJobs from '@app/api/worker/tasks/ExpireStaleJobs';
 import extractEmbeds from '@app/api/worker/tasks/ExtractEmbeds';
 import extractFeedPostEmbeds from '@app/api/worker/tasks/ExtractFeedPostEmbeds';
 import fanoutFeedPost from '@app/api/worker/tasks/FanoutFeedPost';
-import finalizeNcmecAttachmentReport from '@app/api/worker/tasks/FinalizeNcmecAttachmentReport';
 import flushCounters from '@app/api/worker/tasks/FlushCounters';
 import flushFeedViewCounterSlice from '@app/api/worker/tasks/FlushFeedViewCounterSlice';
 import flushFeedViewCounters from '@app/api/worker/tasks/FlushFeedViewCounters';
@@ -39,6 +39,7 @@ import flushMicupBotXp from '@app/api/worker/tasks/FlushMicupBotXp';
 import flushMicupBotXpSlice from '@app/api/worker/tasks/FlushMicupBotXpSlice';
 import flushUserActivityBuffer from '@app/api/worker/tasks/FlushUserActivityBuffer';
 import grantReferralRewards from '@app/api/worker/tasks/GrantReferralRewards';
+import guildProcessDeletion from '@app/api/worker/tasks/GuildProcessDeletion';
 import handleMentionChunk from '@app/api/worker/tasks/HandleMentionChunk';
 import handleMentions from '@app/api/worker/tasks/HandleMentions';
 import handleMicupBotLevelUp from '@app/api/worker/tasks/HandleMicupBotLevelUp';
@@ -48,6 +49,7 @@ import harvestUserData from '@app/api/worker/tasks/HarvestUserData';
 import indexChannelMessages from '@app/api/worker/tasks/IndexChannelMessages';
 import indexGuildMembers from '@app/api/worker/tasks/IndexGuildMembers';
 import keepFeedVideoEvidence from '@app/api/worker/tasks/KeepFeedVideoEvidence';
+import liftExpiredGuildInvitePauses from '@app/api/worker/tasks/LiftExpiredGuildInvitePauses';
 import messageShred from '@app/api/worker/tasks/MessageShred';
 import pollAppStoreNotificationHistory from '@app/api/worker/tasks/PollAppStoreNotificationHistory';
 import pollGooglePlayVoidedPurchases from '@app/api/worker/tasks/PollGooglePlayVoidedPurchases';
@@ -74,6 +76,7 @@ import queueMicupBotVoiceSlots from '@app/api/worker/tasks/QueueMicupBotVoiceSlo
 import rebuildCounter from '@app/api/worker/tasks/RebuildCounter';
 import rebuildMicupBotLeaderboard from '@app/api/worker/tasks/RebuildMicupBotLeaderboard';
 import recomputeGuildBoost from '@app/api/worker/tasks/RecomputeGuildBoost';
+import reconcileAttachmentDecay from '@app/api/worker/tasks/ReconcileAttachmentDecay';
 import reconcileFeedVideoBucket from '@app/api/worker/tasks/ReconcileFeedVideoBucket';
 import reconcileFeedVideos from '@app/api/worker/tasks/ReconcileFeedVideos';
 import reconcileShopOrders from '@app/api/worker/tasks/ReconcileShopOrders';
@@ -105,7 +108,6 @@ import syncUrlBlocklists from '@app/api/worker/tasks/SyncUrlBlocklists';
 import {
 	archiveInactiveThreads,
 	deleteChannelThreads,
-	rebuildThreadAutoArchiveQueue,
 	removeThreadMembershipsForGuildMember,
 	repairThreadIndexes,
 } from '@app/api/worker/tasks/ThreadMaintenanceTasks';
@@ -132,7 +134,6 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	backfillPioneerBadges,
 	archiveInactiveThreads,
 	deleteChannelThreads,
-	rebuildThreadAutoArchiveQueue,
 	removeThreadMembershipsForGuildMember,
 	repairThreadIndexes,
 	syncThreadSearchDocument,
@@ -143,27 +144,29 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	bulkDeleteMessagesForUsers: bulkDeleteMessagesForUsers,
 	bulkDeleteSelfMessagesImmediate,
 	bulkDeleteUserMessages,
-	bulkDeleteUserMessagesScoped,
 	bulkScheduleUserDeletion: bulkScheduleUserDeletion,
 	bulkUpdateGuildFeatures: bulkUpdateGuildFeatures,
 	bulkUpdateUserFlags: bulkUpdateUserFlags,
+	clearAuthenticatedReporterEmails,
 	crosspostMessage,
 	crosspostMessageChunk,
 	deleteUserMessagesInGuildByTime,
 	ensureUserPremium,
 	drainActivitySpool,
 	expireAttachments,
+	expireReportSnapshots,
 	expireStaleJobs,
 	extractEmbeds,
 	extractFeedPostEmbeds,
 	fanoutFeedPost,
-	finalizeNcmecAttachmentReport,
+	guildProcessDeletion,
 	handleMentions,
 	handleMentionChunk,
 	harvestGuildData,
 	harvestUserData,
 	indexChannelMessages,
 	indexGuildMembers,
+	liftExpiredGuildInvitePauses,
 	messageShred,
 	processAssetDeletionQueue,
 	processCachePurgeQueue,
@@ -177,6 +180,7 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	processUserDeletionHook,
 	propagatePartialUserChange,
 	reconcileShopOrders,
+	reconcileAttachmentDecay,
 	reconcileUserPayments,
 	removeBlockedFollows,
 	removeMemberBoosts,

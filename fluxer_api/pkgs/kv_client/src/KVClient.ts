@@ -17,7 +17,6 @@ import {
 import {createInvalidResponseError, KVClientError, KVClientErrorCode} from '@pkgs/kv_client/src/KVClientError';
 import {resolveKVClusterConnection} from '@pkgs/kv_client/src/KVClusterConnection';
 import {
-	createStringEntriesFromPairs,
 	createZSetMembersFromScorePairs,
 	normalizeScoreBound,
 	parseRangeByScoreArguments,
@@ -61,13 +60,6 @@ return 0
 const EXTEND_LOCK_SCRIPT = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
 	redis.call('EXPIRE', KEYS[1], ARGV[2])
-	return 1
-end
-return 0
-`;
-const RENEW_SNOWFLAKE_SCRIPT = `
-if redis.call('GET', KEYS[1]) == ARGV[1] then
-	redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])
 	return 1
 end
 return 0
@@ -420,20 +412,6 @@ export class KVClient implements IKVProvider {
 		});
 	}
 
-	async mset(...args: Array<string>): Promise<void> {
-		const entries = createStringEntriesFromPairs(args);
-		if (entries.length === 0) {
-			return;
-		}
-		await this.execute('mset', async () => {
-			const batches = this.splitBySlot(entries, (entry) => entry.key);
-			await runSlotBatches(batches, async (batch) => {
-				const result = await this.client.mset(...batch.flatMap((entry) => [entry.key, entry.value]));
-				parseSetReply(result, 'mset');
-			});
-		});
-	}
-
 	async del(...keys: Array<string>): Promise<number> {
 		if (keys.length === 0) {
 			return 0;
@@ -713,18 +691,6 @@ export class KVClient implements IKVProvider {
 	async extendLock(key: string, token: string, ttlSeconds: number): Promise<boolean> {
 		const result = await this.executeScript('extendLock', EXTEND_LOCK_SCRIPT, 1, key, token, ttlSeconds);
 		return parseIntegerDecision(result, 'extendLock');
-	}
-
-	async renewSnowflakeNode(key: string, instanceId: string, ttlSeconds: number): Promise<boolean> {
-		const result = await this.executeScript(
-			'renewSnowflakeNode',
-			RENEW_SNOWFLAKE_SCRIPT,
-			1,
-			key,
-			instanceId,
-			ttlSeconds,
-		);
-		return parseIntegerDecision(result, 'renewSnowflakeNode');
 	}
 
 	async checkLeakyBucketLimit(key: string, limit: number, windowMs: number, cost: number): Promise<KVRateLimitResult> {

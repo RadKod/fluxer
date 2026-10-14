@@ -7,10 +7,8 @@ import {beforeEach, describe, expect, test, vi} from 'vitest';
 const fixture = vi.hoisted(() => ({
 	installAuth: vi.fn(),
 	installResponseObserver: vi.fn(),
-	sudoInit: vi.fn(),
 	promptInit: vi.fn(),
 }));
-vi.mock('@app/features/auth/state/AuthSudo', () => ({default: {init: fixture.sudoInit}}));
 vi.mock('@app/features/auth/state/SudoPrompt', () => ({default: {init: fixture.promptInit}}));
 vi.mock('@app/features/platform/state/AuthSession', () => ({
 	default: {currentAccountKey: 'instance::user1', token: 'auth-token'},
@@ -30,7 +28,6 @@ describe('shared username selection HTTP error chain', () => {
 	test('installs the response observer alongside existing auth and sudo hooks', () => {
 		setupHttp();
 		expect(fixture.installAuth).toHaveBeenCalledOnce();
-		expect(fixture.sudoInit).toHaveBeenCalledOnce();
 		expect(fixture.promptInit).toHaveBeenCalledOnce();
 		expect(fixture.installResponseObserver).toHaveBeenCalledOnce();
 		fixture.installResponseObserver.mock.calls[0][0]({status: 403, body: {code: 'USERNAME_SELECTION_REQUIRED'}});

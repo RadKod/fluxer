@@ -5,7 +5,6 @@ import {AdminApiKeyRepository} from '@app/api/admin/repositories/AdminApiKeyRepo
 import {AdminArchiveRepository} from '@app/api/admin/repositories/AdminArchiveRepository';
 import {AdminApiKeyService} from '@app/api/admin/services/AdminApiKeyService';
 import {AdminArchiveService} from '@app/api/admin/services/AdminArchiveService';
-import {AdminAuditService} from '@app/api/admin/services/AdminAuditService';
 import {createGuildID, type GuildID, type UserID} from '@app/api/BrandedTypes';
 import {BadgeRepository} from '@app/api/badge/BadgeRepository';
 import {BadgeService} from '@app/api/badge/BadgeService';
@@ -26,9 +25,6 @@ import type {APIConfig} from '@app/api/config/APIConfig';
 import {ConnectionRepository} from '@app/api/connection/ConnectionRepository';
 import {CosmeticRepository} from '@app/api/cosmetics/CosmeticRepository';
 import {CosmeticService} from '@app/api/cosmetics/CosmeticService';
-import {createNcmecApiConfig, NcmecReporter} from '@app/api/csam/NcmecReporter';
-import {NcmecRepository} from '@app/api/csam/NcmecRepository';
-import {NcmecSubmissionService} from '@app/api/csam/NcmecSubmissionService';
 import {DonationRepository} from '@app/api/donation/DonationRepository';
 import {createEmailProvider} from '@app/api/email/EmailProviderFactory';
 import {FavoriteMemeRepository} from '@app/api/favorite_meme/FavoriteMemeRepository';
@@ -55,7 +51,6 @@ import {createFollowCounterFlushers} from '@app/api/follow/FollowCounters';
 import {FollowRepository} from '@app/api/follow/FollowRepository';
 import {FollowService} from '@app/api/follow/FollowService';
 import {GatewayRequestService} from '@app/api/gateway/GatewayRequestService';
-import {GifService} from '@app/api/gif/GifService';
 import {createNatsGifProvider} from '@app/api/gif/NatsGifProvider';
 import {createGuildBoostCounterFlushers} from '@app/api/guild/boost/GuildBoostCounters';
 import {GuildBoostRepository} from '@app/api/guild/boost/GuildBoostRepository';
@@ -72,7 +67,6 @@ import {createMicupBotXpCounterFlusher} from '@app/api/guild/micupbot/MicupBotXp
 import {GuildDataRepository} from '@app/api/guild/repositories/GuildDataRepository';
 import {GuildDiscoveryRepository} from '@app/api/guild/repositories/GuildDiscoveryRepository';
 import {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
-import type {IGuildMemberRepository} from '@app/api/guild/repositories/IGuildMemberRepository';
 import {GuildRosterRepository} from '@app/api/guild/roster/GuildRosterRepository';
 import {GuildRosterSettingsService} from '@app/api/guild/roster/GuildRosterSettingsService';
 import {GuildDiscoveryService} from '@app/api/guild/services/GuildDiscoveryService';
@@ -100,10 +94,12 @@ import {createStorageService} from '@app/api/infrastructure/StorageServiceFactor
 import {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import {createUsersServiceClient} from '@app/api/infrastructure/UsersServiceClient';
 import {VirusScanService} from '@app/api/infrastructure/VirusScanService';
-import {ChannelThreadsConfigPublisher} from '@app/api/instance/ChannelThreadsConfigPublisher';
-import {GatewayRolloutConfigPublisher} from '@app/api/instance/GatewayRolloutConfigPublisher';
+import {type ContactEmails, resolveContactEmails} from '@app/api/instance/ContactEmails';
 import {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
-import {PushRelayConfigPublisher} from '@app/api/instance/PushRelayConfigPublisher';
+import {type LegalUrls, resolveLegalUrls} from '@app/api/instance/LegalUrls';
+import {NatsConfigPublisher} from '@app/api/instance/NatsConfigPublisher';
+import {getInstanceProductName} from '@app/api/instance/ProductName';
+import {ensureSetupToken} from '@app/api/instance/SetupToken';
 import {InviteRepository} from '@app/api/invite/InviteRepository';
 import {Logger} from '@app/api/Logger';
 import {LimitConfigService} from '@app/api/limits/LimitConfigService';
@@ -169,6 +165,7 @@ import {UserActivityBuffer} from '@app/api/user/services/UserActivityBuffer';
 import {UserContactChangeLogService} from '@app/api/user/services/UserContactChangeLogService';
 import {awaitAll} from '@app/api/utils/ConcurrencyUtils';
 import {UserPermissionUtils} from '@app/api/utils/UserPermissionUtils';
+import {VoiceP2pConnectionReportRepository} from '@app/api/voice/VoiceP2pConnectionReportRepository';
 import {VoiceRepository} from '@app/api/voice/VoiceRepository';
 import {VoiceSeatRepository} from '@app/api/voice_seat/VoiceSeatRepository';
 import {VoiceSeatService} from '@app/api/voice_seat/VoiceSeatService';
@@ -177,7 +174,6 @@ import {WebhookRepository} from '@app/api/webhook/WebhookRepository';
 import type {InstanceBranding} from '@fluxer/schema/src/domains/instance/InstanceSchemas';
 import type {ICacheService} from '@pkgs/cache/src/ICacheService';
 import {KVCacheProvider} from '@pkgs/cache/src/providers/KVCacheProvider';
-import {EmailI18nService} from '@pkgs/email/src/EmailI18nService';
 import type {EmailConfig, UserBouncedEmailChecker} from '@pkgs/email/src/EmailProviderTypes';
 import {EmailService} from '@pkgs/email/src/EmailService';
 import type {IEmailService} from '@pkgs/email/src/IEmailService';
@@ -197,6 +193,7 @@ export const getReadStateRepository = singleton(() => new ReadStateRepository())
 export const getFavoriteMemeRepository = singleton(() => new FavoriteMemeRepository());
 export const getConnectionRepository = singleton(() => new ConnectionRepository());
 export const getReportRepository = singleton(() => new ReportRepository());
+export const getVoiceP2pConnectionReportRepository = singleton(() => new VoiceP2pConnectionReportRepository());
 export const getAdminRepository = singleton(() => new AdminRepository());
 export const getAdminArchiveRepository = singleton(() => new AdminArchiveRepository());
 export const getVoiceRepository = singleton(() => new VoiceRepository());
@@ -263,35 +260,13 @@ export async function shutdownInstanceConfigRepository(): Promise<void> {
 	await instanceConfigRepositoryInstance?.shutdown();
 }
 
-export const getGatewayRolloutConfigPublisher = singleton(
+export const getNatsConfigPublisher = singleton(
 	() =>
-		new GatewayRolloutConfigPublisher(
+		new NatsConfigPublisher(
 			new NatsConnectionManager({
 				url: Config.nats.coreUrl,
 				token: Config.nats.authToken || undefined,
-				name: 'fluxer-api-gateway-rollout-config',
-			}),
-		),
-);
-
-export const getPushRelayConfigPublisher = singleton(
-	() =>
-		new PushRelayConfigPublisher(
-			new NatsConnectionManager({
-				url: Config.nats.coreUrl,
-				token: Config.nats.authToken || undefined,
-				name: 'fluxer-api-push-relay-config',
-			}),
-		),
-);
-
-export const getChannelThreadsConfigPublisher = singleton(
-	() =>
-		new ChannelThreadsConfigPublisher(
-			new NatsConnectionManager({
-				url: Config.nats.coreUrl,
-				token: Config.nats.authToken || undefined,
-				name: 'fluxer-api-channel-threads-config',
+				name: 'fluxer-api-config',
 			}),
 		),
 );
@@ -319,17 +294,24 @@ export const getEmailDnsValidationService = singleton(() => new EmailDnsValidati
 
 function createEmailServiceForConfig(
 	emailConfigSource: APIConfig['email'],
+	legalUrls: LegalUrls,
+	contactEmails: ContactEmails,
+	productName: string,
 	bouncedEmailChecker: UserBouncedEmailChecker,
-	emailI18n: EmailI18nService,
 	branding: InstanceBranding | null,
 ): IEmailService {
 	const emailConfig: EmailConfig = {
 		enabled: emailConfigSource.enabled,
 		fromEmail: emailConfigSource.fromEmail,
-		fromName: emailConfigSource.fromName,
+		fromName: emailConfigSource.fromName.trim() || productName,
 		replyTo: emailConfigSource.replyToEmail || null,
 		appBaseUrl: emailConfigSource.appBaseUrl,
-		marketingBaseUrl: Config.endpoints.marketing,
+		termsUrl: legalUrls.termsUrl,
+		guidelinesUrl: legalUrls.guidelinesUrl,
+		appealsEmail: contactEmails.appealsEmail,
+		safetyEmail: contactEmails.safetyEmail,
+		supportEmail: contactEmails.supportEmail,
+		productName,
 		html: branding && {
 			productName: branding.product_name,
 			logoUrl: branding.icon_url ?? branding.logo_url,
@@ -337,23 +319,29 @@ function createEmailServiceForConfig(
 			footer: emailConfigSource.htmlFooter,
 		},
 	};
-	return new EmailService(emailConfig, emailI18n, createEmailProvider(emailConfigSource), bouncedEmailChecker);
+	return new EmailService(emailConfig, createEmailProvider(emailConfigSource), bouncedEmailChecker);
 }
 
 export function createRuntimeEmailService(
 	bouncedEmailChecker: UserBouncedEmailChecker,
 	getRepository: () => InstanceConfigRepository = getInstanceConfigRepository,
 ): IEmailService {
-	const emailI18n = new EmailI18nService();
 	return new Proxy({} as IEmailService, {
 		get(_target, property) {
 			return async (...args: Array<unknown>): Promise<boolean> => {
 				const instanceConfigRepository = getRepository();
-				const emailConfig = await instanceConfigRepository.getEffectiveEmailConfig();
-				const branding = emailConfig.htmlEnabled
-					? (await instanceConfigRepository.getAppPublicConfig()).branding
-					: null;
-				const delegate = createEmailServiceForConfig(emailConfig, bouncedEmailChecker, emailI18n, branding);
+				const [emailConfig, appPublic] = await Promise.all([
+					instanceConfigRepository.getEffectiveEmailConfig(),
+					instanceConfigRepository.getAppPublicConfig(),
+				]);
+				const delegate = createEmailServiceForConfig(
+					emailConfig,
+					resolveLegalUrls(appPublic.legal),
+					resolveContactEmails(),
+					getInstanceProductName(),
+					bouncedEmailChecker,
+					emailConfig.htmlEnabled ? appPublic.branding : null,
+				);
 				const method = delegate[property as keyof IEmailService];
 				if (typeof method !== 'function') {
 					throw new Error(`Unknown email service method: ${String(property)}`);
@@ -418,8 +406,7 @@ let threadAutoArchiveQueue: KVThreadAutoArchiveQueueService | null = null;
 export function getKVThreadAutoArchiveQueue(): KVThreadAutoArchiveQueueService {
 	const kvClient = getKVClient();
 	if (!threadAutoArchiveQueue || threadAutoArchiveQueueClient !== kvClient) {
-		const channels = getChannelRepository();
-		threadAutoArchiveQueue = new KVThreadAutoArchiveQueueService(kvClient, channels.threads, channels.channelData);
+		threadAutoArchiveQueue = new KVThreadAutoArchiveQueueService(kvClient);
 		threadAutoArchiveQueueClient = kvClient;
 	}
 	return threadAutoArchiveQueue;
@@ -525,7 +512,7 @@ export function getKVCounterService(): KVCounterService {
  * removals of the same member (kick + kick, ban + leave, repeated leaves) count once.
  */
 export async function removeGuildMemberCounted(
-	guildRepository: Pick<IGuildMemberRepository, 'getMember' | 'deleteMember'>,
+	guildRepository: Pick<GuildRepository, 'getMember' | 'deleteMember'>,
 	guildId: GuildID,
 	userId: UserID,
 ): Promise<boolean> {
@@ -562,55 +549,13 @@ export function getKVAccountDeletionQueue(): KVAccountDeletionQueueService {
 }
 
 export const getThemeService = singleton(() => new ThemeService(getStorageService()));
-const getNcmecReporter = singleton(() => new NcmecReporter({config: createNcmecApiConfig(), fetch}));
-const getNcmecRepository = singleton(() => new NcmecRepository());
 export const getAttachmentUploadTraceRepository = singleton(() => new AttachmentUploadTraceRepository());
-export const getNcmecSubmissionService = singleton(
-	() =>
-		new NcmecSubmissionService({
-			reportRepository: getReportRepository(),
-			ncmecApi: getNcmecReporter(),
-			ncmecRepository: getNcmecRepository(),
-			attachmentUploadTraceRepository: getAttachmentUploadTraceRepository(),
-			storageService: getStorageService(),
-			channelRepository: getChannelRepository(),
-			userRepository: getUserRepository(),
-			guildRepository: getGuildRepository(),
-			gatewayService: getGatewayService(),
-			userCacheService: createUserCacheService(),
-			adminArchiveService: new AdminArchiveService(
-				getAdminArchiveRepository(),
-				getUserRepository(),
-				getGuildRepository(),
-				getStorageService(),
-				getSnowflakeService(),
-				getWorkerService(),
-			),
-			adminAuditService: new AdminAuditService(getAdminRepository(), getSnowflakeService(), {
-				userRepository: getUserRepository(),
-				guildRepository: getGuildRepository(),
-				channelRepository: getChannelRepository(),
-			}),
-			purgeQueue: getPurgeQueue(),
-			workerService: getWorkerService(),
-			deletionQueue: getKVAccountDeletionQueue(),
-			feedPostService: getFeedPostService(),
-		}),
-);
-
-let _virusScanInitPromise: Promise<void> | null = null;
 
 export const getVirusScanServiceInstance: () => IVirusScanService = singleton(() => {
 	const VirusScanServiceClass = Config.clamav.enabled ? VirusScanService : DisabledVirusScanService;
 	const service = new VirusScanServiceClass(getCacheService());
-	_virusScanInitPromise = service.initialize();
 	return service;
 });
-
-export async function ensureVirusScanInitialized(): Promise<void> {
-	getVirusScanServiceInstance();
-	await _virusScanInitPromise;
-}
 
 export const getEmailService: () => IEmailService = singleton(() => {
 	if (Config.dev.testModeEnabled) return new TestEmailService();
@@ -651,7 +596,7 @@ export function getUnfurlerService(): IUnfurlerService {
 }
 
 export const getEmbedService = singleton(
-	() => new EmbedService(getChannelRepository(), getUnfurlerService(), getMediaService(), getWorkerService()),
+	() => new EmbedService(getUnfurlerService(), getMediaService(), getWorkerService()),
 );
 export const getReadStateService = singleton(() => new ReadStateService(getReadStateRepository(), getGatewayService()));
 export const getDiscriminatorService = singleton(
@@ -663,9 +608,7 @@ export const getBotMfaMirrorService = singleton(
 );
 export const getGifService = singleton(() => {
 	const instanceConfigRepository = getInstanceConfigRepository();
-	return new GifService(
-		createNatsGifProvider(async () => (await instanceConfigRepository.getEffectiveGifConfig()).klipy_api_key),
-	);
+	return createNatsGifProvider(async () => (await instanceConfigRepository.getEffectiveGifConfig()).klipy_api_key);
 });
 export const getGuildAuditLogService = singleton(
 	() => new GuildAuditLogService(getGuildRepository(), getSnowflakeService(), getWorkerService(), getGatewayService()),
@@ -1130,6 +1073,11 @@ export async function initializeServiceSingletons(): Promise<void> {
 			assertServiceSingletonInitializationActive(owner);
 			await getInstanceConfigRepository().ensureAccountIdentityMode();
 			assertServiceSingletonInitializationActive(owner);
+			await ensureSetupToken(
+				getInstanceConfigRepository(),
+				async (userId) => (await getUserRepository().findUnique(userId)) !== null,
+			);
+			assertServiceSingletonInitializationActive(owner);
 			await limitConfigService.initialize();
 			assertServiceSingletonInitializationActive(owner);
 			limitConfigService.setAsGlobalInstance();
@@ -1200,7 +1148,6 @@ export function resetServiceSingletonsForTesting(): void {
 	});
 	activityTracker?.shutdown();
 	clearSingletonsForTesting();
-	_virusScanInitPromise = null;
 	bulkMessageDeletionQueue = null;
 	bulkMessageDeletionQueueClient = null;
 	premiumStateQueue = null;

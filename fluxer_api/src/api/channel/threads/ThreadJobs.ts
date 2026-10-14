@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {ChannelID, GuildID, UserID} from '@app/api/BrandedTypes';
-import {getCompiledChannelThreadsConfig} from '@app/api/experiment/ChannelThreadsGate';
 import {Logger} from '@app/api/Logger';
 
 const REPAIR_DEBOUNCE_MS = 30_000;
@@ -25,14 +24,6 @@ export async function enqueueRemoveThreadMemberships(guildId: GuildID, userId: U
 		'removeThreadMembershipsForGuildMember',
 		{guildId: guildId.toString(), userId: userId.toString()},
 		{jobKey: `remove-thread-memberships-${guildId}-${userId}`},
-	);
-}
-
-export async function enqueueRebuildThreadAutoArchiveQueue(guildId: string): Promise<void> {
-	await (await workerService()).addJob(
-		'rebuildThreadAutoArchiveQueue',
-		{guildId, configVersion: getCompiledChannelThreadsConfig().config.config_version},
-		{jobKey: `rebuild-thread-archive-queue-${guildId}`},
 	);
 }
 
@@ -68,7 +59,7 @@ export function enqueueThreadSearchSync(threadId: ChannelID, opts: {activity?: b
 export async function enqueueThreadSearchBackfill(guildId: string): Promise<void> {
 	await (await workerService()).addJob(
 		'backfillThreadSearch',
-		{guildId, configVersion: getCompiledChannelThreadsConfig().config.config_version},
+		{guildId},
 		{jobKey: `backfill-thread-search-${guildId}`},
 	);
 }

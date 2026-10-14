@@ -2,7 +2,7 @@
 
 import {useHoverPreload} from '@app/features/app/hooks/useHoverPreload';
 import type {Channel} from '@app/features/channel/models/Channel';
-import GatewayConnection from '@app/features/gateway/transport/GatewayConnection';
+import GatewaySessions from '@app/features/gateway/transport/GatewaySessionPool';
 import type {Guild} from '@app/features/guild/models/Guild';
 import {ensureMembersForMessages} from '@app/features/messaging/commands/MessageCommands';
 import Messages from '@app/features/messaging/state/MessagingMessages';
@@ -18,10 +18,9 @@ interface UseChannelHoverPreloadOptions {
 	defaultHiddenForChannel?: boolean;
 	enabled?: boolean;
 	preloadMemberList?: boolean;
-	preloadMessages?: boolean;
 }
 
-export function ensureMembersForCachedChannelMessages(channelId: string): void {
+function ensureMembersForCachedChannelMessages(channelId: string): void {
 	const messages = Messages.getCachedMessages(channelId);
 	if (!messages || messages.length === 0) {
 		return;
@@ -29,12 +28,7 @@ export function ensureMembersForCachedChannelMessages(channelId: string): void {
 	void ensureMembersForMessages(messages.toArray());
 }
 
-export function useChannelHoverPreload({
-	channel,
-	guild = null,
-	enabled = true,
-	preloadMessages = true,
-}: UseChannelHoverPreloadOptions): {
+export function useChannelHoverPreload({channel, guild = null, enabled = true}: UseChannelHoverPreloadOptions): {
 	scheduleChannelPreload: () => void;
 	cancelChannelPreload: () => void;
 	preloadChannelNow: () => void;
@@ -42,7 +36,7 @@ export function useChannelHoverPreload({
 	const preload = useCallback(() => {
 		if (
 			!enabled ||
-			!GatewayConnection.isConnected ||
+			!GatewaySessions.foregroundConnection.isConnected ||
 			!channel ||
 			channel.type === ChannelTypes.GUILD_CATEGORY ||
 			channel.type === ChannelTypes.GUILD_LINK
@@ -52,12 +46,10 @@ export function useChannelHoverPreload({
 		if (channel.isThreadOnly() || (channel.isThread() && !ThreadGuilds.isActive(channel.guildId))) {
 			return;
 		}
-		if (preloadMessages) {
-			if (!Messages.preloadLatestPage(channel.id, guild?.id ?? channel.guildId ?? null)) {
-				ensureMembersForCachedChannelMessages(channel.id);
-			}
+		if (!Messages.preloadLatestPage(channel.id, guild?.id ?? channel.guildId ?? null)) {
+			ensureMembersForCachedChannelMessages(channel.id);
 		}
-	}, [channel, enabled, guild, preloadMessages]);
+	}, [channel, enabled, guild]);
 	const {schedule, cancel, preloadNow} = useHoverPreload(
 		'channel',
 		preload,

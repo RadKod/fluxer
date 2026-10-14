@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 pub mod bluesky;
-mod default_helpers;
+pub(crate) mod default_helpers;
 pub mod default_resolver;
 pub mod fxtwitter;
 pub mod hacker_news;
@@ -18,7 +18,6 @@ use std::future::Future;
 use std::pin::Pin;
 use url::Url;
 
-#[allow(dead_code)]
 pub struct ResolveContext<'mp> {
     pub url: Url,
     pub original_url: Url,

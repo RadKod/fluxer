@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {
+	BASE64_IMAGE_MAX_SIZE,
+	MAX_BIO_LENGTH,
+	MAX_SCREEN_SHARE_BITRATE_CEILING,
+	MIN_SCREEN_SHARE_BITRATE_CEILING,
+} from '@fluxer/constants/src/LimitConstants';
+
 export const LIMIT_KEYS = [
 	'avatar_max_size',
 	'emoji_max_size',
@@ -60,6 +67,7 @@ export const LIMIT_KEYS = [
 	'max_private_channels_per_user',
 	'max_reactions_per_message',
 	'max_relationships',
+	'max_screen_share_bitrate',
 	'max_users_per_message_reaction',
 	'max_voice_message_duration',
 	'max_webhooks_per_channel',
@@ -130,6 +138,7 @@ export const LIMIT_KEY_SCOPES: Record<LimitKey, LimitScope> = {
 	max_private_channels_per_user: 'user',
 	max_reactions_per_message: 'guild',
 	max_relationships: 'user',
+	max_screen_share_bitrate: 'user',
 	max_users_per_message_reaction: 'guild',
 	max_voice_message_duration: 'both',
 	max_webhooks_per_channel: 'guild',
@@ -137,7 +146,7 @@ export const LIMIT_KEY_SCOPES: Record<LimitKey, LimitScope> = {
 	sticker_max_size: 'guild',
 };
 
-type LimitCategory = 'messages' | 'guilds' | 'channels' | 'expressions' | 'files' | 'social' | 'features';
+type LimitCategory = 'messages' | 'guilds' | 'channels' | 'expressions' | 'files' | 'social' | 'media' | 'features';
 
 interface LimitKeyMetadata {
 	key: LimitKey;
@@ -146,7 +155,7 @@ interface LimitKeyMetadata {
 	category: LimitCategory;
 	scope: LimitScope;
 	isToggle: boolean;
-	unit?: 'bytes' | 'count';
+	unit?: 'bytes' | 'count' | 'bps';
 	min?: number;
 	max?: number;
 }
@@ -158,6 +167,7 @@ export const LIMIT_CATEGORY_LABELS: Record<LimitCategory, string> = {
 	expressions: 'Expressions & Stickers',
 	files: 'Files & Attachments',
 	social: 'Social & Private',
+	media: 'Voice & Video',
 	features: 'Feature Toggles',
 };
 export const LIMIT_KEY_METADATA: Record<LimitKey, LimitKeyMetadata> = {
@@ -366,6 +376,8 @@ export const LIMIT_KEY_METADATA: Record<LimitKey, LimitKeyMetadata> = {
 		scope: 'guild',
 		isToggle: false,
 		unit: 'bytes',
+		min: 1,
+		max: BASE64_IMAGE_MAX_SIZE,
 	},
 	sticker_max_size: {
 		key: 'sticker_max_size',
@@ -375,6 +387,8 @@ export const LIMIT_KEY_METADATA: Record<LimitKey, LimitKeyMetadata> = {
 		scope: 'guild',
 		isToggle: false,
 		unit: 'bytes',
+		min: 1,
+		max: BASE64_IMAGE_MAX_SIZE,
 	},
 	max_attachment_file_size: {
 		key: 'max_attachment_file_size',
@@ -393,6 +407,8 @@ export const LIMIT_KEY_METADATA: Record<LimitKey, LimitKeyMetadata> = {
 		scope: 'user',
 		isToggle: false,
 		unit: 'bytes',
+		min: 1,
+		max: BASE64_IMAGE_MAX_SIZE,
 	},
 	max_custom_backgrounds: {
 		key: 'max_custom_backgrounds',
@@ -447,6 +463,8 @@ export const LIMIT_KEY_METADATA: Record<LimitKey, LimitKeyMetadata> = {
 		scope: 'user',
 		isToggle: false,
 		unit: 'count',
+		min: 0,
+		max: MAX_BIO_LENGTH,
 	},
 	max_bookmarks: {
 		key: 'max_bookmarks',
@@ -550,6 +568,17 @@ export const LIMIT_KEY_METADATA: Record<LimitKey, LimitKeyMetadata> = {
 		scope: 'user',
 		isToggle: false,
 		unit: 'count',
+	},
+	max_screen_share_bitrate: {
+		key: 'max_screen_share_bitrate',
+		label: 'Max Screen Share Bitrate',
+		description: 'Highest video bitrate a screen share can send, in bits per second',
+		category: 'media',
+		scope: 'user',
+		isToggle: false,
+		unit: 'bps',
+		min: MIN_SCREEN_SHARE_BITRATE_CEILING,
+		max: MAX_SCREEN_SHARE_BITRATE_CEILING,
 	},
 	feature_animated_avatar: {
 		key: 'feature_animated_avatar',

@@ -39,7 +39,12 @@ import {
 	SkeletonGuildRailItemIndicator,
 	SkeletonGuildRailItemKind,
 } from '@app/features/app/components/skeleton/SkeletonLayoutMemory';
-import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
+import {
+	skeletonDirectMessagesDisabled,
+	skeletonGifEnabled,
+	skeletonSelfHosted,
+	skeletonSingleCommunityEnabled,
+} from '@app/features/app/components/skeleton/SkeletonRuntimeConfig';
 import {AppStorageKey} from '@app/features/platform/state/AppStorageKeys';
 import {
 	GATEWAY_PREBOOT_SESSION_STORAGE_KEY,
@@ -51,6 +56,7 @@ import {Platform} from '@app/features/platform/types/Platform';
 import SidebarWidth from '@app/features/ui/state/SidebarWidth';
 import VoiceCallFullscreen from '@app/features/voice/state/VoiceCallFullscreen';
 import Window from '@app/features/window/state/Window';
+import {GATEWAY_PREBOOT_SESSION_PRESENT} from '@fluxer/desktop_ipc/src/StorageContract';
 
 export const SHELL_HINT_VERSION = 4;
 
@@ -64,7 +70,6 @@ export const SHELL_HINT_CHANNEL_KIND_CODES: Readonly<Record<ChatSkeletonChannelK
 	[ChatSkeletonChannelKind.PERSONAL_NOTES]: 4,
 });
 
-const GATEWAY_PREBOOT_SESSION_PRESENT = '1';
 const MAX_PATHNAME_LENGTH = 256;
 const MAX_ACCOUNT_KEY_LENGTH = 256;
 const MAX_CHANNEL_ID_LENGTH = 32;
@@ -162,7 +167,7 @@ interface RailProjection {
 }
 
 function resolveRailProjection(layout: RememberedSkeletonGuildRailLayout | null): RailProjection {
-	const communityActionsAvailable = !RuntimeConfig.singleCommunityEnabled;
+	const communityActionsAvailable = !skeletonSingleCommunityEnabled();
 	const inlineDmRowCount = layout?.inlineDmRowCount ?? 0;
 	const rememberedUnread = layout?.inlineDmUnreadFlags ?? [];
 	const inlineDmUnreadFlags = Array.from(
@@ -170,7 +175,7 @@ function resolveRailProjection(layout: RememberedSkeletonGuildRailLayout | null)
 		(_unused, index) => rememberedUnread[index] === true,
 	);
 	return {
-		fluxerVisible: layout?.fluxerVisible ?? !RuntimeConfig.directMessagesDisabled,
+		fluxerVisible: layout?.fluxerVisible ?? !skeletonDirectMessagesDisabled(),
 		favoritesVisible: layout?.favoritesVisible ?? true,
 		inlineDmUnreadFlags,
 		selectedInlineDmRowIndex: layout?.selectedInlineDmRowIndex ?? NO_SELECTED_ROW_INDEX,
@@ -245,7 +250,7 @@ function resolveDMActionMask(layout: RememberedSkeletonDMSidebarLayout | null, m
 	if (layout?.personalNotesVisible ?? true) {
 		mask |= DM_ACTION_PERSONAL_NOTES_BIT;
 	}
-	if (layout?.premiumVisible ?? (!RuntimeConfig.isSelfHosted() && !mobile)) {
+	if (layout?.premiumVisible ?? (!skeletonSelfHosted() && !mobile)) {
 		mask |= DM_ACTION_PREMIUM_BIT;
 	}
 	return mask;
@@ -297,7 +302,7 @@ export function writeShellHint(): void {
 		const isChat = shell.content.kind === 'chat';
 		const chat = resolveChatSkeletonPresentation(pathname, !mobile && viewportWidth >= MEMBER_LIST_FIT_MIN_WIDTH_PX);
 		const composer =
-			getRememberedSkeletonComposerLayout() ?? resolveDefaultSkeletonComposerLayout(RuntimeConfig.gifEnabled);
+			getRememberedSkeletonComposerLayout() ?? resolveDefaultSkeletonComposerLayout(skeletonGifEnabled());
 		const message = getRememberedSkeletonMessagePresentation() ?? resolveDefaultSkeletonMessagePresentation();
 		const voice = getRememberedSkeletonVoicePresence() ?? SKELETON_DEFAULT_VOICE_PRESENCE;
 		const showMemberList = isChat && chat.showMemberList;

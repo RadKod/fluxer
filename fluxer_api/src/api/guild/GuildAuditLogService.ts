@@ -9,7 +9,7 @@ import {
 	THREAD_SCOPED_AUDIT_OPTION,
 } from '@app/api/guild/GuildAuditLogEntryMapper';
 import type {AuditLogChange, GuildAuditLogChange} from '@app/api/guild/GuildAuditLogTypes';
-import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {ISnowflakeService} from '@app/api/infrastructure/ISnowflakeService';
 import {Logger} from '@app/api/Logger';
@@ -60,8 +60,52 @@ function normalizeAuditLogMetadata(metadata?: CreateGuildAuditLogParams['metadat
 }
 
 export class GuildAuditLogService {
+	async record(params: {
+		guildId: GuildID;
+		userId: UserID;
+		action: AuditLogActionType;
+		targetId?: bigint | string | null;
+		auditLogReason?: string | null;
+		metadata?: Map<string, string> | Record<string, string>;
+		changes?: GuildAuditLogChange | null;
+		createdAt?: Date;
+	}): Promise<void> {
+		const targetId =
+			params.targetId === undefined || params.targetId === null
+				? null
+				: typeof params.targetId === 'string'
+					? params.targetId
+					: params.targetId.toString();
+		try {
+			const builder = this.createBuilder(params.guildId, params.userId)
+				.withAction(params.action, targetId)
+				.withReason(params.auditLogReason ?? null);
+			if (params.metadata) {
+				builder.withMetadata(params.metadata);
+			}
+			if (params.changes) {
+				builder.withChanges(params.changes);
+			}
+			if (params.createdAt) {
+				builder.withCreatedAt(params.createdAt);
+			}
+			await builder.commit();
+		} catch (error) {
+			Logger.error(
+				{
+					error,
+					guildId: params.guildId.toString(),
+					userId: params.userId.toString(),
+					action: params.action,
+					targetId,
+				},
+				'Failed to record guild audit log',
+			);
+		}
+	}
+
 	constructor(
-		private readonly guildRepository: IGuildRepositoryAggregate,
+		private readonly guildRepository: GuildRepository,
 		private readonly snowflakeService: ISnowflakeService,
 		private readonly workerService: IWorkerService<WorkerTaskName>,
 		private readonly gatewayService: IGatewayService,
@@ -343,27 +387,6 @@ export class GuildAuditLogService {
 		return changes;
 	}
 
-	computeArrayChange<T>(
-		previous: Array<T> | null | undefined,
-		next: Array<T> | null | undefined,
-		key: string,
-	): AuditLogChange | null {
-		if (!previous?.length && !next?.length) {
-			return null;
-		}
-		if (!this.areArraysEqual(previous, next)) {
-			const change: AuditLogChange = {key};
-			if (previous !== undefined && previous !== null) {
-				change.old_value = previous;
-			}
-			if (next !== undefined && next !== null) {
-				change.new_value = next;
-			}
-			return change;
-		}
-		return null;
-	}
-
 	private areValuesEqual(a: unknown, b: unknown): boolean {
 		if (a === b) return true;
 		if (a == null || b == null) return false;
@@ -372,13 +395,6 @@ export class GuildAuditLogService {
 			return JSON.stringify(a) === JSON.stringify(b);
 		}
 		return false;
-	}
-
-	private areArraysEqual(a: Array<unknown> | null | undefined, b: Array<unknown> | null | undefined): boolean {
-		if (a === b) return true;
-		if (!a || !b) return false;
-		if (a.length !== b.length) return false;
-		return JSON.stringify(a) === JSON.stringify(b);
 	}
 
 	private async dispatchAuditLogEntryCreate(log: GuildAuditLog, threadScoped = false): Promise<void> {
@@ -434,24 +450,8 @@ class GuildAuditLogBuilder {
 		return this;
 	}
 
-	withMetadataEntry(key: string, value: string): this {
-		if (!this.metadataMap) {
-			this.metadataMap = new Map();
-		}
-		this.metadataMap.set(key, value);
-		return this;
-	}
-
 	withChanges(changes: GuildAuditLogChange | null): this {
 		this.params.changes = changes;
-		return this;
-	}
-
-	withComputedChanges(
-		previous: Record<string, unknown> | null | undefined,
-		next: Record<string, unknown> | null | undefined,
-	): this {
-		this.params.changes = this.service.computeChanges(previous, next);
 		return this;
 	}
 

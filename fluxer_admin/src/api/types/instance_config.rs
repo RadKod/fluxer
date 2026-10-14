@@ -29,11 +29,9 @@ pub struct InstanceConfigResponse {
     #[serde(default)]
     pub domain_migration: DomainMigrationConfigResponse,
     #[serde(default)]
-    pub plutonium_page: PlutoniumPageConfigResponse,
+    pub voice_p2p: VoiceP2pConfigResponse,
     #[serde(default)]
     pub captcha: CaptchaConfigResponse,
-    #[serde(default)]
-    pub channel_threads: ChannelThreadsConfigResponse,
     #[serde(default)]
     pub experiment_delivery: ExperimentDeliveryConfigResponse,
     #[serde(default)]
@@ -237,7 +235,8 @@ pub struct InstanceEmailSmtpIntegrationResponse {
     pub username: Option<String>,
     #[serde(default)]
     pub password_set: bool,
-    pub secure: Option<bool>,
+    pub tls_mode: Option<String>,
+    pub effective_tls_mode: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -428,6 +427,8 @@ pub struct AppLegalConfigResponse {
     pub terms_url: Option<String>,
     pub privacy_url: Option<String>,
     pub source_url: Option<String>,
+    #[serde(default)]
+    pub guidelines_url: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -517,12 +518,12 @@ impl VoiceE2eeScope {
 }
 
 pub const EXPERIMENT_MAX_TARGETED_USERS: usize = 1_000;
+pub const EXPERIMENT_MAX_ROLLOUT_COUNTRY_CODES: usize = 250;
 pub const DOMAIN_MIGRATION_DEFAULT_SALT: &str = "domain-migration-v1";
-pub const PLUTONIUM_PAGE_DEFAULT_SALT: &str = "plutonium-page-v1";
+pub const VOICE_P2P_DEFAULT_SALT: &str = "voice-p2p-v1";
+pub const VOICE_P2P_MAX_PARTICIPANTS_RANGE: std::ops::RangeInclusive<u32> = 2..=4;
 pub const CAPTCHA_COST_RANGE: std::ops::RangeInclusive<u32> = 1_000..=20_000;
 pub const CAPTCHA_MAX_COUNTER_RANGE: std::ops::RangeInclusive<u32> = 100..=20_000;
-pub const CHANNEL_THREADS_DEFAULT_GUILD_SALT: &str = "channel-threads-guild-v1";
-pub const CHANNEL_THREADS_DEFAULT_USER_SALT: &str = "channel-threads-user-v1";
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
@@ -544,6 +545,7 @@ pub struct DomainMigrationConfigResponse {
     pub enabled: bool,
     pub config_version: u64,
     pub rollout_basis_points: u32,
+    pub rollout_country_codes: Vec<String>,
     pub rollout_salt: String,
     pub included_user_ids: Vec<String>,
     pub included_guild_ids: Vec<String>,
@@ -559,6 +561,7 @@ impl Default for DomainMigrationConfigResponse {
             enabled: false,
             config_version: 0,
             rollout_basis_points: 0,
+            rollout_country_codes: Vec::new(),
             rollout_salt: DOMAIN_MIGRATION_DEFAULT_SALT.to_owned(),
             included_user_ids: Vec::new(),
             included_guild_ids: Vec::new(),
@@ -577,6 +580,8 @@ pub struct DomainMigrationConfigUpdateRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rollout_basis_points: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub rollout_country_codes: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub rollout_salt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub included_user_ids: Option<Vec<String>>,
@@ -594,38 +599,44 @@ pub struct DomainMigrationConfigUpdateRequest {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
-pub struct PlutoniumPageConfigResponse {
+pub struct VoiceP2pConfigResponse {
     pub enabled: bool,
     pub config_version: u64,
     pub rollout_basis_points: u32,
+    pub rollout_country_codes: Vec<String>,
     pub rollout_salt: String,
     pub included_user_ids: Vec<String>,
     pub included_guild_ids: Vec<String>,
     pub include_premium_users: bool,
     pub excluded_user_ids: Vec<String>,
+    pub max_participants: u32,
 }
 
-impl Default for PlutoniumPageConfigResponse {
+impl Default for VoiceP2pConfigResponse {
     fn default() -> Self {
         Self {
             enabled: false,
             config_version: 0,
             rollout_basis_points: 0,
-            rollout_salt: PLUTONIUM_PAGE_DEFAULT_SALT.to_owned(),
+            rollout_country_codes: Vec::new(),
+            rollout_salt: VOICE_P2P_DEFAULT_SALT.to_owned(),
             included_user_ids: Vec::new(),
             included_guild_ids: Vec::new(),
             include_premium_users: false,
             excluded_user_ids: Vec::new(),
+            max_participants: *VOICE_P2P_MAX_PARTICIPANTS_RANGE.start(),
         }
     }
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
-pub struct PlutoniumPageConfigUpdateRequest {
+pub struct VoiceP2pConfigUpdateRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rollout_basis_points: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rollout_country_codes: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rollout_salt: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -636,6 +647,8 @@ pub struct PlutoniumPageConfigUpdateRequest {
     pub include_premium_users: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub excluded_user_ids: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_participants: Option<u32>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -664,62 +677,6 @@ pub struct CaptchaConfigUpdateRequest {
     pub cost: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_counter: Option<u32>,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(default)]
-pub struct ChannelThreadsConfigResponse {
-    pub enabled: bool,
-    pub config_version: u64,
-    pub ever_enabled: bool,
-    pub guild_basis_points: u32,
-    pub guild_salt: String,
-    pub enabled_guild_ids: Vec<String>,
-    pub disabled_guild_ids: Vec<String>,
-    pub user_basis_points: u32,
-    pub user_salt: String,
-    pub included_user_ids: Vec<String>,
-    pub excluded_user_ids: Vec<String>,
-}
-
-impl Default for ChannelThreadsConfigResponse {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            config_version: 0,
-            ever_enabled: false,
-            guild_basis_points: 0,
-            guild_salt: CHANNEL_THREADS_DEFAULT_GUILD_SALT.to_owned(),
-            enabled_guild_ids: Vec::new(),
-            disabled_guild_ids: Vec::new(),
-            user_basis_points: 0,
-            user_salt: CHANNEL_THREADS_DEFAULT_USER_SALT.to_owned(),
-            included_user_ids: Vec::new(),
-            excluded_user_ids: Vec::new(),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default, Serialize)]
-pub struct ChannelThreadsConfigUpdateRequest {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub enabled: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub guild_basis_points: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub guild_salt: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub enabled_guild_ids: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub disabled_guild_ids: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub user_basis_points: Option<u32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub user_salt: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub included_user_ids: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub excluded_user_ids: Option<Vec<String>>,
 }
 
 pub const VOICE_NS_MAX_GUILD_OVERRIDES: usize = 200;
@@ -900,8 +857,6 @@ pub struct InstanceRegistrationResponse {
     pub admin_registration_urls_enabled: bool,
     #[serde(default)]
     pub urls: Vec<RegistrationUrlResponse>,
-    #[serde(default)]
-    pub pending_registrations: Vec<PendingRegistrationResponse>,
 }
 
 impl Default for InstanceRegistrationResponse {
@@ -910,7 +865,6 @@ impl Default for InstanceRegistrationResponse {
             mode: RegistrationMode::Open,
             admin_registration_urls_enabled: true,
             urls: Vec::new(),
-            pending_registrations: Vec::new(),
         }
     }
 }
@@ -966,6 +920,92 @@ pub struct PendingRegistrationResponse {
     pub client_ip: Option<String>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PendingRegistrationStatus {
+    Approved,
+    Rejected,
+}
+
+impl PendingRegistrationStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Approved => "approved",
+            Self::Rejected => "rejected",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct PendingRegistrationListResponse {
+    pub pending_registrations: Vec<PendingRegistrationResponse>,
+}
+
+pub const BRANDING_ASSET_MAX_IMAGE_CHARS: usize = 16_000_000;
+
+pub const BRANDING_ASSET_ACCEPT: &str = ".png,.jpeg,.webp,.gif,.apng,.avif,.heic,.heif,.jxl,.svg,\
+     image/png,image/jpeg,image/webp,image/gif,image/apng,image/avif,image/heic,image/heif,\
+     image/jxl,image/svg+xml";
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BrandingAssetKind {
+    Icon,
+    Symbol,
+    Logo,
+    Wordmark,
+    Favicon,
+}
+
+impl BrandingAssetKind {
+    pub const ALL: [Self; 5] = [
+        Self::Icon,
+        Self::Symbol,
+        Self::Logo,
+        Self::Wordmark,
+        Self::Favicon,
+    ];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Icon => "icon",
+            Self::Symbol => "symbol",
+            Self::Logo => "logo",
+            Self::Wordmark => "wordmark",
+            Self::Favicon => "favicon",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|kind| kind.as_str() == value)
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Icon => "Icon",
+            Self::Symbol => "Symbol",
+            Self::Logo => "Logo",
+            Self::Wordmark => "Wordmark",
+            Self::Favicon => "Favicon",
+        }
+    }
+
+    pub fn url(self, branding: &AppBrandingConfigResponse) -> Option<&str> {
+        match self {
+            Self::Icon => branding.icon_url.as_deref(),
+            Self::Symbol => branding.symbol_url.as_deref(),
+            Self::Logo => branding.logo_url.as_deref(),
+            Self::Wordmark => branding.wordmark_url.as_deref(),
+            Self::Favicon => branding.favicon_url.as_deref(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct BrandingAssetUploadRequest {
+    pub kind: BrandingAssetKind,
+    pub image: Option<String>,
+}
+
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct InstanceConfigUpdateRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -987,11 +1027,9 @@ pub struct InstanceConfigUpdateRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub domain_migration: Option<DomainMigrationConfigUpdateRequest>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub plutonium_page: Option<PlutoniumPageConfigUpdateRequest>,
+    pub voice_p2p: Option<VoiceP2pConfigUpdateRequest>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub captcha: Option<CaptchaConfigUpdateRequest>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub channel_threads: Option<ChannelThreadsConfigUpdateRequest>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub experiment_delivery: Option<ExperimentDeliveryConfigUpdateRequest>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1079,7 +1117,7 @@ pub struct InstanceEmailSmtpIntegrationUpdateRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub secure: Option<bool>,
+    pub tls_mode: Option<Option<String>>,
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -1132,15 +1170,6 @@ pub struct InstanceAttachmentDecayUpdateRequest {
     pub renew_threshold_days: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub renew_window_days: Option<u32>,
-}
-
-#[derive(Clone, Debug, Default, Serialize)]
-pub struct InstanceEmailSmtpTestRequest {
-    pub host: String,
-    pub port: u16,
-    pub username: String,
-    pub password: String,
-    pub secure: bool,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -1202,6 +1231,8 @@ pub struct AppLegalConfigUpdateRequest {
     pub privacy_url: Option<Option<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_url: Option<Option<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guidelines_url: Option<Option<String>>,
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -1381,24 +1412,22 @@ mod tests {
                 .expect("admin schema");
         let domain_migration = serde_json::from_value::<DomainMigrationConfigResponse>(json!({}))
             .expect("default domain migration config");
-        let plutonium_page = serde_json::from_value::<PlutoniumPageConfigResponse>(json!({}))
-            .expect("default plutonium page config");
+        let voice_p2p = serde_json::from_value::<VoiceP2pConfigResponse>(json!({}))
+            .expect("default voice p2p config");
         let captcha = serde_json::from_value::<CaptchaConfigResponse>(json!({}))
             .expect("default captcha config");
         let delivery = serde_json::from_value::<ExperimentDeliveryConfigResponse>(json!({}))
             .expect("default delivery config");
         let domain_migration =
             serde_json::to_value(domain_migration).expect("serializable domain migration config");
-        let plutonium_page =
-            serde_json::to_value(plutonium_page).expect("serializable plutonium page config");
+        let voice_p2p = serde_json::to_value(voice_p2p).expect("serializable voice p2p config");
         let captcha = serde_json::to_value(captcha).expect("serializable captcha config");
         let delivery = serde_json::to_value(delivery).expect("serializable delivery config");
         let generated_domain_migration: generated_types::DomainMigrationConfigResponse =
             serde_json::from_value(domain_migration.clone())
                 .expect("generated domain migration config contract");
-        let generated_plutonium_page: generated_types::PlutoniumPageConfigResponse =
-            serde_json::from_value(plutonium_page.clone())
-                .expect("generated plutonium page config contract");
+        let generated_voice_p2p: generated_types::VoiceP2pConfigResponse =
+            serde_json::from_value(voice_p2p.clone()).expect("generated voice p2p config contract");
         let generated_captcha: generated_types::CaptchaConfigResponse =
             serde_json::from_value(captcha.clone()).expect("generated captcha config contract");
         let generated_delivery: generated_types::ExperimentDeliveryConfigResponse =
@@ -1409,9 +1438,9 @@ mod tests {
             domain_migration
         );
         assert_eq!(
-            serde_json::to_value(generated_plutonium_page)
-                .expect("serializable generated plutonium page config"),
-            plutonium_page
+            serde_json::to_value(generated_voice_p2p)
+                .expect("serializable generated voice p2p config"),
+            voice_p2p
         );
         assert_eq!(
             serde_json::to_value(generated_captcha).expect("serializable generated captcha config"),
@@ -1434,7 +1463,7 @@ mod tests {
         );
         for (name, value) in [
             ("DomainMigrationConfigResponse", domain_migration),
-            ("PlutoniumPageConfigResponse", plutonium_page),
+            ("VoiceP2pConfigResponse", voice_p2p),
             ("CaptchaConfigResponse", captcha),
             ("ExperimentDeliveryConfigResponse", delivery),
             ("VoiceRoomConfigResponse", voice_room),
@@ -1499,21 +1528,21 @@ mod tests {
     }
 
     #[test]
-    fn plutonium_page_update_preserves_empty_lists_and_omitted_fields() {
-        let update = PlutoniumPageConfigUpdateRequest {
+    fn voice_p2p_update_preserves_empty_lists_and_omitted_fields() {
+        let update = VoiceP2pConfigUpdateRequest {
             included_user_ids: Some(Vec::new()),
             excluded_user_ids: Some(Vec::new()),
             ..Default::default()
         };
         let value = serde_json::to_value(update).expect("serializable update");
-        serde_json::from_value::<generated_types::PlutoniumPageConfigUpdateRequest>(value.clone())
+        serde_json::from_value::<generated_types::VoiceP2pConfigUpdateRequest>(value.clone())
             .expect("generated update contract");
         assert_eq!(
             value,
             json!({"included_user_ids": [], "excluded_user_ids": []})
         );
         assert_eq!(
-            serde_json::to_value(PlutoniumPageConfigUpdateRequest::default())
+            serde_json::to_value(VoiceP2pConfigUpdateRequest::default())
                 .expect("serializable update"),
             json!({})
         );

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {showGenericErrorModal} from '@app/features/app/components/alerts/GenericErrorModalCommands';
 import * as Modal from '@app/features/app/components/dialogs/Modal';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import * as GuildCommands from '@app/features/guild/commands/GuildCommands';
@@ -9,9 +10,9 @@ import {
 	ONE_HOUR_DURATION_DESCRIPTOR,
 	ONE_MONTH_DURATION_DESCRIPTOR,
 	ONE_WEEK_DURATION_DESCRIPTOR,
+	SOMETHING_WENT_WRONG_DESCRIPTOR,
 	TWELVE_HOURS_DURATION_DESCRIPTOR,
 } from '@app/features/i18n/utils/CommonMessageDescriptors';
-import {showModerationErrorModal} from '@app/features/moderation/components/alerts/ModerationErrorModalUtils';
 import styles from '@app/features/moderation/components/modals/BanMemberModal.module.css';
 import {BAN_DELETE_MESSAGE_OPTIONS} from '@app/features/moderation/constants/BanDeleteMessageOptions';
 import {BANNED_POSTER} from '@app/features/moderation/constants/BanModalMedia';
@@ -23,7 +24,7 @@ import {Combobox as FormCombobox} from '@app/features/ui/components/form/FormCom
 import {Input} from '@app/features/ui/components/form/FormInput';
 import {RadioGroup} from '@app/features/ui/radio_group/RadioGroup';
 import type {User} from '@app/features/user/models/User';
-import * as DisplayNameUtils from '@app/features/user/utils/DisplayNameUtils';
+import * as DisplayNameUtils from '@app/features/user/utils/NicknameUtils';
 import {MAX_TEMP_BAN_DURATION_SECONDS, MIN_TEMP_BAN_DURATION_SECONDS} from '@fluxer/constants/src/LimitConstants';
 import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
@@ -129,11 +130,12 @@ export const BanMemberModal: React.FC<{guildId: string; targetUser: User}> = obs
 			ModalCommands.pop();
 		} catch (error) {
 			logger.error('Failed to ban member:', error);
-			showModerationErrorModal(
-				i18n,
-				<Trans>Failed to ban member. Try again.</Trans>,
-				'moderation.ban-member-modal.ban-error-modal',
-			);
+			showGenericErrorModal({
+				title: () => i18n._(SOMETHING_WENT_WRONG_DESCRIPTOR),
+				message: <Trans>Failed to ban member. Try again.</Trans>,
+				dataFlx: 'moderation.ban-member-modal.ban-error-modal',
+				defer: false,
+			});
 		} finally {
 			setIsBanning(false);
 		}

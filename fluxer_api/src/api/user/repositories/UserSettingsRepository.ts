@@ -4,19 +4,19 @@ import type {GuildID, UserID} from '@app/api/BrandedTypes';
 import {deleteOneOrMany, executeConditional, fetchMany, fetchOne} from '@app/api/database/CassandraQueryExecution';
 import {Db} from '@app/api/database/CassandraTypes';
 import {buildPatchFromData, executeVersionedUpdate} from '@app/api/database/CassandraVersionedUpdate';
-import type {ExactRow} from '@app/api/database/types/DatabaseRowTypes';
 import type {UserGuildSettingsRow, UserSettingsRow} from '@app/api/database/types/UserTypes';
 import {USER_GUILD_SETTINGS_COLUMNS, USER_SETTINGS_COLUMNS} from '@app/api/database/types/UserTypes';
 import {Logger} from '@app/api/Logger';
 import {UserGuildSettings} from '@app/api/models/UserGuildSettings';
 import {UserSettings} from '@app/api/models/UserSettings';
 import {UserGuildSettings as UserGuildSettingsTable, UserSettings as UserSettingsTable} from '@app/api/Tables';
-import type {
-	IUserSettingsRepository,
-	UserSettingsPatchOptions,
-} from '@app/api/user/repositories/IUserSettingsRepository';
 import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
+
+export interface UserSettingsPatchOptions {
+	gameActivityPolicyChanged?: boolean;
+	expectedPolicyRevision?: bigint;
+}
 
 const FETCH_USER_SETTINGS_CQL = UserSettingsTable.selectCql({
 	where: UserSettingsTable.where.eq('user_id'),
@@ -30,7 +30,7 @@ const FETCH_ALL_USER_GUILD_SETTINGS_CQL = UserGuildSettingsTable.selectCql({
 	where: UserGuildSettingsTable.where.eq('user_id'),
 });
 
-export class UserSettingsRepository implements IUserSettingsRepository {
+export class UserSettingsRepository {
 	async deleteAllUserGuildSettings(userId: UserID): Promise<void> {
 		await deleteOneOrMany(
 			UserGuildSettingsTable.deleteCql({
@@ -75,7 +75,7 @@ export class UserSettingsRepository implements IUserSettingsRepository {
 		return settings ? new UserSettings(settings) : null;
 	}
 
-	async upsertGuildSettings(settings: ExactRow<UserGuildSettingsRow>): Promise<UserGuildSettings> {
+	async upsertGuildSettings(settings: UserGuildSettingsRow): Promise<UserGuildSettings> {
 		const userId = settings.user_id;
 		const guildId = settings.guild_id;
 		const result = await executeVersionedUpdate<UserGuildSettingsRow, 'user_id' | 'guild_id'>(
@@ -98,7 +98,7 @@ export class UserSettingsRepository implements IUserSettingsRepository {
 		return new UserGuildSettings({...settings, version: result.finalVersion ?? 1});
 	}
 
-	async upsertSettings(settings: ExactRow<UserSettingsRow>): Promise<UserSettings> {
+	async upsertSettings(settings: UserSettingsRow): Promise<UserSettings> {
 		const userId = settings.user_id;
 		const current = await this.findSettings(userId, {authoritative: true});
 		if (!current) {

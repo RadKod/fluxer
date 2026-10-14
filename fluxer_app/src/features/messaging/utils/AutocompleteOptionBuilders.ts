@@ -16,7 +16,7 @@ import {
 import type {GuildMember} from '@app/features/member/models/GuildMember';
 import type {User} from '@app/features/user/models/User';
 import Users from '@app/features/user/state/Users';
-import * as DisplayNameUtils from '@app/features/user/utils/DisplayNameUtils';
+import * as DisplayNameUtils from '@app/features/user/utils/NicknameUtils';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
 import type {I18n} from '@lingui/core';
 import {matchSorter} from 'match-sorter';
@@ -37,7 +37,7 @@ function toLowerSearchText(value: string | null | undefined): string {
 	return typeof value === 'string' ? value.toLowerCase() : '';
 }
 
-export function getMemberDisplayName(member: GuildMember): string {
+function getMemberDisplayName(member: GuildMember): string {
 	return firstDisplayText(
 		DisplayNameUtils.getUntruncatedGuildMemberNickname(member),
 		member.user.username,
@@ -45,7 +45,7 @@ export function getMemberDisplayName(member: GuildMember): string {
 	);
 }
 
-export function getUserDisplayName(user: User): string {
+function getUserDisplayName(user: User): string {
 	return DisplayNameUtils.getUntruncatedNickname(user, null);
 }
 
@@ -279,7 +279,7 @@ export function buildEmojiReactionOptions(ctx: EmojiReactionContext): Array<Auto
 	return options;
 }
 
-export interface EmojiPreferences {
+interface EmojiPreferences {
 	showDefaultEmojis: boolean;
 	showCustomEmojis: boolean;
 	showStickers: boolean;

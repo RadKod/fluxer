@@ -179,7 +179,6 @@ export class ScrollManager {
 			tolerance: BOTTOM_LOCK_TOLERANCE,
 			wasPinned: this.pinIsAtBottom,
 			hasMoreAfter: this.props.messages.hasMoreAfter,
-			allowPinWhenHasMoreAfter: false,
 		});
 	}
 
@@ -202,11 +201,6 @@ export class ScrollManager {
 			return this.props.unloadedSpacerHeight;
 		}
 		return this.props.unloadedSpacerHeight * getRemScaleForDocument(scrollerNode.ownerDocument);
-	}
-
-	pinIsAtBottomFor(state: ScrollerState = this.scrollGetState()): boolean {
-		const pinState = this.pinComputeState(state);
-		return pinState.isPinned;
 	}
 
 	layoutGetElementFromMessageId(messageId: string): HTMLElement | null {
@@ -789,18 +783,6 @@ export class ScrollManager {
 		this.scrollFixPosition(state.offsetHeight, state.scrollHeight, shouldStickToBottom);
 	}
 
-	dragHandleMouseDown = (event: React.MouseEvent): void => {
-		if (this.lifecycleIsDisposed) return;
-		if (event.target === event.currentTarget) {
-			this.dragIsActive = true;
-		}
-	};
-	dragHandleMouseUp = (): void => {
-		if (this.lifecycleIsDisposed) return;
-		this.dragIsActive = false;
-		this.scrollHandle();
-	};
-
 	scrollFixPosition(offsetHeight: number, scrollHeight: number, forceAtBottom = false): void {
 		this.cacheOffsetHeight = offsetHeight;
 		this.cacheScrollHeight = scrollHeight;
@@ -1282,18 +1264,6 @@ export class ScrollManager {
 		}
 		if (heightChanged) {
 			this.scrollFixPosition(offsetHeight, scrollHeight, shouldForceBottom);
-		}
-	}
-
-	anchorAddAutomaticListener(
-		callback: (anchor: AnchorData | null, bottom: AnchorData | null) => void,
-		immediate = true,
-	): void {
-		if (!this.anchorAutomaticListeners.includes(callback)) {
-			this.anchorAutomaticListeners.push(callback);
-		}
-		if (immediate) {
-			this.anchorSetAutomatic(this.anchorFindTopVisible());
 		}
 	}
 

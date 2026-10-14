@@ -31,6 +31,7 @@ import UserProfileStore from '@app/features/user/state/UserProfile';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import type {ProfilePreviewOverrides} from '@app/features/user/utils/ProfileDisplayUtils';
 import {type BadgeSettings, createMockProfile} from '@app/features/user/utils/ProfileUtils';
+import {YOU_CAN_T_MESSAGE_YOURSELF_DESCRIPTOR} from '@app/features/user/utils/UserMessageDescriptors';
 import {PublicUserFlags} from '@fluxer/constants/src/UserConstants';
 import type {CosmeticAssetDataResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
 import type {UserProfile} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
@@ -44,10 +45,6 @@ import {useCallback, useMemo} from 'react';
 const PROFILE_PREVIEW_PRESS_ENTER_TO_OPEN_FULL_PREVIEW_DESCRIPTOR = msg({
 	message: 'Profile preview (press Enter to open full preview)',
 	comment: 'Label in the user settings profile preview.',
-});
-const YOU_CAN_T_MESSAGE_YOURSELF_DESCRIPTOR = msg({
-	message: "You can't message yourself",
-	comment: 'Error message in the user settings profile preview.',
 });
 
 interface ProfilePreviewProps {
@@ -74,6 +71,7 @@ interface ProfilePreviewProps {
 	previewCustomStatus?: CustomStatus | null;
 	previewProfileEffect?: CosmeticAssetDataResponse | null;
 	decorationSurface?: AvatarDecorationSurface;
+	onAvatarClick?: () => void;
 }
 
 export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
@@ -101,6 +99,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 		previewCustomStatus,
 		previewProfileEffect,
 		decorationSurface = 'profile',
+		onAvatarClick,
 	}) => {
 		const {i18n} = useLingui();
 		const previewOverrides = useMemo<ProfilePreviewOverrides>(
@@ -273,7 +272,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 							avatarUrl={finalAvatarUrl}
 							hoverAvatarUrl={finalHoverAvatarUrl}
 							isClickable={true}
-							onAvatarClick={openMockProfile}
+							onAvatarClick={onAvatarClick ?? openMockProfile}
 							data-flx="user.profile.profile-preview.profile-card-banner"
 						/>
 						<ProfileCardContent data-flx="user.profile.profile-preview.profile-card-content">

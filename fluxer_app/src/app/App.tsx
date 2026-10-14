@@ -21,12 +21,14 @@ import {usePlatformClasses} from '@app/features/app/hooks/usePlatformClasses';
 import {useServiceWorkerBadge} from '@app/features/app/hooks/useServiceWorkerBadge';
 import {useTabKeyFocusGuard} from '@app/features/app/hooks/useTabKeyFocusGuard';
 import {type LayoutVariant, LayoutVariantProvider} from '@app/features/app/state/LayoutVariantContext';
+import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import RuntimeCrash from '@app/features/app/state/RuntimeCrash';
+import DeveloperOptions from '@app/features/devtools/state/DeveloperOptions';
 import {showMyselfTypingHelper} from '@app/features/devtools/utils/ShowMyselfTypingHelper';
-import GatewayConnection from '@app/features/gateway/transport/GatewayConnection';
 import GatewaySessions from '@app/features/gateway/transport/GatewaySessionPool';
 import {AppI18nProvider} from '@app/features/i18n/components/AppI18nProvider';
 import MemberSidebar from '@app/features/member/state/MemberSidebar';
+import {attachExternalLinkInterceptor} from '@app/features/messaging/utils/ExternalLinkUtils';
 import {startDeepLinkHandling} from '@app/features/navigation/utils/DeepLinkUtils';
 import {Outlet, RouterProvider} from '@app/features/platform/components/router/RouterReact';
 import SessionManager from '@app/features/platform/state/AuthSession';
@@ -41,6 +43,7 @@ import {useRemScaleTracking} from '@app/features/theme/hooks/useRemScaleTracking
 import {useThemeCssVariables} from '@app/features/theme/hooks/useThemeCssVariables';
 import Theme from '@app/features/theme/state/Theme';
 import ThemeLibrary from '@app/features/theme/state/ThemeLibrary';
+import WindowsFont from '@app/features/theme/state/WindowsFont';
 import {useThemeStudioBroadcast} from '@app/features/theme_studio/state/ThemeStudioBroadcast';
 import ThemeStudioState from '@app/features/theme_studio/state/ThemeStudioState';
 import {SVGMasks} from '@app/features/ui/components/SVGMasks';
@@ -51,7 +54,7 @@ import MobileLayout from '@app/features/ui/state/MobileLayout';
 import Modal from '@app/features/ui/state/Modal';
 import Popout from '@app/features/ui/state/Popout';
 import {getDesktopWindowBehaviorSettings} from '@app/features/ui/utils/DesktopWindowBehaviorUtils';
-import {attachExternalLinkInterceptor, isDesktop} from '@app/features/ui/utils/NativeUtils';
+import {isDesktop} from '@app/features/ui/utils/NativeUtils';
 import {UNFOCUSED_FULLY_INTERACTIVE_CLASS} from '@app/features/ui/utils/WindowFocusInteractionGuard';
 import {UsernameSelectionGate} from '@app/features/user/components/UsernameSelectionGate';
 import UserSettings from '@app/features/user/state/UserSettings';
@@ -82,6 +85,14 @@ interface AppWrapperProps {
 	children: ReactNode;
 }
 
+function getInstanceThemeColor(): string | null {
+	const snapshot = RuntimeConfig.getSnapshotOrNull();
+	if (snapshot === null || !(DeveloperOptions.selfHostedModeOverride || snapshot.features.self_hosted)) {
+		return null;
+	}
+	return snapshot.appPublic.branding.theme_color ?? null;
+}
+
 export const AppWrapper = observer(({children}: AppWrapperProps) => {
 	const {i18n} = useLingui();
 	const reducedMotion = Accessibility.useReducedMotion;
@@ -95,9 +106,7 @@ export const AppWrapper = observer(({children}: AppWrapperProps) => {
 		() => ({variant: layoutVariant, setVariant: setLayoutVariant}),
 		[layoutVariant],
 	);
-	const popouts = Popout.getPopouts();
-	const topPopout = popouts.length ? popouts[popouts.length - 1] : null;
-	const topPopoutRequiresBackdrop = Boolean(topPopout && !topPopout.disableBackdrop);
+	const topPopoutRequiresBackdrop = Popout.requiresBackdrop();
 	const hasBlockingModal = Modal.hasModalOpen();
 	const room = MediaEngine.room;
 	const ringsContainerRef = useRef<HTMLDivElement>(null);
@@ -148,7 +157,7 @@ export const AppWrapper = observer(({children}: AppWrapperProps) => {
 	useEffect(
 		() =>
 			reaction(
-				() => GatewayConnection.sessionId,
+				() => GatewaySessions.foregroundConnection.sessionId,
 				(sessionId) => MemberSidebar.synchronizeGatewaySession(sessionId),
 				{fireImmediately: true},
 			),
@@ -177,6 +186,7 @@ export const AppWrapper = observer(({children}: AppWrapperProps) => {
 	useDocumentClassToggle('reduced-motion', reducedMotion);
 	useDocumentClassToggle('mobile-layout', MobileLayout.platformMobileDetected || MobileLayout.enabled);
 	useDocumentClassToggle(UNFOCUSED_FULLY_INTERACTIVE_CLASS, stayInteractiveWhenUnfocused);
+	useDocumentClassToggle('windows-fluxer-sans', WindowsFont.useFluxerSans);
 	useDesktopAllowTransparency(isNative);
 	useWindowEventListeners();
 	useRemScaleTracking();
@@ -191,6 +201,7 @@ export const AppWrapper = observer(({children}: AppWrapperProps) => {
 		messageGutter: Accessibility.messageGutter,
 		messageGroupSpacing: Accessibility.getMessageGroupSpacingValue(messageDisplayCompact),
 		hdrDisplayMode: Accessibility.hdrDisplayMode,
+		instanceThemeColor: getInstanceThemeColor(),
 	});
 	useCustomThemeStyle({
 		enabledThemeCss: ThemeLibrary.activeThemeCss,

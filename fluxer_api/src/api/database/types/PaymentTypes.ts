@@ -2,51 +2,50 @@
 
 import type {UserID} from '@app/api/BrandedTypes';
 
-type Nullish<T> = T | null;
 export type GiftCodeDurationType = 'days' | 'weeks' | 'months' | 'years';
 
 export interface GiftCodeRow {
 	code: string;
-	duration_months: Nullish<number>;
-	duration_type?: Nullish<GiftCodeDurationType>;
-	duration_quantity?: Nullish<number>;
+	duration_months: number | null;
+	duration_type?: GiftCodeDurationType | null;
+	duration_quantity?: number | null;
 	created_at: Date;
 	created_by_user_id: UserID;
-	redeemed_at: Nullish<Date>;
-	redeemed_by_user_id: Nullish<UserID>;
-	stripe_payment_intent_id: Nullish<string>;
-	visionary_sequence_number: Nullish<number>;
-	checkout_session_id: Nullish<string>;
-	revoked_at?: Nullish<Date>;
+	redeemed_at: Date | null;
+	redeemed_by_user_id: UserID | null;
+	stripe_payment_intent_id: string | null;
+	visionary_sequence_number: number | null;
+	checkout_session_id: string | null;
+	revoked_at?: Date | null;
 	// Micup item codes (shop, 3.4): the cosmetic the code gives instead of premium time. Optional on purpose: the one
 	// writer, GiftCodeRepository.createGiftCode, normalises it to null.
-	cosmetic_item_id?: Nullish<bigint>;
-	premium_reversed_seconds?: Nullish<number>;
+	cosmetic_item_id?: bigint | null;
+	premium_reversed_seconds?: number | null;
 	version: number;
 }
 
 export interface PaymentRow {
 	checkout_session_id: string;
 	user_id: UserID;
-	stripe_customer_id: Nullish<string>;
-	payment_intent_id: Nullish<string>;
-	subscription_id: Nullish<string>;
-	invoice_id: Nullish<string>;
-	price_id: Nullish<string>;
-	product_type: Nullish<string>;
+	stripe_customer_id: string | null;
+	payment_intent_id: string | null;
+	subscription_id: string | null;
+	invoice_id: string | null;
+	price_id: string | null;
+	product_type: string | null;
 	amount_cents: number;
 	currency: string;
 	status: string;
 	is_gift: boolean;
-	gift_code: Nullish<string>;
-	purchase_geoip_country_code: Nullish<string>;
-	purchase_client_country_code: Nullish<string>;
+	gift_code: string | null;
+	purchase_geoip_country_code: string | null;
+	purchase_client_country_code: string | null;
 	eu_withdrawal_waiver_required: boolean;
 	eu_withdrawal_waiver_accepted: boolean;
-	eu_withdrawal_waiver_accepted_at: Nullish<Date>;
-	eu_withdrawal_waiver_text_version: Nullish<string>;
+	eu_withdrawal_waiver_accepted_at: Date | null;
+	eu_withdrawal_waiver_text_version: string | null;
 	created_at: Date;
-	completed_at: Nullish<Date>;
+	completed_at: Date | null;
 	version: number;
 }
 
@@ -62,9 +61,9 @@ export interface VisionarySlotRow {
 	slot_index: number;
 	user_id: UserID | null;
 	// Micup Visionary sale. Optional so upstream's partial writes stay valid.
-	version?: Nullish<number>; // CAS counter; rows sanalyer opens start at 1, rows without one are never handed out
-	order_id?: Nullish<bigint>; // the order holding the number, kept after it is taken (retry proof)
-	held_until?: Nullish<Date>; // no owner: end of a pending order's hold; an owner: when an admin took the number back
+	version?: number | null; // CAS counter; rows sanalyer opens start at 1, rows without one are never handed out
+	order_id?: bigint | null; // the order holding the number, kept after it is taken (retry proof)
+	held_until?: Date | null; // no owner: end of a pending order's hold; an owner: when an admin took the number back
 }
 
 export const PAYMENT_COLUMNS = [

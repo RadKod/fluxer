@@ -6,7 +6,6 @@ import {Config} from '@app/api/Config';
 import {getContentMessage} from '@app/api/content_i18n/ContentI18n';
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import {Logger} from '@app/api/Logger';
-import {getBillingRepository} from '@app/api/middleware/ServiceRegistry';
 import type {User} from '@app/api/models/User';
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
 import {getBillingBranding} from '@app/api/stripe/BillingBranding';
@@ -19,18 +18,15 @@ import {
 	getPremiumWillCancelFromSubscription,
 } from '@app/api/stripe/StripeSubscriptionAccessPolicy';
 import {
-	getPrimarySubscriptionItem,
+	getSubscriptionBillingCycle,
+	getSubscriptionCurrentPeriodStart,
 	getSubscriptionPremiumPeriodEnd,
 	getSubscriptionStartDate,
 } from '@app/api/stripe/StripeSubscriptionPeriod';
 import {extractId} from '@app/api/stripe/StripeUtils';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
-import {
-	type Currency,
-	getCurrencyPreferences,
-	getGiftCurrencyPreferences,
-	isLocalizedCurrency,
-} from '@app/api/utils/CurrencyUtils';
+import {shiftGiftExtensionPastPremiumUntil} from '@app/api/user/GiftExtensionShift';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
+import {type Currency, isLocalizedCurrency, shouldDisableAdaptivePricing} from '@app/api/utils/CurrencyUtils';
 import {isEuEeaCountryCode} from '@fluxer/constants/src/EuropeanEconomicArea';
 import {PremiumFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {PurchaseEmailVerificationRequiredError} from '@fluxer/errors/src/domains/auth/EmailVerificationRequiredError';
@@ -43,6 +39,7 @@ import {StripePaymentNotAvailableError} from '@fluxer/errors/src/domains/payment
 import {UnclaimedAccountCannotMakePurchasesError} from '@fluxer/errors/src/domains/user/UnclaimedAccountCannotMakePurchasesError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
 import type {CheckoutPaymentMethod} from '@fluxer/schema/src/domains/premium/GiftCodeSchemas';
+import type {PriceIdsResponse} from '@fluxer/schema/src/domains/premium/PremiumSchemas';
 import type {ICacheService} from '@pkgs/cache/src/ICacheService';
 import {seconds} from 'itty-time';
 import type Stripe from 'stripe';
@@ -95,22 +92,6 @@ const PIX_UPI_MANDATE_HEADROOM_MULTIPLIER = 1.25;
 const LOCAL_PAYMENT_METHOD_BY_CURRENCY: Partial<Record<Currency, CheckoutPaymentMethod>> = {
 	BRL: 'pix',
 };
-
-interface ResolvedPriceIds {
-	monthly: string | null;
-	yearly: string | null;
-	gift_1_month: string | null;
-	gift_1_year: string | null;
-	currency: Currency;
-	gift_currency: Currency | null;
-}
-
-interface PriceIdsResponse extends ResolvedPriceIds {
-	monthly_amount_minor: number | null;
-	yearly_amount_minor: number | null;
-	gift_1_month_amount_minor: number | null;
-	gift_1_year_amount_minor: number | null;
-}
 
 interface EuWithdrawalWaiverContext {
 	accepted: boolean;
@@ -182,7 +163,7 @@ export class StripeCheckoutService {
 	private static readonly LOCALIZED_CARD_PREAPPROVAL_TTL_SECONDS = seconds('1 day');
 	constructor(
 		private stripe: Stripe | null,
-		private userRepository: IUserRepository,
+		private userRepository: UserRepository,
 		private productRegistry: ProductRegistry,
 		private cacheService: ICacheService,
 		private storeEntitlementService: StoreEntitlementService | null = null,
@@ -294,6 +275,7 @@ export class StripeCheckoutService {
 			},
 			billing_address_collection: isBusiness ? 'required' : 'auto',
 			allow_promotion_codes: true,
+			...(shouldDisableAdaptivePricing(productInfo.currency) ? {adaptive_pricing: {enabled: false}} : {}),
 			...(checkoutMode === 'subscription'
 				? {
 						subscription_data: {
@@ -667,14 +649,6 @@ export class StripeCheckoutService {
 		}
 		try {
 			const session = await this.stripe.checkout.sessions.create(checkoutParams);
-			try {
-				await getBillingRepository().checkoutSessions.upsertFromStripe(session, {knownUserId: userId});
-			} catch (mirrorErr) {
-				Logger.error(
-					{mirrorErr, sessionId: session.id},
-					'Mirror upsert failed after Stripe write; reconciler will heal',
-				);
-			}
 			if (!session.url) {
 				Logger.error({userId, sessionId: session.id}, 'Stripe checkout session missing url');
 				throw new StripeError('Stripe checkout session missing url');
@@ -749,7 +723,8 @@ export class StripeCheckoutService {
 		isGift: boolean;
 		userId: UserID;
 	}): void {
-		const localizedPrices = this.resolveConfiguredPriceIds(countryCode);
+		const localizedPrices = this.productRegistry.resolveLocalizedPriceIds(countryCode);
+		if (!localizedPrices) throw new StripeError('Stripe price ids missing for supported currencies');
 		const allowedPriceIds = new Set(
 			(isGift
 				? [localizedPrices.gift_1_month, localizedPrices.gift_1_year]
@@ -967,7 +942,7 @@ export class StripeCheckoutService {
 		const patch: Partial<UserRow> = {};
 		const subscriptionStartDate = this.getRuntimeSubscriptionStartDate(subscription);
 		const premiumUntil = getSubscriptionPremiumPeriodEnd(subscription);
-		const premiumBillingCycle = this.getRuntimeSubscriptionBillingCycle(subscription);
+		const premiumBillingCycle = getSubscriptionBillingCycle(subscription);
 		const premiumWillCancel = getPremiumWillCancelFromSubscription(subscription);
 		const customerId = extractId(subscription.customer);
 		if (user.premiumType !== UserPremiumTypes.SUBSCRIPTION) {
@@ -978,6 +953,15 @@ export class StripeCheckoutService {
 		}
 		if (premiumUntil && user.premiumUntil?.getTime() !== premiumUntil.getTime()) {
 			patch.premium_until = premiumUntil;
+			const giftEnd = shiftGiftExtensionPastPremiumUntil(
+				{premiumUntil: user.premiumUntil, giftEnd: user.premiumGiftExtensionEndsAt},
+				premiumUntil,
+				new Date(),
+				getSubscriptionCurrentPeriodStart(subscription),
+			);
+			if (giftEnd !== user.premiumGiftExtensionEndsAt) {
+				patch.premium_gift_extension_ends_at = giftEnd;
+			}
 		}
 		if (user.premiumWillCancel !== premiumWillCancel) {
 			patch.premium_will_cancel = premiumWillCancel;
@@ -1014,18 +998,6 @@ export class StripeCheckoutService {
 		return typeof startUnix === 'number' ? getSubscriptionStartDate(subscription) : null;
 	}
 
-	private getRuntimeSubscriptionBillingCycle(subscription: Stripe.Subscription): 'monthly' | 'yearly' | null {
-		const item = getPrimarySubscriptionItem(subscription);
-		const interval = item?.price?.recurring?.interval;
-		if (interval === 'month') {
-			return 'monthly';
-		}
-		if (interval === 'year') {
-			return 'yearly';
-		}
-		return null;
-	}
-
 	async createCustomerPortalSession(userId: UserID): Promise<string> {
 		if (!this.stripe) {
 			throw new StripePaymentNotAvailableError();
@@ -1060,7 +1032,8 @@ export class StripeCheckoutService {
 	}
 
 	async getPriceIds(countryCode?: string): Promise<PriceIdsResponse> {
-		const resolvedPrices = this.resolveConfiguredPriceIds(countryCode);
+		const resolvedPrices = this.productRegistry.resolveLocalizedPriceIds(countryCode);
+		if (!resolvedPrices) throw new StripeError('Stripe price ids missing for supported currencies');
 		const [monthlyPrice, yearlyPrice, gift1MonthPrice, gift1YearPrice] = await Promise.all([
 			this.getStripePriceSummary(resolvedPrices.monthly),
 			this.getStripePriceSummary(resolvedPrices.yearly),
@@ -1078,72 +1051,6 @@ export class StripeCheckoutService {
 
 	validateUserCanPurchase(user: User): void {
 		assertUserCanPurchase(user);
-	}
-
-	private resolveConfiguredPriceIds(countryCode?: string): ResolvedPriceIds {
-		const recurringCurrencyPreferences = getCurrencyPreferences(countryCode);
-		const giftCurrencyPreferences = getGiftCurrencyPreferences(countryCode);
-		const recurringPrices = this.resolveRecurringPriceIds(recurringCurrencyPreferences);
-		const giftPrices = this.resolveGiftPriceIds(giftCurrencyPreferences);
-		return {
-			monthly: recurringPrices.monthly,
-			yearly: recurringPrices.yearly,
-			gift_1_month: giftPrices.gift_1_month,
-			gift_1_year: giftPrices.gift_1_year,
-			currency: recurringPrices.currency,
-			gift_currency: giftPrices.gift_currency,
-		};
-	}
-
-	private resolveRecurringPriceIds(
-		preferredCurrencies: Array<Currency>,
-	): Pick<ResolvedPriceIds, 'monthly' | 'yearly' | 'currency'> {
-		for (const currency of preferredCurrencies) {
-			const resolvedPrices = this.getConfiguredRecurringPriceIdsForCurrency(currency);
-			if (resolvedPrices) {
-				return resolvedPrices;
-			}
-		}
-		throw new StripeError(
-			`Stripe recurring price ids missing for supported currencies: ${preferredCurrencies.join(', ')}`,
-		);
-	}
-
-	private resolveGiftPriceIds(
-		preferredCurrencies: Array<Currency>,
-	): Pick<ResolvedPriceIds, 'gift_1_month' | 'gift_1_year' | 'gift_currency'> {
-		for (const currency of preferredCurrencies) {
-			const resolvedPrices = this.getConfiguredGiftPriceIdsForCurrency(currency);
-			if (resolvedPrices) {
-				return resolvedPrices;
-			}
-		}
-		if (Config.instance.selfHosted) {
-			return {gift_1_month: null, gift_1_year: null, gift_currency: null};
-		}
-		throw new StripeError(`Stripe gift price ids missing for supported currencies: ${preferredCurrencies.join(', ')}`);
-	}
-
-	private getConfiguredRecurringPriceIdsForCurrency(
-		currency: Currency,
-	): Pick<ResolvedPriceIds, 'monthly' | 'yearly' | 'currency'> | null {
-		const monthly = this.productRegistry.getRecurringSubscriptionPriceId('monthly', currency);
-		const yearly = this.productRegistry.getRecurringSubscriptionPriceId('yearly', currency);
-		if (!monthly || !yearly) {
-			return null;
-		}
-		return {monthly, yearly, currency};
-	}
-
-	private getConfiguredGiftPriceIdsForCurrency(
-		currency: Currency,
-	): Pick<ResolvedPriceIds, 'gift_1_month' | 'gift_1_year' | 'gift_currency'> | null {
-		const gift1Month = this.productRegistry.getGiftPriceId('gift_1_month', currency);
-		const gift1Year = this.productRegistry.getGiftPriceId('gift_1_year', currency);
-		if (!gift1Month || !gift1Year) {
-			return null;
-		}
-		return {gift_1_month: gift1Month, gift_1_year: gift1Year, gift_currency: currency};
 	}
 
 	private async getStripePriceSummary(priceId: string | null): Promise<StripePriceSummary | null> {

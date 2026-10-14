@@ -1,6 +1,10 @@
 %% SPDX-License-Identifier: AGPL-3.0-or-later
 
 -module(gateway_ip_connections).
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+-endif.
+
 -typing([eqwalizer]).
 
 -export([
@@ -19,10 +23,6 @@
 -define(UNIDENTIFIED_TABLE, gateway_unidentified_connections).
 -define(MAX_CONNECTIONS_PER_IP, 256).
 -define(OWNER_SWEEP_INTERVAL_MS, 60000).
-
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
--endif.
 
 -spec acquire(term()) ->
     ok | {error, too_many_connections | at_capacity | unidentified_at_capacity}.

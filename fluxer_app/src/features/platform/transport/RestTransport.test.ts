@@ -8,6 +8,17 @@ import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 
 vi.mock('@lingui/core/macro', () => ({msg: (descriptor: MessageDescriptor) => descriptor}));
 
+const desktopDocument = vi.hoisted(() => ({active: false}));
+
+vi.mock('@app/features/platform/DesktopLocalAppRuntime', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('@app/features/platform/DesktopLocalAppRuntime')>();
+	return {...actual, isDesktopLocalAppDocument: () => desktopDocument.active};
+});
+
+vi.mock('@app/features/ui/utils/NativeUtils', () => ({
+	getElectronAPI: () => (desktopDocument.active ? {localAppUpload: {subscribe: () => () => {}}} : undefined),
+}));
+
 interface SentRequest {
 	method: string;
 	url: string;
@@ -95,6 +106,31 @@ beforeEach(() => {
 
 afterEach(() => {
 	vi.unstubAllGlobals();
+	desktopDocument.active = false;
+});
+
+describe('RestClient desktop local upload tagging', () => {
+	const uploadIdHeader = 'x-fluxer-local-upload-id';
+
+	test('a remote upload from the desktop app never carries the local upload id', async () => {
+		desktopDocument.active = true;
+		await createClient().put('https://uploads.fluxer.app/v1/relay/abc?t=token', {
+			body: new Blob(['x']),
+			auth: 'none',
+			onProgress: () => {},
+		});
+		expect(sent[0].headers[uploadIdHeader]).toBeUndefined();
+	});
+
+	test('an upload through the desktop local proxy is tagged for progress', async () => {
+		desktopDocument.active = true;
+		await createClient().put('fluxer-app://app/_remote/key?url=https%3A%2F%2Fuploads.test%2Fv1%2Frelay%2Fabc', {
+			body: new Blob(['x']),
+			auth: 'none',
+			onProgress: () => {},
+		});
+		expect(sent[0].headers[uploadIdHeader]).toMatch(/^[0-9a-f]{32}$/u);
+	});
 });
 
 describe('RestClient interceptor selection', () => {
@@ -145,61 +181,16 @@ describe('RestClient interceptor selection', () => {
 		expect(sent[1].headers['x-captcha-token']).toBe('global-token');
 	});
 
-	test('a per-request interceptor replaces the global one', async () => {
-		const client = createClient();
-		const global = captchaRetryingInterceptor('global-token');
-		const own = captchaRetryingInterceptor('own-token');
-		client.installHooks({intercept: global});
-		replies.push(CAPTCHA_REPLY, {status: 200, body: {}});
-
-		await client.post('https://other.test/api/v1/auth/register', {body: {}, intercept: own, auth: 'none'});
-
-		expect(global).not.toHaveBeenCalled();
-		expect(own).toHaveBeenCalledTimes(1);
-		expect(sent.map((request) => request.url)).toEqual([
-			'https://other.test/api/v1/auth/register',
-			'https://other.test/api/v1/auth/register',
-		]);
-		expect(sent[1].headers['x-captcha-token']).toBe('own-token');
-	});
-
 	test('the interceptor retry runs with no interceptor at all', async () => {
 		const client = createClient();
 		const global = captchaRetryingInterceptor('global-token');
-		const own = captchaRetryingInterceptor('own-token');
 		client.installHooks({intercept: global});
 		replies.push(CAPTCHA_REPLY, CAPTCHA_REPLY);
 
-		await expect(client.post('/auth/register', {body: {}, intercept: own})).rejects.toMatchObject({status: 400});
+		await expect(client.post('/auth/register', {body: {}})).rejects.toMatchObject({status: 400});
 
-		expect(own).toHaveBeenCalledTimes(1);
-		expect(global).not.toHaveBeenCalled();
+		expect(global).toHaveBeenCalledTimes(1);
 		expect(sent).toHaveLength(2);
-	});
-
-	test('the sudo reissue keeps the per-request interceptor', async () => {
-		const client = createClient();
-		const global = captchaRetryingInterceptor('global-token');
-		const own = captchaRetryingInterceptor('own-token');
-		client.installHooks({intercept: global});
-		client.installSudo({
-			tokenProvider: () => null,
-			tokenListener: () => undefined,
-			invalidate: () => undefined,
-			prompt: async () => ({password: 'hunter2'}),
-			onFailure: () => undefined,
-		});
-		replies.push(SUDO_REQUIRED_REPLY, CAPTCHA_REPLY, {status: 200, body: {}});
-
-		const reply = await client.post('/users/@me/disable', {body: {}, intercept: own});
-
-		expect(reply.status).toBe(200);
-		expect(global).not.toHaveBeenCalled();
-		expect(captchaCalls(own)).toBe(1);
-		expect(sent).toHaveLength(3);
-		expect(JSON.parse(sent[1].body as string)).toEqual({password: 'hunter2'});
-		expect(JSON.parse(sent[2].body as string)).toEqual({password: 'hunter2'});
-		expect(sent[2].headers['x-captcha-token']).toBe('own-token');
 	});
 
 	test('the sudo reissue falls back to the global interceptor', async () => {

@@ -153,35 +153,6 @@
 	border-radius: var(--radius-sm);
 }
 
-.enable-forced-colors .outerRadioBase {
-	fill: Canvas;
-}
-
-.enable-forced-colors .innerDotRadio {
-	fill: HighlightText;
-}
-
-.enable-forced-colors .radioGroupOption[data-disabled] {
-	opacity: 1;
-}
-
-.enable-forced-colors .radioGroupOption[data-disabled],
-.enable-forced-colors .radioGroupOption[data-disabled]:hover {
-	color: GrayText;
-}
-
-.enable-forced-colors .radioGroupOption[data-state='checked'] .outerRadioBase {
-	fill: Highlight;
-}
-
-.enable-forced-colors .radioGroupOption[data-disabled] .outerRadioBase {
-	fill: Canvas;
-}
-
-.enable-forced-colors .radioGroupOption[data-disabled] .innerDotRadio {
-	fill: GrayText;
-}
-
 /* Micup: the checked radio fills with the v1 white accent in the coal and dark themes, so its dot takes the on-accent
    colour (it vanished white on white). The light theme keeps its own #fff above. */
 :global(html:is(.theme-coal, .theme-dark)) .group {

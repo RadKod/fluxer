@@ -4,11 +4,7 @@ import {Logger} from '@app/features/platform/utils/AppLogger';
 import {CHANNEL_SETTINGS_LABEL_DESCRIPTOR} from '@app/features/user/components/settings_utils/ChannelSettingsConstants';
 import {msg} from '@lingui/core/macro';
 
-export type {
-	ChannelDetailsBottomSheetProps,
-	ChannelDetailsTab,
-	QuickActionButtonProps,
-} from '@app/features/channel/components/bottomsheets/ChannelDetailsBottomSheetTypes';
+export type {QuickActionButtonProps} from '@app/features/channel/components/bottomsheets/ChannelDetailsBottomSheetTypes';
 
 export const logger = new Logger('ChannelDetailsBottomSheet');
 export const DIRECT_MESSAGE_DESCRIPTOR = msg({
@@ -76,16 +72,6 @@ export const FAILED_TO_UNPIN_GROUP_DESCRIPTOR = msg({
 });
 export const FAILED_TO_UNPIN_DM_DESCRIPTOR = msg({
 	message: 'Failed to unpin DM',
-	comment:
-		'Channel details bottom sheet label or action (channel type, settings, toast, confirmation, or notification option).',
-});
-export const ARE_YOU_SURE_YOU_WANT_TO_CLOSE_YOUR_DESCRIPTOR = msg({
-	message: 'Close your DM with {recipientUsername}? You can reopen it anytime.',
-	comment:
-		'Channel details bottom sheet label or action (channel type, settings, toast, confirmation, or notification option).',
-});
-export const DM_CLOSED_DESCRIPTOR = msg({
-	message: 'DM closed',
 	comment:
 		'Channel details bottom sheet label or action (channel type, settings, toast, confirmation, or notification option).',
 });

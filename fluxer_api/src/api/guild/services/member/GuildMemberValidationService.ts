@@ -1,19 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {GuildID, RoleID, UserID} from '@app/api/BrandedTypes';
-import {guildIdToRoleId} from '@app/api/BrandedTypes';
-import {shouldEnforceGuildIpBan} from '@app/api/ban/IpBanCgnatGuard';
-import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import {type GuildID, guildIdToRoleId, type RoleID, type UserID} from '@app/api/BrandedTypes';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
+import {assertNotBannedFromGuild} from '@app/api/guild/services/GuildBanChecks';
 import type {GuildMember} from '@app/api/models/GuildMember';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {MissingPermissionsError} from '@fluxer/errors/src/domains/core/MissingPermissionsError';
-import {BannedFromGuildError} from '@fluxer/errors/src/domains/guild/BannedFromGuildError';
-import {IpBannedFromGuildError} from '@fluxer/errors/src/domains/guild/IpBannedFromGuildError';
 import {UnknownGuildRoleError} from '@fluxer/errors/src/domains/guild/UnknownGuildRoleError';
-import {isSameIpDecisionMatch} from '@fluxer/ip_utils/src/IpAddress';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import type {IpInfoService} from '@pkgs/geoip/src/IpInfoService';
 
@@ -25,8 +21,8 @@ function ensureNotEveryoneRole(roleId: RoleID, guildId: GuildID, path: string): 
 
 export class GuildMemberValidationService {
 	constructor(
-		private readonly guildRepository: IGuildRepositoryAggregate,
-		private readonly userRepository: IUserRepository,
+		private readonly guildRepository: GuildRepository,
+		private readonly userRepository: UserRepository,
 		private readonly ipInfoService: IpInfoService,
 	) {}
 
@@ -92,19 +88,7 @@ export class GuildMemberValidationService {
 		}
 	}
 
-	async checkUserBanStatus({userId, guildId}: {userId: UserID; guildId: GuildID}): Promise<void> {
-		const bans = await this.guildRepository.listBans(guildId);
-		const user = await this.userRepository.findUnique(userId);
-		const userIp = user?.lastActiveIp;
-		let enforceIpBan: boolean | undefined;
-		for (const ban of bans) {
-			if (ban.userId === userId) {
-				throw new BannedFromGuildError();
-			}
-			if (isSameIpDecisionMatch(userIp, ban.ipAddress)) {
-				enforceIpBan ??= await shouldEnforceGuildIpBan(userIp, ban.ipAddress, this.ipInfoService);
-				if (enforceIpBan) throw new IpBannedFromGuildError();
-			}
-		}
+	async checkUserBanStatus(params: {userId: UserID; guildId: GuildID}): Promise<void> {
+		return assertNotBannedFromGuild(this.guildRepository, this.userRepository, this.ipInfoService, params);
 	}
 }

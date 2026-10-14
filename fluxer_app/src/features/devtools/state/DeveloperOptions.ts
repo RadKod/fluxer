@@ -25,28 +25,15 @@ export type DeveloperOptionsState = Readonly<{
 	forceLoadingSkeleton: boolean;
 	forceFailMessageSends: boolean;
 	forceFailMessageLoads: boolean;
-	forceRenderPlaceholders: boolean;
-	forceEmbedSkeletons: boolean;
-	forceMediaLoading: boolean;
-	forceUpdateReady: boolean;
-	forceNativeUpdateReady: boolean;
-	mockNativeUpdateProgress: number | null;
-	forceWebUpdateReady: boolean;
-	mockUpdaterState: 'none' | 'checking' | 'available' | 'downloading' | 'ready' | 'installing' | 'error';
 	showMyselfTyping: boolean;
-	slowAttachmentUpload: boolean;
 	slowMessageLoad: boolean;
 	slowMessageSend: boolean;
-	slowMessageEdit: boolean;
 	slowProfileLoad: boolean;
 	forceProfileSkeletons: boolean;
 	forceProfileDataWarning: boolean;
-	useCloudUpload: boolean;
-	forceGifPickerLoading: boolean;
 	forceUnknownMessageType: boolean;
 	selfHostedModeOverride: boolean;
 	forceShowVanityURLDisclaimer: boolean;
-	forceShowVoiceConnection: boolean;
 	premiumScenarioOverride: PremiumScenarioOverride | null;
 	premiumTypeOverride: number | null;
 	premiumLifetimeSequenceOverride: number | null;
@@ -72,7 +59,6 @@ export type DeveloperOptionsState = Readonly<{
 	mockMatureMediaGateReason: 'none' | 'geo_restricted' | 'mature_content_check_required';
 	forceMatureMedia: boolean;
 	mockInUK: boolean;
-	mockGeoBlocked: boolean;
 	forceNoSendMessages: boolean;
 	forceNoAttachFiles: boolean;
 	mockSlowmodeActive: boolean;
@@ -100,28 +86,15 @@ class DeveloperOptions implements DeveloperOptionsState {
 	forceLoadingSkeleton = false;
 	forceFailMessageSends = false;
 	forceFailMessageLoads = false;
-	forceRenderPlaceholders = false;
-	forceEmbedSkeletons = false;
-	forceMediaLoading = false;
-	forceUpdateReady = false;
-	forceNativeUpdateReady = false;
-	mockNativeUpdateProgress: number | null = null;
-	forceWebUpdateReady = false;
-	mockUpdaterState: DeveloperOptionsState['mockUpdaterState'] = 'none';
 	showMyselfTyping = false;
-	slowAttachmentUpload = false;
 	slowMessageLoad = false;
 	slowMessageSend = false;
-	slowMessageEdit = false;
 	slowProfileLoad = false;
 	forceProfileSkeletons = false;
 	forceProfileDataWarning = false;
-	useCloudUpload = false;
-	forceGifPickerLoading = false;
 	forceUnknownMessageType = false;
 	selfHostedModeOverride = false;
 	forceShowVanityURLDisclaimer = false;
-	forceShowVoiceConnection = false;
 	premiumScenarioOverride: PremiumScenarioOverride | null = null;
 	premiumTypeOverride: number | null = null;
 	premiumLifetimeSequenceOverride: number | null = null;
@@ -148,7 +121,6 @@ class DeveloperOptions implements DeveloperOptionsState {
 	mockMatureMediaGateReason: 'none' | 'geo_restricted' | 'mature_content_check_required' = 'none';
 	forceMatureMedia = false;
 	mockInUK = false;
-	mockGeoBlocked = false;
 	forceNoSendMessages = false;
 	forceNoAttachFiles = false;
 	mockSlowmodeActive = false;
@@ -178,28 +150,15 @@ class DeveloperOptions implements DeveloperOptionsState {
 			'forceLoadingSkeleton',
 			'forceFailMessageSends',
 			'forceFailMessageLoads',
-			'forceRenderPlaceholders',
-			'forceEmbedSkeletons',
-			'forceMediaLoading',
-			'forceUpdateReady',
-			'forceNativeUpdateReady',
-			'mockNativeUpdateProgress',
-			'forceWebUpdateReady',
-			'mockUpdaterState',
 			'showMyselfTyping',
-			'slowAttachmentUpload',
 			'slowMessageLoad',
 			'slowMessageSend',
-			'slowMessageEdit',
 			'slowProfileLoad',
 			'forceProfileSkeletons',
 			'forceProfileDataWarning',
-			'useCloudUpload',
-			'forceGifPickerLoading',
 			'forceUnknownMessageType',
 			'selfHostedModeOverride',
 			'forceShowVanityURLDisclaimer',
-			'forceShowVoiceConnection',
 			'premiumScenarioOverride',
 			'premiumTypeOverride',
 			'premiumLifetimeSequenceOverride',
@@ -218,7 +177,6 @@ class DeveloperOptions implements DeveloperOptionsState {
 			'mockMatureMediaGateReason',
 			'forceMatureMedia',
 			'mockInUK',
-			'mockGeoBlocked',
 			'forceNoSendMessages',
 			'forceNoAttachFiles',
 			'mockSlowmodeActive',

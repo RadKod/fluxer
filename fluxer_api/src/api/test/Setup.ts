@@ -18,16 +18,15 @@ import {setInjectedKVProvider, setInjectedSnowflakeService} from '@app/api/middl
 import {getInstanceConfigRepository, getUserRepository} from '@app/api/middleware/ServiceSingletons';
 import {drainSearchTasks, enableSearchTaskTracking} from '@app/api/search/SearchTaskTracker';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {MockSnowflakeService} from '@app/api/test/mocks/MockSnowflakeService';
 import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {RepositoryBackedMessageResponseDataService} from '@app/api/test/mocks/RepositoryBackedMessageResponseDataService';
-import {fakeNcmecServer} from '@app/api/test/msw/handlers/NcmecHandlers';
 import {fakePayriffServer} from '@app/api/test/msw/handlers/PayriffHandlers';
 import {server} from '@app/api/test/msw/server';
 import {mapUserToPartialResponse} from '@app/api/user/UserMappers';
 import {loadConfig} from '@fluxer/config/src/ConfigLoader';
 import type {UserPartialResponse} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, afterEach, beforeAll} from 'vitest';
 
 function defaultNatsUrl(): string {
@@ -82,7 +81,7 @@ function setDefaultTestEnv(): void {
 		FLUXER_EMAIL_SMTP_PORT: '1025',
 		FLUXER_EMAIL_SMTP_USERNAME: 'test',
 		FLUXER_EMAIL_SMTP_PASSWORD: 'test',
-		FLUXER_EMAIL_SMTP_SECURE: 'false',
+		FLUXER_EMAIL_SMTP_TLS_MODE: 'none',
 		FLUXER_LIVEKIT_ENABLED: 'false',
 		FLUXER_STRIPE_ENABLED: 'true',
 		FLUXER_SEARCH_ENGINE: 'elasticsearch',
@@ -189,13 +188,6 @@ const testApiConfig: APIConfig = {
 		sandboxUserIds: [],
 		sandboxEntitlesAll: false,
 	},
-	ncmec: {
-		...apiConfig.ncmec,
-		enabled: true,
-		baseUrl: fakeNcmecServer.baseUrl,
-		username: 'usr123',
-		password: 'pswd123',
-	},
 	payriff: {
 		...apiConfig.payriff,
 		enabled: true,
@@ -222,7 +214,7 @@ setInjectedMessageResponseDataService(new RepositoryBackedMessageResponseDataSer
 
 enableSearchTaskTracking();
 
-export {fakeNcmecServer, fakePayriffServer};
+export {fakePayriffServer};
 
 beforeAll(async () => {
 	server.listen({
@@ -235,7 +227,6 @@ afterEach(async () => {
 	resetCassandraQueryExecutorForTesting();
 	getInstanceConfigRepository().clearCacheForTesting();
 	server.resetHandlers();
-	fakeNcmecServer.reset();
 	fakePayriffServer.reset();
 });
 

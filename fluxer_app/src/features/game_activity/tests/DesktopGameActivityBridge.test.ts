@@ -2,7 +2,7 @@
 
 import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
 import {DesktopGameActivityBridge} from '@app/features/game_activity/utils/DesktopGameActivityBridge';
-import type {DesktopGameActivityState, ElectronAPI} from '@app/features/platform/types/Electron';
+import type {DesktopGameActivityState, ElectronAPI} from '@app/types/electron.d';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 describe('DesktopGameActivityBridge IPC fixture', () => {

@@ -431,6 +431,12 @@ function readAppPublic(value: unknown): InstanceAppPublic {
 	const registration = readRecord(source.registration, 'appPublic.registration');
 	const localization =
 		source.localization === undefined ? null : readRecord(source.localization, 'appPublic.localization');
+	const accountIdentityLocked = readOptionalBoolean(
+		setup,
+		'account_identity_locked',
+		'appPublic.setup.account_identity_locked',
+	);
+	const setupTokenRequired = readOptionalBoolean(setup, 'setup_token_required', 'appPublic.setup.setup_token_required');
 	return {
 		branding: {
 			product_name: readNonEmptyString(branding, 'product_name', 'appPublic.branding.product_name'),
@@ -450,6 +456,8 @@ function readAppPublic(value: unknown): InstanceAppPublic {
 		setup: {
 			configured: readBoolean(setup, 'configured', 'appPublic.setup.configured'),
 			admin_url: readNullableAbsoluteHttpUrl(setup, 'admin_url', 'appPublic.setup.admin_url'),
+			...(accountIdentityLocked === undefined ? {} : {account_identity_locked: accountIdentityLocked}),
+			...(setupTokenRequired === undefined ? {} : {setup_token_required: setupTokenRequired}),
 		},
 		legal: {
 			terms_url: readNullableAbsoluteHttpUrl(legal, 'terms_url', 'appPublic.legal.terms_url'),
@@ -457,6 +465,10 @@ function readAppPublic(value: unknown): InstanceAppPublic {
 			source_url: Object.hasOwn(legal, 'source_url')
 				? readNullableAbsoluteHttpUrl(legal, 'source_url', 'appPublic.legal.source_url')
 				: null,
+			guidelines_url:
+				legal['guidelines_url'] === undefined
+					? null
+					: readNullableAbsoluteHttpUrl(legal, 'guidelines_url', 'appPublic.legal.guidelines_url'),
 		},
 		...(localization === null
 			? {}

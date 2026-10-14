@@ -14,9 +14,9 @@ import {getDMDisplayName, getIcon, getName} from '@app/features/channel/utils/Ch
 import DeveloperMode from '@app/features/devtools/state/DeveloperMode';
 import {joinDiscoveryGuild} from '@app/features/discovery/commands/DiscoveryJoinCommands';
 import DiscoveryChannelPreviews from '@app/features/discovery/state/DiscoveryChannelPreviews';
+import {GuildAcronym} from '@app/features/guild/components/GuildAcronym';
 import type {Guild} from '@app/features/guild/models/Guild';
 import Guilds from '@app/features/guild/state/Guilds';
-import {getGuildIconDisplayInitials} from '@app/features/guild/utils/GuildInitialsUtils';
 import {
 	COPY_LINK_DESCRIPTOR,
 	OKAY_DESCRIPTOR,
@@ -31,8 +31,9 @@ import {
 	type RendererProps,
 } from '@app/features/messaging/components/markdown/renderers/RendererTypes';
 import {ExternalLinkWarningModal} from '@app/features/messaging/components/modals/ExternalLinkWarningModal';
+import {useOpenInBrowserOnMiddleClick} from '@app/features/messaging/hooks/useOpenInBrowserOnMiddleClick';
 import AttachmentUrlRefresher from '@app/features/messaging/state/AttachmentUrlRefresher';
-import {openExternalUrlWithWarning} from '@app/features/messaging/utils/ExternalLinkUtils';
+import {MIDDLE_MOUSE_BUTTON} from '@app/features/messaging/utils/ExternalLinkUtils';
 import {goToMessage} from '@app/features/messaging/utils/MessageNavigator';
 import type {LinkNode} from '@app/features/messaging/utils/markdown/parser/Nodes';
 import * as NavigationCommands from '@app/features/navigation/commands/NavigationCommands';
@@ -80,7 +81,6 @@ import {
 } from '@app/features/user/components/settings_utils/SettingsConstants';
 import type {UserSettingsDeepLinkTarget} from '@app/features/user/components/settings_utils/UserSettingsDeepLinks';
 import * as AvatarUtils from '@app/features/user/utils/AvatarUtils';
-import * as StringUtils from '@app/lib/strings';
 import {ME} from '@fluxer/constants/src/AppConstants';
 import {isProbablyAValidSnowflake} from '@fluxer/snowflake/src/SnowflakeUtils';
 import type {I18n} from '@lingui/core';
@@ -205,6 +205,19 @@ function promptForJumpGate(channel: Channel, scope: string | null | undefined, o
 	});
 }
 
+function useJumpLinkAuxClick(url: string, interactive: boolean) {
+	return useCallback(
+		(event: React.MouseEvent<HTMLButtonElement | HTMLSpanElement>) => {
+			if (!interactive) return;
+			if (event.button !== MIDDLE_MOUSE_BUTTON) return;
+			event.preventDefault();
+			event.stopPropagation();
+			if (url) void openExternalUrl(url);
+		},
+		[interactive, url],
+	);
+}
+
 type CompactGuildMentionIconStyle = React.CSSProperties & {
 	'--jump-link-guild-icon-image'?: string;
 };
@@ -214,7 +227,6 @@ function CompactGuildMentionIcon({guild}: {guild: Pick<Guild, 'id' | 'name' | 'i
 	const style: CompactGuildMentionIconStyle | undefined = iconUrl
 		? {'--jump-link-guild-icon-image': `url(${iconUrl})`}
 		: undefined;
-	const initials = getGuildIconDisplayInitials(StringUtils.getInitialsFromName(guild.name));
 	return (
 		<span
 			className={clsx(jumpLinkStyles.icon, jumpLinkStyles.guildIcon)}
@@ -224,12 +236,10 @@ function CompactGuildMentionIcon({guild}: {guild: Pick<Guild, 'id' | 'name' | 'i
 			data-flx="messaging.markdown.renderers.link-renderer.compact-guild-mention-icon"
 		>
 			{!iconUrl && (
-				<span
-					className={jumpLinkStyles.guildInitials}
-					data-flx="messaging.markdown.renderers.link-renderer.compact-guild-mention-icon.initials"
-				>
-					{initials}
-				</span>
+				<GuildAcronym
+					name={guild.name}
+					data-flx="messaging.markdown.renderers.link-renderer.compact-guild-mention-icon.acronym"
+				/>
 			)}
 		</span>
 	);
@@ -324,16 +334,7 @@ const JumpLinkMention = observer(function JumpLinkMention({
 		},
 		[channel, guild?.id, interactive, navigateToJumpTarget],
 	);
-	const handleAuxClick = useCallback(
-		(event: React.MouseEvent<HTMLButtonElement | HTMLSpanElement>) => {
-			if (!interactive) return;
-			if (event.button !== 1) return;
-			event.preventDefault();
-			event.stopPropagation();
-			if (url) void openExternalUrl(url);
-		},
-		[interactive, url],
-	);
+	const handleAuxClick = useJumpLinkAuxClick(url, interactive);
 	const handleContextMenu = useCallback(
 		(event: React.MouseEvent<HTMLButtonElement | HTMLSpanElement>) => {
 			if (!interactive) return;
@@ -469,16 +470,7 @@ function InaccessibleJumpLinkMention({url, i18n, interactive = true}: Inaccessib
 		},
 		[i18n, interactive],
 	);
-	const handleAuxClick = useCallback(
-		(event: React.MouseEvent<HTMLButtonElement | HTMLSpanElement>) => {
-			if (!interactive) return;
-			if (event.button !== 1) return;
-			event.preventDefault();
-			event.stopPropagation();
-			if (url) void openExternalUrl(url);
-		},
-		[interactive, url],
-	);
+	const handleAuxClick = useJumpLinkAuxClick(url, interactive);
 	const handleContextMenu = useCallback(
 		(event: React.MouseEvent<HTMLButtonElement | HTMLSpanElement>) => {
 			if (!interactive) return;
@@ -555,16 +547,7 @@ const DiscoverableJumpLinkMention = observer(function DiscoverableJumpLinkMentio
 		},
 		[channelId, guildId, interactive, joining, messageId],
 	);
-	const handleAuxClick = useCallback(
-		(event: React.MouseEvent<HTMLButtonElement | HTMLSpanElement>) => {
-			if (!interactive) return;
-			if (event.button !== 1) return;
-			event.preventDefault();
-			event.stopPropagation();
-			void openExternalUrl(url);
-		},
-		[interactive, url],
-	);
+	const handleAuxClick = useJumpLinkAuxClick(url, interactive);
 	const handleContextMenu = useCallback(
 		(event: React.MouseEvent<HTMLButtonElement | HTMLSpanElement>) => {
 			if (!interactive) return;
@@ -705,16 +688,7 @@ function SettingsJumpLinkMention({target, url, i18n, interactive = true}: Settin
 		},
 		[interactive, url],
 	);
-	const handleAuxClick = useCallback(
-		(event: React.MouseEvent<HTMLButtonElement | HTMLSpanElement>) => {
-			if (!interactive) return;
-			if (event.button !== 1) return;
-			event.preventDefault();
-			event.stopPropagation();
-			if (url) void openExternalUrl(url);
-		},
-		[interactive, url],
-	);
+	const handleAuxClick = useJumpLinkAuxClick(url, interactive);
 	const handleContextMenu = useCallback(
 		(event: React.MouseEvent<HTMLButtonElement | HTMLSpanElement>) => {
 			if (!interactive) return;
@@ -808,16 +782,7 @@ function AppPageJumpLinkMention({page, url, i18n, interactive = true}: AppPageJu
 		},
 		[interactive, page],
 	);
-	const handleAuxClick = useCallback(
-		(event: React.MouseEvent<HTMLButtonElement | HTMLSpanElement>) => {
-			if (!interactive) return;
-			if (event.button !== 1) return;
-			event.preventDefault();
-			event.stopPropagation();
-			void openExternalUrl(url);
-		},
-		[interactive, url],
-	);
+	const handleAuxClick = useJumpLinkAuxClick(url, interactive);
 	const handleContextMenu = useCallback(
 		(event: React.MouseEvent<HTMLButtonElement | HTMLSpanElement>) => {
 			if (!interactive) return;
@@ -876,6 +841,7 @@ export const LinkRenderer = observer(function LinkRenderer({
 }: RendererProps<LinkNode>): React.ReactElement {
 	const i18n = options.i18n!;
 	const {url, text} = node;
+	const openInBrowser = useOpenInBrowserOnMiddleClick(url);
 	const content = text ? renderChildren([text], LINK_CONTENT_OPTION_OVERRIDES) : url;
 	const inviteCode = InviteUtils.findInvite(url);
 	const themeCode = ThemeUtils.findTheme(url);
@@ -1199,14 +1165,7 @@ export const LinkRenderer = observer(function LinkRenderer({
 						void openExternalUrl(url);
 					}
 				}}
-				onAuxClick={(e) => {
-					if (e.button !== 1 || isInternal) {
-						return;
-					}
-					e.preventDefault();
-					e.stopPropagation();
-					openExternalUrlWithWarning(url);
-				}}
+				onAuxClick={isInternal ? undefined : openInBrowser.onAuxClick}
 				className={markupStyles.link}
 				data-flx="messaging.markdown.renderers.link-renderer.a"
 			>
@@ -1220,15 +1179,26 @@ export const LinkRenderer = observer(function LinkRenderer({
 	const destinationTooltipText = MobileLayout.enabled
 		? url
 		: () => (
-				<span className={linkRendererStyles.destination}>
+				<span className={linkRendererStyles.destination} data-flx="messaging.markdown.renderers.link-renderer.span">
 					{!isTrustedExternalDestination && (
-						<WarningIcon size={16} weight="fill" className={linkRendererStyles.destinationWarningIcon} />
+						<WarningIcon
+							size={16}
+							weight="fill"
+							className={linkRendererStyles.destinationWarningIcon}
+							data-flx="messaging.markdown.renderers.link-renderer.warning-icon"
+						/>
 					)}
-					<span>{url}</span>
+					<span data-flx="messaging.markdown.renderers.link-renderer.span--2">{url}</span>
 				</span>
 			);
 	return (
-		<Tooltip text={destinationTooltipText} type="normal" position="bottom" maxWidth="xl">
+		<Tooltip
+			text={destinationTooltipText}
+			type="normal"
+			position="bottom"
+			maxWidth="xl"
+			data-flx="messaging.markdown.renderers.link-renderer.tooltip.normal"
+		>
 			{linkElement}
 		</Tooltip>
 	);

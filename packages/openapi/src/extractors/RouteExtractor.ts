@@ -51,6 +51,7 @@ const RouteMetadata = z.strictObject({
 		.transform((value) => (typeof value === 'number' ? [value] : value))
 		.optional(),
 	bodylessStatusCodes: z.array(MetadataStatusCode).optional(),
+	errorStatusCodes: z.array(MetadataStatusCode).optional(),
 	security: z
 		.union([MetadataSecurityScheme, z.array(MetadataSecurityScheme)])
 		.transform((value) => (typeof value === 'string' ? [value] : value))
@@ -62,9 +63,6 @@ const RouteMetadata = z.strictObject({
 		.string()
 		.regex(/^[a-z][a-z0-9_]*$/)
 		.optional(),
-});
-const RouteOptionsMetadata = RouteMetadata.pick({description: true, responseContentType: true}).extend({
-	description: z.string().min(1),
 });
 function isHttpMethod(method: string): method is HttpMethod {
 	return HTTP_METHODS.has(method);
@@ -172,6 +170,7 @@ interface MiddlewareInfo {
 	explicitOperationId?: string;
 	explicitDescription?: string;
 	explicitStatusCodes?: Array<number> | null;
+	errorStatusCodes?: Array<number> | null;
 	explicitSecurity?: Array<string> | null;
 	oauth2RequiredScopes?: Array<string> | null;
 	oauth2ScopeMode?: 'all' | 'any';
@@ -182,20 +181,12 @@ interface MiddlewareInfo {
 	explicitExperiment?: string;
 }
 function extractOpenAPIMetadata(args: ReadonlyArray<Node>, context: MetadataContext): MiddlewareInfo {
-	const [first, summary, responseSchema, options] = args;
+	const [first] = args;
 	if (!first) throw new Error('OpenAPI requires route metadata');
-	if (options !== undefined && !Node.isObjectLiteralExpression(options)) {
-		throw new Error(`OpenAPI options must be an object literal: ${options.getText()}`);
+	if (!Node.isObjectLiteralExpression(first)) {
+		throw new Error(`OpenAPI metadata must be an object literal: ${first.getText()}`);
 	}
-	const value = Node.isObjectLiteralExpression(first)
-		? parseObjectLiteralMetadata(first, context)
-		: {
-				...(options ? RouteOptionsMetadata.parse(parseObjectLiteralMetadata(options, context)) : {}),
-				operationId: resolveMetadataValue(first, context),
-				summary: summary ? resolveMetadataValue(summary, context) : undefined,
-				responseSchema: responseSchema ? extractSchemaName(responseSchema, context) : undefined,
-				tags: [],
-			};
+	const value = parseObjectLiteralMetadata(first, context);
 	const parsed = RouteMetadata.safeParse(value);
 	if (!parsed.success) {
 		throw new Error(`Invalid OpenAPI metadata at line ${first.getStartLineNumber()}`, {cause: parsed.error});
@@ -215,6 +206,7 @@ function extractOpenAPIMetadata(args: ReadonlyArray<Node>, context: MetadataCont
 		explicitOperationId: metadata.operationId,
 		explicitDescription: metadata.description,
 		explicitStatusCodes: metadata.statusCode,
+		errorStatusCodes: metadata.errorStatusCodes,
 		explicitSecurity: metadata.security,
 		explicitTags: metadata.tags,
 		explicitDeprecated: metadata.deprecated,
@@ -230,10 +222,6 @@ function extractMiddlewareInfo(callExpr: CallExpression, context: MetadataContex
 	switch (name) {
 		case 'RateLimitMiddleware':
 			return {middlewareName: name, rateLimitConfig: args[0]?.getText()};
-		case 'ResponseType':
-			return {middlewareName: name, responseSchemaName: args[0]?.getText()};
-		case 'NoContent':
-			return {middlewareName: name, hasNoContent: true};
 		case 'OpenAPI':
 			return extractOpenAPIMetadata(args, context);
 		case 'requireOAuth2Scope':
@@ -410,6 +398,7 @@ function buildRoute(
 		explicitOperationId: null,
 		explicitDescription: null,
 		explicitStatusCodes: null,
+		errorStatusCodes: [],
 		explicitSecurity: null,
 		oauth2RequiredScopes: null,
 		oauth2ScopeMode: null,
@@ -461,6 +450,7 @@ function buildRoute(
 		if (middleware.explicitOperationId) route.explicitOperationId = middleware.explicitOperationId;
 		if (middleware.explicitDescription) route.explicitDescription = middleware.explicitDescription;
 		if (middleware.explicitStatusCodes) route.explicitStatusCodes = middleware.explicitStatusCodes;
+		if (middleware.errorStatusCodes) route.errorStatusCodes = middleware.errorStatusCodes;
 		if (middleware.explicitSecurity) route.explicitSecurity = middleware.explicitSecurity;
 		if (middleware.oauth2RequiredScopes && middleware.oauth2ScopeMode) {
 			if (route.oauth2ScopeMode && route.oauth2ScopeMode !== middleware.oauth2ScopeMode) {

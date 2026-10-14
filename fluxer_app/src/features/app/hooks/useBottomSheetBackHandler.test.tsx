@@ -59,21 +59,10 @@ afterEach(() => {
 	router.history = null;
 });
 
-test('closing a sheet by hand steps back over its history entry', () => {
-	const history = requireHistory();
-	const back = vi.spyOn(history, 'back');
-	act(() => root?.render(<Sheet />));
-	expect(sheetMarker()).toBeTypeOf('string');
-	act(() => closeSheet?.());
-	expect(back).toHaveBeenCalledTimes(1);
-	expect(history.location.href).toBe(SHEET_URL);
-	expect(sheetMarker()).toBeUndefined();
-});
-
 test('a sheet dismissed by an account switch leaves navigation to the switch', async () => {
 	const history = requireHistory();
 	const back = vi.spyOn(history, 'back');
-	act(() => root?.render(<Sheet />));
+	act(() => root?.render(<Sheet data-flx="app.use-bottom-sheet-back-handler-test.sheet--2" />));
 	expect(sheetMarker()).toBeTypeOf('string');
 	(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = false;
 	await AccountScopedWork.runSuspended(AccountScopedWorkTransitionReason.ACCOUNT_SWITCH, async () => {

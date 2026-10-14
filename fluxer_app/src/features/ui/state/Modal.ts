@@ -37,10 +37,6 @@ export function getZIndexForStack(stackIndex: number): number {
 	return BASE_Z_INDEX + stackIndex * Z_INDEX_INCREMENT;
 }
 
-export function getBackdropZIndexForStack(stackIndex: number): number {
-	return BASE_Z_INDEX + stackIndex * Z_INDEX_INCREMENT - 1;
-}
-
 interface ModalEntry {
 	modal: ModalRender;
 	modalType: ModalType | undefined;
@@ -204,10 +200,6 @@ class ModalState {
 			);
 			this.scheduleFocus(removed.focusReturnTarget, removed.keyboardModeEnabled);
 		}
-	}
-
-	get orderedModals(): Array<ModalWithStackInfo> {
-		return this.getOrderedModals(document);
 	}
 
 	getOrderedModals(ownerDocument: Document = document): Array<ModalWithStackInfo> {

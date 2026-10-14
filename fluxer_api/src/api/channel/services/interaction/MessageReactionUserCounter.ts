@@ -9,8 +9,8 @@ import {
 	type MessageID,
 	type UserID,
 } from '@app/api/BrandedTypes';
-import type {IChannelRepository} from '@app/api/channel/IChannelRepository';
-import type {IMessageInteractionRepository} from '@app/api/channel/repositories/IMessageInteractionRepository';
+import type {ChannelRepository} from '@app/api/channel/ChannelRepository';
+import type {MessageInteractionRepository} from '@app/api/channel/repositories/MessageInteractionRepository';
 import {
 	type CounterFlusher,
 	counterDirtyKey,
@@ -35,11 +35,11 @@ export function messageReactionUserCounterId(
 }
 
 export function createMessageReactionUserCounterFlusher(
-	channelRepository: Pick<IChannelRepository, 'countReactionUsersUpTo'>,
+	channelRepository: Pick<ChannelRepository, 'messageInteractions'>,
 ): CounterFlusher {
 	const readBase = (id: string) => {
 		const [channelId, messageId, emojiId, ...name] = id.split(':');
-		return channelRepository.countReactionUsersUpTo(
+		return channelRepository.messageInteractions.countReactionUsersUpTo(
 			createChannelID(BigInt(channelId)),
 			createMessageID(BigInt(messageId)),
 			name.join(':'),
@@ -73,7 +73,7 @@ async function adjustExistingCounter(id: string, delta: number): Promise<void> {
 }
 
 export async function getMessageReactionCount(
-	repository: IMessageInteractionRepository,
+	repository: MessageInteractionRepository,
 	channelId: ChannelID,
 	messageId: MessageID,
 	emojiName: string,
@@ -123,7 +123,7 @@ export async function getMessageReactionCount(
 }
 
 export async function removeMessageReactionCounted(
-	repository: IMessageInteractionRepository,
+	repository: MessageInteractionRepository,
 	channelId: ChannelID,
 	messageId: MessageID,
 	userId: UserID,

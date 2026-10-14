@@ -15,10 +15,7 @@ import {
 	type ProfileViewer,
 } from '@app/api/user/profile/ProfileAccessRules';
 import {type ProfileAudience, resolveProfileAudience} from '@app/api/user/profile/ProfilePrivacy';
-import type {IUserAccountRepository} from '@app/api/user/repositories/IUserAccountRepository';
-import type {IUserChannelRepository} from '@app/api/user/repositories/IUserChannelRepository';
-import type {IUserRelationshipRepository} from '@app/api/user/repositories/IUserRelationshipRepository';
-import type {IUserSettingsRepository} from '@app/api/user/repositories/IUserSettingsRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import {RelationshipTypes, UserFlags} from '@fluxer/constants/src/UserConstants';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
@@ -43,10 +40,10 @@ export interface Relation {
 }
 
 export interface ProfileAccessServiceDeps {
-	users: Pick<IUserAccountRepository, 'findUnique' | 'getUserGuildIds'>;
-	settings: Pick<IUserSettingsRepository, 'findSettings'>;
-	relationships: Pick<IUserRelationshipRepository, 'getRelationship' | 'getIncomingRelationship'>;
-	channels: Pick<IUserChannelRepository, 'listPrivateChannels'>;
+	users: Pick<UserRepository, 'findUnique' | 'getUserGuildIds'>;
+	settings: Pick<UserRepository, 'findSettings'>;
+	relationships: Pick<UserRepository, 'getRelationship' | 'getIncomingRelationship'>;
+	channels: Pick<UserRepository, 'listPrivateChannels'>;
 	follows: {
 		getFollow(userId: UserID, targetId: UserID): Promise<unknown | null>;
 		isFollowingCached(userId: UserID, targetId: UserID): Promise<boolean>;

@@ -2,12 +2,11 @@
 
 import {Config} from '@app/api/Config';
 import {ProductRegistry, ProductType} from '@app/api/stripe/ProductRegistry';
-import {UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {afterAll, beforeAll, describe, expect, test} from 'vitest';
 
 // Mirrors the live BRL/TRY configuration after the repricing: the BRL slots point at the new list
 // prices, TRY is not configured at all (production has no TRY prices), and every retired price id
-// lives only in the legacy map.
+// is only in the legacy map.
 const MOCK_PRICES = {
 	monthlyUsd: 'price_monthly_usd',
 	monthlyBrl: 'price_1TMbqsFPC94Os7FdfElrIIaZ',
@@ -59,7 +58,6 @@ describe('ProductRegistry - legacy prices', () => {
 			const registry = buildRegistry(MOCK_PRICES, MOCK_LEGACY_PRICES);
 			expect(registry.getProduct(LEGACY_MONTHLY_BRL)).toEqual({
 				type: ProductType.MONTHLY_SUBSCRIPTION,
-				premiumType: UserPremiumTypes.SUBSCRIPTION,
 				durationMonths: 1,
 				isGift: false,
 				currency: 'BRL',
@@ -71,7 +69,6 @@ describe('ProductRegistry - legacy prices', () => {
 			const registry = buildRegistry(MOCK_PRICES, MOCK_LEGACY_PRICES);
 			expect(registry.getProduct(LEGACY_YEARLY_BRL)).toEqual({
 				type: ProductType.YEARLY_SUBSCRIPTION,
-				premiumType: UserPremiumTypes.SUBSCRIPTION,
 				durationMonths: 12,
 				isGift: false,
 				currency: 'BRL',
@@ -84,7 +81,6 @@ describe('ProductRegistry - legacy prices', () => {
 			const info = registry.getProduct(LEGACY_GIFT_1_MONTH_BRL);
 			expect(info).toEqual({
 				type: ProductType.GIFT_1_MONTH,
-				premiumType: UserPremiumTypes.SUBSCRIPTION,
 				durationMonths: 1,
 				isGift: true,
 				currency: 'BRL',
@@ -97,7 +93,6 @@ describe('ProductRegistry - legacy prices', () => {
 			const info = registry.getProduct(LEGACY_GIFT_1_YEAR_BRL);
 			expect(info).toEqual({
 				type: ProductType.GIFT_1_YEAR,
-				premiumType: UserPremiumTypes.SUBSCRIPTION,
 				durationMonths: 12,
 				isGift: true,
 				currency: 'BRL',
@@ -121,6 +116,7 @@ describe('ProductRegistry - legacy prices', () => {
 					monthly_brl: ['legacy_brl'],
 					monthly_dkk: ['legacy_dkk'],
 					monthly_inr: ['legacy_inr'],
+					monthly_isk: ['legacy_isk'],
 					monthly_nok: ['legacy_nok'],
 					monthly_pln: ['legacy_pln'],
 					monthly_sek: ['legacy_sek'],
@@ -132,6 +128,7 @@ describe('ProductRegistry - legacy prices', () => {
 			expect(registry.getProduct('legacy_brl')?.currency).toBe('BRL');
 			expect(registry.getProduct('legacy_dkk')?.currency).toBe('DKK');
 			expect(registry.getProduct('legacy_inr')?.currency).toBe('INR');
+			expect(registry.getProduct('legacy_isk')?.currency).toBe('ISK');
 			expect(registry.getProduct('legacy_nok')?.currency).toBe('NOK');
 			expect(registry.getProduct('legacy_pln')?.currency).toBe('PLN');
 			expect(registry.getProduct('legacy_sek')?.currency).toBe('SEK');
@@ -196,7 +193,6 @@ describe('ProductRegistry - legacy prices', () => {
 
 			expect(registry.getProduct(LEGACY_MONTHLY_TRY)).toEqual({
 				type: ProductType.MONTHLY_SUBSCRIPTION,
-				premiumType: UserPremiumTypes.SUBSCRIPTION,
 				durationMonths: 1,
 				isGift: false,
 				currency: 'TRY',
@@ -211,7 +207,7 @@ describe('ProductRegistry - legacy prices', () => {
 		test('no legacy price id is ever returned by either price getter, for any cycle or currency', () => {
 			const registry = buildRegistry(MOCK_PRICES, MOCK_LEGACY_PRICES);
 			const legacyIds = new Set(Object.values(MOCK_LEGACY_PRICES).flatMap((ids) => ids ?? []));
-			const currencies = ['USD', 'EUR', 'BRL', 'DKK', 'INR', 'NOK', 'PLN', 'SEK', 'TRY'];
+			const currencies = ['USD', 'EUR', 'BRL', 'DKK', 'INR', 'ISK', 'NOK', 'PLN', 'SEK', 'TRY'];
 
 			const offered: Array<string> = [];
 			for (const currency of currencies) {
@@ -253,7 +249,6 @@ describe('ProductRegistry - legacy prices', () => {
 			});
 			expect(registry.getProduct(MOCK_PRICES.monthlyBrl)).toEqual({
 				type: ProductType.MONTHLY_SUBSCRIPTION,
-				premiumType: UserPremiumTypes.SUBSCRIPTION,
 				durationMonths: 1,
 				isGift: false,
 				currency: 'BRL',
@@ -267,7 +262,6 @@ describe('ProductRegistry - legacy prices', () => {
 			});
 			expect(registry.getProduct(MOCK_PRICES.gift1YearBrl)).toEqual({
 				type: ProductType.GIFT_1_YEAR,
-				premiumType: UserPremiumTypes.SUBSCRIPTION,
 				durationMonths: 12,
 				isGift: true,
 				currency: 'BRL',
@@ -284,7 +278,6 @@ describe('ProductRegistry - legacy prices', () => {
 			);
 			expect(registry.getProduct('legacy_shared')).toEqual({
 				type: ProductType.MONTHLY_SUBSCRIPTION,
-				premiumType: UserPremiumTypes.SUBSCRIPTION,
 				durationMonths: 1,
 				isGift: false,
 				currency: 'BRL',

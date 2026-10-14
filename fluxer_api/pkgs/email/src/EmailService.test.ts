@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {EmailI18nService} from '@pkgs/email/src/EmailI18nService';
 import type {EmailConfig, EmailHtmlBranding, EmailMessage, IEmailProvider} from '@pkgs/email/src/EmailProviderTypes';
 import {EmailService} from '@pkgs/email/src/EmailService';
 import {describe, expect, it} from 'vitest';
@@ -10,7 +9,12 @@ const CONFIG: EmailConfig = {
 	fromEmail: 'noreply@example.test',
 	fromName: 'sanalyer',
 	appBaseUrl: 'https://app.example.test',
-	marketingBaseUrl: 'https://example.test/marketing',
+	termsUrl: 'https://example.test/marketing/terms',
+	guidelinesUrl: 'https://example.test/marketing/guidelines',
+	appealsEmail: 'info@sanalyer.com',
+	safetyEmail: 'info@sanalyer.com',
+	supportEmail: 'info@sanalyer.com',
+	productName: 'sanalyer',
 };
 const LOGO_URL = 'https://static.example.test/web/android-chrome-192x192.png';
 const HTML: EmailHtmlBranding = {
@@ -26,7 +30,7 @@ const HTML: EmailHtmlBranding = {
 async function capture(config: EmailConfig, send: (service: EmailService) => Promise<boolean>): Promise<EmailMessage> {
 	const sent: Array<EmailMessage> = [];
 	await send(
-		new EmailService(config, new EmailI18nService(), {
+		new EmailService(config, {
 			sendEmail: async (message) => {
 				sent.push(message);
 				return true;
@@ -356,7 +360,7 @@ async function sendWith(config: EmailConfig): Promise<EmailMessage> {
 			return true;
 		},
 	};
-	const service = new EmailService(config, new EmailI18nService(), provider);
+	const service = new EmailService(config, provider);
 	await expect(service.sendRegistrationApprovedEmail('user@example.com', 'testuser', 'en-US')).resolves.toBe(true);
 	expect(sent).toHaveLength(1);
 	return sent[0];

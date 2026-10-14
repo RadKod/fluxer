@@ -3,12 +3,9 @@
 import type {UserID} from '@app/api/BrandedTypes';
 import {SYSTEM_USER_ID} from '@app/api/constants/Core';
 import type {GiftCodeDurationType, GiftCodeRow} from '@app/api/database/types/PaymentTypes';
-import {mapGiftCodeDurationToMonths} from '@app/api/models/GiftCode';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
-import * as RandomUtils from '@app/api/utils/RandomUtils';
+import {generateUniqueGiftCode, mapGiftCodeDurationToMonths} from '@app/api/models/GiftCode';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 
-const CODE_LENGTH = 32;
-const MAX_GENERATION_ATTEMPTS = 100;
 const MAX_CODES_PER_REQUEST = 100;
 const DURATION_TYPES = new Set<GiftCodeDurationType>(['days', 'weeks', 'months', 'years']);
 
@@ -20,7 +17,7 @@ interface GenerateGiftCodesOptions {
 }
 
 export class AdminCodeGenerationService {
-	constructor(private readonly userRepository: IUserRepository) {}
+	constructor(private readonly userRepository: UserRepository) {}
 
 	async generateGiftCodes(options: GenerateGiftCodesOptions): Promise<Array<string>> {
 		const {count, durationType, durationQuantity} = this.validateOptions(options);
@@ -49,7 +46,7 @@ export class AdminCodeGenerationService {
 	): Promise<Array<string>> {
 		const codes: Array<string> = [];
 		for (let i = 0; i < count; i += 1) {
-			const code = await this.generateUniqueGiftCode();
+			const code = await generateUniqueGiftCode((candidate) => this.userRepository.findGiftCode(candidate));
 			const giftCodeRow: GiftCodeRow = {
 				code,
 				...grant,
@@ -88,19 +85,5 @@ export class AdminCodeGenerationService {
 			throw new Error('Gift code duration quantity must be a positive integer');
 		}
 		return options;
-	}
-
-	private async generateUniqueGiftCode(): Promise<string> {
-		for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
-			const candidate = RandomUtils.randomString(CODE_LENGTH);
-			const exists = await this.userRepository.findGiftCode(candidate);
-			if (!exists) {
-				return candidate;
-			}
-		}
-		throw new Error(
-			`Failed to generate unique gift code after ${MAX_GENERATION_ATTEMPTS} attempts. ` +
-				'This may indicate a high collision rate or database issues.',
-		);
 	}
 }

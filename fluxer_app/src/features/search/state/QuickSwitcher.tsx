@@ -4,7 +4,8 @@ import Guilds from '@app/features/guild/state/Guilds';
 import {onLocaleChange} from '@app/features/i18n/utils/LocaleChangeListener';
 import type {GuildMember} from '@app/features/member/models/GuildMember';
 import GuildMembers from '@app/features/member/state/GuildMembers';
-import MemberSearch, {type SearchContext, type TransformedMember} from '@app/features/member/state/MemberSearch';
+import MemberSearch, {type SearchContext} from '@app/features/member/state/MemberSearch';
+import type {TransformedMember} from '@app/features/member/workers/MemberSearchProtocol';
 import SelectedGuild from '@app/features/navigation/state/SelectedGuild';
 import {parseChannelUrl} from '@app/features/navigation/utils/DeepLinkUtils';
 import {AccountScopedWork} from '@app/features/platform/state/AccountScopedWork';
@@ -156,10 +157,6 @@ class QuickSwitcher {
 
 	getIsOpen(): boolean {
 		return this.isOpen;
-	}
-
-	getResults(): ReadonlyArray<QuickSwitcherResult> {
-		return this.results;
 	}
 
 	getSelectedResult(): QuickSwitcherExecutableResult | null {

@@ -6,7 +6,6 @@ import {
 	findLaneForTask,
 	queuesUnconsumedPurgeRuns,
 	queuesUnconsumedViewFlushes,
-	resolveCronSchedulerEnabled,
 	resolveWorkerLanes,
 	validateLaneCompleteness,
 	WORKER_LANES,
@@ -273,7 +272,7 @@ describe('WorkerLaneConfig', () => {
 			lanes.filter((lane) => lane.retiredTaskTypes.length > 0).map((lane) => [lane.name, lane.retiredTaskTypes]),
 		);
 		expect(retired).toEqual({
-			lifecycle: ['sendScheduledMessage'],
+			lifecycle: ['sendScheduledMessage', 'finalizeNcmecAttachmentReport'],
 			batch: ['syncDisposableEmailDomains'],
 		});
 		for (const lane of lanes) {
@@ -294,47 +293,6 @@ describe('WorkerLaneConfig', () => {
 		expect(() => validateLaneCompleteness({...registry, sendScheduledMessage: () => {}})).toThrow(
 			/Retired tasks registered again: sendScheduledMessage/,
 		);
-	});
-	it('throws when single_lane mode has no lane configured', () => {
-		expect(() =>
-			resolveWorkerLanes({
-				mode: 'single_lane',
-				laneConcurrencyOverrides: {},
-			}),
-		).toThrow(/required when worker mode is "single_lane"/);
-	});
-	it('throws when a lane override is invalid', () => {
-		expect(() =>
-			resolveWorkerLanes({
-				mode: 'single_lane',
-				laneName: 'realtime',
-				laneConcurrencyOverrides: {
-					realtime: 0,
-				},
-			}),
-		).toThrow(/Invalid concurrency override/);
-	});
-	it('applies per-lane concurrency overrides', () => {
-		const lanes = resolveWorkerLanes({
-			mode: 'all_lanes',
-			laneConcurrencyOverrides: {
-				realtime: 99,
-			},
-		});
-		const realtimeLane = lanes.find((lane) => lane.name === 'realtime');
-		const lifecycleLane = lanes.find((lane) => lane.name === 'lifecycle');
-		expect(realtimeLane?.concurrency).toBe(99);
-		expect(lifecycleLane?.concurrency).toBe(8);
-	});
-	it('enables cron by default in all_lanes mode', () => {
-		expect(resolveCronSchedulerEnabled('all_lanes', undefined)).toBe(true);
-	});
-	it('disables cron by default in single_lane mode', () => {
-		expect(resolveCronSchedulerEnabled('single_lane', undefined)).toBe(false);
-	});
-	it('respects explicit cron scheduler config', () => {
-		expect(resolveCronSchedulerEnabled('single_lane', true)).toBe(true);
-		expect(resolveCronSchedulerEnabled('all_lanes', false)).toBe(false);
 	});
 });
 

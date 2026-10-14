@@ -4,7 +4,7 @@
 -typing([eqwalizer]).
 -behaviour(gen_server).
 
--export([start_link/0, pub/2, pub/3, pub_reply/2, reply_publish_failures/0, get_pool_status/0]).
+-export([start_link/0, pub/2, pub_reply/2, reply_publish_failures/0, get_pool_status/0]).
 -export([enable_rpc_subscription/0, disable_rpc_subscription/0]).
 -export([rpc_ready/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -34,13 +34,6 @@ start_link() ->
 pub(Subject, Payload) ->
     case gateway_nats_pool_conn:get_pool_conn() of
         {ok, Conn} -> nats:pub(Conn, Subject, Payload);
-        Error -> Error
-    end.
-
--spec pub(binary(), iodata(), map()) -> ok | {error, term()}.
-pub(Subject, Payload, Opts) ->
-    case gateway_nats_pool_conn:get_pool_conn() of
-        {ok, Conn} -> nats:pub(Conn, Subject, Payload, Opts);
         Error -> Error
     end.
 
@@ -537,7 +530,7 @@ dispatch_rpc_msg(Subject, Payload, MsgOpts, HC, MaxH, HRefs, State) ->
 -spec spawn_rpc_handler(binary(), binary(), binary()) -> {pid(), reference()}.
 spawn_rpc_handler(Subject, Payload, ReplyTo) ->
     spawn_monitor(fun() ->
-        gateway_nats_rpc:handle_rpc_request(Subject, Payload, ReplyTo)
+        gateway_nats_rpc_handler:handle_rpc_request(Subject, Payload, ReplyTo)
     end).
 
 -spec send_overloaded(binary()) -> ok | {error, term()}.

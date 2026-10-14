@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {AdminAuditLog} from '@app/api/admin/IAdminRepository';
+import type {AdminAuditLog} from '@app/api/admin/AdminRepository';
 import {createTestAccount, setUserACLs, type TestAccount} from '@app/api/auth/tests/AuthTestUtils';
-import {GATEWAY_ROLLOUT_CONFIG_NATS_SUBJECT} from '@app/api/instance/GatewayRolloutConfigPublisher';
 import {getAdminRepository, getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
@@ -70,7 +69,7 @@ describe('gateway rollout connection cap admin updates', () => {
 		expect(await getInstanceConfigRepository().getGatewayRolloutConfig()).toEqual(response.gateway_rollout);
 		expect(publish).toHaveBeenCalledTimes(1);
 		const [subject, payload] = publish.mock.calls[0];
-		expect(subject).toBe(GATEWAY_ROLLOUT_CONFIG_NATS_SUBJECT);
+		expect(subject).toBe('config.gateway.rollout');
 		expect(JSON.parse(new TextDecoder().decode(payload))).toEqual({
 			type: 'gateway_rollout_config',
 			config: response.gateway_rollout,

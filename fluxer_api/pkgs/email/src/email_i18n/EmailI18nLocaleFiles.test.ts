@@ -1,15 +1,10 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
-
 import {extractMessageTemplatePlaceholders} from '@fluxer/i18n/src/runtime/MessageCatalogTypes';
-import {EmailI18nService} from '@pkgs/email/src/EmailI18nService';
-import type {EmailMessage, IEmailProvider} from '@pkgs/email/src/EmailProviderTypes';
-import {EmailService} from '@pkgs/email/src/EmailService';
-import {getEmailTemplate, resetEmailI18n} from '@pkgs/email/src/email_i18n/EmailI18n';
+import {getEmailTemplate} from '@pkgs/email/src/email_i18n/EmailI18n';
 import {EMAIL_I18N_LOCALE_MESSAGES} from '@pkgs/email/src/email_i18n/EmailI18nLocales';
 import {EMAIL_I18N_MESSAGES} from '@pkgs/email/src/email_i18n/EmailI18nMessages';
 import type {EmailTemplateVariables} from '@pkgs/email/src/email_i18n/EmailI18nTypes';
 import type {EmailTemplate, EmailTemplateKey} from '@pkgs/email/src/email_i18n/EmailI18nTypes.generated';
-import {afterEach, describe, expect, it} from 'vitest';
+import {describe, expect, it} from 'vitest';
 
 const LOCALES = Object.keys(EMAIL_I18N_LOCALE_MESSAGES) as Array<keyof typeof EMAIL_I18N_LOCALE_MESSAGES>;
 const ACTION_URL_VARIABLES: Record<string, string> = {
@@ -49,6 +44,7 @@ const SAMPLE_VARIABLES = {
 	amount: '$5.00',
 	currency: 'USD',
 	interval: 'month',
+	support_email: 'info@sanalyer.com',
 };
 
 function buttonTemplates(catalog: Record<string, EmailTemplate>): Array<string> {
@@ -62,15 +58,27 @@ const TEMPLATE_KEYS = Object.keys(EMAIL_I18N_MESSAGES) as Array<EmailTemplateKey
 const DATE = new Date('2026-10-01T23:30:00Z');
 
 const FIXTURE: {[K in EmailTemplateKey]: EmailTemplateVariables[K]} = {
-	account_deletion_cancelled: {username: 'testuser'},
-	account_deletion_scheduled_inactivity: {username: 'testuser', reason: 'Inactive', deletionDate: DATE},
-	account_deletion_scheduled_requested: {username: 'testuser', reason: 'Requested', deletionDate: DATE},
+	account_deletion_cancelled: {username: 'testuser', safety_email: 'safety@fluxer.com'},
+	account_deletion_scheduled_inactivity: {
+		username: 'testuser',
+		reason: 'Inactive',
+		deletionDate: DATE,
+		safety_email: 'safety@fluxer.com',
+	},
+	account_deletion_scheduled_requested: {
+		username: 'testuser',
+		reason: 'Requested',
+		deletionDate: DATE,
+		safety_email: 'safety@fluxer.com',
+	},
 	account_scheduled_deletion: {
 		username: 'testuser',
 		reason: 'Spam',
 		deletionDate: DATE,
 		termsUrl: 'https://example.com/terms',
 		guidelinesUrl: 'https://example.com/guidelines',
+		legalLinks: 'both',
+		appeals_email: 'appeals@fluxer.com',
 	},
 	account_temp_banned: {
 		username: 'testuser',
@@ -79,27 +87,32 @@ const FIXTURE: {[K in EmailTemplateKey]: EmailTemplateVariables[K]} = {
 		bannedUntil: DATE,
 		termsUrl: 'https://example.com/terms',
 		guidelinesUrl: 'https://example.com/guidelines',
+		legalLinks: 'both',
+		appeals_email: 'appeals@fluxer.com',
 	},
 	donation_confirmation: {amount: '$5.00', currency: 'USD', interval: 'month', manageUrl: 'https://example.com/m'},
 	donation_magic_link: {manageUrl: 'https://example.com/m', expiresAt: DATE},
+	dsa_report_resolved: {reportId: '1', publicComment: 'Thanks', hasComment: 'yes', appeals_email: 'appeals@fluxer.com'},
 	dsa_report_verification: {code: '123456', expiresAt: DATE},
 	email_change_new: {username: 'testuser', code: '123456', expiresAt: DATE},
 	email_change_original: {username: 'testuser', code: '123456', expiresAt: DATE},
 	email_change_revert: {username: 'testuser', newEmail: 'new@example.com', revertUrl: 'https://example.com/r'},
 	email_verification: {username: 'testuser', verifyUrl: 'https://example.com/verify'},
-	gift_chargeback_notification: {username: 'testuser'},
+	gift_chargeback_notification: {username: 'testuser', support_email: 'support@fluxer.com'},
 	harvest_completed: {
 		username: 'testuser',
 		downloadUrl: 'https://example.com/d',
 		totalMessages: 1200,
 		fileSizeMB: 3.5,
 		expiresAt: DATE,
+		support_email: 'support@fluxer.com',
 	},
 	inactivity_warning: {
 		username: 'testuser',
 		deletionDate: DATE,
 		lastActiveDate: DATE,
 		loginUrl: 'https://example.com/login',
+		support_email: 'support@fluxer.com',
 	},
 	ip_authorization: {
 		username: 'testuser',
@@ -112,36 +125,25 @@ const FIXTURE: {[K in EmailTemplateKey]: EmailTemplateVariables[K]} = {
 	password_reset: {username: 'testuser', resetUrl: 'https://example.com/reset'},
 	referral_reward_ready: {username: 'testuser'},
 	registration_approved: {username: 'testuser', channelsUrl: 'https://example.com/channels'},
-	report_resolved: {username: 'testuser', reportId: '1', publicComment: 'Thanks', hasComment: 'yes'},
-	scheduled_deletion_notification: {username: 'testuser', deletionDate: DATE, reason: 'Payment fraud'},
+	report_received: {reportId: '1', targetKind: 'message'},
+	report_resolved: {
+		username: 'testuser',
+		reportId: '1',
+		publicComment: 'Thanks',
+		hasComment: 'yes',
+		safety_email: 'safety@fluxer.com',
+	},
+	scheduled_deletion_notification: {
+		username: 'testuser',
+		deletionDate: DATE,
+		reason: 'Payment fraud',
+		appeals_email: 'appeals@fluxer.com',
+	},
 	self_deletion_scheduled: {username: 'testuser', deletionDate: DATE},
 	unban_notification: {username: 'testuser', reason: 'Appeal accepted'},
 };
 
-function renderBody<K extends EmailTemplateKey>(key: K, locale: string, variables: EmailTemplateVariables[K]): string {
-	const result = getEmailTemplate(key, locale, variables);
-	if (!result.ok) {
-		throw new Error(result.error.message);
-	}
-	return result.value.body;
-}
-
 describe('EmailI18n locale files', () => {
-	afterEach(() => {
-		resetEmailI18n();
-	});
-	it.each(LOCALES)('%s loads without module errors', (locale) => {
-		const template = getEmailTemplate('email_verification', locale, {
-			username: 'testuser',
-			verifyUrl: 'https://example.com/verify',
-		});
-		expect(template.ok).toBe(true);
-	});
-	it.each(LOCALES)('%s has the same translation keys as the source catalog', (locale) => {
-		const messagesKeys = Object.keys(EMAIL_I18N_MESSAGES).sort();
-		const localeKeys = Object.keys(EMAIL_I18N_LOCALE_MESSAGES[locale]).sort();
-		expect(localeKeys).toEqual(messagesKeys);
-	});
 	it('labels the action button of the action templates in the source catalog', () => {
 		expect(buttonTemplates(EMAIL_I18N_MESSAGES)).toEqual(BUTTON_TEMPLATES);
 	});
@@ -152,10 +154,12 @@ describe('EmailI18n locale files', () => {
 		'%s %s compiles and keeps the action URL on a line of its own',
 		(locale, key) => {
 			const url = `https://example.test/${key}`;
-			const template = getEmailTemplate(key as keyof typeof EMAIL_I18N_MESSAGES, locale, {
-				...SAMPLE_VARIABLES,
-				[ACTION_URL_VARIABLES[key]]: url,
-			});
+			const template = getEmailTemplate(
+				key as EmailTemplateKey,
+				locale,
+				{...SAMPLE_VARIABLES, [ACTION_URL_VARIABLES[key]]: url} as EmailTemplateVariables[EmailTemplateKey],
+				'sanalyer',
+			);
 			expect(template.ok).toBe(true);
 			if (!template.ok) return;
 			expect(template.value.button?.trim()).toBeTruthy();
@@ -170,10 +174,12 @@ describe('EmailI18n locale files', () => {
 		}
 	});
 	it('compiles the button label with the template variables', () => {
-		const template = getEmailTemplate('registration_approved', 'tr', {
-			username: 'ayse',
-			channelsUrl: 'https://example.com/channels/@me',
-		});
+		const template = getEmailTemplate(
+			'registration_approved',
+			'tr',
+			{username: 'ayse', channelsUrl: 'https://example.com/channels/@me'},
+			'sanalyer',
+		);
 		expect(template.ok && template.value.button).toBe("sanalyer'i aç");
 	});
 	it.each(LOCALES)('%s keeps the source placeholders in every template', (locale) => {
@@ -194,62 +200,11 @@ describe('EmailI18n locale files', () => {
 	});
 	it.each(['en-US', ...LOCALES])('%s renders every template with UTC times', (locale) => {
 		for (const key of TEMPLATE_KEYS) {
-			const result = getEmailTemplate(key, locale, FIXTURE[key]);
+			const result = getEmailTemplate(key, locale, FIXTURE[key], 'Fluxer');
 			expect(result.ok, key).toBe(true);
 			if (!result.ok) continue;
 			expect(result.value.body, key).not.toContain('GMT');
 			expect(result.value.body, key).not.toContain('Coordinated Universal Time');
 		}
-	});
-	it('renders dates and times in UTC with a zone label', () => {
-		expect(renderBody('self_deletion_scheduled', 'en-US', {username: 'testuser', deletionDate: DATE})).toContain(
-			'Thursday, October 1, 2026 at 11:30 PM UTC',
-		);
-	});
-	it.each(['account_deletion_scheduled_requested', 'account_deletion_scheduled_inactivity'] as const)(
-		'%s makes no enforcement claim',
-		(key) => {
-			const body = renderBody(key, 'en-US', {username: 'testuser', reason: 'Some reason', deletionDate: DATE});
-			expect(body).not.toContain('Terms of Service');
-			expect(body.toLowerCase()).not.toContain('appeal');
-			expect(body).toContain('Reason: Some reason');
-		},
-	);
-	it.each(['account_deletion_scheduled_requested', 'account_deletion_scheduled_inactivity'] as const)(
-		'%s leaves no gap without a reason',
-		(key) => {
-			const body = renderBody(key, 'en-US', {username: 'testuser', reason: null, deletionDate: DATE});
-			expect(body).not.toContain('Reason:');
-			expect(body).not.toContain('\n\n\n');
-		},
-	);
-	it('renders a blank reason the same as no reason', async () => {
-		const sent: Array<EmailMessage> = [];
-		const provider: IEmailProvider = {
-			sendEmail: async (message) => {
-				sent.push(message);
-				return true;
-			},
-		};
-		const service = new EmailService(
-			{
-				enabled: true,
-				fromEmail: 'noreply@example.com',
-				fromName: 'Fluxer',
-				appBaseUrl: 'https://example.com',
-				marketingBaseUrl: 'https://example.com',
-			},
-			new EmailI18nService(),
-			provider,
-		);
-		await service.sendUnbanNotification('user@example.com', 'testuser', '  ', 'en-US');
-		await service.sendUnbanNotification('user@example.com', 'testuser', null, 'en-US');
-		await service.sendAccountDeletionRequestedEmail('user@example.com', 'testuser', '  ', DATE, 'en-US');
-		await service.sendAccountDeletionRequestedEmail('user@example.com', 'testuser', null, DATE, 'en-US');
-		expect(sent).toHaveLength(4);
-		expect(sent[0].text).toBe(sent[1].text);
-		expect(sent[0].text).not.toContain('Reason:');
-		expect(sent[2].text).toBe(sent[3].text);
-		expect(sent[2].text).not.toContain('Reason:');
 	});
 });

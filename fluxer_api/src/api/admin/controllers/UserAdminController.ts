@@ -8,16 +8,16 @@ import {
 	RequireEmailAccountIdentity,
 	RequireUsernameAccountIdentity,
 } from '@app/api/middleware/AccountIdentityMiddleware';
-import {requireAdminACL} from '@app/api/middleware/AdminMiddleware';
+import {hasAdminACL, requireAdminACL, requireGrantedAdminACLs} from '@app/api/middleware/AdminMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
+import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import type {HonoApp} from '@app/api/types/HonoEnv';
 import {holdBucket} from '@app/api/user/username/UsernameOwnershipRepository';
 import {inputValidationErrorFromZodIssues, Validator} from '@app/api/Validator';
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
-import {MissingACLError} from '@fluxer/errors/src/domains/core/MissingACLError';
 import {ListUserGuildsResponse} from '@fluxer/schema/src/domains/admin/AdminGuildSchemas';
 import {SearchUsersResponse} from '@fluxer/schema/src/domains/admin/AdminSchemas';
 import {
@@ -26,6 +26,7 @@ import {
 	AdminUserAclsRequest,
 	AdminUserBanNoteRequest,
 	AdminUserBanRequest,
+	AdminUserBotStatusRequest,
 	AdminUserChangeLogQuery,
 	AdminUserClearFieldsRequest,
 	AdminUserDeletionCancelRequest,
@@ -40,6 +41,7 @@ import {
 	AdminUserPremiumFlagsUpdateRequest,
 	AdminUserRelationshipCategoryQuery,
 	AdminUserRelationshipParam,
+	AdminUserSystemStatusRequest,
 	AdminUsersMeResponse,
 	AdminUserTraitsRequest,
 	AdminUserUnbanRequest,
@@ -65,12 +67,6 @@ import {
 } from '@fluxer/schema/src/domains/admin/UsernameSchemas';
 import {WebAuthnCredentialListResponse} from '@fluxer/schema/src/domains/auth/AuthSchemas';
 import {UserIdParam} from '@fluxer/schema/src/domains/common/CommonParamSchemas';
-
-function requireSelectorACL(granted: ReadonlySet<string>, acl: string): void {
-	if (!granted.has(acl) && !granted.has(AdminACLs.WILDCARD)) {
-		throw new MissingACLError(acl);
-	}
-}
 
 export function UserAdminController(app: HonoApp) {
 	app.get(
@@ -255,14 +251,15 @@ export function UserAdminController(app: HonoApp) {
 			security: 'adminApiKey',
 			tags: 'Admin',
 			description:
-				'Return the admin the request was authenticated as, with the admin permissions, roles, and metadata of the account. Requires AUTHENTICATE permission.',
+				'Return the admin the request was authenticated as, with the admin permissions, roles, and metadata of the account, plus the number of pending registrations when the admin holds REGISTRATION_REVIEW. Requires AUTHENTICATE permission.',
 		}),
 		async (ctx) => {
-			const adminUser = ctx.get('user');
-			const cacheService = ctx.get('cacheService');
-			return ctx.json({
-				user: await mapUserToAdminResponse(adminUser, cacheService),
-			});
+			const canReviewRegistrations = hasAdminACL(ctx.get('adminUserAcls'), AdminACLs.REGISTRATION_REVIEW);
+			const [user, pendingRegistrations] = await Promise.all([
+				mapUserToAdminResponse(ctx.get('user'), ctx.get('cacheService')),
+				canReviewRegistrations ? getInstanceConfigRepository().getPendingRegistrations() : null,
+			]);
+			return ctx.json({user, pending_registration_count: pendingRegistrations?.length ?? null});
 		},
 	);
 	app.get(
@@ -288,7 +285,7 @@ export function UserAdminController(app: HonoApp) {
 				query.user_id === undefined ? undefined : Array.isArray(query.user_id) ? query.user_id : [query.user_id];
 			if (userIds || query.resolve !== undefined) {
 				if (!userIds && query.resolve?.includes('@')) {
-					requireSelectorACL(adminUserAcls, AdminACLs.USER_VIEW_EMAIL);
+					requireGrantedAdminACLs(adminUserAcls, [AdminACLs.USER_VIEW_EMAIL]);
 				}
 				const parsed = LookupUserRequest.safeParse(userIds ? {user_ids: userIds} : {query: query.resolve});
 				if (!parsed.success) {
@@ -311,9 +308,9 @@ export function UserAdminController(app: HonoApp) {
 			}
 			const selector = query.email?.trim() ? 'email' : query.last_active_ip?.trim() ? 'last_active_ip' : 'search';
 			if (selector === 'email') {
-				requireSelectorACL(adminUserAcls, AdminACLs.USER_VIEW_EMAIL);
+				requireGrantedAdminACLs(adminUserAcls, [AdminACLs.USER_VIEW_EMAIL]);
 			} else if (selector === 'last_active_ip') {
-				requireSelectorACL(adminUserAcls, AdminACLs.USER_VIEW_IP);
+				requireGrantedAdminACLs(adminUserAcls, [AdminACLs.USER_VIEW_IP]);
 			}
 			const response = await adminService.searchService.searchUsers(
 				{
@@ -749,6 +746,70 @@ export function UserAdminController(app: HonoApp) {
 			const {user_id: userId} = ctx.req.valid('param');
 			return ctx.json(
 				await adminService.userService.profileService.clearUserFields(
+					{user_id: userId, ...ctx.req.valid('json')},
+					adminUserId,
+					auditLogReason,
+					adminUserAcls,
+				),
+			);
+		},
+	);
+	app.put(
+		'/admin/users/:user_id/bot-status',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.USER_UPDATE_BOT_STATUS),
+		Validator('param', UserIdParam),
+		Validator('json', AdminUserBotStatusRequest),
+		OpenAPI({
+			operationId: 'set_admin_user_bot_status',
+			summary: 'Set user bot status',
+			responseSchema: UserMutationResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'Mark or unmark a user account as a bot. Controls bot badge visibility and API permissions. Creates audit log entry. Requires USER_UPDATE_BOT_STATUS permission.',
+		}),
+		async (ctx) => {
+			const adminService = ctx.get('adminService');
+			const adminUserId = ctx.get('adminUserId');
+			const auditLogReason = ctx.get('auditLogReason');
+			const adminUserAcls = ctx.get('adminUserAcls');
+			const {user_id: userId} = ctx.req.valid('param');
+			return ctx.json(
+				await adminService.userService.profileService.setUserBotStatus(
+					{user_id: userId, ...ctx.req.valid('json')},
+					adminUserId,
+					auditLogReason,
+					adminUserAcls,
+				),
+			);
+		},
+	);
+	app.put(
+		'/admin/users/:user_id/system-status',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.USER_UPDATE_BOT_STATUS),
+		Validator('param', UserIdParam),
+		Validator('json', AdminUserSystemStatusRequest),
+		OpenAPI({
+			operationId: 'set_admin_user_system_status',
+			summary: 'Set user system status',
+			responseSchema: UserMutationResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'Mark or unmark a user as a system account. System accounts have special permissions for automated operations. Creates audit log entry. Requires USER_UPDATE_BOT_STATUS permission.',
+		}),
+		async (ctx) => {
+			const adminService = ctx.get('adminService');
+			const adminUserId = ctx.get('adminUserId');
+			const auditLogReason = ctx.get('auditLogReason');
+			const adminUserAcls = ctx.get('adminUserAcls');
+			const {user_id: userId} = ctx.req.valid('param');
+			return ctx.json(
+				await adminService.userService.profileService.setUserSystemStatus(
 					{user_id: userId, ...ctx.req.valid('json')},
 					adminUserId,
 					auditLogReason,

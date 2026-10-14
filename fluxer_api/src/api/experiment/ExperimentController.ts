@@ -8,11 +8,11 @@ import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import type {HonoApp} from '@app/api/types/HonoEnv';
 import {entityTagMatches} from '@app/api/utils/EntityTag';
+import {lookupGeoip} from '@app/api/utils/IpUtils';
 import {Headers as HttpHeaders} from '@fluxer/constants/src/Headers';
-import {resolveChannelThreadsAssignment} from '@fluxer/schema/src/domains/admin/ChannelThreadsSchemas';
 import {resolveDomainMigrationAssignment} from '@fluxer/schema/src/domains/admin/DomainMigrationSchemas';
-import {resolvePlutoniumPageAssignment} from '@fluxer/schema/src/domains/admin/PlutoniumPageSchemas';
 import {resolveVoiceNoiseSuppressionAssignment} from '@fluxer/schema/src/domains/admin/VoiceNoiseSuppressionSchemas';
+import {resolveVoiceP2pAssignment} from '@fluxer/schema/src/domains/admin/VoiceP2pSchemas';
 import {resolveVoiceRoomAssignment} from '@fluxer/schema/src/domains/admin/VoiceRoomConfigSchemas';
 import {ExperimentAssignmentsResponse} from '@fluxer/schema/src/domains/experiment/ExperimentSchemas';
 
@@ -37,20 +37,25 @@ export function ExperimentController(app: HonoApp) {
 				delivery,
 				domainMigrationConfig,
 				channelThreadsConfig,
-				plutoniumPageConfig,
+				voiceP2pConfig,
 				voiceRoomConfig,
 				voiceNoiseConfig,
+				geoip,
 			] = await Promise.all([
 				instanceConfigRepository.getExperimentDeliveryConfig(),
 				instanceConfigRepository.getDomainMigrationConfig(),
-				instanceConfigRepository.getCompiledChannelThreadsConfig(),
-				instanceConfigRepository.getPlutoniumPageConfig(),
+				instanceConfigRepository.getChannelThreadsConfig(),
+				instanceConfigRepository.getVoiceP2pConfig(),
 				instanceConfigRepository.getVoiceRoomConfig(),
 				instanceConfigRepository.getVoiceNoiseSuppressionConfig(),
+				lookupGeoip(ctx.req.raw),
 			]);
 			const user = ctx.get('user');
 			const userId = user.id.toString();
-			const targeting = await resolveExperimentTargeting(user, [domainMigrationConfig, plutoniumPageConfig]);
+			const targeting = await resolveExperimentTargeting(user, geoip.countryCode, [
+				domainMigrationConfig,
+				voiceP2pConfig,
+			]);
 			const body: ExperimentAssignmentsResponse = {
 				poll_interval_seconds: delivery.poll_interval_seconds,
 				poll_jitter_percent: delivery.poll_jitter_percent,
@@ -58,13 +63,11 @@ export function ExperimentController(app: HonoApp) {
 					voice_noise_suppression: resolveVoiceNoiseSuppressionAssignment(voiceNoiseConfig, userId),
 					voice_room: resolveVoiceRoomAssignment(voiceRoomConfig),
 					domain_migration: resolveDomainMigrationAssignment(domainMigrationConfig, userId, targeting),
-					plutonium_page: resolvePlutoniumPageAssignment(plutoniumPageConfig, userId, targeting),
+					plutonium_page: {enabled: true},
+					voice_p2p: resolveVoiceP2pAssignment(voiceP2pConfig, userId, targeting),
 				},
 			};
-			const channelThreads = resolveChannelThreadsAssignment(channelThreadsConfig, userId);
-			if (channelThreads !== undefined) {
-				body.assignments.channel_threads = channelThreads;
-			}
+			body.assignments.channel_threads = {active: true, config_version: channelThreadsConfig.config_version};
 			const etag = `"${createHash('sha256').update(JSON.stringify(body)).digest('hex')}"`;
 			ctx.header(HttpHeaders.ETAG, etag);
 			ctx.header(HttpHeaders.CACHE_CONTROL, 'private, no-cache');

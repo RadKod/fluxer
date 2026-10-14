@@ -27,6 +27,7 @@ export interface StatusAwareAvatarProps {
 	guildId?: string | null;
 	mediaSize?: MediaProxyImageSize;
 	status?: string | null;
+	isMobile?: boolean;
 	animateStatusCutout?: boolean;
 	decorationSurface?: AvatarDecorationSurface;
 }
@@ -56,6 +57,7 @@ export const StatusAwareAvatar: React.FC<StatusAwareAvatarProps> = observer(
 		guildId,
 		mediaSize,
 		status: externalStatus,
+		isMobile: externalIsMobile,
 		animateStatusCutout,
 		decorationSurface,
 	}) => {
@@ -69,7 +71,7 @@ export const StatusAwareAvatar: React.FC<StatusAwareAvatarProps> = observer(
 		} else if (externalStatus == null) {
 			status = getStatusWithTransientFallback(user.id);
 		}
-		const isMobile = shouldDisablePresence ? false : Presence.isMobile(user.id);
+		const isMobile = shouldDisablePresence ? false : (externalIsMobile ?? Presence.isMobile(user.id));
 		return (
 			<Avatar
 				user={user}

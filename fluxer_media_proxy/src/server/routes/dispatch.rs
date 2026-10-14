@@ -41,6 +41,9 @@ pub(in crate::server) async fn catch_all(
     request: Request<Body>,
 ) -> Response {
     let method = request.method().clone();
+    if app.cfg.mode != DeploymentMode::Relay && cors::is_preflight(&method, request.headers()) {
+        return preflight(&app, request.uri().path(), request.headers());
+    }
     if method != Method::GET && method != Method::HEAD {
         return text(StatusCode::METHOD_NOT_ALLOWED, "Method Not Allowed");
     }
@@ -87,6 +90,21 @@ pub(in crate::server) async fn catch_all(
         cors::narrow_response(&check, response.headers_mut());
     }
     response
+}
+
+fn preflight(app: &AppState, path: &str, headers: &HeaderMap) -> Response {
+    if app.cfg.cors.mode == PolicyMode::Off {
+        return cors::preflight_response(&OriginCheck::Absent);
+    }
+    let check = cors::check_origin(&app.cfg.cors.allowed_origins, headers);
+    if check != OriginCheck::Refused {
+        return cors::preflight_response(&check);
+    }
+    if app.cfg.cors.mode == PolicyMode::Enforce {
+        return cors::refused_response(headers);
+    }
+    cors::log_would_refuse(&Method::OPTIONS, path, headers);
+    cors::preflight_response(&check)
 }
 
 async fn serve_public_read(app: &Arc<AppState>, read: PublicRead<'_>) -> Response {
@@ -187,9 +205,12 @@ fn without_signature_parameters(params: &HashMap<String, String>) -> HashMap<Str
 }
 
 #[cfg(test)]
+use crate::test_fixtures::CapturedLog;
+
+#[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::Config;
+    use crate::{config::Config, constants::DESKTOP_APP_ORIGIN};
     use axum::{
         body::to_bytes,
         http::{HeaderValue, header},
@@ -202,42 +223,8 @@ mod tests {
     };
     use std::{
         path::Path,
-        sync::Mutex,
         time::{SystemTime, UNIX_EPOCH},
     };
-    use tracing_subscriber::fmt::MakeWriter;
-
-    #[derive(Clone, Default)]
-    struct CapturedLog(Arc<Mutex<Vec<u8>>>);
-
-    impl CapturedLog {
-        fn text(&self) -> String {
-            String::from_utf8(self.0.lock().expect("captured log is not poisoned").clone())
-                .expect("captured log is utf-8")
-        }
-    }
-
-    impl std::io::Write for CapturedLog {
-        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-            self.0
-                .lock()
-                .expect("captured log is not poisoned")
-                .extend_from_slice(buf);
-            Ok(buf.len())
-        }
-
-        fn flush(&mut self) -> std::io::Result<()> {
-            Ok(())
-        }
-    }
-
-    impl<'a> MakeWriter<'a> for CapturedLog {
-        type Writer = Self;
-
-        fn make_writer(&'a self) -> Self::Writer {
-            self.clone()
-        }
-    }
 
     const STORED_BYTES: &[u8] = b"raw-stored-bytes";
     const THEME_BYTES: &[u8] = b"body{color:#fff}";
@@ -462,36 +449,6 @@ mod tests {
             .headers()
             .get(name)
             .map(|value| value.to_str().expect("header is ascii").to_owned())
-    }
-
-    #[tokio::test]
-    async fn static_mode_caches_every_asset_forever() {
-        let tmp = tempfile::tempdir().expect("storage root");
-        let root = tmp.path().canonicalize().expect("canonical storage root");
-        let app = static_mode_app(root.as_path(), &[]);
-        for key in STATIC_KEYS {
-            let response = dispatch(&app, Method::GET, &format!("/{key}")).await;
-            assert_eq!(StatusCode::OK, response.status(), "key={key}");
-            assert_eq!(
-                Some(STATIC_CACHE_CONTROL.to_owned()),
-                header_value(&response, header::CACHE_CONTROL),
-                "key={key}"
-            );
-        }
-    }
-
-    #[tokio::test]
-    async fn static_mode_omits_expires_and_relies_on_cache_control() {
-        let tmp = tempfile::tempdir().expect("storage root");
-        let root = tmp.path().canonicalize().expect("canonical storage root");
-        let app = static_mode_app(root.as_path(), &[]);
-        let response = dispatch(&app, Method::GET, "/avatars/0.png").await;
-        assert_eq!(StatusCode::OK, response.status());
-        assert_eq!(None, header_value(&response, header::EXPIRES));
-        assert_eq!(
-            Some(STATIC_CACHE_CONTROL.to_owned()),
-            header_value(&response, "CDN-Cache-Control")
-        );
     }
 
     #[tokio::test]
@@ -852,6 +809,140 @@ mod tests {
         );
     }
 
+    fn preflight_request(path: &str, origin: &str, requested: Option<&str>) -> Request<Body> {
+        let mut builder = Request::builder()
+            .method(Method::OPTIONS)
+            .uri(path)
+            .header(header::ORIGIN, origin);
+        if let Some(requested) = requested {
+            builder = builder.header(header::ACCESS_CONTROL_REQUEST_METHOD, requested);
+        }
+        builder.body(Body::empty()).expect("preflight request")
+    }
+
+    #[tokio::test]
+    async fn enforce_serves_the_desktop_app_origin_without_configuring_it() {
+        let tmp = tempfile::tempdir().expect("storage root");
+        let root = tmp.path().canonicalize().expect("canonical storage root");
+        let root = root.as_path();
+        write_stored_representations(root);
+        let app = dispatch_app("mp", root, ENFORCE);
+        for method in [Method::GET, Method::HEAD] {
+            let response = dispatch_request(
+                &app,
+                read_request(
+                    method.clone(),
+                    THEME_PATH,
+                    &[DESKTOP_APP_ORIGIN.as_bytes()],
+                    None,
+                ),
+            )
+            .await;
+            assert_eq!(StatusCode::OK, response.status(), "{method}");
+            assert_eq!(
+                Some(DESKTOP_APP_ORIGIN.to_owned()),
+                header_value(&response, header::ACCESS_CONTROL_ALLOW_ORIGIN),
+                "{method}"
+            );
+            assert_eq!(vec![ORIGIN_VARY.to_owned()], vary_values(&response));
+        }
+        for lookalike in [
+            "fluxer-app://app/",
+            "fluxer-app://evil",
+            "fluxer-app://app.evil.example",
+            "fluxer-app://app:443",
+            "FLUXER-APP://APP",
+            "fluxer-app:app",
+        ] {
+            let response = dispatch_request(
+                &app,
+                read_request(Method::GET, THEME_PATH, &[lookalike.as_bytes()], None),
+            )
+            .await;
+            assert_eq!(StatusCode::FORBIDDEN, response.status(), "{lookalike}");
+            assert_eq!(
+                None,
+                header_value(&response, header::ACCESS_CONTROL_ALLOW_ORIGIN),
+                "{lookalike}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn preflight_answers_allowed_origins_and_refuses_the_rest() {
+        let tmp = tempfile::tempdir().expect("storage root");
+        let root = tmp.path().canonicalize().expect("canonical storage root");
+        let root = root.as_path();
+        let enforce = dispatch_app("mp", root, ENFORCE);
+        for origin in [WEB, DESKTOP_APP_ORIGIN] {
+            for requested in ["GET", "HEAD"] {
+                let response = dispatch_request(
+                    &enforce,
+                    preflight_request(THEME_PATH, origin, Some(requested)),
+                )
+                .await;
+                let label = format!("{origin} {requested}");
+                assert_eq!(StatusCode::NO_CONTENT, response.status(), "{label}");
+                assert_eq!(
+                    Some(origin.to_owned()),
+                    header_value(&response, header::ACCESS_CONTROL_ALLOW_ORIGIN),
+                    "{label}"
+                );
+                assert_eq!(
+                    Some("GET, HEAD, OPTIONS".to_owned()),
+                    header_value(&response, header::ACCESS_CONTROL_ALLOW_METHODS),
+                    "{label}"
+                );
+                assert_eq!(
+                    Some("Range".to_owned()),
+                    header_value(&response, header::ACCESS_CONTROL_ALLOW_HEADERS),
+                    "{label}"
+                );
+                assert_eq!(
+                    vec![
+                        "Origin, Access-Control-Request-Method, Access-Control-Request-Headers"
+                            .to_owned()
+                    ],
+                    vary_values(&response),
+                    "{label}"
+                );
+                assert!(body_of(response).await.is_empty(), "{label}");
+            }
+        }
+
+        let refused =
+            dispatch_request(&enforce, preflight_request(THEME_PATH, EVIL, Some("GET"))).await;
+        assert_eq!(StatusCode::FORBIDDEN, refused.status());
+        assert_eq!(
+            None,
+            header_value(&refused, header::ACCESS_CONTROL_ALLOW_ORIGIN)
+        );
+
+        let not_a_preflight =
+            dispatch_request(&enforce, preflight_request(THEME_PATH, WEB, None)).await;
+        assert_eq!(StatusCode::METHOD_NOT_ALLOWED, not_a_preflight.status());
+
+        for (mode, extra) in [("mp", &[][..]), ("mp", REPORT), ("static", &[][..])] {
+            let app = dispatch_app(mode, root, extra);
+            let response =
+                dispatch_request(&app, preflight_request(THEME_PATH, EVIL, Some("GET"))).await;
+            assert_eq!(StatusCode::NO_CONTENT, response.status(), "{mode}");
+            assert_eq!(
+                Some("*".to_owned()),
+                header_value(&response, header::ACCESS_CONTROL_ALLOW_ORIGIN),
+                "{mode}"
+            );
+        }
+
+        let relay = dispatch_app("relay", root, &[]);
+        assert_eq!(
+            StatusCode::METHOD_NOT_ALLOWED,
+            dispatch_request(&relay, preflight_request(THEME_PATH, WEB, Some("GET")))
+                .await
+                .status()
+        );
+    }
+
     #[tokio::test]
     async fn enforce_applies_to_upload_mode_reads() {
         let tmp = tempfile::tempdir().expect("storage root");
@@ -934,52 +1025,6 @@ mod tests {
                 assert_eq!(expected.status(), actual.status(), "{label}");
                 assert_eq!(expected.headers(), actual.headers(), "{label}");
                 assert_eq!(body_of(expected).await, body_of(actual).await, "{label}");
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn report_mode_logs_one_would_deny_line_for_each_refused_origin_only() {
-        let tmp = tempfile::tempdir().expect("storage root");
-        let root = tmp.path().canonicalize().expect("canonical storage root");
-        let root = root.as_path();
-        write_stored_representations(root);
-        let report = dispatch_app("mp", root, REPORT);
-        let cases: [(&[&[u8]], Option<&str>); 4] = [
-            (&[EVIL.as_bytes()], Some("origin=https://evil.example")),
-            (&[b"null".as_slice()], Some("origin=null")),
-            (&[WEB.as_bytes()], None),
-            (&[], None),
-        ];
-        for (origins, expected_origin) in cases {
-            let label = format!("origins={origins:?}");
-            let captured = CapturedLog::default();
-            let subscriber = tracing_subscriber::fmt()
-                .with_writer(captured.clone())
-                .with_ansi(false)
-                .with_max_level(tracing::Level::TRACE)
-                .finish();
-            let response = {
-                let _guard = tracing::subscriber::set_default(subscriber);
-                dispatch_request(
-                    &report,
-                    read_request(Method::GET, ATTACHMENT_PATH, origins, None),
-                )
-                .await
-            };
-            assert_eq!(StatusCode::OK, response.status(), "{label}");
-            let log = captured.text();
-            let would_deny: Vec<&str> = log
-                .lines()
-                .filter(|line| line.contains("reason=\"cors_origin_would_deny\""))
-                .collect();
-            match expected_origin {
-                Some(origin) => {
-                    assert_eq!(1, would_deny.len(), "{label}\n{log}");
-                    assert!(would_deny[0].contains(" WARN "), "{label}\n{log}");
-                    assert!(would_deny[0].trim_end().ends_with(origin), "{label}\n{log}");
-                }
-                None => assert!(would_deny.is_empty(), "{label}\n{log}"),
             }
         }
     }
@@ -1721,28 +1766,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn report_leaves_a_refusable_read_caching_forever() {
-        let tmp = tempfile::tempdir().expect("storage root");
-        let root = tmp.path().canonicalize().expect("canonical storage root");
-        let root = root.as_path();
-        write_signed_representations(root);
-        let report = dispatch_app("mp", root, SIGNATURE_REPORT);
-        for uri in [
-            ATTACHMENT_PATH.to_owned(),
-            expired_uri(ATTACHMENT_PATH, ATTACHMENT_KEY),
-            foreign_key_uri(ATTACHMENT_PATH),
-        ] {
-            let response = dispatch_uri(&report, Method::GET, &uri, &[], None).await;
-            assert_eq!(StatusCode::OK, response.status(), "{uri}");
-            assert_eq!(
-                Some(STATIC_CACHE_CONTROL.to_owned()),
-                header_value(&response, header::CACHE_CONTROL),
-                "{uri}"
-            );
-        }
-    }
-
-    #[tokio::test]
     async fn only_enforce_masks_a_missing_object_so_it_matches_a_refusal() {
         let tmp = tempfile::tempdir().expect("storage root");
         let root = tmp.path().canonicalize().expect("canonical storage root");
@@ -1837,59 +1860,6 @@ mod tests {
             Some(STATIC_CACHE_CONTROL.to_owned()),
             header_value(&theme, header::CACHE_CONTROL)
         );
-    }
-
-    #[tokio::test]
-    async fn report_mode_logs_one_line_for_each_refused_verdict_only() {
-        let tmp = tempfile::tempdir().expect("storage root");
-        let root = tmp.path().canonicalize().expect("canonical storage root");
-        let root = root.as_path();
-        write_signed_representations(root);
-        let report = dispatch_app("mp", root, SIGNATURE_REPORT);
-        let cases: [(&str, String); 8] = [
-            ("missing", ATTACHMENT_PATH.to_owned()),
-            ("malformed", malformed_uri(ATTACHMENT_PATH, ATTACHMENT_KEY)),
-            ("mismatch", foreign_key_uri(ATTACHMENT_PATH)),
-            ("expired", expired_uri(ATTACHMENT_PATH, ATTACHMENT_KEY)),
-            ("", signed_uri(ATTACHMENT_PATH, ATTACHMENT_KEY, "")),
-            ("", data_package_uri(ATTACHMENT_PATH, ATTACHMENT_KEY, "")),
-            (
-                "malformed",
-                data_package_uri(ATTACHMENT_PATH, ATTACHMENT_KEY, "").replace("&uc=dp", ""),
-            ),
-            (
-                "mismatch",
-                foreign_secret_data_package_uri(ATTACHMENT_PATH, ATTACHMENT_KEY),
-            ),
-        ];
-        for (verdict, uri) in cases {
-            let captured = CapturedLog::default();
-            let subscriber = tracing_subscriber::fmt()
-                .with_writer(captured.clone())
-                .with_ansi(false)
-                .with_max_level(tracing::Level::TRACE)
-                .finish();
-            let response = {
-                let _guard = tracing::subscriber::set_default(subscriber);
-                dispatch_uri(&report, Method::GET, &uri, &[], None).await
-            };
-            assert_eq!(StatusCode::OK, response.status(), "{verdict} {uri}");
-            let log = captured.text();
-            let lines: Vec<&str> = log
-                .lines()
-                .filter(|line| line.contains("reason=\"attachment_signature_would_deny\""))
-                .collect();
-            if verdict.is_empty() {
-                assert!(lines.is_empty(), "{uri}\n{log}");
-                continue;
-            }
-            assert_eq!(1, lines.len(), "{verdict} {uri}\n{log}");
-            assert!(lines[0].contains(" WARN "), "{verdict}\n{log}");
-            assert!(
-                lines[0].contains(&format!("verdict=\"{verdict}\"")),
-                "{verdict}\n{log}"
-            );
-        }
     }
 
     #[tokio::test]

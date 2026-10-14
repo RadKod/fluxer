@@ -30,13 +30,12 @@ export interface ChannelStreamItem {
 	flashKey?: number;
 	jumpTarget?: boolean;
 	hasUnread?: boolean;
-	hasJumpTarget?: boolean;
 	unreadId?: string;
 	contentKey?: string;
 	showUnreadDividerBefore?: boolean;
 }
 
-export const MESSAGE_GROUP_TIMEOUT = 7 * 60 * 1000;
+const MESSAGE_GROUP_TIMEOUT = 7 * 60 * 1000;
 
 export function isNewMessageGroup(
 	_channel: Channel | undefined,
@@ -103,7 +102,7 @@ export function getCollapsedGroupType(
 	treatSpam: boolean,
 	blocked = Relationships.isBlocked(message.author.id),
 ): ChannelStreamType | null {
-	if (blocked) {
+	if (blocked && message.isUserMessage()) {
 		return ChannelStreamType.MESSAGE_GROUP_BLOCKED;
 	}
 	if (
@@ -257,9 +256,6 @@ export function createChannelStream(props: {
 				collapsedGroupItem.hasUnread = true;
 			}
 			collapsedContentItems.push(messageItem);
-			if (messageItem.jumpTarget) {
-				collapsedGroupItem.hasJumpTarget = true;
-			}
 		} else {
 			stream.push(messageItem);
 		}

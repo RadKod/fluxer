@@ -79,6 +79,7 @@ function remoteValuesFor(forum: Channel): ForumFormInputs {
 		content_warning_text: forum.contentWarningText ?? '',
 		rtc_region: null,
 		room_theme: null,
+		rtc_p2p: false,
 		default_auto_archive_duration: forum.defaultAutoArchiveDuration ?? DEFAULT_THREAD_AUTO_ARCHIVE_DURATION,
 		default_thread_rate_limit_per_user: forum.defaultThreadRateLimitPerUser,
 		default_reaction: getDefaultReaction(forum),

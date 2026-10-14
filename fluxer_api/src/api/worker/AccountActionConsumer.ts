@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {Config} from '@app/api/Config';
+import {applyPauseGuildInvites, type GuildInvitePauseDeps} from '@app/api/guild/services/GuildInvitePauseApplier';
 import {emitActivity} from '@app/api/infrastructure/activity/ActivityEvents';
 import {workerMeta} from '@app/api/infrastructure/activity/ActivityMeta';
 import {
@@ -28,6 +29,7 @@ import {AckPolicy, type ConsumerMessages, type JetStreamClient, type JsMsg} from
 export interface AccountActionDeps {
 	js: Pick<JetStreamClient, 'consumers'>;
 	state: AccountStateDeps;
+	guildInvites: GuildInvitePauseDeps;
 	publishOutcome?: (key: string, outcome: ActionOutcome) => Promise<void>;
 	now?: () => number;
 	retryDelayMs?: number;
@@ -44,7 +46,7 @@ interface ConsumerState {
 
 let running: ConsumerState | null = null;
 
-export function decodeActionEnvelope(data: Uint8Array | string): ActionEnvelope | null {
+function decodeActionEnvelope(data: Uint8Array | string): ActionEnvelope | null {
 	try {
 		const value = JSON.parse(typeof data === 'string' ? data : new TextDecoder().decode(data)) as unknown;
 		if (
@@ -80,6 +82,8 @@ export function applyAction(deps: AccountActionDeps, env: ActionEnvelope): Promi
 			return applyHideRecentMessages(deps.state, env);
 		case 'delete_user_messages':
 			return applyDeleteUserMessages(deps.state, env);
+		case 'pause_guild_invites':
+			return applyPauseGuildInvites(deps.guildInvites, env);
 		default:
 			return Promise.resolve(outcomeOf(env as ActionEnvelope, 'unsupported'));
 	}

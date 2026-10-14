@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {defineStaticLocaleMessages} from '@fluxer/i18n/src/runtime/MessageCatalogTypes';
-
 export const ERROR_I18N_MESSAGES = {
 	'application_command.stale': 'This command has changed. Refresh the command list before running it again.',
 	'application_command.version_conflict': 'The command set has changed. Read its current version before updating it.',
@@ -53,11 +51,8 @@ export const ERROR_I18N_MESSAGES = {
 	'admin_and_system.test_harness_disabled': 'Test harness is disabled.',
 	'admin_and_system.test_harness_forbidden': 'Test harness is forbidden.',
 	'admin_and_system.update_failed': "We couldn't update the resource. Please try again.",
+	'admin_and_system.user_must_be_bot_for_system_user': 'User must be a bot to be marked as a system user.',
 	'age_verification.already_verified': "You've already completed age verification.",
-	'attachments_and_uploads.attachment_fields_required':
-		'`attachment_id`, `channel_id`, `message_id`, and `expires_at` are required.',
-	'attachments_and_uploads.attachment_ids_must_be_valid_integers':
-		'`attachment_id`, `channel_id`, and `message_id` must be valid integers.',
 	'attachments_and_uploads.attachment_must_be_image':
 		'Attachment "{filename}" must be an image file (png, jpg, jpeg, webp, or gif).',
 	'attachments_and_uploads.attachment_not_found_in_message':
@@ -71,7 +66,6 @@ export const ERROR_I18N_MESSAGES = {
 	'attachments_and_uploads.duplicate_file_index': 'Duplicate file index: {index}.',
 	'attachments_and_uploads.failed_to_parse_multipart_form_data':
 		"We couldn't parse the multipart form data. Check that all field names and filenames are properly formatted.",
-	'attachments_and_uploads.failed_to_parse_multipart_payload': "We couldn't parse the multipart payload.",
 	'attachments_and_uploads.failed_to_upload_image': "We couldn't upload the image. Please try again.",
 	'attachments_and_uploads.file_index_exceeds_maximum':
 		'File index {index} exceeds the maximum allowed index of {maxIndex}.',
@@ -93,13 +87,11 @@ export const ERROR_I18N_MESSAGES = {
 	'attachments_and_uploads.preview_must_be_jpeg': 'Preview must be JPEG.',
 	'attachments_and_uploads.referenced_attachment_not_found':
 		'Referenced attachment "{filename}" wasn\'t found in message attachments.',
-	'attachments_and_uploads.size_bytes_must_be_valid_integer': '`size_bytes` must be a valid integer.',
 	'attachments_and_uploads.too_many_files':
 		'Too many files. Maximum {maxFiles, plural, one {# file} other {# files}} allowed.',
 	'attachments_and_uploads.unresolved_attachment_url':
 		'Unresolved `attachment://` URL detected. This should have been resolved before embed processing.',
 	'attachments_and_uploads.uploaded_attachment_not_found': "Uploaded attachment {filename} wasn't found.",
-	'auth_and_oauth.application_not_owned': "You don't own this application.",
 	'auth_and_oauth.bot_already_in_guild': 'This bot is already in the community.',
 	'auth_and_oauth.bot_users_cannot_create_auth_sessions': "Bot users can't create auth sessions.",
 	'auth_and_oauth.bot_users_cannot_use_auth_endpoints': "Bot users can't use auth endpoints.",
@@ -115,21 +107,19 @@ export const ERROR_I18N_MESSAGES = {
 	'auth_and_oauth.invalid_or_expired_sso_state': 'Invalid or expired SSO state. Please start the sign-in flow again.',
 	'auth_and_oauth.invalid_or_expired_ticket': 'Invalid or expired ticket.',
 	'auth_and_oauth.invalid_proof_token': 'Invalid proof token.',
-	'auth_and_oauth.invalid_request': 'Invalid request.',
 	'auth_and_oauth.invalid_scope': "The requested scope isn't supported or you don't have permission to request it.",
 	'auth_and_oauth.invalid_sso_authorization_code': 'Invalid SSO authorization code.',
 	'auth_and_oauth.invalid_sso_token': 'Invalid SSO token.',
-	'auth_and_oauth.invalid_token_admin_api_key': 'Invalid admin API key.',
 	'auth_and_oauth.missing_authorization': 'Missing or invalid authorization header.',
 	'auth_and_oauth.must_start_session_before_sending_messages': 'You must start a session before sending messages.',
 	'auth_and_oauth.origin_handoff_nonce_invalid': "This sign-in transfer doesn't match the one you started.",
 	'auth_and_oauth.passkey_bridge_nonce_invalid': 'This passkey request could not be confirmed. Try again.',
 	'auth_and_oauth.registration_closed': 'Registration is closed on this instance.',
+	'auth_and_oauth.registration_credentials_required':
+		'This instance reviews new accounts. Sign up from the sign-up page with a password so you can sign in once approved.',
 	'auth_and_oauth.registration_pending_approval': 'This registration is waiting for admin approval.',
 	'auth_and_oauth.registration_rejected': 'This registration request was rejected.',
 	'auth_and_oauth.registration_url_invalid': 'This registration link is invalid or has expired.',
-	'auth_and_oauth.response_type_must_be_code_for_non_bot_scopes':
-		'Response type must be "code" for scopes other than "bot".',
 	'auth_and_oauth.sso_identity_mismatch': 'SSO identity mismatch between id_token and userinfo.',
 	'auth_and_oauth.sso_misconfigured': 'SSO is misconfigured. Please contact your administrator.',
 	'auth_and_oauth.sso_provider_did_not_return_email': "Your SSO provider didn't return an email address.",
@@ -149,6 +139,9 @@ export const ERROR_I18N_MESSAGES = {
 	'auth_and_registration.password_is_too_common':
 		'Your password is too common. Please choose a less predictable password.',
 	'auth_and_registration.password_not_set': "Password isn't set.",
+	'auth_and_registration.setup_token_invalid': 'That setup token is not correct. Check the token and try again.',
+	'auth_and_registration.setup_token_required':
+		'This instance is not set up yet. Finish setup in a web browser with the setup token before creating accounts.',
 	'auth_and_registration.username_sign_in_only':
 		'This is only available on instances where people sign in with a username.',
 	'bots.bot_discriminator_cannot_be_changed': "Bot discriminator can't be changed.",
@@ -218,6 +211,8 @@ export const ERROR_I18N_MESSAGES = {
 	'channels_and_guilds.context_channel_or_guild_required': 'A context channel or community ID is required.',
 	'channels_and_guilds.discoverable_guild_verification_level_too_low':
 		'Discoverable communities must have a verification level of at least Low.',
+	'channels_and_guilds.group_dm_mature_content_ineligible':
+		'Not everyone in this group is eligible for mature content.',
 	'channels_and_guilds.group_dm_recipients_not_addable': "One or more selected users can't be added to this group DM.",
 	'channels_and_guilds.guild_banner_requires_feature': 'Community banner requires BANNER feature.',
 	'channels_and_guilds.guild_creation_permission_required':
@@ -275,8 +270,6 @@ export const ERROR_I18N_MESSAGES = {
 		'Connection verification failed. Make sure the verification token is correctly placed.',
 	'content_and_safety.content_blocked': 'This content was blocked by safety systems.',
 	'content_and_safety.explicit_content_cannot_be_sent': "Explicit content can't be sent.",
-	'content_and_safety.ncmec_already_submitted': 'This content has already been submitted to NCMEC.',
-	'content_and_safety.ncmec_submission_failed': "We couldn't submit the report to NCMEC. Please try again later.",
 	'content_and_safety.nsfw_age_restricted': 'NSFW content is age restricted.',
 	'discovery.already_applied': 'This community has already applied for Discovery.',
 	'discovery.application_already_reviewed': 'This Discovery application has already been reviewed.',
@@ -302,7 +295,6 @@ export const ERROR_I18N_MESSAGES = {
 	'email.invalid_verification_code': 'Invalid verification code.',
 	'email.length_invalid': 'Email address must be between {min} and {max} characters.',
 	'email.must_be_changed_via_token': 'Email must be changed via token.',
-	'email.must_change_via_token': 'Email must be changed via `email_token`.',
 	'email.must_have_email_to_change_it': 'You must have an email address to change it.',
 	'email.new_email_must_be_different': 'New email must be different from your current email.',
 	'email.no_new_email_requested': 'No new email was requested.',
@@ -313,7 +305,6 @@ export const ERROR_I18N_MESSAGES = {
 	'email.token_expired': 'Email token expired.',
 	'email.unavailable_on_instance': "This instance doesn't use email.",
 	'email.user_has_no_email_address': "This user doesn't have an email address.",
-	'email.user_is_not_pending_verification': "This user isn't pending verification.",
 	'email.verification_code_expired': 'Verification code has expired.',
 	'email.verification_code_not_issued': 'No verification code has been issued.',
 	'embeds.embed_index_out_of_bounds':
@@ -328,8 +319,6 @@ export const ERROR_I18N_MESSAGES = {
 	'friends_and_dms.direct_messages_disabled': 'Direct messages and friend requests are disabled on this instance.',
 	'friends_and_dms.new_conversations_limited': "You can't start new conversations right now. Please try again later.",
 	'friends_and_dms.at_least_one_recipient_required': 'At least one recipient is required.',
-	'friends_and_dms.at_least_one_recipient_required_to_seed_private_channels':
-		'At least one recipient is required to seed private channels.',
 	'friends_and_dms.bots_cannot_send_friend_requests': "Bots can't send friend requests.",
 	'friends_and_dms.cannot_add_yourself_to_group_dm': "You can't add yourself to a group DM.",
 	'friends_and_dms.cannot_block_system_user': "You can't block the system user.",
@@ -359,26 +348,17 @@ export const ERROR_I18N_MESSAGES = {
 	'http.not_implemented': 'Not implemented.',
 	'http.service_unavailable': 'Service unavailable.',
 	'http.validation_error': 'Validation failed.',
-	'invites_and_beta.invalid_or_already_used_beta_code': 'Invalid or already used beta code.',
-	'invites_and_beta.max_beta_codes_reached':
-		"You've reached the maximum of {count, plural, one {# beta code} other {# beta codes}}.",
-	'invites_and_beta.unknown_beta_code': 'Unknown beta code.',
 	'invites_and_gifts.gift_code_already_redeemed': 'Gift code is already redeemed.',
 	'invites_and_gifts.stripe_gift_redemption_in_progress': 'Gift code redemption is in progress. Try again in a moment.',
 	'invites_and_gifts.unknown_gift_code': 'Unknown gift code.',
-	'invites_and_packs.emoji_requires_access':
-		"You can't use this emoji without access to its community or installed pack.",
 	'invites_and_packs.max_emojis_reached':
 		"You've reached the maximum of {count, plural, one {# emoji} other {# emojis}}.",
 	'limits.at_least_one_entry_required': 'At least one entry is required.',
 	'limits.base64_length_invalid': 'Base64 string length must be between {min} and {maxLength} characters.',
-	'limits.bucket_required': '`bucket` is required.',
-	'limits.cannot_shrink_reserved_slots': "You can't shrink reserved slots.",
 	'limits.cannot_specify_before_and_after': "You can't specify both `before` and `after`.",
 	'limits.content_exceeds_max_length':
 		'Text must not exceed {maxLength, plural, one {# character} other {# characters}}.',
 	'limits.integer_out_of_int64_range': 'Integer value is out of the valid int64 range.',
-	'limits.rows_required': '`rows` is required.',
 	'limits.string_length_exact': 'String must be exactly {length, plural, one {# character} other {# characters}}.',
 	'limits.string_length_invalid': 'String length must be between {min} and {max} characters.',
 	'limits.synced_preferences_too_large': 'Synced preferences exceed {max_bytes} bytes.',
@@ -434,14 +414,10 @@ export const ERROR_I18N_MESSAGES = {
 	'mfa_and_passkeys.webauthn_credential_limit_reached':
 		"You've reached the maximum of {count, plural, one {# WebAuthn credential} other {# WebAuthn credentials}}.",
 	'misc.cannot_send_messages_in_non_text_channel': "You can't send messages in a non-text channel.",
-	'misc.cannot_send_messages_in_this_guild_without_email_verification':
-		'You need to verify your email to send messages in this community.',
 	'misc.invalid_permissions_integer': 'Permissions must be a valid integer.',
 	'misc.invalid_permissions_negative': 'Permissions must be non-negative.',
 	'misc.invalid_request_generic': 'Invalid request.',
 	'misc.invalid_snowflake': 'Invalid snowflake.',
-	'misc.max_files_exceeded': 'Too many files. Maximum {maxFiles, plural, one {# file} other {# files}} allowed.',
-	'misc.must_have_bot_to_mark_system_user': 'User must be a bot to be marked as a system user.',
 	'misc_limits.max_applications_reached':
 		"You've reached the maximum of {limit, plural, one {# application} other {# applications}}.",
 	'misc_limits.max_bookmarks_reached':
@@ -460,10 +436,13 @@ export const ERROR_I18N_MESSAGES = {
 	'moderation_and_reports.ip_ban_declined': 'This IP address cannot be added to the blocklist.',
 	'moderation_and_reports.invalid_dsa_ticket': 'Invalid DSA ticket.',
 	'moderation_and_reports.invalid_dsa_verification_code': 'Invalid DSA verification code.',
-	'moderation_and_reports.ncmec_attachment_must_be_image_or_video':
-		'Only image or video attachments can be reported to NCMEC.',
+	'moderation_and_reports.invalid_report_flow_answers':
+		"These answers don't match the report form. Start the report again.",
 	'moderation_and_reports.report_already_resolved': 'Report already resolved.',
 	'moderation_and_reports.report_banned': "You've been banned from submitting reports.",
+	'moderation_and_reports.report_flow_outdated':
+		'The report form changed while you were filling it in. Start the report again.',
+	'moderation_and_reports.report_under_legal_hold': "This report is under a legal hold and can't be deleted.",
 	'moderation_and_reports.unclaimed_account_cannot_submit_reports':
 		'You need to complete your account setup before you can submit reports.',
 	'moderation_and_reports.unknown_report': 'Unknown report.',
@@ -563,7 +542,8 @@ export const ERROR_I18N_MESSAGES = {
 	'store_billing.purchase_sandbox_not_entitled': 'Test purchases cannot be applied to this account.',
 	'store_billing.unavailable': 'In-app purchases are unavailable right now. Try again later.',
 	'store_billing.unknown_purchase': 'Unknown store purchase.',
-	'stripe.error': 'Payment processing encountered an error. Please try again or contact support.',
+	'stripe.error':
+		'{supportEmail, select, null {Payment processing encountered an error. Please try again or contact the administrators of this instance.} other {Payment processing encountered an error. Please try again or contact support.}}',
 	'stripe.invalid_product_configuration': 'Invalid product configuration.',
 	'stripe.invalid_product_selection': 'Invalid product selection.',
 	'stripe.no_active_subscription_found': 'No active subscription found.',
@@ -621,9 +601,7 @@ export const ERROR_I18N_MESSAGES = {
 	'usernames_and_tags.discriminator_out_of_range': 'Discriminator must be between {min} and {max}.',
 	'usernames_and_tags.discriminator_required': 'Discriminator is required.',
 	'usernames_and_tags.display_name_cannot_impersonate_micup': "Display name can't pass for an official sanalyer account.",
-	'usernames_and_tags.display_name_length_invalid': 'Display name must be between {min} and {max} characters.',
 	'usernames_and_tags.display_name_reserved_terms': 'Display name can\'t contain "system message".',
-	'usernames_and_tags.display_name_reserved_value': 'Display name can\'t be "everyone" or "here".',
 	'usernames_and_tags.global_name_length_invalid': 'Global name must be between {min} and {max} characters.',
 	'usernames_and_tags.global_name_reserved_value': 'Global name can\'t be "everyone" or "here".',
 	'usernames_and_tags.tag_already_taken': 'This tag is already taken.',
@@ -681,5 +659,3 @@ export const ERROR_I18N_MESSAGES = {
 
 export type ErrorI18nCatalog = typeof ERROR_I18N_MESSAGES;
 export type ErrorI18nKey = keyof ErrorI18nCatalog;
-
-export const defineErrorI18nLocaleMessages = defineStaticLocaleMessages<ErrorI18nCatalog>();

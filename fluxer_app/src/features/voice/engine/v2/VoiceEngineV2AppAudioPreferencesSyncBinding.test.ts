@@ -62,7 +62,6 @@ const previous: VoiceEngineV2AppAudioPreferencesSnapshot = {
 	participantMutes: {},
 	connectionVolumes: {},
 	streamAudioRevision: 0,
-	transmitMode: 'voice_activity',
 	pushToMuteActive: false,
 };
 

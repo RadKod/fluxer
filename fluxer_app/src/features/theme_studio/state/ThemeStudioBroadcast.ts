@@ -12,9 +12,7 @@ export type ThemeStudioBroadcastInput =
 	| {type: 'customThemeCss'; value: string | null}
 	| {type: 'themeLibrary'; revision: number}
 	| {type: 'themePreference'; snapshot: ThemePreferenceSnapshot}
-	| {type: 'studio:opened-popout'}
 	| {type: 'studio:closed-popout'}
-	| {type: 'studio:close-popout'}
 	| {type: 'studio:focus-popout'};
 export type ThemeStudioBroadcastMessage = ThemeStudioBroadcastInput & {origin: string};
 
@@ -48,7 +46,6 @@ const ensureChannel = (): BroadcastChannel | null => {
 	}
 	return channel;
 };
-export const broadcastSenderId = senderId;
 
 export function broadcastThemeStudioMessage(message: ThemeStudioBroadcastInput): void {
 	const ch = ensureChannel();
@@ -60,7 +57,7 @@ export function broadcastThemeStudioMessage(message: ThemeStudioBroadcastInput):
 	}
 }
 
-export function subscribeThemeStudioBroadcast(listener: (message: ThemeStudioBroadcastMessage) => void): () => void {
+function subscribeThemeStudioBroadcast(listener: (message: ThemeStudioBroadcastMessage) => void): () => void {
 	ensureChannel();
 	listeners.add(listener);
 	return () => {

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {IAdminRepository} from '@app/api/admin/IAdminRepository';
+import type {AdminRepository} from '@app/api/admin/AdminRepository';
 
 interface DisposableDomainCheckerContext {
-	adminRepository: Pick<IAdminRepository, 'isEmailDomainSuspicious' | 'isEmailDomainDisposable'>;
+	adminRepository: Pick<AdminRepository, 'isEmailDomainSuspicious' | 'isEmailDomainDisposable'>;
 }
 
 export function createDisposableDomainChecker(ctx: DisposableDomainCheckerContext) {

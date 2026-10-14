@@ -33,26 +33,6 @@ pub const USER_TABS: &[(&str, &str)] = &[
     ("audit_logs", "Audit Logs"),
 ];
 
-pub fn user_detail_page(
-    config: &AdminConfig,
-    auth: &AuthContext,
-    user: Option<&AdminUser>,
-    user_id: &str,
-    premium_badge_name: Option<&str>,
-    is_htmx: bool,
-) -> Markup {
-    user_detail_with_tab(
-        config,
-        auth,
-        user,
-        user_id,
-        "overview",
-        None,
-        premium_badge_name,
-        is_htmx,
-    )
-}
-
 #[allow(clippy::too_many_arguments)]
 pub fn user_detail_with_tab(
     config: &AdminConfig,
@@ -132,9 +112,9 @@ fn render_user_detail(
         @if let Some(banner) = banner_url {
             div class="mb-4 space-y-2" {
                 a href=(banner) target="_blank" rel="noreferrer noopener"
-                    class="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2" {
+                    class="block max-w-2xl rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2" {
                     img src=(banner) alt={(user.username) "'s banner"}
-                        class="h-32 w-full rounded-lg border border-neutral-200 bg-neutral-50 object-cover sm:h-48"
+                        class="aspect-[17/6] w-full rounded-lg border border-neutral-200 bg-neutral-50 object-cover"
                         loading="lazy";
                 }
                 @if let Some(hash) = &user.banner {

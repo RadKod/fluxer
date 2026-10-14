@@ -36,11 +36,6 @@ export function resolveAuthPanelSso(runtimeSnapshot: RuntimeConfigSnapshot): Ins
 	return runtimeSnapshot.sso ?? null;
 }
 
-export function isRuntimeSsoEnforced(): boolean {
-	const ssoConfig = RuntimeConfig.sso;
-	return isInstanceSsoAvailable(ssoConfig) && ssoConfig?.enforced === true;
-}
-
 interface AuthSsoPanelProps {
 	redirectPath?: string;
 	extraTopContent?: ReactNode;
@@ -149,3 +144,7 @@ export const AuthSsoPanel = observer(function AuthSsoPanel({
 		</div>
 	);
 });
+
+export function isSsoLoginEnforced(ssoConfig: InstanceSsoConfig | null): boolean {
+	return isInstanceSsoAvailable(ssoConfig) && ssoConfig?.enforced === true;
+}

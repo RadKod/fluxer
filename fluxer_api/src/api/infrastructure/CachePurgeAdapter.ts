@@ -2,6 +2,7 @@
 
 import type {APICachePurgeConfig} from '@app/api/config/APIConfig';
 import {createBunnyCachePurgeAdapter} from '@app/api/infrastructure/BunnyCachePurgeAdapter';
+import {createControllerCachePurgeAdapter} from '@app/api/infrastructure/ControllerCachePurgeAdapter';
 import {createHttpCachePurgeAdapter} from '@app/api/infrastructure/HttpCachePurgeAdapter';
 import {createNoneCachePurgeAdapter} from '@app/api/infrastructure/NoneCachePurgeAdapter';
 import type {CachePurgeAdapterName} from '@fluxer/config/src/MasterConfig';
@@ -23,6 +24,7 @@ function refuseQueueOnlyPurge(): CachePurgeAdapter {
 const CACHE_PURGE_ADAPTERS = {
 	none: createNoneCachePurgeAdapter,
 	http: createHttpCachePurgeAdapter,
+	controller: createControllerCachePurgeAdapter,
 	bunny: createBunnyCachePurgeAdapter,
 	queue_only: refuseQueueOnlyPurge,
 } satisfies Record<CachePurgeAdapterName, (config: APICachePurgeConfig) => CachePurgeAdapter>;

@@ -7,19 +7,25 @@ import type {UserRow} from '@app/api/database/types/UserTypes';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import {Logger} from '@app/api/Logger';
 import {getCachedInstancePremiumMode} from '@app/api/limits/InstancePremiumModeCache';
-import {getBillingRepository} from '@app/api/middleware/ServiceRegistry';
 import {getCosmeticService, getPremiumLedgerService} from '@app/api/middleware/ServiceSingletons';
-import {isPremiumGiftCode, mapGiftDurationMonthsToFields, type PremiumGiftCode} from '@app/api/models/GiftCode';
+import {
+	createGiftCodeRow,
+	generateUniqueGiftCode,
+	isPremiumGiftCode,
+	mapGiftDurationMonthsToFields,
+	type PremiumGiftCode,
+} from '@app/api/models/GiftCode';
 import type {User} from '@app/api/models/User';
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
 import {getBillingBranding} from '@app/api/stripe/BillingBranding';
 import type {ProductInfo} from '@app/api/stripe/ProductRegistry';
+import {mirrorSubscription} from '@app/api/stripe/StripeMirror';
 import type {StripeCheckoutService} from '@app/api/stripe/services/StripeCheckoutService';
 import type {StripePremiumService} from '@app/api/stripe/services/StripePremiumService';
 import type {StripeSubscriptionService} from '@app/api/stripe/services/StripeSubscriptionService';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
-import {mapUserToPrivateResponse} from '@app/api/user/UserMappers';
-import * as RandomUtils from '@app/api/utils/RandomUtils';
+import {bumpGiftInventory} from '@app/api/user/GiftInventory';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
+import {dispatchUserUpdate} from '@app/api/user/UserMappers';
 import {UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {FeatureNotAvailableSelfHostedError} from '@fluxer/errors/src/domains/core/FeatureNotAvailableSelfHostedError';
 import {CannotRedeemPlutoniumWithVisionaryError} from '@fluxer/errors/src/domains/payment/CannotRedeemPlutoniumWithVisionaryError';
@@ -44,7 +50,7 @@ export function assertGiftCodesAvailable(): void {
 export class StripeGiftService {
 	constructor(
 		private stripe: Stripe | null,
-		private userRepository: IUserRepository,
+		private userRepository: UserRepository,
 		private cacheService: ICacheService,
 		private gatewayService: IGatewayService,
 		private checkoutService: StripeCheckoutService,
@@ -169,23 +175,19 @@ export class StripeGiftService {
 					);
 					await this.cancelStripeSubscriptionImmediately(user);
 				}
-				let stackedOntoStripeSubscription = false;
-				if (premiumType === UserPremiumTypes.SUBSCRIPTION) {
-					stackedOntoStripeSubscription = await this.tryStackSubscriptionGiftOntoStripeSubscription(
-						user,
-						giftCode,
-						code,
-					);
-				}
+				const stackedSubscription =
+					premiumType === UserPremiumTypes.SUBSCRIPTION
+						? await this.tryStackSubscriptionGiftOntoStripeSubscription(user, giftCode, code)
+						: null;
 				Logger.debug(
 					{
 						userId,
 						giftCode: code,
-						stackedOntoStripeSubscription,
+						stackedOntoStripeSubscription: stackedSubscription !== null,
 					},
 					'Gift redemption stacking decision completed',
 				);
-				if (stackedOntoStripeSubscription) {
+				if (stackedSubscription) {
 					Logger.debug(
 						{
 							userId,
@@ -195,13 +197,9 @@ export class StripeGiftService {
 						},
 						'Recording gift extension in gift bucket alongside Stripe trial stacking',
 					);
-					await this.premiumService.extendPremiumByGift(
-						userId,
-						premiumType,
-						giftCode.durationType,
-						giftCode.durationQuantity,
-						true,
-					);
+					if (stackedSubscription.subscription) {
+						await this.premiumService.recordGiftTrialExtension(userId, stackedSubscription.subscription);
+					}
 				} else if (premiumType === UserPremiumTypes.LIFETIME && giftCode.visionarySequenceNumber != null) {
 					const GIFT_CODE_SENTINEL_USER_ID = createUserID(-1n);
 					Logger.debug(
@@ -353,22 +351,19 @@ export class StripeGiftService {
 			if (freshPayment?.giftCode) {
 				return freshPayment.giftCode;
 			}
-			const code = await this.generateUniqueGiftCode();
+			const code = await generateUniqueGiftCode((code) => this.userRepository.findGiftCode(code));
 			const duration = mapGiftDurationMonthsToFields(productInfo.durationMonths);
-			await this.userRepository.createGiftCode({
-				code,
-				duration_months: null,
-				duration_type: duration.durationType,
-				duration_quantity: duration.durationQuantity,
-				created_at: new Date(),
-				created_by_user_id: purchaser.id,
-				redeemed_at: null,
-				redeemed_by_user_id: null,
-				stripe_payment_intent_id: paymentIntentId,
-				visionary_sequence_number: null,
-				checkout_session_id: checkoutSessionId,
-				version: 1,
-			});
+			await this.userRepository.createGiftCode(
+				createGiftCodeRow({
+					code: code,
+					durationType: duration.durationType,
+					durationQuantity: duration.durationQuantity,
+					createdAt: new Date(),
+					createdByUserId: purchaser.id,
+					paymentIntentId: paymentIntentId,
+					checkoutSessionId: checkoutSessionId,
+				}),
+			);
 			await this.userRepository.linkGiftCodeToCheckoutSession(code, checkoutSessionId);
 			Logger.debug(
 				{code, purchaserId: purchaser.id, durationMonths: productInfo.durationMonths, productType: productInfo.type},
@@ -385,19 +380,9 @@ export class StripeGiftService {
 	}
 
 	async finaliseGiftCode(purchaserId: UserID): Promise<void> {
-		const currentUser = await this.userRepository.findUnique(purchaserId);
-		if (!currentUser) {
+		if (!(await bumpGiftInventory(this.userRepository, this.gatewayService, purchaserId))) {
 			Logger.error({userId: purchaserId}, 'Purchaser not found for gift finalisation');
-			return;
 		}
-		const updatedUser = await this.userRepository.patchUpsert(
-			purchaserId,
-			{
-				gift_inventory_server_seq: (currentUser.giftInventoryServerSeq ?? 0) + 1,
-			},
-			currentUser.toRow(),
-		);
-		await this.dispatchUser(updatedUser);
 	}
 
 	// One delivery per code (grant key 'gift:<code>'). The user x item lock makes a second code for the same item wait
@@ -434,22 +419,11 @@ export class StripeGiftService {
 		}
 	}
 
-	private async generateUniqueGiftCode(): Promise<string> {
-		let code: string;
-		let exists = true;
-		while (exists) {
-			code = RandomUtils.randomString(32);
-			const existing = await this.userRepository.findGiftCode(code);
-			exists = !!existing;
-		}
-		return code!;
-	}
-
 	private async tryStackSubscriptionGiftOntoStripeSubscription(
 		user: User,
 		giftCode: PremiumGiftCode,
 		code: string,
-	): Promise<boolean> {
+	): Promise<{subscription: Stripe.Subscription | null} | null> {
 		const hasCurrentSubscriptionState = this.hasCurrentSubscriptionState(user);
 		if (!hasCurrentSubscriptionState || !user.stripeSubscriptionId || !this.stripe) {
 			Logger.debug(
@@ -462,7 +436,7 @@ export class StripeGiftService {
 				},
 				'Skipping Stripe subscription stacking for gift redemption',
 			);
-			return false;
+			return null;
 		}
 		Logger.debug(
 			{
@@ -475,14 +449,14 @@ export class StripeGiftService {
 			'Attempting to stack gift duration onto active Stripe subscription',
 		);
 		try {
-			await this.subscriptionService.extendSubscriptionWithGiftTrialDuration(
+			const subscription = await this.subscriptionService.extendSubscriptionWithGiftTrialDuration(
 				user,
 				giftCode.durationType,
 				giftCode.durationQuantity,
 				code,
 			);
 			Logger.debug({userId: user.id, giftCode: code}, 'Stacked gift duration onto Stripe subscription');
-			return true;
+			return {subscription};
 		} catch (error: unknown) {
 			if (!this.shouldFallbackToPremiumFieldGrant(error)) {
 				Logger.error(
@@ -509,7 +483,7 @@ export class StripeGiftService {
 				},
 				'Falling back to premium-field gift grant after missing or inactive Stripe subscription',
 			);
-			return false;
+			return null;
 		}
 	}
 
@@ -560,7 +534,7 @@ export class StripeGiftService {
 		}
 		Logger.debug({userId: user.id, patch}, 'Clearing stale Stripe identity before premium field fallback');
 		const updatedUser = await this.userRepository.patchUpsert(user.id, patch, user.toRow());
-		await this.dispatchUser(updatedUser);
+		await dispatchUserUpdate(this.gatewayService, updatedUser);
 		await this.storeEntitlementService?.reapplyAfterStripeChange(user.id);
 	}
 
@@ -575,35 +549,17 @@ export class StripeGiftService {
 			invoice_now: false,
 			prorate: false,
 		});
-		try {
-			await getBillingRepository().subscriptions.upsertFromStripe(canceledSubscription, {
-				knownUserId: user.id,
-				snapshotCapturedAt: new Date(),
-			});
-		} catch (mirrorErr) {
-			Logger.error(
-				{mirrorErr, subId: canceledSubscription.id},
-				'Mirror upsert failed after Stripe write; reconciler will heal',
-			);
-		}
-		const updatedUser = await this.userRepository.patchUpsert(
+		await mirrorSubscription(
+			canceledSubscription,
 			user.id,
-			{
-				stripe_subscription_id: null,
-				premium_billing_cycle: null,
-				premium_will_cancel: false,
-			},
-			user.toRow(),
+			'Mirror upsert failed after Stripe write; reconciler will heal',
 		);
-		await this.dispatchUser(updatedUser);
-		Logger.debug({userId: user.id}, 'Canceled active subscription due to lifetime grant');
-	}
-
-	private async dispatchUser(user: User): Promise<void> {
-		await this.gatewayService.dispatchPresence({
-			userId: user.id,
-			event: 'USER_UPDATE',
-			data: mapUserToPrivateResponse(user),
+		const updatedUser = await this.userRepository.patchUpsert(user.id, {
+			stripe_subscription_id: null,
+			premium_billing_cycle: null,
+			premium_will_cancel: false,
 		});
+		await dispatchUserUpdate(this.gatewayService, updatedUser);
+		Logger.debug({userId: user.id}, 'Canceled active subscription due to lifetime grant');
 	}
 }

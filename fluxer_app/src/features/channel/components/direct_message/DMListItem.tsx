@@ -13,8 +13,6 @@ import type {InviteCandidate} from '@app/features/channel/components/direct_mess
 import {getDefaultInviteChannelId} from '@app/features/channel/components/direct_message/DMListHelpers';
 import {buildMobileMenuGroups} from '@app/features/channel/components/direct_message/DMListItemMenuGroups';
 import {useDMListItemHandlers} from '@app/features/channel/components/direct_message/useDMListItemHandlers';
-import {EditGroupBottomSheet} from '@app/features/channel/components/modals/EditGroupBottomSheet';
-import {GroupInvitesBottomSheet} from '@app/features/channel/components/modals/GroupInvitesBottomSheet';
 import type {Channel} from '@app/features/channel/models/Channel';
 import * as ChannelUtils from '@app/features/channel/utils/ChannelUtils';
 import {NameplateBackground} from '@app/features/cosmetics/components/NameplateBackground';
@@ -29,7 +27,7 @@ import Messages from '@app/features/messaging/state/MessagingMessages';
 import {SystemMessageUtils} from '@app/features/messaging/utils/SystemMessageUtils';
 import ReadStates from '@app/features/read_state/state/ReadStates';
 import Relationships from '@app/features/relationship/state/Relationships';
-import TypingIndicator from '@app/features/typing/state/TypingIndicator';
+import RollingTypingStore from '@app/features/typing/rolling/RollingTypingStore';
 import {DMContextMenu} from '@app/features/ui/action_menu/DMContextMenu';
 import {GroupDMContextMenu} from '@app/features/ui/action_menu/GroupDMContextMenu';
 import * as ContextMenuCommands from '@app/features/ui/commands/ContextMenuCommands';
@@ -130,8 +128,8 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 	const recipientId = recipient?.id || '';
 	const isBotDM = Boolean(recipient?.bot || recipient?.system);
 	const isTyping = isGroupDM
-		? channel.recipientIds.some((groupRecipientId) => TypingIndicator.isTyping(channel.id, groupRecipientId))
-		: TypingIndicator.isTyping(channel.id, recipientId);
+		? channel.recipientIds.some((groupRecipientId) => RollingTypingStore.isTyping(channel.id, groupRecipientId))
+		: RollingTypingStore.isTyping(channel.id, recipientId);
 	const hasUnreadMessages = () => ReadStates.hasUnread(channel.id);
 	const isMobile = MobileLayout.isMobileLayout();
 	const isMuted = UserGuildSettings.isChannelDirectlyMuted(null, channel.id);
@@ -148,8 +146,7 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 		title: string;
 		groups: Array<MenuGroupType>;
 	} | null>(null);
-	const [editGroupSheetOpen, setEditGroupSheetOpen] = useState(false);
-	const [invitesSheetOpen, setInvitesSheetOpen] = useState(false);
+
 	const currentUser = Users.getCurrentUser();
 	const lastMessage = Messages.getCachedMessages(channel.id)?.last();
 	const leaveGroup = useLeaveGroup();
@@ -191,13 +188,10 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 		channel,
 		recipient,
 		isGroupDM,
-		isMobile,
 		relationshipType,
 		restrictRecipientActions,
 		closeAllSheets,
 		setMenuOpen,
-		setEditGroupSheetOpen,
-		setInvitesSheetOpen,
 		leaveGroup,
 		i18n,
 	});
@@ -446,7 +440,6 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 										<CustomStatusDisplay
 											userId={recipient.id}
 											className={styles.dmItemCustomStatus}
-											showText={true}
 											showTooltip
 											tooltipPosition="bottom"
 											animateOnParentHover
@@ -504,195 +497,160 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 						data-flx="channel.direct-message.dm-list-item.menu-bottom-sheet--2"
 					/>
 				)}
-				{isGroupDM && (
-					<>
-						<EditGroupBottomSheet
-							isOpen={editGroupSheetOpen}
-							onClose={() => setEditGroupSheetOpen(false)}
-							channelId={channel.id}
-							data-flx="channel.direct-message.dm-list-item.edit-group-bottom-sheet"
-						/>
-						<GroupInvitesBottomSheet
-							isOpen={invitesSheetOpen}
-							onClose={() => setInvitesSheetOpen(false)}
-							channelId={channel.id}
-							data-flx="channel.direct-message.dm-list-item.group-invites-bottom-sheet"
-						/>
-					</>
-				)}
 			</>
 		);
 	}
 	return (
-		<>
-			<FocusRing offset={-2} data-flx="channel.direct-message.dm-list-item.focus-ring--2">
-				<div
-					ref={setDesktopRef}
-					className={clsx(
-						isSelected ? styles.dmItemSelected : hasUnreadMessages() ? styles.dmItemUnread : styles.dmItem,
-						isMuted && styles.dmItemMuted,
-						contextMenuOpen && styles.contextMenuActive,
+		<FocusRing offset={-2} data-flx="channel.direct-message.dm-list-item.focus-ring--2">
+			<div
+				ref={setDesktopRef}
+				className={clsx(
+					isSelected ? styles.dmItemSelected : hasUnreadMessages() ? styles.dmItemUnread : styles.dmItem,
+					isMuted && styles.dmItemMuted,
+					contextMenuOpen && styles.contextMenuActive,
+				)}
+				onClick={handleNavigate}
+				onContextMenu={handleContextMenu}
+				onMouseEnter={scheduleChannelPreload}
+				onMouseLeave={cancelChannelPreload}
+				onFocus={() => setIsFocused(true)}
+				onBlur={() => setIsFocused(false)}
+				data-dm-list-focus-item="true"
+				role="link"
+				tabIndex={0}
+				aria-label={dmAriaLabel}
+				aria-current={isSelected ? 'page' : undefined}
+				onKeyDown={(event) => {
+					if (event.target !== event.currentTarget) return;
+					if (!isKeyboardActivationKey(event.key)) return;
+					event.preventDefault();
+					handleNavigate();
+				}}
+				data-flx="channel.direct-message.dm-list-item.dm-item-selected.navigate-to"
+			>
+				<AnimatePresence data-flx="channel.direct-message.dm-list-item.animate-presence--2">
+					{unreadState.shouldShowUnreadIndicator && (
+						<div
+							className={styles.dmItemUnreadIndicatorContainerDesktop}
+							data-flx="channel.direct-message.dm-list-item.dm-item-unread-indicator-container-desktop"
+						>
+							<motion.span
+								data-flx="channel.direct-message.dm-list-item.dm-item-unread-indicator--2"
+								{...motionSettings}
+								className={styles.dmItemUnreadIndicator}
+							/>
+						</div>
 					)}
-					onClick={handleNavigate}
-					onContextMenu={handleContextMenu}
-					onMouseEnter={scheduleChannelPreload}
-					onMouseLeave={cancelChannelPreload}
-					onFocus={() => setIsFocused(true)}
-					onBlur={() => setIsFocused(false)}
-					data-dm-list-focus-item="true"
-					role="link"
-					tabIndex={0}
-					aria-label={dmAriaLabel}
-					aria-current={isSelected ? 'page' : undefined}
-					onKeyDown={(event) => {
-						if (event.target !== event.currentTarget) return;
-						if (!isKeyboardActivationKey(event.key)) return;
-						event.preventDefault();
-						handleNavigate();
-					}}
-					data-flx="channel.direct-message.dm-list-item.dm-item-selected.navigate-to"
+				</AnimatePresence>
+				<NameplateBackground
+					nameplate={recipient?.nameplate ?? null}
+					data-flx="channel.direct-message.dm-list-item.nameplate-background--2"
 				>
-					<AnimatePresence data-flx="channel.direct-message.dm-list-item.animate-presence--2">
-						{unreadState.shouldShowUnreadIndicator && (
-							<div
-								className={styles.dmItemUnreadIndicatorContainerDesktop}
-								data-flx="channel.direct-message.dm-list-item.dm-item-unread-indicator-container-desktop"
-							>
-								<motion.span
-									data-flx="channel.direct-message.dm-list-item.dm-item-unread-indicator--2"
-									{...motionSettings}
-									className={styles.dmItemUnreadIndicator}
+					<div className={styles.dmItemContent} data-flx="channel.direct-message.dm-list-item.dm-item-content--2">
+						<div
+							className={styles.dmItemAvatarWrapper}
+							data-flx="channel.direct-message.dm-list-item.dm-item-avatar-wrapper--2"
+						>
+							{isGroupDM ? (
+								<GroupDMAvatar
+									channel={channel}
+									size={32}
+									isTyping={isTyping}
+									data-flx="channel.direct-message.dm-list-item.group-dm-avatar--2"
 								/>
-							</div>
-						)}
-					</AnimatePresence>
-					<NameplateBackground
-						nameplate={recipient?.nameplate ?? null}
-						data-flx="channel.direct-message.dm-list-item.nameplate-background--2"
-					>
-						<div className={styles.dmItemContent} data-flx="channel.direct-message.dm-list-item.dm-item-content--2">
-							<div
-								className={styles.dmItemAvatarWrapper}
-								data-flx="channel.direct-message.dm-list-item.dm-item-avatar-wrapper--2"
-							>
-								{isGroupDM ? (
-									<GroupDMAvatar
-										channel={channel}
-										size={32}
-										isTyping={isTyping}
-										data-flx="channel.direct-message.dm-list-item.group-dm-avatar--2"
-									/>
-								) : (
-									<ListStatusAwareAvatar
-										user={recipient!}
-										size={32}
-										isTyping={isTyping}
-										showOffline={true}
-										data-flx="channel.direct-message.dm-list-item.status-aware-avatar--2"
+							) : (
+								<ListStatusAwareAvatar
+									user={recipient!}
+									size={32}
+									isTyping={isTyping}
+									showOffline={true}
+									data-flx="channel.direct-message.dm-list-item.status-aware-avatar--2"
+								/>
+							)}
+						</div>
+						<div className={styles.dmItemInfo} data-flx="channel.direct-message.dm-list-item.dm-item-info--2">
+							<span className={styles.dmItemName} data-flx="channel.direct-message.dm-list-item.dm-item-name--2">
+								{channel.isPinned && (
+									<PushPinIcon
+										weight="fill"
+										className={styles.dmItemPinIcon}
+										data-flx="channel.direct-message.dm-list-item.dm-item-pin-icon--2"
 									/>
 								)}
-							</div>
-							<div className={styles.dmItemInfo} data-flx="channel.direct-message.dm-list-item.dm-item-info--2">
-								<span className={styles.dmItemName} data-flx="channel.direct-message.dm-list-item.dm-item-name--2">
-									{channel.isPinned && (
-										<PushPinIcon
-											weight="fill"
-											className={styles.dmItemPinIcon}
-											data-flx="channel.direct-message.dm-list-item.dm-item-pin-icon--2"
-										/>
-									)}
-									<DMListItemNameText
-										displayName={displayName}
-										dataFlx="channel.direct-message.dm-list-item.dm-item-name-text--2"
-										data-flx="channel.direct-message.dm-list-item.resolved-dm-list-item.dm-list-item-name-text--2"
+								<DMListItemNameText
+									displayName={displayName}
+									dataFlx="channel.direct-message.dm-list-item.dm-item-name-text--2"
+									data-flx="channel.direct-message.dm-list-item.resolved-dm-list-item.dm-list-item-name-text--2"
+								/>
+								{!isGroupDM && recipient && (
+									<VerifiedUserBadge
+										user={recipient}
+										className={styles.dmItemUserTag}
+										data-flx="channel.direct-message.dm-list-item.verified-user-badge--2"
 									/>
-									{!isGroupDM && recipient && (
-										<VerifiedUserBadge
-											user={recipient}
-											className={styles.dmItemUserTag}
-											data-flx="channel.direct-message.dm-list-item.verified-user-badge--2"
-										/>
-									)}
-									{!isGroupDM && isBotDM && (
-										<UserTag
-											className={styles.dmItemUserTag}
-											system={recipient?.system}
-											data-flx="channel.direct-message.dm-list-item.dm-item-user-tag--2"
-										/>
+								)}
+								{!isGroupDM && isBotDM && (
+									<UserTag
+										className={styles.dmItemUserTag}
+										system={recipient?.system}
+										data-flx="channel.direct-message.dm-list-item.dm-item-user-tag--2"
+									/>
+								)}
+							</span>
+							{!isGroupDM && recipient && !messagePreview && (
+								<CustomStatusDisplay
+									userId={recipient.id}
+									className={styles.dmItemCustomStatus}
+									showTooltip
+									tooltipPosition="bottom"
+									animateOnParentHover
+									data-flx="channel.direct-message.dm-list-item.dm-item-custom-status--2"
+								/>
+							)}
+							{isGroupDM && (
+								<span
+									className={clsx(styles.dmItemSubtext, styles.dmItemMembersSubtext)}
+									data-flx="channel.direct-message.dm-list-item.dm-item--2"
+								>
+									{plural(
+										{count: channel.recipientIds.length + 1},
+										{
+											one: '# member',
+											other: '# members',
+										},
 									)}
 								</span>
-								{!isGroupDM && recipient && !messagePreview && (
-									<CustomStatusDisplay
-										userId={recipient.id}
-										className={styles.dmItemCustomStatus}
-										showText={true}
-										showTooltip
-										tooltipPosition="bottom"
-										animateOnParentHover
-										data-flx="channel.direct-message.dm-list-item.dm-item-custom-status--2"
-									/>
-								)}
-								{isGroupDM && (
-									<span
-										className={clsx(styles.dmItemSubtext, styles.dmItemMembersSubtext)}
-										data-flx="channel.direct-message.dm-list-item.dm-item--2"
-									>
-										{plural(
-											{count: channel.recipientIds.length + 1},
-											{
-												one: '# member',
-												other: '# members',
-											},
-										)}
-									</span>
-								)}
-								{!isGroupDM && messagePreview && (
-									<span
-										className={styles.dmItemSubtext}
-										data-flx="channel.direct-message.dm-list-item.dm-item-subtext--2"
-									>
-										{messagePreview}
-									</span>
-								)}
-							</div>
-							<FocusRing offset={-2} data-flx="channel.direct-message.dm-list-item.focus-ring--3">
-								<button
-									type="button"
-									tabIndex={-1}
-									className={styles.dmItemCloseButton}
-									style={{opacity: isFocused && keyboardModeEnabled ? 1 : undefined}}
-									onClick={handlers.handleRemoveChannel}
-									aria-label={i18n._(CLOSE_DIRECT_MESSAGE_WITH_DESCRIPTOR, {displayName})}
-									data-flx="channel.direct-message.dm-list-item.dm-item-close-button.remove-channel"
+							)}
+							{!isGroupDM && messagePreview && (
+								<span
+									className={styles.dmItemSubtext}
+									data-flx="channel.direct-message.dm-list-item.dm-item-subtext--2"
 								>
-									<XIcon
-										weight="bold"
-										className={styles.iconSize4}
-										data-flx="channel.direct-message.dm-list-item.icon-size4"
-									/>
-								</button>
-							</FocusRing>
+									{messagePreview}
+								</span>
+							)}
 						</div>
-					</NameplateBackground>
-				</div>
-			</FocusRing>
-			{isGroupDM && (
-				<>
-					<EditGroupBottomSheet
-						isOpen={editGroupSheetOpen}
-						onClose={() => setEditGroupSheetOpen(false)}
-						channelId={channel.id}
-						data-flx="channel.direct-message.dm-list-item.edit-group-bottom-sheet--2"
-					/>
-					<GroupInvitesBottomSheet
-						isOpen={invitesSheetOpen}
-						onClose={() => setInvitesSheetOpen(false)}
-						channelId={channel.id}
-						data-flx="channel.direct-message.dm-list-item.group-invites-bottom-sheet--2"
-					/>
-				</>
-			)}
-		</>
+						<FocusRing offset={-2} data-flx="channel.direct-message.dm-list-item.focus-ring--3">
+							<button
+								type="button"
+								tabIndex={-1}
+								className={styles.dmItemCloseButton}
+								style={{opacity: isFocused && keyboardModeEnabled ? 1 : undefined}}
+								onClick={handlers.handleRemoveChannel}
+								aria-label={i18n._(CLOSE_DIRECT_MESSAGE_WITH_DESCRIPTOR, {displayName})}
+								data-flx="channel.direct-message.dm-list-item.dm-item-close-button.remove-channel"
+							>
+								<XIcon
+									weight="bold"
+									className={styles.iconSize4}
+									data-flx="channel.direct-message.dm-list-item.icon-size4"
+								/>
+							</button>
+						</FocusRing>
+					</div>
+				</NameplateBackground>
+			</div>
+		</FocusRing>
 	);
 });
 export const DMListItem = observer((props: DMListItemProps) => {

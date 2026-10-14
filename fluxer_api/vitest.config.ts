@@ -39,7 +39,7 @@ const MODULE_REGISTRY_TEST_FILES = [
 	'src/api/stripe/tests/StripeWebhookRefund.test.ts',
 	'src/api/stripe/tests/StripeWebhookSubscription.test.ts',
 	'src/api/channel/tests/MessageCrosspostFanout.test.ts',
-	'src/api/gif/GifRequestCountry.test.ts',
+	'src/api/experiment/tests/ExperimentController.test.ts',
 	'src/api/referral/tests/ReferralBackfill.test.ts',
 	'src/api/referral/tests/ReferralGrant.test.ts',
 	'src/api/stripe/tests/StripeCheckoutCountryEnforcement.test.ts',
@@ -66,16 +66,14 @@ const MODULE_REGISTRY_TEST_FILES = [
 	'src/api/user/username/tests/UsernameAdminReadRoutes.test.ts',
 	'src/api/user/username/tests/UsernamePolicyDictionaryCleanup.test.ts',
 	'src/api/user/username/tests/UsernamePolicyRuntime.test.ts',
+	'src/api/voice/tests/VoiceP2pConnectionReports.test.ts',
 ];
 
 // Wall-clock budgets measured while other workers run fail on CPU contention, not on slow code; these files run
 // in their own project after every other project has finished, so their budgets stay strict.
 const TIMING_BUDGET_TEST_FILES = ['src/api/user/username/tests/UsernamePolicyDictionary.test.ts'];
 
-const INSTANCE_POLICY_TEST_FILES = [
-	'src/api/admin/tests/InstanceConfigPendingRegistrationApproval.test.ts',
-	'src/api/instance/tests/SingleCommunityService.test.ts',
-];
+const INSTANCE_POLICY_TEST_FILES = ['src/api/admin/tests/InstanceConfigPendingRegistrationApproval.test.ts'];
 
 // TEMPORARY: announcement channels are closed, so these upstream suites cannot build their fixtures; re-include them when they open (bucketed follower/crosspost partitions and a follower cap first).
 const CLOSED_ANNOUNCEMENT_TEST_FILES = [
@@ -103,8 +101,6 @@ const sharedExclude = [
 	'pkgs/**',
 	'../fluxer_desktop/**',
 	'**/target/**',
-	'**/*Integration.test.ts',
-	'**/*ExttestIntegration.test.ts',
 	...CLOSED_ANNOUNCEMENT_TEST_FILES,
 ];
 
@@ -116,6 +112,7 @@ const sharedTestConfig = {
 	testTimeout: 40000,
 	hookTimeout: 20000,
 	maxConcurrency: configuredMaxConcurrency,
+	execArgv: ['--no-experimental-webstorage', '--disable-warning=ExperimentalWarning'],
 };
 
 export default defineConfig({
@@ -127,19 +124,7 @@ export default defineConfig({
 		fileParallelism: true,
 		reporters: ['default', 'json'],
 		outputFile: './test-results.json',
-		coverage: {
-			provider: 'v8',
-			reporter: ['text', 'text-summary', 'json', 'html'],
-			reportsDirectory: './coverage',
-			exclude: [
-				'**/node_modules/tests/test*.test.tsx',
-				'**/*.test.ts',
-				'**/Setup.tsx',
-				'**/TestConstants.tsx',
-				'**/TestRequestBuilder.tsx',
-				'**/TestHelpers.tsx',
-			],
-		},
+
 		projects: [
 			{
 				resolve: {tsconfigPaths: true},

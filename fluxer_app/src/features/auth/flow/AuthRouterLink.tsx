@@ -6,7 +6,6 @@ import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import type {ReactNode} from 'react';
 
 interface AuthRouterLinkProps {
-	ringOffset?: number;
 	children?: ReactNode;
 	className?: string;
 	to: string;
@@ -14,14 +13,7 @@ interface AuthRouterLinkProps {
 	asButton?: boolean;
 }
 
-export function AuthRouterLink({
-	ringOffset = -2,
-	children,
-	className,
-	to,
-	search,
-	asButton = false,
-}: AuthRouterLinkProps) {
+export function AuthRouterLink({children, className, to, search, asButton = false}: AuthRouterLinkProps) {
 	const navigate = useNavigate();
 	if (asButton) {
 		return (
@@ -38,7 +30,7 @@ export function AuthRouterLink({
 		);
 	}
 	return (
-		<FocusRing offset={ringOffset} data-flx="auth.flow.auth-router-link.focus-ring">
+		<FocusRing offset={-2} data-flx="auth.flow.auth-router-link.focus-ring">
 			<RouterLink
 				tabIndex={0}
 				className={className}

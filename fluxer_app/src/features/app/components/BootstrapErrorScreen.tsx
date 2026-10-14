@@ -2,11 +2,13 @@
 
 import {BootstrapErrorKind, classifyBootstrapError} from '@app/features/app/components/BootstrapErrorKind';
 import styles from '@app/features/app/components/ErrorFallback.module.css';
-import {PRODUCT_NAME, SUPPORT_EMAIL, SUPPORT_EMAIL_MAILTO} from '@app/features/app/config/I18nDisplayConstants';
+import {SUPPORT_EMAIL, SUPPORT_EMAIL_MAILTO} from '@app/features/app/config/I18nDisplayConstants';
+import {resolveAppShellBranding} from '@app/features/app/state/AppShellBranding';
+import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import {TRY_AGAIN_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {ResetClientStateReason, resetClientState} from '@app/features/platform/state/ResetClientState';
 import {Button} from '@app/features/ui/button/Button';
-import {APPLICATION_ICON_DESCRIPTOR, FluxerIconMark} from '@app/features/ui/components/icons/FluxerIconMark';
+import {FluxerIcon} from '@app/features/ui/components/icons/FluxerIcon';
 import {Trans, useLingui} from '@lingui/react/macro';
 import type React from 'react';
 import {useCallback, useEffect, useState} from 'react';
@@ -57,13 +59,12 @@ export const BootstrapErrorScreen: React.FC<BootstrapErrorScreenProps> = ({error
 			window.location.reload(),
 		);
 	}, []);
+	const snapshot = RuntimeConfig.getSnapshotOrNull();
+	const productName = resolveAppShellBranding(snapshot).productName;
+	const statusPageUrl = RuntimeConfig.statusPageUrl;
 	return (
 		<div className={styles.errorFallbackContainer} data-flx="app.bootstrap-error-screen.error-fallback-container">
-			<FluxerIconMark
-				aria-label={i18n._(APPLICATION_ICON_DESCRIPTOR, {productName: PRODUCT_NAME})}
-				className={styles.errorFallbackIcon}
-				data-flx="app.bootstrap-error-screen.error-fallback-icon"
-			/>
+			<FluxerIcon className={styles.errorFallbackIcon} data-flx="app.bootstrap-error-screen.error-fallback-icon" />
 			<div className={styles.errorFallbackContent} data-flx="app.bootstrap-error-screen.error-fallback-content">
 				<h1 className={styles.errorFallbackTitle} data-flx="app.bootstrap-error-screen.error-fallback-title">
 					{unreachable ? <Trans>Can't connect</Trans> : <Trans>Failed to start</Trans>}
@@ -73,7 +74,7 @@ export const BootstrapErrorScreen: React.FC<BootstrapErrorScreenProps> = ({error
 						<Trans>Check your connection and try again.</Trans>
 					) : (
 						<Trans>
-							{PRODUCT_NAME} failed to start properly. This could be due to corrupted data or a temporary issue.
+							{productName} failed to start properly. This could be due to corrupted data or a temporary issue.
 						</Trans>
 					)}
 				</p>
@@ -84,6 +85,25 @@ export const BootstrapErrorScreen: React.FC<BootstrapErrorScreenProps> = ({error
 						data-flx="app.bootstrap-error-screen.error-fallback-description--2"
 					>
 						{error.message}
+					</p>
+				)}
+				{statusPageUrl && (
+					<p
+						className={styles.errorFallbackDescription}
+						data-flx="app.bootstrap-error-screen.error-fallback-description--status"
+					>
+						<Trans>
+							Check the{' '}
+							<a
+								href={statusPageUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								data-flx="app.bootstrap-error-screen.status-page-link"
+							>
+								status page
+							</a>{' '}
+							for updates.
+						</Trans>
 					</p>
 				)}
 				<p

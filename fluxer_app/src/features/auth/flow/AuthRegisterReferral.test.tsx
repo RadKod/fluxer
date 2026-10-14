@@ -104,7 +104,6 @@ vi.mock('@app/features/referral/utils/ReferralCodeStorage', () => ({
 }));
 
 const {AuthRegisterFormCore} = await import('@app/features/auth/flow/AuthRegisterFormCore');
-const {AuthMinimalRegisterFormCore} = await import('@app/features/auth/flow/AuthMinimalRegisterFormCore');
 const {runtimeSnapshotFromDiscovery} = await import('@app/features/app/state/InstanceSnapshotStore');
 const {instanceDiscoveryFixture} = await import('@app/features/platform/state/__fixtures__/RuntimeBootstrapFixture');
 const {parseInstanceDiscoveryDocument} = await import('@fluxer/instance_bootstrap/src/Discovery');
@@ -117,7 +116,11 @@ const runtimeSnapshot = runtimeSnapshotFromDiscovery(parseInstanceDiscoveryDocum
 
 describe.each([
 	['AuthRegisterFormCore', AuthRegisterFormCore],
-	['AuthMinimalRegisterFormCore', AuthMinimalRegisterFormCore],
+	[
+		'AuthRegisterFormCore without a username field',
+		(props: React.ComponentProps<typeof AuthRegisterFormCore>) =>
+			createElement(AuthRegisterFormCore, {...props, fields: {showUsername: false}}),
+	],
 ])('%s referral code', (_name, Form) => {
 	let container: HTMLDivElement;
 	let root: ReturnType<typeof createRoot>;
@@ -149,7 +152,9 @@ describe.each([
 
 		expect(register.mock.calls[0][0]).toMatchObject({referral_code: 'abcdef2345'});
 		expect(register.mock.calls[0][1]).toEqual({
-			http: {instanceKey: 'https://micup.test/api', apiEndpoint: 'https://micup.test/api', apiVersion: 9},
+			instanceKey: 'https://micup.test/api',
+			apiEndpoint: 'https://micup.test/api',
+			apiVersion: 9,
 		});
 		expect(stored.code).toBeNull();
 	});

@@ -8,8 +8,7 @@ import type {IVoiceRoomStore} from '@app/api/infrastructure/IVoiceRoomStore';
 import {LiveKitService, SERVER_MUTE_ATTRIBUTE} from '@app/api/infrastructure/LiveKitService';
 import {LiveKitWebhookService} from '@app/api/infrastructure/LiveKitWebhookService';
 import type {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
-import type {IVoiceRepository} from '@app/api/voice/IVoiceRepository';
+import type {VoiceRepository} from '@app/api/voice/VoiceRepository';
 import {VoiceTopology} from '@app/api/voice/VoiceTopology';
 import {registerVoiceSeatMockScripts} from '@app/api/voice_seat/tests/VoiceSeatMockScripts';
 import {createVoiceMembershipHooks, type VoiceMembershipHooks} from '@app/api/voice_seat/VoiceMembershipHooks';
@@ -17,6 +16,7 @@ import {VoiceSeatRepository} from '@app/api/voice_seat/VoiceSeatRepository';
 import {VoiceSeatService} from '@app/api/voice_seat/VoiceSeatService';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import {VOICE_ROOM_THEME_IDS} from '@fluxer/constants/src/VoiceRoomThemes';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {TrackSource, type WebhookEvent} from 'livekit-server-sdk';
 import {describe, expect, it, vi} from 'vitest';
 
@@ -40,51 +40,47 @@ function fakeHooks() {
 
 function harness(pinnedServerId: string | null) {
 	const deleteRoomServer = vi.fn(async () => {});
-	const disconnectAllVoiceUsersInChannel = vi.fn(async () => ({disconnectedCount: 0}));
 	const voiceRoomStore = {
 		getPinnedRoomServer: vi.fn(async () => (pinnedServerId ? {regionId: 'eu', serverId: pinnedServerId} : null)),
 		deleteRoomServer,
 	} as unknown as IVoiceRoomStore;
-	const gatewayService = {disconnectAllVoiceUsersInChannel} as unknown as IGatewayService;
+	const gatewayService = {} as unknown as IGatewayService;
 	const liveKitService = {} as unknown as ILiveKitService;
 	const hooks = fakeHooks();
 	const service = new LiveKitWebhookService(
 		voiceRoomStore,
 		gatewayService,
 		liveKitService,
-		new VoiceTopology({} as unknown as IVoiceRepository, null),
+		new VoiceTopology({} as unknown as VoiceRepository, null),
 		hooks,
 	);
-	return {service, deleteRoomServer, disconnectAllVoiceUsersInChannel, hooks};
+	return {service, deleteRoomServer, hooks};
 }
 
 describe('LiveKitWebhookService room_finished', () => {
 	it('clears the guild pin without disconnecting anybody', async () => {
-		const {service, deleteRoomServer, disconnectAllVoiceUsersInChannel, hooks} = harness('eu-1');
+		const {service, deleteRoomServer, hooks} = harness('eu-1');
 
 		await service.handleRoomFinished(roomFinished(`guild_${GUILD_ID}_channel_${CHANNEL_ID}`), 'unknown-key');
 
 		expect(deleteRoomServer).toHaveBeenCalledTimes(1);
-		expect(disconnectAllVoiceUsersInChannel).not.toHaveBeenCalled();
 		expect(hooks.onRoomFinished).toHaveBeenCalledWith(CHANNEL_ID);
 	});
 
 	it('clears the pin even when no server is pinned, and still disconnects nobody', async () => {
-		const {service, deleteRoomServer, disconnectAllVoiceUsersInChannel} = harness(null);
+		const {service, deleteRoomServer} = harness(null);
 
 		await service.handleRoomFinished(roomFinished(`guild_${GUILD_ID}_channel_${CHANNEL_ID}`), 'unknown-key');
 
 		expect(deleteRoomServer).toHaveBeenCalledTimes(1);
-		expect(disconnectAllVoiceUsersInChannel).not.toHaveBeenCalled();
 	});
 
 	it('ignores a room name it cannot parse', async () => {
-		const {service, deleteRoomServer, disconnectAllVoiceUsersInChannel, hooks} = harness('eu-1');
+		const {service, deleteRoomServer, hooks} = harness('eu-1');
 
 		await service.handleRoomFinished(roomFinished('not_a_voice_room'), 'unknown-key');
 
 		expect(deleteRoomServer).not.toHaveBeenCalled();
-		expect(disconnectAllVoiceUsersInChannel).not.toHaveBeenCalled();
 		expect(hooks.onRoomFinished).not.toHaveBeenCalled();
 	});
 });
@@ -122,7 +118,7 @@ describe('LiveKitWebhookService participant_left', () => {
 			voiceRoomStore,
 			{disconnectVoiceUserIfInChannel} as unknown as IGatewayService,
 			liveKitService,
-			new VoiceTopology({} as unknown as IVoiceRepository, null),
+			new VoiceTopology({} as unknown as VoiceRepository, null),
 			fakeHooks(),
 		);
 
@@ -188,7 +184,7 @@ function membershipHarness(options: {
 					: {status: 'ok', participants},
 			),
 		} as unknown as ILiveKitService,
-		new VoiceTopology({} as unknown as IVoiceRepository, null),
+		new VoiceTopology({} as unknown as VoiceRepository, null),
 		hooks,
 	);
 	return {service, hooks, disconnectVoiceUserIfInChannel, disconnectParticipant};
@@ -353,7 +349,7 @@ describe('LiveKitWebhookService track_published', () => {
 			{} as unknown as IVoiceRoomStore,
 			{} as unknown as IGatewayService,
 			liveKitService,
-			new VoiceTopology({} as unknown as IVoiceRepository, null),
+			new VoiceTopology({} as unknown as VoiceRepository, null),
 			fakeHooks(),
 		);
 
@@ -384,7 +380,7 @@ function trackHarness() {
 		{} as unknown as IVoiceRoomStore,
 		{} as unknown as IGatewayService,
 		{muteMicrophoneTrack} as unknown as ILiveKitService,
-		new VoiceTopology({} as unknown as IVoiceRepository, null),
+		new VoiceTopology({} as unknown as VoiceRepository, null),
 		fakeHooks(),
 	);
 	return {service, muteMicrophoneTrack};

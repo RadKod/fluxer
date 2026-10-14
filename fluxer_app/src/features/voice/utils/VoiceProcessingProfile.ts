@@ -122,24 +122,6 @@ function resolveBaseVoiceProcessing(
 	}
 }
 
-export function resolveVoiceProcessingFromState(store: typeof VoiceSettings): ResolvedVoiceProcessing {
-	return resolveVoiceProcessing(
-		{
-			voiceProcessingMode: store.voiceProcessingMode,
-			echoCancellation: store.echoCancellation,
-			noiseSuppression: store.noiseSuppression,
-			autoGainControl: store.autoGainControl,
-			deepFilterNoiseSuppression: store.deepFilterNoiseSuppression,
-			deepFilterNoiseSuppressionLevel: store.deepFilterNoiseSuppressionLevel,
-		},
-		resolveNoiseSuppressionBackend(
-			store.getNoiseSuppressionBackend() ??
-				(store.deepFilterNoiseSuppression ? 'deep_filter' : !store.noiseSuppression ? 'none' : null),
-		),
-		store.getStereoMicrophone() === true,
-	);
-}
-
 export function resolveVoiceProcessingFromStateForDeviceLabel(
 	store: typeof VoiceSettings,
 	label: string | null | undefined,

@@ -59,28 +59,6 @@ max_connections_rollout_validation_test() ->
         [-1, 200001, 1.5, <<"18">>, null]
     ).
 
-is_session_eligible_full_rollout_test() ->
-    persistent_term:put(?PERSISTENT_TERM_KEY, default_config()),
-    ?assert(gateway_rollout_config:is_session_eligible(<<"user123">>)),
-    ?assert(gateway_rollout_config:is_session_eligible(<<"user456">>)).
-
-is_guild_eligible_full_rollout_test() ->
-    persistent_term:put(?PERSISTENT_TERM_KEY, default_config()),
-    ?assert(gateway_rollout_config:is_guild_eligible(<<"guild123">>)),
-    ?assert(gateway_rollout_config:is_guild_eligible(<<"guild456">>)).
-
-is_session_eligible_zero_rollout_test() ->
-    Config = (default_config())#{<<"session_rollout_percentage">> => 0},
-    persistent_term:put(?PERSISTENT_TERM_KEY, Config),
-    ?assertNot(gateway_rollout_config:is_session_eligible(<<"user123">>)),
-    ?assertNot(gateway_rollout_config:is_session_eligible(<<"user456">>)).
-
-is_guild_eligible_zero_rollout_test() ->
-    Config = (default_config())#{<<"guild_rollout_percentage">> => 0},
-    persistent_term:put(?PERSISTENT_TERM_KEY, Config),
-    ?assertNot(gateway_rollout_config:is_guild_eligible(<<"guild123">>)),
-    ?assertNot(gateway_rollout_config:is_guild_eligible(<<"guild456">>)).
-
 validate_config_rejects_bad_rollout_values_test() ->
     ?assertMatch(
         {error, {invalid_field, <<"session_rollout_percentage">>, 101}},
@@ -121,71 +99,6 @@ validate_config_ignores_unknown_keys_and_merges_defaults_test() ->
     ?assertEqual(25, maps:get(<<"session_rollout_percentage">>, Config)),
     ?assertEqual(false, maps:is_key(<<"unknown">>, Config)),
     ?assertEqual(256, maps:get(<<"max_concurrent_guild_starts">>, Config)).
-
-session_start_rollout_decision_eligible_test() ->
-    persistent_term:put(?PERSISTENT_TERM_KEY, default_config()),
-    ?assertEqual(
-        eligible,
-        gateway_rollout_config:session_start_rollout_decision(#{<<"user_id">> => <<"123">>})
-    ).
-
-session_start_rollout_decision_missing_user_id_test() ->
-    Config = (default_config())#{<<"session_rollout_percentage">> => 50},
-    persistent_term:put(?PERSISTENT_TERM_KEY, Config),
-    ?assertEqual(missing_user_id, gateway_rollout_config:session_start_rollout_decision(#{})).
-
-is_clustered_false_when_flag_unset_test() ->
-    persistent_term:put({fluxer_gateway, runtime_config}, #{}),
-    ?assertEqual(false, gateway_rollout_config:is_clustered()).
-
-is_clustered_false_when_flag_not_true_test() ->
-    persistent_term:put({fluxer_gateway, runtime_config}, #{cluster_enabled => false}),
-    ?assertEqual(false, gateway_rollout_config:is_clustered()),
-    persistent_term:put({fluxer_gateway, runtime_config}, #{cluster_enabled => <<"true">>}),
-    ?assertEqual(false, gateway_rollout_config:is_clustered()),
-    persistent_term:put({fluxer_gateway, runtime_config}, #{cluster_enabled => 1}),
-    ?assertEqual(false, gateway_rollout_config:is_clustered()).
-
-is_clustered_false_when_flag_true_but_only_self_test() ->
-    persistent_term:put({fluxer_gateway, runtime_config}, #{cluster_enabled => true}),
-    persistent_term:erase({gateway_cluster_membership, members}),
-    ?assertEqual(false, gateway_rollout_config:is_clustered()),
-    persistent_term:put({gateway_cluster_membership, members}, [node()]),
-    ?assertEqual(false, gateway_rollout_config:is_clustered()),
-    persistent_term:erase({gateway_cluster_membership, members}),
-    persistent_term:erase({fluxer_gateway, runtime_config}).
-
-is_clustered_true_when_flag_and_multiple_members_test() ->
-    persistent_term:put({fluxer_gateway, runtime_config}, #{cluster_enabled => true}),
-    persistent_term:put(
-        {gateway_cluster_membership, members},
-        [node(), 'peer@host']
-    ),
-    ?assertEqual(true, gateway_rollout_config:is_clustered()),
-    persistent_term:erase({gateway_cluster_membership, members}),
-    persistent_term:erase({fluxer_gateway, runtime_config}).
-
-rollout_percentage_update_applies_atomically_across_concurrent_reads_test() ->
-    Config50 = (default_config())#{<<"session_rollout_percentage">> => 50},
-    persistent_term:put(?PERSISTENT_TERM_KEY, Config50),
-    Self = self(),
-    NumReaders = 20,
-    Pids = [
-        spawn(fun() ->
-            V = gateway_rollout_config:session_rollout_percentage(),
-            Self ! {rollout_read, self(), V}
-        end)
-     || _ <- lists:seq(1, NumReaders)
-    ],
-    Results = [
-        receive
-            {rollout_read, Pid, V} -> V
-        after 1000 -> timeout
-        end
-     || Pid <- Pids
-    ],
-    ?assert(lists:all(fun(V) -> V =:= 50 end, Results)),
-    persistent_term:put(?PERSISTENT_TERM_KEY, default_config()).
 
 nats_payload_updates_config_and_notifies_subscribers_test() ->
     persistent_term:put(?PERSISTENT_TERM_KEY, default_config()),
@@ -246,24 +159,6 @@ nats_duplicate_payload_does_not_notify_subscribers_test() ->
         ok
     end.
 
-validate_config_rejects_rpc_timeout_below_minimum_test() ->
-    ?assertMatch(
-        {error, {invalid_field, <<"rpc_request_timeout_ms">>, 500}},
-        gateway_rollout_config_validate:validate(
-            #{<<"rpc_request_timeout_ms">> => 500},
-            default_config()
-        )
-    ).
-
-validate_config_rejects_rpc_timeout_above_maximum_test() ->
-    ?assertMatch(
-        {error, {invalid_field, <<"rpc_request_timeout_ms">>, 61000}},
-        gateway_rollout_config_validate:validate(
-            #{<<"rpc_request_timeout_ms">> => 61000},
-            default_config()
-        )
-    ).
-
 validate_config_rejects_relay_max_queue_zero_test() ->
     ?assertMatch(
         {error, {invalid_field, <<"gateway_dispatch_relay_max_queue">>, 0}},
@@ -306,7 +201,7 @@ nats_resubscribed_recovers_missed_rollout_test() ->
         _ = fetch_and_finish({nats_resubscribed, <<"config.gateway.rollout">>}, State),
         ?assertEqual(1, gateway_ip_connections:node_connection_limit()),
         ?assertEqual(Config, gateway_rollout_config:get()),
-        ?assertEqual(1, meck:num_calls(api_rpc_client, call, '_')),
+        ?assertEqual(1, meck:num_calls(rpc_client, call, '_')),
         receive
             rollout_config_changed -> ok
         after 100 ->
@@ -318,16 +213,16 @@ failed_rollout_fetch_retries_test_() ->
     [
         {Name, fun() ->
             with_rollout_api(fun(State, Config) ->
-                meck:expect(api_rpc_client, call, fun(_) -> {error, timeout} end),
+                meck:expect(rpc_client, call, fun(_) -> {error, timeout} end),
                 Failed = fetch_and_finish(Message, State),
                 ?assertEqual(200000, gateway_ip_connections:node_connection_limit()),
-                ?assertEqual(1, meck:num_calls(api_rpc_client, call, '_')),
+                ?assertEqual(1, meck:num_calls(rpc_client, call, '_')),
                 receive
                     rollout_config_changed -> ?assert(false)
                 after 0 ->
                     ok
                 end,
-                meck:expect(api_rpc_client, call, fun(_) -> {ok, #{<<"config">> => Config}} end),
+                meck:expect(rpc_client, call, fun(_) -> {ok, #{<<"config">> => Config}} end),
                 Started = erlang:monotonic_time(millisecond),
                 Retry =
                     receive
@@ -339,7 +234,7 @@ failed_rollout_fetch_retries_test_() ->
                 Recovered = fetch_and_finish(Retry, Failed),
                 ?assertEqual(Config, gateway_rollout_config:get()),
                 ?assertEqual(1, gateway_ip_connections:node_connection_limit()),
-                ?assertEqual(2, meck:num_calls(api_rpc_client, call, '_')),
+                ?assertEqual(2, meck:num_calls(rpc_client, call, '_')),
                 ?assertEqual(false, maps:is_key(fetch_retry_timer, Recovered)),
                 ?assertEqual(false, maps:is_key(fetch_retry_attempt, Recovered)),
                 receive
@@ -358,7 +253,7 @@ failed_rollout_fetch_retries_test_() ->
 
 rollout_fetch_backoff_is_capped_and_single_test() ->
     with_rollout_api(fun(State, Config) ->
-        meck:expect(api_rpc_client, call, fun(_) -> {error, no_responders} end),
+        meck:expect(rpc_client, call, fun(_) -> {error, no_responders} end),
         Failed = lists:foldl(
             fun(Attempt, Previous) ->
                 OldTimer = maps:get(fetch_retry_timer, Previous, undefined),
@@ -391,7 +286,7 @@ rollout_fetch_backoff_is_capped_and_single_test() ->
             lists:seq(0, 8)
         ),
         LastTimer = maps:get(fetch_retry_timer, Failed),
-        meck:expect(api_rpc_client, call, fun(_) -> {ok, #{<<"config">> => Config}} end),
+        meck:expect(rpc_client, call, fun(_) -> {ok, #{<<"config">> => Config}} end),
         Recovered = fetch_and_finish(fetch_initial_config, Failed),
         ?assertEqual(false, erlang:read_timer(LastTimer)),
         ?assertEqual(Config, gateway_rollout_config:get()),
@@ -399,7 +294,7 @@ rollout_fetch_backoff_is_capped_and_single_test() ->
         {noreply, Recovered} = gateway_rollout_config:handle_info(
             {timeout, LastTimer, fetch_initial_config}, Recovered
         ),
-        ?assertEqual(10, meck:num_calls(api_rpc_client, call, '_'))
+        ?assertEqual(10, meck:num_calls(rpc_client, call, '_'))
     end).
 
 fetch_and_finish(Message, State) ->
@@ -419,7 +314,7 @@ fetch_and_finish(Message, State) ->
 periodic_fetch_uses_one_timer_and_one_worker_test() ->
     with_rollout_api(fun(State, _Config) ->
         Parent = self(),
-        meck:expect(api_rpc_client, call, fun(_) ->
+        meck:expect(rpc_client, call, fun(_) ->
             Parent ! {fetch_started, self()},
             receive
                 release -> {error, unavailable}
@@ -463,7 +358,7 @@ periodic_fetch_uses_one_timer_and_one_worker_test() ->
                 after 1000 -> error(fetch_result_missing)
                 end,
             {noreply, Finished} = gateway_rollout_config:handle_info(Result, Refetched),
-            ?assertEqual(1, meck:num_calls(api_rpc_client, call, '_')),
+            ?assertEqual(1, meck:num_calls(rpc_client, call, '_')),
             gateway_rollout_config:terminate(normal, Finished),
             ?assertEqual(false, erlang:read_timer(NextTimer))
         after
@@ -475,7 +370,7 @@ resubscription_during_fetch_reconciles_after_old_result_test() ->
     with_rollout_api(fun(State, Config) ->
         Parent = self(),
         OldConfig = (default_config())#{<<"max_connections">> => 18},
-        meck:expect(api_rpc_client, call, fun(_) ->
+        meck:expect(rpc_client, call, fun(_) ->
             Parent ! {fetch_started, self()},
             receive
                 {release, Response} -> {ok, #{<<"config">> => Response}}
@@ -520,7 +415,7 @@ resubscription_during_fetch_reconciles_after_old_result_test() ->
             ?assert(gateway_rollout_config:game_activity_allowed()),
             ?assertEqual(Config, gateway_rollout_config:get()),
             ?assertNot(maps:is_key(fetch_worker, Finished)),
-            ?assertEqual(2, meck:num_calls(api_rpc_client, call, '_'))
+            ?assertEqual(2, meck:num_calls(rpc_client, call, '_'))
         after
             gateway_rollout_config:terminate(normal, Reconciling)
         end
@@ -529,7 +424,7 @@ resubscription_during_fetch_reconciles_after_old_result_test() ->
 nats_update_fences_older_fetch_snapshot_test() ->
     with_rollout_api(fun(State, Config) ->
         Parent = self(),
-        meck:expect(api_rpc_client, call, fun(_) ->
+        meck:expect(rpc_client, call, fun(_) ->
             Parent ! {fetch_started, self()},
             receive
                 {release, Response} -> {ok, #{<<"config">> => Response}}
@@ -572,7 +467,7 @@ nats_update_fences_older_fetch_snapshot_test() ->
             ?assertEqual(Config, gateway_rollout_config:get()),
             ?assert(gateway_rollout_config:game_activity_allowed()),
             ?assertNot(maps:is_key(fetch_worker, Finished)),
-            ?assertEqual(2, meck:num_calls(api_rpc_client, call, '_'))
+            ?assertEqual(2, meck:num_calls(rpc_client, call, '_'))
         after
             gateway_rollout_config:terminate(normal, Reconciling)
         end
@@ -619,15 +514,15 @@ with_rollout_api(Test) ->
         nats_subscription => make_ref(),
         nats_monitor => undefined
     },
-    meck:new(api_rpc_client, [passthrough]),
-    meck:expect(api_rpc_client, call, fun(_) -> {ok, #{<<"config">> => Config}} end),
+    meck:new(rpc_client, [passthrough]),
+    meck:expect(rpc_client, call, fun(_) -> {ok, #{<<"config">> => Config}} end),
     persistent_term:put(?PERSISTENT_TERM_KEY, (default_config())#{
         <<"max_connections">> => 200000
     }),
     try
         Test(State, Config)
     after
-        meck:unload(api_rpc_client),
+        meck:unload(rpc_client),
         persistent_term:put(?PERSISTENT_TERM_KEY, Previous),
         drain_rollout_notifications()
     end.

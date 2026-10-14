@@ -31,10 +31,6 @@ export const SUBSCRIBE_MONTHLY_DESCRIPTOR = msg({
 	message: 'Get monthly',
 	comment: 'Secondary Plutonium page button that starts a monthly subscription checkout.',
 });
-export const SAVE_PERCENT_DESCRIPTOR = msg({
-	message: 'Save {percent}%',
-	comment: 'Badge on the yearly Plutonium button. percent is a whole number such as 17.',
-});
 export const GIFT_PLUTONIUM_DESCRIPTOR = msg({
 	message: 'Gift {premiumProductName}',
 	comment: 'Plutonium page button that opens the gift purchase dialog. premiumProductName is the paid tier name.',
@@ -67,9 +63,10 @@ export const GRACE_DESCRIPTOR = msg({
 	message: 'We could not renew your subscription. Update your payment method to keep your perks.',
 	comment: 'Plutonium page hero subtitle while a failed renewal is in its grace period.',
 });
-export const HERO_DESCRIPTION_DESCRIPTOR = msg({
-	message: 'Support an independent communication platform and unlock some sweet perks.',
-	comment: 'Plutonium page hero subtitle for people without the paid tier.',
+export const GIFT_GRACE_DESCRIPTOR = msg({
+	message: 'Your gift time has ended. Subscribe to keep {premiumProductName}.',
+	comment:
+		'Plutonium page hero subtitle while gifted premium time is in its short grace period after ending. premiumProductName is the paid tier name.',
 });
 export const REDEEM_ONLY_DESCRIPTOR = msg({
 	message: 'Have a gift code? Redeem it to unlock {premiumProductName}.',
@@ -125,10 +122,6 @@ export const FREE_COLUMN_DESCRIPTOR = msg({
 	message: 'Free',
 	comment: 'Column header for the free tier in the Plutonium page comparison table.',
 });
-export const AVAILABLE_DESCRIPTOR = msg({
-	message: 'Available',
-	comment: 'Screen reader text for a check mark in the Plutonium page comparison table.',
-});
 export const NOT_AVAILABLE_DESCRIPTOR = msg({
 	message: 'Not available',
 	comment: 'Screen reader text for a cross in the Plutonium page comparison table.',
@@ -140,6 +133,14 @@ export const CLOSING_TITLE_DESCRIPTOR = msg({
 export const CLOSING_BODY_DESCRIPTOR = msg({
 	message: 'Pick a plan and your perks switch on the moment checkout finishes.',
 	comment: 'Body of the closing call to action on the Plutonium page for people without the paid tier.',
+});
+export const CLOSING_GIFT_TITLE_DESCRIPTOR = msg({
+	message: 'Keep your perks going',
+	comment: 'Heading of the closing call to action on the Plutonium page for members on gifted time who can subscribe.',
+});
+export const CLOSING_GIFT_BODY_DESCRIPTOR = msg({
+	message: 'Subscribe now. Your remaining gift time is added after your paid period.',
+	comment: 'Body of the closing call to action on the Plutonium page for members on gifted time who can subscribe.',
 });
 export const CLOSING_MEMBER_TITLE_DESCRIPTOR = msg({
 	message: 'Share the perks',
@@ -227,8 +228,4 @@ export const PURCHASE_BLOCKED_VERIFY_DESCRIPTOR = msg({
 export const PAGE_LABEL_DESCRIPTOR = msg({
 	message: '{premiumProductName} page',
 	comment: 'Accessible label of the Plutonium page region. premiumProductName is the paid tier name.',
-});
-export const BACK_DESCRIPTOR = msg({
-	message: 'Back',
-	comment: 'Accessible label of the back button on the Plutonium page in the mobile layout.',
 });

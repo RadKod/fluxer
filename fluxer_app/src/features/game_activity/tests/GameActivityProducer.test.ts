@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {GameActivityProducer} from '@app/features/game_activity/utils/DesktopGameActivityBridge';
-import type {DesktopGameActivityState} from '@app/features/platform/types/Electron';
+import type {DesktopGameActivityState} from '@app/types/electron.d';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const game = {game_id: 'test-game', started_at: 1000};

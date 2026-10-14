@@ -14,7 +14,6 @@ import {currentInstanceTarget} from '@app/features/platform/transport/InstanceHT
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {ComponentBus} from '@app/features/platform/utils/ComponentBus';
 import * as PlutoniumPageCommands from '@app/features/premium/commands/PlutoniumPageCommands';
-import PlutoniumPageRollout from '@app/features/premium/state/PlutoniumPageRollout';
 import {shouldShowPremiumFeatures} from '@app/features/premium/utils/PremiumUtils';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {APP_PROTOCOL_SCHEME, isAppProtocolUrl} from '@app/features/ui/utils/AppProtocol';
@@ -92,7 +91,7 @@ export function parseUserSettingsDeepLink(rawUrl: string): UserSettingsDeepLinkT
 	return parseUserSettingsDeepLinkPath(normalized);
 }
 
-export const parseDeepLink = (rawUrl: string): DeepLinkTarget | null => {
+const parseDeepLink = (rawUrl: string): DeepLinkTarget | null => {
 	const directUserId = parseUserProfileUrl(rawUrl);
 	if (directUserId) {
 		return {type: 'user', userId: directUserId};
@@ -132,7 +131,7 @@ export const parseDeepLink = (rawUrl: string): DeepLinkTarget | null => {
 };
 
 function openUserSettingsDeepLink(target: UserSettingsDeepLinkTarget): void {
-	if (target.tab === 'plutonium' && PlutoniumPageRollout.enabled) {
+	if (target.tab === 'plutonium') {
 		PlutoniumPageCommands.openPlutoniumPage();
 		return;
 	}

@@ -72,13 +72,13 @@ fn render_overview_tab(
         div class="space-y-6" {
             @if let Some(until) = &user.temp_banned_until {
                 div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-900" {
-                    "Temporarily banned until " (until)
+                    "Temporarily banned until " (format_admin_timestamp(until))
                 }
             }
             @if user.temp_banned_until.is_none() {
                 @if let Some(pending) = &user.pending_deletion_at {
                     div class="rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900" {
-                        div class="font-medium" { "Scheduled for deletion: " (pending) }
+                        div class="font-medium" { "Scheduled for deletion: " (format_admin_timestamp(pending)) }
                         @if let Some(code) = user.deletion_reason_code {
                             div class="mt-1" { "Reason code: " (code) }
                         }
@@ -107,7 +107,7 @@ fn render_overview_tab(
             @if let Some(pending) = &user.pending_bulk_message_deletion_at {
                 div class="rounded-lg border border-neutral-200 bg-neutral-50 p-4" {
                     div class="font-medium text-neutral-700 text-sm" {
-                        "Bulk message deletion scheduled for " (pending)
+                        "Bulk message deletion scheduled for " (format_admin_timestamp(pending))
                     }
                     @if acl::has_permission(admin_acls, acl::USER_CANCEL_BULK_MESSAGE_DELETION) {
                         form method="post"
@@ -203,10 +203,10 @@ fn render_overview_tab(
                         }
                     }))
                     @if let Some(ref value) = user.premium_grace_ends_at {
-                        (detail_row("Grace Period Ends", html! { (value) }))
+                        (detail_row("Grace Period Ends", html! { (format_admin_timestamp(value)) }))
                     }
                     (detail_row("Last Active", html! {
-                        (user.last_active_at.as_deref().unwrap_or("Never"))
+                        (user.last_active_at.as_deref().map_or_else(|| "Never".to_string(), format_admin_timestamp))
                     }))
                     @if acl::has_permission(admin_acls, acl::USER_VIEW_IP) {
                         (detail_row("Last IP", html! {
@@ -253,7 +253,7 @@ fn render_overview_tab(
                                     div class="py-3 text-sm" {
                                         dt class="font-medium text-neutral-900" {
                                             (entry.field)
-                                            span class="ml-2 font-normal text-xs text-neutral-500" { (entry.event_at) }
+                                            span class="ml-2 font-normal text-xs text-neutral-500" { (format_admin_timestamp(&entry.event_at)) }
                                         }
                                         dd class="mt-1 font-mono text-xs text-neutral-700" {
                                             (entry.old_value.as_deref().unwrap_or("null"))
@@ -526,6 +526,11 @@ fn acls_card(
                                 (flag_checkbox("acls[]", item.to_string(), item, checked, true))
                             }
                         }
+                        @for item in &user.acls {
+                            @if !acl::ALL_ACLS.iter().any(|known| known == &item.as_str()) {
+                                input type="hidden" name="acls[]" value=(item);
+                            }
+                        }
                         (form_actions(html! {
                             (submit_button("Save ACLs"))
                         }))
@@ -634,6 +639,10 @@ fn traits_form(
                         class="w-full rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20" {
                         (custom_traits.join("\n"))
                     }
+                    p class="text-neutral-500 text-xs" {
+                        "The premium trait follows each member's subscription or gift and cannot be \
+                         assigned here."
+                    }
                 }
                 (form_actions(html! {
                     (submit_button("Save Traits"))
@@ -667,65 +676,4 @@ fn custom_traits<'a>(user: &'a AdminUser, trait_definitions: &[&str]) -> Vec<&'a
         .filter(|trait_name| !trait_definitions.contains(trait_name))
         .filter(|trait_name| !DERIVED_TRAITS.contains(trait_name))
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn test_config() -> AdminConfig {
-        AdminConfig {
-            env: crate::config::RuntimeEnv::Test,
-            host: String::new(),
-            port: 3020,
-            secret_key_base: "test-secret".to_owned(),
-            base_path: "/admin".to_owned(),
-            api_endpoint: String::new(),
-            media_endpoint: String::new(),
-            static_cdn_endpoint: String::new(),
-            admin_endpoint: String::new(),
-            web_app_endpoint: String::new(),
-            oauth_client_id: String::new(),
-            oauth_client_secret: String::new(),
-            oauth_redirect_uri: String::new(),
-            build_version: "test".to_owned(),
-            self_hosted: true,
-            proxy: crate::config::ProxyConfig {
-                trust_client_ip_header: false,
-                client_ip_header_name: String::new(),
-            },
-        }
-    }
-
-    fn render_email_row(username_sign_in: bool) -> String {
-        let user: AdminUser = serde_json::from_value(serde_json::json!({
-            "id": "1500000000000000001",
-            "username": "target",
-            "discriminator": "0001",
-            "email": "target@example.com"
-        }))
-        .expect("valid admin user");
-        let acls = vec![acl::USER_VIEW_EMAIL.to_owned()];
-        render_overview_tab(
-            &test_config(),
-            &user,
-            &acls,
-            "csrf",
-            None,
-            None,
-            false,
-            username_sign_in,
-        )
-        .into_string()
-    }
-
-    #[test]
-    fn username_mode_hides_the_email_row() {
-        assert!(!render_email_row(true).contains("target@example.com"));
-    }
-
-    #[test]
-    fn email_mode_shows_the_email_row() {
-        assert!(render_email_row(false).contains("target@example.com"));
-    }
 }

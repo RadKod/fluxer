@@ -2,7 +2,8 @@
 
 import type {UserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
-import type {APIConfig, AppStoreAppConfig} from '@app/api/config/APIConfig';
+import type {AppStoreAppConfig} from '@app/api/config/APIConfig';
+import {hasText} from '@app/api/store_billing/StoreBillingCredentials';
 import type {StorePurchaseKind, StoreSlot} from '@app/api/store_billing/StoreBillingTypes';
 import type {RecurringBillingCycle} from '@app/api/stripe/ProductRegistry';
 
@@ -23,18 +24,6 @@ export interface GooglePlayProductEntry {
 	productId: string;
 	basePlanId: string | null;
 	slot: StoreSlot;
-}
-
-export function getAppStoreConfig(): APIConfig['appStore'] {
-	return Config.appStore;
-}
-
-export function getGooglePlayConfig(): APIConfig['googlePlay'] {
-	return Config.googlePlay;
-}
-
-function hasText(value: string | undefined): boolean {
-	return value !== undefined && value.trim().length > 0;
 }
 
 export function isAppStoreConfigured(): boolean {

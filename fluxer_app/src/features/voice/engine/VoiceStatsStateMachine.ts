@@ -2,7 +2,6 @@
 
 import {
 	createVoiceLatencySnapshot,
-	type LatencyDataPoint,
 	observeVoiceLatencyGap,
 	recordVoiceLatencySample,
 	resetVoiceLatencySnapshot,
@@ -11,15 +10,16 @@ import {
 	type VoiceLatencySnapshot,
 } from '@app/features/voice/engine/VoiceLatencyTracker';
 import type {
+	VoiceEngineV2LatencyDataPoint as LatencyDataPoint,
 	VoiceEngineV2PerTrackStats as PerTrackStats,
 	VoiceEngineV2TransportInfo as TransportInfo,
 	VoiceEngineV2VoiceStats as VoiceStats,
 	VoiceEngineV2StatsSample as VoiceStatsSample,
-} from '@fluxer/voice_engine_v2';
+} from '@fluxer/voice_engine_v2/src/protocol/types';
 import {assign, initialTransition, type SnapshotFrom, setup, transition} from 'xstate';
 
-export const MAX_LATENCY_HISTORY = 60;
-export const MAX_TIME_SERIES_SAMPLES = 60;
+const MAX_LATENCY_HISTORY = 60;
+const MAX_TIME_SERIES_SAMPLES = 60;
 
 export interface VoiceStatsRtpCounter {
 	bytes?: number;
@@ -28,7 +28,7 @@ export interface VoiceStatsRtpCounter {
 	timestamp: number;
 }
 
-export interface VoiceStatsMachineContext {
+interface VoiceStatsMachineContext {
 	roomIdentity: unknown | null;
 	latencyIntervalActive: boolean;
 	statsIntervalActive: boolean;
@@ -376,7 +376,7 @@ function resetState(context: VoiceStatsMachineContext): VoiceStatsMachineContext
 	};
 }
 
-export const voiceStatsStateMachine = setup({
+const voiceStatsStateMachine = setup({
 	types: {} as {
 		context: VoiceStatsMachineContext;
 		events: VoiceStatsEvent;
@@ -515,7 +515,6 @@ export const voiceStatsStateMachine = setup({
 });
 
 export type VoiceStatsSnapshot = SnapshotFrom<typeof voiceStatsStateMachine>;
-export type VoiceStatsStateValue = 'idle' | 'trackingLatency' | 'trackingStats' | 'trackingBoth';
 
 export function createVoiceStatsSnapshot(): VoiceStatsSnapshot {
 	return initialTransition(voiceStatsStateMachine)[0];
@@ -523,13 +522,6 @@ export function createVoiceStatsSnapshot(): VoiceStatsSnapshot {
 
 export function transitionVoiceStatsSnapshot(snapshot: VoiceStatsSnapshot, event: VoiceStatsEvent): VoiceStatsSnapshot {
 	return transition(voiceStatsStateMachine, snapshot, event)[0] as VoiceStatsSnapshot;
-}
-
-export function getVoiceStatsStateValue(snapshot: VoiceStatsSnapshot): VoiceStatsStateValue {
-	if (snapshot.value === 'trackingLatency' || snapshot.value === 'trackingStats' || snapshot.value === 'trackingBoth') {
-		return snapshot.value;
-	}
-	return 'idle';
 }
 
 export function selectVoiceStatsCollectionDecision(snapshot: VoiceStatsSnapshot): VoiceStatsCollectionDecision {

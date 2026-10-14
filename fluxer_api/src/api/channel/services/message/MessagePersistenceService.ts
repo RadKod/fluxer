@@ -6,8 +6,8 @@ import type {ChannelID, GuildID, MessageID, RoleID, StickerID, UserID, WebhookID
 import {createAttachmentID, createGuildID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
 import type {AttachmentToProcess} from '@app/api/channel/AttachmentDTOs';
+import type {ChannelRepository} from '@app/api/channel/ChannelRepository';
 import type {MessageUpdateRequest} from '@app/api/channel/MessageTypes';
-import type {IChannelRepositoryAggregate} from '@app/api/channel/repositories/IChannelRepositoryAggregate';
 import type {AttachmentUploadTraceRepository} from '@app/api/channel/repositories/message/AttachmentUploadTraceRepository';
 import {AttachmentProcessingService} from '@app/api/channel/services/message/AttachmentProcessingService';
 import {type DmNsfwContext, MessageContentService} from '@app/api/channel/services/message/MessageContentService';
@@ -28,7 +28,7 @@ import type {
 	MessageReference,
 	MessageStickerItem,
 } from '@app/api/database/types/MessageTypes';
-import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import type {EmbedService} from '@app/api/infrastructure/EmbedService';
 import type {IMediaService, MediaProxyNsfwMode} from '@app/api/infrastructure/IMediaService';
 import type {ISnowflakeService} from '@app/api/infrastructure/ISnowflakeService';
@@ -41,8 +41,7 @@ import type {Message} from '@app/api/models/Message';
 import type {MessageSnapshot} from '@app/api/models/MessageSnapshot';
 import type {User} from '@app/api/models/User';
 import type {ReadStateService} from '@app/api/read_state/ReadStateService';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
-import {hasVisibleContent} from '@app/api/utils/StringUtils';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {MessageFlags, Permissions, SENDABLE_MESSAGE_FLAGS} from '@fluxer/constants/src/ChannelConstants';
 import {ATTACHMENT_MAX_SIZE_NON_PREMIUM} from '@fluxer/constants/src/LimitConstants';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
@@ -52,6 +51,7 @@ import type {GuildMemberResponse} from '@fluxer/schema/src/domains/guild/GuildMe
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import type {RichEmbedRequest} from '@fluxer/schema/src/domains/message/MessageRequestSchemas';
 import type {AllowedMentionsRequest} from '@fluxer/schema/src/domains/message/SharedMessageSchemas';
+import {hasVisibleContent} from '@fluxer/schema/src/primitives/MessageValidators';
 import {snowflakeToDate} from '@fluxer/snowflake/src/Snowflake';
 import * as BucketUtils from '@fluxer/snowflake/src/SnowflakeBuckets';
 import type {IVirusScanService} from '@pkgs/virus_scan/src/IVirusScanService';
@@ -131,9 +131,9 @@ export class MessagePersistenceService {
 	private readonly attachmentDecayService: AttachmentDecayService;
 
 	constructor(
-		private channelRepository: IChannelRepositoryAggregate,
-		private userRepository: IUserRepository,
-		guildRepository: IGuildRepositoryAggregate,
+		private channelRepository: ChannelRepository,
+		private userRepository: UserRepository,
+		guildRepository: GuildRepository,
 		private embedService: EmbedService,
 		private readonly storageService: IStorageService,
 		attachmentUploadTraceRepository: AttachmentUploadTraceRepository,
@@ -158,6 +158,10 @@ export class MessagePersistenceService {
 
 	private nsfwScopeChannel(channel: Channel): Promise<Channel> {
 		return resolveNsfwScopeChannel(channel, (channelId) => this.channelRepository.channelData.findUnique(channelId));
+	}
+
+	resolveDmNsfwContext(channel: Channel, senderId: UserID): Promise<DmNsfwContext | undefined> {
+		return this.contentService.resolveDmNsfwContext(channel, senderId);
 	}
 
 	getEmbedAttachmentResolver(): MessageEmbedAttachmentResolver {
@@ -406,6 +410,7 @@ export class MessagePersistenceService {
 		isBugHunterBot?: boolean;
 		locale?: string | null;
 		components?: ReadonlyArray<MessageActionRowData>;
+		dmNsfwContext?: DmNsfwContext;
 	}): Promise<UpdateMessageResult> {
 		const {message, messageId, data, channel, guild, member} = params;
 		if (message.messageSnapshots && message.messageSnapshots.length > 0) {
@@ -416,6 +421,7 @@ export class MessagePersistenceService {
 			guild,
 			member,
 			isBot: params.isBot,
+			dmNsfwContext: params.dmNsfwContext,
 		});
 		const updatedRowData = {...message.toRow()};
 		let hasChanges = false;
@@ -585,55 +591,6 @@ export class MessagePersistenceService {
 						)
 				: () => Promise.resolve();
 		return {message: updatedMessage, enqueueDeferredEmbeds};
-	}
-
-	async updateSnapshotAttachments(params: {
-		message: Message;
-		snapshotEdits: ReadonlyArray<{
-			attachments?: ReadonlyArray<{
-				id: bigint | number;
-				title?: string | null;
-				description?: string | null;
-			}>;
-		}>;
-	}): Promise<Message> {
-		const {message, snapshotEdits} = params;
-		if (!message.messageSnapshots || message.messageSnapshots.length === 0) {
-			throw InputValidationError.fromCode('message_snapshots', ValidationErrorCodes.INVALID_MESSAGE_DATA);
-		}
-		const updatedSnapshots = message.messageSnapshots.map((snapshot, index) => {
-			const edit = snapshotEdits[index];
-			if (!edit?.attachments || edit.attachments.length === 0) {
-				return snapshot.toMessageSnapshot();
-			}
-			const snapshotRow = snapshot.toMessageSnapshot();
-			const existingAttachments = snapshotRow.attachments ?? [];
-			const editsByRefId = new Map<
-				bigint,
-				{
-					title?: string | null;
-					description?: string | null;
-				}
-			>();
-			for (const att of edit.attachments) {
-				const refId = createAttachmentID(typeof att.id === 'number' ? BigInt(att.id) : att.id);
-				editsByRefId.set(refId, {title: att.title, description: att.description});
-			}
-			const newAttachments = existingAttachments.map((existing, attIndex) => {
-				const matchById = editsByRefId.get(existing.attachment_id);
-				const fallback = matchById === undefined ? editsByRefId.get(createAttachmentID(BigInt(attIndex))) : undefined;
-				const patch = matchById ?? fallback;
-				if (!patch) return existing;
-				return {
-					...existing,
-					title: patch.title !== undefined ? patch.title : existing.title,
-					description: patch.description !== undefined ? patch.description : existing.description,
-				};
-			});
-			return {...snapshotRow, attachments: newAttachments.length > 0 ? newAttachments : null};
-		});
-		const updatedRowData = {...message.toRow(), message_snapshots: updatedSnapshots};
-		return await this.channelRepository.messages.upsertMessage(updatedRowData, message.toRow());
 	}
 
 	async handleNonAuthorEdit(params: {

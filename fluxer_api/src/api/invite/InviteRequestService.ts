@@ -121,7 +121,7 @@ export class InviteRequestService {
 		channelId: ChannelID;
 		requestCache: RequestCache;
 	}): Promise<Array<InviteMetadataResponseSchema>> {
-		const invites = await this.inviteService.getChannelInvitesSorted({
+		const invites = await this.inviteService.getChannelInvites({
 			userId: params.userId,
 			viewer: params.viewer,
 			channelId: params.channelId,
@@ -134,7 +134,7 @@ export class InviteRequestService {
 		guildId: GuildID;
 		requestCache: RequestCache;
 	}): Promise<Array<InviteMetadataResponseSchema>> {
-		const invites = await this.inviteService.getGuildInvitesSorted({
+		const invites = await this.inviteService.getGuildInvites({
 			userId: params.userId,
 			guildId: params.guildId,
 		});
@@ -151,7 +151,7 @@ export class InviteRequestService {
 				await this.channelService.channelData.operations.getChannelSystem(channelId),
 			getChannelMemberCount: async (channelId: ChannelID) =>
 				await this.channelService.channelData.operations.getChannelMemberCount(channelId),
-			getGuildResponse: async (guildId: GuildID) => await this.guildService.data.getPublicGuildData(guildId),
+			getGuildResponse: async (guildId: GuildID) => await this.guildService.data.operations.getPublicGuildData(guildId),
 			getGuildCounts: async (guildId: GuildID) => await this.gatewayService.getGuildCounts(guildId),
 			gatewayService: this.gatewayService,
 		};

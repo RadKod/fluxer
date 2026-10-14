@@ -18,14 +18,12 @@ function rule(css: string, selector: string): string {
 
 describe('server rail tile shape', () => {
 	it.each([
-		'AddGuildButton.tsx',
 		'DiscoveryButton.tsx',
-		'DownloadButton.tsx',
 		'FavoritesButton.tsx',
 		'FeedButton.tsx',
 		'FluxerButton.tsx',
+		'GuildListActionButton.tsx',
 		'GuildListDMItem.tsx',
-		'HelpButton.tsx',
 	])('animates %s to the rounded square only', (file) => {
 		const source = read(`sidebar_nav/${file}`);
 		expect(source).not.toContain("'50%'");

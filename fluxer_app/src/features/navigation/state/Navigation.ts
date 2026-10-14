@@ -18,7 +18,6 @@ class Navigation {
 	threadId: string | null = null;
 	threadMessageId: string | null = null;
 	private router: Router | null = null;
-	private unsubscribe: (() => void) | null = null;
 	currentLocation: URL | null = null;
 
 	constructor() {
@@ -28,7 +27,7 @@ class Navigation {
 	initialize(router: Router): void {
 		this.router = router;
 		this.updateFromRouter();
-		this.unsubscribe = this.router.subscribe(() => {
+		this.router.subscribe(() => {
 			this.updateFromRouter();
 		});
 	}
@@ -56,14 +55,6 @@ class Navigation {
 
 	get pathname(): string {
 		return this.currentLocation?.pathname ?? '';
-	}
-
-	get search(): string {
-		return this.currentLocation?.search ?? '';
-	}
-
-	get hash(): string {
-		return this.currentLocation?.hash ?? '';
 	}
 
 	get context(): 'dm' | 'favorites' | 'guild' {
@@ -113,26 +104,6 @@ class Navigation {
 		this.applyNavigation(path, mode);
 	}
 
-	buildChannelPath(guildId: string | null | undefined, channelId: string): string {
-		if (!guildId || guildId === ME) {
-			return Routes.dmChannel(channelId);
-		}
-		if (guildId === '@favorites') {
-			return Routes.favoritesChannel(channelId);
-		}
-		return Routes.guildChannel(guildId, channelId);
-	}
-
-	buildMessagePath(guildId: string | null | undefined, channelId: string, messageId: string): string {
-		if (!guildId || guildId === ME) {
-			return Routes.dmChannelMessage(channelId, messageId);
-		}
-		if (guildId === '@favorites') {
-			return Routes.favoritesChannelMessage(channelId, messageId);
-		}
-		return Routes.channelMessage(guildId, channelId, messageId);
-	}
-
 	private buildGuildPath(guildId: string, channelId?: string, messageId?: string): string {
 		if (messageId && channelId) {
 			return Routes.channelMessage(guildId, channelId, messageId);
@@ -166,14 +137,6 @@ class Navigation {
 		} else {
 			RouterUtils.transitionTo(path);
 		}
-	}
-
-	destroy(): void {
-		if (this.unsubscribe) {
-			this.unsubscribe();
-			this.unsubscribe = null;
-		}
-		this.router = null;
 	}
 }
 

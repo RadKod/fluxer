@@ -7,7 +7,7 @@ import {
 	createGuildID,
 	createUserID,
 } from '@app/api/BrandedTypes';
-import {ChannelRepository} from '@app/api/channel/repositories/ChannelRepository';
+import {ChannelRepository} from '@app/api/channel/ChannelRepository';
 import {setCassandraQueryExecutorForTesting, upsertOne} from '@app/api/database/CassandraQueryExecution';
 import type {ChannelRow} from '@app/api/database/types/ChannelTypes';
 import {
@@ -18,10 +18,10 @@ import {
 } from '@app/api/infrastructure/KVThreadAutoArchiveQueueService';
 import {Channels} from '@app/api/Tables';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import {ChannelFlags} from '@fluxer/constants/src/ThreadConstants';
 import {createSnowflakeFromTimestamp} from '@fluxer/snowflake/src/Snowflake';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {beforeEach, describe, expect, it} from 'vitest';
 
 const GUILD_ID = createGuildID(1_910_000_000_000_000_000n);
@@ -50,6 +50,7 @@ function threadRow(threadId: ChannelID): ChannelRow {
 		user_limit: null,
 		voice_connection_limit: null,
 		rtc_region: null,
+		rtc_p2p: null,
 		last_message_id: null,
 		last_pin_timestamp: null,
 		permission_overwrites: null,
@@ -70,7 +71,7 @@ describe('KVThreadAutoArchiveQueueService', () => {
 		setCassandraQueryExecutorForTesting(new InMemoryCassandraQueryExecutor());
 		kv = new MockKVProvider();
 		repositories = new ChannelRepository();
-		queue = new KVThreadAutoArchiveQueueService(kv, repositories.threads, repositories.channelData);
+		queue = new KVThreadAutoArchiveQueueService(kv);
 		base = Date.now() - 10 * HOUR;
 		await upsertOne(Channels.upsertAll({...threadRow(PARENT_ID), type: ChannelTypes.GUILD_TEXT, parent_id: null}));
 	});
@@ -133,15 +134,5 @@ describe('KVThreadAutoArchiveQueueService', () => {
 		const transition = await repositories.threads.updateState(archived.threadId, () => ({archived: true}));
 		await queue.schedule(transition!.state, null);
 		expect(await kv.zcard(threadArchiveQueueKey(GUILD_ID))).toBe(0);
-	});
-
-	it('rebuilds a guild from its active partition', async () => {
-		const first = await createThread(0, 60);
-		const second = await createThread(1000, 60);
-		await createThread(2000, 60, ChannelFlags.PINNED);
-		await kv.zadd(threadArchiveQueueKey(GUILD_ID), 1, '123');
-		expect(await queue.rebuildGuild(GUILD_ID)).toBe(2);
-		expect(await queue.getDue(GUILD_ID, Date.now(), 200)).toEqual([first.threadId, second.threadId]);
-		expect(await queue.getDue(GUILD_ID, Date.now(), 1)).toEqual([first.threadId]);
 	});
 });

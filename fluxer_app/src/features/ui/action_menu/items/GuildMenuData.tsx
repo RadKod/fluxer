@@ -9,7 +9,8 @@ import {CategoryCreateModal} from '@app/features/channel/components/modals/Categ
 import {ChannelCreateModal} from '@app/features/channel/components/modals/ChannelCreateModal';
 import Channels from '@app/features/channel/state/Channels';
 import {DELETE_MY_MESSAGES_DESCRIPTOR} from '@app/features/channel/utils/ChannelMessageDescriptors';
-import {GuildDebugModal} from '@app/features/devtools/components/debug/GuildDebugModal';
+import {COMMUNITY_RECORD_DESCRIPTOR, RecordDebugModal} from '@app/features/devtools/components/debug/RecordDebugModal';
+
 import {hasForumUnread} from '@app/features/forum/state/ForumReadState';
 import {GuildNotificationSettingsModal} from '@app/features/guild/components/modals/GuildNotificationSettingsModal';
 import {GuildPrivacySettingsModal} from '@app/features/guild/components/modals/GuildPrivacySettingsModal';
@@ -33,8 +34,6 @@ import {
 } from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {InviteModal} from '@app/features/invite/components/modals/InviteModal';
 import * as InviteUtils from '@app/features/invite/utils/InviteUtils';
-import {REPORT_COMMUNITY_DESCRIPTOR} from '@app/features/moderation/utils/ModerationMessageDescriptors';
-import {openReportGuildModal} from '@app/features/moderation/utils/ReportActionUtils';
 import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
 import Permission from '@app/features/permissions/state/Permission';
 import * as ReadStateCommands from '@app/features/read_state/commands/ReadStateCommands';
@@ -54,7 +53,6 @@ import {
 	MuteIcon,
 	NotificationSettingsIcon,
 	PrivacySettingsIcon,
-	ReportUserIcon,
 	SettingsIcon,
 } from '@app/features/ui/action_menu/ContextMenuIcons';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
@@ -109,42 +107,10 @@ interface UseGuildMenuDataOptions {
 	preserveInitialMarkAsReadVisibility?: boolean;
 }
 
-export interface GuildMenuHandlers {
-	handleMarkAsRead: () => void;
-	handleInviteMembers: () => void;
-	handleCommunitySettings: () => void;
-	handleBoostCommunity: () => void;
-	handleCreateChannel: () => void;
-	handleCreateCategory: () => void;
-	handleNotificationSettings: () => void;
-	handlePrivacySettings: () => void;
-	handleEditCommunityProfile: () => void;
-	handleLeaveCommunity: () => void;
-	handleDeleteMyMessagesInCommunity: () => void;
-	handleCopyGuildId: () => void;
-	handleDebugGuild: () => void;
-	handleResetMatureContentAgreeState: () => void;
-	handleReportGuild: () => void;
-	handleToggleHideMutedChannels: (checked: boolean) => void;
-}
-
-export interface GuildMenuPermissions {
-	canManageGuild: boolean;
-	canManageChannels: boolean;
-	canInvite: boolean;
-	canAccessGuildSettings: boolean;
-	isOwner: boolean;
-	hasGuildUnread: boolean;
-	developerMode: boolean;
-}
-
 export interface GuildMenuData {
 	groups: Array<MenuGroupType>;
-	handlers: GuildMenuHandlers;
-	permissions: GuildMenuPermissions;
 	isMuted: boolean;
 	mutedText: string | null;
-	hideMutedChannels: boolean;
 }
 
 export function useGuildMenuData(guild: Guild, options: UseGuildMenuDataOptions): GuildMenuData {
@@ -308,9 +274,10 @@ export function useGuildMenuData(guild: Guild, options: UseGuildMenuDataOptions)
 				ModalCommands.pushAfterBottomSheetClose(
 					onClose,
 					modal(() => (
-						<GuildDebugModal
+						<RecordDebugModal
+							label={i18n._(COMMUNITY_RECORD_DESCRIPTOR)}
 							title={i18n._(COMMUNITY_DEBUG_DESCRIPTOR)}
-							guild={guild}
+							record={guild}
 							data-flx="ui.action-menu.items.guild-menu-data.handle-debug-guild.guild-debug-modal"
 						/>
 					)),
@@ -320,9 +287,6 @@ export function useGuildMenuData(guild: Guild, options: UseGuildMenuDataOptions)
 				GuildMatureContentAgree.revokeGuild(guild.id);
 				onClose();
 			},
-			handleReportGuild: () => {
-				ModalCommands.runAfterBottomSheetClose(onClose, () => openReportGuildModal({i18n, guild}));
-			},
 			handleToggleHideMutedChannels: (checked: boolean) => {
 				const currentSettings = UserGuildSettings.getSettingsForScope(guild.id);
 				const currentValue = currentSettings?.hide_muted_channels ?? false;
@@ -331,18 +295,6 @@ export function useGuildMenuData(guild: Guild, options: UseGuildMenuDataOptions)
 			},
 		}),
 		[channels, deleteMyMessagesInGuild, guild, i18n.locale, leaveGuild, onClose],
-	);
-	const permissions: GuildMenuPermissions = useMemo(
-		() => ({
-			canManageGuild,
-			canManageChannels,
-			canInvite,
-			canAccessGuildSettings,
-			isOwner,
-			hasGuildUnread,
-			developerMode,
-		}),
-		[canManageGuild, canManageChannels, canInvite, canAccessGuildSettings, isOwner, hasGuildUnread, developerMode],
 	);
 	const availableSettingsTabs = useMemo(() => {
 		const allTabs = getGuildSettingsTabs(i18n);
@@ -484,19 +436,11 @@ export function useGuildMenuData(guild: Guild, options: UseGuildMenuDataOptions)
 				danger: true,
 			},
 		];
-		if (!isOwner) {
-			if (!isStockCommunityGuild(guild.id)) {
-				dangerActions.push({
-					icon: <LeaveIcon size={20} data-flx="ui.action-menu.items.guild-menu-data.groups.leave-icon" />,
-					label: i18n._(LEAVE_COMMUNITY_DESCRIPTOR),
-					onClick: handlers.handleLeaveCommunity,
-					danger: true,
-				});
-			}
+		if (!isOwner && !isStockCommunityGuild(guild.id)) {
 			dangerActions.push({
-				icon: <ReportUserIcon size={20} data-flx="ui.action-menu.items.guild-menu-data.groups.report-user-icon" />,
-				label: i18n._(REPORT_COMMUNITY_DESCRIPTOR),
-				onClick: handlers.handleReportGuild,
+				icon: <LeaveIcon size={20} data-flx="ui.action-menu.items.guild-menu-data.groups.leave-icon" />,
+				label: i18n._(LEAVE_COMMUNITY_DESCRIPTOR),
+				onClick: handlers.handleLeaveCommunity,
 				danger: true,
 			});
 		}
@@ -551,10 +495,8 @@ export function useGuildMenuData(guild: Guild, options: UseGuildMenuDataOptions)
 	]);
 	return {
 		groups,
-		handlers,
-		permissions,
+
 		isMuted,
 		mutedText: mutedText ?? null,
-		hideMutedChannels,
 	};
 }

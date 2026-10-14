@@ -65,16 +65,12 @@ import {useContext, useEffect, useMemo, useRef, useState} from 'react';
 const SCREEN_SHARE_SOURCE = VoiceTrackSource.ScreenShare as Track.Source;
 const SCREEN_SHARE_AUDIO_SOURCE = VoiceTrackSource.ScreenShareAudio as Track.Source;
 const VOICE_ENGINE_V2_SCREEN_SOURCE = 'screen';
-export const VIDEO_UNSUBSCRIBE_GRACE_MS = 2000;
+const VIDEO_UNSUBSCRIBE_GRACE_MS = 2000;
 
 export class UnsubscribeGraceGate {
 	private timeoutId: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(private readonly graceMs: number) {}
-
-	get isPending(): boolean {
-		return this.timeoutId !== null;
-	}
 
 	scheduleDisable(onDisable: () => void): void {
 		if (this.timeoutId !== null) return;

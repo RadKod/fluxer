@@ -75,7 +75,7 @@ async function openedLocale({setting, timeZone, languages, savedLocale}: Visit):
 	vi.resetModules();
 	storage.clear();
 	if (savedLocale) {
-		storage.set('locale', savedLocale);
+		storage.set('fluxer:i18n:chosen-locale', savedLocale);
 	}
 	vi.stubGlobal('window', bootWindow(setting));
 	vi.stubGlobal('navigator', {languages, language: languages[0], userAgent: 'vitest'});

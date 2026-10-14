@@ -47,6 +47,7 @@ type ChannelUpdateParams = Partial<
 		| 'owner_id'
 		| 'rtc_region'
 		| 'room_theme'
+		| 'rtc_p2p'
 	>
 >;
 

@@ -2,7 +2,6 @@
 
 export const NativeGatewayTransportMode = Object.freeze({
 	GATEWAY: 'gateway',
-	VOICE: 'voice',
 } as const);
 
 export type NativeGatewayTransportMode = (typeof NativeGatewayTransportMode)[keyof typeof NativeGatewayTransportMode];
@@ -73,6 +72,9 @@ export const NATIVE_GATEWAY_TRANSPORT_CHANNELS = Object.freeze({
 	dispose: 'native-gateway-transport:dispose',
 	isAvailable: 'native-gateway-transport:is-available',
 } as const);
+
+export const NATIVE_GATEWAY_TRANSPORT_PROXIED_MESSAGE =
+	'The native gateway transport cannot reach a gateway that resolves through a proxy';
 
 export const NATIVE_GATEWAY_TRANSPORT_EVENT_CHANNEL = 'native-gateway-transport:event';
 

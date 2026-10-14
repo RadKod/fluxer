@@ -11,7 +11,6 @@
     get_from_cluster/1,
     get_local_fast/1,
     local_bulk_presence_map/1,
-    fetch_remote_bulk_presence_map/2,
     normalize_user_ids/1,
     group_user_ids_by_owner/1,
     sanitize_presence_map/1,
@@ -123,15 +122,6 @@ local_bulk_presence_map(UserIds) ->
         Groups
     ).
 
--spec fetch_remote_bulk_presence_map(node(), [integer()]) -> #{integer() => map()}.
-fetch_remote_bulk_presence_map(OwnerNode, UserIds) ->
-    case safe_remote_call(OwnerNode, {bulk_get_local_map, UserIds}, invalid_reply) of
-        Reply when is_map(Reply) -> sanitize_presence_map(Reply);
-        _ ->
-            FallbackReply = safe_remote_call(OwnerNode, {bulk_get_local, UserIds}, []),
-            map_from_presence_list(FallbackReply)
-    end.
-
 -spec safe_remote_call(node(), term(), term()) -> term().
 safe_remote_call(TargetNode, Request, Fallback) ->
     safe_remote_call(TargetNode, Request, Fallback, ?REMOTE_CALL_TIMEOUT_MS).
@@ -203,7 +193,7 @@ add_user_to_owner_group(UserId, Acc) ->
 
 -spec local_shard_count() -> pos_integer().
 local_shard_count() ->
-    {Count, _Source} = determine_shard_count(presence_cache_shards),
+    {Count, _Source} = clustered_ets_cache:determine_shard_count([presence_cache_shards]),
     Count.
 
 -spec select_shard(term(), pos_integer()) -> non_neg_integer().
@@ -279,14 +269,6 @@ accumulate_ets_lookup(TableName, UserId, AccMap) ->
         _ -> AccMap
     catch
         error:badarg -> AccMap
-    end.
-
--spec determine_shard_count(atom()) -> {pos_integer(), configured | auto}.
-determine_shard_count(ConfigKey) ->
-    case clustered_ets_cache:determine_shard_count([ConfigKey]) of
-        {Count, ConfigKey} -> {Count, configured};
-        {Count, auto} -> {Count, auto};
-        {Count, _Source} -> {Count, configured}
     end.
 
 -spec normalize_shard_groups([{non_neg_integer(), [term()]}]) ->

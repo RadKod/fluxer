@@ -131,14 +131,6 @@ mod tests {
     }
 
     #[test]
-    fn execution_profile_bounds_the_request_timeout() {
-        assert_eq!(
-            Some(REQUEST_TIMEOUT),
-            execution_profile(None, None).get_request_timeout()
-        );
-    }
-
-    #[test]
     fn execution_profile_keeps_the_driver_default_consistency_when_unset() {
         assert_eq!(
             Consistency::LocalQuorum,

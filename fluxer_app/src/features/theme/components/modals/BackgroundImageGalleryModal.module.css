@@ -317,10 +317,6 @@
 	color: var(--text-on-brand-primary);
 }
 
-.fileInput {
-	display: none;
-}
-
 .statsText {
 	text-align: center;
 	font-size: 0.875rem;

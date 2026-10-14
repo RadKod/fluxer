@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use super::super::animated_transform::{gif_resize_dims, source_can_stand_in_for_resize};
+use super::super::animated_transform::{
+    GifResizeDims, gif_resize_dims, source_can_stand_in_for_resize,
+};
 use super::super::{
     AnimationLimits, AnimationMode, ImageOptions, ImageQuality, MediaError, ResizeMode,
 };
@@ -161,6 +163,27 @@ fn animated_gif_with_trailing_bytes_after_the_trailer_passes_through_byte_identi
 
     assert_eq!("image/gif", passed_through.content_type);
     assert_eq!(gif, passed_through.bytes);
+}
+
+#[test]
+fn animated_gif_with_trailing_bytes_after_the_trailer_resizes() {
+    for tail in [&[0u8; 4096][..], b"trailing garbage"] {
+        let mut gif = animated_gif_frames(3, 20);
+        gif.extend_from_slice(tail);
+        let resized = transform_image(
+            &gif,
+            &ImageOptions {
+                width: Some(8),
+                format: OutputFormat::GIF,
+                animation: animated_mode(),
+                ..Default::default()
+            },
+        )
+        .expect("a gif with trailing bytes after the trailer still resizes");
+
+        assert_animated_gif(&resized.bytes, 3);
+        assert_eq!(vec![20u16; 3], gif_frame_delays_cs(&resized.bytes));
+    }
 }
 
 #[test]
@@ -520,4 +543,43 @@ fn an_animated_gif_encodes_to_webp_frames_that_carry_only_the_changed_region() {
             .all(|&(width, height)| width * height < 128 * 128),
         "{frames:?}"
     );
+}
+
+#[test]
+fn the_gif_resize_work_budget_counts_output_pixels_across_every_frame() {
+    let thumbnail = GifResizeDims {
+        width: 480,
+        height: 270,
+    };
+    assert!(thumbnail.fits_work_budget(129));
+    assert!(!thumbnail.fits_work_budget(130));
+    assert!(!thumbnail.fits_work_budget(739));
+    let still = GifResizeDims {
+        width: 4096,
+        height: 4096,
+    };
+    assert!(still.fits_work_budget(1));
+    assert!(still.fits_work_budget(0));
+    assert!(!still.fits_work_budget(2));
+}
+
+#[test]
+fn an_animated_gif_resize_over_the_work_budget_passes_through_byte_identically() {
+    let mut gif = animated_gif_frames(2, 20);
+    gif[6..8].copy_from_slice(&4096u16.to_le_bytes());
+    gif[8..10].copy_from_slice(&4096u16.to_le_bytes());
+    let passed_through = transform_image(
+        &gif,
+        &ImageOptions {
+            width: Some(4095),
+            format: OutputFormat::GIF,
+            quality: ImageQuality::Lossless,
+            animation: animated_mode(),
+            ..Default::default()
+        },
+    )
+    .expect("a gif too costly to resize still passes through");
+
+    assert_eq!("image/gif", passed_through.content_type);
+    assert_eq!(gif, passed_through.bytes);
 }

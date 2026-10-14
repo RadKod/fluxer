@@ -75,26 +75,17 @@ import {
 	type WebAuthnCredentialRow,
 } from '@app/api/database/types/AuthTypes';
 import {
-	BILLING_ACTION_INTENT_COLUMNS,
-	BILLING_CHARGE_BY_CUSTOMER_COLUMNS,
 	BILLING_CHARGE_COLUMNS,
-	BILLING_CHECKOUT_SESSION_BY_CUSTOMER_COLUMNS,
-	BILLING_CHECKOUT_SESSION_COLUMNS,
 	BILLING_CUSTOMER_BY_USER_ID_COLUMNS,
 	BILLING_CUSTOMER_COLUMNS,
-	BILLING_DISPUTE_BY_CHARGE_COLUMNS,
-	BILLING_DISPUTE_COLUMNS,
 	BILLING_INVOICE_BY_CUSTOMER_COLUMNS,
-	BILLING_INVOICE_BY_SUBSCRIPTION_COLUMNS,
 	BILLING_INVOICE_COLUMNS,
 	BILLING_PAYMENT_BY_INVOICE_COLUMNS,
 	BILLING_PAYMENT_COLUMNS,
-	BILLING_PAYMENT_INTENT_BY_CUSTOMER_COLUMNS,
 	BILLING_PAYMENT_INTENT_COLUMNS,
 	BILLING_PAYMENT_METHOD_BY_CUSTOMER_COLUMNS,
 	BILLING_PAYMENT_METHOD_COLUMNS,
 	BILLING_PRICE_COLUMNS,
-	BILLING_PRODUCT_COLUMNS,
 	BILLING_REFUND_BY_CHARGE_COLUMNS,
 	BILLING_REFUND_BY_INVOICE_COLUMNS,
 	BILLING_REFUND_BY_PAYMENT_INTENT_COLUMNS,
@@ -102,26 +93,17 @@ import {
 	BILLING_SUBSCRIPTION_BY_CUSTOMER_COLUMNS,
 	BILLING_SUBSCRIPTION_BY_USER_COLUMNS,
 	BILLING_SUBSCRIPTION_COLUMNS,
-	type BillingActionIntentRow,
-	type BillingChargeByCustomerRow,
 	type BillingChargeRow,
-	type BillingCheckoutSessionByCustomerRow,
-	type BillingCheckoutSessionRow,
 	type BillingCustomerByUserIdRow,
 	type BillingCustomerRow,
-	type BillingDisputeByChargeRow,
-	type BillingDisputeRow,
 	type BillingInvoiceByCustomerRow,
-	type BillingInvoiceBySubscriptionRow,
 	type BillingInvoiceRow,
 	type BillingPaymentByInvoiceRow,
-	type BillingPaymentIntentByCustomerRow,
 	type BillingPaymentIntentRow,
 	type BillingPaymentMethodByCustomerRow,
 	type BillingPaymentMethodRow,
 	type BillingPaymentRow,
 	type BillingPriceRow,
-	type BillingProductRow,
 	type BillingRefundByChargeRow,
 	type BillingRefundByInvoiceRow,
 	type BillingRefundByPaymentIntentRow,
@@ -153,12 +135,6 @@ import {
 	type WebhooksBySourceChannelRow,
 } from '@app/api/database/types/ChannelTypes';
 import {USER_CONNECTION_STORAGE_COLUMNS, type UserConnectionStorageRow} from '@app/api/database/types/ConnectionTypes';
-import {
-	NCMEC_ATTACHMENT_SUBMISSION_COLUMNS,
-	NCMEC_USER_WORKFLOW_COLUMNS,
-	type NcmecAttachmentSubmissionRow,
-	type NcmecUserWorkflowRow,
-} from '@app/api/database/types/CsamTypes';
 import {
 	GUILD_DISCOVERY_BY_STATUS_COLUMNS,
 	GUILD_DISCOVERY_COLUMNS,
@@ -259,10 +235,14 @@ import {
 	DSA_REPORT_TICKET_COLUMNS,
 	type DSAReportEmailVerificationRow,
 	type DSAReportTicketRow,
+	GUILD_REPORT_SUBMISSION_BY_REPORTER_COLUMNS,
+	type GuildReportSubmissionByReporterRow,
 	IAR_SUBMISSION_COLUMNS,
 	type IARSubmissionRow,
 	MESSAGE_REPORT_SUBMISSION_BY_REPORTER_COLUMNS,
 	type MessageReportSubmissionByReporterRow,
+	USER_REPORT_SUBMISSION_BY_REPORTER_COLUMNS,
+	type UserReportSubmissionByReporterRow,
 } from '@app/api/database/types/ReportTypes';
 import {
 	REGISTRATION_EVENT_BY_EMAIL_DOMAIN_COLUMNS,
@@ -341,7 +321,6 @@ import {
 	USERNAME_HOLD_BY_BUCKET_COLUMNS,
 	USERNAME_OP_INTENT_COLUMNS,
 	USERNAME_OWNER_COLUMNS,
-	USERS_PENDING_DELETION_COLUMNS,
 	type UserByEmailRow,
 	type UserByLastActiveIpRow,
 	type UserByLastActiveIpTrustKeyRow,
@@ -362,8 +341,11 @@ import {
 	type UsernameOwnerRow,
 	type UserRow,
 	type UserSettingsRow,
-	type UsersPendingDeletionRow,
 } from '@app/api/database/types/UserTypes';
+import {
+	VOICE_P2P_CONNECTION_REPORT_COLUMNS,
+	type VoiceP2pConnectionReportRow,
+} from '@app/api/database/types/VoiceTypes';
 import {ATTACHMENT_DECAY_COLUMNS, type AttachmentDecayRow} from '@app/api/types/AttachmentDecayTypes';
 import {seconds} from 'itty-time';
 
@@ -408,14 +390,6 @@ export const UsernameHoldsByBucket = defineTable<UsernameHoldByBucketRow, 'bucke
 	partitionKey: ['bucket'],
 });
 
-export const UsersPendingDeletion = defineTable<
-	UsersPendingDeletionRow,
-	'deletion_date' | 'pending_deletion_at' | 'user_id'
->({
-	name: 'users_pending_deletion',
-	columns: USERS_PENDING_DELETION_COLUMNS,
-	primaryKey: ['deletion_date', 'pending_deletion_at', 'user_id'],
-});
 export const UserDmHistory = defineTable<UserDmHistoryRow, 'user_id' | 'channel_id'>({
 	name: 'user_dm_history',
 	columns: USER_DM_HISTORY_COLUMNS,
@@ -986,16 +960,41 @@ export const MessageReportSubmissionsByReporter = defineTable<
 	columns: MESSAGE_REPORT_SUBMISSION_BY_REPORTER_COLUMNS,
 	primaryKey: ['reporter_id', 'channel_id', 'message_id'],
 	partitionKey: ['reporter_id'],
+	defaultTtlSeconds: seconds('365 days'),
+});
+export const UserReportSubmissionsByReporter = defineTable<
+	UserReportSubmissionByReporterRow,
+	'reporter_id' | 'reported_user_id',
+	'reporter_id'
+>({
+	name: 'user_report_submissions_by_reporter',
+	columns: USER_REPORT_SUBMISSION_BY_REPORTER_COLUMNS,
+	primaryKey: ['reporter_id', 'reported_user_id'],
+	partitionKey: ['reporter_id'],
+	defaultTtlSeconds: seconds('24 hours'),
+});
+export const GuildReportSubmissionsByReporter = defineTable<
+	GuildReportSubmissionByReporterRow,
+	'reporter_id' | 'reported_guild_id',
+	'reporter_id'
+>({
+	name: 'guild_report_submissions_by_reporter',
+	columns: GUILD_REPORT_SUBMISSION_BY_REPORTER_COLUMNS,
+	primaryKey: ['reporter_id', 'reported_guild_id'],
+	partitionKey: ['reporter_id'],
+	defaultTtlSeconds: seconds('24 hours'),
 });
 export const DSAReportEmailVerifications = defineTable<DSAReportEmailVerificationRow, 'email_lower'>({
 	name: 'dsa_report_email_verifications',
 	columns: DSA_REPORT_EMAIL_VERIFICATION_COLUMNS,
 	primaryKey: ['email_lower'],
+	defaultTtlSeconds: seconds('10 minutes'),
 });
 export const DSAReportTickets = defineTable<DSAReportTicketRow, 'ticket'>({
 	name: 'dsa_report_tickets',
 	columns: DSA_REPORT_TICKET_COLUMNS,
 	primaryKey: ['ticket'],
+	defaultTtlSeconds: seconds('1 hour'),
 });
 export const EmailVerificationTokens = defineTable<EmailVerificationTokenRow, 'token_' | 'user_id'>({
 	name: 'email_verification_tokens',
@@ -1326,16 +1325,6 @@ export const AttachmentUploadTracesByAttachment = defineTable<AttachmentUploadTr
 	primaryKey: ['attachment_id'],
 	defaultTtlSeconds: seconds('30 days'),
 });
-export const NcmecAttachmentSubmissions = defineTable<NcmecAttachmentSubmissionRow, 'attachment_id'>({
-	name: 'ncmec_attachment_submissions',
-	columns: NCMEC_ATTACHMENT_SUBMISSION_COLUMNS,
-	primaryKey: ['attachment_id'],
-});
-export const NcmecUserWorkflows = defineTable<NcmecUserWorkflowRow, 'user_id'>({
-	name: 'ncmec_user_workflows',
-	columns: NCMEC_USER_WORKFLOW_COLUMNS,
-	primaryKey: ['user_id'],
-});
 export const BillingCustomers = defineTable<BillingCustomerRow, 'provider_id'>({
 	name: 'billing_customers',
 	columns: BILLING_CUSTOMER_COLUMNS,
@@ -1345,11 +1334,6 @@ export const BillingCustomersByUserId = defineTable<BillingCustomerByUserIdRow, 
 	name: 'billing_customers_by_user_id',
 	columns: BILLING_CUSTOMER_BY_USER_ID_COLUMNS,
 	primaryKey: ['user_id', 'provider_id'],
-});
-export const BillingProducts = defineTable<BillingProductRow, 'provider_id'>({
-	name: 'billing_products',
-	columns: BILLING_PRODUCT_COLUMNS,
-	primaryKey: ['provider_id'],
 });
 export const BillingPrices = defineTable<BillingPriceRow, 'provider_id'>({
 	name: 'billing_prices',
@@ -1402,45 +1386,15 @@ export const BillingInvoicesByCustomer = defineTable<
 	primaryKey: ['customer_id', 'stripe_created_at', 'provider_id'],
 	partitionKey: ['customer_id'],
 });
-export const BillingInvoicesBySubscription = defineTable<
-	BillingInvoiceBySubscriptionRow,
-	'subscription_id' | 'stripe_created_at' | 'provider_id',
-	'subscription_id'
->({
-	name: 'billing_invoices_by_subscription',
-	columns: BILLING_INVOICE_BY_SUBSCRIPTION_COLUMNS,
-	primaryKey: ['subscription_id', 'stripe_created_at', 'provider_id'],
-	partitionKey: ['subscription_id'],
-});
 export const BillingPaymentIntents = defineTable<BillingPaymentIntentRow, 'provider_id'>({
 	name: 'billing_payment_intents',
 	columns: BILLING_PAYMENT_INTENT_COLUMNS,
 	primaryKey: ['provider_id'],
 });
-export const BillingPaymentIntentsByCustomer = defineTable<
-	BillingPaymentIntentByCustomerRow,
-	'customer_id' | 'stripe_created_at' | 'provider_id',
-	'customer_id'
->({
-	name: 'billing_payment_intents_by_customer',
-	columns: BILLING_PAYMENT_INTENT_BY_CUSTOMER_COLUMNS,
-	primaryKey: ['customer_id', 'stripe_created_at', 'provider_id'],
-	partitionKey: ['customer_id'],
-});
 export const BillingCharges = defineTable<BillingChargeRow, 'provider_id'>({
 	name: 'billing_charges',
 	columns: BILLING_CHARGE_COLUMNS,
 	primaryKey: ['provider_id'],
-});
-export const BillingChargesByCustomer = defineTable<
-	BillingChargeByCustomerRow,
-	'customer_id' | 'stripe_created_at' | 'provider_id',
-	'customer_id'
->({
-	name: 'billing_charges_by_customer',
-	columns: BILLING_CHARGE_BY_CUSTOMER_COLUMNS,
-	primaryKey: ['customer_id', 'stripe_created_at', 'provider_id'],
-	partitionKey: ['customer_id'],
 });
 export const BillingPayments = defineTable<BillingPaymentRow, 'provider_id'>({
 	name: 'billing_payments',
@@ -1492,35 +1446,11 @@ export const BillingRefundsByInvoice = defineTable<
 	primaryKey: ['invoice_id', 'stripe_created_at', 'provider_id'],
 	partitionKey: ['invoice_id'],
 });
-export const BillingCheckoutSessions = defineTable<BillingCheckoutSessionRow, 'provider_id'>({
-	name: 'billing_checkout_sessions',
-	columns: BILLING_CHECKOUT_SESSION_COLUMNS,
-	primaryKey: ['provider_id'],
-});
-export const BillingCheckoutSessionsByCustomer = defineTable<
-	BillingCheckoutSessionByCustomerRow,
-	'customer_id' | 'stripe_created_at' | 'provider_id',
-	'customer_id'
->({
-	name: 'billing_checkout_sessions_by_customer',
-	columns: BILLING_CHECKOUT_SESSION_BY_CUSTOMER_COLUMNS,
-	primaryKey: ['customer_id', 'stripe_created_at', 'provider_id'],
-	partitionKey: ['customer_id'],
-});
-export const BillingDisputes = defineTable<BillingDisputeRow, 'provider_id'>({
-	name: 'billing_disputes',
-	columns: BILLING_DISPUTE_COLUMNS,
-	primaryKey: ['provider_id'],
-});
-export const BillingDisputesByCharge = defineTable<BillingDisputeByChargeRow, 'charge_id' | 'provider_id'>({
-	name: 'billing_disputes_by_charge',
-	columns: BILLING_DISPUTE_BY_CHARGE_COLUMNS,
-	primaryKey: ['charge_id', 'provider_id'],
-});
-export const BillingActionIntents = defineTable<BillingActionIntentRow, 'intent_id'>({
-	name: 'billing_action_intents',
-	columns: BILLING_ACTION_INTENT_COLUMNS,
-	primaryKey: ['intent_id'],
+export const VoiceP2pConnectionReports = defineTable<VoiceP2pConnectionReportRow, 'user_id' | 'report_id'>({
+	name: 'voice_p2p_connection_reports',
+	columns: VOICE_P2P_CONNECTION_REPORT_COLUMNS,
+	primaryKey: ['user_id', 'report_id'],
+	defaultTtlSeconds: seconds('180 days'),
 });
 
 export const RegistrationEventsByIp = defineTable<RegistrationEventByIpRow, 'ip' | 'created_at' | 'user_id', 'ip'>({

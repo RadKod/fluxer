@@ -4,7 +4,7 @@ import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import {noteText} from '@app/features/theme/fonts/ScriptFontLoader';
 import UserPinnedDM from '@app/features/user/state/UserPinnedDM';
 import Users from '@app/features/user/state/Users';
-import {ChannelTypes, GUILD_TEXT_BASED_CHANNEL_TYPES, Permissions} from '@fluxer/constants/src/ChannelConstants';
+import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import {VOICE_CHANNEL_CONNECTION_LIMIT_DEFAULT} from '@fluxer/constants/src/LimitConstants';
 import {THREAD_CHANNEL_TYPES, THREAD_ONLY_CHANNEL_TYPES} from '@fluxer/constants/src/ThreadConstants';
 import type {ChannelOverwrite, Channel as WireChannel} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
@@ -28,15 +28,6 @@ export class ChannelOverwriteRecord {
 		this.type = overwrite.type;
 		this.allow = BigInt(overwrite.allow);
 		this.deny = BigInt(overwrite.deny);
-	}
-
-	withUpdates(overwrite: Partial<ChannelOverwrite>): ChannelOverwriteRecord {
-		return new ChannelOverwriteRecord({
-			id: this.id,
-			type: overwrite.type ?? this.type,
-			allow: overwrite.allow ?? this.allow.toString(),
-			deny: overwrite.deny ?? this.deny.toString(),
-		});
 	}
 
 	equals(other: ChannelOverwriteRecord): boolean {
@@ -142,6 +133,7 @@ export class Channel {
 	readonly voiceConnectionLimit: number | null;
 	readonly rtcRegion: string | null;
 	readonly roomTheme: string | null;
+	readonly rtcP2p: boolean;
 	readonly lastMessageId: string | null;
 	readonly lastPinTimestamp: Date | null;
 	readonly permissionOverwrites: Readonly<Record<string, ChannelOverwriteRecord>>;
@@ -174,6 +166,7 @@ export class Channel {
 			(this.type === ChannelTypes.GUILD_VOICE ? VOICE_CHANNEL_CONNECTION_LIMIT_DEFAULT : null);
 		this.rtcRegion = channel.rtc_region ?? null;
 		this.roomTheme = channel.room_theme ?? null;
+		this.rtcP2p = channel.rtc_p2p ?? false;
 		this.lastMessageId = channel.last_message_id ?? null;
 		this.lastPinTimestamp = channel.last_pin_timestamp ? new Date(channel.last_pin_timestamp) : null;
 		this.nsfw = channel.nsfw ?? false;
@@ -229,28 +222,12 @@ export class Channel {
 		return this.type === ChannelTypes.DM_PERSONAL_NOTES;
 	}
 
-	isGuildText(): boolean {
-		return this.type === ChannelTypes.GUILD_TEXT;
-	}
-
-	isGuildAnnouncement(): boolean {
-		return this.type === ChannelTypes.GUILD_ANNOUNCEMENT;
-	}
-
-	isGuildVoice(): boolean {
-		return this.type === ChannelTypes.GUILD_VOICE;
-	}
-
 	isGuildCategory(): boolean {
 		return this.type === ChannelTypes.GUILD_CATEGORY;
 	}
 
 	isVoice(): boolean {
 		return this.type === ChannelTypes.GUILD_VOICE;
-	}
-
-	isText(): boolean {
-		return GUILD_TEXT_BASED_CHANNEL_TYPES.has(this.type);
 	}
 
 	isMature(): boolean {
@@ -313,21 +290,6 @@ export class Channel {
 		return this.threadFields?.default_thread_rate_limit_per_user ?? 0;
 	}
 
-	isRoleRequired(): boolean {
-		if (
-			this.guildId == null ||
-			(this.type !== ChannelTypes.GUILD_TEXT &&
-				this.type !== ChannelTypes.GUILD_ANNOUNCEMENT &&
-				this.type !== ChannelTypes.GUILD_VOICE &&
-				this.type !== ChannelTypes.GUILD_LINK)
-		) {
-			return false;
-		}
-		const flag = this.type === ChannelTypes.GUILD_VOICE ? Permissions.CONNECT : Permissions.VIEW_CHANNEL;
-		const overwrite = this.permissionOverwrites[this.guildId];
-		return overwrite != null && (overwrite.deny & flag) === flag;
-	}
-
 	getRecipientId(): string | undefined {
 		if (this.type !== ChannelTypes.DM) return undefined;
 		return this.recipientIds[0];
@@ -371,6 +333,7 @@ export class Channel {
 					updates.voice_connection_limit !== undefined ? updates.voice_connection_limit : this.voiceConnectionLimit,
 				rtc_region: updates.rtc_region !== undefined ? updates.rtc_region : this.rtcRegion,
 				room_theme: updates.room_theme !== undefined ? updates.room_theme : this.roomTheme,
+				rtc_p2p: updates.rtc_p2p ?? this.rtcP2p,
 				last_message_id: updates.last_message_id !== undefined ? updates.last_message_id : this.lastMessageId,
 				last_pin_timestamp: updates.last_pin_timestamp ?? this.lastPinTimestamp?.toISOString() ?? undefined,
 				permission_overwrites: !this.isPrivate()
@@ -386,22 +349,6 @@ export class Channel {
 				rate_limit_per_user: updates.rate_limit_per_user ?? this.rateLimitPerUser,
 				nicks: updates.nicks ?? this.nicks,
 				...pickThreadFields(updates, this.threadFields),
-			},
-			{instanceId: this.instanceId},
-		);
-	}
-
-	withOverwrite(overwrite: ChannelOverwriteRecord): Channel {
-		if (this.isPrivate()) {
-			return this;
-		}
-		return new Channel(
-			{
-				...this.toJSON(),
-				permission_overwrites: Object.values({
-					...this.permissionOverwrites,
-					[overwrite.id]: overwrite,
-				}).map((o) => o.toJSON()),
 			},
 			{instanceId: this.instanceId},
 		);
@@ -425,6 +372,7 @@ export class Channel {
 		if (this.voiceConnectionLimit !== other.voiceConnectionLimit) return false;
 		if (this.rtcRegion !== other.rtcRegion) return false;
 		if (this.roomTheme !== other.roomTheme) return false;
+		if (this.rtcP2p !== other.rtcP2p) return false;
 		if (this.lastMessageId !== other.lastMessageId) return false;
 		if (this.lastPinTimestamp?.getTime() !== other.lastPinTimestamp?.getTime()) return false;
 		if (this.nsfw !== other.nsfw) return false;
@@ -466,6 +414,7 @@ export class Channel {
 			voice_connection_limit: this.voiceConnectionLimit,
 			rtc_region: this.rtcRegion,
 			room_theme: this.roomTheme,
+			rtc_p2p: this.rtcP2p,
 			last_message_id: this.lastMessageId,
 			last_pin_timestamp: this.lastPinTimestamp?.toISOString() ?? undefined,
 			permission_overwrites: Object.values(this.permissionOverwrites).map((o) => o.toJSON()),

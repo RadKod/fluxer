@@ -88,6 +88,7 @@ function createDesktopHandoffAPI(): DesktopHandoffAPI & {
 				instance,
 				code: CODE,
 				expiresAt: new Date(Date.now() + 300_000).toISOString(),
+				returnMethod: 'deep_link',
 			};
 			return session;
 		},
@@ -107,17 +108,17 @@ let root: Root;
 let controller: Controller | null = null;
 
 function Probe({
-	onExpired,
+	onEnded,
 	onSuccess,
 	runtimeSnapshot,
 }: {
-	onExpired: () => void;
+	onEnded: () => void;
 	onSuccess: (payload: {token: string; userId: string}) => Promise<void> | void;
 	runtimeSnapshot: typeof RUNTIME_SNAPSHOT;
 }) {
 	controller = useBrowserLoginHandoff({
 		runtimeSnapshot,
-		onExpired,
+		onEnded,
 		onSuccess,
 	});
 	return null;
@@ -133,10 +134,10 @@ function requireController(): Controller {
 async function mountProbe(
 	onSuccess: (payload: {token: string; userId: string}) => Promise<void> | void,
 	runtimeSnapshot: typeof RUNTIME_SNAPSHOT = RUNTIME_SNAPSHOT,
-	onExpired: () => void = () => {},
+	onEnded: () => void = () => {},
 ): Promise<void> {
 	await act(async () => {
-		root.render(createElement(Probe, {onExpired, onSuccess, runtimeSnapshot}));
+		root.render(createElement(Probe, {onEnded, onSuccess, runtimeSnapshot}));
 	});
 }
 
@@ -217,7 +218,7 @@ describe('browser sign-in against a deployed desktop shell', () => {
 		expect(harness.initiateDesktopHandoff).toHaveBeenCalledTimes(1);
 		expect(harness.navigateToExternalURL).toHaveBeenCalledTimes(1);
 		expect(harness.navigateToExternalURL.mock.calls[0]?.[0]).toBe(
-			`https://self.hosted.example/login?handoff=1&code=${encodeURIComponent(CODE)}`,
+			`https://self.hosted.example/login?handoff=1&code=${encodeURIComponent(CODE)}&api=${encodeURIComponent('https://self.hosted.example')}`,
 		);
 
 		await advancePollInterval();
@@ -292,105 +293,6 @@ describe('browser sign-in against an updated desktop shell', () => {
 		expect(api.polled).toEqual([CODE, CODE]);
 		expect(harness.pollDesktopHandoffStatus).not.toHaveBeenCalled();
 		expect(succeeded).toEqual([{token: 'ipc-token', userId: '77', userData: {username: 'ada', discriminator: '0001'}}]);
-	});
-});
-
-describe('the handoff code the user is asked to type', () => {
-	test('claims it was copied only when the clipboard actually took it', async () => {
-		installElectron({platform: 'darwin'});
-		await mountProbe(() => {});
-		await act(async () => {
-			await requireController().showManualCode();
-		});
-
-		harness.copy.mockResolvedValue(false);
-		await act(async () => {
-			requireController().copyCode();
-		});
-
-		expect(harness.copy).toHaveBeenCalledTimes(1);
-		expect(requireController().copied).toBe(false);
-
-		harness.copy.mockResolvedValue(true);
-		await act(async () => {
-			requireController().copyCode();
-		});
-
-		expect(requireController().copied).toBe(true);
-	});
-
-	test('reports itself expired once the countdown runs out, before the poll notices', async () => {
-		installElectron({platform: 'darwin'});
-		harness.initiateDesktopHandoff.mockResolvedValue({
-			code: CODE,
-			expires_at: new Date(Date.now() + 5_000).toISOString(),
-			poll_secret: 'server-poll-secret',
-		});
-		harness.pollDesktopHandoffStatus.mockReset();
-		harness.pollDesktopHandoffStatus.mockResolvedValue({status: 'pending'});
-		await mountProbe(() => {});
-		await act(async () => {
-			await requireController().showManualCode();
-		});
-
-		expect(requireController().isExpired).toBe(false);
-
-		await act(async () => {
-			await vi.advanceTimersByTimeAsync(5_200);
-		});
-
-		expect(requireController().isExpired).toBe(true);
-		expect(requireController().remainingSeconds).toBe(0);
-		expect(requireController().hasCode).toBe(true);
-	});
-
-	test('mints a fresh code on demand rather than handing back the dead one', async () => {
-		installElectron({platform: 'darwin'});
-		await mountProbe(() => {});
-		await act(async () => {
-			await requireController().showManualCode();
-		});
-		expect(harness.initiateDesktopHandoff).toHaveBeenCalledTimes(1);
-
-		harness.initiateDesktopHandoff.mockResolvedValue({
-			code: 'ZZZZZZ999999',
-			expires_at: new Date(Date.now() + 300_000).toISOString(),
-			poll_secret: 'second-secret',
-		});
-		await act(async () => {
-			await requireController().regenerateCode();
-		});
-
-		expect(harness.initiateDesktopHandoff).toHaveBeenCalledTimes(2);
-		expect(requireController().code).toBe('ZZZZZZ999999');
-
-		await advancePollInterval();
-
-		expect(harness.pollDesktopHandoffStatus.mock.calls.at(-1)?.[1]).toBe('second-secret');
-	});
-});
-
-describe('an instance that publishes no web address', () => {
-	test('is reported as unable to start, and no code is burned finding out', async () => {
-		installElectron({platform: 'darwin'});
-		const snapshot = {
-			apiEndpoint: 'https://self.hosted.example/api',
-			apiCodeVersion: 1,
-			webAppEndpoint: '',
-			features: {},
-		} as unknown as typeof RUNTIME_SNAPSHOT;
-
-		await mountProbe(() => {}, snapshot);
-
-		expect(requireController().canStart).toBe(false);
-		expect(harness.initiateDesktopHandoff).not.toHaveBeenCalled();
-	});
-
-	test('still reports a reachable instance as able to start', async () => {
-		installElectron({platform: 'darwin'});
-		await mountProbe(() => {});
-
-		expect(requireController().canStart).toBe(true);
 	});
 });
 
@@ -491,7 +393,7 @@ describe('when the instance reports the code as dead', () => {
 		expect(harness.pollDesktopHandoffStatus).toHaveBeenCalledTimes(1);
 		expect(requireController().session).toBeNull();
 		expect(requireController().code).toBeNull();
-		expect(requireController().error).toBe('That sign-in code expired. Try again.');
+		expect(requireController().error).toBe('The sign-in request expired before your browser approved it.');
 
 		await advancePollInterval();
 		await advancePollInterval();

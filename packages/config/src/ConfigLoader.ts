@@ -23,6 +23,8 @@ import {
 
 let cachedConfig: MasterConfig | null = null;
 
+const MAX_REPORT_RETENTION_DAYS = 36_500;
+
 const DEFAULT_PASSKEY_ORIGINS: Array<string> = [];
 
 function defaultConfig(): MasterConfig {
@@ -167,7 +169,7 @@ function defaultConfig(): MasterConfig {
 				enabled: false,
 				provider: 'none',
 				from_email: '',
-				from_name: 'Fluxer',
+				from_name: '',
 				reply_to_email: '',
 				app_base_url: '',
 			},
@@ -193,12 +195,6 @@ function defaultConfig(): MasterConfig {
 				prices: {},
 				legacy_prices: {},
 			},
-			ncmec: {
-				enabled: false,
-				base_url: '',
-				username: '',
-				password: '',
-			},
 			payriff: {
 				enabled: false,
 				secret_key: '',
@@ -219,6 +215,11 @@ function defaultConfig(): MasterConfig {
 			cache_purge: {
 				adapter: 'none',
 				http: {
+					endpoint: '',
+					token: '',
+					timeout_ms: 10_000,
+				},
+				controller: {
 					endpoint: '',
 					token: '',
 					timeout_ms: 10_000,
@@ -305,6 +306,11 @@ function defaultConfig(): MasterConfig {
 		attachment_decay_enabled: true,
 		deletion_grace_period_hours: 336,
 		inactivity_deletion_threshold_days: 365,
+		report_retention: {
+			days: 365,
+			resolved_days: null,
+			dry_run: false,
+		},
 	};
 }
 
@@ -498,6 +504,20 @@ function validateApiWorkerConfig(config: MasterConfig): void {
 	}
 }
 
+function validateReportRetentionConfig(config: MasterConfig): void {
+	const retention = config.report_retention;
+	assertIntegerInRange(retention.days, 'FLUXER_REPORT_RETENTION_DAYS', 1, MAX_REPORT_RETENTION_DAYS);
+	if (retention.resolved_days !== null) {
+		assertIntegerInRange(
+			retention.resolved_days,
+			'FLUXER_RESOLVED_REPORT_RETENTION_DAYS',
+			1,
+			MAX_REPORT_RETENTION_DAYS,
+		);
+	}
+	assertBoolean(retention.dry_run, 'FLUXER_REPORT_RETENTION_DRY_RUN');
+}
+
 function validateStorageChangeFeedConfig(config: MasterConfig): void {
 	const feed = config.services.api?.storage_change_feed;
 	if (!feed?.enabled) {
@@ -525,16 +545,17 @@ function normalizeAppOriginAliases(config: MasterConfig): void {
 	];
 }
 
-function requirePurgeEndpoint(value: string, envName: string): void {
+function requirePurgeEndpoint(value: string, envName: string, protocols: ReadonlyArray<string>): void {
 	requireString(value, envName);
 	const endpoint = URL.parse(value);
 	if (
 		endpoint === null ||
-		(endpoint.protocol !== 'http:' && endpoint.protocol !== 'https:') ||
+		!protocols.includes(endpoint.protocol) ||
 		endpoint.username !== '' ||
 		endpoint.password !== ''
 	) {
-		throw new Error(`${envName} must be an absolute http or https URL without credentials`);
+		const schemes = protocols.map((protocol) => protocol.slice(0, -1)).join(' or ');
+		throw new Error(`${envName} must be an absolute ${schemes} URL without credentials`);
 	}
 }
 
@@ -545,10 +566,20 @@ function requirePurgeCredential(value: string, envName: string): void {
 	}
 }
 
+function validateCachePurgeTarget(
+	target: {endpoint: string; token: string; timeout_ms: number},
+	envPrefix: string,
+	protocols: ReadonlyArray<string>,
+): void {
+	requirePurgeEndpoint(target.endpoint, `${envPrefix}_ENDPOINT`, protocols);
+	requirePurgeCredential(target.token, `${envPrefix}_TOKEN`);
+	assertIntegerInRange(target.timeout_ms, `${envPrefix}_TIMEOUT_MS`, 1_000, 10_000);
+}
+
 function validateCachePurgeConfig(config: MasterConfig): void {
 	const cachePurge = config.integrations.cache_purge;
 	if (cachePurge.adapter === 'bunny') {
-		requirePurgeEndpoint(cachePurge.bunny.api_base, 'FLUXER_CACHE_PURGE_BUNNY_API_BASE');
+		requirePurgeEndpoint(cachePurge.bunny.api_base, 'FLUXER_CACHE_PURGE_BUNNY_API_BASE', ['http:', 'https:']);
 		// Every request carries the Bunny account key, which can rewrite the static CDN; it never goes out in clear text.
 		if (URL.parse(cachePurge.bunny.api_base)?.protocol !== 'https:') {
 			throw new Error(
@@ -579,14 +610,19 @@ function validateCachePurgeConfig(config: MasterConfig): void {
 		if (cachePurge.http.token !== '') {
 			throw new Error('FLUXER_CACHE_PURGE_HTTP_TOKEN must be empty when FLUXER_CACHE_PURGE_ADAPTER is queue_only');
 		}
+		if (cachePurge.controller.token !== '') {
+			throw new Error(
+				'FLUXER_CACHE_PURGE_CONTROLLER_TOKEN must be empty when FLUXER_CACHE_PURGE_ADAPTER is queue_only',
+			);
+		}
 		return;
 	}
-	if (cachePurge.adapter !== 'http') {
-		return;
+	if (cachePurge.adapter === 'http') {
+		validateCachePurgeTarget(cachePurge.http, 'FLUXER_CACHE_PURGE_HTTP', ['http:', 'https:']);
 	}
-	requirePurgeEndpoint(cachePurge.http.endpoint, 'FLUXER_CACHE_PURGE_HTTP_ENDPOINT');
-	requirePurgeCredential(cachePurge.http.token, 'FLUXER_CACHE_PURGE_HTTP_TOKEN');
-	assertIntegerInRange(cachePurge.http.timeout_ms, 'FLUXER_CACHE_PURGE_HTTP_TIMEOUT_MS', 1_000, 10_000);
+	if (cachePurge.adapter === 'controller') {
+		validateCachePurgeTarget(cachePurge.controller, 'FLUXER_CACHE_PURGE_CONTROLLER', ['https:']);
+	}
 }
 
 // Micup: every Payriff request carries the secret key; a wrong scheme stops the process at startup rather than every
@@ -761,6 +797,7 @@ function normalizeConfig(config: MasterConfig): MasterConfig {
 	validatePostgresConfig(config);
 	validateApiWorkerConfig(config);
 	validateStorageChangeFeedConfig(config);
+	validateReportRetentionConfig(config);
 	validateCachePurgeConfig(config);
 	validatePayriffConfig(config);
 	normalizeBunnyStreamConfig(config);
@@ -794,6 +831,13 @@ function normalizeConfig(config: MasterConfig): MasterConfig {
 	requireString(config.services.admin.oauth_client_secret, 'FLUXER_ADMIN_OAUTH_CLIENT_SECRET');
 	requireString(config.services.gateway.rpc_auth_token, 'FLUXER_GATEWAY_RPC_AUTH_TOKEN');
 	return config;
+}
+
+function applySelfHostedEnvDefault(config: MasterConfig, explicitEnv: string | undefined): MasterConfig {
+	if (explicitEnv !== undefined || !config.instance.self_hosted) {
+		return config;
+	}
+	return {...config, env: 'production'};
 }
 
 function applyPublicOrigin(config: MasterConfig): MasterConfig {
@@ -918,7 +962,10 @@ export async function loadConfig(): Promise<MasterConfig> {
 		return cachedConfig;
 	}
 	const overrides = buildNamedFluxerEnvOverrides(process.env);
-	const merged = applyPublicOrigin(mergeConfig(defaultConfig(), overrides));
+	const merged = applySelfHostedEnvDefault(
+		applyPublicOrigin(mergeConfig(defaultConfig(), overrides)),
+		readEnvValue(process.env, 'FLUXER_ENV'),
+	);
 	const normalized = normalizeConfig(merged);
 	const derived = deriveEndpointsFromDomain(normalized.domain);
 	const endpoints = {...derived, ...(normalized.endpoint_overrides ?? {})};
@@ -929,13 +976,6 @@ export async function loadConfig(): Promise<MasterConfig> {
 		readEnvValue(process.env, 'FLUXER_PASSKEY_ADDITIONAL_ALLOWED_ORIGINS') === undefined,
 	);
 	cachedConfig = withPublicPort;
-	return cachedConfig;
-}
-
-export function getConfig(): MasterConfig {
-	if (!cachedConfig) {
-		throw new Error('Config not loaded. Call loadConfig() first.');
-	}
 	return cachedConfig;
 }
 

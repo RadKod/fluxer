@@ -23,16 +23,17 @@ import {
 	type UserID,
 } from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
-import type {IThreadRepository} from '@app/api/channel/repositories/IThreadRepository';
+import type {ThreadRepository} from '@app/api/channel/repositories/ThreadRepository';
 import {
 	isChannelEligible,
 	isTimestampInWindow,
+	loadSelfMessageEligibilityContext,
 	type SelfMessageEligibilityContext,
 	type SelfMessageFilter,
 } from '@app/api/channel/services/message/SelfMessageFilter';
 import type {UserConnectionRow} from '@app/api/database/types/ConnectionTypes';
 import type {StorePurchaseRow} from '@app/api/database/types/StoreBillingTypes';
-import {everEnabled, isTainted} from '@app/api/experiment/ChannelThreadsGate';
+import {isTainted} from '@app/api/experiment/ChannelThreadsGate';
 import type {IStorageService} from '@app/api/infrastructure/IStorageService';
 import {Logger} from '@app/api/Logger';
 import type {Application} from '@app/api/models/Application';
@@ -69,7 +70,6 @@ import {ContentAddressedAttachmentCollector} from '@app/api/worker/utils/Content
 import {deserializeSelfMessageFilter, SelfMessageFilterPayload} from '@app/api/worker/utils/SelfMessageFilterPayload';
 import {getWorkerDependencies} from '@app/api/worker/WorkerContext';
 import type {WorkerDependencies} from '@app/api/worker/WorkerDependencies';
-import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import {
 	decodeSyncedPreferencesLenient,
 	syncedPreferencesToJson,
@@ -421,7 +421,7 @@ export async function harvestMessages(
 	return {channelMessagesMap, totalMessages};
 }
 
-type HarvestThreadRepository = Pick<IThreadRepository, 'listJoinedThreadIdsPage' | 'getMember'>;
+type HarvestThreadRepository = Pick<ThreadRepository, 'listJoinedThreadIdsPage' | 'getMember'>;
 
 // Shared by simultaneous exports in this worker process. Fleet concurrency is
 // worker replicas * this bound; the worker queue controls active export jobs.
@@ -449,7 +449,6 @@ export async function collectThreadMemberships(
 	guildIds: ReadonlyArray<GuildID>,
 	writePage: (members: Array<ThreadMember>) => Promise<void>,
 ): Promise<void> {
-	if (!everEnabled()) return;
 	for (const guildId of guildIds) {
 		if (!(await readHarvestThread(() => isTainted(guildId, {fresh: true})))) continue;
 		let cursor: string | null | undefined;
@@ -536,11 +535,11 @@ export function buildUserDataJson(params: UserDataJsonParams) {
 			email_bounced: user.emailBounced,
 			avatar_hash: user.avatarHash,
 			avatar_url: user.avatarHash
-				? `${Config.endpoints.media}/avatars/${userId}/${user.avatarHash}.${user.avatarHash.startsWith('a_') ? 'gif' : 'png'}`
+				? `${Config.endpoints.media}/avatars/${userId}/${user.avatarHash}.${getAnimatedAssetExtension(user.avatarHash)}`
 				: null,
 			banner_hash: user.bannerHash,
 			banner_url: user.bannerHash
-				? `${Config.endpoints.media}/banners/${userId}/${user.bannerHash}.${user.bannerHash.startsWith('a_') ? 'gif' : 'png'}`
+				? `${Config.endpoints.media}/banners/${userId}/${user.bannerHash}.${getAnimatedAssetExtension(user.bannerHash)}`
 				: null,
 			bio: user.bio,
 			pronouns: user.pronouns,
@@ -634,6 +633,8 @@ export function buildUserDataJson(params: UserDataJsonParams) {
 					staff_dm_access_user_ids: Array.from(userSettings.staffDmAccessUserIds).map((id) => id.toString()),
 					synced_preferences: syncedPreferencesToJson(decodeSyncedPreferencesLenient(userSettings.syncedPreferences)),
 					profile_privacy: userSettings.profilePrivacy,
+					privacy_setup_version: userSettings.privacySetupVersion,
+					privacy_setup_completed_at: userSettings.privacySetupCompletedAt?.toISOString() ?? null,
 				}
 			: null,
 		guild_memberships: guildMemberships
@@ -895,30 +896,22 @@ const harvestUserData: ArchiveTaskHandler = async (payload, helpers, attempt) =>
 		let filterArgs: HarvestMessagesFilterArgs | null = null;
 		if (validated.filter) {
 			const filter = deserializeSelfMessageFilter(validated.filter);
-			const [privateChannelsForFilter, userGuildsForFilter] = await Promise.all([
-				userRepository.listPrivateChannels(userId),
-				guildRepository.listUserGuilds(userId),
-			]);
-			const openDmChannelIds = new Set<string>();
-			for (const channel of privateChannelsForFilter) {
-				if (channel.type === ChannelTypes.DM || channel.type === ChannelTypes.GROUP_DM) {
-					openDmChannelIds.add(channel.id.toString());
-				}
-			}
-			const context: SelfMessageEligibilityContext = {
-				currentGuildIds: new Set(userGuildsForFilter.map((guild) => guild.id.toString())),
-				openDmChannelIds,
-			};
+			const context = await loadSelfMessageEligibilityContext(userId, {userRepository, guildRepository});
 			filterArgs = {
 				filter,
 				context,
-				findChannel: (channelId) => channelRepository.findUnique(channelId),
+				findChannel: (channelId) => channelRepository.channelData.findUnique(channelId),
 			};
 		}
 		Logger.debug({userId, harvestId, elapsed: Date.now() - startTime}, 'Starting user data harvest');
 		await progressReporter.updateProgress(INITIAL_PROGRESS, 'Harvesting messages');
 		Logger.debug({elapsed: Date.now() - startTime}, 'Set progress to INITIAL_PROGRESS');
-		const {channelMessagesMap, totalMessages} = await harvestMessages(channelRepository, userId, startTime, filterArgs);
+		const {channelMessagesMap, totalMessages} = await harvestMessages(
+			channelRepository.messages,
+			userId,
+			startTime,
+			filterArgs,
+		);
 		if (totalMessages > 0) {
 			const progress = Math.min(INITIAL_PROGRESS + Math.floor((totalMessages / 10000) * 50), MESSAGES_PROGRESS_MAX);
 			await progressReporter.updateProgress(progress, `Harvested ${totalMessages} messages`);

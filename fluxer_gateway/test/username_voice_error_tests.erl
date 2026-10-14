@@ -9,9 +9,9 @@ selection_error_wire_contract_test() ->
         {error, permission_denied, username_selection_required},
         gateway_errors:error(username_selection_required)
     ),
-    ?assertEqual(
-        <<"USERNAME_SELECTION_REQUIRED">>,
-        gateway_errors:error_code(username_selection_required)
+    ?assertMatch(
+        {<<"USERNAME_SELECTION_REQUIRED">>, _, permission_denied},
+        gateway_errors:voice_error_info(username_selection_required)
     ).
 
 selection_error_direct_nested_and_iodata_test() ->
@@ -38,7 +38,9 @@ guild_token_preserves_selection_error_test() ->
     with_selection_rpc(fun() ->
         ?assertEqual(
             {error, username_selection_required},
-            guild_voice_connection_token:request_voice_token(999, 100, 10, #{})
+            guild_voice_connection_token:request_voice_token(
+                999, 100, 10, null, #{}, null, undefined, undefined
+            )
         )
     end).
 

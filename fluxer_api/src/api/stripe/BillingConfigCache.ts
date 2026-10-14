@@ -75,6 +75,13 @@ const ENV_CATALOG: ReadonlyArray<{
 		gift_1_year: 'gift1YearInr',
 	},
 	{
+		currency: 'ISK',
+		monthly: 'monthlyIsk',
+		yearly: 'yearlyIsk',
+		gift_1_month: 'gift1MonthIsk',
+		gift_1_year: 'gift1YearIsk',
+	},
+	{
 		currency: 'NOK',
 		monthly: 'monthlyNok',
 		yearly: 'yearlyNok',
@@ -119,10 +126,6 @@ export function setStoredBillingConfig(stored: StoredBillingConfig | null): void
 
 export function getStoredBillingConfig(): StoredBillingConfig | null {
 	return storedBillingConfig;
-}
-
-export function getActiveStoredBillingConfig(): StoredBillingConfig | null {
-	return Config.instance.selfHosted ? storedBillingConfig : null;
 }
 
 function trackWebhookSecret(): void {

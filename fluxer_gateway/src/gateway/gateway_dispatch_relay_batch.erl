@@ -7,7 +7,6 @@
     relay_or_direct_many/3,
     relay_game_activity_many/2,
     relay_or_direct/3,
-    select_worker/1,
     current_workers/0,
     current_workers_tuple/0,
     current_workers_tuple_normalized/0,
@@ -260,13 +259,6 @@ normalize_workers_tuple(_) -> {}.
 current_workers_tuple_normalized() ->
     current_workers_tuple().
 
--spec select_worker(pid()) -> pid() | undefined.
-select_worker(SessionPid) ->
-    case select_worker_slot(SessionPid) of
-        undefined -> undefined;
-        {_Slot, Worker} -> Worker
-    end.
-
 -spec select_worker_slot(pid()) -> {non_neg_integer(), pid()} | undefined.
 select_worker_slot(SessionPid) ->
     Workers = current_workers_tuple_normalized(),
@@ -321,12 +313,3 @@ worker_index(Pid, Workers, Index) ->
 worker_index(_Pid, Count, _Workers, Index) when Index >= Count -> undefined;
 worker_index(Pid, _Count, Workers, Index) when element(Index + 1, Workers) =:= Pid -> Index;
 worker_index(Pid, Count, Workers, Index) -> worker_index(Pid, Count, Workers, Index + 1).
-
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
-
-select_worker_returns_undefined_when_no_workers_test() ->
-    persistent_term:erase(?STATE_KEY),
-    ?assertEqual(undefined, select_worker(self())).
-
--endif.

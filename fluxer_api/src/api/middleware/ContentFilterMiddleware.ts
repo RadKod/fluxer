@@ -82,7 +82,7 @@ const SKIP_CONTENT_FILTER_PATH_PARTS = [
 	'/feed/videos/webhook',
 	'/oauth2/',
 	'/premium/store/',
-	'/reports/dsa/email/',
+	'/reports/dsa',
 	'/users/@me/authorized-ips',
 	'/users/@me/email-change/',
 	'/users/@me/mfa/',

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import styles from '@app/features/app/components/dialogs/components/PricingCard.module.css';
+import {formatNumber} from '@app/features/i18n/utils/IntlCache';
 import {WAS_PRICE_DESCRIPTOR} from '@app/features/shop/utils/ShopMessageDescriptors';
 import {Button} from '@app/features/ui/button/Button';
 import * as LocaleUtils from '@app/features/user/utils/LocaleUtils';
 import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
-import {formatNumber} from '@pkgs/number_utils/src/NumberFormatting';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';

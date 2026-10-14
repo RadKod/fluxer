@@ -16,12 +16,12 @@ import {
 	resolveVideoLayout,
 } from '@app/features/channel/components/embeds/media/VideoDimensionUtils';
 import {useMaybeMessageViewContext} from '@app/features/channel/components/MessageViewContext';
-import DeveloperOptions from '@app/features/devtools/state/DeveloperOptions';
 import {isKeyboardActivationKey} from '@app/features/input/utils/KeyboardUtils';
 import {useDeleteAttachment} from '@app/features/messaging/hooks/useDeleteAttachment';
 import {useMatureMedia} from '@app/features/messaging/hooks/useMatureMedia';
 import {useMediaFavorite} from '@app/features/messaging/hooks/useMediaFavorite';
 import {useNearViewport} from '@app/features/messaging/hooks/useNearViewport';
+import {resolveDesktopCrossOriginMediaURL} from '@app/features/messaging/utils/DesktopResourceUrl';
 import {createDownloadHandler} from '@app/features/messaging/utils/FileDownloadUtils';
 import * as ImageCacheUtils from '@app/features/messaging/utils/ImageCacheUtils';
 import {buildMediaProxyURL, mediaDevicePixelRatio} from '@app/features/messaging/utils/MediaProxyUtils';
@@ -366,9 +366,6 @@ const EmbedVideo: FC<EmbedVideoProps> = observer(
 		useEffect(() => {
 			if (!shouldLoadMedia) return;
 			if (!posterSrc) return;
-			if (DeveloperOptions.forceRenderPlaceholders || DeveloperOptions.forceMediaLoading) {
-				return;
-			}
 			if (loadedPosterSrc === posterSrc) return;
 			let active = true;
 			const cleanup = ImageCacheUtils.loadImage(
@@ -575,7 +572,7 @@ const EmbedVideo: FC<EmbedVideoProps> = observer(
 					muted
 					playsInline
 					preload="metadata"
-					src={effectiveSrc}
+					src={resolveDesktopCrossOriginMediaURL(effectiveSrc)}
 					tabIndex={-1}
 					onLoadedMetadata={handleMetadataProbeLoaded}
 					data-flx="channel.embeds.media.embed-video.metadata-probe"
@@ -609,7 +606,7 @@ const EmbedVideo: FC<EmbedVideoProps> = observer(
 								<video
 									ref={inlineVideoRef}
 									className={styles.inlineVideo}
-									src={effectiveSrc}
+									src={resolveDesktopCrossOriginMediaURL(effectiveSrc)}
 									poster={presentedPosterSrc ?? undefined}
 									autoPlay
 									playsInline

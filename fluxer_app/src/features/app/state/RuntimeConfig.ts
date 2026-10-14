@@ -43,12 +43,9 @@ import {InstanceDiscoveryUnreachableError} from '@fluxer/instance_bootstrap/src/
 import {InstanceEndpointKind, normalizeInstanceEndpoint} from '@fluxer/instance_bootstrap/src/EndpointNormalization';
 import {isOfficialInstanceHost, OFFICIAL_INSTANCE_DISPLAY_HOST} from '@fluxer/instance_bootstrap/src/OfficialInstance';
 import type {
-	InstanceAgePolicy,
 	InstanceAppPublic,
 	InstanceCommunity,
-	InstanceDiscoveryResponse,
 	InstanceFeatures,
-	InstanceRegistration,
 	InstanceServices,
 	InstanceSso as InstanceSsoConfig,
 } from '@fluxer/instance_bootstrap/src/Types';
@@ -62,19 +59,7 @@ export {
 	runtimeConfigSnapshotsAreSameInstance,
 	runtimeInstanceKey,
 } from '@app/features/app/state/InstanceSnapshotStore';
-export type {
-	GifProvider,
-	GifProviderInfo,
-	InstanceCommunity,
-	InstanceDiscoveryResponse,
-	InstanceFeatures,
-	InstanceRegistration,
-	InstanceServices,
-	InstanceSnapshotResolution,
-	InstanceSnapshotResolveRequest,
-	InstanceSsoConfig,
-	RuntimeConfigSnapshot,
-};
+export type {InstanceSsoConfig, RuntimeConfigSnapshot};
 
 export interface ApplyRuntimeConfigSnapshotRequest {
 	snapshot: RuntimeConfigSnapshot;
@@ -114,7 +99,6 @@ interface RuntimeConfigPublication {
 	phase: RuntimeConfigPublicationPhase;
 }
 
-const DEFAULT_PREMIUM_PRODUCT_NAME = 'sanalyer Plus';
 const LEGACY_USERNAME_MIGRATION: UsernameMigration = Object.freeze({
 	state: 'legacy',
 	epoch: 0,
@@ -172,6 +156,10 @@ export function describeAPIEndpoint(endpoint: string): string {
 	}
 	return withoutScheme;
 }
+
+const DISCOVERY_REVALIDATION_TIMEOUT_MS = 5000;
+
+let pendingDiscoveryRevalidation: Promise<void> | null = null;
 
 class RuntimeConfig {
 	private lifecycleGeneration = 0;
@@ -290,14 +278,6 @@ class RuntimeConfig {
 		return this.readableSnapshot().features;
 	}
 
-	get sso(): InstanceSsoConfig | null {
-		return this.readableSnapshot().sso;
-	}
-
-	get registration(): InstanceRegistration {
-		return this.readableSnapshot().registration;
-	}
-
 	get community(): InstanceCommunity {
 		return this.readableSnapshot().community;
 	}
@@ -306,20 +286,12 @@ class RuntimeConfig {
 		return this.readableSnapshot().services;
 	}
 
-	get publicPushVapidKey(): string | null {
-		return this.readableSnapshot().publicPushVapidKey;
-	}
-
 	get limits(): LimitConfigSnapshot {
 		return this.readableSnapshot().limits;
 	}
 
 	get appPublic(): InstanceAppPublic {
 		return this.readableSnapshot().appPublic;
-	}
-
-	get agePolicy(): InstanceAgePolicy | null {
-		return this.readableSnapshot().agePolicy ?? null;
 	}
 
 	private requireActiveSnapshot(): RuntimeConfigSnapshot {
@@ -683,17 +655,31 @@ class RuntimeConfig {
 		this.lifecycleGeneration = nextLifecycleGeneration(this.lifecycleGeneration);
 	}
 
-	async refreshDiscovery(): Promise<void> {
+	async refreshDiscovery(signal?: AbortSignal): Promise<void> {
 		const current = this.requireActiveSnapshot();
-		const resolution = await InstanceSnapshotStore.refresh({input: current.apiEndpoint, signal: null});
+		const resolution = await InstanceSnapshotStore.refresh({input: current.apiEndpoint, signal: signal ?? null});
 		if (runtimeInstanceKey(resolution.snapshot) !== runtimeInstanceKey(this.requireActiveSnapshot())) {
 			return;
 		}
-		this.replaceActiveFeatures(resolution.snapshot.features);
-		this.applyUsernameConfig({
-			username_migration: resolution.snapshot.usernameMigration,
-			username_tiers: resolution.snapshot.usernameTiers,
+		const runtime = this.requireActiveRuntime();
+		const usable = this.requireUsableSnapshot({
+			...runtime.snapshot,
+			features: resolution.snapshot.features,
+			appPublic: resolution.snapshot.appPublic,
+			usernameMigration: resolution.snapshot.usernameMigration ?? runtime.snapshot.usernameMigration,
+			usernameTiers: resolution.snapshot.usernameTiers ?? runtime.snapshot.usernameTiers,
 		});
+		this.activeRuntime = {...runtime, snapshot: usable};
+		this.lifecycleGeneration = nextLifecycleGeneration(this.lifecycleGeneration);
+	}
+
+	revalidateDiscovery(): Promise<void> {
+		if (pendingDiscoveryRevalidation !== null) return pendingDiscoveryRevalidation;
+		const request = this.refreshDiscovery(AbortSignal.timeout(DISCOVERY_REVALIDATION_TIMEOUT_MS)).finally(() => {
+			if (pendingDiscoveryRevalidation === request) pendingDiscoveryRevalidation = null;
+		});
+		pendingDiscoveryRevalidation = request;
+		return request;
 	}
 
 	private replaceActiveFeatures(features: InstanceFeatures): void {
@@ -771,10 +757,6 @@ class RuntimeConfig {
 		return this.activeRuntime?.snapshot.appPublic.branding.status_page_url ?? '';
 	}
 
-	get statusPageIncidentHistoryUrl(): string {
-		return this.activeRuntime?.snapshot.appPublic.branding.status_page_incident_history_url ?? '';
-	}
-
 	isSelfHosted(): boolean {
 		return DeveloperOptions.selfHostedModeOverride || this.features.self_hosted;
 	}
@@ -789,10 +771,6 @@ class RuntimeConfig {
 
 	get stripeServiceable(): boolean {
 		return this.features.stripe_serviceable;
-	}
-
-	get premiumProductName(): string {
-		return this.appPublic.branding.premium_product_name?.trim() || DEFAULT_PREMIUM_PRODUCT_NAME;
 	}
 
 	get premiumInfoUrl(): string | null {
@@ -879,12 +857,8 @@ class RuntimeConfig {
 		return this.appPublic.legal.source_url;
 	}
 
-	get collectDateOfBirthOnRegistration(): boolean {
-		return this.appPublic.registration.collect_date_of_birth;
-	}
-
-	get setupAdminUrl(): string | null {
-		return this.appPublic.setup.admin_url;
+	get guidelinesUrl(): string | null {
+		return this.appPublic.legal.guidelines_url;
 	}
 
 	requiresSelfHostedSetup(): boolean {
@@ -919,14 +893,6 @@ class RuntimeConfig {
 
 	get marketingHost(): string {
 		return new URL(this.marketingEndpoint).host;
-	}
-
-	get inviteHost(): string {
-		return new URL(this.inviteEndpoint).host;
-	}
-
-	get giftHost(): string {
-		return new URL(this.giftEndpoint).host;
 	}
 
 	get inviteUrlBase(): string {

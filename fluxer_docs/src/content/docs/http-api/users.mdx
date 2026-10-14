@@ -6,7 +6,7 @@ description: User objects, public profiles, account tags, and the settings recor
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A user is a Fluxer account. Another account sees the [partial user object](#partial-user-object), and the owner sees the [user object](#user-object). Account mutation lives on [Current user](/http-api/users/current-user/).
+A user is a Fluxer account. Another account sees the [partial user object](#partial-user-object), and the owner sees the [user object](#user-object). Account mutation is on [Current user](/http-api/users/current-user/).
 
 Every route on this page takes a user session token or a bot token. An OAuth2 bearer credential is rejected with 403 `ACCESS_DENIED`.
 
@@ -82,6 +82,7 @@ On an instance whose `tag_style` [feature](/http-api/instance/#instance-features
 | 1 &lt;&lt; 4 | FRIENDLY_BOT | Bot accepts friend requests from users |
 | 1 &lt;&lt; 5 | FRIENDLY_BOT_MANUAL_APPROVAL | Bot requires manual approval for friend requests |
 | 1 &lt;&lt; 6 | SPAMMER | Account is flagged as a spammer |
+| 1 &lt;&lt; 7 | PROFILE_HIDDEN | Profile details are hidden from other users |
 | 1 &lt;&lt; 29 | VERIFIED | Account is verified by the instance |
 | 1 &lt;&lt; 30 | PREMIUM_BADGE | Account has premium and has not hidden its badge. Computed every time the user is read, never stored; it cannot be set. |
 
@@ -248,6 +249,7 @@ The value `1` is unassigned. Any stored authenticator value outside this registr
 An account is limited while its [user object](#user-object) reports `account_limited` as true. A limited account can still read, join voice, change its own settings, and manage its sessions. The operations below return 403 [`ACCOUNT_LIMITED`](/http-api/errors/), and the error message tells the user to check their email.
 
 - [Create message](/http-api/messages/#create-message) and [Modify message](/http-api/messages/#modify-message) in any channel except the account's personal notes
+- [Start thread from message](/http-api/threads/#start-thread-from-message) and [Start thread](/http-api/threads/#start-thread)
 - [Crosspost message](/http-api/messages/#crosspost-message)
 - [Add own reaction](/http-api/messages/#add-own-reaction)
 - [Create webhook](/http-api/webhooks/#create-webhook)
@@ -318,6 +320,8 @@ The [user settings update object](/http-api/users/settings/#user-settings-update
 | game_activity_visibility | string | `off` disables game sharing; `friends` shares the current game with friends (default `off`) |
 | game_activity_policy_revision | string | Read-only decimal revision used by the server to protect concurrent [game sharing policy writes](/http-api/users/settings/#user-settings-update-object) (default `"0"`) |
 | default_share_voice_activity<sup>7</sup> | boolean | Whether a newly accepted friend relationship starts with voice activity sharing on |
+| privacy_setup_version<sup>8</sup> | integer | The latest privacy setup version the account has reviewed, 0 if it never has |
+| privacy_setup_completed_at | ?ISO8601 timestamp | When the account last completed the privacy setup, or null if it never has |
 
 <sup>1</sup> Duplicate identifiers are removed when the array is written
 
@@ -332,6 +336,8 @@ The [user settings update object](/http-api/users/settings/#user-settings-update
 <sup>6</sup> The message is `fluxer.user.preferences.v1.SyncedPreferences`. The empty string means nothing has been synced yet. The decoded message cannot exceed 524288 bytes, the 512 KiB ceiling
 
 <sup>7</sup> The field is read-only here and is changed by [Modify voice activity sharing](/http-api/users/settings/#modify-voice-activity-sharing)
+
+<sup>8</sup> Fluxer only stores this number. The first-party client compares it with the privacy setup version it ships and asks the user to review their direct message settings while the stored number is lower
 
 ## Custom status object
 

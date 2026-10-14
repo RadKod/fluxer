@@ -225,13 +225,6 @@ const actions: Array<[string, () => Promise<unknown>]> = [
 			} as Parameters<MessageSendService['sendMessage']>[0]),
 	],
 	[
-		'send validation alternative',
-		() =>
-			sendService().validateMessageCanBeSent(
-				messageParams() as Parameters<MessageSendService['validateMessageCanBeSent']>[0],
-			),
-	],
-	[
 		'forum validation core',
 		() =>
 			sendService().validateForumStarter({...messageParams(), parentAuth: auth} as Parameters<

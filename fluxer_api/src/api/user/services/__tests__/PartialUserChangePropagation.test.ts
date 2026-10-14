@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createGuildID, createUserID} from '@app/api/BrandedTypes';
-import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {GuildMember} from '@app/api/models/GuildMember';
 import type {User} from '@app/api/models/User';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {
 	dispatchPendingPartialUserChange,
 	type PendingPartialUserChangeDeps,
 } from '@app/api/user/services/PartialUserChangePropagation';
 import {findLaneForTask, WORKER_LANES} from '@app/api/worker/WorkerLaneConfig';
 import type {UserPartialResponse} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {describe, expect, test, vi} from 'vitest';
 
 const USER_ID = createUserID(1n);
@@ -68,7 +68,7 @@ async function createDeps(guildIds: Array<(typeof GUILD_IDS)[number]> = GUILD_ID
 		} as unknown as UserCacheService,
 		gatewayService: {dispatchGuild} as unknown as IGatewayService,
 		userRepository: {findUnique: async () => USER, getUserGuildIds},
-		guildRepository: {getMember} as unknown as IGuildRepositoryAggregate,
+		guildRepository: {getMember} as unknown as GuildRepository,
 	};
 	return {deps, kvClient, dispatchGuild, getUserGuildIds, getMember};
 }

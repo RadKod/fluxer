@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {DesktopGameActivityState, ElectronAPI} from '@app/features/platform/types/Electron';
+import type {DesktopGameActivityState, ElectronAPI} from '@app/types/electron.d';
 import {ProfilePrivacyLevels} from '@fluxer/constants/src/UserConstants';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
