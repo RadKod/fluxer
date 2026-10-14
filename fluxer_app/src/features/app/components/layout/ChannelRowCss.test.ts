@@ -14,7 +14,7 @@ import {describe, expect, it} from 'vitest';
 // in globals.css; each stylesheet carries its override in one block at its end, after MARKER, so upstream merges never
 // touch these lines.
 const SRC_ROOT = fileURLToPath(new URL('../../../../', import.meta.url));
-const MARKER = '/* sanalyer: Discord-like channel rows */';
+const MARKER = '/* Micup: Discord-like channel rows */';
 
 function block(file: string): string {
 	const parts = readFileSync(`${SRC_ROOT}${file}`, 'utf8').split(MARKER);
@@ -57,8 +57,8 @@ describe('channel rows', () => {
 // on the frame color, the chat on the body color, and the channel list, DM list, user area and member list panels on
 // --side-panel-background; each panel re-scopes the surface variable its descendants read, so light stays upstream.
 // The channel header takes the palette's channel header color.
-const PANELS_MARKER = '/* sanalyer: lighter side panels in the coal theme */';
-const COAL_HEADER_MARKER = '/* sanalyer: coal channel header on its own step */';
+const PANELS_MARKER = '/* Micup: lighter side panels in the coal theme */';
+const COAL_HEADER_MARKER = '/* Micup: coal channel header on its own step */';
 // Every Micup coal rule steps aside while a custom theme (Theme Studio or the theme library) is applied, so the theme's
 // own surface variables paint the panels, header and chat as upstream.
 const COAL_OR_DARK = ':global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style)))';
@@ -67,7 +67,7 @@ function section(file: string, marker: string): string {
 	const css = readFileSync(`${SRC_ROOT}${file}`, 'utf8');
 	expect(css.split(marker)).toHaveLength(2);
 	const after = css.slice(css.indexOf(marker) + marker.length);
-	const next = after.indexOf('/* sanalyer:');
+	const next = after.indexOf('/* Micup:');
 	return (next === -1 ? after : after.slice(0, next)).replace(/\s+/g, ' ').trim();
 }
 
@@ -106,7 +106,7 @@ describe('coal side panels', () => {
 });
 
 // Keep Fluxer's 32px role header and 12px top padding in both the virtual list and its skeleton.
-const ROLE_GAP_MARKER = '/* sanalyer: role group gap in the member list */';
+const ROLE_GAP_MARKER = '/* Micup: role group gap in the member list */';
 
 describe('member list role groups', () => {
 	it('keeps the virtual row offsets and CSS header height aligned at the upstream size', () => {

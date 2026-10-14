@@ -8,7 +8,7 @@ import {describe, expect, it} from 'vitest';
 // scaled with it. Upstream's rule stays as is; the Micup block at the end of the file overrides it (MARKER). The build
 // takes 1px off every font size (micup-shrink-font-size), so the line renders at 0.7625rem instead of 0.6875rem.
 const CSS = readFileSync(fileURLToPath(new URL('./VoiceConnectionStatus.module.css', import.meta.url)), 'utf8');
-const MARKER = '/* sanalyer: voice panel channel line 10% larger */';
+const MARKER = '/* Micup: voice panel channel line 10% larger */';
 
 const flat = (text: string) => text.replace(/\s+/g, ' ').trim();
 

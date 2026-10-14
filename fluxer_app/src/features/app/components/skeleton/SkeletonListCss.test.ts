@@ -10,7 +10,7 @@ import {describe, expect, it} from 'vitest';
 // one block at its end, after MARKER, so upstream merges never touch these lines.
 const SRC_ROOT = fileURLToPath(new URL('../../../../', import.meta.url));
 const SKELETON_DIR = 'features/app/components/skeleton/';
-const MARKER = '/* sanalyer: static list skeletons */';
+const MARKER = '/* Micup: static list skeletons */';
 
 function read(file: string): string {
 	return readFileSync(`${SRC_ROOT}${file}`, 'utf8');

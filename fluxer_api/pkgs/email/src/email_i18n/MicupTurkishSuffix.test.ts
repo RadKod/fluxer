@@ -3,7 +3,7 @@
 import {EMAIL_I18N_LOCALE_MESSAGES} from '@pkgs/email/src/email_i18n/EmailI18nLocales';
 import {describe, expect, it} from 'vitest';
 
-// product_name is "sanalyer" (front vowel e, voiced r), so Turkish suffixes are 'i, 'in, 'e, 'de, 'den, 'deki.
+// Micup: product_name is "Micup" (back vowel u, hard p), so Turkish suffixes are 'u, 'un, 'a, 'ta, 'tan, 'taki.
 const WRONG_SUFFIX = /\{product_name\}'(u|un|ı|ın|a|ya|ye|ta|tan|taki|te|ten|teki|da|dan|daki)(?![a-zçğıöşü])/g;
 
 describe('sanalyer Turkish email suffixes', () => {

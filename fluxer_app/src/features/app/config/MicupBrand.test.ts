@@ -171,7 +171,7 @@ describe('sanalyer brand text', () => {
 	// "sanalyer" ends in a front vowel and a voiced r, like upstream's "Fluxer": sanalyer'i, sanalyer'e, sanalyer'de,
 	// sanalyer'den, sanalyer'in. Micup's back-vowel suffixes ('u, 'a, 'ta) must not come back.
 	it('attaches Turkish suffixes that fit "sanalyer" to the product name', () => {
-		const tr = catalogs.find(({locale}) => locale === 'tr')?.entries ?? [];
+	// Micup'u, Micup'a, Micup'ta, Micup'tan, Micup'un.
 		const suffixes = tr.flatMap(([, msgstr]) =>
 			[...msgstr.matchAll(/\{(?:productName|PRODUCT_NAME)\}['’](\p{L}+)/gu)].map((match) => match[1]),
 		);
@@ -194,7 +194,7 @@ describe('sanalyer brand text', () => {
 	// Catalog text is checked above; these values are filled into it at runtime. The listed ones are never shown on
 	// Micup: Weblate and fluxer.dev links render only when the instance is not self-hosted, the rest are unused.
 	it('keeps Fluxer addresses only in display constants sanalyer never shows', async () => {
-		const constants = await import('@app/features/app/config/I18nDisplayConstants');
+	// Micup: Weblate and fluxer.dev links render only when the instance is not self-hosted, the rest are unused.
 		const fluxerValued = Object.entries(constants)
 			.filter(([, value]) => typeof value === 'string' && /fluxer/i.test(value))
 			.map(([name]) => name)

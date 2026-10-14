@@ -8,7 +8,7 @@ import {describe, expect, it} from 'vitest';
 // frames for as long as the message is on screen, so the text stays static and fully visible. The override lives in
 // one block at the end of the stylesheet, after MARKER, so upstream merges never touch these lines.
 const CSS = readFileSync(fileURLToPath(new URL('./Markup.module.css', import.meta.url)), 'utf8');
-const MARKER = '/* sanalyer: static ANSI blink */';
+const MARKER = '/* Micup: static ANSI blink */';
 
 describe('message markup', () => {
 	it('keeps ANSI blink text static and visible', () => {
