@@ -2,6 +2,8 @@
 
 import {resetSudoModeServiceForTesting} from '@app/api/auth/services/SudoModeService';
 import {resetIpBanExemptionsForTesting} from '@app/api/ban/IpBanExemptions';
+import {feedDiscoverCache} from '@app/api/feed/discover/FeedDiscoverCache';
+import {feedSuggestionCache} from '@app/api/feed/suggest/FeedSuggestionCache';
 import {resetSsoRequestUrlPolicyForTesting} from '@app/api/instance/SsoConfigValidation';
 import {resetGlobalLimitConfigServiceForTesting} from '@app/api/limits/LimitConfigService';
 import {bannedAvatarHashCache} from '@app/api/middleware/BannedAvatarHashCache';
@@ -35,4 +37,6 @@ export async function resetServiceStateForTesting(): Promise<void> {
 	phraseBlocklistCache.resetForTesting();
 	bannedAvatarHashCache.resetForTesting();
 	profileSubstringBlocklistCache.resetForTesting();
+	feedDiscoverCache.resetForTesting();
+	feedSuggestionCache.resetForTesting();
 }

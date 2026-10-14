@@ -26,6 +26,7 @@ import {
 	DownloadSimpleIcon,
 	type Icon,
 	type IconWeight,
+	NewspaperIcon,
 	PlusIcon,
 	QuestionMarkIcon,
 	StarIcon,
@@ -137,6 +138,37 @@ const RailActionButton = ({
 				data-flx="app.skeleton.guild-rail-skeleton.rail-action-button.icon"
 			/>
 		</flx-app-guild-rail-skeleton-action-icon>
+	</flx-app-guild-rail-skeleton-item>
+);
+
+// Micup: with a branding icon the feed tile is that icon (see FeedButton), so the startup rail draws it the same way.
+const FeedLogoPlaceholder = ({iconUrl, selected}: {readonly iconUrl: string; readonly selected: boolean}) => (
+	<flx-app-guild-rail-skeleton-item
+		className={flxElementClassName(styles.item)}
+		data-selected={selectedAttribute(selected)}
+		data-flx="app.skeleton.guild-rail-skeleton.feed-logo-placeholder.item"
+	>
+		{selected && (
+			<GuildRailSkeletonIndicator
+				selected={true}
+				data-flx="app.skeleton.guild-rail-skeleton.feed-logo-placeholder.guild-rail-skeleton-indicator"
+			/>
+		)}
+		<flx-app-guild-rail-skeleton-fluxer-icon
+			className={flxElementClassName(styles.fluxerIcon, styles.feedLogoTile)}
+			data-flx="app.skeleton.guild-rail-skeleton.feed-logo-placeholder.icon-surface"
+		>
+			<img
+				src={iconUrl}
+				alt=""
+				draggable={false}
+				onError={(event) => {
+					event.currentTarget.hidden = true;
+				}}
+				className={styles.feedLogo}
+				data-flx="app.skeleton.guild-rail-skeleton.feed-logo-placeholder.logo"
+			/>
+		</flx-app-guild-rail-skeleton-fluxer-icon>
 	</flx-app-guild-rail-skeleton-item>
 );
 
@@ -430,12 +462,14 @@ function renderOrganizedItem(
 interface GuildRailSkeletonProps {
 	readonly isFluxerSelected: boolean;
 	readonly isFavoritesSelected: boolean;
+	readonly isFeedSelected: boolean;
 	readonly isDiscoverySelected: boolean;
 }
 
 export const GuildRailSkeleton: React.FC<GuildRailSkeletonProps> = ({
 	isFluxerSelected,
 	isFavoritesSelected,
+	isFeedSelected,
 	isDiscoverySelected,
 }) => {
 	const [mountState] = useState(() => {
@@ -464,25 +498,30 @@ export const GuildRailSkeleton: React.FC<GuildRailSkeletonProps> = ({
 	const selectedItemIndex = rememberedLayout?.selectedItemIndex ?? SKELETON_NO_SELECTED_RAIL_ITEM_INDEX;
 	const fluxerVisible = rememberedLayout?.fluxerVisible ?? !RuntimeConfig.directMessagesDisabled;
 	const favoritesVisible = rememberedLayout?.favoritesVisible ?? true;
+	const feedVisible = rememberedLayout?.feedVisible ?? false;
 	const discoveryVisible = rememberedLayout?.discoveryVisible ?? communityActionsAvailable;
 	const addGuildVisible = rememberedLayout?.addGuildVisible ?? communityActionsAvailable;
 	const downloadVisible = rememberedLayout?.downloadVisible ?? SHOWS_DOWNLOAD_ACTION;
 	const helpVisible = rememberedLayout?.helpVisible ?? true;
 	const hasGuildItems = outageVisible || organizedItems.length > 0;
 	const fluxerIsLastTopRow = fluxerVisible && !favoritesVisible && inlineDmRowCount === 0;
-	const hasBottomRailButtons = discoveryVisible || addGuildVisible || downloadVisible || helpVisible;
+	const hasBottomRailButtons = feedVisible || discoveryVisible || addGuildVisible || downloadVisible || helpVisible;
 	const itemsEndWithoutGap = outageVisible && organizedItems.length === 0 && hasBottomRailButtons;
 	let guildsSectionTrailingGap: boolean;
 	if (helpVisible) {
 		guildsSectionTrailingGap = false;
-	} else if (discoveryVisible || addGuildVisible || downloadVisible) {
+	} else if (feedVisible || discoveryVisible || addGuildVisible || downloadVisible) {
 		guildsSectionTrailingGap = true;
 	} else {
 		guildsSectionTrailingGap = organizedItems.length > 0;
 	}
 	const topRowCount = (fluxerVisible ? 1 : 0) + (favoritesVisible ? 1 : 0) + inlineDmRowCount;
 	const bottomButtonCount =
-		(discoveryVisible ? 1 : 0) + (addGuildVisible ? 1 : 0) + (downloadVisible ? 1 : 0) + (helpVisible ? 1 : 0);
+		(feedVisible ? 1 : 0) +
+		(discoveryVisible ? 1 : 0) +
+		(addGuildVisible ? 1 : 0) +
+		(downloadVisible ? 1 : 0) +
+		(helpVisible ? 1 : 0);
 	const scrollTop = resolveDrawableRailScrollTopPx({
 		bottomButtonCount,
 		organizedItems,
@@ -558,6 +597,21 @@ export const GuildRailSkeleton: React.FC<GuildRailSkeletonProps> = ({
 								{organizedItems.map((item, index) => renderOrganizedItem(item, index, selectedItemIndex))}
 							</flx-app-guild-rail-skeleton-items>
 						)}
+						{feedVisible &&
+							(RuntimeConfig.iconUrl ? (
+								<FeedLogoPlaceholder
+									iconUrl={RuntimeConfig.iconUrl}
+									selected={isFeedSelected}
+									data-flx="app.skeleton.guild-rail-skeleton.feed-logo-placeholder"
+								/>
+							) : (
+								<RailActionButton
+									icon={NewspaperIcon}
+									weight="fill"
+									selected={isFeedSelected}
+									data-flx="app.skeleton.guild-rail-skeleton.rail-action-button--feed"
+								/>
+							))}
 						{discoveryVisible && (
 							<RailActionButton
 								icon={CompassIcon}

@@ -101,6 +101,8 @@ fn filters_card(config: &AdminConfig, filters: &ReportFilters<'_>, limit: u32) -
                         ("0", "Message"),
                         ("1", "User"),
                         ("2", "Guild"),
+                        ("3", "Feed Post"),
+                        ("4", "Feed Comment"),
                     ], filters.report_type.unwrap_or("")))
                     (select_input("category", "Category", report_category_options(), filters.category.unwrap_or("")))
                     (select_input("sort", "Sort", &[
@@ -173,6 +175,8 @@ fn format_report_type(report_type: i32) -> (&'static str, BadgeVariant) {
         0 => ("Message", BadgeVariant::Info),
         1 => ("User", BadgeVariant::Default),
         2 => ("Guild", BadgeVariant::Warning),
+        3 => ("Feed Post", BadgeVariant::Info),
+        4 => ("Feed Comment", BadgeVariant::Info),
         _ => ("Unknown", BadgeVariant::Default),
     }
 }
@@ -271,7 +275,7 @@ fn reporter_cell(config: &AdminConfig, report: &ReportEntry) -> Markup {
 fn reported_cell(config: &AdminConfig, report: &ReportEntry) -> Markup {
     match report.report_type {
         0 => reported_message_cell(config, report),
-        1 => reported_user_cell(config, report),
+        1 | 3 | 4 => reported_user_cell(config, report),
         2 => reported_guild_cell(config, report),
         _ => html! { span class="text-neutral-400 text-sm italic" { "Unknown" } },
     }

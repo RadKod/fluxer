@@ -51,6 +51,10 @@ core_event_map() ->
         <<"FAVORITE_MEME_CREATE">> => favorite_meme_create,
         <<"FAVORITE_MEME_DELETE">> => favorite_meme_delete,
         <<"FAVORITE_MEME_UPDATE">> => favorite_meme_update,
+        <<"FEED_NOTIFICATION_ACK">> => feed_notification_ack,
+        <<"FEED_NOTIFICATION_CREATE">> => feed_notification_create,
+        <<"FOLLOW_CREATE">> => follow_create,
+        <<"FOLLOW_DELETE">> => follow_delete,
         <<"INVITE_CREATE">> => invite_create,
         <<"INVITE_DELETE">> => invite_delete,
         <<"PRESENCE_UPDATE">> => presence_update,
@@ -63,6 +67,7 @@ core_event_map() ->
         <<"SAVED_MESSAGE_CREATE">> => saved_message_create,
         <<"SAVED_MESSAGE_DELETE">> => saved_message_delete,
         <<"SESSIONS_REPLACE">> => sessions_replace,
+        <<"TABLE_GAME_UPDATE">> => table_game_update,
         <<"TYPING_START">> => typing_start
     }.
 
@@ -158,6 +163,16 @@ normalize_binary_existing_atom_test() ->
 normalize_known_private_event_test() ->
     ?assertEqual(user_guild_settings_update, normalize(<<"USER_GUILD_SETTINGS_UPDATE">>)),
     ?assertEqual(user_note_update, normalize(<<"USER_NOTE_UPDATE">>)).
+
+normalize_micup_event_test() ->
+    ?assertEqual(feed_notification_ack, normalize(<<"FEED_NOTIFICATION_ACK">>)),
+    ?assertEqual(feed_notification_create, normalize(<<"FEED_NOTIFICATION_CREATE">>)),
+    ?assertEqual(follow_create, normalize(<<"FOLLOW_CREATE">>)),
+    ?assertEqual(follow_delete, normalize(<<"FOLLOW_DELETE">>)).
+
+normalize_micup_table_game_event_test() ->
+    ?assertEqual(table_game_update, normalize(<<"TABLE_GAME_UPDATE">>)),
+    ?assertEqual(table_game_update, normalize(<<"table_game_update">>)).
 
 normalize_thread_events_test() ->
     ?assertEqual(thread_create, normalize(<<"THREAD_CREATE">>)),

@@ -1,0 +1,176 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* A plan card of the perk cards' family (PremiumPerkTiles .tile): the same surface, edge, corner and type. The
+   recommended one takes the table's language: a lavender edge, a violet tone fading from the top and the only lift on
+   the page besides the floating buy capsule. */
+.card {
+	composes: tokens card from '@app/features/premium/components/PremiumSurface.module.css';
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	padding: 1rem;
+	transition: transform 0.16s var(--premium-ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.card:hover {
+		transform: translateY(-0.125rem);
+	}
+}
+
+:global(html.reduced-motion) .card:hover {
+	transform: none;
+}
+
+/* The plan's picture across the top of the card, fading into it. */
+.art {
+	position: relative;
+	height: 7.5rem;
+	margin: -1rem -1rem 0.875rem;
+	overflow: hidden;
+	border-radius: calc(var(--premium-radius-card) - 0.0625rem) calc(var(--premium-radius-card) - 0.0625rem) 0 0;
+	mask-image: linear-gradient(180deg, #000 60%, transparent);
+}
+
+.artImage {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	user-select: none;
+}
+
+/* What a month of the package saves against the monthly plan; its own line, apart from a campaign badge. */
+.savings {
+	flex-basis: 100%;
+	font-size: var(--premium-fs-small);
+	font-weight: 700;
+	color: var(--accent-success);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.recommended {
+	border-color: color-mix(in srgb, var(--premium-periwinkle) 45%, transparent);
+	background:
+		linear-gradient(180deg, color-mix(in srgb, var(--premium-violet) 16%, transparent), transparent 45%),
+		var(--premium-card-bg);
+	box-shadow: var(--premium-card-shade), var(--premium-float-shade);
+}
+
+.ribbon {
+	position: absolute;
+	top: -0.8125rem;
+	left: 50%;
+	transform: translateX(-50%);
+	padding: 0.1875rem 0.75rem;
+	border-radius: var(--radius-full);
+	background: var(--premium-deep);
+	color: var(--premium-hero-ink);
+	font-size: var(--premium-fs-small);
+	font-weight: 700;
+	line-height: 1.125rem;
+	white-space: nowrap;
+}
+
+.title {
+	composes: headingFill from '@app/features/premium/components/PremiumSurface.module.css';
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 700;
+	line-height: 1.25rem;
+}
+
+.priceRow {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0.625rem;
+	margin: 0.75rem 0 0.125rem;
+}
+
+.price {
+	font-size: var(--premium-fs-price);
+	font-weight: 700;
+	line-height: 1.1;
+	letter-spacing: var(--premium-track-head);
+	font-variant-numeric: tabular-nums;
+	color: var(--text-primary);
+}
+
+.was {
+	font-size: var(--premium-fs-body);
+	color: var(--text-tertiary);
+}
+
+.discount {
+	padding: 0.125rem 0.5rem;
+	border-radius: var(--radius-full);
+	background: var(--premium-ice);
+	color: var(--premium-night);
+	font-size: var(--premium-fs-small);
+	font-weight: 700;
+}
+
+/* Keeps its line on the one month card so the cards' rows line up. */
+.perMonth {
+	min-height: 1.25rem;
+	margin: 0;
+	font-size: var(--premium-fs-body);
+	line-height: 1.25rem;
+	color: var(--text-secondary);
+}
+
+.azn {
+	margin: 0.125rem 0 0;
+	font-size: var(--premium-fs-small);
+	line-height: 1.125rem;
+	color: var(--text-tertiary);
+	font-variant-numeric: tabular-nums;
+}
+
+.perks {
+	display: grid;
+	gap: 0.5rem;
+	margin: 1rem 0;
+	padding: 0;
+	list-style: none;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	color: var(--text-secondary);
+}
+
+.perk {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.perkIcon {
+	flex-shrink: 0;
+	width: 1rem;
+	height: 1rem;
+	color: var(--premium-sky);
+}
+
+:global(.theme-light) .perkIcon {
+	color: var(--premium-violet);
+}
+
+.countdown {
+	margin: -0.5rem 0 1rem;
+}
+
+.action {
+	composes: buyAccent from '@app/features/premium/components/PremiumSurface.module.css';
+	margin-top: auto;
+}
+
+.halo {
+	display: flex;
+	width: 100%;
+}
+
+.srOnly {
+	composes: srOnly from '@app/features/premium/components/PremiumSurface.module.css';
+}

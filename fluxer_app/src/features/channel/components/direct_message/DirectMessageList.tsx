@@ -7,11 +7,14 @@ import {reportSkeletonDMSidebarLayout} from '@app/features/app/components/skelet
 import {useMergeRefs} from '@app/features/app/hooks/useMergeRefs';
 import {useRovingFocusList} from '@app/features/app/hooks/useRovingFocusList';
 import {useSkeletonLayoutReport} from '@app/features/app/hooks/useSkeletonLayoutMemoryCapture';
+import {BOT_SYSTEM_DESCRIPTOR} from '@app/features/bots/utils/BotMessageDescriptors';
 import {PersonalNotesPurgeFailedModal} from '@app/features/channel/components/alerts/PersonalNotesPurgeFailedModal';
 import {CreateDMBottomSheet} from '@app/features/channel/components/bottomsheets/CreateDMBottomSheet';
 import styles from '@app/features/channel/components/direct_message/DirectMessageList.module.css';
 import {getDmRouteChannelId} from '@app/features/channel/components/direct_message/DMListHelpers';
 import {DMListItem} from '@app/features/channel/components/direct_message/DMListItem';
+import {DMListPageItems} from '@app/features/channel/components/direct_message/DMListPageItems';
+import pageItemStyles from '@app/features/channel/components/direct_message/DMListPageItems.module.css';
 import {CreateDMModal} from '@app/features/channel/components/modals/CreateDMModal';
 import Channels from '@app/features/channel/state/Channels';
 import {getCreateDMRestrictionMessage, getCreateDmRestriction} from '@app/features/channel/utils/CreateDMModalUtils';
@@ -21,13 +24,20 @@ import * as MessageCommands from '@app/features/messaging/commands/MessageComman
 import {getSortedDmChannels} from '@app/features/messaging/utils/DmChannelUtils';
 import * as NavigationCommands from '@app/features/navigation/commands/NavigationCommands';
 import SelectedChannel from '@app/features/navigation/state/SelectedChannel';
+import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
 import {useLocation} from '@app/features/platform/components/router/RouterReact';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import * as PremiumModalCommands from '@app/features/premium/commands/PremiumModalCommands';
-import {getPremiumProductName, shouldShowPremiumFeatures} from '@app/features/premium/utils/PremiumUtils';
+import {
+	getPremiumProductName,
+	isPremiumPageAvailable,
+	shouldShowPremiumFeatures,
+} from '@app/features/premium/utils/PremiumUtils';
 import {AddFriendSheet} from '@app/features/relationship/components/modals/AddFriendSheet';
 import Relationships from '@app/features/relationship/state/Relationships';
 import QuickSwitcher from '@app/features/search/state/QuickSwitcher';
+import {isShopPageAvailable} from '@app/features/shop/utils/ShopAvailability';
+import {SHOP_DESCRIPTOR} from '@app/features/shop/utils/ShopMessageDescriptors';
 import {DeleteIcon} from '@app/features/ui/action_menu/ContextMenuIcons';
 import {PersonalNotesContextMenu} from '@app/features/ui/action_menu/PersonalNotesContextMenu';
 import * as ContextMenuCommands from '@app/features/ui/commands/ContextMenuCommands';
@@ -56,9 +66,12 @@ import {
 	NotePencilIcon,
 	PaperPlaneIcon,
 	PlusIcon,
+	RobotIcon,
+	StorefrontIcon,
 	UserPlusIcon,
 	UsersThreeIcon,
 } from '@phosphor-icons/react';
+import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
@@ -260,7 +273,12 @@ export const DMList = observer(() => {
 		currentUserId != null &&
 		(routeDmChannelId === currentUserId || (isMobileDmIndexRoute && lastSelectedDmChannelId === currentUserId));
 	const showPremiumFeatures = shouldShowPremiumFeatures();
-	const showMobilePlutoniumButton = showPremiumFeatures && !isMobile;
+	// Micup: on a self-hosted instance premium and the shop are pages and have no settings tab, so mobile lists them too.
+	const showMobilePlutoniumButton = showPremiumFeatures && (!isMobile || isPremiumPageAvailable());
+	const showShop = isShopPageAvailable();
+	const openShop = () => RouterUtils.transitionTo(Routes.SHOP);
+	const isBotsPage = location.pathname === Routes.BOTS;
+	const openBots = () => RouterUtils.transitionTo(Routes.BOTS);
 	const personalNotesVisible = currentUserId != null;
 	const displayedDmChannelCount = filteredDmChannels.length;
 	const dmRowsContainerRef = useRef<HTMLDivElement | null>(null);
@@ -421,7 +439,7 @@ export const DMList = observer(() => {
 								<button
 									type="button"
 									onClick={() => PremiumModalCommands.open()}
-									className={styles.mobilePlutoniumButton}
+									className={clsx(styles.mobilePlutoniumButton, pageItemStyles.accent)}
 									data-flx="channel.direct-message.dm-list.mobile-plutonium-button.open"
 								>
 									<div
@@ -429,7 +447,7 @@ export const DMList = observer(() => {
 										data-flx="channel.direct-message.dm-list.mobile-special-button-content--2"
 									>
 										<div
-											className={styles.mobileSpecialButtonIcon}
+											className={clsx(styles.mobileSpecialButtonIcon, pageItemStyles.accentIcon)}
 											data-flx="channel.direct-message.dm-list.mobile-special-button-icon--2"
 										>
 											<CrownIcon
@@ -443,7 +461,7 @@ export const DMList = observer(() => {
 											data-flx="channel.direct-message.dm-list.mobile-special-button-text--2"
 										>
 											<span
-												className={styles.mobileSpecialButtonLabel}
+												className={clsx(styles.mobileSpecialButtonLabel, pageItemStyles.accentLabel)}
 												data-flx="channel.direct-message.dm-list.mobile-special-button-label--2"
 											>
 												{getPremiumProductName()}
@@ -453,6 +471,75 @@ export const DMList = observer(() => {
 								</button>
 							</FocusRing>
 						)}
+						{showShop && (
+							<FocusRing offset={-2} data-flx="channel.direct-message.dm-list.focus-ring.mobile-shop">
+								<button
+									type="button"
+									onClick={openShop}
+									className={clsx(styles.mobileSpecialButton, pageItemStyles.accent)}
+									data-flx="channel.direct-message.dm-list.mobile-shop-button.open-shop"
+								>
+									<div
+										className={styles.mobileSpecialButtonContent}
+										data-flx="channel.direct-message.dm-list.mobile-special-button-content.shop"
+									>
+										<div
+											className={clsx(styles.mobileSpecialButtonIcon, pageItemStyles.accentIcon)}
+											data-flx="channel.direct-message.dm-list.mobile-special-button-icon.shop"
+										>
+											<StorefrontIcon
+												weight="fill"
+												className={styles.iconSize5}
+												data-flx="channel.direct-message.dm-list.icon-size5.mobile-shop"
+											/>
+										</div>
+										<div
+											className={styles.mobileSpecialButtonText}
+											data-flx="channel.direct-message.dm-list.mobile-special-button-text.shop"
+										>
+											<span
+												className={clsx(styles.mobileSpecialButtonLabel, pageItemStyles.accentLabel)}
+												data-flx="channel.direct-message.dm-list.mobile-special-button-label.shop"
+											>
+												{i18n._(SHOP_DESCRIPTOR)}
+											</span>
+										</div>
+									</div>
+								</button>
+							</FocusRing>
+						)}
+						<FocusRing offset={-2} data-flx="channel.direct-message.dm-list.focus-ring.mobile-bots">
+							<button
+								type="button"
+								onClick={openBots}
+								aria-current={isBotsPage ? 'page' : undefined}
+								className={isBotsPage ? styles.mobileSpecialButtonSelected : styles.mobileSpecialButton}
+								data-flx="channel.direct-message.dm-list.mobile-bots-button"
+							>
+								<div
+									className={styles.mobileSpecialButtonContent}
+									data-flx="channel.direct-message.dm-list.mobile-bots-content"
+								>
+									<div
+										className={styles.mobileSpecialButtonIcon}
+										data-flx="channel.direct-message.dm-list.mobile-bots-icon"
+									>
+										<RobotIcon
+											weight="fill"
+											className={styles.iconSize5}
+											aria-hidden
+											data-flx="channel.direct-message.dm-list.mobile-bots-robot"
+										/>
+									</div>
+									<span
+										className={styles.mobileSpecialButtonLabel}
+										data-flx="channel.direct-message.dm-list.mobile-bots-label"
+									>
+										{i18n._(BOT_SYSTEM_DESCRIPTOR)}
+									</span>
+								</div>
+							</button>
+						</FocusRing>
 						{filteredDmChannels.map((channel) => {
 							const isSelected = highlightedChannelId === channel.id;
 							return (
@@ -587,35 +674,7 @@ export const DMList = observer(() => {
 							</div>
 						</ClickableItem>
 					)}
-					{showPremiumFeatures && (
-						<ClickableItem
-							isSelected={location.pathname === Routes.PLUTONIUM}
-							onClick={() => PremiumModalCommands.open()}
-							data-flx="channel.direct-message.dm-list.clickable-item.open"
-						>
-							<div
-								className={styles.clickableItemContent}
-								data-flx="channel.direct-message.dm-list.clickable-item-content--3"
-							>
-								<div
-									className={styles.clickableItemIcon}
-									data-flx="channel.direct-message.dm-list.clickable-item-icon--3"
-								>
-									<CrownIcon
-										weight="fill"
-										className={styles.iconSize5}
-										data-flx="channel.direct-message.dm-list.icon-size5--6"
-									/>
-								</div>
-								<span
-									className={styles.clickableItemText}
-									data-flx="channel.direct-message.dm-list.clickable-item-text--3"
-								>
-									{getPremiumProductName()}
-								</span>
-							</div>
-						</ClickableItem>
-					)}
+					<DMListPageItems data-flx="channel.direct-message.dm-list.dm-list-page-items" />
 					<div className={styles.dmSectionSeparator} data-flx="channel.direct-message.dm-list.dm-section-separator" />
 					<div className={styles.dmSectionHeader} data-flx="channel.direct-message.dm-list.dm-section-header">
 						<div

@@ -3,6 +3,7 @@
 import {requireSudoMode} from '@app/api/auth/services/SudoVerificationService';
 import {createAttachmentID, createChannelID, createMessageID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
+import {AnnouncementChannelsRouteGuard} from '@app/api/channel/AnnouncementChannelsRouteGuard';
 import type {MessageRequest, MessageUpdateRequest} from '@app/api/channel/MessageTypes';
 import {normalizeMessageRequestPayload} from '@app/api/channel/services/message/MessageRequestCompatibility';
 import {parseMultipartMessageData} from '@app/api/channel/services/message/MessageRequestParser';
@@ -531,6 +532,7 @@ export function MessageController(app: HonoApp) {
 	);
 	app.post(
 		'/channels/:channel_id/messages/:message_id/crosspost',
+		AnnouncementChannelsRouteGuard,
 		RateLimitMiddleware(RateLimitConfigs.CHANNEL_MESSAGE_CROSSPOST),
 		LoginRequired,
 		Validator('param', ChannelIdMessageIdParam),
@@ -560,6 +562,7 @@ export function MessageController(app: HonoApp) {
 	);
 	app.get(
 		'/channels/:channel_id/messages/:message_id/crosspost-source',
+		AnnouncementChannelsRouteGuard,
 		RateLimitMiddleware(RateLimitConfigs.CHANNEL_MESSAGE_CROSSPOST_SOURCE),
 		LoginRequired,
 		Validator('param', ChannelIdMessageIdParam),

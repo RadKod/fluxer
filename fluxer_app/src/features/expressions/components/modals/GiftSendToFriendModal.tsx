@@ -26,7 +26,7 @@ import {useCallback, useState} from 'react';
 
 const YOU_ALREADY_HAVE_LIFETIME_DESCRIPTOR = msg({
 	message: 'You already have lifetime {premiumProductName}',
-	comment: 'Status label shown to a user who already owns the lifetime premium tier.',
+	comment: 'Status label shown to a user who already owns the lifetime Plus tier.',
 });
 const SEND_GIFT_DESCRIPTOR = msg({
 	message: 'Send gift',

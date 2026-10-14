@@ -1,14 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {Routes} from '@app/app/Routes';
+import Accessibility from '@app/features/accessibility/state/Accessibility';
+import Channels from '@app/features/channel/state/Channels';
 import {TURN_OFF_CAMERA_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
+import Navigation from '@app/features/navigation/state/Navigation';
+import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
 import Permission from '@app/features/permissions/state/Permission';
 import NativePermission from '@app/features/permissions/system/state/NativePermission';
+import {VOICE_ROOM_CONTROL_DISCOVERY_STORAGE_KEY} from '@app/features/platform/state/PersistentStorage';
+import {awaitHydration} from '@app/features/platform/utils/MobXPersistence';
 import * as ContextMenuCommands from '@app/features/ui/commands/ContextMenuCommands';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {modal} from '@app/features/ui/commands/ModalCommands';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
+import MobileLayout from '@app/features/ui/state/MobileLayout';
 import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
 import {isDesktop} from '@app/features/ui/utils/NativeUtils';
+import {SettingsStatusBadge} from '@app/features/user/components/settings_utils/SettingsStatusBadge';
 import {ActiveScreenShareMenu} from '@app/features/voice/components/ActiveScreenShareMenu';
 import {
 	CameraPreviewModalInRoom,
@@ -28,19 +37,25 @@ import type {LivekitParticipantSnapshot} from '@app/features/voice/engine/VoiceP
 import {useCameraUserCapBlocked} from '@app/features/voice/hooks/useCameraUserCapBlocked';
 import {useMediaDevices} from '@app/features/voice/hooks/useMediaDevices';
 import ActiveScreenShareSource from '@app/features/voice/state/ActiveScreenShareSource';
+import PopoutWindowManager from '@app/features/voice/state/PopoutWindowManager';
+import VoiceCallFullscreen from '@app/features/voice/state/VoiceCallFullscreen';
 import {resolveDisplayShareEnvironment} from '@app/features/voice/utils/ScreenShareEnvironment';
 import {
 	VOICE_SHARE_SCREEN_DESCRIPTOR,
 	VOICE_TURN_ON_CAMERA_DESCRIPTOR,
 } from '@app/features/voice/utils/VoiceMessageDescriptors';
+import {roomViewFor} from '@app/features/voice_scene/state/RoomView';
+import VoiceRoomControlDiscovery from '@app/features/voice_scene/state/VoiceRoomControlDiscovery';
+import VoiceSceneSettings from '@app/features/voice_scene/state/VoiceSceneSettings';
+import VoiceSceneTvRequest from '@app/features/voice_scene/state/VoiceSceneTvRequest';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {VOICE_CHANNEL_CAMERA_USER_LIMIT} from '@fluxer/constants/src/LimitConstants';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
-import {CameraIcon, CameraSlashIcon, MonitorPlayIcon} from '@phosphor-icons/react';
+import {CameraIcon, CameraSlashIcon, CubeIcon, MonitorPlayIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
-import {type MouseEvent as ReactMouseEvent, useCallback} from 'react';
+import {type MouseEvent as ReactMouseEvent, useCallback, useEffect, useState} from 'react';
 
 const WAITING_FOR_CONNECTION_DESCRIPTOR = msg({
 	message: 'Waiting for connection...',
@@ -59,8 +74,32 @@ const CONFIGURE_OR_END_SCREEN_SHARE_DESCRIPTOR = msg({
 	message: 'Configure or end screen share',
 	comment: 'Tooltip / aria label on the screen-share control while a share is active. Opens the configure / end menu.',
 });
+const OPEN_ROOM_DESCRIPTOR = msg({
+	message: '3D room',
+	comment: 'Voice panel button: open the connected channel in its 3D room view.',
+});
+const CLOSE_ROOM_DESCRIPTOR = msg({
+	message: 'Close 3D room',
+	comment: 'Voice panel button: return to the flat call view while keeping the call expanded.',
+});
+const NEW_ROOM_CONTROL_DESCRIPTOR = msg({
+	message: 'New',
+	context: 'navigation-badge',
+	comment: 'Accessible hint that the voice panel 3D room control is newly available.',
+});
 export const LocalParticipantControls = observer(() => {
 	const {i18n} = useLingui();
+	const [roomSettingsHydrated, setRoomSettingsHydrated] = useState(false);
+	const [animateRoomNewBadge, setAnimateRoomNewBadge] = useState(false);
+	useEffect(() => {
+		let mounted = true;
+		void awaitHydration(VOICE_ROOM_CONTROL_DISCOVERY_STORAGE_KEY).then(() => {
+			if (mounted) setRoomSettingsHydrated(true);
+		});
+		return () => {
+			mounted = false;
+		};
+	}, []);
 	useMediaEngineVersion();
 	const {videoDevices} = useMediaDevices();
 	const room = MediaEngine.room;
@@ -80,6 +119,49 @@ export const LocalParticipantControls = observer(() => {
 	const displayShareEnvironment = resolveDisplayShareEnvironment(isDesktop(), NativePermission.isLinuxWaylandDesktop);
 	const channelId = MediaEngine.channelId;
 	const guildId = MediaEngine.guildId;
+	const channel = channelId ? Channels.getChannel(channelId) : null;
+	const roomView = channel ? roomViewFor(channel) : null;
+	const showRoomControl =
+		isConnected &&
+		!MobileLayout.isMobileLayout() &&
+		roomView !== null &&
+		['room', 'user_flat', 'context_lost', 'load_failed'].includes(roomView.reason);
+	const showRoomNewBadge = showRoomControl && roomSettingsHydrated && !VoiceRoomControlDiscovery.dismissed;
+	const reduceRoomNewBadgeMotion = Accessibility.useReducedMotion || Accessibility.systemReducedMotion;
+	const roomNewShimmerShown = VoiceRoomControlDiscovery.shimmerShown;
+	useEffect(() => {
+		if (!showRoomNewBadge || reduceRoomNewBadgeMotion) setAnimateRoomNewBadge(false);
+		if (!showRoomNewBadge || roomNewShimmerShown) return;
+		VoiceRoomControlDiscovery.markShimmerShown();
+		if (!reduceRoomNewBadgeMotion) setAnimateRoomNewBadge(true);
+	}, [showRoomNewBadge, reduceRoomNewBadgeMotion, roomNewShimmerShown]);
+	const scopeKey = channel ? `${channel.guildId ? 'guild-voice' : 'dm-call'}:${channel.id}` : null;
+	const isRoomDisplayed = Boolean(
+		showRoomControl &&
+			channel &&
+			scopeKey &&
+			Navigation.channelId === channel.id &&
+			VoiceCallFullscreen.isScopeActive(scopeKey) &&
+			!PopoutWindowManager.isCallPopoutOpenForChannel(channel.id) &&
+			!VoiceSceneTvRequest.fullscreen &&
+			roomView?.show,
+	);
+	const handleToggleRoom = useCallback(() => {
+		if (!showRoomControl || !channel || !scopeKey) return;
+		VoiceRoomControlDiscovery.dismiss();
+		if (isRoomDisplayed) {
+			VoiceSceneSettings.setPreferRoom(false);
+			return;
+		}
+		if (VoiceSceneSettings.failure) VoiceSceneSettings.retry();
+		else VoiceSceneSettings.setPreferRoom(true);
+		RouterUtils.transitionTo(
+			channel.guildId ? Routes.guildChannel(channel.guildId, channel.id) : Routes.dmChannel(channel.id),
+		);
+		VoiceCallFullscreen.open(scopeKey);
+	}, [channel, isRoomDisplayed, scopeKey, showRoomControl]);
+	const roomLabel = i18n._(isRoomDisplayed ? CLOSE_ROOM_DESCRIPTOR : OPEN_ROOM_DESCRIPTOR);
+	const roomAccessibleLabel = showRoomNewBadge ? `${roomLabel}, ${i18n._(NEW_ROOM_CONTROL_DESCRIPTOR)}` : roomLabel;
 	const canStream = !guildId || !channelId || Permission.can(Permissions.STREAM, {channelId});
 	const isCameraUserCapReached = useCameraUserCapBlocked(isCameraEnabled);
 	const controlState = selectLocalParticipantControlsViewState({
@@ -267,6 +349,42 @@ export const LocalParticipantControls = observer(() => {
 					</button>
 				</FocusRing>
 			</Tooltip>
+			{showRoomControl && (
+				<Tooltip text={roomLabel} data-flx="voice.voice-connection-status.local-participant-controls.room-tooltip">
+					<FocusRing offset={-2} data-flx="voice.voice-connection-status.local-participant-controls.room-focus-ring">
+						<button
+							type="button"
+							className={clsx(styles.mediaButton, isRoomDisplayed && styles.roomActive)}
+							onClick={handleToggleRoom}
+							aria-label={roomAccessibleLabel}
+							aria-pressed={isRoomDisplayed}
+							data-flx="voice.voice-connection-status.local-participant-controls.room-button"
+						>
+							<CubeIcon
+								weight="fill"
+								className={styles.mediaIcon}
+								data-flx="voice.voice-connection-status.local-participant-controls.room-icon"
+							/>
+							{showRoomNewBadge && (
+								<span
+									aria-hidden="true"
+									onAnimationEnd={() => setAnimateRoomNewBadge(false)}
+									data-flx="voice.voice-connection-status.local-participant-controls.room-new-badge"
+								>
+									<SettingsStatusBadge
+										kind="new"
+										className={clsx(
+											styles.roomNewBadge,
+											animateRoomNewBadge && !reduceRoomNewBadgeMotion && styles.roomNewBadgeShimmer,
+										)}
+										data-flx="voice.voice-connection-status.local-participant-controls.room-new-status-badge"
+									/>
+								</span>
+							)}
+						</button>
+					</FocusRing>
+				</Tooltip>
+			)}
 		</>
 	);
 });

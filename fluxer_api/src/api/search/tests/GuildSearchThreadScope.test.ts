@@ -12,13 +12,9 @@ import {ensureSessionStarted, markGuildChannelsAsIndexed} from '@app/api/message
 import {getWorkerService} from '@app/api/middleware/ServiceRegistry';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
+import * as ThreadConstants from '@fluxer/constants/src/ThreadConstants';
 import type {ThreadChannelResponse} from '@fluxer/schema/src/domains/channel/ThreadRequestSchemas';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
-
-vi.mock('@fluxer/constants/src/ThreadConstants', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@fluxer/constants/src/ThreadConstants')>()),
-	SEARCH_INDEX_ENQUEUE_MAX: 1,
-}));
 
 describe('guild search thread scope', () => {
 	let harness: ApiTestHarness;
@@ -28,6 +24,9 @@ describe('guild search thread scope', () => {
 	});
 
 	beforeEach(async () => {
+		vi.spyOn(ThreadConstants as {SEARCH_INDEX_ENQUEUE_MAX: number}, 'SEARCH_INDEX_ENQUEUE_MAX', 'get').mockReturnValue(
+			1,
+		);
 		await harness.reset();
 		resetChannelThreadsConfig();
 	});

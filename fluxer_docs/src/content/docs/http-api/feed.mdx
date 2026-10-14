@@ -1,0 +1,1052 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: Feed
+description: Posts with text, images, a video or a poll, the home feed of followed accounts, Discover, an account's posts, likes, comments and replies on posts, and the notifications they raise.
+---
+
+import RouteHeader from '@/components/RouteHeader.astro';
+
+A post is a short text, up to four images, or both, published to the accounts that [follow](/http-api/users/follows/) its author. A post can instead hold one [video](#video-posts), which becomes a post only after it is encoded and checked. A post with text can carry a [poll](#poll-object) instead of media, and a [public](#public-posts) post can also reach other accounts through [Discover](#get-discover-feed). New posts are not pushed over the Gateway; a client reads the [home feed](#get-home-feed). Accounts that may read a post can [like](#like-post) it, [comment](#create-comment) on it and [reply](#create-reply) to its comments. Likes, comments, replies and new followers reach the account they are aimed at as [notifications](#list-notifications). Posts and comments are reported through [Report feed post](/http-api/reports/#report-feed-post) and [Report feed comment](/http-api/reports/#report-feed-comment).
+
+Every route here except [Receive Bunny Stream webhook](#receive-bunny-stream-webhook) requires a user session. A bot or OAuth2 bearer credential is refused with 403 `ACCESS_DENIED`, and a [limited account](/http-api/users/#account-limitation) is refused with 403 `ACCOUNT_LIMITED` by every route that writes. While the `feature_feed` limit of the caller is `0`, every route that requires a session returns 403 `FEATURE_TEMPORARILY_DISABLED`.
+
+:::note[Posts use the profile rule]
+Reading an account's posts needs the full profile under [Get user profile](/http-api/users/#get-user-profile). Any other reader receives 403 `MISSING_ACCESS`, and so does a block in either direction. The caller can always read its own posts. A [public post](#public-posts) relaxes the rule for that post, and [List user posts](#list-user-posts) returns the public posts to a caller that sees the public profile.
+:::
+
+## Public posts
+
+A post is marked public when its author's [profile privacy level](/http-api/users/#profile-privacy-levels) reads as `EVERYONE` at the time it is created; the server sets the mark and ignores the `public` field of the request. Posts marked earlier keep the mark, including those an earlier client marked while the author was at `ALL_GUILDS`. While the author's level reads as `EVERYONE`, any account with a user session can read a public post by its ID, like it, comment on it and vote in its poll without the profile rule, unless either account blocks the other or the author is disabled or deleted. Once the level reads as anything else, the post falls back to the profile rule on the next request. The public post of an account flagged as a spammer keeps the profile rule. [List user posts](#list-user-posts) and [List post likers](#list-post-likers) keep the profile rule for every post. On a public post of another account, [List comments](#list-comments) leaves out the comments of accounts that block the caller or that the caller blocks. An account that reaches a public post only through its public flag needs more to write there: see [Create comment](#create-comment) and [Vote in poll](#vote-in-poll).
+
+## Video posts
+
+A video post is uploaded to Bunny Stream rather than through [Upload post media](#upload-post-media). It needs a `feature_feed_video` limit other than `0` for the caller and the instance's [Bunny Stream settings](/operator/configuration/#feature-flags-and-development-switches); without either, [Start video post](#start-video-post) and [Re-sign video upload](#re-sign-video-upload) return 403 `FEATURE_TEMPORARILY_DISABLED`.
+
+1. [Start video post](#start-video-post) returns a [video upload ticket](#video-upload-ticket-object). It takes one post of the day at once, and an account has at most 3 videos on their way.
+2. Upload the file with TUS to `upload.endpoint`, sending `upload.signature` as `AuthorizationSignature`, `upload.expires` as `AuthorizationExpire`, `id` as `VideoId` and `library_id` as `LibraryId`. The signature lasts 2 hours; [Re-sign video upload](#re-sign-video-upload) signs the same upload again within 6 hours of its start.
+3. Bunny Stream encodes the video and reports each step to [Receive Bunny Stream webhook](#receive-bunny-stream-webhook). Once it is encoded, the video is checked for explicit content through Bunny's content tagging and frames of the video.
+4. A clean video becomes a post with the text given at the start, public when the author's level read as `EVERYONE` at the start, and reaches home feeds and Discover like any post. No route shows the video before that.
+
+A video that fails to encode, is stored larger than 500 MB, is refused by the check or is still not a post after 72 hours is deleted, and its author receives a system DM unless the account is disabled or deleted. [List pending videos](#list-pending-videos) shows the caller's videos on their way. A published video that Bunny later tags as adult, or whose upload is replaced, loses its post.
+
+## Post object
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id<sup>1</sup> | snowflake | The post ID |
+| author | [partial user](/http-api/users/#partial-user-object) object | The author of the post |
+| content | ?string | The plain text of the post |
+| attachments<sup>2</sup> | array[[message attachment](/http-api/messages/#message-attachment-object) object] | The images of the post (at most 4); empty for a video post |
+| edited_at | ?ISO8601 timestamp | When the post was last edited |
+| like_count | integer | How many accounts like the post |
+| comment_count | integer | How many comments and replies the post has |
+| liked | boolean | Whether the caller likes the post |
+| public | boolean | Whether the post is [public](#public-posts) |
+| poll? | [poll](#poll-object) object | The poll of the post, when it has one |
+| link_preview?<sup>3</sup> | [link preview](#link-preview-object) object | The previewed link of the post, when it has one |
+| video?<sup>4</sup> | [video](#video-object) object | The video of a [video post](#video-posts) |
+| view_count? | integer | How many times the post was seen, a minute or two behind; absent while view counts are off |
+| view_token? | string | Ticket for [Record post views](#record-post-views), for the caller only, valid 12 hours |
+| author_following? | boolean | Whether the caller [follows](/http-api/users/follows/) the author; only on [Discover](#get-discover-feed) pages, and never on the caller's own posts |
+
+<sup>1</sup> Its [snowflake](/snowflakes/) timestamp is when the post was published. It is the `before` cursor of [Get home feed](#get-home-feed) and [List user posts](#list-user-posts)
+
+<sup>2</sup> Each `url` and `proxy_url` is a [signed attachment URL](/http-api/messages/#signed-attachment-urls)
+
+<sup>3</sup> Resolved in the background after the post is published, so a new post can arrive without it
+
+<sup>4</sup> Absent while the instance has no Bunny Stream settings, so a video post then shows only its text
+
+## Video object
+
+The URLs are signed for the request that returned them and name only this video's files. They stay the same within each hour and work until `expires_at`, at least 2 hours after the request (longer for a video longer than 90 minutes, at most about 7 hours); read the post again for new ones.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | string | The Bunny Stream ID (GUID) of the video |
+| width | ?integer | The width of the picture as shown, in pixels |
+| height | ?integer | The height of the picture as shown, in pixels |
+| duration | ?integer | The length in seconds |
+| poster_url | string | The signed URL of the poster image |
+| hls_url | string | The signed URL of the HLS playlist |
+| mp4_url<sup>1</sup> | ?string | The signed URL of an MP4 file for players without HLS |
+| expires_at | ISO8601 timestamp | When the signed URLs stop working |
+
+<sup>1</sup> The 720p file, or the largest one below it; `null` when Bunny keeps no MP4 of the video
+
+## Poll object
+
+A poll takes one vote per account. A vote cannot be changed or taken back, and the author of the post cannot vote. Which account chose which option is never shown.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| options | array[string] | The choices, in order |
+| expires_at | ISO8601 timestamp | When voting ends |
+| votes<sup>1</sup> | ?array[integer] | The votes for each option, in the order of `options` |
+| voted | ?integer | The index of the caller's option, or `null` when the caller has not voted |
+
+<sup>1</sup> `null` until the caller votes, unless the caller wrote the post or voting has ended
+
+## Poll input object
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| options | array[string] | The choices, 2-4, each 1-80 characters; two that match ignoring case and outer spaces are refused |
+| duration_hours | integer | How many hours the poll takes votes (1-168) |
+
+## Link preview object
+
+A post previews at most one link: the first link of its text to a YouTube video, a Twitch or Kick channel, video or clip, or an invite of this instance. Other links stay plain text. The unfurled card of a YouTube, Twitch or Kick link has its media through the Media Proxy; when it cannot be unfurled, the card holds only the site name. An invite is never fetched; read it through [Get invite](/http-api/invites/#get-invite).
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| kind | string | `youtube`, `twitch`, `kick` or `invite` |
+| url | string | The link as written in the post |
+| invite_code | ?string | The invite code for `invite`; `null` for the other kinds |
+| embed | ?[embed](/http-api/messages/#embed-object) object | The card of the link; `null` for `invite` |
+
+## Comment object
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id<sup>1</sup> | snowflake | The comment ID |
+| post_id | snowflake | The post the comment belongs to |
+| author | [partial user](/http-api/users/#partial-user-object) object | The author of the comment |
+| content | string | The plain text of the comment |
+| edited_at | ?ISO8601 timestamp | When the comment was last edited; comments cannot be edited yet, so it is `null` |
+| parent_id?<sup>2</sup> | ?snowflake | The top-level comment a reply answers; `null` for a top-level comment |
+| reply_count?<sup>3</sup> | integer | How many replies a top-level comment has |
+
+<sup>1</sup> Its [snowflake](/snowflakes/) timestamp is when the comment was written. It is the `before` cursor of [List comments](#list-comments) and [List replies](#list-replies)
+
+<sup>2</sup> A reply is a comment object too. Replies go one level deep: a reply cannot be answered
+
+<sup>3</sup> Present on top-level comments only
+
+## Notification object
+
+The actions of one type aimed at one account fold into one notification per post and clock hour (per clock hour for follows). A later action of the same hour updates the notification in place under the same `id`.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id<sup>1</sup> | snowflake | The notification ID |
+| type<sup>5</sup> | string | `post_like`, `post_comment`, `comment_reply` or `follow` |
+| post_id | ?snowflake | The post liked or commented on; `null` for `follow` |
+| comment_id<sup>2</sup> | ?snowflake | The newest comment for `post_comment`, the comment the newest reply answers for `comment_reply`, else `null` |
+| actors<sup>3</sup> | array[[partial user](/http-api/users/#partial-user-object) object] | Up to three of the accounts behind it, the most recent first |
+| actor_count<sup>4</sup> | integer | How many accounts are behind it |
+| updated_at | ISO8601 timestamp | When the newest action folded into it happened |
+
+<sup>1</sup> Its [snowflake](/snowflakes/) timestamp is when its first action was folded in. It is the `before` cursor of [List notifications](#list-notifications)
+
+<sup>2</sup> The comment may have been deleted since; the post then still lists its other comments
+
+<sup>3</sup> Holds at least one account. Accounts the recipient blocks are left out, and a notification with no other account is left out entirely
+
+<sup>4</sup> Counts each account once while it stays among the three newest; an account that undoes and repeats a like after three others may count again. Undoing a like or deleting a comment does not lower it
+
+<sup>5</sup> `comment_reply` goes to the author of a comment that receives a reply, and only while the instance's `feature_feed_reply_notifications` limit is not `0`. A client ignores a type it does not know
+
+## Notification state object
+
+The caller's notification read cursor and unread count, sent in [READY](/gateway/events/#ready-object) as `feed_notification_state`. It is the same on all of the caller's devices.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| last_read_at | ?ISO8601 timestamp | The read cursor that [Mark notifications read](#mark-notifications-read) moves; `null` before the first read |
+| unread_count<sup>1</sup> | integer | Notifications updated after `last_read_at` (0-10) |
+| unread_seq<sup>2</sup> | integer | The unread sequence this count includes |
+| unread_epoch<sup>3</sup> | integer | When that sequence began, in Unix milliseconds; `0` before it exists |
+
+<sup>1</sup> Counted over the newest 20 notifications of the newest 20 days and capped at 10, so a client shows `9+` from 10. A notification whose post was deleted counts until the notifications are read
+
+<sup>2</sup> [FEED_NOTIFICATION_CREATE](/gateway/events/#feed-notification-create) carries newer values; the rise over the last value a client saw is the number of newly unread notifications
+
+<sup>3</sup> The sequence lives for a day after its last change (a newly unread notification, a read or a recount) and then starts again from 0 under a later epoch. A value under a later epoch than a client's counts from 0; one under an earlier epoch is a late event and changes no count
+
+## Pending video object
+
+One of the caller's [video posts](#video-posts) on its way.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | string | The Bunny Stream ID (GUID) of the video |
+| state | string | `uploading`, `processing` (Bunny is encoding it), `scanning` (it is being checked) or `published` |
+| created_at | ISO8601 timestamp | When the upload started |
+| post_id | ?snowflake | The post the video became; `null` until it is `published` |
+
+## Video upload ticket object
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | string | The Bunny Stream ID (GUID) of the video, sent as the `VideoId` TUS header |
+| library_id | string | The Bunny Stream library, sent as the `LibraryId` TUS header |
+| upload | [TUS upload](#tus-upload-object) object | What the TUS upload is signed with |
+
+## TUS upload object
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| endpoint | string | The TUS endpoint to upload the file to |
+| signature | string | The `AuthorizationSignature` TUS header |
+| expires | integer | The `AuthorizationExpire` TUS header, in Unix seconds; 2 hours after the ticket was issued |
+
+## View input object
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | snowflake | The ID of a post the caller saw |
+| token | string | The `view_token` that came with the post (at most 64 characters) |
+
+## Feed suggestions object
+
+What [Get feed suggestions](#get-feed-suggestions) returns.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| users<sup>1</sup> | array[[partial user](/http-api/users/#partial-user-object) object] | Up to five popular accounts for the caller to follow |
+| guilds<sup>2</sup> | array[[discovery guild](/http-api/discovery/#discovery-guild-object) object] | Up to five popular Discovery communities the caller is not in |
+
+<sup>1</sup> Empty for a caller who may not follow strangers or is not an adult by date of birth
+
+<sup>2</sup> Empty while the instance has Discovery disabled
+
+## Upload post media
+
+<RouteHeader method="POST" path="/v1/feed/attachments" />
+
+Plans the upload of up to four post images and returns 200 with `attachments`, an array of [singlepart attachment upload objects](/http-api/messages/#singlepart-attachment-upload-object) in request order. Each object echoes the `id` of its request item. Upload each file with one `PUT` to its `upload_url`, then pass the `upload_filename` in [Create post](#create-post). A video is not uploaded here; it starts at [Start video post](#start-video-post).
+
+A filename must name a PNG, JPEG, WebP or GIF image, and a declared size may not exceed 10 MiB or the caller's `max_attachment_file_size` limit when that is lower. The instance must allow presigned uploads.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| attachments | array[[attachment upload request item](/http-api/messages/#attachment-upload-request-item-object) object] | The images to upload (1-4) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | object with `attachments` | The upload URLs were issued |
+| 400<sup>1</sup> | [error response](/http-api/#error-response) | The body is invalid, a filename is not an image, or a size is too large |
+| 403<sup>2</sup> | [error response](/http-api/#error-response) | Presigned uploads are off and the request returns `FEATURE_TEMPORARILY_DISABLED` |
+
+<sup>1</sup> A filename that is not a PNG, JPEG, WebP or GIF returns `INVALID_FORM_BODY` with the field code `ATTACHMENT_MUST_BE_IMAGE`; a size over the limit returns `FILE_SIZE_TOO_LARGE`
+
+<sup>2</sup> Also returned for an MP4 or WebM filename while the caller's `feature_feed_video` limit is `0`, as before video posts moved to Bunny Stream; once it is not `0`, such a filename returns 400 with `ATTACHMENT_MUST_BE_IMAGE`
+
+### Rate limit
+
+10 requests per 10 seconds for each authenticated user, on the `feed:attachment:upload` bucket.
+
+## Create post
+
+<RouteHeader method="POST" path="/v1/feed/posts" />
+
+Publishes a post and returns 200 with the [post object](#post-object). A post needs text, media, or both. A poll needs text, which is its question, and takes no media.
+
+Each image is checked like a message attachment, and more strictly: the media type sniffed from the uploaded bytes must be PNG, JPEG, WebP or GIF, the file may not exceed 10 MiB, explicit media is refused, and a file the media service cannot read is refused rather than kept as a plain file. An upload key is consumed by the post that uses it. A video post is made through [Start video post](#start-video-post) instead.
+
+The post is [public](#public-posts), and can reach [Discover](#get-discover-feed), when the caller's profile privacy level reads as `EVERYONE`; `public` in the body is ignored. The first link of the text that can be previewed becomes the post's [link preview](#link-preview-object).
+
+An account can publish `max_feed_posts_per_day` posts a feed day (50 by default). Followers see the first `feed_fanout_max_posts_per_day` posts of each day (10 by default) in their home feed; later posts appear only in [List user posts](#list-user-posts).
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| content? | ?string | The plain text of the post (1-2,000 characters) |
+| attachments? | array[[pre-uploaded attachment](/http-api/messages/#pre-uploaded-attachment-object) object] | Images uploaded through [Upload post media](#upload-post-media) (at most 4) |
+| public? | boolean | Ignored; the server sets whether the post is [public](#public-posts) |
+| poll? | [poll input](#poll-input-object) object | A poll; needs `content` as its question and no `attachments` |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [post object](#post-object) | The post was published |
+| 400<sup>1</sup> | [error response](/http-api/#error-response) | The post is empty, an attachment was refused, or the poll is invalid |
+| 403<sup>3</sup> | [error response](/http-api/#error-response) | The text, a poll option or an image is blocked and the request returns `CONTENT_BLOCKED` |
+| 429<sup>2</sup> | [error response](/http-api/#error-response) | The caller already published `max_feed_posts_per_day` posts this feed day |
+
+<sup>1</sup> An empty post, or a poll without text, returns `CANNOT_SEND_EMPTY_MESSAGE`. An image returns `INVALID_FORM_BODY` with the field code `ATTACHMENT_MUST_BE_IMAGE` for another sniffed type and `UPLOADED_ATTACHMENT_NOT_FOUND` for an unknown or used upload key, `MEDIA_METADATA_ERROR` when it cannot be read, `FILE_SIZE_TOO_LARGE` over the size limit, and `EXPLICIT_CONTENT_CANNOT_BE_SENT` for explicit media. An MP4 or WebM filename returns `ATTACHMENT_MUST_BE_IMAGE` too while the caller's `feature_feed_video` limit is not `0`. A poll with attachments returns the field code `INVALID_FORMAT` on `poll`, and repeated options the same code on `poll.options`
+
+<sup>2</sup> Returned as `RATE_LIMITED`, with `retry_after` counting down to the start of the next feed day
+
+<sup>3</sup> An MP4 or WebM filename while the caller's `feature_feed_video` limit is `0` returns `FEATURE_TEMPORARILY_DISABLED`
+
+### Rate limit
+
+5 requests per 10 seconds for each authenticated user, on the `feed:post:create` bucket.
+
+## Start video post
+
+<RouteHeader method="POST" path="/v1/feed/videos" />
+
+Starts a [video post](#video-posts) and returns 200 with a [video upload ticket object](#video-upload-ticket-object). The text is checked like message content now; the post is published with it once the video passes processing.
+
+The video takes one of the caller's `max_feed_posts_per_day` posts at once, and a cancelled or refused video does not give it back. An account has at most 3 videos uploading, processing or being checked at a time.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| filename | string | The name of the file (1-255 characters) |
+| file_size<sup>1</sup> | integer | The size of the file in bytes (1-524,288,000) |
+| content_type | string | `video/mp4`, `video/webm`, `video/quicktime` or `video/x-matroska` |
+| content? | ?string | The plain text of the post (1-2,000 characters) |
+| public? | boolean | Ignored; the server sets whether the post is [public](#public-posts) |
+
+<sup>1</sup> Bunny's stored copy is measured again once it arrives, and a video over 500 MB is then deleted
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [video upload ticket](#video-upload-ticket-object) object | The video was started |
+| 400 | [error response](/http-api/#error-response) | The body is invalid and the request returns `INVALID_FORM_BODY` |
+| 403<sup>1</sup> | [error response](/http-api/#error-response) | Video posts are off for the caller and the request returns `FEATURE_TEMPORARILY_DISABLED` |
+| 429<sup>2</sup> | [error response](/http-api/#error-response) | 3 videos are on their way, or the caller already has `max_feed_posts_per_day` posts this feed day |
+| 502 | [error response](/http-api/#error-response) | Bunny Stream did not create the video and the request returns `BAD_GATEWAY` |
+
+<sup>1</sup> Off means a `feature_feed_video` limit of `0` or an instance without Bunny Stream settings. A blocked text returns `CONTENT_BLOCKED`
+
+<sup>2</sup> Returned as `RATE_LIMITED`; `retry_after` is 60 seconds for the videos on their way, and counts down to the start of the next feed day for the daily limit
+
+### Rate limit
+
+3 requests per minute for each authenticated user, on the `feed:video:create` bucket.
+
+## Re-sign video upload
+
+<RouteHeader method="POST" path="/v1/feed/videos/{video_id}/signature" />
+
+Returns 200 with a new [video upload ticket object](#video-upload-ticket-object) for one of the caller's videos that is still uploading, for a TUS upload whose signature ran out. A video can be re-signed within 6 hours of its start.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| video_id | string | The Bunny Stream ID (GUID) of the video |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [video upload ticket](#video-upload-ticket-object) object | The upload was signed again |
+| 403 | [error response](/http-api/#error-response) | Video posts are off for the caller and the request returns `FEATURE_TEMPORARILY_DISABLED` |
+| 404<sup>1</sup> | [error response](/http-api/#error-response) | The caller has no such video still uploading and the request returns `NOT_FOUND` |
+| 409 | [error response](/http-api/#error-response) | The video is being changed by another request and the request returns `CONFLICT` |
+
+<sup>1</sup> Also returned 6 hours after the start
+
+### Rate limit
+
+10 requests per minute for each authenticated user, on the `feed:video:sign` bucket.
+
+## Cancel video post
+
+<RouteHeader method="DELETE" path="/v1/feed/videos/{video_id}" />
+
+Cancels one of the caller's videos that is not a post yet, deletes it from Bunny Stream and returns 204 with an empty body. A published video goes with its post through [Delete post](#delete-post).
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| video_id | string | The Bunny Stream ID (GUID) of the video |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The video was cancelled |
+| 404 | [error response](/http-api/#error-response) | The caller has no such video on its way and the request returns `NOT_FOUND` |
+| 409 | [error response](/http-api/#error-response) | The video is being changed by another request and the request returns `CONFLICT` |
+
+### Rate limit
+
+10 requests per 10 seconds for each authenticated user, on the `feed:video:cancel` bucket.
+
+## List pending videos
+
+<RouteHeader method="GET" path="/v1/feed/videos" />
+
+Returns up to 20 of the caller's [pending video objects](#pending-video-object), newest first: the videos uploading, processing or being checked, and those published in the last hour with their `post_id`. A video that was refused or cancelled leaves the list.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | array of [pending video objects](#pending-video-object) | The list was returned, possibly empty |
+
+### Rate limit
+
+10 requests per 10 seconds for each authenticated user, on the `feed:video:list` bucket.
+
+## Receive Bunny Stream webhook
+
+<RouteHeader method="POST" path="/v1/feed/videos/webhook" unauthenticated />
+
+Accepts a Bunny Stream video status change and returns 200 with a [webhook received](/http-api/billing/#webhook-received-object) object. The instance's Bunny Stream library sends it; clients never call it. The signature headers are the credential, and the status is read again from Bunny before anything changes.
+
+### Limitations
+
+- A body over 4 KiB returns 400 `INVALID_REQUEST`, and so does a signed body that is not the expected JSON.
+- A signature that is missing, of another version or algorithm, or not made over the raw body with the library's read-only API key returns 401 `UNAUTHORIZED`.
+- An event of another library or with an unknown status is acknowledged and ignored.
+- One status of one video is handled once a minute; a repeat within the minute is acknowledged and ignored.
+
+:::caution[The signature covers the exact bytes]
+A proxy that re-encodes, reorders or pretty-prints the body invalidates the signature.
+:::
+
+### Request headers
+
+| Field | Type | Description |
+| --- | --- | --- |
+| X-BunnyStream-Signature | string | Lowercase hex HMAC-SHA256 of the raw body, keyed with the library's read-only API key |
+| X-BunnyStream-Signature-Version | string | The signature version, which must be `v1` |
+| X-BunnyStream-Signature-Algorithm | string | The signature algorithm, which must be `hmac-sha256` |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| VideoLibraryId | integer | The Bunny Stream library of the video |
+| VideoGuid | string | The Bunny Stream ID (GUID) of the video |
+| Status | integer | The Bunny Stream video status |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [webhook received](/http-api/billing/#webhook-received-object) object | The event was authenticated and queued, or acknowledged and ignored |
+| 400 | [error response](/http-api/#error-response) | The body is too large or malformed and the request returns `INVALID_REQUEST` |
+| 401 | [error response](/http-api/#error-response) | The signature did not verify and the request returns `UNAUTHORIZED` |
+| 503 | [error response](/http-api/#error-response) | The instance has no Bunny Stream settings and the request returns `SERVICE_UNAVAILABLE` |
+
+### Rate limit
+
+60,000 requests per minute for each client IP address, or for the authenticated user when a credential happens to be supplied, on the `feed:video:webhook` bucket. The bucket is exempt from the global bucket.
+
+## Get post
+
+<RouteHeader method="GET" path="/v1/feed/posts/{post_id}" />
+
+Returns 200 with one [post object](#post-object).
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [post object](#post-object) | The post was returned |
+| 403 | [error response](/http-api/#error-response) | The caller may not read the author's posts and the request returns `MISSING_ACCESS` |
+| 404<sup>1</sup> | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+
+<sup>1</sup> Also returned when the caller and the author block each other
+
+### Rate limit
+
+60 requests per 10 seconds for each authenticated user, on the `feed:post:get` bucket.
+
+## Delete post
+
+<RouteHeader method="DELETE" path="/v1/feed/posts/{post_id}" />
+
+Deletes one of the caller's posts with its media, likes, poll votes, comments and replies and returns 204 with an empty body. Home feeds drop the post on their next read. The video of a video post is deleted from Bunny Stream in the background.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The post was deleted |
+| 403 | [error response](/http-api/#error-response) | Another account wrote the post and the request returns `MISSING_PERMISSIONS` |
+| 404 | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+
+### Rate limit
+
+10 requests per 10 seconds for each authenticated user, on the `feed:post:delete` bucket.
+
+## Get home feed
+
+<RouteHeader method="GET" path="/v1/feed/home" />
+
+Returns one page of the posts of the accounts the caller follows and of the caller, as an array of [post objects](#post-object) with the newest post first. The home feed covers the last 30 days.
+
+One request reads a bounded part of the home feed, so a page can hold fewer posts than `limit`, or none, while older posts remain.
+
+The pagination signal is in the response headers. `X-Next-Before` is the `before` value for the next page, and it is absent when no older posts are known to remain. Read the next page with `X-Next-Before` as `before` when it is present, and otherwise with the last post's `id`. An empty page without `X-Next-Before` is the end of the home feed. A client that follows empty pages on its own should wait between the requests and stop after a few in a row, since each one counts against the rate limit below.
+
+Posts of an account the caller stops following, or blocks, or is blocked by, leave the home feed.
+
+An account the caller follows shows all its posts while the caller sees its full profile under [Get user profile](/http-api/users/#get-user-profile). One the caller sees only as a public profile (for example one followed through a public Discover post with [Follow user](/http-api/users/follows/#follow-user) and `post_id`, or from the [feed suggestions](#get-feed-suggestions)) shows only its [public posts](#public-posts) here, from the whole 30-day window, and only while its [profile privacy level](/http-api/users/#profile-privacy-levels) reads as `EVERYONE`; one whose profile is limited or refused shows none. Those public posts are left out while the author is flagged as a spammer or for suspicious activity, and while the caller's `feature_feed_discover` limit is `0`. As on Discover, a post hidden after reports, or one with images or a video while the instance's `feature_feed_discover_media` or `feature_feed_discover_video` limit is `0`, is left out too, and so is every post between accounts that block each other. A narrower privacy level of the author reaches the home feed on its next page, and a wider one within a minute.
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| before? | snowflake | The cursor selecting posts published before this post ID |
+| limit? | integer | The maximum number of posts to return (1-50, default 25) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | array of [post objects](#post-object) | The page was returned, possibly empty; `X-Next-Before` says where the next page starts |
+
+### Rate limit
+
+20 requests per 10 seconds for each authenticated user, on the `feed:home` bucket.
+
+## Get Discover feed
+
+<RouteHeader method="GET" path="/v1/feed/discover" />
+
+Returns one page of Discover, the [public posts](#public-posts) of the whole instance that drew the most reactions lately, as an array of [post objects](#post-object) with the best post first. While the caller's `feature_feed_discover` limit is `0`, the route returns 403 `FEATURE_TEMPORARILY_DISABLED`.
+
+Discover ranks the public posts of the last 72 hours by their likes, comments and poll votes from established accounts, a newer reaction weighing more than an older one, and spreads out the posts of one author. An author qualifies with a verified email address, an account at least 24 hours old (7 days for a post with a video) and a [profile privacy level](/http-api/users/#profile-privacy-levels) that reads as `EVERYONE`, and not while flagged as a spammer or for suspicious activity. While the instance's `feature_feed_discover_media` limit is `0`, posts with images are left out, and Twitch and Kick previews lose their images. While its `feature_feed_discover_video` limit is `0`, [video posts](#video-posts) are left out. Discover holds no signed video URL; each page signs the videos it returns for the caller. A post that draws enough reports leaves Discover but stays readable through its ID. Posts of accounts that block the caller, or that the caller blocks, are left out.
+
+The list holds up to 1,000 posts and is rebuilt about every 30 seconds, so the counts on a page can be about a minute old; `liked`, `author_following` and the poll state are the caller's own at the time of the request.
+
+The pagination signal is in the response headers. `X-Next-Cursor` is the `cursor` value for the next page, and it is absent at the end of the list. A page read after a rebuild continues at the same position in the new list, so a post can repeat or be skipped; drop the posts already shown.
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| cursor? | string | The `X-Next-Cursor` value of the previous page |
+| limit? | integer | The maximum number of posts to return (1-50, default 20) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | array of [post objects](#post-object) | The page was returned, possibly empty; `X-Next-Cursor` says where the next page starts |
+| 403 | [error response](/http-api/#error-response) | The caller's `feature_feed_discover` limit is `0` and the request returns `FEATURE_TEMPORARILY_DISABLED` |
+
+### Rate limit
+
+20 requests per 10 seconds for each authenticated user, on the `feed:discover` bucket.
+
+## Get feed suggestions
+
+<RouteHeader method="GET" path="/v1/feed/suggestions" />
+
+Returns a [feed suggestions object](#feed-suggestions-object) with up to five popular accounts for the caller to follow and up to five popular [Discovery](/http-api/discovery/) communities for the caller to join. While the caller's `feature_feed_suggestions` limit is `0`, the route returns 403 `FEATURE_TEMPORARILY_DISABLED`.
+
+The instance keeps a list of up to 100 accounts and a list of up to 100 communities, and rebuilds both about once a minute. The account list takes the accounts with the most followers, each with at least as many as the `feed_suggestions_min_followers` limit of the default rule (at least 1), that qualify: not a bot or system account; a verified email address, a claimed account at least 24 hours old and the date of birth of an adult; not banned, deleted or flagged as a spammer or for suspicious activity; a `feature_feed` limit other than `0`; a [profile privacy level](/http-api/users/#profile-privacy-levels) that reads as `EVERYONE`; and at least half of its 100 newest followers with a verified email address and a claimed, unflagged account at least 72 hours old. The community list takes the approved Discovery listings with the most members whose [NSFW level](/http-api/guilds/#nsfw-levels) is `0` and that lack the `INVITES_DISABLED` [guild feature](/http-api/guilds/#guild-features). It is empty while the instance has Discovery disabled or no search backend.
+
+Each request draws up to 20 entries of each list at random and returns the first five that suit the caller, so two requests seldom return the same entries; keep one answer while the view stays open. `users` leaves out the caller, the accounts the caller follows and the accounts that block the caller or that the caller blocks. It stays empty unless the caller has a verified email address, a claimed account at least 24 hours old and no spammer or suspicious activity flag, and is an adult by date of birth; an account without a date of birth receives no accounts. `guilds` leaves out the communities the caller is in and does not depend on the caller's standing.
+
+A new ban, spammer or suspicious activity flag, or a deletion removes an account from the list at once. Any other change to a listed account or community reaches the lists within about a minute and a half. When the lists have not been rebuilt for 10 minutes, both arrays are empty. A listed account can be followed through [Follow user](/http-api/users/follows/#follow-user) without `post_id`, and a listed community joined through [Join discovery guild](/http-api/discovery/#join-discovery-guild).
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [feed suggestions](#feed-suggestions-object) object | The suggestions were returned, possibly with empty arrays |
+| 403 | [error response](/http-api/#error-response) | The caller's `feature_feed_suggestions` limit is `0` and the request returns `FEATURE_TEMPORARILY_DISABLED` |
+
+### Rate limit
+
+10 requests per 10 seconds for each authenticated user, on the `feed:suggestions` bucket.
+
+## List user posts
+
+<RouteHeader method="GET" path="/v1/users/{user_id}/posts" />
+
+Returns one page of an account's posts, as an array of [post objects](#post-object) with the newest post first. A caller that sees the full profile under [Get user profile](/http-api/users/#get-user-profile) gets every post, reads the next page with the last post's `id` as `before`, and stops at an empty page; no `X-Next-Before` is sent.
+
+A caller that sees the account only as a public profile gets its [public posts](#public-posts) only, and spends the daily stranger allowance described under [Get user profile](/http-api/users/#get-user-profile). One request reads up to three pages of the account's posts to fill the page, so a page can come back short or empty while older public posts remain. `X-Next-Before` is then the `before` value for the next page; when it is absent, read the next page with the last post's `id`, and an empty page without it is the end.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the author |
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| before? | snowflake | The cursor selecting posts published before this post ID |
+| limit? | integer | The maximum number of posts to return (1-50, default 25) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | array of [post objects](#post-object) | The page was returned, possibly empty; `X-Next-Before` says where a public profile's next page starts |
+| 403 | [error response](/http-api/#error-response) | The caller may not read the author's posts and the request returns `MISSING_ACCESS` |
+| 404 | [error response](/http-api/#error-response) | No account has the ID and the request returns `UNKNOWN_USER` |
+
+### Rate limit
+
+30 requests per 10 seconds for each authenticated user, on the `feed:user_posts` bucket.
+
+## Like post
+
+<RouteHeader method="PUT" path="/v1/feed/posts/{post_id}/like" />
+
+Likes a post and returns 204 with an empty body. Liking a post the caller already likes changes nothing. The post's `like_count` counts each account once, and `liked` is `true` in the caller's [post objects](#post-object).
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The caller likes the post |
+| 403 | [error response](/http-api/#error-response) | The caller may not read the author's posts and the request returns `MISSING_ACCESS` |
+| 404<sup>1</sup> | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+
+<sup>1</sup> Also returned when the caller and the author block each other
+
+### Rate limit
+
+30 requests per 10 seconds for each authenticated user, on the `feed:post:like` bucket.
+
+## Unlike post
+
+<RouteHeader method="DELETE" path="/v1/feed/posts/{post_id}/like" />
+
+Takes the caller's like off a post and returns 204 with an empty body. Without a like it changes nothing.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The caller does not like the post |
+| 403 | [error response](/http-api/#error-response) | The caller may not read the author's posts and the request returns `MISSING_ACCESS` |
+| 404<sup>1</sup> | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+
+<sup>1</sup> Also returned when the caller and the author block each other
+
+### Rate limit
+
+30 requests per 10 seconds for each authenticated user, on the `feed:post:unlike` bucket.
+
+## Vote in poll
+
+<RouteHeader method="PUT" path="/v1/feed/posts/{post_id}/poll/vote" />
+
+Casts the caller's vote for one option of a post's [poll](#poll-object) and returns 200 with the [post object](#post-object), whose `poll` now shows the votes. An account votes once and cannot change or take back its vote, and the author of the post cannot vote. A vote also counts toward the post's place in [Discover](#get-discover-feed), with a quarter of a like's weight. On a [public](#public-posts) post, a caller who could not read the author's posts without the public flag needs a verified email address to vote.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| option | integer | The index of the chosen option in `options` (0-3) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [post object](#post-object) | The vote was cast |
+| 400<sup>1</sup> | [error response](/http-api/#error-response) | The body is invalid, the post has no poll, or it has no option of the index |
+| 403<sup>2</sup> | [error response](/http-api/#error-response) | The caller may not read the author's posts and the request returns `MISSING_ACCESS` |
+| 404<sup>3</sup> | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+| 409 | [error response](/http-api/#error-response) | The caller already voted or voting has ended, and the request returns `CONFLICT` |
+
+<sup>1</sup> A post without a poll or an index past its options returns `INVALID_FORM_BODY` with the field code `INVALID_FORMAT`
+
+<sup>2</sup> The author of the post receives `MISSING_PERMISSIONS`. On a public post, a caller without a verified email address who could not read the author's posts otherwise receives `EMAIL_VERIFICATION_REQUIRED`
+
+<sup>3</sup> Also returned when the caller and the author block each other
+
+### Rate limit
+
+10 requests per 10 seconds for each authenticated user, on the `feed:poll:vote` bucket.
+
+## Record post views
+
+<RouteHeader method="POST" path="/v1/feed/views" />
+
+Counts the posts the caller saw and returns 204 with an empty body. Each view carries the `view_token` of a [post object](#post-object) the caller received. A ticket of another account, a forged or an expired ticket is dropped without an error, and a post named twice in a batch counts once. The caller passes one batch a minute, so an account adds at most one view to a post a minute. The views reach `view_count` a minute or two later. While the instance's `feature_feed_views` limit is `0`, the route returns 403 and post objects carry neither `view_count` nor `view_token`.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| views | array[[view input](#view-input-object) object] | Posts seen since the last batch (1-100) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The batch was taken; views with an invalid ticket were dropped |
+| 400 | [error response](/http-api/#error-response) | The body is invalid or holds more than 100 views, and the request returns `INVALID_FORM_BODY` |
+| 403 | [error response](/http-api/#error-response) | The instance's `feature_feed_views` limit is `0` and the request returns `FEATURE_TEMPORARILY_DISABLED` |
+| 429<sup>1</sup> | [error response](/http-api/#error-response) | The caller's batch of this minute was already taken, or the bucket is spent, and the request returns `RATE_LIMITED` |
+
+<sup>1</sup> For the minute, `retry_after` counts down to its end. A batch in which no ticket is valid does not take the minute
+
+### Rate limit
+
+6 requests per 60 seconds for each authenticated user, on the `feed:views` bucket, outside the global limit; one batch a minute passes.
+
+## List post likers
+
+<RouteHeader method="GET" path="/v1/feed/posts/{post_id}/likes" />
+
+Returns one page of the accounts that like a post, as an array of [partial user](/http-api/users/#partial-user-object) objects by ascending user ID. Read the next page with the last account's `id` as `after`, and stop at a page shorter than `limit`.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| after? | snowflake | The cursor selecting accounts with a user ID above this one |
+| limit? | integer | The maximum number of accounts to return (1-100, default 50) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | array of [partial user](/http-api/users/#partial-user-object) objects | The page was returned, possibly empty |
+| 403 | [error response](/http-api/#error-response) | The caller may not read the author's posts and the request returns `MISSING_ACCESS` |
+| 404<sup>1</sup> | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+
+<sup>1</sup> Also returned when the caller and the author block each other
+
+### Rate limit
+
+20 requests per 10 seconds for each authenticated user, on the `feed:post:likers` bucket.
+
+## List comments
+
+<RouteHeader method="GET" path="/v1/feed/posts/{post_id}/comments" />
+
+Returns one page of the top-level comments on a post, as an array of [comment objects](#comment-object) with the newest comment first. Each carries its `reply_count`; read its replies through [List replies](#list-replies). Read the next page with the last comment's `id` as `before`, and stop at a page shorter than `limit`.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| before? | snowflake | The cursor selecting comments written before this comment ID |
+| limit? | integer | The maximum number of comments to return (1-50, default 25) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | array of [comment objects](#comment-object) | The page was returned, possibly empty |
+| 403 | [error response](/http-api/#error-response) | The caller may not read the author's posts and the request returns `MISSING_ACCESS` |
+| 404<sup>1</sup> | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+
+<sup>1</sup> Also returned when the caller and the author block each other
+
+### Rate limit
+
+40 requests per 10 seconds for each authenticated user, on the `feed:comments:list` bucket.
+
+## Create comment
+
+<RouteHeader method="POST" path="/v1/feed/posts/{post_id}/comments" />
+
+Adds a comment to a post and returns 200 with the [comment object](#comment-object). The text is checked like message content. A post takes up to `max_comments_per_post` comments and replies together (10,000 by default); deleting a comment frees its place.
+
+On a [public](#public-posts) post of another account, the caller writes at most 20 comments and replies together while the post is in its first 72 hours (72 hours from the caller's first comment after that). A caller who could not read the author's posts without the public flag also needs a verified email address, a claimed account and an account at least 24 hours old.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| content | string | The plain text of the comment (1-1,000 characters) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [comment object](#comment-object) | The comment was added |
+| 400<sup>1</sup> | [error response](/http-api/#error-response) | The body is invalid or the post is full |
+| 403<sup>3</sup> | [error response](/http-api/#error-response) | The caller may not read the author's posts and the request returns `MISSING_ACCESS` |
+| 404<sup>2</sup> | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+| 429<sup>4</sup> | [error response](/http-api/#error-response) | The caller already wrote 20 comments and replies on this public post and the request returns `RATE_LIMITED` |
+
+<sup>1</sup> A post with `max_comments_per_post` comments returns `MAX_FEED_COMMENTS`, with the limit in `max_comments_per_post`
+
+<sup>2</sup> Also returned when the caller and the author block each other
+
+<sup>3</sup> A blocked text returns `CONTENT_BLOCKED`. On a public post, a caller without a verified email address who could not read the author's posts otherwise receives `EMAIL_VERIFICATION_REQUIRED`, and a claimed, verified account younger than 24 hours `MISSING_ACCESS`
+
+<sup>4</sup> `retry_after` is the time until the count resets
+
+### Rate limit
+
+5 requests per 10 seconds for each authenticated user, on the `feed:comment:create` bucket, and 500 requests a day on the `feed:comment:create:daily` bucket.
+
+## Delete comment
+
+<RouteHeader method="DELETE" path="/v1/feed/posts/{post_id}/comments/{comment_id}" />
+
+Deletes a top-level comment with its replies and returns 204 with an empty body. The post's `comment_count` drops by one plus the number of replies. The comment's author and the post's author may delete it, whatever blocks lie between them.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+| comment_id | snowflake | The ID of the comment |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The comment was deleted |
+| 403 | [error response](/http-api/#error-response) | The caller wrote neither the comment nor the post and the request returns `MISSING_PERMISSIONS` |
+| 404<sup>1</sup> | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+
+<sup>1</sup> A post with no comment of the ID returns `UNKNOWN_FEED_COMMENT`
+
+### Rate limit
+
+10 requests per 10 seconds for each authenticated user, on the `feed:comment:delete` bucket.
+
+## List replies
+
+<RouteHeader method="GET" path="/v1/feed/posts/{post_id}/comments/{comment_id}/replies" />
+
+Returns one page of the replies to a top-level comment, as an array of [comment objects](#comment-object) with the newest reply first. Read the next page with the last reply's `id` as `before`, and stop at a page shorter than `limit`. On a [public](#public-posts) post of another account, replies of accounts that block the caller or that the caller blocks are left out, as in [List comments](#list-comments).
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+| comment_id | snowflake | The ID of the top-level comment |
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| before? | snowflake | The cursor selecting replies written before this reply ID |
+| limit? | integer | The maximum number of replies to return (1-50, default 25) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | array of [comment objects](#comment-object) | The page was returned, possibly empty |
+| 403 | [error response](/http-api/#error-response) | The caller may not read the author's posts and the request returns `MISSING_ACCESS` |
+| 404<sup>1</sup> | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+
+<sup>1</sup> Also returned when the caller and the author block each other. A post with no top-level comment of the ID returns `UNKNOWN_FEED_COMMENT`, and so does a reply ID
+
+### Rate limit
+
+40 requests per 10 seconds for each authenticated user, on the `feed:comments:list` bucket, shared with [List comments](#list-comments).
+
+## Create reply
+
+<RouteHeader method="POST" path="/v1/feed/posts/{post_id}/comments/{comment_id}/replies" />
+
+Adds a reply to a top-level comment and returns 200 with the [comment object](#comment-object) of the reply. Replies go one level deep, so a reply cannot be answered. A reply follows the rules of [Create comment](#create-comment): the text check, the access rules on a public post, the allowance of 20 comments and replies on another account's public post, and `max_comments_per_post`, which counts comments and replies together. A reply raises the post's `comment_count` and the comment's `reply_count` by one.
+
+The comment's author receives a `comment_reply` [notification](#notification-object) while the instance's `feature_feed_reply_notifications` limit is not `0`.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+| comment_id | snowflake | The ID of the top-level comment |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| content | string | The plain text of the reply (1-1,000 characters) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [comment object](#comment-object) | The reply was added |
+| 400<sup>1</sup> | [error response](/http-api/#error-response) | The body is invalid or the post is full |
+| 403<sup>3</sup> | [error response](/http-api/#error-response) | The caller may not read the author's posts and the request returns `MISSING_ACCESS` |
+| 404<sup>2</sup> | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+| 429<sup>4</sup> | [error response](/http-api/#error-response) | The caller already wrote 20 comments and replies on this public post and the request returns `RATE_LIMITED` |
+
+<sup>1</sup> A post with `max_comments_per_post` comments and replies returns `MAX_FEED_COMMENTS`, with the limit in `max_comments_per_post`
+
+<sup>2</sup> Also returned when the caller and the author block each other. A post with no top-level comment of the ID returns `UNKNOWN_FEED_COMMENT`, and so does a reply ID
+
+<sup>3</sup> As for [Create comment](#create-comment)
+
+<sup>4</sup> `retry_after` is the time until the count resets
+
+### Rate limit
+
+5 requests per 10 seconds for each authenticated user, on the `feed:comment:create` bucket, and 500 requests a day on the `feed:comment:create:daily` bucket, both shared with [Create comment](#create-comment).
+
+## Delete reply
+
+<RouteHeader method="DELETE" path="/v1/feed/posts/{post_id}/comments/{comment_id}/replies/{reply_id}" />
+
+Deletes a reply and returns 204 with an empty body. The post's `comment_count` and the comment's `reply_count` drop by one. The reply's author and the post's author may delete it, whatever blocks lie between them.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+| comment_id | snowflake | The ID of the top-level comment the reply answers |
+| reply_id | snowflake | The ID of the reply |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The reply was deleted |
+| 403 | [error response](/http-api/#error-response) | The caller wrote neither the reply nor the post and the request returns `MISSING_PERMISSIONS` |
+| 404<sup>1</sup> | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+
+<sup>1</sup> A comment with no reply of the ID returns `UNKNOWN_FEED_COMMENT`
+
+### Rate limit
+
+10 requests per 10 seconds for each authenticated user, on the `feed:comment:delete` bucket, shared with [Delete comment](#delete-comment).
+
+## List notifications
+
+<RouteHeader method="GET" path="/v1/feed/notifications" />
+
+Returns one page of the likes, comments, replies and follows aimed at the caller, as an array of [notification objects](#notification-object) with the newest `id` first. Notifications are kept for 90 days. Liking or commenting on your own post, or replying to your own comment, raises none.
+
+A page can hold fewer notifications than `limit` while more remain. Read the next page with the last notification's `id` as `before`, and stop at an empty page. Notifications of a deleted post are left out.
+
+New and updated notifications also arrive as [FEED_NOTIFICATION_CREATE](/gateway/events/#feed-notification-create) on the caller's sessions, at most one a minute; an update held back by that limit follows when the minute ends.
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| before? | snowflake | The cursor selecting notifications with an ID below this notification ID |
+| limit? | integer | The maximum number of notifications to return (1-50, default 25) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | array of [notification objects](#notification-object) | The page was returned, possibly empty |
+
+### Rate limit
+
+20 requests per 10 seconds for each authenticated user, on the `feed:notifications` bucket.
+
+## Mark notifications read
+
+<RouteHeader method="POST" path="/v1/feed/notifications/ack" />
+
+Moves the caller's notification read cursor to `read_at` and marks the notifications counted up to `unread_seq` read. The cursor only moves forward and never past the server's time. A notification counted after the sequence the session sent stays unread, so a push that crossed the request is not lost. All of the caller's sessions, this one included, receive [FEED_NOTIFICATION_ACK](/gateway/events/#feed-notification-ack) with the response body.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| read_at<sup>1</sup> | ISO8601 timestamp | When the caller saw their notifications |
+| unread_seq | integer | The newest unread sequence the session has seen (READY, pushes and acks), 0 or more |
+| unread_epoch | integer | The epoch of that sequence, 0 or more |
+
+<sup>1</sup> A server time: the newest `updated_at` shown or the time the list was served, never the device clock
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| last_read_at | ISO8601 timestamp | The read cursor after the request |
+| unread_seq<sup>1</sup> | integer | The unread sequence the read covers |
+| unread_epoch | integer | The epoch of the server's current sequence |
+
+<sup>1</sup> The greater of the sequence an earlier read covered and the lower of `unread_seq` and the server's current sequence; `unread_seq` counts as 0 when `unread_epoch` is not the current epoch
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The read was taken; a cursor that would move back stays where it was |
+| 400 | [error response](/http-api/#error-response) | A field is missing, `read_at` is not ISO8601 or a number is negative; returns `INVALID_FORM_BODY` |
+| 403 | [error response](/http-api/#error-response) | The caller's `feature_feed` limit is `0` and the request returns `FEATURE_TEMPORARILY_DISABLED` |
+
+### Rate limit
+
+10 requests per 10 seconds for each authenticated user, on the `feed:notifications:ack` bucket.
+
+## Account deletion
+
+Deleting a post deletes its likes, poll votes, comments and replies, and its video from Bunny Stream. Deleting an account deletes its posts and their media, its videos that are not posts yet, its likes, poll votes, comments and replies, and its notifications, and the posts it liked, voted in or commented on stop counting them. Its [data harvest](/http-api/users/data-harvest/) lists in `feed.json` its posts, each with its text, timestamps, whether it is public, its poll and its media URLs, its comments and replies with their post and text (a reply with the `parent_id` of its comment), the posts it likes, its poll votes, and its notifications of the last 90 days with the IDs of their accounts. A video is listed by the URL of its HLS playlist, signed for the 7 days the archive can be downloaded, or `null` while the instance has no Bunny Stream settings.

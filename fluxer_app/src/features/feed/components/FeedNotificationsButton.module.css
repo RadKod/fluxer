@@ -1,0 +1,33 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* The inbox button at the right end of the feed header. The feed header is not a channel header, so the channel
+   header's colours for ChannelHeaderIcon are set here (as DiscoveryNavbar.module.css does). */
+.wrapper {
+	--channel-header-text-primary: var(--text-primary);
+	--channel-header-text-muted: var(--text-primary-muted);
+	position: relative;
+	display: inline-flex;
+	flex-shrink: 0;
+	margin-inline-start: auto;
+}
+
+/* Fluxer's mention badge on the icon's top right. */
+.badge {
+	position: absolute;
+	top: 0.125rem;
+	right: 0.125rem;
+	pointer-events: none;
+}
+
+/* Narrow screens and touch: a 44px button; the badge moves with the icon, which stays centred. */
+@media (max-width: 640px), (pointer: coarse) {
+	.wrapper .button {
+		width: 2.75rem;
+		height: 2.75rem;
+	}
+
+	.wrapper .badge {
+		top: 0.375rem;
+		right: 0.375rem;
+	}
+}

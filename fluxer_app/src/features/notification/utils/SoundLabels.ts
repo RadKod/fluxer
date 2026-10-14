@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {SoundType} from '@app/features/notification/utils/SoundUtils';
+import {getTableGameSoundLabels} from '@app/features/table_game/sound/TableGameSoundLabels';
 import {
 	VOICE_DEAFEN_SOUND_DESCRIPTOR,
 	VOICE_UNDEAFEN_SOUND_DESCRIPTOR,
@@ -94,5 +95,6 @@ export function getSoundLabels(i18n: I18n): Record<SoundType, string> {
 		[SoundType.CameraOff]: i18n._(CAMERA_OFF_DESCRIPTOR),
 		[SoundType.ScreenShareStart]: i18n._(SCREEN_SHARE_START_DESCRIPTOR),
 		[SoundType.ScreenShareStop]: i18n._(SCREEN_SHARE_STOP_DESCRIPTOR),
+		...getTableGameSoundLabels(i18n),
 	};
 }

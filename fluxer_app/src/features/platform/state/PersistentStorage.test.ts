@@ -438,6 +438,89 @@ describe('the synchronous raw mirror closes the asynchronous write loss window',
 	});
 });
 
+describe('desktop motion raw mirror', () => {
+	const motionKey = 'Accessibility:motion';
+	const migratedKey = 'Accessibility:motionSyncDefaultOffMigratedV1';
+	const nativeMotion = '{"syncReducedMotionWithSystem":true,"reducedMotionOverride":null}';
+	const legacyMotion = '{"syncReducedMotionWithSystem":false,"reducedMotionOverride":true}';
+
+	async function loadDesktopStorage(): Promise<LoadedModules> {
+		const modules = await loadModules();
+		const backendModule: BackendModule = await import('@app/features/platform/state/PersistentStorageBackend');
+		const backend = backendModule.createPersistentStorageBackend(null);
+		Object.defineProperty(backend, 'kind', {value: PersistentStorageBackendKind.DESKTOP});
+		backendModule.installPersistentStorageBackend(backend);
+		return {...modules, backend};
+	}
+
+	test.each([motionKey, migratedKey])('writes and deletes %s in the first-paint mirror', async (key) => {
+		const modules = await loadDesktopStorage();
+		await modules.storage.initializeAppStorage();
+		modules.storage.default.setItem(key, key === motionKey ? nativeMotion : 'true');
+		expect(rawStorage().getItem(key)).toBe(key === motionKey ? nativeMotion : 'true');
+		await modules.storage.flushAppStorageWrites();
+		expect((await modules.backend.get('global', key))?.value).toBe(rawStorage().getItem(key));
+		modules.storage.default.removeItem(key);
+		expect(rawStorage().getItem(key)).toBeNull();
+		await modules.storage.flushAppStorageWrites();
+		expect(await modules.backend.get('global', key)).toBeNull();
+	});
+
+	test('hydrates imported native motion and its migration marker before replaying stale raw values', async () => {
+		const modules = await loadDesktopStorage();
+		await modules.backend.setMany([
+			{scope: 'global', key: motionKey, value: nativeMotion},
+			{scope: 'global', key: migratedKey, value: 'true'},
+		]);
+		rawStorage().setItem(motionKey, legacyMotion);
+		rawStorage().setItem(migratedKey, 'false');
+		await modules.storage.initializeAppStorage();
+		for (const [key, value] of [
+			[motionKey, nativeMotion],
+			[migratedKey, 'true'],
+		]) {
+			expect(rawStorage().getItem(key)).toBe(value);
+			expect(modules.storage.default.getItem(key)).toBe(value);
+		}
+		await modules.storage.flushAppStorageWrites();
+		expect((await modules.backend.get('global', motionKey))?.value).toBe(nativeMotion);
+		expect((await modules.backend.get('global', migratedKey))?.value).toBe('true');
+	});
+
+	test('refreshes native motion on account activation without replaying stale raw state', async () => {
+		const modules = await loadDesktopStorage();
+		await modules.storage.initializeAppStorage();
+		await modules.backend.set('global', motionKey, nativeMotion);
+		await modules.backend.set('global', migratedKey, 'true');
+		rawStorage().setItem(motionKey, legacyMotion);
+		await modules.storage.activateAppStorageScope(ACCOUNT_A);
+		expect(rawStorage().getItem(motionKey)).toBe(nativeMotion);
+		expect(rawStorage().getItem(migratedKey)).toBe('true');
+		expect(modules.storage.default.getItem(motionKey)).toBe(nativeMotion);
+	});
+
+	test.each([motionKey, migratedKey])('does not resurrect deleted native %s on restart', async (key) => {
+		const modules = await loadDesktopStorage();
+		await modules.backend.set('global', AppStorageKey.DELETED_KEYS, JSON.stringify([key]));
+		rawStorage().setItem(key, key === motionKey ? legacyMotion : 'true');
+		await modules.storage.initializeAppStorage();
+		expect(rawStorage().getItem(key)).toBeNull();
+		expect(modules.storage.default.getItem(key)).toBeNull();
+		await modules.storage.flushAppStorageWrites();
+		expect(await modules.backend.get('global', key)).toBeNull();
+	});
+
+	test('imports a legacy motion choice when native storage has no motion record yet', async () => {
+		const modules = await loadDesktopStorage();
+		rawStorage().setItem(motionKey, legacyMotion);
+		rawStorage().setItem(migratedKey, 'true');
+		await modules.storage.initializeAppStorage();
+		await modules.storage.flushAppStorageWrites();
+		expect((await modules.backend.get('global', motionKey))?.value).toBe(legacyMotion);
+		expect((await modules.backend.get('global', migratedKey))?.value).toBe('true');
+	});
+});
+
 describe('scoped wipe semantics', () => {
 	let modules: LoadedModules;
 

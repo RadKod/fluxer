@@ -954,13 +954,11 @@ const MyProfileTabComponent = observer(function MyProfileTabComponent({
 					{hasPremium && !isPerGuildProfile && (
 						<PremiumBadgeSettings
 							premiumBadgeHidden={form.watch('premium_badge_hidden') ?? false}
-							premiumBadgeTimestampHidden={form.watch('premium_badge_timestamp_hidden') ?? false}
 							premiumBadgeMasked={form.watch('premium_badge_masked') ?? false}
 							premiumBadgeSequenceHidden={form.watch('premium_badge_sequence_hidden') ?? false}
 							disabled={isProfileCustomizationLocked}
 							onToggle={handlePremiumBadgeToggle}
 							hasLifetimePremium={hasLifetimePremium}
-							premiumSince={user.premiumSince}
 							premiumLifetimeSequence={user.premiumLifetimeSequence}
 							data-flx="user.my-profile-tab.my-profile-tab-component.premium-badge-settings"
 						/>

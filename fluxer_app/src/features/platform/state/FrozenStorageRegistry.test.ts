@@ -37,7 +37,7 @@ function collectSourceFiles(root: string): Array<string> {
 	const walk = (directory: string): void => {
 		for (const name of readdirSync(directory)) {
 			const path = join(directory, name);
-			if (EXCLUDED_PATH_PATTERN.test(path)) {
+			if (EXCLUDED_PATH_PATTERN.test(path.replaceAll('\\', '/'))) {
 				continue;
 			}
 			if (statSync(path).isDirectory()) {
@@ -56,7 +56,7 @@ function collectSourceFiles(root: string): Array<string> {
 const SOURCE_FILES: ReadonlyArray<string> = SCANNED_ROOTS.flatMap(collectSourceFiles);
 
 const SOURCE_BY_PATH: ReadonlyMap<string, string> = new Map(
-	SOURCE_FILES.map((path) => [relative(REPO_ROOT, path), readFileSync(path, 'utf8')]),
+	SOURCE_FILES.map((path) => [relative(REPO_ROOT, path).replaceAll('\\', '/'), readFileSync(path, 'utf8')]),
 );
 
 function destructiveReferences(entry: FrozenStorageEntry): Array<string> {

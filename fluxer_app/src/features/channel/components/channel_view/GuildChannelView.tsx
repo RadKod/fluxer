@@ -216,8 +216,8 @@ export const GuildChannelView = observer(({channelId, guildId}: GuildChannelView
 		scopeKey: `guild-voice:${channelId}`,
 	});
 	const {isPending: isVoiceConnectionPending, startConnection: startVoiceConnection} = usePendingVoiceConnection({
-		guildId: channel?.guildId,
-		channelId: channel?.id,
+		guildId: channel?.guildId ?? guildId,
+		channelId,
 	});
 	const handleVoiceJoinButtonClick = useCallback(() => {
 		startVoiceConnection({skipConfirm: true});

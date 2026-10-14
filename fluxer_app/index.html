@@ -3,9 +3,17 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Fluxer</title>
+<title>Micup</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content, maximum-scale=1, user-scalable=no">
-<meta name="description" content="Fluxer is a free and open source instant messaging and VoIP chat app built for friends, groups, and communities.">
+<meta name="description" content="Micup; arkadaşlar, gruplar ve topluluklar için anlık mesajlaşma ve sesli sohbet uygulaması.">
+<meta property="og:site_name" content="Micup">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Micup">
+<meta property="og:description" content="Micup; arkadaşlar, gruplar ve topluluklar için anlık mesajlaşma ve sesli sohbet uygulaması.">
+<meta property="og:image" content="{{STATIC_CDN_ENDPOINT}}/web/og-image-default.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="{{STATIC_CDN_ENDPOINT}}">
 <link rel="preconnect" href="{{STATIC_CDN_ENDPOINT}}" crossorigin>
 <link rel="preconnect" href="{{MEDIA_ENDPOINT}}">
@@ -14,17 +22,17 @@
 <link rel="apple-touch-icon" sizes="180x180" href="{{STATIC_CDN_ENDPOINT}}/web/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Fluxer">
+<meta name="apple-mobile-web-app-title" content="Micup">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#4641D9">
-<meta name="msapplication-navbutton-color" content="#4641D9">
-<meta name="msapplication-TileColor" content="#4641D9">
+<meta name="theme-color" content="#0B0B0C">
+<meta name="msapplication-navbutton-color" content="#0B0B0C">
+<meta name="msapplication-TileColor" content="#0B0B0C">
 <meta name="format-detection" content="telephone=no">
 <meta name="display" content="standalone">
 <link rel="license" href="/assets/fonts-NOTICE.txt">
 <link rel="expect" href="#fluxer-boot-end" blocking="render">
-<script nonce="{{CSP_NONCE_PLACEHOLDER}}">(function(){try{var loc=window.location;if(loc.pathname==='/'){var target='/channels/@me';if(loc.search)target+=loc.search;if(loc.hash)target+=loc.hash;loc.replace(target);}}catch(e){}})();</script>
-<script nonce="{{CSP_NONCE_PLACEHOLDER}}">(function(){try{var t=localStorage.getItem('theme');if(t){document.documentElement.classList.add('theme-'+t)}}catch{}})()</script>
+<script nonce="{{CSP_NONCE_PLACEHOLDER}}">(function(){try{var loc=window.location;if(loc.pathname==='/'){var target='/channels/@me';if(!loc.search&&!loc.hash&&!window.electron){var t=null;try{t=localStorage.getItem('token')}catch(e){}if(!t||t==='undefined'||t==='null')target='/marketing';}if(loc.search)target+=loc.search;if(loc.hash)target+=loc.hash;loc.replace(target);}}catch(e){}})();</script>
+<script nonce="{{CSP_NONCE_PLACEHOLDER}}">(function(){try{var t=localStorage.getItem('theme');document.documentElement.classList.add('theme-'+(t||'coal'))}catch{}})()</script>
 <script nonce="{{CSP_NONCE_PLACEHOLDER}}">(function(){try{var z=localStorage.getItem('fluxer:accessibility:zoom-preboot');if(z){var p=parseInt(z,10);if(p>=50&&p<=200){document.documentElement.style.setProperty('--custom-zoom',String(p))}}}catch{}})()</script>
 <script nonce="{{CSP_NONCE_PLACEHOLDER}}">(function(){try{if(window.electron||typeof WebSocket!=='function'||typeof fetch!=='function')return;var P=location.pathname;if(P==='/'||P.indexOf('/migrate/')===0||P.indexOf('/oauth2/')===0)return;var LS=localStorage;if(LS.getItem('fluxer:gateway:preboot:session')!=='1')return;var h=JSON.parse(LS.getItem('fluxer:preboot:network')||'null');if(!h||h.v!==1||typeof h.a!=='string'||h.a!==LS.getItem('fluxer:auth:active-account-key'))return;var X={startedAt:Date.now(),discovery:null,gateway:null};window.__FLUXER_PREBOOT_NETWORK__=X;if(typeof h.d==='string'&&/^https?:\/\//.test(h.d)){var r=fetch(h.d,{method:'GET',headers:{Accept:'application/json'},redirect:'error',credentials:'omit',cache:'no-store',referrerPolicy:'no-referrer'});r.catch(function(){});X.discovery={url:h.d,response:r}}if(typeof h.g==='string'&&/^wss?:\/\//.test(h.g)){var u=new URL(h.g);u.searchParams.set('v','1');u.searchParams.set('encoding','json');u.searchParams.set('compress','zstd-stream');u.searchParams.set('stream','1');var ws=new WebSocket(u.toString());ws.binaryType='arraybuffer';var g={url:u.toString(),socket:ws,open:false,messages:[]};ws.onopen=function(){g.open=true};ws.onmessage=function(e){g.messages.push(e)};ws.onclose=ws.onerror=function(){if(X.gateway===g)X.gateway=null};X.gateway=g;setTimeout(function(){if(X.gateway===g){X.gateway=null;try{ws.close(1000,'Preboot gateway unclaimed')}catch(e){}}},30000)}}catch(e){}})()</script>
 </head>

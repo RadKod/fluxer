@@ -54,11 +54,12 @@ import type {UserGuildSettings} from '@app/api/models/UserGuildSettings';
 import type {UserSettings} from '@app/api/models/UserSettings';
 import type {WebAuthnCredential} from '@app/api/models/WebAuthnCredential';
 import {mapStorePurchaseToResponse} from '@app/api/store_billing/StoreBillingMappers';
+import {collectUserHarvestExtensions} from '@app/api/user/lifecycle/UserLifecycleHooks';
 import {buildHarvestDownloadUrl} from '@app/api/user/services/HarvestDownloadUrl';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
 import {resolveSessionClientInfo} from '@app/api/utils/SessionClientIdentity';
 import {writeZipArchive} from '@app/api/worker/utils/ArchiveFile';
-import {createArchiveJsonBuffer} from '@app/api/worker/utils/ArchiveJson';
+import {createArchiveJsonBuffer, stringifyArchiveJson} from '@app/api/worker/utils/ArchiveJson';
 import {
 	appendAssetToArchive,
 	buildHashedAssetKey,
@@ -164,6 +165,8 @@ interface ArchiveParams {
 	isAdminArchive: boolean;
 	includeAttachments: boolean;
 	userDataJsonBuffer: Buffer;
+	threadRepository: HarvestThreadRepository;
+	guildIds: ReadonlyArray<GuildID>;
 	user: User;
 	channelMessagesMap: Map<string, Array<HarvestedMessage>>;
 	payments: Array<Payment>;
@@ -176,6 +179,7 @@ interface ArchiveParams {
 		last_active_ip: string | null;
 	};
 	storageService: IStorageService;
+	extensions: Array<{name: string; data: unknown}>;
 }
 
 interface ArchiveResult {
@@ -243,6 +247,7 @@ async function claimUserArchive(
 // query, not what bounds the archive.
 const HARVEST_MESSAGE_CHUNK_SIZE = 1000;
 const HARVEST_READ_CONCURRENCY = 10;
+const HARVEST_THREAD_CHUNK_SIZE = 1000;
 const INITIAL_PROGRESS = 5;
 const MESSAGES_PROGRESS_MAX = 55;
 const METADATA_PROGRESS = 60;
@@ -416,19 +421,79 @@ export async function harvestMessages(
 	return {channelMessagesMap, totalMessages};
 }
 
+type HarvestThreadRepository = Pick<IThreadRepository, 'listJoinedThreadIdsPage' | 'getMember'>;
+
+// Shared by simultaneous exports in this worker process. Fleet concurrency is
+// worker replicas * this bound; the worker queue controls active export jobs.
+let activeThreadReads = 0;
+const waitingThreadReads: Array<() => void> = [];
+
+async function readHarvestThread<T>(read: () => Promise<T>): Promise<T> {
+	if (activeThreadReads >= HARVEST_READ_CONCURRENCY) {
+		await new Promise<void>((resolve) => waitingThreadReads.push(resolve));
+	} else {
+		activeThreadReads++;
+	}
+	try {
+		return await read();
+	} finally {
+		const next = waitingThreadReads.shift();
+		if (next) next();
+		else activeThreadReads--;
+	}
+}
+
 export async function collectThreadMemberships(
-	threads: Pick<IThreadRepository, 'listJoinedThreadIds' | 'getMember'>,
+	threads: HarvestThreadRepository,
 	userId: UserID,
 	guildIds: ReadonlyArray<GuildID>,
-): Promise<Array<ThreadMember>> {
-	if (!everEnabled()) return [];
-	const perGuild = await mapWithConcurrency(guildIds, HARVEST_READ_CONCURRENCY, async (guildId) => {
-		if (!(await isTainted(guildId, {fresh: true}))) return [];
-		const threadIds = await threads.listJoinedThreadIds(userId, guildId);
-		const members = await Promise.all(threadIds.map((threadId) => threads.getMember(threadId, userId)));
-		return members.filter((member): member is ThreadMember => member !== null);
+	writePage: (members: Array<ThreadMember>) => Promise<void>,
+): Promise<void> {
+	if (!everEnabled()) return;
+	for (const guildId of guildIds) {
+		if (!(await readHarvestThread(() => isTainted(guildId, {fresh: true})))) continue;
+		let cursor: string | null | undefined;
+		do {
+			const page = await readHarvestThread(() =>
+				threads.listJoinedThreadIdsPage(userId, guildId, {limit: HARVEST_THREAD_CHUNK_SIZE, cursor}),
+			);
+			const members = await mapWithConcurrency(page.threadIds, HARVEST_READ_CONCURRENCY, (threadId) =>
+				readHarvestThread(() => threads.getMember(threadId, userId)),
+			);
+			const present = members.filter((member): member is ThreadMember => member !== null);
+			if (present.length > 0) await writePage(present);
+			cursor = page.cursor;
+		} while (cursor !== null);
+	}
+}
+
+function mapThreadMembership(member: ThreadMember) {
+	return {
+		thread_id: member.threadId.toString(),
+		guild_id: member.guildId.toString(),
+		parent_id: member.parentId.toString(),
+		join_timestamp: member.joinTimestamp.toISOString(),
+		flags: member.flags,
+		muted: member.muted,
+	};
+}
+
+export async function writeUserDataJson(
+	filePath: string,
+	metadata: Buffer,
+	threads: HarvestThreadRepository,
+	userId: UserID,
+	guildIds: ReadonlyArray<GuildID>,
+): Promise<void> {
+	await using file = await fs.promises.open(filePath, 'w');
+	await file.writeFile(metadata.subarray(0, -1));
+	let hasMemberships = false;
+	await collectThreadMemberships(threads, userId, guildIds, async (members) => {
+		await file.writeFile(hasMemberships ? ',' : ',\n"thread_memberships":[');
+		await file.writeFile(stringifyArchiveJson(members.map(mapThreadMembership), 0).slice(1, -1));
+		hasMemberships = true;
 	});
-	return perGuild.flat();
+	await file.writeFile(hasMemberships ? ']}' : '}');
 }
 
 export function buildUserDataJson(params: UserDataJsonParams) {
@@ -601,14 +666,7 @@ export function buildUserDataJson(params: UserDataJsonParams) {
 			})),
 		...(threadMemberships.length > 0
 			? {
-					thread_memberships: threadMemberships.map((member) => ({
-						thread_id: member.threadId.toString(),
-						guild_id: member.guildId.toString(),
-						parent_id: member.parentId.toString(),
-						join_timestamp: member.joinTimestamp.toISOString(),
-						flags: member.flags,
-						muted: member.muted,
-					})),
+					thread_memberships: threadMemberships.map(mapThreadMembership),
 				}
 			: {}),
 		saved_messages: savedMessages.map((msg) => ({
@@ -700,6 +758,8 @@ async function createAndUploadArchive(params: ArchiveParams): Promise<ArchiveRes
 		isAdminArchive,
 		includeAttachments,
 		userDataJsonBuffer,
+		threadRepository,
+		guildIds,
 		user,
 		channelMessagesMap,
 		payments,
@@ -707,12 +767,15 @@ async function createAndUploadArchive(params: ArchiveParams): Promise<ArchiveRes
 		authorizedIps,
 		activityData,
 		storageService,
+		extensions,
 	} = params;
 	const userIdString = userId.toString();
 	await using tempDir = await fs.promises.mkdtempDisposable(path.join(os.tmpdir(), 'fluxer-harvest-'));
 	const zipPath = path.join(tempDir.path, `user-data-${userId}.zip`);
+	const userDataJsonPath = path.join(tempDir.path, 'user.json');
+	await writeUserDataJson(userDataJsonPath, userDataJsonBuffer, threadRepository, userId, guildIds);
 	await writeZipArchive(zipPath, async (archive) => {
-		await archive.append(userDataJsonBuffer, {name: 'user.json'});
+		await archive.append(fs.createReadStream(userDataJsonPath), {name: 'user.json'});
 		if (user.avatarHash) {
 			const avatarArchiveName = `assets/user/avatar.${getAnimatedAssetExtension(user.avatarHash)}`;
 			const avatarStorageKey = buildHashedAssetKey('avatars', userIdString, user.avatarHash);
@@ -772,6 +835,9 @@ async function createAndUploadArchive(params: ArchiveParams): Promise<ArchiveRes
 		await archive.append(createArchiveJsonBuffer(mapSecurityData({authorizedIps, activityData})), {
 			name: 'account/security.json',
 		});
+		for (const extension of extensions) {
+			await archive.append(createArchiveJsonBuffer(extension.data), {name: `${extension.name}.json`});
+		}
 	});
 	const storageKey = isAdminArchive
 		? `archives/users/${userId}/${harvestId}/${attemptId}/user-data.zip`
@@ -926,7 +992,6 @@ const harvestUserData: ArchiveTaskHandler = async (payload, helpers, attempt) =>
 		const guildSettings = await mapWithConcurrency(guildIds, HARVEST_READ_CONCURRENCY, (guildId) =>
 			userRepository.findGuildSettings(userId, guildId),
 		);
-		const threadMemberships = await collectThreadMemberships(channelRepository.threads, userId, guildIds);
 		const {branding} = await instanceConfigRepository.getAppPublicConfig();
 		const userData = buildUserDataJson({
 			user,
@@ -938,7 +1003,7 @@ const harvestUserData: ArchiveTaskHandler = async (payload, helpers, attempt) =>
 			userSettings,
 			guildMemberships,
 			guildSettings,
-			threadMemberships,
+			threadMemberships: [],
 			savedMessages,
 			privateChannels,
 			favoriteMemes,
@@ -956,6 +1021,8 @@ const harvestUserData: ArchiveTaskHandler = async (payload, helpers, attempt) =>
 			activityData,
 		});
 		const userDataJsonBuffer = createArchiveJsonBuffer(userData);
+		// Micup: feature data (feed, follows, cosmetics, badges, boosts) from the registered harvest hooks.
+		const extensions = await collectUserHarvestExtensions({userId});
 		Logger.debug({userId, harvestId, elapsed: Date.now() - startTime}, 'Collected user metadata');
 		const includeAttachments = validated.includeAttachments && isAdminArchive;
 		await progressReporter.updateProgress(METADATA_PROGRESS + 5, 'Downloading attachments and creating archive');
@@ -968,6 +1035,8 @@ const harvestUserData: ArchiveTaskHandler = async (payload, helpers, attempt) =>
 			isAdminArchive,
 			includeAttachments,
 			userDataJsonBuffer,
+			threadRepository: channelRepository.threads,
+			guildIds,
 			user,
 			channelMessagesMap,
 			payments,
@@ -975,6 +1044,7 @@ const harvestUserData: ArchiveTaskHandler = async (payload, helpers, attempt) =>
 			authorizedIps,
 			activityData,
 			storageService,
+			extensions,
 		});
 		Logger.debug(
 			{userId, harvestId, zipSize: archive.fileSize.toString(), elapsed: Date.now() - startTime},

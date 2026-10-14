@@ -52,6 +52,33 @@ export function FixtureController(app: HonoApp) {
 		}),
 		async (ctx) => ctx.body(null, 204),
 	);
+	app.get(
+		'/fixture/allow-suspicious-user',
+		LoginRequiredAllowSuspicious,
+		DefaultUserOnly,
+		OpenAPI({
+			operationId: 'fixture_allow_suspicious_user',
+			summary: 'Fixture',
+			description: 'Fixture route.',
+			responseSchema: null,
+			statusCode: 204,
+			tags: ['Fixture'],
+		}),
+		async (ctx) => ctx.body(null, 204),
+	);
+	app.get(
+		'/fixture/allow-suspicious-any',
+		LoginRequiredAllowSuspicious,
+		OpenAPI({
+			operationId: 'fixture_allow_suspicious_any',
+			summary: 'Fixture',
+			description: 'Fixture route.',
+			responseSchema: null,
+			statusCode: 204,
+			tags: ['Fixture'],
+		}),
+		async (ctx) => ctx.body(null, 204),
+	);
 }
 `;
 
@@ -91,6 +118,20 @@ describe('operation security', () => {
 	it('keeps LoginRequired routes open to bot and user tokens', () => {
 		const {route, security} = securityOf('/fixture/any');
 		expect(route.hasBotOnly).toBe(false);
+		expect(security).toEqual([{botToken: []}, {sessionToken: []}]);
+	});
+
+	it('recognizes LoginRequiredAllowSuspicious with DefaultUserOnly as user authentication', () => {
+		const {route, security} = securityOf('/fixture/allow-suspicious-user');
+		expect(route.hasLoginRequired).toBe(true);
+		expect(route.hasDefaultUserOnly).toBe(true);
+		expect(security).toEqual([{sessionToken: []}]);
+	});
+
+	it('recognizes LoginRequiredAllowSuspicious as bot and user authentication', () => {
+		const {route, security} = securityOf('/fixture/allow-suspicious-any');
+		expect(route.hasLoginRequired).toBe(true);
+		expect(route.hasDefaultUserOnly).toBe(false);
 		expect(security).toEqual([{botToken: []}, {sessionToken: []}]);
 	});
 });

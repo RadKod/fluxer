@@ -25,11 +25,13 @@ const EMAIL_I18N_JA_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "{product_name}へのご寄付ありがとうございます",
-		"body": "こんにちは。\n\n{product_name}へのご寄付ありがとうございます。{interval, select,\n  month {定期寄付}\n  year {定期寄付}\n  other {1回のみの寄付}\n}の{interval, select,\n  month {設定}\n  year {設定}\n  other {処理}\n}が完了しました。\n\n寄付の詳細:\n金額: {amount}{interval, select,\n  month {（毎月）}\n  year {（毎年）}\n  other {}\n}\n\nStripeから、請求書PDF付きの領収書が別途メールで送信されます。これにはすべての支払い詳細が含まれており、税務目的にご利用いただけます。\n\n以下のリンクから、いつでも寄付履歴の表示、請求書のダウンロード、{interval, select,\n  month {およびサブスクリプションの管理またはキャンセル}\n  year {およびサブスクリプションの管理またはキャンセル}\n  other {および今後の寄付の管理}\n}が可能です。\n\n{manageUrl}\n\n皆様のご支援が{product_name}の運営を支えています。ありがとうございます。\n\n– {product_name}チーム"
+		"body": "こんにちは。\n\n{product_name}へのご寄付ありがとうございます。{interval, select,\n  month {定期寄付}\n  year {定期寄付}\n  other {1回のみの寄付}\n}の{interval, select,\n  month {設定}\n  year {設定}\n  other {処理}\n}が完了しました。\n\n寄付の詳細:\n金額: {amount}{interval, select,\n  month {（毎月）}\n  year {（毎年）}\n  other {}\n}\n\nStripeから、請求書PDF付きの領収書が別途メールで送信されます。これにはすべての支払い詳細が含まれており、税務目的にご利用いただけます。\n\n以下のリンクから、いつでも寄付履歴の表示、請求書のダウンロード、{interval, select,\n  month {およびサブスクリプションの管理またはキャンセル}\n  year {およびサブスクリプションの管理またはキャンセル}\n  other {および今後の寄付の管理}\n}が可能です。\n\n{manageUrl}\n\n皆様のご支援が{product_name}の運営を支えています。ありがとうございます。\n\n– {product_name}チーム",
+		"button": "寄付を管理"
 	},
 	"donation_magic_link": {
 		"subject": "{product_name}への寄付を管理",
-		"body": "こんにちは。\n\n以下のリンクをクリックして、寄付者ポータルにアクセスしてください。\n\n{manageUrl}\n\nポータルでは、サブスクリプションの管理、請求書のダウンロード、寄付履歴の表示ができます。\n\nこのリンクの有効期限は{expiresAt, date, full} {expiresAt, time, short}です。\n\nこのリンクをリクエストしていない場合は、このメールを無視して問題ありません。\n\n– {product_name}チーム"
+		"body": "こんにちは。\n\n以下のリンクをクリックして、寄付者ポータルにアクセスしてください。\n\n{manageUrl}\n\nポータルでは、サブスクリプションの管理、請求書のダウンロード、寄付履歴の表示ができます。\n\nこのリンクの有効期限は{expiresAt, date, full} {expiresAt, time, short}です。\n\nこのリンクをリクエストしていない場合は、このメールを無視して問題ありません。\n\n– {product_name}チーム",
+		"button": "寄付を管理"
 	},
 	"dsa_report_verification": {
 		"subject": "DSA報告のためのメールアドレスを確認",
@@ -45,11 +47,13 @@ const EMAIL_I18N_JA_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "{product_name}のメールアドレスが変更されました",
-		"body": "こんにちは、{username}さん\n\n{product_name}アカウントのメールアドレスが{newEmail}に変更されました。\n\nこの変更を行った場合は、何もする必要はありません。変更を行っていない場合は、このリンクを使用して変更を元に戻し、アカウントを保護できます。\n\n{revertUrl}\n\nこれにより、以前のメールアドレスが復元され、すべてのデバイスからログアウトされ、MFAが無効になり、新しいパスワードの設定が必要になります。\n\n– {product_name}安全チーム"
+		"body": "こんにちは、{username}さん\n\n{product_name}アカウントのメールアドレスが{newEmail}に変更されました。\n\nこの変更を行った場合は、何もする必要はありません。変更を行っていない場合は、このリンクを使用して変更を元に戻し、アカウントを保護できます。\n\n{revertUrl}\n\nこれにより、以前のメールアドレスが復元され、すべてのデバイスからログアウトされ、MFAが無効になり、新しいパスワードの設定が必要になります。\n\n– {product_name}安全チーム",
+		"button": "この変更を取り消す"
 	},
 	"email_verification": {
 		"subject": "{product_name}のメールアドレスを確認",
-		"body": "こんにちは、{username}さん\n\n以下のリンクをクリックして、{product_name}アカウントのメールアドレスを確認してください。\n\n{verifyUrl}\n\n{product_name}アカウントを作成していない場合は、このメールを無視して問題ありません。\n\nこのリンクは24時間有効です。\n\n– {product_name}チーム"
+		"body": "🎉 こんにちは、{username}さん\n\n以下のリンクをクリックして、{product_name}アカウントのメールアドレスを確認してください。\n\n{verifyUrl}\n\n{product_name}アカウントを作成していない場合は、このメールを無視して問題ありません。\n\nこのリンクは24時間有効です。\n\n– {product_name}チーム",
+		"button": "メールアドレスを確認"
 	},
 	"gift_chargeback_notification": {
 		"subject": "引き換えたギフトの特典が削除されました",
@@ -57,15 +61,18 @@ const EMAIL_I18N_JA_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "{product_name}データのエクスポート準備が完了しました",
-		"body": "こんにちは、{username}さん\n\nデータのエクスポート準備が完了しました。\n\nダウンロードリンク:\n{downloadUrl}\n\n含まれるメッセージ数: {totalMessages, number}件\nファイルサイズ: {fileSizeMB, number} MB\n\nこのリンクの有効期限は{expiresAt, date, full} {expiresAt, time, short}です。\n\nご自身でこのエクスポートをリクエストしていない場合は、すぐにパスワードを変更し、サポートチームにお問い合わせください。\n\n– {product_name}チーム"
+		"body": "こんにちは、{username}さん\n\nデータのエクスポート準備が完了しました。\n\nダウンロードリンク:\n{downloadUrl}\n\n含まれるメッセージ数: {totalMessages, number}件\nファイルサイズ: {fileSizeMB, number} MB\n\nこのリンクの有効期限は{expiresAt, date, full} {expiresAt, time, short}です。\n\nご自身でこのエクスポートをリクエストしていない場合は、すぐにパスワードを変更し、サポートチームにお問い合わせください。\n\n– {product_name}チーム",
+		"button": "データをダウンロード"
 	},
 	"inactivity_warning": {
 		"subject": "{product_name}アカウントは非アクティブのため削除されます",
-		"body": "こんにちは、{username}さん\n\n{lastActiveDate, date, full}以降、{product_name}アカウントでのアクティビティが確認されていません。\n\n{deletionDate, date, full} {deletionDate, time, short}までにログインしない場合、アカウントは非アクティブのため完全に削除されます。\n\nこちらからログインしてください。\n{loginUrl}\n\n最近{product_name}を利用した場合は、すぐにサポートチームにお問い合わせください。\n\n– {product_name}チーム"
+		"body": "こんにちは、{username}さん\n\n{lastActiveDate, date, full}以降、{product_name}アカウントでのアクティビティが確認されていません。\n\n{deletionDate, date, full} {deletionDate, time, short}までにログインしない場合、アカウントは非アクティブのため完全に削除されます。\n\nこちらからログインしてください。\n{loginUrl}\n\n最近{product_name}を利用した場合は、すぐにサポートチームにお問い合わせください。\n\n– {product_name}チーム",
+		"button": "ログイン"
 	},
 	"ip_authorization": {
 		"subject": "新しいIPアドレスからのログインを承認",
-		"body": "こんにちは、{username}さん\n\n新しいIPアドレスから{product_name}アカウントへのログイン試行を検出しました。\n\nIPアドレス: {ipAddress}\n場所: {location}\n\nこれがご自身によるものである場合は、以下のリンクをクリックしてこのIPアドレスを承認してください。\n\n{authUrl}\n\nログインを試行していない場合は、すぐにパスワードを変更してください。\n\nこのリンクは30分間有効です。\n\n– {product_name}チーム"
+		"body": "こんにちは、{username}さん\n\n新しいIPアドレスから{product_name}アカウントへのログイン試行を検出しました。\n\nIPアドレス: {ipAddress}\n場所: {location}\n\nこれがご自身によるものである場合は、以下のリンクをクリックしてこのIPアドレスを承認してください。\n\n{authUrl}\n\nログインを試行していない場合は、すぐにパスワードを変更してください。\n\nこのリンクは30分間有効です。\n\n– {product_name}チーム",
+		"button": "このログインを承認"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "{product_name}のバックアップコードへのアクセスを確認",
@@ -77,11 +84,17 @@ const EMAIL_I18N_JA_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "{product_name}のパスワードをリセット",
-		"body": "こんにちは、{username}さん\n\n{product_name}のパスワードリセットをリクエストされました。以下のリンクを使用して新しいパスワードを設定してください。\n\n{resetUrl}\n\nご自身でリクエストしていない場合は、このメールを無視して問題ありません。\n\nこのリンクは1時間有効です。\n\n– {product_name}チーム"
+		"body": "こんにちは、{username}さん\n\n{product_name}のパスワードリセットをリクエストされました。以下のリンクを使用して新しいパスワードを設定してください。\n\n{resetUrl}\n\nご自身でリクエストしていない場合は、このメールを無視して問題ありません。\n\nこのリンクは1時間有効です。\n\n– {product_name}チーム",
+		"button": "パスワードをリセット"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "{product_name}の登録が承認されました",
-		"body": "こんにちは、{username}さん\n\n良いお知らせです。{product_name}の登録が承認されました。\n\nこちらから{product_name}アプリにログインできます。\n{channelsUrl}\n\n{product_name}コミュニティへようこそ。\n\n– {product_name}チーム"
+		"body": "🎉 こんにちは、{username}さん\n\n良いお知らせです。{product_name}の登録が承認されました。\n\nこちらから{product_name}アプリにログインできます。\n{channelsUrl}\n\n{product_name}コミュニティへようこそ。\n\n– {product_name}チーム",
+		"button": "{product_name}を開く"
 	},
 	"report_resolved": {
 		"subject": "{product_name}への報告の審査が完了しました",
@@ -97,7 +110,7 @@ const EMAIL_I18N_JA_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "{product_name}アカウントの停止が解除されました",
-		"body": "こんにちは、{username}さん\n\n良いお知らせです。{product_name}アカウントの停止が解除されました。\n\n{reason, select,\n  null {}\n  other {理由: {reason}}\n}\n\nこれで再度ログインして、通常通り{product_name}を利用できます。\n\n– {product_name}安全チーム"
+		"body": "🎉 こんにちは、{username}さん\n\n良いお知らせです。{product_name}アカウントの停止が解除されました。\n\n{reason, select,\n  null {}\n  other {理由: {reason}}\n}\n\nこれで再度ログインして、通常通り{product_name}を利用できます。\n\n– {product_name}安全チーム"
 	}
 });
 

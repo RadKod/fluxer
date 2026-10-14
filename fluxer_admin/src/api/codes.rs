@@ -31,4 +31,14 @@ impl AdminApiClient {
             .map_err(|e| self.generated_error(e))?;
         self.generated_value(response.into_inner())
     }
+
+    // Item codes give one owned-availability cosmetic item instead of premium time.
+    pub async fn create_cosmetic_gift_codes(
+        &self,
+        count: u32,
+        item_id: &str,
+    ) -> ApiResult<CodesResponse> {
+        let body = serde_json::json!({ "count": count, "item_id": item_id });
+        self.post("/admin/gift-codes/cosmetic", Some(&body)).await
+    }
 }

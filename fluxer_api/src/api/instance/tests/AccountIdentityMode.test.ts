@@ -449,7 +449,12 @@ describe('Account identity mode', () => {
 			await repository.setAccountIdentityMode(AccountIdentityModes.EMAIL, 'setup', 'random');
 			await createBuilderWithoutAuth(harness)
 				.post('/auth/register')
-				.body({email: 'taggedadmin@example.com', username: 'taggedadmin', password: 'a-strong-password-123'})
+				.body({
+					email: 'taggedadmin@example.com',
+					username: 'taggedadmin',
+					password: 'a-strong-password-123',
+					date_of_birth: '2000-01-01',
+				})
 				.execute();
 			await createBuilderWithoutAuth(harness)
 				.put('/instance/setup/account-identity')
@@ -467,7 +472,12 @@ describe('Account identity mode', () => {
 			await repository.setAccountIdentityMode(AccountIdentityModes.USERNAME, 'setup');
 			await createBuilderWithoutAuth(harness)
 				.post('/auth/register')
-				.body({username: 'firstadmin', global_name: 'First', password: 'a-strong-password-123'})
+				.body({
+					username: 'firstadmin',
+					global_name: 'First',
+					password: 'a-strong-password-123',
+					date_of_birth: '2000-01-01',
+				})
 				.execute();
 			await createBuilderWithoutAuth(harness)
 				.put('/instance/setup/account-identity')
@@ -505,7 +515,12 @@ describe('Account identity mode', () => {
 			expect((await fetchDiscovery()).app_public.setup.account_identity_locked).toBe(false);
 			await createBuilderWithoutAuth(harness)
 				.post('/auth/register')
-				.body({username: 'lockedadmin', global_name: 'Locked', password: 'a-strong-password-123'})
+				.body({
+					username: 'lockedadmin',
+					global_name: 'Locked',
+					password: 'a-strong-password-123',
+					date_of_birth: '2000-01-01',
+				})
 				.execute();
 			expect((await fetchDiscovery()).app_public.setup.account_identity_locked).toBe(true);
 			await repository.setAppPublicConfig({setup: {configured: true}});
@@ -541,7 +556,12 @@ describe('Account identity mode', () => {
 			let settled = false;
 			const pending = createBuilderWithoutAuth<{token: string}>(harness)
 				.post('/auth/register')
-				.body({username: 'waitingadmin', global_name: 'Waiting', password: 'a-strong-password-123'})
+				.body({
+					username: 'waitingadmin',
+					global_name: 'Waiting',
+					password: 'a-strong-password-123',
+					date_of_birth: '2000-01-01',
+				})
 				.execute()
 				.then((result) => {
 					settled = true;
@@ -584,7 +604,12 @@ describe('Account identity mode', () => {
 			await repository.setAccountIdentityMode(AccountIdentityModes.USERNAME, 'setup');
 			const registration = await createBuilderWithoutAuth<{token: string}>(harness)
 				.post('/auth/register')
-				.body({username: 'setupadmin', global_name: 'Setup Admin', password: 'a-strong-password-123'})
+				.body({
+					username: 'setupadmin',
+					global_name: 'Setup Admin',
+					password: 'a-strong-password-123',
+					date_of_birth: '2000-01-01',
+				})
 				.execute();
 			expect((await fetchAdminConfig(registration.token)).account_identity).toEqual({
 				mode: AccountIdentityModes.USERNAME,

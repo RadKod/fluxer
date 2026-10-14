@@ -16,7 +16,7 @@ export const PiPOverlay = observer(function PiPOverlay() {
 	const room = MediaEngine.room;
 	const [activeRoom, setActiveRoom] = useState<Room | null>(room);
 	useEffect(() => {
-		if (room) setActiveRoom(room);
+		setActiveRoom(room);
 	}, [room]);
 	const renderRoom = activeRoom;
 	const portalRoot = typeof document === 'undefined' ? null : document.body;

@@ -16,7 +16,6 @@ import {
 	AVERAGE_PING_DESCRIPTOR,
 	BANDWIDTH_DESCRIPTOR,
 	COPY_ENDPOINT_DESCRIPTOR,
-	CURRENT_PING_DESCRIPTOR,
 	DEVICE_DESCRIPTOR,
 	DURATION_DESCRIPTOR,
 	ENDPOINT_DESCRIPTOR,
@@ -35,12 +34,17 @@ import {
 	RECEIVE_BANDWIDTH_DESCRIPTOR,
 	SEND_BANDWIDTH_DESCRIPTOR,
 	SESSION_DESCRIPTOR,
+	SIGNAL_PING_DESCRIPTOR,
 	SUBSCRIBER_TRANSPORT_DESCRIPTOR,
 	VIDEO_PACKET_LOSS_DESCRIPTOR,
 	VIDEO_RECEIVE_BANDWIDTH_DESCRIPTOR,
 	VIDEO_SEND_BANDWIDTH_DESCRIPTOR,
+	VOICE_SERVER_PING_DESCRIPTOR,
 } from '@app/features/voice/components/voice_connection_status/shared';
-import MediaEngine, {useMediaEngineVersion} from '@app/features/voice/engine/MediaEngineFacade';
+import MediaEngine, {
+	useMediaEngineStatsVersion,
+	useMediaEngineVersion,
+} from '@app/features/voice/engine/MediaEngineFacade';
 import {formatDuration} from '@fluxer/date_utils/src/DateDuration';
 import type {
 	VoiceEngineV2LatencyDataPoint as LatencyDataPoint,
@@ -206,6 +210,7 @@ interface VoiceDetailsPopoutProps {
 export const VoiceDetailsPopout = observer(({onClose, hideHeader = false}: VoiceDetailsPopoutProps = {}) => {
 	const {i18n} = useLingui();
 	useMediaEngineVersion();
+	useMediaEngineStatsVersion();
 	const handleClose = () => {
 		if (onClose) {
 			onClose();
@@ -214,7 +219,8 @@ export const VoiceDetailsPopout = observer(({onClose, hideHeader = false}: Voice
 		PopoutCommands.close();
 	};
 	const locale = i18n.locale;
-	const latency = MediaEngine.currentLatency;
+	const mediaLatency = MediaEngine.mediaLatency;
+	const signalLatency = MediaEngine.signalLatency;
 	const averageLatency = MediaEngine.averageLatency;
 	const latencyHistory = MediaEngine.latencyHistory;
 	const voiceServerEndpoint = MediaEngine.voiceServerEndpoint;
@@ -415,9 +421,14 @@ export const VoiceDetailsPopout = observer(({onClose, hideHeader = false}: Voice
 							/>
 						)}
 						<PopoutStatRow
-							label={i18n._(CURRENT_PING_DESCRIPTOR)}
-							value={latency !== null ? formatMilliseconds(latency, locale) : i18n._(MEASURING_DESCRIPTOR)}
+							label={i18n._(VOICE_SERVER_PING_DESCRIPTOR)}
+							value={mediaLatency !== null ? formatMilliseconds(mediaLatency, locale) : i18n._(MEASURING_DESCRIPTOR)}
 							data-flx="voice.voice-connection-status.voice-details-popout.popout-stat-row--2"
+						/>
+						<PopoutStatRow
+							label={i18n._(SIGNAL_PING_DESCRIPTOR)}
+							value={signalLatency !== null ? formatMilliseconds(signalLatency, locale) : i18n._(MEASURING_DESCRIPTOR)}
+							data-flx="voice.voice-connection-status.voice-details-popout.signal-ping-row"
 						/>
 						{averageLatency !== null && averageLatency !== undefined && (
 							<PopoutStatRow

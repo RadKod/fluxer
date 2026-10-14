@@ -34,13 +34,16 @@ import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {User} from '@app/api/models/User';
 import {UserSettings} from '@app/api/models/UserSettings';
 import {deriveAvailableUsername, reserveUsername, type UsernameReservation} from '@app/api/user/UniqueUsernames';
-import {USERNAME_MODE_DISCRIMINATOR} from '@app/api/user/UserTag';
+import {USERNAME_CLAIM_ERROR_CODES} from '@app/api/user/username/UsernameOwnershipService';
+import {UsernamePolicyService} from '@app/api/user/username/UsernamePolicyService';
 import {EXTERNAL_RESPONSE_LIMITS} from '@app/api/utils/ExternalResponseLimits';
 import * as FetchUtils from '@app/api/utils/FetchUtils';
 import {isJsonRecord, parseJsonRecord, parseJsonWithGuard} from '@app/api/utils/JsonBoundaryUtils';
 import {generateRandomUsername} from '@app/api/utils/UsernameGenerator';
 import {deriveUsernameFromDisplayName} from '@app/api/utils/UsernameSuggestionUtils';
 import {AccountIdentityModes, TagStyles} from '@fluxer/constants/src/AccountIdentityConstants';
+import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
+import type {LocaleCode} from '@fluxer/constants/src/Locales';
 import {SSO_MOBILE_CALLBACK_URI, SSO_MOBILE_STATE_PREFIX} from '@fluxer/constants/src/SsoConstants';
 import {ProfileFieldPrivacyFlags} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
@@ -50,8 +53,11 @@ import {SsoRequiredError} from '@fluxer/errors/src/domains/auth/SsoRequiredError
 import {ContentBlockedError} from '@fluxer/errors/src/domains/content/ContentBlockedError';
 import {FeatureTemporarilyDisabledError} from '@fluxer/errors/src/domains/core/FeatureTemporarilyDisabledError';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
+import {FluxerError} from '@fluxer/errors/src/FluxerError';
+import {displayNamePassesForMicup} from '@fluxer/schema/src/primitives/MicupBrandGuard';
 import {EmailType} from '@fluxer/schema/src/primitives/UserValidators';
 import {formatUrlForDiagnostics} from '@pkgs/http_client/src/HttpClientDiagnostics';
+import {parseAcceptLanguage} from '@pkgs/locale/src/LocaleService';
 import {ms, seconds} from 'itty-time';
 import {
 	type CryptoKey,
@@ -361,7 +367,9 @@ export class SsoService {
 			config,
 		});
 		const claims = await this.resolveClaims(tokenResponse, config, statePayload.nonce);
-		const user = await this.resolveUserFromClaims(claims, config, requestCache);
+		const acceptLanguage = request.headers.get('accept-language');
+		const locale = acceptLanguage ? parseAcceptLanguage(acceptLanguage) : undefined;
+		const user = await this.resolveUserFromClaims(claims, config, requestCache, locale);
 		const [token] = await AuthSession.createAuthSession(this.apiContext, {
 			user,
 			origin: AuthSession.resolveSessionOrigin(this.apiContext, request),
@@ -373,6 +381,7 @@ export class SsoService {
 		claims: ResolvedSsoClaims,
 		config: ResolvedSsoConfig,
 		requestCache: RequestCache,
+		locale?: LocaleCode,
 	): Promise<User> {
 		if (!claims.emailVerified) {
 			throw InputValidationError.fromCode('email_verified', ValidationErrorCodes.INVALID_SSO_TOKEN);
@@ -406,9 +415,14 @@ export class SsoService {
 		if (registrationConfig.mode === 'closed') {
 			throw new RegistrationClosedError();
 		}
+		const appPublicConfig = await this.instanceConfigRepository.getAppPublicConfig();
+		if (appPublicConfig.registration.collect_date_of_birth) {
+			// OIDC claims carry no verified date of birth, so provisioning here would skip the regional minimum age check.
+			throw InputValidationError.fromCode('date_of_birth', ValidationErrorCodes.INVALID_DATE_OF_BIRTH_FORMAT);
+		}
 		await assertEmailNotBlocklisted(emailLower, 'email');
 		const pendingApproval = registrationConfig.mode === 'approval';
-		const user = await this.provisionUserFromClaims(claims, config, {pendingApproval});
+		const user = await this.provisionUserFromClaims(claims, config, {pendingApproval, locale});
 		if (pendingApproval) {
 			throw new RegistrationPendingApprovalError();
 		}
@@ -459,7 +473,7 @@ export class SsoService {
 
 	private async allocateDiscriminator(username: string): Promise<number> {
 		const result = await this.discriminatorService.generateDiscriminator({username});
-		if (!result.available) {
+		if (!result.available || result.discriminator <= 0) {
 			throw InputValidationError.fromCode('username', ValidationErrorCodes.SSO_UNABLE_TO_ALLOCATE_DISCRIMINATOR);
 		}
 		return result.discriminator;
@@ -470,17 +484,33 @@ export class SsoService {
 		config: ResolvedSsoConfig,
 		options?: {
 			pendingApproval?: boolean;
+			locale?: LocaleCode;
 		},
 	): Promise<User> {
 		const {users, snowflake, cache} = this.apiContext.services;
-		const accountIdentity = await this.instanceConfigRepository.getAccountIdentity();
+		const accountIdentity = {
+			...(await this.instanceConfigRepository.getAccountIdentity()),
+			usernameMigration: await this.instanceConfigRepository.getUsernameMigrationConfig(),
+		};
 		const usernameMode = accountIdentity.mode === AccountIdentityModes.USERNAME;
-		const uniqueUsernames = accountIdentity.tagStyle === TagStyles.NONE;
+		const uniqueUsernames =
+			(accountIdentity.usernameMigration?.state ?? 'legacy') === 'legacy' &&
+			accountIdentity.tagStyle === TagStyles.NONE;
 		const userId = (await snowflake.generate()) as UserID;
 		const baseName = claims.name?.trim() || claims.email.split('@')[0] || generateRandomUsername();
 		const derivedUsername = deriveUsernameFromDisplayName(baseName) ?? generateRandomUsername();
 		const username = uniqueUsernames ? await deriveAvailableUsername(users, derivedUsername) : derivedUsername;
-		const discriminator = uniqueUsernames ? USERNAME_MODE_DISCRIMINATOR : await this.allocateDiscriminator(username);
+		const policy = new UsernamePolicyService(this.instanceConfigRepository);
+		const snapshot = await policy.readCached().catch((cause) => {
+			throw new FluxerError({code: APIErrorCodes.USERNAME_UNAVAILABLE, status: 503, cause});
+		});
+		const rejection = policy.check(username.toLowerCase(), {kind: 'human', userId}, false, snapshot, null);
+		if (rejection)
+			throw new FluxerError({
+				code: USERNAME_CLAIM_ERROR_CODES[rejection],
+				status: rejection === 'UNAVAILABLE' ? 503 : 400,
+			});
+		const discriminator = await this.allocateDiscriminator(username);
 		const now = new Date();
 		const traits = new Set<string>([
 			'sso',
@@ -491,10 +521,13 @@ export class SsoService {
 		if (options?.pendingApproval) {
 			traits.add(REGISTRATION_PENDING_APPROVAL_TRAIT);
 		}
-		const globalName = claims.name?.substring(0, 256) ?? username;
+		const claimedName = claims.name?.substring(0, 256) ?? username;
+		// Micup: the provider's name is not the user's choice, so one that passes for Micup is dropped (the username
+		// shows instead) rather than refusing the sign-up.
+		const globalName = displayNamePassesForMicup(claimedName) ? null : claimedName;
 		if (
 			profileSubstringBlocklistCache.containsBannedSubstring('username', username) ||
-			profileSubstringBlocklistCache.containsBannedSubstring('global_name', globalName)
+			profileSubstringBlocklistCache.containsBannedSubstring('global_name', claimedName)
 		) {
 			throw new ContentBlockedError();
 		}
@@ -502,6 +535,7 @@ export class SsoService {
 			user_id: userId,
 			username,
 			discriminator,
+			username_state: null,
 			global_name: globalName,
 			bot: false,
 			system: false,
@@ -522,7 +556,7 @@ export class SsoService {
 			timezone: null,
 			timezone_privacy_flags: ProfileFieldPrivacyFlags.EVERYONE,
 			date_of_birth: null,
-			locale: null,
+			locale: options?.locale ?? null,
 			flags: 0n,
 			premium_type: null,
 			premium_since: null,
@@ -583,8 +617,9 @@ export class SsoService {
 			await users.upsertSettings(
 				UserSettings.getDefaultUserSettings({
 					userId,
-					locale: 'en-US',
+					locale: options?.locale ?? 'en-US',
 					isAdult: true,
+					publicProfile: false,
 				}),
 			);
 			void this.kvActivityTracker.updateActivity(user.id, now).catch((error: unknown) => {

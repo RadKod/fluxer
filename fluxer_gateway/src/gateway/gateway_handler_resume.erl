@@ -156,6 +156,7 @@ finalize_resume(Pid, Seq, MissedEvents, GwTimings0, State) ->
         ReplayStartedAt,
         GwTimings0
     ),
+    gen_server:cast(Pid, {game_activity_resume, SocketPid}),
     ResumedData = put_resumed_gateway_timings(session_is_staff(Pid), GwTimings),
     SocketPid ! {dispatch, resumed, ResumedData, Seq},
     gateway_cluster_metrics:record_resume(),

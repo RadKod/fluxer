@@ -9,6 +9,10 @@ import type {GatewayGuildSettings} from '@app/features/user/state/UserGuildSetti
 import type {WebAuthnCredential} from '@app/features/user/state/WebAuthnCredentials';
 import type {RtcRegionResponse, Channel as WireChannel} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
 import type {ConnectionListResponse} from '@fluxer/schema/src/domains/connection/ConnectionSchemas';
+import type {
+	FeedNotificationAckResponse,
+	FeedNotificationStateResponse,
+} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import type {GuildEmoji, GuildSticker} from '@fluxer/schema/src/domains/guild/GuildEmojiSchemas';
 import type {GuildMemberData} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
 import type {Guild as WireGuild} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
@@ -201,6 +205,9 @@ export interface SnapshotPresenceRow {
 }
 
 export interface SnapshotAccountMetadataRow {
+	feedNotifications?: FeedNotificationStateResponse;
+	feedNotificationAck?: FeedNotificationAckResponse;
+	feedNotificationLocalCount?: boolean;
 	authSessionIdHash: string | null;
 	staticClientSessionId: string | null;
 	countryCode: string | null;
@@ -391,6 +398,7 @@ export function snapshotEntityKey<E extends SnapshotEntity>(entity: E, key: stri
 }
 
 export function accountMetadataFromReady(data: {
+	feed_notification_state?: FeedNotificationStateResponse;
 	auth_session_id_hash?: string;
 	static_client_session_id?: string;
 	country_code?: string;
@@ -401,6 +409,7 @@ export function accountMetadataFromReady(data: {
 	notes?: Record<string, string>;
 }): SnapshotAccountMetadataRow {
 	return {
+		...(data.feed_notification_state ? {feedNotifications: {...data.feed_notification_state}} : {}),
 		authSessionIdHash: data.auth_session_id_hash ?? null,
 		staticClientSessionId: data.static_client_session_id ?? null,
 		countryCode: data.country_code ?? null,

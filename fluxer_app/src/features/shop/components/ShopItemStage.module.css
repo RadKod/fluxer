@@ -1,0 +1,262 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* The natural region is drawn at full size and scaled once, so the card width fixes the scale and nothing is measured
+   in JS. */
+.stage {
+	--stage-scale: 0.8;
+	--natural-w: 22.5rem;
+	--natural-h: 17.5rem;
+	--card-x: 1.875rem;
+	--card-y: 1.25rem;
+	position: relative;
+	width: 100%;
+	aspect-ratio: 9 / 7;
+	overflow: hidden;
+	contain: layout paint;
+	background: var(--background-secondary-lighter);
+}
+
+/* A member list column instead of a profile card: the profile card does not draw nameplates. */
+.stage[data-type='nameplate'] {
+	--stage-scale: 1.0909;
+	--natural-w: 16.5rem;
+	--natural-h: 12.8333rem;
+}
+
+.stage[data-size='grid'] {
+	container-type: size;
+}
+
+/* --stage-boost lets a host grow the content past its own scale, up to what the box holds (the shop card). */
+.stage[data-size='grid'] .natural {
+	--fit-scale: min(
+		calc(var(--stage-scale) * var(--stage-boost, 1)),
+		calc(100cqw / var(--natural-w)),
+		calc(100cqh / var(--natural-h))
+	);
+}
+
+.natural {
+	--fit-scale: var(--stage-scale);
+	position: absolute;
+	top: calc((100% - var(--natural-h) * var(--fit-scale)) / 2);
+	left: calc((100% - var(--natural-w) * var(--fit-scale)) / 2);
+	width: var(--natural-w);
+	height: var(--natural-h);
+	transform: scale(var(--fit-scale));
+	transform-origin: 0 0;
+	animation: stageIn 0.15s ease-out;
+}
+
+@keyframes stageIn {
+	from {
+		opacity: 0;
+	}
+}
+
+.card {
+	padding-top: var(--card-y);
+	padding-left: var(--card-x);
+}
+
+/* The item dialog: scale 1 (the dialog zooms it), as tall as the card, centred. */
+.stage[data-size='full'] {
+	container-type: inline-size;
+	--stage-scale: 1;
+	--card-x: 0;
+	aspect-ratio: auto;
+	padding-bottom: 1.25rem;
+}
+
+.stage[data-size='full'] .natural {
+	position: static;
+	width: fit-content;
+	height: auto;
+	margin-inline: auto;
+	transform: none;
+	animation: none;
+}
+
+.stage[data-size='full'][data-custom-layout] .natural {
+	width: var(--natural-w);
+	zoom: min(var(--stage-scale), calc(100cqw / var(--natural-w)));
+}
+
+/* Micup: reserve the profile avatar's left and top overhang within the fitted preview. */
+.stage[data-size='full'][data-type='avatar_ultra'] .card {
+	padding-left: max(var(--card-x), 5.375rem);
+	padding-top: max(var(--card-y), 2.5625rem);
+}
+
+.stage[data-size='full'][data-type='avatar_ultra'] .natural {
+	width: calc(var(--natural-w) + max(0rem, 5.375rem - var(--card-x)));
+	zoom: min(var(--stage-scale), calc(100cqw / (var(--natural-w) + max(0rem, 5.375rem - var(--card-x)))));
+}
+
+/* A bundle's nameplate among other items: the member row over the card's foot, as wide as the member column's row. */
+.plateRow {
+	position: absolute;
+	right: 0;
+	bottom: 0.5rem;
+	left: 0;
+	width: 15.5rem;
+	margin: 0 auto;
+	border-radius: var(--radius-md);
+	background: var(--background-secondary-lighter);
+}
+
+/* A bundle on its wide shop card (and a set tile): one slot per item, side by side across the box, each part centred
+   in its slot and drawn as large as the slot allows (--part-scale, by how many slots there are). Five items or more
+   take two rows. The profile card hangs from the top of its slot; its foot is cut by the box. */
+.stage[data-composed] {
+	--stage-scale: 1;
+	--natural-w: 30rem;
+	--natural-h: 10.5rem;
+}
+
+.composition {
+	--avatar-scale: 1.45;
+	--plate-scale: 0.64;
+	--panel-scale: 0.5;
+	display: grid;
+	grid-auto-columns: minmax(0, 1fr);
+	grid-auto-flow: column;
+	width: 100%;
+	height: 100%;
+	padding: 0 0.25rem;
+	box-sizing: border-box;
+}
+
+.composition[data-parts='1'] {
+	--avatar-scale: 1.9;
+	--plate-scale: 1.4;
+	--panel-scale: 0.55;
+}
+
+.composition[data-parts='2'] {
+	--avatar-scale: 1.75;
+	--plate-scale: 0.85;
+	--panel-scale: 0.5;
+}
+
+.composition[data-parts='4'] {
+	--avatar-scale: 1.2;
+	--plate-scale: 0.46;
+	--panel-scale: 0.38;
+}
+
+.composition:is(
+	[data-parts='5'],
+	[data-parts='6'],
+	[data-parts='7'],
+	[data-parts='8'],
+	[data-parts='9'],
+	[data-parts='10']
+) {
+	--avatar-scale: 0.8;
+	--plate-scale: 0.36;
+	--panel-scale: 0.24;
+	grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.compositionSlot {
+	position: relative;
+	min-width: 0;
+	min-height: 0;
+}
+
+.compositionAvatar,
+.compositionPlate,
+.compositionPanel {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%) scale(var(--part-scale));
+}
+
+.compositionAvatar {
+	--part-scale: var(--avatar-scale);
+	width: 5rem;
+	height: 5rem;
+}
+
+/* Ultra wings: at their natural size (no scale), centred in their slot. The composed stage does not clip them; the
+   card's own edge is the limit, and the card keeps room for them. */
+.compositionUltra {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 2.5rem;
+	height: 2.5rem;
+	transform: translate(-50%, -50%);
+}
+
+/* A bundle with ultra wings is drawn at its own size and not clipped by the stage, so the wings keep their natural
+   size; the card's edge is the limit and the card has room for them. */
+.stage[data-composed][data-ultra] {
+	overflow: visible;
+	contain: layout;
+}
+
+.stage[data-composed][data-ultra] .natural {
+	--fit-scale: 1;
+}
+
+.compositionPlate {
+	--part-scale: var(--plate-scale);
+	width: 15.5rem;
+	overflow: hidden;
+	border-radius: var(--radius-md);
+	background: var(--background-secondary-lighter);
+	box-shadow: 0 0.5rem 1.25rem -0.5rem color-mix(in srgb, var(--background-tertiary) 85%, transparent);
+}
+
+.compositionPanel {
+	--part-scale: var(--panel-scale);
+	top: 0.5rem;
+	width: 19.0625rem;
+	border-radius: var(--radius-lg);
+	box-shadow: 0 0.75rem 2rem -0.5rem color-mix(in srgb, var(--background-tertiary) 85%, transparent);
+	transform: translateX(-50%) scale(var(--part-scale));
+	transform-origin: top center;
+}
+
+.memberColumn {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 0.125rem;
+	width: 100%;
+	height: 100%;
+	padding: 0 0.5rem;
+}
+
+.skeletonRow {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	height: 2.625rem;
+	padding: 0 0.5rem;
+	opacity: var(--skeleton-opacity-default);
+}
+
+.skeletonAvatar {
+	flex: 0 0 auto;
+	width: 2rem;
+	height: 2rem;
+	border-radius: var(--radius-full);
+	background: var(--background-modifier-accent);
+}
+
+.skeletonName {
+	width: 6rem;
+	height: 0.75rem;
+	border-radius: var(--radius-full);
+	background: var(--background-modifier-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.natural {
+		animation: none;
+	}
+}

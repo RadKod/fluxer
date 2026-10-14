@@ -8,21 +8,27 @@ import {
 	type GuildID,
 	type UserID,
 } from '@app/api/BrandedTypes';
-import type {ChannelOverride, UserGuildSettingsRow} from '@app/api/database/types/UserTypes';
+import {buildPatchFromData} from '@app/api/database/CassandraVersionedUpdate';
+import type {ChannelOverride, UserGuildSettingsRow, UserSettingsRow} from '@app/api/database/types/UserTypes';
+import {USER_SETTINGS_COLUMNS} from '@app/api/database/types/UserTypes';
 import {type ThreadViewer, viewerActive} from '@app/api/experiment/ChannelThreadsGate';
 import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getGameActivityPolicyService} from '@app/api/middleware/ServiceSingletons';
 import type {GuildChannelOverride} from '@app/api/models/GuildChannelOverride';
 import type {User} from '@app/api/models/User';
 import type {UserGuildSettings} from '@app/api/models/UserGuildSettings';
 import type {UserSettings} from '@app/api/models/UserSettings';
+import type {ProfileAccessCache} from '@app/api/user/profile/ProfileAccessCache';
+import {canHavePublicProfile, PUBLIC_PROFILE_MIN_AGE} from '@app/api/user/profile/ProfilePrivacy';
 import type {IUserAccountRepository} from '@app/api/user/repositories/IUserAccountRepository';
 import type {IUserRelationshipRepository} from '@app/api/user/repositories/IUserRelationshipRepository';
 import type {IUserSettingsRepository} from '@app/api/user/repositories/IUserSettingsRepository';
 import {CustomStatusValidator} from '@app/api/user/services/CustomStatusValidator';
+import {type GameActivityPolicyService, isGameActivityEligible} from '@app/api/user/services/GameActivityPolicyService';
 import type {UserAccountUpdatePropagator} from '@app/api/user/services/UserAccountUpdatePropagator';
 import {getCachedUserPartialResponse} from '@app/api/user/UserCacheHelpers';
 import {controlUserGuildSettingsView} from '@app/api/user/UserGuildSettingsThreadView';
@@ -34,6 +40,7 @@ import {
 	DEFAULT_GUILD_FOLDER_ICON,
 	GroupDmAddPermissionFlags,
 	IncomingCallFlags,
+	ProfilePrivacyLevels,
 	RelationshipTypes,
 	SensitiveMediaFilterLevel,
 	UNCATEGORIZED_FOLDER_ID,
@@ -66,6 +73,8 @@ interface UserAccountSettingsServiceDeps {
 	userCacheService: UserCacheService;
 	guildRepository: IGuildRepositoryAggregate;
 	limitConfigService: LimitConfigService;
+	profileAccessCache?: Pick<ProfileAccessCache, 'forgetSide'>;
+	gameActivityPolicyService?: Pick<GameActivityPolicyService, 'fenceUserPolicy' | 'applyUserPolicy'>;
 }
 
 export class UserAccountSettingsService {
@@ -80,7 +89,7 @@ export class UserAccountSettingsService {
 	}
 
 	async findSettings(userId: UserID): Promise<UserSettings> {
-		const userSettings = await this.deps.userSettingsRepository.findSettings(userId);
+		const userSettings = await this.deps.userSettingsRepository.findSettings(userId, {authoritative: true});
 		if (!userSettings) throw new UnknownUserError();
 		return userSettings;
 	}
@@ -92,11 +101,28 @@ export class UserAccountSettingsService {
 		flags?: bigint;
 	}): Promise<UserSettings> {
 		const {userId, data, dateOfBirth, flags = 0n} = params;
-		const currentSettings = await this.deps.userSettingsRepository.findSettings(userId);
+		const currentSettings = await this.deps.userSettingsRepository.findSettings(userId, {authoritative: true});
 		if (!currentSettings) {
 			throw new UnknownUserError();
 		}
+		const hasPolicyIntent = data.game_activity_visibility !== undefined || data.profile_privacy !== undefined;
+		if (
+			data.game_activity_visibility != null &&
+			data.game_activity_visibility !== 'off' &&
+			data.game_activity_visibility !== 'friends'
+		) {
+			throw ValidationError.fromPath('game_activity_visibility', 'INVALID_VALUE', 'Expected off or friends');
+		}
+		const policyAccount = hasPolicyIntent ? await this.deps.userAccountRepository.findUnique(userId) : null;
+		if (hasPolicyIntent && !policyAccount) throw new UnknownUserError();
+		if (data.game_activity_visibility === 'friends' && (!policyAccount || !isGameActivityEligible(policyAccount))) {
+			throw InputValidationError.fromCode('game_activity_visibility', ValidationErrorCodes.MUST_BE_MINIMUM_AGE, {
+				minAge: 16,
+			});
+		}
 		const updatedRowData = {...currentSettings.toRow(), user_id: userId};
+		if (data.game_activity_visibility !== undefined)
+			updatedRowData.game_activity_visibility = data.game_activity_visibility ?? 'off';
 		const localeChanged = data.locale !== undefined && data.locale !== currentSettings.locale;
 		const isStaffUser = (flags & UserFlags.STAFF) === UserFlags.STAFF;
 		if (data.status !== undefined) updatedRowData.status = data.status;
@@ -162,6 +188,12 @@ export class UserAccountSettingsService {
 			);
 		}
 		if (data.profile_privacy !== undefined) {
+			// Micup: A public profile needs a date of birth and 16 years. The legacy 1 is kept as written.
+			if (data.profile_privacy === ProfilePrivacyLevels.EVERYONE && !canHavePublicProfile(policyAccount?.dateOfBirth)) {
+				throw InputValidationError.fromCode('profile_privacy', ValidationErrorCodes.MUST_BE_MINIMUM_AGE, {
+					minAge: PUBLIC_PROFILE_MIN_AGE,
+				});
+			}
 			updatedRowData.profile_privacy = data.profile_privacy;
 		}
 		if (data.guild_folders !== undefined) {
@@ -270,8 +302,39 @@ export class UserAccountSettingsService {
 		if (data.synced_preferences !== undefined) {
 			updatedRowData.synced_preferences = normalizeSyncedPreferencesSnapshot(data.synced_preferences);
 		}
-		await this.deps.userSettingsRepository.upsertSettings(updatedRowData);
+		const changed = buildPatchFromData(updatedRowData, currentSettings.toRow(), USER_SETTINGS_COLUMNS, ['user_id']);
+		const patch = Object.fromEntries(
+			Object.entries(changed).map(([key, op]) => [key, op.kind === 'clear' ? null : op.value]),
+		) as Partial<UserSettingsRow>;
+		for (const key of Object.keys(data)) {
+			if (key === 'user_id' || key === 'version' || key === 'game_activity_policy_revision') continue;
+			if (USER_SETTINGS_COLUMNS.includes(key as keyof UserSettingsRow)) {
+				Object.assign(patch, {[key]: updatedRowData[key as keyof UserSettingsRow]});
+			}
+		}
+		const policyService = hasPolicyIntent
+			? (this.deps.gameActivityPolicyService ?? getGameActivityPolicyService())
+			: null;
+		const fence = policyService
+			? await policyService.fenceUserPolicy(userId, currentSettings, {
+					recoverable: true,
+					expectedPolicyRevision: currentSettings.gameActivityPolicyRevision,
+				})
+			: null;
+		await this.deps.userSettingsRepository.patchSettings(
+			userId,
+			patch,
+			fence
+				? {
+						gameActivityPolicyChanged: true,
+						expectedPolicyRevision: BigInt(fence.policy_revision),
+					}
+				: undefined,
+		);
+		// The next profile request already decides under the new level.
+		if (data.profile_privacy !== undefined) await this.deps.profileAccessCache?.forgetSide(userId);
 		const updatedSettings = await this.findSettings(userId);
+		if (policyService && fence) await policyService.applyUserPolicy(userId, fence, updatedSettings);
 		await this.deps.updatePropagator.dispatchUserSettingsUpdate({userId, settings: updatedSettings});
 		if (localeChanged) {
 			const user = await this.deps.userAccountRepository.findUnique(userId);

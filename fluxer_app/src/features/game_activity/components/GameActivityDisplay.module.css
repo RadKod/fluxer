@@ -1,0 +1,29 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.container {
+	min-height: 1px;
+}
+.activity {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	margin-top: 0.75rem;
+}
+.icon {
+	flex-shrink: 0;
+	border-radius: var(--radius-sm);
+	color: var(--text-primary);
+}
+.details {
+	min-width: 0;
+}
+.label,
+.duration {
+	color: var(--text-secondary);
+	font-size: 0.75rem;
+}
+.name {
+	color: var(--text-primary);
+	font-size: 0.875rem;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}

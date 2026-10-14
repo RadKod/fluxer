@@ -201,20 +201,20 @@ function buildTemplate(): Array<MenuItemConstructorOptions> {
 			{
 				label: t('desktop.appMenu.website'),
 				click: async () => {
-					await openExternalDeduped('https://fluxer.app');
+					await openExternalDeduped('https://micup.gg');
 				},
 			},
 			{
-				label: t('desktop.appMenu.github'),
+				label: t('desktop.appMenu.sourceCode'),
 				click: async () => {
-					await openExternalDeduped('https://github.com/fluxerapp/fluxer');
+					await openExternalDeduped('https://micup.gg/yasal/kaynak');
 				},
 			},
 			{type: 'separator'},
 			{
 				label: t('desktop.appMenu.reportIssue'),
 				click: async () => {
-					await openExternalDeduped('https://feedback.fluxer.com');
+					await openExternalDeduped('mailto:pr@premate.gg');
 				},
 			},
 			{type: 'separator'},

@@ -11,8 +11,10 @@ import {modal} from '@app/features/ui/commands/ModalCommands';
 import {Scroller} from '@app/features/ui/components/Scroller';
 import {StatusAwareAvatar} from '@app/features/ui/components/StatusAwareAvatar';
 import {NoteEditSheet} from '@app/features/user/components/modals/NoteEditSheet';
+import {PremiumUserBadge} from '@app/features/user/components/PremiumUserBadge';
 import {UserProfileBadges} from '@app/features/user/components/popouts/UserProfileBadges';
 import {UserProfileBio, UserProfileMembershipInfo} from '@app/features/user/components/popouts/UserProfileShared';
+import profileCardStyles from '@app/features/user/components/profile/profile_card/ProfileCardUserInfo.module.css';
 import {normalizeCustomStatus} from '@app/features/user/state/CustomStatus';
 import UserNote from '@app/features/user/state/UserNote';
 import Users from '@app/features/user/state/Users';
@@ -122,6 +124,12 @@ export const YouPage = observer(({onAvatarClick}: YouPageProps) => {
 										<span className={styles.username} data-flx="app.you-page.username">
 											{NicknameUtils.getDisplayName(user)}
 										</span>
+										<PremiumUserBadge
+											user={user}
+											size={20}
+											className={profileCardStyles.userTagWrapper}
+											data-flx="app.you-page.premium-user-badge"
+										/>
 									</div>
 									<div className={styles.tagBadgeRow} data-flx="app.you-page.tag-badge-row">
 										<span className={styles.fullTag} data-flx="app.you-page.full-tag">
@@ -129,6 +137,7 @@ export const YouPage = observer(({onAvatarClick}: YouPageProps) => {
 										</span>
 										<div className={styles.badgesWrapper} data-flx="app.you-page.badges-wrapper">
 											<UserProfileBadges
+												showPremium={false}
 												user={user}
 												profile={profile}
 												isModal={true}

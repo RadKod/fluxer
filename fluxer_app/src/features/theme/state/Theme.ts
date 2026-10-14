@@ -24,6 +24,8 @@ export interface ThemePreferenceSnapshot {
 const EXPLICIT_THEMES = new Set<string>([ThemeTypes.DARK, ThemeTypes.DARK_LEGACY, ThemeTypes.LIGHT, ThemeTypes.COAL]);
 const VALID_THEMES = new Set<string>(Object.values(ThemeTypes));
 const STORAGE_KEY = 'theme';
+// Micup: new visitors and accounts use Coal (upstream: Dark); the system preference keeps upstream Dark for dark mode.
+const DEFAULT_THEME = ThemeTypes.COAL;
 
 function isExplicitTheme(theme: string | null | undefined): theme is ExplicitTheme {
 	return typeof theme === 'string' && EXPLICIT_THEMES.has(theme);
@@ -52,8 +54,8 @@ function persistThemeToLocalStorage(theme: string): void {
 
 class Theme {
 	syncAcrossDevices = true;
-	localTheme: ThemeType = ThemeTypes.DARK;
-	serverTheme: ThemeType = ThemeTypes.DARK;
+	localTheme: ThemeType = DEFAULT_THEME;
+	serverTheme: ThemeType = DEFAULT_THEME;
 	systemPrefersDark = false;
 	private _hydrated = false;
 	private _pendingServerTheme: ThemeType | null = null;
@@ -108,7 +110,7 @@ class Theme {
 		}
 		if (sync) {
 			this.syncAcrossDevices = true;
-			this.localTheme = ThemeTypes.DARK;
+			this.localTheme = DEFAULT_THEME;
 		} else {
 			const currentPreference = this.themePreference;
 			this.syncAcrossDevices = false;
@@ -126,12 +128,12 @@ class Theme {
 
 	applyPreferenceSnapshot(snapshot: ThemePreferenceSnapshot): void {
 		this.syncAcrossDevices = Boolean(snapshot.syncAcrossDevices);
-		this.localTheme = isValidTheme(snapshot.localTheme) ? snapshot.localTheme : ThemeTypes.DARK;
-		this.serverTheme = isValidTheme(snapshot.serverTheme) ? snapshot.serverTheme : ThemeTypes.DARK;
+		this.localTheme = isValidTheme(snapshot.localTheme) ? snapshot.localTheme : DEFAULT_THEME;
+		this.serverTheme = isValidTheme(snapshot.serverTheme) ? snapshot.serverTheme : DEFAULT_THEME;
 	}
 
 	updateServerTheme(theme: string | null | undefined): void {
-		const normalized = isValidTheme(theme) ? theme : ThemeTypes.DARK;
+		const normalized = isValidTheme(theme) ? theme : DEFAULT_THEME;
 		this.serverTheme = normalized;
 		if (!this._hydrated) {
 			this._pendingServerTheme = normalized;

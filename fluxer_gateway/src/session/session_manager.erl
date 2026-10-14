@@ -108,6 +108,7 @@ init([]) ->
     _ = fluxer_gateway_env:load(),
     session_manager_shards:ensure_shard_table(),
     {ShardCount, _Source} = determine_shard_count(),
+    ok = gateway_connection_metrics:init_sessions(ShardCount),
     Shards = session_manager_shards:start_shards(ShardCount),
     State = #{shards => Shards, shard_count => ShardCount},
     session_manager_shards:sync_shard_table(State),

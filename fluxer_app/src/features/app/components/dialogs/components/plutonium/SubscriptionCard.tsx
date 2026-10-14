@@ -423,13 +423,13 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = observer(
 							</h3>
 							<span className={badgeClass} data-flx="app.plutonium.subscription-card.badge">
 								{isFullyExpired ? (
-									<Trans comment="Subscription status badge meaning premium access has fully expired.">Expired</Trans>
+									<Trans comment="Subscription status badge meaning Plus access has fully expired.">Expired</Trans>
 								) : isInGracePeriod ? (
 									<Trans comment="Subscription status badge meaning access remains briefly after subscription end.">
 										Grace period
 									</Trans>
 								) : perksDisabled ? (
-									<Trans comment="Subscription status badge meaning premium is paid but perks are temporarily disabled.">
+									<Trans comment="Subscription status badge meaning Plus is paid but perks are temporarily disabled.">
 										Perks paused
 									</Trans>
 								) : premiumWillCancel ? (
@@ -441,9 +441,9 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = observer(
 										Change scheduled
 									</Trans>
 								) : isVisionary ? (
-									<Trans comment="Subscription status badge meaning permanent premium access.">Lifetime</Trans>
+									<Trans comment="Subscription status badge meaning permanent Plus access.">Lifetime</Trans>
 								) : isGiftSubscription ? (
-									<Trans comment="Subscription status badge meaning premium access came from a gift.">Gift</Trans>
+									<Trans comment="Subscription status badge meaning Plus access came from a gift.">Gift</Trans>
 								) : (
 									<Trans comment="Subscription status badge meaning the paid subscription is active.">Active</Trans>
 								)}
@@ -783,7 +783,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = observer(
 									disabled={purchaseDisabled}
 									data-flx="app.plutonium.subscription-card.action-button.navigate-to-redeem-gift"
 								>
-									<Trans comment="Billing button for entering a premium gift code.">Redeem gift code</Trans>
+									<Trans comment="Billing button for entering a Plus gift code.">Redeem gift code</Trans>
 								</Button>,
 								'redeem-gift',
 								purchaseDisabled,
@@ -802,7 +802,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = observer(
 											data-flx="app.plutonium.subscription-card.action-button.reactivate-subscription"
 										>
 											{isFullyExpired ? (
-												<Trans comment="Billing button for starting a new subscription after premium expired.">
+												<Trans comment="Billing button for starting a new subscription after Plus expired.">
 													Resubscribe
 												</Trans>
 											) : isInGracePeriod ? (
@@ -920,7 +920,7 @@ export const SubscriptionCard: React.FC<SubscriptionCardProps> = observer(
 										className={styles.actionButton}
 										data-flx="app.plutonium.subscription-card.action-button.end-premium-grace-period"
 									>
-										<Trans comment="Billing button that ends premium grace period immediately.">End grace now</Trans>
+										<Trans comment="Billing button that ends Plus grace period immediately.">End grace now</Trans>
 									</Button>
 								)}
 							</>

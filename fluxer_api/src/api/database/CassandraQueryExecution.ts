@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {Config} from '@app/api/Config';
+import {resolveReadConsistency} from '@app/api/database/CassandraConsistency';
 import {logBatch, logQuery} from '@app/api/database/CassandraDevLogger';
 import {getIsDev} from '@app/api/database/CassandraMetaRegistry';
 import type {CassandraParams, KvQueryMeta, PreparedQuery, QueryTemplate} from '@app/api/database/CassandraTypes';
@@ -13,7 +15,7 @@ import {
 import {Logger} from '@app/api/Logger';
 import {chunkArray} from '@app/api/utils/ArrayUtils';
 import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
-import {getClient} from '@pkgs/cassandra/src/Client';
+import {getClient, toDriverConsistency} from '@pkgs/cassandra/src/Client';
 import cassandra from 'cassandra-driver';
 
 const DEFAULT_MAX_PARTITION_KEYS_PER_QUERY = 100;
@@ -37,6 +39,7 @@ export function mapCassandraDriverError(err: unknown): unknown {
 export interface CassandraQueryExecutorForTesting {
 	executeQuery<T = Record<string, unknown>, P extends CassandraParams = CassandraParams>(
 		query: PreparedQuery<P>,
+		readOptions?: CassandraReadOptions,
 	): Promise<Array<T>>;
 	executePagedQuery?<T = Record<string, unknown>, P extends CassandraParams = CassandraParams>(
 		query: PreparedQuery<P>,
@@ -83,7 +86,7 @@ export interface PagedQueryResult<T> {
 	pageState: string | null;
 }
 
-interface CassandraReadOptions {
+export interface CassandraReadOptions {
 	consistency: 'all' | 'serial';
 }
 
@@ -115,18 +118,25 @@ export async function executeQuery<T = Record<string, unknown>, P extends Cassan
 	assertNoUndefinedParams(bound as Record<string, unknown>);
 	const executor = activeExecutor();
 	if (executor) {
-		return executor.executeQuery<T, P>({
+		const query = {
 			cql,
 			params: bound as P,
 			kvMeta: typeof queryOrPrepared === 'string' ? undefined : queryOrPrepared.kvMeta,
-		});
+		};
+		return readOptions ? executor.executeQuery<T, P>(query, readOptions) : executor.executeQuery<T, P>(query);
 	}
 	const isDev = getIsDev();
 	const startTime = isDev ? performance.now() : 0;
 	try {
 		const result = await getClient().execute(cql, bound, {
 			prepare: true,
-			...(readOptions ? {consistency: cassandra.types.consistencies[readOptions.consistency]} : {}),
+			...(readOptions
+				? {
+						consistency: toDriverConsistency(
+							resolveReadConsistency(readOptions.consistency, Config.cassandra.consistency),
+						),
+					}
+				: {}),
 		});
 		const rows = await collectSelectRows<T>(meta.type, result);
 		if (isDev) {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
+import {bornYearsAgo, createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {
 	acceptInvite,
 	addMemberRole,
@@ -19,6 +19,7 @@ import {
 	updateChannel,
 	updateRole,
 } from '@app/api/channel/tests/ChannelTestUtils';
+import {overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
 import {getRoles, updateGuild} from '@app/api/guild/tests/GuildTestUtils';
 import {
 	markChannelAsIndexed,
@@ -31,7 +32,7 @@ import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {ChannelTypes, Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {GuildNSFWLevel} from '@fluxer/constants/src/GuildConstants';
-import {afterEach, beforeEach, describe, expect, test} from 'vitest';
+import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 
 interface MessageSearchResult {
 	channels: Array<{
@@ -262,6 +263,12 @@ describe('Message Search Permissions', () => {
 		});
 	});
 	describe('NSFW filtering', () => {
+		beforeEach(() => {
+			overrideLimits({feature_mature_content_settings: 1});
+		});
+		afterEach(() => {
+			vi.restoreAllMocks();
+		});
 		test('by default (include_nsfw: false), NSFW channel messages are excluded', async () => {
 			const owner = await createTestAccount(harness);
 			const guild = await createGuild(harness, owner.token, 'Test Guild');
@@ -405,7 +412,7 @@ describe('Message Search Permissions', () => {
 		});
 		test('underage user cannot search messages in an age-restricted guild', async () => {
 			const owner = await createTestAccount(harness, {dateOfBirth: '2000-01-01'});
-			const underageMember = await createTestAccount(harness, {dateOfBirth: '2012-01-01'});
+			const underageMember = await createTestAccount(harness, {dateOfBirth: bornYearsAgo(15)});
 			const guild = await createGuild(harness, owner.token, 'Age Restricted Guild');
 			const systemChannelId = guild.system_channel_id!;
 			const invite = await createChannelInvite(harness, owner.token, systemChannelId);

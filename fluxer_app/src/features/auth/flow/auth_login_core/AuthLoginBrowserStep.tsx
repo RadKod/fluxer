@@ -70,7 +70,7 @@ const BROWSER_CODE_EXPIRED_DESCRIPTOR = msg({
 	comment: 'Status shown under the browser sign-in code once its countdown reaches zero.',
 });
 const BROWSER_WAIT_STOPPED_DESCRIPTOR = msg({
-	message: "Fluxer stopped checking whether the browser approved this sign-in. It didn't lose your code.",
+	message: "Micup stopped checking whether the browser approved this sign-in. It didn't lose your code.",
 	comment: 'Status shown when browser sign-in status polling gives up after repeated failures.',
 });
 const BROWSER_HANDOFF_UNSUPPORTED_INSTANCE_DESCRIPTOR = msg({

@@ -7,7 +7,7 @@
 
 -spec init(cowboy_req:req(), term()) -> {ok, cowboy_req:req(), term()}.
 init(Req0, State) ->
-    case is_loopback_request(Req0) of
+    case is_allowed_request(Req0) of
         false ->
             Req = cowboy_req:reply(
                 403,
@@ -27,21 +27,24 @@ init(Req0, State) ->
             {ok, Req, State}
     end.
 
--spec is_loopback_request(cowboy_req:req()) -> boolean().
-is_loopback_request(Req) ->
-    case cowboy_req:peer(Req) of
-        {{127, 0, 0, 1}, _Port} ->
-            true;
-        {{0, 0, 0, 0, 0, 0, 0, 1}, _Port} ->
-            true;
-        _ ->
-            false
+%% Judged by the socket peer, never a forwarded header (gateway_metrics_access).
+-spec is_allowed_request(cowboy_req:req()) -> boolean().
+is_allowed_request(Req) ->
+    {Ip, _Port} = cowboy_req:peer(Req),
+    gateway_metrics_access:is_peer_allowed(Ip, allowed_networks()).
+
+-spec allowed_networks() -> [gateway_metrics_access:network()].
+allowed_networks() ->
+    case fluxer_gateway_env:get(metrics_allowed_networks) of
+        Networks when is_list(Networks) -> Networks;
+        _ -> []
     end.
 
 -spec render_metrics() -> iolist().
 render_metrics() ->
     [
         render_gateway_gauges(),
+        render_connection_gauges(),
         render_cluster_counters(),
         render_process_counts(),
         render_channel_threads_stats(),
@@ -119,6 +122,61 @@ render_gateway_gauges() ->
         )
     ].
 
+-spec render_connection_gauges() -> iolist().
+render_connection_gauges() ->
+    Count = safe_apply_int(fun gateway_ip_connections:node_connection_count/0),
+    Limit = safe_apply_int(fun gateway_ip_connections:node_connection_limit/0),
+    Sessions = safe_apply_int(fun gateway_connection_metrics:session_count/0),
+    Counters = safe_apply_map(fun gateway_connection_metrics:snapshot/0),
+    [
+        format_metric(
+            <<"fluxer_gateway_websocket_connections">>,
+            <<"gauge">>,
+            <<"WebSockets holding a connection slot on this node">>,
+            integer_to_binary(Count)
+        ),
+        format_metric(
+            <<"fluxer_gateway_sessions">>,
+            <<"gauge">>,
+            <<"Sessions held on this node, including those kept for Resume">>,
+            integer_to_binary(Sessions)
+        ),
+        format_metric(
+            <<"fluxer_gateway_websocket_connection_limit">>,
+            <<"gauge">>,
+            <<"Effective Gateway connection soft limit on this node, 0 when unlimited">>,
+            integer_to_binary(max(0, Limit))
+        ),
+        format_metric(
+            <<"fluxer_gateway_websocket_accepted_total">>,
+            <<"counter">>,
+            <<"WebSockets accepted and sent Hello">>,
+            counter_value(accepted, Counters)
+        ),
+        format_labeled_series(
+            <<"fluxer_gateway_websocket_rejected_total">>,
+            <<"counter">>,
+            <<"WebSockets closed by a connection limit, by reason">>,
+            [
+                {rejection_labels(R), counter_value(R, Counters)}
+             || R <- gateway_connection_metrics:reasons()
+            ]
+        )
+    ].
+
+-spec counter_value(term(), map()) -> binary().
+counter_value(Key, Counters) ->
+    case maps:get(Key, Counters, 0) of
+        N when is_integer(N) -> integer_to_binary(N);
+        _ -> <<"0">>
+    end.
+
+-spec rejection_labels(gateway_connection_metrics:reason()) -> binary().
+rejection_labels({too_many_connections, Family}) ->
+    <<"reason=\"too_many_connections\",family=\"", (atom_to_binary(Family))/binary, "\"">>;
+rejection_labels(Reason) ->
+    <<"reason=\"", (atom_to_binary(Reason))/binary, "\"">>.
+
 -spec safe_apply_int(fun(() -> term())) -> integer().
 safe_apply_int(Fun) ->
     case shard_utils:safe_apply(Fun, 0) of
@@ -189,6 +247,27 @@ render_voice_server_labels(Servers) ->
 
 -spec render_cluster_counters() -> iolist().
 render_cluster_counters() ->
+    case fluxer_gateway_env:get(cluster_enabled) of
+        true -> [render_cluster_rpc_readiness(), render_cluster_membership_counters()];
+        _ -> render_cluster_membership_counters()
+    end.
+
+-spec render_cluster_rpc_readiness() -> iolist().
+render_cluster_rpc_readiness() ->
+    ReadyValue =
+        case gateway_cluster_membership:rpc_ready() of
+            true -> <<"1">>;
+            false -> <<"0">>
+        end,
+    format_metric(
+        <<"fluxer_gateway_cluster_rpc_ready">>,
+        <<"gauge">>,
+        <<"Local cluster membership permits RPC subscriptions">>,
+        ReadyValue
+    ).
+
+-spec render_cluster_membership_counters() -> iolist().
+render_cluster_membership_counters() ->
     Snapshot = safe_apply_map(fun gateway_cluster_metrics:snapshot/0),
     case map_size(Snapshot) of
         0 ->
@@ -581,6 +660,112 @@ format_labeled_series(Name, Type, Help, LabelValues) ->
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+
+cluster_rpc_ready_metric_test() ->
+    Key = {fluxer_gateway, runtime_config},
+    Previous = persistent_term:get(Key, undefined),
+    try
+        persistent_term:put(Key, #{cluster_enabled => true}),
+        ?assertNotEqual(
+            nomatch,
+            binary:match(
+                iolist_to_binary(render_cluster_counters()),
+                <<"\nfluxer_gateway_cluster_rpc_ready 0\n">>
+            )
+        ),
+        persistent_term:put(Key, #{cluster_enabled => false}),
+        ?assertEqual(
+            iolist_to_binary(render_cluster_membership_counters()),
+            iolist_to_binary(render_cluster_counters())
+        )
+    after
+        case Previous of
+            undefined -> persistent_term:erase(Key);
+            _ -> persistent_term:put(Key, Previous)
+        end
+    end.
+
+cluster_disabled_metrics_match_upstream_golden_test() ->
+    Keys = [
+        {fluxer_gateway, runtime_config},
+        gateway_cluster_metrics_counters,
+        {gateway_cluster_membership, members}
+    ],
+    Saved = [{Key, persistent_term:get(Key, undefined)} || Key <- Keys],
+    try
+        persistent_term:put({fluxer_gateway, runtime_config}, #{cluster_enabled => false}),
+        persistent_term:put({gateway_cluster_membership, members}, [node()]),
+        gateway_cluster_metrics:reset_for_tests(),
+        Expected = <<
+            "# HELP fluxer_gateway_cluster_member_count Alive cluster members\n",
+            "# TYPE fluxer_gateway_cluster_member_count gauge\n",
+            "fluxer_gateway_cluster_member_count 1\n",
+            "# HELP fluxer_gateway_cluster_discovery_resolve_failures_total DNS discovery resolve failures\n",
+            "# TYPE fluxer_gateway_cluster_discovery_resolve_failures_total counter\n",
+            "fluxer_gateway_cluster_discovery_resolve_failures_total 0\n",
+            "# HELP fluxer_gateway_cluster_membership_transitions_total Cluster membership transitions\n",
+            "# TYPE fluxer_gateway_cluster_membership_transitions_total counter\n",
+            "fluxer_gateway_cluster_membership_transitions_total{direction=\"up\"} 0\n",
+            "fluxer_gateway_cluster_membership_transitions_total{direction=\"down\"} 0\n",
+            "# HELP fluxer_gateway_cluster_owner_resolutions_total Owner resolution outcomes\n",
+            "# TYPE fluxer_gateway_cluster_owner_resolutions_total counter\n",
+            "fluxer_gateway_cluster_owner_resolutions_total{result=\"self\"} 0\n",
+            "fluxer_gateway_cluster_owner_resolutions_total{result=\"peer\"} 0\n"
+        >>,
+        ?assertEqual(Expected, iolist_to_binary(render_cluster_counters()))
+    after
+        lists:foreach(
+            fun
+                ({Key, undefined}) -> persistent_term:erase(Key);
+                ({Key, Value}) -> persistent_term:put(Key, Value)
+            end,
+            Saved
+        )
+    end.
+
+connection_limit_metric_tracks_rollout_test() ->
+    Previous = persistent_term:get(gateway_rollout_config, undefined),
+    persistent_term:put(gateway_rollout_config, #{<<"max_connections">> => 18}),
+    try
+        Body = iolist_to_binary(render_connection_gauges()),
+        ?assertNotEqual(
+            nomatch,
+            binary:match(Body, <<"\nfluxer_gateway_websocket_connection_limit 18\n">>)
+        )
+    after
+        case Previous of
+            undefined -> persistent_term:erase(gateway_rollout_config);
+            _ -> persistent_term:put(gateway_rollout_config, Previous)
+        end
+    end.
+
+connection_gauges_list_every_rejection_reason_test() ->
+    gateway_connection_metrics:reset_for_tests(),
+    ok = gateway_connection_metrics:init_sessions(2),
+    ok = gateway_connection_metrics:note_shard_sessions(1, 7),
+    ok = gateway_connection_metrics:record_rejection(identify_timeout),
+    ok = gateway_connection_metrics:record_rejection(identify_dropped),
+    ok = gateway_connection_metrics:record_rejection({too_many_connections, ipv6}),
+    ok = gateway_connection_metrics:record_accepted(),
+    Body = iolist_to_binary(render_connection_gauges()),
+    gateway_connection_metrics:reset_for_tests(),
+    Has = fun(Part) -> ?assertNotEqual(nomatch, binary:match(Body, Part)) end,
+    Rejected = <<"fluxer_gateway_websocket_rejected_total">>,
+    Has(<<"# TYPE fluxer_gateway_websocket_accepted_total counter">>),
+    Has(<<"\nfluxer_gateway_websocket_accepted_total 1\n">>),
+    Has(<<"# TYPE ", Rejected/binary, " counter">>),
+    Has(<<Rejected/binary, "{reason=\"too_many_connections\",family=\"ipv4\"} 0">>),
+    Has(<<Rejected/binary, "{reason=\"too_many_connections\",family=\"ipv6\"} 1">>),
+    Has(<<Rejected/binary, "{reason=\"too_many_connections_ipv6_48\"} 0">>),
+    Has(<<Rejected/binary, "{reason=\"at_capacity\"} 0">>),
+    Has(<<Rejected/binary, "{reason=\"unidentified_at_capacity\"} 0">>),
+    Has(<<Rejected/binary, "{reason=\"identify_at_capacity\"} 0">>),
+    Has(<<Rejected/binary, "{reason=\"identify_timeout\"} 1">>),
+    Has(<<Rejected/binary, "{reason=\"identify_dropped\"} 1">>),
+    Has(<<"# TYPE fluxer_gateway_websocket_connection_limit gauge">>),
+    Has(<<"# TYPE fluxer_gateway_websocket_connections gauge">>),
+    Has(<<"# TYPE fluxer_gateway_sessions gauge">>),
+    Has(<<"\nfluxer_gateway_sessions 7\n">>).
 
 push_outbox_drops_render_one_series_per_kind_and_reason_test() ->
     Rendered = iolist_to_binary(

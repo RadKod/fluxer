@@ -5,7 +5,7 @@ import {createUserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
 import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
 import type {GuildService} from '@app/api/guild/services/GuildService';
-import {createGuild, createRole, getMember} from '@app/api/guild/tests/GuildTestUtils';
+import {createGuild, createRole} from '@app/api/guild/tests/GuildTestUtils';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import {StripePremiumService} from '@app/api/stripe/services/StripePremiumService';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
@@ -14,7 +14,7 @@ import {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
-import {afterAll, beforeAll, beforeEach, describe, expect, test} from 'vitest';
+import {afterAll, beforeAll, beforeEach, describe, expect, test, vi} from 'vitest';
 
 describe('StripePremiumService', () => {
 	let harness: ApiTestHarness;
@@ -39,7 +39,7 @@ describe('StripePremiumService', () => {
 		Config.instance.visionariesGuildVisionaryRoleId = visionaryRole.id;
 	});
 	describe('POST /premium/visionary/rejoin', () => {
-		test('allows visionary users to rejoin guild', async () => {
+		test('keeps the route closed even for visionary users', async () => {
 			const account = await createTestAccount(harness);
 			await createBuilder(harness, account.token)
 				.post(`/test/users/${account.userId}/premium`)
@@ -48,11 +48,12 @@ describe('StripePremiumService', () => {
 					premium_lifetime_sequence: 0,
 				})
 				.execute();
-			await createBuilder(harness, account.token).post('/premium/visionary/rejoin').expect(204).execute();
-			const member = await getMember(harness, account.token, Config.instance.visionariesGuildId!, account.userId);
-			expect(member.roles).toContain(Config.instance.visionariesGuildVisionaryRoleId);
+			await createBuilder(harness, account.token)
+				.post('/premium/visionary/rejoin')
+				.expect(404, APIErrorCodes.NOT_FOUND)
+				.execute();
 		});
-		test('rejects users without visionary access', async () => {
+		test('keeps the route closed for users without visionary access', async () => {
 			const account = await createTestAccount(harness);
 			await createBuilder(harness, account.token)
 				.post(`/test/users/${account.userId}/premium`)
@@ -63,13 +64,40 @@ describe('StripePremiumService', () => {
 				.execute();
 			await createBuilder(harness, account.token)
 				.post('/premium/visionary/rejoin')
-				.expect(403, APIErrorCodes.MISSING_ACCESS)
+				.expect(404, APIErrorCodes.NOT_FOUND)
 				.execute();
 		});
-		test('requires authentication', async () => {
-			await createBuilder(harness, 'invalid-token').post('/premium/visionary/rejoin').expect(401).execute();
+		test('keeps the route closed before authentication', async () => {
+			await createBuilder(harness, 'invalid-token')
+				.post('/premium/visionary/rejoin')
+				.expect(404, APIErrorCodes.NOT_FOUND)
+				.execute();
 		});
 	});
+	describe('dormant visionary rejoin service', () => {
+		test('adds only a lifetime user to the configured guild', async () => {
+			const account = await createTestAccount(harness);
+			const userId = createUserID(BigInt(account.userId));
+			const repository = new UserRepository();
+			const user = (await repository.findUnique(userId))!;
+			const members = {addUserToGuild: vi.fn(), systemAddMemberRole: vi.fn()};
+			const premiumService = new StripePremiumService(
+				repository,
+				{} as IGatewayService,
+				{getMember: async () => null} as unknown as IGuildRepositoryAggregate,
+				{members} as unknown as GuildService,
+			);
+			await expect(premiumService.rejoinVisionariesGuild(userId)).rejects.toMatchObject({
+				code: APIErrorCodes.MISSING_ACCESS,
+			});
+			expect(members.addUserToGuild).not.toHaveBeenCalled();
+			await repository.patchUpsert(userId, {premium_type: UserPremiumTypes.LIFETIME}, user.toRow());
+			await premiumService.rejoinVisionariesGuild(userId);
+			expect(members.addUserToGuild).toHaveBeenCalledWith(expect.objectContaining({userId}));
+			expect(members.systemAddMemberRole).toHaveBeenCalledWith(expect.objectContaining({targetId: userId}));
+		});
+	});
+
 	describe('POST /premium/grace/end', () => {
 		test('rejects with UNKNOWN_USER when the account record is gone', async () => {
 			const premiumService = new StripePremiumService(

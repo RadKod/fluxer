@@ -1,0 +1,141 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.root {
+	--chess-light: #eadcc0;
+	--chess-dark: #9c7552;
+	--chess-white-piece: #fbfaf7;
+	--chess-black-piece: #17120d;
+
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-2);
+	width: min(100%, 22rem);
+	margin-inline: auto;
+}
+
+.player {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--spacing-2);
+	min-width: 0;
+}
+
+.playerName {
+	overflow: hidden;
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--text-primary);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.clock {
+	flex-shrink: 0;
+	padding: 0.125rem 0.5rem;
+	border-radius: var(--radius-sm);
+	background-color: var(--background-tertiary);
+	font-size: 0.9375rem;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	color: var(--text-primary-muted);
+}
+
+.clock[data-running='true'] {
+	background-color: var(--text-primary);
+	color: var(--background-primary);
+}
+
+.clock[data-low='true'] {
+	background-color: var(--status-danger);
+	color: #fff;
+}
+
+.board {
+	container-type: inline-size;
+	display: grid;
+	grid-template-columns: repeat(8, minmax(0, 1fr));
+	aspect-ratio: 1;
+	overflow: hidden;
+	border-radius: var(--radius-sm);
+	box-shadow: 0 0 0 0.1875rem color-mix(in srgb, var(--chess-dark) 70%, #000);
+}
+
+.square {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	border: none;
+	aspect-ratio: 1;
+	cursor: default;
+}
+
+.board[data-interactive='true'] .square {
+	cursor: pointer;
+}
+
+.light {
+	background-color: var(--chess-light);
+}
+
+.dark {
+	background-color: var(--chess-dark);
+}
+
+.square[data-last='true'] {
+	background-image: linear-gradient(rgb(232 186 62 / 0.38), rgb(232 186 62 / 0.38));
+}
+
+.square[data-selected='true'] {
+	box-shadow: inset 0 0 0 0.1875rem rgb(232 186 62 / 0.95);
+}
+
+.square[data-target='true']::after {
+	position: absolute;
+	width: 28%;
+	height: 28%;
+	border-radius: 50%;
+	background-color: rgb(23 18 13 / 0.32);
+	content: '';
+}
+
+.square[data-target='true'][data-piece]::after {
+	width: 88%;
+	height: 88%;
+	border: 0.1875rem solid rgb(23 18 13 / 0.38);
+	background-color: transparent;
+	box-sizing: border-box;
+}
+
+.square:focus-visible {
+	outline: 0.125rem solid var(--text-primary);
+	outline-offset: -0.125rem;
+}
+
+.piece {
+	font-family: 'Segoe UI Symbol', 'Noto Sans Symbols 2', 'Apple Symbols', serif;
+	font-size: clamp(1.5rem, 8.5cqi, 2.25rem);
+	line-height: 1;
+	user-select: none;
+	pointer-events: none;
+}
+
+.whitePiece {
+	color: var(--chess-white-piece);
+	text-shadow:
+		0 0 0.0625rem #000,
+		0 0.0625rem 0.125rem rgb(0 0 0 / 0.55);
+}
+
+.blackPiece {
+	color: var(--chess-black-piece);
+	text-shadow: 0 0.0625rem 0.0625rem rgb(255 255 255 / 0.25);
+}
+
+.error {
+	margin: 0;
+	font-size: 0.8125rem;
+	color: var(--status-danger);
+}

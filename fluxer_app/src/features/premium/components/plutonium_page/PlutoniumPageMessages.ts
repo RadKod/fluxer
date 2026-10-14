@@ -94,14 +94,7 @@ export const SHOWCASE_PROFILE_TITLE_DESCRIPTOR = msg({
 });
 export const SHOWCASE_PROFILE_BODY_WITHOUT_TAG_DESCRIPTOR = msg({
 	message: 'Get an animated avatar and banner, a subscriber badge and a separate profile for each community.',
-	comment:
-		'Plutonium page perk card body about profile perks, shown on instances where people sign in with a username and have no tag.',
-});
-export const SHOWCASE_PROFILE_BODY_DESCRIPTOR = msg({
-	message:
-		'Get an animated avatar and banner, a subscriber badge, the four-digit tag you want after your username{footnote}, and a separate profile for each community.',
-	comment:
-		'Plutonium page perk card body about profile perks. footnote is a clickable asterisk that points to a footnote about tags. Keep it directly after the word for username.',
+	comment: 'Plutonium page perk card body about profile perks.',
 });
 export const SHOWCASE_STREAM_TITLE_DESCRIPTOR = msg({
 	message: 'Stream in 4K at 60 FPS',
@@ -140,20 +133,6 @@ export const NOT_AVAILABLE_DESCRIPTOR = msg({
 	message: 'Not available',
 	comment: 'Screen reader text for a cross in the Plutonium page comparison table.',
 });
-export const TAG_FOOTNOTE_DESCRIPTOR = msg({
-	message:
-		"You can only pick a tag that nobody else with the same username already has. Usernames aren't case sensitive, so Mina#4821 and mina#4821 count as the same. The #0000 tag is reserved for {productName} Visionary members. {visionaryLink}.",
-	comment:
-		'Footnote on the Plutonium page about custom username tags. Keep Mina#4821, mina#4821 and #0000 unchanged. visionaryLink is a link whose text is "Learn more about Visionary".',
-});
-export const TAG_FOOTNOTE_LINK_DESCRIPTOR = msg({
-	message: 'Learn more about Visionary',
-	comment: 'Link text in the Plutonium page tag footnote. Opens the Visionary help article.',
-});
-export const TAG_FOOTNOTE_MARKER_DESCRIPTOR = msg({
-	message: 'Footnote about custom tags',
-	comment: 'Screen reader label for the asterisk that jumps to the custom tag footnote on the Plutonium page.',
-});
 export const CLOSING_TITLE_DESCRIPTOR = msg({
 	message: 'Ready to upgrade?',
 	comment: 'Heading of the closing call to action on the Plutonium page for people without the paid tier.',
@@ -170,10 +149,6 @@ export const CLOSING_MEMBER_BODY_DESCRIPTOR = msg({
 	message: 'Gift {premiumProductName} to a friend for a month or a whole year. Gifts never renew.',
 	comment:
 		'Body of the closing call to action on the Plutonium page for members. premiumProductName is the paid tier name.',
-});
-export const PERK_CUSTOM_TAG_DESCRIPTOR = msg({
-	message: 'Pick the 4-digit number after your username',
-	comment: 'Plutonium page comparison row label for the custom username tag perk.',
 });
 export const PERK_PER_COMMUNITY_PROFILES_DESCRIPTOR = msg({
 	message: 'A separate profile for each community',

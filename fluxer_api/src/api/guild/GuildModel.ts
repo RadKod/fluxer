@@ -94,6 +94,9 @@ export function mapGuildToGuildResponse(
 		disabled_operations: guild.disabledOperations,
 		message_history_cutoff: guild.messageHistoryCutoff ? guild.messageHistoryCutoff.toISOString() : null,
 		permissions: options?.permissions != null ? options.permissions.toString() : undefined,
+		// stored null (a guild that never had boosts) reads as 0; the columns are never defaulted to 0.
+		premium_tier: guild.premiumTier ?? 0,
+		premium_subscription_count: guild.premiumSubscriptionCount ?? 0,
 	};
 }
 

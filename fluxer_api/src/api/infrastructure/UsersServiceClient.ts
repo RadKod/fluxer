@@ -17,16 +17,20 @@ const textDecoder = new TextDecoder();
 const USERS_SERVICE_SUBJECT = readOptionalEnv('FLUXER_USERS_SERVICE_SUBJECT') ?? 'svc.users';
 const DEFAULT_USERS_SERVICE_TIMEOUT_MS = 6000;
 const DEFAULT_USERS_SERVICE_INFLIGHT_MAX_ENTRIES = 10000;
+const CONTENT_VISIBILITY_BATCH_SIZE = 1000;
 const MAX_REQUEST_TIMEOUT_MS = 2_147_483_647;
 
 export interface IUsersServiceClient {
 	getUserPartialResponses(userIds: Array<UserID>): Promise<Map<UserID, UserPartialResponse>>;
+	getContentHiddenSince(userIds: Array<UserID>): Promise<Map<UserID, Date | null>>;
 	invalidateUserCache(userId: UserID): Promise<void>;
 }
 
 type PendingUserPartials = Promise<Map<UserID, UserPartialResponse>>;
+type PendingContentVisibility = Promise<Map<UserID, Date | null>>;
 
 type UsersServiceRequest =
+	| {op: 'GetPartialsByIds'; user_ids: Array<object>}
 	| {
 			op: 'GetApiPartialsByIds';
 			user_ids: Array<string>;
@@ -50,8 +54,44 @@ function isUserPartialsResponse(value: unknown): value is UserPartialsResponse {
 	);
 }
 
+interface ContentVisibilityResponse {
+	FoundPartials: Array<{user_id: string; content_hidden_since?: number | null}>;
+}
+
+function isInternalUserId(value: string): boolean {
+	return value.length <= 19 && /^[1-9][0-9]*$/.test(value) && BigInt(value) <= 9223372036854775807n;
+}
+
+function isContentVisibilityResponse(value: unknown): value is ContentVisibilityResponse {
+	return (
+		isJsonRecord(value) &&
+		Array.isArray(value.FoundPartials) &&
+		value.FoundPartials.every((partial) => {
+			if (!isJsonRecord(partial) || typeof partial.user_id !== 'string' || !isInternalUserId(partial.user_id))
+				return false;
+			const cutoff = partial.content_hidden_since;
+			return (
+				cutoff == null ||
+				(typeof cutoff === 'number' && Number.isSafeInteger(cutoff) && !Number.isNaN(new Date(cutoff).getTime()))
+			);
+		})
+	);
+}
+
+function parseContentVisibilityJson<T>(wire: string, guard: (value: unknown) => value is T): T | null {
+	const value: unknown = JSON.parse(wire, (key: string, value: unknown, context?: {source?: string}) => {
+		if (key !== 'user_id') return value;
+		if (typeof value !== 'number' || !context?.source || !isInternalUserId(context.source)) {
+			throw new Error('[users-service] invalid internal response user ID');
+		}
+		return context.source;
+	});
+	return guard(value) ? value : null;
+}
+
 export class NatsUsersServiceClient implements IUsersServiceClient {
 	private readonly inflightPartials = new Map<UserID, PendingUserPartials>();
+	private readonly inflightContentVisibility = new Map<UserID, PendingContentVisibility>();
 
 	constructor(
 		private readonly connectionManager: INatsConnectionManager,
@@ -103,6 +143,48 @@ export class NatsUsersServiceClient implements IUsersServiceClient {
 		return result;
 	}
 
+	async getContentHiddenSince(userIds: Array<UserID>): Promise<Map<UserID, Date | null>> {
+		const uniqueUserIds = uniqueSortedUserIds(userIds);
+		if (uniqueUserIds.length === 0) {
+			return new Map();
+		}
+		const result = new Map<UserID, Date | null>();
+		const lookups = new Map<PendingContentVisibility, Array<UserID>>();
+		const misses: Array<UserID> = [];
+		for (const userId of uniqueUserIds) {
+			const batch = this.inflightContentVisibility.get(userId);
+			if (!batch) {
+				misses.push(userId);
+				continue;
+			}
+			const assignedUserIds = lookups.get(batch);
+			if (assignedUserIds) assignedUserIds.push(userId);
+			else lookups.set(batch, [userId]);
+		}
+		const capacity = Math.max(0, this.maxInflightEntries - this.inflightContentVisibility.size);
+		const coalesced = misses.slice(0, capacity);
+		const direct = misses.slice(capacity);
+		for (let offset = 0; offset < coalesced.length; offset += CONTENT_VISIBILITY_BATCH_SIZE) {
+			const chunk = coalesced.slice(offset, offset + CONTENT_VISIBILITY_BATCH_SIZE);
+			lookups.set(this.fetchCoalescedContentVisibility(chunk), chunk);
+		}
+		for (let offset = 0; offset < direct.length; offset += CONTENT_VISIBILITY_BATCH_SIZE) {
+			const chunk = direct.slice(offset, offset + CONTENT_VISIBILITY_BATCH_SIZE);
+			lookups.set(this.fetchContentHiddenSince(chunk), chunk);
+		}
+		await awaitAll(
+			Array.from(lookups, async ([batch, assignedUserIds]) => {
+				const partials = await batch;
+				for (const userId of assignedUserIds) {
+					const partial = partials.get(userId);
+					if (partial !== undefined) result.set(userId, partial);
+				}
+			}),
+			'[users-service] failed to fetch content visibility',
+		);
+		return result;
+	}
+
 	private async fetchUserPartialResponses(userIds: Array<UserID>): Promise<Map<UserID, UserPartialResponse>> {
 		const requestedUserIds = new Map(userIds.map((userId) => [userId.toString(), userId]));
 		const response = await this.request(
@@ -140,8 +222,37 @@ export class NatsUsersServiceClient implements IUsersServiceClient {
 		return batch;
 	}
 
+	private async fetchContentHiddenSince(userIds: Array<UserID>): Promise<Map<UserID, Date | null>> {
+		const requested = new Map(userIds.map((userId) => [userId.toString(), userId]));
+		const rawJson = JSON as typeof JSON & {rawJSON(value: string): object};
+		const numericIds = Array.from(requested.keys(), (id) => {
+			if (!isInternalUserId(id)) throw new Error('[users-service] invalid internal request user ID');
+			return rawJson.rawJSON(id);
+		});
+		const response = await this.request({op: 'GetPartialsByIds', user_ids: numericIds}, isContentVisibilityResponse);
+		const result = new Map<UserID, Date | null>();
+		for (const partial of response.FoundPartials) {
+			const id = requested.get(partial.user_id);
+			if (id === undefined) throw new Error('[users-service] response contains an invalid or unrequested user ID');
+			if (result.has(id)) throw new Error('[users-service] response contains a duplicate user ID');
+			result.set(id, partial.content_hidden_since == null ? null : new Date(partial.content_hidden_since));
+		}
+		return result;
+	}
+
+	private fetchCoalescedContentVisibility(userIds: Array<UserID>): PendingContentVisibility {
+		const batch = this.fetchContentHiddenSince(userIds).finally(() => {
+			for (const userId of userIds) {
+				if (this.inflightContentVisibility.get(userId) === batch) this.inflightContentVisibility.delete(userId);
+			}
+		});
+		for (const userId of userIds) this.inflightContentVisibility.set(userId, batch);
+		return batch;
+	}
+
 	async invalidateUserCache(userId: UserID): Promise<void> {
 		this.inflightPartials.delete(userId);
+		this.inflightContentVisibility.delete(userId);
 		try {
 			await this.request(
 				{
@@ -152,6 +263,7 @@ export class NatsUsersServiceClient implements IUsersServiceClient {
 			);
 		} finally {
 			this.inflightPartials.delete(userId);
+			this.inflightContentVisibility.delete(userId);
 		}
 	}
 
@@ -165,7 +277,10 @@ export class NatsUsersServiceClient implements IUsersServiceClient {
 				timeout: this.requestTimeoutMs,
 			});
 			const decoded = textDecoder.decode(response.data);
-			const parsed = parseJsonWithGuard(decoded, responseGuard);
+			const parsed =
+				payload.op === 'GetPartialsByIds'
+					? parseContentVisibilityJson(decoded, responseGuard)
+					: parseJsonWithGuard(decoded, responseGuard);
 			if (parsed === null) {
 				throwForSvcErrorReply('users-service', parseJsonRecord(decoded));
 				throw new Error('[users-service] invalid response payload');

@@ -10,6 +10,7 @@ import type {Message} from '@app/features/messaging/models/MessagingMessage';
 import MessageReferences, {MessageReferenceState} from '@app/features/messaging/state/MessageReferences';
 import {goToMessage} from '@app/features/messaging/utils/MessageNavigator';
 import LocalUserSpamOverride from '@app/features/moderation/state/LocalUserSpamOverride';
+import Relationships from '@app/features/relationship/state/Relationships';
 import markupStyles from '@app/features/theme/styles/Markup.module.css';
 import styles from '@app/features/theme/styles/Message.module.css';
 import {Avatar} from '@app/features/ui/components/Avatar';
@@ -19,8 +20,9 @@ import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {ArrowBendUpLeftIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
+import {computed} from 'mobx';
 import {observer} from 'mobx-react-lite';
-import {type CSSProperties, useCallback} from 'react';
+import {type CSSProperties, useCallback, useEffect, useMemo} from 'react';
 
 const ORIGINAL_MESSAGE_WAS_DELETED_DESCRIPTOR = msg({
 	message: 'Original message was deleted',
@@ -55,13 +57,30 @@ export const ReplyPreview = observer(
 		messageDisplayCompact: boolean;
 	}) => {
 		const {i18n} = useLingui();
-		const resolution = MessageReferences.getMessageReference(
-			message.messageReference?.channel_id ?? '',
-			message.messageReference?.message_id ?? '',
-		);
-		const {isMessageRevealed} = useCollapsedMessageVisibility();
-		const resolvedGuildId = guildId ?? message.guildId ?? message.messageReference?.guild_id;
 		const referenceChannelId = message.messageReference?.channel_id ?? message.channelId;
+		const referenceMessageId = message.messageReference?.message_id;
+		const referenceGeneration = MessageReferences.generation;
+		const resolution = MessageReferences.getMessageReference(
+			referenceChannelId,
+			referenceMessageId ?? '',
+			message.referencedMessage,
+		);
+		const referenceMessage = resolution.state === MessageReferenceState.LOADED ? resolution.message : undefined;
+		const referenceAuthorId = referenceMessage?.author.id;
+		const blockedReference = useMemo(
+			() => (referenceAuthorId ? Relationships.createBlockedSelector(referenceAuthorId) : undefined),
+			[referenceAuthorId],
+		);
+		useEffect(() => {
+			if (!referenceMessageId) return;
+			return MessageReferences.retainReference(referenceChannelId, referenceMessageId, referenceMessage);
+		}, [referenceChannelId, referenceMessageId, referenceMessage, referenceGeneration]);
+		const {isMessageRevealed} = useCollapsedMessageVisibility();
+		const revealedReference = useMemo(
+			() => computed(() => (referenceMessage ? isMessageRevealed(referenceMessage) : false)),
+			[referenceMessage, isMessageRevealed],
+		);
+		const resolvedGuildId = guildId ?? message.guildId ?? message.messageReference?.guild_id;
 		const jumpToRepliedMessage = useCallback(() => {
 			if (message.messageReference?.message_id) {
 				goToMessage(referenceChannelId, message.messageReference.message_id, {
@@ -124,9 +143,9 @@ export const ReplyPreview = observer(
 		const isSpammerReply =
 			referencedMessage.author.id !== Authentication.currentUserId &&
 			LocalUserSpamOverride.isUserMarkedAsSpammer(referencedMessage.author.id, referencedMessage.author.flags);
-		const isCollapsedReferenceRevealed = isMessageRevealed(referencedMessage);
+		const isCollapsedReferenceRevealed = revealedReference.get();
 		const hiddenReplyReason =
-			referencedMessage.blocked && !isCollapsedReferenceRevealed
+			blockedReference?.get() && !isCollapsedReferenceRevealed
 				? i18n._(REPLY_HIDDEN_BECAUSE_THE_ORIGINAL_AUTHOR_IS_BLOCKED_DESCRIPTOR)
 				: isSpammerReply && !isCollapsedReferenceRevealed
 					? i18n._(REPLY_HIDDEN_BECAUSE_THE_ORIGINAL_AUTHOR_IS_MARKED_DESCRIPTOR)

@@ -8,46 +8,46 @@ const {promisify} = require('node:util');
 const execFileAsync = promisify(execFile);
 const CHANNELS = {
 	stable: {
-		productName: 'Fluxer',
-		linuxOptDirName: 'Fluxer',
-		artifactProductName: 'Fluxer',
-		appId: 'app.fluxer',
+		productName: 'Micup',
+		linuxOptDirName: 'Micup',
+		artifactProductName: 'Micup',
+		appId: 'gg.micup.desktop',
 		iconDirectory: 'icons-stable',
-		packageName: 'fluxer_desktop',
-		linuxPackageName: 'fluxer',
-		linuxDesktopId: 'app.fluxer.FluxerDesktop',
+		packageName: 'micup_desktop',
+		linuxPackageName: 'micup',
+		linuxDesktopId: 'micup',
 		linuxComment: 'Instant messaging and VoIP',
-		protocolScheme: 'fluxer',
-		macEntitlements: 'build_resources/entitlements.mac.stable.plist',
+		protocolScheme: 'micup',
+		macEntitlements: 'build_resources/entitlements.mac.development.plist',
 		notarize: true,
-		provisioningProfile: 'build_resources/profiles/Fluxer.provisionprofile',
+		provisioningProfile: null,
 	},
 	canary: {
-		productName: 'Fluxer Canary',
-		linuxOptDirName: 'fluxer-canary',
-		artifactProductName: 'Fluxer-Canary',
-		appId: 'app.fluxer.canary',
+		productName: 'Micup Canary',
+		linuxOptDirName: 'micup-canary',
+		artifactProductName: 'Micup-Canary',
+		appId: 'gg.micup.desktop.canary',
 		iconDirectory: 'icons-canary',
-		packageName: 'fluxer_desktop_canary',
-		linuxPackageName: 'fluxer-canary',
-		linuxDesktopId: 'app.fluxer.FluxerDesktopCanary',
-		linuxComment: 'Canary build of Fluxer',
-		protocolScheme: 'fluxer',
-		macEntitlements: 'build_resources/entitlements.mac.canary.plist',
+		packageName: 'micup_desktop_canary',
+		linuxPackageName: 'micup-canary',
+		linuxDesktopId: 'micup-canary',
+		linuxComment: 'Canary build of Micup',
+		protocolScheme: 'micup',
+		macEntitlements: 'build_resources/entitlements.mac.development.plist',
 		notarize: true,
-		provisioningProfile: 'build_resources/profiles/Fluxer_Canary.provisionprofile',
+		provisioningProfile: null,
 	},
 	development: {
-		productName: 'Fluxer Development',
-		linuxOptDirName: 'fluxer-development',
-		artifactProductName: 'Fluxer-Development',
-		appId: 'app.fluxer.development',
+		productName: 'Micup Development',
+		linuxOptDirName: 'micup-development',
+		artifactProductName: 'Micup-Development',
+		appId: 'gg.micup.desktop.development',
 		iconDirectory: 'icons-development',
-		packageName: 'fluxer_desktop_development',
-		linuxPackageName: 'fluxer-development',
-		linuxDesktopId: 'app.fluxer.FluxerDesktopDevelopment',
-		linuxComment: 'Development build of Fluxer',
-		protocolScheme: 'fluxer-development',
+		packageName: 'micup_desktop_development',
+		linuxPackageName: 'micup-development',
+		linuxDesktopId: 'micup-development',
+		linuxComment: 'Development build of Micup',
+		protocolScheme: 'micup-development',
 		macEntitlements: 'build_resources/entitlements.mac.development.plist',
 		notarize: false,
 		provisioningProfile: null,
@@ -60,8 +60,10 @@ if (!channel) {
 	throw new Error(`Unsupported BUILD_CHANNEL: ${buildChannel}. Expected one of ${Object.keys(CHANNELS).join(', ')}`);
 }
 
-const isCanary = buildChannel === 'canary';
-const isStable = buildChannel === 'stable';
+if (buildChannel === 'development' && process.argv.includes('msix')) {
+	throw new Error('Development builds cannot use the Micup Store package identity.');
+}
+
 const isLinuxBuild = process.argv.includes('--linux');
 const productName = channel.productName;
 const linuxOptDirName = channel.linuxOptDirName;
@@ -82,21 +84,6 @@ const rpmBuildIdLinkFpmArgs = [
 	'--rpm-rpmbuild-define',
 	'_missing_build_ids_terminate_build 0',
 ];
-const legacyLinuxStableDebPackageName = 'fluxer-app';
-const legacyLinuxStableRpmPackageName = 'fluxer_app';
-const legacyLinuxStablePackageNames = {
-	'.deb': legacyLinuxStableDebPackageName,
-	'.rpm': legacyLinuxStableRpmPackageName,
-};
-const legacyLinuxStableDebFpmArgs = isStable
-	? ['--replaces', legacyLinuxStableDebPackageName, '--conflicts', legacyLinuxStableDebPackageName]
-	: [];
-const legacyLinuxStableRpmFpmArgs = isStable
-	? ['--replaces', legacyLinuxStableRpmPackageName, '--conflicts', legacyLinuxStableRpmPackageName]
-	: [];
-const legacyLinuxCanaryOptDir = '/opt/Fluxer Canary';
-const legacyLinuxOptDirSweepScript = path.resolve(__dirname, 'packaging/linux/rpm-post-transaction.sh');
-const legacyLinuxOptDirRpmFpmArgs = isCanary ? ['--rpm-posttrans', legacyLinuxOptDirSweepScript] : [];
 const macOSMinimumSystemVersion = '13.0';
 const isMacBuild = process.argv.includes('--mac');
 const isWindowsBuild = process.argv.includes('--win');
@@ -416,6 +403,7 @@ const linuxDesktopEntry = {
 	Keywords: 'chat;im;messaging;messenger;voip;voice;video;call;',
 	Categories: 'Network;InstantMessaging;Chat;',
 	StartupWMClass: linuxDesktopId,
+	Icon: linuxPackageName,
 	StartupNotify: 'true',
 	SingleMainWindow: 'true',
 	MimeType: `x-scheme-handler/${channel.protocolScheme};`,
@@ -1408,156 +1396,23 @@ async function verifyRpmArtifactsSurviveASamePathUpgrade(buildResult) {
 	throw new Error(lines.join('\n'));
 }
 
-async function readRpmPostTransactionScriptlet(artifactPath) {
-	try {
-		const {stdout} = await execFileAsync('rpm', ['-qp', '--qf', '%{POSTTRANS}', artifactPath], {
-			maxBuffer: 16 * 1024 * 1024,
-		});
-		return stdout === '(none)' ? '' : stdout;
-	} catch (error) {
-		if (error && error.code === 'ENOENT') {
-			throw new Error(`Cannot inspect RPM artifact ${artifactPath}: rpm executable is not available.`);
-		}
-		const stderr = typeof error?.stderr === 'string' ? error.stderr.trim() : '';
-		throw new Error(`Cannot inspect RPM artifact ${artifactPath}: ${stderr || error?.message || String(error)}`);
-	}
-}
-
-async function verifyRpmArtifactsSweepTheRenamedInstallDirectory(buildResult) {
-	if (!isCanary) return;
-	const rpmArtifacts = (buildResult.artifactPaths ?? []).filter(
-		(artifactPath) => path.extname(artifactPath) === '.rpm',
-	);
-	const violations = [];
-	for (const artifactPath of rpmArtifacts) {
-		const scriptlet = await readRpmPostTransactionScriptlet(artifactPath);
-		const detail = !scriptlet.includes(legacyLinuxCanaryOptDir)
-			? `does not reference ${legacyLinuxCanaryOptDir}`
-			: !scriptlet.includes('rmdir')
-				? 'does not sweep the directory with rmdir'
-				: /\brm\s+-[a-zA-Z]*[rf]/.test(scriptlet)
-					? 'removes files rather than only empty directories'
-					: null;
-		if (detail !== null) {
-			violations.push({artifactPath, detail});
-		}
-	}
-	if (violations.length === 0) return;
-
-	const lines = [
-		`RPM %posttrans must sweep the empty ${legacyLinuxCanaryOptDir} skeleton left by the /opt rename.`,
-		'fpm emits no directory entries for rpm, so the old directories survive the upgrade unowned by any package and',
-		'survive a later uninstall too. The sweep must stay rmdir-based so it can never delete a live install.',
-	];
-	for (const {artifactPath, detail} of violations) {
-		lines.push(`  - ${path.basename(artifactPath)}: ${detail}`);
-	}
-	throw new Error(lines.join('\n'));
-}
-
-async function readDebControlField(artifactPath, field) {
-	try {
-		const {stdout} = await execFileAsync('dpkg-deb', ['-f', artifactPath, field], {
-			maxBuffer: 1024 * 1024,
-		});
-		return stdout;
-	} catch (error) {
-		if (error && error.code === 'ENOENT') {
-			throw new Error(`Cannot inspect DEB artifact ${artifactPath}: dpkg-deb executable is not available.`);
-		}
-		const stderr = typeof error?.stderr === 'string' ? error.stderr.trim() : '';
-		throw new Error(`Cannot inspect DEB artifact ${artifactPath}: ${stderr || error?.message || String(error)}`);
-	}
-}
-
-async function readRpmRelationNames(artifactPath, queryFlag) {
-	try {
-		const {stdout} = await execFileAsync('rpm', ['-qp', queryFlag, artifactPath], {
-			maxBuffer: 1024 * 1024,
-		});
-		return stdout;
-	} catch (error) {
-		if (error && error.code === 'ENOENT') {
-			throw new Error(`Cannot inspect RPM artifact ${artifactPath}: rpm executable is not available.`);
-		}
-		const stderr = typeof error?.stderr === 'string' ? error.stderr.trim() : '';
-		throw new Error(`Cannot inspect RPM artifact ${artifactPath}: ${stderr || error?.message || String(error)}`);
-	}
-}
-
-function parsePackageRelationNames(output) {
-	return output
-		.split(/[\r\n,]+/)
-		.map((entry) => entry.trim())
-		.filter((entry) => entry && entry !== '(none)')
-		.map((entry) => entry.split(/\s+/)[0]);
-}
-
-async function readLinuxPackageReplacementNames(artifactPath) {
-	if (path.extname(artifactPath) === '.deb') {
-		return {
-			replaces: parsePackageRelationNames(await readDebControlField(artifactPath, 'Replaces')),
-			conflicts: parsePackageRelationNames(await readDebControlField(artifactPath, 'Conflicts')),
-		};
-	}
-	return {
-		replaces: parsePackageRelationNames(await readRpmRelationNames(artifactPath, '--obsoletes')),
-		conflicts: parsePackageRelationNames(await readRpmRelationNames(artifactPath, '--conflicts')),
-	};
-}
-
-async function verifyLinuxPackagesDeclareTheLegacyStableReplacement(buildResult) {
-	const packageArtifacts = (buildResult.artifactPaths ?? []).filter((artifactPath) =>
-		['.deb', '.rpm'].includes(path.extname(artifactPath)),
-	);
-	const violations = [];
-	for (const artifactPath of packageArtifacts) {
-		const legacyName = legacyLinuxStablePackageNames[path.extname(artifactPath)];
-		const {replaces, conflicts} = await readLinuxPackageReplacementNames(artifactPath);
-		const declared = [
-			...(replaces.includes(legacyName) ? ['replaces'] : []),
-			...(conflicts.includes(legacyName) ? ['conflicts'] : []),
-		];
-		if (!isStable && declared.length > 0) {
-			violations.push({
-				artifactPath,
-				detail: `${buildChannel} declares ${declared.join(' and ')} on ${legacyName}, which belongs to stable only`,
-			});
-		} else if (isStable && declared.length !== 2) {
-			violations.push({
-				artifactPath,
-				detail: `stable declares ${declared.join(' and ') || 'neither'} on ${legacyName}, expected both`,
-			});
-		}
-	}
-	if (violations.length === 0) return;
-
-	const lines = [
-		'Stable Linux package artifact(s) must declare both the replaces and the conflicts relation on the legacy package.',
-		'Without both, dpkg aborts every legacy install on the file-overwrite check and dnf models the new package as a',
-		'second install that coexists with the old one. Canary never shipped under the legacy names, so it declares neither.',
-	];
-	for (const {artifactPath, detail} of violations) {
-		lines.push(`  - ${path.basename(artifactPath)}: ${detail}`);
-	}
-	throw new Error(lines.join('\n'));
-}
-
 async function verifyLinuxArtifactContracts(buildResult) {
 	await verifyRpmArtifactsDoNotOwnBuildIds(buildResult);
 	await verifyRpmArtifactsSurviveASamePathUpgrade(buildResult);
-	await verifyRpmArtifactsSweepTheRenamedInstallDirectory(buildResult);
-	await verifyLinuxPackagesDeclareTheLegacyStableReplacement(buildResult);
 	await verifyLinuxPackagesContainAppArmorProfile(buildResult);
 	await verifyAppImageArtifactsGlibcCompatibility(buildResult);
 	await verifyAppImageArtifactsDoNotNeedFuse2(buildResult);
 	await verifyAppImageArtifactsUseSandboxAwareLauncher(buildResult);
 }
 
+// AGPLv3 §4/§6: ship a copy of the licence next to LICENSE.electron.txt. On macOS it goes to Contents/Resources,
+// because codesign rejects unsigned files in the bundle's Contents root.
+const agplLicenseFile = [{from: 'LICENSE', to: 'LICENSE.txt'}];
+
 module.exports = {
 	appId,
 	productName: installedProductName,
-	copyright: 'Copyright © 2026 Fluxer Platform AB',
+	copyright: 'Copyright © 2026 Fluxer Platform AB and Micup',
 	artifactName: `${artifactProductName}-\${version}-\${os}-\${arch}.\${ext}`,
 	directories: {
 		buildResources: 'build_resources',
@@ -1577,6 +1432,9 @@ module.exports = {
 	extraMetadata: {
 		main: 'dist/main/index.js',
 		name: metadataName,
+		// Micup publishes this build: the author becomes the exe's CompanyName (Windows "Publisher").
+		author: {name: 'Micup', email: 'pr@premate.gg'},
+		homepage: 'https://micup.gg',
 		...(process.env.VERSION ? {version: process.env.VERSION} : {}),
 		...(targetPlatform === 'linux' ? {desktopName: `${linuxDesktopId}.desktop`} : {}),
 	},
@@ -1604,9 +1462,6 @@ module.exports = {
 			to: 'badges',
 			filter: ['**/*'],
 		},
-		...(buildChannel === 'development' && targetPlatform === 'darwin'
-			? [{from: `build_resources/${iconDir}/_compiled/Assets.car`, to: 'Assets.car'}]
-			: []),
 	],
 	asar: {
 		smartUnpack: false,
@@ -1694,6 +1549,7 @@ module.exports = {
 		minimumSystemVersion: macOSMinimumSystemVersion,
 		icon: `build_resources/${iconDir}/_compiled/AppIcon.icns`,
 		darkModeSupport: true,
+		extraResources: agplLicenseFile,
 		notarize: channel.notarize,
 		sign: {
 			hardenedRuntime: true,
@@ -1712,14 +1568,13 @@ module.exports = {
 			},
 		],
 		extendInfo: {
-			NSMicrophoneUsageDescription: 'Fluxer needs access to your microphone to enable voice chat features.',
-			NSCameraUsageDescription: 'Fluxer needs access to your camera to enable video chat features.',
-			NSAppleEventsUsageDescription: 'Fluxer needs access to Apple Events for automation features.',
-			NSAudioCaptureUsageDescription: 'Fluxer captures audio from the screen or window you choose to share.',
-			NSScreenCaptureUsageDescription: 'Fluxer captures the screen or window you choose to share.',
-			...(buildChannel === 'development' ? {CFBundleIconName: 'AppIcon'} : {}),
+			NSMicrophoneUsageDescription: 'Micup needs access to your microphone to enable voice chat features.',
+			NSCameraUsageDescription: 'Micup needs access to your camera to enable video chat features.',
+			NSAppleEventsUsageDescription: 'Micup needs access to Apple Events for automation features.',
+			NSAudioCaptureUsageDescription: 'Micup captures audio from the screen or window you choose to share.',
+			NSScreenCaptureUsageDescription: 'Micup captures the screen or window you choose to share.',
 			NSLocalNetworkUsageDescription:
-				'Fluxer needs local network access to reach a Fluxer instance you host on your own network. It never scans your network or connects to devices you have not pointed it at.',
+				'Micup needs local network access to reach a Micup instance you host on your own network. It never scans your network or connects to devices you have not pointed it at.',
 		},
 	},
 	dmg: {
@@ -1739,13 +1594,29 @@ module.exports = {
 	win: {
 		icon: `build_resources/${iconDir}/icon.ico`,
 		target: winTargets,
+		extraFiles: agplLicenseFile,
+	},
+	msix: {
+		// Partner Center > Micup (9P1SNJ2H2W9H) > Product identity; applicationId as in the published 0.4.4.0 package (keeps pinned tiles).
+		identityName: 'Micup.Micup',
+		publisher: 'CN=6B905D36-79B1-4EA5-8E9B-F18A23784188',
+		publisherDisplayName: 'Micup',
+		applicationId: 'Micup',
+		backgroundColor: '#0b0b0c',
+		languages: ['tr-TR', 'en-US'],
+		setBuildNumber: false,
+		minVersion: '10.0.17763.0',
+		maxVersionTested: '10.0.26100.0',
+		customManifestPath: 'packaging/windows/store/manifest.xml',
+		customExtensionsPath: 'packaging/windows/store/extensions.xml',
 	},
 	portable: {
 		artifactName: `${artifactProductName}-\${version}-portable-\${os}-\${arch}.\${ext}`,
 	},
 	linux: {
-		icon: `build_resources/${iconDir}/1024x1024.png`,
+		icon: `build_resources/${iconDir}`,
 		category: 'Network;InstantMessaging;Chat;',
+		extraFiles: agplLicenseFile,
 		target: [
 			{
 				target: 'AppImage',
@@ -1775,7 +1646,6 @@ module.exports = {
 			entry: linuxDesktopEntryWithActions,
 			desktopActions: linuxDesktopActions,
 		},
-		fpm: legacyLinuxStableDebFpmArgs,
 		depends: [
 			'libgtk-3-0t64 | libgtk-3-0',
 			'libnotify4',
@@ -1798,7 +1668,7 @@ module.exports = {
 			desktopActions: linuxDesktopActions,
 		},
 		afterRemove: 'packaging/linux/rpm-after-remove.tpl',
-		fpm: [...rpmBuildIdLinkFpmArgs, ...legacyLinuxStableRpmFpmArgs, ...legacyLinuxOptDirRpmFpmArgs],
+		fpm: rpmBuildIdLinkFpmArgs,
 		depends: [
 			'gtk3',
 			'libnotify',

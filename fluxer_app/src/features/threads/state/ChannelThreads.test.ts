@@ -470,6 +470,7 @@ describe('control arm', () => {
 				'position',
 				'rate_limit_per_user',
 				'recipients',
+				'room_theme',
 				'rtc_region',
 				'topic',
 				'type',
@@ -478,6 +479,7 @@ describe('control arm', () => {
 				'voice_connection_limit',
 			].sort(),
 		);
+		expect(new Channel(wire).toJSON().room_theme).toBeNull();
 		expect(new Channel(wire).threadFields).toBeNull();
 	});
 

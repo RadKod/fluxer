@@ -208,6 +208,19 @@ function readLegacyKeys(storage: Storage): Array<string> {
 	return keys.sort();
 }
 
+function feedCursorOwner(value: string): string | null | undefined {
+	try {
+		const parsed: unknown = JSON.parse(value);
+		if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return undefined;
+		const {lastReadAt, lastReadUserId} = parsed as Record<string, unknown>;
+		if (typeof lastReadAt !== 'number' || !Number.isFinite(lastReadAt) || lastReadAt < 0) return undefined;
+		if (lastReadUserId == null) return null;
+		return typeof lastReadUserId === 'string' && lastReadUserId.length > 0 ? lastReadUserId : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 function stageOwnedSnapshot(staged: Map<string, AppStorageWrite>, account: KeyedStoredAccount): void {
 	const snapshot = account.managedStorageData ?? account.localStorageData;
 	for (const legacyKey of Object.keys(snapshot).sort()) {
@@ -224,6 +237,10 @@ function stageOwnedSnapshot(staged: Map<string, AppStorageWrite>, account: Keyed
 		}
 		if (match.row.scope === 'global' || (match.userId != null && match.userId !== account.userId)) {
 			continue;
+		}
+		if (legacyKey === 'FeedNotifications') {
+			const owner = feedCursorOwner(value);
+			if (owner === undefined || (owner !== null && owner !== account.userId)) continue;
 		}
 		stageWrite(staged, account.storageKey, legacyKey, value);
 	}
@@ -266,6 +283,17 @@ export function buildLegacyAppStorageMigrationPlan(
 				unclassifiedKeys.push(legacyKey);
 			}
 			stageWrite(fannedOut, GLOBAL_APP_STORAGE_SCOPE, legacyKey, value);
+			continue;
+		}
+		if (legacyKey === 'FeedNotifications') {
+			// The deployed cursor was shared, but only its named owner may claim it. A user ID alone cannot choose
+			// between two instances; keep an ambiguous record in raw storage instead of marking either inbox read.
+			const owner = feedCursorOwner(value);
+			const ownerScopes = owner == null ? undefined : scopesByUserId.get(owner);
+			const scope = owner === null ? contentScope : ownerScopes?.size === 1 ? ownerScopes.values().next().value : null;
+			if (contentScope !== null && scope != null && scope !== UNAUTHENTICATED_APP_STORAGE_SCOPE) {
+				stageWrite(perAccount, scope, legacyKey, value);
+			}
 			continue;
 		}
 		if (match.userId != null) {

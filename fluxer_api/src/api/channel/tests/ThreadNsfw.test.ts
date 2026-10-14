@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {createTestAccount, type TestAccount} from '@app/api/auth/tests/AuthTestUtils';
+import {bornYearsAgo, createTestAccount, type TestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createReportID} from '@app/api/BrandedTypes';
 import {MessageContentService} from '@app/api/channel/services/message/MessageContentService';
 import {MessagePersistenceService} from '@app/api/channel/services/message/MessagePersistenceService';
@@ -18,6 +18,7 @@ import {
 	setChannelThreadsConfig,
 	threadsRequest,
 } from '@app/api/channel/tests/ThreadTestUtils';
+import {overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
 import {EmbedService} from '@app/api/infrastructure/EmbedService';
 import {ensureSessionStarted, sendMessage} from '@app/api/message/tests/MessageTestUtils';
 import {ReportRepository} from '@app/api/report/ReportRepository';
@@ -48,6 +49,7 @@ describe('thread nsfw scope', () => {
 	beforeEach(async () => {
 		await harness.reset();
 		resetChannelThreadsConfig();
+		overrideLimits({feature_mature_content_settings: 1});
 	});
 
 	afterEach(() => {
@@ -132,7 +134,7 @@ describe('thread nsfw scope', () => {
 
 	it('requires age verification for posts and post data under an nsfw forum', async () => {
 		const s = await setup();
-		const minor = await createTestAccount(harness, {dateOfBirth: '2012-01-01'});
+		const minor = await createTestAccount(harness, {dateOfBirth: bornYearsAgo(15)});
 		const invite = await createChannelInvite(harness, s.owner.token, s.sfwChannelId);
 		await acceptInvite(harness, minor.token, invite.code);
 		await ensureSessionStarted(harness, minor.token);

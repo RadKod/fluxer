@@ -14,6 +14,7 @@ export interface RegistrationLegalConsentConfig {
 	termsUrl: string | null;
 	privacyUrl: string | null;
 	requirement: LegalConsentRequirement | null;
+	collectDateOfBirth: boolean;
 }
 
 function resolveLegalConsentRequirement(
@@ -42,10 +43,11 @@ export function getRegistrationLegalConsentConfig(
 	const privacyUrl =
 		runtimeSnapshot.appPublic.legal.privacy_url ??
 		(isSelfHosted ? null : `${runtimeSnapshot.marketingEndpoint}/privacy`);
+	const collectDateOfBirth = runtimeSnapshot.appPublic.registration.collect_date_of_birth;
 	if (!showLegalConsent) {
-		return {termsUrl, privacyUrl, requirement: null};
+		return {termsUrl, privacyUrl, requirement: null, collectDateOfBirth};
 	}
-	return {termsUrl, privacyUrl, requirement: resolveLegalConsentRequirement(termsUrl, privacyUrl)};
+	return {termsUrl, privacyUrl, requirement: resolveLegalConsentRequirement(termsUrl, privacyUrl), collectDateOfBirth};
 }
 
 interface RegistrationLegalConsentProps {
@@ -110,7 +112,7 @@ function RegistrationLegalConsentLabel({config}: {config: RegistrationLegalConse
 
 export function RegistrationLegalConsent({checked, config, onChange}: RegistrationLegalConsentProps) {
 	if (config.requirement == null) return null;
-	return (
+	const consentRow = (
 		<flx-auth-registration-legal-consent
 			className={flxElementClassName(styles.consentRow)}
 			data-flx="auth.flow.registration-legal-consent.consent-row"
@@ -128,5 +130,20 @@ export function RegistrationLegalConsent({checked, config, onChange}: Registrati
 				</span>
 			</Checkbox>
 		</flx-auth-registration-legal-consent>
+	);
+	// Micup: a new account of 16 or older starts with a public profile. Said only where registration
+	// asks the date of birth: without one the server starts the profile on shared communities.
+	// This notice follows the registration target rather than the active account.
+	if (!config.collectDateOfBirth) return consentRow;
+	return (
+		<>
+			{consentRow}
+			<p className={styles.consentLabel} data-flx="auth.flow.registration-legal-consent.public-profile-note">
+				<Trans comment="Registration notice under the terms consent box. Settings > Privacy is where profile visibility is changed. Legal-effect text, approved before release.">
+					If you are 16 or older, your profile starts public. You can change who sees it any time in Settings &gt;
+					Privacy.
+				</Trans>
+			</p>
+		</>
 	);
 }

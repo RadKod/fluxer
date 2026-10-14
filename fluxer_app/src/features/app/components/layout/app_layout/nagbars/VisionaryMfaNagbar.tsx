@@ -18,7 +18,7 @@ import {useCallback} from 'react';
 const VISIONARY_MFA_MESSAGE_DESCRIPTOR = msg({
 	message: 'Protect your Visionary account by enabling two-factor authentication. Thanks for supporting {productName}!',
 	comment:
-		'Nagbar body shown to Visionary premium users who have not enabled two-factor authentication. {productName} is Fluxer.',
+		'Nagbar body shown to Visionary Plus users who have not enabled two-factor authentication. {productName} is Fluxer.',
 });
 export const VisionaryMfaNagbar = observer(({isMobile}: {isMobile: boolean}) => {
 	const {i18n} = useLingui();

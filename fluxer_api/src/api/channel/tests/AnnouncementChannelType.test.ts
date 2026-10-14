@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
+import {bornYearsAgo, createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {sendMessageWithAttachments} from '@app/api/channel/tests/AttachmentTestUtils';
 import {
 	acceptInvite,
@@ -14,6 +14,7 @@ import {
 	updateChannel,
 	updateGuild,
 } from '@app/api/channel/tests/ChannelTestUtils';
+import {overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
 import {getGuildChannels, updateChannelPositions} from '@app/api/guild/tests/GuildTestUtils';
 import {deleteMessage, ensureSessionStarted, getMessages, pinMessage} from '@app/api/message/tests/MessageTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
@@ -27,7 +28,7 @@ import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import type {ChannelResponse} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
 import {sortChannelsForOrdering} from '@fluxer/schema/src/domains/channel/GuildChannelOrdering';
 import type {MessageResponse} from '@fluxer/schema/src/domains/message/MessageResponseSchemas';
-import {afterAll, beforeAll, beforeEach, describe, expect, test} from 'vitest';
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi} from 'vitest';
 
 describe('Announcement channel type', () => {
 	let harness: ApiTestHarness;
@@ -38,6 +39,11 @@ describe('Announcement channel type', () => {
 
 	beforeEach(async () => {
 		await harness.reset();
+		overrideLimits({feature_mature_content_settings: 1});
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
 	});
 
 	afterAll(async () => {
@@ -188,7 +194,7 @@ describe('Announcement channel type', () => {
 
 	test('applies the age gate to an age-restricted announcement channel', async () => {
 		const owner = await createTestAccount(harness, {dateOfBirth: '2000-01-01'});
-		const minor = await createTestAccount(harness, {dateOfBirth: '2012-01-01'});
+		const minor = await createTestAccount(harness, {dateOfBirth: bornYearsAgo(15)});
 		const guild = await createGuild(harness, owner.token, 'Age Gate Guild');
 		const invite = await createChannelInvite(harness, owner.token, guild.system_channel_id!);
 		await acceptInvite(harness, minor.token, invite.code);

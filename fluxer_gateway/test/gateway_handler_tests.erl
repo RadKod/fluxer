@@ -727,3 +727,291 @@ restore_env(Key, Value) ->
 unique_test_peer_ip(Prefix) ->
     Suffix = integer_to_binary(erlang:unique_integer([positive])),
     <<Prefix/binary, "-", Suffix/binary>>.
+
+websocket_init_closes_4008_above_hard_limit_before_hello_test() ->
+    with_rate_limits_enabled(fun() ->
+        %% soft 1, hard 2
+        with_node_limit(1, fun() ->
+            gateway_connection_metrics:reset_for_tests(),
+            ok = gateway_ip_connections:acquire(<<"198.51.100.201">>),
+            ok = gateway_ip_connections:acquire(<<"198.51.100.202">>),
+            State = (new_json_state())#{peer_ip => <<"198.51.100.203">>},
+            ?assertMatch(
+                {[{close, 4008, <<"Gateway at capacity">>}], _},
+                gateway_handler:websocket_init(State)
+            ),
+            ?assertEqual(2, gateway_ip_connections:node_connection_count()),
+            ?assertEqual(0, maps:get(accepted, gateway_connection_metrics:snapshot())),
+            ok = gateway_ip_connections:release(<<"198.51.100.201">>),
+            ok = gateway_ip_connections:release(<<"198.51.100.202">>)
+        end)
+    end).
+
+websocket_init_sends_hello_when_limit_unset_test() ->
+    with_rate_limits_enabled(fun() ->
+        with_node_limit(0, fun() ->
+            gateway_connection_metrics:reset_for_tests(),
+            {[{text, _Hello}], State} =
+                gateway_handler:websocket_init((new_json_state())#{
+                    peer_ip => <<"198.51.100.204">>
+                }),
+            ?assertEqual(1, maps:get(accepted, gateway_connection_metrics:snapshot())),
+            gateway_handler_heartbeat:cancel_heartbeat_timer(State),
+            ok = gateway_ip_connections:release(<<"198.51.100.204">>)
+        end)
+    end).
+
+identify_closes_4008_above_soft_limit_test() ->
+    with_rate_limits_enabled(fun() ->
+        with_node_limit(1, fun() ->
+            ok = gateway_ip_connections:acquire(<<"198.51.100.205">>),
+            ok = gateway_ip_connections:acquire(<<"198.51.100.206">>),
+            State = (new_json_state())#{peer_ip => <<"198.51.100.206">>},
+            ?assertMatch(
+                {[{close, 4008, <<"Gateway at capacity">>}], _},
+                gateway_handler_dispatch:handle_opcode(identify, #{<<"d">> => #{}}, State)
+            ),
+            ok = gateway_ip_connections:release(<<"198.51.100.205">>),
+            ok = gateway_ip_connections:release(<<"198.51.100.206">>)
+        end)
+    end).
+
+identify_at_soft_limit_reaches_validation_test() ->
+    with_rate_limits_enabled(fun() ->
+        with_node_limit(1, fun() ->
+            ok = gateway_ip_connections:acquire(<<"198.51.100.207">>),
+            State = (new_json_state())#{peer_ip => <<"198.51.100.207">>},
+            ?assertMatch(
+                {[{close, 4002, <<"Invalid identify payload">>}], _},
+                gateway_handler_dispatch:handle_opcode(identify, #{<<"d">> => #{}}, State)
+            ),
+            ok = gateway_ip_connections:release(<<"198.51.100.207">>)
+        end)
+    end).
+
+resume_is_not_cut_by_soft_limit_test() ->
+    with_rate_limits_enabled(fun() ->
+        with_node_limit(1, fun() ->
+            ok = gateway_ip_connections:acquire(<<"198.51.100.208">>),
+            ok = gateway_ip_connections:acquire(<<"198.51.100.209">>),
+            State = (new_json_state())#{peer_ip => <<"198.51.100.209">>},
+            ?assertMatch(
+                {[{close, 4002, <<"Invalid resume payload">>}], _},
+                gateway_handler_dispatch:handle_opcode(resume, #{<<"d">> => #{}}, State)
+            ),
+            ok = gateway_ip_connections:release(<<"198.51.100.208">>),
+            ok = gateway_ip_connections:release(<<"198.51.100.209">>)
+        end)
+    end).
+
+identify_timeout_closes_4003_without_identify_test() ->
+    with_identify_timeout(20, fun() ->
+        gateway_connection_metrics:reset_for_tests(),
+        {[{text, _Hello}], State} = gateway_handler:websocket_init(new_json_state()),
+        receive
+            identify_timeout -> ok
+        after 500 -> error(no_identify_timeout)
+        end,
+        ?assertMatch(
+            {[{close, 4003, <<"Identify timeout">>}], _},
+            gateway_handler:websocket_info(identify_timeout, State)
+        ),
+        ?assertEqual(1, maps:get(identify_timeout, gateway_connection_metrics:snapshot())),
+        gateway_handler_heartbeat:cancel_heartbeat_timer(State)
+    end).
+
+identify_timeout_off_by_default_test() ->
+    with_identify_timeout(0, fun() ->
+        {[{text, _Hello}], State} = gateway_handler:websocket_init(new_json_state()),
+        receive
+            identify_timeout -> error(unexpected_identify_timeout)
+        after 100 -> ok
+        end,
+        gateway_handler_heartbeat:cancel_heartbeat_timer(State)
+    end).
+
+identify_timeout_ignored_after_session_start_test() ->
+    State = (new_json_state())#{session_pid => self()},
+    ?assertMatch({ok, _}, gateway_handler:websocket_info(identify_timeout, State)).
+
+identify_timeout_ignored_while_session_start_is_held_test() ->
+    State = (new_json_state())#{pending_identify => {#{}, self()}},
+    ?assertMatch({ok, _}, gateway_handler:websocket_info(identify_timeout, State)).
+
+with_env_key(Key, Value, Fun) ->
+    Previous = fluxer_gateway_env:get(Key),
+    _ = fluxer_gateway_env:patch(#{Key => Value}),
+    try
+        Fun()
+    after
+        _ = fluxer_gateway_env:patch(#{Key => Previous})
+    end.
+
+with_identify_timeout(Ms, Fun) -> with_env_key(identify_timeout_ms, Ms, Fun).
+
+with_unidentified_budget(Budget, Fun) ->
+    lists:foreach(
+        fun(Table) ->
+            case ets:whereis(Table) of
+                undefined -> ok;
+                _ -> ets:delete_all_objects(Table)
+            end
+        end,
+        [gateway_ip_connections, gateway_ip_connection_owners, gateway_unidentified_connections]
+    ),
+    with_env_key(max_unidentified_connections, Budget, Fun).
+
+%% websocket_init/1 in another process (another socket); an accepted one lets its slot go at once.
+init_elsewhere(IP) ->
+    Parent = self(),
+    Pid = spawn(fun() ->
+        Result = gateway_handler:websocket_init((new_json_state())#{peer_ip => IP}),
+        ok = gateway_ip_connections:release(IP),
+        Parent ! {init_result, self(), Result}
+    end),
+    receive
+        {init_result, Pid, Result} -> Result
+    after 1000 -> error(init_elsewhere_timeout)
+    end.
+
+frame(Op, Data) ->
+    {text, iolist_to_binary(json:encode(#{<<"op">> => Op, <<"d">> => Data}))}.
+
+websocket_init_closes_4008_when_unidentified_budget_is_full_test() ->
+    with_rate_limits_enabled(fun() ->
+        with_unidentified_budget(1, fun() ->
+            gateway_connection_metrics:reset_for_tests(),
+            IP = <<"198.51.100.220">>,
+            {[{text, _Hello}], State} =
+                gateway_handler:websocket_init((new_json_state())#{peer_ip => IP}),
+            gateway_handler_heartbeat:cancel_heartbeat_timer(State),
+            ?assertMatch(
+                {[{close, 4008, <<"Gateway at capacity">>}], _},
+                init_elsewhere(<<"198.51.100.221">>)
+            ),
+            ?assertEqual(
+                1, maps:get(unidentified_at_capacity, gateway_connection_metrics:snapshot())
+            ),
+            ok = gateway_ip_connections:release(IP)
+        end)
+    end).
+
+resume_leaves_full_unidentified_budget_test() ->
+    assert_frame_leaves_full_budget(
+        <<"198.51.100.222">>, frame(6, #{}), <<"Invalid resume payload">>
+    ).
+
+identify_leaves_full_unidentified_budget_test() ->
+    assert_frame_leaves_full_budget(
+        <<"198.51.100.224">>, frame(2, #{}), <<"Invalid identify payload">>
+    ).
+
+%% The budget is full with this socket; a new socket is turned away. This socket's Identify or
+%% Resume is still served (it reaches validation), and takes it out of the budget.
+assert_frame_leaves_full_budget(IP, Frame, InvalidReason) ->
+    with_rate_limits_enabled(fun() ->
+        with_unidentified_budget(1, fun() ->
+            {[{text, _Hello}], State} =
+                gateway_handler:websocket_init((new_json_state())#{peer_ip => IP}),
+            gateway_handler_heartbeat:cancel_heartbeat_timer(State),
+            Other = next_ip(IP),
+            ?assertMatch({[{close, 4008, _}], _}, init_elsewhere(Other)),
+            ?assertMatch(
+                {[{close, 4002, InvalidReason}], _},
+                gateway_handler:websocket_handle(Frame, State)
+            ),
+            ?assertMatch({[{text, _}], _}, init_elsewhere(Other)),
+            ok = gateway_ip_connections:release(IP)
+        end)
+    end).
+
+next_ip(<<"198.51.100.", Last/binary>>) ->
+    <<"198.51.100.", (integer_to_binary(binary_to_integer(Last) + 1))/binary>>.
+
+held_identify_timeout_counts_as_dropped_test() ->
+    assert_held_frame_timeout_counts_as_dropped(frame(2, valid_identify_data(#{}))).
+
+held_resume_timeout_counts_as_dropped_test() ->
+    Resume = #{<<"token">> => <<"abc">>, <<"session_id">> => <<"s">>, <<"seq">> => 1},
+    assert_held_frame_timeout_counts_as_dropped(frame(6, Resume)).
+
+%% The IP is past its Identify rate, so the Identify or Resume is held without a session; the
+%% identify timeout then closes the socket the same way, counted as dropped, not as silent.
+assert_held_frame_timeout_counts_as_dropped(Frame) ->
+    with_rate_limits_enabled(fun() ->
+        with_identify_timeout(20, fun() ->
+            session_abuse_protection:ensure_tables(),
+            gateway_connection_metrics:reset_for_tests(),
+            IP = unique_test_peer_ip(<<"held-identify">>),
+            lists:foreach(
+                fun(_) -> ok = session_abuse_protection:check_identify_rate(IP) end,
+                lists:seq(1, ?TEST_IDENTIFY_MAX_PER_IP)
+            ),
+            {[{text, _Hello}], State} =
+                gateway_handler:websocket_init((new_json_state())#{peer_ip => IP}),
+            {ok, Held} = gateway_handler:websocket_handle(Frame, State),
+            receive
+                identify_timeout -> ok
+            after 500 -> error(no_identify_timeout)
+            end,
+            ?assertMatch(
+                {[{close, 4003, <<"Identify timeout">>}], _},
+                gateway_handler:websocket_info(identify_timeout, Held)
+            ),
+            Snapshot = gateway_connection_metrics:snapshot(),
+            ?assertEqual(1, maps:get(identify_dropped, Snapshot)),
+            ?assertEqual(0, maps:get(identify_timeout, Snapshot)),
+            gateway_handler_heartbeat:cancel_heartbeat_timer(Held),
+            ok = gateway_ip_connections:release(IP)
+        end)
+    end).
+
+%% A Resume answered with Invalid Session was not dropped: the mark an earlier held Identify or
+%% Resume left goes, and the identify timeout then counts the socket as silent.
+failed_resume_clears_dropped_mark_test() ->
+    with_rate_limits_enabled(fun() ->
+        with_identify_timeout(20, fun() ->
+            session_abuse_protection:ensure_tables(),
+            gateway_connection_metrics:reset_for_tests(),
+            IP = unique_test_peer_ip(<<"failed-resume">>),
+            {[{text, _Hello}], State} =
+                gateway_handler:websocket_init((new_json_state())#{peer_ip => IP}),
+            Resume = #{
+                <<"token">> => <<"abc">>, <<"session_id">> => <<"gone">>, <<"seq">> => 1
+            },
+            {[{text, InvalidSession}], Failed} =
+                gateway_handler:websocket_handle(frame(6, Resume), State#{
+                    identify_received => true
+                }),
+            ?assertMatch(
+                {ok, #{<<"op">> := 9, <<"d">> := false}},
+                gateway_codec:decode(InvalidSession, json)
+            ),
+            receive
+                identify_timeout -> ok
+            after 500 -> error(no_identify_timeout)
+            end,
+            ?assertMatch(
+                {[{close, 4003, <<"Identify timeout">>}], _},
+                gateway_handler:websocket_info(identify_timeout, Failed)
+            ),
+            Snapshot = gateway_connection_metrics:snapshot(),
+            ?assertEqual(1, maps:get(identify_timeout, Snapshot)),
+            ?assertEqual(0, maps:get(identify_dropped, Snapshot)),
+            gateway_handler_heartbeat:cancel_heartbeat_timer(Failed),
+            ok = gateway_ip_connections:release(IP)
+        end)
+    end).
+
+%% Node counts are absolute: start from empty tables so other tests' rows do not count.
+with_node_limit(Limit, Fun) ->
+    lists:foreach(
+        fun(Table) ->
+            case ets:whereis(Table) of
+                undefined -> ok;
+                _ -> ets:delete_all_objects(Table)
+            end
+        end,
+        [gateway_ip_connections, gateway_ip_connection_owners]
+    ),
+    with_env_key(max_connections, Limit, Fun).

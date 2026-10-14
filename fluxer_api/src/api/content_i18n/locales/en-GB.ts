@@ -12,13 +12,20 @@ const CONTENT_I18N_EN_GB_MESSAGES = defineContentI18nLocaleMessages({
 	"billing.eu_withdrawal_waiver_checkout": "If I am an EU/EEA consumer, I expressly consent to {product_name} {premium_tier_name} digital content being provided immediately and acknowledge that I lose my statutory withdrawal right once access is provided. This does not affect other mandatory consumer rights. See the [Terms of Service]({terms_url}).",
 	"bulk_message_deletion.complete": "We finished deleting your messages. We removed {message_count, plural, =0 {0 messages} one {# message} other {# messages}} from {channel_count, plural, =0 {0 places} one {# place} other {# places}}.",
 	"content.virus_detected": "That file was flagged as potentially unsafe and has been removed.",
+	"feed.comment_removed_by_moderator": "A moderator removed one of your feed comments for violating our Terms of Service or Community Guidelines.",
+	"feed.post_removed_by_moderator": "A moderator removed one of your feed posts for violating our Terms of Service or Community Guidelines.",
+	"feed.video_failed": "Your feed video could not be processed, so it was not posted.",
+	"feed.video_gone": "Your feed post was removed because its video is no longer available.",
+	"feed.video_rejected": "Your feed video did not pass our content checks, so it is not shown in the feed.",
+	"feed.video_too_large": "Your feed video was not posted because it is larger than 500 MB.",
 	"guild.bulk_create.emoji_limit": "Maximum number of emojis reached ({limit}).",
 	"guild.bulk_create.sticker_limit": "Maximum number of stickers reached ({limit}).",
 	"guild.bulk_create.unknown_error": "Unknown error.",
 	"guild.default_category_text": "Text channels",
 	"guild.default_category_voice": "Voice channels",
 	"guild.default_channel_text": "general",
-	"guild.default_channel_voice": "General"
+	"guild.default_channel_voice": "General",
+	"referral.reward_ready": "Your referral reward is ready. You can see it in Settings → Referral."
 });
 
 export default CONTENT_I18N_EN_GB_MESSAGES;

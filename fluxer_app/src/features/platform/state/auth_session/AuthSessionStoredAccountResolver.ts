@@ -13,6 +13,7 @@ import {
 	type UnqualifiedStoredAccount,
 } from '@app/features/auth/state/StoredAccountInventoryContract';
 import {inventoryEntryStorageKey} from '@app/features/auth/state/StoredAccountInventoryPolicy';
+import {isDesktopLocalAppDocument} from '@app/features/platform/DesktopLocalAppRuntime';
 import {
 	parseStoredSessionRestorationPointer,
 	type StoredSessionCredential,
@@ -25,9 +26,15 @@ export interface AuthSessionStoredAccountResolverStorage {
 	replaceInventoryEntry(request: StoredAccountInventoryReplacement): Promise<QualifiedStoredAccount>;
 }
 
+// Micup: adopted means the account record is stored, rejected means the credential was signed out and removed,
+// skipped means nothing changed and the next boot asks again.
+export type LegacyCredentialAdoption = 'adopted' | 'rejected' | 'skipped';
+
 export interface AuthSessionStoredAccountResolverDependencies {
 	readonly accountStorage: AuthSessionStoredAccountResolverStorage;
 	readonly resolveRuntimeEndpoint: (input: string) => Promise<InstanceSnapshotResolution>;
+	// Micup: stores the account record for a raw mirror credential this page's instance confirms.
+	readonly adoptLegacyCredential?: (credential: StoredSessionCredential) => Promise<LegacyCredentialAdoption>;
 }
 
 export interface ResolvedActiveStoredAccountRestoration {
@@ -332,6 +339,45 @@ export class AuthSessionStoredAccountResolver {
 
 	async resolveActiveRestoration(mirror: StoredSessionMirror): Promise<ActiveStoredAccountRestoration> {
 		const pointer = parseStoredSessionRestorationPointer(mirror);
+		const restoration = await this.resolveStoredActiveRestoration(pointer);
+		const adoption = await this.adoptLegacyCredential(pointer, restoration);
+		if (adoption === 'adopted') {
+			return await this.resolveStoredActiveRestoration(pointer);
+		}
+		if (adoption === 'rejected') {
+			return {kind: 'signed-out', inventory: restoration.inventory, reason: 'no-session-pointer'};
+		}
+		return restoration;
+	}
+
+	// Micup: the previous web release never persisted its account record (its runtime snapshot kept a MobX observable
+	// array, so every IndexedDB put failed with a DataCloneError and fell back to memory); its session exists only in
+	// the raw token/userId mirror. This is the only gate of that adoption: a web document whose IndexedDB inventory has
+	// no record for the raw credential. The desktop authority and qualified pointers keep the upstream behavior.
+	// TEMPORARY: only profiles last opened by a release before instance accounts take this path. Remove this method,
+	// the adoptLegacyCredential dependency and AuthSessionManager.adoptLegacyCredential together once this release has
+	// been live for 30 days (a profile not opened since then signs in again).
+	private async adoptLegacyCredential(
+		pointer: StoredSessionRestorationPointer,
+		restoration: ActiveStoredAccountRestoration,
+	): Promise<LegacyCredentialAdoption> {
+		if (
+			this.dependencies.adoptLegacyCredential === undefined ||
+			pointer.kind !== 'legacy-credential' ||
+			restoration.kind !== 'unresolved' ||
+			restoration.reason !== 'missing-account' ||
+			restoration.inventory.source !== 'idb' ||
+			typeof window === 'undefined' ||
+			isDesktopLocalAppDocument()
+		) {
+			return 'skipped';
+		}
+		return await this.dependencies.adoptLegacyCredential(pointer.credential);
+	}
+
+	private async resolveStoredActiveRestoration(
+		pointer: StoredSessionRestorationPointer,
+	): Promise<ActiveStoredAccountRestoration> {
 		for (let attempt = 0; attempt < 2; attempt += 1) {
 			const inventory = await this.dependencies.accountStorage.getAccountInventory();
 			const selection = selectActiveAccount(inventory, pointer);

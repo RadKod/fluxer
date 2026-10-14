@@ -13,7 +13,11 @@ import Authentication from '@app/features/auth/state/Authentication';
 import * as PrivateChannelCommands from '@app/features/channel/commands/PrivateChannelCommands';
 import {GifIndicator} from '@app/features/channel/components/embeds/media/GifIndicator';
 import Channels from '@app/features/channel/state/Channels';
+import {ProfileEffectOverlay} from '@app/features/cosmetics/components/ProfileEffectOverlay';
 import {ExpressionInfoBottomSheet} from '@app/features/expressions/components/bottomsheets/ExpressionInfoBottomSheet';
+import {ProfilePostsButton} from '@app/features/feed/components/ProfilePostsButton';
+import {ProfileFollowActions} from '@app/features/follow/components/ProfileFollowActions';
+import {GameActivityDisplay} from '@app/features/game_activity/components/GameActivityDisplay';
 import {
 	BLOCKED_USER_DM_WARNING_DESCRIPTOR,
 	OPEN_DM_DESCRIPTOR,
@@ -59,7 +63,10 @@ import {
 	UserProfileRoles,
 	UserProfileTimezoneInfo,
 } from '@app/features/user/components/popouts/UserProfileShared';
+import profileCardStyles from '@app/features/user/components/profile/profile_card/ProfileCardUserInfo.module.css';
+import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge';
 import {useAutoplayExpandedProfileAnimations} from '@app/features/user/hooks/useAutoplayExpandedProfileAnimations';
+import {useProfileBadgeMetrics} from '@app/features/user/hooks/useProfileBadgeMetrics';
 import type {Profile} from '@app/features/user/models/Profile';
 import {User} from '@app/features/user/models/User';
 import UserNote from '@app/features/user/state/UserNote';
@@ -95,13 +102,14 @@ import {
 	PencilIcon,
 	PhoneIcon,
 	ProhibitIcon,
+	UserCircleIcon,
 	UserMinusIcon,
 	UserPlusIcon,
 	VideoCameraIcon,
 } from '@phosphor-icons/react';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 
 const UNBLOCK_USER_DESCRIPTOR = msg({
 	message: 'Unblock user',
@@ -111,6 +119,11 @@ const UNBLOCK_USER_DESCRIPTOR = msg({
 const SEND_FRIEND_REQUEST_DESCRIPTOR = msg({
 	message: 'Send friend request',
 	comment: 'Button or menu action label in the user profile mobile sheet. Keep it concise.',
+});
+const OPEN_PROFILE_DESCRIPTOR = msg({
+	message: 'Open profile',
+	comment:
+		'Button on the small profile card, the profile modal and the mobile profile sheet that opens the full profile page.',
 });
 const logger = new Logger('UserProfileMobileSheet');
 export const UserProfileMobileSheet: React.FC = observer(function UserProfileMobileSheet() {
@@ -141,7 +154,11 @@ export const UserProfileMobileSheet: React.FC = observer(function UserProfileMob
 	const displayUser = user ?? fallbackUser;
 	const fallbackProfile = useMemo(() => (fallbackUser ? createMockProfile(fallbackUser) : null), [fallbackUser]);
 	const mockProfile = useMemo(() => (user ? createMockProfile(user) : null), [user]);
-	const initialProfile = useMemo(() => (userId ? UserProfile.getProfile(userId, guildId) : null), [userId, guildId]);
+	// Micup: a profile the page cached without the mutual lists is asked for again with them.
+	const initialProfile = useMemo(() => {
+		const cached = userId ? UserProfile.getProfile(userId, guildId) : null;
+		return cached?.mutualsLoaded ? cached : null;
+	}, [userId, guildId]);
 	const [profile, setProfile] = useState<Profile | null>(initialProfile);
 	const [isProfileLoading, setIsProfileLoading] = useState(() => !initialProfile);
 	const profileMatchesContext = profile?.userId === userId && (profile?.guildId ?? null) === (guildId ?? null);
@@ -215,6 +232,7 @@ export const UserProfileMobileSheet: React.FC = observer(function UserProfileMob
 			guildId={guildId}
 			autoFocusNote={autoFocusNote}
 			isLoading={shouldShowProfileLoading}
+			gameActivityProfileFull={!!activeProfile && !activeProfile.profileLimited}
 			onClose={handleClose}
 			data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content"
 		/>
@@ -228,6 +246,7 @@ interface UserProfileMobileSheetContentProps {
 	guildId?: string;
 	autoFocusNote?: boolean;
 	isLoading: boolean;
+	gameActivityProfileFull: boolean;
 	onClose: () => void;
 }
 
@@ -238,7 +257,16 @@ interface EmojiInfoState {
 }
 
 const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps> = observer(
-	function UserProfileMobileSheetContent({user, profile, userNote, guildId, autoFocusNote, isLoading, onClose}) {
+	function UserProfileMobileSheetContent({
+		user,
+		profile,
+		userNote,
+		guildId,
+		autoFocusNote,
+		isLoading,
+		gameActivityProfileFull,
+		onClose,
+	}) {
 		const {i18n} = useLingui();
 		const [noteSheetOpen, setNoteSheetOpen] = useState(false);
 		const [actionsSheetOpen, setActionsSheetOpen] = useState(false);
@@ -306,6 +334,8 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 			return profile?.getEffectiveProfile() ?? null;
 		}, [profile, showGlobalProfile]);
 		const displayName = getProfileMembershipDisplayName(user, displayMembership);
+		const displayNameRef = useRef<HTMLSpanElement>(null);
+		const {badgeStyle, bindNameRef} = useProfileBadgeMetrics(displayNameRef, displayName);
 		const isDisplayNameUsername = displayName === user.username;
 		const bannerColor = useMemo(
 			() => getUserAccentColor(user, effectiveProfile?.accent_color),
@@ -371,6 +401,34 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 				),
 			);
 		};
+		// Micup: the full profile page; openProfilePage closes this sheet.
+		const handleOpenProfilePage = () => {
+			UserProfileCommands.openProfilePage(user.id);
+		};
+		const renderOpenProfilePageCard = () => (
+			<button
+				type="button"
+				onClick={handleOpenProfilePage}
+				className={styles.actionCard}
+				data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.action-card.open-profile-page.button"
+			>
+				<div
+					className={styles.actionIconContainerSecondary}
+					data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.action-icon-container-secondary--3"
+				>
+					<UserCircleIcon
+						className={styles.actionIconSecondary}
+						data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.action-icon-secondary--3"
+					/>
+				</div>
+				<span
+					className={styles.actionLabel}
+					data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.action-label--4"
+				>
+					{i18n._(OPEN_PROFILE_DESCRIPTOR)}
+				</span>
+			</button>
+		);
 		const handleStartVoiceCall = async () => {
 			try {
 				const channelId = await PrivateChannelCommands.ensureDMChannel(user.id);
@@ -601,6 +659,7 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 											</div>
 											<div
 												className={styles.usernameContainer}
+												style={badgeStyle}
 												data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.username-container"
 											>
 												<div
@@ -608,11 +667,18 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 													data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.username-row"
 												>
 													<span
+														ref={bindNameRef}
 														className={styles.username}
 														data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.username"
 													>
 														{displayName}
 													</span>
+													<VerifiedUserBadge
+														user={user}
+														size={20}
+														className={profileCardStyles.userTagWrapper}
+														data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.verified-user-badge"
+													/>
 													{isDisplayNameUsername && shouldShowDiscriminator(user) && (
 														<span
 															className={styles.discriminator}
@@ -623,10 +689,22 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 													)}
 												</div>
 												<div
+													className={styles.badgesWrapper}
+													data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.badges-wrapper"
+												>
+													<UserProfileBadges
+														user={user}
+														profile={profile}
+														isModal={true}
+														isMobile={true}
+														data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.user-profile-badges"
+													/>
+												</div>
+												<div
 													className={styles.tagBadgeRow}
 													data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.tag-badge-row"
 												>
-													{!isDisplayNameUsername && (
+													{(!isDisplayNameUsername || !shouldShowDiscriminator(user)) && (
 														<span
 															className={styles.fullTag}
 															data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.full-tag"
@@ -634,18 +712,15 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 															{NicknameUtils.formatTagForStreamerMode(user.tag)}
 														</span>
 													)}
-													<div
-														className={styles.badgesWrapper}
-														data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.badges-wrapper"
-													>
-														<UserProfileBadges
-															user={user}
-															profile={profile}
-															isModal={true}
-															isMobile={true}
-															data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.user-profile-badges"
-														/>
-													</div>
+
+													<ProfileFollowActions
+														userId={user.id}
+														data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.profile-follow-actions"
+													/>
+													<ProfilePostsButton
+														userId={user.id}
+														data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.profile-posts-button"
+													/>
 												</div>
 												<div
 													className={styles.customStatusRow}
@@ -663,6 +738,7 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 													/>
 												</div>
 											</div>
+											<GameActivityDisplay userId={user.id} fullProfile={gameActivityProfileFull} />
 											{isCurrentUser ? (
 												!currentUserUnclaimed && (
 													<div
@@ -686,6 +762,7 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 																<Trans>Edit profile</Trans>
 															</span>
 														</button>
+														{renderOpenProfilePageCard()}
 													</div>
 												)
 											) : (
@@ -772,6 +849,7 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 																</button>
 															</>
 														)}
+													{renderOpenProfilePageCard()}
 												</div>
 											)}
 											{profile && (effectiveProfile?.bio || profile) && (
@@ -931,6 +1009,10 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 								</div>
 							</Scroller>
 						)}
+						<ProfileEffectOverlay
+							effect={profile.profileEffect}
+							data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.profile-effect-overlay"
+						/>
 					</div>
 				</BottomSheet>
 				{!hidePrivateDetails && (

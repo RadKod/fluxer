@@ -67,9 +67,17 @@ export interface VoiceRemoteSpeakingMachineContext {
 }
 
 export type VoiceRemoteSpeakingEvent =
-	| {type: 'remote.attach'; identity: string; track: unknown}
+	| {type: 'remote.attach'; identity: string; track: unknown; pipelineV2Enabled?: boolean}
 	| {type: 'remote.detach'; identity: string}
-	| {type: 'remote.tick'; identity: string; rms: number; threshold: number; nowMs: number; trackEnded?: boolean}
+	| {
+			type: 'remote.tick';
+			identity: string;
+			rms: number;
+			threshold: number;
+			nowMs: number;
+			trackEnded?: boolean;
+			pipelineV2Enabled?: boolean;
+	  }
 	| {type: 'remote.visibilityHidden'}
 	| {type: 'remote.visibilityVisible'}
 	| {type: 'remote.clear'}
@@ -79,7 +87,7 @@ const EMPTY_PARTICIPANTS: Readonly<Record<string, LivekitParticipantSnapshot>> =
 const EMPTY_REMOTE_COMMANDS: ReadonlyArray<VoiceRemoteSpeakingCommand> = [];
 const REMOTE_PLAYBACK_TARGET_RMS = 0.09;
 const REMOTE_PLAYBACK_MIN_RMS = 0.0025;
-const REMOTE_PLAYBACK_MAX_BOOST = 3;
+const REMOTE_PLAYBACK_MAX_BOOST = 1.5;
 const REMOTE_PLAYBACK_MIN_CHANGE_RATIO = 1.03;
 const REMOTE_PLAYBACK_BOOST_UP_COEFF = 0.08;
 const REMOTE_PLAYBACK_BOOST_DOWN_COEFF = 0.35;
@@ -303,6 +311,7 @@ function attachRemoteAnalyser(
 	context: VoiceRemoteSpeakingMachineContext,
 	identity: string,
 	track: unknown,
+	pipelineV2Enabled = false,
 ): VoiceRemoteSpeakingMachineContext {
 	const existing = context.analysers.get(identity);
 	if (existing?.track === track) return context;
@@ -318,8 +327,11 @@ function attachRemoteAnalyser(
 	});
 	const commands: Array<VoiceRemoteSpeakingCommand> = [];
 	if (existing?.speaking) commands.push({type: 'setAudioLevelSpeaking', identity, speaking: false});
-	if (existing && existing.appliedBoost !== 1) commands.push({type: 'clearPlaybackBoost', identity});
-	commands.push({type: 'setPlaybackBoost', identity, boost: 1});
+	if (!pipelineV2Enabled && existing && existing.appliedBoost !== 1)
+		commands.push({type: 'clearPlaybackBoost', identity});
+	commands.push(
+		pipelineV2Enabled ? {type: 'clearPlaybackBoost', identity} : {type: 'setPlaybackBoost', identity, boost: 1},
+	);
 	return appendRemoteCommands({...context, analysers}, commands);
 }
 
@@ -355,7 +367,13 @@ function updateRemotePlaybackBoost(
 	rms: number,
 	threshold: number,
 	nowMs: number,
+	pipelineV2Enabled = false,
 ): {entry: RemoteSpeakingAnalyserState; command: VoiceRemoteSpeakingCommand | null} {
+	if (pipelineV2Enabled) {
+		return entry.playbackBoost !== 1 || entry.appliedBoost !== 1
+			? snapRemotePlaybackBoost(entry)
+			: {entry, command: null};
+	}
 	const isActiveSpeech = Number.isFinite(rms) && rms >= REMOTE_PLAYBACK_MIN_RMS && rms >= threshold && entry.speaking;
 	if (isActiveSpeech) {
 		const desiredBoost = Math.max(1, Math.min(REMOTE_PLAYBACK_MAX_BOOST, REMOTE_PLAYBACK_TARGET_RMS / rms));
@@ -405,7 +423,13 @@ function tickRemoteAnalyser(
 			commands.push({type: 'setAudioLevelSpeaking', identity: event.identity, speaking: false});
 		}
 	}
-	const boostUpdate = updateRemotePlaybackBoost(entry, event.rms, event.threshold, event.nowMs);
+	const boostUpdate = updateRemotePlaybackBoost(
+		entry,
+		event.rms,
+		event.threshold,
+		event.nowMs,
+		event.pipelineV2Enabled,
+	);
 	entry = boostUpdate.entry;
 	if (boostUpdate.command) commands.push(boostUpdate.command);
 	if (entry === existing && commands.length === 0) return context;
@@ -487,7 +511,9 @@ export const voiceRemoteSpeakingStateMachine = setup({
 	},
 	actions: {
 		attach: assign(({context, event}) =>
-			event.type === 'remote.attach' ? attachRemoteAnalyser(context, event.identity, event.track) : context,
+			event.type === 'remote.attach'
+				? attachRemoteAnalyser(context, event.identity, event.track, event.pipelineV2Enabled)
+				: context,
 		),
 		detach: assign(({context, event}) =>
 			event.type === 'remote.detach' ? detachRemoteAnalyser(context, event.identity) : context,

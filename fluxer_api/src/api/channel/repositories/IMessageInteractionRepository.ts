@@ -55,6 +55,21 @@ export abstract class IMessageInteractionRepository {
 		emojiId?: EmojiID,
 	): Promise<number>;
 
+	abstract hasReactionUsers(
+		channelId: ChannelID,
+		messageId: MessageID,
+		emojiName: string,
+		emojiId?: EmojiID,
+	): Promise<boolean>;
+
+	abstract countReactionUsersUpTo(
+		channelId: ChannelID,
+		messageId: MessageID,
+		emojiName: string,
+		emojiId: EmojiID | undefined,
+		limit: number,
+	): Promise<number>;
+
 	abstract countUniqueReactions(channelId: ChannelID, messageId: MessageID): Promise<number>;
 
 	abstract checkUserReactionExists(

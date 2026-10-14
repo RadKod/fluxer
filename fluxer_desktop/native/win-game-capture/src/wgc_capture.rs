@@ -567,6 +567,10 @@ fn create_wgc_state_for_format(
     let session = frame_pool
         .CreateCaptureSession(&ctx.item)
         .map_err(|e| format!("Direct3D11CaptureFramePool.CreateCaptureSession: {e}"))?;
+    // Consent is requested once before sharing by the main process. Windows
+    // ignores this preference after denial; older systems lack the property.
+    // Neither case should prevent capture.
+    let _ = session.SetIsBorderRequired(false);
     session
         .StartCapture()
         .map_err(|e| format!("GraphicsCaptureSession.StartCapture: {e}"))?;

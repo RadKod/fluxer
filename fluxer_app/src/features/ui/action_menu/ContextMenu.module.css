@@ -305,7 +305,7 @@
 	top: 50%;
 	width: 0.25rem;
 	height: 0.5625rem;
-	border: solid white;
+	border: solid var(--text-on-brand-primary);
 	border-width: 0 0.15625rem 0.15625rem 0;
 	transform: translate(-50%, -60%) rotate(45deg);
 }
@@ -447,4 +447,9 @@
 	width: 1.375rem;
 	height: 1.375rem;
 	object-fit: contain;
+}
+
+/* Micup: menu row hover (--control-button-active-bg) in the coal and dark themes */
+:global(html:is(.theme-coal, .theme-dark)) :is(.contextMenu, .submenuPopover) {
+	--surface-interactive-hover-bg: var(--control-button-active-bg);
 }

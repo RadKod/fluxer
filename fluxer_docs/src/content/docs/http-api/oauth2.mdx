@@ -147,6 +147,7 @@ The account identity an application reads with the `identify` scope.
 | id | snowflake | The ID of the account |
 | username | string | The username of the account |
 | discriminator | string | The four-digit discriminator tag |
+| identity_version? | string | Decimal, monotonic generation of the username and discriminator, as on the [partial user object](/http-api/users/#partial-user-object) |
 | global_name | ?string | The display name of the account, or null when unset |
 | avatar<sup>1</sup> | ?string | The avatar hash of the account, or null when it has none |
 | email?<sup>2</sup> | ?string | The email address of the account, null unless the `email` scope is granted and an address is set |

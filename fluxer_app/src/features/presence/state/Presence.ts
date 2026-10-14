@@ -2,6 +2,7 @@
 
 import Authentication from '@app/features/auth/state/Authentication';
 import Channels from '@app/features/channel/state/Channels';
+import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
 import type {SnapshotPresenceRow} from '@app/features/gateway/snapshot/SnapshotEntities';
 import type {GuildReadyData} from '@app/features/gateway/types/GatewayGuildTypes';
 import type {Presence as WirePresence} from '@app/features/gateway/types/GatewayPresenceTypes';
@@ -312,6 +313,7 @@ class Presence {
 	}
 
 	handleSessionInvalidated(): void {
+		GameActivityStore.reset();
 		this.resetPresencesToOffline();
 		this.resyncExternalStatusListeners();
 	}
@@ -413,6 +415,12 @@ class Presence {
 	}
 
 	handlePresenceUpdate(presence: WirePresence): void {
+		GameActivityStore.update(presence);
+		if (
+			Object.hasOwn(presence, 'game_activity') &&
+			!['status', 'afk', 'mobile', 'custom_status'].some((field) => Object.hasOwn(presence, field))
+		)
+			return;
 		const {guild_id: guildIdRaw, user, status, afk, mobile, custom_status: customStatusPayload} = presence;
 		const normalizedStatus = normalizeStatus(status);
 		const userId = user.id;

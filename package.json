@@ -39,7 +39,8 @@
 		"lint": "cargo run -p fluxer-dev -- lint",
 		"openapi:generate": "pnpm --filter @fluxer/openapi generate",
 		"openapi:validate": "pnpm --filter @fluxer/openapi validate",
-		"test": "cargo run -p fluxer-dev -- test",
+		"test": "pnpm test:ci && cargo run -p fluxer-dev -- test",
+		"test:ci": "node --test \"tools/ci/*.test.mjs\"",
 		"typecheck": "cargo run -p fluxer-dev -- typecheck"
 	},
 	"prettier": {
@@ -51,13 +52,17 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
+		"@lingui/core": "catalog:",
 		"@vitest/coverage-v8": "catalog:",
 		"eslint": "catalog:",
 		"eslint-plugin-react-google-translate": "catalog:",
 		"knip": "catalog:",
+		"react": "catalog:",
+		"react-dom": "catalog:",
 		"typescript": "catalog:",
 		"typescript-eslint": "catalog:",
-		"vite": "catalog:"
+		"vite": "catalog:",
+		"vitest": "catalog:"
 	},
 	"packageManager": "pnpm@11.27.0"
 }

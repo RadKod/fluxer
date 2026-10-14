@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createChannelID} from '@app/api/BrandedTypes';
+import {AnnouncementChannelsRouteGuard} from '@app/api/channel/AnnouncementChannelsRouteGuard';
 import {viewerFromCtx} from '@app/api/experiment/ChannelThreadsGate';
 import {LoginRequired} from '@app/api/middleware/AuthMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
@@ -19,6 +20,7 @@ import {ChannelIdParam} from '@fluxer/schema/src/domains/common/CommonParamSchem
 export function ChannelFollowController(app: HonoApp) {
 	app.post(
 		'/channels/:channel_id/followers',
+		AnnouncementChannelsRouteGuard,
 		RateLimitMiddleware(RateLimitConfigs.CHANNEL_FOLLOW),
 		LoginRequired,
 		Validator('param', ChannelIdParam),
@@ -52,6 +54,7 @@ export function ChannelFollowController(app: HonoApp) {
 	);
 	app.get(
 		'/channels/:channel_id/follower-stats',
+		AnnouncementChannelsRouteGuard,
 		RateLimitMiddleware(RateLimitConfigs.CHANNEL_FOLLOWER_STATS),
 		LoginRequired,
 		Validator('param', ChannelIdParam),

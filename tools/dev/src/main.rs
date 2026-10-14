@@ -3,7 +3,8 @@
 use anyhow::{Context, Result, bail};
 use clap::{Args, Parser, Subcommand};
 use fluxer_dev::cassandra::{
-    apply_schema, compute_diff, render_target_schema, verify_schema, write_diff_file,
+    CassandraConfig, DEV_KEYSPACE_REPLICATION, apply_schema, compute_diff, config_from_env,
+    render_target_schema, verify_schema, write_diff_file,
 };
 use fluxer_dev::desktop::{
     DEFAULT_INSTALL_DIR, DesktopAppOptions, RendererDelivery, build_desktop, desktop_app,
@@ -111,10 +112,26 @@ enum CassandraCommand {
     Diff {
         #[arg(long)]
         output: Option<PathBuf>,
+        #[command(flatten)]
+        keyspace: KeyspaceArgs,
     },
-    Apply,
+    Apply(KeyspaceArgs),
     Verify,
     TargetSchema,
+}
+
+#[derive(Debug, Args)]
+struct KeyspaceArgs {
+    #[arg(long)]
+    replication: Option<String>,
+    #[arg(long, conflicts_with = "replication")]
+    dev: bool,
+}
+
+impl KeyspaceArgs {
+    fn config(&self) -> Result<CassandraConfig> {
+        config_from_env()?.with_replication(self.replication.as_deref(), self.dev)
+    }
 }
 
 #[derive(Debug, Args)]
@@ -236,6 +253,11 @@ async fn main() -> Result<()> {
 
     match cli.command {
         Command::Bootstrap(args) => {
+            if std::env::var_os("FLUXER_CASSANDRA_REPLICATION").is_none() {
+                unsafe {
+                    std::env::set_var("FLUXER_CASSANDRA_REPLICATION", DEV_KEYSPACE_REPLICATION);
+                }
+            }
             fluxer_dev::bootstrap::bootstrap(args.skip_install).await?;
         }
         Command::PostStart => fluxer_dev::bootstrap::post_start().await?,
@@ -264,8 +286,8 @@ async fn main() -> Result<()> {
         }
         Command::Infra(args) => run_infra(args.command)?,
         Command::Cassandra(args) => match args.command {
-            CassandraCommand::Diff { output } => {
-                let diff = compute_diff(None).await?;
+            CassandraCommand::Diff { output, keyspace } => {
+                let diff = compute_diff(Some(keyspace.config()?)).await?;
                 let output = write_diff_file(&diff, output.as_deref())?;
                 println!("Wrote Cassandra schema diff to {}", output.display());
                 if !diff.errors.is_empty() {
@@ -275,8 +297,8 @@ async fn main() -> Result<()> {
                     std::process::exit(1);
                 }
             }
-            CassandraCommand::Apply => {
-                apply_schema(None).await?;
+            CassandraCommand::Apply(keyspace) => {
+                apply_schema(Some(keyspace.config()?)).await?;
             }
             CassandraCommand::Verify => verify_schema(None, None).await?,
             CassandraCommand::TargetSchema => print!("{}", render_target_schema("fluxer")),

@@ -1255,3 +1255,10 @@
 		color: #666;
 	}
 }
+
+/* Micup: static ANSI blink */
+/* Blink is user content inside message rows; an infinite blink per message keeps the channel producing frames while it
+   is on screen, so the text stays static and fully visible. */
+.markup .ansiCode :global(.ansi-blink) {
+	animation: none;
+}

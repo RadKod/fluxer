@@ -432,3 +432,22 @@
 		color: var(--text-primary);
 	}
 }
+
+/* Micup: Discord-like channel rows */
+.channelItemCore,
+.channelItemRegular {
+	padding-top: var(--channel-item-padding-block);
+	padding-bottom: var(--channel-item-padding-block);
+}
+
+.channelReorderTarget:not(.channelCategoryReorderTarget) {
+	padding-top: var(--channel-item-gap);
+}
+
+.channelCategoryReorderTarget {
+	padding-top: var(--channel-category-gap);
+}
+
+.categoryName {
+	font-weight: 500;
+}

@@ -68,3 +68,11 @@ test('a local startup failure still offers the reset of app data', () => {
 	expect(markup).toContain('Stored account record is malformed');
 	expect(markup).not.toContain(COPY_DETAILS_BUTTON);
 });
+
+test('opens only the Micup support address outside the app window', () => {
+	const markup = renderToStaticMarkup(<BootstrapErrorScreen />);
+	expect(markup).toContain('href="mailto:pr@premate.gg"');
+	expect(markup).toContain('target="_blank"');
+	expect(markup).toContain('rel="noopener noreferrer"');
+	expect(markup).not.toMatch(/bluesky|support@fluxer/i);
+});

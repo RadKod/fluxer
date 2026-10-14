@@ -12,6 +12,51 @@ cluster_defaults_test() ->
     ?assertEqual(5000, maps:get(cluster_discovery_poll_interval_ms, Config)),
     ?assertEqual([], maps:get(cluster_static_peers, Config)).
 
+cluster_min_peers_for_rpc_test() ->
+    ?assertEqual(
+        1, maps:get(cluster_min_peers_for_rpc, fluxer_gateway_config:build_config(#{}))
+    ),
+    with_env("FLUXER_GATEWAY_CLUSTER_MIN_PEERS_FOR_RPC", "2", fun() ->
+        ?assertEqual(2, maps:get(cluster_min_peers_for_rpc, fluxer_gateway_config:load()))
+    end),
+    lists:foreach(
+        fun(Value) ->
+            with_env(
+                "FLUXER_GATEWAY_CLUSTER_MIN_PEERS_FOR_RPC", integer_to_list(Value), fun() ->
+                    ?assertError(
+                        {invalid_cluster_min_peers_for_rpc, Value}, fluxer_gateway_config:load()
+                    )
+                end
+            )
+        end,
+        [0, -1, 513]
+    ).
+
+cluster_rpc_stability_ms_test() ->
+    ?assertEqual(
+        5000, maps:get(cluster_rpc_stability_ms, fluxer_gateway_config:build_config(#{}))
+    ),
+    lists:foreach(
+        fun(Value) ->
+            with_env("FLUXER_GATEWAY_CLUSTER_RPC_STABILITY_MS", integer_to_list(Value), fun() ->
+                ?assertEqual(
+                    Value, maps:get(cluster_rpc_stability_ms, fluxer_gateway_config:load())
+                )
+            end)
+        end,
+        [0, 250, 60000]
+    ),
+    lists:foreach(
+        fun(Value) ->
+            with_env("FLUXER_GATEWAY_CLUSTER_RPC_STABILITY_MS", integer_to_list(Value), fun() ->
+                ?assertError(
+                    {invalid_cluster_rpc_stability_ms, Value}, fluxer_gateway_config:load()
+                )
+            end)
+        end,
+        [-1, 60001]
+    ).
+
 cluster_overrides_test() ->
     RawConfig = #{
         <<"services">> => #{
@@ -272,6 +317,120 @@ public_endpoints_defaults_test() ->
     ?assertEqual(undefined, maps:get(media_proxy_endpoint, Config)),
     ?assertEqual(<<"http://localhost:8088">>, maps:get(static_cdn_endpoint, Config)).
 
+metrics_allowed_networks_default_to_loopback_only_test() ->
+    Config = fluxer_gateway_config:build_config(#{}),
+    ?assertEqual([], maps:get(metrics_allowed_networks, Config)).
+
+metrics_allowed_networks_parse_the_env_list_test() ->
+    Value = " 10.77.0.0/24 , ,fd00:77::/64,192.0.2.10 ",
+    with_env("FLUXER_METRICS_ALLOWED_CIDRS", Value, fun() ->
+        Config = fluxer_gateway_config:load(),
+        ?assertEqual(
+            [
+                {{10, 77, 0, 0}, 24},
+                {{16#fd00, 16#77, 0, 0, 0, 0, 0, 0}, 64},
+                {{192, 0, 2, 10}, 32}
+            ],
+            maps:get(metrics_allowed_networks, Config)
+        )
+    end).
+
+metrics_allowed_networks_reject_invalid_entries_test() ->
+    lists:foreach(
+        fun(Entry) ->
+            RawConfig = #{
+                <<"services">> => #{
+                    <<"gateway">> => #{<<"metrics_allowed_cidrs">> => list_to_binary(Entry)}
+                }
+            },
+            ?assertError(
+                {invalid_metrics_allowed_cidr, Entry},
+                fluxer_gateway_config:build_config(RawConfig)
+            )
+        end,
+        ["10.77.0.0/33", "fd00::/129", "not-an-ip/24", "10.77.0.0/", "1.2.3.4/2x", "1.2.3.4/-1"]
+    ).
+
+connection_limits_default_to_upstream_test() ->
+    Config = fluxer_gateway_config:build_config(#{}),
+    ?assertEqual(0, maps:get(zstd_window_log, Config)),
+    ?assertEqual(0, maps:get(max_connections, Config)),
+    ?assertEqual(0, maps:get(max_connections_per_ipv6_48, Config)),
+    ?assertEqual(0, maps:get(max_unidentified_connections, Config)),
+    ?assertEqual(0, maps:get(identify_timeout_ms, Config)),
+    ?assertEqual(false, maps:get(count_ipv6_by_64, Config)).
+
+connection_limits_read_env_test() ->
+    with_envs(
+        [
+            {"FLUXER_GATEWAY_MAX_CONNECTIONS", "2500"},
+            {"FLUXER_GATEWAY_MAX_CONNECTIONS_PER_IPV6_48", "1024"},
+            {"FLUXER_GATEWAY_MAX_UNIDENTIFIED_CONNECTIONS", "250"},
+            {"FLUXER_GATEWAY_IDENTIFY_TIMEOUT_MS", "45000"},
+            {"FLUXER_GATEWAY_COUNT_IPV6_BY_64", "true"}
+        ],
+        fun() ->
+            Config = fluxer_gateway_config:load(),
+            ?assertEqual(2500, maps:get(max_connections, Config)),
+            ?assertEqual(1024, maps:get(max_connections_per_ipv6_48, Config)),
+            ?assertEqual(250, maps:get(max_unidentified_connections, Config)),
+            ?assertEqual(45000, maps:get(identify_timeout_ms, Config)),
+            ?assertEqual(true, maps:get(count_ipv6_by_64, Config))
+        end
+    ).
+
+connection_limits_reject_non_integer_env_test() ->
+    lists:foreach(
+        fun({Name, Value}) ->
+            with_env(Name, Value, fun() ->
+                ?assertError({invalid_integer_env, Name, Value}, fluxer_gateway_config:load())
+            end)
+        end,
+        [
+            {"FLUXER_GATEWAY_MAX_CONNECTIONS", "abc"},
+            {"FLUXER_GATEWAY_MAX_CONNECTIONS_PER_IPV6_48", "1k"},
+            {"FLUXER_GATEWAY_MAX_UNIDENTIFIED_CONNECTIONS", "250x"},
+            {"FLUXER_GATEWAY_IDENTIFY_TIMEOUT_MS", "20s"}
+        ]
+    ).
+
+zstd_window_log_env_test() ->
+    lists:foreach(
+        fun({Value, Expected}) ->
+            with_env("FLUXER_GATEWAY_ZSTD_WINDOW_LOG", Value, fun() ->
+                ?assertEqual(Expected, maps:get(zstd_window_log, fluxer_gateway_config:load()))
+            end)
+        end,
+        [{false, 0}, {"", 0}, {"0", 0}, {"10", 10}, {"18", 18}, {"23", 23}]
+    ).
+
+zstd_window_log_rejects_non_integer_env_test() ->
+    lists:foreach(
+        fun(Value) ->
+            with_env("FLUXER_GATEWAY_ZSTD_WINDOW_LOG", Value, fun() ->
+                ?assertError(
+                    {invalid_integer_env, "FLUXER_GATEWAY_ZSTD_WINDOW_LOG", Value},
+                    fluxer_gateway_config:load()
+                )
+            end)
+        end,
+        ["abc", "18.0"]
+    ).
+
+zstd_window_log_rejects_out_of_range_test() ->
+    lists:foreach(
+        fun(Value) ->
+            with_env("FLUXER_GATEWAY_ZSTD_WINDOW_LOG", Value, fun() ->
+                Parsed = list_to_integer(Value),
+                ?assertError(
+                    {invalid_zstd_window_log, Parsed},
+                    fluxer_gateway_config:load()
+                )
+            end)
+        end,
+        ["9", "24", "-1"]
+    ).
+
 env_value_reads_name_file_test() ->
     with_env_file(<<"from-file\r\n">>, fun(Path) ->
         with_envs(
@@ -337,7 +496,7 @@ with_envs([{Name, Value} | Rest], Fun) ->
 
 with_env(Name, Value, Fun) ->
     Previous = os:getenv(Name),
-    os:putenv(Name, Value),
+    restore_env(Name, Value),
     try
         Fun()
     after

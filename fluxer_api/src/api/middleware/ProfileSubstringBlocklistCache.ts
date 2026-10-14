@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {AdminRepository} from '@app/api/admin/AdminRepository';
 import {BANNED_PROFILE_SUBSTRINGS_REFRESH_CHANNEL} from '@app/api/constants/ContentModeration';
-import type {BannedProfileSubstringScope} from '@app/api/database/types/AdminArchiveTypes';
+import {fetchMany} from '@app/api/database/CassandraQueryExecution';
+import type {BannedProfileSubstringRow, BannedProfileSubstringScope} from '@app/api/database/types/AdminArchiveTypes';
 import {Logger} from '@app/api/Logger';
+import {BannedProfileSubstrings} from '@app/api/Tables';
+import {
+	compileUsernameDictionary,
+	type UsernameDictionary,
+	type UsernameDictionaryEntries,
+} from '@app/api/user/username/UsernamePolicyService';
 import {buildPhraseMatchForms, canonicalizeStoredPhrase} from '@app/api/utils/PhraseBlocklistNormalization';
 import {RefreshSubscription} from '@app/api/utils/RefreshSubscription';
 import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
@@ -12,6 +18,19 @@ type ProfileScope = BannedProfileSubstringScope;
 
 const PROFILE_SCOPES: ReadonlyArray<ProfileScope> = ['username', 'global_name', 'nickname', 'bio', 'pronouns'];
 const PROFILE_NAME_SCOPES = new Set<ProfileScope>(['username', 'global_name', 'nickname']);
+const DICTIONARY_SCOPES = ['uname_exact', 'uname_contains', 'uname_allow'] as const;
+const LOAD_DICTIONARY_SCOPE = BannedProfileSubstrings.select({where: BannedProfileSubstrings.where.eq('scope')});
+
+export async function loadUsernameDictionaryGeneration(gen: number): Promise<UsernameDictionaryEntries> {
+	if (!Number.isSafeInteger(gen) || gen < 0) throw new Error('Invalid username dictionary generation');
+	const lists = await Promise.all(
+		DICTIONARY_SCOPES.map(async (scope) => {
+			const rows = await fetchMany<{substring: string}>(LOAD_DICTIONARY_SCOPE.bind({scope: `${scope}:g${gen}`}));
+			return rows.map((row) => row.substring);
+		}),
+	);
+	return {uname_exact: lists[0], uname_contains: lists[1], uname_allow: lists[2]};
+}
 
 interface ScopeMatchers {
 	raw: Array<string>;
@@ -27,8 +46,9 @@ function emptyMatchers(): ScopeMatchers {
 }
 
 export class ProfileSubstringBlocklistCache {
+	private usernameDictionaries = new Map<number, UsernameDictionary>();
+	private usernameLoads = new Map<string, Promise<UsernameDictionary>>();
 	private byScope: Map<ProfileScope, ScopeMatchers> = new Map();
-	private adminRepository = new AdminRepository();
 	private kvClient: IKVProvider | null = null;
 	private consecutiveFailures = 0;
 	private readonly maxConsecutiveFailures = 5;
@@ -56,7 +76,11 @@ export class ProfileSubstringBlocklistCache {
 	}
 
 	async refresh(): Promise<void> {
-		const rows = await this.adminRepository.loadAllBannedProfileSubstrings();
+		const rows = (
+			await Promise.all(
+				PROFILE_SCOPES.map((scope) => fetchMany<BannedProfileSubstringRow>(LOAD_DICTIONARY_SCOPE.bind({scope}))),
+			)
+		).flat();
 		const next = new Map<ProfileScope, ScopeMatchers>();
 		for (const scope of PROFILE_SCOPES) {
 			next.set(scope, emptyMatchers());
@@ -73,6 +97,32 @@ export class ProfileSubstringBlocklistCache {
 			{counts: Object.fromEntries(Array.from(next.entries()).map(([k, v]) => [k, v.raw.length]))},
 			'Profile-substring blocklist cache refreshed',
 		);
+	}
+
+	getUsernameDictionary(gen: number, hash: string): UsernameDictionary | null {
+		const dictionary = this.usernameDictionaries.get(gen);
+		return dictionary?.manifest.hash === hash ? dictionary : null;
+	}
+
+	loadUsernameDictionary(gen: number, hash: string): Promise<UsernameDictionary> {
+		const cached = this.getUsernameDictionary(gen, hash);
+		if (cached) return Promise.resolve(cached);
+		const key = `${gen}:${hash}`;
+		const pending = this.usernameLoads.get(key);
+		if (pending) return pending;
+		const loading = loadUsernameDictionaryGeneration(gen)
+			.then((entries) => {
+				const dictionary = compileUsernameDictionary(gen, entries);
+				if (dictionary.manifest.hash !== hash) throw new Error('Username dictionary hash mismatch');
+				this.usernameDictionaries.set(gen, dictionary);
+				// Micup: snapshots keep their dictionary alive; the shared cache only retains the two latest loaded generations.
+				while (this.usernameDictionaries.size > 2)
+					this.usernameDictionaries.delete(this.usernameDictionaries.keys().next().value!);
+				return dictionary;
+			})
+			.finally(() => this.usernameLoads.delete(key));
+		this.usernameLoads.set(key, loading);
+		return loading;
 	}
 
 	private addToMatchers(matchers: ScopeMatchers, value: string): void {
@@ -162,6 +212,8 @@ export class ProfileSubstringBlocklistCache {
 			Logger.error({error}, 'Failed to shut down profile-substring blocklist cache');
 		});
 		this.byScope = new Map();
+		this.usernameDictionaries.clear();
+		this.usernameLoads.clear();
 		this.kvClient = null;
 		this.consecutiveFailures = 0;
 	}

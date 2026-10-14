@@ -151,6 +151,7 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 	const blobResolversRef = useRef<{resolve: (blob: Blob) => void; reject: (err: unknown) => void} | null>(null);
 	const sentRef = useRef(false);
 	const initialRecordingStartedRef = useRef(false);
+	const recordingGenerationRef = useRef(0);
 
 	const stopRecordingFrameLoop = useCallback(() => {
 		if (recordingRafRef.current === null) return;
@@ -203,6 +204,11 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 
 	useEffect(() => {
 		return () => {
+			recordingGenerationRef.current++;
+			blobResolversRef.current?.reject(new Error('Recording cancelled'));
+			blobResolversRef.current = null;
+			recordedChunksRef.current = [];
+			initialRecordingStartedRef.current = false;
 			stopAnalyser();
 			stopRecordingFrameLoop();
 			stopMediaStream();
@@ -218,6 +224,10 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 	}, [stopAnalyser, stopMediaStream, stopPlayback, stopRecordingFrameLoop]);
 
 	const close = useCallback(() => {
+		recordingGenerationRef.current++;
+		blobResolversRef.current?.reject(new Error('Recording cancelled'));
+		blobResolversRef.current = null;
+		recordedChunksRef.current = [];
 		ModalCommands.popByType(VoiceMessageComposerModal);
 	}, []);
 	const showComposerErrorModal = useCallback(
@@ -270,6 +280,7 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 	}, [runRecordingFrameLoop, stopRecordingFrameLoop]);
 
 	const startRecording = useCallback(async () => {
+		const generation = ++recordingGenerationRef.current;
 		setErrorMessage(null);
 		const mimeType = pickRecorderMime();
 		if (!mimeType || typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
@@ -279,6 +290,10 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 		}
 		try {
 			const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+			if (generation !== recordingGenerationRef.current) {
+				for (const track of stream.getTracks()) track.stop();
+				return;
+			}
 			mediaStreamRef.current = stream;
 			const Ctor =
 				window.AudioContext ||
@@ -296,9 +311,11 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 			const recorder = new MediaRecorder(stream, {mimeType});
 			recordedChunksRef.current = [];
 			recorder.ondataavailable = (event) => {
+				if (generation !== recordingGenerationRef.current) return;
 				if (event.data && event.data.size > 0) recordedChunksRef.current.push(event.data);
 			};
 			recorder.onstop = () => {
+				if (generation !== recordingGenerationRef.current) return;
 				const blob = new Blob(recordedChunksRef.current, {type: mimeType});
 				recordedChunksRef.current = [];
 				const resolver = blobResolversRef.current;
@@ -306,9 +323,21 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 				resolver?.resolve(blob);
 			};
 			recorder.onerror = (event) => {
+				if (generation !== recordingGenerationRef.current) return;
+				recordingGenerationRef.current++;
 				const resolver = blobResolversRef.current;
 				blobResolversRef.current = null;
+				mediaRecorderRef.current = null;
+				recordedChunksRef.current = [];
+				try {
+					recorder.stop();
+				} catch {}
+				stopRecordingFrameLoop();
+				stopAnalyser();
+				stopMediaStream();
 				resolver?.reject(event);
+				setStage('permission_error');
+				setErrorMessage(i18n._(RECORDING_FAILED_DESCRIPTOR));
 			};
 			mediaRecorderRef.current = recorder;
 			recorder.start();
@@ -318,6 +347,7 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 			startRecordingFrameLoop();
 			setStage('recording');
 		} catch (error) {
+			if (generation !== recordingGenerationRef.current) return;
 			logger.warn('Failed to start mic capture', {error});
 			stopRecordingFrameLoop();
 			stopAnalyser();
@@ -333,16 +363,19 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 		});
 	}, []);
 
-	const decodeBlob = useCallback(async (blob: Blob): Promise<AudioBuffer | null> => {
+	const decodeBlob = useCallback(async (blob: Blob, generation: number): Promise<AudioBuffer | null> => {
+		const arrayBuffer = await blob.arrayBuffer();
+		if (generation !== recordingGenerationRef.current) return null;
 		const Ctor =
 			window.AudioContext || (window as typeof window & {webkitAudioContext?: typeof AudioContext}).webkitAudioContext;
 		if (!Ctor) return null;
 		const ctx = playbackCtxRef.current ?? new Ctor();
 		playbackCtxRef.current = ctx;
-		const arrayBuffer = await blob.arrayBuffer();
 		try {
-			return await ctx.decodeAudioData(arrayBuffer.slice(0));
+			const decoded = await ctx.decodeAudioData(arrayBuffer.slice(0));
+			return generation === recordingGenerationRef.current ? decoded : null;
 		} catch (error) {
+			if (generation !== recordingGenerationRef.current) return null;
 			logger.warn('Failed to decode recorded audio', {error});
 			return null;
 		}
@@ -351,6 +384,7 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 	const stopRecording = useCallback(async () => {
 		const recorder = mediaRecorderRef.current;
 		if (!recorder) return;
+		const generation = recordingGenerationRef.current;
 		const blobPromise = waitForRecording();
 		try {
 			recorder.stop();
@@ -364,6 +398,7 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 		stopAnalyser();
 		try {
 			const blob = await blobPromise;
+			if (generation !== recordingGenerationRef.current) return;
 			stopMediaStream();
 			if (!blob || blob.size === 0) {
 				showComposerErrorModal(
@@ -374,7 +409,8 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 				setAmplitudes([]);
 				return;
 			}
-			const decoded = await decodeBlob(blob);
+			const decoded = await decodeBlob(blob, generation);
+			if (generation !== recordingGenerationRef.current) return;
 			if (!decoded) {
 				showComposerErrorModal(
 					RECORDING_FAILED_DESCRIPTOR,
@@ -389,6 +425,7 @@ export const VoiceMessageComposerModal: React.FC<VoiceMessageComposerModalProps>
 			setEndSeconds(decoded.duration);
 			setStage('reviewing');
 		} catch (error) {
+			if (generation !== recordingGenerationRef.current) return;
 			logger.warn('MediaRecorder failed mid-stop', {error});
 			stopMediaStream();
 			showComposerErrorModal(

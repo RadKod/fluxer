@@ -7,7 +7,9 @@ import * as Modal from '@app/features/app/components/dialogs/Modal';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import Authentication from '@app/features/auth/state/Authentication';
 import * as PrivateChannelCommands from '@app/features/channel/commands/PrivateChannelCommands';
+import {ProfileEffectOverlay} from '@app/features/cosmetics/components/ProfileEffectOverlay';
 import DeveloperOptions from '@app/features/devtools/state/DeveloperOptions';
+import {ProfileFollowButton} from '@app/features/follow/components/ProfileFollowActions';
 import {
 	BLOCKED_USER_DM_WARNING_DESCRIPTOR,
 	COPY_USER_ID_DESCRIPTOR,
@@ -46,6 +48,7 @@ import {modal} from '@app/features/ui/commands/ModalCommands';
 import * as TextCopyCommands from '@app/features/ui/commands/TextCopyCommands';
 import ContextMenu from '@app/features/ui/state/ContextMenu';
 import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
+import * as UserProfileCommands from '@app/features/user/commands/UserProfileCommands';
 import userProfileModalStyles from '@app/features/user/components/modals/UserProfileModal.module.css';
 import {ProfileModalContent} from '@app/features/user/components/modals/user_profile_modal/ProfileModalContent';
 import {UserProfileLoadingSkeleton} from '@app/features/user/components/profile/UserProfileLoadingSkeleton';
@@ -79,10 +82,12 @@ import {
 	PencilIcon,
 	PhoneIcon,
 	ProhibitIcon,
+	UserCircleIcon,
 	UserMinusIcon,
 	UserPlusIcon,
 	VideoCameraIcon,
 } from '@phosphor-icons/react';
+import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
@@ -126,6 +131,11 @@ const CLAIM_YOUR_ACCOUNT_TO_SEND_FRIEND_REQUESTS_DESCRIPTOR = msg({
 const SEND_FRIEND_REQUEST_DESCRIPTOR = msg({
 	message: 'Send friend request',
 	comment: 'Button or menu action label in the user profile modal. Keep it concise.',
+});
+const OPEN_PROFILE_DESCRIPTOR = msg({
+	message: 'Open profile',
+	comment:
+		'Button on the small profile card, the profile modal and the mobile profile sheet that opens the full profile page.',
 });
 const logger = new Logger('UserProfileModal');
 
@@ -268,6 +278,34 @@ export const UserProfileModal: UserProfileModalComponent = observer(
 				),
 			);
 		};
+		// Micup: the full profile page; openProfilePage closes this modal.
+		const handleOpenProfilePage = () => {
+			UserProfileCommands.openProfilePage(userId);
+		};
+		const renderOpenProfilePageButton = () => (
+			<Tooltip
+				text={i18n._(OPEN_PROFILE_DESCRIPTOR)}
+				maxWidth="xl"
+				data-flx="user.user-profile-modal.render-open-profile-page-button.tooltip"
+			>
+				<div data-flx="user.user-profile-modal.render-open-profile-page-button.div">
+					<Button
+						variant="secondary"
+						small={true}
+						square={true}
+						icon={
+							<UserCircleIcon
+								className={userProfileModalStyles.buttonIcon}
+								data-flx="user.user-profile-modal.render-open-profile-page-button.user-circle-icon"
+							/>
+						}
+						aria-label={i18n._(OPEN_PROFILE_DESCRIPTOR)}
+						onClick={handleOpenProfilePage}
+						data-flx="user.user-profile-modal.render-open-profile-page-button.button.open-profile-page"
+					/>
+				</div>
+			</Tooltip>
+		);
 		const handleMessage = async () => {
 			try {
 				ModalCommands.pop();
@@ -590,6 +628,7 @@ export const UserProfileModal: UserProfileModalComponent = observer(
 								<Trans>Edit profile</Trans>
 							</Button>
 						)}
+						{renderOpenProfilePageButton()}
 						<Button
 							ref={moreOptionsButtonRef}
 							small={true}
@@ -773,7 +812,12 @@ export const UserProfileModal: UserProfileModalComponent = observer(
 							{isBlocked ? i18n._(OPEN_DM_DESCRIPTOR) : <Trans context="message-action">Message</Trans>}
 						</Button>
 					)}
+					<ProfileFollowButton
+						userId={userId}
+						data-flx="user.user-profile-modal.render-action-buttons.profile-follow-button"
+					/>
 					{renderPrimaryActionButton()}
+					{renderOpenProfilePageButton()}
 					<Button
 						ref={moreOptionsButtonRef}
 						small={true}
@@ -800,11 +844,12 @@ export const UserProfileModal: UserProfileModalComponent = observer(
 				? previewOverrides.previewAccentColor
 				: borderProfile?.accent_color;
 		const borderColor = getUserAccentColor(displayUser, borderAccentColor);
+		const decorationOverflow = displayUser.avatarUltra !== null && userProfileModalStyles.decorationOverflow;
 		return (
 			<Modal.Root
 				size="medium"
 				initialFocusRef={autoFocusNote ? noteRef : undefined}
-				className={userProfileModalStyles.modalRoot}
+				className={clsx(userProfileModalStyles.modalRoot, decorationOverflow)}
 				data-flx="user.user-profile-modal.modal-root"
 			>
 				<Modal.ScreenReaderLabel
@@ -812,7 +857,7 @@ export const UserProfileModal: UserProfileModalComponent = observer(
 					data-flx="user.user-profile-modal.modal-screen-reader-label"
 				/>
 				<div
-					className={userProfileModalStyles.modalContainer}
+					className={clsx(userProfileModalStyles.modalContainer, decorationOverflow)}
 					style={{borderColor}}
 					data-flx="user.user-profile-modal.div"
 				>
@@ -832,9 +877,14 @@ export const UserProfileModal: UserProfileModalComponent = observer(
 							renderActionButtons={renderActionButtons}
 							showProfileDataWarning={shouldShowProfileDataWarning}
 							previewOverrides={previewOverrides}
+							isPreview={isPreview}
 							data-flx="user.user-profile-modal.profile-modal-content"
 						/>
 					)}
+					<ProfileEffectOverlay
+						effect={resolvedProfile.profileEffect}
+						data-flx="user.user-profile-modal.profile-effect-overlay"
+					/>
 				</div>
 			</Modal.Root>
 		);

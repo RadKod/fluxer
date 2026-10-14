@@ -1,0 +1,13 @@
+<desktop:Extension Category="windows.startupTask" Executable="app\Micup.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="MicupStartup" Enabled="false" DisplayName="Micup" />
+        </desktop:Extension>
+        <com:Extension xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10" Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer Executable="app\Micup.exe" Arguments="-ToastActivated" DisplayName="Micup">
+              <com:Class Id="0BF67325-4A5A-4569-8C6B-19BFB4FDADE2" DisplayName="Micup toast activator" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+        <desktop:Extension Category="windows.toastNotificationActivation">
+          <desktop:ToastNotificationActivation ToastActivatorCLSID="0BF67325-4A5A-4569-8C6B-19BFB4FDADE2" />
+        </desktop:Extension>

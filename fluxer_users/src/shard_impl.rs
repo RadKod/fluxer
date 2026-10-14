@@ -32,7 +32,7 @@ type OptionalDate = Option<MaybeEmpty<NaiveDate>>;
 
 #[cfg(feature = "scylla")]
 const FULL_USER_COLUMNS: &str = "\
-    user_id, username, discriminator, bot, system, \
+    user_id, username, discriminator, identity_version, bot, system, \
     email, email_verified, email_bounced, \
     authenticator_types, \
     avatar_hash, avatar_color, banner_hash, banner_color, \
@@ -55,20 +55,27 @@ const FULL_USER_COLUMNS: &str = "\
     first_refund_at, version, \
     premium_grace_ends_at, mention_flags, \
     last_voice_activity_sharing_change_at, \
-    timezone, timezone_privacy_flags, content_hidden_since";
+    timezone, timezone_privacy_flags, \
+    avatar_decoration_id, avatar_decoration_asset, \
+    avatar_ultra_id, avatar_ultra_asset, \
+    nameplate_id, nameplate_asset, content_hidden_since";
 #[cfg(feature = "scylla")]
 const PARTIAL_USER_COLUMNS: &str = "\
-    user_id, username, discriminator, global_name, \
+    user_id, username, discriminator, identity_version, global_name, \
     avatar_hash, bot, system, flags, \
+    premium_type, premium_flags, \
     banner_hash, banner_color, accent_color, avatar_color, \
-    mention_flags, temp_banned_until, pending_deletion_at, deletion_reason_code, \
+    mention_flags, \
+    avatar_decoration_id, avatar_decoration_asset, \
+    avatar_ultra_id, avatar_ultra_asset, \
+    nameplate_id, nameplate_asset, temp_banned_until, pending_deletion_at, deletion_reason_code, \
     content_hidden_since";
 const USER_BATCH_SIZE: usize = 128;
 const USER_BATCH_CONCURRENCY: usize = 8;
 const USER_CACHE_MIN_GENERATION_STRIPES: usize = 4096;
 const USER_CACHE_MAX_GENERATION_STRIPES: usize = 1 << 20;
 const FLUXER_SYSTEM_USER_ID: i64 = 0;
-const FLUXER_SYSTEM_USERNAME: &str = "Fluxer";
+const FLUXER_SYSTEM_USERNAME: &str = "Micup";
 const FLUXER_SYSTEM_DISCRIMINATOR: i32 = 0;
 const USER_FLAG_STAFF: i64 = 1;
 
@@ -116,6 +123,7 @@ struct FullUserDbRow {
     user_id: i64,
     username: String,
     discriminator: i32,
+    identity_version: Option<i64>,
     bot: Option<bool>,
     system: Option<bool>,
     email: Option<String>,
@@ -169,6 +177,12 @@ struct FullUserDbRow {
     last_voice_activity_sharing_change_at: OptionalTimestamp,
     timezone: Option<String>,
     timezone_privacy_flags: Option<i32>,
+    avatar_decoration_id: Option<i64>,
+    avatar_decoration_asset: Option<String>,
+    avatar_ultra_id: Option<i64>,
+    avatar_ultra_asset: Option<String>,
+    nameplate_id: Option<i64>,
+    nameplate_asset: Option<String>,
     content_hidden_since: OptionalTimestamp,
 }
 
@@ -177,16 +191,25 @@ struct PartialUserDbRow {
     user_id: i64,
     username: String,
     discriminator: i32,
+    identity_version: Option<i64>,
     global_name: Option<String>,
     avatar_hash: Option<String>,
     bot: Option<bool>,
     system: Option<bool>,
     flags: Option<i64>,
+    premium_type: Option<i32>,
+    premium_flags: Option<i32>,
     banner_hash: Option<String>,
     banner_color: Option<i32>,
     accent_color: Option<i32>,
     avatar_color: Option<i32>,
     mention_flags: Option<i32>,
+    avatar_decoration_id: Option<i64>,
+    avatar_decoration_asset: Option<String>,
+    avatar_ultra_id: Option<i64>,
+    avatar_ultra_asset: Option<String>,
+    nameplate_id: Option<i64>,
+    nameplate_asset: Option<String>,
     #[serde(default)]
     temp_banned_until: Option<i64>,
     #[serde(default)]
@@ -203,16 +226,25 @@ struct PartialUserScyllaRow {
     user_id: i64,
     username: String,
     discriminator: i32,
+    identity_version: Option<i64>,
     global_name: Option<String>,
     avatar_hash: Option<String>,
     bot: Option<bool>,
     system: Option<bool>,
     flags: Option<i64>,
+    premium_type: Option<i32>,
+    premium_flags: Option<i32>,
     banner_hash: Option<String>,
     banner_color: Option<i32>,
     accent_color: Option<i32>,
     avatar_color: Option<i32>,
     mention_flags: Option<i32>,
+    avatar_decoration_id: Option<i64>,
+    avatar_decoration_asset: Option<String>,
+    avatar_ultra_id: Option<i64>,
+    avatar_ultra_asset: Option<String>,
+    nameplate_id: Option<i64>,
+    nameplate_asset: Option<String>,
     temp_banned_until: OptionalTimestamp,
     pending_deletion_at: OptionalTimestamp,
     deletion_reason_code: Option<i32>,
@@ -226,16 +258,25 @@ impl From<PartialUserScyllaRow> for PartialUserDbRow {
             user_id: row.user_id,
             username: row.username,
             discriminator: row.discriminator,
+            identity_version: row.identity_version,
             global_name: row.global_name,
             avatar_hash: row.avatar_hash,
             bot: row.bot,
             system: row.system,
             flags: row.flags,
+            premium_type: row.premium_type,
+            premium_flags: row.premium_flags,
             banner_hash: row.banner_hash,
             banner_color: row.banner_color,
             accent_color: row.accent_color,
             avatar_color: row.avatar_color,
             mention_flags: row.mention_flags,
+            avatar_decoration_id: row.avatar_decoration_id,
+            avatar_decoration_asset: row.avatar_decoration_asset,
+            avatar_ultra_id: row.avatar_ultra_id,
+            avatar_ultra_asset: row.avatar_ultra_asset,
+            nameplate_id: row.nameplate_id,
+            nameplate_asset: row.nameplate_asset,
             temp_banned_until: optional_timestamp_millis(row.temp_banned_until),
             pending_deletion_at: optional_timestamp_millis(row.pending_deletion_at),
             deletion_reason_code: row.deletion_reason_code,
@@ -249,6 +290,7 @@ struct FullUserKvRow {
     user_id: i64,
     username: String,
     discriminator: i32,
+    identity_version: Option<i64>,
     bot: Option<bool>,
     system: Option<bool>,
     email: Option<String>,
@@ -302,6 +344,12 @@ struct FullUserKvRow {
     last_voice_activity_sharing_change_at: Option<i64>,
     timezone: Option<String>,
     timezone_privacy_flags: Option<i32>,
+    avatar_decoration_id: Option<i64>,
+    avatar_decoration_asset: Option<String>,
+    avatar_ultra_id: Option<i64>,
+    avatar_ultra_asset: Option<String>,
+    nameplate_id: Option<i64>,
+    nameplate_asset: Option<String>,
     content_hidden_since: Option<i64>,
 }
 
@@ -686,6 +734,7 @@ fn fluxer_system_user() -> User {
         user_id: FLUXER_SYSTEM_USER_ID,
         username: FLUXER_SYSTEM_USERNAME.to_owned(),
         discriminator: FLUXER_SYSTEM_DISCRIMINATOR,
+        identity_version: None,
         bot: Some(true),
         system: Some(true),
         email: None,
@@ -739,6 +788,12 @@ fn fluxer_system_user() -> User {
         last_voice_activity_sharing_change_at: None,
         timezone: None,
         timezone_privacy_flags: None,
+        avatar_decoration_id: None,
+        avatar_decoration_asset: None,
+        avatar_ultra_id: None,
+        avatar_ultra_asset: None,
+        nameplate_id: None,
+        nameplate_asset: None,
         content_hidden_since: None,
     }
 }
@@ -834,16 +889,25 @@ impl From<PartialUserDbRow> for UserPartial {
             user_id: row.user_id,
             username: row.username,
             discriminator: row.discriminator,
+            identity_version: row.identity_version,
             global_name: row.global_name,
             avatar_hash: row.avatar_hash,
             bot: row.bot,
             system: row.system,
             flags: row.flags,
+            premium_type: row.premium_type,
+            premium_flags: row.premium_flags,
             banner_hash: row.banner_hash,
             banner_color: row.banner_color,
             accent_color: row.accent_color,
             avatar_color: row.avatar_color,
             mention_flags: row.mention_flags,
+            avatar_decoration_id: row.avatar_decoration_id,
+            avatar_decoration_asset: row.avatar_decoration_asset,
+            avatar_ultra_id: row.avatar_ultra_id,
+            avatar_ultra_asset: row.avatar_ultra_asset,
+            nameplate_id: row.nameplate_id,
+            nameplate_asset: row.nameplate_asset,
             content_hidden_since: row.content_hidden_since,
         }
         .visible_to_others(&standing, now_ms())
@@ -857,6 +921,7 @@ impl From<FullUserDbRow> for User {
             user_id: row.user_id,
             username: row.username,
             discriminator: row.discriminator,
+            identity_version: row.identity_version,
             bot: row.bot,
             system: row.system,
             email: row.email,
@@ -929,6 +994,12 @@ impl From<FullUserDbRow> for User {
             ),
             timezone: row.timezone,
             timezone_privacy_flags: row.timezone_privacy_flags,
+            avatar_decoration_id: row.avatar_decoration_id,
+            avatar_decoration_asset: row.avatar_decoration_asset,
+            avatar_ultra_id: row.avatar_ultra_id,
+            avatar_ultra_asset: row.avatar_ultra_asset,
+            nameplate_id: row.nameplate_id,
+            nameplate_asset: row.nameplate_asset,
             content_hidden_since: optional_timestamp_millis(row.content_hidden_since),
         }
     }
@@ -940,6 +1011,7 @@ impl From<FullUserKvRow> for User {
             user_id: row.user_id,
             username: row.username,
             discriminator: row.discriminator,
+            identity_version: row.identity_version,
             bot: row.bot,
             system: row.system,
             email: row.email,
@@ -995,6 +1067,12 @@ impl From<FullUserKvRow> for User {
             last_voice_activity_sharing_change_at: row.last_voice_activity_sharing_change_at,
             timezone: row.timezone,
             timezone_privacy_flags: row.timezone_privacy_flags,
+            avatar_decoration_id: row.avatar_decoration_id,
+            avatar_decoration_asset: row.avatar_decoration_asset,
+            avatar_ultra_id: row.avatar_ultra_id,
+            avatar_ultra_asset: row.avatar_ultra_asset,
+            nameplate_id: row.nameplate_id,
+            nameplate_asset: row.nameplate_asset,
             content_hidden_since: row.content_hidden_since,
         }
     }
@@ -1022,6 +1100,71 @@ mod tests {
 
     fn caches() -> UserCaches {
         UserCaches::new(16, Duration::from_secs(60))
+    }
+
+    #[tokio::test]
+    async fn projected_identity_survives_decode_cache_and_api_reads() {
+        let row = json!({
+            "user_id": 42, "username": "new", "discriminator": 0, "identity_version": 8
+        });
+        let caches = caches();
+        let partial = decode_postgres_user_partial(row.clone()).unwrap();
+        caches
+            .get_or_fetch_partial(42, async { Ok(Some(partial)) })
+            .await
+            .unwrap();
+        let cached = caches
+            .get_partial(42)
+            .await
+            .unwrap()
+            .unwrap()
+            .to_api_partial();
+        assert_eq!(cached.username, "new");
+        assert_eq!(cached.identity_version.as_deref(), Some("8"));
+        let full = decode_postgres_user(row).unwrap();
+        let full_api = full.to_partial().to_api_partial();
+        assert_eq!(full_api.username, "new");
+        assert_eq!(full_api.identity_version.as_deref(), Some("8"));
+    }
+
+    #[tokio::test]
+    async fn late_fetch_keeps_its_own_identity_version_after_invalidation() {
+        let caches = caches();
+        let old_key = caches.key(42);
+        let old = decode_postgres_user_partial(json!({
+            "user_id": 42, "username": "old", "discriminator": 7, "identity_version": 7
+        }))
+        .unwrap();
+        caches.invalidate(42).await;
+        let new = decode_postgres_user_partial(json!({
+            "user_id": 42, "username": "new", "discriminator": 0, "identity_version": 8
+        }))
+        .unwrap();
+        caches.insert_partial(caches.key(42), Some(new)).await;
+        caches.insert_partial(old_key, Some(old.clone())).await;
+        let fresh = caches
+            .get_partial(42)
+            .await
+            .unwrap()
+            .unwrap()
+            .to_api_partial();
+        assert_eq!(fresh.username, "new");
+        assert_eq!(fresh.identity_version.as_deref(), Some("8"));
+        let late = old.to_api_partial();
+        assert_eq!(late.username, "old");
+        assert_eq!(late.identity_version.as_deref(), Some("7"));
+    }
+
+    #[cfg(feature = "scylla")]
+    #[test]
+    fn cassandra_identity_is_selected_with_username_in_both_queries() {
+        for columns in [FULL_USER_COLUMNS, PARTIAL_USER_COLUMNS] {
+            let columns: Vec<_> = columns.split(',').map(str::trim).collect();
+            assert_eq!(
+                &columns[..4],
+                &["user_id", "username", "discriminator", "identity_version"]
+            );
+        }
     }
 
     #[tokio::test]
@@ -1164,6 +1307,7 @@ mod tests {
             .collect::<BTreeSet<_>>();
         let mut user = test_user(42);
         user.content_hidden_since = Some(1);
+        user.identity_version = Some(1);
         let partial = serde_json::to_value(user.to_partial()).unwrap();
         let mut fields = partial
             .as_object()
@@ -1186,12 +1330,61 @@ mod tests {
         assert!(columns.len() < full_columns.len());
     }
 
+    // The same vectors drive the API's partial user mapper and the gateway's user_utils, so a cosmetic field that one
+    // of the three drops, or leaves out instead of sending null, fails somewhere.
+    #[test]
+    fn api_partial_includes_cosmetics() {
+        let vectors: Vec<serde_json::Value> = serde_json::from_str(include_str!(
+            "../../fluxer_common/src/testdata/partial_user_cosmetic_vectors.json"
+        ))
+        .unwrap();
+        assert!(!vectors.is_empty());
+        for vector in vectors {
+            let row: PartialUserDbRow = serde_json::from_value(vector["row"].clone()).unwrap();
+            let api_partial =
+                serde_json::to_value(UserPartial::from(row).to_api_partial()).unwrap();
+            assert_eq!(api_partial, vector["partial"], "{}", vector["name"]);
+        }
+    }
+
+    // Micup: the shared vectors behind public_user_flags, read through the users service's own row and partial.
+    #[test]
+    fn api_partial_premium_badge_follows_the_shared_vectors() {
+        let vectors: Vec<serde_json::Value> = serde_json::from_str(include_str!(
+            "../../fluxer_common/src/testdata/premium_badge_flag_vectors.json"
+        ))
+        .unwrap();
+        assert!(!vectors.is_empty());
+        for vector in vectors {
+            let mut row = json!({"user_id": 42, "username": "ada", "discriminator": 7});
+            row.as_object_mut()
+                .unwrap()
+                .extend(vector["row"].as_object().unwrap().clone());
+            let row: PartialUserDbRow = serde_json::from_value(row).unwrap();
+            let flags = UserPartial::from(row).to_api_partial().flags;
+            assert_eq!(
+                Some(i64::from(flags)),
+                vector["public_flags"].as_i64(),
+                "{}",
+                vector["name"]
+            );
+        }
+    }
+
+    #[test]
+    fn system_user_partial_sends_null_ultra() {
+        let partial = fluxer_system_user().to_partial().to_api_partial();
+        let api_partial = serde_json::to_value(partial).unwrap();
+        let ultra = api_partial.get("avatar_ultra_data");
+        assert_eq!(ultra, Some(&serde_json::Value::Null));
+    }
+
     #[test]
     fn fluxer_system_user_partial_is_virtual_id_zero() {
         let partial = fluxer_system_user().to_partial();
 
         assert_eq!(partial.user_id, 0);
-        assert_eq!(partial.username, "Fluxer");
+        assert_eq!(partial.username, "Micup");
         assert_eq!(partial.discriminator, 0);
         assert_eq!(partial.global_name, None);
         assert_eq!(partial.bot, Some(true));
@@ -1302,6 +1495,25 @@ mod tests {
             assert_eq!(user.username, "Ada");
             assert_eq!(user.avatar_hash.as_deref(), Some("avatar_hash"));
         }
+    }
+
+    #[test]
+    fn hidden_profiles_clear_worn_cosmetics_and_the_derived_premium_badge() {
+        let mut user = styled(54, PROFILE_HIDDEN);
+        user.premium_type = Some(1);
+        user.avatar_decoration_id = Some(11);
+        user.avatar_decoration_asset = Some("decoration".to_owned());
+        user.avatar_ultra_id = Some(12);
+        user.avatar_ultra_asset = Some("ultra".to_owned());
+        user.nameplate_id = Some(13);
+        user.nameplate_asset = Some("nameplate".to_owned());
+        let api = user.to_partial().to_api_partial();
+        assert_eq!(api.avatar_decoration_data, None);
+        assert_eq!(api.avatar_ultra_data, None);
+        assert_eq!(api.nameplate_data, None);
+        assert_eq!(api.flags & (1 << 30), 0);
+        assert_eq!(user.premium_type, Some(1));
+        assert_eq!(user.avatar_ultra_asset.as_deref(), Some("ultra"));
     }
 
     #[test]

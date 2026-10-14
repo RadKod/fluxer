@@ -5,7 +5,7 @@ import {getConfig} from '@app/api/Config';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
-import {grantPremium, updateUserProfile} from '@app/api/user/tests/UserTestUtils';
+import {grantPremium} from '@app/api/user/tests/UserTestUtils';
 import {UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
@@ -29,7 +29,7 @@ describe('User discriminator #0000', () => {
 	afterEach(async () => {
 		await harness?.shutdown();
 	});
-	test('blocks #0000 for non-visionary premium users on the main instance', async () => {
+	test('blocks legacy human #0000 on the main instance', async () => {
 		const account = await createTestAccount(harness);
 		await grantPremium(harness, account.userId, UserPremiumTypes.SUBSCRIPTION);
 		const {response, text} = await createBuilder(harness, account.token)
@@ -37,17 +37,18 @@ describe('User discriminator #0000', () => {
 			.body({discriminator: '0000', password: account.password})
 			.executeRaw();
 		expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
-		expect(text).toContain(ValidationErrorCodes.VISIONARY_REQUIRED_FOR_DISCRIMINATOR);
+		expect(text).toContain(ValidationErrorCodes.DISCRIMINATOR_NOT_SUPPORTED_ON_INSTANCE);
 	});
-	test('allows #0000 on self-hosted instances', async () => {
+	test('blocks legacy human #0000 on self-hosted instances', async () => {
 		const account = await createTestAccount(harness);
 		await grantPremium(harness, account.userId, UserPremiumTypes.SUBSCRIPTION);
 		await withSelfHostedInstance(async () => {
-			const updated = await updateUserProfile(harness, account.token, {
-				discriminator: '0000',
-				password: account.password,
-			});
-			expect(updated.json.discriminator).toBe('0000');
+			const {response, text} = await createBuilder(harness, account.token)
+				.patch('/users/@me')
+				.body({discriminator: '0000', password: account.password})
+				.executeRaw();
+			expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+			expect(text).toContain(ValidationErrorCodes.DISCRIMINATOR_NOT_SUPPORTED_ON_INSTANCE);
 		});
 	});
 });

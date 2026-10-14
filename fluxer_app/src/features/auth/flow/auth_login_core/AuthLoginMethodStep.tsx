@@ -88,6 +88,7 @@ export function AuthLoginMethodStep({
 		registerLinkClassName = registerLinkClassNameValue;
 	}
 	const methodRegisterLink = cloneElement(registerLink, {
+		asButton: true,
 		className: clsx(styles.methodChoiceLink, registerLinkClassName),
 		children: (
 			<>

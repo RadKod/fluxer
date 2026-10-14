@@ -10,6 +10,7 @@ import {
 	MIN_WINDOW_WIDTH,
 } from '@electron/common/Constants';
 import {getDesktopWindowBehaviorSettings, getPrebootTheme} from '@electron/common/DesktopConfig';
+import {DESKTOP_APP_NAME} from '@electron/common/DesktopIdentity';
 import {createChildLogger} from '@electron/common/Logger';
 import type {DesktopWindowBehaviorSettings} from '@electron/common/Types';
 import {createAppLoadRetry} from '@electron/main/AppLoadRetry';
@@ -23,6 +24,11 @@ import {resolveDesktopLandingUrl} from '@electron/main/DesktopLastRoute';
 import {DesktopRuntimeSecurity} from '@electron/main/DesktopRuntimeSecurity';
 import {hasActiveDesktopTray, refreshDesktopTrayMenu} from '@electron/main/DesktopTray';
 import {drainPendingDisplayMediaRequests, registerDisplayMediaRequestHandler} from '@electron/main/DisplayMedia';
+import {
+	attachGameOverlayWindow,
+	GAME_OVERLAY_WINDOW_NAME,
+	getGameOverlayWindowOptions,
+} from '@electron/main/GameOverlay';
 import {isNativeGatewayAvailable} from '@electron/main/GatewaySocketNativeBoundary';
 import {shouldDisableV8CodeCache} from '@electron/main/LaunchOptions';
 import {getDesktopLocalAppAuthorization} from '@electron/main/LocalAppProtocolAuthorization';
@@ -60,7 +66,7 @@ const ACTIVE_ALLOW_TRANSPARENCY_RENDERER_ARG = '--fluxer-active-allow-transparen
 const ACTIVE_USE_NATIVE_TITLEBAR_RENDERER_ARG = '--fluxer-active-use-native-titlebar=1';
 const THEME_STUDIO_POPOUT_WINDOW_NAME = 'fluxer_theme_studio';
 const THEME_STUDIO_POPOUT_PATHNAME = '/theme-studio';
-const THEME_STUDIO_POPOUT_TITLE = 'Fluxer | Theme Studio';
+const THEME_STUDIO_POPOUT_TITLE = `${DESKTOP_APP_NAME} | Theme Studio`;
 const THEME_STUDIO_POPOUT_MIN_WIDTH = 900;
 const THEME_STUDIO_POPOUT_MIN_HEIGHT = 620;
 export const THEME_STUDIO_POPOUT_KEY = THEME_STUDIO_POPOUT_WINDOW_NAME;
@@ -1079,8 +1085,17 @@ export function createWindow(options: CreateWindowOptions = {}): BrowserWindow {
 			trackVoicePopoutWindow(details.frameName, window);
 		}
 		attachChildWindowGuards(window.webContents);
+		if (details.frameName === GAME_OVERLAY_WINDOW_NAME) {
+			attachGameOverlayWindow(window, webContents);
+		}
 	});
 	webContents.setWindowOpenHandler(({url, frameName}) => {
+		if (frameName === GAME_OVERLAY_WINDOW_NAME && url === 'about:blank') {
+			if (process.platform !== 'win32') {
+				return {action: 'deny'};
+			}
+			return {action: 'allow', overrideBrowserWindowOptions: getGameOverlayWindowOptions()};
+		}
 		if (isVoicePopoutWindowName(frameName) && url === 'about:blank') {
 			if (!hasVoicePopoutCapacity()) {
 				logger.warn('Denied voice popout window: capacity reached', {frameName});

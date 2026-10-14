@@ -1,0 +1,777 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: Table games
+description: Okey, 101 okey, chess, dama and tavla at the tables of a 3D voice room, refereed by the server, with private racks and watch tickets.
+---
+
+import RouteHeader from '@/components/RouteHeader.astro';
+
+The [room theme](/http-api/voice-seats/#room-themes) of a guild voice channel can place game tables in its room, one for each table slot such as `T01`. The members connected to the channel play Classic Okey, 101 Okey, chess, Türk daması, Normal dama, or tavla at them. The server holds every game: it deals and rolls, checks each move against the rules, runs the turn clocks, and sends each player only what that player may see.
+
+The routes on this page are user-only. A bot or OAuth2 bearer credential is refused with 403 `ACCESS_DENIED`. Every route needs the access [Get channel](/http-api/channels/#get-channel) needs on a guild voice channel. Opening a table, sitting down, watching, and reading also need [CONNECT](/http-api/permissions/) and a `connection_id` that passes the [voice membership](/http-api/voice-seats/#voice-membership) check.
+
+:::note[Table games start switched off]
+Table games need 3D rooms. The [Admin API](/admin-api/instance/#voice-room-configuration-object) switches both, and a client reads the state as `games` in the `voice_room` assignment of [Get experiment assignments](/http-api/experiments/#get-experiment-assignments). While games are off, every route returns 403 `FEATURE_TEMPORARILY_DISABLED`, and the server ends each open table as `canceled` with reason `disabled`.
+:::
+
+:::caution[A rack is private to its player]
+A player's rack appears in that player's own responses and Dispatches alone. No response, Dispatch, or error carries another player's rack or the order of the pile, and every view a spectator receives has `rack` null. A 101 rack stays hidden after the hand ends, and only the melds laid on the table are public.
+
+Chess, dama, and tavla hide nothing: every viewer sees the same board, and only `legal_moves` is for the player to move.
+:::
+
+## Game kinds
+
+| Value | Description |
+| --- | --- |
+| okey | Classic Okey for four players, one hand |
+| okey101 | 101 Okey for four players, one hand, scored at its end |
+| chess | Chess for two players, at positions 1 and 3 |
+| dama | [Türk daması](#dama-moves) for two players, at positions 1 and 3 |
+| dama_normal | [Normal dama](#dama-moves), Brazilian draughts on the dark squares, for two players at positions 1 and 3 |
+| tavla | [Tavla](#tavla-turns), backgammon with no doubling cube, one game for two players at positions 1 and 3 |
+
+## Game speeds
+
+The player who opens a table chooses its speed.
+
+| Value | Description |
+| --- | --- |
+| fast | 15 seconds a turn in okey, 25 in 101, and 20 in tavla, and 3 minutes a side in chess and both damas |
+| normal | 30 seconds a turn in okey, 45 in 101, and 40 in tavla, and 10 minutes a side in chess and both damas |
+| slow | 60 seconds a turn in okey, 90 in 101, and 90 in tavla, and 30 minutes a side in chess and both damas |
+
+A chess or dama clock adds no increment.
+
+## Table statuses
+
+| Value | Description |
+| --- | --- |
+| lobby | The table is filling, and no game runs yet |
+| playing | The game runs |
+| ended | The game is over, and `result` says how |
+
+## Table lifecycle
+
+- [Open a table game](#open-a-table-game) puts the caller at position 1 of a lobby. Okey and 101 fill positions 1 to 4, and chess, both damas, and tavla fill positions 1 and 3.
+- The game starts as the last position is taken. The server shuffles and rolls with a cryptographic random source, and in chess, dama, and tavla it draws the position that plays white.
+- A lobby that does not fill within 10 minutes ends as `canceled` with reason `abandoned`, and so does a lobby its last player leaves. Leaving a lobby, or leaving the voice channel while in one, only gives up the position.
+- When a game ends, its players return to lounge seats, or stand when none is free.
+- An ended table stays readable for 5 minutes, and a new table can be opened on its slot at once.
+- An account plays at one open table at a time, in any channel.
+- A table whose slot is no longer in the channel's room theme ends as `canceled` with reason `theme_changed` on the next move or tick at it.
+
+Every change to a table raises its `version` by one and sends a [Table Game Update](/gateway/events/#table-game-update) Dispatch to its players and subscribed spectators.
+
+## Turns and clocks
+
+In okey and 101 the turn passes from position 1 through 4 and around again, and `deadline_at` is the moment the turn runs out. The server then plays the turn for the player: it draws from the pile when the turn has not drawn yet, and discards the tile the player received last, or another one when that tile is a joker or would carry a penalty. A player whose turn runs out twice in a row loses the game as `forfeit` with reason `timeouts`. Any move of the player's own resets that count.
+
+In tavla each turn has its own time as well, and `deadline_at` is the moment it runs out. The server then plays `legal_moves[0]` for the player, and a player whose turn runs out twice in a row loses as `forfeit` with reason `timeouts`. Any move of the player's own resets that count. A turn that passes because the roll has no play neither counts nor resets it.
+
+In chess and both damas each side has its own clock. The side whose clock reaches zero loses, with reason `timeout`, whatever is left on the board.
+
+The server settles an expired clock by itself on a timer that runs every second. A player's client can also send a `tick` action, which settles whatever is due at once. A spectator cannot send one.
+
+## Leaving and disconnects
+
+- [Leave a table game](#leave-a-table-game) during a game loses it at once, as `forfeit` with reason `leave`.
+- A player who leaves the voice channel during a game is reported with `connected` false. Coming back within 30 seconds clears the mark. Otherwise the game ends as `forfeit` with reason `disconnect`, after the server confirms once more that the player is gone.
+- A player whose other connection is still in the channel is not disconnected.
+- The server also checks the players of a running game against the voice channel every 60 seconds, and marks a missing player the same way.
+
+## Watching
+
+Anyone connected to the channel can watch a table they do not play at. [Watch a table game](#watch-a-table-game) subscribes the caller to the table's [Table Game Update](/gateway/events/#table-game-update) Dispatches while the table has fewer than 50 subscribed spectators. Past that, `subscribed` is false, and the caller polls [Get a table game](#get-a-table-game) with its `ETag` instead.
+
+Watching also issues a watch ticket for 60 seconds, subscribed or not. While the ticket lasts, Get a table game needs no `connection_id`. After it expires, the request sends `connection_id` again, and one that passes the voice membership check issues a new ticket.
+
+An account watches one table at a time, so watching a table stops watching the previous one. Leaving the voice channel stops watching its tables.
+
+A [watch seat](/http-api/voice-seats/#watch-seats) beside a table is only a place to sit. Its holder watches through Watch a table game like anyone else, receives the public view with `rack` null, and has no other right at the table.
+
+## Reading tables
+
+A player reads their own table at any time. Anyone else reads a table with a watch ticket or a `connection_id`, and [List table games](#list-table-games) always needs the `connection_id`.
+
+Both reads answer with an `ETag`, `Cache-Control: private, no-cache`, and `Vary: Authorization`, and a matching `If-None-Match` answers 304 with no body. A response can carry the caller's own rack, so no shared cache may keep it.
+
+The `ETag` of a table follows its `version` and the caller's position, so a change of `spectator_count` alone answers 304. The `ETag` of the list covers the whole response. Treat both as opaque values.
+
+## Tile tokens
+
+A tile is a string from `t0` to `t105`. For a numbered tile `tN`, the color is `(N mod 52) div 13` and the number is `(N mod 13) + 1`, and every numbered face exists twice.
+
+| Value | Description |
+| --- | --- |
+| t0 to t103 | A numbered tile |
+| t104, t105 | The two false jokers |
+
+The color values are these.
+
+| Value | Description |
+| --- | --- |
+| 0 | Yellow |
+| 1 | Blue |
+| 2 | Black |
+| 3 | Red |
+
+The indicator decides the joker: the face of the indicator's color with the next number, where 1 follows 13. The two tiles of that face are jokers, and the false jokers stand for that face.
+
+## Dama moves
+
+Squares are named as in chess, `a1` to `h8`, and white starts on the low ranks and moves toward rank 8. White moves first in both damas. The two kinds differ in these rules.
+
+| Rule | Türk daması (`dama`) | Normal dama (`dama_normal`) |
+| --- | --- | --- |
+| Board | All 64 squares, 16 men a side on ranks 2-3 and 6-7 | The 32 dark squares with a1 dark, 12 men a side on ranks 1-3 and 6-8 |
+| Men move | One square forward or sideways | One square diagonally forward |
+| Men capture | Forward or sideways | Diagonally, forward or backward |
+| Kings | Fly any distance along ranks and files | Fly any distance along diagonals |
+| Taken pieces | Leave the board at once, so their squares can be crossed again | Stay as blockers until the move ends, and none is jumped twice |
+| Lone kings | One king against one king is a draw at once | Play goes on |
+
+A `dama_move` names the whole move as `path`: the square the piece starts on, then every square it stops on, 2 to 17 squares. A plain move is two squares. A capture lists one landing square for each piece it takes, so a chain that takes three pieces is four squares in one request.
+
+- Capturing is compulsory, and the move takes as many pieces as the most any capture on the board takes. Men and kings count the same.
+- A king captures at a distance and lands on any empty square past the piece it takes.
+- No piece turns back the way it came within a capture.
+- A man that reaches the last rank during a capture goes on as a man, and becomes a king only when the move ends there.
+- Routes from the same start to the same end that take the same pieces are one move. `legal_moves` lists one of them, and the server accepts any of them.
+
+The server checks each leg of a path against the rules, not against the list. `legal_moves` holds at most 1024 paths, and a path a crowded position leaves off the list is still accepted.
+
+A side left with no pieces, or with no legal move on its turn, loses. The game is drawn when the same position with the same side to move comes up three times since the last advance, or after 25 moves by each side with no advance. An advance is a capture or a man moving forward, so a sideways man move or any king move in Türk daması is not one.
+
+## Tavla turns
+
+Points are numbered 1 to 24 in one frame for both sides, in `points`, `tavla_move`, `last_moves`, and `legal_moves`. White moves from 24 down to 1 and bears off from its home, points 1 to 6. Black moves from 1 up to 24 and bears off from points 19 to 24. Each side starts with 15 checkers: white has two on point 24, five on 13, three on 8, and five on 6, and black mirrors that on points 1, 12, 17, and 19.
+
+A checker entering from the bar on die `d` lands on point `25 - d` for white and on point `d` for black. `bar` is only ever a `from`, and `off` only ever a `to`.
+
+The server rolls the dice itself, from a cryptographic random source, as each turn starts. There is no roll action, and no roll exists before its turn starts. At the start of the game the server rolls one die for each side, rerolling ties, and the side with the higher die starts with two fresh dice. `opening` shows that opening roll on the first turn only.
+
+A `tavla_move` carries the whole turn in one request, 1 to 4 steps.
+
+- Both dice are played when possible. When only one of them can be played, it is the larger one if either could be. Doubles give four steps, played as far as they go.
+- A checker on the bar enters before any other checker moves.
+- A lone checker that is hit goes to the bar.
+- Bearing off needs all 15 of the side's checkers in its home. A die higher than the farthest checker takes that checker off, and a die that fits a checker exactly may still be played inside the home instead.
+- The server checks the turn as a whole, so any order or split of a legal play is accepted, such as a 6-5 sent as `24/18 18/13` or as `24/19 19/13`.
+
+`legal_moves` holds one string for each distinct board a turn can leave, at most 3060. A string is the steps as `from/to` joined by spaces, such as `bar/22 13/7` or `6/off`, farthest from the mover's home first: the bar, then points descending for white and ascending for black. `legal_moves[0]` is the play the server makes when the turn runs out.
+
+When a roll has no play, the turn passes at once and the next player's dice are rolled in the same change. An empty `legal_moves` shows up only after more than 16 such passes in a row, and that turn then passes when it runs out, without counting a timeout.
+
+The first side to bear off all 15 checkers wins with reason `bear_off`, and the result has `finish` `mars` when the loser bore off none. A resignation or a forfeit is never a mars.
+
+## Table game player object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| position | integer | The position of the player (1-4) |
+| user_id | snowflake | The ID of the player |
+| connected | boolean | False while the player's disconnect grace runs |
+| timeouts | integer | The turns in a row the player let run out, always 0 in chess and both damas |
+
+## Table game result object
+
+The `kind` field decides the other fields.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| kind | string | `win`, `forfeit`, `draw`, or `canceled` |
+| winners?<sup>1</sup> | array[integer] | The winning positions |
+| loser?<sup>2</sup> | integer | The position that lost |
+| reason | string | The [result reason](#table-game-result-reasons) |
+| finish?<sup>3</sup> | string | How the game was finished, one of `normal`, `pairs`, `okey`, `hand`, and `mars` |
+
+<sup>1</sup> Present for `win`. A 101 hand can have several winners on equal scores
+
+<sup>2</sup> Present for `forfeit`
+
+<sup>3</sup> Present on an okey win by finishing, on a 101 win when a player finished the hand, and on a tavla win when the loser bore off no checker. `pairs` is okey only, `hand` is 101 only, and `mars` is tavla only
+
+## Table game result reasons
+
+| Value | Description |
+| --- | --- |
+| finish | Win: a player finished the okey hand |
+| score | Win: the lowest 101 hand score, after a finish or an empty pile |
+| checkmate | Win: checkmate |
+| timeout | Win: the other side's chess or dama clock ran out |
+| resign | Win: the other side resigned |
+| bear_off | Win: a tavla player bore off all 15 checkers |
+| no_pieces | Win: the other dama side has no pieces left |
+| blocked | Win: the other dama side has no legal move on its turn |
+| leave | Forfeit: the player left the table |
+| disconnect | Forfeit: the player stayed out of the voice channel past the grace |
+| timeouts | Forfeit: the player's turn ran out twice in a row |
+| pile_empty | Draw: the okey pile ran out |
+| stalemate | Draw: stalemate |
+| insufficient | Draw: neither side can checkmate |
+| threefold | Draw: the same position came up three times |
+| fifty_move | Draw: fifty moves by each side with no capture or pawn move |
+| move_limit | Draw: 25 dama moves by each side with no capture and no man moving forward |
+| lone_kings | Draw: one king against one king and nothing else, in Türk daması |
+| disabled | Canceled: table games were switched off |
+| theme_changed | Canceled: the slot left the channel's room theme |
+| abandoned | Canceled: the lobby did not fill, or its last player left |
+
+## Table game summary object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| slot | string | The table slot, such as `T01` |
+| game | string | The [game kind](#game-kinds) |
+| speed | string | The [game speed](#game-speeds) |
+| status | string | The [table status](#table-statuses) |
+| players | array[[table game player](#table-game-player-object) object] | The seated players, by position |
+| spectator_count | integer | The subscribed spectators |
+| version | integer | The table version, raised by one on every change |
+| result | ?[table game result](#table-game-result-object) object | How the game ended, null until it ends |
+
+## Okey view object
+
+The game view of Classic Okey. Each four-element array is indexed by position, so its first element belongs to position 1.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| game | string | Always `okey` |
+| indicator | string | The indicator [tile](#tile-tokens), which decides the joker |
+| pile_count | integer | The tiles left in the pile |
+| discards | array[array[string]] | The tiles each position discarded, oldest first |
+| rack_counts | array[integer] | The number of tiles in each rack |
+| turn | ?integer | The position whose turn it is, null once the game ended |
+| phase | string | What the player on turn does next, `draw` or `discard` |
+| deadline_at | ?ISO8601 timestamp | When the turn runs out, null once the game ended |
+| rack<sup>1</sup> | ?array[string] | The viewer's own rack, null for everyone else |
+
+<sup>1</sup> A player receives their own rack in their own responses and Dispatches only
+
+A player draws from the pile or takes the newest discard of the previous position.
+
+## Okey 101 view object
+
+The game view of 101 Okey has every [okey view](#okey-view-object) field, with `game` always `okey101` and `phase` either `draw` or `play`, and these fields besides.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| melds | array[[okey 101 meld](#okey-101-meld-object) object] | The melds laid on the table |
+| opened | array[string] | How each position opened, one of `none`, `sets`, and `pairs` |
+| penalties | array[integer] | The penalty points of each position |
+| scores | ?array[integer] | The hand score of each position, null until the hand is over |
+
+## Okey 101 meld object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | integer | The ID of the meld, which an addition names as `meld_id` |
+| owner | integer | The position that laid it |
+| kind | string | `run`, `group`, or `pair` |
+| tiles | array[string] | Its tiles in order |
+
+## Chess view object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| game | string | Always `chess` |
+| fen | string | The position in Forsyth-Edwards Notation |
+| white | integer | The position that plays white, 1 or 3 |
+| clocks_ms | object | `white` and `black`, the milliseconds each side had left when the current turn started |
+| turn_started_at | ?ISO8601 timestamp | When the side to move started its turn, null once the game ended |
+| last_move | ?string | The last move in UCI notation, such as `e2e4` or `e7e8q` |
+| legal_moves | ?array[string] | The legal moves in UCI notation, for the player to move alone and null for everyone else |
+| in_check | boolean | Whether the side to move is in check |
+
+## Dama view object
+
+The game view of both damas, the same for every viewer apart from `legal_moves`.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| game | string | `dama` or `dama_normal` |
+| board | string | The 64 squares a8 to h8, a7 to h7, and on down to h1: `.` empty, `w` and `b` men, `W` and `B` kings |
+| white | integer | The position that plays white, 1 or 3 |
+| turn | ?integer | The position to move, null once the game ended |
+| clocks_ms | object | `white` and `black`, the milliseconds each side had left when the current turn started |
+| turn_started_at | ?ISO8601 timestamp | When the side to move started its turn, null once the game ended |
+| last_move | ?array[string] | The [path](#dama-moves) of the last move, start first, null before the first move |
+| last_captured | array[string] | The squares of the pieces the last move took, in capture order |
+| legal_moves | ?array[string] | The legal paths with squares joined by `-`, such as `c3-c5-e5`, for the player to move alone |
+
+`legal_moves` is null for everyone but the player to move, and holds at most 1024 paths.
+
+## Tavla view object
+
+The game view of tavla, the same for every viewer apart from `legal_moves`. Point numbers follow [Tavla turns](#tavla-turns).
+
+| Field | Type | Description |
+| --- | --- | --- |
+| game | string | Always `tavla` |
+| white | integer | The position that plays white, 1 or 3 |
+| points | array[integer] | 24 checker counts, the first for point 1: positive for white, negative for black |
+| bar | object | `white` and `black`, the checkers each side has on the bar |
+| off | object | `white` and `black`, the checkers each side has borne off |
+| turn | ?integer | The position whose turn it is, null once the game ended |
+| dice | ?array[integer] | The two dice of the current turn, null once the game ended |
+| opening | ?array[integer] | The opening roll as white's die and black's die, on the first turn only and otherwise null |
+| deadline_at | ?ISO8601 timestamp | When the turn runs out, null once the game ended |
+| last_moves | array[[tavla step](#tavla-step-object) object] | The steps of the last turn played, each with `hit`, empty before the first |
+| legal_moves | ?array[string] | Each distinct way to play the turn, such as `24/18 13/7`, for the player on turn alone |
+
+`legal_moves` is null for everyone but the player on turn, and holds at most 3060 plays.
+
+## Tavla step object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| from | integer or string | The point the checker leaves (1-24), or `bar` |
+| to | integer or string | The point the checker reaches (1-24), or `off` when it is borne off |
+| hit?<sup>1</sup> | boolean | Whether the step hit a lone checker of the other side to the bar |
+
+<sup>1</sup> Present in `last_moves` only, and never sent in a `tavla_move`
+
+## Table game view object
+
+A table as one caller may see it.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| summary | [table game summary](#table-game-summary-object) object | The public summary of the table |
+| game_view | ?object | The [okey](#okey-view-object), [101](#okey-101-view-object), [chess](#chess-view-object), [dama](#dama-view-object), or [tavla](#tavla-view-object) view, null in the lobby |
+| viewer_position | ?integer | The caller's position at the table, null when the caller does not play at it |
+| spectating | boolean | Whether the caller is a subscribed spectator |
+
+### Example
+
+The view of the player at position 2, whose turn it is to discard. Only that player's own rack is present.
+
+```json
+{
+  "summary": {
+    "slot": "T01",
+    "game": "okey",
+    "speed": "normal",
+    "status": "playing",
+    "players": [
+      {"position": 1, "user_id": "1501314428688998101", "connected": true, "timeouts": 0},
+      {"position": 2, "user_id": "1501314428688998102", "connected": true, "timeouts": 0},
+      {"position": 3, "user_id": "1501314428688998103", "connected": false, "timeouts": 0},
+      {"position": 4, "user_id": "1501314428688998104", "connected": true, "timeouts": 1}
+    ],
+    "spectator_count": 3,
+    "version": 12,
+    "result": null
+  },
+  "game_view": {
+    "game": "okey",
+    "indicator": "t17",
+    "pile_count": 43,
+    "discards": [["t3", "t70"], ["t60"], ["t91"], ["t40"]],
+    "rack_counts": [14, 15, 14, 14],
+    "turn": 2,
+    "phase": "discard",
+    "deadline_at": "2026-10-03T07:12:30.000Z",
+    "rack": ["t0", "t5", "t12", "t14", "t22", "t27", "t33", "t48", "t53", "t66", "t79", "t84", "t97", "t101", "t104"]
+  },
+  "viewer_position": 2,
+  "spectating": false
+}
+```
+
+## Table game action types
+
+| Value | Description |
+| --- | --- |
+| tick | Settles whatever is due at the table, in any game, from a player only |
+| draw | Draws a tile in okey from `pile` or `discard`, and in 101 from `pile` only |
+| discard | Discards `tile` in okey or 101 |
+| finish | Finishes an okey hand, throwing `tile` and showing the rest of the rack as `sets` |
+| take_discard | Takes the previous position's newest discard in 101, and uses it at once in `open` or `add` |
+| meld | Opens or adds to melds in 101, through `open` and `add` |
+| move | Moves a chess piece from `from` to `to`, with `promotion` for a pawn reaching the last rank |
+| dama_move | Plays a whole [dama move](#dama-moves) along `path`, every capture of a chain in one request |
+| tavla_move | Plays a whole [tavla turn](#tavla-turns) as `moves` |
+| resign | Resigns a chess, dama, or tavla game |
+
+## Table game action object
+
+The `type` field decides the other fields.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| type | string | The [action type](#table-game-action-types) |
+| from? | string | `pile` or `discard` for `draw`, and a square such as `e2` for `move` |
+| to? | string | The square a chess piece moves to |
+| promotion? | string | The piece a pawn becomes, one of `q`, `r`, `b`, and `n` |
+| tile? | string | The [tile](#tile-tokens) to discard, or for `finish` the tile thrown to end the hand |
+| sets? | array[array[string]] | For `finish`, the rest of the rack as 1-7 melds of 2-13 tiles each |
+| open? | array[array[string]] | For `take_discard` and `meld`, up to 12 new melds of 2-13 tiles each |
+| add? | array[[okey addition](#okey-addition-object) object] | For `take_discard` and `meld`, up to 12 additions to melds on the table |
+| path? | array[string] | For `dama_move`, the start square and every square the piece stops on, 2-17 squares |
+| moves? | array[[tavla step](#tavla-step-object) object] | For `tavla_move`, the steps of the turn (1-4), each `from` and `to` |
+
+## Okey addition object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| meld_id | integer | The [meld](#okey-101-meld-object) to add to (0-255) |
+| tiles | array[string] | The tiles to add (1-12) |
+| at | string | The end of the meld the tiles join, `start` or `end` |
+
+## Rule violation reasons
+
+A move the rules refuse returns 400 `TABLE_GAME_RULE_VIOLATION`, and the [error response](/http-api/#error-response) adds a `reason` member from this closed set. The body names no tile.
+
+| Value | Description |
+| --- | --- |
+| not_your_turn | It is another position's turn |
+| wrong_phase | The action does not fit the phase of the turn |
+| tile_not_in_rack | A named tile is not in the caller's rack |
+| invalid_meld | A set, run, group, or pair is not valid |
+| open_too_low | A 101 opening with runs and groups counts too few points |
+| pairs_too_few | A 101 opening with pairs has too few pairs |
+| take_unused | A discard taken in 101 is not used in the same action |
+| not_opened | A 101 player who has not opened adds to a meld |
+| cannot_add | A tile does not fit the meld it is added to, or adding is not allowed yet |
+| illegal_move | The chess, dama, or tavla move is not legal |
+| game_over | The game has already ended |
+| unsupported_action | The game has no such action |
+| must_finish_with_discard | A 101 meld would leave no tile to discard |
+
+## Common responses
+
+Every route on this page can also answer with these.
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 400 | [error response](/http-api/#error-response) | The channel is not a guild voice channel, returned as `INVALID_CHANNEL_TYPE` |
+| 401 | [error response](/http-api/#error-response) | No account is signed in |
+| 403 | [error response](/http-api/#error-response) | The credential is a bot or OAuth2 bearer token, returned as `ACCESS_DENIED` |
+| 403 | [error response](/http-api/#error-response) | Table games are switched off, returned as `FEATURE_TEMPORARILY_DISABLED` |
+| 403 | [error response](/http-api/#error-response) | The caller lacks a permission the route needs, returned as `MISSING_PERMISSIONS` |
+| 404 | [error response](/http-api/#error-response) | The channel does not exist, returned as `UNKNOWN_CHANNEL` |
+
+## List table games
+
+<RouteHeader method="GET" path="/v1/channels/{channel_id}/table-games" />
+
+Returns the summary of every table at a slot of the channel's room theme, in the theme's slot order. A slot with no table is left out, and an ended table is listed for the 5 minutes it stays readable.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| channel_id | snowflake | The ID of the voice channel |
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| connection_id | string | The caller's voice connection in this channel (1-64 characters) |
+
+### Request headers
+
+| Field | Type | Description |
+| --- | --- | --- |
+| If-None-Match? | string | An `ETag` from an earlier response to this route |
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| tables | array[[table game summary](#table-game-summary-object) object] | The tables of the room |
+
+### Response headers
+
+| Field | Type | Description |
+| --- | --- | --- |
+| ETag | string | A strong tag over the response body, sent on 200 and on 304 |
+| Cache-Control | string | The literal value `private, no-cache` |
+| Vary | string | The literal value `Authorization`, replaced by `Origin` where the [cross-origin policy](/http-api/#cross-origin-requests) echoed an allowed origin |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The tables were listed |
+| 304 | empty | The request sent a matching `If-None-Match` |
+| 400 | [error response](/http-api/#error-response) | `connection_id` is absent or fails the membership check, returned as `USER_NOT_IN_VOICE` |
+
+The [common responses](#common-responses) also apply.
+
+### Rate limit
+
+60 requests per 10 seconds for each authenticated user and channel ID, on the shared `table_game:read::channel_id` bucket.
+
+## Get a table game
+
+<RouteHeader method="GET" path="/v1/channels/{channel_id}/table-games/{slot}" />
+
+Returns the [table game view](#table-game-view-object) of one table. A player at the table receives their own rack, and anyone else the public view. A caller who does not play at the table needs a valid [watch ticket](#watching) or a `connection_id` that passes the membership check, and a request that passes it issues a new ticket.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| channel_id | snowflake | The ID of the voice channel |
+| slot | string | The table slot, `T` and two digits such as `T01` |
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| connection_id? | string | The caller's voice connection in this channel (1-64 characters) |
+
+### Request headers
+
+| Field | Type | Description |
+| --- | --- | --- |
+| If-None-Match? | string | An `ETag` from an earlier response to this route |
+
+### Response headers
+
+| Field | Type | Description |
+| --- | --- | --- |
+| ETag | string | A strong tag of the table version and the caller's position, sent on 200 and on 304 |
+| Cache-Control | string | The literal value `private, no-cache` |
+| Vary | string | The literal value `Authorization`, replaced by `Origin` where the [cross-origin policy](/http-api/#cross-origin-requests) echoed an allowed origin |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [table game view](#table-game-view-object) object | The table was returned |
+| 304 | empty | The request sent a matching `If-None-Match` |
+| 400 | [error response](/http-api/#error-response) | A caller with no ticket sent no `connection_id` or one that fails the check, returned as `USER_NOT_IN_VOICE` |
+| 404 | [error response](/http-api/#error-response) | The slot has no table, returned as `UNKNOWN_TABLE_GAME` |
+
+The [common responses](#common-responses) also apply.
+
+### Rate limit
+
+60 requests per 10 seconds for each authenticated user and channel ID, on the shared `table_game:read::channel_id` bucket.
+
+## Open a table game
+
+<RouteHeader method="POST" path="/v1/channels/{channel_id}/table-games/{slot}" />
+
+Opens a lobby at a table slot, seats the caller at position 1, and returns the caller's [table game view](#table-game-view-object). A table that has ended is replaced. The lobby ends as `canceled` with reason `abandoned` when it does not fill within 10 minutes.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| channel_id | snowflake | The ID of the voice channel |
+| slot | string | A table slot of the channel's room theme |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| game | string | The [game kind](#game-kinds) |
+| speed | string | The [game speed](#game-speeds) |
+| connection_id | string | The caller's voice connection in this channel (1-64 characters) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 201 | [table game view](#table-game-view-object) object | The lobby was opened |
+| 400 | [error response](/http-api/#error-response) | `connection_id` fails the membership check, returned as `USER_NOT_IN_VOICE` |
+| 404 | [error response](/http-api/#error-response) | The slot is not in the channel's room theme, returned as `UNKNOWN_TABLE_GAME` |
+| 409 | [error response](/http-api/#error-response) | The slot has an open table, or the caller plays at another one, returned as `TABLE_GAME_CONFLICT` |
+
+The [common responses](#common-responses) also apply.
+
+### Side effects
+
+The caller's connection moves to the table's position 1 [seat](/http-api/voice-seats/#seat-names), and the table's players receive a [Table Game Update](/gateway/events/#table-game-update) Dispatch.
+
+### Rate limit
+
+5 requests per minute for each authenticated user and channel ID, on the `table_game:create::channel_id` bucket.
+
+## Join a table game
+
+<RouteHeader method="PUT" path="/v1/channels/{channel_id}/table-games/{slot}/players/@me" />
+
+Sits the caller down at a free position of a lobby and returns the caller's [table game view](#table-game-view-object). Taking the last free position starts the game.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| channel_id | snowflake | The ID of the voice channel |
+| slot | string | A table slot of the channel's room theme |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| position | integer | The position to take (1-4), where chess, both damas, and tavla use 1 and 3 only |
+| connection_id | string | The caller's voice connection in this channel (1-64 characters) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [table game view](#table-game-view-object) object | The caller sat down |
+| 400 | [error response](/http-api/#error-response) | `connection_id` fails the membership check, returned as `USER_NOT_IN_VOICE` |
+| 404 | [error response](/http-api/#error-response) | The slot is not in the room theme or has no table, returned as `UNKNOWN_TABLE_GAME` |
+| 409 | [error response](/http-api/#error-response) | The table is not a lobby, or the position is taken or unused by the game, as `TABLE_GAME_CONFLICT` |
+| 409 | [error response](/http-api/#error-response) | The caller already plays at this or another table, returned as `TABLE_GAME_CONFLICT` |
+
+The [common responses](#common-responses) also apply.
+
+### Side effects
+
+The caller's connection moves to the position's [seat](/http-api/voice-seats/#seat-names), and the table's players and spectators receive a [Table Game Update](/gateway/events/#table-game-update) Dispatch.
+
+### Rate limit
+
+10 requests per 30 seconds for each authenticated user, channel ID, and table slot, on the shared `table_game:seat::channel_id::slot` bucket.
+
+## Leave a table game
+
+<RouteHeader method="DELETE" path="/v1/channels/{channel_id}/table-games/{slot}/players/@me" />
+
+Gives up the caller's position in a lobby, or loses a running game at once as `forfeit` with reason `leave`, and returns 204 with an empty body. Leaving an ended table changes nothing.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| channel_id | snowflake | The ID of the voice channel |
+| slot | string | The table slot |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The caller left the table |
+| 404 | [error response](/http-api/#error-response) | The slot has no table, returned as `UNKNOWN_TABLE_GAME` |
+| 409 | [error response](/http-api/#error-response) | The caller does not play at the table, returned as `TABLE_GAME_CONFLICT` |
+
+The [common responses](#common-responses) also apply.
+
+### Side effects
+
+The caller returns to a lounge seat, or stands when none is free. The players, the subscribed spectators, and the caller receive a [Table Game Update](/gateway/events/#table-game-update) Dispatch.
+
+### Rate limit
+
+10 requests per 30 seconds for each authenticated user, channel ID, and table slot, on the shared `table_game:seat::channel_id::slot` bucket.
+
+## Act at a table game
+
+<RouteHeader method="POST" path="/v1/channels/{channel_id}/table-games/{slot}/actions" />
+
+Applies a player's [action](#table-game-action-object) to the table and returns the caller's [table game view](#table-game-view-object). The server first settles whatever is due at the table, such as an expired turn, and then judges the action against the settled table.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| channel_id | snowflake | The ID of the voice channel |
+| slot | string | The table slot |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| version | integer | The table `version` the action was made against, ignored for `tick` |
+| action | [table game action](#table-game-action-object) object | The action |
+
+A `version` other than the table's current one returns 409, and the client reads the table again. When the clock ran out before the action arrived, the settled turn is written and the action is then refused, so a refused action can still change the table.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [table game view](#table-game-view-object) object | The action was applied |
+| 400 | [error response](/http-api/#error-response) | The rules refuse the action, returned as `TABLE_GAME_RULE_VIOLATION` with a [reason](#rule-violation-reasons) |
+| 404 | [error response](/http-api/#error-response) | The slot has no table, returned as `UNKNOWN_TABLE_GAME` |
+| 409 | [error response](/http-api/#error-response) | The caller does not play at the table, which includes every spectator, as `TABLE_GAME_CONFLICT` |
+| 409 | [error response](/http-api/#error-response) | The version is stale, or a move is sent to a lobby, returned as `TABLE_GAME_CONFLICT` |
+
+The [common responses](#common-responses) also apply.
+
+### Side effects
+
+An action that changes the table sends a [Table Game Update](/gateway/events/#table-game-update) Dispatch to its players and subscribed spectators before the response.
+
+### Rate limit
+
+30 requests per 10 seconds for each authenticated user, channel ID, and table slot, on the `table_game:action::channel_id::slot` bucket.
+
+## Watch a table game
+
+<RouteHeader method="PUT" path="/v1/channels/{channel_id}/table-games/{slot}/spectators/@me" />
+
+Subscribes the caller to the table's updates while it has fewer than 50 subscribed spectators, issues a 60 second [watch ticket](#watching) either way, and returns whether the caller is subscribed with the public view.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| channel_id | snowflake | The ID of the voice channel |
+| slot | string | The table slot |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| connection_id | string | The caller's voice connection in this channel (1-64 characters) |
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| subscribed | boolean | Whether the caller receives the table's Dispatches, false while the spectators are full |
+| view | [table game view](#table-game-view-object) object | The public view of the table |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The caller watches the table |
+| 400 | [error response](/http-api/#error-response) | `connection_id` fails the membership check, returned as `USER_NOT_IN_VOICE` |
+| 404 | [error response](/http-api/#error-response) | The slot has no table, returned as `UNKNOWN_TABLE_GAME` |
+| 409 | [error response](/http-api/#error-response) | The caller plays at the table, returned as `TABLE_GAME_CONFLICT` |
+
+The [common responses](#common-responses) also apply.
+
+### Side effects
+
+The caller stops watching any other table, subscribed or not.
+
+### Rate limit
+
+10 requests per minute for each authenticated user and channel ID, on the shared `table_game:spectate::channel_id` bucket.
+
+## Stop watching a table game
+
+<RouteHeader method="DELETE" path="/v1/channels/{channel_id}/table-games/{slot}/spectators/@me" />
+
+Ends the caller's subscription to the table's updates and returns 204 with an empty body, whether or not the caller was subscribed.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| channel_id | snowflake | The ID of the voice channel |
+| slot | string | The table slot |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The caller no longer watches the table |
+
+The [common responses](#common-responses) also apply.
+
+### Rate limit
+
+10 requests per minute for each authenticated user and channel ID, on the shared `table_game:spectate::channel_id` bucket.

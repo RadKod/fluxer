@@ -60,7 +60,8 @@ handle_disconnect_if_in_channel(Params) ->
             GuildParams = #{
                 <<"guild_id">> => integer_to_binary(GuildId),
                 <<"user_id">> => UserIdBin,
-                <<"expected_channel_id">> => ChannelIdBin
+                <<"expected_channel_id">> => ChannelIdBin,
+                <<"token_nonce">> => maps:get(<<"token_nonce">>, Params, undefined)
             },
             gateway_rpc_guild:execute_method(
                 <<"guild.disconnect_voice_user_if_in_channel">>,

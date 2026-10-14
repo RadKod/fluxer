@@ -3,6 +3,7 @@
 import {ClientInfo} from '@app/features/app/components/dialogs/components/ClientInfo';
 import {LogoutModal} from '@app/features/app/components/dialogs/components/LogoutModal';
 import styles from '@app/features/app/components/dialogs/components/MobileSettingsView.module.css';
+import {SourceCodeLink} from '@app/features/app/components/dialogs/components/SourceCodeLink';
 import {
 	MobileHeader,
 	MobileHeaderWithBanner,
@@ -493,6 +494,10 @@ const MobileSettingsList = observer(
 					data-flx="app.mobile-settings-view.mobile-settings-list.client-info-container"
 				>
 					<ClientInfo data-flx="app.mobile-settings-view.mobile-settings-list.client-info" />
+					<SourceCodeLink
+						className={styles.sourceCodeLink}
+						data-flx="app.mobile-settings-view.mobile-settings-list.source-code-link"
+					/>
 				</div>
 			</Scroller>
 		);

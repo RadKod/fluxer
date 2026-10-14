@@ -15,7 +15,14 @@ import {
 import {beginMicrophoneSession} from '@app/features/voice/utils/noise_suppression/DeepFilter';
 import NoiseSuppressionAvailability from '@app/features/voice/utils/noise_suppression/NoiseSuppressionAvailability';
 import type {VoiceNoiseSuppressionBackend} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionBackends';
-import {readRequestedNoiseSuppressionBackend} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime';
+import {
+	readEffectiveNoiseSuppression,
+	readNoiseSuppressionBackend,
+	readNoiseSuppressionStrength,
+	readRequestedNoiseSuppressionBackend,
+	readVoicePipelineV2Enabled,
+	resolveRuntimeVoiceProcessing,
+} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime';
 import {
 	applyContentHintToTrack,
 	resolveVoiceProcessing,
@@ -34,13 +41,19 @@ export interface MicTestSettings {
 	inputVolume: number;
 	outputVolume: number;
 	echoCancellation: boolean;
+	noiseSuppression: boolean;
 	autoGainControl: boolean;
+	deepFilterNoiseSuppression: boolean;
+	deepFilterNoiseSuppressionLevel: number;
 	voiceProcessingMode: VoiceProcessingMode;
 	stereoMicrophone: boolean;
 }
 
 function readEffectiveNoiseSuppressionBackend(): VoiceNoiseSuppressionBackend {
-	return NoiseSuppressionAvailability.resolveEffectiveBackend(readRequestedNoiseSuppressionBackend());
+	return NoiseSuppressionAvailability.resolveEffectiveBackend(
+		readRequestedNoiseSuppressionBackend(),
+		readVoicePipelineV2Enabled(),
+	);
 }
 
 function normalizeOutputDeviceId(deviceId: string): string {
@@ -70,25 +83,34 @@ export const useMicTest = (settings: MicTestSettings) => {
 		NoiseSuppressionAvailability.subscribe,
 		readEffectiveNoiseSuppressionBackend,
 	);
+	const pipelineV2Enabled = useSyncExternalStore(NoiseSuppressionAvailability.subscribe, readVoicePipelineV2Enabled);
 	const captureSignature = useMemo(
 		() =>
 			JSON.stringify({
 				inputDeviceId: settings.inputDeviceId,
 				outputDeviceId: settings.outputDeviceId,
 				echoCancellation: settings.echoCancellation,
+				noiseSuppression: settings.noiseSuppression,
 				autoGainControl: settings.autoGainControl,
+				deepFilterNoiseSuppression: settings.deepFilterNoiseSuppression,
+				deepFilterNoiseSuppressionLevel: settings.deepFilterNoiseSuppressionLevel,
 				voiceProcessingMode: settings.voiceProcessingMode,
 				stereoMicrophone: settings.stereoMicrophone,
 				noiseSuppressionBackend,
+				pipelineV2Enabled,
 			}),
 		[
 			settings.autoGainControl,
+			settings.deepFilterNoiseSuppression,
+			settings.deepFilterNoiseSuppressionLevel,
 			settings.echoCancellation,
 			settings.inputDeviceId,
+			settings.noiseSuppression,
 			settings.outputDeviceId,
 			settings.stereoMicrophone,
 			settings.voiceProcessingMode,
 			noiseSuppressionBackend,
+			pipelineV2Enabled,
 		],
 	);
 	const updateLevel = useCallback(() => {
@@ -179,10 +201,8 @@ export const useMicTest = (settings: MicTestSettings) => {
 					return exhaustive;
 				}
 			}
-			const profile = resolveVoiceProcessing(
-				settings,
-				readEffectiveNoiseSuppressionBackend(),
-				settings.stereoMicrophone,
+			const profile = resolveRuntimeVoiceProcessing(
+				resolveVoiceProcessing(settings, readNoiseSuppressionBackend(), settings.stereoMicrophone),
 			);
 			const baseAudioConstraints: MediaTrackConstraints & {voiceIsolation?: boolean} = {
 				echoCancellation: profile.echoCancellation,
@@ -235,14 +255,22 @@ export const useMicTest = (settings: MicTestSettings) => {
 				source: acquired.source,
 				sourceTrack,
 				channelCount: profile.stereoCapture ? 2 : 1,
-				resolveConfig: () => ({
-					backend: resolveVoiceProcessing(settings, readEffectiveNoiseSuppressionBackend(), false)
-						.noiseSuppressionBackend,
-					inputVolumePercent: inputVolumeRef.current,
-					gateEnabled: false,
-					gateAuto: true,
-					gateThresholdRms: 0,
-				}),
+				resolveConfig: () => {
+					const currentProfile = resolveRuntimeVoiceProcessing(
+						resolveVoiceProcessing(settings, readNoiseSuppressionBackend()),
+					);
+					return {
+						processingMode: settings.voiceProcessingMode,
+						backend: currentProfile.noiseSuppressionBackend,
+						pipelineV2Enabled: currentProfile.pipelineV2Enabled,
+						pipelineV2Tuning: readEffectiveNoiseSuppression(48000).pipelineV2Tuning,
+						suppressionStrength: readNoiseSuppressionStrength(profile),
+						inputVolumePercent: inputVolumeRef.current,
+						gateEnabled: false,
+						gateAuto: true,
+						gateThresholdRms: 0,
+					};
+				},
 				outputGain: boostedVoiceVolumePercentToTrackVolume(settings.outputVolume),
 				playbackTarget,
 				playbackDelaySeconds: MIC_TEST_MONITOR_DELAY_SECONDS,

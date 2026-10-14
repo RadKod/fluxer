@@ -126,7 +126,12 @@ export class GuildDiscoveryRepository extends IGuildDiscoveryRepository {
 		updatedRow: GuildDiscoveryRow,
 	): Promise<void> {
 		const batch = new BatchBuilder();
-		batch.addPrepared(
+		// A batch shares one write timestamp and a tombstone wins the tie, so deleting and re-inserting
+		// the same index key here would drop the application from its status index.
+		const indexKeyChanged =
+			oldStatus !== updatedRow.status || oldAppliedAt.getTime() !== updatedRow.applied_at.getTime();
+		batch.addPreparedIf(
+			indexKeyChanged,
 			GuildDiscoveryByStatus.deleteByPk({
 				status: oldStatus,
 				applied_at: oldAppliedAt,

@@ -115,7 +115,7 @@ export default class LocalAudioTrack extends LocalTrack<Track.Kind.Audio> {
 	}
 	protected override async restart(constraints?: MediaTrackConstraints, isUnmuting?: boolean): Promise<typeof this> {
 		const track = await super.restart(constraints, isUnmuting);
-		this.checkForSilence();
+		if (!this.manuallyStopped) this.checkForSilence();
 		return track;
 	}
 

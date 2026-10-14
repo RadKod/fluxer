@@ -43,7 +43,7 @@ export abstract class IAdminRepository {
 
 	abstract isIpBanned(ip: string): Promise<boolean>;
 
-	abstract banIp(ip: string, ttlSeconds?: number | null): Promise<void>;
+	abstract banIp(ip: string, ttlSeconds?: number | null): Promise<Date | null>;
 
 	abstract banIpTemp(ip: string, ttlSeconds: number): Promise<void>;
 
@@ -52,6 +52,10 @@ export abstract class IAdminRepository {
 	abstract loadAllBannedIpEntries(): Promise<Array<BannedIpEntry>>;
 
 	abstract isEmailBanned(email: string): Promise<boolean>;
+
+	abstract isEmailDomainSuspicious(domain: string): Promise<boolean>;
+
+	abstract isEmailDomainDisposable(domain: string): Promise<boolean>;
 
 	abstract banEmail(email: string): Promise<void>;
 

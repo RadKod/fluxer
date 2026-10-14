@@ -40,15 +40,16 @@ export class GatewayRpcClient {
 		GatewayRpcClient.instance = null;
 	}
 
-	async call<T>(method: string, params: Record<string, unknown>): Promise<T> {
+	async call<T>(method: string, params: Record<string, unknown>, retry = true): Promise<T> {
 		Logger.debug(`[gateway-rpc] calling ${method}`);
-		for (let attempt = 0; attempt <= MAX_RETRY_ATTEMPTS; attempt += 1) {
+		const maxRetries = retry ? MAX_RETRY_ATTEMPTS : 0;
+		for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
 			try {
 				const result = await this.executeCall(method, params);
 				return result as T;
 			} catch (error) {
 				const shouldRetry = this.shouldRetry(error, method);
-				if (attempt === MAX_RETRY_ATTEMPTS || !shouldRetry) {
+				if (attempt === maxRetries || !shouldRetry) {
 					throw error;
 				}
 				const backoffMs = this.calculateBackoff(attempt);
@@ -72,7 +73,7 @@ export class GatewayRpcClient {
 		return Math.min(500 * multiplier, ms('2 seconds'));
 	}
 
-	private shouldRetry(error: unknown, method: string): boolean {
+	shouldRetry(error: unknown, method: string): boolean {
 		if (this.isNatsConnectionError(error)) {
 			return true;
 		}

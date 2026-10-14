@@ -10,6 +10,7 @@ import {UserPartialResponse, UserPrivateResponse} from '@fluxer/schema/src/domai
 import {
 	createNamedStringLiteralUnion,
 	createStringType,
+	createUnboundedStringType,
 	SnowflakeStringType,
 } from '@fluxer/schema/src/primitives/SchemaPrimitives';
 import {EmailType, GlobalNameType, PasswordType, UsernameType} from '@fluxer/schema/src/primitives/UserValidators';
@@ -37,6 +38,10 @@ export const RegisterRequest = z.object({
 		.describe('Date of birth in YYYY-MM-DD format'),
 	consent: z.boolean().default(false).describe('Whether user consents to terms of service'),
 	invite_code: createStringType(0, 256).nullish().describe('Guild invite code to join after registration'),
+	referral_code: createUnboundedStringType()
+		.transform((code) => (code.length > 0 && code.length <= 64 ? code : null))
+		.nullish()
+		.describe('Personal referral code from a /r/<code> link; an unknown, malformed or overlong code is ignored'),
 	registration_url_code: createStringType(1, 256)
 		.nullish()
 		.describe('Admin-issued registration URL code to use for this registration'),
@@ -284,6 +289,7 @@ export type UsernameSuggestionsResponse = z.infer<typeof UsernameSuggestionsResp
 
 export const UsernameAvailabilityResponse = z.object({
 	available: z.boolean().describe('Whether no other account holds this username'),
+	reason: z.string().optional(),
 });
 
 export type UsernameAvailabilityResponse = z.infer<typeof UsernameAvailabilityResponse>;

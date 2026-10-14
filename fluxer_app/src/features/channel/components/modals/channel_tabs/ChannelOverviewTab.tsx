@@ -33,6 +33,7 @@ import {
 	ANNOUNCEMENT_CHANNEL_DESCRIPTOR,
 	TRY_AGAIN_IN_A_MOMENT_DESCRIPTOR,
 } from '@app/features/i18n/utils/CommonMessageDescriptors';
+import {shouldShowChannelMatureContentSettings} from '@app/features/mature_content/utils/MatureContentSettingsUtils';
 import Permission from '@app/features/permissions/state/Permission';
 import {failureCode, failureMessage} from '@app/features/platform/utils/ResponseInspection';
 import {ThreadDefaultsSection} from '@app/features/threads/components/ThreadDefaultsSection';
@@ -154,6 +155,7 @@ const ChannelOverviewTab: React.FC<{channelId: string}> = observer(({channelId})
 			user_limit: 0,
 			voice_connection_limit: VOICE_CHANNEL_CONNECTION_LIMIT_DEFAULT,
 			rtc_region: null,
+			room_theme: null,
 		},
 	});
 	const threadDefaultsActive =
@@ -181,6 +183,7 @@ const ChannelOverviewTab: React.FC<{channelId: string}> = observer(({channelId})
 				user_limit: channel.userLimit ?? 0,
 				voice_connection_limit: channel.voiceConnectionLimit ?? VOICE_CHANNEL_CONNECTION_LIMIT_DEFAULT,
 				rtc_region: channel.rtcRegion ?? null,
+				room_theme: channel.roomTheme,
 			}
 		: null;
 	useEffect(() => {
@@ -257,6 +260,7 @@ const ChannelOverviewTab: React.FC<{channelId: string}> = observer(({channelId})
 					updateData.bitrate = Math.min(data.bitrate ?? BITRATE_KBPS_DEFAULT, maxBitrateKbps) * 1000;
 					updateData.user_limit = data.user_limit;
 					updateData.voice_connection_limit = data.voice_connection_limit ?? VOICE_CHANNEL_CONNECTION_LIMIT_DEFAULT;
+					if (dirty.room_theme) updateData.room_theme = data.room_theme;
 				} else if (channel.type === ChannelTypes.GUILD_LINK) {
 					updateData.url = data.url;
 				}
@@ -319,6 +323,7 @@ const ChannelOverviewTab: React.FC<{channelId: string}> = observer(({channelId})
 						currentValues.voice_connection_limit ??
 						VOICE_CHANNEL_CONNECTION_LIMIT_DEFAULT,
 					rtc_region: data.rtc_region ?? currentValues.rtc_region ?? null,
+					room_theme: data.room_theme,
 					...(threadDefaultsActive
 						? {
 								default_auto_archive_duration: data.default_auto_archive_duration,
@@ -403,7 +408,7 @@ const ChannelOverviewTab: React.FC<{channelId: string}> = observer(({channelId})
 	}, []);
 	if (!channel) return null;
 	const isTextChannel = channel.type === ChannelTypes.GUILD_TEXT || channel.type === ChannelTypes.GUILD_ANNOUNCEMENT;
-	const isAnnouncementConvertible = ANNOUNCEMENT_CONVERTIBLE_CHANNEL_TYPES.has(channel.type);
+	const isAnnouncementConvertible = channel.type === ChannelTypes.GUILD_ANNOUNCEMENT; // TEMPORARY: announcement channels are closed; open only after bucketing ((source_channel_id, bucket), source_message_id) and capping followers, on a product decision.
 	const isGuildVoiceChannel = channel.type === ChannelTypes.GUILD_VOICE;
 	const isMessageableGuildChannel = GUILD_TEXT_BASED_CHANNEL_TYPES.has(channel.type);
 	const isCategory = channel.type === ChannelTypes.GUILD_CATEGORY;
@@ -414,7 +419,8 @@ const ChannelOverviewTab: React.FC<{channelId: string}> = observer(({channelId})
 	const showSafetySection =
 		canManageChannel &&
 		Boolean(channel.guildId) &&
-		(isTextChannel || isGuildVoiceChannel || isLinkChannel || isCategory);
+		(isTextChannel || isGuildVoiceChannel || isLinkChannel || isCategory) &&
+		shouldShowChannelMatureContentSettings(channel, guild);
 	const showAdvancedSection = canManageChannel && isGuildVoiceChannel;
 	return (
 		<div className={styles.sectionWrapper} data-flx="channel.channel-tabs.channel-overview-tab.section-wrapper">

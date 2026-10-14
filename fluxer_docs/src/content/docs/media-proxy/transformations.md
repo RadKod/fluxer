@@ -107,6 +107,8 @@ The `format` query parameter, also accepted as `fmt`, overrides the path extensi
 
 A sticker always selects WebP and ignores `format`. An animated GIF sticker stays GIF when `animated` resolves to true.
 
+An animated GIF avatar, icon, or banner that selects WebP with `animated` resolving to true stays GIF when the selected size would not shrink it. When the size shrinks it, the asset is encoded as animated WebP that keeps every frame. When the stored GIF is at most 1.5 times the encoded size on each edge, it is returned instead of a WebP that would not be smaller than it.
+
 ## Quality
 
 Quality names are matched exactly and are case-sensitive. An unrecognised value selects `high`.
@@ -142,7 +144,7 @@ For transformed output, animation requires an animated request and WebP, GIF or 
 PNG and JPEG cannot represent animation. Requesting them with `animated=true` can produce one tall image with the frames stacked vertically.
 :::
 
-An animated GIF request for GIF output is resized in its original container, and is returned untouched when the requested size would not change it. Requesting a cover crop routes it through the image pipeline, which still emits GIF.
+An animated GIF request for GIF output is resized in its original container, and is returned untouched when the requested size would not change it or when the resized GIF would not be smaller than a source at most 1.5 times its size on each edge. Requesting a cover crop routes it through the image pipeline, which still emits GIF.
 
 ## Video thumbnails
 
@@ -166,7 +168,7 @@ A stored object above the [500 MiB media bound](/media-proxy/responses-and-limit
 
 Decoded images are limited to 16,384 pixels on either edge and 268,435,456 pixels in total. Animated input is also limited to 20,000 decoded frames and 1,073,741,824 decoded pixels across all frames. These bounds are fixed. Exceeding a decoded image or animation limit fails the transformation.
 
-Animated WebP and animated APNG output is bounded again at encode time, and exceeding one of those bounds truncates the output. The encoder stops adding frames after 20,000 frames, or once the accumulated frame delays reach 30,000 ms of playback, and emits the frames it already has. An operator can configure the frame cap from 1 through 100,000 and the playback cap from 100 through 600,000 ms. Animated GIF output has neither cap on any encoding path, so the decode limits above are its only bound.
+Animated WebP and animated APNG output is bounded again at encode time, and exceeding one of those bounds truncates the output. The encoder stops adding frames after 20,000 frames, or once the accumulated frame delays reach 30,000 ms of playback, and emits the frames it already has. An operator can configure the frame cap from 1 through 100,000 and the playback cap from 100 through 600,000 ms. Animated GIF output has neither cap on any encoding path, and neither has the animated WebP that a shrunk GIF image asset becomes, so the decode limits above are their only bound.
 
 The transformation deadline defaults to 15,000 ms and can be configured from 1,000 through 120,000 ms. WebP or APNG animation can be shortened to meet it. A GIF resize that reaches the deadline fails.
 

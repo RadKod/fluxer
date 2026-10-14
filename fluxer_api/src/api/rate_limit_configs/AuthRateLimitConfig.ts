@@ -46,7 +46,7 @@ export const AuthRateLimitConfigs = {
 	} as RouteRateLimitConfig,
 	AUTH_USERNAME_AVAILABILITY: {
 		bucket: 'auth:username_availability',
-		config: {limit: 30, windowMs: ms('1 minute')},
+		config: {limit: 20, windowMs: ms('1 minute')},
 	} as RouteRateLimitConfig,
 	AUTH_VALIDATE_RESET_TOKEN: {
 		bucket: 'auth:reset:validate',

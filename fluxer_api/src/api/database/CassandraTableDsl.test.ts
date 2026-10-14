@@ -115,3 +115,24 @@ describe('CassandraTableDsl default TTL', () => {
 		expect(getTableMetadata('default_ttl_dsl_rejected_rows')).toBeUndefined();
 	});
 });
+
+describe('CassandraTableDsl token range', () => {
+	it('selects an inclusive TOKEN() range with both bounds bound as parameters', () => {
+		const query = TtlHelperTestRows.select({
+			where: TtlHelperTestRows.where.tokenRange('id', 'token_start', 'token_end'),
+		}).bind({token_start: -5n, token_end: 7n});
+		expect(query.cql).toBe(
+			'SELECT id, value FROM ttl_helper_test_rows WHERE TOKEN(id) >= :token_start AND TOKEN(id) <= :token_end;',
+		);
+		expect(query.params).toEqual({token_start: -5n, token_end: 7n});
+		expect(query.kvMeta?.where).toEqual([
+			{kind: 'tokenRange', col: 'id', startParam: 'token_start', endParam: 'token_end'},
+		]);
+	});
+
+	it('refuses unsafe bound parameter names', () => {
+		expect(() =>
+			TtlHelperTestRows.selectCql({where: TtlHelperTestRows.where.tokenRange('id', 'token_start', 'end; DROP')}),
+		).toThrow('Unsafe CQL identifier');
+	});
+});

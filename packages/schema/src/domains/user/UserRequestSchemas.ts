@@ -18,6 +18,7 @@ import {
 } from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {SudoVerificationSchema} from '@fluxer/schema/src/domains/auth/AuthSchemas';
+import {GameActivityVisibilitySchema} from '@fluxer/schema/src/domains/user/GameActivitySchemas';
 import {
 	isValidSyncedPreferencesEncoding,
 	SYNCED_PREFERENCES_MAX_ENCODED_LENGTH,
@@ -55,6 +56,7 @@ import {
 	EmailType,
 	GlobalNameType,
 	PasswordType,
+	UsernameLookupType,
 	UsernameType,
 } from '@fluxer/schema/src/primitives/UserValidators';
 import {z} from 'zod';
@@ -191,8 +193,10 @@ export const UserPasswordUpdateRequest = z
 export type UserPasswordUpdateRequest = z.infer<typeof UserPasswordUpdateRequest>;
 
 export const FriendRequestByTagRequest = z.object({
-	username: UsernameType.describe('Username of the user to send friend request'),
-	discriminator: DiscriminatorType.describe('Discriminator tag of the user'),
+	username: z
+		.preprocess((value) => (typeof value === 'string' ? value.replace(/^@/, '') : value), UsernameLookupType)
+		.describe('Username of the user to send friend request'),
+	discriminator: DiscriminatorType.optional().describe('Discriminator tag of the legacy user'),
 });
 
 export type FriendRequestByTagRequest = z.infer<typeof FriendRequestByTagRequest>;
@@ -319,6 +323,9 @@ const UserThemeType = withOpenApiType(
 );
 export const UserSettingsUpdateRequest = z
 	.object({
+		game_activity_visibility: GameActivityVisibilitySchema.nullable().describe(
+			'Who can see the current game; null disables sharing',
+		),
 		flags: z.number().int().describe('Bitfield of user settings flags'),
 		status: UserStatusType,
 		status_resets_at: DateTimeType.nullish().describe('When status resets'),
@@ -389,7 +396,7 @@ export const UserSettingsUpdateRequest = z
 		staff_dm_access_user_ids: z.array(SnowflakeType).nullish().describe('User IDs with Staff DM Access enabled'),
 		profile_privacy: withFieldDescription(
 			ProfilePrivacyLevelSchema,
-			'Controls who sees the full profile: all guild members, only small-guild members, or only friends',
+			'Who sees the full profile: shared communities (0; the legacy 1 reads the same), friends and mutual follows (2), every signed-in user (100) or only you (101)',
 		),
 		default_share_voice_activity: z
 			.boolean()
@@ -464,7 +471,7 @@ export type EmptyBodyRequest = z.infer<typeof EmptyBodyRequest>;
 
 export const UserTagCheckQueryRequest = z.object({
 	username: UsernameType.describe('The username to check'),
-	discriminator: DiscriminatorType.describe('The discriminator to check'),
+	discriminator: DiscriminatorType.optional().describe('The legacy discriminator to check'),
 });
 
 export type UserTagCheckQueryRequest = z.infer<typeof UserTagCheckQueryRequest>;

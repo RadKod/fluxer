@@ -178,6 +178,28 @@ handoff_to_topology_reports_failed_remote_transfer_test() ->
     end,
     SessionPid ! stop.
 
+handoff_to_topology_records_where_the_session_went_test() ->
+    with_session_state_transfer(fun() ->
+        TestPid = self(),
+        SessionId = <<"session-handoff-recorded">>,
+        Target = 'gateway_b@127.0.0.1',
+        TransferState = #{token_hash => utils:hash_token(<<"resume-token">>), seq => 7},
+        SessionPid = spawn(fun() -> transfer_test_session_loop(TestPid, TransferState) end),
+        State = #{sessions => #{SessionId => {SessionPid, make_ref()}}},
+        ok = meck:new(session_state_transfer, [passthrough, no_link]),
+        try
+            ok = meck:expect(session_state_transfer, push_state, fun(_, _, _) -> ok end),
+            ?assertEqual(
+                #{attempted => 1, handed_off => 1},
+                session_manager_shard_drain:handoff_to_topology([Target], State)
+            ),
+            ?assertEqual({ok, Target}, session_state_transfer:handoff_target(SessionId))
+        after
+            meck:unload(session_state_transfer),
+            SessionPid ! stop
+        end
+    end).
+
 push_state_rpc_timeout_does_not_drain_session_test() ->
     TestPid = self(),
     SessionId = <<"session-push-timeout">>,
@@ -283,6 +305,28 @@ build_session_data_normalizes_current_user_for_ready_test() ->
     ?assertEqual(null, maps:get(<<"global_name">>, UserData)),
     ?assertEqual(1, maps:get(<<"mention_flags">>, UserData)),
     ?assertEqual(false, maps:get(<<"is_staff">>, UserData)).
+
+build_session_data_keeps_worn_cosmetics_test() ->
+    Frame = #{<<"asset">> => <<"a_1a2b3c4d">>, <<"item_id">> => <<"1001">>},
+    Ultra = #{<<"asset">> => <<"a_7c8d9e0f">>, <<"item_id">> => <<"3003">>},
+    UserDataMap = #{
+        <<"id">> => <<"123">>,
+        <<"username">> => <<"tester">>,
+        <<"discriminator">> => <<"0001">>,
+        <<"avatar">> => null,
+        <<"avatar_color">> => null,
+        <<"flags">> => 0,
+        <<"avatar_decoration_data">> => Frame,
+        <<"avatar_ultra_data">> => Ultra,
+        <<"nameplate_data">> => null
+    },
+    Data = #{<<"guilds">> => [], <<"user">> => UserDataMap, <<"user_settings">> => null},
+    IdentifyData = #{properties => #{}, token => <<"token">>, presence => null},
+    SessionData = build_test_session_data(Data, IdentifyData, UserDataMap),
+    UserData = maps:get(user_data, SessionData),
+    ?assertEqual(Frame, maps:get(<<"avatar_decoration_data">>, UserData)),
+    ?assertEqual(Ultra, maps:get(<<"avatar_ultra_data">>, UserData)),
+    ?assertEqual(null, maps:get(<<"nameplate_data">>, UserData)).
 
 build_session_data_filters_guilds_for_identify_shard_test() ->
     Guild0 = guild_id_for_shard(0, 4, 0),

@@ -34,6 +34,11 @@ function createUser(overrides: {emailVerified: boolean; isBot?: boolean}): User 
 	return {
 		id: 1n,
 		isBot: overrides.isBot ?? false,
+		isSystem: false,
+		flags: 0n,
+		deletionStartedAt: null,
+		tempBannedUntil: null,
+		usernameState: 'selected',
 		emailVerified: overrides.emailVerified,
 		isUnclaimedAccount: () => false,
 	} as unknown as User;

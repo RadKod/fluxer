@@ -26,7 +26,7 @@ import {
 	resolveUploadSizes,
 } from '@app/features/premium/components/plutonium_page/PlutoniumPageComparison';
 import {PlutoniumPageIcon} from '@app/features/premium/components/plutonium_page/PlutoniumPageIcons';
-import {CROWN_AVIF, CROWN_WEBP} from '@app/features/premium/components/plutonium_page/PlutoniumPageMedia';
+import {CROWN_WEBP} from '@app/features/premium/components/plutonium_page/PlutoniumPageMedia';
 import {
 	BACK_DESCRIPTOR,
 	CLOSING_BODY_DESCRIPTOR,
@@ -52,8 +52,6 @@ import {
 	SAVE_PERCENT_DESCRIPTOR,
 	SUBSCRIBE_MONTHLY_DESCRIPTOR,
 	SUBSCRIBE_YEARLY_DESCRIPTOR,
-	TAG_FOOTNOTE_DESCRIPTOR,
-	TAG_FOOTNOTE_LINK_DESCRIPTOR,
 	VISIONARY_THANKS_DESCRIPTOR,
 	YEARLY_PRICE_DESCRIPTOR,
 } from '@app/features/premium/components/plutonium_page/PlutoniumPageMessages';
@@ -84,7 +82,6 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 
 type CheckoutPlan = 'monthly' | 'yearly' | 'gift_1_month' | 'gift_1_year';
 
-const FOOTNOTE_ID = 'plutonium-page-tag-footnote';
 const MANAGE_ID = 'plutonium-page-manage';
 const COMPARE_ID = 'plutonium-page-compare';
 const PLACEHOLDER_PRICE = '...';
@@ -219,13 +216,6 @@ export const PlutoniumPage = observer(function PlutoniumPage() {
 		const target = scrollerRef.current?.querySelector<HTMLElement>(`#${id}`);
 		target?.scrollIntoView({behavior: 'smooth', block});
 	}, []);
-	const handleFootnoteClick = useCallback(
-		(event: React.MouseEvent<HTMLAnchorElement>) => {
-			event.preventDefault();
-			scrollToId(FOOTNOTE_ID, 'center');
-		},
-		[scrollToId],
-	);
 	const handleBack = useCallback(() => {
 		const history = RouterUtils.getHistory();
 		if (history && window.history.length > 1) {
@@ -332,8 +322,6 @@ export const PlutoniumPage = observer(function PlutoniumPage() {
 	const showDonationHint = !RuntimeConfig.isSelfHosted();
 	const donationTemplate = i18n._(DONATION_HINT_DESCRIPTOR, {productName: PRODUCT_NAME, donateLink: '\u0000'});
 	const [donationBefore, donationAfter] = splitTemplate(donationTemplate, '\u0000');
-	const footnoteTemplate = i18n._(TAG_FOOTNOTE_DESCRIPTOR, {productName: PRODUCT_NAME, visionaryLink: '\u0000'});
-	const [footnoteBefore, footnoteAfter] = splitTemplate(footnoteTemplate, '\u0000');
 	const secondaryLinks = (
 		<div className={styles.secondaryLinks} data-flx="premium.plutonium-page.hero.secondary-links">
 			{giftPurchasesAvailable && (
@@ -452,7 +440,6 @@ export const PlutoniumPage = observer(function PlutoniumPage() {
 						{!RuntimeConfig.isSelfHosted() && (
 							<div className={styles.crownWrap}>
 								<picture>
-									<source type="image/avif" srcSet={CROWN_AVIF} />
 									<img
 										draggable={false}
 										className={styles.crown}
@@ -571,16 +558,9 @@ export const PlutoniumPage = observer(function PlutoniumPage() {
 							</div>
 						</section>
 					)}
-					<PlutoniumPageShowcase
-						uploadSize={uploadSizes.premium}
-						freeUploadSize={uploadSizes.free}
-						footnoteId={FOOTNOTE_ID}
-						onFootnoteClick={handleFootnoteClick}
-					/>
+					<PlutoniumPageShowcase uploadSize={uploadSizes.premium} freeUploadSize={uploadSizes.free} />
 					<div id={COMPARE_ID} data-flx="premium.plutonium-page.compare-anchor">
 						<PlutoniumPageComparison
-							footnoteId={FOOTNOTE_ID}
-							onFootnoteClick={handleFootnoteClick}
 							actions={
 								canSubscribe ? subscribeButtons('comparison') : isMember ? giftButton('primary', 'comparison') : null
 							}
@@ -608,23 +588,6 @@ export const PlutoniumPage = observer(function PlutoniumPage() {
 								</div>
 							</div>
 						</section>
-					)}
-					{!RuntimeConfig.usesUniqueUsernames && (
-						<p id={FOOTNOTE_ID} className={styles.footnote} data-flx="premium.plutonium-page.footnote">
-							<span>{`* ${footnoteBefore}`}</span>
-							<FocusRing offset={-2}>
-								<a
-									className={styles.inlineLink}
-									href={Routes.helpArticle('visionary')}
-									target="_blank"
-									rel="noopener noreferrer"
-									data-flx="premium.plutonium-page.footnote.visionary-link"
-								>
-									{i18n._(TAG_FOOTNOTE_LINK_DESCRIPTOR)}
-								</a>
-							</FocusRing>
-							<span>{footnoteAfter}</span>
-						</p>
 					)}
 				</div>
 			</div>

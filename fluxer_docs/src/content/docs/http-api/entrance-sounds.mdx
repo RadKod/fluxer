@@ -26,7 +26,7 @@ Every bound below is a fixed constant of the instance, and none is resolved from
 
 <sup>2</sup> Only [Upload entrance sound](#upload-entrance-sound) applies the lower bound
 
-The [instance discovery](/http-api/instance/#limit-keys) document publishes a `feature_voice_entrance_sounds` limit key. The Fluxer client reads that key to decide whether it opens the clip upload dialog and whether it calls [Play entrance sound](#play-entrance-sound) after it connects to a voice channel. No route on this page checks it, so a library can be read, written, and played back regardless of its resolved value.
+The [instance discovery](/http-api/instance/#limit-keys) document publishes a `feature_voice_entrance_sounds` limit key. The Fluxer client reads that key to decide whether it opens the clip upload dialog and whether it calls [Play entrance sound](#play-entrance-sound) after it connects to a voice channel. Upload, assigning a sound to a scope, and playback require the caller's resolved feature value to be greater than zero; otherwise they return 400 `INVALID_FORM_BODY` with the validation code `ENTRANCE_SOUNDS_REQUIRE_PREMIUM`. Listing, renaming, deleting saved sounds, and clearing a selection (`sound_id: null`) remain available when the feature is unavailable, and losing access does not delete saved sounds or selections.
 
 ## Supported containers
 
@@ -179,6 +179,7 @@ Every failure below returns 400 `INVALID_FORM_BODY`. A response can contain more
 | Failure | Validation code | Path |
 | --- | --- | --- |
 | The field is absent or is a literal empty string<sup>1</sup> | `INVALID_FORMAT` | name or audio |
+| Caller lacks premium access | `ENTRANCE_SOUNDS_REQUIRE_PREMIUM` | audio |
 | The normalised name is empty or longer than 32 characters | `STRING_LENGTH_INVALID` | name |
 | The encoded payload is empty or longer than 1398134 characters<sup>2</sup> | `BASE64_LENGTH_INVALID` | audio |
 | The payload is not valid base64 | `INVALID_BASE64_FORMAT` | audio |
@@ -303,7 +304,8 @@ A `guild:{guild_id}` scope does not require current guild membership. A non-null
 | Status | Body | Condition |
 | --- | --- | --- |
 | 204 | empty | Selection was written or cleared |
-| 400 | [error response](/http-api/#error-response) | Scope is unrecognised and the request returns `INVALID_FORMAT` at the `scope_id` path, or the account owns no such clip and the request returns `ENTRANCE_SOUND_NOT_FOUND` at the `sound_id` path |
+| 400 | [error response](/http-api/#error-response) | Scope is unrecognised and the request returns `INVALID_FORMAT` at the `scope_id` path, a non-null `sound_id` requires the `feature_voice_entrance_sounds` entitlement and returns `ENTRANCE_SOUNDS_REQUIRE_PREMIUM` at the `sound_id` path when unavailable, or the account owns no such clip and the request returns `ENTRANCE_SOUND_NOT_FOUND` at the `sound_id` path |
+
 | 403 | [error response](/http-api/#error-response) | The account is [limited](/http-api/users/#account-limitation) and the request returns `ACCOUNT_LIMITED` |
 
 ### Side effects
@@ -339,10 +341,10 @@ Recipients fetch and play the clip locally from the URL in the event.
 | Status | Body | Condition |
 | --- | --- | --- |
 | 204 | empty | Fluxer attempted a Dispatch to every other connected account |
-| 400 | [error response](/http-api/#error-response) | Caller holds no voice state in the channel, including when the channel does not exist, and the request returns `ENTRANCE_SOUND_INVALID_SCOPE` at the `channel_id` path, or the account owns no such clip and the request returns `ENTRANCE_SOUND_NOT_FOUND` at the `sound_id` path |
+| 400 | [error response](/http-api/#error-response) | Caller holds no voice state in the channel, including when the channel does not exist, and the request returns `ENTRANCE_SOUND_INVALID_SCOPE` at the `channel_id` path, the caller does not have the `feature_voice_entrance_sounds` entitlement and the request returns `ENTRANCE_SOUNDS_REQUIRE_PREMIUM` at the `sound_id` path, or the account owns no such clip and the request returns `ENTRANCE_SOUND_NOT_FOUND` at the `sound_id` path |
 
-:::caution[Connection is the only authorisation]
-Fluxer evaluates no channel permission and checks no guild membership.
+:::caution[Connection and entitlement are required]
+The caller must hold a voice state in the channel and have the `feature_voice_entrance_sounds` entitlement. Fluxer evaluates no channel permission and checks no guild membership.
 :::
 
 An ID naming no channel is refused exactly like a channel the caller is not connected to. The connection check runs before the clip is looked up, so a caller who is not connected never learns whether the named clip exists.

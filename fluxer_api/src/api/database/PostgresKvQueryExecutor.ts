@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {getKvMeta, getTableMetadata} from '@app/api/database/CassandraMetaRegistry';
+import type {CassandraReadOptions} from '@app/api/database/CassandraQueryExecution';
 import type {
 	CassandraParams,
 	ColumnName,
@@ -15,6 +16,24 @@ import {type IPostgresClient, type PostgresQueryable, quoteIdentifier} from '@pk
 import cassandra from 'cassandra-driver';
 
 type Row = Record<string, unknown>;
+
+export class UnsupportedWriteTimestampError extends Error {
+	constructor() {
+		super('Postgres KV does not support Cassandra write timestamps or WRITETIME');
+		this.name = 'UnsupportedWriteTimestampError';
+	}
+}
+
+function assertSupportedTimestamps(query: PreparedQuery): void {
+	const meta = query.kvMeta ?? getKvMeta(query.cql);
+	if (
+		meta?.timestampParamName !== undefined ||
+		meta?.writeTime !== undefined ||
+		/\bUSING\s+TIMESTAMP\b|\bAND\s+TIMESTAMP\s+(?=[:?+-]|\d)|\bWRITETIME\s*\(/i.test(query.cql)
+	) {
+		throw new UnsupportedWriteTimestampError();
+	}
+}
 type EqWhereExpr = Extract<WhereExpr<Row>, {kind: 'eq'}>;
 type InWhereExpr = Extract<WhereExpr<Row>, {kind: 'in'}>;
 type PinnedWhereExpr = EqWhereExpr | InWhereExpr;
@@ -325,6 +344,10 @@ export function matchesWhere(
 				break;
 			case 'gte':
 				if (compareValues(row[clause.col], getParam(params, clause.param)) < 0) return false;
+				break;
+			case 'tokenRange':
+				if (compareValues(row[clause.col], getParam(params, clause.startParam)) < 0) return false;
+				if (compareValues(row[clause.col], getParam(params, clause.endParam)) > 0) return false;
 				break;
 			case 'tupleGt': {
 				const left = clause.cols.map((column) => row[column]);
@@ -753,6 +776,20 @@ function numericScanPlan(meta: KvQueryMeta, plan: QueryPlan): boolean {
 	return plan.exact && plan.candidates.kind === 'scan' && (meta.table.primaryKey as ReadonlyArray<string>).length === 1;
 }
 
+// Postgres KV has no token ring: like tokenGt, a token range compares the key itself, which still hands every
+// key to exactly one range of a split ring. On a single numeric primary key it pages on the numeric index.
+function numericKeyRange(meta: KvQueryMeta, params: CassandraParams): {start: string; end: string} | null {
+	const where = whereClauses(meta);
+	const clause = where[0];
+	const primaryKey = meta.table.primaryKey as ReadonlyArray<string>;
+	if (where.length !== 1 || clause?.kind !== 'tokenRange' || primaryKey.length !== 1 || clause.col !== primaryKey[0]) {
+		return null;
+	}
+	const start = numericKeyValue(getParam(params, clause.startParam));
+	const end = numericKeyValue(getParam(params, clause.endParam));
+	return start === null || end === null ? null : {start, end};
+}
+
 function numericScanKeyed(meta: KvQueryMeta, plan: QueryPlan, entries: ReadonlyArray<PageEntry>): boolean {
 	if (!numericScanPlan(meta, plan)) return false;
 	const column = (meta.table.primaryKey as ReadonlyArray<string>)[0]!;
@@ -991,8 +1028,10 @@ export class PostgresKvQueryExecutor {
 
 	async executeQuery<T = Row, P extends CassandraParams = CassandraParams>(
 		query: PreparedQuery<P>,
-		db: PostgresQueryable = this.client,
+		dbOrReadOptions: PostgresQueryable | CassandraReadOptions = this.client,
 	): Promise<Array<T>> {
+		assertSupportedTimestamps(query);
+		const db = 'query' in dbOrReadOptions ? dbOrReadOptions : this.client;
 		const meta = this.meta(query);
 		if (meta.conditions !== undefined) {
 			return (await this.conditionalWrite(meta, query.params, db)) as Array<T>;
@@ -1029,13 +1068,17 @@ export class PostgresKvQueryExecutor {
 		query: PreparedQuery<P>,
 		options: {pageSize: number; pageState?: string | null},
 	): Promise<{rows: Array<T>; pageState: string | null}> {
+		assertSupportedTimestamps(query);
 		const state = decodePageState(options.pageState);
 		const meta = this.meta(query);
 		if (pageableSelect(meta, options.pageSize) && (state.after !== undefined || state.offset === 0)) {
 			const plan = buildCandidatePlan(meta, query.params);
-			const cursor = numericScanPlan(meta, plan) ? numericScanCursor(state) : null;
+			const keyRange = numericKeyRange(meta, query.params);
+			const rangeCursor = state.after === undefined && keyRange ? {rowKey: '', value: keyRange.start} : null;
+			const cursor =
+				rangeCursor ?? (keyRange !== null || numericScanPlan(meta, plan) ? numericScanCursor(state) : null);
 			const page = cursor
-				? await this.numericScanPage(meta, query.params, cursor, state.offset, options.pageSize)
+				? await this.numericScanPage(meta, query.params, cursor, state.offset, options.pageSize, keyRange?.end)
 				: await this.sortedPage(meta, query.params, plan, state, options.pageSize);
 			return {rows: page.rows as Array<T>, pageState: page.pageState};
 		}
@@ -1054,11 +1097,13 @@ export class PostgresKvQueryExecutor {
 		cursor: {rowKey: string; value: string},
 		offset: number,
 		pageSize: number,
+		upperBound?: string,
 	): Promise<{rows: Array<Row>; pageState: string | null}> {
 		logFullScan(meta);
+		const upper = upperBound === undefined ? '' : ` AND ${NUMERIC_ROW_KEY} <= $5::numeric`;
 		const result = await this.client.query<StoredRow>(
-			`SELECT kv.row_key, kv.row_data FROM ${this.table} kv WHERE kv.table_name = $1 AND ${NUMERIC_ROW_KEY} IS NOT NULL AND (${NUMERIC_ROW_KEY}, kv.row_key COLLATE "C") > ($2::numeric, $3) AND (kv.expires_at IS NULL OR kv.expires_at > now()) ORDER BY ${NUMERIC_ROW_KEY}, kv.row_key COLLATE "C" LIMIT $4`,
-			[meta.table.name, cursor.value, cursor.rowKey, pageSize + 1],
+			`SELECT kv.row_key, kv.row_data FROM ${this.table} kv WHERE kv.table_name = $1 AND ${NUMERIC_ROW_KEY} IS NOT NULL AND (${NUMERIC_ROW_KEY}, kv.row_key COLLATE "C") > ($2::numeric, $3)${upper} AND (kv.expires_at IS NULL OR kv.expires_at > now()) ORDER BY ${NUMERIC_ROW_KEY}, kv.row_key COLLATE "C" LIMIT $4`,
+			[meta.table.name, cursor.value, cursor.rowKey, pageSize + 1, ...(upperBound === undefined ? [] : [upperBound])],
 		);
 		const entries = this.matchingEntries(meta, result.rows.slice(0, pageSize), params);
 		const last = entries[entries.length - 1];
@@ -1104,6 +1149,7 @@ export class PostgresKvQueryExecutor {
 		atomic = true,
 	): Promise<void> {
 		for (const query of queries) {
+			assertSupportedTimestamps({cql: query.query, params: query.params as CassandraParams, kvMeta: query.meta});
 			if (isConditionalQuery({cql: query.query, params: query.params as CassandraParams, kvMeta: query.meta})) {
 				throw new Error('Conditional writes must use executeConditional to preserve their result');
 			}

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import '@app/api/stripe/tests/DormantStripeTestFixture';
 import {Config} from '@app/api/Config';
 import {DonationRepository} from '@app/api/donation/DonationRepository';
 import {DonorMagicLinkToken} from '@app/api/donation/models/DonorMagicLinkToken';

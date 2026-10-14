@@ -2,6 +2,7 @@
 
 import {Endpoints} from '@app/features/app/constants/Endpoints';
 import GeoIP from '@app/features/app/state/GeoIP';
+import {AccountScopedWork, accountScopedWorkAbortError} from '@app/features/platform/state/AccountScopedWork';
 import {http} from '@app/features/platform/transport/RestTransport';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import PremiumState from '@app/features/premium/state/PremiumState';
@@ -35,6 +36,7 @@ interface PremiumPerksDisabledRequest {
 }
 
 const priceIdsCache = new Map<string, CachedPriceIdsEntry>();
+let generation = 0;
 
 function normalizedCountryCode(countryCode?: string): string | undefined {
 	return countryCode?.toUpperCase();
@@ -81,6 +83,8 @@ async function postAndInvalidate(endpoint: string, body?: Record<string, string>
 }
 
 export async function fetchPriceIds(countryCode?: string): Promise<PriceIds> {
+	if (AccountScopedWork.isSuspended) throw accountScopedWorkAbortError();
+	const requestGeneration = generation;
 	const country = normalizedCountryCode(countryCode);
 	const cacheKey = priceIdsCacheKey(country);
 	const cachedEntry = priceIdsCache.get(cacheKey);
@@ -95,6 +99,7 @@ export async function fetchPriceIds(countryCode?: string): Promise<PriceIds> {
 			const response = await http.get<PriceIds>(Endpoints.PREMIUM_PRICE_IDS, {
 				query: priceIdsQuery(country),
 			});
+			if (requestGeneration !== generation) throw accountScopedWorkAbortError();
 			logger.debug('Price IDs fetched', response.body);
 			priceIdsCache.set(cacheKey, {
 				value: response.body,
@@ -102,7 +107,7 @@ export async function fetchPriceIds(countryCode?: string): Promise<PriceIds> {
 			});
 			return response.body;
 		} catch (error) {
-			priceIdsCache.delete(cacheKey);
+			if (requestGeneration === generation) priceIdsCache.delete(cacheKey);
 			logger.error('Price IDs fetch failed', error);
 			throw error;
 		}
@@ -124,6 +129,8 @@ interface CachedCurrentSubscriptionPrice {
 let currentSubscriptionPriceCache: CachedCurrentSubscriptionPrice | null = null;
 
 export async function fetchCurrentSubscriptionPrice(): Promise<CurrentSubscriptionPriceResponse> {
+	if (AccountScopedWork.isSuspended) throw accountScopedWorkAbortError();
+	const requestGeneration = generation;
 	const cached = currentSubscriptionPriceCache;
 	if (cached && cached.fetchedAt != null && Date.now() - cached.fetchedAt < CURRENT_SUBSCRIPTION_PRICE_CACHE_TTL_MS) {
 		return cached.value ?? null;
@@ -134,10 +141,11 @@ export async function fetchCurrentSubscriptionPrice(): Promise<CurrentSubscripti
 	const request = (async () => {
 		try {
 			const response = await http.get<CurrentSubscriptionPriceResponse>(Endpoints.PREMIUM_CURRENT_SUBSCRIPTION_PRICE);
+			if (requestGeneration !== generation) throw accountScopedWorkAbortError();
 			currentSubscriptionPriceCache = {value: response.body, fetchedAt: Date.now()};
 			return response.body;
 		} catch (error) {
-			currentSubscriptionPriceCache = null;
+			if (requestGeneration === generation) currentSubscriptionPriceCache = null;
 			logger.error('Current subscription price fetch failed', error);
 			throw error;
 		}
@@ -177,7 +185,10 @@ function applyPremiumStateToCurrentUser(state: PremiumStateResponse): void {
 }
 
 export async function fetchPremiumState(countryCode?: string): Promise<PremiumStateResponse> {
+	if (AccountScopedWork.isSuspended) throw accountScopedWorkAbortError();
+	const requestGeneration = generation;
 	const country = await resolvePremiumStateCountryCode(countryCode);
+	if (requestGeneration !== generation) throw accountScopedWorkAbortError();
 	const response = await http.get<PremiumStateResponse>(Endpoints.PREMIUM_STATE, {
 		...(country ? {query: {country_code: country}} : {}),
 	});
@@ -189,14 +200,15 @@ function isAbortError(error: unknown): boolean {
 }
 
 export async function refreshPremiumState(countryCode?: string): Promise<PremiumStateResponse> {
+	if (AccountScopedWork.isSuspended) throw accountScopedWorkAbortError();
+	const requestGeneration = generation;
 	const currentUserId = Users.currentUser?.id;
 	if (currentUserId) {
 		PremiumState.beginLoad(currentUserId);
 	}
 	try {
 		const state = await fetchPremiumState(countryCode);
-		if (Users.currentUser?.id !== currentUserId) {
-			PremiumState.finishLoad();
+		if (requestGeneration !== generation || Users.currentUser?.id !== currentUserId) {
 			return state;
 		}
 		if (currentUserId) {
@@ -205,7 +217,7 @@ export async function refreshPremiumState(countryCode?: string): Promise<Premium
 		applyPremiumStateToCurrentUser(state);
 		return state;
 	} catch (error) {
-		PremiumState.finishLoad();
+		if (requestGeneration === generation) PremiumState.finishLoad();
 		if (!isAbortError(error)) {
 			logger.error('Premium state fetch failed', error);
 		}
@@ -214,11 +226,12 @@ export async function refreshPremiumState(countryCode?: string): Promise<Premium
 }
 
 export async function setPremiumPerksDisabled(disabled: boolean): Promise<PremiumStateResponse> {
+	const requestGeneration = generation;
 	const currentUserId = Users.currentUser?.id;
 	const response = await http.patch<PremiumStateResponse>(Endpoints.PREMIUM_PERKS_DISABLED, {
 		body: {disabled} satisfies PremiumPerksDisabledRequest,
 	});
-	if (Users.currentUser?.id !== currentUserId) {
+	if (requestGeneration !== generation || Users.currentUser?.id !== currentUserId) {
 		return response.body;
 	}
 	if (currentUserId) {
@@ -361,3 +374,9 @@ export async function rejoinVisionaryGuild(): Promise<void> {
 		throw error;
 	}
 }
+
+AccountScopedWork.registerCancellation(() => {
+	generation += 1;
+	priceIdsCache.clear();
+	currentSubscriptionPriceCache = null;
+});

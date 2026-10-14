@@ -2,9 +2,15 @@
 
 import {createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createTestGuild, getPngDataUrl} from '@app/api/emoji/tests/EmojiTestUtils';
+import {getGatewayService, setInjectedWorkerService} from '@app/api/middleware/ServiceRegistry';
+import {getGuildRepository, getUserCacheService, getUserRepository} from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {NoopGatewayService} from '@app/api/test/NoopGatewayService';
+import {NoopWorkerService} from '@app/api/test/NoopWorkerService';
+import {SyncTaskWorkerService} from '@app/api/test/SyncTaskWorkerService';
 import {updateAvatar} from '@app/api/user/tests/UserTestUtils';
+import propagatePartialUserChange from '@app/api/worker/tasks/PropagatePartialUserChange';
+import {clearWorkerDependencies, setWorkerDependenciesForTest} from '@app/api/worker/WorkerContext';
 import type {GuildMemberResponse} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, type MockInstance, vi} from 'vitest';
 
@@ -29,9 +35,19 @@ describe('User Profile Guild Propagation', () => {
 	});
 	beforeEach(async () => {
 		await harness.reset();
+		setWorkerDependenciesForTest({
+			kvClient: harness.kvProvider,
+			userRepository: getUserRepository(),
+			guildRepository: getGuildRepository(),
+			userCacheService: getUserCacheService(),
+			gatewayService: getGatewayService(),
+		});
+		setInjectedWorkerService(new SyncTaskWorkerService({propagatePartialUserChange}));
 	});
 	afterEach(() => {
 		vi.restoreAllMocks();
+		clearWorkerDependencies();
+		setInjectedWorkerService(new NoopWorkerService());
 	});
 	afterAll(async () => {
 		await harness?.shutdown();

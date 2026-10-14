@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // @vitest-environment happy-dom
 
-import {afterEach, describe, expect, it, vi} from 'vitest';
+import {afterAll, afterEach, describe, expect, it, vi} from 'vitest';
 
 const mocks = vi.hoisted(() => ({
 	accountKey: 'https://one.example/api::100' as string | null,
@@ -39,6 +39,10 @@ vi.mock('@app/features/channel/state/Channels', () => ({
 		handleMessageCreate: vi.fn(),
 	},
 }));
+
+const initializationErrors: Array<Error> = [];
+const recordInitializationError = (error: Error) => initializationErrors.push(error);
+process.on('uncaughtExceptionMonitor', recordInitializationError);
 
 const {AccountScopedWork, AccountScopedWorkTransitionReason} = await import(
 	'@app/features/platform/state/AccountScopedWork'
@@ -86,9 +90,17 @@ function send(nonce: string, content: string): Promise<unknown> {
 }
 
 describe('composer state across an account transition', () => {
+	afterAll(() => {
+		process.removeListener('uncaughtExceptionMonitor', recordInitializationError);
+		expect(initializationErrors).toEqual([]);
+	});
 	afterEach(() => {
 		mocks.accountKey = ACCOUNT_A;
 		mocks.post.mockReset();
+	});
+
+	it('initializes the messaging dependency graph without notification reference errors', () => {
+		expect(initializationErrors).toEqual([]);
 	});
 
 	it('never sends a message queued by the previous account', async () => {

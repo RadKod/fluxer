@@ -351,6 +351,7 @@ function createHarness(overrides: Partial<AuthSessionDependencies> = {}): Harnes
 		closeLayers: () => undefined,
 		clearSudoToken: () => undefined,
 		sendInvisiblePresence: () => undefined,
+		captureForegroundFeedSnapshot: () => undefined,
 		cleanupGatewaySession: (reason) => {
 			gatewayTeardowns.push(reason);
 		},
@@ -775,6 +776,63 @@ describe('the active account pointer', () => {
 		expect(window.localStorage.getItem(AuthSessionStorageKey.UserId)).toBeNull();
 		expect(window.localStorage.getItem(AuthSessionStorageKey.ActiveAccountKey)).toBeNull();
 		expect(window.localStorage.getItem(GATEWAY_PREBOOT_SESSION_STORAGE_KEY)).toBeNull();
+	});
+
+	test('a 4004 close of the active session resets its synced settings like a logout', async () => {
+		const steps: Array<string> = [];
+		const harness = createHarness({
+			deactivateRuntime: async () => {
+				steps.push('deactivate');
+			},
+			resetSyncedUserSettings: async (reason) => {
+				steps.push(`reset:${reason}`);
+			},
+		});
+		await harness.session.login({token: 'token-100', userId: '100', runtimeSnapshot: PRIMARY});
+		steps.length = 0;
+
+		await harness.session.handleConnectionClosed(4004);
+
+		expect(steps).toEqual(['deactivate', 'reset:logout']);
+	});
+
+	test('a 4004 close resets synced settings in the storage scope of the closed account', async () => {
+		let scope: string | null = null;
+		const resetScopes: Array<string | null> = [];
+		const harness = createHarness({
+			activateStorageScope: async (accountKey) => {
+				scope = accountKey;
+			},
+			resetSyncedUserSettings: async () => {
+				resetScopes.push(scope);
+			},
+		});
+		await harness.session.login({token: 'token-100', userId: '100', runtimeSnapshot: PRIMARY});
+		resetScopes.length = 0;
+
+		await harness.session.handleConnectionClosed(4004);
+		await harness.session.login({token: 'token-200', userId: '200', runtimeSnapshot: PRIMARY});
+
+		expect(resetScopes).toEqual([`${PRIMARY_KEY}::100`]);
+	});
+
+	test('a 4004 close of a background account leaves the active synced settings alone', async () => {
+		const steps: Array<string> = [];
+		const harness = createHarness({
+			resetSyncedUserSettings: async () => {
+				steps.push('reset');
+			},
+		});
+		harness.validTokens.set('token-100', '100');
+		harness.validTokens.set('token-200', '200');
+		await harness.session.login({token: 'token-100', userId: '100', runtimeSnapshot: PRIMARY});
+		await harness.session.login({token: 'token-200', userId: '200', runtimeSnapshot: PRIMARY});
+		steps.length = 0;
+
+		const result = await harness.session.handleConnectionClosed(4004, `${PRIMARY_KEY}::100`);
+
+		expect(result.invalidatedCurrentSession).toBe(false);
+		expect(steps).toEqual([]);
 	});
 
 	test('a token rotation refreshes the mirror without moving the account key', async () => {

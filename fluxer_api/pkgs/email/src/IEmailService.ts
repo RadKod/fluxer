@@ -82,6 +82,7 @@ export interface IEmailService {
 		locale?: string | null,
 	): Promise<boolean>;
 	sendGiftChargebackNotification(email: string, username: string, locale?: string | null): Promise<boolean>;
+	sendReferralRewardReadyEmail(email: string, username: string, locale?: string | null): Promise<boolean>;
 	sendReportResolvedEmail(
 		email: string,
 		username: string,

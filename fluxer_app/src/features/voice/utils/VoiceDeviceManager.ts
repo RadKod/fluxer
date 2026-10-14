@@ -435,11 +435,13 @@ class VoiceDeviceManager {
 	private scheduledEnumerationPermissionIntents = new Map<VoiceMediaPermissionType, VoiceMediaPermissionIntent>();
 	private enumerationChainPermissionIntents = new Map<VoiceMediaPermissionType, VoiceMediaPermissionIntent>();
 	private hasEnumeratedDevices = false;
+	private markInUse: (() => void) | null = null;
+	private readonly inUse = new Promise<void>((resolve) => {
+		this.markInUse = resolve;
+	});
 
-	constructor() {
-		if (typeof navigator !== 'undefined' && navigator.mediaDevices?.addEventListener) {
-			navigator.mediaDevices.addEventListener('devicechange', this.handleDeviceChange);
-		}
+	public whenInUse(): Promise<void> {
+		return this.inUse;
 	}
 
 	public getState(): VoiceDeviceState {
@@ -455,6 +457,7 @@ class VoiceDeviceManager {
 	}
 
 	public async ensureDevices(options: EnsureVoiceDevicesOptions = {}): Promise<VoiceDeviceState> {
+		this.startWatchingDevices();
 		const permissionIntents = this.resolvePermissionIntents(options);
 		const forceRefresh = options.forceRefresh ?? false;
 		logger.debug('ensureDevices called', {
@@ -738,6 +741,17 @@ class VoiceDeviceManager {
 			...partial,
 		};
 		this.listeners.forEach((listener) => listener(this.state));
+	}
+
+	// Chromium starts its video capture service for a devicechange subscription or an enumeration and keeps it for
+	// the browser's lifetime, so device access starts with the first real use instead of at startup.
+	private startWatchingDevices(): void {
+		if (!this.markInUse) return;
+		this.markInUse();
+		this.markInUse = null;
+		if (typeof navigator !== 'undefined' && navigator.mediaDevices?.addEventListener) {
+			navigator.mediaDevices.addEventListener('devicechange', this.handleDeviceChange);
+		}
 	}
 
 	private handleDeviceChange = () => {

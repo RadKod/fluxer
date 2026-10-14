@@ -1,0 +1,121 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* The profile rail beside the feed: the page's full height below the header, a line on its start edge. */
+.aside {
+	display: flex;
+	flex-shrink: 0;
+	flex-direction: column;
+	gap: 0.875rem;
+	box-sizing: border-box;
+	width: 19.75rem;
+	padding: 1rem;
+	border-inline-start: 0.0625rem solid var(--border-color);
+	overflow-y: auto;
+}
+
+/* The feed page body is the container (FeedPage.module.css .body): below the 37.5rem column + this 19.75rem rail,
+   the rail goes and the column keeps the width. */
+@container (max-width: 57.25rem) {
+	.aside {
+		display: none;
+	}
+}
+
+/* flex-shrink 0: overflow hidden would let the scrolling rail squeeze the card. */
+.card {
+	display: flex;
+	flex-shrink: 0;
+	flex-direction: column;
+	overflow: hidden;
+	border: 0.0625rem solid var(--background-modifier-accent);
+	border-radius: var(--radius-2xl);
+	background-color: var(--background-secondary-alt);
+}
+
+/* The accent colour is the inline background; the banner, when there is one, covers it. */
+.cover {
+	height: 4.5rem;
+}
+
+.coverImage {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.profile {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	padding: 0 1rem 1rem;
+}
+
+/* Half over the cover, ringed in the card colour. */
+.avatar {
+	margin-top: -2.5rem;
+	border-radius: 50%;
+	box-shadow: 0 0 0 0.3125rem var(--background-secondary-alt);
+}
+
+.names {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	line-height: 1.3;
+}
+
+.nameRow {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	min-width: 0;
+}
+
+.name {
+	overflow: hidden;
+	color: var(--text-primary);
+	font-size: 1.0625rem;
+	font-weight: 700;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tag {
+	overflow: hidden;
+	color: var(--text-primary-muted);
+	font-size: 0.8125rem;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.note {
+	margin: 0;
+	padding: 0 0.25rem;
+	color: var(--text-primary-muted);
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+}
+
+/* Narrow screens and touch (a touch-screen desktop layout shows the rail too): 44px button. Three parts to
+   outrank .button.small (0,2,0). */
+@media (max-width: 640px), (pointer: coarse) {
+	.aside .card .postsButton {
+		min-height: 2.75rem;
+	}
+}
+
+/* Micup: X look in the coal and dark themes (FeedPage.module.css). No column lines,
+   so the rail drops its own too; the card is X's side panel (the theme tokens already give it the black fill, the line and
+   the 16px corners), titled by the name at 20px over the muted handle. */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .aside {
+	border-inline-start: none;
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .name {
+	font-size: 1.25rem;
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .tag {
+	color: var(--text-tertiary);
+}

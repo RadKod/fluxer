@@ -49,6 +49,8 @@ export class Guild {
 	readonly auditLogsIndexedAt: Date | null;
 	readonly membersIndexedAt: Date | null;
 	readonly messageHistoryCutoff: Date | null;
+	readonly premiumTier: number | null;
+	readonly premiumSubscriptionCount: number | null;
 	readonly version: number;
 
 	constructor(row: GuildRow) {
@@ -89,6 +91,8 @@ export class Guild {
 		this.auditLogsIndexedAt = row.audit_logs_indexed_at ?? null;
 		this.membersIndexedAt = row.members_indexed_at ?? null;
 		this.messageHistoryCutoff = row.message_history_cutoff ?? null;
+		this.premiumTier = row.premium_tier ?? null;
+		this.premiumSubscriptionCount = row.premium_subscription_count ?? null;
 		this.version = row.version;
 	}
 
@@ -128,6 +132,8 @@ export class Guild {
 			audit_logs_indexed_at: this.auditLogsIndexedAt,
 			members_indexed_at: this.membersIndexedAt,
 			message_history_cutoff: this.messageHistoryCutoff,
+			premium_tier: this.premiumTier,
+			premium_subscription_count: this.premiumSubscriptionCount,
 			version: this.version,
 		};
 	}

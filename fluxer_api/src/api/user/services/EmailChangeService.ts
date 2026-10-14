@@ -2,6 +2,7 @@
 
 import {randomUUID} from 'node:crypto';
 import type {ApiContext} from '@app/api/ApiContext';
+import {EMAIL_CLEARABLE_SUSPICIOUS_ACTIVITY_FLAGS} from '@app/api/auth/AuthEmail';
 import * as AuthPassword from '@app/api/auth/AuthPassword';
 import {assertEmailNotBlocklisted} from '@app/api/auth/EmailBlocklist';
 import type {User} from '@app/api/models/User';
@@ -309,11 +310,13 @@ export class EmailChangeService {
 		}
 		const emailToken = await this.verifyNew(user, ticket, code, row.original_proof);
 		const updatedEmail = await this.getTokenEmail(user.id, emailToken);
-		const updatedUser = await users.patchUpsert(
-			user.id,
-			{email: updatedEmail, email_verified: true, email_bounced: false},
-			user.toRow(),
-		);
+		const updates = {
+			email: updatedEmail,
+			email_verified: true,
+			email_bounced: false,
+			suspicious_activity_flags: user.suspiciousActivityFlags & ~EMAIL_CLEARABLE_SUSPICIOUS_ACTIVITY_FLAGS,
+		};
+		const updatedUser = await users.patchUpsert(user.id, updates, user.toRow());
 		await this.deleteToken(emailToken);
 		await enqueueStripeCustomerEmailSync(worker, user, updatedUser);
 		return updatedUser;

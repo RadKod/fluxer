@@ -227,8 +227,9 @@ Further members are accepted and ignored. `guild_positions` is an array of at mo
 | suppress_unprivileged_self_mentions?<sup>12</sup> | boolean | Whether direct and reply mentions from unprivileged users are suppressed |
 | suppress_unprivileged_self_mentions_bypass_user_ids?<sup>12</sup> | ?array[snowflake] | The users exempt from mention suppression |
 | staff_dm_access_user_ids?<sup>12</sup> | ?array[snowflake] | The users granted staff direct message access |
-| profile_privacy? | integer | [Profile privacy level](/http-api/users/#profile-privacy-levels) |
-| synced_preferences?<sup>13</sup> | ?string | The base64-encoded `fluxer.user.preferences.v1.SyncedPreferences` snapshot, or null to clear it |
+| profile_privacy?<sup>13</sup> | integer | [Profile privacy level](/http-api/users/#profile-privacy-levels) |
+| game_activity_visibility?<sup>15</sup> | ?string | `off` disables game sharing; `friends` shares the current game with friends; null disables sharing |
+| synced_preferences?<sup>14</sup> | ?string | The base64-encoded `fluxer.user.preferences.v1.SyncedPreferences` snapshot, or null to clear it |
 
 <sup>1</sup> A string matches ISO 8601 and an integer is Unix milliseconds between 0 and 8640000000000000. Anything else is rejected with `INVALID_ISO_TIMESTAMP`
 
@@ -254,7 +255,15 @@ Further members are accepted and ignored. `guild_positions` is an array of at mo
 
 <sup>12</sup> The field is staff-only
 
-<sup>13</sup> The value runs to at most 699052 characters of base64 and decodes to at most 524288 bytes, the 512 KiB ceiling. A longer string returns 400 `INVALID_FORM_BODY`, an oversized decode fails with `TOO_LARGE`, and an undecodable value fails with `INVALID_FORMAT`
+<sup>13</sup> One of `0`, `1`, `2`, `100` and `101`. `1` is kept as written and reads as `ALL_GUILDS`. `100` needs a recorded date of birth of 16 years or older, and otherwise fails against `profile_privacy` with `MUST_BE_MINIMUM_AGE`. A change reaches the next profile, follow list and post request
+
+<sup>14</sup> The value runs to at most 699052 characters of base64 and decodes to at most 524288 bytes, the 512 KiB ceiling. A longer string returns 400 `INVALID_FORM_BODY`, an oversized decode fails with `TOO_LARGE`, and an undecodable value fails with `INVALID_FORMAT`
+
+<sup>15</sup> Enabling `friends` needs a recorded date of birth of 16 years or older; otherwise the field fails with `MUST_BE_MINIMUM_AGE`. Sharing also depends on the instance rollout and the account's profile privacy
+
+Both [Get current user settings](#get-current-user-settings) and [Modify current user settings](#modify-current-user-settings) return `game_activity_visibility` as `off` or `friends`, with `off` as the default. They also return `game_activity_policy_revision`, a server-owned decimal string starting at `"0"`. The revision advances when the game sharing policy changes. The server checks it during conditional writes and revocation so an older concurrent write cannot overwrite a newer policy. It is read-only and is not a PATCH input.
+
+The first-party client stops local game detection before changing sharing or profile privacy. It confirms the requested value in the PATCH response before restarting under the returned policy, and rejects a response superseded by a later local change or account switch. It does not send or compare `game_activity_policy_revision`. After an uncertain sharing save, it reads settings again and keeps detection stopped until a later confirmed save.
 
 Fluxer decodes an accepted `synced_preferences` value, re-encodes it canonically, and stores the result, so a snapshot with only zero values is stored as cleared and read back as the empty string.
 
@@ -329,7 +338,7 @@ A new account starts with these values. Every field not listed starts empty, so 
 | AFK timeout | 600 seconds |
 | Time format | Automatic |
 | Trusted domains | None |
-| Profile privacy | Visible to all guild members |
+| Profile privacy | `EVERYONE` for an account registered with a date of birth of 16 years or older, `ALL_GUILDS` otherwise |
 | Voice activity sharing | Enabled |
 | Friend sources | Mutual friends and mutual guilds, plus no relation for a verified adult |
 | Sensitive media filters | Show for a verified adult and blur otherwise on friend DMs, block on non-friend DMs, blur in guilds |

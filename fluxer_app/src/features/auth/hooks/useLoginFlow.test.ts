@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+// Idle and LocalPresence import each other; loading Idle first keeps its timer from calling a half-loaded store.
+import '@app/features/ui/state/Idle';
 import type {RuntimeConfigSnapshot} from '@app/features/app/state/RuntimeConfig';
 import {selectStoredAccount} from '@app/features/auth/hooks/useLoginFlow';
 import {type Account, SessionExpiredError} from '@app/features/platform/state/AuthSession';

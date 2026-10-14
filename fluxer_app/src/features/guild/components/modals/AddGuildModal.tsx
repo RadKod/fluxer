@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import Accessibility from '@app/features/accessibility/state/Accessibility';
 import * as Modal from '@app/features/app/components/dialogs/Modal';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import styles from '@app/features/guild/components/modals/AddGuildModal.module.css';
@@ -19,7 +20,7 @@ import {TemplateImportForm} from '@app/features/guild/components/modals/add_guil
 import {SteppedCarousel} from '@app/features/ui/stepped_carousel/SteppedCarousel';
 import {THE_OTHER_PLATFORM} from '@fluxer/constants/src/ExternalPlatformConstants';
 import {useLingui} from '@lingui/react/macro';
-import {AnimatePresence, motion, type Transition, useReducedMotion} from 'framer-motion';
+import {AnimatePresence, motion, type Transition} from 'framer-motion';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {useCallback, useMemo, useState} from 'react';
@@ -38,7 +39,7 @@ const instantTransition: Transition = {
 
 export const AddGuildModal = observer(({initialView = 'landing'}: {initialView?: AddGuildModalView} = {}) => {
 	const {i18n} = useLingui();
-	const shouldReduceMotion = useReducedMotion();
+	const shouldReduceMotion = Accessibility.useReducedMotion;
 	const [view, setView] = useState<AddGuildModalView>(initialView);
 	const [footerContent, setFooterContent] = useState<React.ReactNode>(null);
 	const getTitle = (): string => {

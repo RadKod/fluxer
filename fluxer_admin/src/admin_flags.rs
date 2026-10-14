@@ -17,8 +17,10 @@ pub mod user_flag_bits {
     pub const FRIENDLY_BOT: u64 = 1 << 4;
     pub const FRIENDLY_BOT_MANUAL_APPROVAL: u64 = 1 << 5;
     pub const SPAMMER: u64 = 1 << 6;
+    pub const VERIFIED: u64 = 1 << 29;
     pub const HIGH_GLOBAL_RATE_LIMIT: u64 = 1 << 33;
     pub const DELETED: u64 = 1 << 34;
+    pub const DISABLED_SUSPICIOUS_ACTIVITY: u64 = 1 << 35;
     pub const SELF_DELETED: u64 = 1 << 36;
     pub const DISABLED: u64 = 1 << 38;
     pub const HAS_SESSION_STARTED: u64 = 1 << 39;
@@ -30,7 +32,9 @@ pub mod user_flag_bits {
     pub const APP_STORE_REVIEWER: u64 = 1 << 53;
     pub const STAFF_HIDDEN: u64 = 1 << 57;
     pub const AGE_VERIFIED_ADULT: u64 = 1 << 60;
-    pub const LIMIT_EXEMPT: u64 = 1 << 62;
+    pub const LIMIT_EXEMPT: u64 = 1 << 59;
+    pub const FORCE_INBOUND_PHONE_VERIFICATION: u64 = 1 << 61;
+    pub const NOT_SUSPICIOUS: u64 = 1 << 62;
 }
 
 pub const USER_FLAGS: &[U64Flag] = &[
@@ -57,6 +61,10 @@ pub const USER_FLAGS: &[U64Flag] = &[
     U64Flag {
         name: "SPAMMER",
         value: user_flag_bits::SPAMMER,
+    },
+    U64Flag {
+        name: "VERIFIED",
+        value: user_flag_bits::VERIFIED,
     },
     U64Flag {
         name: "HIGH_GLOBAL_RATE_LIMIT",
@@ -114,6 +122,18 @@ pub const USER_FLAGS: &[U64Flag] = &[
         name: "LIMIT_EXEMPT",
         value: user_flag_bits::LIMIT_EXEMPT,
     },
+    U64Flag {
+        name: "DISABLED_SUSPICIOUS_ACTIVITY",
+        value: user_flag_bits::DISABLED_SUSPICIOUS_ACTIVITY,
+    },
+    U64Flag {
+        name: "FORCE_INBOUND_PHONE_VERIFICATION",
+        value: user_flag_bits::FORCE_INBOUND_PHONE_VERIFICATION,
+    },
+    U64Flag {
+        name: "NOT_SUSPICIOUS",
+        value: user_flag_bits::NOT_SUSPICIOUS,
+    },
 ];
 
 pub const PREMIUM_FLAGS: &[I32Flag] = &[
@@ -154,3 +174,40 @@ pub const PREMIUM_FLAGS: &[I32Flag] = &[
         value: 1 << 8,
     },
 ];
+#[cfg(test)]
+mod tests {
+    use super::{USER_FLAGS, user_flag_bits};
+
+    #[test]
+    fn limit_exempt_uses_bit_59_without_reusing_legacy_flags() {
+        let value = user_flag_bits::LIMIT_EXEMPT;
+        assert_eq!(value, 1 << 59);
+        assert_eq!(value & ((1 << 35) | (1 << 61) | (1 << 62)), 0);
+        assert_eq!(
+            USER_FLAGS
+                .iter()
+                .find(|flag| flag.name == "LIMIT_EXEMPT")
+                .unwrap()
+                .value,
+            value
+        );
+    }
+
+    #[test]
+    fn legacy_user_flag_labels_keep_their_stored_meanings() {
+        for (name, bit) in [
+            ("DISABLED_SUSPICIOUS_ACTIVITY", 35),
+            ("FORCE_INBOUND_PHONE_VERIFICATION", 61),
+            ("NOT_SUSPICIOUS", 62),
+        ] {
+            assert_eq!(
+                USER_FLAGS
+                    .iter()
+                    .find(|flag| flag.name == name)
+                    .map(|flag| flag.value),
+                Some(1 << bit),
+                "{name}"
+            );
+        }
+    }
+}

@@ -10,6 +10,8 @@ import {createMiddleware} from 'hono/factory';
 const SKIP_FIELDS = new Set([
 	'acls',
 	'allow',
+	// Micup (cosmetics): base64 images of a catalog item, like image and icon.
+	'asset',
 	'avatar',
 	'banner',
 	'challenge',
@@ -48,6 +50,8 @@ const SKIP_FIELDS = new Set([
 	'ticket',
 	'token',
 	'traits',
+	// Micup (angel-wings): the base64 in-front images of an ultra decoration.
+	'ultra_front',
 	'upload_filename',
 	'upload_id',
 	'users',
@@ -75,6 +79,7 @@ const SKIP_CONTENT_FILTER_PATH_PARTS = [
 	'/admin/blocklists/url-domain/',
 	'/admin/blocklists/url/',
 	'/auth/',
+	'/feed/videos/webhook',
 	'/oauth2/',
 	'/premium/store/',
 	'/reports/dsa/email/',

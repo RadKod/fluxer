@@ -19,12 +19,15 @@ export class User {
 	readonly id: UserID;
 	readonly username: string;
 	readonly discriminator: number;
+	readonly usernameState: UserRow['username_state'];
+	readonly identityVersion: bigint;
 	readonly globalName: string | null;
 	readonly isBot: boolean;
 	readonly isSystem: boolean;
 	readonly email: string | null;
 	readonly emailVerified: boolean;
 	readonly emailBounced: boolean;
+	readonly hasVerifiedPhone: boolean;
 	readonly passwordHash: string | null;
 	readonly passwordLastChangedAt: Date | null;
 	readonly totpSecret: string | null;
@@ -53,6 +56,7 @@ export class User {
 	readonly stripeSubscriptionId: string | null;
 	readonly stripeCustomerId: string | null;
 	readonly hasEverPurchased: boolean;
+	readonly suspiciousActivityFlags: number;
 	readonly termsAgreedAt: Date | null;
 	readonly privacyAgreedAt: Date | null;
 	readonly lastActiveAt: Date | null;
@@ -77,18 +81,29 @@ export class User {
 	readonly premiumOnboardingDismissedAt: Date | null;
 	readonly mentionFlags: MentionReplyPreference;
 	readonly lastVoiceActivitySharingChangeAt: Date | null;
+	readonly avatarDecorationId: bigint | null;
+	readonly avatarUltraId: bigint | null;
+	readonly profileEffectId: bigint | null;
+	readonly nameplateId: bigint | null;
+	readonly avatarDecorationAsset: string | null;
+	readonly avatarUltraAsset: string | null;
+	readonly profileEffectAsset: string | null;
+	readonly nameplateAsset: string | null;
 	readonly version: number;
 
 	constructor(row: UserRow) {
 		this.id = row.user_id;
 		this.username = row.username;
 		this.discriminator = row.discriminator;
+		this.usernameState = row.username_state ?? null;
+		this.identityVersion = row.identity_version ?? 0n;
 		this.globalName = row.global_name ?? null;
 		this.isBot = row.bot ?? false;
 		this.isSystem = row.system ?? false;
 		this.email = row.email ?? null;
 		this.emailVerified = row.email_verified ?? false;
 		this.emailBounced = row.email_bounced ?? false;
+		this.hasVerifiedPhone = row.has_verified_phone ?? false;
 		this.passwordHash = row.password_hash ?? null;
 		this.passwordLastChangedAt = row.password_last_changed_at ?? null;
 		this.totpSecret = row.totp_secret ?? null;
@@ -118,6 +133,7 @@ export class User {
 		this.stripeSubscriptionId = row.stripe_subscription_id ?? null;
 		this.stripeCustomerId = row.stripe_customer_id ?? null;
 		this.hasEverPurchased = row.has_ever_purchased ?? false;
+		this.suspiciousActivityFlags = row.suspicious_activity_flags ?? 0;
 		this.termsAgreedAt = row.terms_agreed_at ?? null;
 		this.privacyAgreedAt = row.privacy_agreed_at ?? null;
 		this.lastActiveAt = row.last_active_at ?? null;
@@ -142,6 +158,14 @@ export class User {
 		this.premiumOnboardingDismissedAt = row.premium_onboarding_dismissed_at ?? null;
 		this.mentionFlags = row.mention_flags ?? 0;
 		this.lastVoiceActivitySharingChangeAt = row.last_voice_activity_sharing_change_at ?? null;
+		this.avatarDecorationId = row.avatar_decoration_id ?? null;
+		this.avatarUltraId = row.avatar_ultra_id ?? null;
+		this.profileEffectId = row.profile_effect_id ?? null;
+		this.nameplateId = row.nameplate_id ?? null;
+		this.avatarDecorationAsset = row.avatar_decoration_asset ?? null;
+		this.avatarUltraAsset = row.avatar_ultra_asset ?? null;
+		this.profileEffectAsset = row.profile_effect_asset ?? null;
+		this.nameplateAsset = row.nameplate_asset ?? null;
 		this.version = row.version;
 	}
 
@@ -176,12 +200,15 @@ export class User {
 			user_id: this.id,
 			username: this.username,
 			discriminator: this.discriminator,
+			username_state: this.usernameState,
+			identity_version: this.identityVersion,
 			global_name: this.globalName,
 			bot: this.isBot,
 			system: this.isSystem,
 			email: this.email,
 			email_verified: this.emailVerified,
 			email_bounced: this.emailBounced,
+			has_verified_phone: this.hasVerifiedPhone,
 			password_hash: this.passwordHash,
 			password_last_changed_at: this.passwordLastChangedAt,
 			totp_secret: this.totpSecret,
@@ -210,6 +237,7 @@ export class User {
 			stripe_subscription_id: this.stripeSubscriptionId,
 			stripe_customer_id: this.stripeCustomerId,
 			has_ever_purchased: this.hasEverPurchased,
+			suspicious_activity_flags: this.suspiciousActivityFlags,
 			terms_agreed_at: this.termsAgreedAt,
 			privacy_agreed_at: this.privacyAgreedAt,
 			last_active_at: this.lastActiveAt,
@@ -234,6 +262,14 @@ export class User {
 			premium_onboarding_dismissed_at: this.premiumOnboardingDismissedAt,
 			mention_flags: this.mentionFlags,
 			last_voice_activity_sharing_change_at: this.lastVoiceActivitySharingChangeAt,
+			avatar_decoration_id: this.avatarDecorationId,
+			avatar_ultra_id: this.avatarUltraId,
+			profile_effect_id: this.profileEffectId,
+			nameplate_id: this.nameplateId,
+			avatar_decoration_asset: this.avatarDecorationAsset,
+			avatar_ultra_asset: this.avatarUltraAsset,
+			profile_effect_asset: this.profileEffectAsset,
+			nameplate_asset: this.nameplateAsset,
 			version: this.version,
 		};
 	}

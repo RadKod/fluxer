@@ -148,7 +148,22 @@ export const ProfilePrivacyLevelSchema = createInt32EnumType(
 		[ProfilePrivacyLevels.ALL_GUILDS, 'ALL_GUILDS', ProfilePrivacyLevelsDescriptions.ALL_GUILDS],
 		[ProfilePrivacyLevels.SMALL_GUILDS_ONLY, 'SMALL_GUILDS_ONLY', ProfilePrivacyLevelsDescriptions.SMALL_GUILDS_ONLY],
 		[ProfilePrivacyLevels.FRIENDS_ONLY, 'FRIENDS_ONLY', ProfilePrivacyLevelsDescriptions.FRIENDS_ONLY],
+		[ProfilePrivacyLevels.EVERYONE, 'EVERYONE', ProfilePrivacyLevelsDescriptions.EVERYONE],
+		[ProfilePrivacyLevels.ONLY_ME, 'ONLY_ME', ProfilePrivacyLevelsDescriptions.ONLY_ME],
 	],
 	'Profile privacy visibility level',
+	'ProfilePrivacyLevel',
+);
+// The same OpenAPI name as the request schema on purpose. The generator names the request (input) component
+// ProfilePrivacyLevelInput and this one ProfilePrivacyLevel, the names generated SDKs already use.
+export const ProfilePrivacyLevelResponseSchema = createInt32EnumType(
+	[
+		[ProfilePrivacyLevels.ALL_GUILDS, 'ALL_GUILDS', ProfilePrivacyLevelsDescriptions.ALL_GUILDS],
+		[ProfilePrivacyLevels.SMALL_GUILDS_ONLY, 'SMALL_GUILDS_ONLY', ProfilePrivacyLevelsDescriptions.SMALL_GUILDS_ONLY],
+		[ProfilePrivacyLevels.FRIENDS_ONLY, 'FRIENDS_ONLY', ProfilePrivacyLevelsDescriptions.FRIENDS_ONLY],
+		[ProfilePrivacyLevels.EVERYONE, 'EVERYONE', ProfilePrivacyLevelsDescriptions.EVERYONE],
+		[ProfilePrivacyLevels.ONLY_ME, 'ONLY_ME', ProfilePrivacyLevelsDescriptions.ONLY_ME],
+	],
+	'Profile privacy visibility level (response; Micup adds EVERYONE and ONLY_ME)',
 	'ProfilePrivacyLevel',
 );

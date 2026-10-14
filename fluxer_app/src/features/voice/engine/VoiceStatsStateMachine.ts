@@ -72,6 +72,7 @@ export type VoiceStatsEvent =
 			activeCounterIds: Set<string>;
 	  }
 	| {type: 'stats.collectionFinished'; generation: number}
+	| {type: 'stats.collectionFailed'; generation: number}
 	| {type: 'reconnection.increment'}
 	| {type: 'stats.reset'}
 	| {type: 'stats.cleanup'};
@@ -151,6 +152,8 @@ function setRoom(
 		statsCollectionInFlight: roomChanged ? false : context.statsCollectionInFlight,
 		statsGeneration: roomChanged ? context.statsGeneration + 1 : context.statsGeneration,
 		rtpCounters: roomChanged ? new Map() : context.rtpCounters,
+		publisherTransport: roomChanged ? null : context.publisherTransport,
+		subscriberTransport: roomChanged ? null : context.subscriberTransport,
 	};
 	if (!roomChanged) return nextContext;
 	return syncLatencyContext(
@@ -203,6 +206,8 @@ function stopStats(context: VoiceStatsMachineContext): VoiceStatsMachineContext 
 		statsIntervalActive: false,
 		statsGeneration: context.statsGeneration + 1,
 		statsCollectionInFlight: false,
+		publisherTransport: null,
+		subscriberTransport: null,
 	};
 }
 
@@ -404,6 +409,11 @@ export const voiceStatsStateMachine = setup({
 		finishCollection: assign(({context, event}) =>
 			event.type === 'stats.collectionFinished' ? finishCollection(context, event.generation) : context,
 		),
+		failCollection: assign(({context, event}) =>
+			event.type === 'stats.collectionFailed' && context.statsGeneration === event.generation
+				? {...context, publisherTransport: null, subscriberTransport: null}
+				: context,
+		),
 		incrementReconnectionCount: assign(({context}) => incrementReconnectionCount(context)),
 		reset: assign(({context}) => resetState(context)),
 	},
@@ -438,6 +448,7 @@ export const voiceStatsStateMachine = setup({
 				'stats.collectionStarted': {target: 'routing', actions: 'startCollection'},
 				'stats.collectionSucceeded': {target: 'routing', actions: 'applyCollectionResult'},
 				'stats.collectionFinished': {target: 'routing', actions: 'finishCollection'},
+				'stats.collectionFailed': {target: 'routing', actions: 'failCollection'},
 				'reconnection.increment': {target: 'routing', actions: 'incrementReconnectionCount'},
 				'stats.reset': {target: 'routing', actions: 'reset'},
 				'stats.cleanup': {target: 'routing', actions: 'reset'},
@@ -456,6 +467,7 @@ export const voiceStatsStateMachine = setup({
 				'stats.collectionStarted': {target: 'routing', actions: 'startCollection'},
 				'stats.collectionSucceeded': {target: 'routing', actions: 'applyCollectionResult'},
 				'stats.collectionFinished': {target: 'routing', actions: 'finishCollection'},
+				'stats.collectionFailed': {target: 'routing', actions: 'failCollection'},
 				'reconnection.increment': {target: 'routing', actions: 'incrementReconnectionCount'},
 				'stats.reset': {target: 'routing', actions: 'reset'},
 				'stats.cleanup': {target: 'routing', actions: 'reset'},
@@ -474,6 +486,7 @@ export const voiceStatsStateMachine = setup({
 				'stats.collectionStarted': {target: 'routing', actions: 'startCollection'},
 				'stats.collectionSucceeded': {target: 'routing', actions: 'applyCollectionResult'},
 				'stats.collectionFinished': {target: 'routing', actions: 'finishCollection'},
+				'stats.collectionFailed': {target: 'routing', actions: 'failCollection'},
 				'reconnection.increment': {target: 'routing', actions: 'incrementReconnectionCount'},
 				'stats.reset': {target: 'routing', actions: 'reset'},
 				'stats.cleanup': {target: 'routing', actions: 'reset'},
@@ -492,6 +505,7 @@ export const voiceStatsStateMachine = setup({
 				'stats.collectionStarted': {target: 'routing', actions: 'startCollection'},
 				'stats.collectionSucceeded': {target: 'routing', actions: 'applyCollectionResult'},
 				'stats.collectionFinished': {target: 'routing', actions: 'finishCollection'},
+				'stats.collectionFailed': {target: 'routing', actions: 'failCollection'},
 				'reconnection.increment': {target: 'routing', actions: 'incrementReconnectionCount'},
 				'stats.reset': {target: 'routing', actions: 'reset'},
 				'stats.cleanup': {target: 'routing', actions: 'reset'},

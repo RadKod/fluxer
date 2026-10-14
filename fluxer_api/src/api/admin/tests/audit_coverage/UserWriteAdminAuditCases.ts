@@ -566,4 +566,22 @@ export const UserWriteAdminAuditCases: ReadonlyArray<AdminAuditCoverageCase> = [
 			};
 		},
 	},
+	{
+		method: 'POST',
+		route: '/admin/users/:user_id/clear-legacy-restriction',
+		async prepare({harness}) {
+			const target = await createTestAccount(harness);
+			const user = await loadUser(target);
+			await getUserRepository().patchUpsert(user.id, {suspicious_activity_flags: 8}, user.toRow());
+			return {
+				request: {path: `/admin/users/${target.userId}/clear-legacy-restriction`, body: {}},
+				expected: {
+					action: 'clear_legacy_restriction',
+					targetType: 'user',
+					targetId: target.userId,
+					metadata: {old_suspicious_activity_flags: '8', new_suspicious_activity_flags: '0'},
+				},
+			};
+		},
+	},
 ];

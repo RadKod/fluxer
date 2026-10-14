@@ -45,6 +45,7 @@ installElectronStub({
 		getVersion: () => '0.0.0',
 		getLocale: () => 'en-US',
 		setPath: noop,
+		removeAsDefaultProtocolClient: noop,
 		exit: noop,
 		quit: noop,
 		whenReady: () => Promise.resolve(),
@@ -152,7 +153,7 @@ describe('the window trust boundary is exactly the local app document origin', (
 	});
 
 	test('the OS deep link scheme is not a document origin', () => {
-		assert.equal(isTrustedOrigin('fluxer://guild/channel'), false);
+		assert.equal(isTrustedOrigin('micup://guild/channel'), false);
 	});
 
 	test('an empty or absent URL is rejected', () => {
@@ -189,7 +190,7 @@ describe('the main window only ever loads the local app document', () => {
 
 	test('a deep link reaches the renderer as an in-app path, never as a document to load', async () => {
 		assert.doesNotMatch(readMainSource('DeepLinks.ts'), /\.loadURL\(|\.loadFile\(/);
-		for (const deepLink of ['fluxer://channels/@me', 'fluxer://evil.example/https://evil.example', 'fluxer://-/x']) {
+		for (const deepLink of ['micup://channels/@me', 'micup://evil.example/https://evil.example', 'micup://-/x']) {
 			ipcHandlers.delete('get-initial-deep-link');
 			withArgv([...HOSTILE_ARGV, deepLink], () => initializeDeepLinks());
 			const payload = await ipcHandlers.get('get-initial-deep-link')();

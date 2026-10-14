@@ -58,6 +58,9 @@ function discoveryDocument(
 			premium_enabled: false,
 			stripe_serviceable: false,
 			phone_verification_enabled: false,
+			premium_trial_days: 0,
+			gift_codes_enabled: false,
+			official_apps: [],
 		},
 		gif: {provider: 'tenor', display_name: 'Tenor', attribution_required: true},
 		sso: {enabled: false, enforced: false, display_name: null, redirect_uri: `https://${host}/sso`},
@@ -210,7 +213,7 @@ describe('runtimeSnapshotFromDiscovery', () => {
 		document.app_public = {
 			...BOOTSTRAP_APP_PUBLIC,
 			branding: {...BOOTSTRAP_APP_PUBLIC.branding, icon_url: 'https://cdn.d.test/icon.png?v=3'},
-			legal: {terms_url: 'https://d.test/legal?doc=terms', privacy_url: null},
+			legal: {terms_url: 'https://d.test/legal?doc=terms', privacy_url: null, source_url: null},
 		};
 		const snapshot = runtimeSnapshotFromDiscovery(parseInstanceDiscoveryDocument(document));
 		expect(snapshot.appPublic.branding.icon_url).toBe('https://cdn.d.test/icon.png?v=3');

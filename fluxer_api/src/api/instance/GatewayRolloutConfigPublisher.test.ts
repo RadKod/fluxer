@@ -65,6 +65,9 @@ describe('GatewayRolloutConfigPublisher', () => {
 			gateway_dispatch_relay_shards: 32,
 			gateway_dispatch_relay_max_queue: 50000,
 			voice_e2ee_scope: 'guild_feature_only',
+			max_connections: 18000,
+			game_activity_enabled: true,
+			game_activity_epoch: 4,
 		};
 
 		await publisher.publish(config);

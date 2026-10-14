@@ -19,6 +19,7 @@ import type {
 import {refreshTccStatus} from '@electron/main/MacTcc';
 import {isValidStartOptions, normalizeScreenCaptureDimension} from '@electron/main/NativeScreenCaptureValidation';
 import {requirePrivilegedRendererDocumentSender} from '@electron/main/PrivilegedRendererDocuments';
+import {ensureWindowsCaptureBorderAccess} from '@electron/main/WindowsCaptureBorder';
 import {ipcMain} from 'electron';
 
 const logger = createChildLogger('NativeScreenCapture');
@@ -812,7 +813,12 @@ async function startNativeScreenCapture(
 			detail: windowsHags.windowsHagsDetail,
 		});
 	}
-	await makeRoomForSenderSession(sender.id);
+	await ensureWindowsCaptureBorderAccess();
+	// Recheck after every asynchronous stop. When there is room, registration below
+	// stays synchronous so starts released by the same consent cannot overbook it.
+	while ((activeSessionIdsBySenderId.get(sender.id)?.size ?? 0) >= MAX_NATIVE_SCREEN_SESSIONS_PER_SENDER) {
+		await makeRoomForSenderSession(sender.id);
+	}
 	if (sender.isDestroyed()) {
 		throw new Error('Cannot start native screen capture for destroyed renderer');
 	}

@@ -16,6 +16,8 @@ const gatewayRolloutFields = {
 	gateway_dispatch_relay_shards: z.number().int().min(1).max(10000),
 	gateway_dispatch_relay_max_queue: z.number().int().min(0).max(1000000),
 	voice_e2ee_scope: VoiceE2EEScopeEnum,
+	max_connections: z.number().int().min(0).max(200000),
+	game_activity_enabled: z.boolean(),
 };
 
 export const GatewayRolloutConfigSchema = z.object({
@@ -28,11 +30,14 @@ export const GatewayRolloutConfigSchema = z.object({
 	gateway_dispatch_relay_shards: gatewayRolloutFields.gateway_dispatch_relay_shards.default(32),
 	gateway_dispatch_relay_max_queue: gatewayRolloutFields.gateway_dispatch_relay_max_queue.default(50000),
 	voice_e2ee_scope: gatewayRolloutFields.voice_e2ee_scope.default('guild_feature_only'),
+	max_connections: gatewayRolloutFields.max_connections.default(0),
+	game_activity_enabled: gatewayRolloutFields.game_activity_enabled.default(false),
+	game_activity_epoch: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).default(0),
 });
 
 export type GatewayRolloutConfig = z.infer<typeof GatewayRolloutConfigSchema>;
 
-export const GatewayRolloutConfigUpdateRequest = z.object(gatewayRolloutFields).partial();
+export const GatewayRolloutConfigUpdateRequest = z.strictObject(gatewayRolloutFields).partial();
 
 export type GatewayRolloutConfigUpdateRequest = z.infer<typeof GatewayRolloutConfigUpdateRequest>;
 

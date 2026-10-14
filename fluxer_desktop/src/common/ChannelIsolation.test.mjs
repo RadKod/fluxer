@@ -13,12 +13,16 @@ const CHANNELS = ['stable', 'canary', 'development'];
 
 function loadBuilderConfig(channel) {
 	const previous = process.env.BUILD_CHANNEL;
+	const previousArch = process.env.ELECTRON_ARCH;
+	process.env.ELECTRON_ARCH = 'x64';
 	process.env.BUILD_CHANNEL = channel;
 	try {
 		delete require.cache[CONFIG_PATH];
 		return require(CONFIG_PATH);
 	} finally {
 		delete require.cache[CONFIG_PATH];
+		if (previousArch === undefined) delete process.env.ELECTRON_ARCH;
+		else process.env.ELECTRON_ARCH = previousArch;
 		if (previous === undefined) {
 			delete process.env.BUILD_CHANNEL;
 		} else {
@@ -43,14 +47,14 @@ describe('installed channels stay apart', () => {
 		assertDistinct('protocol registration name', (config) => config.protocols[0].name);
 	});
 
-	test('the development app registers its own deep link scheme instead of fluxer://', () => {
+	test('the development app registers its own deep link scheme instead of micup://', () => {
 		const schemes = configs.development.protocols.flatMap((protocol) => protocol.schemes);
-		assert.deepEqual(schemes, ['fluxer-development']);
-		assert.equal(configs.development.linux.desktop.entry.MimeType, 'x-scheme-handler/fluxer-development;');
+		assert.deepEqual(schemes, ['micup-development']);
+		assert.equal(configs.development.linux.desktop.entry.MimeType, 'x-scheme-handler/micup-development;');
 		for (const channel of ['stable', 'canary']) {
 			assert.deepEqual(
 				configs[channel].protocols.flatMap((protocol) => protocol.schemes),
-				['fluxer'],
+				['micup'],
 			);
 		}
 	});
@@ -70,7 +74,7 @@ describe('running channels stay apart', () => {
 		const source = fs.readFileSync(path.join(DESKTOP_DIR, 'src/common/UserDataPath.ts'), 'utf8');
 		const map = /channelStorageDirectoryMap: ChannelStorageDirectoryMap = \{([^}]+)\}/u.exec(source)?.[1] ?? '';
 		const directories = CHANNELS.map((channel) => new RegExp(`${channel}: '([^']+)'`, 'u').exec(map)?.[1]);
-		assert.deepEqual(directories, ['fluxer', 'fluxercanary', 'fluxerdevelopment']);
+		assert.deepEqual(directories, ['micup_desktop', 'micup_desktop_canary', 'micup_desktop_development']);
 	});
 
 	test('only a packaged app claims its deep link scheme, so a dev Electron run never takes it from an installed app', () => {

@@ -57,12 +57,20 @@ describe('premium product name', () => {
 		vi.spyOn(DesktopRuntimeTransactions, 'deactivate').mockResolvedValue(undefined);
 		desktopRuntime.required = true;
 		await RuntimeConfig.deactivate();
-		expect(getPremiumProductName()).toBe('Plutonium');
-		expect(getPremiumProductFullName()).toBe('Fluxer Plutonium');
+		expect(getPremiumProductName()).toBe('Plus');
+		expect(getPremiumProductFullName()).toBe('Micup Plus');
 	});
 
 	test('falls back to the default premium name when the instance sends a blank one', () => {
-		applyBranding({premium_product_name: '   '});
-		expect(getPremiumProductName()).toBe('Plutonium');
+		applyBranding({premium_product_name: 'Gold'});
+		const snapshot = RuntimeConfig.getSnapshotOrNull()!;
+		RuntimeConfig.applySnapshot({
+			...snapshot,
+			appPublic: {
+				...snapshot.appPublic,
+				branding: {...snapshot.appPublic.branding, premium_product_name: '   '},
+			},
+		});
+		expect(getPremiumProductName()).toBe('Plus');
 	});
 });

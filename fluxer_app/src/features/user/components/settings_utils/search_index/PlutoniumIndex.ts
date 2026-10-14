@@ -13,7 +13,7 @@ const SUBSCRIPTION_DESCRIPTOR = msg({
 	comment: 'Settings search entry label. Also used as a search synonym in the settings search bar.',
 });
 const PREMIUM_DESCRIPTOR = msg({
-	message: 'Premium',
+	message: 'Plus',
 	comment: 'Settings search synonym. Used to match this term when the user types it in the settings search bar.',
 });
 const UPGRADE_DESCRIPTOR = msg({
@@ -143,7 +143,7 @@ const COMPARISON_DESCRIPTOR = msg({
 	comment: 'Settings search synonym. Used to match this term when the user types it in the settings search bar.',
 });
 const FREE_VERSUS_PREMIUM_DESCRIPTOR = msg({
-	message: 'Free versus premium',
+	message: 'Free versus Plus',
 	comment: 'Settings search synonym. Used to match this term when the user types it in the settings search bar.',
 });
 const VIEW_PREMIUM_PERKS_DESCRIPTOR = msg({

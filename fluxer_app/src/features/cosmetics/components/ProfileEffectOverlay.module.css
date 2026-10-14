@@ -1,0 +1,15 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Drawn over the whole profile surface; clicks and text selection pass through to the profile. */
+.image {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: top center;
+	border-radius: inherit;
+	pointer-events: none;
+	user-select: none;
+	-webkit-user-drag: none;
+}

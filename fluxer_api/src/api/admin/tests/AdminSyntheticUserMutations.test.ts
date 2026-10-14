@@ -12,7 +12,8 @@ import {afterAll, beforeAll, beforeEach, describe, expect, test} from 'vitest';
 
 const SYNTHETIC_USER_IDS = ['0', String(DELETED_USER_ID)];
 
-const MUTATIONS: Array<{verb: 'put' | 'patch' | 'delete'; path: string; acl: string; body?: unknown}> = [
+const MUTATIONS: Array<{verb: 'put' | 'patch' | 'delete' | 'post'; path: string; acl: string; body?: unknown}> = [
+	{verb: 'post', path: 'clear-legacy-restriction', acl: AdminACLs.USER_CLEAR_LEGACY_RESTRICTION, body: {}},
 	{verb: 'patch', path: 'username', acl: AdminACLs.USER_UPDATE_USERNAME, body: {username: 'takenover'}},
 	{verb: 'patch', path: 'email', acl: AdminACLs.USER_UPDATE_EMAIL, body: {email: 'takenover@example.com'}},
 	{verb: 'patch', path: 'flags', acl: AdminACLs.USER_UPDATE_FLAGS, body: {add_flags: ['STAFF'], remove_flags: []}},
@@ -43,7 +44,11 @@ describe('admin mutations against synthetic accounts', () => {
 	});
 	test.each(CASES)('$name is rejected and writes no row', async (testCase) => {
 		const admin = await createTestAccount(harness);
-		await setUserACLs(harness, admin, [AdminACLs.AUTHENTICATE, testCase.acl]);
+		await setUserACLs(harness, admin, [
+			AdminACLs.AUTHENTICATE,
+			testCase.acl,
+			...(testCase.path === 'username' ? [AdminACLs.USERNAME_RESERVE] : []),
+		]);
 		const request = createBuilder(harness, `${admin.token}`)[testCase.verb](
 			`/admin/users/${testCase.userId}/${testCase.path}`,
 		);
@@ -64,7 +69,11 @@ describe('admin mutations against synthetic accounts', () => {
 	});
 	test.each(['%200', '0%0A', '%091', '1%20'])('padded user id %s is rejected the same way', async (encodedUserId) => {
 		const admin = await createTestAccount(harness);
-		await setUserACLs(harness, admin, [AdminACLs.AUTHENTICATE, AdminACLs.USER_UPDATE_USERNAME]);
+		await setUserACLs(harness, admin, [
+			AdminACLs.AUTHENTICATE,
+			AdminACLs.USER_UPDATE_USERNAME,
+			AdminACLs.USERNAME_RESERVE,
+		]);
 		await createBuilder(harness, `${admin.token}`)
 			.patch(`/admin/users/${encodedUserId}/username`)
 			.body({username: 'takenover'})

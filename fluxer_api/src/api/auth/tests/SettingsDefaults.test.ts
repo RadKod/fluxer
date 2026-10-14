@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {
+	bornYearsAgo,
 	createAuthHarness,
 	createTestAccount,
 	createUniqueEmail,
@@ -39,7 +40,7 @@ describe('User settings defaults', () => {
 			username: createUniqueUsername(),
 			global_name: 'Minor Settings',
 			password: 'a-strong-password',
-			date_of_birth: '2012-01-01',
+			date_of_birth: bornYearsAgo(15),
 			consent: true,
 		});
 		const minorSettings = await fetchSettings(harness, minorReg.token);

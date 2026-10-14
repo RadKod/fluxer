@@ -198,7 +198,12 @@ disconnect_voice_user_if_in_channel(
             );
         ConnId ->
             guild_voice_disconnect_channel:disconnect_connection_from_expected_channel(
-                UserId, ExpectedChannelId, ConnId, VoiceStates, State
+                UserId,
+                ExpectedChannelId,
+                ConnId,
+                maps:get(token_nonce, Request, undefined),
+                VoiceStates,
+                State
             )
     end.
 

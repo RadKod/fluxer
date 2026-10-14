@@ -24,6 +24,7 @@ import {
 	type ThreadParentSettingsInput,
 } from '@app/api/channel/services/thread/ThreadParentSettings';
 import {enqueueDeleteChannelThreads} from '@app/api/channel/threads/ThreadJobs';
+import {assertMatureContentSettingsWrite} from '@app/api/channel/utils/MatureContentSettingsGate';
 import {
 	everEnabled,
 	guildActive,
@@ -105,6 +106,7 @@ export interface ChannelUpdateData {
 		deny?: bigint;
 	}> | null;
 	rtc_region?: string | null;
+	room_theme?: string | null;
 	icon?: string | null;
 	owner_id?: bigint | null;
 	nicks?: Record<string, string | null> | null;
@@ -378,6 +380,10 @@ export class ChannelOperationsService {
 				data.rtc_region !== undefined && channel.type === ChannelTypes.GUILD_VOICE
 					? data.rtc_region
 					: channel.rtcRegion,
+			room_theme:
+				data.room_theme !== undefined && channel.type === ChannelTypes.GUILD_VOICE
+					? data.room_theme
+					: channel.roomTheme,
 			permission_overwrites: new Map(
 				Array.from(permissionOverwrites.entries()).map(([targetId, overwrite]) => [
 					targetId,
@@ -385,6 +391,21 @@ export class ChannelOperationsService {
 				]),
 			),
 		};
+		await assertMatureContentSettingsWrite({
+			limitConfigService: this.limitConfigService,
+			userRepository: this.userRepository,
+			userId,
+			current: {
+				nsfw: channel.nsfwOverride,
+				contentWarningLevel: channel.contentWarningLevel,
+				contentWarningText: channel.contentWarningText,
+			},
+			next: {
+				nsfw: updatedChannelData.nsfw,
+				contentWarningLevel: updatedChannelData.content_warning_level,
+				contentWarningText: updatedChannelData.content_warning_text,
+			},
+		});
 		let retypedThreads: Array<ThreadState> = [];
 		const toAnnouncement =
 			nextType === ChannelTypes.GUILD_ANNOUNCEMENT && channel.type !== ChannelTypes.GUILD_ANNOUNCEMENT;
@@ -957,6 +978,8 @@ function resolveNextChannelType(channel: Channel, typeConversion: ChannelTypeCon
 	if (typeConversion === null || typeConversion.to === channel.type) {
 		return channel.type;
 	}
+	// TEMPORARY: announcement channels are closed; open only after bucketing ((source_channel_id, bucket), source_message_id) and capping followers, on a product decision.
+	if (typeConversion.to === ChannelTypes.GUILD_ANNOUNCEMENT) throw new ChannelTypeConversionNotSupportedError();
 	if (
 		typeConversion.from !== channel.type ||
 		!ANNOUNCEMENT_CONVERTIBLE_CHANNEL_TYPES.has(channel.type) ||

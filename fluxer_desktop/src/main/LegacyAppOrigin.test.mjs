@@ -27,6 +27,7 @@ const constantsSource = transform('../common/Constants.ts');
 const localAppRouteContractSource = transform('../../../packages/desktop_ipc/src/LocalAppRouteContract.ts');
 const desktopConfigSource = transform('../common/DesktopConfig.ts');
 const globalShortcutActionsSource = transform('../common/GlobalShortcutActions.ts');
+const gameActivityTypesSource = transform('../common/GameActivityTypes.ts');
 
 const silentLog = {debug() {}, info() {}, warn() {}, error() {}};
 
@@ -62,8 +63,12 @@ function loadDesktop({channel = 'stable', settings} = {}) {
 	const globalShortcutActions = runModule(globalShortcutActionsSource, (specifier) => {
 		throw new Error(`Unexpected import: ${specifier}`);
 	});
+	const gameActivityTypes = runModule(gameActivityTypesSource, (specifier) => {
+		throw new Error(`Unexpected import: ${specifier}`);
+	});
 	const desktopConfig = runModule(desktopConfigSource, (specifier) => {
 		if (specifier === 'node:fs') return fs;
+		if (specifier === '@electron/common/GameActivityTypes') return gameActivityTypes;
 		if (specifier === '@electron/common/GlobalShortcutActions') return globalShortcutActions;
 		if (specifier === 'node:path') return path;
 		if (specifier === '@electron/common/BuildChannel') return {BUILD_CHANNEL: channel};
@@ -80,34 +85,32 @@ function loadDesktop({channel = 'stable', settings} = {}) {
 
 describe('DesktopConfig legacy app origin', () => {
 	test('harvests the legacy web app origin when no app origin is stored', () => {
-		assert.equal(loadDesktop().getLegacyAppOrigin(), 'https://web.fluxer.app');
-		assert.equal(loadDesktop({channel: 'canary'}).getLegacyAppOrigin(), 'https://web.canary.fluxer.app');
+		assert.equal(loadDesktop().getLegacyAppOrigin(), 'https://micup.gg');
+		assert.equal(loadDesktop({channel: 'canary'}).getLegacyAppOrigin(), 'https://canary.micup.gg');
 	});
 
-	test('harvests the migrated origin an older build stored', () => {
-		const stable = loadDesktop({settings: {app_origin: 'https://fluxer.com'}});
-		const canary = loadDesktop({channel: 'canary', settings: {app_origin: 'https://canary.fluxer.com'}});
-
-		assert.equal(stable.getLegacyAppOrigin(), 'https://fluxer.com');
-		assert.equal(canary.getLegacyAppOrigin(), 'https://canary.fluxer.com');
+	test('drops origins belonging to the upstream product', () => {
+		for (const appOrigin of ['https://fluxer.com', 'https://web.fluxer.app', 'https://canary.fluxer.com']) {
+			assert.equal(loadDesktop({settings: {app_origin: appOrigin}}).getLegacyAppOrigin(), 'https://micup.gg');
+		}
 	});
 
-	test('harvests the legacy web app origin for a stored legacy origin', () => {
-		const desktopConfig = loadDesktop({settings: {app_origin: 'https://web.fluxer.app'}});
+	test('retains a stored origin allowed for the channel', () => {
+		const desktopConfig = loadDesktop({settings: {app_origin: 'https://micup.gg'}});
 
-		assert.equal(desktopConfig.getLegacyAppOrigin(), 'https://web.fluxer.app');
+		assert.equal(desktopConfig.getLegacyAppOrigin(), 'https://micup.gg');
 	});
 
 	test('drops stored origins outside the channel allowlist', () => {
 		for (const appOrigin of [
-			'https://canary.fluxer.com',
-			'https://fluxer.com/',
+			'https://canary.micup.gg',
+			'https://micup.gg/',
 			'https://evil.example',
-			'http://fluxer.com',
+			'http://micup.gg',
 			42,
 		]) {
 			const desktopConfig = loadDesktop({settings: {app_origin: appOrigin}});
-			assert.equal(desktopConfig.getLegacyAppOrigin(), 'https://web.fluxer.app');
+			assert.equal(desktopConfig.getLegacyAppOrigin(), 'https://micup.gg');
 		}
 	});
 });

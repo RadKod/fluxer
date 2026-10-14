@@ -4,7 +4,10 @@ import {Endpoints} from '@app/features/app/constants/Endpoints';
 import type {RuntimeConfigSnapshot} from '@app/features/app/state/RuntimeConfig';
 import type {AccountPresenceIntent, UserData} from '@app/features/auth/state/AccountStorage';
 import {getAccountKey} from '@app/features/auth/state/AccountStorageKey';
-import type {AccountScopedWorkSuspension} from '@app/features/platform/state/AccountScopedWork';
+import {
+	type AccountScopedWorkSuspension,
+	AccountScopedWorkTransitionReason,
+} from '@app/features/platform/state/AccountScopedWork';
 import {AuthSessionAccountCatalog} from '@app/features/platform/state/auth_session/AuthSessionAccountCatalog';
 import {
 	AuthSessionAccountPersistence,
@@ -40,10 +43,14 @@ import {
 	selectAuthSessionCanSwitch,
 	transitionAuthSessionSnapshot,
 } from '@app/features/platform/state/auth_session/AuthSessionStateMachine';
-import {AuthSessionStoredAccountResolver} from '@app/features/platform/state/auth_session/AuthSessionStoredAccountResolver';
+import {
+	AuthSessionStoredAccountResolver,
+	type LegacyCredentialAdoption,
+} from '@app/features/platform/state/auth_session/AuthSessionStoredAccountResolver';
 import {AuthSessionTransitionGate} from '@app/features/platform/state/auth_session/AuthSessionTransitionGate';
 import {
 	emptyStoredSessionMirror,
+	type StoredSessionCredential,
 	type StoredSessionMirror,
 } from '@app/features/platform/state/auth_session/SessionCredentialMirror';
 import {mirrorGatewayPrebootSession} from '@app/features/platform/state/PrebootMirror';
@@ -101,7 +108,11 @@ export class AuthSessionManager {
 			restore: (snapshot) => this.restoreSnapshot(snapshot),
 		});
 		const cleanup = new AuthSessionCleanup(deps);
-		const storedAccountResolver = new AuthSessionStoredAccountResolver(deps);
+		const storedAccountResolver = new AuthSessionStoredAccountResolver({
+			accountStorage: deps.accountStorage,
+			resolveRuntimeEndpoint: deps.resolveRuntimeEndpoint,
+			adoptLegacyCredential: (credential) => this.adoptLegacyCredential(credential),
+		});
 		this.restorer = new AuthSessionRestorer(
 			deps,
 			this.accountCatalog,
@@ -132,6 +143,7 @@ export class AuthSessionManager {
 		);
 		makeAutoObservable<
 			AuthSessionManager,
+			| 'adoptLegacyCredential'
 			| '_initPromise'
 			| '_sessionInvalidationPromises'
 			| 'accountCatalog'
@@ -145,6 +157,7 @@ export class AuthSessionManager {
 		>(
 			this,
 			{
+				adoptLegacyCredential: false,
 				_initPromise: false,
 				_sessionInvalidationPromises: false,
 				accountCatalog: false,
@@ -503,6 +516,51 @@ export class AuthSessionManager {
 		}
 	}
 
+	// Micup: the previous-release credential adoption gated in AuthSessionStoredAccountResolver.adoptLegacyCredential.
+	// The credential is adopted only for the instance this page belongs to, and only once that instance answers the
+	// token with this user. Only a 401 or an answer for another user signs it out; any other failure (discovery,
+	// timeout, 403, 429, 5xx, a body without a user ID) leaves the credential for the next boot.
+	// TEMPORARY: removed together with that gate.
+	private async adoptLegacyCredential({userId, token}: StoredSessionCredential): Promise<LegacyCredentialAdoption> {
+		const skip = (cause: unknown): LegacyCredentialAdoption => {
+			logger.warn('This instance could not confirm the stored session credential, keeping it for the next boot', cause);
+			return 'skipped';
+		};
+		const reject = async (): Promise<LegacyCredentialAdoption> => {
+			logger.warn('This instance rejected the stored session credential, signing it out');
+			await this.deps.credentialMirror.persist(emptyStoredSessionMirror());
+			return 'rejected';
+		};
+		let snapshot: RuntimeConfigSnapshot;
+		try {
+			({snapshot} = await this.deps.resolveRuntimeEndpoint(window.location.origin));
+		} catch (error) {
+			return skip(error);
+		}
+		let body: unknown;
+		try {
+			({body} = await this.deps.http.get<unknown>(Endpoints.USER_ME, {
+				auth: 'none',
+				headers: {Authorization: token},
+				target: instanceTargetFromSnapshot(snapshot),
+				timeoutMs: AUTH_SESSION_TOKEN_VALIDATION_TIMEOUT_MS,
+				retries: 0,
+			}));
+		} catch (error) {
+			return error instanceof HttpError && error.status === HttpStatus.UNAUTHORIZED ? await reject() : skip(error);
+		}
+		const answeredUserId = typeof body === 'object' && body !== null && 'id' in body ? body.id : undefined;
+		if (typeof answeredUserId !== 'string') {
+			return skip(new Error('The current user answer carries no user ID'));
+		}
+		if (answeredUserId !== userId) {
+			return await reject();
+		}
+		await this.deps.accountStorage.stashAccountData(userId, token, undefined, snapshot, null);
+		logger.info(`Adopted the stored session credential for ${getAccountKey({userId, instance: snapshot})}`);
+		return 'adopted';
+	}
+
 	markAccountInvalid(accountKey: string, expectedToken?: string): void {
 		const resolved = this.accountCatalog.resolve(this.accounts, accountKey);
 		if (resolved === null || (expectedToken !== undefined && resolved.account.token !== expectedToken)) {
@@ -640,6 +698,11 @@ export class AuthSessionManager {
 			}
 			try {
 				await this.deps.deactivateRuntime();
+			} catch (error) {
+				cleanupErrors.push(error);
+			}
+			try {
+				await this.deps.resetSyncedUserSettings(AccountScopedWorkTransitionReason.LOGOUT);
 			} catch (error) {
 				cleanupErrors.push(error);
 			}

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type {ScreenShareContentHint} from '@app/features/voice/utils/CodecCapabilityDetector';
 import {
 	buildScreenShareOptions,
+	buildScreenShareSenderParameters,
 	getScreenShareBitrateBps,
 	resolveScreenShareDegradationPreference,
 	resolveScreenShareFrameRate,
@@ -31,7 +33,13 @@ function collectKeys(value: unknown, keys: Set<string>): Set<string> {
 	return keys;
 }
 
-function targetOf(overrides: {mode?: 'gaming' | 'screenshare' | 'custom'; softwareEncoderClamp?: boolean} = {}) {
+function targetOf(
+	overrides: {
+		mode?: 'gaming' | 'screenshare' | 'custom';
+		softwareEncoderClamp?: boolean;
+		hintSetting?: ScreenShareContentHint;
+	} = {},
+) {
 	return resolveScreenShareTarget({
 		mode: overrides.mode ?? 'screenshare',
 		storedResolution: 'medium',
@@ -39,7 +47,7 @@ function targetOf(overrides: {mode?: 'gaming' | 'screenshare' | 'custom'; softwa
 		entitled: true,
 		context: 'display',
 		sourceDimensions: null,
-		hintSetting: 'auto',
+		hintSetting: overrides.hintSetting ?? 'auto',
 		...(overrides.softwareEncoderClamp === undefined ? {} : {softwareEncoderClamp: overrides.softwareEncoderClamp}),
 	});
 }
@@ -104,8 +112,53 @@ describe('screen share quality', () => {
 		expect(publishOptions.degradationPreference).toBe('maintain-resolution');
 	});
 
-	it('holds the motion hint only for a camera', () => {
-		expect(targetOf({mode: 'gaming'}).contentHint).toBeUndefined();
+	it('keeps the motion hint on a game share of a display and lets the encoder balance resolution and frame rate', () => {
+		expect(targetOf({mode: 'gaming'})).toMatchObject({
+			contentHint: 'motion',
+			degradationPreference: 'balanced',
+		});
+	});
+
+	it('scales a game share capture down to its target before the encoder sees it', () => {
+		const {degradationPreference, encodings} = buildScreenShareSenderParameters({
+			encodings: [{}],
+			target: targetOf({mode: 'gaming'}),
+			capture: {width: 1920, height: 1080},
+			scalabilityMode: undefined,
+		});
+		expect(degradationPreference).toBe('balanced');
+		expect(encodings[0]?.scaleResolutionDownBy).toBe(1.5);
+	});
+
+	it('balances a custom quality share that carries the motion hint', () => {
+		expect(targetOf({mode: 'custom', hintSetting: 'motion'})).toMatchObject({
+			contentHint: 'motion',
+			degradationPreference: 'balanced',
+		});
+	});
+
+	it('leaves a maintain-framerate capture unscaled for the encoder', () => {
+		const target = targetOf({mode: 'custom'});
+		const {degradationPreference, encodings} = buildScreenShareSenderParameters({
+			encodings: [{}],
+			target,
+			capture: {width: 1920, height: 1080},
+			scalabilityMode: undefined,
+		});
+		expect(target.contentHint).toBeUndefined();
+		expect(degradationPreference).toBe('maintain-framerate');
+		expect(encodings[0]?.scaleResolutionDownBy).toBe(1);
+	});
+
+	it('starts a higher quality game share at 720p60, the bitrate of 1080p30', () => {
+		expect(targetOf({mode: 'gaming'})).toMatchObject({resolution: 'medium', frameRate: 60, maxBitrate: 4_500_000});
+	});
+
+	it('keeps the text hint on a screen share of a display', () => {
+		expect(targetOf({mode: 'screenshare'})).toMatchObject({
+			contentHint: 'text',
+			degradationPreference: 'maintain-resolution',
+		});
 	});
 
 	it('applies the software H.264 clamp', () => {
@@ -127,6 +180,29 @@ describe('screen share degradation preference', () => {
 				maxBitrate: 3_000_000,
 			}),
 		).toBe('balanced');
+	});
+
+	it('balances a motion share so a narrow uplink cannot shrink the picture without a floor', () => {
+		expect(
+			resolveScreenShareDegradationPreference({
+				context: 'display',
+				rung: 'medium',
+				contentHint: 'motion',
+				maxBitrate: 3_000_000,
+			}),
+		).toBe('balanced');
+	});
+
+	it('holds resolution on a motion share below 500 kbps and balances it from 500 kbps up', () => {
+		const motionAt = (maxBitrate: number) =>
+			resolveScreenShareDegradationPreference({
+				context: 'display',
+				rung: 'low_240p',
+				contentHint: 'motion',
+				maxBitrate,
+			});
+		expect(motionAt(499_999)).toBe('maintain-resolution');
+		expect(motionAt(500_000)).toBe('balanced');
 	});
 
 	it('refuses maintain-framerate below the initial frame dropper cliff', () => {

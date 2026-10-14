@@ -100,4 +100,12 @@ describe('OpenExternal URL validation', () => {
 		await assert.rejects(openExternalDeduped('javascript:alert(1)'), /External URL open request blocked/);
 		assert.deepEqual(openExternalCalls, []);
 	});
+
+	test('opens the Microsoft Store product page the Store copy updates from', async () => {
+		const {openExternalDeduped, openExternalCalls} = loadOpenExternal();
+
+		await openExternalDeduped('ms-windows-store://pdp/?ProductId=9P1SNJ2H2W9H');
+
+		assert.deepEqual(openExternalCalls, ['ms-windows-store://pdp/?ProductId=9P1SNJ2H2W9H']);
+	});
 });

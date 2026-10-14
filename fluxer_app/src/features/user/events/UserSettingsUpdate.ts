@@ -12,9 +12,10 @@ export interface UserSettingsPayload {
 	guild_positions: Array<string>;
 	locale: string;
 	synced_preferences?: string;
+	game_activity_visibility?: 'off' | 'friends' | null;
 }
 
-export function handleUserSettingsUpdate(data: UserSettingsPayload, _context: GatewayHandlerContext): void {
-	UserSettings.updateUserSettings(data);
+export function handleUserSettingsUpdate(data: UserSettingsPayload, context: GatewayHandlerContext): void {
+	UserSettings.updateUserSettings(data, {settingsEpoch: context.settingsEpoch});
 	GuildList.sortGuilds();
 }

@@ -1,0 +1,72 @@
+[
+	{
+		"name": "subscription premium shows the badge",
+		"row": {"flags": 0, "bot": false, "premium_type": 1, "premium_flags": 0},
+		"public_flags": 1073741824
+	},
+	{
+		"name": "lifetime premium shows the badge",
+		"row": {"flags": 0, "bot": false, "premium_type": 2, "premium_flags": 0},
+		"public_flags": 1073741824
+	},
+	{
+		"name": "BADGE_HIDDEN hides it",
+		"row": {"flags": 0, "bot": false, "premium_type": 1, "premium_flags": 2},
+		"public_flags": 0
+	},
+	{
+		"name": "masked, date and id hidden still show it",
+		"row": {"flags": 0, "bot": false, "premium_type": 2, "premium_flags": 28},
+		"public_flags": 1073741824
+	},
+	{
+		"name": "PERKS_DISABLED hides it",
+		"row": {"flags": 0, "bot": false, "premium_type": 2, "premium_flags": 256},
+		"public_flags": 0
+	},
+	{
+		"name": "PERKS_DISABLED keeps the other public bits",
+		"row": {"flags": 536870912, "bot": false, "premium_type": 1, "premium_flags": 256},
+		"public_flags": 536870912
+	},
+	{
+		"name": "ENABLED_OVERRIDE without premium_type shows nothing",
+		"row": {"flags": 0, "bot": false, "premium_type": null, "premium_flags": 128},
+		"public_flags": 0
+	},
+	{
+		"name": "premium_type 0 shows nothing",
+		"row": {"flags": 0, "bot": false, "premium_type": 0, "premium_flags": 0},
+		"public_flags": 0
+	},
+	{
+		"name": "premium_type null shows nothing",
+		"row": {"flags": 0, "bot": false, "premium_type": null, "premium_flags": null},
+		"public_flags": 0
+	},
+	{
+		"name": "a bot never shows it",
+		"row": {"flags": 0, "bot": true, "premium_type": 1, "premium_flags": 0},
+		"public_flags": 0
+	},
+	{
+		"name": "a deleted account never shows it",
+		"row": {"flags": 17179869184, "bot": false, "premium_type": 1, "premium_flags": 0},
+		"public_flags": 0
+	},
+	{
+		"name": "a stored bit 30 does not leak without premium",
+		"row": {"flags": 1073741824, "bot": false, "premium_type": null, "premium_flags": 0},
+		"public_flags": 0
+	},
+	{
+		"name": "verified premium keeps both bits",
+		"row": {"flags": 536870912, "bot": false, "premium_type": 1, "premium_flags": 0},
+		"public_flags": 1610612736
+	},
+	{
+		"name": "the legacy BADGE_HIDDEN bit (40) in flags hides it too",
+		"row": {"flags": 1099511627776, "bot": false, "premium_type": 1, "premium_flags": 0},
+		"public_flags": 0
+	}
+]

@@ -4,7 +4,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import LocalAudioTrack from './LocalAudioTrack.ts';
 import type {AudioProcessorOptions, TrackProcessor} from './processor/types.ts';
-import type {Track} from './Track.ts';
+import {Track} from './Track.ts';
 
 let nextTrackId = 0;
 
@@ -176,5 +176,87 @@ describe('LocalAudioTrack mute with a processor', () => {
 		expect(restarted.enabled).toBe(true);
 		expect(sender.handoffs).toEqual([{track: processor.processedTrack, enabled: false}]);
 		expect(processor.processedTrack?.enabled).toBe(false);
+	});
+});
+
+describe('LocalAudioTrack microphone re-acquisition', () => {
+	let getUserMedia: ReturnType<typeof vi.fn>;
+
+	beforeEach(() => {
+		vi.stubGlobal(
+			'MediaStream',
+			class {
+				constructor(readonly tracks: Array<MediaStreamTrack>) {}
+			},
+		);
+		getUserMedia = vi.fn(async () => ({getTracks: () => [new FakeMediaStreamTrack()]}));
+		vi.stubGlobal('navigator', {mediaDevices: {getUserMedia}});
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	async function createMicrophoneTrack() {
+		const published = await createPublishedTrack();
+		published.track.source = Track.Source.Microphone;
+		return published;
+	}
+
+	it('does not open a new capture when a stopped track is unmuted', async () => {
+		const {raw, track} = await createMicrophoneTrack();
+		await track.mute();
+		track.stop();
+		await track.unmute();
+		expect(getUserMedia).not.toHaveBeenCalled();
+		expect(raw.readyState).toBe('ended');
+		expect(track.isMuted).toBe(false);
+	});
+
+	it('does not open a new capture when a stopped track is restarted', async () => {
+		const {track} = await createMicrophoneTrack();
+		track.stop();
+		await track.restartTrack();
+		expect(getUserMedia).not.toHaveBeenCalled();
+	});
+
+	it('does not run the silence check on a stopped track that is restarted', async () => {
+		const {track} = await createMicrophoneTrack();
+		const checkForSilence = vi.spyOn(track, 'checkForSilence').mockResolvedValue(false);
+		track.stop();
+		await track.restartTrack();
+		expect(checkForSilence).not.toHaveBeenCalled();
+	});
+
+	it('re-acquires the microphone on unmute after the device ended the capture', async () => {
+		const {raw, track} = await createMicrophoneTrack();
+		await track.mute();
+		raw.readyState = 'ended';
+		await track.unmute();
+		expect(getUserMedia).toHaveBeenCalledTimes(1);
+		expect(track.mediaStreamTrack.readyState).toBe('live');
+		expect(track.isMuted).toBe(false);
+	});
+
+	it('re-acquires the microphone on unmute after the device changed while muted', async () => {
+		const {track} = await createMicrophoneTrack();
+		await track.mute();
+		await track.setDeviceId('other-microphone');
+		expect(getUserMedia).not.toHaveBeenCalled();
+		await track.unmute();
+		expect(getUserMedia).toHaveBeenCalledTimes(1);
+		expect(track.mediaStreamTrack.readyState).toBe('live');
+		expect(track.isMuted).toBe(false);
+	});
+
+	it('re-acquires the microphone on unmute after stopOnMute released it', async () => {
+		const {raw, track} = await createMicrophoneTrack();
+		track.stopOnMute = true;
+		await track.mute();
+		expect(raw.readyState).toBe('ended');
+		await track.unmute();
+		expect(getUserMedia).toHaveBeenCalledTimes(1);
+		expect(track.mediaStreamTrack.readyState).toBe('live');
+		expect(track.isMuted).toBe(false);
 	});
 });

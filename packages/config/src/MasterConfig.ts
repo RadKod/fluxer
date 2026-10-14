@@ -5,8 +5,12 @@ import type {DerivedEndpoints} from '@fluxer/config/src/EndpointDerivation';
 export type RuntimeEnv = 'development' | 'production' | 'test';
 export type DatabaseBackend = 'postgres' | 'cassandra';
 export type PublicScheme = 'http' | 'https';
-export const CACHE_PURGE_ADAPTER_NAMES = ['none', 'http'] as const;
+export const CACHE_PURGE_ADAPTER_NAMES = ['none', 'http', 'bunny', 'queue_only'] as const;
 export type CachePurgeAdapterName = (typeof CACHE_PURGE_ADAPTER_NAMES)[number];
+export const BUNNY_PURGE_MODES = ['prefix', 'tag'] as const;
+export type BunnyPurgeMode = (typeof BUNNY_PURGE_MODES)[number];
+export const CASSANDRA_CONSISTENCY_NAMES = ['local_one', 'local_quorum', 'quorum', 'one'] as const;
+export type CassandraConsistencyName = (typeof CASSANDRA_CONSISTENCY_NAMES)[number];
 export const STORE_PRODUCT_SLOT_NAMES = ['monthly', 'yearly', 'gift_1_month', 'gift_1_year'] as const;
 export type StoreProductSlotName = (typeof STORE_PRODUCT_SLOT_NAMES)[number];
 export const ACCOUNT_IDENTITY_MODE_NAMES = ['email', 'username'] as const;
@@ -53,6 +57,7 @@ export interface MasterConfig {
 			local_dc: string;
 			username: string;
 			password: string;
+			consistency?: CassandraConsistencyName;
 		};
 		postgres: {
 			url: string;
@@ -91,6 +96,7 @@ export interface MasterConfig {
 			automated_message_deletion_delay_days: number;
 			ip_ban_exempt_ips: Array<string>;
 			donation_proxy_key: string;
+			premium_trial_email_hash_key?: string;
 			trusted_callers: Array<{
 				name: string;
 				key: string;
@@ -102,7 +108,22 @@ export interface MasterConfig {
 			app_origin_aliases: Array<string>;
 			worker?: {
 				mode?: 'all_lanes' | 'single_lane' | 'single_task';
-				lane?: 'realtime' | 'unfurl' | 'lifecycle' | 'batch' | 'crosspost';
+				lane?:
+					| 'realtime'
+					| 'unfurl'
+					| 'lifecycle'
+					| 'batch'
+					| 'purge'
+					| 'feed'
+					| 'video'
+					| 'views'
+					| 'referral'
+					| 'roster'
+					| 'roster_live'
+					| 'micupbot_live'
+					| 'micupbot_roles'
+					| 'micupbot'
+					| 'crosspost';
 				task?: string;
 				enable_cron_scheduler?: boolean;
 				metrics_port?: number;
@@ -111,8 +132,19 @@ export interface MasterConfig {
 					unfurl?: number;
 					lifecycle?: number;
 					batch?: number;
+					purge?: number;
+					feed?: number;
+					video?: number;
+					views?: number;
+					referral?: number;
+					roster?: number;
+					roster_live?: number;
+					micupbot_live?: number;
+					micupbot_roles?: number;
+					micupbot?: number;
 					crosspost?: number;
 				};
+				feed_view_flush_partition_concurrency?: number;
 			};
 			storage_change_feed?: {
 				enabled?: boolean;
@@ -176,6 +208,10 @@ export interface MasterConfig {
 		};
 	};
 	integrations: {
+		risk_integration: {
+			ipinfo_api_key?: string;
+			account_policy_dsl?: unknown;
+		};
 		email: {
 			enabled: boolean;
 			provider: 'smtp' | 'none';
@@ -184,6 +220,8 @@ export interface MasterConfig {
 			reply_to_email: string;
 			app_base_url: string;
 			webhook_secret?: string;
+			html_enabled?: boolean;
+			html_footer?: Record<string, string>;
 			smtp?: {
 				host: string;
 				port: number;
@@ -228,6 +266,12 @@ export interface MasterConfig {
 			password: string;
 			reporter_email?: string;
 		};
+		// Micup shop payments (AZN). Only the API and the worker read it; the secret key never leaves the server.
+		payriff: {
+			enabled: boolean;
+			secret_key: string;
+			base_url: string;
+		};
 		clamav: {
 			enabled: boolean;
 			host: string;
@@ -247,6 +291,32 @@ export interface MasterConfig {
 				token: string;
 				timeout_ms: number;
 			};
+			bunny: {
+				api_base: string;
+				api_key: string;
+				timeout_ms: number;
+				concurrency: number;
+				mode: BunnyPurgeMode;
+				pull_zone_id: number;
+				rate_per_minute: number;
+				burst: number;
+			};
+		};
+		// Micup feed videos (Bunny Stream). `enabled` is not an env: the loader sets it when every secret is present.
+		bunny_stream: {
+			enabled: boolean;
+			library_id: number;
+			api_key: string;
+			read_only_api_key: string;
+			cdn_hostname: string;
+			token_key: string;
+			storage_zone: string;
+			// The storage zone's ReadOnlyPassword: the API only lists and reads the video files.
+			storage_password: string;
+			storage_host: string;
+			api_base: string;
+			tus_endpoint: string;
+			timeout_ms: number;
 		};
 		blocklist_feeds: {
 			enabled?: boolean;
@@ -299,7 +369,12 @@ export interface MasterConfig {
 	};
 	instance: {
 		self_hosted: boolean;
+		abuse_policy: {
+			phone_flagging: {enabled: boolean};
+		};
 		auto_join_invite_code?: string;
+		roster_bot_application_id?: string;
+		micupbot_application_id?: string;
 		visionaries_guild_id?: string;
 		visionaries_guild_visionary_role_id?: string;
 		branding: InstanceBrandingConfig;

@@ -54,6 +54,7 @@ pub async fn run_ci(args: CiArgs) -> Result<()> {
         CiStep::Test => {
             run_generators(&root, false)?;
             run_app_test_artifact_generators(&root, AppWasm::ReuseIfPresent)?;
+            ensure_desktop_build_channel_file(&root)?;
             run_workspace_tests(&root)?;
             run_command(
                 CommandSpec::new("pnpm")

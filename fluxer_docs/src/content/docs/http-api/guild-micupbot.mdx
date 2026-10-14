@@ -1,0 +1,573 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: Guild community bot
+description: Community bot settings, reaction roles, moderation commands, automod, levels, and personal data.
+---
+
+import RouteHeader from '@/components/RouteHeader.astro';
+
+MicupBOT is the instance's official community bot. It provides welcome and goodbye messages, automatic roles, reaction role panels, message and voice XP, level rewards, moderation commands, and automod. Configure it in **Server Settings → Community bot**. The displayed bot name comes from its application.
+
+All 13 routes below require a signed-in user and guild membership. Bot and OAuth2 bearer credentials return 403 `ACCESS_DENIED`. IDs are decimal snowflake strings. The permissions below belong to the caller; the bot needs its own permissions when sending messages or changing roles.
+
+## Feature availability
+
+The instance-wide `feature_micupbot` limit defaults to `0`. Processing requires a nonzero limit and a valid `FLUXER_MICUPBOT_APPLICATION_ID`. This is an application ID, not a bot token. While unavailable, every write route returns 403 `FEATURE_TEMPORARILY_DISABLED`; reads remain available and stored settings remain intact. Pending XP counters can still flush to storage after the feature is disabled.
+
+Commands, levels, automod, welcome messages, goodbye messages, and voice XP default to disabled. The settings response's `feature_enabled` describes instance availability; check `bot.in_guild` separately.
+
+The service maintains four guild features under the guild update lock. They are not user-toggleable through the general guild update endpoint:
+
+| Feature | Enabled when the bot is a member and… |
+| --- | --- |
+| MICUPBOT_COMMANDS | `commands_enabled` is true |
+| MICUPBOT_LEVELS | `levels_enabled` is true |
+| MICUPBOT_AUTOMOD | `automod_enabled` is true and at least one rule is enabled |
+| MICUPBOT_JOIN | Welcome, goodbye, or at least one automatic role is configured |
+
+Bot departure processing removes these features; rejoining restores them from settings. When the bot identity is configured, its join and departure events are queued and processed even while `feature_micupbot` is `0`, keeping guild features and voice scheduling membership in sync. This does not enable commands, automod, or XP while the instance feature is disabled. A settings PATCH or automod PUT that changes the desired feature set is limited to **one change per guild per 60 seconds**, including repairs to out-of-sync features. Excess changes return 429 with `retry_after: 60`. Ordinary settings edits that leave the feature set unchanged do not consume this additional limit.
+
+## Invite the bot
+
+Use `bot.application_id` and `invite_permissions` from the settings response with the normal [bot invitation flow](/http-api/oauth2/):
+
+```text
+/oauth2/authorize?client_id=APPLICATION_ID&scope=bot&permissions=1099780156480&guild_id=GUILD_ID&disable_guild_select=true
+```
+
+The inviter needs the normal guild management and permission-granting rights. The decimal mask `1099780156480` is the sum of:
+
+| Permission | Bit value |
+| --- | --- |
+| ADD_REACTIONS | 64 |
+| VIEW_CHANNEL | 1024 |
+| SEND_MESSAGES | 2048 |
+| MANAGE_MESSAGES | 8192 |
+| EMBED_LINKS | 16384 |
+| READ_MESSAGE_HISTORY | 65536 |
+| MANAGE_ROLES | 268435456 |
+| MODERATE_MEMBERS | 1099511627776 |
+
+`BAN_MEMBERS`, `KICK_MEMBERS`, and `MOVE_MEMBERS` are not requested: commands perform those actions with the **command author's identity and permissions**. Inviting the bot does not grant those rights to members. Move its role above roles it should assign and allow its permissions in the selected channels.
+
+The bot runs through the instance's services without its own Gateway session and can appear offline. Its token is refused for bot-token authentication.
+
+**Discover → Applications** reads `features.official_apps` from [instance discovery](/http-api/instance/). Each entry has `application_id` and `invite_permissions`, both strings. Applications appear in order: MicupBOT, then Micup Roster, each only when its own instance feature is enabled and its application ID is configured. Disabled or unconfigured entries are omitted. A listed application does not prove it has joined a guild. Cards fetch application details from `GET /oauth2/applications/{application_id}/public` and use the same `scope=bot` invitation, without a preselected guild.
+
+## Permission and safety rules
+
+### Role assignment (K2)
+
+Saving automatic roles, reaction roles, or level rewards requires `MANAGE_ROLES` as well as the route's `MANAGE_GUILD`. Each role must belong to this guild, be below the caller's highest role (the owner is exempt from this hierarchy check), and be below the bot's highest role when it is a member. The `@everyone` role and managed roles are refused.
+
+Roles carrying any of these elevated permissions are refused: `KICK_MEMBERS`, `BAN_MEMBERS`, `ADMINISTRATOR`, `MANAGE_CHANNELS`, `MANAGE_GUILD`, `MANAGE_MESSAGES`, `MANAGE_ROLES`, `MANAGE_WEBHOOKS`, or `MODERATE_MEMBERS`.
+
+Automatic assignments recheck role safety and the bot's permissions at execution time. A deleted, elevated, or inaccessible role is skipped. Temporary members receive no automatic, reaction, or reward roles. `role_warnings` lists stored role IDs that fail the current caller/bot checks; it contains IDs, not explanatory messages.
+
+### Automod configuration (K3)
+
+Saving rules requires `MANAGE_GUILD` and `MANAGE_MESSAGES`, plus `MODERATE_MEMBERS` if **any submitted rule** uses `delete_mute`, even when that rule is disabled. Words must contain 3-64 characters, with at most 200 words per rule. Members with effective `MANAGE_MESSAGES` in the message channel are exempt from automod actions. Each rule can also exempt roles and channels.
+
+### Message channels and mentions (K4)
+
+Every non-null welcome, goodbye, and level-up channel must be a guild text channel (type `0`) in this guild. The caller needs effective `VIEW_CHANNEL`, `SEND_MESSAGES`, and `EMBED_LINKS`, including channel overwrites, even when the corresponding embed option is false. PATCH checks the resulting target channel when the request includes its channel field or a related message, embed, or enable field:
+
+- Welcome: `welcome_channel_id`, `welcome_message`, `welcome_embed`, or `welcome_enabled`.
+- Goodbye: `goodbye_channel_id`, `goodbye_message`, `goodbye_embed`, or `goodbye_enabled`.
+- Level-up: `level_up_channel_id`, `level_up_message`, or `level_up_message_enabled`.
+
+Changing a template therefore checks the saved target channel even if its ID is omitted. A caller without access to that channel receives 403. Unrelated changes, such as `commands_enabled`, do not revalidate saved message channels or automatic roles, so a deleted channel does not block them. Automatic-role permission and safety checks run only when `autorole_ids` is submitted, including an empty array; other settings do not require `MANAGE_ROLES` just because automatic roles are stored.
+
+Panel creation checks the caller's `VIEW_CHANNEL`, `SEND_MESSAGES`, and `ADD_REACTIONS` in its text channel. The bot sends the embed and adds reactions with its own permissions.
+
+Templates are limited to 1,000 characters before expansion. Welcome and level-up messages allow only the affected user to be mentioned; goodbye messages and panels allow no mentions. All use `allowed_mentions.parse: []`. Names are Markdown-escaped and `@everyone`/`@here` in names are broken up. Command replies also disable reply-author pings.
+
+### MFA
+
+The normal Fluxer MFA checks apply to elevated caller permissions. A non-owner without an enrolled authenticator in an MFA-required guild can receive 400 `TWO_FACTOR_REQUIRED`. Commands use the author's normal service checks; channel overwrite commands use Fluxer's overwrite path, which does not add a separate MFA check.
+
+`bot.mfa_blocked` is true when the guild requires elevated MFA. There is no official-bot MFA exemption: bot role changes can be skipped, and the message hook does not queue automod actions in these guilds. Saving settings does not establish that the bot can execute them.
+
+## Settings object
+
+All fields below appear in the response. PATCH accepts every field except `updated_at`, makes each optional, and requires at least one recognized field. Omitted values are retained. Arrays replace their previous values and cannot contain duplicate IDs.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| commands_enabled | boolean | Enable commands; defaults to false |
+| levels_enabled | boolean | Enable message XP and levels; defaults to false |
+| automod_enabled | boolean | Enable automod; defaults to false |
+| welcome_enabled | boolean | Enable welcome messages; defaults to false |
+| welcome_channel_id | ?snowflake | Welcome text channel; defaults to null |
+| welcome_message | ?string | Template of 1-1,000 characters; null uses the default |
+| welcome_embed | boolean | Send the welcome as an embed; defaults to false |
+| goodbye_enabled | boolean | Enable goodbye messages; defaults to false |
+| goodbye_channel_id | ?snowflake | Goodbye text channel; defaults to null |
+| goodbye_message | ?string | Template of 1-1,000 characters; null uses the default |
+| goodbye_embed | boolean | Send the goodbye as an embed; defaults to false |
+| autorole_ids | array[snowflake] | Up to 5 roles granted on joining; defaults to empty |
+| level_up_message_enabled | boolean | Announce level-ups; defaults to true |
+| level_up_channel_id | ?snowflake | Announcement channel; null uses the XP message's channel |
+| level_up_message | ?string | Template of 1-1,000 characters; null uses the default |
+| no_xp_channel_ids | array[snowflake] | Up to 50 excluded channels; defaults to empty |
+| no_xp_role_ids | array[snowflake] | Up to 50 excluded roles; defaults to empty |
+| voice_xp_enabled | boolean | Enable voice XP when levels are enabled; defaults to false; see [levels](#levels-and-rewards) |
+| updated_at | ?ISO8601 timestamp | Last saved time; null before settings are first saved |
+
+A welcome or goodbye with no channel sends no message. Enabling its boolean does not fill in a channel.
+
+## Settings response object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| feature_enabled | boolean | Instance flag and application configuration enable the feature |
+| bot | ?object | Bot information below; null without a valid application ID |
+| invite_permissions | string | Always `"1099780156480"` |
+| join_notification_conflict | boolean | Welcome shares the unsuppressed system join-message channel |
+| role_warnings | array[string] | Stored role IDs failing the current safety or hierarchy checks |
+| settings | object | The [settings object](#settings-object) |
+| default_messages | object | `welcome`, `goodbye`, and `level_up` template strings |
+| limits | object | The fixed [limits](#limits-object) |
+
+When `join_notification_conflict` is true, consider suppressing the system join message with `SUPPRESS_JOIN_NOTIFICATIONS`; saving bot settings does not change it automatically.
+
+The `bot` object contains `application_id` and `user_id` as snowflakes, `in_guild` as a boolean, and `mfa_blocked` as a boolean.
+
+## Limits object
+
+These integer fields are returned by the settings route:
+
+| Field | Value |
+| --- | --- |
+| templateMax | 1000 |
+| autoroleMax | 5 |
+| noXpChannelsMax | 50 |
+| noXpRolesMax | 50 |
+| rulesMax | 6 |
+| wordsMax | 200 |
+| wordMin | 3 |
+| wordMax | 64 |
+| domainsMax | 50 |
+| exemptMax | 50 |
+| panelsMax | 25 |
+| panelEntriesMax | 20 |
+| panelTitleMax | 100 |
+| panelDescriptionMax | 1000 |
+| rewardsMax | 25 |
+| levelMax | 500 |
+| muteMinSeconds | 60 |
+| muteMaxSeconds | 2419200 |
+| muteDefaultSeconds | 600 |
+| warningsMax | 100 |
+| warningReasonMax | 512 |
+| leaderboardPage | 100 |
+| leaderboardMax | 1000 |
+
+## Automod rule object
+
+The response contains all fields. In a submitted rule, `rule`, `enabled`, and `threshold` are required; the other fields have the defaults below.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| rule | string | `spam`, `invites`, `links`, `words`, `mentions`, or `caps` |
+| enabled | boolean | Whether this rule is enabled |
+| action | string | `delete`, `delete_warn`, or `delete_mute`; defaults to `delete_warn` |
+| threshold | integer | Rule-specific range below; required even for rules using zero |
+| mute_seconds | integer | 60-2,419,200 seconds; defaults to 600 |
+| words | array[string] | Up to 200 strings of 3-64 characters; `*` only at the start or end, 3+ others; defaults to empty; only for `words` |
+| allowed_domains | array[string] | Up to 50 strings of 1-253 characters; defaults to empty; only for `links` |
+| exempt_role_ids | array[snowflake] | Up to 50 distinct exempt roles; defaults to empty |
+| exempt_channel_ids | array[snowflake] | Up to 50 distinct exempt channels; defaults to empty |
+
+An automod response has the following field:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| rules | array[object] | All six [automod rules](#automod-rule-object) |
+
+Absent rules use disabled defaults, empty lists, a `delete_warn` action, and a 600-second timeout.
+
+| Rule | Threshold | Detection |
+| --- | --- | --- |
+| spam | 3-20; default 5 | Per-user, per-guild message bucket over 5 seconds |
+| invites | 0 | Recognized instance or Discord invite links |
+| links | 0 | Explicit HTTP(S) or `www.` links outside allowed and instance hosts |
+| words | 0 | Turkish case-insensitive whole word; `word*` also matches as a prefix, `*word` as a suffix, `*word*` as a substring; no regex |
+| mentions | 3-50; default 5 | Distinct user mentions plus distinct role mentions reach the threshold; everyone mentions trigger it |
+| caps | 50-100; default 70 | Uppercase percentage reaches the threshold in text containing at least 10 letters |
+
+Allowed domains are hostnames, not URL patterns. Matching ignores case, a leading `www.`, and a trailing dot. Each allowed domain also permits its subdomains: `youtube.com` allows `m.youtube.com` and `music.youtube.com`, but not `notyoutube.com` or `youtube.com.example.org`. The invite rule recognizes instance invite URLs and Discord invite forms including `discord.gg` and `discord.com/invite`. Detection does not fetch URLs.
+
+Automod checks ordinary user messages and replies after sending and after editing. Bots and webhooks are ignored. Enabled automod rules run before command handling, including when the author's command bucket is full. A command message that violates a rule queues the automod action and no command job, and receives no message XP. For example, `#help discord.gg/example` is subject to the invite rule. Only one violation is selected per message; spam is checked if the other rules found none. Editing a message can trigger automod, but never executes a command or awards XP.
+
+`delete` removes the message. `delete_warn` removes it and posts a warning in the same channel, mentioning only its author, at most once per member and guild every **30 seconds**. Further violations during that warning cooldown are still deleted. It does **not** create a stored warning. `delete_mute` removes it and requests a timeout using the bot's normal permissions and hierarchy checks.
+
+The guild-wide circuit breaker allows 60 action attempts per minute. Exceeding it pauses automod for 600 seconds and attempts one warning. Members with effective `MANAGE_MESSAGES` are exempted before consuming the circuit-breaker bucket. For other members, it counts action attempts before deletion, not only successful deletions.
+
+Exact example messages from `MICUPBOT_TEXT`:
+
+```text
+⚠️ <@1489002177550843906>, çok hızlı mesaj gönderiyorsun.
+⚠️ Otomoderasyon 10 dakika durduruldu: dakikada 60'tan fazla işlem yapıldı.
+```
+
+## Reaction role panel object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| message_id | snowflake | The bot-owned panel message |
+| channel_id | snowflake | The guild text channel |
+| mode | string | `normal`, `unique`, or `add_only` |
+| title | string | Panel title, 1-100 characters |
+| description | ?string | Optional description, up to 1,000 characters |
+| entries | array[object] | 1-20 emoji-to-role entries |
+| created_at | ISO8601 timestamp | Creation time |
+
+Each entry contains `role_id` and `emoji: {name, id}`. `name` is a 1-64 character string. `id` is a nullable custom-emoji snowflake; omit it or use null when submitting a single valid Unicode emoji. A custom emoji must belong to this guild; its stored name is used. Role IDs and emoji identities must each be distinct within a panel.
+
+In `normal` mode, adding a reaction grants its role and removing it revokes that role. In `unique` mode, a successful grant also removes the member's other roles from the same panel. If the new grant fails, existing choices remain. In `add_only` mode, removing the reaction does not revoke the role. Processing rechecks the actual reaction state and is limited to 10 changes per member and guild per 10 seconds.
+
+## Level reward and leaderboard objects
+
+A reward is `{level, role_id}`: `level` is an integer from 1 to 500 and `role_id` is a snowflake. Levels must be distinct; role IDs need not be. Rewards are cumulative. A rewards response has these fields:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| rewards | array[object] | Up to 25 `{level, role_id}` rewards |
+| max_rewards | integer | Always 25 |
+
+A leaderboard response has these fields:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| levels_enabled | boolean | Whether the guild has levels enabled |
+| total | integer | Entry count in the retained top 1,000, not all guild members |
+| entries | array[object] | The requested page of leaderboard entries |
+
+Each leaderboard entry has:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| rank | integer | One-based rank |
+| user_id | snowflake | Member ID |
+| xp | number | Total XP |
+| level | integer | Level calculated from total XP |
+| user | ?object | Partial [user object](/http-api/users/), or null when unavailable |
+
+Disabled levels return `levels_enabled: false`, `total: 0`, and an empty array. A missing ranking cache returns an empty array with `levels_enabled: true` and queues a rebuild; retry later. The ranking cache can expire after 30 days without a TTL refresh; persistent XP is retained.
+
+## Warning object
+
+The list response has the following field:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| warnings | array[object] | Up to 100 warning records, newest first |
+
+Each warning record has these fields:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | snowflake | Warning ID, derived from the command message ID |
+| moderator_id | snowflake | Moderator who issued the warning |
+| reason | string | Reason of at most 512 characters |
+| created_at | ISO8601 timestamp | Warning creation time |
+
+`#warn` creates warnings; there is no HTTP create-warning route and no automatic punishment based on the warning count. At 100 warnings, delete old warnings before adding another.
+
+## Get community bot settings
+
+<RouteHeader method="GET" path="/v1/guilds/{guild_id}/micupbot/settings" />
+
+Operation ID: `get_guild_micupbot_settings`. Requires `MANAGE_GUILD`. Returns 200 with the [settings response](#settings-response-object), including defaults before the first save. No JSON body or query parameters. Uses the read rate bucket.
+
+## Update community bot settings
+
+<RouteHeader method="PATCH" path="/v1/guilds/{guild_id}/micupbot/settings" />
+
+Operation ID: `update_guild_micupbot_settings`. Requires `MANAGE_GUILD`, feature availability, and the [safety checks](#permission-and-safety-rules). Returns 200 with the [settings response](#settings-response-object). Uses the write bucket and, when features change, the module cooldown.
+
+### JSON body
+
+Send at least one writable field from the [settings object](#settings-object). For example:
+
+```json
+{
+  "welcome_enabled": true,
+  "welcome_channel_id": "1489002177550843906",
+  "welcome_message": null,
+  "welcome_embed": false
+}
+```
+
+Invalid fields return 400, unsafe roles return 400 `MICUPBOT_ROLE_NOT_ASSIGNABLE`, and denied permissions or a disabled feature return 403. A concurrent settings update is retried once internally; unresolved contention returns 409 `CONFLICT`. Refetch before retrying.
+
+## Get automod rules
+
+<RouteHeader method="GET" path="/v1/guilds/{guild_id}/micupbot/automod" />
+
+Operation ID: `get_guild_micupbot_automod`. Requires `MANAGE_GUILD`. Returns 200 with `{rules: [...]}` containing all six [automod rules](#automod-rule-object). No JSON body or query parameters. Uses the read bucket.
+
+## Replace automod rules
+
+<RouteHeader method="PUT" path="/v1/guilds/{guild_id}/micupbot/automod" />
+
+Operation ID: `update_guild_micupbot_automod`. Requires `MANAGE_GUILD`, `MANAGE_MESSAGES`, feature availability, and `MODERATE_MEMBERS` for any `delete_mute` action. Uses the write bucket and the module cooldown when the first active rule enables or the last active rule disables the guild feature.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| rules | array[object] | 0-6 [rule objects](#automod-rule-object), with no duplicate rule names |
+
+This replaces all saved rules; an empty array removes them. Omitted rules return as disabled defaults. Returns 200 with all six rules. Invalid fields return 400; permission and feature failures return 403; throttling returns 429.
+
+## List reaction role panels
+
+<RouteHeader method="GET" path="/v1/guilds/{guild_id}/micupbot/reaction-roles" />
+
+Operation ID: `list_guild_micupbot_reaction_roles`. Requires `MANAGE_GUILD`. Returns 200 with `{panels: [...], max_panels: 25}`. Entries are [panel objects](#reaction-role-panel-object). No pagination, JSON body, or query parameters. Uses the read bucket.
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| panels | array[object] | Stored [reaction role panels](#reaction-role-panel-object) |
+| max_panels | integer | Always 25 |
+
+## Create reaction role panel
+
+<RouteHeader method="POST" path="/v1/guilds/{guild_id}/micupbot/reaction-roles" />
+
+Operation ID: `create_guild_micupbot_reaction_role`. Requires `MANAGE_GUILD`, `MANAGE_ROLES`, feature availability, bot membership, and the panel channel and role checks above. Uses the write bucket.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| channel_id | snowflake | Target guild text channel |
+| mode? | string | `normal`, `unique`, or `add_only`; defaults to `normal` |
+| title | string | 1-100 characters |
+| description? | string | 0-1,000 characters; omission returns null |
+| entries | array[object] | 1-20 distinct emoji/role pairs as described in the [panel object](#reaction-role-panel-object) |
+
+Returns 200 with the created panel. The route sends a new bot message; it cannot attach a panel to an existing message. Initial reaction failures are logged and can leave a stored panel without all seeded reactions.
+
+At 25 stored panels, creation returns 400 `MAX_MICUPBOT_REACTION_ROLE_PANELS` with `max_micupbot_reaction_role_panels: 25`. Missing bot membership returns 400 `MICUPBOT_NOT_IN_GUILD`; unsafe roles return 400 `MICUPBOT_ROLE_NOT_ASSIGNABLE`. Field validation returns 400 and permission/feature failures return 403. Lock contention can return 409 `CONFLICT`.
+
+## Delete reaction role panel
+
+<RouteHeader method="DELETE" path="/v1/guilds/{guild_id}/micupbot/reaction-roles/{message_id}" />
+
+Operation ID: `delete_guild_micupbot_reaction_role`. Requires `MANAGE_GUILD` and feature availability, but not `MANAGE_ROLES`. Deletes the panel row and attempts to delete its bot message. Message deletion failure does not undo the row deletion; already granted roles are not removed. No JSON body. Returns 204 empty, or 404 `UNKNOWN_MICUPBOT_REACTION_ROLE_PANEL` if the panel is absent from this guild. Uses the write bucket.
+
+## List level rewards
+
+<RouteHeader method="GET" path="/v1/guilds/{guild_id}/micupbot/level-rewards" />
+
+Operation ID: `list_guild_micupbot_level_rewards`. Requires `MANAGE_GUILD`. Returns 200 with the [rewards response](#level-reward-and-leaderboard-objects). No JSON body or query parameters. Uses the read bucket.
+
+## Replace level rewards
+
+<RouteHeader method="PUT" path="/v1/guilds/{guild_id}/micupbot/level-rewards" />
+
+Operation ID: `update_guild_micupbot_level_rewards`. Requires `MANAGE_GUILD`, `MANAGE_ROLES`, feature availability, and K2 role checks. Uses the write bucket.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| rewards | array[object] | 0-25 `{level, role_id}` objects; distinct levels from 1 to 500 and safe guild roles |
+
+The array replaces all rewards; an empty array removes the configuration. Returns 200 with the [rewards response](#level-reward-and-leaderboard-objects). Validation or unsafe roles return 400; permission or feature failures return 403. Replacement does not revoke roles already earned or immediately grant new ones to existing members.
+
+## Get leaderboard
+
+<RouteHeader method="GET" path="/v1/guilds/{guild_id}/micupbot/leaderboard" />
+
+Operation ID: `get_guild_micupbot_leaderboard`. Requires guild membership, with no additional management permission. Returns 200 with the [leaderboard response](#level-reward-and-leaderboard-objects). A non-member or unknown guild returns 403 `MISSING_ACCESS`. Uses the leaderboard bucket.
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| offset? | integer | 0-900; defaults to 0 |
+| limit? | integer | 1-100; defaults to 100 |
+
+Only the first 1,000 ranks are exposed. Invalid query values return 400. There is no JSON body.
+
+## List member warnings
+
+<RouteHeader method="GET" path="/v1/guilds/{guild_id}/micupbot/warnings/{user_id}" />
+
+Operation ID: `list_guild_micupbot_warnings`. Requires `MODERATE_MEMBERS`, not `MANAGE_GUILD`. Returns 200 with the [warning list](#warning-object), or an empty list if this member has none in this guild. No pagination, JSON body, or query parameters. Uses the read bucket. This HTTP response exposes moderator IDs only to callers with the required permission.
+
+## Clear member warnings
+
+<RouteHeader method="DELETE" path="/v1/guilds/{guild_id}/micupbot/warnings/{user_id}" />
+
+Operation ID: `clear_guild_micupbot_warnings`. Requires `MODERATE_MEMBERS` and feature availability. Deletes this member's warnings in this guild, including an already-empty list. Returns 204 empty. No JSON body. Uses the write bucket.
+
+## Delete member warning
+
+<RouteHeader method="DELETE" path="/v1/guilds/{guild_id}/micupbot/warnings/{user_id}/{warning_id}" />
+
+Operation ID: `delete_guild_micupbot_warning`. Requires `MODERATE_MEMBERS` and feature availability. Returns 204 empty, or 404 `UNKNOWN_MICUPBOT_WARNING` if no warning matches this guild, user, and warning ID. No JSON body. Uses the write bucket.
+
+## Path parameters and errors
+
+Every route's `guild_id` selects the owning guild. Panel deletion's `message_id` is the panel message ID, warning routes' `user_id` is the warned member, and `warning_id` is the warning to delete. These are snowflakes. A panel or warning in another guild is not accessible through this guild's path.
+
+The standard [error response](/http-api/#error-response) applies. Common failures are 401 for no signed-in user, 403 `ACCESS_DENIED` for disallowed credentials, 403 `MISSING_PERMISSIONS` for denied permissions, and 429 for rate limits. Guild lookup can return 404 `UNKNOWN_GUILD` or 403 `MISSING_ACCESS`; the leaderboard maps unknown guilds to 403. Elevated-permission MFA failures return 400 `TWO_FACTOR_REQUIRED`. Every write can return 403 `FEATURE_TEMPORARILY_DISABLED`.
+
+Feature-specific errors are:
+
+- 400 `MAX_MICUPBOT_REACTION_ROLE_PANELS`: the 25-panel limit, with `max_micupbot_reaction_role_panels: 25`.
+- 404 `UNKNOWN_MICUPBOT_REACTION_ROLE_PANEL`: no panel in the selected guild.
+- 404 `UNKNOWN_MICUPBOT_WARNING`: no warning for the selected guild and user.
+- 400 `MICUPBOT_ROLE_NOT_ASSIGNABLE`: role safety or hierarchy failure, with `role_id`.
+- 400 `MICUPBOT_NOT_IN_GUILD`: panel creation requires the configured bot to be present.
+
+Field validation returns 400 `INVALID_FORM_BODY`. Its `errors` entries contain `path` and validation codes:
+
+- `CHANNEL_DOES_NOT_EXIST`: a selected message channel is missing or belongs to another guild.
+- `INVALID_CHANNEL_ID`: a selected message channel is not a guild text channel.
+- `NOT_A_VALID_UNICODE_EMOJI`: a panel entry is not a single valid Unicode emoji.
+- `CUSTOM_EMOJI_NOT_FOUND`: a custom panel emoji is not in this guild.
+- `STRING_LENGTH_INVALID`: a normalized string is outside its length bounds.
+- `INVALID_SNOWFLAKE_FORMAT` or `SNOWFLAKE_OUT_OF_RANGE`: an invalid ID.
+- `INVALID_FORMAT`: missing or invalid fields, empty PATCH, invalid ranges, duplicate IDs/rules/levels/emoji, or lists used with the wrong automod rule.
+
+## Rate limits
+
+Route buckets are scoped to the authenticated user and guild. Reads other than leaderboard share `guild:micupbot:read::guild_id` at 30 requests per 10 seconds. Writes share `guild:micupbot:write::guild_id` at 10 requests per 10 seconds. Leaderboard reads use `guild:micupbot:leaderboard::guild_id` at 20 requests per 10 seconds. Standard global limits also apply. See [rate-limit handling](/topics/rate-limits/).
+
+The separate module-change cooldown is guild-wide, one change per 60 seconds. Commands have their own buckets: 5 per author and guild per 10 seconds, 30 per guild per 10 seconds, and 10 per guild per minute for `ban`, `kick`, `clear`, `lock`, `unlock`, and `slowmode`. Excess commands are silently dropped.
+
+## Commands
+
+The fixed prefix is `#`, at the beginning of the message. Command names are case-insensitive. Only ordinary user messages and replies in guilds with commands enabled are considered. Bot and webhook messages are ignored. The original message must still exist with unchanged content when the job runs.
+
+Moderation runs as the author through the normal Fluxer services: permissions, applicable hierarchy, MFA, and audit identity are the author's. The bot only sends the reply. All commands require access to the source channel. Additional permissions are listed below; `none` means no additional management permission.
+
+| Command | Arguments | Required permission |
+| --- | --- | --- |
+| #ban | `@üye [süre] [sebep]` | `BAN_MEMBERS` |
+| #unban | `id` | `BAN_MEMBERS` |
+| #kick | `@üye [sebep]` | `KICK_MEMBERS` |
+| #mute | `@üye <süre> [sebep]` | `MODERATE_MEMBERS` |
+| #timeout | `@üye <süre> [sebep]` | `MODERATE_MEMBERS` |
+| #unmute | `@üye` | `MODERATE_MEMBERS` |
+| #warn | `@üye <sebep>` | `MODERATE_MEMBERS` |
+| #warnings | `@üye` | `MODERATE_MEMBERS` |
+| #clear | `<1-100> [@üye]` | `MANAGE_MESSAGES`, `READ_MESSAGE_HISTORY` |
+| #lock | `[#kanal]` | `MANAGE_ROLES` |
+| #unlock | `[#kanal]` | `MANAGE_ROLES` |
+| #slowmode | `<saniye\|kapat\|off\|0> [#kanal]` | `MANAGE_CHANNELS` |
+| #role | `@üye <@rol\|id\|ad>` | `MANAGE_ROLES` |
+| #nick | `@üye [yeni ad]` | `MANAGE_NICKNAMES` |
+| #move | `@üye <#ses\|id>` | `MOVE_MEMBERS` |
+| #user | `[@üye]` | none |
+| #server | none | none |
+| #avatar | `[@üye]` | none |
+| #rank | `[@üye]` | none |
+| #top | none | none |
+| #help | none | none |
+
+User arguments accept a mention or numeric ID; channel arguments accept a channel mention or ID. Roles accept a role mention, ID, or full name matched case-insensitively using Turkish casing. Optional user arguments default to the author. Durations accept `s`/`sn`, `m`/`dk`, `h`/`sa`, and `d`/`g`, such as `10dk`. A ban duration is `0` (permanent), omitted (permanent), or 60 seconds to two years. A timeout must be positive and at most 28 days. Reasons are limited to 512 characters; nicknames to 1-32 characters, and slowmode to 0-21,600 seconds, through Fluxer's request schemas.
+
+`#rank` and `#top` require levels to be enabled. Changing your own nickname with `#nick` requires `CHANGE_NICKNAME` instead of `MANAGE_NICKNAMES`.
+
+`#role` toggles the selected role under the author's hierarchy; K2's automatic-role restrictions do not replace that normal permission check. `#nick` without a new name resets it. `#clear` considers up to the requested count of messages before the command, then applies an optional author filter; it does not search further to fill that count. `#lock` removes the `@everyone` SEND_MESSAGES allow and sets its deny; `#unlock` clears that deny without restoring an earlier allow.
+
+`#warnings` checks moderator permission and target hierarchy, then posts up to ten recent warnings with timestamps and reasons, plus the total count, in the source channel. The reply omits moderator IDs and mentions. **Anyone who can read that channel can read the reply**; use a private moderation channel for warning commands. `#user` and `#avatar` require the target to be a guild member. `#server` counts only channels visible to the author.
+
+### Reply examples
+
+These are exact `MICUPBOT_TEXT` outputs with example arguments (`Ada`, role `Mavi`, count `3`). Embed-only commands show their fixed field labels or titles; `#avatar` has an image and the target's name rather than a fixed text response.
+
+| Command | Turkish response example |
+| --- | --- |
+| #ban | Text: `✅ **Ada** yasaklandı.` |
+| #unban | Text: ``✅ `1489002177550843906` kimlikli kullanıcının yasağı kaldırıldı.`` |
+| #kick | Text: `✅ **Ada** topluluktan atıldı.` |
+| #mute, #timeout | Text: `🔇 **Ada** 10 dakika susturuldu.` |
+| #unmute | Text: `🔊 **Ada** artık konuşabilir.` |
+| #warn | Text: `⚠️ **Ada** uyarıldı. Toplam uyarı: 3.` |
+| #warnings | Text: `**Ada** için uyarı yok.` |
+| #clear | Text: `🧹 3 mesaj silindi.` |
+| #lock | Text: `🔒 Kanal kilitlendi.` |
+| #unlock | Text: `🔓 Kanalın kilidi açıldı.` |
+| #slowmode | Text: `🐢 Yavaş mod: 10 saniye.` |
+| #role | Text: `✅ **Ada** üyesine **Mavi** rolü verildi.` |
+| #nick | Text: `✏️ **Ada** takma adı değiştirildi.` |
+| #move | Text: `🔀 **Ada** <#1489002177550843906> kanalına taşındı.` |
+| #user | Embed: `Hesap oluşturma`, `Katılma`, `Roller` |
+| #server | Embed: `Sahip`, `Üye sayısı`, `Oluşturma`, `Kanallar` |
+| #avatar | Embed: `Ada` |
+| #top | Text: `Henüz sıralamada kimse yok.` |
+| #help | Embed: `Komutlar` |
+
+A rank reply and nonempty warning/top embed titles are:
+
+```text
+📊 **Ada** — Seviye 2 · 25/220 XP · Sıra: 3
+⚠️ Ada — uyarılar
+🏆 Sıralama — ilk 10
+```
+
+`#rank` uses `1000+` when the member has no retained rank. When a ranking cache is missing, `#rank` and `#top` request a rebuild and return the empty-ranking message. Common failures and a usage reply are:
+
+```text
+❌ Bu komut için yetkin yok.
+❌ Bu toplulukta moderasyon için iki adımlı doğrulama gerekli.
+❌ Bu toplulukta seviye sistemi kapalı.
+❌ Bu üyenin uyarı sınırı (100) doldu; eskileri ayarlardan silin.
+❌ Komut çalıştırılamadı.
+Kullanım: `#warn @üye <sebep>`
+```
+
+## Welcome templates
+
+| Variable | Expansion |
+| --- | --- |
+| `{user}` | The affected user's mention |
+| `{user.name}` | Escaped display name, falling back to username |
+| `{user.id}` | User ID |
+| `{server}` | Escaped guild name |
+| `{server.members}` | Guild member count, or empty when unavailable |
+| `{level}` | New level for level-up messages, otherwise empty |
+
+Unknown variables stay unchanged. Expanded output is truncated to 2,000 characters. The stored null template uses these exact defaults:
+
+```text
+Hoş geldin {user}! **{server}** topluluğuna katıldın.
+**{user.name}** aramızdan ayrıldı.
+🎉 Tebrikler {user}, **{level}**. seviyeye ulaştın!
+```
+
+Bots and temporary members receive no welcome or goodbye. Welcome announcements are limited to 10 per guild per second; excess announcements are skipped, while automatic-role processing happens before this announcement limit. This is a temporary burst limit: if sustained joins exceed it, the upgrade path is grouped welcome messages every five seconds.
+
+## Levels and rewards
+
+An eligible message awards a random integer from **15 to 25 XP**, at most once per **60 seconds per member and guild**. Bot/webhook messages, commands recognized by the enabled command module, detected automod violations, excluded channels, and members with an excluded role receive no message XP.
+
+Level `L` requires `5L² + 50L + 100` additional XP to reach `L + 1`. Level zero starts at zero total XP: level 1 requires 100 total XP, level 2 requires 255, and level 3 requires 475. Rank progress shows XP earned within the current level, not total XP.
+
+On a level-up, every configured reward at or below the new level that the member lacks is considered. Rewards are cumulative; earning a higher reward does not remove an earlier one. K2, bot permissions, hierarchy, temporary-member restrictions, and MFA still apply. Level-up messages default to enabled and use the configured channel or the message channel. If neither exists, no message is sent.
+
+With levels and `voice_xp_enabled` enabled, eligible members receive **10 XP per five-minute turn**. A voice channel must contain at least **two distinct eligible listeners after filtering**. Bots, temporary members, members with a `no_xp_role_ids` role, deafened or self-deafened users, the guild's AFK channel, and `no_xp_channel_ids` channels are excluded. A bot and one eligible member therefore earn no voice XP. Multiple connections for the same member count once.
+
+Voice XP is capped at **144 turns per member and guild per UTC day** (12 hours of five-minute turns). Eligibility uses the current voice-state snapshot when the turn runs. Voice awards have no source text channel, so level-up announcements need a configured `level_up_channel_id`.
+
+XP counters are flushed periodically to persistent storage; leaderboard reads use a bounded top-1,000 cache. Leaving a guild does not reset stored XP. These limits are not a user-capacity target: the architecture target is millions of users and up to 10 million concurrent users. Current cache and flush choices require further scaling when their documented operational thresholds are reached.
+
+## Stored data and account deletion
+
+Persistent bot data includes guild settings and their last editor/time, automod rules and their editor/time, panel message/channel IDs and emoji/role mappings with creator/time, reward roles and editor/time, member XP, and warnings with moderator ID, reason, and creation time. Levels are calculated from XP. A user-to-guild index locates XP and warnings even after the member leaves. Voice scheduling has a guild-slot index. These records do not have an automatic retention TTL.
+
+Transient state includes XP counters, the ranking cache, cooldowns, action-rate buckets, and command deduplication keys. The bot does not create a separate archive of deleted message content or a persistent voice history. Bot announcements and replies remain ordinary messages, and actions use the normal audit-log paths where supported.
+
+The account-deletion hook (K12) removes the account's XP row, pending XP counter and flush membership, leaderboard entry, warnings **about that account**, and its user-to-guild index across indexed guilds, including guilds it left. It does not remove other users' warnings issued by that moderator: their `moderator_id` remains an audit identifier. Nor does this bot-specific hook erase editor/creator IDs in guild configuration or independently delete bot messages and reactions.
+
+The personal [data export](/http-api/users/data-harvest/) includes `micupbot.json` with one entry per indexed guild: `guild_id`, `xp`, calculated `level`, and `warnings` containing only `reason` and `created_at`. It omits moderator IDs and warning IDs. The export reads the XP counter so it can include XP not yet flushed to the persistent row.

@@ -99,3 +99,8 @@
 	background: var(--guild-header-popout-hover-background);
 	color: var(--text-primary);
 }
+
+/* Micup: menu row hover (--control-button-active-bg) in the coal and dark themes */
+:global(html:is(.theme-coal, .theme-dark)) .container {
+	--surface-interactive-hover-bg: var(--control-button-active-bg);
+}

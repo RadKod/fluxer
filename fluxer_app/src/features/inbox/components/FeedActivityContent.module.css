@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.tabIcon {
+	position: relative;
+	display: flex;
+}
+
+.tabBadge {
+	position: absolute;
+	top: -0.625rem;
+	right: -0.75rem;
+	--mention-badge-cutout-surface: var(--form-surface-background);
+}
+
+.scroller {
+	flex: 1;
+	min-height: 0;
+	min-width: 0;
+	padding: 0.5rem;
+}
+
+.rows {
+	position: relative;
+	width: 100%;
+}
+
+.rowSlot {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	padding-bottom: 0.125rem;
+	box-sizing: border-box;
+}
+
+.row {
+	display: flex;
+	width: 100%;
+	align-items: flex-start;
+	gap: 0.75rem;
+	margin: 0;
+	padding: 0.625rem 0.75rem;
+	border: none;
+	border-radius: var(--radius-md);
+	background: transparent;
+	color: var(--text-primary);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: background-color 0.1s ease;
+}
+
+:global(:where(html.window-focused, html.unfocused-fully-interactive):not(.window-focus-activation-guard)) .row:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.typeIcon {
+	display: flex;
+	flex-shrink: 0;
+	width: 2rem;
+	height: 2rem;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-full);
+	background-color: var(--background-modifier-hover);
+}
+
+.typeIcon svg {
+	width: 1.125rem;
+	height: 1.125rem;
+}
+
+.typeLike {
+	color: var(--status-danger);
+}
+
+.typeComment {
+	color: var(--brand-primary);
+}
+
+.typeFollow {
+	color: var(--status-online);
+}
+
+.body {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 0.375rem;
+	min-width: 0;
+}
+
+.text {
+	display: -webkit-box;
+	margin: 0;
+	overflow: hidden;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	overflow-wrap: anywhere;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+.time {
+	color: var(--text-tertiary);
+	font-size: 0.75rem;
+	line-height: 1rem;
+}
+
+.unreadDot {
+	flex-shrink: 0;
+	width: 0.5rem;
+	height: 0.5rem;
+	margin-top: 0.75rem;
+	border-radius: var(--radius-full);
+	background-color: var(--brand-primary);
+}
+
+.status {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.75rem;
+	margin: 0;
+	padding: 1.5rem 1rem;
+	color: var(--text-tertiary);
+	text-align: center;
+}

@@ -29,6 +29,7 @@ interface ShellUpdateRuntime {
 	readonly packaged: boolean;
 	readonly portable: boolean;
 	readonly flatpak: boolean;
+	readonly windowsStore: boolean;
 	readonly appImage: AppImageTarget | null;
 	readonly platform: NodeJS.Platform;
 }
@@ -37,7 +38,7 @@ export function decideShellUpdatePlan(runtime: ShellUpdateRuntime): ShellUpdateP
 	if (!runtime.packaged || runtime.channel === 'development') {
 		return {capability: ShellUpdateCapability.MANUAL_DOWNLOAD, reason: 'unpackaged'};
 	}
-	if (runtime.flatpak) {
+	if (runtime.flatpak || (runtime.platform === 'win32' && runtime.windowsStore)) {
 		return {capability: ShellUpdateCapability.MANAGED_PACKAGE};
 	}
 	if (runtime.portable) {
@@ -69,6 +70,7 @@ export function resolveShellUpdatePlan(): ShellUpdatePlan {
 		packaged: app.isPackaged,
 		portable: isPortableMode(),
 		flatpak: isFlatpakRuntime(),
+		windowsStore: process.windowsStore === true,
 		appImage: resolveRunningAppImage(),
 		platform: process.platform,
 	});

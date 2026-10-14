@@ -1,0 +1,515 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: Shop
+description: Shop settings, prices, campaigns, bundles, order lookup, Payriff budget health, and Visionary numbers.
+---
+
+import RouteHeader from '@/components/RouteHeader.astro';
+
+The shop sells owned cosmetic items, bundles of them, premium packages and Visionary through Payriff, as [Shop](/http-api/shop/) describes. These routes set the sales switches, the member discount, the rate, the prices and the campaigns, manage the [bundles](#bundles), look up an order, and manage the Visionary numbers. Every route on this page requires `shop:manage` and records an [Admin audit entry](/admin-api/#admin-audit-entry-object), reads included. The routes answer in every premium mode, so an admin can prepare the shop before opening it.
+
+A value the shop cannot accept returns 400 `INVALID_FORM_BODY`, with one element in `errors` that names the field and carries an English message. [Make user a Visionary](/admin-api/users/#make-user-a-visionary) and [Take Visionary from user](/admin-api/users/#take-visionary-from-user) are on the Admin users page.
+
+:::caution[Refunds are made by hand]
+Fluxer sends no refund through Payriff. Refund the payment in the Payriff panel, then take back what the order delivered: an item, or each item of a bundle order, with [Take cosmetic item back from user](/admin-api/cosmetics/#take-cosmetic-item-back-from-user), premium time with [End user premium now](/admin-api/users/#end-user-premium-now), or Visionary with Take Visionary from user.
+:::
+
+## Minimum price
+
+Every write that changes a price, a campaign, the member discount or the rate is checked against the worst case, which is the campaign together with the member discount on an item. A write that would leave any product below 1 cent or below 0.10 AZN returns 400 `INVALID_FORM_BODY`, and nothing is written. [Create shop order](/http-api/shop/#create-shop-order) checks the final price again.
+
+## Shop admin settings object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| premium_sales_open | boolean | The switch for premium packages and Visionary |
+| item_sales_open | boolean | The switch for owned items and bundles |
+| premium_discount_percent | integer | The member discount on items and bundles for accounts with paid premium (0-95) |
+| usd_to_azn_rate_micro | integer | Manat per US dollar in millionths, so a rate of 1.70 is `1700000` |
+| try_to_azn_rate_micro | ?integer | Last accepted CBAR rate, in millionths of AZN per TRY; display only |
+| try_rate_date | ?date | Bulletin date from CBAR's XML, in `YYYY-MM-DD` format |
+| try_rate_fetched_at | ?ISO8601 timestamp | Last successful rate refresh |
+| try_to_azn_rate_override_micro | ?integer | Manual display rate; null uses the automatic rate |
+| try_rate_override_at | ?ISO8601 timestamp | When the current override was set; null when cleared |
+| payriff_configured<sup>1</sup> | boolean | Whether the deployment has a Payriff configuration |
+| visionary_on_sale | boolean | Whether Visionary is shown and sold, or hidden |
+| visionary_reward_item_ids | array[snowflake] | The items delivered and worn with every Visionary number |
+
+<sup>1</sup> False keeps every sale closed whatever the switches say. It comes from the deployment configuration, and no route changes it. A Fluxer process refuses to start while `FLUXER_PAYRIFF_BASE_URL` is not an https URL, even with Payriff switched off
+
+Both sales switches and `visionary_on_sale` start off, the member discount starts at 0, and the rate starts at `1700000`. The settings live in the instance configuration under the `shop_config` key.
+
+Payriff charges AZN; users see TL (CBAR daily rate) and the AZN amount. The price anchor remains the stored US-cent price and `usd_to_azn_rate_micro`. Changing either TRY rate never changes a quote, an order or the Payriff charge. Legacy dollar fields remain in the API for older clients.
+
+The effective display rate is the override, or the automatic rate if its bulletin is no more than 10 days old. Without an effective rate, the client shows AZN alone and sales continue. The worker checks CBAR every six hours, and queues an initial refresh when no automatic rate is stored. Catalog requests use the existing shared cache and never fetch CBAR themselves.
+
+The refresh reads only the TRY entry, divides `Value` by `Nominal`, and uses the XML bulletin date even when the requested day is a weekend. It rejects malformed XML, DOCTYPE declarations, older bulletins, rates outside 0.001–1.0 AZN per TRY, and changes greater than 25% from the previous automatic rate. A rejected refresh logs a warning and preserves the last accepted rate and admin settings. Requests have a timeout, a response-size limit and no redirects.
+
+## Shop admin price object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| sku | string | The [product](/http-api/shop/#shop-products) |
+| base_usd_cents | integer | The list price in US cents |
+| campaign_percent | ?integer | The campaign discount as stored, including a campaign that has ended |
+| campaign_ends_at | ?ISO8601 timestamp | When the campaign ends, null for a campaign with no end |
+| now | [shop price](/http-api/shop/#shop-price-object) object | What the shop shows for the product now |
+
+## Shop price entry object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| sku | string | The [product](/http-api/shop/#shop-products) |
+| base_usd_cents | ?integer | The list price in US cents (1-10000000), or null to take the product out of the shop |
+
+## Shop admin bundle object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | snowflake | The ID of the bundle |
+| sku | string | The [product](/http-api/shop/#shop-products) `bundle:<id>`, priced with [Set shop prices](#set-shop-prices) |
+| name | string | The display name of the bundle (1-64 characters) |
+| description | ?string | A short description (1-256 characters) |
+| item_ids | array[snowflake] | The items the bundle gives, in bundle order (2-10) |
+
+## Shop health object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| busy_refusals_last_hour | integer | The orders refused with `SHOP_BUSY` in the current and the previous clock hour |
+| reconcile_lag_seconds | integer | The age of the oldest scheduled check still waiting, 0 while checks are current |
+| payriff_backing_off | boolean | Whether Payriff answered 429 in the last 30 seconds |
+
+### Payriff request budget
+
+The budget is a temporary limit sized for the shop's traffic today. Every API and worker process shares about 2 requests per second to Payriff, split into three buckets so that none can starve another. Opening orders has about 0.3 per second, callback checks about 0.5 per second, and scheduled checks about 1.2 per second. The shop therefore opens about 0.3 orders per second, roughly 18 a minute, and refuses the rest with 503 `SHOP_BUSY`. The API logs such a refusal at debug level, as expected load shedding, and counts it in `busy_refusals_last_hour`.
+
+The three buckets hold at most 6, 10 and 12 requests, 28 together, which stays under the burst of 30 observed from Payriff. The reconcile job runs once a minute or more often, and each run spends only what the reconcile bucket holds, 12 requests when it is full. While `reconcile_lag_seconds` is above 900, every reconcile run also logs a warning.
+
+Grow the budget when any of these appears:
+
+- `busy_refusals_last_hour` above 0.
+- `reconcile_lag_seconds` above 900, which is 15 minutes.
+- `payriff_backing_off` true, after the first 429 from Payriff.
+- Daily orders reaching half of the limit Payriff approved.
+
+The first step is a higher Payriff quota, with the three buckets grown together in the same 1 : 1.7 : 4 ratio. The next is a server-side order queue in place of `SHOP_BUSY`. The last is a second payment provider, for which every order already records its provider.
+
+## Shop admin object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| settings | [shop admin settings](#shop-admin-settings-object) object | The stored settings |
+| prices | array[[shop admin price](#shop-admin-price-object) object] | Every price row, in SKU order |
+| health | [shop health](#shop-health-object) object | The Payriff budget triggers |
+| bundles | array[[shop admin bundle](#shop-admin-bundle-object) object] | Every bundle, priced or not, in ID order |
+
+## Shop admin order object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | snowflake | The ID of the order |
+| user_id | snowflake | The account that bought |
+| sku | string | The [product](/http-api/shop/#shop-products) |
+| status | string | The [shop order status](/http-api/shop/#shop-order-statuses) |
+| failure_reason | ?string | The [failure reason](/http-api/shop/#shop-order-failure-reasons), null unless the order failed |
+| base_usd_cents | integer | The list price in US cents when the order opened |
+| campaign_percent | integer | The campaign discount applied, 0 without one |
+| premium_percent | integer | The member discount applied, 0 when it did not apply |
+| final_usd_cents | integer | The US dollar price charged |
+| amount_azn_minor | integer | The amount charged, in qəpik |
+| usd_to_azn_rate | string | The rate used, with four decimal places |
+| currency | string | Always `AZN` |
+| display_currency? | ?string | Currency of the price shown in the shop when the order opened: `TRY` or `AZN`; null on legacy orders |
+| display_amount_minor? | ?integer | That shown price in minor units (kuruş or qəpik), frozen on the order; null on legacy orders |
+| display_rate_micro? | ?integer | Frozen AZN per TRY in millionths used for the shown TRY price; null for AZN or legacy orders |
+| provider_order_id | ?string | The Payriff order ID, null until Payriff opened the order |
+| provider_status | ?string | The last payment status Payriff reported |
+| created_at | ISO8601 timestamp | When the order opened |
+| paid_at | ?ISO8601 timestamp | When the payment was confirmed |
+| granted_at | ?ISO8601 timestamp | When delivery finished |
+| check_count | integer | The scheduled checks made so far (0-4) |
+| item_ids? | array[snowflake] | Bundle orders only: the items frozen when the order opened, in bundle order |
+
+## Shop admin Visionary object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| total | integer | The number of Visionary numbers |
+| sold | integer | The numbers with an owner, including taken-back numbers, which are never sold again |
+| held | integer | The numbers a pending order holds while its 15 minute hold lasts |
+| remaining<sup>1</sup> | integer | The numbers with no owner and no live hold |
+| over_cap_grants | integer | The numbers given above `total` because a payment arrived after its hold ended |
+
+<sup>1</sup> Read fresh on every request. A number row without a version, which only upstream Fluxer code writes, is never handed out and never counts here
+
+## Shop audit changes
+
+The price and campaign operations record what they changed in the `changes` metadata key. It lists each product whose price or campaign changed as `<sku>:<old>→<new>`, joined with commas, and leaves out a product that stayed the same. The key is absent when nothing changed.
+
+- A price reads as US cents, such as `premium:1:500→450`, and `none` stands for no price.
+- A campaign reads as its percentage, such as `20%`, or with its end as `20%@2026-10-01T00:00:00.000Z`, and `none` stands for no campaign.
+
+## Bundles
+
+A bundle sells 2-10 owned-availability items as one product, `bundle:<id>`. [Create shop bundle](#create-shop-bundle) makes it, and it enters the shop once [Set shop prices](#set-shop-prices) gives it a price. Campaigns and the member discount apply as they do to an item. An item sold only in bundles is an owned-availability item with no price of its own.
+
+- A null price takes a bundle out of the shop and keeps it. [Delete shop bundle](#delete-shop-bundle) removes the bundle and its price.
+- A bundle leaves the catalog while any of its items is off sale, and cannot be bought until the item is back or the bundle changes.
+- A Visionary reward cannot be in a bundle, and an item in a bundle cannot become a Visionary reward.
+- An account that owns any item of a bundle cannot buy the bundle, so an item bought alone keeps its buyer from every bundle that holds it.
+- An order freezes the bundle's items in `item_ids` when it opens. Open and paid orders deliver those items even after the bundle changes or is deleted.
+
+Delivery gives each item as its own delivery, keyed by the order and the item, then wears the first item of each type it gave in one user update. An item deleted before delivery is skipped, the rest are delivered, the order becomes `granted`, and the API logs a warning with the order and item IDs. Refund by hand.
+
+:::caution[A bundle item the account already owned]
+Two orders paid together, such as a bundle and one of its items opened in two tabs, can hold the same item. Only the first delivery gives it, the bundle order still becomes `granted`, and the API logs a warning with the order and item IDs. Refund the whole bundle order, then take back every item it delivered with [Take cosmetic item back from user](/admin-api/cosmetics/#take-cosmetic-item-back-from-user), leaving the item the other order gave.
+:::
+
+### Deploying and rolling back bundles
+
+:::danger[Apply the schema first]
+The bundle release adds the `shop_bundles` table and the `item_ids` column of `shop_orders`. Apply that schema before the API and worker images. The new code reads `item_ids` with every order, so without the column every order read and write fails, single items included. Without `shop_bundles` the shop catalog, Get shop and the Visionary reward update fail too; `pnpm dev:cassandra:verify` must show both the table and the column.
+:::
+
+To roll the bundle release back:
+
+1. Give every `bundle:` product a null price with [Set shop prices](#set-shop-prices), so no bundle order opens.
+2. Wait 24 hours after the last bundle order opened, the time of its fourth scheduled check.
+3. Check that `reconcile_lag_seconds` in [Get shop](#get-shop) is 0.
+4. Roll the code back. The schema only adds, so it stays.
+5. For a bundle order still `paid`, give each of its `item_ids` with [Give user a cosmetic item](/admin-api/cosmetics/#give-user-a-cosmetic-item). No route closes an order: it stays `paid` and holds the reconcile cursor until its check row expires after 7 days.
+
+## Get shop
+
+<RouteHeader method="GET" path="/v1/admin/shop" auditReason />
+
+Returns the [shop admin](#shop-admin-object) object. The settings, prices and bundles are read from storage, not from the caches the shop pages use.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [shop admin](#shop-admin-object) object | The shop was returned |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `view_shop`, target type `shop`, target ID `0`, and metadata key `result_count`, the number of price rows.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:shop:view` bucket.
+
+## Update shop settings
+
+<RouteHeader method="PATCH" path="/v1/admin/shop/settings" auditReason />
+
+Opens or closes sales, and sets the member discount, the rate and the Visionary settings. Returns the [shop admin settings](#shop-admin-settings-object) object.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| try_to_azn_rate_override? | ?string | Manual TL display rate in AZN per TRY, `"0.001"` through `"1"` with up to six decimals; null resumes the automatic CBAR rate |
+
+The sales switches, `premium_discount_percent`, `usd_to_azn_rate_micro`, `visionary_on_sale` and `visionary_reward_item_ids` are optional. An omitted field stays as it is. CBAR fields and override timestamps are read-only.
+
+- `premium_discount_percent` is 0 through 95.
+- `usd_to_azn_rate_micro` is 1000000 through 3000000, which catches a rate entered as 0.017 or as 17.
+- `try_to_azn_rate_override` is a decimal string from `"0.001"` through `"1"`, with up to six decimal places, in AZN per TRY, or null to resume the automatic rate. It only changes the informational TL display.
+- `visionary_reward_item_ids` replaces the list and holds at most 10 IDs. Each must be an owned-availability item without a shop price and in no bundle, and a repeated ID counts once.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [shop admin settings](#shop-admin-settings-object) object | The settings were saved |
+| 400 | [error response](/admin-api/#error-response) | A value is refused, or a product would fall below the [minimum price](#minimum-price) |
+
+### Side effects
+
+The settings are saved with a compare-and-set, and every API process picks them up through the instance configuration refresh. The shop catalog can show the old values for up to 60 seconds. A new reward item reaches only numbers delivered after the change.
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `update_shop_settings`, target type `shop`, and target ID `0`. For every field the request changed, the metadata holds `<field>_old` and `<field>_new`.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:shop:manage` bucket.
+
+## Refresh TRY display rate
+
+<RouteHeader method="POST" path="/v1/admin/shop/settings/refresh-try-rate" auditReason />
+
+Queues the existing worker task to fetch the current CBAR bulletin. Requires `shop:manage`; the admin interface also verifies CSRF. No payment or order is created. The automatic-rate fields are updated only after a valid response, without replacing other shop settings. A manual override stays in force.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The refresh was queued |
+
+The route uses the shop management rate limit and records an admin write audit entry. A queued refresh may fail or be rejected; check the last-success timestamp and bulletin date to confirm a new rate. The catalog can retain the previous display rate for up to 60 seconds.
+
+## Set shop prices
+
+<RouteHeader method="PUT" path="/v1/admin/shop/prices" auditReason />
+
+Sets the list price of up to 200 products, and returns the [shop admin](#shop-admin-object) object. The `visionary` product is priced here too.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| prices | array[[shop price entry](#shop-price-entry-object) object] | The prices to set (1-200 entries) |
+
+- A cosmetic SKU must name an owned-availability item, and a Visionary reward item cannot take a price.
+- A bundle SKU must name an existing [bundle](#bundles). A null price is accepted for any bundle SKU, which clears a price left behind by a deleted bundle.
+- A new price keeps the product's campaign. A null price removes the product and its campaign.
+- A SKU repeated in the list takes its last value.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [shop admin](#shop-admin-object) object | The prices were set |
+| 400 | [error response](/admin-api/#error-response) | An entry is refused, or a product would fall below the [minimum price](#minimum-price) |
+
+### Side effects
+
+A quote shows a new price within 5 seconds and the catalog within 60 seconds. An order opened after the write is charged the new price.
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `set_shop_prices`, target type `shop`, target ID `0`, and metadata keys `count`, `skus`, the SKUs joined with commas, and `changes`, as [Shop audit changes](#shop-audit-changes) describes.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:shop:manage` bucket.
+
+## Apply shop campaign
+
+<RouteHeader method="POST" path="/v1/admin/shop/campaigns" auditReason />
+
+Puts one campaign discount on up to 200 priced products, until the given time or with no end, and returns the [shop admin](#shop-admin-object) object. Visionary takes campaigns too. It never takes the member discount, which items still take on top of the campaign.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| skus | array[string] | The [products](/http-api/shop/#shop-products), each with a price (1-200 entries) |
+| percent | integer | The campaign discount (1-95) |
+| ends_at | ?ISO8601 timestamp | When the campaign ends, in the future, or null for no end |
+
+A campaign replaces the product's previous one, and a repeated SKU counts once. The campaign ends by the server clock. Its row keeps the percentage until it is removed or replaced, and `now` shows the price without it.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [shop admin](#shop-admin-object) object | The campaign was applied |
+| 400 | [error response](/admin-api/#error-response) | A SKU has no price, the end is in the past, or a product would fall below the [minimum price](#minimum-price) |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `apply_shop_campaign`, target type `shop`, target ID `0`, and metadata keys `count`, `percent`, `ends_at` and `changes`, as [Shop audit changes](#shop-audit-changes) describes.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:shop:manage` bucket.
+
+## Remove shop campaign
+
+<RouteHeader method="POST" path="/v1/admin/shop/campaigns/remove" auditReason />
+
+Ends the campaign of up to 200 products now, and returns the [shop admin](#shop-admin-object) object. A SKU with no price is skipped.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| skus | array[string] | The [products](/http-api/shop/#shop-products) (1-200 entries) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [shop admin](#shop-admin-object) object | The campaigns were removed |
+| 400 | [error response](/admin-api/#error-response) | The body fails validation |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `remove_shop_campaign`, target type `shop`, target ID `0`, and metadata keys `count` and `changes`, as [Shop audit changes](#shop-audit-changes) describes.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:shop:manage` bucket.
+
+## Create shop bundle
+
+<RouteHeader method="POST" path="/v1/admin/shop/bundles" auditReason />
+
+Creates a [bundle](#bundles), and returns the [shop admin bundle](#shop-admin-bundle-object) object. The bundle is not in the shop until [Set shop prices](#set-shop-prices) gives it a price.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| name | string | The display name of the bundle (1-64 characters) |
+| description? | ?string | A short description (1-256 characters) |
+| item_ids | array[snowflake] | The items, in bundle order (2-10) |
+
+- A repeated item counts once, in its first place, and 2 to 10 items must remain.
+- Each item must be an owned-availability item on sale, with or without a price of its own, and not a Visionary reward.
+- The shop holds at most 200 bundles.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [shop admin bundle](#shop-admin-bundle-object) object | The bundle was created |
+| 400 | [error response](/admin-api/#error-response) | An item is refused, or the shop already holds 200 bundles |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `create_shop_bundle`, target type `shop_bundle`, the bundle ID as target ID, and metadata keys `name` and `item_ids`, the item IDs joined with commas.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:shop:manage` bucket.
+
+## Update shop bundle
+
+<RouteHeader method="PATCH" path="/v1/admin/shop/bundles/{bundle_id}" auditReason />
+
+Changes the name, description or items of a bundle, and returns the updated [shop admin bundle](#shop-admin-bundle-object) object.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| bundle_id | snowflake | The ID of the bundle |
+
+### JSON body
+
+Every field of [Create shop bundle](#create-shop-bundle), each optional. An omitted field stays as it is, and a null `description` clears it. New items are checked as on create.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [shop admin bundle](#shop-admin-bundle-object) object | The bundle was updated |
+| 400 | [error response](/admin-api/#error-response) | An item is refused |
+| 404 | [error response](/admin-api/#error-response) | `NOT_FOUND`: no bundle has this ID |
+
+### Side effects
+
+A quote shows the change within 5 seconds and the catalog within 60 seconds. An order opened after the write gets the new items, and orders opened before keep theirs.
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `update_shop_bundle`, target type `shop_bundle`, and the bundle ID as target ID. For every field the request changed, the metadata holds `<field>_old` and `<field>_new`, with item IDs joined with commas.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:shop:manage` bucket.
+
+## Delete shop bundle
+
+<RouteHeader method="DELETE" path="/v1/admin/shop/bundles/{bundle_id}" auditReason />
+
+Deletes a bundle together with its price. To take a bundle out of the shop and keep it, give it a null price with [Set shop prices](#set-shop-prices) instead.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| bundle_id | snowflake | The ID of the bundle |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The bundle and its price were deleted |
+| 404 | [error response](/admin-api/#error-response) | `NOT_FOUND`: no bundle has this ID |
+
+### Side effects
+
+Open and paid orders still deliver the items they were opened with. The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `delete_shop_bundle`, target type `shop_bundle`, the bundle ID as target ID, and metadata key `name`.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:shop:manage` bucket.
+
+## Get shop order
+
+<RouteHeader method="GET" path="/v1/admin/shop/orders/{order_id}" auditReason />
+
+Returns one order as a [shop admin order](#shop-admin-order-object) object, for support and refunds. A bundle order lists its items in `item_ids`. The Payriff panel shows the order ID after `Micup #` in the order description, followed by the product. The description contains no US-dollar suffix.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| order_id | snowflake | The ID of the order |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [shop admin order](#shop-admin-order-object) object | The order was returned |
+| 404 | [error response](/admin-api/#error-response) | `NOT_FOUND`: no order has this ID |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `view_shop_order`, target type `shop_order`, the order ID as target ID, and metadata key `order_id`.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:shop:view` bucket.
+
+## Get Visionary numbers
+
+<RouteHeader method="GET" path="/v1/admin/shop/visionary" auditReason />
+
+Returns the [shop admin Visionary](#shop-admin-visionary-object) object: how many numbers exist, and how many are sold, held and free.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [shop admin Visionary](#shop-admin-visionary-object) object | The numbers were counted |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `view_shop_visionary`, target type `shop`, target ID `0`, and metadata key `total`.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:shop:view` bucket.
+
+## Set Visionary numbers
+
+<RouteHeader method="PUT" path="/v1/admin/shop/visionary/slots" auditReason />
+
+Sets how many Visionary numbers exist, and returns the [shop admin Visionary](#shop-admin-visionary-object) object. Growing adds free numbers after the highest one. Shrinking removes numbers from the top.
+
+A sold number stays counted in `total` and is never sold again, so selling more numbers means raising `total` by as many.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| total | integer | The number of Visionary numbers (0-100000) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [shop admin Visionary](#shop-admin-visionary-object) object | The count was set |
+| 400 | [error response](/admin-api/#error-response) | A removed number has an owner or a live hold, returned as `CANNOT_SHRINK_RESERVED_SLOTS` |
+
+### Side effects
+
+A number with an owner or a live hold is never removed, and a shrink that races with a sale is refused. Read [Get Visionary numbers](#get-visionary-numbers) to see how many are sold and held.
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `set_visionary_slots`, target type `shop`, target ID `0`, and metadata keys `total_old` and `total_new`.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:shop:manage` bucket.

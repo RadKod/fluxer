@@ -4,6 +4,9 @@
 #![allow(unsafe_op_in_unsafe_fn)]
 
 #[cfg(target_os = "windows")]
+mod borderless;
+
+#[cfg(target_os = "windows")]
 mod capture_target;
 #[cfg(target_os = "windows")]
 mod d3d11_device;

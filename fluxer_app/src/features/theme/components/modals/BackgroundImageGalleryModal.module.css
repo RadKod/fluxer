@@ -314,7 +314,7 @@
 }
 
 .selectedIcon {
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 .fileInput {

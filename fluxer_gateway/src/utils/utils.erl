@@ -141,13 +141,51 @@ user_field_differs(Field, CurrentUserData, NewUserData) ->
         false ->
             false;
         true ->
-            CurrentValue = maps:get(Field, CurrentUserData, undefined),
+            CurrentValue = maps:get(Field, CurrentUserData, missing_field_value(Field)),
             NewValue = maps:get(Field, NewUserData, undefined),
             CurrentValue =/= NewValue
     end.
 
+%% Micup: user data stored before a cosmetic field existed wears nothing, so an explicit null
+%% for it is not a change and does not cost a large guild a GUILD_MEMBER_UPDATE.
+-spec missing_field_value(binary()) -> null | undefined.
+missing_field_value(<<"avatar_decoration_data">>) -> null;
+missing_field_value(<<"avatar_ultra_data">>) -> null;
+missing_field_value(<<"nameplate_data">>) -> null;
+missing_field_value(_Field) -> undefined.
+
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+
+check_user_data_differs_ultra_predates_test() ->
+    Predates = #{<<"id">> => <<"42">>},
+    NoUltra = #{<<"id">> => <<"42">>, <<"avatar_ultra_data">> => null},
+    UltraData = #{<<"asset">> => <<"a_7c8d9e0f">>, <<"item_id">> => <<"3003">>},
+    Ultra = #{<<"id">> => <<"42">>, <<"avatar_ultra_data">> => UltraData},
+    ?assertNot(check_user_data_differs(Predates, NoUltra)),
+    ?assert(check_user_data_differs(Predates, Ultra)),
+    ?assert(check_user_data_differs(Ultra, NoUltra)).
+
+check_user_data_differs_cosmetics_test() ->
+    Ring = #{<<"asset">> => <<"a_1a2b3c4d">>, <<"item_id">> => <<"1001">>},
+    NewRing = #{<<"asset">> => <<"5e6f7a8b">>, <<"item_id">> => <<"1001">>},
+    Plate = #{<<"asset">> => <<"5e6f7a8b">>, <<"item_id">> => <<"2002">>},
+    Worn = #{
+        <<"id">> => <<"42">>,
+        <<"avatar_decoration_data">> => Ring,
+        <<"nameplate_data">> => null
+    },
+    NewImage = Worn#{<<"avatar_decoration_data">> => NewRing},
+    TakenOff = Worn#{<<"avatar_decoration_data">> => null},
+    NameplateOn = Worn#{<<"nameplate_data">> => Plate},
+    Predates = #{<<"id">> => <<"42">>},
+    ?assert(check_user_data_differs(Worn, NewImage)),
+    ?assert(check_user_data_differs(Worn, TakenOff)),
+    ?assert(check_user_data_differs(Worn, NameplateOn)),
+    ?assertNot(check_user_data_differs(Worn, Worn)),
+    ?assertNot(check_user_data_differs(Predates, TakenOff)),
+    ?assertNot(check_user_data_differs(Worn, Predates)),
+    ?assert(check_user_data_differs(Predates, NewImage)).
 
 binary_to_integer_safe_integer_test() ->
     ?assertEqual(42, binary_to_integer_safe(42)),

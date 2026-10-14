@@ -7,7 +7,7 @@ import {isTemporarilyBanned} from '@app/api/user/UserHelpers';
 import {generateSeededUsername} from '@app/api/utils/UsernameGenerator';
 import {DeletionReasons} from '@fluxer/constants/src/Core';
 import {NON_SELF_HOSTED_RESERVED_DISCRIMINATORS} from '@fluxer/constants/src/DiscriminatorConstants';
-import {UserFlags} from '@fluxer/constants/src/UserConstants';
+import {PublicUserFlags, UserFlags} from '@fluxer/constants/src/UserConstants';
 import type {GuildMemberResponse} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
 import type {UserPartialResponse} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 
@@ -76,6 +76,10 @@ export function hiddenUserPartial(partial: UserPartialResponse): UserPartialResp
 		global_name: null,
 		avatar: null,
 		avatar_color: null,
+		avatar_decoration_data: null,
+		avatar_ultra_data: null,
+		nameplate_data: null,
+		flags: partial.flags & ~PublicUserFlags.PREMIUM_BADGE,
 	};
 }
 

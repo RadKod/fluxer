@@ -5,6 +5,7 @@ import {UserTag} from '@app/features/channel/components/ChannelUserTag';
 import {CompactMemberCustomStatus} from '@app/features/channel/components/CompactMemberCustomStatus';
 import styles from '@app/features/channel/components/MemberListItem.module.css';
 import {PreloadableUserPopout} from '@app/features/channel/components/PreloadableUserPopout';
+import {NameplateBackground} from '@app/features/cosmetics/components/NameplateBackground';
 import Guilds from '@app/features/guild/state/Guilds';
 import {useMemberListCustomStatus} from '@app/features/member/hooks/useMemberListCustomStatus';
 import {useMemberListPresence} from '@app/features/member/hooks/useMemberListPresence';
@@ -17,6 +18,8 @@ import {FocusRingWrapper} from '@app/features/ui/components/FocusRingWrapper';
 import {ListStatusAwareAvatar} from '@app/features/ui/components/StatusAwareAvatar';
 import {useTextOverflow} from '@app/features/ui/hooks/useTextOverflow';
 import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
+import {PremiumUserBadge} from '@app/features/user/components/PremiumUserBadge';
+import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge';
 import type {User} from '@app/features/user/models/User';
 import type {CustomStatus} from '@app/features/user/state/CustomStatus';
 import * as AvatarUtils from '@app/features/user/utils/AvatarUtils';
@@ -56,6 +59,8 @@ interface MemberListItemProps {
 	displayName?: string;
 	disableBackdrop?: boolean;
 	avatarMediaSize?: MediaProxyImageSize;
+	// Plays the nameplate without a hover: the shop's inert preview row never gets one.
+	animateNameplate?: boolean;
 }
 
 export const MemberListItem: React.FC<MemberListItemProps> = observer((props) => {
@@ -72,6 +77,7 @@ export const MemberListItem: React.FC<MemberListItemProps> = observer((props) =>
 		displayName,
 		disableBackdrop = false,
 		avatarMediaSize,
+		animateNameplate = false,
 	} = props;
 	const itemRef = useRef<HTMLButtonElement>(null);
 	const hookStatus = useMemberListPresence({
@@ -195,58 +201,76 @@ export const MemberListItem: React.FC<MemberListItemProps> = observer((props) =>
 				data-member-list-focus-item="true"
 				data-flx="channel.member-list-item.button.context-menu"
 			>
-				<div className={styles.grid} data-flx="channel.member-list-item.grid">
-					<span className={styles.content} data-flx="channel.member-list-item.content">
-						<div className={styles.avatarContainer} data-flx="channel.member-list-item.avatar-container">
-							<ListStatusAwareAvatar
-								user={user}
-								size={32}
-								isTyping={isTyping}
-								showOffline={isCurrentUser || isTyping}
-								guildId={guildId}
-								status={status}
-								avatarUrl={memberAvatarUrl}
-								hoverAvatarUrl={memberHoverAvatarUrl}
-								mediaSize={avatarMediaSize}
-								data-flx="channel.member-list-item.status-aware-avatar"
-							/>
-						</div>
-						<div className={styles.userInfoContainer} data-flx="channel.member-list-item.user-info-container">
-							<div className={styles.nameContainer} data-flx="channel.member-list-item.name-container">
-								{isNameOverflowing ? (
-									<Tooltip text={nickname} data-flx="channel.member-list-item.name-tooltip">
-										{nameContent}
-									</Tooltip>
-								) : (
-									nameContent
-								)}
-								{showOwnerCrown && (
-									<div className={styles.ownerIcon} data-flx="channel.member-list-item.owner-icon">
-										<Tooltip
-											text={i18n._(guildId ? COMMUNITY_OWNER_DESCRIPTOR : GROUP_OWNER_DESCRIPTOR)}
-											data-flx="channel.member-list-item.tooltip"
-										>
-											<CrownIcon className={styles.crownIcon} data-flx="channel.member-list-item.crown-icon" />
-										</Tooltip>
-									</div>
-								)}
-								{user.bot && (
-									<UserTag
-										className={styles.userTag}
-										system={user.system}
-										data-flx="channel.member-list-item.user-tag"
-									/>
-								)}
+				<NameplateBackground
+					nameplate={user.nameplate}
+					animate={animateNameplate}
+					data-flx="channel.member-list-item.nameplate-background"
+				>
+					<div className={styles.grid} data-flx="channel.member-list-item.grid">
+						<span className={styles.content} data-flx="channel.member-list-item.content">
+							<div className={styles.avatarContainer} data-flx="channel.member-list-item.avatar-container">
+								<ListStatusAwareAvatar
+									user={user}
+									size={32}
+									decorationSurface="compact"
+									isTyping={isTyping}
+									showOffline={isCurrentUser || isTyping}
+									guildId={guildId}
+									status={status}
+									avatarUrl={memberAvatarUrl}
+									hoverAvatarUrl={memberHoverAvatarUrl}
+									mediaSize={avatarMediaSize}
+									data-flx="channel.member-list-item.status-aware-avatar"
+								/>
 							</div>
-							<CompactMemberCustomStatus
-								customStatus={memberListCustomStatus}
-								userId={user.id}
-								className={styles.memberCustomStatus}
-								data-flx="channel.member-list-item.member-custom-status"
-							/>
-						</div>
-					</span>
-				</div>
+							<div className={styles.userInfoContainer} data-flx="channel.member-list-item.user-info-container">
+								<div className={styles.nameContainer} data-flx="channel.member-list-item.name-container">
+									{isNameOverflowing ? (
+										<Tooltip text={nickname} data-flx="channel.member-list-item.name-tooltip">
+											{nameContent}
+										</Tooltip>
+									) : (
+										nameContent
+									)}
+									<VerifiedUserBadge
+										user={user}
+										className={styles.userTag}
+										data-flx="channel.member-list-item.verified-user-badge"
+									/>
+									<PremiumUserBadge
+										user={user}
+										className={styles.userTag}
+										focusable={false}
+										data-flx="channel.member-list-item.premium-user-badge"
+									/>
+									{showOwnerCrown && (
+										<div className={styles.ownerIcon} data-flx="channel.member-list-item.owner-icon">
+											<Tooltip
+												text={i18n._(guildId ? COMMUNITY_OWNER_DESCRIPTOR : GROUP_OWNER_DESCRIPTOR)}
+												data-flx="channel.member-list-item.tooltip"
+											>
+												<CrownIcon className={styles.crownIcon} data-flx="channel.member-list-item.crown-icon" />
+											</Tooltip>
+										</div>
+									)}
+									{user.bot && (
+										<UserTag
+											className={styles.userTag}
+											system={user.system}
+											data-flx="channel.member-list-item.user-tag"
+										/>
+									)}
+								</div>
+								<CompactMemberCustomStatus
+									customStatus={memberListCustomStatus}
+									userId={user.id}
+									className={styles.memberCustomStatus}
+									data-flx="channel.member-list-item.member-custom-status"
+								/>
+							</div>
+						</span>
+					</div>
+				</NameplateBackground>
 			</button>
 		</FocusRingWrapper>
 	);

@@ -38,6 +38,7 @@ import {
 	setChannelThreadsConfig,
 	threadsRequest,
 } from '@app/api/channel/tests/ThreadTestUtils';
+import {overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
 import type {EmbedService} from '@app/api/infrastructure/EmbedService';
 import type {IAssetDeletionQueue} from '@app/api/infrastructure/IAssetDeletionQueue';
 import type {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
@@ -89,6 +90,7 @@ describe('Crosspost propagation', () => {
 		await harness.reset();
 		harness.storageService.reset();
 		world = await setupFanoutWorld(harness);
+		overrideLimits({feature_mature_content_settings: 1});
 	});
 
 	afterEach(() => {

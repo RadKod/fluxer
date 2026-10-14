@@ -77,8 +77,8 @@ const GAMING_DESCRIPTOR = msg({
 	message: 'Gaming',
 	comment: 'Streaming preset label in the stream settings menu. Higher frame rate, optimized for video games.',
 });
-const SMOOTH_60_FPS_AT_UP_TO_1440P_DESCRIPTOR = msg({
-	message: 'Smooth 60 FPS at up to 1440p',
+const SMOOTH_60_FPS_AT_UP_TO_720P_DESCRIPTOR = msg({
+	message: 'Smooth 60 FPS at up to 720p',
 	comment:
 		'Description for the high-tier Gaming streaming preset (Plutonium). Resolution and frame rate are technical tokens.',
 });
@@ -423,7 +423,7 @@ export const StreamSettingsMenuContent = observer(
 					value: 'gaming',
 					label: i18n._(GAMING_DESCRIPTOR),
 					description: hasHigherVideoQuality
-						? i18n._(SMOOTH_60_FPS_AT_UP_TO_1440P_DESCRIPTOR)
+						? i18n._(SMOOTH_60_FPS_AT_UP_TO_720P_DESCRIPTOR)
 						: i18n._(SMOOTH_30_FPS_AT_UP_TO_720P_DESCRIPTOR),
 					isPremium: false,
 				},

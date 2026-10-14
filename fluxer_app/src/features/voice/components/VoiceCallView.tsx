@@ -15,6 +15,7 @@ import {
 } from '@app/features/i18n/utils/CommonMessageDescriptors';
 import Favorites from '@app/features/messaging/state/Favorites';
 import {goBackOr} from '@app/features/platform/components/router/NavigationAdapter';
+import {TableGamesEntry} from '@app/features/table_game/components/TableGamesEntry';
 import {BottomSheet} from '@app/features/ui/bottom_sheet/BottomSheet';
 import * as ToastCommands from '@app/features/ui/commands/ToastCommands';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
@@ -70,6 +71,10 @@ import VoiceCallLayout from '@app/features/voice/state/VoiceCallLayout';
 import {hasValidRoomForVoiceCallContext} from '@app/features/voice/utils/VoiceCallContext';
 import {VOICE_CALL_DESCRIPTOR} from '@app/features/voice/utils/VoiceMessageDescriptors';
 import {parseVoiceParticipantIdentity} from '@app/features/voice/utils/VoiceParticipantIdentity';
+import {VoiceSceneToggleButton} from '@app/features/voice_scene/components/VoiceSceneToggleButton';
+import {VoiceSceneView} from '@app/features/voice_scene/components/VoiceSceneView';
+import {roomViewFor} from '@app/features/voice_scene/state/RoomView';
+import {useVoiceSceneTvFullscreen} from '@app/features/voice_scene/state/VoiceSceneTvRequest';
 import {ME} from '@fluxer/constants/src/AppConstants';
 import {msg, plural} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
@@ -185,6 +190,11 @@ const VoiceCallViewInner = observer(
 			exitFullscreen: exitVoiceCallAppFullscreen,
 			toggleFullscreen: toggleVoiceCallAppFullscreen,
 		} = useVoiceCallAppFullscreen({containerRef});
+		const tvFullscreen = useVoiceSceneTvFullscreen({
+			active: !inPopout,
+			isFullscreen: isVoiceCallAppFullscreen,
+			enterFullscreen: enterVoiceCallAppFullscreen,
+		});
 		const [isPointerHudActive, setIsPointerHudActive] = useState(false);
 		const connectionState = useVoiceEngineConnectionState();
 		const normalizedConnectionState = asVoiceEngineConnectionState(connectionState);
@@ -228,6 +238,7 @@ const VoiceCallViewInner = observer(
 			channelId: channel.id,
 		});
 		const hasRenderableTiles = hasScreenShare || filteredCameraTracks.length > 0;
+		const showRoom = !inPopout && !tvFullscreen && roomViewFor(channel).show;
 		const [gridOverflow, setGridOverflow] = useState(false);
 		const handleGridCapacityChange = useCallback(
 			(info: {visibleTileCount: number; totalTileCount: number; overflow: boolean}) => {
@@ -594,6 +605,18 @@ const VoiceCallViewInner = observer(
 									{connectionStateText}
 								</div>
 							)}
+							{!inPopout && (
+								<VoiceSceneToggleButton
+									channel={channel}
+									className={styles.voiceHeaderIconButton}
+									data-flx="voice.voice-call-view.voice-call-view-inner.voice-header-icon-button"
+								/>
+							)}
+							<TableGamesEntry
+								channel={channel}
+								placement="header"
+								data-flx="voice.voice-call-view.voice-call-view-inner.table-games-entry"
+							/>
 							{statsButton}
 							{isMobile && (
 								<ChannelHeaderIcon
@@ -619,7 +642,12 @@ const VoiceCallViewInner = observer(
 						</div>
 					</NativeDragRegion>
 					<div className={mainContentClassName} data-flx="voice.voice-call-view.voice-call-view-inner.div--5">
-						{hasRenderableTiles ? (
+						{showRoom ? (
+							<VoiceSceneView
+								channel={channel}
+								data-flx="voice.voice-call-view.voice-call-view-inner.voice-scene-view"
+							/>
+						) : hasRenderableTiles ? (
 							<VoiceCallLayoutContent
 								channel={channel}
 								layoutMode={effectiveLayoutMode}

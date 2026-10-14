@@ -1,0 +1,139 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: Voice seats
+description: Room themes, the lounge and watch seats of a 3D voice room, the LiveKit seat attribute, and taking a seat.
+---
+
+import RouteHeader from '@/components/RouteHeader.astro';
+
+A guild voice channel can carry a room theme, which a client can show as a 3D room. The room has named seats, and each voice connection in the channel is either seated or standing. The server owns every seat: it seats a connection when it joins, frees the seat when the connection leaves, and carries each connection's seat to the rest of the room as a LiveKit participant attribute. The tables in the room are played through [Table games](/http-api/table-games/).
+
+The one route on this page is user-only and acts on the caller's own voice connection. A bot or OAuth2 bearer credential is refused with 403 `ACCESS_DENIED`.
+
+:::note[3D rooms start switched off]
+The [Admin API](/admin-api/instance/#voice-room-configuration-object) switches 3D rooms on and off for the instance, and a client learns the state from the `voice_room` assignment of [Get experiment assignments](/http-api/experiments/#get-experiment-assignments). While rooms are off, the server seats nobody and the route on this page returns 403 `FEATURE_TEMPORARILY_DISABLED`.
+:::
+
+## Room themes
+
+[Modify channel](/http-api/channels/#modify-channel) sets the theme as `room_theme`, and the [channel object](/http-api/channels/#channel-object) reports it. A channel with no theme has no room. This server version defines three themes.
+
+| Value | Description |
+| --- | --- |
+| gece-lounge | A night lounge with one game table, `T01`, and four watch seats at it |
+| kahvehane | A coffee house with three game tables, `T01` to `T03`, and two watch seats at each |
+| oyun-odasi | A game room with two game tables, `T01` and `T02`, and four watch seats at each |
+
+A theme fixes the lounge seats, the table slots, the watch seats, and the standing places of the room. The client draws them from the theme's room file, so a theme adds no field to the channel beyond its ID.
+
+## Seat names
+
+| Value | Description |
+| --- | --- |
+| `seat_<G>_<NN>` | A lounge seat, where `G` is a seat group in capital letters and digits and `NN` two digits, such as `seat_A_01` |
+| `seat_T<NN>_<K>` | A seat at a game table, where `TNN` is the table slot and `K` the position 1-4, such as `seat_T01_2` |
+| `seat_T<NN>_Y<K>` | A [watch seat](#watch-seats) beside a game table, where `K` is 1-4, such as `seat_T01_Y2` |
+
+A connection on no seat is standing. Table seats are taken by sitting down at a table and are never named to [Take a voice seat](#take-a-voice-seat).
+
+## Seat assignment
+
+One account holds at most one seat in a channel, whichever of its connections sits on it.
+
+- When LiveKit confirms that a connection joined, the server seats it on the first free lounge seat in the theme's order. A player at an active table is seated at the table instead, and a connection that already holds a seat keeps it.
+- A second connection of the same account stays standing. Taking a seat from it moves the account's seat to it and stands the first connection up.
+- When a connection leaves, its seat passes to the account's most recently joined connection that is still in the channel and standing, which keeps the seat across a page reload. Otherwise the seat becomes free.
+- A connection that finds the room full stands. The server then frees the seats of connections that are no longer in the channel, at most once per channel every 30 seconds, and tries again.
+
+Sitting down at a [game table](/http-api/table-games/) moves the player's seat to the table, and the end of the game moves it back to a free lounge seat. The server seats nobody in a channel without a theme.
+
+## Watch seats
+
+A watch seat sits beside a game table, behind a player's chair, so that its holder can follow the game from up close. The server never gives one by itself: a connection takes it only by naming it to [Take a voice seat](#take-a-voice-seat), whether or not a game runs at the table.
+
+- A watch seat carries no right at the table. Its holder is a spectator like anyone else, watches through [Watch a table game](/http-api/table-games/#watch-a-table-game), and receives the public view with `rack` null.
+- A held watch seat stays with its connection when LiveKit reports the same join again.
+- Sitting down at the table from a watch seat moves the seat to the table, and the end of the game moves it to a free lounge seat, not back to the watch seat.
+- A player at an active table cannot move to a watch seat until the game ends.
+- When the channel's theme changes, a held lounge or watch seat the new theme lacks is dropped the next time the server seats that connection, which then takes a free lounge seat or stands.
+
+## Seat attribute
+
+The seat reaches the room through the LiveKit participant attribute `micup.seat` of each [participant](/voice/#media-transport). Its value is the seat name, and a participant without the attribute, or with an empty one, is standing. A client follows the attribute on the participants it already receives and needs no extra request to show who sits where.
+
+:::caution[Only the server writes the seat attribute]
+A voice grant never lets a participant change its own metadata or attributes, so a seat a client claims through LiveKit has no effect. Every change goes through this server.
+:::
+
+## Voice membership
+
+The routes here and on [Table games](/http-api/table-games/) take a `connection_id`, the [voice state](/gateway/events/#voice-state-object) `connection_id` of one of the caller's own connections. The request counts only when that connection is in the channel the route names. The server checks it against the join LiveKit confirmed, with no Gateway call.
+
+A request sent in the moment before LiveKit confirms the join falls back to the Gateway voice states, at most once per channel every 30 seconds. A request that loses that window returns 400 `USER_NOT_IN_VOICE`, and the same request succeeds once the join is confirmed.
+
+## Voice seat object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| seat | ?string | The [seat](#seat-names) the connection holds, or null when it stands |
+
+## Take a voice seat
+
+<RouteHeader method="PUT" path="/v1/channels/{channel_id}/voice-seat" />
+
+Seats the caller's connection on a lounge or watch seat of the channel's room and returns the [voice seat](#voice-seat-object) object. With `seat` null the server picks a lounge seat, which is how a client asks for a seat when the automatic one did not arrive.
+
+### Limitations
+
+- The caller needs the access [Get channel](/http-api/channels/#get-channel) needs, and [CONNECT](/http-api/permissions/) in the channel.
+- The channel is a guild voice channel with a [room theme](#room-themes).
+- `connection_id` passes the [voice membership](#voice-membership) check.
+- A player seated at an active table cannot move to a lounge or watch seat until the game ends.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| channel_id | snowflake | The ID of the voice channel |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| connection_id | string | The caller's voice connection in this channel (1-64 characters) |
+| seat | ?string | A lounge or watch [seat](#seat-names) of the room, or null to let the server pick a free lounge seat |
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| seat | ?string | The seat the connection now holds, or null when it stands |
+
+When `seat` is null and the room is full, or the account's seat is held by another of its connections that is still in the channel, the response is 200 with `seat` null.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [voice seat](#voice-seat-object) object | The connection holds the returned seat, or stands |
+| 400 | [error response](/http-api/#error-response) | The channel is not a guild voice channel, returned as `INVALID_CHANNEL_TYPE` |
+| 400 | [error response](/http-api/#error-response) | The channel has no theme, or the seat is not a lounge or watch seat of it, as `VOICE_SEAT_UNKNOWN` |
+| 400 | [error response](/http-api/#error-response) | The connection is not the caller's connection in this channel, returned as `USER_NOT_IN_VOICE` |
+| 401 | [error response](/http-api/#error-response) | No account is signed in |
+| 403 | [error response](/http-api/#error-response) | The credential is a bot or OAuth2 bearer token, returned as `ACCESS_DENIED` |
+| 403 | [error response](/http-api/#error-response) | 3D rooms are switched off, returned as `FEATURE_TEMPORARILY_DISABLED` |
+| 403 | [error response](/http-api/#error-response) | The caller lacks `VIEW_CHANNEL` or `CONNECT`, returned as `MISSING_PERMISSIONS` |
+| 404 | [error response](/http-api/#error-response) | The channel does not exist, returned as `UNKNOWN_CHANNEL` |
+| 409 | [error response](/http-api/#error-response) | Another connection sits on the seat, returned as `VOICE_SEAT_TAKEN` |
+| 409 | [error response](/http-api/#error-response) | The caller sits at an active table, returned as `TABLE_GAME_CONFLICT` |
+| 429 | [error response](/http-api/#error-response) | The channel's cap of 20 seat changes a second is spent, returned as `RATE_LIMITED` |
+
+### Side effects
+
+The server writes the [seat attribute](#seat-attribute) of the caller's connection. A connection that loses its seat to this request, the caller's own other connection, has its attribute removed. When two requests move the same connection close together, the attribute ends on the seat the server stored last.
+
+### Rate limit
+
+10 requests per 10 seconds for each authenticated user and channel ID, on the `voice_seat:take::channel_id` bucket.
+
+The channel as a whole also takes at most 20 seat changes in each one-second window, from all of its members together, because every change reaches each participant of the room. Every request that passes the [voice membership](#voice-membership) check counts, including one that changes nothing, and a request that fails the check never does. The seats the server gives on a LiveKit join are not counted. A request past the cap returns 429 `RATE_LIMITED` with a `retry_after` of 1 second and `X-RateLimit-Scope: shared`, and without `X-RateLimit-Bucket`.

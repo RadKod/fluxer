@@ -64,6 +64,16 @@ interface DisconnectParticipantParams {
 	serverId: string;
 }
 
+export interface SetParticipantAttributesParams {
+	userId: UserID;
+	guildId?: GuildID;
+	channelId: ChannelID;
+	connectionId: string;
+	regionId: string;
+	serverId: string;
+	attributes: Record<string, string>;
+}
+
 interface ListParticipantsParams {
 	guildId?: GuildID;
 	channelId: ChannelID;
@@ -100,6 +110,9 @@ export abstract class ILiveKitService {
 	abstract muteMicrophoneTrack(params: MuteMicrophoneTrackParams): Promise<void>;
 
 	abstract disconnectParticipant(params: DisconnectParticipantParams): Promise<void>;
+
+	// Server-written participant attributes (the voice seat). An empty value removes the attribute.
+	abstract setParticipantAttributes(params: SetParticipantAttributesParams): Promise<'ok' | 'not_found' | 'error'>;
 
 	abstract listParticipants(params: ListParticipantsParams): Promise<ListParticipantsResult>;
 

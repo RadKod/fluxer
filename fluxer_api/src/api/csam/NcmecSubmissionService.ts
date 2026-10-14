@@ -9,6 +9,7 @@ import {
 	createAttachmentID,
 	createChannelID,
 	createMessageID,
+	createReportID,
 	createUserID,
 	type MessageID,
 	type ReportID,
@@ -35,8 +36,9 @@ import {buildNcmecFileDetailsXml, buildNcmecReportXml} from '@app/api/csam/Ncmec
 import type {NcmecRepository} from '@app/api/csam/NcmecRepository';
 import type {AttachmentUploadTraceByAttachmentRow} from '@app/api/database/types/AttachmentUploadTypes';
 import type {NcmecAttachmentSubmissionRow, NcmecUserWorkflowRow} from '@app/api/database/types/CsamTypes';
+import type {FeedPostService} from '@app/api/feed/FeedPostService';
 import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
-import type {IPurgeQueue} from '@app/api/infrastructure/CachePurgeQueue';
+import {type IPurgeQueue, priorityPurgeQueue} from '@app/api/infrastructure/CachePurgeQueue';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {IStorageService} from '@app/api/infrastructure/IStorageService';
 import type {KVAccountDeletionQueueService} from '@app/api/infrastructure/KVAccountDeletionQueueService';
@@ -46,10 +48,11 @@ import type {Embed} from '@app/api/models/Embed';
 import type {EmbedMedia} from '@app/api/models/EmbedMedia';
 import type {Message} from '@app/api/models/Message';
 import type {User} from '@app/api/models/User';
-import type {IARMessageContext, IARSubmission} from '@app/api/report/IReportRepository';
+import {type IARMessageContext, type IARSubmission, ReportType} from '@app/api/report/IReportRepository';
 import type {ReportRepository} from '@app/api/report/ReportRepository';
 import {deleteMessageSearchDocuments} from '@app/api/search/MessageSearchIndexCleanup';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
+import {onUserBanned} from '@app/api/user/lifecycle/UserLifecycleHooks';
 import {reschedulePendingDeletion} from '@app/api/user/services/PendingDeletionCoordinator';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import {MessageFlags} from '@fluxer/constants/src/ChannelConstants';
@@ -134,6 +137,7 @@ interface NcmecSubmissionServiceDeps {
 	purgeQueue: IPurgeQueue;
 	workerService: IWorkerService<WorkerTaskName>;
 	deletionQueue: KVAccountDeletionQueueService;
+	feedPostService: Pick<FeedPostService, 'removePostById'>;
 	updatePropagator?: NcmecUserUpdatePropagator;
 }
 
@@ -249,7 +253,7 @@ export class NcmecSubmissionService {
 				id: attachment.userId !== null ? BigInt(attachment.userId) : null,
 				screenName: reportedUser.screenName,
 				displayName: reportedUser.displayName,
-				espService: 'Fluxer',
+				espService: 'Micup',
 				permanentlyDisabledAt: existingWorkflow?.deleted_at ?? null,
 				person: buildReportedUserPerson(reportedUser),
 				ipCaptureEvents: buildReportedUserIpCaptureEvents(attachmentUploadTrace),
@@ -459,11 +463,14 @@ export class NcmecSubmissionService {
 				updated_at: new Date(),
 			});
 		}
-		await this.deleteMessageSilently(
+		const deletedMessage = await this.deleteMessageSilently(
 			createChannelID(submission.channel_id),
 			createMessageID(submission.message_id),
 			createUserID(submissionUserId),
 		);
+		if (!deletedMessage) {
+			await this.deleteReportedFeedPost(submission);
+		}
 		await this.deps.ncmecRepository.upsertAttachmentSubmission({
 			...submission,
 			archive_completed_at: archiveCompletedAt,
@@ -696,6 +703,7 @@ export class NcmecSubmissionService {
 		});
 		await this.deps.userRepository.deleteAllAuthSessions(userId);
 		await this.updatePropagator.propagateUserUpdate({userId, oldUser: user, updatedUser});
+		await onUserBanned({userId});
 		return {
 			...workflow,
 			deleted_at: new Date(),
@@ -772,15 +780,25 @@ export class NcmecSubmissionService {
 		});
 	}
 
+	// Micup: a feed report (FEED_POST, FEED_COMMENT) stores the post that holds the image as the message ID under the
+	// author's personal channel. A post is not a message, so it is removed through the feed, its images purged first.
+	private async deleteReportedFeedPost(submission: NcmecAttachmentSubmissionRow): Promise<void> {
+		if (submission.source_report_id === null) return;
+		const report = await this.deps.reportRepository.getReport(createReportID(submission.source_report_id));
+		if (report?.reportType !== ReportType.FEED_POST && report?.reportType !== ReportType.FEED_COMMENT) return;
+		await this.deps.feedPostService.removePostById(submission.message_id, {priority: true});
+	}
+
+	/** Returns false when there is no such message. */
 	private async deleteMessageSilently(
 		channelId: ChannelID,
 		messageId: MessageID,
 		fallbackUserId: UserID,
-	): Promise<void> {
+	): Promise<boolean> {
 		const channel = await this.deps.channelRepository.findUnique(channelId);
 		const message = await this.deps.channelRepository.getMessage(channelId, messageId);
-		if (!message) return;
-		await purgeMessageAttachments(message, this.deps.storageService, this.deps.purgeQueue);
+		if (!message) return false;
+		await purgeMessageAttachments(message, this.deps.storageService, priorityPurgeQueue(this.deps.purgeQueue));
 		await this.deps.channelRepository.deleteMessage(
 			channelId,
 			messageId,
@@ -791,14 +809,14 @@ export class NcmecSubmissionService {
 		await deleteMessageSearchDocuments([messageId], {context: {source: 'ncmec_submission_delete'}});
 		await enqueueCrosspostSourceRemoval(this.deps.workerService, {messages: [message], mode: 'purge'});
 		await enqueueCrosspostFamilyPurgeFromCopies(this.deps.workerService, {messages: [message]});
-		if (!channel) return;
+		if (!channel) return true;
 		if (channel.guildId) {
 			await this.deps.gatewayService.dispatchGuild({
 				guildId: channel.guildId,
 				event: 'MESSAGE_DELETE',
 				data: withThreadContext(channel, {channel_id: channelId.toString(), id: messageId.toString()}),
 			});
-			return;
+			return true;
 		}
 		for (const recipientId of channel.recipientIds) {
 			await this.deps.gatewayService.dispatchPresence({
@@ -807,6 +825,7 @@ export class NcmecSubmissionService {
 				data: {channel_id: channelId.toString(), id: messageId.toString()},
 			});
 		}
+		return true;
 	}
 
 	private async requeueFinalizer(attachmentId: AttachmentID, requeueCount: number): Promise<void> {
@@ -848,7 +867,7 @@ function buildAdditionalInfo(args: {
 	attachmentUploadTrace: AttachmentUploadTraceByAttachmentRow | null;
 }): string {
 	const lines = [
-		'Fluxer admin attachment report.',
+		'Micup admin attachment report.',
 		`Channel ID: ${args.channelId.toString()}`,
 		`Message ID: ${args.messageId.toString()}`,
 		`Attachment ID: ${args.attachmentId.toString()}`,
@@ -944,12 +963,12 @@ function getBestEffortUploadTimestamp(trace: AttachmentUploadTraceByAttachmentRo
 
 function describeBestEffortUploadIpSource(trace: AttachmentUploadTraceByAttachmentRow): string {
 	if (trace.completion_ip && trace.completed_at) {
-		return 'multipart completion callback observed by Fluxer API';
+		return 'multipart completion callback observed by Micup API';
 	}
 	if (trace.upload_mode === 'form_data') {
-		return 'attachment upload request handled directly by Fluxer API';
+		return 'attachment upload request handled directly by Micup API';
 	}
-	return 'presigned upload authorization request observed by Fluxer API';
+	return 'presigned upload authorization request observed by Micup API';
 }
 
 function buildAuditMetadata(args: {

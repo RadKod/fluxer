@@ -37,19 +37,19 @@ const REVIEW_ACTIVE_OVERRIDES_DESCRIPTOR = msg({
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const BACKEND_PREMIUM_OVERRIDE_DESCRIPTOR = msg({
-	message: 'Backend premium override',
+	message: 'Backend Plus override',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const BACKEND_PREMIUM_OVERRIDE_ENABLED_DESCRIPTOR = msg({
-	message: 'Backend premium override enabled',
+	message: 'Backend Plus override enabled',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const BACKEND_PREMIUM_PERKS_DISABLED_DESCRIPTOR = msg({
-	message: 'Backend premium perks disabled',
+	message: 'Backend Plus perks disabled',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const PREMIUM_PERKS_DISABLED_DESCRIPTOR = msg({
-	message: 'Premium perks disabled',
+	message: 'Plus perks disabled',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 export const DeveloperStateSummaryMenu: React.FC = observer(() => {

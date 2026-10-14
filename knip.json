@@ -7,7 +7,8 @@
 		"fluxer_admin/src/styles/app.css",
 		"fluxer_admin/static/htmx.min.js",
 		"tools/ci/templates/libfluxcore_wrapper.d.ts",
-		"tools/ci/templates/libfluxcore_wrapper.js"
+		"tools/ci/templates/libfluxcore_wrapper.js",
+		"tools/room_themes/build_manifest.mjs"
 	],
 	"ignoreIssues": {
 		"fluxer_app/scripts/build/Config.tsx": ["exports"],
@@ -20,6 +21,7 @@
 		"fluxer_desktop/src/main/Autostart.ts": ["exports"],
 		"fluxer_desktop/src/main/LinuxDesktopEntry.ts": ["exports"],
 		"fluxer_desktop/src/main/NotificationState.ts": ["exports", "types"],
+		"packages/constants/src/ApplicationCommandConstants.ts": ["exports"],
 		"packages/schema/src/domains/admin/AdminUserSchemas.ts": ["exports"],
 		"packages/schema/src/domains/download/DownloadSchemas.ts": ["exports"],
 		"packages/schema/src/domains/geolocation/GeolocationSchemas.ts": ["exports"],
@@ -28,7 +30,15 @@
 	},
 	"workspaces": {
 		".": {
-			"ignoreDependencies": ["vite"]
+			"entry": [
+				"tools/ci/*.test.mjs",
+				"tests/game_activity_integration/run.mjs",
+				"tests/game_activity_integration/vitest.config.mts"
+			],
+			"paths": {
+				"@app/api/*": ["fluxer_api/src/api/*"],
+				"@app/*": ["fluxer_app/src/*"]
+			}
 		},
 		"fluxer_api": {
 			"ignoreDependencies": [
@@ -47,7 +57,13 @@
 			]
 		},
 		"fluxer_app": {
-			"entry": ["lingui.config.js", "scripts/build-sw.mjs", "scripts/Generate*.ts"]
+			"entry": [
+				"lingui.config.js",
+				"scripts/build-sw.mjs",
+				"scripts/Generate*.ts",
+				"scripts/build/check-*.mjs",
+				"scripts/build/*.test.mjs"
+			]
 		},
 		"fluxer_desktop": {
 			"entry": [

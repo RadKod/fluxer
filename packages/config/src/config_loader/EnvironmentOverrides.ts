@@ -40,6 +40,16 @@ const NAMED_FLUXER_ENV_OVERRIDES: Record<string, NamedEnvOverride> = {
 	FLUXER_CASSANDRA_LOCAL_DC: {path: ['database', 'cassandra', 'local_dc']},
 	FLUXER_CASSANDRA_USERNAME: {path: ['database', 'cassandra', 'username']},
 	FLUXER_CASSANDRA_PASSWORD: {path: ['database', 'cassandra', 'password']},
+	FLUXER_CASSANDRA_CONSISTENCY: {path: ['database', 'cassandra', 'consistency']},
+	FLUXER_RISK_IPINFO_API_KEY: {path: ['integrations', 'risk_integration', 'ipinfo_api_key']},
+	FLUXER_ACCOUNT_POLICY_DSL: {
+		path: ['integrations', 'risk_integration', 'account_policy_dsl'],
+		parse: parseEnvValue,
+	},
+	FLUXER_ABUSE_POLICY_PHONE_FLAGGING_ENABLED: {
+		path: ['instance', 'abuse_policy', 'phone_flagging', 'enabled'],
+		parse: parseBoolean,
+	},
 	FLUXER_POSTGRES_URL: {path: ['database', 'postgres', 'url']},
 	FLUXER_POSTGRES_HOST: {path: ['database', 'postgres', 'host']},
 	FLUXER_POSTGRES_PORT: {path: ['database', 'postgres', 'port'], parse: parseInteger},
@@ -78,6 +88,7 @@ const NAMED_FLUXER_ENV_OVERRIDES: Record<string, NamedEnvOverride> = {
 	},
 	FLUXER_API_IP_BAN_EXEMPT_IPS: {path: ['services', 'api', 'ip_ban_exempt_ips'], parse: parseCsv},
 	FLUXER_API_DONATION_PROXY_KEY: {path: ['services', 'api', 'donation_proxy_key']},
+	FLUXER_API_PREMIUM_TRIAL_EMAIL_HASH_KEY: {path: ['services', 'api', 'premium_trial_email_hash_key']},
 	FLUXER_API_TRUSTED_CALLERS: {path: ['services', 'api', 'trusted_callers'], parse: parseJsonArray},
 	FLUXER_API_PRESIGNED_ATTACHMENT_UPLOADS_ENABLED: {
 		path: ['services', 'api', 'presigned_attachment_uploads_enabled'],
@@ -98,6 +109,10 @@ const NAMED_FLUXER_ENV_OVERRIDES: Record<string, NamedEnvOverride> = {
 	FLUXER_API_WORKER_LANE_CONCURRENCY_OVERRIDES: {
 		path: ['services', 'api', 'worker', 'lane_concurrency_overrides'],
 		parse: parseJsonObject,
+	},
+	FLUXER_API_WORKER_FEED_VIEW_FLUSH_PARTITION_CONCURRENCY: {
+		path: ['services', 'api', 'worker', 'feed_view_flush_partition_concurrency'],
+		parse: parseInteger,
 	},
 	FLUXER_API_STORAGE_CHANGE_FEED_ENABLED: {
 		path: ['services', 'api', 'storage_change_feed', 'enabled'],
@@ -159,6 +174,8 @@ const NAMED_FLUXER_ENV_OVERRIDES: Record<string, NamedEnvOverride> = {
 	FLUXER_EMAIL_REPLY_TO_EMAIL: {path: ['integrations', 'email', 'reply_to_email']},
 	FLUXER_EMAIL_APP_BASE_URL: {path: ['integrations', 'email', 'app_base_url']},
 	FLUXER_EMAIL_WEBHOOK_SECRET: {path: ['integrations', 'email', 'webhook_secret']},
+	FLUXER_EMAIL_HTML_ENABLED: {path: ['integrations', 'email', 'html_enabled'], parse: parseBoolean},
+	FLUXER_EMAIL_HTML_FOOTER: {path: ['integrations', 'email', 'html_footer'], parse: parseJsonObject},
 	FLUXER_EMAIL_SMTP_HOST: {path: ['integrations', 'email', 'smtp', 'host']},
 	FLUXER_EMAIL_SMTP_PORT: {path: ['integrations', 'email', 'smtp', 'port'], parse: parseInteger},
 	FLUXER_EMAIL_SMTP_USERNAME: {path: ['integrations', 'email', 'smtp', 'username']},
@@ -225,6 +242,9 @@ const NAMED_FLUXER_ENV_OVERRIDES: Record<string, NamedEnvOverride> = {
 	FLUXER_NCMEC_USERNAME: {path: ['integrations', 'ncmec', 'username']},
 	FLUXER_NCMEC_PASSWORD: {path: ['integrations', 'ncmec', 'password']},
 	FLUXER_NCMEC_REPORTER_EMAIL: {path: ['integrations', 'ncmec', 'reporter_email']},
+	FLUXER_PAYRIFF_ENABLED: {path: ['integrations', 'payriff', 'enabled'], parse: parseBoolean},
+	FLUXER_PAYRIFF_SECRET_KEY: {path: ['integrations', 'payriff', 'secret_key']},
+	FLUXER_PAYRIFF_BASE_URL: {path: ['integrations', 'payriff', 'base_url']},
 	FLUXER_CLAMAV_ENABLED: {path: ['integrations', 'clamav', 'enabled'], parse: parseBoolean},
 	FLUXER_CLAMAV_HOST: {path: ['integrations', 'clamav', 'host']},
 	FLUXER_CLAMAV_PORT: {path: ['integrations', 'clamav', 'port'], parse: parseInteger},
@@ -238,6 +258,40 @@ const NAMED_FLUXER_ENV_OVERRIDES: Record<string, NamedEnvOverride> = {
 		path: ['integrations', 'cache_purge', 'http', 'timeout_ms'],
 		parse: parseInteger,
 	},
+	FLUXER_CACHE_PURGE_BUNNY_API_BASE: {path: ['integrations', 'cache_purge', 'bunny', 'api_base']},
+	FLUXER_CACHE_PURGE_BUNNY_API_KEY: {path: ['integrations', 'cache_purge', 'bunny', 'api_key']},
+	FLUXER_CACHE_PURGE_BUNNY_TIMEOUT_MS: {
+		path: ['integrations', 'cache_purge', 'bunny', 'timeout_ms'],
+		parse: parseInteger,
+	},
+	FLUXER_CACHE_PURGE_BUNNY_CONCURRENCY: {
+		path: ['integrations', 'cache_purge', 'bunny', 'concurrency'],
+		parse: parseInteger,
+	},
+	FLUXER_CACHE_PURGE_BUNNY_MODE: {path: ['integrations', 'cache_purge', 'bunny', 'mode']},
+	FLUXER_CACHE_PURGE_BUNNY_PULL_ZONE_ID: {
+		path: ['integrations', 'cache_purge', 'bunny', 'pull_zone_id'],
+		parse: parseInteger,
+	},
+	FLUXER_CACHE_PURGE_BUNNY_RATE_PER_MINUTE: {
+		path: ['integrations', 'cache_purge', 'bunny', 'rate_per_minute'],
+		parse: parseInteger,
+	},
+	FLUXER_CACHE_PURGE_BUNNY_BURST: {
+		path: ['integrations', 'cache_purge', 'bunny', 'burst'],
+		parse: parseInteger,
+	},
+	FLUXER_BUNNY_STREAM_LIBRARY_ID: {path: ['integrations', 'bunny_stream', 'library_id'], parse: parseInteger},
+	FLUXER_BUNNY_STREAM_API_KEY: {path: ['integrations', 'bunny_stream', 'api_key']},
+	FLUXER_BUNNY_STREAM_READ_ONLY_API_KEY: {path: ['integrations', 'bunny_stream', 'read_only_api_key']},
+	FLUXER_BUNNY_STREAM_CDN_HOSTNAME: {path: ['integrations', 'bunny_stream', 'cdn_hostname']},
+	FLUXER_BUNNY_STREAM_TOKEN_KEY: {path: ['integrations', 'bunny_stream', 'token_key']},
+	FLUXER_BUNNY_STREAM_STORAGE_ZONE: {path: ['integrations', 'bunny_stream', 'storage_zone']},
+	FLUXER_BUNNY_STREAM_STORAGE_PASSWORD: {path: ['integrations', 'bunny_stream', 'storage_password']},
+	FLUXER_BUNNY_STREAM_STORAGE_HOST: {path: ['integrations', 'bunny_stream', 'storage_host']},
+	FLUXER_BUNNY_STREAM_API_BASE: {path: ['integrations', 'bunny_stream', 'api_base']},
+	FLUXER_BUNNY_STREAM_TUS_ENDPOINT: {path: ['integrations', 'bunny_stream', 'tus_endpoint']},
+	FLUXER_BUNNY_STREAM_TIMEOUT_MS: {path: ['integrations', 'bunny_stream', 'timeout_ms'], parse: parseInteger},
 	FLUXER_BLOCKLIST_FEEDS_ENABLED: {path: ['integrations', 'blocklist_feeds', 'enabled'], parse: parseBoolean},
 	FLUXER_BREACHED_PASSWORD_CHECK_ENABLED: {
 		path: ['integrations', 'breached_password_check', 'enabled'],
@@ -275,6 +329,8 @@ const NAMED_FLUXER_ENV_OVERRIDES: Record<string, NamedEnvOverride> = {
 	},
 	FLUXER_SELF_HOSTED: {path: ['instance', 'self_hosted'], parse: parseBoolean},
 	FLUXER_AUTO_JOIN_INVITE_CODE: {path: ['instance', 'auto_join_invite_code']},
+	FLUXER_MICUPBOT_APPLICATION_ID: {path: ['instance', 'micupbot_application_id']},
+	FLUXER_ROSTER_BOT_APPLICATION_ID: {path: ['instance', 'roster_bot_application_id']},
 	FLUXER_VISIONARIES_GUILD_ID: {path: ['instance', 'visionaries_guild_id']},
 	FLUXER_VISIONARIES_GUILD_VISIONARY_ROLE_ID: {path: ['instance', 'visionaries_guild_visionary_role_id']},
 	FLUXER_APP_PRODUCT_NAME: {path: ['instance', 'branding', 'product_name']},
@@ -367,6 +423,24 @@ function parseJsonArray(raw: string): Array<unknown> {
 	throw new Error('must be a JSON array');
 }
 
+export function parseEnvValue(raw: string): unknown {
+	const trimmed = raw.trim();
+	const lower = trimmed.toLowerCase();
+	if (lower === 'true' || lower === 'false') return parseBoolean(trimmed);
+	if (/^-?\d+$/.test(trimmed)) {
+		return parseInteger(trimmed);
+	}
+	if (/^-?\d+\.\d+$/.test(trimmed)) {
+		const value = Number(trimmed);
+		if (!Number.isFinite(value)) throw new Error('must be a finite number');
+		return value;
+	}
+	if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+		return parseJson(trimmed);
+	}
+	return raw;
+}
+
 function parseInteger(raw: string): number {
 	const trimmed = raw.trim();
 	if (!/^-?\d+$/.test(trimmed)) {
@@ -450,6 +524,9 @@ export function buildNamedFluxerEnvOverrides(env: NodeJS.ProcessEnv): ConfigObje
 	for (const [envKey, mapping] of Object.entries(NAMED_FLUXER_ENV_OVERRIDES)) {
 		const alias = NAMED_FLUXER_ENV_ALIASES[envKey];
 		const raw = readEnvValue(env, envKey) ?? (alias === undefined ? undefined : readEnvValue(env, alias));
+		if (envKey === 'FLUXER_CASSANDRA_CONSISTENCY' && raw === undefined && env[envKey] !== undefined) {
+			throw new Error(`Invalid FLUXER_CASSANDRA_CONSISTENCY: ${env[envKey]}`);
+		}
 		if (raw === undefined) {
 			continue;
 		}

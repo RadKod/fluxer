@@ -5,7 +5,10 @@ import Config from '@app/features/app/config/Config';
 import {getCachedDesktopTroubleshootingSettings} from '@app/features/devtools/utils/DesktopTroubleshootingUtils';
 import type {AppMetricsSnapshot, DesktopInfo, GpuInfo} from '@app/features/platform/types/Electron';
 import {getElectronAPI} from '@app/features/ui/utils/NativeUtils';
-import MediaEngine, {useMediaEngineVersion} from '@app/features/voice/engine/MediaEngineFacade';
+import MediaEngine, {
+	useMediaEngineStatsVersion,
+	useMediaEngineVersion,
+} from '@app/features/voice/engine/MediaEngineFacade';
 import ScreenShareCodecNegotiation, {
 	getScreenShareCodecPreferenceOrder,
 } from '@app/features/voice/engine/ScreenShareCodecNegotiation';
@@ -106,6 +109,7 @@ function getSystemInfo(): StatsForNerdsData['system'] {
 
 export function useStatsForNerds({enabled = true}: UseStatsForNerdsOptions = {}): StatsForNerdsData {
 	useMediaEngineVersion();
+	useMediaEngineStatsVersion();
 	const [gpuInfo, setGpuInfo] = useState<GpuInfo | null>(null);
 	const [appMetrics, setAppMetrics] = useState<AppMetricsSnapshot | null>(null);
 	const [desktopInfo, setDesktopInfo] = useState<DesktopInfo | null>(null);

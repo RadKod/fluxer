@@ -4,10 +4,11 @@ use crate::api::generated::{snowflake, types as generated_types};
 
 use super::client::{AdminApiClient, ApiError, ApiResult};
 use super::types::{
-    AdminUser, AdminUserMeResponse, GuildInfo, ListUserGuildsResponse, LookupUserResponse,
-    PasswordResetLinkResponse, SearchUsersResponse, TerminateSessionsResponse,
-    UserMutationResponse,
+    AdminEndPremium, AdminUser, AdminUserMeResponse, AdminVisionary, GuildInfo,
+    ListUserGuildsResponse, LookupUserResponse, PasswordResetLinkResponse, SearchUsersResponse,
+    TerminateSessionsResponse, UserMutationResponse,
 };
+use serde_json::json;
 
 impl AdminApiClient {
     pub async fn search_users(
@@ -105,6 +106,21 @@ impl AdminApiClient {
             .await
             .map_err(|e| self.generated_error(e))?;
         let resp: UserMutationResponse = self.generated_value(response.into_inner())?;
+        Ok(resp.user)
+    }
+
+    pub async fn clear_legacy_restriction(
+        &self,
+        user_id: &str,
+        reason: Option<&str>,
+    ) -> ApiResult<AdminUser> {
+        let resp: UserMutationResponse = self
+            .post_with_reason(
+                &format!("/admin/users/{user_id}/clear-legacy-restriction"),
+                Some(&json!({})),
+                reason,
+            )
+            .await?;
         Ok(resp.user)
     }
 
@@ -311,6 +327,7 @@ impl AdminApiClient {
         user_id: &str,
         username: &str,
         discriminator: Option<&str>,
+        reason: &str,
     ) -> ApiResult<AdminUser> {
         let body = generated_types::AdminUserUsernameUpdateRequest {
             discriminator: discriminator
@@ -318,12 +335,29 @@ impl AdminApiClient {
             username: generated_types::UsernameType::from(username.to_owned()),
         };
         let response = self
-            .generated()
+            .generated_with_reason(Some(reason))?
             .update_admin_user_username(&snowflake(user_id), &body)
             .await
             .map_err(|e| self.generated_error(e))?;
         let resp: UserMutationResponse = self.generated_value(response.into_inner())?;
         Ok(resp.user)
+    }
+
+    pub async fn force_username_reselect(
+        &self,
+        user_id: &str,
+        ban_name: bool,
+        reason: &str,
+    ) -> ApiResult<()> {
+        self.post_void_with_reason(
+            &format!(
+                "/admin/users/{}/username/reselect",
+                urlencoding::encode(user_id)
+            ),
+            Some(&json!({ "ban_name": ban_name })),
+            Some(reason),
+        )
+        .await
     }
 
     pub async fn change_email(&self, user_id: &str, email: &str) -> ApiResult<AdminUser> {
@@ -571,6 +605,34 @@ impl AdminApiClient {
         let resp: UserMutationResponse = self.generated_value(response.into_inner())?;
         Ok(resp.user)
     }
+
+    // Premium refunds: ends bought, gift code and trial premium time now; used after a Payriff refund.
+    pub async fn end_premium(&self, user_id: &str, reason: &str) -> ApiResult<AdminEndPremium> {
+        let path = format!("/admin/users/{}/premium/end", urlencoding::encode(user_id));
+        self.post_with_reason(&path, None, Some(reason)).await
+    }
+
+    // Micup (shop, Visionary): the number asked for, or the lowest free one when None.
+    pub async fn grant_visionary(
+        &self,
+        user_id: &str,
+        slot: Option<u32>,
+        reason: &str,
+    ) -> ApiResult<AdminVisionary> {
+        let body = slot.map_or_else(|| json!({}), |slot| json!({ "slot": slot }));
+        self.post_with_reason(&visionary_path(user_id), Some(&body), Some(reason))
+            .await
+    }
+
+    // Micup (shop, Visionary): the number is retired; the API takes the reward items back.
+    pub async fn revoke_visionary(&self, user_id: &str, reason: &str) -> ApiResult<AdminVisionary> {
+        self.delete_with_reason(&visionary_path(user_id), None, Some(reason))
+            .await
+    }
+}
+
+fn visionary_path(user_id: &str) -> String {
+    format!("/admin/users/{}/visionary", urlencoding::encode(user_id))
 }
 
 fn nonempty(value: Option<&str>) -> Option<&str> {

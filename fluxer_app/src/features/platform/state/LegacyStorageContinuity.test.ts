@@ -47,6 +47,7 @@ interface LoadedClient {
 	readonly storage: PersistentStorageModule;
 	readonly persistence: PersistenceModule;
 	readonly drafts: PersistedDrafts;
+	readonly feedCursor: PersistedFeedCursor;
 	readonly desktopBackendInstalled: boolean;
 }
 
@@ -54,6 +55,7 @@ const ACTIVE_USER_ID = '100000000000000002';
 const OTHER_USER_ID = '100000000000000003';
 const ACTIVE_SCOPE = `${FIXTURE_CURRENT_INSTANCE_KEY}::${ACTIVE_USER_ID}`;
 const OTHER_SCOPE = `${FIXTURE_CURRENT_INSTANCE_KEY}::${OTHER_USER_ID}`;
+const OTHER_INSTANCE_SCOPE = `https://other.test/api::${ACTIVE_USER_ID}`;
 const ADDED_SINCE_SCOPE = `${FIXTURE_CURRENT_INSTANCE_KEY}::100000000000000009`;
 const DEPLOYED_DRAFTS: Readonly<Record<string, string>> = {'110000000000000001': 'unsent message text'};
 const GLOBAL_SCOPE = 'global';
@@ -77,6 +79,15 @@ const GOLDEN_VALUES: ReadonlyMap<string, string> = new Map(
 const DEPLOYED_STORE_NAMES: ReadonlyArray<string> = readPersistedStoreNames().filter(
 	(name) => !STORES_WITHOUT_DEPLOYED_DATA.has(name),
 );
+
+class PersistedFeedCursor {
+	lastReadAt = 0;
+	lastReadUserId: string | null = null;
+
+	constructor() {
+		makeAutoObservable(this);
+	}
+}
 
 class PersistedDrafts {
 	drafts: Record<string, string> = {};
@@ -215,13 +226,16 @@ async function loadClient(): Promise<LoadedClient> {
 	expect(result.scope).toBe(ACTIVE_SCOPE);
 	const drafts = new PersistedDrafts();
 	await persistence.makePersistent(drafts, AppStorageKey.MESSAGING_DRAFTS, ['drafts', 'draftSegments']);
-	return {storage, persistence, drafts, desktopBackendInstalled: result.desktopBackendInstalled};
+	const feedCursor = new PersistedFeedCursor();
+	await persistence.makePersistent(feedCursor, 'FeedNotifications', ['lastReadAt', 'lastReadUserId']);
+	return {storage, persistence, drafts, feedCursor, desktopBackendInstalled: result.desktopBackendInstalled};
 }
 
 async function unloadClient(client: LoadedClient): Promise<void> {
 	client.persistence.flushPendingPersistWrites();
 	await client.storage.flushAppStorageWrites();
 	client.persistence.stopPersistent(AppStorageKey.MESSAGING_DRAFTS, client.drafts);
+	client.persistence.stopPersistent('FeedNotifications', client.feedCursor);
 }
 
 function expectActiveAccountState(client: LoadedClient, label: string): void {
@@ -237,6 +251,8 @@ function expectActiveAccountState(client: LoadedClient, label: string): void {
 	}
 	expect(AppStorage.getItem(AppStorageKey.UI_SIDEBAR_WIDTH), label).toBe('286');
 	expect(client.drafts.drafts, label).toEqual(DEPLOYED_DRAFTS);
+	expect(client.feedCursor.lastReadAt, label).toBe(1_800_000_000_000);
+	expect(client.feedCursor.lastReadUserId, label).toBe(ACTIVE_USER_ID);
 }
 
 function expectOtherAccountState(client: LoadedClient, label: string): void {
@@ -276,6 +292,11 @@ async function expectContinuityAcrossLoads(expectDesktopBackend: boolean): Promi
 
 		await client.storage.activateAppStorageScope(OTHER_SCOPE);
 		expectOtherAccountState(client, `load ${load} after switching account`);
+
+		await client.storage.activateAppStorageScope(OTHER_INSTANCE_SCOPE);
+		expect(client.storage.default.getItem('FeedNotifications')).toBeNull();
+		expect(client.feedCursor.lastReadAt).toBe(0);
+		expect(client.feedCursor.lastReadUserId).toBeNull();
 
 		await client.storage.activateAppStorageScope(ADDED_SINCE_SCOPE);
 		expectNoLegacyContent(client, `load ${load} in an account added since the upgrade`);

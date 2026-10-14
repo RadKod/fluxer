@@ -8,15 +8,132 @@ import {
 	createGroupDmChannel,
 	createGuild,
 } from '@app/api/channel/tests/ChannelTestUtils';
-import {getUserActivityBuffer} from '@app/api/middleware/ServiceSingletons';
+import {setInjectedUsernameOwnershipService} from '@app/api/middleware/ServiceRegistry';
+import {getInstanceConfigRepository, getUserActivityBuffer} from '@app/api/middleware/ServiceSingletons';
 import {HTTP_STATUS, TEST_CREDENTIALS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
+import type {UsernameOwnershipService} from '@app/api/user/username/UsernameOwnershipService';
+import {AccountIdentityModes} from '@fluxer/constants/src/AccountIdentityConstants';
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
 
 const MISSING_USER_ID = '999999999999999999';
 const LAST_ACTIVE_IP = '198.51.100.91';
 
+function injectUsernameOwnershipAuditFixture(): void {
+	const ownership: Pick<
+		UsernameOwnershipService,
+		'adminHold' | 'adminUnhold' | 'adminAssign' | 'forceReselect' | 'listReservations'
+	> = {
+		listReservations: async (bucket) => ({bucket, items: [], next_cursor: null}),
+		adminHold: async (username) => ({ok: true, username, noop: false}),
+		adminUnhold: async () => {},
+		adminAssign: async (username) => ({ok: true, username, noop: false}),
+		forceReselect: async () => {},
+	};
+	setInjectedUsernameOwnershipService(ownership as UsernameOwnershipService);
+}
+
 export const UserAdminAuditCases: ReadonlyArray<AdminAuditCoverageCase> = [
+	{
+		method: 'GET',
+		route: '/admin/usernames/reservations',
+		async prepare() {
+			injectUsernameOwnershipAuditFixture();
+			return {
+				request: {path: '/admin/usernames/reservations?bucket=7'},
+				expected: {
+					action: 'list_username_reservations',
+					targetType: 'username',
+					targetId: '0',
+					metadata: {bucket: '7', result_count: '0', has_more: 'false'},
+				},
+			};
+		},
+	},
+	{
+		method: 'POST',
+		route: '/admin/usernames/reserve',
+		async prepare() {
+			injectUsernameOwnershipAuditFixture();
+			return {
+				request: {path: '/admin/usernames/reserve', body: {username: 'reserved', note: 'official account'}},
+				expected: {
+					action: 'reserve_username',
+					targetType: 'username',
+					targetId: '0',
+					metadata: {username: 'reserved', note: 'official account'},
+				},
+			};
+		},
+	},
+	{
+		method: 'POST',
+		route: '/admin/usernames/unreserve',
+		async prepare() {
+			injectUsernameOwnershipAuditFixture();
+			return {
+				request: {path: '/admin/usernames/unreserve', body: {username: 'reserved'}, expectStatus: 204},
+				expected: {
+					action: 'unreserve_username',
+					targetType: 'username',
+					targetId: '0',
+					metadata: {username: 'reserved'},
+				},
+			};
+		},
+	},
+	{
+		method: 'POST',
+		route: '/admin/usernames/assign',
+		async prepare({harness}) {
+			const target = await createTestAccount(harness);
+			injectUsernameOwnershipAuditFixture();
+			return {
+				request: {path: '/admin/usernames/assign', body: {username: 'reserved', user_id: target.userId}},
+				expected: {
+					action: 'assign_username',
+					targetType: 'user',
+					targetId: target.userId,
+					metadata: {username: 'reserved'},
+				},
+			};
+		},
+	},
+	{
+		method: 'POST',
+		route: '/admin/users/:user_id/username/reselect',
+		async prepare({harness}) {
+			const target = await createTestAccount(harness);
+			const config = getInstanceConfigRepository();
+			const startedAt = Date.now();
+			await config.setConfig(
+				'account_identity_config',
+				JSON.stringify({
+					mode: AccountIdentityModes.EMAIL,
+					decided_at: new Date(startedAt).toISOString(),
+					source: 'migration',
+					...(await config.readAccountIdentityConfig()),
+					username_migration: {
+						state: 'selecting',
+						epoch: 1,
+						preparing_at: new Date(startedAt - 60000).toISOString(),
+						started_at: new Date(startedAt).toISOString(),
+						forced_at: new Date(startedAt + 7 * 86400000).toISOString(),
+					},
+				}),
+			);
+			injectUsernameOwnershipAuditFixture();
+			return {
+				request: {path: `/admin/users/${target.userId}/username/reselect`, body: {ban_name: true}, expectStatus: 204},
+				expected: {
+					action: 'force_username_reselect',
+					targetType: 'user',
+					targetId: target.userId,
+					metadata: {ban_name: 'true'},
+				},
+			};
+		},
+	},
 	{
 		method: 'GET',
 		route: '/admin/acls',

@@ -16,6 +16,10 @@ import type {
 import {SnapshotWriter} from '@app/features/gateway/snapshot/SnapshotWriter';
 import {isDesktopNativeGatewayTransportAvailable} from '@app/features/gateway/transport/GatewayWireTransport';
 import {Logger} from '@app/features/platform/utils/AppLogger';
+import type {
+	FeedNotificationAckResponse,
+	FeedNotificationStateResponse,
+} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 
 export type {ReadyPayload, SnapshotDispatch};
 
@@ -141,6 +145,22 @@ class SnapshotSyncOwner {
 		}
 		this.clearPreparedPromotion(storageKey);
 		this.clearCommittedPromotion(storageKey);
+	}
+
+	hasForegroundSnapshot(storageKey: string): boolean {
+		return snapshotTransportAvailable && this.accounts.get(storageKey)?.foreground != null;
+	}
+
+	setFeedNotificationState(
+		storageKey: string,
+		state: FeedNotificationStateResponse,
+		ack: FeedNotificationAckResponse | null,
+		localCount = false,
+	): void {
+		if (!snapshotTransportAvailable) return;
+		const account = this.accounts.get(storageKey);
+		if (account?.mode !== 'foreground' || account.foreground == null) return;
+		account.foreground.setFeedNotificationState(account.writer.enqueue, state, ack, localCount);
 	}
 
 	demoteForeground(storageKey: string): StateSnapshotCapture | null {

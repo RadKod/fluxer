@@ -4,6 +4,7 @@ import {revokeAllAuthSessions} from '@app/api/auth/AuthSessionRevocation';
 import type {UserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
 import {SYSTEM_USER_ID} from '@app/api/constants/Core';
+import {scanByTokenRanges} from '@app/api/database/TokenRangeScan';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {KVAccountDeletionQueueService} from '@app/api/infrastructure/KVAccountDeletionQueueService';
 import type {KVActivityTracker} from '@app/api/infrastructure/KVActivityTracker';
@@ -25,6 +26,10 @@ import {ms} from 'itty-time';
 
 const BATCH_SIZE = 100;
 const USER_PROCESSING_CONCURRENCY = 8;
+// Scale trigger: a full pass taking over half of the 6 hour cron period means raise the ranges or concurrency.
+// TEMPORARY: one job lock means one worker per pass; past one worker's capacity, lock per range so workers share it.
+const SCAN_TOKEN_RANGES = 64;
+const SCAN_RANGE_CONCURRENCY = 4;
 
 interface InactivityCheckResult {
 	warningsSent: number;
@@ -204,30 +209,35 @@ export async function processInactivityDeletionsCore(
 		activityTracker,
 		deletionEligibilityService,
 	};
-	let pageState: string | null = null;
 	let processedUsers = 0;
-	do {
-		const page = await userRepository.scanAllUsersPage(BATCH_SIZE, pageState);
-		pageState = page.pageState;
-		const users = page.users;
-		if (users.length === 0) continue;
-		const pageActivities = await loadPageActivities(activityTracker, users);
-		await mapWithConcurrency(users, USER_PROCESSING_CONCURRENCY, async (user) => {
-			try {
-				await processUser(user, userDeps, pageActivities, result);
-			} catch (userError) {
-				Logger.error({error: userError, userId: user.id}, 'Failed to process inactive user');
-				result.errors++;
+	await scanByTokenRanges<User>({
+		job: 'processInactivityDeletions',
+		ranges: SCAN_TOKEN_RANGES,
+		concurrency: SCAN_RANGE_CONCURRENCY,
+		kv: deps.kvClient,
+		page: async (range, pageState) => {
+			const page = await userRepository.scanUsersTokenRangePage(range, BATCH_SIZE, pageState);
+			return {rows: page.users, pageState: page.pageState};
+		},
+		onRows: async (users) => {
+			const pageActivities = await loadPageActivities(activityTracker, users);
+			await mapWithConcurrency(users, USER_PROCESSING_CONCURRENCY, async (user) => {
+				try {
+					await processUser(user, userDeps, pageActivities, result);
+				} catch (userError) {
+					Logger.error({error: userError, userId: user.id}, 'Failed to process inactive user');
+					result.errors++;
+				}
+			});
+			processedUsers += users.length;
+			if (processedUsers % 1000 === 0) {
+				Logger.debug(
+					{processedUsers, warningsSent: result.warningsSent, deletionsScheduled: result.deletionsScheduled},
+					'Inactivity deletion progress',
+				);
 			}
-		});
-		processedUsers += users.length;
-		if (processedUsers % 1000 === 0) {
-			Logger.debug(
-				{processedUsers, warningsSent: result.warningsSent, deletionsScheduled: result.deletionsScheduled},
-				'Inactivity deletion progress',
-			);
-		}
-	} while (pageState);
+		},
+	});
 	Logger.info(
 		{
 			processedUsers,

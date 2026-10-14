@@ -8,11 +8,18 @@
 	"billing.eu_withdrawal_waiver_checkout": "Om jag är konsument i EU/EES samtycker jag uttryckligen till att det digitala innehållet i {product_name} {premium_tier_name} tillhandahålls omedelbart och bekräftar att jag förlorar min lagstadgade ångerrätt när jag får tillgång till innehållet. Detta påverkar inte andra tvingande konsumenträttigheter. Se [användarvillkoren]({terms_url}).",
 	"bulk_message_deletion.complete": "Vi har raderat dina meddelanden. Vi tog bort {message_count, plural, =0 {0 meddelanden} one {# meddelande} other {# meddelanden}} från {channel_count, plural, =0 {0 platser} one {# plats} other {# platser}}.",
 	"content.virus_detected": "Filen flaggades som potentiellt osäker och har tagits bort.",
+	"feed.comment_removed_by_moderator": "En moderator har tagit bort en av dina kommentarer i flödet på grund av brott mot våra användarvillkor eller communityriktlinjer.",
+	"feed.post_removed_by_moderator": "En moderator har tagit bort ett av dina inlägg i flödet på grund av brott mot våra användarvillkor eller communityriktlinjer.",
+	"feed.video_failed": "Din video för flödet kunde inte bearbetas och publicerades därför inte.",
+	"feed.video_gone": "Ditt inlägg i flödet togs bort eftersom videon inte längre är tillgänglig.",
+	"feed.video_rejected": "Din video klarade inte våra innehållskontroller och visas därför inte i flödet.",
+	"feed.video_too_large": "Din video publicerades inte i flödet eftersom den är större än 500 MB.",
 	"guild.bulk_create.emoji_limit": "Maximalt antal emojis nått ({limit}).",
 	"guild.bulk_create.sticker_limit": "Maximalt antal klistermärken nått ({limit}).",
 	"guild.bulk_create.unknown_error": "Okänt fel.",
 	"guild.default_category_text": "Textkanaler",
 	"guild.default_category_voice": "Röstkanaler",
 	"guild.default_channel_text": "allmänt",
-	"guild.default_channel_voice": "Allmänt"
+	"guild.default_channel_voice": "Allmänt",
+	"referral.reward_ready": "Din belöning för hänvisningen är klar. Du kan se den under Inställningar → Hänvisningar."
 }

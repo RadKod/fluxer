@@ -1,0 +1,380 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: Referral
+description: Referral settings, reward tiers, off-site reward delivery, and the referrals of one account.
+---
+
+import RouteHeader from '@/components/RouteHeader.astro';
+
+The referral programme links a new account to the owner of the code it registered through, as [Referral](/http-api/referral/) describes. These routes open and close the programme, set its rules and reward tiers, deliver the rewards staff hand over by hand, and read the referrals of one account. Every route on this page requires `referral:manage` and records an [Admin audit entry](/admin-api/#admin-audit-entry-object), reads included.
+
+A value the programme cannot accept returns 400 `INVALID_FORM_BODY`, with one element in `errors` that names the field and carries an English message.
+
+:::caution[An off-site code is for its owner alone]
+No response on this page contains an off-site reward code, an IP address, or the IP key a decision used. The code staff type into [Deliver referral reward](#deliver-referral-reward) is shown only in the owner's own [Get my referral](/http-api/referral/#get-my-referral) response. A system message or email about the reward never carries it, and neither does the audit log, which stores `has_code` instead.
+:::
+
+## Rejection reasons
+
+| Value | Description |
+| --- | --- |
+| same_ip | The referred account registered from, or last used, an IP address the referrer has used |
+| ip_velocity | More accounts registered from the referred account's registration address in 30 days than `ip_registration_limit` allows |
+| same_email | The referred account's email address is a variant of the referrer's |
+| risk | The registration was risk-blocked or the referred account has a suspicious activity flag |
+| unverified | The referred account's email address was not verified within the decision window |
+| inactive | The referred account was not active for `min_active_days` days in time, or its registration still awaits approval |
+| account_gone | The referred account, or the referrer, was deleted, banned or marked as a spammer |
+
+A referral that only waits, because its account is unverified, inactive or flagged, is checked again every day. It is rejected with that reason once 14 days have passed since its active period ended.
+
+## Referral settings object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| enabled | boolean | Whether the programme is open |
+| min_active_days | integer | The days a referred account must stay active to count (1-30) |
+| daily_valid_cap | integer | The valid referrals counted for one referrer per day (1-10000) |
+| ip_registration_limit | integer | The registrations from one address in 30 days above which a referral is not counted (1-100) |
+
+The programme starts closed, with 3 active days, a cap of 50 and an address limit of 3. The settings and tiers live in the instance configuration under the `referral_config` key, and no public instance route returns them.
+
+## Referral tier admin object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | snowflake | The ID of the tier |
+| threshold | integer | The valid referrals needed to earn the tier (1-1000000) |
+| reward | [referral tier reward](/http-api/referral/#referral-tier-reward-object) object | What the tier gives |
+| enabled | boolean | Whether the tier grants anything new |
+
+## Referral admin object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| settings | [referral settings](#referral-settings-object) object | The programme's rules |
+| tiers | array[[referral tier admin](#referral-tier-admin-object) object] | Every tier, disabled ones included |
+
+## Referral pending reward object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the referrer who earned the reward |
+| tier_id | snowflake | The ID of the tier |
+| reward | [referral tier reward](/http-api/referral/#referral-tier-reward-object) object | The off-site reward to hand over |
+| created_at | ISO8601 timestamp | When the account reached the tier |
+
+## Referral pending rewards object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| month | string | The UTC month the page covers, as `YYYY-MM` |
+| items | array[[referral pending reward](#referral-pending-reward-object) object] | One page of rewards, oldest first |
+| next_cursor | ?string | The cursor for the next page, null on the last page |
+
+## Referral user reward object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| tier_id | snowflake | The ID of the tier |
+| reward | [referral tier reward](/http-api/referral/#referral-tier-reward-object) object | What the tier gave |
+| status | string | The [reward status](/http-api/referral/#referral-reward-statuses) |
+| granted_at | ISO8601 timestamp | When the account reached the tier |
+| delivered_at | ?ISO8601 timestamp | When the reward was delivered |
+| delivered_by | ?snowflake | The admin who delivered an off-site reward |
+| note | ?string | The staff note given at delivery |
+| has_code | boolean | Whether staff delivered a code with the reward. The code is never returned |
+
+## Referral referee object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| referee_id | snowflake | The ID of the referred account |
+| state | string | The [referral state](/http-api/referral/#referral-states): `pending`, `valid` or `rejected` |
+| reason | ?string | The [rejection reason](#rejection-reasons) of a rejected referral, otherwise null |
+| referred_at | ISO8601 timestamp | When the account registered |
+
+A deleted account stays in the list with its ID only.
+
+## Referral user object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the account |
+| code | ?string | The account's referral code, null while it has none |
+| referrer_id | ?snowflake | The account that referred this account, null when none did |
+| counts<sup>1</sup> | [referral counts](/http-api/referral/#referral-counts-object) object | The referrals of the account by state |
+| rewards | array[[referral user reward](#referral-user-reward-object) object] | The rewards the account has earned |
+| referees | array[[referral referee](#referral-referee-object) object] | One page of the accounts it referred |
+| next_cursor | ?string | The cursor for the next page of `referees`, null on the last page |
+
+<sup>1</sup> Read from storage, so it can trail a decision by about a minute
+
+## Referral reward result object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the referrer |
+| tier_id | snowflake | The ID of the tier |
+| status | string | The [reward status](/http-api/referral/#referral-reward-statuses), `delivered` after a delivery |
+| delivered_at | ?ISO8601 timestamp | When the reward was delivered |
+| has_code | boolean | Whether a code was delivered |
+
+## Get referral
+
+<RouteHeader method="GET" path="/v1/admin/referral" auditReason />
+
+Returns the [referral admin](#referral-admin-object) object. It is read from storage, not from the cache the other routes use.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [referral admin](#referral-admin-object) object | The programme was returned |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `view_referral`, target type `referral`, target ID `0`, and metadata key `result_count`, the number of tiers.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:referral` bucket.
+
+## Update referral settings
+
+<RouteHeader method="PATCH" path="/v1/admin/referral/settings" auditReason />
+
+Opens or closes the programme, and sets its rules. Returns the [referral admin](#referral-admin-object) object.
+
+### JSON body
+
+Any field of the [referral settings](#referral-settings-object) object, each optional. An omitted field stays as it is.
+
+Closing the programme stops new codes and new links. Referrals already pending are still decided, rewards already earned stay, and tiers still grant. To stop rewards, turn the tiers off with [Update referral tier](#update-referral-tier).
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [referral admin](#referral-admin-object) object | The settings were saved |
+| 400 | [error response](/admin-api/#error-response) | A value is outside its range |
+
+### Side effects
+
+The settings are saved with a compare-and-set, and every API process picks them up through the instance configuration refresh. The operation records one entry with action `update_referral_settings`, target type `referral`, target ID `0`, and a `<field>_old` and `<field>_new` metadata key for every field it changed.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:referral` bucket.
+
+## Create referral tier
+
+<RouteHeader method="POST" path="/v1/admin/referral/tiers" auditReason />
+
+Adds a tier and returns the [referral tier admin](#referral-tier-admin-object) object. A programme holds at most 50 tiers, so reuse a disabled one past that.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| threshold | integer | The valid referrals needed (1-1000000) |
+| reward | [referral tier reward](/http-api/referral/#referral-tier-reward-object) object | What the tier gives |
+| enabled? | boolean | Whether the tier grants anything new (default true) |
+
+- A `cosmetic` reward must name an item with `owned` [availability](/http-api/cosmetics/#cosmetic-item-object).
+- A `premium_days` reward is 1 through 3650 days.
+- An `offsite` description is 1 through 200 characters.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [referral tier admin](#referral-tier-admin-object) object | The tier was created |
+| 400 | [error response](/admin-api/#error-response) | A value is refused, or the programme already holds 50 tiers |
+
+### Side effects
+
+An enabled tier queues a background job that grants it to the referrers already at the threshold. The job reads one page of referrers at a time and sends no message or email. Each reward it grants records a system entry with action `referral_grant`, target type `user`, and metadata keys `tier_id` and `reward_type`, as every automatic grant does, and the job records one entry with action `referral_backfill` and the number granted when it ends. The operation records one entry with action `create_referral_tier`, target type `referral_tier`, the ID of the tier as target ID, and metadata keys `threshold`, `reward_type` and `enabled`.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:referral` bucket.
+
+## Update referral tier
+
+<RouteHeader method="PATCH" path="/v1/admin/referral/tiers/{tier_id}" auditReason />
+
+Changes the threshold of a tier, or turns it on or off, and returns the [referral tier admin](#referral-tier-admin-object) object. A reward never changes: give a different reward by creating a new tier and turning the old one off.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| tier_id | snowflake | The ID of the tier |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| threshold? | integer | The valid referrals needed (1-1000000) |
+| enabled? | boolean | Whether the tier grants anything new |
+
+At least one field is required. Lowering the threshold, or turning the tier on, grants it to the referrers who now reach it. Raising the threshold, or turning the tier off, takes nothing back.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [referral tier admin](#referral-tier-admin-object) object | The tier was saved |
+| 400 | [error response](/admin-api/#error-response) | No field was given, or a value is outside its range |
+| 404 | [error response](/admin-api/#error-response) | The tier does not exist, returned as `NOT_FOUND` |
+
+### Side effects
+
+A tier that is on after the change, and was off or had a higher threshold before, queues the same background job as [Create referral tier](#create-referral-tier). The operation records one entry with action `update_referral_tier`, target type `referral_tier`, the ID of the tier as target ID, and a `<field>_old` and `<field>_new` metadata key for every field it changed.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:referral` bucket.
+
+## List pending referral rewards
+
+<RouteHeader method="GET" path="/v1/admin/referral/pending-rewards" auditReason />
+
+Returns one page of the off-site rewards that staff have not delivered yet, as a [referral pending rewards](#referral-pending-rewards-object) object. A reward belongs to the UTC month it was granted in, and the page lists that month oldest first.
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| month? | string | The UTC month as `YYYY-MM` (default the current month) |
+| cursor? | string | The `next_cursor` of the previous page (1-200 characters) |
+| limit? | integer | The entries to return (1-100, default 50) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [referral pending rewards](#referral-pending-rewards-object) object | The page was returned |
+| 400 | [error response](/admin-api/#error-response) | A query value is refused |
+
+### Side effects
+
+The operation records one entry with action `view_referral_pending_rewards`, target type `referral`, target ID `0`, and metadata keys `month` and `result_count`.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:referral` bucket.
+
+## Get user referrals
+
+<RouteHeader method="GET" path="/v1/admin/users/{user_id}/referrals" auditReason />
+
+Returns the [referral user](#referral-user-object) object of an account: its code, its referrer, its counts and rewards, and one page of the accounts it referred.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the account |
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| cursor? | string | The `next_cursor` of the previous page (1-200 characters) |
+| limit? | integer | The referred accounts to return (1-100, default 50) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [referral user](#referral-user-object) object | The account's referrals were returned |
+| 400 | [error response](/admin-api/#error-response) | A query value is refused |
+
+An account with no code and no referrals returns null `code` and `referrer_id`, zero counts, and empty `rewards` and `referees`.
+
+### Side effects
+
+The operation records one entry with action `view_user_referrals`, target type `user`, the ID of the account as target ID, and metadata key `result_count`, the number of referred accounts on the page.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:referral` bucket.
+
+## Deliver referral reward
+
+<RouteHeader method="POST" path="/v1/admin/users/{user_id}/referral-rewards/{tier_id}/deliver" auditReason />
+
+Marks an off-site reward as delivered, optionally with a code, and returns the [referral reward result](#referral-reward-result-object) object. Staff hand the reward over outside the instance first, and then call this route.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the referrer who earned the reward |
+| tier_id | snowflake | The ID of the tier |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| code? | ?string | A code only the referrer sees, in their own referral response (1-256 characters) |
+| note? | ?string | A staff note (0-500 characters) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [referral reward result](#referral-reward-result-object) object | The reward was marked delivered |
+| 400 | [error response](/admin-api/#error-response) | A value is refused |
+| 404 | [error response](/admin-api/#error-response) | The account has no reward for the tier, returned as `NOT_FOUND` |
+| 409 | [error response](/admin-api/#error-response) | The reward is not waiting for delivery, returned as `CONFLICT` |
+
+### Side effects
+
+The status moves from `pending_admin` to `delivered` once, however many times the request repeats, and the reward leaves the pending list. A delivery with a `code` also sends the referrer a system message and an email that say the reward is ready and that name no code. A failed message or email is logged and does not fail the request.
+
+The operation records one entry with action `deliver_referral_reward`, target type `user`, the ID of the referrer as target ID, and metadata keys `tier_id`, `has_code` and `note`. The entry never stores the code.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:referral` bucket.
+
+## Notify referral reward
+
+<RouteHeader method="POST" path="/v1/admin/users/{user_id}/referral-rewards/{tier_id}/notify" auditReason />
+
+Sends the referrer a system message about an off-site reward. The reward keeps its status.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the referrer who earned the reward |
+| tier_id | snowflake | The ID of the tier |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| content | string | The message text (1-2000 characters) |
+
+Text that contains the code stored for the reward is refused, so a code reaches its owner only through their own referral response.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | none | The message was queued |
+| 400 | [error response](/admin-api/#error-response) | The text is refused, or it contains the stored code |
+| 404 | [error response](/admin-api/#error-response) | The account has no reward for the tier, returned as `NOT_FOUND` |
+| 409 | [error response](/admin-api/#error-response) | The reward is not a pending or delivered off-site reward, returned as `CONFLICT` |
+
+### Side effects
+
+The operation records one entry with action `notify_referral_reward`, target type `user`, the ID of the referrer as target ID, and metadata keys `tier_id` and `content_length`. The entry never stores the text.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:referral` bucket.

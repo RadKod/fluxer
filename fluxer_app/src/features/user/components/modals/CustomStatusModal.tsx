@@ -295,6 +295,7 @@ export const CustomStatusModal = observer(() => {
 					{currentUser && (
 						<ProfilePreview
 							user={currentUser}
+							decorationSurface="none"
 							showMembershipInfo={false}
 							showMessageButton={false}
 							showPreviewLabel={false}

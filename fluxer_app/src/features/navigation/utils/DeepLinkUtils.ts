@@ -227,14 +227,8 @@ export async function startDeepLinkHandling(): Promise<void> {
 	}
 }
 
-const OFFICIAL_INTERNAL_APP_HOSTS = [
-	'fluxer.app',
-	'canary.fluxer.app',
-	'web.fluxer.app',
-	'web.canary.fluxer.app',
-	'fluxer.com',
-	'canary.fluxer.com',
-];
+// Micup: Fluxer's app hosts are another service's, so their channel links are not opened in place.
+const OFFICIAL_INTERNAL_APP_HOSTS = ['micup.gg'];
 const getNormalizedWebAppHost = (): string => {
 	try {
 		return new URL(RuntimeConfig.webAppBaseUrl).host.toLowerCase();
@@ -317,24 +311,11 @@ export function parseUserProfileUrl(url: string): string | null {
 	}
 }
 
-export function navigateToLinkedUserProfile(
-	userId: string,
-	{
-		replace = false,
-		guildId,
-		autoFocusNote,
-	}: {
-		replace?: boolean;
-		guildId?: string;
-		autoFocusNote?: boolean;
-	} = {},
-): void {
+// Micup: /users/<id> is the full profile page; anything but a plain snowflake goes home.
+// The guild context the old modal took is dropped.
+export function navigateToLinkedUserProfile(userId: string, {replace = false}: {replace?: boolean} = {}): void {
 	const navigate = replace ? RouterUtils.replaceWith : RouterUtils.transitionTo;
-	navigate(Routes.ME);
-	if (!isProbablyAValidSnowflake(userId)) {
-		return;
-	}
-	void UserProfileCommands.openLinkedUserProfile(userId, guildId, autoFocusNote);
+	navigate(UserProfileCommands.isProfileId(userId) ? Routes.userProfile(userId) : Routes.ME);
 }
 
 export interface ChannelJumpLink {

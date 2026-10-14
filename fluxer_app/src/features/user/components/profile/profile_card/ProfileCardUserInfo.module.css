@@ -49,6 +49,15 @@
 	margin-left: 0.25rem;
 }
 
+/* Micup: the row under the name; hidden when its content renders nothing (a user without badges). */
+.belowName {
+	margin-top: 0.25rem;
+}
+
+.belowName:empty {
+	display: none;
+}
+
 .actionsContainer {
 	margin-top: 0.25rem;
 	display: flex;

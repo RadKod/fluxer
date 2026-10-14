@@ -25,11 +25,13 @@ const EMAIL_I18N_UK_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "Дякуємо за твою пожертву для {product_name}",
-		"body": "Привіт,\n\nДякуємо за твою пожертву для {product_name}! Твою {interval, select,\n  month {регулярну пожертву}\n  year {регулярну пожертву}\n  other {одноразову пожертву}\n} успішно {interval, select,\n  month {налаштовано}\n  year {налаштовано}\n  other {оброблено}\n}.\n\nДеталі пожертви:\nСума: {amount} {interval, select,\n  month {на місяць}\n  year {на рік}\n  other {}\n}\n\nStripe незабаром надішле тобі окрему квитанцію з рахунком у форматі PDF. Вона містить усі платіжні дані, і її можна використати для податкових цілей.\n\nТи можеш переглядати історію своїх пожертв, завантажувати рахунки, {interval, select,\n  month {а також керувати підпискою або скасувати її}\n  year {а також керувати підпискою або скасувати її}\n  other {а також керувати майбутніми пожертвами}\n} у будь-який час за цим посиланням:\n\n{manageUrl}\n\nТвоя підтримка допомагає {product_name} працювати. Дякуємо!\n\n– Команда {product_name}"
+		"body": "Привіт,\n\nДякуємо за твою пожертву для {product_name}! Твою {interval, select,\n  month {регулярну пожертву}\n  year {регулярну пожертву}\n  other {одноразову пожертву}\n} успішно {interval, select,\n  month {налаштовано}\n  year {налаштовано}\n  other {оброблено}\n}.\n\nДеталі пожертви:\nСума: {amount} {interval, select,\n  month {на місяць}\n  year {на рік}\n  other {}\n}\n\nStripe незабаром надішле тобі окрему квитанцію з рахунком у форматі PDF. Вона містить усі платіжні дані, і її можна використати для податкових цілей.\n\nТи можеш переглядати історію своїх пожертв, завантажувати рахунки, {interval, select,\n  month {а також керувати підпискою або скасувати її}\n  year {а також керувати підпискою або скасувати її}\n  other {а також керувати майбутніми пожертвами}\n} у будь-який час за цим посиланням:\n\n{manageUrl}\n\nТвоя підтримка допомагає {product_name} працювати. Дякуємо!\n\n– Команда {product_name}",
+		"button": "Керувати пожертвами"
 	},
 	"donation_magic_link": {
 		"subject": "Керуй своїми пожертвами для {product_name}",
-		"body": "Привіт,\n\nНатисни посилання нижче, щоб отримати доступ до порталу керування пожертвами:\n\n{manageUrl}\n\nНа порталі ти можеш керувати підписками, завантажувати рахунки та переглядати історію своїх пожертв.\n\nЦе посилання діє до {expiresAt, date, full} о {expiresAt, time, short}.\n\nЯкщо цей запит не від тебе, можеш сміливо проігнорувати цей лист.\n\n– Команда {product_name}"
+		"body": "Привіт,\n\nНатисни посилання нижче, щоб отримати доступ до порталу керування пожертвами:\n\n{manageUrl}\n\nНа порталі ти можеш керувати підписками, завантажувати рахунки та переглядати історію своїх пожертв.\n\nЦе посилання діє до {expiresAt, date, full} о {expiresAt, time, short}.\n\nЯкщо цей запит не від тебе, можеш сміливо проігнорувати цей лист.\n\n– Команда {product_name}",
+		"button": "Керувати пожертвами"
 	},
 	"dsa_report_verification": {
 		"subject": "Підтвердь свою електронну адресу для звіту DSA",
@@ -45,11 +47,13 @@ const EMAIL_I18N_UK_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "Електронну адресу твого акаунта {product_name} змінено",
-		"body": "Привіт, {username},\n\nЕлектронну адресу твого акаунта {product_name} змінено на {newEmail}.\n\nЯкщо ти знаєш про цю зміну, робити нічого не потрібно. Якщо ні, ти можеш скасувати зміну та захистити свій акаунт за цим посиланням:\n\n{revertUrl}\n\nЦе відновить твою попередню електронну адресу, завершить усі сесії, вимкне MFA та вимагатиме встановити новий пароль.\n\n– Команда безпеки {product_name}"
+		"body": "Привіт, {username},\n\nЕлектронну адресу твого акаунта {product_name} змінено на {newEmail}.\n\nЯкщо ти знаєш про цю зміну, робити нічого не потрібно. Якщо ні, ти можеш скасувати зміну та захистити свій акаунт за цим посиланням:\n\n{revertUrl}\n\nЦе відновить твою попередню електронну адресу, завершить усі сесії, вимкне MFA та вимагатиме встановити новий пароль.\n\n– Команда безпеки {product_name}",
+		"button": "Скасувати цю зміну"
 	},
 	"email_verification": {
 		"subject": "Підтвердь свою електронну адресу для {product_name}",
-		"body": "Привіт, {username},\n\nБудь ласка, підтвердь електронну адресу свого акаунта {product_name}, натиснувши посилання нижче:\n\n{verifyUrl}\n\nЯкщо акаунт {product_name} не твій, можеш сміливо проігнорувати цей лист.\n\nЦе посилання діє протягом 24 годин.\n\n– Команда {product_name}"
+		"body": "🎉 Привіт, {username},\n\nБудь ласка, підтвердь електронну адресу свого акаунта {product_name}, натиснувши посилання нижче:\n\n{verifyUrl}\n\nЯкщо акаунт {product_name} не твій, можеш сміливо проігнорувати цей лист.\n\nЦе посилання діє протягом 24 годин.\n\n– Команда {product_name}",
+		"button": "Підтвердити пошту"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Видалено переваги активованого подарунка",
@@ -57,15 +61,18 @@ const EMAIL_I18N_UK_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "Твій експорт даних {product_name} готовий до завантаження",
-		"body": "Привіт, {username},\n\nТвій експорт даних готовий.\n\nПосилання для завантаження:\n{downloadUrl}\n\nВключено повідомлень: {totalMessages, number}\nРозмір файлу: {fileSizeMB, number} МБ\n\nЦе посилання діє до {expiresAt, date, full} о {expiresAt, time, short}.\n\nЯкщо цей запит не від тебе, будь ласка, негайно зміни пароль та зв'яжися з нашою службою підтримки.\n\n– Команда {product_name}"
+		"body": "Привіт, {username},\n\nТвій експорт даних готовий.\n\nПосилання для завантаження:\n{downloadUrl}\n\nВключено повідомлень: {totalMessages, number}\nРозмір файлу: {fileSizeMB, number} МБ\n\nЦе посилання діє до {expiresAt, date, full} о {expiresAt, time, short}.\n\nЯкщо цей запит не від тебе, будь ласка, негайно зміни пароль та зв'яжися з нашою службою підтримки.\n\n– Команда {product_name}",
+		"button": "Завантажити мої дані"
 	},
 	"inactivity_warning": {
 		"subject": "Твій акаунт {product_name} буде видалено через неактивність",
-		"body": "Привіт, {username},\n\nМи не бачили жодної активності на твоєму акаунті {product_name} з {lastActiveDate, date, full}.\n\nЯкщо ти не увійдеш до {deletionDate, date, full} о {deletionDate, time, short}, твій акаунт буде остаточно видалено через неактивність.\n\nУвійди тут:\n{loginUrl}\n\nЯкщо останнім часом ти користуєшся {product_name}, будь ласка, негайно зв'яжися з нашою службою підтримки.\n\n– Команда {product_name}"
+		"body": "Привіт, {username},\n\nМи не бачили жодної активності на твоєму акаунті {product_name} з {lastActiveDate, date, full}.\n\nЯкщо ти не увійдеш до {deletionDate, date, full} о {deletionDate, time, short}, твій акаунт буде остаточно видалено через неактивність.\n\nУвійди тут:\n{loginUrl}\n\nЯкщо останнім часом ти користуєшся {product_name}, будь ласка, негайно зв'яжися з нашою службою підтримки.\n\n– Команда {product_name}",
+		"button": "Увійти"
 	},
 	"ip_authorization": {
 		"subject": "Дозволь вхід з нової IP-адреси",
-		"body": "Привіт, {username},\n\nМи виявили спробу входу в твій акаунт {product_name} з нової IP-адреси:\n\nIP-адреса: {ipAddress}\nМісцезнаходження: {location}\n\nЯкщо це ти, будь ласка, дозволь цю IP-адресу, натиснувши посилання нижче:\n\n{authUrl}\n\nЯкщо спроба входу не твоя, будь ласка, негайно зміни пароль.\n\nЦе посилання діє протягом 30 хвилин.\n\n– Команда {product_name}"
+		"body": "Привіт, {username},\n\nМи виявили спробу входу в твій акаунт {product_name} з нової IP-адреси:\n\nIP-адреса: {ipAddress}\nМісцезнаходження: {location}\n\nЯкщо це ти, будь ласка, дозволь цю IP-адресу, натиснувши посилання нижче:\n\n{authUrl}\n\nЯкщо спроба входу не твоя, будь ласка, негайно зміни пароль.\n\nЦе посилання діє протягом 30 хвилин.\n\n– Команда {product_name}",
+		"button": "Дозволити цей вхід"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Підтвердь доступ до резервних кодів {product_name}",
@@ -77,11 +84,17 @@ const EMAIL_I18N_UK_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "Скинь свій пароль для {product_name}",
-		"body": "Привіт, {username},\n\nМи отримали твій запит на скидання пароля для {product_name}. Використай посилання нижче, щоб встановити новий пароль:\n\n{resetUrl}\n\nЯкщо цей запит не від тебе, можеш сміливо проігнорувати цей лист.\n\nЦе посилання діє протягом 1 години.\n\n– Команда {product_name}"
+		"body": "Привіт, {username},\n\nМи отримали твій запит на скидання пароля для {product_name}. Використай посилання нижче, щоб встановити новий пароль:\n\n{resetUrl}\n\nЯкщо цей запит не від тебе, можеш сміливо проігнорувати цей лист.\n\nЦе посилання діє протягом 1 години.\n\n– Команда {product_name}",
+		"button": "Скинути пароль"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "Твою реєстрацію в {product_name} схвалено",
-		"body": "Привіт, {username},\n\nГарні новини: твою реєстрацію в {product_name} схвалено.\n\nТепер ти можеш увійти до застосунку {product_name} тут:\n{channelsUrl}\n\nЛаскаво просимо до спільноти {product_name}.\n\n– Команда {product_name}"
+		"body": "🎉 Привіт, {username},\n\nГарні новини: твою реєстрацію в {product_name} схвалено.\n\nТепер ти можеш увійти до застосунку {product_name} тут:\n{channelsUrl}\n\nЛаскаво просимо до спільноти {product_name}.\n\n– Команда {product_name}",
+		"button": "Відкрити {product_name}"
 	},
 	"report_resolved": {
 		"subject": "Твій звіт у {product_name} розглянуто",
@@ -97,7 +110,7 @@ const EMAIL_I18N_UK_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "Призупинення твого акаунта {product_name} скасовано",
-		"body": "Привіт, {username},\n\nГарні новини: призупинення твого акаунта {product_name} скасовано.\n\n{reason, select,\n  null {}\n  other {Причина: {reason}}\n}\n\nТепер ти можеш знову увійти та продовжувати користуватися {product_name} як зазвичай.\n\n– Команда безпеки {product_name}"
+		"body": "🎉 Привіт, {username},\n\nГарні новини: призупинення твого акаунта {product_name} скасовано.\n\n{reason, select,\n  null {}\n  other {Причина: {reason}}\n}\n\nТепер ти можеш знову увійти та продовжувати користуватися {product_name} як зазвичай.\n\n– Команда безпеки {product_name}"
 	}
 });
 

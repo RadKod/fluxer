@@ -9,6 +9,11 @@
     rpc_subjects_for_role/1,
     do_connect/1,
     do_subscribe/1,
+    subscribe_missing_subjects/3,
+    subjects_installed/2,
+    update_subscription_retry/2,
+    cancel_subscription_retry/1,
+    notify_connection_ready/2,
     schedule_reconnect/1,
     max_handlers/0,
     parse_nats_url/1,
@@ -155,9 +160,25 @@ connect_and_notify(Host, Port, Opts, Parent) ->
         case gateway_nats_pool_conn:connect(Host, Port, Opts) of
             {ok, Conn} ->
                 ok = nats:controlling_process(Conn, Parent),
-                Parent ! {nats_connect_result, self(), {ok, Conn}};
+                Parent ! {nats_connect_result, self(), {ok, Conn}},
+                notify_connection_ready(Conn, Parent);
             {error, Reason} ->
                 Parent ! {nats_connect_result, self(), {error, Reason}}
+        end,
+    ok.
+
+-spec notify_connection_ready(nats:conn(), pid()) -> ok.
+notify_connection_ready(Conn, Parent) ->
+    _ =
+        case fluxer_gateway_env:get(cluster_enabled) of
+            true ->
+                %% The connect result precedes this replay if readiness raced ownership transfer.
+                case nats:is_ready(Conn) of
+                    true -> Parent ! {Conn, ready};
+                    _ -> ok
+                end;
+            _ ->
+                ok
         end,
     ok.
 
@@ -173,7 +194,10 @@ do_subscribe(#{conn := Conn, rpc_enabled := RpcEnabled} = State) when
             ),
             State;
         _ ->
-            subscribe_for_role(Conn, State)
+            case gateway_cluster_membership:rpc_ready() of
+                true -> subscribe_for_role(Conn, State);
+                false -> State
+            end
     end;
 do_subscribe(State) ->
     State.
@@ -182,6 +206,13 @@ do_subscribe(State) ->
 subscribe_for_role(Conn, State) ->
     Role = fluxer_gateway_sup:current_role(),
     Subjects = rpc_subjects_for_role(Role),
+    case fluxer_gateway_env:get(cluster_enabled) of
+        true -> subscribe_cluster_subjects(Conn, Subjects, State);
+        _ -> subscribe_upstream_subjects(Conn, Role, Subjects, State)
+    end.
+
+-spec subscribe_upstream_subjects(nats:conn(), atom(), [binary()], map()) -> map().
+subscribe_upstream_subjects(Conn, Role, Subjects, State) ->
     case Subjects of
         [] ->
             logger:info("Gateway NATS RPC connected but not subscribing", #{role => Role}),
@@ -190,6 +221,78 @@ subscribe_for_role(Conn, State) ->
             Sids = subscribe_subjects(Conn, Role, Subjects),
             State#{sub => Sids}
     end.
+
+-spec subscribe_cluster_subjects(nats:conn(), [binary()], map()) -> map().
+subscribe_cluster_subjects(Conn, Subjects, State) ->
+    case
+        {maps:get(nats_ready, State, false), maps:get(rpc_subscription_retry, State, undefined)}
+    of
+        {false, _} ->
+            State;
+        {true, {_Timer, _Token}} ->
+            State;
+        {true, undefined} ->
+            Existing = maps:get(rpc_subscriptions, State, #{}),
+            Installed = subscribe_missing_subjects(Conn, Subjects, Existing),
+            Ready = subjects_installed(Subjects, Installed),
+            update_subscription_retry(
+                State#{
+                    rpc_subscriptions => Installed,
+                    sub => maps:values(Installed),
+                    cluster_rpc_ready => Ready
+                },
+                not Ready
+            )
+    end.
+
+-spec subscribe_missing_subjects(nats:conn(), [binary()], map()) -> map().
+subscribe_missing_subjects(Conn, Subjects, Existing) ->
+    lists:foldl(
+        fun(Subject, Acc) ->
+            case maps:is_key(Subject, Acc) of
+                true ->
+                    Acc;
+                false ->
+                    case subscribe_subject(Conn, fluxer_gateway_sup:current_role(), Subject) of
+                        {true, Sid} -> Acc#{Subject => Sid};
+                        false -> Acc
+                    end
+            end
+        end,
+        Existing,
+        Subjects
+    ).
+
+-spec subjects_installed([binary()], map()) -> boolean().
+subjects_installed(Subjects, Installed) ->
+    lists:all(fun(Subject) -> maps:is_key(Subject, Installed) end, Subjects).
+
+-spec update_subscription_retry(map(), boolean()) -> map().
+update_subscription_retry(State, false) ->
+    cancel_subscription_retry(State);
+update_subscription_retry(State, true) ->
+    case maps:get(rpc_subscription_retry, State, undefined) of
+        {_Timer, _Token} ->
+            State;
+        undefined ->
+            Attempt = maps:get(rpc_subscription_failures, State, 0),
+            Delay = min(5000, 250 * (1 bsl min(Attempt, 5))),
+            Token = make_ref(),
+            Timer = erlang:send_after(Delay, self(), {retry_rpc_subscription, Token}),
+            State#{
+                rpc_subscription_retry => {Timer, Token},
+                rpc_subscription_failures => Attempt + 1
+            }
+    end.
+
+-spec cancel_subscription_retry(map()) -> map().
+cancel_subscription_retry(State) ->
+    _ =
+        case maps:get(rpc_subscription_retry, State, undefined) of
+            {Timer, _Token} -> erlang:cancel_timer(Timer);
+            undefined -> ok
+        end,
+    State#{rpc_subscription_retry => undefined, rpc_subscription_failures => 0}.
 
 -spec subscribe_subjects(nats:conn(), atom(), [binary()]) -> [term()].
 subscribe_subjects(Conn, Role, Subjects) ->

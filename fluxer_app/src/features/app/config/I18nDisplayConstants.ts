@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import Config from '@app/features/app/config/Config';
-import {PRODUCT_NAME} from '@app/features/app/config/ProductConstants';
+import {PREMIUM_PRODUCT_FULL_NAME, PREMIUM_PRODUCT_NAME, PRODUCT_NAME} from '@app/features/app/config/ProductConstants';
 import {formatAssetUploadExtensions, formatKnownAnimatedAssetExtensions} from '@fluxer/constants/src/AssetFormatPolicy';
 import {THE_OTHER_PLATFORM} from '@fluxer/constants/src/ExternalPlatformConstants';
 
-export {PRODUCT_NAME};
+export {PREMIUM_PRODUCT_FULL_NAME, PREMIUM_PRODUCT_NAME, PRODUCT_NAME};
 export const PRODUCT_API_NAME = `${PRODUCT_NAME} API`;
 export const PRODUCT_HQ_COMMUNITY_NAME = `${PRODUCT_NAME} HQ`;
 export const CANARY_RELEASE_CHANNEL_NAME = `${PRODUCT_NAME} Canary`;
-export const DESKTOP_ENTRY_NAME = 'Fluxer';
-export const CANARY_DESKTOP_ENTRY_NAME = 'Fluxer Canary';
+export const DESKTOP_ENTRY_NAME = PRODUCT_NAME;
+export const CANARY_DESKTOP_ENTRY_NAME = `${PRODUCT_NAME} Canary`;
 export const VOICE_PROVIDER_NAME = 'LiveKit';
-export const PAYMENT_PROVIDER_NAME = 'Stripe';
+export const PAYMENT_PROVIDER_NAME = 'Payriff';
 export const BLUESKY_PROVIDER_NAME = 'Bluesky';
 export const APP_STORE_NAME = 'App Store';
 export const GOOGLE_PLAY_NAME = 'Google Play';
 export const PIX_PAYMENT_METHOD = 'Pix';
 export const UPI_PAYMENT_METHOD = 'UPI';
 export const BLIK_PAYMENT_METHOD = 'BLIK';
-export const SUPPORT_EMAIL = 'support@fluxer.app';
+// Micup support contact.
+export const SUPPORT_EMAIL = 'pr@premate.gg';
 export const SUPPORT_EMAIL_MAILTO = `mailto:${SUPPORT_EMAIL}`;
 export const I18N_EMAIL = 'i18n@fluxer.app';
 export const I18N_EMAIL_MAILTO = `mailto:${I18N_EMAIL}`;
@@ -29,13 +29,13 @@ export const EXAMPLE_DOMAIN = 'example.com';
 export const EXAMPLE_URL = `https://${EXAMPLE_DOMAIN}`;
 export const EXAMPLE_CALLBACK_URL = `${EXAMPLE_URL}/callback`;
 export const EXAMPLE_EMAIL = 'name@example.com';
-export const EXAMPLE_PERSONAL_EMAIL = 'marty@example.com';
+export const EXAMPLE_PERSONAL_EMAIL = 'name@example.com';
 export const EXAMPLE_USERNAME_TAG = 'Username#0000';
 export const EXAMPLE_REPORT_EMAIL = 'you@example.com';
 export const EXAMPLE_REPORT_USER_TAG = 'username#1234';
 export const EXAMPLE_INVITE_CODE = 'abcDEF12';
 export const EXAMPLE_VERIFICATION_CODE = 'ABCD-1234';
-export const EXAMPLE_FLUXER_TAG = 'Marty_McFly';
+export const EXAMPLE_FLUXER_TAG = 'Username';
 export const EXAMPLE_CUSTOM_URL_SLUG = 'your-custom-url';
 export const EXAMPLE_BOT_NAME = 'BotName';
 export const EXAMPLE_CHANNEL_NAME = 'new-channel';
@@ -48,18 +48,11 @@ export const VISIONARY_LIFETIME_BADGE_LABEL = 'Visionary #42';
 export const FLUXER_TAG_MIN_WITH_ZERO_LABEL = '#0000';
 export const FLUXER_TAG_MIN_STANDARD_LABEL = '#0001';
 export const FLUXER_TAG_MAX_LABEL = '#9999';
-export const LINK_PREVIEW_EXAMPLE_URL = 'https://fluxer.app';
+export const LINK_PREVIEW_EXAMPLE_URL = 'https://micup.gg';
 export const EXAMPLE_MESSAGE_LINK = `${LINK_PREVIEW_EXAMPLE_URL}/channels/...`;
 export const EXAMPLE_GIF_URLS = `${EXAMPLE_URL}/gif1.gif\n${EXAMPLE_URL}/gif2.gif`;
 export const THE_OTHER_PLATFORM_TEMPLATE_EXAMPLE_URL = `https://${THE_OTHER_PLATFORM.toLowerCase()}.new/abcd1234`;
-const DESKTOP_DOWNLOAD_URLS: Record<string, string> = {
-	stable: 'https://fluxer.app/download',
-	canary: 'https://canary.fluxer.app/download',
-	development: 'http://localhost:8088/download',
-};
-
-export const DESKTOP_DOWNLOAD_URL =
-	DESKTOP_DOWNLOAD_URLS[Config.PUBLIC_RELEASE_CHANNEL] ?? DESKTOP_DOWNLOAD_URLS.stable;
+export const DESKTOP_DOWNLOAD_URL = 'https://micup.gg/indir';
 export const FLUXER_DOCS_DOMAIN = 'fluxer.dev';
 export const FLUXER_DOCS_URL = `https://${FLUXER_DOCS_DOMAIN}`;
 export const FLUXER_BLUESKY_HANDLE = '@fluxer.app';

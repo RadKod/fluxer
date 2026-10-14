@@ -8,9 +8,13 @@ import * as ShortLinkAcceptModalOpener from '@app/app/router/ShortLinkAcceptModa
 import {AuthLayout} from '@app/features/app/components/layout/AuthLayout';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import {type AuthRoutePage, createAuthRoutePage} from '@app/features/auth/flow/AuthLoadableRoutePage';
+import Authentication from '@app/features/auth/state/Authentication';
+import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
 import {createRoute, type RouteBuilder} from '@app/features/platform/components/router/RouterBuilder';
 import {NotFound, Redirect, type RouteContext} from '@app/features/platform/components/router/RouterTypes';
+import SessionManager from '@app/features/platform/state/AuthSession';
 import {shouldShowPremiumFeatures} from '@app/features/premium/utils/PremiumUtils';
+import {saveReferralCode} from '@app/features/referral/utils/ReferralCodeStorage';
 
 const AuthorizeIPPage = createAuthRoutePage(
 	'AuthorizeIPPage',
@@ -164,7 +168,7 @@ const giftShortLinkHandlers = ShortLinkRouteEnterPolicy.createHandlers({
 
 function whenGiftingAvailable(handler: AuthRouteRedirectPolicy.AuthRouteEnterHandler): AuthPageEnterHandler {
 	return (context: RouteContext): Redirect | NotFound | undefined => {
-		if (RuntimeConfig.getSnapshotOrNull() !== null && !shouldShowPremiumFeatures()) {
+		if (RuntimeConfig.getSnapshotOrNull() !== null && !RuntimeConfig.giftCodesEnabled && !shouldShowPremiumFeatures()) {
 			return new NotFound();
 		}
 		return handler(context);
@@ -196,6 +200,27 @@ const ssoCallbackRoute = createAuthPageRoute({
 const inviteBaseRoute = createAuthRedirectRoute('inviteBase', '/invite');
 const giftBaseRoute = createAuthRedirectRoute('giftBase', '/gift');
 const themeBaseRoute = createAuthRedirectRoute('themeBase', '/theme');
+// A /r/<code> referral link keeps the code for the registration request. Signed-in visitors have nothing to register.
+const referralRoute = createRoute({
+	getParentRoute: () => authLayoutRoute,
+	id: 'referral',
+	path: '/r/:code',
+	onEnter: (ctx) => {
+		const code = ctx.params['code'] ?? '';
+		const resolvePath = (): string => {
+			if (Authentication.isAuthenticated) {
+				return Routes.ME;
+			}
+			saveReferralCode(code);
+			return Routes.REGISTER;
+		};
+		if (SessionManager.isInitialized) {
+			return new Redirect(resolvePath());
+		}
+		void SessionManager.initialize().then(() => RouterUtils.replaceWith(resolvePath()));
+		return undefined;
+	},
+});
 const registerRoute = createAuthPageRoute({
 	id: 'register',
 	path: '/register',
@@ -292,6 +317,7 @@ export const authRouteTree = authLayoutRoute.addChildren([
 	loginRoute,
 	ssoCallbackRoute,
 	registerRoute,
+	referralRoute,
 	oauthAuthorizeRoute,
 	inviteBaseRoute,
 	giftBaseRoute,

@@ -143,7 +143,11 @@
 	flex-shrink: 0;
 	display: flex;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
+}
+
+.badgesWrapper:empty {
+	display: none;
 }
 
 .userNoteEditor {
@@ -245,6 +249,24 @@
 	min-height: calc(2.375rem * var(--profile-modal-scale));
 	padding: 0 calc(1rem * var(--profile-modal-scale));
 	padding-top: calc(1rem * var(--profile-modal-scale));
+}
+
+.headerContainerIdentity {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: var(--spacing-4);
+}
+
+.headerContainerIdentity::before {
+	content: '';
+	flex: 0 0 min(var(--profile-avatar-clearance-width), 100%);
+	height: var(--profile-avatar-clearance-height);
+	pointer-events: none;
+}
+
+.userInfoPage {
+	padding-left: 0;
 }
 
 .avatarContainer {
@@ -450,4 +472,11 @@
 	align-items: center;
 	justify-content: center;
 	min-height: 0;
+}
+
+/* An ultra decoration can reach past the profile card; its banner and content panel keep their own rounded clips. */
+.modalRoot.modalRoot.decorationOverflow,
+.modalContainer.decorationOverflow {
+	overflow: visible;
+	clip-path: none;
 }

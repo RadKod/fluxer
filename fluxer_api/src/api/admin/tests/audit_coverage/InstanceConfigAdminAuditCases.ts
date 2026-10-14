@@ -9,12 +9,16 @@ import {
 } from '@app/api/auth/tests/AuthTestUtils';
 import {getPngDataUrl} from '@app/api/emoji/tests/EmojiTestUtils';
 import {ChannelThreadsConfigPublisher} from '@app/api/instance/ChannelThreadsConfigPublisher';
+import {setInjectedUsernameMigrationPreconditions} from '@app/api/middleware/ServiceRegistry';
 import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
 import type {ApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {HTTP_STATUS, TEST_IDS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
+import {compileUsernameDictionary, UsernamePolicyService} from '@app/api/user/username/UsernamePolicyService';
 import type {CreateRegistrationUrlResponse} from '@fluxer/schema/src/domains/admin/AdminSchemas';
-import {vi} from 'vitest';
+import {afterEach, vi} from 'vitest';
+
+afterEach(() => vi.restoreAllMocks());
 
 async function createRegistrationUrl(harness: ApiTestHarness, admin: TestAccount): Promise<string> {
 	const created = await createBuilder<CreateRegistrationUrlResponse>(harness, admin.token)
@@ -26,6 +30,157 @@ async function createRegistrationUrl(harness: ApiTestHarness, admin: TestAccount
 }
 
 export const InstanceConfigAdminAuditCases: ReadonlyArray<AdminAuditCoverageCase> = [
+	{
+		method: 'GET',
+		route: '/admin/instance/username-migration',
+		async prepare() {
+			return {
+				request: {path: '/admin/instance/username-migration'},
+				expected: {
+					action: 'get_username_migration',
+					targetType: 'username_migration',
+					targetId: '0',
+					metadata: {epoch: '0', state: 'legacy'},
+				},
+			};
+		},
+	},
+	{
+		method: 'POST',
+		route: '/admin/instance/username-migration/prepare',
+		async prepare() {
+			const preparingAt = '2026-10-09T00:00:00.000Z';
+			vi.spyOn(getInstanceConfigRepository(), 'prepareUsernameMigration').mockResolvedValue({
+				state: 'preparing',
+				epoch: 1,
+				preparing_at: preparingAt,
+				started_at: null,
+				forced_at: null,
+			});
+			return {
+				request: {path: '/admin/instance/username-migration/prepare', body: {processes_ready: true}},
+				expected: {
+					action: 'prepare_username_migration',
+					targetType: 'username_migration',
+					targetId: '0',
+					metadata: {epoch: '1', processes_ready: 'true', preparing_at: preparingAt},
+				},
+			};
+		},
+	},
+	{
+		method: 'POST',
+		route: '/admin/instance/username-migration/start',
+		async prepare() {
+			setInjectedUsernameMigrationPreconditions(async () => ({
+				holdsReady: true,
+				capacityReady: true,
+				reserveVersion: 0,
+			}));
+			vi.spyOn(getInstanceConfigRepository(), 'setUsernameMigrationGuildCapacity').mockResolvedValue(undefined);
+			const guildCapacity = {
+				max_guild_members: 100,
+				max_guild_online: 10,
+				source: 'activity report',
+				observed_at: new Date().toISOString(),
+			};
+			vi.spyOn(UsernamePolicyService.prototype, 'readAuthoritative').mockResolvedValue({
+				policyRevision: 1,
+				tiers: {1: 'locked', 2: 'locked', 3: 'locked'},
+				migration: {state: 'preparing', epoch: 1, startedAt: null, forcedAt: null},
+				admission: {globalPerSecond: 100, paused: false},
+				dictionary: compileUsernameDictionary(1, {uname_exact: [], uname_contains: [], uname_allow: []}),
+			});
+			vi.spyOn(getInstanceConfigRepository(), 'startUsernameMigration').mockResolvedValue({
+				state: 'selecting',
+				epoch: 1,
+				preparing_at: '2026-10-09T00:00:00.000Z',
+				started_at: '2026-10-09T01:00:00.000Z',
+				forced_at: '2026-10-16T01:00:00.000Z',
+			});
+			return {
+				request: {
+					path: '/admin/instance/username-migration/start',
+					body: {epoch: 1, mobile_published: true, mobile_version: '1.2.3', guild_capacity: guildCapacity},
+				},
+				expected: {
+					action: 'start_username_migration',
+					targetType: 'username_migration',
+					targetId: '0',
+					metadata: {
+						epoch: '1',
+						mobile_published: 'true',
+						mobile_version: '1.2.3',
+						dictionary_gen: '1',
+						max_guild_members: '100',
+						max_guild_online: '10',
+						source: guildCapacity.source,
+						observed_at: guildCapacity.observed_at,
+					},
+				},
+			};
+		},
+	},
+	{
+		method: 'POST',
+		route: '/admin/instance/username-migration/rollback',
+		async prepare() {
+			vi.spyOn(getInstanceConfigRepository(), 'rollbackUsernameMigration').mockResolvedValue({
+				state: 'legacy',
+				epoch: 1,
+				preparing_at: null,
+				started_at: null,
+				forced_at: null,
+			});
+			return {
+				request: {path: '/admin/instance/username-migration/rollback', body: {epoch: 1}},
+				expected: {
+					action: 'rollback_username_migration',
+					targetType: 'username_migration',
+					targetId: '0',
+					metadata: {epoch: '1'},
+				},
+			};
+		},
+	},
+	{
+		method: 'GET',
+		route: '/admin/instance/username-policy',
+		async prepare() {
+			const policy = await getInstanceConfigRepository().readUsernamePolicyConfig();
+			return {
+				request: {path: '/admin/instance/username-policy'},
+				expected: {
+					action: 'get_instance_config',
+					targetType: 'username_policy',
+					targetId: '0',
+					metadata: {revision: String(policy.revision)},
+				},
+			};
+		},
+	},
+	{
+		method: 'PATCH',
+		route: '/admin/instance/username-policy',
+		async prepare() {
+			const policy = await getInstanceConfigRepository().readUsernamePolicyConfig();
+			const tiers = {'1': 'public', '2': 'public', '3': 'public'};
+			return {
+				request: {path: '/admin/instance/username-policy', body: {tiers}},
+				expected: {
+					action: 'update_username_policy',
+					targetType: 'username_policy',
+					targetId: '0',
+					metadata: {
+						revision: String(policy.revision + 1),
+						tiers: JSON.stringify(tiers),
+						admission: JSON.stringify(policy.admission),
+						held_manifest: JSON.stringify(policy.held_manifest),
+					},
+				},
+			};
+		},
+	},
 	{
 		method: 'GET',
 		route: '/admin/instance/config',

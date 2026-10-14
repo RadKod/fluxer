@@ -132,6 +132,7 @@ function buildScreenPublishOptions(options: VoiceEngineV2ScreenEncodingOptions):
 }
 
 export class VoiceEngineV2AppLiveKitExecutionAdapter implements LiveKitPort {
+	private microphoneSessionStarted = false;
 	private readonly media: VoiceEngineV2AppLiveKitMediaDelegate;
 	private readonly connection: VoiceEngineV2AppLiveKitConnectionDelegate;
 	private readonly screenShare: VoiceEngineV2AppLiveKitScreenShareDelegate;
@@ -201,7 +202,8 @@ export class VoiceEngineV2AppLiveKitExecutionAdapter implements LiveKitPort {
 			throw buildOperatingError('connect', 'options.token is missing');
 		}
 		this.logger.info('connect requested', {url: options.url});
-		beginMicrophoneSession();
+		beginMicrophoneSession(undefined, !this.microphoneSessionStarted);
+		this.microphoneSessionStarted = true;
 		const voiceServerDelegate = this.connection.connectToVoiceServer;
 		if (typeof voiceServerDelegate === 'function') {
 			try {
@@ -238,6 +240,7 @@ export class VoiceEngineV2AppLiveKitExecutionAdapter implements LiveKitPort {
 			throw buildOperatingError('disconnect', 'reason is missing');
 		}
 		this.logger.info('disconnect requested', {reason});
+		if (reason === 'user' || reason === 'server' || reason === 'shutdown') this.microphoneSessionStarted = false;
 		const delegate = this.connection.disconnectFromVoiceChannel;
 		if (typeof delegate !== 'function') return;
 		const mapped = reason === 'user' ? 'user' : reason === 'server' ? 'server' : 'error';

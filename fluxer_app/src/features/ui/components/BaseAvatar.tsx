@@ -123,6 +123,9 @@ interface BaseAvatarProps {
 	customStatusBadgeScale?: number;
 	customStatusBadgeMaxSizeRatio?: number;
 	customStatusBadgeCutoutPaddingScale?: number;
+	decoration?: React.ReactNode;
+	// Micup: the ultra decoration, drawn before the avatar image so DOM order keeps it behind without a z-index.
+	underlay?: React.ReactNode;
 	title?: never;
 	[themeAttr: `data-flx-${string}`]: string | undefined;
 }
@@ -154,6 +157,8 @@ export const BaseAvatar = React.forwardRef<HTMLDivElement, BaseAvatarProps>(
 			customStatusBadgeScale = DEFAULT_CUSTOM_STATUS_BADGE_SCALE,
 			customStatusBadgeMaxSizeRatio,
 			customStatusBadgeCutoutPaddingScale = DEFAULT_CUSTOM_STATUS_BADGE_CUTOUT_PADDING_SCALE,
+			decoration,
+			underlay,
 			...props
 		},
 		ref,
@@ -371,6 +376,7 @@ export const BaseAvatar = React.forwardRef<HTMLDivElement, BaseAvatarProps>(
 				{...interactiveProps}
 				{...props}
 			>
+				{underlay}
 				<svg
 					viewBox={avatarViewBox}
 					className={styles.overlay}
@@ -435,6 +441,7 @@ export const BaseAvatar = React.forwardRef<HTMLDivElement, BaseAvatarProps>(
 						data-flx="ui.base-avatar.hover-overlay"
 					/>
 				</svg>
+				{decoration}
 				{statusBadge &&
 					(isTyping || disableStatusTooltip ? (
 						statusBadge

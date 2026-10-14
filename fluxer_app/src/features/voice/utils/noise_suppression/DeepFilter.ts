@@ -7,8 +7,15 @@ import NoiseSuppressionAvailability, {
 	type NoiseSuppressionFailureReason,
 } from '@app/features/voice/utils/noise_suppression/NoiseSuppressionAvailability';
 import {getNoiseSuppressionBackendDescriptor} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionBackends';
-import {readRequestedNoiseSuppressionBackend} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime';
-import {getActiveVoiceProcessingMode} from '@app/features/voice/utils/VoiceProcessingProfile';
+import {
+	readRequestedNoiseSuppressionBackend,
+	resolveRuntimeVoiceProcessing,
+} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime';
+import {
+	getActiveInputDeviceLabel,
+	getActiveVoiceProcessingMode,
+	resolveVoiceProcessingFromStateForDeviceLabel,
+} from '@app/features/voice/utils/VoiceProcessingProfile';
 
 const logger = new Logger('DeepFilter');
 
@@ -17,12 +24,12 @@ const DEEP_FILTER_MODEL_URL = new URL('./deepfilternet3/DeepFilterNet3_onnx.tar.
 const DEEP_FILTER_PROCESSOR_NAME = 'fluxer-deep-filter';
 const DEEP_FILTER_ASSET_IDLE_MS = 20_000;
 const DEEP_FILTER_ASSET_TOTAL_MS = 10 * 60_000;
+const DEEP_FILTER_ASSET_TASK_BUDGET_MS = 8;
 const DEEP_FILTER_BUILD_TIMEOUT_MS = 8000;
 const DEEP_FILTER_ATTEN_LIM_DB = 30;
 const DEEP_FILTER_INPUT_GAIN = 10;
 const DEEP_FILTER_OUTPUT_GAIN = 0.1;
 const DEEP_FILTER_HIGH_PASS_HZ = 60;
-const DEEP_FILTER_PREFETCH_IDLE_TIMEOUT_MS = 20_000;
 const DEEP_FILTER_PRIMED_TIMEOUT_MS = 500;
 const DEEP_FILTER_IDLE_DISPOSE_MS = 60_000;
 const DEEP_FILTER_JOIN_WAIT_MS = 2000;
@@ -40,10 +47,16 @@ interface DeepFilterAssets {
 	modelBytes: ArrayBuffer;
 }
 
+type DeepFilterHealthListener = (processingMs: number, audioMs: number, contextTime: number) => void;
+
 interface DeepFilterNodeHandle {
 	node: AudioWorkletNode;
 	flushAndAwaitPrimed: (signal: AbortSignal) => Promise<void>;
-	watch: (onFault: (error: Error) => void) => () => void;
+	watch: (
+		onFault: (error: Error) => void,
+		pipelineV2Enabled: () => boolean,
+		onHealth?: DeepFilterHealthListener,
+	) => () => void;
 	dispose: () => void;
 }
 
@@ -58,7 +71,16 @@ type DeepFilterWorkletMessage =
 	| {type: 'ready'; frameLength: number}
 	| {type: 'primed'}
 	| {type: 'error'; message: string}
-	| {type: 'health'; inputRms: number; outputRms: number; nonFinite: boolean; frame: number; contextTime: number};
+	| {
+			type: 'health';
+			inputRms: number;
+			outputRms: number;
+			nonFinite: boolean;
+			frame: number;
+			contextTime: number;
+			processingMs: number;
+			audioMs: number;
+	  };
 
 class DeepFilterUnavailableError extends Error {
 	constructor(
@@ -106,28 +128,43 @@ function raceAbort<T>(pending: Promise<T>, signal: AbortSignal): Promise<T> {
 
 async function fetchAssetBody(url: string, controller: AbortController): Promise<ReadableStream<Uint8Array>> {
 	let idleTimer: ReturnType<typeof setTimeout> | undefined;
-	const stopIdleTimer = () => clearTimeout(idleTimer);
-	const restartIdleTimer = () => {
-		stopIdleTimer();
-		idleTimer = setTimeout(() => {
-			controller.abort(
-				new DeepFilterUnavailableError('assets', `No data from ${url} for ${DEEP_FILTER_ASSET_IDLE_MS} ms`),
-			);
-		}, DEEP_FILTER_ASSET_IDLE_MS);
+	let lastProgressAt = performance.now();
+	const stopIdleTimer = () => {
+		clearTimeout(idleTimer);
+		controller.signal.removeEventListener('abort', stopIdleTimer);
+	};
+	const checkIdle = () => {
+		const remaining = DEEP_FILTER_ASSET_IDLE_MS - (performance.now() - lastProgressAt);
+		if (remaining > 0) {
+			idleTimer = setTimeout(checkIdle, remaining);
+			return;
+		}
+		controller.abort(
+			new DeepFilterUnavailableError('assets', `No data from ${url} for ${DEEP_FILTER_ASSET_IDLE_MS} ms`),
+		);
 	};
 	controller.signal.addEventListener('abort', stopIdleTimer, {once: true});
-	restartIdleTimer();
+	idleTimer = setTimeout(checkIdle, DEEP_FILTER_ASSET_IDLE_MS);
 	try {
 		const response = await fetch(url, {credentials: 'same-origin', signal: controller.signal});
 		if (!response.ok || !response.body) {
 			throw new DeepFilterUnavailableError('assets', `${url} returned status ${response.status}`);
 		}
-		restartIdleTimer();
+		lastProgressAt = performance.now();
+		let lastYieldAt = lastProgressAt;
 		return response.body.pipeThrough(
 			new TransformStream<Uint8Array, Uint8Array>({
 				transform(chunk, stream) {
-					restartIdleTimer();
+					lastProgressAt = performance.now();
 					stream.enqueue(chunk);
+					if (lastProgressAt - lastYieldAt < DEEP_FILTER_ASSET_TASK_BUDGET_MS) return;
+					// Cached assets can otherwise drain hundreds of stream microtasks in one browser task.
+					const scheduler = (globalThis as typeof globalThis & {scheduler?: {yield?: () => Promise<void>}}).scheduler;
+					const yielded = scheduler?.yield?.() ?? new Promise<void>((resolve) => setTimeout(resolve, 0));
+					return yielded.then(() => {
+						controller.signal.throwIfAborted();
+						lastYieldAt = performance.now();
+					});
 				},
 				flush: stopIdleTimer,
 			}),
@@ -214,17 +251,6 @@ export function prefetchDeepFilterAssets(): void {
 	void loadDeepFilterAssets().catch(() => {});
 }
 
-export function scheduleDeepFilterPrefetch(): () => void {
-	if (typeof window.requestIdleCallback === 'function') {
-		const handle = window.requestIdleCallback(prefetchDeepFilterAssets, {
-			timeout: DEEP_FILTER_PREFETCH_IDLE_TIMEOUT_MS,
-		});
-		return () => window.cancelIdleCallback(handle);
-	}
-	const handle = window.setTimeout(prefetchDeepFilterAssets, DEEP_FILTER_PREFETCH_IDLE_TIMEOUT_MS);
-	return () => window.clearTimeout(handle);
-}
-
 const workletModules = new WeakMap<BaseAudioContext, Promise<void>>();
 
 function addDeepFilterWorkletModule(context: BaseAudioContext): Promise<void> {
@@ -295,10 +321,14 @@ function watchDeepFilterNode(
 	node: AudioWorkletNode,
 	listen: (listener: DeepFilterMessageListener) => () => void,
 	onFault: (error: Error) => void,
+	pipelineV2Enabled: () => boolean,
+	onHealth?: DeepFilterHealthListener,
 ): () => void {
 	let lastReportContextTime = context.currentTime;
 	let levelFaultReports = 0;
 	let lastCheckAtMs = performance.now();
+	let enabled = pipelineV2Enabled();
+	node.port.postMessage({type: 'pipeline', enabled});
 	const checkLiveness = () => {
 		const now = performance.now();
 		const checkWasDelayed = now - lastCheckAtMs > LIVENESS_MAX_CHECK_DELAY_MS;
@@ -326,8 +356,24 @@ function watchDeepFilterNode(
 			return;
 		}
 		if (message.type !== 'health') return;
+		const nextEnabled = pipelineV2Enabled();
+		if (nextEnabled !== enabled) {
+			enabled = nextEnabled;
+			node.port.postMessage({type: 'pipeline', enabled});
+		}
 		lastReportContextTime = message.contextTime;
 		NoiseSuppressionAvailability.setDeepFilterLevels(context, message.inputRms, message.outputRms, message.contextTime);
+		if (onHealth) {
+			if (enabled) onHealth(message.processingMs, message.audioMs, message.contextTime);
+		} else
+			NoiseSuppressionAvailability.reportProcessingHealth(
+				'deep_filter',
+				message.processingMs,
+				message.audioMs,
+				pipelineV2Enabled(),
+				'filter',
+				node,
+			);
 		const silentOutput = message.outputRms === 0 || message.nonFinite;
 		levelFaultReports = message.inputRms > LEVEL_FAULT_MIN_INPUT_RMS && silentOutput ? levelFaultReports + 1 : 0;
 		if (levelFaultReports >= LEVEL_FAULT_REPORTS) onFault(new Error('DeepFilterNet output went silent'));
@@ -359,7 +405,10 @@ function awaitDeepFilterPrimed(
 	});
 }
 
-async function createDeepFilterNode(context: AudioContext): Promise<DeepFilterNodeHandle> {
+async function createDeepFilterNode(
+	context: AudioContext,
+	attenuationLimit = DEEP_FILTER_ATTEN_LIM_DB,
+): Promise<DeepFilterNodeHandle> {
 	const isClosed = () => context.state === 'closed';
 	if (isClosed()) throw new DOMException('Voice input AudioContext closed', 'AbortError');
 	const supportedSampleRates = getNoiseSuppressionBackendDescriptor('deep_filter').supportedSampleRates ?? [];
@@ -401,7 +450,7 @@ async function createDeepFilterNode(context: AudioContext): Promise<DeepFilterNo
 			processorOptions: {
 				wasmModule: assets.module,
 				modelBytes: assets.modelBytes,
-				attenLimDb: DEEP_FILTER_ATTEN_LIM_DB,
+				attenLimDb: attenuationLimit,
 				inputGain: DEEP_FILTER_INPUT_GAIN,
 				outputGain: DEEP_FILTER_OUTPUT_GAIN,
 				highPassHz: DEEP_FILTER_HIGH_PASS_HZ,
@@ -433,7 +482,8 @@ async function createDeepFilterNode(context: AudioContext): Promise<DeepFilterNo
 			readyNode.port.postMessage({type: 'flush'});
 			return primed;
 		},
-		watch: (onFault) => watchDeepFilterNode(context, readyNode, readyListen, onFault),
+		watch: (onFault, pipelineV2Enabled, onHealth) =>
+			watchDeepFilterNode(context, readyNode, readyListen, onFault, pipelineV2Enabled, onHealth),
 		dispose: () => {
 			readyNode.disconnect();
 			readyNode.port.postMessage({type: 'dispose'});
@@ -443,6 +493,7 @@ async function createDeepFilterNode(context: AudioContext): Promise<DeepFilterNo
 }
 
 interface DeepFilterPoolEntry {
+	readonly attenuationLimit: number;
 	readonly build: Promise<DeepFilterNodeHandle>;
 	readonly stopWatchingContext: () => void;
 	holder: symbol | null;
@@ -473,12 +524,17 @@ function disposePoolEntry(pool: Set<DeepFilterPoolEntry>, entry: DeepFilterPoolE
 	);
 }
 
-function createPoolEntry(context: AudioContext, pool: Set<DeepFilterPoolEntry>): DeepFilterPoolEntry {
+function createPoolEntry(
+	context: AudioContext,
+	pool: Set<DeepFilterPoolEntry>,
+	attenuationLimit: number,
+): DeepFilterPoolEntry {
 	const onStateChange = () => {
 		if (context.state === 'closed') disposePoolEntry(pool, entry);
 	};
 	const entry: DeepFilterPoolEntry = {
-		build: createDeepFilterNode(context),
+		build: createDeepFilterNode(context, attenuationLimit),
+		attenuationLimit,
 		stopWatchingContext: () => context.removeEventListener('statechange', onStateChange),
 		holder: null,
 		idleTimer: undefined,
@@ -510,9 +566,9 @@ function releasePoolEntry(pool: Set<DeepFilterPoolEntry>, entry: DeepFilterPoolE
 	entry.idleTimer = setTimeout(() => disposePoolEntry(pool, entry), DEEP_FILTER_IDLE_DISPOSE_MS);
 }
 
-export function hasIdleDeepFilterNode(context: BaseAudioContext): boolean {
+export function hasIdleDeepFilterNode(context: BaseAudioContext, attenuationLimit: number): boolean {
 	for (const entry of getDeepFilterPool(context)) {
-		if (entry.holder === null && !entry.faulted) return true;
+		if (entry.holder === null && !entry.faulted && entry.attenuationLimit === attenuationLimit) return true;
 	}
 	return false;
 }
@@ -521,12 +577,20 @@ export async function acquireDeepFilterNode(
 	context: AudioContext,
 	signal: AbortSignal,
 	onFault: () => void,
+	attenuationLimit = DEEP_FILTER_ATTEN_LIM_DB,
+	pipelineV2Enabled: () => boolean = () => false,
+	onHealth?: DeepFilterHealthListener,
 ): Promise<DeepFilterNodeLease> {
+	attenuationLimit = Number.isFinite(attenuationLimit)
+		? Math.max(0, Math.min(100, attenuationLimit))
+		: DEEP_FILTER_ATTEN_LIM_DB;
 	await loadDeepFilterAssets(signal);
 	signal.throwIfAborted();
 	const pool = getDeepFilterPool(context);
-	const idle = [...pool].find((candidate) => candidate.holder === null && !candidate.faulted);
-	const entry = idle ?? createPoolEntry(context, pool);
+	const idle = [...pool].find(
+		(candidate) => candidate.holder === null && !candidate.faulted && candidate.attenuationLimit === attenuationLimit,
+	);
+	const entry = idle ?? createPoolEntry(context, pool, attenuationLimit);
 	const token = Symbol('deep-filter-lease');
 	entry.holder = token;
 	clearTimeout(entry.idleTimer);
@@ -539,13 +603,17 @@ export async function acquireDeepFilterNode(
 	}
 	const builtOverLiveSource = entry.builtOverLiveSource;
 	entry.builtOverLiveSource = false;
-	const stopWatching = handle.watch((error) => {
-		if (entry.holder !== token || entry.faulted) return;
-		entry.faulted = true;
-		pool.delete(entry);
-		markDeepFilterFailed('runtime', error);
-		onFault();
-	});
+	const stopWatching = handle.watch(
+		(error) => {
+			if (entry.holder !== token || entry.faulted) return;
+			entry.faulted = true;
+			pool.delete(entry);
+			markDeepFilterFailed('runtime', error);
+			onFault();
+		},
+		pipelineV2Enabled,
+		onHealth,
+	);
 	return {
 		node: handle.node,
 		builtOverLiveSource,
@@ -569,7 +637,15 @@ async function buildIdleDeepFilterNode(context: AudioContext, signal?: AbortSign
 	try {
 		await loadDeepFilterAssets(joinWait.signal);
 		if (isVoiceInputSourceLive()) return;
-		const lease = await acquireDeepFilterNode(context, joinWait.signal, () => {});
+		const profile = resolveRuntimeVoiceProcessing(
+			resolveVoiceProcessingFromStateForDeviceLabel(VoiceSettings, getActiveInputDeviceLabel(VoiceSettings)),
+		);
+		const lease = await acquireDeepFilterNode(
+			context,
+			joinWait.signal,
+			() => {},
+			profile.deepFilterNoiseReductionLevel,
+		);
 		lease.release();
 	} finally {
 		clearTimeout(joinDeadline);
@@ -585,8 +661,8 @@ async function warmDeepFilterNode(signal?: AbortSignal): Promise<void> {
 		.finally(() => lease.release());
 }
 
-export function beginMicrophoneSession(signal?: AbortSignal): void {
-	NoiseSuppressionAvailability.releaseExpiredFailures(Date.now());
+export function beginMicrophoneSession(signal?: AbortSignal, resetCpuFailures = false): void {
+	NoiseSuppressionAvailability.releaseExpiredFailures(Date.now(), resetCpuFailures);
 	prefetchDeepFilterAssets();
 	if (!isDeepFilterRequested() || NoiseSuppressionAvailability.failures.get('deep_filter')?.active) return;
 	const warmup = warmDeepFilterNode(signal);

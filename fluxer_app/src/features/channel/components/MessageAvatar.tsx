@@ -70,6 +70,7 @@ export const MessageAvatar = observer(
 					<Avatar
 						user={user}
 						size={size}
+						decorationSurface="compact"
 						className={className}
 						forceAnimate={isHovering}
 						guildId={guildId}

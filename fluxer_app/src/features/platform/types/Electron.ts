@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type {GameActivity} from '@app/features/gateway/types/GatewayPresenceTypes';
 import type {DesktopAccountStorageAPI} from '@fluxer/desktop_ipc/src/AccountContract';
 import type {DesktopHandoffAPI} from '@fluxer/desktop_ipc/src/BrowserHandoffContract';
 import type {DesktopCapabilityManifest} from '@fluxer/desktop_ipc/src/CapabilityManifest';
@@ -135,6 +136,15 @@ export interface VoiceBackgroundMediaReadResult {
 	path: string;
 	mediaKind: VoiceBackgroundMediaKind;
 	dataUrl: string;
+}
+
+export type DesktopGameOverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+export interface DesktopGameOverlayLayout {
+	visible: boolean;
+	corner: DesktopGameOverlayCorner;
+	width: number; // CSS px = DIP
+	height: number;
 }
 
 export interface DesktopVoiceDebugEventSinkEntry {
@@ -322,6 +332,20 @@ export interface AppMetricsSnapshot {
 	freeMemoryMB: number;
 }
 
+export interface DesktopGameActivityState {
+	generation: number;
+	state: 'unsupported' | 'disabled' | 'unavailable' | 'idle' | 'playing';
+	activity: GameActivity | null;
+	fresh: boolean;
+}
+
+export type DesktopGameActivityRule = {rule_id: string} & ({game_id: string} | {manual_name: string});
+export type DesktopGameActivityRuleInput = {token: string} & ({game_id: string} | {manual_name: string});
+export type DesktopGameActivityCandidates =
+	| {state: 'ok'; candidates: Array<{token: string; label: string}>; next_cursor?: string}
+	| {state: 'unsupported' | 'unavailable'};
+export type DesktopGameActivityRules = {state: 'ok'; rules: Array<DesktopGameActivityRule>} | {state: 'unsupported'};
+
 interface DesktopLegacyHarvestAPI {
 	read: () => Promise<DesktopLegacyHarvest | null>;
 	markReplanted: () => Promise<void>;
@@ -337,6 +361,23 @@ interface DesktopLocalAppInfo {
 }
 
 export interface ElectronAPI {
+	gameActivityGetCapabilities?: () => Promise<{version: 1; supported: boolean}>;
+	gameActivityConfigure?: (request: {
+		account_id: string | null;
+		generation: number;
+		enabled: boolean;
+	}) => Promise<{state: 'ok' | 'unsupported'}>;
+	gameActivityGetState?: (request: {generation: number}) => Promise<DesktopGameActivityState>;
+	gameActivityListCandidates?: (request: {
+		generation: number;
+		cursor?: string;
+	}) => Promise<DesktopGameActivityCandidates>;
+	gameActivityAddRule?: (
+		request: {generation: number} & DesktopGameActivityRuleInput,
+	) => Promise<{state: 'ok'; rule_id: string} | {state: 'unsupported' | 'unavailable'}>;
+	gameActivityListRules?: (request: {generation: number}) => Promise<DesktopGameActivityRules>;
+	gameActivityRemoveRule?: (request: {generation: number; rule_id: string}) => Promise<{state: 'ok' | 'unsupported'}>;
+	onGameActivityState?: (callback: (state: DesktopGameActivityState) => void) => () => void;
 	platform: NodeJS.Platform;
 	localDevelopmentInstanceUrl?: string | null;
 	getDesktopInfo: () => Promise<DesktopInfo>;
@@ -374,6 +415,7 @@ export interface ElectronAPI {
 	openVoiceDebugEventSinkPopout?: (entries: Array<DesktopVoiceDebugEventSinkEntry>) => Promise<void>;
 	appendVoiceDebugEventSinkEntries?: (entries: Array<DesktopVoiceDebugEventSinkEntry>) => void;
 	setVoiceDebugEventSinkStatsHtml?: (html: string) => void;
+	setGameOverlayLayout?: (layout: DesktopGameOverlayLayout) => void;
 	onWindowLiveResizeChange: (callback: (resizing: boolean) => void) => () => void;
 	onWindowMaximizeChange: (callback: (maximized: boolean) => void) => () => void;
 	openExternal: (url: string) => Promise<void>;
@@ -388,6 +430,9 @@ export interface ElectronAPI {
 	autostartIsEnabled: () => Promise<boolean>;
 	autostartIsInitialized: () => Promise<boolean>;
 	autostartMarkInitialized: () => Promise<void>;
+	autostartClaimStorePrompt?: () => Promise<boolean>;
+	getTaskbarPinState?: () => Promise<{supported: boolean; pinned: boolean; lafRequired: boolean}>;
+	requestTaskbarPin?: () => Promise<boolean>;
 	checkMediaAccess: (type: MediaAccessType) => Promise<MediaAccessStatus>;
 	requestMediaAccess: (type: MediaAccessType) => Promise<boolean>;
 	openMediaAccessSettings: (type: MediaAccessType) => Promise<void>;

@@ -23,6 +23,7 @@ import {MockSnowflakeService} from '@app/api/test/mocks/MockSnowflakeService';
 import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {RepositoryBackedMessageResponseDataService} from '@app/api/test/mocks/RepositoryBackedMessageResponseDataService';
 import {fakeNcmecServer} from '@app/api/test/msw/handlers/NcmecHandlers';
+import {fakePayriffServer} from '@app/api/test/msw/handlers/PayriffHandlers';
 import {server} from '@app/api/test/msw/server';
 import {mapUserToPartialResponse} from '@app/api/user/UserMappers';
 import {loadConfig} from '@fluxer/config/src/ConfigLoader';
@@ -110,6 +111,11 @@ class RepositoryBackedUsersServiceClient implements IUsersServiceClient {
 		return result;
 	}
 
+	async getContentHiddenSince(userIds: Array<UserID>): Promise<Map<UserID, Date | null>> {
+		const users = await getUserRepository().listUsers(userIds);
+		return new Map(users.map((user) => [user.id, user.contentHiddenSince]));
+	}
+
 	async invalidateUserCache(_userId: UserID): Promise<void> {}
 }
 
@@ -190,6 +196,12 @@ const testApiConfig: APIConfig = {
 		username: 'usr123',
 		password: 'pswd123',
 	},
+	payriff: {
+		...apiConfig.payriff,
+		enabled: true,
+		secretKey: fakePayriffServer.secretKey,
+		baseUrl: fakePayriffServer.baseUrl,
+	},
 };
 testApiConfig.dev.relaxRegistrationRateLimits = true;
 testApiConfig.dev.disableRateLimits = true;
@@ -210,7 +222,7 @@ setInjectedMessageResponseDataService(new RepositoryBackedMessageResponseDataSer
 
 enableSearchTaskTracking();
 
-export {fakeNcmecServer};
+export {fakeNcmecServer, fakePayriffServer};
 
 beforeAll(async () => {
 	server.listen({
@@ -224,6 +236,7 @@ afterEach(async () => {
 	getInstanceConfigRepository().clearCacheForTesting();
 	server.resetHandlers();
 	fakeNcmecServer.reset();
+	fakePayriffServer.reset();
 });
 
 afterAll(async () => {

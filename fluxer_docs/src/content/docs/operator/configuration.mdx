@@ -462,11 +462,21 @@ Default `9042`. The port. Integer.
 
 #### `FLUXER_CASSANDRA_KEYSPACE`
 
-Default `fluxer`. The keyspace. Must exist already.
+Default `fluxer`. The keyspace. Must exist before the services start. `fluxer-dev cassandra apply` creates it when you give it a replication, see `FLUXER_CASSANDRA_REPLICATION`.
 
 #### `FLUXER_CASSANDRA_LOCAL_DC`
 
-Default `datacenter1`. The local datacentre. Read by `api` and `worker` only. The Rust services ignore it.
+Default `datacenter1` in `api` and `worker`, unset in the Rust services. The local datacentre, as `nodetool status` names it. `api` and `worker` send their queries to its nodes. The Rust services prefer its nodes when it is set and have no datacentre preference when it is unset. Give every process the same value.
+
+#### `FLUXER_CASSANDRA_CONSISTENCY`
+
+Default empty. The consistency level queries run at. `local_one`, `local_quorum`, `quorum`, or `one`. Anything else fails startup. Empty keeps each driver's default, and the defaults differ: `LOCAL_ONE` for `api` and `worker`, `LOCAL_QUORUM` for the Rust services. With `FLUXER_ENV=production` and the Cassandra backend, `api` and `worker` refuse to start unless it is `local_quorum` or `quorum`. On a cluster of more than one node, set `local_quorum` for every process so that a read sees every acknowledged write.
+
+#### `FLUXER_CASSANDRA_REPLICATION`
+
+Default empty. Read only by `fluxer-dev cassandra diff` and `fluxer-dev cassandra apply` (`pnpm dev:cassandra:diff`, `pnpm dev:cassandra:apply`), which create the keyspace with this replication when it does not exist yet. One CQL map such as `{'class': 'NetworkTopologyStrategy', 'dc1': 3}`. The `--replication` flag overrides it. Anything that is not a single map fails. With neither set, a missing keyspace is an error. The `--dev` flag creates a local single-node keyspace with `SimpleStrategy` and replication factor 1 instead, and the development bootstrap uses that replication when this is unset.
+
+These commands never change the replication of a keyspace that already exists, but they check it. When `FLUXER_CASSANDRA_HOSTS` lists more than one host, a `SimpleStrategy` keyspace, or one with fewer than three replicas (or fewer than the number of hosts, when that is smaller) in any datacentre, is an error, whether it already exists or would be created from the given replication. `diff` reports it and exits non-zero, `apply` fails before changing anything, and `fluxer-dev cassandra verify` fails. Only `--dev` skips this check. List every node in `FLUXER_CASSANDRA_HOSTS`, because the check counts the hosts listed there.
 
 #### `FLUXER_CASSANDRA_USERNAME`
 
@@ -777,6 +787,14 @@ Default empty. The address replies go to, sent as the `Reply-To` header on every
 #### `FLUXER_EMAIL_APP_BASE_URL`
 
 `.env.example` empty. The base URL used in links. Must be http or https with no username, password, query, or fragment, or the API fails at boot. Falls back to the app endpoint. Compose forwards it from `.env`.
+
+#### `FLUXER_EMAIL_HTML_ENABLED`
+
+Default `false`. Email goes out as plain text only. Set `true` to add an HTML part built from the same text, with the instance branding: the icon (or the logo when there is no icon) at the top when its URL is https, the theme color behind it, and the product name beside it (`app_public.branding.product_name`, default `FLUXER_APP_PRODUCT_NAME`, else `Fluxer`). The HTML part uses a dark layout; a theme color that is not a hex value falls back to `#0B0B0C`. When a template has a `button` label in the email catalog, its action link is shown as that labelled button with the full URL as a small link under it; other links stay inline. The plain text part stays the same. Compose does not pass it, so add it through a Compose override file for `api` and `worker`.
+
+#### `FLUXER_EMAIL_HTML_FOOTER`
+
+Default empty. A JSON object from locale to footer text for the HTML part, for example `{"en-US":"Operated by …","tr":"…"}`. The footer for the message locale is used, then `en-US`, then none. Every value must be a string, or the API fails at boot.
 
 #### `FLUXER_EMAIL_SMTP_HOST`
 
@@ -1129,7 +1147,13 @@ Default `development`. The runtime mode. `development`, `production`, or `test`.
 
 Default `false`. The self-host switch. Compose sets `true`. It relaxes the production Postgres SSL requirement, seeds the limit tier, gates registration, donation and discovery controllers, keeps premium billing off until it is set up as [Payments](#payments) describes, turns blocklist feeds off, and keeps hosted-only artwork from `fluxer.app` out of the app, webhook avatars and link embeds.
 
-`/_metrics` on `api`, `media-proxy`, `gateway`, and `push`, plus the Gateway's `/_health/ready`, `/_health/drain`, and `/_health/undrain`, are gated to loopback peers, so no proxy reaches them. The probes that work from outside are `/api/_health`, `/gateway/_health`, `/media/_health`, and the edge's own `/_health`.
+#### `FLUXER_METRICS_ALLOWED_CIDRS`
+
+Default empty. The networks, besides loopback, that may read `/_metrics` on `api`, `gateway`, `media-proxy`, `push`, and the internal services' `FLUXER_SVC_PORT`. A comma-separated list of CIDRs such as `10.0.0.5/32`. A bare address counts as `/32`, or `/128` for IPv6. Empty means loopback only (`127.0.0.0/8` and `::1`). Each process judges the address of the connecting socket, never `X-Forwarded-For`. An invalid entry stops the process at startup, and so do entries separated by spaces instead of commas and a signed prefix such as `/+24`.
+
+List only the address of the metrics scraper, as a `/32` (`/128` for IPv6). Never list the address of a reverse proxy, whether the bundled Caddy edge or your own, and never a network that contains it. Every request a proxy forwards arrives from its address, so listing it serves the proxied metrics paths, such as `/api/_metrics`, to anyone on the internet.
+
+The Gateway's `/_health/ready`, `/_health/drain`, and `/_health/undrain` stay gated to loopback whatever the list says. With the list empty, no proxy reaches `/_metrics` either. The probes that work from outside are `/api/_health`, `/gateway/_health`, `/media/_health`, and the edge's own `/_health`.
 
 ## Feature flags and development switches
 
@@ -1193,7 +1217,7 @@ Default empty. The YouTube Data API key. Also read by `unfurl`, which accepts `Y
 
 #### `FLUXER_CACHE_PURGE_ADAPTER`
 
-Default `none`. How cached copies of deleted or replaced media are purged. `none` or `http`. Anything else fails startup. With `none`, nothing is queued or sent. Compose forwards it from `.env`.
+Default `none`. How cached copies of deleted or replaced media are purged. `none`, `http`, `bunny` or `queue_only`. Anything else fails startup. With `none`, nothing is queued or sent. With `queue_only`, the process queues purges and never sends them, and a purge token or Bunny key in its environment fails startup. Give it to internet-facing processes such as the API, and run the worker with `http` or `bunny`. A worker left on `queue_only` leaves the queue untouched and logs an error on every run. Compose forwards it from `.env`.
 
 #### `FLUXER_CACHE_PURGE_HTTP_ENDPOINT`
 
@@ -1206,6 +1230,86 @@ Default empty. The bearer token sent in the `Authorization` header of each purge
 #### `FLUXER_CACHE_PURGE_HTTP_TIMEOUT_MS`
 
 Default `10000`. Purge request timeout. Accepts 1000 to 10000. The range is checked only when the adapter is `http`. Compose forwards it from `.env`.
+
+#### `FLUXER_CACHE_PURGE_BUNNY_API_BASE`
+
+Default `https://api.bunny.net`. The Bunny API the worker purges through when the adapter is `bunny`. Must be an absolute `https` URL without credentials, or startup fails, because every request carries the account key. The Bunny settings below are checked only when the adapter is `bunny`.
+
+#### `FLUXER_CACHE_PURGE_BUNNY_API_KEY`
+
+Default empty. The Bunny account API key, sent in the `AccessKey` header and never logged. Required when the adapter is `bunny`. A key with spaces, line breaks or non-ASCII characters fails startup. Give it to the worker only: under `queue_only` a key fails startup.
+
+#### `FLUXER_CACHE_PURGE_BUNNY_TIMEOUT_MS`
+
+Default `10000`. Purge request timeout. Accepts 1000 to 10000.
+
+#### `FLUXER_CACHE_PURGE_BUNNY_CONCURRENCY`
+
+Default `8`. Purge requests in flight at once. Accepts 1 to 32.
+
+#### `FLUXER_CACHE_PURGE_BUNNY_MODE`
+
+Default `prefix`. `prefix` sends one wildcard URL purge per queued prefix, and two for a file name with non-ASCII characters, one for its percent-encoded and one for its decoded spelling. `tag` sends one cache tag purge per asset to the pull zone, and needs the edge to tag each media response with a `CDN-Tag` header: its decoded path without the extension, or `attachments/<channel>/<attachment>` for an attachment. Anything else fails startup.
+
+#### `FLUXER_CACHE_PURGE_BUNNY_PULL_ZONE_ID`
+
+Default `0`. The pull zone tag purges go to. Must be a positive integer when the mode is `tag`, or startup fails.
+
+#### `FLUXER_CACHE_PURGE_BUNNY_RATE_PER_MINUTE`
+
+Default `30`. Purges per minute across every worker, drawn from one budget kept in Valkey. Accepts 1 to 60000. The default is Bunny's documented account limit for URL purges. Tag purges have no documented limit, so raise it only after Bunny confirms a higher one.
+
+#### `FLUXER_CACHE_PURGE_BUNNY_BURST`
+
+Default `20`. How many purges the budget holds at once. Accepts 2 to 10000, since a non-ASCII prefix costs two. A run takes only the purges that fit whole. The rest wait in the queue for a later run, and the worker logs `Bunny purge budget is spent, deferred cache prefixes to a later run`. Legal and moderation removals are sent before ordinary ones.
+
+#### `FLUXER_BUNNY_STREAM_LIBRARY_ID`
+
+Default `0`, which means unset. The Bunny Stream video library feed videos upload to. Feed videos are on only when this, both library keys, the CDN hostname, the token key, the storage zone and its password are all set. Setting some of them and not the others fails startup, and leaving all of them empty keeps feed videos off, the video routes closed and the hourly `reconcileFeedVideos` and per-minute `drainFeedVideoJobs` crons unregistered. Must be a positive integer. The API and the worker both need the settings below, and the worker runs video jobs on its `video` lane.
+
+#### `FLUXER_BUNNY_STREAM_API_KEY`
+
+Default empty. The library's API key, sent in the `AccessKey` header to create, read and delete videos and to derive each upload's TUS signature. Never logged and never sent to clients. A key with spaces, line breaks or non-ASCII characters fails startup.
+
+#### `FLUXER_BUNNY_STREAM_READ_ONLY_API_KEY`
+
+Default empty. The library's read-only API key. Bunny signs its webhooks with it, and the API refuses a webhook whose HMAC-SHA256 signature does not match. Point the library's webhook URL at `<api endpoint>/feed/videos/webhook`.
+
+#### `FLUXER_BUNNY_STREAM_CDN_HOSTNAME`
+
+Default empty. The library's pull zone hostname, such as `vz-1234abcd-567.b-cdn.net`, without a scheme or path. Posters, playlists and MP4 files are served from it with a signed token only.
+
+#### `FLUXER_BUNNY_STREAM_TOKEN_KEY`
+
+Default empty. The pull zone's token authentication key. Every video URL the API hands out is signed with it and lives 2 to 3 hours, or the video's length and 30 minutes when that is longer, up to about 7 hours; there is no unsigned mode. Turn on token authentication on the pull zone, turn off direct play and turn on embed token authentication on the library before you set it, or Bunny's own player and direct URLs stay open.
+
+#### `FLUXER_BUNNY_STREAM_STORAGE_ZONE`
+
+Default empty. The name of the storage zone behind the library. Lowercase letters, digits and hyphens only, or startup fails. The worker lists and reads each video's files there to scan its frames and to copy a reported video's evidence.
+
+#### `FLUXER_BUNNY_STREAM_STORAGE_PASSWORD`
+
+Default empty. The storage zone's ReadOnlyPassword, not its full password: the API only lists and reads files. Never logged and never sent to clients.
+
+#### `FLUXER_BUNNY_STREAM_STORAGE_HOST`
+
+Default `storage.bunnycdn.com`. The Bunny Storage API host for the storage zone's region, without a scheme or path.
+
+#### `FLUXER_BUNNY_STREAM_API_BASE`
+
+Default `https://video.bunnycdn.com`. The Bunny Stream API. Must be an `https` URL without credentials, or startup fails, because every request carries the library key.
+
+#### `FLUXER_BUNNY_STREAM_TUS_ENDPOINT`
+
+Default `https://video.bunnycdn.com/tusupload`. Where clients upload videos with TUS. Must be an `https` URL without credentials.
+
+#### `FLUXER_BUNNY_STREAM_TIMEOUT_MS`
+
+Default `10000`. Timeout of each Bunny Stream and Storage request. Accepts 1000 to 30000. Evidence copies stream whole files and use their own longer deadline.
+
+The web app's Content Security Policy does not list Bunny. Before turning feed videos on, set these on the app proxy, or browsers block the uploads, the playback and the posters: `FLUXER_CSP_EXTRA_CONNECT_SRC` to the TUS host (`https://video.bunnycdn.com`, or the origin of `FLUXER_BUNNY_STREAM_TUS_ENDPOINT`) and `https://<FLUXER_BUNNY_STREAM_CDN_HOSTNAME>`, and both `FLUXER_CSP_EXTRA_MEDIA_SRC` and `FLUXER_CSP_EXTRA_IMG_SRC` to `https://<FLUXER_BUNNY_STREAM_CDN_HOSTNAME>`. Separate several sources with spaces or commas.
+
+A published video that Bunny no longer has, in the Stream API and in the storage zone alike, loses its post, and its author gets a system DM. More than 20 of them in one hour is taken for a library ID, key or storage zone pointed at the wrong place: the worker sets the Valkey key `feed:video:gone:halt`, logs `Too many published feed videos are gone from Bunny this hour`, and removes no more such posts, logging an error for each post it keeps. The key never expires. Fix the settings, then delete it (`DEL feed:video:gone:halt`) to let the removals run again. Deleted within the same hour, it comes back at that hour's next gone video. To lift it at once, delete the hour's count first and the key after it, one key per command, as Valkey in cluster mode refuses a `DEL` of keys in different slots: `DEL feed:video:gone:<hour>`, where `<hour>` is the Unix hour (`$(( $(date +%s) / 3600 ))` in a shell), then `DEL feed:video:gone:halt`. Posts kept while it was set are not checked again.
 
 #### `FLUXER_GEOIP_DB_PATH`
 
@@ -1293,13 +1397,17 @@ Default `30000`. How long a client may take to send the request line and the hea
 
 Default `120000`. How long a client may take over the whole request. Integer 1000 to 3600000, checked at startup. This is the one to raise for large uploads or high latency links. Compose forwards it from `.env`.
 
+#### `FLUXER_API_PREMIUM_TRIAL_EMAIL_HASH_KEY`
+
+Default empty, which keeps the card-free premium trial closed. The key the API uses to hash a normalised email address with HMAC-SHA256 before it records that the address has had its trial, so a stored hash cannot be matched against a list of addresses. Must be at least 32 characters, or the API fails at boot. Generate it with `openssl rand -hex 32`. The trial also needs a self-hosted instance, the `mirror` premium mode, the [ALTCHA CAPTCHA check](/admin-api/instance/#captcha-configuration-object) enabled and a `premium_trial_days` above 0 in the stored instance policy. A new key forgets every recorded trial, so each address can claim one again.
+
 #### `FLUXER_API_WORKER_MODE`
 
 Default `all_lanes`. Which lanes the worker runs. `all_lanes`, `single_lane`, or `single_task`. Anything else fails startup. Compose sets `all_lanes`, because the stack runs one `worker`.
 
 #### `FLUXER_API_WORKER_LANE`
 
-No default. Which lane, under `single_lane`. `realtime`, `unfurl`, `lifecycle`, `batch`, or `crosspost`. Compose does not forward it. A deployment that splits the worker by lane needs a `crosspost` worker, or published announcements are never delivered.
+No default. Which lane, under `single_lane`. `realtime`, `unfurl`, `lifecycle`, `batch`, `purge`, `views`, or `crosspost`. `purge` sends the queued CDN purges of deleted and reported media. `views` runs the minute flush of feed view counts; a process that queues it but runs no views lane warns at startup. When you split the worker into one process per lane, run one for every lane, `purge` and `views` included. A lane no process runs keeps its jobs queued without an error. A worker that runs the cron scheduler logs a warning at startup when it queues purge runs but runs no `purge` lane itself. A `crosspost` worker delivers published announcements.
 
 #### `FLUXER_API_WORKER_TASK`
 
@@ -1311,7 +1419,11 @@ No default. Whether the cron scheduler runs. Compose sets `true`. Without it no 
 
 #### `FLUXER_API_WORKER_LANE_CONCURRENCY_OVERRIDES`
 
-No default. Per-lane concurrency. JSON object keyed by lane, `realtime`, `unfurl`, `lifecycle`, `batch`, or `crosspost`. Each value must be an integer of at least 1 or startup fails. Built-in concurrency is realtime 10, unfurl 20, lifecycle 8, batch 12, crosspost 8. Compose forwards it from `.env`.
+No default. Per-lane concurrency. JSON object keyed by lane. Each value must be an integer of at least 1 or startup fails. Built-in concurrency is realtime 10, unfurl 20, lifecycle 8, batch 12, purge 2, views 16, crosspost 8.
+
+#### `FLUXER_API_WORKER_FEED_VIEW_FLUSH_PARTITION_CONCURRENCY`
+
+Default 2. Partitions each feed view flush slice works at once, 1 to 8; raise it when the slice budget warning keeps showing.
 
 #### `FLUXER_NODE_EXTRA_CA_CERTS`
 
@@ -1477,6 +1589,36 @@ Default `128`. Presence push buffer depth. Compose forwards it from `.env`.
 
 Default `1048576`. Presence push buffer size. Compose forwards it from `.env`.
 
+#### `FLUXER_GATEWAY_MAX_CONNECTIONS`
+
+Default `0`, no limit. Integer. While a Gateway node holds more WebSockets or more sessions than this, an Identify closes with `4008` and reason `Gateway at capacity`, and a Resume still gets in. A session counts until it ends, so one kept resumable after its WebSocket closed still counts. Once the node holds more WebSockets than this number plus 5% of it, rounded down and at least 1, a new WebSocket closes with the same code and reason before Hello is sent. Connections already open stay open. Each node counts only its own WebSockets and sessions. It counts WebSockets with the per-IP connection limit, so this limit does nothing while `FLUXER_DISABLE_RATE_LIMITS` is on. A value that is not an integer stops the Gateway at startup.
+
+Gateway Rollout `max_connections` overrides this value without a restart when set to 1-200000. `0` uses this environment value. Lowering the limit leaves existing connections open and rejects only new ones. Monitor `fluxer_gateway_websocket_connection_limit` and node memory before raising it; a high connection count can exhaust memory.
+
+#### `FLUXER_GATEWAY_ZSTD_WINDOW_LOG`
+
+Default `0`, preserving the upstream zstd stream window. Empty or `0` does not set a compression window parameter. Set an integer from `10` to `23` to limit the zstd stream compression window to `2^n` bytes; an out-of-range value stops the Gateway at startup. This applies to `zstd-stream` connections created after startup. One-shot `zstd_frame` compression uses `ezstd:compress/2` and does not expose a window parameter.
+
+#### `FLUXER_GATEWAY_MAX_CONNECTIONS_PER_IPV6_48`
+
+Default `0`, no limit. Integer. When above zero, every IPv6 address in one /48 shares this many WebSockets on a node, on top of the per-IP limit of 256. A further connection closes with `4008` and reason `Too many connections` before Hello is sent. IPv4 addresses, and IPv6 addresses whose first 48 bits are zero such as IPv4-mapped addresses, are not grouped. A value that is not an integer stops the Gateway at startup.
+
+#### `FLUXER_GATEWAY_MAX_UNIDENTIFIED_CONNECTIONS`
+
+Default `0`, no limit. Integer. When above zero, the WebSockets on a node that have not sent Identify or Resume yet share this many places. A new WebSocket past it closes with `4008` and reason `Gateway at capacity` before Hello is sent. A WebSocket leaves the budget when it sends Identify or Resume, even one that a rate limit discards. Keep it off. While the budget is full, every new WebSocket is refused, legitimate ones included, and a place frees only when a socket identifies, closes, or reaches `FLUXER_GATEWAY_IDENTIFY_TIMEOUT_MS`. A few addresses that keep reconnecting can hold the budget full more cheaply than they could fill `FLUXER_GATEWAY_MAX_CONNECTIONS`. Turn it on only once the Gateway closes the oldest unidentified WebSocket to make room for a new one, which it does not do yet. Like `FLUXER_GATEWAY_MAX_CONNECTIONS`, it does nothing while `FLUXER_DISABLE_RATE_LIMITS` is on. A value that is not an integer stops the Gateway at startup.
+
+#### `FLUXER_GATEWAY_COUNT_IPV6_BY_64`
+
+Default `false`. When `true`, the per-IP connection limit of 256 counts every IPv6 address in the same /64 as one address. IPv6 addresses whose first 64 bits are zero, such as IPv4-mapped addresses, keep their own count. Change it only with a restart, because open connections keep the key they were counted under.
+
+#### `FLUXER_GATEWAY_IDENTIFY_TIMEOUT_MS`
+
+Default `0`, no timeout. Integer, milliseconds. A WebSocket that has no session this long after Hello closes with `4003` and reason `Identify timeout`, unless its session start is being held, for example while the node drains. Heartbeats do not extend it, and an Identify or Resume dropped by a rate limit does not stop it. The web app opens its WebSocket before the page has loaded and gives up on an unclaimed socket after 30 seconds, so keep the value above `30000`. A value that is not an integer stops the Gateway at startup.
+
+#### `FLUXER_GATEWAY_SHUTDOWN_DRAIN_WAIT_MS`
+
+Default `5000`. Milliseconds. The Gateway parses it into its configuration at startup, and nothing reads it after that, so it controls no drain.
+
 #### `FLUXER_GATEWAY_PUSH_ENROLLED_CLEAR_NOTIFICATIONS_ENABLED`
 
 Default `true`. Whether the Gateway asks `push` to clear a channel's notifications once the channel is read. Compose forwards it from `.env`.
@@ -1496,6 +1638,18 @@ Default `15000`. How long the circuit stays open. Milliseconds. Compose forwards
 #### `FLUXER_GATEWAY_CLUSTER_ENABLED`
 
 Default `false`. BEAM clustering. Single-node by default. Compose forwards none of the clustering names, because the stack runs one Gateway node.
+
+#### `FLUXER_GATEWAY_CLUSTER_MIN_PEERS_FOR_RPC`
+
+Default `1`. Integer from `1` to `512`, including this node. With clustering enabled, both NATS RPC consumers wait for one local reconciliation of the discovery snapshot and at least this many admitted, connected members. RPC permission closes immediately when the count falls below the threshold or the membership process stops. Subscriptions resume after continuous membership stability unless RPC consumption was manually disabled. The loopback readiness endpoint returns `503` while membership is gated or the role's required RPC subscriptions are unavailable. The cluster-only `fluxer_gateway_cluster_rpc_ready` metric reports membership permission: `0` while gated and `1` after stability; it does not report successful NATS subscriptions. After 30 seconds blocked, the gateway logs one readiness timeout warning per blocked period and continues waiting. Membership restart monitoring retries every second.
+
+For roles with RPC subjects, readiness requires every role subject on the enabled main consumer and every configured pool slot; an absent main consumer fails closed. Deliberately disabling main consumption removes its subscription requirement, while pool requirements remain. Roles with no RPC subjects (`websocket` and `sessions`) require only membership permission. Failed subscriptions retry from `250` milliseconds, doubling up to `5000` milliseconds, while preserving successful subscriptions.
+
+The default `1` preserves self-only compatibility after reconciling a discovery snapshot, including an empty cached snapshot; successful DNS resolution is not required. It does not protect against partitions. For a fixed three-node group, configure `2` on every node to require a local majority. This is local membership reconciliation, not distributed consensus or a fencing guarantee: membership failure detection takes time, and RPC work already executing can finish. When clustering is disabled, this setting does not gate RPC consumption.
+
+#### `FLUXER_GATEWAY_CLUSTER_RPC_STABILITY_MS`
+
+Default `5000`. Integer from `0` to `60000`, in milliseconds. With clustering enabled, the reconciled membership must continuously meet `FLUXER_GATEWAY_CLUSTER_MIN_PEERS_FOR_RPC` for this duration before RPC permission opens, both at startup and after recovery. Falling below the threshold closes permission immediately and resets the duration; canceled timers cannot reopen it. Explicit `0` disables the stability delay. This setting has no effect when clustering is disabled.
 
 #### `FLUXER_GATEWAY_CLUSTER_DISCOVERY_DNS_NAME`
 
@@ -1568,6 +1722,10 @@ Default `./static`. Where the client's SPA bundle lives, unrelated to `static-pr
 #### `FLUXER_APP_PROXY_INDEX_UPSTREAM_URL`
 
 No default. An upstream to fetch `index.html` from. Leave unset for the shipped image. Compose forwards it from `.env`.
+
+#### `FLUXER_APP_PROXY_KEEP_LINK_PREVIEW_METADATA`
+
+Default `false`. On a self-hosted instance `app-proxy` removes `<title>`, `<meta name="description">`, and the `og:` and `twitter:` meta tags from `index.html`, because the shipped shell names Fluxer. Set `true` when your shell carries your own name and description, so link previews keep them. Compose does not pass it, so add it through a Compose override file.
 
 #### `DISCOVERY_UPSTREAM_URL`
 

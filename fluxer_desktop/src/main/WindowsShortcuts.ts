@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import fs from 'node:fs';
-import {createRequire} from 'node:module';
 import path from 'node:path';
 import {
 	DESKTOP_APP_NAME,
@@ -10,8 +9,7 @@ import {
 	WINDOWS_SHORTCUT_AUTHOR,
 	WINDOWS_TOAST_ACTIVATOR_CLSID,
 } from '@electron/common/DesktopIdentity';
-
-const requireModule = createRequire(import.meta.url);
+import {loadWinShell} from '@electron/main/WinShell';
 
 interface WindowsShortcutRepairPaths {
 	authorShortcut: string;
@@ -77,27 +75,6 @@ function isInFluxerRoot(candidate: string, rootDir: string): boolean {
 	);
 }
 
-interface ShellLinkBinding {
-	createShortcut: ((opts: CreateShortcutOptions) => Promise<void>) | null;
-	loadError: Error | null;
-}
-
-let cachedBinding: ShellLinkBinding | null = null;
-
-function loadWinShell(): ShellLinkBinding | null {
-	if (cachedBinding) return cachedBinding;
-	try {
-		cachedBinding = requireModule('@fluxer/win-shell') as ShellLinkBinding;
-	} catch (error) {
-		console.warn('[WindowsShortcuts] Failed to load @fluxer/win-shell', error);
-		return null;
-	}
-	if (cachedBinding.loadError) {
-		console.warn('[WindowsShortcuts] @fluxer/win-shell load error', cachedBinding.loadError);
-	}
-	return cachedBinding;
-}
-
 function lnkContainsString(lnkPath: string, needle: string): boolean {
 	let buf: Buffer;
 	try {
@@ -142,7 +119,6 @@ async function repairOneShortcut(
 async function repairWindowsShortcutsAsync(repairPaths: WindowsShortcutRepairPaths): Promise<void> {
 	const binding = loadWinShell();
 	if (!binding?.createShortcut) {
-		console.warn('[WindowsShortcuts] @fluxer/win-shell unavailable; skipping shortcut repair');
 		return;
 	}
 	const {createShortcut} = binding;

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {ALL_PERMISSIONS, Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {MAX_GIFT_CODES_PER_REQUEST, MAX_GIFT_DURATION_QUANTITY} from '@fluxer/constants/src/GiftCodeConstants';
 import {
 	CONTENT_WARNING_TEXT_MAX_LENGTH,
@@ -11,7 +12,12 @@ import {ADMIN_ACL_COUNT, AdminAclType} from '@fluxer/schema/src/domains/admin/Ad
 import {AdminArchiveResponseSchema} from '@fluxer/schema/src/domains/admin/AdminArchiveSchemas';
 import {GuildAdminResponse} from '@fluxer/schema/src/domains/admin/AdminGuildSchemas';
 import {UserAdminResponseSchema} from '@fluxer/schema/src/domains/admin/AdminUserSchemas';
-import {CaptchaConfigResponse, CaptchaConfigUpdateRequest} from '@fluxer/schema/src/domains/admin/CaptchaSchemas';
+import {
+	CaptchaConfigResponse,
+	CaptchaConfigUpdateRequest,
+	CaptchaIntegrationResponse,
+	CaptchaIntegrationUpdateRequest,
+} from '@fluxer/schema/src/domains/admin/CaptchaSchemas';
 import {
 	ChannelThreadsConfigResponse,
 	ChannelThreadsConfigUpdateRequest,
@@ -34,6 +40,14 @@ import {
 } from '@fluxer/schema/src/domains/admin/PlutoniumPageSchemas';
 import {PushRelayConfigResponse, PushRelayConfigUpdateRequest} from '@fluxer/schema/src/domains/admin/PushRelaySchemas';
 import {
+	VoiceNoiseSuppressionConfigResponse,
+	VoiceNoiseSuppressionConfigUpdateRequest,
+} from '@fluxer/schema/src/domains/admin/VoiceNoiseSuppressionSchemas';
+import {
+	VoiceRoomConfigResponse,
+	VoiceRoomConfigUpdateRequest,
+} from '@fluxer/schema/src/domains/admin/VoiceRoomConfigSchemas';
+import {
 	ExperimentDeliveryConfigResponse,
 	ExperimentDeliveryConfigUpdateRequest,
 } from '@fluxer/schema/src/domains/experiment/ExperimentSchemas';
@@ -54,6 +68,7 @@ import {
 	GuildVerificationLevelSchema,
 	NSFWLevelSchema,
 } from '@fluxer/schema/src/primitives/GuildValidators';
+import {LocaleSchema} from '@fluxer/schema/src/primitives/LocaleSchema';
 import {PermissionStringType} from '@fluxer/schema/src/primitives/PermissionValidators';
 import {createQueryIntegerType, QueryBooleanType} from '@fluxer/schema/src/primitives/QueryValidators';
 import {
@@ -66,6 +81,7 @@ import {
 	NonNegativeSafeIntegerType,
 	SnowflakeStringType,
 	SnowflakeType,
+	UnsignedInt64StringType,
 	withOpenApiType,
 } from '@fluxer/schema/src/primitives/SchemaPrimitives';
 import {EmailBlocklistEntryType} from '@fluxer/schema/src/primitives/UserValidators';
@@ -89,6 +105,8 @@ const ReportTypeSchema = withOpenApiType(
 			[0, 'MESSAGE', 'Report of a message'],
 			[1, 'USER', 'Report of a user'],
 			[2, 'GUILD', 'Report of a guild'],
+			[3, 'FEED_POST', 'Report of a feed post'],
+			[4, 'FEED_COMMENT', 'Report of a feed comment'],
 		],
 		'The type of entity being reported',
 		'ReportType',
@@ -203,6 +221,8 @@ const ReportTypeFilterEnum = createNamedStringLiteralUnion(
 		['message', 'message', 'Only reports about a message'],
 		['user', 'user', 'Only reports about a user'],
 		['guild', 'guild', 'Only reports about a community'],
+		['feed_post', 'feed_post', 'Only reports about a feed post'],
+		['feed_comment', 'feed_comment', 'Only reports about a feed comment'],
 	],
 	'Only return reports about this kind of entity',
 );
@@ -448,6 +468,16 @@ export const GenerateGiftCodesRequest = z.object({
 
 export type GenerateGiftCodesRequest = z.infer<typeof GenerateGiftCodesRequest>;
 
+export const RevokeGiftCodesRequest = z.object({
+	codes: z
+		.array(createStringType(1, 32))
+		.min(1)
+		.max(MAX_GIFT_CODES_PER_REQUEST)
+		.describe('Gift codes to revoke; redeemed codes are left unchanged'),
+});
+
+export type RevokeGiftCodesRequest = z.infer<typeof RevokeGiftCodesRequest>;
+
 const SsoAllowedDomainsSchema = z.array(z.string()).max(100);
 
 const SsoConfigResponse = z.object({
@@ -524,10 +554,17 @@ const AppPublicConfigResponse = z.object({
 	legal: z.object({
 		terms_url: z.string().nullable(),
 		privacy_url: z.string().nullable(),
+		source_url: z.string().nullable(),
 	}),
 	registration: z.object({
 		collect_date_of_birth: z.boolean(),
 	}),
+	localization: z
+		.object({
+			default_locale: z.string().nullable(),
+			default_locale_time_zones: z.array(z.string()),
+		})
+		.optional(),
 });
 
 function isAbsoluteHttpUrl(value: string): boolean {
@@ -565,6 +602,12 @@ const AppPublicConfigUpdateRequest = z.object({
 		.object({
 			terms_url: z.string().trim().max(2048).nullish(),
 			privacy_url: z.string().trim().max(2048).nullish(),
+			source_url: z
+				.string()
+				.trim()
+				.max(2048)
+				.refine((v) => v === '' || /^https?:\/\//i.test(v), 'Must be an absolute http(s) URL')
+				.nullish(),
 		})
 		.nullish(),
 	registration: z
@@ -572,7 +615,54 @@ const AppPublicConfigUpdateRequest = z.object({
 			collect_date_of_birth: z.boolean().optional(),
 		})
 		.nullish(),
+	localization: z
+		.object({
+			default_locale: LocaleSchema.nullish(),
+			default_locale_time_zones: z
+				.array(
+					z
+						.string()
+						.trim()
+						.regex(/^[A-Za-z0-9_+\-/]{1,64}$/),
+				)
+				.max(32)
+				.optional(),
+		})
+		.nullish(),
 });
+
+const OfficialAppsSchema = z
+	.array(
+		z.object({
+			application_id: SnowflakeStringType.max(19)
+				.refine((value) => value.length <= 19 && SnowflakeType.safeParse(value).success, {
+					message: 'Application ID must be a signed 64-bit snowflake',
+				})
+				.describe('Application ID as a decimal string in the signed 64-bit range 0 through 9223372036854775807.'),
+			invite_permissions: z
+				.string()
+				.max(20)
+				.regex(/^[0-9]+$/)
+				.pipe(UnsignedInt64StringType)
+				.pipe(
+					PermissionStringType.refine(
+						(value) => {
+							const permissions = BigInt(value);
+							return (permissions & ~ALL_PERMISSIONS) === 0n && (permissions & Permissions.ADMINISTRATOR) === 0n;
+						},
+						{message: 'Invite permissions must use known permissions and exclude administrator'},
+					),
+				)
+				.describe(
+					'Decimal unsigned 64-bit permission string, 0 through 18446744073709551615; only known permission bits are allowed and ADMINISTRATOR is forbidden.',
+				),
+		}),
+	)
+	.max(20)
+	.refine((apps) => new Set(apps.map((app) => app.application_id)).size === apps.length, {
+		message: 'Official applications must have unique application IDs',
+	})
+	.describe('Up to 20 official applications with unique application IDs.');
 
 const InstancePolicyResponse = z.object({
 	single_community_enabled: z.boolean(),
@@ -581,6 +671,8 @@ const InstancePolicyResponse = z.object({
 	direct_messages_locked: z.boolean(),
 	guild_create_access: z.boolean(),
 	premium_mode: z.enum(['mirror', 'everyone']),
+	premium_trial_days: z.number().int(),
+	official_apps: OfficialAppsSchema,
 	services: z.object({
 		gif_enabled: z.boolean().nullable(),
 		youtube_enabled: z.boolean().nullable(),
@@ -636,6 +728,7 @@ const InstanceIntegrationsResponse = z.object({
 		api_key_set: z.boolean(),
 		effective_available: z.boolean(),
 	}),
+	captcha: CaptchaIntegrationResponse.optional(),
 	email: z.object({
 		enabled: z.boolean().nullable(),
 		effective_enabled: z.boolean(),
@@ -674,6 +767,8 @@ const InstanceAccountIdentityConfigResponse = z.object({
 export const InstanceConfigResponse = z.object({
 	sso: SsoConfigResponse,
 	gateway_rollout: GatewayRolloutConfigResponse,
+	voice_noise_suppression: VoiceNoiseSuppressionConfigResponse,
+	voice_room: VoiceRoomConfigResponse,
 	push_relay: PushRelayConfigResponse,
 	domain_migration: DomainMigrationConfigResponse,
 	plutonium_page: PlutoniumPageConfigResponse,
@@ -698,6 +793,8 @@ const InstancePolicyUpdateSchema = z.object({
 	direct_messages_disabled: z.boolean().optional(),
 	direct_messages_locked: z.literal(false).optional(),
 	premium_mode: z.enum(['mirror', 'everyone']).optional(),
+	premium_trial_days: z.number().int().min(0).max(30).optional(),
+	official_apps: OfficialAppsSchema.optional(),
 	guild_create_access: z.boolean().optional(),
 	services: z
 		.object({
@@ -710,6 +807,12 @@ const InstancePolicyUpdateSchema = z.object({
 
 export const InstanceConfigUpdateRequest = z.object({
 	gateway_rollout: GatewayRolloutConfigUpdateRequest.nullish(),
+	voice_noise_suppression: VoiceNoiseSuppressionConfigUpdateRequest.register(schemaMetadata, {
+		preserveEmptyValues: true,
+	})
+		.nullable()
+		.optional(),
+	voice_room: VoiceRoomConfigUpdateRequest.register(schemaMetadata, {preserveEmptyValues: true}).nullable().optional(),
 	push_relay: PushRelayConfigUpdateRequest.nullish(),
 	domain_migration: DomainMigrationConfigUpdateRequest.nullish(),
 	plutonium_page: PlutoniumPageConfigUpdateRequest.nullish(),
@@ -752,6 +855,7 @@ export const InstanceConfigUpdateRequest = z.object({
 					api_key: z.string().trim().max(4096).nullish(),
 				})
 				.nullish(),
+			captcha: CaptchaIntegrationUpdateRequest.nullish(),
 			email: z
 				.object({
 					enabled: z.boolean().nullish(),
@@ -1141,6 +1245,12 @@ export const NcmecAttachmentSubmitResultResponse = z.object({
 export const CodesResponse = z.object({
 	codes: z.array(z.string()),
 });
+export const RevokeGiftCodesResponse = z.object({
+	revoked: z.array(z.string()).describe('Codes that can no longer be redeemed, including ones revoked earlier'),
+	already_redeemed: z.array(z.string()).describe('Codes left unchanged because they were already redeemed'),
+	not_found: z.array(z.string()).describe('Codes that do not exist'),
+});
+export type RevokeGiftCodesResponse = z.infer<typeof RevokeGiftCodesResponse>;
 export const GuildMemoryStatsResponse = z.object({
 	guilds: z
 		.array(

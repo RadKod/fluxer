@@ -48,6 +48,7 @@ export class SmtpEmailProvider implements IEmailProvider {
 				...(message.replyTo ? {replyTo: message.replyTo} : {}),
 				subject: message.subject,
 				text: message.text,
+				html: message.html,
 			});
 			logger.debug({to: message.to}, 'Email sent via SMTP');
 			return true;

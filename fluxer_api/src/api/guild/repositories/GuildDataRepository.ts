@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {GuildID, UserID} from '@app/api/BrandedTypes';
-import {BatchBuilder, fetchMany, fetchOne} from '@app/api/database/CassandraQueryExecution';
+import {BatchBuilder, fetchMany, fetchOne, upsertOne} from '@app/api/database/CassandraQueryExecution';
+import {Db} from '@app/api/database/CassandraTypes';
 import {buildPatchFromData, executeVersionedUpdate} from '@app/api/database/CassandraVersionedUpdate';
 import {GUILD_COLUMNS, type GuildMemberByUserIdRow, type GuildRow} from '@app/api/database/types/GuildTypes';
 import {IGuildDataRepository} from '@app/api/guild/repositories/IGuildDataRepository';
@@ -10,6 +11,11 @@ import {Guild} from '@app/api/models/Guild';
 import {GuildMembersByUserId, Guilds} from '@app/api/Tables';
 
 const FETCH_GUILD_BY_ID_QUERY = Guilds.selectCql({
+	where: Guilds.where.eq('guild_id'),
+	limit: 1,
+});
+const FETCH_GUILD_MEMBER_COUNT_QUERY = Guilds.selectCql({
+	columns: ['member_count'],
 	where: Guilds.where.eq('guild_id'),
 	limit: 1,
 });
@@ -40,6 +46,18 @@ export class GuildDataRepository extends IGuildDataRepository {
 			guild_id: guildId,
 		});
 		return guild ? new Guild(guild) : null;
+	}
+
+	/** Stored member_count, or null when the guild row does not exist. */
+	async findMemberCount(guildId: GuildID): Promise<number | null> {
+		const row = await fetchOne<Pick<GuildRow, 'member_count'>>(FETCH_GUILD_MEMBER_COUNT_QUERY, {guild_id: guildId});
+		return row ? (row.member_count ?? 0) : null;
+	}
+
+	/** Writes only member_count (no read, no version bump); callers check the guild exists first. */
+	async setMemberCount(guildId: GuildID, memberCount: number): Promise<void> {
+		this.requestCache?.guilds.delete(guildId);
+		await upsertOne(Guilds.patchByPk({guild_id: guildId}, {member_count: Db.set(memberCount)}));
 	}
 
 	async listGuilds(guildIds: Array<GuildID>): Promise<Array<Guild>> {

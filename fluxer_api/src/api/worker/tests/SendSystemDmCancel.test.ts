@@ -51,7 +51,7 @@ function createLedgerStub(cancelAfter: number) {
 function createWorkerDependencies() {
 	const sentChannelIds: Array<bigint> = [];
 	const sentUserIds: Array<bigint> = [];
-	const systemUser = {id: 0n, username: 'Fluxer', bot: true, system: true};
+	const systemUser = {id: 0n, username: 'Fluxer', isBot: true, isSystem: true, flags: 0n};
 	const userRepository = {
 		findUnique: async () => systemUser,
 		findUniqueAssert: async () => systemUser,
@@ -190,7 +190,7 @@ describe('System DM cancellation', () => {
 			del: async (key: string) => (kv.delete(key) ? 1 : 0),
 		};
 		const recipientIds: Array<bigint> = [];
-		const systemUser = {id: 0n, username: 'Fluxer', bot: true, system: true};
+		const systemUser = {id: 0n, username: 'Fluxer', isBot: true, isSystem: true, flags: 0n};
 		const userRepository = {
 			findUnique: async () => systemUser,
 			findUniqueAssert: async () => systemUser,
@@ -221,5 +221,48 @@ describe('System DM cancellation', () => {
 		expect(recipientIds).toEqual([21n, 24n]);
 		expect(markSucceeded).toHaveBeenCalledWith(LEDGER_JOB_ID, {sent_count: 2, failed_count: 0});
 		expect(kv.size).toBe(0);
+	});
+	it('rejects an all_users broadcast above the recipient limit before sending anything', async () => {
+		const pageSize = 100;
+		let scans = 0;
+		const userRepository = {
+			findUnique: async () => ({id: 0n}),
+			findUniqueAssert: async () => ({id: 0n}),
+			findExistingDmState: async () => ({id: 500n}),
+			isDmChannelOpen: async () => true,
+			scanAllUsersPage: async (_limit: number, pageState: string | null) => {
+				scans += 1;
+				const page = pageState === null ? 0 : Number(pageState);
+				const users = Array.from({length: pageSize}, (_, index) => ({
+					id: BigInt(1000 + page * pageSize + index),
+					isBot: false,
+					isSystem: false,
+					flags: 0n,
+				}));
+				return {users, pageState: page < 1000 ? (page + 1).toString() : null};
+			},
+		} as unknown as UserRepository;
+		const sendMessage = vi.fn(async () => {});
+		const channelService = {messages: {send: {sendMessage}}} as unknown as ChannelService;
+		const kvClient = {get: async () => null, setex: async () => {}, del: async () => 0};
+		setWorkerDependenciesForTest({userRepository, channelService, kvClient} as never);
+		const {ledger, markSucceeded} = createLedgerStub(Number.POSITIVE_INFINITY);
+		const runner = new TestWorkerRunner({
+			tasks: {[TASK_TYPE]: sendSystemDm},
+			queue: queueStub,
+			consumerName: 'workers_batch',
+			laneName: 'batch',
+			ledger,
+			concurrency: 1,
+		});
+
+		await expect(runner.runJob(TASK_TYPE, createJobMessage({all_users: true}) as unknown as JsMsg)).resolves.toBe(true);
+
+		expect(sendMessage).not.toHaveBeenCalled();
+		expect(scans).toBe(1001);
+		expect(markSucceeded).toHaveBeenCalledWith(
+			LEDGER_JOB_ID,
+			expect.objectContaining({sent_count: 0, failed_count: 0, rejected: expect.stringContaining('100000')}),
+		);
 	});
 });

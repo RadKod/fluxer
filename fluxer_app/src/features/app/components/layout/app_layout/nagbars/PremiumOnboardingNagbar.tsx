@@ -29,42 +29,42 @@ import {useCallback, useMemo} from 'react';
 const PREMIUM_ONBOARDING_DEFAULT_MESSAGE_DESCRIPTOR = msg({
 	message: 'Welcome to {premiumProductFullName}. Explore your {premiumProductName} perks and manage your subscription.',
 	comment:
-		'Premium onboarding nagbar body. {premiumProductFullName} is the full premium product name, such as Fluxer Plutonium. {premiumProductName} is the short product name.',
+		'Plus onboarding nagbar body. {premiumProductFullName} is the full Plus product name, such as Fluxer Plutonium. {premiumProductName} is the short product name.',
 });
 const PREMIUM_ONBOARDING_VISIONARY_MESSAGE_DESCRIPTOR = msg({
 	message:
 		'Welcome to {premiumProductFullName}. You have lifetime access as a Visionary. Explore your {premiumProductName} perks.',
 	comment:
-		'Premium onboarding nagbar body for lifetime premium users. Visionary is the lifetime premium tier name. {premiumProductFullName} is the full premium product name. {premiumProductName} is the short product name.',
+		'Plus onboarding nagbar body for lifetime Plus users. Visionary is the lifetime Plus tier name. {premiumProductFullName} is the full Plus product name. {premiumProductName} is the short product name.',
 });
 const PREMIUM_ONBOARDING_CANCELING_MESSAGE_DESCRIPTOR = msg({
 	message:
 		'Welcome to {premiumProductFullName}. Your subscription is active until {formattedDate}. Explore your {premiumProductName} perks and manage your subscription.',
 	comment:
-		'Premium onboarding nagbar body for a subscription that will cancel. {premiumProductFullName} is the full premium product name, {premiumProductName} is the short product name, and {formattedDate} is already localized.',
+		'Plus onboarding nagbar body for a subscription that will cancel. {premiumProductFullName} is the full Plus product name, {premiumProductName} is the short product name, and {formattedDate} is already localized.',
 });
 const PREMIUM_ONBOARDING_MONTHLY_MESSAGE_DESCRIPTOR = msg({
 	message:
 		'Welcome to {premiumProductFullName}. Your monthly subscription renews on {formattedDate}. Explore your {premiumProductName} perks and manage your subscription.',
 	comment:
-		'Premium onboarding nagbar body for a monthly subscription. {premiumProductFullName} is the full premium product name, {premiumProductName} is the short product name, and {formattedDate} is already localized.',
+		'Plus onboarding nagbar body for a monthly subscription. {premiumProductFullName} is the full Plus product name, {premiumProductName} is the short product name, and {formattedDate} is already localized.',
 });
 const PREMIUM_ONBOARDING_YEARLY_MESSAGE_DESCRIPTOR = msg({
 	message:
 		'Welcome to {premiumProductFullName}. Your yearly subscription renews on {formattedDate}. Explore your {premiumProductName} perks and manage your subscription.',
 	comment:
-		'Premium onboarding nagbar body for a yearly subscription. {premiumProductFullName} is the full premium product name, {premiumProductName} is the short product name, and {formattedDate} is already localized.',
+		'Plus onboarding nagbar body for a yearly subscription. {premiumProductFullName} is the full Plus product name, {premiumProductName} is the short product name, and {formattedDate} is already localized.',
 });
 const PREMIUM_ONBOARDING_GIFT_MESSAGE_DESCRIPTOR = msg({
 	message:
 		'Welcome to {premiumProductFullName}. Your gift subscription runs until {formattedDate}. Explore your {premiumProductName} perks.',
 	comment:
-		'Premium onboarding nagbar body for a gift subscription. {premiumProductFullName} is the full premium product name, {premiumProductName} is the short product name, and {formattedDate} is already localized.',
+		'Plus onboarding nagbar body for a gift subscription. {premiumProductFullName} is the full Plus product name, {premiumProductName} is the short product name, and {formattedDate} is already localized.',
 });
 const VIEW_PREMIUM_FEATURES_DESCRIPTOR = msg({
 	message: 'View {premiumProductName} features',
 	comment:
-		'Button label on the premium onboarding nagbar. Opens premium feature and subscription settings. Preserve {premiumProductName}; it is inserted by code.',
+		'Button label on the Plus onboarding nagbar. Opens Plus feature and subscription settings. Preserve {premiumProductName}; it is inserted by code.',
 });
 
 function useOnboardingMessage(i18n: I18n): string {

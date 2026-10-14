@@ -20,6 +20,12 @@ export interface ChannelUnreadState {
 	hasVisibleUnread: boolean;
 }
 
+export function getDMListItemUnreadState(
+	input: Omit<ChannelUnreadStateInput, 'unreadBadgesLevel'>,
+): ChannelUnreadState {
+	return getChannelUnreadState({...input, unreadBadgesLevel: null});
+}
+
 export function getChannelUnreadState({
 	hasUnread,
 	unreadCount,

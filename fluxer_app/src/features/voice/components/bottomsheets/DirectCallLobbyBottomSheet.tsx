@@ -38,7 +38,10 @@ import {
 	formatMilliseconds,
 	formatPacketLossPercent,
 } from '@app/features/voice/components/voice_connection_status/shared';
-import MediaEngine, {useMediaEngineVersion} from '@app/features/voice/engine/MediaEngineFacade';
+import MediaEngine, {
+	useMediaEngineStatsVersion,
+	useMediaEngineVersion,
+} from '@app/features/voice/engine/MediaEngineFacade';
 import {VOICE_CAMERA_USER_LIMIT_REACHED_DESCRIPTOR} from '@app/features/voice/engine/media_engine_facade/shared';
 import {useCameraUserCapBlocked} from '@app/features/voice/hooks/useCameraUserCapBlocked';
 import LocalVoiceState from '@app/features/voice/state/LocalVoiceState';
@@ -150,6 +153,7 @@ export const DirectCallLobbyBottomSheet = observer(function DirectCallLobbyBotto
 }: DirectCallLobbyBottomSheetProps) {
 	const {i18n} = useLingui();
 	useMediaEngineVersion();
+	useMediaEngineStatsVersion();
 	const callHeaderState = useCallHeaderState(channel);
 	const voiceState = MediaEngine.getCurrentUserVoiceState(channel.guildId ?? null);
 	const localSelfMute = LocalVoiceState.getSelfMute();

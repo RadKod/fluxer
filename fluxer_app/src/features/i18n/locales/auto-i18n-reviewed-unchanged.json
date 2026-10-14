@@ -21,6 +21,9 @@
         "msgid": "Bluesky OAuth"
       },
       {
+        "msgid": "Cloudflare Turnstile"
+      },
+      {
         "msgid": "Ctrl"
       },
       {
@@ -36,9 +39,6 @@
         "msgid": "HEVC"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "OP"
       },
       {
@@ -46,6 +46,9 @@
       },
       {
         "msgid": "PgUp"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Searching..."
@@ -69,22 +72,7 @@
         "msgid": "Win"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "user@example.com"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -113,7 +101,7 @@
         "msgid": "Bluesky OAuth"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -140,9 +128,6 @@
         "msgid": "Markdown"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "OP"
       },
       {
@@ -150,6 +135,9 @@
       },
       {
         "msgid": "PgUp"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Searching..."
@@ -170,28 +158,10 @@
         "msgid": "Win"
       },
       {
-        "msgid": "Wordmark"
-      },
-      {
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "user@example.com"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -207,9 +177,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -250,15 +217,6 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
@@ -283,7 +241,7 @@
         "msgid": "Chat"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -322,9 +280,6 @@
         "msgid": "Instance"
       },
       {
-        "msgid": "Limit"
-      },
-      {
         "msgid": "Logo"
       },
       {
@@ -332,12 +287,6 @@
       },
       {
         "msgid": "Markdown"
-      },
-      {
-        "msgid": "Metadata"
-      },
-      {
-        "msgid": "NCMEC {ncmecReportId}"
       },
       {
         "msgid": "Neko"
@@ -359,6 +308,9 @@
       },
       {
         "msgid": "Ping"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Plutonium"
@@ -403,9 +355,6 @@
         "msgid": "Token"
       },
       {
-        "msgid": "Uploader"
-      },
-      {
         "msgid": "Video"
       },
       {
@@ -436,28 +385,13 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
         "msgid": "emoji {emojiName}"
       },
       {
-        "msgid": "macOS"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "online"
-      },
-      {
-        "msgid": "video"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -473,9 +407,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -703,22 +634,10 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
         "msgid": "Acceleration"
-      },
-      {
-        "msgid": "Admin"
       },
       {
         "msgid": "Administrator"
@@ -743,9 +662,6 @@
       },
       {
         "msgid": "Banner"
-      },
-      {
-        "msgid": "Bind"
       },
       {
         "msgid": "Bio"
@@ -775,7 +691,7 @@
         "msgid": "Chat"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Codec"
@@ -832,9 +748,6 @@
         "msgid": "Gaming"
       },
       {
-        "msgid": "Gateway"
-      },
-      {
         "msgid": "Google Lens"
       },
       {
@@ -844,28 +757,13 @@
         "msgid": "Hardware"
       },
       {
-        "msgid": "Hashing"
-      },
-      {
         "msgid": "Hindi"
       },
       {
         "msgid": "Hyperlink"
       },
       {
-        "msgid": "Inviter"
-      },
-      {
         "msgid": "Jitter"
-      },
-      {
-        "msgid": "Job {jobId}: {jobStatus}"
-      },
-      {
-        "msgid": "Jobs"
-      },
-      {
-        "msgid": "Lane"
       },
       {
         "msgid": "Layout"
@@ -892,25 +790,13 @@
         "msgid": "Markdown"
       },
       {
-        "msgid": "Metadata"
-      },
-      {
         "msgid": "Moderator"
-      },
-      {
-        "msgid": "NCMEC {ncmecReportId}"
       },
       {
         "msgid": "Navigation"
       },
       {
         "msgid": "Neko"
-      },
-      {
-        "msgid": "Net"
-      },
-      {
-        "msgid": "Node"
       },
       {
         "msgid": "Normal"
@@ -923,9 +809,6 @@
       },
       {
         "msgid": "Offline"
-      },
-      {
-        "msgid": "Offset {offset}"
       },
       {
         "msgid": "Online"
@@ -949,6 +832,9 @@
         "msgid": "Platform"
       },
       {
+        "msgid": "Plus"
+      },
+      {
         "msgid": "Plutonium"
       },
       {
@@ -965,9 +851,6 @@
       },
       {
         "msgid": "Prompt"
-      },
-      {
-        "msgid": "Region: {regionName}"
       },
       {
         "msgid": "Relevant"
@@ -997,19 +880,10 @@
         "msgid": "Stack traces"
       },
       {
-        "msgid": "Standard"
-      },
-      {
-        "msgid": "Standard {baseCurrencyLabel}"
-      },
-      {
         "msgid": "Start"
       },
       {
         "msgid": "Status"
-      },
-      {
-        "msgid": "Sticker"
       },
       {
         "msgid": "Stop"
@@ -1054,19 +928,7 @@
         "msgid": "Token"
       },
       {
-        "msgid": "Tokens"
-      },
-      {
         "msgid": "Tone"
-      },
-      {
-        "msgid": "Top"
-      },
-      {
-        "msgid": "Type"
-      },
-      {
-        "msgid": "Type {premiumType}"
       },
       {
         "msgid": "Upload"
@@ -1076,9 +938,6 @@
       },
       {
         "msgid": "Upload emoji"
-      },
-      {
-        "msgid": "Uploader"
       },
       {
         "msgid": "Version"
@@ -1120,52 +979,25 @@
         "msgid": "Zoom"
       },
       {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
         "msgid": "emoji {emojiName}"
+      },
+      {
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "link"
       },
       {
-        "msgid": "macOS"
-      },
-      {
         "msgid": "online"
       },
       {
-        "msgid": "repost"
-      },
-      {
-        "msgid": "slash {commandName}"
-      },
-      {
         "msgid": "spoiler"
-      },
-      {
-        "msgid": "sticker"
-      },
-      {
-        "msgid": "video"
-      },
-      {
-        "msgid": "{actor} banned {target}."
       },
       {
         "msgid": "{actor} stopped following an announcement channel in {channel}"
       },
       {
         "msgid": "{context} · {accountName}"
-      },
-      {
-        "msgid": "{count, plural, one {# emoji} other {# emojis}}"
       },
       {
         "msgid": "{desktopChannel} Desktop {desktopVersion}"
@@ -1181,12 +1013,6 @@
       },
       {
         "msgid": "{length, plural, one {# app} other {# apps}}"
-      },
-      {
-        "msgid": "{length} apps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -1211,9 +1037,6 @@
       },
       {
         "msgid": "{resolution} {fps} FPS"
-      },
-      {
-        "msgid": "{tokenCount, plural, one {# token} other {# tokens}}"
       },
       {
         "msgid": "{zoomPercent}%"
@@ -1261,10 +1084,6 @@
       {
         "msgctxt": "keyboard-key-name",
         "msgid": "Pause / Break"
-      },
-      {
-        "msgctxt": "noise-suppression-option",
-        "msgid": "Standard"
       },
       {
         "msgctxt": "us-state",
@@ -1480,22 +1299,7 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
-        "msgid": "ACLs"
-      },
-      {
         "msgid": "AV1"
-      },
-      {
-        "msgid": "Admin"
       },
       {
         "msgid": "Administrator"
@@ -1508,9 +1312,6 @@
       },
       {
         "msgid": "Apps"
-      },
-      {
-        "msgid": "Assets"
       },
       {
         "msgid": "Audio"
@@ -1546,10 +1347,10 @@
         "msgid": "Chat"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Client"
       },
       {
-        "msgid": "Client"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Code"
@@ -1559,9 +1360,6 @@
       },
       {
         "msgid": "Codes"
-      },
-      {
-        "msgid": "Communities"
       },
       {
         "msgid": "Community"
@@ -1675,13 +1473,7 @@
         "msgid": "Moderator"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "Name"
-      },
-      {
-        "msgid": "Name: {0}."
       },
       {
         "msgid": "Navigation"
@@ -1699,9 +1491,6 @@
         "msgid": "Offline"
       },
       {
-        "msgid": "Offset {offset}"
-      },
-      {
         "msgid": "Okay"
       },
       {
@@ -1717,6 +1506,9 @@
         "msgid": "Pause"
       },
       {
+        "msgid": "Plus"
+      },
+      {
         "msgid": "Plutonium"
       },
       {
@@ -1730,12 +1522,6 @@
       },
       {
         "msgid": "Premium"
-      },
-      {
-        "msgid": "Region"
-      },
-      {
-        "msgid": "Region: {regionName}"
       },
       {
         "msgid": "Reposts: <0>{countLabel}</0>"
@@ -1754,12 +1540,6 @@
       },
       {
         "msgid": "Spoiler"
-      },
-      {
-        "msgid": "Standard"
-      },
-      {
-        "msgid": "Standard {baseCurrencyLabel}"
       },
       {
         "msgid": "Status"
@@ -1816,9 +1596,6 @@
         "msgid": "Tracking"
       },
       {
-        "msgid": "Uploader"
-      },
-      {
         "msgid": "Version"
       },
       {
@@ -1858,16 +1635,7 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "online"
@@ -1891,9 +1659,6 @@
         "msgid": "{kilobits} kbps"
       },
       {
-        "msgid": "{megabits} Mbps"
-      },
-      {
         "msgid": "{messageGroupSpacing}px"
       },
       {
@@ -1901,12 +1666,6 @@
       },
       {
         "msgid": "{presenceCount} online"
-      },
-      {
-        "msgid": "{productName} Bug Hunter"
-      },
-      {
-        "msgid": "{productName} Desktop"
       },
       {
         "msgid": "{productName} Visionary"
@@ -1954,10 +1713,6 @@
       {
         "msgctxt": "keyboard-key-name",
         "msgid": "Kana"
-      },
-      {
-        "msgctxt": "noise-suppression-option",
-        "msgid": "Standard"
       },
       {
         "msgctxt": "us-state",
@@ -2173,22 +1928,10 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
         "msgid": "Alt"
-      },
-      {
-        "msgid": "Anime & manga"
       },
       {
         "msgid": "Backspace"
@@ -2200,7 +1943,7 @@
         "msgid": "Bluesky OAuth"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Coal"
@@ -2236,9 +1979,6 @@
         "msgid": "Markdown"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "Neko"
       },
       {
@@ -2260,6 +2000,9 @@
         "msgid": "Ping: {latency}ms"
       },
       {
+        "msgid": "Plus"
+      },
+      {
         "msgid": "Premium"
       },
       {
@@ -2267,9 +2010,6 @@
       },
       {
         "msgid": "Shift"
-      },
-      {
-        "msgid": "Spam"
       },
       {
         "msgid": "Tab"
@@ -2296,31 +2036,13 @@
         "msgid": "Webhook {currentName}"
       },
       {
-        "msgid": "Webhooks"
-      },
-      {
         "msgid": "Win"
       },
       {
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "user@example.com"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -2333,9 +2055,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -2355,10 +2074,6 @@
       {
         "msgctxt": "community-settings-tab",
         "msgid": "Emoji"
-      },
-      {
-        "msgctxt": "community-settings-tab",
-        "msgid": "Webhooks"
       },
       {
         "msgctxt": "keyboard-key-name",
@@ -2390,19 +2105,7 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "128 kbps voice quality"
-      },
-      {
         "msgid": "24 hours"
-      },
-      {
-        "msgid": "256 kbps voice quality"
-      },
-      {
-        "msgid": "3 Days"
-      },
-      {
-        "msgid": "384 kbps voice quality"
       },
       {
         "msgid": "<0/> followed {sourceComponent} into this channel. Messages published there will appear here."
@@ -2438,9 +2141,6 @@
         "msgid": "A separate profile for each community"
       },
       {
-        "msgid": "A viewer cannot play {pinnedCodec}, so your stream uses {codec}."
-      },
-      {
         "msgid": "AV1"
       },
       {
@@ -2454,6 +2154,9 @@
       },
       {
         "msgid": "Accepted"
+      },
+      {
+        "msgid": "Account & Plus overrides"
       },
       {
         "msgid": "Account details unavailable"
@@ -2489,55 +2192,13 @@
         "msgid": "Add tags"
       },
       {
-        "msgid": "Added a chat embed background."
-      },
-      {
-        "msgid": "Added a community banner."
-      },
-      {
-        "msgid": "Added a community icon."
-      },
-      {
-        "msgid": "Added a content warning with the text {text}."
-      },
-      {
-        "msgid": "Added a content warning."
-      },
-      {
-        "msgid": "Added an avatar."
-      },
-      {
-        "msgid": "Added an invite background."
-      },
-      {
-        "msgid": "Added the member's community profile avatar."
-      },
-      {
-        "msgid": "Added the member's community profile banner."
-      },
-      {
-        "msgid": "Added the role {role}."
-      },
-      {
         "msgid": "Added the tag {name}"
-      },
-      {
-        "msgid": "Adds a manual audio source picker to the stream settings menu. Without it, a shared window already captures that app and a shared screen captures your desktop."
-      },
-      {
-        "msgid": "Advertise a capped decode codec to force publisher migration"
-      },
-      {
-        "msgid": "All Messages"
       },
       {
         "msgid": "Allow AV1 for screen sharing"
       },
       {
         "msgid": "Allow H.265 (HEVC) for screen sharing"
-      },
-      {
-        "msgid": "Allow access on your Mac"
       },
       {
         "msgid": "Allow anyone to invite"
@@ -2552,31 +2213,7 @@
         "msgid": "Allow {productName} under Screen Recording in System Settings. If it is already allowed, relaunch {productName2} so macOS applies it."
       },
       {
-        "msgid": "Allow {productName} under {macosScreenRecordingPermissionName} in {macosSystemSettingsName}. If it is already allowed, relaunch {productName2} so macOS applies it."
-      },
-      {
         "msgid": "Allowed"
-      },
-      {
-        "msgid": "Allowed all members to mention this role."
-      },
-      {
-        "msgid": "Allowed anyone to mention this role."
-      },
-      {
-        "msgid": "Allowed flexible text channel names."
-      },
-      {
-        "msgid": "Allowed others to clone this community's emojis."
-      },
-      {
-        "msgid": "Allowed others to clone this community's stickers."
-      },
-      {
-        "msgid": "Allowed up to {count, plural, one {# connection} other {# connections}} per member."
-      },
-      {
-        "msgid": "Allowed {permissions}."
       },
       {
         "msgid": "Allows members to create posts in this channel."
@@ -2627,24 +2264,6 @@
         "msgid": "App audio isn't available right now on Windows."
       },
       {
-        "msgid": "Application audio"
-      },
-      {
-        "msgid": "Application audio for video device shares"
-      },
-      {
-        "msgid": "Applied a community deafen."
-      },
-      {
-        "msgid": "Applied a community mute."
-      },
-      {
-        "msgid": "Applied a server deafen."
-      },
-      {
-        "msgid": "Applied a server mute."
-      },
-      {
         "msgid": "Approval required"
       },
       {
@@ -2660,6 +2279,9 @@
         "msgid": "Ask for a passkey after your password when you sign in"
       },
       {
+        "msgid": "Ask the administrators of this instance to review your account. This instance is run independently, and only its administrators can change your account."
+      },
+      {
         "msgid": "Attach an image or a video to post in a media channel."
       },
       {
@@ -2667,9 +2289,6 @@
       },
       {
         "msgid": "Audio muted"
-      },
-      {
-        "msgid": "Audio sources"
       },
       {
         "msgid": "Automatic ({codec})"
@@ -2682,6 +2301,15 @@
       },
       {
         "msgid": "Back to {productName}"
+      },
+      {
+        "msgid": "Backend Plus override"
+      },
+      {
+        "msgid": "Backend Plus override enabled"
+      },
+      {
+        "msgid": "Backend Plus perks disabled"
       },
       {
         "msgid": "Backup code"
@@ -2703,9 +2331,6 @@
       },
       {
         "msgid": "Be the first to start a conversation here."
-      },
-      {
-        "msgid": "Blocked the member from sending messages, reacting and joining voice until {date}."
       },
       {
         "msgid": "Bluesky connections"
@@ -2732,16 +2357,10 @@
         "msgid": "By purchasing, you agree to our <0>Terms of service</0>."
       },
       {
-        "msgid": "By purchasing, you agree to our {legalDocument}."
-      },
-      {
         "msgid": "By purchasing, you agreed to our <0>Privacy policy</0>."
       },
       {
         "msgid": "By purchasing, you agreed to our <0>Terms of service</0>."
-      },
-      {
-        "msgid": "By purchasing, you agreed to our {legalDocument}."
       },
       {
         "msgid": "CSS files"
@@ -2760,9 +2379,6 @@
       },
       {
         "msgid": "Cancel the scheduled change to move to the current price instead."
-      },
-      {
-        "msgid": "Capture card"
       },
       {
         "msgid": "Capture devices use the Gaming preset."
@@ -2786,58 +2402,7 @@
         "msgid": "Change which voice region this channel uses."
       },
       {
-        "msgid": "Changed slowmode from {oldDuration} to {newDuration}."
-      },
-      {
         "msgid": "Changed slowmode to {duration}"
-      },
-      {
-        "msgid": "Changed the AFK channel from {oldChannel} to {newChannel}."
-      },
-      {
-        "msgid": "Changed the AFK timeout from {oldDuration} to {newDuration}."
-      },
-      {
-        "msgid": "Changed the audio quality from {oldKbps} kbps to {newKbps} kbps."
-      },
-      {
-        "msgid": "Changed the avatar."
-      },
-      {
-        "msgid": "Changed the block on sending messages, reacting and joining voice to end at {date}."
-      },
-      {
-        "msgid": "Changed the chat embed background."
-      },
-      {
-        "msgid": "Changed the community avatar."
-      },
-      {
-        "msgid": "Changed the community banner."
-      },
-      {
-        "msgid": "Changed the community bio to {text}."
-      },
-      {
-        "msgid": "Changed the community icon."
-      },
-      {
-        "msgid": "Changed the community profile avatar."
-      },
-      {
-        "msgid": "Changed the community profile bio to {text}."
-      },
-      {
-        "msgid": "Changed the connections per member from {oldCount} to {newCount}."
-      },
-      {
-        "msgid": "Changed the content warning text from {oldText} to {newText}."
-      },
-      {
-        "msgid": "Changed the custom role icon."
-      },
-      {
-        "msgid": "Changed the custom warning text from {oldText} to {newText}."
       },
       {
         "msgid": "Changed the default hide after inactivity time to {duration}"
@@ -2846,73 +2411,13 @@
         "msgid": "Changed the default layout to {layout}"
       },
       {
-        "msgid": "Changed the default notification setting from {oldSetting} to {newSetting}."
-      },
-      {
         "msgid": "Changed the default slowmode in threads to {duration}"
       },
       {
         "msgid": "Changed the default sort order to {order}"
       },
       {
-        "msgid": "Changed the description from {oldText} to {newText}."
-      },
-      {
-        "msgid": "Changed the explicit content filter from {oldFilter} to {newFilter}."
-      },
-      {
         "msgid": "Changed the hide after inactivity time to {duration}"
-      },
-      {
-        "msgid": "Changed the invite background alignment from {oldAlignment} to {newAlignment}."
-      },
-      {
-        "msgid": "Changed the invite background."
-      },
-      {
-        "msgid": "Changed the link from {oldUrl} to {newUrl}."
-      },
-      {
-        "msgid": "Changed the member's community profile avatar."
-      },
-      {
-        "msgid": "Changed the member's community profile bio to {text}."
-      },
-      {
-        "msgid": "Changed the message history threshold from {oldDate} to {newDate}."
-      },
-      {
-        "msgid": "Changed the name from {oldName} to {newName}."
-      },
-      {
-        "msgid": "Changed the nickname from {oldNick} to {newNick}."
-      },
-      {
-        "msgid": "Changed the role icon from {oldEmoji} to {newEmoji}."
-      },
-      {
-        "msgid": "Changed the system channel from {oldChannel} to {newChannel}."
-      },
-      {
-        "msgid": "Changed the timeout end date to {date}."
-      },
-      {
-        "msgid": "Changed the timeout to end on {date}."
-      },
-      {
-        "msgid": "Changed the topic from {oldText} to {newText}."
-      },
-      {
-        "msgid": "Changed the user limit from {oldCount} to {newCount}."
-      },
-      {
-        "msgid": "Changed the vanity URL from {oldCode} to {newCode}."
-      },
-      {
-        "msgid": "Changed the verification level from {oldLevel} to {newLevel}."
-      },
-      {
-        "msgid": "Changed the voice region from {oldRegion} to {newRegion}."
       },
       {
         "msgid": "Characters in a single message"
@@ -2943,6 +2448,9 @@
       },
       {
         "msgid": "Choose how people sign in"
+      },
+      {
+        "msgid": "Choose the Plus model"
       },
       {
         "msgid": "Choose the premium model"
@@ -2981,9 +2489,6 @@
         "msgid": "Clearer text"
       },
       {
-        "msgid": "Clearing the text of a message with attachments asks to delete the message unless this is on"
-      },
-      {
         "msgid": "Click to learn more"
       },
       {
@@ -3008,9 +2513,6 @@
         "msgid": "Closed the thread"
       },
       {
-        "msgid": "Codec negotiation testing"
-      },
-      {
         "msgid": "Combobox"
       },
       {
@@ -3023,9 +2525,6 @@
         "msgid": "Communities you can join"
       },
       {
-        "msgid": "Community model"
-      },
-      {
         "msgid": "Community overrides"
       },
       {
@@ -3033,9 +2532,6 @@
       },
       {
         "msgid": "Compressing"
-      },
-      {
-        "msgid": "Compressing {percent}%"
       },
       {
         "msgid": "Confirm it's you before you view your backup codes."
@@ -3054,6 +2550,9 @@
       },
       {
         "msgid": "Connection volume controls"
+      },
+      {
+        "msgid": "Contact the administrators of this instance for help."
       },
       {
         "msgid": "Convert"
@@ -3218,9 +2717,6 @@
         "msgid": "Custom themes for the app"
       },
       {
-        "msgid": "Cuts audio below a loudness threshold, lowest CPU cost."
-      },
-      {
         "msgid": "Date posted"
       },
       {
@@ -3230,10 +2726,10 @@
         "msgid": "Debugging"
       },
       {
-        "msgid": "Decide how premium limits apply to people on this instance."
+        "msgid": "Decide how Plus limits apply to people on this instance."
       },
       {
-        "msgid": "Default Hide After Inactivity"
+        "msgid": "Decide how premium limits apply to people on this instance."
       },
       {
         "msgid": "Default hide after inactivity"
@@ -3266,19 +2762,10 @@
         "msgid": "Delete user"
       },
       {
-        "msgid": "Deleted their messages from the last {duration}."
-      },
-      {
-        "msgid": "Deleted {duration} of the member's recent message history."
-      },
-      {
         "msgid": "Delivered to #{targetChannelName}"
       },
       {
         "msgid": "Denied"
-      },
-      {
-        "msgid": "Denied {permissions}."
       },
       {
         "msgid": "Desktop audio isn't available right now on Linux."
@@ -3302,6 +2789,9 @@
         "msgid": "Device volume"
       },
       {
+        "msgid": "Disable backend Plus perks"
+      },
+      {
         "msgid": "Disable direct messages and friend requests"
       },
       {
@@ -3309,9 +2799,6 @@
       },
       {
         "msgid": "Discard post"
-      },
-      {
-        "msgid": "Displayed members with this role separately."
       },
       {
         "msgid": "Do you want to join {communityName}?"
@@ -3362,12 +2849,6 @@
         "msgid": "Each published message allows 3 quick edits, then 1 every 20 minutes. Try again later."
       },
       {
-        "msgid": "Edit Tag"
-      },
-      {
-        "msgid": "Edit Tags"
-      },
-      {
         "msgid": "Edit published message?"
       },
       {
@@ -3395,19 +2876,16 @@
         "msgid": "Editing limit reached"
       },
       {
+        "msgid": "Email us and a person will review your account. Tell us you cannot verify by SMS and we will take it from there. Replies come by email, so this is not instant."
+      },
+      {
         "msgid": "Emails to your current address are not being delivered. Enter a new email and we'll send a code there."
       },
       {
         "msgid": "Emoji and sticker cloning shortcuts"
       },
       {
-        "msgid": "Emoji cloning enabled"
-      },
-      {
         "msgid": "Empty edit"
-      },
-      {
-        "msgid": "Emulate decode codec (testing)"
       },
       {
         "msgid": "Enable camera access to preview cameras and capture devices before choosing one to stream."
@@ -3417,6 +2895,9 @@
       },
       {
         "msgid": "Enable previews"
+      },
+      {
+        "msgid": "Enable self-hosted mode client-side. Hides all Plus and billing UI."
       },
       {
         "msgid": "Enable the integrations whose credentials you have configured. Only available services are shown."
@@ -3473,7 +2954,7 @@
         "msgid": "Every community that follows this channel gets a copy. If you edit or delete it later, the copies change too."
       },
       {
-        "msgid": "Excluded search filter: {filter}"
+        "msgid": "Everyone is Plus"
       },
       {
         "msgid": "Expires in {remainingSeconds}s"
@@ -3482,7 +2963,13 @@
         "msgid": "Failed to remove instance from recent instances"
       },
       {
+        "msgid": "Failed to reset Plus state."
+      },
+      {
         "msgid": "Failed to send reset link. Try again."
+      },
+      {
+        "msgid": "Failed to update Plus perk state."
       },
       {
         "msgid": "Favicon"
@@ -3518,9 +3005,6 @@
         "msgid": "Follow channel"
       },
       {
-        "msgid": "Follow limit reached"
-      },
-      {
         "msgid": "Follow this channel"
       },
       {
@@ -3554,10 +3038,7 @@
         "msgid": "Forum"
       },
       {
-        "msgid": "Forum Channel"
-      },
-      {
-        "msgid": "Forum channel"
+        "msgid": "Free versus Plus"
       },
       {
         "msgid": "From {sourceGuildName}"
@@ -3599,6 +3080,9 @@
         "msgid": "Gifts aren't available right now."
       },
       {
+        "msgid": "Give everyone on this instance the highest Plus limits."
+      },
+      {
         "msgid": "Give everyone on this instance the highest premium limits."
       },
       {
@@ -3629,19 +3113,10 @@
         "msgid": "Granted"
       },
       {
-        "msgid": "Granted {permissions}."
-      },
-      {
         "msgid": "H.265 (requires opt-in)"
       },
       {
         "msgid": "HEVC"
-      },
-      {
-        "msgid": "Hang out together with voice, video and screen share"
-      },
-      {
-        "msgid": "Hang out together with voice, video, and screen share"
       },
       {
         "msgid": "Hang out with voice, video and screen share"
@@ -3662,13 +3137,7 @@
         "msgid": "Hey {displayName}, we can't deliver email to your address. Add a working email to verify your account."
       },
       {
-        "msgid": "Hid join messages in the system channel."
-      },
-      {
         "msgid": "Hid media download options"
-      },
-      {
-        "msgid": "Hid the community owner crown."
       },
       {
         "msgid": "Hide after inactivity"
@@ -3705,6 +3174,9 @@
       },
       {
         "msgid": "If macOS asks to quit and reopen {productName}, choose Later."
+      },
+      {
+        "msgid": "If you can't verify by SMS"
       },
       {
         "msgid": "If you forget your password, a recovery kit is the only way back into your account."
@@ -3812,7 +3284,13 @@
         "msgid": "Largest file you can upload"
       },
       {
+        "msgid": "Leave and set aside"
+      },
+      {
         "msgid": "Leave thread"
+      },
+      {
+        "msgid": "Leave {count, plural, one {# community} other {# communities}} and set this check aside?"
       },
       {
         "msgid": "Let others clone your emojis"
@@ -3830,9 +3308,6 @@
         "msgid": "Let people search and send GIFs powered by Klipy."
       },
       {
-        "msgid": "Let the member hear others in this community again."
-      },
-      {
         "msgid": "Lets other communities follow this channel and get copies of what you publish."
       },
       {
@@ -3845,34 +3320,16 @@
         "msgid": "Lets push-to-talk and shortcuts work in other apps."
       },
       {
-        "msgid": "Lets push-to-talk and shortcuts work while {productName} is in the background."
-      },
-      {
         "msgid": "Lets you reset your password if you forget it."
       },
       {
         "msgid": "Lets you share your screen or a window."
       },
       {
-        "msgid": "Lets {productName} read your keyboard directly. Turn this off to set up shortcuts through your desktop instead."
-      },
-      {
         "msgid": "Lets {productName} read your keyboard directly. Your system already allows this."
       },
       {
-        "msgid": "Lightweight classic filter, works on any device."
-      },
-      {
-        "msgid": "Limited mentions of this role to members with permission to mention any role."
-      },
-      {
-        "msgid": "Limited the channel to {count, plural, one {# user} other {# users}}."
-      },
-      {
         "msgid": "Link a new device"
-      },
-      {
-        "msgid": "Link channel"
       },
       {
         "msgid": "Link file"
@@ -3914,19 +3371,7 @@
         "msgid": "Logo"
       },
       {
-        "msgid": "Made the channel follow the mature content setting of its category or the community."
-      },
-      {
-        "msgid": "Made the channel inherit its mature content setting."
-      },
-      {
         "msgid": "Make the instance yours"
-      },
-      {
-        "msgid": "Manage Posts"
-      },
-      {
-        "msgid": "Manage Threads"
       },
       {
         "msgid": "Manage posts"
@@ -3935,34 +3380,13 @@
         "msgid": "Manage threads"
       },
       {
-        "msgid": "Marked the channel as containing mature content."
-      },
-      {
-        "msgid": "Marked the channel as mature."
-      },
-      {
-        "msgid": "Marked the channel as not containing mature content."
-      },
-      {
-        "msgid": "Marked the channel as not mature."
-      },
-      {
         "msgid": "May cause compatibility issues for viewers. We’re working on improving this."
-      },
-      {
-        "msgid": "Media Channel"
-      },
-      {
-        "msgid": "Media channel"
       },
       {
         "msgid": "Media items you can save for later"
       },
       {
         "msgid": "Members who can manage posts can add or remove it."
-      },
-      {
-        "msgid": "Members with Manage Posts can add or remove it."
       },
       {
         "msgid": "Mention everyone or any role in this channel (even if the role isn't set to be mentionable)."
@@ -3999,36 +3423,6 @@
       },
       {
         "msgid": "Mirror tiers"
-      },
-      {
-        "msgid": "Moved from {oldCategory} to {newCategory}."
-      },
-      {
-        "msgid": "Moved from {oldChannel} to {newChannel}."
-      },
-      {
-        "msgid": "Moved into {category}."
-      },
-      {
-        "msgid": "Moved out of {category}."
-      },
-      {
-        "msgid": "Moved the channel from the category {oldCategory} to the category {newCategory}."
-      },
-      {
-        "msgid": "Moved the channel into the category {category}."
-      },
-      {
-        "msgid": "Moved the role down in the member list."
-      },
-      {
-        "msgid": "Moved the role down in the role list."
-      },
-      {
-        "msgid": "Moved the role up in the member list."
-      },
-      {
-        "msgid": "Moved the role up in the role list."
       },
       {
         "msgid": "Mute other members in this voice channel for everyone."
@@ -4163,9 +3557,6 @@
         "msgid": "Only the members and roles you pick, plus admins, can view this channel."
       },
       {
-        "msgid": "Open Settings"
-      },
-      {
         "msgid": "Open System Settings"
       },
       {
@@ -4214,9 +3605,6 @@
         "msgid": "Open {labelText}"
       },
       {
-        "msgid": "Open {macosSystemSettingsName} → {macosPrivacyAndSecuritySettingsName} → {macosScreenRecordingPermissionName}, then allow {productName}."
-      },
-      {
         "msgid": "Open {premiumProductFullName}"
       },
       {
@@ -4238,19 +3626,10 @@
         "msgid": "Original message was deleted."
       },
       {
-        "msgid": "Originally banned by {user} on {date}."
-      },
-      {
-        "msgid": "Originally banned by {user}."
-      },
-      {
-        "msgid": "Originally banned on {date}."
-      },
-      {
-        "msgid": "Other Active Threads"
-      },
-      {
         "msgid": "Other active threads"
+      },
+      {
+        "msgid": "Our phone number check is down right now. This is on us, not your number. Wait a few minutes and try the same number again."
       },
       {
         "msgid": "Passkey sign-in is unavailable here."
@@ -4260,6 +3639,9 @@
       },
       {
         "msgid": "Pause preview when Fluxer isn’t focused"
+      },
+      {
+        "msgid": "Pause preview when {productName} isn’t focused"
       },
       {
         "msgid": "Paused. The person who followed this channel can no longer see it. Follow it again to resume."
@@ -4295,19 +3677,10 @@
         "msgid": "Pick an emoji"
       },
       {
-        "msgid": "Pick application audio while sharing a video device on Linux"
-      },
-      {
         "msgid": "Pick at least one tag for this post."
       },
       {
         "msgid": "Pick the 4-digit number after your username"
-      },
-      {
-        "msgid": "Pick the apps to capture audio from"
-      },
-      {
-        "msgid": "Pin Neko to the top-right of the chat input instead of following your cursor"
       },
       {
         "msgid": "Pin or unpin any message in this channel."
@@ -4323,6 +3696,39 @@
       },
       {
         "msgid": "Plans, perks, gifts and your subscription all live on one page."
+      },
+      {
+        "msgid": "Plus"
+      },
+      {
+        "msgid": "Plus badge"
+      },
+      {
+        "msgid": "Plus expired nagbar"
+      },
+      {
+        "msgid": "Plus grace period nagbar"
+      },
+      {
+        "msgid": "Plus model"
+      },
+      {
+        "msgid": "Plus onboarding nagbar"
+      },
+      {
+        "msgid": "Plus perks disabled"
+      },
+      {
+        "msgid": "Plus since date"
+      },
+      {
+        "msgid": "Plus state reset on the backend."
+      },
+      {
+        "msgid": "Plus type"
+      },
+      {
+        "msgid": "Plus until date"
       },
       {
         "msgid": "Pop out user"
@@ -4352,12 +3758,6 @@
         "msgid": "Post updates other communities can follow"
       },
       {
-        "msgid": "Post updates that other communities can follow"
-      },
-      {
-        "msgid": "Post updates that other communities can follow into their own channels"
-      },
-      {
         "msgid": "Posts built around images and videos"
       },
       {
@@ -4379,28 +3779,13 @@
         "msgid": "Prevent <0>{targetUserTag}</0> from sending messages, reacting, and joining voice channels for the specified duration."
       },
       {
-        "msgid": "Previous 2 days"
-      },
-      {
         "msgid": "Previous 3 days"
-      },
-      {
-        "msgid": "Previous 4 days"
-      },
-      {
-        "msgid": "Previous 5 days"
-      },
-      {
-        "msgid": "Previous 6 days"
       },
       {
         "msgid": "Previous channels"
       },
       {
         "msgid": "Print"
-      },
-      {
-        "msgid": "Private"
       },
       {
         "msgid": "Private channel"
@@ -4415,9 +3800,6 @@
         "msgid": "Profile banners are not enabled on this instance."
       },
       {
-        "msgid": "Public"
-      },
-      {
         "msgid": "Public registration is closed."
       },
       {
@@ -4428,9 +3810,6 @@
       },
       {
         "msgid": "Published"
-      },
-      {
-        "msgid": "Published to following communities"
       },
       {
         "msgid": "Publishing limit reached"
@@ -4472,9 +3851,6 @@
         "msgid": "Push-to-talk works outside {productName} only after you bind it in your Hyprland config. Add the line for your Hyprland version and replace KEY with the key you want."
       },
       {
-        "msgid": "Quick access to an external website or resource"
-      },
-      {
         "msgid": "Quit {appName}, make sure no other copy is running, and open it again."
       },
       {
@@ -4484,19 +3860,10 @@
         "msgid": "React to post"
       },
       {
-        "msgid": "Read messages sent before they opened a channel. Without it, they only see messages that arrive while it is open."
-      },
-      {
-        "msgid": "Read messages sent in this channel before they opened it. Without it, they only see messages that arrive while it is open."
-      },
-      {
         "msgid": "Read the supplemental privacy notice"
       },
       {
         "msgid": "Reason (optional)."
-      },
-      {
-        "msgid": "Recently Active"
       },
       {
         "msgid": "Recently active"
@@ -4541,121 +3908,16 @@
         "msgid": "Remove {accountTag}"
       },
       {
-        "msgid": "Removed the AFK channel."
-      },
-      {
-        "msgid": "Removed the avatar."
-      },
-      {
-        "msgid": "Removed the channel from the category {category}."
-      },
-      {
-        "msgid": "Removed the chat embed background."
-      },
-      {
-        "msgid": "Removed the community avatar."
-      },
-      {
-        "msgid": "Removed the community banner."
-      },
-      {
-        "msgid": "Removed the community bio."
-      },
-      {
-        "msgid": "Removed the community deafen."
-      },
-      {
-        "msgid": "Removed the community icon."
-      },
-      {
-        "msgid": "Removed the community mute."
-      },
-      {
-        "msgid": "Removed the community profile avatar."
-      },
-      {
-        "msgid": "Removed the community profile bio."
-      },
-      {
-        "msgid": "Removed the community profile pronouns."
-      },
-      {
-        "msgid": "Removed the community pronouns."
-      },
-      {
-        "msgid": "Removed the content warning text."
-      },
-      {
-        "msgid": "Removed the content warning."
-      },
-      {
-        "msgid": "Removed the custom role icon."
-      },
-      {
-        "msgid": "Removed the custom warning text."
-      },
-      {
         "msgid": "Removed the default reaction"
       },
       {
-        "msgid": "Removed the description {text}."
-      },
-      {
-        "msgid": "Removed the invite background."
-      },
-      {
-        "msgid": "Removed the link."
-      },
-      {
-        "msgid": "Removed the member's community profile avatar."
-      },
-      {
-        "msgid": "Removed the member's community profile bio."
-      },
-      {
-        "msgid": "Removed the member's community profile pronouns."
-      },
-      {
-        "msgid": "Removed the message history threshold."
-      },
-      {
-        "msgid": "Removed the nickname {nick}."
-      },
-      {
-        "msgid": "Removed the override for {permissions}."
-      },
-      {
-        "msgid": "Removed the role icon."
-      },
-      {
-        "msgid": "Removed the role {role}."
-      },
-      {
-        "msgid": "Removed the server deafen."
-      },
-      {
-        "msgid": "Removed the server mute."
-      },
-      {
         "msgid": "Removed the tag {name}"
-      },
-      {
-        "msgid": "Removed the timeout."
-      },
-      {
-        "msgid": "Removed the topic {text}."
-      },
-      {
-        "msgid": "Removed the vanity URL {code}."
       },
       {
         "msgid": "Removed timeout from {targetUserTag}"
       },
       {
         "msgid": "Removing the timeout will allow <0>{targetUserTag}</0> to send messages, react, and join voice channels again."
-      },
-      {
-        "msgid": "Renamed the community from {oldName} to {newName}."
       },
       {
         "msgid": "Reply to message above"
@@ -4676,9 +3938,6 @@
         "msgid": "Require people to select tags when posting"
       },
       {
-        "msgid": "Required 2FA for moderation actions."
-      },
-      {
         "msgid": "Required a tag on new posts"
       },
       {
@@ -4688,13 +3947,10 @@
         "msgid": "Requires a claimed account."
       },
       {
-        "msgid": "Requires an account with a username and password that's at least 5 minutes old."
+        "msgid": "Reset Plus state"
       },
       {
-        "msgid": "Requires an account with a username and password."
-      },
-      {
-        "msgid": "Reset the member list position for the role."
+        "msgid": "Resetting Plus state..."
       },
       {
         "msgid": "Resize expression picker from bottom left"
@@ -4769,9 +4025,6 @@
         "msgid": "Resize sidebar"
       },
       {
-        "msgid": "Resumed invites."
-      },
-      {
         "msgid": "Retry"
       },
       {
@@ -4782,12 +4035,6 @@
       },
       {
         "msgid": "Review the permissions {productName} uses for voice, video, screen sharing, and shortcuts."
-      },
-      {
-        "msgid": "Review your choices below, then finish. This saves the configuration, opens the instance, and reloads the app."
-      },
-      {
-        "msgid": "Revoked {permissions}."
       },
       {
         "msgid": "Run the instance as one community instead of many. This can only be enabled now, during setup."
@@ -4821,18 +4068,6 @@
       },
       {
         "msgid": "Screen share privacy"
-      },
-      {
-        "msgid": "Screen sharing failed, but Fluxer could not confirm that every capture path stopped. Use Stop Sharing or disconnect from the call before continuing."
-      },
-      {
-        "msgid": "Screenshare"
-      },
-      {
-        "msgid": "Search filter: {filter}"
-      },
-      {
-        "msgid": "Search for {query}"
       },
       {
         "msgid": "Search is getting ready for this community. Trying again shortly..."
@@ -4910,19 +4145,10 @@
         "msgid": "Send messages, images, GIFs and emoji"
       },
       {
-        "msgid": "Send messages, images, GIFs, and emoji"
-      },
-      {
-        "msgid": "Sending {resolution} at {frameRate} FPS with {codec}"
-      },
-      {
-        "msgid": "Sends both channels of a stereo microphone. Needs all processing off and a channel at 128 kbps or higher."
+        "msgid": "Sending an SMS to this phone number is too expensive for {PRODUCT_NAME}, so we need you to send us an SMS instead. We know this isn't ideal. You can also ask the administrators of this instance to lift this requirement from your account."
       },
       {
         "msgid": "Sends both channels of a stereo microphone. Needs all processing off and a channel at 64 kbps or higher."
-      },
-      {
-        "msgid": "Sends both channels of a stereo microphone. Works only with no suppression or standard suppression."
       },
       {
         "msgid": "Sends your microphone audio with no suppression."
@@ -4940,115 +4166,25 @@
         "msgid": "Session expired"
       },
       {
-        "msgid": "Set a community avatar."
-      },
-      {
-        "msgid": "Set a community banner."
-      },
-      {
-        "msgid": "Set a community profile avatar."
-      },
-      {
-        "msgid": "Set a community profile banner."
-      },
-      {
-        "msgid": "Set a custom role icon."
-      },
-      {
-        "msgid": "Set a member list position for the role."
-      },
-      {
         "msgid": "Set by the {preset} preset. Picking a value here switches to Custom."
-      },
-      {
-        "msgid": "Set mature content to follow the community setting."
-      },
-      {
-        "msgid": "Set slowmode to {duration}."
-      },
-      {
-        "msgid": "Set the AFK channel to {channel}."
-      },
-      {
-        "msgid": "Set the audio quality to {kbps} kbps."
-      },
-      {
-        "msgid": "Set the community bio to {text}."
-      },
-      {
-        "msgid": "Set the community profile bio to {text}."
-      },
-      {
-        "msgid": "Set the community profile pronouns to {text}."
-      },
-      {
-        "msgid": "Set the community pronouns to {text}."
-      },
-      {
-        "msgid": "Set the content warning text to {text}."
-      },
-      {
-        "msgid": "Set the custom warning text to {text}."
       },
       {
         "msgid": "Set the default reaction to {emoji}"
       },
       {
-        "msgid": "Set the description to {text}."
+        "msgid": "Set this check aside"
       },
       {
-        "msgid": "Set the link to {url}."
-      },
-      {
-        "msgid": "Set the member's community profile bio to {text}."
-      },
-      {
-        "msgid": "Set the member's community profile pronouns to {text}."
-      },
-      {
-        "msgid": "Set the message history threshold to {date}."
-      },
-      {
-        "msgid": "Set the nickname to {nick}."
-      },
-      {
-        "msgid": "Set the role icon to {emoji}."
-      },
-      {
-        "msgid": "Set the system channel to {channel}."
-      },
-      {
-        "msgid": "Set the topic to {text}."
-      },
-      {
-        "msgid": "Set the vanity URL to {code}."
-      },
-      {
-        "msgid": "Set the voice region to automatic."
-      },
-      {
-        "msgid": "Set the voice region to {region}."
-      },
-      {
-        "msgid": "Set to send {resolution} at {frameRate} FPS with {codec}"
+        "msgid": "Set this check aside?"
       },
       {
         "msgid": "Set up"
       },
       {
-        "msgid": "Set up later in User Settings"
-      },
-      {
         "msgid": "Set up {productName}"
       },
       {
-        "msgid": "Shape the social model"
-      },
-      {
         "msgid": "Share full-length videos and big files without shrinking them first. Free accounts can send up to {freeSize}."
-      },
-      {
-        "msgid": "Share images and videos as posts with their own discussions"
       },
       {
         "msgid": "Share screen"
@@ -5078,9 +4214,6 @@
         "msgid": "Sharp text at up to 4K, up to 15 FPS"
       },
       {
-        "msgid": "Sharper text at 720p, 30 FPS"
-      },
-      {
         "msgid": "Shortcut to an external website"
       },
       {
@@ -5094,15 +4227,6 @@
       },
       {
         "msgid": "Show connection volume controls"
-      },
-      {
-        "msgid": "Show embedded previews for links they send in this channel."
-      },
-      {
-        "msgid": "Show embedded previews for links they send."
-      },
-      {
-        "msgid": "Show fewer filters"
       },
       {
         "msgid": "Show guidelines"
@@ -5123,13 +4247,7 @@
         "msgid": "Show store folder"
       },
       {
-        "msgid": "Show {count, plural, one {# more filter} other {# more filters}}"
-      },
-      {
         "msgid": "Showed media download options"
-      },
-      {
-        "msgid": "Showed members with this role in their own section in the member list."
       },
       {
         "msgid": "Shown on every post so people can react with one click."
@@ -5192,19 +4310,13 @@
         "msgid": "Smooth 30 FPS at up to 720p"
       },
       {
-        "msgid": "Smooth 60 FPS at up to 1440p"
+        "msgid": "Smooth 60 FPS at up to 720p"
       },
       {
         "msgid": "Smoother video"
       },
       {
-        "msgid": "Some stream settings could not be applied to your live stream."
-      },
-      {
         "msgid": "Someone gifted you {premiumProductName}. Your perks stay active until {date}."
-      },
-      {
-        "msgid": "Something is limiting this stream, so viewers are getting fewer frames than you asked for."
       },
       {
         "msgid": "Something went wrong while changing your price. Please try again in a moment."
@@ -5214,9 +4326,6 @@
       },
       {
         "msgid": "Something went wrong: {detail}"
-      },
-      {
-        "msgid": "Sort & View"
       },
       {
         "msgid": "Sort & view"
@@ -5240,9 +4349,6 @@
         "msgid": "Started by {name}"
       },
       {
-        "msgid": "Started displaying members with this role separately."
-      },
-      {
         "msgid": "Static Neko"
       },
       {
@@ -5255,13 +4361,7 @@
         "msgid": "Stereo microphone"
       },
       {
-        "msgid": "Sticker cloning enabled"
-      },
-      {
         "msgid": "Still Neko"
-      },
-      {
-        "msgid": "Still not applied after you turned it on?"
       },
       {
         "msgid": "Still waiting for screen recording access"
@@ -5282,52 +4382,13 @@
         "msgid": "Stop using passkeys for two-factor authentication?"
       },
       {
-        "msgid": "Stopped allowing anyone to mention this role."
-      },
-      {
-        "msgid": "Stopped allowing flexible text channel names."
-      },
-      {
-        "msgid": "Stopped allowing others to clone this community's emojis."
-      },
-      {
-        "msgid": "Stopped allowing others to clone this community's stickers."
-      },
-      {
-        "msgid": "Stopped displaying members with this role separately."
-      },
-      {
-        "msgid": "Stopped hiding join messages in the system channel."
-      },
-      {
-        "msgid": "Stopped hiding the community owner crown."
-      },
-      {
-        "msgid": "Stopped overriding {permissions}."
-      },
-      {
-        "msgid": "Stopped requiring 2FA for moderation actions."
-      },
-      {
         "msgid": "Stopped requiring a tag on new posts"
-      },
-      {
-        "msgid": "Stopped the member from hearing others in this community."
       },
       {
         "msgid": "Stream in 4K at 60 FPS"
       },
       {
-        "msgid": "Stream is not keeping up"
-      },
-      {
         "msgid": "Stream quality"
-      },
-      {
-        "msgid": "Stream settings were adjusted"
-      },
-      {
-        "msgid": "Strongest neural filter for speech, limits audio to the speech range."
       },
       {
         "msgid": "Subscriber badge on your profile"
@@ -5357,9 +4418,6 @@
         "msgid": "System-wide shortcuts could not be set up."
       },
       {
-        "msgid": "System-wide: Not assigned"
-      },
-      {
         "msgid": "System-wide: not assigned"
       },
       {
@@ -5378,7 +4436,7 @@
         "msgid": "Tap Share, then Add to Home Screen."
       },
       {
-        "msgid": "Text is rendered with grayscale antialiasing instead of ClearType while transparency is enabled, so it will look softer."
+        "msgid": "That did not finish. Some communities may already have been left, and your account is still locked. Press Set this check aside again to finish."
       },
       {
         "msgid": "That doesn't look like an instance address. Try a domain such as {exampleInstanceDomain}."
@@ -5387,55 +4445,7 @@
         "msgid": "That image could not be used. Try a different file."
       },
       {
-        "msgid": "The ban had already expired on {date}."
-      },
-      {
-        "msgid": "The ban was scheduled to expire on {date}."
-      },
-      {
-        "msgid": "The ban was set to expire on {date}."
-      },
-      {
-        "msgid": "The browser is sending {deliveredResolution} instead of {resolution}."
-      },
-      {
         "msgid": "The camera preview is still stopping. Try streaming again in a moment."
-      },
-      {
-        "msgid": "The emoji was uploaded by {user}."
-      },
-      {
-        "msgid": "The invite was created by {user} on {date}."
-      },
-      {
-        "msgid": "The invite was created by {user}."
-      },
-      {
-        "msgid": "The invite was created on {date}."
-      },
-      {
-        "msgid": "The invite was never used."
-      },
-      {
-        "msgid": "The invite was scheduled to expire on {date}."
-      },
-      {
-        "msgid": "The invite was set to allow unlimited uses."
-      },
-      {
-        "msgid": "The invite was set to expire after {duration}."
-      },
-      {
-        "msgid": "The invite was set to expire on {date}."
-      },
-      {
-        "msgid": "The invite was set to grant temporary membership."
-      },
-      {
-        "msgid": "The invite was set to never expire."
-      },
-      {
-        "msgid": "The member is no longer temporary."
       },
       {
         "msgid": "The member to target."
@@ -5450,27 +4460,6 @@
         "msgid": "The official Fluxer mobile apps receive notifications through Fluxer's push relay, which hands them to Apple and Google. Self-hosted UnifiedPush and ntfy endpoints never reach the relay and need no agreement."
       },
       {
-        "msgid": "The override allowed {permissions}."
-      },
-      {
-        "msgid": "The override denied {permissions}."
-      },
-      {
-        "msgid": "The role granted {permissions}."
-      },
-      {
-        "msgid": "The sticker was uploaded by {user}."
-      },
-      {
-        "msgid": "The system gave {target} the role {role}."
-      },
-      {
-        "msgid": "The system removed the role {role} from {target}."
-      },
-      {
-        "msgid": "The webhook was created by {user}."
-      },
-      {
         "msgid": "There are no posts yet"
       },
       {
@@ -5480,16 +4469,10 @@
         "msgid": "There are no threads"
       },
       {
-        "msgid": "There are no threads."
-      },
-      {
         "msgid": "These options change how people use the instance. Some can only be chosen during setup."
       },
       {
         "msgid": "This animation is too long or too large to crop. Try a shorter or smaller file."
-      },
-      {
-        "msgid": "This browser can't crop animated {AVIF_FORMAT_LABEL} files. Upload a GIF or WebP instead."
       },
       {
         "msgid": "This browser can't crop animated {avifFormatLabel} files. Upload a GIF or WebP instead."
@@ -5507,16 +4490,10 @@
         "msgid": "This channel has a content warning. Updates can only go to channels with a content warning or an age restriction."
       },
       {
-        "msgid": "This community has published a lot of messages recently. Try again in a few minutes."
-      },
-      {
-        "msgid": "This community has published a lot of messages recently. Try again in {duration}."
+        "msgid": "This clears your backend Plus state entirely, including Plus type, billing metadata, and override flags."
       },
       {
         "msgid": "This desktop doesn't offer system-wide shortcuts. Shortcuts still work while {productName} is focused."
-      },
-      {
-        "msgid": "This device could not keep up with {targetResolution} at {targetFrameRate} FPS last time, so your stream started at {resolution} at {frameRate} FPS."
       },
       {
         "msgid": "This emoji is from"
@@ -5534,25 +4511,19 @@
         "msgid": "This instance already uses usernames to sign in. This can no longer change."
       },
       {
-        "msgid": "This instance currently allows screen share up to 720p at 30 FPS."
-      },
-      {
-        "msgid": "This instance has no accounts yet. The first account you create automatically becomes the administrator. Create it now, then return here to finish setup."
-      },
-      {
         "msgid": "This invite is on {instanceName}, where you also have an account."
-      },
-      {
-        "msgid": "This is a custom emoji from"
       },
       {
         "msgid": "This is a custom sticker from a community."
       },
       {
-        "msgid": "This is a custom sticker from a community. Ask the author for an invite to use this sticker."
+        "msgid": "This is an age-restricted channel. Updates can only go to age-restricted channels."
       },
       {
-        "msgid": "This is an age-restricted channel. Updates can only go to age-restricted channels."
+        "msgid": "This is not available on your account right now. Ask the administrators of this instance to review it."
+      },
+      {
+        "msgid": "This is not available on your account right now. Email {supportEmail} and a person will review it."
       },
       {
         "msgid": "This is off until you turn it on. While it is on, members of other communities can use the in-app one-click \"Clone\" shortcut on your custom emojis. Turning it off does not prevent anyone from saving the image and uploading it themselves."
@@ -5562,9 +4533,6 @@
       },
       {
         "msgid": "This is your last passkey and passkeys are your second factor. Deleting it turns off two-factor authentication for your account, and your current backup codes will stop working."
-      },
-      {
-        "msgid": "This is your last passkey and passkeys are your second factor. Once it's gone you'll need a backup code to sign in, and you'll lose two-factor authentication on this account."
       },
       {
         "msgid": "This is your last passkey. Once it's gone you won't be able to use a passkey as your second factor."
@@ -5577,6 +4545,9 @@
       },
       {
         "msgid": "This message has already been published"
+      },
+      {
+        "msgid": "This number is verified by texting us instead. Go back and start phone verification again to get the code and the number to text."
       },
       {
         "msgid": "This option is required. Please provide a value."
@@ -5606,9 +4577,6 @@
         "msgid": "Thread"
       },
       {
-        "msgid": "Thread Members"
-      },
-      {
         "msgid": "Thread created"
       },
       {
@@ -5633,12 +4601,6 @@
         "msgid": "Threads"
       },
       {
-        "msgid": "Timed out the member until {date}."
-      },
-      {
-        "msgid": "Timed out until {date}."
-      },
-      {
         "msgid": "Timed out {targetUserTag}"
       },
       {
@@ -5651,16 +4613,10 @@
         "msgid": "To change the keys, open your desktop's keyboard shortcut settings."
       },
       {
-        "msgid": "Transferred community ownership to {user}."
-      },
-      {
         "msgid": "Try a different name or check the other tab."
       },
       {
         "msgid": "Try different words or clear the tag filter."
-      },
-      {
-        "msgid": "Try full quality again"
       },
       {
         "msgid": "Turn off audio sharing for this source or try again in a moment."
@@ -5670,30 +4626,6 @@
       },
       {
         "msgid": "Turn on a camera or share a screen in this voice channel."
-      },
-      {
-        "msgid": "Turned off mature content."
-      },
-      {
-        "msgid": "Turned off slowmode."
-      },
-      {
-        "msgid": "Turned off the content warning."
-      },
-      {
-        "msgid": "Turned off the detached banner."
-      },
-      {
-        "msgid": "Turned off the member's microphone in this community."
-      },
-      {
-        "msgid": "Turned on mature content."
-      },
-      {
-        "msgid": "Turned on the content warning."
-      },
-      {
-        "msgid": "Turned the member's microphone back on in this community."
       },
       {
         "msgid": "Two-factor backup codes"
@@ -5762,6 +4694,9 @@
         "msgid": "Use a self-hosted instance URL"
       },
       {
+        "msgid": "Use actual Plus type"
+      },
+      {
         "msgid": "Use animated emojis in messages"
       },
       {
@@ -5795,7 +4730,7 @@
         "msgid": "Use the Up and Down arrow keys to move between items and Space or Enter to open one. Where a tab has sections, the Right arrow expands it and the Left arrow collapses it."
       },
       {
-        "msgid": "Use the official Fluxer instance"
+        "msgid": "Use the official Micup instance"
       },
       {
         "msgid": "Use video and camera previews."
@@ -5834,6 +4769,9 @@
         "msgid": "Usernames (recommended)"
       },
       {
+        "msgid": "Using actual Plus state"
+      },
+      {
         "msgid": "Using {effectiveLabel} until {requestedLabel} is ready."
       },
       {
@@ -5850,9 +4788,6 @@
       },
       {
         "msgid": "View as"
-      },
-      {
-        "msgid": "Virtual microphone"
       },
       {
         "msgid": "Voice uses your system output device in this browser. Change it in your system settings."
@@ -5877,6 +4812,12 @@
       },
       {
         "msgid": "We couldn't reach {instanceLabel} to switch accounts. Your current account is still active. Try again when the instance is back online."
+      },
+      {
+        "msgid": "We couldn't verify this number automatically. Contact support and a person will review your account."
+      },
+      {
+        "msgid": "We don't send verification texts to this country. Try a mobile number from another country, or contact support."
       },
       {
         "msgid": "We lowered the price of {premiumProductName} in Brazil. It is now {monthlyPrice} a month or {yearlyPrice} a year."
@@ -5927,9 +4868,6 @@
         "msgid": "Works while {productName} is focused"
       },
       {
-        "msgid": "You asked for {resolution} at {frameRate} FPS"
-      },
-      {
         "msgid": "You can close this tab"
       },
       {
@@ -5942,7 +4880,10 @@
         "msgid": "You can start another thread in {seconds, plural, one {# second} other {# seconds}}."
       },
       {
-        "msgid": "You can turn these on later in User Settings under {settingsTabLabel}."
+        "msgid": "You can still ask the administrators of this instance for a human review at any time."
+      },
+      {
+        "msgid": "You can still email {supportEmail} for a human review at any time."
       },
       {
         "msgid": "You can't manage webhooks in any community. Ask an admin to follow this channel."
@@ -5952,6 +4893,9 @@
       },
       {
         "msgid": "You don't have a recovery kit yet"
+      },
+      {
+        "msgid": "You will leave {guildNames}. Nothing you posted is deleted, and you can join again later."
       },
       {
         "msgid": "You're a Visionary. Your perks never expire, and gifts for friends are always available."
@@ -5969,22 +4913,22 @@
         "msgid": "Your account has no email address. If you forget your password, a recovery kit is the only way back in. It only takes a minute."
       },
       {
+        "msgid": "Your account is back to normal."
+      },
+      {
         "msgid": "Your account will no longer be protected by two-factor authentication when you sign in with your password. You'll also lose elevated permissions in servers that require two-factor authentication."
+      },
+      {
+        "msgid": "Your account works normally again straight away and nothing is removed. We can ask for this check again later."
       },
       {
         "msgid": "Your accounts and settings have not been changed or deleted."
       },
       {
-        "msgid": "Your capture device is sending {deliveredResolution} instead of {resolution}."
+        "msgid": "Your carrier says this number isn't in service. Check it and try again, or contact support if it's correct."
       },
       {
         "msgid": "Your changes reach every community that follows this channel, which can take a minute. Each published message allows 3 quick edits, then 1 every 20 minutes."
-      },
-      {
-        "msgid": "Your connection cannot keep up. Viewers get about {deliveredFrameRate} of {frameRate} FPS at {resolution}."
-      },
-      {
-        "msgid": "Your connection cannot keep up. Your stream is set to {frameRate} FPS at {resolution} and viewers are getting about {deliveredFrameRate} FPS."
       },
       {
         "msgid": "Your current kit stops working as soon as the new one is created."
@@ -5993,25 +4937,7 @@
         "msgid": "Your desktop didn't set up system-wide shortcuts."
       },
       {
-        "msgid": "Your desktop keeps these keys for {productName}, so other apps can't use them."
-      },
-      {
-        "msgid": "Your desktop keeps these keys for {productName}, so other apps can't use them. To use the same key in other apps, turn on direct input device access below."
-      },
-      {
         "msgid": "Your desktop runs these shortcuts even while {productName} is not focused."
-      },
-      {
-        "msgid": "Your device cannot keep up. Viewers get about {deliveredFrameRate} of {frameRate} FPS at {resolution}."
-      },
-      {
-        "msgid": "Your device cannot keep up. Your stream is set to {frameRate} FPS at {resolution} and viewers are getting about {deliveredFrameRate} FPS."
-      },
-      {
-        "msgid": "Your device could not keep up, so your stream now sends {frameRate} FPS to keep {resolution} sharp."
-      },
-      {
-        "msgid": "Your device could not keep up, so your stream now sends {resolution} to keep {frameRate} FPS smooth."
       },
       {
         "msgid": "Your device will ask you to save an updated passkey for {name}. It replaces the old one."
@@ -6053,9 +4979,6 @@
         "msgid": "Your saved {savedResolution} at {savedFrameRate} FPS needs {premiumProductName}, so shares use {resolution} at {frameRate} FPS."
       },
       {
-        "msgid": "Your source is producing about {sourceFrameRate} FPS"
-      },
-      {
         "msgid": "Your subscription"
       },
       {
@@ -6066,9 +4989,6 @@
       },
       {
         "msgid": "Your subscription still ends on <0>{cancelDate}</0>. The current price is now {listPriceNewLabel}. If you reactivate, you can switch to it from here."
-      },
-      {
-        "msgid": "Your video encoder stopped, so your stream switched to {codec}."
       },
       {
         "msgid": "Your {premiumProductName} perks have ended. Subscribe again to bring them back."
@@ -6086,28 +5006,16 @@
         "msgid": "deleted-role"
       },
       {
-        "msgid": "farewell"
-      },
-      {
-        "msgid": "greeting"
-      },
-      {
         "msgid": "hyprland.conf (before Hyprland 0.55)"
       },
       {
         "msgid": "hyprland.lua (Hyprland 0.55 and later)"
       },
       {
-        "msgid": "macOS"
-      },
-      {
         "msgid": "macOS permissions"
       },
       {
         "msgid": "members"
-      },
-      {
-        "msgid": "not"
       },
       {
         "msgid": "online"
@@ -6128,100 +5036,13 @@
         "msgid": "{PRODUCT_NAME} needs to restart for the title bar change to take effect."
       },
       {
-        "msgid": "{actor} added a permission override for @everyone in {channel}."
-      },
-      {
-        "msgid": "{actor} added a permission override for the role {role} in {channel}."
-      },
-      {
-        "msgid": "{actor} added a permission override for {user} in {channel}."
-      },
-      {
-        "msgid": "{actor} added a sticker."
-      },
-      {
-        "msgid": "{actor} added an emoji."
-      },
-      {
-        "msgid": "{actor} added the bot {target} as a temporary member."
-      },
-      {
-        "msgid": "{actor} added the bot {target}."
-      },
-      {
-        "msgid": "{actor} added the emoji {emoji}."
-      },
-      {
-        "msgid": "{actor} added the sticker {name}."
-      },
-      {
-        "msgid": "{actor} applied a community deafen to {target}."
-      },
-      {
-        "msgid": "{actor} applied a community mute to {target}."
-      },
-      {
-        "msgid": "{actor} banned {target} for {duration}."
-      },
-      {
-        "msgid": "{actor} banned {target}."
-      },
-      {
         "msgid": "{actor} changed the permission overrides of the announcement channel {channel}"
-      },
-      {
-        "msgid": "{actor} changed the permission overrides of the category {channel}."
-      },
-      {
-        "msgid": "{actor} changed the permission overrides of the channel {channel}."
       },
       {
         "msgid": "{actor} changed the permission overrides of the forum channel {channel}"
       },
       {
-        "msgid": "{actor} changed the permission overrides of the link channel {channel}."
-      },
-      {
         "msgid": "{actor} changed the permission overrides of the media channel {channel}"
-      },
-      {
-        "msgid": "{actor} changed the permission overrides of the text channel {channel}."
-      },
-      {
-        "msgid": "{actor} changed the permission overrides of the voice channel {channel}."
-      },
-      {
-        "msgid": "{actor} changed the timeout end date for {target} to {date}."
-      },
-      {
-        "msgid": "{actor} changed the timeout for {target} to end on {date}."
-      },
-      {
-        "msgid": "{actor} changed the vanity URL from {oldCode} to {newCode}."
-      },
-      {
-        "msgid": "{actor} changed their community avatar."
-      },
-      {
-        "msgid": "{actor} changed their community banner."
-      },
-      {
-        "msgid": "{actor} changed their community bio to {text}."
-      },
-      {
-        "msgid": "{actor} changed their community profile avatar."
-      },
-      {
-        "msgid": "{actor} changed their community profile banner."
-      },
-      {
-        "msgid": "{actor} changed their community profile bio to {text}."
-      },
-      {
-        "msgid": "{actor} changed {target}'s block on sending messages, reacting and joining voice to end at {date}."
-      },
-      {
-        "msgid": "{actor} created a webhook."
       },
       {
         "msgid": "{actor} created the announcement channel {channel}"
@@ -6230,31 +5051,10 @@
         "msgid": "{actor} created the announcement channel {channel} in {category}"
       },
       {
-        "msgid": "{actor} created the category {channel}."
-      },
-      {
-        "msgid": "{actor} created the channel {channel} in {category}."
-      },
-      {
-        "msgid": "{actor} created the channel {channel}."
-      },
-      {
         "msgid": "{actor} created the forum channel {channel}"
       },
       {
         "msgid": "{actor} created the forum channel {channel} in {category}"
-      },
-      {
-        "msgid": "{actor} created the invite {code} for {channel}."
-      },
-      {
-        "msgid": "{actor} created the invite {code}."
-      },
-      {
-        "msgid": "{actor} created the link channel {channel} in {category}."
-      },
-      {
-        "msgid": "{actor} created the link channel {channel}."
       },
       {
         "msgid": "{actor} created the media channel {channel}"
@@ -6263,232 +5063,22 @@
         "msgid": "{actor} created the media channel {channel} in {category}"
       },
       {
-        "msgid": "{actor} created the role {role}."
-      },
-      {
-        "msgid": "{actor} created the text channel {channel} in {category}."
-      },
-      {
-        "msgid": "{actor} created the text channel {channel}."
-      },
-      {
-        "msgid": "{actor} created the voice channel {channel} in {category}."
-      },
-      {
-        "msgid": "{actor} created the voice channel {channel}."
-      },
-      {
-        "msgid": "{actor} created the webhook {name} in {channel}."
-      },
-      {
-        "msgid": "{actor} created the webhook {name}."
-      },
-      {
-        "msgid": "{actor} deleted a message in {channel}."
-      },
-      {
-        "msgid": "{actor} deleted a message."
-      },
-      {
-        "msgid": "{actor} deleted a sticker."
-      },
-      {
-        "msgid": "{actor} deleted a webhook."
-      },
-      {
-        "msgid": "{actor} deleted an emoji."
-      },
-      {
-        "msgid": "{actor} deleted some messages in {channel}."
-      },
-      {
-        "msgid": "{actor} deleted some messages."
-      },
-      {
         "msgid": "{actor} deleted the announcement channel {channel}"
-      },
-      {
-        "msgid": "{actor} deleted the category {channel}."
-      },
-      {
-        "msgid": "{actor} deleted the channel {channel}."
-      },
-      {
-        "msgid": "{actor} deleted the emoji {emoji}."
       },
       {
         "msgid": "{actor} deleted the forum channel {channel}"
       },
       {
-        "msgid": "{actor} deleted the invite {code} for {channel}."
-      },
-      {
-        "msgid": "{actor} deleted the invite {code}."
-      },
-      {
-        "msgid": "{actor} deleted the link channel {channel}."
-      },
-      {
         "msgid": "{actor} deleted the media channel {channel}"
-      },
-      {
-        "msgid": "{actor} deleted the role {role}."
-      },
-      {
-        "msgid": "{actor} deleted the sticker {name}."
-      },
-      {
-        "msgid": "{actor} deleted the text channel {channel}."
       },
       {
         "msgid": "{actor} deleted the thread {channel}"
       },
       {
-        "msgid": "{actor} deleted the voice channel {channel}."
-      },
-      {
-        "msgid": "{actor} deleted the webhook {name}."
-      },
-      {
-        "msgid": "{actor} deleted {count, plural, one {# message} other {# messages}} in {channel}."
-      },
-      {
-        "msgid": "{actor} deleted {count, plural, one {# message} other {# messages}}."
-      },
-      {
-        "msgid": "{actor} disconnected from voice."
-      },
-      {
-        "msgid": "{actor} disconnected from {channel}."
-      },
-      {
-        "msgid": "{actor} disconnected {target} from voice."
-      },
-      {
-        "msgid": "{actor} disconnected {target} from {channel}."
-      },
-      {
         "msgid": "{actor} followed an announcement channel into {channel}"
       },
       {
-        "msgid": "{actor} gave {target} the role {role}."
-      },
-      {
-        "msgid": "{actor} kicked {target}."
-      },
-      {
-        "msgid": "{actor} let {target} hear others in this community again."
-      },
-      {
-        "msgid": "{actor} made a change that this version of the app cannot show."
-      },
-      {
-        "msgid": "{actor} moved from {oldChannel} to {newChannel}."
-      },
-      {
-        "msgid": "{actor} moved the role {role} down in the member list."
-      },
-      {
-        "msgid": "{actor} moved the role {role} down in the role list."
-      },
-      {
-        "msgid": "{actor} moved the role {role} up in the member list."
-      },
-      {
-        "msgid": "{actor} moved the role {role} up in the role list."
-      },
-      {
-        "msgid": "{actor} moved to a different voice channel."
-      },
-      {
-        "msgid": "{actor} moved to {channel}."
-      },
-      {
-        "msgid": "{actor} moved {target} from {oldChannel} to {newChannel}."
-      },
-      {
-        "msgid": "{actor} moved {target} to a different voice channel."
-      },
-      {
-        "msgid": "{actor} moved {target} to {channel}."
-      },
-      {
-        "msgid": "{actor} paused invites."
-      },
-      {
-        "msgid": "{actor} pinned a message in {channel}."
-      },
-      {
-        "msgid": "{actor} pinned a message."
-      },
-      {
-        "msgid": "{actor} removed the community deafen from {target}."
-      },
-      {
-        "msgid": "{actor} removed the community mute from {target}."
-      },
-      {
-        "msgid": "{actor} removed the nickname {nick} from {target}."
-      },
-      {
-        "msgid": "{actor} removed the permission override for @everyone from {channel}."
-      },
-      {
-        "msgid": "{actor} removed the permission override for the role {role} from {channel}."
-      },
-      {
-        "msgid": "{actor} removed the permission override for {user} from {channel}."
-      },
-      {
-        "msgid": "{actor} removed the role {role} from {target}."
-      },
-      {
-        "msgid": "{actor} removed the server deafen from {target}."
-      },
-      {
-        "msgid": "{actor} removed the server mute from {target}."
-      },
-      {
-        "msgid": "{actor} removed the timeout for {target}."
-      },
-      {
-        "msgid": "{actor} removed the vanity URL {code}."
-      },
-      {
-        "msgid": "{actor} removed their community avatar."
-      },
-      {
-        "msgid": "{actor} removed their community banner."
-      },
-      {
-        "msgid": "{actor} removed their community bio."
-      },
-      {
-        "msgid": "{actor} removed their community profile avatar."
-      },
-      {
-        "msgid": "{actor} removed their community profile banner."
-      },
-      {
-        "msgid": "{actor} removed their community profile bio."
-      },
-      {
-        "msgid": "{actor} removed their community profile pronouns."
-      },
-      {
-        "msgid": "{actor} removed their community pronouns."
-      },
-      {
-        "msgid": "{actor} removed their nickname {nick}."
-      },
-      {
         "msgid": "{actor} renamed the announcement channel {oldName} to {newName}"
-      },
-      {
-        "msgid": "{actor} renamed the community from {oldName} to {newName}."
-      },
-      {
-        "msgid": "{actor} renamed the emoji {oldEmoji} to {newEmoji}."
       },
       {
         "msgid": "{actor} renamed the forum channel {oldName} to {newName}"
@@ -6497,163 +5087,22 @@
         "msgid": "{actor} renamed the media channel {oldName} to {newName}"
       },
       {
-        "msgid": "{actor} renamed the role {oldName} to {newName}."
-      },
-      {
-        "msgid": "{actor} renamed the sticker {oldName} to {newName}."
-      },
-      {
-        "msgid": "{actor} renamed the webhook {oldName} to {newName}."
-      },
-      {
-        "msgid": "{actor} reset the member list position for the role {role}."
-      },
-      {
-        "msgid": "{actor} resumed invites."
-      },
-      {
-        "msgid": "{actor} server deafened {target}."
-      },
-      {
-        "msgid": "{actor} server muted {target}."
-      },
-      {
-        "msgid": "{actor} set a community avatar."
-      },
-      {
-        "msgid": "{actor} set a community banner."
-      },
-      {
-        "msgid": "{actor} set a community profile avatar."
-      },
-      {
-        "msgid": "{actor} set a community profile banner."
-      },
-      {
-        "msgid": "{actor} set a member list position for the role {role}."
-      },
-      {
-        "msgid": "{actor} set the nickname of {target} to {nick}."
-      },
-      {
-        "msgid": "{actor} set the vanity URL to {code}."
-      },
-      {
-        "msgid": "{actor} set their community bio to {text}."
-      },
-      {
-        "msgid": "{actor} set their community profile avatar."
-      },
-      {
-        "msgid": "{actor} set their community profile banner."
-      },
-      {
-        "msgid": "{actor} set their community profile bio to {text}."
-      },
-      {
-        "msgid": "{actor} set their community profile pronouns to {text}."
-      },
-      {
-        "msgid": "{actor} set their community pronouns to {text}."
-      },
-      {
         "msgid": "{actor} started the thread {channel}"
       },
       {
         "msgid": "{actor} stopped following an announcement channel in {channel}"
       },
       {
-        "msgid": "{actor} stopped {target} from hearing others in this community."
-      },
-      {
-        "msgid": "{actor} timed out {target} until {date}."
-      },
-      {
-        "msgid": "{actor} transferred community ownership to {user}."
-      },
-      {
-        "msgid": "{actor} turned off {target}'s microphone in this community."
-      },
-      {
-        "msgid": "{actor} turned {target}'s microphone back on in this community."
-      },
-      {
-        "msgid": "{actor} unbanned {target}."
-      },
-      {
-        "msgid": "{actor} unpinned a message in {channel}."
-      },
-      {
-        "msgid": "{actor} unpinned a message."
-      },
-      {
-        "msgid": "{actor} updated a sticker."
-      },
-      {
-        "msgid": "{actor} updated a webhook."
-      },
-      {
-        "msgid": "{actor} updated an emoji."
-      },
-      {
         "msgid": "{actor} updated the announcement channel {channel}"
-      },
-      {
-        "msgid": "{actor} updated the category {channel}."
-      },
-      {
-        "msgid": "{actor} updated the channel {channel}."
-      },
-      {
-        "msgid": "{actor} updated the emoji {emoji}."
       },
       {
         "msgid": "{actor} updated the forum channel {channel}"
       },
       {
-        "msgid": "{actor} updated the invite {code}."
-      },
-      {
-        "msgid": "{actor} updated the link channel {channel}."
-      },
-      {
         "msgid": "{actor} updated the media channel {channel}"
       },
       {
-        "msgid": "{actor} updated the permission override for @everyone in {channel}."
-      },
-      {
-        "msgid": "{actor} updated the permission override for the role {role} in {channel}."
-      },
-      {
-        "msgid": "{actor} updated the permission override for {user} in {channel}."
-      },
-      {
-        "msgid": "{actor} updated the role {role}."
-      },
-      {
-        "msgid": "{actor} updated the roles of {target}."
-      },
-      {
-        "msgid": "{actor} updated the sticker {name}."
-      },
-      {
-        "msgid": "{actor} updated the text channel {channel}."
-      },
-      {
         "msgid": "{actor} updated the thread {channel}"
-      },
-      {
-        "msgid": "{actor} updated the voice channel {channel}."
-      },
-      {
-        "msgid": "{actor} updated the webhook {name}."
-      },
-      {
-        "msgid": "{actor} updated their community profile."
-      },
-      {
-        "msgid": "{actor} updated {target}."
       },
       {
         "msgid": "{appName} can't reach its servers. It will keep trying in the background."
@@ -6674,16 +5123,10 @@
         "msgid": "{channelHeading}, {mentionCount, plural, one {# mention} other {# mentions}}"
       },
       {
-        "msgid": "{codec} cannot keep up on this device. Set the codec to Automatic in Advanced settings to allow a faster one."
-      },
-      {
         "msgid": "{context} · {accountName}"
       },
       {
         "msgid": "{count, plural, =0 {∞ No limit} one {# participant} other {# participants}}"
-      },
-      {
-        "msgid": "{count, plural, one {# Message} other {# Messages}}"
       },
       {
         "msgid": "{count, plural, one {# channel follows} other {# channels follow}} this channel. Converting it to a text channel removes those follows."
@@ -6701,9 +5144,6 @@
         "msgid": "{count, plural, one {# message} other {# messages}}"
       },
       {
-        "msgid": "{count, plural, one {# minute} other {# minutes}}"
-      },
-      {
         "msgid": "{count, plural, one {# more permission} other {# more permissions}}"
       },
       {
@@ -6711,12 +5151,6 @@
       },
       {
         "msgid": "{count, plural, one {# video} other {# videos}}"
-      },
-      {
-        "msgid": "{count, plural, one {The invite was limited to # use.} other {The invite was limited to # uses.}}"
-      },
-      {
-        "msgid": "{count, plural, one {The invite was used # time.} other {The invite was used # times.}}"
       },
       {
         "msgid": "{domain} runs a newer version of Fluxer than this app. Update Fluxer, then try again."
@@ -6741,9 +5175,6 @@
       },
       {
         "msgid": "{name} copy"
-      },
-      {
-        "msgid": "{pinnedCodec} is not available on this device, so your stream uses {codec}."
       },
       {
         "msgid": "{premiumProductName} costs less now. Switch from {currentPrice} to {newPrice} a month starting {effectiveDate}, and nothing is charged today."
@@ -6806,9 +5237,6 @@
         "msgid": "{productName} registered its shortcuts with Hyprland. Bind them in your Hyprland config to use them while {productName} is not focused."
       },
       {
-        "msgid": "{productName} uses these for voice, video, screen sharing, and shortcuts. Grant all four to continue."
-      },
-      {
         "msgid": "{productName} wordmark"
       },
       {
@@ -6828,42 +5256,6 @@
       },
       {
         "msgid": "{yearlyPrice}/yr"
-      },
-      {
-        "msgctxt": "audit-log-member-profile",
-        "msgid": "Changed the community banner."
-      },
-      {
-        "msgctxt": "audit-log-member-profile",
-        "msgid": "Changed the community profile banner."
-      },
-      {
-        "msgctxt": "audit-log-member-profile",
-        "msgid": "Changed the member's community profile banner."
-      },
-      {
-        "msgctxt": "audit-log-member-profile",
-        "msgid": "Removed the community banner."
-      },
-      {
-        "msgctxt": "audit-log-member-profile",
-        "msgid": "Removed the community profile banner."
-      },
-      {
-        "msgctxt": "audit-log-member-profile",
-        "msgid": "Removed the member's community profile banner."
-      },
-      {
-        "msgctxt": "noise-suppression-option",
-        "msgid": "Balanced"
-      },
-      {
-        "msgctxt": "noise-suppression-option",
-        "msgid": "Classic"
-      },
-      {
-        "msgctxt": "noise-suppression-option",
-        "msgid": "Focused"
       },
       {
         "msgctxt": "noise-suppression-option",
@@ -6888,24 +5280,11 @@
       {
         "msgctxt": "voice-connection-status",
         "msgid": "Dismiss"
-      },
-      {
-        "msgctxt": "voice-connection-status",
-        "msgid": "Retry"
       }
     ],
     "es-419": [
       {
         "msgid": "+{count}"
-      },
-      {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
       },
       {
         "msgid": "AV1"
@@ -6941,7 +5320,7 @@
         "msgid": "Chat"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Color"
@@ -7010,9 +5389,6 @@
         "msgid": "Mod"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "Neko"
       },
       {
@@ -7034,6 +5410,9 @@
         "msgid": "Plan"
       },
       {
+        "msgid": "Plus"
+      },
+      {
         "msgid": "Portugal"
       },
       {
@@ -7041,9 +5420,6 @@
       },
       {
         "msgid": "Roles"
-      },
-      {
-        "msgid": "Roles ({roleCount})"
       },
       {
         "msgid": "Searching..."
@@ -7077,9 +5453,6 @@
       },
       {
         "msgid": "Token"
-      },
-      {
-        "msgid": "Tokens"
       },
       {
         "msgid": "Video"
@@ -7121,25 +5494,10 @@
         "msgid": "Zoom"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
         "msgid": "emoji {emojiName}"
       },
       {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "sendSystemDm"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "spoiler"
@@ -7148,13 +5506,7 @@
         "msgid": "sticker"
       },
       {
-        "msgid": "video"
-      },
-      {
         "msgid": "{context} · {accountName}"
-      },
-      {
-        "msgid": "{count, plural, one {# emoji} other {# emojis}}"
       },
       {
         "msgid": "{count, plural, one {# video} other {# videos}}"
@@ -7169,12 +5521,6 @@
         "msgid": "{kilobits} kbps"
       },
       {
-        "msgid": "{length} stickers"
-      },
-      {
-        "msgid": "{megabits} Mbps"
-      },
-      {
         "msgid": "{messageGroupSpacing}px"
       },
       {
@@ -7182,12 +5528,6 @@
       },
       {
         "msgid": "{resolution} {fps} FPS"
-      },
-      {
-        "msgid": "{tokenCount, plural, one {# token} other {# tokens}}"
-      },
-      {
-        "msgid": "{totalCount} total"
       },
       {
         "msgid": "{zoomPercent}%"
@@ -7366,15 +5706,6 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
@@ -7405,7 +5736,7 @@
         "msgid": "Chat"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Color"
@@ -7438,9 +5769,6 @@
         "msgid": "Fluxer"
       },
       {
-        "msgid": "Gateway"
-      },
-      {
         "msgid": "General"
       },
       {
@@ -7468,9 +5796,6 @@
         "msgid": "Mod"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "Neko"
       },
       {
@@ -7489,6 +5814,9 @@
         "msgid": "Plan"
       },
       {
+        "msgid": "Plus"
+      },
+      {
         "msgid": "Portugal"
       },
       {
@@ -7496,9 +5824,6 @@
       },
       {
         "msgid": "Roles"
-      },
-      {
-        "msgid": "Roles ({roleCount})"
       },
       {
         "msgid": "Searching..."
@@ -7517,9 +5842,6 @@
       },
       {
         "msgid": "Token"
-      },
-      {
-        "msgid": "Tokens"
       },
       {
         "msgid": "Visionary"
@@ -7555,31 +5877,16 @@
         "msgid": "Zoom"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
         "msgid": "emoji {emojiName}"
       },
       {
-        "msgid": "macOS"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "spoiler"
       },
       {
         "msgid": "{context} · {accountName}"
-      },
-      {
-        "msgid": "{count, plural, one {# emoji} other {# emojis}}"
       },
       {
         "msgid": "{fps} FPS"
@@ -7589,9 +5896,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -7604,9 +5908,6 @@
       },
       {
         "msgid": "{resolution} {fps} FPS"
-      },
-      {
-        "msgid": "{tokenCount, plural, one {# token} other {# tokens}}"
       },
       {
         "msgid": "{zoomPercent}%"
@@ -7781,15 +6082,6 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
@@ -7808,7 +6100,7 @@
         "msgid": "Chat"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -7853,9 +6145,6 @@
         "msgid": "Media"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "Neko"
       },
       {
@@ -7872,6 +6161,9 @@
       },
       {
         "msgid": "Ping"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Plutonium"
@@ -7922,25 +6214,10 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
         "msgid": "emoji {emojiName}"
       },
       {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "video"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -7956,9 +6233,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -8202,9 +6476,6 @@
         "msgid": "Actions"
       },
       {
-        "msgid": "Admin"
-      },
-      {
         "msgid": "Alt"
       },
       {
@@ -8215,9 +6486,6 @@
       },
       {
         "msgid": "Applications"
-      },
-      {
-        "msgid": "Archives"
       },
       {
         "msgid": "Audio"
@@ -8250,10 +6518,10 @@
         "msgid": "Capture"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Client"
       },
       {
-        "msgid": "Client"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Code"
@@ -8269,12 +6537,6 @@
       },
       {
         "msgid": "Compact"
-      },
-      {
-        "msgid": "Compact (400x300)"
-      },
-      {
-        "msgid": "Composer"
       },
       {
         "msgid": "Confirmation"
@@ -8302,9 +6564,6 @@
       },
       {
         "msgid": "Documentation"
-      },
-      {
-        "msgid": "Expiration"
       },
       {
         "msgid": "Expressions"
@@ -8346,19 +6605,7 @@
         "msgid": "Invisible"
       },
       {
-        "msgid": "Inviter"
-      },
-      {
-        "msgid": "Latitude"
-      },
-      {
-        "msgid": "Local {localizedCurrencyLabel}"
-      },
-      {
         "msgid": "Logo"
-      },
-      {
-        "msgid": "Longitude"
       },
       {
         "msgid": "Luxembourg"
@@ -8367,16 +6614,10 @@
         "msgid": "Markdown"
       },
       {
-        "msgid": "Mature"
-      },
-      {
         "msgid": "Mentions"
       },
       {
         "msgid": "Message"
-      },
-      {
-        "msgid": "Message @"
       },
       {
         "msgid": "Messages"
@@ -8386,9 +6627,6 @@
       },
       {
         "msgid": "Microphone ({deviceLabel})"
-      },
-      {
-        "msgid": "Minutes"
       },
       {
         "msgid": "Narration"
@@ -8421,9 +6659,6 @@
         "msgid": "Options"
       },
       {
-        "msgid": "Page {pageNumber}"
-      },
-      {
         "msgid": "Participants"
       },
       {
@@ -8436,13 +6671,13 @@
         "msgid": "Photo"
       },
       {
-        "msgid": "Phrase"
-      },
-      {
         "msgid": "PiP"
       },
       {
         "msgid": "Ping"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Plutonium"
@@ -8460,9 +6695,6 @@
         "msgid": "Premium"
       },
       {
-        "msgid": "Public"
-      },
-      {
         "msgid": "Saturation"
       },
       {
@@ -8470,9 +6702,6 @@
       },
       {
         "msgid": "Secret"
-      },
-      {
-        "msgid": "Secrets"
       },
       {
         "msgid": "Session"
@@ -8499,12 +6728,6 @@
         "msgid": "Spoilers"
       },
       {
-        "msgid": "Standard"
-      },
-      {
-        "msgid": "Standard {baseCurrencyLabel}"
-      },
-      {
         "msgid": "Sticker"
       },
       {
@@ -8512,9 +6735,6 @@
       },
       {
         "msgid": "Suggestions"
-      },
-      {
-        "msgid": "Suppression"
       },
       {
         "msgid": "Surfaces"
@@ -8530,18 +6750,6 @@
       },
       {
         "msgid": "Tags ({tagCount}/{tagLimit})"
-      },
-      {
-        "msgid": "Toast"
-      },
-      {
-        "msgid": "Traits"
-      },
-      {
-        "msgid": "Type"
-      },
-      {
-        "msgid": "Type {premiumType}"
       },
       {
         "msgid": "Version"
@@ -8583,22 +6791,7 @@
         "msgid": "Zoom"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "image"
-      },
-      {
-        "msgid": "macOS"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "message"
@@ -8613,9 +6806,6 @@
         "msgid": "{channelHeading}, {mentionCount, plural, one {# mention} other {# mentions}}"
       },
       {
-        "msgid": "{channelHeading}, {mentionCount} mentions"
-      },
-      {
         "msgid": "{context} · {accountName}"
       },
       {
@@ -8623,12 +6813,6 @@
       },
       {
         "msgid": "{count, plural, one {# message} other {# messages}}"
-      },
-      {
-        "msgid": "{count, plural, one {# minute} other {# minutes}}"
-      },
-      {
-        "msgid": "{countLabel} minutes"
       },
       {
         "msgid": "{desktopChannel} Desktop {desktopVersion}"
@@ -8646,25 +6830,7 @@
         "msgid": "{length, plural, one {# sticker} other {# stickers}}"
       },
       {
-        "msgid": "{length} types"
-      },
-      {
-        "msgid": "{megabits} Mbps"
-      },
-      {
-        "msgid": "{mentionCount} mentions"
-      },
-      {
-        "msgid": "{messageCount} messages"
-      },
-      {
         "msgid": "{messageGroupSpacing}px"
-      },
-      {
-        "msgid": "{minutes, plural, one {# minute} other {# minutes}}"
-      },
-      {
-        "msgid": "{minutes} minutes"
       },
       {
         "msgid": "{oneMinute} minute"
@@ -8674,12 +6840,6 @@
       },
       {
         "msgid": "{thirtyMinutes} minutes"
-      },
-      {
-        "msgid": "{totalCount} total"
-      },
-      {
-        "msgid": "{totalMentionCount} mentions"
       },
       {
         "msgctxt": "accessibility-settings-section",
@@ -8716,10 +6876,6 @@
       {
         "msgctxt": "keyboard-key-name",
         "msgid": "Menu"
-      },
-      {
-        "msgctxt": "noise-suppression-option",
-        "msgid": "Standard"
       },
       {
         "msgctxt": "privacy-settings-section",
@@ -8903,6 +7059,9 @@
         "msgid": "Bluesky"
       },
       {
+        "msgid": "Cloudflare Turnstile"
+      },
+      {
         "msgid": "Ctrl"
       },
       {
@@ -8924,9 +7083,6 @@
         "msgid": "HEVC"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "OP"
       },
       {
@@ -8936,6 +7092,9 @@
         "msgid": "PgUp"
       },
       {
+        "msgid": "Plus"
+      },
+      {
         "msgid": "Searching..."
       },
       {
@@ -8943,9 +7102,6 @@
       },
       {
         "msgid": "Tab"
-      },
-      {
-        "msgid": "Threads"
       },
       {
         "msgid": "Visionary"
@@ -8969,25 +7125,7 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "sendSystemDm"
-      },
-      {
-        "msgid": "user@example.com"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -9040,16 +7178,10 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
         "msgid": "Alt"
-      },
-      {
-        "msgid": "Bluesky OAuth"
       },
       {
         "msgid": "Ctrl"
@@ -9070,9 +7202,6 @@
         "msgid": "HEVC"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "OP"
       },
       {
@@ -9080,6 +7209,9 @@
       },
       {
         "msgid": "PgUp"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Searching..."
@@ -9097,22 +7229,7 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "sendSystemDm"
-      },
-      {
-        "msgid": "user@example.com"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -9122,9 +7239,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -9139,15 +7253,6 @@
     "hr": [
       {
         "msgid": "+{count}"
-      },
-      {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
       },
       {
         "msgid": "AV1"
@@ -9174,7 +7279,7 @@
         "msgid": "Bot"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -9204,9 +7309,6 @@
         "msgid": "Forum"
       },
       {
-        "msgid": "Gateway"
-      },
-      {
         "msgid": "Google Lens"
       },
       {
@@ -9214,9 +7316,6 @@
       },
       {
         "msgid": "Host"
-      },
-      {
-        "msgid": "Logo"
       },
       {
         "msgid": "Malta"
@@ -9231,16 +7330,10 @@
         "msgid": "Moderator"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "Neko"
       },
       {
         "msgid": "OP"
-      },
-      {
-        "msgid": "Online"
       },
       {
         "msgid": "PgDn"
@@ -9256,6 +7349,12 @@
       },
       {
         "msgid": "Plan"
+      },
+      {
+        "msgid": "Plus"
+      },
+      {
+        "msgid": "Plus model"
       },
       {
         "msgid": "Port"
@@ -9277,9 +7376,6 @@
       },
       {
         "msgid": "Sourcemaps"
-      },
-      {
-        "msgid": "Spam"
       },
       {
         "msgid": "Status"
@@ -9318,25 +7414,10 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
         "msgid": "emoji {emojiName}"
       },
       {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "user@example.com"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -9352,9 +7433,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -9562,22 +7640,10 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
         "msgid": "Alt"
-      },
-      {
-        "msgid": "Avatar hash"
       },
       {
         "msgid": "Backspace"
@@ -9595,10 +7661,7 @@
         "msgid": "Bot"
       },
       {
-        "msgid": "Bot DM"
-      },
-      {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -9622,16 +7685,10 @@
         "msgid": "Fluxer"
       },
       {
-        "msgid": "Gateway"
-      },
-      {
         "msgid": "Google Lens"
       },
       {
         "msgid": "HEVC"
-      },
-      {
-        "msgid": "JWKS URL"
       },
       {
         "msgid": "Jitter"
@@ -9644,9 +7701,6 @@
       },
       {
         "msgid": "Mod"
-      },
-      {
-        "msgid": "NCMEC {ncmecReportId}"
       },
       {
         "msgid": "Neko"
@@ -9671,6 +7725,9 @@
       },
       {
         "msgid": "Platform"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Port"
@@ -9715,31 +7772,16 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "link"
-      },
-      {
-        "msgid": "macOS"
       },
       {
         "msgid": "online"
       },
       {
         "msgid": "spoiler"
-      },
-      {
-        "msgid": "user@example.com"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -9752,9 +7794,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -9982,19 +8021,7 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
-      },
-      {
-        "msgid": "Admin"
       },
       {
         "msgid": "Administrator"
@@ -10048,7 +8075,7 @@
         "msgid": "Checkout"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Codec"
@@ -10085,12 +8112,6 @@
       },
       {
         "msgid": "Edit \"{0}\""
-      },
-      {
-        "msgid": "Edit Tag"
-      },
-      {
-        "msgid": "Edit Thread"
       },
       {
         "msgid": "Edit media"
@@ -10177,22 +8198,13 @@
         "msgid": "Media"
       },
       {
-        "msgid": "Metadata"
-      },
-      {
         "msgid": "Mod"
       },
       {
         "msgid": "Moderator"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "Neko"
-      },
-      {
-        "msgid": "Node"
       },
       {
         "msgid": "Normal"
@@ -10202,9 +8214,6 @@
       },
       {
         "msgid": "Offline"
-      },
-      {
-        "msgid": "Offset {offset}"
       },
       {
         "msgid": "Online"
@@ -10231,6 +8240,9 @@
         "msgid": "Platform"
       },
       {
+        "msgid": "Plus"
+      },
+      {
         "msgid": "Plutonium"
       },
       {
@@ -10244,9 +8256,6 @@
       },
       {
         "msgid": "Prompt"
-      },
-      {
-        "msgid": "SHA-256 Hash"
       },
       {
         "msgid": "Searching..."
@@ -10273,28 +8282,16 @@
         "msgid": "Submenu"
       },
       {
-        "msgid": "Substring"
-      },
-      {
         "msgid": "Tab"
       },
       {
         "msgid": "Tag"
       },
       {
-        "msgid": "Target"
-      },
-      {
         "msgid": "Template"
       },
       {
         "msgid": "Token"
-      },
-      {
-        "msgid": "Total RAM"
-      },
-      {
-        "msgid": "Unit"
       },
       {
         "msgid": "Video"
@@ -10339,34 +8336,16 @@
         "msgid": "Zoom"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
         "msgid": "emoji {emojiName}"
       },
       {
-        "msgid": "macOS"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "online"
       },
       {
         "msgid": "spoiler"
-      },
-      {
-        "msgid": "user@example.com"
-      },
-      {
-        "msgid": "video"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -10387,9 +8366,6 @@
         "msgid": "{kilobits} kbps"
       },
       {
-        "msgid": "{megabits} Mbps"
-      },
-      {
         "msgid": "{messageGroupSpacing}px"
       },
       {
@@ -10397,9 +8373,6 @@
       },
       {
         "msgid": "{presenceCount} online"
-      },
-      {
-        "msgid": "{productName} Desktop"
       },
       {
         "msgid": "{productName} Visionary"
@@ -10415,9 +8388,6 @@
       },
       {
         "msgid": "{resolution} {fps} FPS"
-      },
-      {
-        "msgid": "{totalCount} total"
       },
       {
         "msgid": "{zoomPercent}%"
@@ -10668,15 +8638,6 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
@@ -10690,9 +8651,6 @@
       },
       {
         "msgid": "Austria"
-      },
-      {
-        "msgid": "Automatic ({codec})"
       },
       {
         "msgid": "Avatar"
@@ -10722,10 +8680,10 @@
         "msgid": "Chat"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Client"
       },
       {
-        "msgid": "Client"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Codec"
@@ -10782,9 +8740,6 @@
         "msgid": "Forum"
       },
       {
-        "msgid": "Gateway"
-      },
-      {
         "msgid": "Google Lens"
       },
       {
@@ -10792,9 +8747,6 @@
       },
       {
         "msgid": "Hardware"
-      },
-      {
-        "msgid": "Hashing"
       },
       {
         "msgid": "Hindi"
@@ -10836,12 +8788,6 @@
         "msgid": "Neko"
       },
       {
-        "msgid": "Nickname"
-      },
-      {
-        "msgid": "Nickname: {nickname}"
-      },
-      {
         "msgid": "No"
       },
       {
@@ -10860,9 +8806,6 @@
         "msgid": "Password"
       },
       {
-        "msgid": "Payload"
-      },
-      {
         "msgid": "PiP"
       },
       {
@@ -10873,6 +8816,9 @@
       },
       {
         "msgid": "Ping: {latency}ms"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Premium"
@@ -10897,15 +8843,6 @@
       },
       {
         "msgid": "Spoiler"
-      },
-      {
-        "msgid": "Standard"
-      },
-      {
-        "msgid": "Standard {baseCurrencyLabel}"
-      },
-      {
-        "msgid": "Static Neko"
       },
       {
         "msgid": "Sticker"
@@ -10968,28 +8905,13 @@
         "msgid": "Zoom"
       },
       {
-        "msgid": "community"
-      },
-      {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
         "msgid": "emoji {emojiName}"
       },
       {
-        "msgid": "link"
+        "msgid": "hCaptcha"
       },
       {
-        "msgid": "macOS"
+        "msgid": "link"
       },
       {
         "msgid": "online"
@@ -10999,12 +8921,6 @@
       },
       {
         "msgid": "sticker"
-      },
-      {
-        "msgid": "user@example.com"
-      },
-      {
-        "msgid": "video"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -11025,9 +8941,6 @@
         "msgid": "{kilobits} kbps"
       },
       {
-        "msgid": "{megabits} Mbps"
-      },
-      {
         "msgid": "{messageGroupSpacing}px"
       },
       {
@@ -11035,9 +8948,6 @@
       },
       {
         "msgid": "{presenceCount} online"
-      },
-      {
-        "msgid": "{productName} Desktop"
       },
       {
         "msgid": "{productName} Visionary"
@@ -11076,14 +8986,6 @@
       {
         "msgctxt": "keyboard-key-name",
         "msgid": "Menu"
-      },
-      {
-        "msgctxt": "noise-suppression-option",
-        "msgid": "Standard"
-      },
-      {
-        "msgctxt": "security-settings-section",
-        "msgid": "Account"
       },
       {
         "msgctxt": "us-state",
@@ -11275,15 +9177,6 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
@@ -11299,7 +9192,7 @@
         "msgid": "Bluesky OAuth"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -11315,12 +9208,6 @@
       },
       {
         "msgid": "HEVC"
-      },
-      {
-        "msgid": "JWKS URL"
-      },
-      {
-        "msgid": "NCMEC {ncmecReportId}"
       },
       {
         "msgid": "OP"
@@ -11339,6 +9226,9 @@
       },
       {
         "msgid": "Ping: {latency}ms"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Searching..."
@@ -11362,34 +9252,13 @@
         "msgid": "WebAuthn"
       },
       {
-        "msgid": "Webhook"
-      },
-      {
-        "msgid": "Webhook URL"
-      },
-      {
         "msgid": "Win"
       },
       {
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "user@example.com"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -11402,9 +9271,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -11444,15 +9310,6 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
@@ -11460,6 +9317,9 @@
       },
       {
         "msgid": "Bluesky OAuth"
+      },
+      {
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -11477,12 +9337,6 @@
         "msgid": "HEVC"
       },
       {
-        "msgid": "JWKS URL"
-      },
-      {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "OP"
       },
       {
@@ -11490,6 +9344,9 @@
       },
       {
         "msgid": "PgUp"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Searching..."
@@ -11513,25 +9370,7 @@
         "msgid": "Win"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "sendSystemDm"
-      },
-      {
-        "msgid": "user@example.com"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -11580,9 +9419,6 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
@@ -11593,9 +9429,6 @@
       },
       {
         "msgid": "Bluesky"
-      },
-      {
-        "msgid": "Cisco"
       },
       {
         "msgid": "Ctrl"
@@ -11622,15 +9455,6 @@
         "msgid": "Hindi"
       },
       {
-        "msgid": "Instance"
-      },
-      {
-        "msgid": "Instance URL"
-      },
-      {
-        "msgid": "JWKS URL"
-      },
-      {
         "msgid": "Malta"
       },
       {
@@ -11638,9 +9462,6 @@
       },
       {
         "msgid": "Mod"
-      },
-      {
-        "msgid": "NCMEC {ncmecReportId}"
       },
       {
         "msgid": "Neko"
@@ -11659,6 +9480,9 @@
       },
       {
         "msgid": "Ping"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Premium"
@@ -11691,18 +9515,6 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
         "msgid": "{context} · {accountName}"
       },
       {
@@ -11713,9 +9525,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{resolution} {fps} FPS"
@@ -11789,9 +9598,6 @@
         "msgid": "1 week"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
@@ -11811,9 +9617,6 @@
       },
       {
         "msgid": "Authenticator"
-      },
-      {
-        "msgid": "Authenticators"
       },
       {
         "msgid": "Avatar"
@@ -11855,10 +9658,10 @@
         "msgid": "Chat"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Client"
       },
       {
-        "msgid": "Client"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Code"
@@ -11874,9 +9677,6 @@
       },
       {
         "msgid": "Compact"
-      },
-      {
-        "msgid": "Compact (400x300)"
       },
       {
         "msgid": "Contact"
@@ -11945,9 +9745,6 @@
         "msgid": "Gaming"
       },
       {
-        "msgid": "Gateway"
-      },
-      {
         "msgid": "Google Lens"
       },
       {
@@ -11990,12 +9787,6 @@
         "msgid": "Jitter"
       },
       {
-        "msgid": "Jobs"
-      },
-      {
-        "msgid": "Lane"
-      },
-      {
         "msgid": "Later"
       },
       {
@@ -12020,22 +9811,10 @@
         "msgid": "Media"
       },
       {
-        "msgid": "Metadata"
-      },
-      {
         "msgid": "Moderator"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "Neko"
-      },
-      {
-        "msgid": "Node"
-      },
-      {
-        "msgid": "Nodes"
       },
       {
         "msgid": "OP"
@@ -12044,19 +9823,10 @@
         "msgid": "Offline"
       },
       {
-        "msgid": "Offset {offset}"
-      },
-      {
         "msgid": "Online"
       },
       {
         "msgid": "Open @{displayName}"
-      },
-      {
-        "msgid": "Open community"
-      },
-      {
-        "msgid": "Open event sink"
       },
       {
         "msgid": "Open thread"
@@ -12077,9 +9847,6 @@
         "msgid": "Open {landmarkName}"
       },
       {
-        "msgid": "Open {macosSystemSettingsName}"
-      },
-      {
         "msgid": "Open {premiumProductFullName}"
       },
       {
@@ -12090,9 +9857,6 @@
       },
       {
         "msgid": "Passkeys"
-      },
-      {
-        "msgid": "Payload"
       },
       {
         "msgid": "Permanent"
@@ -12113,6 +9877,9 @@
         "msgid": "Platform"
       },
       {
+        "msgid": "Plus"
+      },
+      {
         "msgid": "Plutonium"
       },
       {
@@ -12122,16 +9889,10 @@
         "msgid": "Premium"
       },
       {
-        "msgid": "Premium model"
-      },
-      {
         "msgid": "Privacy"
       },
       {
         "msgid": "Provider"
-      },
-      {
-        "msgid": "Realtime"
       },
       {
         "msgid": "Recent"
@@ -12188,9 +9949,6 @@
         "msgid": "Submenu"
       },
       {
-        "msgid": "Substring"
-      },
-      {
         "msgid": "Tab"
       },
       {
@@ -12227,15 +9985,6 @@
         "msgid": "Tracking"
       },
       {
-        "msgid": "Type"
-      },
-      {
-        "msgid": "Type {premiumType}"
-      },
-      {
-        "msgid": "Uploader"
-      },
-      {
         "msgid": "Video"
       },
       {
@@ -12243,9 +9992,6 @@
       },
       {
         "msgid": "Visionary ({visionaryLifetimeBadgeLabel})"
-      },
-      {
-        "msgid": "Voice servers: {regionName}"
       },
       {
         "msgid": "Volume"
@@ -12278,31 +10024,16 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
         "msgid": "emoji {emojiName}"
+      },
+      {
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "link"
       },
       {
-        "msgid": "macOS"
-      },
-      {
         "msgid": "online"
-      },
-      {
-        "msgid": "reposts"
       },
       {
         "msgid": "slash {commandName}"
@@ -12312,9 +10043,6 @@
       },
       {
         "msgid": "sticker"
-      },
-      {
-        "msgid": "video"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -12339,15 +10067,6 @@
       },
       {
         "msgid": "{length, plural, one {# sticker} other {# stickers}}"
-      },
-      {
-        "msgid": "{length} apps"
-      },
-      {
-        "msgid": "{length} stickers"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{onlineCount} online"
@@ -12624,19 +10343,7 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
-      },
-      {
-        "msgid": "Admin"
       },
       {
         "msgid": "Administrator"
@@ -12646,9 +10353,6 @@
       },
       {
         "msgid": "Avatar"
-      },
-      {
-        "msgid": "Ban reason"
       },
       {
         "msgid": "Banner"
@@ -12666,9 +10370,6 @@
         "msgid": "Bluesky OAuth"
       },
       {
-        "msgid": "Boost"
-      },
-      {
         "msgid": "Bot"
       },
       {
@@ -12678,7 +10379,7 @@
         "msgid": "Chat"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -12714,9 +10415,6 @@
         "msgid": "Full"
       },
       {
-        "msgid": "Gateway"
-      },
-      {
         "msgid": "Google Lens"
       },
       {
@@ -12726,16 +10424,7 @@
         "msgid": "Hindi"
       },
       {
-        "msgid": "Inviter"
-      },
-      {
         "msgid": "Jitter"
-      },
-      {
-        "msgid": "Lane"
-      },
-      {
-        "msgid": "Latitude"
       },
       {
         "msgid": "Latvia"
@@ -12753,19 +10442,10 @@
         "msgid": "Markdown"
       },
       {
-        "msgid": "Metadata"
-      },
-      {
         "msgid": "Moderator"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "Neko"
-      },
-      {
-        "msgid": "Node"
       },
       {
         "msgid": "Normal"
@@ -12789,6 +10469,9 @@
         "msgid": "Ping"
       },
       {
+        "msgid": "Plus"
+      },
+      {
         "msgid": "Plutonium"
       },
       {
@@ -12799,12 +10482,6 @@
       },
       {
         "msgid": "Premium"
-      },
-      {
-        "msgid": "Region"
-      },
-      {
-        "msgid": "Region: {regionName}"
       },
       {
         "msgid": "Ring"
@@ -12837,12 +10514,6 @@
         "msgid": "Spoiler"
       },
       {
-        "msgid": "Standard"
-      },
-      {
-        "msgid": "Standard {baseCurrencyLabel}"
-      },
-      {
         "msgid": "Start"
       },
       {
@@ -12867,19 +10538,7 @@
         "msgid": "Token"
       },
       {
-        "msgid": "Tokens"
-      },
-      {
         "msgid": "Tone"
-      },
-      {
-        "msgid": "Total RAM"
-      },
-      {
-        "msgid": "Type"
-      },
-      {
-        "msgid": "Type {premiumType}"
       },
       {
         "msgid": "Video"
@@ -12909,34 +10568,13 @@
         "msgid": "Zoom"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
         "msgid": "emoji {emojiName}"
       },
       {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "repost"
-      },
-      {
-        "msgid": "sendSystemDm"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "spoiler"
-      },
-      {
-        "msgid": "video"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -12946,9 +10584,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{productName} Visionary"
@@ -13203,7 +10838,7 @@
         "msgid": "Bot"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -13251,9 +10886,6 @@
         "msgid": "Jitter"
       },
       {
-        "msgid": "Limit"
-      },
-      {
         "msgid": "Link"
       },
       {
@@ -13267,9 +10899,6 @@
       },
       {
         "msgid": "Moderator"
-      },
-      {
-        "msgid": "NCMEC {ncmecReportId}"
       },
       {
         "msgid": "Neko"
@@ -13296,16 +10925,13 @@
         "msgid": "Plan"
       },
       {
+        "msgid": "Plus"
+      },
+      {
         "msgid": "Port"
       },
       {
         "msgid": "Premium"
-      },
-      {
-        "msgid": "Region"
-      },
-      {
-        "msgid": "Region: {regionName}"
       },
       {
         "msgid": "Searching..."
@@ -13344,9 +10970,6 @@
         "msgid": "Visionary ({visionaryLifetimeBadgeLabel})"
       },
       {
-        "msgid": "Web {buildVersion}"
-      },
-      {
         "msgid": "WebAuthn"
       },
       {
@@ -13359,28 +10982,13 @@
         "msgid": "Win"
       },
       {
-        "msgid": "Wordmark"
-      },
-      {
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "link"
-      },
-      {
-        "msgid": "macOS"
       },
       {
         "msgid": "online"
@@ -13390,9 +10998,6 @@
       },
       {
         "msgid": "{context} · {accountName}"
-      },
-      {
-        "msgid": "{desktopChannel} Desktop {desktopVersion}"
       },
       {
         "msgid": "{formattedPresenceCount} online"
@@ -13588,22 +11193,7 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
-        "msgid": "ACLs"
-      },
-      {
         "msgid": "AV1"
-      },
-      {
-        "msgid": "Admin"
       },
       {
         "msgid": "Alt"
@@ -13627,7 +11217,7 @@
         "msgid": "Bots"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Codec"
@@ -13666,9 +11256,6 @@
         "msgid": "GIFs"
       },
       {
-        "msgid": "Gateway"
-      },
-      {
         "msgid": "Google Lens"
       },
       {
@@ -13678,16 +11265,10 @@
         "msgid": "Hardware"
       },
       {
-        "msgid": "Hindi"
-      },
-      {
         "msgid": "Host"
       },
       {
         "msgid": "Interface"
-      },
-      {
-        "msgid": "Latitude"
       },
       {
         "msgid": "Layout"
@@ -13702,19 +11283,10 @@
         "msgid": "Login"
       },
       {
-        "msgid": "Logo"
-      },
-      {
-        "msgid": "Longitude"
-      },
-      {
         "msgid": "Malta"
       },
       {
         "msgid": "Markdown"
-      },
-      {
-        "msgid": "NCMEC {ncmecReportId}"
       },
       {
         "msgid": "Neko"
@@ -13744,10 +11316,7 @@
         "msgid": "Ping"
       },
       {
-        "msgid": "Ping: {currentLatency}ms"
-      },
-      {
-        "msgid": "Ping: {latency}ms"
+        "msgid": "Plus"
       },
       {
         "msgid": "Portugal"
@@ -13783,9 +11352,6 @@
         "msgid": "Submenu"
       },
       {
-        "msgid": "Substring"
-      },
-      {
         "msgid": "Tab"
       },
       {
@@ -13805,9 +11371,6 @@
       },
       {
         "msgid": "Tokens"
-      },
-      {
-        "msgid": "Use {accountTag}"
       },
       {
         "msgid": "Visionary"
@@ -13849,25 +11412,13 @@
         "msgid": "Zoom"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
         "msgid": "emoji {emojiName}"
       },
       {
-        "msgid": "link"
+        "msgid": "hCaptcha"
       },
       {
-        "msgid": "macOS"
+        "msgid": "link"
       },
       {
         "msgid": "online"
@@ -13877,9 +11428,6 @@
       },
       {
         "msgid": "{context} · {accountName}"
-      },
-      {
-        "msgid": "{count, plural, one {# emoji} other {# emojis}}"
       },
       {
         "msgid": "{desktopChannel} Desktop {desktopVersion}"
@@ -13895,12 +11443,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{length} apps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -13922,12 +11464,6 @@
       },
       {
         "msgid": "{resolution} {fps} FPS"
-      },
-      {
-        "msgid": "{tokenCount, plural, one {# token} other {# tokens}}"
-      },
-      {
-        "msgid": "{totalCount} total"
       },
       {
         "msgid": "{zoomPercent}%"
@@ -14118,22 +11654,10 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
         "msgid": "Accent"
-      },
-      {
-        "msgid": "Admin"
       },
       {
         "msgid": "Administrator"
@@ -14175,10 +11699,10 @@
         "msgid": "Chat"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Client"
       },
       {
-        "msgid": "Client"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Codec"
@@ -14188,9 +11712,6 @@
       },
       {
         "msgid": "Compact"
-      },
-      {
-        "msgid": "Compact (400x300)"
       },
       {
         "msgid": "Contact"
@@ -14244,9 +11765,6 @@
         "msgid": "Forum"
       },
       {
-        "msgid": "Gateway"
-      },
-      {
         "msgid": "General"
       },
       {
@@ -14268,19 +11786,10 @@
         "msgid": "Indicator"
       },
       {
-        "msgid": "Invalid"
-      },
-      {
         "msgid": "Jitter"
       },
       {
-        "msgid": "Job {jobId}: {jobStatus}"
-      },
-      {
         "msgid": "Link"
-      },
-      {
-        "msgid": "Local {localizedCurrencyLabel}"
       },
       {
         "msgid": "Logo"
@@ -14301,13 +11810,7 @@
         "msgid": "Moderator"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "Neko"
-      },
-      {
-        "msgid": "Net"
       },
       {
         "msgid": "Normal"
@@ -14331,25 +11834,19 @@
         "msgid": "Ping"
       },
       {
+        "msgid": "Plus"
+      },
+      {
         "msgid": "Port"
       },
       {
         "msgid": "Premium"
       },
       {
-        "msgid": "Public"
-      },
-      {
         "msgid": "Searching..."
       },
       {
         "msgid": "Secret"
-      },
-      {
-        "msgid": "Set the message history threshold to {date}."
-      },
-      {
-        "msgid": "Set the role color to {color}."
       },
       {
         "msgid": "Shift"
@@ -14365,15 +11862,6 @@
       },
       {
         "msgid": "Spoiler"
-      },
-      {
-        "msgid": "Standard"
-      },
-      {
-        "msgid": "Standard {baseCurrencyLabel}"
-      },
-      {
-        "msgid": "Static"
       },
       {
         "msgid": "Static Neko"
@@ -14433,28 +11921,16 @@
         "msgid": "Zoom"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
         "msgid": "emoji {emojiName}"
       },
       {
         "msgid": "exclude {values}"
       },
       {
-        "msgid": "link"
+        "msgid": "hCaptcha"
       },
       {
-        "msgid": "macOS"
+        "msgid": "link"
       },
       {
         "msgid": "online"
@@ -14467,12 +11943,6 @@
       },
       {
         "msgid": "sticker"
-      },
-      {
-        "msgid": "user@example.com"
-      },
-      {
-        "msgid": "video"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -14491,9 +11961,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -14515,9 +11982,6 @@
       },
       {
         "msgid": "{resolution} {fps} FPS"
-      },
-      {
-        "msgid": "{totalCount} total"
       },
       {
         "msgid": "{zoomPercent}%"
@@ -14553,10 +12017,6 @@
       {
         "msgctxt": "keyboard-key-name",
         "msgid": "Pause / Break"
-      },
-      {
-        "msgctxt": "noise-suppression-option",
-        "msgid": "Standard"
       },
       {
         "msgctxt": "us-state",
@@ -14764,7 +12224,7 @@
         "msgid": "Bluesky"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -14785,9 +12245,6 @@
         "msgid": "HEVC"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "OP"
       },
       {
@@ -14795,6 +12252,9 @@
       },
       {
         "msgid": "PgUp"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Searching..."
@@ -14824,25 +12284,7 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "sendSystemDm"
-      },
-      {
-        "msgid": "user@example.com"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -14885,22 +12327,10 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
         "msgid": "Acceleration"
-      },
-      {
-        "msgid": "Admin"
       },
       {
         "msgid": "Alt"
@@ -14912,9 +12342,6 @@
         "msgid": "Banner"
       },
       {
-        "msgid": "Bio"
-      },
-      {
         "msgid": "Bluesky"
       },
       {
@@ -14924,7 +12351,7 @@
         "msgid": "Bot"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Codec"
@@ -14945,9 +12372,6 @@
         "msgid": "Emoji"
       },
       {
-        "msgid": "Emojis"
-      },
-      {
         "msgid": "Esc"
       },
       {
@@ -14966,9 +12390,6 @@
         "msgid": "Forum"
       },
       {
-        "msgid": "Gateway"
-      },
-      {
         "msgid": "Google Lens"
       },
       {
@@ -14979,9 +12400,6 @@
       },
       {
         "msgid": "Jitter"
-      },
-      {
-        "msgid": "Lane"
       },
       {
         "msgid": "Layout"
@@ -14999,16 +12417,7 @@
         "msgid": "Max {maxSize}."
       },
       {
-        "msgid": "Media"
-      },
-      {
-        "msgid": "Metadata"
-      },
-      {
         "msgid": "Moderator"
-      },
-      {
-        "msgid": "NCMEC {ncmecReportId}"
       },
       {
         "msgid": "Neko"
@@ -15041,6 +12450,9 @@
         "msgid": "Plan"
       },
       {
+        "msgid": "Plus"
+      },
+      {
         "msgid": "Plutonium"
       },
       {
@@ -15057,12 +12469,6 @@
       },
       {
         "msgid": "Premium"
-      },
-      {
-        "msgid": "Region"
-      },
-      {
-        "msgid": "Region: {regionName}"
       },
       {
         "msgid": "Relevant"
@@ -15084,12 +12490,6 @@
       },
       {
         "msgid": "Spoilers"
-      },
-      {
-        "msgid": "Standard"
-      },
-      {
-        "msgid": "Standard {baseCurrencyLabel}"
       },
       {
         "msgid": "Status"
@@ -15140,31 +12540,13 @@
         "msgid": "Win"
       },
       {
-        "msgid": "Wordmark"
-      },
-      {
         "msgid": "YubiKey"
-      },
-      {
-        "msgid": "community"
-      },
-      {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
       },
       {
         "msgid": "emoji {emojiName}"
       },
       {
-        "msgid": "macOS"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "online"
@@ -15173,19 +12555,10 @@
         "msgid": "spoiler"
       },
       {
-        "msgid": "video"
-      },
-      {
         "msgid": "{categoryLabel}, {count, plural, one {# community} other {# communities}}"
       },
       {
         "msgid": "{context} · {accountName}"
-      },
-      {
-        "msgid": "{count, plural, one {# emoji} other {# emojis}}"
-      },
-      {
-        "msgid": "{desktopChannel} Desktop {desktopVersion}"
       },
       {
         "msgid": "{formattedPresenceCount} online"
@@ -15195,9 +12568,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{onlineCount} online"
@@ -15229,10 +12599,6 @@
       {
         "msgctxt": "channel-settings-tab",
         "msgid": "Webhooks"
-      },
-      {
-        "msgctxt": "chat-settings-section",
-        "msgid": "Media"
       },
       {
         "msgctxt": "community-settings-tab",
@@ -15468,15 +12834,6 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
@@ -15489,10 +12846,10 @@
         "msgid": "Bluesky OAuth"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Client secret"
       },
       {
-        "msgid": "Client secret"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -15513,9 +12870,6 @@
         "msgid": "HEVC"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "OP"
       },
       {
@@ -15526,6 +12880,9 @@
       },
       {
         "msgid": "PiP"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Searching..."
@@ -15564,22 +12921,7 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "user@example.com"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -15589,9 +12931,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -15631,15 +12970,6 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
@@ -15664,7 +12994,7 @@
         "msgid": "Bot"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -15683,9 +13013,6 @@
       },
       {
         "msgid": "Favicon"
-      },
-      {
-        "msgid": "Fluxer"
       },
       {
         "msgid": "Forum"
@@ -15709,13 +13036,7 @@
         "msgid": "Mod"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "Neko"
-      },
-      {
-        "msgid": "Net"
       },
       {
         "msgid": "Normal"
@@ -15745,6 +13066,9 @@
         "msgid": "Platform"
       },
       {
+        "msgid": "Plus"
+      },
+      {
         "msgid": "Port"
       },
       {
@@ -15758,9 +13082,6 @@
       },
       {
         "msgid": "Shift"
-      },
-      {
-        "msgid": "Spam"
       },
       {
         "msgid": "Spoiler"
@@ -15796,25 +13117,10 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "spoiler"
-      },
-      {
-        "msgid": "video"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -15827,9 +13133,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -16057,7 +13360,7 @@
         "msgid": "Bluesky"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -16084,9 +13387,6 @@
         "msgid": "Markdown"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "OP"
       },
       {
@@ -16094,6 +13394,9 @@
       },
       {
         "msgid": "PgUp"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Searching..."
@@ -16120,28 +13423,10 @@
         "msgid": "Win"
       },
       {
-        "msgid": "Wordmark"
-      },
-      {
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "user@example.com"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -16190,15 +13475,6 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
@@ -16223,7 +13499,7 @@
         "msgid": "Camera"
       },
       {
-        "msgid": "Cisco"
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Codec"
@@ -16280,13 +13556,7 @@
         "msgid": "Mic"
       },
       {
-        "msgid": "Microphone ({deviceLabel})"
-      },
-      {
         "msgid": "Mod"
-      },
-      {
-        "msgid": "NCMEC {ncmecReportId}"
       },
       {
         "msgid": "Neko"
@@ -16302,6 +13572,9 @@
       },
       {
         "msgid": "Ping"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Plutonium"
@@ -16320,9 +13593,6 @@
       },
       {
         "msgid": "Slovenia"
-      },
-      {
-        "msgid": "Spam"
       },
       {
         "msgid": "Tab"
@@ -16361,25 +13631,7 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "user@example.com"
-      },
-      {
-        "msgid": "video"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -16392,9 +13644,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{messageGroupSpacing}px"
@@ -16638,6 +13887,9 @@
         "msgid": "Bluesky OAuth"
       },
       {
+        "msgid": "Cloudflare Turnstile"
+      },
+      {
         "msgid": "Ctrl"
       },
       {
@@ -16650,22 +13902,16 @@
         "msgid": "HEVC"
       },
       {
-        "msgid": "JWKS URL"
-      },
-      {
         "msgid": "Logo"
-      },
-      {
-        "msgid": "Logo URL"
       },
       {
         "msgid": "Markdown"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
+        "msgid": "OP"
       },
       {
-        "msgid": "OP"
+        "msgid": "Plus"
       },
       {
         "msgid": "Searching..."
@@ -16701,25 +13947,7 @@
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "sendSystemDm"
-      },
-      {
-        "msgid": "user@example.com"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -16729,9 +13957,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{productName} Visionary"
@@ -16767,15 +13992,6 @@
         "msgid": "+{count}"
       },
       {
-        "msgid": "15 FPS"
-      },
-      {
-        "msgid": "30 FPS"
-      },
-      {
-        "msgid": "60 FPS"
-      },
-      {
         "msgid": "AV1"
       },
       {
@@ -16786,6 +14002,9 @@
       },
       {
         "msgid": "Bluesky OAuth"
+      },
+      {
+        "msgid": "Cloudflare Turnstile"
       },
       {
         "msgid": "Ctrl"
@@ -16815,9 +14034,6 @@
         "msgid": "Mute thread"
       },
       {
-        "msgid": "NCMEC {ncmecReportId}"
-      },
-      {
         "msgid": "OP"
       },
       {
@@ -16825,6 +14041,9 @@
       },
       {
         "msgid": "PgUp"
+      },
+      {
+        "msgid": "Plus"
       },
       {
         "msgid": "Searching..."
@@ -16848,31 +14067,10 @@
         "msgid": "Win"
       },
       {
-        "msgid": "Wordmark"
-      },
-      {
         "msgid": "YubiKey"
       },
       {
-        "msgid": "cron"
-      },
-      {
-        "msgid": "deleted-category"
-      },
-      {
-        "msgid": "deleted-channel"
-      },
-      {
-        "msgid": "deleted-role"
-      },
-      {
-        "msgid": "macOS"
-      },
-      {
-        "msgid": "sendSystemDm"
-      },
-      {
-        "msgid": "user@example.com"
+        "msgid": "hCaptcha"
       },
       {
         "msgid": "{context} · {accountName}"
@@ -16885,9 +14083,6 @@
       },
       {
         "msgid": "{kilobits} kbps"
-      },
-      {
-        "msgid": "{megabits} Mbps"
       },
       {
         "msgid": "{resolution} {fps} FPS"

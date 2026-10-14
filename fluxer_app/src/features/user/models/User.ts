@@ -13,6 +13,7 @@ import {
 	UserPremiumTypes,
 } from '@fluxer/constants/src/UserConstants';
 import {DEFAULT_STOCK_LIMITS} from '@fluxer/limits/src/LimitDefaults';
+import type {CosmeticAssetDataResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
 import type {UserPartial, UserPrivate, User as WireUser} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import * as SnowflakeUtils from '@fluxer/snowflake/src/SnowflakeUtils';
 
@@ -123,11 +124,18 @@ function hasKey<K extends string>(obj: object, key: K): boolean {
 	return key in obj;
 }
 
+function cosmeticsEqual(a: CosmeticAssetDataResponse | null, b: CosmeticAssetDataResponse | null): boolean {
+	if (a === b) return true;
+	return a != null && b != null && a.asset === b.asset && a.item_id === b.item_id;
+}
+
 export class User {
 	readonly instanceId: string;
 	readonly id: string;
 	readonly username: string;
 	readonly discriminator: string;
+	readonly identityVersion: string;
+	readonly usernameState: WireUser['username_state'];
 	readonly globalName: string | null;
 	readonly avatar: string | null;
 	readonly bot: boolean;
@@ -135,6 +143,9 @@ export class User {
 	readonly flags: number;
 	readonly mentionFlags: MentionReplyPreference;
 	readonly avatarColor: number | null | undefined;
+	readonly avatarDecoration: CosmeticAssetDataResponse | null;
+	readonly avatarUltra: CosmeticAssetDataResponse | null;
+	readonly nameplate: CosmeticAssetDataResponse | null;
 	private readonly _isStaff: boolean | undefined;
 	private readonly _email: string | null | undefined;
 	private readonly _emailBounced: boolean | undefined;
@@ -166,6 +177,7 @@ export class User {
 	readonly passwordLastChangedAt: Date | null | undefined;
 	readonly lastVoiceActivitySharingChangeAt: Date | null | undefined;
 	private readonly _nsfwAllowed: boolean | undefined;
+	private readonly _publicProfileAllowed: boolean | undefined;
 	readonly hasDismissedPremiumOnboarding: boolean | undefined;
 	private readonly _hasEverPurchased: boolean | undefined;
 	private readonly _hasUnreadGiftInventory: boolean | undefined;
@@ -180,6 +192,8 @@ export class User {
 		this.id = user.id;
 		this.username = user.username;
 		this.discriminator = user.discriminator;
+		this.identityVersion = user.identity_version ?? '0';
+		this.usernameState = user.username_state;
 		this.globalName = user.global_name ?? null;
 		this.avatar = user.avatar;
 		this.bot = user.bot ?? false;
@@ -187,6 +201,9 @@ export class User {
 		this.flags = user.flags;
 		this.mentionFlags = user.mention_flags ?? 0;
 		this.avatarColor = hasKey(user, 'avatar_color') ? user.avatar_color : undefined;
+		this.avatarDecoration = user.avatar_decoration_data ?? null;
+		this.avatarUltra = user.avatar_ultra_data ?? null;
+		this.nameplate = user.nameplate_data ?? null;
 		this._isStaff = hasKey(user, 'is_staff') ? user.is_staff : undefined;
 		this._email = hasKey(user, 'email') ? (user.email ?? null) : undefined;
 		this._emailBounced = hasKey(user, 'email_bounced') ? user.email_bounced : undefined;
@@ -236,6 +253,7 @@ export class User {
 			? parseDateOrNull(user.last_voice_activity_sharing_change_at)
 			: undefined;
 		this._nsfwAllowed = hasKey(user, 'nsfw_allowed') ? user.nsfw_allowed : undefined;
+		this._publicProfileAllowed = hasKey(user, 'public_profile_allowed') ? user.public_profile_allowed : undefined;
 		this.hasDismissedPremiumOnboarding = hasKey(user, 'has_dismissed_premium_onboarding')
 			? user.has_dismissed_premium_onboarding
 			: undefined;
@@ -340,6 +358,11 @@ export class User {
 		return this._nsfwAllowed;
 	}
 
+	// Micup: whether the server lets this account choose the public profile (16 or older with a date of birth).
+	get publicProfileAllowed(): boolean | undefined {
+		return this._publicProfileAllowed;
+	}
+
 	get ageVerifiedAdult(): boolean | undefined {
 		return this._ageVerifiedAdult;
 	}
@@ -373,7 +396,16 @@ export class User {
 	}
 
 	private buildMergedPayload(updates: Partial<WireUser>, opts: MergeOptions): WireUser {
-		const u = updates;
+		const staleIdentity = BigInt(updates.identity_version ?? '0') < BigInt(this.identityVersion);
+		const u = staleIdentity
+			? {
+					...updates,
+					username: this.username,
+					discriminator: this.discriminator,
+					identity_version: this.identityVersion,
+					username_state: this.usernameState,
+				}
+			: updates;
 		const result: MutableWireUser = {
 			id: u.id ?? this.id,
 			username: u.username ?? this.username,
@@ -385,7 +417,16 @@ export class User {
 			system: u.system ?? this.system,
 			flags: u.flags ?? this.flags,
 			mention_flags: hasKey(u, 'mention_flags') ? u.mention_flags : this.mentionFlags || undefined,
+			identity_version: u.identity_version ?? this.identityVersion,
 		};
+		const usernameState = pickField(this.usernameState, u, 'username_state', opts);
+		if (usernameState !== undefined) result.username_state = usernameState;
+		const avatarDecoration = pickField(this.avatarDecoration, u, 'avatar_decoration_data', opts);
+		if (avatarDecoration !== undefined) result.avatar_decoration_data = avatarDecoration;
+		const avatarUltra = pickField(this.avatarUltra, u, 'avatar_ultra_data', opts);
+		if (avatarUltra !== undefined) result.avatar_ultra_data = avatarUltra;
+		const nameplate = pickField(this.nameplate, u, 'nameplate_data', opts);
+		if (nameplate !== undefined) result.nameplate_data = nameplate;
 		const isStaff = pickField(this._isStaff, u, 'is_staff', opts);
 		if (isStaff !== undefined) result.is_staff = isStaff;
 		const avatarColor = pickField(this.avatarColor, u, 'avatar_color', opts);
@@ -475,6 +516,8 @@ export class User {
 		}
 		const nsfwAllowed = pickField(this._nsfwAllowed, u, 'nsfw_allowed', opts);
 		if (nsfwAllowed !== undefined) result.nsfw_allowed = nsfwAllowed;
+		const publicProfileAllowed = pickField(this._publicProfileAllowed, u, 'public_profile_allowed', opts);
+		if (publicProfileAllowed !== undefined) result.public_profile_allowed = publicProfileAllowed;
 		const hasDismissedPremiumOnboarding = pickField(
 			this.hasDismissedPremiumOnboarding,
 			u,
@@ -570,6 +613,18 @@ export class User {
 		return this.resolveRuntimeLimit('max_relationships', DEFAULT_STOCK_LIMITS.max_relationships);
 	}
 
+	get maxFollowing(): number {
+		return this.resolveRuntimeLimit('max_following', DEFAULT_STOCK_LIMITS.max_following);
+	}
+
+	get maxFeedPostsPerDay(): number {
+		return this.resolveRuntimeLimit('max_feed_posts_per_day', DEFAULT_STOCK_LIMITS.max_feed_posts_per_day);
+	}
+
+	get maxBoostSlots(): number {
+		return this.resolveRuntimeLimit('max_boost_slots', DEFAULT_STOCK_LIMITS.max_boost_slots);
+	}
+
 	private resolveRuntimeLimit(key: LimitKey, fallback: number): number {
 		return LimitResolver.resolve({
 			key,
@@ -580,6 +635,10 @@ export class User {
 
 	isStaff(): boolean {
 		return this._isStaff ?? (this.flags & PublicUserFlags.STAFF) !== 0;
+	}
+
+	isVerified(): boolean {
+		return (this.flags & PublicUserFlags.VERIFIED) !== 0;
 	}
 
 	isClaimed(): boolean {
@@ -594,9 +653,14 @@ export class User {
 			this.id === other.id &&
 			this.username === other.username &&
 			this.discriminator === other.discriminator &&
+			this.identityVersion === other.identityVersion &&
+			this.usernameState === other.usernameState &&
 			this.globalName === other.globalName &&
 			this.avatar === other.avatar &&
 			this.avatarColor === other.avatarColor &&
+			cosmeticsEqual(this.avatarDecoration, other.avatarDecoration) &&
+			cosmeticsEqual(this.avatarUltra, other.avatarUltra) &&
+			cosmeticsEqual(this.nameplate, other.nameplate) &&
 			this.bot === other.bot &&
 			this.system === other.system &&
 			this.flags === other.flags &&
@@ -632,6 +696,7 @@ export class User {
 			datesEqual(this.passwordLastChangedAt, other.passwordLastChangedAt) &&
 			datesEqual(this.lastVoiceActivitySharingChangeAt, other.lastVoiceActivitySharingChangeAt) &&
 			this._nsfwAllowed === other._nsfwAllowed &&
+			this._publicProfileAllowed === other._publicProfileAllowed &&
 			this.hasDismissedPremiumOnboarding === other.hasDismissedPremiumOnboarding &&
 			this._hasEverPurchased === other._hasEverPurchased &&
 			this._hasUnreadGiftInventory === other._hasUnreadGiftInventory &&
@@ -648,6 +713,7 @@ export class User {
 			id: this.id,
 			username: this.username,
 			discriminator: this.discriminator,
+			identity_version: this.identityVersion,
 			global_name: this.globalName,
 			avatar: this.avatar,
 			avatar_color: this.avatarColor ?? null,
@@ -655,8 +721,12 @@ export class User {
 			system: this.system,
 			flags: this.flags,
 			mention_flags: this.mentionFlags || undefined,
+			avatar_decoration_data: this.avatarDecoration,
+			avatar_ultra_data: this.avatarUltra,
+			nameplate_data: this.nameplate,
 		};
 		const privateFields: Record<string, unknown> = {};
+		if (this.usernameState !== undefined) privateFields.username_state = this.usernameState;
 		const setOptional = <K extends keyof UserPrivate>(key: K, value: UserPrivate[K] | undefined): void => {
 			if (value !== undefined) privateFields[key as string] = value;
 		};
@@ -704,6 +774,7 @@ export class User {
 				: dateToIsoOrNull(this.lastVoiceActivitySharingChangeAt),
 		);
 		setOptional('nsfw_allowed', this._nsfwAllowed);
+		setOptional('public_profile_allowed', this._publicProfileAllowed);
 		setOptional('has_dismissed_premium_onboarding', this.hasDismissedPremiumOnboarding);
 		setOptional('has_ever_purchased', this._hasEverPurchased);
 		setOptional('has_unread_gift_inventory', this._hasUnreadGiftInventory);

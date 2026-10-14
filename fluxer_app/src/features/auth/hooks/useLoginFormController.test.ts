@@ -33,6 +33,8 @@ vi.mock(import('@app/features/auth/state/AuthFlow'), async (importOriginal) => (
 	loginWithPassword: harness.loginWithPassword,
 }));
 
+// Idle and LocalPresence import each other; loading Idle first keeps its timer from calling a half-loaded store.
+await import('@app/features/ui/state/Idle');
 const {useLoginFormController, LOGIN_CONNECTING_STATUS_DELAY_MS} = await import(
 	'@app/features/auth/hooks/useLoginFlow'
 );

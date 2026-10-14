@@ -1,0 +1,607 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* A timeline row: the 40px avatar column, then the post. The row divider and the column lines belong to the list and
+   the feed page (FeedTimelineList.module.css, FeedPage.module.css), so the post modals show the row without them. */
+.post {
+	display: flex;
+	gap: 0.75rem;
+	padding: 0.875rem 1rem 0.625rem;
+	transition: background-color 150ms ease;
+	/* The like pink has no theme token: a card-scoped value like --feed-video-ratio (#f91880 at saturation 1). */
+	--feed-like: hsl(332.3, calc(94.9% * var(--saturation-factor)), 53.5%);
+}
+
+/* Darker in the light theme, so the heart keeps 3:1 against the light rows. */
+:global(.theme-light) .post {
+	--feed-like: hsl(332.3, calc(94.9% * var(--saturation-factor)), 40%);
+}
+
+:global(html:not(.auth-page):not(.mobile-layout)) .post {
+	padding: 1rem 1.25rem 0.625rem;
+}
+
+/* A timeline row only: the post page card does not light up. The light theme keeps secondary-alt, not modifier-hover:
+   muted text keeps 4.5:1 on it there (4.53 against 4.48). */
+@media (hover: hover) and (pointer: fine) {
+	.post:not(.pageVariant):hover {
+		background-color: var(--background-secondary-alt);
+	}
+
+	:global(html:not(.theme-light)) .post:not(.pageVariant):hover {
+		background-color: var(--background-modifier-hover);
+	}
+}
+
+.avatarButton,
+.authorButton,
+.moreButton,
+.actionButton {
+	margin: 0;
+	border: none;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+
+.avatarButton {
+	display: flex;
+	flex-shrink: 0;
+	align-self: flex-start;
+	padding: 0;
+	border-radius: 50%;
+}
+
+.body {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 0.25rem;
+	min-width: 0;
+}
+
+.header {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	min-width: 0;
+	font-size: 0.9375rem;
+	line-height: 1.25rem;
+}
+
+/* The name follows the header size (font: inherit above). */
+:global(html:not(.auth-page):not(.mobile-layout)) .header {
+	font-size: 0.875rem;
+}
+
+.authorButton {
+	flex: 0 1 auto;
+	min-width: 0;
+	padding: 0;
+	overflow: hidden;
+	color: var(--text-primary);
+	font-weight: 700;
+	text-align: left;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.authorButton:hover {
+	text-decoration: underline;
+}
+
+.tag {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	color: var(--text-primary-muted);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+:global(html:not(.auth-page):not(.mobile-layout)) .tag {
+	font-size: 0.8125rem;
+}
+
+/* The auto end margin pushes the "..." button to the row end, whatever wraps it (FocusRing, Tooltip). */
+.timestamp {
+	flex-shrink: 0;
+	margin-inline-end: auto;
+	color: var(--text-primary-muted);
+	white-space: nowrap;
+}
+
+.timestamp::before {
+	content: '·';
+	margin-inline-end: 0.375rem;
+}
+
+.timestampLink {
+	color: inherit;
+	text-decoration: none;
+}
+
+.timestampLink:hover {
+	text-decoration: underline;
+}
+
+/* A public post shows a globe right after the time; the auto end margin moves from the time to the globe. */
+.timestampBeforeMarker {
+	margin-inline-end: 0;
+}
+
+.publicMarker {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: 0.375rem;
+	margin-inline-end: auto;
+	color: var(--text-primary-muted);
+}
+
+.publicMarker::before {
+	content: '·';
+}
+
+:global(html:not(.auth-page):not(.mobile-layout)) .timestamp,
+:global(html:not(.auth-page):not(.mobile-layout)) .publicMarker {
+	font-size: 0.75rem;
+}
+
+.moreButton {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	padding: 0.375rem;
+	border-radius: var(--radius-lg);
+	color: var(--text-primary-muted);
+	transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* 28px on the desktop layout with a mouse; touch keeps its 44px (the touch block below sets min-width/min-height). */
+@media (hover: hover) and (pointer: fine) {
+	:global(html:not(.auth-page):not(.mobile-layout)) .moreButton {
+		width: 1.75rem;
+		height: 1.75rem;
+		padding: 0;
+	}
+}
+
+.moreButton:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-primary);
+}
+
+/* Micup akis-takip: the Follow pill before the "..." button on a Discover post — the accent with its on-brand text
+   (renk-v1), outlined once following; while following, hover shows Unfollow in the danger colour. One line and 28px,
+   no taller than the "..." button, so the header keeps its height when the pill comes or goes; the name and tag give
+   way (ellipsis). */
+.followPill {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	height: 1.75rem;
+	padding: 0 0.75rem;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	background: var(--brand-primary);
+	color: var(--text-on-brand-primary);
+	font: inherit;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	line-height: 1;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.followPillFollowing {
+	border-color: var(--background-modifier-accent);
+	background: transparent;
+	color: var(--text-primary);
+}
+
+.followPill:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.followHoverLabel {
+	display: none;
+}
+
+/* A mouse only: a tap on touch leaves a sticky :hover, which would show Unfollow right after the follow. */
+@media (hover: hover) and (pointer: fine) {
+	.followPillFollowing:hover {
+		border-color: var(--status-danger);
+		color: var(--status-danger);
+	}
+
+	.followPillFollowing:hover .followIdleLabel {
+		display: none;
+	}
+
+	.followPillFollowing:hover .followHoverLabel {
+		display: inline;
+	}
+}
+
+.content {
+	min-width: 0;
+	color: var(--text-chat);
+	font-size: 0.9375rem;
+	overflow-wrap: anywhere;
+}
+
+:global(html:not(.auth-page):not(.mobile-layout)) .content {
+	line-height: 1.5;
+}
+
+:global(html:not(.auth-page):not(.mobile-layout)) .pageVariant .content {
+	font-size: 1.0625rem;
+}
+
+/* Marks a part of the post that a click does not open (poll, link preview, comments) without a box of its own. */
+.noOpen {
+	display: contents;
+}
+
+/* The 16px image corners come from Fluxer's own media radius token, redefined on this wrapper only :
+   no clipping and no fit-content, so a mosaic keeps its full width and a narrow single image keeps its own corners. */
+.media {
+	margin-top: 0.25rem;
+	--media-border-radius: var(--radius-2xl);
+}
+
+.actions {
+	display: flex;
+	align-items: center;
+	gap: 1.5rem;
+	margin-inline-start: -0.5rem;
+}
+
+:global(html:not(.auth-page):not(.mobile-layout)) .actions {
+	gap: 0.25rem;
+}
+
+.actionButton {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	height: 2rem;
+	padding: 0 0.5rem;
+	border-radius: var(--radius-lg);
+	color: var(--text-primary-muted);
+	font-size: 0.8125rem;
+	font-weight: 500;
+	line-height: 1.25rem;
+	transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.actionIcon {
+	width: 1.125rem;
+	height: 1.125rem;
+}
+
+/* Only the heart turns pink; the count stays muted (4.5:1 on the hover layer). */
+.actionButtonActive .actionIcon {
+	color: var(--feed-like);
+}
+
+/* The hover text moves off muted: muted is 4.21:1 on control-button-hover-bg in the light theme. */
+@media (hover: hover) and (pointer: fine) {
+	.actionButton:hover {
+		background: var(--control-button-hover-bg);
+		color: var(--text-primary);
+	}
+
+	.likeButton:hover {
+		background: color-mix(in srgb, var(--feed-like) 10%, transparent);
+	}
+
+	.likeButton:hover .actionIcon {
+		color: var(--feed-like);
+	}
+}
+
+.moreButton:active {
+	transform: scale(0.97);
+}
+
+.actionButton:active {
+	transform: scale(0.97);
+}
+
+/* Motion off: Fluxer's own reduced-motion setting, with the press selectors. */
+:global(html.reduced-motion) .moreButton,
+:global(html.reduced-motion) .moreButton:active,
+:global(html.reduced-motion) .actionButton,
+:global(html.reduced-motion) .actionButton:active {
+	transition: none;
+	transform: none;
+}
+
+/* The post page puts "See who liked" here, at the end of the action row. */
+.actionsEnd {
+	display: inline-flex;
+	margin-inline-start: auto;
+}
+
+/* The view count: an eye icon and the shortened count at the end of the action row, in the muted count colour (like
+   the like and comment counts); the likers button (post page) stays after it. */
+.viewCount {
+	margin-inline-start: auto;
+	padding: 0 0.5rem;
+	color: var(--text-primary-muted);
+	font-size: 0.8125rem;
+	font-weight: 500;
+	line-height: 1.25rem;
+	white-space: nowrap;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+.viewCount + .actionsEnd {
+	margin-inline-start: 0;
+}
+
+/* The comments: a rounded panel inside the post, aligned with its text, in the card colour (lighter than the page in
+   every dark theme). The border keeps it apart from a hovered row. */
+.comments {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	margin-top: 0.5rem;
+	padding: 0.75rem;
+	border: 0.0625rem solid var(--background-modifier-accent);
+	border-radius: var(--radius-xl);
+	background-color: var(--background-secondary-alt);
+}
+
+.commentComposer {
+	display: flex;
+	align-items: flex-end;
+	gap: 0.5rem;
+}
+
+.commentComposerInput {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+/* Textarea drops a className given to it (FormInput.tsx sets its own), and with innerActionButton the box is
+   Textarea's wrapper, so the pill goes on the wrapper, found by its data-flx (as FeedPollEditor.module.css does). The
+   desktop layout squares it like the Send button beside it (Fluxer's own Button corner). */
+.commentComposerInput [data-flx='ui.form.input.textarea-with-actions.textarea-wrapper'] {
+	border-radius: 1.3125rem;
+}
+
+:global(html:not(.auth-page):not(.mobile-layout))
+	.commentComposerInput
+	[data-flx='ui.form.input.textarea-with-actions.textarea-wrapper'] {
+	border-radius: var(--radius-lg);
+}
+
+/* Micup: GIF and emoji sit inside the comment and reply boxes, on their last row. Fluxer's action column
+   (.textareaActions) is padded for a character count; with a mouse the 34px buttons keep the box one row tall, touch
+   keeps its 44px targets and the box grows to fit them. */
+.commentComposerInput [data-flx='ui.form.input.textarea-with-actions.textarea-actions'] {
+	min-width: 0;
+	justify-content: flex-end;
+	padding: 0.125rem 0.25rem;
+}
+
+.comment {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.625rem;
+	min-width: 0;
+}
+
+/* Collapsed comment by a blocked account, styled like the collapsed blocked messages in a channel. */
+.blockedComment {
+	padding: 0.25rem 0;
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	font-size: 0.75rem;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	color: var(--text-primary-muted);
+	text-align: left;
+	transition: color 150ms ease;
+}
+
+.blockedComment:hover {
+	color: var(--text-secondary);
+}
+
+.commentBody {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.commentHeader {
+	display: flex;
+	align-items: baseline;
+	gap: 0.375rem;
+	min-width: 0;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+}
+
+/* Micup: the verified tick beside a comment name. The row lines its text up on the baseline, which would
+   lift the icon; the tick sits on the middle of the name instead. */
+.commentBadge {
+	align-self: center;
+}
+
+.commentAuthor {
+	composes: authorButton;
+	font-size: 0.875rem;
+}
+
+/* (0,4,1): above any desktop .authorButton rule (0,3,1) the composed class also gets. */
+:global(html:not(.auth-page):not(.mobile-layout)) .comment .commentAuthor {
+	font-size: 0.8125rem;
+}
+
+.commentBody .content {
+	font-size: 0.875rem;
+}
+
+.status {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0.5rem;
+	color: var(--text-primary-muted);
+	font-size: 0.875rem;
+	text-align: center;
+}
+
+/* Narrow screens and touch (the MobileLayout 640px threshold, and tablets forced into it): 44px targets for every button
+   in the post. Fluxer Buttons set min-height through .button.small (0,2,0), so their rules here are more
+   specific: the load-older and back-to-newest Buttons are children of the panel, retry sits in its status row. */
+@media (max-width: 640px), (pointer: coarse) {
+	.moreButton,
+	.actionButton,
+	.blockedComment {
+		min-width: 2.75rem;
+		min-height: 2.75rem;
+	}
+
+	.body .comments > button,
+	.comments .status > button,
+	.comments .commentComposer .sendButton {
+		min-height: 2.75rem;
+	}
+
+	.avatarButton {
+		position: relative;
+	}
+
+	/* A 44px hit area without a bigger avatar (like the Slider grabber): 40px + 2 x 2px on a post, 24px + 2 x 10px on a
+	   comment (52px around the 32px top-level comment avatar of the desktop post page, with touch). */
+	.avatarButton::before {
+		content: '';
+		position: absolute;
+		inset: -0.125rem;
+	}
+
+	.comment .avatarButton::before {
+		inset: -0.625rem;
+	}
+
+	/* The follow pill keeps its 28px look; a hit area makes the target 44px tall (the "..." button already makes the
+	   header that tall here). */
+	.followPill {
+		position: relative;
+	}
+
+	.followPill::before {
+		content: '';
+		position: absolute;
+		inset: -0.5rem 0;
+	}
+}
+
+/* Micup: the X "Lights out" look in the coal and dark themes; the light theme keeps the rules above.
+   The custom theme guard, as on the other Micup coal surfaces, also lifts these rules (1,1,1) over the desktop layout
+   and hover rules, so each state they change is restated here. */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .post {
+	padding: 0.75rem 1rem;
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .header {
+	font-size: 0.9375rem;
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .tag,
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .timestamp,
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .publicMarker {
+	color: var(--text-tertiary);
+	font-size: inherit;
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .content {
+	line-height: 1.25rem;
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .pageVariant .content {
+	font-size: 1.0625rem;
+	line-height: 1.5rem;
+}
+
+/* 12px under the text with the body gap; a line round each image and GIF (the video box draws its own,
+   FeedVideo.module.css), on the element that carries the media corners. */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .media {
+	margin-top: 0.5rem;
+}
+
+/* No :has() root here: a bare tag target makes Chromium restyle the whole document on every DOM change. */
+:global(html:is(.theme-coal, .theme-dark)) .media[data-flx='feed.feed-post-card.media'] :is(img, video) {
+	outline: 0.0625rem solid var(--border-color);
+	outline-offset: -0.0625rem;
+}
+
+/* The actions spread over X's 425px (the whole width on the post page); nothing holds the row end. */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .actions {
+	justify-content: space-between;
+	max-width: 26.5625rem;
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .pageVariant .actions {
+	max-width: none;
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .viewCount,
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .actionsEnd {
+	margin-inline-start: 0;
+}
+
+/* X's hover tints, white instead of X's blue  for comments and views, the like pink for likes. */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .actionButton,
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .viewCount {
+	color: var(--text-tertiary);
+	--feed-tint: var(--text-primary);
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .likeButton {
+	--feed-tint: var(--feed-like);
+}
+
+@media (hover: hover) and (pointer: fine) {
+	:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .actionButton:hover,
+	:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .viewCount:hover {
+		background: transparent;
+		color: var(--feed-tint);
+	}
+
+	/* The circle behind the icon only, as on X. */
+	:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .actionButton:hover .actionIcon,
+	:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .viewCount:hover .actionIcon {
+		border-radius: 50%;
+		background-color: color-mix(in srgb, var(--feed-tint) 10%, transparent);
+		box-shadow: 0 0 0 0.5rem color-mix(in srgb, var(--feed-tint) 10%, transparent);
+	}
+}
+
+/* X's primary buttons: the white pill in bold, half faded while disabled (Fluxer's Button already fades to 0.5). */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .followPill {
+	font-weight: 700;
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .followPill:disabled {
+	opacity: 0.5;
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .sendButton {
+	border-radius: var(--radius-full);
+	font-weight: 700;
+}

@@ -1,0 +1,237 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: Cosmetics
+description: Adding and changing cosmetic catalog items, taking them off sale and back, ultra decoration sizes and in-front images, and giving items to accounts.
+---
+
+import RouteHeader from '@/components/RouteHeader.astro';
+
+The cosmetic catalog holds the avatar decorations, ultra decorations, profile effects and nameplates accounts can wear. [Cosmetics](/http-api/cosmetics/) defines the item object and wearing. Every route on this page requires `cosmetics:manage`. An admin can also give an item to an account or take it back, which is how an owned item reaches an account outside the [shop](/http-api/shop/) and [item codes](/http-api/gifts/#item-codes).
+
+## Cosmetic images
+
+An item image is stored as a branding asset under `branding/cosmetic-{type}-{id}/` and is refused unless it meets every rule below.
+
+| Rule | Value |
+| --- | --- |
+| Format | PNG, APNG or WebP, detected from the bytes; SVG is refused |
+| Size | At most 524288 bytes; ultra decorations at most 1228800 bytes |
+| Width and height | 96 through 480 pixels each |
+
+An image that breaks a format or dimension rule fails with 400 `INVALID_FORM_BODY` and the validation code `INVALID_IMAGE_FORMAT` on `asset`. For an otherwise valid image, a frame, nameplate or profile effect above 524288 bytes returns `IMAGE_SIZE_EXCEEDS_LIMIT` if its base64 payload stays within 1638400 characters. A payload above that character limit, including every ultra decoration above 1228800 bytes, returns `BASE64_LENGTH_INVALID`.
+
+## In-front images
+
+An ultra decoration can also carry the images a client draws in front of the avatar and opens on interaction, as the [ultra front](/http-api/cosmetics/#ultra-front-object) object describes. They are sent all at once as the [ultra front upload](#ultra-front-upload-object) object in `ultra_front` on [Update cosmetic item](#update-cosmetic-item). Each part is the left half of the decoration and follows the format rule of the [item image](#cosmetic-images), with these rules in place of its size and dimension rules.
+
+| Part | Image | Size |
+| --- | --- | --- |
+| closed | Still | At most 153600 bytes |
+| open | 2 through 30 still frames | At most 65536 bytes each and 512000 bytes together |
+| idle | Animated | At most 1500000 bytes |
+
+Every part is 96 through 576 pixels tall and exactly twice as tall as it is wide. The first opening frame should be the closed image, since a client shows it as the opening starts; the server does not check this.
+
+The item image in `asset` keeps the [item image](#cosmetic-images) rules and stays the full fallback: an older client draws it behind the avatar, and so does a client that cannot read the item. Make it the whole closed decoration, both halves.
+
+A part that breaks the format, height or shape rule, a closed image or opening frame that moves, and a loop that does not move each fail with 400 `INVALID_FORM_BODY` and the validation code `INVALID_IMAGE_FORMAT` at path `ultra_front.closed`, `ultra_front.open.{index}` or `ultra_front.idle`. The base64 payload of each part is capped at the characters its size needs: 204800 for `closed`, 87384 for each opening frame and 2000000 for `idle`. A part above its size therefore returns `BASE64_LENGTH_INVALID` at its path, except an opening frame of 65537 or 65538 bytes, which fits its cap and returns `IMAGE_SIZE_EXCEEDS_LIMIT`. Opening frames above 512000 bytes together return `IMAGE_SIZE_EXCEEDS_LIMIT` at path `ultra_front.open` before any image is stored. Fewer than 2 or more than 30 opening frames return 400 `INVALID_FORM_BODY` at path `ultra_front.open`.
+
+The request stores `closed`, the opening frames in order, `idle` and then `asset`, reads the item again and writes it once, so a change made while the images upload, such as taking the item off sale, is kept. If one part fails, or the item cannot be written, none are kept: every image the request stored is deleted again, except an image the item already uses, and the item does not change.
+
+## Ultra front upload object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| closed | base64 string | The still image shown while the decoration is closed, left half |
+| open | array[base64 string] | The still opening frames in order, left half, 2 to 30 of them |
+| idle | base64 string | The animated loop played while the decoration is open, left half |
+
+## List cosmetic items
+
+<RouteHeader method="GET" path="/v1/admin/cosmetics/items" auditReason />
+
+Returns every item in ascending ID order, which is creation order, including items taken off sale. An item taken off sale reads `owned` as its availability.
+
+### Response body
+
+The body is an array of [cosmetic item](/http-api/cosmetics/#cosmetic-item-object) objects.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The items were returned |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `list_cosmetic_items`, target type `cosmetic_item`, target ID `0`, and metadata key `result_count`.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:cosmetics:list` bucket.
+
+## Create cosmetic item
+
+<RouteHeader method="POST" path="/v1/admin/cosmetics/items" auditReason />
+
+Adds an item to the catalog and puts it on sale. Returns the [cosmetic item](/http-api/cosmetics/#cosmetic-item-object) object.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| type | string | The [cosmetic item type](/http-api/cosmetics/#cosmetic-item-types) |
+| name | string | The display name of the item (1-64 characters) |
+| description? | ?string | A short description (1-256 characters) |
+| availability | string | The [cosmetic availability](/http-api/cosmetics/#cosmetic-availability) |
+| asset | base64 string | The [item image](#cosmetic-images) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [cosmetic item](/http-api/cosmetics/#cosmetic-item-object) object | Item was created |
+| 400 | [error response](/admin-api/#error-response) | The body or the image fails validation |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with the action `create_cosmetic_item` and the target type `cosmetic_item`. Its metadata has `type` and `availability`.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:cosmetics:manage` bucket.
+
+## Update cosmetic item
+
+<RouteHeader method="PATCH" path="/v1/admin/cosmetics/items/{item_id}" auditReason />
+
+Changes the name, description, availability, image, ultra decoration sizes or [in-front images](#in-front-images) of an item, or puts an item taken off sale back in the catalog. Returns the updated [cosmetic item](/http-api/cosmetics/#cosmetic-item-object) object.
+
+### JSON body
+
+Every field of [Create cosmetic item](#create-cosmetic-item) except `type`, each optional, and the fields below. A null `description` clears it.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| ultra_layout?<sup>1</sup> | ?[ultra layout](/http-api/cosmetics/#ultra-layout-object) object | The sizes of an ultra decoration, or null to go back to the fixed sizes |
+| ultra_front?<sup>2</sup> | ?[ultra front upload](#ultra-front-upload-object) object | Every in-front image, or null to draw the item behind the avatar again |
+| on_sale?<sup>3</sup> | boolean | True puts an item taken off sale back in the catalog |
+
+<sup>1</sup> Only an ultra decoration takes it, and any other type returns 400 `INVALID_FORM_BODY` at path `ultra_layout`. All three surfaces are required, each null for its fixed size. An omitted `ultra_layout` keeps the sizes
+
+<sup>2</sup> Only an ultra decoration takes it, and any other type returns 400 `INVALID_FORM_BODY` at path `ultra_front`. The whole set is replaced at once under the [in-front image](#in-front-images) rules. An omitted `ultra_front` keeps the images
+
+<sup>3</sup> Only `true` is accepted. The item goes back with the availability it has, which is `owned` after [Take cosmetic item off sale](#take-cosmetic-item-off-sale), unless `availability` is sent too. An item on sale stays on sale, and an omitted `on_sale` keeps the item on or off sale
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [cosmetic item](/http-api/cosmetics/#cosmetic-item-object) object | Item was updated |
+| 400 | [error response](/admin-api/#error-response) | The body or the image fails validation |
+| 404 | [error response](/admin-api/#error-response) | `NOT_FOUND`: no item has this ID |
+
+:::note[Wearers keep their image]
+A new image is stored beside the old one. Accounts that already wear the item keep showing the image they put on until they put the item on again. In-front images are read from the item instead, so a new set reaches every account that wears it. The images of the previous set stay stored.
+:::
+
+### Side effects
+
+New sizes and in-front images reach other clients within 60 seconds through [List cosmetic items by ID](/http-api/cosmetics/#list-cosmetic-items-by-id), since each API process keeps an item that long, and a client that already drew the item uses them from its next session.
+
+The operation records an [Admin audit entry](/admin-api/#admin-audit-entry-object) with the action `update_cosmetic_item`. When `on_sale` is sent, the action is `relist_cosmetic_item`, the counterpart of `retire_cosmetic_item`, and other fields sent with it add a second entry with `update_cosmetic_item`. The metadata of each entry has `fields`, the changed field names including `ultra_layout`, `ultra_front` and `on_sale`, and `availability`.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:cosmetics:manage` bucket.
+
+## Take cosmetic item off sale
+
+<RouteHeader method="DELETE" path="/v1/admin/cosmetics/items/{item_id}" auditReason />
+
+Removes an item from the catalog without deleting it. Accounts that wear it keep showing it, and accounts that own it can still put it on; no other account can. The image stays stored. [Update cosmetic item](#update-cosmetic-item) with `on_sale` puts it back.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | none | Item was taken off sale |
+| 404 | [error response](/admin-api/#error-response) | `NOT_FOUND`: no item has this ID |
+
+### Side effects
+
+The item's availability becomes `owned`. The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with the action `retire_cosmetic_item`.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:cosmetics:manage` bucket.
+
+## Admin user cosmetic object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| item_id | snowflake | The ID of the item |
+| owned | boolean | Whether the account owns the item now |
+| equipped | boolean | Whether the account wears the item now |
+| changed | boolean | False when the account already owned the item, or on a take back did not own it |
+| unequipped | boolean | On a take back, whether the item was worn and has been taken off |
+
+## Give user a cosmetic item
+
+<RouteHeader method="POST" path="/v1/admin/users/{user_id}/cosmetics/{item_id}" auditReason />
+
+Adds an item to the items an account owns, without wearing it. Returns the [admin user cosmetic](#admin-user-cosmetic-object) object. Giving an item the account already owns changes nothing.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the account |
+| item_id | snowflake | The ID of the item |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [admin user cosmetic](#admin-user-cosmetic-object) object | The account owns the item |
+| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_USER` for an unknown or deleted account, or `NOT_FOUND` for an unknown item |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `grant_cosmetic_item`, target type `user`, the account ID as target ID, and metadata keys `item_id` and `changed`. It emits no Gateway Dispatch.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:cosmetics:manage` bucket.
+
+## Take cosmetic item back from user
+
+<RouteHeader method="DELETE" path="/v1/admin/users/{user_id}/cosmetics/{item_id}" auditReason />
+
+Removes an item from the items an account owns, and takes it off when the account can no longer wear it. Returns the [admin user cosmetic](#admin-user-cosmetic-object) object. A free item, or a premium item on an account with premium, stays on.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the account |
+| item_id | snowflake | The ID of the item |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [admin user cosmetic](#admin-user-cosmetic-object) object | The account no longer owns the item |
+| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_USER` for an unknown account, or `NOT_FOUND` for an unknown item |
+
+### Side effects
+
+A pending delivery of the item to the account, from a [shop](/http-api/shop/) order or an [item code](/http-api/gifts/#item-codes), is cancelled first. The item therefore never comes back from the same order or code, even when that delivery is retried. The account row is read again after the take-off, so a wear request that raced the take back is undone too.
+
+Taking a worn item off sends [User Update](/gateway/events/#user-update) to the account's sessions. For an avatar decoration, ultra decoration or nameplate it also sends [Guild Member Update](/gateway/events/#guild-member-update) to every guild the account is in.
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `revoke_cosmetic_item`, target type `user`, the account ID as target ID, and metadata keys `item_id`, `changed` and `unequipped`.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:cosmetics:manage` bucket.

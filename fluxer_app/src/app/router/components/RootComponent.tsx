@@ -80,7 +80,8 @@ export const RootComponent: React.FC<{children?: React.ReactNode}> = observer(({
 			pathname === '/__notfound' ||
 			pathname.startsWith('/invite/') ||
 			pathname.startsWith('/gift/') ||
-			pathname.startsWith('/theme/')
+			pathname.startsWith('/theme/') ||
+			pathname.startsWith('/r/')
 		);
 	}, [pathname]);
 	const shouldShowSelfHostedSetup = requiresSelfHostedSetup && !isStandaloneRoute;

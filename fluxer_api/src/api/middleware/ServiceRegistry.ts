@@ -18,16 +18,26 @@ import {LiveKitService} from '@app/api/infrastructure/LiveKitService';
 import {MediaService as ProdMediaService} from '@app/api/infrastructure/MediaService';
 import {SnowflakeService} from '@app/api/infrastructure/SnowflakeService';
 import {VoiceRoomStore} from '@app/api/infrastructure/VoiceRoomStore';
+import {getCachedAccountIdentity} from '@app/api/instance/AccountIdentityModeCache';
 import type {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
 import {Logger} from '@app/api/Logger';
 import {setInjectedSearchProvider} from '@app/api/SearchFactory';
 import type {ISearchProvider} from '@app/api/search/ISearchProvider';
+import {
+	type UsernameOwnershipService,
+	UsernameOwnershipUnavailableError,
+} from '@app/api/user/username/UsernameOwnershipService';
+import {UsernameSelectionGate} from '@app/api/user/username/UsernameSelectionGate';
 import {readOptionalEnv, readOptionalIntegerEnv} from '@app/api/utils/IntegerOptions';
 import {VoiceAvailabilityService} from '@app/api/voice/VoiceAvailabilityService';
 import {VoiceRepository} from '@app/api/voice/VoiceRepository';
 import {VoiceServerLoadTracker} from '@app/api/voice/VoiceServerLoad';
 import {VoiceTopology} from '@app/api/voice/VoiceTopology';
+import {readUsernameMigrationStartEvidence} from '@app/api/worker/tasks/UsernameMigrationEvidence';
+import {createUsernameOwnershipRuntime} from '@app/api/worker/tasks/UsernameRuntimeAdapters';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
+import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
+import {FluxerError} from '@fluxer/errors/src/FluxerError';
 import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
 import {KVClient} from '@pkgs/kv_client/src/KVClient';
 import {NatsConnectionManager} from '@pkgs/nats/src/NatsConnectionManager';
@@ -80,8 +90,64 @@ export function closeOwnedKVClient(): void {
 
 let _injectedWorkerService: IWorkerService<WorkerTaskName> | undefined;
 
+let _injectedUsernameOwnershipService: UsernameOwnershipService | undefined;
+let _usernameOwnershipRuntime: UsernameOwnershipService | undefined;
+let _usernameSelectionGate: UsernameSelectionGate | undefined;
+type UsernameMigrationPreconditions = {holdsReady: boolean; capacityReady: boolean; reserveVersion: number};
+let _usernameMigrationPreconditions: (() => Promise<UsernameMigrationPreconditions>) | undefined;
+
+export function setInjectedUsernameOwnershipService(service: UsernameOwnershipService | undefined): void {
+	_injectedUsernameOwnershipService = service;
+}
+
+export function getUsernameOwnershipService(): UsernameOwnershipService {
+	if (_injectedUsernameOwnershipService) return _injectedUsernameOwnershipService;
+	if (!_injectedWorkerService) throw new UsernameOwnershipUnavailableError();
+	return (_usernameOwnershipRuntime ??= createUsernameOwnershipRuntime({
+		kv: getKVClient(),
+		worker: _injectedWorkerService,
+	}));
+}
+
+export function getUsernameSelectionGate(): UsernameSelectionGate {
+	return (_usernameSelectionGate ??= new UsernameSelectionGate(
+		() => {
+			try {
+				const migration = getCachedAccountIdentity().usernameMigration;
+				if (!migration) return {state: 'legacy', forcedAt: null};
+				const forcedAt = migration.forced_at === null ? null : new Date(migration.forced_at);
+				if (
+					!['legacy', 'preparing', 'selecting'].includes(migration.state) ||
+					(migration.state === 'selecting' && (!forcedAt || !Number.isFinite(forcedAt.getTime())))
+				)
+					throw new Error('Invalid username migration cache');
+				return {state: migration.state, forcedAt};
+			} catch {
+				throw new FluxerError({code: APIErrorCodes.USERNAME_UNAVAILABLE, status: 503});
+			}
+		},
+		(user) => user.usernameState,
+	));
+}
+
+export function setInjectedUsernameMigrationPreconditions(
+	provider: (() => Promise<UsernameMigrationPreconditions>) | undefined,
+): void {
+	_usernameMigrationPreconditions = provider;
+}
+
+export async function readUsernameMigrationPreconditions(
+	config: Parameters<typeof readUsernameMigrationStartEvidence>[0],
+): Promise<UsernameMigrationPreconditions> {
+	if (_usernameMigrationPreconditions) return _usernameMigrationPreconditions();
+	const {holds, capacity, reserveVersion} = await readUsernameMigrationStartEvidence(config);
+	if (!capacity.available) throw new UsernameOwnershipUnavailableError();
+	return {holdsReady: holds.ready, capacityReady: capacity.ready, reserveVersion};
+}
+
 export function setInjectedWorkerService(service: IWorkerService<WorkerTaskName> | undefined): void {
 	_injectedWorkerService = service;
+	_usernameOwnershipRuntime = undefined;
 }
 
 export function getWorkerService(): IWorkerService<WorkerTaskName> {
@@ -362,6 +428,10 @@ export function getVoiceRoomStoreInstance(): IVoiceRoomStore | null {
 }
 
 export function resetServiceRegistryForTesting(): void {
+	_injectedUsernameOwnershipService = undefined;
+	_usernameOwnershipRuntime = undefined;
+	_usernameSelectionGate = undefined;
+	_usernameMigrationPreconditions = undefined;
 	_kvClient = null;
 	_snowflakeService = null;
 	_billingRepository = null;

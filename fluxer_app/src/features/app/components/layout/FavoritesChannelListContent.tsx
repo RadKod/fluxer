@@ -227,14 +227,19 @@ const FavoriteChannelResolvedItem = observer(
 					type: channel.type,
 				})
 			: null;
-		const unreadState = getChannelUnreadState({
-			hasUnread,
-			unreadCount,
-			mentionCount,
-			isMuted,
-			showFadedUnreadOnMutedChannels: Accessibility.showFadedUnreadOnMutedChannels,
-			unreadBadgesLevel,
-		});
+		const showFadedUnreadOnMutedChannels = Accessibility.showFadedUnreadOnMutedChannels;
+		const unreadState = useMemo(
+			() =>
+				getChannelUnreadState({
+					hasUnread,
+					unreadCount,
+					mentionCount,
+					isMuted,
+					showFadedUnreadOnMutedChannels,
+					unreadBadgesLevel,
+				}),
+			[hasUnread, unreadCount, mentionCount, isMuted, showFadedUnreadOnMutedChannels, unreadBadgesLevel],
+		);
 		const {scheduleChannelPreload, cancelChannelPreload, preloadChannelNow} = useChannelHoverPreload({
 			channel,
 			guild,

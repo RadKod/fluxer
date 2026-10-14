@@ -1,0 +1,165 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.spinnerContainer {
+	display: flex;
+	justify-content: center;
+	padding: 2rem 0;
+}
+
+.layout {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+	.layout {
+		flex-direction: row;
+		gap: clamp(2rem, 3vw, 3.5rem);
+	}
+}
+
+.pickers {
+	display: flex;
+	flex: 2;
+	flex-direction: column;
+	gap: 1.5rem;
+	min-width: 0;
+}
+
+.previewColumn {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+	.previewColumn {
+		align-items: flex-end;
+	}
+}
+
+.grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+	gap: 0.75rem;
+}
+
+.tileWrapper {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.375rem;
+	min-width: 0;
+}
+
+.tile {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 4.5rem;
+	height: 4.5rem;
+	padding: 0.375rem;
+	border: 0.125rem solid transparent;
+	border-radius: var(--radius-md);
+	background-color: var(--background-secondary);
+	cursor: pointer;
+}
+
+.tile:hover {
+	background-color: var(--background-tertiary);
+}
+
+.tileSelected {
+	border-color: var(--brand-primary);
+}
+
+.tileImage {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	pointer-events: none;
+	user-select: none;
+	-webkit-user-drag: none;
+}
+
+.noneIcon {
+	width: 1.5rem;
+	height: 1.5rem;
+	color: var(--text-primary-muted);
+}
+
+.lockBadge {
+	position: absolute;
+	top: 0.25rem;
+	right: 0.25rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.25rem;
+	height: 1.25rem;
+	border-radius: 624.9375rem;
+	background-color: var(--background-tertiary);
+	color: var(--text-primary-muted);
+}
+
+.lockBadge svg {
+	width: 0.75rem;
+	height: 0.75rem;
+}
+
+.tileName {
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.75rem;
+	line-height: 1rem;
+	color: var(--text-primary-muted);
+}
+
+.lockedNotice {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	margin-top: 0.75rem;
+	padding: 0.75rem 1rem;
+	border-radius: var(--radius-md);
+	background-color: var(--background-secondary);
+}
+
+.lockedText {
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	color: var(--text-primary);
+}
+
+/* A member list row, so the nameplate is seen where others see it. */
+.nameplatePreview {
+	position: relative;
+	width: 100%;
+	max-width: 18.75rem;
+	overflow: hidden;
+	border-radius: var(--radius-md);
+	background-color: var(--background-secondary);
+}
+
+.nameplateRow {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.5rem 0.75rem;
+}
+
+.nameplateName {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-weight: 500;
+	color: var(--text-primary);
+}

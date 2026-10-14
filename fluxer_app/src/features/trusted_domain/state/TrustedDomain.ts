@@ -5,16 +5,9 @@ import AppStorage from '@app/features/platform/state/PersistentStorage';
 import UserSettings from '@app/features/user/state/UserSettings';
 import {makeAutoObservable} from 'mobx';
 
-const BUILT_IN_TRUST_PATTERNS = [
-	'fluxer.app',
-	'*.fluxer.app',
-	'fluxer.com',
-	'*.fluxer.com',
-	'fluxerstatus.com',
-	'*.fluxerstatus.com',
-	'fluxer.gg',
-	'fluxer.gift',
-] as const;
+// Micup: Fluxer's hosts (fluxer.app and every subdomain, fluxer.gg, fluxer.gift, fluxerstatus.com) are another
+// service's and open with the usual warning.
+const BUILT_IN_TRUST_PATTERNS = ['micup.gg', 'canary.micup.gg'] as const;
 const TRUST_EVERYTHING_PATTERN = '*';
 const LEGACY_TRUSTED_DOMAINS_KEY = 'TrustedDomain';
 

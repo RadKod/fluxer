@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {buildUrl} from '@fluxer/config/src/EndpointDerivation';
+import {buildUrl, deriveEndpointsFromDomain} from '@fluxer/config/src/EndpointDerivation';
 
 const DEFAULT_BASE_DOMAIN = 'localhost';
 const DEFAULT_PUBLIC_SCHEME = 'http';
@@ -73,4 +73,16 @@ export function docsListenPort(): number {
 
 export function docsSearchIndexing(): boolean {
 	return readString('FLUXER_DOCS_SEARCH_INDEXING', 'false') === 'true';
+}
+
+export function docsProductName(): string {
+	return readString('FLUXER_DOCS_PRODUCT_NAME', 'Fluxer');
+}
+
+export function docsExampleEndpoints() {
+	return deriveEndpointsFromDomain({
+		base_domain: docsBaseDomain(),
+		public_scheme: readScheme('FLUXER_PUBLIC_SCHEME'),
+		public_port: readPort('FLUXER_PUBLIC_PORT'),
+	});
 }

@@ -63,11 +63,13 @@ import {
 	getAssetDeletionQueue,
 	getAttachmentUploadTraceRepository,
 	getAvatarService,
+	getBadgeService,
 	getBotAuthService,
 	getCacheService,
 	getChannelRepository,
 	getConnectionRepository,
 	getContactChangeLogService,
+	getCosmeticService,
 	getDiscriminatorService,
 	getDonationRepository,
 	getEmailChangeRepository,
@@ -79,32 +81,53 @@ import {
 	getEntranceSoundService,
 	getErrorI18nService,
 	getFavoriteMemeRepository,
+	getFeedInteractionService,
+	getFeedNotificationService,
+	getFeedPostService,
+	getFeedSuggestionService,
+	getFeedTimelineService,
+	getFeedVideoService,
+	getFeedViewService,
+	getFollowService,
 	getGatewayRequestService,
 	getGifService,
 	getGuildAuditLogService,
+	getGuildBoostService,
 	getGuildDiscoveryRepository,
 	getGuildDiscoveryService,
 	getGuildRepository,
+	getGuildRosterSettingsService,
 	getInstanceConfigRepository,
 	getInviteRepository,
 	getKVAccountDeletionQueue,
 	getKVActivityTracker,
 	getKVBulkMessageDeletionQueue,
+	getKVCounterService,
 	getKVThreadAutoArchiveQueue,
 	getLimitConfigService,
+	getMessageComponentService,
+	getMicupBotSettingsService,
 	getNcmecSubmissionService,
 	getOAuth2TokenRepository,
 	getPasswordChangeRepository,
+	getPremiumLedgerService,
 	getPremiumStateReconciliationQueueService,
+	getPremiumTrialService,
 	getPurgeQueue,
 	getRateLimitService,
 	getReadStateRequestService,
 	getReadStateService,
+	getReferralAdminService,
+	getReferralService,
+	getRegistrationEventsRepository,
 	getReportRepository,
+	getShopCatalogService,
+	getShopOrderService,
 	getStorageService,
 	getStoreBillingRepository,
 	getStreamPreviewService,
 	getSweegoWebhookService,
+	getTableGameService,
 	getThemeService,
 	getUnfurlerService,
 	getUserActivityBuffer,
@@ -112,7 +135,9 @@ import {
 	getUserPermissionUtils,
 	getUserRepository,
 	getVirusScanServiceInstance,
+	getVisionaryService,
 	getVoiceRepository,
+	getVoiceSeatService,
 	getWebhookRepository,
 } from '@app/api/middleware/ServiceSingletons';
 import {ApplicationService} from '@app/api/oauth/ApplicationService';
@@ -140,6 +165,7 @@ import {UserRelationshipRequestService} from '@app/api/user/services/UserRelatio
 import {UserService} from '@app/api/user/services/UserService';
 import {getRequestClientIp} from '@app/api/utils/RequestClientIp';
 import {VoiceService} from '@app/api/voice/VoiceService';
+import {VoiceMembershipHooks} from '@app/api/voice_seat/VoiceMembershipHooks';
 import {ChannelFollowService} from '@app/api/webhook/ChannelFollowService';
 import {WebhookRequestService} from '@app/api/webhook/WebhookRequestService';
 import {WebhookService} from '@app/api/webhook/WebhookService';
@@ -195,6 +221,7 @@ function getLiveKitWebhookService(): LiveKitWebhookService | null {
 				getGatewayService(),
 				liveKitService,
 				voiceTopology,
+				VoiceMembershipHooks,
 			);
 		}
 	}
@@ -207,6 +234,7 @@ class RequestServices implements RequestScopedServices {
 	private cachedLiveKit: ILiveKitService | undefined;
 	private cachedVoiceRooms: IVoiceRoomStore | undefined;
 	private cachedVoice: VoiceService | null | undefined;
+	private cachedMicupBotSettings: ReturnType<typeof getMicupBotSettingsService> | undefined;
 	private cachedGuildStack: GuildStackServices | undefined;
 	private cachedChannelRepository: ChannelRepository | undefined;
 	private cachedGuildRepository: GuildRepository | undefined;
@@ -391,6 +419,76 @@ class RequestServices implements RequestScopedServices {
 		return getEntityAssetService();
 	}
 
+	get badgeService() {
+		return getBadgeService();
+	}
+
+	get cosmeticService() {
+		return getCosmeticService();
+	}
+
+	get shopCatalogService() {
+		return getShopCatalogService();
+	}
+
+	get shopOrderService() {
+		return getShopOrderService();
+	}
+
+	get visionaryService() {
+		return getVisionaryService();
+	}
+
+	get feedInteractionService() {
+		return getFeedInteractionService();
+	}
+
+	get feedNotificationService() {
+		return getFeedNotificationService();
+	}
+
+	get feedPostService() {
+		return getFeedPostService();
+	}
+
+	get feedSuggestionService() {
+		return getFeedSuggestionService();
+	}
+
+	get feedTimelineService() {
+		return getFeedTimelineService();
+	}
+
+	get feedVideoService() {
+		return getFeedVideoService();
+	}
+
+	get feedViewService() {
+		return getFeedViewService();
+	}
+
+	get followService() {
+		return getFollowService();
+	}
+
+	get micupBotSettingsService() {
+		this.cachedMicupBotSettings ??= getMicupBotSettingsService({
+			guildService: this.guildService,
+			channelService: this.channelService,
+		});
+		return this.cachedMicupBotSettings;
+	}
+	get guildRosterSettingsService() {
+		return getGuildRosterSettingsService();
+	}
+	get messageComponentService() {
+		return getMessageComponentService({channelService: this.channelService});
+	}
+
+	get guildBoostService() {
+		return getGuildBoostService();
+	}
+
 	get entranceSoundService() {
 		return getEntranceSoundService();
 	}
@@ -423,6 +521,10 @@ class RequestServices implements RequestScopedServices {
 		return getKVActivityTracker();
 	}
 
+	get kvCounterService() {
+		return getKVCounterService();
+	}
+
 	get limitConfigService() {
 		return getLimitConfigService();
 	}
@@ -435,6 +537,14 @@ class RequestServices implements RequestScopedServices {
 		return getOAuth2TokenRepository();
 	}
 
+	get premiumLedgerService() {
+		return getPremiumLedgerService();
+	}
+
+	get premiumTrialService() {
+		return getPremiumTrialService();
+	}
+
 	get rateLimitService() {
 		return getRateLimitService();
 	}
@@ -445,6 +555,22 @@ class RequestServices implements RequestScopedServices {
 
 	get readStateRequestService() {
 		return getReadStateRequestService();
+	}
+
+	get referralService() {
+		return getReferralService();
+	}
+
+	get referralAdminService() {
+		return getReferralAdminService();
+	}
+
+	get voiceSeatService() {
+		return getVoiceSeatService();
+	}
+
+	get tableGameService() {
+		return getTableGameService();
 	}
 
 	get reportService() {
@@ -557,6 +683,7 @@ class RequestServices implements RequestScopedServices {
 
 	get authRequestService(): AuthRequestService {
 		if (!this.cachedAuthRequestService) {
+			const adminRepository = getAdminRepository();
 			this.cachedAuthRequestService = new AuthRequestService(
 				this.context,
 				this.ssoService,
@@ -567,6 +694,10 @@ class RequestServices implements RequestScopedServices {
 					singleCommunityService: this.singleCommunityService,
 					discriminatorService: getDiscriminatorService(),
 					kvActivityTracker: getKVActivityTracker(),
+					isEmailDomainSuspicious: adminRepository.isEmailDomainSuspicious.bind(adminRepository),
+					isEmailDomainDisposable: adminRepository.isEmailDomainDisposable.bind(adminRepository),
+					registrationEventsRepository: getRegistrationEventsRepository(),
+					referralService: getReferralService(),
 				},
 				{
 					inviteService: this.inviteService,
@@ -699,6 +830,7 @@ class RequestServices implements RequestScopedServices {
 			this.guildService,
 			this.gatewayService,
 			getUserCacheService(),
+			getCacheService(),
 		);
 		return this.cachedInviteRequestService;
 	}
@@ -763,6 +895,7 @@ class RequestServices implements RequestScopedServices {
 			getInstanceConfigRepository(),
 			this.voice,
 			getVoiceAvailabilityService(),
+			getFeedNotificationService(),
 		);
 		return this.cachedRpcService;
 	}

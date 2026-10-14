@@ -18,11 +18,22 @@ export function getPremiumProductFullName(): string {
 	return `${productName} ${getPremiumProductName()}`;
 }
 
+// Micup: a self-hosted instance shows premium when it offers the free trial or keys.
+// Add `|| RuntimeConfig.payriffEnabled` when Payriff checkout lands.
 export function shouldShowPremiumFeatures(): boolean {
 	if (DeveloperOptions.selfHostedModeOverride) {
 		return false;
 	}
-	return !RuntimeConfig.isSelfHosted() || RuntimeConfig.premiumEnabled;
+	return (
+		!RuntimeConfig.isSelfHosted() ||
+		RuntimeConfig.premiumEnabled ||
+		RuntimeConfig.premiumTrialDays > 0 ||
+		RuntimeConfig.giftCodesEnabled
+	);
+}
+
+export function isPremiumPageAvailable(): boolean {
+	return RuntimeConfig.isSelfHosted() && shouldShowPremiumFeatures();
 }
 
 export function arePremiumPurchasesAvailable(purchaseDisabled = false): boolean {

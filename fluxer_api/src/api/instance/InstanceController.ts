@@ -3,6 +3,10 @@
 import {Config} from '@app/api/Config';
 import type {GifService} from '@app/api/gif/GifService';
 import type {IGifProvider} from '@app/api/gif/IGifProvider';
+import {isMicupBotLive, micupBotApplicationId} from '@app/api/guild/micupbot/MicupBotBot';
+import {MICUPBOT_BOT_INVITE_PERMISSIONS} from '@app/api/guild/micupbot/MicupBotConstants';
+import {isGuildRosterLive, rosterBotApplicationId} from '@app/api/guild/roster/GuildRosterBot';
+import {ROSTER_BOT_INVITE_PERMISSIONS} from '@app/api/guild/roster/GuildRosterConstants';
 import type {AccountIdentity} from '@app/api/instance/AccountIdentityModeCache';
 import {withAccountIdentitySetupLock} from '@app/api/instance/AccountIdentitySetupLock';
 import {
@@ -10,8 +14,14 @@ import {
 	isDiscoveryNotModified,
 	nextDiscoveryValidators,
 } from '@app/api/instance/DiscoveryValidators';
+import type {
+	InstanceCaptchaEffectiveConfig,
+	InstancePolicyConfig,
+	InstancePremiumMode,
+} from '@app/api/instance/InstanceConfigRepository';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
+import {getLimitConfigService} from '@app/api/middleware/ServiceSingletons';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import {isBillingActive, isPremiumTieringActive, isStripeServiceable} from '@app/api/stripe/BillingConfigCache';
 import type {HonoEnv} from '@app/api/types/HonoEnv';
@@ -23,7 +33,6 @@ import {AccountIdentityLockedError} from '@fluxer/errors/src/domains/auth/Accoun
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {buildDiscoveryResponse, type DiscoveryStaticInput} from '@fluxer/instance_bootstrap/src/BuildDiscovery';
 import type {InstanceAppPublic} from '@fluxer/instance_bootstrap/src/Types';
-import type {CaptchaConfig} from '@fluxer/schema/src/domains/admin/CaptchaSchemas';
 import {toDomainMigrationDiscovery} from '@fluxer/schema/src/domains/admin/DomainMigrationSchemas';
 import {
 	InstanceAccountIdentityResponse,
@@ -38,8 +47,12 @@ function buildDiscoveryStaticInput(
 	gifService: GifService | undefined,
 	appPublic: InstanceAppPublic,
 	runtime: {
-		captcha: CaptchaConfig;
+		captcha: InstanceCaptchaEffectiveConfig;
 		emailEnabled: boolean;
+		premiumMode: InstancePremiumMode;
+		premiumTrialDays: number;
+		officialApps: InstancePolicyConfig['official_apps'];
+		eligibleOfficialApps: ReadonlySet<string>;
 		accountIdentity: AccountIdentity;
 	},
 ): DiscoveryStaticInput {
@@ -57,6 +70,29 @@ function buildDiscoveryStaticInput(
 		gifDisplayName = gifProvider.meta.displayName;
 		gifAttributionRequired = gifProvider.meta.attributionRequired;
 	}
+	const fixedOfficialApps = [
+		{
+			applicationId: isMicupBotLive(getLimitConfigService()) ? micupBotApplicationId() : null,
+			permissions: MICUPBOT_BOT_INVITE_PERMISSIONS,
+		},
+		{
+			applicationId: isGuildRosterLive(getLimitConfigService()) ? rosterBotApplicationId() : null,
+			permissions: ROSTER_BOT_INVITE_PERMISSIONS,
+		},
+	].flatMap(({applicationId, permissions}) =>
+		applicationId === null
+			? []
+			: [{application_id: applicationId.toString(), invite_permissions: permissions.toString()}],
+	);
+	const seenApplicationIds = new Set<string>();
+	const fixedIds = new Set(fixedOfficialApps.map(({application_id}) => application_id));
+	// The built-in bots are listed by their own feature flags, as before; only admin-configured apps need eligibility.
+	const officialApps = [...fixedOfficialApps, ...runtime.officialApps].filter(({application_id}) => {
+		if (!fixedIds.has(application_id) && !runtime.eligibleOfficialApps.has(application_id)) return false;
+		if (seenApplicationIds.has(application_id)) return false;
+		seenApplicationIds.add(application_id);
+		return true;
+	});
 	return {
 		apiCodeVersion: API_CODE_VERSION,
 		endpoints: {
@@ -73,9 +109,10 @@ function buildDiscoveryStaticInput(
 			gift: Config.endpoints.gift,
 			webapp: Config.endpoints.webApp,
 		},
-		captcha: {
-			provider: runtime.captcha.enabled ? 'altcha' : 'none',
-		},
+		captcha:
+			runtime.captcha.provider === 'turnstile'
+				? {provider: 'turnstile', turnstile_site_key: runtime.captcha.turnstile_site_key}
+				: {provider: runtime.captcha.provider},
 		features: {
 			voice_enabled: Config.voice.enabled,
 			stripe_enabled: isBillingActive(),
@@ -84,6 +121,9 @@ function buildDiscoveryStaticInput(
 			self_hosted: Config.instance.selfHosted,
 			presigned_attachment_uploads: Config.presignedAttachmentUploadsEnabled,
 			emails_enabled: runtime.emailEnabled,
+			premium_trial_days: runtime.premiumTrialDays,
+			gift_codes_enabled: !Config.instance.selfHosted || runtime.premiumMode === 'mirror',
+			official_apps: officialApps,
 			phone_verification_enabled: false,
 			account_identity: runtime.accountIdentity.mode,
 			tag_style: runtime.accountIdentity.tagStyle,
@@ -120,17 +160,34 @@ export function InstanceController(app: Hono<HonoEnv>) {
 			const limits = ctx.get('limitConfigService').getConfigWireFormat();
 			const sso = await ctx.get('ssoService').getPublicStatus();
 			const instanceConfigRepository = ctx.get('instanceConfigRepository');
-			const [registration, community, services, appPublicConfig, captcha, email, domainMigration, accountIdentity] =
-				await Promise.all([
-					instanceConfigRepository.getRegistrationPublicConfig(),
-					instanceConfigRepository.getInstanceCommunityPublicConfig(),
-					instanceConfigRepository.getResolvedServicesConfig(),
-					instanceConfigRepository.getAppPublicConfig(),
-					instanceConfigRepository.getCaptchaConfig(),
-					instanceConfigRepository.getEffectiveEmailConfig(),
-					instanceConfigRepository.getDomainMigrationConfig(),
-					instanceConfigRepository.getAccountIdentity(),
-				]);
+			const [
+				registration,
+				community,
+				services,
+				appPublicConfig,
+				captcha,
+				email,
+				domainMigration,
+				accountIdentity,
+				policy,
+				premiumTrialDays,
+				usernameMigration,
+				usernamePolicy,
+			] = await Promise.all([
+				instanceConfigRepository.getRegistrationPublicConfig(),
+				instanceConfigRepository.getInstanceCommunityPublicConfig(),
+				instanceConfigRepository.getResolvedServicesConfig(),
+				instanceConfigRepository.getAppPublicConfig(),
+				instanceConfigRepository.getEffectiveCaptchaConfig(),
+				instanceConfigRepository.getEffectiveEmailConfig(),
+				instanceConfigRepository.getDomainMigrationConfig(),
+				instanceConfigRepository.getAccountIdentity(),
+				instanceConfigRepository.getInstancePolicyConfig(),
+				ctx.get('premiumTrialService').getAvailableDays(),
+				instanceConfigRepository.getUsernameMigrationConfig(),
+				instanceConfigRepository.getUsernamePolicyConfig(),
+				instanceConfigRepository.getOfficialAppEligibility(),
+			]);
 			const accountIdentityLocked =
 				Config.instance.selfHosted && !appPublicConfig.setup.configured
 					? await instanceConfigRepository.isAccountIdentityLocked()
@@ -149,6 +206,10 @@ export function InstanceController(app: Hono<HonoEnv>) {
 					{
 						captcha,
 						emailEnabled: email.enabled,
+						premiumMode: policy.premium_mode,
+						premiumTrialDays,
+						officialApps: policy.official_apps,
+						eligibleOfficialApps: instanceConfigRepository.getCachedOfficialAppEligibility(),
 						accountIdentity,
 					},
 				),
@@ -160,7 +221,12 @@ export function InstanceController(app: Hono<HonoEnv>) {
 					limits,
 				},
 			);
-			const response = {...discovery, domain_migration: toDomainMigrationDiscovery(domainMigration)};
+			const response = {
+				...discovery,
+				domain_migration: toDomainMigrationDiscovery(domainMigration),
+				username_migration: usernameMigration,
+				username_tiers: usernamePolicy.tiers,
+			};
 			discoveryValidators = nextDiscoveryValidators(response, discoveryValidators);
 			ctx.header('ETag', discoveryValidators.etag);
 			ctx.header('Last-Modified', discoveryValidators.lastModified.toUTCString());

@@ -70,7 +70,7 @@ function patchConfig(harness: ApiTestHarness, admin: TestAccount, body: Record<s
 }
 
 const OPERATOR_BILLING = {
-	enabled: true,
+	enabled: false,
 	stripe_secret_key: OPERATOR_SECRET_KEY,
 	stripe_webhook_secret: OPERATOR_WEBHOOK_SECRET,
 	default_currency: 'GBP',
@@ -104,6 +104,16 @@ describe('instance config billing on a self-hosted instance', () => {
 		expect(current.policy.premium_mode).toBe('everyone');
 	});
 
+	it('rejects enabling Stripe in mirror mode without saving the catalog or secrets', async () => {
+		const admin = await createAdmin(context.harness);
+		await patchConfig(context.harness, admin, {policy: {premium_mode: 'mirror'}}).execute();
+		await patchConfig(context.harness, admin, {billing: {...OPERATOR_BILLING, enabled: true}})
+			.expect(HTTP_STATUS.BAD_REQUEST, APIErrorCodes.INVALID_FORM_BODY)
+			.execute();
+		expect((await getInstanceConfigRepository().readStoredInstanceBillingConfig()).prices).toBeNull();
+		expect(getStoredBillingConfig()?.stripe_secret_key ?? null).toBeNull();
+	});
+
 	it('saves the environment fallback in everyone mode even when the environment enables billing', async () => {
 		const admin = await createAdmin(context.harness);
 		const originalEnabled = getConfig().stripe.enabled;
@@ -122,7 +132,7 @@ describe('instance config billing on a self-hosted instance', () => {
 		}
 	});
 
-	it('enables billing and mirror mode from one request and redacts the secrets', async () => {
+	it('stores billing and mirror mode with redacted secrets while Stripe stays inactive', async () => {
 		const admin = await createAdmin(context.harness);
 		const updated = await patchConfig(context.harness, admin, {
 			billing: OPERATOR_BILLING,
@@ -130,27 +140,28 @@ describe('instance config billing on a self-hosted instance', () => {
 		}).execute();
 		expect(updated.policy.premium_mode).toBe('mirror');
 		expect(updated.billing).toMatchObject({
-			enabled: true,
-			effective_enabled: true,
+			enabled: false,
+			effective_enabled: false,
 			stripe_secret_key_set: true,
 			stripe_webhook_secret_set: true,
 			default_currency: 'GBP',
 			prices: OPERATOR_BILLING.prices,
 			country_currencies: {GB: 'GBP'},
 			legacy_prices: {monthly_GBP: ['price_oldmonthlygbp']},
-			billing_active: true,
+			billing_active: false,
 			catalog_mode: 'operator',
 		});
 		expect(updated.billing.webhook_url).toMatch(/\/stripe\/webhook$/);
 		const {text} = await createBuilder(context.harness, admin.token).get('/admin/instance/config').executeRaw();
 		expect(text).not.toContain(OPERATOR_SECRET_KEY);
 		expect(text).not.toContain(OPERATOR_WEBHOOK_SECRET);
-		expect(JSON.parse(text).billing).toMatchObject({stripe_secret_key_set: true, billing_active: true});
+		expect(JSON.parse(text).billing).toMatchObject({stripe_secret_key_set: true, billing_active: false});
 	});
 
 	it('rejects switching the premium mode to everyone while billing is enabled', async () => {
 		const admin = await createAdmin(context.harness);
-		await patchConfig(context.harness, admin, {billing: OPERATOR_BILLING, policy: {premium_mode: 'mirror'}}).execute();
+		await patchConfig(context.harness, admin, {policy: {premium_mode: 'mirror'}}).execute();
+		await getInstanceConfigRepository().setInstanceBillingConfig({...OPERATOR_BILLING, enabled: true});
 		await patchConfig(context.harness, admin, {policy: {premium_mode: 'everyone'}})
 			.expect(HTTP_STATUS.BAD_REQUEST, APIErrorCodes.INVALID_FORM_BODY)
 			.execute();
@@ -172,10 +183,10 @@ describe('instance config billing on a self-hosted instance', () => {
 		const kept = await patchConfig(context.harness, admin, {billing: {default_currency: 'GBP'}}).execute();
 		expect(kept.billing.prices).toEqual(OPERATOR_BILLING.prices);
 		const cleared = await patchConfig(context.harness, admin, {
-			billing: {enabled: true, stripe_webhook_secret: null, prices: null, legacy_prices: null},
+			billing: {enabled: false, stripe_webhook_secret: null, prices: null, legacy_prices: null},
 		}).execute();
 		expect(cleared.billing).toMatchObject({
-			enabled: true,
+			enabled: false,
 			prices: null,
 			legacy_prices: null,
 			catalog_mode: 'env',
@@ -224,7 +235,7 @@ describe('instance config billing on a self-hosted instance', () => {
 		const admin = await createAdmin(context.harness);
 		await patchConfig(context.harness, admin, {billing: OPERATOR_BILLING, policy: {premium_mode: 'mirror'}}).execute();
 		const envCatalog = await patchConfig(context.harness, admin, {billing: {prices: null}}).execute();
-		expect(envCatalog.billing).toMatchObject({prices: null, catalog_mode: 'env', enabled: true});
+		expect(envCatalog.billing).toMatchObject({prices: null, catalog_mode: 'env', enabled: false});
 		const followsEnv = await patchConfig(context.harness, admin, {billing: {enabled: null}}).execute();
 		expect(followsEnv.billing).toMatchObject({enabled: null, effective_enabled: getConfig().stripe.enabled});
 	});
@@ -233,7 +244,7 @@ describe('instance config billing on a self-hosted instance', () => {
 		const admin = await createAdmin(context.harness);
 		await patchConfig(context.harness, admin, {app_public: {setup: {configured: true}}}).execute();
 		await patchConfig(context.harness, admin, {
-			billing: {enabled: true},
+			billing: {enabled: false},
 			policy: {premium_mode: 'mirror', single_community_enabled: true},
 		})
 			.expect(HTTP_STATUS.BAD_REQUEST)
@@ -245,7 +256,7 @@ describe('instance config billing on a self-hosted instance', () => {
 		expect(current.billing.enabled).toBeNull();
 	});
 
-	it('re-checks the stored premium mode right before the billing write', async () => {
+	it('rejects enabling billing even when the cached premium mode says mirror', async () => {
 		const admin = await createAdmin(context.harness);
 		const repository = getInstanceConfigRepository();
 		const stored = await repository.getInstancePolicyConfig();
@@ -265,7 +276,8 @@ describe('instance config billing on a self-hosted instance', () => {
 
 	it('re-checks the stored billing right before the premium mode write', async () => {
 		const admin = await createAdmin(context.harness);
-		await patchConfig(context.harness, admin, {billing: OPERATOR_BILLING, policy: {premium_mode: 'mirror'}}).execute();
+		await patchConfig(context.harness, admin, {policy: {premium_mode: 'mirror'}}).execute();
+		await getInstanceConfigRepository().setInstanceBillingConfig({...OPERATOR_BILLING, enabled: true});
 		const cached = getStoredBillingConfig();
 		expect(cached?.enabled).toBe(true);
 		setStoredBillingConfig(cached === null ? null : {...cached, enabled: false});

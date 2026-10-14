@@ -131,6 +131,10 @@ A report is written once, when the reporter files it. [Update report](#update-re
 | 0 | MESSAGE | A message was reported |
 | 1 | USER | A user was reported |
 | 2 | GUILD | A guild was reported |
+| 3 | FEED_POST | A [feed](/http-api/feed/) post was reported |
+| 4 | FEED_COMMENT | A comment on a feed post was reported |
+
+A `FEED_POST` or `FEED_COMMENT` report carries the reported item in `message_context` in message shape: `reported_message_id` is the post or comment ID, `reported_channel_id` is `null`, and each context entry's `channel_id` is the post author's personal channel ID. A comment report lists the post first, then the comment. Post images are copied like message attachments, so [Create NCMEC report](/admin-api/messages/#create-ncmec-report) accepts that `channel_id`, the post ID as `message_id`, and the report ID as `source_report_id`. [Admin feed moderation](/admin-api/feed/) removes the item. The `report_type` filter of [List reports](#list-reports) does not select these types.
 
 ## Admin report detail object
 

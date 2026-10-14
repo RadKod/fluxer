@@ -19,7 +19,7 @@ import {
 } from '@app/api/user/UserMappers';
 import {DeletionReasons} from '@fluxer/constants/src/Core';
 import {NON_SELF_HOSTED_RESERVED_DISCRIMINATORS} from '@fluxer/constants/src/DiscriminatorConstants';
-import {UserFlags} from '@fluxer/constants/src/UserConstants';
+import {PublicUserFlags, UserFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {InMemoryProvider} from '@pkgs/cache/src/providers/InMemoryProvider';
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
 
@@ -138,6 +138,26 @@ describe('profile visibility', () => {
 			accent_color: 99,
 		});
 		expect(own.flags & PROFILE_HIDDEN_BIT).toBe(0);
+	});
+
+	it('clears every worn Micup cosmetic and the derived Plus badge when hidden', () => {
+		const styled = user({
+			flags: UserFlags.PROFILE_HIDDEN | UserFlags.VERIFIED,
+			premium_type: UserPremiumTypes.SUBSCRIPTION,
+			avatar_decoration_id: 11n,
+			avatar_decoration_asset: 'decoration',
+			avatar_ultra_id: 12n,
+			avatar_ultra_asset: 'ultra',
+			nameplate_id: 13n,
+			nameplate_asset: 'nameplate',
+		});
+		const partial = mapUserToPartialResponse(styled);
+		expect(partial).toMatchObject({avatar_decoration_data: null, avatar_ultra_data: null, nameplate_data: null});
+		expect(partial.flags & PublicUserFlags.PREMIUM_BADGE).toBe(0);
+		expect(partial.flags & PublicUserFlags.VERIFIED).toBe(PublicUserFlags.VERIFIED);
+		const own = mapUserToPrivateResponse(styled);
+		expect(own.avatar_ultra_data).toEqual({item_id: '12', asset: 'ultra'});
+		expect(own.flags & PublicUserFlags.PREMIUM_BADGE).toBe(PublicUserFlags.PREMIUM_BADGE);
 	});
 
 	it('gives each account one stable pseudonym in the generated username format', () => {

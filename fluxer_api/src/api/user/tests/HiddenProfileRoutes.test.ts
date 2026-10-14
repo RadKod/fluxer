@@ -2,12 +2,18 @@
 
 import {createTestAccount, setUserACLs, type TestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {getMember, setupTestGuildWithMembers} from '@app/api/guild/tests/GuildTestUtils';
+import {getGatewayService, getKVClient, setInjectedWorkerService} from '@app/api/middleware/ServiceRegistry';
+import {getGuildRepository, getUserCacheService, getUserRepository} from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {NoopGatewayService} from '@app/api/test/NoopGatewayService';
+import {NoopWorkerService} from '@app/api/test/NoopWorkerService';
+import {SyncTaskWorkerService} from '@app/api/test/SyncTaskWorkerService';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {profilePseudonym} from '@app/api/user/ProfileVisibility';
 import {fetchUser, fetchUserMe, fetchUserProfile} from '@app/api/user/tests/UserTestUtils';
+import propagatePartialUserChange from '@app/api/worker/tasks/PropagatePartialUserChange';
+import {clearWorkerDependencies, setWorkerDependenciesForTest} from '@app/api/worker/WorkerContext';
 import {DeletionReasons} from '@fluxer/constants/src/Core';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import type {GuildMemberResponse} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
@@ -34,6 +40,14 @@ describe('hidden profiles', () => {
 
 	beforeEach(async () => {
 		harness = await createApiTestHarness();
+		setWorkerDependenciesForTest({
+			kvClient: getKVClient(),
+			userRepository: getUserRepository(),
+			guildRepository: getGuildRepository(),
+			userCacheService: getUserCacheService(),
+			gatewayService: getGatewayService(),
+		});
+		setInjectedWorkerService(new SyncTaskWorkerService({propagatePartialUserChange}));
 		admin = await setUserACLs(harness, await createTestAccount(harness), [
 			'admin:authenticate',
 			'user:lookup',
@@ -61,6 +75,8 @@ describe('hidden profiles', () => {
 
 	afterEach(async () => {
 		vi.restoreAllMocks();
+		clearWorkerDependencies();
+		setInjectedWorkerService(new NoopWorkerService());
 		await harness?.shutdown();
 	});
 

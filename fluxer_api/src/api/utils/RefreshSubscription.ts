@@ -11,6 +11,8 @@ interface RefreshSubscriptionOptions {
 	drainInitialNotifications?: boolean;
 	periodicIntervalMs?: () => number | null;
 	closeMode?: 'disconnect' | 'quit';
+	onInvalidate?: () => void;
+	onSubscriptionError?: (error: Error) => void;
 }
 
 export class RefreshSubscriptionUnavailableError extends Error {
@@ -72,7 +74,12 @@ class RefreshSubscriptionSession {
 	private readonly messageHandler = (channel: string, message: string): void => {
 		if (!this.options.channels.includes(channel)) return;
 		if (this.options.shouldRefresh && !this.options.shouldRefresh(channel, message)) return;
+		this.options.onInvalidate?.();
 		this.requestRefresh('notification');
+	};
+	private readonly errorHandler = (error: Error): void => {
+		this.options.onInvalidate?.();
+		this.options.onSubscriptionError?.(error);
 	};
 
 	constructor(
@@ -104,6 +111,7 @@ class RefreshSubscriptionSession {
 		this.assertActive();
 		if (this.subscription) {
 			this.subscription.on('message', this.messageHandler);
+			if (this.options.onSubscriptionError) this.subscription.on('error', this.errorHandler);
 			try {
 				await this.subscription.connect();
 				this.assertActive();
@@ -174,6 +182,7 @@ class RefreshSubscriptionSession {
 		if (this.timer) clearInterval(this.timer);
 		this.timer = null;
 		this.subscription?.off('message', this.messageHandler);
+		if (this.options.onSubscriptionError) this.subscription?.off('error', this.errorHandler);
 		this.stopCompletion = this.close(wasStarting);
 		return this.stopCompletion;
 	}

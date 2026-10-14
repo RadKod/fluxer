@@ -9,10 +9,17 @@ import {
 	registerMetricsSection,
 } from '@fluxer/hono/src/middleware/Metrics';
 import {Hono} from 'hono';
-import {describe, expect, test} from 'vitest';
+import {afterEach, describe, expect, test, vi} from 'vitest';
 
 function requestMetrics(app: Hono, remoteAddress = '127.0.0.1') {
 	return app.request('/_metrics', undefined, {incoming: {socket: {remoteAddress}}});
+}
+
+function createAllowListApp(allowedCidrs?: ReadonlyArray<string>) {
+	const {metricsHandler} = createMetricsMiddleware('test', {allowedCidrs});
+	const app = new Hono();
+	app.get('/_metrics', metricsHandler);
+	return app;
 }
 
 function createTestApp() {
@@ -243,6 +250,82 @@ describe('Metrics Middleware', () => {
 				{incoming: {socket: {remoteAddress: '203.0.113.9'}}},
 			);
 			expect(res.status).toBe(403);
+		});
+	});
+
+	describe('allowed networks', () => {
+		afterEach(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test('serves metrics to a peer inside an allowed network', async () => {
+			const res = await requestMetrics(createAllowListApp(['10.77.0.0/24']), '10.77.0.3');
+			expect(res.status).toBe(200);
+		});
+
+		test('still serves loopback peers when networks are allowed', async () => {
+			const res = await requestMetrics(createAllowListApp(['10.77.0.0/24']), '127.0.0.1');
+			expect(res.status).toBe(200);
+		});
+
+		test('serves only loopback peers when the list is empty', async () => {
+			const app = createAllowListApp([]);
+			expect((await requestMetrics(app, '127.0.0.1')).status).toBe(200);
+			expect((await requestMetrics(app, '10.77.0.3')).status).toBe(403);
+		});
+
+		test('rejects a peer outside every allowed network', async () => {
+			const res = await requestMetrics(createAllowListApp(['10.77.0.0/24']), '10.77.1.3');
+			expect(res.status).toBe(403);
+		});
+
+		test('matches an IPv4-mapped peer against an IPv4 network', async () => {
+			const res = await requestMetrics(createAllowListApp(['10.77.0.0/24']), '::ffff:10.77.0.3');
+			expect(res.status).toBe(200);
+		});
+
+		test('matches IPv6 networks and single addresses', async () => {
+			const app = createAllowListApp(['fd00:77::/64', '192.0.2.10']);
+			expect((await requestMetrics(app, 'fd00:77::5')).status).toBe(200);
+			expect((await requestMetrics(app, '192.0.2.10')).status).toBe(200);
+			expect((await requestMetrics(app, '192.0.2.11')).status).toBe(403);
+		});
+
+		test('ignores a forged x-forwarded-for header from a peer outside the list', async () => {
+			const res = await createAllowListApp(['10.77.0.0/24']).request(
+				'/_metrics',
+				{headers: {'x-forwarded-for': '10.77.0.3'}},
+				{incoming: {socket: {remoteAddress: '203.0.113.9'}}},
+			);
+			expect(res.status).toBe(403);
+		});
+
+		test('refuses to start with an invalid entry', () => {
+			for (const entry of [
+				'10.77.0.0/33',
+				'fd00::/129',
+				'not-an-ip/24',
+				'10.77.0.0/',
+				'10.77.0.0/2x',
+				'10.0.0.0/+24',
+				'10.0.0.0/0024',
+			]) {
+				expect(() => createMetricsMiddleware('test', {allowedCidrs: [entry]})).toThrow('FLUXER_METRICS_ALLOWED_CIDRS');
+			}
+		});
+
+		// Same rejections as the Rust and Erlang parsers: only commas separate entries.
+		test('refuses to start with networks separated by spaces', () => {
+			vi.stubEnv('FLUXER_METRICS_ALLOWED_CIDRS', '10.0.0.0/24 10.1.0.0/24');
+			expect(() => createMetricsMiddleware('test')).toThrow('FLUXER_METRICS_ALLOWED_CIDRS');
+		});
+
+		test('reads FLUXER_METRICS_ALLOWED_CIDRS when no list is given', async () => {
+			vi.stubEnv('FLUXER_METRICS_ALLOWED_CIDRS', ' 10.77.0.0/24 , ,fd00:77::/64 ');
+			const app = createAllowListApp();
+			expect((await requestMetrics(app, '10.77.0.3')).status).toBe(200);
+			expect((await requestMetrics(app, 'fd00:77::5')).status).toBe(200);
+			expect((await requestMetrics(app, '172.18.0.4')).status).toBe(403);
 		});
 	});
 

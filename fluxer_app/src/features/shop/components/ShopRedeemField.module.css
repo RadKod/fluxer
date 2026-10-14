@@ -1,0 +1,96 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.field {
+	composes: tokens card from '@app/features/premium/components/PremiumSurface.module.css';
+	display: flex;
+	flex-direction: column;
+	container: shop-redeem / inline-size;
+}
+
+/* Premium page: heading, line, field, hint. */
+.card {
+	padding: 1.5rem;
+}
+
+/* Shop page: label, field and button on one row. */
+.bar {
+	padding: 1rem;
+}
+
+.heading {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	margin: 0 0 0.375rem;
+	font-size: var(--premium-fs-title);
+	font-weight: 700;
+	line-height: 1.5rem;
+	color: var(--text-primary);
+}
+
+.body {
+	margin: 0 0 1rem;
+	font-size: var(--premium-fs-body);
+	line-height: 1.5;
+	color: var(--text-secondary);
+}
+
+.hint {
+	margin: 0.625rem 0 0;
+	font-size: var(--premium-fs-small);
+	line-height: 1.25rem;
+	color: var(--text-tertiary);
+}
+
+.icon {
+	flex-shrink: 0;
+	width: 1.25rem;
+	height: 1.25rem;
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.bar .row {
+	gap: 1rem;
+}
+
+.label {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	font-size: var(--premium-fs-body);
+	font-weight: 700;
+	white-space: nowrap;
+	color: var(--text-primary);
+}
+
+.input {
+	flex: 1;
+	min-width: 0;
+}
+
+.submit {
+	flex-shrink: 0;
+}
+
+.srOnly {
+	composes: srOnly from '@app/features/premium/components/PremiumSurface.module.css';
+}
+
+@container shop-redeem (max-width: 23.99rem) {
+	.row {
+		flex-wrap: wrap;
+	}
+
+	.label {
+		width: 100%;
+	}
+
+	.row .submit {
+		width: 100%;
+	}
+}

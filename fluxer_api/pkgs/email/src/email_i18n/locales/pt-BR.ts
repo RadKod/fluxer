@@ -25,11 +25,13 @@ const EMAIL_I18N_PT_BR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "Agradecemos pela sua doação ao {product_name}",
-		"body": "Olá,\n\nAgradecemos pela sua doação ao {product_name}! Sua {interval, select,\n  month {doação recorrente}\n  year {doação recorrente}\n  other {doação única}\n} foi {interval, select,\n  month {configurada}\n  year {configurada}\n  other {processada}\n} com sucesso.\n\nDetalhes da doação:\nValor: {amount} {interval, select,\n  month {por mês}\n  year {por ano}\n  other {}\n}\n\nA Stripe enviará um recibo separado com sua fatura em PDF em breve. Isso inclui todos os detalhes de pagamento e pode ser usado para fins fiscais.\n\nVocê pode visualizar seu histórico de doações, baixar faturas {interval, select,\n  month {e gerenciar ou cancelar sua assinatura}\n  year {e gerenciar ou cancelar sua assinatura}\n  other {e gerenciar futuras doações}\n} a qualquer momento usando este link:\n\n{manageUrl}\n\nSeu apoio ajuda a manter o {product_name} funcionando. Agradecemos!\n\n– Equipe do {product_name}"
+		"body": "Olá,\n\nAgradecemos pela sua doação ao {product_name}! Sua {interval, select,\n  month {doação recorrente}\n  year {doação recorrente}\n  other {doação única}\n} foi {interval, select,\n  month {configurada}\n  year {configurada}\n  other {processada}\n} com sucesso.\n\nDetalhes da doação:\nValor: {amount} {interval, select,\n  month {por mês}\n  year {por ano}\n  other {}\n}\n\nA Stripe enviará um recibo separado com sua fatura em PDF em breve. Isso inclui todos os detalhes de pagamento e pode ser usado para fins fiscais.\n\nVocê pode visualizar seu histórico de doações, baixar faturas {interval, select,\n  month {e gerenciar ou cancelar sua assinatura}\n  year {e gerenciar ou cancelar sua assinatura}\n  other {e gerenciar futuras doações}\n} a qualquer momento usando este link:\n\n{manageUrl}\n\nSeu apoio ajuda a manter o {product_name} funcionando. Agradecemos!\n\n– Equipe do {product_name}",
+		"button": "Gerenciar doações"
 	},
 	"donation_magic_link": {
 		"subject": "Gerencie suas doações ao {product_name}",
-		"body": "Olá,\n\nClique no link abaixo para acessar seu portal de doadores:\n\n{manageUrl}\n\nNo portal, você pode gerenciar assinaturas, baixar faturas e visualizar seu histórico de doações.\n\nEste link expira em {expiresAt, date, full} às {expiresAt, time, short}.\n\nSe você não solicitou este link, pode ignorar este e-mail com segurança.\n\n– Equipe do {product_name}"
+		"body": "Olá,\n\nClique no link abaixo para acessar seu portal de doadores:\n\n{manageUrl}\n\nNo portal, você pode gerenciar assinaturas, baixar faturas e visualizar seu histórico de doações.\n\nEste link expira em {expiresAt, date, full} às {expiresAt, time, short}.\n\nSe você não solicitou este link, pode ignorar este e-mail com segurança.\n\n– Equipe do {product_name}",
+		"button": "Gerenciar doações"
 	},
 	"dsa_report_verification": {
 		"subject": "Verifique seu e-mail para enviar uma denúncia nos termos do DSA",
@@ -45,11 +47,13 @@ const EMAIL_I18N_PT_BR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "O e-mail da sua conta do {product_name} foi alterado",
-		"body": "Olá, {username},\n\nO endereço de e-mail da sua conta do {product_name} foi alterado para {newEmail}.\n\nSe você fez essa alteração, nenhuma ação é necessária. Se você não fez, pode reverter a alteração e proteger sua conta usando este link:\n\n{revertUrl}\n\nIsso restaurará seu e-mail anterior, encerrará todas as suas sessões, desativará a autenticação multifator (MFA) e exigirá que você defina uma nova senha.\n\n– equipe de segurança do {product_name}"
+		"body": "Olá, {username},\n\nO endereço de e-mail da sua conta do {product_name} foi alterado para {newEmail}.\n\nSe você fez essa alteração, nenhuma ação é necessária. Se você não fez, pode reverter a alteração e proteger sua conta usando este link:\n\n{revertUrl}\n\nIsso restaurará seu e-mail anterior, encerrará todas as suas sessões, desativará a autenticação multifator (MFA) e exigirá que você defina uma nova senha.\n\n– equipe de segurança do {product_name}",
+		"button": "Desfazer esta alteração"
 	},
 	"email_verification": {
 		"subject": "Verifique o endereço de e-mail da sua conta do {product_name}",
-		"body": "Olá, {username},\n\nPor favor, verifique o endereço de e-mail da sua conta do {product_name} clicando no link abaixo:\n\n{verifyUrl}\n\nSe você não criou uma conta do {product_name}, pode ignorar este e-mail com segurança.\n\nEste link é válido por 24 horas.\n\n– Equipe do {product_name}"
+		"body": "🎉 Olá, {username},\n\nPor favor, verifique o endereço de e-mail da sua conta do {product_name} clicando no link abaixo:\n\n{verifyUrl}\n\nSe você não criou uma conta do {product_name}, pode ignorar este e-mail com segurança.\n\nEste link é válido por 24 horas.\n\n– Equipe do {product_name}",
+		"button": "Verificar e-mail"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Os benefícios do presente que você resgatou foram removidos",
@@ -57,15 +61,18 @@ const EMAIL_I18N_PT_BR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "Sua exportação de dados do {product_name} está pronta para download",
-		"body": "Olá, {username},\n\nSua exportação de dados está pronta.\n\nLink para download:\n{downloadUrl}\n\nMensagens incluídas: {totalMessages, number}\nTamanho do arquivo: {fileSizeMB, number} MB\n\nEste link expira em {expiresAt, date, full} às {expiresAt, time, short}.\n\nSe você não solicitou esta exportação, por favor, altere sua senha imediatamente e entre em contato com nossa equipe de suporte.\n\n– Equipe do {product_name}"
+		"body": "Olá, {username},\n\nSua exportação de dados está pronta.\n\nLink para download:\n{downloadUrl}\n\nMensagens incluídas: {totalMessages, number}\nTamanho do arquivo: {fileSizeMB, number} MB\n\nEste link expira em {expiresAt, date, full} às {expiresAt, time, short}.\n\nSe você não solicitou esta exportação, por favor, altere sua senha imediatamente e entre em contato com nossa equipe de suporte.\n\n– Equipe do {product_name}",
+		"button": "Baixar meus dados"
 	},
 	"inactivity_warning": {
 		"subject": "A sua conta do {product_name} será excluída devido à inatividade",
-		"body": "Olá, {username},\n\nNão vimos nenhuma atividade em sua conta do {product_name} desde {lastActiveDate, date, full}.\n\nSe você não entrar até {deletionDate, date, full} às {deletionDate, time, short}, sua conta será excluída permanentemente devido à inatividade.\n\nEntre aqui:\n{loginUrl}\n\nSe você usou o {product_name} recentemente, entre em contato com nossa equipe de suporte imediatamente.\n\n– Equipe do {product_name}"
+		"body": "Olá, {username},\n\nNão vimos nenhuma atividade em sua conta do {product_name} desde {lastActiveDate, date, full}.\n\nSe você não entrar até {deletionDate, date, full} às {deletionDate, time, short}, sua conta será excluída permanentemente devido à inatividade.\n\nEntre aqui:\n{loginUrl}\n\nSe você usou o {product_name} recentemente, entre em contato com nossa equipe de suporte imediatamente.\n\n– Equipe do {product_name}",
+		"button": "Entrar"
 	},
 	"ip_authorization": {
 		"subject": "Autorizar login de um novo endereço IP",
-		"body": "Olá, {username},\n\nDetectamos uma tentativa de login em sua conta do {product_name} de um novo endereço IP:\n\nEndereço IP: {ipAddress}\nLocalização: {location}\n\nSe foi você, por favor, autorize este endereço IP clicando no link abaixo:\n\n{authUrl}\n\nSe você não tentou entrar, por favor, altere sua senha imediatamente.\n\nEste link é válido por 30 minutos.\n\n– Equipe do {product_name}"
+		"body": "Olá, {username},\n\nDetectamos uma tentativa de login em sua conta do {product_name} de um novo endereço IP:\n\nEndereço IP: {ipAddress}\nLocalização: {location}\n\nSe foi você, por favor, autorize este endereço IP clicando no link abaixo:\n\n{authUrl}\n\nSe você não tentou entrar, por favor, altere sua senha imediatamente.\n\nEste link é válido por 30 minutos.\n\n– Equipe do {product_name}",
+		"button": "Autorizar este login"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Confirme o acesso aos códigos de recuperação da sua conta do {product_name}",
@@ -77,11 +84,17 @@ const EMAIL_I18N_PT_BR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "Redefina a senha da sua conta do {product_name}",
-		"body": "Olá, {username},\n\nVocê solicitou uma redefinição de senha da sua conta do {product_name}. Use o link abaixo para definir uma nova senha:\n\n{resetUrl}\n\nSe você não solicitou isso, pode ignorar este e-mail com segurança.\n\nEste link é válido por 1 hora.\n\n– Equipe do {product_name}"
+		"body": "Olá, {username},\n\nVocê solicitou uma redefinição de senha da sua conta do {product_name}. Use o link abaixo para definir uma nova senha:\n\n{resetUrl}\n\nSe você não solicitou isso, pode ignorar este e-mail com segurança.\n\nEste link é válido por 1 hora.\n\n– Equipe do {product_name}",
+		"button": "Redefinir senha"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "Seu cadastro no {product_name} foi aprovado",
-		"body": "Olá, {username},\n\nBoas notícias: seu cadastro no {product_name} foi aprovado.\n\nAgora você pode entrar no aplicativo do {product_name} aqui:\n{channelsUrl}\n\nBem-vindo à comunidade do {product_name}.\n\n– Equipe do {product_name}"
+		"body": "🎉 Olá, {username},\n\nBoas notícias: seu cadastro no {product_name} foi aprovado.\n\nAgora você pode entrar no aplicativo do {product_name} aqui:\n{channelsUrl}\n\nBem-vindo à comunidade do {product_name}.\n\n– Equipe do {product_name}",
+		"button": "Abrir o {product_name}"
 	},
 	"report_resolved": {
 		"subject": "Sua denúncia no {product_name} foi analisada",
@@ -97,7 +110,7 @@ const EMAIL_I18N_PT_BR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "A suspensão da sua conta do {product_name} foi encerrada",
-		"body": "Olá, {username},\n\nBoas notícias: a suspensão da sua conta do {product_name} foi encerrada.\n\n{reason, select,\n  null {}\n  other {Motivo: {reason}}\n}\n\nAgora você pode entrar novamente e continuar usando o {product_name} normalmente.\n\n– equipe de segurança do {product_name}"
+		"body": "🎉 Olá, {username},\n\nBoas notícias: a suspensão da sua conta do {product_name} foi encerrada.\n\n{reason, select,\n  null {}\n  other {Motivo: {reason}}\n}\n\nAgora você pode entrar novamente e continuar usando o {product_name} normalmente.\n\n– equipe de segurança do {product_name}"
 	}
 });
 

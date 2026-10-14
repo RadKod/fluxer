@@ -23,7 +23,7 @@ interface PremiumUpsellBannerProps {
 const COMMUNITY_ICON_LIMIT = 4;
 const PREMIUM_EMOJI_STICKER_UPSELL_DESCRIPTOR = msg({
 	message: 'Unlock all custom emojis and stickers across all communities with {premiumProductName}',
-	comment: 'Premium upsell banner shown in emoji and sticker pickers.',
+	comment: 'Plus upsell banner shown in emoji and sticker pickers.',
 });
 const mapGuildIdToIcon = (communityId: string) => {
 	const guild = Guilds.getGuild(communityId);

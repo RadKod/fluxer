@@ -171,7 +171,7 @@
 .audioIcon {
 	height: 3rem;
 	width: 3rem;
-	color: white;
+	color: var(--text-on-brand-primary);
 	flex-shrink: 0;
 }
 
@@ -186,7 +186,7 @@
 .audioDuration {
 	font-family: var(--font-mono);
 	font-size: 1.125rem;
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 .audioFilename {
@@ -206,7 +206,7 @@
 	background-color: rgba(0, 0, 0, 0.2);
 	font-weight: 700;
 	font-size: 0.75rem;
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 .actionBar {

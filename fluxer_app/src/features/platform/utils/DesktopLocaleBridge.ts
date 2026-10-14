@@ -148,6 +148,10 @@ const WEBSITE_DESCRIPTOR = msg({
 	message: 'Website',
 	comment: 'Native Help submenu item that opens the Fluxer marketing website.',
 });
+const SOURCE_CODE_DESCRIPTOR = msg({
+	message: 'Source code',
+	comment: 'Native Help submenu item. Opens the page where the app offers the source code of its software.',
+});
 const REPORT_ISSUE_DESCRIPTOR = msg({
 	message: 'Report issue',
 	comment: 'Native Help submenu item. Opens the bug / issue reporting flow.',
@@ -340,6 +344,13 @@ const FAILED_TO_START_DESCRIPTOR = msg({
 	comment:
 		'Title of the native error dialog shown when the desktop app cannot boot. {appName} is the desktop app name (typically Fluxer).',
 });
+const OPEN_MICROSOFT_STORE_DESCRIPTOR = msg({message: 'Open Microsoft Store'});
+const STORE_UPDATE_REQUIRED_DESCRIPTOR = msg({
+	message: 'An update must be installed from Microsoft Store before {appName} can start.',
+});
+const STORE_SECURITY_UPDATE_REQUIRED_DESCRIPTOR = msg({
+	message: 'A required security update must be installed from Microsoft Store before {appName} can start.',
+});
 const APP_LOAD_FAILED_TITLE_DESCRIPTOR = msg({
 	message: "Can't connect",
 	comment:
@@ -397,7 +408,7 @@ const NATIVE_MESSAGES: Record<string, NativeMessage> = {
 	'desktop.appMenu.close': CLOSE_DESCRIPTOR,
 	'desktop.appMenu.help': HELP_DESCRIPTOR,
 	'desktop.appMenu.website': WEBSITE_DESCRIPTOR,
-	'desktop.appMenu.github': 'GitHub',
+	'desktop.appMenu.sourceCode': SOURCE_CODE_DESCRIPTOR,
 	'desktop.appMenu.reportIssue': REPORT_ISSUE_DESCRIPTOR,
 	'desktop.appMenu.troubleshooting': TROUBLESHOOTING_DESCRIPTOR,
 	'desktop.troubleshooting.disableHardwareAccelerationAndRestart': DISABLE_HARDWARE_ACCELERATION_AND_RESTART_DESCRIPTOR,
@@ -441,6 +452,9 @@ const NATIVE_MESSAGES: Record<string, NativeMessage> = {
 	'desktop.badge.unreadMessages': UNREAD_MESSAGES_DESCRIPTOR,
 	'desktop.badge.unreadMessagesCount': UNREAD_MESSAGES_COUNT_DESCRIPTOR,
 	'desktop.startup.failedTitle': FAILED_TO_START_DESCRIPTOR,
+	'desktop.shellUpdate.openMicrosoftStore': OPEN_MICROSOFT_STORE_DESCRIPTOR,
+	'desktop.shellUpdate.storeRequired': STORE_UPDATE_REQUIRED_DESCRIPTOR,
+	'desktop.shellUpdate.storeSecurityRequired': STORE_SECURITY_UPDATE_REQUIRED_DESCRIPTOR,
 	'desktop.appLoad.failedTitle': APP_LOAD_FAILED_TITLE_DESCRIPTOR,
 	'desktop.appLoad.failedMessage': APP_LOAD_FAILED_MESSAGE_DESCRIPTOR,
 	'desktop.appLoad.retry': TRY_AGAIN_DESCRIPTOR,

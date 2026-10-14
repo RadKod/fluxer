@@ -60,3 +60,10 @@
 	line-height: 1.4;
 	margin: 0;
 }
+
+/* Micup: the streamer privacy mark takes the white accent instead of blurple in the coal and dark themes */
+:global(html:is(.theme-coal, .theme-dark)) .privacyMark {
+	background: var(--brand-primary);
+	box-shadow: 0 1.125rem 3.25rem rgb(0 0 0 / 40%);
+	color: var(--text-on-brand-primary);
+}

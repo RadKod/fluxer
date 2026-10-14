@@ -8,6 +8,7 @@ import {
 	flushAppStorageWrites,
 	GLOBAL_APP_STORAGE_SCOPE,
 	getAppStorageScope,
+	PRESERVED_DEVICE_STORAGE_KEYS,
 	PRESERVED_RESET_STORAGE_KEY_PREFIXES,
 	PRESERVED_RESET_STORAGE_KEYS,
 	RAW_MIRROR_SCOPE_PREFIX,
@@ -115,7 +116,9 @@ function clearLegacyStorageCorpus(keysToKeep: ReadonlySet<string>): void {
 }
 
 export async function resetClientState(options: ResetClientStateOptions, accountScope?: string): Promise<void> {
-	const keysToKeep: ReadonlyArray<string> = options.keepDrafts ? PRESERVED_RESET_STORAGE_KEYS : [];
+	const keysToKeep: ReadonlyArray<string> = options.keepDrafts
+		? PRESERVED_RESET_STORAGE_KEYS
+		: PRESERVED_DEVICE_STORAGE_KEYS;
 	await settlePendingWrites();
 	switch (options.reason) {
 		case ResetClientStateReason.LOGOUT:

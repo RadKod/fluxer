@@ -538,6 +538,115 @@ async fn an_explicit_quality_reuses_the_entry_the_resolved_default_minted() {
     assert!(rendered.contains("fluxer_media_proxy_transform_cache_misses_total 1\n"));
 }
 
+const ANIMATED_ASSET_TEST_PATH: &str = "/avatars/123456789012345678/a_a1b2c3d4e5f6.webp";
+
+async fn app_with_animated_gif_avatar(
+    storage_root: &std::path::Path,
+    gif: &[u8],
+    max_encode_frames: u32,
+) -> Arc<AppState> {
+    let mut cfg = asset_test_config(storage_root);
+    cfg.media.transform_timeout_ms = 60_000;
+    cfg.media.max_encode_frames = max_encode_frames;
+    let app = test_app_state(cfg);
+    let asset = parse_standard_asset_path(ANIMATED_ASSET_TEST_PATH).unwrap();
+    app.store
+        .write_object(
+            &app.cfg.storage.bucket_cdn,
+            &asset.storage_key,
+            gif,
+            "image/gif",
+        )
+        .await
+        .unwrap();
+    app
+}
+
+async fn animated_gif_avatar_at_size_128(app: &Arc<AppState>) -> Response {
+    let params = HashMap::from([("size".to_owned(), "128".to_owned())]);
+    serve_asset_image(
+        app,
+        Method::GET,
+        parse_standard_asset_path(ANIMATED_ASSET_TEST_PATH).unwrap(),
+        &params,
+        &HeaderMap::new(),
+    )
+    .await
+}
+
+fn content_type_of(response: &Response) -> Option<&str> {
+    response
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+}
+
+#[tokio::test]
+async fn a_downscaled_animated_gif_asset_on_a_webp_path_is_animated_webp_with_every_frame() {
+    let tmp = tempfile::tempdir().unwrap();
+    let storage_root = tmp.path().canonicalize().unwrap();
+    let gif = crate::test_fixtures::animated_gif_solid_frames(3, 20, 256);
+    let app = app_with_animated_gif_avatar(&storage_root, &gif, 2).await;
+    let response = animated_gif_avatar_at_size_128(&app).await;
+    assert_eq!(StatusCode::OK, response.status());
+    assert_eq!(Some("image/webp"), content_type_of(&response));
+    let body = response_body(response).await;
+    assert_eq!(
+        3,
+        crate::test_fixtures::webp_chunk_payloads(&body, b"ANMF").len(),
+        "a resize is not a re-time: the encode caps never cut a gif's tail"
+    );
+    assert!(body.len() < gif.len());
+}
+
+#[tokio::test]
+async fn an_animated_gif_asset_that_webp_would_not_shrink_is_served_as_the_original_gif() {
+    let tmp = tempfile::tempdir().unwrap();
+    let storage_root = tmp.path().canonicalize().unwrap();
+    let gif = crate::test_fixtures::animated_gif_pixel_frames_on_canvas(5, 160);
+    let app = app_with_animated_gif_avatar(&storage_root, &gif, 20_000).await;
+    for _ in 0..2 {
+        let response = animated_gif_avatar_at_size_128(&app).await;
+        assert_eq!(StatusCode::OK, response.status());
+        assert_eq!(Some("image/gif"), content_type_of(&response));
+        assert!(
+            response
+                .headers()
+                .get(header::CONTENT_DISPOSITION)
+                .is_some()
+        );
+        assert_eq!(gif, response_body(response).await);
+    }
+    let rendered = app.metrics.render();
+    assert!(
+        rendered.contains("fluxer_media_proxy_transform_cache_hits_total 1\n"),
+        "the encode stops at the source size and caches the original in its place"
+    );
+    assert!(
+        rendered.contains("fluxer_media_proxy_transform_failures_total 0\n"),
+        "reaching the source size is not a transform failure"
+    );
+}
+
+#[tokio::test]
+async fn a_far_larger_animated_gif_asset_is_served_as_webp_even_when_the_webp_outweighs_it() {
+    // Sixteen times the requested pixels per frame is past the 1.5x-per-edge bound, so the
+    // original cannot stand in for the 128px WebP.
+    let tmp = tempfile::tempdir().unwrap();
+    let storage_root = tmp.path().canonicalize().unwrap();
+    let gif = crate::test_fixtures::animated_gif_pixel_frames_on_canvas(5, 512);
+    let app = app_with_animated_gif_avatar(&storage_root, &gif, 20_000).await;
+    let response = animated_gif_avatar_at_size_128(&app).await;
+    assert_eq!(StatusCode::OK, response.status());
+    assert_eq!(Some("image/webp"), content_type_of(&response));
+    let body = response_body(response).await;
+    assert!(body.len() > gif.len());
+    assert_eq!(
+        Some((128, 128)),
+        crate::test_fixtures::webp_canvas_size(&body).map(|(width, height, _)| (width, height))
+    );
+}
+
 fn cache_control_of(response: &Response) -> &str {
     response
         .headers()

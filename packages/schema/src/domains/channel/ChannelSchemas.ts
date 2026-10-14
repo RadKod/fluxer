@@ -65,6 +65,10 @@ export const ChannelResponse = z.object({
 		'The maximum active voice connections allowed per user in the voice channel',
 	),
 	rtc_region: z.string().nullish().describe('The voice region ID for the voice channel'),
+	room_theme: z
+		.string()
+		.nullish()
+		.describe('Room theme of a voice channel; null inherits the default, none disables the 3D room view'),
 	last_message_id: SnowflakeStringType.nullish().describe('The ID of the last message sent in this channel'),
 	last_pin_timestamp: z.iso
 		.datetime()
@@ -160,6 +164,7 @@ export interface Channel {
 	readonly user_limit?: number | null;
 	readonly voice_connection_limit?: number | null;
 	readonly rtc_region?: string | null;
+	readonly room_theme?: string | null;
 	readonly last_message_id?: string | null;
 	readonly last_pin_timestamp?: string | null;
 	readonly permission_overwrites?: ReadonlyArray<ChannelOverwrite>;

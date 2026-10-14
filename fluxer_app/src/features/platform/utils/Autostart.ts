@@ -42,6 +42,18 @@ export async function getAutostartStatus(): Promise<boolean | null> {
 	}
 }
 
+// True once per Microsoft Store install, while the startup task is still off; the desktop app keeps the record.
+export async function claimStoreAutostartPrompt(): Promise<boolean> {
+	const electronApi = getElectronAPI();
+	if (!electronApi?.autostartClaimStorePrompt) return false;
+	try {
+		return await electronApi.autostartClaimStorePrompt();
+	} catch (error) {
+		logger.error('Failed to claim the Store autostart prompt', error);
+		return false;
+	}
+}
+
 export async function ensureAutostartDefaultEnabled(): Promise<boolean | null> {
 	const electronApi = getElectronAPI();
 	if (!electronApi) return null;

@@ -7,7 +7,7 @@ import {
 	VOICE_TOKEN_TTL_SECONDS,
 } from '@app/api/infrastructure/LiveKitService';
 import {AccessToken, TrackSource} from 'livekit-server-sdk';
-import {describe, expect, it} from 'vitest';
+import {describe, expect, it, vi} from 'vitest';
 
 function decodeJwtPayload(token: string): Record<string, unknown> {
 	const [, payload] = token.split('.');
@@ -100,6 +100,45 @@ function createServiceWithRoomServiceClient(roomServiceClient: unknown): LiveKit
 	return service;
 }
 
+describe('LiveKitService published microphone mute', () => {
+	const params = {
+		guildId: createGuildID(1n),
+		channelId: createChannelID(2n),
+		userId: createUserID(3n),
+		connectionId: 'conn-1',
+		regionId: 'region-1',
+		serverId: 'region-1-server-1',
+		trackSid: 'TR_new',
+	};
+
+	it.each(['true', '', undefined])('checks the current server mute attribute %s before muting', async (serverMute) => {
+		const getParticipant = vi.fn(async () => ({attributes: {server_mute: serverMute}}));
+		const mutePublishedTrack = vi.fn(async () => {});
+		const service = createServiceWithRoomServiceClient({getParticipant, mutePublishedTrack});
+
+		await service.muteMicrophoneTrack(params);
+
+		expect(getParticipant).toHaveBeenCalledExactlyOnceWith('guild_1_channel_2', 'user_3_conn-1');
+		if (serverMute === 'true') {
+			expect(mutePublishedTrack).toHaveBeenCalledExactlyOnceWith('guild_1_channel_2', 'user_3_conn-1', 'TR_new', true);
+		} else {
+			expect(mutePublishedTrack).not.toHaveBeenCalled();
+		}
+	});
+
+	it('does not apply a stale mute if the current participant cannot be read', async () => {
+		const getParticipant = vi.fn(async () => {
+			throw new FakeTwirpError('participant not found', 404);
+		});
+		const mutePublishedTrack = vi.fn(async () => {});
+		const service = createServiceWithRoomServiceClient({getParticipant, mutePublishedTrack});
+
+		await service.muteMicrophoneTrack(params);
+
+		expect(mutePublishedTrack).not.toHaveBeenCalled();
+	});
+});
+
 describe('LiveKitService listParticipants', () => {
 	const params = {
 		guildId: createGuildID(1n),
@@ -135,6 +174,62 @@ describe('LiveKitService listParticipants', () => {
 		});
 		const result = await service.listParticipants(params);
 		expect(result).toEqual({status: 'ok', participants: []});
+	});
+});
+
+describe('LiveKitService voice seat attribute', () => {
+	const seatParams = {
+		userId: createUserID(3n),
+		guildId: createGuildID(1n),
+		channelId: createChannelID(2n),
+		connectionId: 'conn-a',
+		regionId: 'region-1',
+		serverId: 'region-1-server-1',
+	};
+
+	it('voice tokens never grant canUpdateOwnMetadata', async () => {
+		const service = createServiceWithRoomServiceClient({});
+		for (const deaf of [false, true]) {
+			const {token} = await service.createToken({...seatParams, tokenNonce: 'nonce', deaf});
+			const video = decodeJwtPayload(token).video as Record<string, unknown>;
+			expect(video.roomJoin).toBe(true);
+			expect(video.canUpdateOwnMetadata ?? false).toBe(false);
+		}
+	});
+
+	it('setParticipantAttributes calls updateParticipant(room, identity, {attributes}) once, never listParticipants, no permission argument', async () => {
+		const updateParticipant = vi.fn(async () => ({}));
+		const listParticipants = vi.fn(async () => []);
+		const service = createServiceWithRoomServiceClient({updateParticipant, listParticipants});
+		const result = await service.setParticipantAttributes({...seatParams, attributes: {'micup.seat': 'seat_A_01'}});
+		expect(result).toBe('ok');
+		expect(listParticipants).not.toHaveBeenCalled();
+		expect(updateParticipant).toHaveBeenCalledTimes(1);
+		expect(updateParticipant).toHaveBeenCalledWith('guild_1_channel_2', 'user_3_conn-a', {
+			attributes: {'micup.seat': 'seat_A_01'},
+		});
+	});
+
+	it('404 → not_found', async () => {
+		const service = createServiceWithRoomServiceClient({
+			updateParticipant: async () => {
+				throw new FakeTwirpError('participant not found', 404, 'not_found');
+			},
+		});
+		const result = await service.setParticipantAttributes({...seatParams, attributes: {'micup.seat': ''}});
+		expect(result).toBe('not_found');
+	});
+
+	it('other failures → error; a server gone from the topology → not_found', async () => {
+		const service = createServiceWithRoomServiceClient({
+			updateParticipant: async () => {
+				throw new FakeTwirpError('unavailable', 503);
+			},
+		});
+		expect(await service.setParticipantAttributes({...seatParams, attributes: {'micup.seat': ''}})).toBe('error');
+		expect(
+			await service.setParticipantAttributes({...seatParams, serverId: 'gone', attributes: {'micup.seat': ''}}),
+		).toBe('not_found');
 	});
 });
 
@@ -194,5 +289,32 @@ describe('LiveKitService updateParticipant mute', () => {
 		expect(calls).toEqual([
 			['updateParticipant', 'guild_1_channel_2', 'user_3_conn-1', {attributes: {server_mute: ''}}],
 		]);
+	});
+
+	it.each([true, false])('preserves microphone mute=%s when the server-mute attribute write fails', async (mute) => {
+		const mutePublishedTrack = vi.fn(async () => {});
+		const updateParticipant = vi.fn(async () => {
+			throw new Error('attribute write failed');
+		});
+		const service = createServiceWithRoomServiceClient({
+			listParticipants: async () => [
+				{
+					identity: 'user_3_conn-1',
+					tracks: [
+						{sid: 'TR_mic', source: TrackSource.MICROPHONE},
+						{sid: 'TR_camera', source: TrackSource.CAMERA},
+					],
+				},
+			],
+			updateParticipant,
+			mutePublishedTrack,
+		});
+
+		await service.updateParticipant({...params, mute});
+
+		expect(updateParticipant).toHaveBeenCalledWith('guild_1_channel_2', 'user_3_conn-1', {
+			attributes: {server_mute: mute ? 'true' : ''},
+		});
+		expect(mutePublishedTrack).toHaveBeenCalledExactlyOnceWith('guild_1_channel_2', 'user_3_conn-1', 'TR_mic', mute);
 	});
 });

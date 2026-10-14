@@ -9,7 +9,6 @@ import {
 	resolveEffectiveChannelMatureContent,
 } from '@app/features/messaging/utils/ContentWarningUtils';
 import {getEffectiveMatureContentGeoContext} from '@app/features/moderation/utils/MatureContentGeoUtils';
-import AppStorage from '@app/features/platform/state/PersistentStorage';
 import {makePersistent} from '@app/features/platform/utils/MobXPersistence';
 import {initializeStore} from '@app/features/platform/utils/StoreInitialization';
 import {makeSyncedField} from '@app/features/user/state/SyncedField';
@@ -20,7 +19,6 @@ import {GuildNsfwAgreementsSchema as GuildMatureContentAgreementsSchema} from '@
 import {makeAutoObservable} from 'mobx';
 
 const LOCAL_STORAGE_KEY = 'GuildMatureContentAgreeLocal';
-let localPersisted = false;
 
 export enum MatureContentGateReason {
 	NONE = 0,
@@ -74,7 +72,7 @@ class GuildMatureContentAgree {
 	}
 
 	private async initPersistence(): Promise<void> {
-		if (AppStorage.getItem(LOCAL_STORAGE_KEY) != null) this.persistLocal();
+		void makePersistent(this, LOCAL_STORAGE_KEY, ['localAgreedChannelIds']);
 		await makeSyncedField(this, {
 			field: 'guildNsfwAgreements',
 			schema: GuildMatureContentAgreementsSchema,
@@ -99,7 +97,6 @@ class GuildMatureContentAgree {
 			return;
 		}
 		if (channel?.isThreadOnly()) {
-			this.persistLocal();
 			if (!this.localAgreedChannelIds.includes(channelId)) {
 				this.localAgreedChannelIds.push(channelId);
 			}
@@ -108,12 +105,6 @@ class GuildMatureContentAgree {
 		if (!this.agreedChannelIds.includes(channelId)) {
 			this.agreedChannelIds.push(channelId);
 		}
-	}
-
-	private persistLocal(): void {
-		if (localPersisted) return;
-		localPersisted = true;
-		void makePersistent(this, LOCAL_STORAGE_KEY, ['localAgreedChannelIds']);
 	}
 
 	agreeToCategory(categoryId: string): void {
@@ -126,13 +117,6 @@ class GuildMatureContentAgree {
 		if (!this.agreedGuildIds.includes(guildId)) {
 			this.agreedGuildIds.push(guildId);
 		}
-	}
-
-	reset(): void {
-		this.localAgreedChannelIds = [];
-		this.agreedChannelIds = [];
-		this.agreedCategoryIds = [];
-		this.agreedGuildIds = [];
 	}
 
 	revokeChannel(channelId: string): void {

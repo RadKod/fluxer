@@ -80,6 +80,7 @@ interface RuntimeState {
 	authProvider: () => string | null;
 	sudo: SudoBindings | null;
 	globalIntercept?: RestInterceptor;
+	responseObserver?: (reply: RestResponse) => void;
 	pacing: Map<string, PacingEntry>;
 }
 
@@ -228,6 +229,10 @@ export class RestClient {
 
 	installHooks(hooks: RestClientHooks): void {
 		this.state.globalIntercept = hooks.intercept;
+	}
+
+	installResponseObserver(observer: (reply: RestResponse) => void): void {
+		this.state.responseObserver = observer;
 	}
 
 	hasAuthorization(): boolean {
@@ -856,6 +861,9 @@ async function reactToOutcome(
 		return {next: 'retry-after', delayMs: 0, mode: 'backoff'};
 	}
 	const {reply, receivedSudoToken} = outcome;
+	if (!looksAbsolute(plan.path) && plan.options.auth !== 'none') {
+		state.responseObserver?.(reply);
+	}
 	if (reply.status === 429) {
 		return reactToRateLimit(state, plan, reply);
 	}

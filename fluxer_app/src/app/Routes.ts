@@ -35,6 +35,16 @@ export const Routes = {
 	CONNECTION_CALLBACK: '/connection-callback',
 	USER_PROFILE: '/users/:userId',
 	THEME_STUDIO: '/theme-studio',
+	FEED: '/feed',
+	FEED_POST: '/feed/posts/:postId',
+	// Micup: premium and the shop are pages beside the DM list, like bookmarks and mentions.
+	PREMIUM: '/premium',
+	SHOP: '/shop',
+	BOTS: '/bots',
+	// Micup: the same pages opened from the feed stay beside its sidebar (FeedSectionPages).
+	FEED_PREMIUM: '/feed/premium',
+	FEED_SHOP: '/feed/shop',
+	FEED_BOTS: '/feed/bots',
 	PLUTONIUM: '/channels/@premium',
 	LEGACY_PLUTONIUM: '/plutonium',
 	terms: () => marketingUrl('terms'),
@@ -66,12 +76,17 @@ export const Routes = {
 	themeRegister: (themeId: string) => `/theme/${themeId}`,
 	themeLogin: (themeId: string) => `/theme/${themeId}/login`,
 	userProfile: (userId: string) => `/users/${userId}`,
+	feedPost: (postId: string) => `/feed/posts/${postId}`,
 	isSpecialPage: (pathname: string) =>
 		pathname === Routes.BOOKMARKS ||
 		pathname === Routes.MENTIONS ||
 		pathname === Routes.NOTIFICATIONS ||
-		pathname === Routes.YOU,
+		pathname === Routes.YOU ||
+		pathname === Routes.PREMIUM ||
+		pathname === Routes.SHOP ||
+		pathname === Routes.BOTS,
 	isDMRoute: (pathname: string) => pathname.startsWith('/channels/@me'),
+	isFeedRoute: (pathname: string) => pathname === Routes.FEED || pathname.startsWith(`${Routes.FEED}/`),
 	isFavoritesRoute: (pathname: string) => pathname.startsWith('/channels/@favorites'),
 	isDiscoverRoute: (pathname: string) => pathname.startsWith('/channels/@discover'),
 	isPlutoniumRoute: (pathname: string) => pathname === '/channels/@premium',

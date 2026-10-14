@@ -30,11 +30,18 @@ init(Args) ->
     process_flag(trap_exit, true),
     erlang:process_flag(fullsweep_after, 10),
     ShardIndex = maps:get(shard_index, Args, 0),
-    {ok, #{presences => #{}, shard_index => ShardIndex}, hibernate}.
+    State = subscribe_rollout_config(#{presences => #{}, shard_index => ShardIndex}),
+    {ok, State, hibernate}.
 
 -spec handle_call(term(), gen_server:from(), state()) -> {reply, term(), state()}.
 handle_call({lookup, UserId}, _From, State) when is_integer(UserId) ->
     do_lookup(UserId, State);
+handle_call({game_activity_prepare, UserId, Kind, Request}, _From, State) ->
+    prepare_game_activity(UserId, Kind, Request, State);
+handle_call({game_activity_finish, UserId, Kind, Request, Pid, Ack}, _From, State) ->
+    finish_game_activity(UserId, Kind, Request, Pid, Ack, State);
+handle_call({game_activity_reject, UserId, Kind, Request, Pid, Token}, _From, State) ->
+    reject_game_activity(UserId, Kind, Request, Pid, Token, State);
 handle_call({dispatch, UserId, Event, Data}, _From, State) when
     is_integer(UserId), is_atom(Event);
     is_integer(UserId), is_binary(Event)
@@ -87,6 +94,16 @@ handle_cast(_Unknown, State) ->
 -spec handle_info(Info, State) -> {noreply, state()} when
     Info :: {'DOWN', reference(), process, pid(), term()} | term(),
     State :: state().
+handle_info(
+    {'DOWN', Ref, process, Pid, _Reason},
+    #{rollout_config_monitor := Ref, rollout_config_pid := Pid} = State
+) ->
+    Gate = {unavailable, Ref},
+    self() ! {game_activity_rollout_batch, maps:iterator(maps:get(presences, State)), Gate},
+    Closed = maps:without([rollout_config_monitor, rollout_config_pid], State),
+    {noreply, retry_rollout_config(Closed#{game_activity_gate => Gate})};
+handle_info(retry_rollout_config, State) ->
+    {noreply, subscribe_rollout_config(maps:remove(rollout_config_retry, State))};
 handle_info({'DOWN', Ref, process, Pid, _Reason}, State) when is_reference(Ref), is_pid(Pid) ->
     demonitor(Ref, [flush]),
     presence_manager_cache:clean_by_pid(Pid),
@@ -102,8 +119,67 @@ handle_info({'DOWN', Ref, process, Pid, _Reason}, State) when is_reference(Ref),
         RemovedUserIds
     ),
     {noreply, State#{presences := NewPresences}};
+handle_info(rollout_config_changed, State) ->
+    Allowed = gateway_rollout_config:game_activity_allowed(),
+    Generation =
+        case Allowed of
+            true -> gateway_rollout_config:game_activity_generation();
+            false -> 0
+        end,
+    Gate = {
+        Allowed,
+        maps:get(<<"game_activity_epoch">>, gateway_rollout_config:get(), 0),
+        Generation
+    },
+    case maps:get(game_activity_gate, State, undefined) =:= Gate of
+        true ->
+            {noreply, State};
+        false ->
+            self() !
+                {game_activity_rollout_batch, maps:iterator(maps:get(presences, State)), Gate},
+            {noreply, State#{game_activity_gate => Gate}}
+    end;
+handle_info({game_activity_rollout_batch, Iterator, Gate}, State) ->
+    game_activity_rollout_batch(100, Iterator, Gate),
+    {noreply, State};
 handle_info(_Unknown, State) ->
     {noreply, State}.
+
+-spec subscribe_rollout_config(state()) -> state().
+subscribe_rollout_config(State) ->
+    case whereis(gateway_rollout_config) of
+        undefined -> retry_rollout_config(State);
+        Pid -> monitor_rollout_config(Pid, State)
+    end.
+
+-spec monitor_rollout_config(pid(), state()) -> state().
+monitor_rollout_config(Pid, #{rollout_config_pid := Pid} = State) ->
+    State;
+monitor_rollout_config(Pid, State) ->
+    Ref = monitor(process, Pid),
+    gateway_rollout_config:subscribe_changes(self()),
+    self() ! rollout_config_changed,
+    State#{rollout_config_pid => Pid, rollout_config_monitor => Ref}.
+
+-spec retry_rollout_config(state()) -> state().
+retry_rollout_config(#{rollout_config_retry := _} = State) ->
+    State;
+retry_rollout_config(State) ->
+    Timer = erlang:send_after(1000, self(), retry_rollout_config),
+    State#{rollout_config_retry => Timer}.
+
+-spec game_activity_rollout_batch(non_neg_integer(), maps:iterator(), tuple()) -> ok.
+game_activity_rollout_batch(0, Iterator, Gate) ->
+    self() ! {game_activity_rollout_batch, Iterator, Gate},
+    ok;
+game_activity_rollout_batch(N, Iterator, Gate) ->
+    case maps:next(Iterator) of
+        none ->
+            ok;
+        {_Id, {Pid, _Ref}, Next} ->
+            gen_server:cast(Pid, {game_activity_rollout, Gate}),
+            game_activity_rollout_batch(N - 1, Next, Gate)
+    end.
 
 -spec terminate(Reason, State) -> ok when
     Reason :: term(),
@@ -168,12 +244,183 @@ handle_missing_presence(UserId, Request, Presences, State) ->
 ) ->
     {reply, {ok, pid()} | {error, term()}, state()}.
 start_new_presence(UserId, PresenceName, Request, Presences, State) ->
-    PresenceData = build_presence_data(Request),
+    Pending = maps:get(UserId, maps:get(game_activity_pending, State, #{}), #{}),
+    PresenceData = (build_presence_data(Request))#{game_activity_pending => Pending},
     case presence:start_link(PresenceData) of
         {ok, Pid} ->
             register_new_presence(UserId, PresenceName, Pid, Presences, State);
         Error ->
             {reply, Error, State}
+    end.
+
+-spec prepare_game_activity(user_id(), policy | pair, map(), state()) ->
+    {reply, term(), state()}.
+prepare_game_activity(UserId, Kind, Request, State) ->
+    Pending = maps:get(game_activity_pending, State, #{}),
+    Game =
+        case maps:find(UserId, Pending) of
+            {ok, Existing} -> Existing;
+            error -> presence_game_activity_policy:new()
+        end,
+    Phase = presence_game_activity_policy:value(phase, Request, undefined),
+    Result =
+        case Phase of
+            <<"fence">> ->
+                presence_manager_game_activity:prepare_fence(
+                    UserId, Kind, Request, Game, State
+                );
+            <<"apply">> ->
+                {ok, Game};
+            _ ->
+                {error, stale}
+        end,
+    prepare_game_activity_result(Result, Phase, UserId, Kind, Request, Game, State).
+
+-spec prepare_game_activity_result(
+    {ok, map()} | {error, stale | busy}, term(), user_id(), policy | pair, map(), map(), state()
+) -> {reply, term(), state()}.
+prepare_game_activity_result(
+    {error, _} = Error, _Phase, _UserId, _Kind, _Request, _Game, State
+) ->
+    {reply, Error, State};
+prepare_game_activity_result({ok, Next}, Phase, UserId, Kind, Request, Game, State) ->
+    Guarded =
+        case Phase of
+            <<"fence">> ->
+                presence_manager_game_activity:store_pending(UserId, Next, Request, State);
+            _ ->
+                State
+        end,
+    case lookup_presence(UserId, Guarded) of
+        {ok, Pid, Found} ->
+            prepared_owner(UserId, Kind, Request, Pid, Game, Found);
+        {error, not_found, Missing} ->
+            offline_game_activity(UserId, Kind, Request, Next, Missing)
+    end.
+
+-spec prepared_owner(user_id(), policy | pair, map(), pid(), map(), state()) ->
+    {reply, term(), state()}.
+prepared_owner(UserId, Kind, Request, Pid, Before, State) ->
+    case presence_game_activity_policy:value(phase, Request, undefined) of
+        <<"fence">> ->
+            prepared_fence_owner(UserId, Kind, Request, Pid, Before, State);
+        _ ->
+            {reply, {owner, Pid, undefined}, State}
+    end.
+
+-spec prepared_fence_owner(user_id(), policy | pair, map(), pid(), map(), state()) ->
+    {reply, term(), state()}.
+prepared_fence_owner(UserId, Kind, Request, Pid, Before, State) ->
+    Pending = maps:get(game_activity_pending, State),
+    Game = maps:get(UserId, Pending),
+    Key = presence_manager_game_activity:pending_key(Kind, Request),
+    Id = presence_manager_game_activity:pending_id(Kind, Request),
+    Tokens = maps:remove(Key, maps:get(rejection_tokens, Game, #{})),
+    {Token, NextTokens} =
+        case
+            maps:is_key(Id, presence_manager_game_activity:pending_ids(Kind, Request, Before))
+        of
+            true ->
+                {undefined, Tokens};
+            false ->
+                Ref = make_ref(),
+                {Ref, Tokens#{Key => {Pid, Ref}}}
+        end,
+    Next = State#{
+        game_activity_pending => Pending#{
+            UserId => Game#{rejection_tokens => NextTokens}
+        }
+    },
+    {reply, {owner, Pid, Token}, Next}.
+
+-spec reject_game_activity(user_id(), policy | pair, map(), pid(), term(), state()) ->
+    {reply, term(), state()}.
+reject_game_activity(UserId, Kind, Request, Pid, Token, State) ->
+    case lookup_presence(UserId, State) of
+        {ok, Pid, Current} when is_reference(Token) ->
+            reject_current_game_activity(UserId, Kind, Request, Pid, Token, Current);
+        _ ->
+            {reply, ok, State}
+    end.
+
+-spec reject_current_game_activity(
+    user_id(), policy | pair, map(), pid(), reference(), state()
+) ->
+    {reply, term(), state()}.
+reject_current_game_activity(UserId, Kind, Request, Pid, Token, Current) ->
+    Game = maps:get(UserId, maps:get(game_activity_pending, Current, #{}), #{}),
+    Key = presence_manager_game_activity:pending_key(Kind, Request),
+    Tokens = maps:get(rejection_tokens, Game, #{}),
+    case maps:get(Key, Tokens, undefined) of
+        {Pid, Token} ->
+            Id = presence_manager_game_activity:pending_id(Kind, Request),
+            Remaining = maps:remove(
+                Id, presence_manager_game_activity:pending_ids(Kind, Request, Game)
+            ),
+            Next = presence_manager_game_activity:remove_rejected_request(
+                Kind, Request, Remaining, Game
+            ),
+            {reply, ok,
+                presence_manager_game_activity:store_pending(
+                    UserId,
+                    Next#{rejection_tokens => maps:remove(Key, Tokens)},
+                    Request,
+                    Current
+                )};
+        _ ->
+            {reply, ok, Current}
+    end.
+
+-spec offline_game_activity(user_id(), policy | pair, map(), map(), state()) ->
+    {reply, term(), state()}.
+offline_game_activity(UserId, Kind, Request, Game, State) ->
+    case presence_manager_game_activity:pending_control(Kind, Request, Game) of
+        {error, _} = Error ->
+            {reply, Error, State};
+        {ok, Next} ->
+            Ack = presence_game_activity_policy:ack(Kind, Request, Next),
+            Recorded = presence_manager_game_activity:record_pending_ack(
+                Kind, Request, Ack, Next
+            ),
+            {reply, {offline, Ack},
+                presence_manager_game_activity:store_pending(UserId, Recorded, Request, State)}
+    end.
+
+-spec finish_game_activity(user_id(), policy | pair, map(), pid(), map(), state()) ->
+    {reply, term(), state()}.
+finish_game_activity(UserId, Kind, Request, Pid, Ack, State) ->
+    case lookup_presence(UserId, State) of
+        {ok, Pid, Current} ->
+            finish_current_game_activity(UserId, Kind, Request, Ack, Current);
+        {ok, _Replacement, Current} ->
+            {reply, retry, Current};
+        {error, not_found, Current} ->
+            {reply, retry, Current}
+    end.
+
+-spec finish_current_game_activity(user_id(), policy | pair, map(), map(), state()) ->
+    {reply, term(), state()}.
+finish_current_game_activity(UserId, Kind, Request, Ack, State) ->
+    Pending = maps:get(game_activity_pending, State, #{}),
+    case maps:find(UserId, Pending) of
+        error ->
+            {reply, ok, State};
+        {ok, Game} ->
+            finish_pending_game_activity(UserId, Kind, Request, Ack, Game, State)
+    end.
+
+-spec finish_pending_game_activity(user_id(), policy | pair, map(), map(), map(), state()) ->
+    {reply, term(), state()}.
+finish_pending_game_activity(UserId, Kind, Request, Ack, Game, State) ->
+    case presence_manager_game_activity:pending_control(Kind, Request, Game) of
+        {error, _} = Error ->
+            {reply, Error, State};
+        {ok, Next} ->
+            Recorded = presence_manager_game_activity:record_pending_ack(
+                Kind, Request, Ack, Next
+            ),
+            {reply, ok,
+                presence_manager_game_activity:store_pending(UserId, Recorded, Request, State)}
     end.
 
 -spec build_presence_data(start_or_lookup_request()) -> map().

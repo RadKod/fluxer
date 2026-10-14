@@ -12,10 +12,13 @@ use crate::{
 };
 use maud::{Markup, html};
 
+#[allow(clippy::too_many_arguments)]
 pub fn threads_tab(
     config: &AdminConfig,
     guild: &GuildInfo,
     threads: &[GuildThreadItem],
+    current_cursor: Option<&str>,
+    next_cursor: Option<&str>,
     can_delete: bool,
     can_reindex: bool,
     csrf_token: &str,
@@ -36,10 +39,13 @@ pub fn threads_tab(
             }))
         }
         (card_with_header(
-            &format!("Threads ({})", threads.len()),
+            &format!("Threads on this page ({})", threads.len()),
             html! {
+                p class="mb-3 text-sm text-neutral-500" {
+                    "Ordered by parent ID, then thread ID. Each page reads one parent channel; empty pages may have more results."
+                }
                 @if threads.is_empty() {
-                    p class="text-sm text-neutral-500" { "No threads found for this guild." }
+                    p class="text-sm text-neutral-500" { "No threads on this page." }
                 } @else {
                     (data_table(
                         &["Thread", "Parent", "State", "Members", "Messages", ""],
@@ -49,6 +55,18 @@ pub fn threads_tab(
                             }
                         },
                     ))
+                }
+                @if current_cursor.is_some() || next_cursor.is_some() {
+                    nav aria-label="Thread pages" class="mt-4 flex items-center justify-between border-t pt-4" {
+                        @if current_cursor.is_some() {
+                            a href={(base) "/guilds/" (guild.id) "?tab=threads"}
+                                class="text-sm text-brand-primary hover:underline" { "First page" }
+                        }
+                        @if let Some(cursor) = next_cursor {
+                            a href={(base) "/guilds/" (guild.id) "?tab=threads&thread_cursor=" (urlencoding::encode(cursor))}
+                                class="text-sm text-brand-primary hover:underline" { "Next page" }
+                        }
+                    }
                 }
             },
         ))
@@ -103,4 +121,76 @@ fn thread_row(
             }
         }))
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::threads_tab;
+    use crate::api::types::GuildInfo;
+    use crate::config::{AdminConfig, ProxyConfig, RuntimeEnv};
+
+    fn config() -> AdminConfig {
+        AdminConfig {
+            env: RuntimeEnv::Test,
+            host: "127.0.0.1".into(),
+            port: 3020,
+            secret_key_base: "test".into(),
+            base_path: "/admin".into(),
+            api_endpoint: "http://api.test".into(),
+            media_endpoint: "http://media.test".into(),
+            static_cdn_endpoint: String::new(),
+            admin_endpoint: "http://admin.test".into(),
+            web_app_endpoint: "http://app.test".into(),
+            oauth_client_id: "123".into(),
+            oauth_client_secret: "test".into(),
+            oauth_redirect_uri: "http://admin.test/callback".into(),
+            build_version: "test".into(),
+            self_hosted: true,
+            proxy: ProxyConfig {
+                trust_client_ip_header: false,
+                client_ip_header_name: "x-forwarded-for".into(),
+            },
+        }
+    }
+
+    fn guild() -> GuildInfo {
+        serde_json::from_value(serde_json::json!({"id":"123", "name":"Guild", "owner_id":"456"}))
+            .unwrap()
+    }
+
+    #[test]
+    fn next_page_remains_available_on_an_empty_parent_page() {
+        let markup = threads_tab(
+            &config(),
+            &guild(),
+            &[],
+            None,
+            Some("opaque_next"),
+            false,
+            false,
+            "csrf",
+        )
+        .into_string();
+        assert!(markup.contains("thread_cursor=opaque_next"));
+        assert!(markup.contains("Next page"));
+        assert!(!markup.contains("First page"));
+    }
+
+    #[test]
+    fn last_page_offers_a_return_to_the_first_page() {
+        let markup = threads_tab(
+            &config(),
+            &guild(),
+            &[],
+            Some("opaque_current"),
+            None,
+            false,
+            false,
+            "csrf",
+        )
+        .into_string();
+        assert!(markup.contains("/admin/guilds/123?tab=threads"));
+        assert!(markup.contains("First page"));
+        assert!(!markup.contains("Next page"));
+    }
 }

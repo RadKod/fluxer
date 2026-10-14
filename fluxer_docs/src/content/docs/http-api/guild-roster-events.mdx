@@ -1,0 +1,290 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: Guild roster events
+description: Hourly roster event settings, permissions, and the Micup Roster bot's announcements and voice checks.
+---
+
+import RouteHeader from '@/components/RouteHeader.astro';
+
+Micup Roster announces a guild's hourly events, collects participants through the Join and Leave buttons on each announcement and, during the transition to buttons, through ✅ reactions, and checks their voice channels at the start time. Manage events in **Server Settings → Event bot** or through the four routes below. These routes expose settings, not roster membership.
+
+Every route requires a signed-in user, guild membership, and [MANAGE_GUILD](/http-api/permissions/). Bot and OAuth2 bearer credentials are refused with 403 `ACCESS_DENIED`. `MANAGE_GUILD` is an [elevated permission](/http-api/permissions/#elevated-permissions): a non-owner must have an enrolled authenticator when the guild requires MFA, or the request returns 400 `TWO_FACTOR_REQUIRED`.
+
+## Feature availability
+
+The instance-wide `feature_guild_roster` limit defaults to `0`. The feature is active only when the limit is nonzero and the instance has a valid `FLUXER_ROSTER_BOT_APPLICATION_ID` configured. This identifies the official bot; it is not a bot token.
+
+While the feature is off, announcements, voice checks, reaction processing, and embed updates stop, and a button click answers `component_unavailable`. Creating, updating, and deleting settings return 403 `FEATURE_TEMPORARILY_DISABLED`. Listing still returns the stored events and bot information; stored settings are not deleted. The list's `feature_enabled` does not establish whether the bot has joined this guild: check `bot.in_guild` separately.
+
+## Permissions and channel rules
+
+Creating or updating an event checks the **caller's own effective channel permissions**, including channel overwrites (K3):
+
+- In the event voice channel: `VIEW_CHANNEL`, `CONNECT`, and `MOVE_MEMBERS`.
+- In the announcement channel: `VIEW_CHANNEL` and `SEND_MESSAGES`.
+- For a role that is not mentionable: `MENTION_EVERYONE` in the announcement channel.
+
+Having `MANAGE_GUILD` alone is insufficient. Updates validate the whole resulting event, even when only its name or `enabled` changes. Listing and deleting require `MANAGE_GUILD` but do not repeat these channel checks.
+
+Both channels and the optional role must belong to the guild in the path (K4). The event channel must be `GUILD_VOICE` (type `2`), and the announcement channel must be `GUILD_TEXT` (type `0`). The `@everyone` role is never accepted. Set `mention_role_id` to `null` to announce without a role mention.
+
+The bot needs its own permissions at runtime. Saving an event does not grant the bot channel access or move its role in the hierarchy.
+
+## Guild roster event object
+
+IDs are decimal snowflake strings. The response omits the creator ID, internal version, and roster members.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | snowflake | The event ID |
+| guild_id | snowflake | The guild that owns the event |
+| name | string | The event name (1-64 characters) |
+| voice_channel_id | snowflake | The event voice channel |
+| announce_channel_id | snowflake | The announcement text channel |
+| mention_role_id | ?snowflake | The role to mention, or null |
+| main_size | integer | Main roster capacity (1-50) |
+| sub_size | integer | Substitute roster capacity (0-25) |
+| enabled | boolean | Whether this event announces and checks participants |
+| created_at | ISO8601 timestamp | When the event was created |
+| updated_at | ISO8601 timestamp | When the event was last updated |
+
+## Roster bot object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| application_id | snowflake | The configured official bot application ID |
+| user_id | snowflake | The official bot user ID |
+| in_guild | boolean | Whether the bot is a member of this guild |
+
+## Guild roster event list object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| feature_enabled | boolean | Whether the feature flag and bot configuration enable roster processing |
+| bot | ?[roster bot](#roster-bot-object) object | The configured bot, or null when no valid application ID is configured |
+| invite_permissions | string | The invite permission mask, always `"17910848"` |
+| max_events | integer | The event limit, always `10` |
+| events | array[[guild roster event](#guild-roster-event-object) object] | Stored events, including disabled events, ordered by event ID |
+
+## List guild roster events
+
+<RouteHeader method="GET" path="/v1/guilds/{guild_id}/roster-events" />
+
+Operation ID: `list_guild_roster_events`. Returns settings and invite information even while the feature is disabled. There is no pagination or JSON body.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| guild_id | snowflake | The guild ID |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [guild roster event list](#guild-roster-event-list-object) object | Settings and feature status were returned |
+| 403 | [error response](/http-api/#error-response) | Caller lacks `MANAGE_GUILD`, or the credential is not allowed |
+
+The [common errors](#errors) also apply.
+
+### Rate limit
+
+30 requests per 10 seconds per user and guild, on the `guild:roster:list::guild_id` bucket.
+
+## Create guild roster event
+
+<RouteHeader method="POST" path="/v1/guilds/{guild_id}/roster-events" />
+
+Operation ID: `create_guild_roster_event`. Requires the feature to be enabled and all [channel and role checks](#permissions-and-channel-rules) to pass.
+
+Creation is refused when the guild already has 10 events, including disabled events. This is a count check, not an atomic reservation: concurrent creates can exceed the limit. Send creates sequentially.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| guild_id | snowflake | The guild ID |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| name | string | Event name, trimmed and normalized (1-64 characters) |
+| voice_channel_id | snowflake | A voice channel in this guild (type `2`) |
+| announce_channel_id | snowflake | A text channel in this guild (type `0`) |
+| mention_role_id? | ?snowflake | A role in this guild other than `@everyone`; defaults to null |
+| main_size? | integer | Main capacity (1-50); defaults to `10` |
+| sub_size? | integer | Substitute capacity (0-25); defaults to `5` |
+| enabled? | boolean | Whether the event is enabled; defaults to `true` |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [guild roster event](#guild-roster-event-object) object | Event was created |
+| 400 | [error response](/http-api/#error-response) | Invalid fields, or `MAX_GUILD_ROSTER_EVENTS` with `max_guild_roster_events: 10` |
+| 403 | [error response](/http-api/#error-response) | `MISSING_PERMISSIONS` or `FEATURE_TEMPORARILY_DISABLED` |
+
+The [common errors](#errors) also apply. Creating an event does not immediately send an announcement; it is considered at the next hourly announcement.
+
+### Rate limit
+
+10 requests per 10 seconds per user and guild, on the shared `guild:roster:write::guild_id` bucket. Create, update, and delete share this bucket within the same guild.
+
+## Update guild roster event
+
+<RouteHeader method="PATCH" path="/v1/guilds/{guild_id}/roster-events/{event_id}" />
+
+Operation ID: `update_guild_roster_event`. Requires the feature to be enabled and rechecks the caller's permissions against the whole resulting event. The event is looked up only within the guild in the path.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| guild_id | snowflake | The guild ID |
+| event_id | snowflake | The event ID within this guild |
+
+### JSON body
+
+At least one recognised field is required. Omitted fields retain their values; create defaults are not reapplied.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| name? | string | Event name, trimmed and normalized (1-64 characters) |
+| voice_channel_id? | snowflake | A voice channel in this guild (type `2`) |
+| announce_channel_id? | snowflake | A text channel in this guild (type `0`) |
+| mention_role_id? | ?snowflake | A role in this guild other than `@everyone`; null removes the mention |
+| main_size? | integer | Main capacity (1-50) |
+| sub_size? | integer | Substitute capacity (0-25) |
+| enabled? | boolean | Whether the event is enabled |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [guild roster event](#guild-roster-event-object) object | Event was updated |
+| 400 | [error response](/http-api/#error-response) | Invalid fields or no recognised field supplied |
+| 403 | [error response](/http-api/#error-response) | `MISSING_PERMISSIONS` or `FEATURE_TEMPORARILY_DISABLED` |
+| 404 | [error response](/http-api/#error-response) | `UNKNOWN_GUILD_ROSTER_EVENT` in this guild |
+| 409 | [error response](/http-api/#error-response) | `CONFLICT` after concurrent updates; fetch the latest settings before retrying |
+
+The [common errors](#errors) also apply. An announced roster keeps its name and capacities for that hour. The voice check uses the current event voice channel and enabled state. Disabling an event prevents new announcements; an already announced roster closes at the check without moving or removing participants.
+
+### Rate limit
+
+10 requests per 10 seconds per user and guild, on the shared `guild:roster:write::guild_id` bucket.
+
+## Delete guild roster event
+
+<RouteHeader method="DELETE" path="/v1/guilds/{guild_id}/roster-events/{event_id}" />
+
+Operation ID: `delete_guild_roster_event`. Requires the feature to be enabled. Deletes the event settings and scheduling entry. There is no JSON body.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| guild_id | snowflake | The guild ID |
+| event_id | snowflake | The event ID within this guild |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | Event was deleted |
+| 403 | [error response](/http-api/#error-response) | `MISSING_PERMISSIONS` or `FEATURE_TEMPORARILY_DISABLED` |
+| 404 | [error response](/http-api/#error-response) | `UNKNOWN_GUILD_ROSTER_EVENT` in this guild |
+
+The [common errors](#errors) also apply. Deletion leaves existing announcement messages in place. The deleted event is no longer scheduled for a voice check or closing edit; its hourly roster state expires by TTL. Neither the buttons nor reactions can change the roster after its scheduled start time.
+
+### Rate limit
+
+10 requests per 10 seconds per user and guild, on the shared `guild:roster:write::guild_id` bucket.
+
+## Errors
+
+All routes can return 401 when no user is signed in, 403 for a disallowed credential or missing guild permission, 404 `UNKNOWN_GUILD` for an unknown guild, and 429 when rate limited. The standard [error response](/http-api/#error-response) applies. A guild that is unavailable returns 403 `MISSING_ACCESS`.
+
+Field validation returns 400 `INVALID_FORM_BODY`. Its `errors` entries carry a field `path` and one of these validation codes:
+
+| Code | Condition |
+| --- | --- |
+| CHANNEL_DOES_NOT_EXIST | A selected channel is missing or belongs to another guild |
+| CHANNEL_MUST_BE_VOICE | `voice_channel_id` is not a type `2` channel |
+| INVALID_CHANNEL_ID | `announce_channel_id` is not a type `0` channel |
+| INVALID_ROLE_ID | The role is missing, belongs to another guild, or is `@everyone` |
+| STRING_LENGTH_INVALID | The normalized name is outside 1-64 characters |
+| INVALID_SNOWFLAKE_FORMAT | A supplied ID is not a valid snowflake string |
+| SNOWFLAKE_OUT_OF_RANGE | A supplied ID is outside the supported snowflake range |
+| INVALID_FORMAT | A required value is missing, has the wrong type or range, or an update has no recognised fields |
+
+## Invite Micup Roster
+
+Use the `application_id` and `invite_permissions` from the list response. On the instance's client origin, the bot invite URL has this form:
+
+```text
+/oauth2/authorize?client_id=APPLICATION_ID&scope=bot&permissions=17910848&guild_id=GUILD_ID&disable_guild_select=true
+```
+
+This uses the normal [OAuth2 bot invitation](/http-api/oauth2/) flow. The inviter needs `MANAGE_GUILD` or `ADMINISTRATOR` and must be able to grant the requested permissions. The decimal mask `17910848` is the sum of:
+
+| Permission | Bit value |
+| --- | --- |
+| ADD_REACTIONS | 64 |
+| VIEW_CHANNEL | 1024 |
+| SEND_MESSAGES | 2048 |
+| EMBED_LINKS | 16384 |
+| READ_MESSAGE_HISTORY | 65536 |
+| CONNECT | 1048576 |
+| MOVE_MEMBERS | 16777216 |
+
+Move the bot's role above the roles of members it needs to move, and allow its permissions in the selected channels. It cannot move the guild owner. The invite does not request `MENTION_EVERYONE`: make the selected role mentionable if the bot does not separately have that permission. The caller passing the role check does not give the bot permission to mention the role.
+
+Micup Roster runs through the instance's own services without a separate Gateway session, so it can appear offline in the member list. Its bot token is not used for this feature and is refused for bot-token authentication.
+
+## Hourly behaviour
+
+The scheduler announces at **:25** and checks voice at **:35** each hour. The embed's timestamp markup displays the start time in each reader's local timezone; it is not a configurable local-time schedule.
+
+1. At :25, each enabled event sends a new announcement: the roster embed with a Join (`Katıl`) and a Leave (`Ayrıl`) [button](/http-api/messages/#message-components). The announcement mentions no one. When the event has a role, the bot then sends the role mention as a separate reply to the announcement that can ping only that role; a failed role mention is logged and leaves the announcement in place. The bot adds ✅ to the announcement. Previous announcements remain. A failed announcement is logged and is not retried for that hour; an announcement that runs at or after :35 is skipped. Persistent failures, such as a missing bot, deleted channel or event voice room, or missing permissions, are counted across runs. After six consecutive hourly announcement failures, the event is attempted only once per day.
+2. Before :35, members join with the Join button or with ✅, and leave with the Leave button or by removing their ✅; membership in the mentioned role is not required. Anyone who can react to the announcement can use ✅, and [Click message button](/http-api/messages/#click-message-button) lists who can click. A click answers only the clicker with a [reply code](/http-api/messages/#click-reply-codes). During the transition both ways work together: a Leave, including one that answers `roster_not_joined`, also removes the clicker's own ✅ from the announcement when present. A member who joined with the button stays on the roster when their ✅ is removed or the reactions are cleared, and leaves only with Leave. A member who joined with ✅ and then presses Join receives `roster_already_joined` and still leaves by removing ✅. A member who removes ✅ and presses Join before that removal is applied also receives `roster_already_joined`, and the removal then takes them off the roster; they press Join again. That window runs from removing ✅ until the removal is applied, including up to about two seconds of waiting for the roster lock, and closes when ✅ joining ends with the transition. A member can belong to only one event roster at a time in the same guild and hour, including substitute and waiting places. Joining a second answers `roster_busy` to a click; a ✅ reaction stays on the message, but the member is not added to that roster. Leaving the original roster releases that hour's place, allowing a new join elsewhere before :35. Join order, by button or reaction, fills the main roster, then substitutes, then up to 50 waiting places that are not shown. Once all are taken, Join answers `roster_full`, and further reactions remain on the message but do not add roster entries. Voluntary departures let the next people advance. Embed edits after button and reaction changes are grouped into two-second windows and do not resend the role mention.
+3. At :35, only main participants are checked. Substitutes are not checked or moved and remain in the final substitute list even if they are not in voice. A main participant already in the event voice channel stays there. Someone in another voice channel is moved only if they can view and connect to the target channel and the bot passes the normal move permission and hierarchy checks.
+4. A main participant in no voice channel, or no longer in the guild, is removed **from the roster**, not kicked from the guild. Permission, hierarchy, or channel failures leave the person on the roster and produce one warning per event and hour in the announcement channel. The warning distinguishes the bot's move permissions or role hierarchy, the member's own access to the event room, and a deleted event room (`Etkinlik odası silinmiş`). A failed voice-state read also leaves the person on the roster, but only logs the failure.
+5. Removed participants are not replaced from substitutes or the waiting list. The closing embed keeps the final main and substitute lists with unfilled capacity shown as `-`, and the closing edit disables both buttons. After the start time, Join and Leave answer `roster_closed`, and new or removed ✅ reactions no longer change that hour's roster, even if the voice check is delayed.
+
+### Embed example
+
+These Turkish strings are emitted by `GuildRosterConstants.ROSTER_TEXT`. For an event named `Arena`, a main capacity of `2`, and one substitute place, an open embed can contain:
+
+```text
+🚀 Arena İÇİN KATIL
+
+**Etkinlik başlıyor:** <t:1790944500:t> · <t:1790944500:R>
+**Katıl** düğmesiyle ya da ✅ tepkisiyle katıl; **Ayrıl** düğmesiyle ya da tepkini geri alarak ayrıl.
+
+🟢 **Ana Kadro (1/2)**
+`1.` <@1489002177550843906>
+`2.` -
+
+🔴 **Yedek Kadro (0/1)**
+`1.` -
+```
+
+The title keeps the event name as written and remains when the roster closes. Its description begins with the following two lines instead of the start and participation instructions, followed by the final lists:
+
+```text
+**Bu etkinlik artık aktif değil.**
+⏰ Etkinlik saati: <t:1790944500:t>
+```
+
+A move blocked by the bot's permissions or role hierarchy produces this warning for one retained participant. The event name is escaped, and the warning cannot ping users or roles:
+
+```text
+⚠️ **Arena**: 1 kişi etkinlik odasına taşınamadı; kadroda bırakıldı. Botun rolünü üyelerin rollerinin üstüne taşıyın ve odada "Üyeleri Taşı" izni verin.
+```
+
+## Stored data
+
+Participant identity in the transient roster is stored only as user IDs, ordered by join time, plus the set of user IDs that joined with the button; it does not copy profiles or voice history. Roster state uses a two-hour TTL (`7200` seconds). Writes refresh the relevant state or member-key TTL, including when the roster closes; this is not a promise that every key disappears exactly two hours after the announcement.
+
+Persistent event settings retain `created_by` as an audit identifier, but it is not returned by these routes. The two-hour roster TTL does not delete announcement messages, reactions, or member mentions in embeds. Those remain with the message. Voice moves use the normal `MEMBER_MOVE` audit log and its retention rules.

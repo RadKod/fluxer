@@ -21,11 +21,13 @@
 	},
 	"donation_confirmation": {
 		"subject": "{product_name} 후원에 감사드려요",
-		"body": "안녕하세요,\n\n{product_name}에 후원해 주셔서 감사해요! 회원님의 {interval, select,\n  month {정기 후원}\n  year {정기 후원}\n  other {일회성 후원}\n}이 성공적으로 {interval, select,\n  month {설정되었어요}\n  year {설정되었어요}\n  other {처리되었어요}\n}.\n\n후원 상세 정보:\n금액: {amount} {interval, select,\n  month {매월}\n  year {매년}\n  other {}\n}\n\nStripe에서 곧 인보이스 PDF가 포함된 별도의 영수증을 이메일로 보내드릴 예정이에요. 이 영수증에는 모든 결제 세부 정보가 포함되어 있으며, 세금 목적으로 활용할 수 있어요.\n\n다음 링크를 통해 언제든지 후원 내역을 확인하고, 인보이스를 다운로드하고, {interval, select,\n  month {구독을 관리하거나 취소할 수 있어요}\n  year {구독을 관리하거나 취소할 수 있어요}\n  other {향후 후원을 관리할 수 있어요}\n}:\n\n{manageUrl}\n\n회원님의 후원은 {product_name}를 계속 운영하는 데 큰 도움이 돼요. 진심으로 감사해요!\n\n– {product_name} 팀"
+		"body": "안녕하세요,\n\n{product_name}에 후원해 주셔서 감사해요! 회원님의 {interval, select,\n  month {정기 후원}\n  year {정기 후원}\n  other {일회성 후원}\n}이 성공적으로 {interval, select,\n  month {설정되었어요}\n  year {설정되었어요}\n  other {처리되었어요}\n}.\n\n후원 상세 정보:\n금액: {amount} {interval, select,\n  month {매월}\n  year {매년}\n  other {}\n}\n\nStripe에서 곧 인보이스 PDF가 포함된 별도의 영수증을 이메일로 보내드릴 예정이에요. 이 영수증에는 모든 결제 세부 정보가 포함되어 있으며, 세금 목적으로 활용할 수 있어요.\n\n다음 링크를 통해 언제든지 후원 내역을 확인하고, 인보이스를 다운로드하고, {interval, select,\n  month {구독을 관리하거나 취소할 수 있어요}\n  year {구독을 관리하거나 취소할 수 있어요}\n  other {향후 후원을 관리할 수 있어요}\n}:\n\n{manageUrl}\n\n회원님의 후원은 {product_name}를 계속 운영하는 데 큰 도움이 돼요. 진심으로 감사해요!\n\n– {product_name} 팀",
+		"button": "후원 관리"
 	},
 	"donation_magic_link": {
 		"subject": "{product_name} 후원 내역 관리",
-		"body": "안녕하세요,\n\n아래 링크를 클릭하여 후원자 포털에 접속해 주세요:\n\n{manageUrl}\n\n포털에서 구독을 관리하고, 인보이스를 다운로드하고, 후원 내역을 확인할 수 있어요.\n\n이 링크는 {expiresAt, date, full} {expiresAt, time, short}에 만료돼요.\n\n이 링크를 요청하지 않았다면 이 이메일을 무시해도 괜찮아요.\n\n– {product_name} 팀"
+		"body": "안녕하세요,\n\n아래 링크를 클릭하여 후원자 포털에 접속해 주세요:\n\n{manageUrl}\n\n포털에서 구독을 관리하고, 인보이스를 다운로드하고, 후원 내역을 확인할 수 있어요.\n\n이 링크는 {expiresAt, date, full} {expiresAt, time, short}에 만료돼요.\n\n이 링크를 요청하지 않았다면 이 이메일을 무시해도 괜찮아요.\n\n– {product_name} 팀",
+		"button": "후원 관리"
 	},
 	"dsa_report_verification": {
 		"subject": "DSA 신고를 위한 이메일 인증",
@@ -41,11 +43,13 @@
 	},
 	"email_change_revert": {
 		"subject": "{product_name} 이메일이 변경되었어요",
-		"body": "안녕하세요, {username}님.\n\n{product_name} 계정의 이메일 주소가 {newEmail}로 변경되었어요.\n\n직접 변경하셨다면 별도의 조치는 필요 없어요. 직접 변경하지 않으셨다면 다음 링크를 사용하여 변경 사항을 되돌리고 계정을 보호할 수 있어요:\n\n{revertUrl}\n\n이전 이메일이 복원되고, 모든 기기에서 로그아웃되며, MFA가 비활성화되며, 새 비밀번호를 설정해야 해요.\n\n– {product_name} 안전팀"
+		"body": "안녕하세요, {username}님.\n\n{product_name} 계정의 이메일 주소가 {newEmail}로 변경되었어요.\n\n직접 변경하셨다면 별도의 조치는 필요 없어요. 직접 변경하지 않으셨다면 다음 링크를 사용하여 변경 사항을 되돌리고 계정을 보호할 수 있어요:\n\n{revertUrl}\n\n이전 이메일이 복원되고, 모든 기기에서 로그아웃되며, MFA가 비활성화되며, 새 비밀번호를 설정해야 해요.\n\n– {product_name} 안전팀",
+		"button": "변경 취소"
 	},
 	"email_verification": {
 		"subject": "{product_name} 이메일 주소 인증",
-		"body": "안녕하세요, {username}님.\n\n아래 링크를 클릭하여 {product_name} 계정의 이메일 주소를 인증해 주세요:\n\n{verifyUrl}\n\n{product_name} 계정을 생성하지 않으셨다면 이 이메일을 무시해도 괜찮아요.\n\n이 링크는 24시간 동안 유효해요.\n\n– {product_name} 팀"
+		"body": "🎉 안녕하세요, {username}님.\n\n아래 링크를 클릭하여 {product_name} 계정의 이메일 주소를 인증해 주세요:\n\n{verifyUrl}\n\n{product_name} 계정을 생성하지 않으셨다면 이 이메일을 무시해도 괜찮아요.\n\n이 링크는 24시간 동안 유효해요.\n\n– {product_name} 팀",
+		"button": "이메일 인증"
 	},
 	"gift_chargeback_notification": {
 		"subject": "사용하신 선물 혜택이 제거되었어요",
@@ -53,15 +57,18 @@
 	},
 	"harvest_completed": {
 		"subject": "{product_name} 데이터 내보내기를 다운로드할 수 있어요",
-		"body": "안녕하세요, {username}님.\n\n데이터 내보내기가 준비되었어요.\n\n다운로드 링크:\n{downloadUrl}\n\n포함된 메시지: {totalMessages, number}개\n파일 크기: {fileSizeMB, number} MB\n\n이 링크는 {expiresAt, date, full} {expiresAt, time, short}에 만료돼요.\n\n이 내보내기를 요청하지 않으셨다면 즉시 비밀번호를 변경하고 고객지원팀에 문의해 주세요.\n\n– {product_name} 팀"
+		"body": "안녕하세요, {username}님.\n\n데이터 내보내기가 준비되었어요.\n\n다운로드 링크:\n{downloadUrl}\n\n포함된 메시지: {totalMessages, number}개\n파일 크기: {fileSizeMB, number} MB\n\n이 링크는 {expiresAt, date, full} {expiresAt, time, short}에 만료돼요.\n\n이 내보내기를 요청하지 않으셨다면 즉시 비밀번호를 변경하고 고객지원팀에 문의해 주세요.\n\n– {product_name} 팀",
+		"button": "내 데이터 다운로드"
 	},
 	"inactivity_warning": {
 		"subject": "장기간 미접속으로 {product_name} 계정이 삭제될 예정이에요",
-		"body": "안녕하세요, {username}님.\n\n{lastActiveDate, date, full} 이후로 {product_name} 계정에서 활동이 없었어요.\n\n{deletionDate, date, full} {deletionDate, time, short}까지 로그인하지 않으면 장기간 미접속으로 계정이 영구적으로 삭제될 예정이에요.\n\n여기에서 로그인해 주세요:\n{loginUrl}\n\n최근에 {product_name}를 사용하셨다면 즉시 고객지원팀에 문의해 주세요.\n\n– {product_name} 팀"
+		"body": "안녕하세요, {username}님.\n\n{lastActiveDate, date, full} 이후로 {product_name} 계정에서 활동이 없었어요.\n\n{deletionDate, date, full} {deletionDate, time, short}까지 로그인하지 않으면 장기간 미접속으로 계정이 영구적으로 삭제될 예정이에요.\n\n여기에서 로그인해 주세요:\n{loginUrl}\n\n최근에 {product_name}를 사용하셨다면 즉시 고객지원팀에 문의해 주세요.\n\n– {product_name} 팀",
+		"button": "로그인"
 	},
 	"ip_authorization": {
 		"subject": "새 IP 주소 로그인 승인",
-		"body": "안녕하세요, {username}님.\n\n새로운 IP 주소에서 {product_name} 계정으로 로그인 시도가 감지되었어요:\n\nIP 주소: {ipAddress}\n위치: {location}\n\n본인이 시도한 경우, 아래 링크를 클릭하여 이 IP 주소를 승인해 주세요:\n\n{authUrl}\n\n로그인을 시도하지 않으셨다면 즉시 비밀번호를 변경해 주세요.\n\n이 링크는 30분 동안 유효해요.\n\n– {product_name} 팀"
+		"body": "안녕하세요, {username}님.\n\n새로운 IP 주소에서 {product_name} 계정으로 로그인 시도가 감지되었어요:\n\nIP 주소: {ipAddress}\n위치: {location}\n\n본인이 시도한 경우, 아래 링크를 클릭하여 이 IP 주소를 승인해 주세요:\n\n{authUrl}\n\n로그인을 시도하지 않으셨다면 즉시 비밀번호를 변경해 주세요.\n\n이 링크는 30분 동안 유효해요.\n\n– {product_name} 팀",
+		"button": "이 로그인 승인"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "{product_name} 백업 코드 액세스 확인",
@@ -73,11 +80,17 @@
 	},
 	"password_reset": {
 		"subject": "{product_name} 비밀번호 재설정",
-		"body": "안녕하세요, {username}님.\n\n{product_name} 비밀번호 재설정을 요청하셨어요. 아래 링크를 사용하여 새 비밀번호를 설정해 주세요:\n\n{resetUrl}\n\n요청하지 않으셨다면 이 이메일을 무시해도 괜찮아요.\n\n이 링크는 1시간 동안 유효해요.\n\n– {product_name} 팀"
+		"body": "안녕하세요, {username}님.\n\n{product_name} 비밀번호 재설정을 요청하셨어요. 아래 링크를 사용하여 새 비밀번호를 설정해 주세요:\n\n{resetUrl}\n\n요청하지 않으셨다면 이 이메일을 무시해도 괜찮아요.\n\n이 링크는 1시간 동안 유효해요.\n\n– {product_name} 팀",
+		"button": "비밀번호 재설정"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "{product_name} 가입이 승인되었어요",
-		"body": "안녕하세요, {username}님.\n\n좋은 소식이에요: {product_name} 가입이 승인되었어요.\n\n이제 여기에서 {product_name} 앱에 로그인할 수 있어요:\n{channelsUrl}\n\n{product_name} 커뮤니티에 오신 것을 환영해요.\n\n– {product_name} 팀"
+		"body": "🎉 안녕하세요, {username}님.\n\n좋은 소식이에요: {product_name} 가입이 승인되었어요.\n\n이제 여기에서 {product_name} 앱에 로그인할 수 있어요:\n{channelsUrl}\n\n{product_name} 커뮤니티에 오신 것을 환영해요.\n\n– {product_name} 팀",
+		"button": "{product_name} 열기"
 	},
 	"report_resolved": {
 		"subject": "{product_name} 신고 검토가 완료되었어요",
@@ -93,6 +106,6 @@
 	},
 	"unban_notification": {
 		"subject": "{product_name} 계정 정지가 해제되었어요",
-		"body": "안녕하세요, {username}님.\n\n좋은 소식이에요: {product_name} 계정 정지가 해제되었어요.\n\n{reason, select,\n  null {}\n  other {사유: {reason}}\n}\n\n이제 다시 로그인하여 평소처럼 {product_name}를 계속 사용할 수 있어요.\n\n– {product_name} 안전팀"
+		"body": "🎉 안녕하세요, {username}님.\n\n좋은 소식이에요: {product_name} 계정 정지가 해제되었어요.\n\n{reason, select,\n  null {}\n  other {사유: {reason}}\n}\n\n이제 다시 로그인하여 평소처럼 {product_name}를 계속 사용할 수 있어요.\n\n– {product_name} 안전팀"
 	}
 }

@@ -8,13 +8,16 @@
     start_link/0,
     push_state/3,
     pop_state/1,
-    pop_state/2
+    pop_state/2,
+    note_handoff/2,
+    handoff_target/1
 ]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -define(RPC_TIMEOUT_MS, 5000).
 -define(DEFAULT_STATE_TTL_MS, 120000).
 -define(CLEANUP_INTERVAL_MS, 10000).
+-define(HANDOFF_TABLE, session_state_transfer_handoffs).
 
 -type session_id() :: binary().
 -type transferred_state() :: #{
@@ -59,16 +62,56 @@ pop_state(SessionId, TargetNode) ->
         exit:_Reason -> {error, not_found}
     end.
 
+-spec note_handoff(session_id(), node()) -> ok.
+note_handoff(_SessionId, TargetNode) when TargetNode =:= node() ->
+    ok;
+note_handoff(SessionId, TargetNode) ->
+    try
+        ets:insert(?HANDOFF_TABLE, {SessionId, TargetNode, erlang:monotonic_time(millisecond)})
+    of
+        true -> ok
+    catch
+        error:badarg -> ok
+    end.
+
+-spec handoff_target(session_id()) -> {ok, node()} | none.
+handoff_target(SessionId) ->
+    try ets:lookup(?HANDOFF_TABLE, SessionId) of
+        [{SessionId, TargetNode, SentAt}] when is_atom(TargetNode), is_integer(SentAt) ->
+            case erlang:monotonic_time(millisecond) - SentAt < state_ttl_ms() of
+                true -> {ok, TargetNode};
+                false -> none
+            end;
+        _ ->
+            none
+    catch
+        error:badarg -> none
+    end.
+
 -spec init([]) -> {ok, store()}.
 init([]) ->
     erlang:process_flag(fullsweep_after, 0),
+    ensure_handoff_table(),
     schedule_cleanup(),
     {ok, #{}}.
+
+-spec ensure_handoff_table() -> ok.
+ensure_handoff_table() ->
+    case ets:whereis(?HANDOFF_TABLE) of
+        undefined ->
+            _ = ets:new(?HANDOFF_TABLE, [
+                named_table, public, set, {read_concurrency, true}, {write_concurrency, true}
+            ]),
+            ok;
+        _Tid ->
+            ok
+    end.
 
 -spec handle_call(term(), gen_server:from(), store()) -> {reply, term(), store()}.
 handle_call({receive_state, SessionId, SessionState}, _From, Store) when
     is_binary(SessionId), is_map(SessionState)
 ->
+    forget_handoff(SessionId),
     Entry = #{
         session_id => SessionId,
         state => SessionState,
@@ -99,6 +142,7 @@ handle_info(cleanup_expired, Store) ->
         end,
         Store
     ),
+    forget_expired_handoffs(Now - Ttl),
     schedule_cleanup(),
     {noreply, Cleaned};
 handle_info(_Info, Store) ->
@@ -113,6 +157,24 @@ code_change(_OldVsn, Store, _Extra) ->
     erlang:process_flag(fullsweep_after, 0),
     erlang:garbage_collect(),
     {ok, Store}.
+
+-spec forget_handoff(session_id()) -> ok.
+forget_handoff(SessionId) ->
+    try ets:delete(?HANDOFF_TABLE, SessionId) of
+        true -> ok
+    catch
+        error:badarg -> ok
+    end.
+
+-spec forget_expired_handoffs(integer()) -> ok.
+forget_expired_handoffs(Cutoff) ->
+    try
+        ets:select_delete(?HANDOFF_TABLE, [{{'_', '_', '$1'}, [{'<', '$1', Cutoff}], [true]}])
+    of
+        _Deleted -> ok
+    catch
+        error:badarg -> ok
+    end.
 
 -spec schedule_cleanup() -> reference().
 schedule_cleanup() ->
@@ -248,6 +310,65 @@ unknown_cast_is_noop_test() ->
 
 unknown_info_is_noop_test() ->
     {noreply, #{}} = handle_info(unknown_message, #{}).
+
+handoff_target_remembers_only_remote_targets_test() ->
+    with_started_store(fun() ->
+        ok = note_handoff(<<"handoff-remote">>, 'gateway_b@127.0.0.1'),
+        ok = note_handoff(<<"handoff-local">>, node()),
+        ?assertEqual({ok, 'gateway_b@127.0.0.1'}, handoff_target(<<"handoff-remote">>)),
+        ?assertEqual(none, handoff_target(<<"handoff-local">>)),
+        ?assertEqual(none, handoff_target(<<"handoff-missing">>))
+    end).
+
+received_state_clears_the_handoff_target_test() ->
+    with_started_store(fun() ->
+        SessionId = <<"handoff-came-back">>,
+        ok = note_handoff(SessionId, 'gateway_b@127.0.0.1'),
+        ok = push_state(node(), SessionId, #{seq => 1}),
+        ?assertEqual(none, handoff_target(SessionId)),
+        ?assertEqual({ok, #{seq => 1}}, pop_state(SessionId))
+    end).
+
+expired_handoff_targets_are_forgotten_test() ->
+    with_state_ttl(1, fun() ->
+        with_started_store(fun() ->
+            SessionId = <<"handoff-expired">>,
+            ok = note_handoff(SessionId, 'gateway_b@127.0.0.1'),
+            timer:sleep(5),
+            ?assertEqual(none, handoff_target(SessionId)),
+            whereis(?MODULE) ! cleanup_expired,
+            _ = sys:get_state(?MODULE),
+            ?assertEqual([], ets:lookup(?HANDOFF_TABLE, SessionId))
+        end)
+    end).
+
+with_started_store(Fun) ->
+    undefined = whereis(?MODULE),
+    {ok, Pid} = start_link(),
+    unlink(Pid),
+    try
+        Fun()
+    after
+        gen_server:stop(Pid)
+    end.
+
+with_state_ttl(TtlMs, Fun) ->
+    Key = {fluxer_gateway, runtime_config},
+    Previous = persistent_term:get(Key, undefined),
+    Base =
+        case Previous of
+            undefined -> #{};
+            Map -> Map
+        end,
+    persistent_term:put(Key, Base#{session_state_transfer_ttl_ms => TtlMs}),
+    try
+        Fun()
+    after
+        case Previous of
+            undefined -> persistent_term:erase(Key);
+            _ -> persistent_term:put(Key, Previous)
+        end
+    end.
 
 -spec test_from() -> gen_server:from().
 test_from() ->

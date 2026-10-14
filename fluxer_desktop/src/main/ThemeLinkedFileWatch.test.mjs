@@ -160,7 +160,7 @@ describe('ThemeLinkedFileWatch', () => {
 		assert.equal(change.error, 'too_large');
 	});
 
-	test('refuses to follow a symlink', async () => {
+	test('refuses to follow a symlink', {skip: process.platform === 'win32'}, async () => {
 		const targetPath = nextFilePath();
 		const linkPath = nextFilePath();
 		fs.writeFileSync(targetPath, 'secret');

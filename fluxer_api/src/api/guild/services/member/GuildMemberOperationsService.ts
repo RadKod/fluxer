@@ -10,6 +10,7 @@ import type {GuildAuditLogService} from '@app/api/guild/GuildAuditLogService';
 import type {GuildAuditLogChange} from '@app/api/guild/GuildAuditLogTypes';
 import {resolveMaxGuildMembersLimit} from '@app/api/guild/GuildMemberLimitUtils';
 import {mapGuildMemberToResponse} from '@app/api/guild/GuildModel';
+import {notifyMicupBotMemberJoin} from '@app/api/guild/micupbot/MicupBotMemberHooks';
 import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
 import type {GuildMemberAuthService} from '@app/api/guild/services/member/GuildMemberAuthService';
 import type {GuildMemberEventService} from '@app/api/guild/services/member/GuildMemberEventService';
@@ -27,6 +28,12 @@ import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import {profileSubstringBlocklistCache} from '@app/api/middleware/ProfileSubstringBlocklistCache';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
+import {
+	GUILD_MEMBER_COUNT_COUNTER,
+	getKVCounterService,
+	removeGuildMemberCounted,
+} from '@app/api/middleware/ServiceSingletons';
 import type {GuildMember} from '@app/api/models/GuildMember';
 import type {User} from '@app/api/models/User';
 import type {UserGuildSettings} from '@app/api/models/UserGuildSettings';
@@ -401,15 +408,7 @@ export class GuildMemberOperationsService {
 		}
 		await checkTargetMember(targetId);
 		await this.snapshotMembershipMetadata(targetMember);
-		const guild = await this.guildRepository.findUnique(guildId);
-		await this.guildRepository.deleteMember(guildId, targetId);
-		if (guild) {
-			await this.guildRepository.upsertPartial(
-				guildId,
-				{member_count: Math.max(0, guild.memberCount - 1)},
-				guild.toRow(),
-			);
-		}
+		await removeGuildMemberCounted(this.guildRepository, guildId, targetId);
 		await this.gatewayService.leaveGuild({userId: targetId, guildId});
 	}
 
@@ -453,6 +452,8 @@ export class GuildMemberOperationsService {
 			assertMutableUserId(userId);
 			const user = await this.userRepository.findUnique(userId);
 			if (!user) throw new UnknownGuildError();
+			const initiator = initiatorId === userId ? user : await this.userRepository.findUnique(initiatorId);
+			if (initiator) getUsernameSelectionGate().assertMayAct(initiator, user.isBot ? 'bot_add' : 'guild_join');
 			if (!skipAccountLimitCheck) {
 				assertAccountNotLimited(user);
 			}
@@ -467,15 +468,12 @@ export class GuildMemberOperationsService {
 				guildFeatures: guild.features,
 				snapshot: this.limitConfigService.getConfigSnapshot(),
 			});
-			if (guild.memberCount >= maxGuildMembers) {
-				throw new MaxGuildMembersError(maxGuildMembers);
-			}
 			const metadata = await this.guildRepository.getMembershipMetadata(guildId, userId);
 			const restoredTimeout =
 				metadata?.communication_disabled_until && metadata.communication_disabled_until.getTime() > Date.now()
 					? metadata.communication_disabled_until
 					: null;
-			const guildMember = await this.guildRepository.upsertMember({
+			const memberRow: GuildMemberRow = {
 				guild_id: guildId,
 				user_id: userId,
 				joined_at: new Date(),
@@ -497,8 +495,37 @@ export class GuildMemberOperationsService {
 				profile_flags: null,
 				mention_flags: null,
 				version: 1,
-			});
-			await this.guildRepository.upsertPartial(guildId, {member_count: guild.memberCount + 1}, guild.toRow());
+			};
+			const memberCounter = getKVCounterService();
+			const memberCountId = guildId.toString();
+			const joined = await memberCounter.withSubjectLock(
+				GUILD_MEMBER_COUNT_COUNTER,
+				memberCountId,
+				userId.toString(),
+				async () => {
+					const racedMember = await this.guildRepository.getMember(guildId, userId);
+					if (racedMember) {
+						return {member: racedMember, created: false};
+					}
+					if ((await memberCounter.add(GUILD_MEMBER_COUNT_COUNTER, memberCountId, 1)) > maxGuildMembers) {
+						await memberCounter.add(GUILD_MEMBER_COUNT_COUNTER, memberCountId, -1);
+						throw new MaxGuildMembersError(maxGuildMembers);
+					}
+					try {
+						return {member: await this.guildRepository.upsertMember(memberRow), created: true};
+					} catch (error) {
+						const applied = await this.guildRepository.getMember(guildId, userId).catch(() => null);
+						if (!applied) {
+							await memberCounter.add(GUILD_MEMBER_COUNT_COUNTER, memberCountId, -1);
+						}
+						throw error;
+					}
+				},
+			);
+			if (!joined.created) {
+				return joined.member;
+			}
+			const guildMember = joined.member;
 			await this.applyJoinUserSettings({userId, guildId, user});
 			await eventService.dispatchGuildMemberAdd({member: guildMember, requestCache});
 			await this.gatewayService.joinGuild({userId, guildId});
@@ -509,6 +536,7 @@ export class GuildMemberOperationsService {
 			if (sendJoinMessage && !(guild.systemChannelFlags & SystemChannelFlags.SUPPRESS_JOIN_NOTIFICATIONS)) {
 				await this.channelService.messages.system.sendJoinSystemMessage({guildId, userId, requestCache});
 			}
+			notifyMicupBotMemberJoin({guild, userId, user, isTemporary});
 			void emitActivity('guild_joined', userId.toString(), {
 				user_id: userId.toString(),
 				guild_id: guildId.toString(),
@@ -545,16 +573,11 @@ export class GuildMemberOperationsService {
 			throw InputValidationError.fromCode('guild_id', ValidationErrorCodes.CANNOT_LEAVE_GUILD_AS_OWNER);
 		}
 		const user = await this.userRepository.findUnique(userId);
-		const guild = await this.guildRepository.findUnique(guildId);
 		const leavingMember = await this.guildRepository.getMember(guildId, userId);
 		if (leavingMember) {
 			await this.snapshotMembershipMetadata(leavingMember);
 		}
-		await this.guildRepository.deleteMember(guildId, userId);
-		if (guild) {
-			const newMemberCount = Math.max(0, guild.memberCount - 1);
-			await this.guildRepository.upsertPartial(guildId, {member_count: newMemberCount}, guild.toRow());
-		}
+		await removeGuildMemberCounted(this.guildRepository, guildId, userId);
 		if (user && !user.isBot) {
 			await removeGuildFromUserFolders({
 				userId,

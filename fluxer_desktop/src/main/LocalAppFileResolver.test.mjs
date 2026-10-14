@@ -43,7 +43,8 @@ function createRendererRoot() {
 const rendererRoot = createRendererRoot();
 const outsideRoot = createRoot('local-app-outside-');
 writeFileSync(path.join(outsideRoot, 'secret.txt'), 'secret');
-symlinkSync(path.join(outsideRoot, 'secret.txt'), path.join(rendererRoot, 'escape.txt'));
+if (process.platform !== 'win32')
+	symlinkSync(path.join(outsideRoot, 'secret.txt'), path.join(rendererRoot, 'escape.txt'));
 
 const files = new DesktopLocalAppFiles({rendererRoot});
 
@@ -142,7 +143,7 @@ describe('renderer file resolution refuses to leave the bundle', () => {
 		assert.equal(resolved.filePath, path.join(rendererRoot, 'index.html'));
 	});
 
-	test('a symlink pointing outside the bundle is not served', async () => {
+	test('a symlink pointing outside the bundle is not served', {skip: process.platform === 'win32'}, async () => {
 		const resolved = await resolvePath('/escape.txt');
 		assert.equal(resolved.type, 'not-found');
 	});
@@ -213,7 +214,9 @@ describe('renderer file reads', () => {
 		assert.equal(files.isIndexFile(path.join(rendererRoot, 'manifest.json')), false);
 	});
 
-	test('a symlinked path handed straight to a read never yields what it points at', async () => {
+	test('a symlinked path handed straight to a read never yields what it points at', {
+		skip: process.platform === 'win32',
+	}, async () => {
 		const symlinkPath = path.join(rendererRoot, 'escape.txt');
 		await assert.rejects(
 			() => files.readForResponse(symlinkPath, 1024, neverAborted()),
@@ -425,7 +428,8 @@ mkdirSync(path.join(moduleDirectory, 'assets'), {recursive: true});
 writeFileSync(path.join(moduleDirectory, 'assets', 'cafebabecafebabe.wasm'), 'wasm-bytes');
 writeFileSync(path.join(moduleDirectory, 'assets', 'deadbeefdeadbeef.js'), 'console.log(2)');
 writeFileSync(path.join(moduleDirectory, 'index.html'), '<html lang="en"><body>module</body></html>');
-symlinkSync(path.join(outsideRoot, 'secret.txt'), path.join(moduleDirectory, 'assets', 'aaaaaaaabbbbbbbb.css'));
+if (process.platform !== 'win32')
+	symlinkSync(path.join(outsideRoot, 'secret.txt'), path.join(moduleDirectory, 'assets', 'aaaaaaaabbbbbbbb.css'));
 
 const siblingStoreRoot = `${moduleStoreRoot}-sibling`;
 temporaryRoots.push(siblingStoreRoot);
@@ -503,7 +507,9 @@ describe('the module root chain', () => {
 		assert.equal(resolved.reason, 'path-escape');
 	});
 
-	test('a symlinked module file is not served and does not become the SPA shell', async () => {
+	test('a symlinked module file is not served and does not become the SPA shell', {
+		skip: process.platform === 'win32',
+	}, async () => {
 		const moduleFiles = createModuleFiles();
 		const resolved = await moduleFiles.resolve('fluxer-app://app/assets/aaaaaaaabbbbbbbb.css');
 		assert.equal(resolved.type, 'not-found');

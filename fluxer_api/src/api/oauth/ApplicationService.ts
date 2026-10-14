@@ -19,6 +19,7 @@ import type {BotAuthService} from '@app/api/oauth/BotAuthService';
 import {generateOAuthTokenSecret} from '@app/api/oauth/OAuthTokenSecret';
 import type {IApplicationRepository} from '@app/api/oauth/repositories/IApplicationRepository';
 import {enforceFluxerTagChangeRateLimit} from '@app/api/user/FluxerTagChangeRateLimit';
+import {assertBotUsernameAvailable} from '@app/api/user/UniqueUsernames';
 import {hasPartialUserFieldsChanged, mapUserToPrivateResponse} from '@app/api/user/UserMappers';
 import {runAllInOrder} from '@app/api/utils/ConcurrencyUtils';
 import {hashPassword} from '@app/api/utils/PasswordUtils';
@@ -84,7 +85,7 @@ export class ApplicationService {
 			const discResult = await this.deps.discriminatorService.generateDiscriminator({
 				username: preferredUsername,
 			});
-			if (discResult.available && discResult.discriminator !== -1) {
+			if (discResult.available && discResult.discriminator > 0) {
 				return {username: preferredUsername, discriminator: discResult.discriminator};
 			}
 		}
@@ -97,7 +98,7 @@ export class ApplicationService {
 			const randomDiscResult = await this.deps.discriminatorService.generateDiscriminator({
 				username: randomUsername,
 			});
-			if (randomDiscResult.available && randomDiscResult.discriminator !== -1) {
+			if (randomDiscResult.available && randomDiscResult.discriminator > 0) {
 				return {username: randomUsername, discriminator: randomDiscResult.discriminator};
 			}
 		}
@@ -143,6 +144,7 @@ export class ApplicationService {
 		const applicationId: ApplicationID = (await this.apiContext.services.snowflake.generate()) as ApplicationID;
 		const botUserId = applicationIdToUserId(applicationId);
 		const {username, discriminator} = await this.generateBotUsername(args.name);
+		await assertBotUsernameAvailable(botUserId, username);
 		if (profileSubstringBlocklistCache.containsBannedSubstring('username', username)) {
 			throw new ContentBlockedError();
 		}
@@ -469,11 +471,13 @@ export class ApplicationService {
 		const newUsername = args.username ?? botUser.username;
 		const usernameChanged = args.username !== undefined && args.username !== botUser.username;
 		if (usernameChanged) {
+			await assertBotUsernameAvailable(botUser.id, newUsername);
 			const result = await this.deps.discriminatorService.resolveUsernameChange({
 				currentUsername: botUser.username,
 				currentDiscriminator: botUser.discriminator,
 				newUsername,
 			});
+			if (result.discriminator <= 0) throw new BotUserGenerationError();
 			if (result.username !== botUser.username) {
 				updates.username = result.username;
 			}

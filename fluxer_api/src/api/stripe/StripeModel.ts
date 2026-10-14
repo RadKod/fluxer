@@ -2,19 +2,19 @@
 
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
-import type {GiftCode} from '@app/api/models/GiftCode';
+import type {PremiumGiftCode} from '@app/api/models/GiftCode';
 import {getCachedUserPartialResponse} from '@app/api/user/UserCacheHelpers';
 import type {GiftCodeMetadataResponse, GiftCodeResponse} from '@fluxer/schema/src/domains/premium/GiftCodeSchemas';
 
 interface MapGiftCodeToResponseParams {
-	giftCode: GiftCode;
+	giftCode: PremiumGiftCode;
 	userCacheService: UserCacheService;
 	requestCache: RequestCache;
 	includeCreator?: boolean;
 }
 
 interface MapGiftCodeToMetadataResponseParams {
-	giftCode: GiftCode;
+	giftCode: PremiumGiftCode;
 	userCacheService: UserCacheService;
 	requestCache: RequestCache;
 }

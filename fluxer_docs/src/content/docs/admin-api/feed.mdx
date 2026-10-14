@@ -1,0 +1,136 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: Admin feed moderation
+description: Removing feed posts, comments and replies as a moderator, and putting a report-hidden post back on Discover.
+---
+
+import RouteHeader from '@/components/RouteHeader.astro';
+
+Admin feed routes remove a [feed](/http-api/feed/) post, a comment on one or a reply to a comment, or put a public post that reports took off [Discover](/http-api/feed/#get-discover-feed) back on it. All require `feed:moderate`. Reports about feed content arrive through the [Admin Reports API](/admin-api/reports/) with report type `FEED_POST` (3) or `FEED_COMMENT` (4); their `reported_message_id` is the post, comment or reply ID, and a comment report's first context entry is its post. A reply report's second context entry is the comment it answers, whose ID the [reply delete](#delete-feed-comment-reply) route takes.
+
+## Delete feed post
+
+<RouteHeader method="DELETE" path="/v1/admin/feed/posts/{post_id}" auditReason />
+
+Removes a post with its images or video, likes, comments and replies, and returns 204 with an empty body. Requires `feed:moderate`.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The post was removed and the audit entry was written |
+| 403 | [error response](/http-api/#error-response) | The caller lacks `feed:moderate` |
+| 404 | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+
+:::danger[Removal is permanent]
+The images are purged from storage and the CDN, and a video is deleted from Bunny Stream. There is no grace period and no restore operation. A copy of each image stays in the reports bucket as evidence, as a report snapshot keeps its own copy. A video is copied there first as `evidence.ts`, its largest rendition within 2 GiB joined into one MPEG-TS file, and only then deleted; a failed copy is retried and the video stays on Bunny Stream until it succeeds.
+:::
+
+### Side effects
+
+Home feeds drop the post on their next read, and its notifications leave the author's inbox. The author receives a system DM in their locale saying a moderator removed one of their posts, through the same delivery job as [System DMs](/admin-api/system-dms/). No Dispatch is emitted.
+
+One [Admin audit entry](/admin-api/#admin-audit-entry-object) is recorded with the action `delete_feed_post` and the target type `feed_post`, targeting the post ID. Its metadata is `author_id`, and `evidence_keys` when the post had images or a video: the comma-separated reports bucket keys of their copies.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:feed:moderation` bucket.
+
+## Restore feed post to Discover
+
+<RouteHeader method="DELETE" path="/v1/admin/feed/posts/{post_id}/discover-hide" auditReason />
+
+Undoes the hide that enough reports put on a public post, and returns 204 with an empty body. The post's reports are cleared, it returns to the Discover ranking with the score its reactions earned, and new reports cannot take it off Discover again for 72 hours. Requires `feed:moderate`.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The hide was undone and the audit entry was written |
+| 403 | [error response](/http-api/#error-response) | The caller lacks `feed:moderate` |
+| 404 | [error response](/http-api/#error-response) | No post has the ID and the request returns `UNKNOWN_FEED_POST` |
+
+### Side effects
+
+Discover shows the post again from its next list build, about a minute later; a post that is not public or is older than 72 hours stays off Discover. The author is not told, as they were not told of the hide. No Dispatch is emitted.
+
+One [Admin audit entry](/admin-api/#admin-audit-entry-object) is recorded with the action `restore_feed_post_discover` and the target type `feed_post`, targeting the post ID. Its metadata is `author_id`.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:feed:moderation` bucket.
+
+## Delete feed comment
+
+<RouteHeader method="DELETE" path="/v1/admin/feed/posts/{post_id}/comments/{comment_id}" auditReason />
+
+Removes a top-level comment on a post with its replies and returns 204 with an empty body. Requires `feed:moderate`.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+| comment_id | snowflake | The ID of the comment |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The comment was removed and the audit entry was written |
+| 403 | [error response](/http-api/#error-response) | The caller lacks `feed:moderate` |
+| 404 | [error response](/http-api/#error-response) | The post has no comment with the ID and the request returns `UNKNOWN_FEED_COMMENT` |
+
+### Side effects
+
+The post's comment count drops by one plus the number of replies. The comment's author receives a system DM in their locale saying a moderator removed one of their comments; the authors of its replies are not told. No Dispatch is emitted.
+
+One [Admin audit entry](/admin-api/#admin-audit-entry-object) is recorded with the action `delete_feed_comment` and the target type `feed_comment`, targeting the comment ID. Its metadata is `post_id` and `author_id`.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:feed:moderation` bucket.
+
+## Delete feed comment reply
+
+<RouteHeader method="DELETE" path="/v1/admin/feed/posts/{post_id}/comments/{comment_id}/replies/{reply_id}" auditReason />
+
+Removes a reply to a comment on a post and returns 204 with an empty body. Requires `feed:moderate`.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id | snowflake | The ID of the post |
+| comment_id | snowflake | The ID of the top-level comment the reply answers |
+| reply_id | snowflake | The ID of the reply |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The reply was removed and the audit entry was written |
+| 403 | [error response](/http-api/#error-response) | The caller lacks `feed:moderate` |
+| 404 | [error response](/http-api/#error-response) | The comment has no reply with the ID and the request returns `UNKNOWN_FEED_COMMENT` |
+
+### Side effects
+
+The post's comment count and the comment's reply count drop by one. The reply's author receives a system DM in their locale saying a moderator removed one of their comments. No Dispatch is emitted.
+
+One [Admin audit entry](/admin-api/#admin-audit-entry-object) is recorded with the action `delete_feed_comment_reply` and the target type `feed_comment`, targeting the reply ID. Its metadata is `post_id`, `parent_id` (the comment the reply answers) and `author_id`.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:feed:moderation` bucket.

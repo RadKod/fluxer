@@ -51,6 +51,7 @@ interface IpBanCacheState {
 	singleIpBans: FamilyMap<SingleCacheEntry>;
 	rangeIpBans: FamilyMap<RangeCacheEntry>;
 	sameIpDecisionBans: Map<string, IpBanCount>;
+	sameIpDecisionMembers: Map<string, Set<string>>;
 }
 
 const PERMANENT_BAN_METADATA: IpBanMetadata = {
@@ -62,6 +63,7 @@ class IpBanCache {
 	private singleIpBans: FamilyMap<SingleCacheEntry>;
 	private rangeIpBans: FamilyMap<RangeCacheEntry>;
 	private sameIpDecisionBans: Map<string, IpBanCount>;
+	private sameIpDecisionMembers: Map<string, Set<string>>;
 	private adminRepository = new AdminRepository();
 	private consecutiveFailures = 0;
 	private readonly maxConsecutiveFailures = 5;
@@ -94,6 +96,7 @@ class IpBanCache {
 		this.singleIpBans = state.singleIpBans;
 		this.rangeIpBans = state.rangeIpBans;
 		this.sameIpDecisionBans = state.sameIpDecisionBans;
+		this.sameIpDecisionMembers = state.sameIpDecisionMembers;
 	}
 
 	setRefreshSubscriber(kvClient: IKVProvider | null): void {
@@ -113,6 +116,7 @@ class IpBanCache {
 		this.singleIpBans = state.singleIpBans;
 		this.rangeIpBans = state.rangeIpBans;
 		this.sameIpDecisionBans = state.sameIpDecisionBans;
+		this.sameIpDecisionMembers = state.sameIpDecisionMembers;
 		this.consecutiveFailures = 0;
 	}
 
@@ -168,6 +172,48 @@ class IpBanCache {
 		this.addEntry(ip, {kind: 'temporary_24h', expiresAt});
 	}
 
+	replaceBan(ip: string, expiresAt: Date | null): void {
+		if (isIpBanExempt(ip)) return;
+		const parsed = parseIpBanEntry(ip);
+		if (!parsed) return;
+		const count = this.createCount({kind: expiresAt === null ? 'permanent' : 'temporary_24h', expiresAt});
+		if (parsed.type === 'range') {
+			this.rangeIpBans[parsed.family].set(parsed.canonical, {start: parsed.start, end: parsed.end, count});
+			return;
+		}
+		const map = this.singleIpBans[parsed.family];
+		map.set(parsed.canonical, {value: parsed.value, count});
+		const key = getSameIpDecisionKey(parsed.canonical);
+		if (!key) return;
+		const members = this.sameIpDecisionMembers.get(key) ?? new Set<string>();
+		members.add(parsed.canonical);
+		this.sameIpDecisionMembers.set(key, members);
+		this.rebuildDecisionCount(key, parsed.family);
+	}
+
+	private rebuildDecisionCount(key: string, family: IpAddressFamily): void {
+		const members = this.sameIpDecisionMembers.get(key);
+		if (!members || members.size === 0) {
+			this.sameIpDecisionBans.delete(key);
+			return;
+		}
+		const map = this.singleIpBans[family];
+		const combined: IpBanCount = {permanent: 0, temporary: 0, temporaryExpiresAt: null};
+		for (const member of members) {
+			const current = map.get(member)?.count;
+			if (!current) continue;
+			combined.permanent += current.permanent;
+			combined.temporary += current.temporary;
+			if (
+				current.temporaryExpiresAt &&
+				(!combined.temporaryExpiresAt || current.temporaryExpiresAt > combined.temporaryExpiresAt)
+			) {
+				combined.temporaryExpiresAt = current.temporaryExpiresAt;
+			}
+		}
+		this.sameIpDecisionBans.set(key, combined);
+	}
+
 	unban(ip: string): void {
 		this.removeEntry(ip);
 	}
@@ -177,6 +223,7 @@ class IpBanCache {
 		this.singleIpBans = state.singleIpBans;
 		this.rangeIpBans = state.rangeIpBans;
 		this.sameIpDecisionBans = state.sameIpDecisionBans;
+		this.sameIpDecisionMembers = state.sameIpDecisionMembers;
 	}
 
 	private createEmptyState(): IpBanCacheState {
@@ -184,6 +231,7 @@ class IpBanCache {
 			singleIpBans: this.createFamilyMaps(),
 			rangeIpBans: this.createFamilyMaps(),
 			sameIpDecisionBans: new Map(),
+			sameIpDecisionMembers: new Map(),
 		};
 	}
 
@@ -254,6 +302,7 @@ class IpBanCache {
 			singleIpBans: this.singleIpBans,
 			rangeIpBans: this.rangeIpBans,
 			sameIpDecisionBans: this.sameIpDecisionBans,
+			sameIpDecisionMembers: this.sameIpDecisionMembers,
 		});
 	}
 
@@ -273,6 +322,9 @@ class IpBanCache {
 			}
 			const sameIpDecisionKey = getSameIpDecisionKey(parsed.canonical);
 			if (sameIpDecisionKey) {
+				const members = state.sameIpDecisionMembers.get(sameIpDecisionKey) ?? new Set<string>();
+				members.add(parsed.canonical);
+				state.sameIpDecisionMembers.set(sameIpDecisionKey, members);
 				const decisionCount = state.sameIpDecisionBans.get(sameIpDecisionKey);
 				if (decisionCount) {
 					this.incrementCount(decisionCount, metadata);
@@ -300,16 +352,16 @@ class IpBanCache {
 			if (!existing) return;
 			if (this.decrementCount(existing.count)) {
 				map.delete(parsed.canonical);
+				const key = getSameIpDecisionKey(parsed.canonical);
+				if (key) {
+					const members = this.sameIpDecisionMembers.get(key);
+					members?.delete(parsed.canonical);
+					if (members?.size === 0) this.sameIpDecisionMembers.delete(key);
+				}
 			}
 			const sameIpDecisionKey = getSameIpDecisionKey(parsed.canonical);
 			if (sameIpDecisionKey) {
-				const decisionCount = this.sameIpDecisionBans.get(sameIpDecisionKey);
-				if (!decisionCount) {
-					return;
-				}
-				if (this.decrementCount(decisionCount)) {
-					this.sameIpDecisionBans.delete(sameIpDecisionKey);
-				}
+				this.rebuildDecisionCount(sameIpDecisionKey, parsed.family);
 			}
 		} else {
 			const map = this.rangeIpBans[parsed.family];

@@ -43,6 +43,11 @@ export interface ArchivedThreadPage {
 	hasMore: boolean;
 }
 
+export interface JoinedThreadIdsPage {
+	threadIds: Array<ChannelID>;
+	cursor: string | null;
+}
+
 export interface ThreadMemberSettingsPatch {
 	flags?: number;
 	muted?: boolean;
@@ -104,6 +109,12 @@ export abstract class IThreadRepository {
 
 	abstract listJoinedThreadIds(userId: UserID, guildId: GuildID): Promise<Array<ChannelID>>;
 
+	abstract listJoinedThreadIdsPage(
+		userId: UserID,
+		guildId: GuildID,
+		opts: {limit: number; cursor?: string | null},
+	): Promise<JoinedThreadIdsPage>;
+
 	abstract listJoinedPrivateThreadIds(
 		userId: UserID,
 		guildId: GuildID,
@@ -142,6 +153,11 @@ export abstract class IThreadRepository {
 		guildId: GuildID,
 		opts?: {activeSince?: Date; parents?: ReadonlyArray<{id: ChannelID; type: number}>},
 	): Promise<Array<ChannelID>>;
+
+	abstract listGuildThreadIdsPage(
+		guildId: GuildID,
+		opts: {limit: number; cursor?: string | null},
+	): Promise<{threadIds: Array<ChannelID>; cursor: string | null}>;
 
 	abstract purgeThread(threadId: ChannelID): Promise<void>;
 

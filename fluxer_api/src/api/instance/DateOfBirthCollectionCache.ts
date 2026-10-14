@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {Config} from '@app/api/Config';
-
 let cachedCollectDateOfBirth: boolean | null = null;
 
 export function getDefaultDateOfBirthCollection(): boolean {
-	return !Config.instance.selfHosted;
+	return true;
 }
 
 export function instanceCollectsDateOfBirth(): boolean {

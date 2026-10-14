@@ -29,6 +29,18 @@ import {experimentBucket} from '@fluxer/schema/src/domains/experiment/Experiment
 import {runInAction} from 'mobx';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
+const migrationBuildGate = vi.hoisted(() => ({enabled: true}));
+
+vi.mock('@app/features/app/domain_migration/DomainMigrationCore', async (importOriginal) => {
+	const original = await importOriginal<typeof import('@app/features/app/domain_migration/DomainMigrationCore')>();
+	return {
+		...original,
+		get DOMAIN_MIGRATION_ENABLED() {
+			return migrationBuildGate.enabled;
+		},
+	};
+});
+
 vi.mock('@app/features/platform/utils/AppLogger', () => ({
 	Logger: class {
 		debug = vi.fn();
@@ -723,12 +735,24 @@ describe('runDomainMigrationPreMount', () => {
 	}
 
 	beforeEach(() => {
+		migrationBuildGate.enabled = true;
 		window.localStorage.clear();
 		window.sessionStorage.clear();
 	});
 
 	afterEach(() => {
 		vi.unstubAllGlobals();
+	});
+
+	it('keeps the production migration gate closed without discovery or navigation', async () => {
+		const original = await vi.importActual<typeof core>('@app/features/app/domain_migration/DomainMigrationCore');
+		expect(original.DOMAIN_MIGRATION_ENABLED).toBe(false);
+		migrationBuildGate.enabled = original.DOMAIN_MIGRATION_ENABLED;
+		visit('https://web.fluxer.app/channels/@me', ENABLED_DISCOVERY);
+		writeCompletedMarker();
+		expect(await runDomainMigrationPreMount()).toBe(false);
+		expect(discoveryFetch).not.toHaveBeenCalled();
+		expect(replace).not.toHaveBeenCalled();
 	});
 
 	it('does nothing on a self-hosted origin', async () => {

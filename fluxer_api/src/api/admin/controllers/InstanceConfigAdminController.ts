@@ -14,6 +14,7 @@ import {deriveSsoRedirectUri, normalizeAndValidateSsoConfig} from '@app/api/inst
 import {requireAdminACL} from '@app/api/middleware/AdminMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
+import {readUsernameMigrationPreconditions} from '@app/api/middleware/ServiceRegistry';
 import {
 	getChannelThreadsConfigPublisher,
 	getGatewayRolloutConfigPublisher,
@@ -22,15 +23,19 @@ import {
 } from '@app/api/middleware/ServiceSingletons';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import type {HonoApp, HonoEnv} from '@app/api/types/HonoEnv';
+import {UsernamePolicyService} from '@app/api/user/username/UsernamePolicyService';
 import {Validator} from '@app/api/Validator';
 import {
 	enabledThreadGuildIds,
 	enqueueThreadPermissionSeeds,
 	newlyEnabledThreadGuildIds,
 } from '@app/api/worker/tasks/SeedThreadPermissions';
+import {readUsernameMigrationStartEvidence} from '@app/api/worker/tasks/UsernameMigrationEvidence';
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
+import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {InstancePolicyTransitionNotAllowedError} from '@fluxer/errors/src/domains/core/InstancePolicyTransitionNotAllowedError';
+import {FluxerError} from '@fluxer/errors/src/FluxerError';
 import {
 	BrandingAssetUploadRequest,
 	CreateRegistrationUrlRequest,
@@ -50,6 +55,17 @@ import {DomainMigrationConfigSchema} from '@fluxer/schema/src/domains/admin/Doma
 import {GatewayRolloutConfigSchema} from '@fluxer/schema/src/domains/admin/GatewayRolloutSchemas';
 import {PlutoniumPageConfigSchema} from '@fluxer/schema/src/domains/admin/PlutoniumPageSchemas';
 import type {PushRelayConfig, PushRelayConfigUpdateRequest} from '@fluxer/schema/src/domains/admin/PushRelaySchemas';
+import {
+	UsernameMigrationInspectionResponse,
+	UsernameMigrationPrepareRequest,
+	UsernameMigrationResponse,
+	UsernameMigrationRollbackRequest,
+	UsernameMigrationStartRequest,
+	UsernamePolicyResponse,
+	UsernamePolicyUpdateRequest,
+} from '@fluxer/schema/src/domains/admin/UsernameSchemas';
+import {VoiceNoiseSuppressionConfigSchema} from '@fluxer/schema/src/domains/admin/VoiceNoiseSuppressionSchemas';
+import {VoiceRoomConfigSchema} from '@fluxer/schema/src/domains/admin/VoiceRoomConfigSchemas';
 import {UserIdParam} from '@fluxer/schema/src/domains/common/CommonParamSchemas';
 import {ExperimentDeliveryConfigSchema} from '@fluxer/schema/src/domains/experiment/ExperimentSchemas';
 import type {InstanceBranding} from '@fluxer/schema/src/domains/instance/InstanceSchemas';
@@ -76,6 +92,8 @@ async function buildInstanceConfigResponse(): Promise<InstanceConfigResponse> {
 	const [
 		ssoConfig,
 		gatewayRollout,
+		voiceNoiseSuppression,
+		voiceRoom,
 		pushRelay,
 		domainMigration,
 		plutoniumPage,
@@ -88,6 +106,8 @@ async function buildInstanceConfigResponse(): Promise<InstanceConfigResponse> {
 	] = await Promise.all([
 		instanceConfigRepository.getSsoConfig(),
 		instanceConfigRepository.getGatewayRolloutConfig(),
+		instanceConfigRepository.getVoiceNoiseSuppressionConfig(),
+		instanceConfigRepository.getVoiceRoomConfig(),
 		instanceConfigRepository.getPushRelayConfig(),
 		instanceConfigRepository.getDomainMigrationConfig(),
 		instanceConfigRepository.getPlutoniumPageConfig(),
@@ -127,6 +147,8 @@ async function buildInstanceConfigResponse(): Promise<InstanceConfigResponse> {
 			redirect_uri: deriveSsoRedirectUri(Config.endpoints.webApp),
 		},
 		gateway_rollout: gatewayRollout,
+		voice_noise_suppression: voiceNoiseSuppression,
+		voice_room: voiceRoom,
 		push_relay: pushRelay,
 		domain_migration: domainMigration,
 		plutonium_page: plutoniumPage,
@@ -152,6 +174,8 @@ async function buildInstanceConfigResponse(): Promise<InstanceConfigResponse> {
 			direct_messages_locked: policy.direct_messages_locked,
 			guild_create_access: policy.guild_create_access,
 			premium_mode: policy.premium_mode,
+			premium_trial_days: policy.premium_trial_days,
+			official_apps: policy.official_apps,
 			services: {
 				gif_enabled: policy.gif_enabled,
 				youtube_enabled: policy.youtube_enabled,
@@ -233,6 +257,9 @@ function relayConsentStamp(
 }
 
 function assertSelfHostedBillingSections(data: InstanceConfigUpdateRequest): void {
+	if (data.billing?.enabled === true) {
+		throw InputValidationError.create('billing.enabled', 'Stripe billing is unavailable on this instance');
+	}
 	if (Config.instance.selfHosted) {
 		return;
 	}
@@ -332,6 +359,250 @@ function listSuppliedSections(data: InstanceConfigUpdateRequest): string | undef
 export function InstanceConfigAdminController(app: HonoApp) {
 	const instanceConfigRepository = getInstanceConfigRepository();
 	app.get(
+		'/admin/instance/username-migration',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_LOOKUP),
+		requireAdminACL(AdminACLs.USERNAME_MIGRATION_START),
+		OpenAPI({
+			operationId: 'get_admin_username_migration',
+			summary: 'Inspect username migration prerequisites',
+			responseSchema: UsernameMigrationInspectionResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'Read epoch-bound scan progress, reservation readiness and the start capacity declaration. Missing evidence remains unavailable. Requires USERNAME_MIGRATION_START permission.',
+		}),
+		async (ctx) => {
+			let inspection: ReturnType<typeof UsernameMigrationInspectionResponse.parse>;
+			try {
+				const {migration, holds, capacity} = await readUsernameMigrationStartEvidence(instanceConfigRepository);
+				const scan = await instanceConfigRepository.readUsernameMigrationScan();
+				const current = await instanceConfigRepository.readUsernameMigrationConfig();
+				if (
+					current.epoch !== migration.epoch ||
+					current.state !== migration.state ||
+					current.preparing_at !== migration.preparing_at
+				)
+					throw new Error('Migration changed during inspection');
+				inspection = UsernameMigrationInspectionResponse.parse({
+					migration: {...migration, preparing_at: migration.preparing_at ?? null},
+					scan:
+						scan?.epoch === migration.epoch
+							? {epoch: scan.epoch, scanned: scan.scanned, found: scan.found, done_at: scan.done_at}
+							: null,
+					holds,
+					capacity,
+				});
+			} catch (cause) {
+				throw new FluxerError({
+					code: APIErrorCodes.USERNAME_UNAVAILABLE,
+					status: 503,
+					cause: cause instanceof Error ? cause : undefined,
+				});
+			}
+			await recordAdminRead(ctx, {
+				targetType: 'username_migration',
+				targetId: 0n,
+				action: AdminAuditReadActions.GET_USERNAME_MIGRATION,
+				metadata: {epoch: inspection.migration.epoch, state: inspection.migration.state},
+			});
+			return ctx.json(inspection);
+		},
+	);
+	app.post(
+		'/admin/instance/username-migration/prepare',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.USERNAME_MIGRATION_START),
+		Validator('json', UsernameMigrationPrepareRequest),
+		OpenAPI({
+			operationId: 'prepare_admin_username_migration',
+			summary: 'Prepare username migration',
+			requestSchema: UsernameMigrationPrepareRequest,
+			responseSchema: UsernameMigrationResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'Prepare after confirming all API and worker processes run the migration version. Requires an audit reason.',
+		}),
+		async (ctx) => {
+			if (!ctx.get('auditLogReason')?.trim())
+				throw InputValidationError.create('audit_log_reason', 'A reason is required');
+			const {processes_ready} = ctx.req.valid('json');
+			const result = await instanceConfigRepository.prepareUsernameMigration({processesReady: processes_ready});
+			await recordAdminWrite(ctx, {
+				targetType: 'username_migration',
+				targetId: 0n,
+				action: 'prepare_username_migration',
+				metadata: {epoch: result.epoch, processes_ready, preparing_at: result.preparing_at},
+			});
+			return ctx.json(result);
+		},
+	);
+	app.post(
+		'/admin/instance/username-migration/start',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.USERNAME_MIGRATION_START),
+		Validator('json', UsernameMigrationStartRequest),
+		OpenAPI({
+			operationId: 'start_admin_username_migration',
+			summary: 'Start username migration',
+			requestSchema: UsernameMigrationStartRequest,
+			responseSchema: UsernameMigrationResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'Start selection after server prerequisites and confirmation that the mobile version is published in Play and App Store. Requires an audit reason.',
+		}),
+		async (ctx) => {
+			if (!ctx.get('auditLogReason')?.trim())
+				throw InputValidationError.create('audit_log_reason', 'A reason is required');
+			const {epoch, mobile_published, mobile_version, guild_capacity} = ctx.req.valid('json');
+			const age = Date.now() - Date.parse(guild_capacity.observed_at);
+			if (age < 0 || age >= 3_600_000)
+				throw InputValidationError.create(
+					'guild_capacity.observed_at',
+					'A current guild capacity declaration is required',
+				);
+			// Micup: audit the explicit admin attestation before persisting it, including rejected start attempts.
+			await recordAdminWrite(ctx, {
+				targetType: 'username_migration',
+				targetId: 0n,
+				action: 'declare_username_migration_capacity',
+				metadata: {epoch, ...guild_capacity},
+			});
+			await instanceConfigRepository.setUsernameMigrationGuildCapacity({
+				...guild_capacity,
+				epoch,
+				admin_id: ctx.get('user').id.toString(),
+			});
+			// Micup: only the server can attest the dictionary, holds, and capacity prerequisites.
+			const prerequisites = await (async () => {
+				try {
+					// Micup: read the policy first, so the start CAS can reject any policy change after this inspection.
+					const snapshot = await new UsernamePolicyService().readAuthoritative();
+					const readiness = await readUsernameMigrationPreconditions(instanceConfigRepository);
+					return {
+						...readiness,
+						policyRevision: snapshot.policyRevision,
+						dictionaryGen: snapshot.dictionary.gen,
+						dictionaryHash: snapshot.dictionary.manifest.hash,
+					};
+				} catch (cause) {
+					throw new FluxerError({
+						code: APIErrorCodes.USERNAME_UNAVAILABLE,
+						status: 503,
+						cause: cause instanceof Error ? cause : undefined,
+					});
+				}
+			})();
+			const result = await instanceConfigRepository.startUsernameMigration(epoch, {
+				...prerequisites,
+				mobilePublished: mobile_published,
+			});
+			await recordAdminWrite(ctx, {
+				targetType: 'username_migration',
+				targetId: 0n,
+				action: 'start_username_migration',
+				metadata: {
+					epoch: result.epoch,
+					mobile_published,
+					mobile_version,
+					dictionary_gen: prerequisites.dictionaryGen,
+					...guild_capacity,
+				},
+			});
+			return ctx.json(result);
+		},
+	);
+	app.post(
+		'/admin/instance/username-migration/rollback',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.USERNAME_MIGRATION_START),
+		Validator('json', UsernameMigrationRollbackRequest),
+		OpenAPI({
+			operationId: 'rollback_admin_username_migration',
+			summary: 'Roll back username migration preparation',
+			requestSchema: UsernameMigrationRollbackRequest,
+			responseSchema: UsernameMigrationResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description: 'Roll back only the current preparing epoch. Selection is irreversible. Requires an audit reason.',
+		}),
+		async (ctx) => {
+			if (!ctx.get('auditLogReason')?.trim())
+				throw InputValidationError.create('audit_log_reason', 'A reason is required');
+			const result = await instanceConfigRepository.rollbackUsernameMigration(ctx.req.valid('json').epoch);
+			await recordAdminWrite(ctx, {
+				targetType: 'username_migration',
+				targetId: 0n,
+				action: 'rollback_username_migration',
+				metadata: {epoch: result.epoch},
+			});
+			return ctx.json(result);
+		},
+	);
+	app.get(
+		'/admin/instance/username-policy',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_LOOKUP),
+		requireAdminACL(AdminACLs.INSTANCE_CONFIG_VIEW),
+		OpenAPI({
+			operationId: 'get_admin_username_policy',
+			summary: 'Get username policy',
+			responseSchema: UsernamePolicyResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description: 'Read username tiers, dictionary generation, and admission policy.',
+		}),
+		async (ctx) => {
+			const result = await instanceConfigRepository.readUsernamePolicyConfig();
+			await recordAdminRead(ctx, {
+				targetType: 'username_policy',
+				targetId: 0n,
+				action: AdminAuditReadActions.GET_INSTANCE_CONFIG,
+				metadata: {revision: result.revision},
+			});
+			return ctx.json(result);
+		},
+	);
+	app.patch(
+		'/admin/instance/username-policy',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.INSTANCE_CONFIG_UPDATE),
+		Validator('json', UsernamePolicyUpdateRequest),
+		OpenAPI({
+			operationId: 'update_admin_username_policy',
+			summary: 'Update username policy',
+			responseSchema: UsernamePolicyResponse,
+			requestSchema: UsernamePolicyUpdateRequest,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'Atomically replace all three username tier modes and optionally update admission. Requires an audit reason.',
+		}),
+		async (ctx) => {
+			if (!ctx.get('auditLogReason')?.trim())
+				throw InputValidationError.create('audit_log_reason', 'A reason is required');
+			const result = await instanceConfigRepository.setUsernamePolicyConfig(ctx.req.valid('json'));
+			await recordAdminWrite(ctx, {
+				targetType: 'username_policy',
+				targetId: 0n,
+				action: 'update_username_policy',
+				metadata: {
+					revision: result.revision,
+					tiers: JSON.stringify(result.tiers),
+					admission: JSON.stringify(result.admission),
+					held_manifest: JSON.stringify(result.held_manifest),
+				},
+			});
+			return ctx.json(result);
+		},
+	);
+	app.get(
 		'/admin/instance/config',
 		RateLimitMiddleware(RateLimitConfigs.ADMIN_LOOKUP),
 		requireSetupSessionOrAdminACL(AdminACLs.INSTANCE_CONFIG_VIEW),
@@ -376,6 +647,9 @@ export function InstanceConfigAdminController(app: HonoApp) {
 		}),
 		async (ctx) => {
 			const data = ctx.req.valid('json');
+			if (data.policy?.official_apps !== undefined) {
+				await requireAdminACL(AdminACLs.INSTANCE_CONFIG_UPDATE)(ctx, async () => {});
+			}
 			assertSelfHostedBillingSections(data);
 			await assertBillingCompatibleWithPremiumMode(data);
 			const appPublicBeforeUpdate = completesInitialSetup(data, false)
@@ -384,7 +658,7 @@ export function InstanceConfigAdminController(app: HonoApp) {
 			const shouldGrantSetupCompleterAdmin =
 				appPublicBeforeUpdate !== null && completesInitialSetup(data, appPublicBeforeUpdate.setup.configured);
 			if (data.gateway_rollout) {
-				const patch = data.gateway_rollout;
+				const patch = omitUndefinedFields(data.gateway_rollout);
 				const landed = await instanceConfigRepository.updateGatewayRolloutConfig((current) =>
 					GatewayRolloutConfigSchema.parse({...current, ...patch}),
 				);
@@ -411,6 +685,26 @@ export function InstanceConfigAdminController(app: HonoApp) {
 							...patch,
 							config_version: current.config_version + 1,
 						}),
+					);
+				}
+			}
+			if (data.voice_noise_suppression) {
+				const patch = omitUndefinedFields(data.voice_noise_suppression);
+				if (Object.keys(patch).length > 0) {
+					await instanceConfigRepository.updateVoiceNoiseSuppressionConfig((current) =>
+						VoiceNoiseSuppressionConfigSchema.parse({
+							...current,
+							...patch,
+							config_version: current.config_version + 1,
+						}),
+					);
+				}
+			}
+			if (data.voice_room) {
+				const patch = omitUndefinedFields(data.voice_room);
+				if (Object.keys(patch).length > 0) {
+					await instanceConfigRepository.updateVoiceRoomConfig((current) =>
+						VoiceRoomConfigSchema.parse({...current, ...patch}),
 					);
 				}
 			}
@@ -528,11 +822,18 @@ export function InstanceConfigAdminController(app: HonoApp) {
 						? omitUndefinedFields({
 								terms_url: readOptionalField(data.app_public.legal, 'terms_url'),
 								privacy_url: readOptionalField(data.app_public.legal, 'privacy_url'),
+								source_url: readOptionalField(data.app_public.legal, 'source_url'),
 							})
 						: undefined,
 					registration: data.app_public.registration
 						? omitUndefinedFields({
 								collect_date_of_birth: readOptionalField(data.app_public.registration, 'collect_date_of_birth'),
+							})
+						: undefined,
+					localization: data.app_public.localization
+						? omitUndefinedFields({
+								default_locale: readOptionalField(data.app_public.localization, 'default_locale'),
+								default_locale_time_zones: readOptionalField(data.app_public.localization, 'default_locale_time_zones'),
 							})
 						: undefined,
 				});
@@ -547,6 +848,13 @@ export function InstanceConfigAdminController(app: HonoApp) {
 					youtube: data.integrations.youtube
 						? omitUndefinedFields({
 								api_key: readOptionalField(data.integrations.youtube, 'api_key'),
+							})
+						: undefined,
+					captcha: data.integrations.captcha
+						? omitUndefinedFields({
+								provider: readOptionalField(data.integrations.captcha, 'provider'),
+								turnstile_site_key: readOptionalField(data.integrations.captcha, 'turnstile_site_key'),
+								turnstile_secret_key: readOptionalField(data.integrations.captcha, 'turnstile_secret_key'),
 							})
 						: undefined,
 					email: data.integrations.email
@@ -889,6 +1197,12 @@ function planInstancePolicyPatch(
 		if (!policy.direct_messages_disabled) {
 			patch.direct_messages_locked = true;
 		}
+	}
+	if (policy.premium_trial_days !== undefined) {
+		patch.premium_trial_days = policy.premium_trial_days;
+	}
+	if (policy.official_apps !== undefined) {
+		patch.official_apps = policy.official_apps;
 	}
 	if (policy.guild_create_access !== undefined && policy.guild_create_access !== current.guild_create_access) {
 		patch.guild_create_access = policy.guild_create_access;

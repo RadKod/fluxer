@@ -2,12 +2,15 @@
 
 import type {Channel} from '@app/features/channel/models/Channel';
 import type {Message} from '@app/features/messaging/models/MessagingMessage';
+import type {User} from '@app/features/user/models/User';
 import type {MessagePreviewContext} from '@fluxer/constants/src/ChannelConstants';
 import React, {useContext} from 'react';
 
-interface MessagePreviewOverrides {
+export interface MessagePreviewOverrides {
 	usernameColor?: string;
 	displayName?: string;
+	// Micup: a preview draws this user as the author, not the stored one (the shop shows an item as if worn).
+	author?: User;
 }
 
 export interface MessagePreviewPermissions {

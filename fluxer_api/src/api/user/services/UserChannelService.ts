@@ -22,6 +22,7 @@ import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
 import type {Channel} from '@app/api/models/Channel';
 import type {Message} from '@app/api/models/Message';
 import type {User} from '@app/api/models/User';
@@ -145,6 +146,7 @@ export class UserChannelService {
 	}): Promise<Channel> {
 		const callingUser = await this.userRepository.findUnique(userId);
 		if (!callingUser) throw new UnknownUserError();
+		getUsernameSelectionGate().assertMayAct(callingUser, data.recipients !== undefined ? 'group_dm' : 'dm_open');
 		if (callingUser.isUnclaimedAccount()) {
 			if (data.recipients !== undefined) {
 				throw new UnclaimedAccountCannotJoinGroupDmsError();
@@ -331,6 +333,7 @@ export class UserChannelService {
 		userCacheService: UserCacheService;
 		requestCache: RequestCache;
 	}): Promise<Channel> {
+		await this.assertUsernameMayOpenDm(userId);
 		const existingChannel = await this.userRepository.findExistingDmState(userId, recipientId);
 		if (existingChannel) {
 			const [isUserOpen, isRecipientOpen] = await Promise.all([
@@ -368,6 +371,7 @@ export class UserChannelService {
 		userCacheService: UserCacheService;
 		requestCache: RequestCache;
 	}): Promise<void> {
+		await this.assertUsernameMayOpenDm(userId);
 		await this.reopenExistingDMChannel({userId, existingChannel, userCacheService, requestCache});
 		await this.reopenExistingDMChannel({
 			userId: recipientId,
@@ -388,6 +392,7 @@ export class UserChannelService {
 		userCacheService: UserCacheService;
 		requestCache: RequestCache;
 	}): Promise<Channel> {
+		await this.assertUsernameMayOpenDm(userId);
 		const newChannel = await this.createNewDMChannel({
 			userId,
 			recipientId,
@@ -470,6 +475,7 @@ export class UserChannelService {
 		userCacheService: UserCacheService;
 		requestCache: RequestCache;
 	}): Promise<Channel> {
+		await this.assertUsernameMayOpenDm(userId, 'group_dm');
 		const fallbackRecipientLimit = MAX_GROUP_DM_RECIPIENTS;
 		const recipientLimit = this.resolveLimitForUser(
 			await this.userRepository.findUnique(userId),
@@ -601,6 +607,12 @@ export class UserChannelService {
 			});
 		}
 		return newChannel;
+	}
+
+	private async assertUsernameMayOpenDm(userId: UserID, action: 'dm_open' | 'group_dm' = 'dm_open'): Promise<void> {
+		const user = await this.userRepository.findUnique(userId);
+		if (!user) throw new UnknownUserError();
+		getUsernameSelectionGate().assertMayAct(user, action);
 	}
 
 	private async dispatchSystemMessage({channel, message}: {channel: Channel; message: Message}): Promise<void> {

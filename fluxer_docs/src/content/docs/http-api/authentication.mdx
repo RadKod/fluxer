@@ -277,6 +277,7 @@ Whether a username is free for a new account.
 | Field | Type | Description |
 | --- | --- | --- |
 | available | boolean | Whether no other account holds the username |
+| reason? | string | Why the name is unavailable during username migration, as a `USERNAME_` code suffix such as `TAKEN` |
 
 ## Handoff initiation object
 
@@ -556,6 +557,7 @@ Registration verifies a [CAPTCHA](/topics/captcha/). It permits 3 attempts per h
 | consent?<sup>5</sup> | boolean | Whether the terms of service and privacy policy are accepted (default false) |
 | invite_code? | ?string | The invite accepted immediately after registration (0-256 characters) |
 | registration_url_code?<sup>6</sup> | ?string | The administrator-issued registration URL code (1-256 characters) |
+| referral_code?<sup>7</sup> | ?string | The [referral](/http-api/referral/) code from the `/r/<code>` link the account followed |
 | theme? | string | The initial theme preference, one of `dark`, `dark_legacy`, `coal`, `light`, or `system` |
 
 <sup>1</sup> Omitting the email address creates an unclaimed account, which has no recovery path until it is claimed. An address whose domain has no usable DNS records, or whose top-level domain the instance blocks, returns the field code `INVALID_EMAIL_ADDRESS`, and an address already in use returns `EMAIL_ALREADY_IN_USE`. A `username` instance accepts any string of 1-320 characters here, because older apps send one, and discards it. It stores no address and sends no email. It does not check the address against DNS or the blocklists, or whether another account uses it
@@ -570,7 +572,9 @@ Registration verifies a [CAPTCHA](/topics/captcha/). It permits 3 attempts per h
 
 <sup>6</sup> A code supplied on an instance with administrator registration URLs disabled, and a code that does not resolve, both return 400 `REGISTRATION_URL_INVALID`. A valid code overrides the closed registration mode and replaces the instance approval mode with its own approval setting
 
-Fluxer resolves the region from the client IP address, and an age below the minimum for that region returns the field code `MUST_BE_MINIMUM_AGE`. That minimum is 13 years unless the region sets a different minimum, and the applied minimum appears only in the localised message.
+<sup>7</sup> Never fails the registration. A code that is unknown, malformed, overlong, or the account's own, and any code while the referral programme is closed, is ignored without an error. A valid code links the new account to the code's owner as a pending referral. The code does not affect `invite_code` or any other registration policy
+
+Micup requires accounts to be at least 15 years old in every region, including an unknown region. An age below that minimum returns the field code `MUST_BE_MINIMUM_AGE`, and the applied minimum appears only in the localised message.
 
 Registration returns 403 `REGISTRATION_CLOSED` when the instance is closed and no valid registration URL was supplied. A username whose discriminator space is exhausted returns the field code `TOO_MANY_USERS_WITH_THIS_USERNAME`. A username or display name containing a blocked substring returns 403 `CONTENT_BLOCKED`.
 
@@ -1466,7 +1470,7 @@ This read reserves no username and changes no account state. No Gateway Dispatch
 
 ### Rate limit
 
-30 requests per minute, on the `auth:username_availability` bucket.
+20 requests per minute, on the `auth:username_availability` bucket. Signed-out checks also share 200 requests per minute for each IPv4 /24 or IPv6 /56 network.
 
 ## Initiate desktop handoff
 

@@ -234,6 +234,52 @@ pub struct Message {
     pub call: Option<MessageCall>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message_snapshots: Option<Vec<MessageSnapshot>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub micup_components: Option<Vec<MessageActionRow>>,
+}
+
+impl Message {
+    /// Micup: the stored button rows as the API `components` field; no rows (or an empty list) leaves it out.
+    pub fn components_response(&self) -> Option<Vec<ApiMessageActionRowResponse>> {
+        let rows = self
+            .micup_components
+            .as_deref()
+            .filter(|rows| !rows.is_empty())?;
+        Some(
+            rows.iter()
+                .map(|row| ApiMessageActionRowResponse {
+                    component_type: row.component_type.unwrap_or_default(),
+                    components: row
+                        .components
+                        .as_deref()
+                        .unwrap_or_default()
+                        .iter()
+                        .map(|button| ApiMessageButtonResponse {
+                            component_type: button.component_type.unwrap_or_default(),
+                            style: button.style.unwrap_or_default(),
+                            label: button.label.clone(),
+                            emoji: button.emoji_name.clone().map(|name| {
+                                ApiComponentEmojiResponse {
+                                    name,
+                                    id: button.emoji_id.map(|id| id.to_string()),
+                                    animated: button.emoji_animated.unwrap_or(false),
+                                }
+                            }),
+                            custom_id: button.custom_id.clone(),
+                            disabled: button.disabled.unwrap_or(false),
+                        })
+                        .collect(),
+                })
+                .collect(),
+        )
+    }
+}
+
+/// Micup: a worn cosmetic, the catalog item and the image hash copied onto the user row when it was put on.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ApiCosmeticAssetData {
+    pub asset: String,
+    pub item_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -251,6 +297,10 @@ pub struct ApiUserPartialResponse {
     pub flags: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mention_flags: Option<i32>,
+    // Micup: always serialized, as null when nothing is worn, to match the users service and the API partial user.
+    pub avatar_decoration_data: Option<ApiCosmeticAssetData>,
+    pub avatar_ultra_data: Option<ApiCosmeticAssetData>,
+    pub nameplate_data: Option<ApiCosmeticAssetData>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -499,12 +549,42 @@ pub struct ApiMessageResponse {
     pub nonce: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub call: Option<ApiMessageCallResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub components: Option<Vec<ApiMessageActionRowResponse>>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         deserialize_with = "deserialize_double_option"
     )]
     pub referenced_message: Option<Option<Box<ApiMessageResponse>>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiMessageActionRowResponse {
+    #[serde(rename = "type")]
+    pub component_type: i32,
+    pub components: Vec<ApiMessageButtonResponse>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiMessageButtonResponse {
+    #[serde(rename = "type")]
+    pub component_type: i32,
+    pub style: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub emoji: Option<ApiComponentEmojiResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_id: Option<String>,
+    pub disabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiComponentEmojiResponse {
+    pub name: String,
+    pub id: Option<String>,
+    pub animated: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -707,6 +787,28 @@ pub struct MessageSnapshot {
     pub flags: Option<i32>,
 }
 
+/// Micup: a button row as the TypeScript message row carries it (`micup_components`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageActionRow {
+    #[serde(rename = "type")]
+    pub component_type: Option<i32>,
+    pub components: Option<Vec<MessageComponent>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageComponent {
+    #[serde(rename = "type")]
+    pub component_type: Option<i32>,
+    pub style: Option<i32>,
+    pub label: Option<String>,
+    pub emoji_name: Option<String>,
+    #[serde(default, deserialize_with = "serde_id::opt_i64_from_string_or_number")]
+    pub emoji_id: Option<i64>,
+    pub emoji_animated: Option<bool>,
+    pub custom_id: Option<String>,
+    pub disabled: Option<bool>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -795,6 +897,9 @@ mod tests {
             system: None,
             flags: 0,
             mention_flags: None,
+            avatar_decoration_data: None,
+            avatar_ultra_data: None,
+            nameplate_data: None,
         };
         ApiMessageResponse {
             id: "2".to_string(),
@@ -821,8 +926,151 @@ mod tests {
             message_snapshots: None,
             nonce: None,
             call: None,
+            components: None,
             referenced_message: referenced,
         }
+    }
+
+    fn ts_row(micup_components: Option<serde_json::Value>) -> Message {
+        let mut row = json!({
+            "message_id": "1509197195776110592",
+            "channel_id": "1497639278555484216",
+            "bucket": 416,
+            "type": 0,
+            "version": 1
+        });
+        if let Some(components) = micup_components {
+            row["micup_components"] = components;
+        }
+        serde_json::from_value(row).expect("message row should deserialize")
+    }
+
+    fn roster_buttons() -> serde_json::Value {
+        json!([{
+            "type": 1,
+            "components": [
+                {
+                    "type": 2, "style": 3, "label": "Join", "emoji_name": "✅", "emoji_id": null,
+                    "emoji_animated": null, "custom_id": "roster:join", "disabled": null
+                },
+                {
+                    "type": 2, "style": 4, "label": "Leave", "emoji_name": "party",
+                    "emoji_id": "1509197195776110599", "emoji_animated": true,
+                    "custom_id": "roster:leave", "disabled": true
+                }
+            ]
+        }])
+    }
+
+    #[test]
+    fn a_row_with_components_builds_button_rows_in_the_response() {
+        let rows = ts_row(Some(roster_buttons()))
+            .components_response()
+            .expect("button rows");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].component_type, 1);
+        let [join, leave] = rows[0].components.as_slice() else {
+            panic!("two buttons expected");
+        };
+        assert_eq!(
+            (join.component_type, join.style, join.label.as_deref()),
+            (2, 3, Some("Join"))
+        );
+        assert_eq!(join.custom_id.as_deref(), Some("roster:join"));
+        assert!(!join.disabled);
+        let join_emoji = join.emoji.as_ref().expect("emoji");
+        assert_eq!(
+            (join_emoji.name.as_str(), join_emoji.id.as_deref()),
+            ("✅", None)
+        );
+        assert!(!join_emoji.animated);
+        assert!(leave.disabled);
+        let leave_emoji = leave.emoji.as_ref().expect("emoji");
+        assert_eq!(leave_emoji.id.as_deref(), Some("1509197195776110599"));
+        assert!(leave_emoji.animated);
+    }
+
+    #[test]
+    fn a_row_without_components_builds_a_response_without_the_key() {
+        assert!(ts_row(None).components_response().is_none());
+        assert!(
+            ts_row(Some(serde_json::Value::Null))
+                .components_response()
+                .is_none()
+        );
+        let response = serde_json::to_value(minimal_api_message(None)).expect("serialises");
+        assert!(response.get("components").is_none());
+    }
+
+    #[test]
+    fn an_empty_component_list_is_left_out() {
+        assert!(ts_row(Some(json!([]))).components_response().is_none());
+    }
+
+    #[test]
+    fn a_button_without_an_emoji_has_no_emoji_field() {
+        let rows = ts_row(Some(json!([{
+            "type": 1,
+            "components": [{
+                "type": 2, "style": 1, "label": "Open", "emoji_name": null,
+                "emoji_id": "1509197195776110599", "custom_id": "support:open"
+            }]
+        }])))
+        .components_response()
+        .expect("button rows");
+        let button = serde_json::to_value(&rows[0].components[0]).expect("serialises");
+        assert!(button.get("emoji").is_none());
+        assert_eq!(button["disabled"], json!(false));
+    }
+
+    #[test]
+    fn emoji_ids_arrive_as_strings_or_numbers() {
+        let message = ts_row(Some(json!([{
+            "type": 1,
+            "components": [
+                {"type": 2, "style": 1, "emoji_name": "a", "emoji_id": "1509197195776110599", "custom_id": "x:a"},
+                {"type": 2, "style": 1, "emoji_name": "b", "emoji_id": 1509197195776110599i64, "custom_id": "x:b"}
+            ]
+        }])));
+        let stored = message.micup_components.as_ref().expect("rows")[0]
+            .components
+            .as_ref()
+            .expect("buttons");
+        assert_eq!(stored[0].emoji_id, Some(1_509_197_195_776_110_599));
+        assert_eq!(stored[1].emoji_id, Some(1_509_197_195_776_110_599));
+        let rows = message.components_response().expect("button rows");
+        for button in &rows[0].components {
+            assert_eq!(
+                button.emoji.as_ref().and_then(|emoji| emoji.id.as_deref()),
+                Some("1509197195776110599")
+            );
+        }
+    }
+
+    #[test]
+    fn a_ts_row_with_micup_components_builds_the_components_field() {
+        let mut response = minimal_api_message(None);
+        response.components = ts_row(Some(roster_buttons())).components_response();
+        let value = serde_json::to_value(response).expect("serialises");
+        assert!(value.get("micup_components").is_none());
+        assert_eq!(
+            value["components"],
+            json!([{
+                "type": 1,
+                "components": [
+                    {
+                        "type": 2, "style": 3, "label": "Join",
+                        "emoji": {"name": "✅", "id": null, "animated": false},
+                        "custom_id": "roster:join", "disabled": false
+                    },
+                    {
+                        "type": 2, "style": 4, "label": "Leave",
+                        "emoji": {"name": "party", "id": "1509197195776110599", "animated": true},
+                        "custom_id": "roster:leave", "disabled": true
+                    }
+                ]
+            }])
+        );
     }
 
     fn msgpack_round_trip(

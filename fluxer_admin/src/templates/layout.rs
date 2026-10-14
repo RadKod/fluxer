@@ -69,7 +69,7 @@ pub fn admin_layout_ext(
                 @if options.auto_refresh {
                     meta http-equiv="refresh" content="3";
                 }
-                title { (title) " ~ Fluxer Admin" }
+                title { (title) " ~ Micup Admin" }
                 link rel="stylesheet" href={(base) "/static/fonts/" (crate::fonts::STYLESHEET_FILE_NAME)};
                 link rel="stylesheet" href=(cache_busted_asset(base, asset_version, "/static/app.css"));
                 link rel="icon" type="image/x-icon" href={(config.static_cdn_endpoint) "/web/favicon.ico"};

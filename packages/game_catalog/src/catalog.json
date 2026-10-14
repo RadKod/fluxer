@@ -1,0 +1,1505 @@
+{
+	"version": 1,
+	"games": [
+		{
+			"id": "league-of-legends",
+			"name": "League of Legends",
+			"exe": ["league of legends.exe"],
+			"icon": "league-of-legends",
+			"icon_source": {
+				"url": "https://www.riotgames.com/darkroom/original/9a50f5b3bdcfb815580ef103ec9b6ee2:d49b78b12cf185e10127cdf81b144a00/lol-logo-rendered-hi-res.png",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "valorant",
+			"name": "VALORANT",
+			"exe": ["valorant-win64-shipping.exe"],
+			"icon": "valorant",
+			"icon_source": {
+				"url": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news/cbf4460132cdfeb2a97fad5f9dd25ba0bc058f76-128x128.png?accountingTag=VAL",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "counter-strike-2",
+			"name": "Counter-Strike 2",
+			"exe": ["cs2.exe"],
+			"icon": "counter-strike-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/730/324b323045b09bace182f928f4104dfcd93cb7f3.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "dota-2",
+			"name": "Dota 2",
+			"exe": ["dota2.exe"],
+			"icon": "dota-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/570/27062de94099414e44f149f1f9dc8e8bed905341.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "minecraft-java",
+			"name": "Minecraft: Java Edition",
+			"exe": [],
+			"icon": "minecraft-java",
+			"icon_source": {
+				"url": "https://www.minecraft.net/content/dam/minecraftnet/franchise/logos/Homepage_Download-Launcher_Creeper-Logo_500x500.png",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "minecraft-bedrock",
+			"name": "Minecraft: Bedrock Edition",
+			"exe": ["minecraft.windows.exe"],
+			"icon": "minecraft-bedrock",
+			"icon_source": {
+				"url": "https://www.minecraft.net/content/dam/minecraftnet/franchise/logos/Homepage_Download-Launcher_Creeper-Logo_500x500.png",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "fortnite",
+			"name": "Fortnite",
+			"exe": ["fortniteclient-win64-shipping.exe"],
+			"icon": "fortnite",
+			"icon_source": {
+				"url": "https://cdn2.unrealengine.com/24br-s24-egs-launcher-logo-350x100-350x100-b63249f937d9.png?h=270&quality=medium&resize=1&w=480",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "grand-theft-auto-v",
+			"name": "Grand Theft Auto V Legacy",
+			"exe": ["gta5.exe"],
+			"icon": "grand-theft-auto-v",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/271590/06b52e09e284542dd99eea45f9f85f68440dbcaf.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "pubg",
+			"name": "PUBG: BATTLEGROUNDS",
+			"exe": ["tslgame.exe"],
+			"icon": "pubg",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/578080/f962202b06de547cf47c156bdd7aaa5bf7f2cdbb.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "apex-legends",
+			"name": "Apex Legends",
+			"exe": ["r5apex.exe"],
+			"icon": "apex-legends",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1172470/8986dd626da56db5f3fe09bc1b8871739de8b00d.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "roblox",
+			"name": "Roblox",
+			"exe": [],
+			"icon": "roblox",
+			"icon_source": {
+				"url": "https://images.rbxcdn.com/905bd722ee0a6ceda3caacde54c0b081.png",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "rocket-league",
+			"name": "Rocket League",
+			"exe": ["rocketleague.exe"],
+			"icon": "rocket-league",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/252950/3ea06e4358d60a692914fd961298de33ad4073b2.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "overwatch-2",
+			"name": "Overwatch 2",
+			"exe": ["overwatch.exe"],
+			"icon": "overwatch-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2357570/c05905cbf26020ffefcae9b39038d9ad523e2d68.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "rust",
+			"name": "Rust",
+			"exe": ["rustclient.exe"],
+			"icon": "rust",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/252490/acf87ad23570b3c81f8c9cfc19544a07edd8b632.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "ea-sports-fc-26",
+			"name": "EA SPORTS FC 26",
+			"exe": ["fc26.exe"],
+			"icon": "ea-sports-fc-26",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3405690/8bc71e018a346f575c4b1bc6ed42a06c15e8e454.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "fall-guys",
+			"name": "Fall Guys",
+			"exe": ["fallguys_client_game.exe"],
+			"icon": "fall-guys",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1097150/14b00cca56782d93f4f60d6f10124fbbd7f5dc28.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "genshin-impact",
+			"name": "Genshin Impact",
+			"exe": ["genshinimpact.exe"],
+			"icon": "genshin-impact",
+			"icon_source": {
+				"url": "https://genshin.hoyoverse.com/favicon.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "metin2",
+			"name": "Metin2",
+			"exe": [],
+			"icon": "metin2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/550900/095d9cd6bf6e885fce572dd0e25e4cd0fd4ed2c1.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "knight-online",
+			"name": "Knight Online",
+			"exe": [],
+			"icon": "knight-online",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/389430/908f553172ee3dc062e69dafd92bdcafb4f69888.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "wolfteam",
+			"name": "Wolfteam",
+			"exe": [],
+			"icon": "wolfteam",
+			"icon_source": {
+				"url": "https://www.wolfteam.net/wolfteam.png",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "zula",
+			"name": "Zula",
+			"exe": [],
+			"icon": "zula",
+			"icon_source": {
+				"url": "https://img.zulaoyun.com/sitecdn/TR/Content/zulaoyun/images/zula-logov2.png",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "point-blank",
+			"name": "Point Blank",
+			"exe": [],
+			"icon": "point-blank",
+			"icon_source": {
+				"url": "https://pointblank.zepetto.com/images/common/bi_wide.png",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "euro-truck-simulator-2",
+			"name": "Euro Truck Simulator 2",
+			"exe": ["eurotrucks2.exe"],
+			"icon": "euro-truck-simulator-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/227300/5daee883eed0789df7a96d8ffe89def35edc1431.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "the-sims-4",
+			"name": "The Sims 4",
+			"exe": [],
+			"icon": "the-sims-4",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1222670/f972f7624b8e98135c71fe4b04cd87cf22329ec9.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "rainbow-six-siege",
+			"name": "Tom Clancy's Rainbow Six Siege",
+			"exe": ["rainbowsix.exe"],
+			"icon": "rainbow-six-siege",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/359550/0f02b60c4e54a254f99ce6d38f16e6fadb504e54.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "call-of-duty",
+			"name": "Call of Duty",
+			"exe": [],
+			"icon": "call-of-duty",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1938090/62d857e14896e4f7010ebedc8842b1e48898a18c.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "elden-ring",
+			"name": "ELDEN RING",
+			"exe": ["eldenring.exe"],
+			"icon": "elden-ring",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1245620/2e048bfc2073ca30804ed5b8c454a9ca0e2f98de.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "cyberpunk-2077",
+			"name": "Cyberpunk 2077",
+			"exe": ["cyberpunk2077.exe"],
+			"icon": "cyberpunk-2077",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1091500/6897c3848f3e0350d512f59d5bae174a1e3739f9.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "hearthstone",
+			"name": "Hearthstone",
+			"exe": [],
+			"icon": "hearthstone",
+			"icon_source": {
+				"url": "https://blz-contentstack-images.akamaized.net/v3/assets/blt9c12f249ac15c7ec/blt2cbf3f08528a78f9/6a4d481c515519530f5fad21/favicon.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "world-of-warcraft",
+			"name": "World of Warcraft",
+			"exe": [],
+			"icon": "world-of-warcraft",
+			"icon_source": {
+				"url": "https://assets-bwa.worldofwarcraft.blizzard.com/static/wow-icon-32x32.1a38d7c1c3d8df560d53f5c2ad5442c0401edf83.png",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "among-us",
+			"name": "Among Us",
+			"exe": ["among us.exe"],
+			"icon": "among-us",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/945360/b82c3f46da8f3c918e1c9e0d18bd6fa8fcef6801.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "lethal-company",
+			"name": "Lethal Company",
+			"exe": ["lethal company.exe"],
+			"icon": "lethal-company",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1966720/80d2453285274e4723c884a671cdd3f8fe2f766f.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "marvel-rivals",
+			"name": "Marvel Rivals",
+			"exe": ["marvel-win64-shipping.exe"],
+			"icon": "marvel-rivals",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2767030/bd22e45404f4ed4f3c549b575e23ce76fe03fb07.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "deadlock",
+			"name": "Deadlock",
+			"exe": ["deadlock.exe"],
+			"icon": "deadlock",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1422450/d84198725616ae43a74222f559e0fe710c3bb18b.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "dead-by-daylight",
+			"name": "Dead by Daylight",
+			"exe": ["deadbydaylight-win64-shipping.exe"],
+			"icon": "dead-by-daylight",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/381210/ba79062ed34a8dd2e028d2ff84b7e101b85cc0d2.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "osu",
+			"name": "osu!",
+			"exe": ["osu!.exe"],
+			"icon": "osu",
+			"icon_source": {
+				"url": "https://osu.ppy.sh/images/favicon/apple-touch-icon.png",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "stardew-valley",
+			"name": "Stardew Valley",
+			"exe": ["stardew valley.exe"],
+			"icon": "stardew-valley",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/413150/35d1377200084a4034238c05b0c8930451e2fb40.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "terraria",
+			"name": "Terraria",
+			"exe": ["terraria.exe"],
+			"icon": "terraria",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/105600/a4ce7b163832f35ffcbf560ca40974bccd5d4cd5.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "valheim",
+			"name": "Valheim",
+			"exe": ["valheim.exe"],
+			"icon": "valheim",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/892970/2f64c9a826e2c6cf3253fea4834c2e612db09143.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "palworld",
+			"name": "Palworld",
+			"exe": [],
+			"icon": "palworld",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1623730/22a20bdaa6d782f60caa45eb7b02fc2411dcd988.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "helldivers-2",
+			"name": "HELLDIVERS 2",
+			"exe": ["helldivers2.exe"],
+			"icon": "helldivers-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/553850/5236dcc5d02b1f7aa199eef56253d20be87baef3.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "red-dead-redemption-2",
+			"name": "Red Dead Redemption 2",
+			"exe": [],
+			"icon": "red-dead-redemption-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1174180/5bf6edd7efb1110b457da905e7ac696c6c619ed1.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "the-witcher-3",
+			"name": "The Witcher 3: Wild Hunt",
+			"exe": [],
+			"icon": "the-witcher-3",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/292030/7b52d11edee478d652ef4e7103e00644bed2c74c.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "baldurs-gate-3",
+			"name": "Baldur's Gate 3",
+			"exe": ["bg3.exe", "bg3_dx11.exe"],
+			"icon": "baldurs-gate-3",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1086940/ea19a7ce2af83c0240e775d79d3b690751a062c1.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "hogwarts-legacy",
+			"name": "Hogwarts Legacy",
+			"exe": ["hogwartslegacy.exe"],
+			"icon": "hogwarts-legacy",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/990080/a734421278d0fe3aadea50dc72c45630afe2e891.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "black-myth-wukong",
+			"name": "Black Myth: Wukong",
+			"exe": [],
+			"icon": "black-myth-wukong",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2358720/0121f85746c30090f72e2ba7eb5528fdfffa70b6.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "sekiro",
+			"name": "Sekiro: Shadows Die Twice",
+			"exe": ["sekiro.exe"],
+			"icon": "sekiro",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/814380/06f5400c9d524f8f6434b7b81ff1e780a691b297.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "dark-souls-3",
+			"name": "DARK SOULS III",
+			"exe": ["darksoulsiii.exe"],
+			"icon": "dark-souls-3",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/374320/e9bb44e88f49a1491db1664ec765e90e7debc3ea.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "lies-of-p",
+			"name": "Lies of P",
+			"exe": [],
+			"icon": "lies-of-p",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1627720/cb88827f3ba39be4bc1c73f34de4dca87a78fc5f.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "remnant-2",
+			"name": "Remnant II",
+			"exe": [],
+			"icon": "remnant-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1282100/e8ea92bb3c60e1073c4fa5dc6e6e51b0595b1648.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "monster-hunter-wilds",
+			"name": "Monster Hunter Wilds",
+			"exe": ["monsterhunterwilds.exe"],
+			"icon": "monster-hunter-wilds",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2246340/5500dc058cb0fc0efb39c3919ecdaa49e4847000.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "monster-hunter-world",
+			"name": "Monster Hunter: World",
+			"exe": ["monsterhunterworld.exe"],
+			"icon": "monster-hunter-world",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/582010/2ac9a892c6a17fe17867bf7161fb933d72320cda.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "monster-hunter-rise",
+			"name": "MONSTER HUNTER RISE",
+			"exe": ["monsterhunterrise.exe"],
+			"icon": "monster-hunter-rise",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1446780/c98a7974e5edd052ebc9b30b919e7dd7820551ca.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "path-of-exile",
+			"name": "Path of Exile",
+			"exe": [],
+			"icon": "path-of-exile",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/238960/ccabb5a034c0e3ed54f9ce0e5def91302a492850.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "path-of-exile-2",
+			"name": "Path of Exile 2",
+			"exe": [],
+			"icon": "path-of-exile-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2694490/c8d87031239ad99f9e50a970ed7e31d4ec0d3e04.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "diablo-iv",
+			"name": "Diablo IV",
+			"exe": ["diablo iv.exe"],
+			"icon": "diablo-iv",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2344520/8c5e04162b8710e58d21ea31bfecc0ad1a3f9196.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "lost-ark",
+			"name": "Lost Ark",
+			"exe": [],
+			"icon": "lost-ark",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1599340/4e4ef2862189e1f1d3052125fb1ed6cb42bcaaf8.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "black-desert",
+			"name": "Black Desert",
+			"exe": [],
+			"icon": "black-desert",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/582660/d5f6888a790262ebca639f6eb8fedcfc9f24f268.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "warframe",
+			"name": "Warframe",
+			"exe": [],
+			"icon": "warframe",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/230410/3b8ddd969a289cdf233fafe0a77ca70655b9b2e1.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "destiny-2",
+			"name": "Destiny 2",
+			"exe": [],
+			"icon": "destiny-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1085660/9f2d65473912e04aea5b63378def39dc71be2485.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "the-finals",
+			"name": "THE FINALS",
+			"exe": [],
+			"icon": "the-finals",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2073850/c81ad4f42ddf1ac3ab65e06ecb343cdb74576abf.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "team-fortress-2",
+			"name": "Team Fortress 2",
+			"exe": ["tf_win64.exe", "tf.exe"],
+			"icon": "team-fortress-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/440/f568912870a4684f9ec76277a1a404dda6bab213.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "left-4-dead-2",
+			"name": "Left 4 Dead 2",
+			"exe": ["left4dead2.exe"],
+			"icon": "left-4-dead-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/550/1a8d50f6078b5d023582ea1793b0e53813d57b7f.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "payday-2",
+			"name": "PAYDAY 2",
+			"exe": ["payday2_win32_release.exe", "payday2_win32_release_vr.exe", "payday2.exe"],
+			"icon": "payday-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/218620/6807e0f8d779ba3aff047acb65680bcf5f6ac03c.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "payday-3",
+			"name": "PAYDAY 3",
+			"exe": [],
+			"icon": "payday-3",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1272080/d8c8c35a4e1482c7dfd752cb3e9e20ed50e72938.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "ready-or-not",
+			"name": "Ready or Not",
+			"exe": [],
+			"icon": "ready-or-not",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1144200/2ff04d6677a45dd95f0add718d646185539a82d8.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "escape-from-tarkov",
+			"name": "Escape from Tarkov",
+			"exe": [],
+			"icon": "escape-from-tarkov",
+			"icon_source": {
+				"url": "https://www.escapefromtarkov.com/android-chrome-192x192.png?v=kPPzp2moQ2",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "arena-breakout-infinite",
+			"name": "Arena Breakout: Infinite",
+			"exe": [],
+			"icon": "arena-breakout-infinite",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2073620/9760e992804b538a9a227817067e191871b03da9.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "delta-force",
+			"name": "Delta Force",
+			"exe": [],
+			"icon": "delta-force",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2507950/8acb6477cc230a553883d6676cca247b520bb4dd.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "battlefield-2042",
+			"name": "Battlefield 2042",
+			"exe": [],
+			"icon": "battlefield-2042",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1517290/fee1f71a1ddfb51a1417e3938f5c887ec1dc071f.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "battlefield-v",
+			"name": "Battlefield V",
+			"exe": [],
+			"icon": "battlefield-v",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1238810/efa4f81c3558c637a107e9ac36fd11996022110c.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "battlefield-1",
+			"name": "Battlefield 1",
+			"exe": [],
+			"icon": "battlefield-1",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1238840/435ac4a7011c6d09328d70f9a2cc7616ab6c10ca.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "insurgency-sandstorm",
+			"name": "Insurgency: Sandstorm",
+			"exe": [],
+			"icon": "insurgency-sandstorm",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/581320/d279a836f1d2df271dadbefda9fee7fc65c5fe87.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "hell-let-loose",
+			"name": "Hell Let Loose",
+			"exe": ["hll-win64-shipping.exe"],
+			"icon": "hell-let-loose",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/686810/ff6cb9cead3dd68eb9f67bab6612abacde0c23d9.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "squad",
+			"name": "Squad",
+			"exe": [],
+			"icon": "squad",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/393380/e31f512b65773b50b79b1f9c994e1c7fa1402e76.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "arma-3",
+			"name": "Arma 3",
+			"exe": [],
+			"icon": "arma-3",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/107410/06ec25998633d10a2b503de42648b47c94baa215.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "dayz",
+			"name": "DayZ",
+			"exe": [],
+			"icon": "dayz",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/221100/f8c16699ed5ce1cc8aa9b15ed3fdd66553fce2bf.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "scum",
+			"name": "SCUM",
+			"exe": [],
+			"icon": "scum",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/513710/c25483e3e989239b932901118e44cf71606b5973.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "7-days-to-die",
+			"name": "7 Days to Die",
+			"exe": [],
+			"icon": "7-days-to-die",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/251570/01840052e8bc61931392423adcd4912262b2ce54.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "ark-survival-ascended",
+			"name": "ARK: Survival Ascended",
+			"exe": ["arkascended.exe"],
+			"icon": "ark-survival-ascended",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2399830/655cc2012105979c2b8e4821d568351c86b22be7.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "ark-survival-evolved",
+			"name": "ARK: Survival Evolved",
+			"exe": ["shootergame.exe"],
+			"icon": "ark-survival-evolved",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/346110/fef1799533131c10f538d2dd697bbbd89e663265.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "the-forest",
+			"name": "The Forest",
+			"exe": ["theforest.exe", "theforest32.exe", "theforestvr.exe"],
+			"icon": "the-forest",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/242760/3a6847f6ac5879e48531db52261771d5e22904ac.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "sons-of-the-forest",
+			"name": "Sons Of The Forest",
+			"exe": ["sonsoftheforest.exe"],
+			"icon": "sons-of-the-forest",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1326470/bd28fe592b339cff5a3eef743f31e3166c984c68.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "raft",
+			"name": "Raft",
+			"exe": ["raft.exe"],
+			"icon": "raft",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/648800/5d02897be07521435a513bdde6505b5e1177e3fa.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "subnautica",
+			"name": "Subnautica",
+			"exe": ["subnautica.exe", "subnautica32.exe"],
+			"icon": "subnautica",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/264710/33576b78a79e5ffa345253b190b03fe90dd47612.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "dont-starve-together",
+			"name": "Don't Starve Together",
+			"exe": ["dontstarve_steam_x64.exe", "dontstarve_steam.exe"],
+			"icon": "dont-starve-together",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/322330/5176d189ff929acc8d29a2e5f0466e18798db436.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "project-zomboid",
+			"name": "Project Zomboid",
+			"exe": ["projectzomboid64.exe"],
+			"icon": "project-zomboid",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/108600/b8036444b2a8889663bc232c142ac888e8353415.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "phasmophobia",
+			"name": "Phasmophobia",
+			"exe": ["phasmophobia.exe"],
+			"icon": "phasmophobia",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/739630/125673b382059f666ec81477173380a76e1df0be.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "content-warning",
+			"name": "Content Warning",
+			"exe": ["content warning.exe"],
+			"icon": "content-warning",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2881650/5a169fbaaa7403e0827f56eb898767b0ab77ac25.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "repo",
+			"name": "R.E.P.O.",
+			"exe": ["repo.exe"],
+			"icon": "repo",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3241660/b8bf4770408fc369e15cebd42e0026a27b67aaa8.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "devour",
+			"name": "DEVOUR",
+			"exe": ["devour.exe"],
+			"icon": "devour",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1274570/e24aa080068d3686e0b1b5aa52a4155dc553e69d.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "escape-the-backrooms",
+			"name": "Escape the Backrooms",
+			"exe": [],
+			"icon": "escape-the-backrooms",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1943950/2bd4431dd3b71ea7fd11cbcef9594f0d09e4079d.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "gta-iv",
+			"name": "Grand Theft Auto IV: The Complete Edition",
+			"exe": [],
+			"icon": "gta-iv",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/12210/2239a011f34704ddb0561dc2c8dd312b08a0be3e.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "forza-horizon-5",
+			"name": "Forza Horizon 5",
+			"exe": ["forzahorizon5.exe"],
+			"icon": "forza-horizon-5",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1551360/6c1d20c62c4613263548323052c62cece488876b.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "forza-horizon-4",
+			"name": "Forza Horizon 4",
+			"exe": ["forzahorizon4.exe"],
+			"icon": "forza-horizon-4",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1293830/7c993f9089d54fe2767efec47b75a7009cdd632e.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "assetto-corsa",
+			"name": "Assetto Corsa",
+			"exe": [],
+			"icon": "assetto-corsa",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/244210/2da95c73fc0c607dc9c0448f33577956112bd2d6.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "assetto-corsa-competizione",
+			"name": "Assetto Corsa Competizione",
+			"exe": [],
+			"icon": "assetto-corsa-competizione",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/805550/b37fb9f7534d471eb5e8e40fcd99a2a31003104f.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "beamng-drive",
+			"name": "BeamNG.drive",
+			"exe": [],
+			"icon": "beamng-drive",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/284160/72037f753bb4f49cd9e7d5c18bc6431551177597.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "need-for-speed-heat",
+			"name": "Need for Speed Heat",
+			"exe": [],
+			"icon": "need-for-speed-heat",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1222680/98a96955403db8eeed026bc5ff04e51e3329f1b0.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "need-for-speed-unbound",
+			"name": "Need for Speed Unbound",
+			"exe": [],
+			"icon": "need-for-speed-unbound",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1846380/3c2d64cd1a5b593965af197a539a21c57db2208b.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "f1-25",
+			"name": "F1 25",
+			"exe": ["f1_25.exe"],
+			"icon": "f1-25",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3059520/acf774ad92979047362e1be3ca6bad2b6b090ac4.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "american-truck-simulator",
+			"name": "American Truck Simulator",
+			"exe": ["amtrucks.exe"],
+			"icon": "american-truck-simulator",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/270880/bb3d5e390828e6acd0424566d77446b592d066b1.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "farming-simulator-25",
+			"name": "Farming Simulator 25",
+			"exe": [],
+			"icon": "farming-simulator-25",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2300320/eed36670b4a48ff1517255277bdae1830b17b8d6.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "football-manager-2024",
+			"name": "Football Manager 2024",
+			"exe": ["fm.exe"],
+			"icon": "football-manager-2024",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2252570/1622e91509748c1130e024e093fddb116cec3ead.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "efootball",
+			"name": "eFootball",
+			"exe": ["efootball.exe"],
+			"icon": "efootball",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1665460/9926fba802bda7383835b52f8bc7c7998da68925.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "nba-2k26",
+			"name": "NBA 2K26",
+			"exe": ["nba2k26.exe"],
+			"icon": "nba-2k26",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3472040/54e045a0ef29aebb045227a67025ed2e6f03ee3e.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "age-of-empires-2-de",
+			"name": "Age of Empires II: Definitive Edition",
+			"exe": ["aoe2de_s.exe"],
+			"icon": "age-of-empires-2-de",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/813780/7559e80083c6d4bd482aa61242300d0b32c65652.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "age-of-empires-4",
+			"name": "Age of Empires IV: Anniversary Edition",
+			"exe": ["reliccardinal.exe"],
+			"icon": "age-of-empires-4",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1466860/c8f15ed47879a46a2fc175fb1720fee32678f3b4.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "civilization-6",
+			"name": "Sid Meier's Civilization VI",
+			"exe": ["civilizationvi.exe", "civilizationvi_dx12.exe"],
+			"icon": "civilization-6",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/289070/c142bb71440effac911eb3c18e4ba775c9c8e7ef.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "civilization-7",
+			"name": "Sid Meier's Civilization VII",
+			"exe": ["civ7_win64_dx12_finalrelease.exe", "civ7_win64_vulkan_finalrelease.exe"],
+			"icon": "civilization-7",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1295660/caf850b14064a89962c6309f7685264cfc721c9e.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "hearts-of-iron-4",
+			"name": "Hearts of Iron IV",
+			"exe": ["hoi4.exe"],
+			"icon": "hearts-of-iron-4",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/394360/1a13011c8363b5160781d9bb16bcb392b07b69be.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "europa-universalis-4",
+			"name": "Europa Universalis IV",
+			"exe": ["eu4.exe"],
+			"icon": "europa-universalis-4",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/236850/aa46f5bf2697ce607ae95ec1be2bef119b63d0e6.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "crusader-kings-3",
+			"name": "Crusader Kings III",
+			"exe": [],
+			"icon": "crusader-kings-3",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1158310/3d31b9b8d7ffb8512e546fc4ffb987273066ef0a.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "stellaris",
+			"name": "Stellaris",
+			"exe": ["stellaris.exe"],
+			"icon": "stellaris",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/281990/bdd12fd12fb9b08bd6b27f37a88dad919de726b4.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "total-war-warhammer-3",
+			"name": "Total War: WARHAMMER III",
+			"exe": ["warhammer3.exe"],
+			"icon": "total-war-warhammer-3",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1142710/6db17b5e504c0850a9a60edac9152de019d0d3a8.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "mount-and-blade-2-bannerlord",
+			"name": "Mount & Blade II: Bannerlord",
+			"exe": [],
+			"icon": "mount-and-blade-2-bannerlord",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/261550/67c469bce70b110fc0d2247dc1402695cc55175a.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "mount-and-blade-warband",
+			"name": "Mount & Blade: Warband",
+			"exe": ["mb_warband.exe"],
+			"icon": "mount-and-blade-warband",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/48700/a81b690bae77b05abd78cafc36b2394c5914e9ad.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "cities-skylines",
+			"name": "Cities: Skylines",
+			"exe": ["cities.exe"],
+			"icon": "cities-skylines",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/255710/3f2b22c6d7bca4d39f06c203d16facb50014bbbb.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "cities-skylines-2",
+			"name": "Cities: Skylines II",
+			"exe": ["cities2.exe"],
+			"icon": "cities-skylines-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/949230/a183d04770e4cc9e6d615ad0f3301609fd23ac9c.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "rimworld",
+			"name": "RimWorld",
+			"exe": ["rimworldwin.exe", "rimworldwin64.exe", "rimworld.exe"],
+			"icon": "rimworld",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/294100/addbe3b704b267060b4d5d7649cfb292de61bd70.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "factorio",
+			"name": "Factorio",
+			"exe": ["factorio.exe"],
+			"icon": "factorio",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/427520/bcbf4ca8e6be3f0222e257396c8ba7dbc6caca29.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "satisfactory",
+			"name": "Satisfactory",
+			"exe": [],
+			"icon": "satisfactory",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/526870/ee3406fe5ec813b1987ad67e37e5cd6fb4f620e6.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "dyson-sphere-program",
+			"name": "Dyson Sphere Program",
+			"exe": ["dspgame.exe"],
+			"icon": "dyson-sphere-program",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1366540/9cc1bc41c9918f9f905931f996d42f89960fafc3.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "oxygen-not-included",
+			"name": "Oxygen Not Included",
+			"exe": ["oxygennotincluded.exe"],
+			"icon": "oxygen-not-included",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/457140/727e873b32e3b5f16e30c007a9758e4e5b480938.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "slay-the-spire",
+			"name": "Slay the Spire",
+			"exe": [],
+			"icon": "slay-the-spire",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/646570/825fd1d1d886ee62f7265d5a88c63b82423623a7.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "balatro",
+			"name": "Balatro",
+			"exe": ["balatro.exe"],
+			"icon": "balatro",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2379780/b6018068070ab0e23561694c11f7950dd6f4c752.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "hades",
+			"name": "Hades",
+			"exe": ["hades.exe"],
+			"icon": "hades",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1145360/c2af83dde08c0636a1cd511abd0f9290913e6249.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "hades-2",
+			"name": "Hades II",
+			"exe": ["hades2.exe"],
+			"icon": "hades-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1145350/e8cd1233d374c647e8e3d7bbaa98a5d399e3f40b.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "hollow-knight",
+			"name": "Hollow Knight",
+			"exe": ["hollow_knight.exe"],
+			"icon": "hollow-knight",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/367520/29492c0a65a3d03943a8f4ab786c93a95a150a56.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "hollow-knight-silksong",
+			"name": "Hollow Knight: Silksong",
+			"exe": ["hollow knight silksong.exe"],
+			"icon": "hollow-knight-silksong",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1030300/28f5a41307a55aa9151db0b4104ac327039d2683.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "dead-cells",
+			"name": "Dead Cells",
+			"exe": ["deadcells.exe", "deadcells_gl.exe"],
+			"icon": "dead-cells",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/588650/4937672451bb8f5abedd20852eed355fd82ec1a3.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "vampire-survivors",
+			"name": "Vampire Survivors",
+			"exe": ["vampiresurvivors.exe"],
+			"icon": "vampire-survivors",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1794680/b61dc182c372d4f9517043ba04f4fa61308a30bb.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "undertale",
+			"name": "UNDERTALE",
+			"exe": ["undertale.exe"],
+			"icon": "undertale",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/391540/2ce672b89b63ec1e70d2f12862e72eb4a33e9268.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "cuphead",
+			"name": "Cuphead",
+			"exe": ["cuphead.exe"],
+			"icon": "cuphead",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/268910/c19f1bd916b6d171e94089d03112ec4e4e4da84e.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "it-takes-two",
+			"name": "It Takes Two",
+			"exe": ["ittakestwo.exe"],
+			"icon": "it-takes-two",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1426210/323a899705796f44d4a95c4e22094dd6f28fb442.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "split-fiction",
+			"name": "Split Fiction",
+			"exe": ["splitfiction.exe"],
+			"icon": "split-fiction",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2001120/6fd23d595c8bacaf8d6eceb96af80ec551d83831.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "a-way-out",
+			"name": "A Way Out",
+			"exe": [],
+			"icon": "a-way-out",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1222700/ac36b7d06c117d34c204166c3120e15910ef2b8b.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "portal-2",
+			"name": "Portal 2",
+			"exe": ["portal2.exe"],
+			"icon": "portal-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/620/25a5a16b2423bf7487ac5340b5b0948cef48c5f8.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "half-life-2",
+			"name": "Half-Life 2",
+			"exe": ["hl2.exe"],
+			"icon": "half-life-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/220/85c721efacb1b0903fa11e993291c33da8f643d1.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "resident-evil-4",
+			"name": "Resident Evil 4",
+			"exe": ["re4.exe"],
+			"icon": "resident-evil-4",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2050650/ef2c95ca72f92116c5d76e0d1478ecf884cd32e4.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "resident-evil-village",
+			"name": "Resident Evil Village",
+			"exe": ["re8.exe"],
+			"icon": "resident-evil-village",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1196590/d9d775d8013daa1cde6d5c64464421111dd46333.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "dying-light-2",
+			"name": "Dying Light 2 Stay Human",
+			"exe": ["dyinglightgame_x64_rwdi.exe"],
+			"icon": "dying-light-2",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/534380/4036cc941abaeeed5ee8bd433ca69388723f7f19.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "dying-light",
+			"name": "Dying Light",
+			"exe": ["dyinglightgame.exe"],
+			"icon": "dying-light",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/239140/d575b4ba3480fe20aaeda8e8f498c3e47033069d.jpg",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "god-of-war",
+			"name": "God of War",
+			"exe": ["gow.exe"],
+			"icon": "god-of-war",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1593500/13a56d5a2f9248b14f6d2cc0486e2b05b19d9554.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "god-of-war-ragnarok",
+			"name": "God of War Ragnarök",
+			"exe": ["gowr.exe"],
+			"icon": "god-of-war-ragnarok",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2322010/3c7629ad56ac95b1314512861a01bfb186701c97.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "spider-man-remastered",
+			"name": "Marvel's Spider-Man Remastered",
+			"exe": ["spider-man.exe"],
+			"icon": "spider-man-remastered",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1817070/17c356390aee122b2bb73d3e11a4654ed8dd5927.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "ghost-of-tsushima",
+			"name": "Ghost of Tsushima DIRECTOR'S CUT",
+			"exe": ["ghostoftsushima.exe"],
+			"icon": "ghost-of-tsushima",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2215430/5ba81045bcf5da2a289fdba801f5a639758663d4.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "sea-of-thieves",
+			"name": "Sea of Thieves",
+			"exe": ["sotgame.exe"],
+			"icon": "sea-of-thieves",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1172620/ef129f82533775a9ff81b9e3faeb1dd1a862442e.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "no-mans-sky",
+			"name": "No Man's Sky",
+			"exe": ["nms.exe"],
+			"icon": "no-mans-sky",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/275850/46266eaec5fdccb672f5fd8728268bb19d53876d.ico",
+				"date": "2026-10-06"
+			}
+		},
+		{
+			"id": "deep-rock-galactic",
+			"name": "Deep Rock Galactic",
+			"exe": [],
+			"icon": "deep-rock-galactic",
+			"icon_source": {
+				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/548430/e033e23c29a192a17c16a7645a2b423ac64ff447.jpg",
+				"date": "2026-10-06"
+			}
+		}
+	]
+}

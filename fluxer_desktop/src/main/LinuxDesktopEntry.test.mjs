@@ -8,7 +8,7 @@ import {afterEach, beforeEach, describe, test} from 'node:test';
 import {loadTsModule} from './fixtures/TsModuleLoader.mjs';
 
 const EXEC_PATH = '/opt/Fluxer/fluxer';
-const DESKTOP_NAME = 'app.fluxer.FluxerDesktop.desktop';
+const DESKTOP_NAME = 'micup.desktop';
 const protocolRegistrations = [];
 const inProcessRegistrations = [];
 const childProcessCalls = [];
@@ -35,21 +35,26 @@ const englishStrings = {
 	'desktop.linuxEntry.comment': 'Instant messaging and VoIP',
 };
 
-const desktopEntry = loadTsModule('@electron/main/LinuxDesktopEntry', {
-	stubs: {
-		'node:child_process': childProcess,
-		'node:fs': fs,
-		'node:os': os,
-		'node:path': path,
-		electron: {app: electronApp},
-		'@electron/common/BuildChannel': {BUILD_CHANNEL: 'stable'},
-		'@electron/common/Logger': {createChildLogger: () => noopLogger},
-		'@electron/main/JumpList': {TASK_ARG_PREFIX: '--fluxer-task='},
-		'@electron/main/LinuxLaunchPath': {getStableLinuxLaunchPath: () => EXEC_PATH},
-		'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},
-		'@electron/main/MainI18n': {getNativeLocale: () => 'en-US', t: (key) => englishStrings[key] ?? key},
+const desktopStubs = {
+	'node:child_process': childProcess,
+	'node:fs': fs,
+	'node:os': os,
+	'node:path': path,
+	electron: {app: electronApp},
+	'@electron/common/BuildChannel': {BUILD_CHANNEL: 'stable'},
+	'@electron/common/DesktopIdentity': {
+		DESKTOP_APP_NAME: 'Micup',
+		LINUX_DESKTOP_ENTRY_ID: 'micup',
+		LINUX_ICON_NAME: 'micup',
+		LEGACY_LINUX_DESKTOP_ENTRY_ID: 'micup-legacy',
 	},
-});
+	'@electron/common/Logger': {createChildLogger: () => noopLogger},
+	'@electron/main/JumpList': {TASK_ARG_PREFIX: '--fluxer-task='},
+	'@electron/main/LinuxLaunchPath': {getStableLinuxLaunchPath: () => EXEC_PATH},
+	'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},
+	'@electron/main/MainI18n': {getNativeLocale: () => 'en-US', t: (key) => englishStrings[key] ?? key},
+};
+const desktopEntry = loadTsModule('@electron/main/LinuxDesktopEntry', {stubs: desktopStubs});
 
 function parseMainGroup(contents) {
 	const entries = new Map();
@@ -62,13 +67,13 @@ function parseMainGroup(contents) {
 }
 
 describe('LinuxDesktopEntry contents', () => {
-	test('uses the reverse-DNS desktop id for window matching and keeps the packaged icon name', () => {
+	test('uses the Micup desktop id for window matching and the packaged icon', () => {
 		const entry = parseMainGroup(desktopEntry.buildDesktopFileContents(EXEC_PATH, false));
-		assert.equal(entry.get('StartupWMClass'), 'app.fluxer.FluxerDesktop');
-		assert.equal(entry.get('Icon'), 'fluxer');
+		assert.equal(entry.get('StartupWMClass'), 'micup');
+		assert.equal(entry.get('Icon'), 'micup');
 		assert.equal(entry.get('Exec'), `"${EXEC_PATH}" %U`);
 		assert.equal(entry.get('TryExec'), EXEC_PATH);
-		assert.equal(entry.get('MimeType'), 'x-scheme-handler/fluxer;');
+		assert.equal(entry.get('MimeType'), 'x-scheme-handler/micup;');
 		assert.equal(entry.has('Hidden'), false);
 		assert.equal(entry.has('NoDisplay'), false);
 	});
@@ -87,7 +92,7 @@ describe('ensureLinuxDesktopEntry', () => {
 	let previous;
 
 	beforeEach(() => {
-		root = fs.mkdtempSync(path.join(os.tmpdir(), 'fluxer-desktop-entry-'));
+		root = fs.mkdtempSync(path.join(process.cwd(), '.desktop-entry-test-'));
 		previous = {
 			platform: Object.getOwnPropertyDescriptor(process, 'platform'),
 			resourcesPath: process.resourcesPath,
@@ -99,7 +104,7 @@ describe('ensureLinuxDesktopEntry', () => {
 		Object.defineProperty(process, 'platform', {value: 'linux'});
 		process.resourcesPath = path.join(root, 'resources');
 		process.env.XDG_DATA_HOME = path.join(root, 'home');
-		process.env.XDG_DATA_DIRS = path.join(root, 'system');
+		process.env.XDG_DATA_DIRS = path.relative(process.cwd(), path.join(root, 'system'));
 		delete process.env.FLUXER_DISABLE_DESKTOP_FILE;
 		process.env.CHROME_DESKTOP = DESKTOP_NAME;
 		protocolRegistrations.length = 0;
@@ -130,65 +135,68 @@ describe('ensureLinuxDesktopEntry', () => {
 
 	test('writes the new entry and removes only the generated legacy entry', () => {
 		fs.mkdirSync(userDir(), {recursive: true});
-		fs.writeFileSync(path.join(userDir(), 'fluxer.desktop'), `[Desktop Entry]\n${desktopEntry.GENERATED_MARKER}\n`);
+		fs.writeFileSync(
+			path.join(userDir(), 'micup-legacy.desktop'),
+			`[Desktop Entry]\n${desktopEntry.GENERATED_MARKER}\n`,
+		);
 		fs.writeFileSync(
 			path.join(userDir(), 'fluxer-canary.desktop'),
 			`[Desktop Entry]\n${desktopEntry.GENERATED_MARKER}\n`,
 		);
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), true);
-		assert.equal(fs.existsSync(path.join(userDir(), 'fluxer.desktop')), false);
+		assert.equal(fs.existsSync(path.join(userDir(), 'micup-legacy.desktop')), false);
 		assert.equal(fs.existsSync(path.join(userDir(), 'fluxer-canary.desktop')), true);
-		const written = fs.readFileSync(path.join(userDir(), 'app.fluxer.FluxerDesktop.desktop'), 'utf8');
+		const written = fs.readFileSync(path.join(userDir(), 'micup.desktop'), 'utf8');
 		assert.equal(written, desktopEntry.buildDesktopFileContents(EXEC_PATH, false));
 		assert.deepEqual(
 			fs.readdirSync(userDir()).filter((name) => name.endsWith('.tmp')),
 			[],
 		);
-		assert.deepEqual(protocolRegistrations, ['fluxer']);
+		assert.deepEqual(protocolRegistrations, ['micup']);
 	});
 
 	test('leaves a hand-written legacy entry alone', () => {
 		fs.mkdirSync(userDir(), {recursive: true});
-		fs.writeFileSync(path.join(userDir(), 'fluxer.desktop'), '[Desktop Entry]\nExec=/somewhere/else\n');
+		fs.writeFileSync(path.join(userDir(), 'micup-legacy.desktop'), '[Desktop Entry]\nExec=/somewhere/else\n');
 		desktopEntry.ensureLinuxDesktopEntry();
-		assert.equal(fs.existsSync(path.join(userDir(), 'fluxer.desktop')), true);
+		assert.equal(fs.existsSync(path.join(userDir(), 'micup-legacy.desktop')), true);
 	});
 
 	test('a system entry wins and removes a generated user copy', () => {
 		fs.mkdirSync(systemDir(), {recursive: true});
-		fs.writeFileSync(path.join(systemDir(), 'app.fluxer.FluxerDesktop.desktop'), '[Desktop Entry]\n');
+		fs.writeFileSync(path.join(systemDir(), 'micup.desktop'), '[Desktop Entry]\n');
 		fs.mkdirSync(userDir(), {recursive: true});
-		fs.writeFileSync(
-			path.join(userDir(), 'app.fluxer.FluxerDesktop.desktop'),
-			desktopEntry.buildDesktopFileContents(EXEC_PATH, false),
-		);
+		fs.writeFileSync(path.join(userDir(), 'micup.desktop'), desktopEntry.buildDesktopFileContents(EXEC_PATH, false));
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), true);
-		assert.equal(fs.existsSync(path.join(userDir(), 'app.fluxer.FluxerDesktop.desktop')), false);
+		assert.equal(fs.existsSync(path.join(userDir(), 'micup.desktop')), false);
 	});
 
 	test('a system entry under the previous desktop id keeps the new user entry out of menus', () => {
 		fs.mkdirSync(systemDir(), {recursive: true});
-		fs.writeFileSync(path.join(systemDir(), 'fluxer.desktop'), '[Desktop Entry]\nExec=/usr/bin/fluxer\n');
+		fs.writeFileSync(path.join(systemDir(), 'micup-legacy.desktop'), '[Desktop Entry]\nExec=/usr/bin/fluxer\n');
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), true);
-		const written = fs.readFileSync(path.join(userDir(), 'app.fluxer.FluxerDesktop.desktop'), 'utf8');
+		const written = fs.readFileSync(path.join(userDir(), 'micup.desktop'), 'utf8');
 		assert.equal(written, desktopEntry.buildDesktopFileContents(EXEC_PATH, true));
-		assert.equal(fs.existsSync(path.join(systemDir(), 'fluxer.desktop')), true);
+		assert.equal(fs.existsSync(path.join(systemDir(), 'micup-legacy.desktop')), true);
 	});
 
 	test('FLUXER_DISABLE_DESKTOP_FILE leaves launchers and the scheme handler alone', () => {
 		process.env.FLUXER_DISABLE_DESKTOP_FILE = '1';
 		fs.mkdirSync(userDir(), {recursive: true});
-		fs.writeFileSync(path.join(userDir(), 'fluxer.desktop'), `[Desktop Entry]\n${desktopEntry.GENERATED_MARKER}\n`);
+		fs.writeFileSync(
+			path.join(userDir(), 'micup-legacy.desktop'),
+			`[Desktop Entry]\n${desktopEntry.GENERATED_MARKER}\n`,
+		);
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), false);
-		assert.equal(fs.existsSync(path.join(userDir(), 'fluxer.desktop')), true);
-		assert.equal(fs.existsSync(path.join(userDir(), 'app.fluxer.FluxerDesktop.desktop')), false);
+		assert.equal(fs.existsSync(path.join(userDir(), 'micup-legacy.desktop')), true);
+		assert.equal(fs.existsSync(path.join(userDir(), 'micup.desktop')), false);
 		assert.deepEqual(protocolRegistrations, []);
 	});
 
 	test('FLUXER_DISABLE_DESKTOP_FILE still reports an entry the user installed', () => {
 		process.env.FLUXER_DISABLE_DESKTOP_FILE = '1';
 		fs.mkdirSync(userDir(), {recursive: true});
-		fs.writeFileSync(path.join(userDir(), 'app.fluxer.FluxerDesktop.desktop'), '[Desktop Entry]\n');
+		fs.writeFileSync(path.join(userDir(), 'micup.desktop'), '[Desktop Entry]\n');
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), true);
 		assert.deepEqual(protocolRegistrations, []);
 	});
@@ -196,17 +204,52 @@ describe('ensureLinuxDesktopEntry', () => {
 	test('FLUXER_DISABLE_DESKTOP_FILE still points the scheme handler at a packaged entry', () => {
 		process.env.FLUXER_DISABLE_DESKTOP_FILE = '1';
 		fs.mkdirSync(systemDir(), {recursive: true});
-		fs.writeFileSync(path.join(systemDir(), 'app.fluxer.FluxerDesktop.desktop'), '[Desktop Entry]\n');
+		fs.writeFileSync(path.join(systemDir(), 'micup.desktop'), '[Desktop Entry]\n');
 		fs.mkdirSync(userDir(), {recursive: true});
-		fs.writeFileSync(path.join(userDir(), 'fluxer.desktop'), `[Desktop Entry]\n${desktopEntry.GENERATED_MARKER}\n`);
+		fs.writeFileSync(
+			path.join(userDir(), 'micup-legacy.desktop'),
+			`[Desktop Entry]\n${desktopEntry.GENERATED_MARKER}\n`,
+		);
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), true);
-		assert.equal(fs.existsSync(path.join(userDir(), 'fluxer.desktop')), true);
-		assert.deepEqual(protocolRegistrations, ['fluxer']);
+		assert.equal(fs.existsSync(path.join(userDir(), 'micup-legacy.desktop')), true);
+		assert.deepEqual(protocolRegistrations, ['micup']);
+	});
+
+	test('a matching legacy id never deletes or rewrites the current generated entry on restart', () => {
+		const mutations = [];
+		const module = loadTsModule('@electron/main/LinuxDesktopEntry', {
+			stubs: {
+				...desktopStubs,
+				'@electron/common/DesktopIdentity': {
+					...desktopStubs['@electron/common/DesktopIdentity'],
+					LEGACY_LINUX_DESKTOP_ENTRY_ID: 'micup',
+				},
+				'node:fs': {
+					...fs,
+					unlinkSync: (...args) => {
+						mutations.push('unlink');
+						return fs.unlinkSync(...args);
+					},
+					renameSync: (...args) => {
+						mutations.push('rename');
+						return fs.renameSync(...args);
+					},
+				},
+			},
+		});
+		fs.mkdirSync(userDir(), {recursive: true});
+		const contents = module.buildDesktopFileContents(EXEC_PATH, false);
+		fs.writeFileSync(path.join(userDir(), DESKTOP_NAME), contents);
+		registeredAsDefault = true;
+		assert.equal(module.ensureLinuxDesktopEntry(), true);
+		assert.equal(fs.readFileSync(path.join(userDir(), DESKTOP_NAME), 'utf8'), contents);
+		assert.deepEqual(mutations, []);
+		assert.deepEqual(childProcessCalls, []);
 	});
 
 	const installSystemEntry = () => {
 		fs.mkdirSync(systemDir(), {recursive: true});
-		fs.writeFileSync(path.join(systemDir(), 'app.fluxer.FluxerDesktop.desktop'), '[Desktop Entry]\n');
+		fs.writeFileSync(path.join(systemDir(), 'micup.desktop'), '[Desktop Entry]\n');
 	};
 
 	test('the scheme handler is registered off the main thread with a bounded xdg-mime call', () => {
@@ -214,7 +257,7 @@ describe('ensureLinuxDesktopEntry', () => {
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), true);
 		const registrations = childProcessCalls.filter((call) => call.file === 'xdg-mime');
 		assert.equal(registrations.length, 1);
-		assert.deepEqual(registrations[0].args, ['default', DESKTOP_NAME, 'x-scheme-handler/fluxer']);
+		assert.deepEqual(registrations[0].args, ['default', DESKTOP_NAME, 'x-scheme-handler/micup']);
 		assert.equal(registrations[0].options.timeout, 5000);
 		registrations[0].callback(null);
 		assert.deepEqual(inProcessRegistrations, []);
@@ -235,7 +278,7 @@ describe('ensureLinuxDesktopEntry', () => {
 		assert.deepEqual(inProcessRegistrations, []);
 		const registration = childProcessCalls.find((call) => call.file === 'xdg-mime');
 		registration.callback(Object.assign(new Error('spawn xdg-mime ENOENT'), {code: 'ENOENT'}));
-		assert.deepEqual(inProcessRegistrations, ['fluxer']);
+		assert.deepEqual(inProcessRegistrations, ['micup']);
 	});
 
 	test('the scheme handler is left alone when the shell has no desktop name', () => {
@@ -249,7 +292,7 @@ describe('ensureLinuxDesktopEntry', () => {
 	test('an unpackaged run leaves launchers and the scheme handler alone', () => {
 		electronApp.isPackaged = false;
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), false);
-		assert.equal(fs.existsSync(path.join(userDir(), 'app.fluxer.FluxerDesktop.desktop')), false);
+		assert.equal(fs.existsSync(path.join(userDir(), 'micup.desktop')), false);
 		assert.deepEqual(protocolRegistrations, []);
 	});
 });

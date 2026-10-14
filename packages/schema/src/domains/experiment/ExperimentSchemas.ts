@@ -9,6 +9,15 @@ import {
 	INERT_PLUTONIUM_PAGE_ASSIGNMENT,
 	PlutoniumPageAssignmentResponse,
 } from '@fluxer/schema/src/domains/admin/PlutoniumPageSchemas';
+import {
+	INERT_VOICE_NOISE_SUPPRESSION_ASSIGNMENT,
+	VoiceNoiseSuppressionAssignmentResponse,
+} from '@fluxer/schema/src/domains/admin/VoiceNoiseSuppressionSchemas';
+import {
+	INERT_VOICE_ROOM_ASSIGNMENT,
+	type VoiceRoomAssignment,
+	VoiceRoomAssignmentResponse,
+} from '@fluxer/schema/src/domains/admin/VoiceRoomConfigSchemas';
 import {z} from 'zod';
 
 export const EXPERIMENT_MIN_POLL_INTERVAL_SECONDS = 60;
@@ -46,6 +55,8 @@ export const ExperimentDeliveryConfigResponse = ExperimentDeliveryConfigSchema;
 export type ExperimentDeliveryConfigResponse = z.infer<typeof ExperimentDeliveryConfigResponse>;
 
 const ExperimentAssignmentsSchema = z.object({
+	voice_noise_suppression: VoiceNoiseSuppressionAssignmentResponse.optional(),
+	voice_room: VoiceRoomAssignmentResponse.optional(),
 	domain_migration: DomainMigrationAssignmentResponse.optional(),
 	channel_threads: ChannelThreadsAssignmentResponse.optional(),
 	plutonium_page: PlutoniumPageAssignmentResponse.optional(),
@@ -79,4 +90,17 @@ export function readChannelThreadsAssignment(
 
 export function readPlutoniumPageAssignment(response: ExperimentAssignmentsResponse): PlutoniumPageAssignmentResponse {
 	return response.assignments.plutonium_page ?? INERT_PLUTONIUM_PAGE_ASSIGNMENT;
+}
+
+export function readVoiceRoomAssignment(response: ExperimentAssignmentsResponse): VoiceRoomAssignment {
+	const assignment = response.assignments.voice_room;
+	return assignment
+		? {...assignment, cameras: assignment.cameras ?? false, default_room_theme: assignment.default_room_theme ?? null}
+		: INERT_VOICE_ROOM_ASSIGNMENT;
+}
+
+export function readVoiceNoiseSuppressionAssignment(
+	response: ExperimentAssignmentsResponse,
+): VoiceNoiseSuppressionAssignmentResponse {
+	return response.assignments.voice_noise_suppression ?? INERT_VOICE_NOISE_SUPPRESSION_ASSIGNMENT;
 }

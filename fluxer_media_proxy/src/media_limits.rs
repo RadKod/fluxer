@@ -103,6 +103,14 @@ impl MediaLimits {
     pub fn max_internal_request_body_bytes(&self) -> usize {
         self.max_internal_request_body_bytes
     }
+
+    // Narrows the byte bound for one transform whose output is only worth keeping below it.
+    pub(crate) fn with_max_media_proxy_bytes(self, max_media_proxy_bytes: usize) -> Self {
+        Self {
+            max_media_proxy_bytes: max_media_proxy_bytes.clamp(1, self.max_media_proxy_bytes),
+            ..self
+        }
+    }
 }
 
 #[cfg(test)]

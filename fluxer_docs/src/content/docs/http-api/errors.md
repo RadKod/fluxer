@@ -20,7 +20,7 @@ An OAuth2 protocol failure raised by the [OAuth2 resource](/http-api/oauth2/) an
 
 ## Supplementary members
 
-The error code determines which supplementary members a failure has, and most codes have none. A client reads only the members documented for the code it matched. `errors` is the list of field violations. `retry_after` is the delay before another attempt is admitted. `global` is `true` on a global rate limit denial and `false` on a route one. `required_scope` is the OAuth2 scope the request is missing. `has_mfa` and `methods` are the [sudo mode](/http-api/users/mfa/#sudo-mode) proofs an account can supply. `captcha_provider` and `altcha_challenge` are the challenge described in [CAPTCHA handling](/topics/captcha/).
+The error code determines which supplementary members a failure has, and most codes have none. A client reads only the members documented for the code it matched. `errors` is the list of field violations. `retry_after` is the delay before another attempt is admitted. `global` is `true` on a global rate limit denial and `false` on a route one. `required_scope` is the OAuth2 scope the request is missing. `has_mfa` and `methods` are the [sudo mode](/http-api/users/mfa/#sudo-mode) proofs an account can supply. `reason` is the [rule violation reason](/http-api/table-games/#rule-violation-reasons) of `TABLE_GAME_RULE_VIOLATION`. `captcha_provider` and `altcha_challenge` are the challenge described in [CAPTCHA handling](/topics/captcha/).
 
 `GLOBAL_IP_BANNED` and `GLOBAL_IP_TEMPORARILY_BANNED` have their own members:
 
@@ -171,6 +171,22 @@ You're already friends with this user
 ### `ANNOUNCEMENT_CHANNEL_REQUIRED`
 
 This action is only available in announcement channels
+
+### `APPLICATION_COMMAND_BOT_UNAVAILABLE`
+
+The application bot is unavailable
+
+### `APPLICATION_COMMAND_FEATURE_DISABLED`
+
+Application commands are disabled for this account
+
+### `APPLICATION_COMMAND_STALE`
+
+This command has changed
+
+### `APPLICATION_COMMAND_VERSION_CONFLICT`
+
+The command set has changed
 
 ### `APPLICATION_NOT_OWNED`
 
@@ -348,6 +364,14 @@ Connection verification failed
 
 This content was blocked by safety systems
 
+### `COSMETIC_ALREADY_OWNED`
+
+You already have this item
+
+### `COSMETIC_NOT_OWNED`
+
+You don't have access to this cosmetic item
+
 ### `DELETION_FAILED`
 
 We couldn't delete the resource
@@ -520,6 +544,22 @@ Your data export is still being prepared
 
 This instance policy change is not allowed
 
+### `INTERACTION_DEADLINE_EXCEEDED`
+
+The interaction response deadline has passed
+
+### `INTERACTION_NONCE_CONFLICT`
+
+This nonce has already been used for a different interaction request
+
+### `INTERACTION_OUTCOME_UNKNOWN`
+
+The interaction outcome is unknown
+
+### `INTERACTION_TOKEN_CONSUMED`
+
+The interaction response token has already been used
+
 ### `INTERNAL_SERVER_ERROR`
 
 Internal server error
@@ -676,6 +716,14 @@ You've reached the maximum of {count, plural, one {# emoji} other {# emojis}}
 
 You've reached the maximum of {count, plural, one {# favorite meme} other {# favorite memes}}
 
+### `MAX_FEED_COMMENTS`
+
+This post has reached the maximum of {count, plural, one {# comment} other {# comments}}
+
+### `MAX_FOLLOWING`
+
+You've reached the maximum of {count, plural, one {# followed account} other {# followed accounts}}
+
 ### `MAX_FRIENDS`
 
 You've reached the maximum of {count, plural, one {# friend} other {# friends}}
@@ -704,9 +752,21 @@ You've reached the maximum of {count, plural, one {# community member} other {# 
 
 You've reached the maximum of {count, plural, one {# community role} other {# community roles}}
 
+### `MAX_GUILD_ROSTER_EVENTS`
+
+This community already has the maximum of {count} roster events
+
+Returned with 400 when creating a [guild roster event](/http-api/guild-roster-events/) would exceed the guild's event limit, including disabled events. The response includes `max_guild_roster_events`, currently `10`.
+
 ### `MAX_INVITES`
 
 You've reached the maximum of {count, plural, one {# invite} other {# invites}}
+
+### `MAX_MICUPBOT_REACTION_ROLE_PANELS`
+
+This community already has the maximum of {count} reaction role panels
+
+Returned with 400 when creating a [community bot reaction role panel](/http-api/guild-micupbot/#create-reaction-role-panel) would exceed the guild's panel limit. The response includes `max_micupbot_reaction_role_panels`, currently `25`.
 
 ### `MAX_REACTIONS`
 
@@ -747,6 +807,18 @@ Method not allowed
 ### `MFA_EMAIL_VERIFICATION_REQUIRED`
 
 Email verification is required for this action
+
+### `MICUPBOT_NOT_IN_GUILD`
+
+Add the bot to this community first
+
+Returned with 400 when creating a [community bot reaction role panel](/http-api/guild-micupbot/#create-reaction-role-panel) while the configured bot is not a member of the guild.
+
+### `MICUPBOT_ROLE_NOT_ASSIGNABLE`
+
+The bot cannot give this role: it is @everyone, above your highest role or the bot's, or it carries moderation permissions
+
+Returned with 400 when a role fails the [community bot's role safety checks](/http-api/guild-micupbot/#permission-and-safety-rules). The response includes the rejected `role_id`.
 
 ### `MISSING_ACCESS`
 
@@ -896,6 +968,22 @@ Service unavailable
 
 Session token mismatch
 
+### `SHOP_BUSY`
+
+Too many orders right now
+
+### `SHOP_ITEM_UNAVAILABLE`
+
+This can't be bought right now
+
+### `SHOP_SALES_CLOSED`
+
+Sales are paused right now
+
+### `SHOP_TOO_MANY_OPEN_ORDERS`
+
+You have unpaid orders
+
 ### `SINGLE_COMMUNITY_CANNOT_CREATE_GUILDS`
 
 This instance is a single community, so additional communities cannot be created
@@ -1008,6 +1096,14 @@ Stripe webhook signature is missing
 
 Sudo mode is required
 
+### `TABLE_GAME_CONFLICT`
+
+The table changed in the meantime
+
+### `TABLE_GAME_RULE_VIOLATION`
+
+That move isn't allowed
+
 ### `TAG_ALREADY_TAKEN`
 
 This tag is already taken
@@ -1023,6 +1119,18 @@ Test harness is disabled
 ### `TEST_HARNESS_FORBIDDEN`
 
 Test harness is forbidden
+
+### `TRIAL_ALREADY_USED`
+
+This account or email address has already used the free Premium trial
+
+### `TRIAL_NOT_ELIGIBLE`
+
+This account isn't eligible for the free Premium trial
+
+### `TRIAL_UNAVAILABLE`
+
+The free Premium trial isn't available right now
 
 ### `TWO_FACTOR_REQUIRED`
 
@@ -1100,6 +1208,14 @@ Unknown emoji
 
 Unknown favorite meme
 
+### `UNKNOWN_FEED_COMMENT`
+
+Comment wasn't found
+
+### `UNKNOWN_FEED_POST`
+
+Post wasn't found
+
 ### `UNKNOWN_GIFT_CODE`
 
 Unknown gift code
@@ -1107,6 +1223,12 @@ Unknown gift code
 ### `UNKNOWN_GUILD`
 
 Community wasn't found
+
+### `UNKNOWN_GUILD_ROSTER_EVENT`
+
+Unknown roster event
+
+Returned with 404 when updating or deleting a [guild roster event](/http-api/guild-roster-events/) that does not exist in the guild in the request path.
 
 ### `UNKNOWN_HARVEST`
 
@@ -1124,6 +1246,17 @@ Member wasn't found in this community
 
 Message wasn't found
 
+### `UNKNOWN_MICUPBOT_REACTION_ROLE_PANEL`
+
+Unknown reaction role panel
+
+Returned with 404 when deleting a [community bot reaction role panel](/http-api/guild-micupbot/#delete-reaction-role-panel) that does not exist in the guild in the request path.
+
+### `UNKNOWN_MICUPBOT_WARNING`
+
+Unknown warning
+
+Returned with 404 when deleting a [community bot warning](/http-api/guild-micupbot/#delete-member-warning) that does not match the guild, user, and warning ID in the request path.
 ### `UNKNOWN_ORIGIN_HANDOFF`
 
 This sign-in transfer has expired or was already used
@@ -1151,6 +1284,10 @@ Unknown sticker
 ### `UNKNOWN_STORE_PURCHASE`
 
 Unknown store purchase
+
+### `UNKNOWN_TABLE_GAME`
+
+There's no game at this table
 
 ### `UNKNOWN_USER`
 
@@ -1180,13 +1317,65 @@ Unknown webhook
 
 We couldn't update the resource
 
+### `USERNAME_BLOCKED`
+
+This username is not available
+
+### `USERNAME_BUSY`
+
+Conflict
+
+### `USERNAME_COOLDOWN`
+
+You're being rate limited
+
+### `USERNAME_INVALID`
+
+Username can only contain Latin letters (a-z, A-Z), numbers (0-9), and underscores (_)
+
 ### `USERNAME_NOT_AVAILABLE`
 
 This username is not available
 
+### `USERNAME_RATE_LIMITED`
+
+You're being rate limited
+
+### `USERNAME_RELEASE_EMBARGO`
+
+This username is not available
+
+### `USERNAME_REQUIRES_ENTITLEMENT`
+
+You don't have access to this resource or feature
+
+### `USERNAME_RESERVED`
+
+This username is not available
+
+### `USERNAME_RESERVED_TERM`
+
+This username is not available
+
+### `USERNAME_SELECTION_REQUIRED`
+
+To choose your username, update the app or use the web or desktop app
+
 ### `USERNAME_SIGN_IN_ONLY`
 
 This is only available on instances where people sign in with a username
+
+### `USERNAME_TAKEN`
+
+This username is already taken
+
+### `USERNAME_TOO_SHORT`
+
+Bad request
+
+### `USERNAME_UNAVAILABLE`
+
+Service unavailable
 
 ### `USER_BANNED_FROM_GUILD`
 
@@ -1211,6 +1400,14 @@ Validation failed
 ### `VOICE_CHANNEL_FULL`
 
 Voice channel is full
+
+### `VOICE_SEAT_TAKEN`
+
+Someone is already sitting there
+
+### `VOICE_SEAT_UNKNOWN`
+
+That seat isn't in this room
 
 ### `WEBAUTHN_CREDENTIAL_LIMIT_REACHED`
 
@@ -1489,6 +1686,10 @@ Embed index {embedIndex} is out of bounds (message has {embedCount, plural, one 
 
 Embed splash requires INVITE_SPLASH feature
 
+### `ENTRANCE_SOUNDS_REQUIRE_PREMIUM`
+
+Entrance sounds require Plus.
+
 ### `ENTRANCE_SOUND_DURATION_EXCEEDS_LIMIT`
 
 Entrance sounds can be at most {max_ms, number}ms long
@@ -1564,6 +1765,10 @@ Forward message reference must include `channel_id` and `message_id`
 ### `GLOBAL_NAME_CANNOT_CONTAIN_RESERVED_TERMS`
 
 Display name can't contain "system message"
+
+### `GLOBAL_NAME_CANNOT_IMPERSONATE_MICUP`
+
+Display name can't pass for an official Micup account
 
 ### `GLOBAL_NAME_LENGTH_INVALID`
 
@@ -2049,6 +2254,9 @@ URL must be between {min} and {max} characters
 
 URL must resolve to a publicly routable address
 
+### `USERNAME_CANNOT_CONTAIN_MICUP`
+
+Username can't contain "micup"
 ### `USERNAME_ALREADY_TAKEN`
 
 This username is already taken
@@ -2100,6 +2308,10 @@ Vanity URL code can't contain "fluxer"
 ### `VANITY_URL_CODE_LENGTH_INVALID`
 
 Vanity URL code must be between {min} and {max} characters
+
+### `VANITY_URL_CODE_RESERVED`
+
+Vanity URL code is reserved
 
 ### `VANITY_URL_INVALID_CHARACTERS`
 

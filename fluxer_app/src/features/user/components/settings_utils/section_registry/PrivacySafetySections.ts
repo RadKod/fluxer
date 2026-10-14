@@ -143,9 +143,26 @@ const PROFILE_PRIVACY_DESCRIPTOR = msg({
 	message: 'Profile privacy',
 	comment: 'Privacy settings section for who can see full profile details.',
 });
+const GAME_ACTIVITY_DESCRIPTOR = msg({
+	message: 'Game activity',
+	comment: 'Privacy settings section for sharing the currently played game.',
+});
 const CHOOSE_WHO_CAN_SEE_YOUR_PROFILE_DETAILS_DESCRIPTOR = msg({
 	message: 'Choose who can see your profile details',
 	comment: 'Settings section description. One-line summary of what the settings section controls.',
+});
+// Micup: the four profile visibility options, searchable by their names.
+const PUBLIC_PROFILE_DESCRIPTOR = msg({
+	message: 'Public profile',
+	comment: 'Settings search synonym. Used to match this term when the user types it in the settings search bar.',
+});
+const ONLY_ME_DESCRIPTOR = msg({
+	message: 'Only me',
+	comment: 'Settings search synonym. Used to match this term when the user types it in the settings search bar.',
+});
+const MUTUAL_FOLLOWS_DESCRIPTOR = msg({
+	message: 'Mutual follows',
+	comment: 'Settings search synonym. Used to match this term when the user types it in the settings search bar.',
 });
 const BIO_DESCRIPTOR = msg({
 	message: 'Bio',
@@ -306,6 +323,9 @@ export const privacySafetySections = [
 			FRIENDS_DESCRIPTOR,
 			COMMUNITY_DESCRIPTOR,
 			COMMUNITY_MEMBERS_DESCRIPTOR,
+			PUBLIC_PROFILE_DESCRIPTOR,
+			ONLY_ME_DESCRIPTOR,
+			MUTUAL_FOLLOWS_DESCRIPTOR,
 		],
 		isAdvanced: false,
 	},
@@ -384,6 +404,13 @@ export const privacySafetySections = [
 			FRIENDS_DESCRIPTOR,
 			PRIVACY_DESCRIPTOR,
 		],
+		isAdvanced: false,
+	},
+	{
+		id: 'game-activity',
+		tabType: 'privacy_safety',
+		label: GAME_ACTIVITY_DESCRIPTOR,
+		keywords: [GAME_ACTIVITY_DESCRIPTOR, FRIENDS_DESCRIPTOR, PRIVACY_DESCRIPTOR],
 		isAdvanced: false,
 	},
 	{

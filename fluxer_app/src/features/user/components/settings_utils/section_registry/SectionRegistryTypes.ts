@@ -12,8 +12,11 @@ export type SectionKeyword = MessageDescriptor | string | (() => string);
 
 export type UserSettingsTabType =
 	| 'my_profile'
+	| 'profile_cosmetics'
+	| 'referral'
 	| 'account_security'
 	| 'plutonium'
+	| 'shop'
 	| 'gift_inventory'
 	| 'privacy_safety'
 	| 'authorized_apps'
@@ -23,6 +26,7 @@ export type UserSettingsTabType =
 	| 'accessibility'
 	| 'chat_settings'
 	| 'voice_video'
+	| 'game_overlay'
 	| 'notifications'
 	| 'desktop_settings'
 	| 'advanced_settings'

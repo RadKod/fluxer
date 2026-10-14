@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import {Limits} from '@app/features/app/utils/UserLimits';
 import styles from '@app/features/premium/components/plutonium_page/PlutoniumPage.module.css';
 import {
@@ -17,7 +16,6 @@ import {
 	PERK_ANIMATED_PROFILE_DESCRIPTOR,
 	PERK_BOOKMARKS_DESCRIPTOR,
 	PERK_COMMUNITIES_DESCRIPTOR,
-	PERK_CUSTOM_TAG_DESCRIPTOR,
 	PERK_CUSTOM_THEMES_DESCRIPTOR,
 	PERK_EARLY_ACCESS_DESCRIPTOR,
 	PERK_GLOBAL_EXPRESSIONS_DESCRIPTOR,
@@ -30,7 +28,6 @@ import {
 	PERK_VIDEO_QUALITY_DESCRIPTOR,
 	PERK_VIDEO_QUALITY_FREE_DESCRIPTOR,
 	PERK_VIDEO_QUALITY_PREMIUM_DESCRIPTOR,
-	TAG_FOOTNOTE_MARKER_DESCRIPTOR,
 } from '@app/features/premium/components/plutonium_page/PlutoniumPageMessages';
 import {getPremiumProductName} from '@app/features/premium/utils/PremiumUtils';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
@@ -64,7 +61,6 @@ interface PerkDefinition {
 }
 
 const PERK_DEFINITIONS: ReadonlyArray<PerkDefinition> = [
-	{perkId: 'custom_discriminator', icon: 'hash', label: PERK_CUSTOM_TAG_DESCRIPTOR},
 	{perkId: 'per_guild_profiles', icon: 'userCircle', label: PERK_PER_COMMUNITY_PROFILES_DESCRIPTOR},
 	{perkId: 'profile_badge', icon: 'fluxerPremium', label: PERK_PROFILE_BADGE_DESCRIPTOR},
 	{perkId: 'custom_video_backgrounds', icon: 'image', label: PERK_VIDEO_BACKGROUNDS_DESCRIPTOR},
@@ -119,7 +115,6 @@ function resolveNumericValue(perk: LimitTierPerk, value: number, premium: boolea
 function buildRows(locale: string, translate: (descriptor: MessageDescriptor) => string): Array<PerkRow> {
 	const rows: Array<PerkRow> = [];
 	for (const definition of PERK_DEFINITIONS) {
-		if (definition.perkId === 'custom_discriminator' && RuntimeConfig.usesUniqueUsernames) continue;
 		const perk = LIMIT_TIER_PERKS.find((candidate) => candidate.id === definition.perkId);
 		if (!perk) continue;
 		if (isBooleanTierPerk(perk)) {
@@ -181,121 +176,100 @@ function PerkValueView({value, highlighted}: {value: PerkValue; highlighted: boo
 }
 
 interface PlutoniumPageComparisonProps {
-	footnoteId: string;
-	onFootnoteClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
 	actions: React.ReactNode;
 }
 
-export const PlutoniumPageComparison = observer(
-	({footnoteId, onFootnoteClick, actions}: PlutoniumPageComparisonProps) => {
-		const {i18n} = useLingui();
-		const rows = buildRows(i18n.locale, (descriptor) => i18n._(descriptor));
-		const premiumLabel = getPremiumProductName();
-		const renderLabel = (row: PerkRow) => (
-			<>
-				<span>{i18n._(row.label)}</span>
-				{row.id === 'custom_discriminator' && (
-					<FocusRing offset={-2}>
-						<a
-							href={`#${footnoteId}`}
-							className={styles.footnoteMarker}
-							onClick={onFootnoteClick}
-							data-flx="premium.plutonium-page.comparison.footnote-marker"
-						>
-							<span aria-hidden="true">*</span>
-							<span className={styles.srOnly}>{i18n._(TAG_FOOTNOTE_MARKER_DESCRIPTOR)}</span>
-						</a>
-					</FocusRing>
-				)}
-			</>
-		);
-		return (
-			<section
-				className={clsx(styles.glassPanel, styles.comparison)}
-				aria-labelledby="plutonium-page-compare-heading"
-				data-flx="premium.plutonium-page.comparison"
+export const PlutoniumPageComparison = observer(({actions}: PlutoniumPageComparisonProps) => {
+	const {i18n} = useLingui();
+	const rows = buildRows(i18n.locale, (descriptor) => i18n._(descriptor));
+	const premiumLabel = getPremiumProductName();
+	const renderLabel = (row: PerkRow) => <span>{i18n._(row.label)}</span>;
+	return (
+		<section
+			className={clsx(styles.glassPanel, styles.comparison)}
+			aria-labelledby="plutonium-page-compare-heading"
+			data-flx="premium.plutonium-page.comparison"
+		>
+			<h2
+				id="plutonium-page-compare-heading"
+				className={styles.titleHeading}
+				data-flx="premium.plutonium-page.comparison.title"
 			>
-				<h2
-					id="plutonium-page-compare-heading"
-					className={styles.titleHeading}
-					data-flx="premium.plutonium-page.comparison.title"
-				>
-					{i18n._(COMPARE_TITLE_DESCRIPTOR, {premiumProductName: getPremiumProductName()})}
-				</h2>
-				<ul className={styles.perkCards} data-flx="premium.plutonium-page.comparison.cards">
-					{rows.map((row) => (
-						<li key={row.id} className={styles.perkCard} data-flx="premium.plutonium-page.comparison.card">
-							<div className={styles.perkCardHead}>
-								<PlutoniumPageIcon name={row.icon} className={styles.perkCardIcon} />
-								<span className={styles.perkCardLabel}>{renderLabel(row)}</span>
+				{i18n._(COMPARE_TITLE_DESCRIPTOR, {premiumProductName: getPremiumProductName()})}
+			</h2>
+			<ul className={styles.perkCards} data-flx="premium.plutonium-page.comparison.cards">
+				{rows.map((row) => (
+					<li key={row.id} className={styles.perkCard} data-flx="premium.plutonium-page.comparison.card">
+						<div className={styles.perkCardHead}>
+							<PlutoniumPageIcon name={row.icon} className={styles.perkCardIcon} />
+							<span className={styles.perkCardLabel}>{renderLabel(row)}</span>
+						</div>
+						<dl className={styles.perkCardValues}>
+							<div className={styles.perkCell}>
+								<dt className={styles.perkCellTerm}>{i18n._(FREE_COLUMN_DESCRIPTOR)}</dt>
+								<dd className={styles.perkCellValue}>
+									<PerkValueView value={row.free} highlighted={false} />
+								</dd>
 							</div>
-							<dl className={styles.perkCardValues}>
-								<div className={styles.perkCell}>
-									<dt className={styles.perkCellTerm}>{i18n._(FREE_COLUMN_DESCRIPTOR)}</dt>
-									<dd className={styles.perkCellValue}>
+							<div className={clsx(styles.perkCell, styles.perkCellPremium)}>
+								<dt className={styles.perkCellTerm}>{premiumLabel}</dt>
+								<dd className={styles.perkCellValue}>
+									<PerkValueView value={row.premium} highlighted />
+								</dd>
+							</div>
+						</dl>
+					</li>
+				))}
+			</ul>
+			<FocusRing offset={-2}>
+				<section
+					className={styles.tableWrap}
+					aria-label={i18n._(COMPARE_TITLE_DESCRIPTOR, {premiumProductName: getPremiumProductName()})}
+					data-flx="premium.plutonium-page.comparison.table-wrap"
+				>
+					<table className={styles.table}>
+						<thead>
+							<tr>
+								<th className={clsx(styles.tableHead, styles.tableHeadFeature)} scope="col">
+									{i18n._(FEATURE_COLUMN_DESCRIPTOR)}
+								</th>
+								<th className={clsx(styles.tableHead, styles.tableHeadTier)} scope="col">
+									{i18n._(FREE_COLUMN_DESCRIPTOR)}
+								</th>
+								<th className={clsx(styles.tableHead, styles.tableHeadTier, styles.tableHeadPremium)} scope="col">
+									{premiumLabel}
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							{rows.map((row) => (
+								<tr key={row.id} className={styles.tableRow} data-flx="premium.plutonium-page.comparison.row">
+									<th scope="row" className={styles.tableRowHead}>
+										<span className={styles.tableRowLabel}>
+											<PlutoniumPageIcon name={row.icon} className={styles.tableRowIcon} />
+											<span>{renderLabel(row)}</span>
+										</span>
+									</th>
+									<td className={styles.tableCell}>
 										<PerkValueView value={row.free} highlighted={false} />
-									</dd>
-								</div>
-								<div className={clsx(styles.perkCell, styles.perkCellPremium)}>
-									<dt className={styles.perkCellTerm}>{premiumLabel}</dt>
-									<dd className={styles.perkCellValue}>
+									</td>
+									<td className={clsx(styles.tableCell, styles.tableCellPremium)}>
 										<PerkValueView value={row.premium} highlighted />
-									</dd>
-								</div>
-							</dl>
-						</li>
-					))}
-				</ul>
-				<FocusRing offset={-2}>
-					<section
-						className={styles.tableWrap}
-						aria-label={i18n._(COMPARE_TITLE_DESCRIPTOR, {premiumProductName: getPremiumProductName()})}
-						data-flx="premium.plutonium-page.comparison.table-wrap"
-					>
-						<table className={styles.table}>
-							<thead>
-								<tr>
-									<th className={clsx(styles.tableHead, styles.tableHeadFeature)} scope="col">
-										{i18n._(FEATURE_COLUMN_DESCRIPTOR)}
-									</th>
-									<th className={clsx(styles.tableHead, styles.tableHeadTier)} scope="col">
-										{i18n._(FREE_COLUMN_DESCRIPTOR)}
-									</th>
-									<th className={clsx(styles.tableHead, styles.tableHeadTier, styles.tableHeadPremium)} scope="col">
-										{premiumLabel}
-									</th>
+									</td>
 								</tr>
-							</thead>
-							<tbody>
-								{rows.map((row) => (
-									<tr key={row.id} className={styles.tableRow} data-flx="premium.plutonium-page.comparison.row">
-										<th scope="row" className={styles.tableRowHead}>
-											<span className={styles.tableRowLabel}>
-												<PlutoniumPageIcon name={row.icon} className={styles.tableRowIcon} />
-												<span>{renderLabel(row)}</span>
-											</span>
-										</th>
-										<td className={styles.tableCell}>
-											<PerkValueView value={row.free} highlighted={false} />
-										</td>
-										<td className={clsx(styles.tableCell, styles.tableCellPremium)}>
-											<PerkValueView value={row.premium} highlighted />
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</section>
-				</FocusRing>
-				{actions && (
-					<div
-						className={clsx(styles.actions, styles.comparisonActions)}
-						data-flx="premium.plutonium-page.comparison.actions"
-					>
-						{actions}
-					</div>
-				)}
-			</section>
-		);
-	},
-);
+							))}
+						</tbody>
+					</table>
+				</section>
+			</FocusRing>
+			{actions && (
+				<div
+					className={clsx(styles.actions, styles.comparisonActions)}
+					data-flx="premium.plutonium-page.comparison.actions"
+				>
+					{actions}
+				</div>
+			)}
+		</section>
+	);
+});

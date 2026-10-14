@@ -10,7 +10,7 @@ export const CHARACTERS_LEFT_DESCRIPTOR = msg({
 export const CHARACTERS_LEFT_GET_TO_WRITE_UP_TO_CHARACTERS_DESCRIPTOR = msg({
 	message:
 		'{remaining, plural, one {# character left} other {# characters left}}. Get {premiumProductName} to write up to {premiumMaxLength, plural, one {# character} other {# characters}}.',
-	comment: 'Character counter status with an upsell to the premium tier.',
+	comment: 'Character counter status with an upsell to the Plus tier.',
 });
 
 export const MESSAGE_IS_TOO_LONG_DESCRIPTOR = msg({

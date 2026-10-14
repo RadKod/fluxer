@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       channel:
-        description: Release channel label (stable or canary). Source is always this repository's main branch.
+        description: Release channel label (stable or canary). Source is the commit that triggers this workflow.
         required: false
         type: choice
         options:
@@ -21,6 +21,11 @@ on:
         required: false
         default: ""
         type: string
+      publish_release:
+        description: Publish the complete signed release to GitHub (requires separate approval and Micup release ownership configuration).
+        required: false
+        type: boolean
+        default: false
 permissions:
   contents: write
   id-token: write
@@ -33,6 +38,7 @@ concurrency:
 env:
   CHANNEL: ${{ inputs.channel }}
   BUILD_CHANNEL: ${{ inputs.channel == 'canary' && 'canary' || 'stable' }}
+  FLUXER_DESKTOP_PACKAGE_ORIGIN_BASE: https://dl.micup.gg
 
 jobs:
   meta:
@@ -52,26 +58,16 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: main
+          ref: ${{ github.sha }}
 
       - name: Set up Rust toolchain (CI helpers)
         uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
         with:
           toolchain: "1.98.1"
 
-      - name: Create token
-        id: create-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
-        with:
-          client-id: ${{ vars.FLUXER_CI_APP_ID }}
-          private-key: ${{ secrets.FLUXER_CI_APP_KEY }}
-          owner: fluxerapp
-          repositories: fluxer
-          permission-contents: read
       - name: Set metadata
         id: meta
         env:
-          GH_TOKEN: ${{ steps.create-token.outputs.token }}
           FLUXER_BUILD_VERSION: ${{ inputs.build_version }}
         run: >-
           cargo run --locked --quiet --manifest-path tools/ci/Cargo.toml -- build-desktop
@@ -90,18 +86,39 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
 
       - name: Set up Rust toolchain (CI helpers)
         uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
         with:
           toolchain: "1.98.1"
 
+      - name: Resolve available platforms
+        id: targets
+        env:
+          SKIP_TARGETS: ${{ inputs.skip_targets }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$APPLE_CERTIFICATE" || -z "$APPLE_CERTIFICATE_PASSWORD" || -z "$APPLE_ID" || -z "$APPLE_PASSWORD" || -z "$APPLE_TEAM_ID" ]]; then
+            echo "::notice::macOS skipped: Apple signing or notarization inputs are missing."
+            SKIP_TARGETS="${SKIP_TARGETS:+${SKIP_TARGETS},}macos"
+          fi
+          printf 'skip_targets=%s\n' "$SKIP_TARGETS" >> "$GITHUB_OUTPUT"
+
       - name: Build platform matrix
         id: set-matrix
+        env:
+          SKIP_TARGETS: ${{ steps.targets.outputs.skip_targets }}
         run: >-
           cargo run --locked --quiet --manifest-path tools/ci/Cargo.toml -- build-desktop
           --step set_matrix
-          --skip-targets "${{ inputs.skip_targets }}"
+          --skip-targets "${SKIP_TARGETS}"
 
   shared_assets:
     name: Build shared renderer assets
@@ -612,6 +629,10 @@ jobs:
           cargo run --locked --quiet --manifest-path ${{ github.workspace }}/_ci/tools/ci/Cargo.toml -- build-desktop
           --step prepare_artifacts_unix
 
+      - name: Install AppImage feed tools
+        if: matrix.platform == 'linux'
+        run: sudo apt-get install -y --no-install-recommends zsync
+
       - name: Build AppImage update feed (Linux)
         if: matrix.platform == 'linux'
         run: >-
@@ -674,7 +695,6 @@ jobs:
       PUBLIC_BUILD_VERSION: ${{ needs.meta.outputs.version }}
       PUB_DATE: ${{ needs.meta.outputs.pub_date }}
       SOURCE_SHA: ${{ needs.meta.outputs.source_sha }}
-      PUBLIC_DL_BASE: https://api.fluxer.app/dl
     steps:
       - name: Checkout source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -712,11 +732,13 @@ jobs:
           --step build_module_manifest
 
       - name: Prepare GitHub release assets
+        if: ${{ inputs.publish_release }}
         run: >-
           cargo run --locked --quiet --manifest-path tools/ci/Cargo.toml -- build-desktop
           --step prepare_release_assets
 
       - name: Upload GitHub release assets
+        if: ${{ inputs.publish_release }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: fluxer-desktop-release-assets
@@ -725,14 +747,30 @@ jobs:
           retention-days: 1
           compression-level: 0
 
+      - name: Upload prepared desktop payload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: micup-desktop-prepared-${{ needs.meta.outputs.build_channel }}
+          path: payload_tree/desktop
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
       - name: Build summary
+        if: ${{ inputs.publish_release }}
         run: >-
           cargo run --locked --quiet --manifest-path tools/ci/Cargo.toml -- build-desktop
           --step build_summary
 
+      - name: Build preparation summary
+        if: ${{ !inputs.publish_release }}
+        run: |
+          printf '## Micup desktop preparation\n\nVersion: %s\n\nSource: main (%s)\n\nPayload: micup-desktop-prepared-%s\n\nNo release was published.\n' \
+            "$VERSION" "$SOURCE_SHA" "$CHANNEL" >> "$GITHUB_STEP_SUMMARY"
+
   publish_release:
     name: Publish GitHub desktop release
-    if: ${{ !cancelled() && needs.upload.result == 'success' }}
+    if: ${{ !cancelled() && inputs.publish_release && needs.upload.result == 'success' }}
     needs:
       - meta
       - upload

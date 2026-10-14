@@ -3,6 +3,8 @@
 import {GuildSettingsModal, UserSettingsModal} from '@app/features/app/components/dialogs/LoadableSettingsModals';
 import {useRovingFocusList} from '@app/features/app/hooks/useRovingFocusList';
 import Authentication from '@app/features/auth/state/Authentication';
+import {openGuildBoostPanel} from '@app/features/boost/commands/GuildBoostPanelCommands';
+import {isGuildBoostAvailable} from '@app/features/boost/utils/GuildBoostLevels';
 import {CategoryCreateModal} from '@app/features/channel/components/modals/CategoryCreateModal';
 import {ChannelCreateModal} from '@app/features/channel/components/modals/ChannelCreateModal';
 import {DELETE_MY_MESSAGES_DESCRIPTOR} from '@app/features/channel/utils/ChannelMessageDescriptors';
@@ -43,6 +45,7 @@ import {
 	GearIcon,
 	type Icon,
 	PlusCircleIcon,
+	RocketLaunchIcon,
 	ShieldIcon,
 	SignOutIcon,
 	TrashIcon,
@@ -54,6 +57,10 @@ import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {useCallback} from 'react';
 
+const BOOST_THIS_COMMUNITY_DESCRIPTOR = msg({
+	message: 'Boost this community',
+	comment: 'Community header menu action for members: opens the community boosts, where they can boost it.',
+});
 const INVITE_MEMBERS_DESCRIPTOR = msg({
 	message: 'Invite members',
 	comment: 'Button or menu action label in the guild header popout. Keep it concise.',
@@ -233,6 +240,15 @@ export const GuildHeaderPopout = observer(({guild}: {guild: Guild}) => {
 						)
 					}
 					data-flx="guild.guild-header-popout.guild-header-popout-item.push--2"
+				/>
+			)}
+			{/* The header row and menu share the lazy perks entry. */}
+			{!canAccessGuildSettings && isGuildBoostAvailable(guild) && (
+				<GuildHeaderPopoutItem
+					icon={RocketLaunchIcon}
+					title={i18n._(BOOST_THIS_COMMUNITY_DESCRIPTOR)}
+					onClick={() => openGuildBoostPanel(guild.id)}
+					data-flx="guild.guild-header-popout.guild-header-popout-item.boost"
 				/>
 			)}
 			{canManageChannels && (

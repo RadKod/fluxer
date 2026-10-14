@@ -10,6 +10,24 @@ const winGameCapture = require('./index.js');
 const hasBindingHook = typeof winGameCapture.__setBindingForTests === 'function';
 const injectionSkip = hasBindingHook ? false : 'no __setBindingForTests hook exported';
 
+test('borderless permission bridge awaits native result and preserves API errors for the caller', async () => {
+	let calls = 0;
+	winGameCapture.__setBindingForTests({
+		requestBorderlessAccess: async () => {
+			calls++;
+			return false;
+		},
+	});
+	assert.equal(await winGameCapture.requestBorderlessAccess(), false);
+	assert.equal(calls, 1);
+	winGameCapture.__setBindingForTests({
+		requestBorderlessAccess: async () => {
+			throw new Error('denied');
+		},
+	});
+	await assert.rejects(() => winGameCapture.requestBorderlessAccess(), /denied/);
+});
+
 if (!hasBindingHook) {
 	console.warn(
 		'[index.test.mjs] __setBindingForTests not present on index.js; ' +

@@ -20,6 +20,28 @@ const PASSTHROUGH_PROCESS =
 const PORT_LISTENER = 'this.port.addEventListener(`message`,e=>{e.data===`destroy`&&this.destroy()})';
 const PORT_LISTENER_STARTED = `${PORT_LISTENER},this.port.start()`;
 
+const RNNOISE_PORT_LISTENER =
+	'this.__healthEnabled=e.processorOptions.pipelineV2Enabled===true,' +
+	'this.__processingMs=0,this.__audioFrames=0,this.__reportFrames=sampleRate/2,' +
+	'this.port.addEventListener(`message`,e=>{' +
+	'e.data===`destroy`&&this.destroy();' +
+	'if(e.data?.type===`configure-health`&&this.__healthEnabled!==(e.data.enabled===true)){' +
+	'this.__healthEnabled=e.data.enabled===true;' +
+	'this.__processingMs=0;this.__audioFrames=0;this.__reportFrames=sampleRate/2' +
+	'}}),this.port.start()';
+
+const RNNOISE_PROCESS = PASSTHROUGH_PROCESS.replace(
+	'return this.processor.process(__in,__out),!0',
+	'if(!this.__healthEnabled)return this.processor.process(__in,__out),!0;' +
+		'const __start=Date.now();this.processor.process(__in,__out);' +
+		'this.__processingMs+=Date.now()-__start;this.__audioFrames+=__out[0]?.length??0;' +
+		'if(this.__audioFrames>=this.__reportFrames){' +
+		'this.port.postMessage({type:"health",processingMs:this.__processingMs,' +
+		'audioMs:this.__audioFrames/sampleRate*1000,contextTime:currentTime});' +
+		'this.__reportFrames=this.__audioFrames+sampleRate/2' +
+		'}return!0',
+);
+
 const READY_MARKER = 'this.destroyed&&this.destroy()})()}';
 const READY_MARKER_SIGNALLED =
 	'this.destroyed&&this.destroy(),this.destroyed||this.port.postMessage({type:"ready"})})()' +
@@ -43,7 +65,13 @@ module.exports = function noiseSuppressorWorkletLoader(source) {
 	if (resourcePath.includes('noiseGate')) {
 		return replaceExactlyOnce(source, GATE_CONSTRUCTOR_TAIL, GATE_CONSTRUCTOR_TAIL_SIGNALLED, resourcePath);
 	}
-	let output = replaceExactlyOnce(source, PORT_LISTENER, PORT_LISTENER_STARTED, resourcePath);
+	const rnnoise = /[\\/]rnnoise[\\/]/.test(resourcePath);
+	let output = replaceExactlyOnce(
+		source,
+		PORT_LISTENER,
+		rnnoise ? RNNOISE_PORT_LISTENER : PORT_LISTENER_STARTED,
+		resourcePath,
+	);
 	output = replaceExactlyOnce(output, READY_MARKER, READY_MARKER_SIGNALLED, resourcePath);
-	return replaceExactlyOnce(output, PROCESS_SIGNATURE, PASSTHROUGH_PROCESS, resourcePath);
+	return replaceExactlyOnce(output, PROCESS_SIGNATURE, rnnoise ? RNNOISE_PROCESS : PASSTHROUGH_PROCESS, resourcePath);
 };

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {Routes} from '@app/app/Routes';
 import Accessibility from '@app/features/accessibility/state/Accessibility';
 import {DiscoveryPageSkeleton, DiscoveryResultsSkeleton} from '@app/features/app/components/skeleton/DiscoverySkeleton';
 import {
@@ -18,6 +19,7 @@ import styles from '@app/features/discovery/discovery/DiscoveryPage.module.css';
 import {DiscoverySearchFilters} from '@app/features/discovery/discovery/DiscoverySearchFilters';
 import {DiscoveryMotionKind, DiscoveryTransition} from '@app/features/discovery/discovery/DiscoveryTransition';
 import Discovery from '@app/features/discovery/state/Discovery';
+import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
 import {Scroller, type ScrollerHandle} from '@app/features/ui/components/Scroller';
 import {Spinner} from '@app/features/ui/components/Spinner';
 import {getAppRemScale} from '@app/features/ui/utils/AppZoomUtils';
@@ -62,7 +64,7 @@ function useCategoriesSettledLatch(): boolean {
 
 function useFirstResultsSettledLatch(): boolean {
 	const startedRef = useRef(false);
-	const settledRef = useRef(false);
+	const settledRef = useRef(Discovery.searchSettled);
 	if (Discovery.loading) {
 		startedRef.current = true;
 	}
@@ -81,6 +83,21 @@ function resolveScrollOffsetTop(element: HTMLElement, scrollerNode: HTMLElement 
 }
 
 export const DiscoveryPage = observer(function DiscoveryPage() {
+	return Discovery.view === 'apps' ? (
+		<LegacyAppsRedirect data-flx="discovery.discovery.discovery-page.legacy-apps" />
+	) : (
+		<DiscoveryCommunitiesPage data-flx="discovery.discovery.discovery-page.communities" />
+	);
+});
+
+function LegacyAppsRedirect() {
+	useEffect(() => {
+		RouterUtils.replaceWith(Routes.BOTS);
+	}, []);
+	return null;
+}
+
+const DiscoveryCommunitiesPage = observer(function DiscoveryCommunitiesPage() {
 	const {i18n} = useLingui();
 	const scrollerRef = useRef<ScrollerHandle>(null);
 	const [resultsColumnNode, setResultsColumnNode] = useState<HTMLDivElement | null>(null);

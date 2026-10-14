@@ -18,12 +18,17 @@ import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {ISnowflakeService} from '@app/api/infrastructure/ISnowflakeService';
 import type {IStorageService} from '@app/api/infrastructure/IStorageService';
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
+import {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
 import {Logger} from '@app/api/Logger';
 import {createRequestCache} from '@app/api/middleware/RequestCacheMiddleware';
-import {getBillingRepository} from '@app/api/middleware/ServiceRegistry';
+import {getBillingRepository, getUsernameOwnershipService} from '@app/api/middleware/ServiceRegistry';
+import {getPremiumLedgerRepository, removeGuildMemberCounted} from '@app/api/middleware/ServiceSingletons';
 import type {ApplicationRepository} from '@app/api/oauth/repositories/ApplicationRepository';
 import type {OAuth2TokenRepository} from '@app/api/oauth/repositories/OAuth2TokenRepository';
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
+import {scheduleUserDeletionHooks} from '@app/api/user/lifecycle/UserLifecycleHooks';
+import {UserDataRepository} from '@app/api/user/repositories/account/crud/UserDataRepository';
+import {UserIndexRepository} from '@app/api/user/repositories/account/crud/UserIndexRepository';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {isPendingDeletionBlocked} from '@app/api/user/services/PendingDeletionCoordinator';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
@@ -256,15 +261,7 @@ export async function processUserDeletion(
 						);
 					}
 				}
-				await guildRepository.deleteMember(guildId, userId);
-				const guild = await guildRepository.findUnique(guildId);
-				if (guild) {
-					await guildRepository.upsertPartial(
-						guildId,
-						{member_count: Math.max(0, guild.memberCount - 1)},
-						guild.toRow(),
-					);
-				}
+				await removeGuildMemberCounted(guildRepository, guildId, userId);
 				await gatewayService.dispatchGuild({
 					guildId,
 					event: 'GUILD_MEMBER_REMOVE',
@@ -473,15 +470,26 @@ export async function processUserDeletion(
 		userRepository.deleteAllRecentMentions(userId),
 		userRepository.deleteAllAuthorizedIps(userId),
 		userRepository.deletePinnedDmsByUserId(userId),
+		// Micup: premium ledger (KVKK) — the paid period ends and the trial is forgotten; grant keys stay for idempotency.
+		getPremiumLedgerRepository().anonymizeForDeletion(userId, new Date()),
 	]);
-	await userRepository.deleteUserSecondaryIndices(userId);
+	const beforeIdentity = await userRepository.findUniqueAssert(userId);
+	if (
+		!beforeIdentity.isBot &&
+		!beforeIdentity.isSystem &&
+		(await new InstanceConfigRepository().readUsernameMigrationConfig()).state !== 'legacy'
+	) {
+		await getUsernameOwnershipService().deleteAccount(userId, {
+			username: DELETED_USER_USERNAME,
+			discriminator: DELETED_USER_DISCRIMINATOR,
+		});
+	} else {
+		await new UserDataRepository().anonymizeLegacyIdentityForDeletion(beforeIdentity, Date.now() + 30000);
+	}
 	const userForAnonymization = await userRepository.findUniqueAssert(userId);
 	Logger.debug({userId}, 'Anonymizing user record');
-	const anonymisedUser = await userRepository.anonymizeForDeletion(userForAnonymization, {
-		username: DELETED_USER_USERNAME,
-		discriminator: DELETED_USER_DISCRIMINATOR,
+	const stagedUser = await userRepository.anonymizeForDeletion(userForAnonymization, {
 		global_name: DELETED_USER_GLOBAL_NAME,
-		email: null,
 		email_verified: false,
 		password_hash: null,
 		totp_secret: null,
@@ -498,10 +506,27 @@ export async function processUserDeletion(
 		premium_since: null,
 		premium_until: null,
 		premium_gift_extension_ends_at: null,
-		stripe_customer_id: null,
-		stripe_subscription_id: null,
 		authenticator_types: new Set(),
 	});
+	// Micup: retain index keys behind the deletion gate until cleanup succeeds, including after a crash.
+	await new UserIndexRepository().deleteIndices(
+		userId,
+		stagedUser.username,
+		stagedUser.discriminator,
+		stagedUser.email,
+		stagedUser.stripeCustomerId,
+		stagedUser.stripeSubscriptionId,
+		stagedUser.lastActiveIp,
+		true,
+	);
+	const anonymisedUser = await userRepository.anonymizeForDeletion(stagedUser, {
+		email: null,
+		stripe_customer_id: null,
+		stripe_subscription_id: null,
+		last_active_ip: null,
+	});
+	// Micup: queued before the deletion is marked done, so a deletion that stops here reruns and queues them again.
+	await scheduleUserDeletionHooks(userId, workerService);
 	await userRepository.removePendingDeletion(userId, pendingDeletionAt);
 	await userCacheService.setUserPartialResponseFromUser(anonymisedUser);
 	await userRepository.completeDeletion(anonymisedUser);

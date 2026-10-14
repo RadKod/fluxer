@@ -56,7 +56,7 @@ maybe_update_member_user(Member, UserId, EventData) ->
             false -> undefined
         end,
     case MemberId =:= UserId of
-        true -> Member#{<<"user">> => EventData};
+        true -> Member#{<<"user">> => user_utils:merge_user(MUser, EventData)};
         false -> Member
     end.
 
@@ -79,9 +79,10 @@ handle_user_data_update(UserId, UserData, State) ->
 -spec maybe_apply_changed_user_data(user_id(), map(), member(), guild_state()) -> guild_state().
 maybe_apply_changed_user_data(UserId, UserData, Member, State) ->
     CurrentUserData = maps:get(<<"user">>, Member, #{}),
-    case check_user_data_differs(CurrentUserData, UserData) of
+    MergedUserData = user_utils:merge_user(CurrentUserData, UserData),
+    case check_user_data_differs(CurrentUserData, MergedUserData) of
         false -> State;
-        true -> apply_user_data_update(UserId, UserData, State)
+        true -> apply_user_data_update(UserId, MergedUserData, State)
     end.
 
 -spec apply_user_data_update(user_id(), map(), guild_state()) -> guild_state().
@@ -190,6 +191,40 @@ message_create_equivalent_author_data_does_not_dispatch_member_update_test() ->
     NewState = maybe_update_cached_user_data(message_create, #{<<"author">> => Author}, State),
     ?assertEqual(State, NewState),
     assert_no_member_update_dispatch().
+
+message_create_null_cosmetics_on_older_member_data_does_not_dispatch_test() ->
+    drain_test_mailbox(),
+    State = normalized_test_state(),
+    Author = #{
+        <<"id">> => <<"100">>,
+        <<"username">> => <<"alice">>,
+        <<"discriminator">> => <<"0001">>,
+        <<"global_name">> => null,
+        <<"avatar">> => null,
+        <<"avatar_color">> => null,
+        <<"flags">> => 0,
+        <<"avatar_decoration_data">> => null,
+        <<"avatar_ultra_data">> => null,
+        <<"nameplate_data">> => null
+    },
+    NewState = maybe_update_cached_user_data(message_create, #{<<"author">> => Author}, State),
+    ?assertEqual(State, NewState),
+    assert_no_member_update_dispatch().
+
+message_create_new_cosmetic_updates_member_test() ->
+    drain_test_mailbox(),
+    State = normalized_test_state(),
+    Decoration = #{<<"asset">> => <<"a_1a2b3c4d">>, <<"item_id">> => <<"1001">>},
+    Author = #{
+        <<"id">> => <<"100">>,
+        <<"username">> => <<"alice">>,
+        <<"avatar_decoration_data">> => Decoration
+    },
+    NewState = maybe_update_cached_user_data(message_create, #{<<"author">> => Author}, State),
+    Members = guild_data_index:member_map(maps:get(data, NewState)),
+    #{<<"user">> := User} = maps:get(100, Members),
+    ?assertEqual(Decoration, maps:get(<<"avatar_decoration_data">>, User)),
+    drain_test_mailbox().
 
 check_user_data_differs_test() ->
     Current = #{<<"username">> => <<"alice">>},

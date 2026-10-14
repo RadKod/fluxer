@@ -20,6 +20,8 @@ export enum ReportType {
 	MESSAGE = 0,
 	USER = 1,
 	GUILD = 2,
+	FEED_POST = 3,
+	FEED_COMMENT = 4,
 }
 
 const REPORT_STATUS_STRINGS: Record<ReportStatus, string> = {

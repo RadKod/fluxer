@@ -98,7 +98,8 @@ export const STREAMING_MODE_PRESETS: Record<
 		frameRate: SupportedScreenShareFrameRate;
 	}
 > = {
-	gaming: {resolution: 'ultra', frameRate: 60},
+	// Micup: 720p60 carries the 1080p30 bitrate; higher rungs stay a choice in the quality menu.
+	gaming: {resolution: 'medium', frameRate: 60},
 	screenshare: {resolution: 'high', frameRate: 30},
 };
 const FREE_STREAMING_MODE_PRESETS: Record<
@@ -327,6 +328,7 @@ export function resolveScreenShareDegradationPreference(
 	if (target.rung === 'source') return 'maintain-resolution';
 	if (target.contentHint === 'text' || target.contentHint === 'detail') return 'maintain-resolution';
 	if (target.maxBitrate < SCREEN_SHARE_MIN_MAINTAIN_FRAMERATE_BITRATE_BPS) return 'maintain-resolution';
+	if (target.contentHint === 'motion') return 'balanced';
 	return 'maintain-framerate';
 }
 
@@ -376,15 +378,6 @@ function resolveScreenShareContentHintForMode(
 	return hintSetting === 'auto' ? undefined : hintSetting;
 }
 
-function resolveScreenShareContentHint(
-	mode: StreamingMode,
-	hintSetting: ScreenShareContentHint,
-	context: ScreenShareContext,
-): ScreenShareCaptureOptions['contentHint'] {
-	const hint = resolveScreenShareContentHintForMode(mode, hintSetting);
-	return hint === 'motion' && context !== 'device' ? undefined : hint;
-}
-
 export function resolveScreenShareTarget(input: ScreenShareTargetInput): ScreenShareTarget {
 	const clamped = input.softwareEncoderClamp === true || shouldClampToSoftwareH264(input.codec);
 	const configured = resolveEffectiveScreenShareQuality(input);
@@ -393,7 +386,9 @@ export function resolveScreenShareTarget(input: ScreenShareTargetInput): ScreenS
 	const onDisplay = clamped ? clampToSoftwareH264Budget(configuredOnDisplay) : configuredOnDisplay;
 	const fit = resolveEffectiveScreenShareDimensions(effective.resolution, input.sourceDimensions);
 	const maxBitrate = computeScreenShareBitrateBps(fit.width * fit.height, fit.rung, effective.frameRate);
-	const contentHint = resolveScreenShareContentHint(effective.mode, input.hintSetting, input.context);
+	// Without the motion hint Chromium treats a display or window capture as text: it keeps the resolution and drops
+	// frames when the uplink cannot carry it. With it, the encoder trades resolution and frame rate against each other.
+	const contentHint = resolveScreenShareContentHintForMode(effective.mode, input.hintSetting);
 	return {
 		mode: effective.mode,
 		resolution: effective.resolution,

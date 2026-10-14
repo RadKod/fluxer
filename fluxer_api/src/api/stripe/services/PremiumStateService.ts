@@ -12,6 +12,8 @@ import type {
 import type {StorePurchaseRow} from '@app/api/database/types/StoreBillingTypes';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import {Logger} from '@app/api/Logger';
+import {getCachedInstancePremiumMode} from '@app/api/limits/InstancePremiumModeCache';
+import {getUserCacheService} from '@app/api/middleware/ServiceSingletons';
 import type {User} from '@app/api/models/User';
 import {
 	mapPremiumStoreSubscriptionState,
@@ -30,6 +32,7 @@ import {
 	SELF_SERVE_REFUND_WINDOW_DAYS,
 } from '@app/api/stripe/services/StripeRefundService';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
+import {propagateIfPartialChanged} from '@app/api/user/services/PartialUserChangePropagation';
 import {checkHasActivePaidPremium} from '@app/api/user/UserHelpers';
 import {mapUserToPrivateResponse} from '@app/api/user/UserMappers';
 import {
@@ -264,6 +267,13 @@ export class PremiumStateService {
 				? user
 				: await this.userRepository.patchUpsert(user.id, {premium_flags: nextFlags}, user.toRow());
 		if (updatedUser !== user) {
+			// Micup: disabled perks take the premium badge off the public flags; a failed announcement never fails this.
+			await propagateIfPartialChanged(
+				{userCacheService: getUserCacheService()},
+				user,
+				updatedUser,
+				'after switching premium perks',
+			);
 			await this.gatewayService.dispatchPresence({
 				userId: updatedUser.id,
 				event: 'USER_UPDATE',
@@ -318,7 +328,12 @@ export class PremiumStateService {
 				premium_lifetime_sequence: user.premiumLifetimeSequence,
 				premium_grace_ends_at: toIso(user.premiumGraceEndsAt),
 				premium_enabled_override: (user.premiumFlags & PremiumFlags.ENABLED_OVERRIDE) !== 0,
-				premium_purchase_disabled: (user.premiumFlags & PremiumFlags.PURCHASE_DISABLED) !== 0 || !isBillingActive(),
+				premium_purchase_disabled:
+					(user.premiumFlags & PremiumFlags.PURCHASE_DISABLED) !== 0 ||
+					!(
+						isBillingActive() ||
+						(Config.instance.selfHosted && getCachedInstancePremiumMode() === 'mirror' && Config.payriff.enabled)
+					),
 				premium_perks_disabled: (user.premiumFlags & PremiumFlags.PERKS_DISABLED) !== 0,
 				self_hosted: Config.instance.selfHosted,
 				bot: user.isBot,

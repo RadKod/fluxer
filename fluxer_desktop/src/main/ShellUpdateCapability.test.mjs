@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {describe, test} from 'node:test';
+import {mkdtempSync, readFileSync, rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {after, describe, test} from 'node:test';
 import {fileURLToPath} from 'node:url';
 import {installElectronStub} from './LocalAppTestSupport.test.mjs';
 
 const events = [];
 const ipcRegistrations = [];
 let openExternalFailure = null;
+const userData = mkdtempSync(join(tmpdir(), 'shell-update-locale-'));
+after(() => rmSync(userData, {recursive: true, force: true}));
 
 class FakeWebContents {
 	constructor() {
@@ -82,7 +86,7 @@ installElectronStub({
 		isPackaged: true,
 		isReady: () => true,
 		getAppPath: () => process.cwd(),
-		getPath: () => process.cwd(),
+		getPath: () => userData,
 		quit: () => {
 			events.push('quit');
 		},
@@ -115,6 +119,7 @@ const {decideShellUpdatePlan, resolveShellUpdatePlan, ShellUpdateCapability} = a
 	'@electron/main/ShellUpdateCapability'
 );
 const {DOWNLOAD_PAGE_URL} = await import('@electron/main/UpdaterDownloads');
+const {setNativeStrings} = await import('@electron/main/MainI18n');
 const {armBlockedShellUpdate, getBlockedShellUpdate, SPLASH_MANUAL_UPDATE_MESSAGE} = await import(
 	'@electron/main/ShellUpdateSplash'
 );
@@ -176,6 +181,7 @@ function planFor(runtime) {
 		packaged: true,
 		portable: false,
 		flatpak: false,
+		windowsStore: false,
 		appImage: null,
 		platform: 'linux',
 		...runtime,
@@ -238,6 +244,7 @@ describe('shell update capability', () => {
 				packaged: true,
 				portable: false,
 				flatpak: false,
+				windowsStore: process.windowsStore === true,
 				appImage: null,
 				platform: process.platform,
 			}),
@@ -258,6 +265,46 @@ describe('shell update capability', () => {
 });
 
 describe('blocked shell update states', () => {
+	test('a first-launch Store update block has Turkish text before the renderer can provide native strings', () => {
+		withPlatform('win32', () =>
+			withProperty(process, 'windowsStore', true, () => {
+				const blocked = getBlockedShellUpdate(MANAGED_PLAN, null);
+				assert.equal(blocked.action.label, 'Microsoft Store’u aç');
+				assert.equal(blocked.message, 'Micup başlamadan önce Microsoft Store’dan bir güncelleme yüklenmelidir.');
+				assert.equal(blocked.downloadUrl, 'ms-windows-store://pdp/?ProductId=9P1SNJ2H2W9H');
+				assert.equal(blocked.downloadUrls.size, 0);
+				assert.equal(blocked.options, null);
+				const security = getBlockedShellUpdate(MANAGED_PLAN, null, true);
+				assert.equal(security.status, 'blocked-security-update-managed');
+				assert.equal(
+					security.message,
+					'Micup başlamadan önce Microsoft Store’dan zorunlu güvenlik güncellemesi yüklenmelidir.',
+				);
+			}),
+		);
+	});
+
+	test('Store update text uses persisted native translations and interpolates the app name', () => {
+		setNativeStrings('en-US', {
+			'desktop.shellUpdate.openMicrosoftStore': 'Open Microsoft Store',
+			'desktop.shellUpdate.storeRequired': 'Update {appName} from Microsoft Store.',
+			'desktop.shellUpdate.storeSecurityRequired': 'Security update for {appName} from Microsoft Store.',
+		});
+		try {
+			withPlatform('win32', () =>
+				withProperty(process, 'windowsStore', true, () => {
+					assert.equal(getBlockedShellUpdate(MANAGED_PLAN, null).message, 'Update Micup from Microsoft Store.');
+					assert.equal(
+						getBlockedShellUpdate(MANAGED_PLAN, null, true).message,
+						'Security update for Micup from Microsoft Store.',
+					);
+				}),
+			);
+		} finally {
+			setNativeStrings('en-US', {});
+		}
+	});
+
 	test('every plan lands on an affordance that can resolve the block', () => {
 		for (const plan of [SELF_UPDATE_PLAN, MANUAL_PLATFORM_PLAN, MANUAL_UNPACKAGED_PLAN, MANAGED_PLAN]) {
 			for (const platform of ['linux', 'darwin', 'win32']) {
@@ -339,7 +386,7 @@ describe('blocked shell update states', () => {
 
 	test('the download page is a channel aware page, never an artifact', () => {
 		assert.equal(shouldOpenExternalUrl(DOWNLOAD_PAGE_URL), true);
-		assert.equal(new URL(DOWNLOAD_PAGE_URL).pathname, '/download');
+		assert.equal(new URL(DOWNLOAD_PAGE_URL).pathname, BUILD_CHANNEL === 'development' ? '/download' : '/indir');
 	});
 
 	test('every picker entry resolves to the latest linux artifact route for the running arch', () => {

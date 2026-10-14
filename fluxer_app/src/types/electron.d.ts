@@ -155,6 +155,15 @@ export interface SetDesktopTroubleshootingDisableHardwareAccelerationOptions {
 	restart?: boolean;
 }
 
+export type DesktopGameOverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+export interface DesktopGameOverlayLayout {
+	visible: boolean;
+	corner: DesktopGameOverlayCorner;
+	width: number; // CSS px = DIP
+	height: number;
+}
+
 export interface DesktopVoiceDebugEventSinkEntry {
 	sequence: number;
 	line: string;
@@ -544,6 +553,9 @@ export interface ElectronAPI {
 	autostartIsEnabled(): Promise<boolean>;
 	autostartIsInitialized(): Promise<boolean>;
 	autostartMarkInitialized(): Promise<void>;
+	autostartClaimStorePrompt?(): Promise<boolean>;
+	getTaskbarPinState?(): Promise<{supported: boolean; pinned: boolean; lafRequired: boolean}>;
+	requestTaskbarPin?(): Promise<boolean>;
 	globalKeyHookStart(): Promise<boolean>;
 	globalKeyHookIsRunning?(): Promise<boolean>;
 	globalKeyHookStop(): Promise<void>;
@@ -612,6 +624,7 @@ export interface ElectronAPI {
 	openVoiceDebugEventSinkPopout?(entries: Array<DesktopVoiceDebugEventSinkEntry>): Promise<void>;
 	appendVoiceDebugEventSinkEntries?(entries: Array<DesktopVoiceDebugEventSinkEntry>): void;
 	setVoiceDebugEventSinkStatsHtml?(html: string): void;
+	setGameOverlayLayout?(layout: DesktopGameOverlayLayout): void;
 	windowMinimize?(): void;
 	windowMaximize?(): void;
 	windowClose?(): void;

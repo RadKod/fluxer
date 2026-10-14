@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Accessibility from '@app/features/accessibility/state/Accessibility';
+import * as AnalyticsCommands from '@app/features/analytics/commands/AnalyticsCommands';
 import {showDmActionErrorModal} from '@app/features/app/components/alerts/DmActionErrorModal';
 import {FeatureTemporarilyDisabledModal} from '@app/features/app/components/alerts/FeatureTemporarilyDisabledModal';
 import {showGenericErrorModal} from '@app/features/app/components/alerts/GenericErrorModalCommands';
@@ -595,6 +596,7 @@ export async function send(channelId: string, params: SendMessageParams): Promis
 		MessageQueue.rejectLocalRateLimitedSend(channelId, params.nonce, params.hasAttachments);
 		return null;
 	}
+	AnalyticsCommands.track('message_send');
 	const sendOrder = Accessibility.sequentialFileSend && params.hasAttachments ? nextChannelOrder(channelId) : -1;
 	const prepared = await prepareSendAttachments(channelId, params);
 	if (!prepared) {

@@ -25,11 +25,13 @@ const EMAIL_I18N_RO_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "Îți mulțumim pentru donația către {product_name}",
-		"body": "Salut,\n\nÎți mulțumim pentru donația ta către {product_name}! {interval, select,\n  month {Donația ta recurentă}\n  year {Donația ta recurentă}\n  other {Donația ta unică}\n} a fost {interval, select,\n  month {configurată}\n  year {configurată}\n  other {procesată}\n} cu succes.\n\nDetalii donație:\nSumă: {amount} {interval, select,\n  month {pe lună}\n  year {pe an}\n  other {}\n}\n\nStripe îți va trimite în scurt timp un e-mail separat cu chitanța și factura ta în format PDF. Acestea includ toate detaliile plății și pot fi folosite în scopuri fiscale.\n\nPoți vizualiza istoricul donațiilor, descărca facturi {interval, select,\n  month {și gestiona sau anula abonamentul}\n  year {și gestiona sau anula abonamentul}\n  other {și gestiona donațiile viitoare}\n} în orice moment folosind acest link:\n\n{manageUrl}\n\nSprijinul tău ne ajută să menținem {product_name} în funcțiune. Mulțumim!\n\n– Echipa {product_name}"
+		"body": "Salut,\n\nÎți mulțumim pentru donația ta către {product_name}! {interval, select,\n  month {Donația ta recurentă}\n  year {Donația ta recurentă}\n  other {Donația ta unică}\n} a fost {interval, select,\n  month {configurată}\n  year {configurată}\n  other {procesată}\n} cu succes.\n\nDetalii donație:\nSumă: {amount} {interval, select,\n  month {pe lună}\n  year {pe an}\n  other {}\n}\n\nStripe îți va trimite în scurt timp un e-mail separat cu chitanța și factura ta în format PDF. Acestea includ toate detaliile plății și pot fi folosite în scopuri fiscale.\n\nPoți vizualiza istoricul donațiilor, descărca facturi {interval, select,\n  month {și gestiona sau anula abonamentul}\n  year {și gestiona sau anula abonamentul}\n  other {și gestiona donațiile viitoare}\n} în orice moment folosind acest link:\n\n{manageUrl}\n\nSprijinul tău ne ajută să menținem {product_name} în funcțiune. Mulțumim!\n\n– Echipa {product_name}",
+		"button": "Gestionează donațiile"
 	},
 	"donation_magic_link": {
 		"subject": "Gestionează-ți donațiile către {product_name}",
-		"body": "Salut,\n\nApasă pe linkul de mai jos pentru a accesa portalul tău de donator:\n\n{manageUrl}\n\nÎn portal, poți gestiona abonamentele, descărca facturi și vizualiza istoricul donațiilor tale.\n\nAcest link expiră la data de {expiresAt, date, full} la ora {expiresAt, time, short}.\n\nDacă nu ai solicitat acest link, poți ignora în siguranță acest e-mail.\n\n– Echipa {product_name}"
+		"body": "Salut,\n\nApasă pe linkul de mai jos pentru a accesa portalul tău de donator:\n\n{manageUrl}\n\nÎn portal, poți gestiona abonamentele, descărca facturi și vizualiza istoricul donațiilor tale.\n\nAcest link expiră la data de {expiresAt, date, full} la ora {expiresAt, time, short}.\n\nDacă nu ai solicitat acest link, poți ignora în siguranță acest e-mail.\n\n– Echipa {product_name}",
+		"button": "Gestionează donațiile"
 	},
 	"dsa_report_verification": {
 		"subject": "Verifică-ți e-mailul pentru un raport DSA",
@@ -45,11 +47,13 @@ const EMAIL_I18N_RO_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "Adresa de e-mail pentru {product_name} a fost schimbată",
-		"body": "Salut {username},\n\nAdresa de e-mail a contului tău {product_name} a fost schimbată în {newEmail}.\n\nDacă tu ai făcut această modificare, nu trebuie să faci nimic. Dacă nu ai făcut-o tu, poți anula modificarea și îți poți securiza contul folosind acest link:\n\n{revertUrl}\n\nAceasta va restabili adresa ta de e-mail anterioară, te va deconecta de pe toate dispozitivele, va dezactiva MFA și îți va cere să setezi o parolă nouă.\n\n– Echipa de siguranță {product_name}"
+		"body": "Salut {username},\n\nAdresa de e-mail a contului tău {product_name} a fost schimbată în {newEmail}.\n\nDacă tu ai făcut această modificare, nu trebuie să faci nimic. Dacă nu ai făcut-o tu, poți anula modificarea și îți poți securiza contul folosind acest link:\n\n{revertUrl}\n\nAceasta va restabili adresa ta de e-mail anterioară, te va deconecta de pe toate dispozitivele, va dezactiva MFA și îți va cere să setezi o parolă nouă.\n\n– Echipa de siguranță {product_name}",
+		"button": "Anulează această modificare"
 	},
 	"email_verification": {
 		"subject": "Verifică-ți adresa de e-mail pentru {product_name}",
-		"body": "Salut {username},\n\nTe rugăm să verifici adresa de e-mail a contului tău {product_name} apăsând pe linkul de mai jos:\n\n{verifyUrl}\n\nDacă nu ai creat un cont {product_name}, poți ignora în siguranță acest e-mail.\n\nAcest link este valabil 24 de ore.\n\n– Echipa {product_name}"
+		"body": "🎉 Salut {username},\n\nTe rugăm să verifici adresa de e-mail a contului tău {product_name} apăsând pe linkul de mai jos:\n\n{verifyUrl}\n\nDacă nu ai creat un cont {product_name}, poți ignora în siguranță acest e-mail.\n\nAcest link este valabil 24 de ore.\n\n– Echipa {product_name}",
+		"button": "Verifică e-mailul"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Beneficiile din cadoul pe care l-ai valorificat au fost eliminate",
@@ -57,15 +61,18 @@ const EMAIL_I18N_RO_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "Exportul datelor din {product_name} este gata pentru descărcare",
-		"body": "Salut {username},\n\nExportul datelor tale este gata.\n\nLink de descărcare:\n{downloadUrl}\n\nMesaje incluse: {totalMessages, number}\nDimensiune fișier: {fileSizeMB, number} MB\n\nAcest link expiră la data de {expiresAt, date, full} la ora {expiresAt, time, short}.\n\nDacă nu ai solicitat acest export, te rugăm să-ți schimbi parola imediat și să contactezi asistența.\n\n– Echipa {product_name}"
+		"body": "Salut {username},\n\nExportul datelor tale este gata.\n\nLink de descărcare:\n{downloadUrl}\n\nMesaje incluse: {totalMessages, number}\nDimensiune fișier: {fileSizeMB, number} MB\n\nAcest link expiră la data de {expiresAt, date, full} la ora {expiresAt, time, short}.\n\nDacă nu ai solicitat acest export, te rugăm să-ți schimbi parola imediat și să contactezi asistența.\n\n– Echipa {product_name}",
+		"button": "Descarcă datele mele"
 	},
 	"inactivity_warning": {
 		"subject": "Contul tău {product_name} va fi șters din cauza inactivității",
-		"body": "Salut {username},\n\nNu am înregistrat nicio activitate pe contul tău {product_name} de la data de {lastActiveDate, date, full}.\n\nDacă nu te conectezi până la data de {deletionDate, date, full} la ora {deletionDate, time, short}, contul tău va fi șters permanent din cauza inactivității.\n\nConectează-te aici:\n{loginUrl}\n\nDacă ai folosit {product_name} recent, te rugăm să contactezi imediat asistența.\n\n– Echipa {product_name}"
+		"body": "Salut {username},\n\nNu am înregistrat nicio activitate pe contul tău {product_name} de la data de {lastActiveDate, date, full}.\n\nDacă nu te conectezi până la data de {deletionDate, date, full} la ora {deletionDate, time, short}, contul tău va fi șters permanent din cauza inactivității.\n\nConectează-te aici:\n{loginUrl}\n\nDacă ai folosit {product_name} recent, te rugăm să contactezi imediat asistența.\n\n– Echipa {product_name}",
+		"button": "Conectează-te"
 	},
 	"ip_authorization": {
 		"subject": "Autorizează conectarea de la o nouă adresă IP",
-		"body": "Salut {username},\n\nAm detectat o tentativă de conectare la contul tău {product_name} de la o nouă adresă IP:\n\nAdresă IP: {ipAddress}\nLocație: {location}\n\nDacă ai fost tu, te rugăm să autorizezi această adresă IP apăsând pe linkul de mai jos:\n\n{authUrl}\n\nDacă nu ai încercat să te conectezi, te rugăm să-ți schimbi parola imediat.\n\nAcest link este valabil 30 de minute.\n\n– Echipa {product_name}"
+		"body": "Salut {username},\n\nAm detectat o tentativă de conectare la contul tău {product_name} de la o nouă adresă IP:\n\nAdresă IP: {ipAddress}\nLocație: {location}\n\nDacă ai fost tu, te rugăm să autorizezi această adresă IP apăsând pe linkul de mai jos:\n\n{authUrl}\n\nDacă nu ai încercat să te conectezi, te rugăm să-ți schimbi parola imediat.\n\nAcest link este valabil 30 de minute.\n\n– Echipa {product_name}",
+		"button": "Autorizează această conectare"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Confirmă accesul la codurile tale de rezervă pentru {product_name}",
@@ -77,11 +84,17 @@ const EMAIL_I18N_RO_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "Resetează-ți parola pentru {product_name}",
-		"body": "Salut {username},\n\nAi solicitat o resetare a parolei pentru {product_name}. Folosește linkul de mai jos pentru a seta o nouă parolă:\n\n{resetUrl}\n\nDacă nu ai solicitat acest lucru, poți ignora în siguranță acest e-mail.\n\nAcest link este valabil o oră.\n\n– Echipa {product_name}"
+		"body": "Salut {username},\n\nAi solicitat o resetare a parolei pentru {product_name}. Folosește linkul de mai jos pentru a seta o nouă parolă:\n\n{resetUrl}\n\nDacă nu ai solicitat acest lucru, poți ignora în siguranță acest e-mail.\n\nAcest link este valabil o oră.\n\n– Echipa {product_name}",
+		"button": "Resetează parola"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "Înregistrarea ta pentru {product_name} a fost aprobată",
-		"body": "Salut {username},\n\nVești bune: înregistrarea ta pentru {product_name} a fost aprobată.\n\nAcum te poți conecta la aplicația {product_name} aici:\n{channelsUrl}\n\nBun venit în comunitatea {product_name}.\n\n– Echipa {product_name}"
+		"body": "🎉 Salut {username},\n\nVești bune: înregistrarea ta pentru {product_name} a fost aprobată.\n\nAcum te poți conecta la aplicația {product_name} aici:\n{channelsUrl}\n\nBun venit în comunitatea {product_name}.\n\n– Echipa {product_name}",
+		"button": "Deschide {product_name}"
 	},
 	"report_resolved": {
 		"subject": "Raportul tău de pe {product_name} a fost analizat",
@@ -97,7 +110,7 @@ const EMAIL_I18N_RO_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "Suspendarea contului {product_name} a fost ridicată",
-		"body": "Salut {username},\n\nVești bune: suspendarea contului tău {product_name} a fost ridicată.\n\n{reason, select,\n  null {}\n  other {Motiv: {reason}}\n}\n\nAcum te poți conecta din nou și poți continua să folosești {product_name} în mod normal.\n\n– Echipa de siguranță {product_name}"
+		"body": "🎉 Salut {username},\n\nVești bune: suspendarea contului tău {product_name} a fost ridicată.\n\n{reason, select,\n  null {}\n  other {Motiv: {reason}}\n}\n\nAcum te poți conecta din nou și poți continua să folosești {product_name} în mod normal.\n\n– Echipa de siguranță {product_name}"
 	}
 });
 

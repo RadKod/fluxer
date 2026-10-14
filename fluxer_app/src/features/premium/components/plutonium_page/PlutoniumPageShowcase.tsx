@@ -17,20 +17,16 @@ import {
 import {
 	SHOWCASE_EXPRESSIONS_BODY_DESCRIPTOR,
 	SHOWCASE_EXPRESSIONS_TITLE_DESCRIPTOR,
-	SHOWCASE_PROFILE_BODY_DESCRIPTOR,
 	SHOWCASE_PROFILE_BODY_WITHOUT_TAG_DESCRIPTOR,
 	SHOWCASE_PROFILE_TITLE_DESCRIPTOR,
 	SHOWCASE_STREAM_BODY_DESCRIPTOR,
 	SHOWCASE_STREAM_TITLE_DESCRIPTOR,
 	SHOWCASE_UPLOAD_BODY_DESCRIPTOR,
 	SHOWCASE_UPLOAD_TITLE_DESCRIPTOR,
-	TAG_FOOTNOTE_MARKER_DESCRIPTOR,
 } from '@app/features/premium/components/plutonium_page/PlutoniumPageMessages';
-import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import type {MessageDescriptor} from '@lingui/core';
 import {useLingui} from '@lingui/react/macro';
 import {clsx} from 'clsx';
-import type React from 'react';
 
 const PERK_SHOT_SIZES = '(min-width: 48rem) 50vw, calc(100vw - 5rem)';
 const CHAT_SURFACE = 'rgb(30, 29, 35)';
@@ -76,7 +72,7 @@ const PERK_CARDS: ReadonlyArray<PerkCard> = [
 	{
 		id: 'profile',
 		title: SHOWCASE_PROFILE_TITLE_DESCRIPTOR,
-		body: SHOWCASE_PROFILE_BODY_DESCRIPTOR,
+		body: SHOWCASE_PROFILE_BODY_WITHOUT_TAG_DESCRIPTOR,
 		shots: PROFILE_SHOTS,
 		width: 662,
 		height: 407,
@@ -150,7 +146,6 @@ function PerkArt({card, eager}: {card: PerkCard; eager: boolean}) {
 	return (
 		<div className={styles.perkArt} data-flx="premium.plutonium-page.perk-art">
 			<picture>
-				<source type="image/avif" srcSet={srcSet(card.shots.avif)} sizes={PERK_SHOT_SIZES} />
 				<source type="image/webp" srcSet={srcSet(card.shots.webp)} sizes={PERK_SHOT_SIZES} />
 				<img
 					draggable={false}
@@ -195,33 +190,16 @@ function PerkArt({card, eager}: {card: PerkCard; eager: boolean}) {
 interface PlutoniumPageShowcaseProps {
 	uploadSize: string;
 	freeUploadSize: string;
-	footnoteId: string;
-	onFootnoteClick: (event: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
-export function PlutoniumPageShowcase({
-	uploadSize,
-	freeUploadSize,
-	footnoteId,
-	onFootnoteClick,
-}: PlutoniumPageShowcaseProps) {
+export function PlutoniumPageShowcase({uploadSize, freeUploadSize}: PlutoniumPageShowcaseProps) {
 	const {i18n} = useLingui();
 	const showArt = !RuntimeConfig.isSelfHosted();
 	return (
 		<>
 			{PERK_CARDS.map((card, index) => {
 				const flipped = index % 2 === 1;
-				const body =
-					card.id === 'profile' && RuntimeConfig.usesUniqueUsernames
-						? i18n._(SHOWCASE_PROFILE_BODY_WITHOUT_TAG_DESCRIPTOR)
-						: card.id === 'profile'
-							? renderProfileBody(
-									i18n._(card.body, {footnote: '\u0000'}),
-									footnoteId,
-									onFootnoteClick,
-									i18n._(TAG_FOOTNOTE_MARKER_DESCRIPTOR),
-								)
-							: i18n._(card.body, {freeSize: freeUploadSize});
+				const body = i18n._(card.body, {freeSize: freeUploadSize});
 				return (
 					<article
 						key={card.id}
@@ -244,32 +222,6 @@ export function PlutoniumPageShowcase({
 					</article>
 				);
 			})}
-		</>
-	);
-}
-
-function renderProfileBody(
-	text: string,
-	footnoteId: string,
-	onFootnoteClick: (event: React.MouseEvent<HTMLAnchorElement>) => void,
-	markerLabel: string,
-): React.ReactNode {
-	const [before, after = ''] = text.split('\u0000');
-	return (
-		<>
-			<span>{before}</span>
-			<FocusRing offset={-2}>
-				<a
-					href={`#${footnoteId}`}
-					className={styles.footnoteMarker}
-					onClick={onFootnoteClick}
-					data-flx="premium.plutonium-page.perk-row.footnote-marker"
-				>
-					<span aria-hidden="true">*</span>
-					<span className={styles.srOnly}>{markerLabel}</span>
-				</a>
-			</FocusRing>
-			<span>{after}</span>
 		</>
 	);
 }

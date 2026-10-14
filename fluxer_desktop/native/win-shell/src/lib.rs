@@ -4,6 +4,15 @@ use napi::Task;
 use napi::bindgen_prelude::{AsyncTask, Env, Error, Result, Status};
 use napi_derive::napi;
 
+#[cfg(target_os = "windows")]
+mod taskbar;
+
+#[cfg(target_os = "windows")]
+mod processes;
+
+#[cfg(target_os = "windows")]
+pub use processes::{ListProcessesTask, ProcessInfo, list_processes};
+
 #[napi(object)]
 #[derive(Debug)]
 pub struct CreateShortcutOptions {
@@ -66,6 +75,11 @@ pub struct GetRunValueTask {
     name: String,
 }
 
+pub struct StartupTaskStateTask {
+    task_id: String,
+    enable: Option<bool>,
+}
+
 #[napi(js_name = "createShortcut")]
 pub fn create_shortcut(opts: CreateShortcutOptions) -> Result<AsyncTask<CreateShortcutTask>> {
     Ok(AsyncTask::new(CreateShortcutTask {
@@ -91,6 +105,27 @@ pub fn delete_current_user_run_value(name: String) -> Result<AsyncTask<DeleteRun
 pub fn get_current_user_run_value(name: String) -> Result<AsyncTask<GetRunValueTask>> {
     Ok(AsyncTask::new(GetRunValueTask {
         name: require_non_empty(Some(name), "name")?,
+    }))
+}
+
+/// State of the package's `windows.startupTask`; fails without package identity (MSIX only).
+#[napi(js_name = "getStartupTaskState")]
+pub fn get_startup_task_state(task_id: String) -> Result<AsyncTask<StartupTaskStateTask>> {
+    Ok(AsyncTask::new(StartupTaskStateTask {
+        task_id: require_non_empty(Some(task_id), "taskId")?,
+        enable: None,
+    }))
+}
+
+/// Windows shows no consent dialog to packaged desktop apps here: call it only after the user said yes.
+#[napi(js_name = "setStartupTaskEnabled")]
+pub fn set_startup_task_enabled(
+    task_id: String,
+    enabled: bool,
+) -> Result<AsyncTask<StartupTaskStateTask>> {
+    Ok(AsyncTask::new(StartupTaskStateTask {
+        task_id: require_non_empty(Some(task_id), "taskId")?,
+        enable: Some(enabled),
     }))
 }
 
@@ -152,6 +187,31 @@ impl Task for GetRunValueTask {
     }
 }
 
+impl Task for StartupTaskStateTask {
+    type Output = i32;
+    type JsValue = String;
+
+    fn compute(&mut self) -> Result<Self::Output> {
+        platform::startup_task_state(&self.task_id, self.enable)
+    }
+
+    fn resolve(&mut self, _env: Env, output: Self::Output) -> Result<Self::JsValue> {
+        Ok(startup_task_state_label(output).to_string())
+    }
+}
+
+/// `Windows.ApplicationModel.StartupTaskState` values.
+fn startup_task_state_label(state: i32) -> &'static str {
+    match state {
+        0 => "disabled",
+        1 => "disabled-by-user",
+        2 => "enabled",
+        3 => "disabled-by-policy",
+        4 => "enabled-by-policy",
+        _ => "unknown",
+    }
+}
+
 fn validate_options(opts: CreateShortcutOptions) -> Result<ShortcutOptions> {
     Ok(ShortcutOptions {
         lnk_path: require_non_empty(opts.lnk_path, "lnkPath")?,
@@ -189,6 +249,7 @@ mod platform {
     use napi::bindgen_prelude::{Error, Result, Status};
     use std::ffi::c_void;
     use std::mem::ManuallyDrop;
+    use windows::ApplicationModel::StartupTask;
     use windows::Win32::Foundation::{
         ERROR_FILE_NOT_FOUND, ERROR_SUCCESS, PROPERTYKEY, WIN32_ERROR,
     };
@@ -210,7 +271,7 @@ mod platform {
         QUNS_PRESENTATION_MODE, QUNS_QUIET_TIME, QUNS_RUNNING_D3D_FULL_SCREEN,
         SHQueryUserNotificationState, ShellLink,
     };
-    use windows::core::{GUID, Interface, PCWSTR, PWSTR};
+    use windows::core::{GUID, HSTRING, Interface, PCWSTR, PWSTR};
 
     const CURRENT_USER_RUN_SUBKEY: &str = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
     const PKEY_APP_USER_MODEL_ID: PROPERTYKEY = PROPERTYKEY {
@@ -221,6 +282,28 @@ mod platform {
         fmtid: GUID::from_u128(0x9f4c2855_9f79_4b39_a8d0_e1d42de1d5f3),
         pid: 26,
     };
+
+    pub(super) fn startup_task_state(task_id: &str, enable: Option<bool>) -> Result<i32> {
+        let task = StartupTask::GetAsync(&HSTRING::from(task_id))
+            .and_then(|operation| operation.join())
+            .map_err(|err| hresult_error("StartupTask::GetAsync failed", err))?;
+        let state = match enable {
+            Some(true) => task
+                .RequestEnableAsync()
+                .and_then(|operation| operation.join())
+                .map_err(|err| hresult_error("StartupTask::RequestEnableAsync failed", err))?,
+            Some(false) => {
+                task.Disable()
+                    .map_err(|err| hresult_error("StartupTask::Disable failed", err))?;
+                task.State()
+                    .map_err(|err| hresult_error("StartupTask::State failed", err))?
+            }
+            None => task
+                .State()
+                .map_err(|err| hresult_error("StartupTask::State failed", err))?,
+        };
+        Ok(state.0)
+    }
 
     pub(super) fn get_user_notification_state() -> Result<String> {
         let state = unsafe { SHQueryUserNotificationState() }
@@ -578,6 +661,13 @@ mod platform {
             "win-shell not supported on this platform",
         ))
     }
+
+    pub(super) fn startup_task_state(_task_id: &str, _enable: Option<bool>) -> Result<i32> {
+        Err(Error::new(
+            Status::GenericFailure,
+            "win-shell not supported on this platform",
+        ))
+    }
 }
 
 #[cfg(test)]
@@ -701,5 +791,34 @@ mod tests {
         let err = platform::create_shortcut(&opts).expect_err("non-Windows should fail");
         assert_eq!(err.status, Status::GenericFailure);
         assert_eq!(err.reason, "win-shell not supported on this platform");
+    }
+
+    #[test]
+    fn startup_task_state_labels_follow_winrt_values() {
+        let labels: Vec<_> = (0..=5).map(startup_task_state_label).collect();
+        assert_eq!(
+            labels,
+            [
+                "disabled",
+                "disabled-by-user",
+                "enabled",
+                "disabled-by-policy",
+                "enabled-by-policy",
+                "unknown"
+            ]
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn startup_task_lookup_fails_cleanly_without_package_identity() {
+        let err = platform::startup_task_state("MicupStartup", None)
+            .expect_err("cargo test runs without package identity");
+        assert_eq!(err.status, Status::GenericFailure);
+        assert!(
+            err.reason.starts_with("StartupTask::GetAsync failed"),
+            "{}",
+            err.reason
+        );
     }
 }

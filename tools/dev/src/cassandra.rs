@@ -15,14 +15,19 @@ use std::sync::LazyLock;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
+pub const DEV_KEYSPACE_REPLICATION: &str = "{'class': 'SimpleStrategy', 'replication_factor': 1}";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CassandraConfig {
-    pub host: String,
+    pub hosts: Vec<String>,
     pub port: u16,
     pub keyspace: String,
     pub local_dc: String,
     pub username: Option<String>,
     pub password: Option<String>,
+    pub replication: Option<String>,
+    /// `--dev`: a local single-node cluster, where an RF=1 keyspace is not refused.
+    pub dev: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -33,6 +38,7 @@ pub struct ExistingTable {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ExistingSchema {
     pub keyspace_exists: bool,
+    pub replication: BTreeMap<String, String>,
     pub types: BTreeMap<String, BTreeMap<String, String>>,
     pub tables: BTreeMap<String, ExistingTable>,
     pub indexes: BTreeSet<String>,
@@ -96,18 +102,10 @@ pub fn target_schema() -> &'static TargetSchema {
 }
 
 pub fn config_from_env() -> Result<CassandraConfig> {
-    let hosts = env::var("FLUXER_CASSANDRA_HOSTS").unwrap_or_else(|_| "cassandra".to_owned());
-    let host = hosts
-        .split_once(',')
-        .map(|(first, _)| first)
-        .unwrap_or(&hosts)
-        .trim();
+    let hosts = env::var("FLUXER_CASSANDRA_HOSTS").unwrap_or_default();
+    let replication = env::var("FLUXER_CASSANDRA_REPLICATION").unwrap_or_default();
     Ok(CassandraConfig {
-        host: if host.is_empty() {
-            "cassandra".to_owned()
-        } else {
-            host.to_owned()
-        },
+        hosts: parse_hosts(&hosts),
         port: env::var("FLUXER_CASSANDRA_PORT")
             .unwrap_or_else(|_| "9042".to_owned())
             .parse()
@@ -121,12 +119,112 @@ pub fn config_from_env() -> Result<CassandraConfig> {
         password: env::var("FLUXER_CASSANDRA_PASSWORD")
             .ok()
             .filter(|value| !value.is_empty()),
+        replication: parse_replication(&replication)?,
+        dev: false,
     })
 }
 
+impl CassandraConfig {
+    pub fn with_replication(mut self, replication: Option<&str>, dev: bool) -> Result<Self> {
+        self.dev = dev;
+        if let Some(replication) = parse_replication(replication.unwrap_or_default())? {
+            self.replication = Some(replication);
+        } else if dev && self.replication.is_none() {
+            self.replication = Some(DEV_KEYSPACE_REPLICATION.to_owned());
+        }
+        Ok(self)
+    }
+}
+
+fn parse_hosts(value: &str) -> Vec<String> {
+    let hosts = value
+        .split(',')
+        .map(str::trim)
+        .filter(|host| !host.is_empty())
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    if hosts.is_empty() {
+        vec!["cassandra".to_owned()]
+    } else {
+        hosts
+    }
+}
+
+fn parse_replication(value: &str) -> Result<Option<String>> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Ok(None);
+    }
+    if !value.starts_with('{') || !value.ends_with('}') || value.contains(';') {
+        bail!(
+            "invalid Cassandra keyspace replication {value:?}: expected one CQL map such as \
+             {{'class': 'NetworkTopologyStrategy', '<datacenter>': 3}}"
+        );
+    }
+    Ok(Some(value.to_owned()))
+}
+
+/// Reads a CQL map such as `{'class': 'NetworkTopologyStrategy', 'fsn1': 3}`; empty when it is
+/// not one.
+fn parse_replication_map(value: &str) -> BTreeMap<String, String> {
+    let unquote = |part: &str| part.trim().trim_matches('\'').to_owned();
+    value
+        .trim()
+        .strip_prefix('{')
+        .and_then(|body| body.strip_suffix('}'))
+        .and_then(|body| {
+            body.split(',')
+                .map(|pair| {
+                    let (key, factor) = pair.split_once(':')?;
+                    Some((unquote(key), unquote(factor)))
+                })
+                .collect::<Option<BTreeMap<_, _>>>()
+        })
+        .unwrap_or_default()
+}
+
+/// Why a keyspace replication would lose data or quorum once one node of a multi-host cluster
+/// is down, if it would: SimpleStrategy, or any datacentre with fewer than min(3, hosts)
+/// replicas. One host and `--dev` are never refused.
+fn replication_problem(
+    replication: &BTreeMap<String, String>,
+    hosts: usize,
+    dev: bool,
+) -> Option<String> {
+    if dev || hosts < 2 {
+        return None;
+    }
+    let required = hosts.min(3);
+    let class = replication.get("class").map_or("", String::as_str);
+    let factors = replication
+        .iter()
+        .filter(|(key, _)| key.as_str() != "class")
+        .map(|(_, factor)| factor.trim().parse::<usize>().ok())
+        .collect::<Vec<_>>();
+    let safe = !class.ends_with("SimpleStrategy")
+        && !factors.is_empty()
+        && factors
+            .iter()
+            .all(|factor| factor.is_some_and(|factor| factor >= required));
+    (!safe).then(|| {
+        format!(
+            "replication {replication:?} is unsafe on {hosts} Cassandra hosts: use \
+             NetworkTopologyStrategy with at least {required} replicas in every datacenter \
+             (--dev is only for a local single-node cluster)"
+        )
+    })
+}
+
+fn contact_points(config: &CassandraConfig) -> Vec<String> {
+    config
+        .hosts
+        .iter()
+        .map(|host| format!("{host}:{}", config.port))
+        .collect()
+}
+
 async fn connect(config: &CassandraConfig) -> Result<Session> {
-    let contact = format!("{}:{}", config.host, config.port);
-    let mut builder = SessionBuilder::new().known_node(contact);
+    let mut builder = SessionBuilder::new().known_nodes(contact_points(config));
     if let Some(username) = &config.username {
         builder = builder.user(username, config.password.as_deref().unwrap_or_default());
     }
@@ -134,6 +232,7 @@ async fn connect(config: &CassandraConfig) -> Result<Session> {
 }
 
 pub async fn wait_for_cassandra(config: &CassandraConfig, timeout_secs: u64) -> Result<()> {
+    let contact = contact_points(config).join(", ");
     let deadline = Instant::now() + Duration::from_secs(timeout_secs);
     let mut last_error = None;
     while Instant::now() < deadline {
@@ -143,7 +242,7 @@ pub async fn wait_for_cassandra(config: &CassandraConfig, timeout_secs: u64) -> 
                 .await
             {
                 Ok(_) => {
-                    println!("Cassandra is reachable at {}:{}", config.host, config.port);
+                    println!("Cassandra is reachable at {contact}");
                     return Ok(());
                 }
                 Err(error) => last_error = Some(error.to_string()),
@@ -153,9 +252,7 @@ pub async fn wait_for_cassandra(config: &CassandraConfig, timeout_secs: u64) -> 
         sleep(Duration::from_secs(3)).await;
     }
     bail!(
-        "Timed out waiting for Cassandra at {}:{}: {}",
-        config.host,
-        config.port,
+        "Timed out waiting for Cassandra at {contact}: {}",
         last_error.unwrap_or_else(|| "unknown error".to_owned())
     );
 }
@@ -182,9 +279,8 @@ fn normalize_identifier(value: &str) -> String {
 }
 
 #[derive(Debug, DeserializeRow)]
-#[allow(dead_code)]
 struct KeyspaceRow {
-    keyspace_name: String,
+    replication: BTreeMap<String, String>,
 }
 
 #[derive(Debug, DeserializeRow)]
@@ -210,7 +306,7 @@ struct IndexRow {
 pub async fn fetch_existing_schema(session: &Session, keyspace: &str) -> Result<ExistingSchema> {
     let keyspace_rows = session
         .query_unpaged(
-            "SELECT keyspace_name FROM system_schema.keyspaces WHERE keyspace_name = ?",
+            "SELECT replication FROM system_schema.keyspaces WHERE keyspace_name = ?",
             (keyspace,),
         )
         .await?
@@ -274,8 +370,10 @@ pub async fn fetch_existing_schema(session: &Session, keyspace: &str) -> Result<
         .map(|name| normalize_identifier(&name))
         .collect();
 
+    let replication = keyspace_rows.into_iter().next().map(|row| row.replication);
     Ok(ExistingSchema {
-        keyspace_exists: !keyspace_rows.is_empty(),
+        keyspace_exists: replication.is_some(),
+        replication: replication.unwrap_or_default(),
         types,
         tables,
         indexes,
@@ -400,15 +498,33 @@ fn type_dependencies(user_type: &UserType, user_type_names: &BTreeSet<String>) -
     deps
 }
 
-pub fn create_diff(existing: &ExistingSchema, keyspace: &str) -> SchemaDiff {
+pub fn create_diff(
+    existing: &ExistingSchema,
+    keyspace: &str,
+    config: &CassandraConfig,
+) -> Result<SchemaDiff> {
     let schema = target_schema();
     let mut statements = Vec::new();
     let mut warnings = Vec::new();
     let mut errors = Vec::new();
-    if !existing.keyspace_exists {
+    let replication = if existing.keyspace_exists {
+        existing.replication.clone()
+    } else {
+        let Some(replication) = config.replication.as_deref() else {
+            bail!(
+                "Cassandra keyspace {keyspace} does not exist and no replication was given; \
+                 create it first or pass --replication \
+                 \"{{'class': 'NetworkTopologyStrategy', '<dc>': 3}}\" (env \
+                 FLUXER_CASSANDRA_REPLICATION); --dev creates a local single-node RF=1 keyspace"
+            );
+        };
         statements.push(format!(
-            "CREATE KEYSPACE IF NOT EXISTS {keyspace} WITH replication = {{'class': 'SimpleStrategy', 'replication_factor': 1}}"
+            "CREATE KEYSPACE IF NOT EXISTS {keyspace} WITH replication = {replication}"
         ));
+        parse_replication_map(replication)
+    };
+    if let Some(problem) = replication_problem(&replication, config.hosts.len(), config.dev) {
+        errors.push(format!("keyspace {keyspace}: {problem}"));
     }
     for user_type in sorted_user_types() {
         let Some(current_fields) = existing.types.get(&user_type.name) else {
@@ -477,12 +593,12 @@ pub fn create_diff(existing: &ExistingSchema, keyspace: &str) -> SchemaDiff {
             ));
         }
     }
-    SchemaDiff {
+    Ok(SchemaDiff {
         statements,
         warnings,
         errors,
         target_sha256: target_schema_sha256(keyspace),
-    }
+    })
 }
 
 fn statement_with_semicolon(statement: &str) -> String {
@@ -538,21 +654,23 @@ pub async fn compute_diff(config: Option<CassandraConfig>) -> Result<SchemaDiff>
     let config = config.unwrap_or(config_from_env()?);
     wait_for_cassandra(&config, 180).await?;
     let session = connect(&config).await?;
-    create_live_diff(&session, &config.keyspace).await
+    create_live_diff(&session, &config.keyspace, &config).await
 }
 
-async fn create_live_diff(session: &Session, keyspace: &str) -> Result<SchemaDiff> {
-    Ok(create_diff(
-        &fetch_existing_schema(session, keyspace).await?,
-        keyspace,
-    ))
+async fn create_live_diff(
+    session: &Session,
+    keyspace: &str,
+    config: &CassandraConfig,
+) -> Result<SchemaDiff> {
+    let existing = fetch_existing_schema(session, keyspace).await?;
+    create_diff(&existing, keyspace, config)
 }
 
 pub async fn apply_schema(config: Option<CassandraConfig>) -> Result<SchemaDiff> {
     let config = config.unwrap_or(config_from_env()?);
     wait_for_cassandra(&config, 180).await?;
     let session = connect(&config).await?;
-    let diff = create_live_diff(&session, &config.keyspace).await?;
+    let diff = create_live_diff(&session, &config.keyspace, &config).await?;
     let diff_path = write_diff_file(&diff, None)?;
     if !diff.errors.is_empty() {
         bail!(
@@ -578,7 +696,7 @@ pub async fn apply_schema(config: Option<CassandraConfig>) -> Result<SchemaDiff>
             session.query_unpaged(statement.as_str(), ()).await?;
         }
     }
-    verify_schema_with_session(&session, &config.keyspace).await?;
+    verify_schema_with_session(&session, &config.keyspace, &config).await?;
     Ok(diff)
 }
 
@@ -590,12 +708,15 @@ pub async fn verify_schema(
     let keyspace = keyspace.unwrap_or_else(|| config.keyspace.clone());
     wait_for_cassandra(&config, 180).await?;
     let session = connect(&config).await?;
-    verify_schema_with_session(&session, &keyspace).await
+    verify_schema_with_session(&session, &keyspace, &config).await
 }
 
-async fn verify_schema_with_session(session: &Session, keyspace: &str) -> Result<()> {
-    let existing = fetch_existing_schema(session, keyspace).await?;
-    let diff = create_diff(&existing, keyspace);
+async fn verify_schema_with_session(
+    session: &Session,
+    keyspace: &str,
+    config: &CassandraConfig,
+) -> Result<()> {
+    let diff = create_live_diff(session, keyspace, config).await?;
     let unapplied = diff.statements.clone();
     if !diff.errors.is_empty() || !unapplied.is_empty() {
         write_diff_file(&diff, None)?;
@@ -646,10 +767,164 @@ mod tests {
         assert!(rendered.ends_with(";\n"));
     }
 
+    const NTS: &str = "{'class': 'NetworkTopologyStrategy', 'fsn1': 3}";
+
+    const THREE_HOSTS: &str = "10.88.0.11,10.88.0.12,10.88.0.13";
+
+    fn test_config(hosts: &str, replication: Option<&str>) -> CassandraConfig {
+        CassandraConfig {
+            hosts: parse_hosts(hosts),
+            port: 9042,
+            keyspace: "fluxer".to_owned(),
+            local_dc: "fsn1".to_owned(),
+            username: None,
+            password: None,
+            replication: replication.map(str::to_owned),
+            dev: false,
+        }
+    }
+
+    fn replication_map(pairs: &[(&str, &str)]) -> BTreeMap<String, String> {
+        pairs
+            .iter()
+            .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+            .collect()
+    }
+
+    fn pick(env: Option<&str>, cli: Option<&str>, dev: bool) -> Option<String> {
+        let config = test_config("", env).with_replication(cli, dev).unwrap();
+        config.replication
+    }
+
+    #[test]
+    fn diff_refuses_missing_keyspace_without_replication() {
+        let config = test_config("", None);
+        let error = create_diff(&ExistingSchema::default(), "fluxer", &config).unwrap_err();
+        assert!(error.to_string().contains("--replication"));
+    }
+
+    #[test]
+    fn diff_never_touches_an_existing_keyspace() {
+        let existing = ExistingSchema {
+            keyspace_exists: true,
+            ..ExistingSchema::default()
+        };
+        for replication in [None, Some(NTS)] {
+            let diff = create_diff(&existing, "fluxer", &test_config("", replication)).unwrap();
+            assert!(!render_diff(&diff).contains("KEYSPACE"));
+        }
+    }
+
+    #[test]
+    fn replication_problem_refuses_keyspaces_that_lose_a_node_on_many_hosts() {
+        let nts = |hel1: &str| {
+            replication_map(&[
+                ("class", "NetworkTopologyStrategy"),
+                ("fsn1", "3"),
+                ("hel1", hel1),
+            ])
+        };
+        let simple = replication_map(&[
+            ("class", "org.apache.cassandra.locator.SimpleStrategy"),
+            ("replication_factor", "3"),
+        ]);
+        let no_datacenter = replication_map(&[("class", "NetworkTopologyStrategy")]);
+        assert!(replication_problem(&nts("3"), 3, false).is_none());
+        assert!(replication_problem(&nts("2"), 3, false).is_some());
+        assert!(replication_problem(&nts("2"), 2, false).is_none());
+        assert!(replication_problem(&nts("three"), 3, false).is_some());
+        assert!(replication_problem(&simple, 3, false).is_some());
+        assert!(replication_problem(&no_datacenter, 3, false).is_some());
+    }
+
+    #[test]
+    fn replication_problem_allows_rf1_only_on_one_host_or_with_dev() {
+        let rf1 = parse_replication_map(DEV_KEYSPACE_REPLICATION);
+        assert!(replication_problem(&rf1, 1, false).is_none());
+        assert!(replication_problem(&rf1, 3, true).is_none());
+        assert!(replication_problem(&rf1, 2, false).is_some());
+        assert!(replication_problem(&rf1, 3, false).is_some());
+    }
+
+    #[test]
+    fn reads_cql_replication_maps() {
+        assert_eq!(
+            parse_replication_map(NTS),
+            replication_map(&[("class", "NetworkTopologyStrategy"), ("fsn1", "3")])
+        );
+        assert_eq!(
+            parse_replication_map("{'class':'SimpleStrategy','replication_factor':1}"),
+            replication_map(&[("class", "SimpleStrategy"), ("replication_factor", "1")])
+        );
+        assert!(parse_replication_map("{'class', 'fsn1': 3}").is_empty());
+    }
+
+    #[test]
+    fn diff_refuses_rf1_keyspaces_on_many_hosts_unless_dev() {
+        let errors = |existing: &ExistingSchema, config: &CassandraConfig| {
+            create_diff(existing, "fluxer", config).unwrap().errors
+        };
+        let existing_rf1 = ExistingSchema {
+            keyspace_exists: true,
+            replication: parse_replication_map(DEV_KEYSPACE_REPLICATION),
+            ..ExistingSchema::default()
+        };
+        let many = test_config(THREE_HOSTS, None);
+        let given_rf1 = test_config(
+            THREE_HOSTS,
+            Some("{'class':'SimpleStrategy','replication_factor':1}"),
+        );
+        for refused in [
+            errors(&existing_rf1, &many),
+            errors(&ExistingSchema::default(), &given_rf1),
+        ] {
+            assert!(refused.iter().any(|error| error.contains("unsafe")));
+        }
+
+        let dev = many.with_replication(None, true).unwrap();
+        assert!(dev.dev);
+        assert!(errors(&existing_rf1, &dev).is_empty());
+        assert!(errors(&existing_rf1, &test_config("", None)).is_empty());
+    }
+
+    #[test]
+    fn dev_replication_is_only_a_fallback() {
+        let dev = Some(DEV_KEYSPACE_REPLICATION.to_owned());
+        let cli = "{'class': 'NetworkTopologyStrategy', 'fsn1': 3, 'hel1': 3}";
+        assert_eq!(pick(None, None, false), None);
+        assert_eq!(pick(None, None, true), dev);
+        assert_eq!(pick(Some(NTS), None, true), Some(NTS.to_owned()));
+        assert_eq!(pick(Some(NTS), Some(cli), false), Some(cli.to_owned()));
+    }
+
+    #[test]
+    fn replication_must_be_a_single_cql_map() {
+        assert_eq!(parse_replication("  ").unwrap(), None);
+        let trimmed = parse_replication(&format!(" {NTS} ")).unwrap();
+        assert_eq!(trimmed, Some(NTS.to_owned()));
+        assert!(parse_replication("NetworkTopologyStrategy").is_err());
+        assert!(parse_replication("{'a': 1}; DROP KEYSPACE fluxer; {'b': 2}").is_err());
+    }
+
+    #[test]
+    fn connects_to_every_configured_host() {
+        let config = test_config(" 10.88.0.11, 10.88.0.12,,10.88.0.13 ", None);
+        assert_eq!(
+            contact_points(&config),
+            ["10.88.0.11:9042", "10.88.0.12:9042", "10.88.0.13:9042"]
+        );
+        assert_eq!(parse_hosts(""), ["cassandra"]);
+    }
+
     #[test]
     fn diff_creates_keyspace_and_missing_schema() {
-        let diff = create_diff(&ExistingSchema::default(), "fluxer");
-        assert!(diff.statements[0].starts_with("CREATE KEYSPACE IF NOT EXISTS fluxer"));
+        let config = test_config(THREE_HOSTS, Some(NTS));
+        let diff = create_diff(&ExistingSchema::default(), "fluxer", &config).unwrap();
+        assert_eq!(
+            diff.statements[0],
+            format!("CREATE KEYSPACE IF NOT EXISTS fluxer WITH replication = {NTS}")
+        );
+        assert!(!render_diff(&diff).contains("SimpleStrategy"));
         assert!(
             diff.statements
                 .iter()
@@ -676,7 +951,7 @@ mod tests {
         existing
             .tables
             .insert("unexpected".to_owned(), ExistingTable::default());
-        let diff = create_diff(&existing, "fluxer");
+        let diff = create_diff(&existing, "fluxer", &test_config("", None)).unwrap();
         assert!(
             diff.errors
                 .iter()

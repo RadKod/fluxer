@@ -31,7 +31,10 @@ import {
 	formatMilliseconds,
 	formatPacketLossPercent,
 } from '@app/features/voice/components/voice_connection_status/shared';
-import MediaEngine, {useMediaEngineVersion} from '@app/features/voice/engine/MediaEngineFacade';
+import MediaEngine, {
+	useMediaEngineStatsVersion,
+	useMediaEngineVersion,
+} from '@app/features/voice/engine/MediaEngineFacade';
 import {VOICE_CAMERA_USER_LIMIT_REACHED_DESCRIPTOR} from '@app/features/voice/engine/media_engine_facade/shared';
 import {useCameraUserCapBlocked} from '@app/features/voice/hooks/useCameraUserCapBlocked';
 import {usePendingVoiceConnection} from '@app/features/voice/hooks/usePendingVoiceConnection';
@@ -120,6 +123,7 @@ export const VoiceLobbyBottomSheet = observer(function VoiceLobbyBottomSheet({
 }: VoiceLobbyBottomSheetProps) {
 	const {i18n} = useLingui();
 	useMediaEngineVersion();
+	useMediaEngineStatsVersion();
 	const connectedGuildId = MediaEngine.guildId;
 	const connectedChannelId = MediaEngine.channelId;
 	const voiceState = MediaEngine.getCurrentUserVoiceState(connectedGuildId);

@@ -19,6 +19,7 @@ import {
 	threadsRequest,
 } from '@app/api/channel/tests/ThreadTestUtils';
 import {createEmoji, getPngDataUrl} from '@app/api/emoji/tests/EmojiTestUtils';
+import {overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
 import {ensureSessionStarted} from '@app/api/message/tests/MessageTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {NoopGatewayService} from '@app/api/test/NoopGatewayService';
@@ -32,7 +33,7 @@ import type {
 	ThreadPostDataResponse,
 } from '@fluxer/schema/src/domains/channel/ForumRequestSchemas';
 import type {ThreadChannelResponse} from '@fluxer/schema/src/domains/channel/ThreadRequestSchemas';
-import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 interface Setup {
 	owner: TestAccount;
@@ -56,6 +57,11 @@ describe('forum and media channels', () => {
 	beforeEach(async () => {
 		await harness.reset();
 		resetChannelThreadsConfig();
+		overrideLimits({feature_mature_content_settings: 1});
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
 	});
 
 	afterAll(async () => {

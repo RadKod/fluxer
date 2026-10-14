@@ -253,7 +253,9 @@ dispatch_global_user_update(TargetId, Payload, State) ->
     NewUserData = maps:get(<<"user">>, Payload, #{}),
     case presence_cache_safe:get(TargetId) of
         {ok, CachedPresence} ->
-            MergedPresence = CachedPresence#{<<"user">> => NewUserData},
+            CachedUser = maps:get(<<"user">>, CachedPresence, #{}),
+            MergedUser = user_utils:merge_user(CachedUser, NewUserData),
+            MergedPresence = CachedPresence#{<<"user">> => MergedUser},
             presence_cache:put(TargetId, MergedPresence),
             dispatch_to_sessions(MergedPresence, State),
             {noreply, State};

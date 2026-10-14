@@ -15,9 +15,9 @@ interface UserDataPaths {
 type ChannelStorageDirectoryMap = Record<BuildChannel, string>;
 
 const channelStorageDirectoryMap: ChannelStorageDirectoryMap = {
-	stable: 'fluxer',
-	canary: 'fluxercanary',
-	development: 'fluxerdevelopment',
+	stable: 'micup_desktop',
+	canary: 'micup_desktop_canary',
+	development: 'micup_desktop_development',
 };
 
 class UserDataPathConflictError extends Error {

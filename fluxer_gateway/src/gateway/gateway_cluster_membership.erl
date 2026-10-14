@@ -9,6 +9,9 @@
     members/0,
     is_member/1,
     alive_count/0,
+    rpc_ready/0,
+    watch_rpc_membership/1,
+    stop_rpc_watch/1,
     members_by_role/0,
     subscribe/1,
     unsubscribe/1
@@ -39,6 +42,9 @@
 -define(ROLE_REFRESH_MS, 10000).
 -define(DISCOVERY_RESUBSCRIBE_MS, 10000).
 -define(NODE_RECONCILE_MS, 30000).
+-define(RPC_READY_KEY, {?MODULE, rpc_ready}).
+-define(RPC_WATCH_MS, 1000).
+-define(RPC_READY_TIMEOUT_MS, 30000).
 
 -type options() :: #{
     connect_fun => fun((node()) -> boolean()),
@@ -51,6 +57,9 @@
     members := [node()],
     members_by_role := #{atom() => [node()]},
     discovered := [node()],
+    discovery_reconciled => boolean(),
+    rpc_ready_timer => reference() | undefined,
+    rpc_stability_timer => reference() | undefined,
     connect_fun := fun((node()) -> boolean()),
     connected_nodes_fun := fun(() -> [node()]),
     role_fun := fun((node()) -> atom()),
@@ -84,6 +93,54 @@ is_member(Node) ->
 alive_count() ->
     length(members()).
 
+-spec rpc_ready() -> boolean().
+rpc_ready() ->
+    case fluxer_gateway_env:get(cluster_enabled) of
+        true ->
+            case persistent_term:get(?RPC_READY_KEY, undefined) of
+                {Pid, true} when is_pid(Pid) ->
+                    Pid =:= whereis(?MODULE) andalso erlang:is_process_alive(Pid);
+                _ ->
+                    false
+            end;
+        _ ->
+            true
+    end.
+
+-spec watch_rpc_membership(map()) -> map().
+watch_rpc_membership(State) ->
+    case fluxer_gateway_env:get(cluster_enabled) of
+        true ->
+            Timer = erlang:send_after(?RPC_WATCH_MS, self(), check_cluster_rpc),
+            Owner = whereis(?MODULE),
+            Previous = maps:get(rpc_membership_monitor, State, undefined),
+            Monitor =
+                case Previous of
+                    {Owner, _Ref} when is_pid(Owner) -> Previous;
+                    _ ->
+                        demonitor_rpc_owner(Previous),
+                        case Owner of
+                            undefined -> undefined;
+                            _ -> {Owner, erlang:monitor(process, Owner)}
+                        end
+                end,
+            State#{rpc_membership_monitor => Monitor, rpc_membership_timer => Timer};
+        _ ->
+            State
+    end.
+
+-spec stop_rpc_watch(map()) -> ok.
+stop_rpc_watch(State) ->
+    cancel_timer(maps:get(rpc_membership_timer, State, undefined)),
+    demonitor_rpc_owner(maps:get(rpc_membership_monitor, State, undefined)).
+
+-spec demonitor_rpc_owner({pid(), reference()} | undefined) -> ok.
+demonitor_rpc_owner({_, Ref}) ->
+    erlang:demonitor(Ref, [flush]),
+    ok;
+demonitor_rpc_owner(undefined) ->
+    ok.
+
 -spec subscribe(pid()) -> ok.
 subscribe(Pid) when is_pid(Pid) ->
     gen_server:cast(?MODULE, {subscribe, Pid}).
@@ -102,6 +159,9 @@ init(Options) ->
         members => [node()],
         members_by_role => role_members([node()], RoleFun),
         discovered => [],
+        discovery_reconciled => false,
+        rpc_ready_timer => undefined,
+        rpc_stability_timer => undefined,
         connect_fun => maps:get(connect_fun, Options, fun default_connect/1),
         connected_nodes_fun =>
             maps:get(connected_nodes_fun, Options, fun default_connected_nodes/0),
@@ -113,6 +173,8 @@ init(Options) ->
     },
     persistent_term:put(?MEMBERS_KEY, [node()]),
     persistent_term:put(?ROLE_MEMBERS_KEY, maps:get(members_by_role, State0)),
+    persistent_term:put(?RPC_READY_KEY, {self(), false}),
+    notify_rpc_owners(),
     _ = gateway_node_metadata:refresh_node_pod_names([node()]),
     State =
         case maps:get(auto_subscribe, Options, true) of
@@ -122,7 +184,10 @@ init(Options) ->
             false ->
                 State0
         end,
-    {ok, State}.
+    case fluxer_gateway_env:get(cluster_enabled) of
+        true -> {ok, schedule_rpc_ready_timeout(State)};
+        _ -> {ok, State}
+    end.
 
 -spec handle_call(term(), gen_server:from(), state()) -> {reply, term(), state()}.
 handle_call(_Request, _From, State) ->
@@ -150,6 +215,23 @@ handle_info(refresh_roles, State) ->
 handle_info(reconcile_nodes, State) ->
     State1 = reconcile_against_connected_nodes(State),
     {noreply, State1#{node_reconcile_timer := schedule_node_reconcile()}};
+handle_info({timeout, Timer, rpc_stable}, #{rpc_stability_timer := Timer} = State) when
+    is_reference(Timer)
+->
+    State1 = State#{rpc_stability_timer := undefined},
+    {noreply, publish_rpc_readiness(rpc_membership_eligible(State1), State1)};
+handle_info(rpc_ready_timeout, State) ->
+    case rpc_ready() of
+        false ->
+            logger:warning("Gateway cluster RPC remains gated after readiness timeout", #{
+                timeout_ms => ?RPC_READY_TIMEOUT_MS,
+                member_count => length(maps:get(members, State)),
+                min_peers => min_peers_for_rpc()
+            });
+        true ->
+            ok
+    end,
+    {noreply, State#{rpc_ready_timer => undefined}};
 handle_info(resubscribe_discovery, State) ->
     safe_subscribe_discovery(),
     {noreply, State#{discovery_resubscribe_timer := schedule_discovery_resubscribe()}};
@@ -164,6 +246,10 @@ terminate(_Reason, State) ->
     cancel_timer(maps:get(role_refresh_timer, State, undefined)),
     cancel_timer(maps:get(discovery_resubscribe_timer, State, undefined)),
     cancel_timer(maps:get(node_reconcile_timer, State, undefined)),
+    cancel_timer(maps:get(rpc_ready_timer, State, undefined)),
+    cancel_timer(maps:get(rpc_stability_timer, State, undefined)),
+    persistent_term:put(?RPC_READY_KEY, {self(), false}),
+    notify_rpc_owners(),
     ok.
 
 -spec code_change(term(), state(), term()) -> {ok, state()}.
@@ -177,7 +263,8 @@ apply_discovered(Peers, #{connect_fun := Connect} = State) ->
     Self = node(),
     Filtered = [P || P <- Peers, P =/= Self],
     Connected = [P || P <- Filtered, Connect(P)],
-    reconcile_against_connected_nodes(State#{discovered := Filtered}, Connected).
+    State1 = reconcile_against_connected_nodes(State#{discovered := Filtered}, Connected),
+    update_rpc_readiness(State1#{discovery_reconciled => true}).
 
 -spec normalize_nodes(term()) -> [node()].
 normalize_nodes(Nodes) when is_list(Nodes) ->
@@ -222,13 +309,21 @@ maybe_remove_member(Node, #{members := Members} = State) ->
 
 -spec update_members([node()], state()) -> state().
 update_members(NewMembers, #{members := OldMembers, members_by_role := OldRoleMembers} = State) ->
+    State1 =
+        case
+            fluxer_gateway_env:get(cluster_enabled) =:= true andalso
+                length(NewMembers) < min_peers_for_rpc()
+        of
+            true -> close_rpc_readiness(State);
+            false -> State
+        end,
     RoleFun = maps:get(role_fun, State, fun role_for_node/1),
     NewRoleMembers = role_members(NewMembers, RoleFun, OldRoleMembers),
     case NewMembers =:= OldMembers andalso NewRoleMembers =:= OldRoleMembers of
         true ->
-            State;
+            State1;
         false ->
-            do_update_members(NewMembers, NewRoleMembers, State)
+            do_update_members(NewMembers, NewRoleMembers, State1)
     end.
 
 -spec do_update_members([node()], #{atom() => [node()]}, state()) -> state().
@@ -239,7 +334,94 @@ do_update_members(NewMembers, NewRoleMembers, State) ->
     persistent_term:put(?ROLE_MEMBERS_KEY, NewRoleMembers),
     _ = gateway_node_metadata:refresh_node_pod_names(NewMembers),
     notify_subscribers(NewMembers, State),
-    State#{members := NewMembers, members_by_role := NewRoleMembers}.
+    update_rpc_readiness(State#{members := NewMembers, members_by_role := NewRoleMembers}).
+
+-spec update_rpc_readiness(state()) -> state().
+update_rpc_readiness(State) ->
+    case fluxer_gateway_env:get(cluster_enabled) of
+        true ->
+            case rpc_membership_eligible(State) of
+                false -> close_rpc_readiness(State);
+                true -> stabilize_rpc_readiness(State)
+            end;
+        _ ->
+            State
+    end.
+
+-spec rpc_membership_eligible(state()) -> boolean().
+rpc_membership_eligible(State) ->
+    maps:get(discovery_reconciled, State, false) andalso
+        length(maps:get(members, State)) >= min_peers_for_rpc().
+
+-spec close_rpc_readiness(state()) -> state().
+close_rpc_readiness(State) ->
+    cancel_timer(maps:get(rpc_stability_timer, State, undefined)),
+    publish_rpc_readiness(false, State#{rpc_stability_timer => undefined}).
+
+-spec stabilize_rpc_readiness(state()) -> state().
+stabilize_rpc_readiness(State) ->
+    case {rpc_ready(), maps:get(rpc_stability_timer, State, undefined)} of
+        {false, undefined} ->
+            case maps:get(cluster_rpc_stability_ms, fluxer_gateway_env:get_map(), 5000) of
+                0 ->
+                    publish_rpc_readiness(true, State);
+                Delay ->
+                    Timer = erlang:start_timer(Delay, self(), rpc_stable),
+                    State#{rpc_stability_timer => Timer}
+            end;
+        _ ->
+            State
+    end.
+
+-spec publish_rpc_readiness(boolean(), state()) -> state().
+publish_rpc_readiness(Ready, State) ->
+    Value = {self(), Ready},
+    Previous = persistent_term:get(?RPC_READY_KEY, undefined),
+    case Value =:= Previous of
+        true ->
+            ok;
+        false ->
+            persistent_term:put(?RPC_READY_KEY, Value),
+            notify_rpc_owners(),
+            logger:info("Gateway cluster RPC readiness changed", #{ready => Ready})
+    end,
+    Timer = maps:get(rpc_ready_timer, State, undefined),
+    case {Ready, Timer, Previous} of
+        {true, _, _} ->
+            cancel_timer(Timer),
+            State#{rpc_ready_timer => undefined};
+        {false, undefined, {_, true}} ->
+            schedule_rpc_ready_timeout(State);
+        {false, undefined, undefined} ->
+            schedule_rpc_ready_timeout(State);
+        _ ->
+            State
+    end.
+
+-spec schedule_rpc_ready_timeout(state()) -> state().
+schedule_rpc_ready_timeout(State) ->
+    Timer = erlang:send_after(?RPC_READY_TIMEOUT_MS, self(), rpc_ready_timeout),
+    State#{rpc_ready_timer => Timer}.
+
+-spec min_peers_for_rpc() -> pos_integer().
+min_peers_for_rpc() ->
+    case fluxer_gateway_env:get(cluster_min_peers_for_rpc) of
+        Value when is_integer(Value), Value > 0 -> Value;
+        _ -> 1
+    end.
+
+-spec notify_rpc_owners() -> ok.
+notify_rpc_owners() ->
+    lists:foreach(
+        fun(Name) ->
+            case whereis(Name) of
+                undefined -> ok;
+                Pid -> Pid ! cluster_rpc_readiness_changed
+            end
+        end,
+        [gateway_nats_rpc, gateway_nats_pool]
+    ),
+    ok.
 
 -spec role_members([node()]) -> #{atom() => [node()]}.
 role_members(Members) ->

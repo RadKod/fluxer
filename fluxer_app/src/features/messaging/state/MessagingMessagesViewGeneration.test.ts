@@ -29,6 +29,8 @@ vi.mock('@app/features/channel/state/Channels', () => ({
 	},
 }));
 
+// Idle and LocalPresence import each other; loading Idle first keeps its timer from calling a half-loaded store.
+await import('@app/features/ui/state/Idle');
 const {default: RuntimeConfig} = await import('@app/features/app/state/RuntimeConfig');
 const {runtimeSnapshotFromDiscovery} = await import('@app/features/app/state/InstanceSnapshotStore');
 const {parseInstanceDiscoveryDocument} = await import('@fluxer/instance_bootstrap/src/Discovery');

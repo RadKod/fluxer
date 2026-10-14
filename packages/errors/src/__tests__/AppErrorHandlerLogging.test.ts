@@ -3,6 +3,7 @@
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {BadRequestError} from '@fluxer/errors/src/domains/core/BadRequestError';
 import {AppErrorHandler} from '@fluxer/errors/src/domains/core/ErrorHandlers';
+import {ShopBusyError} from '@fluxer/errors/src/domains/payment/ShopBusyError';
 import {ServiceUnavailableError} from '@fluxer/errors/src/HttpErrors';
 import type {BaseHonoEnv} from '@fluxer/hono_types/src/HonoTypes';
 import {Hono} from 'hono';
@@ -109,5 +110,43 @@ describe('AppErrorHandler logging', () => {
 		expect(response.status).toBe(500);
 		expect(logCalls.error).toHaveLength(1);
 		expect(logCalls.error[0]![1]).toBe('Unhandled error occurred');
+	});
+
+	it('masks gift codes, shop codes and Payriff callback tokens in the logged path', async () => {
+		const app = createApp();
+		app.get('/v1/gifts/:code', () => {
+			throw new Error('boom');
+		});
+		app.post('/v1/payriff/callback/:orderId/:token', () => {
+			throw new ServiceUnavailableError();
+		});
+		app.get('/v1/shop/codes/:code', () => {
+			throw new BadRequestError({code: APIErrorCodes.BAD_REQUEST});
+		});
+
+		await app.request('/v1/gifts/SECRETGIFTCODE');
+		await app.request('/v1/payriff/callback/1490000000000000001/SECRETTOKEN', {method: 'POST'});
+		await app.request('/v1/shop/codes/SECRETSHOPCODE');
+
+		expect(logCalls.error.map(([details]) => details.path)).toEqual([
+			'/v1/gifts/:code',
+			'/v1/payriff/callback/:orderId/:token',
+		]);
+		expect(logCalls.debug.map(([details]) => details.path)).toEqual(['/v1/shop/codes/:code']);
+		expect(JSON.stringify([...logCalls.error, ...logCalls.debug])).not.toContain('SECRET');
+	});
+
+	it('logs a SHOP_BUSY refusal, expected load shedding, at debug rather than error', async () => {
+		const app = createApp();
+		app.post('/shop/orders', () => {
+			throw new ShopBusyError();
+		});
+
+		const response = await app.request('/shop/orders', {method: 'POST'});
+
+		expect(response.status).toBe(503);
+		expect(logCalls.error).toHaveLength(0);
+		expect(logCalls.debug).toHaveLength(1);
+		expect(logCalls.debug[0]![0].status).toBe(503);
 	});
 });

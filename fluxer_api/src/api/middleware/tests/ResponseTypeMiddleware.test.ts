@@ -91,6 +91,24 @@ describe('ResponseTypeMiddleware', () => {
 		},
 	);
 
+	test('masks a code in the path of the response validation log', async () => {
+		const app = new Hono<HonoEnv>();
+		app.get('/v1/gifts/:code', ResponseType(SnowflakeResponse), (ctx) => ctx.json({id: 'not-a-snowflake'}));
+		const errorLoggerSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+
+		try {
+			const response = await app.request('/v1/gifts/SECRETGIFTCODE');
+
+			expect(response.status).toBe(500);
+			expect(errorLoggerSpy).toHaveBeenCalledWith(
+				expect.objectContaining({path: '/v1/gifts/:code'}),
+				'Response validation failed',
+			);
+		} finally {
+			errorLoggerSpy.mockRestore();
+		}
+	});
+
 	test('passes the response through untouched while validation is disabled', async () => {
 		Config.dev.validateResponses = false;
 		const app = new Hono<HonoEnv>();

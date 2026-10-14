@@ -2,6 +2,7 @@
 
 import * as CustomSoundDB from '@app/features/notification/utils/CustomSoundDB';
 import {Logger} from '@app/features/platform/utils/AppLogger';
+import {TABLE_GAME_SOUND_FILES, TABLE_GAME_SOUND_TYPE} from '@app/features/table_game/sound/TableGameSoundFiles';
 import cameraOffSound from '@app/media/sounds/camera-off.mp3';
 import cameraOnSound from '@app/media/sounds/camera-on.mp3';
 import deafSound from '@app/media/sounds/deaf.mp3';
@@ -46,6 +47,7 @@ export const SoundType = {
 	CameraOff: 'camera-off',
 	ScreenShareStart: 'screen-share-start',
 	ScreenShareStop: 'screen-share-stop',
+	...TABLE_GAME_SOUND_TYPE,
 } as const;
 
 export type SoundType = ValueOf<typeof SoundType>;
@@ -69,6 +71,7 @@ const SOUND_FILES: Record<SoundType, string> = {
 	[SoundType.CameraOff]: cameraOffSound,
 	[SoundType.ScreenShareStart]: streamSound,
 	[SoundType.ScreenShareStop]: streamStopSound,
+	...TABLE_GAME_SOUND_FILES,
 };
 const CALL_RELATED_SOUND_TYPES = new Set<SoundType>([
 	SoundType.Deaf,
@@ -86,6 +89,7 @@ const CALL_RELATED_SOUND_TYPES = new Set<SoundType>([
 	SoundType.CameraOff,
 	SoundType.ScreenShareStart,
 	SoundType.ScreenShareStop,
+	...Object.values(TABLE_GAME_SOUND_TYPE),
 ]);
 const shouldRouteSoundToCaptureBus = (type: SoundType): boolean => !CALL_RELATED_SOUND_TYPES.has(type);
 
@@ -102,10 +106,21 @@ interface OneShotAudioInstance {
 	cleanup: () => void;
 }
 
+// A media element source stays alive while its context runs, even after disconnect(), so each sound type keeps one
+// element and source and every play reuses them.
+interface SoundElementChannel {
+	audio: HTMLAudioElement;
+	sourceNode: MediaElementAudioSourceNode;
+	src: string;
+	owner: AudioInstance | null;
+}
+
 const activeSounds: Map<SoundType, AudioInstance> = new Map();
 const activePreviewSounds: Set<AudioInstance> = new Set();
 const activeOneShotSounds: Set<OneShotAudioInstance> = new Set();
 const customSoundCache: Map<SoundType, string> = new Map();
+const oneShotChannels: Map<SoundType, SoundElementChannel> = new Map();
+const loopChannels: Map<SoundType, SoundElementChannel> = new Map();
 
 let audioContext: AudioContext | null = null;
 let masterGainNode: GainNode | null = null;
@@ -337,6 +352,28 @@ const createAudioElement = (src: string): HTMLAudioElement => {
 	audio.preload = 'auto';
 	return audio;
 };
+const acquireSoundChannel = (
+	ctx: AudioContext,
+	channels: Map<SoundType, SoundElementChannel>,
+	type: SoundType,
+	src: string,
+): SoundElementChannel => {
+	const existing = channels.get(type);
+	if (existing) {
+		disconnectNodes(existing.sourceNode);
+		if (existing.src !== src) {
+			existing.audio.src = src;
+			existing.src = src;
+		} else if (existing.audio.error) {
+			existing.audio.load();
+		}
+		return existing;
+	}
+	const audio = createAudioElement(src);
+	const channel: SoundElementChannel = {audio, sourceNode: ctx.createMediaElementSource(audio), src, owner: null};
+	channels.set(type, channel);
+	return channel;
+};
 const isAutoplayBlockedError = (error: unknown): boolean => {
 	if (!error || typeof error !== 'object') return false;
 	const name = (
@@ -355,29 +392,35 @@ const playOneShotSound = async (
 	if (signal?.aborted) return null;
 	const soundUrl = await getSoundUrl(type);
 	if (signal?.aborted) return null;
-	const audio = createAudioElement(soundUrl);
-	audio.currentTime = 0;
-	audio.loop = false;
 	const effectiveVolume = clamp(volume, 0, MAX_EFFECTIVE_VOLUME);
-	let sourceNode: MediaElementAudioSourceNode | undefined;
+	let channel: SoundElementChannel | undefined;
 	let gainNode: GainNode | undefined;
 	const routeToCaptureBus = shouldRouteSoundToCaptureBus(type);
 	try {
 		const ctx = await resumeAudioContextIfNeeded();
 		if (signal?.aborted) return null;
 		if (ctx.state !== 'suspended') {
-			sourceNode = ctx.createMediaElementSource(audio);
-			gainNode = ctx.createGain();
-			gainNode.gain.value = effectiveVolume;
-			sourceNode.connect(gainNode);
-			gainNode.connect(routeToCaptureBus ? getMasterGainNode() : ctx.destination);
-			audio.volume = 1;
-		} else {
-			audio.volume = effectiveVolume;
-			applyOutputDeviceToAudioElement(audio);
+			const reused = acquireSoundChannel(ctx, oneShotChannels, type, soundUrl);
+			for (const playing of activeOneShotSounds) {
+				if (playing.audio === reused.audio) stopOneShotInstance(playing);
+			}
+			const channelGain = ctx.createGain();
+			channelGain.gain.value = effectiveVolume;
+			reused.sourceNode.connect(channelGain);
+			channelGain.connect(routeToCaptureBus ? getMasterGainNode() : ctx.destination);
+			channel = reused;
+			gainNode = channelGain;
 		}
 	} catch (error) {
 		logger.debug('Falling back to direct element playback for one-shot sound', {type, error});
+	}
+	const sourceNode = channel?.sourceNode;
+	const audio = channel?.audio ?? createAudioElement(soundUrl);
+	audio.currentTime = 0;
+	audio.loop = false;
+	if (channel) {
+		audio.volume = 1;
+	} else {
 		audio.volume = effectiveVolume;
 		applyOutputDeviceToAudioElement(audio);
 	}
@@ -399,8 +442,10 @@ const playOneShotSound = async (
 	};
 	abortPlayback = () => {
 		audio.pause();
-		audio.removeAttribute('src');
-		audio.load();
+		if (!channel) {
+			audio.removeAttribute('src');
+			audio.load();
+		}
 		instance.cleanup();
 	};
 	audio.addEventListener('ended', instance.cleanup);
@@ -420,6 +465,7 @@ const playOneShotSound = async (
 		}
 		return audio;
 	} catch (error) {
+		if (cleanedUp) return null;
 		instance.cleanup();
 		if (signal?.aborted) {
 			return null;
@@ -456,10 +502,10 @@ export async function playSound(
 			return null;
 		}
 		const soundUrl = await getSoundUrl(type);
-		const audio = createAudioElement(soundUrl);
+		const channel = acquireSoundChannel(ctx, loopChannels, type, soundUrl);
+		const {audio, sourceNode} = channel;
 		audio.currentTime = 0;
 		audio.loop = loop;
-		const sourceNode = ctx.createMediaElementSource(audio);
 		const gainNode = ctx.createGain();
 		sourceNode.connect(gainNode);
 		gainNode.connect(shouldRouteSoundToCaptureBus(type) ? getMasterGainNode() : ctx.destination);
@@ -470,6 +516,7 @@ export async function playSound(
 			gainNode,
 			sourceNode,
 		};
+		channel.owner = instance;
 		const playPromise = audio.play();
 		if (playPromise) {
 			try {
@@ -532,10 +579,14 @@ export async function stopSound(type: SoundType): Promise<void> {
 	try {
 		await fadeOut(gainNode, 0.08);
 	} catch {}
-	audio.pause();
-	audio.currentTime = 0;
-	audio.loop = false;
-	disconnectNodes(sourceNode, gainNode);
+	if (loopChannels.get(type)?.owner === activeSound) {
+		audio.pause();
+		audio.currentTime = 0;
+		audio.loop = false;
+		disconnectNodes(sourceNode, gainNode);
+	} else {
+		disconnectNodes(gainNode);
+	}
 }
 
 export async function stopAllSounds(): Promise<void> {

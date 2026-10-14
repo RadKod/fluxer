@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {Routes} from '@app/app/Routes';
-import Accessibility from '@app/features/accessibility/state/Accessibility';
+import Accessibility, {DEFAULT_ZOOM_LEVEL} from '@app/features/accessibility/state/Accessibility';
 import {ConfirmModal} from '@app/features/app/components/dialogs/ConfirmModal';
 import {UserSettingsModal} from '@app/features/app/components/dialogs/LoadableSettingsModals';
 import type {HandlerHost} from '@app/features/app/keybindings/keybind_manager/handlers/types';
@@ -603,6 +603,6 @@ export function registerDefaultKeybindHandlers(host: HandlerHost, i18n: I18n): v
 	});
 	host.register('system_zoom_reset', ({type}) => {
 		if (type !== 'press') return;
-		Accessibility.updateSettings({zoomLevel: 1.0});
+		Accessibility.updateSettings({zoomLevel: DEFAULT_ZOOM_LEVEL});
 	});
 }

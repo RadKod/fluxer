@@ -134,6 +134,10 @@ const CONNECT_SOURCES: &[&str] = &[
     "https://fluxer.media",
 ];
 
+// Micup: the GA4 collection endpoint, opened only while a measurement id is configured.
+// The shared shell uses script hashes; the consent loader needs an explicit script source.
+const GA4_CONNECT_SOURCES: &[&str] = &["https://*.google-analytics.com"];
+
 const WORKER_SOURCES: &[&str] = &["https://*.fluxer.app", "blob:"];
 
 const MANIFEST_SOURCES: &[&str] = &["https://*.fluxer.app"];
@@ -180,8 +184,23 @@ pub struct CspHeaderValues {
 
 impl CompiledCspPolicy {
     pub fn from_config(config: &AppProxyConfig) -> Result<Self, CspCompileError> {
+        let mut csp = config.csp.clone();
+        if config.ga4_measurement_id.is_some() {
+            csp.extra_script_src.push(
+                CspSource::parse(
+                    "GA4_SCRIPT_SOURCE",
+                    "https://www.googletagmanager.com/gtag/js",
+                )
+                .expect("the built-in GA4 script source is valid"),
+            );
+            for source in GA4_CONNECT_SOURCES {
+                let source = CspSource::parse("GA4_CONNECT_SOURCES", source)
+                    .expect("a built-in GA4 CSP source is a valid source");
+                csp.extra_connect_src.push(source);
+            }
+        }
         Self::compile(
-            config.csp.clone(),
+            csp,
             &RuntimeCspSources {
                 static_cdn_endpoint: config.static_cdn_endpoint.clone(),
                 media_endpoint: config.media_endpoint.clone(),
@@ -724,5 +743,40 @@ mod tests {
             policy.spa_headers(&hashes).enforced.to_str().unwrap(),
             build_csp(&config, &hashes, &sources)
         );
+    }
+
+    fn spa_directive(config: &AppProxyConfig, name: &str) -> String {
+        let header = CompiledCspPolicy::from_config(config)
+            .unwrap()
+            .spa_headers(&[])
+            .enforced;
+        header
+            .to_str()
+            .unwrap()
+            .split("; ")
+            .find(|directive| directive.starts_with(&format!("{name} ")))
+            .expect("directive present")
+            .to_owned()
+    }
+
+    #[test]
+    fn a_ga4_measurement_id_opens_only_the_loader_and_collection_endpoints() {
+        let mut config = AppProxyConfig::from_env();
+        config.ga4_measurement_id = None;
+        let dark_connect = spa_directive(&config, "connect-src");
+        let dark_script = spa_directive(&config, "script-src");
+        assert!(!dark_connect.contains("google"));
+
+        config.ga4_measurement_id = Some("G-TEST1234".to_owned());
+        let connect = spa_directive(&config, "connect-src");
+        assert_eq!(
+            connect,
+            format!("{dark_connect} https://*.google-analytics.com")
+        );
+        assert_eq!(
+            spa_directive(&config, "script-src"),
+            format!("{dark_script} https://www.googletagmanager.com/gtag/js")
+        );
+        assert!(!spa_directive(&config, "img-src").contains("google"));
     }
 }

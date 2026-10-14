@@ -14,6 +14,14 @@ export const CONTENT_I18N_MESSAGES = {
 	'bulk_message_deletion.complete':
 		'We finished deleting your messages. We removed {message_count, plural, =0 {0 messages} one {# message} other {# messages}} from {channel_count, plural, =0 {0 places} one {# place} other {# places}}.',
 	'content.virus_detected': 'That file was flagged as potentially unsafe and has been removed.',
+	'feed.comment_removed_by_moderator':
+		'A moderator removed one of your feed comments for violating our Terms of Service or Community Guidelines.',
+	'feed.post_removed_by_moderator':
+		'A moderator removed one of your feed posts for violating our Terms of Service or Community Guidelines.',
+	'feed.video_failed': 'Your feed video could not be processed, so it was not posted.',
+	'feed.video_gone': 'Your feed post was removed because its video is no longer available.',
+	'feed.video_rejected': 'Your feed video did not pass our content checks, so it is not shown in the feed.',
+	'feed.video_too_large': 'Your feed video was not posted because it is larger than 500 MB.',
 	'guild.bulk_create.emoji_limit': 'Maximum number of emojis reached ({limit}).',
 	'guild.bulk_create.sticker_limit': 'Maximum number of stickers reached ({limit}).',
 	'guild.bulk_create.unknown_error': 'Unknown error.',
@@ -21,6 +29,7 @@ export const CONTENT_I18N_MESSAGES = {
 	'guild.default_category_voice': 'Voice channels',
 	'guild.default_channel_text': 'general',
 	'guild.default_channel_voice': 'General',
+	'referral.reward_ready': 'Your referral reward is ready. You can see it in Settings → Referral.',
 } as const;
 
 export type ContentI18nCatalog = typeof CONTENT_I18N_MESSAGES;

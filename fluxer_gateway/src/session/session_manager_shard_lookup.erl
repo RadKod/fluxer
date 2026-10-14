@@ -7,6 +7,8 @@
     lookup_session/2,
     lookup_session_anywhere/2,
     lookup_or_rehydrate/4,
+    lookup_or_rehydrate/5,
+    rehydrate_handoff/4,
     lookup_remote_on_nodes/2,
     remote_lookup_nodes/2,
     select_remote_session_pid/1,
@@ -23,6 +25,7 @@
 -export_type([session_id/0, lookup_reply/0, rehydrate_lookup_reply/0, state/0]).
 
 -define(REMOTE_SESSION_LOOKUP_TIMEOUT_MS, 1000).
+-define(HANDOFF_REHYDRATE_TIMEOUT_MS, 2000).
 
 -type session_id() :: binary().
 -type lookup_reply() :: {ok, pid()} | {error, not_found}.
@@ -86,11 +89,80 @@ lookup_session_anywhere(SessionId, State) ->
 -spec lookup_or_rehydrate(session_id(), binary(), pid(), state()) ->
     {rehydrate_lookup_reply(), state()}.
 lookup_or_rehydrate(SessionId, Token, SocketPid, State) ->
-    case lookup_session_anywhere(SessionId, State) of
+    lookup_or_rehydrate(SessionId, Token, SocketPid, nodes(), State).
+
+%% A handoff record is used only while its target is connected, so a dropped target never holds
+%% this shard in an RPC; a target that no longer has the session falls back to the cluster lookup.
+-spec lookup_or_rehydrate(session_id(), binary(), pid(), [node()], state()) ->
+    {rehydrate_lookup_reply(), state()}.
+lookup_or_rehydrate(SessionId, Token, SocketPid, ConnectedNodes, State) ->
+    case lookup_session(SessionId, State) of
+        {{ok, Pid}, NewState} ->
+            {{ok, Pid}, NewState};
+        {{error, not_found}, NewState} ->
+            case rehydrate_on_handoff_target(SessionId, Token, SocketPid, ConnectedNodes) of
+                none -> lookup_remote_or_rehydrate(SessionId, Token, SocketPid, NewState);
+                Reply -> {Reply, NewState}
+            end
+    end.
+
+-spec lookup_remote_or_rehydrate(session_id(), binary(), pid(), state()) ->
+    {rehydrate_lookup_reply(), state()}.
+lookup_remote_or_rehydrate(SessionId, Token, SocketPid, State) ->
+    case lookup_remote_live_session(SessionId, State) of
         {{ok, Pid}, NewState} ->
             {{ok, Pid}, NewState};
         {{error, not_found}, NewState} ->
             rehydrate_session_from_transfer(SessionId, Token, SocketPid, NewState)
+    end.
+
+-spec rehydrate_on_handoff_target(session_id(), binary(), pid(), [node()]) ->
+    rehydrate_lookup_reply() | none.
+rehydrate_on_handoff_target(SessionId, Token, SocketPid, ConnectedNodes) ->
+    case session_state_transfer:handoff_target(SessionId) of
+        {ok, TargetNode} ->
+            case lists:member(TargetNode, ConnectedNodes) of
+                true -> ask_handoff_target(TargetNode, SessionId, Token, SocketPid);
+                false -> none
+            end;
+        none ->
+            none
+    end.
+
+%% An unanswered call does not go on to the cluster lookup: its timeouts would add to this one
+%% inside the shard.
+-spec ask_handoff_target(node(), session_id(), binary(), pid()) ->
+    rehydrate_lookup_reply() | none.
+ask_handoff_target(TargetNode, SessionId, Token, SocketPid) ->
+    Request = {rehydrate_handoff, SessionId, Token, SocketPid},
+    case
+        rpc:call(
+            TargetNode,
+            session_manager,
+            call_shard,
+            [SessionId, Request, ?HANDOFF_REHYDRATE_TIMEOUT_MS],
+            ?HANDOFF_REHYDRATE_TIMEOUT_MS + 500
+        )
+    of
+        {ok, Pid} when is_pid(Pid) -> {ok, Pid};
+        {error, invalid_token} -> {error, invalid_token};
+        {error, not_found} -> none;
+        _ -> {error, not_found}
+    end.
+
+-spec rehydrate_handoff(session_id(), binary(), pid(), state()) ->
+    {rehydrate_lookup_reply(), state()}.
+rehydrate_handoff(SessionId, Token, SocketPid, State) ->
+    case lookup_session(SessionId, State) of
+        {{ok, Pid}, NewState} ->
+            {{ok, Pid}, NewState};
+        {{error, not_found}, NewState} ->
+            case session_state_transfer:pop_state(SessionId) of
+                {ok, TransferState} when is_map(TransferState) ->
+                    restore_or_start(SessionId, Token, SocketPid, TransferState, NewState);
+                _ ->
+                    {{error, not_found}, NewState}
+            end
     end.
 
 -spec lookup_remote_live_session(session_id(), state()) ->

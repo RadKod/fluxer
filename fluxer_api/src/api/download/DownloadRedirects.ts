@@ -2,7 +2,7 @@
 
 import {posix} from 'node:path';
 
-export const PKGS_BASE_URL = 'https://pkgs.fluxer.com';
+export const PKGS_BASE_URL = 'https://dl.micup.gg';
 export const DOWNLOAD_PREFIX = '/dl';
 export const DESKTOP_REDIRECT_PREFIX = `${DOWNLOAD_PREFIX}/desktop`;
 

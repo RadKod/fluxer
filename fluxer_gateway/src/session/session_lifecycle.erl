@@ -348,8 +348,13 @@ handle_resume(Seq, SocketPid, #{seq := CurrentSeq} = State) ->
             true -> Buffer;
             false -> limited_deque:to_list(Buffer)
         end,
-    MissedEvents = events_after_seq(Seq, BufferList),
-    NewState0 = cancel_offline_timer(cancel_resume_timer(State)),
+    ResumeState = State#{
+        game_activity_grants => #{},
+        game_activity_expected => #{},
+        game_activity_resuming => SocketPid
+    },
+    MissedEvents = session_game_activity:replay(events_after_seq(Seq, BufferList), ResumeState),
+    NewState0 = cancel_offline_timer(cancel_resume_timer(ResumeState)),
     NewState1 = replace_socket(SocketPid, NewState0),
     ReplyEvents = replay_missed_events_inline(MissedEvents, SocketPid),
     NewState = NewState1#{status => ResumeStatus, resume_status => ResumeStatus},
@@ -566,7 +571,12 @@ send_presence_update(#{presence_pid := Pid}, SessionId, NewStatus, NewAfk, NewMo
             {ok, CS} -> BaseMsg#{<<"custom_status">> => CS};
             error -> BaseMsg
         end,
-    gen_server:cast(Pid, {presence_update, Msg}),
+    GameMsg =
+        case maps:find(<<"game_activity">>, Update) of
+            {ok, GameActivity} -> Msg#{<<"game_activity">> => GameActivity};
+            error -> Msg
+        end,
+    gen_server:cast(Pid, {presence_update, GameMsg}),
     ok.
 
 -spec handle_initial_global_presences([map()], session_state()) -> {noreply, session_state()}.

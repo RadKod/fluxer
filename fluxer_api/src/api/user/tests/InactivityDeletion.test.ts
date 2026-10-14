@@ -9,7 +9,7 @@ import {createBuilder, createBuilderWithoutAuth} from '@app/api/test/TestRequest
 import {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {expectDataExists} from '@app/api/user/tests/UserTestUtils';
 import {DeletionReasons} from '@fluxer/constants/src/Core';
-import {afterEach, beforeEach, describe, expect, test} from 'vitest';
+import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 
 interface InactivityCheckResult {
 	warnings_sent: number;
@@ -187,13 +187,22 @@ describe('Inactivity Deletion', () => {
 		}
 		kvProvider.mgetSpy.mockClear();
 		kvProvider.getSpy.mockClear();
+		const scanSpy = vi.spyOn(UserRepository.prototype, 'scanUsersTokenRangePage');
 		await processInactivityDeletions(harness);
-		const activityBatches = kvProvider.mgetSpy.mock.calls.filter((keys) =>
-			keys.some((key) => String(key).startsWith('user_activity:')),
+		const pages: Array<Awaited<ReturnType<UserRepository['scanUsersTokenRangePage']>>> = await Promise.all(
+			scanSpy.mock.results.map((result) => result.value),
 		);
-		expect(activityBatches).toHaveLength(1);
+		scanSpy.mockRestore();
+		const sortedKeys = (keys: Array<unknown>) => keys.map(String).sort();
+		const pageBatches = pages
+			.filter((page) => page.users.length > 0)
+			.map((page) => sortedKeys(page.users.map((user) => `user_activity:${user.id}`)));
+		const activityBatches = kvProvider.mgetSpy.mock.calls
+			.filter((keys) => keys.some((key) => String(key).startsWith('user_activity:')))
+			.map(sortedKeys);
+		expect(activityBatches.sort()).toEqual(pageBatches.sort());
 		for (const account of accounts) {
-			expect(activityBatches[0]).toContain(`user_activity:${account.userId}`);
+			expect(activityBatches.flat()).toContain(`user_activity:${account.userId}`);
 		}
 		const activityGets = kvProvider.getSpy.mock.calls.filter((call) => String(call[0]).startsWith('user_activity:'));
 		expect(activityGets).toHaveLength(0);

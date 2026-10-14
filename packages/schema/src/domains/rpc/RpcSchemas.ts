@@ -5,18 +5,25 @@ import {FORUM_UNREAD_COUNT_CAP, FORUM_UNREADS_MAX_THREADS} from '@fluxer/constan
 import {ChannelThreadsConfigResponse} from '@fluxer/schema/src/domains/admin/ChannelThreadsSchemas';
 import {GatewayRolloutConfigResponse} from '@fluxer/schema/src/domains/admin/GatewayRolloutSchemas';
 import {LegacyPushServiceDeliveryWire} from '@fluxer/schema/src/domains/admin/PushRelaySchemas';
+import {UsernameTiersSchema} from '@fluxer/schema/src/domains/admin/UsernameSchemas';
 import {WebAuthnCredentialResponse} from '@fluxer/schema/src/domains/auth/AuthSchemas';
 import {ChannelResponse, RtcRegionResponse} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
 import {
 	ThreadMemberRpcResponse,
 	ThreadParentSettingsRpcResponse,
 } from '@fluxer/schema/src/domains/channel/ThreadSchemas';
+import {FeedNotificationStateResponse} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import {VoiceStateResponse} from '@fluxer/schema/src/domains/gateway/GatewaySchemas';
 import {GuildEmojiResponse, GuildStickerResponse} from '@fluxer/schema/src/domains/guild/GuildEmojiSchemas';
 import {GuildMemberResponse} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
 import {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import {GuildRoleResponse} from '@fluxer/schema/src/domains/guild/GuildRoleSchemas';
+import {UsernameMigrationSchema} from '@fluxer/schema/src/domains/instance/InstanceSchemas';
 import {FavoriteMemeResponse} from '@fluxer/schema/src/domains/meme/MemeSchemas';
+import {
+	GameActivityPolicyRevisionSchema,
+	GameActivityVisibilitySchema,
+} from '@fluxer/schema/src/domains/user/GameActivitySchemas';
 import {CustomStatusPayload} from '@fluxer/schema/src/domains/user/UserRequestSchemas';
 import {
 	CustomStatusResponse,
@@ -34,6 +41,112 @@ import {
 import {z} from 'zod';
 
 const RPC_USER_BATCH_MAX = 1000;
+
+const GameActivityOwnerEpoch = z.string().min(1).max(128);
+const GameActivityRequestId = z.string().min(1).max(128);
+const GameActivityPhase = z.enum(['fence', 'apply']);
+const GameActivityAudience = z.enum(['everyone', 'guilds', 'close', 'only_me']);
+
+export const GameActivityPolicyState = z
+	.object({
+		policy_revision: GameActivityPolicyRevisionSchema,
+		visibility: GameActivityVisibilitySchema,
+		eligible_16_plus: z.boolean(),
+		effective_profile_audience: GameActivityAudience,
+	})
+	.strict();
+
+export type GameActivityPolicyState = z.infer<typeof GameActivityPolicyState>;
+
+export const GameActivityPolicyRequest = z.discriminatedUnion('phase', [
+	GameActivityPolicyState.extend({
+		user_id: SnowflakeStringType,
+		owner_epoch: GameActivityOwnerEpoch.nullable(),
+		phase: z.literal('fence'),
+		request_id: GameActivityRequestId,
+		recoverable: z.boolean().optional(),
+	}).strict(),
+	GameActivityPolicyState.extend({
+		user_id: SnowflakeStringType,
+		owner_epoch: GameActivityOwnerEpoch,
+		phase: z.literal('apply'),
+		request_id: GameActivityRequestId,
+	}).strict(),
+]);
+export type GameActivityPolicyRequest = z.infer<typeof GameActivityPolicyRequest>;
+
+export const GameActivityPolicyAck = z
+	.object({
+		owner_epoch: GameActivityOwnerEpoch,
+		policy_revision: GameActivityPolicyRevisionSchema,
+		phase: GameActivityPhase,
+		request_id: GameActivityRequestId,
+		revoked_sessions: z.number().int().nonnegative(),
+	})
+	.strict();
+export type GameActivityPolicyAck = z.infer<typeof GameActivityPolicyAck>;
+
+export const GameActivityPairPolicyRequest = z.discriminatedUnion('phase', [
+	z
+		.object({
+			owner_id: SnowflakeStringType,
+			viewer_id: SnowflakeStringType,
+			phase: z.literal('fence'),
+			request_id: GameActivityRequestId,
+		})
+		.strict(),
+	z
+		.object({
+			owner_id: SnowflakeStringType,
+			viewer_id: SnowflakeStringType,
+			phase: z.literal('apply'),
+			request_id: GameActivityRequestId,
+			owner_epoch: GameActivityOwnerEpoch,
+			pair_generation: GameActivityPolicyRevisionSchema,
+		})
+		.strict(),
+]);
+export type GameActivityPairPolicyRequest = z.infer<typeof GameActivityPairPolicyRequest>;
+
+export const GameActivityPairPolicyAck = z
+	.object({
+		owner_epoch: GameActivityOwnerEpoch,
+		pair_generation: GameActivityPolicyRevisionSchema,
+		request_id: GameActivityRequestId,
+		phase: GameActivityPhase,
+	})
+	.strict();
+export type GameActivityPairPolicyAck = z.infer<typeof GameActivityPairPolicyAck>;
+
+export const GameActivityGrant = z
+	.object({
+		owner_id: SnowflakeStringType,
+		policy_revision: GameActivityPolicyRevisionSchema,
+		eligible_16_plus: z.boolean(),
+		effective_profile_audience: GameActivityAudience,
+		friend: z.boolean(),
+		blocked: z.boolean(),
+		profile_view: z.enum(['full', 'public', 'limited']).nullable(),
+		allowed: z.boolean(),
+	})
+	.strict();
+export type GameActivityGrant = z.infer<typeof GameActivityGrant>;
+
+export const GameActivityGrantsRequest = z
+	.object({
+		type: z.literal('get_game_activity_grants'),
+		request_nonce: GameActivityRequestId,
+		targets: z.array(SnowflakeType).min(1).max(100),
+		viewer_id: SnowflakeType,
+	})
+	.strict();
+
+export const GameActivityGrantsResponse = z
+	.object({
+		request_nonce: GameActivityRequestId,
+		grants: z.array(GameActivityGrant).max(100),
+	})
+	.strict();
 
 export const RpcGuildCollectionType = z.enum([
 	'guild',
@@ -65,10 +178,12 @@ const ThreadGateRpcResponse = z.object({
 });
 
 export const RpcRequest = z.discriminatedUnion('type', [
+	GameActivityGrantsRequest,
 	z.object({
 		type: z.literal('session').describe('Request type for session initialization'),
 		token: createStringType().describe('Authentication token for the session'),
 		version: z.literal(1).describe('RPC protocol version'),
+		game_activity_request_nonce: GameActivityRequestId.optional(),
 		ip: createStringType(1, 45).optional().describe('Client IP address'),
 		latitude: createStringType(1, 32).optional().describe('Client latitude for region selection'),
 		longitude: createStringType(1, 32).optional().describe('Client longitude for region selection'),
@@ -347,6 +462,8 @@ export const RpcSessionTimings = z.object({
 export type RpcSessionTimings = z.infer<typeof RpcSessionTimings>;
 
 export const RpcResponseSessionData = z.object({
+	game_activity_policy: GameActivityPolicyState.optional(),
+	game_activity_request_nonce: GameActivityRequestId.optional(),
 	_timings: RpcSessionTimings.optional().describe(
 		'Structured server-side timings for this session initialization, sent to staff sessions only',
 	),
@@ -355,6 +472,8 @@ export const RpcResponseSessionData = z.object({
 	),
 	auth_session_id_hash: z.string().nullish().describe('Hash of the authentication session ID'),
 	user: UserPrivateResponse.describe('Private user data for the authenticated user'),
+	username_migration: UsernameMigrationSchema.optional().describe('Username selection migration state and deadlines'),
+	username_tiers: UsernameTiersSchema.optional().describe('Availability of one-, two-, and three-character usernames'),
 	user_settings: UserSettingsResponse.nullish().describe('User settings configuration'),
 	user_guild_settings: z.array(UserGuildSettingsResponse).describe('Per-guild settings for the user'),
 	notes: z.record(SnowflakeStringType, z.string()).describe('User notes keyed by user ID'),
@@ -371,6 +490,9 @@ export const RpcResponseSessionData = z.object({
 	webauthn_credentials: z
 		.array(WebAuthnCredentialResponse)
 		.describe('Registered WebAuthn credentials (passkeys) for the authenticated user'),
+	feed_notification_state: FeedNotificationStateResponse.optional().describe(
+		'Micup: the feed inbox read cursor and unread count; absent for bots, with the feed off, or when it could not be read in time',
+	),
 	version: z.number().int().describe('Session data version for cache invalidation'),
 });
 
@@ -402,6 +524,7 @@ const RpcResponseValidateCustomStatus = z.object({
 });
 
 export const RpcResponse = z.discriminatedUnion('type', [
+	z.object({type: z.literal('get_game_activity_grants'), data: GameActivityGrantsResponse}),
 	z.object({
 		type: z.literal('session').describe('Response type for session initialization'),
 		data: RpcResponseSessionData.describe('Session initialization data'),

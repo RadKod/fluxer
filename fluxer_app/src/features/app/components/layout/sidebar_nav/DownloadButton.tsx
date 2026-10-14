@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Accessibility from '@app/features/accessibility/state/Accessibility';
+import * as AnalyticsCommands from '@app/features/analytics/commands/AnalyticsCommands';
 import guildStyles from '@app/features/app/components/layout/GuildsLayout.module.css';
 import styles from '@app/features/app/components/layout/sidebar_nav/DownloadButton.module.css';
 import {DESKTOP_DOWNLOAD_URL, PRODUCT_NAME} from '@app/features/app/config/I18nDisplayConstants';
@@ -29,7 +30,7 @@ const DOWNLOAD_DESCRIPTOR = msg({
 });
 export const DownloadButton = observer(() => {
 	const {i18n} = useLingui();
-	const [hoverRef, isHovering] = useHover();
+	const [hoverRef] = useHover();
 	const buttonRef = useRef<HTMLButtonElement | null>(null);
 	const iconRef = useRef<HTMLDivElement | null>(null);
 	const itemRef = useRef<HTMLElement | null>(null);
@@ -39,6 +40,7 @@ export const DownloadButton = observer(() => {
 		return null;
 	}
 	const handleDownload = () => {
+		AnalyticsCommands.track('desktop_download_click');
 		openExternalUrlWithWarning(DESKTOP_DOWNLOAD_URL);
 	};
 	const handleContextMenu = (e: React.MouseEvent) => {
@@ -64,7 +66,6 @@ export const DownloadButton = observer(() => {
 			</MenuGroup>
 		));
 	};
-	const shouldShowHoverState = isHovering || contextMenuOpen;
 	return (
 		<div
 			className={clsx(guildStyles.createGuildButton, contextMenuOpen && guildStyles.contextMenuHover)}
@@ -95,8 +96,8 @@ export const DownloadButton = observer(() => {
 						<motion.div
 							ref={iconRef}
 							className={guildStyles.createGuildButtonIcon}
-							animate={{borderRadius: shouldShowHoverState ? '30%' : '50%'}}
-							initial={{borderRadius: shouldShowHoverState ? '30%' : '50%'}}
+							animate={{borderRadius: '30%'}}
+							initial={{borderRadius: '30%'}}
 							transition={{duration: Accessibility.useReducedMotion ? 0 : 0.07, ease: 'easeOut'}}
 							data-flx="app.sidebar-nav.download-button.div--2"
 						>

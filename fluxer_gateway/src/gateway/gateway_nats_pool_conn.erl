@@ -22,6 +22,8 @@
     reconnect_delay/1
 ]).
 
+-dialyzer({no_opaque, [close_failed_unsubscribe/1]}).
+
 -define(DEFAULT_POOL_SIZE, 16).
 -define(DEFAULT_MAX_HANDLERS, 512).
 -define(RECONNECT_BASE_DELAY_MS, 2000).
@@ -104,7 +106,8 @@ connect_slot_and_notify(Idx, Host, Port, Opts, Parent) ->
         case connect(Host, Port, Opts) of
             {ok, Conn} ->
                 ok = nats:controlling_process(Conn, Parent),
-                Parent ! {nats_pool_connect_result, Idx, self(), {ok, Conn}};
+                Parent ! {nats_pool_connect_result, Idx, self(), {ok, Conn}},
+                gateway_nats_rpc_handler:notify_connection_ready(Conn, Parent);
             {error, Reason} ->
                 Parent ! {nats_pool_connect_result, Idx, self(), {error, Reason}}
         end,
@@ -139,7 +142,21 @@ handle_conn_down(
     NewSubs = maps:remove(Idx, Subs),
     update_persistent_term(NewSlots, PoolSize),
     schedule_reconnect(Idx, self()),
-    State#{slots => NewSlots, subs => NewSubs, monitors => CleanMonitors}.
+    NewState = State#{slots => NewSlots, subs => NewSubs, monitors => CleanMonitors},
+    case fluxer_gateway_env:get(cluster_enabled) of
+        true ->
+            Installed = maps:remove(Idx, maps:get(rpc_subscriptions, State, #{})),
+            ReadySlots = maps:remove(Idx, maps:get(ready_slots, State, #{})),
+            gateway_nats_rpc_handler:cancel_subscription_retry(
+                NewState#{
+                    rpc_subscriptions => Installed,
+                    cluster_rpc_ready => false,
+                    ready_slots => ReadySlots
+                }
+            );
+        _ ->
+            NewState
+    end.
 
 -spec find_slot_by_conn(nats:conn(), map()) -> non_neg_integer() | undefined.
 find_slot_by_conn(Conn, #{slots := Slots}) ->
@@ -190,11 +207,45 @@ reconnect_delay(Failures) ->
 
 -spec subscribe_slot(non_neg_integer(), nats:conn(), map()) -> map().
 subscribe_slot(Idx, Conn, #{subs := Subs} = State) ->
-    case maps:is_key(Idx, Subs) of
+    case fluxer_gateway_env:get(cluster_enabled) of
+        true -> subscribe_cluster_slot(Idx, Conn, Subs, State);
+        _ -> subscribe_upstream_slot(Idx, Conn, Subs, State)
+    end.
+
+-spec subscribe_upstream_slot(non_neg_integer(), nats:conn(), map(), map()) -> map().
+subscribe_upstream_slot(Idx, Conn, Subs, State) ->
+    case
+        maps:is_key(Idx, Subs) orelse not maps:get(rpc_enabled, State, true) orelse
+            not gateway_cluster_membership:rpc_ready()
+    of
         true ->
             State;
         false ->
             subscribe_new_slot(Idx, Conn, Subs, State)
+    end.
+
+-spec subscribe_cluster_slot(non_neg_integer(), nats:conn(), map(), map()) -> map().
+subscribe_cluster_slot(Idx, Conn, Subs, State) ->
+    case
+        maps:get(Idx, maps:get(ready_slots, State, #{}), undefined) =:= Conn andalso
+            maps:get(rpc_enabled, State, true) andalso gateway_cluster_membership:rpc_ready()
+    of
+        false ->
+            State;
+        true ->
+            Subjects = gateway_nats_rpc:rpc_subjects_for_role(
+                fluxer_gateway_sup:current_role()
+            ),
+            Installed = maps:get(rpc_subscriptions, State, #{}),
+            SlotSubs = gateway_nats_rpc_handler:subscribe_missing_subjects(
+                Conn, Subjects, maps:get(Idx, Installed, #{})
+            ),
+            NewSubs =
+                case map_size(SlotSubs) of
+                    0 -> Subs;
+                    _ -> Subs#{Idx => maps:values(SlotSubs)}
+                end,
+            State#{rpc_subscriptions => Installed#{Idx => SlotSubs}, subs => NewSubs}
     end.
 
 -spec subscribe_new_slot(non_neg_integer(), nats:conn(), map(), map()) -> map().
@@ -335,11 +386,30 @@ ignore_unsub(Conn, Sid) ->
 -spec safe_unsub(nats:conn(), nats:sid()) -> ok.
 safe_unsub(Conn, TypedSid) ->
     try nats:unsub(Conn, TypedSid) of
-        _ -> ok
+        ok -> ok;
+        {error, _} -> close_failed_unsubscribe(Conn)
     catch
-        throw:_ -> ok;
-        error:_ -> ok;
-        exit:_ -> ok
+        _:_ -> close_failed_unsubscribe(Conn)
+    end.
+
+-spec close_failed_unsubscribe(nats:conn()) -> ok.
+close_failed_unsubscribe(Conn) ->
+    case fluxer_gateway_env:get(cluster_enabled) of
+        true ->
+            logger:warning("Gateway NATS RPC unsubscribe failed, closing connection"),
+            try nats:disconnect(Conn) of
+                ok ->
+                    ok;
+                _ ->
+                    exit(Conn, kill),
+                    ok
+            catch
+                _:_ ->
+                    exit(Conn, kill),
+                    ok
+            end;
+        _ ->
+            ok
     end.
 
 -spec coerce_sid(term()) -> {ok, nats:sid()} | error.

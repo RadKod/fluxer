@@ -10,6 +10,7 @@ import {
 	createMessageID,
 	createReportID,
 	createUserID,
+	userIdToChannelId,
 } from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
 import type {IChannelRepository} from '@app/api/channel/IChannelRepository';
@@ -24,9 +25,11 @@ import {
 	guildToContentWarningView,
 } from '@app/api/channel/utils/EffectiveContentWarning';
 import {resolveNsfwScopeChannel} from '@app/api/channel/utils/ThreadNsfwScope';
+import type {FeedCommentRow, FeedMedia, FeedPostRow} from '@app/api/database/types/FeedTypes';
 import type {MessageAttachment} from '@app/api/database/types/MessageTypes';
 import type {DSAReportTicketRow} from '@app/api/database/types/ReportTypes';
 import type {ThreadViewer} from '@app/api/experiment/ChannelThreadsGate';
+import {isStreamMedia} from '@app/api/feed/video/FeedVideoUrls';
 import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
 import {emitActivity} from '@app/api/infrastructure/activity/ActivityEvents';
 import type {ReportOutcome, ReportTarget, ResolvedBy} from '@app/api/infrastructure/activity/Contract.generated';
@@ -53,7 +56,7 @@ import type {IReportSearchService} from '@app/api/search/IReportSearchService';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
 import {isUnderEnforcement} from '@app/api/user/ProfileVisibility';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
-import {InviteTypes, MessageFlags, Permissions} from '@fluxer/constants/src/ChannelConstants';
+import {InviteTypes, MessageFlags, MessageTypes, Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
@@ -88,6 +91,18 @@ interface ReporterMetadata {
 	fullLegalName: string | null;
 	countryOfResidence: string | null;
 }
+
+// A feed post or comment as a report's message_context entry.
+interface FeedReportItem {
+	id: bigint;
+	authorId: UserID;
+	content: string | null;
+	editedAt: Date | null;
+	media: Array<FeedMedia>;
+}
+
+// A reported comment, or a reply in comment shape (its reply ID as comment_id).
+type FeedReportComment = Pick<FeedCommentRow, 'comment_id' | 'author_id' | 'content' | 'edited_at'>;
 
 const REPORT_RATE_LIMIT_WINDOW = ms('1 hour');
 const REPORT_RATE_LIMIT_MAX = 5;
@@ -360,6 +375,191 @@ export class ReportService {
 			});
 		}
 		return report;
+	}
+
+	/** The caller checks that the reporter can see the post (feature_feed, the author's profile rule, blocks). */
+	async reportFeedPost(reporter: ReporterMetadata, post: FeedPostRow, category: string): Promise<IARSubmission> {
+		return this.reportFeedItem(reporter, ReportType.FEED_POST, category, [feedPostReportItem(post)]);
+	}
+
+	/** A reply comes with its top-level comment (parent), which sits between the post and the reply. */
+	async reportFeedComment(
+		reporter: ReporterMetadata,
+		post: FeedPostRow,
+		comment: FeedReportComment,
+		category: string,
+		parent: FeedReportComment | null = null,
+	): Promise<IARSubmission> {
+		return this.reportFeedItem(reporter, ReportType.FEED_COMMENT, category, [
+			feedPostReportItem(post),
+			...(parent ? [feedCommentReportItem(parent)] : []),
+			feedCommentReportItem(comment),
+		]);
+	}
+
+	/**
+	 * Feed posts (FEED_POST) and comments (FEED_COMMENT) take the message report path. The reported item is the last
+	 * message_context entry in message shape (a comment's post comes first), under the post author's personal channel
+	 * ID, which prefixes the feed image keys: the admin report view and the NCMEC submission (channel_id, message_id and
+	 * source_report_id) find the images copied to the reports bucket like message attachments.
+	 */
+	private async reportFeedItem(
+		reporter: ReporterMetadata,
+		reportType: ReportType,
+		category: string,
+		items: Array<FeedReportItem>,
+	): Promise<IARSubmission> {
+		const target = items.at(-1)!;
+		await this.checkReportBan(reporter.id);
+		const reporterKey = this.getReporterRateLimitKey(reporter);
+		await this.ensureReportRateLimit(this.createReportRateLimitIdentifier(reporterKey), REPORT_RATE_LIMIT_MAX, false);
+		if (reporter.id && target.authorId === reporter.id) {
+			throw new CannotReportYourselfError();
+		}
+		const reportedUser = await this.userRepository.findUnique(target.authorId);
+		if (!reportedUser) {
+			throw new UnknownUserError();
+		}
+		const channelId = userIdToChannelId(items[0]!.authorId);
+		const messageId = createMessageID(target.id);
+		const reportId = createReportID(await this.snowflakeService.generate());
+		const reportData: IARSubmissionRow = {
+			report_id: reportId,
+			reporter_id: reporter.id,
+			reporter_email: reporter.email,
+			reporter_full_legal_name: reporter.fullLegalName,
+			reporter_country_of_residence: reporter.countryOfResidence,
+			reported_at: new Date(),
+			status: ReportStatus.PENDING,
+			report_type: reportType,
+			category,
+			additional_info: null,
+			reported_user_id: target.authorId,
+			reported_user_avatar_hash: reportedUser.avatarHash || null,
+			reported_guild_id: null,
+			reported_guild_name: null,
+			reported_guild_icon_hash: null,
+			reported_message_id: messageId,
+			reported_channel_id: null,
+			reported_channel_name: null,
+			message_context: await this.gatherFeedReportContext(channelId, items),
+			guild_context_id: null,
+			resolved_at: null,
+			resolved_by_admin_id: null,
+			public_comment: null,
+			audit_log_reason: null,
+			reported_guild_invite_code: null,
+			...(await this.buildContentWarningSnapshot(null, null)),
+		};
+		if (
+			reporter.id &&
+			!(await this.reportRepository.reserveMessageReportByReporter({
+				reporter_id: reporter.id,
+				channel_id: channelId,
+				message_id: messageId,
+				report_id: reportId,
+				reported_at: reportData.reported_at,
+			}))
+		) {
+			throw new ConflictError({code: APIErrorCodes.CONFLICT});
+		}
+		try {
+			const checks = [
+				{identifier: this.createReportRateLimitIdentifier(reporterKey), maxAttempts: REPORT_RATE_LIMIT_MAX},
+				{identifier: `report:feed:target:${target.id}`, maxAttempts: MESSAGE_REPORT_TARGET_MESSAGE_RATE_LIMIT_MAX},
+			];
+			for (const check of checks) {
+				await this.ensureReportRateLimit(check.identifier, check.maxAttempts, false);
+			}
+			for (const check of checks) {
+				await this.ensureReportRateLimit(check.identifier, check.maxAttempts, true);
+			}
+			const report = await this.reportRepository.createReport(reportData);
+			if (this.reportSearchService && 'indexReport' in this.reportSearchService) {
+				await this.reportSearchService.indexReport(report).catch((error) => {
+					Logger.error({error, reportId: report.reportId}, 'Failed to index feed report in search');
+				});
+			}
+			return report;
+		} catch (error) {
+			if (reporter.id) {
+				await this.reportRepository
+					.deleteMessageReportByReporter(reporter.id, channelId, messageId)
+					.catch((cleanupError) => {
+						Logger.error({error: cleanupError, reportId}, 'Failed to clean up feed report duplicate reservation');
+					});
+			}
+			throw error;
+		}
+	}
+
+	private async gatherFeedReportContext(
+		channelId: ChannelID,
+		items: Array<FeedReportItem>,
+	): Promise<Array<IARMessageContextRow>> {
+		const context: Array<IARMessageContextRow> = [];
+		for (const item of items) {
+			const author = await this.userRepository.findUnique(item.authorId);
+			if (!author) continue;
+			const attachments = await this.cloneFeedMediaForReport(item.media, channelId);
+			context.push({
+				message_id: item.id,
+				channel_id: channelId,
+				author_id: item.authorId,
+				author_username: author.username,
+				author_discriminator: author.discriminator,
+				author_avatar_hash: author.avatarHash || null,
+				content: item.content,
+				timestamp: snowflakeToDate(item.id),
+				edited_timestamp: item.editedAt,
+				type: MessageTypes.DEFAULT,
+				flags: 0,
+				mention_everyone: false,
+				mention_users: null,
+				mention_roles: null,
+				mention_channels: null,
+				attachments: attachments.length > 0 ? attachments : null,
+				embeds: null,
+				sticker_items: null,
+			});
+		}
+		return context;
+	}
+
+	private async cloneFeedMediaForReport(
+		media: Array<FeedMedia>,
+		channelId: ChannelID,
+	): Promise<Array<MessageAttachment>> {
+		const cloned: Array<MessageAttachment> = [];
+		for (const item of media) {
+			const attachmentId = createAttachmentID(item.attachment_id);
+			// The stream fields stay out of the report.
+			const {stream_video_id, stream_mp4_file, ...fields} = item;
+			const attachment = {...fields, attachment_id: attachmentId, title: null, duration: null, waveform: null};
+			// A Bunny video has no CDN object: the video lane joins its HLS segments into the reports bucket under this
+			// same key (evidence.ts, video/mp2t) before Bunny deletes it, so it is listed without a copy here.
+			if (isStreamMedia(item)) {
+				cloned.push(attachment);
+				continue;
+			}
+			const key = MessageHelpers.makeAttachmentCdnKey(channelId, attachmentId, item.filename);
+			try {
+				await this.storageService.copyObject({
+					sourceBucket: Config.s3.buckets.cdn,
+					sourceKey: key,
+					destinationBucket: Config.s3.buckets.reports,
+					destinationKey: key,
+					newContentType: item.content_type,
+				});
+				cloned.push(attachment);
+			} catch (error) {
+				Logger.error(
+					{error, attachmentId, filename: item.filename, channelId},
+					'Failed to clone feed image for report',
+				);
+			}
+		}
+		return cloned;
 	}
 
 	private async authorizeGuildReporter(
@@ -1215,4 +1415,24 @@ export class ReportService {
 	}
 
 	public shutdown(): void {}
+}
+
+function feedPostReportItem(post: FeedPostRow): FeedReportItem {
+	return {
+		id: post.post_id,
+		authorId: post.author_id,
+		content: post.content ?? null,
+		editedAt: post.edited_at ?? null,
+		media: post.media ?? [],
+	};
+}
+
+function feedCommentReportItem(comment: FeedReportComment): FeedReportItem {
+	return {
+		id: comment.comment_id,
+		authorId: comment.author_id,
+		content: comment.content,
+		editedAt: comment.edited_at ?? null,
+		media: [],
+	};
 }

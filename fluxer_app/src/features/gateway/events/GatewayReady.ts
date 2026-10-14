@@ -2,6 +2,8 @@
 
 import {startDomainMigrationTrigger} from '@app/features/app/domain_migration/DomainMigrationTrigger';
 import Initialization from '@app/features/app/state/Initialization';
+import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
+import type {UsernameMigration, UsernameTiers} from '@app/features/app/state/RuntimeConfigSnapshot';
 import accountStorage from '@app/features/auth/state/AccountStorage';
 import Accounts from '@app/features/auth/state/Accounts';
 import Authentication from '@app/features/auth/state/Authentication';
@@ -13,12 +15,17 @@ import Emoji from '@app/features/emoji/state/Emoji';
 import Sticker from '@app/features/emoji/state/EmojiSticker';
 import type {FavoriteMemeWire} from '@app/features/expressions/models/FavoriteMeme';
 import FavoriteMemes from '@app/features/expressions/state/FavoriteMemes';
+import {handleFeedNotificationReady} from '@app/features/feed/events/FeedNotificationReady';
+import FeedTimeline from '@app/features/feed/state/FeedTimeline';
 import ForumPosts from '@app/features/forum/state/ForumPosts';
 import ForumReadState from '@app/features/forum/state/ForumReadState';
+import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
+import DesktopGameActivityBridge from '@app/features/game_activity/utils/DesktopGameActivityBridge';
 import {scheduleAccountReadyWork} from '@app/features/gateway/events/AccountReadyWork';
 import type {GatewayHandlerContext} from '@app/features/gateway/events/EventRouter';
 import type {GuildReadyData} from '@app/features/gateway/types/GatewayGuildTypes';
 import type {PresenceRecord} from '@app/features/gateway/types/GatewayPresenceTypes';
+import type {GatewayRolloutPayload} from '@app/features/gateway/types/GatewayRolloutTypes';
 import ChannelMemberCount from '@app/features/guild/state/ChannelMemberCount';
 import GuildAvailability from '@app/features/guild/state/GuildAvailability';
 import GuildCount from '@app/features/guild/state/GuildCount';
@@ -52,6 +59,7 @@ import WebAuthnCredentials, {type WebAuthnCredential} from '@app/features/user/s
 import RtcRegions from '@app/features/voice/state/RtcRegions';
 import {seedVoiceStatesFromReady} from '@app/features/voice/VoiceGatewayLifecycle';
 import type {RtcRegionResponse, Channel as WireChannel} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
+import type {FeedNotificationStateResponse} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import type {
 	UserPrivate,
 	UserSettingsResponse,
@@ -62,6 +70,8 @@ import {runInAction} from 'mobx';
 const logger = new Logger('READY Handler');
 
 export interface ReadyPayload {
+	username_migration?: UsernameMigration;
+	username_tiers?: UsernameTiers;
 	session_id: string;
 	guilds: Array<GuildReadyData>;
 	user: UserPrivate;
@@ -79,9 +89,11 @@ export interface ReadyPayload {
 	read_states?: Array<GatewayReadState>;
 	read_state_proto?: string;
 	presences?: Array<PresenceRecord>;
+	gateway_rollout?: GatewayRolloutPayload;
 	auth_session_id_hash?: string;
 	rtc_regions?: Array<RtcRegionResponse>;
 	webauthn_credentials?: Array<WebAuthnCredential>;
+	feed_notification_state?: FeedNotificationStateResponse;
 }
 
 export class GatewayReadyIdentityMismatchError extends Error {
@@ -111,6 +123,12 @@ export function handleReady(data: ReadyPayload, context: GatewayHandlerContext):
 }
 
 function handleReadyInternal(data: ReadyPayload, context: GatewayHandlerContext, accountKey: string): void {
+	GameActivityStore.resetRollout();
+	GameActivityStore.handleRollout(data.gateway_rollout);
+	void DesktopGameActivityBridge.setAccount(data.user.id);
+	if (data.username_migration !== undefined || data.username_tiers !== undefined) {
+		RuntimeConfig.applyUsernameConfig(data);
+	}
 	const currentSessionId = data.session_id;
 	const isNewSession = context.previousSessionId !== null && context.previousSessionId !== currentSessionId;
 	if (isNewSession) {
@@ -166,7 +184,7 @@ function handleReadyInternal(data: ReadyPayload, context: GatewayHandlerContext,
 	Accounts.updateAccountUserData(accountKey, userData);
 	Authentication.handleGatewayReady({user: data.user});
 	Guilds.handleGatewayReady({guilds});
-	UserSettings.handleGatewayReady(data.user_settings);
+	UserSettings.handleGatewayReady(data.user_settings, context.settingsEpoch);
 	GuildList.handleGatewayReady(guilds);
 	GuildCount.handleGatewayReady(guilds);
 	GuildMembers.handleGatewayReady(guilds);
@@ -186,6 +204,8 @@ function handleReadyInternal(data: ReadyPayload, context: GatewayHandlerContext,
 	MemberSearch.handleGatewayReady();
 	SavedMessages.handleGatewayReady();
 	MentionFeed.handleGatewayReady();
+	void handleFeedNotificationReady(data.feed_notification_state, data.user.id, accountKey);
+	FeedTimeline.handleGatewayReady();
 	ChannelPins.handleGatewayReady();
 	UserConnection.handleGatewayReady();
 	UserGuildSettings.handleGatewayReady(data.user_guild_settings ?? []);
@@ -197,6 +217,7 @@ function handleReadyInternal(data: ReadyPayload, context: GatewayHandlerContext,
 	});
 	GuildReadState.handleGatewayReady();
 	Presence.handleGatewayReady(data.user, guilds, data.presences);
+	GameActivityStore.replaceReady(data.presences ?? []);
 	seedVoiceStatesFromReady(guilds);
 	if (!context.setReady()) return;
 	Initialization.setReady();

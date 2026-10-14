@@ -27,6 +27,8 @@ import {
 	updateTrayRuntimeState,
 } from '@electron/main/DesktopTray';
 import {DownloadChecksumError, downloadFile} from '@electron/main/FileDownloads';
+import {cleanupGameActivityIpc, registerGameActivityIpcHandlers} from '@electron/main/GameActivityIpc';
+import {registerGameOverlayIpcHandlers} from '@electron/main/GameOverlay';
 import {getGatewayOriginRegistry} from '@electron/main/GatewayOriginRegistry';
 import {retryBlockedGlobalShortcutHooks} from '@electron/main/GlobalShortcutsIpc';
 import {
@@ -65,6 +67,7 @@ import {
 	releaseStreamingPriority,
 	resetStreamingPriority,
 } from '@electron/main/StreamingPriority';
+import {registerTaskbarPinIpcHandlers} from '@electron/main/TaskbarPin';
 import {setTaskbarProgress, type TaskbarProgressMode} from '@electron/main/TaskbarProgress';
 import {registerThemeLocalFileHandlers} from '@electron/main/ThemeLocalFiles';
 import {
@@ -162,6 +165,9 @@ function getActiveMiddleClickAutoscroll(): boolean {
 }
 
 export function registerIpcHandlers(): void {
+	registerGameActivityIpcHandlers(getMainWindow);
+	registerTaskbarPinIpcHandlers(getMainWindow);
+	registerGameOverlayIpcHandlers();
 	registerVoiceDebugEventSinkPopoutIpcHandlers();
 	registerVoiceBackgroundMediaCacheHandlers();
 	ipcMain.handle(DESKTOP_MODULE_CHANNELS.ensure, (event, moduleName: unknown) => {
@@ -643,6 +649,7 @@ export function cleanupGatewayTransportHandlers(): void {
 }
 
 export function cleanupIpcHandlers(_options: {quitting?: boolean} = {}): void {
+	cleanupGameActivityIpc();
 	cleanupDesktopRuntimeConfigHandlers();
 	browserHandoff?.cleanup();
 	browserHandoff = null;

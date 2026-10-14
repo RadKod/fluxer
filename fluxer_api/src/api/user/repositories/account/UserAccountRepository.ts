@@ -2,9 +2,11 @@
 
 import type {UserID} from '@app/api/BrandedTypes';
 import {Db, type DbOp} from '@app/api/database/CassandraTypes';
+import type {TokenRange} from '@app/api/database/TokenRangeScan';
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import {Logger} from '@app/api/Logger';
 import {User} from '@app/api/models/User';
+import {onUserAccountWritten} from '@app/api/user/lifecycle/UserLifecycleHooks';
 import {
 	UserDataRepository,
 	type UserDeletionTransition,
@@ -42,7 +44,7 @@ export class UserAccountRepository {
 	}
 
 	async create(data: UserRow): Promise<User> {
-		return this.upsert(data);
+		return this.writeAccount(data, null, true);
 	}
 
 	async findUnique(userId: UserID): Promise<User | null> {
@@ -67,11 +69,28 @@ export class UserAccountRepository {
 		return this.dataRepo.scanAllUsersPage(limit, pageState);
 	}
 
+	async scanUsersTokenRangePage(
+		range: TokenRange,
+		limit: number,
+		pageState?: string | null,
+	): Promise<{
+		users: Array<User>;
+		pageState: string | null;
+	}> {
+		return this.dataRepo.scanUsersTokenRangePage(range, limit, pageState);
+	}
+
 	async listUsers(userIds: Array<UserID>): Promise<Array<User>> {
 		return this.dataRepo.listUsers(userIds);
 	}
 
 	async upsert(data: UserRow, oldData?: UserRow | null): Promise<User> {
+		return this.writeAccount(data, oldData, false);
+	}
+
+	private async writeAccount(data: UserRow, oldData: UserRow | null | undefined, create: boolean): Promise<User> {
+		// Micup: two coordinators may differ by 2s; keep the first index older than any later projection.
+		const initialIndexTimestamp = create ? BigInt(Date.now()) * 1000n - 2000001n : null;
 		const userId = data.user_id;
 		if (oldData === undefined) {
 			oldData = (await this.findUnique(userId))?.toRow() ?? null;
@@ -84,17 +103,23 @@ export class UserAccountRepository {
 		}
 		let dataCommitted = false;
 		try {
-			const result = await this.dataRepo.upsertUserRow(data, oldData);
+			const result = create
+				? await this.dataRepo.createUserRow(data)
+				: await this.dataRepo.upsertUserRow(data, oldData);
 			if (result.finalVersion === null) {
 				throw new Error(`Failed to update user ${userId} after max retries due to concurrent updates`);
 			}
 			dataCommitted = true;
 			const updatedData = result.updatedData;
 			const previousData = result.previousData;
+			// Micup: creation owns the first tag; profile sync cannot recreate it during migration.
+			if (create && !updatedData.bot && !updatedData.system)
+				await this.indexRepo.createLegacyUsernameIndex(updatedData, initialIndexTimestamp!);
+			await onUserAccountWritten({previous: previousData, updated: updatedData});
 			const updatedUser = new User(updatedData);
 			await this.emailOwnershipRepo.finalizeEmailClaim(emailClaim);
 			await this.releasePreviousEmailIfChanged(previousData, updatedData);
-			await this.indexRepo.syncIndices(updatedData, previousData);
+			await this.indexRepo.syncIndices(updatedData, previousData, create && !updatedData.bot && !updatedData.system);
 			await this.searchRepo.indexUser(updatedUser);
 			return updatedUser;
 		} catch (error) {
@@ -110,8 +135,13 @@ export class UserAccountRepository {
 		}
 	}
 
-	async patchUpsert(userId: UserID, patchData: Partial<UserRow>, oldData?: UserRow | null): Promise<User> {
-		return this.patchAccount(userId, patchData, oldData);
+	async patchUpsert(
+		userId: UserID,
+		patchData: Partial<UserRow>,
+		oldData?: UserRow | null,
+		legacyIdentityDeadlineAt?: number,
+	): Promise<User> {
+		return this.patchAccount(userId, patchData, oldData, undefined, legacyIdentityDeadlineAt);
 	}
 
 	async compareAndSetFlags(user: User, flags: bigint): Promise<User | null> {
@@ -119,6 +149,7 @@ export class UserAccountRepository {
 		if (!result) return null;
 		const updatedUser = new User(result.updatedData);
 		await this.searchRepo.updateUser(updatedUser);
+		await onUserAccountWritten({previous: result.previousData, updated: result.updatedData});
 		return updatedUser;
 	}
 
@@ -147,8 +178,12 @@ export class UserAccountRepository {
 		);
 	}
 
+	// Micup: the deletion start and the subscription status are conditional writes outside patchAccount; their account
+	// write hooks run here, so the profile caches (and every other hook) see them too.
 	async startDeletion(userId: UserID, pendingDeletionAt: Date): Promise<User | null> {
-		return this.dataRepo.startDeletion(userId, pendingDeletionAt);
+		const started = await this.dataRepo.startDeletion(userId, pendingDeletionAt);
+		if (started?.previous) await onUserAccountWritten({previous: started.previous, updated: started.user.toRow()});
+		return started?.user ?? null;
 	}
 
 	async anonymizeForDeletion(user: User, patch: Partial<UserRow>): Promise<User> {
@@ -164,6 +199,7 @@ export class UserAccountRepository {
 		patchData: Partial<UserRow>,
 		oldData?: UserRow | null,
 		deletionTransition?: UserDeletionTransition,
+		legacyIdentityDeadlineAt?: number,
 	): Promise<User> {
 		if (!oldData) {
 			const existingUser = await this.findUniqueAssert(userId);
@@ -191,13 +227,14 @@ export class UserAccountRepository {
 		try {
 			const result = deletionTransition
 				? await this.dataRepo.patchDeletion(new User(oldData), userPatch, deletionTransition)
-				: await this.dataRepo.patchUser(userId, userPatch, oldData);
+				: await this.dataRepo.patchUser(userId, userPatch, oldData, legacyIdentityDeadlineAt);
 			if (result.finalVersion === null) {
 				throw new Error(`Failed to update user ${userId} due to concurrent modification`);
 			}
 			dataCommitted = true;
 			const updatedData = result.updatedData;
 			const previousData = result.previousData;
+			await onUserAccountWritten({previous: previousData, updated: updatedData});
 			const updatedUser = new User(updatedData);
 			await this.emailOwnershipRepo.finalizeEmailClaim(emailClaim);
 			await this.releasePreviousEmailIfChanged(previousData, updatedData);
@@ -256,7 +293,9 @@ export class UserAccountRepository {
 	): Promise<{
 		finalVersion: number | null;
 	}> {
-		return this.dataRepo.updateSubscriptionStatus(userId, updates);
+		const {finalVersion, previousData, updatedData} = await this.dataRepo.updateSubscriptionStatus(userId, updates);
+		if (updatedData) await onUserAccountWritten({previous: previousData, updated: updatedData});
+		return {finalVersion};
 	}
 
 	async listUserIdsByLastActiveIp(

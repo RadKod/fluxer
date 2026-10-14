@@ -18,18 +18,11 @@ function logFailure(context: Record<string, unknown>, failure: CachePurgeFailure
 	Logger.error({...context, status, error}, 'Cache purge endpoint refused the request, requeued its prefixes');
 }
 
-const processCachePurgeQueue: WorkerTaskHandler = async (_payload, _helpers) => {
-	const adapter = Config.cachePurge.adapter;
-	if (adapter === 'none') {
-		Logger.warn('Skipped a cache purge run because the adapter is none');
-		return;
-	}
-	const queue = new CachePurgeQueue(getWorkerDependencies().kvClient);
-	const prefixes = await queue.dequeueBatch();
-	if (prefixes.length === 0) {
-		return;
-	}
-	const context = {adapter, prefixes: prefixes.length};
+async function purgeBatch(
+	queue: CachePurgeQueue,
+	prefixes: Array<string>,
+	context: Record<string, unknown>,
+): Promise<void> {
 	let outcome: CachePurgeOutcome;
 	try {
 		outcome = await createCachePurgeAdapter(Config.cachePurge).purge(prefixes);
@@ -48,6 +41,30 @@ const processCachePurgeQueue: WorkerTaskHandler = async (_payload, _helpers) => 
 	}
 	await queue.requeue(prefixes);
 	logFailure(context, outcome);
+}
+
+const processCachePurgeQueue: WorkerTaskHandler = async (_payload, _helpers) => {
+	const adapter = Config.cachePurge.adapter;
+	if (adapter === 'none') {
+		Logger.warn('Skipped a cache purge run because the adapter is none');
+		return;
+	}
+	// Micup: the prefixes stay queued for a worker that can purge them; dequeuing here would lose them.
+	if (adapter === 'queue_only') {
+		Logger.error('Skipped a cache purge run: this worker is queue_only, the purging worker needs bunny or http');
+		return;
+	}
+	const queue = new CachePurgeQueue(getWorkerDependencies().kvClient);
+	const {prefixes, priority} = await queue.dequeueBatch();
+	if (prefixes.length === 0) {
+		return;
+	}
+	try {
+		await purgeBatch(queue, prefixes, {adapter, prefixes: prefixes.length, priority: priority.length});
+	} finally {
+		// Every requeue goes to the ordinary queue; priority prefixes that were not purged must not wait there.
+		await queue.restorePriority(priority);
+	}
 };
 
 export default processCachePurgeQueue;

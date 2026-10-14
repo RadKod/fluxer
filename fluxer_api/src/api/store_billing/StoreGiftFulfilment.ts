@@ -13,6 +13,9 @@ import type {StoreEntitlementWriter} from '@app/api/store_billing/StoreEntitleme
 import type {StripeGiftReversalHandler} from '@app/api/stripe/services/StripeGiftReversalHandler';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
 import * as RandomUtils from '@app/api/utils/RandomUtils';
+import {StoreBillingUnavailableError} from '@fluxer/errors/src/domains/payment/StoreBillingUnavailableError';
+import type {ICacheService} from '@pkgs/cache/src/ICacheService';
+import {seconds} from 'itty-time';
 
 const PURCHASE_WRITE_ATTEMPTS = 4;
 const GIFT_REFUND_REVERSAL_REASON = 'store_refund';
@@ -23,6 +26,7 @@ interface StoreGiftFulfilmentDeps {
 	giftReversalHandler: StripeGiftReversalHandler;
 	googlePlaySettlement: GooglePlaySettlement;
 	entitlementWriter: StoreEntitlementWriter;
+	cacheService: ICacheService;
 }
 
 export class StoreGiftFulfilment {
@@ -109,19 +113,28 @@ export class StoreGiftFulfilment {
 	}
 
 	private async reverseStoreGift(code: string, row: StorePurchaseRow): Promise<void> {
-		const gift = await this.deps.userRepository.findGiftCode(code);
-		if (!gift || gift.revokedAt) {
-			return;
+		const lockKey = `gift_redeem_lock:${code}`;
+		const lockToken = await this.deps.cacheService.acquireLock(lockKey, seconds('2 minutes'));
+		if (!lockToken) {
+			throw new StoreBillingUnavailableError();
 		}
-		const redeemerId = gift.redeemedByUserId;
-		if (redeemerId !== null) {
-			await this.reverseRedeemedStoreGift(gift, redeemerId);
+		try {
+			const gift = await this.deps.userRepository.findGiftCode(code);
+			if (!gift || gift.revokedAt) {
+				return;
+			}
+			const redeemerId = gift.redeemedByUserId;
+			if (redeemerId !== null) {
+				await this.reverseRedeemedStoreGift(gift, redeemerId);
+			}
+			await this.deps.userRepository.revokeGiftCodeForStoreRefund(code, gift.createdByUserId, redeemerId);
+			Logger.info(
+				{storeKey: redactStoreKey(row.store_key), redeemerId: redeemerId?.toString() ?? null},
+				'Revoked a gift code after a store refund',
+			);
+		} finally {
+			await this.deps.cacheService.releaseLock(lockKey, lockToken);
 		}
-		await this.deps.userRepository.revokeGiftCode(code);
-		Logger.info(
-			{storeKey: redactStoreKey(row.store_key), redeemerId: redeemerId?.toString() ?? null},
-			'Revoked a gift code after a store refund',
-		);
 	}
 
 	private async reverseRedeemedStoreGift(gift: GiftCode, redeemerId: UserID): Promise<void> {

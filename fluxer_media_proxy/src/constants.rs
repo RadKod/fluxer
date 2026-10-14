@@ -2,8 +2,7 @@
 
 pub const MAX_MEDIA_PROXY_BYTES: usize = 500 * 1024 * 1024;
 
-pub const OUTBOUND_USER_AGENT: &str =
-    "Mozilla/5.0 (compatible; Fluxerbot/1.0; +https://fluxer.app)";
+pub const OUTBOUND_USER_AGENT: &str = "Mozilla/5.0 (compatible; Micupbot/1.0; +https://micup.gg)";
 pub const MAX_MEDIA_IMAGE_DIMENSION_DEFAULT: u32 = 16_384;
 pub const MAX_MEDIA_IMAGE_PIXELS_DEFAULT: usize =
     MAX_MEDIA_IMAGE_DIMENSION_DEFAULT as usize * MAX_MEDIA_IMAGE_DIMENSION_DEFAULT as usize;

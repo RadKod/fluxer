@@ -25,6 +25,12 @@ vi.mock('@app/features/auth/altcha/AltchaSolver', () => ({
 	solveAltchaChallenge: (challenge: {signature: string}) => solveAltchaChallenge(challenge),
 }));
 
+const requestTurnstileToken = vi.fn(async (_siteKey: string): Promise<string | null> => 'turnstile-token');
+
+vi.mock('@app/features/auth/components/modals/TurnstileModal', () => ({
+	requestTurnstileToken: (siteKey: string) => requestTurnstileToken(siteKey),
+}));
+
 interface SentRequest {
 	url: string;
 	headers: Record<string, string>;
@@ -103,6 +109,7 @@ beforeEach(() => {
 	replies.length = 0;
 	sent.length = 0;
 	solveAltchaChallenge.mockClear();
+	requestTurnstileToken.mockClear();
 });
 
 afterEach(() => {
@@ -146,5 +153,48 @@ describe('CaptchaInterceptor on instance-targeted requests', () => {
 			'https://foreign.test/api/v1/auth/login',
 		]);
 		expect(sent[2].headers['x-captcha-token']).toBe('solved:second');
+	});
+});
+
+describe('CaptchaInterceptor with a Turnstile instance', () => {
+	function turnstileRequired(code = 'CAPTCHA_REQUIRED') {
+		return {status: 400, body: {code, captcha_provider: 'turnstile', turnstile_site_key: 'foreign-site-key'}};
+	}
+
+	test('asks for a Turnstile token with the site key the instance names and retries with it', async () => {
+		replies.push(turnstileRequired(), {status: 200, body: {token: 'session'}});
+
+		const reply = await instanceRequest<{token: string}>({
+			method: 'POST',
+			path: '/auth/login',
+			target: FOREIGN_TARGET,
+			body: {},
+			auth: 'none',
+		});
+
+		expect(reply.body).toEqual({token: 'session'});
+		expect(requestTurnstileToken).toHaveBeenCalledWith('foreign-site-key');
+		expect(solveAltchaChallenge).not.toHaveBeenCalled();
+		expect(sent).toHaveLength(2);
+		expect(sent[1].headers['x-captcha-token']).toBe('turnstile-token');
+	});
+
+	test('asks once more when the instance refuses the first Turnstile token', async () => {
+		replies.push(turnstileRequired(), turnstileRequired('INVALID_CAPTCHA'), {status: 204, body: {}});
+
+		await instanceRequest({method: 'POST', path: '/auth/forgot', target: FOREIGN_TARGET, body: {}, auth: 'none'});
+
+		expect(requestTurnstileToken).toHaveBeenCalledTimes(2);
+		expect(sent).toHaveLength(3);
+	});
+
+	test('hands back the challenge when the person closes the Turnstile prompt', async () => {
+		requestTurnstileToken.mockResolvedValueOnce(null);
+		replies.push(turnstileRequired());
+
+		await expect(
+			instanceRequest({method: 'POST', path: '/auth/register', target: FOREIGN_TARGET, body: {}, auth: 'none'}),
+		).rejects.toBeDefined();
+		expect(sent).toHaveLength(1);
 	});
 });

@@ -14,7 +14,9 @@ export function useEmojiCategories(
 ) {
 	const guilds = GuildList.guilds;
 	const selectedGuildId = SelectedGuild.selectedGuildId;
-	const favoriteEmojis = EmojiPicker.getFavoriteEmojis(allEmojis);
+	// Favorites mutate in place on toggle and can be replaced by remote preferences with the same length.
+	const favoriteEmojiIds = JSON.stringify(EmojiPicker.favoriteEmojis);
+	const favoriteEmojis = useMemo(() => EmojiPicker.getFavoriteEmojis(allEmojis), [allEmojis, favoriteEmojiIds]);
 	const pinnedRankingRef = useRef<UsageRanking | null>(null);
 	pinnedRankingRef.current ??= EmojiPicker.getRanking();
 	const pinnedRanking = pinnedRankingRef.current;

@@ -23,7 +23,7 @@ export const LIFETIME_DESCRIPTOR = msg({
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 export const USE_ACTUAL_PREMIUM_TYPE_DESCRIPTOR = msg({
-	message: 'Use actual premium type',
+	message: 'Use actual Plus type',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 export const NONE_NORMAL_BEHAVIOR_DESCRIPTOR = msg({

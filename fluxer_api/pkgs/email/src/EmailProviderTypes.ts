@@ -7,6 +7,14 @@ export interface EmailConfig {
 	replyTo?: string | null;
 	appBaseUrl: string;
 	marketingBaseUrl: string;
+	html?: EmailHtmlBranding | null;
+}
+
+export interface EmailHtmlBranding {
+	productName: string;
+	logoUrl: string | null;
+	headerColor: string | null;
+	footer: Readonly<Record<string, string>>;
 }
 
 export interface EmailMessage {
@@ -18,6 +26,7 @@ export interface EmailMessage {
 	replyTo?: string;
 	subject: string;
 	text: string;
+	html?: string;
 }
 
 export interface IEmailProvider {

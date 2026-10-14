@@ -1,0 +1,16 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Micup bridge sandbox test (S6). Prepare E:\micup-sandbox\bridge as described in run-e2e.ps1, then open this file. -->
+<!-- One fresh sandbox per scenario: set -Scenario below to direct, allusers (per-machine v1; a person answers UAC) or updater. -->
+<Configuration>
+  <Networking>Enable</Networking>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>E:\micup-sandbox\bridge</HostFolder>
+      <SandboxFolder>C:\micup-bridge</SandboxFolder>
+      <ReadOnly>false</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <Command>powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\micup-bridge\run-e2e.ps1 -Scenario direct</Command>
+  </LogonCommand>
+</Configuration>

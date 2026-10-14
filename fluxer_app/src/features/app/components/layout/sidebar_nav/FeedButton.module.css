@@ -1,0 +1,59 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.button {
+	position: relative;
+	display: flex;
+	width: 100%;
+	justify-content: center;
+	border: none;
+	background-color: transparent;
+	padding: 0;
+}
+
+/* Micup: rail glyph smaller (upstream 1.25rem) */
+.iconText {
+	height: 1rem;
+	width: 1rem;
+	color: var(--text-primary);
+}
+
+/* Micup: rail glyph smaller (upstream 1.25rem) */
+.iconTextSelected {
+	height: 1rem;
+	width: 1rem;
+	color: var(--text-on-brand-primary);
+}
+
+.logo {
+	height: 100%;
+	width: 100%;
+	transform: scale(1.1);
+	/* TEMPORARY: assumes a light mark on a dark logo (the dark turns into the tile colour); if the branding logo gets a
+	   coloured background, switch to a monochrome SVG mark */
+	mix-blend-mode: lighten;
+}
+
+/* White tile, dark mark; brightness lifts the inverted near-black (rgb 11) background to full white */
+.logoHighlighted {
+	composes: logo;
+	filter: invert(1) brightness(1.1);
+	mix-blend-mode: darken;
+}
+
+/* Micup: the light theme's rail tile is light gray, so the mark turns dark there; light and dark_legacy keep a violet
+   selected tile, so the highlighted mark stays white there like the home glyph (after the light rule: same specificity) */
+:global(html.theme-light) .logo {
+	filter: invert(1) brightness(1.1);
+	mix-blend-mode: darken;
+}
+
+:global(html:is(.theme-light, .theme-dark_legacy)) .logoHighlighted {
+	filter: none;
+	mix-blend-mode: lighten;
+}
+
+/* Micup: the coal and dark highlighted tile is a soft gray now (GuildsLayout.module.css), so the mark stays light there */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .logoHighlighted {
+	filter: none;
+	mix-blend-mode: lighten;
+}

@@ -1,0 +1,12 @@
+/* Under the TV's bottom edge: the source picker, and while something plays, Full screen and Close. */
+.bar {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	transform: translateY(calc(50% + 0.5rem));
+}
+
+/* TV focus fills the view with the TV, leaving no room under it: the bar sits on the TV's bottom edge, inside. */
+.bar[data-inside] {
+	transform: translateY(calc(-50% - 0.75rem));
+}

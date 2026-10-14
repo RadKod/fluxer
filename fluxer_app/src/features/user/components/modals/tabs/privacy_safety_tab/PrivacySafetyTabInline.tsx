@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {AnalyticsSettingsSection} from '@app/features/analytics/components/AnalyticsSettingsSection';
 import {SettingsSection} from '@app/features/app/components/dialogs/shared/SettingsSection';
 import Accounts from '@app/features/auth/state/Accounts';
+import {GameActivitySettingsTab} from '@app/features/game_activity/components/GameActivitySettingsTab';
 import {ActiveNowTabContent as ActiveNowTab} from '@app/features/user/components/modals/tabs/privacy_safety_tab/ActiveNowTab';
 import {CommunicationTabContent as CommunicationTab} from '@app/features/user/components/modals/tabs/privacy_safety_tab/CommunicationTab';
 import {ConnectionsTabContent as ConnectionsTab} from '@app/features/user/components/modals/tabs/privacy_safety_tab/ConnectionsTab';
@@ -31,6 +33,10 @@ const COMMUNICATION_DESCRIPTOR = msg({
 const ACTIVITY_SHARING_DESCRIPTOR = msg({
 	message: 'Activity sharing',
 	comment: 'Privacy section label for voice activity sharing.',
+});
+const GAME_ACTIVITY_DESCRIPTOR = msg({
+	message: 'Game activity',
+	comment: 'Privacy section label for sharing the currently played game.',
 });
 const SENSITIVE_CONTENT_DESCRIPTOR = msg({
 	message: 'Sensitive content',
@@ -90,6 +96,14 @@ export const PrivacyDashboardContent: React.FC = observer(() => {
 				<ActiveNowTab data-flx="user.privacy-safety-tab.privacy-dashboard-content.active-now-tab" />
 			</SettingsSection>
 			<SettingsSection
+				id="game-activity"
+				tabType="privacy_safety"
+				title={i18n._(GAME_ACTIVITY_DESCRIPTOR)}
+				data-flx="user.privacy-safety-tab.privacy-dashboard-content.game-activity"
+			>
+				<GameActivitySettingsTab />
+			</SettingsSection>
+			<SettingsSection
 				id="sensitive-content"
 				tabType="privacy_safety"
 				title={i18n._(SENSITIVE_CONTENT_DESCRIPTOR)}
@@ -97,6 +111,7 @@ export const PrivacyDashboardContent: React.FC = observer(() => {
 			>
 				<SensitiveContentTab data-flx="user.privacy-safety-tab.privacy-dashboard-content.sensitive-content-tab" />
 			</SettingsSection>
+			<AnalyticsSettingsSection data-flx="user.privacy-safety-tab.privacy-dashboard-content.analytics-settings-section" />
 			<SettingsSection
 				id="data-export"
 				tabType="privacy_safety"

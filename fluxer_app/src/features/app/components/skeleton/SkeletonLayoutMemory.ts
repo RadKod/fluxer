@@ -227,6 +227,7 @@ export interface RememberedSkeletonGuildRailLayout {
 	readonly outageVisible: boolean;
 	readonly fluxerVisible: boolean;
 	readonly favoritesVisible: boolean;
+	readonly feedVisible: boolean;
 	readonly discoveryVisible: boolean;
 	readonly addGuildVisible: boolean;
 	readonly downloadVisible: boolean;
@@ -627,6 +628,7 @@ const GUILD_RAIL_KEYS = new Set([
 	'outageVisible',
 	'fluxerVisible',
 	'favoritesVisible',
+	'feedVisible',
 	'discoveryVisible',
 	'addGuildVisible',
 	'downloadVisible',
@@ -991,6 +993,7 @@ function parseGuildRailLayout(value: unknown, now: number): OptionalParseResult<
 		typeof value.outageVisible !== 'boolean' ||
 		typeof value.fluxerVisible !== 'boolean' ||
 		typeof value.favoritesVisible !== 'boolean' ||
+		(value.feedVisible !== undefined && typeof value.feedVisible !== 'boolean') ||
 		typeof value.discoveryVisible !== 'boolean' ||
 		typeof value.addGuildVisible !== 'boolean' ||
 		typeof value.downloadVisible !== 'boolean' ||
@@ -1045,6 +1048,7 @@ function parseGuildRailLayout(value: unknown, now: number): OptionalParseResult<
 			outageVisible: value.outageVisible,
 			fluxerVisible: value.fluxerVisible,
 			favoritesVisible: value.favoritesVisible,
+			feedVisible: value.feedVisible === true,
 			discoveryVisible: value.discoveryVisible,
 			addGuildVisible: value.addGuildVisible,
 			downloadVisible: value.downloadVisible,
@@ -2399,6 +2403,7 @@ function commitGuildRailLayout(layout: RememberedSkeletonGuildRailLayout): void 
 		previous.outageVisible === layout.outageVisible &&
 		previous.fluxerVisible === layout.fluxerVisible &&
 		previous.favoritesVisible === layout.favoritesVisible &&
+		previous.feedVisible === layout.feedVisible &&
 		previous.discoveryVisible === layout.discoveryVisible &&
 		previous.addGuildVisible === layout.addGuildVisible &&
 		previous.downloadVisible === layout.downloadVisible &&
@@ -2934,6 +2939,7 @@ export function reportSkeletonGuildRailLayout(layout: Omit<RememberedSkeletonGui
 		outageVisible: layout.outageVisible,
 		fluxerVisible: layout.fluxerVisible,
 		favoritesVisible: layout.favoritesVisible,
+		feedVisible: layout.feedVisible === true,
 		discoveryVisible: layout.discoveryVisible,
 		addGuildVisible: layout.addGuildVisible,
 		downloadVisible: layout.downloadVisible,

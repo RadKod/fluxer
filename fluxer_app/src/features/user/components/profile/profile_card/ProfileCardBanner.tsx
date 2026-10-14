@@ -2,11 +2,14 @@
 
 import {useAnimatedImageUrl} from '@app/features/app/hooks/useAnimatedImageUrl';
 import {GifIndicator} from '@app/features/channel/components/embeds/media/GifIndicator';
+import type {AvatarDecorationSurface} from '@app/features/cosmetics/components/AvatarUltraLayer';
 import {remFromPx} from '@app/features/theme/layout/RemFromPx';
 import {StatusAwareAvatar} from '@app/features/ui/components/StatusAwareAvatar';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import styles from '@app/features/user/components/profile/profile_card/ProfileCardBanner.module.css';
 import {
+	getProfileAvatarDecorationBounds,
+	getProfileAvatarLeft,
 	PROFILE_POPOUT_BANNER_AVATAR_CUTOUT,
 	PROFILE_POPOUT_GEOMETRY,
 } from '@app/features/user/constants/UserProfileSurfaceGeometry';
@@ -28,6 +31,7 @@ interface ProfileCardBannerProps {
 	onAvatarContextMenu?: (event: React.MouseEvent) => void;
 	onBannerContextMenu?: (event: React.MouseEvent) => void;
 	headerHeight?: number;
+	decorationSurface?: AvatarDecorationSurface;
 }
 
 export const ProfileCardBanner: React.FC<ProfileCardBannerProps> = observer(
@@ -44,12 +48,46 @@ export const ProfileCardBanner: React.FC<ProfileCardBannerProps> = observer(
 		onAvatarContextMenu,
 		onBannerContextMenu,
 		headerHeight = PROFILE_POPOUT_GEOMETRY.headerHeightPx,
+		decorationSurface = 'profile',
 	}) => {
 		const bannerHeight = PROFILE_POPOUT_GEOMETRY.bannerHeightPx;
 		const reactId = useId();
 		const safeId = reactId.replace(/[^a-zA-Z0-9_-]/g, '');
 		const maskId = `uid_${safeId}`;
-		const headerStyle = useMemo<React.CSSProperties>(() => ({height: remFromPx(headerHeight)}), [headerHeight]);
+		const hasProfileUltra = decorationSurface === 'profile' && Boolean(user.avatarUltra);
+		const bounds =
+			decorationSurface === 'profile' && !hasProfileUltra
+				? getProfileAvatarDecorationBounds(
+						user,
+						PROFILE_POPOUT_GEOMETRY.avatarSizePx,
+						PROFILE_POPOUT_GEOMETRY.avatarBorderPx,
+					)
+				: null;
+		const avatarLeft = bounds
+			? getProfileAvatarLeft({
+					decorationLeft: bounds.left,
+					size: PROFILE_POPOUT_GEOMETRY.avatarSizePx,
+					border: PROFILE_POPOUT_GEOMETRY.avatarBorderPx,
+					edgePadding: PROFILE_POPOUT_GEOMETRY.avatarLeftPx,
+					containerWidth: PROFILE_POPOUT_GEOMETRY.contentWidthPx,
+				})
+			: PROFILE_POPOUT_GEOMETRY.avatarLeftPx;
+		const avatarTop = bounds
+			? Math.max(PROFILE_POPOUT_GEOMETRY.avatarTopPx, -PROFILE_POPOUT_GEOMETRY.avatarBorderPx - bounds.top)
+			: PROFILE_POPOUT_GEOMETRY.avatarTopPx;
+		const headerStyle: React.CSSProperties = {
+			height: remFromPx(
+				hasProfileUltra
+					? headerHeight
+					: Math.max(
+							headerHeight,
+							avatarTop +
+								PROFILE_POPOUT_GEOMETRY.avatarBorderPx +
+								(bounds?.bottom ?? PROFILE_POPOUT_GEOMETRY.avatarSizePx),
+						),
+			),
+		};
+		const avatarStyle: React.CSSProperties = {left: remFromPx(avatarLeft), top: remFromPx(avatarTop)};
 		const bannerWrapperStyle = useMemo<React.CSSProperties>(
 			() => ({minHeight: remFromPx(bannerHeight)}),
 			[bannerHeight],
@@ -102,8 +140,8 @@ export const ProfileCardBanner: React.FC<ProfileCardBannerProps> = observer(
 							/>
 							<circle
 								fill="black"
-								cx={PROFILE_POPOUT_BANNER_AVATAR_CUTOUT.cx}
-								cy={PROFILE_POPOUT_BANNER_AVATAR_CUTOUT.cy}
+								cx={avatarLeft + PROFILE_POPOUT_GEOMETRY.avatarBorderPx + PROFILE_POPOUT_GEOMETRY.avatarSizePx / 2}
+								cy={avatarTop + PROFILE_POPOUT_GEOMETRY.avatarBorderPx + PROFILE_POPOUT_GEOMETRY.avatarSizePx / 2}
 								r={PROFILE_POPOUT_BANNER_AVATAR_CUTOUT.r}
 								data-flx="user.profile.profile-card.profile-card-banner.circle"
 							/>
@@ -132,11 +170,13 @@ export const ProfileCardBanner: React.FC<ProfileCardBannerProps> = observer(
 						onClick={onAvatarClick}
 						onContextMenu={onAvatarContextMenu}
 						className={styles.avatarButton}
+						style={avatarStyle}
 						data-flx="user.profile.profile-card.profile-card-banner.avatar-button.avatar-click"
 					>
 						<StatusAwareAvatar
 							size={80}
 							user={user}
+							decorationSurface={decorationSurface}
 							avatarUrl={avatarUrl}
 							hoverAvatarUrl={hoverAvatarUrl}
 							disablePresence={disablePresence}

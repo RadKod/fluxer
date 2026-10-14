@@ -9,6 +9,7 @@ import {createMiddleware} from 'hono/factory';
 
 export interface RequestCache {
 	userPartials: Map<bigint, UserPartialResponse>;
+	contentHiddenSince: Map<bigint, Date | null>;
 	messageMentionChannels: Map<string, Array<{id: string; name: string; type: number}>>;
 	channels: Map<ChannelID, Channel | null>;
 	guilds: Map<GuildID, Guild>;
@@ -19,6 +20,7 @@ export interface RequestCache {
 
 class RequestCacheImpl implements RequestCache {
 	userPartials = new Map<bigint, UserPartialResponse>();
+	contentHiddenSince = new Map<bigint, Date | null>();
 	messageMentionChannels = new Map<string, Array<{id: string; name: string; type: number}>>();
 	channels = new Map<ChannelID, Channel | null>();
 	guilds = new Map<GuildID, Guild>();
@@ -43,6 +45,7 @@ class RequestCacheImpl implements RequestCache {
 
 	clear(): void {
 		this.userPartials.clear();
+		this.contentHiddenSince.clear();
 		this.messageMentionChannels.clear();
 		this.channels.clear();
 		this.guilds.clear();

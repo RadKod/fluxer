@@ -15,67 +15,67 @@ const VISIONARY_DESCRIPTOR = msg({
 });
 const SELECT_A_SCENARIO_TO_APPLY_DESCRIPTOR = msg({
 	message: 'Select a scenario to apply...',
-	comment: 'Placeholder option in a developer premium-state scenario selector.',
+	comment: 'Placeholder option in a developer Plus-state scenario selector.',
 });
 const FREE_USER_NO_PURCHASES_DESCRIPTOR = msg({
 	message: 'Free user (no purchases)',
-	comment: 'Developer premium-state scenario label.',
+	comment: 'Developer Plus-state scenario label.',
 });
 const FREE_USER_WITH_PURCHASE_HISTORY_DESCRIPTOR = msg({
 	message: 'Free user (with purchase history)',
-	comment: 'Developer premium-state scenario label.',
+	comment: 'Developer Plus-state scenario label.',
 });
 const ACTIVE_MONTHLY_SUBSCRIBER_DESCRIPTOR = msg({
 	message: 'Active monthly subscriber',
-	comment: 'Developer premium-state scenario label.',
+	comment: 'Developer Plus-state scenario label.',
 });
 const ACTIVE_MONTHLY_SUBSCRIBER_CANCELLATION_SCHEDULED_DESCRIPTOR = msg({
 	message: 'Active monthly subscriber (cancellation scheduled)',
-	comment: 'Developer premium-state scenario label.',
+	comment: 'Developer Plus-state scenario label.',
 });
 const ACTIVE_YEARLY_SUBSCRIBER_DESCRIPTOR = msg({
 	message: 'Active yearly subscriber',
-	comment: 'Developer premium-state scenario label.',
+	comment: 'Developer Plus-state scenario label.',
 });
 const ACTIVE_YEARLY_SUBSCRIBER_CANCELLATION_SCHEDULED_DESCRIPTOR = msg({
 	message: 'Active yearly subscriber (cancellation scheduled)',
-	comment: 'Developer premium-state scenario label.',
+	comment: 'Developer Plus-state scenario label.',
 });
 const GIFT_ACTIVE_NO_PURCHASE_HISTORY_DESCRIPTOR = msg({
 	message: 'Gift: active (no purchase history)',
-	comment: 'Developer premium-state scenario label for gifted premium.',
+	comment: 'Developer Plus-state scenario label for gifted Plus.',
 });
 const GIFT_ACTIVE_HAS_PURCHASE_HISTORY_DESCRIPTOR = msg({
 	message: 'Gift: active (has purchase history)',
-	comment: 'Developer premium-state scenario label for gifted premium.',
+	comment: 'Developer Plus-state scenario label for gifted Plus.',
 });
 const GIFT_EXPIRING_SOON_DESCRIPTOR = msg({
 	message: 'Gift: expiring soon',
-	comment: 'Developer premium-state scenario label for gifted premium.',
+	comment: 'Developer Plus-state scenario label for gifted Plus.',
 });
 const GIFT_GRACE_PERIOD_STILL_HAVE_ACCESS_DESCRIPTOR = msg({
 	message: 'Gift: grace period (still have access)',
-	comment: 'Developer premium-state scenario label for gifted premium.',
+	comment: 'Developer Plus-state scenario label for gifted Plus.',
 });
 const GIFT_EXPIRED_WITHIN_30_DAYS_DESCRIPTOR = msg({
 	message: 'Gift: expired (within 30 days)',
-	comment: 'Developer premium-state scenario label for gifted premium.',
+	comment: 'Developer Plus-state scenario label for gifted Plus.',
 });
 const GRACE_PERIOD_STILL_HAVE_ACCESS_DESCRIPTOR = msg({
 	message: 'Grace period (still have access)',
-	comment: 'Developer premium-state scenario label.',
+	comment: 'Developer Plus-state scenario label.',
 });
 const EXPIRED_WITHIN_30_DAYS_DESCRIPTOR = msg({
 	message: 'Expired (within 30 days)',
-	comment: 'Developer premium-state scenario label.',
+	comment: 'Developer Plus-state scenario label.',
 });
 const EXPIRED_OVER_30_DAYS_AGO_DESCRIPTOR = msg({
 	message: 'Expired (over 30 days ago)',
-	comment: 'Developer premium-state scenario label.',
+	comment: 'Developer Plus-state scenario label.',
 });
 const RESET_TO_ACTUAL_VALUES_DESCRIPTOR = msg({
 	message: 'Reset to actual values',
-	comment: 'Developer premium-state scenario option that clears overrides.',
+	comment: 'Developer Plus-state scenario option that clears overrides.',
 });
 
 interface PremiumScenarioSelectOption {

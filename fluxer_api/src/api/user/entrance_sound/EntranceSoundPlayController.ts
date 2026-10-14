@@ -31,11 +31,11 @@ export function EntranceSoundPlayController(app: HonoApp) {
 			tags: ['Voice'],
 		}),
 		async (ctx) => {
-			const userId = ctx.get('user').id;
+			const user = ctx.get('user');
 			const channelId = createChannelID(BigInt(ctx.req.valid('param').channel_id));
 			const soundId = createEntranceSoundID(BigInt(ctx.req.valid('json').sound_id));
 			const service: EntranceSoundPlayService = ctx.get('entranceSoundPlayService');
-			await service.play({userId, channelId, soundId});
+			await service.play({user, channelId, soundId});
 			return ctx.body(null, 204);
 		},
 	);

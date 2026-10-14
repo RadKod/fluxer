@@ -9,7 +9,7 @@ import type React from 'react';
 
 const PREMIUM_PERKS_DESCRIPTOR = msg({
 	message: '{premiumProductName} perks',
-	comment: 'Link label that opens the premium perks list. premiumProductName is the premium plan name.',
+	comment: 'Link label that opens the Plus perks list. premiumProductName is the Plus plan name.',
 });
 export const PerksButton: React.FC<{
 	onClick: () => void;

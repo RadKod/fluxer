@@ -26,6 +26,7 @@ import TypingIndicator from '@app/features/typing/state/TypingIndicator';
 import {OwnerCrownIcon} from '@app/features/ui/action_menu/ContextMenuIcons';
 import {StatusAwareAvatar} from '@app/features/ui/components/StatusAwareAvatar';
 import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
+import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge';
 import * as AvatarUtils from '@app/features/user/utils/AvatarUtils';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
@@ -195,6 +196,11 @@ export const MobileMemberListItem = observer(
 							>
 								{displayName}
 							</span>
+							<VerifiedUserBadge
+								user={member.user}
+								className={styles.memberTag}
+								data-flx="channel.channel-details-bottom-sheet-member-list.mobile-member-list-item.verified-user-badge"
+							/>
 							{guild.isOwner(member.user.id) && !guild.features.has(GuildFeatures.HIDE_OWNER_CROWN) && (
 								<div
 									className={styles.crownContainer}

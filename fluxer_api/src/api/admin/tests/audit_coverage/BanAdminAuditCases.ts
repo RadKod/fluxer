@@ -6,8 +6,10 @@ import type {
 } from '@app/api/admin/tests/audit_coverage/AdminAuditCoverage';
 import {createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {getPngDataUrl} from '@app/api/emoji/tests/EmojiTestUtils';
+import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {updateAvatar} from '@app/api/user/tests/UserTestUtils';
+import {computeUsernameDictionaryManifest} from '@app/api/user/username/UsernamePolicyService';
 import {expect} from 'vitest';
 
 const FILE_SHA = 'a1'.repeat(32);
@@ -27,6 +29,48 @@ async function addBlocklistEntry(
 }
 
 export const BanAdminAuditCases: ReadonlyArray<AdminAuditCoverageCase> = [
+	{
+		method: 'GET',
+		route: '/admin/username-dictionary',
+		async prepare() {
+			const policy = await getInstanceConfigRepository().readUsernamePolicyConfig();
+			return {
+				request: {path: '/admin/username-dictionary'},
+				expected: {
+					action: 'list_blocklist_entries',
+					targetType: 'username_dictionary',
+					targetId: '0',
+					metadata: {dictionary_gen: String(policy.dictionary_gen), result_count: '0'},
+				},
+			};
+		},
+	},
+	{
+		method: 'PATCH',
+		route: '/admin/username-dictionary',
+		async prepare() {
+			const policy = await getInstanceConfigRepository().readUsernamePolicyConfig();
+			const manifest = computeUsernameDictionaryManifest({
+				uname_exact: ['admin'],
+				uname_contains: [],
+				uname_allow: [],
+			});
+			return {
+				request: {path: '/admin/username-dictionary', body: {scope: 'uname_exact', add: ['admin']}},
+				expected: {
+					action: 'publish_username_dictionary',
+					targetType: 'username_dictionary',
+					targetId: '0',
+					metadata: {
+						scope: 'uname_exact',
+						dictionary_gen: String(policy.next_dictionary_gen),
+						count: String(manifest.count),
+						hash: manifest.hash,
+					},
+				},
+			};
+		},
+	},
 	{
 		method: 'GET',
 		route: '/admin/blocklists',

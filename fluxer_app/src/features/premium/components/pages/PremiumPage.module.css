@@ -1,0 +1,227 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* The premium page body (DMPageFrame bodyClassName): an edge-to-edge hero, then centred sections. The scale, card
+   and palette come from PremiumSurface; nothing here reaches the rest of the app. */
+.page {
+	composes: tokens from '@app/features/premium/components/PremiumSurface.module.css';
+	position: relative;
+	isolation: isolate;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	min-width: 0;
+	padding-bottom: 2rem;
+	container: premium-page / inline-size;
+}
+
+/* Hero: the Plus art across the top of the page, fading into it, as on the shop. The headline and its line on the left,
+   the buy buttons or the member's status on the right; the perk cards below stand over the art's lower part. */
+.hero {
+	position: relative;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: end;
+	gap: 1.5rem 3rem;
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 67.5rem;
+	margin: 0 auto;
+	padding: clamp(5rem, 9vw, 8rem) 2rem 0;
+	color: var(--premium-hero-ink);
+}
+
+.heroArt {
+	position: absolute;
+	top: 0;
+	left: 50%;
+	z-index: -1;
+	width: 100cqw;
+	height: clamp(26rem, 42cqw, 38rem);
+	overflow: hidden;
+	transform: translateX(-50%);
+	mask-image: linear-gradient(180deg, #000 50%, transparent);
+	pointer-events: none;
+}
+
+.heroArtImage {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: 70% 30%;
+	user-select: none;
+}
+
+.heroText {
+	min-width: 0;
+	filter: drop-shadow(0 0.125rem 0.5rem color-mix(in srgb, var(--premium-night) 85%, transparent));
+}
+
+.heroTitle {
+	composes: headingFill from '@app/features/premium/components/PremiumSurface.module.css';
+	max-width: 13em;
+	margin: 0 0 1rem;
+	font-size: var(--premium-fs-display);
+	font-weight: 800;
+	line-height: var(--premium-lh-head);
+	letter-spacing: var(--premium-track-head);
+	text-wrap: balance;
+}
+
+.heroLead {
+	max-width: 34em;
+	margin: 0;
+	font-size: var(--premium-fs-lead);
+	line-height: 1.5;
+	color: color-mix(in srgb, var(--premium-hero-ink) 92%, transparent);
+	text-wrap: pretty;
+}
+
+.heroActions {
+	composes: buyLight from '@app/features/premium/components/PremiumSurface.module.css';
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	min-width: 0;
+}
+
+.heroCtas {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 0.75rem;
+}
+
+.heroFine {
+	margin: 0.875rem 0 0;
+	font-size: var(--premium-fs-small);
+	color: color-mix(in srgb, var(--premium-hero-ink) 78%, transparent);
+}
+
+/* The hero halo is a touch wider and fuller, with a dark ring so the colours read against the night. Inset and blur
+   were set for the 44 px hero button; the 52 px one keeps them. */
+.heroHalo {
+	--premium-halo-inset: -0.625rem -1.0625rem;
+	--premium-halo-blur: 1.0625rem;
+	--premium-halo-opacity: 0.7;
+	box-shadow:
+		0 0 0 0.0625rem color-mix(in srgb, var(--premium-night) 55%, transparent),
+		0 0.625rem 1.75rem -0.375rem color-mix(in srgb, var(--premium-night) 75%, transparent);
+}
+
+/* The hero's buttons, the status box's "Add time" too, stand well above Fluxer's 36 px button: 52 px tall, the lead's
+   text size, 20 px icon. */
+.heroActions .heroButton {
+	height: 3.25rem;
+	min-height: 3.25rem;
+	padding: 0 1.75rem;
+	font-size: var(--premium-fs-lead);
+	line-height: 1.5rem;
+}
+
+.heroActions .heroButton svg {
+	width: 1.25rem;
+	height: 1.25rem;
+}
+
+/* One entrance: headline, line and buttons rise 12 px, 60 ms apart. Transform only, so the text is never hidden,
+   even where the animation does not run. */
+.heroTitle,
+.heroLead,
+.heroActions {
+	animation: premiumHeroRise 0.5s var(--premium-ease-out) backwards;
+}
+
+.heroLead {
+	animation-delay: 60ms;
+}
+
+.heroActions {
+	animation-delay: 120ms;
+}
+
+@keyframes premiumHeroRise {
+	from {
+		transform: translateY(0.75rem);
+	}
+}
+
+/* Sections: one column, left aligned, 8 px rhythm. */
+.section {
+	--premium-section-top: 4.5rem;
+	width: 100%;
+	max-width: 67.5rem;
+	margin: 0 auto;
+	padding: var(--premium-section-top) 2rem 0.5rem;
+}
+
+.perks {
+	--premium-section-top: 3.5rem;
+}
+
+.compare,
+.plans {
+	--premium-section-top: 7.5rem;
+}
+
+.faq {
+	--premium-section-top: 6rem;
+}
+
+/* The same size as the other sections' heads (PremiumPerkTiles .heading). */
+.sectionTitle {
+	composes: headingFill from '@app/features/premium/components/PremiumSurface.module.css';
+	margin: 0 0 1.25rem;
+	font-size: 1.25rem;
+	font-weight: 700;
+	line-height: 1.5rem;
+	text-wrap: balance;
+}
+
+.questions {
+	display: grid;
+	align-items: start;
+	gap: 1.25rem;
+}
+
+.questionsWithCode {
+	grid-template-columns: 22.5rem minmax(0, 1fr);
+}
+
+@container premium-page (max-width: 60rem) {
+	.questionsWithCode {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@container premium-page (max-width: 47.5rem) {
+	.hero {
+		grid-template-columns: minmax(0, 1fr);
+		padding: 4.5rem 1rem 0;
+	}
+
+	.heroActions {
+		align-items: stretch;
+	}
+
+	.heroLead {
+		font-size: 1rem;
+	}
+
+	.heroCtas > * {
+		width: 100%;
+	}
+
+	.heroCtas > * > button {
+		flex: 1;
+	}
+
+	.section {
+		padding: calc(var(--premium-section-top) * 0.7) 1rem 0.25rem;
+	}
+}
+
+:global(html.reduced-motion) .heroTitle,
+:global(html.reduced-motion) .heroLead,
+:global(html.reduced-motion) .heroActions {
+	animation: none;
+}

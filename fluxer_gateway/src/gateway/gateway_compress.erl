@@ -190,9 +190,27 @@ set_zstd_stream_compression_level(StreamCtx, Ctx) ->
         StreamCtx, zstd_c_compression_level, ?ZSTD_COMPRESSION_LEVEL
     ]),
     case Result of
-        ok -> {ok, StreamCtx, Ctx#{stream_ctx => StreamCtx}};
+        ok -> set_zstd_stream_window_log(StreamCtx, Ctx);
         {error, Reason} -> {error, {compress_failed, Reason}};
         Other -> {error, {compress_failed, {case_clause, Other}}}
+    end.
+
+-spec set_zstd_stream_window_log(reference(), zstd_stream_ctx()) ->
+    {ok, reference(), zstd_stream_ctx()} | {error, term()}.
+set_zstd_stream_window_log(StreamCtx, Ctx) ->
+    case fluxer_gateway_env:get(zstd_window_log) of
+        WindowLog when is_integer(WindowLog), WindowLog > 0 ->
+            case
+                erlang:apply(ezstd, set_compression_parameter, [
+                    StreamCtx, zstd_c_window_log, WindowLog
+                ])
+            of
+                ok -> {ok, StreamCtx, Ctx#{stream_ctx => StreamCtx}};
+                {error, Reason} -> {error, {compress_failed, Reason}};
+                Other -> {error, {compress_failed, {case_clause, Other}}}
+            end;
+        _ ->
+            {ok, StreamCtx, Ctx#{stream_ctx => StreamCtx}}
     end.
 
 -spec handle_zstd_stream_compress_result(term(), compress_ctx()) ->
@@ -404,6 +422,96 @@ ezstd_nif_stream_chunk_available() ->
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+
+zstd_window_log_parameter_test() ->
+    meck:new(ezstd, [passthrough]),
+    Self = self(),
+    meck:expect(ezstd, set_compression_parameter, fun(_Ref, Parameter, Value) ->
+        Self ! {zstd_parameter, Parameter, Value},
+        ok
+    end),
+    Previous = fluxer_gateway_env:get(zstd_window_log),
+    try
+        lists:foreach(
+            fun(Value) ->
+                _ = fluxer_gateway_env:patch(#{zstd_window_log => Value}),
+                ?assertMatch(
+                    {ok, _, _},
+                    set_zstd_stream_compression_level(make_ref(), new_context(zstd_stream))
+                ),
+                ?assertEqual(
+                    {zstd_parameter, zstd_c_compression_level, 3}, receive_zstd_parameter()
+                ),
+                ?assertEqual(none, receive_zstd_parameter_now())
+            end,
+            [undefined, 0]
+        ),
+        _ = fluxer_gateway_env:patch(#{zstd_window_log => 18}),
+        ?assertMatch(
+            {ok, _, _}, set_zstd_stream_compression_level(make_ref(), new_context(zstd_stream))
+        ),
+        ?assertEqual({zstd_parameter, zstd_c_compression_level, 3}, receive_zstd_parameter()),
+        ?assertEqual({zstd_parameter, zstd_c_window_log, 18}, receive_zstd_parameter())
+    after
+        _ = fluxer_gateway_env:patch(#{zstd_window_log => Previous}),
+        meck:unload(ezstd)
+    end.
+
+receive_zstd_parameter() ->
+    receive
+        Message = {zstd_parameter, _, _} -> Message
+    after 100 -> timeout
+    end.
+
+receive_zstd_parameter_now() ->
+    receive
+        Message = {zstd_parameter, _, _} -> Message
+    after 0 -> none
+    end.
+
+zstd_window_log_parameter_failure_test() ->
+    meck:new(ezstd, [passthrough]),
+    Previous = fluxer_gateway_env:get(zstd_window_log),
+    try
+        _ = fluxer_gateway_env:patch(#{zstd_window_log => 18}),
+        lists:foreach(
+            fun({Result, Expected}) ->
+                meck:expect(ezstd, set_compression_parameter, fun
+                    (_Ref, zstd_c_compression_level, 3) -> ok;
+                    (_Ref, zstd_c_window_log, 18) -> Result
+                end),
+                ?assertEqual(
+                    Expected,
+                    set_zstd_stream_compression_level(make_ref(), new_context(zstd_stream))
+                )
+            end,
+            [
+                {{error, window_rejected}, {error, {compress_failed, window_rejected}}},
+                {unexpected, {error, {compress_failed, {case_clause, unexpected}}}}
+            ]
+        )
+    after
+        _ = fluxer_gateway_env:patch(#{zstd_window_log => Previous}),
+        meck:unload(ezstd)
+    end.
+
+zstd_window_log_18_round_trip_test() ->
+    ?assert(probe_ezstd_stream_available()),
+    Previous = fluxer_gateway_env:get(zstd_window_log),
+    try
+        _ = fluxer_gateway_env:patch(#{zstd_window_log => 18}),
+        Data = binary:copy(<<"window-limited-stream">>, 32768),
+        {ok, Compressed, Ctx} = compress(Data, new_context(zstd_stream)),
+        Decoder = ezstd:create_decompression_context(?ZSTD_STREAM_BUFFER_SIZE),
+        ok = ezstd:set_decompression_parameter(Decoder, zstd_d_window_log_max, 18),
+        Decoded = ezstd:decompress_streaming(Decoder, Compressed),
+        ?assertNotMatch({error, _}, Decoded),
+        ?assertEqual(Data, iolist_to_binary(Decoded)),
+        {ok, Next, _} = compress(Data, Ctx),
+        ?assertEqual(Data, iolist_to_binary(ezstd:decompress_streaming(Decoder, Next)))
+    after
+        _ = fluxer_gateway_env:patch(#{zstd_window_log => Previous})
+    end.
 
 parse_compression_test_() ->
     [

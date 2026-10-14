@@ -2,12 +2,14 @@
 
 import {BUILD_CHANNEL} from '@electron/common/BuildChannel';
 import {DESKTOP_PREBOOT_THEME_CHANNEL, LOCAL_DEVELOPMENT_INSTANCE_URL} from '@electron/common/Constants';
+import {type GameActivityState, isGameActivityState} from '@electron/common/GameActivityTypes';
 import {IS_OFFLINE_BUILD} from '@electron/common/OfflineBuild';
 import {readExactPlainRecord} from '@electron/common/PlainRecord';
 import type {
 	AppMetricsSnapshot,
 	ClipboardWriteFileOptions,
 	ClipboardWriteFileResult,
+	DesktopGameOverlayLayout,
 	DesktopInfo,
 	DesktopSource,
 	DesktopTroubleshootingSettings,
@@ -96,13 +98,19 @@ import type {
 } from '@simplewebauthn/browser';
 import {contextBridge, ipcRenderer, webFrame} from 'electron';
 
-const ACCESSIBILITY_STORE_STORAGE_KEY = 'AccessibilityStore';
+const ACCESSIBILITY_STORE_STORAGE_KEY = 'Accessibility';
+const ACCESSIBILITY_ZOOM_STORAGE_KEY = 'Accessibility:zoomLevel';
+const ACCESSIBILITY_MOTION_STORAGE_KEY = 'Accessibility:motion';
+const ACCESSIBILITY_MOTION_SYNC_DEFAULT_OFF_MIGRATED_STORAGE_KEY = 'Accessibility:motionSyncDefaultOffMigratedV1';
 const ACTIVE_ALLOW_TRANSPARENCY_RENDERER_ARG = '--fluxer-active-allow-transparency=1';
 const ACTIVE_USE_NATIVE_TITLEBAR_RENDERER_ARG = '--fluxer-active-use-native-titlebar=1';
 const CUSTOM_TITLEBAR_HEIGHT = '32px';
 const NATIVE_TITLEBAR_HEIGHT = '0px';
 const STARTUP_NATIVE_TITLEBAR_ID = 'fluxer-startup-native-titlebar';
 const THEME_STUDIO_STANDALONE_PATHNAME = '/theme-studio';
+const ZOOM_LEVEL_MIN = 0.5;
+const ZOOM_LEVEL_MAX = 2.0;
+const DEFAULT_ZOOM_LEVEL = 0.95;
 const DESKTOP_CAPABILITY_MANIFEST_KEYS = Object.freeze(['appStore', 'gatewaySocket'] as const);
 
 class DesktopCapabilityManifestContractError extends TypeError {
@@ -113,6 +121,7 @@ class DesktopCapabilityManifestContractError extends TypeError {
 }
 
 interface AccessibilityStartupSettings {
+	zoomLevel: number;
 	syncReducedMotionWithSystem: boolean;
 	reducedMotionOverride: boolean | null;
 }
@@ -160,6 +169,32 @@ function validateNativeScreenCaptureLifecycleMessage(value: unknown): NativeScre
 		: {captureId, kind: kind as NativeScreenCaptureLifecycleEventKind, message, source};
 }
 
+function clampZoomLevel(level: number): number {
+	if (!Number.isFinite(level)) return DEFAULT_ZOOM_LEVEL;
+	const pct = Math.round(level * 100);
+	const clampedPct = Math.max(Math.round(ZOOM_LEVEL_MIN * 100), Math.min(Math.round(ZOOM_LEVEL_MAX * 100), pct));
+	return clampedPct / 100;
+}
+
+function readLocalZoomLevel(): number | null {
+	let raw: string | null;
+	try {
+		raw = window.localStorage.getItem(ACCESSIBILITY_ZOOM_STORAGE_KEY);
+	} catch {
+		return null;
+	}
+	if (raw === null) {
+		return null;
+	}
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw);
+	} catch {
+		return null;
+	}
+	return typeof parsed === 'number' ? clampZoomLevel(parsed) : null;
+}
+
 function readLegacyAccessibilityStartupSettings(): AccessibilityStartupSettings | null {
 	let raw: string | null;
 	try {
@@ -184,32 +219,69 @@ function readLegacyAccessibilityStartupSettings(): AccessibilityStartupSettings 
 		return null;
 	}
 	return {
+		zoomLevel: typeof parsed.zoomLevel === 'number' ? clampZoomLevel(parsed.zoomLevel) : DEFAULT_ZOOM_LEVEL,
 		syncReducedMotionWithSystem:
-			typeof parsed.syncReducedMotionWithSystem === 'boolean' ? parsed.syncReducedMotionWithSystem : true,
+			typeof parsed.syncReducedMotionWithSystem === 'boolean' ? parsed.syncReducedMotionWithSystem : false,
 		reducedMotionOverride: typeof parsed.reducedMotionOverride === 'boolean' ? parsed.reducedMotionOverride : null,
 	};
 }
 
-function hasPrebootZoomMirror(): boolean {
+// Micup: the motion settings the app writes (sync and override), so a chosen "Reduce motion" paints from the first frame.
+function readLocalMotionSettings(): Record<string, unknown> | null {
+	try {
+		const parsed: unknown = JSON.parse(window.localStorage.getItem(ACCESSIBILITY_MOTION_STORAGE_KEY) ?? 'null');
+		return isRecord(parsed) ? parsed : null;
+	} catch {
+		return null;
+	}
+}
+
+function readPrebootZoomLevel(): number | null {
 	let raw: string | null;
 	try {
 		raw = window.localStorage.getItem(ZOOM_PREBOOT_MIRROR_STORAGE_KEY);
 	} catch {
-		return false;
+		return null;
 	}
-	return raw !== null && Number.isFinite(Number.parseInt(raw, 10));
+	if (raw === null) return null;
+	const percent = Number.parseInt(raw, 10);
+	return Number.isFinite(percent) ? clampZoomLevel(percent / 100) : null;
 }
 
 function readAccessibilityStartupSettings(): AccessibilityStartupSettings | null {
-	const hasZoomMirror = hasPrebootZoomMirror();
+	const localZoomLevel = readPrebootZoomLevel() ?? readLocalZoomLevel();
 	const legacySettings = readLegacyAccessibilityStartupSettings();
-	if (!hasZoomMirror && legacySettings === null) {
+	const localMotion = readLocalMotionSettings();
+	if (localZoomLevel === null && legacySettings === null && localMotion === null) {
 		return null;
 	}
+	const zoomLevel = localZoomLevel ?? legacySettings?.zoomLevel ?? DEFAULT_ZOOM_LEVEL;
+	if (localMotion === null) {
+		return {
+			zoomLevel,
+			syncReducedMotionWithSystem: legacySettings?.syncReducedMotionWithSystem ?? false,
+			reducedMotionOverride: legacySettings?.reducedMotionOverride ?? null,
+		};
+	}
+	// Micup: as the app reads it, a saved motion record is the whole answer (a null override included), and the app's
+	// one-time move turns an old-default sync (on, no override) off before the app reads it.
+	const reducedMotionOverride =
+		typeof localMotion.reducedMotionOverride === 'boolean' ? localMotion.reducedMotionOverride : null;
 	return {
-		syncReducedMotionWithSystem: legacySettings?.syncReducedMotionWithSystem ?? true,
-		reducedMotionOverride: legacySettings?.reducedMotionOverride ?? null,
+		zoomLevel,
+		syncReducedMotionWithSystem:
+			localMotion.syncReducedMotionWithSystem === true &&
+			(reducedMotionOverride !== null || isMotionSyncDefaultOffMigrated()),
+		reducedMotionOverride,
 	};
+}
+
+function isMotionSyncDefaultOffMigrated(): boolean {
+	try {
+		return window.localStorage.getItem(ACCESSIBILITY_MOTION_SYNC_DEFAULT_OFF_MIGRATED_STORAGE_KEY) !== null;
+	} catch {
+		return false;
+	}
 }
 
 function getSystemReducedMotionPreference(): boolean {
@@ -261,6 +333,13 @@ function withDocumentElement(callback: (root: HTMLElement) => void): void {
 function applyReducedMotionClass(reducedMotion: boolean): void {
 	withDocumentElement((root) => {
 		root.classList.toggle('reduced-motion', reducedMotion);
+	});
+}
+
+function applyCustomZoomProperty(level: number): void {
+	const zoomPercent = Math.round(clampZoomLevel(level) * 100);
+	withDocumentElement((root) => {
+		root.style.setProperty('--custom-zoom', String(zoomPercent));
 	});
 }
 
@@ -351,9 +430,11 @@ function applyStartupDesktopWindowClasses(): void {
 function applyStartupAccessibilitySettings(): void {
 	const settings = readAccessibilityStartupSettings();
 	if (settings === null) {
+		applyCustomZoomProperty(DEFAULT_ZOOM_LEVEL);
 		return;
 	}
 	webFrame.setZoomFactor(1);
+	applyCustomZoomProperty(settings.zoomLevel);
 	applyReducedMotionClass(resolveReducedMotion(settings));
 }
 
@@ -405,6 +486,11 @@ document.addEventListener('visibilitychange', () => {
 
 applyStartupAccessibilitySettings();
 
+const gameActivitySubscriptions = new Set<() => void>();
+window.addEventListener('unload', () => {
+	for (const unsubscribe of gameActivitySubscriptions) unsubscribe();
+});
+
 const api: ElectronAPI = {
 	platform: process.platform,
 	buildChannel: BUILD_CHANNEL,
@@ -425,6 +511,25 @@ const api: ElectronAPI = {
 	getGpuInfo: (): Promise<GpuInfo> => ipcRenderer.invoke('get-gpu-info'),
 	getAppMetrics: (): Promise<AppMetricsSnapshot> => ipcRenderer.invoke('get-app-metrics'),
 	getSystemIdleTimeMs: (): Promise<number> => ipcRenderer.invoke('system-idle-time-ms'),
+	gameActivityGetCapabilities: () => ipcRenderer.invoke('game-activity:get-capabilities'),
+	gameActivityConfigure: (request) => ipcRenderer.invoke('game-activity:configure', request),
+	gameActivityGetState: (request) => ipcRenderer.invoke('game-activity:get-state', request),
+	gameActivityListCandidates: (request) => ipcRenderer.invoke('game-activity:list-candidates', request),
+	gameActivityAddRule: (request) => ipcRenderer.invoke('game-activity:add-rule', request),
+	gameActivityListRules: (request) => ipcRenderer.invoke('game-activity:list-rules', request),
+	gameActivityRemoveRule: (request) => ipcRenderer.invoke('game-activity:remove-rule', request),
+	onGameActivityState: (callback: (state: GameActivityState) => void): (() => void) => {
+		const handler = (_event: Electron.IpcRendererEvent, state: unknown): void => {
+			if (isGameActivityState(state)) callback(state);
+		};
+		const unsubscribe = (): void => {
+			ipcRenderer.removeListener('game-activity:state', handler);
+			gameActivitySubscriptions.delete(unsubscribe);
+		};
+		gameActivitySubscriptions.add(unsubscribe);
+		ipcRenderer.on('game-activity:state', handler);
+		return unsubscribe;
+	},
 	getDesktopWindowBehaviorSettings: (): Promise<DesktopWindowBehaviorSettings> =>
 		ipcRenderer.invoke('desktop-window-behavior-get'),
 	setDesktopWindowBehaviorSettings: (
@@ -488,6 +593,9 @@ const api: ElectronAPI = {
 	setVoiceDebugEventSinkStatsHtml: (html: string): void => {
 		ipcRenderer.send('voice-debug-event-sink:set-stats-html', html);
 	},
+	setGameOverlayLayout: (layout: DesktopGameOverlayLayout): void => {
+		ipcRenderer.send('game-overlay:set-layout', layout);
+	},
 	onWindowLiveResizeChange: (callback: (resizing: boolean) => void): (() => void) => {
 		const handler = (_event: Electron.IpcRendererEvent, resizing: boolean): void => {
 			callback(resizing);
@@ -527,6 +635,13 @@ const api: ElectronAPI = {
 	autostartIsEnabled: (): Promise<boolean> => ipcRenderer.invoke('autostart-is-enabled'),
 	autostartIsInitialized: (): Promise<boolean> => ipcRenderer.invoke('autostart-is-initialized'),
 	autostartMarkInitialized: (): Promise<void> => ipcRenderer.invoke('autostart-mark-initialized'),
+	autostartClaimStorePrompt: (): Promise<boolean> => ipcRenderer.invoke('autostart-claim-store-prompt'),
+	...(process.platform === 'win32'
+		? {
+				getTaskbarPinState: () => ipcRenderer.invoke('taskbar-pin:get-state'),
+				requestTaskbarPin: (): Promise<boolean> => ipcRenderer.invoke('taskbar-pin:request'),
+			}
+		: {}),
 	checkMediaAccess: (type: MediaAccessType): Promise<MediaAccessStatus> =>
 		ipcRenderer.invoke('check-media-access', type),
 	requestMediaAccess: (type: MediaAccessType): Promise<boolean> => ipcRenderer.invoke('request-media-access', type),

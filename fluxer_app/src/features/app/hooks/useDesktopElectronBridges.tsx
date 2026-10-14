@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import Accessibility from '@app/features/accessibility/state/Accessibility';
+import Accessibility, {DEFAULT_ZOOM_LEVEL} from '@app/features/accessibility/state/Accessibility';
 import {isClientBooting} from '@app/features/app/state/ClientReadiness';
 import Authentication from '@app/features/auth/state/Authentication';
 import {Logger} from '@app/features/platform/utils/AppLogger';
@@ -35,7 +35,9 @@ export function useDesktopElectronBridges(): void {
 		};
 		const unsubZoomIn = electronApi.onZoomIn?.(() => adjustZoom(1));
 		const unsubZoomOut = electronApi.onZoomOut?.(() => adjustZoom(-1));
-		const unsubZoomReset = electronApi.onZoomReset?.(() => Accessibility.updateSettings({zoomLevel: 1.0}));
+		const unsubZoomReset = electronApi.onZoomReset?.(() =>
+			Accessibility.updateSettings({zoomLevel: DEFAULT_ZOOM_LEVEL}),
+		);
 		const unsubOpenSettings = electronApi.onOpenSettings?.(() => {
 			if (!Authentication.isAuthenticated) return;
 			if (isClientBooting()) return;

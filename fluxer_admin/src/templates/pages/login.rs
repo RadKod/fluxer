@@ -11,7 +11,7 @@ pub fn login_page(config: &AdminConfig, error_message: Option<&str>) -> Markup {
             head {
                 meta charset="UTF-8";
                 meta name="viewport" content="width=device-width, initial-scale=1.0";
-                title { "Login ~ Fluxer Admin" }
+                title { "Login ~ Micup Admin" }
                 link rel="stylesheet" href={(base) "/static/fonts/" (crate::fonts::STYLESHEET_FILE_NAME)};
                 link rel="stylesheet" href={(base) "/static/app.css"};
                 link rel="icon" type="image/x-icon" href={(config.static_cdn_endpoint) "/web/favicon.ico"};
@@ -23,7 +23,7 @@ pub fn login_page(config: &AdminConfig, error_message: Option<&str>) -> Markup {
                             div class="flex flex-col gap-8 items-center" {
                                 div class="flex flex-col gap-2 items-center" {
                                     h1 class="text-gray-900 tracking-tight text-xl" {
-                                        "Fluxer Admin"
+                                        "Micup Admin"
                                     }
                                 }
                                 @if let Some(error) = error_message {

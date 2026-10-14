@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {
+	DOMAIN_MIGRATION_ENABLED,
 	type DomainMigrationDeviceMap,
 	type DomainMigrationMediaDevice,
 	type DomainMigrationMediaDeviceKind,
@@ -164,7 +165,7 @@ function reconcileMigratedDevices(state: VoiceDeviceState): void {
 }
 
 export async function installMigratedDeviceRemap(): Promise<void> {
-	if (installed) {
+	if (!DOMAIN_MIGRATION_ENABLED || installed) {
 		return;
 	}
 	const map = readDomainMigrationDeviceMap(getProtectedLocalStorage(), Date.now());

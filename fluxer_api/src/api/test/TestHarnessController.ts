@@ -38,10 +38,12 @@ import {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import type {ISnowflakeService} from '@app/api/infrastructure/ISnowflakeService';
 import {KVAccountDeletionQueueService} from '@app/api/infrastructure/KVAccountDeletionQueueService';
 import {KVActivityTracker} from '@app/api/infrastructure/KVActivityTracker';
+import {counterKey} from '@app/api/infrastructure/KVCounterService';
 import {StorageService} from '@app/api/infrastructure/StorageService';
 import {Logger} from '@app/api/Logger';
 import {requireOAuth2Scope} from '@app/api/middleware/OAuth2ScopeMiddleware';
 import {getKVClient, getSnowflakeService} from '@app/api/middleware/ServiceRegistry';
+import {GUILD_MEMBER_COUNT_COUNTER} from '@app/api/middleware/ServiceSingletons';
 import {mapGiftDurationMonthsToFields} from '@app/api/models/GiftCode';
 import {OAuth2TokenRepository} from '@app/api/oauth/repositories/OAuth2TokenRepository';
 import {IpAuthorizationTokens, OAuth2AccessTokensByUser} from '@app/api/Tables';
@@ -1127,6 +1129,7 @@ export function TestHarnessController(app: HonoApp) {
 			throw new UnknownGuildError();
 		}
 		await guildRepository.upsertPartial(guildId, {member_count: memberCount}, guild.toRow());
+		await getKVClient().del(counterKey(GUILD_MEMBER_COUNT_COUNTER, guildId.toString()));
 		return ctx.json({
 			success: true,
 			member_count: memberCount,

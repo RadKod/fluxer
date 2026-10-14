@@ -2,6 +2,7 @@
 
 import Accessibility from '@app/features/accessibility/state/Accessibility';
 import {useShouldAnimate} from '@app/features/app/hooks/useShouldAnimate';
+import {AvatarDecorationLayer} from '@app/features/cosmetics/components/AvatarDecorationLayer';
 import GuildMembers from '@app/features/member/state/GuildMembers';
 import * as ImageCacheUtils from '@app/features/messaging/utils/ImageCacheUtils';
 import styles from '@app/features/ui/avatars/AvatarWithPresence.module.css';
@@ -125,6 +126,14 @@ export const AvatarWithPresence: React.FC<Props> = observer(function AvatarWithP
 			customStatusBadgeScale={1.5}
 			customStatusBadgeMaxSizeRatio={0.36}
 			customStatusBadgeCutoutPaddingScale={1.35}
+			decoration={
+				<AvatarDecorationLayer
+					decoration={user.avatarDecoration}
+					size={size}
+					animate={speakingNow}
+					data-flx="ui.avatars.avatar-with-presence.avatar-decoration-layer"
+				/>
+			}
 			data-flx="ui.avatars.avatar-with-presence.container"
 		/>
 	);

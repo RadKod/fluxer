@@ -1,0 +1,130 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Pixel sizes must match GameOverlayModel.ts; the native window is sized from them. No backgrounds: the window is
+   transparent and only avatars and names are drawn over the game. */
+
+.root {
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	padding: 6px;
+	overflow: hidden;
+	pointer-events: none;
+	user-select: none;
+}
+
+/* Bottom corners grow the window upwards after a 150 ms delay; keep the avatars on the window bottom so they stay put. */
+.bottom {
+	height: 100vh;
+	justify-content: flex-end;
+}
+
+.speaking {
+	width: 40px;
+	gap: 6px;
+}
+
+.room {
+	width: 154px;
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	height: 28px;
+	min-width: 0;
+	color: #fff;
+	font-size: 10px;
+	font-weight: 600;
+	line-height: 13px;
+}
+
+.avatar {
+	position: relative;
+	flex: none;
+	width: 28px;
+	height: 28px;
+}
+
+.room .avatar {
+	width: 22px;
+	height: 22px;
+}
+
+.avatar img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+.avatar::after {
+	position: absolute;
+	inset: -1.5px;
+	border: 1.5px solid #22c55e;
+	border-radius: 50%;
+	content: '';
+	opacity: 0;
+	transition: opacity 120ms ease;
+}
+
+.avatarSpeaking::after {
+	opacity: 1;
+}
+
+:global(html.reduced-motion) .avatar::after {
+	transition: none;
+}
+
+.micBadge {
+	position: absolute;
+	right: -2px;
+	bottom: -2px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: #4e5058;
+	color: #fff;
+}
+
+.room .micBadge {
+	width: 10px;
+	height: 10px;
+}
+
+.micBadgeOff {
+	background: var(--status-danger);
+}
+
+.micIcon {
+	display: block;
+	width: 70%;
+	height: 70%;
+}
+
+.name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	text-shadow:
+		0 0 2px rgb(0 0 0 / 0.9),
+		0 1px 2px rgb(0 0 0 / 0.9);
+}
+
+.overflow {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	font-size: 9px;
+	font-weight: 700;
+	text-shadow:
+		0 0 2px rgb(0 0 0 / 0.9),
+		0 1px 2px rgb(0 0 0 / 0.9);
+}

@@ -25,11 +25,13 @@ const EMAIL_I18N_ZH_TW_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "感謝您對 {product_name} 的捐款",
-		"body": "哈囉，\n\n感謝您對 {product_name} 的捐款！您的{interval, select,\n  month {定期捐款}\n  year {定期捐款}\n  other {一次性捐款}\n}已成功{interval, select,\n  month {設定}\n  year {設定}\n  other {處理}\n}。\n\n捐款詳情：\n金額：{amount} {interval, select,\n  month {每月}\n  year {每年}\n  other {}\n}\n\nStripe 稍後會另外寄給您一封收據，其中附有發票 PDF。這份收據包含所有付款詳情，可用於報稅。\n\n您可以隨時使用此連結查看您的捐款紀錄、下載發票，{interval, select,\n  month {以及管理或取消您的訂閱}\n  year {以及管理或取消您的訂閱}\n  other {以及管理未來的捐款}\n}：\n\n{manageUrl}\n\n您的支持讓 {product_name} 得以持續運作。謝謝您！\n\n– {product_name} 團隊"
+		"body": "哈囉，\n\n感謝您對 {product_name} 的捐款！您的{interval, select,\n  month {定期捐款}\n  year {定期捐款}\n  other {一次性捐款}\n}已成功{interval, select,\n  month {設定}\n  year {設定}\n  other {處理}\n}。\n\n捐款詳情：\n金額：{amount} {interval, select,\n  month {每月}\n  year {每年}\n  other {}\n}\n\nStripe 稍後會另外寄給您一封收據，其中附有發票 PDF。這份收據包含所有付款詳情，可用於報稅。\n\n您可以隨時使用此連結查看您的捐款紀錄、下載發票，{interval, select,\n  month {以及管理或取消您的訂閱}\n  year {以及管理或取消您的訂閱}\n  other {以及管理未來的捐款}\n}：\n\n{manageUrl}\n\n您的支持讓 {product_name} 得以持續運作。謝謝您！\n\n– {product_name} 團隊",
+		"button": "管理捐款"
 	},
 	"donation_magic_link": {
 		"subject": "管理您的 {product_name} 捐款",
-		"body": "哈囉，\n\n點擊下方連結以存取您的捐款者入口網站：\n\n{manageUrl}\n\n在入口網站中，您可以管理訂閱、下載發票並查看您的捐款紀錄。\n\n此連結將於 {expiresAt, date, full} {expiresAt, time, short} 失效。\n\n如果您沒有要求此連結，可以直接忽略這封電子郵件。\n\n– {product_name} 團隊"
+		"body": "哈囉，\n\n點擊下方連結以存取您的捐款者入口網站：\n\n{manageUrl}\n\n在入口網站中，您可以管理訂閱、下載發票並查看您的捐款紀錄。\n\n此連結將於 {expiresAt, date, full} {expiresAt, time, short} 失效。\n\n如果您沒有要求此連結，可以直接忽略這封電子郵件。\n\n– {product_name} 團隊",
+		"button": "管理捐款"
 	},
 	"dsa_report_verification": {
 		"subject": "驗證您的電子郵件以送出 DSA 檢舉",
@@ -45,11 +47,13 @@ const EMAIL_I18N_ZH_TW_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "您的 {product_name} 電子郵件已變更",
-		"body": "哈囉 {username}，\n\n您的 {product_name} 帳號電子郵件地址已變更為 {newEmail}。\n\n如果您進行了此變更，則無需採取任何行動。如果您沒有進行此變更，可以使用此連結還原變更並保護您的帳號安全：\n\n{revertUrl}\n\n這將會還原您先前的電子郵件、將您從所有裝置登出、停用多重要素驗證，並要求您設定新密碼。\n\n– {product_name} 安全團隊"
+		"body": "哈囉 {username}，\n\n您的 {product_name} 帳號電子郵件地址已變更為 {newEmail}。\n\n如果您進行了此變更，則無需採取任何行動。如果您沒有進行此變更，可以使用此連結還原變更並保護您的帳號安全：\n\n{revertUrl}\n\n這將會還原您先前的電子郵件、將您從所有裝置登出、停用多重要素驗證，並要求您設定新密碼。\n\n– {product_name} 安全團隊",
+		"button": "復原此變更"
 	},
 	"email_verification": {
 		"subject": "驗證您的 {product_name} 電子郵件地址",
-		"body": "哈囉 {username}，\n\n請點擊下方連結以驗證您的 {product_name} 帳號電子郵件地址：\n\n{verifyUrl}\n\n如果您沒有建立 {product_name} 帳號，可以直接忽略這封電子郵件。\n\n此連結在 24 小時內有效。\n\n– {product_name} 團隊"
+		"body": "🎉 哈囉 {username}，\n\n請點擊下方連結以驗證您的 {product_name} 帳號電子郵件地址：\n\n{verifyUrl}\n\n如果您沒有建立 {product_name} 帳號，可以直接忽略這封電子郵件。\n\n此連結在 24 小時內有效。\n\n– {product_name} 團隊",
+		"button": "驗證電子郵件"
 	},
 	"gift_chargeback_notification": {
 		"subject": "您兌換禮物取得的福利已移除",
@@ -57,15 +61,18 @@ const EMAIL_I18N_ZH_TW_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "您的 {product_name} 資料匯出已可下載",
-		"body": "哈囉 {username}，\n\n您的資料匯出已準備就緒。\n\n下載連結：\n{downloadUrl}\n\n包含的訊息：{totalMessages, number} 則\n檔案大小：{fileSizeMB, number} MB\n\n此連結將於 {expiresAt, date, full} {expiresAt, time, short} 失效。\n\n如果您沒有要求此匯出，請立即變更您的密碼並聯絡我們的支援團隊。\n\n– {product_name} 團隊"
+		"body": "哈囉 {username}，\n\n您的資料匯出已準備就緒。\n\n下載連結：\n{downloadUrl}\n\n包含的訊息：{totalMessages, number} 則\n檔案大小：{fileSizeMB, number} MB\n\n此連結將於 {expiresAt, date, full} {expiresAt, time, short} 失效。\n\n如果您沒有要求此匯出，請立即變更您的密碼並聯絡我們的支援團隊。\n\n– {product_name} 團隊",
+		"button": "下載我的資料"
 	},
 	"inactivity_warning": {
 		"subject": "您的 {product_name} 帳號將因長期未使用而刪除",
-		"body": "哈囉 {username}，\n\n自 {lastActiveDate, date, full} 起，我們未在您的 {product_name} 帳號上看到任何活動。\n\n如果您未在 {deletionDate, date, full} {deletionDate, time, short} 前登入，您的帳號將因長期未使用而永久刪除。\n\n請在此登入：\n{loginUrl}\n\n如果您最近有使用 {product_name}，請立即聯絡我們的支援團隊。\n\n– {product_name} 團隊"
+		"body": "哈囉 {username}，\n\n自 {lastActiveDate, date, full} 起，我們未在您的 {product_name} 帳號上看到任何活動。\n\n如果您未在 {deletionDate, date, full} {deletionDate, time, short} 前登入，您的帳號將因長期未使用而永久刪除。\n\n請在此登入：\n{loginUrl}\n\n如果您最近有使用 {product_name}，請立即聯絡我們的支援團隊。\n\n– {product_name} 團隊",
+		"button": "登入"
 	},
 	"ip_authorization": {
 		"subject": "授權從新的 IP 位址登入",
-		"body": "哈囉 {username}，\n\n我們偵測到您的 {product_name} 帳號有來自新 IP 位址的登入嘗試：\n\nIP 位址：{ipAddress}\n位置：{location}\n\n如果這是您本人操作，請點擊下方連結授權此 IP 位址：\n\n{authUrl}\n\n如果您沒有嘗試登入，請立即變更您的密碼。\n\n此連結在 30 分鐘內有效。\n\n– {product_name} 團隊"
+		"body": "哈囉 {username}，\n\n我們偵測到您的 {product_name} 帳號有來自新 IP 位址的登入嘗試：\n\nIP 位址：{ipAddress}\n位置：{location}\n\n如果這是您本人操作，請點擊下方連結授權此 IP 位址：\n\n{authUrl}\n\n如果您沒有嘗試登入，請立即變更您的密碼。\n\n此連結在 30 分鐘內有效。\n\n– {product_name} 團隊",
+		"button": "授權此次登入"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "確認存取您的 {product_name} 備用碼",
@@ -77,11 +84,17 @@ const EMAIL_I18N_ZH_TW_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "重設您的 {product_name} 密碼",
-		"body": "哈囉 {username}，\n\n您已要求重設 {product_name} 密碼。請使用下方連結設定新密碼：\n\n{resetUrl}\n\n如果您沒有提出此要求，可以直接忽略這封電子郵件。\n\n此連結在 1 小時內有效。\n\n– {product_name} 團隊"
+		"body": "哈囉 {username}，\n\n您已要求重設 {product_name} 密碼。請使用下方連結設定新密碼：\n\n{resetUrl}\n\n如果您沒有提出此要求，可以直接忽略這封電子郵件。\n\n此連結在 1 小時內有效。\n\n– {product_name} 團隊",
+		"button": "重設密碼"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "您的 {product_name} 註冊已獲核准",
-		"body": "哈囉 {username}，\n\n好消息：您的 {product_name} 註冊已獲核准。\n\n您現在可以從這裡登入 {product_name} 應用程式：\n{channelsUrl}\n\n歡迎加入 {product_name} 社群。\n\n– {product_name} 團隊"
+		"body": "🎉 哈囉 {username}，\n\n好消息：您的 {product_name} 註冊已獲核准。\n\n您現在可以從這裡登入 {product_name} 應用程式：\n{channelsUrl}\n\n歡迎加入 {product_name} 社群。\n\n– {product_name} 團隊",
+		"button": "開啟 {product_name}"
 	},
 	"report_resolved": {
 		"subject": "您的 {product_name} 檢舉已審核完成",
@@ -97,7 +110,7 @@ const EMAIL_I18N_ZH_TW_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "您的 {product_name} 帳號停權已解除",
-		"body": "哈囉 {username}，\n\n好消息：您的 {product_name} 帳號停權已解除。\n\n{reason, select,\n  null {}\n  other {原因：{reason}}\n}\n\n您現在可以重新登入並繼續正常使用 {product_name}。\n\n– {product_name} 安全團隊"
+		"body": "🎉 哈囉 {username}，\n\n好消息：您的 {product_name} 帳號停權已解除。\n\n{reason, select,\n  null {}\n  other {原因：{reason}}\n}\n\n您現在可以重新登入並繼續正常使用 {product_name}。\n\n– {product_name} 安全團隊"
 	}
 });
 

@@ -26,12 +26,9 @@
 -type state() :: map().
 
 -spec handle_terminate_session_call([binary()], state()) ->
-    {reply, term(), state()} | {stop, normal, ok, state()}.
+    {reply, ok | {error, term()}, state()}.
 handle_terminate_session_call(SessionIdHashes, State) ->
-    case terminate_sessions_by_auth_hashes(SessionIdHashes, State) of
-        {reply, Reply, NewState} -> {reply, Reply, NewState};
-        {stop, ok, NewState} -> {stop, normal, ok, NewState}
-    end.
+    terminate_sessions_by_auth_hashes(SessionIdHashes, State).
 
 -spec terminate_all_session_pids([binary()], state()) -> ok.
 terminate_all_session_pids(SessionIdHashes, State) ->
@@ -130,11 +127,14 @@ collect_session_pids(State) ->
     [Pid || #{pid := Pid} <- maps:values(Sessions), is_pid(Pid)].
 
 -spec terminate_sessions_by_auth_hashes([binary()], state()) ->
-    {reply, ok | {error, term()}, state()} | {stop, ok, state()}.
+    {reply, ok | {error, term()}, state()}.
 terminate_sessions_by_auth_hashes(SessionIdHashes, State) ->
     Sessions = maps:get(sessions, State),
     {NewSessions, Removed, Errors} = fold_terminate_sessions(SessionIdHashes, Sessions),
-    NewState0 = State#{sessions := NewSessions},
+    RemovedIds = maps:keys(maps:without(maps:keys(NewSessions), Sessions)),
+    NewState0 = lists:foldl(
+        fun presence_game_activity:disconnect/2, State#{sessions := NewSessions}, RemovedIds
+    ),
     NewState = maybe_publish_after_removal(Removed, NewSessions, NewState0),
     finalize_session_termination(Errors, Removed, NewSessions, NewState).
 
@@ -192,11 +192,11 @@ maybe_publish_after_removal(false, _NewSessions, State) ->
     State.
 
 -spec finalize_session_termination([term()], boolean(), sessions(), state()) ->
-    {reply, ok | {error, term()}, state()} | {stop, ok, state()}.
+    {reply, ok | {error, term()}, state()}.
 finalize_session_termination([], true, NewSessions, NewState) when
     map_size(NewSessions) =:= 0
 ->
-    {stop, ok, NewState};
+    {reply, ok, enter_idle(NewState)};
 finalize_session_termination([], true, _NewSessions, NewState) ->
     presence_session:dispatch_sessions_replace(NewState),
     {reply, ok, NewState};
@@ -224,15 +224,23 @@ terminate_session_process(Pid, SessionIdHashes) when is_pid(Pid) ->
     {noreply, state()} | {stop, normal, state()}.
 process_session_removal(SessionId, Sessions, State) ->
     NewSessions = maps:remove(SessionId, Sessions),
-    NewState0 = State#{sessions := NewSessions},
+    NewState0 = presence_game_activity:disconnect(SessionId, State#{sessions := NewSessions}),
     NewState = presence_broadcast:publish_global_presence(NewSessions, NewState0),
     case map_size(NewSessions) of
         0 ->
-            {stop, normal, NewState};
+            {noreply, enter_idle(NewState)};
         _ ->
             presence_session:dispatch_sessions_replace(NewState),
             {noreply, NewState}
     end.
+
+-spec enter_idle(state()) -> state().
+enter_idle(State) ->
+    kick_temporary_members_on_terminate(maps:get(user_id, State), State),
+    Flushed = presence_update:flush_push_buffer(State),
+    Closed = presence_game_activity:rollout(Flushed#{temporary_guild_ids => #{}}),
+    erlang:send_after(20000, self(), game_activity_idle_expired),
+    Closed.
 
 -spec spawn_kick_request(user_id(), [integer()]) -> ok.
 spawn_kick_request(UserId, GuildIdsList) ->

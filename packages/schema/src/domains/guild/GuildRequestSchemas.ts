@@ -16,6 +16,7 @@ import {
 	MIN_TEMP_BAN_DURATION_SECONDS,
 	STICKER_MAX_SIZE,
 } from '@fluxer/constants/src/LimitConstants';
+import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {SudoVerificationSchema} from '@fluxer/schema/src/domains/auth/AuthSchemas';
 import {GuildFeatureSchema} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import {TemplateSerializedGuild} from '@fluxer/schema/src/domains/guild/GuildTemplateSchemas';
@@ -30,6 +31,7 @@ import {
 	NSFWLevelSchema,
 	SplashCardAlignmentSchema,
 } from '@fluxer/schema/src/primitives/GuildValidators';
+import {displayNamePassesForMicup} from '@fluxer/schema/src/primitives/MicupBrandGuard';
 import {QueryBooleanType} from '@fluxer/schema/src/primitives/QueryValidators';
 import {
 	ColorType,
@@ -139,8 +141,14 @@ export const GuildUpdateRequest = z
 export type GuildUpdateRequest = z.infer<typeof GuildUpdateRequest>;
 
 export const GuildMemberUpdateRequest = z.object({
+	// Micup: a nickname is shown in place of the display name, so it follows the display name rule.
 	nick: z
-		.preprocess(coerceBlankStringToNull, createStringType(1, 32).nullish())
+		.preprocess(
+			coerceBlankStringToNull,
+			createStringType(1, 32)
+				.refine((value) => !displayNamePassesForMicup(value), ValidationErrorCodes.GLOBAL_NAME_CANNOT_IMPERSONATE_MICUP)
+				.nullish(),
+		)
 		.describe('The nickname to set for the member (1-32 characters)'),
 	roles: z
 		.array(SnowflakeType)
@@ -176,7 +184,7 @@ export const GuildMemberUpdateRequest = z.object({
 		.nullish()
 		.describe('The reason for timing out the member (1-512 characters)'),
 	channel_id: SnowflakeType.nullish().describe('The voice channel ID to move the member to'),
-	connection_id: createStringType(1, 32).nullish().describe('The voice connection ID for the member'),
+	connection_id: createStringType(1, 64).nullish().describe('The voice connection ID for the member'),
 });
 
 export type GuildMemberUpdateRequest = z.infer<typeof GuildMemberUpdateRequest>;

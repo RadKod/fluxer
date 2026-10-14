@@ -20,6 +20,7 @@ export type EmailTemplateKey =
 	| 'mfa_backup_codes_view'
 	| 'password_change_verification'
 	| 'password_reset'
+	| 'referral_reward_ready'
 	| 'registration_approved'
 	| 'report_resolved'
 	| 'scheduled_deletion_notification'
@@ -29,4 +30,5 @@ export type EmailTemplateKey =
 export interface EmailTemplate {
 	subject: string;
 	body: string;
+	button?: string;
 }

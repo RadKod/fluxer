@@ -7,10 +7,17 @@ import {emitActivity} from '@app/api/infrastructure/activity/ActivityEvents';
 import type {IDiscriminatorService} from '@app/api/infrastructure/DiscriminatorService';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
-import {getCachedTagStyle} from '@app/api/instance/AccountIdentityModeCache';
+import {
+	getCachedAccountIdentity,
+	getCachedTagStyle,
+	getFreshCachedAccountIdentity,
+} from '@app/api/instance/AccountIdentityModeCache';
 import {Logger} from '@app/api/Logger';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getUsernameOwnershipService} from '@app/api/middleware/ServiceRegistry';
+import {getPremiumLedgerService} from '@app/api/middleware/ServiceSingletons';
 import type {User} from '@app/api/models/User';
+import type {PremiumLedgerService} from '@app/api/premium/ledger/PremiumLedgerService';
 import {
 	RpcTimingRecorder,
 	type RpcTimingSteps,
@@ -20,22 +27,34 @@ import {
 } from '@app/api/rpc/RpcTimings';
 import type {UserData} from '@app/api/rpc/RpcTypes';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
+import {gameActivityPolicyState} from '@app/api/user/services/GameActivityPolicyService';
+import {propagateIfPartialChanged} from '@app/api/user/services/PartialUserChangePropagation';
 import {createPremiumClearPatch, shouldStripExpiredPremium} from '@app/api/user/UserHelpers';
-import {mapUserToPrivateResponse} from '@app/api/user/UserMappers';
+import {hasPartialUserFieldsChanged, mapUserToPrivateResponse} from '@app/api/user/UserMappers';
+import {UsernameRepairIncompleteError} from '@app/api/user/username/UsernameOwnershipService';
 import {TagStyles} from '@fluxer/constants/src/AccountIdentityConstants';
 import {PremiumFlags, UserFlags} from '@fluxer/constants/src/UserConstants';
-import type {RpcSessionTimings} from '@fluxer/schema/src/domains/rpc/RpcSchemas';
+import type {GameActivityPolicyState, RpcSessionTimings} from '@fluxer/schema/src/domains/rpc/RpcSchemas';
 
-interface SessionStartUserRepository extends Pick<IUserRepository, 'patchUpsert' | 'updateFlags'> {}
+interface SessionStartUserRepository
+	extends Pick<IUserRepository, 'patchUpsert' | 'updateFlags' | 'findSettings' | 'findUniqueAssert'> {}
 
 interface SessionStartGuildRepository extends Pick<IGuildRepositoryAggregate, 'getMember' | 'upsertMember'> {}
 
 interface SessionStartUserCacheService
-	extends Pick<UserCacheService, 'getUserPartialResponse' | 'setUserPartialResponseFromUserInBackground'> {}
+	extends Pick<
+		UserCacheService,
+		| 'getUserPartialResponse'
+		| 'setUserPartialResponseFromUser'
+		| 'setUserPartialResponseFromUserInBackground'
+		| 'setUserPartialResponseFromUserInRequestCache'
+	> {}
 
 interface SessionStartGatewayService extends Pick<IGatewayService, 'dispatchGuild' | 'dispatchPresence'> {}
 
 interface SessionStartDiscriminatorService extends Pick<IDiscriminatorService, 'generateDiscriminator'> {}
+
+interface SessionStartPremiumLedgerService extends Pick<PremiumLedgerService, 'isActive' | 'ensureUserPremium'> {}
 
 interface SessionStartDeps {
 	userRepository: SessionStartUserRepository;
@@ -43,6 +62,7 @@ interface SessionStartDeps {
 	userCacheService: SessionStartUserCacheService;
 	gatewayService: SessionStartGatewayService;
 	discriminatorService: SessionStartDiscriminatorService;
+	premiumLedgerService?: SessionStartPremiumLedgerService;
 }
 
 interface ProcessSessionStartParams {
@@ -54,6 +74,7 @@ interface ProcessSessionStartParams {
 
 interface ProcessSessionStartResult {
 	user: User;
+	gameActivityPolicy: GameActivityPolicyState;
 	timings: RpcSessionTimings;
 }
 
@@ -61,9 +82,30 @@ export class RpcSessionStartService {
 	constructor(private readonly deps: SessionStartDeps) {}
 
 	async processSessionStart(params: ProcessSessionStartParams): Promise<ProcessSessionStartResult> {
+		const identityDeadlineAt = Date.now() + 30_000;
 		const timings = new RpcTimingRecorder();
 		const {userData, requestCache, geoipCountryIso, clientIp} = params;
 		let user = userData.user;
+		const usernameMigrationActive = (getCachedAccountIdentity().usernameMigration?.state ?? 'legacy') !== 'legacy';
+		if (usernameMigrationActive && !user.isBot && !user.isSystem) {
+			await timings.time('repair_username_identity', async () => {
+				let operationSeen = false;
+				try {
+					operationSeen = await getUsernameOwnershipService().repair(user.id);
+				} catch (error) {
+					// Micup: the durable intent stays with the repair sweeper, so a failed repair never blocks the session.
+					operationSeen = error instanceof UsernameRepairIncompleteError;
+					Logger.warn({error, userId: user.id.toString()}, 'Username identity repair failed during session start');
+				}
+				if (!operationSeen) return;
+				try {
+					user = await this.deps.userRepository.findUniqueAssert(user.id);
+					userData.user = user;
+				} catch (error) {
+					Logger.warn({error, userId: user.id.toString()}, 'Username identity reread failed during session start');
+				}
+			});
+		}
 		const startedUser = user;
 		void emitActivity(
 			'session_started',
@@ -98,6 +140,7 @@ export class RpcSessionStartService {
 		let isPremium = false;
 		let needsPremiumStrip = false;
 		let hasBeenSanitized = false;
+		let userBeforePremiumStrip = null as User | null;
 		timings.timeSync('compute_session_and_premium_flags', () => {
 			if (!(user.flags & UserFlags.HAS_SESSION_STARTED)) {
 				needsSessionStartedFlag = true;
@@ -108,6 +151,29 @@ export class RpcSessionStartService {
 			hasBeenSanitized = (user.premiumFlags & PremiumFlags.PERKS_SANITIZED) !== 0;
 		});
 		if (needsPremiumStrip) {
+			await timings.time('check_premium_ledger', async () => {
+				try {
+					const premiumLedgerService = this.deps.premiumLedgerService ?? getPremiumLedgerService();
+					if (!(await premiumLedgerService.isActive(user.id))) {
+						return;
+					}
+					needsPremiumStrip = false;
+					isPremium = true;
+					const {user: repairedUser} = await premiumLedgerService.ensureUserPremium(user.id);
+					if (repairedUser) {
+						user = repairedUser;
+						userData.user = repairedUser;
+						this.deps.userCacheService.setUserPartialResponseFromUserInBackground(repairedUser, requestCache);
+					}
+				} catch (error) {
+					// Paid time is never stripped on a guess: the expiration job or the next session settles it.
+					needsPremiumStrip = false;
+					isPremium = true;
+					Logger.warn({userId: user.id.toString(), error}, 'Premium ledger check failed on RPC session start');
+				}
+			});
+		}
+		if (needsPremiumStrip) {
 			await timings.time('strip_expired_premium', async () => {
 				try {
 					const strippedUser = await this.deps.userRepository.patchUpsert(
@@ -116,17 +182,27 @@ export class RpcSessionStartService {
 						user.toRow(),
 					);
 					if (strippedUser) {
+						userBeforePremiumStrip = user;
 						user = strippedUser;
 						userData.user = strippedUser;
-						this.deps.userCacheService.setUserPartialResponseFromUserInBackground(strippedUser, requestCache);
+						// Micup: a changed partial user is refreshed in the users service once, by the announcement below.
+						if (hasPartialUserFieldsChanged(userBeforePremiumStrip, strippedUser)) {
+							this.deps.userCacheService.setUserPartialResponseFromUserInRequestCache(strippedUser, requestCache);
+						} else {
+							this.deps.userCacheService.setUserPartialResponseFromUserInBackground(strippedUser, requestCache);
+						}
 					}
 				} catch (error) {
 					Logger.warn({userId: user.id.toString(), error}, 'Failed to strip expired premium on RPC session start');
 				}
 			});
 		}
+		const freshIdentity = getFreshCachedAccountIdentity();
+		const legacyIdentityWritable =
+			freshIdentity !== null && (freshIdentity.usernameMigration?.state ?? 'legacy') === 'legacy';
 		if (
 			!isPremium &&
+			(user.isBot || legacyIdentityWritable) &&
 			(user.premiumFlags & PremiumFlags.DISCRIMINATOR) !== 0 &&
 			getCachedTagStyle() === TagStyles.RANDOM
 		) {
@@ -147,6 +223,7 @@ export class RpcSessionStartService {
 								discriminator: discriminatorResult.discriminator,
 							},
 							user.toRow(),
+							user.isBot ? undefined : identityDeadlineAt,
 						),
 					);
 					if (updatedUser) {
@@ -246,6 +323,19 @@ export class RpcSessionStartService {
 			});
 			timings.record('sanitize_expired_premium_perks', sanitizePremiumStartedAtNs, sanitizePremiumSteps);
 		}
+		if (userBeforePremiumStrip) {
+			const lapsedUser = userBeforePremiumStrip;
+			// Micup: the premium badge leaves the public flags. Announced after the guild member sanitization above, whose
+			// own GUILD_MEMBER_UPDATE must not land after it; a failed announcement never fails the session.
+			await timings.time('propagate_premium_badge_change', () =>
+				propagateIfPartialChanged(
+					{userCacheService: this.deps.userCacheService},
+					lapsedUser,
+					user,
+					'on RPC session start',
+				),
+			);
+		}
 		if (needsSessionStartedFlag) {
 			await timings.time('persist_session_started_flag', async () => {
 				try {
@@ -281,6 +371,16 @@ export class RpcSessionStartService {
 				}
 			});
 		}
-		return {user, timings: timings.finalize()};
+		userData.settings = await this.deps.userRepository.findSettings(user.id, {authoritative: true});
+		if (userData.settings?.customStatus?.isExpired()) {
+			userData.settings = Object.assign(Object.create(Object.getPrototypeOf(userData.settings)), userData.settings, {
+				customStatus: null,
+			});
+		}
+		return {
+			user,
+			gameActivityPolicy: gameActivityPolicyState(user, userData.settings),
+			timings: timings.finalize(),
+		};
 	}
 }

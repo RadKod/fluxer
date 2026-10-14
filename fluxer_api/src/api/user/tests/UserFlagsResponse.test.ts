@@ -6,6 +6,7 @@ import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {fetchUser, fetchUserMe, updateUserProfile} from '@app/api/user/tests/UserTestUtils';
 import {PublicUserFlags, UserFlags} from '@fluxer/constants/src/UserConstants';
+import type {UserPrivateResponse} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import {afterAll, beforeAll, beforeEach, describe, expect, test} from 'vitest';
 
 async function setUserFlags(harness: ApiTestHarness, userId: string, flags: bigint): Promise<void> {
@@ -84,6 +85,37 @@ describe('User flags in responses', () => {
 		await setUserFlags(harness, account.userId, UserFlags.SPAMMER | UserFlags.HAS_SESSION_STARTED);
 		const {json} = await fetchUserMe(harness, account.token);
 		expect(json.flags & PublicUserFlags.SPAMMER).toBe(PublicUserFlags.SPAMMER);
+	});
+	test('VERIFIED is public user flag bit 29', () => {
+		expect(UserFlags.VERIFIED).toBe(1n << 29n);
+		expect(PublicUserFlags.VERIFIED).toBe(1 << 29);
+	});
+	test('GET /users/@me and GET /users/:id include VERIFIED next to SPAMMER', async () => {
+		const account = await createTestAccount(harness);
+		const viewer = await createTestAccount(harness);
+		await setUserFlags(harness, account.userId, UserFlags.VERIFIED | UserFlags.SPAMMER);
+		const {json: me} = await fetchUserMe(harness, account.token);
+		expect(me.flags).toBe(PublicUserFlags.VERIFIED | PublicUserFlags.SPAMMER);
+		const {json: partial} = await fetchUser(harness, account.userId, viewer.token);
+		expect(partial.flags).toBe(PublicUserFlags.VERIFIED | PublicUserFlags.SPAMMER);
+	});
+	test('STAFF_HIDDEN hides STAFF but keeps VERIFIED', async () => {
+		const account = await createTestAccount(harness);
+		const viewer = await createTestAccount(harness);
+		await setUserFlags(harness, account.userId, UserFlags.STAFF | UserFlags.STAFF_HIDDEN | UserFlags.VERIFIED);
+		const {json} = await fetchUser(harness, account.userId, viewer.token);
+		expect(json.flags).toBe(PublicUserFlags.VERIFIED);
+	});
+	test('PATCH /users/@me ignores a flags field, so a user cannot verify themselves', async () => {
+		const account = await createTestAccount(harness);
+		const {json: updated} = await createBuilder<UserPrivateResponse>(harness, account.token)
+			.patch('/users/@me')
+			.body({bio: 'self verify attempt', flags: 1 << 29})
+			.expect(HTTP_STATUS.OK)
+			.executeWithResponse();
+		expect(updated.flags & (1 << 29)).toBe(0);
+		const {json: me} = await fetchUserMe(harness, account.token);
+		expect(me.flags & (1 << 29)).toBe(0);
 	});
 	test('PATCH /users/@me does not leak internal flags', async () => {
 		const account = await createTestAccount(harness);

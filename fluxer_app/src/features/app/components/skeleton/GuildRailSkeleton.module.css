@@ -68,7 +68,7 @@
 	z-index: 0;
 }
 
-.itemSlot[data-selected='true'] flx-skeleton-circle {
+.itemSlot flx-skeleton-circle {
 	border-radius: 30%;
 }
 
@@ -172,7 +172,7 @@
 	z-index: 0;
 }
 
-.expandedFolderGuild[data-selected='true'] flx-skeleton-circle {
+.expandedFolderGuild flx-skeleton-circle {
 	border-radius: 30%;
 }
 
@@ -186,7 +186,7 @@
 	z-index: 0;
 }
 
-.item[data-selected='true'] flx-skeleton-circle {
+.item flx-skeleton-circle {
 	border-radius: 30%;
 }
 
@@ -197,7 +197,7 @@
 	height: var(--guild-icon-size);
 	width: var(--guild-icon-size);
 	flex-shrink: 0;
-	border-radius: var(--radius-full);
+	border-radius: 30%;
 	background-color: var(--guilds-layout-item-bg);
 	color: var(--text-primary);
 }
@@ -205,13 +205,42 @@
 .item[data-selected='true'] .fluxerIcon {
 	border-radius: 30%;
 	background-color: var(--brand-primary);
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
+/* Micup: rail glyph smaller (upstream 1.75rem) */
 .fluxerIconGlyph {
-	height: 1.75rem;
-	width: 1.75rem;
+	height: 1.375rem;
+	width: 1.375rem;
 	color: currentColor;
+}
+
+.feedLogoTile {
+	overflow: hidden;
+}
+
+/* Same drawing as FeedButton's .logo / .logoHighlighted */
+.feedLogo {
+	height: 100%;
+	width: 100%;
+	transform: scale(1.1);
+	mix-blend-mode: lighten;
+}
+
+.item[data-selected='true'] .feedLogo {
+	filter: invert(1) brightness(1.1);
+	mix-blend-mode: darken;
+}
+
+/* Micup: light and dark_legacy, as in FeedButton.module.css */
+:global(html.theme-light) .feedLogo {
+	filter: invert(1) brightness(1.1);
+	mix-blend-mode: darken;
+}
+
+:global(html:is(.theme-light, .theme-dark_legacy)) .item[data-selected='true'] .feedLogo {
+	filter: none;
+	mix-blend-mode: lighten;
 }
 
 .dividerSlot {
@@ -248,17 +277,29 @@
 .item[data-selected='true'] .actionIcon {
 	border-radius: 30%;
 	background-color: var(--brand-primary);
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
+/* Micup: no dashed ring around the selected white action tile in the coal and dark themes (as on the rail) */
+:global(html:is(.theme-coal, .theme-dark)) .item[data-selected='true'] .actionIcon {
+	border-color: transparent;
+}
+
+/* Micup: rail glyph smaller (upstream 1.25rem) */
 .actionIconGlyph {
-	height: 1.25rem;
-	width: 1.25rem;
+	height: 1rem;
+	width: 1rem;
 	color: currentColor;
 }
 
+/* Micup: rail glyph smaller (upstream 1.75rem) */
 .favoritesIconGlyph {
-	height: 1.75rem;
-	width: 1.75rem;
+	height: 1.375rem;
+	width: 1.375rem;
 	color: currentColor;
+}
+
+/* Micup: user area in the channel list column */
+.rail {
+	--layout-user-area-overlay-height: 0px;
 }

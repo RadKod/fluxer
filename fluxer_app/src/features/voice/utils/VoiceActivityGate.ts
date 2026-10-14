@@ -1,16 +1,23 @@
+import {Logger} from '@app/features/platform/utils/AppLogger';
 import {
 	LOCAL_AUTO_MIN_RMS,
 	LOCAL_MAX_RMS,
 	SPEAKING_LOCAL_RELEASE_MS,
 } from '@app/features/voice/engine/VoiceSpeakingThreshold';
+import {VOICE_PIPELINE_TUNING, type VoicePipelineTuning} from '@app/features/voice/utils/VoicePipelineTuning';
 
 const GATE_STARTUP_TIMEOUT_MS = 8000;
 const modules = new WeakMap<AudioContext, Promise<void>>();
+const vadModules = new WeakMap<AudioContext, Promise<void>>();
+const gainModules = new WeakMap<AudioContext, Promise<void>>();
+const logger = new Logger('VoiceActivityGate');
 
 export interface VoiceActivityGateConfig {
 	apply: boolean;
 	auto: boolean;
 	manualThresholdRms: number;
+	pipelineV2Enabled?: boolean;
+	tuning?: VoicePipelineTuning;
 }
 
 export interface VoiceInputLevel {
@@ -21,17 +28,25 @@ export interface VoiceInputLevel {
 	nonFinite: boolean;
 	frame: number;
 	contextTime: number;
+	processingMs?: number;
+	audioMs?: number;
 }
 
-export function loadVoiceActivityGate(context: AudioContext, signal: AbortSignal): Promise<void> {
-	let pending = modules.get(context);
+function loadWorklet(
+	context: AudioContext,
+	signal: AbortSignal,
+	cache: WeakMap<AudioContext, Promise<void>>,
+	asset: 'VOICE_GATE_WORKLET_URL' | 'VOICE_VAD_WORKLET_URL' | 'VOICE_SOFT_GAIN_WORKLET_URL',
+): Promise<void> {
+	signal.throwIfAborted();
+	let pending = cache.get(context);
 	if (!pending) {
 		pending = import('@app/features/voice/utils/noise_suppression/NoiseSuppressionWorkletAssets').then((assets) =>
-			context.audioWorklet.addModule(assets.VOICE_GATE_WORKLET_URL),
+			context.audioWorklet.addModule(assets[asset]),
 		);
-		modules.set(context, pending);
+		cache.set(context, pending);
 		void pending.catch(() => {
-			if (modules.get(context) === pending) modules.delete(context);
+			if (cache.get(context) === pending) cache.delete(context);
 		});
 	}
 	const loading = pending;
@@ -53,6 +68,56 @@ export function loadVoiceActivityGate(context: AudioContext, signal: AbortSignal
 	});
 }
 
+export async function loadVoiceActivityGate(
+	context: AudioContext,
+	signal: AbortSignal,
+	pipelineV2Enabled = false,
+): Promise<void> {
+	await loadWorklet(context, signal, modules, 'VOICE_GATE_WORKLET_URL');
+	if (!pipelineV2Enabled || context.sampleRate !== 48000) return;
+	try {
+		await loadWorklet(context, signal, vadModules, 'VOICE_VAD_WORKLET_URL');
+	} catch (error) {
+		signal.throwIfAborted();
+		logger.warn('Speech detector unavailable; retaining RMS gate', error);
+	}
+}
+
+export function loadVoiceSoftGain(context: AudioContext, signal: AbortSignal): Promise<void> {
+	return loadWorklet(context, signal, gainModules, 'VOICE_SOFT_GAIN_WORKLET_URL');
+}
+
+export function createVoiceSoftGain(
+	context: AudioContext,
+	onFailure: () => void,
+	onHealth?: (processingMs: number, audioMs: number, contextTime: number) => void,
+	tuning: VoicePipelineTuning = VOICE_PIPELINE_TUNING,
+): AudioWorkletNode {
+	const node = new AudioWorkletNode(context, 'fluxer-voice-soft-gain', {
+		numberOfInputs: 2,
+		numberOfOutputs: 1,
+		outputChannelCount: [1],
+		channelCount: 1,
+		channelCountMode: 'explicit',
+		processorOptions: {tuning},
+	});
+	node.port.onmessage = ({data}: MessageEvent) => {
+		if (
+			data?.type === 'health' &&
+			Number.isFinite(data.processingMs) &&
+			data.processingMs >= 0 &&
+			Number.isFinite(data.audioMs) &&
+			data.audioMs > 0 &&
+			Number.isFinite(data.contextTime) &&
+			data.contextTime >= 0
+		) {
+			onHealth?.(data.processingMs, data.audioMs, data.contextTime);
+		}
+	};
+	node.onprocessorerror = onFailure;
+	return node;
+}
+
 export function createVoiceActivityGate(
 	context: AudioContext,
 	channelCount: 1 | 2,
@@ -62,13 +127,14 @@ export function createVoiceActivityGate(
 ): AudioWorkletNode {
 	const node = new AudioWorkletNode(context, 'fluxer-voice-gate', {
 		numberOfInputs: 1,
-		numberOfOutputs: 1,
-		outputChannelCount: [channelCount],
+		numberOfOutputs: 2,
+		outputChannelCount: [channelCount, 1],
 		channelCount,
 		channelCountMode: 'explicit',
 		channelInterpretation: 'speakers',
 		processorOptions: {
 			...config,
+			tuning: config.tuning ?? VOICE_PIPELINE_TUNING,
 			channelCount,
 			minRms: LOCAL_AUTO_MIN_RMS,
 			maxRms: LOCAL_MAX_RMS,
@@ -77,6 +143,7 @@ export function createVoiceActivityGate(
 	});
 	node.port.onmessage = ({data}: MessageEvent<VoiceInputLevel & {type: string}>) => {
 		if (data.type === 'level') onLevel(data);
+		if (data.type === 'vad-failure') logger.warn('Speech detector failed; retaining RMS gate');
 	};
 	node.onprocessorerror = onFailure;
 	return node;

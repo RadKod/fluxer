@@ -163,3 +163,8 @@
 	bottom: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem);
 	z-index: 50;
 }
+
+/* Micup: lighter side panels in the coal theme */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .container {
+	--background-secondary: var(--side-panel-background);
+}

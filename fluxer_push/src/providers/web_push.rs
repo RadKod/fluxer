@@ -366,4 +366,31 @@ mod retry_tests {
         assert!(!should_retry(400, 0));
         assert!(!should_retry(410, 0));
     }
+
+    #[test]
+    fn only_public_https_endpoints_are_sent_to() {
+        let listed = vec!["ntfy".to_owned()];
+        for endpoint in [
+            "https://fcm.googleapis.com/fcm/send/abc",
+            "https://updates.push.services.mozilla.com:443/wpush/v2/abc",
+            "https://ntfy/up?up=1",
+        ] {
+            assert!(endpoint_is_allowed(endpoint, &listed), "{endpoint}");
+        }
+        for endpoint in [
+            "http://fcm.googleapis.com/fcm/send/abc",
+            "https://user:pass@fcm.googleapis.com/fcm/send/abc",
+            "https://fcm.googleapis.com:8443/fcm/send/abc",
+            "https://127.0.0.1/push",
+            "https://169.254.169.254/latest/meta-data",
+            "https://10.0.0.5/push",
+            "https://[::1]/push",
+            "https://[::ffff:192.168.1.20]/push",
+            "https://localhost/push",
+            "https://push-service/push",
+            "not a url",
+        ] {
+            assert!(!endpoint_is_allowed(endpoint, &listed), "{endpoint}");
+        }
+    }
 }

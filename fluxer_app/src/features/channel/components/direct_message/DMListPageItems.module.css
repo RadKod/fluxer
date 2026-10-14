@@ -1,0 +1,69 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Micup: premium and the shop stand out in the DM list and the feed sidebar: a violet ring, a faint violet wash and,
+   while the row is not the current page, a violet icon chip and the full text colour; one hue of the premium palette,
+   on top of the DM list row (DirectMessageList.module.css .clickableItem). The ring and the wash are layers behind the
+   row's content in its own stacking context, so the row keeps its box and its hover and selected backgrounds, and the
+   current page shows the selected chip every current row shows. Static: only the wash's opacity moves, on hover. */
+.accent {
+	composes: tokens from '@app/features/premium/components/PremiumSurface.module.css';
+	position: relative;
+	isolation: isolate;
+}
+
+.accent::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	padding: 0.0625rem;
+	border-radius: inherit;
+	background: linear-gradient(100deg, var(--premium-violet), var(--premium-lavender));
+	mask:
+		linear-gradient(black 0 0) content-box,
+		linear-gradient(black 0 0);
+	mask-composite: exclude;
+	pointer-events: none;
+}
+
+.accent::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	border-radius: inherit;
+	background: linear-gradient(
+		100deg,
+		color-mix(in srgb, var(--premium-violet) 22%, transparent),
+		color-mix(in srgb, var(--premium-lavender) 8%, transparent)
+	);
+	opacity: 0.75;
+	transition: opacity var(--transition-fast);
+	pointer-events: none;
+}
+
+.accent[aria-current='page']::after {
+	opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	:global(:where(html.window-focused, html.unfocused-fully-interactive):not(.window-focus-activation-guard))
+		.accent:hover::after {
+		opacity: 1;
+	}
+}
+
+/* The chip's own background and colour stay the row's; the gradient and the glyph colour sit over them. White on
+   violet to deep violet: 4.2 to 6.8:1. */
+.accent:not([aria-current='page']) .accentIcon {
+	background-image: linear-gradient(135deg, var(--premium-violet), var(--premium-deep));
+}
+
+.accent:not([aria-current='page']) .accentIcon > svg {
+	color: white;
+}
+
+/* The full text colour on the wash: the muted row text falls under 4.5:1 on it in the light theme. */
+.accent:not([aria-current='page']) .accentLabel {
+	color: var(--text-primary);
+}

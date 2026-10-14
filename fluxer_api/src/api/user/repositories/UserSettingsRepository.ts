@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {GuildID, UserID} from '@app/api/BrandedTypes';
-import {deleteOneOrMany, fetchMany, fetchOne} from '@app/api/database/CassandraQueryExecution';
+import {deleteOneOrMany, executeConditional, fetchMany, fetchOne} from '@app/api/database/CassandraQueryExecution';
+import {Db} from '@app/api/database/CassandraTypes';
 import {buildPatchFromData, executeVersionedUpdate} from '@app/api/database/CassandraVersionedUpdate';
 import type {ExactRow} from '@app/api/database/types/DatabaseRowTypes';
 import type {UserGuildSettingsRow, UserSettingsRow} from '@app/api/database/types/UserTypes';
@@ -10,7 +11,12 @@ import {Logger} from '@app/api/Logger';
 import {UserGuildSettings} from '@app/api/models/UserGuildSettings';
 import {UserSettings} from '@app/api/models/UserSettings';
 import {UserGuildSettings as UserGuildSettingsTable, UserSettings as UserSettingsTable} from '@app/api/Tables';
-import type {IUserSettingsRepository} from '@app/api/user/repositories/IUserSettingsRepository';
+import type {
+	IUserSettingsRepository,
+	UserSettingsPatchOptions,
+} from '@app/api/user/repositories/IUserSettingsRepository';
+import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
+import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
 
 const FETCH_USER_SETTINGS_CQL = UserSettingsTable.selectCql({
 	where: UserSettingsTable.where.eq('user_id'),
@@ -62,8 +68,10 @@ export class UserSettingsRepository implements IUserSettingsRepository {
 		return rows.map((row) => new UserGuildSettings(row));
 	}
 
-	async findSettings(userId: UserID): Promise<UserSettings | null> {
-		const settings = await fetchOne<UserSettingsRow>(FETCH_USER_SETTINGS_CQL, {user_id: userId});
+	async findSettings(userId: UserID, options?: {authoritative?: boolean}): Promise<UserSettings | null> {
+		const settings = options?.authoritative
+			? (await fetchMany<UserSettingsRow>(FETCH_USER_SETTINGS_CQL, {user_id: userId}, {consistency: 'serial'}))[0]
+			: await fetchOne<UserSettingsRow>(FETCH_USER_SETTINGS_CQL, {user_id: userId});
 		return settings ? new UserSettings(settings) : null;
 	}
 
@@ -92,20 +100,77 @@ export class UserSettingsRepository implements IUserSettingsRepository {
 
 	async upsertSettings(settings: ExactRow<UserSettingsRow>): Promise<UserSettings> {
 		const userId = settings.user_id;
-		const result = await executeVersionedUpdate<UserSettingsRow, 'user_id'>(
-			() =>
-				this.findSettings(userId)
-					.then((s) => s?.toRow() ?? null)
-					.catch((error) => {
-						Logger.error({userId: userId.toString(), error}, 'Failed to fetch settings');
-						throw error;
-					}),
-			(current) => ({
-				pk: {user_id: userId},
-				patch: buildPatchFromData(settings, current, USER_SETTINGS_COLUMNS, ['user_id']),
-			}),
-			UserSettingsTable,
+		const current = await this.findSettings(userId, {authoritative: true});
+		if (!current) {
+			if (await executeConditional(UserSettingsTable.insertIfNotExists(settings))) return new UserSettings(settings);
+		}
+		// Full-row callers can carry old policy snapshots. Sharing changes require an explicit fenced patch.
+		const {
+			user_id: _userId,
+			version: _version,
+			profile_privacy: _privacy,
+			game_activity_visibility: _visibility,
+			game_activity_policy_revision: _revision,
+			...patch
+		} = settings;
+		const profileChanged =
+			current && settings.version === current.version && settings.profile_privacy !== current.profilePrivacy;
+		return this.writeSettingsPatch(
+			userId,
+			{...patch, ...(profileChanged ? {profile_privacy: settings.profile_privacy} : {})},
+			profileChanged ? settings.version : undefined,
 		);
-		return new UserSettings({...settings, version: result.finalVersion ?? 1});
+	}
+
+	async patchSettings(
+		userId: UserID,
+		data: Partial<Omit<UserSettingsRow, 'user_id' | 'version' | 'game_activity_policy_revision'>>,
+		options?: UserSettingsPatchOptions,
+	): Promise<UserSettings> {
+		return this.writeSettingsPatch(userId, data, undefined, options);
+	}
+
+	private async writeSettingsPatch(
+		userId: UserID,
+		data: Partial<Omit<UserSettingsRow, 'user_id' | 'version' | 'game_activity_policy_revision'>>,
+		profileSourceVersion?: number,
+		options?: UserSettingsPatchOptions,
+	): Promise<UserSettings> {
+		for (let attempt = 0; attempt < 5; attempt++) {
+			const current = await this.findSettings(userId, {authoritative: true});
+			if (!current) throw new UnknownUserError();
+			if (
+				options?.expectedPolicyRevision !== undefined &&
+				current.gameActivityPolicyRevision !== options.expectedPolicyRevision
+			)
+				throw new ServiceUnavailableError();
+			const row = current.toRow();
+			const intent = {...data};
+			if (profileSourceVersion !== undefined) {
+				if (current.version !== profileSourceVersion) delete intent.profile_privacy;
+				else if (current.gameActivityVisibility !== 'off') throw new ServiceUnavailableError();
+			}
+			const patch = buildPatchFromData<UserSettingsRow>(intent, row, USER_SETTINGS_COLUMNS, ['user_id']);
+			const policyChanged =
+				options?.gameActivityPolicyChanged === true ||
+				patch.game_activity_visibility !== undefined ||
+				patch.profile_privacy !== undefined;
+			const revision = current.gameActivityPolicyRevision;
+			if (policyChanged && revision >= 9223372036854775807n) throw new ServiceUnavailableError();
+			if (policyChanged) patch.game_activity_policy_revision = Db.set(revision + 1n);
+			patch.version = Db.set(current.version + 1);
+			const applied = await executeConditional(
+				UserSettingsTable.conditionalPatchByPk({user_id: userId}, patch, {
+					version: current.version,
+					game_activity_policy_revision: row.game_activity_policy_revision ?? null,
+				}),
+			);
+			if (applied) {
+				const updated = await this.findSettings(userId, {authoritative: true});
+				if (!updated) throw new UnknownUserError();
+				return updated;
+			}
+		}
+		throw new ServiceUnavailableError();
 	}
 }

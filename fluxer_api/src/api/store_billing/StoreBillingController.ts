@@ -22,6 +22,7 @@ import {mapStorePurchaseToResponse} from '@app/api/store_billing/StoreBillingMap
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
 import {isStripeSubscriptionActive} from '@app/api/store_billing/StoreEntitlementWriter';
 import type {HonoApp, HonoEnv} from '@app/api/types/HonoEnv';
+import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
 import {Validator} from '@app/api/Validator';
 import {PremiumFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {AppNotFoundHandler} from '@fluxer/errors/src/domains/core/ErrorHandlers';
@@ -118,6 +119,7 @@ export function StoreBillingController(app: HonoApp) {
 			tags: 'Premium',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			return ctx.json(await buildStoreBillingContext(ctx.get('user'), ctx.get('storeEntitlementService')));
 		},
 	);
@@ -139,6 +141,7 @@ export function StoreBillingController(app: HonoApp) {
 			tags: 'Premium',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const {signed_transaction} = ctx.req.valid('json');
 			const result = await ctx
 				.get('storeEntitlementService')
@@ -164,6 +167,7 @@ export function StoreBillingController(app: HonoApp) {
 			tags: 'Premium',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const body = ctx.req.valid('json');
 			const result = await ctx.get('storeEntitlementService').claimGooglePlayPurchase(ctx.get('user').id, {
 				purchaseToken: body.purchase_token,
@@ -215,6 +219,7 @@ export function StoreBillingController(app: HonoApp) {
 			tags: 'Premium',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const user = ctx.get('user');
 			const {purchase_id} = ctx.req.valid('param');
 			await requireSudoMode(ctx, user, ctx.req.valid('json'));

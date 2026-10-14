@@ -294,7 +294,7 @@ const EXEMPTION_RULES: ReadonlyArray<ExemptionRule> = [
 const MEDIA_PROXY_ROUTES = new Map([
 	['GET /_health', '.route("/_health", get(routes::ops::health))'],
 	['HEAD /_health', '.route("/_health", get(routes::ops::health))'],
-	['GET /_metrics', '.route("/_metrics", get(routes::ops::metrics_handler))'],
+	['GET /_metrics', 'get(routes::ops::metrics_handler).layer(Extension(metrics_allowed))'],
 	['POST /_metadata', '.route("/_metadata", post(routes::internal::metadata_handler))'],
 	['POST /_sniff', '.route("/_sniff", post(routes::internal::sniff_handler))'],
 	['POST /_thumbnail', '.route("/_thumbnail", post(routes::internal::thumbnail_handler))'],

@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {ThemeTypes} from '@fluxer/constants/src/UserConstants';
 import type {Color} from 'react-aria-components';
+
+// Micup: the picker starts on the accent, which is the v1 white in the coal and dark themes (upstream: violet).
+export function getDefaultPickerHex(theme: string): string {
+	return theme === ThemeTypes.COAL || theme === ThemeTypes.DARK ? '#F4F4F6' : '#4641D9';
+}
 
 interface RectLike {
 	left: number;

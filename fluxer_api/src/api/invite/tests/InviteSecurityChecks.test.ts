@@ -2,9 +2,12 @@
 
 import {createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createChannelID, createGuildID, createInviteCode, createUserID} from '@app/api/BrandedTypes';
+import {resetIpBanExemptionsForTesting} from '@app/api/ban/IpBanExemptions';
+import {Config} from '@app/api/Config';
 import {acceptInvite, createChannelInvite, createGuild, getChannel} from '@app/api/channel/tests/ChannelTestUtils';
 import {InviteRepository} from '@app/api/invite/InviteRepository';
 import {deleteInvite} from '@app/api/invite/tests/InviteTestUtils';
+import {setInjectedIpInfoService} from '@app/api/middleware/ServiceSingletons';
 import {banUser} from '@app/api/moderation/tests/ModerationTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
@@ -12,7 +15,8 @@ import {createBuilder, createBuilderWithoutAuth} from '@app/api/test/TestRequest
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {InviteTypes} from '@fluxer/constants/src/ChannelConstants';
 import type {GuildInviteMetadataResponse} from '@fluxer/schema/src/domains/invite/InviteSchemas';
-import {afterAll, beforeAll, beforeEach, describe, expect, test} from 'vitest';
+import {createUnavailableIpInfoService} from '@pkgs/geoip/src/IpInfoService';
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest';
 
 async function createGuildInviteWithCodeForTesting(
 	code: string,
@@ -45,6 +49,63 @@ describe('Invite Security Checks', () => {
 	beforeEach(async () => {
 		await harness.reset();
 	});
+	afterEach(() => {
+		setInjectedIpInfoService(undefined);
+		resetIpBanExemptionsForTesting();
+	});
+	test.each(['mobile', 'education', 'exempt'])(
+		'allows shared-network invite joins for %s without allowing the banned account',
+		async (network) => {
+			const bannedIp = '2a01:e0a:d10:1111::1';
+			const rotatedIp = '2a01:e0a:d10:1111::2';
+			const originalExemptions = [...Config.ipBanExemptIps];
+			const unavailable = createUnavailableIpInfoService();
+			setInjectedIpInfoService({
+				lookup: async (ip) => {
+					const result = await unavailable.lookup(ip);
+					return {
+						...result,
+						available: true,
+						flags: {...result.flags, isMobile: network === 'mobile'},
+						asn: {...result.asn, type: network === 'education' ? 'education' : 'isp'},
+					};
+				},
+			});
+			const owner = await createTestAccount(harness);
+			const banned = await createTestAccount(harness, {ipAddress: bannedIp});
+			const rotated = await createTestAccount(harness, {ipAddress: rotatedIp});
+			const guild = await createGuild(harness, owner.token, 'Shared access safety');
+			const invite = await createChannelInvite(harness, owner.token, guild.system_channel_id!);
+			await createBuilder(harness, banned.token)
+				.post(`/invites/${invite.code}`)
+				.header('x-forwarded-for', bannedIp)
+				.body(null)
+				.expect(200)
+				.execute();
+			await banUser(harness, owner.token, guild.id, banned.userId, 0);
+			try {
+				if (network === 'exempt') {
+					Config.ipBanExemptIps.splice(0, Config.ipBanExemptIps.length, rotatedIp);
+					resetIpBanExemptionsForTesting();
+				}
+				await createBuilder(harness, rotated.token)
+					.post(`/invites/${invite.code}`)
+					.header('x-forwarded-for', rotatedIp)
+					.body(null)
+					.expect(200)
+					.execute();
+				await createBuilder(harness, banned.token)
+					.post(`/invites/${invite.code}`)
+					.header('x-forwarded-for', bannedIp)
+					.body(null)
+					.expect(403, APIErrorCodes.USER_BANNED_FROM_GUILD)
+					.execute();
+			} finally {
+				Config.ipBanExemptIps.splice(0, Config.ipBanExemptIps.length, ...originalExemptions);
+				resetIpBanExemptionsForTesting();
+			}
+		},
+	);
 	test('non-member cannot delete invite they did not create', async () => {
 		const owner = await createTestAccount(harness);
 		const attacker = await createTestAccount(harness);

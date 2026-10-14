@@ -138,6 +138,7 @@ export function createInitializer(config: APIConfig, logger: ILogger): () => Pro
 					localDc: config.cassandra.localDc,
 					username: config.cassandra.username || undefined,
 					password: config.cassandra.password || undefined,
+					consistency: config.cassandra.consistency,
 				});
 				logger.info('Cassandra client initialized');
 			} else if (config.database.backend === 'cassandra') {
@@ -165,6 +166,12 @@ export function createInitializer(config: APIConfig, logger: ILogger): () => Pro
 			await initializeRefreshCache(profileSubstringBlocklistCache, 'Profile substring blocklist cache', logger);
 			await initializeServiceSingletons();
 			logger.info('Service singletons initialized');
+			const {feedDiscoverCache} = await import('@app/api/feed/discover/FeedDiscoverCache');
+			feedDiscoverCache.setRefreshSubscriber(kvClient);
+			await initializeRefreshCache(feedDiscoverCache, 'Feed discover cache', logger);
+			const {feedSuggestionCache} = await import('@app/api/feed/suggest/FeedSuggestionCache');
+			feedSuggestionCache.setRefreshSubscriber(kvClient);
+			await initializeRefreshCache(feedSuggestionCache, 'Feed suggestion cache', logger);
 			if (!config.dev.testModeEnabled) {
 				jsConnectionManager = new JetStreamConnectionManager({
 					url: config.nats.jetStreamUrl,

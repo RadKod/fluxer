@@ -6,8 +6,10 @@ import type {AdminGuildUpdatePropagator} from '@app/api/admin/services/guild/Adm
 import {createGuildID, createUserID, type GuildID, type UserID} from '@app/api/BrandedTypes';
 import type {GuildRow} from '@app/api/database/types/GuildTypes';
 import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import {withGuildUpdateLock} from '@app/api/guild/services/GuildService';
 import type {EntityAssetService, PreparedAssetUpload} from '@app/api/infrastructure/EntityAssetService';
 import {Logger} from '@app/api/Logger';
+import {getCacheService} from '@app/api/middleware/ServiceSingletons';
 import {UnknownGuildError} from '@fluxer/errors/src/domains/guild/UnknownGuildError';
 import type {
 	ClearGuildFieldsRequest,
@@ -40,18 +42,22 @@ export class AdminGuildUpdateService {
 		auditLogReason: string | null;
 	}) {
 		const {guildRepository, auditService, updatePropagator} = this.deps;
-		const guild = await guildRepository.findUnique(guildId);
-		if (!guild) {
-			throw new UnknownGuildError();
-		}
-		const newFeatures = new Set(guild.features);
-		for (const feature of addFeatures) {
-			newFeatures.add(feature);
-		}
-		for (const feature of removeFeatures) {
-			newFeatures.delete(feature);
-		}
-		const updatedGuild = await guildRepository.upsertPartial(guildId, {features: newFeatures}, guild.toRow());
+		// under the guild update lock, so a boost recompute never writes the features set over this change.
+		const {newFeatures, updatedGuild} = await withGuildUpdateLock(getCacheService(), guildId, async () => {
+			const guild = await guildRepository.findUnique(guildId);
+			if (!guild) {
+				throw new UnknownGuildError();
+			}
+			const newFeatures = new Set(guild.features);
+			for (const feature of addFeatures) {
+				newFeatures.add(feature);
+			}
+			for (const feature of removeFeatures) {
+				newFeatures.delete(feature);
+			}
+			const updatedGuild = await guildRepository.upsertPartial(guildId, {features: newFeatures}, guild.toRow());
+			return {newFeatures, updatedGuild};
+		});
 		await updatePropagator.dispatchGuildUpdate(guildId, updatedGuild, {
 			adminUserId,
 			reconcileDiscoveryFeature: true,

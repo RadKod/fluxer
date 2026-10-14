@@ -13,6 +13,7 @@ import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder'
 import {awaitAll} from '@app/api/utils/ConcurrencyUtils';
 import {
 	type AssetKind,
+	COSMETIC_ASSET_POLICY,
 	formatAssetUploadExtensions,
 	getPolicy,
 	isExtensionAllowed,
@@ -26,6 +27,15 @@ import sharp from 'sharp';
 
 type AssetType = 'avatar' | 'banner' | 'icon' | 'splash' | 'embed_splash' | 'branding';
 type EntityType = 'user' | 'guild' | 'guild_member' | 'instance';
+// Micup: a cosmetic catalog image is a branding asset whose owner key names the item. The media proxy serves any
+// branding/<owner>/<hash> with an owner key of [A-Za-z0-9_-]{1,128}, so no new asset type or prefix is needed.
+export type CosmeticAssetOwnerKey = `cosmetic-${string}-${bigint}`;
+
+// Micup (angel-wings): a part of an ultra decoration drawn in front: the left half (height = 2 × width), still or animated.
+export interface CosmeticImageShape {
+	height: Readonly<{min: number; max: number}>;
+	animated: boolean;
+}
 
 const ASSET_TYPE_TO_PREFIX: Record<AssetType, string> = {
 	avatar: 'avatars',
@@ -66,11 +76,13 @@ export interface PreparedAssetUpload {
 interface PrepareAssetUploadOptions {
 	assetType: AssetType;
 	entityType: EntityType;
-	entityId: bigint;
+	entityId: bigint | CosmeticAssetOwnerKey;
 	guildId?: bigint;
 	previousHash: string | null;
 	base64Image: string | null;
 	errorPath: string;
+	cosmeticMaxBytes?: number;
+	cosmeticShape?: CosmeticImageShape;
 }
 
 type LimitConfigSnapshotProvider = Pick<LimitConfigService, 'getConfigSnapshot'>;
@@ -100,8 +112,34 @@ export class EntityAssetService {
 		}
 	}
 
+	// Micup: admin-only path for cosmetic catalog images; the new object never replaces an old one, since accounts
+	// that wear the previous image keep pointing at it, so callers do not commitAssetChange. Without a shape the image
+	// follows the catalog rule (96-480 px each side, still or animated).
+	async prepareCosmeticAssetUpload(
+		ownerKey: CosmeticAssetOwnerKey,
+		base64Image: string,
+		errorPath: string,
+		maxBytes: number,
+		shape?: CosmeticImageShape,
+	): Promise<PreparedAssetUpload> {
+		return this.prepareAssetUpload({
+			assetType: 'branding',
+			entityType: 'instance',
+			entityId: ownerKey,
+			previousHash: null,
+			base64Image,
+			errorPath,
+			cosmeticMaxBytes: maxBytes,
+			cosmeticShape: shape,
+		});
+	}
+
 	async prepareAssetUpload(options: PrepareAssetUploadOptions): Promise<PreparedAssetUpload> {
 		const {assetType, entityType, entityId, guildId, previousHash, base64Image, errorPath} = options;
+		const cosmetic = typeof entityId === 'string';
+		if (cosmetic && assetType !== 'branding') {
+			throw new Error('Only branding assets take a cosmetic owner key');
+		}
 		const s3KeyBase = this.buildS3KeyBase(assetType, entityType, entityId, guildId);
 		const cdnUrlBase = `${Config.endpoints.media}/${s3KeyBase}`;
 		const previousS3Key = previousHash ? `${s3KeyBase}/${this.stripAnimationPrefix(previousHash)}` : null;
@@ -131,7 +169,14 @@ export class EntityAssetService {
 			width,
 			contentType,
 			animated: isAnimated,
-		} = await this.validateAndProcessImage(base64Image, errorPath, assetType);
+		} = await this.validateAndProcessImage(
+			base64Image,
+			errorPath,
+			assetType,
+			cosmetic,
+			options.cosmeticMaxBytes,
+			options.cosmeticShape,
+		);
 		const imageHash = crypto.createHash('md5').update(Buffer.from(imageBuffer)).digest('hex');
 		const imageHashShort = imageHash.slice(0, 8);
 		const newHash = isAnimated ? `a_${imageHashShort}` : imageHashShort;
@@ -250,7 +295,7 @@ export class EntityAssetService {
 	private buildQueuedAssetReference(
 		assetType: AssetType,
 		entityType: EntityType,
-		entityId: bigint,
+		entityId: bigint | CosmeticAssetOwnerKey,
 		hash: string,
 		guildId?: bigint,
 	): QueuedAssetReference {
@@ -267,7 +312,12 @@ export class EntityAssetService {
 		return hash.startsWith('a_') ? hash.substring(2) : hash;
 	}
 
-	private buildS3KeyBase(assetType: AssetType, entityType: EntityType, entityId: bigint, guildId?: bigint): string {
+	private buildS3KeyBase(
+		assetType: AssetType,
+		entityType: EntityType,
+		entityId: bigint | CosmeticAssetOwnerKey,
+		guildId?: bigint,
+	): string {
 		const prefix = ASSET_TYPE_TO_PREFIX[assetType];
 		if (entityType === 'guild_member') {
 			if (!guildId) {
@@ -282,6 +332,9 @@ export class EntityAssetService {
 		base64Image: string,
 		errorPath: string,
 		assetType: AssetType,
+		cosmetic: boolean,
+		cosmeticMaxBytes?: number,
+		cosmeticShape?: CosmeticImageShape,
 	): Promise<{
 		imageBuffer: Uint8Array;
 		format: string;
@@ -292,23 +345,24 @@ export class EntityAssetService {
 	}> {
 		const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 		const imageBuffer = new Uint8Array(Buffer.from(base64Data, 'base64'));
-		const maxAvatarSize = this.resolveAvatarSizeLimit();
+		const maxAvatarSize = cosmetic
+			? (cosmeticMaxBytes ?? COSMETIC_ASSET_POLICY.maxBytes)
+			: this.resolveAvatarSizeLimit();
 		if (imageBuffer.length > maxAvatarSize) {
 			throw InputValidationError.fromCode(errorPath, ValidationErrorCodes.IMAGE_SIZE_EXCEEDS_LIMIT, {
 				maxSize: maxAvatarSize,
 			});
 		}
 		const kind = this.mapAssetTypeToAssetKind(assetType);
-		const metadata = this.requireAllowedMetadata({
-			metadata: await this.mediaService.getMetadata({
-				type: 'base64',
-				base64: base64Data,
-				version: 2,
-				nsfw: 'allow',
-			}),
-			kind,
-			errorPath,
+		const rawMetadata = await this.mediaService.getMetadata({
+			type: 'base64',
+			base64: base64Data,
+			version: 2,
+			nsfw: 'allow',
 		});
+		const metadata = cosmetic
+			? this.requireCosmeticMetadata(rawMetadata, errorPath, cosmeticShape)
+			: this.requireAllowedMetadata({metadata: rawMetadata, kind, errorPath});
 		const isAnimatedImage = metadata.animated ?? false;
 		const keepDimensions = !isSvgMetadata(metadata);
 		return {
@@ -334,6 +388,33 @@ export class EntityAssetService {
 		if (!animated) return metadata;
 		if (getPolicy(kind).animated === 'never' || this.isAnimatedAvif(metadata)) {
 			this.throwInvalidImageFormat(errorPath, kind);
+		}
+		return metadata;
+	}
+
+	private requireCosmeticMetadata(
+		metadata: MediaProxyMetadataResponse | null,
+		errorPath: string,
+		shape?: CosmeticImageShape,
+	): MediaProxyMetadataResponse {
+		const {upload, dims} = COSMETIC_ASSET_POLICY;
+		const within = (side: number | null | undefined, range: Readonly<{min: number; max: number}>) =>
+			side != null && side >= range.min && side <= range.max;
+		const shaped = shape
+			? within(metadata?.height, shape.height) &&
+				metadata?.width != null &&
+				metadata.width * 2 === metadata.height &&
+				(metadata.animated ?? false) === shape.animated
+			: within(metadata?.width, dims) && within(metadata?.height, dims);
+		if (
+			metadata == null ||
+			isSvgMetadata(metadata) ||
+			!upload.some((ext) => ext === metadata.format.toLowerCase()) ||
+			!shaped
+		) {
+			throw InputValidationError.fromCode(errorPath, ValidationErrorCodes.INVALID_IMAGE_FORMAT, {
+				supportedExtensions: upload.join(', '),
+			});
 		}
 		return metadata;
 	}

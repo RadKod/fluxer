@@ -150,7 +150,7 @@ const VOICE_CONNECTION_DEBUG_DESCRIPTOR = msg({
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 export const PREMIUM_TYPE_DESCRIPTOR = msg({
-	message: 'Premium type',
+	message: 'Plus type',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const VISIONARY_BADGE_ID_DESCRIPTOR = msg({
@@ -158,11 +158,11 @@ const VISIONARY_BADGE_ID_DESCRIPTOR = msg({
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const PREMIUM_SINCE_DATE_DESCRIPTOR = msg({
-	message: 'Premium since date',
+	message: 'Plus since date',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const PREMIUM_UNTIL_DATE_DESCRIPTOR = msg({
-	message: 'Premium until date',
+	message: 'Plus until date',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const BILLING_CYCLE_DESCRIPTOR = msg({

@@ -7,23 +7,31 @@ import {ApplicationAdminAuditCases} from '@app/api/admin/tests/audit_coverage/Ap
 import {ArchiveAdminAuditCases} from '@app/api/admin/tests/audit_coverage/ArchiveAdminAuditCases';
 import {AssetAdminAuditCases} from '@app/api/admin/tests/audit_coverage/AssetAdminAuditCases';
 import {AuditLogAdminAuditCases} from '@app/api/admin/tests/audit_coverage/AuditLogAdminAuditCases';
+import {BadgeAdminAuditCases} from '@app/api/admin/tests/audit_coverage/BadgeAdminAuditCases';
 import {BanAdminAuditCases} from '@app/api/admin/tests/audit_coverage/BanAdminAuditCases';
 import {BulkAdminAuditCases} from '@app/api/admin/tests/audit_coverage/BulkAdminAuditCases';
 import {CodesAdminAuditCases} from '@app/api/admin/tests/audit_coverage/CodesAdminAuditCases';
+import {CosmeticAdminAuditCases} from '@app/api/admin/tests/audit_coverage/CosmeticAdminAuditCases';
 import {DiscoveryAdminAuditCases} from '@app/api/admin/tests/audit_coverage/DiscoveryAdminAuditCases';
+import {FeedModerationAdminAuditCases} from '@app/api/admin/tests/audit_coverage/FeedModerationAdminAuditCases';
 import {GatewayAdminAuditCases} from '@app/api/admin/tests/audit_coverage/GatewayAdminAuditCases';
 import {GuildAdminAuditCases} from '@app/api/admin/tests/audit_coverage/GuildAdminAuditCases';
 import {InstanceConfigAdminAuditCases} from '@app/api/admin/tests/audit_coverage/InstanceConfigAdminAuditCases';
 import {JobsAdminAuditCases} from '@app/api/admin/tests/audit_coverage/JobsAdminAuditCases';
 import {LimitConfigAdminAuditCases} from '@app/api/admin/tests/audit_coverage/LimitConfigAdminAuditCases';
 import {MessageAdminAuditCases} from '@app/api/admin/tests/audit_coverage/MessageAdminAuditCases';
+import {PremiumLedgerAdminAuditCases} from '@app/api/admin/tests/audit_coverage/PremiumLedgerAdminAuditCases';
+import {ReferralAdminAuditCases} from '@app/api/admin/tests/audit_coverage/ReferralAdminAuditCases';
 import {ReportAdminAuditCases} from '@app/api/admin/tests/audit_coverage/ReportAdminAuditCases';
 import {SearchAdminAuditCases} from '@app/api/admin/tests/audit_coverage/SearchAdminAuditCases';
+import {ShopAdminAuditCases} from '@app/api/admin/tests/audit_coverage/ShopAdminAuditCases';
+import {ShopOrderAdminAuditCases} from '@app/api/admin/tests/audit_coverage/ShopOrderAdminAuditCases';
 import {StoreBillingAdminAuditCases} from '@app/api/admin/tests/audit_coverage/StoreBillingAdminAuditCases';
 import {SystemDmAdminAuditCases} from '@app/api/admin/tests/audit_coverage/SystemDmAdminAuditCases';
 import {ThreadAdminAuditCases} from '@app/api/admin/tests/audit_coverage/ThreadAdminAuditCases';
 import {UserAdminAuditCases} from '@app/api/admin/tests/audit_coverage/UserAdminAuditCases';
 import {UserWriteAdminAuditCases} from '@app/api/admin/tests/audit_coverage/UserWriteAdminAuditCases';
+import {VisionaryAdminAuditCases} from '@app/api/admin/tests/audit_coverage/VisionaryAdminAuditCases';
 import {VoiceAdminAuditCases} from '@app/api/admin/tests/audit_coverage/VoiceAdminAuditCases';
 import type {HonoEnv} from '@app/api/types/HonoEnv';
 import {Hono} from 'hono';
@@ -35,23 +43,31 @@ const ALL_CASES = [
 	...ArchiveAdminAuditCases,
 	...AssetAdminAuditCases,
 	...AuditLogAdminAuditCases,
+	...BadgeAdminAuditCases,
 	...BanAdminAuditCases,
 	...BulkAdminAuditCases,
 	...CodesAdminAuditCases,
+	...CosmeticAdminAuditCases,
 	...DiscoveryAdminAuditCases,
+	...FeedModerationAdminAuditCases,
 	...GatewayAdminAuditCases,
 	...GuildAdminAuditCases,
 	...InstanceConfigAdminAuditCases,
 	...JobsAdminAuditCases,
 	...LimitConfigAdminAuditCases,
 	...MessageAdminAuditCases,
+	...PremiumLedgerAdminAuditCases,
+	...ReferralAdminAuditCases,
 	...ReportAdminAuditCases,
 	...SearchAdminAuditCases,
+	...ShopAdminAuditCases,
+	...ShopOrderAdminAuditCases,
 	...StoreBillingAdminAuditCases,
 	...SystemDmAdminAuditCases,
 	...ThreadAdminAuditCases,
 	...UserAdminAuditCases,
 	...UserWriteAdminAuditCases,
+	...VisionaryAdminAuditCases,
 	...VoiceAdminAuditCases,
 ];
 

@@ -1,0 +1,127 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: Referral
+description: The referral link and code, referral counts, reward tiers, and the rewards an account has earned.
+---
+
+import RouteHeader from '@/components/RouteHeader.astro';
+
+The referral programme rewards an account for bringing others to the instance. Every account has one personal code. A new account that registers through a link carrying that code, `/r/<code>`, is linked to its owner. Once the new account has stayed active long enough and passed the programme's checks, it counts as a valid referral, and the owner earns each [reward tier](#referral-tier-object) whose threshold the count reaches. The [Admin API](/admin-api/referral/) opens and closes the programme and sets the tiers.
+
+The one route on this page is user-only, requires no permission, and acts on the caller's own account. A bot or OAuth2 bearer credential is refused with 403 `ACCESS_DENIED`. No route reads the code or the referrals of another account.
+
+:::note[The programme starts closed]
+While the programme is closed, the route reports `enabled` false, returns no code, and creates none. A registration that carries a code links nothing.
+:::
+
+## Referral codes
+
+A code is 10 characters from `a` to `z` and `2` to `7`, and the server creates it from random bytes on the first read after the programme opens. The code of an account never changes. A client builds the referral link from it and carries the code to [Register an account](/http-api/authentication/#register-an-account) as `referral_code`.
+
+## Referral states
+
+A referred account is in one of three states. The state decides which count it adds to.
+
+| Value | Description |
+| --- | --- |
+| pending | The account registered through the code and is not decided yet |
+| valid | The account stayed active for `min_active_days` days with a verified email address and passed the programme's checks |
+| rejected | The account failed the checks, or was still undecided 14 days after its active period ended |
+
+The decision is made once and never reverses. A valid referral stays counted if the referred account is deleted later. A referral that is still pending when the referred account is deleted becomes rejected.
+
+## Referral reward types
+
+| Value | Description |
+| --- | --- |
+| cosmetic | An owned-availability [cosmetic item](/http-api/cosmetics/#cosmetic-item-object), added to the account without being worn |
+| premium_days | Days of [premium](/http-api/premium/) added to the account |
+| offsite | A reward staff hand over by hand, such as one outside the instance |
+
+## Referral reward statuses
+
+| Value | Description |
+| --- | --- |
+| granting | The server is delivering the reward, and the status changes shortly |
+| auto_delivered | A cosmetic or premium reward was delivered |
+| pending_admin | An off-site reward is waiting for staff to deliver it |
+| delivered | Staff delivered an off-site reward |
+
+## Referral reward object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| tier_id | snowflake | The ID of the tier that gave the reward |
+| reward | [referral tier reward](#referral-tier-reward-object) object | What the tier gave, as it was when the account earned it |
+| status | string | The [status](#referral-reward-statuses) of the reward |
+| granted_at | ISO8601 timestamp | When the account reached the tier |
+| delivered_at | ?ISO8601 timestamp | When the reward was delivered, null while it is `granting` or `pending_admin` |
+| code<sup>1</sup> | ?string | The code staff typed in for an off-site reward |
+
+<sup>1</sup> Present only while `status` is `delivered` and staff entered a code, and only in this response, which the account that earned the reward alone can read. The server never puts it in a direct message, an email, the Admin API, or the audit log
+
+## Referral tier reward object
+
+The `type` field decides the other field.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| type | string | The [reward type](#referral-reward-types) |
+| item_id<sup>1</sup> | snowflake | The ID of the item |
+| days<sup>2</sup> | integer | The premium days (1-3650) |
+| description<sup>3</sup> | string | What staff hand over (1-200 characters) |
+
+<sup>1</sup> Present for `cosmetic`
+
+<sup>2</sup> Present for `premium_days`
+
+<sup>3</sup> Present for `offsite`
+
+## Referral tier object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | snowflake | The ID of the tier |
+| threshold | integer | The valid referrals needed to earn the tier |
+| reward | [referral tier reward](#referral-tier-reward-object) object | What the tier gives |
+
+## Referral counts object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| pending | integer | The referrals not decided yet |
+| valid | integer | The valid referrals |
+| rejected | integer | The rejected referrals |
+
+The counts can trail a decision by a few seconds. The response does not say why a referral was rejected.
+
+## Referral object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| enabled | boolean | Whether the programme is open |
+| code | ?string | The account's referral code, null while the programme is closed |
+| counts | [referral counts](#referral-counts-object) object | The referrals of the account by state |
+| min_active_days | integer | The days a referred account must stay active to count |
+| tiers | array[[referral tier](#referral-tier-object) object] | The tiers that are on, lowest threshold first |
+| rewards | array[[referral reward](#referral-reward-object) object] | The rewards the account has earned |
+
+## Get my referral
+
+<RouteHeader method="GET" path="/v1/users/@me/referral" />
+
+Returns the [referral](#referral-object) object of the caller. While the programme is open, the first read creates the account's code, and every later read returns the same one.
+
+A tier that is turned off after the account earned it stays in `rewards`, and a tier raised above the account's count takes nothing back.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [referral](#referral-object) object | The referral was returned |
+| 401 | [error response](/http-api/#error-response) | No account is signed in |
+| 403 | [error response](/http-api/#error-response) | The credential is a bot or OAuth2 bearer token, returned as `ACCESS_DENIED` |
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `referral:me` bucket.

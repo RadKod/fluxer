@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Initialization from '@app/features/app/state/Initialization';
+import GameActivitySettings from '@app/features/game_activity/state/GameActivitySettings';
+import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
+import DesktopGameActivityBridge from '@app/features/game_activity/utils/DesktopGameActivityBridge';
 import {
 	BACKGROUND_RESUME_STAGGER_MS,
 	BackgroundGatewaySessionManager,
@@ -24,13 +27,23 @@ import SelectedGuild from '@app/features/navigation/state/SelectedGuild';
 import SessionManager from '@app/features/platform/state/AuthSession';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import LocalPresence from '@app/features/presence/state/LocalPresence';
-import {reaction} from 'mobx';
+import {getElectronAPI} from '@app/features/ui/utils/NativeUtils';
+import {type IReactionDisposer, reaction} from 'mobx';
 
 export {BACKGROUND_RESUME_STAGGER_MS, MAX_BACKGROUND_GATEWAY_CONNECTIONS, readMaxBackgroundGatewayConnections};
 
 const logger = new Logger('GatewaySessionPool');
 const FOREGROUND_RECOVERY_RETRY_DELAYS_MS = [1_000, 3_000, 10_000] as const;
 const FAILED_FOREGROUND_RECOVERY_REARM_INTERVAL_MS = 60_000;
+
+function isGameActivitySharingEnabled(): boolean {
+	return (
+		GameActivityStore.enabled &&
+		!!SessionManager.userId &&
+		GameActivitySettings.getEffectiveSharing() &&
+		GameActivitySettings.getDetectionEnabled(SessionManager.userId)
+	);
+}
 
 type ForegroundRecoveryState =
 	| {readonly kind: 'idle'}
@@ -57,10 +70,14 @@ class GatewaySessionPool {
 			installDeferredReaction(() =>
 				reaction(
 					() => LocalPresence.presenceKey,
-					() => this.syncForegroundPresence(),
+					() => {
+						DesktopGameActivityBridge.presenceChanged();
+						this.syncForegroundPresence();
+					},
 				),
 			),
 		);
+		this.disposers.push(installDeferredReaction(() => this.installGameActivityBridge()));
 		this.disposers.push(
 			installDeferredReaction(() =>
 				reaction(
@@ -290,6 +307,28 @@ class GatewaySessionPool {
 
 	shutdownBackground(): void {
 		this.backgroundSessions.shutdown();
+	}
+
+	private installGameActivityBridge(): IReactionDisposer {
+		DesktopGameActivityBridge.initialize({
+			getApi: () => getElectronAPI() ?? undefined,
+			getPresence: () => LocalPresence.getGatewayPresence(),
+			send: (presence) =>
+				GameActivityStore.enabled &&
+				(this.foregroundConnection.socket?.updatePresence(
+					presence.status,
+					presence.afk,
+					presence.mobile,
+					presence.custom_status,
+					presence.game_activity,
+				) ??
+					false),
+			getEnabled: isGameActivitySharingEnabled,
+			clearReceived: () => GameActivityStore.reset(),
+		});
+		return reaction(isGameActivitySharingEnabled, () => {
+			void DesktopGameActivityBridge.syncPolicy();
+		});
 	}
 
 	private syncForegroundPresence(): void {

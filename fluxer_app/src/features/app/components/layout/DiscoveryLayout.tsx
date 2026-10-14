@@ -13,8 +13,10 @@ import {useEffect} from 'react';
 export const DiscoveryLayout = observer(function DiscoveryLayout() {
 	const mobileLayout = MobileLayout;
 	useEffect(() => {
-		void Discovery.loadCategories();
-		void Discovery.search({offset: 0});
+		if (Discovery.view !== 'apps') {
+			void Discovery.loadCategories();
+			void Discovery.search({offset: 0});
+		}
 		return () => {
 			Discovery.reset();
 		};

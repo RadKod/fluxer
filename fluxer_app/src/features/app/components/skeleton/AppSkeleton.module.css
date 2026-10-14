@@ -97,8 +97,7 @@
 	transition-duration: 0s;
 }
 
-@media (prefers-reduced-motion: reduce) {
-	.container {
-		transition-duration: 0s;
-	}
+/* Micup: rounded frame corner by the channel list */
+.outlineFrame {
+	--outline-radius: var(--outline-frame-radius-native);
 }

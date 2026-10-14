@@ -22,6 +22,7 @@ import {MessageStickerService} from '@app/api/channel/services/message/MessageSt
 import {resolveNsfwScopeChannel} from '@app/api/channel/utils/ThreadNsfwScope';
 import {getContentMessage} from '@app/api/content_i18n/ContentI18n';
 import type {
+	MessageActionRowData,
 	MessageAttachment,
 	MessageEmbed,
 	MessageReference,
@@ -115,6 +116,7 @@ interface CreateMessageParams {
 	};
 	allowEmbeds?: boolean;
 	dmNsfwContext?: DmNsfwContext;
+	components?: ReadonlyArray<MessageActionRowData>;
 	processedEmbeds?: Array<MessageEmbed>;
 	processedStickerItems?: Array<MessageStickerItem>;
 	skipDeferredEmbeds?: boolean;
@@ -254,6 +256,7 @@ export class MessagePersistenceService {
 			call: null,
 			has_reaction: false,
 			version: 1,
+			micup_components: params.components ? [...params.components] : null,
 		};
 		const message = await this.channelRepository.messages.upsertMessage(
 			messageRowData,
@@ -402,6 +405,7 @@ export class MessagePersistenceService {
 		isBot?: boolean;
 		isBugHunterBot?: boolean;
 		locale?: string | null;
+		components?: ReadonlyArray<MessageActionRowData>;
 	}): Promise<UpdateMessageResult> {
 		const {message, messageId, data, channel, guild, member} = params;
 		if (message.messageSnapshots && message.messageSnapshots.length > 0) {
@@ -559,6 +563,10 @@ export class MessagePersistenceService {
 				updatedRowData.embeds = nextEmbeds.length > 0 ? nextEmbeds : null;
 			}
 			hasUncachedUrls = embedUrls;
+			hasChanges = true;
+		}
+		if (params.components) {
+			updatedRowData.micup_components = [...params.components];
 			hasChanges = true;
 		}
 		let updatedMessage = message;

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {ChannelID, GuildID, UserID} from '@app/api/BrandedTypes';
-import type {ILiveKitService, ListParticipantsResult} from '@app/api/infrastructure/ILiveKitService';
+import type {
+	ILiveKitService,
+	ListParticipantsResult,
+	SetParticipantAttributesParams,
+} from '@app/api/infrastructure/ILiveKitService';
 import type {VoiceRegionMetadata, VoiceServerRecord} from '@app/api/voice/VoiceModel';
 
 interface CreateTokenParams {
@@ -76,6 +80,10 @@ export class DisabledLiveKitService implements ILiveKitService {
 	async muteMicrophoneTrack(_params: MuteMicrophoneTrackParams): Promise<void> {}
 
 	async disconnectParticipant(_params: DisconnectParticipantParams): Promise<void> {}
+
+	async setParticipantAttributes(_params: SetParticipantAttributesParams): Promise<'ok'> {
+		return 'ok';
+	}
 
 	async listParticipants(_params: {
 		guildId?: GuildID;

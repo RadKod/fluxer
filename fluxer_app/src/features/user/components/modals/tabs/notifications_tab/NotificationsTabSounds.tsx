@@ -5,6 +5,8 @@ import {CUSTOM_SOUND_MAX_SIZE_BYTES} from '@app/features/app/config/I18nDisplayC
 import {formatFileSize} from '@app/features/messaging/utils/FileUtils';
 import type * as CustomSoundDB from '@app/features/notification/utils/CustomSoundDB';
 import {type SoundType, SoundType as SoundTypes} from '@app/features/notification/utils/SoundUtils';
+import {isTableGameSoundType} from '@app/features/table_game/sound/TableGameSoundFiles';
+import {TableGameSoundSettings} from '@app/features/table_game/sound/TableGameSoundSettings';
 import {remFromPx} from '@app/features/theme/layout/RemFromPx';
 import {Accordion} from '@app/features/ui/accordion/Accordion';
 import {Switch} from '@app/features/ui/components/form/FormSwitch';
@@ -166,9 +168,11 @@ export const Sounds: React.FC<SoundsProps> = observer(
 		const [allSoundsExpanded, setAllSoundsExpanded] = useState(false);
 		const previousHadOverridesRef = useRef(hasAnyOverride);
 		const additionalSoundsId = useId();
-		const soundEntries = Object.entries(soundTypeLabels).map(
+		const allSoundEntries = Object.entries(soundTypeLabels).map(
 			([soundType, label]) => [soundType as SoundType, label] as const,
 		);
+		const soundEntries = allSoundEntries.filter(([soundType]) => !isTableGameSoundType(soundType));
+		const tableGameSoundEntries = allSoundEntries.filter(([soundType]) => isTableGameSoundType(soundType));
 		const commonSoundEntries = soundEntries.filter(([soundType]) => COMMON_SOUND_TYPES.has(soundType));
 		const additionalSoundEntries = soundEntries.filter(([soundType]) => !COMMON_SOUND_TYPES.has(soundType));
 		const hasAdditionalSounds = additionalSoundEntries.length > 0;
@@ -351,6 +355,14 @@ export const Sounds: React.FC<SoundsProps> = observer(
 							</button>
 						</div>
 					)}
+					<TableGameSoundSettings
+						entries={tableGameSoundEntries}
+						allDisabled={allDisabled}
+						isSoundEnabled={isSoundEnabled}
+						onToggleSound={onToggleSound}
+						renderSoundToggle={renderSoundToggle}
+						data-flx="user.notifications-tab.sounds.table-game-sound-settings"
+					/>
 					<Accordion
 						id="sound-overrides"
 						title={i18n._(PER_SOUND_VOLUME_DESCRIPTOR)}
@@ -364,8 +376,7 @@ export const Sounds: React.FC<SoundsProps> = observer(
 						data-flx="user.notifications-tab.sounds.sound-overrides"
 					>
 						<div className={styles.overridesList} data-flx="user.notifications-tab.sounds.overrides-list">
-							{Object.entries(soundTypeLabels).map(([soundType, label]) => {
-								const type = soundType as SoundType;
+							{soundEntries.map(([type, label]) => {
 								const override = soundOverrides[type];
 								const hasOverride = override !== undefined;
 								const effectiveValue = hasOverride ? (override as number) : masterVolume;
@@ -375,7 +386,7 @@ export const Sounds: React.FC<SoundsProps> = observer(
 								const SoundToggleIcon = soundEnabled ? SpeakerHighIcon : SpeakerXIcon;
 								return (
 									<div
-										key={soundType}
+										key={type}
 										className={clsx(styles.overrideRow, !hasOverride && styles.overrideRowLinked)}
 										data-flx="user.notifications-tab.sounds.override-row"
 									>

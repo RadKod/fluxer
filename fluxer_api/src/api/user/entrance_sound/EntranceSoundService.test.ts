@@ -2,14 +2,20 @@
 
 import {createUserID, type EntranceSoundID, type UserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
+import {createDefaultLimitConfig} from '@app/api/constants/LimitConfig';
+import {EMPTY_USER_ROW} from '@app/api/database/types/UserTypes';
 import type {IMediaService} from '@app/api/infrastructure/IMediaService';
 import type {IStorageService} from '@app/api/infrastructure/IStorageService';
+import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import type {EntranceSound} from '@app/api/models/EntranceSound';
+import {User} from '@app/api/models/User';
 import type {EntranceSoundRepository} from '@app/api/user/entrance_sound/EntranceSoundRepository';
 import {EntranceSoundService} from '@app/api/user/entrance_sound/EntranceSoundService';
+import {PremiumFlags} from '@fluxer/constants/src/UserConstants';
 import {describe, expect, it, vi} from 'vitest';
 
 const USER_ID = createUserID(1234567890123456n);
+const USER = new User({...EMPTY_USER_ROW, user_id: USER_ID, premium_flags: PremiumFlags.ENABLED_OVERRIDE});
 
 function createWavBase64(sampleCount: number): string {
 	const dataLength = sampleCount * 2;
@@ -90,6 +96,7 @@ function createService() {
 		repository as unknown as EntranceSoundRepository,
 		storageService,
 		mediaService,
+		{getConfigSnapshot: () => createDefaultLimitConfig({selfHosted: false})} as unknown as LimitConfigService,
 	);
 	return {service, repository, objects, deleteObject};
 }
@@ -101,8 +108,8 @@ function keyFromUrl(url: string): string {
 describe('EntranceSoundService shared object references', () => {
 	it('keeps the shared object when one of two entries with identical audio is deleted', async () => {
 		const {service, objects, deleteObject} = createService();
-		const first = await service.upload({userId: USER_ID, name: 'first', base64Audio: HALF_SECOND_WAV});
-		const second = await service.upload({userId: USER_ID, name: 'second', base64Audio: HALF_SECOND_WAV});
+		const first = await service.upload({user: USER, name: 'first', base64Audio: HALF_SECOND_WAV});
+		const second = await service.upload({user: USER, name: 'second', base64Audio: HALF_SECOND_WAV});
 		expect(keyFromUrl(second.url)).toBe(keyFromUrl(first.url));
 
 		await service.delete(USER_ID, first.sound.soundId);
@@ -119,10 +126,10 @@ describe('EntranceSoundService shared object references', () => {
 
 	it('keeps the shared object when a duplicate upload fails to persist', async () => {
 		const {service, repository, objects, deleteObject} = createService();
-		const first = await service.upload({userId: USER_ID, name: 'first', base64Audio: HALF_SECOND_WAV});
+		const first = await service.upload({user: USER, name: 'first', base64Audio: HALF_SECOND_WAV});
 
 		repository.failNextUpsert = true;
-		await expect(service.upload({userId: USER_ID, name: 'duplicate', base64Audio: HALF_SECOND_WAV})).rejects.toThrow(
+		await expect(service.upload({user: USER, name: 'duplicate', base64Audio: HALF_SECOND_WAV})).rejects.toThrow(
 			'Failed to persist entrance sound',
 		);
 
@@ -135,7 +142,7 @@ describe('EntranceSoundService shared object references', () => {
 		const {service, repository, objects, deleteObject} = createService();
 
 		repository.failNextUpsert = true;
-		await expect(service.upload({userId: USER_ID, name: 'only', base64Audio: HALF_SECOND_WAV})).rejects.toThrow(
+		await expect(service.upload({user: USER, name: 'only', base64Audio: HALF_SECOND_WAV})).rejects.toThrow(
 			'Failed to persist entrance sound',
 		);
 
@@ -145,8 +152,8 @@ describe('EntranceSoundService shared object references', () => {
 
 	it('deletes the object for a lone entry and leaves other entries alone', async () => {
 		const {service, objects, deleteObject} = createService();
-		const lone = await service.upload({userId: USER_ID, name: 'lone', base64Audio: HALF_SECOND_WAV});
-		const other = await service.upload({userId: USER_ID, name: 'other', base64Audio: OTHER_WAV});
+		const lone = await service.upload({user: USER, name: 'lone', base64Audio: HALF_SECOND_WAV});
+		const other = await service.upload({user: USER, name: 'other', base64Audio: OTHER_WAV});
 		expect(keyFromUrl(other.url)).not.toBe(keyFromUrl(lone.url));
 
 		await service.delete(USER_ID, lone.sound.soundId);

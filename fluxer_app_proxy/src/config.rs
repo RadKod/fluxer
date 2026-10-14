@@ -360,6 +360,30 @@ pub struct AppProxyConfig {
     pub same_origin_hosts: Vec<String>,
     pub manifest_scope_extensions: Vec<String>,
     pub self_hosted: bool,
+    pub keep_link_preview_metadata: bool,
+    pub ga4_measurement_id: Option<String>,
+}
+const GA4_ID_ENV: &str = "FLUXER_APP_PROXY_GA4_MEASUREMENT_ID";
+
+// Micup: unset keeps Google Analytics off (no consent banner, no script, no CSP change).
+// Only the published measurement-id shape can reach the shell metadata.
+fn ga4_measurement_id_from(value: Option<String>) -> Option<String> {
+    let value = value?;
+    let valid = value.strip_prefix("G-").is_some_and(|rest| {
+        (4..=20).contains(&rest.len())
+            && rest
+                .bytes()
+                .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit())
+    });
+    if valid {
+        return Some(value);
+    }
+    warn_invalid(&InvalidAppProxyEnvironmentError::new(
+        GA4_ID_ENV,
+        &value,
+        "a GA4 measurement id such as G-XXXXXXXXXX",
+    ));
+    None
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -501,12 +525,29 @@ impl AppProxyConfig {
             geoip_source,
             geoip_s3_config,
             trust_client_ip_header: cfg::read_bool_env("FLUXER_TRUST_CLIENT_IP_HEADER", false),
-            client_ip_header_name: cfg::read_env("FLUXER_CLIENT_IP_HEADER_NAME", "x-forwarded-for")
-                .trim()
-                .to_ascii_lowercase(),
             same_origin_hosts: parse_same_origin_hosts(
                 "FLUXER_APP_PROXY_SAME_ORIGIN_HOSTS",
                 &cfg::read_env("FLUXER_APP_PROXY_SAME_ORIGIN_HOSTS", ""),
+            ),
+            client_ip_header_name: cfg::read_first_env(
+                &[
+                    "FLUXER_CLIENT_IP_HEADER_NAME",
+                    "FLUXER_CLIENT_IP_HEADER",
+                    "CLIENT_IP_HEADER_NAME",
+                    "CLIENT_IP_HEADER",
+                ],
+                "x-forwarded-for",
+            )
+            .trim()
+            .to_ascii_lowercase(),
+            keep_link_preview_metadata: cfg::read_bool_env(
+                "FLUXER_APP_PROXY_KEEP_LINK_PREVIEW_METADATA",
+                false,
+            ),
+            ga4_measurement_id: ga4_measurement_id_from(
+                env::var(GA4_ID_ENV)
+                    .ok()
+                    .filter(|value| !value.trim().is_empty()),
             ),
             manifest_scope_extensions: parse_manifest_scope_extensions(
                 "FLUXER_APP_PROXY_MANIFEST_SCOPE_EXTENSIONS",
@@ -781,6 +822,30 @@ mod tests {
         ])
         .expect_err("a malformed origin is refused");
         assert!(error.to_string().contains("FLUXER_PUBLIC_ORIGIN"));
+    }
+
+    #[test]
+    fn a_ga4_measurement_id_is_accepted_only_in_its_published_shape() {
+        assert_eq!(
+            ga4_measurement_id_from(Some("G-6T4PXNJLVZ".to_owned())),
+            Some("G-6T4PXNJLVZ".to_owned())
+        );
+        for rejected in [
+            "",
+            "UA-12345-1",
+            "G-abc12345",
+            "G-ABC",
+            "G-ABCDEFGHIJKLMNOPQRSTU",
+            "G-ABC\"</script>",
+            "G-ABC DEF",
+        ] {
+            assert_eq!(
+                ga4_measurement_id_from(Some(rejected.to_owned())),
+                None,
+                "{rejected:?} must leave Google Analytics off"
+            );
+        }
+        assert_eq!(ga4_measurement_id_from(None), None);
     }
 
     #[test]

@@ -190,6 +190,15 @@ start_shard_acc(Index, Acc) ->
 handle_call({lookup, UserId}, _From, State) when is_integer(UserId) ->
     {Reply, NewState} = presence_manager_shards:forward_call(UserId, {lookup, UserId}, State),
     {reply, Reply, NewState};
+handle_call({game_activity_prepare, UserId, _, _} = Request, _From, State) ->
+    {Reply, Next} = presence_manager_shards:forward_call(UserId, Request, State),
+    {reply, Reply, Next};
+handle_call({game_activity_finish, UserId, _, _, _, _} = Request, _From, State) ->
+    {Reply, Next} = presence_manager_shards:forward_call(UserId, Request, State),
+    {reply, Reply, Next};
+handle_call({game_activity_reject, UserId, _, _, _, _} = Request, _From, State) ->
+    {Reply, Next} = presence_manager_shards:forward_call(UserId, Request, State),
+    {reply, Reply, Next};
 handle_call({dispatch, UserId, Event, Data}, _From, State) when is_integer(UserId) ->
     {Reply, NewState} = presence_manager_shards:forward_call(
         UserId, {dispatch, UserId, Event, Data}, State

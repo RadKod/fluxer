@@ -73,7 +73,7 @@ describe('RpcService guild load thread permission seeding', () => {
 
 		await loadGuild(guild.id);
 		expect(await fetchOne<GuildThreadStateRow>(FETCH_MARKER, {guild_id: guildId})).toBeNull();
-		expect(addJob).not.toHaveBeenCalled();
+		expect(addJob.mock.calls.filter(([task]) => task === 'seedThreadPermissions')).toEqual([]);
 
 		const landed = await getInstanceConfigRepository().updateChannelThreadsConfig((current) =>
 			applyChannelThreadsConfigUpdate(current, {enabled: true, guild_basis_points: 10000}),
@@ -92,7 +92,7 @@ describe('RpcService guild load thread permission seeding', () => {
 		addJob.mockClear();
 		await loadGuild(guild.id);
 		await loadGuild(guild.id);
-		expect(addJob).not.toHaveBeenCalled();
+		expect(addJob.mock.calls.filter(([task]) => task === 'seedThreadPermissions')).toEqual([]);
 	});
 
 	test('channels loads skip the taint read for control guilds with no dangling references', async () => {

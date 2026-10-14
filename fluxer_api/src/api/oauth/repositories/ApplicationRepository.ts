@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {randomUUID} from 'node:crypto';
 import {type ApplicationID, createApplicationID, type UserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
 import {SYSTEM_USER_ID} from '@app/api/constants/Core';
@@ -7,13 +8,25 @@ import {BatchBuilder, fetchMany, fetchOne} from '@app/api/database/CassandraQuer
 import {buildPatchFromData, executeVersionedUpdate} from '@app/api/database/CassandraVersionedUpdate';
 import type {ApplicationByOwnerRow, ApplicationRow} from '@app/api/database/types/OAuth2Types';
 import {APPLICATION_COLUMNS} from '@app/api/database/types/OAuth2Types';
+import {INSTANCE_CONFIG_REFRESH_CHANNEL, InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
+import {
+	OFFICIAL_APP_RESTRICTIVE_WRITE_DELAY_MS,
+	officialAppEligibilityLeaseKey,
+	officialAppMutationKey,
+} from '@app/api/instance/OfficialAppsEligibilityConstants';
+import {getKVClient} from '@app/api/middleware/ServiceRegistry';
 import {Application} from '@app/api/models/Application';
 import type {IApplicationRepository} from '@app/api/oauth/repositories/IApplicationRepository';
 import {Applications, ApplicationsByOwner} from '@app/api/Tables';
 import {hashPassword} from '@app/api/utils/PasswordUtils';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {ADMIN_OAUTH2_APPLICATION_ID} from '@fluxer/constants/src/Core';
+import {ConflictError} from '@fluxer/errors/src/domains/core/ConflictError';
 import {ForbiddenError} from '@fluxer/errors/src/domains/core/ForbiddenError';
+import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
+import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
+
+export {officialAppMutationKey} from '@app/api/instance/OfficialAppsEligibilityConstants';
 
 const SELECT_APPLICATION_CQL = Applications.selectCql({
 	where: Applications.where.eq('application_id'),
@@ -51,7 +64,7 @@ function buildAdminApplication(secretHash: string | null): Application {
 	const row: ApplicationRow = {
 		application_id: createApplicationID(ADMIN_OAUTH2_APPLICATION_ID),
 		owner_user_id: SYSTEM_USER_ID,
-		name: 'Fluxer Admin',
+		name: 'Micup Admin',
 		bot_user_id: null,
 		bot_is_public: false,
 		bot_require_code_grant: false,
@@ -67,6 +80,53 @@ function buildAdminApplication(secretHash: string | null): Application {
 }
 
 export class ApplicationRepository implements IApplicationRepository {
+	constructor(private readonly provider: IKVProvider | null = getKVClient()) {}
+
+	private async withEligibilityMutation<T>(
+		applicationId: ApplicationID,
+		restrictive: boolean,
+		write: () => Promise<T>,
+	): Promise<T> {
+		const provider = this.provider;
+		if (!provider) throw new ServiceUnavailableError();
+		const mutationId = randomUUID();
+		const key = officialAppMutationKey(applicationId.toString());
+		// The lease exceeds the default Cassandra timeout; abandoned markers expire after a process crash.
+		if (!(await provider.acquireLock(key, mutationId, 300))) throw new ConflictError({code: APIErrorCodes.CONFLICT});
+		const errors: Array<unknown> = [];
+		let result: T | undefined;
+		const publish = (type: string) =>
+			provider.publish(
+				INSTANCE_CONFIG_REFRESH_CHANNEL,
+				JSON.stringify({type, application_id: applicationId.toString(), mutation_id: mutationId}),
+			);
+		try {
+			await publish('application_invalidate');
+			const current =
+				restrictive &&
+				((await InstanceConfigRepository.isOfficialAppCandidate(applicationId.toString())) ||
+					(await provider.get(officialAppEligibilityLeaseKey(applicationId.toString()))))
+					? await this.getApplication(applicationId)
+					: null;
+			// Pubsub has no delivery acknowledgement: expire every public discovery lease before restricting access.
+			if (current?.botIsPublic && current.botUserId !== null)
+				await new Promise((resolve) => setTimeout(resolve, OFFICIAL_APP_RESTRICTIVE_WRITE_DELAY_MS));
+			if ((await provider.get(key)) !== mutationId) throw new ConflictError({code: APIErrorCodes.CONFLICT});
+			result = await write();
+		} catch (error) {
+			errors.push(error);
+		} finally {
+			try {
+				await provider.releaseLock(key, mutationId);
+				await publish('application_refresh');
+			} catch (error) {
+				errors.push(error);
+			}
+		}
+		if (errors.length === 1) throw errors[0];
+		if (errors.length > 1) throw new AggregateError(errors, 'Failed to write application or refresh eligibility');
+		return result as T;
+	}
 	async getApplication(applicationId: ApplicationID): Promise<Application | null> {
 		if (applicationId === createApplicationID(ADMIN_OAUTH2_APPLICATION_ID)) {
 			const secretHash = await getAdminSecretHash();
@@ -100,32 +160,35 @@ export class ApplicationRepository implements IApplicationRepository {
 				message: 'Cannot modify the built-in admin OAuth2 application',
 			});
 		}
-		const result = await executeVersionedUpdate<ApplicationRow, 'application_id'>(
-			async () => fetchOne<ApplicationRow>(SELECT_APPLICATION_CQL, {application_id: applicationId}),
-			(current) => ({
-				pk: {application_id: applicationId},
-				patch: buildPatchFromData(data, current, APPLICATION_COLUMNS, ['application_id']),
-			}),
-			Applications,
-			{initialData: oldData},
-		);
-		const batch = new BatchBuilder();
-		batch.addPrepared(
-			ApplicationsByOwner.upsertAll({
-				owner_user_id: data.owner_user_id,
-				application_id: data.application_id,
-			}),
-		);
-		if (oldData && oldData.owner_user_id !== data.owner_user_id) {
+		const restrictive = data.bot_is_public === false || data.bot_user_id === null;
+		return this.withEligibilityMutation(applicationId, restrictive, async () => {
+			const result = await executeVersionedUpdate<ApplicationRow, 'application_id'>(
+				async () => fetchOne<ApplicationRow>(SELECT_APPLICATION_CQL, {application_id: applicationId}),
+				(current) => ({
+					pk: {application_id: applicationId},
+					patch: buildPatchFromData(data, current, APPLICATION_COLUMNS, ['application_id']),
+				}),
+				Applications,
+				{initialData: oldData},
+			);
+			const batch = new BatchBuilder();
 			batch.addPrepared(
-				ApplicationsByOwner.deleteByPk({
-					owner_user_id: oldData.owner_user_id,
+				ApplicationsByOwner.upsertAll({
+					owner_user_id: data.owner_user_id,
 					application_id: data.application_id,
 				}),
 			);
-		}
-		await batch.execute();
-		return new Application({...data, version: result.finalVersion});
+			if (oldData && oldData.owner_user_id !== data.owner_user_id) {
+				batch.addPrepared(
+					ApplicationsByOwner.deleteByPk({
+						owner_user_id: oldData.owner_user_id,
+						application_id: data.application_id,
+					}),
+				);
+			}
+			await batch.execute();
+			return new Application({...data, version: result.finalVersion});
+		});
 	}
 
 	async deleteApplication(applicationId: ApplicationID): Promise<void> {
@@ -148,6 +211,6 @@ export class ApplicationRepository implements IApplicationRepository {
 				application_id: applicationId,
 			}),
 		);
-		await batch.execute();
+		await this.withEligibilityMutation(applicationId, true, () => batch.execute());
 	}
 }

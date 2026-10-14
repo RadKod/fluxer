@@ -362,7 +362,7 @@ A body with no field at all selects nothing, so an empty patch applies no change
 
 <sup>6</sup> Any integer from 0 to 2147483647, stored as supplied, including bits outside the documented registry
 
-A code already claimed by any invite is rejected with 400 `INVALID_FORM_BODY` and the validation code `THIS_VANITY_URL_IS_ALREADY_TAKEN` against `vanity_url_code`.
+A code already claimed by any invite is rejected with 400 `INVALID_FORM_BODY` and the validation code `THIS_VANITY_URL_IS_ALREADY_TAKEN` against `vanity_url_code`. A reserved code, under the same rule as [Modify guild custom invite URL](/http-api/guilds/#modify-guild-custom-invite-url), is rejected with `VANITY_URL_CODE_RESERVED`.
 
 `afk_channel_id`, `system_channel_id`, `afk_timeout`, and `message_history_cutoff` of a guild are not Admin-writable. They change through the public [Modify guild](/http-api/guilds/#modify-guild) operation.
 
@@ -377,9 +377,10 @@ A code already claimed by any invite is rejected with 400 `INVALID_FORM_BODY` an
 | Status | Body | Condition |
 | --- | --- | --- |
 | 200 | response body | Every selected field group was applied |
-| 400 | [error response](/admin-api/#error-response) | The custom invite code is malformed or already claimed |
+| 400 | [error response](/admin-api/#error-response) | The custom invite code is malformed, reserved, or already claimed |
 | 403 | [error response](/admin-api/#error-response) | `MISSING_ACL`, because the account holds none of the update ACLs, or lacks an ACL a supplied field selects |
 | 404 | [error response](/admin-api/#error-response) | `UNKNOWN_GUILD`, because the guild does not exist |
+| 423 | [error response](/admin-api/#error-response) | Another custom invite code change to this guild holds the guild lock, returning `GENERAL_ERROR` with `Retry-After: 2` |
 
 :::caution[Field groups apply one at a time]
 The groups run in a fixed order: image clears, settings, features, name, custom invite code, ownership. Each is a separate write with its own [Guild Update](/gateway/events/#guild-update) Dispatch and its own Admin audit entry. A failure part way through leaves the earlier groups applied.

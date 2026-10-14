@@ -1,0 +1,163 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Top of the timeline column: your avatar, then the post box. It stays outside the list scroller. */
+.composer {
+	display: flex;
+	gap: 0.75rem;
+	padding: 1rem 1rem 0.75rem;
+	border-bottom: 0.0625rem solid var(--border-color);
+}
+
+/* The desktop layout pads the box like a post. */
+:global(html:not(.auth-page):not(.mobile-layout)) .composer {
+	padding: 1.125rem 1.25rem 0.875rem;
+}
+
+.body {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 0.5rem;
+	min-width: 0;
+}
+
+/* Textarea drops a className given to it (FormInput.tsx sets its own on the element), so the borderless large box is
+   styled through this wrapper. */
+.field textarea {
+	padding: 0.375rem 0;
+	border: none;
+	background-color: transparent;
+	font-size: 1.1875rem;
+	line-height: 1.625rem;
+}
+
+:global(html:not(.auth-page):not(.mobile-layout)) .field textarea {
+	font-size: 0.9375rem;
+	line-height: 1.5;
+}
+
+.field textarea::placeholder {
+	color: var(--text-primary-muted);
+}
+
+.images {
+	padding-top: 1rem;
+	overflow-x: auto;
+}
+
+/* Micup: Fluxer's preflight sets height: auto on a video (video:not([data-embed-media]), 0,1,1) over
+   the upload card's .media height: 100% (0,1,0), so a wide video left the card's lower part empty. An image keeps
+   the card rule; this gives the video the card's full height back. */
+.images video:not([data-embed-media]) {
+	height: 100%;
+}
+
+.footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding-top: 0.625rem;
+	border-top: 0.0625rem solid var(--border-color);
+}
+
+.tools {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.toolButton {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.25rem;
+	height: 2.25rem;
+	margin: 0;
+	padding: 0;
+	border: none;
+	border-radius: var(--radius-lg);
+	background: transparent;
+	color: var(--text-primary-muted);
+	cursor: pointer;
+	transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* 34px on the desktop layout with a mouse; touch keeps its 44px (the touch block below). */
+@media (hover: hover) and (pointer: fine) {
+	:global(html:not(.auth-page):not(.mobile-layout)) .toolButton {
+		width: 2.125rem;
+		height: 2.125rem;
+	}
+}
+
+.toolButton:hover:not(:disabled) {
+	background: var(--background-modifier-hover);
+	color: var(--text-primary);
+}
+
+.toolButton:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.toolButton:active {
+	transform: scale(0.97);
+}
+
+/* Motion off: Fluxer's own reduced-motion setting, with the press selector. */
+:global(html.reduced-motion) .toolButton,
+:global(html.reduced-motion) .toolButton:active {
+	transition: none;
+	transform: none;
+}
+
+.toolIcon {
+	width: 1.25rem;
+	height: 1.25rem;
+}
+
+/* Narrow screens and touch: 44px targets. The Post Button's min-height comes from .button.small (0,2,0), hence
+   three parts here. */
+@media (max-width: 640px), (pointer: coarse) {
+	.toolButton {
+		width: 2.75rem;
+		height: 2.75rem;
+	}
+
+	.composer .footer .postButton {
+		min-height: 2.75rem;
+	}
+}
+
+/* Micup: X look in the coal and dark themes (FeedPostCard.module.css, where the custom theme guard is
+   explained): padded like a post, X's 20px text on a muted placeholder, round white tool buttons and the white
+   bold pill Post button (Fluxer's Button already fades a disabled one to 0.5). */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .composer {
+	padding: 0.75rem 1rem;
+}
+
+/* No :has() root on the textarea rules: with a bare tag or pseudo-element target Chromium cannot scope the invalidation
+   and restyles the whole document on every DOM change (page switches slowed for every Coal/Dark user). */
+:global(html:is(.theme-coal, .theme-dark)) .field textarea {
+	font-size: 1.25rem;
+	line-height: 1.5rem;
+}
+
+:global(html:is(.theme-coal, .theme-dark)) .field textarea::placeholder {
+	color: var(--text-tertiary);
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .toolButton {
+	border-radius: 50%;
+	color: var(--text-primary);
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .toolButton:hover:not(:disabled) {
+	background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .postButton {
+	border-radius: var(--radius-full);
+	font-weight: 700;
+}

@@ -35,13 +35,6 @@
 	}
 }
 
-@media (prefers-reduced-motion: reduce) {
-	.skeleton {
-		animation: none;
-		background-image: none;
-	}
-}
-
 :global(html.reduced-motion) .skeleton {
 	animation: none;
 	background-image: none;
@@ -81,4 +74,15 @@
 
 .radiusCircle {
 	border-radius: 50%;
+}
+
+/* Micup: static list skeletons */
+/* Applies to every .skeleton, not only list rows: the app shell, auth loading and profile skeletons are static too.
+   List placeholders render many rows at once, and an infinite background-position shimmer on each row restyles and
+   repaints the list every frame while idle, so all skeletons keep the reduced-motion look. The upstream shimmer
+   above (keyframes, --skeleton-shimmer-delay and the delays set in AppSkeleton.tsx and AuthShellLoadingState.tsx)
+   is left in place as dead code to keep upstream merges clean. */
+.skeleton {
+	animation: none;
+	background-image: none;
 }

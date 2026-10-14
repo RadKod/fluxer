@@ -200,6 +200,30 @@ local ttlMs = math.max(1, resetAfterMs)
 redis.call('SET', key, cjson.encode({level = level, updatedAt = updatedAt}), 'PX', ttlMs)
 return createResult(true, remaining, resetAfterMs, 0)
 `;
+const COUNTER_ADD_SCRIPT = `
+if ARGV[3] == '' then
+	if redis.call('EXISTS', KEYS[1]) == 0 then
+		return false
+	end
+else
+	redis.call('SET', KEYS[1], ARGV[3], 'NX')
+end
+local value = redis.call('INCRBY', KEYS[1], ARGV[2])
+redis.call('PERSIST', KEYS[1])
+redis.call('SADD', KEYS[2], ARGV[1])
+return value
+`;
+const COUNTER_CLAIM_SCRIPT = `
+for _, member in ipairs(redis.call('SMEMBERS', KEYS[2])) do
+	redis.call('SADD', KEYS[1], member)
+end
+redis.call('DEL', KEYS[2])
+local members = redis.call('SPOP', KEYS[1], ARGV[1])
+for _, member in ipairs(members) do
+	redis.call('SADD', KEYS[2], member)
+end
+return members
+`;
 const SCHEDULE_BULK_DELETION_SCRIPT = `
 redis.call('ZADD', KEYS[1], ARGV[1], ARGV[2])
 redis.call('SET', KEYS[2], ARGV[2])
@@ -440,6 +464,50 @@ export class KVClient implements IKVProvider {
 		return await this.execute('incr', async () => this.client.incr(key));
 	}
 
+	async counterAdd(
+		counterKey: string,
+		dirtyKey: string,
+		member: string,
+		delta: number,
+		base: number | null,
+	): Promise<number | null> {
+		if (!Number.isSafeInteger(delta) || (base !== null && !Number.isSafeInteger(base))) {
+			throw new KVClientError({
+				code: KVClientErrorCode.REQUEST_FAILED,
+				message: 'KV request failed (counterAdd): delta and base must be safe integers',
+			});
+		}
+		const result = await this.executeScript(
+			'counterAdd',
+			COUNTER_ADD_SCRIPT,
+			2,
+			counterKey,
+			dirtyKey,
+			member,
+			delta,
+			base === null ? '' : base,
+		);
+		if (result === null) return null;
+		if (typeof result !== 'number' || !Number.isSafeInteger(result)) {
+			throw createInvalidResponseError('counterAdd', 'an integer counter value or nil');
+		}
+		return result;
+	}
+
+	async counterClaim(dirtyKey: string, inflightKey: string, max: number): Promise<Array<string>> {
+		if (!Number.isSafeInteger(max) || max <= 0) {
+			throw new KVClientError({
+				code: KVClientErrorCode.REQUEST_FAILED,
+				message: 'KV request failed (counterClaim): max must be a positive safe integer',
+			});
+		}
+		const result = await this.executeScript('counterClaim', COUNTER_CLAIM_SCRIPT, 2, dirtyKey, inflightKey, max);
+		if (!Array.isArray(result) || !result.every((member) => typeof member === 'string')) {
+			throw createInvalidResponseError('counterClaim', 'an array of set members');
+		}
+		return result;
+	}
+
 	async getex(key: string, ttlSeconds: number): Promise<string | null> {
 		return await this.execute('getex', async () => {
 			const result = await this.client.call('GETEX', key, 'EX', ttlSeconds);
@@ -510,6 +578,38 @@ export class KVClient implements IKVProvider {
 		return await this.execute('zcard', async () => this.client.zcard(key));
 	}
 
+	async zrevrangeWithScores(key: string, start: number, stop: number): Promise<Array<{member: string; score: number}>> {
+		return await this.execute('zrevrangeWithScores', async () => {
+			const reply = await this.client.zrevrange(key, start, stop, 'WITHSCORES');
+			if (!Array.isArray(reply) || reply.length % 2 !== 0) {
+				throw createInvalidResponseError('zrevrangeWithScores', 'member/score pairs');
+			}
+			const entries: Array<{member: string; score: number}> = [];
+			for (let index = 0; index < reply.length; index += 2) {
+				const member = reply[index];
+				const rawScore = reply[index + 1];
+				if (
+					typeof member !== 'string' ||
+					typeof rawScore !== 'string' ||
+					rawScore.trim() === '' ||
+					!Number.isFinite(Number(rawScore))
+				) {
+					throw createInvalidResponseError('zrevrangeWithScores', 'a string member and numeric score');
+				}
+				entries.push({member, score: Number(rawScore)});
+			}
+			return entries;
+		});
+	}
+
+	async zrevrank(key: string, member: string): Promise<number | null> {
+		return await this.execute('zrevrank', async () => this.client.zrevrank(key, member));
+	}
+
+	async zremrangebyrank(key: string, start: number, stop: number): Promise<number> {
+		return await this.execute('zremrangebyrank', async () => this.client.zremrangebyrank(key, start, stop));
+	}
+
 	async zrangebyscore(
 		key: string,
 		min: string | number,
@@ -569,6 +669,10 @@ export class KVClient implements IKVProvider {
 			return 0;
 		}
 		return await this.execute('hdel', async () => this.client.hdel(key, ...fields));
+	}
+
+	async hincrby(key: string, field: string, increment: number): Promise<number> {
+		return await this.execute('hincrby', async () => this.client.hincrby(key, field, increment));
 	}
 
 	async hget(key: string, field: string): Promise<string | null> {

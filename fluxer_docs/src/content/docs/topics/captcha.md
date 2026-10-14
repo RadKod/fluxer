@@ -49,6 +49,7 @@ The following operations verify a CAPTCHA while the check is on.
 | POST | /v1/gifts/{code}/redeem | [Redeem gift](/http-api/gifts/#redeem-gift) |
 | POST | /v1/users/@me/channels | [Create private channel](/http-api/users/private-channels/#create-private-channel) |
 | PUT | /v1/channels/{channel_id}/recipients/{user_id} | [Add group direct message recipient](/http-api/channels/#add-group-direct-message-recipient) |
+| POST | /v1/premium/trial | [Start premium trial](/http-api/premium/#start-premium-trial) |
 
 Create private channel is gated only on the group direct message path, where the request body has a `recipients` member. A one-to-one direct message request omits the field and is never gated.
 

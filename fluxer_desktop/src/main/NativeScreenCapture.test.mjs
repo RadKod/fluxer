@@ -86,7 +86,12 @@ function makeNativeAddon({
 	};
 }
 
-function loadNativeScreenCapture({platform = 'linux', addon, tccStatus = 'not-determined'} = {}) {
+function loadNativeScreenCapture({
+	platform = 'linux',
+	addon,
+	tccStatus = 'not-determined',
+	borderAccess = async () => {},
+} = {}) {
 	const handlers = new Map();
 	const calls = {
 		logs: {debug: [], warn: []},
@@ -144,6 +149,9 @@ function loadNativeScreenCapture({platform = 'linux', addon, tccStatus = 'not-de
 		if (specifier === '@electron/main/MacTcc') {
 			return {getTccStatus: () => tccStatus};
 		}
+		if (specifier === '@electron/main/WindowsCaptureBorder') {
+			return {ensureWindowsCaptureBorderAccess: borderAccess};
+		}
 		if (specifier === '@electron/main/NativeScreenCaptureValidation') {
 			return {
 				isValidStartOptions: () => true,
@@ -175,6 +183,43 @@ function loadNativeScreenCapture({platform = 'linux', addon, tccStatus = 'not-de
 }
 
 describe('NativeScreenCapture source identity and capability reporting', () => {
+	test('shared delayed border consent cannot exceed the per-renderer capture limit', async () => {
+		const {addon, captures} = makeNativeAddon();
+		addon.getAvailability = () => ({available: true, backend: 'windows-game-capture'});
+		const consent = Promise.withResolvers();
+		const waiting = Promise.withResolvers();
+		let waitingCount = 0;
+		let peakCaptures = 0;
+		const BaseCapture = addon.ScreenCapture;
+		addon.ScreenCapture = class extends BaseCapture {
+			constructor(options) {
+				super(options);
+				peakCaptures = Math.max(peakCaptures, captures.filter((capture) => capture.stopCount === 0).length);
+			}
+		};
+		const harness = loadNativeScreenCapture({
+			platform: 'win32',
+			addon,
+			borderAccess: () => {
+				if (++waitingCount === 3) waiting.resolve();
+				return consent.promise;
+			},
+		});
+		harness.module.registerNativeScreenCaptureHandlers();
+		const {sender} = makeSender();
+		const starts = Array.from({length: 3}, (_, i) =>
+			harness.handlers.get('native-screen-capture:start')({sender}, {sourceId: `screen:${i}:0`, sourceKind: 'screen'}),
+		);
+		const settled = Promise.allSettled(starts);
+		await waiting.promise;
+		assert.equal(captures.length, 0);
+		consent.resolve();
+		await settled;
+		assert.equal(captures.length, 3);
+		assert.equal(peakCaptures, 2);
+		assert.equal(captures.filter((capture) => capture.stopCount === 0).length, 2);
+	});
+
 	test('normalizes display and window sources without changing source ids', async () => {
 		const {addon} = makeNativeAddon({
 			sources: [

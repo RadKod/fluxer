@@ -58,7 +58,9 @@ build_presence_request(State) when is_map(State) ->
         status => maps:get(status, State),
         friend_ids => FriendIds,
         group_dm_recipients => GroupDmRecipients,
-        custom_status => maps:get(custom_status, State, null)
+        custom_status => maps:get(custom_status, State, null),
+        game_activity_policy => maps:get(game_activity_policy, State, undefined),
+        game_activity_request_nonce => maps:get(game_activity_request_nonce, State, undefined)
     }.
 
 -spec do_session_connect(pid(), attempt(), session_state()) ->
@@ -113,7 +115,9 @@ try_session_connect(
         status => Status,
         afk => Afk,
         mobile => Mobile,
-        socket_pid => SocketPid
+        socket_pid => SocketPid,
+        game_activity_policy => maps:get(game_activity_policy, State, undefined),
+        game_activity_request_nonce => maps:get(game_activity_request_nonce, State, undefined)
     },
     ConnectStartedAt = gateway_timings:start(),
     Result = safe_call(fun() ->
@@ -139,7 +143,7 @@ try_session_connect(
                 presence_mref => MRef,
                 collected_sessions => Sessions
             },
-            session_ready:check_readiness(NewState);
+            session_ready:check_readiness(session_game_activity:subscribe(NewState));
         _ ->
             schedule_presence_retry(Attempt, State1)
     end.

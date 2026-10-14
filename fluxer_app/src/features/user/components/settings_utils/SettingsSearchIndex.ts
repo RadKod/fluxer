@@ -31,6 +31,7 @@ import {clientDeveloperSettingsIndex} from '@app/features/user/components/settin
 import {desktopSettingsIndex} from '@app/features/user/components/settings_utils/search_index/DesktopSettingsIndex';
 import {devicesIndex} from '@app/features/user/components/settings_utils/search_index/DevicesIndex';
 import {embedDebuggerIndex} from '@app/features/user/components/settings_utils/search_index/EmbedDebuggerIndex';
+import {gameOverlayIndex} from '@app/features/user/components/settings_utils/search_index/GameOverlayIndex';
 import {giftInventoryIndex} from '@app/features/user/components/settings_utils/search_index/GiftInventoryIndex';
 import {keybindsIndex} from '@app/features/user/components/settings_utils/search_index/KeybindsIndex';
 import {languageIndex} from '@app/features/user/components/settings_utils/search_index/LanguageIndex';
@@ -38,6 +39,7 @@ import {linkedAccountsIndex} from '@app/features/user/components/settings_utils/
 import {myProfileIndex} from '@app/features/user/components/settings_utils/search_index/MyProfileIndex';
 import {notificationsIndex} from '@app/features/user/components/settings_utils/search_index/NotificationsIndex';
 import {plutoniumIndex} from '@app/features/user/components/settings_utils/search_index/PlutoniumIndex';
+import {profileCosmeticsIndex} from '@app/features/user/components/settings_utils/search_index/ProfileCosmeticsIndex';
 import type {
 	SearchableSettingDescriptor,
 	SearchableSettingKeyword,
@@ -95,6 +97,7 @@ function translateSearchableDescriptor(item: SearchableSettingDescriptor, active
 
 const ADDITIONAL_SEARCHABLE_ITEMS: Array<SearchableSettingDescriptor> = [
 	...myProfileIndex,
+	...profileCosmeticsIndex,
 	...accountSecurityIndex,
 	...linkedAccountsIndex,
 	...authorizedAppsIndex,
@@ -106,6 +109,7 @@ const ADDITIONAL_SEARCHABLE_ITEMS: Array<SearchableSettingDescriptor> = [
 	...notificationsIndex,
 	...chatSettingsIndex,
 	...voiceVideoIndex,
+	...gameOverlayIndex,
 	...accessibilityIndex,
 	...languageIndex,
 	...keybindsIndex,

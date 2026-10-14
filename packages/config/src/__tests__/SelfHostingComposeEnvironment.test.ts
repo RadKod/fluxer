@@ -81,6 +81,15 @@ function forwardedEntries(): Array<{service: string; key: string; name: string}>
 }
 
 describe('the shipped compose stack forwards settings from .env', () => {
+	test('hands the required pseudonym secret only to the processes that derive pseudonyms', () => {
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: Compose interpolation is asserted as literal text.
+		const required = '${FLUXER_PROFILE_PSEUDONYM_SECRET:?set FLUXER_PROFILE_PSEUDONYM_SECRET in .env}';
+		const holders = serviceNames.filter((service) => 'FLUXER_PROFILE_PSEUDONYM_SECRET' in serviceEnvironment(service));
+		expect(holders.sort()).toEqual(['api', 'users-shard', 'worker']);
+		for (const service of holders) {
+			expect(serviceEnvironment(service).FLUXER_PROFILE_PSEUDONYM_SECRET).toBe(required);
+		}
+	});
 	test('the api is handed every setting its config loader reads', () => {
 		const api = serviceEnvironment('api');
 		const missing = NAMED_FLUXER_ENV_NAMES.filter((name) => !(name in api) && !(name in API_SETTINGS_NOT_FORWARDED));

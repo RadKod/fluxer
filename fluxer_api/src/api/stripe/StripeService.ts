@@ -7,7 +7,7 @@ import type {GiftCodeDurationType} from '@app/api/database/types/PaymentTypes';
 import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
 import type {GuildService} from '@app/api/guild/services/GuildService';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
-import type {GiftCode} from '@app/api/models/GiftCode';
+import type {PremiumGiftCode} from '@app/api/models/GiftCode';
 import type {User} from '@app/api/models/User';
 import type {StoreBillingRepository} from '@app/api/store_billing/StoreBillingRepository';
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
@@ -201,7 +201,7 @@ export class StripeService {
 		);
 	}
 
-	async getGiftCode(code: string): Promise<GiftCode> {
+	async getGiftCode(code: string): Promise<PremiumGiftCode> {
 		return this.giftService.getGiftCode(code);
 	}
 
@@ -209,7 +209,7 @@ export class StripeService {
 		return this.giftService.redeemGiftCode(userId, code);
 	}
 
-	async getUserGifts(userId: UserID): Promise<Array<GiftCode>> {
+	async getUserGifts(userId: UserID): Promise<Array<PremiumGiftCode>> {
 		return this.giftService.getUserGifts(userId);
 	}
 

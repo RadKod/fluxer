@@ -9,15 +9,19 @@ import type {InstanceConfigurationRow} from '@app/api/database/types/InstanceCon
 import {syncChannelThreadsConfig} from '@app/api/experiment/ChannelThreadsGate';
 import {
 	type AccountIdentity,
+	getCachedAccountIdentityFetchedAt,
+	invalidateCachedAccountIdentity,
 	resolveAccountIdentity,
 	type StoredAccountIdentity,
 	setCachedAccountIdentity,
+	type UsernameMigrationConfig,
 } from '@app/api/instance/AccountIdentityModeCache';
 import {
 	getDefaultDateOfBirthCollection,
 	setCachedDateOfBirthCollection,
 } from '@app/api/instance/DateOfBirthCollectionCache';
 import {InstanceConfigCache} from '@app/api/instance/InstanceConfigCache';
+import {OfficialAppsEligibilityCache} from '@app/api/instance/OfficialAppsEligibilityCache';
 import {normalizeSsoAllowedEmailDomains} from '@app/api/instance/SsoConfigValidation';
 import {Logger} from '@app/api/Logger';
 import {isLimitConfigSnapshot} from '@app/api/limits/LimitConfigValidation';
@@ -28,6 +32,7 @@ import {
 	setStoredBillingConfig,
 } from '@app/api/stripe/BillingConfigCache';
 import {InstanceConfiguration, Users} from '@app/api/Tables';
+import {resolveDeferredPhoneGateEnabled, setCachedDeferredPhoneGateEnabled} from '@app/api/user/DeferredPhoneGateCache';
 import {DEFAULT_DECAY_CONSTANTS, DEFAULT_RENEWAL_CONSTANTS} from '@app/api/utils/AttachmentDecay';
 import {isJsonRecord} from '@app/api/utils/JsonBoundaryUtils';
 import {
@@ -50,6 +55,8 @@ import {
 	type CaptchaConfig,
 	CaptchaConfigSchema,
 	type CaptchaConfigUpdateRequest,
+	type StoredCaptchaIntegrationProvider,
+	StoredCaptchaIntegrationProviderSchema,
 } from '@fluxer/schema/src/domains/admin/CaptchaSchemas';
 import {
 	type ChannelThreadsConfig,
@@ -80,6 +87,15 @@ import {
 	toLegacyPushServiceDeliveryWire,
 } from '@fluxer/schema/src/domains/admin/PushRelaySchemas';
 import {
+	UsernameHeldManifestSchema,
+	UsernameStoredGuildCapacitySchema,
+} from '@fluxer/schema/src/domains/admin/UsernameSchemas';
+import {
+	type VoiceNoiseSuppressionConfig,
+	VoiceNoiseSuppressionConfigSchema,
+} from '@fluxer/schema/src/domains/admin/VoiceNoiseSuppressionSchemas';
+import {type VoiceRoomConfig, VoiceRoomConfigSchema} from '@fluxer/schema/src/domains/admin/VoiceRoomConfigSchemas';
+import {
 	type ExperimentDeliveryConfig,
 	ExperimentDeliveryConfigSchema,
 } from '@fluxer/schema/src/domains/experiment/ExperimentSchemas';
@@ -87,17 +103,26 @@ import {
 	type InstanceAppPublic,
 	InstanceAppPublicSchema,
 	type InstanceBranding,
+	type InstanceCaptchaProvider,
 	type InstanceCommunity,
 	type InstanceRegistration,
 	InstanceRegistrationSchema,
 	type InstanceServices,
 	type InstanceSetup,
 } from '@fluxer/schema/src/domains/instance/InstanceSchemas';
+import {
+	CreateReferralTierRequest,
+	ReferralTierReward,
+	UpdateReferralSettingsRequest,
+} from '@fluxer/schema/src/domains/referral/ReferralRequestSchemas';
+import {UpdateShopSettingsRequest} from '@fluxer/schema/src/domains/shop/ShopAdminSchemas';
 import {normalizeString, SnowflakeType} from '@fluxer/schema/src/primitives/SchemaPrimitives';
 import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
 import {z} from 'zod';
 
 const GATEWAY_ROLLOUT_CONFIG_KEY = 'gateway_rollout_config';
+const VOICE_NOISE_SUPPRESSION_CONFIG_KEY = 'voice_noise_suppression_config';
+const VOICE_ROOM_CONFIG_KEY = 'voice_room_config';
 const PUSH_RELAY_CONFIG_KEY = 'push_service_delivery_config';
 const DOMAIN_MIGRATION_CONFIG_KEY = 'domain_migration_config';
 const PLUTONIUM_PAGE_CONFIG_KEY = 'plutonium_page_config';
@@ -113,8 +138,13 @@ const INSTANCE_POLICY_CONFIG_KEY = 'instance_policy_config';
 const LIMIT_CONFIG_KEY = 'limit_config';
 const INSTANCE_INTEGRATIONS_CONFIG_KEY = 'instance_integrations_config';
 const INSTANCE_MEDIA_CONFIG_KEY = 'instance_media_config';
+const SHOP_CONFIG_KEY = 'shop_config';
+const REFERRAL_CONFIG_KEY = 'referral_config';
 const INSTANCE_BILLING_CONFIG_KEY = 'instance_billing_config';
 const ACCOUNT_IDENTITY_CONFIG_KEY = 'account_identity_config';
+const USERNAME_POLICY_CONFIG_KEY = 'username_policy';
+const USERNAME_MIGRATION_SCAN_CONFIG_KEY = 'username_migration_scan';
+const USERNAME_REPAIR_STATE_CONFIG_KEY = 'username_repair_state';
 export const INSTANCE_CONFIG_REFRESH_CHANNEL = 'instance-config-refresh';
 export const REGISTRATION_PENDING_APPROVAL_TRAIT = 'registration_pending_approval';
 export const REGISTRATION_REJECTED_TRAIT = 'registration_rejected';
@@ -187,17 +217,52 @@ export interface InstanceBillingAdminConfig {
 
 export type InstancePremiumMode = 'mirror' | 'everyone';
 
+// Micup shop settings; not an instance feature, so the public instance response never shows them.
+export interface ShopConfig {
+	try_to_azn_rate_micro?: number | null;
+	try_rate_date?: string | null;
+	try_rate_fetched_at?: string | null;
+	try_to_azn_rate_override_micro?: number | null;
+	try_rate_override_at?: string | null;
+	premium_sales_open: boolean;
+	item_sales_open: boolean;
+	usd_to_azn_rate_micro: number;
+	premium_discount_percent: number;
+	visionary_on_sale: boolean;
+	visionary_reward_item_ids: Array<string>;
+}
+
+// Micup referral programme; like the shop settings, never in the public instance response.
+export interface ReferralTierConfig {
+	id: string;
+	threshold: number;
+	reward: ReferralTierReward;
+	enabled: boolean;
+	created_at: string;
+}
+
+export interface ReferralConfig {
+	enabled: boolean;
+	min_active_days: number;
+	daily_valid_cap: number;
+	ip_registration_limit: number;
+	tiers: Array<ReferralTierConfig>;
+}
+
 interface LimitConfigInputs {
 	config: LimitConfigSnapshot | null;
 	premiumMode: InstancePremiumMode;
 }
 
 export interface InstancePolicyConfig {
+	deferred_phone_gate_enabled: boolean;
 	single_community_enabled: boolean;
 	single_community_guild_id: string | null;
 	direct_messages_disabled: boolean;
 	direct_messages_locked: boolean;
 	premium_mode: InstancePremiumMode;
+	premium_trial_days: number;
+	official_apps: Array<{application_id: string; invite_permissions: string}>;
 	guild_create_access: boolean;
 	gif_enabled: boolean | null;
 	youtube_enabled: boolean | null;
@@ -212,6 +277,14 @@ interface InstanceGifIntegrationConfig {
 
 interface InstanceYoutubeIntegrationConfig {
 	api_key: string | null;
+}
+
+interface InstanceCaptchaIntegrationConfig {
+	provider: StoredCaptchaIntegrationProvider | null;
+	hcaptcha_site_key: string | null;
+	hcaptcha_secret_key: string | null;
+	turnstile_site_key: string | null;
+	turnstile_secret_key: string | null;
 }
 
 interface InstanceEmailSmtpIntegrationConfig {
@@ -249,6 +322,7 @@ interface InstanceBlueskyIntegrationConfig {
 interface InstanceIntegrationsConfig {
 	gif: InstanceGifIntegrationConfig;
 	youtube: InstanceYoutubeIntegrationConfig;
+	captcha: InstanceCaptchaIntegrationConfig;
 	email: InstanceEmailIntegrationConfig;
 	bluesky: InstanceBlueskyIntegrationConfig;
 }
@@ -259,6 +333,12 @@ interface InstanceGifEffectiveConfig {
 	available: boolean;
 }
 
+export type InstanceCaptchaEffectiveConfig = CaptchaConfig &
+	(
+		| {provider: 'turnstile'; turnstile_site_key: string; turnstile_secret_key: string}
+		| {provider: Exclude<InstanceCaptchaProvider, 'turnstile'>; turnstile_site_key: null; turnstile_secret_key: null}
+	);
+
 interface InstanceIntegrationsAdminConfig {
 	gif: {
 		klipy_api_key_set: boolean;
@@ -267,6 +347,13 @@ interface InstanceIntegrationsAdminConfig {
 	youtube: {
 		api_key_set: boolean;
 		effective_available: boolean;
+	};
+	captcha: {
+		provider: StoredCaptchaIntegrationProvider | null;
+		effective_provider: InstanceCaptchaProvider;
+		turnstile_site_key: string | null;
+		turnstile_secret_key_set: boolean;
+		effective_enabled: boolean;
 	};
 	email: {
 		enabled: boolean | null;
@@ -334,6 +421,7 @@ interface InstanceMediaAdminConfig {
 interface InstanceIntegrationsConfigPatch {
 	gif?: Partial<InstanceGifIntegrationConfig>;
 	youtube?: Partial<InstanceYoutubeIntegrationConfig>;
+	captcha?: Partial<InstanceCaptchaIntegrationConfig>;
 	email?: Partial<Omit<InstanceEmailIntegrationConfig, 'smtp'>> & {
 		smtp?: Partial<InstanceEmailSmtpIntegrationConfig>;
 	};
@@ -421,16 +509,20 @@ function getDefaultAppPublicConfig(): InstanceAppPublicConfig {
 		legal: {
 			terms_url: null,
 			privacy_url: null,
+			source_url: null,
 		},
 		registration: {
 			collect_date_of_birth: getDefaultDateOfBirthCollection(),
 		},
+		localization: {default_locale: null, default_locale_time_zones: []},
 	};
 }
 
 type StoredConfigSection =
 	| 'app public'
 	| 'gateway rollout'
+	| 'voice noise suppression'
+	| 'voice room'
 	| 'push relay'
 	| 'domain migration'
 	| 'plutonium page'
@@ -440,6 +532,8 @@ type StoredConfigSection =
 	| 'instance policy'
 	| 'integrations'
 	| 'media'
+	| 'shop'
+	| 'referral'
 	| 'billing'
 	| 'registration'
 	| 'registration URLs'
@@ -558,14 +652,122 @@ function checkStoredConfig(section: StoredConfigSection, decode: () => unknown):
 	readStoredConfigOrDefault(section, decode, () => null);
 }
 
-export type AccountIdentityDecisionSource = 'new_instance' | 'existing_instance' | 'setup';
+export type AccountIdentityDecisionSource = 'new_instance' | 'existing_instance' | 'setup' | 'migration';
+
+const SafeCounterSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const UsernameMigrationConfigSchema = z
+	.object({
+		state: z.enum(['legacy', 'preparing', 'selecting']),
+		epoch: SafeCounterSchema,
+		preparing_at: z.iso.datetime().nullable().optional(),
+		started_at: z.iso.datetime().nullable(),
+		forced_at: z.iso.datetime().nullable(),
+	})
+	.superRefine((value, ctx) => {
+		if (
+			value.state === 'legacy' &&
+			(value.preparing_at != null || value.started_at !== null || value.forced_at !== null)
+		) {
+			ctx.addIssue({code: 'custom', message: 'Legacy migration cannot contain active dates'});
+		}
+		if (value.state !== 'legacy' && (value.epoch === 0 || !value.preparing_at)) {
+			ctx.addIssue({code: 'custom', message: 'Active migration requires a durable preparation time'});
+		}
+		if (value.state === 'preparing' && (value.started_at !== null || value.forced_at !== null)) {
+			ctx.addIssue({code: 'custom', message: 'Preparing migration cannot contain selection dates'});
+		}
+		if (
+			value.state === 'selecting' &&
+			value.preparing_at &&
+			value.started_at &&
+			Date.parse(value.started_at) < Date.parse(value.preparing_at) + 60_000
+		) {
+			ctx.addIssue({code: 'custom', message: 'Selecting migration requires the preparation barrier'});
+		}
+		if (
+			value.state === 'selecting' &&
+			(value.started_at === null ||
+				value.forced_at === null ||
+				Date.parse(value.forced_at) !== Date.parse(value.started_at) + 7 * 24 * 60 * 60 * 1000)
+		) {
+			ctx.addIssue({code: 'custom', message: 'Selecting migration requires immutable seven-day dates'});
+		}
+	});
+const UsernameTierSchema = z.enum(['locked', 'for_sale', 'public']);
+const UsernamePolicyConfigSchema = z
+	.object({
+		revision: SafeCounterSchema,
+		tiers: z.object({'1': UsernameTierSchema, '2': UsernameTierSchema, '3': UsernameTierSchema}),
+		dictionary_gen: SafeCounterSchema,
+		previous_dictionary_gen: SafeCounterSchema.default(0),
+		dictionary_hash: z
+			.string()
+			.regex(/^[a-f0-9]{64}$/)
+			.nullable(),
+		next_dictionary_gen: SafeCounterSchema,
+		admission: z.object({global_per_second: SafeCounterSchema, paused: z.boolean()}),
+		held_manifest: UsernameHeldManifestSchema.nullable().default(null),
+	})
+	.refine(
+		(value) =>
+			value.next_dictionary_gen > value.dictionary_gen &&
+			(value.previous_dictionary_gen === 0 || value.previous_dictionary_gen < value.dictionary_gen) &&
+			(value.dictionary_gen === 0) === (value.dictionary_hash === null),
+		{message: 'Invalid dictionary generation pointer'},
+	);
+export type UsernamePolicyConfig = z.infer<typeof UsernamePolicyConfigSchema>;
+export interface UsernameDictionaryGenerationReservation {
+	generation: number;
+	baseRevision: number;
+	baseGeneration: number;
+	baseHash: string | null;
+	createdAt: string;
+}
+const UsernameDictionaryGenerationMetadataSchema = z.object({created_at: z.iso.datetime()});
+export type UsernameDictionaryGenerationMetadata = z.infer<typeof UsernameDictionaryGenerationMetadataSchema>;
+const UsernameDictionaryCleanupStateSchema = z.object({day: z.iso.date(), cursor: SafeCounterSchema.min(1)});
+export type UsernameDictionaryCleanupState = z.infer<typeof UsernameDictionaryCleanupStateSchema>;
+const UsernameMigrationScanSchema = z
+	.object({
+		epoch: SafeCounterSchema,
+		cursor: z.string().nullable(),
+		scanned: SafeCounterSchema,
+		found: SafeCounterSchema,
+		done_at: z.iso.datetime().nullable(),
+	})
+	.refine((value) => value.found <= value.scanned, {message: 'Found count exceeds scanned count'});
+export type UsernameMigrationScan = z.infer<typeof UsernameMigrationScanSchema>;
+const UsernameRepairStateSchema = z.record(z.string(), z.json());
+export type UsernameRepairState = z.infer<typeof UsernameRepairStateSchema>;
+
+function parseUsernamePolicyConfig(raw: string | null): UsernamePolicyConfig {
+	return UsernamePolicyConfigSchema.parse(
+		raw === null
+			? {
+					revision: 0,
+					tiers: {'1': 'locked', '2': 'locked', '3': 'locked'},
+					dictionary_gen: 0,
+					dictionary_hash: null,
+					next_dictionary_gen: 1,
+					admission: {global_per_second: 0, paused: true},
+				}
+			: JSON.parse(raw),
+	);
+}
+
+function migrationFromStored(stored: StoredAccountIdentityConfig | null): UsernameMigrationConfig {
+	return stored?.username_migration ?? {state: 'legacy', epoch: 0, started_at: null, forced_at: null};
+}
 
 const StoredAccountIdentityConfigSchema = z.object({
 	mode: z.enum([AccountIdentityModes.EMAIL, AccountIdentityModes.USERNAME]),
 	tag_style: z.enum([TagStyles.NONE, 'zero_first', TagStyles.RANDOM]).optional(),
 	unique_usernames: z.boolean().optional(),
 	decided_at: z.string(),
-	source: z.enum(['new_instance', 'existing_instance', 'setup']),
+	source: z.enum(['new_instance', 'existing_instance', 'setup', 'migration']),
+	username_migration: UsernameMigrationConfigSchema.optional(),
+	username_reserve_version: SafeCounterSchema.optional(),
+	username_reserve_mutation_pending: z.boolean().optional(),
 });
 
 export type StoredAccountIdentityConfig = z.infer<typeof StoredAccountIdentityConfigSchema>;
@@ -580,22 +782,23 @@ function parseStoredAccountIdentityConfig(raw: string | null): StoredAccountIden
 }
 
 function readStoredAccountIdentity(raw: string | null): StoredAccountIdentity | null {
-	return readStoredConfigOrDefault(
-		'account identity',
-		() => {
-			const stored = parseStoredAccountIdentityConfig(raw);
-			return stored ? {mode: stored.mode, tagStyle: readStoredTagStyle(stored)} : null;
-		},
-		() => null,
-	);
+	try {
+		const stored = parseStoredAccountIdentityConfig(raw);
+		return stored
+			? {
+					mode: stored.mode,
+					tagStyle: readStoredTagStyle(stored),
+					...(stored.username_migration ? {usernameMigration: stored.username_migration} : {}),
+				}
+			: null;
+	} catch (error) {
+		invalidateCachedAccountIdentity(error instanceof Error ? error : new Error('Invalid stored account identity'));
+		throw error;
+	}
 }
 
 function readStoredAccountIdentitySource(raw: string | null): AccountIdentityDecisionSource | null {
-	return readStoredConfigOrDefault(
-		'account identity',
-		() => parseStoredAccountIdentityConfig(raw)?.source ?? null,
-		() => null,
-	);
+	return parseStoredAccountIdentityConfig(raw)?.source ?? null;
 }
 
 function readStoredTagStyle(stored: StoredAccountIdentityConfig): TagStyle {
@@ -611,6 +814,7 @@ function serialiseAccountIdentity(identity: StoredAccountIdentity, source: Accou
 		tag_style: identity.tagStyle,
 		decided_at: new Date().toISOString(),
 		source,
+		...(identity.usernameMigration ? {username_migration: identity.usernameMigration} : {}),
 	});
 }
 
@@ -639,6 +843,16 @@ function parseStoredPushRelayConfig(raw: string | null): LegacyPushServiceDelive
 		'push relay',
 	);
 	return toLegacyPushServiceDeliveryWire(config, config_version);
+}
+
+function parseStoredVoiceNoiseSuppressionConfig(raw: string | null): VoiceNoiseSuppressionConfig {
+	return parseStoredConfigOrDefault(VoiceNoiseSuppressionConfigSchema, raw, 'voice noise suppression');
+}
+
+// A broken stored value falls back to the defaults, which keep rooms and games off.
+function parseStoredVoiceRoomConfig(raw: string | null): VoiceRoomConfig {
+	// Removing a manifest theme defaults the whole stored voice_room config; change its default theme before removal.
+	return parseStoredConfigOrDefault(VoiceRoomConfigSchema, raw, 'voice room');
 }
 
 function toPushRelayConfig(wire: LegacyPushServiceDeliveryWire): PushRelayConfig {
@@ -688,6 +902,7 @@ const StoredInstanceAppPublicSchema = InstanceAppPublicSchema.extend({
 	setup: InstanceAppPublicSchema.shape.setup.pick({configured: true}).partial().optional(),
 	legal: InstanceAppPublicSchema.shape.legal.partial().optional(),
 	registration: InstanceAppPublicSchema.shape.registration.partial().optional(),
+	localization: InstanceAppPublicSchema.shape.localization.unwrap().partial().optional(),
 });
 
 function parseStoredAppPublicConfig(raw: string | null): InstanceAppPublicConfig {
@@ -698,7 +913,7 @@ function parseStoredAppPublicConfig(raw: string | null): InstanceAppPublicConfig
 
 function buildAppPublicConfig(config: z.infer<typeof StoredInstanceAppPublicSchema>): InstanceAppPublicConfig {
 	const defaults = getDefaultAppPublicConfig();
-	const {branding = {}, setup = {}, legal = {}, registration = {}} = config;
+	const {branding = {}, setup = {}, legal = {}, registration = {}, localization = {}} = config;
 	return {
 		branding: {
 			product_name: normalizeOptionalString(branding.product_name) ?? defaults.branding.product_name,
@@ -723,9 +938,14 @@ function buildAppPublicConfig(config: z.infer<typeof StoredInstanceAppPublicSche
 		legal: {
 			terms_url: normalizeOptionalPublicString(legal.terms_url, defaults.legal.terms_url),
 			privacy_url: normalizeOptionalPublicString(legal.privacy_url, defaults.legal.privacy_url),
+			source_url: normalizeOptionalPublicString(legal.source_url, defaults.legal.source_url),
 		},
 		registration: {
 			collect_date_of_birth: registration.collect_date_of_birth ?? defaults.registration.collect_date_of_birth,
+		},
+		localization: {
+			default_locale: localization.default_locale ?? null,
+			default_locale_time_zones: localization.default_locale_time_zones ?? [],
 		},
 	};
 }
@@ -736,11 +956,14 @@ const StoredSnowflakeStringSchema = z
 	.string()
 	.refine((value) => value.length <= 19 && !/\D/.test(value) && SnowflakeType.safeParse(value).success);
 const StoredInstancePolicySchema = z.object({
+	deferred_phone_gate_enabled: z.boolean().default(false),
 	single_community_enabled: InstancePolicyUpdateSchema.shape.single_community_enabled.default(false),
 	single_community_guild_id: StoredSnowflakeStringSchema.nullable().default(null),
 	direct_messages_disabled: InstancePolicyUpdateSchema.shape.direct_messages_disabled.default(false),
 	direct_messages_locked: z.boolean().default(false),
 	premium_mode: InstancePolicyUpdateSchema.shape.premium_mode.default('everyone'),
+	premium_trial_days: InstancePolicyUpdateSchema.shape.premium_trial_days.default(0),
+	official_apps: InstancePolicyUpdateSchema.shape.official_apps.default([]),
 	guild_create_access: InstancePolicyUpdateSchema.shape.guild_create_access.default(true),
 	gif_enabled: InstancePolicyServiceUpdateSchema.shape.gif_enabled.default(null),
 	youtube_enabled: InstancePolicyServiceUpdateSchema.shape.youtube_enabled.default(null),
@@ -757,6 +980,50 @@ function parseStoredInstancePolicyConfig(raw: string | null): InstancePolicyConf
 		readStoredConfigValue(raw, 'instance policy'),
 		'instance policy',
 	);
+}
+
+// Both sales start closed; the bounds are the admin request's.
+const StoredShopConfigSchema = z.object({
+	try_to_azn_rate_micro: z.number().int().min(1_000).max(1_000_000).nullable().default(null),
+	try_rate_date: z.iso.date().nullable().default(null),
+	try_rate_fetched_at: z.iso.datetime().nullable().default(null),
+	try_to_azn_rate_override_micro: z.number().int().min(1_000).max(1_000_000).nullable().default(null),
+	try_rate_override_at: z.iso.datetime().nullable().default(null),
+	premium_sales_open: z.boolean().default(false),
+	item_sales_open: z.boolean().default(false),
+	usd_to_azn_rate_micro: UpdateShopSettingsRequest.shape.usd_to_azn_rate_micro.unwrap().default(1_700_000),
+	premium_discount_percent: UpdateShopSettingsRequest.shape.premium_discount_percent.unwrap().default(0),
+	visionary_on_sale: z.boolean().default(false),
+	visionary_reward_item_ids: z.array(StoredSnowflakeStringSchema).max(10).default([]),
+}) satisfies z.ZodType<ShopConfig>;
+
+function parseStoredShopConfig(raw: string | null): ShopConfig {
+	return salvageStoredConfig(StoredShopConfigSchema, readStoredConfigValue(raw, 'shop'), 'shop');
+}
+
+// The programme starts closed; the bounds are the admin requests'. At most 50 tiers keeps the blob and every
+// evaluation's tier scan small.
+const StoredReferralConfigSchema = z.object({
+	enabled: z.boolean().default(false),
+	min_active_days: UpdateReferralSettingsRequest.shape.min_active_days.unwrap().default(3),
+	daily_valid_cap: UpdateReferralSettingsRequest.shape.daily_valid_cap.unwrap().default(50),
+	ip_registration_limit: UpdateReferralSettingsRequest.shape.ip_registration_limit.unwrap().default(3),
+	tiers: z
+		.array(
+			z.object({
+				id: StoredSnowflakeStringSchema,
+				threshold: CreateReferralTierRequest.shape.threshold,
+				reward: ReferralTierReward,
+				enabled: z.boolean(),
+				created_at: z.iso.datetime(),
+			}),
+		)
+		.max(50)
+		.default([]),
+}) satisfies z.ZodType<ReferralConfig>;
+
+function parseStoredReferralConfig(raw: string | null): ReferralConfig {
+	return salvageStoredConfig(StoredReferralConfigSchema, readStoredConfigValue(raw, 'referral'), 'referral');
 }
 
 const IntegrationUpdateSchema = InstanceConfigUpdateRequest.shape.integrations.unwrap().unwrap();
@@ -784,6 +1051,15 @@ const StoredBlueskyKeysSchema = z
 const StoredInstanceIntegrationsSchema = z.object({
 	gif: z.object({klipy_api_key: StoredIntegrationStringSchema}).prefault({}),
 	youtube: z.object({api_key: StoredIntegrationStringSchema}).prefault({}),
+	captcha: z
+		.object({
+			provider: StoredCaptchaIntegrationProviderSchema.nullable().default(null),
+			hcaptcha_site_key: StoredIntegrationStringSchema,
+			hcaptcha_secret_key: StoredIntegrationStringSchema,
+			turnstile_site_key: StoredIntegrationStringSchema,
+			turnstile_secret_key: StoredIntegrationStringSchema,
+		})
+		.prefault({}),
 	email: z
 		.object({
 			enabled: StoredNullableBooleanSchema,
@@ -1171,15 +1447,52 @@ function normalizeSsoAllowedEmailDomainsForWrite(domains: Array<string>, enabled
 	}
 }
 
+// Micup: one direct identity read per process at a time, shared by every concurrent caller.
+let identityRefresh: Promise<string | null> | null = null;
+let identityRefreshStartedAt = 0;
+
 export class InstanceConfigRepository {
+	static async isOfficialAppCandidate(applicationId: string): Promise<boolean> {
+		if (
+			applicationId === Config.instance.micupBotApplicationId ||
+			applicationId === Config.instance.rosterBotApplicationId
+		)
+			return true;
+		const row = await fetchOne<InstanceConfigurationRow>(FETCH_CONFIG_QUERY, {key: INSTANCE_POLICY_CONFIG_KEY});
+		return parseStoredInstancePolicyConfig(row?.value ?? null).official_apps.some(
+			(app) => app.application_id === applicationId,
+		);
+	}
+
 	private readonly kvClient: IKVProvider | null;
 	private configCache: InstanceConfigCache;
+	private eligibilityCache: OfficialAppsEligibilityCache;
 	private effectiveBlueskyConfig: BlueskyOAuthConfig | null = null;
 	private effectiveBlueskyConfigSource: string | null = null;
 
 	constructor(kvClient: IKVProvider | null = null) {
 		this.kvClient = kvClient;
 		this.configCache = this.createConfigCache();
+		this.eligibilityCache = this.createEligibilityCache();
+	}
+
+	private createEligibilityCache(): OfficialAppsEligibilityCache {
+		return new OfficialAppsEligibilityCache(this.kvClient, INSTANCE_CONFIG_REFRESH_CHANNEL, async () => {
+			const policy = parseStoredInstancePolicyConfig(await this.fetchConfigFromDatabase(INSTANCE_POLICY_CONFIG_KEY));
+			return [
+				Config.instance.micupBotApplicationId,
+				Config.instance.rosterBotApplicationId,
+				...policy.official_apps.map((app) => app.application_id),
+			].filter((id): id is string => id !== undefined);
+		});
+	}
+
+	getOfficialAppEligibility(): Promise<ReadonlySet<string>> {
+		return this.eligibilityCache.getEligible();
+	}
+
+	getCachedOfficialAppEligibility(): ReadonlySet<string> {
+		return this.eligibilityCache.getCachedEligible();
 	}
 
 	private createConfigCache(previousShutdown?: Promise<void>): InstanceConfigCache {
@@ -1188,7 +1501,7 @@ export class InstanceConfigRepository {
 				provider: this.kvClient,
 				channel: INSTANCE_CONFIG_REFRESH_CHANNEL,
 				load: () => this.fetchAllConfigsFromDatabase(),
-				onRefresh: (snapshot) => this.syncConfigCaches(snapshot),
+				onRefresh: (snapshot, loadedAt) => this.syncConfigCaches(snapshot, loadedAt),
 			},
 			previousShutdown,
 		);
@@ -1199,16 +1512,49 @@ export class InstanceConfigRepository {
 		const snapshot = await cache.getSnapshot();
 		cache.assertActive();
 		if (snapshot !== null) return;
+		const fetchedAt = Date.now();
 		const configs = await this.fetchAllConfigsFromDatabase();
 		cache.assertActive();
-		this.syncConfigCaches(configs);
+		this.syncConfigCaches(configs, fetchedAt);
 	}
 
 	async getConfig(key: string): Promise<string | null> {
 		const cache = this.configCache;
 		const snapshot = await cache.getSnapshot();
 		cache.assertActive();
-		return snapshot === null ? this.fetchConfigFromDatabase(key) : (snapshot.get(key) ?? null);
+		if (snapshot !== null) return snapshot.get(key) ?? null;
+		if (key === ACCOUNT_IDENTITY_CONFIG_KEY) return this.refreshAccountIdentity();
+		// Micup: without the refresh subscription, direct reads keep the identity snapshot at most one second old.
+		const age = Date.now() - Math.max(getCachedAccountIdentityFetchedAt(), identityRefreshStartedAt);
+		const due = age >= 1000 || age < 0;
+		const [value] = await Promise.all([
+			this.fetchConfigFromDatabase(key),
+			due &&
+				this.refreshAccountIdentity().catch((error) => {
+					// Micup: identity writers refuse the aging snapshot; every other caller keeps the last known value.
+					Logger.warn({error}, 'Account identity refresh failed');
+				}),
+		]);
+		return value;
+	}
+
+	private refreshAccountIdentity(): Promise<string | null> {
+		identityRefresh ??= (async () => {
+			const fetchedAt = Date.now();
+			identityRefreshStartedAt = fetchedAt;
+			try {
+				const raw = await this.fetchConfigFromDatabase(ACCOUNT_IDENTITY_CONFIG_KEY);
+				try {
+					setCachedAccountIdentity(readStoredAccountIdentity(raw), fetchedAt);
+				} catch {
+					// Micup: the parser has already failed the identity cache closed.
+				}
+				return raw;
+			} finally {
+				identityRefresh = null;
+			}
+		})();
+		return identityRefresh;
 	}
 
 	async getAllConfigs(): Promise<Map<string, string>> {
@@ -1229,7 +1575,8 @@ export class InstanceConfigRepository {
 		const results = await Promise.allSettled(
 			entries.map(async ([key, value]) => {
 				await this.writeConfig(key, value);
-				cache.update(key, value);
+				if (!key.startsWith('username_dictionary_generation:') && key !== 'username_dictionary_cleanup')
+					cache.update(key, value);
 			}),
 		);
 		const errors: Array<unknown> = results.flatMap((result) => (result.status === 'rejected' ? [result.reason] : []));
@@ -1267,17 +1614,26 @@ export class InstanceConfigRepository {
 	private async compareAndSetStoredValue<T>(
 		cache: InstanceConfigCache,
 		key: string,
-		next: (raw: string | null) => StoredValueUpdate<T>,
+		next: (raw: string | null) => StoredValueUpdate<T> | Promise<StoredValueUpdate<T>>,
+		reconcileTimeout = false,
 	): Promise<{result: T; written: boolean}> {
 		await cache.getSnapshot();
 		for (let attempt = 0; attempt < INSTANCE_CONFIG_WRITE_ATTEMPTS; attempt++) {
 			cache.assertActive();
 			const current = await this.fetchConfigForWrite(key);
 			cache.assertActive();
-			const {value, result} = next(current);
+			const {value, result} = await next(current);
 			if (value === null) return {result, written: false};
-			if (await executeConditional(this.compareAndSetConfig(key, current, value))) {
-				cache.update(key, value);
+			let applied: boolean;
+			try {
+				applied = await executeConditional(this.compareAndSetConfig(key, current, value));
+			} catch (error) {
+				if (!reconcileTimeout || (await this.fetchConfigForWrite(key)) !== value) throw error;
+				applied = true;
+			}
+			if (applied) {
+				if (!key.startsWith('username_dictionary_generation:') && key !== 'username_dictionary_cleanup')
+					cache.update(key, value);
 				return {result, written: true};
 			}
 		}
@@ -1311,27 +1667,35 @@ export class InstanceConfigRepository {
 	}
 
 	private async fetchAllConfigsFromDatabase(): Promise<Map<string, string>> {
+		// Micup: TEMPORARY: Hot config reads include one row per admin generation; move metadata to a dedicated Cassandra table before 10,000 generations.
 		const rows = await fetchMany<InstanceConfigurationRow>(FETCH_ALL_CONFIG_QUERY, {});
 		const configs = new Map<string, string>();
 		for (const row of rows) {
-			if (row.value != null) {
+			if (
+				row.value != null &&
+				!row.key.startsWith('username_dictionary_generation:') &&
+				row.key !== 'username_dictionary_cleanup'
+			) {
 				configs.set(row.key, row.value);
 			}
 		}
 		return configs;
 	}
 
-	private syncConfigCaches(snapshot: ReadonlyMap<string, string>): void {
+	private syncConfigCaches(snapshot: ReadonlyMap<string, string>, fetchedAt: number): void {
 		checkStoredConfig('gateway rollout', () =>
 			parseStoredGatewayRolloutConfig(snapshot.get(GATEWAY_ROLLOUT_CONFIG_KEY) ?? null),
 		);
+		parseStoredVoiceNoiseSuppressionConfig(snapshot.get(VOICE_NOISE_SUPPRESSION_CONFIG_KEY) ?? null);
+		parseStoredVoiceRoomConfig(snapshot.get(VOICE_ROOM_CONFIG_KEY) ?? null);
 		parseStoredPushRelayConfig(snapshot.get(PUSH_RELAY_CONFIG_KEY) ?? null);
 		parseStoredDomainMigrationConfig(snapshot.get(DOMAIN_MIGRATION_CONFIG_KEY) ?? null);
 		parseStoredPlutoniumPageConfig(snapshot.get(PLUTONIUM_PAGE_CONFIG_KEY) ?? null);
 		parseStoredCaptchaConfig(snapshot.get(CAPTCHA_CONFIG_KEY) ?? null);
 		syncChannelThreadsConfig(snapshot.get(CHANNEL_THREADS_CONFIG_KEY) ?? null, parseStoredChannelThreadsConfig);
 		parseStoredExperimentDeliveryConfig(snapshot.get(EXPERIMENT_DELIVERY_CONFIG_KEY) ?? null);
-		parseStoredInstancePolicyConfig(snapshot.get(INSTANCE_POLICY_CONFIG_KEY) ?? null);
+		const policy = parseStoredInstancePolicyConfig(snapshot.get(INSTANCE_POLICY_CONFIG_KEY) ?? null);
+		setCachedDeferredPhoneGateEnabled(resolveDeferredPhoneGateEnabled(policy));
 		checkStoredConfig('registration', () =>
 			parseStoredRegistrationConfig(snapshot.get(REGISTRATION_CONFIG_KEY) ?? null),
 		);
@@ -1357,10 +1721,12 @@ export class InstanceConfigRepository {
 			parseStoredInstanceIntegrationsConfig(snapshot.get(INSTANCE_INTEGRATIONS_CONFIG_KEY) ?? null),
 		);
 		checkStoredConfig('media', () => parseStoredInstanceMediaConfig(snapshot.get(INSTANCE_MEDIA_CONFIG_KEY) ?? null));
+		checkStoredConfig('shop', () => parseStoredShopConfig(snapshot.get(SHOP_CONFIG_KEY) ?? null));
+		checkStoredConfig('referral', () => parseStoredReferralConfig(snapshot.get(REFERRAL_CONFIG_KEY) ?? null));
 		setStoredBillingConfig(parseStoredInstanceBillingConfig(snapshot.get(INSTANCE_BILLING_CONFIG_KEY) ?? null));
 		const appPublic = parseStoredAppPublicConfig(snapshot.get(APP_PUBLIC_CONFIG_KEY) ?? null);
 		setCachedDateOfBirthCollection(appPublic.registration.collect_date_of_birth);
-		setCachedAccountIdentity(readStoredAccountIdentity(snapshot.get(ACCOUNT_IDENTITY_CONFIG_KEY) ?? null));
+		setCachedAccountIdentity(readStoredAccountIdentity(snapshot.get(ACCOUNT_IDENTITY_CONFIG_KEY) ?? null), fetchedAt);
 	}
 
 	private async publishRefresh(sourceId: string): Promise<void> {
@@ -1374,7 +1740,7 @@ export class InstanceConfigRepository {
 	}
 
 	shutdown(): Promise<void> {
-		return this.configCache.shutdown();
+		return Promise.all([this.configCache.shutdown(), this.eligibilityCache.shutdown()]).then(() => undefined);
 	}
 
 	clearCacheForTesting(): void {
@@ -1382,6 +1748,7 @@ export class InstanceConfigRepository {
 		syncChannelThreadsConfig(null, parseStoredChannelThreadsConfig);
 		const shutdown = this.shutdown();
 		this.configCache = this.createConfigCache(shutdown);
+		this.eligibilityCache = this.createEligibilityCache();
 		void shutdown.catch((error) => {
 			Logger.error({error}, 'Failed to clear instance config cache');
 		});
@@ -1396,9 +1763,8 @@ export class InstanceConfigRepository {
 	}
 
 	async getAccountIdentity(): Promise<AccountIdentity> {
-		if (!Config.instance.selfHosted) return resolveAccountIdentity(null);
 		const stored = readStoredAccountIdentity(await this.getConfig(ACCOUNT_IDENTITY_CONFIG_KEY));
-		setCachedAccountIdentity(stored);
+		setCachedAccountIdentity(stored, getCachedAccountIdentityFetchedAt());
 		return resolveAccountIdentity(stored);
 	}
 
@@ -1406,8 +1772,461 @@ export class InstanceConfigRepository {
 		return (await this.getAccountIdentity()).mode;
 	}
 
+	async readAccountIdentityConfig(): Promise<StoredAccountIdentityConfig | null> {
+		return parseStoredAccountIdentityConfig(await this.fetchConfigForWrite(ACCOUNT_IDENTITY_CONFIG_KEY));
+	}
+
 	async getTagStyle(): Promise<TagStyle> {
 		return (await this.getAccountIdentity()).tagStyle;
+	}
+
+	async getUsernameMigrationConfig(): Promise<UsernameMigrationConfig> {
+		return migrationFromStored(parseStoredAccountIdentityConfig(await this.getConfig(ACCOUNT_IDENTITY_CONFIG_KEY)));
+	}
+
+	async readUsernameMigrationConfig(): Promise<UsernameMigrationConfig> {
+		return migrationFromStored(
+			parseStoredAccountIdentityConfig(await this.fetchConfigForWrite(ACCOUNT_IDENTITY_CONFIG_KEY)),
+		);
+	}
+
+	async readUsernameMigrationGuildCapacity(): Promise<z.infer<typeof UsernameStoredGuildCapacitySchema> | null> {
+		const raw = await this.fetchConfigForWrite('username_migration_guild_capacity');
+		return raw === null ? null : UsernameStoredGuildCapacitySchema.parse(JSON.parse(raw));
+	}
+
+	async setUsernameMigrationGuildCapacity(
+		declaration: z.infer<typeof UsernameStoredGuildCapacitySchema>,
+	): Promise<void> {
+		const value = UsernameStoredGuildCapacitySchema.parse(declaration);
+		const age = Date.now() - Date.parse(value.observed_at);
+		if (age < 0 || age >= 3_600_000) throw new Error('Guild capacity declaration is stale');
+		await this.compareAndSetStoredValue(
+			this.configCache,
+			'username_migration_guild_capacity',
+			async () => {
+				const migration = await this.readUsernameMigrationConfig();
+				if (migration.epoch !== value.epoch || !['preparing', 'selecting'].includes(migration.state))
+					throw new Error('Guild capacity declaration requires the current active migration epoch');
+				return {value: JSON.stringify(value), result: undefined};
+			},
+			true,
+		);
+	}
+
+	async prepareUsernameMigration(proof: {processesReady: boolean}): Promise<UsernameMigrationConfig> {
+		if (!Config.instance.selfHosted || proof.processesReady !== true)
+			throw new Error('Migration processes are not ready');
+		const cache = this.configCache;
+		const {result, written} = await this.compareAndSetStoredValue(
+			cache,
+			ACCOUNT_IDENTITY_CONFIG_KEY,
+			(raw) => {
+				const stored = parseStoredAccountIdentityConfig(raw);
+				if (!stored || stored.mode !== AccountIdentityModes.EMAIL) throw new Error('Migration requires email identity');
+				const current = migrationFromStored(stored);
+				if (current.state === 'selecting') throw new Error('Selecting migration cannot be prepared again');
+				if (current.state === 'preparing') return {value: null, result: current};
+				const next = UsernameMigrationConfigSchema.parse({
+					state: 'preparing',
+					epoch: current.epoch + 1,
+					preparing_at: new Date(Date.now()).toISOString(),
+					started_at: null,
+					forced_at: null,
+				});
+				return {value: JSON.stringify({...stored, source: 'migration', username_migration: next}), result: next};
+			},
+			true,
+		);
+		if (written) await this.publishRefresh(cache.sourceId);
+		await this.initializeUsernameMigrationScan(result.epoch);
+		return result;
+	}
+
+	async startUsernameMigration(
+		epoch: number,
+		proof: {
+			policyRevision: number;
+			dictionaryGen: number;
+			dictionaryHash: string;
+			holdsReady: boolean;
+			reserveVersion: number;
+			capacityReady: boolean;
+			mobilePublished: boolean;
+		},
+	): Promise<UsernameMigrationConfig> {
+		if (
+			!Config.instance.selfHosted ||
+			proof.holdsReady !== true ||
+			proof.capacityReady !== true ||
+			proof.mobilePublished !== true
+		)
+			throw new Error('Migration prerequisites are not ready');
+		SafeCounterSchema.parse(epoch);
+		const cache = this.configCache;
+		const {result, written} = await this.compareAndSetStoredValue(
+			cache,
+			ACCOUNT_IDENTITY_CONFIG_KEY,
+			async (raw) => {
+				const stored = parseStoredAccountIdentityConfig(raw);
+				if (!stored || stored.mode !== AccountIdentityModes.EMAIL) throw new Error('Migration requires email identity');
+				const current = migrationFromStored(stored);
+				if (current.epoch !== epoch) throw new Error('Migration epoch changed');
+				if (current.state === 'selecting') return {value: null, result: current};
+				if (stored.username_reserve_mutation_pending || (stored.username_reserve_version ?? 0) !== proof.reserveVersion)
+					throw new Error('Reservations changed after the start inspection');
+				if (
+					current.state !== 'preparing' ||
+					!current.preparing_at ||
+					Date.now() < Date.parse(current.preparing_at) + 60_000
+				)
+					throw new Error('Migration preparation barrier is not complete');
+				const scan = await this.readUsernameMigrationScan();
+				if (
+					!scan ||
+					scan.epoch !== epoch ||
+					!scan.done_at ||
+					scan.found !== 0 ||
+					Date.parse(scan.done_at) < Date.parse(current.preparing_at) + 60_000 ||
+					Date.parse(scan.done_at) > Date.now()
+				)
+					throw new Error('Migration scan is not complete');
+				const policy = await this.readUsernamePolicyConfig();
+				if (
+					policy.revision !== proof.policyRevision ||
+					policy.dictionary_gen < 1 ||
+					policy.dictionary_gen !== proof.dictionaryGen ||
+					policy.dictionary_hash !== proof.dictionaryHash ||
+					policy.admission.global_per_second === 0 ||
+					policy.admission.paused
+				)
+					throw new Error('Migration dictionary or admission is not ready');
+				const started = Date.now();
+				const next = UsernameMigrationConfigSchema.parse({
+					...current,
+					state: 'selecting',
+					started_at: new Date(started).toISOString(),
+					forced_at: new Date(started + 7 * 86400000).toISOString(),
+				});
+				return {
+					value: JSON.stringify({...stored, tag_style: TagStyles.NONE, source: 'migration', username_migration: next}),
+					result: next,
+				};
+			},
+			true,
+		);
+		if (written) await this.publishRefresh(cache.sourceId);
+		return result;
+	}
+
+	async rollbackUsernameMigration(epoch: number): Promise<UsernameMigrationConfig> {
+		if (!Config.instance.selfHosted) throw new Error('Migration requires a self-hosted instance');
+		SafeCounterSchema.parse(epoch);
+		const cache = this.configCache;
+		const {result, written} = await this.compareAndSetStoredValue(
+			cache,
+			ACCOUNT_IDENTITY_CONFIG_KEY,
+			(raw) => {
+				const stored = parseStoredAccountIdentityConfig(raw);
+				const current = migrationFromStored(stored);
+				if (!stored || current.epoch !== epoch || current.state !== 'preparing')
+					throw new Error('Only the current preparing migration can be rolled back');
+				const next = UsernameMigrationConfigSchema.parse({
+					...current,
+					state: 'legacy',
+					preparing_at: null,
+					started_at: null,
+					forced_at: null,
+				});
+				return {value: JSON.stringify({...stored, username_migration: next}), result: next};
+			},
+			true,
+		);
+		if (written) await this.publishRefresh(cache.sourceId);
+		return result;
+	}
+
+	async readUsernameReserveFence(): Promise<{version: number; pending: boolean}> {
+		const stored = parseStoredAccountIdentityConfig(await this.fetchConfigForWrite(ACCOUNT_IDENTITY_CONFIG_KEY));
+		return {
+			version: stored?.username_reserve_version ?? 0,
+			pending: stored?.username_reserve_mutation_pending === true,
+		};
+	}
+
+	// Micup: a reservation change while preparing runs inside this fence; the start CAS requires it closed and unchanged.
+	// The fence is read only through serial reads, so no cache refresh is broadcast.
+	async openUsernameReserveMutation(): Promise<number | null> {
+		const {result} = await this.compareAndSetStoredValue(
+			this.configCache,
+			ACCOUNT_IDENTITY_CONFIG_KEY,
+			(raw) => {
+				const stored = parseStoredAccountIdentityConfig(raw);
+				if (!stored || migrationFromStored(stored).state !== 'preparing') return {value: null, result: null};
+				const version = (stored.username_reserve_version ?? 0) + 1;
+				return {
+					value: JSON.stringify({
+						...stored,
+						username_reserve_version: version,
+						username_reserve_mutation_pending: true,
+					}),
+					result: version,
+				};
+			},
+			true,
+		);
+		return result;
+	}
+
+	async closeUsernameReserveMutation(version: number): Promise<void> {
+		await this.compareAndSetStoredValue(
+			this.configCache,
+			ACCOUNT_IDENTITY_CONFIG_KEY,
+			(raw) => {
+				const stored = parseStoredAccountIdentityConfig(raw);
+				if (stored?.username_reserve_version !== version || !stored.username_reserve_mutation_pending)
+					return {value: null, result: undefined};
+				return {value: JSON.stringify({...stored, username_reserve_mutation_pending: false}), result: undefined};
+			},
+			true,
+		);
+	}
+
+	async getUsernamePolicyConfig(): Promise<UsernamePolicyConfig> {
+		return parseUsernamePolicyConfig(await this.getConfig(USERNAME_POLICY_CONFIG_KEY));
+	}
+
+	async readUsernamePolicyConfig(): Promise<UsernamePolicyConfig> {
+		return parseUsernamePolicyConfig(await this.fetchConfigForWrite(USERNAME_POLICY_CONFIG_KEY));
+	}
+
+	setUsernamePolicyConfig(
+		patch: Partial<Pick<UsernamePolicyConfig, 'tiers' | 'admission' | 'held_manifest'>>,
+	): Promise<UsernamePolicyConfig> {
+		return this.updateStoredConfig(USERNAME_POLICY_CONFIG_KEY, (raw) => {
+			const current = parseUsernamePolicyConfig(raw);
+			return UsernamePolicyConfigSchema.parse({...current, ...patch, revision: current.revision + 1});
+		});
+	}
+
+	async reserveUsernameDictionaryGeneration(): Promise<UsernameDictionaryGenerationReservation> {
+		const cache = this.configCache;
+		const {result} = await this.compareAndSetStoredValue(cache, USERNAME_POLICY_CONFIG_KEY, (raw) => {
+			const current = parseUsernamePolicyConfig(raw);
+			const next = UsernamePolicyConfigSchema.parse({...current, next_dictionary_gen: current.next_dictionary_gen + 1});
+			return {
+				value: JSON.stringify(next),
+				result: {
+					generation: current.next_dictionary_gen,
+					baseRevision: current.revision,
+					baseGeneration: current.dictionary_gen,
+					baseHash: current.dictionary_hash,
+					createdAt: new Date(Date.now()).toISOString(),
+				},
+			};
+		});
+		await this.compareAndSetStoredValue(
+			cache,
+			`username_dictionary_generation:${result.generation}`,
+			(raw) => {
+				if (raw !== null) throw new Error('Dictionary generation metadata already exists');
+				return {value: JSON.stringify({created_at: result.createdAt}), result: undefined};
+			},
+			true,
+		);
+		await this.publishRefresh(cache.sourceId);
+		return result;
+	}
+
+	async publishUsernameDictionaryGeneration(
+		reservation: UsernameDictionaryGenerationReservation,
+		hash: string,
+	): Promise<boolean> {
+		const cache = this.configCache;
+		const {result, written} = await this.compareAndSetStoredValue(
+			cache,
+			USERNAME_POLICY_CONFIG_KEY,
+			(raw) => {
+				const current = parseUsernamePolicyConfig(raw);
+				if (current.dictionary_gen === reservation.generation && current.dictionary_hash === hash) {
+					return {value: null, result: true};
+				}
+				if (
+					current.revision !== reservation.baseRevision ||
+					current.dictionary_gen !== reservation.baseGeneration ||
+					current.dictionary_hash !== reservation.baseHash
+				) {
+					return {value: null, result: false};
+				}
+				if (reservation.generation <= current.dictionary_gen || reservation.generation >= current.next_dictionary_gen) {
+					throw new Error('Dictionary generation was not reserved');
+				}
+				const next = UsernamePolicyConfigSchema.parse({
+					...current,
+					previous_dictionary_gen: current.dictionary_gen,
+					dictionary_gen: reservation.generation,
+					dictionary_hash: hash,
+					revision: current.revision + 1,
+				});
+				return {value: JSON.stringify(next), result: true};
+			},
+			true,
+		);
+		if (written) await this.publishRefresh(cache.sourceId);
+		return result;
+	}
+
+	async readUsernameDictionaryGenerationMetadata(
+		generation: number,
+	): Promise<UsernameDictionaryGenerationMetadata | null> {
+		SafeCounterSchema.min(1).parse(generation);
+		const raw = await this.fetchConfigForWrite(`username_dictionary_generation:${generation}`);
+		return raw === null ? null : UsernameDictionaryGenerationMetadataSchema.parse(JSON.parse(raw));
+	}
+
+	async fenceUsernameDictionaryGenerationCleanup(expected: {
+		revision: number;
+		dictionary_gen: number;
+		previous_dictionary_gen: number;
+	}): Promise<boolean> {
+		const cache = this.configCache;
+		const {result, written} = await this.compareAndSetStoredValue(
+			cache,
+			USERNAME_POLICY_CONFIG_KEY,
+			(raw) => {
+				const current = parseUsernamePolicyConfig(raw);
+				if (
+					current.revision !== expected.revision ||
+					current.dictionary_gen !== expected.dictionary_gen ||
+					current.previous_dictionary_gen !== expected.previous_dictionary_gen
+				)
+					return {value: null, result: false};
+				const next = UsernamePolicyConfigSchema.parse({...current, revision: current.revision + 1});
+				return {value: JSON.stringify(next), result: true};
+			},
+			true,
+		);
+		if (written) await this.publishRefresh(cache.sourceId);
+		return result;
+	}
+
+	async readUsernameDictionaryCleanupState(): Promise<UsernameDictionaryCleanupState | null> {
+		const raw = await this.fetchConfigForWrite('username_dictionary_cleanup');
+		return raw === null ? null : UsernameDictionaryCleanupStateSchema.parse(JSON.parse(raw));
+	}
+
+	async compareAndSetUsernameDictionaryCleanupState(
+		expected: UsernameDictionaryCleanupState | null,
+		next: UsernameDictionaryCleanupState,
+	): Promise<boolean> {
+		if (expected) UsernameDictionaryCleanupStateSchema.parse(expected);
+		UsernameDictionaryCleanupStateSchema.parse(next);
+		const cache = this.configCache;
+		const {result} = await this.compareAndSetStoredValue(
+			cache,
+			'username_dictionary_cleanup',
+			(raw) => {
+				const current = raw === null ? null : UsernameDictionaryCleanupStateSchema.parse(JSON.parse(raw));
+				if (JSON.stringify(current) !== JSON.stringify(expected)) return {value: null, result: false};
+				return {value: JSON.stringify(next), result: true};
+			},
+			true,
+		);
+		return result;
+	}
+
+	async readUsernameMigrationScan(): Promise<UsernameMigrationScan | null> {
+		const raw = await this.fetchConfigForWrite(USERNAME_MIGRATION_SCAN_CONFIG_KEY);
+		return raw === null ? null : UsernameMigrationScanSchema.parse(JSON.parse(raw));
+	}
+
+	async initializeUsernameMigrationScan(epoch: number): Promise<UsernameMigrationScan> {
+		const cache = this.configCache;
+		const {result, written} = await this.compareAndSetStoredValue(
+			cache,
+			USERNAME_MIGRATION_SCAN_CONFIG_KEY,
+			async (raw) => {
+				const migration = await this.readUsernameMigrationConfig();
+				if (migration.state !== 'preparing' || migration.epoch !== epoch)
+					throw new Error('Migration scan epoch is no longer preparing');
+				const current = raw === null ? null : UsernameMigrationScanSchema.parse(JSON.parse(raw));
+				if (current?.epoch === epoch) return {value: null, result: current};
+				if (current && current.epoch > epoch) throw new Error('Cannot overwrite a newer migration scan');
+				const next = UsernameMigrationScanSchema.parse({epoch, cursor: null, scanned: 0, found: 0, done_at: null});
+				return {value: JSON.stringify(next), result: next};
+			},
+			true,
+		);
+		if (written) await this.publishRefresh(cache.sourceId);
+		return result;
+	}
+
+	async compareAndSetUsernameMigrationScan(
+		expected: UsernameMigrationScan,
+		next: UsernameMigrationScan,
+	): Promise<boolean> {
+		UsernameMigrationScanSchema.parse(expected);
+		UsernameMigrationScanSchema.parse(next);
+		if (
+			expected.epoch !== next.epoch ||
+			next.scanned < expected.scanned ||
+			next.found < expected.found ||
+			expected.done_at !== null
+		)
+			throw new Error('Invalid migration scan progress');
+		const cache = this.configCache;
+		const {result, written} = await this.compareAndSetStoredValue(
+			cache,
+			USERNAME_MIGRATION_SCAN_CONFIG_KEY,
+			async (raw) => {
+				const migration = await this.readUsernameMigrationConfig();
+				if (
+					migration.state !== 'preparing' ||
+					migration.epoch !== expected.epoch ||
+					!migration.preparing_at ||
+					Date.now() < Date.parse(migration.preparing_at) + 60_000
+				)
+					return {value: null, result: false};
+				if (
+					next.done_at &&
+					(Date.parse(next.done_at) < Date.parse(migration.preparing_at) + 60_000 ||
+						Date.parse(next.done_at) > Date.now())
+				)
+					throw new Error('Invalid migration scan completion time');
+				const current = raw === null ? null : UsernameMigrationScanSchema.parse(JSON.parse(raw));
+				if (JSON.stringify(current) !== JSON.stringify(expected)) return {value: null, result: false};
+				return {value: JSON.stringify(next), result: true};
+			},
+			true,
+		);
+		if (written) await this.publishRefresh(cache.sourceId);
+		return result;
+	}
+
+	async readUsernameRepairState(): Promise<UsernameRepairState | null> {
+		const raw = await this.fetchConfigForWrite(USERNAME_REPAIR_STATE_CONFIG_KEY);
+		return raw === null ? null : UsernameRepairStateSchema.parse(JSON.parse(raw));
+	}
+
+	async compareAndSetUsernameRepairState(
+		expected: UsernameRepairState | null,
+		next: UsernameRepairState,
+	): Promise<boolean> {
+		if (expected !== null) UsernameRepairStateSchema.parse(expected);
+		UsernameRepairStateSchema.parse(next);
+		const cache = this.configCache;
+		const {result, written} = await this.compareAndSetStoredValue(
+			cache,
+			USERNAME_REPAIR_STATE_CONFIG_KEY,
+			(raw) => {
+				const current = raw === null ? null : UsernameRepairStateSchema.parse(JSON.parse(raw));
+				if (JSON.stringify(current) !== JSON.stringify(expected)) return {value: null, result: false};
+				return {value: JSON.stringify(next), result: true};
+			},
+			true,
+		);
+		if (written) await this.publishRefresh(cache.sourceId);
+		return result;
 	}
 
 	async usesUniqueUsernames(): Promise<boolean> {
@@ -1417,7 +2236,8 @@ export class InstanceConfigRepository {
 	async isAccountIdentityLocked(): Promise<boolean> {
 		if (!Config.instance.selfHosted) return true;
 		if (Config.instance.setup.configured) return true;
-		if (readStoredAccountIdentitySource(await this.getConfig(ACCOUNT_IDENTITY_CONFIG_KEY)) === 'existing_instance') {
+		const source = readStoredAccountIdentitySource(await this.getConfig(ACCOUNT_IDENTITY_CONFIG_KEY));
+		if (source === 'existing_instance' || source === 'migration') {
 			return true;
 		}
 		const appPublic = await this.getAppPublicConfig();
@@ -1440,7 +2260,13 @@ export class InstanceConfigRepository {
 		};
 		const value = serialiseAccountIdentity(identity, source);
 		const cache = this.configCache;
-		await this.compareAndSetStoredValue(cache, ACCOUNT_IDENTITY_CONFIG_KEY, () => ({value, result: undefined}));
+		await this.compareAndSetStoredValue(cache, ACCOUNT_IDENTITY_CONFIG_KEY, (raw) => {
+			const stored = parseStoredAccountIdentityConfig(raw);
+			if (stored?.source === 'migration' || (stored?.username_migration && stored.username_migration.epoch > 0)) {
+				throw new Error('Account identity setup cannot overwrite a username migration');
+			}
+			return {value, result: undefined};
+		});
 		setCachedAccountIdentity(identity);
 		await this.publishRefresh(cache.sourceId);
 	}
@@ -1520,17 +2346,27 @@ export class InstanceConfigRepository {
 		return rows.length > 0;
 	}
 
-	async getGatewayRolloutConfig(): Promise<GatewayRolloutConfig> {
-		const raw = await this.getConfig(GATEWAY_ROLLOUT_CONFIG_KEY);
+	async getGatewayRolloutConfig(options?: {authoritative?: boolean}): Promise<GatewayRolloutConfig> {
+		this.configCache.assertActive();
+		const raw = options?.authoritative
+			? await this.fetchConfigForWrite(GATEWAY_ROLLOUT_CONFIG_KEY)
+			: await this.fetchConfigFromDatabase(GATEWAY_ROLLOUT_CONFIG_KEY);
+		this.configCache.assertActive();
 		return parseStoredGatewayRolloutConfig(raw);
 	}
 
 	updateGatewayRolloutConfig(
 		update: (current: GatewayRolloutConfig) => GatewayRolloutConfig,
 	): Promise<GatewayRolloutConfig> {
-		return this.updateStoredConfig(GATEWAY_ROLLOUT_CONFIG_KEY, (raw) =>
-			decodeGatewayRolloutConfig(update(parseStoredGatewayRolloutConfig(raw))),
-		);
+		return this.updateStoredConfig(GATEWAY_ROLLOUT_CONFIG_KEY, (raw) => {
+			const current = parseStoredGatewayRolloutConfig(raw);
+			const next = update(current);
+			return decodeGatewayRolloutConfig({
+				...next,
+				game_activity_epoch:
+					current.game_activity_epoch + (next.game_activity_enabled === current.game_activity_enabled ? 0 : 1),
+			});
+		});
 	}
 
 	async getLegacyPushServiceDeliveryWire(): Promise<LegacyPushServiceDeliveryWire> {
@@ -1571,6 +2407,37 @@ export class InstanceConfigRepository {
 		);
 	}
 
+	async getVoiceNoiseSuppressionConfig(): Promise<VoiceNoiseSuppressionConfig> {
+		const raw = await this.getConfig(VOICE_NOISE_SUPPRESSION_CONFIG_KEY);
+		return parseStoredVoiceNoiseSuppressionConfig(raw);
+	}
+
+	async setVoiceNoiseSuppressionConfig(config: VoiceNoiseSuppressionConfig): Promise<void> {
+		await this.updateVoiceNoiseSuppressionConfig(() => config);
+	}
+
+	updateVoiceNoiseSuppressionConfig(
+		update: (current: VoiceNoiseSuppressionConfig) => VoiceNoiseSuppressionConfig,
+	): Promise<VoiceNoiseSuppressionConfig> {
+		return this.updateStoredConfig(VOICE_NOISE_SUPPRESSION_CONFIG_KEY, (raw) =>
+			validateStoredConfig(
+				VoiceNoiseSuppressionConfigSchema,
+				update(parseStoredVoiceNoiseSuppressionConfig(raw)),
+				'voice noise suppression',
+			),
+		);
+	}
+
+	async getVoiceRoomConfig(): Promise<VoiceRoomConfig> {
+		return parseStoredVoiceRoomConfig(await this.getConfig(VOICE_ROOM_CONFIG_KEY));
+	}
+
+	updateVoiceRoomConfig(update: (current: VoiceRoomConfig) => VoiceRoomConfig): Promise<VoiceRoomConfig> {
+		return this.updateStoredConfig(VOICE_ROOM_CONFIG_KEY, (raw) =>
+			validateStoredConfig(VoiceRoomConfigSchema, update(parseStoredVoiceRoomConfig(raw)), 'voice room'),
+		);
+	}
+
 	async getPlutoniumPageConfig(): Promise<PlutoniumPageConfig> {
 		const raw = await this.getConfig(PLUTONIUM_PAGE_CONFIG_KEY);
 		return parseStoredPlutoniumPageConfig(raw);
@@ -1597,6 +2464,21 @@ export class InstanceConfigRepository {
 		return this.updateStoredConfig(CAPTCHA_CONFIG_KEY, (raw) =>
 			validateStoredConfig(CaptchaConfigSchema, {...parseStoredCaptchaConfig(raw), ...patch}, 'captcha'),
 		);
+	}
+
+	// Turnstile answers only while it is picked and both of its keys are stored; ALTCHA covers every other case.
+	async getEffectiveCaptchaConfig(): Promise<InstanceCaptchaEffectiveConfig> {
+		const [captcha, integrations] = await Promise.all([this.getCaptchaConfig(), this.getInstanceIntegrationsConfig()]);
+		const {provider, turnstile_site_key: siteKey, turnstile_secret_key: secretKey} = integrations.captcha;
+		if (captcha.enabled && provider === 'turnstile' && siteKey !== null && secretKey !== null) {
+			return {...captcha, provider: 'turnstile', turnstile_site_key: siteKey, turnstile_secret_key: secretKey};
+		}
+		return {
+			...captcha,
+			provider: captcha.enabled ? 'altcha' : 'none',
+			turnstile_site_key: null,
+			turnstile_secret_key: null,
+		};
 	}
 
 	async getChannelThreadsConfig(): Promise<ChannelThreadsConfig> {
@@ -1676,6 +2558,7 @@ export class InstanceConfigRepository {
 		setup?: Partial<InstanceAppPublicConfig['setup']>;
 		legal?: Partial<InstanceAppPublicConfig['legal']>;
 		registration?: Partial<InstanceAppPublicConfig['registration']>;
+		localization?: Partial<NonNullable<InstanceAppPublicConfig['localization']>>;
 	}): Promise<InstanceAppPublicConfig> {
 		const cache = this.configCache;
 		const {result: next} = await this.compareAndSetStoredValue(cache, APP_PUBLIC_CONFIG_KEY, (raw) => {
@@ -1709,6 +2592,7 @@ export class InstanceConfigRepository {
 						...current.registration,
 						...(config.registration ?? {}),
 					},
+					localization: {...current.localization, ...(config.localization ?? {})},
 				},
 				'app public',
 			);
@@ -1721,7 +2605,9 @@ export class InstanceConfigRepository {
 
 	async getInstancePolicyConfig(): Promise<InstancePolicyConfig> {
 		const raw = await this.getConfig(INSTANCE_POLICY_CONFIG_KEY);
-		return parseStoredInstancePolicyConfig(raw);
+		const policy = parseStoredInstancePolicyConfig(raw);
+		setCachedDeferredPhoneGateEnabled(resolveDeferredPhoneGateEnabled(policy));
+		return policy;
 	}
 
 	async readStoredInstancePolicyConfig(): Promise<InstancePolicyConfig> {
@@ -1747,6 +2633,61 @@ export class InstanceConfigRepository {
 			return {value: Object.keys(patch).length === 0 ? null : JSON.stringify(config), result: config};
 		});
 		if (written) await this.publishRefresh(cache.sourceId);
+		setCachedDeferredPhoneGateEnabled(resolveDeferredPhoneGateEnabled(next));
+		return next;
+	}
+
+	// Catalog and quote: the pubsub-refreshed snapshot.
+	async getShopConfig(): Promise<ShopConfig> {
+		return parseStoredShopConfig(await this.getConfig(SHOP_CONFIG_KEY));
+	}
+
+	// Order creation and the admin page: straight from the table.
+	async readStoredShopConfig(): Promise<ShopConfig> {
+		const cache = this.configCache;
+		cache.assertActive();
+		const raw = await this.fetchConfigFromDatabase(SHOP_CONFIG_KEY);
+		cache.assertActive();
+		return parseStoredShopConfig(raw);
+	}
+
+	// plan runs inside the compare-and-set loop and may run again after a lost write; an error it throws ends the update.
+	async updateShopConfig(plan: (current: ShopConfig) => Partial<ShopConfig>): Promise<ShopConfig> {
+		const cache = this.configCache;
+		const {result: next, written} = await this.compareAndSetStoredValue(cache, SHOP_CONFIG_KEY, (raw) => {
+			const current = parseStoredShopConfig(raw);
+			const patch = plan(current);
+			const config = validateStoredConfig(StoredShopConfigSchema, {...current, ...patch}, 'shop');
+			return {value: Object.keys(patch).length === 0 ? null : JSON.stringify(config), result: config};
+		});
+		if (written) await this.publishRefresh(cache.sourceId);
+		return next;
+	}
+
+	// Registration and the user's own page: the pubsub-refreshed snapshot.
+	async getReferralConfig(): Promise<ReferralConfig> {
+		return parseStoredReferralConfig(await this.getConfig(REFERRAL_CONFIG_KEY));
+	}
+
+	// The admin page and tier changes: straight from the table.
+	async readStoredReferralConfig(): Promise<ReferralConfig> {
+		const cache = this.configCache;
+		cache.assertActive();
+		const raw = await this.fetchConfigFromDatabase(REFERRAL_CONFIG_KEY);
+		cache.assertActive();
+		return parseStoredReferralConfig(raw);
+	}
+
+	// plan runs inside the compare-and-set loop like updateShopConfig's.
+	async updateReferralConfig(plan: (current: ReferralConfig) => Partial<ReferralConfig>): Promise<ReferralConfig> {
+		const cache = this.configCache;
+		const {result: next, written} = await this.compareAndSetStoredValue(cache, REFERRAL_CONFIG_KEY, (raw) => {
+			const current = parseStoredReferralConfig(raw);
+			const patch = plan(current);
+			const config = validateStoredConfig(StoredReferralConfigSchema, {...current, ...patch}, 'referral');
+			return {value: Object.keys(patch).length === 0 ? null : JSON.stringify(config), result: config};
+		});
+		if (written) await this.publishRefresh(cache.sourceId);
 		return next;
 	}
 
@@ -1766,6 +2707,10 @@ export class InstanceConfigRepository {
 				youtube: {
 					...current.youtube,
 					...(config.youtube ?? {}),
+				},
+				captcha: {
+					...current.captcha,
+					...(config.captcha ?? {}),
 				},
 				email: {
 					...current.email,
@@ -1923,10 +2868,11 @@ export class InstanceConfigRepository {
 	}
 
 	async getInstanceIntegrationsAdminConfig(): Promise<InstanceIntegrationsAdminConfig> {
-		const [integrations, gif, youtubeApiKey, email, bluesky] = await Promise.all([
+		const [integrations, gif, youtubeApiKey, captcha, email, bluesky] = await Promise.all([
 			this.getInstanceIntegrationsConfig(),
 			this.getEffectiveGifConfig(),
 			this.getEffectiveYoutubeApiKey(),
+			this.getEffectiveCaptchaConfig(),
 			this.getEffectiveEmailConfig(),
 			this.getEffectiveBlueskyConfig(),
 		]);
@@ -1938,6 +2884,13 @@ export class InstanceConfigRepository {
 			youtube: {
 				api_key_set: secretIsSet(integrations.youtube.api_key) || secretIsSet(Config.youtube.apiKey),
 				effective_available: Boolean(youtubeApiKey),
+			},
+			captcha: {
+				provider: integrations.captcha.provider,
+				effective_provider: captcha.provider,
+				turnstile_site_key: integrations.captcha.turnstile_site_key,
+				turnstile_secret_key_set: secretIsSet(integrations.captcha.turnstile_secret_key),
+				effective_enabled: captcha.enabled,
 			},
 			email: {
 				enabled: integrations.email.enabled,

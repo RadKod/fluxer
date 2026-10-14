@@ -281,7 +281,7 @@
 
 .clickableItemSelected .clickableItemIcon {
 	background-color: var(--brand-primary);
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -325,7 +325,7 @@
 .sendIcon {
 	height: 1.5rem;
 	width: 1.5rem;
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 .clickableItemText {
@@ -758,7 +758,7 @@
 
 .mobileSpecialButtonSelected .mobileSpecialButtonIcon {
 	background-color: var(--brand-primary);
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 .mobileSpecialButtonText {
@@ -782,4 +782,9 @@
 .iconSize4 {
 	height: 1rem;
 	width: 1rem;
+}
+
+/* Micup: lighter side panels in the coal theme */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .dmListContainer {
+	--background-secondary: var(--side-panel-background);
 }

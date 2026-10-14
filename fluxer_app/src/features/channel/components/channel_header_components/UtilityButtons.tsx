@@ -2,24 +2,39 @@
 
 import {ChannelHeaderIcon} from '@app/features/channel/components/channel_header_components/ChannelHeaderIcon';
 import {DeveloperToolsContextMenu} from '@app/features/channel/components/channel_header_components/DeveloperToolsContextMenu';
+import styles from '@app/features/channel/components/channel_header_components/UtilityButtons.module.css';
 import DeveloperMode from '@app/features/devtools/state/DeveloperMode';
 import {INBOX_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
+import {getInboxBadge} from '@app/features/inbox/utils/InboxBadge';
 import {InboxPopout} from '@app/features/messaging/components/popouts/InboxPopout';
 import * as ContextMenuCommands from '@app/features/ui/commands/ContextMenuCommands';
 import {FluxerStaffIcon} from '@app/features/ui/components/icons/FluxerStaffIcon';
 import {InboxIcon} from '@app/features/ui/components/icons/InboxIcon';
+import {MentionBadge} from '@app/features/ui/components/MentionBadge';
 import {useContextMenuTrigger} from '@app/features/ui/hooks/useContextMenuTrigger';
 import {usePopout} from '@app/features/ui/hooks/usePopout';
 import {Popout} from '@app/features/ui/popover/PopoverPopout';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
+import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
-import {useCallback} from 'react';
+import {forwardRef, useCallback} from 'react';
 
 const DEVELOPER_TOOLS_DESCRIPTOR = msg({
 	message: 'Developer tools',
 	comment: 'Short label in the channel and chat utility buttons. Keep it concise.',
+});
+
+const INBOX_MENTIONS_DESCRIPTOR = msg({
+	message: 'Inbox, unread mentions: {mentionCount}',
+	comment:
+		'Accessible label for the Inbox button when it has unread mentions. {mentionCount} is the full unread mention count, even when the badge displays 99+.',
+});
+// The same message as the feed page inbox button's screen-reader fragment, so its translations apply.
+const UNREAD_DESCRIPTOR = msg({
+	message: 'unread',
+	comment: 'Lowercase screen-reader fragment after "Inbox" on the inbox button when only feed activity is unread.',
 });
 
 export function isStaffToolsButtonVisible(): boolean {
@@ -67,8 +82,43 @@ export const StaffToolsButton = observer(({className, ...rest}: HeaderUtilityBut
 		/>
 	);
 });
+const InboxHeaderIcon = observer(
+	forwardRef<HTMLButtonElement, HeaderUtilityButtonProps & {isOpen: boolean}>(({className, isOpen, ...rest}, ref) => {
+		const {i18n} = useLingui();
+		const {mentionCount, count, max} = getInboxBadge();
+		let ariaLabel: string | undefined;
+		if (mentionCount > 0) ariaLabel = i18n._(INBOX_MENTIONS_DESCRIPTOR, {mentionCount});
+		else if (count > 0) ariaLabel = [i18n._(INBOX_DESCRIPTOR), i18n._(UNREAD_DESCRIPTOR)].join(', ');
+		return (
+			<ChannelHeaderIcon
+				ref={ref}
+				icon={InboxIcon}
+				label={i18n._(INBOX_DESCRIPTOR)}
+				aria-label={ariaLabel}
+				className={clsx(styles.inboxButton, className)}
+				badge={
+					count > 0 ? (
+						<div
+							className={styles.inboxBadge}
+							aria-hidden="true"
+							data-flx="channel.channel-header-components.utility-buttons.inbox-button.badge"
+						>
+							<MentionBadge mentionCount={count} size="small" max={max} />
+						</div>
+					) : undefined
+				}
+				isSelected={isOpen}
+				aria-haspopup={true}
+				aria-expanded={isOpen}
+				keybindAction="chat_toggle_inbox"
+				data-flx="channel.channel-header-components.utility-buttons.inbox-button.channel-header-icon"
+				{...rest}
+			/>
+		);
+	}),
+);
+
 export const InboxButton = observer(({className, ...rest}: HeaderUtilityButtonProps) => {
-	const {i18n} = useLingui();
 	const {isOpen, openProps} = usePopout('inbox');
 	return (
 		<Popout
@@ -80,17 +130,7 @@ export const InboxButton = observer(({className, ...rest}: HeaderUtilityButtonPr
 			position="bottom-end"
 			subscribeTo="INBOX_OPEN"
 		>
-			<ChannelHeaderIcon
-				icon={InboxIcon}
-				label={i18n._(INBOX_DESCRIPTOR)}
-				className={className}
-				isSelected={isOpen}
-				aria-haspopup={true}
-				aria-expanded={isOpen}
-				keybindAction="chat_toggle_inbox"
-				data-flx="channel.channel-header-components.utility-buttons.inbox-button.channel-header-icon"
-				{...rest}
-			/>
+			<InboxHeaderIcon className={className} isOpen={isOpen} {...rest} />
 		</Popout>
 	);
 });

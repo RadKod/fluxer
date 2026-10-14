@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {GuildID, UserID} from '@app/api/BrandedTypes';
+import {shouldEnforceGuildIpBan} from '@app/api/ban/IpBanCgnatGuard';
 import {isIpBanExempt} from '@app/api/ban/IpBanExemptions';
 import type {GuildAuditLogService} from '@app/api/guild/GuildAuditLogService';
 import type {GuildAuditLogChange} from '@app/api/guild/GuildAuditLogTypes';
@@ -14,6 +15,7 @@ import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import {Logger} from '@app/api/Logger';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {removeGuildMemberCounted} from '@app/api/middleware/ServiceSingletons';
 import type {Guild} from '@app/api/models/Guild';
 import type {GuildBan} from '@app/api/models/GuildBan';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
@@ -29,6 +31,7 @@ import {UnknownGuildMemberError} from '@fluxer/errors/src/domains/guild/UnknownG
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
 import {isSameIpDecisionMatch} from '@fluxer/ip_utils/src/IpAddress';
 import type {GuildBanResponse} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
+import type {IpInfoService} from '@pkgs/geoip/src/IpInfoService';
 import type {IWorkerService} from '@pkgs/worker/src/contracts/IWorkerService';
 
 const SECONDS_PER_DAY = 86_400;
@@ -45,6 +48,7 @@ export class GuildModerationService {
 		private readonly userCacheService: UserCacheService,
 		private readonly workerService: IWorkerService<WorkerTaskName>,
 		private readonly guildAuditLogService: GuildAuditLogService,
+		private readonly ipInfoService: IpInfoService,
 	) {
 		this.searchIndexService = new GuildMemberSearchIndexService();
 	}
@@ -159,15 +163,7 @@ export class GuildModerationService {
 			},
 		});
 		if (targetMember) {
-			await this.guildRepository.deleteMember(guildId, targetId);
-			const guild = await this.guildRepository.findUnique(guildId);
-			if (guild) {
-				await this.guildRepository.upsertPartial(
-					guildId,
-					{member_count: Math.max(0, guild.memberCount - 1)},
-					guild.toRow(),
-				);
-			}
+			await removeGuildMemberCounted(this.guildRepository, guildId, targetId);
 			await this.dispatchGuildMemberRemove({guildId, userId: targetId});
 			await this.gatewayService.leaveGuild({userId: targetId, guildId});
 			const guildForSearch = await this.guildRepository.findUnique(guildId);
@@ -232,12 +228,14 @@ export class GuildModerationService {
 			this.guildRepository.listBans(guildId),
 			this.userRepository.findUnique(userId),
 		]);
-		const userIp = user?.lastActiveIp;
 		const userEmail = user?.email?.toLowerCase();
+		const userIp = user?.lastActiveIp;
+		let enforceIpBan: boolean | undefined;
 		for (const ban of bans) {
 			if (ban.userId === userId) throw new BannedFromGuildError();
-			if (isSameIpDecisionMatch(userIp, ban.ipAddress) && !isIpBanExempt(userIp)) {
-				throw new IpBannedFromGuildError();
+			if (isSameIpDecisionMatch(userIp, ban.ipAddress)) {
+				enforceIpBan ??= await shouldEnforceGuildIpBan(userIp, ban.ipAddress, this.ipInfoService);
+				if (enforceIpBan) throw new IpBannedFromGuildError();
 			}
 		}
 		if (userEmail) {

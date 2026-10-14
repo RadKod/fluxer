@@ -47,7 +47,7 @@ export const PurchaseHistorySection: React.FC<PurchaseHistorySectionProps> = obs
 							id="plutonium-invoices"
 							className={styles.accordion}
 							compact
-							title={<Trans comment="Accordion title in the premium billing panel.">Billing history</Trans>}
+							title={<Trans comment="Accordion title in the Plus billing panel.">Billing history</Trans>}
 							expanded={invoicesExpanded}
 							onExpandedChange={setInvoicesExpanded}
 							data-flx="app.plutonium.purchase-history-section.plutonium-invoices"

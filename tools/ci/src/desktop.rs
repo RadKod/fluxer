@@ -37,7 +37,8 @@ use walkdir::WalkDir;
 use zip::write::SimpleFileOptions;
 
 const PACKAGE_ORIGIN_BASE: &str = "https://pkgs.fluxer.com";
-const PACKAGE_ORIGIN_BASE_ENV: &str = "PKGS_DOWNLOAD_BASE_URL";
+const PACKAGE_ORIGIN_BASE_ENV: &str = "FLUXER_DESKTOP_PACKAGE_ORIGIN_BASE";
+const PACKAGE_DOWNLOAD_BASE_ENV: &str = "PKGS_DOWNLOAD_BASE_URL";
 const PNPM_VERSION: &str = "12.4.2";
 const RUST_TOOLCHAIN: &str = "1.98.1";
 const LINUX_PIPEWIRE_VERSION: &str = "0.3.65";
@@ -2728,6 +2729,12 @@ const WINDOWS_SIGNING_ENV: &[&str] = &[
     "AZURE_ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME",
 ];
 const VELOPACK_TRUSTED_SIGN_FILE_ENV: &str = "VELOPACK_TRUSTED_SIGN_FILE";
+const WINDOWS_ALLOW_UNSIGNED_ENV: &str = "FLUXER_DESKTOP_ALLOW_UNSIGNED";
+const WINDOWS_PACK_IDENTITY_ENV: [&str; 3] = [
+    "FLUXER_DESKTOP_PACK_ID",
+    "FLUXER_DESKTOP_PACK_TITLE",
+    "FLUXER_DESKTOP_PACK_AUTHORS",
+];
 const TRUSTED_SIGNING_EXCLUDED_CREDENTIALS: &[&str] = &[
     "ManagedIdentityCredential",
     "WorkloadIdentityCredential",
@@ -2740,10 +2747,31 @@ const TRUSTED_SIGNING_EXCLUDED_CREDENTIALS: &[&str] = &[
 ];
 
 fn validate_windows_signing_inputs_step() -> Result<()> {
+    validate_windows_signing_inputs(env_string)
+}
+
+/// TEMPORARY: `FLUXER_DESKTOP_ALLOW_UNSIGNED=1` packages Windows builds without
+/// Azure Trusted Signing (beta direct download; SmartScreen warns). Leave it for Fluxer's signed
+/// path below once install completion drops under 70% or non-Store downloads exceed Store
+/// downloads. Unset, every Windows build stays signed exactly as upstream.
+fn windows_unsigned_build(lookup: impl Fn(&str) -> Option<String>) -> bool {
+    let unsigned = lookup(WINDOWS_ALLOW_UNSIGNED_ENV).is_some_and(|value| parse_bool(&value));
+    if unsigned {
+        println!(
+            "::warning::UNSIGNED build — GEÇİCİ: {WINDOWS_ALLOW_UNSIGNED_ENV} is set, so Windows code signing is skipped."
+        );
+    }
+    unsigned
+}
+
+fn validate_windows_signing_inputs(lookup: impl Fn(&str) -> Option<String>) -> Result<()> {
+    if windows_unsigned_build(&lookup) {
+        return Ok(());
+    }
     let missing = WINDOWS_SIGNING_ENV
         .iter()
         .copied()
-        .filter(|name| env_string(name).is_none())
+        .filter(|name| lookup(name).is_none())
         .collect::<Vec<_>>();
     ensure!(
         missing.is_empty(),
@@ -2774,6 +2802,9 @@ fn windows_trusted_signing_metadata_path() -> PathBuf {
 }
 
 fn write_windows_signing_metadata_step() -> Result<()> {
+    if windows_unsigned_build(env_string) {
+        return Ok(());
+    }
     validate_windows_signing_inputs_step()?;
     let metadata = TrustedSigningMetadata {
         endpoint: require_env("AZURE_ARTIFACT_SIGNING_ENDPOINT")?,
@@ -2821,9 +2852,10 @@ fn resolve_windows_unpacked_dir(arch: &str, main_exe: &str) -> Result<PathBuf> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct WindowsPackageConfig {
-    pack_id: &'static str,
-    pack_title: &'static str,
-    artifact_prefix: &'static str,
+    pack_id: String,
+    pack_title: String,
+    pack_authors: String,
+    artifact_prefix: String,
     icon_dir: &'static str,
     runtime: &'static str,
     main_exe: String,
@@ -2841,35 +2873,47 @@ struct VelopackAssetIndexEntry {
 }
 
 fn windows_package_config(build_channel: &str, arch: &str) -> Result<WindowsPackageConfig> {
-    let (pack_id, pack_title, artifact_prefix, icon_dir) = match build_channel {
-        "stable" => ("fluxer_desktop", "Fluxer", "Fluxer", "icons-stable"),
-        "canary" => (
-            "fluxer_desktop_canary",
-            "Fluxer Canary",
-            "Fluxer-Canary",
-            "icons-canary",
-        ),
-        "development" => (
-            "fluxer_desktop_development",
-            "Fluxer Development",
-            "Fluxer-Development",
-            "icons-development",
-        ),
+    windows_package_config_from(env_string, build_channel, arch)
+}
+
+/// Micup: `FLUXER_DESKTOP_PACK_ID`/`_TITLE`/`_AUTHORS` rebrand the Windows package
+/// (canary appends `_canary` / ` Canary`); unset keeps Fluxer's identity. All three or none:
+/// a partial set would keep packId `fluxer_desktop` and install over Fluxer's own app and feed.
+fn windows_package_config_from(
+    lookup: impl Fn(&str) -> Option<String>,
+    build_channel: &str,
+    arch: &str,
+) -> Result<WindowsPackageConfig> {
+    let (suffix, title_suffix, icon_dir) = match build_channel {
+        "stable" => ("", "", "icons-stable"),
+        "canary" => ("_canary", " Canary", "icons-canary"),
+        "development" => ("_development", " Development", "icons-development"),
         other => bail!(
             "Unsupported BUILD_CHANNEL for Windows packaging: {other}. Expected stable, canary or development"
         ),
     };
+    let [pack_id, mut pack_title, pack_authors] = match WINDOWS_PACK_IDENTITY_ENV.map(&lookup) {
+        [Some(id), Some(title), Some(authors)] => [id, title, authors],
+        [None, None, None] => ["fluxer_desktop", "Fluxer", "Fluxer Platform AB"].map(String::from),
+        _ => bail!(
+            "{} must be set together or not at all; a partial set keeps packId fluxer_desktop and \
+             would install over Fluxer's own app and update feed.",
+            WINDOWS_PACK_IDENTITY_ENV.join(", ")
+        ),
+    };
+    pack_title.push_str(title_suffix);
     Ok(WindowsPackageConfig {
-        pack_id,
+        pack_id: format!("{pack_id}{suffix}"),
+        pack_authors,
+        artifact_prefix: pack_title.replace(' ', "-"),
+        main_exe: format!("{pack_title}.exe"),
         pack_title,
-        artifact_prefix,
         icon_dir,
         runtime: if arch == "arm64" {
             "win-arm64"
         } else {
             "win-x64"
         },
-        main_exe: format!("{pack_title}.exe"),
         output_dir: PathBuf::from("dist-electron").join(format!("velopack-windows-{arch}")),
     })
 }
@@ -2888,23 +2932,30 @@ fn package_app_windows_velopack_step() -> Result<()> {
         )
     })?;
     let vpk = find_velopack_cli()?;
-    let trusted_sign_file = PathBuf::from(require_env(VELOPACK_TRUSTED_SIGN_FILE_ENV).context(
-        "Velopack packaging requires the Trusted Signing metadata written by the write_windows_signing_metadata step. Windows packages are never produced unsigned.",
-    )?);
-    ensure!(
-        trusted_sign_file.is_file(),
-        "Velopack Trusted Signing metadata file is missing: {}",
-        trusted_sign_file.display()
-    );
+    let trusted_sign_file = if windows_unsigned_build(env_string) {
+        None
+    } else {
+        let path = PathBuf::from(require_env(VELOPACK_TRUSTED_SIGN_FILE_ENV).context(
+            "Velopack packaging requires the Trusted Signing metadata written by the write_windows_signing_metadata step. Windows packages are never produced unsigned.",
+        )?);
+        ensure!(
+            path.is_file(),
+            "Velopack Trusted Signing metadata file is missing: {}",
+            path.display()
+        );
+        Some(path)
+    };
     let packaged = pack_and_validate_windows_velopack(
         &vpk,
         &config,
         &version,
         &arch,
         &pack_dir,
-        &trusted_sign_file,
+        trusted_sign_file.as_deref(),
     );
-    let metadata_removed = remove_file_if_exists(&trusted_sign_file);
+    let metadata_removed = trusted_sign_file
+        .as_deref()
+        .map_or(Ok(()), remove_file_if_exists);
     packaged?;
     metadata_removed?;
     print_directory(&config.output_dir)
@@ -2916,15 +2967,34 @@ fn pack_and_validate_windows_velopack(
     version: &str,
     arch: &str,
     pack_dir: &Path,
-    trusted_sign_file: &Path,
+    trusted_sign_file: Option<&Path>,
 ) -> Result<()> {
-    ensure_velopack_pack_supports(vpk, &["--azureTrustedSignFile"])?;
+    if trusted_sign_file.is_some() {
+        ensure_velopack_pack_supports(vpk, &["--azureTrustedSignFile"])?;
+    }
 
-    run_command(CommandSpec::new(vpk).args([
+    run_command(CommandSpec::new(vpk).args(velopack_pack_args(
+        config,
+        version,
+        pack_dir,
+        trusted_sign_file,
+    )))?;
+
+    validate_velopack_output(config, version, arch)?;
+    remove_velopack_portable_archives(&config.output_dir)
+}
+
+fn velopack_pack_args(
+    config: &WindowsPackageConfig,
+    version: &str,
+    pack_dir: &Path,
+    trusted_sign_file: Option<&Path>,
+) -> Vec<String> {
+    let mut args = [
         "--yes",
         "pack",
         "--packId",
-        config.pack_id,
+        &config.pack_id,
         "--packVersion",
         version,
         "--packDir",
@@ -2932,9 +3002,9 @@ fn pack_and_validate_windows_velopack(
         "--mainExe",
         config.main_exe.as_str(),
         "--packTitle",
-        config.pack_title,
+        &config.pack_title,
         "--packAuthors",
-        "Fluxer Platform AB",
+        &config.pack_authors,
         "--shortcuts",
         "Desktop,StartMenu",
         "--runtime",
@@ -2945,12 +3015,14 @@ fn pack_and_validate_windows_velopack(
         config.output_dir.to_string_lossy().as_ref(),
         "--delta",
         "None",
-        "--azureTrustedSignFile",
-        trusted_sign_file.to_string_lossy().as_ref(),
-    ]))?;
-
-    validate_velopack_output(config, version, arch)?;
-    remove_velopack_portable_archives(&config.output_dir)
+    ]
+    .map(str::to_string)
+    .to_vec();
+    if let Some(file) = trusted_sign_file {
+        args.push("--azureTrustedSignFile".to_string());
+        args.push(file.to_string_lossy().into_owned());
+    }
+    args
 }
 
 fn remove_velopack_portable_archives(output_dir: &Path) -> Result<()> {
@@ -3202,7 +3274,7 @@ fn analyse_velopack_paths_step() -> Result<()> {
     println!("Analyzing Velopack package {}", nupkg.display());
     let local_app_data = require_env("LOCALAPPDATA")?;
     let prefix = PathBuf::from(local_app_data)
-        .join(config.pack_id)
+        .join(&config.pack_id)
         .join("current")
         .join("resources")
         .join("app.asar.unpacked");
@@ -4164,6 +4236,9 @@ fn verify_windows_unpacked_signatures_step() -> Result<()> {
         "No .dll was detected as a PE file under {}; the exe,dll,node signing filter would have been a silent no-op.",
         pack_dir.display()
     );
+    if windows_unsigned_build(env_string) {
+        return Ok(());
+    }
     let signtool = find_signtool()?;
     verify_windows_pe_signatures(&signtool, "win-unpacked", &pack_dir, &files)
 }
@@ -4273,7 +4348,9 @@ fn verify_windows_signed_artifacts_step() -> Result<()> {
         unverified_zips.join("\n")
     );
 
-    let signtool = find_signtool()?;
+    let signtool = (!windows_unsigned_build(env_string))
+        .then(find_signtool)
+        .transpose()?;
     let root = short_extraction_root(&format!("{}-{version}-{arch}", config.pack_id));
     remove_dir_if_exists(&root)?;
 
@@ -4300,7 +4377,9 @@ fn verify_windows_signed_artifacts_step() -> Result<()> {
     assert_windows_package_file_policy(&lib_app, &arch)?;
     assert_windows_native_pe_machines(&lib_app, &nupkg_files, &arch, &config.main_exe)?;
     assert_expected_windows_pe_inventory(&lib_app, &nupkg_files, &arch, &config.main_exe)?;
-    verify_windows_pe_signatures(&signtool, "nupkg lib/app", &lib_app, &nupkg_files)?;
+    if let Some(signtool) = &signtool {
+        verify_windows_pe_signatures(signtool, "nupkg lib/app", &lib_app, &nupkg_files)?;
+    }
 
     let portable_root = root.join("p");
     extract_zip_safely(&portable_zip, &portable_root)?;
@@ -4308,7 +4387,9 @@ fn verify_windows_signed_artifacts_step() -> Result<()> {
     assert_windows_package_file_policy(&portable_root, &arch)?;
     assert_windows_native_pe_machines(&portable_root, &portable_files, &arch, &config.main_exe)?;
     assert_expected_windows_pe_inventory(&portable_root, &portable_files, &arch, &config.main_exe)?;
-    verify_windows_pe_signatures(&signtool, "portable zip", &portable_root, &portable_files)?;
+    if let Some(signtool) = &signtool {
+        verify_windows_pe_signatures(signtool, "portable zip", &portable_root, &portable_files)?;
+    }
 
     let staged_installers = collect_pe_files(&config.output_dir)?;
     ensure!(
@@ -4316,7 +4397,9 @@ fn verify_windows_signed_artifacts_step() -> Result<()> {
         "Velopack output directory does not contain the renamed Setup executable {}",
         setup_exe.display()
     );
-    verify_windows_pe_signatures(&signtool, "setup", &config.output_dir, &staged_installers)?;
+    if let Some(signtool) = &signtool {
+        verify_windows_pe_signatures(signtool, "setup", &config.output_dir, &staged_installers)?;
+    }
 
     remove_dir_if_exists(&root)
 }
@@ -4486,6 +4569,7 @@ fn build_payload_step() -> Result<()> {
     let channel = require_env("CHANNEL")?;
     let version = require_env("VERSION")?;
     let pub_date = require_env("PUB_DATE")?;
+    let origin = package_origin_base()?;
     let artifacts = Path::new("artifacts");
     let artifact_dirs = payload_artifact_dirs(artifacts, &channel)?;
     ensure!(
@@ -4521,7 +4605,7 @@ fn build_payload_step() -> Result<()> {
                 },
             )?;
             if platform == "darwin" {
-                write_macos_releases(&dest, &channel, &manifest)?;
+                write_macos_releases(&dest, &origin, &channel, &manifest)?;
             }
             write_json_pretty(&dest.join("manifest.json"), &manifest)?;
         }
@@ -5040,7 +5124,33 @@ fn published_arches(platform: &str, arch: &str) -> Vec<&'static str> {
     }
 }
 
-fn write_macos_releases(dest: &Path, channel: &str, manifest: &DesktopManifest) -> Result<()> {
+/// Micup: `FLUXER_DESKTOP_PACKAGE_ORIGIN_BASE=https://dl.micup.gg` points the desktop update
+/// feeds at the fork's package origin; unset keeps Fluxer's.
+pub(crate) fn package_origin_base() -> Result<String> {
+    package_origin_base_from(
+        env_string(PACKAGE_ORIGIN_BASE_ENV).or_else(|| env_string(PACKAGE_DOWNLOAD_BASE_ENV)),
+    )
+}
+
+fn package_origin_base_from(value: Option<String>) -> Result<String> {
+    let Some(value) = value else {
+        return Ok(PACKAGE_ORIGIN_BASE.to_string());
+    };
+    let base = value.trim_end_matches('/');
+    ensure!(
+        base.strip_prefix("https://")
+            .is_some_and(|host| !host.is_empty()),
+        "{PACKAGE_ORIGIN_BASE_ENV}/{PACKAGE_DOWNLOAD_BASE_ENV} must be an https:// origin, got {value:?}."
+    );
+    Ok(base.to_string())
+}
+
+fn write_macos_releases(
+    dest: &Path,
+    origin: &str,
+    channel: &str,
+    manifest: &DesktopManifest,
+) -> Result<()> {
     let Some(zip) = manifest.files.get("zip") else {
         println!(
             "No .zip found for macOS {} in {} (auto-update requires zip artifacts).",
@@ -5050,8 +5160,7 @@ fn write_macos_releases(dest: &Path, channel: &str, manifest: &DesktopManifest) 
         return Ok(());
     };
     let url = format!(
-        "{}/{DESKTOP_PAYLOAD_PREFIX}/{channel}/{}/{}/{}",
-        package_origin_base(),
+        "{origin}/{DESKTOP_PAYLOAD_PREFIX}/{channel}/{}/{}/{}",
         manifest.platform,
         manifest.arch,
         zip.filename()
@@ -5111,19 +5220,15 @@ struct DesktopPackedModule {
     directory: PathBuf,
 }
 
-fn package_origin_base() -> String {
-    env::var(PACKAGE_ORIGIN_BASE_ENV)
-        .ok()
-        .map(|value| value.trim().trim_end_matches('/').to_string())
-        .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| PACKAGE_ORIGIN_BASE.to_string())
-}
-
-pub(crate) fn desktop_module_package_url(channel: &str, module: &str, sha256: &str) -> String {
-    format!(
+pub(crate) fn desktop_module_package_url(
+    channel: &str,
+    module: &str,
+    sha256: &str,
+) -> Result<String> {
+    Ok(format!(
         "{}/{DESKTOP_PAYLOAD_PREFIX}/{channel}/{DESKTOP_MODULES_KEY_SEGMENT}/{module}/{sha256}/{DESKTOP_MODULE_PACKAGE_NAME}",
-        package_origin_base()
-    )
+        package_origin_base()?
+    ))
 }
 
 fn read_packed_desktop_modules(
@@ -5222,20 +5327,20 @@ fn stage_desktop_module_packages(
 fn desktop_channel_manifest_entries(
     channel: &str,
     packed: &[DesktopPackedModule],
-) -> BTreeMap<String, DesktopChannelManifestEntry> {
+) -> Result<BTreeMap<String, DesktopChannelManifestEntry>> {
     packed
         .iter()
         .map(|module| {
-            (
+            Ok((
                 module.module.clone(),
                 DesktopChannelManifestEntry {
                     sha256: module.sha256.clone(),
                     bytes: module.bytes,
-                    url: desktop_module_package_url(channel, &module.module, &module.sha256),
+                    url: desktop_module_package_url(channel, &module.module, &module.sha256)?,
                     minimum_shell_version: DESKTOP_MODULE_MINIMUM_SHELL_VERSION.to_string(),
                     maximum_shell_version: None,
                 },
-            )
+            ))
         })
         .collect()
 }
@@ -5345,7 +5450,7 @@ fn write_desktop_channel_manifests(
     );
     let metadata_version = desktop_module_metadata_version(pub_date)?;
     stage_desktop_module_packages(payload_root, channel, packed)?;
-    let modules = desktop_channel_manifest_entries(channel, packed);
+    let modules = desktop_channel_manifest_entries(channel, packed)?;
     for (platform, arch) in targets {
         let manifest = DesktopChannelManifest {
             manifest_version: DESKTOP_CHANNEL_MANIFEST_VERSION,
@@ -6040,7 +6145,7 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
             )]),
         };
 
-        write_macos_releases(temp.path(), "canary", &manifest).unwrap();
+        write_macos_releases(temp.path(), PACKAGE_ORIGIN_BASE, "canary", &manifest).unwrap();
         let releases: Value =
             serde_json::from_str(&fs::read_to_string(temp.path().join("RELEASES.json")).unwrap())
                 .unwrap();
@@ -6145,12 +6250,12 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
 
     #[test]
     fn windows_package_config_tracks_channel_and_arch() {
-        let stable = windows_package_config("stable", "x64").unwrap();
+        let stable = windows_package_config_from(|_| None, "stable", "x64").unwrap();
         assert_eq!(stable.pack_id, "fluxer_desktop");
         assert_eq!(stable.runtime, "win-x64");
         assert_eq!(stable.main_exe, "Fluxer.exe");
 
-        let canary = windows_package_config("canary", "arm64").unwrap();
+        let canary = windows_package_config_from(|_| None, "canary", "arm64").unwrap();
         assert_eq!(canary.pack_id, "fluxer_desktop_canary");
         assert_eq!(canary.runtime, "win-arm64");
         assert_eq!(canary.main_exe, "Fluxer Canary.exe");
@@ -6283,10 +6388,125 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
         }
     }
 
+    fn micup_env(name: &str) -> Option<String> {
+        match name {
+            "FLUXER_DESKTOP_PACK_ID" => Some("micup_desktop".to_string()),
+            "FLUXER_DESKTOP_PACK_TITLE" | "FLUXER_DESKTOP_PACK_AUTHORS" => {
+                Some("Micup".to_string())
+            }
+            _ => None,
+        }
+    }
+
+    fn unsigned_flag(value: &'static str) -> impl Fn(&str) -> Option<String> {
+        move |name| (name == "FLUXER_DESKTOP_ALLOW_UNSIGNED").then(|| value.to_string())
+    }
+
+    #[test]
+    fn windows_package_config_takes_the_micup_identity_from_env() {
+        let stable = windows_package_config_from(micup_env, "stable", "x64").unwrap();
+        assert_eq!(stable.pack_id, "micup_desktop");
+        assert_eq!(stable.pack_title, "Micup");
+        assert_eq!(stable.pack_authors, "Micup");
+        assert_eq!(stable.main_exe, "Micup.exe");
+        assert_eq!(stable.artifact_prefix, "Micup");
+
+        let canary = windows_package_config_from(micup_env, "canary", "arm64").unwrap();
+        assert_eq!(canary.pack_id, "micup_desktop_canary");
+        assert_eq!(canary.pack_title, "Micup Canary");
+        assert_eq!(canary.pack_authors, "Micup");
+        assert_eq!(canary.main_exe, "Micup Canary.exe");
+        assert_eq!(canary.artifact_prefix, "Micup-Canary");
+    }
+
+    #[test]
+    fn windows_package_config_without_env_keeps_the_fluxer_identity() {
+        let stable = windows_package_config_from(|_| None, "stable", "x64").unwrap();
+        assert_eq!(stable.pack_id, "fluxer_desktop");
+        assert_eq!(stable.pack_title, "Fluxer");
+        assert_eq!(stable.pack_authors, "Fluxer Platform AB");
+        assert_eq!(stable.main_exe, "Fluxer.exe");
+        assert_eq!(stable.artifact_prefix, "Fluxer");
+
+        let canary = windows_package_config_from(|_| None, "canary", "x64").unwrap();
+        assert_eq!(canary.pack_id, "fluxer_desktop_canary");
+        assert_eq!(canary.pack_title, "Fluxer Canary");
+        assert_eq!(canary.main_exe, "Fluxer Canary.exe");
+        assert_eq!(canary.artifact_prefix, "Fluxer-Canary");
+    }
+
+    #[test]
+    fn velopack_pack_args_sign_with_the_trusted_signing_metadata() {
+        let config = windows_package_config_from(|_| None, "stable", "x64").unwrap();
+        let args = velopack_pack_args(
+            &config,
+            "2026.810.1",
+            Path::new("pack"),
+            Some(Path::new("sign.json")),
+        );
+        assert!(
+            args.windows(2)
+                .any(|pair| pair == ["--azureTrustedSignFile", "sign.json"])
+        );
+        assert!(
+            args.windows(2)
+                .any(|pair| pair == ["--packAuthors", "Fluxer Platform AB"])
+        );
+    }
+
+    #[test]
+    fn a_partial_micup_identity_is_rejected_instead_of_installing_as_fluxer() {
+        let only = |set: &'static [&'static str]| {
+            move |name: &str| set.contains(&name).then(|| "Micup".to_string())
+        };
+        for partial in [
+            &["FLUXER_DESKTOP_PACK_TITLE"][..],
+            &["FLUXER_DESKTOP_PACK_ID", "FLUXER_DESKTOP_PACK_TITLE"],
+            &["FLUXER_DESKTOP_PACK_AUTHORS"],
+        ] {
+            let error = windows_package_config_from(only(partial), "stable", "x64")
+                .unwrap_err()
+                .to_string();
+            assert!(error.contains("must be set together"), "{error}");
+        }
+    }
+
+    #[test]
+    fn velopack_pack_args_for_an_unsigned_micup_build_carry_no_signing_option() {
+        let config = windows_package_config_from(micup_env, "stable", "x64").unwrap();
+        let args = velopack_pack_args(&config, "1.0.2", Path::new("pack"), None);
+        assert!(!args.iter().any(|arg| arg == "--azureTrustedSignFile"));
+        assert!(
+            args.windows(2)
+                .any(|pair| pair == ["--packId", "micup_desktop"])
+        );
+        assert!(args.windows(2).any(|pair| pair == ["--packTitle", "Micup"]));
+        assert!(
+            args.windows(2)
+                .any(|pair| pair == ["--packAuthors", "Micup"])
+        );
+        assert!(
+            args.windows(2)
+                .any(|pair| pair == ["--mainExe", "Micup.exe"])
+        );
+    }
+
+    #[test]
+    fn missing_windows_signing_inputs_fail_unless_unsigned_builds_are_allowed() {
+        for lookup in [unsigned_flag(""), unsigned_flag("0")] {
+            let error = validate_windows_signing_inputs(lookup).unwrap_err();
+            assert!(
+                error
+                    .to_string()
+                    .contains("Missing Windows code signing environment variables")
+            );
+        }
+    }
+
     #[test]
     fn module_package_urls_point_at_the_content_addressed_package() {
         assert_eq!(
-            desktop_module_package_url("canary", "fluxer_renderer", "5c1e"),
+            desktop_module_package_url("canary", "fluxer_renderer", "5c1e").unwrap(),
             "https://pkgs.fluxer.com/desktop/canary/modules/fluxer_renderer/5c1e/package.br"
         );
     }
@@ -6412,6 +6632,33 @@ export const CHANNEL_DISPLAY_NAME = BUILD_CHANNEL;\n"
             );
             assert!(staged.join("package.br.sha256").is_file());
             assert!(staged.join("module.json").is_file());
+        }
+    }
+
+    #[test]
+    fn the_unsigned_flag_skips_windows_signing_input_validation() {
+        validate_windows_signing_inputs(unsigned_flag("1")).unwrap();
+    }
+
+    #[test]
+    fn package_origin_base_defaults_to_fluxer_and_follows_the_env_override() {
+        assert_eq!(
+            package_origin_base_from(None).unwrap(),
+            "https://pkgs.fluxer.com"
+        );
+        assert_eq!(
+            package_origin_base_from(Some("https://dl.micup.gg/".to_string())).unwrap(),
+            "https://dl.micup.gg"
+        );
+    }
+
+    #[test]
+    fn package_origin_base_rejects_an_override_that_is_not_https() {
+        for base in ["http://dl.micup.gg", "dl.micup.gg", "https://", "https:///"] {
+            let error = package_origin_base_from(Some(base.to_string()))
+                .unwrap_err()
+                .to_string();
+            assert!(error.contains("must be an https:// origin"), "{error}");
         }
     }
 

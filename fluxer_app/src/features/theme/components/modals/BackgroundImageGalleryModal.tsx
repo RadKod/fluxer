@@ -71,7 +71,7 @@ const NO_BACKGROUND_DESCRIPTOR = msg({
 });
 const UNLOCK_MORE_BACKGROUNDS_DESCRIPTOR = msg({
 	message: 'Unlock more backgrounds with {premiumProductName}',
-	comment: 'Premium upsell title in the background gallery.',
+	comment: 'Plus upsell title in the background gallery.',
 });
 const BLUR_DESCRIPTOR = msg({
 	message: 'Blur',

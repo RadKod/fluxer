@@ -26,7 +26,7 @@ export const BOOTSTRAP_APP_PUBLIC: InstanceAppPublic = {
 		premium_info_url: null,
 	},
 	setup: {configured: true, admin_url: null},
-	legal: {terms_url: null, privacy_url: null},
+	legal: {terms_url: null, privacy_url: null, source_url: null},
 	registration: {collect_date_of_birth: true},
 };
 
@@ -61,6 +61,9 @@ export function instanceDiscoveryFixture(
 			premium_enabled: false,
 			stripe_serviceable: false,
 			phone_verification_enabled: false,
+			premium_trial_days: 0,
+			gift_codes_enabled: false,
+			official_apps: [],
 		},
 		gif: {provider: 'tenor', display_name: 'Tenor', attribution_required: true},
 		sso: {enabled: false, enforced: false, display_name: null, redirect_uri: ''},

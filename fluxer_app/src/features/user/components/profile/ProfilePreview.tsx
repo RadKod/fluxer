@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {CustomStatusDisplay} from '@app/features/app/components/shared/custom_status_display/CustomStatusDisplay';
+import type {AvatarDecorationSurface} from '@app/features/cosmetics/components/AvatarUltraLayer';
 import Guilds from '@app/features/guild/state/Guilds';
 import type {GuildMember} from '@app/features/member/models/GuildMember';
 import {Button} from '@app/features/ui/button/Button';
@@ -26,9 +27,12 @@ import {useAutoplayExpandedProfileAnimations} from '@app/features/user/hooks/use
 import type {Profile} from '@app/features/user/models/Profile';
 import type {User} from '@app/features/user/models/User';
 import type {CustomStatus} from '@app/features/user/state/CustomStatus';
+import UserProfileStore from '@app/features/user/state/UserProfile';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import type {ProfilePreviewOverrides} from '@app/features/user/utils/ProfileDisplayUtils';
 import {type BadgeSettings, createMockProfile} from '@app/features/user/utils/ProfileUtils';
+import {PublicUserFlags} from '@fluxer/constants/src/UserConstants';
+import type {CosmeticAssetDataResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
 import type {UserProfile} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
@@ -68,6 +72,8 @@ interface ProfilePreviewProps {
 	showMessageButton?: boolean;
 	showPreviewLabel?: boolean;
 	previewCustomStatus?: CustomStatus | null;
+	previewProfileEffect?: CosmeticAssetDataResponse | null;
+	decorationSurface?: AvatarDecorationSurface;
 }
 
 export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
@@ -93,6 +99,8 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 		showMessageButton = true,
 		showPreviewLabel = true,
 		previewCustomStatus,
+		previewProfileEffect,
+		decorationSurface = 'profile',
 	}) => {
 		const {i18n} = useLingui();
 		const previewOverrides = useMemo<ProfilePreviewOverrides>(
@@ -114,20 +122,29 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 			],
 		);
 		const isCommunityProfile = Boolean(guildId && guildMemberProfile);
+		const previewBadgeHidden = previewBadgeSettings?.premium_badge_hidden;
 		const previewUser = useMemo(() => {
 			const globalName = previewGlobalName !== undefined ? previewGlobalName : user.globalName;
+			// Micup: the profile badge row reads PREMIUM_BADGE, so the unsaved "hide the premium badge" switch flips it.
+			let flags = user.flags;
+			if (previewBadgeHidden === true) {
+				flags &= ~PublicUserFlags.PREMIUM_BADGE;
+			} else if (previewBadgeHidden === false && (user.premiumType ?? 0) > 0) {
+				flags |= PublicUserFlags.PREMIUM_BADGE;
+			}
 			if (isCommunityProfile) {
-				return user.withUpdates({global_name: globalName});
+				return user.withUpdates({global_name: globalName, flags});
 			}
 			const bio = previewBio !== undefined ? previewBio : user.bio;
 			const pronouns = previewPronouns !== undefined ? previewPronouns : user.pronouns;
-			return user.withUpdates({bio, pronouns, global_name: globalName});
-		}, [user, previewBio, previewPronouns, previewGlobalName, isCommunityProfile]);
+			return user.withUpdates({bio, pronouns, global_name: globalName, flags});
+		}, [user, previewBio, previewPronouns, previewGlobalName, isCommunityProfile, previewBadgeHidden]);
 		const mockProfile = useMemo(() => {
 			if (isCommunityProfile && guildId && guildMemberProfile) {
 				const globalProfile = createMockProfile(previewUser, {
 					previewTimezoneOffset,
 					previewBadgeSettings,
+					previewProfileEffect,
 				});
 				return globalProfile.withGuildId(guildId).withUpdates({
 					guild_member: guildMember?.toJSON(),
@@ -147,6 +164,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 				previewAccentColor,
 				previewTimezoneOffset,
 				previewBadgeSettings,
+				previewProfileEffect,
 			});
 		}, [
 			previewUser,
@@ -157,6 +175,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 			previewAccentColor,
 			previewTimezoneOffset,
 			previewBadgeSettings,
+			previewProfileEffect,
 			guildId,
 			guildMember,
 			guildMemberProfile,
@@ -238,6 +257,11 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 					<ProfileCardLayout
 						borderColor={borderColor}
 						showPreviewLabel={showPreviewLabel}
+						profileEffect={
+							previewProfileEffect !== undefined
+								? previewProfileEffect
+								: UserProfileStore.getProfile(user.id)?.profileEffect
+						}
 						data-flx="user.profile.profile-preview.profile-card-layout"
 					>
 						<ProfileCardBanner
@@ -245,16 +269,12 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 							hoverBannerUrl={finalHoverBannerUrl}
 							bannerColor={bannerColor}
 							user={user}
+							decorationSurface={decorationSurface}
 							avatarUrl={finalAvatarUrl}
 							hoverAvatarUrl={finalHoverAvatarUrl}
 							isClickable={true}
 							onAvatarClick={openMockProfile}
 							data-flx="user.profile.profile-preview.profile-card-banner"
-						/>
-						<UserProfileBadges
-							user={previewUser}
-							profile={mockProfile}
-							data-flx="user.profile.profile-preview.user-profile-badges"
 						/>
 						<ProfileCardContent data-flx="user.profile.profile-preview.profile-card-content">
 							<ProfileCardUserInfo
@@ -265,6 +285,14 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 								isClickable={true}
 								onDisplayNameClick={openMockProfile}
 								onUsernameClick={openMockProfile}
+								belowName={
+									<UserProfileBadges
+										user={previewUser}
+										profile={mockProfile}
+										isModal={true}
+										data-flx="user.profile.profile-preview.user-profile-badges"
+									/>
+								}
 								data-flx="user.profile.profile-preview.profile-card-user-info"
 							/>
 							<div className={styles.profileCustomStatus} data-flx="user.profile.profile-preview.profile-custom-status">

@@ -420,7 +420,11 @@ export const UserAreaPopout = observer(() => {
 	return (
 		<FocusRingScope containerRef={popoutContainerRef} data-flx="app.floating.user-area-popout.focus-ring-scope">
 			<div ref={popoutContainerRef} className={styles.container} data-flx="app.floating.user-area-popout.container">
-				<ProfileCardLayout borderColor={borderColor} data-flx="app.floating.user-area-popout.profile-card-layout">
+				<ProfileCardLayout
+					borderColor={borderColor}
+					profileEffect={profile.profileEffect}
+					data-flx="app.floating.user-area-popout.profile-card-layout"
+				>
 					<ProfileCardBanner
 						bannerUrl={bannerUrl}
 						hoverBannerUrl={hoverBannerUrl}
@@ -433,15 +437,18 @@ export const UserAreaPopout = observer(() => {
 						onAvatarClick={openUserProfile}
 						data-flx="app.floating.user-area-popout.profile-card-banner"
 					/>
-					<UserProfileBadges
-						user={currentUser}
-						profile={profile}
-						data-flx="app.floating.user-area-popout.user-profile-badges"
-					/>
 					<ProfileCardContent isWebhook={false} data-flx="app.floating.user-area-popout.profile-card-content">
 						<ProfileCardUserInfo
 							displayName={displayName}
 							user={currentUser}
+							belowName={
+								<UserProfileBadges
+									user={currentUser}
+									profile={profile}
+									isModal={true}
+									data-flx="app.floating.user-area-popout.user-profile-badges"
+								/>
+							}
 							pronouns={profileData?.pronouns}
 							showUsername={true}
 							isClickable={false}

@@ -28,6 +28,7 @@ import {
 import {resolveNsfwScopeChannel} from '@app/api/channel/utils/ThreadNsfwScope';
 import type {NcmecAttachmentStatusResponse, NcmecSubmissionService} from '@app/api/csam/NcmecSubmissionService';
 import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import {priorityPurgeQueue} from '@app/api/infrastructure/CachePurgeQueue';
 import {getPurgeQueue, getStorageService} from '@app/api/middleware/ServiceSingletons';
 import {getMessageSearchService} from '@app/api/SearchFactory';
 import {deleteMessageSearchDocuments} from '@app/api/search/MessageSearchIndexCleanup';
@@ -139,7 +140,7 @@ export class AdminMessageService {
 		const channel = await channelRepository.findUnique(channelId);
 		const message = await channelRepository.getMessage(channelId, messageId);
 		if (message) {
-			await purgeMessageAttachments(message, getStorageService(), getPurgeQueue());
+			await purgeMessageAttachments(message, getStorageService(), priorityPurgeQueue(getPurgeQueue()));
 			await channelRepository.deleteMessage(
 				channelId,
 				messageId,

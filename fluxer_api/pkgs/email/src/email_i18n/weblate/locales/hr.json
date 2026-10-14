@@ -21,11 +21,13 @@
 	},
 	"donation_confirmation": {
 		"subject": "Hvala ti na donaciji za {product_name}",
-		"body": "Pozdrav,\n\nHvala ti na donaciji za {product_name}! Tvoja {interval, select,\n  month {redovita donacija}\n  year {redovita donacija}\n  other {jednokratna donacija}\n} uspješno je {interval, select,\n  month {postavljena}\n  year {postavljena}\n  other {obrađena}\n}.\n\nDetalji donacije:\nIznos: {amount} {interval, select,\n  month {mjesečno}\n  year {godišnje}\n  other {}\n}\n\nStripe će ti uskoro poslati zasebnu potvrdu s PDF-om računa. Ona sadrži sve detalje plaćanja i možeš je koristiti u porezne svrhe.\n\nMožeš pregledati povijest donacija, preuzeti račune {interval, select,\n  month {i upravljati pretplatom ili je otkazati}\n  year {i upravljati pretplatom ili je otkazati}\n  other {i upravljati budućim donacijama}\n} u bilo kojem trenutku putem ove poveznice:\n\n{manageUrl}\n\nTvoja podrška pomaže da {product_name} nastavi raditi. Hvala ti!\n\n– Tim {product_name}a"
+		"body": "Pozdrav,\n\nHvala ti na donaciji za {product_name}! Tvoja {interval, select,\n  month {redovita donacija}\n  year {redovita donacija}\n  other {jednokratna donacija}\n} uspješno je {interval, select,\n  month {postavljena}\n  year {postavljena}\n  other {obrađena}\n}.\n\nDetalji donacije:\nIznos: {amount} {interval, select,\n  month {mjesečno}\n  year {godišnje}\n  other {}\n}\n\nStripe će ti uskoro poslati zasebnu potvrdu s PDF-om računa. Ona sadrži sve detalje plaćanja i možeš je koristiti u porezne svrhe.\n\nMožeš pregledati povijest donacija, preuzeti račune {interval, select,\n  month {i upravljati pretplatom ili je otkazati}\n  year {i upravljati pretplatom ili je otkazati}\n  other {i upravljati budućim donacijama}\n} u bilo kojem trenutku putem ove poveznice:\n\n{manageUrl}\n\nTvoja podrška pomaže da {product_name} nastavi raditi. Hvala ti!\n\n– Tim {product_name}a",
+		"button": "Upravljaj donacijama"
 	},
 	"donation_magic_link": {
 		"subject": "Upravljanje donacijama za {product_name}",
-		"body": "Pozdrav,\n\nKlikni na poveznicu ispod za pristup svom portalu za donatore:\n\n{manageUrl}\n\nNa portalu možeš upravljati pretplatama, preuzimati račune i pregledavati povijest svojih donacija.\n\nOva poveznica istječe {expiresAt, date, full} u {expiresAt, time, short}.\n\nAko ovaj zahtjev ne dolazi od tebe, slobodno zanemari ovu e-poštu.\n\n– Tim {product_name}a"
+		"body": "Pozdrav,\n\nKlikni na poveznicu ispod za pristup svom portalu za donatore:\n\n{manageUrl}\n\nNa portalu možeš upravljati pretplatama, preuzimati račune i pregledavati povijest svojih donacija.\n\nOva poveznica istječe {expiresAt, date, full} u {expiresAt, time, short}.\n\nAko ovaj zahtjev ne dolazi od tebe, slobodno zanemari ovu e-poštu.\n\n– Tim {product_name}a",
+		"button": "Upravljaj donacijama"
 	},
 	"dsa_report_verification": {
 		"subject": "Potvrdi svoju e-poštu za prijavu prema Zakonu o digitalnim uslugama",
@@ -41,11 +43,13 @@
 	},
 	"email_change_revert": {
 		"subject": "Tvoja e-pošta za {product_name} je promijenjena",
-		"body": "Pozdrav {username},\n\nAdresa e-pošte na tvom računu na {product_name}u promijenjena je u {newEmail}.\n\nAko ova promjena dolazi od tebe, nije potrebna nikakva radnja. Ako ne dolazi, možeš je poništiti i zaštititi svoj račun ovom poveznicom:\n\n{revertUrl}\n\nOvo će vratiti tvoju prethodnu e-poštu, odjaviti te iz svih sesija, onemogućiti višefaktorsku autentifikaciju i zahtijevati postavljanje nove lozinke.\n\n– Sigurnosni tim {product_name}a"
+		"body": "Pozdrav {username},\n\nAdresa e-pošte na tvom računu na {product_name}u promijenjena je u {newEmail}.\n\nAko ova promjena dolazi od tebe, nije potrebna nikakva radnja. Ako ne dolazi, možeš je poništiti i zaštititi svoj račun ovom poveznicom:\n\n{revertUrl}\n\nOvo će vratiti tvoju prethodnu e-poštu, odjaviti te iz svih sesija, onemogućiti višefaktorsku autentifikaciju i zahtijevati postavljanje nove lozinke.\n\n– Sigurnosni tim {product_name}a",
+		"button": "Poništi ovu promjenu"
 	},
 	"email_verification": {
 		"subject": "Potvrdi svoju e-poštu za {product_name}",
-		"body": "Pozdrav {username},\n\nPotvrdi adresu e-pošte za svoj račun na {product_name}u klikom na poveznicu ispod:\n\n{verifyUrl}\n\nAko račun na {product_name}u nije tvoj, možeš zanemariti ovu e-poštu.\n\nOva poveznica vrijedi 24 sata.\n\n– Tim {product_name}a"
+		"body": "🎉 Pozdrav {username},\n\nPotvrdi adresu e-pošte za svoj račun na {product_name}u klikom na poveznicu ispod:\n\n{verifyUrl}\n\nAko račun na {product_name}u nije tvoj, možeš zanemariti ovu e-poštu.\n\nOva poveznica vrijedi 24 sata.\n\n– Tim {product_name}a",
+		"button": "Potvrdi e-poštu"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Pogodnosti tvog iskorištenog poklona su uklonjene",
@@ -53,15 +57,18 @@
 	},
 	"harvest_completed": {
 		"subject": "Tvoj izvoz podataka za {product_name} je spreman za preuzimanje",
-		"body": "Pozdrav {username},\n\nTvoj izvoz podataka je spreman.\n\nPoveznica za preuzimanje:\n{downloadUrl}\n\nUključene poruke: {totalMessages, number}\nVeličina datoteke: {fileSizeMB, number} MB\n\nOva poveznica istječe {expiresAt, date, full} u {expiresAt, time, short}.\n\nAko ovaj izvoz ne dolazi od tebe, odmah promijeni lozinku i kontaktiraj naš tim za podršku.\n\n– Tim {product_name}a"
+		"body": "Pozdrav {username},\n\nTvoj izvoz podataka je spreman.\n\nPoveznica za preuzimanje:\n{downloadUrl}\n\nUključene poruke: {totalMessages, number}\nVeličina datoteke: {fileSizeMB, number} MB\n\nOva poveznica istječe {expiresAt, date, full} u {expiresAt, time, short}.\n\nAko ovaj izvoz ne dolazi od tebe, odmah promijeni lozinku i kontaktiraj naš tim za podršku.\n\n– Tim {product_name}a",
+		"button": "Preuzmi moje podatke"
 	},
 	"inactivity_warning": {
 		"subject": "Tvoj račun na {product_name}u bit će izbrisan zbog neaktivnosti",
-		"body": "Pozdrav {username},\n\nNismo primijetili nikakvu aktivnost na tvom računu na {product_name}u od {lastActiveDate, date, full}.\n\nAko se ne prijaviš do {deletionDate, date, full} u {deletionDate, time, short}, tvoj račun bit će trajno izbrisan zbog neaktivnosti.\n\nPrijavi se ovdje:\n{loginUrl}\n\nAko u posljednje vrijeme koristiš {product_name}, odmah kontaktiraj naš tim za podršku.\n\n– Tim {product_name}a"
+		"body": "Pozdrav {username},\n\nNismo primijetili nikakvu aktivnost na tvom računu na {product_name}u od {lastActiveDate, date, full}.\n\nAko se ne prijaviš do {deletionDate, date, full} u {deletionDate, time, short}, tvoj račun bit će trajno izbrisan zbog neaktivnosti.\n\nPrijavi se ovdje:\n{loginUrl}\n\nAko u posljednje vrijeme koristiš {product_name}, odmah kontaktiraj naš tim za podršku.\n\n– Tim {product_name}a",
+		"button": "Prijavi se"
 	},
 	"ip_authorization": {
 		"subject": "Odobri prijavu s nove IP adrese",
-		"body": "Pozdrav {username},\n\nOtkrili smo pokušaj prijave na tvoj račun na {product_name}u s nove IP adrese:\n\nIP adresa: {ipAddress}\nLokacija: {location}\n\nAko je to bio tvoj pokušaj, odobri ovu IP adresu klikom na poveznicu ispod:\n\n{authUrl}\n\nAko taj pokušaj ne dolazi od tebe, odmah promijeni lozinku.\n\nOva poveznica vrijedi 30 minuta.\n\n– Tim {product_name}a"
+		"body": "Pozdrav {username},\n\nOtkrili smo pokušaj prijave na tvoj račun na {product_name}u s nove IP adrese:\n\nIP adresa: {ipAddress}\nLokacija: {location}\n\nAko je to bio tvoj pokušaj, odobri ovu IP adresu klikom na poveznicu ispod:\n\n{authUrl}\n\nAko taj pokušaj ne dolazi od tebe, odmah promijeni lozinku.\n\nOva poveznica vrijedi 30 minuta.\n\n– Tim {product_name}a",
+		"button": "Odobri ovu prijavu"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Potvrdi pristup svojim rezervnim kodovima na {product_name}u",
@@ -73,11 +80,17 @@
 	},
 	"password_reset": {
 		"subject": "Poništi svoju lozinku za {product_name}",
-		"body": "Pozdrav {username},\n\nPrimili smo tvoj zahtjev za poništavanje lozinke za {product_name}. Upotrijebi poveznicu ispod za postavljanje nove lozinke:\n\n{resetUrl}\n\nAko ovaj zahtjev ne dolazi od tebe, slobodno zanemari ovu e-poštu.\n\nOva poveznica vrijedi 1 sat.\n\n– Tim {product_name}a"
+		"body": "Pozdrav {username},\n\nPrimili smo tvoj zahtjev za poništavanje lozinke za {product_name}. Upotrijebi poveznicu ispod za postavljanje nove lozinke:\n\n{resetUrl}\n\nAko ovaj zahtjev ne dolazi od tebe, slobodno zanemari ovu e-poštu.\n\nOva poveznica vrijedi 1 sat.\n\n– Tim {product_name}a",
+		"button": "Poništi lozinku"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "Tvoja registracija za {product_name} je odobrena",
-		"body": "Pozdrav {username},\n\nDobre vijesti: tvoja registracija za {product_name} je odobrena.\n\nSada se možeš prijaviti u aplikaciju {product_name} ovdje:\n{channelsUrl}\n\nDobro došli u zajednicu {product_name}a.\n\n– Tim {product_name}a"
+		"body": "🎉 Pozdrav {username},\n\nDobre vijesti: tvoja registracija za {product_name} je odobrena.\n\nSada se možeš prijaviti u aplikaciju {product_name} ovdje:\n{channelsUrl}\n\nDobro došli u zajednicu {product_name}a.\n\n– Tim {product_name}a",
+		"button": "Otvori {product_name}"
 	},
 	"report_resolved": {
 		"subject": "Tvoja prijava na {product_name}u je pregledana",
@@ -93,6 +106,6 @@
 	},
 	"unban_notification": {
 		"subject": "Suspenzija tvog računa na {product_name}u je ukinuta",
-		"body": "Pozdrav {username},\n\nDobre vijesti: suspenzija tvog računa na {product_name}u je ukinuta.\n\n{reason, select,\n  null {}\n  other {Razlog: {reason}}\n}\n\nSada se možeš ponovno prijaviti i nastaviti koristiti {product_name} kao i obično.\n\n– Sigurnosni tim {product_name}a"
+		"body": "🎉 Pozdrav {username},\n\nDobre vijesti: suspenzija tvog računa na {product_name}u je ukinuta.\n\n{reason, select,\n  null {}\n  other {Razlog: {reason}}\n}\n\nSada se možeš ponovno prijaviti i nastaviti koristiti {product_name} kao i obično.\n\n– Sigurnosni tim {product_name}a"
 	}
 }

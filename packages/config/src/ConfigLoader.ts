@@ -13,7 +13,9 @@ import {
 } from '@fluxer/config/src/EndpointDerivation';
 import {
 	ACCOUNT_IDENTITY_MODE_NAMES,
+	BUNNY_PURGE_MODES,
 	CACHE_PURGE_ADAPTER_NAMES,
+	CASSANDRA_CONSISTENCY_NAMES,
 	type MasterConfig,
 	STORE_PRODUCT_SLOT_NAMES,
 	TAG_STYLE_NAMES,
@@ -21,14 +23,7 @@ import {
 
 let cachedConfig: MasterConfig | null = null;
 
-const DEFAULT_PASSKEY_ORIGINS = [
-	'https://fluxer.app',
-	'https://web.fluxer.app',
-	'https://web.canary.fluxer.app',
-	'https://fluxer.com',
-	'https://canary.fluxer.com',
-	'android:apk-key-hash:keSY4bimyLqZQV7bKXgpa2xYuqXi0qZJzsYtp6gpx7w',
-];
+const DEFAULT_PASSKEY_ORIGINS: Array<string> = [];
 
 function defaultConfig(): MasterConfig {
 	return {
@@ -167,6 +162,7 @@ function defaultConfig(): MasterConfig {
 			},
 		},
 		integrations: {
+			risk_integration: {},
 			email: {
 				enabled: false,
 				provider: 'none',
@@ -203,6 +199,11 @@ function defaultConfig(): MasterConfig {
 				username: '',
 				password: '',
 			},
+			payriff: {
+				enabled: false,
+				secret_key: '',
+				base_url: 'https://api.payriff.com/api/v3',
+			},
 			clamav: {
 				enabled: false,
 				host: '127.0.0.1',
@@ -222,6 +223,32 @@ function defaultConfig(): MasterConfig {
 					token: '',
 					timeout_ms: 10_000,
 				},
+				bunny: {
+					api_base: 'https://api.bunny.net',
+					api_key: '',
+					timeout_ms: 10_000,
+					concurrency: 8,
+					mode: 'prefix',
+					pull_zone_id: 0,
+					// Bunny's documented per-account budget for prefix purges: 20 at once, then 0.5 per second.
+					// Tag purges have no documented limit, so they start from the same budget.
+					rate_per_minute: 30,
+					burst: 20,
+				},
+			},
+			bunny_stream: {
+				enabled: false,
+				library_id: 0,
+				api_key: '',
+				read_only_api_key: '',
+				cdn_hostname: '',
+				token_key: '',
+				storage_zone: '',
+				storage_password: '',
+				storage_host: 'storage.bunnycdn.com',
+				api_base: 'https://video.bunnycdn.com',
+				tus_endpoint: 'https://video.bunnycdn.com/tusupload',
+				timeout_ms: 10_000,
 			},
 			blocklist_feeds: {},
 			breached_password_check: {},
@@ -249,6 +276,7 @@ function defaultConfig(): MasterConfig {
 		},
 		instance: {
 			self_hosted: false,
+			abuse_policy: {phone_flagging: {enabled: true}},
 			branding: {
 				product_name: 'Fluxer',
 			},
@@ -435,10 +463,38 @@ function validateApiWorkerConfig(config: MasterConfig): void {
 		assertOneOf(worker.mode, ['all_lanes', 'single_lane', 'single_task'], 'FLUXER_API_WORKER_MODE');
 	}
 	if (worker.lane !== undefined) {
-		assertOneOf(worker.lane, ['realtime', 'unfurl', 'lifecycle', 'batch', 'crosspost'], 'FLUXER_API_WORKER_LANE');
+		assertOneOf(
+			worker.lane,
+			[
+				'realtime',
+				'unfurl',
+				'lifecycle',
+				'batch',
+				'crosspost',
+				'purge',
+				'feed',
+				'video',
+				'views',
+				'referral',
+				'roster',
+				'roster_live',
+				'micupbot_live',
+				'micupbot_roles',
+				'micupbot',
+			],
+			'FLUXER_API_WORKER_LANE',
+		);
 	}
 	if (worker.mode === 'single_task') {
 		requireString(worker.task, 'FLUXER_API_WORKER_TASK');
+	}
+	if (worker.feed_view_flush_partition_concurrency !== undefined) {
+		assertIntegerInRange(
+			worker.feed_view_flush_partition_concurrency,
+			'FLUXER_API_WORKER_FEED_VIEW_FLUSH_PARTITION_CONCURRENCY',
+			1,
+			8,
+		);
 	}
 }
 
@@ -469,26 +525,120 @@ function normalizeAppOriginAliases(config: MasterConfig): void {
 	];
 }
 
-function validateCachePurgeConfig(config: MasterConfig): void {
-	const cachePurge = config.integrations.cache_purge;
-	if (cachePurge.adapter !== 'http') {
-		return;
-	}
-	requireString(cachePurge.http.endpoint, 'FLUXER_CACHE_PURGE_HTTP_ENDPOINT');
-	const endpoint = URL.parse(cachePurge.http.endpoint);
+function requirePurgeEndpoint(value: string, envName: string): void {
+	requireString(value, envName);
+	const endpoint = URL.parse(value);
 	if (
 		endpoint === null ||
 		(endpoint.protocol !== 'http:' && endpoint.protocol !== 'https:') ||
 		endpoint.username !== '' ||
 		endpoint.password !== ''
 	) {
-		throw new Error('FLUXER_CACHE_PURGE_HTTP_ENDPOINT must be an absolute http or https URL without credentials');
+		throw new Error(`${envName} must be an absolute http or https URL without credentials`);
 	}
-	requireString(cachePurge.http.token, 'FLUXER_CACHE_PURGE_HTTP_TOKEN');
-	if (!/^[\x21-\x7e]+$/u.test(cachePurge.http.token)) {
-		throw new Error('FLUXER_CACHE_PURGE_HTTP_TOKEN must contain only visible ASCII characters');
+}
+
+function requirePurgeCredential(value: string, envName: string): void {
+	requireString(value, envName);
+	if (!/^[\x21-\x7e]+$/u.test(value)) {
+		throw new Error(`${envName} must contain only visible ASCII characters`);
 	}
+}
+
+function validateCachePurgeConfig(config: MasterConfig): void {
+	const cachePurge = config.integrations.cache_purge;
+	if (cachePurge.adapter === 'bunny') {
+		requirePurgeEndpoint(cachePurge.bunny.api_base, 'FLUXER_CACHE_PURGE_BUNNY_API_BASE');
+		// Every request carries the Bunny account key, which can rewrite the static CDN; it never goes out in clear text.
+		if (URL.parse(cachePurge.bunny.api_base)?.protocol !== 'https:') {
+			throw new Error(
+				'FLUXER_CACHE_PURGE_BUNNY_API_BASE must be an https URL; the account key would travel in clear text',
+			);
+		}
+		requirePurgeCredential(cachePurge.bunny.api_key, 'FLUXER_CACHE_PURGE_BUNNY_API_KEY');
+		assertIntegerInRange(cachePurge.bunny.timeout_ms, 'FLUXER_CACHE_PURGE_BUNNY_TIMEOUT_MS', 1_000, 10_000);
+		assertIntegerInRange(cachePurge.bunny.concurrency, 'FLUXER_CACHE_PURGE_BUNNY_CONCURRENCY', 1, 32);
+		assertOneOf(cachePurge.bunny.mode, BUNNY_PURGE_MODES, 'FLUXER_CACHE_PURGE_BUNNY_MODE');
+		const zoneId = cachePurge.bunny.pull_zone_id;
+		if (cachePurge.bunny.mode === 'tag' && !(Number.isSafeInteger(zoneId) && zoneId > 0)) {
+			throw new Error(
+				'FLUXER_CACHE_PURGE_BUNNY_PULL_ZONE_ID must be a positive integer when FLUXER_CACHE_PURGE_BUNNY_MODE is tag',
+			);
+		}
+		assertIntegerInRange(cachePurge.bunny.rate_per_minute, 'FLUXER_CACHE_PURGE_BUNNY_RATE_PER_MINUTE', 1, 60_000);
+		// A prefix purge of a non-ASCII name costs two purges, so the burst must hold at least two.
+		assertIntegerInRange(cachePurge.bunny.burst, 'FLUXER_CACHE_PURGE_BUNNY_BURST', 2, 10_000);
+		return;
+	}
+	// Micup: queue_only is for internet-facing processes (the API): they fill the queue and the worker purges, so a
+	// CDN credential there is a leak waiting to happen.
+	if (cachePurge.adapter === 'queue_only') {
+		if (cachePurge.bunny.api_key !== '') {
+			throw new Error('FLUXER_CACHE_PURGE_BUNNY_API_KEY must be empty when FLUXER_CACHE_PURGE_ADAPTER is queue_only');
+		}
+		if (cachePurge.http.token !== '') {
+			throw new Error('FLUXER_CACHE_PURGE_HTTP_TOKEN must be empty when FLUXER_CACHE_PURGE_ADAPTER is queue_only');
+		}
+		return;
+	}
+	if (cachePurge.adapter !== 'http') {
+		return;
+	}
+	requirePurgeEndpoint(cachePurge.http.endpoint, 'FLUXER_CACHE_PURGE_HTTP_ENDPOINT');
+	requirePurgeCredential(cachePurge.http.token, 'FLUXER_CACHE_PURGE_HTTP_TOKEN');
 	assertIntegerInRange(cachePurge.http.timeout_ms, 'FLUXER_CACHE_PURGE_HTTP_TIMEOUT_MS', 1_000, 10_000);
+}
+
+// Micup: every Payriff request carries the secret key; a wrong scheme stops the process at startup rather than every
+// shop call that builds the client.
+function validatePayriffConfig(config: MasterConfig): void {
+	if (URL.parse(config.integrations.payriff.base_url)?.protocol !== 'https:') {
+		throw new Error('FLUXER_PAYRIFF_BASE_URL must be an https URL; the secret key would travel in clear text');
+	}
+}
+
+function requireHttpsUrl(value: string, envName: string): void {
+	const url = URL.parse(value);
+	if (url === null || url.protocol !== 'https:' || url.username !== '' || url.password !== '') {
+		throw new Error(`${envName} must be an https URL without credentials`);
+	}
+}
+
+// Micup feed videos: all of the library, its keys, the CDN token key and the storage zone's read-only password, or
+// none. Every video URL is signed with the token key and every scan reads from the storage zone, so a half set would
+// hand out unsigned video or scan nothing; it fails startup instead. Nothing set leaves the video path closed.
+function normalizeBunnyStreamConfig(config: MasterConfig): void {
+	const stream = config.integrations.bunny_stream;
+	const secrets = [
+		[stream.api_key, 'FLUXER_BUNNY_STREAM_API_KEY'],
+		[stream.read_only_api_key, 'FLUXER_BUNNY_STREAM_READ_ONLY_API_KEY'],
+		[stream.token_key, 'FLUXER_BUNNY_STREAM_TOKEN_KEY'],
+		[stream.storage_password, 'FLUXER_BUNNY_STREAM_STORAGE_PASSWORD'],
+	] as const;
+	stream.enabled =
+		stream.library_id !== 0 ||
+		stream.cdn_hostname !== '' ||
+		stream.storage_zone !== '' ||
+		secrets.some(([value]) => value !== '');
+	if (!stream.enabled) return;
+	if (stream.library_id === 0) throw new Error('FLUXER_BUNNY_STREAM_LIBRARY_ID is required');
+	if (!Number.isSafeInteger(stream.library_id) || stream.library_id < 1) {
+		throw new Error('FLUXER_BUNNY_STREAM_LIBRARY_ID must be a positive integer');
+	}
+	for (const [value, envName] of secrets) {
+		requirePurgeCredential(value, envName);
+	}
+	requireString(stream.cdn_hostname, 'FLUXER_BUNNY_STREAM_CDN_HOSTNAME');
+	validateDomain(stream.cdn_hostname, 'FLUXER_BUNNY_STREAM_CDN_HOSTNAME');
+	requireString(stream.storage_zone, 'FLUXER_BUNNY_STREAM_STORAGE_ZONE');
+	if (!/^[a-z0-9-]+$/u.test(stream.storage_zone)) {
+		throw new Error('FLUXER_BUNNY_STREAM_STORAGE_ZONE must be lowercase letters, digits or hyphens');
+	}
+	requireString(stream.storage_host, 'FLUXER_BUNNY_STREAM_STORAGE_HOST');
+	validateDomain(stream.storage_host, 'FLUXER_BUNNY_STREAM_STORAGE_HOST');
+	requireHttpsUrl(stream.api_base, 'FLUXER_BUNNY_STREAM_API_BASE');
+	requireHttpsUrl(stream.tus_endpoint, 'FLUXER_BUNNY_STREAM_TUS_ENDPOINT');
+	assertIntegerInRange(stream.timeout_ms, 'FLUXER_BUNNY_STREAM_TIMEOUT_MS', 1_000, 30_000);
 }
 
 function validateStoreProductSlots(
@@ -587,6 +737,17 @@ function normalizeConfig(config: MasterConfig): MasterConfig {
 	assertOneOf(config.env, ['development', 'production', 'test'], 'FLUXER_ENV');
 	assertOneOf(config.domain.public_scheme, ['http', 'https'], 'FLUXER_PUBLIC_SCHEME');
 	assertOneOf(config.database.backend, ['postgres', 'cassandra'], 'FLUXER_DATABASE_BACKEND');
+	if (config.database.cassandra.consistency !== undefined) {
+		assertOneOf(config.database.cassandra.consistency, CASSANDRA_CONSISTENCY_NAMES, 'FLUXER_CASSANDRA_CONSISTENCY');
+	}
+	// Micup: read-after-write checks (member counts, locks) only hold when reads and writes overlap on a quorum.
+	if (
+		config.env === 'production' &&
+		config.database.backend === 'cassandra' &&
+		!['local_quorum', 'quorum'].includes(config.database.cassandra.consistency ?? '')
+	) {
+		throw new Error('FLUXER_CASSANDRA_CONSISTENCY must be local_quorum (or quorum) in production with Cassandra');
+	}
 	assertOneOf(config.internal.kv_mode, ['standalone', 'cluster'], 'FLUXER_KV_MODE');
 	assertOneOf(config.integrations.email.provider, ['smtp', 'none'], 'FLUXER_EMAIL_PROVIDER');
 	assertOneOf(config.integrations.search.engine, ['elasticsearch', 'meilisearch'], 'FLUXER_SEARCH_ENGINE');
@@ -601,6 +762,8 @@ function normalizeConfig(config: MasterConfig): MasterConfig {
 	validateApiWorkerConfig(config);
 	validateStorageChangeFeedConfig(config);
 	validateCachePurgeConfig(config);
+	validatePayriffConfig(config);
+	normalizeBunnyStreamConfig(config);
 	validateStoreBillingConfig(config);
 	validateReplyToEmail(config.integrations.email.reply_to_email);
 	normalizeAppOriginAliases(config);

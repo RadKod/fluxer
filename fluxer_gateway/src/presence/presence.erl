@@ -38,7 +38,10 @@
     subscriptions := map(),
     is_bot := boolean(),
     initial_presences_sent := boolean(),
-    last_published_presence := map() | undefined
+    last_published_presence := map() | undefined,
+    game_activity_state => map(),
+    game_activity_barriers => #{pid() => gen_server:from()},
+    game_activity_delivery_busy => boolean()
 }.
 -type presence_data() :: #{
     user_id := user_id(),
@@ -47,7 +50,8 @@
     friend_ids => [user_id()],
     group_dm_recipients => #{integer() => [user_id()] | #{user_id() => true}},
     status := status(),
-    custom_status => custom_status()
+    custom_status => custom_status(),
+    game_activity_pending => map()
 }.
 
 -spec start_link(presence_data()) -> {ok, pid()} | {error, term()}.
@@ -58,7 +62,21 @@ start_link(PresenceData) ->
 init(PresenceData) ->
     process_flag(trap_exit, true),
     erlang:process_flag(fullsweep_after, 20),
-    State = build_initial_state(PresenceData),
+    Initial = presence_game_activity:init(build_initial_state(PresenceData)),
+    Pending = maps:with(
+        [
+            policy_revision,
+            policy_requests,
+            inherited_policy_requests,
+            recoverable_policy_requests,
+            fenced,
+            pairs,
+            pair_sequence
+        ],
+        maps:get(game_activity_pending, PresenceData, #{})
+    ),
+    Game = maps:merge(maps:get(game_activity_state, Initial), Pending),
+    State = Initial#{game_activity_state => Game},
     StateWithSubs = presence_broadcast:ensure_initial_global_subscriptions(State),
     {ok, StateWithSubs}.
 
@@ -82,7 +100,7 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 -spec handle_call(term(), gen_server:from(), state()) ->
-    {reply, term(), state()} | {stop, normal, ok, state()}.
+    {reply, term(), state()} | {noreply, state()} | {stop, normal, ok, state()}.
 handle_call({session_connect, Request}, {Pid, _}, State) when is_map(Request), is_pid(Pid) ->
     SessionPid = session_connect_pid(Request, Pid),
     {reply, Reply, NewState} = presence_session:handle_session_connect(
@@ -93,8 +111,29 @@ handle_call({session_connect, Request}, {Pid, _}, State) when is_map(Request), i
     ),
     presence_broadcast:send_cached_presences_to_session(SessionPid, FinalState),
     {reply, Reply, FinalState};
+handle_call(has_active_sessions, _From, State) ->
+    {reply, map_size(maps:get(sessions, State)) > 0, State};
 handle_call(get_current_visible_presence, _From, State) ->
     {reply, presence_broadcast:current_visible_presence(State), State};
+handle_call({game_activity_context, ViewerId}, _From, State) ->
+    {reply, presence_game_activity:context(ViewerId, State), State};
+handle_call({game_activity_subscribe, ViewerId, SessionPid, Context, Grant}, _From, State) ->
+    {Reply, Next} = presence_game_activity:subscribe(
+        ViewerId, SessionPid, Context, Grant, State
+    ),
+    {reply, Reply, Next};
+handle_call({game_activity_control, Kind, Request}, From, State) ->
+    case presence_game_activity:control(Kind, Request, State) of
+        {{barrier, Targets, Ack}, Next} ->
+            Parent = self(),
+            Worker = spawn(presence_game_activity, barrier, [Targets, Ack, Next, Parent]),
+            Barriers = maps:get(game_activity_barriers, Next, #{}),
+            {noreply, Next#{game_activity_barriers => Barriers#{Worker => From}}};
+        {Reply, Next} ->
+            {reply, Reply, Next}
+    end;
+handle_call({game_activity_bootstrap, Nonce, Policy}, _From, State) ->
+    {reply, ok, presence_game_activity:bootstrap(Nonce, Policy, State)};
 handle_call({terminate_session, SessionIdHashes}, _From, State) when is_list(SessionIdHashes) ->
     presence_connect:handle_terminate_session_call(binary_list(SessionIdHashes), State);
 handle_call({dispatch, EventAtom, Data}, _From, State) when
@@ -131,6 +170,10 @@ handle_cast(reconcile_flattened_presence, State) ->
         )};
 handle_cast({presence_update, Request}, State) when is_map(Request) ->
     handle_presence_update_cast(Request, State);
+handle_cast({game_activity_clear, SessionId}, State) ->
+    {noreply, presence_game_activity:clear(SessionId, State)};
+handle_cast({game_activity_rollout, _Epoch}, State) ->
+    {noreply, presence_game_activity:rollout_changed(State)};
 handle_cast({terminate_session, SessionIdHashes}, State) when is_list(SessionIdHashes) ->
     presence_connect:terminate_all_session_pids(binary_list(SessionIdHashes), State),
     {noreply, State};
@@ -182,12 +225,38 @@ handle_info({initial_presences, Presences}, State) when is_list(Presences) ->
     presence_broadcast:dispatch_initial_presences(map_list(Presences), State),
     {noreply, State};
 handle_info({'DOWN', Ref, process, _Pid, Reason}, State) when is_reference(Ref) ->
-    presence_connect:handle_process_down(Ref, Reason, State);
+    presence_connect:handle_process_down(
+        Ref, Reason, presence_game_activity:receiver_down(Ref, State)
+    );
 handle_info({thread_user_flip, Version} = Flip, State) when is_integer(Version) ->
     lists:foreach(fun(Pid) -> Pid ! Flip end, presence_connect:collect_session_pids(State)),
     {noreply, State};
+handle_info({game_activity_expire, SessionId, Generation, Epoch}, State) ->
+    {noreply, presence_game_activity:expire(SessionId, Generation, Epoch, State)};
+handle_info({game_activity_barrier_done, Worker, Reply}, State) ->
+    Barriers = maps:get(game_activity_barriers, State, #{}),
+    case maps:take(Worker, Barriers) of
+        error ->
+            {noreply, State};
+        {From, Rest} ->
+            gen_server:reply(From, Reply),
+            Next = State#{game_activity_barriers => Rest},
+            game_activity_barrier_result(Reply, Next)
+    end;
+handle_info(game_activity_pending, State) ->
+    {noreply, presence_game_activity:pending(State)};
+handle_info({game_activity_delivery, Revision, Iterator}, State) ->
+    {noreply, presence_game_activity:delivery_batch(Revision, Iterator, State)};
+handle_info(game_activity_idle_expired, #{sessions := Sessions} = State) when
+    map_size(Sessions) =:= 0
+->
+    {stop, normal, State};
 handle_info(_, State) ->
     {noreply, State}.
+
+-spec game_activity_barrier_result(term(), state()) -> {noreply, state()}.
+game_activity_barrier_result({ok, _}, State) -> {noreply, State};
+game_activity_barrier_result(_, State) -> {noreply, presence_game_activity:rollout(State)}.
 
 -spec build_initial_state(presence_data()) -> state().
 build_initial_state(PresenceData) ->
@@ -230,10 +299,21 @@ handle_presence_update_cast(Request, State) ->
     {noreply, NewState} = presence_session:handle_presence_update(
         UpdatedRequest, StateWithCustomStatus
     ),
-    FinalState = presence_broadcast:publish_global_presence(
-        maps:get(sessions, NewState), NewState
-    ),
-    {noreply, FinalState}.
+    HasGame =
+        maps:is_key(game_activity, Request) orelse maps:is_key(<<"game_activity">>, Request),
+    FinalState =
+        case
+            HasGame andalso maps:get(sessions, NewState) =:= maps:get(sessions, State) andalso
+                maps:get(custom_status, NewState, null) =:= maps:get(custom_status, State, null)
+        of
+            true ->
+                NewState;
+            false ->
+                presence_broadcast:publish_global_presence(
+                    maps:get(sessions, NewState), NewState
+                )
+        end,
+    {noreply, presence_game_activity:update(Request, FinalState)}.
 
 -spec cast_guild_op(fun((integer(), state()) -> {reply, term(), state()}), integer(), state()) ->
     state().
@@ -242,11 +322,23 @@ cast_guild_op(Fun, GuildId, State) ->
     NewState.
 
 -spec handle_dispatch_call(atom(), map() | list(), state()) -> {reply, ok, state()}.
+handle_dispatch_call(user_update, Data, State) ->
+    NewState = process_dispatch_event(user_update, Data, State),
+    presence_broadcast:dispatch_to_all_sessions(
+        user_update, maps:get(user_data, NewState), State
+    ),
+    {reply, ok, NewState};
 handle_dispatch_call(EventAtom, Data, State) ->
     presence_broadcast:dispatch_to_all_sessions(EventAtom, Data, State),
     {reply, ok, process_dispatch_event(EventAtom, Data, State)}.
 
 -spec handle_dispatch_cast(atom(), map() | list(), state()) -> {noreply, state()}.
+handle_dispatch_cast(user_update, Data, State) ->
+    NewState = process_dispatch_event(user_update, Data, State),
+    presence_broadcast:dispatch_to_all_sessions(
+        user_update, maps:get(user_data, NewState), State
+    ),
+    {noreply, NewState};
 handle_dispatch_cast(Event, Data, State) ->
     presence_broadcast:dispatch_to_all_sessions(Event, Data, State),
     {noreply, process_dispatch_event(Event, Data, State)}.
@@ -267,7 +359,9 @@ process_dispatch_event(user_update, Data, State) ->
     presence_update:handle_user_update_event(Data, State);
 process_dispatch_event(user_settings_update, Data, State) ->
     NewState = presence_update:handle_user_settings_update(Data, State),
-    presence_broadcast:force_publish_global_presence(NewState);
+    presence_game_activity:update(
+        #{session_id => <<>>}, presence_broadcast:force_publish_global_presence(NewState)
+    );
 process_dispatch_event(message_create, Data, State) ->
     presence_update:handle_message_create_event(Data, State);
 process_dispatch_event(message_ack, Data, State) ->

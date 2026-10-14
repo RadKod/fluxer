@@ -5,6 +5,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {DEFAULT_TTL_TABLES} from '@app/api/database/PostgresKvDefaultTtlExpiry';
 import * as DonationTables from '@app/api/donation/DonationTables';
+import * as FeedTables from '@app/api/feed/FeedTables';
 import * as Tables from '@app/api/Tables';
 import {describe, expect, it} from 'vitest';
 
@@ -27,10 +28,23 @@ const SCHEMA_DEFAULTS = new Map<string, number>(
 	}),
 );
 
-const DSL_TABLES = [...Object.values(Tables), ...Object.values(DonationTables)];
+const DSL_TABLES = [...Object.values(Tables), ...Object.values(DonationTables), ...Object.values(FeedTables)];
 const DSL_NAMES = new Set<string>(DSL_TABLES.map((table) => table.name));
 
 const NON_DSL_DEFAULTS: Record<string, number | null> = {
+	inbound_sms_challenges: null,
+	inbound_sms_challenges_by_user: null,
+	ipinfo_cache: null,
+	ipinfo_requests_by_hour: null,
+	phone_lookup_cache: null,
+	phone_tokens: null,
+	phone_verification_attempts: null,
+	risk_outcomes_by_asn: null,
+	risk_outcomes_by_email_domain: null,
+	risk_outcomes_by_ip: null,
+	risk_outcomes_by_subnet: null,
+	suspicious_ips: null,
+	user_country_history: null,
 	billing_webhook_events: null,
 	forensic_identifier_by_key_day: null,
 	forensic_identifier_by_request: null,

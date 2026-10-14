@@ -51,6 +51,7 @@ type FlatCatalog = Record<string, string>;
 interface EmailTemplate {
 	subject: string;
 	body: string;
+	button?: string;
 }
 
 type EmailCatalog = Record<string, EmailTemplate>;
@@ -191,6 +192,12 @@ function normalizeEmailCatalog(source: EmailCatalog, existing: unknown): EmailCa
 					? existingTemplate.body
 					: sourceTemplate.body,
 		};
+		if (sourceTemplate.button !== undefined) {
+			next[key].button =
+				isRecord(existingTemplate) && typeof existingTemplate.button === 'string'
+					? existingTemplate.button
+					: sourceTemplate.button;
+		}
 	}
 	return next;
 }
@@ -214,6 +221,9 @@ function validateCatalog(kind: CatalogKind, catalog: unknown, label: string): Ca
 	for (const [key, value] of Object.entries(catalog)) {
 		if (!isRecord(value) || typeof value.subject !== 'string' || typeof value.body !== 'string') {
 			throw new Error(`${label}.${key} must contain string subject and body fields`);
+		}
+		if (value.button !== undefined && typeof value.button !== 'string') {
+			throw new Error(`${label}.${key}.button must be a string`);
 		}
 	}
 	return catalog as EmailCatalog;

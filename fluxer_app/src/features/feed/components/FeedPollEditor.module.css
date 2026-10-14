@@ -1,0 +1,91 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.editor {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	padding: 0.75rem;
+	border: 0.0625rem solid var(--background-modifier-accent);
+	border-radius: var(--radius-lg);
+}
+
+.options {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.option {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.input {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.removeButton {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 2.25rem;
+	height: 2.25rem;
+	margin: 0;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--text-primary-muted);
+	cursor: pointer;
+}
+
+.removeButton:hover:not(:disabled) {
+	background: var(--background-modifier-hover);
+	color: var(--text-primary);
+}
+
+.removeButton:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.footer {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+
+.length {
+	min-width: 9rem;
+	margin-left: auto;
+}
+
+/* Narrow screens and touch: 44px targets. The Add option Button's min-height comes from .button.small
+   (0,2,0), hence three parts here. The length picker is a compact Combobox: its input group grows to 44px and the
+   input, which opens the menu, fills it. */
+@media (max-width: 640px), (pointer: coarse) {
+	.removeButton {
+		width: 2.75rem;
+		height: 2.75rem;
+	}
+
+	.editor .footer .addOption {
+		min-height: 2.75rem;
+	}
+
+	.length [data-flx='ui.form.combobox.input-group'] {
+		min-height: 2.75rem;
+	}
+
+	.length [data-flx='ui.form.combobox.input'] {
+		align-self: stretch;
+	}
+}

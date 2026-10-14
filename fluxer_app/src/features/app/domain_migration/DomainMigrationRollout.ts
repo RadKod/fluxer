@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {
+	DOMAIN_MIGRATION_ENABLED,
 	markDomainMigrationEnrolled,
 	readDomainMigrationEnrollment,
 } from '@app/features/app/domain_migration/DomainMigrationCore';
@@ -43,10 +44,11 @@ class DomainMigrationRolloutSelector {
 	}
 
 	get enabled(): boolean {
-		return this.assignmentEnabled || this.deviceEnrolled;
+		return DOMAIN_MIGRATION_ENABLED && (this.assignmentEnabled || this.deviceEnrolled);
 	}
 
 	markDeviceEnrolled(): void {
+		if (!DOMAIN_MIGRATION_ENABLED) return;
 		markDomainMigrationEnrolled(getProtectedLocalStorage(), Date.now());
 		this.deviceEnrolled = true;
 	}

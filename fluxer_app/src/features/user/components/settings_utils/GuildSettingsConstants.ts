@@ -13,11 +13,14 @@ import {
 	type IconWeight,
 	LinkIcon,
 	ProhibitIcon,
+	RobotIcon,
+	RocketLaunchIcon,
 	ShieldIcon,
 	SmileyIcon,
 	StickerIcon,
 	TicketIcon,
 	UserIcon,
+	UsersThreeIcon,
 	WebhooksLogoIcon,
 } from '@phosphor-icons/react';
 
@@ -66,6 +69,21 @@ const DISCOVERY_DESCRIPTOR = msg({
 	context: 'community-settings-tab',
 	comment: 'Community settings tab for public community discovery/listing.',
 });
+const BOOSTS_DESCRIPTOR = msg({
+	message: 'Boosts',
+	context: 'community-settings-tab',
+	comment: 'Community settings tab showing the boost level, its perks and the members who boost.',
+});
+const EVENT_BOT_DESCRIPTOR = msg({
+	message: 'Event bot',
+	context: 'community-settings-tab',
+	comment: 'Community settings tab for configuring the official hourly event roster bot.',
+});
+const COMMUNITY_BOT_DESCRIPTOR = msg({
+	message: 'Community bot',
+	context: 'community-settings-tab',
+	comment: 'Community settings tab for the official welcome, roles, levels and moderation bot.',
+});
 const MEMBERS_DESCRIPTOR = msg({
 	message: 'Members',
 	context: 'community-settings-tab',
@@ -89,8 +107,11 @@ export type GuildSettingsTabType =
 	| 'stickers'
 	| 'moderation'
 	| 'audit_log'
+	| 'micupbot'
 	| 'webhooks'
 	| 'vanity_url'
+	| 'boost'
+	| 'roster'
 	| 'discovery'
 	| 'members'
 	| 'invites'
@@ -181,6 +202,27 @@ const GUILD_SETTINGS_TABS_DESCRIPTORS: Array<GuildSettingsTabDescriptor> = [
 		iconWeight: 'bold',
 		permission: Permissions.MANAGE_GUILD,
 		requireFeature: GuildFeatures.VANITY_URL,
+	},
+	// No permission: any member who opens community settings can boost.
+	{
+		type: 'boost',
+		category: 'community',
+		label: BOOSTS_DESCRIPTOR,
+		icon: RocketLaunchIcon,
+	},
+	{
+		type: 'roster',
+		category: 'community',
+		label: EVENT_BOT_DESCRIPTOR,
+		icon: RobotIcon,
+		permission: Permissions.MANAGE_GUILD,
+	},
+	{
+		type: 'micupbot',
+		category: 'integrations',
+		label: COMMUNITY_BOT_DESCRIPTOR,
+		icon: UsersThreeIcon,
+		permission: Permissions.MANAGE_GUILD,
 	},
 	{
 		type: 'webhooks',

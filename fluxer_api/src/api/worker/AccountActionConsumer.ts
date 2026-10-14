@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {Config} from '@app/api/Config';
 import {emitActivity} from '@app/api/infrastructure/activity/ActivityEvents';
 import {workerMeta} from '@app/api/infrastructure/activity/ActivityMeta';
 import {
@@ -146,6 +147,7 @@ async function runActionPartition(deps: AccountActionDeps, partition: number, st
 }
 
 export function startAccountActionConsumer(deps: AccountActionDeps): void {
+	if (Config.instance.selfHosted) return;
 	if (running) return;
 	const state: ConsumerState = {stopped: false, loops: [], tasks: []};
 	running = state;

@@ -4,6 +4,7 @@ import {makeAutoObservable} from 'mobx';
 
 class VoiceCallFullscreenState {
 	activeScopeKey: string | null = null;
+	activePresentation: 'room' | 'call' = 'room';
 	fullscreenRequestNonce = 0;
 	private readonly mountedScopes = new Map<string, number>();
 
@@ -19,14 +20,20 @@ class VoiceCallFullscreenState {
 		return this.activeScopeKey === scopeKey;
 	}
 
-	open(scopeKey: string): void {
+	isCallViewRequested(scopeKey: string): boolean {
+		return this.isScopeActive(scopeKey) && this.activePresentation === 'call';
+	}
+
+	open(scopeKey: string, presentation: 'room' | 'call' = 'room'): void {
 		this.activeScopeKey = scopeKey;
+		this.activePresentation = presentation;
 		this.fullscreenRequestNonce += 1;
 	}
 
 	close(scopeKey?: string): void {
 		if (scopeKey && this.activeScopeKey !== scopeKey) return;
 		this.activeScopeKey = null;
+		this.activePresentation = 'room';
 	}
 
 	mountScope(scopeKey: string): void {

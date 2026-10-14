@@ -25,11 +25,13 @@ const EMAIL_I18N_ES_419_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "Gracias por tu donación a {product_name}",
-		"body": "Hola:\n\n¡Gracias por tu donación a {product_name}! Tu {interval, select,\n  month {donación recurrente}\n  year {donación recurrente}\n  other {donación única}\n} ha sido {interval, select,\n  month {configurada}\n  year {configurada}\n  other {procesada}\n} con éxito.\n\nDetalles de la donación:\nMonto: {amount} {interval, select,\n  month {por mes}\n  year {por año}\n  other {}\n}\n\nEn breve, Stripe te enviará por separado un correo electrónico con el recibo y la factura en PDF. Este recibo incluye todos los detalles de pago y se puede utilizar para fines fiscales.\n\nPuedes ver tu historial de donaciones, descargar facturas {interval, select,\n  month {y administrar o cancelar tu suscripción}\n  year {y administrar o cancelar tu suscripción}\n  other {y administrar futuras donaciones}\n} en cualquier momento usando este enlace:\n\n{manageUrl}\n\nTu apoyo ayuda a mantener {product_name} en funcionamiento. ¡Gracias!\n\n– Equipo de {product_name}"
+		"body": "Hola:\n\n¡Gracias por tu donación a {product_name}! Tu {interval, select,\n  month {donación recurrente}\n  year {donación recurrente}\n  other {donación única}\n} ha sido {interval, select,\n  month {configurada}\n  year {configurada}\n  other {procesada}\n} con éxito.\n\nDetalles de la donación:\nMonto: {amount} {interval, select,\n  month {por mes}\n  year {por año}\n  other {}\n}\n\nEn breve, Stripe te enviará por separado un correo electrónico con el recibo y la factura en PDF. Este recibo incluye todos los detalles de pago y se puede utilizar para fines fiscales.\n\nPuedes ver tu historial de donaciones, descargar facturas {interval, select,\n  month {y administrar o cancelar tu suscripción}\n  year {y administrar o cancelar tu suscripción}\n  other {y administrar futuras donaciones}\n} en cualquier momento usando este enlace:\n\n{manageUrl}\n\nTu apoyo ayuda a mantener {product_name} en funcionamiento. ¡Gracias!\n\n– Equipo de {product_name}",
+		"button": "Administrar donaciones"
 	},
 	"donation_magic_link": {
 		"subject": "Administra tus donaciones a {product_name}",
-		"body": "Hola:\n\nHaz clic en el siguiente enlace para acceder a tu portal de donantes:\n\n{manageUrl}\n\nEn el portal, puedes administrar suscripciones, descargar facturas y ver tu historial de donaciones.\n\nEste enlace vence el {expiresAt, date, full} a las {expiresAt, time, short}.\n\nSi no solicitaste este enlace, puedes ignorar este correo electrónico de forma segura.\n\n– Equipo de {product_name}"
+		"body": "Hola:\n\nHaz clic en el siguiente enlace para acceder a tu portal de donantes:\n\n{manageUrl}\n\nEn el portal, puedes administrar suscripciones, descargar facturas y ver tu historial de donaciones.\n\nEste enlace vence el {expiresAt, date, full} a las {expiresAt, time, short}.\n\nSi no solicitaste este enlace, puedes ignorar este correo electrónico de forma segura.\n\n– Equipo de {product_name}",
+		"button": "Administrar donaciones"
 	},
 	"dsa_report_verification": {
 		"subject": "Verifica tu correo electrónico para enviar un reporte conforme a la Ley de Servicios Digitales",
@@ -45,11 +47,13 @@ const EMAIL_I18N_ES_419_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "Se cambió tu correo electrónico en {product_name}",
-		"body": "Hola {username}:\n\nLa dirección de correo electrónico de tu cuenta de {product_name} se cambió a {newEmail}.\n\nSi realizaste este cambio, no es necesario que hagas nada. Si no lo hiciste, puedes revertir el cambio y proteger tu cuenta usando este enlace:\n\n{revertUrl}\n\nEsto restaurará tu correo electrónico anterior, cerrará tu sesión en todas partes, deshabilitará la autenticación multifactor y te pedirá que establezcas una nueva contraseña.\n\n– Equipo de seguridad de {product_name}"
+		"body": "Hola {username}:\n\nLa dirección de correo electrónico de tu cuenta de {product_name} se cambió a {newEmail}.\n\nSi realizaste este cambio, no es necesario que hagas nada. Si no lo hiciste, puedes revertir el cambio y proteger tu cuenta usando este enlace:\n\n{revertUrl}\n\nEsto restaurará tu correo electrónico anterior, cerrará tu sesión en todas partes, deshabilitará la autenticación multifactor y te pedirá que establezcas una nueva contraseña.\n\n– Equipo de seguridad de {product_name}",
+		"button": "Deshacer este cambio"
 	},
 	"email_verification": {
 		"subject": "Verifica tu dirección de correo electrónico en {product_name}",
-		"body": "Hola {username}:\n\nPor favor, verifica la dirección de correo electrónico de tu cuenta de {product_name} haciendo clic en el siguiente enlace:\n\n{verifyUrl}\n\nSi no creaste una cuenta de {product_name}, puedes ignorar este correo electrónico de forma segura.\n\nEste enlace es válido por 24 horas.\n\n– Equipo de {product_name}"
+		"body": "🎉 Hola {username}:\n\nPor favor, verifica la dirección de correo electrónico de tu cuenta de {product_name} haciendo clic en el siguiente enlace:\n\n{verifyUrl}\n\nSi no creaste una cuenta de {product_name}, puedes ignorar este correo electrónico de forma segura.\n\nEste enlace es válido por 24 horas.\n\n– Equipo de {product_name}",
+		"button": "Verificar correo"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Los beneficios de tu regalo canjeado han sido eliminados",
@@ -57,15 +61,18 @@ const EMAIL_I18N_ES_419_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "Tu exportación de datos de {product_name} está lista para descargar",
-		"body": "Hola {username}:\n\nTu exportación de datos está lista.\n\nEnlace de descarga:\n{downloadUrl}\n\nMensajes incluidos: {totalMessages, number}\nTamaño del archivo: {fileSizeMB, number} MB\n\nEste enlace vence el {expiresAt, date, full} a las {expiresAt, time, short}.\n\nSi no solicitaste esta exportación, por favor, cambia tu contraseña inmediatamente y comunícate con nuestro equipo de soporte.\n\n– Equipo de {product_name}"
+		"body": "Hola {username}:\n\nTu exportación de datos está lista.\n\nEnlace de descarga:\n{downloadUrl}\n\nMensajes incluidos: {totalMessages, number}\nTamaño del archivo: {fileSizeMB, number} MB\n\nEste enlace vence el {expiresAt, date, full} a las {expiresAt, time, short}.\n\nSi no solicitaste esta exportación, por favor, cambia tu contraseña inmediatamente y comunícate con nuestro equipo de soporte.\n\n– Equipo de {product_name}",
+		"button": "Descargar mis datos"
 	},
 	"inactivity_warning": {
 		"subject": "Tu cuenta de {product_name} será eliminada debido a inactividad",
-		"body": "Hola {username}:\n\nNo hemos visto actividad en tu cuenta de {product_name} desde el {lastActiveDate, date, full}.\n\nSi no inicias sesión antes del {deletionDate, date, full} a las {deletionDate, time, short}, tu cuenta será eliminada permanentemente debido a inactividad.\n\nInicia sesión aquí:\n{loginUrl}\n\nSi has usado {product_name} recientemente, por favor, comunícate con nuestro equipo de soporte de inmediato.\n\n– Equipo de {product_name}"
+		"body": "Hola {username}:\n\nNo hemos visto actividad en tu cuenta de {product_name} desde el {lastActiveDate, date, full}.\n\nSi no inicias sesión antes del {deletionDate, date, full} a las {deletionDate, time, short}, tu cuenta será eliminada permanentemente debido a inactividad.\n\nInicia sesión aquí:\n{loginUrl}\n\nSi has usado {product_name} recientemente, por favor, comunícate con nuestro equipo de soporte de inmediato.\n\n– Equipo de {product_name}",
+		"button": "Iniciar sesión"
 	},
 	"ip_authorization": {
 		"subject": "Autoriza el inicio de sesión desde una nueva dirección IP",
-		"body": "Hola {username}:\n\nDetectamos un intento de inicio de sesión en tu cuenta de {product_name} desde una nueva dirección IP:\n\nDirección IP: {ipAddress}\nUbicación: {location}\n\nSi fuiste tú, por favor, autoriza esta dirección IP haciendo clic en el siguiente enlace:\n\n{authUrl}\n\nSi no intentaste iniciar sesión, por favor, cambia tu contraseña de inmediato.\n\nEste enlace es válido por 30 minutos.\n\n– Equipo de {product_name}"
+		"body": "Hola {username}:\n\nDetectamos un intento de inicio de sesión en tu cuenta de {product_name} desde una nueva dirección IP:\n\nDirección IP: {ipAddress}\nUbicación: {location}\n\nSi fuiste tú, por favor, autoriza esta dirección IP haciendo clic en el siguiente enlace:\n\n{authUrl}\n\nSi no intentaste iniciar sesión, por favor, cambia tu contraseña de inmediato.\n\nEste enlace es válido por 30 minutos.\n\n– Equipo de {product_name}",
+		"button": "Autorizar este inicio de sesión"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Confirma el acceso a tus códigos de respaldo de {product_name}",
@@ -77,11 +84,17 @@ const EMAIL_I18N_ES_419_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "Restablece tu contraseña de {product_name}",
-		"body": "Hola {username}:\n\nSolicitaste un restablecimiento de contraseña de {product_name}. Usa el siguiente enlace para establecer una nueva contraseña:\n\n{resetUrl}\n\nSi no solicitaste esto, puedes ignorar este correo electrónico de forma segura.\n\nEste enlace es válido por 1 hora.\n\n– Equipo de {product_name}"
+		"body": "Hola {username}:\n\nSolicitaste un restablecimiento de contraseña de {product_name}. Usa el siguiente enlace para establecer una nueva contraseña:\n\n{resetUrl}\n\nSi no solicitaste esto, puedes ignorar este correo electrónico de forma segura.\n\nEste enlace es válido por 1 hora.\n\n– Equipo de {product_name}",
+		"button": "Restablecer contraseña"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "Tu registro en {product_name} ha sido aprobado",
-		"body": "Hola {username}:\n\nBuenas noticias: tu registro en {product_name} ha sido aprobado.\n\nAhora puedes iniciar sesión en la aplicación de {product_name} aquí:\n{channelsUrl}\n\nBienvenido a la comunidad de {product_name}.\n\n– Equipo de {product_name}"
+		"body": "🎉 Hola {username}:\n\nBuenas noticias: tu registro en {product_name} ha sido aprobado.\n\nAhora puedes iniciar sesión en la aplicación de {product_name} aquí:\n{channelsUrl}\n\nBienvenido a la comunidad de {product_name}.\n\n– Equipo de {product_name}",
+		"button": "Abrir {product_name}"
 	},
 	"report_resolved": {
 		"subject": "Se revisó tu reporte en {product_name}",
@@ -97,7 +110,7 @@ const EMAIL_I18N_ES_419_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "Se levantó la suspensión de tu cuenta de {product_name}",
-		"body": "Hola {username}:\n\nBuenas noticias: se levantó la suspensión de tu cuenta de {product_name}.\n\n{reason, select,\n  null {}\n  other {Motivo: {reason}}\n}\n\nAhora puedes iniciar sesión de nuevo y seguir usando {product_name} con normalidad.\n\n– Equipo de seguridad de {product_name}"
+		"body": "🎉 Hola {username}:\n\nBuenas noticias: se levantó la suspensión de tu cuenta de {product_name}.\n\n{reason, select,\n  null {}\n  other {Motivo: {reason}}\n}\n\nAhora puedes iniciar sesión de nuevo y seguir usando {product_name} con normalidad.\n\n– Equipo de seguridad de {product_name}"
 	}
 });
 

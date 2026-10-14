@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import * as AnalyticsCommands from '@app/features/analytics/commands/AnalyticsCommands';
 import {FeatureTemporarilyDisabledModal} from '@app/features/app/components/alerts/FeatureTemporarilyDisabledModal';
 import {GenericErrorModal} from '@app/features/app/components/alerts/GenericErrorModal';
 import {TemporaryInviteRequiresPresenceModal} from '@app/features/app/components/alerts/TemporaryInviteRequiresPresenceModal';
@@ -242,6 +243,7 @@ export async function acceptAndTransitionToChannel(
 		}
 		logger.debug(`User not in guild ${guildId}, accepting invite ${code}`);
 		await accept(code, target);
+		AnalyticsCommands.track('guild_join');
 		logger.debug(
 			inviteTargetAllowed
 				? `Transitioning to channel ${channelId} in guild ${guildId}`

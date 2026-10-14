@@ -9,6 +9,7 @@ import {GiftEmbed} from '@app/features/channel/components/GiftEmbed';
 import {InviteEmbed} from '@app/features/channel/components/InviteEmbed';
 import {getAttachmentRenderingState} from '@app/features/channel/components/MessageAttachmentStateUtils';
 import styles from '@app/features/channel/components/MessageAttachments.module.css';
+import {MessageComponents} from '@app/features/channel/components/MessageComponents';
 import {MessageReactions} from '@app/features/channel/components/MessageReactions';
 import {useMessageViewContext} from '@app/features/channel/components/MessageViewContext';
 import {ThemeEmbed} from '@app/features/channel/components/ThemeEmbed';
@@ -714,6 +715,11 @@ export const MessageAttachments = observer(() => {
 						/>
 					);
 				})}
+			<MessageComponents
+				message={message}
+				isPreview={reactionsIsPreview}
+				data-flx="channel.message-attachments.message-components"
+			/>
 			{UserSettings.getRenderReactions() && reactions.length > 0 && (
 				<MessageReactions
 					message={message}

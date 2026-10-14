@@ -8,13 +8,14 @@ import {
 	RequireUsernameAccountIdentity,
 	RequireUsernameLookup,
 } from '@app/api/middleware/AccountIdentityMiddleware';
-import {DefaultUserOnly, LoginRequired} from '@app/api/middleware/AuthMiddleware';
+import {DefaultUserOnly, LoginRequiredAllowSuspicious} from '@app/api/middleware/AuthMiddleware';
 import {CaptchaMiddleware} from '@app/api/middleware/CaptchaMiddleware';
 import {LocalAuthMiddleware} from '@app/api/middleware/LocalAuthMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {SudoModeMiddleware} from '@app/api/middleware/SudoModeMiddleware';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
+import {UsernameAvailabilityRateLimit} from '@app/api/rate_limit_configs/UsernameAvailabilityRateLimit';
 import type {HonoApp} from '@app/api/types/HonoEnv';
 import {Validator} from '@app/api/Validator';
 import {requireClientIp} from '@fluxer/ip_utils/src/ClientIp';
@@ -195,7 +196,7 @@ export function AuthController(app: HonoApp) {
 	app.post(
 		'/auth/logout',
 		RateLimitMiddleware(RateLimitConfigs.AUTH_LOGOUT),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		OpenAPI({
 			operationId: 'logout_user',
 			summary: 'Logout account',
@@ -237,7 +238,7 @@ export function AuthController(app: HonoApp) {
 		LocalAuthMiddleware,
 		RequireEmailAccountIdentity,
 		RateLimitMiddleware(RateLimitConfigs.AUTH_RESEND_VERIFICATION),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		OpenAPI({
 			operationId: 'resend_verification_email',
@@ -374,7 +375,7 @@ export function AuthController(app: HonoApp) {
 	app.get(
 		'/auth/sessions',
 		RateLimitMiddleware(RateLimitConfigs.AUTH_SESSIONS_GET),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		OpenAPI({
 			operationId: 'list_auth_sessions',
@@ -394,7 +395,7 @@ export function AuthController(app: HonoApp) {
 	app.post(
 		'/auth/sessions/logout',
 		RateLimitMiddleware(RateLimitConfigs.AUTH_SESSIONS_LOGOUT),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		SudoModeMiddleware,
 		Validator('json', LogoutAuthSessionsWithVerificationRequest),
@@ -589,7 +590,12 @@ export function AuthController(app: HonoApp) {
 		'/auth/username-availability',
 		LocalAuthMiddleware,
 		RateLimitMiddleware(RateLimitConfigs.AUTH_USERNAME_AVAILABILITY),
-		RequireUsernameLookup,
+		UsernameAvailabilityRateLimit(),
+		async (ctx, next) => {
+			const migration = await ctx.get('instanceConfigRepository').getUsernameMigrationConfig();
+			if (migration.state !== 'legacy') return next();
+			return RequireUsernameLookup(ctx, next);
+		},
 		Validator('query', UsernameAvailabilityQuery),
 		OpenAPI({
 			operationId: 'get_username_availability',

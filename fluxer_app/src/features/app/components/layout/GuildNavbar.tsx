@@ -50,7 +50,7 @@ export const GuildNavbar = observer(({guild}: {guild: Guild}) => {
 				<ChannelListContent
 					guild={guild}
 					scrollY={scrollY}
-					banner={banner}
+					banner={banner.channelList}
 					data-flx="app.guild-navbar.channel-list-content"
 				/>
 			}

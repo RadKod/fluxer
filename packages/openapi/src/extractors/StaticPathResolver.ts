@@ -54,8 +54,11 @@ export function getIdentifierDeclarations(node: Identifier): ReadonlyArray<Node>
 export class StaticPathResolver {
 	private readonly inFlight = new Set<Node>();
 	private readonly appSourceRoots = new Map<string, string | null>();
+	private readonly paths: typeof path;
 
-	constructor(private readonly project: Project) {}
+	constructor(private readonly project: Project) {
+		this.paths = project.getFileSystem().getCurrentDirectory().startsWith('/') ? path.posix : path;
+	}
 
 	public resolve(node: Node, scope: Scope): StaticValue {
 		return this.evaluate(node, scope, 0);
@@ -343,13 +346,13 @@ export class StaticPathResolver {
 
 	private resolveSpecifierBase(fromPath: string, specifier: string): string | null {
 		if (specifier.startsWith('.')) {
-			return path.resolve(path.dirname(fromPath), specifier);
+			return this.paths.resolve(this.paths.dirname(fromPath), specifier);
 		}
 		if (!specifier.startsWith(APP_ALIAS_PREFIX)) {
 			return null;
 		}
-		const sourceRoot = this.findAppSourceRoot(path.dirname(fromPath));
-		return sourceRoot == null ? null : path.join(sourceRoot, specifier.slice(APP_ALIAS_PREFIX.length));
+		const sourceRoot = this.findAppSourceRoot(this.paths.dirname(fromPath));
+		return sourceRoot == null ? null : this.paths.join(sourceRoot, specifier.slice(APP_ALIAS_PREFIX.length));
 	}
 
 	private findAppSourceRoot(directory: string): string | null {
@@ -358,14 +361,14 @@ export class StaticPathResolver {
 			return cached;
 		}
 		const fileSystem = this.project.getFileSystem();
-		const tsconfigPath = path.join(directory, 'tsconfig.json');
-		const parent = path.dirname(directory);
+		const tsconfigPath = this.paths.join(directory, 'tsconfig.json');
+		const parent = this.paths.dirname(directory);
 		let sourceRoot: string | null = null;
 		if (fileSystem.fileExistsSync(tsconfigPath)) {
 			const {config} = ts.readConfigFile(tsconfigPath, (filePath) => fileSystem.readFileSync(filePath));
 			const target = config?.compilerOptions?.paths?.[`${APP_ALIAS_PREFIX}*`]?.[0];
 			if (typeof target === 'string' && target.endsWith('/*')) {
-				sourceRoot = path.resolve(directory, target.slice(0, -2));
+				sourceRoot = this.paths.resolve(directory, target.slice(0, -2));
 			}
 		} else if (parent !== directory) {
 			sourceRoot = this.findAppSourceRoot(parent);

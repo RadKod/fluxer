@@ -70,6 +70,10 @@ export class UserContentRepository implements IUserContentRepository {
 		return this.giftCodeRepository.unrevokeGiftCode(code);
 	}
 
+	async revokeGiftCodeForStoreRefund(code: string, purchaserId: UserID, redeemerId: UserID | null): Promise<void> {
+		return this.giftCodeRepository.revokeGiftCodeForStoreRefund(code, purchaserId, redeemerId);
+	}
+
 	async markGiftPremiumReversed(gift: GiftCode, seconds: number): Promise<boolean> {
 		return this.giftCodeRepository.markGiftPremiumReversed(gift, seconds);
 	}

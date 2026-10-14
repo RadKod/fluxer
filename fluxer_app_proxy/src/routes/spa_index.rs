@@ -180,8 +180,13 @@ async fn serve_spa_index(state: &AppState, headers: &HeaderMap, request_path: &s
         Ok(content) => content,
         Err(response) => return response,
     };
-    let raw_html = if state.config.self_hosted {
+    let raw_html = if state.config.self_hosted && !state.config.keep_link_preview_metadata {
         strip_link_preview_metadata(&raw_html)
+    } else {
+        raw_html
+    };
+    let raw_html = if let Some(id) = &state.config.ga4_measurement_id {
+        mark_analytics_measurement_id(&raw_html, id)
     } else {
         raw_html
     };
@@ -233,6 +238,17 @@ fn request_hostname(authority: &str) -> Option<&str> {
     };
     let hostname = hostname.trim_end_matches('.');
     (!hostname.is_empty()).then_some(hostname)
+}
+
+fn mark_analytics_measurement_id(html: &str, measurement_id: &str) -> String {
+    html.replacen(
+        HEAD_CLOSE_TAG,
+        &format!(
+            r#"<meta name="micup-ga4-measurement-id" content="{measurement_id}">
+</head>"#
+        ),
+        1,
+    )
 }
 
 fn mark_same_origin_api(html: &str) -> String {
@@ -315,6 +331,8 @@ fn apply_media_preconnect(html: &str, media: &str, static_cdn: &str) -> String {
 
 fn strip_link_preview_metadata(html: &str) -> String {
     let html = remove_elements(html, "<title", "</title>");
+    let html = remove_elements(&html, r#"<meta property="og:"#, ">");
+    let html = remove_elements(&html, r#"<meta name="twitter:"#, ">");
     remove_elements(&html, r#"<meta name="description""#, ">")
 }
 
@@ -890,6 +908,44 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_self_hosted_instance_configured_to_keep_link_preview_metadata_serves_it() {
+        let mut state = assemble_spa_state(
+            SpaIndexSource::bundled(SHIPPED_APP_SHELL),
+            Some("https://cdn.example.test"),
+            true,
+        );
+        let mut config = (*state.config).clone();
+        config.keep_link_preview_metadata = true;
+        state.config = Arc::new(config);
+
+        let response = serve_spa_index(&state, &HeaderMap::new(), "/").await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let served = read_document(response).await;
+
+        assert!(served.contains("<title>Micup</title>"));
+        assert!(served.contains(r#"<meta name="description""#));
+        assert!(served.contains(r#"<meta property="og:title" content="Micup">"#));
+        assert!(served.contains(
+            r#"<meta property="og:image" content="https://cdn.example.test/web/og-image-default.png">"#
+        ));
+        assert!(served.contains(r#"<meta name="twitter:card" content="summary_large_image">"#));
+        assert!(!served.contains("window.__FLUXER_BOOTSTRAP__"));
+    }
+
+    #[tokio::test]
+    async fn analytics_configuration_reaches_the_shell_without_loading_a_script() {
+        let mut state = spa_state_serving(SHIPPED_APP_SHELL);
+        Arc::make_mut(&mut state.config).ga4_measurement_id = Some("G-TEST1234".to_owned());
+        state.csp = Arc::new(crate::csp::CompiledCspPolicy::from_config(&state.config).unwrap());
+        let response = serve_spa_index(&state, &HeaderMap::new(), "/").await;
+        let policy = policy_of(&response);
+        let served = read_document(response).await;
+        assert!(served.contains(r#"<meta name="micup-ga4-measurement-id" content="G-TEST1234">"#));
+        assert!(!served.contains("googletagmanager"));
+        assert_every_inline_script_is_granted(&served, &policy);
+    }
+
+    #[tokio::test]
     async fn the_official_instance_keeps_its_link_preview_metadata() {
         let state = spa_state_serving(SHIPPED_APP_SHELL);
 
@@ -897,7 +953,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let served = read_document(response).await;
 
-        assert!(served.contains("<title>Fluxer</title>"));
+        assert!(served.contains("<title>Micup</title>"));
         assert!(served.contains(r#"<meta name="description""#));
     }
 
@@ -1070,6 +1126,8 @@ mod tests {
                 .expect("test static CDN endpoint must be a valid HTTP endpoint")
         });
         config.self_hosted = self_hosted;
+        config.keep_link_preview_metadata = false;
+        config.ga4_measurement_id = None;
 
         let csp = Arc::new(
             crate::csp::CompiledCspPolicy::from_config(&config)

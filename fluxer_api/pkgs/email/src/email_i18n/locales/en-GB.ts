@@ -25,11 +25,13 @@ const EMAIL_I18N_EN_GB_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "Thank you for your {product_name} donation",
-		"body": "Hello,\n\nThank you for your donation to {product_name}! Your {interval, select,\n  month {recurring donation}\n  year {recurring donation}\n  other {one-time donation}\n} has been {interval, select,\n  month {set up}\n  year {set up}\n  other {processed}\n} successfully.\n\nDonation details:\nAmount: {amount} {interval, select,\n  month {per month}\n  year {per year}\n  other {}\n}\n\nStripe will email you a separate receipt with your invoice PDF shortly. This includes all payment details and can be used for tax purposes.\n\nYou can view your donation history, download invoices, {interval, select,\n  month {and manage or cancel your subscription}\n  year {and manage or cancel your subscription}\n  other {and manage future donations}\n} at any time using this link:\n\n{manageUrl}\n\nYour support helps keep {product_name} running. Thank you!\n\n– {product_name} Team"
+		"body": "Hello,\n\nThank you for your donation to {product_name}! Your {interval, select,\n  month {recurring donation}\n  year {recurring donation}\n  other {one-time donation}\n} has been {interval, select,\n  month {set up}\n  year {set up}\n  other {processed}\n} successfully.\n\nDonation details:\nAmount: {amount} {interval, select,\n  month {per month}\n  year {per year}\n  other {}\n}\n\nStripe will email you a separate receipt with your invoice PDF shortly. This includes all payment details and can be used for tax purposes.\n\nYou can view your donation history, download invoices, {interval, select,\n  month {and manage or cancel your subscription}\n  year {and manage or cancel your subscription}\n  other {and manage future donations}\n} at any time using this link:\n\n{manageUrl}\n\nYour support helps keep {product_name} running. Thank you!\n\n– {product_name} Team",
+		"button": "Manage donations"
 	},
 	"donation_magic_link": {
 		"subject": "Manage your {product_name} donations",
-		"body": "Hello,\n\nClick the link below to access your donor portal:\n\n{manageUrl}\n\nIn the portal, you can manage subscriptions, download invoices, and view your donation history.\n\nThis link expires on {expiresAt, date, full} at {expiresAt, time, short}.\n\nIf you did not request this link, you can safely ignore this email.\n\n– {product_name} Team"
+		"body": "Hello,\n\nClick the link below to access your donor portal:\n\n{manageUrl}\n\nIn the portal, you can manage subscriptions, download invoices, and view your donation history.\n\nThis link expires on {expiresAt, date, full} at {expiresAt, time, short}.\n\nIf you did not request this link, you can safely ignore this email.\n\n– {product_name} Team",
+		"button": "Manage donations"
 	},
 	"dsa_report_verification": {
 		"subject": "Verify your email for a DSA report",
@@ -45,11 +47,13 @@ const EMAIL_I18N_EN_GB_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "Your {product_name} email was changed",
-		"body": "Hello {username},\n\nThe email address on your {product_name} account was changed to {newEmail}.\n\nIf you made this change, no action is needed. If you didn't, you can revert the change and secure your account using this link:\n\n{revertUrl}\n\nThis will restore your previous email, sign you out everywhere, disable MFA, and require you to set a new password.\n\n– {product_name} Safety Team"
+		"body": "Hello {username},\n\nThe email address on your {product_name} account was changed to {newEmail}.\n\nIf you made this change, no action is needed. If you didn't, you can revert the change and secure your account using this link:\n\n{revertUrl}\n\nThis will restore your previous email, sign you out everywhere, disable MFA, and require you to set a new password.\n\n– {product_name} Safety Team",
+		"button": "Undo this change"
 	},
 	"email_verification": {
 		"subject": "Verify your {product_name} email address",
-		"body": "Hello {username},\n\nPlease verify the email address for your {product_name} account by clicking the link below:\n\n{verifyUrl}\n\nIf you didn't create a {product_name} account, you can safely ignore this email.\n\nThis link is valid for 24 hours.\n\n– {product_name} Team"
+		"body": "🎉 Hello {username},\n\nPlease verify the email address for your {product_name} account by clicking the link below:\n\n{verifyUrl}\n\nIf you didn't create a {product_name} account, you can safely ignore this email.\n\nThis link is valid for 24 hours.\n\n– {product_name} Team",
+		"button": "Verify email"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Perks from your redeemed gift have been removed",
@@ -57,15 +61,18 @@ const EMAIL_I18N_EN_GB_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "Your {product_name} data export is ready to download",
-		"body": "Hello {username},\n\nYour data export is ready.\n\nDownload link:\n{downloadUrl}\n\nMessages included: {totalMessages, number}\nFile size: {fileSizeMB, number} MB\n\nThis link expires on {expiresAt, date, full} at {expiresAt, time, short}.\n\nIf you didn't request this export, please change your password immediately and contact our support team.\n\n– {product_name} Team"
+		"body": "Hello {username},\n\nYour data export is ready.\n\nDownload link:\n{downloadUrl}\n\nMessages included: {totalMessages, number}\nFile size: {fileSizeMB, number} MB\n\nThis link expires on {expiresAt, date, full} at {expiresAt, time, short}.\n\nIf you didn't request this export, please change your password immediately and contact our support team.\n\n– {product_name} Team",
+		"button": "Download my data"
 	},
 	"inactivity_warning": {
 		"subject": "Your {product_name} account will be deleted due to inactivity",
-		"body": "Hello {username},\n\nWe haven't seen any activity on your {product_name} account since {lastActiveDate, date, full}.\n\nIf you don't log in by {deletionDate, date, full} at {deletionDate, time, short}, your account will be permanently deleted due to inactivity.\n\nLog in here:\n{loginUrl}\n\nIf you've used {product_name} recently, please contact our support team right away.\n\n– {product_name} Team"
+		"body": "Hello {username},\n\nWe haven't seen any activity on your {product_name} account since {lastActiveDate, date, full}.\n\nIf you don't log in by {deletionDate, date, full} at {deletionDate, time, short}, your account will be permanently deleted due to inactivity.\n\nLog in here:\n{loginUrl}\n\nIf you've used {product_name} recently, please contact our support team right away.\n\n– {product_name} Team",
+		"button": "Log in"
 	},
 	"ip_authorization": {
 		"subject": "Authorise login from a new IP address",
-		"body": "Hello {username},\n\nWe detected a login attempt to your {product_name} account from a new IP address:\n\nIP address: {ipAddress}\nLocation: {location}\n\nIf this was you, please authorise this IP address by clicking the link below:\n\n{authUrl}\n\nIf you didn't attempt to log in, please change your password right away.\n\nThis link is valid for 30 minutes.\n\n– {product_name} Team"
+		"body": "Hello {username},\n\nWe detected a login attempt to your {product_name} account from a new IP address:\n\nIP address: {ipAddress}\nLocation: {location}\n\nIf this was you, please authorise this IP address by clicking the link below:\n\n{authUrl}\n\nIf you didn't attempt to log in, please change your password right away.\n\nThis link is valid for 30 minutes.\n\n– {product_name} Team",
+		"button": "Authorise this login"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Confirm access to your {product_name} backup codes",
@@ -77,11 +84,17 @@ const EMAIL_I18N_EN_GB_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "Reset your {product_name} password",
-		"body": "Hello {username},\n\nYou requested a {product_name} password reset. Use the link below to set a new password:\n\n{resetUrl}\n\nIf you didn't request this, you can safely ignore this email.\n\nThis link is valid for 1 hour.\n\n– {product_name} Team"
+		"body": "Hello {username},\n\nYou requested a {product_name} password reset. Use the link below to set a new password:\n\n{resetUrl}\n\nIf you didn't request this, you can safely ignore this email.\n\nThis link is valid for 1 hour.\n\n– {product_name} Team",
+		"button": "Reset password"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "Your {product_name} registration has been approved",
-		"body": "Hello {username},\n\nGood news: your {product_name} registration has been approved.\n\nYou can now log in to the {product_name} app here:\n{channelsUrl}\n\nWelcome to the {product_name} community.\n\n– {product_name} Team"
+		"body": "🎉 Hello {username},\n\nGood news: your {product_name} registration has been approved.\n\nYou can now log in to the {product_name} app here:\n{channelsUrl}\n\nWelcome to the {product_name} community.\n\n– {product_name} Team",
+		"button": "Open {product_name}"
 	},
 	"report_resolved": {
 		"subject": "Your {product_name} report has been reviewed",
@@ -97,7 +110,7 @@ const EMAIL_I18N_EN_GB_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "Your {product_name} account suspension has been lifted",
-		"body": "Hello {username},\n\nGood news: your {product_name} account suspension has been lifted.\n\n{reason, select,\n  null {}\n  other {Reason: {reason}}\n}\n\nYou can now log back in and continue using {product_name} as normal.\n\n– {product_name} Safety Team"
+		"body": "🎉 Hello {username},\n\nGood news: your {product_name} account suspension has been lifted.\n\n{reason, select,\n  null {}\n  other {Reason: {reason}}\n}\n\nYou can now log back in and continue using {product_name} as normal.\n\n– {product_name} Safety Team"
 	}
 });
 

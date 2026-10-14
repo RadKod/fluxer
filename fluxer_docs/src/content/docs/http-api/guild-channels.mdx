@@ -138,6 +138,7 @@ Creates a guild channel and returns its [channel object](/http-api/channels/#cha
 ### Limitations
 
 - Supplying `permission_overwrites` also requires [MANAGE_ROLES](/http-api/permissions/) at guild level.
+- Micup: an empty `permission_overwrites` array is treated as omitted. It does not require `MANAGE_ROLES`, and the channel inherits its parent category's overwrites. To create a channel that is open to everyone inside a private category, supply a non-empty overwrite list or [set channel permission overwrites](/http-api/channels/#set-channel-permission-overwrite) after creation. This is a temporary Micup deviation from Fluxer and will be removed once older Micup mobile builds are closed by a forced update.
 
 `MANAGE_CHANNELS` is an [elevated permission](/http-api/permissions/#elevated-permissions), so it also requires an enrolled multi-factor authenticator when the guild [MFA level](/http-api/guilds/#mfa-levels) is elevated and the caller is not the guild owner.
 
@@ -180,7 +181,7 @@ Creates a guild channel and returns its [channel object](/http-api/channels/#cha
 
 <sup>6</sup> The value `0` means no occupancy limit
 
-<sup>7</sup> When omitted, a new channel with a parent category copies that category's current overwrites. A present field replaces that inheritance completely, including with an empty array. Null is rejected
+<sup>7</sup> When omitted, a new channel with a parent category copies that category's current overwrites. A present field replaces that inheritance completely, including with an empty array. Null is rejected. Micup: an empty array is treated as omitted and keeps the inheritance (temporary, see Limitations)
 
 <sup>8</sup> `nsfw_override` takes precedence, and `nsfw` supplies the value only when `nsfw_override` is absent. Omitting both stores an explicit `false`, and only a null `nsfw_override` inherits
 
@@ -208,7 +209,7 @@ Only the allowed mask is compared, so a supplied deny is stored without any auth
 | --- | --- | --- |
 | 200 | [channel](/http-api/channels/#channel-object) object | Channel was created |
 | 400<sup>1</sup><sup>2</sup> | [error response](/http-api/#error-response) | Body, type, name, parent, URL, voice setting, or content warning text is invalid, a channel limit is reached, or the caller has no enrolled authenticator in an elevated-MFA guild |
-| 403 | [error response](/http-api/#error-response) | Caller lacks `MANAGE_CHANNELS`, is not a member of the guild, supplied overwrites without `MANAGE_ROLES`, or allowed a permission they do not hold in the parent context, each returning `MISSING_PERMISSIONS` |
+| 403 | [error response](/http-api/#error-response) | Caller lacks `MANAGE_CHANNELS`, is not a member of the guild, supplied overwrites without `MANAGE_ROLES` (Micup: an empty list counts as not supplied), or allowed a permission they do not hold in the parent context, each returning `MISSING_PERMISSIONS` |
 | 404 | [error response](/http-api/#error-response) | Guild does not exist, returning `UNKNOWN_GUILD` |
 
 <sup>1</sup> A schema or parent failure returns `INVALID_FORM_BODY` and names the field with `CATEGORIES_CANNOT_HAVE_PARENTS`, `INVALID_PARENT_CHANNEL`, or `PARENT_MUST_BE_CATEGORY`. A capacity failure returns the top-level `MAX_GUILD_CHANNELS` or `MAX_CATEGORY_CHANNELS`

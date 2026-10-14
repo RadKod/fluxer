@@ -1,27 +1,34 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {createHash} from 'node:crypto';
 import * as AuthEmailRevert from '@app/api/auth/AuthEmailRevert';
 import {requireEmailVerified} from '@app/api/auth/EmailVerificationUtils';
 import {requireSudoMode, type SudoVerificationResult} from '@app/api/auth/services/SudoVerificationService';
 import {createChannelID, createGuildID, type UserID} from '@app/api/BrandedTypes';
-import type {UserConnectionRow} from '@app/api/database/types/ConnectionTypes';
 import type {ThreadViewer} from '@app/api/experiment/ChannelThreadsGate';
 import {emitActivity} from '@app/api/infrastructure/activity/ActivityEvents';
 import {isBlockedEmailDomain} from '@app/api/infrastructure/activity/SharedLists';
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import {Logger} from '@app/api/Logger';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getKVClient, getUsernameOwnershipService} from '@app/api/middleware/ServiceRegistry';
+import {getPremiumLedgerService, getProfileAccessCache} from '@app/api/middleware/ServiceSingletons';
 import type {AuthSession} from '@app/api/models/AuthSession';
 import type {User} from '@app/api/models/User';
 import type {HonoEnv} from '@app/api/types/HonoEnv';
 import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
 import {isProfileHidden} from '@app/api/user/ProfileVisibility';
+import type {ProfileViewer} from '@app/api/user/profile/ProfileAccessRules';
+import {applyProfileExtensions} from '@app/api/user/profile/ProfileExtensionProviders';
+import type {ProfileViewConnection} from '@app/api/user/profile/ProfileViewProjection';
 import type {EmailChangeService} from '@app/api/user/services/EmailChangeService';
+import {propagateIfPartialChanged} from '@app/api/user/services/PartialUserChangePropagation';
 import type {UserAccountService} from '@app/api/user/services/UserAccountService';
 import type {UserChannelService} from '@app/api/user/services/UserChannelService';
+import {readUsernameMigration} from '@app/api/user/UniqueUsernames';
 import {mapUserToPartialResponseWithCache} from '@app/api/user/UserCacheHelpers';
-import {createPremiumClearPatch, shouldStripExpiredPremium} from '@app/api/user/UserHelpers';
+import {createPremiumClearPatch, isAccountClosed, shouldStripExpiredPremium} from '@app/api/user/UserHelpers';
 import {
 	mapGuildMemberToProfileResponse,
 	mapUserToPrivateResponse,
@@ -29,10 +36,13 @@ import {
 } from '@app/api/user/UserMappers';
 import {extractEmailDomain} from '@app/api/utils/EmailDomainUtils';
 import {AccountIdentityModes} from '@fluxer/constants/src/AccountIdentityConstants';
+import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
+import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {getCurrentTimeZoneOffsetMinutes} from '@fluxer/date_utils/src/TimeZoneUtils';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {UnauthorizedError} from '@fluxer/errors/src/domains/core/UnauthorizedError';
+import {FluxerError} from '@fluxer/errors/src/FluxerError';
 import type {ConnectionResponse} from '@fluxer/schema/src/domains/connection/ConnectionSchemas';
 import type {
 	EmailChangeApplyRequest,
@@ -42,6 +52,7 @@ import type {
 	UserPrivateResponse,
 	UserProfileFullResponse,
 	UserUpdateResponse,
+	UserUsernamePromptResponse,
 } from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import type {Context} from 'hono';
 
@@ -91,6 +102,7 @@ interface UserProfileParams {
 	guildId?: bigint;
 	withMutualFriends?: boolean;
 	withMutualGuilds?: boolean;
+	viewer?: ProfileViewer;
 	requestCache: RequestCache;
 }
 
@@ -102,6 +114,59 @@ export class UserAccountRequestService {
 		private readonly userRepository: IUserRepository,
 		private readonly userCacheService: UserCacheService,
 	) {}
+
+	async getUsernameStatus(userId: UserID) {
+		try {
+			const status = await getUsernameOwnershipService().getPrivateStatus(userId);
+			return {...status, changeAvailableAt: status.changeAvailableAt?.toISOString() ?? null};
+		} catch (cause) {
+			throw new FluxerError({
+				code: APIErrorCodes.USERNAME_UNAVAILABLE,
+				status: 503,
+				cause: cause instanceof Error ? cause : undefined,
+			});
+		}
+	}
+
+	async getUsernamePrompt(user: User): Promise<UserUsernamePromptResponse> {
+		const now = Date.now();
+		if (
+			user.isBot ||
+			user.isSystem ||
+			isAccountClosed(user) ||
+			user.usernameState === 'selected' ||
+			user.usernameState === 'reselect_required' ||
+			((user.flags & UserFlags.DISABLED) !== 0n &&
+				(user.tempBannedUntil === null || user.tempBannedUntil.getTime() > now))
+		)
+			return {show: false};
+		const migration = await readUsernameMigration();
+		if (
+			migration.state !== 'selecting' ||
+			!migration.started_at ||
+			!migration.forced_at ||
+			now >= Date.parse(migration.forced_at)
+		)
+			return {show: false};
+		const jitter =
+			createHash('sha256').update(`${user.id}:${migration.epoch}`).digest().readUInt32BE(0) % (6 * 3600000 + 1);
+		const firstDueAt = Date.parse(migration.started_at) + jitter;
+		const dayStart = Math.floor((now + 3 * 3600000) / 86400000) * 86400000 - 3 * 3600000;
+		const dueAt = dayStart <= firstDueAt ? firstDueAt : dayStart + jitter;
+		if (!Number.isFinite(dueAt)) return {show: false};
+		if (now < dueAt) return {show: false, retry_after_ms: dueAt - now};
+		const day = new Intl.DateTimeFormat('en-CA', {
+			timeZone: 'Europe/Istanbul',
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+		}).format(now);
+		try {
+			return {show: (await getKVClient().set(`uprompt:${user.id}:${day}`, '1', 'EX', 172800, 'NX')) === 'OK'};
+		} catch {
+			return {show: false};
+		}
+	}
 
 	getCurrentUserResponse(params: {
 		authTokenType?: 'session' | 'bearer' | 'bot' | 'admin_api_key';
@@ -284,13 +349,42 @@ export class UserAccountRequestService {
 			guildId,
 			withMutualFriends: params.withMutualFriends,
 			withMutualGuilds: params.withMutualGuilds,
+			viewer: params.viewer,
 			requestCache: params.requestCache,
 		});
-		let profileUser = profile.user;
+		const lookedUpUser = profile.user;
+		let profileUser = lookedUpUser;
 		let premiumType = profile.premiumType;
 		let premiumSince = profile.premiumSince;
 		let premiumLifetimeSequence = profile.premiumLifetimeSequence;
-		if (shouldStripExpiredPremium(profileUser)) {
+		let stripPremium = shouldStripExpiredPremium(profileUser);
+		if (stripPremium) {
+			// Micup the cached view only says the premium looks lapsed; the repair and the strip below run on the real
+			// row (a projection never reaches patchUpsert), and the next request draws a view rebuilt from it.
+			profileUser = await this.userRepository.findUniqueAssert(profileUser.id);
+			profile.user = profileUser;
+			stripPremium = shouldStripExpiredPremium(profileUser);
+			await getProfileAccessCache().forgetView(profileUser.id);
+		}
+		if (stripPremium) {
+			// Micup: paid time in the premium ledger is repaired, never stripped on a stale read. The ledger is read only
+			// here, when the row already looks lapsed, so an ordinary profile view costs nothing extra.
+			try {
+				const premiumLedgerService = getPremiumLedgerService();
+				if (await premiumLedgerService.isActive(profileUser.id)) {
+					stripPremium = false;
+					const {user: repairedUser} = await premiumLedgerService.ensureUserPremium(profileUser.id);
+					if (repairedUser) {
+						profileUser = repairedUser;
+						profile.user = repairedUser;
+					}
+				}
+			} catch (error) {
+				stripPremium = false;
+				Logger.warn({userId: profileUser.id.toString(), error}, 'Premium ledger check failed before returning profile');
+			}
+		}
+		if (stripPremium) {
 			try {
 				const sanitizedUser = await this.userRepository.patchUpsert(
 					profileUser.id,
@@ -298,17 +392,36 @@ export class UserAccountRequestService {
 					profileUser.toRow(),
 				);
 				if (sanitizedUser) {
+					const lapsedUser = profileUser;
 					profileUser = sanitizedUser;
 					profile.user = sanitizedUser;
 					premiumType = undefined;
 					premiumSince = undefined;
 					premiumLifetimeSequence = undefined;
+					// Micup: the premium badge leaves the public flags; a failed announcement never fails the profile.
+					await propagateIfPartialChanged(
+						{userCacheService: this.userCacheService},
+						lapsedUser,
+						sanitizedUser,
+						'before returning profile',
+					);
 				}
 			} catch (error) {
 				Logger.warn(
 					{userId: profileUser.id.toString(), error},
 					'Failed to sanitize expired premium fields before returning profile',
 				);
+			}
+		}
+		if (profileUser !== lookedUpUser) {
+			// Micup: the lookup filled the request cache and the guild member with the partial user from before the repair
+			// or strip above, so both answer with the partial user as written.
+			const partialUser = this.userCacheService.setUserPartialResponseFromUserInRequestCache(
+				profileUser,
+				params.requestCache,
+			);
+			if (profile.guildMember) {
+				profile.guildMember = {...profile.guildMember, user: partialUser};
 			}
 		}
 		const restrictProfile = profile.restrictProfile;
@@ -318,7 +431,8 @@ export class UserAccountRequestService {
 			restrictProfile,
 			hidden,
 		});
-		const timezoneOffset = profile.timezoneVisible ? getCurrentTimeZoneOffsetMinutes(profileUser.timezone) : null;
+		const timezoneOffset =
+			profile.timezoneVisible && !hidden ? getCurrentTimeZoneOffsetMinutes(profileUser.timezone) : null;
 		const mutualFriends = profile.mutualFriends
 			? profile.mutualFriends.map((user) =>
 					mapUserToPartialResponseWithCache({
@@ -330,7 +444,7 @@ export class UserAccountRequestService {
 			: undefined;
 		const connectedAccounts =
 			profile.connections && !hidden ? this.mapConnectionsToResponse(profile.connections) : undefined;
-		return {
+		const response: UserProfileFullResponse = {
 			user: mapUserToPartialResponseWithCache({
 				user: profileUser,
 				userCacheService: this.userCacheService,
@@ -348,9 +462,19 @@ export class UserAccountRequestService {
 			timezone_offset: timezoneOffset,
 			profile_limited: restrictProfile ? true : undefined,
 		};
+		if (hidden) {
+			return {...response, profile_effect_data: null};
+		}
+		return applyProfileExtensions(response, {
+			userId: profileUser.id,
+			viewerId: params.currentUserId,
+			restrictProfile,
+			user: profileUser,
+			cachedBadges: profile.badges,
+		});
 	}
 
-	checkTagAvailability(params: {currentUser: User; username: string; discriminator: number}): boolean {
+	checkTagAvailability(params: {currentUser: User; username: string; discriminator?: number}): boolean {
 		const currentUser = params.currentUser;
 		const discriminator = params.discriminator;
 		if (
@@ -363,6 +487,7 @@ export class UserAccountRequestService {
 	}
 
 	private stripBearerSensitiveFields(response: UserPrivateResponse): void {
+		delete response.username_state;
 		response.acls = [];
 		response.traits = [];
 		response.email_bounced = undefined;
@@ -401,7 +526,7 @@ export class UserAccountRequestService {
 		return usernameChanged || discriminatorChanged || emailTokenProvided || emailChanged || newPasswordProvided;
 	}
 
-	private mapConnectionsToResponse(connections: Array<UserConnectionRow>): Array<ConnectionResponse> {
+	private mapConnectionsToResponse(connections: Array<ProfileViewConnection>): Array<ConnectionResponse> {
 		return connections
 			.sort((a, b) => a.sort_order - b.sort_order)
 			.map((connection) => ({

@@ -74,3 +74,8 @@
 	min-width: 0;
 	overflow: hidden;
 }
+
+/* Micup: lighter side panels in the coal theme */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .container {
+	--background-secondary: var(--side-panel-background);
+}

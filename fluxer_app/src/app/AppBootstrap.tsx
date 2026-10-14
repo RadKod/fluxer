@@ -2,7 +2,7 @@
 
 import 'urlpattern-polyfill';
 import {bootstrapSyntheticHistory} from '@app/app/HistoryBootstrap';
-import reactiveI18n, {initI18n} from '@app/app/I18n';
+import reactiveI18n, {applyInstanceDefaultLocale, initI18n} from '@app/app/I18n';
 import {Routes} from '@app/app/Routes';
 import {AppErrorBoundary} from '@app/features/app/components/AppErrorBoundary';
 import {ErrorFallback} from '@app/features/app/components/ErrorFallback';
@@ -203,7 +203,7 @@ async function bootstrapApp(storageBootstrap: AppStorageBootstrapHandle): Promis
 		{default: NewDeviceMonitoring},
 		{default: Notification},
 		{default: QuickSwitcher},
-		_runtimeConfig,
+		{default: RuntimeConfig},
 		{default: StatusPage},
 		{installMigratedDeviceRemap},
 	] = await Promise.all([
@@ -241,6 +241,7 @@ async function bootstrapApp(storageBootstrap: AppStorageBootstrapHandle): Promis
 	if (Accounts.currentAccount === null) {
 		await Promise.all([activateSignedOutDocumentInstance(), prepareSignedOutFirstScreen()]);
 	}
+	await applyInstanceDefaultLocale(RuntimeConfig.getSnapshotOrNull()?.appPublic.localization);
 	setupHttp();
 	initializeEmojiParser();
 	await markdownParserReady;

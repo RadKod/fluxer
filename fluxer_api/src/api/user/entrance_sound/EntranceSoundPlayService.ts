@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {type ChannelID, createUserID, type EntranceSoundID, type UserID} from '@app/api/BrandedTypes';
+import {type ChannelID, createUserID, type EntranceSoundID} from '@app/api/BrandedTypes';
 import type {IChannelRepository} from '@app/api/channel/IChannelRepository';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import {Logger} from '@app/api/Logger';
+import type {User} from '@app/api/models/User';
 import type {EntranceSoundService} from '@app/api/user/entrance_sound/EntranceSoundService';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 
 interface PlayEntranceSoundParams {
-	userId: UserID;
+	user: User;
 	channelId: ChannelID;
 	soundId: EntranceSoundID;
 }
@@ -22,7 +23,9 @@ export class EntranceSoundPlayService {
 	) {}
 
 	async play(params: PlayEntranceSoundParams): Promise<void> {
-		const {userId, channelId, soundId} = params;
+		const {user, channelId, soundId} = params;
+		this.entranceSoundService.assertEntranceSoundFeature(user, 'sound_id');
+		const userId = user.id;
 		const channel = await this.channelRepository.findUnique(channelId);
 		const guildId = channel?.guildId ?? undefined;
 		const voiceStates = channel

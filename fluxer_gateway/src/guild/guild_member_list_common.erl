@@ -112,7 +112,7 @@ deep_merge_member(CurrentMember, MemberUpdate) ->
 -spec merge_user_field(map(), map()) -> map().
 merge_user_field(User0, MemberUpdate) ->
     case maps:get(<<"user">>, MemberUpdate, undefined) of
-        UM when is_map(UM) -> MemberUpdate#{<<"user">> => maps:merge(User0, UM)};
+        UM when is_map(UM) -> MemberUpdate#{<<"user">> => user_utils:merge_user(User0, UM)};
         _ -> MemberUpdate
     end.
 

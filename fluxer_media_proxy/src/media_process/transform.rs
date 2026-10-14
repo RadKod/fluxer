@@ -2,7 +2,7 @@
 
 use super::animated_transform::{
     DecodedAnimation, decode_heif_sequence, gif_resize_dims, resize_animated_gif_with_ffmpeg,
-    try_decode_apng, try_decode_heif_primary_still,
+    source_can_stand_in_for_resize, try_decode_apng, try_decode_heif_primary_still,
 };
 use super::encoding::{
     VipsEncodeRequest, anim_limits_from_options, encode_vips_image,
@@ -101,16 +101,25 @@ pub fn transform_image(
     let animated = options.is_animated();
     let format = effective_transform_format(sniffed.mime, options.format, animated);
     let animated_avif = sniffed.mime == "image/avif" && sniffed.animated;
-    let full_canvas_animation = animated
-        && format == OutputFormat::WebP
-        && (matches!(sniffed.mime, "image/gif" | "image/apng") || animated_avif);
+    // A GIF source re-encodes only the changed region of each frame: as full canvases its
+    // frames lose the GIF's own frame differencing and the WebP can outgrow the source.
+    let full_canvas_animation =
+        animated && format == OutputFormat::WebP && (sniffed.mime == "image/apng" || animated_avif);
     if animated
         && format == OutputFormat::GIF
         && !options.wants_cover_crop()
         && sniffed.mime == "image/gif"
     {
+        // The resizer writes full-canvas frames with per-frame palettes, which can outgrow a
+        // source that relies on offset sub-frames; a source barely larger than the request
+        // answers it instead.
         let bytes = if let Some(dims) = gif_resize_dims(sniffed, options) {
-            resize_animated_gif_with_ffmpeg(input, dims, options, media_limits)?
+            let resized = resize_animated_gif_with_ffmpeg(input, dims, options, media_limits)?;
+            if resized.len() < input.len() || !source_can_stand_in_for_resize(sniffed, options) {
+                resized
+            } else {
+                input.to_vec()
+            }
         } else {
             input.to_vec()
         };

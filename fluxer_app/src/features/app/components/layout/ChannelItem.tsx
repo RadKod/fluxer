@@ -16,6 +16,7 @@ import {
 	canChannelDropOnTarget,
 	selectChannelReorderResolution,
 } from '@app/features/app/components/layout/dnd/ChannelReorderStateMachine';
+import {moveVoiceParticipantToChannel} from '@app/features/app/components/layout/dnd/VoiceParticipantDrop';
 import {GenericChannelItem} from '@app/features/app/components/layout/GenericChannelItem';
 import type {ScrollIndicatorSeverity} from '@app/features/app/components/layout/ScrollIndicatorOverlay';
 import {type DragItem, DragItemType, type DropResult} from '@app/features/app/components/layout/types/DndTypes';
@@ -33,7 +34,6 @@ import {Typing} from '@app/features/channel/components/ChannelTyping';
 import {ChannelCreateModal} from '@app/features/channel/components/modals/ChannelCreateModal';
 import {getTypingText, usePresentableTypingUsers} from '@app/features/channel/components/TypingUsers';
 import type {Channel} from '@app/features/channel/models/Channel';
-import Channels from '@app/features/channel/state/Channels';
 import * as ChannelUtils from '@app/features/channel/utils/ChannelUtils';
 import {hasForumUnread} from '@app/features/forum/state/ForumReadState';
 import type {Guild} from '@app/features/guild/models/Guild';
@@ -44,10 +44,8 @@ import {
 import {isKeyboardActivationKey, stopPropagationOnEnterSpace} from '@app/features/input/utils/KeyboardUtils';
 import {InviteModal} from '@app/features/invite/components/modals/InviteModal';
 import * as InviteUtils from '@app/features/invite/utils/InviteUtils';
-import * as GuildMemberCommands from '@app/features/member/commands/GuildMemberCommands';
 import * as NavigationCommands from '@app/features/navigation/commands/NavigationCommands';
 import Permission from '@app/features/permissions/state/Permission';
-import * as PermissionUtils from '@app/features/permissions/utils/PermissionUtils';
 import ReadStates from '@app/features/read_state/state/ReadStates';
 import Autocomplete from '@app/features/search/state/Autocomplete';
 import {CategoryContextMenu} from '@app/features/ui/action_menu/CategoryContextMenu';
@@ -65,7 +63,6 @@ import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
 import {CHANNEL_SETTINGS_LABEL_DESCRIPTOR} from '@app/features/user/components/settings_utils/ChannelSettingsConstants';
 import type {User} from '@app/features/user/models/User';
 import UserGuildSettings from '@app/features/user/state/UserGuildSettings';
-import Users from '@app/features/user/state/Users';
 import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
 import {usePendingVoiceConnection} from '@app/features/voice/hooks/usePendingVoiceConnection';
 import {computeChannelE2EEStatus} from '@app/features/voice/state/ChannelE2EEStatus';
@@ -266,14 +263,19 @@ export const ChannelItem = observer(
 			parentId: channel.parentId ?? undefined,
 			type: channel.type,
 		});
-		const unreadState = getChannelUnreadState({
-			hasUnread,
-			unreadCount,
-			mentionCount,
-			isMuted: isChannelDirectlyMuted,
-			showFadedUnreadOnMutedChannels: Accessibility.showFadedUnreadOnMutedChannels,
-			unreadBadgesLevel,
-		});
+		const showFadedUnreadOnMutedChannels = Accessibility.showFadedUnreadOnMutedChannels;
+		const unreadState = useMemo(
+			() =>
+				getChannelUnreadState({
+					hasUnread,
+					unreadCount,
+					mentionCount,
+					isMuted: isChannelDirectlyMuted,
+					showFadedUnreadOnMutedChannels,
+					unreadBadgesLevel,
+				}),
+			[hasUnread, unreadCount, mentionCount, isChannelDirectlyMuted, showFadedUnreadOnMutedChannels, unreadBadgesLevel],
+		);
 		const hasUnreadMessages = unreadState.hasUnreadMessages;
 		const hasMentions = unreadState.hasMentions;
 		const isHighlight = unreadState.isHighlight;
@@ -344,26 +346,7 @@ export const ChannelItem = observer(
 						return;
 					}
 					if (item.type === DragItemType.VOICE_PARTICIPANT && channelIsVoice) {
-						const canMove = Permission.can(Permissions.MOVE_MEMBERS, {guildId: guild.id});
-						if (!canMove || item.currentChannelId === channel.id) {
-							setDropIndicator(null);
-							return;
-						}
-						const currentUserId = Users.getCurrentUser()?.id ?? null;
-						if (currentUserId && item.userId === currentUserId) {
-							void MediaEngine.connectToVoiceChannel(guild.id, channel.id);
-							setDropIndicator(null);
-							return;
-						}
-						const targetChannel = Channels.getChannel(channel.id);
-						if (targetChannel) {
-							const canTargetConnect = PermissionUtils.can(Permissions.CONNECT, item.userId!, targetChannel.toJSON());
-							if (!canTargetConnect) {
-								setDropIndicator(null);
-								return;
-							}
-						}
-						void GuildMemberCommands.update(guild.id, item.userId!, {channel_id: channel.id});
+						moveVoiceParticipantToChannel(item, guild.id, channel.id);
 						setDropIndicator(null);
 						return;
 					}
@@ -397,7 +380,7 @@ export const ChannelItem = observer(
 		}, [preview]);
 		const {startConnection: startVoiceConnection} = usePendingVoiceConnection({
 			guildId: guild.id,
-			channelId: channel.id,
+			channelId: channelIsVoice ? channel.id : null,
 		});
 		const singleClickConnectsToVoice =
 			channelIsVoice && !Accessibility.voiceChannelJoinRequiresDoubleClick && !isVoiceSelected;

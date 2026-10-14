@@ -239,3 +239,12 @@
 	padding-right: var(--member-list-scroller-padding-inline);
 	padding-bottom: var(--member-list-scroller-padding-block-end);
 }
+
+/* Micup: lighter side panels in the coal theme */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .header {
+	--background-secondary-lighter: var(--background-channel-header);
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .memberList {
+	--background-secondary-lighter: var(--side-panel-background);
+}

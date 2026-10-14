@@ -222,6 +222,25 @@ fn relax_progenitor_schema_strictness(spec: &mut openapiv3::OpenAPI) {
     let registry = spec.components.clone().unwrap_or_default();
 
     if let Some(components) = spec.components.as_mut() {
+        // Older API instances omit these fields during rolling upgrades.
+        object_schema_mut(components, "GatewayRolloutConfigResponse")
+            .required
+            .retain(|name| {
+                name != "max_connections"
+                    && name != "game_activity_enabled"
+                    && name != "game_activity_epoch"
+            });
+        object_schema_mut(components, "VoiceNoiseSuppressionConfigResponse")
+            .required
+            .retain(|name| {
+                name != "pipeline_v2_enabled"
+                    && name != "pipeline_v2_all"
+                    && name != "pipeline_v2_gate_open_probability"
+                    && name != "pipeline_v2_gate_refresh_probability"
+                    && name != "pipeline_v2_gate_hangover_ms"
+                    && name != "pipeline_v2_gain_target_dbfs"
+                    && name != "pipeline_v2_gain_max_db"
+            });
         for schema in components.schemas.values_mut() {
             relax_schema_reference(schema, &registry);
         }
@@ -682,9 +701,14 @@ fn build_tailwind(manifest_dir: &Path, out_dir: &Path) {
     fs::create_dir_all(&output_dir).expect("failed to create generated static dir");
     let input = manifest_dir.join("src/styles/app.css");
     let output = output_dir.join("app.css");
+    let cli_path = if cfg!(windows) {
+        "node_modules/@tailwindcss/cli/dist/index.mjs"
+    } else {
+        "node_modules/.bin/tailwindcss"
+    };
     let candidates = [
-        manifest_dir.join("node_modules/.bin/tailwindcss"),
-        manifest_dir.join("../node_modules/.bin/tailwindcss"),
+        manifest_dir.join(cli_path),
+        manifest_dir.join("..").join(cli_path),
     ];
     let Some(cli) = candidates.iter().find(|c| c.exists()) else {
         panic!(
@@ -693,7 +717,14 @@ fn build_tailwind(manifest_dir: &Path, out_dir: &Path) {
             candidates
         );
     };
-    let status = Command::new(cli)
+    let mut command = if cfg!(windows) {
+        let mut command = Command::new("node");
+        command.arg(cli);
+        command
+    } else {
+        Command::new(cli)
+    };
+    let status = command
         .arg("-i")
         .arg(&input)
         .arg("-o")

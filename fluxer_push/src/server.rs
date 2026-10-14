@@ -9,11 +9,12 @@ use crate::rpc::RpcClient;
 use crate::secret::SecretString;
 use crate::tokens::TokenCache;
 use crate::vendor;
-use axum::Router;
 use axum::extract::{ConnectInfo, State};
 use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
+use axum::{Extension, Router};
+use fluxer_svc::server::MetricsAllowList;
 use fluxer_svc::shutdown::{DEFAULT_DRAIN_TIMEOUT, drain_with_timeout, wait_for_shutdown};
 use fluxer_svc::transport::NatsTransport;
 use std::net::SocketAddr;
@@ -72,6 +73,7 @@ impl Serving {
 }
 
 pub async fn serve(addr: SocketAddr, router: Router) -> anyhow::Result<Serving> {
+    let router = router.layer(Extension(Arc::new(MetricsAllowList::from_env()?)));
     let listener = TcpListener::bind(addr).await?;
     let (stop, stopped) = oneshot::channel::<()>();
     let served = tokio::spawn(async move {
@@ -189,9 +191,10 @@ async fn readiness(State(sidecar): State<Arc<Sidecar>>) -> impl IntoResponse {
 
 async fn metrics_handler(
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Extension(allowed): Extension<Arc<MetricsAllowList>>,
     State(sidecar): State<Arc<Sidecar>>,
 ) -> Response {
-    if !is_loopback_peer(&peer) {
+    if !allowed.is_metrics_peer_allowed(&peer) {
         return (StatusCode::FORBIDDEN, "FORBIDDEN").into_response();
     }
     (
@@ -204,6 +207,59 @@ async fn metrics_handler(
         .into_response()
 }
 
-fn is_loopback_peer(peer: &SocketAddr) -> bool {
-    peer.ip().to_canonical().is_loopback()
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    async fn metrics_status(allowed: &str, peer: &str) -> StatusCode {
+        let sidecar = Arc::new(Sidecar::new(Arc::new(Metrics::new())));
+        let allowed = Arc::new(MetricsAllowList::parse(allowed).expect("valid allow list"));
+        let peer = peer.parse().expect("valid socket address");
+        metrics_handler(ConnectInfo(peer), Extension(allowed), State(sidecar))
+            .await
+            .status()
+    }
+
+    #[tokio::test]
+    async fn metrics_are_served_to_loopback_and_allowed_networks_only() {
+        assert_eq!(StatusCode::OK, metrics_status("", "127.0.0.1:5000").await);
+        assert_eq!(
+            StatusCode::FORBIDDEN,
+            metrics_status("", "10.77.0.3:5000").await
+        );
+        assert_eq!(
+            StatusCode::OK,
+            metrics_status("10.77.0.0/24", "10.77.0.3:5000").await
+        );
+        assert_eq!(
+            StatusCode::FORBIDDEN,
+            metrics_status("10.77.0.0/24", "10.77.1.3:5000").await
+        );
+    }
+
+    #[tokio::test]
+    async fn serve_installs_the_metrics_allow_list() {
+        let addr = std::net::TcpListener::bind("127.0.0.1:0")
+            .and_then(|listener| listener.local_addr())
+            .expect("free loopback port");
+        let sidecar = Arc::new(Sidecar::new(Arc::new(Metrics::new())));
+        let serving = serve(addr, sidecar_router(sidecar))
+            .await
+            .expect("sidecar serves");
+        let mut stream = tokio::net::TcpStream::connect(addr)
+            .await
+            .expect("connects to the sidecar");
+        stream
+            .write_all(b"GET /_metrics HTTP/1.1\r\nHost: sidecar\r\nConnection: close\r\n\r\n")
+            .await
+            .expect("sends the request");
+        let mut response = String::new();
+        stream
+            .read_to_string(&mut response)
+            .await
+            .expect("reads the response");
+        serving.stop().await;
+        assert!(response.starts_with("HTTP/1.1 200"), "{response}");
+    }
 }

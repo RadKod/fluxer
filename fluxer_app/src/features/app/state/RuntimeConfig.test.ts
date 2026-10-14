@@ -9,7 +9,11 @@ import InstanceSnapshotStore, {
 import RuntimeConfig, {describeAPIEndpoint} from '@app/features/app/state/RuntimeConfig';
 import {BOOTSTRAP_APP_PUBLIC} from '@app/features/platform/state/__fixtures__/RuntimeBootstrapFixture';
 import {http} from '@app/features/platform/transport/RestTransport';
-import {type InstanceDiscoveryDocument, parseInstanceDiscoveryDocument} from '@fluxer/instance_bootstrap/src/Discovery';
+import {
+	fetchInstanceDiscovery,
+	type InstanceDiscoveryDocument,
+	parseInstanceDiscoveryDocument,
+} from '@fluxer/instance_bootstrap/src/Discovery';
 import type {InstanceDiscoveryResponse} from '@fluxer/instance_bootstrap/src/Types';
 import type {LimitConfigSnapshot} from '@fluxer/limits/src/LimitTypes';
 import type {MessageDescriptor} from '@lingui/core';
@@ -19,6 +23,10 @@ import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 const desktopRuntime = vi.hoisted(() => ({required: false}));
 
 vi.mock('@lingui/core/macro', () => ({msg: (descriptor: MessageDescriptor) => descriptor}));
+vi.mock('@fluxer/instance_bootstrap/src/Discovery', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('@fluxer/instance_bootstrap/src/Discovery')>();
+	return {...actual, fetchInstanceDiscovery: vi.fn(actual.fetchInstanceDiscovery)};
+});
 vi.mock('@app/features/app/state/DesktopRuntimeTransaction', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('@app/features/app/state/DesktopRuntimeTransaction')>();
 	return {...actual, requiresDesktopRuntimeTransaction: () => desktopRuntime.required};
@@ -53,6 +61,9 @@ function discoveryDocument(host: string): InstanceDiscoveryResponse {
 			premium_enabled: false,
 			stripe_serviceable: false,
 			phone_verification_enabled: false,
+			premium_trial_days: 0,
+			gift_codes_enabled: false,
+			official_apps: [],
 		},
 		gif: {provider: 'klipy', display_name: 'Klipy', attribution_required: false},
 		sso: {enabled: false, enforced: false, display_name: null, redirect_uri: `https://${host}/sso`},
@@ -91,6 +102,68 @@ afterEach(() => {
 });
 
 describe('boot', () => {
+	test('retains migration configuration in the canonical runtime snapshot', () => {
+		const migration = {
+			state: 'selecting' as const,
+			epoch: 1,
+			preparing_at: '2026-10-01T00:00:00Z',
+			started_at: '2026-10-01T00:01:00Z',
+			forced_at: '2026-10-08T00:01:00Z',
+		};
+		const tiers = {'1': 'locked' as const, '2': 'for_sale' as const, '3': 'public' as const};
+		RuntimeConfig.applySnapshot({...bootSnapshot, usernameMigration: migration, usernameTiers: tiers});
+		expect(RuntimeConfig.usernameMigration).toEqual(migration);
+		expect(RuntimeConfig.usernameTiers).toEqual(tiers);
+	});
+	test('merges READY migration config without losing other runtime config and resets it across instances', () => {
+		RuntimeConfig.applyUsernameConfig({
+			username_migration: {state: 'legacy', epoch: 0, started_at: null, forced_at: null},
+			username_tiers: {'1': 'public', '2': 'locked', '3': 'locked'},
+		});
+		expect(RuntimeConfig.usernameTiers['1']).toBe('public');
+		expect(RuntimeConfig.apiEndpoint).toBe('https://boot.test/api');
+		RuntimeConfig.applySnapshot(runtimeSnapshotFromDiscovery(parsedDocument('second.test')));
+		expect(RuntimeConfig.usernameMigration.state).toBe('legacy');
+		expect(RuntimeConfig.usernameTiers['1']).toBe('locked');
+	});
+	test('rejects malformed active migration instead of silently treating it as legacy', () => {
+		expect(() =>
+			RuntimeConfig.applyUsernameConfig({
+				username_migration: {state: 'selecting', epoch: 1, started_at: null, forced_at: null},
+			}),
+		).toThrow();
+	});
+	test.each(['username_migration', 'username_tiers'] as const)(
+		'rejects null READY %s without retaining stale configuration',
+		(field) => {
+			expect(() => RuntimeConfig.applyUsernameConfig({[field]: null} as never)).toThrow();
+		},
+	);
+	test('updates selection state and tiers when discovery refreshes the active instance', async () => {
+		RuntimeConfig.applySnapshot(runtimeSnapshotFromDiscovery(parsedDocument('refresh.test')));
+		const migration = {
+			state: 'selecting' as const,
+			epoch: 1,
+			preparing_at: '2026-10-01T00:00:00Z',
+			started_at: '2026-10-01T00:01:00Z',
+			forced_at: '2026-10-08T00:01:00Z',
+		};
+		const tiers = {'1': 'public' as const, '2': 'locked' as const, '3': 'locked' as const};
+		vi.mocked(fetchInstanceDiscovery).mockResolvedValueOnce({
+			kind: 'ok',
+			url: 'https://refresh.test/.well-known/fluxer',
+			document: parseInstanceDiscoveryDocument({
+				...discoveryDocument('refresh.test'),
+				username_migration: migration,
+				username_tiers: tiers,
+			}),
+			etag: null,
+			lastModified: null,
+		});
+		await RuntimeConfig.refreshDiscovery();
+		expect(RuntimeConfig.usernameMigration).toEqual(migration);
+		expect(RuntimeConfig.usernameTiers).toEqual(tiers);
+	});
 	test('applies the initial runtime snapshot', () => {
 		expect(RuntimeConfig.apiEndpoint).toBe('https://boot.test/api');
 		expect(RuntimeConfig.productName).toBe('Fluxer boot.test');
@@ -331,5 +404,22 @@ describe('describeAPIEndpoint', () => {
 		['not a url at all', 'not a url at all'],
 	])('%s displays as %s', (endpoint, expected) => {
 		expect(describeAPIEndpoint(endpoint)).toBe(expected);
+	});
+});
+
+describe('Micup instance features and source URL', () => {
+	test('retains trial, gifts and legal source in the runtime snapshot', () => {
+		const document = discoveryDocument('micup.test');
+		document.features.premium_trial_days = 7;
+		document.features.gift_codes_enabled = true;
+		document.app_public!.legal.source_url = 'https://micup.test/yasal/kaynak';
+		RuntimeConfig.applySnapshot(runtimeSnapshotFromDiscovery(parseInstanceDiscoveryDocument(document)));
+		expect(RuntimeConfig.premiumTrialDays).toBe(7);
+		expect(RuntimeConfig.giftCodesEnabled).toBe(true);
+		expect(RuntimeConfig.sourceUrl).toBe('https://micup.test/yasal/kaynak');
+	});
+	test('defaults missing trial and gift features to off', () => {
+		expect(RuntimeConfig.premiumTrialDays).toBe(0);
+		expect(RuntimeConfig.giftCodesEnabled).toBe(false);
 	});
 });

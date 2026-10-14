@@ -12,7 +12,7 @@ const QUOTED_ENTRY = /'([^']+)'/gu;
 const LINK_ENTRY = /link:\s*'([^']+)'/gu;
 
 function slugOf(file: string): string {
-	const relative = path.relative(DOCS_ROOT, file);
+	const relative = path.relative(DOCS_ROOT, file).split(path.sep).join('/');
 	const withoutExtension = relative.replace(/\.(mdx|md)$/u, '');
 	if (withoutExtension === 'index') {
 		return '';

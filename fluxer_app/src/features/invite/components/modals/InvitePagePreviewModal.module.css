@@ -104,3 +104,9 @@
 		padding: 3.75rem 1rem 1rem;
 	}
 }
+
+/* Micup: the splash behind auth and invite pages stays dark when the coal and dark accent turns white */
+:global(html:is(.theme-coal, .theme-dark)) .previewModal,
+:global(html:is(.theme-coal, .theme-dark)) .previewContent {
+	background: var(--background-secondary-lighter);
+}

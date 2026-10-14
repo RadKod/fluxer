@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import type {CosmeticType} from '@app/features/cosmetics/state/Cosmetics';
+import type {MessageDescriptor} from '@lingui/core';
+import {msg} from '@lingui/core/macro';
+
+export const COSMETIC_TYPE_LABELS: Record<CosmeticType, MessageDescriptor> = {
+	avatar_decoration: msg({
+		message: 'Avatar decoration',
+		comment: 'A frame drawn around the user avatar. Profile decorations settings section title and search entry.',
+	}),
+	avatar_ultra: msg({
+		message: 'Ultra decoration',
+		comment: 'Big decoration, such as wings, behind the avatar. Profile decorations section title and search entry.',
+	}),
+	nameplate: msg({
+		message: 'Nameplate',
+		comment:
+			'A background image behind the user name in member and direct message lists. Profile decorations settings section title and search entry.',
+	}),
+	profile_effect: msg({
+		message: 'Profile effect',
+		comment:
+			'An animation played over the user profile card. Profile decorations settings section title and search entry.',
+	}),
+};
+
+export const COSMETIC_TYPE_DESCRIPTIONS: Record<CosmeticType, MessageDescriptor> = {
+	avatar_decoration: msg({
+		message: 'A frame around your avatar.',
+		comment: 'Profile decorations settings: what an avatar decoration is. Also the settings search entry description.',
+	}),
+	avatar_ultra: msg({
+		message: 'Wings and other large decorations behind your avatar.',
+		comment: 'Profile decorations settings: what ultra decorations are. Also the settings search entry description.',
+	}),
+	nameplate: msg({
+		message: 'A background behind your name in member lists and direct messages.',
+		comment: 'Profile decorations settings: what a nameplate is. Also the settings search entry description.',
+	}),
+	profile_effect: msg({
+		message: 'An animation that plays over your profile card.',
+		comment: 'Profile decorations settings: what a profile effect is. Also the settings search entry description.',
+	}),
+};

@@ -78,7 +78,7 @@ export type MediaEngineFacadeConnectPreflightDecision =
 	| {type: 'proceed'};
 
 export interface MediaEngineFacadeGatewayErrorInput {
-	code: GatewayErrorCode;
+	code: GatewayErrorCode | 'USERNAME_SELECTION_REQUIRED';
 	connecting: boolean;
 	connected: boolean;
 	channelId: string | null;
@@ -443,6 +443,19 @@ export function selectMediaEngineGatewayErrorDecision(
 	snapshot: MediaEngineFacadeSnapshot,
 	input: MediaEngineFacadeGatewayErrorInput,
 ): MediaEngineFacadeGatewayErrorDecision {
+	if (input.code === 'USERNAME_SELECTION_REQUIRED') {
+		const abortConnection = input.connecting && !input.connected;
+		return {
+			type: 'handle',
+			clearPendingSessionRestore: abortConnection,
+			clearViewerStreamKeys: abortConnection,
+			abortConnection,
+			unavailableChannelId: null,
+			showUnavailableToast: false,
+			disconnectReason: null,
+			toast: null,
+		};
+	}
 	if (!voiceGatewayErrorCodes.has(input.code)) return {type: 'ignore'};
 
 	const abortConnection =

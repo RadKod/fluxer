@@ -8,6 +8,10 @@ import {
 	scheduleDeletedChannelFollowerRemoval,
 } from '@app/api/channel/services/ChannelFollowers';
 import type {ChannelService} from '@app/api/channel/services/ChannelService';
+import {
+	assertMatureContentSettingsWrite,
+	isMatureContentSettingsEnabled,
+} from '@app/api/channel/utils/MatureContentSettingsGate';
 import {getContentMessage} from '@app/api/content_i18n/ContentI18n';
 import {BatchBuilder} from '@app/api/database/CassandraQueryExecution';
 import type {PermissionOverwrite} from '@app/api/database/types/ChannelTypes';
@@ -27,7 +31,8 @@ import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
-import {getKVThreadAutoArchiveQueue} from '@app/api/middleware/ServiceSingletons';
+import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
+import {getGuildBoostService, getKVThreadAutoArchiveQueue} from '@app/api/middleware/ServiceSingletons';
 import {Guild} from '@app/api/models/Guild';
 import type {User} from '@app/api/models/User';
 import {getGuildSearchService} from '@app/api/SearchFactory';
@@ -36,6 +41,7 @@ import {deleteChannelMessageSearchDocuments} from '@app/api/search/MessageSearch
 import {deleteThreadSearchDocuments} from '@app/api/search/thread/ThreadSearchService';
 import {Channels, ChannelsByGuild, GuildMembers, GuildMembersByUserId, GuildRoles, Guilds} from '@app/api/Tables';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
+import {onUserGuildsChanged} from '@app/api/user/lifecycle/UserLifecycleHooks';
 import {mapUserSettingsToResponse} from '@app/api/user/UserMappers';
 import {addGuildToUncategorizedFolder, removeGuildFromUserFolders} from '@app/api/user/utils/GuildFolderUtils';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
@@ -60,6 +66,7 @@ import {
 	VOICE_CHANNEL_CONNECTION_LIMIT_DEFAULT,
 	VOICE_CHANNEL_USER_LIMIT_MAX,
 } from '@fluxer/constants/src/LimitConstants';
+import {MessageNotifications} from '@fluxer/constants/src/NotificationConstants';
 import {
 	DEFAULT_THREAD_PERMISSIONS,
 	THREAD_AWARE_ALL_PERMISSIONS,
@@ -203,7 +210,15 @@ export class GuildOperationsService {
 		try {
 			const guild = await this.gatewayService.getGuildData({guildId, userId});
 			if (!guild) throw new UnknownGuildError();
-			return guild;
+			// the Gateway copy learns the boost count only with a level change, so read it live; when
+			// that read fails the Gateway copy answers, since a stale count is no reason to fail the guild read.
+			const premiumSubscriptionCount = await getGuildBoostService()
+				.getLiveBoostCount(guildId)
+				.catch((countError: unknown) => {
+					Logger.warn({error: countError, guildId: guildId.toString()}, 'Failed to read the live guild boost count');
+					return guild.premium_subscription_count;
+				});
+			return {...guild, premium_subscription_count: premiumSubscriptionCount};
 		} catch (error) {
 			if (this.isGuildAccessError(error)) {
 				if (await this.guildExists(guildId)) {
@@ -309,6 +324,7 @@ export class GuildOperationsService {
 		_auditLogReason?: string | null,
 	): Promise<GuildResponse> {
 		const {user, data, locale = null} = params;
+		getUsernameSelectionGate().assertMayAct(user, 'guild_create');
 		if (user.isBot) {
 			throw new BotsCannotCreateGuildsError();
 		}
@@ -324,6 +340,12 @@ export class GuildOperationsService {
 			DEFAULT_STOCK_LIMITS.max_guilds,
 		);
 		if (currentGuildCount >= maxGuilds) throw new MaxGuildsError(maxGuilds);
+		// Imported templates (for example from Discord) keep working while the flag is off: mature marks are dropped instead of refused.
+		const template =
+			data.template?.channels.some((channel) => channel.nsfw === true) &&
+			!isMatureContentSettingsEnabled(this.limitConfigService, ctx)
+				? {...data.template, channels: data.template.channels.map((channel) => ({...channel, nsfw: false}))}
+				: data.template;
 		const guildId = createGuildID(await this.snowflakeService.generate());
 		contentModerationService.scanText(data.name, {
 			userId: user.id,
@@ -346,12 +368,12 @@ export class GuildOperationsService {
 		const iconKey = preparedIcon?.newHash ?? null;
 		const shouldUseEmptyFeatures = data.empty_features ?? false;
 		const featuresSet = shouldUseEmptyFeatures ? new Set<string>() : new Set(BASE_GUILD_FEATURES);
-		const templateSettings = this.sanitiseTemplateGuildSettings(data.template);
+		const templateSettings = this.sanitiseTemplateGuildSettings(template);
 		const batch = new BatchBuilder();
 		let systemChannelId: ChannelID;
-		if (data.template) {
+		if (template) {
 			const templateBatch = new BatchBuilder();
-			const templateResult = await this.buildTemplateEntities(guildId, data.template, templateBatch, locale);
+			const templateResult = await this.buildTemplateEntities(guildId, template, templateBatch, locale);
 			systemChannelId = templateResult.systemChannelId;
 			await templateBatch.executeChunked(50);
 		} else {
@@ -393,6 +415,8 @@ export class GuildOperationsService {
 			audit_logs_indexed_at: null,
 			members_indexed_at: null,
 			message_history_cutoff: null,
+			premium_tier: null,
+			premium_subscription_count: null,
 			version: 1,
 		};
 		batch.addPrepared(Guilds.insert(guildData));
@@ -423,6 +447,7 @@ export class GuildOperationsService {
 		);
 		batch.addPrepared(GuildMembersByUserId.insert({user_id: user.id, guild_id: guildId}));
 		await batch.execute();
+		await onUserGuildsChanged({userId: user.id});
 		if (guildActive(guildId)) {
 			await this.channelRepository.threads.ensureGuildMarker(guildId, {permsSeededAt: new Date()});
 		}
@@ -593,6 +618,21 @@ export class GuildOperationsService {
 			const trimmed = data.content_warning_text == null ? null : data.content_warning_text.trim();
 			patch.content_warning_text = trimmed && trimmed.length > 0 ? trimmed : null;
 		}
+		await assertMatureContentSettingsWrite({
+			limitConfigService: this.limitConfigService,
+			userRepository: this.userRepository,
+			userId,
+			current: {
+				nsfw: currentGuild.nsfw,
+				contentWarningLevel: currentGuild.contentWarningLevel,
+				contentWarningText: currentGuild.contentWarningText,
+			},
+			next: {
+				nsfw: patch.nsfw ?? null,
+				contentWarningLevel: patch.content_warning_level ?? null,
+				contentWarningText: patch.content_warning_text ?? null,
+			},
+		});
 		if (data.explicit_content_filter !== undefined) {
 			patch.explicit_content_filter = data.explicit_content_filter;
 		}
@@ -881,6 +921,7 @@ export class GuildOperationsService {
 					user_limit: bitrate !== null ? 0 : null,
 					voice_connection_limit: bitrate !== null ? VOICE_CHANNEL_CONNECTION_LIMIT_DEFAULT : null,
 					rtc_region: null,
+					room_theme: null,
 					last_message_id: null,
 					last_pin_timestamp: null,
 					permission_overwrites: null,
@@ -1113,6 +1154,7 @@ export class GuildOperationsService {
 						? (channel.voice_connection_limit ?? VOICE_CHANNEL_CONNECTION_LIMIT_DEFAULT)
 						: null,
 					rtc_region: null,
+					room_theme: null,
 					last_message_id: null,
 					last_pin_timestamp: null,
 					permission_overwrites: permissionOverwrites,
@@ -1163,6 +1205,7 @@ export class GuildOperationsService {
 					user_limit: null,
 					voice_connection_limit: null,
 					rtc_region: null,
+					room_theme: null,
 					last_message_id: null,
 					last_pin_timestamp: null,
 					permission_overwrites: null,
@@ -1204,6 +1247,8 @@ export class GuildOperationsService {
 	}
 
 	private mapOtherPlatformTemplateChannelTypeToFluxer(channelType: number): number | null {
+		// TEMPORARY: announcement channels are closed; open only after bucketing ((source_channel_id, bucket), source_message_id) and capping followers, on a product decision.
+		if (channelType === ChannelTypes.GUILD_ANNOUNCEMENT) return ChannelTypes.GUILD_TEXT;
 		if (
 			channelType === ChannelTypes.GUILD_TEXT ||
 			channelType === ChannelTypes.GUILD_ANNOUNCEMENT ||
@@ -1227,7 +1272,12 @@ export class GuildOperationsService {
 				GuildVerificationLevel.NONE,
 			),
 			explicitContentFilter: this.clampTemplateSetting(template?.explicit_content_filter, 0, 2, 0),
-			defaultMessageNotifications: this.clampTemplateSetting(template?.default_message_notifications, 0, 1, 0),
+			defaultMessageNotifications: this.clampTemplateSetting(
+				template?.default_message_notifications,
+				0,
+				1,
+				MessageNotifications.ONLY_MENTIONS,
+			),
 			systemChannelFlags: (template?.system_channel_flags ?? 0) & SUPPORTED_SYSTEM_CHANNEL_FLAGS,
 			afkTimeout: this.clampTemplateSetting(
 				template?.afk_timeout,

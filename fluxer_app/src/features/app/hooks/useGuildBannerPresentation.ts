@@ -8,7 +8,7 @@ import {
 	resolveGuildBannerGeometry,
 	resolveGuildBannerHeaderGlassOpacity,
 } from '@app/features/app/components/layout/GuildBannerCollapse';
-import {useAnimatedImageUrl} from '@app/features/app/hooks/useAnimatedImageUrl';
+import {useGuildBannerPlayback} from '@app/features/app/hooks/useGuildBannerPlayback';
 import {clampWideAssetAspectRatio} from '@app/features/expressions/utils/AssetImageGeometry';
 import type {Guild} from '@app/features/guild/models/Guild';
 import MobileLayout from '@app/features/ui/state/MobileLayout';
@@ -27,16 +27,20 @@ interface GuildBannerMeasurements {
 	readonly viewportHeight: number;
 }
 
-export interface GuildBannerPresentation {
-	readonly headerRowRef: React.RefCallback<HTMLElement>;
+export interface GuildBannerChannelListPresentation {
 	readonly hoverRef: React.RefCallback<HTMLElement>;
+	readonly collapseDistance: number;
+	readonly collapsible: boolean;
+}
+
+export interface GuildBannerPresentation extends GuildBannerChannelListPresentation {
+	readonly headerRowRef: React.RefCallback<HTMLElement>;
+	readonly channelList: GuildBannerChannelListPresentation;
 	readonly imageUrl: string | null;
 	readonly hasBanner: boolean;
 	readonly isDetached: boolean;
 	readonly aspectRatio: number;
 	readonly bannerHeight: number;
-	readonly collapseDistance: number;
-	readonly collapsible: boolean;
 	readonly centerCrop: boolean;
 	readonly frosted: boolean;
 	readonly collapsed: boolean;
@@ -150,31 +154,60 @@ export function useGuildBannerPresentation({
 		syncToScroll();
 	}, [syncToScroll]);
 	const animatedBannerUrl = useMemo(() => {
-		if (!showsIntegratedBanner || collapsed) return null;
 		return AvatarUtils.getGuildBannerURL({id: guild.id, banner: guild.banner}, true) || null;
-	}, [collapsed, guild.banner, guild.id, showsIntegratedBanner]);
-	const {hoverRef, imageUrl} = useAnimatedImageUrl({
+	}, [guild.banner, guild.id]);
+	const {hoverRef, imageUrl} = useGuildBannerPlayback({
+		guildId: guild.id,
+		bannerHash: guild.banner,
 		staticUrl: showsIntegratedBanner ? staticBannerUrl : null,
-		animatedUrl: animatedBannerUrl,
-		kind: 'gif',
+		animatedUrl: showsIntegratedBanner ? animatedBannerUrl : null,
+		visible: showsIntegratedBanner && !collapsed,
 	});
-	return {
-		headerRowRef,
-		hoverRef,
-		imageUrl,
-		hasBanner,
-		isDetached,
-		aspectRatio,
-		bannerHeight: geometry.bannerHeight,
-		collapseDistance,
-		collapsible: imageUrl != null && collapseDistance > 0,
-		centerCrop: isMobile && geometry.heightCapped,
-		frosted,
-		collapsed,
-		clipShift,
-		imageShift,
-		imageOpacity,
-		glassOpacity,
-		scrimOpacity,
-	};
+	const collapsible = showsIntegratedBanner && collapseDistance > 0;
+	const channelList = useMemo(
+		() => ({hoverRef, collapsible, collapseDistance}),
+		[hoverRef, collapsible, collapseDistance],
+	);
+	return useMemo(
+		() => ({
+			headerRowRef,
+			channelList,
+			hoverRef,
+			imageUrl,
+			hasBanner,
+			isDetached,
+			aspectRatio,
+			bannerHeight: geometry.bannerHeight,
+			collapseDistance,
+			collapsible,
+			centerCrop: isMobile && geometry.heightCapped,
+			frosted,
+			collapsed,
+			clipShift,
+			imageShift,
+			imageOpacity,
+			glassOpacity,
+			scrimOpacity,
+		}),
+		[
+			headerRowRef,
+			channelList,
+			collapsible,
+			hoverRef,
+			imageUrl,
+			hasBanner,
+			isDetached,
+			aspectRatio,
+			geometry,
+			collapseDistance,
+			isMobile,
+			frosted,
+			collapsed,
+			clipShift,
+			imageShift,
+			imageOpacity,
+			glassOpacity,
+			scrimOpacity,
+		],
+	);
 }

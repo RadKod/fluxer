@@ -41,12 +41,8 @@ export function applyAppZoomToDocument(zoomPercent: number, electronApi?: AppZoo
 	root.style.removeProperty('zoom');
 	root.style.removeProperty('--app-zoom-factor');
 	root.style.removeProperty('font-size');
-	if (electronApi) {
-		root.style.setProperty('--custom-zoom', String(normalizedZoomPercent));
-		electronApi.setZoomFactor(1);
-	} else {
-		root.style.removeProperty('--custom-zoom');
-	}
+	root.style.setProperty('--custom-zoom', String(normalizedZoomPercent));
+	electronApi?.setZoomFactor(1);
 	clearAppZoomCache();
 }
 

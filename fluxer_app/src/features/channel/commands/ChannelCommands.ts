@@ -46,6 +46,7 @@ type ChannelUpdateParams = Partial<
 		| 'icon'
 		| 'owner_id'
 		| 'rtc_region'
+		| 'room_theme'
 	>
 >;
 

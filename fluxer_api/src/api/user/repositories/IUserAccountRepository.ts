@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {GuildID, UserID} from '@app/api/BrandedTypes';
+import type {TokenRange} from '@app/api/database/TokenRangeScan';
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import type {User} from '@app/api/models/User';
 
@@ -19,7 +20,12 @@ export interface UserDeletionScheduleUpdate {
 export interface IUserAccountRepository {
 	create(data: UserRow): Promise<User>;
 	upsert(data: UserRow, oldData?: UserRow | null): Promise<User>;
-	patchUpsert(userId: UserID, patchData: Partial<UserRow>, oldData?: UserRow | null): Promise<User>;
+	patchUpsert(
+		userId: UserID,
+		patchData: Partial<UserRow>,
+		oldData?: UserRow | null,
+		legacyIdentityDeadlineAt?: number,
+	): Promise<User>;
 	compareAndSetFlags(user: User, flags: bigint): Promise<User | null>;
 	updateFlags(userId: UserID, mutate: (flags: bigint) => bigint): Promise<User | null>;
 	updateDeletionSchedule(user: User, patch: UserDeletionScheduleUpdate): Promise<User>;
@@ -45,6 +51,14 @@ export interface IUserAccountRepository {
 	listUsers(userIds: Array<UserID>): Promise<Array<User>>;
 	listAllUsersPaginated(limit: number, lastUserId?: UserID): Promise<Array<User>>;
 	scanAllUsersPage(
+		limit: number,
+		pageState?: string | null,
+	): Promise<{
+		users: Array<User>;
+		pageState: string | null;
+	}>;
+	scanUsersTokenRangePage(
+		range: TokenRange,
 		limit: number,
 		pageState?: string | null,
 	): Promise<{

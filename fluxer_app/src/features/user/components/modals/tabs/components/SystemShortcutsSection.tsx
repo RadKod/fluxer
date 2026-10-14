@@ -61,53 +61,9 @@ const HYPRLAND_BOUND_DESCRIPTION_DESCRIPTOR = msg({
 	comment:
 		'Subtitle for system-wide shortcuts on the Hyprland desktop after setup. Hyprland shows no list of assigned keys. {productName} is the app name.',
 });
-const KEYS_RESERVED_DESCRIPTOR = msg({
-	message: "Your desktop keeps these keys for {productName}, so other apps can't use them.",
-	comment:
-		'Linux settings note under the list of system-wide shortcuts the desktop runs (KDE, GNOME). A key assigned here stops reaching every other app. {productName} is the app name.',
-});
-const KEYS_RESERVED_DIRECT_INPUT_DESCRIPTOR = msg({
-	message:
-		"Your desktop keeps these keys for {productName}, so other apps can't use them. To use the same key in other apps, turn on direct input device access below.",
-	comment:
-		'Linux settings note under the list of system-wide shortcuts the desktop runs (KDE, GNOME), shown when the "Use direct input device access" switch is offered below it. A key assigned here stops reaching every other app. {productName} is the app name.',
-});
-const ONE_ACTION_PER_KEY_DESCRIPTOR = msg({
-	message: 'Each key can run only one system-wide shortcut.',
-	comment: 'Note under the list of system-wide shortcuts on Linux. The desktop cannot assign one key to two actions.',
-});
-const NOT_ASSIGNED_DESCRIPTOR = msg({
-	message: 'Not assigned',
-	comment: 'Shown instead of a key when the desktop has no key assigned to a system-wide shortcut.',
-});
 const CHANGE_IN_SYSTEM_SETTINGS_DESCRIPTOR = msg({
 	message: 'Change in system settings',
 	comment: 'Button that opens the Linux desktop dialog for changing the keys of system-wide shortcuts.',
-});
-const KDE_INSTRUCTIONS_DESCRIPTOR = msg({
-	message: 'To change the keys, go to System Settings > Keyboard > Shortcuts > {productName}.',
-	comment:
-		'Instructions for KDE Plasma. Keep "System Settings", "Keyboard" and "Shortcuts" as the KDE menu names in your language. {productName} is the app name.',
-});
-const GNOME_INSTRUCTIONS_DESCRIPTOR = msg({
-	message: 'To change the keys, go to Settings > Apps > {productName}.',
-	comment:
-		'Instructions for GNOME. Keep "Settings" and "Apps" as the GNOME menu names in your language. {productName} is the app name.',
-});
-const HYPRLAND_INSTRUCTIONS_DESCRIPTOR = msg({
-	message:
-		'Hyprland has no shortcut dialog. Add the lines for your Hyprland version to your Hyprland config and replace KEY with the key you want.',
-	comment:
-		'Instructions for the Hyprland desktop, shown above config lines for hyprland.lua (Hyprland 0.55 and later) and for hyprland.conf (before 0.55). Keep "KEY" exactly as written.',
-});
-const HYPRLAND_NO_APP_ID_DESCRIPTOR = msg({
-	message: 'Hyprland has no shortcut dialog. Bind the keys in your Hyprland config.',
-	comment:
-		'Instructions for the Hyprland desktop when the app id is unknown. The config is hyprland.lua on Hyprland 0.55 and later, hyprland.conf before.',
-});
-const OTHER_DESKTOP_INSTRUCTIONS_DESCRIPTOR = msg({
-	message: "To change the keys, open your desktop's keyboard shortcut settings.",
-	comment: 'Instructions for changing system-wide shortcut keys on an unrecognized Linux desktop.',
 });
 const HYPRLAND_LUA_LINES_DESCRIPTOR = msg({
 	message: 'hyprland.lua (Hyprland 0.55 and later)',
@@ -162,12 +118,6 @@ const DIRECT_INPUT_LABEL_DESCRIPTOR = msg({
 const DIRECT_INPUT_DESCRIPTION_DESCRIPTOR = msg({
 	message: 'Lets {productName} read your keyboard directly. Your system already allows this.',
 	comment: 'Description for the Linux direct input device access switch. {productName} is the app name.',
-});
-const DIRECT_INPUT_ENABLED_DESKTOP_DESCRIPTION_DESCRIPTOR = msg({
-	message:
-		'Lets {productName} read your keyboard directly. Turn this off to set up shortcuts through your desktop instead.',
-	comment:
-		'Description for the Linux direct input device access switch while it is on, on a desktop that can also run system-wide shortcuts itself (KDE, GNOME, Hyprland). {productName} is the app name.',
 });
 const DIRECT_INPUT_UNAVAILABLE_DESCRIPTION_DESCRIPTOR = msg({
 	message: "{productName} can no longer read your keyboard, so your desktop's shortcuts are used instead.",
@@ -326,21 +276,6 @@ function getPushToTalkUnassignedText(i18n: I18n): string {
 	}
 }
 
-function getChangeInstructions(i18n: I18n): string {
-	switch (GlobalShortcuts.linux?.desktop) {
-		case 'kde':
-			return i18n._(KDE_INSTRUCTIONS_DESCRIPTOR, {productName: getDesktopEntryName()});
-		case 'gnome':
-			return i18n._(GNOME_INSTRUCTIONS_DESCRIPTOR, {productName: getDesktopEntryName()});
-		case 'hyprland':
-			return GlobalShortcuts.portal?.portalAppId
-				? i18n._(HYPRLAND_INSTRUCTIONS_DESCRIPTOR)
-				: i18n._(HYPRLAND_NO_APP_ID_DESCRIPTOR);
-		default:
-			return i18n._(OTHER_DESKTOP_INSTRUCTIONS_DESCRIPTOR);
-	}
-}
-
 const PUSH_TO_TALK_ACTIONS = ['voice_push_to_talk', 'voice_push_to_talk_priority'] as const;
 
 function isPushToTalkDesktopOnly(): boolean {
@@ -492,49 +427,6 @@ const BoundPortalShortcuts: React.FC<{'data-flx': string}> = observer(({'data-fl
 					</div>
 				) : null}
 			</div>
-			{desktop === 'hyprland' ? null : (
-				<div className={styles.defaultsSectionRows} data-flx="user.system-shortcuts-section.bound.rows">
-					{actions.map(({action, label, triggerDescription}) => (
-						<div key={action} className={styles.defaultRow} data-flx="user.system-shortcuts-section.bound.row">
-							<div className={styles.defaultLabel} data-flx="user.system-shortcuts-section.bound.row.label">
-								{label}
-								{isGnomeHoldTriggerRisky(action, triggerDescription) ? (
-									<div className={styles.customHint} data-flx="user.system-shortcuts-section.bound.row.gnome-hold-hint">
-										{getGnomeHoldWarning(i18n, action)}
-									</div>
-								) : null}
-							</div>
-							{triggerDescription ? (
-								<span className={styles.defaultChip} data-flx="user.system-shortcuts-section.bound.row.trigger">
-									{triggerDescription}
-								</span>
-							) : (
-								<span
-									className={styles.defaultChipsEmpty}
-									data-flx="user.system-shortcuts-section.bound.row.not-assigned"
-								>
-									{i18n._(NOT_ASSIGNED_DESCRIPTOR)}
-								</span>
-							)}
-						</div>
-					))}
-				</div>
-			)}
-			<p className={styles.permissionSectionHelper} data-flx="user.system-shortcuts-section.bound.instructions">
-				{getChangeInstructions(i18n)}
-			</p>
-			{desktop === 'hyprland' ? null : (
-				<p className={styles.permissionSectionHelper} data-flx="user.system-shortcuts-section.bound.one-action-per-key">
-					{i18n._(ONE_ACTION_PER_KEY_DESCRIPTOR)}
-				</p>
-			)}
-			{desktop === 'hyprland' ? null : (
-				<p className={styles.permissionSectionHelper} data-flx="user.system-shortcuts-section.bound.keys-reserved">
-					{i18n._(shouldShowDirectInputSwitch() ? KEYS_RESERVED_DIRECT_INPUT_DESCRIPTOR : KEYS_RESERVED_DESCRIPTOR, {
-						productName: PRODUCT_NAME,
-					})}
-				</p>
-			)}
 			{desktop === 'hyprland' && portal.portalAppId ? (
 				<HyprlandBindLines
 					portalAppId={portal.portalAppId}
@@ -643,18 +535,8 @@ function shouldShowDirectInputSwitch(): boolean {
 	return directInput.available || directInput.enabled;
 }
 
-function canDesktopRunShortcuts(): boolean {
-	const linux = GlobalShortcuts.linux;
-	if (linux?.session !== 'wayland') return false;
-	return linux.desktop === 'kde' || linux.desktop === 'gnome' || linux.desktop === 'hyprland';
-}
-
 function getDirectInputDescription(available: boolean): MessageDescriptor {
-	if (available) {
-		return GlobalShortcuts.backend === 'evdev' && canDesktopRunShortcuts()
-			? DIRECT_INPUT_ENABLED_DESKTOP_DESCRIPTION_DESCRIPTOR
-			: DIRECT_INPUT_DESCRIPTION_DESCRIPTOR;
-	}
+	if (available) return DIRECT_INPUT_DESCRIPTION_DESCRIPTOR;
 	const backend = GlobalShortcuts.backend;
 	if (backend === 'x11') return DIRECT_INPUT_UNAVAILABLE_X11_DESCRIPTION_DESCRIPTOR;
 	if (backend === 'portal' && GlobalShortcuts.portal?.state === 'bound') {

@@ -36,15 +36,15 @@
 }
 
 .reactionMe .reactionButton {
-	background-color: color-mix(in srgb, var(--brand-primary) 36%, var(--background-secondary) 64%);
-	border-color: var(--brand-primary);
-	color: var(--text-on-brand-primary);
+	background-color: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+	border-color: color-mix(in srgb, var(--brand-primary) 45%, transparent);
+	color: var(--text-primary);
 }
 
 :global(:where(html.window-focused, html.unfocused-fully-interactive):not(.window-focus-activation-guard))
 	.reactionMe
 	.reactionButton:hover {
-	background-color: color-mix(in srgb, var(--brand-primary) 48%, var(--background-secondary) 52%);
+	background-color: color-mix(in srgb, var(--brand-primary) 18%, transparent);
 	border-color: var(--brand-primary);
 }
 
@@ -80,7 +80,7 @@
 }
 
 .reactionMe .countWrapper {
-	color: var(--text-on-brand-primary);
+	color: var(--text-primary);
 }
 
 :global(.theme-light) .reactionButton {
@@ -96,7 +96,7 @@
 }
 
 :global(.theme-light) .reactionMe .reactionButton {
-	background-color: color-mix(in srgb, var(--brand-primary) 12%, var(--background-primary) 88%);
+	background-color: color-mix(in srgb, var(--brand-primary) 12%, transparent);
 	border-color: color-mix(in srgb, var(--brand-primary) 45%, transparent 55%);
 	color: var(--brand-primary);
 }
@@ -104,7 +104,7 @@
 :global(.theme-light:where(.window-focused, .unfocused-fully-interactive):not(.window-focus-activation-guard))
 	.reactionMe
 	.reactionButton:hover {
-	background-color: color-mix(in srgb, var(--brand-primary) 18%, var(--background-primary) 82%);
+	background-color: color-mix(in srgb, var(--brand-primary) 18%, transparent);
 	border-color: var(--brand-primary);
 }
 
@@ -127,8 +127,8 @@
 
 .reactionMe .reactionButtonDisabled,
 .reactionMe .reactionButtonDisabled:hover {
-	background-color: color-mix(in srgb, var(--brand-primary) 36%, var(--background-secondary) 64%);
-	border-color: var(--brand-primary);
+	background-color: color-mix(in srgb, var(--brand-primary) 12%, transparent);
+	border-color: color-mix(in srgb, var(--brand-primary) 45%, transparent);
 }
 
 :global(.theme-light) .reactionButtonDisabled,
@@ -139,7 +139,7 @@
 
 :global(.theme-light) .reactionMe .reactionButtonDisabled,
 :global(.theme-light) .reactionMe .reactionButtonDisabled:hover {
-	background-color: color-mix(in srgb, var(--brand-primary) 12%, var(--background-primary) 88%);
+	background-color: color-mix(in srgb, var(--brand-primary) 12%, transparent);
 	border-color: color-mix(in srgb, var(--brand-primary) 45%, transparent 55%);
 }
 

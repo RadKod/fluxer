@@ -389,7 +389,7 @@ describe('lane consumer filters', () => {
 		const {queue, consumerAdds} = createQueue({existing: LEGACY_CONFIG});
 		await queue.ensureConsumers(WORKER_LANES);
 		const unfurl = consumerAdds.find((config) => config.durable_name === 'workers_unfurl');
-		expect(unfurl?.filter_subjects).toEqual(['jobs.extractEmbeds']);
+		expect(unfurl?.filter_subjects).toEqual(['jobs.extractEmbeds', 'jobs.extractFeedPostEmbeds']);
 	});
 
 	it('never claims the same subject from two lane consumers', async () => {

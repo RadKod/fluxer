@@ -10,6 +10,8 @@ import type {SudoVerificationResult} from '@app/api/auth/services/SudoVerificati
 import {Config} from '@app/api/Config';
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import type {IDiscriminatorService} from '@app/api/infrastructure/DiscriminatorService';
+import {getFreshCachedAccountIdentity} from '@app/api/instance/AccountIdentityModeCache';
+import {getCachedInstancePremiumMode} from '@app/api/limits/InstancePremiumModeCache';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
@@ -19,20 +21,32 @@ import type {AuthSession as AuthSessionModel} from '@app/api/models/AuthSession'
 import type {User} from '@app/api/models/User';
 import {enforceFluxerTagChangeRateLimit} from '@app/api/user/FluxerTagChangeRateLimit';
 import type {IUserAccountRepository} from '@app/api/user/repositories/IUserAccountRepository';
-import {assertNoDiscriminatorChange, reserveUsername, type UsernameReservation} from '@app/api/user/UniqueUsernames';
+import {
+	assertBotUsernameAvailable,
+	assertNoDiscriminatorChange,
+	readUsernameMigration,
+	reserveUsername,
+	type UsernameReservation,
+} from '@app/api/user/UniqueUsernames';
 import {isProfileSubstringExempt} from '@app/api/user/UserHelpers';
-import {USERNAME_MODE_DISCRIMINATOR} from '@app/api/user/UserTag';
+import {UsernameOwnershipRepository} from '@app/api/user/username/UsernameOwnershipRepository';
+import {USERNAME_CLAIM_ERROR_CODES} from '@app/api/user/username/UsernameOwnershipService';
+import {UsernamePolicyService} from '@app/api/user/username/UsernamePolicyService';
 import {AccountIdentityModes, TagStyles} from '@fluxer/constants/src/AccountIdentityConstants';
+import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {PremiumFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {SudoModeRequiredError} from '@fluxer/errors/src/domains/auth/SudoModeRequiredError';
 import {ContentBlockedError} from '@fluxer/errors/src/domains/content/ContentBlockedError';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
+import {FluxerError} from '@fluxer/errors/src/FluxerError';
 import type {UserUpdateRequest} from '@fluxer/schema/src/domains/user/UserRequestSchemas';
 import type {IRateLimitService} from '@pkgs/rate_limit/src/IRateLimitService';
 
 interface UserUpdateMetadata {
 	invalidateAuthSessions?: boolean;
+	usernameClaim?: string;
+	identityDeadlineAt?: number;
 	usernameReservation?: UsernameReservation;
 }
 
@@ -63,10 +77,9 @@ export class UserAccountSecurityService {
 		metadata: UserUpdateMetadata;
 	}> {
 		const {user, data, sudoContext} = params;
+		const identityDeadlineAt = Date.now() + 30_000;
 		const updates: UserFieldUpdates = {
 			password_hash: user.passwordHash,
-			username: user.username,
-			discriminator: user.discriminator,
 			global_name: user.isBot ? null : user.globalName,
 			email: user.email,
 		};
@@ -80,10 +93,27 @@ export class UserAccountSecurityService {
 		const normalizedEmail = rawEmail?.toLowerCase();
 		const tagChangeRequested = data.username !== undefined || data.discriminator !== undefined;
 		const accountIdentity = tagChangeRequested ? await getInstanceConfigRepository().getAccountIdentity() : null;
+		const migration = tagChangeRequested ? await readUsernameMigration() : null;
 		const usernameSignIn = accountIdentity?.mode === AccountIdentityModes.USERNAME;
-		const uniqueUsernames = !user.isBot && accountIdentity?.tagStyle === TagStyles.NONE;
-		if (uniqueUsernames) {
-			assertNoDiscriminatorChange(data.discriminator, user.discriminator);
+		const ownershipIdentity = !user.isBot && migration !== null && migration.state !== 'legacy';
+		const legacyUnique = !ownershipIdentity && !user.isBot && accountIdentity?.tagStyle === TagStyles.NONE;
+		if (legacyUnique) assertNoDiscriminatorChange(data.discriminator, user.discriminator);
+		if (!ownershipIdentity && data.discriminator === 0) {
+			throw InputValidationError.fromCode(
+				'discriminator',
+				ValidationErrorCodes.DISCRIMINATOR_NOT_SUPPORTED_ON_INSTANCE,
+			);
+		}
+		if (
+			ownershipIdentity &&
+			data.discriminator !== undefined &&
+			data.discriminator !== user.discriminator &&
+			!(data.username !== undefined && data.discriminator === 0)
+		) {
+			throw InputValidationError.fromCode(
+				'discriminator',
+				ValidationErrorCodes.DISCRIMINATOR_NOT_SUPPORTED_ON_INSTANCE,
+			);
 		}
 		const hasPasswordRequiredChanges =
 			(data.username !== undefined && data.username !== user.username) ||
@@ -109,9 +139,51 @@ export class UserAccountSecurityService {
 			updates.password_last_changed_at = new Date();
 			metadata.invalidateAuthSessions = true;
 		}
-		if (data.username !== undefined) {
-			const {newUsername, newDiscriminator} = uniqueUsernames
-				? {newUsername: data.username, newDiscriminator: USERNAME_MODE_DISCRIMINATOR}
+		if (user.isBot && data.username !== undefined && data.username !== user.username) {
+			await assertBotUsernameAvailable(user.id, data.username);
+		}
+		if (
+			!ownershipIdentity &&
+			!user.isBot &&
+			data.username !== undefined &&
+			data.username.toLowerCase() !== user.username.toLowerCase()
+		) {
+			try {
+				const policy = new UsernamePolicyService();
+				const snapshot = await policy.readCached();
+				const canonical = data.username.toLowerCase();
+				const entitlement =
+					snapshot.dictionary.gen > 0 &&
+					canonical.length <= 3 &&
+					snapshot.tiers[canonical.length as 1 | 2 | 3] !== 'public'
+						? await new UsernameOwnershipRepository().readEntitlement(user.id)
+						: null;
+				const rejection = policy.check(
+					canonical,
+					{kind: 'human', userId: user.id},
+					false,
+					snapshot,
+					entitlement?.revoked_at == null ? (entitlement?.username ?? null) : null,
+				);
+				if (rejection)
+					throw new FluxerError({
+						code: USERNAME_CLAIM_ERROR_CODES[rejection],
+						status: rejection === 'UNAVAILABLE' ? 503 : 400,
+					});
+			} catch (cause) {
+				if (cause instanceof FluxerError) throw cause;
+				throw new FluxerError({
+					code: APIErrorCodes.USERNAME_UNAVAILABLE,
+					status: 503,
+					cause: cause instanceof Error ? cause : undefined,
+				});
+			}
+		}
+		if (ownershipIdentity && data.username !== undefined) {
+			metadata.usernameClaim = data.username;
+		} else if (data.username !== undefined) {
+			const {newUsername, newDiscriminator} = legacyUnique
+				? {newUsername: data.username, newDiscriminator: user.discriminator}
 				: await this.updateUsername({
 						user,
 						username: data.username,
@@ -125,10 +197,21 @@ export class UserAccountSecurityService {
 			}
 			updates.username = newUsername;
 			updates.discriminator = newDiscriminator;
-		} else if (data.discriminator !== undefined) {
-			updates.discriminator = uniqueUsernames
-				? data.discriminator
+		} else if (!ownershipIdentity && data.discriminator !== undefined) {
+			updates.discriminator = legacyUnique
+				? user.discriminator
 				: await this.updateDiscriminator({user, discriminator: data.discriminator});
+		}
+		if (updates.discriminator === 0) {
+			throw InputValidationError.fromCode(
+				'discriminator',
+				ValidationErrorCodes.DISCRIMINATOR_NOT_SUPPORTED_ON_INSTANCE,
+			);
+		}
+		if (updates.username !== undefined || updates.discriminator !== undefined) {
+			if (!user.isBot && getFreshCachedAccountIdentity() === null)
+				throw new FluxerError({code: APIErrorCodes.USERNAME_UNAVAILABLE, status: 503});
+			metadata.identityDeadlineAt = identityDeadlineAt;
 		}
 		await this.enforceFluxerTagChangeRateLimit({
 			user,
@@ -138,7 +221,7 @@ export class UserAccountSecurityService {
 		});
 		const usernameRealChange =
 			data.username !== undefined && data.username.toLowerCase() !== user.username.toLowerCase();
-		const discriminatorChanged = updates.discriminator !== user.discriminator;
+		const discriminatorChanged = updates.discriminator !== undefined && updates.discriminator !== user.discriminator;
 		const shouldMarkPremiumDiscriminator =
 			!usernameSignIn &&
 			(accountIdentity?.tagStyle ?? TagStyles.RANDOM) === TagStyles.RANDOM &&
@@ -170,7 +253,7 @@ export class UserAccountSecurityService {
 			}
 			updates.email = rawEmail;
 		}
-		if (uniqueUsernames && (usernameRealChange || discriminatorChanged)) {
+		if (legacyUnique && usernameRealChange) {
 			metadata.usernameReservation = await reserveUsername(
 				{users: this.deps.apiContext.services.users, cache: this.deps.apiContext.services.cache},
 				updates.username!,
@@ -320,7 +403,9 @@ export class UserAccountSecurityService {
 	}
 
 	private requiresVisionaryForDiscriminator0000(user: User, discriminator: number): boolean {
-		if (Config.instance.selfHosted) {
+		// in mirror premium mode #0000 is a Visionary reward, as on Fluxer's hosted instance; an account that already
+		// wears it keeps it until it changes its name.
+		if (Config.instance.selfHosted && getCachedInstancePremiumMode() !== 'mirror') {
 			return false;
 		}
 		return discriminator === 0 && user.premiumType !== UserPremiumTypes.LIFETIME;

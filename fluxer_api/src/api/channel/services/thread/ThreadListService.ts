@@ -8,6 +8,7 @@ import type {ThreadServiceContext} from '@app/api/channel/services/thread/Thread
 import {loadThreadViews} from '@app/api/channel/services/thread/ThreadViews';
 import type {ThreadViewer} from '@app/api/experiment/ChannelThreadsGate';
 import type {ThreadState} from '@app/api/models/ThreadState';
+import {chunkArray} from '@app/api/utils/ArrayUtils';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import {THREAD_PARENT_CHANNEL_TYPES} from '@fluxer/constants/src/ThreadConstants';
 import {
@@ -16,10 +17,36 @@ import {
 	withImplicitThreadBits,
 } from '@fluxer/constants/src/ThreadPermissionUtils';
 import {InvalidChannelTypeError} from '@fluxer/errors/src/domains/channel/InvalidChannelTypeError';
+import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
+import type {
+	ListGuildThreadsQuery,
+	ListGuildThreadsResponse,
+} from '@fluxer/schema/src/domains/admin/AdminThreadSchemas';
 import type {
 	ActiveThreadsResponse,
 	ArchivedThreadsResponse,
 } from '@fluxer/schema/src/domains/channel/ThreadRequestSchemas';
+
+const ADMIN_PAGE_CONCURRENCY = 10;
+const ADMIN_PAGE_MAX_PENDING = 100;
+let activeAdminPages = 0;
+const waitingAdminPages: Array<() => void> = [];
+
+async function readAdminPage<T>(read: () => Promise<T>): Promise<T> {
+	if (activeAdminPages >= ADMIN_PAGE_CONCURRENCY) {
+		if (waitingAdminPages.length >= ADMIN_PAGE_MAX_PENDING) throw new ServiceUnavailableError();
+		await new Promise<void>((resolve) => waitingAdminPages.push(resolve));
+	} else {
+		activeAdminPages++;
+	}
+	try {
+		return await read();
+	} finally {
+		const next = waitingAdminPages.shift();
+		if (next) next();
+		else activeAdminPages--;
+	}
+}
 
 export class ThreadListService {
 	constructor(private readonly ctx: ThreadServiceContext) {}
@@ -68,14 +95,18 @@ export class ThreadListService {
 		return until != null && until.getTime() > Date.now();
 	}
 
-	async listGuildThreadsForAdmin(guildId: GuildID): Promise<ActiveThreadsResponse['threads']> {
-		const threadIds = await this.ctx.channelRepository.threads.listGuildThreadIds(guildId);
-		const states = await this.ctx.channelRepository.threads.getStates(threadIds);
-		const views = await loadThreadViews(
-			this.ctx.channelRepository,
-			states.sort((a, b) => (a.threadId > b.threadId ? -1 : a.threadId < b.threadId ? 1 : 0)),
-		);
-		return views.map((view) => mapThreadToResponse(view));
+	async listGuildThreadsForAdmin(guildId: GuildID, query: ListGuildThreadsQuery): Promise<ListGuildThreadsResponse> {
+		return readAdminPage(async () => {
+			const page = await this.ctx.channelRepository.threads.listGuildThreadIdsPage(guildId, query);
+			const states = await this.ctx.channelRepository.threads.getStates(page.threadIds);
+			states.sort((left, right) => (left.threadId < right.threadId ? -1 : left.threadId > right.threadId ? 1 : 0));
+			const threads: ListGuildThreadsResponse['threads'] = [];
+			for (const chunk of chunkArray(states, 10)) {
+				const views = await loadThreadViews(this.ctx.channelRepository, chunk);
+				threads.push(...views.map((view) => mapThreadToResponse(view)));
+			}
+			return {threads, next_cursor: page.cursor};
+		});
 	}
 
 	async listPublicArchived(params: {

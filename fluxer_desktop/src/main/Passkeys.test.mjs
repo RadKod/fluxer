@@ -6,7 +6,7 @@ import {describe, test} from 'node:test';
 import {installElectronStub, installTestModuleStub} from './LocalAppTestSupport.test.mjs';
 
 const PROTOCOL_STATE_KEY = '__fluxerPasskeyProtocolTestState__';
-const WEBAUTHN_STUB_URL = 'file:///fluxer-webauthn-passkey-test-stub.cjs';
+const WEBAUTHN_STUB_URL = new URL('./fixtures/webauthn-passkey-test-stub.cjs', import.meta.url).href;
 const CEREMONY_STATE_KEY = '__fluxerPasskeyCeremonyTestState__';
 
 const protocolState = {activePlan: null, cachedPlans: new Map()};

@@ -12,12 +12,8 @@ import {accessibleThreadIds} from '@app/api/search/ThreadSearchScope';
 import {ThreadsByParent} from '@app/api/Tables';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
+import * as ThreadConstants from '@fluxer/constants/src/ThreadConstants';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
-
-vi.mock('@fluxer/constants/src/ThreadConstants', async (importOriginal) => ({
-	...(await importOriginal<typeof import('@fluxer/constants/src/ThreadConstants')>()),
-	THREAD_SCOPE_MAX: 300,
-}));
 
 const USER_ID = createUserID(1n);
 const GUILD_A = createGuildID(10n);
@@ -61,11 +57,13 @@ describe('accessibleThreadIds', () => {
 	let executor: CountingExecutor;
 
 	beforeEach(() => {
+		vi.spyOn(ThreadConstants as {THREAD_SCOPE_MAX: number}, 'THREAD_SCOPE_MAX', 'get').mockReturnValue(300);
 		executor = new CountingExecutor();
 		setCassandraQueryExecutorForTesting(executor);
 	});
 
 	afterEach(() => {
+		vi.restoreAllMocks();
 		executor.inner.reset();
 		setCassandraQueryExecutorForTesting(null);
 	});

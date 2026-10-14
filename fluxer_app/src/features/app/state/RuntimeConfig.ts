@@ -19,7 +19,11 @@ import InstanceSnapshotStore, {
 	type RuntimeConfigSnapshot,
 	runtimeInstanceKey,
 } from '@app/features/app/state/InstanceSnapshotStore';
-import {requireRuntimeConfigSnapshot} from '@app/features/app/state/RuntimeConfigSnapshot';
+import {
+	requireRuntimeConfigSnapshot,
+	type UsernameMigration,
+	type UsernameTiers,
+} from '@app/features/app/state/RuntimeConfigSnapshot';
 import {
 	accountIdentityOf,
 	tagStyleOf,
@@ -110,7 +114,14 @@ interface RuntimeConfigPublication {
 	phase: RuntimeConfigPublicationPhase;
 }
 
-const DEFAULT_PREMIUM_PRODUCT_NAME = 'Plutonium';
+const DEFAULT_PREMIUM_PRODUCT_NAME = 'Micup Plus';
+const LEGACY_USERNAME_MIGRATION: UsernameMigration = Object.freeze({
+	state: 'legacy',
+	epoch: 0,
+	started_at: null,
+	forced_at: null,
+});
+const LOCKED_USERNAME_TIERS: UsernameTiers = Object.freeze({'1': 'locked', '2': 'locked', '3': 'locked'});
 
 class RuntimeActivationSupersededError extends Error {
 	constructor() {
@@ -659,6 +670,19 @@ class RuntimeConfig {
 		});
 	}
 
+	applyUsernameConfig(config: {username_migration?: UsernameMigration; username_tiers?: UsernameTiers}): void {
+		if (config.username_migration === undefined && config.username_tiers === undefined) return;
+		const runtime = this.requireActiveRuntime();
+		const snapshot = this.requireUsableSnapshot({
+			...runtime.snapshot,
+			usernameMigration:
+				config.username_migration === undefined ? runtime.snapshot.usernameMigration : config.username_migration,
+			usernameTiers: config.username_tiers === undefined ? runtime.snapshot.usernameTiers : config.username_tiers,
+		});
+		this.activeRuntime = {...runtime, snapshot};
+		this.lifecycleGeneration = nextLifecycleGeneration(this.lifecycleGeneration);
+	}
+
 	async refreshDiscovery(): Promise<void> {
 		const current = this.requireActiveSnapshot();
 		const resolution = await InstanceSnapshotStore.refresh({input: current.apiEndpoint, signal: null});
@@ -666,6 +690,10 @@ class RuntimeConfig {
 			return;
 		}
 		this.replaceActiveFeatures(resolution.snapshot.features);
+		this.applyUsernameConfig({
+			username_migration: resolution.snapshot.usernameMigration,
+			username_tiers: resolution.snapshot.usernameTiers,
+		});
 	}
 
 	private replaceActiveFeatures(features: InstanceFeatures): void {
@@ -775,8 +803,28 @@ class RuntimeConfig {
 		return this.features.emails_enabled;
 	}
 
+	get premiumTrialDays(): number {
+		return this.features.premium_trial_days;
+	}
+
+	get giftCodesEnabled(): boolean {
+		return this.features.gift_codes_enabled;
+	}
+
+	get officialApps(): InstanceFeatures['official_apps'] {
+		return this.features.official_apps;
+	}
+
 	get accountIdentity(): AccountIdentityMode {
 		return accountIdentityOf(this.features);
+	}
+
+	get usernameMigration(): UsernameMigration {
+		return this.readableSnapshot().usernameMigration ?? LEGACY_USERNAME_MIGRATION;
+	}
+
+	get usernameTiers(): UsernameTiers {
+		return this.readableSnapshot().usernameTiers ?? LOCKED_USERNAME_TIERS;
 	}
 
 	get usesUsernameSignIn(): boolean {
@@ -825,6 +873,10 @@ class RuntimeConfig {
 
 	get privacyUrl(): string | null {
 		return this.appPublic.legal.privacy_url;
+	}
+
+	get sourceUrl(): string | null {
+		return this.appPublic.legal.source_url;
 	}
 
 	get collectDateOfBirthOnRegistration(): boolean {

@@ -8,11 +8,18 @@
 	"billing.eu_withdrawal_waiver_checkout": "私がEU/EEAの消費者である場合、{product_name} {premium_tier_name} のデジタルコンテンツが直ちに提供されることに明示的に同意し、アクセスが提供された時点で法定の撤回権を失うことを認めます。これは、法律によって保障されるその他の消費者の権利に影響を与えません。[利用規約]({terms_url})をご確認ください。",
 	"bulk_message_deletion.complete": "メッセージの削除が完了しました。{channel_count, plural, =0 {0 件の場所から} other {# 件の場所から}}{message_count, plural, =0 {0 件のメッセージを削除しました} other {# 件のメッセージを削除しました}}。",
 	"content.virus_detected": "このファイルは安全でない可能性があると判断されたため、削除されました。",
+	"feed.comment_removed_by_moderator": "利用規約またはコミュニティガイドラインへの違反のため、モデレーターがあなたのフィードのコメントを1件削除しました。",
+	"feed.post_removed_by_moderator": "利用規約またはコミュニティガイドラインへの違反のため、モデレーターがあなたのフィード投稿を1件削除しました。",
+	"feed.video_failed": "フィードの動画を処理できなかったため、投稿されませんでした。",
+	"feed.video_gone": "動画が利用できなくなったため、フィードの投稿が削除されました。",
+	"feed.video_rejected": "動画がコンテンツ審査を通過しなかったため、フィードには表示されません。",
+	"feed.video_too_large": "動画のサイズが 500 MB を超えているため、フィードに投稿されませんでした。",
 	"guild.bulk_create.emoji_limit": "絵文字の上限に達しました（{limit}）。",
 	"guild.bulk_create.sticker_limit": "ステッカーの上限に達しました（{limit}）。",
 	"guild.bulk_create.unknown_error": "不明なエラーが発生しました。",
 	"guild.default_category_text": "テキストチャンネル",
 	"guild.default_category_voice": "ボイスチャンネル",
 	"guild.default_channel_text": "一般",
-	"guild.default_channel_voice": "一般"
+	"guild.default_channel_voice": "一般",
+	"referral.reward_ready": "紹介特典を受け取れます。「設定 → 紹介」で確認できます。"
 }

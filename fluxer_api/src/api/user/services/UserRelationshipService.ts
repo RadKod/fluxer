@@ -6,18 +6,23 @@ import type {UserID} from '@app/api/BrandedTypes';
 import {emitActivity} from '@app/api/infrastructure/activity/ActivityEvents';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
+import {Logger} from '@app/api/Logger';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
 import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
 import type {Relationship} from '@app/api/models/Relationship';
 import type {User} from '@app/api/models/User';
+import {onUserBlocked} from '@app/api/user/lifecycle/UserLifecycleHooks';
 import {assertMayStartConversation} from '@app/api/user/NewConversationLimit';
 import type {IUserAccountRepository} from '@app/api/user/repositories/IUserAccountRepository';
 import type {IUserChannelRepository} from '@app/api/user/repositories/IUserChannelRepository';
 import type {IUserRelationshipRepository} from '@app/api/user/repositories/IUserRelationshipRepository';
 import type {IUserSettingsRepository} from '@app/api/user/repositories/IUserSettingsRepository';
+import {type GameActivityPairFence, GameActivityPolicyService} from '@app/api/user/services/GameActivityPolicyService';
+import {resolveUsernameHandle} from '@app/api/user/UniqueUsernames';
 import {getCachedUserPartialResponse} from '@app/api/user/UserCacheHelpers';
 import {isDirectDeliverySuppressed} from '@app/api/user/UserHelpers';
 import {mapRelationshipToResponse} from '@app/api/user/UserMappers';
@@ -26,6 +31,7 @@ import type {LimitKey} from '@fluxer/constants/src/LimitConfigMetadata';
 import {MAX_RELATIONSHIPS} from '@fluxer/constants/src/LimitConstants';
 import {RelationshipTypes, UserFlags} from '@fluxer/constants/src/UserConstants';
 import {DirectMessagesDisabledError} from '@fluxer/errors/src/domains/channel/DirectMessagesDisabledError';
+import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
 import {BotsCannotSendFriendRequestsError} from '@fluxer/errors/src/domains/oauth/BotsCannotSendFriendRequestsError';
 import {AlreadyFriendsError} from '@fluxer/errors/src/domains/user/AlreadyFriendsError';
 import {CannotBlockSystemUserError} from '@fluxer/errors/src/domains/user/CannotBlockSystemUserError';
@@ -68,6 +74,7 @@ function emitFriendRequest(userId: UserID, targetId: UserID, delivered: boolean)
 export class UserRelationshipService {
 	private readonly userRepository: UserRelationshipRepository;
 	private readonly gatewayService: IGatewayService;
+	private readonly gameActivityPolicyService: GameActivityPolicyService;
 
 	constructor(
 		apiContext: ApiContext,
@@ -77,6 +84,7 @@ export class UserRelationshipService {
 		const {users, gateway} = apiContext.services;
 		this.userRepository = users;
 		this.gatewayService = gateway;
+		this.gameActivityPolicyService = new GameActivityPolicyService({users, gateway});
 	}
 
 	async getRelationship(params: {userId: UserID; targetId: UserID; type: number}): Promise<Relationship | null> {
@@ -98,12 +106,17 @@ export class UserRelationshipService {
 		userCacheService: UserCacheService;
 		requestCache: RequestCache;
 	}): Promise<Relationship> {
+		const requester = await this.userRepository.findUnique(userId);
+		if (!requester) throw new UnknownUserError();
+		getUsernameSelectionGate().assertMayAct(requester, 'relationship_create');
 		const {username, discriminator} = data;
-		const discrimValue = discriminator;
-		if (!Number.isInteger(discrimValue) || discrimValue < 0 || discrimValue > 9999) {
+		if (
+			discriminator !== undefined &&
+			(!Number.isInteger(discriminator) || discriminator < 0 || discriminator > 9999)
+		) {
 			throw new InvalidDiscriminatorError();
 		}
-		const targetUser = await this.userRepository.findByUsernameDiscriminator(username, discrimValue);
+		const targetUser = await resolveUsernameHandle(this.userRepository, username, discriminator);
 		if (!targetUser) {
 			throw new NoUsersWithFluxertagError();
 		}
@@ -135,6 +148,7 @@ export class UserRelationshipService {
 		requestCache: RequestCache;
 	}): Promise<Relationship> {
 		const requesterUser = await this.userRepository.findUnique(userId);
+		if (requesterUser) getUsernameSelectionGate().assertMayAct(requesterUser, 'relationship_create');
 		const requesterIsStaff = requesterUser != null && (requesterUser.flags & UserFlags.STAFF) === UserFlags.STAFF;
 		if (!requesterIsStaff && (await getInstanceConfigRepository().getInstancePolicyConfig()).direct_messages_disabled) {
 			throw new DirectMessagesDisabledError();
@@ -225,6 +239,7 @@ export class UserRelationshipService {
 		if (!user) {
 			throw new UnknownUserError();
 		}
+		getUsernameSelectionGate().assertMayAct(user, 'relationship_create');
 		if (this.isDeletedUser(user)) {
 			throw new FriendRequestBlockedError();
 		}
@@ -307,6 +322,8 @@ export class UserRelationshipService {
 		}
 		const existingBlocked = await this.userRepository.getRelationship(userId, targetId, RelationshipTypes.BLOCKED);
 		if (existingBlocked) {
+			const pairFences = await this.gameActivityPolicyService.fencePair(userId, targetId);
+			await this.completeGameActivityPairWrite(pairFences);
 			return existingBlocked;
 		}
 		const existingFriend = await this.userRepository.getRelationship(userId, targetId, RelationshipTypes.FRIEND);
@@ -320,6 +337,7 @@ export class UserRelationshipService {
 			targetId,
 			RelationshipTypes.OUTGOING_REQUEST,
 		);
+		const pairFences = await this.gameActivityPolicyService.fencePair(userId, targetId);
 		if (existingFriend) {
 			await this.userRepository.deleteRelationship(userId, targetId, RelationshipTypes.FRIEND);
 			await this.userRepository.deleteRelationship(targetId, userId, RelationshipTypes.FRIEND);
@@ -347,7 +365,9 @@ export class UserRelationshipService {
 			userCacheService,
 			requestCache,
 		});
+		await onUserBlocked({userId, targetId});
 		emitUserBlocked(userId, targetId);
+		await this.completeGameActivityPairWrite(pairFences);
 		return blockRelationship;
 	}
 
@@ -361,12 +381,17 @@ export class UserRelationshipService {
 		const existingRelationship = friend || incoming || outgoing || blocked;
 		if (!existingRelationship) throw new UnknownUserError();
 		const relationshipType = existingRelationship.type;
+		const pairFences =
+			relationshipType === RelationshipTypes.FRIEND || relationshipType === RelationshipTypes.BLOCKED
+				? await this.gameActivityPolicyService.fencePair(userId, targetId)
+				: [];
 		if (relationshipType === RelationshipTypes.INCOMING_REQUEST || relationshipType === RelationshipTypes.BLOCKED) {
 			await this.userRepository.deleteRelationship(userId, targetId, relationshipType);
 			await this.dispatchRelationshipRemove({
 				userId,
 				targetId: targetId.toString(),
 			});
+			await this.completeGameActivityPairWrite(pairFences);
 			return;
 		}
 		if (relationshipType === RelationshipTypes.OUTGOING_REQUEST) {
@@ -381,6 +406,7 @@ export class UserRelationshipService {
 			await this.userRepository.deleteRelationship(targetId, userId, RelationshipTypes.FRIEND);
 			await this.dispatchRelationshipRemove({userId, targetId: targetId.toString()});
 			await this.dispatchRelationshipRemove({userId: targetId, targetId: userId.toString()});
+			await this.completeGameActivityPairWrite(pairFences);
 			return;
 		}
 		await this.userRepository.deleteRelationship(userId, targetId, relationshipType);
@@ -420,6 +446,18 @@ export class UserRelationshipService {
 			requestCache,
 		});
 		return updatedRelationship;
+	}
+
+	private async completeGameActivityPairWrite(fences: Array<GameActivityPairFence>): Promise<void> {
+		try {
+			await this.gameActivityPolicyService.applyPair(fences);
+		} catch (error) {
+			Logger.error({error}, 'Relationship was persisted but game activity revocation acknowledgement failed');
+			throw new ServiceUnavailableError({
+				message: 'Relationship saved; game activity revocation acknowledgement is pending',
+				data: {relationship_persisted: true, game_activity_revocation_pending: true},
+			});
+		}
 	}
 
 	async bulkIgnoreIncomingRequests({userId, data}: {userId: UserID; data: BulkIgnoreFriendRequestsRequest}): Promise<{

@@ -25,11 +25,13 @@ const EMAIL_I18N_AR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "شكرًا لك على تبرعك لـ{product_name}",
-		"body": "مرحبًا،\n\nشكرًا لك على تبرعك لـ{product_name}! لقد تم {interval, select,\n  month {إعداد تبرعك المتكرر}\n  year {إعداد تبرعك المتكرر}\n  other {معالجة تبرعك لمرة واحدة}\n} بنجاح.\n\nتفاصيل التبرع:\nالمبلغ: {amount} {interval, select,\n  month {شهريًا}\n  year {سنويًا}\n  other {}\n}\n\nسترسل لك Stripe إيصالًا منفصلًا عبر البريد الإلكتروني مع فاتورتك بصيغة PDF قريبًا. يتضمن هذا جميع تفاصيل الدفع ويمكن استخدامه لأغراض ضريبية.\n\nيمكنك عرض سجل تبرعاتك، وتنزيل الفواتير، {interval, select,\n  month {وإدارة أو إلغاء اشتراكك}\n  year {وإدارة أو إلغاء اشتراكك}\n  other {وإدارة التبرعات المستقبلية}\n} في أي وقت باستخدام هذا الرابط:\n\n{manageUrl}\n\nدعمك يساعد على استمرار {product_name}. شكرًا لك!\n\n– فريق {product_name}"
+		"body": "مرحبًا،\n\nشكرًا لك على تبرعك لـ{product_name}! لقد تم {interval, select,\n  month {إعداد تبرعك المتكرر}\n  year {إعداد تبرعك المتكرر}\n  other {معالجة تبرعك لمرة واحدة}\n} بنجاح.\n\nتفاصيل التبرع:\nالمبلغ: {amount} {interval, select,\n  month {شهريًا}\n  year {سنويًا}\n  other {}\n}\n\nسترسل لك Stripe إيصالًا منفصلًا عبر البريد الإلكتروني مع فاتورتك بصيغة PDF قريبًا. يتضمن هذا جميع تفاصيل الدفع ويمكن استخدامه لأغراض ضريبية.\n\nيمكنك عرض سجل تبرعاتك، وتنزيل الفواتير، {interval, select,\n  month {وإدارة أو إلغاء اشتراكك}\n  year {وإدارة أو إلغاء اشتراكك}\n  other {وإدارة التبرعات المستقبلية}\n} في أي وقت باستخدام هذا الرابط:\n\n{manageUrl}\n\nدعمك يساعد على استمرار {product_name}. شكرًا لك!\n\n– فريق {product_name}",
+		"button": "إدارة التبرعات"
 	},
 	"donation_magic_link": {
 		"subject": "إدارة تبرعاتك لـ{product_name}",
-		"body": "مرحبًا،\n\nانقر على الرابط أدناه للوصول إلى بوابة المتبرعين الخاصة بك:\n\n{manageUrl}\n\nفي البوابة، يمكنك إدارة الاشتراكات، وتنزيل الفواتير، وعرض سجل تبرعاتك.\n\nتنتهي صلاحية هذا الرابط في {expiresAt, date, full} الساعة {expiresAt, time, short}.\n\nإذا لم تطلب هذا الرابط، يمكنك تجاهل هذا البريد الإلكتروني بأمان.\n\n– فريق {product_name}"
+		"body": "مرحبًا،\n\nانقر على الرابط أدناه للوصول إلى بوابة المتبرعين الخاصة بك:\n\n{manageUrl}\n\nفي البوابة، يمكنك إدارة الاشتراكات، وتنزيل الفواتير، وعرض سجل تبرعاتك.\n\nتنتهي صلاحية هذا الرابط في {expiresAt, date, full} الساعة {expiresAt, time, short}.\n\nإذا لم تطلب هذا الرابط، يمكنك تجاهل هذا البريد الإلكتروني بأمان.\n\n– فريق {product_name}",
+		"button": "إدارة التبرعات"
 	},
 	"dsa_report_verification": {
 		"subject": "تحقق من بريدك الإلكتروني لتقديم بلاغ DSA",
@@ -45,11 +47,13 @@ const EMAIL_I18N_AR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "تم تغيير بريدك الإلكتروني في {product_name}",
-		"body": "مرحبًا {username}،\n\nتم تغيير عنوان البريد الإلكتروني لحسابك في {product_name} إلى {newEmail}.\n\nإذا قمت بهذا التغيير، فلا داعي لاتخاذ أي إجراء. إذا لم تقم بذلك، يمكنك التراجع عن التغيير وتأمين حسابك باستخدام هذا الرابط:\n\n{revertUrl}\n\nسيؤدي هذا إلى استعادة بريدك الإلكتروني السابق، وتسجيل خروجك من جميع الأجهزة، وتعطيل المصادقة متعددة العوامل، وسيُطلب منك تعيين كلمة مرور جديدة.\n\n– فريق أمان {product_name}"
+		"body": "مرحبًا {username}،\n\nتم تغيير عنوان البريد الإلكتروني لحسابك في {product_name} إلى {newEmail}.\n\nإذا قمت بهذا التغيير، فلا داعي لاتخاذ أي إجراء. إذا لم تقم بذلك، يمكنك التراجع عن التغيير وتأمين حسابك باستخدام هذا الرابط:\n\n{revertUrl}\n\nسيؤدي هذا إلى استعادة بريدك الإلكتروني السابق، وتسجيل خروجك من جميع الأجهزة، وتعطيل المصادقة متعددة العوامل، وسيُطلب منك تعيين كلمة مرور جديدة.\n\n– فريق أمان {product_name}",
+		"button": "التراجع عن هذا التغيير"
 	},
 	"email_verification": {
 		"subject": "تحقق من بريدك الإلكتروني في {product_name}",
-		"body": "مرحبًا {username}،\n\nيرجى التحقق من عنوان البريد الإلكتروني لحسابك في {product_name} بالنقر على الرابط أدناه:\n\n{verifyUrl}\n\nإذا لم تقم بإنشاء حساب {product_name}، يمكنك تجاهل هذا البريد الإلكتروني بأمان.\n\nهذا الرابط صالح لمدة 24 ساعة.\n\n– فريق {product_name}"
+		"body": "🎉 مرحبًا {username}،\n\nيرجى التحقق من عنوان البريد الإلكتروني لحسابك في {product_name} بالنقر على الرابط أدناه:\n\n{verifyUrl}\n\nإذا لم تقم بإنشاء حساب {product_name}، يمكنك تجاهل هذا البريد الإلكتروني بأمان.\n\nهذا الرابط صالح لمدة 24 ساعة.\n\n– فريق {product_name}",
+		"button": "تأكيد البريد الإلكتروني"
 	},
 	"gift_chargeback_notification": {
 		"subject": "تمت إزالة مزايا الهدية التي استرددتها",
@@ -57,15 +61,18 @@ const EMAIL_I18N_AR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "تصدير بياناتك من {product_name} جاهز للتنزيل",
-		"body": "مرحبًا {username}،\n\nتصدير بياناتك جاهز.\n\nرابط التنزيل:\n{downloadUrl}\n\nالرسائل المتضمنة: {totalMessages, number}\nحجم الملف: {fileSizeMB, number} ميجابايت\n\nتنتهي صلاحية هذا الرابط في {expiresAt, date, full} الساعة {expiresAt, time, short}.\n\nإذا لم تطلب هذا التصدير، يرجى تغيير كلمة المرور الخاصة بك على الفور والاتصال بفريق الدعم لدينا.\n\n– فريق {product_name}"
+		"body": "مرحبًا {username}،\n\nتصدير بياناتك جاهز.\n\nرابط التنزيل:\n{downloadUrl}\n\nالرسائل المتضمنة: {totalMessages, number}\nحجم الملف: {fileSizeMB, number} ميجابايت\n\nتنتهي صلاحية هذا الرابط في {expiresAt, date, full} الساعة {expiresAt, time, short}.\n\nإذا لم تطلب هذا التصدير، يرجى تغيير كلمة المرور الخاصة بك على الفور والاتصال بفريق الدعم لدينا.\n\n– فريق {product_name}",
+		"button": "تنزيل بياناتي"
 	},
 	"inactivity_warning": {
 		"subject": "سيتم حذف حسابك في {product_name} بسبب عدم النشاط",
-		"body": "مرحبًا {username}،\n\nلم نرَ أي نشاط على حسابك في {product_name} منذ {lastActiveDate, date, full}.\n\nإذا لم تسجل الدخول بحلول {deletionDate, date, full} الساعة {deletionDate, time, short}، فسيتم حذف حسابك نهائيًا بسبب عدم النشاط.\n\nسجل الدخول هنا:\n{loginUrl}\n\nإذا كنت قد استخدمت {product_name} مؤخرًا، يرجى الاتصال بفريق الدعم لدينا على الفور.\n\n– فريق {product_name}"
+		"body": "مرحبًا {username}،\n\nلم نرَ أي نشاط على حسابك في {product_name} منذ {lastActiveDate, date, full}.\n\nإذا لم تسجل الدخول بحلول {deletionDate, date, full} الساعة {deletionDate, time, short}، فسيتم حذف حسابك نهائيًا بسبب عدم النشاط.\n\nسجل الدخول هنا:\n{loginUrl}\n\nإذا كنت قد استخدمت {product_name} مؤخرًا، يرجى الاتصال بفريق الدعم لدينا على الفور.\n\n– فريق {product_name}",
+		"button": "تسجيل الدخول"
 	},
 	"ip_authorization": {
 		"subject": "السماح بتسجيل الدخول من عنوان IP جديد",
-		"body": "مرحبًا {username}،\n\nلقد اكتشفنا محاولة تسجيل دخول إلى حسابك في {product_name} من عنوان IP جديد:\n\nعنوان IP: {ipAddress}\nالموقع: {location}\n\nإذا كنت أنت من قام بذلك، يرجى السماح بعنوان IP هذا بالنقر على الرابط أدناه:\n\n{authUrl}\n\nإذا لم تحاول تسجيل الدخول، يرجى تغيير كلمة المرور الخاصة بك على الفور.\n\nهذا الرابط صالح لمدة 30 دقيقة.\n\n– فريق {product_name}"
+		"body": "مرحبًا {username}،\n\nلقد اكتشفنا محاولة تسجيل دخول إلى حسابك في {product_name} من عنوان IP جديد:\n\nعنوان IP: {ipAddress}\nالموقع: {location}\n\nإذا كنت أنت من قام بذلك، يرجى السماح بعنوان IP هذا بالنقر على الرابط أدناه:\n\n{authUrl}\n\nإذا لم تحاول تسجيل الدخول، يرجى تغيير كلمة المرور الخاصة بك على الفور.\n\nهذا الرابط صالح لمدة 30 دقيقة.\n\n– فريق {product_name}",
+		"button": "السماح بتسجيل الدخول هذا"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "تأكيد الوصول إلى الرموز الاحتياطية في {product_name}",
@@ -77,11 +84,17 @@ const EMAIL_I18N_AR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "إعادة تعيين كلمة المرور في {product_name}",
-		"body": "مرحبًا {username}،\n\nلقد طلبت إعادة تعيين كلمة المرور الخاصة بك في {product_name}. استخدم الرابط أدناه لتعيين كلمة مرور جديدة:\n\n{resetUrl}\n\nإذا لم تطلب هذا، يمكنك تجاهل هذا البريد الإلكتروني بأمان.\n\nهذا الرابط صالح لمدة ساعة واحدة.\n\n– فريق {product_name}"
+		"body": "مرحبًا {username}،\n\nلقد طلبت إعادة تعيين كلمة المرور الخاصة بك في {product_name}. استخدم الرابط أدناه لتعيين كلمة مرور جديدة:\n\n{resetUrl}\n\nإذا لم تطلب هذا، يمكنك تجاهل هذا البريد الإلكتروني بأمان.\n\nهذا الرابط صالح لمدة ساعة واحدة.\n\n– فريق {product_name}",
+		"button": "إعادة تعيين كلمة المرور"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "تمت الموافقة على تسجيلك في {product_name}",
-		"body": "مرحبًا {username}،\n\nأخبار سارة: تمت الموافقة على تسجيلك في {product_name}.\n\nيمكنك الآن تسجيل الدخول إلى تطبيق {product_name} من هنا:\n{channelsUrl}\n\nمرحبًا بك في مجتمع {product_name}.\n\n– فريق {product_name}"
+		"body": "🎉 مرحبًا {username}،\n\nأخبار سارة: تمت الموافقة على تسجيلك في {product_name}.\n\nيمكنك الآن تسجيل الدخول إلى تطبيق {product_name} من هنا:\n{channelsUrl}\n\nمرحبًا بك في مجتمع {product_name}.\n\n– فريق {product_name}",
+		"button": "فتح {product_name}"
 	},
 	"report_resolved": {
 		"subject": "تمت مراجعة بلاغك في {product_name}",
@@ -97,7 +110,7 @@ const EMAIL_I18N_AR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "تم رفع تعليق حسابك في {product_name}",
-		"body": "مرحبًا {username}،\n\nأخبار سارة: تم رفع تعليق حسابك في {product_name}.\n\n{reason, select,\n  null {}\n  other {السبب: {reason}}\n}\n\nيمكنك الآن تسجيل الدخول مرة أخرى ومواصلة استخدام {product_name} كالمعتاد.\n\n– فريق أمان {product_name}"
+		"body": "🎉 مرحبًا {username}،\n\nأخبار سارة: تم رفع تعليق حسابك في {product_name}.\n\n{reason, select,\n  null {}\n  other {السبب: {reason}}\n}\n\nيمكنك الآن تسجيل الدخول مرة أخرى ومواصلة استخدام {product_name} كالمعتاد.\n\n– فريق أمان {product_name}"
 	}
 });
 

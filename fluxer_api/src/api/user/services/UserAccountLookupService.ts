@@ -1,32 +1,41 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {GuildID, UserID} from '@app/api/BrandedTypes';
+import {createGuildID, type GuildID, type UserID} from '@app/api/BrandedTypes';
 import type {IConnectionRepository} from '@app/api/connection/IConnectionRepository';
-import type {UserConnectionRow} from '@app/api/database/types/ConnectionTypes';
 import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
 import type {GuildService} from '@app/api/guild/services/GuildService';
 import type {IDiscriminatorService} from '@app/api/infrastructure/DiscriminatorService';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getBadgeRepository, getBadgeService, getProfileAccessCache} from '@app/api/middleware/ServiceSingletons';
 import type {GuildMember} from '@app/api/models/GuildMember';
 import type {User} from '@app/api/models/User';
+import {isProfileHidden} from '@app/api/user/ProfileVisibility';
+import type {ProfileAccessResult, ProfileView, ProfileViewer} from '@app/api/user/profile/ProfileAccessRules';
+import type {ProfileAudience} from '@app/api/user/profile/ProfilePrivacy';
+import {
+	buildProfileView,
+	type CachedProfileView,
+	decodeProfileView,
+	encodeProfileView,
+	type ProfileViewConnection,
+	projectedUser,
+} from '@app/api/user/profile/ProfileViewProjection';
 import type {IUserAccountRepository} from '@app/api/user/repositories/IUserAccountRepository';
-import type {IUserChannelRepository} from '@app/api/user/repositories/IUserChannelRepository';
 import type {IUserRelationshipRepository} from '@app/api/user/repositories/IUserRelationshipRepository';
-import type {IUserSettingsRepository} from '@app/api/user/repositories/IUserSettingsRepository';
-import {isUsernameTaken} from '@app/api/user/UniqueUsernames';
+import type {ProfileAccessService, ProfileSide} from '@app/api/user/services/ProfileAccessService';
+import {checkUsernameClaimAvailability, isUsernameTaken, readUsernameMigration} from '@app/api/user/UniqueUsernames';
 import {hasFixedDiscriminator} from '@app/api/user/UserTag';
-import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import {
 	PremiumFlags,
 	ProfileFieldPrivacyFlags,
-	ProfilePrivacyLevels,
 	RelationshipTypes,
-	SMALL_GUILD_MEMBER_THRESHOLD,
 	type UserPremiumType,
 	UserPremiumTypes,
 } from '@fluxer/constants/src/UserConstants';
+import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {MissingAccessError} from '@fluxer/errors/src/domains/core/MissingAccessError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
+import type {BadgeResponse} from '@fluxer/schema/src/domains/badge/BadgeResponseSchemas';
 import type {GuildMemberResponse} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
 
 interface ProfileFieldPrivacyContext {
@@ -37,13 +46,19 @@ interface ProfileFieldPrivacyContext {
 
 interface UserAccountLookupServiceDeps {
 	userAccountRepository: IUserAccountRepository;
-	userChannelRepository: IUserChannelRepository;
 	userRelationshipRepository: IUserRelationshipRepository;
-	userSettingsRepository: IUserSettingsRepository;
 	guildRepository: IGuildRepositoryAggregate;
 	guildService: GuildService;
 	discriminatorService: IDiscriminatorService;
 	connectionRepository: IConnectionRepository;
+	profileAccess: ProfileAccessService;
+}
+
+interface ProfileAccessParams {
+	userId: UserID;
+	targetId: UserID;
+	viewer?: ProfileViewer;
+	requestCache?: RequestCache;
 }
 
 export class UserAccountLookupService {
@@ -57,12 +72,44 @@ export class UserAccountLookupService {
 		return await this.deps.userAccountRepository.findUniqueAssert(userId);
 	}
 
+	/** the one profile access rule. Throws UnknownUserError (404); a refusal is view: null. */
+	async resolveProfileAccess(params: ProfileAccessParams): Promise<ProfileAccessResult> {
+		return this.deps.profileAccess.resolve(params.userId, params.targetId, params.viewer, params.requestCache);
+	}
+
+	/**
+	 * The profile access rule alone (the first step of getUserProfile): throws MissingAccessError (403) when the viewer
+	 * may not see the target and tells whether the profile is restricted, without reading the profile fields or the
+	 * owner's users row (the owner side answers). Follow routes and the post routes use it.
+	 */
+	async getProfileAccess(
+		params: ProfileAccessParams,
+	): Promise<ProfileAccessResult & {view: ProfileView; restrictProfile: boolean}> {
+		const access = await this.resolveProfileAccess(params);
+		if (access.view === null) throw new MissingAccessError();
+		return {...access, view: access.view, restrictProfile: access.view === 'limited'};
+	}
+
+	/** A public post's gate: the owner side and a block either way, without the bond. Throws UnknownUserError. */
+	async resolvePublicPostAccess(params: {
+		userId: UserID;
+		targetId: UserID;
+	}): Promise<{side: ProfileSide; blocked: boolean}> {
+		return this.deps.profileAccess.sideAndBlock(params.userId, params.targetId);
+	}
+
+	/** The owner's effective level from the owner side (Keşfet, the home feed filter); null when the account is gone. */
+	async getProfileAudience(targetId: UserID): Promise<ProfileAudience | null> {
+		return this.deps.profileAccess.audienceOf(targetId);
+	}
+
 	async getUserProfile(params: {
 		userId: UserID;
 		targetId: UserID;
 		guildId?: GuildID;
 		withMutualFriends?: boolean;
 		withMutualGuilds?: boolean;
+		viewer?: ProfileViewer;
 		requestCache: RequestCache;
 	}): Promise<{
 		user: User;
@@ -76,17 +123,18 @@ export class UserAccountLookupService {
 			id: string;
 			nick: string | null;
 		}>;
-		connections?: Array<UserConnectionRow>;
+		connections?: Array<ProfileViewConnection>;
+		badges: Array<BadgeResponse>;
 		timezoneVisible: boolean;
 		restrictProfile: boolean;
 	}> {
-		const {userId, targetId, guildId, withMutualFriends, withMutualGuilds, requestCache} = params;
-		const user = await this.deps.userAccountRepository.findUnique(targetId);
-		if (!user) throw new UnknownUserError();
-		if (userId !== targetId) {
-			await this.validateProfileAccess(userId, targetId, user);
-		}
-		const restrictProfile = await this.shouldRestrictProfile(userId, targetId, user);
+		const {userId, targetId, guildId, withMutualFriends, withMutualGuilds, viewer, requestCache} = params;
+		const access = await this.getProfileAccess({userId, targetId, viewer, requestCache});
+		// Micup the owner as the cached view sees it; a lapsed premium is mended from the real row by the caller.
+		const view = await this.loadProfileView(targetId);
+		const user = projectedUser(view);
+		const hidden = isProfileHidden(user);
+		const restrictProfile = access.restrictProfile || hidden;
 		let guildMember: GuildMemberResponse | null = null;
 		let guildMemberDomain: GuildMember | null = null;
 		if (guildId != null) {
@@ -123,21 +171,27 @@ export class UserAccountLookupService {
 				premiumSince = undefined;
 			}
 		}
-		const profileFieldPrivacyContext = restrictProfile
+		// Micup: the field privacy context comes with the access decision, no more reads.
+		const profileFieldPrivacyContext: ProfileFieldPrivacyContext | null = restrictProfile
 			? null
-			: await this.getProfileFieldPrivacyContext(userId, targetId);
+			: {isOwner: userId === targetId, isFriend: access.friend, hasMutualGuild: access.sharedGuild};
+		// the mutual lists only on the full view.
+		const withMutuals = !hidden && access.view === 'full' && userId !== targetId;
 		const timezoneVisible =
 			!restrictProfile &&
 			user.timezone != null &&
 			profileFieldPrivacyContext != null &&
 			this.canViewProfileField(user.timezonePrivacyFlags, profileFieldPrivacyContext);
-		const [mutualFriends, mutualGuilds, connections] = await Promise.all([
-			withMutualFriends && userId !== targetId ? this.getMutualFriends(userId, targetId) : undefined,
-			withMutualGuilds && userId !== targetId ? this.getMutualGuilds(userId, targetId) : undefined,
-			restrictProfile || profileFieldPrivacyContext == null
-				? Promise.resolve([] as Array<UserConnectionRow>)
-				: this.getVisibleConnections(targetId, profileFieldPrivacyContext),
+		const [mutualFriends, mutualGuilds] = await Promise.all([
+			withMutualFriends && withMutuals ? this.getMutualFriends(userId, targetId) : undefined,
+			withMutualGuilds && withMutuals ? this.getMutualGuilds(userId, targetId) : undefined,
 		]);
+		const connections =
+			restrictProfile || profileFieldPrivacyContext == null
+				? []
+				: view.connections.filter((connection) =>
+						this.canViewProfileField(connection.visibility_flags, profileFieldPrivacyContext),
+					);
 		return {
 			user,
 			guildMember,
@@ -148,87 +202,34 @@ export class UserAccountLookupService {
 			mutualFriends,
 			mutualGuilds,
 			connections,
+			badges: restrictProfile ? [] : await getBadgeService().toProfileBadges(view.badges),
 			timezoneVisible,
 			restrictProfile,
 		};
 	}
 
-	private async shouldRestrictProfile(viewerId: UserID, targetId: UserID, targetUser: User): Promise<boolean> {
-		if (viewerId === targetId) return false;
-		if (targetUser.isBot) return false;
-		const targetSettings = await this.deps.userSettingsRepository.findSettings(targetId);
-		const level = targetSettings?.profilePrivacy ?? ProfilePrivacyLevels.ALL_GUILDS;
-		if (level === ProfilePrivacyLevels.ALL_GUILDS) {
-			if (await this.areFriends(viewerId, targetId)) return false;
-			return !(await this.haveMutualGuild(viewerId, targetId));
-		}
-		if (await this.areFriends(viewerId, targetId)) return false;
-		if (level === ProfilePrivacyLevels.FRIENDS_ONLY) return true;
-		const sharedGuildIds = await this.getMutualGuildIds(viewerId, targetId);
-		if (sharedGuildIds.length === 0) return true;
-		const guilds = await Promise.all(sharedGuildIds.map((id) => this.deps.guildRepository.findUnique(id)));
-		return !guilds.some((guild) => guild != null && guild.memberCount <= SMALL_GUILD_MEMBER_THRESHOLD);
-	}
-
-	private async getMutualGuildIds(userId1: UserID, userId2: UserID): Promise<Array<GuildID>> {
-		const [user1GuildIds, user2GuildIds] = await Promise.all([
-			this.deps.userAccountRepository.getUserGuildIds(userId1),
-			this.deps.userAccountRepository.getUserGuildIds(userId2),
+	// the owner's users row, verified connections and badges are read only when the 60 s
+	// view is missing, so however many viewers open a profile its partitions are read about once a minute.
+	private async loadProfileView(targetId: UserID): Promise<CachedProfileView> {
+		const cache = getProfileAccessCache();
+		const cached = await cache.readView(targetId);
+		if (cached.state === 'hit') return decodeProfileView(cached.value);
+		const [user, connections, badges] = await Promise.all([
+			this.deps.userAccountRepository.findUnique(targetId),
+			this.deps.connectionRepository.findByUserId(targetId),
+			getBadgeRepository().listUserBadges(targetId),
 		]);
-		const set = new Set(user1GuildIds.map((id) => id.toString()));
-		return user2GuildIds.filter((id) => set.has(id.toString()));
+		if (!user) throw new UnknownUserError();
+		const view = buildProfileView(user, connections, badges);
+		await cache.writeView(targetId, encodeProfileView(view), cached);
+		return view;
 	}
 
-	private async validateProfileAccess(userId: UserID, targetId: UserID, targetUser: User): Promise<void> {
-		if (targetUser.isBot) {
-			return;
-		}
-		const friendship = await this.deps.userRelationshipRepository.getRelationship(
-			userId,
-			targetId,
-			RelationshipTypes.FRIEND,
-		);
-		if (friendship) {
-			return;
-		}
-		const incomingRequest = await this.deps.userRelationshipRepository.getRelationship(
-			userId,
-			targetId,
-			RelationshipTypes.INCOMING_REQUEST,
-		);
-		if (incomingRequest) {
-			return;
-		}
-		const outgoingRequest = await this.deps.userRelationshipRepository.getRelationship(
-			userId,
-			targetId,
-			RelationshipTypes.OUTGOING_REQUEST,
-		);
-		if (outgoingRequest) {
-			return;
-		}
-		const [userGuildIds, targetGuildIds] = await Promise.all([
-			this.deps.userAccountRepository.getUserGuildIds(userId),
-			this.deps.userAccountRepository.getUserGuildIds(targetId),
-		]);
-		const userGuildIdSet = new Set(userGuildIds.map((id) => id.toString()));
-		const hasMutualGuild = targetGuildIds.some((id) => userGuildIdSet.has(id.toString()));
-		if (hasMutualGuild) {
-			return;
-		}
-		if (await this.hasSharedGroupDm(userId, targetId)) {
-			return;
-		}
-		throw new MissingAccessError();
-	}
-
-	private async hasSharedGroupDm(userId: UserID, targetId: UserID): Promise<boolean> {
-		const privateChannels = await this.deps.userChannelRepository.listPrivateChannels(userId);
-		return privateChannels.some(
-			(channel) => channel.type === ChannelTypes.GROUP_DM && channel.recipientIds.has(targetId),
-		);
-	}
-
+	// TEMPORARY: mutual friends read the owner's relationships partition. It runs only when a client asks
+	// (the full page asks when About opens; the modal and popup still ask on open, as upstream) and only on the full view,
+	// so strangers never cause it. Path: a 60 s KV set of the owner's friend IDs (built from this read, dropped on the
+	// owner's relationship changes) and SISMEMBER over the viewer's friends. Trigger: more than 5 K reads/s on one
+	// relationships partition, or with_mutual_friends on more than 20 % of profile requests.
 	private async getMutualFriends(userId: UserID, targetId: UserID): Promise<Array<User>> {
 		const [userRelationships, targetRelationships] = await Promise.all([
 			this.deps.userRelationshipRepository.listRelationships(userId),
@@ -264,10 +265,15 @@ export class UserAccountLookupService {
 			nick: string | null;
 		}>
 	> {
-		const [userGuildIds, targetGuildIds] = await Promise.all([
+		// Micup: the owner's communities from the owner side (A1 caches it), not the owner's user_guilds partition; a bot's
+		// side keeps none (it may be in thousands), so a bot profile reads them as upstream does.
+		const [userGuildIds, side] = await Promise.all([
 			this.deps.userAccountRepository.getUserGuildIds(userId),
-			this.deps.userAccountRepository.getUserGuildIds(targetId),
+			this.deps.profileAccess.sideOf(targetId),
 		]);
+		const targetGuildIds = side.bot
+			? await this.deps.userAccountRepository.getUserGuildIds(targetId)
+			: side.guildIds.map((id) => createGuildID(BigInt(id)));
 		const userGuildIdSet = new Set(userGuildIds.map((id) => id.toString()));
 		const mutualGuildIds = targetGuildIds.filter((id) => userGuildIdSet.has(id.toString()));
 		if (mutualGuildIds.length === 0) {
@@ -283,38 +289,25 @@ export class UserAccountLookupService {
 
 	async checkUsernameDiscriminatorAvailability(params: {
 		username: string;
-		discriminator: number;
+		discriminator?: number;
 		currentUser: User;
-	}): Promise<boolean> {
+		includePrivateStatus?: boolean;
+	}): Promise<{taken: boolean; reason?: string | null; available_at?: string | null}> {
 		const {username, discriminator, currentUser} = params;
+		const migration = await readUsernameMigration();
+		if (migration.state !== 'legacy')
+			return checkUsernameClaimAvailability(username, params.includePrivateStatus === false ? null : currentUser.id);
+		if (discriminator === undefined) throw InputValidationError.create('discriminator', 'This field is required');
+		if (currentUser.username.toLowerCase() === username.toLowerCase() && currentUser.discriminator === discriminator)
+			return {taken: false};
 		if (hasFixedDiscriminator(currentUser)) {
-			return await isUsernameTaken(this.deps.userAccountRepository, username, currentUser.id);
+			return {taken: await isUsernameTaken(this.deps.userAccountRepository, username, currentUser.id)};
 		}
 		const isAvailable = await this.deps.discriminatorService.isDiscriminatorAvailableForUsername(
 			username,
 			discriminator,
 		);
-		return !isAvailable;
-	}
-
-	private async getVisibleConnections(
-		targetId: UserID,
-		privacyContext: ProfileFieldPrivacyContext,
-	): Promise<Array<UserConnectionRow>> {
-		const connections = await this.deps.connectionRepository.findByUserId(targetId);
-		const verified = connections.filter((connection) => connection.verified);
-		return verified.filter((connection) => this.canViewProfileField(connection.visibility_flags, privacyContext));
-	}
-
-	private async getProfileFieldPrivacyContext(viewerId: UserID, targetId: UserID): Promise<ProfileFieldPrivacyContext> {
-		if (viewerId === targetId) {
-			return {isOwner: true, isFriend: true, hasMutualGuild: true};
-		}
-		const [isFriend, hasMutualGuild] = await Promise.all([
-			this.areFriends(viewerId, targetId),
-			this.haveMutualGuild(viewerId, targetId),
-		]);
-		return {isOwner: false, isFriend, hasMutualGuild};
+		return {taken: !isAvailable};
 	}
 
 	private canViewProfileField(flags: number, privacyContext: ProfileFieldPrivacyContext): boolean {
@@ -331,23 +324,5 @@ export class UserAccountLookupService {
 			return true;
 		}
 		return false;
-	}
-
-	private async areFriends(userId1: UserID, userId2: UserID): Promise<boolean> {
-		const friendship = await this.deps.userRelationshipRepository.getRelationship(
-			userId1,
-			userId2,
-			RelationshipTypes.FRIEND,
-		);
-		return friendship !== null;
-	}
-
-	private async haveMutualGuild(userId1: UserID, userId2: UserID): Promise<boolean> {
-		const [user1GuildIds, user2GuildIds] = await Promise.all([
-			this.deps.userAccountRepository.getUserGuildIds(userId1),
-			this.deps.userAccountRepository.getUserGuildIds(userId2),
-		]);
-		const user1GuildIdSet = new Set(user1GuildIds.map((id) => id.toString()));
-		return user2GuildIds.some((id) => user1GuildIdSet.has(id.toString()));
 	}
 }

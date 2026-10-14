@@ -17,6 +17,7 @@ import {runInAction} from 'mobx';
 
 export interface ForegroundGatewayDispatchHost {
 	getSocket(): GatewaySocket | null;
+	getSettingsEpoch(): number | null;
 	getForegroundSocket(accountKey: string | null): GatewaySocket | null;
 	getAccountUserId(accountKey: string): string | null;
 	getPreviousSessionId(): string | null;
@@ -113,6 +114,7 @@ export class ForegroundGatewayDispatchProcessor {
 		return {
 			socket: this.host.getSocket(),
 			accountKey,
+			settingsEpoch: this.host.getSettingsEpoch(),
 			expectedUserId,
 			previousSessionId: this.host.getPreviousSessionId(),
 			setPreviousSessionId: (sessionId: string) => {

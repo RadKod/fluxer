@@ -116,3 +116,8 @@
 		max-height: calc(100% - 0.75rem);
 	}
 }
+
+/* Micup: the splash behind auth and invite pages stays dark when the coal and dark accent turns white */
+:global(html:is(.theme-coal, .theme-dark)) .background {
+	background-color: var(--background-secondary-lighter);
+}

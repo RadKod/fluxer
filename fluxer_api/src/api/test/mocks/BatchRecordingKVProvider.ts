@@ -80,6 +80,16 @@ export class BatchRecordingKVProvider extends MockKVProvider {
 				inner.hgetall(key);
 				return recorded;
 			},
+			hset: (key, field, value) => {
+				batch.keys.push(key);
+				inner.hset(key, field, value);
+				return recorded;
+			},
+			hdel: (key, ...fields) => {
+				batch.keys.push(key);
+				inner.hdel(key, ...fields);
+				return recorded;
+			},
 			mset: (...args) => {
 				for (let index = 0; index + 1 < args.length; index += 2) {
 					batch.keys.push(args[index]);

@@ -12,6 +12,7 @@ import {
 	createRole,
 } from '@app/api/channel/tests/ChannelTestUtils';
 import {createTestChannelService} from '@app/api/channel/tests/CrosspostTestUtils';
+import {overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
 import {getGatewayService, getSnowflakeService, setInjectedWorkerService} from '@app/api/middleware/ServiceRegistry';
 import {
 	getAvatarService,
@@ -46,6 +47,7 @@ import type {ChannelResponse} from '@fluxer/schema/src/domains/channel/ChannelSc
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import type {MessageResponse} from '@fluxer/schema/src/domains/message/MessageResponseSchemas';
 import type {WorkerTaskHandler} from '@pkgs/worker/src/contracts/WorkerTask';
+import {vi} from 'vitest';
 
 export interface AnnouncementSourceGuild {
 	owner: TestAccount;
@@ -137,6 +139,8 @@ export async function createAnnouncementTargetGuild(
 		name: 'voice',
 		type: ChannelTypes.GUILD_VOICE,
 	});
+	// Stored values written while the mature content settings were offered.
+	overrideLimits({feature_mature_content_settings: 1});
 	const ageRestricted = await createGuildChannel(harness, owner.token, guild.id, {
 		name: 'restricted',
 		type: ChannelTypes.GUILD_TEXT,
@@ -147,6 +151,7 @@ export async function createAnnouncementTargetGuild(
 		type: ChannelTypes.GUILD_TEXT,
 		content_warning_level: ContentWarningLevel.CONTENT_WARNING,
 	});
+	vi.mocked(getLimitConfigService().getConfigSnapshot).mockRestore();
 	await addGuildMember(harness, owner, guild, webhookManager);
 	await createPermissionOverwrite(harness, owner.token, t1.id, webhookManager.userId, {
 		type: 1,

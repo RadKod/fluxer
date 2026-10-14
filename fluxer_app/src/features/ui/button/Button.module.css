@@ -337,13 +337,33 @@
 	}
 }
 
-@media (prefers-reduced-motion: reduce) {
-	.button.recording {
-		animation: none;
-	}
+:global(html.reduced-motion) .button.recording {
+	animation: none;
+}
 
-	.spinnerItem {
-		animation: none;
-		opacity: 0.6;
-	}
+:global(html.reduced-motion) .spinnerItem {
+	animation: none;
+	opacity: 0.6;
+}
+
+/* Micup: the v1 danger button in the coal and dark themes: dark red fill #32191b (hover #3d2124), border #56272b,
+   text #ff8b8b. The upstream rule keeps --button-danger-fill, which other places also use as a text color. */
+:global(html:is(.theme-coal, .theme-dark)) .button.danger {
+	background-color: hsl(355.2, calc(33.3% * var(--saturation-factor)), 14.7%);
+	border-color: hsl(354.9, calc(37.6% * var(--saturation-factor)), 24.5%);
+	color: hsl(0, calc(100% * var(--saturation-factor)), 77.3%);
+}
+
+:global(
+		html:is(.theme-coal, .theme-dark):where(.window-focused, .unfocused-fully-interactive):not(
+			.window-focus-activation-guard
+		)
+	)
+	.button.danger:hover:not(:disabled):not([data-disabled]) {
+	background-color: hsl(353.6, calc(29.8% * var(--saturation-factor)), 18.4%);
+	border-color: hsl(354.9, calc(37.6% * var(--saturation-factor)), 24.5%);
+}
+
+:global(html:is(.theme-coal, .theme-dark)) .button.danger:active:not(:disabled):not([data-disabled]) {
+	background-color: hsl(355.2, calc(33.3% * var(--saturation-factor)), 14.7%);
 }

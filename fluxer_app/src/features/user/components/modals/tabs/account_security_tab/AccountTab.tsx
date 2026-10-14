@@ -14,6 +14,7 @@ import {
 	RecoveryKitReminderAlert,
 	RecoveryKitRow,
 } from '@app/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings';
+import {UsernameSection} from '@app/features/user/components/modals/tabs/my_profile_tab/MyProfileTabUsernameSection';
 import type {User} from '@app/features/user/models/User';
 import * as DateUtils from '@app/features/user/utils/DateFormatting';
 import {msg} from '@lingui/core/macro';
@@ -220,6 +221,12 @@ export const AccountTabContent: React.FC<AccountTabProps> = observer(
 					/>
 				)}
 				<div className={styles.accountRows} data-flx="user.account-security-tab.account-tab.account-tab-content.rows">
+					{!user.bot &&
+						(RuntimeConfig.usernameMigration.state === 'selecting' ||
+							user.usernameState === 'selected' ||
+							user.usernameState === 'reselect_required') && (
+							<UsernameSection user={user} isClaimed={isClaimed} isEmailVerified={user.verified !== false} />
+						)}
 					{emailRow}
 					{passwordRow}
 					{usesUsernameSignIn && isClaimed && (

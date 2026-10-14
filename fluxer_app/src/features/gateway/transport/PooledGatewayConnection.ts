@@ -9,6 +9,8 @@ import AccountAccess from '@app/features/auth/state/AccountAccess';
 import Authentication from '@app/features/auth/state/Authentication';
 import Channels from '@app/features/channel/state/Channels';
 import FavoriteMemes from '@app/features/expressions/state/FavoriteMemes';
+import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
+import DesktopGameActivityBridge from '@app/features/game_activity/utils/DesktopGameActivityBridge';
 import {scheduleAccountReadyWork} from '@app/features/gateway/events/AccountReadyWork';
 import type {GatewayGeoipPayload} from '@app/features/gateway/events/EventRouter';
 import {
@@ -44,7 +46,6 @@ import {
 	type GatewayVoiceStateUpdateParams,
 } from '@app/features/gateway/transport/GatewaySocket';
 import {selectGuildActivationTarget} from '@app/features/gateway/transport/GuildActivationTarget';
-import GuildMatureContentAgree from '@app/features/guild/state/GuildMatureContentAgree';
 import MemberSearch from '@app/features/member/state/MemberSearch';
 import AttachmentUrlRefresher from '@app/features/messaging/state/AttachmentUrlRefresher';
 import Messages from '@app/features/messaging/state/MessagingMessages';
@@ -61,6 +62,7 @@ import QuickSwitcher from '@app/features/search/state/QuickSwitcher';
 import TypingIndicator from '@app/features/typing/state/TypingIndicator';
 import LayerManager from '@app/features/ui/state/LayerManager';
 import MobileLayout from '@app/features/ui/state/MobileLayout';
+import UserSettings from '@app/features/user/state/UserSettings';
 import {reportGatewayErrorToVoice, teardownVoiceForFatalGatewayCrash} from '@app/features/voice/VoiceGatewayLifecycle';
 import {DEFAULT_API_VERSION} from '@fluxer/constants/src/AppConstants';
 import {GatewayCloseCodes, GatewayIdentifyFlags} from '@fluxer/constants/src/GatewayConstants';
@@ -141,6 +143,7 @@ interface DesiredSession {
 interface GatewaySocketOwner {
 	readonly socket: GatewaySocket;
 	readonly accountKey: string | null;
+	readonly settingsEpoch: number;
 }
 
 interface GatewayAuthenticationFailure {
@@ -193,6 +196,7 @@ export class PooledGatewayConnection {
 		this.resumeListeners = new GatewayResumeListenerOwner();
 		this.dispatchProcessor = new ForegroundGatewayDispatchProcessor({
 			getSocket: () => this.socket,
+			getSettingsEpoch: () => this.socketOwner?.settingsEpoch ?? null,
 			getForegroundSocket: (accountKey) => this.foregroundSocketForAccount(accountKey),
 			getAccountUserId: (accountKey) => SessionManager.getAccount(accountKey)?.userId ?? null,
 			getPreviousSessionId: () => this.previousReadySessionId,
@@ -353,6 +357,8 @@ export class PooledGatewayConnection {
 	}
 
 	private cleanupSocket(): void {
+		GameActivityStore.resetRollout();
+		void DesktopGameActivityBridge.disconnected();
 		const owner = this.socketOwner;
 		this.demotionHandover.clear();
 		this.promotionReplay.clear();
@@ -492,7 +498,7 @@ export class PooledGatewayConnection {
 			geo: () => ({latitude: GeoIP.latitude, longitude: GeoIP.longitude}),
 		});
 		const generation = ++this.generation;
-		this.socketOwner = {socket, accountKey: meta.accountKey};
+		this.socketOwner = {socket, accountKey: meta.accountKey, settingsEpoch: UserSettings.getSettingsEpoch()};
 		this.desired = {accountKey: meta.accountKey, token, userIdHint: SessionManager.userId};
 		this.sessionId = meta.sessionId;
 		this.previousReadySessionId = meta.sessionId;
@@ -504,6 +510,7 @@ export class PooledGatewayConnection {
 		this.guildSubscriptions.prepareAdoptedSession();
 		this.promotionReplay.begin(meta.accountKey, socket);
 		this.installSocketWiring(socket, generation, meta.accountKey);
+		void DesktopGameActivityBridge.setAccount(SessionManager.userId);
 	}
 
 	preparePromotedForegroundReplay(): void {
@@ -669,6 +676,10 @@ export class PooledGatewayConnection {
 			this.connectionEpoch += 1;
 		}
 		this.isConnected = newState === GatewayState.Connected;
+		if (previousState === GatewayState.Connected && newState !== GatewayState.Connected) {
+			GameActivityStore.resetRollout();
+			void DesktopGameActivityBridge.disconnected();
+		}
 		this.isConnecting = newState === GatewayState.Connecting || newState === GatewayState.Reconnecting;
 		if (newState === GatewayState.Connected) {
 			this.connectionInterruption.restore();
@@ -739,7 +750,10 @@ export class PooledGatewayConnection {
 			}
 		}
 		this.desired = desired;
+		GameActivityStore.resetRollout();
+		void DesktopGameActivityBridge.setAccount(userIdHint);
 		const generation = ++this.generation;
+		const settingsEpoch = UserSettings.getSettingsEpoch();
 		this.rejectReadyWaiters(new GatewaySessionSupersededError());
 		LocalPresence.handleSessionChanging();
 		if (this.socket !== null) {
@@ -783,7 +797,7 @@ export class PooledGatewayConnection {
 			);
 			runInAction(() => {
 				if (this.generation === generation) {
-					this.socketOwner = {socket, accountKey};
+					this.socketOwner = {socket, accountKey, settingsEpoch};
 				}
 			});
 			if (this.socket === socket) {
@@ -937,6 +951,7 @@ export class PooledGatewayConnection {
 	}
 
 	sendInvisiblePresenceForCurrentSession(reason: GatewaySessionRetirementReason): void {
+		void DesktopGameActivityBridge.stopSharing();
 		sendInvisiblePresenceForLocalSession(this.socket, LocalPresence.mobile, reason, logger);
 		LocalPresence.handleSessionChanging({clearRestoredIntent: true});
 	}
@@ -957,7 +972,6 @@ export class PooledGatewayConnection {
 		Messages.handleSessionInvalidated();
 		FavoriteMemes.reset();
 		AttachmentUrlRefresher.reset();
-		GuildMatureContentAgree.reset();
 		ChannelFrecency.handleLogout();
 		MemberSearch.handleLogout();
 		ThreadPanel.closeCreate();
@@ -999,6 +1013,7 @@ export class PooledGatewayConnection {
 	}
 
 	private retireForeground(): void {
+		void DesktopGameActivityBridge.setAccount(null);
 		this.generation += 1;
 		LocalPresence.handleSessionChanging({clearRestoredIntent: true});
 		this.connectionInterruption.restore();
@@ -1015,6 +1030,7 @@ export class PooledGatewayConnection {
 
 	handleConnectionResumed(): void {
 		this.completeLiveSession();
+		void DesktopGameActivityBridge.syncPolicy();
 	}
 
 	private completeLiveSession(): void {

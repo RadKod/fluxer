@@ -7,6 +7,7 @@ import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {ChannelTypes, Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {SystemChannelFlags} from '@fluxer/constants/src/GuildConstants';
 import {CHANNEL_TOPIC_MAX_LENGTH, VOICE_CHANNEL_USER_LIMIT_MAX} from '@fluxer/constants/src/LimitConstants';
+import {MessageNotifications} from '@fluxer/constants/src/NotificationConstants';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import {afterAll, beforeAll, beforeEach, describe, expect, test} from 'vitest';
 
@@ -171,7 +172,7 @@ describe('Guild Template Import', () => {
 		const mediaChannel = channels.find((channel) => channel.name === 'media-feed');
 		expect(categoryChannel).toBeDefined();
 		expect(announcementsChannel).toBeDefined();
-		expect(announcementsChannel?.type).toBe(ChannelTypes.GUILD_ANNOUNCEMENT);
+		expect(announcementsChannel?.type).toBe(ChannelTypes.GUILD_TEXT);
 		expect(announcementsChannel?.parent_id).toBe(categoryChannel?.id ?? null);
 		expect(stageChannel).toBeDefined();
 		expect(stageChannel?.type).toBe(ChannelTypes.GUILD_VOICE);
@@ -292,6 +293,36 @@ describe('Guild Template Import', () => {
 		const general = channels.find((channel) => channel.name === 'general');
 		expect(general?.topic).toBe('a'.repeat(CHANNEL_TOPIC_MAX_LENGTH - 1));
 		expect(channels.find((channel) => channel.name === 'projects')).toBeUndefined();
+	});
+	test('defaults a community created without a template to mention-only notifications', async () => {
+		const account = await createTestAccount(harness);
+		const guild = await createBuilder<GuildResponse>(harness, account.token)
+			.post('/guilds')
+			.body({name: 'Plain Guild'})
+			.execute();
+		expect(guild.default_message_notifications).toBe(MessageNotifications.ONLY_MENTIONS);
+	});
+	test('keeps all-messages notifications when the template asks for them', async () => {
+		const account = await createTestAccount(harness);
+		const guild = await createBuilder<GuildResponse>(harness, account.token)
+			.post('/guilds')
+			.body({
+				name: 'All Messages Guild',
+				template: {
+					name: 'Template Source',
+					description: null,
+					verification_level: 0,
+					default_message_notifications: MessageNotifications.ALL_MESSAGES,
+					explicit_content_filter: 0,
+					system_channel_id: 6001,
+					afk_timeout: 300,
+					system_channel_flags: 0,
+					roles: [{id: 0, name: '@everyone', permissions: DEFAULT_EVERYONE_PERMISSIONS}],
+					channels: [{id: 6001, type: ChannelTypes.GUILD_TEXT, name: 'general', position: 0}],
+				},
+			})
+			.execute();
+		expect(guild.default_message_notifications).toBe(MessageNotifications.ALL_MESSAGES);
 	});
 });
 

@@ -98,6 +98,40 @@ afterEach(() => {
 });
 
 describe('RestClient interceptor selection', () => {
+	test('a response observer sees username errors without replacing captcha interception or swallowing the failure', async () => {
+		const client = createClient();
+		const observer = vi.fn();
+		expect('installResponseObserver' in client).toBe(true);
+		client.installResponseObserver(observer);
+		const global = captchaRetryingInterceptor('global-token');
+		client.installHooks({intercept: global});
+		replies.push({status: 403, body: {code: 'USERNAME_SELECTION_REQUIRED'}});
+		await expect(client.post('/channels/1/messages')).rejects.toMatchObject({status: 403});
+		expect(observer).toHaveBeenCalledWith(expect.objectContaining({body: {code: 'USERNAME_SELECTION_REQUIRED'}}));
+		expect(global).toHaveBeenCalledOnce();
+	});
+	test('a response observer ignores unauthenticated and absolute foreign requests', async () => {
+		const client = createClient();
+		const observer = vi.fn();
+		expect('installResponseObserver' in client).toBe(true);
+		client.installResponseObserver(observer);
+		replies.push(
+			{status: 403, body: {code: 'USERNAME_SELECTION_REQUIRED'}},
+			{status: 403, body: {code: 'USERNAME_SELECTION_REQUIRED'}},
+		);
+		await expect(client.post('/auth/login', {auth: 'none'})).rejects.toMatchObject({status: 403});
+		await expect(client.post('https://foreign.test/api/v1/message')).rejects.toMatchObject({status: 403});
+		expect(observer).not.toHaveBeenCalled();
+	});
+	test('silent authenticated failures still reach the response observer', async () => {
+		const client = createClient();
+		const observer = vi.fn();
+		expect('installResponseObserver' in client).toBe(true);
+		client.installResponseObserver(observer);
+		replies.push({status: 403, body: {code: 'USERNAME_SELECTION_REQUIRED'}});
+		expect((await client.post('/channels/1/messages', {mode: 'silent'})).status).toBe(403);
+		expect(observer).toHaveBeenCalledOnce();
+	});
 	test('uses the global interceptor when the request has none', async () => {
 		const client = createClient();
 		const global = captchaRetryingInterceptor('global-token');
@@ -190,6 +224,31 @@ describe('RestClient interceptor selection', () => {
 });
 
 describe('RestClient account transition aborts', () => {
+	test('a late username-required response from a retired account cannot reach the response observer', async () => {
+		const {AccountScopedWork, AccountScopedWorkTransitionReason} = await import(
+			'@app/features/platform/state/AccountScopedWork'
+		);
+		const {isAccountTransitionAbortError} = await import('@app/features/platform/state/AccountTransitionAbort');
+		let delayed: StubXMLHttpRequest | undefined;
+		class DelayedXMLHttpRequest extends StubXMLHttpRequest {
+			override send(): void {
+				delayed = this;
+			}
+		}
+		vi.stubGlobal('XMLHttpRequest', DelayedXMLHttpRequest);
+		const client = createClient();
+		const observer = vi.fn();
+		client.installResponseObserver(observer);
+		const settled = client.post('/channels/1/messages').catch((error: unknown) => error);
+		await vi.waitFor(() => expect(delayed).toBeDefined());
+		await AccountScopedWork.runSuspended(AccountScopedWorkTransitionReason.ACCOUNT_SWITCH, async () => {});
+		expect(isAccountTransitionAbortError(await settled)).toBe(true);
+		delayed!.status = 403;
+		delayed!.responseText = JSON.stringify({code: 'USERNAME_SELECTION_REQUIRED'});
+		delayed!.dispatchEvent(new Event('load'));
+		delayed!.dispatchEvent(new Event('loadend'));
+		expect(observer).not.toHaveBeenCalled();
+	});
 	test('a request waiting out a retry backoff rejects with the account transition abort', async () => {
 		const {AccountScopedWork, AccountScopedWorkTransitionReason} = await import(
 			'@app/features/platform/state/AccountScopedWork'

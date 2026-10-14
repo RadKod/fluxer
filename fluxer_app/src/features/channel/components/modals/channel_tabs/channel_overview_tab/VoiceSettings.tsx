@@ -8,14 +8,19 @@ import {
 	type FormInputs,
 	getBitrateKbpsMarkers,
 } from '@app/features/channel/components/modals/channel_tabs/channel_overview_tab/shared';
+import ExperimentAssignments from '@app/features/experiment/state/ExperimentAssignments';
 import {RESET_SLIDER_TO_DEFAULT_VALUE_DESCRIPTOR, Slider} from '@app/features/ui/components/Slider';
+import {CompactComboboxRow} from '@app/features/user/components/modals/tabs/components/CompactComboboxRow';
+import {ROOM_THEME_LABEL_DESCRIPTOR, roomThemeOptions} from '@app/features/voice_scene/utils/RoomThemeOptions';
 import {
 	VOICE_CHANNEL_CONNECTION_LIMIT_DEFAULT,
 	VOICE_CHANNEL_CONNECTION_LIMIT_MAX,
 	VOICE_CHANNEL_CONNECTION_LIMIT_MIN,
 } from '@fluxer/constants/src/LimitConstants';
+import {readVoiceRoomAssignment} from '@fluxer/schema/src/domains/experiment/ExperimentSchemas';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
+import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {Controller, type UseFormReturn} from 'react-hook-form';
 
@@ -47,7 +52,10 @@ const CONNECTION_LIMIT_VALUE_DESCRIPTOR = msg({
 	message: '{count, plural, one {# connection} other {# connections}}',
 	comment: 'Displayed value for the voice channel connection limit slider.',
 });
-
+const ROOM_THEME_DESCRIPTION_DESCRIPTOR = msg({
+	message: 'People in this voice channel see it as a 3D room.',
+	comment: 'Helper text for the voice channel room theme setting.',
+});
 interface VoiceSettingsProps {
 	form: UseFormReturn<FormInputs>;
 	maxBitrateKbps: number;
@@ -169,9 +177,41 @@ export const VoiceSettings: React.FC<VoiceSettingsProps> = ({form, maxBitrateKbp
 					data-flx="channel.channel-tabs.channel-overview-tab.controller--3"
 				/>
 			</div>
+			<VoiceRoomThemeSelect
+				form={form}
+				data-flx="channel.channel-tabs.channel-overview-tab.voice-settings.voice-room-theme-select"
+			/>
 		</>
 	);
 };
+
+// Hidden while the voice_room switch is off; the API keeps accepting the field.
+const VoiceRoomThemeSelect: React.FC<{form: UseFormReturn<FormInputs>}> = observer(({form}) => {
+	const {i18n} = useLingui();
+	const assignment = readVoiceRoomAssignment(ExperimentAssignments.response);
+	if (!assignment.rooms) return null;
+	const options = roomThemeOptions(i18n, assignment.default_room_theme);
+	return (
+		<Controller
+			name="room_theme"
+			control={form.control}
+			render={({field}) => (
+				<CompactComboboxRow<string | null>
+					label={i18n._(ROOM_THEME_LABEL_DESCRIPTOR)}
+					description={i18n._(ROOM_THEME_DESCRIPTION_DESCRIPTOR)}
+					value={field.value ?? null}
+					onChange={field.onChange}
+					options={options}
+					isSearchable={false}
+					isClearable={false}
+					dataFlx="channel.channel-tabs.channel-overview-tab.voice-settings.room-theme"
+					data-flx="channel.channel-tabs.channel-overview-tab.voice-settings.voice-room-theme-select.compact-combobox-row.change"
+				/>
+			)}
+			data-flx="channel.channel-tabs.channel-overview-tab.voice-settings.voice-room-theme-select.controller"
+		/>
+	);
+});
 
 export const VoiceConnectionLimitControl: React.FC<{form: UseFormReturn<FormInputs>}> = ({form}) => {
 	const {i18n} = useLingui();

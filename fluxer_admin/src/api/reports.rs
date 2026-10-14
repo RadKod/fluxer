@@ -171,6 +171,8 @@ fn report_type_name(value: i32) -> ApiResult<&'static str> {
         0 => Ok("message"),
         1 => Ok("user"),
         2 => Ok("guild"),
+        3 => Ok("feed_post"),
+        4 => Ok("feed_comment"),
         other => Err(ApiError::Parse(format!("unknown report type: {other}"))),
     }
 }
@@ -207,10 +209,16 @@ mod tests {
 
     #[test]
     fn report_types_preserve_the_closed_wire_mapping() {
-        for (value, expected) in [(0, "message"), (1, "user"), (2, "guild")] {
+        for (value, expected) in [
+            (0, "message"),
+            (1, "user"),
+            (2, "guild"),
+            (3, "feed_post"),
+            (4, "feed_comment"),
+        ] {
             assert_eq!(report_type_name(value).expect("supported type"), expected);
         }
-        for value in [-1, 3] {
+        for value in [-1, 5] {
             assert_eq!(
                 report_type_name(value)
                     .expect_err("unknown type")

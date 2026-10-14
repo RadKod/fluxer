@@ -4,6 +4,7 @@ import {Config} from '@app/api/Config';
 import type {HonoEnv} from '@app/api/types/HonoEnv';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {InternalServerError} from '@fluxer/errors/src/domains/core/InternalServerError';
+import {redactRequestLogPath} from '@fluxer/errors/src/error_handling/RequestLogRedaction';
 import {resolveRoutePattern} from '@fluxer/errors/src/error_handling/RoutePattern';
 import {createLogger} from '@fluxer/logger/src/Logger';
 import type {Context, MiddlewareHandler} from 'hono';
@@ -54,7 +55,7 @@ async function validateAndRewriteResponse(ctx: Context<HonoEnv>, schema: ZodType
 		}));
 		const errorContext = {
 			method: ctx.req.method,
-			path: resolveRoutePattern(ctx),
+			path: redactRequestLogPath(resolveRoutePattern(ctx)),
 			status: response.status,
 			validationErrors,
 			body,

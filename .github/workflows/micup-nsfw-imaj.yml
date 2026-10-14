@@ -1,0 +1,171 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# The Micup v2 NSFW image builds from its own fluxer_nsfw/ version, independently of the candidate SHA;
+# output: ghcr.io/<owner>/micup-v2/fluxer-nsfw:v<fluxer_nsfw/VERSION>. Order: tag status, local build,
+# self-test, load smoke, combined media-proxy smoke, push only if all pass, then summary.
+# Etiket değişmez: varsa ve derleme girdileri (Dockerfile, requirements.txt, requirements-model.txt, export_onnx.py,
+# server.py) aynıysa mevcut imaj çekilip AYNI dumanlardan geçer, itilmez; girdiler farklıysa iş durur ("VERSION'ı
+# artırın"). Koşu özeti MICUP_NSFW_ETIKET + MICUP_NSFW_OZET (sınanan imajın kayıt defteri manifest özeti) basar; infra
+# robot/fluxer/nsfw-imaj.env'e sabitler.
+# Kaplar üretimdeki gibi koşar: salt okunur kök, /tmp tmpfs, ağsız (birleşikte yalnız iç ağ), 2 vCPU, 1 GiB.
+# Tetik: elle ya da fluxer_nsfw/ değişince push (dosya varsayılan dalda değilken workflow_dispatch güvenilmez).
+name: Micup NSFW imaj
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Derlenecek dal ya da commit (boş = iş akışının koştuğu commit)
+        required: false
+        default: ''
+      medya_proxy:
+        description: Birleşik dumandaki fluxer-media-proxy imajının MICUP_SHA'sı (boş = canlı aday-18)
+        required: false
+        default: ''
+  push:
+    branches:
+      - micup/main
+      - micup/akis-video-kurulum
+    paths:
+      - fluxer_nsfw/**
+      - .github/workflows/micup-nsfw-imaj.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: micup-nsfw-imaj  # tek etiket alanı: iki dal aynı v<VERSION>'ı aynı anda itmesin
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash  # bash --noprofile --norc -eo pipefail: tee'ye borulanan duman da işi düşürür
+
+jobs:
+  imaj:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      packages: write
+    env:
+      # Empty input uses the production base image; update it when fluxer_media_proxy changes or a new image is deployed.
+      MP_SHA: ${{ inputs.medya_proxy || '458383816c4aed0cf80949d1fe1e0a88d36263b6' }}
+      KAP: --read-only --tmpfs /tmp:rw,nosuid,nodev,size=16m --cpus 2 --memory 1g
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - name: Sürüm ve etiket durumu
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          surum=$(tr -d '[:space:]' <fluxer_nsfw/VERSION)
+          [[ $surum =~ ^[1-9][0-9]*$ ]] || { echo "::error::fluxer_nsfw/VERSION pozitif tamsayı değil: $surum"; exit 1; }
+          kayit="ghcr.io/${GITHUB_REPOSITORY,,}"
+          imaj="$kayit/fluxer-nsfw:v$surum"
+          kaynak=$(git rev-parse HEAD:fluxer_nsfw/Dockerfile HEAD:fluxer_nsfw/requirements.txt \
+            HEAD:fluxer_nsfw/requirements-model.txt HEAD:fluxer_nsfw/export_onnx.py HEAD:fluxer_nsfw/server.py |
+            sha256sum | cut -d' ' -f1)
+          printf '%s' "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          if cikti=$(docker buildx imagetools inspect "$imaj" --format '{{json .Manifest}}' 2>&1); then
+            ozet=$(jq -r .digest <<<"$cikti")
+            [[ $ozet =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::mevcut etiketin özeti okunamadı: $cikti"; exit 1; }
+            docker pull -q "$kayit/fluxer-nsfw@$ozet"
+            mevcut=$(docker inspect -f '{{index .Config.Labels "app.micup.nsfw-kaynak"}}' "$kayit/fluxer-nsfw@$ozet")
+            if [[ $mevcut != "$kaynak" ]]; then
+              echo "::error::v$surum zaten var, derleme girdileri farklı: fluxer_nsfw/VERSION'ı artırın"
+              exit 1
+            fi
+            docker tag "$kayit/fluxer-nsfw@$ozet" "$imaj"
+            printf 'ITILECEK=0\nOZET=%s\n' "$ozet" >>"$GITHUB_ENV"
+            echo "v$surum zaten var, girdiler aynı: mevcut imaj $ozet sınanacak, itilmeyecek"
+          elif grep -qiE 'not found|name unknown|manifest unknown' <<<"$cikti"; then
+            echo 'ITILECEK=1' >>"$GITHUB_ENV"
+            echo "v$surum yok: derlenip sınanacak, yeşilse itilecek"
+          else
+            echo "::error::etiket durumu okunamadı (yetki ya da ağ): $cikti"
+            exit 1
+          fi
+          printf 'ETIKET=v%s\nIMAJ=%s\nKAYIT=%s\nKAYNAK=%s\n' "$surum" "$imaj" "$kayit" "$kaynak" >>"$GITHUB_ENV"
+      - name: Derle (itmeden)
+        if: env.ITILECEK == '1'
+        run: |
+          tarih=$(TZ=UTC git log -1 --no-show-signature --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ HEAD)
+          docker build -f fluxer_nsfw/Dockerfile --provenance=false -t "$IMAJ" \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "app.micup.nsfw-kaynak=$KAYNAK" \
+            --build-arg "BUILD_VERSION=$ETIKET" --build-arg "SOURCE_SHA=$(git rev-parse HEAD)" \
+            --build-arg "SOURCE_DATE=$tarih" fluxer_nsfw
+          docker image ls "$IMAJ"
+      - name: Öz-denetim (ağsız; kur-fluxer.sh'ın komutu)
+        run: |
+          # shellcheck disable=SC2086 # KAP bilerek sözcüklere bölünür
+          docker run --rm --network none $KAP "$IMAJ" python /srv/nsfw/server.py --selftest
+      - name: Yük dumanı (16 video + 8 etkileşimli eşzamanlı; p99, tepe RSS)
+        run: |
+          # shellcheck disable=SC2086
+          docker run -d --name nsfw --network none $KAP "$IMAJ"
+          trap 'docker logs nsfw 2>&1 | tail -n 40; docker rm -f nsfw >/dev/null' EXIT
+          for i in $(seq 90); do
+            durum=$(docker inspect -f '{{.State.Running}} {{.State.Health.Status}}' nsfw)
+            [[ $durum == 'true healthy' ]] && break
+            if (( i == 90 )) || [[ $durum != true\ * ]]; then echo "::error::nsfw sağlıklı olmadı: $durum"; exit 1; fi
+            sleep 2
+          done
+          docker exec -i nsfw python - load <fluxer_nsfw/smoke.py | tee -a "$GITHUB_STEP_SUMMARY"
+          rss=$(docker exec nsfw cat /proc/1/status | awk '/^VmHWM:/ {print int($2 / 1024)}')
+          docker stats --no-stream nsfw
+          echo "fluxer-nsfw tepe RSS (VmHWM): $rss MiB" | tee -a "$GITHUB_STEP_SUMMARY"
+          (( rss <= 900 )) || { echo "::error::tepe RSS $rss MiB > 900 MiB: çıkarım arka ucu yeniden seçilir (PLAN §3)"; exit 1; }
+          (( rss <= 800 )) || echo "::warning::tepe RSS $rss MiB > 800 MiB: NSFW bellek limiti 1,5 GiB, bütçe 34,5 GiB (PLAN §3)"
+      - name: Örnek video (ffmpeg testsrc, 2 sn)
+        run: |
+          command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null; }
+          mkdir -p "$RUNNER_TEMP/ornek"
+          ffmpeg -loglevel error -f lavfi -i testsrc=size=320x240:rate=10:duration=2 -pix_fmt yuv420p \
+            "$RUNNER_TEMP/ornek/video.mp4"
+          chmod -R a+rX "$RUNNER_TEMP/ornek"
+      - name: media-proxy ile birleşik duman ('allow' = 'block', denetim Y3)
+        run: |
+          [[ $MP_SHA =~ ^[0-9a-f]{40}$ ]] || { echo "::error::medya_proxy 40 hex MICUP_SHA değil: $MP_SHA"; exit 1; }
+          docker pull -q "$KAYIT/fluxer-media-proxy:$MP_SHA" || {
+            echo "::error::fluxer-media-proxy:$MP_SHA yok: medya_proxy'ye micup-imaj.yml ile derlenmiş MICUP_SHA verin"
+            exit 1
+          }
+          anahtar=$(openssl rand -hex 24)
+          echo "::add-mask::$anahtar"
+          docker network create --internal nsfw-ag >/dev/null
+          # shellcheck disable=SC2086
+          docker run -d --name nsfw --network nsfw-ag $KAP "$IMAJ"
+          docker run -d --name media-proxy --network nsfw-ag -e FLUXER_MEDIA_PROXY_SECRET_KEY="$anahtar" \
+            -e FLUXER_NSFW_SERVICE_ENDPOINT=http://nsfw:8000 -e FLUXER_MEDIA_PROXY_CORS_MODE=off \
+            -e FLUXER_MEDIA_PROXY_ATTACHMENT_SIGNATURE_MODE=off "$KAYIT/fluxer-media-proxy:$MP_SHA"
+          trap 'for k in nsfw media-proxy; do echo "== $k"; docker logs "$k" 2>&1 | tail -n 30; done' EXIT
+          for i in $(seq 90); do
+            durum=$(docker inspect -f '{{.State.Running}} {{.State.Health.Status}}' nsfw media-proxy | sort -u)
+            [[ $durum == 'true healthy' ]] && break
+            if (( i == 90 )) || grep -q '^false' <<<"$durum"; then echo "::error::kaplar sağlıklı olmadı: $durum"; exit 1; fi
+            sleep 2
+          done
+          echo "### media-proxy $MP_SHA + fluxer-nsfw $ETIKET" >>"$GITHUB_STEP_SUMMARY"
+          docker run --rm -i --network nsfw-ag -v "$RUNNER_TEMP/ornek:/ornek:ro" -e MP_ANAHTAR="$anahtar" \
+            "$IMAJ" python - media-proxy <fluxer_nsfw/smoke.py | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: GHCR'ye it (yalnız yeni etiket, bütün dumanlar yeşilken)
+        if: env.ITILECEK == '1'
+        run: |
+          docker push -q "$IMAJ"
+          ozet=$(docker inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' "$IMAJ" | sed -n "s|^$KAYIT/fluxer-nsfw@||p")
+          [[ $ozet =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::itilen imajın özeti okunamadı: $ozet"; exit 1; }
+          uzak=$(docker buildx imagetools inspect "$IMAJ" --format '{{json .Manifest}}' | jq -r .digest)
+          [[ $uzak == "$ozet" ]] || { echo "::error::$ETIKET kayıt defterinde $uzak, itilen $ozet"; exit 1; }
+          echo "OZET=$ozet" >>"$GITHUB_ENV"
+      - name: Özet (her şey yeşil)
+        run: |
+          if [[ $ITILECEK == 1 ]]; then durum='derlendi, sınandı, itildi'; else durum='mevcut imaj sınandı, itilmedi'; fi
+          {
+            echo "### fluxer-nsfw $ETIKET: $durum"
+            echo '```'
+            echo "MICUP_NSFW_ETIKET=$ETIKET"
+            echo "MICUP_NSFW_OZET=$OZET"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"

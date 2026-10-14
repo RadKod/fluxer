@@ -12,6 +12,8 @@ import {Headers as HttpHeaders} from '@fluxer/constants/src/Headers';
 import {resolveChannelThreadsAssignment} from '@fluxer/schema/src/domains/admin/ChannelThreadsSchemas';
 import {resolveDomainMigrationAssignment} from '@fluxer/schema/src/domains/admin/DomainMigrationSchemas';
 import {resolvePlutoniumPageAssignment} from '@fluxer/schema/src/domains/admin/PlutoniumPageSchemas';
+import {resolveVoiceNoiseSuppressionAssignment} from '@fluxer/schema/src/domains/admin/VoiceNoiseSuppressionSchemas';
+import {resolveVoiceRoomAssignment} from '@fluxer/schema/src/domains/admin/VoiceRoomConfigSchemas';
 import {ExperimentAssignmentsResponse} from '@fluxer/schema/src/domains/experiment/ExperimentSchemas';
 
 export function ExperimentController(app: HonoApp) {
@@ -31,11 +33,20 @@ export function ExperimentController(app: HonoApp) {
 		}),
 		async (ctx) => {
 			const instanceConfigRepository = ctx.get('instanceConfigRepository');
-			const [delivery, domainMigrationConfig, channelThreadsConfig, plutoniumPageConfig] = await Promise.all([
+			const [
+				delivery,
+				domainMigrationConfig,
+				channelThreadsConfig,
+				plutoniumPageConfig,
+				voiceRoomConfig,
+				voiceNoiseConfig,
+			] = await Promise.all([
 				instanceConfigRepository.getExperimentDeliveryConfig(),
 				instanceConfigRepository.getDomainMigrationConfig(),
 				instanceConfigRepository.getCompiledChannelThreadsConfig(),
 				instanceConfigRepository.getPlutoniumPageConfig(),
+				instanceConfigRepository.getVoiceRoomConfig(),
+				instanceConfigRepository.getVoiceNoiseSuppressionConfig(),
 			]);
 			const user = ctx.get('user');
 			const userId = user.id.toString();
@@ -44,6 +55,8 @@ export function ExperimentController(app: HonoApp) {
 				poll_interval_seconds: delivery.poll_interval_seconds,
 				poll_jitter_percent: delivery.poll_jitter_percent,
 				assignments: {
+					voice_noise_suppression: resolveVoiceNoiseSuppressionAssignment(voiceNoiseConfig, userId),
+					voice_room: resolveVoiceRoomAssignment(voiceRoomConfig),
 					domain_migration: resolveDomainMigrationAssignment(domainMigrationConfig, userId, targeting),
 					plutonium_page: resolvePlutoniumPageAssignment(plutoniumPageConfig, userId, targeting),
 				},

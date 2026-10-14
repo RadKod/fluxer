@@ -98,6 +98,9 @@ export interface EmailTemplateVariables {
 		username: string;
 		resetUrl: string;
 	};
+	referral_reward_ready: {
+		username: string;
+	};
 	registration_approved: {
 		username: string;
 		channelsUrl: string;

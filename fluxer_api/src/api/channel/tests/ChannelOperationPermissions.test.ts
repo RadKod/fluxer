@@ -11,10 +11,11 @@ import {
 	updateChannel,
 	updateGuild,
 } from '@app/api/channel/tests/ChannelTestUtils';
+import {overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
-import {beforeAll, beforeEach, describe, expect, it} from 'vitest';
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 describe('Channel Operation Permissions', () => {
 	let harness: ApiTestHarness;
@@ -23,6 +24,10 @@ describe('Channel Operation Permissions', () => {
 	});
 	beforeEach(async () => {
 		await harness.reset();
+		overrideLimits({feature_mature_content_settings: 1});
+	});
+	afterEach(() => {
+		vi.restoreAllMocks();
 	});
 	it('should allow member to get channel', async () => {
 		const owner = await createTestAccount(harness);

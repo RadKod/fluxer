@@ -83,7 +83,18 @@ function measureUnwrappedTablistWidth(tablist: HTMLElement): number {
 }
 
 export const ProfileBody: React.FC<ProfileBodyProps> = observer(
-	({profile, user, userNote, autoFocusNote, noteRef, showProfileDataWarning}) => {
+	({
+		profile,
+		user,
+		userNote,
+		autoFocusNote,
+		noteRef,
+		showProfileDataWarning,
+		isPreview,
+		hideUserInfo,
+		onLeave = ModalCommands.pop,
+		onOpenUser,
+	}) => {
 		const {i18n} = useLingui();
 		const showMutualFriendsTab = !user.bot;
 		const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
@@ -182,6 +193,10 @@ export const ProfileBody: React.FC<ProfileBodyProps> = observer(
 		}, [tabs]);
 		const handleMutualFriendClick = useCallback(
 			(friendId: string) => {
+				if (onOpenUser) {
+					onOpenUser(friendId);
+					return;
+				}
 				const currentModal = ModalState.getModal();
 				if (currentModal) {
 					ModalCommands.update(currentModal.key, () =>
@@ -195,7 +210,7 @@ export const ProfileBody: React.FC<ProfileBodyProps> = observer(
 					);
 				}
 			},
-			[profile],
+			[profile, onOpenUser],
 		);
 		const handleMutualFriendContextMenu = useCallback(
 			(event: React.MouseEvent, friend: User) => {
@@ -222,11 +237,14 @@ export const ProfileBody: React.FC<ProfileBodyProps> = observer(
 			},
 			[profile],
 		);
-		const handleGuildClick = useCallback((guild: Guild) => {
-			ModalCommands.pop();
-			const selectedChannel = SelectedChannel.selectedChannelIds.get(guild.id);
-			NavigationCommands.selectGuild(guild.id, selectedChannel);
-		}, []);
+		const handleGuildClick = useCallback(
+			(guild: Guild) => {
+				onLeave();
+				const selectedChannel = SelectedChannel.selectedChannelIds.get(guild.id);
+				NavigationCommands.selectGuild(guild.id, selectedChannel);
+			},
+			[onLeave],
+		);
 		const handleGuildContextMenu = useCallback((event: React.MouseEvent, guild: Guild) => {
 			event.preventDefault();
 			event.stopPropagation();
@@ -238,11 +256,14 @@ export const ProfileBody: React.FC<ProfileBodyProps> = observer(
 				/>
 			));
 		}, []);
-		const handleGroupClick = useCallback((group: Channel) => {
-			ModalCommands.pop();
-			NavigationCommands.selectChannel(ME, group.id);
-			focusChannelTextareaAfterNavigation(group.id);
-		}, []);
+		const handleGroupClick = useCallback(
+			(group: Channel) => {
+				onLeave();
+				NavigationCommands.selectChannel(ME, group.id);
+				focusChannelTextareaAfterNavigation(group.id);
+			},
+			[onLeave],
+		);
 		const handleGroupContextMenu = useCallback((event: React.MouseEvent, group: Channel) => {
 			event.preventDefault();
 			event.stopPropagation();
@@ -343,6 +364,7 @@ export const ProfileBody: React.FC<ProfileBodyProps> = observer(
 							userNote={userNote}
 							autoFocusNote={autoFocusNote}
 							noteRef={noteRef}
+							onNavigate={onLeave}
 							data-flx="user.user-profile-modal.render-active-tab-content.profile-content"
 						/>
 					);
@@ -354,13 +376,16 @@ export const ProfileBody: React.FC<ProfileBodyProps> = observer(
 		};
 		return (
 			<div className={userProfileModalStyles.contentContainer} data-flx="user.user-profile-modal.profile-body.div">
-				<UserInfo
-					user={user}
-					profile={profile}
-					guildId={profile.guildId ?? undefined}
-					showProfileDataWarning={showProfileDataWarning}
-					data-flx="user.user-profile-modal.profile-body.user-info"
-				/>
+				{!hideUserInfo && (
+					<UserInfo
+						user={user}
+						profile={profile}
+						guildId={profile.guildId ?? undefined}
+						showProfileDataWarning={showProfileDataWarning}
+						isPreview={isPreview}
+						data-flx="user.user-profile-modal.profile-body.user-info"
+					/>
+				)}
 				{!isCurrentUser ? (
 					<div
 						ref={tabsWrapperRef}

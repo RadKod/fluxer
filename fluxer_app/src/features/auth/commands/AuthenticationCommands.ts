@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import * as AnalyticsCommands from '@app/features/analytics/commands/AnalyticsCommands';
 import {Endpoints} from '@app/features/app/constants/Endpoints';
 import InstanceCapabilities, {InstanceResponseCapability} from '@app/features/app/state/InstanceCapabilities';
 import type {RuntimeConfigSnapshot} from '@app/features/app/state/InstanceSnapshotStore';
@@ -11,7 +12,7 @@ import {type InstanceHTTPTarget, instanceRequest} from '@app/features/platform/t
 import {HttpError} from '@app/features/platform/types/EndpointError';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {failureCode, ipAuthorizationRequiredResponseFromError} from '@app/features/platform/utils/ResponseInspection';
-import UserSettings from '@app/features/user/state/UserSettings';
+import {getCurrentOrDetectedLocale} from '@app/features/user/utils/LocaleUtils';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import type {ValueOf} from '@fluxer/constants/src/ValueOf';
 import type {
@@ -26,7 +27,7 @@ import type {AuthenticationResponseJSON, PublicKeyCredentialRequestOptionsJSON} 
 
 const logger = new Logger('AuthService');
 const withAuthLocaleHeader = (headers?: Record<string, string>): Record<string, string> => ({
-	'Accept-Language': UserSettings.getLocale(),
+	'Accept-Language': getCurrentOrDetectedLocale(),
 	...(headers ?? {}),
 });
 
@@ -427,6 +428,7 @@ export async function register(data: RegisterRequest, target: AuthRequestTarget)
 		});
 		const responseBody = response.body;
 		logger.info('Registration successful');
+		AnalyticsCommands.track('sign_up');
 		return responseBody;
 	} catch (error) {
 		logger.error('Registration failed', error);
@@ -587,6 +589,7 @@ export async function verifyEmail(token: string, target: AuthRequestTarget): Pro
 			headers: withAuthLocaleHeader(),
 		});
 		logger.info('Email verification successful');
+		AnalyticsCommands.track('email_verified');
 		return VerificationResult.SUCCESS;
 	} catch (error) {
 		const result = verificationResultFromError(error, VerificationResult.EXPIRED_TOKEN, 400);
@@ -796,6 +799,7 @@ export async function completeLogin(
 	options: CompleteLoginOptions = {},
 ): Promise<void> {
 	logger.info('Completing login process');
+	AnalyticsCommands.track('login');
 	await Accounts.switchToNewAccount({
 		userId: requireLoginCredential(userId, 'userId'),
 		token: requireLoginCredential(token, 'token'),

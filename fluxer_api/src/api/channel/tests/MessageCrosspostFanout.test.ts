@@ -48,6 +48,7 @@ import {
 	writeRow,
 } from '@app/api/channel/tests/CrosspostWorkerTestUtils';
 import {getPngDataUrl} from '@app/api/emoji/tests/EmojiTestUtils';
+import {overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
 import {Logger} from '@app/api/Logger';
 import {getMessages} from '@app/api/message/tests/MessageTestUtils';
 import {startContentBlocklistCaches, stopContentBlocklistCaches} from '@app/api/middleware/ContentBlocklistCaches';
@@ -117,6 +118,7 @@ describe('Crosspost fan-out', () => {
 		await harness.reset();
 		harness.storageService.reset();
 		world = await setupFanoutWorld(harness);
+		overrideLimits({feature_mature_content_settings: 1});
 	});
 
 	afterEach(() => {

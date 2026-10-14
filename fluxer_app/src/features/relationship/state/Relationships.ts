@@ -2,7 +2,7 @@
 
 import {Relationship, type RelationshipWire} from '@app/features/relationship/models/Relationship';
 import {RelationshipTypes} from '@fluxer/constants/src/UserConstants';
-import {makeAutoObservable} from 'mobx';
+import {computed, type IComputedValue, makeAutoObservable} from 'mobx';
 
 class Relationships {
 	relationships: Record<string, Relationship> = {};
@@ -58,6 +58,10 @@ class Relationships {
 	isBlocked(userId: string): boolean {
 		const relationship = this.relationships[userId];
 		return relationship?.type === RelationshipTypes.BLOCKED;
+	}
+
+	createBlockedSelector(userId: string): IComputedValue<boolean> {
+		return computed(() => this.isBlocked(userId));
 	}
 }
 

@@ -223,7 +223,7 @@
 	box-shadow: var(--shadow-xl);
 }
 
-:global(html.theme-coal) .container {
+:global(html:is(.theme-coal, .theme-dark)) .container {
 	background-color: var(--background-textarea);
 	border-color: var(--background-modifier-accent);
 }
@@ -236,7 +236,7 @@
 	background-color: var(--background-primary);
 }
 
-:global(html.theme-coal) .inputBackground,
+:global(html:is(.theme-coal, .theme-dark)) .inputBackground,
 :global(html.theme-light) .inputBackground {
 	background-color: var(--background-secondary);
 }
@@ -248,7 +248,7 @@
 	max-height: 20rem;
 }
 
-:global(html.theme-coal) .scrollerContainer {
+:global(html:is(.theme-coal, .theme-dark)) .scrollerContainer {
 	--scrollbar-track-bg: var(--background-textarea);
 }
 
@@ -283,7 +283,7 @@
 	color: var(--qs-text-secondary, var(--text-secondary));
 }
 
-:global(html.theme-coal) .footer {
+:global(html:is(.theme-coal, .theme-dark)) .footer {
 	background-color: var(--background-textarea);
 	border-top-color: transparent;
 }

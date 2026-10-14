@@ -151,6 +151,11 @@
 	display: flex;
 	align-items: center;
 	flex-shrink: 0;
+	margin-top: 0.25rem;
+}
+
+.badgesWrapper:empty {
+	display: none;
 }
 
 .customStatusRow {
@@ -185,12 +190,12 @@
 .editProfileIcon {
 	height: 1.25rem;
 	width: 1.25rem;
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 .editProfileText {
 	font-weight: 500;
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 .actionButtonsContainer {
@@ -234,7 +239,7 @@
 .actionIcon {
 	height: 1.5rem;
 	width: 1.5rem;
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 .actionIconSecondary {

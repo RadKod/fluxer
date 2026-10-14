@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {useHoverPreload} from '@app/features/app/hooks/useHoverPreload';
 import type {Channel} from '@app/features/channel/models/Channel';
+import GatewayConnection from '@app/features/gateway/transport/GatewayConnection';
 import type {Guild} from '@app/features/guild/models/Guild';
 import {ensureMembersForMessages} from '@app/features/messaging/commands/MessageCommands';
 import Messages from '@app/features/messaging/state/MessagingMessages';
 import ThreadGuilds from '@app/features/threads/state/ThreadGuilds';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
-import {useCallback, useEffect, useRef} from 'react';
+import {useCallback} from 'react';
 
 const CHANNEL_HOVER_PRELOAD_DELAY_MS = 220;
 
@@ -37,19 +39,10 @@ export function useChannelHoverPreload({
 	cancelChannelPreload: () => void;
 	preloadChannelNow: () => void;
 } {
-	const timerRef = useRef<number | null>(null);
-	const cancelChannelPreload = useCallback(() => {
-		if (timerRef.current == null || typeof window === 'undefined') {
-			timerRef.current = null;
-			return;
-		}
-		window.clearTimeout(timerRef.current);
-		timerRef.current = null;
-	}, []);
-	const preloadChannelNow = useCallback(() => {
-		cancelChannelPreload();
+	const preload = useCallback(() => {
 		if (
 			!enabled ||
+			!GatewayConnection.isConnected ||
 			!channel ||
 			channel.type === ChannelTypes.GUILD_CATEGORY ||
 			channel.type === ChannelTypes.GUILD_LINK
@@ -64,14 +57,12 @@ export function useChannelHoverPreload({
 				ensureMembersForCachedChannelMessages(channel.id);
 			}
 		}
-	}, [cancelChannelPreload, channel, enabled, guild, preloadMessages]);
-	const scheduleChannelPreload = useCallback(() => {
-		if (!enabled || !channel || typeof window === 'undefined') {
-			return;
-		}
-		cancelChannelPreload();
-		timerRef.current = window.setTimeout(preloadChannelNow, CHANNEL_HOVER_PRELOAD_DELAY_MS);
-	}, [cancelChannelPreload, channel, enabled, preloadChannelNow]);
-	useEffect(() => cancelChannelPreload, [cancelChannelPreload]);
-	return {scheduleChannelPreload, cancelChannelPreload, preloadChannelNow};
+	}, [channel, enabled, guild, preloadMessages]);
+	const {schedule, cancel, preloadNow} = useHoverPreload(
+		'channel',
+		preload,
+		CHANNEL_HOVER_PRELOAD_DELAY_MS,
+		enabled && channel != null,
+	);
+	return {scheduleChannelPreload: schedule, cancelChannelPreload: cancel, preloadChannelNow: preloadNow};
 }

@@ -34,6 +34,10 @@ class RecordingUsersServiceClient implements IUsersServiceClient {
 		return result;
 	}
 
+	async getContentHiddenSince(userIds: Array<UserID>): Promise<Map<UserID, Date | null>> {
+		return new Map(userIds.filter((id) => this.partialsById.has(id)).map((id) => [id, null]));
+	}
+
 	async invalidateUserCache(_userId: UserID): Promise<void> {}
 }
 

@@ -1,0 +1,120 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.container {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+.spinnerContainer {
+	display: flex;
+	justify-content: center;
+	padding: 2rem 0;
+}
+
+.section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.heading {
+	font-weight: 600;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+}
+
+.card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	border-radius: var(--radius-md);
+	border: 0.0625rem solid var(--background-header-secondary);
+	background-color: var(--background-secondary);
+	padding: 1rem;
+}
+
+.statusRow {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+
+.level {
+	font-weight: 600;
+	font-size: 1rem;
+	line-height: 1.5rem;
+	color: var(--text-primary);
+}
+
+.muted {
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	color: var(--text-primary-muted);
+}
+
+.progress {
+	width: 100%;
+	height: 0.5rem;
+	appearance: none;
+	border: none;
+	border-radius: 624.9375rem;
+	overflow: hidden;
+	background-color: var(--background-header-secondary);
+	accent-color: var(--brand-primary);
+}
+
+.progress::-webkit-progress-bar {
+	background-color: var(--background-header-secondary);
+}
+
+.progress::-webkit-progress-value {
+	background-color: var(--brand-primary);
+}
+
+.progress::-moz-progress-bar {
+	background-color: var(--brand-primary);
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	justify-content: flex-end;
+}
+
+.actions > * {
+	flex: none;
+}
+
+.boosters {
+	display: flex;
+	flex-direction: column;
+}
+
+.booster {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.5rem 0;
+	border-bottom: 0.0625rem solid var(--background-header-secondary);
+}
+
+.avatar {
+	width: 2rem;
+	height: 2rem;
+	flex: none;
+	border-radius: 50%;
+}
+
+.name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	color: var(--text-primary);
+}

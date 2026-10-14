@@ -35,6 +35,7 @@ export const Nagbar = observer(
 						backgroundColor,
 						color: textColor,
 						'--nagbar-background-color': backgroundColor,
+						'--nagbar-text-color': textColor,
 					} as React.CSSProperties
 				}
 				data-flx="app.nagbar.nagbar"

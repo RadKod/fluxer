@@ -18,6 +18,9 @@ export interface GiftCodeRow {
 	visionary_sequence_number: Nullish<number>;
 	checkout_session_id: Nullish<string>;
 	revoked_at?: Nullish<Date>;
+	// Micup item codes (shop, 3.4): the cosmetic the code gives instead of premium time. Optional on purpose: the one
+	// writer, GiftCodeRepository.createGiftCode, normalises it to null.
+	cosmetic_item_id?: Nullish<bigint>;
 	premium_reversed_seconds?: Nullish<number>;
 	version: number;
 }
@@ -58,6 +61,10 @@ export interface PaymentBySubscriptionRow {
 export interface VisionarySlotRow {
 	slot_index: number;
 	user_id: UserID | null;
+	// Micup Visionary sale. Optional so upstream's partial writes stay valid.
+	version?: Nullish<number>; // CAS counter; rows Micup opens start at 1, rows without one are never handed out
+	order_id?: Nullish<bigint>; // the order holding the number, kept after it is taken (retry proof)
+	held_until?: Nullish<Date>; // no owner: end of a pending order's hold; an owner: when an admin took the number back
 }
 
 export const PAYMENT_COLUMNS = [
@@ -106,13 +113,14 @@ export const GIFT_CODE_COLUMNS = [
 	'visionary_sequence_number',
 	'checkout_session_id',
 	'revoked_at',
+	'cosmetic_item_id',
 	'premium_reversed_seconds',
 	'version',
 ] as const;
 export const GIFT_CODE_BY_CREATOR_COLUMNS = ['created_by_user_id', 'code'] as const;
 export const GIFT_CODE_BY_PAYMENT_INTENT_COLUMNS = ['stripe_payment_intent_id', 'code'] as const;
 export const GIFT_CODE_BY_REDEEMER_COLUMNS = ['redeemed_by_user_id', 'code'] as const;
-export const VISIONARY_SLOT_COLUMNS = ['slot_index', 'user_id'] as const;
+export const VISIONARY_SLOT_COLUMNS = ['slot_index', 'user_id', 'version', 'order_id', 'held_until'] as const;
 
 export interface PaymentByPaymentIntentRow {
 	payment_intent_id: string;

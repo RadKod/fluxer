@@ -403,7 +403,7 @@ Pass the query string on `/gateway` through untouched. Clients always send `?v=`
 
 Apple and Google require the association files at those fixed paths for saved-password autofill and app links. A proxy that forwards all paths needs no extra rules. Include them explicitly if you use a path allowlist.
 
-`/_metrics` on the API, Media Proxy, Gateway, and push service, plus `/_health/ready`, `/_health/drain`, and `/_health/undrain` on the Gateway, are gated to loopback and are unreachable through any proxy. The push service has no public path. The probes that work through a proxy are `/_health`, `/api/_health`, `/gateway/_health`, and `/media/_health`.
+`/_health/ready`, `/_health/drain`, and `/_health/undrain` on the Gateway are gated to loopback and are unreachable through any proxy. `/_metrics` on the API, Media Proxy, Gateway, and push service answers loopback peers and the networks in [`FLUXER_METRICS_ALLOWED_CIDRS`](/operator/configuration/#logging-and-build-metadata), judged by the socket peer, never `X-Forwarded-For`. With that list empty, no proxy reaches it. Never put your proxy's address, or a network that contains it, in that list: every request the proxy forwards comes from that address, so paths such as `/api/_metrics` would answer anyone on the internet. List only the scraper's own address as a `/32`. The push service has no public path. The probes that work through a proxy are `/_health`, `/api/_health`, `/gateway/_health`, and `/media/_health`.
 
 ## Trusted proxies
 

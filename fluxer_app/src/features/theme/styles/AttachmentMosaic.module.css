@@ -308,7 +308,7 @@
 }
 
 .playButton svg {
-	color: var(--text-on-brand-primary);
+	color: hsl(0, 0%, 98%);
 }
 
 .audioPlaceholder {
@@ -399,7 +399,7 @@
 	padding: 0.25rem 0.5rem;
 	font-size: 0.875rem;
 	font-weight: 600;
-	color: var(--text-on-brand-primary);
+	color: hsl(0, 0%, 98%);
 	line-height: 1;
 }
 

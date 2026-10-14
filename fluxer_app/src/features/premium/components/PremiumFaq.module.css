@@ -1,0 +1,78 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.faq {
+	display: grid;
+	gap: 0.625rem;
+}
+
+.item {
+	composes: card cardHover from '@app/features/premium/components/PremiumSurface.module.css';
+	padding: 0 1.25rem;
+}
+
+.question {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	min-height: 3.25rem;
+	padding: 0.875rem 0;
+	list-style: none;
+	cursor: pointer;
+	font-size: var(--premium-fs-body);
+	font-weight: 600;
+	color: var(--text-primary);
+	text-wrap: pretty;
+}
+
+.question::-webkit-details-marker {
+	display: none;
+}
+
+.question::after {
+	content: '+';
+	flex-shrink: 0;
+	font-size: 1.25rem;
+	line-height: 1;
+	color: var(--text-tertiary);
+	transition: transform 0.2s var(--premium-ease-out);
+}
+
+.item[open] .question::after {
+	transform: rotate(45deg);
+}
+
+.answer {
+	max-width: 68ch;
+	margin: 0 0 1rem;
+	font-size: var(--premium-fs-body);
+	line-height: 1.5;
+	color: var(--text-secondary);
+	text-wrap: pretty;
+}
+
+/* An answer the user opens fades in (opacity and 4 px). The first one opens with the page and is never hidden. */
+.item:not(:first-child)[open] .answer {
+	animation: premiumFaqReveal 0.2s var(--premium-ease-out);
+}
+
+@keyframes premiumFaqReveal {
+	from {
+		opacity: 0;
+		transform: translateY(-0.25rem);
+	}
+}
+
+:global(html.reduced-motion) .item:not(:first-child)[open] .answer {
+	animation-name: premiumFaqFade;
+}
+
+:global(html.reduced-motion) .question::after {
+	transition: none;
+}
+
+@keyframes premiumFaqFade {
+	from {
+		opacity: 0;
+	}
+}

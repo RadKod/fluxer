@@ -4,9 +4,10 @@ use crate::{
     admin_flags,
     api::client::{AdminApiClient, ApiError},
     middleware::flash::FlashData,
-    utils::forms::MultiValueForm,
+    utils::{forms::MultiValueForm, timestamps::format_admin_timestamp},
 };
 use std::collections::HashSet;
+use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 
 pub struct DispatchOutcome {
     pub flash: FlashData,
@@ -52,6 +53,13 @@ pub async fn dispatch(
 ) -> DispatchOutcome {
     let get = |k: &str| form.clean(k);
     match action {
+        "clear_legacy_restriction" => DispatchOutcome::from_result(
+            client
+                .clear_legacy_restriction(user_id, get("private_reason").as_deref())
+                .await,
+            "Legacy account restriction cleared successfully",
+            "Failed to clear legacy account restriction",
+        ),
         "update_flags" => {
             if has_legacy_flag_delta_fields(form) {
                 let add = form.list_values_any(&["add_flags[]", "add_flags"]);
@@ -94,20 +102,20 @@ pub async fn dispatch(
         "update_premium_flags" => {
             if has_legacy_flag_delta_fields(form) {
                 let Ok(add) = form.parse_list_values::<i32>(&["add_flags[]", "add_flags"]) else {
-                    return DispatchOutcome::error("Invalid premium flag value to add");
+                    return DispatchOutcome::error("Invalid Plus flag value to add");
                 };
                 let Ok(remove) = form.parse_list_values::<i32>(&["remove_flags[]", "remove_flags"])
                 else {
-                    return DispatchOutcome::error("Invalid premium flag value to remove");
+                    return DispatchOutcome::error("Invalid Plus flag value to remove");
                 };
                 return DispatchOutcome::from_result(
                     client.update_premium_flags(user_id, &add, &remove).await,
-                    "Premium flags updated successfully",
-                    "Failed to update premium flags",
+                    "Plus flags updated successfully",
+                    "Failed to update Plus flags",
                 );
             }
             let Ok(submitted) = form.parse_list_values::<i32>(&["flags[]", "flags"]) else {
-                return DispatchOutcome::error("Invalid premium flag value");
+                return DispatchOutcome::error("Invalid Plus flag value");
             };
             let selected = submitted.iter().copied().collect::<HashSet<_>>();
             let user = match client.get_user_by_id(user_id).await {
@@ -130,10 +138,17 @@ pub async fn dispatch(
                 .collect::<Vec<_>>();
             DispatchOutcome::from_result(
                 client.update_premium_flags(user_id, &add, &remove).await,
-                "Premium flags updated successfully",
-                "Failed to update premium flags",
+                "Plus flags updated successfully",
+                "Failed to update Plus flags",
             )
         }
+        // Premium refunds: the reason is required and goes to the audit log.
+        "end_premium" => match super::cosmetics::audit_reason(form) {
+            Err(message) => DispatchOutcome::error(message),
+            Ok(reason) => end_premium(client, user_id, &reason).await,
+        },
+        "grant_visionary" => grant_visionary(client, user_id, form).await,
+        "revoke_visionary" => revoke_visionary(client, user_id, form).await,
         "update_acls" => {
             let acls = form.list_values_any(&["acls[]", "acls"]);
             DispatchOutcome::from_result(
@@ -182,13 +197,33 @@ pub async fn dispatch(
             let Some(username) = get("username") else {
                 return DispatchOutcome::error("Username is required");
             };
+            let reason = match username_audit_reason(form) {
+                Ok(reason) => reason,
+                Err(message) => return DispatchOutcome::error(message),
+            };
             let discriminator = get("discriminator");
             DispatchOutcome::from_result(
                 client
-                    .change_username(user_id, &username, discriminator.as_deref())
+                    .change_username(user_id, &username, discriminator.as_deref(), &reason)
                     .await,
                 "Username changed successfully",
                 "Failed to change username",
+            )
+        }
+        "force_username_reselect" => {
+            if !form.bool_value("confirm") {
+                return DispatchOutcome::error("Confirm that this user must select a new username");
+            }
+            let reason = match username_audit_reason(form) {
+                Ok(reason) => reason,
+                Err(message) => return DispatchOutcome::error(message),
+            };
+            DispatchOutcome::from_result(
+                client
+                    .force_username_reselect(user_id, form.bool_value("ban_name"), &reason)
+                    .await,
+                "User must select a new username",
+                "Failed to require a new username",
             )
         }
         "change_email" => {
@@ -484,6 +519,121 @@ pub async fn dispatch(
         }
         _ => DispatchOutcome::error(format!("Unknown user action: {action}")),
     }
+}
+
+// Micup (shop, Visionary): SHOP_MANAGE and USER_UPDATE_FLAGS are checked by the API.
+async fn grant_visionary(
+    client: &AdminApiClient,
+    user_id: &str,
+    form: &MultiValueForm,
+) -> DispatchOutcome {
+    let slot = match form.clean("slot") {
+        None => None,
+        Some(raw) => match raw.parse::<u32>() {
+            Ok(slot @ 1..=100_000) => Some(slot),
+            _ => {
+                return DispatchOutcome::error(
+                    "The number must be a whole number from 1 to 100000, or blank",
+                );
+            }
+        },
+    };
+    let reason = match super::cosmetics::audit_reason(form) {
+        Ok(reason) => reason,
+        Err(message) => return DispatchOutcome::error(message),
+    };
+    match client.grant_visionary(user_id, slot, &reason).await {
+        Ok(result) if result.changed => DispatchOutcome::success(format!(
+            "Gave {} to {user_id}.",
+            visionary_label(result.slot)
+        )),
+        Ok(result) => DispatchOutcome::success(format!(
+            "{user_id} already is {}; nothing changed.",
+            visionary_label(result.slot)
+        )),
+        Err(ApiError::Http { message, .. }) if message.contains("SHOP_ITEM_UNAVAILABLE") => {
+            let number =
+                slot.map_or_else(|| "A number".to_owned(), |slot| format!("Number {slot}"));
+            DispatchOutcome::error(format!(
+                "{number} is taken or does not exist, or no number is free. Raise the total on the \
+                 Shop page first."
+            ))
+        }
+        Err(error) => {
+            tracing::warn!(%error, user_id, "admin API request failed: grant Visionary");
+            DispatchOutcome::error("Failed to give Visionary")
+        }
+    }
+}
+
+async fn revoke_visionary(
+    client: &AdminApiClient,
+    user_id: &str,
+    form: &MultiValueForm,
+) -> DispatchOutcome {
+    let reason = match super::cosmetics::audit_reason(form) {
+        Ok(reason) => reason,
+        Err(message) => return DispatchOutcome::error(message),
+    };
+    match client.revoke_visionary(user_id, &reason).await {
+        Ok(result) if result.changed => DispatchOutcome::success(format!(
+            "Took {} back from {user_id}; the number is retired.",
+            visionary_label(result.slot)
+        )),
+        Ok(_) => {
+            DispatchOutcome::success(format!("{user_id} is not a Visionary; nothing changed."))
+        }
+        Err(error) => {
+            tracing::warn!(%error, user_id, "admin API request failed: revoke Visionary");
+            DispatchOutcome::error("Failed to take Visionary back")
+        }
+    }
+}
+
+// The API answers the paid end it cut; none still ahead means the button changed nothing.
+async fn end_premium(client: &AdminApiClient, user_id: &str, reason: &str) -> DispatchOutcome {
+    let ended = match client.end_premium(user_id, reason).await {
+        Ok(ended) => ended,
+        Err(error) => {
+            tracing::warn!(%error, user_id, "admin API request failed: end premium");
+            return DispatchOutcome::error("Failed to end Plus");
+        }
+    };
+    let now = OffsetDateTime::now_utc();
+    match ended.previous_paid_until.filter(|until| {
+        OffsetDateTime::parse(until, &Rfc3339)
+            .ok()
+            .is_none_or(|until| until > now)
+    }) {
+        Some(until) => DispatchOutcome::success(format!(
+            "Plus ended; it was paid until {}.",
+            format_admin_timestamp(&until)
+        )),
+        None => DispatchOutcome {
+            flash: FlashData::info("Nothing to end: no paid Plus time was left."),
+            redirect_params: Vec::new(),
+        },
+    }
+}
+
+fn visionary_label(slot: Option<i32>) -> String {
+    slot.map_or_else(
+        || "Visionary".to_owned(),
+        |slot| format!("Visionary #{slot}"),
+    )
+}
+
+fn username_audit_reason(form: &MultiValueForm) -> Result<String, &'static str> {
+    let reason = form
+        .clean("audit_log_reason")
+        .ok_or("A reason is required")?;
+    if reason.chars().any(char::is_control) {
+        return Err("Write the reason on one line without control characters");
+    }
+    if reason.encode_utf16().count() > 512 {
+        return Err("The reason takes at most 512 characters");
+    }
+    Ok(reason)
 }
 
 fn has_legacy_flag_delta_fields(form: &MultiValueForm) -> bool {

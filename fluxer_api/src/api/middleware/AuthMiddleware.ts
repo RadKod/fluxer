@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {HonoEnv} from '@app/api/types/HonoEnv';
+import {isLegacyAccountRestricted} from '@app/api/user/AccountLimit';
 import {AccessDeniedError} from '@fluxer/errors/src/domains/core/AccessDeniedError';
 import {UnauthorizedError} from '@fluxer/errors/src/domains/core/UnauthorizedError';
+import {AccountLimitedError} from '@fluxer/errors/src/domains/user/AccountLimitedError';
 import {createMiddleware} from 'hono/factory';
 
 function ensureOAuth2BearerRouteSupport(
@@ -15,6 +17,17 @@ function ensureOAuth2BearerRouteSupport(
 }
 
 export const LoginRequired = createMiddleware<HonoEnv>(async (ctx, next) => {
+	const user = ctx.get('user');
+	if (!user) {
+		throw new UnauthorizedError();
+	}
+	ensureOAuth2BearerRouteSupport(ctx.get('authTokenType'), ctx.get('oauthBearerAllowed'));
+	if (isLegacyAccountRestricted(user)) {
+		throw new AccountLimitedError();
+	}
+	await next();
+});
+export const LoginRequiredAllowSuspicious = createMiddleware<HonoEnv>(async (ctx, next) => {
 	const user = ctx.get('user');
 	if (!user) {
 		throw new UnauthorizedError();

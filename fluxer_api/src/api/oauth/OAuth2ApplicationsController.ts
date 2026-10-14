@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {DefaultUserOnly, LoginRequired} from '@app/api/middleware/AuthMiddleware';
+import {DefaultUserOnly, LoginRequiredAllowSuspicious} from '@app/api/middleware/AuthMiddleware';
 import {CaptchaMiddleware} from '@app/api/middleware/CaptchaMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {SudoModeMiddleware} from '@app/api/middleware/SudoModeMiddleware';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import type {HonoApp, HonoEnv} from '@app/api/types/HonoEnv';
+import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
 import {Validator} from '@app/api/Validator';
 import {SudoVerificationSchema} from '@fluxer/schema/src/domains/auth/AuthSchemas';
 import {ApplicationIdParam} from '@fluxer/schema/src/domains/common/CommonParamSchemas';
@@ -39,7 +40,7 @@ export function OAuth2ApplicationsController(app: HonoApp) {
 	app.get(
 		'/users/@me/applications',
 		RateLimitMiddleware(RateLimitConfigs.OAUTH_DEV_CLIENTS_LIST),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		OpenAPI({
 			operationId: 'list_user_applications',
@@ -56,7 +57,7 @@ export function OAuth2ApplicationsController(app: HonoApp) {
 	app.get(
 		'/oauth2/applications/@me',
 		RateLimitMiddleware(RateLimitConfigs.OAUTH_DEV_CLIENTS_LIST),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		OpenAPI({
 			operationId: 'get_oauth_applications_me',
 			summary: 'Get current applications endpoint',
@@ -72,7 +73,7 @@ export function OAuth2ApplicationsController(app: HonoApp) {
 	app.post(
 		'/oauth2/applications',
 		RateLimitMiddleware(RateLimitConfigs.OAUTH_DEV_CLIENT_CREATE),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		CaptchaMiddleware,
 		Validator('json', ApplicationCreateRequest),
@@ -87,6 +88,7 @@ export function OAuth2ApplicationsController(app: HonoApp) {
 				'Creates a new bot-backed OAuth2 application (client). Requires a solved captcha challenge (X-Captcha-Token). Returns client credentials including ID and secret. Application can be used for authorization flows and API access.',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
 			const body = ctx.req.valid('json');
 			const response = await ctx.get('oauth2ApplicationsRequestService').createApplication(userId, body);
@@ -96,7 +98,7 @@ export function OAuth2ApplicationsController(app: HonoApp) {
 	app.get(
 		'/oauth2/applications/:id',
 		RateLimitMiddleware(RateLimitConfigs.OAUTH_DEV_CLIENTS_LIST),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		Validator('param', ApplicationIdParam),
 		OpenAPI({
@@ -120,7 +122,7 @@ export function OAuth2ApplicationsController(app: HonoApp) {
 	app.patch(
 		'/oauth2/applications/:id',
 		RateLimitMiddleware(RateLimitConfigs.OAUTH_DEV_CLIENT_UPDATE),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		Validator('param', ApplicationIdParam),
 		Validator('json', ApplicationUpdateRequest),
@@ -135,6 +137,7 @@ export function OAuth2ApplicationsController(app: HonoApp) {
 				'Modifies OAuth2 application configuration such as name, description, and redirect URIs. Does not rotate credentials.',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
 			const body = ctx.req.valid('json');
 			const response = await ctx
@@ -146,7 +149,7 @@ export function OAuth2ApplicationsController(app: HonoApp) {
 	app.delete(
 		'/oauth2/applications/:id',
 		RateLimitMiddleware(RateLimitConfigs.OAUTH_DEV_CLIENT_DELETE),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		SudoModeMiddleware,
 		Validator('param', ApplicationIdParam),
@@ -176,7 +179,7 @@ export function OAuth2ApplicationsController(app: HonoApp) {
 	app.patch(
 		'/oauth2/applications/:id/bot',
 		RateLimitMiddleware(RateLimitConfigs.OAUTH_DEV_CLIENT_UPDATE),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		Validator('param', ApplicationIdParam),
 		Validator('json', BotProfileUpdateRequest),
@@ -191,6 +194,7 @@ export function OAuth2ApplicationsController(app: HonoApp) {
 				'Modifies bot profile information such as name, avatar, and status. Changes apply to the bot account associated with this OAuth2 application.',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
 			const body = ctx.req.valid('json');
 			const response = await ctx

@@ -16,7 +16,8 @@ import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
-import {Permissions} from '@fluxer/constants/src/ChannelConstants';
+import {ChannelTypes, Permissions} from '@fluxer/constants/src/ChannelConstants';
+import {InvalidChannelTypeError} from '@fluxer/errors/src/domains/channel/InvalidChannelTypeError';
 import {MissingPermissionsError} from '@fluxer/errors/src/domains/core/MissingPermissionsError';
 import {UnknownGuildError} from '@fluxer/errors/src/domains/guild/UnknownGuildError';
 import type {ChannelCreateRequest} from '@fluxer/schema/src/domains/channel/ChannelRequestSchemas';
@@ -46,6 +47,7 @@ export class GuildChannelService {
 			snowflakeService,
 			guildAuditLogService,
 			limitConfigService,
+			userRepository,
 		);
 	}
 
@@ -113,6 +115,8 @@ export class GuildChannelService {
 			guildId: params.guildId,
 			permission: Permissions.MANAGE_CHANNELS,
 		});
+		// TEMPORARY: announcement channels are closed; open only after bucketing ((source_channel_id, bucket), source_message_id) and capping followers, on a product decision.
+		if (params.data.type === ChannelTypes.GUILD_ANNOUNCEMENT) throw new InvalidChannelTypeError();
 		const response = await this.channelOps.createChannel(params, auditLogReason);
 		const [masked] = await maskChannelResponseThreadBits(params.guildId, params.viewer, [response]);
 		return masked;

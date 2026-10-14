@@ -737,3 +737,69 @@ Fluxer records one [Admin audit entry](/admin-api/#admin-audit-entry-object) und
 ### Rate limit
 
 60 requests per minute for each authenticated user, on the `admin:ban:operation` bucket.
+
+## Get username dictionary
+
+<RouteHeader method="GET" path="/v1/admin/username-dictionary" auditReason />
+
+Returns the published username dictionary generation that screens usernames during username migration. Requires `ban:profile_substring:check`.
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| dictionary_gen | integer | The published generation, `0` when none |
+| hash | string | SHA-256 hex digest of the generation |
+| count | integer | Total entries across the three scopes, at most 20000 |
+| counts | object | Entry count of each scope: `uname_exact`, `uname_contains`, and `uname_allow` |
+| entries | object | The entries of each scope, keyed the same way |
+
+`uname_exact` blocks a whole name, `uname_contains` blocks every name that contains the entry, and `uname_allow` lets a name through those two.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The dictionary was returned |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `list_blocklist_entries`, target type `username_dictionary`, target ID `0`, and metadata keys `dictionary_gen` and `result_count`.
+
+### Rate limit
+
+200 requests per minute for each authenticated user, on the `admin:lookup` bucket.
+
+## Update username dictionary
+
+<RouteHeader method="PATCH" path="/v1/admin/username-dictionary" auditReason />
+
+Publishes a new, immutable dictionary generation with the changes applied to one scope and returns it in the shape of [Get username dictionary](#get-username-dictionary). Requires an audit reason.
+
+Adding to `uname_exact` or `uname_contains` requires `ban:profile_substring:add`, and removing from them requires `ban:profile_substring:remove`. `uname_allow` uses the inverse: adding requires `ban:profile_substring:remove` and removing requires `ban:profile_substring:add`.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| scope | string | `uname_exact`, `uname_contains`, or `uname_allow` |
+| add? | array[string] | Entries to add, each 1-32 lowercase ASCII letters or digits, at most 20000 |
+| remove? | array[string] | Entries to remove, with the same rules |
+
+At least one entry must be added or removed.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [Get username dictionary](#get-username-dictionary) response body | The generation was published |
+| 400 | [error response](/admin-api/#error-response) | Body validation fails or the audit reason is missing |
+| 403 | [error response](/admin-api/#error-response) | `MISSING_ACL`, because the caller lacks the ACL a change needs |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `publish_username_dictionary`, target type `username_dictionary`, and metadata keys `scope`, `dictionary_gen`, `count`, and `hash`.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:ban:operation` bucket.

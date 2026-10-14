@@ -51,6 +51,29 @@ pub enum DatabaseBackend {
     Cassandra,
 }
 
+/// The names `FLUXER_CASSANDRA_CONSISTENCY` accepts, shared with the API's config loader.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CassandraConsistency {
+    LocalOne,
+    LocalQuorum,
+    Quorum,
+    One,
+}
+
+impl std::str::FromStr for CassandraConsistency {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> anyhow::Result<Self> {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "local_one" => Ok(Self::LocalOne),
+            "local_quorum" => Ok(Self::LocalQuorum),
+            "quorum" => Ok(Self::Quorum),
+            "one" => Ok(Self::One),
+            other => anyhow::bail!("unsupported FLUXER_CASSANDRA_CONSISTENCY: {other}"),
+        }
+    }
+}
+
 impl ServiceConfig {
     pub fn from_env() -> anyhow::Result<Self> {
         Self::from_env_reader(env_var)
@@ -542,6 +565,25 @@ mod tests {
         ]);
 
         assert_eq!(32, cfg.max_concurrent_requests);
+    }
+
+    #[test]
+    fn parses_cassandra_consistency_names() {
+        let parse = |value: &str| value.parse::<CassandraConsistency>().unwrap();
+        assert_eq!(CassandraConsistency::LocalOne, parse(" LOCAL_ONE "));
+        assert_eq!(CassandraConsistency::LocalQuorum, parse("local_quorum"));
+        assert_eq!(CassandraConsistency::Quorum, parse("quorum"));
+        assert_eq!(CassandraConsistency::One, parse("one"));
+    }
+
+    #[test]
+    fn rejects_unknown_cassandra_consistency_names() {
+        for value in ["all", "serial", "each_quorum", "local-quorum", ""] {
+            assert!(
+                value.parse::<CassandraConsistency>().is_err(),
+                "{value} should be rejected"
+            );
+        }
     }
 
     #[test]

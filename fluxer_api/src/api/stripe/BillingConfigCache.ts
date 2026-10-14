@@ -239,6 +239,7 @@ export function getEffectiveBillingConfig(): EffectiveBillingConfig {
 	return config;
 }
 
+/** @public Read by the dormant Stripe test fixture, which restores the upstream billing gate. */
 export function hasRecurringPricePair(config: EffectiveBillingConfig = getEffectiveBillingConfig()): boolean {
 	return Object.values(config.prices).some((set) => set.monthly !== null && set.yearly !== null);
 }
@@ -267,15 +268,12 @@ export function isPremiumTieringActive(): boolean {
 	return !Config.instance.selfHosted || getCachedInstancePremiumMode() === 'mirror';
 }
 
-export function isBillingActive(config: EffectiveBillingConfig = getEffectiveBillingConfig()): boolean {
-	return config.enabled && config.secretKey !== null && hasRecurringPricePair(config) && isPremiumTieringActive();
+export function isBillingActive(_config?: EffectiveBillingConfig): boolean {
+	return false;
 }
 
-export function isStripeServiceable(config: EffectiveBillingConfig = getEffectiveBillingConfig()): boolean {
-	if (config.secretKey === null) {
-		return false;
-	}
-	return Config.instance.selfHosted ? isPremiumTieringActive() : config.enabled;
+export function isStripeServiceable(_config?: EffectiveBillingConfig): boolean {
+	return false;
 }
 
 export function isCurrentCatalogPriceId(

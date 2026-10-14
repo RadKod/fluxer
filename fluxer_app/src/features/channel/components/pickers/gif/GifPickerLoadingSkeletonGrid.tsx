@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import Accessibility from '@app/features/accessibility/state/Accessibility';
 import styles from '@app/features/channel/components/GifPicker.module.css';
 import {buildGifPickerLoadingSkeletonLayout} from '@app/features/channel/components/pickers/gif/GifPickerLoadingSkeletonGridLayout';
-import {motion, useReducedMotion} from 'framer-motion';
+import {motion} from 'framer-motion';
 import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 
 interface SkeletonViewportSize {
@@ -15,7 +16,7 @@ const EMPTY_SIZE: SkeletonViewportSize = {width: 0, height: 0};
 export function GifPickerLoadingSkeletonGrid() {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [viewportSize, setViewportSize] = useState<SkeletonViewportSize>(EMPTY_SIZE);
-	const prefersReducedMotion = useReducedMotion();
+	const prefersReducedMotion = Accessibility.useReducedMotion;
 	useLayoutEffect(() => {
 		const element = containerRef.current;
 		if (!element) {

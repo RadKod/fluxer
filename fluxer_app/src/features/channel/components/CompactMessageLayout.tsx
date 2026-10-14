@@ -13,6 +13,8 @@ import type {Message} from '@app/features/messaging/models/MessagingMessage';
 import {compactMessagePrefixProps} from '@app/features/theme/layout/MessageLayoutAttributes';
 import {getRemScaleForDocument} from '@app/features/theme/layout/RemFromPx';
 import styles from '@app/features/theme/styles/Message.module.css';
+import {PremiumUserBadge} from '@app/features/user/components/PremiumUserBadge';
+import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge';
 import type {User} from '@app/features/user/models/User';
 import * as DateUtils from '@app/features/user/utils/DateFormatting';
 import type {MessagePreviewContext} from '@fluxer/constants/src/ChannelConstants';
@@ -225,6 +227,17 @@ export function CompactAuthorPrefix({
 					previewColor={previewOverrides?.usernameColor}
 					previewName={previewOverrides?.displayName}
 					data-flx="channel.compact-message-layout.compact-author-prefix.message-username"
+				/>
+				<VerifiedUserBadge
+					user={author}
+					className={styles.userTagOffset}
+					data-flx="channel.compact-message-layout.compact-author-prefix.verified-user-badge"
+				/>
+				<PremiumUserBadge
+					user={author}
+					className={styles.userTagOffset}
+					focusable={false}
+					data-flx="channel.compact-message-layout.compact-author-prefix.premium-user-badge"
 				/>
 			</span>
 			<span className={styles.copyOnly} data-flx="channel.compact-message-layout.compact-author-prefix.copy-only--2">

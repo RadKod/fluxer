@@ -7,7 +7,10 @@ import {MessageActionBar, MessageActionBarCore} from '@app/features/channel/comp
 import {MessageActionBottomSheet} from '@app/features/channel/components/MessageActionBottomSheet';
 import {requestDeleteMessage} from '@app/features/channel/components/MessageActionUtils';
 import {useMessageHoverState} from '@app/features/channel/components/MessageHoverState';
-import {MessageViewContextProvider} from '@app/features/channel/components/MessageViewContext';
+import {
+	type MessagePreviewOverrides,
+	MessageViewContextProvider,
+} from '@app/features/channel/components/MessageViewContext';
 import type {Channel} from '@app/features/channel/models/Channel';
 import DeveloperOptions from '@app/features/devtools/state/DeveloperOptions';
 import {parse} from '@app/features/messaging/components/markdown/renderers';
@@ -31,7 +34,6 @@ import UserSettings from '@app/features/user/state/UserSettings';
 import Users from '@app/features/user/state/Users';
 import * as DateUtils from '@app/features/user/utils/DateFormatting';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
-import {FLUXERBOT_ID} from '@fluxer/constants/src/AppConstants';
 import {MessagePreviewContext, MessageStates, MessageTypes} from '@fluxer/constants/src/ChannelConstants';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
@@ -184,10 +186,7 @@ interface MessageProps {
 	onEdit?: (targetNode: HTMLElement) => void;
 	previewContext?: keyof typeof MessagePreviewContext;
 	shouldGroup?: boolean;
-	previewOverrides?: {
-		usernameColor?: string;
-		displayName?: string;
-	};
+	previewOverrides?: MessagePreviewOverrides;
 	removeTopSpacing?: boolean;
 	isJumpTarget?: boolean;
 	previewMode?: boolean;
@@ -626,7 +625,7 @@ export const Message: React.FC<MessageProps> = observer((props) => {
 				!previewContext &&
 					(isReplying || isHighlight || isJumpTarget) &&
 					(isReplying ? styles.messageReplying : styles.messageHighlight),
-				message.type === MessageTypes.CLIENT_SYSTEM && message.author.id === FLUXERBOT_ID && styles.messageClientSystem,
+				message.isClientSystemMessage() && styles.messageClientSystem,
 				isLongPressing && styles.messageLongPress,
 				!previewContext && (contextMenuOpen || isPopoutOpen) && styles.contextMenuActive,
 				previewContext && styles.messagePreview,

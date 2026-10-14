@@ -2,6 +2,7 @@
 
 import {AccountIdentityModes, TagStyles} from '@fluxer/constants/src/AccountIdentityConstants';
 import {DomainMigrationDiscoveryResponse} from '@fluxer/schema/src/domains/admin/DomainMigrationSchemas';
+import {UsernameTiersSchema} from '@fluxer/schema/src/domains/admin/UsernameSchemas';
 import {SsoStatusResponse} from '@fluxer/schema/src/domains/auth/AuthSchemas';
 import {createNamedStringLiteralUnion} from '@fluxer/schema/src/primitives/SchemaPrimitives';
 import {z} from 'zod';
@@ -64,6 +65,10 @@ const InstanceLegalSchema = z
 	.object({
 		terms_url: z.string().nullable().describe('Optional public terms of service URL for account registration'),
 		privacy_url: z.string().nullable().describe('Optional public privacy policy URL for account registration'),
+		source_url: z
+			.string()
+			.nullable()
+			.describe('Optional public URL where the instance offers its corresponding source code'),
 	})
 	.describe('Optional legal document URLs shown during public registration');
 
@@ -73,15 +78,30 @@ const InstanceAppRegistrationSchema = z
 	})
 	.describe('Public registration field collection policy');
 
+// Default client language for visitors who have not chosen one; exposed through app_public.
+const InstanceLocalizationSchema = z
+	.object({
+		default_locale: z
+			.string()
+			.nullable()
+			.describe('Client locale for visitors who have not chosen a language, or null'),
+		default_locale_time_zones: z
+			.array(z.string())
+			.describe('IANA time zones whose visitors open the client in the default locale'),
+	})
+	.describe('Default client language for visitors who have not chosen one');
+
 export const InstanceAppPublicSchema = z.object({
 	branding: InstanceBrandingSchema,
 	setup: InstanceSetupSchema,
 	legal: InstanceLegalSchema,
 	registration: InstanceAppRegistrationSchema,
+	localization: InstanceLocalizationSchema.optional(),
 });
 export type InstanceAppPublic = z.infer<typeof InstanceAppPublicSchema>;
 
-export const InstanceCaptchaProviderSchema = z.enum(['altcha', 'none']);
+export const InstanceCaptchaProviderSchema = z.enum(['altcha', 'turnstile', 'none']);
+export type InstanceCaptchaProvider = z.infer<typeof InstanceCaptchaProviderSchema>;
 
 export const InstanceEndpointsSchema = z
 	.object({
@@ -104,7 +124,11 @@ export type InstanceEndpoints = z.infer<typeof InstanceEndpointsSchema>;
 
 export const InstanceCaptchaSchema = z
 	.object({
-		provider: InstanceCaptchaProviderSchema.describe('Captcha provider (altcha or none)'),
+		provider: InstanceCaptchaProviderSchema.describe('Captcha provider (altcha, turnstile or none)'),
+		turnstile_site_key: z
+			.string()
+			.optional()
+			.describe('Cloudflare Turnstile site key, present while Turnstile is the provider'),
 	})
 	.describe('Captcha configuration');
 export type InstanceCaptcha = z.infer<typeof InstanceCaptchaSchema>;
@@ -138,6 +162,15 @@ export const InstanceFeaturesSchema = z
 		self_hosted: z.boolean().describe('Whether this is a self-hosted instance'),
 		presigned_attachment_uploads: z.boolean().describe('Whether clients can request presigned attachment upload URLs'),
 		emails_enabled: z.boolean().describe('Whether the instance sends emails (verification, password reset, etc.)'),
+		premium_trial_days: z
+			.number()
+			.int()
+			.min(0)
+			.describe('Length in days of the card-free premium trial a new account can claim; 0 when no trial is offered'),
+		gift_codes_enabled: z.boolean().describe('Whether premium gift codes can be redeemed on this instance'),
+		official_apps: z
+			.array(z.object({application_id: z.string(), invite_permissions: z.string()}))
+			.describe('Official applications in display order with the permissions requested when inviting each bot'),
 		phone_verification_enabled: z.boolean().describe('Deprecated. Always false.'),
 		desktop_modules_enabled: z.boolean().optional().describe('Whether desktop clients may load downloadable modules'),
 		account_deletion_grace_period_hours: z
@@ -266,12 +299,47 @@ export const InstanceAgePolicySchema = z
 	.describe('Regional age policy for this instance');
 export type InstanceAgePolicy = z.infer<typeof InstanceAgePolicySchema>;
 
+export const UsernameMigrationSchema = z
+	.object({
+		state: z.enum(['legacy', 'preparing', 'selecting']),
+		epoch: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+		preparing_at: z.iso.datetime().nullable().optional(),
+		started_at: z.iso.datetime().nullable(),
+		forced_at: z.iso.datetime().nullable(),
+	})
+	.superRefine((value, ctx) => {
+		if (value.state !== 'legacy' && (value.epoch === 0 || !value.preparing_at)) {
+			ctx.addIssue({code: 'custom', message: 'Active migration requires a preparation time'});
+		}
+		if (value.state !== 'selecting' && (value.started_at !== null || value.forced_at !== null)) {
+			ctx.addIssue({code: 'custom', message: 'Only selecting migration has selection dates'});
+		}
+		if (value.state === 'legacy' && value.preparing_at != null) {
+			ctx.addIssue({code: 'custom', message: 'Legacy migration has no preparation time'});
+		}
+		if (
+			value.state === 'selecting' &&
+			(!value.started_at ||
+				!value.forced_at ||
+				!value.preparing_at ||
+				Date.parse(value.started_at) < Date.parse(value.preparing_at) + 60_000 ||
+				Date.parse(value.forced_at) !== Date.parse(value.started_at) + 7 * 86400000)
+		) {
+			ctx.addIssue({
+				code: 'custom',
+				message: 'Selecting migration requires immutable seven-day dates after preparation',
+			});
+		}
+	});
+
 export const WellKnownFluxerResponse = z.object({
 	codename: z.string().optional().describe('Protocol generation spoken by this instance'),
 	api_code_version: z.number().int().describe('Version of the API server code'),
 	endpoints: InstanceEndpointsSchema,
 	captcha: InstanceCaptchaSchema,
 	features: InstanceFeaturesSchema,
+	username_migration: UsernameMigrationSchema.optional().describe('Username selection migration state and deadlines'),
+	username_tiers: UsernameTiersSchema.optional().describe('Availability of one-, two-, and three-character usernames'),
 	gif: InstanceGifSchema,
 	sso: InstanceSsoSchema,
 	registration: InstanceRegistrationSchema,

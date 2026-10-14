@@ -26,7 +26,13 @@ describe('Limit config defaults', () => {
 			filters: {guildFeatures: [GuildFeatures.VERY_LARGE_GUILD]},
 			limits: {max_guild_members: MAX_GUILD_MEMBERS_VERY_LARGE_GUILD},
 		});
-		expect(config.rules.map((rule) => rule.id)).toEqual(['premium', 'default', 'very_large_guild']);
+		expect(config.rules.map((rule) => rule.id)).toEqual([
+			'premium',
+			'default',
+			'very_large_guild',
+			'more_emoji',
+			'more_stickers',
+		]);
 	});
 	test('self-hosted defaults include default and very large guild limit rules', () => {
 		const config = createDefaultLimitConfig({selfHosted: true});
@@ -35,7 +41,7 @@ describe('Limit config defaults', () => {
 			filters: {guildFeatures: [GuildFeatures.VERY_LARGE_GUILD]},
 			limits: {max_guild_members: MAX_GUILD_MEMBERS_VERY_LARGE_GUILD},
 		});
-		expect(config.rules.map((rule) => rule.id)).toEqual(['default', 'very_large_guild']);
+		expect(config.rules.map((rule) => rule.id)).toEqual(['default', 'very_large_guild', 'more_emoji', 'more_stickers']);
 	});
 });
 

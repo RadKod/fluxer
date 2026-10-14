@@ -65,6 +65,18 @@ const CHECK_USER_REACTION_EXISTS_QUERY = MessageReactions.selectCql({
 	],
 	limit: 1,
 });
+const createCountReactionUsersUpToQuery = (limit: number) =>
+	MessageReactions.select({
+		columns: ['user_id'],
+		where: [
+			MessageReactions.where.eq('channel_id'),
+			MessageReactions.where.eq('bucket'),
+			MessageReactions.where.eq('message_id'),
+			MessageReactions.where.eq('emoji_id'),
+			MessageReactions.where.eq('emoji_name'),
+		],
+		limit,
+	});
 
 export class MessageInteractionRepository extends IMessageInteractionRepository {
 	private messageRepository: MessageRepository;
@@ -275,6 +287,34 @@ export class MessageInteractionRepository extends IMessageInteractionRepository 
 			uniqueEmojis.add(emojiKey);
 		}
 		return uniqueEmojis.size;
+	}
+
+	async hasReactionUsers(
+		channelId: ChannelID,
+		messageId: MessageID,
+		emojiName: string,
+		emojiId?: EmojiID,
+	): Promise<boolean> {
+		return (await this.countReactionUsersUpTo(channelId, messageId, emojiName, emojiId, 1)) > 0;
+	}
+
+	async countReactionUsersUpTo(
+		channelId: ChannelID,
+		messageId: MessageID,
+		emojiName: string,
+		emojiId: EmojiID | undefined,
+		limit: number,
+	): Promise<number> {
+		const reactions = await fetchMany<Pick<MessageReactionRow, 'user_id'>>(
+			createCountReactionUsersUpToQuery(limit).bind({
+				channel_id: channelId,
+				bucket: BucketUtils.makeBucket(messageId),
+				message_id: messageId,
+				emoji_id: emojiId ?? createEmojiID(0n),
+				emoji_name: emojiName,
+			}),
+		);
+		return reactions.length;
 	}
 
 	async checkUserReactionExists(

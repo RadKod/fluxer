@@ -45,6 +45,53 @@ Returns the current [user](/http-api/users/#user-object) object.
 
 40 requests per 10 seconds for each authenticated user, on the `user:settings:get` bucket, which is shared with [Get current user settings](/http-api/users/settings/#get-current-user-settings).
 
+## Get username status
+
+<RouteHeader method="GET" path="/v1/users/@me/username" />
+
+Returns the private username selection state of the current account. Only a session token is accepted.
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| state | string | `legacy`, `selected`, or `reselect_required`, as the user object `username_state` |
+| changeAvailableAt | ?ISO8601 timestamp | When the next change opens, 14 days after the last change once the free change is used, or null |
+| freeChangeAvailable | boolean | Whether the next selection or change has no waiting period |
+
+The first selection and one later change have no waiting period. A person told to choose another name gets a free selection again.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | Username status was returned |
+| 403 | [error response](/http-api/#error-response) | The credential is not a session token and the request returns `ACCESS_DENIED` |
+| 503 | [error response](/http-api/#error-response) | `USERNAME_UNAVAILABLE`, because the ownership store cannot be read |
+
+### Rate limit
+
+40 requests per 10 seconds for each authenticated user, on the `user:settings:get` bucket, which is shared with [Get current user](#get-current-user).
+
+## Claim username prompt
+
+<RouteHeader method="POST" path="/v1/users/@me/username-prompt" />
+
+Reports whether the client shows the username selection reminder now. The request has an empty JSON body. Only a session token is accepted.
+
+The response is `show` true at most once per account per Istanbul calendar day, and only while the instance is in the `selecting` [username migration](/http-api/instance/#username-migration-object) state before `forced_at`, for a person who has not selected a name. Each account has a fixed delay of up to six hours after the daily start. Before it, the response is `show` false with `retry_after_ms`, the milliseconds until the client may ask again.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | `show` and optional `retry_after_ms` | The prompt decision was returned |
+| 403 | [error response](/http-api/#error-response) | The credential is not a session token and the request returns `ACCESS_DENIED` |
+
+### Rate limit
+
+40 requests per 10 seconds for each authenticated user, on the `user:settings:get` bucket, which is shared with [Get current user](#get-current-user).
+
 ## Modify current user
 
 <RouteHeader method="PATCH" path="/v1/users/@me" />

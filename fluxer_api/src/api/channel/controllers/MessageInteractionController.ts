@@ -4,7 +4,7 @@ import {createChannelID, createMessageID, createUserID} from '@app/api/BrandedTy
 import {isPersonalNotesChannel} from '@app/api/channel/services/message/MessageHelpers';
 import {SYSTEM_USER_ID} from '@app/api/constants/Core';
 import {THREAD_FEATURE_CHANNEL_TYPES, viewerActive, viewerFromCtx} from '@app/api/experiment/ChannelThreadsGate';
-import {LoginRequired} from '@app/api/middleware/AuthMiddleware';
+import {DefaultUserOnly, LoginRequired} from '@app/api/middleware/AuthMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
@@ -15,6 +15,7 @@ import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {InvalidChannelTypeError} from '@fluxer/errors/src/domains/channel/InvalidChannelTypeError';
 import {UnclaimedAccountCannotAddReactionsError} from '@fluxer/errors/src/domains/channel/UnclaimedAccountCannotAddReactionsError';
+import {UnclaimedAccountCannotSendMessagesError} from '@fluxer/errors/src/domains/channel/UnclaimedAccountCannotSendMessagesError';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {
 	ChannelIdMessageIdEmojiParam,
@@ -23,6 +24,10 @@ import {
 	ChannelIdParam,
 	SessionIdQuerySchema,
 } from '@fluxer/schema/src/domains/common/CommonParamSchemas';
+import {
+	MessageComponentClickRequest,
+	MessageComponentClickResponse,
+} from '@fluxer/schema/src/domains/message/MessageComponentSchemas';
 import {
 	ChannelPinsQuerySchema,
 	ReactionUsersQuerySchema,
@@ -425,6 +430,41 @@ export function MessageInteractionController(app: HonoApp) {
 				.get('channelService')
 				.interactions.removeAllReactions({viewer: viewerFromCtx(ctx), userId, channelId, messageId});
 			return ctx.body(null, 204);
+		},
+	);
+	app.post(
+		'/channels/:channel_id/messages/:message_id/components',
+		RateLimitMiddleware(RateLimitConfigs.CHANNEL_MESSAGE_COMPONENTS),
+		LoginRequired,
+		DefaultUserOnly,
+		Validator('param', ChannelIdMessageIdParam),
+		Validator('json', MessageComponentClickRequest),
+		OpenAPI({
+			operationId: 'click_message_component',
+			summary: 'Click a message button',
+			description:
+				"Clicks a button on a first-party bot message. Needs the same access as adding a reaction: view the channel, read the message and be able to talk there. Returns the bot's reply code, shown only to the clicker, or null.",
+			responseSchema: MessageComponentClickResponse,
+			statusCode: 200,
+			security: ['bearerToken', 'sessionToken'],
+			tags: 'Channels',
+		}),
+		async (ctx) => {
+			const {channel_id, message_id} = ctx.req.valid('param');
+			const user = ctx.get('user');
+			if (user.isUnclaimedAccount()) throw new UnclaimedAccountCannotSendMessagesError();
+			if (!(user.flags & UserFlags.HAS_SESSION_STARTED))
+				throw InputValidationError.fromCode('custom_id', ValidationErrorCodes.MUST_START_SESSION_BEFORE_SENDING);
+			return ctx.json(
+				await ctx.get('messageComponentService').click({
+					user,
+					viewer: viewerFromCtx(ctx),
+					channelId: createChannelID(channel_id),
+					messageId: createMessageID(message_id),
+					customId: ctx.req.valid('json').custom_id,
+					requestCache: ctx.get('requestCache'),
+				}),
+			);
 		},
 	);
 }

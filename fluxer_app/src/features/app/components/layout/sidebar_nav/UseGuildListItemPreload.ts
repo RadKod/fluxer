@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {useChannelHoverPreload} from '@app/features/app/hooks/useChannelHoverPreload';
+import {useHoverPreload} from '@app/features/app/hooks/useHoverPreload';
 import type {Channel} from '@app/features/channel/models/Channel';
 import Channels from '@app/features/channel/state/Channels';
+import GatewayConnection from '@app/features/gateway/transport/GatewayConnection';
 import type {Guild} from '@app/features/guild/models/Guild';
 import GuildCount from '@app/features/guild/state/GuildCount';
 import {filterViewableChannels} from '@app/features/messaging/utils/ChannelShared';
 import SelectedChannel from '@app/features/navigation/state/SelectedChannel';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
-import {useEffect, useMemo} from 'react';
+import {useCallback, useEffect, useMemo} from 'react';
 
 interface UseGuildListItemPreloadOptions {
 	readonly guild: Guild;
@@ -70,6 +72,15 @@ export function useGuildListItemPreload({
 		defaultHiddenForChannel: resolveDefaultHiddenForChannel(preloadTargetChannel),
 		enabled: !guild.unavailable && !isSortingList,
 	});
+	const preloadCounts = useCallback(() => {
+		if (GatewayConnection.isConnected) GuildCount.requestCounts(guild.id, {force: false});
+	}, [guild.id]);
+	const {schedule: scheduleCounts, cancel: cancelCounts} = useHoverPreload(
+		'guild-count',
+		preloadCounts,
+		250,
+		!guild.unavailable && !isMobileExperience && !isSortingList,
+	);
 	useEffect(() => {
 		if (isMobileExperience || isSortingList || !isHovering) {
 			cancelChannelPreload();
@@ -79,9 +90,12 @@ export function useGuildListItemPreload({
 		return cancelChannelPreload;
 	}, [cancelChannelPreload, isHovering, isMobileExperience, isSortingList, scheduleChannelPreload]);
 	useEffect(() => {
-		if (isMobileExperience || isSortingList || !isHovering) return;
-		const timeoutId = window.setTimeout(() => GuildCount.requestCounts(guild.id, {force: false}), 250);
-		return () => window.clearTimeout(timeoutId);
-	}, [guild.id, isHovering, isMobileExperience, isSortingList]);
+		if (!isHovering) {
+			cancelCounts();
+			return;
+		}
+		scheduleCounts();
+		return cancelCounts;
+	}, [cancelCounts, isHovering, scheduleCounts]);
 	return {preloadChannelNow, selectedChannelId};
 }

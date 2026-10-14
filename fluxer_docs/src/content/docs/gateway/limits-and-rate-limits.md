@@ -16,7 +16,7 @@ A compressed message that decompresses past 10 MiB closes with `4002` and reason
 
 Hello advertises a heartbeat interval of 41,250 ms. The Gateway checks the heartbeat state every 13,750 ms. When 37,125 ms have elapsed since the last acknowledgement it sends Opcode `1`, and a client answers it immediately. If no new acknowledgement is accepted before the elapsed time passes 45,000 ms, the connection closes with `4009` and reason `Heartbeat timeout`.
 
-There is no separate authentication deadline. The heartbeat rule alone closes a socket that never authenticates.
+By default there is no separate authentication deadline, so a socket that never authenticates stays open for as long as it heartbeats. An operator can set one with `FLUXER_GATEWAY_IDENTIFY_TIMEOUT_MS`. A socket that has no session that long after Hello then closes with `4003` and reason `Identify timeout`, unless its session start is being held.
 
 A disconnected session remains resumable for 60,000 ms. Its presence is published as `offline` 5,000 ms after the socket drops, well before the retention window ends. A successful Resume inside the window restores the status the session last selected.
 
@@ -42,7 +42,9 @@ The session budget applies only after authentication.
 
 One source IP address holds 256 concurrent Gateway WebSockets. A further connection closes with `4008` and reason `Too many connections` before Hello is sent.
 
-One source IP address makes 300 Identify attempts in each fixed 60-second window. A further attempt is discarded without a reply and without a close. The payload is not retained and is never retried, so the client sends a new Identify itself once the budget recovers, before the heartbeat deadline closes the socket.
+An operator can add four connection limits, all off by default. `FLUXER_GATEWAY_COUNT_IPV6_BY_64` counts every address in one IPv6 /64 as one source address, and `FLUXER_GATEWAY_MAX_CONNECTIONS_PER_IPV6_48` caps the WebSockets of one IPv6 /48. A connection past either closes with `4008` and reason `Too many connections` before Hello is sent. `FLUXER_GATEWAY_MAX_UNIDENTIFIED_CONNECTIONS` caps the WebSockets on one node that have not sent Identify or Resume yet. A new connection past it closes with `4008` and reason `Gateway at capacity` before Hello. Leave that budget off: while it is full it refuses every new connection, because the Gateway does not yet close the oldest unidentified socket to make room. `FLUXER_GATEWAY_MAX_CONNECTIONS` caps the WebSockets and the sessions one node holds, and a session kept resumable after its WebSocket closed still counts. Past that limit an Identify closes with `4008` and reason `Gateway at capacity`. When the node's WebSockets pass the limit plus 5%, a new connection closes the same way before Hello, so a Resume keeps working until that second threshold. Sessions already running are never closed by these limits.
+
+One source IP address makes 300 Identify attempts in each fixed 60-second window. A further attempt is discarded without a reply and without a close. The payload is not retained and is never retried, so the client sends a new Identify itself once the budget recovers, before the heartbeat deadline closes the socket. When the operator sets `FLUXER_GATEWAY_IDENTIFY_TIMEOUT_MS`, a discarded Identify does not stop that timeout. A budget that recovers after it ends with `4003` and reason `Identify timeout`, and the client reconnects.
 
 Presence Update accepts five commands per WebSocket in a rolling 20-second window. A further update is discarded without closing the connection.
 

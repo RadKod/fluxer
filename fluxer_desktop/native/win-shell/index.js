@@ -56,10 +56,15 @@ if (process.platform === 'win32') {
 }
 
 module.exports = {
+	listProcesses: binding ? binding.listProcesses : null,
+	getTaskbarPinState: binding ? binding.getTaskbarPinState : null,
+	requestTaskbarPin: binding ? binding.requestTaskbarPin : null,
 	createShortcut: binding ? binding.createShortcut : null,
 	setCurrentUserRunValue: binding ? binding.setCurrentUserRunValue : null,
 	deleteCurrentUserRunValue: binding ? binding.deleteCurrentUserRunValue : null,
 	getCurrentUserRunValue: binding ? binding.getCurrentUserRunValue : null,
+	getStartupTaskState: binding ? binding.getStartupTaskState : null,
+	setStartupTaskEnabled: binding ? binding.setStartupTaskEnabled : null,
 	getUserNotificationState: binding ? binding.getUserNotificationState : null,
 	loadError,
 };

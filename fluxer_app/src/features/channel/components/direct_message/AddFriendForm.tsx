@@ -17,6 +17,7 @@ import {modal} from '@app/features/ui/commands/ModalCommands';
 import {Input} from '@app/features/ui/components/form/FormInput';
 import MobileLayout from '@app/features/ui/state/MobileLayout';
 import Users from '@app/features/user/state/Users';
+import {parseUserTagInput} from '@app/features/user/utils/UserTagUtils';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
@@ -107,14 +108,6 @@ export const AddFriendForm: React.FC<AddFriendFormProps> = observer(({onSuccess}
 			/>
 		);
 	}
-	const parseInput = (input: string): [string, string] => {
-		const parts = input['split']('#');
-		if (parts.length > 1) {
-			const discriminator = parts.slice(1).join('#');
-			return [parts[0], usernameOnly && /^0{1,4}$/.test(discriminator) ? '0000' : discriminator];
-		}
-		return [input, '0000'];
-	};
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setInput(e.target.value);
 		if (resultStatus) {
@@ -141,13 +134,14 @@ export const AddFriendForm: React.FC<AddFriendFormProps> = observer(({onSuccess}
 	};
 	const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		const [username, discriminator] = parseInput(input['trim']());
-		if (!username || !discriminator || !/^\d{4}$/.test(discriminator)) {
+		const parsed = parseUserTagInput(input);
+		if (!parsed) {
 			setResultStatus('error');
 			setErrorCode(APIErrorCodes.NO_USERS_WITH_FLUXERTAG_EXIST);
 			setErrorMessage(null);
 			return;
 		}
+		const [username, discriminator] = parsed;
 		setIsLoading(true);
 		RelationshipCommands.sendFriendRequestByTag(username, discriminator)
 			.then(() => {
@@ -187,7 +181,7 @@ export const AddFriendForm: React.FC<AddFriendFormProps> = observer(({onSuccess}
 					type="text"
 					value={input}
 					onChange={handleInputChange}
-					placeholder={usernameOnly ? EXAMPLE_USERNAME : EXAMPLE_FLUXER_TAG_FULL}
+					placeholder={usernameOnly ? `@${EXAMPLE_USERNAME}` : EXAMPLE_FLUXER_TAG_FULL}
 					className={clsx(
 						styles.input,
 						!isMobile && styles.inputDesktop,

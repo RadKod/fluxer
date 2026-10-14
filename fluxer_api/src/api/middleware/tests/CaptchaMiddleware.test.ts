@@ -14,7 +14,12 @@ const CHEAP_CAPTCHA_CONFIG: CaptchaConfig = {...DEFAULT_CAPTCHA_CONFIG, cost: 10
 
 function createHarness(captcha: CaptchaConfig): (headers: Record<string, string>) => Promise<Response> {
 	const repository = {
-		getCaptchaConfig: async () => captcha,
+		getEffectiveCaptchaConfig: async () => ({
+			...captcha,
+			provider: captcha.enabled ? 'altcha' : 'none',
+			turnstile_site_key: null,
+			turnstile_secret_key: null,
+		}),
 	} as unknown as InstanceConfigRepository;
 	const app = new Hono<HonoEnv>();
 	app.use(async (ctx, next) => {

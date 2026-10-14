@@ -32,7 +32,10 @@ import {
 	isAudioProcessingActive,
 } from '@app/features/voice/components/voice_connection_status/shared';
 import {VoiceDetailsPopout} from '@app/features/voice/components/voice_connection_status/VoiceDetailsPopout';
-import MediaEngine, {useMediaEngineVersion} from '@app/features/voice/engine/MediaEngineFacade';
+import MediaEngine, {
+	useMediaEngineStatsVersion,
+	useMediaEngineVersion,
+} from '@app/features/voice/engine/MediaEngineFacade';
 import VoiceSettings from '@app/features/voice/state/VoiceSettings';
 import {readEffectiveNoiseSuppressionBackend} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime';
 import {VOICE_DISCONNECT_DESCRIPTOR, VOICE_IN_CHAT_DESCRIPTOR} from '@app/features/voice/utils/VoiceMessageDescriptors';
@@ -106,6 +109,7 @@ const ResolvedVoiceConnectionStatusInner = observer(function ResolvedVoiceConnec
 }: ResolvedVoiceConnectionStatusProps) {
 	const {i18n} = useLingui();
 	useMediaEngineVersion();
+	useMediaEngineStatsVersion();
 	const voiceState = MediaEngine.getCurrentUserVoiceState();
 	const isConnecting = MediaEngine.connecting;
 	const storeIsConnected = MediaEngine.connected;

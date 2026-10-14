@@ -341,7 +341,7 @@ describe('Bootstrap entry point', () => {
 	test('the Windows taskbar identity is set before the splash or any other window exists', () => {
 		assert.match(
 			source,
-			/repairWindowsShortcuts\(\);\n\telectronApp\.setToastActivatorCLSID\(WINDOWS_TOAST_ACTIVATOR_CLSID\);\n\telectronApp\.setAppUserModelId\(WINDOWS_APP_USER_MODEL_ID\);\n\}/,
+			/electronApp\.setAppUserModelId\(WINDOWS_APP_USER_MODEL_ID\);\n\t\}\n\telectronApp\.setToastActivatorCLSID\(WINDOWS_TOAST_ACTIVATOR_CLSID\);\n\}/,
 		);
 	});
 });

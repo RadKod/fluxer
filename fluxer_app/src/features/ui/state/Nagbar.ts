@@ -22,6 +22,8 @@ export interface NagbarSettings {
 	legacyPriceOptInDismissed: Record<string, boolean>;
 	guildMembershipCtaDismissed: boolean;
 	visionaryMfaDismissed: boolean;
+	profilePrivacyWidenedDismissed: boolean;
+	profilePublicOfferDismissed: boolean;
 	claimAccountModalShownThisSession: boolean;
 	forceConnectionNotice: boolean;
 	forceEmailVerification: boolean;
@@ -96,6 +98,8 @@ export class Nagbar implements NagbarSettings {
 	legacyPriceOptInDismissed: Record<string, boolean> = {};
 	guildMembershipCtaDismissed = false;
 	visionaryMfaDismissed = false;
+	profilePrivacyWidenedDismissed = false;
+	profilePublicOfferDismissed = false;
 	buildEnvironmentDismissedThisSession = false;
 	scheduledMaintenanceDismissalVersion = 0;
 	claimAccountModalShownThisSession = false;
@@ -172,6 +176,8 @@ export class Nagbar implements NagbarSettings {
 				'legacyPriceOptInDismissed',
 				'guildMembershipCtaDismissed',
 				'visionaryMfaDismissed',
+				'profilePrivacyWidenedDismissed',
+				'profilePublicOfferDismissed',
 			],
 			toMessage: (s) => ({
 				iosInstall: s.iosInstallDismissed,
@@ -185,6 +191,8 @@ export class Nagbar implements NagbarSettings {
 				desktopDownload: s.desktopDownloadDismissed,
 				guildMembershipCta: s.guildMembershipCtaDismissed,
 				visionaryMfa: s.visionaryMfaDismissed,
+				micupProfilePrivacyWidened: s.profilePrivacyWidenedDismissed,
+				micupProfilePublicOffer: s.profilePublicOfferDismissed,
 				pendingBulkDeletion: {...s.pendingBulkDeletionDismissed},
 				invitesDisabled: {...s.invitesDisabledDismissed},
 				guildMfaRequirement: {...s.guildMfaRequirementDismissed},
@@ -203,6 +211,8 @@ export class Nagbar implements NagbarSettings {
 				s.desktopDownloadDismissed = m.desktopDownload;
 				s.guildMembershipCtaDismissed = m.guildMembershipCta;
 				s.visionaryMfaDismissed = m.visionaryMfa;
+				s.profilePrivacyWidenedDismissed = m.micupProfilePrivacyWidened;
+				s.profilePublicOfferDismissed = m.micupProfilePublicOffer;
 				s.pendingBulkDeletionDismissed = {...m.pendingBulkDeletion};
 				s.invitesDisabledDismissed = {...m.invitesDisabled};
 				s.guildMfaRequirementDismissed = {...m.guildMfaRequirement};
@@ -417,6 +427,8 @@ export class Nagbar implements NagbarSettings {
 		this.legacyPriceOptInDismissed = {};
 		this.guildMembershipCtaDismissed = false;
 		this.visionaryMfaDismissed = false;
+		this.profilePrivacyWidenedDismissed = false;
+		this.profilePublicOfferDismissed = false;
 		this.buildEnvironmentDismissedThisSession = false;
 		this.claimAccountModalShownThisSession = false;
 		this.forceOffline = false;

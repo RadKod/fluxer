@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {Config} from '@app/api/Config';
+import {BUNNY_GUID_PATTERN} from '@app/api/feed/video/FeedVideoUrls';
 
 const EXTENSION_PATTERN = /\.[A-Za-z0-9]{1,8}$/u;
 const ASSET_HASH_PATTERN = /^[0-9a-f]{8}$/u;
@@ -28,9 +29,20 @@ function animationVariants(stem: string): Array<string> {
 	return ASSET_HASH_PATTERN.test(stem) ? [stem, `${ANIMATED_PREFIX}${stem}`] : [stem];
 }
 
+// A Bunny Stream video directory, https://<stream CDN host>/<guid>/: one prefix covers its playlists, segments,
+// thumbnails and MP4 files. Only the prefix purge mode reaches it.
+function streamVideoPrefix(parsed: URL, host: string): Array<string> {
+	const guid = /^\/([^/]+)\/$/u.exec(parsed.pathname)?.[1];
+	return parsed.search === '' && guid !== undefined && BUNNY_GUID_PATTERN.test(guid) ? [`${host}/${guid}/`] : [];
+}
+
 export function canonicalizePurgeUrl(url: string): Array<string> {
 	const base = mediaBase();
 	const parsed = URL.parse(url);
+	const streamHost = Config.bunnyStream.cdnHostname;
+	if (parsed !== null && streamHost !== '' && parsed.origin === `https://${streamHost}`) {
+		return streamVideoPrefix(parsed, streamHost);
+	}
 	if (base === null || parsed === null || parsed.origin !== base.origin) {
 		return [];
 	}

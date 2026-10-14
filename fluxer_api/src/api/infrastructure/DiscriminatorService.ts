@@ -83,6 +83,7 @@ export class DiscriminatorService implements IDiscriminatorService {
 
 	async generateDiscriminator(params: GenerateDiscriminatorParams): Promise<GenerateDiscriminatorResult> {
 		const {username, requestedDiscriminator, user} = params;
+		if (requestedDiscriminator === 0 && !user?.isBot) return {discriminator: 0, available: false};
 		const usernameLower = username.toLowerCase();
 		const lockKey = `discrim-lock:${usernameLower}`;
 		const lockToken = await this.acquireLockWithRetry(lockKey);
@@ -126,6 +127,12 @@ export class DiscriminatorService implements IDiscriminatorService {
 
 	async resolveUsernameChange(params: ResolveUsernameChangeParams): Promise<ResolveUsernameChangeResult> {
 		const {currentUsername, currentDiscriminator, newUsername, user, requestedDiscriminator} = params;
+		if (
+			!user?.isBot &&
+			(requestedDiscriminator === 0 || (currentDiscriminator === 0 && requestedDiscriminator === undefined))
+		) {
+			throw new UsernameNotAvailableError();
+		}
 		if (
 			currentUsername.toLowerCase() === newUsername.toLowerCase() &&
 			(requestedDiscriminator === undefined || requestedDiscriminator === currentDiscriminator)

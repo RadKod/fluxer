@@ -23,8 +23,11 @@ export const NagbarType = {
 	VISIONARY_MFA: 'visionary-mfa',
 	VOICE_SESSION_RESTORE: 'voice-session-restore',
 	TERMS_ACCEPTANCE: 'terms-acceptance',
+	TASKBAR_PIN: 'taskbar-pin',
 	SOFTWARE_ENCODER: 'software-encoder',
 	STREAMER_MODE: 'streamer-mode',
+	PROFILE_PRIVACY_WIDENED: 'profile-privacy-widened',
+	PROFILE_PUBLIC_OFFER: 'profile-public-offer',
 	DOMAIN_MOVED: 'domain-moved',
 } as const;
 
@@ -62,7 +65,10 @@ export interface NagbarConditions {
 	canShowVisionaryMfa: boolean;
 	canShowVoiceSessionRestore: boolean;
 	needsTermsAcceptance: boolean;
+	canShowTaskbarPin: boolean;
 	canShowSoftwareEncoder: boolean;
 	canShowStreamerMode: boolean;
+	canShowProfilePrivacyWidened: boolean;
+	canShowProfilePublicOffer: boolean;
 	canShowDomainMoved: boolean;
 }

@@ -7,7 +7,7 @@ import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {PremiumStateReconciliationQueueService} from '@app/api/infrastructure/PremiumStateReconciliationQueueService';
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import {Logger} from '@app/api/Logger';
-import {createRequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {createRequestCache, type RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {User} from '@app/api/models/User';
 import {
 	isAppStoreConfigured,
@@ -19,8 +19,9 @@ import {isTerminalStorePurchaseState} from '@app/api/store_billing/StoreBillingT
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
 import {isPremiumTieringActive} from '@app/api/stripe/BillingConfigCache';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
+import {propagateIfPartialChanged} from '@app/api/user/services/PartialUserChangePropagation';
 import {checkIsPremium, createPremiumClearPatch, shouldStripExpiredPremium} from '@app/api/user/UserHelpers';
-import {mapUserToPrivateResponse} from '@app/api/user/UserMappers';
+import {hasPartialUserFieldsChanged, mapUserToPrivateResponse} from '@app/api/user/UserMappers';
 import {getWorkerDependencies} from '@app/api/worker/WorkerContext';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import {PremiumFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
@@ -52,12 +53,15 @@ interface SweepDeps {
 	workerService: IWorkerService<WorkerTaskName>;
 }
 
-async function sanitizeGuildMemberPerks(user: User, deps: SweepDeps): Promise<boolean> {
+export async function sanitizeGuildMemberPerks(
+	user: User,
+	deps: SweepDeps,
+	requestCache: RequestCache,
+): Promise<boolean> {
 	const guildIds = await deps.userRepository.getUserGuildIds(user.id);
 	if (guildIds.length === 0) {
 		return false;
 	}
-	const requestCache = createRequestCache();
 	const members = await Promise.all(
 		guildIds.map(async (guildId) => {
 			try {
@@ -155,7 +159,7 @@ async function deferToStoreRefresh(user: User, deps: SweepDeps): Promise<number>
 	return rows.length;
 }
 
-async function processUser(user: User, deps: SweepDeps, result: SweepResult): Promise<void> {
+export async function processUser(user: User, deps: SweepDeps, result: SweepResult): Promise<void> {
 	if (user.isBot) {
 		result.skipped += 1;
 		return;
@@ -197,9 +201,19 @@ async function processUser(user: User, deps: SweepDeps, result: SweepResult): Pr
 		result.skipped += 1;
 		return;
 	}
+	let strippedUser: User | null = null;
+	const requestCache = createRequestCache();
 	try {
 		let currentUser = await deps.userRepository.patchUpsert(user.id, createPremiumClearPatch(), user.toRow());
-		deps.userCacheService.setUserPartialResponseFromUserInBackground(currentUser);
+		strippedUser = currentUser;
+		// Micup: a changed partial user is refreshed in the users service once, by the announcement below; until then the
+		// guild perk sanitization reads it from the request cache, not the users service's stale copy.
+		const announcesChange = hasPartialUserFieldsChanged(user, currentUser);
+		if (announcesChange) {
+			deps.userCacheService.setUserPartialResponseFromUserInRequestCache(currentUser, requestCache);
+		} else {
+			deps.userCacheService.setUserPartialResponseFromUserInBackground(currentUser, requestCache);
+		}
 		await deps.gatewayService.dispatchPresence({
 			userId: currentUser.id,
 			event: 'USER_UPDATE',
@@ -209,7 +223,7 @@ async function processUser(user: User, deps: SweepDeps, result: SweepResult): Pr
 		const hasBeenSanitized = !!(user.premiumFlags & PremiumFlags.PERKS_SANITIZED);
 		if (!hasBeenSanitized) {
 			try {
-				const didSanitize = await sanitizeGuildMemberPerks(user, deps);
+				const didSanitize = await sanitizeGuildMemberPerks(user, deps, requestCache);
 				if (didSanitize) {
 					result.sanitized += 1;
 				}
@@ -225,7 +239,9 @@ async function processUser(user: User, deps: SweepDeps, result: SweepResult): Pr
 				currentUser.toRow(),
 			);
 			currentUser = flaggedUser;
-			deps.userCacheService.setUserPartialResponseFromUserInBackground(currentUser);
+			if (!announcesChange) {
+				deps.userCacheService.setUserPartialResponseFromUserInBackground(currentUser);
+			}
 			await deps.gatewayService.dispatchPresence({
 				userId: currentUser.id,
 				event: 'USER_UPDATE',
@@ -235,6 +251,17 @@ async function processUser(user: User, deps: SweepDeps, result: SweepResult): Pr
 	} catch (error) {
 		Logger.error({userId: user.id.toString(), error}, 'Failed to strip expired premium during sweep');
 		result.failed += 1;
+	}
+	// Micup: the premium badge leaves the public flags. Announced after the guild perk sanitization, whose own
+	// GUILD_MEMBER_UPDATE must not land after it, and outside the try so a failed dispatch cannot skip it: the next run
+	// skips the stripped user, so nothing would announce it later.
+	if (strippedUser) {
+		await propagateIfPartialChanged(
+			{userCacheService: deps.userCacheService},
+			user,
+			strippedUser,
+			'during the expired premium sweep',
+		);
 	}
 }
 

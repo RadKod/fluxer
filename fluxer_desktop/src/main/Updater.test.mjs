@@ -140,7 +140,7 @@ function loadUpdater({
 		},
 		'@electron/common/BuildChannel': {BUILD_CHANNEL: 'canary'},
 		'@electron/common/Constants': {DOWNLOAD_PAGE_URLS: {canary: 'https://canary.fluxer.app/download'}},
-		'@electron/common/DesktopIdentity': {DESKTOP_ARTIFACT_PRODUCT_NAME: 'Fluxer-Canary'},
+		'@electron/common/DesktopIdentity': {DESKTOP_ARTIFACT_PRODUCT_NAME: 'Micup-Canary'},
 		'@electron/common/UserDataPath': {isPortableMode: () => false},
 		'@electron/main/DesktopTray': {destroyDesktopTray() {}},
 		'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},
@@ -188,7 +188,7 @@ function loadUpdater({
 		clearTimeout,
 		setImmediate,
 		fetch: (input, init) => {
-			const url = String(input).replace(/https:\/\/pkgs\.fluxer\.com\/desktop\/canary\/[^/]+\/[^/]+/, baseUrl);
+			const url = String(input).replace(/https:\/\/dl\.micup\.gg\/desktop\/canary\/[^/]+\/[^/]+/, baseUrl);
 			return fetch(url, init);
 		},
 		require: (specifier) => {
@@ -328,7 +328,7 @@ describe('Updater AppImage lifecycle', () => {
 	});
 
 	test('offers the manual download when the install directory is not writable', {
-		skip: process.getuid?.() === 0,
+		skip: process.platform === 'win32' || process.getuid?.() === 0,
 	}, async () => {
 		const install = createInstall();
 		chmodSync(install.applications, 0o500);
@@ -345,7 +345,7 @@ describe('Updater AppImage lifecycle', () => {
 			assert.equal(available.downloadOptions[0].format, 'appimage');
 			assert.equal(
 				available.downloadOptions[0].suggestedName,
-				`Fluxer-Canary-${PUBLISHED_VERSION}-linux-arm64.AppImage`,
+				`Micup-Canary-${PUBLISHED_VERSION}-linux-arm64.AppImage`,
 			);
 		} finally {
 			chmodSync(install.applications, 0o755);

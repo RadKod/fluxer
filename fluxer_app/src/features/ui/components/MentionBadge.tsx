@@ -45,8 +45,10 @@ function resolveMentionBadgeMotion(useReducedMotion: boolean): MentionBadgeMotio
 	return STANDARD_MENTION_BADGE_MOTION;
 }
 
-const formatMentionCount = (mentionCount: number) => {
+const formatMentionCount = (mentionCount: number, max?: number) => {
 	const locale = getCurrentLocale();
+	// Micup 2a.9b: a capped count (the feed inbox's 9+) shows its cap with a plus.
+	if (max !== undefined && mentionCount > max) return `${formatNumber(max, locale)}+`;
 	if (mentionCount > 99 && mentionCount < 1000) {
 		return `${formatNumber(99, locale)}+`;
 	}
@@ -59,9 +61,10 @@ const formatMentionCount = (mentionCount: number) => {
 interface MentionBadgeProps {
 	mentionCount: number;
 	size?: 'small' | 'medium';
+	max?: number;
 }
 
-export const MentionBadge = observer(({mentionCount, size = 'medium'}: MentionBadgeProps) => {
+export const MentionBadge = observer(({mentionCount, size = 'medium', max}: MentionBadgeProps) => {
 	if (mentionCount === 0) {
 		return null;
 	}
@@ -70,7 +73,7 @@ export const MentionBadge = observer(({mentionCount, size = 'medium'}: MentionBa
 			className={clsx(styles.badge, size === 'small' ? styles.badgeSmall : styles.badgeMedium)}
 			data-flx="ui.mention-badge.badge"
 		>
-			{formatMentionCount(mentionCount)}
+			{formatMentionCount(mentionCount, max)}
 		</div>
 	);
 });

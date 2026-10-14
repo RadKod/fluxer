@@ -43,16 +43,16 @@ const DESKTOP_NOTIFICATION_NAGBAR_DESCRIPTOR = msg({
 	comment: 'Developer control label for the desktop-notification banner.',
 });
 const PREMIUM_GRACE_PERIOD_NAGBAR_DESCRIPTOR = msg({
-	message: 'Premium grace period nagbar',
-	comment: 'Developer control label for the premium grace-period banner.',
+	message: 'Plus grace period nagbar',
+	comment: 'Developer control label for the Plus grace-period banner.',
 });
 const PREMIUM_EXPIRED_NAGBAR_DESCRIPTOR = msg({
-	message: 'Premium expired nagbar',
-	comment: 'Developer control label for the premium-expired banner.',
+	message: 'Plus expired nagbar',
+	comment: 'Developer control label for the Plus-expired banner.',
 });
 const PREMIUM_ONBOARDING_NAGBAR_DESCRIPTOR = msg({
-	message: 'Premium onboarding nagbar',
-	comment: 'Developer control label for the premium-onboarding banner.',
+	message: 'Plus onboarding nagbar',
+	comment: 'Developer control label for the Plus-onboarding banner.',
 });
 const GIFT_INVENTORY_NAGBAR_DESCRIPTOR = msg({
 	message: 'Gift inventory nagbar',
@@ -121,8 +121,8 @@ const CURRENTLY_SHOWING = msg({
 	comment: 'Developer nagbar status: the banner is showing in the current real state.',
 });
 const USING_ACTUAL_PREMIUM_STATE = msg({
-	message: 'Using actual premium state',
-	comment: 'Developer nagbar status: banner follows real premium subscription state.',
+	message: 'Using actual Plus state',
+	comment: 'Developer nagbar status: banner follows real Plus subscription state.',
 });
 const USING_ACTUAL_GIFT_INVENTORY_STATE = msg({
 	message: 'Using actual gift inventory state',

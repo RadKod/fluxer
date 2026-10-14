@@ -79,7 +79,10 @@ export const VoiceReconnectionManager = observer(() => {
 	const room = MediaEngine.room;
 	return (
 		<>
-			<AutoReconnectHandler data-flx="voice.voice-reconnection-manager.auto-reconnect-handler" />
+			<AutoReconnectHandler
+				key={room ? 'in-call' : 'idle'}
+				data-flx="voice.voice-reconnection-manager.auto-reconnect-handler"
+			/>
 			{room && <AudioPlaybackHandler room={room} data-flx="voice.voice-reconnection-manager.audio-playback-handler" />}
 		</>
 	);

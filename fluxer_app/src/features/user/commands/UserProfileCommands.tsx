@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {Routes} from '@app/app/Routes';
 import {Endpoints} from '@app/features/app/constants/Endpoints';
 import Initialization from '@app/features/app/state/Initialization';
 import Authentication from '@app/features/auth/state/Authentication';
+import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
+import {AccountScopedWork, accountScopedWorkAbortError} from '@app/features/platform/state/AccountScopedWork';
 import SessionManager from '@app/features/platform/state/AuthSession';
 import {http} from '@app/features/platform/transport/RestTransport';
 import {Logger} from '@app/features/platform/utils/AppLogger';
@@ -20,30 +23,42 @@ import {ME} from '@fluxer/constants/src/AppConstants';
 
 const logger = new Logger('UserProfiles');
 const pendingRequests: Map<string, Promise<Profile>> = new Map();
+let generation = 0;
+AccountScopedWork.registerCancellation(() => {
+	generation += 1;
+	pendingRequests.clear();
+});
 
-function buildKey(userId: string, guildId?: string): string {
-	return `${userId}:${guildId ?? ME}`;
+// Micup: a request without the mutual lists has a key of its own, so it never answers one that
+// needs them; one with them answers both.
+function buildKey(userId: string, guildId?: string, withMutuals = true): string {
+	return `${userId}:${guildId ?? ME}${withMutuals ? '' : ':without-mutuals'}`;
 }
 
 function profileScope(guildId?: string): string {
 	return guildId ? ` in guild ${guildId}` : '';
 }
 
-function profileQuery(guildId?: string): Record<string, string | boolean> {
+function profileQuery(guildId: string | undefined, withMutuals: boolean): Record<string, string | boolean> {
 	return {
 		...(guildId ? {guild_id: guildId} : {}),
-		with_mutual_friends: true,
-		with_mutual_guilds: true,
+		...(withMutuals ? {with_mutual_friends: true, with_mutual_guilds: true} : {}),
 	};
 }
 
-function cachedProfileOrRequest(userId: string, guildId?: string): Profile | Promise<Profile> | null {
+function cachedProfileOrRequest(
+	userId: string,
+	guildId: string | undefined,
+	withMutuals: boolean,
+): Profile | Promise<Profile> | null {
 	const existingProfile = UserProfile.getProfile(userId, guildId);
-	if (existingProfile) {
+	if (existingProfile && (existingProfile.mutualsLoaded || !withMutuals)) {
 		logger.debug(`Using cached profile for user ${userId}${profileScope(guildId)}`);
 		return existingProfile;
 	}
-	const existingRequest = pendingRequests.get(buildKey(userId, guildId));
+	const existingRequest =
+		pendingRequests.get(buildKey(userId, guildId)) ??
+		(withMutuals ? undefined : pendingRequests.get(buildKey(userId, guildId, false)));
 	if (existingRequest) {
 		logger.debug(`Reusing in-flight profile request for user ${userId}${profileScope(guildId)}`);
 		return existingRequest;
@@ -51,25 +66,32 @@ function cachedProfileOrRequest(userId: string, guildId?: string): Profile | Pro
 	return null;
 }
 
-async function requestProfile(userId: string, guildId?: string): Promise<ProfileWire> {
+async function requestProfile(userId: string, guildId: string | undefined, withMutuals: boolean): Promise<ProfileWire> {
 	const response = await http.get<ProfileWire>(Endpoints.USER_PROFILE(userId), {
-		query: profileQuery(guildId),
+		query: profileQuery(guildId, withMutuals),
 	});
 	return response.body;
 }
 
-function storeProfile(profile: ProfileWire, guildId?: string): Profile {
+function storeProfile(profile: ProfileWire, guildId: string | undefined, withMutuals: boolean): Profile {
 	Users.handleUserUpdate(profile.user);
-	const profileRecord = new Profile(profile, guildId);
+	const profileRecord = new Profile(profile, guildId, {mutualsLoaded: withMutuals});
 	UserProfile.handleProfileCreate(profileRecord);
 	return profileRecord;
 }
 
-export async function fetch(userId: string, guildId?: string, force = false): Promise<Profile> {
+export async function fetch(
+	userId: string,
+	guildId?: string,
+	force = false,
+	{withMutuals = true}: {withMutuals?: boolean} = {},
+): Promise<Profile> {
+	if (AccountScopedWork.isSuspended) throw accountScopedWorkAbortError();
+	const requestGeneration = generation;
 	try {
-		const key = buildKey(userId, guildId);
+		const key = buildKey(userId, guildId, withMutuals);
 		if (!force) {
-			const cached = cachedProfileOrRequest(userId, guildId);
+			const cached = cachedProfileOrRequest(userId, guildId, withMutuals);
 			if (cached) return cached;
 		} else {
 			const existingRequest = pendingRequests.get(key);
@@ -84,17 +106,19 @@ export async function fetch(userId: string, guildId?: string, force = false): Pr
 		}
 		logger.debug(`Fetching profile for user ${userId}${profileScope(guildId)}`);
 		const promise = (async () => {
-			const profileRecord = storeProfile(await requestProfile(userId, guildId), guildId);
+			const profile = await requestProfile(userId, guildId, withMutuals);
+			if (requestGeneration !== generation) throw accountScopedWorkAbortError();
+			const profileRecord = storeProfile(profile, guildId, withMutuals);
 			logger.debug(`Fetched and cached profile for user ${userId}${profileScope(guildId)}`);
 			return profileRecord;
 		})();
 		pendingRequests.set(key, promise);
 		try {
 			const res = await promise;
-			pendingRequests.delete(key);
+			if (pendingRequests.get(key) === promise) pendingRequests.delete(key);
 			return res;
 		} catch (e) {
-			pendingRequests.delete(key);
+			if (pendingRequests.get(key) === promise) pendingRequests.delete(key);
 			throw e;
 		}
 	} catch (error) {
@@ -109,6 +133,7 @@ export function invalidate(userId: string, guildId?: string): void {
 	try {
 		UserProfile.handleProfileInvalidate(userId, guildId);
 		pendingRequests.delete(buildKey(userId, guildId));
+		pendingRequests.delete(buildKey(userId, guildId, false));
 	} catch (err) {
 		logger.warn('Failed to invalidate cached profile:', err);
 	}
@@ -166,20 +191,18 @@ export function openUserProfile(userId: string, guildId?: string, autoFocusNote?
 	return true;
 }
 
-export async function openLinkedUserProfile(
-	userId: string,
-	guildId?: string,
-	autoFocusNote?: boolean,
-): Promise<boolean> {
-	if (!canOpenUserProfileSurface()) {
-		logger.debug(`Skipping linked profile open before fetch for user ${userId}${profileScope(guildId)}`);
-		return false;
-	}
-	try {
-		await fetch(userId, guildId);
-	} catch (error) {
-		logger.error(`Failed to fetch linked profile for user ${userId}${guildId ? ` in guild ${guildId}` : ''}:`, error);
-		return false;
-	}
-	return openUserProfile(userId, guildId, autoFocusNote);
+// Micup: a profile ID goes into request paths, so only a plain decimal snowflake passes —
+// isProbablyAValidSnowflake also takes '0x10', padded values and 21 digits, since it only asks BigInt().
+const PROFILE_ID = /^[0-9]{1,20}$/;
+export function isProfileId(value: string): boolean {
+	return PROFILE_ID.test(value) && BigInt(value) > 0n;
+}
+
+// Micup: the full profile page at /users/<id>. Whatever profile surface is open closes first.
+export function openProfilePage(userId: string): boolean {
+	if (!isProfileId(userId)) return false;
+	closeUserProfileSurfaces();
+	ModalCommands.popAll();
+	RouterUtils.transitionTo(Routes.userProfile(userId));
+	return true;
 }

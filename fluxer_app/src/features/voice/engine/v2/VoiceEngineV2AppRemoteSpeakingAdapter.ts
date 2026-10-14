@@ -28,6 +28,7 @@ import {
 	setRemoteVoicePlaybackBoost,
 } from '@app/features/voice/state/RemoteVoicePlaybackBoost';
 import VoiceSettings from '@app/features/voice/state/VoiceSettings';
+import {readVoicePipelineV2Enabled} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime';
 import type {Participant, RemoteAudioTrack, RemoteTrack, RemoteTrackPublication, Room} from 'livekit-client';
 
 const logger = new Logger('VoiceEngineV2AppRemoteSpeakingAdapter');
@@ -44,11 +45,14 @@ export function computeTimeDomainRms(samples: Float32Array): number {
 	return Math.sqrt(sumSquares / samples.length);
 }
 
-interface AnalyserHandle {
-	identity: string;
-	track: MediaStreamTrack;
+interface TrackAnalyserNodes {
 	source: MediaStreamAudioSourceNode;
 	analyser: AnalyserNode;
+}
+
+interface AnalyserHandle extends TrackAnalyserNodes {
+	identity: string;
+	track: MediaStreamTrack;
 	samples: Float32Array<ArrayBuffer>;
 	nextTickAtMs: number;
 }
@@ -61,6 +65,9 @@ export class VoiceEngineV2AppRemoteSpeakingAdapter {
 	private audioContext: AudioContext | null = null;
 	private audioContextIsShared = false;
 	private analysers = new Map<string, AnalyserHandle>();
+	// A media stream source stays alive while its context runs, even after disconnect(), so mute, unmute and
+	// visibility changes reconnect the track's existing nodes instead of creating new ones.
+	private trackNodes = new WeakMap<MediaStreamTrack, TrackAnalyserNodes>();
 	private installedVisibilityListener = false;
 	private roomForRehydrate: Room | null = null;
 	private machineSnapshot: VoiceRemoteSpeakingSnapshot = createVoiceRemoteSpeakingSnapshot();
@@ -184,6 +191,7 @@ export class VoiceEngineV2AppRemoteSpeakingAdapter {
 		}
 		if (existing) {
 			this.disposeHandle(existing);
+			this.trackNodes.delete(existing.track);
 		}
 		const ctx = this.getAudioContext();
 		if (!ctx) return;
@@ -195,11 +203,7 @@ export class VoiceEngineV2AppRemoteSpeakingAdapter {
 			return;
 		}
 		try {
-			const source = ctx.createMediaStreamSource(new MediaStream([mediaStreamTrack]));
-			const analyser = ctx.createAnalyser();
-			analyser.fftSize = 512;
-			analyser.smoothingTimeConstant = 0.2;
-			source.connect(analyser);
+			const {source, analyser} = this.connectTrackNodes(ctx, mediaStreamTrack);
 			const handle: AnalyserHandle = {
 				identity,
 				track: mediaStreamTrack,
@@ -209,7 +213,14 @@ export class VoiceEngineV2AppRemoteSpeakingAdapter {
 				nextTickAtMs: this.nowMs() + REMOTE_SPEAKING_ANALYSER_INTERVAL_MS,
 			};
 			this.analysers.set(identity, handle);
-			this.applyCommands(this.transition({type: 'remote.attach', identity, track: mediaStreamTrack}));
+			this.applyCommands(
+				this.transition({
+					type: 'remote.attach',
+					identity,
+					track: mediaStreamTrack,
+					pipelineV2Enabled: readVoicePipelineV2Enabled(),
+				}),
+			);
 			this.ensureAutoSchedule();
 			assert.ok(this.analysers.has(identity), 'attachIfApplicable post-condition: handle registered');
 		} catch (error) {
@@ -298,14 +309,15 @@ export class VoiceEngineV2AppRemoteSpeakingAdapter {
 				expired.push(handle);
 			}
 		}
+		const pipelineV2Enabled = expired.length > 0 && readVoicePipelineV2Enabled();
 		for (const handle of expired) {
 			if (this.analysers.get(handle.identity) !== handle) continue;
-			this.processHandleTick(handle, nowMs);
+			this.processHandleTick(handle, nowMs, pipelineV2Enabled);
 		}
 		assert.ok(this.analysers.size <= sizeBefore, 'tickHost post-condition: handles only removed');
 	}
 
-	private processHandleTick(handle: AnalyserHandle, nowMs: number): void {
+	private processHandleTick(handle: AnalyserHandle, nowMs: number, pipelineV2Enabled: boolean): void {
 		assertObjectLike<AnalyserHandle>(handle, 'processHandleTick.handle');
 		assertNonNegativeFinite(nowMs, 'processHandleTick.nowMs');
 		if (handle.track.readyState === 'ended') {
@@ -330,8 +342,33 @@ export class VoiceEngineV2AppRemoteSpeakingAdapter {
 		handle.analyser.getFloatTimeDomainData(handle.samples);
 		const rms = computeTimeDomainRms(handle.samples);
 		const threshold = getRemoteSpeakingThresholdRms(VoiceSettings.getVadThreshold());
-		this.applyCommands(this.transition({type: 'remote.tick', identity: handle.identity, rms, threshold, nowMs}));
+		this.applyCommands(
+			this.transition({
+				type: 'remote.tick',
+				identity: handle.identity,
+				rms,
+				threshold,
+				nowMs,
+				pipelineV2Enabled,
+			}),
+		);
 		handle.nextTickAtMs = nowMs + REMOTE_SPEAKING_ANALYSER_INTERVAL_MS;
+	}
+
+	private connectTrackNodes(ctx: AudioContext, track: MediaStreamTrack): TrackAnalyserNodes {
+		const cached = this.trackNodes.get(track);
+		if (cached && cached.source.context === ctx) {
+			cached.source.connect(cached.analyser);
+			return cached;
+		}
+		const source = ctx.createMediaStreamSource(new MediaStream([track]));
+		const analyser = ctx.createAnalyser();
+		analyser.fftSize = 512;
+		analyser.smoothingTimeConstant = 0.2;
+		source.connect(analyser);
+		const nodes: TrackAnalyserNodes = {source, analyser};
+		this.trackNodes.set(track, nodes);
+		return nodes;
 	}
 
 	private disposeHandle(handle: AnalyserHandle): void {

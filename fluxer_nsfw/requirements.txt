@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# fluxer-nsfw runtime: python 3.12, linux x86_64. Installed with
+#   pip install --no-deps --only-binary=:all: --require-hashes -r requirements.txt
+# onnxruntime, numpy and Pillow, nothing else. onnxruntime's own dependencies flatbuffers, packaging and protobuf are
+# left out (hence --no-deps): only its conversion and training tools use them; `import onnxruntime` and an
+# InferenceSession never load them. The Dockerfile's model stage installs this file plus requirements-model.txt.
+# Regenerate: uv pip compile (in: onnxruntime numpy pillow pins; override: "flatbuffers ; sys_platform == 'never'"
+#   and the same for packaging and protobuf) --python-version 3.12 --python-platform x86_64-manylinux_2_28
+#   --only-binary :all:, keeping the sha256 of every manylinux x86_64 / cp312 / py3-none-any wheel of each pin.
+
+numpy==2.5.3 \
+    --hash=sha256:b7e18c623bb5c95acb3b3328861272816ba199fb531921c5d6d0b675f1fde9e3
+onnxruntime==1.30.0 \
+    --hash=sha256:fa688e7891a6aa206636fe7372e27ee75fd17713289f6b4fc7b190e0a7de9328
+pillow==12.3.0 \
+    --hash=sha256:78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91

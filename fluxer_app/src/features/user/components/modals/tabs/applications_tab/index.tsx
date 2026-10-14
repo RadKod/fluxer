@@ -3,7 +3,7 @@
 import {SettingsSection} from '@app/features/app/components/dialogs/shared/SettingsSection';
 import {SettingsTabContainer, SettingsTabContent} from '@app/features/app/components/dialogs/shared/SettingsTabLayout';
 import {StatusSlate} from '@app/features/app/components/dialogs/shared/StatusSlate';
-import {FLUXER_DOCS_DOMAIN, FLUXER_DOCS_URL} from '@app/features/app/config/I18nDisplayConstants';
+import {DeveloperDocumentationButton} from '@app/features/bots/components/DeveloperDocumentationButton';
 import type {DeveloperApplication} from '@app/features/devtools/models/DeveloperApplication';
 import {TRY_AGAIN_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {Button} from '@app/features/ui/button/Button';
@@ -21,7 +21,7 @@ import {useUnsavedChangesFlash} from '@app/features/user/hooks/useUnsavedChanges
 import Users from '@app/features/user/state/Users';
 import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
-import {BookOpenIcon, WarningCircleIcon} from '@phosphor-icons/react';
+import {WarningCircleIcon} from '@phosphor-icons/react';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {useCallback, useEffect, useLayoutEffect} from 'react';
@@ -29,10 +29,6 @@ import {useCallback, useEffect, useLayoutEffect} from 'react';
 const CLAIM_YOUR_ACCOUNT_TO_CREATE_APPLICATIONS_DESCRIPTOR = msg({
 	message: 'Claim your account to create applications.',
 	comment: 'Description text in the index.',
-});
-const READ_DOCUMENTATION_DESCRIPTOR = msg({
-	message: 'Read the documentation ({domain})',
-	comment: 'Developer applications link label. domain is the documentation domain.',
 });
 const ApplicationsTab: React.FC = observer(() => {
 	const {i18n} = useLingui();
@@ -157,21 +153,7 @@ const ApplicationsTab: React.FC = observer(() => {
 								<Trans>Create application</Trans>
 							</Button>
 						)}
-						<a
-							className={styles.documentationLink}
-							href={FLUXER_DOCS_URL}
-							target="_blank"
-							rel="noreferrer"
-							data-flx="user.applications-tab.documentation-link"
-						>
-							<BookOpenIcon
-								weight="fill"
-								size={18}
-								className={styles.documentationIcon}
-								data-flx="user.applications-tab.documentation-icon"
-							/>
-							{i18n._(READ_DOCUMENTATION_DESCRIPTOR, {domain: FLUXER_DOCS_DOMAIN})}
-						</a>
+						<DeveloperDocumentationButton data-flx="user.applications-tab.documentation-button" />
 					</div>
 					<ApplicationsList
 						applications={store.applications}

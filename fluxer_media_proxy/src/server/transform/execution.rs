@@ -4,6 +4,7 @@ use crate::{
     coalescer::CoalescerError,
     image_quality::ImageQuality,
     image_transform::{AnimationMode, ImageOptions},
+    media_limits::MediaLimits,
     media_process::{self, MediaError, ProcessedMedia},
     metrics,
     output_format::OutputFormat,
@@ -32,8 +33,16 @@ pub(in crate::server) async fn run_transform(
     data: Bytes,
     options: ImageOptions,
 ) -> anyhow::Result<ProcessedMedia> {
+    run_transform_within(runtime, data, options, runtime.limits()).await
+}
+
+pub(in crate::server) async fn run_transform_within(
+    runtime: &TransformRuntime,
+    data: Bytes,
+    options: ImageOptions,
+    media_limits: MediaLimits,
+) -> anyhow::Result<ProcessedMedia> {
     let deadline = deadline_instant(options.deadline_ms);
-    let media_limits = runtime.limits();
     let transform_metrics = runtime.metrics();
     let timed = runtime
         .tasks()

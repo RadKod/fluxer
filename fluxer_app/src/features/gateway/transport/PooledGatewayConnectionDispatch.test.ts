@@ -99,9 +99,9 @@ vi.mock('@app/features/auth/state/Authentication', () => ({
 	default: {handleConnectionClosed: vi.fn(async () => undefined)},
 }));
 
-vi.mock('@app/features/expressions/state/FavoriteMemes', () => ({default: {reset: vi.fn()}}));
+vi.mock('@app/features/user/state/UserSettings', () => ({default: {getSettingsEpoch: () => 0}}));
 
-vi.mock('@app/features/guild/state/GuildMatureContentAgree', () => ({default: {reset: vi.fn()}}));
+vi.mock('@app/features/expressions/state/FavoriteMemes', () => ({default: {reset: vi.fn()}}));
 
 vi.mock('@app/features/member/state/MemberSearch', () => ({default: {handleLogout: vi.fn()}}));
 

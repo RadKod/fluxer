@@ -37,6 +37,7 @@ struct GuildDetailQuery {
     page: Option<u32>,
     reports_page: Option<u32>,
     before: Option<String>,
+    thread_cursor: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -537,6 +538,7 @@ fn to_tab_query(q: &GuildDetailQuery) -> guild_tabs::GuildTabQuery {
         members_page: q.page,
         reports_page: q.reports_page,
         audit_before: q.before.clone(),
+        thread_cursor: q.thread_cursor.clone(),
     }
 }
 

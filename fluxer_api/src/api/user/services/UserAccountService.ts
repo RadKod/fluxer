@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {ApiContext} from '@app/api/ApiContext';
+import {EMAIL_CLEARABLE_SUSPICIOUS_ACTIVITY_FLAGS} from '@app/api/auth/AuthEmail';
 import type {SudoVerificationResult} from '@app/api/auth/services/SudoVerificationService';
 import type {IConnectionRepository} from '@app/api/connection/IConnectionRepository';
 import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
@@ -12,6 +13,8 @@ import type {KVAccountDeletionQueueService} from '@app/api/infrastructure/KVAcco
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import {Logger} from '@app/api/Logger';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
+import {getUsernameOwnershipService} from '@app/api/middleware/ServiceRegistry';
+import {getFollowRepository, getProfileAccessCache} from '@app/api/middleware/ServiceSingletons';
 import type {AuthSession} from '@app/api/models/AuthSession';
 import type {User} from '@app/api/models/User';
 import {enqueueStripeCustomerEmailSync} from '@app/api/stripe/StripeCustomer';
@@ -19,6 +22,7 @@ import type {IUserAccountRepository} from '@app/api/user/repositories/IUserAccou
 import type {IUserChannelRepository} from '@app/api/user/repositories/IUserChannelRepository';
 import type {IUserRelationshipRepository} from '@app/api/user/repositories/IUserRelationshipRepository';
 import type {IUserSettingsRepository} from '@app/api/user/repositories/IUserSettingsRepository';
+import {ProfileAccessService} from '@app/api/user/services/ProfileAccessService';
 import {UserAccountLifecycleService} from '@app/api/user/services/UserAccountLifecycleService';
 import {UserAccountLookupService} from '@app/api/user/services/UserAccountLookupService';
 import {UserAccountNotesService} from '@app/api/user/services/UserAccountNotesService';
@@ -32,8 +36,12 @@ import {UserAccountUpdatePropagator} from '@app/api/user/services/UserAccountUpd
 import type {UserContactChangeLogService} from '@app/api/user/services/UserContactChangeLogService';
 import {createPremiumClearPatch} from '@app/api/user/UserHelpers';
 import {hasPartialUserFieldsChanged} from '@app/api/user/UserMappers';
+import {USERNAME_CLAIM_ERROR_CODES, type UsernameClaimResult} from '@app/api/user/username/UsernameOwnershipService';
 import {runAllInOrder} from '@app/api/utils/ConcurrencyUtils';
+import {enqueueUsernameReindex} from '@app/api/worker/tasks/ReindexUserGuildMembers';
+import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {PremiumFlags} from '@fluxer/constants/src/UserConstants';
+import {FluxerError} from '@fluxer/errors/src/FluxerError';
 import type {UserUpdateRequest} from '@fluxer/schema/src/domains/user/UserRequestSchemas';
 
 interface UpdateUserParams {
@@ -89,6 +97,7 @@ export class UserAccountService {
 		} = this.apiContext.services;
 		this.userAccountRepository = userAccountRepository;
 		this.guildRepository = guildRepository;
+		const profileAccessCache = getProfileAccessCache();
 		this.searchIndexService = new GuildMemberSearchIndexService();
 		this.updatePropagator = new UserAccountUpdatePropagator({
 			userCacheService,
@@ -100,12 +109,22 @@ export class UserAccountService {
 		this.lookupService = new UserAccountLookupService({
 			userAccountRepository,
 			userRelationshipRepository: userAccountRepository,
-			userChannelRepository: userAccountRepository,
-			userSettingsRepository: userAccountRepository,
 			guildRepository,
 			guildService,
 			discriminatorService,
 			connectionRepository,
+			profileAccess: new ProfileAccessService({
+				users: userAccountRepository,
+				settings: userAccountRepository,
+				relationships: userAccountRepository,
+				channels: userAccountRepository,
+				// Closures, so the follow repository singleton is not touched while modules load.
+				follows: {
+					getFollow: (userId, targetId) => getFollowRepository().getFollow(userId, targetId),
+					isFollowingCached: (userId, targetId) => getFollowRepository().isFollowingCached(userId, targetId),
+				},
+				cache: profileAccessCache,
+			}),
 		});
 		this.profileService = new UserAccountProfileService({
 			userAccountRepository,
@@ -130,6 +149,7 @@ export class UserAccountService {
 			userCacheService,
 			guildRepository,
 			limitConfigService,
+			profileAccessCache,
 		});
 		this.notesService = new UserAccountNotesService({
 			userAccountRepository,
@@ -162,10 +182,42 @@ export class UserAccountService {
 		const emailChanged = data.email !== undefined;
 		if (emailChanged) {
 			updates.email_verified = !!emailVerifiedViaToken;
+			if (emailVerifiedViaToken && user.suspiciousActivityFlags !== null && user.suspiciousActivityFlags !== 0) {
+				const newFlags = user.suspiciousActivityFlags & ~EMAIL_CLEARABLE_SUSPICIOUS_ACTIVITY_FLAGS;
+				if (newFlags !== user.suspiciousActivityFlags) {
+					updates.suspicious_activity_flags = newFlags;
+				}
+			}
 		}
 		let updatedUser: User;
+		let current = user;
 		try {
-			updatedUser = await this.userAccountRepository.patchUpsert(user.id, updates, user.toRow());
+			if (securityResult.metadata.usernameClaim !== undefined) {
+				let result: UsernameClaimResult;
+				try {
+					result = await getUsernameOwnershipService().claimSelf(user.id, securityResult.metadata.usernameClaim);
+				} catch (cause) {
+					throw new FluxerError({
+						code: APIErrorCodes.USERNAME_UNAVAILABLE,
+						status: 503,
+						cause: cause instanceof Error ? cause : undefined,
+					});
+				}
+				if (!result.ok)
+					throw new FluxerError({
+						code: USERNAME_CLAIM_ERROR_CODES[result.code],
+						status: result.code === 'UNAVAILABLE' ? 503 : result.code === 'RATE_LIMITED' ? 429 : 409,
+						data: result.availableAt ? {available_at: result.availableAt.toISOString()} : undefined,
+					});
+				// Micup: the ownership protocol rewrote the identity, so the profile write starts from the projected row.
+				if (!result.noop) current = await this.userAccountRepository.findUniqueAssert(user.id);
+			}
+			updatedUser = await this.userAccountRepository.patchUpsert(
+				user.id,
+				updates,
+				current.toRow(),
+				user.isBot ? undefined : securityResult.metadata.identityDeadlineAt,
+			);
 		} catch (error) {
 			Logger.error(
 				{error, userId: user.id},
@@ -202,7 +254,9 @@ export class UserAccountService {
 					user.username !== updatedUser.username ||
 					user.discriminator !== updatedUser.discriminator ||
 					user.globalName !== updatedUser.globalName;
-				if (nameChanged) {
+				if (updatedUser.identityVersion > 0n && updatedUser.identityVersion !== user.identityVersion) {
+					await enqueueUsernameReindex(this.apiContext.services.worker, updatedUser.id, updatedUser.identityVersion);
+				} else if (nameChanged) {
 					void this.reindexGuildMembersForUser(updatedUser);
 				}
 			},

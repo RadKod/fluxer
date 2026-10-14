@@ -12,16 +12,122 @@
 -define(PRESENCE_LOOKUP_TIMEOUT, 2000).
 
 -spec execute_method(binary(), map()) -> term().
-execute_method(<<"presence.dispatch">>, P) -> handle_dispatch(P);
-execute_method(<<"presence.join_guild">>, P) -> handle_join_guild(P);
-execute_method(<<"presence.leave_guild">>, P) -> handle_leave_guild(P);
-execute_method(<<"presence.terminate_sessions">>, P) -> handle_terminate_sessions(P);
-execute_method(<<"presence.terminate_all_sessions">>, P) -> handle_terminate_all(P);
-execute_method(<<"presence.has_active">>, P) -> handle_has_active(P);
-execute_method(<<"presence.add_temporary_guild">>, P) -> handle_add_temp_guild(P);
-execute_method(<<"presence.remove_temporary_guild">>, P) -> handle_remove_temp_guild(P);
-execute_method(<<"presence.sync_group_dm_recipients">>, P) -> handle_sync_dm_recipients(P);
-execute_method(Method, _P) -> gateway_rpc_error:raise(<<"Unknown method: ", Method/binary>>).
+execute_method(<<"presence.dispatch">>, P) ->
+    handle_dispatch(P);
+execute_method(<<"presence.game_activity_policy">>, P) ->
+    handle_game_activity_control(policy, P);
+execute_method(<<"presence.game_activity_pair_policy">>, P) ->
+    handle_game_activity_control(pair, P);
+execute_method(<<"presence.join_guild">>, P) ->
+    handle_join_guild(P);
+execute_method(<<"presence.leave_guild">>, P) ->
+    handle_leave_guild(P);
+execute_method(<<"presence.terminate_sessions">>, P) ->
+    handle_terminate_sessions(P);
+execute_method(<<"presence.terminate_all_sessions">>, P) ->
+    handle_terminate_all(P);
+execute_method(<<"presence.has_active">>, P) ->
+    handle_has_active(P);
+execute_method(<<"presence.add_temporary_guild">>, P) ->
+    handle_add_temp_guild(P);
+execute_method(<<"presence.remove_temporary_guild">>, P) ->
+    handle_remove_temp_guild(P);
+execute_method(<<"presence.sync_group_dm_recipients">>, P) ->
+    handle_sync_dm_recipients(P);
+execute_method(Method, _P) ->
+    gateway_rpc_error:raise(<<"Unknown method: ", Method/binary>>).
+
+-spec handle_game_activity_control(policy | pair, map()) -> map().
+handle_game_activity_control(Kind, Params) ->
+    Key =
+        case Kind of
+            policy -> <<"user_id">>;
+            pair -> <<"owner_id">>
+        end,
+    UserId = validation:snowflake_or_throw(Key, maps:get(Key, Params)),
+    Request =
+        case Kind of
+            pair ->
+                Params#{
+                    viewer_id => validation:snowflake_or_throw(
+                        <<"viewer_id">>, maps:get(<<"viewer_id">>, Params)
+                    )
+                };
+            policy ->
+                Params
+        end,
+    Deadline = erlang:monotonic_time(millisecond) + 5000,
+    route_game_activity_control(UserId, Kind, Request, Deadline).
+
+-spec route_game_activity_control(integer(), policy | pair, map(), integer()) -> map().
+route_game_activity_control(UserId, Kind, Request, Deadline) ->
+    case
+        game_activity_manager_call(
+            UserId, {game_activity_prepare, UserId, Kind, Request}, Deadline
+        )
+    of
+        {offline, Ack} ->
+            Ack;
+        {owner, Pid, Token} ->
+            route_game_activity_owner(UserId, Kind, Request, Pid, Token, Deadline);
+        {error, Reason} when Reason =:= stale; Reason =:= busy ->
+            gateway_rpc_error:raise(<<"game_activity_policy_unavailable">>);
+        _ ->
+            retry_game_activity_control(UserId, Kind, Request, Deadline)
+    end.
+
+-spec route_game_activity_owner(integer(), policy | pair, map(), pid(), term(), integer()) ->
+    map().
+route_game_activity_owner(UserId, Kind, Request, Pid, Token, Deadline) ->
+    case call_game_activity_control(Pid, Kind, Request, Deadline) of
+        {ok, Ack} ->
+            finish_game_activity_owner(UserId, Kind, Request, Pid, Ack, Deadline);
+        {error, Reason} when Reason =:= stale; Reason =:= busy ->
+            Reject = {game_activity_reject, UserId, Kind, Request, Pid, Token},
+            _ = game_activity_manager_call(UserId, Reject, Deadline),
+            gateway_rpc_error:raise(<<"game_activity_policy_unavailable">>);
+        _ ->
+            retry_game_activity_control(UserId, Kind, Request, Deadline)
+    end.
+
+-spec finish_game_activity_owner(integer(), policy | pair, map(), pid(), map(), integer()) ->
+    map().
+finish_game_activity_owner(UserId, Kind, Request, Pid, Ack, Deadline) ->
+    Finish = {game_activity_finish, UserId, Kind, Request, Pid, Ack},
+    case game_activity_manager_call(UserId, Finish, Deadline) of
+        ok -> Ack;
+        _ -> retry_game_activity_control(UserId, Kind, Request, Deadline)
+    end.
+
+-spec game_activity_manager_call(integer(), tuple(), integer()) -> term().
+game_activity_manager_call(UserId, Request, Deadline) ->
+    Left = Deadline - erlang:monotonic_time(millisecond),
+    case {Left > 0, resolve_owner_node(UserId)} of
+        {true, {ok, OwnerNode}} ->
+            call_presence_manager_node(OwnerNode, Request, min(1000, Left));
+        _ ->
+            {error, unavailable}
+    end.
+
+-spec retry_game_activity_control(integer(), policy | pair, map(), integer()) -> map().
+retry_game_activity_control(UserId, Kind, Request, Deadline) ->
+    Left = Deadline - erlang:monotonic_time(millisecond),
+    case Left > 0 of
+        true ->
+            timer:sleep(min(25, Left)),
+            route_game_activity_control(UserId, Kind, Request, Deadline);
+        false ->
+            gateway_rpc_error:raise(<<"game_activity_policy_timeout">>)
+    end.
+
+-spec call_game_activity_control(pid(), policy | pair, map(), integer()) -> term().
+call_game_activity_control(Pid, Kind, Request, Deadline) ->
+    Left = max(0, Deadline - erlang:monotonic_time(millisecond)),
+    try gen_server:call(Pid, {game_activity_control, Kind, Request}, Left) of
+        Reply -> Reply
+    catch
+        exit:_ -> {error, unavailable}
+    end.
 
 -spec handle_dispatch(map()) -> true.
 handle_dispatch(#{<<"user_id">> := UserIdBin, <<"event">> := Event, <<"data">> := Data}) ->
@@ -93,9 +199,18 @@ handle_terminate_all(#{<<"user_id">> := UserIdBin}) ->
 handle_has_active(#{<<"user_id">> := UserIdBin}) ->
     UserId = validation:snowflake_or_throw(<<"user_id">>, UserIdBin),
     case lookup_owner_presence(UserId) of
-        {ok, _Pid} -> #{<<"has_active">> => true};
+        {ok, Pid} -> #{<<"has_active">> => owner_has_active_sessions(Pid)};
         {error, not_found} -> #{<<"has_active">> => false};
         _ -> gateway_rpc_error:raise(<<"presence_lookup_error">>)
+    end.
+
+-spec owner_has_active_sessions(pid()) -> boolean().
+owner_has_active_sessions(Pid) ->
+    try gen_server:call(Pid, has_active_sessions, ?PRESENCE_LOOKUP_TIMEOUT) of
+        Result when is_boolean(Result) -> Result;
+        _ -> gateway_rpc_error:raise(<<"presence_lookup_error">>)
+    catch
+        exit:_ -> gateway_rpc_error:raise(<<"presence_lookup_error">>)
     end.
 
 -spec handle_add_temp_guild(map()) -> true.

@@ -12,13 +12,20 @@ const CONTENT_I18N_TH_MESSAGES = defineContentI18nLocaleMessages({
 	"billing.eu_withdrawal_waiver_checkout": "หากฉันเป็นผู้บริโภคใน EU/EEA ฉันยินยอมให้มีการให้บริการเนื้อหาดิจิทัล {product_name} {premium_tier_name} ทันที และรับทราบว่าฉันสูญเสียสิทธิ์ในการถอนตัวตามกฎหมายเมื่อมีการให้สิทธิ์การเข้าถึงแล้ว ซึ่งไม่กระทบต่อสิทธิ์ผู้บริโภคอื่นๆ ที่จำเป็น ดู[ข้อกำหนดในการให้บริการ]({terms_url})",
 	"bulk_message_deletion.complete": "ลบข้อความของคุณเรียบร้อยแล้ว เราลบ {message_count, plural, =0 {0 ข้อความ} other {# ข้อความ}} จาก {channel_count, plural, =0 {0 ที่} other {# ที่}}",
 	"content.virus_detected": "ไฟล์นั้นถูกตรวจพบว่าอาจไม่ปลอดภัยและถูกลบออกแล้ว",
+	"feed.comment_removed_by_moderator": "ผู้ดูแลได้ลบความคิดเห็นหนึ่งของคุณในฟีดเนื่องจากละเมิดข้อกำหนดในการให้บริการหรือแนวทางปฏิบัติของคอมมูนิตี้ของเรา",
+	"feed.post_removed_by_moderator": "ผู้ดูแลได้ลบโพสต์หนึ่งของคุณในฟีดเนื่องจากละเมิดข้อกำหนดในการให้บริการหรือแนวทางปฏิบัติของคอมมูนิตี้ของเรา",
+	"feed.video_failed": "ไม่สามารถประมวลผลวิดีโอสำหรับฟีดของคุณได้ จึงไม่ได้เผยแพร่",
+	"feed.video_gone": "โพสต์ในฟีดของคุณถูกนำออก เนื่องจากวิดีโอนั้นไม่พร้อมใช้งานแล้ว",
+	"feed.video_rejected": "วิดีโอของคุณไม่ผ่านการตรวจสอบเนื้อหาของเรา จึงไม่แสดงในฟีด",
+	"feed.video_too_large": "วิดีโอของคุณไม่ได้เผยแพร่ในฟีด เนื่องจากมีขนาดเกิน 500 MB",
 	"guild.bulk_create.emoji_limit": "จำนวนอีโมจิถึงขีดจำกัดแล้ว ({limit})",
 	"guild.bulk_create.sticker_limit": "จำนวนสติกเกอร์ถึงขีดจำกัดแล้ว ({limit})",
 	"guild.bulk_create.unknown_error": "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ",
 	"guild.default_category_text": "ช่องข้อความ",
 	"guild.default_category_voice": "ช่องเสียง",
 	"guild.default_channel_text": "ทั่วไป",
-	"guild.default_channel_voice": "ทั่วไป"
+	"guild.default_channel_voice": "ทั่วไป",
+	"referral.reward_ready": "รางวัลจากการแนะนำของคุณพร้อมแล้ว คุณดูได้ที่ การตั้งค่า → การแนะนำ"
 });
 
 export default CONTENT_I18N_TH_MESSAGES;

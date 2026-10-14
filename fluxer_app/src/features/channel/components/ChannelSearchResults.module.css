@@ -458,7 +458,7 @@
 
 .pageButtonActive {
 	background-color: var(--brand-primary);
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 .pageButtonActive:hover {

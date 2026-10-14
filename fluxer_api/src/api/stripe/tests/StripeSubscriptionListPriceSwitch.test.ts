@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import '@app/api/stripe/tests/DormantStripeTestFixture';
 import {createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createUserID, type UserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
 import {getBillingRepository} from '@app/api/middleware/ServiceRegistry';
 import {STRIPE_API_VERSION} from '@app/api/stripe/StripeApiVersion';
+import {createDormantStripeSubscriptionService} from '@app/api/stripe/tests/DormantStripeServiceTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {createPwnedPasswordsRangeHandler} from '@app/api/test/msw/handlers/PwnedPasswordsHandlers';
 import {createStripeApiHandlers, type StripeApiHandlers} from '@app/api/test/msw/handlers/StripeApiHandlers';
@@ -159,10 +161,7 @@ describe('StripeSubscriptionListPriceSwitch', () => {
 	}
 
 	function switchToListPrice(subscriber: ResolvedSubscriber): Promise<SwitchToListPriceResponse> {
-		return createBuilder<SwitchToListPriceResponse>(harness, subscriber.token)
-			.post('/premium/switch-to-list-price')
-			.expect(200)
-			.execute();
+		return createDormantStripeSubscriptionService().switchToCurrentListPrice(subscriber.userId);
 	}
 
 	function getPremiumState(subscriber: ResolvedSubscriber): Promise<PremiumStateResponse> {
@@ -206,7 +205,12 @@ describe('StripeSubscriptionListPriceSwitch', () => {
 		server.use(...stripeHandlers.handlers, createPwnedPasswordsRangeHandler());
 	});
 
-	describe('POST /premium/switch-to-list-price', () => {
+	describe('dormant list price switch service', () => {
+		test('keeps the hosted list price switch route unavailable', async () => {
+			const account = await createTestAccount(harness);
+			await createBuilder(harness, account.token).post('/premium/switch-to-list-price').expect(404).execute();
+			expectNoStripeWrites();
+		});
 		test('schedules a grandfathered BRL monthly subscriber onto the current list price at period end', async () => {
 			const moneyMoves: Array<string> = [];
 			server.use(
@@ -535,10 +539,9 @@ describe('StripeSubscriptionListPriceSwitch', () => {
 
 		test('rejects a user without an active subscription and mirrors that in premium state', async () => {
 			const account = await createTestAccount(harness);
-			await createBuilder(harness, account.token)
-				.post('/premium/switch-to-list-price')
-				.expect(400, APIErrorCodes.STRIPE_NO_ACTIVE_SUBSCRIPTION)
-				.execute();
+			await expect(
+				createDormantStripeSubscriptionService().switchToCurrentListPrice(createUserID(BigInt(account.userId))),
+			).rejects.toMatchObject({status: 400, code: APIErrorCodes.STRIPE_NO_ACTIVE_SUBSCRIPTION});
 			const state = await createBuilder<PremiumStateResponse>(harness, account.token)
 				.get('/premium/state')
 				.expect(200)

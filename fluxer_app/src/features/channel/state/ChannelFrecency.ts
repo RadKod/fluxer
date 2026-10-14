@@ -28,7 +28,9 @@ import {compareShallow, isObservableMap, makeAutoObservable, observableShallow, 
 
 const TRACKABLE_ID_PATTERN = /^\d{17,19}$/;
 const FRECENCY_REFRESH_INTERVAL_MS = 3_600_000;
-const FRECENCY_SYNC_DEBOUNCE_MS = 1_500;
+// Every navigation changes frecency and each server write is a conditional settings-row update, so changes are
+// batched into at most one write per interval. Ranking reads the in-memory log and stays current.
+const FRECENCY_SYNC_INTERVAL_MS = 600_000;
 const LOCAL_STORAGE_KEY = 'ChannelFrecencyLocal';
 const THREAD_GUILDS_STORAGE_KEY = 'ChannelFrecencyThreadGuilds';
 
@@ -105,7 +107,7 @@ class ChannelFrecency {
 			field: 'channelFrecency',
 			schema: ChannelFrecencyStateSchema,
 			persist: ['useLog'],
-			debounceMs: FRECENCY_SYNC_DEBOUNCE_MS,
+			debounceMs: FRECENCY_SYNC_INTERVAL_MS,
 			toMessage: (store) => ({usage: channelFrecencyHistoryToWire(store.useLog)}),
 			applyMessage: (store, message) => {
 				store.useLog = channelFrecencyHistoryFromWire(message.usage, Date.now());

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {randomInt} from 'node:crypto';
+import {randomBytes, randomInt} from 'node:crypto';
 import * as fs from 'node:fs';
 import {resolveAssetPath} from '@app/api/utils/AssetPaths';
 
@@ -26,7 +26,10 @@ export function generateConnectionId(): string {
 	const tailWords = getTails();
 	const scale = scaleWords[randomInt(scaleWords.length)];
 	const tail = tailWords[randomInt(tailWords.length)];
-	return `${tail}-${scale}`;
+	// The gateway keys voice states by this id alone (per guild, and per node for voice
+	// counts). 801 x 476 word pairs repeat among a few hundred live connections; the
+	// random suffix makes the space 381,276 x 2^32.
+	return `${tail}-${scale}-${randomBytes(4).toString('hex')}`;
 }
 
 function initWords(): void {

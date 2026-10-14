@@ -4,20 +4,20 @@ use crate::mention_extractor::{
     MessageMentions, extend_mentions_from_markdown, extract_mentions_from_markdown,
 };
 use crate::types::{
-    ApiChannelMentionResponse, ApiEmbedAuthorResponse, ApiEmbedFieldResponse,
+    ApiChannelMentionResponse, ApiCosmeticAssetData, ApiEmbedAuthorResponse, ApiEmbedFieldResponse,
     ApiEmbedFooterResponse, ApiEmbedMediaResponse, ApiEmbedProviderResponse,
     ApiMessageAttachmentResponse, ApiMessageCallResponse, ApiMessageEmbedChildResponse,
     ApiMessageEmbedResponse, ApiMessageReactionResponse, ApiMessageReferenceResponse,
     ApiMessageResponse, ApiMessageSnapshotResponse, ApiMessageStickerResponse,
-    ApiReactionEmojiResponse, ApiUserPartialResponse, Message, MessageAttachment, MessageCall,
-    MessageEmbed, MessageEmbedAuthor, MessageEmbedChild, MessageEmbedField, MessageEmbedFooter,
-    MessageEmbedMedia, MessageEmbedProvider, MessageReference, MessageRequest, MessageResponse,
-    MessageSnapshot, MessageStickerItem,
+    ApiReactionEmojiResponse, ApiUserPartialResponse, Message, MessageActionRow, MessageAttachment,
+    MessageCall, MessageComponent, MessageEmbed, MessageEmbedAuthor, MessageEmbedChild,
+    MessageEmbedField, MessageEmbedFooter, MessageEmbedMedia, MessageEmbedProvider,
+    MessageReference, MessageRequest, MessageResponse, MessageSnapshot, MessageStickerItem,
 };
 use crate::udt;
 use base64::prelude::{BASE64_STANDARD, Engine};
 use chrono::{DateTime, Utc};
-use fluxer_common::user_flags::{USER_FLAG_STAFF, visible_user_flags};
+use fluxer_common::user_flags::{USER_FLAG_STAFF, public_user_flags};
 use fluxer_svc::shard::ShardService;
 use fluxer_svc::transport::Transport;
 use fluxer_svc::{postgres, postgres::BigIntBound, postgres::KeyPart};
@@ -96,7 +96,7 @@ const EMBED_MEDIA_OWNED_ATTACHMENT_FLAG: i32 = 1 << 30;
 #[cfg(test)]
 const USER_FLAG_DELETED: i64 = 1_i64 << 34;
 const FLUXER_SYSTEM_USER_ID: i64 = 0;
-const FLUXER_SYSTEM_USERNAME: &str = "Fluxer";
+const FLUXER_SYSTEM_USERNAME: &str = "Micup";
 const FLUXER_SYSTEM_DISCRIMINATOR: &str = "0000";
 const DELETED_USER_USERNAME: &str = "DeletedUser";
 const DELETED_USER_GLOBAL_NAME: &str = "Deleted User";
@@ -125,7 +125,8 @@ const MESSAGE_COLUMNS: &str = "\
     content, edited_timestamp, pinned_timestamp, flags, mention_everyone, \
     mention_users, mention_roles, mention_channels, \
     has_reaction, version, \
-    attachments, embeds, sticker_items, message_reference, call, message_snapshots";
+    attachments, embeds, sticker_items, message_reference, call, message_snapshots, \
+    micup_components";
 
 pub struct MessagesShard<T> {
     storage: MessagesStorage,
@@ -249,6 +250,7 @@ struct MessageDbRow {
     message_reference: Option<udt::MessageReferenceUdt>,
     call: Option<udt::MessageCallUdt>,
     message_snapshots: Option<Vec<udt::MessageSnapshotUdt>>,
+    micup_components: Option<Vec<udt::MessageActionRowUdt>>,
 }
 
 #[cfg_attr(feature = "scylla", derive(DeserializeRow))]
@@ -316,8 +318,16 @@ struct UserPartialServiceResponse {
     bot: Option<bool>,
     system: Option<bool>,
     flags: Option<i64>,
+    premium_type: Option<i32>,
+    premium_flags: Option<i32>,
     avatar_color: Option<i32>,
     mention_flags: Option<i32>,
+    avatar_decoration_id: Option<i64>,
+    avatar_decoration_asset: Option<String>,
+    avatar_ultra_id: Option<i64>,
+    avatar_ultra_asset: Option<String>,
+    nameplate_id: Option<i64>,
+    nameplate_asset: Option<String>,
     #[serde(default)]
     content_hidden_since: Option<i64>,
 }
@@ -362,7 +372,7 @@ impl PageCursor {
 #[derive(Debug, Deserialize)]
 enum UserServiceResponse {
     FoundPartials(Vec<UserPartialServiceResponse>),
-    FoundPartial(UserPartialServiceResponse),
+    FoundPartial(Box<UserPartialServiceResponse>),
     NotFound,
     #[allow(dead_code)]
     Found(serde_json::Value),
@@ -1333,7 +1343,7 @@ impl<T: Transport> MessagesShard<T> {
             .and_then(|bytes| serde_json::from_slice::<UserServiceResponse>(&bytes).ok());
         let partials = match response {
             Some(UserServiceResponse::FoundPartials(partials)) => partials,
-            Some(UserServiceResponse::FoundPartial(partial)) => vec![partial],
+            Some(UserServiceResponse::FoundPartial(partial)) => vec![*partial],
             _ => Vec::new(),
         };
         users.partials.extend(
@@ -1543,6 +1553,7 @@ impl<T: Transport> MessagesShard<T> {
             }),
             nonce: options.nonce.clone(),
             call: message.call.as_ref().map(map_call),
+            components: message.components_response(),
             referenced_message,
         }
     }
@@ -1573,6 +1584,9 @@ impl<T: Transport> MessagesShard<T> {
                 system: None,
                 flags: 0,
                 mention_flags: None,
+                avatar_decoration_data: None,
+                avatar_ultra_data: None,
+                nameplate_data: None,
             };
         }
         deleted_user(0)
@@ -3185,9 +3199,31 @@ fn map_user_partial(partial: UserPartialServiceResponse) -> ApiUserPartialRespon
         avatar_color: partial.avatar_color,
         bot: partial.bot.filter(|bot| *bot),
         system: partial.system.filter(|system| *system),
-        flags: i64::from(visible_user_flags(flags)),
+        flags: i64::from(public_user_flags(
+            flags,
+            partial.bot.unwrap_or_default(),
+            partial.premium_type,
+            partial.premium_flags,
+        )),
         mention_flags: partial.mention_flags.filter(|flags| *flags != 0),
+        avatar_decoration_data: cosmetic_asset_data(
+            partial.avatar_decoration_id,
+            partial.avatar_decoration_asset,
+        ),
+        avatar_ultra_data: cosmetic_asset_data(partial.avatar_ultra_id, partial.avatar_ultra_asset),
+        nameplate_data: cosmetic_asset_data(partial.nameplate_id, partial.nameplate_asset),
     }
+}
+
+// Micup: an item id without its image is not worn.
+fn cosmetic_asset_data(
+    item_id: Option<i64>,
+    asset: Option<String>,
+) -> Option<ApiCosmeticAssetData> {
+    Some(ApiCosmeticAssetData {
+        asset: asset?,
+        item_id: item_id?.to_string(),
+    })
 }
 
 fn fluxer_system_user() -> ApiUserPartialResponse {
@@ -3202,6 +3238,9 @@ fn fluxer_system_user() -> ApiUserPartialResponse {
         system: Some(true),
         flags: USER_FLAG_STAFF,
         mention_flags: None,
+        avatar_decoration_data: None,
+        avatar_ultra_data: None,
+        nameplate_data: None,
     }
 }
 
@@ -3220,6 +3259,9 @@ fn deleted_user(user_id: i64) -> ApiUserPartialResponse {
         system: None,
         flags: 0,
         mention_flags: None,
+        avatar_decoration_data: None,
+        avatar_ultra_data: None,
+        nameplate_data: None,
     }
 }
 
@@ -3683,6 +3725,28 @@ fn convert_message_snapshot(s: udt::MessageSnapshotUdt) -> MessageSnapshot {
     }
 }
 
+fn convert_message_component(c: udt::MessageComponentUdt) -> MessageComponent {
+    MessageComponent {
+        component_type: c.component_type,
+        style: c.style,
+        label: c.label,
+        emoji_name: c.emoji_name,
+        emoji_id: c.emoji_id,
+        emoji_animated: c.emoji_animated,
+        custom_id: c.custom_id,
+        disabled: c.disabled,
+    }
+}
+
+fn convert_message_action_row(r: udt::MessageActionRowUdt) -> MessageActionRow {
+    MessageActionRow {
+        component_type: r.component_type,
+        components: r
+            .components
+            .map(|v| v.into_iter().map(convert_message_component).collect()),
+    }
+}
+
 impl From<MessageDbRow> for Message {
     fn from(row: MessageDbRow) -> Self {
         Self {
@@ -3727,6 +3791,9 @@ impl From<MessageDbRow> for Message {
             message_snapshots: row
                 .message_snapshots
                 .map(|v| v.into_iter().map(convert_message_snapshot).collect()),
+            micup_components: row
+                .micup_components
+                .map(|v| v.into_iter().map(convert_message_action_row).collect()),
         }
     }
 }
@@ -3750,13 +3817,21 @@ mod tests {
             bot: Some(true),
             system: Some(true),
             flags: Some(USER_FLAG_DELETED),
+            premium_type: None,
+            premium_flags: None,
             avatar_color: None,
             mention_flags: None,
+            avatar_decoration_id: None,
+            avatar_decoration_asset: None,
+            avatar_ultra_id: None,
+            avatar_ultra_asset: None,
+            nameplate_id: None,
+            nameplate_asset: None,
             content_hidden_since: None,
         });
 
         assert_eq!(mapped.id, "0");
-        assert_eq!(mapped.username, "Fluxer");
+        assert_eq!(mapped.username, "Micup");
         assert_eq!(mapped.discriminator, "0000");
         assert_eq!(mapped.global_name, None);
         assert_eq!(mapped.bot, Some(true));
@@ -3764,12 +3839,78 @@ mod tests {
         assert_eq!(mapped.flags, USER_FLAG_STAFF);
     }
 
+    // The same vectors drive the users service, the API's partial user mapper and the gateway's user_utils, so a
+    // message author that drops a worn cosmetic, or leaves the field out instead of sending null, fails here.
+    #[test]
+    fn message_author_partial_includes_cosmetics() {
+        let vectors: Vec<serde_json::Value> = serde_json::from_str(include_str!(
+            "../../fluxer_common/src/testdata/partial_user_cosmetic_vectors.json"
+        ))
+        .unwrap();
+        assert!(!vectors.is_empty());
+        for vector in vectors {
+            let partial: UserPartialServiceResponse =
+                serde_json::from_value(vector["row"].clone()).unwrap();
+            let mapped = serde_json::to_value(map_user_partial(partial)).unwrap();
+            assert_eq!(mapped, vector["partial"], "{}", vector["name"]);
+        }
+    }
+
+    // Micup: the shared vectors behind public_user_flags, as the users service sends a message author.
+    #[test]
+    fn message_author_premium_badge_follows_the_shared_vectors() {
+        let vectors: Vec<serde_json::Value> = serde_json::from_str(include_str!(
+            "../../fluxer_common/src/testdata/premium_badge_flag_vectors.json"
+        ))
+        .unwrap();
+        assert!(!vectors.is_empty());
+        for vector in vectors {
+            let mut row = json!({"user_id": 42, "username": "ada", "discriminator": 7});
+            row.as_object_mut()
+                .unwrap()
+                .extend(vector["row"].as_object().unwrap().clone());
+            let partial: UserPartialServiceResponse = serde_json::from_value(row).unwrap();
+            assert_eq!(
+                Some(map_user_partial(partial).flags),
+                vector["public_flags"].as_i64(),
+                "{}",
+                vector["name"]
+            );
+        }
+    }
+
+    // Micup: during a rolling deploy an older users service leaves the premium fields out; the author gets no badge.
+    #[test]
+    fn an_older_users_service_without_premium_fields_sends_no_badge() {
+        let partial: UserPartialServiceResponse = serde_json::from_value(json!({
+            "user_id": 42,
+            "username": "ada",
+            "discriminator": 7,
+            "bot": false,
+            "flags": 0
+        }))
+        .unwrap();
+
+        assert_eq!(partial.premium_type, None);
+        assert_eq!(partial.premium_flags, None);
+        assert_eq!(map_user_partial(partial).flags, 0);
+    }
+
+    #[test]
+    fn system_and_deleted_authors_send_null_ultra() {
+        for author in [deleted_user(0), deleted_user(42)] {
+            let json = serde_json::to_value(author).unwrap();
+            let ultra = json.get("avatar_ultra_data");
+            assert_eq!(ultra, Some(&serde_json::Value::Null));
+        }
+    }
+
     #[test]
     fn missing_id_zero_fallback_is_fluxer_system_user() {
         let mapped = deleted_user(0);
 
         assert_eq!(mapped.id, "0");
-        assert_eq!(mapped.username, "Fluxer");
+        assert_eq!(mapped.username, "Micup");
         assert_eq!(mapped.global_name, None);
         assert_eq!(mapped.bot, Some(true));
         assert_eq!(mapped.system, Some(true));
@@ -3800,8 +3941,16 @@ mod tests {
             bot: Some(false),
             system: Some(false),
             flags: Some(USER_FLAG_DELETED),
+            premium_type: None,
+            premium_flags: None,
             avatar_color: Some(0x336699),
             mention_flags: None,
+            avatar_decoration_id: None,
+            avatar_decoration_asset: None,
+            avatar_ultra_id: None,
+            avatar_ultra_asset: None,
+            nameplate_id: None,
+            nameplate_asset: None,
             content_hidden_since: None,
         });
 
@@ -3876,6 +4025,115 @@ mod tests {
         assert_eq!(
             message.call.unwrap().participant_ids,
             vec![1_472_426_752_046_002_208]
+        );
+    }
+
+    #[cfg(feature = "scylla")]
+    #[test]
+    fn message_columns_include_micup_components() {
+        assert!(MESSAGE_COLUMNS.ends_with(", micup_components"));
+    }
+
+    fn db_row(micup_components: Option<Vec<udt::MessageActionRowUdt>>) -> MessageDbRow {
+        MessageDbRow {
+            message_id: 1_509_197_195_776_110_592,
+            channel_id: 10,
+            bucket: 416,
+            author_id: Some(1_472_426_752_046_002_208),
+            r#type: Some(0),
+            webhook_id: None,
+            webhook_name: None,
+            webhook_avatar_hash: None,
+            content: Some("card".to_owned()),
+            edited_timestamp: None,
+            pinned_timestamp: None,
+            flags: None,
+            mention_everyone: None,
+            mention_users: None,
+            mention_roles: None,
+            mention_channels: None,
+            has_reaction: None,
+            version: Some(1),
+            attachments: None,
+            embeds: None,
+            sticker_items: None,
+            message_reference: None,
+            call: None,
+            message_snapshots: None,
+            micup_components,
+        }
+    }
+
+    #[test]
+    fn db_row_components_reach_the_message() {
+        assert!(Message::from(db_row(None)).micup_components.is_none());
+
+        let message = Message::from(db_row(Some(vec![udt::MessageActionRowUdt {
+            component_type: Some(1),
+            components: Some(vec![udt::MessageComponentUdt {
+                component_type: Some(2),
+                style: Some(3),
+                label: Some("Join".to_owned()),
+                emoji_name: Some("party".to_owned()),
+                emoji_id: Some(77),
+                emoji_animated: Some(true),
+                custom_id: Some("roster:join".to_owned()),
+                disabled: Some(false),
+            }]),
+        }])));
+        let rows = message
+            .micup_components
+            .expect("rows survive the row conversion");
+        assert_eq!(rows[0].component_type, Some(1));
+        let button = &rows[0].components.as_ref().expect("buttons")[0];
+        assert_eq!(
+            (button.component_type, button.style, button.label.as_deref()),
+            (Some(2), Some(3), Some("Join"))
+        );
+        assert_eq!(
+            (
+                button.emoji_name.as_deref(),
+                button.emoji_id,
+                button.emoji_animated
+            ),
+            (Some("party"), Some(77), Some(true))
+        );
+        assert_eq!(
+            (button.custom_id.as_deref(), button.disabled),
+            (Some("roster:join"), Some(false))
+        );
+    }
+
+    #[tokio::test]
+    async fn build_path_puts_stored_buttons_in_the_response() {
+        let deleted = DeletedMessageKeys::default();
+        let shard = recording_shard(&deleted);
+        let message = decode_postgres_message(json!({
+            "channel_id": {"__fluxer_type": "bigint", "value": "10"},
+            "bucket": 416,
+            "message_id": {"__fluxer_type": "bigint", "value": "1509197195776110593"},
+            "webhook_id": {"__fluxer_type": "bigint", "value": "77"},
+            "webhook_name": "hook",
+            "content": "card",
+            "micup_components": [{"type": 1, "components": [{
+                "type": 2, "style": 1, "label": "Join", "emoji_name": "party",
+                "emoji_id": {"__fluxer_type": "bigint", "value": "1509197195776110599"},
+                "emoji_animated": null, "custom_id": "roster:join", "disabled": null
+            }]}]
+        }))
+        .unwrap();
+
+        let responses = shard
+            .build_api_responses_from_messages(vec![message], build_options())
+            .await
+            .unwrap();
+
+        let rows = responses[0].components.as_ref().expect("button rows");
+        let button = &rows[0].components[0];
+        assert_eq!(button.custom_id.as_deref(), Some("roster:join"));
+        assert_eq!(
+            button.emoji.as_ref().and_then(|emoji| emoji.id.as_deref()),
+            Some("1509197195776110599")
         );
     }
 
@@ -4439,6 +4697,21 @@ mod tests {
 
         assert!(responses.is_empty());
         assert!(recorded_deletions(&deleted).is_empty());
+    }
+
+    #[tokio::test]
+    async fn webhook_author_sends_null_ultra() {
+        let deleted = DeletedMessageKeys::default();
+        let shard = recording_shard(&deleted);
+        let message_id = 1_509_197_195_776_110_593;
+        let response = shard
+            .build_api_response_from_message(webhook_message(message_id), build_options())
+            .await
+            .unwrap()
+            .unwrap();
+        let author = serde_json::to_value(&response.author).unwrap();
+        let ultra = author.get("avatar_ultra_data");
+        assert_eq!(ultra, Some(&serde_json::Value::Null));
     }
 
     #[tokio::test]

@@ -2,6 +2,7 @@
 
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {detectWasmSimdSupport} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionBackends';
+import {resolveNoiseGateTuning} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionGateTuning';
 import type * as NoiseSuppressionWorkletAssets from '@app/features/voice/utils/noise_suppression/NoiseSuppressionWorkletAssets';
 import {
 	NOISE_SUPPRESSION_WORKLET_PROCESSOR_NAMES,
@@ -9,9 +10,6 @@ import {
 } from '@app/features/voice/utils/noise_suppression/NoiseSuppressionWorkletTypes';
 
 const logger = new Logger('NoiseSuppressionChain');
-const NOISE_GATE_OPEN_THRESHOLD_DB = -41.6;
-const NOISE_GATE_CLOSE_THRESHOLD_DB = -47.6;
-const NOISE_GATE_HOLD_MS = 180;
 const NOISE_SUPPRESSION_STARTUP_TIMEOUT_MS = 8000;
 
 export interface NoiseSuppressionWorkletNode {
@@ -27,6 +25,9 @@ interface WorkletSignal {
 export interface NoiseSuppressionWorkletNodeOptions {
 	signal: AbortSignal;
 	onRuntimeFailure: (error: Error) => void;
+	suppressionStrength: number;
+	pipelineV2Enabled?: boolean;
+	onHealth?: (processingMs: number, audioMs: number, contextTime: number) => void;
 }
 
 function isWorkletSignal(value: unknown): value is WorkletSignal {
@@ -72,16 +73,16 @@ function resolveWasmUrl(
 function buildProcessorOptions(
 	backend: NoiseSuppressionWorkletBackend,
 	wasmBinary: ArrayBuffer | null,
+	suppressionStrength: number,
+	pipelineV2Enabled: boolean,
 ): Record<string, unknown> {
 	if (backend === 'gate') {
 		return {
-			openThreshold: NOISE_GATE_OPEN_THRESHOLD_DB,
-			closeThreshold: NOISE_GATE_CLOSE_THRESHOLD_DB,
-			holdMs: NOISE_GATE_HOLD_MS,
+			...resolveNoiseGateTuning(suppressionStrength),
 			maxChannels: 1,
 		};
 	}
-	return {maxChannels: 1, wasmBinary};
+	return {maxChannels: 1, wasmBinary, pipelineV2Enabled};
 }
 
 function awaitStartupStep<T>(pending: Promise<T>, signal: AbortSignal): Promise<T> {
@@ -177,6 +178,8 @@ async function startWorkletNode(
 	context: AudioContext,
 	backend: NoiseSuppressionWorkletBackend,
 	signal: AbortSignal,
+	suppressionStrength: number,
+	pipelineV2Enabled: boolean,
 ): Promise<AudioWorkletNode> {
 	const assets = await awaitStartupStep(
 		import('@app/features/voice/utils/noise_suppression/NoiseSuppressionWorkletAssets'),
@@ -198,7 +201,7 @@ async function startWorkletNode(
 		channelCount: 1,
 		channelCountMode: 'explicit',
 		channelInterpretation: 'speakers',
-		processorOptions: buildProcessorOptions(backend, wasmBinary),
+		processorOptions: buildProcessorOptions(backend, wasmBinary, suppressionStrength, pipelineV2Enabled),
 	});
 	try {
 		await awaitWorkletReady(node, backend, signal);
@@ -223,7 +226,13 @@ export async function createNoiseSuppressionWorkletNode(
 	}, NOISE_SUPPRESSION_STARTUP_TIMEOUT_MS);
 	let node: AudioWorkletNode;
 	try {
-		node = await startWorkletNode(context, backend, controller.signal);
+		node = await startWorkletNode(
+			context,
+			backend,
+			controller.signal,
+			options.suppressionStrength,
+			options.pipelineV2Enabled === true,
+		);
 	} finally {
 		window.clearTimeout(timeoutId);
 		options.signal.removeEventListener('abort', onAbort);
@@ -234,6 +243,21 @@ export async function createNoiseSuppressionWorkletNode(
 		options.onRuntimeFailure(error);
 	};
 	node.port.onmessage = (event: MessageEvent) => {
+		if (disposed) return;
+		const data = event.data;
+		if (data?.type === 'health') {
+			if (
+				Number.isFinite(data.processingMs) &&
+				data.processingMs >= 0 &&
+				Number.isFinite(data.audioMs) &&
+				data.audioMs > 0 &&
+				Number.isFinite(data.contextTime) &&
+				data.contextTime >= 0
+			) {
+				options.onHealth?.(data.processingMs, data.audioMs, data.contextTime);
+			}
+			return;
+		}
 		if (!isWorkletSignal(event.data) || event.data.type !== 'error') return;
 		reportFailure(new Error(`Noise suppression worklet "${backend}" failed: ${event.data.message ?? 'unknown error'}`));
 	};

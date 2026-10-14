@@ -1,0 +1,178 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.lobby,
+.form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-3);
+	min-width: 0;
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-1);
+}
+
+.fieldLabel {
+	font-size: 0.75rem;
+	font-weight: 600;
+	line-height: 1rem;
+	color: var(--text-primary-muted);
+}
+
+.gamePicker {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0.25rem;
+	padding: 0.1875rem;
+	border-radius: 0.625rem;
+	background-color: var(--background-tertiary);
+}
+
+.gameChoice {
+	min-width: 0;
+	padding: 0.375rem 0.5rem;
+	border: none;
+	border-radius: 0.5rem;
+	background: transparent;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	line-height: 1.125rem;
+	color: var(--text-secondary);
+	overflow-wrap: anywhere;
+	cursor: pointer;
+	transition:
+		background-color 150ms ease,
+		color 150ms ease;
+}
+
+.gameChoice:hover {
+	color: var(--text-primary);
+}
+
+.gameChoice[aria-pressed='true'] {
+	background-color: var(--background-secondary);
+	box-shadow: 0 0.0625rem 0.125rem rgb(0 0 0 / 0.08);
+	color: var(--text-primary);
+}
+
+.gameChoice:focus-visible {
+	outline: 0.125rem solid var(--text-primary);
+	outline-offset: -0.125rem;
+}
+
+.hint {
+	margin: 0;
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+	color: var(--text-primary-muted);
+}
+
+.error {
+	margin: 0;
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+	color: var(--status-danger);
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: var(--spacing-2);
+}
+
+.confirm {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-2);
+	padding: var(--spacing-2) var(--spacing-3);
+	border-radius: var(--radius-md);
+	background-color: color-mix(in srgb, var(--status-danger) 12%, var(--background-tertiary));
+}
+
+.confirmText {
+	margin: 0;
+	font-size: 0.875rem;
+	font-weight: 600;
+	line-height: 1.25rem;
+	color: var(--text-primary);
+}
+
+/* A top-down table: seats sit on the side they have in the room (1 near, 2 right, 3 far, 4 left). */
+.seatMap {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
+	grid-template-rows: auto minmax(4.5rem, auto) auto;
+	grid-template-areas:
+		'. p3 .'
+		'p4 table p2'
+		'. p1 .';
+	align-items: center;
+	justify-items: center;
+	gap: var(--spacing-2);
+}
+
+.tableTop {
+	grid-area: table;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	align-self: stretch;
+	justify-self: stretch;
+	padding: var(--spacing-2);
+	border-radius: var(--radius-md);
+	background-color: color-mix(in srgb, #2f6b4a 70%, var(--background-tertiary));
+	box-shadow: inset 0 0 0 0.25rem color-mix(in srgb, #6b4a2f 80%, var(--background-tertiary));
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: rgb(255 255 255 / 0.85);
+	text-align: center;
+}
+
+.seat {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 0;
+	max-width: 100%;
+	min-height: 2rem;
+}
+
+.seat[data-table-position='1'] {
+	grid-area: p1;
+}
+
+.seat[data-table-position='2'] {
+	grid-area: p2;
+}
+
+.seat[data-table-position='3'] {
+	grid-area: p3;
+}
+
+.seat[data-table-position='4'] {
+	grid-area: p4;
+}
+
+.seatName {
+	overflow: hidden;
+	max-width: 100%;
+	padding: 0.25rem 0.5rem;
+	border-radius: var(--radius-sm);
+	background-color: var(--background-tertiary);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--text-primary);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.seatOpen {
+	padding: 0.25rem 0.5rem;
+	border: 0.0625rem dashed var(--background-modifier-accent);
+	border-radius: var(--radius-sm);
+	font-size: 0.8125rem;
+	color: var(--text-primary-muted);
+}

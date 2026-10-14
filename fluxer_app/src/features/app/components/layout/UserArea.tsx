@@ -80,6 +80,20 @@ function getResizeObserverEntryBlockSize(entry: ResizeObserverEntry): number {
 	return firstBorderBoxSize?.blockSize ?? entry.contentRect.height;
 }
 
+// Reads the device list only when the menu opens: enumerating devices at startup starts Chromium's video capture
+// service for the whole session.
+const UserAreaAudioSettingsMenu = ({onClose}: {onClose: () => void}) => {
+	const {inputDevices, outputDevices} = useMediaDevices();
+	return (
+		<VoiceAudioSettingsMenu
+			inputDevices={inputDevices}
+			outputDevices={outputDevices}
+			onClose={onClose}
+			data-flx="app.user-area.user-area-audio-settings-menu.voice-audio-settings-menu"
+		/>
+	);
+};
+
 interface UserAreaInnerProps {
 	user: User;
 	isMuted: boolean;
@@ -104,7 +118,6 @@ const UserAreaInner = observer(
 		const {isOpen, openProps} = usePopout('user-area');
 		const status = Presence.getStatus(user.id);
 		const customStatus = Presence.getCustomStatus(user.id);
-		const {inputDevices, outputDevices} = useMediaDevices();
 		const voiceConnectionRef = useRef<HTMLDivElement | null>(null);
 		const voiceConnectionHeightFrameRef = useRef<number | null>(null);
 		const voiceConnectionHeightRef = useRef<number | null>(null);
@@ -120,11 +133,9 @@ const UserAreaInner = observer(
 			event.preventDefault();
 			event.stopPropagation();
 			ContextMenuCommands.openFromEvent(event, (props) => (
-				<VoiceAudioSettingsMenu
-					inputDevices={inputDevices}
-					outputDevices={outputDevices}
+				<UserAreaAudioSettingsMenu
 					onClose={props.onClose}
-					data-flx="app.user-area.handle-mic-context-menu.voice-audio-settings-menu"
+					data-flx="app.user-area.handle-mic-context-menu.user-area-audio-settings-menu"
 				/>
 			));
 		};
@@ -132,11 +143,9 @@ const UserAreaInner = observer(
 			event.preventDefault();
 			event.stopPropagation();
 			ContextMenuCommands.openFromEvent(event, (props) => (
-				<VoiceAudioSettingsMenu
-					inputDevices={inputDevices}
-					outputDevices={outputDevices}
+				<UserAreaAudioSettingsMenu
 					onClose={props.onClose}
-					data-flx="app.user-area.handle-speaker-context-menu.voice-audio-settings-menu"
+					data-flx="app.user-area.handle-speaker-context-menu.user-area-audio-settings-menu"
 				/>
 			));
 		};

@@ -226,6 +226,9 @@ export class ChannelDataService {
 		if (guildChannelData.rtc_region !== undefined) {
 			channelUpdateData.rtc_region = guildChannelData.rtc_region ?? null;
 		}
+		if (guildChannelData.room_theme !== undefined) {
+			channelUpdateData.room_theme = guildChannelData.room_theme ?? null;
+		}
 		if (guildChannelData.icon !== undefined) {
 			channelUpdateData.icon = guildChannelData.icon ?? null;
 		}

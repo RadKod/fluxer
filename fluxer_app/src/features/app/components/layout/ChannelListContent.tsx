@@ -33,12 +33,13 @@ import {
 	type RememberedSkeletonGuildChannelRow,
 	reportSkeletonGuildChannelList,
 } from '@app/features/app/components/skeleton/SkeletonLayoutMemory';
-import type {GuildBannerPresentation} from '@app/features/app/hooks/useGuildBannerPresentation';
+import type {GuildBannerChannelListPresentation} from '@app/features/app/hooks/useGuildBannerPresentation';
 import {useRovingFocusList} from '@app/features/app/hooks/useRovingFocusList';
 import {
 	measureSkeletonTextWidthPx,
 	useSkeletonLayoutReport,
 } from '@app/features/app/hooks/useSkeletonLayoutMemoryCapture';
+import {GuildBoostGoalRow} from '@app/features/boost/components/GuildBoostGoalRow';
 import type {Channel} from '@app/features/channel/models/Channel';
 import Channels from '@app/features/channel/state/Channels';
 import * as GuildCommands from '@app/features/guild/commands/GuildCommands';
@@ -170,7 +171,7 @@ function createRememberedChannelGroups(
 interface ChannelListContentProps {
 	readonly guild: Guild;
 	readonly scrollY: MotionValue<number>;
-	readonly banner: GuildBannerPresentation;
+	readonly banner: GuildBannerChannelListPresentation;
 }
 export const ChannelListContent = observer(({guild, scrollY, banner}: ChannelListContentProps) => {
 	const threadsActive = ThreadGuilds.isActive(guild.id);
@@ -551,6 +552,7 @@ export const ChannelListContent = observer(({guild, scrollY, banner}: ChannelLis
 						/>
 					)}
 					<GuildDetachedBanner guild={guild} data-flx="app.channel-list-content.guild-detached-banner" />
+					<GuildBoostGoalRow guildId={guild.id} data-flx="app.channel-list-content.guild-boost-goal-row" />
 					<div className={styles.topDropZone} data-flx="app.channel-list-content.top-drop-zone">
 						<NullSpaceDropIndicator
 							isDraggingAnything={isDraggingAnything}

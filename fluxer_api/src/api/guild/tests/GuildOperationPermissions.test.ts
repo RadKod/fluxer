@@ -2,6 +2,7 @@
 
 import {createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {authorizeBot, createTestBotAccount} from '@app/api/bot/tests/BotTestUtils';
+import {overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
 import {
 	acceptInvite,
 	addMemberRole,
@@ -17,7 +18,7 @@ import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {GuildFeatures, GuildNSFWLevel} from '@fluxer/constants/src/GuildConstants';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
-import {beforeAll, beforeEach, describe, expect, it} from 'vitest';
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 describe('Guild Operation Permissions', () => {
 	let harness: ApiTestHarness;
@@ -34,6 +35,10 @@ describe('Guild Operation Permissions', () => {
 	});
 	beforeEach(async () => {
 		await harness.reset();
+		overrideLimits({feature_mature_content_settings: 1});
+	});
+	afterEach(() => {
+		vi.restoreAllMocks();
 	});
 	it('should reject member from updating guild without MANAGE_GUILD', async () => {
 		const owner = await createTestAccount(harness);

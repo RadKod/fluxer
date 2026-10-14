@@ -51,7 +51,7 @@
 	padding: 0.75rem 1rem;
 	border-radius: 0.5rem;
 	background-color: var(--brand-primary);
-	color: white;
+	color: var(--text-on-brand-primary);
 	font-weight: 500;
 	transition: background-color 0.2s ease;
 	cursor: pointer;
@@ -229,4 +229,13 @@
 
 .maxWidth {
 	max-width: 100%;
+}
+
+/* Micup: white accent in the coal and dark themes */
+.iconContainerBrand .actionIcon {
+	color: var(--text-on-brand-primary);
+}
+
+:global(html:is(.theme-coal, .theme-dark)) .brandButton:hover {
+	background-color: var(--brand-secondary);
 }

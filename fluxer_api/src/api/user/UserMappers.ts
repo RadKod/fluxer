@@ -10,8 +10,9 @@ import type {User} from '@app/api/models/User';
 import type {UserGuildSettings} from '@app/api/models/UserGuildSettings';
 import type {UserSettings} from '@app/api/models/UserSettings';
 import type {WebAuthnCredential} from '@app/api/models/WebAuthnCredential';
-import {isAccountLimited} from '@app/api/user/AccountLimit';
+import {isMicupAccountLimited} from '@app/api/user/AccountLimit';
 import {hiddenUserPartial, isProfileHidden} from '@app/api/user/ProfileVisibility';
+import {canHavePublicProfile} from '@app/api/user/profile/ProfilePrivacy';
 import {canUserAccessNsfwContent} from '@app/api/utils/AgeUtils';
 import type {ChannelMessageNotifications} from '@fluxer/constants/src/NotificationConstants';
 import {
@@ -22,6 +23,7 @@ import {
 	type GuildFolderIcon,
 	PremiumFlags,
 	PUBLIC_USER_FLAGS,
+	PublicUserFlags,
 	UNCATEGORIZED_FOLDER_ID,
 	type UserAuthenticatorType,
 	UserAuthenticatorTypes,
@@ -29,6 +31,7 @@ import {
 	UserPremiumTypes,
 } from '@fluxer/constants/src/UserConstants';
 import type {WebAuthnCredentialResponse} from '@fluxer/schema/src/domains/auth/AuthSchemas';
+import type {CosmeticAssetDataResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
 import type {
 	RelationshipResponse,
 	UserGuildSettingsResponse,
@@ -44,9 +47,23 @@ function getVisiblePublicUserFlags(userFlags: bigint): bigint {
 	return (userFlags & UserFlags.STAFF_HIDDEN) !== 0n ? PUBLIC_USER_FLAGS_WITHOUT_STAFF : PUBLIC_USER_FLAGS;
 }
 
+// Micup: premium badge next to the name; PERKS_DISABLED hides it like BADGE_HIDDEN (the private response then says
+// premium_type NONE). Derived on every read, never stored; the Rust twin is
+// fluxer_common user_flags::public_user_flags and fluxer_common/src/testdata/premium_badge_flag_vectors.json binds both.
+function showsPremiumBadge(user: User): boolean {
+	return (
+		!user.isBot &&
+		(user.flags & UserFlags.DELETED) === 0n &&
+		(user.premiumType ?? 0) > 0 &&
+		(user.premiumFlags & PremiumFlags.BADGE_HIDDEN) === 0 &&
+		(user.premiumFlags & PremiumFlags.PERKS_DISABLED) === 0
+	);
+}
+
 function mapUserFlagsToPublicBitfield(user: User): number {
 	const flags = user.flags ?? 0n;
-	return Number(flags & getVisiblePublicUserFlags(flags));
+	const publicFlags = Number(flags & getVisiblePublicUserFlags(flags));
+	return showsPremiumBadge(user) ? publicFlags | PublicUserFlags.PREMIUM_BADGE : publicFlags;
 }
 
 function getActiveAuthenticatorTypes(user: User): Array<UserAuthenticatorType> {
@@ -70,6 +87,16 @@ function sortUserIds(userIds: Iterable<UserID>): Array<string> {
 		.map((userId) => userId.toString());
 }
 
+// Micup: a worn cosmetic is its catalog item plus the image hash copied onto the user row when it was put on. Always
+// sent, as null when nothing is worn: the client keeps a field a payload leaves out, and the gateway compares them.
+export function mapCosmeticAssetData(itemId: bigint | null, asset: string | null): CosmeticAssetDataResponse | null {
+	return itemId !== null && asset !== null ? {asset, item_id: itemId.toString()} : null;
+}
+
+function isSameCosmetic(left?: CosmeticAssetDataResponse | null, right?: CosmeticAssetDataResponse | null): boolean {
+	return left?.asset === right?.asset && left?.item_id === right?.item_id;
+}
+
 export function mapUserToPartialResponse(user: User): UserPartialResponse {
 	const partial = mapUserToOwnPartialResponse(user);
 	return isProfileHidden(user) && !isDeletedForDisplay(user) ? hiddenUserPartial(partial) : partial;
@@ -85,6 +112,7 @@ function mapUserToOwnPartialResponse(user: User): UserPartialResponse {
 	if (isDeletedForDisplay(user)) {
 		return {
 			id: user.id.toString(),
+			identity_version: user.identityVersion.toString(),
 			username: DELETED_USER_USERNAME,
 			discriminator: DELETED_USER_DISCRIMINATOR.toString().padStart(4, '0'),
 			global_name: DELETED_USER_GLOBAL_NAME,
@@ -94,10 +122,14 @@ function mapUserToOwnPartialResponse(user: User): UserPartialResponse {
 			system: user.isSystem || undefined,
 			flags: 0,
 			mention_flags: undefined,
+			avatar_decoration_data: null,
+			avatar_ultra_data: null,
+			nameplate_data: null,
 		};
 	}
 	return {
 		id: user.id.toString(),
+		identity_version: user.identityVersion.toString(),
 		username: user.username,
 		discriminator: user.discriminator.toString().padStart(4, '0'),
 		global_name: user.globalName,
@@ -107,6 +139,9 @@ function mapUserToOwnPartialResponse(user: User): UserPartialResponse {
 		system: user.isSystem || undefined,
 		flags: mapUserFlagsToPublicBitfield(user),
 		mention_flags: user.mentionFlags ? user.mentionFlags : undefined,
+		avatar_decoration_data: mapCosmeticAssetData(user.avatarDecorationId, user.avatarDecorationAsset),
+		avatar_ultra_data: mapCosmeticAssetData(user.avatarUltraId, user.avatarUltraAsset),
+		nameplate_data: mapCosmeticAssetData(user.nameplateId, user.nameplateAsset),
 	};
 }
 
@@ -114,6 +149,7 @@ export function hasPartialUserFieldsChanged(oldUser: User, newUser: User): boole
 	const oldPartial = mapUserToPartialResponse(oldUser);
 	const newPartial = mapUserToPartialResponse(newUser);
 	return (
+		oldPartial.identity_version !== newPartial.identity_version ||
 		oldPartial.username !== newPartial.username ||
 		oldPartial.discriminator !== newPartial.discriminator ||
 		oldPartial.global_name !== newPartial.global_name ||
@@ -122,7 +158,10 @@ export function hasPartialUserFieldsChanged(oldUser: User, newUser: User): boole
 		oldPartial.bot !== newPartial.bot ||
 		oldPartial.system !== newPartial.system ||
 		oldPartial.flags !== newPartial.flags ||
-		oldPartial.mention_flags !== newPartial.mention_flags
+		oldPartial.mention_flags !== newPartial.mention_flags ||
+		!isSameCosmetic(oldPartial.avatar_decoration_data, newPartial.avatar_decoration_data) ||
+		!isSameCosmetic(oldPartial.avatar_ultra_data, newPartial.avatar_ultra_data) ||
+		!isSameCosmetic(oldPartial.nameplate_data, newPartial.nameplate_data)
 	);
 }
 
@@ -143,6 +182,7 @@ export function mapUserToPrivateResponse(user: User): UserPrivateResponse {
 	const authenticatorTypes = getActiveAuthenticatorTypes(user);
 	return {
 		...partialResponse,
+		username_state: user.usernameState ?? 'legacy',
 		flags: mapUserFlagsToPublicBitfield(user),
 		is_staff: isStaff,
 		acls: Array.from(user.acls),
@@ -178,8 +218,9 @@ export function mapUserToPrivateResponse(user: User): UserPrivateResponse {
 		password_last_changed_at: user.passwordLastChangedAt?.toISOString() ?? null,
 		last_voice_activity_sharing_change_at: user.lastVoiceActivitySharingChangeAt?.toISOString() ?? null,
 		required_actions: [],
-		account_limited: isAccountLimited(user),
+		account_limited: isMicupAccountLimited(user),
 		nsfw_allowed: canUserAccessNsfwContent(user),
+		public_profile_allowed: canHavePublicProfile(user.dateOfBirth),
 		has_dismissed_premium_onboarding: isActuallyPremium && user.premiumOnboardingDismissedAt != null,
 		has_ever_purchased: user.hasEverPurchased,
 		has_unread_gift_inventory:
@@ -233,6 +274,7 @@ export function mapUserToOAuthResponse(
 	return {
 		sub: user.id.toString(),
 		id: user.id.toString(),
+		identity_version: user.identityVersion.toString(),
 		username: user.username,
 		discriminator: user.discriminator.toString().padStart(4, '0'),
 		avatar: stripAvatarForUser(user),
@@ -352,6 +394,8 @@ export function mapUserSettingsToResponse(params: {settings: UserSettings}): Use
 		staff_dm_access_user_ids: sortUserIds(settings.staffDmAccessUserIds),
 		synced_preferences: settings.syncedPreferences,
 		profile_privacy: settings.profilePrivacy,
+		game_activity_visibility: settings.gameActivityVisibility,
+		game_activity_policy_revision: settings.gameActivityPolicyRevision.toString(),
 		default_share_voice_activity: settings.defaultShareVoiceActivity,
 	};
 }

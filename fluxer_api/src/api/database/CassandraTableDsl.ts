@@ -5,6 +5,7 @@ import {registerKvMeta, registerTableSpec} from '@app/api/database/CassandraMeta
 import type {
 	CassandraParam,
 	CassandraParams,
+	CassandraWriteOptions,
 	ColumnName,
 	ConditionalWriteEntry,
 	DbOp,
@@ -23,6 +24,7 @@ import {prepared, validateTtlSeconds} from '@app/api/database/CassandraTypes';
 
 const DEFAULT_TTL_PARAM_NAME = 'ttl_seconds_bind';
 const DEFAULT_LIMIT_PARAM_NAME = 'limit_bind';
+const WRITE_TIMESTAMP_PARAM_NAME = 'write_timestamp_bind';
 
 const CQL_IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -41,6 +43,10 @@ function compileWhere<Row extends object>(w: WhereExpr<Row>): string {
 		const cols = `(${w.cols.map((c) => assertCqlIdentifier(c as string)).join(', ')})`;
 		const params = `(${w.params.map((p) => `:${assertCqlIdentifier(p as string)}`).join(', ')})`;
 		return `${cols} > ${params}`;
+	}
+	if (w.kind === 'tokenRange') {
+		const col = assertCqlIdentifier(w.col as string);
+		return `TOKEN(${col}) >= :${assertCqlIdentifier(w.startParam)} AND TOKEN(${col}) <= :${assertCqlIdentifier(w.endParam)}`;
 	}
 	const col = assertCqlIdentifier(w.col as string);
 	const param = assertCqlIdentifier(w.param as string);
@@ -104,6 +110,35 @@ export function defineTable<Row extends object, PK extends ColumnName<Row>, Part
 	};
 	registerTableSpec(tableSpec);
 	const nonPkColumns = columns.filter((c) => !pk.includes(c as PK)) as Array<Exclude<ColumnName<Row>, PK>>;
+	function withTimestamp(query: PreparedQuery, options?: CassandraWriteOptions): PreparedQuery {
+		if (!options) return query;
+		if (typeof options.timestamp !== 'bigint' || options.timestamp <= -(1n << 63n) || options.timestamp >= 1n << 63n) {
+			throw new Error('Cassandra write timestamp must be a bigint within the supported signed 64-bit range');
+		}
+		if (columns.includes(WRITE_TIMESTAMP_PARAM_NAME as ColumnName<Row>)) {
+			throw new Error('Cassandra write timestamp parameter collides with a table column');
+		}
+		const clause = `USING TIMESTAMP :${WRITE_TIMESTAMP_PARAM_NAME}`;
+		const cql = query.cql.startsWith('INSERT')
+			? query.cql.replace(/;\s*$/, ` ${clause};`)
+			: query.cql.replace(/^(UPDATE|DELETE FROM) (\w+)/, `$1 $2 ${clause}`);
+		const kvMeta = {...query.kvMeta!, timestampParamName: WRITE_TIMESTAMP_PARAM_NAME};
+		registerKvMeta(cql, kvMeta);
+		return prepared(cql, {...query.params, [WRITE_TIMESTAMP_PARAM_NAME]: options.timestamp}, kvMeta);
+	}
+	function writeTimeSelections(writeTime?: Partial<Record<ColumnName<Row>, string>>): Array<string> {
+		const aliases = new Set(columns.map((column) => column.toLowerCase()));
+		return Object.entries(writeTime ?? {}).map(([column, alias]) => {
+			if (!nonPkColumns.includes(column as Exclude<ColumnName<Row>, PK>)) {
+				throw new Error(`WRITETIME requires a non-primary-key column of "${def.name}"`);
+			}
+			if (typeof alias !== 'string') throw new Error('WRITETIME requires an alias');
+			assertCqlIdentifier(alias);
+			if (aliases.has(alias.toLowerCase())) throw new Error(`Duplicate WRITETIME alias "${alias}"`);
+			aliases.add(alias.toLowerCase());
+			return `WRITETIME(${column}) AS ${alias}`;
+		});
+	}
 	const normalizeWhereArray = (
 		where?: WhereExpr<Row> | ReadonlyArray<WhereExpr<Row>>,
 	): ReadonlyArray<WhereExpr<Row>> => {
@@ -161,13 +196,14 @@ WHERE ${pk.map((k) => `${k} = :${k}`).join(' AND ')};
 	function buildSelectCql(
 		opts: {
 			columns?: ReadonlyArray<ColumnName<Row>>;
+			writeTime?: Partial<Record<ColumnName<Row>, string>>;
 			where?: WhereExpr<Row> | ReadonlyArray<WhereExpr<Row>>;
 			orderBy?: OrderBy<Row>;
 			limit?: number;
 		} = {},
 		limitParamName?: string,
 	): string {
-		const selectCols = (opts.columns ?? columns).join(', ');
+		const selectCols = [...(opts.columns ?? columns), ...writeTimeSelections(opts.writeTime)].join(', ');
 		let where = '';
 		if (opts.where) {
 			const clauses = Array.isArray(opts.where) ? opts.where : [opts.where];
@@ -182,6 +218,7 @@ WHERE ${pk.map((k) => `${k} = :${k}`).join(' AND ')};
 	function selectCql(
 		opts: {
 			columns?: ReadonlyArray<ColumnName<Row>>;
+			writeTime?: Partial<Record<ColumnName<Row>, string>>;
 			where?: WhereExpr<Row> | ReadonlyArray<WhereExpr<Row>>;
 			orderBy?: OrderBy<Row>;
 			limit?: number;
@@ -197,6 +234,7 @@ WHERE ${pk.map((k) => `${k} = :${k}`).join(' AND ')};
 			limit: opts.limit,
 			...(opts.unordered ? {unordered: true} : {}),
 			columns: opts.columns ?? columns,
+			writeTime: opts.writeTime,
 		};
 		registerKvMeta(cql, kvMeta as KvQueryMeta<Record<string, unknown>>);
 		return cql;
@@ -204,6 +242,7 @@ WHERE ${pk.map((k) => `${k} = :${k}`).join(' AND ')};
 	function select(
 		opts: {
 			columns?: ReadonlyArray<ColumnName<Row>>;
+			writeTime?: Partial<Record<ColumnName<Row>, string>>;
 			where?: WhereExpr<Row> | ReadonlyArray<WhereExpr<Row>>;
 			orderBy?: OrderBy<Row>;
 			limit?: number;
@@ -218,6 +257,7 @@ WHERE ${pk.map((k) => `${k} = :${k}`).join(' AND ')};
 			orderBy: opts.orderBy,
 			limit: opts.limit,
 			columns: opts.columns ?? columns,
+			writeTime: opts.writeTime,
 		};
 		registerKvMeta(cql, kvMeta as KvQueryMeta<Record<string, unknown>>);
 		return {
@@ -234,6 +274,7 @@ WHERE ${pk.map((k) => `${k} = :${k}`).join(' AND ')};
 		patch: Partial<{
 			[K in Exclude<ColumnName<Row>, PK>]: DbOp<RowValue<Row, K>>;
 		}>,
+		options?: CassandraWriteOptions,
 	): PreparedQuery {
 		const patchKeys = Object.keys(patch) as Array<Exclude<ColumnName<Row>, PK>>;
 		if (patchKeys.length === 0) {
@@ -254,7 +295,7 @@ WHERE ${pk.map((k) => `${k} = :${k}`).join(' AND ')};
 			patchKeys,
 			pkColumns: pk,
 		};
-		return prepared(cql, params, kvMeta as KvQueryMeta<Record<string, unknown>>);
+		return withTimestamp(prepared(cql, params, kvMeta as KvQueryMeta<Record<string, unknown>>), options);
 	}
 	function withConditions(query: PreparedQuery, expected: Partial<Row>): PreparedQuery {
 		const keys = Object.keys(expected) as Array<ColumnName<Row>>;
@@ -467,7 +508,7 @@ WHERE ${pk.map((k) => `${k} = :${k}`).join(' AND ')};
 			},
 		};
 	}
-	function deleteByPk(pkValues: Pick<Row, PK>): PreparedQuery {
+	function deleteByPk(pkValues: Pick<Row, PK>, options?: CassandraWriteOptions): PreparedQuery {
 		const params: CassandraParams = {};
 		for (const k of pk) params[k] = pkValues[k] as CassandraParam;
 		const kvMeta: KvQueryMeta<Row> = {
@@ -476,7 +517,7 @@ WHERE ${pk.map((k) => `${k} = :${k}`).join(' AND ')};
 			pkColumns: pk,
 			where: pk.map((col) => ({kind: 'eq', col, param: col})) as ReadonlyArray<WhereExpr<Row>>,
 		} as KvQueryMeta<Row>;
-		return prepared(deleteByPkCql, params, kvMeta as KvQueryMeta<Record<string, unknown>>);
+		return withTimestamp(prepared(deleteByPkCql, params, kvMeta as KvQueryMeta<Record<string, unknown>>), options);
 	}
 	function conditionalDeleteByPk(pkValues: Pick<Row, PK>, expected: Partial<Row>): PreparedQuery {
 		return withConditions(deleteByPk(pkValues), expected);
@@ -699,15 +740,18 @@ WHERE ${pk.map((k) => `${k} = :${k}`).join(' AND ')};
 			return updateAll;
 		},
 		paramsFromRow,
-		upsertAll(row: Row) {
+		upsertAll(row: Row, options?: CassandraWriteOptions) {
 			const hasAllColumns = columns.every((c) => row[c as keyof Row] !== undefined);
 			const kvMeta: KvQueryMeta<Row> = {action: 'upsert', table: tableSpec};
 			if (hasAllColumns) {
-				return prepared(updateAll, paramsFromRow(row), kvMeta as KvQueryMeta<Record<string, unknown>>);
+				return withTimestamp(
+					prepared(updateAll, paramsFromRow(row), kvMeta as KvQueryMeta<Record<string, unknown>>),
+					options,
+				);
 			}
 			const {cql, params} = buildDynamicUpsertCql(row);
 			registerKvMeta(cql, kvMeta as KvQueryMeta<Record<string, unknown>>);
-			return prepared(cql, params, kvMeta as KvQueryMeta<Record<string, unknown>>);
+			return withTimestamp(prepared(cql, params, kvMeta as KvQueryMeta<Record<string, unknown>>), options);
 		},
 		patchByPk,
 		conditionalPatchByPk,
@@ -739,6 +783,7 @@ WHERE ${pk.map((k) => `${k} = :${k}`).join(' AND ')};
 			lte: (col, param) => ({kind: 'lte', col, param: param ?? col}),
 			gte: (col, param) => ({kind: 'gte', col, param: param ?? col}),
 			tokenGt: (col, param) => ({kind: 'tokenGt', col, param}),
+			tokenRange: (col, startParam, endParam) => ({kind: 'tokenRange', col, startParam, endParam}),
 			tupleGt: (cols, params) => ({kind: 'tupleGt', cols, params}),
 		},
 	};

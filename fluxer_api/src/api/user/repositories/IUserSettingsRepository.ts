@@ -6,9 +6,19 @@ import type {UserGuildSettingsRow, UserSettingsRow} from '@app/api/database/type
 import type {UserGuildSettings} from '@app/api/models/UserGuildSettings';
 import type {UserSettings} from '@app/api/models/UserSettings';
 
+export interface UserSettingsPatchOptions {
+	gameActivityPolicyChanged?: boolean;
+	expectedPolicyRevision?: bigint;
+}
+
 export interface IUserSettingsRepository {
-	findSettings(userId: UserID): Promise<UserSettings | null>;
+	findSettings(userId: UserID, options?: {authoritative?: boolean}): Promise<UserSettings | null>;
 	upsertSettings(settings: ExactRow<UserSettingsRow>): Promise<UserSettings>;
+	patchSettings(
+		userId: UserID,
+		patch: Partial<Omit<UserSettingsRow, 'user_id' | 'version' | 'game_activity_policy_revision'>>,
+		options?: UserSettingsPatchOptions,
+	): Promise<UserSettings>;
 	deleteUserSettings(userId: UserID): Promise<void>;
 	findGuildSettings(userId: UserID, guildId: GuildID | null): Promise<UserGuildSettings | null>;
 	findAllGuildSettings(userId: UserID): Promise<Array<UserGuildSettings>>;

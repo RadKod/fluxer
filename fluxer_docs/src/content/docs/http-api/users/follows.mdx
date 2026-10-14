@@ -1,0 +1,196 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: Follows
+description: Following accounts, and the follower and following lists of an account.
+---
+
+import RouteHeader from '@/components/RouteHeader.astro';
+
+A follow is one account's one-way subscription to another account. It needs no acceptance and creates no [relationship](/http-api/users/relationships/).
+
+Every route here requires a user session. A bot or OAuth2 bearer credential is refused with 403 `ACCESS_DENIED`, and a [limited account](/http-api/users/#account-limitation) is refused with 403 `ACCOUNT_LIMITED` by every route that writes.
+
+:::note[Follow access uses the profile rule]
+Following an account and reading its lists need the same access as [Get user profile](/http-api/users/#get-user-profile): the full profile, or the public profile of an account at the `EVERYONE` [profile privacy level](/http-api/users/#profile-privacy-levels). A limited profile is not enough. Any other target returns 403 `MISSING_ACCESS`, and so does a block in either direction, a bot or system account, and the caller's own account. The caller can always read its own lists. [Follow user](#follow-user) also accepts, in place of that access, a follow back, a public post that Discover lists or an account that the feed suggests.
+:::
+
+The profile of an account the caller may follow carries `follower_count`, `following_count` and `is_following`. A limited profile carries none of them, and the caller's own profile omits `is_following`.
+
+## Follow object
+
+One follow in a list.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id<sup>1</sup> | snowflake | The follow ID |
+| user<sup>2</sup> | [partial user](/http-api/users/#partial-user-object) object | The other account in the follow |
+| is_following?<sup>3</sup> | boolean | Whether the caller follows the account in `user` |
+
+<sup>1</sup> Its [snowflake](/snowflakes/) timestamp is when the follow started. It is the `before` cursor of [List followers](#list-followers)
+
+<sup>2</sup> The follower in a followers list and the followed account in a following list
+
+<sup>3</sup> Present in a list and omitted on the entry for the caller's own account and in a Gateway event
+
+## Follow user
+
+<RouteHeader method="PUT" path="/v1/users/{user_id}/follow" />
+
+Makes the caller follow an account. Returns 204 with an empty body. The caller's sessions receive a Follow Create Gateway event whose data is a [follow object](#follow-object) naming the followed account. The followed account receives no event.
+
+Following an account the caller already follows changes nothing and still returns 204.
+
+An account at the `ONLY_ME` [profile privacy level](/http-api/users/#profile-privacy-levels) cannot be followed in any way. A public profile opens the follow only while the caller's `feature_feed` limit is not `0`. When the account already follows the caller, the caller can follow it back whatever the profile rule says, at every other level and without a block in either direction.
+
+The profile rule is checked first, and while it grants access `post_id` is not read. When the rule refuses the caller or limits the profile, `post_id` can name a [public post](/http-api/feed/#public-posts) of the account that [Discover](/http-api/feed/#get-discover-feed) would list at the time of the request: published in the last 72 hours, not deleted, not hidden by reports, by an author who qualifies for Discover, and within the instance's Discover media limits. The post does not need to be among the 1,000 posts of the list. The account's [profile privacy level](/http-api/users/#profile-privacy-levels), as it reads now, must be `EVERYONE`; an account at any other level cannot be followed through a post. The caller needs `feature_feed` and `feature_feed_discover` limits other than `0`, an account not flagged as a spammer or for suspicious activity, and, as for a comment on a public post, a verified email address, a claimed account and an account at least 24 hours old. Blocks, bot and system accounts, the caller's own account and `max_following` are refused as without `post_id`. A post that does not qualify, including one that does not exist, returns the same 403 `MISSING_ACCESS`. Such a follow opens neither the profile, [List user posts](/http-api/feed/#list-user-posts) nor the follow lists; the account's posts reach the caller's [home feed](/http-api/feed/#get-home-feed) as described there.
+
+When the profile rule refuses the caller or limits the profile and the body has no `post_id`, the account can instead be on the list that [Get feed suggestions](/http-api/feed/#get-feed-suggestions) draws from, in the copy the server holds at the time of the request. The caller needs `feature_feed` and `feature_feed_suggestions` limits other than `0`, the standing required on the post path, and the date of birth of an adult; an account without a date of birth cannot follow this way. The account is read again and must still qualify for the list: not a bot or system account; not banned, deleted or flagged as a spammer or for suspicious activity; a verified email address, a claimed account at least 24 hours old and the date of birth of an adult; a `feature_feed` limit other than `0`; and the `EVERYONE` profile privacy level, as it reads now. With `post_id`, only the post counts. An account that is not on the list or no longer qualifies returns the same 403 `MISSING_ACCESS`, and such a follow opens no more than a follow through a post.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the account to follow |
+
+### JSON body
+
+The body can be omitted, in which case it is treated as an empty object.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| post_id? | snowflake | A public post of the account that Discover lists, for a caller the profile rule refuses |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The caller follows the account |
+| 400<sup>1</sup> | [error response](/http-api/#error-response) | The body is invalid, or the caller already follows `max_following` accounts |
+| 403<sup>2</sup> | [error response](/http-api/#error-response) | The caller may not follow the account and the request returns `MISSING_ACCESS` |
+| 404 | [error response](/http-api/#error-response) | No account has the ID and the request returns `UNKNOWN_USER` |
+
+<sup>1</sup> A `post_id` that is not a snowflake returns `INVALID_FORM_BODY`. The limit returns `MAX_FOLLOWING`, with the applied limit in a top-level `max_following` member
+
+<sup>2</sup> On the post and suggestion paths, a caller without a verified email address receives `EMAIL_VERIFICATION_REQUIRED`
+
+### Rate limit
+
+20 requests per 10 seconds for each authenticated user, on the `user:follow:create` bucket. The route also draws on 400 requests per day for each authenticated user, on the `user:follow:create:daily` bucket.
+
+## Unfollow user
+
+<RouteHeader method="DELETE" path="/v1/users/{user_id}/follow" />
+
+Ends the caller's follow of an account. Returns 204 with an empty body, also when the caller did not follow it. When a follow ended, the caller's sessions receive a Follow Delete Gateway event whose data is `user_id`, the ID of the account no longer followed.
+
+Unfollowing needs no access, so the caller can end a follow after the accounts stop sharing a community.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the account to stop following |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The caller does not follow the account |
+
+### Rate limit
+
+20 requests per 10 seconds for each authenticated user, on the `user:follow:delete` bucket.
+
+## List followers
+
+<RouteHeader method="GET" path="/v1/users/{user_id}/followers" />
+
+Returns one page of the accounts that follow an account, as an array of [follow objects](#follow-object) with the newest follow first.
+
+A page can hold fewer entries than `limit` while more remain. Read the next page with the last entry's `id` as `before`, and stop at an empty page.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the followed account |
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| before? | snowflake | The cursor selecting follows that started before this follow ID |
+| limit? | integer | The maximum number of entries to return (1-100, default 50) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | array of [follow objects](#follow-object) | The page was returned, possibly empty |
+| 403 | [error response](/http-api/#error-response) | The caller may not read the list and the request returns `MISSING_ACCESS` |
+| 404 | [error response](/http-api/#error-response) | No account has the ID and the request returns `UNKNOWN_USER` |
+
+### Rate limit
+
+40 requests per 10 seconds for each authenticated user, on the `user:follow:list` bucket, shared with [List followed users](#list-followed-users).
+
+## List followed users
+
+<RouteHeader method="GET" path="/v1/users/{user_id}/following" />
+
+Returns one page of the accounts an account follows, as an array of [follow objects](#follow-object) in ascending user ID order.
+
+Read the next page with the last entry's `user.id` as `after`, and stop at an empty page.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the following account |
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| after? | snowflake | The cursor selecting followed accounts with IDs above this user ID |
+| limit? | integer | The maximum number of entries to return (1-100, default 50) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | array of [follow objects](#follow-object) | The page was returned, possibly empty |
+| 403 | [error response](/http-api/#error-response) | The caller may not read the list and the request returns `MISSING_ACCESS` |
+| 404 | [error response](/http-api/#error-response) | No account has the ID and the request returns `UNKNOWN_USER` |
+
+### Rate limit
+
+40 requests per 10 seconds for each authenticated user, on the `user:follow:list` bucket, shared with [List followers](#list-followers).
+
+## Remove follower
+
+<RouteHeader method="DELETE" path="/v1/users/@me/followers/{user_id}" />
+
+Ends another account's follow of the caller. Returns 204 with an empty body, also when that account did not follow the caller. When a follow ended, the former follower's sessions receive a Follow Delete Gateway event naming the caller.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the follower to remove |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The account does not follow the caller |
+
+### Rate limit
+
+20 requests per 10 seconds for each authenticated user, on the `user:follower:remove` bucket.
+
+## Blocks and account deletion
+
+A [block](/http-api/users/relationships/) in either direction ends the follows between the two accounts and prevents new ones. A follow that races a block is removed as well. Deleting an account removes every follow it made and every follow it received, and its [data harvest](/http-api/users/data-harvest/) lists the accounts it follows.

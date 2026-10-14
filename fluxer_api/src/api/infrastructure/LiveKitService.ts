@@ -2,7 +2,7 @@
 
 import type {ChannelID, GuildID, UserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
-import type {ListParticipantsResult} from '@app/api/infrastructure/ILiveKitService';
+import type {ListParticipantsResult, SetParticipantAttributesParams} from '@app/api/infrastructure/ILiveKitService';
 import {ILiveKitService} from '@app/api/infrastructure/ILiveKitService';
 import {Logger} from '@app/api/Logger';
 import type {VoiceRegionMetadata, VoiceServerRecord} from '@app/api/voice/VoiceModel';
@@ -318,6 +318,10 @@ export class LiveKitService extends ILiveKitService {
 			return;
 		}
 		try {
+			const participant = await server.roomServiceClient.getParticipant(roomName, participantIdentity);
+			if (participant.attributes[SERVER_MUTE_ATTRIBUTE] !== 'true') {
+				return;
+			}
 			await server.roomServiceClient.mutePublishedTrack(roomName, participantIdentity, trackSid, true);
 		} catch (error) {
 			Logger.error({error, participantIdentity, roomName, trackSid}, 'Error muting LiveKit microphone track');
@@ -344,6 +348,27 @@ export class LiveKitService extends ILiveKitService {
 				return;
 			}
 			Logger.error({error}, 'Error disconnecting LiveKit participant');
+		}
+	}
+
+	// One RoomService call addressed by identity: no room listing, no permission field (permissions are rewritten
+	// atomically when present), only the given attributes change.
+	async setParticipantAttributes(params: SetParticipantAttributesParams): Promise<'ok' | 'not_found' | 'error'> {
+		const roomName = this.getRoomName(params.guildId, params.channelId);
+		const participantIdentity = this.getParticipantIdentity(params.userId, params.connectionId);
+		const server = this.tryResolveServerClient(params.regionId, params.serverId);
+		if (server === null) {
+			return 'not_found';
+		}
+		try {
+			await server.roomServiceClient.updateParticipant(roomName, participantIdentity, {attributes: params.attributes});
+			return 'ok';
+		} catch (error) {
+			if (LiveKitService.isHttp404(error)) {
+				return 'not_found';
+			}
+			Logger.warn({error, participantIdentity, roomName}, 'LiveKit participant attribute update failed');
+			return 'error';
 		}
 	}
 

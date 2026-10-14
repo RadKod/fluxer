@@ -330,6 +330,12 @@ function __setBindingForTests(nextBinding) {
 }
 
 module.exports = {
+	requestBorderlessAccess: async () => {
+		if (!binding || typeof binding.requestBorderlessAccess !== 'function') {
+			throw loadError || new Error(`${MODULE_NAME} borderless access unavailable`);
+		}
+		return binding.requestBorderlessAccess();
+	},
 	isSupported,
 	getAvailability,
 	listSources,

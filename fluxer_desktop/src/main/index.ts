@@ -61,6 +61,7 @@ import {registerDesktopRuntimeConfigHandlers} from '@electron/main/DesktopRuntim
 import {destroyDesktopTray, hasActiveDesktopTray, initializeDesktopTray} from '@electron/main/DesktopTray';
 import {registerDisplayMediaHandlers} from '@electron/main/DisplayMedia';
 import {initializeDockMenu} from '@electron/main/DockMenu';
+import {cleanupGameActivityIpc} from '@electron/main/GameActivityIpc';
 import {GATEWAY_SOCKET_ADDON_PACKAGE, loadGatewaySocketBinding} from '@electron/main/GatewaySocketNativeBoundary';
 import {cleanupGlobalShortcuts, initializeGlobalShortcuts} from '@electron/main/GlobalShortcutsIpc';
 import {
@@ -104,6 +105,7 @@ import {
 	showWindow,
 } from '@electron/main/Window';
 import {removeLegacySquirrelUninstallEntry} from '@electron/main/WindowsLegacyUninstallEntry';
+import {repairWindowsShortcuts} from '@electron/main/WindowsShortcuts';
 import {removeFluxerVulkanLayerRegistrations} from '@electron/main/WindowsVulkanLayerCleanup';
 import {
 	DESKTOP_CAPABILITY_MANIFEST_CHANNEL,
@@ -328,6 +330,7 @@ if (launchConfigurationError) {
 	let nativeModulePreflight: NativeModulePreflightResult = {degraded: []};
 	try {
 		nativeModulePreflight = runStartupPhase('native-module-preflight', runNativeModulePreflight);
+		runStartupPhase('windows-shortcuts', repairWindowsShortcuts);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		log.error('[NativeModulePreflight] Fatal native module preflight failure:', error);
@@ -352,7 +355,11 @@ if (launchConfigurationError) {
 	});
 	if (process.platform === 'win32') {
 		app.setToastActivatorCLSID(WINDOWS_TOAST_ACTIVATOR_CLSID);
-		app.setAppUserModelId(WINDOWS_APP_USER_MODEL_ID);
+		// Micup: the Store package already carries its AUMID (PackageFamilyName!Micup); a second one splits the taskbar
+		// icon from the pinned Start tile.
+		if (!process.windowsStore) {
+			app.setAppUserModelId(WINDOWS_APP_USER_MODEL_ID);
+		}
 	}
 	try {
 		runStartupPhase('local-app-scheme', () => {
@@ -640,6 +647,7 @@ if (launchConfigurationError) {
 			quitWatchdog.unref?.();
 		}
 		app.on('before-quit', () => {
+			cleanupGameActivityIpc();
 			log.info('[Shutdown] before-quit received');
 			setQuitting(true);
 			startupController.abort();

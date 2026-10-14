@@ -1,0 +1,99 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Micup akis-oneri: popular people and communities under the profile card beside the feed, on the card's surface
+   (FeedProfileAside.module.css .card). The rail hides itself on narrow screens, and these sections with it. */
+.section {
+	display: flex;
+	flex-shrink: 0;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding: 0.75rem;
+	border: 0.0625rem solid var(--background-modifier-accent);
+	border-radius: var(--radius-2xl);
+	background-color: var(--background-secondary-alt);
+}
+
+.heading {
+	margin: 0;
+	color: var(--text-primary);
+	font-size: 0.875rem;
+	font-weight: 700;
+}
+
+.list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	min-height: 2.75rem;
+}
+
+/* The avatar or icon with the names: opens the profile or the community preview. */
+.identity {
+	display: flex;
+	flex: 1;
+	align-items: center;
+	gap: 0.625rem;
+	min-width: 0;
+	padding: 0;
+	border: none;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+.names {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	line-height: 1.3;
+}
+
+.name {
+	overflow: hidden;
+	color: var(--text-primary);
+	font-size: 0.875rem;
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.detail {
+	overflow: hidden;
+	color: var(--text-primary-muted);
+	font-size: 0.75rem;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.action {
+	flex-shrink: 0;
+}
+
+.joined {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	gap: 0.25rem;
+	color: var(--text-primary-muted);
+	font-size: 0.8125rem;
+	font-weight: 600;
+}
+
+/* Narrow screens and touch (a touch-screen desktop layout shows the rail too): 44px buttons. Three parts to outrank
+   .button.small (0,2,0). */
+@media (max-width: 640px), (pointer: coarse) {
+	.section .row .action {
+		min-height: 2.75rem;
+	}
+}

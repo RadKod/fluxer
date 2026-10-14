@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
+import {IN_GAME_OVERLAY_DESCRIPTOR} from '@app/features/game_overlay/utils/GameOverlayMessageDescriptors';
+import {isGameOverlaySupported} from '@app/features/game_overlay/utils/GameOverlaySupport';
 import {getPremiumProductFullName, shouldShowPremiumFeatures} from '@app/features/premium/utils/PremiumUtils';
 import {guessPlatform, isDesktop} from '@app/features/ui/utils/NativeUtils';
 import {
@@ -31,6 +34,7 @@ import {
 	DesktopIcon,
 	DevicesIcon,
 	EyeSlashIcon,
+	GameControllerIcon,
 	GearIcon,
 	GiftIcon,
 	type Icon,
@@ -43,9 +47,11 @@ import {
 	ProhibitIcon,
 	RobotIcon,
 	ShieldIcon,
+	SparkleIcon,
 	TranslateIcon,
 	UserIcon,
 	UserListIcon,
+	UserPlusIcon,
 } from '@phosphor-icons/react';
 import type React from 'react';
 
@@ -85,6 +91,14 @@ const DESKTOP_SETTINGS_FALLBACK_DESCRIPTOR = msg({
 const PROFILE_DESCRIPTOR = msg({
 	message: 'Profile',
 	comment: 'User settings tab for editing the current user profile.',
+});
+const PROFILE_COSMETICS_DESCRIPTOR = msg({
+	message: 'Profile decorations',
+	comment: 'User settings tab for choosing an avatar decoration, a nameplate and a profile effect.',
+});
+const REFERRALS_DESCRIPTOR = msg({
+	message: 'Referrals',
+	comment: 'User settings tab for sharing a referral link and tracking the rewards it earns.',
 });
 const ACCOUNT_SECURITY_DESCRIPTOR = msg({
 	message: 'Account',
@@ -214,6 +228,18 @@ const ALL_TABS_DESCRIPTORS: Array<SettingsTabDescriptor> = [
 		icon: UserIcon,
 	},
 	{
+		type: 'profile_cosmetics',
+		category: 'user_settings',
+		label: PROFILE_COSMETICS_DESCRIPTOR,
+		icon: SparkleIcon,
+	},
+	{
+		type: 'referral',
+		category: 'user_settings',
+		label: REFERRALS_DESCRIPTOR,
+		icon: UserPlusIcon,
+	},
+	{
 		type: 'account_security',
 		category: 'user_settings',
 		label: ACCOUNT_SECURITY_DESCRIPTOR,
@@ -284,6 +310,12 @@ const ALL_TABS_DESCRIPTORS: Array<SettingsTabDescriptor> = [
 		category: 'app_settings',
 		label: AUDIO_AND_VIDEO_DESCRIPTOR,
 		icon: MicrophoneIcon,
+	},
+	{
+		type: 'game_overlay',
+		category: 'app_settings',
+		label: IN_GAME_OVERLAY_DESCRIPTOR,
+		icon: GameControllerIcon,
 	},
 	{
 		type: 'accessibility',
@@ -404,10 +436,13 @@ export const getSettingsTabs = (i18n: I18n): Array<SettingsTab> => {
 		if (ACCOUNT_NESTED_TAB_TYPES.some((tabType) => tabType === tab.type)) {
 			return false;
 		}
-		if (!showPremium && (tab.type === 'plutonium' || tab.type === 'gift_inventory')) {
+		if ((!showPremium || RuntimeConfig.isSelfHosted()) && (tab.type === 'plutonium' || tab.type === 'gift_inventory')) {
 			return false;
 		}
 		if (tab.type === 'desktop_settings' && !isDesktop()) {
+			return false;
+		}
+		if (tab.type === 'game_overlay' && !isGameOverlaySupported()) {
 			return false;
 		}
 		return true;

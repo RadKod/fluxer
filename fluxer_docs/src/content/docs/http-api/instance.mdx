@@ -37,6 +37,8 @@ The discovery document is the complete public description of one deployment. Eve
 | app_public | [public application configuration](#public-application-configuration-object) object | Public client configuration |
 | age_policy? | [age policy](#age-policy-object) object | Regional age policy for the deployment |
 | domain_migration? | [domain migration](#domain-migration-object) object | Web domain migration switch and logged-out rollout |
+| username_migration? | [username migration](#username-migration-object) object | Username selection migration state and deadlines |
+| username_tiers? | object | Mode of one-, two-, and three-character usernames, keyed `1`, `2`, and `3`: `locked`, `for_sale`, or `public` |
 
 <sup>1</sup> The value is a plain integer that increases when the API introduces a change a client is expected to notice, and the current value is `1`
 
@@ -141,6 +143,8 @@ Deployment-wide switches a client reads before it offers a feature, plus whether
 | self_hosted | boolean | Whether this deployment identifies itself as self-hosted |
 | presigned_attachment_uploads | boolean | Whether a client can request presigned attachment upload URLs |
 | emails_enabled<sup>1</sup> | boolean | Whether the deployment sends email |
+| premium_trial_days<sup>7</sup> | integer | Length in days of the [premium trial](/http-api/premium/#start-premium-trial) a new account can start, 0 when none is offered |
+| gift_codes_enabled<sup>8</sup> | boolean | Whether premium [gift codes](/http-api/gifts/) can be redeemed |
 | phone_verification_enabled | boolean | Deprecated. Always false |
 | account_identity<sup>5</sup> | string | How members sign in, one of the [account identity modes](#account-identity-modes) |
 | tag_style<sup>6</sup> | string | How usernames are tagged, one of the [tag styles](#tag-styles) |
@@ -156,6 +160,10 @@ Deployment-wide switches a client reads before it offers a feature, plus whether
 <sup>5</sup> Always `email` on a hosted deployment. A client treats a missing value as `email`, which is what a deployment from before the field existed means
 
 <sup>6</sup> Always `none` on a `username` deployment. Always `random` on a hosted deployment and on an instance that existed before the field. A client treats a missing value as `random`
+
+<sup>7</sup> Above 0 only on a self-hosted deployment in premium mirror mode with the [ALTCHA CAPTCHA check](/admin-api/instance/#captcha-configuration-object) enabled and the trial email hash key configured
+
+<sup>8</sup> False only on a self-hosted deployment that gives premium to everyone
 
 A deployment that reports `emails_enabled` as false sends no verification, password recovery, or IP authorisation message, and the flows that depend on one are unusable there. [Deployment availability](/http-api/deployment-availability/) states which routes a self-hosted deployment does not serve at all.
 
@@ -342,23 +350,43 @@ Each key names one limit. A key whose name begins with `feature_` is a feature g
 | emoji_max_size | Maximum file size for emoji uploads in bytes, in guild scope |
 | feature_animated_avatar | Allow animated avatar uploads, in user scope |
 | feature_animated_banner | Allow animated banner uploads, in user scope |
+| feature_app_commands | Allow bot application commands and interactions, disabled by default, in user scope |
 | feature_custom_discriminator | Allow custom discriminator selection, in user scope. Ignored for people on an instance with the `none` tag style |
 | feature_custom_notification_sounds | Allow custom notification sounds, in user scope |
 | feature_early_access | Access to beta features, in user scope |
+| feature_feed | Post to, read and interact with the feed; 0 closes every feed route and holds videos in processing, in user scope |
+| feature_feed_discover | Read the Discover feed of popular public posts; 0 closes the route and empties the list, in user scope |
+| feature_feed_discover_media | Instance-wide: let posts with images or video into Discover; stays 0 until media scanning is verified, in user scope |
+| feature_feed_discover_video | Instance-wide: let public posts with a Bunny video into Discover; 0 until video scanning is verified, in user scope |
+| feature_feed_reply_notifications | Instance-wide: record comment_reply notifications; 0 until clients that ignore unknown types have shipped, in user scope |
+| feature_feed_suggestions | Suggest popular accounts and communities and allow following a suggested account; 0 closes both, in user scope |
+| feature_feed_video | Post one video (up to 500 MB) through Bunny Stream; 0 until the Bunny token and scanning are live, in user scope |
+| feature_feed_views | Instance-wide: count and show post views; 0 hides the counts and closes POST /feed/views, in user scope |
 | feature_global_expressions | Use expressions across all guilds, in user scope |
+| feature_guild_roster | Instance-wide: enable [Micup Roster](/http-api/guild-roster-events/); 0 stops processing and settings writes, in user scope |
 | feature_guild_create | Create communities while the instance restricts community creation, in user scope |
 | feature_higher_video_quality | Access to higher video streaming quality, in user scope |
+| feature_mature_content_settings | Offer mature content and content warning settings; 0 hides unset ones while stored values keep working, in user scope |
+| feature_micupbot | Instance-wide: enable [MicupBOT](/http-api/guild-micupbot/); 0 stops processing and settings writes, in user scope |
 | feature_per_guild_profiles | Different profile per guild, in user scope |
 | feature_voice_entrance_sounds | Play a sound when joining voice, in user scope |
+| feed_fanout_max_followers | Most followers an author can have and still get new posts written to follower home feeds, in user scope |
+| feed_fanout_max_posts_per_day | Posts per author per day written to follower home feeds; later posts show only on the profile, in user scope |
+| feed_fanout_min_followers | Follower count an author read at request time must drop below to get home feed writes again, in user scope |
+| feed_suggestions_min_followers | Instance-wide: fewest followers a suggested account needs; values below 1 count as 1, in user scope |
 | max_attachment_file_size | Maximum size of each attachment file in bytes, in user and guild scope |
 | max_attachments_per_message | Maximum number of file attachments per message, in user and guild scope |
 | max_bio_length | Maximum characters in a user biography, in user scope |
 | max_bookmarks | Maximum bookmarked messages, in user scope |
+| max_boost_slots | Community boost slots an account holds without buying extra slots, in user scope |
 | max_channels_per_category | Maximum channels per category, in guild scope |
+| max_comments_per_post | Maximum comments one feed post can hold, in user scope |
 | max_custom_backgrounds | Maximum custom profile backgrounds, in user scope |
 | max_embeds_per_message | Maximum number of embeds per message, in user and guild scope |
 | max_favorite_meme_tags | Maximum meme tags to track, in user scope |
 | max_favorite_memes | Maximum favourited memes, in user scope |
+| max_feed_posts_per_day | Maximum feed posts one account can publish in a day, in user scope |
+| max_following | Maximum number of users one account can follow, in user scope |
 | max_group_dm_recipients | Maximum members per group direct message, in user scope |
 | max_group_dms_per_user | Maximum group direct messages a user can own, in user scope |
 | max_guild_channels | Maximum channels per guild, in guild scope |
@@ -391,7 +419,7 @@ Where a rule sets `max_guild_emojis`, `max_guild_stickers`, or one of the compat
 
 ## Public application configuration object
 
-Branding, setup state, legal documents, and registration fields a client reads before an account signs in.
+Branding, setup state, legal documents, registration fields, and the default client language a client reads before an account signs in.
 
 ### Structure
 
@@ -401,6 +429,9 @@ Branding, setup state, legal documents, and registration fields a client reads b
 | setup | [public setup state](#public-setup-state-object) object | Initial configuration state |
 | legal | [public legal configuration](#public-legal-configuration-object) object | Registration legal document URLs |
 | registration | [public registration fields](#public-registration-fields-object) object | Registration field collection policy |
+| localization?<sup>1</sup> | object | Default client language for visitors who have not chosen one |
+
+<sup>1</sup> The object has the nullable string `default_locale`, a client locale such as `tr`, and the string array `default_locale_time_zones` of IANA time zones. A visitor who has not chosen a language and whose time zone is listed opens in `default_locale`. Any other such visitor gets the first browser language the client supports, or `default_locale` when none is supported. A language the visitor saved, or the one stored in their account, always wins. While `default_locale` is null, or names a locale the client does not ship, the client detects the language as it would without this object
 
 ## Public branding object
 
@@ -440,7 +471,7 @@ Whether the deployment has finished its initial configuration, and where an oper
 
 ## Public legal configuration object
 
-The public URLs a client links from its registration form.
+The public URLs a client links from its registration form and settings.
 
 ### Structure
 
@@ -448,6 +479,7 @@ The public URLs a client links from its registration form.
 | --- | --- | --- |
 | terms_url | ?string | Public terms of service URL, or null |
 | privacy_url | ?string | Public privacy policy URL, or null |
+| source_url | ?string | Public URL where the instance offers its corresponding source code, or null |
 
 ## Public registration fields object
 
@@ -458,6 +490,22 @@ Which extra fields public registration collects.
 | Field | Type | Description |
 | --- | --- | --- |
 | collect_date_of_birth | boolean | Whether public registration collects and validates a date of birth |
+
+## Username migration object
+
+The public state of the instance username migration. Clients read it to decide whether to ask people without a selected username to choose one.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| state | string | `legacy`, `preparing`, or `selecting` |
+| epoch | integer | Migration generation, `0` until the first preparation |
+| preparing_at? | ?ISO8601 timestamp | When preparation began, or null |
+| started_at | ?ISO8601 timestamp | When selection began, or null before `selecting` |
+| forced_at | ?ISO8601 timestamp | The selection deadline, seven days after `started_at`, or null before `selecting` |
+
+`legacy` keeps every account on its existing name and tag. After `forced_at`, a person without a selected username must choose one before the actions listed under the [user object](/http-api/users/#user-object).
 
 ## Domain migration object
 

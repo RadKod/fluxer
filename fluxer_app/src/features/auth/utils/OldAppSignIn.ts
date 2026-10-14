@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {
+	DOMAIN_MIGRATION_ENABLED,
 	type DomainMigrationInstallKind,
 	resolveDomainMigrationSide,
 } from '@app/features/app/domain_migration/DomainMigrationCore';
@@ -17,7 +18,7 @@ export interface OldAppSignInInput {
 }
 
 export function shouldOfferOldAppSignIn({origin, installKind, hasStoredAccounts}: OldAppSignInInput): boolean {
-	if (hasStoredAccounts || !OLD_APP_SIGN_IN_INSTALL_KINDS.has(installKind)) {
+	if (!DOMAIN_MIGRATION_ENABLED || hasStoredAccounts || !OLD_APP_SIGN_IN_INSTALL_KINDS.has(installKind)) {
 		return false;
 	}
 	return resolveDomainMigrationSide(origin)?.role === 'target';

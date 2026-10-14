@@ -52,3 +52,11 @@ export function subscribeTooltipScrollHide(listener: () => void): () => void {
 		releaseScrollListener();
 	};
 }
+
+// Micup: resets the last scroll time and the listeners between tests; the fake clock starts again at 0
+// each test.
+export function resetTooltipScrollCoordinatorForTests(): void {
+	scrollHideListeners.clear();
+	releaseScrollListener();
+	lastScrollAt = 0;
+}

@@ -146,12 +146,12 @@
 .editIcon {
 	height: 1.25rem;
 	width: 1.25rem;
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 .editLabel {
 	font-weight: 500;
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 .section {

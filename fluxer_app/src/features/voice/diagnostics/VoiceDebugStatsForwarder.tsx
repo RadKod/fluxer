@@ -2,16 +2,15 @@
 
 import {getElectronAPI} from '@app/features/ui/utils/NativeUtils';
 import {useStatsForNerds} from '@app/features/voice/components/useStatsForNerds';
-import {
-	canOpenBrowserVoiceDebugEventSinkPopout,
-	setBrowserVoiceDebugEventSinkStatsHtml,
-} from '@app/features/voice/diagnostics/VoiceDebugBrowserEventSinkPopout';
+import {setBrowserVoiceDebugEventSinkStatsHtml} from '@app/features/voice/diagnostics/VoiceDebugBrowserEventSinkPopout';
 import {
 	renderVoiceDebugStatsHtml,
 	renderVoiceDebugStatsUnavailableHtml,
 } from '@app/features/voice/diagnostics/VoiceDebugStatsHtml';
+import {useStoreVersion} from '@app/features/voice/engine/Store';
+import voiceEngineV2AppDebugEventSinkHostAdapter from '@app/features/voice/engine/v2/VoiceEngineV2AppDebugEventSinkHostAdapter';
 import type {StatsForNerdsData} from '@app/features/voice/utils/VoiceStatsForNerdsPresenter';
-import {useEffect, useRef} from 'react';
+import {type ReactElement, useEffect, useRef} from 'react';
 
 const VOICE_DEBUG_STATS_FORWARD_INTERVAL_MS = 2000;
 
@@ -38,26 +37,35 @@ function publishUnavailableStatsHtml(): void {
 	setBrowserVoiceDebugEventSinkStatsHtml(html);
 }
 
-export function VoiceDebugStatsForwarder(): null {
-	const electron = getElectronAPI();
-	const enabled = Boolean(electron?.setVoiceDebugEventSinkStatsHtml) || canOpenBrowserVoiceDebugEventSinkPopout();
-	const data = useStatsForNerds({enabled});
+function OpenPopoutVoiceDebugStatsForwarder(): null {
+	const data = useStatsForNerds();
 	const dataRef = useRef(data);
 	dataRef.current = data;
 	useEffect(() => {
-		if (!enabled) return;
 		activeForwarderCount += 1;
 		publishStatsHtml(dataRef.current);
 		const intervalId = window.setInterval(() => {
+			if (!voiceEngineV2AppDebugEventSinkHostAdapter.isEventSinkPopoutOpen()) {
+				voiceEngineV2AppDebugEventSinkHostAdapter.handleEventSinkPopoutClosed();
+				return;
+			}
 			publishStatsHtml(dataRef.current);
 		}, VOICE_DEBUG_STATS_FORWARD_INTERVAL_MS);
 		return () => {
 			window.clearInterval(intervalId);
 			activeForwarderCount -= 1;
-			if (activeForwarderCount === 0) {
+			if (activeForwarderCount === 0 && voiceEngineV2AppDebugEventSinkHostAdapter.isEventSinkPopoutOpen()) {
 				publishUnavailableStatsHtml();
 			}
 		};
-	}, [enabled]);
+	}, []);
 	return null;
+}
+
+export function VoiceDebugStatsForwarder(): ReactElement | null {
+	useStoreVersion(voiceEngineV2AppDebugEventSinkHostAdapter);
+	if (!voiceEngineV2AppDebugEventSinkHostAdapter.isEventSinkPopoutOpen()) return null;
+	return (
+		<OpenPopoutVoiceDebugStatsForwarder data-flx="voice.voice-debug-stats-forwarder.open-popout-voice-debug-stats-forwarder" />
+	);
 }

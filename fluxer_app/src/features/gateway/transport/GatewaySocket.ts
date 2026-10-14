@@ -29,6 +29,7 @@ import {
 	GatewayWireReadyState,
 	type GatewayWireTransport,
 } from '@app/features/gateway/transport/GatewayWireTransport';
+import type {GameActivity} from '@app/features/gateway/types/GatewayPresenceTypes';
 import {Logger, LogLevel} from '@app/features/platform/utils/AppLogger';
 import {ExponentialBackoff} from '@app/features/platform/utils/RetryScheduler';
 import type {GatewayCustomStatusPayload} from '@app/features/user/state/CustomStatus';
@@ -129,7 +130,7 @@ interface GatewayResumeProbeOptions {
 }
 
 export interface GatewayErrorData {
-	code: GatewayErrorCode;
+	code: GatewayErrorCode | 'USERNAME_SELECTION_REQUIRED';
 	message: string;
 }
 
@@ -157,7 +158,7 @@ function parseGatewayPayload(json: string): GatewayPayload {
 }
 
 function isGatewayErrorData(value: unknown): value is GatewayErrorData {
-	return isRecord(value) && typeof value.code === 'number' && typeof value.message === 'string';
+	return isRecord(value) && typeof value.code === 'string' && typeof value.message === 'string';
 }
 
 export interface GatewayDispatchReceipt {
@@ -562,15 +563,17 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 		afk?: boolean,
 		mobile?: boolean,
 		customStatus?: GatewayCustomStatusPayload | null,
-	): void {
-		if (!this.isConnected()) return;
-		this.sendPayload({
+		gameActivity?: GameActivity | null,
+	): boolean {
+		if (!this.isConnected()) return false;
+		return this.sendPayload({
 			op: GatewayOpcodes.PRESENCE_UPDATE,
 			d: {
 				status,
 				...(afk !== undefined && {afk}),
 				...(mobile !== undefined && {mobile}),
 				...(customStatus !== undefined && {custom_status: customStatus}),
+				...(gameActivity !== undefined && {game_activity: gameActivity}),
 			},
 		});
 	}

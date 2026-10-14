@@ -21,6 +21,7 @@ import {buildMessageNotificationBody} from '@app/features/notification/utils/Mes
 import {getNotificationIconURL} from '@app/features/notification/utils/NotificationIconURL';
 import * as NotificationUtils from '@app/features/notification/utils/NotificationUtils';
 import * as PushSubscriptionService from '@app/features/platform/push/PushSubscriptionService';
+import AppStorage from '@app/features/platform/state/PersistentStorage';
 import {IS_DEV} from '@app/features/platform/types/Env';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {makePersistent, stopPersistent} from '@app/features/platform/utils/MobXPersistence';
@@ -133,8 +134,25 @@ const isDocumentFocused = (): boolean => {
 	return typeof document.hasFocus === 'function' && document.hasFocus();
 };
 
+// Micup: the store persists the old off default for everyone who opened the app, so turn it on once; the flag is
+// persisted with the value, so a later off stays off. A browser block stays off (refreshPermission also enforces it).
+function applyBrowserNotificationsDefaultOnMigrationV1(): void {
+	try {
+		const raw = AppStorage.getItem('Notification');
+		if (raw === null) return;
+		const parsed = JSON.parse(raw) as Record<string, unknown>;
+		if (parsed.browserNotificationsDefaultOnMigratedV1 === true) return;
+		if (typeof Notification === 'undefined' || Notification.permission !== 'denied') {
+			parsed.browserNotificationsEnabled = true;
+		}
+		parsed.browserNotificationsDefaultOnMigratedV1 = true;
+		AppStorage.setItem('Notification', JSON.stringify(parsed));
+	} catch {}
+}
+
 class NotificationState {
-	browserNotificationsEnabled = false;
+	browserNotificationsEnabled = true;
+	browserNotificationsDefaultOnMigratedV1 = true;
 	unreadMessageBadgeEnabled = true;
 	ttsNotificationMode: TTSNotificationMode = TTSNotificationMode.NEVER;
 	focused = isDocumentFocused();
@@ -152,11 +170,10 @@ class NotificationState {
 			{autoBind: true},
 		);
 		initializeStore(this, async () => {
+			const notificationUtils = await import('@app/features/notification/utils/NotificationUtils');
+			notificationUtils.ensureDesktopNotificationClickHandler();
 			await this.initPersistence();
 			await this.refreshPermission();
-		});
-		queueMicrotask(() => {
-			NotificationUtils.ensureDesktopNotificationClickHandler();
 		});
 		queueMicrotask(() => {
 			this.accountReactionDisposer = reaction(
@@ -186,8 +203,10 @@ class NotificationState {
 	private async initPersistence(): Promise<void> {
 		if (this.isPersisting) return;
 		this.isPersisting = true;
+		applyBrowserNotificationsDefaultOnMigrationV1();
 		await makePersistent(this, 'Notification', [
 			'browserNotificationsEnabled',
+			'browserNotificationsDefaultOnMigratedV1',
 			'unreadMessageBadgeEnabled',
 			'ttsNotificationMode',
 		]);

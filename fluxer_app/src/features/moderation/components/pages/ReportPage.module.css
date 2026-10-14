@@ -86,7 +86,7 @@
 
 .breadcrumbActive .breadcrumbNumber {
 	background: var(--brand-primary);
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 .breadcrumbLabel {

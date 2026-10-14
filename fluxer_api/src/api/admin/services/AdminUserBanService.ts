@@ -8,6 +8,7 @@ import type {AdminUserUpdatePropagator} from '@app/api/admin/services/AdminUserU
 import * as AuthSession from '@app/api/auth/AuthSession';
 import {createUserID, type UserID} from '@app/api/BrandedTypes';
 import {emitAdminAction} from '@app/api/infrastructure/activity/AccountChangeEvents';
+import {onUserBanned} from '@app/api/user/lifecycle/UserLifecycleHooks';
 import {clearNewConversationLimit} from '@app/api/user/NewConversationLimit';
 import {isAccountClosed, isTemporarilyBanned} from '@app/api/user/UserHelpers';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
@@ -53,6 +54,7 @@ export class AdminUserBanService {
 		const updatedUser = (await userRepository.updateFlags(userId, (flags) => flags | UserFlags.DISABLED)) ?? bannedUser;
 		await AuthSession.terminateAllUserSessions(this.deps.apiContext, userId);
 		await updatePropagator.propagateUserUpdate({userId, oldUser: user, updatedUser: updatedUser});
+		if (data.duration_hours <= 0) await onUserBanned({userId});
 		const email = user.email;
 		const notificationSent =
 			data.notify_user && email && data.duration_hours > 0

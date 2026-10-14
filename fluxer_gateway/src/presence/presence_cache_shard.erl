@@ -140,8 +140,34 @@ do_put(Table, UserId, Presence) ->
             ets:delete(Table, UserId),
             ok;
         _ ->
-            ets:insert(Table, {UserId, Presence}),
-            ok
+            merge_presence_put(Table, UserId, Presence)
+    end.
+
+%% Micup: replicated and direct ETS writes must merge identity atomically.
+-spec merge_presence_put(atom(), integer(), map()) -> ok.
+merge_presence_put(Table, UserId, Presence) ->
+    case ets:lookup(Table, UserId) of
+        [] ->
+            case ets:insert_new(Table, {UserId, Presence}) of
+                true -> ok;
+                false -> merge_presence_put(Table, UserId, Presence)
+            end;
+        [{UserId, Current}] ->
+            User = user_utils:merge_user(
+                maps:get(<<"user">>, Current, #{}), maps:get(<<"user">>, Presence, #{})
+            ),
+            Merged =
+                case map_size(User) of
+                    0 -> Presence;
+                    _ -> Presence#{<<"user">> => User}
+                end,
+            Match = [
+                {{UserId, '$1'}, [{'=:=', '$1', {const, Current}}], [{const, {UserId, Merged}}]}
+            ],
+            case ets:select_replace(Table, Match) of
+                1 -> ok;
+                0 -> merge_presence_put(Table, UserId, Presence)
+            end
     end.
 
 -spec ensure_table(atom(), pid()) -> ok.

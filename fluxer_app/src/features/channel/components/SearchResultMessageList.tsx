@@ -11,7 +11,9 @@ import {
 	getCollapsedGroupType,
 	isNewMessageGroup,
 } from '@app/features/messaging/utils/MessageGroupingUtils';
+import Relationships from '@app/features/relationship/state/Relationships';
 import {MessagePreviewContext} from '@fluxer/constants/src/ChannelConstants';
+import {observer} from 'mobx-react-lite';
 import React, {useMemo} from 'react';
 
 interface SearchResultMessageListProps {
@@ -41,7 +43,11 @@ type SearchResultListItem =
 			items: Array<ChannelStreamItem>;
 	  };
 
-function buildSearchResultListItems(channel: Channel, messages: Array<Message>): Array<SearchResultListItem> {
+function buildSearchResultListItems(
+	channel: Channel,
+	messages: Array<Message>,
+	isBlocked: (userId: string) => boolean,
+): Array<SearchResultListItem> {
 	const items: Array<SearchResultListItem> = [];
 	let pendingCollapsedType: ChannelStreamType | null = null;
 	let pendingCollapsedKey: string | null = null;
@@ -65,7 +71,7 @@ function buildSearchResultListItems(channel: Channel, messages: Array<Message>):
 		lastPendingMessage = undefined;
 	};
 	for (const message of messages) {
-		const collapsedType = getCollapsedGroupType(channel, message, true);
+		const collapsedType = getCollapsedGroupType(channel, message, true, isBlocked(message.author.id));
 		if (collapsedType === null) {
 			flushCollapsedGroup();
 			items.push({type: 'message', message});
@@ -90,7 +96,7 @@ function buildSearchResultListItems(channel: Channel, messages: Array<Message>):
 	return items;
 }
 
-export function SearchResultMessageList({
+export const SearchResultMessageList = observer(function SearchResultMessageList({
 	channel,
 	messages,
 	revealedGroupKeys,
@@ -105,12 +111,18 @@ export function SearchResultMessageList({
 	messageActionsClassName,
 	renderMessageActions,
 	renderMessageWrapper,
-	spammerOverrideVersion,
 }: SearchResultMessageListProps): React.ReactNode {
-	const items = useMemo(
-		() => buildSearchResultListItems(channel, messages),
-		[channel, messages, spammerOverrideVersion],
+	const blockedSelectors = useMemo(
+		() =>
+			new Map(
+				Array.from(new Set(messages.map((message) => message.author.id)), (userId) => [
+					userId,
+					Relationships.createBlockedSelector(userId),
+				]),
+			),
+		[messages],
 	);
+	const items = buildSearchResultListItems(channel, messages, (userId) => blockedSelectors.get(userId)!.get());
 	return items.map((item) => {
 		if (item.type === 'message') {
 			return <React.Fragment key={item.message.id}>{renderMessage(item.message)}</React.Fragment>;
@@ -138,4 +150,4 @@ export function SearchResultMessageList({
 			/>
 		);
 	});
-}
+});

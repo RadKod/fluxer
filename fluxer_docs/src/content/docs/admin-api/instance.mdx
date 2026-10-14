@@ -34,6 +34,7 @@ Missing settings use the defaults documented below. Invalid stored configuration
 | --- | --- | --- |
 | sso | [SSO configuration](#sso-configuration-object) object | Single sign-on settings |
 | gateway_rollout | [Gateway rollout configuration](#gateway-rollout-configuration-object) object | Gateway admission and dispatch tuning |
+| voice_room | [voice room configuration](#voice-room-configuration-object) object | 3D voice room, table game, and room camera switches |
 | push_relay | [push relay configuration](#push-relay-configuration-object) object | Operator consent to the Fluxer-run push relay |
 | domain_migration | [domain migration configuration](#domain-migration-configuration-object) object | Web domain migration rollout |
 | plutonium_page | [Plutonium page configuration](#plutonium-page-configuration-object) object | Plutonium page rollout |
@@ -108,8 +109,15 @@ Admission and dispatch tuning for the Gateway cluster.
 | gateway_dispatch_relay_shards | integer | Dispatch relay shard count (1-10000, default 32) |
 | gateway_dispatch_relay_max_queue | integer | Dispatch relay queue ceiling (0-1000000, default 50000) |
 | voice_e2ee_scope | string | `guild_feature_only` or `platform_wide` (default `guild_feature_only`) |
+| max_connections | integer | Per-node connection soft limit (1-200000; default 0 uses the environment value) |
+| game_activity_enabled | boolean | Whether current game sharing is enabled for the instance (default false) |
+| game_activity_epoch | integer | Read-only rollout revision (0-9007199254740991, default 0) |
 
 Every field is present on read. An absent document or missing field uses the defaults above.
+
+`max_connections` overrides `FLUXER_GATEWAY_MAX_CONNECTIONS` on each Gateway node without a restart. Set it to `0` to restore the environment value. The hard limit uses the same 5% headroom as the environment setting. Lowering the limit leaves existing connections open. Monitor `fluxer_gateway_websocket_connection_limit` and node memory before raising it.
+
+Fluxer raises `game_activity_epoch` by one when `game_activity_enabled` changes. Clients use the epoch to discard older rollout updates. An update cannot set `game_activity_epoch`.
 
 Admin reads and writes name this field `rpc_request_timeout_ms`. The legacy stored name is covered in the [operator configuration reference](/operator/configuration/#stored-instance-policy).
 
@@ -128,6 +136,26 @@ The operator's consent to the push relay supplemental privacy notice.
 Every field is present on read. An absent document or missing field uses the defaults above.
 
 The notice covers only the Fluxer-run relay that reaches Apple and Google for the official mobile apps. A subscription whose endpoint points at another distributor, such as a self-hosted UnifiedPush server or ntfy, never reaches that relay and needs no acceptance.
+
+## Voice room configuration object
+
+The instance switches for the 3D room view of voice channels, for the [table games](/http-api/table-games/) played in it, and for the cameras shown in it. A client reads them as the `voice_room` assignment of [Get experiment assignments](/http-api/experiments/#get-experiment-assignments), where `rooms` is `rooms_enabled`, `games` is true only while `rooms_enabled` and `games_enabled` are both on, and `cameras` is true only while `rooms_enabled` and `room_cameras_enabled` are both on.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| rooms_enabled | boolean | Whether a voice channel with a [room theme](/http-api/voice-seats/#room-themes) opens as a 3D room (default false) |
+| games_enabled | boolean | Whether table games can be played, which needs `rooms_enabled` (default false) |
+| room_cameras_enabled | boolean | Whether the 3D room shows cameras on avatars, which needs `rooms_enabled` (default false) |
+
+Every field is present on read. An absent document or missing field uses the defaults above.
+
+While `rooms_enabled` is false, the server seats nobody, and [Take a voice seat](/http-api/voice-seats/#take-a-voice-seat) and every table game route return 403 `FEATURE_TEMPORARILY_DISABLED`. A room theme can still be set on a channel, and it has no effect until rooms are switched on.
+
+While table games are off, every table game route returns 403 `FEATURE_TEMPORARILY_DISABLED`, and the server ends each open table as `canceled` with reason `disabled` on its next timer pass. Switching games on again restores no ended table.
+
+`room_cameras_enabled` changes nothing on the server. It tells clients whether the 3D room shows the cameras of the people in it on their avatars and subscribes to them. While it is off, a client shows the room without cameras, and the grid view of the call is unaffected.
 
 ## Domain migration configuration object
 
@@ -316,12 +344,15 @@ Branding, legal, setup and registration field policy, in the Admin form of what 
 | --- | --- | --- |
 | branding | [public branding](/http-api/instance/#public-branding-object) object | Product name, image URLs, and theme colour |
 | setup<sup>1</sup> | object | Has the single boolean `configured` |
-| legal | [public legal configuration](/http-api/instance/#public-legal-configuration-object) object | Terms and privacy URLs |
+| legal | [public legal configuration](/http-api/instance/#public-legal-configuration-object) object | Terms, privacy, and source code URLs |
 | registration<sup>2</sup> | [public registration fields](/http-api/instance/#public-registration-fields-object) object | Registration field collection policy |
+| localization?<sup>3</sup> | object | Default client language for visitors who have not chosen one |
 
 <sup>1</sup> The [Instance](/http-api/instance/) resource publishes `admin_url` in this object as well
 
 <sup>2</sup> The object has the single boolean `collect_date_of_birth`
+
+<sup>3</sup> The object has the nullable string `default_locale` and the string array `default_locale_time_zones`, as the Instance resource publishes them
 
 ## Instance policy object
 
@@ -337,6 +368,7 @@ Community, direct message, premium and gating policy for the whole deployment.
 | direct_messages_locked<sup>1</sup> | boolean | Whether the direct message setting is locked against further change |
 | guild_create_access | boolean | Whether every account can create communities, or only admins and holders of the `feature_guild_create` limit |
 | premium_mode | string | [Premium mode](#premium-modes) |
+| premium_trial_days | integer | Length in days of the one-time premium trial, where 0 turns the trial off |
 | services | object | Operator overrides for `gif_enabled`, `youtube_enabled`, and `bluesky_enabled`. Each is nullable, and null means no override |
 | services_resolved<sup>2</sup> | object | The same keys as concrete booleans, resolved from the override and the provider's own availability |
 | services_available<sup>3</sup> | object | Provider availability for `gif`, `youtube`, and `bluesky`, with no operator override applied |
@@ -595,6 +627,59 @@ Display metadata for one [limit key](/http-api/instance/#limit-keys), which an e
 | min? | number | Suggested minimum for an editor |
 | max? | number | Suggested maximum for an editor |
 
+## Username policy object
+
+The stored username policy. It sets which short usernames people can select during username migration, which dictionary generation screens names, and how fast selections are admitted.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| revision | integer | Policy revision, raised by every accepted update |
+| tiers<sup>1</sup> | object | Mode of one-, two-, and three-character usernames, keyed `1`, `2`, and `3` |
+| dictionary_gen | integer | The published [username dictionary](/admin-api/blocklists/#get-username-dictionary) generation, `0` when none |
+| dictionary_hash | ?string | SHA-256 hex digest of that generation, or null when none is published |
+| next_dictionary_gen | integer | The generation number the next dictionary publication receives |
+| admission<sup>2</sup> | object | `global_per_second`, the selections admitted each second, and `paused` |
+| held_manifest | ?array[string] | Usernames that must be held or admin-assigned before migration can start, or null |
+
+<sup>1</sup> Each value is `locked`, `for_sale`, or `public`. A stored policy starts with every tier `locked`
+
+<sup>2</sup> A stored policy starts paused with a budget of `0`
+
+## Username migration state object
+
+The instance username migration state. The public part is the [username migration](/http-api/instance/#username-migration-object) object of discovery.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| state | string | `legacy`, `preparing`, or `selecting` |
+| epoch | integer | Migration generation, raised by every preparation |
+| preparing_at | ?ISO8601 timestamp | When the current preparation began, or null in `legacy` |
+| started_at | ?ISO8601 timestamp | When selection began, or null before `selecting` |
+| forced_at | ?ISO8601 timestamp | The selection deadline, seven days after `started_at`, or null before `selecting` |
+
+## Username migration inspection object
+
+The evidence [Start username migration](#start-username-migration) checks, read for the current epoch. A part that cannot be proven for that epoch is null or not ready.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| migration | [username migration state](#username-migration-state-object) object | The current migration state |
+| scan<sup>1</sup> | ?object | `epoch`, `scanned`, `found`, and `done_at` of the account scan, or null when none ran for this epoch |
+| holds<sup>2</sup> | object | `required`, `ready`, and `proof` for the held username manifest |
+| capacity<sup>3</sup> | object | `available`, `ready`, and `proof` for the declared guild capacity |
+
+<sup>1</sup> The scan counts accounts that still need a username. `found` must be `0` and `done_at` set before selection can start
+
+<sup>2</sup> `proof` records the policy revision, check time, and the `held`, `assigned`, and `missing` names
+
+<sup>3</sup> `proof` records the epoch, policy revision, account total, the latest guild capacity declaration, and the holds proof
+
 ## Get instance configuration
 
 <RouteHeader method="GET" path="/v1/admin/instance/config" auditReason />
@@ -630,14 +715,16 @@ The body has one optional object for each section. Fluxer leaves an absent secti
 | Field | Type | Description |
 | --- | --- | --- |
 | sso?<sup>1</sup> | object | Every [SSO configuration](#sso-configuration-object) field except `client_secret_set` and `redirect_uri`, plus `client_secret` |
-| gateway_rollout? | object | Any subset of the [Gateway rollout configuration](#gateway-rollout-configuration-object) fields, each bound as documented there |
+| gateway_rollout? | object | Any subset of the [Gateway rollout configuration](#gateway-rollout-configuration-object) fields except `game_activity_epoch`, each bound as documented there |
+| voice_noise_suppression? | object | Any subset of the voice noise suppression configuration fields |
+| voice_room? | object | Any of the three [voice room](#voice-room-configuration-object) switches |
 | push_relay? | object | `relay_consent_accepted` from the [push relay configuration](#push-relay-configuration-object) |
 | domain_migration? | object | Any subset of the [domain migration](#domain-migration-configuration-object) fields |
 | plutonium_page? | object | Any subset of the [Plutonium page](#plutonium-page-configuration-object) fields |
 | captcha? | object | Any subset of the [captcha configuration](#captcha-configuration-object) fields |
 | experiment_delivery? | object | Any subset of the [experiment delivery](#experiment-delivery-configuration-object) fields |
 | registration? | object | `mode` and `admin_registration_urls_enabled` |
-| app_public?<sup>2</sup> | object | `branding`, `setup`, `legal`, and `registration` sub-objects, each merged field by field |
+| app_public?<sup>2</sup> | object | `branding`, `setup`, `legal`, `registration`, and `localization` sub-objects, each merged field by field |
 | integrations?<sup>3</sup> | object | `gif`, `youtube`, `email`, and `bluesky` sub-objects, the last of which also has the `keys` array |
 | media? | object | `attachment_decay` overrides, each nullable to restore the deployment default |
 | policy? | [instance policy update](#instance-policy-update-structure) object | Community, direct message, premium, and gating policy |
@@ -645,7 +732,7 @@ The body has one optional object for each section. Fluxer leaves an absent secti
 
 <sup>1</sup> The supplied fields are merged over the stored configuration and the result is validated as a whole. Every supplied endpoint URL uses `https`, has no credentials and no fragment, and resolves to a publicly routable address, otherwise the request returns 400 `INVALID_FORM_BODY` with `INVALID_URL_FORMAT` or `URL_NOT_PUBLICLY_ROUTABLE`
 
-<sup>2</sup> `branding.product_name` is 1 to 80 characters, every branding and legal URL is at most 2048 characters and nullable, `branding.theme_color` is at most 64 characters and nullable, and `setup.configured` and `registration.collect_date_of_birth` are booleans. `branding.premium_product_name` is 1 to 40 characters, and null restores the default. `branding.premium_info_url` is an absolute `http` or `https` URL. Every string is trimmed before it is stored
+<sup>2</sup> `branding.product_name` is 1 to 80 characters, every branding and legal URL is at most 2048 characters and nullable, `branding.theme_color` is at most 64 characters and nullable, and `setup.configured` and `registration.collect_date_of_birth` are booleans. `localization.default_locale` is a supported locale or null, and `localization.default_locale_time_zones` is at most 32 IANA time zone names of at most 64 characters each. To clear `default_locale`, send it together with `default_locale_time_zones`; an object whose supplied values are all null is ignored. `branding.premium_product_name` is 1 to 40 characters, and null restores the default. `branding.premium_info_url` is an absolute `http` or `https` URL. Every string is trimmed before it is stored
 
 `push_relay` takes only `relay_consent_accepted`. Fluxer sets `relay_consent_accepted_at` and `relay_consent_accepted_by` itself on the request that changes that flag, and accepts neither from a request. Turning the flag on stamps the current time and the acting account, and turning it off clears both to null. A request that repeats the flag it already holds leaves the stamp alone.
 
@@ -654,6 +741,8 @@ The body has one optional object for each section. Fluxer leaves an absent secti
 `plutonium_page` works the same way, over the [Plutonium page configuration](#plutonium-page-configuration-object) fields and its own `config_version`.
 
 `captcha` takes any subset of the [captcha configuration](#captcha-configuration-object) fields, each bound as documented there. Fluxer merges the supplied fields over the stored ones. The section has no `config_version`.
+
+`voice_room` takes `rooms_enabled`, `games_enabled`, and `room_cameras_enabled`, each a boolean. It has no `config_version`, and a section with none of them writes nothing.
 
 `experiment_delivery` takes both [experiment delivery configuration](#experiment-delivery-configuration-object) fields, each bound as documented there. It is a section of its own, so a write to it changes no `config_version` and changes no assignment, only the cadence on which clients ask for one.
 
@@ -675,6 +764,7 @@ Fluxer skips URL validation while the merged configuration leaves single sign-on
 | direct_messages_locked?<sup>2</sup> | boolean | Whether the direct message setting stays locked |
 | guild_create_access? | boolean | Whether every account can create communities |
 | premium_mode? | string | [Premium mode](#premium-modes) |
+| premium_trial_days? | integer | Length in days of the one-time premium trial (0-30), where 0 turns the trial off |
 | services? | object | Nullable `gif_enabled`, `youtube_enabled`, and `bluesky_enabled` overrides |
 
 <sup>1</sup> Setting `single_community_enabled` to true adopts the already designated guild when one still exists. When none is designated or the designated guild was deleted, it creates a community using `single_community_name` or the configured product name. When the stored guild ID is not a valid ID, or the guild lookup fails for a reason other than an unknown guild, the operation fails and Fluxer creates no community. On a deployment whose setup is already complete, enabling it while no guild is designated fails with 400 `INSTANCE_POLICY_TRANSITION_NOT_ALLOWED`, as does enabling it when the acting Admin account cannot be resolved. Setting it to false only clears the flag and leaves the guild in place
@@ -693,7 +783,7 @@ On a self-hosted deployment, billing and the `everyone` premium mode exclude eac
 | 400 | [error response](/admin-api/#error-response) | A policy transition is refused, returned as `INSTANCE_POLICY_TRANSITION_NOT_ALLOWED` |
 
 :::caution[Sections are applied one after another]
-The order is `gateway_rollout`, `push_relay`, `domain_migration`, `plutonium_page`, `captcha`, `experiment_delivery`, `sso`, `registration`, `app_public` branding, legal, and registration fields, `integrations`, `media`, `policy`, `billing`, and finally `app_public.setup`. A failure part way through leaves the earlier sections written.
+The order is `gateway_rollout`, `voice_room`, `push_relay`, `domain_migration`, `plutonium_page`, `captcha`, `experiment_delivery`, `sso`, `registration`, `app_public` branding, legal, registration, and localization fields, `integrations`, `media`, `policy`, `billing`, and finally `app_public.setup`. A failure part way through leaves the earlier sections written.
 :::
 
 ### Side effects
@@ -951,6 +1041,171 @@ On a self-hosted deployment whose premium mode is `everyone`, Fluxer drops the `
 Each rule's `modifiedFields` is then recomputed and the merged document replaces the stored one. Every API node adopts the new configuration. Clients observe it through the published [limit configuration](/http-api/instance/#limit-configuration-object).
 
 The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `update_limit_config`, target type `limit_config`, target ID `0`, and metadata keys `rule_count`, `changed_rule_count`, and `trait_definition_count`, each taken from the stored document. `changed_rule_count` is the number of rule identifiers added, removed, or stored with different filters or limits, compared with the configuration the serving node held before the write.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:user:modify` bucket.
+
+## Get username migration
+
+<RouteHeader method="GET" path="/v1/admin/instance/username-migration" auditReason />
+
+Returns the [username migration inspection](#username-migration-inspection-object) object. Requires `username:migration:start`.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [username migration inspection](#username-migration-inspection-object) object | The evidence was read |
+| 503 | [error response](/admin-api/#error-response) | `USERNAME_UNAVAILABLE`, because evidence could not be read or changed during the read |
+
+### Side effects
+
+A successful read records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `get_instance_config`, target type `username_migration`, target ID `0`, and metadata keys `epoch` and `state`. A 503 records nothing.
+
+### Rate limit
+
+200 requests per minute for each authenticated user, on the `admin:lookup` bucket.
+
+## Prepare username migration
+
+<RouteHeader method="POST" path="/v1/admin/instance/username-migration/prepare" auditReason />
+
+Moves the migration from `legacy` to `preparing` with a new epoch, starts the account scan, and returns the [username migration state](#username-migration-state-object) object. Requires `username:migration:start` and an audit reason.
+
+Run it only after every API and worker process serves this version. A migration already `preparing` is returned unchanged, and a `selecting` migration cannot be prepared again.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| processes_ready | boolean | Must be `true`, confirming every process runs this version |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [username migration state](#username-migration-state-object) object | The migration is preparing |
+| 400 | [error response](/admin-api/#error-response) | Body validation fails or the audit reason is missing |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `prepare_username_migration`, target type `username_migration`, target ID `0`, and metadata keys `epoch`, `processes_ready`, and `preparing_at`.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:user:modify` bucket.
+
+## Start username migration
+
+<RouteHeader method="POST" path="/v1/admin/instance/username-migration/start" auditReason />
+
+Moves a `preparing` migration to `selecting` and returns the [username migration state](#username-migration-state-object) object, with `forced_at` seven days after `started_at`. Requires `username:migration:start` and an audit reason.
+
+:::caution[Selection cannot be rolled back]
+Once people select names, identities only move forward. Start only after the mobile release that supports username selection is published in both stores.
+:::
+
+The server checks the published dictionary, the held username manifest, a finished scan of this epoch that found no account to fix, the preparation barrier, and the guild capacity declaration. A migration already `selecting` in the same epoch is returned unchanged.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| epoch | integer | The epoch being started, which must be the current one |
+| mobile_published | boolean | Must be `true`, confirming the mobile release is published |
+| mobile_version | string | The published mobile version (1-100 characters) |
+| guild_capacity<sup>1</sup> | object | `max_guild_members`, `max_guild_online`, `source`, and `observed_at` of the largest community |
+
+<sup>1</sup> `max_guild_online` cannot exceed `max_guild_members`, `source` holds 1-1000 characters, and `observed_at` must be less than an hour old
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [username migration state](#username-migration-state-object) object | Selection started |
+| 400 | [error response](/admin-api/#error-response) | Body validation fails, the declaration is stale, or the audit reason is missing |
+| 503 | [error response](/admin-api/#error-response) | `USERNAME_UNAVAILABLE`, because the prerequisites could not be read |
+
+### Side effects
+
+The operation records an [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `declare_username_migration_capacity` before it stores the declaration, also for a start that then fails. A successful start records a second entry with action `start_username_migration`, target type `username_migration`, target ID `0`, and metadata keys `epoch`, `mobile_published`, `mobile_version`, `dictionary_gen`, and the declaration fields.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:user:modify` bucket.
+
+## Roll back username migration
+
+<RouteHeader method="POST" path="/v1/admin/instance/username-migration/rollback" auditReason />
+
+Returns a `preparing` migration to `legacy` and returns the [username migration state](#username-migration-state-object) object. Requires `username:migration:start` and an audit reason. Only the current preparing epoch can be rolled back. A `selecting` migration cannot.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| epoch | integer | The current preparing epoch |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [username migration state](#username-migration-state-object) object | The migration is `legacy` again |
+| 400 | [error response](/admin-api/#error-response) | Body validation fails or the audit reason is missing |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `rollback_username_migration`, target type `username_migration`, target ID `0`, and metadata key `epoch`.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:user:modify` bucket.
+
+## Get username policy
+
+<RouteHeader method="GET" path="/v1/admin/instance/username-policy" auditReason />
+
+Returns the [username policy](#username-policy-object) object. Requires `instance:config:view`.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [username policy](#username-policy-object) object | The policy was returned |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `get_instance_config`, target type `username_policy`, target ID `0`, and metadata key `revision`.
+
+### Rate limit
+
+200 requests per minute for each authenticated user, on the `admin:lookup` bucket.
+
+## Update username policy
+
+<RouteHeader method="PATCH" path="/v1/admin/instance/username-policy" auditReason />
+
+Replaces all three tier modes together, optionally with the held manifest and admission, and returns the resulting [username policy](#username-policy-object) object. Requires `instance:config:update` and an audit reason.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| tiers | object | Mode of each tier, keyed `1`, `2`, and `3`: `locked`, `for_sale`, or `public` |
+| held_manifest? | array[string] | Up to 1000 distinct usernames that must be held or admin-assigned before migration starts |
+| admission? | object | `global_per_second`, a non-negative integer, and `paused` |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [username policy](#username-policy-object) object | The policy was replaced |
+| 400 | [error response](/admin-api/#error-response) | Body validation fails or the audit reason is missing |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `update_username_policy`, target type `username_policy`, target ID `0`, and metadata keys `revision`, `tiers`, `admission`, and `held_manifest`.
 
 ### Rate limit
 

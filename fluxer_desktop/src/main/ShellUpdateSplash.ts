@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {DESKTOP_APP_NAME} from '@electron/common/DesktopIdentity';
 import {createChildLogger} from '@electron/common/Logger';
+import {t} from '@electron/main/MainI18n';
 import {openExternalDeduped} from '@electron/main/OpenExternal';
 import {
 	buildManualLatestDownloadUrl,
@@ -21,8 +23,9 @@ import {
 import {DOWNLOAD_PAGE_URL} from '@electron/main/UpdaterDownloads';
 import {app} from 'electron';
 
-export const SPLASH_MANUAL_UPDATE_MESSAGE = 'A new version of Fluxer is ready to install.';
-const SPLASH_REQUIRED_SECURITY_UPDATE_MESSAGE = 'A required security update must be installed before Fluxer can start.';
+export const SPLASH_MANUAL_UPDATE_MESSAGE = `A new version of ${DESKTOP_APP_NAME} is ready to install.`;
+const SPLASH_REQUIRED_SECURITY_UPDATE_MESSAGE = `A required security update must be installed before ${DESKTOP_APP_NAME} can start.`;
+const WINDOWS_STORE_PRODUCT_URL = 'ms-windows-store://pdp/?ProductId=9P1SNJ2H2W9H';
 const SPLASH_DECLINE_OPTION_VALUE = 'nope';
 const SPLASH_DECLINE_OPTION_LABEL = "I'll figure it out";
 const SPLASH_DOWNLOAD_BUTTON_LABEL = 'Download';
@@ -77,16 +80,21 @@ export function getBlockedShellUpdate(
 	requiredSecurityUpdate = false,
 ): BlockedShellUpdate {
 	if (plan.capability === ShellUpdateCapability.MANAGED_PACKAGE) {
+		const windowsStore = process.platform === 'win32' && process.windowsStore === true;
 		return {
 			layout: SplashLayout.SPLASH,
 			status: requiredSecurityUpdate
 				? SplashStatus.BLOCKED_SECURITY_UPDATE_MANAGED
 				: SplashStatus.BLOCKED_SHELL_UPDATE_MANAGED,
-			action: SplashAction.QUIT,
-			message: null,
+			action: windowsStore
+				? {kind: SplashActionKind.DOWNLOAD, label: t('desktop.shellUpdate.openMicrosoftStore')}
+				: SplashAction.QUIT,
+			message: windowsStore
+				? t(requiredSecurityUpdate ? 'desktop.shellUpdate.storeSecurityRequired' : 'desktop.shellUpdate.storeRequired')
+				: null,
 			versionLabel: null,
 			options: null,
-			downloadUrl: null,
+			downloadUrl: windowsStore ? WINDOWS_STORE_PRODUCT_URL : null,
 			downloadUrls: new Map(),
 		};
 	}

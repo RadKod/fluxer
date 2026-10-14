@@ -5,3 +5,9 @@
 	-webkit-app-region: no-drag;
 	--button-inverted-text: var(--nagbar-background-color, inherit);
 }
+
+/* Micup: in the coal and dark themes the pill takes the bar's text color, so a white bar (brand, streamer) gets a
+   near-black pill with white text instead of white on white; bars with white text keep their white pill. */
+:global(html:is(.theme-coal, .theme-dark)) .button {
+	--button-inverted-fill: var(--nagbar-text-color, hsl(0, 0%, 100%));
+}

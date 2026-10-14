@@ -30,6 +30,7 @@ import {ChannelTypes, MessageTypes, Permissions} from '@fluxer/constants/src/Cha
 import {ServerMessageFlags, ThreadMemberFlags} from '@fluxer/constants/src/ThreadConstants';
 import {ThreadPermissionFlags} from '@fluxer/constants/src/ThreadPermissionUtils';
 import {ThreadAlreadyCreatedForMessageError} from '@fluxer/errors/src/domains/channel/ThreadAlreadyCreatedForMessageError';
+import type {ListGuildThreadsResponse} from '@fluxer/schema/src/domains/admin/AdminThreadSchemas';
 import type {
 	ActiveThreadsResponse,
 	ArchivedThreadsResponse,
@@ -975,18 +976,30 @@ describe('thread routes', () => {
 			const archived = await startThread(s.owner.token, s.channelId, {name: 'old', type: ChannelTypes.PUBLIC_THREAD});
 			await archive(archived.id);
 			await setChannelThreadsConfig({enabled: false});
-			const listed = await createBuilder<{threads: Array<ThreadChannelResponse>}>(harness, admin.token)
-				.get(`/admin/guilds/${s.guildId}/threads`)
-				.execute();
-			expect(listed.threads.map((thread) => thread.id)).toEqual([archived.id, open.id]);
+			async function listAllThreads(): Promise<Array<ThreadChannelResponse>> {
+				const threads: Array<ThreadChannelResponse> = [];
+				let cursor: string | null = null;
+				let pages = 0;
+				do {
+					const suffix: string = cursor === null ? '' : `&cursor=${encodeURIComponent(cursor)}`;
+					const page: ListGuildThreadsResponse = await createBuilder<ListGuildThreadsResponse>(harness, admin.token)
+						.get(`/admin/guilds/${s.guildId}/threads?limit=1${suffix}`)
+						.expect(200)
+						.execute();
+					expect(page.threads.length).toBeLessThanOrEqual(1);
+					threads.push(...page.threads);
+					cursor = page.next_cursor;
+					pages += 1;
+					expect(pages).toBeLessThan(12);
+				} while (cursor !== null);
+				return threads;
+			}
+			expect((await listAllThreads()).map((thread) => thread.id)).toEqual([open.id, archived.id]);
 			await createBuilder(harness, admin.token).delete(`/admin/channels/${s.channelId}`).expect(400).execute();
 			await createBuilder(harness, admin.token).delete(`/admin/channels/${open.id}`).expect(204).execute();
 			expect(await repository.threads.getState(createChannelID(BigInt(open.id)))).toBeNull();
 			expect(await repository.findUnique(createChannelID(BigInt(open.id)))).toBeNull();
-			const after = await createBuilder<{threads: Array<ThreadChannelResponse>}>(harness, admin.token)
-				.get(`/admin/guilds/${s.guildId}/threads`)
-				.execute();
-			expect(after.threads.map((thread) => thread.id)).toEqual([archived.id]);
+			expect((await listAllThreads()).map((thread) => thread.id)).toEqual([archived.id]);
 		});
 	});
 });

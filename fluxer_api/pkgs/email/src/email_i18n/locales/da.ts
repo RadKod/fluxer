@@ -25,11 +25,13 @@ const EMAIL_I18N_DA_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "Tak for din {product_name}-donation",
-		"body": "Hej,\n\nTak for din donation til {product_name}! Din {interval, select,\n  month {løbende donation}\n  year {løbende donation}\n  other {engangsdonation}\n} er blevet {interval, select,\n  month {oprettet}\n  year {oprettet}\n  other {gennemført}\n}.\n\nDonationsdetaljer:\nBeløb: {amount} {interval, select,\n  month {pr. måned}\n  year {pr. år}\n  other {}\n}\n\nStripe sender dig en separat kvittering med din faktura som PDF inden længe. Kvitteringen indeholder alle betalingsdetaljer og kan bruges til skatteformål.\n\nDu kan til enhver tid se din donationshistorik, downloade fakturaer {interval, select,\n  month {og administrere eller opsige dit abonnement}\n  year {og administrere eller opsige dit abonnement}\n  other {og administrere fremtidige donationer}\n} ved at bruge dette link:\n\n{manageUrl}\n\nDin støtte hjælper med at holde {product_name} kørende. Tak!\n\n– Teamet bag {product_name}"
+		"body": "Hej,\n\nTak for din donation til {product_name}! Din {interval, select,\n  month {løbende donation}\n  year {løbende donation}\n  other {engangsdonation}\n} er blevet {interval, select,\n  month {oprettet}\n  year {oprettet}\n  other {gennemført}\n}.\n\nDonationsdetaljer:\nBeløb: {amount} {interval, select,\n  month {pr. måned}\n  year {pr. år}\n  other {}\n}\n\nStripe sender dig en separat kvittering med din faktura som PDF inden længe. Kvitteringen indeholder alle betalingsdetaljer og kan bruges til skatteformål.\n\nDu kan til enhver tid se din donationshistorik, downloade fakturaer {interval, select,\n  month {og administrere eller opsige dit abonnement}\n  year {og administrere eller opsige dit abonnement}\n  other {og administrere fremtidige donationer}\n} ved at bruge dette link:\n\n{manageUrl}\n\nDin støtte hjælper med at holde {product_name} kørende. Tak!\n\n– Teamet bag {product_name}",
+		"button": "Administrer donationer"
 	},
 	"donation_magic_link": {
 		"subject": "Administrer dine {product_name}-donationer",
-		"body": "Hej,\n\nKlik på linket nedenfor for at få adgang til din donorportal:\n\n{manageUrl}\n\nI portalen kan du administrere abonnementer, downloade fakturaer og se din donationshistorik.\n\nDette link udløber den {expiresAt, date, full} kl. {expiresAt, time, short}.\n\nHvis du ikke har anmodet om dette link, kan du trygt ignorere denne e-mail.\n\n– Teamet bag {product_name}"
+		"body": "Hej,\n\nKlik på linket nedenfor for at få adgang til din donorportal:\n\n{manageUrl}\n\nI portalen kan du administrere abonnementer, downloade fakturaer og se din donationshistorik.\n\nDette link udløber den {expiresAt, date, full} kl. {expiresAt, time, short}.\n\nHvis du ikke har anmodet om dette link, kan du trygt ignorere denne e-mail.\n\n– Teamet bag {product_name}",
+		"button": "Administrer donationer"
 	},
 	"dsa_report_verification": {
 		"subject": "Bekræft din e-mailadresse til en DSA-anmeldelse",
@@ -45,11 +47,13 @@ const EMAIL_I18N_DA_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "Din e-mailadresse til {product_name} er ændret",
-		"body": "Hej {username},\n\nE-mailadressen på din {product_name}-konto blev ændret til {newEmail}.\n\nHvis du selv har foretaget ændringen, behøver du ikke gøre noget. Ellers kan du fortryde ændringen og sikre din konto ved at bruge dette link:\n\n{revertUrl}\n\nDette vil gendanne din tidligere e-mailadresse, logge dig ud overalt, slå multifaktorgodkendelse fra og kræve, at du vælger en ny adgangskode.\n\n– Sikkerhedsteamet hos {product_name}"
+		"body": "Hej {username},\n\nE-mailadressen på din {product_name}-konto blev ændret til {newEmail}.\n\nHvis du selv har foretaget ændringen, behøver du ikke gøre noget. Ellers kan du fortryde ændringen og sikre din konto ved at bruge dette link:\n\n{revertUrl}\n\nDette vil gendanne din tidligere e-mailadresse, logge dig ud overalt, slå multifaktorgodkendelse fra og kræve, at du vælger en ny adgangskode.\n\n– Sikkerhedsteamet hos {product_name}",
+		"button": "Fortryd denne ændring"
 	},
 	"email_verification": {
 		"subject": "Bekræft din {product_name}-e-mailadresse",
-		"body": "Hej {username},\n\nBekræft e-mailadressen for din {product_name}-konto ved at klikke på linket nedenfor:\n\n{verifyUrl}\n\nHvis du ikke har oprettet en {product_name}-konto, kan du trygt ignorere denne e-mail.\n\nDette link er gyldigt i 24 timer.\n\n– Teamet bag {product_name}"
+		"body": "🎉 Hej {username},\n\nBekræft e-mailadressen for din {product_name}-konto ved at klikke på linket nedenfor:\n\n{verifyUrl}\n\nHvis du ikke har oprettet en {product_name}-konto, kan du trygt ignorere denne e-mail.\n\nDette link er gyldigt i 24 timer.\n\n– Teamet bag {product_name}",
+		"button": "Bekræft e-mail"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Fordele fra din indløste gave er fjernet",
@@ -57,15 +61,18 @@ const EMAIL_I18N_DA_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "Din dataeksport fra {product_name} er klar til download",
-		"body": "Hej {username},\n\nDin dataeksport er klar.\n\nDownload-link:\n{downloadUrl}\n\nAntal beskeder: {totalMessages, number}\nFilstørrelse: {fileSizeMB, number} MB\n\nDette link udløber den {expiresAt, date, full} kl. {expiresAt, time, short}.\n\nHvis du ikke har anmodet om denne eksport, skal du straks ændre din adgangskode og kontakte vores supportteam.\n\n– Teamet bag {product_name}"
+		"body": "Hej {username},\n\nDin dataeksport er klar.\n\nDownload-link:\n{downloadUrl}\n\nAntal beskeder: {totalMessages, number}\nFilstørrelse: {fileSizeMB, number} MB\n\nDette link udløber den {expiresAt, date, full} kl. {expiresAt, time, short}.\n\nHvis du ikke har anmodet om denne eksport, skal du straks ændre din adgangskode og kontakte vores supportteam.\n\n– Teamet bag {product_name}",
+		"button": "Download mine data"
 	},
 	"inactivity_warning": {
 		"subject": "Din {product_name}-konto slettes på grund af inaktivitet",
-		"body": "Hej {username},\n\nVi har ikke set nogen aktivitet på din {product_name}-konto siden {lastActiveDate, date, full}.\n\nHvis du ikke logger ind inden {deletionDate, date, full} kl. {deletionDate, time, short}, slettes din konto permanent på grund af inaktivitet.\n\nLog ind her:\n{loginUrl}\n\nHvis du har brugt {product_name} for nylig, skal du kontakte vores supportteam med det samme.\n\n– Teamet bag {product_name}"
+		"body": "Hej {username},\n\nVi har ikke set nogen aktivitet på din {product_name}-konto siden {lastActiveDate, date, full}.\n\nHvis du ikke logger ind inden {deletionDate, date, full} kl. {deletionDate, time, short}, slettes din konto permanent på grund af inaktivitet.\n\nLog ind her:\n{loginUrl}\n\nHvis du har brugt {product_name} for nylig, skal du kontakte vores supportteam med det samme.\n\n– Teamet bag {product_name}",
+		"button": "Log ind"
 	},
 	"ip_authorization": {
 		"subject": "Godkend login fra en ny IP-adresse",
-		"body": "Hej {username},\n\nVi har registreret et loginforsøg på din {product_name}-konto fra en ny IP-adresse:\n\nIP-adresse: {ipAddress}\nSted: {location}\n\nHvis det var dig, skal du godkende denne IP-adresse ved at klikke på linket nedenfor:\n\n{authUrl}\n\nHvis du ikke har forsøgt at logge ind, skal du straks ændre din adgangskode.\n\nDette link er gyldigt i 30 minutter.\n\n– Teamet bag {product_name}"
+		"body": "Hej {username},\n\nVi har registreret et loginforsøg på din {product_name}-konto fra en ny IP-adresse:\n\nIP-adresse: {ipAddress}\nSted: {location}\n\nHvis det var dig, skal du godkende denne IP-adresse ved at klikke på linket nedenfor:\n\n{authUrl}\n\nHvis du ikke har forsøgt at logge ind, skal du straks ændre din adgangskode.\n\nDette link er gyldigt i 30 minutter.\n\n– Teamet bag {product_name}",
+		"button": "Godkend dette login"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Bekræft adgang til dine {product_name}-backupkoder",
@@ -77,11 +84,17 @@ const EMAIL_I18N_DA_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "Nulstil din {product_name}-adgangskode",
-		"body": "Hej {username},\n\nDu har anmodet om at nulstille din {product_name}-adgangskode. Brug linket nedenfor til at vælge en ny adgangskode:\n\n{resetUrl}\n\nHvis du ikke har anmodet om dette, kan du trygt ignorere denne e-mail.\n\nDette link er gyldigt i 1 time.\n\n– Teamet bag {product_name}"
+		"body": "Hej {username},\n\nDu har anmodet om at nulstille din {product_name}-adgangskode. Brug linket nedenfor til at vælge en ny adgangskode:\n\n{resetUrl}\n\nHvis du ikke har anmodet om dette, kan du trygt ignorere denne e-mail.\n\nDette link er gyldigt i 1 time.\n\n– Teamet bag {product_name}",
+		"button": "Nulstil adgangskode"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "Din tilmelding til {product_name} er godkendt",
-		"body": "Hej {username},\n\nGode nyheder: Din tilmelding til {product_name} er godkendt.\n\nDu kan nu logge ind på {product_name}-appen her:\n{channelsUrl}\n\nVelkommen til fællesskabet på {product_name}.\n\n– Teamet bag {product_name}"
+		"body": "🎉 Hej {username},\n\nGode nyheder: Din tilmelding til {product_name} er godkendt.\n\nDu kan nu logge ind på {product_name}-appen her:\n{channelsUrl}\n\nVelkommen til fællesskabet på {product_name}.\n\n– Teamet bag {product_name}",
+		"button": "Åbn {product_name}"
 	},
 	"report_resolved": {
 		"subject": "Din anmeldelse på {product_name} er blevet behandlet",
@@ -97,7 +110,7 @@ const EMAIL_I18N_DA_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "Suspensionen af din {product_name}-konto er ophævet",
-		"body": "Hej {username},\n\nGode nyheder: Suspensionen af din {product_name}-konto er ophævet.\n\n{reason, select,\n  null {}\n  other {Årsag: {reason}}\n}\n\nDu kan nu logge ind igen og fortsætte med at bruge {product_name} som normalt.\n\n– Sikkerhedsteamet hos {product_name}"
+		"body": "🎉 Hej {username},\n\nGode nyheder: Suspensionen af din {product_name}-konto er ophævet.\n\n{reason, select,\n  null {}\n  other {Årsag: {reason}}\n}\n\nDu kan nu logge ind igen og fortsætte med at bruge {product_name} som normalt.\n\n– Sikkerhedsteamet hos {product_name}"
 	}
 });
 

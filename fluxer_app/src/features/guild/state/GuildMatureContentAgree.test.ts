@@ -4,6 +4,7 @@ import {Channel} from '@app/features/channel/models/Channel';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import {ContentWarningLevel} from '@fluxer/constants/src/GuildConstants';
 import type {Channel as WireChannel} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
+import {runInAction} from 'mobx';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 const channels = new Map<string, Channel>();
@@ -37,7 +38,12 @@ function put(channel: WireChannel): void {
 
 beforeEach(() => {
 	channels.clear();
-	GuildMatureContentAgree.reset();
+	runInAction(() => {
+		GuildMatureContentAgree.agreedChannelIds = [];
+		GuildMatureContentAgree.agreedCategoryIds = [];
+		GuildMatureContentAgree.agreedGuildIds = [];
+		GuildMatureContentAgree.localAgreedChannelIds = [];
+	});
 	put({id: 'category', guild_id: 'guild', type: ChannelTypes.GUILD_CATEGORY, nsfw_override: null});
 	put({id: 'parent', guild_id: 'guild', type: ChannelTypes.GUILD_TEXT, parent_id: 'category', nsfw_override: null});
 	put({id: 'thread', guild_id: 'guild', type: ChannelTypes.PUBLIC_THREAD, parent_id: 'parent'});
@@ -74,5 +80,22 @@ describe('GuildMatureContentAgree for threads', () => {
 		GuildMatureContentAgree.agreeToChannel('forum');
 		expect(GuildMatureContentAgree.agreedChannelIds).toEqual([]);
 		expect(GuildMatureContentAgree.hasAgreedToChannel('forum')).toBe(true);
+	});
+});
+
+describe('GuildMatureContentAgree local consent across accounts', () => {
+	it('drops local forum consent when the storage scope changes right after it was given', async () => {
+		vi.resetModules();
+		const {default: agreements} = await import('@app/features/guild/state/GuildMatureContentAgree');
+		const {awaitHydration, rehydrateAllPersistentStores} = await import('@app/features/platform/utils/MobXPersistence');
+		await awaitHydration('GuildMatureContentAgreeLocal');
+		await Promise.resolve();
+		put({id: 'forum', guild_id: 'guild', type: ChannelTypes.GUILD_FORUM, nsfw_override: true});
+		agreements.agreeToChannel('forum');
+		expect(agreements.hasAgreedToChannel('forum')).toBe(true);
+
+		await rehydrateAllPersistentStores({previousScope: 'account-a', nextScope: 'account-b'});
+
+		expect(agreements.hasAgreedToChannel('forum')).toBe(false);
 	});
 });

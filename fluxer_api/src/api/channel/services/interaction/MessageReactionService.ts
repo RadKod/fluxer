@@ -6,12 +6,18 @@ import type {IChannelRepositoryAggregate} from '@app/api/channel/repositories/IC
 import type {AuthenticatedChannel} from '@app/api/channel/services/AuthenticatedChannel';
 import {dispatchChannelEvent} from '@app/api/channel/services/ChannelGatewayDispatch';
 import {MessageInteractionBase, type ParsedEmoji} from '@app/api/channel/services/interaction/MessageInteractionBase';
+import {
+	getMessageReactionCount,
+	removeMessageReactionCounted,
+} from '@app/api/channel/services/interaction/MessageReactionUserCounter';
 import {assertThreadInteractionAllowed} from '@app/api/channel/services/thread/ThreadInteractionGuards';
+import {notifyOfficialBotReaction} from '@app/api/guild/OfficialBotReactionHook';
 import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
+import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
 import type {Channel} from '@app/api/models/Channel';
 import type {MessageReaction} from '@app/api/models/MessageReaction';
 import type {User} from '@app/api/models/User';
@@ -33,7 +39,6 @@ import {MissingPermissionsError} from '@fluxer/errors/src/domains/core/MissingPe
 import {resolveLimit} from '@fluxer/limits/src/LimitResolver';
 import type {UserPartialResponse} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import {isValidSingleUnicodeEmoji} from '@fluxer/schema/src/primitives/EmojiValidators';
-import {snowflakeToDate} from '@fluxer/snowflake/src/Snowflake';
 
 const REACTION_CUSTOM_EMOJI_REGEX = /^(.+):(\d+)$/;
 
@@ -60,26 +65,6 @@ export class MessageReactionService extends MessageInteractionBase {
 			return Math.max(0, Math.floor(params.fallback));
 		}
 		return Math.floor(limitValue);
-	}
-
-	private async assertMessageHistoryAccess({
-		authChannel,
-		messageId,
-	}: {
-		authChannel: AuthenticatedChannel;
-		messageId: MessageID;
-	}): Promise<void> {
-		const {guild, hasPermission} = authChannel;
-		if (!guild) {
-			return;
-		}
-		if (await hasPermission(Permissions.READ_MESSAGE_HISTORY)) {
-			return;
-		}
-		const cutoff = guild.message_history_cutoff;
-		if (!cutoff || snowflakeToDate(messageId).getTime() < new Date(cutoff).getTime()) {
-			throw new UnknownMessageError();
-		}
 	}
 
 	async getUsersForReaction({
@@ -173,16 +158,20 @@ export class MessageReactionService extends MessageInteractionBase {
 		if (!message) throw new UnknownMessageError();
 		const requestingUser = await this.userRepository.findUnique(userId);
 		if (requestingUser) {
+			getUsernameSelectionGate().assertMayAct(requestingUser, 'reaction');
 			requireEmailVerified(requestingUser, 'reaction');
 			assertAccountNotLimited(requestingUser);
 		}
 		const guildFeatures = guild?.features ?? null;
-		const maxUsersPerReaction = this.resolveLimitForUser({
-			user: requestingUser ?? null,
-			guildFeatures,
-			key: 'max_users_per_message_reaction',
-			fallback: MAX_USERS_PER_MESSAGE_REACTION,
-		});
+		const maxUsersPerReaction = Math.floor(
+			resolveLimitSafe(
+				this.limitConfigService.getConfigSnapshot(),
+				createLimitMatchContext({user: requestingUser ?? null, guildFeatures}),
+				'max_users_per_message_reaction',
+				MAX_USERS_PER_MESSAGE_REACTION,
+				'user',
+			),
+		);
 		const maxReactionsPerMessage = this.resolveLimitForUser({
 			user: requestingUser ?? null,
 			guildFeatures,
@@ -201,7 +190,8 @@ export class MessageReactionService extends MessageInteractionBase {
 		if (userReactionExists) {
 			return;
 		}
-		const reactionCount = await this.channelRepository.messageInteractions.countReactionUsers(
+		const {reactionCount, count, increment} = await getMessageReactionCount(
+			this.channelRepository.messageInteractions,
 			channel.id,
 			messageId,
 			parsedEmojiBasic.name,
@@ -221,7 +211,7 @@ export class MessageReactionService extends MessageInteractionBase {
 				hasPermission: channel.guildId ? hasPermission : undefined,
 			});
 		}
-		if (reactionCount >= maxUsersPerReaction) {
+		if (count !== null && count >= maxUsersPerReaction) {
 			throw new MaxUsersPerMessageReactionError(maxUsersPerReaction);
 		}
 		if (reactionCount === 0) {
@@ -241,12 +231,20 @@ export class MessageReactionService extends MessageInteractionBase {
 			emojiId,
 			parsedEmoji.animated ?? false,
 		);
+		await increment();
 		await this.dispatchMessageReactionAdd({
 			channel,
 			messageId,
 			emoji: parsedEmoji,
 			userId,
 			sessionId,
+		});
+		notifyOfficialBotReaction({
+			...{kind: 'add', guildId: channel.guildId ?? null, channelId: channel.id},
+			...{messageId, authorId: message.authorId, userId},
+			emojiName: parsedEmoji.name,
+			emojiId,
+			atMs: Date.now(),
 		});
 	}
 
@@ -281,7 +279,8 @@ export class MessageReactionService extends MessageInteractionBase {
 			await this.assertCanModerateMessageReactions({channel, hasPermission});
 		}
 		const emojiId = parsedEmoji.id ? createEmojiID(BigInt(parsedEmoji.id)) : undefined;
-		await this.channelRepository.messageInteractions.removeReaction(
+		await removeMessageReactionCounted(
+			this.channelRepository.messageInteractions,
 			channel.id,
 			messageId,
 			targetId,
@@ -294,6 +293,13 @@ export class MessageReactionService extends MessageInteractionBase {
 			emoji: parsedEmoji,
 			userId: targetId,
 			sessionId,
+		});
+		notifyOfficialBotReaction({
+			...{kind: 'remove', guildId: channel.guildId ?? null, channelId: channel.id},
+			...{messageId, authorId: message.authorId, userId: targetId},
+			emojiName: parsedEmoji.name,
+			emojiId,
+			atMs: Date.now(),
 		});
 	}
 
@@ -330,6 +336,13 @@ export class MessageReactionService extends MessageInteractionBase {
 			messageId,
 			emoji: parsedEmoji,
 		});
+		notifyOfficialBotReaction({
+			...{kind: 'clear', guildId: channel.guildId ?? null, channelId: channel.id},
+			...{messageId, authorId: message.authorId},
+			emojiName: parsedEmoji.name,
+			emojiId,
+			atMs: Date.now(),
+		});
 	}
 
 	async removeAllReactions({
@@ -352,6 +365,13 @@ export class MessageReactionService extends MessageInteractionBase {
 		await this.assertCanModerateMessageReactions({channel, hasPermission});
 		await this.channelRepository.messageInteractions.removeAllReactions(channel.id, messageId);
 		await this.dispatchMessageReactionRemoveAll({channel, messageId});
+		notifyOfficialBotReaction({
+			...{kind: 'clear', guildId: channel.guildId ?? null, channelId: channel.id},
+			...{messageId, authorId: message.authorId},
+			emojiName: null,
+			emojiId: undefined,
+			atMs: Date.now(),
+		});
 	}
 
 	async getMessageReactions({

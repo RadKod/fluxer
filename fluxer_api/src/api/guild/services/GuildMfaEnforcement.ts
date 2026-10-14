@@ -8,7 +8,7 @@ import {ThreadPermissionFlags} from '@fluxer/constants/src/ThreadPermissionUtils
 import {MfaNotEnabledError} from '@fluxer/errors/src/domains/auth/MfaNotEnabledError';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 
-const ELEVATED_MFA_PERMISSIONS =
+export const ELEVATED_MFA_PERMISSIONS =
 	Permissions.KICK_MEMBERS |
 	Permissions.BAN_MEMBERS |
 	Permissions.ADMINISTRATOR |

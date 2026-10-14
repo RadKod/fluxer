@@ -197,3 +197,88 @@ pub struct MessageSnapshotUdt {
     pub flags: Option<i32>,
     pub edited_timestamp: Option<DateTime<Utc>>,
 }
+
+/// Micup: Cassandra `micup_message_component` (the driver maps UDTs by field name, not type name).
+#[cfg_attr(
+    feature = "scylla",
+    derive(scylla::DeserializeValue, scylla::SerializeValue)
+)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageComponentUdt {
+    #[cfg_attr(feature = "scylla", scylla(rename = "type"))]
+    pub component_type: Option<i32>,
+    pub style: Option<i32>,
+    pub label: Option<String>,
+    pub emoji_name: Option<String>,
+    pub emoji_id: Option<i64>,
+    pub emoji_animated: Option<bool>,
+    pub custom_id: Option<String>,
+    pub disabled: Option<bool>,
+}
+
+/// Micup: Cassandra `micup_message_action_row`.
+#[cfg_attr(
+    feature = "scylla",
+    derive(scylla::DeserializeValue, scylla::SerializeValue)
+)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageActionRowUdt {
+    #[cfg_attr(feature = "scylla", scylla(rename = "type"))]
+    pub component_type: Option<i32>,
+    pub components: Option<Vec<MessageComponentUdt>>,
+}
+
+#[cfg(all(test, feature = "scylla"))]
+mod tests {
+    use super::*;
+    use scylla::cluster::metadata::{CollectionType, ColumnType, NativeType, UserDefinedType};
+    use scylla::deserialize::value::DeserializeValue;
+    use std::borrow::Cow;
+    use std::sync::Arc;
+
+    fn udt(name: &'static str, fields: Vec<(&'static str, NativeType)>) -> ColumnType<'static> {
+        ColumnType::UserDefinedType {
+            frozen: true,
+            definition: Arc::new(UserDefinedType {
+                name: Cow::Borrowed(name),
+                keyspace: Cow::Borrowed("fluxer"),
+                field_types: fields
+                    .into_iter()
+                    .map(|(field, typ)| (Cow::Borrowed(field), ColumnType::Native(typ)))
+                    .collect(),
+            }),
+        }
+    }
+
+    #[test]
+    fn micup_udts_are_matched_by_field_names_not_the_type_name() {
+        let component = udt(
+            "micup_message_component",
+            vec![
+                ("type", NativeType::Int),
+                ("style", NativeType::Int),
+                ("label", NativeType::Text),
+                ("emoji_name", NativeType::Text),
+                ("emoji_id", NativeType::BigInt),
+                ("emoji_animated", NativeType::Boolean),
+                ("custom_id", NativeType::Text),
+                ("disabled", NativeType::Boolean),
+            ],
+        );
+        <MessageComponentUdt as DeserializeValue>::type_check(&component)
+            .expect("micup_message_component maps by field names");
+
+        let mut row = udt("micup_message_action_row", vec![("type", NativeType::Int)]);
+        if let ColumnType::UserDefinedType { definition, .. } = &mut row {
+            Arc::make_mut(definition).field_types.push((
+                Cow::Borrowed("components"),
+                ColumnType::Collection {
+                    frozen: true,
+                    typ: CollectionType::List(Box::new(component)),
+                },
+            ));
+        }
+        <MessageActionRowUdt as DeserializeValue>::type_check(&row)
+            .expect("micup_message_action_row maps by field names");
+    }
+}

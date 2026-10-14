@@ -941,6 +941,6 @@ export class GuildRoleService {
 
 	private resolveGuildLimit(guildFeatures: Iterable<string> | null, key: LimitKey, fallback: number): number {
 		const ctx = createLimitMatchContext({guildFeatures});
-		return resolveLimitSafe(this.limitConfigService.getConfigSnapshot(), ctx, key, fallback);
+		return resolveLimitSafe(this.limitConfigService.getConfigSnapshot(), ctx, key, fallback, 'guild');
 	}
 }

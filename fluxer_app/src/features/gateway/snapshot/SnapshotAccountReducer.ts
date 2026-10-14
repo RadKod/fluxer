@@ -21,6 +21,11 @@ import type {StateSnapshotEntries} from '@app/features/gateway/snapshot/Snapshot
 import type {WebAuthnCredential} from '@app/features/user/state/WebAuthnCredentials';
 import {AllLocales} from '@fluxer/constants/src/Locales';
 import {TimeFormatTypes} from '@fluxer/constants/src/UserConstants';
+import type {
+	FeedNotificationAckResponse,
+	FeedNotificationCreateEvent,
+	FeedNotificationStateResponse,
+} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import type {UserSettingsResponse} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 
 type UserSettingsLocale = UserSettingsResponse['locale'];
@@ -62,7 +67,20 @@ export class SnapshotAccountReducer {
 
 	initializeReady(data: ReadyPayload): void {
 		this.userSettings = data.user_settings ? {...data.user_settings} : null;
+		const previous = this.accountMetadata;
 		this.accountMetadata = accountMetadataFromReady(data);
+		if (data.feed_notification_state === undefined && previous?.feedNotifications) {
+			this.accountMetadata.feedNotifications = {...previous.feedNotifications};
+			this.accountMetadata.feedNotificationLocalCount = previous.feedNotificationLocalCount;
+		}
+		const ack = previous?.feedNotificationAck;
+		if (ack) {
+			this.accountMetadata.feedNotificationAck = ack;
+			const cursor = this.accountMetadata.feedNotifications?.last_read_at;
+			if (Date.parse(ack.last_read_at) > (cursor ? Date.parse(cursor) : 0)) {
+				this.applyFeedNotificationAck(() => {}, ack);
+			}
+		}
 	}
 
 	emitReady(emit: SnapshotEmit): void {
@@ -177,6 +195,94 @@ export class SnapshotAccountReducer {
 			return;
 		}
 		metadata.favoriteMemes = favoriteMemes;
+		this.emitAccountMetadata(emit);
+	}
+
+	applyFeedNotificationCreate(emit: SnapshotEmit, data: FeedNotificationCreateEvent): void {
+		const metadata = this.ensureAccountMetadata();
+		const state = metadata.feedNotifications;
+		if (!state || data.unread_epoch < state.unread_epoch) return;
+		const previousSeq = data.unread_epoch > state.unread_epoch ? 0 : state.unread_seq;
+		const unread = Date.parse(data.updated_at) > Date.parse(state.last_read_at ?? '1970-01-01T00:00:00.000Z');
+		metadata.feedNotifications = {
+			...state,
+			unread_count: state.unread_count + (unread ? Math.max(0, data.unread_seq - previousSeq) : 0),
+			unread_seq: Math.max(previousSeq, data.unread_seq),
+			unread_epoch: data.unread_epoch,
+		};
+		this.emitAccountMetadata(emit);
+	}
+
+	applyFeedNotificationAck(emit: SnapshotEmit, data: FeedNotificationAckResponse): void {
+		const metadata = this.ensureAccountMetadata();
+		const state = metadata.feedNotifications;
+		if (!state) return;
+		if (
+			!metadata.feedNotificationAck ||
+			Date.parse(data.last_read_at) >= Date.parse(metadata.feedNotificationAck.last_read_at)
+		) {
+			metadata.feedNotificationAck = {...data};
+		}
+		const cursor = Math.max(
+			Date.parse(state.last_read_at ?? '1970-01-01T00:00:00.000Z'),
+			Date.parse(data.last_read_at),
+		);
+		if (data.unread_epoch < state.unread_epoch) {
+			metadata.feedNotifications = {...state, last_read_at: new Date(cursor).toISOString()};
+		} else {
+			const seq = data.unread_epoch > state.unread_epoch ? 0 : state.unread_seq;
+			metadata.feedNotifications = {
+				...state,
+				last_read_at: new Date(cursor).toISOString(),
+				unread_count: Math.min(state.unread_count, Math.max(0, seq - data.unread_seq)),
+				unread_seq: Math.max(seq, data.unread_seq),
+				unread_epoch: data.unread_epoch,
+			};
+		}
+		this.emitAccountMetadata(emit);
+	}
+
+	setFeedNotificationState(
+		emit: SnapshotEmit,
+		state: FeedNotificationStateResponse,
+		ack: FeedNotificationAckResponse | null,
+		localCount = false,
+	): void {
+		const metadata = this.ensureAccountMetadata();
+		const current = metadata.feedNotifications;
+		const newer =
+			current != null &&
+			(current.unread_epoch > state.unread_epoch ||
+				(current.unread_epoch === state.unread_epoch && current.unread_seq > state.unread_seq));
+		const selected = newer ? current : state;
+		const sameEpoch = current?.unread_epoch === state.unread_epoch;
+		const cursor = sameEpoch
+			? Math.max(
+					Date.parse(current.last_read_at ?? '1970-01-01T00:00:00.000Z'),
+					Date.parse(state.last_read_at ?? '1970-01-01T00:00:00.000Z'),
+				)
+			: Date.parse(selected.last_read_at ?? '1970-01-01T00:00:00.000Z');
+		metadata.feedNotifications = {
+			...selected,
+			unread_count:
+				newer && sameEpoch && !localCount && !metadata.feedNotificationLocalCount
+					? Math.min(current.unread_count, state.unread_count + current.unread_seq - state.unread_seq)
+					: selected.unread_count,
+			last_read_at: cursor > 0 ? new Date(cursor).toISOString() : null,
+		};
+		metadata.feedNotificationLocalCount = (newer ? metadata.feedNotificationLocalCount : localCount) || undefined;
+		const currentAck = metadata.feedNotificationAck;
+		if (
+			ack != null &&
+			(!currentAck ||
+				Date.parse(ack.last_read_at) > Date.parse(currentAck.last_read_at) ||
+				(ack.last_read_at === currentAck.last_read_at &&
+					(ack.unread_epoch > currentAck.unread_epoch ||
+						(ack.unread_epoch === currentAck.unread_epoch && ack.unread_seq >= currentAck.unread_seq))))
+		) {
+			metadata.feedNotificationAck = {...ack};
+		}
+		if (metadata.feedNotificationAck) this.applyFeedNotificationAck(() => {}, metadata.feedNotificationAck);
 		this.emitAccountMetadata(emit);
 	}
 

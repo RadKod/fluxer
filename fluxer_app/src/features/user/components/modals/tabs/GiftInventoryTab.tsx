@@ -79,7 +79,7 @@ const GIFT_CODE_IS_TOO_LONG_DESCRIPTOR = msg({
 });
 const GIFT_REDEEMED_SUCCESSFULLY_DESCRIPTOR = msg({
 	message: 'Gift redeemed successfully. Enjoy your {premiumProductName}.',
-	comment: 'Toast shown after redeeming a premium gift code.',
+	comment: 'Toast shown after redeeming a Plus gift code.',
 });
 const CLAIM_ACCOUNT_TO_MANAGE_GIFTS_DESCRIPTOR = msg({
 	message: 'Claim your account to redeem or manage {premiumProductName} gift codes.',
@@ -91,11 +91,11 @@ const ENTER_GIFT_CODE_TO_REDEEM_DESCRIPTOR = msg({
 });
 const BUY_GIFT_FROM_PREMIUM_TAB_DESCRIPTOR = msg({
 	message: 'Buy a {premiumProductName} gift from the {premiumProductName} tab to share with friends.',
-	comment: 'Gift inventory empty-state description. premiumProductName is the premium tab name and product name.',
+	comment: 'Gift inventory empty-state description. premiumProductName is the Plus tab name and product name.',
 });
 const GO_TO_PREMIUM_DESCRIPTOR = msg({
 	message: 'Go to {premiumProductName}',
-	comment: 'CTA label that opens the premium settings tab from gift inventory.',
+	comment: 'CTA label that opens the Plus settings tab from gift inventory.',
 });
 const ENTER_GIFT_CODE_DESCRIPTOR = msg({
 	message: 'Enter gift code…',

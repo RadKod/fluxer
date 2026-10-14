@@ -23,6 +23,7 @@ pub struct GuildTabQuery {
     pub members_page: Option<u32>,
     pub reports_page: Option<u32>,
     pub audit_before: Option<String>,
+    pub thread_cursor: Option<String>,
 }
 
 pub async fn render(
@@ -100,12 +101,10 @@ pub async fn render(
             if !acl::has_permission(admin_acls, acl::GUILD_LOOKUP) {
                 return None;
             }
-            let threads = client
-                .list_guild_threads(guild_id)
+            let response = client
+                .list_guild_threads(guild_id, query.thread_cursor.as_deref())
                 .await
-                .map(|response| response.threads)
-                .map_err(|error| tracing::warn!(%error, guild_id, "admin API request failed: list guild threads"))
-                .unwrap_or_default();
+                .log_error("list guild threads")?;
             let threads_enabled = client
                 .get_instance_config()
                 .await
@@ -117,7 +116,9 @@ pub async fn render(
             Some(tabs::threads::threads_tab(
                 config,
                 &guild,
-                &threads,
+                &response.threads,
+                query.thread_cursor.as_deref(),
+                response.next_cursor.as_deref(),
                 acl::has_permission(admin_acls, acl::MESSAGE_DELETE_ALL),
                 threads_enabled,
                 csrf_token,

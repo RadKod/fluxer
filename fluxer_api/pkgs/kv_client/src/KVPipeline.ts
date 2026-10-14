@@ -77,6 +77,16 @@ export class KVPipeline implements IKVPipeline {
 		return this;
 	}
 
+	hset(key: string, field: string, value: string): this {
+		this.commander.hset(key, field, value);
+		return this;
+	}
+
+	hdel(key: string, ...fields: Array<string>): this {
+		this.commander.hdel(key, ...fields);
+		return this;
+	}
+
 	mset(...args: Array<string>): this {
 		const entries = createStringEntriesFromPairs(args);
 		if (entries.length === 0) {

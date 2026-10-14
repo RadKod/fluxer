@@ -40,8 +40,8 @@ const COAL_THEME_DESCRIPTOR = msg({
 	message: 'Coal theme',
 	comment: 'Short label in the theme tab content. Keep it concise.',
 });
-const USE_COAL_THEME_PITCH_BLACK_SURFACES_DESCRIPTOR = msg({
-	message: 'Use coal theme (pitch-black surfaces)',
+const USE_COAL_THEME_NEAR_BLACK_SURFACES_DESCRIPTOR = msg({
+	message: 'Use coal theme (near-black surfaces)',
 	comment: 'Label in the theme tab content.',
 });
 const LIGHT_THEME_DESCRIPTOR = msg({
@@ -106,7 +106,8 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = observer(
 					{
 						type: ThemeTypes.DARK,
 						label: i18n._(DARK_THEME_DESCRIPTOR),
-						backgroundColor: 'hsl(258, calc(10% * var(--saturation-factor)), 12.04%)',
+						// Micup: dark and coal render the Micup palette (GenerateColorSystem.ts); swatches show its body and frame.
+						backgroundColor: '#0c0c0f',
 						isLight: false,
 						icon: null,
 						tooltip: i18n._(USE_DARK_THEME_DESCRIPTOR),
@@ -122,10 +123,10 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = observer(
 					{
 						type: ThemeTypes.COAL,
 						label: i18n._(COAL_THEME_DESCRIPTOR),
-						backgroundColor: 'hsl(258, 10%, 2%)',
+						backgroundColor: '#060608',
 						isLight: false,
 						icon: null,
-						tooltip: i18n._(USE_COAL_THEME_PITCH_BLACK_SURFACES_DESCRIPTOR),
+						tooltip: i18n._(USE_COAL_THEME_NEAR_BLACK_SURFACES_DESCRIPTOR),
 					},
 					{
 						type: ThemeTypes.LIGHT,
@@ -138,9 +139,7 @@ export const ThemeSelector: React.FC<ThemeSelectorProps> = observer(
 					{
 						type: ThemeTypes.SYSTEM,
 						label: i18n._(SYSTEM_THEME_DESCRIPTOR),
-						backgroundColor: systemPrefersDark
-							? 'hsl(258, calc(10% * var(--saturation-factor)), 5%)'
-							: 'hsl(220, 10%, 98.5%)',
+						backgroundColor: systemPrefersDark ? '#0c0c0f' : 'hsl(220, 10%, 98.5%)',
 						isLight: !systemPrefersDark,
 						icon: (
 							<ArrowsCounterClockwiseIcon

@@ -4,10 +4,16 @@ use crate::{
     acl, admin_flags,
     api::types::{AdminUser, LimitConfigResponse, ListUserChangeLogResponse},
     config::AdminConfig,
-    templates::components::{
-        badge::{BadgeVariant, badge},
-        form::{checkbox, csrf_input, form_actions, submit_button},
-        page_container::{card_with_header, detail_row},
+    templates::{
+        components::{
+            badge::{BadgeVariant, badge},
+            form::{
+                FORM_INPUT_CLASS, checkbox, csrf_input, danger_button, form_actions,
+                form_field_group, submit_button,
+            },
+            page_container::{card_with_header, detail_row},
+        },
+        pages::cosmetics::reason_field,
     },
     utils::{
         bigint::format_discriminator,
@@ -176,7 +182,7 @@ fn render_overview_tab(
                             }).collect::<Vec<_>>().join(", "))
                         }
                     }))
-                    (detail_row("Premium", html! {
+                    (detail_row("Plus", html! {
                         @match user.premium_type {
                             Some(1) => {
                                 "Subscription"
@@ -224,6 +230,14 @@ fn render_overview_tab(
                 }
             }))
             (flags_card(config, user, admin_acls, csrf_token))
+            @if acl::has_permission(admin_acls, acl::USER_UPDATE_FLAGS) {
+                (end_premium_card(config, user, csrf_token))
+            }
+            // The API asks for both permissions on these two routes.
+            @if acl::has_permission(admin_acls, acl::SHOP_MANAGE)
+                && acl::has_permission(admin_acls, acl::USER_UPDATE_FLAGS) {
+                (visionary_card(config, user, csrf_token))
+            }
             (acls_card(config, user, admin_acls, csrf_token))
             @if show_traits {
                 (traits_card(config, user, admin_acls, csrf_token, limit_config))
@@ -286,7 +300,7 @@ fn flags_card(
             (i32_flag_form(
                 config,
                 &user.id,
-                "Premium Flags",
+                "Plus Flags",
                 "update_premium_flags",
                 "flags[]",
                 user.premium_flags,
@@ -400,6 +414,81 @@ fn flag_form_shell(
                         p class="text-xs text-neutral-500" {
                             "Read-only \u{2014} " (required) " permission required."
                         }
+                    }
+                }
+            }
+        },
+    )
+}
+
+// Used after refunding a premium payment in Payriff. Ending premium leaves
+// lifetime premium (Visionary, premium_type 2) as it is, so that account gets a pointer instead.
+fn end_premium_card(config: &AdminConfig, user: &AdminUser, csrf_token: &str) -> Markup {
+    card_with_header(
+        "End Plus now",
+        html! {
+            @if user.premium_type == Some(2) {
+                p class="text-neutral-700 text-sm" {
+                    "Visionary is lifetime Plus, which ending Plus does not change. \
+                     Use Take Visionary back instead."
+                }
+            } @else {
+                form method="post" action={(config.base_path) "/users/" (user.id) "?action=end_premium&tab=overview"} class="space-y-4" {
+                    (csrf_input(csrf_token))
+                    p class="text-neutral-700 text-sm" {
+                        "Ends all Plus time now: bought, from a gift code and from the free trial. \
+                         The trial cannot be taken again. Use this after refunding a Plus payment \
+                         in Payriff."
+                    }
+                    (reason_field("end-premium-reason"))
+                    (form_actions(html! {
+                        (danger_button("End Plus now"))
+                    }))
+                }
+            }
+        },
+    )
+}
+
+// Assign a Visionary number; a revoked number is never sold again.
+fn visionary_card(config: &AdminConfig, user: &AdminUser, csrf_token: &str) -> Markup {
+    let action = |name: &str| {
+        format!(
+            "{}/users/{}?action={name}&tab=overview",
+            config.base_path, user.id
+        )
+    };
+    let visionary = user.premium_type == Some(2);
+    let status = match user.premium_lifetime_sequence {
+        Some(number) if visionary => format!("Visionary #{number}"),
+        _ if visionary => "Visionary".to_owned(),
+        _ => "Not a Visionary".to_owned(),
+    };
+    card_with_header(
+        "Visionary",
+        html! {
+            div class="space-y-4" {
+                p class="font-medium text-neutral-900 text-sm" { (status) }
+                @if visionary {
+                    form method="post" action=(action("revoke_visionary")) class="space-y-4" {
+                        (csrf_input(csrf_token))
+                        p class="text-neutral-700 text-sm" {
+                            "The number is retired and never sold again. Reward decorations are taken back."
+                        }
+                        (reason_field("revoke-visionary-reason"))
+                        (form_actions(html! { (danger_button("Take Visionary back")) }))
+                    }
+                } @else {
+                    form method="post" action=(action("grant_visionary")) class="space-y-4" {
+                        (csrf_input(csrf_token))
+                        (form_field_group("Number", "grant-visionary-slot", false, None,
+                            Some("A free number, or blank for the lowest free one."),
+                            html! {
+                                input type="number" id="grant-visionary-slot" name="slot" step="1"
+                                    min="1" max="100000" class=(FORM_INPUT_CLASS);
+                            }))
+                        (reason_field("grant-visionary-reason"))
+                        (form_actions(html! { (submit_button("Give Visionary")) }))
                     }
                 }
             }

@@ -386,7 +386,7 @@ export function buildNcmecReportXml(input: NcmecReportXmlInput): string {
 <report xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="${escapeXml(schemaLocation)}">
     <incidentSummary>
         <incidentType>Child Pornography (possession, manufacture, and distribution)</incidentType>
-        <platform>Fluxer</platform>
+        <platform>Micup</platform>
         <incidentDateTime>${escapeXml(input.reportedAt.toISOString())}</incidentDateTime>
     </incidentSummary>
     <internetDetails>

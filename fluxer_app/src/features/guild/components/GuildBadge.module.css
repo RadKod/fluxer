@@ -35,3 +35,12 @@
 	--guild-badge-seal: white;
 	--guild-badge-icon: var(--brand-primary);
 }
+
+/* Micup: the v1 accent is white in the coal and dark themes, so the mark on the white seal takes the on-accent colour
+   (it vanished white on white). The light theme keeps the upstream colours. */
+:global(html:is(.theme-coal, .theme-dark)) .badge,
+:global(html:is(.theme-coal, .theme-dark)) .badgeOnLightSurface,
+:global(html:is(.theme-coal, .theme-dark)) .badgeBanner,
+:global(html:is(.theme-coal, .theme-dark)) .badgeBannerDark {
+	--guild-badge-icon: var(--text-on-brand-primary);
+}

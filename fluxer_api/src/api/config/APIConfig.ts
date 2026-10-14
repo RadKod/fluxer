@@ -1,11 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type {FeedStreamSettings} from '@app/api/feed/video/FeedVideoUrls';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
-import type {CachePurgeAdapterName, StoreProductSlotName} from '@fluxer/config/src/MasterConfig';
-import type {AccountIdentityMode, TagStyle} from '@fluxer/constants/src/AccountIdentityConstants';
+import type {
+	BunnyPurgeMode,
+	CachePurgeAdapterName,
+	CassandraConsistencyName,
+	StoreProductSlotName,
+} from '@fluxer/config/src/MasterConfig';
 
 export type APIWorkerMode = 'all_lanes' | 'single_lane' | 'single_task';
-export type APIWorkerLaneName = 'realtime' | 'unfurl' | 'lifecycle' | 'batch' | 'crosspost';
+export type APIWorkerLaneName =
+	| 'realtime'
+	| 'unfurl'
+	| 'lifecycle'
+	| 'batch'
+	| 'purge'
+	| 'feed'
+	| 'video'
+	| 'views'
+	| 'referral'
+	| 'roster'
+	| 'roster_live'
+	| 'micupbot_live'
+	| 'micupbot_roles'
+	| 'micupbot'
+	| 'crosspost';
+
+import type {AccountIdentityMode, TagStyle} from '@fluxer/constants/src/AccountIdentityConstants';
 export type PushProviderEnvironment = 'production' | 'development';
 
 export interface PushProviderAppConfig {
@@ -31,6 +53,16 @@ export interface APICachePurgeConfig {
 		endpoint: string;
 		token: string;
 		timeoutMs: number;
+	};
+	bunny: {
+		apiBase: string;
+		apiKey: string;
+		timeoutMs: number;
+		concurrency: number;
+		mode: BunnyPurgeMode;
+		pullZoneId: number;
+		ratePerMinute: number;
+		burst: number;
 	};
 }
 
@@ -63,6 +95,7 @@ export interface APIConfig {
 		localDc: string;
 		username: string;
 		password: string;
+		consistency?: CassandraConsistencyName | undefined;
 	};
 	postgres: {
 		url: string;
@@ -165,6 +198,8 @@ export interface APIConfig {
 		fromName: string;
 		replyToEmail: string;
 		appBaseUrl: string;
+		htmlEnabled: boolean;
+		htmlFooter: Record<string, string>;
 		smtp?: {
 			host: string;
 			port: number;
@@ -173,8 +208,13 @@ export interface APIConfig {
 			secure: boolean;
 		};
 	};
+	risk: {ipinfoApiKey?: string; accountPolicyDsl?: unknown};
+	abusePolicy: {phoneFlagging: {enabled: boolean}};
 	blocklistFeeds: {
 		enabled: boolean;
+	};
+	premiumTrial: {
+		emailHashKey: string;
 	};
 	breachedPasswordCheck: {
 		enabled: boolean;
@@ -238,6 +278,7 @@ export interface APIConfig {
 		legacyPrices?: Record<string, Array<string> | undefined>;
 	};
 	cachePurge: APICachePurgeConfig;
+	bunnyStream: FeedStreamSettings;
 	clamav: {
 		enabled: boolean;
 		host: string;
@@ -274,6 +315,8 @@ export interface APIConfig {
 		selfHosted: boolean;
 		baseDomain: string;
 		autoJoinInviteCode?: string;
+		rosterBotApplicationId?: string;
+		micupBotApplicationId?: string;
 		visionariesGuildId?: string;
 		visionariesGuildVisionaryRoleId?: string;
 		branding: {
@@ -356,8 +399,19 @@ export interface APIConfig {
 			unfurl?: number;
 			lifecycle?: number;
 			batch?: number;
+			purge?: number;
+			feed?: number;
+			video?: number;
+			views?: number;
+			referral?: number;
+			roster?: number;
+			roster_live?: number;
+			micupbot_live?: number;
+			micupbot_roles?: number;
+			micupbot?: number;
 			crosspost?: number;
 		};
+		feedViewFlushPartitionConcurrency: number;
 	};
 	ncmec: {
 		enabled: boolean;
@@ -365,6 +419,12 @@ export interface APIConfig {
 		username?: string;
 		password?: string;
 		reporterEmail?: string;
+	};
+	// enabled is false without a secret key, so the shop reads it as the one "Payriff is configured" switch.
+	payriff: {
+		enabled: boolean;
+		secretKey: string;
+		baseUrl: string;
 	};
 }
 

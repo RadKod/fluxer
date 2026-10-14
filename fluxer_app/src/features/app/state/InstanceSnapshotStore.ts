@@ -119,6 +119,8 @@ export function runtimeSnapshotFromDiscovery(document: InstanceDiscoveryDocument
 		appPublic: discovery.appPublic,
 		agePolicy: discovery.agePolicy,
 		domainMigration: discovery.domainMigration,
+		usernameMigration: discovery.usernameMigration,
+		usernameTiers: discovery.usernameTiers,
 	});
 }
 

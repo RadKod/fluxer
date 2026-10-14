@@ -35,7 +35,7 @@ const CREATE_OR_JOIN_A_COMMUNITY_DESCRIPTOR = msg({
 });
 export const AddGuildButton = observer(() => {
 	const {i18n} = useLingui();
-	const [hoverRef, isHovering] = useHover();
+	const [hoverRef] = useHover();
 	const buttonRef = useRef<HTMLButtonElement | null>(null);
 	const iconRef = useRef<HTMLDivElement | null>(null);
 	const itemRef = useRef<HTMLElement | null>(null);
@@ -91,7 +91,6 @@ export const AddGuildButton = observer(() => {
 			</MenuGroup>
 		));
 	};
-	const shouldShowHoverState = isHovering || contextMenuOpen;
 	if (RuntimeConfig.singleCommunityEnabled) {
 		return null;
 	}
@@ -132,8 +131,8 @@ export const AddGuildButton = observer(() => {
 						<motion.div
 							ref={iconRef}
 							className={guildStyles.createGuildButtonIcon}
-							animate={{borderRadius: shouldShowHoverState ? '30%' : '50%'}}
-							initial={{borderRadius: shouldShowHoverState ? '30%' : '50%'}}
+							animate={{borderRadius: '30%'}}
+							initial={{borderRadius: '30%'}}
 							transition={{duration: Accessibility.useReducedMotion ? 0 : 0.07, ease: 'easeOut'}}
 							data-flx="app.sidebar-nav.add-guild-button.div--2"
 						>

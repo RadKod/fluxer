@@ -117,6 +117,7 @@ export const AppSkeleton = observer(({isExiting = false, onTransitionEnd, effect
 	const pathname = effectivePathname ?? location.pathname;
 	const isFluxerSelected = pathname.startsWith(Routes.ME) || Routes.isSpecialPage(pathname);
 	const isFavoritesSelected = pathname.startsWith(Routes.FAVORITES);
+	const isFeedSelected = Routes.isFeedRoute(pathname);
 	const isDiscoverySelected = Routes.isDiscoverRoute(pathname);
 	const isMobile = MobileLayout.enabled;
 	const isVoiceCallFullscreenActive = VoiceCallFullscreen.isActive;
@@ -206,6 +207,7 @@ export const AppSkeleton = observer(({isExiting = false, onTransitionEnd, effect
 				<GuildRailSkeleton
 					isFluxerSelected={isFluxerSelected}
 					isFavoritesSelected={isFavoritesSelected}
+					isFeedSelected={isFeedSelected}
 					isDiscoverySelected={isDiscoverySelected}
 					data-flx="app.skeleton.app-skeleton.guild-rail-skeleton"
 				/>

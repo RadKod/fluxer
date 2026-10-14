@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import Accessibility from '@app/features/accessibility/state/Accessibility';
 import styles from '@app/features/app/components/setup/SelfHostedSetupWizardGate.module.css';
 import {SetupWelcomeGate} from '@app/features/app/components/setup/SetupWelcomeGate';
 import type {SetupBrandingAssetKind} from '@app/features/app/components/setup/SetupWizardClient';
@@ -27,7 +28,7 @@ import type {MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {ImageIcon, TrashIcon, UploadSimpleIcon} from '@phosphor-icons/react';
-import {AnimatePresence, motion, type Transition, useReducedMotion} from 'framer-motion';
+import {AnimatePresence, motion, type Transition} from 'framer-motion';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {useCallback} from 'react';
@@ -409,28 +410,27 @@ const SERVICE_BLUESKY_DESC_DESCRIPTOR = msg({
 });
 
 const PREMIUM_TITLE_DESCRIPTOR = msg({
-	message: 'Choose the premium model',
-	comment: 'Setup wizard premium model step title.',
+	message: 'Choose the Plus model',
+	comment: 'Setup wizard Plus model step title.',
 });
 const PREMIUM_BODY_DESCRIPTOR = msg({
-	message: 'Decide how premium limits apply to people on this instance.',
-	comment: 'Setup wizard premium model step body.',
+	message: 'Decide how Plus limits apply to people on this instance.',
+	comment: 'Setup wizard Plus model step body.',
 });
 const PREMIUM_MIRROR_NAME_DESCRIPTOR = msg({
 	message: 'Mirror tiers',
-	comment: 'Premium model option that mirrors free and premium tiers.',
+	comment: 'Plus model option that mirrors free and Plus tiers.',
 });
 const PREMIUM_MIRROR_DESC_DESCRIPTOR = msg({
-	message:
-		'Keep free and premium tiers. You can customize the tiers, sell premium through Stripe, or hand out gift codes later from the admin panel.',
-	comment: 'Description for the mirror premium model.',
+	message: 'Keep free and Plus tiers. You can customize the tiers later.',
+	comment: 'Description for the mirror Plus model.',
 });
 const PREMIUM_EVERYONE_NAME_DESCRIPTOR = msg({
-	message: 'Everyone is premium',
-	comment: 'Premium model option that gives everyone the highest limits.',
+	message: 'Everyone is Plus',
+	comment: 'Plus model option that gives everyone the highest limits.',
 });
 const PREMIUM_EVERYONE_DESC_DESCRIPTOR = msg({
-	message: 'Give everyone on this instance the highest premium limits.',
+	message: 'Give everyone on this instance the highest Plus limits.',
 	comment: 'Description for the everyone-is-premium model.',
 });
 
@@ -467,8 +467,8 @@ const SUMMARY_PUSH_RELAY_DESCRIPTOR = msg({
 	comment: 'Summary row label for the push relay consent on the setup wizard finish step.',
 });
 const SUMMARY_PREMIUM_DESCRIPTOR = msg({
-	message: 'Premium model',
-	comment: 'Summary row label for the premium model in the setup wizard.',
+	message: 'Plus model',
+	comment: 'Summary row label for the Plus model in the setup wizard.',
 });
 const SUMMARY_SIGN_IN_METHOD_DESCRIPTOR = msg({
 	message: 'Sign-in method',
@@ -1233,7 +1233,7 @@ export const MediaExpiryStep = observer(
 		onDraftChange: (patch: Partial<MediaExpiryDraft>) => void;
 	}) => {
 		const {i18n} = useLingui();
-		const prefersReducedMotion = useReducedMotion();
+		const prefersReducedMotion = Accessibility.useReducedMotion;
 		return (
 			<section className={styles.step} data-flx="app.self-hosted-setup-wizard-gate.media-expiry-step">
 				<StepHeader

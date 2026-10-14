@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {Routes} from '@app/app/Routes';
 import {DesktopSettingsView} from '@app/features/app/components/dialogs/components/DesktopSettingsView';
 import {MobileSettingsView} from '@app/features/app/components/dialogs/components/MobileSettingsView';
 import * as Modal from '@app/features/app/components/dialogs/Modal';
 import {SettingsModalContainer} from '@app/features/app/components/dialogs/shared/SettingsModalLayout';
+import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
 import {ComponentBus} from '@app/features/platform/utils/ComponentBus';
 import * as PlutoniumPageCommands from '@app/features/premium/commands/PlutoniumPageCommands';
 import PlutoniumPageRollout from '@app/features/premium/state/PlutoniumPageRollout';
+import {isPremiumPageAvailable} from '@app/features/premium/utils/PremiumUtils';
+import {isShopPageAvailable} from '@app/features/shop/utils/ShopAvailability';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import * as UnsavedChangesCommands from '@app/features/ui/commands/UnsavedChangesCommands';
 import MobileLayout from '@app/features/ui/state/MobileLayout';
@@ -30,6 +34,19 @@ import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {useCallback, useEffect, useMemo, useState} from 'react';
 
+// Micup: premium and the shop left the settings for pages beside the DM list. Their old tab ids still arrive (settings
+// links, `initialTab`, USER_SETTINGS_TAB_SELECT); they close the dialogs and open the page.
+function getTabPageRoute(tab: string | undefined): string | null {
+	if (tab === 'plutonium' && isPremiumPageAvailable()) return Routes.PREMIUM;
+	if (tab === 'shop' && isShopPageAvailable()) return Routes.SHOP;
+	return null;
+}
+
+function openTabPage(route: string): void {
+	ModalCommands.popAll();
+	RouterUtils.transitionTo(route);
+}
+
 interface UserSettingsModalProps {
 	initialTab?: UserSettingsTabType;
 	initialSubtab?: string;
@@ -39,6 +56,7 @@ interface UserSettingsModalProps {
 export const UserSettingsModal: React.FC<UserSettingsModalProps> = observer(
 	({initialTab, initialSubtab, initialGuildId}) => {
 		const {i18n} = useLingui();
+		const initialPageRoute = getTabPageRoute(initialTab);
 		const isMobileExperience = isMobileExperienceEnabled();
 		const settingsTabs = useMemo(() => getSettingsTabs(i18n), [i18n.locale]);
 		const initialAccountSection =
@@ -151,10 +169,21 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = observer(
 			}
 		}, [resolveVisibleTab, selectedTab]);
 		useEffect(() => {
+			if (initialPageRoute) openTabPage(initialPageRoute);
+		}, [initialPageRoute]);
+		useEffect(() => {
 			const unsubscribe = ComponentBus.subscribe('USER_SETTINGS_TAB_SELECT', (args?: unknown) => {
 				const {tab, section} = (args ?? {}) as {tab?: string; section?: string};
-				if (plutoniumPageEnabled && tab === 'plutonium') {
-					PlutoniumPageCommands.openPlutoniumPage();
+				const pageRoute = getTabPageRoute(tab);
+				if (pageRoute) {
+					// Micup: the close guard (handleClose) first; the cosmetics tab's premium link comes this way. Only these
+					// settings' tabs: a dialog closed from outside can leave its entry behind (useWebhookUpdates).
+					const unsavedTab = visibleSettingsTabs.find((settingsTab) => UnsavedChanges.unsavedChanges[settingsTab.type]);
+					if (unsavedTab) {
+						UnsavedChangesCommands.triggerFlashEffect(unsavedTab.type);
+						return;
+					}
+					openTabPage(pageRoute);
 					return;
 				}
 				if (tab && typeof tab === 'string') {
@@ -177,7 +206,8 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = observer(
 				}
 			});
 			return unsubscribe;
-		}, [isMobile, mobileNav, plutoniumPageEnabled, resolveVisibleTab, visibleSettingsTabs]);
+		}, [isMobile, mobileNav, resolveVisibleTab, visibleSettingsTabs]);
+		if (initialPageRoute) return null;
 		return (
 			<SettingsContentKeyProvider data-flx="user.user-settings-modal.settings-content-key-provider">
 				<Modal.Root size="fullscreen" onClose={handleModalClose} data-flx="user.user-settings-modal.modal-root">

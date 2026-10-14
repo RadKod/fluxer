@@ -19,7 +19,7 @@ import type {
 } from '@fluxer/instance_bootstrap/src/Types';
 import type {LimitConfigSnapshot, LimitConfigWireFormat} from '@fluxer/limits/src/LimitTypes';
 
-const DEFAULT_PREMIUM_PRODUCT_NAME = 'Plutonium';
+const DEFAULT_PREMIUM_PRODUCT_NAME = 'Plus';
 
 export interface ClientRuntimeDiscoveryEndpoints {
 	readonly discoveryApiEndpoint: string;
@@ -52,6 +52,8 @@ export interface ClientRuntimeDiscovery {
 	readonly appPublic: InstanceAppPublic;
 	readonly agePolicy: InstanceAgePolicy | null;
 	readonly domainMigration: InstanceDomainMigration | null;
+	readonly usernameMigration?: InstanceDiscoveryDocument['usernameMigration'];
+	readonly usernameTiers?: InstanceDiscoveryDocument['usernameTiers'];
 }
 
 export function projectClientRuntimeDiscovery(document: InstanceDiscoveryDocument): ClientRuntimeDiscovery {
@@ -70,6 +72,8 @@ export function projectClientRuntimeDiscovery(document: InstanceDiscoveryDocumen
 		appPublic: projectAppPublic(document.appPublic),
 		agePolicy: document.agePolicy,
 		domainMigration: document.domainMigration,
+		usernameMigration: document.usernameMigration,
+		usernameTiers: document.usernameTiers,
 	};
 }
 
@@ -105,6 +109,9 @@ function projectFeatures(features: Readonly<Partial<InstanceFeatures>>): Instanc
 		emails_enabled: requireDefined(features.emails_enabled, 'features.emails_enabled'),
 		premium_enabled: features.premium_enabled ?? !features.self_hosted,
 		stripe_serviceable: features.stripe_serviceable ?? false,
+		premium_trial_days: features.premium_trial_days ?? 0,
+		gift_codes_enabled: features.gift_codes_enabled ?? false,
+		official_apps: features.official_apps ?? [],
 		phone_verification_enabled: false,
 	};
 }
@@ -139,6 +146,7 @@ function projectAppPublic(appPublic: InstanceDiscoveryDocument['appPublic']): In
 		legal: {
 			terms_url: requireDefined(value.legal.terms_url, 'app_public.legal.terms_url'),
 			privacy_url: requireDefined(value.legal.privacy_url, 'app_public.legal.privacy_url'),
+			source_url: value.legal.source_url ?? null,
 		},
 		registration: {
 			collect_date_of_birth: requireDefined(
@@ -146,6 +154,7 @@ function projectAppPublic(appPublic: InstanceDiscoveryDocument['appPublic']): In
 				'app_public.registration.collect_date_of_birth',
 			),
 		},
+		localization: value.localization,
 	};
 }
 

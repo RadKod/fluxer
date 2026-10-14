@@ -223,7 +223,7 @@ export function useVoiceCallTracksAndLayout({channel, expandedUserIds}: UseVoice
 	const participantSnapshots = MediaEngine.participants;
 	const tracks = liveKitTrackRefs.tracks;
 	const participants = liveKitTrackRefs.participants;
-	const userCacheSize = Users.usersList.length;
+	const userCacheSize = Users.userCount;
 	const participantCount = useMemo(() => countKnownVoiceParticipants(participants), [participants, userCacheSize]);
 	const renderableTracks = useMemo(() => tracks.filter(isKnownVoiceTrackRef), [tracks, userCacheSize]);
 	const viewerStreamKeys = selectVoiceMediaGraphViewerStreamKeys(voiceMediaGraphStore.graph);

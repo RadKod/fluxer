@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {InstanceCaptchaProviderSchema} from '@fluxer/schema/src/domains/instance/InstanceSchemas';
 import {z} from 'zod';
 
 export const CAPTCHA_MIN_COST = 1000;
@@ -30,3 +31,24 @@ export type CaptchaConfigUpdateRequest = z.infer<typeof CaptchaConfigUpdateReque
 export const CaptchaConfigResponse = CaptchaConfigSchema;
 
 export type CaptchaConfigResponse = z.infer<typeof CaptchaConfigResponse>;
+
+export const StoredCaptchaIntegrationProviderSchema = z.enum(['altcha', 'turnstile', 'hcaptcha', 'none']);
+
+export type StoredCaptchaIntegrationProvider = z.infer<typeof StoredCaptchaIntegrationProviderSchema>;
+
+export const CaptchaIntegrationUpdateRequest = z.object({
+	provider: z
+		.enum(['altcha', 'turnstile'])
+		.nullish()
+		.describe('Captcha provider to use; Turnstile needs both keys, otherwise ALTCHA answers'),
+	turnstile_site_key: z.string().trim().max(4096).nullish(),
+	turnstile_secret_key: z.string().trim().max(4096).nullish(),
+});
+
+export const CaptchaIntegrationResponse = z.object({
+	provider: StoredCaptchaIntegrationProviderSchema.nullable(),
+	effective_provider: InstanceCaptchaProviderSchema,
+	turnstile_site_key: z.string().nullable(),
+	turnstile_secret_key_set: z.boolean(),
+	effective_enabled: z.boolean(),
+});

@@ -2,16 +2,11 @@
 
 import {BootstrapErrorKind, classifyBootstrapError} from '@app/features/app/components/BootstrapErrorKind';
 import styles from '@app/features/app/components/ErrorFallback.module.css';
-import {
-	BLUESKY_PROVIDER_NAME,
-	FLUXER_BLUESKY_HANDLE,
-	PRODUCT_NAME,
-} from '@app/features/app/config/I18nDisplayConstants';
+import {PRODUCT_NAME, SUPPORT_EMAIL, SUPPORT_EMAIL_MAILTO} from '@app/features/app/config/I18nDisplayConstants';
 import {TRY_AGAIN_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {ResetClientStateReason, resetClientState} from '@app/features/platform/state/ResetClientState';
 import {Button} from '@app/features/ui/button/Button';
 import {APPLICATION_ICON_DESCRIPTOR, FluxerIconMark} from '@app/features/ui/components/icons/FluxerIconMark';
-import {ExternalUrls} from '@fluxer/constants/src/ExternalUrls';
 import {Trans, useLingui} from '@lingui/react/macro';
 import type React from 'react';
 import {useCallback, useEffect, useState} from 'react';
@@ -96,16 +91,16 @@ export const BootstrapErrorScreen: React.FC<BootstrapErrorScreenProps> = ({error
 					data-flx="app.bootstrap-error-screen.error-fallback-description--3"
 				>
 					<Trans>
-						Check our{' '}
+						If this keeps happening, email us at{' '}
 						<a
-							href={ExternalUrls.BLUESKY}
+							href={SUPPORT_EMAIL_MAILTO}
 							target="_blank"
 							rel="noopener noreferrer"
 							data-flx="app.bootstrap-error-screen.a"
 						>
-							{BLUESKY_PROVIDER_NAME} ({FLUXER_BLUESKY_HANDLE})
-						</a>{' '}
-						for status updates.
+							{SUPPORT_EMAIL}
+						</a>
+						.
 					</Trans>
 				</p>
 			</div>

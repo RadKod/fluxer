@@ -74,9 +74,7 @@
 	}
 }
 
-@media (prefers-reduced-motion: reduce) {
-	.spinnerItem {
-		animation: none;
-		opacity: 0.6;
-	}
+:global(html.reduced-motion) .spinnerItem {
+	animation: none;
+	opacity: 0.6;
 }

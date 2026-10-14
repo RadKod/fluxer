@@ -39,6 +39,12 @@ import {THREAD_AWARE_ALL_PERMISSIONS} from '@fluxer/constants/src/ThreadPermissi
 import {UnknownGuildError} from '@fluxer/errors/src/domains/guild/UnknownGuildError';
 import type {GuildMemberResponse} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
+import type {
+	GameActivityPairPolicyAck,
+	GameActivityPairPolicyRequest,
+	GameActivityPolicyAck,
+	GameActivityPolicyRequest,
+} from '@fluxer/schema/src/domains/rpc/RpcSchemas';
 
 function allPermissionsFor(guildId: GuildID): bigint {
 	return guildActive(guildId) ? THREAD_AWARE_ALL_PERMISSIONS : ALL_PERMISSIONS;
@@ -821,6 +827,25 @@ export class NoopGatewayService extends IGatewayService {
 	}
 
 	async dispatchPresence(_params: {userId: UserID; event: GatewayDispatchEvent; data: unknown}): Promise<void> {}
+
+	async gameActivityPolicy(request: GameActivityPolicyRequest): Promise<GameActivityPolicyAck> {
+		return {
+			owner_epoch: request.owner_epoch ?? 'test-owner',
+			policy_revision: request.policy_revision,
+			phase: request.phase,
+			request_id: request.request_id,
+			revoked_sessions: 0,
+		};
+	}
+
+	async gameActivityPairPolicy(request: GameActivityPairPolicyRequest): Promise<GameActivityPairPolicyAck> {
+		return {
+			owner_epoch: request.phase === 'apply' ? request.owner_epoch : 'test-owner',
+			pair_generation: request.phase === 'apply' ? request.pair_generation : '1',
+			phase: request.phase,
+			request_id: request.request_id,
+		};
+	}
 
 	async clearPushChannelNotifications(_params: {
 		userId: UserID;

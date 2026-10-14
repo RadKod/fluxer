@@ -9,10 +9,12 @@ import {EMAIL_I18N_MESSAGES} from '@pkgs/email/src/email_i18n/EmailI18nMessages'
 import type {EmailTemplate, EmailTemplateKey} from '@pkgs/email/src/email_i18n/EmailI18nTypes.generated';
 
 const DEFAULT_LOCALE = 'en-US';
+// Micup support address; appeals and safety share it.
+const MICUP_CONTACT_EMAIL = 'pr@premate.gg';
 const DEFAULT_EMAIL_TEMPLATE_VARIABLES = {
-	product_name: 'Fluxer',
-	appeals_email: 'appeals@fluxer.app',
-	safety_email: 'safety@fluxer.app',
+	product_name: 'Micup',
+	appeals_email: MICUP_CONTACT_EMAIL,
+	safety_email: MICUP_CONTACT_EMAIL,
 } satisfies Record<string, string>;
 
 function formatEmailDate(value: unknown, locale: string, style: string | null): string {
@@ -58,13 +60,18 @@ const emailI18n = createStaticI18n<EmailTemplateKey, EmailTemplate, Record<strin
 		},
 		validateVariables: (_key, template, variables) =>
 			validateMessageTemplateVariables(template.subject, variables) ??
-			validateMessageTemplateVariables(template.body, variables),
+			validateMessageTemplateVariables(template.body, variables) ??
+			(template.button === undefined ? null : validateMessageTemplateVariables(template.button, variables)),
 		messageFormatOptions: {customFormatters: {date: formatEmailDate, time: formatEmailTime}},
 	},
 	(template, variables, mf) => {
 		const compiledSubject = String(mf.compile(template.subject)(variables));
 		const compiledBody = String(mf.compile(template.body)(variables));
-		return {subject: compiledSubject, body: compiledBody};
+		return {
+			subject: compiledSubject,
+			body: compiledBody,
+			...(template.button !== undefined && {button: String(mf.compile(template.button)(variables))}),
+		};
 	},
 );
 

@@ -29,7 +29,14 @@
 
 -spec handle_identify(map(), binary(), state()) -> ws_result().
 handle_identify(Data, PeerIP, State) ->
-    handle_rate_limited_identify(Data, PeerIP, State).
+    case gateway_ip_connections:admit_identify() of
+        ok ->
+            handle_rate_limited_identify(Data, PeerIP, State);
+        {error, identify_at_capacity} ->
+            gateway_handler_encode:close_with_reason(
+                rate_limited, <<"Gateway at capacity">>, State
+            )
+    end.
 
 -spec handle_rate_limited_identify(map(), binary(), state()) -> ws_result().
 handle_rate_limited_identify(Data, PeerIP, State) ->

@@ -25,6 +25,8 @@ COPY --chown=65532:65532 fluxer_static/avatars /srv/fluxer-static/avatars
 COPY --chown=65532:65532 fluxer_static/badges /srv/fluxer-static/badges
 COPY --chown=65532:65532 fluxer_static/desktop /srv/fluxer-static/desktop
 COPY --chown=65532:65532 fluxer_static/emoji /srv/fluxer-static/emoji
+# Micup: the gateway's web push badge (push_notification.erl push_badge_url).
+COPY --chown=65532:65532 fluxer_static/marketing/branding/symbol-white.svg /srv/fluxer-static/marketing/branding/symbol-white.svg
 COPY --chown=65532:65532 fluxer_static/web /srv/fluxer-static/web
 
 RUN setcap -r /usr/bin/caddy \

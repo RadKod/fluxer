@@ -1,0 +1,300 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* A shelf card in a shop row, shared by ShopItemCard and ShopBundleCard: one square size for every item and bundle,
+   the stage across the card, the name and price at the bottom left over a fade. Hover moves things inside the card
+   only, so the card contains its layout. */
+.card {
+	--shop-card-pad: 1rem;
+	box-sizing: border-box;
+	position: relative;
+	z-index: 0;
+	isolation: isolate;
+	contain: layout;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	width: 15.25rem;
+	min-width: 0;
+	height: 15.25rem;
+	overflow: hidden;
+	border: 0.0625rem solid color-mix(in srgb, var(--text-primary) 9%, transparent);
+	border-radius: 0.5rem;
+	background: var(--shop-card-wash, var(--background-secondary-alt));
+	box-shadow:
+		inset 0 0.0625rem 0 color-mix(in srgb, var(--text-primary) 7%, transparent),
+		0 0.5rem 1.5rem -0.75rem color-mix(in srgb, var(--background-tertiary) 80%, transparent);
+	transition:
+		border-color 0.15s ease,
+		transform 0.16s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.card:focus-within {
+	border-color: color-mix(in srgb, var(--text-primary) 28%, transparent);
+}
+
+/* Pressing the card (not its action) gives it a small push. */
+.card:has(> .cardButton:active) {
+	transform: scale(0.98);
+}
+
+/* The art takes the card above the text: the stage runs edge to edge on the card's own surface down to where the name
+   and price begin, and its product grows to what the stage holds (--stage-boost), so neither covers the other. The
+   dialogs that share size="grid" (checkout, equipped) keep the stage's own 9:7 box and scale. */
+.card > [data-size='grid'] {
+	--stage-boost: 2;
+	position: absolute;
+	inset: 0 0 auto;
+	z-index: 0;
+	height: 69%;
+	aspect-ratio: auto;
+	background: none;
+}
+
+/* A bundle is a wide card: two shelf cards and the gap between them, so every item it gives shows at once. */
+.card[data-type='bundle'] {
+	width: 32rem;
+}
+
+.card[data-type='bundle'] > [data-size='grid'] {
+	--stage-boost: 1.5;
+	height: 74%;
+}
+
+/* The profile card at the card's width, without the stage's margins; its lower part, under the name, is cut. */
+.card > [data-size='grid'][data-type='profile_effect']:not([data-composed]) {
+	--natural-w: 19.0625rem;
+	--natural-h: 12.9rem;
+	--card-x: 0rem;
+	--card-y: 0rem;
+}
+
+/* Layers: the stage (0), the fade over its lower half (1), the text and the action (2). */
+.card::after {
+	content: '';
+	position: absolute;
+	inset: auto 0 0;
+	z-index: 1;
+	height: 50%;
+	background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--background-secondary) 85%, transparent));
+	pointer-events: none;
+}
+
+.cardButton > :not(.chip) {
+	position: relative;
+	z-index: 2;
+}
+
+.cardButton {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	min-width: 0;
+	margin: 0;
+	padding: var(--shop-card-pad);
+	border: 0;
+	background: none;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+	cursor: pointer;
+}
+
+/* A bundle with nothing to buy. */
+.cardButton:disabled {
+	cursor: default;
+}
+
+/* The whole card, stage included, is the button's hit area; the stage itself is inert. */
+.cardButton::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+}
+
+.chip {
+	position: absolute;
+	top: 0.75rem;
+	left: 0.75rem;
+	z-index: 2;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	height: 1.25rem;
+	padding: 0 0.5rem;
+	border-radius: var(--radius-full);
+	font-size: 0.6875rem;
+	font-weight: 700;
+	line-height: 1.25rem;
+	white-space: nowrap;
+}
+
+.chipOwned {
+	background: var(--text-primary);
+	color: var(--background-primary);
+}
+
+.chipPremium {
+	background: color-mix(in srgb, var(--background-tertiary) 88%, transparent);
+	color: var(--text-primary);
+}
+
+.chipIcon {
+	flex: 0 0 auto;
+	width: 0.75rem;
+	height: 0.75rem;
+}
+
+.crown {
+	color: var(--text-primary);
+}
+
+.name {
+	max-width: 100%;
+	margin-bottom: 0.125rem;
+	overflow: hidden;
+	font-size: 0.9375rem;
+	font-weight: 600;
+	line-height: 1.25rem;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	background: linear-gradient(
+		180deg,
+		var(--text-primary) 35%,
+		color-mix(in srgb, var(--premium-lavender, var(--brand-primary)) 65%, var(--text-primary))
+	);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+/* A bundle's price and, beside it, what it saves against its items bought one by one. */
+.priceRow {
+	display: flex;
+	align-items: baseline;
+	gap: 0.375rem;
+	min-width: 0;
+}
+
+/* The price line fills its row elsewhere; here it gives the saving room beside it. */
+.priceRow > :first-child {
+	width: auto;
+}
+
+.savings {
+	font-size: 0.875rem;
+	font-weight: 700;
+	line-height: 1.25rem;
+	color: var(--accent-success);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.savings::before {
+	content: '(';
+}
+
+.savings::after {
+	content: ')';
+}
+
+.srOnly {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+/* Above the card button's hit area. The buy button takes the shop's violet, as a store's accent, in every theme. */
+.action {
+	--brand-primary: var(--premium-violet);
+	--brand-secondary: color-mix(in srgb, var(--premium-violet) 82%, white);
+	--brand-primary-fill: var(--premium-hero-ink);
+	position: relative;
+	z-index: 2;
+}
+
+.action .halo {
+	display: flex;
+	width: 100%;
+}
+
+/* With a fine pointer the action takes the price row's place while the card is hovered or holds focus: it rises 4 px
+   and fades in quickly, and leaves faster. It only fades, so it keeps its place in the tab order; the price row leaves
+   the flow but stays in the card button's name. */
+@media (hover: hover) and (pointer: fine) {
+	/* The hovered card lifts by 2 px; pressing it (below) wins over the lift. */
+	.card:hover {
+		border-color: color-mix(in srgb, var(--text-primary) 28%, transparent);
+		transform: translateY(-0.125rem);
+	}
+
+	.action {
+		position: absolute;
+		right: var(--shop-card-pad);
+		bottom: 0.25rem;
+		left: var(--shop-card-pad);
+		opacity: 0;
+		pointer-events: none;
+		transform: translateY(0.25rem);
+		transition:
+			opacity 0.12s ease,
+			transform 0.12s ease;
+	}
+
+	.hasAction:is(:hover, :focus-within) .action {
+		opacity: 1;
+		pointer-events: auto;
+		transform: none;
+		transition-duration: 0.18s;
+		transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+	}
+
+	/* The price row only fades: the name keeps its line, clear of the art above it. */
+	.hasAction:is(:hover, :focus-within) .cardButton > :last-child {
+		opacity: 0;
+	}
+
+	/* The shelf's small button, so it fits where the price row and the foot of the card were. */
+	.action button {
+		height: 2.125rem;
+		min-height: 2.125rem;
+		padding: 0.375rem 0.625rem;
+	}
+}
+
+/* Touch and coarse pointers: the action always shows, under the price; the card grows below the art instead of
+   covering it. */
+@media not ((hover: hover) and (pointer: fine)) {
+	.card {
+		height: auto;
+		min-height: 15.25rem;
+		padding-top: 10.5rem;
+	}
+
+	.action {
+		padding: 0 var(--shop-card-pad) var(--shop-card-pad);
+	}
+
+	.hasAction .cardButton {
+		padding-bottom: 0.75rem;
+	}
+}
+
+/* A plain action (not the halo's, which presses itself) gives the same small push. */
+.action > button:active:not(:disabled) {
+	transform: scale(0.97);
+}
+
+/* Reduced motion: the action only fades and nothing is pushed. */
+:global(html.reduced-motion) .action,
+:global(html.reduced-motion) .hasAction:is(:hover, :focus-within) .action {
+	transform: none;
+}
+
+:global(html.reduced-motion) .card:hover,
+:global(html.reduced-motion) .card:has(> .cardButton:active),
+:global(html.reduced-motion) .action > button:active:not(:disabled) {
+	transform: none;
+}

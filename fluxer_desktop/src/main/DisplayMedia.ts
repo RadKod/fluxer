@@ -8,6 +8,7 @@ import {
 	shouldHonorSelectedAudio,
 } from '@electron/main/DisplayMediaValidation';
 import {isWaylandSession} from '@electron/main/LinuxSession';
+import {ensureWindowsCaptureBorderAccess} from '@electron/main/WindowsCaptureBorder';
 import {startWindowsScreenCaptureGuardForSource} from '@electron/main/WindowsScreenCaptureGuard';
 import {BrowserWindow, desktopCapturer, ipcMain, screen} from 'electron';
 import log from 'electron-log';
@@ -452,6 +453,7 @@ export function registerDisplayMediaHandlers(): void {
 					name: selectedSource.name,
 					withAudio: withAudio === true,
 				});
+				await ensureWindowsCaptureBorderAccess();
 				startWindowsScreenCaptureGuardForSource(selectedSource, event.sender);
 				const _attachAudio = shouldHonorSelectedAudio(pending.audioRequested, withAudio);
 				const streams: Electron.Streams = {

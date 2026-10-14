@@ -10,7 +10,8 @@
     error_code/1,
     error_message/1,
     error_category/1,
-    is_recoverable/1
+    is_recoverable/1,
+    voice_token_error/1
 ]).
 -export_type([error_atom/0, error_category/0]).
 
@@ -35,6 +36,7 @@
     | voice_invalid_guild_id
     | voice_moderator_missing_connect
     | voice_unclaimed_account
+    | username_selection_required
     | voice_update_rate_limited
     | voice_nonce_mismatch
     | voice_pending_expired
@@ -70,6 +72,31 @@
 -spec error(error_atom()) -> {error, error_category(), error_atom()}.
 error(ErrorAtom) ->
     {error, error_category(ErrorAtom), ErrorAtom}.
+
+%% Micup: keep the selection gate code across both guild and DM token RPC paths.
+-spec voice_token_error(term()) -> error_atom().
+voice_token_error(Body) ->
+    case voice_token_rpc_code(Body) of
+        <<"USERNAME_SELECTION_REQUIRED">> ->
+            username_selection_required;
+        _ ->
+            case guild_voice_unclaimed_account_utils:parse_unclaimed_error(Body) of
+                true -> voice_unclaimed_account;
+                false -> voice_token_failed
+            end
+    end.
+
+-spec voice_token_rpc_code(term()) -> binary() | undefined.
+voice_token_rpc_code(Body) when is_binary(Body); is_list(Body) ->
+    try json:decode(iolist_to_binary(Body)) of
+        #{<<"code">> := Code} when is_binary(Code) -> Code;
+        #{<<"error">> := #{<<"code">> := Code}} when is_binary(Code) -> Code;
+        _ -> undefined
+    catch
+        _:_ -> undefined
+    end;
+voice_token_rpc_code(_) ->
+    undefined.
 
 -spec error_code(error_atom()) -> binary().
 error_code(ErrorAtom) ->
@@ -210,6 +237,10 @@ voice_error_infos() ->
                 permission_denied},
         voice_unclaimed_account =>
             {<<"VOICE_UNCLAIMED_ACCOUNT">>, <<"Claim your account to join voice">>,
+                permission_denied},
+        username_selection_required =>
+            {<<"USERNAME_SELECTION_REQUIRED">>,
+                <<"Select your username in the updated app or on web/desktop to join voice">>,
                 permission_denied},
         voice_update_rate_limited =>
             {<<"VOICE_UPDATE_RATE_LIMITED">>, <<"Voice updates are rate limited">>,

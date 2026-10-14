@@ -25,11 +25,13 @@ const EMAIL_I18N_CS_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "Děkujeme za váš dar pro {product_name}",
-		"body": "Dobrý den,\n\nDěkujeme za váš dar pro {product_name}! Váš {interval, select,\n  month {opakovaný dar}\n  year {opakovaný dar}\n  other {jednorázový dar}\n} byl úspěšně {interval, select,\n  month {nastaven}\n  year {nastaven}\n  other {zpracován}\n}.\n\nPodrobnosti o daru:\nČástka: {amount} {interval, select,\n  month {měsíčně}\n  year {ročně}\n  other {}\n}\n\nStripe vám brzy pošle samostatné potvrzení platby s fakturou v PDF. Obsahuje všechny platební údaje a lze ho použít pro daňové účely.\n\nPomocí tohoto odkazu si můžete kdykoli prohlédnout historii svých darů, stáhnout faktury {interval, select,\n  month {a spravovat nebo zrušit předplatné}\n  year {a spravovat nebo zrušit předplatné}\n  other {a spravovat budoucí dary}\n}:\n\n{manageUrl}\n\nVaše podpora pomáhá udržovat {product_name} v chodu. Děkujeme!\n\n– Tým {product_name}"
+		"body": "Dobrý den,\n\nDěkujeme za váš dar pro {product_name}! Váš {interval, select,\n  month {opakovaný dar}\n  year {opakovaný dar}\n  other {jednorázový dar}\n} byl úspěšně {interval, select,\n  month {nastaven}\n  year {nastaven}\n  other {zpracován}\n}.\n\nPodrobnosti o daru:\nČástka: {amount} {interval, select,\n  month {měsíčně}\n  year {ročně}\n  other {}\n}\n\nStripe vám brzy pošle samostatné potvrzení platby s fakturou v PDF. Obsahuje všechny platební údaje a lze ho použít pro daňové účely.\n\nPomocí tohoto odkazu si můžete kdykoli prohlédnout historii svých darů, stáhnout faktury {interval, select,\n  month {a spravovat nebo zrušit předplatné}\n  year {a spravovat nebo zrušit předplatné}\n  other {a spravovat budoucí dary}\n}:\n\n{manageUrl}\n\nVaše podpora pomáhá udržovat {product_name} v chodu. Děkujeme!\n\n– Tým {product_name}",
+		"button": "Spravovat dary"
 	},
 	"donation_magic_link": {
 		"subject": "Spravujte své dary pro {product_name}",
-		"body": "Dobrý den,\n\nKliknutím na odkaz níže otevřete portál pro dárce:\n\n{manageUrl}\n\nNa portálu můžete spravovat předplatná, stahovat faktury a prohlížet si historii svých darů.\n\nPlatnost tohoto odkazu vyprší dne {expiresAt, date, full} v {expiresAt, time, short}.\n\nPokud jste si tento odkaz nevyžádali, můžete tento e-mail bez obav ignorovat.\n\n– Tým {product_name}"
+		"body": "Dobrý den,\n\nKliknutím na odkaz níže otevřete portál pro dárce:\n\n{manageUrl}\n\nNa portálu můžete spravovat předplatná, stahovat faktury a prohlížet si historii svých darů.\n\nPlatnost tohoto odkazu vyprší dne {expiresAt, date, full} v {expiresAt, time, short}.\n\nPokud jste si tento odkaz nevyžádali, můžete tento e-mail bez obav ignorovat.\n\n– Tým {product_name}",
+		"button": "Spravovat dary"
 	},
 	"dsa_report_verification": {
 		"subject": "Ověřte svůj e-mail pro nahlášení podle DSA",
@@ -45,11 +47,13 @@ const EMAIL_I18N_CS_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "Vaše e-mailová adresa pro {product_name} byla změněna",
-		"body": "Dobrý den, {username},\n\nE-mailová adresa vašeho účtu {product_name} byla změněna na {newEmail}.\n\nPokud jste tuto změnu provedli vy, nemusíte nic dělat. Pokud ne, můžete ji vrátit zpět a zabezpečit svůj účet pomocí tohoto odkazu:\n\n{revertUrl}\n\nTím se obnoví vaše předchozí e-mailová adresa, budete odhlášeni ze všech zařízení, vypne se vícefaktorové ověřování a budete muset nastavit nové heslo.\n\n– Bezpečnostní tým {product_name}"
+		"body": "Dobrý den, {username},\n\nE-mailová adresa vašeho účtu {product_name} byla změněna na {newEmail}.\n\nPokud jste tuto změnu provedli vy, nemusíte nic dělat. Pokud ne, můžete ji vrátit zpět a zabezpečit svůj účet pomocí tohoto odkazu:\n\n{revertUrl}\n\nTím se obnoví vaše předchozí e-mailová adresa, budete odhlášeni ze všech zařízení, vypne se vícefaktorové ověřování a budete muset nastavit nové heslo.\n\n– Bezpečnostní tým {product_name}",
+		"button": "Vrátit tuto změnu"
 	},
 	"email_verification": {
 		"subject": "Ověřte svou e-mailovou adresu pro {product_name}",
-		"body": "Dobrý den, {username},\n\nKliknutím na odkaz níže ověřte e-mailovou adresu svého účtu {product_name}:\n\n{verifyUrl}\n\nPokud jste si účet {product_name} nevytvořili, můžete tento e-mail bez obav ignorovat.\n\nTento odkaz je platný 24 hodin.\n\n– Tým {product_name}"
+		"body": "🎉 Dobrý den, {username},\n\nKliknutím na odkaz níže ověřte e-mailovou adresu svého účtu {product_name}:\n\n{verifyUrl}\n\nPokud jste si účet {product_name} nevytvořili, můžete tento e-mail bez obav ignorovat.\n\nTento odkaz je platný 24 hodin.\n\n– Tým {product_name}",
+		"button": "Ověřit e-mail"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Výhody z uplatněného dárku byly odstraněny",
@@ -57,15 +61,18 @@ const EMAIL_I18N_CS_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "Export vašich dat z {product_name} je připraven ke stažení",
-		"body": "Dobrý den, {username},\n\nExport vašich dat je připraven.\n\nOdkaz ke stažení:\n{downloadUrl}\n\nPočet zahrnutých zpráv: {totalMessages, number}\nVelikost souboru: {fileSizeMB, number} MB\n\nPlatnost tohoto odkazu vyprší dne {expiresAt, date, full} v {expiresAt, time, short}.\n\nPokud jste si tento export nevyžádali, okamžitě si změňte heslo a kontaktujte náš tým podpory.\n\n– Tým {product_name}"
+		"body": "Dobrý den, {username},\n\nExport vašich dat je připraven.\n\nOdkaz ke stažení:\n{downloadUrl}\n\nPočet zahrnutých zpráv: {totalMessages, number}\nVelikost souboru: {fileSizeMB, number} MB\n\nPlatnost tohoto odkazu vyprší dne {expiresAt, date, full} v {expiresAt, time, short}.\n\nPokud jste si tento export nevyžádali, okamžitě si změňte heslo a kontaktujte náš tým podpory.\n\n– Tým {product_name}",
+		"button": "Stáhnout moje data"
 	},
 	"inactivity_warning": {
 		"subject": "Váš účet {product_name} bude smazán kvůli neaktivitě",
-		"body": "Dobrý den, {username},\n\nOd {lastActiveDate, date, full} jsme na vašem účtu {product_name} nezaznamenali žádnou aktivitu.\n\nPokud se nepřihlásíte do {deletionDate, date, full} v {deletionDate, time, short}, váš účet bude kvůli neaktivitě trvale smazán.\n\nPřihlaste se zde:\n{loginUrl}\n\nPokud jste {product_name} v poslední době používali, ihned kontaktujte náš tým podpory.\n\n– Tým {product_name}"
+		"body": "Dobrý den, {username},\n\nOd {lastActiveDate, date, full} jsme na vašem účtu {product_name} nezaznamenali žádnou aktivitu.\n\nPokud se nepřihlásíte do {deletionDate, date, full} v {deletionDate, time, short}, váš účet bude kvůli neaktivitě trvale smazán.\n\nPřihlaste se zde:\n{loginUrl}\n\nPokud jste {product_name} v poslední době používali, ihned kontaktujte náš tým podpory.\n\n– Tým {product_name}",
+		"button": "Přihlásit se"
 	},
 	"ip_authorization": {
 		"subject": "Povolit přihlášení z nové IP adresy",
-		"body": "Dobrý den, {username},\n\nZaznamenali jsme pokus o přihlášení k vašemu účtu {product_name} z nové IP adresy:\n\nIP adresa: {ipAddress}\nPoloha: {location}\n\nPokud jste to byli vy, povolte tuto IP adresu kliknutím na odkaz níže:\n\n{authUrl}\n\nPokud jste se nepokoušeli přihlásit, ihned si změňte heslo.\n\nTento odkaz je platný 30 minut.\n\n– Tým {product_name}"
+		"body": "Dobrý den, {username},\n\nZaznamenali jsme pokus o přihlášení k vašemu účtu {product_name} z nové IP adresy:\n\nIP adresa: {ipAddress}\nPoloha: {location}\n\nPokud jste to byli vy, povolte tuto IP adresu kliknutím na odkaz níže:\n\n{authUrl}\n\nPokud jste se nepokoušeli přihlásit, ihned si změňte heslo.\n\nTento odkaz je platný 30 minut.\n\n– Tým {product_name}",
+		"button": "Povolit toto přihlášení"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Potvrďte přístup k záložním kódům pro {product_name}",
@@ -77,11 +84,17 @@ const EMAIL_I18N_CS_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "Obnovte své heslo k účtu {product_name}",
-		"body": "Dobrý den, {username},\n\nPožádali jste o obnovení hesla k účtu {product_name}. Pomocí odkazu níže si nastavte nové heslo:\n\n{resetUrl}\n\nPokud jste o to nežádali, můžete tento e-mail bez obav ignorovat.\n\nTento odkaz je platný 1 hodinu.\n\n– Tým {product_name}"
+		"body": "Dobrý den, {username},\n\nPožádali jste o obnovení hesla k účtu {product_name}. Pomocí odkazu níže si nastavte nové heslo:\n\n{resetUrl}\n\nPokud jste o to nežádali, můžete tento e-mail bez obav ignorovat.\n\nTento odkaz je platný 1 hodinu.\n\n– Tým {product_name}",
+		"button": "Obnovit heslo"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "Vaše registrace do {product_name} byla schválena",
-		"body": "Dobrý den, {username},\n\nDobrá zpráva: vaše registrace do {product_name} byla schválena.\n\nNyní se můžete přihlásit do aplikace {product_name} zde:\n{channelsUrl}\n\nVítejte v komunitě {product_name}.\n\n– Tým {product_name}"
+		"body": "🎉 Dobrý den, {username},\n\nDobrá zpráva: vaše registrace do {product_name} byla schválena.\n\nNyní se můžete přihlásit do aplikace {product_name} zde:\n{channelsUrl}\n\nVítejte v komunitě {product_name}.\n\n– Tým {product_name}",
+		"button": "Otevřít {product_name}"
 	},
 	"report_resolved": {
 		"subject": "Vaše nahlášení na {product_name} bylo přezkoumáno",
@@ -97,7 +110,7 @@ const EMAIL_I18N_CS_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "Pozastavení vašeho účtu {product_name} bylo zrušeno",
-		"body": "Dobrý den, {username},\n\nDobrá zpráva: pozastavení vašeho účtu {product_name} bylo zrušeno.\n\n{reason, select,\n  null {}\n  other {Důvod: {reason}}\n}\n\nNyní se můžete znovu přihlásit a používat {product_name} jako obvykle.\n\n– Bezpečnostní tým {product_name}"
+		"body": "🎉 Dobrý den, {username},\n\nDobrá zpráva: pozastavení vašeho účtu {product_name} bylo zrušeno.\n\n{reason, select,\n  null {}\n  other {Důvod: {reason}}\n}\n\nNyní se můžete znovu přihlásit a používat {product_name} jako obvykle.\n\n– Bezpečnostní tým {product_name}"
 	}
 });
 

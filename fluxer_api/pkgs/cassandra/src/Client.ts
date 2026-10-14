@@ -12,6 +12,21 @@ const DEFAULT_READ_TIMEOUT_MS = 5000;
 
 export const BACKGROUND_READ_TIMEOUT_MS = 12000;
 
+export type CassandraConsistencyName = 'local_one' | 'local_quorum' | 'quorum' | 'one';
+
+const DRIVER_CONSISTENCIES = {
+	local_one: cassandra.types.consistencies.localOne,
+	local_quorum: cassandra.types.consistencies.localQuorum,
+	quorum: cassandra.types.consistencies.quorum,
+	one: cassandra.types.consistencies.one,
+	all: cassandra.types.consistencies.all,
+	serial: cassandra.types.consistencies.serial,
+} as const;
+
+export function toDriverConsistency(name: keyof typeof DRIVER_CONSISTENCIES): cassandra.types.consistencies {
+	return DRIVER_CONSISTENCIES[name];
+}
+
 interface CassandraConfig {
 	hosts: Array<string>;
 	port?: number | undefined;
@@ -20,6 +35,7 @@ interface CassandraConfig {
 	username?: string | undefined;
 	password?: string | undefined;
 	readTimeoutMs?: number | undefined;
+	consistency?: CassandraConsistencyName | undefined;
 }
 
 interface CassandraClientOptions {
@@ -28,10 +44,12 @@ interface CassandraClientOptions {
 
 export interface CassandraExecuteOptions {
 	prepare?: boolean | undefined;
+	consistency?: CassandraConsistencyName | undefined;
 }
 
 export interface CassandraBatchOptions {
 	prepare?: boolean | undefined;
+	consistency?: CassandraConsistencyName | undefined;
 }
 
 export interface ICassandraClient {
@@ -71,6 +89,7 @@ class CassandraClient implements ICassandraClient {
 			username: config.username,
 			password: config.password,
 			readTimeoutMs: config.readTimeoutMs,
+			consistency: config.consistency,
 		};
 		this.logger = options.logger ?? NoopLogger;
 		this.client = null;
@@ -107,6 +126,7 @@ class CassandraClient implements ICassandraClient {
 				useBigIntAsLong: true,
 				useBigIntAsVarint: true,
 			},
+			...(this.config.consistency ? {queryOptions: {consistency: toDriverConsistency(this.config.consistency)}} : {}),
 			...(authProvider ? {authProvider} : {}),
 		});
 		await client.connect();
@@ -141,6 +161,7 @@ class CassandraClient implements ICassandraClient {
 	): Promise<cassandra.types.ResultSet> {
 		return this.getNativeClient().execute(query.cql, query.params, {
 			prepare: options.prepare ?? true,
+			...(options.consistency ? {consistency: toDriverConsistency(options.consistency)} : {}),
 		});
 	}
 
@@ -151,6 +172,7 @@ class CassandraClient implements ICassandraClient {
 		const batch = queries.map((query) => ({query: query.cql, params: query.params}));
 		await this.getNativeClient().batch(batch, {
 			prepare: options.prepare ?? true,
+			...(options.consistency ? {consistency: toDriverConsistency(options.consistency)} : {}),
 		});
 	}
 

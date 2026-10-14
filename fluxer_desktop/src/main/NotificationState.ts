@@ -2,15 +2,14 @@
 
 import {execFile} from 'node:child_process';
 import {promises as fs} from 'node:fs';
-import {createRequire} from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import {promisify} from 'node:util';
 import {MACOS_BUNDLE_ID} from '@electron/common/DesktopIdentity';
 import {createChildLogger} from '@electron/common/Logger';
+import {loadWinShell} from '@electron/main/WinShell';
 
 const logger = createChildLogger('NotificationState');
-const requireModule = createRequire(import.meta.url);
 const execFileAsync = promisify(execFile);
 
 const POLICY_CACHE_TTL_MS = 1_000;
@@ -23,13 +22,7 @@ export interface NotificationSoundPolicy {
 	reason: string | null;
 }
 
-interface WinShellModule {
-	getUserNotificationState?: (() => string) | null;
-	loadError?: Error | null;
-}
-
 let cachedPolicy: {expiresAt: number; promise: Promise<NotificationSoundPolicy>} | null = null;
-let cachedWinShellModule: WinShellModule | null | undefined;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -166,30 +159,8 @@ async function getMacosNotificationSoundPolicy(): Promise<NotificationSoundPolic
 	return {shouldPlaySound: true, reason: null};
 }
 
-function loadWinShellModule(): WinShellModule | null {
-	if (cachedWinShellModule !== undefined) return cachedWinShellModule;
-	if (process.platform !== 'win32') {
-		cachedWinShellModule = null;
-		return cachedWinShellModule;
-	}
-	try {
-		const mod = requireModule('@fluxer/win-shell') as WinShellModule;
-		if (mod.loadError) {
-			logger.warn('@fluxer/win-shell load error; Windows notification state unavailable', {error: mod.loadError});
-			cachedWinShellModule = null;
-			return cachedWinShellModule;
-		}
-		cachedWinShellModule = mod;
-		return cachedWinShellModule;
-	} catch (error) {
-		logger.warn('Failed to load @fluxer/win-shell; Windows notification state unavailable', {error});
-		cachedWinShellModule = null;
-		return cachedWinShellModule;
-	}
-}
-
 function getWindowsNotificationSoundPolicy(): NotificationSoundPolicy {
-	const mod = loadWinShellModule();
+	const mod = loadWinShell();
 	const state = mod?.getUserNotificationState?.();
 	if (!state || state === 'accepts-notifications' || state === 'app' || state === 'unknown') {
 		return {shouldPlaySound: true, reason: null};

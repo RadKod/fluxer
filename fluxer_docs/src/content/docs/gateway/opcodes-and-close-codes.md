@@ -83,7 +83,7 @@ A client SHOULD log an unknown opcode and ignore the frame, and MUST NOT close o
 | 4000 | Unknown error | Drain, an unclassified session creation error, or a Resume whose retained session could not be reached |
 | 4001 | Unknown opcode | The opcode is undefined, is a server opcode, or the payload has no `d` |
 | 4002 | Decode error | The payload size, compression stream, encoding, or command fields are invalid |
-| 4003 | Not authenticated | An authenticated command arrived before Identify or Resume attached a session |
+| 4003 | Not authenticated | An authenticated command arrived before a session was attached, or the Identify timeout passed |
 | 4004 | Authentication failed | The token is invalid, or it does not own the retained session named by Resume |
 | 4005 | Already authenticated | Identify arrived while a session was attached, or with no `d` |
 | 4007 | Invalid sequence | Heartbeat or Resume supplied a sequence outside the bounds that command accepts, as stated in [Invalid sequence](#invalid-sequence) |
@@ -146,7 +146,9 @@ The Gateway sends an exact reason string with every application close.
 | Reason | Code | Cause |
 | --- | --- | --- |
 | `Invalid API version` | 4012 | The `v` connection parameter is absent or is not `1` |
-| `Too many connections` | 4008 | The source IP already holds 256 concurrent Gateway connections |
+| `Too many connections` | 4008 | The source IP, or its IPv6 /64 when grouped, holds 256 connections, or its IPv6 /48 is at its limit |
+| `Gateway at capacity` | 4008 | On Identify, the node holds more WebSockets or sessions than its limit |
+| `Gateway at capacity` | 4008 | On a new connection, the node holds 5% more WebSockets, or its unidentified budget is full |
 | `Encode failed` | 4002 | Hello could not be encoded<sup>1</sup> |
 | `Compression failed: zstd-stream` | 4002 | Hello could not be compressed on a connection that negotiated zstd<sup>1</sup> |
 | `Payload too large` | 4002 | An inbound message exceeded 4,096 bytes on the wire, or exceeded 4,096 bytes after decompression |
@@ -156,6 +158,7 @@ The Gateway sends an exact reason string with every application close.
 | `Rate limited` | 4008 | The connection, source IP, or user client payload budget was exceeded |
 | `Unknown opcode` | 4001 | The opcode is undefined, is a server opcode, or the payload has no `d` |
 | `Not authenticated` | 4003 | An authenticated command arrived before a session was attached |
+| `Identify timeout` | 4003 | No session was attached within `FLUXER_GATEWAY_IDENTIFY_TIMEOUT_MS` after Hello |
 | `Already authenticated` | 4005 | Identify arrived while a session was attached, or with no `d` |
 | `Invalid identify payload` | 4002 | Identify is missing `token` or `properties`, or a field has the wrong type |
 | `Invalid shard` | 4010 | The Identify `shard` value is not a valid `[shard_id, shard_count]` pair |

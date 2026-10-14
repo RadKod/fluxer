@@ -21,6 +21,13 @@ import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 
 const mocks = vi.hoisted(() => ({token: 'token-primary' as string | null, clientPropertiesFailure: false}));
 
+vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor}));
+
+vi.mock('@lingui/react/macro', () => ({
+	Trans: ({children}: {children: unknown}) => children,
+	useLingui: () => ({i18n: {locale: 'en-US', _: (descriptor: {message: string}) => descriptor.message}}),
+}));
+
 vi.mock('@app/features/channel/state/ChannelFrecency', () => ({default: {handleLogout: vi.fn()}}));
 
 vi.mock('@app/features/forum/state/ForumPosts', () => ({default: {reset: vi.fn(), handleGatewayReady: vi.fn()}}));
@@ -129,9 +136,11 @@ vi.mock('@app/features/auth/state/Authentication', () => ({
 	default: {handleConnectionClosed: vi.fn(async () => undefined)},
 }));
 
+vi.mock('@app/features/user/state/UserSettings', () => ({default: {getSettingsEpoch: () => 0}}));
+
 vi.mock('@app/features/expressions/state/FavoriteMemes', () => ({default: {reset: vi.fn()}}));
 
-vi.mock('@app/features/guild/state/GuildMatureContentAgree', () => ({default: {reset: vi.fn()}}));
+vi.mock('@app/features/member/state/GuildMembers', () => ({default: {handleConnectionResumed: vi.fn()}}));
 
 vi.mock('@app/features/member/state/MemberSearch', () => ({default: {handleLogout: vi.fn()}}));
 
@@ -145,6 +154,10 @@ vi.mock('@app/features/navigation/state/SelectedGuild', async () => {
 });
 
 vi.mock('@app/features/permissions/state/Permission', () => ({default: {}}));
+
+vi.mock('@app/features/game_activity/state/GameActivitySettings', () => ({
+	default: {getEffectiveSharing: () => false, getDetectionEnabled: () => false},
+}));
 
 vi.mock('@app/features/presence/state/LocalPresence', async () => {
 	const {observable} = await import('mobx');

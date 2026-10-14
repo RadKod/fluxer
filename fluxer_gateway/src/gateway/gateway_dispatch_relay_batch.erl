@@ -5,6 +5,7 @@
 
 -export([
     relay_or_direct_many/3,
+    relay_game_activity_many/2,
     relay_or_direct/3,
     select_worker/1,
     current_workers/0,
@@ -42,6 +43,42 @@ relay_or_direct_many(SessionPids, Event, Payload) ->
         Count ->
             relay_many_to_shards(SessionPids, Event, Payload, Workers, Count)
     end.
+
+-spec relay_game_activity_many([pid()], map()) -> ok | busy.
+relay_game_activity_many([Pid], Payload) when is_pid(Pid) ->
+    case select_worker_slot(Pid) of
+        undefined ->
+            gateway_dispatch_relay:dispatch_direct(Pid, presence_update, Payload);
+        {Slot, Worker} ->
+            game_enqueue_result(
+                enqueue_async(Slot, Worker, {deliver_many, [Pid], presence_update, Payload})
+            )
+    end;
+relay_game_activity_many(SessionPids, Payload) when length(SessionPids) =< 100 ->
+    Workers = current_workers_tuple_normalized(),
+    case tuple_size(Workers) of
+        0 ->
+            gateway_dispatch_relay:dispatch_grouped(
+                gateway_dispatch_relay:group_by_node(SessionPids),
+                presence_update,
+                Payload,
+                fun gateway_dispatch_relay:dispatch_direct/3
+            );
+        Count ->
+            Buckets = build_shard_buckets(SessionPids, Count),
+            Deferred = deliver_shard_buckets(
+                1, Count, Buckets, presence_update, Payload, Workers, []
+            ),
+            game_relay_result(Deferred)
+    end.
+
+-spec game_enqueue_result(ok | full) -> ok | busy.
+game_enqueue_result(ok) -> ok;
+game_enqueue_result(full) -> busy.
+
+-spec game_relay_result(list()) -> ok | busy.
+game_relay_result([]) -> ok;
+game_relay_result(_) -> busy.
 
 -spec relay_many_to_shards([pid()], atom(), term(), tuple(), pos_integer()) -> ok.
 relay_many_to_shards(SessionPids, Event, Payload, Workers, Count) ->

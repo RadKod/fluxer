@@ -6,8 +6,11 @@ import {
 	type NagbarState,
 	NagbarType,
 } from '@app/features/app/components/layout/app_layout/AppLayoutTypes';
+import {canShowProfilePrivacyWidened} from '@app/features/app/components/layout/app_layout/nagbars/ProfilePrivacyChangedNagbar';
+import {canShowProfilePublicOffer} from '@app/features/app/components/layout/app_layout/nagbars/ProfilePublicOfferNagbar';
 import {isScheduledMaintenanceNagbarDismissed} from '@app/features/app/components/layout/app_layout/ScheduledMaintenanceDismissal';
 import Config from '@app/features/app/config/Config';
+import {DOMAIN_MIGRATION_ENABLED} from '@app/features/app/domain_migration/DomainMigrationCore';
 import DomainMovedNotice from '@app/features/app/domain_migration/DomainMovedNotice';
 import {isClientReconnecting} from '@app/features/app/state/ClientReadiness';
 import Initialization from '@app/features/app/state/Initialization';
@@ -19,6 +22,7 @@ import Channels from '@app/features/channel/state/Channels';
 import DeveloperOptions from '@app/features/devtools/state/DeveloperOptions';
 import GatewayConnection from '@app/features/gateway/transport/GatewayConnection';
 import * as NotificationUtils from '@app/features/notification/utils/NotificationUtils';
+import {useTaskbarPinNagbar} from '@app/features/platform/hooks/useTaskbarPinNagbar';
 import {resolvePriceAnnouncementCampaign} from '@app/features/premium/config/PriceAnnouncementCampaign';
 import PremiumState from '@app/features/premium/state/PremiumState';
 import {getPremiumGraceEndDate} from '@app/features/premium/utils/PremiumGrace';
@@ -32,6 +36,7 @@ import Nagbar from '@app/features/ui/state/Nagbar';
 import {hasUnavailableElectronNativeContext, isDesktop} from '@app/features/ui/utils/NativeUtils';
 import {isStandalonePwa} from '@app/features/ui/utils/PwaUtils';
 import StatusPage from '@app/features/user/state/StatusPage';
+import UserSettings from '@app/features/user/state/UserSettings';
 import Users from '@app/features/user/state/Users';
 import MediaEngine, {useVoiceEngineV2Model} from '@app/features/voice/engine/MediaEngineFacade';
 import {selectVoiceEngineV2AppConnectionWithFallback} from '@app/features/voice/engine/v2/VoiceEngineV2AppSelectors';
@@ -81,6 +86,7 @@ export const useAppLayoutState = (): AppLayoutState => {
 };
 export const useNagbarConditions = (): NagbarConditions => {
 	const voiceEngineV2Model = useVoiceEngineV2Model();
+	const canShowTaskbarPin = useTaskbarPinNagbar(Authentication.isAuthenticated);
 	const user = Users.currentUser;
 	const nagbarState = Nagbar;
 	const premiumOverrideType = DeveloperOptions.premiumTypeOverride;
@@ -203,6 +209,17 @@ export const useNagbarConditions = (): NagbarConditions => {
 		if (isSelfHosted) return false;
 		return !nagbarState.guildMembershipCtaDismissed;
 	})();
+	const profilePrivacy = UserSettings.isHydrated() ? UserSettings.getProfilePrivacy() : null;
+	const canShowProfilePrivacyWidenedNotice = canShowProfilePrivacyWidened(
+		profilePrivacy,
+		nagbarState.profilePrivacyWidenedDismissed,
+	);
+	const canShowProfilePublicOfferNotice = canShowProfilePublicOffer({
+		profilePrivacy,
+		publicProfileAllowed: user?.publicProfileAllowed === true,
+		dismissed: nagbarState.profilePublicOfferDismissed,
+		widenedShown: canShowProfilePrivacyWidenedNotice,
+	});
 	void nagbarState.scheduledMaintenanceDismissalVersion;
 	const canShowScheduledMaintenance = (() => {
 		if (nagbarState.forceHideScheduledMaintenance) return false;
@@ -260,11 +277,12 @@ export const useNagbarConditions = (): NagbarConditions => {
 	const canShowSoftwareEncoder = SoftwareEncoderWarning.showWarning;
 	const canShowStreamerMode = StreamerMode.shouldShowNagbar;
 	const canShowDesktopUpdateReady = Updater.shouldShowUpdateReadyNagbar;
-	const canShowDomainMoved = nagbarState.forceHideDomainMoved
-		? false
-		: nagbarState.forceDomainMoved
-			? true
-			: DomainMovedNotice.shouldShow(Date.now());
+	const canShowDomainMoved =
+		!DOMAIN_MIGRATION_ENABLED || nagbarState.forceHideDomainMoved
+			? false
+			: nagbarState.forceDomainMoved
+				? true
+				: DomainMovedNotice.shouldShow(Date.now());
 	const canShowBuildEnvironment =
 		!BUILD_ENVIRONMENT_HIDDEN_RELEASE_CHANNELS.has(Config.PUBLIC_RELEASE_CHANNEL) &&
 		!nagbarState.buildEnvironmentDismissedThisSession;
@@ -327,9 +345,12 @@ export const useNagbarConditions = (): NagbarConditions => {
 		canShowVisionaryMfa,
 		canShowVoiceSessionRestore,
 		needsTermsAcceptance,
+		canShowTaskbarPin,
 		canShowSoftwareEncoder,
 		canShowStreamerMode,
 		canShowDesktopUpdateReady,
+		canShowProfilePrivacyWidened: canShowProfilePrivacyWidenedNotice,
+		canShowProfilePublicOffer: canShowProfilePublicOfferNotice,
 		canShowDomainMoved,
 	};
 };
@@ -433,6 +454,18 @@ export const useActiveNagbars = (conditions: NagbarConditions): Array<NagbarStat
 				dismissible: true,
 			},
 			{
+				type: NagbarType.PROFILE_PRIVACY_WIDENED,
+				priority: 6.2,
+				visible: conditions.canShowProfilePrivacyWidened,
+				dismissible: true,
+			},
+			{
+				type: NagbarType.PROFILE_PUBLIC_OFFER,
+				priority: 6.4,
+				visible: conditions.canShowProfilePublicOffer,
+				dismissible: true,
+			},
+			{
 				type: NagbarType.VISIONARY_MFA,
 				priority: 7,
 				visible: conditions.canShowVisionaryMfa,
@@ -442,6 +475,12 @@ export const useActiveNagbars = (conditions: NagbarConditions): Array<NagbarStat
 				type: NagbarType.DESKTOP_NOTIFICATION,
 				priority: 8,
 				visible: conditions.canShowDesktopNotification,
+				dismissible: true,
+			},
+			{
+				type: NagbarType.TASKBAR_PIN,
+				priority: 9.5,
+				visible: conditions.canShowTaskbarPin,
 				dismissible: true,
 			},
 			{

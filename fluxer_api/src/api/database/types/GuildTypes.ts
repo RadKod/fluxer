@@ -51,6 +51,8 @@ export interface GuildRow {
 	audit_logs_indexed_at: Nullish<Date>;
 	members_indexed_at: Nullish<Date>;
 	message_history_cutoff: Nullish<Date>;
+	premium_tier?: Nullish<number>;
+	premium_subscription_count?: Nullish<number>;
 	version: number;
 }
 
@@ -89,6 +91,8 @@ export const GUILD_COLUMNS = [
 	'audit_logs_indexed_at',
 	'members_indexed_at',
 	'message_history_cutoff',
+	'premium_tier',
+	'premium_subscription_count',
 	'version',
 ] as const satisfies ReadonlyArray<keyof GuildRow>;
 

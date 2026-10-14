@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.panel {
+	padding: 0.75rem 0;
+	background: var(--background-secondary-lighter);
+	border: 0.0625rem solid var(--background-modifier-accent);
+	border-radius: var(--radius-lg);
+}

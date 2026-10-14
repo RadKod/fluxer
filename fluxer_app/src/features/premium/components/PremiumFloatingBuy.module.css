@@ -1,0 +1,55 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Sticks to the bottom of the page's scroll area, centred in the column; slides up 16 px when it appears. */
+.capsule {
+	position: sticky;
+	bottom: 1.5rem;
+	z-index: 2;
+	align-self: center;
+	margin-top: 2rem;
+	padding: 0.5rem;
+	border-radius: var(--premium-radius-card);
+	background: color-mix(in srgb, var(--premium-card-bg) 94%, transparent);
+	border: 0.0625rem solid var(--premium-card-edge);
+	box-shadow: var(--premium-card-shade), var(--premium-float-shade);
+	opacity: 0;
+	visibility: hidden;
+	transform: translateY(1rem);
+	transition:
+		opacity 0.25s var(--premium-ease-out),
+		transform 0.25s var(--premium-ease-out),
+		visibility 0s linear 0.25s;
+}
+
+.capsule[data-visible='true'] {
+	opacity: 1;
+	visibility: visible;
+	transform: none;
+	transition-delay: 0s;
+}
+
+.halo {
+	composes: buyLight from '@app/features/premium/components/PremiumSurface.module.css';
+	min-width: 15rem;
+}
+
+.halo > button {
+	flex: 1;
+	min-width: 100%;
+}
+
+@media (max-width: 47.5rem) {
+	.capsule {
+		align-self: stretch;
+		margin-inline: 1rem;
+	}
+
+	.halo {
+		display: flex;
+		min-width: 0;
+	}
+}
+
+:global(html.reduced-motion) .capsule {
+	transform: none;
+}

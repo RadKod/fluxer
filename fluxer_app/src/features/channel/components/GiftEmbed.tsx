@@ -2,6 +2,8 @@
 
 import {openClaimAccountModal} from '@app/features/auth/components/modals/ClaimAccountModal';
 import styles from '@app/features/channel/components/GiftEmbed.module.css';
+import type {CosmeticType} from '@app/features/cosmetics/state/Cosmetics';
+import {COSMETIC_TYPE_LABELS} from '@app/features/cosmetics/utils/CosmeticLabels';
 import * as GiftCommands from '@app/features/gift/commands/GiftCommands';
 import Gifts from '@app/features/gift/state/Gifts';
 import {getGiftDurationText} from '@app/features/gift/utils/GiftUtils';
@@ -76,8 +78,8 @@ export const GiftEmbed = observer(function GiftEmbed({code}: GiftEmbedProps) {
 	const {i18n} = useLingui();
 	const target = useMemo(currentInstanceTarget, []);
 	const giftState = Gifts.getGift(code, target);
-	const gift = giftState?.data;
-	const creator = Users.getUser(gift?.created_by?.id ?? '');
+	const gift = giftState?.data ?? giftState?.item;
+	const creator = Users.getUser(giftState?.data?.created_by?.id ?? '');
 	const isUnclaimed = !(Users.currentUser?.isClaimed() ?? false);
 	const shouldForceSkeleton = useEmbedSkeletonOverride();
 	useEffect(() => {
@@ -99,11 +101,16 @@ export const GiftEmbed = observer(function GiftEmbed({code}: GiftEmbedProps) {
 	if (giftState.invalid || giftState.error || !gift) {
 		return <GiftNotFoundError data-flx="channel.gift-embed.gift-not-found-error" />;
 	}
-	const durationText = getGiftDurationText(i18n, gift);
+	const title = gift.kind === 'cosmetic' ? gift.item.name : getGiftDurationText(i18n, gift);
 	const creatorTag = creator ? NicknameUtils.getDisplayName(creator) : '';
 	const handleRedeem = async () => {
 		if (isUnclaimed) {
 			openClaimAccountModal({force: true});
+			return;
+		}
+		// Redeeming an item also wears it; the gift dialog shows the item (and whether it is owned) first.
+		if (gift.kind === 'cosmetic') {
+			void GiftCommands.openAcceptModal(code, target);
 			return;
 		}
 		try {
@@ -112,11 +119,16 @@ export const GiftEmbed = observer(function GiftEmbed({code}: GiftEmbedProps) {
 			logger.error('Failed to redeem gift', error);
 		}
 	};
-	const subtitleNode = creator ? (
-		<span className={styles.subRow} data-flx="channel.gift-embed.sub-row">
-			{i18n._(FROM_DESCRIPTOR, {creatorTag})}
-		</span>
-	) : undefined;
+	const subtitleNode =
+		gift.kind === 'cosmetic' ? (
+			<span className={styles.subRow} data-flx="channel.gift-embed.sub-row.item-type">
+				{i18n._(COSMETIC_TYPE_LABELS[gift.item.type as CosmeticType])}
+			</span>
+		) : creator ? (
+			<span className={styles.subRow} data-flx="channel.gift-embed.sub-row">
+				{i18n._(FROM_DESCRIPTOR, {creatorTag})}
+			</span>
+		) : undefined;
 	const helpText = gift.redeemed
 		? i18n._(ALREADY_REDEEMED_DESCRIPTOR)
 		: isUnclaimed
@@ -159,7 +171,7 @@ export const GiftEmbed = observer(function GiftEmbed({code}: GiftEmbedProps) {
 					className={`${styles.title} ${cardStyles.title} ${gift.redeemed ? styles.titleTertiary : styles.titlePrimary}`}
 					data-flx="channel.gift-embed.title"
 				>
-					{durationText}
+					{title}
 				</h3>
 			}
 			subtitle={subtitleNode}

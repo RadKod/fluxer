@@ -18,6 +18,7 @@ import type {
 } from '@app/api/infrastructure/activity/Contract.generated';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {KVBulkMessageDeletionQueueService} from '@app/api/infrastructure/KVBulkMessageDeletionQueueService';
+import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import type {User} from '@app/api/models/User';
 import {isAccountLimitExempt} from '@app/api/user/AccountLimit';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
@@ -26,12 +27,10 @@ import {
 	isNewConversationLimitExempt,
 	setNewConversationLimit,
 } from '@app/api/user/NewConversationLimit';
-import {
-	type PartialUserChangePropagationDeps,
-	propagatePartialUserChange,
-} from '@app/api/user/services/PartialUserChangePropagation';
+import {propagatePartialUserChange} from '@app/api/user/services/PartialUserChangePropagation';
 import {mapUserToPrivateResponse} from '@app/api/user/UserMappers';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
+import {HarvestNotReadyError} from '@fluxer/errors/src/domains/moderation/HarvestNotReadyError';
 import {getSameIpDecisionKey, isPublicIpAddress, parseIpAddress} from '@fluxer/ip_utils/src/IpAddress';
 import {snowflakeToDate} from '@fluxer/snowflake/src/Snowflake';
 import type {ICacheService} from '@pkgs/cache/src/ICacheService';
@@ -51,7 +50,7 @@ export interface AccountStateDeps {
 	dispatch: AccountUpdateDispatch;
 	ipBans: Pick<AdminRepository, 'isIpBanned' | 'banIpTemp'>;
 	cache: Pick<ICacheService, 'publish' | 'get' | 'set' | 'delete'>;
-	archives: Pick<AdminArchiveService, 'triggerUserArchive' | 'listArchives'>;
+	archives: Pick<AdminArchiveService, 'triggerUserArchive' | 'listArchives' | 'getDownloadUrl'>;
 	messageDeletionQueue: Pick<KVBulkMessageDeletionQueueService, 'scheduleDeletion' | 'removeFromQueue'>;
 	messageDeletionDelayMs: number;
 	authored: Pick<IChannelRepository, 'listMessagesByAuthor'>;
@@ -64,7 +63,9 @@ const MIN_TEMP_BAN_SECONDS = 60;
 const RECENT_ARCHIVE_MS = ms('1 day');
 const RECENT_ARCHIVE_SCAN = 20;
 
-type ProfilePropagation = Omit<PartialUserChangePropagationDeps, 'gatewayService'>;
+interface ProfilePropagation {
+	userCacheService: Pick<UserCacheService, 'setUserPartialResponseFromUser' | 'invalidateUserCache'>;
+}
 
 function gatewayDispatch(
 	gateway: IGatewayService,
@@ -76,7 +77,7 @@ function gatewayDispatch(
 			await gateway.dispatchPresence({userId: user.id, event: 'USER_UPDATE', data: mapUserToPrivateResponse(user)});
 		},
 		async profileChanged(user) {
-			await propagatePartialUserChange({...profile, gatewayService: gateway}, user);
+			await propagatePartialUserChange(profile, user);
 		},
 		async contentVisibilityChanged(user) {
 			await profile.userCacheService.invalidateUserCache(user.id);
@@ -99,13 +100,13 @@ function gatewayDispatch(
 export function accountStateDepsFromContext(
 	ctx: ApiContext,
 	ipBans: AccountStateDeps['ipBans'],
-	profile: Omit<ProfilePropagation, 'userRepository'>,
+	profile: ProfilePropagation,
 	messageDeletion: Pick<AccountStateDeps, 'archives' | 'messageDeletionQueue' | 'messageDeletionDelayMs'>,
 	channels: Pick<IChannelRepository, 'findUnique' | 'listMessagesByAuthor'>,
 ): AccountStateDeps {
 	return {
 		users: ctx.services.users,
-		dispatch: gatewayDispatch(ctx.services.gateway, {...profile, userRepository: ctx.services.users}, channels),
+		dispatch: gatewayDispatch(ctx.services.gateway, profile, channels),
 		ipBans,
 		cache: ctx.services.cache,
 		...messageDeletion,
@@ -278,11 +279,18 @@ async function archiveBeforeDeletion(deps: AccountStateDeps, userId: UserID, now
 		limit: RECENT_ARCHIVE_SCAN,
 	});
 	const recent = archives.find(
-		(archive) => archive.failed_at === null && now - Date.parse(archive.requested_at) < RECENT_ARCHIVE_MS,
+		(archive) =>
+			archive.failed_at === null &&
+			archive.requested_by === SYSTEM_USER_ID.toString() &&
+			now - Date.parse(archive.requested_at) < RECENT_ARCHIVE_MS &&
+			(archive.expires_at === null || Date.parse(archive.expires_at) > now + deps.messageDeletionDelayMs),
 	);
-	if (recent) return `archive=${recent.archive_id} reused=true`;
-	const created = await deps.archives.triggerUserArchive(userId, SYSTEM_USER_ID, true);
-	return `archive=${created.archive_id} reused=false`;
+	const archive = recent ?? (await deps.archives.triggerUserArchive(userId, SYSTEM_USER_ID, true));
+	if (archive.failed_at !== null || archive.completed_at === null) {
+		throw new HarvestNotReadyError();
+	}
+	await deps.archives.getDownloadUrl('user', userId, BigInt(archive.archive_id));
+	return `archive=${archive.archive_id} reused=${recent !== undefined}`;
 }
 
 async function cancelScheduledMessageDeletion(

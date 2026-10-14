@@ -98,6 +98,18 @@ init(SessionData) ->
 
 -spec handle_call(term(), gen_server:from(), session_state()) ->
     {reply, term(), session_state()} | {stop, normal, term(), session_state()}.
+handle_call({game_activity_expect, OwnerId, Context}, _From, State) when
+    is_integer(OwnerId), is_map(Context)
+->
+    session_game_activity:expect(OwnerId, Context, State);
+handle_call({game_activity_grant, OwnerId, Stamp}, _From, State) when
+    is_integer(OwnerId), is_map(Stamp)
+->
+    session_game_activity:grant(OwnerId, Stamp, State);
+handle_call({game_activity_fence, OwnerId, Stamp}, _From, State) when
+    is_integer(OwnerId), is_map(Stamp)
+->
+    session_game_activity:fence(OwnerId, Stamp, State);
 handle_call({token_verify, Token}, _From, State) when is_binary(Token) ->
     session_lifecycle:handle_token_verify(Token, State);
 handle_call({is_staff}, _From, State) ->
@@ -124,6 +136,42 @@ handle_call(_, _From, State) ->
 
 -spec handle_cast(term(), session_state()) ->
     {noreply, session_state()} | {stop, normal, session_state()}.
+handle_cast({game_activity_fence, OwnerId, Stamp}, State) when
+    is_integer(OwnerId), is_map(Stamp)
+->
+    {reply, {ok, _}, Next} = session_game_activity:fence(OwnerId, Stamp, State),
+    {noreply, Next};
+handle_cast({game_activity_refresh, OwnerId}, State) when is_integer(OwnerId) ->
+    {noreply, session_game_activity:refresh(OwnerId, State)};
+handle_cast(
+    {game_activity_resume, SocketPid},
+    #{socket_pid := SocketPid, game_activity_resuming := SocketPid} = State
+) when
+    is_pid(SocketPid)
+->
+    Active = maps:remove(game_activity_resuming, State),
+    SocketPid !
+        {dispatch, gateway_rollout_update, session_game_activity:rollout_payload(),
+            maps:get(seq, State)},
+    {noreply, session_game_activity:subscribe(Active)};
+handle_cast({game_activity_resume, _SocketPid}, State) ->
+    {noreply, State};
+handle_cast(game_activity_rollout_changed, State) ->
+    session_game_activity_rollout:changed(State);
+handle_cast(game_activity_reset, State) ->
+    {noreply, session_game_activity:rollout(State)};
+handle_cast({game_activity, OwnerId, Activity, Stamp}, State) when
+    is_integer(OwnerId), is_map(Stamp)
+->
+    session_game_activity:deliver(OwnerId, Activity, Stamp, State);
+handle_cast({game_activity_clear}, State) ->
+    case maps:get(presence_pid, State, undefined) of
+        Pid when is_pid(Pid) ->
+            gen_server:cast(Pid, {game_activity_clear, maps:get(id, State)});
+        _ ->
+            ok
+    end,
+    {noreply, State};
 handle_cast({presence_update, Update}, State) when is_map(Update) ->
     session_lifecycle:handle_presence_update_cast(Update, State);
 handle_cast({dispatch, Event, {pre_encoded, EncodedData} = Data}, State) when
@@ -333,6 +381,10 @@ do_handle_resume_timeout(resume_timeout, State) ->
 
 -spec do_handle_info_misc(term(), session_state()) ->
     {noreply, session_state()} | {stop, normal, session_state()}.
+do_handle_info_misc({game_activity_cleanup, Iterator}, State) ->
+    {noreply, session_game_activity:cleanup(Iterator, State)};
+do_handle_info_misc({game_activity_subscribed, Pid}, State) ->
+    {noreply, session_game_activity:subscribed(Pid, State)};
 do_handle_info_misc({process_voice_queue}, State) ->
     handle_voice_queue(State);
 do_handle_info_misc(flush_reaction_buffer, State) ->
@@ -340,7 +392,10 @@ do_handle_info_misc(flush_reaction_buffer, State) ->
 do_handle_info_misc({'DOWN', Ref, process, _Pid, Reason}, State) when
     is_reference(Ref)
 ->
-    session_monitor:handle_process_down(Ref, Reason, State);
+    case session_game_activity:down(Ref, State) of
+        unhandled -> handle_regular_down(Ref, Reason, State);
+        Result -> Result
+    end;
 do_handle_info_misc(check_ack_lag, State) ->
     erlang:send_after(60000, self(), check_ack_lag),
     State1 = session_connection_guild:repair_stalled_guild_connects(State),
@@ -349,6 +404,14 @@ do_handle_info_misc({presence_rejoin_check}, State) ->
     handle_presence_rejoin_check(State);
 do_handle_info_misc(_Info, State) ->
     {noreply, State}.
+
+-spec handle_regular_down(reference(), term(), session_state()) ->
+    {noreply, session_state()} | {stop, normal, session_state()}.
+handle_regular_down(Ref, Reason, #{socket_mref := Ref} = State) ->
+    {noreply, Cleared} = handle_cast({game_activity_clear}, State),
+    session_monitor:handle_process_down(Ref, Reason, Cleared);
+handle_regular_down(Ref, Reason, State) ->
+    session_monitor:handle_process_down(Ref, Reason, State).
 
 -spec handle_presence_rejoin_check(session_state()) -> {noreply, session_state()}.
 handle_presence_rejoin_check(State) ->

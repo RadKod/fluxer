@@ -2,6 +2,7 @@
 
 import {Modals} from '@app/features/app/components/dialogs/Modals';
 import styles from '@app/features/app/components/layout/GlobalOverlays.module.css';
+import {GameOverlayHost} from '@app/features/game_overlay/components/GameOverlayHost';
 import {MEDIA_VIEWER_PORTAL_ROOT_ID} from '@app/features/messaging/components/modals/MediaViewerPortal';
 import {createNamedLoadableComponent} from '@app/features/platform/components/loadable/LoadableComponent';
 import * as QuickSwitcherCommands from '@app/features/search/commands/QuickSwitcherCommands';
@@ -54,6 +55,7 @@ const GlobalOverlays: React.FC = observer(() => {
 			<Toasts data-flx="app.global-overlays.toasts" />
 			<PiPOverlay data-flx="app.global-overlays.pi-p-overlay" />
 			<VoicePopoutHost data-flx="app.global-overlays.voice-popout-host" />
+			<GameOverlayHost data-flx="app.global-overlays.game-overlay-host" />
 			{isMobile && quickSwitcherBottomSheetLoaded && (
 				<QuickSwitcherBottomSheet
 					isOpen={quickSwitcherOpen}

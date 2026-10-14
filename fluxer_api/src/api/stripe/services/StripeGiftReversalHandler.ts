@@ -5,7 +5,7 @@ import type {UserRow} from '@app/api/database/types/UserTypes';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {PremiumStateReconciliationQueueService} from '@app/api/infrastructure/PremiumStateReconciliationQueueService';
 import {Logger} from '@app/api/Logger';
-import {addGiftCodeDuration, type GiftCode} from '@app/api/models/GiftCode';
+import {addGiftCodeDuration, type GiftCode, isPremiumGiftCode} from '@app/api/models/GiftCode';
 import type {User} from '@app/api/models/User';
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
@@ -33,13 +33,14 @@ export class StripeGiftReversalHandler {
 			chargeId?: string;
 		},
 	): Promise<void> {
+		if (!isPremiumGiftCode(giftCode)) return;
 		const redeemerId = giftCode.redeemedByUserId;
 		if (!redeemerId) {
 			return;
 		}
 		const redeemer = await this.userRepository.findUnique(redeemerId);
 		if (!redeemer) {
-			Logger.warn({giftCode: giftCode.code, redeemerId}, 'Gift redeemer not found for premium reversal');
+			Logger.warn({redeemerId}, 'Gift redeemer not found for premium reversal');
 			return;
 		}
 		if (redeemer.stripeSubscriptionId || redeemer.stripeCustomerId) {
@@ -65,7 +66,6 @@ export class StripeGiftReversalHandler {
 			) {
 				Logger.info(
 					{
-						giftCode: giftCode.code,
 						redeemerId: redeemer.id,
 						chargeId: context.chargeId,
 						reason: context.reason,
@@ -81,7 +81,6 @@ export class StripeGiftReversalHandler {
 			});
 			Logger.info(
 				{
-					giftCode: giftCode.code,
 					redeemerId: redeemer.id,
 					chargeId: context.chargeId,
 					reason: context.reason,
@@ -99,7 +98,6 @@ export class StripeGiftReversalHandler {
 		if (!hasGiftInRedeemerIndex) {
 			Logger.warn(
 				{
-					giftCode: giftCode.code,
 					redeemerId: redeemer.id,
 					redeemedGiftCount: redeemedGifts.length,
 					reason: context.reason,
@@ -112,7 +110,6 @@ export class StripeGiftReversalHandler {
 		if (remainingEntitlement.hasLifetimeGift) {
 			Logger.info(
 				{
-					giftCode: giftCode.code,
 					redeemerId: redeemer.id,
 					reason: context.reason,
 				},
@@ -140,7 +137,6 @@ export class StripeGiftReversalHandler {
 			}
 			Logger.info(
 				{
-					giftCode: giftCode.code,
 					redeemerId: redeemer.id,
 					chargeId: context.chargeId,
 					reason: context.reason,
@@ -153,7 +149,6 @@ export class StripeGiftReversalHandler {
 		if (redeemer.premiumType === UserPremiumTypes.LIFETIME) {
 			Logger.warn(
 				{
-					giftCode: giftCode.code,
 					redeemerId: redeemer.id,
 					reason: context.reason,
 				},
@@ -230,6 +225,7 @@ export class StripeGiftReversalHandler {
 		now: Date,
 	): {changed: boolean; giftExtensionEndsAt: Date | null} {
 		const currentGiftEnd = redeemer.premiumGiftExtensionEndsAt;
+		if (!isPremiumGiftCode(giftCode)) return {changed: false, giftExtensionEndsAt: currentGiftEnd};
 		const remaining = this.computeRemainingGiftEntitlement(redeemedGifts, giftCode.code);
 		if (!currentGiftEnd || remaining.hasLifetimeGift) {
 			return {changed: false, giftExtensionEndsAt: currentGiftEnd};
@@ -246,6 +242,7 @@ export class StripeGiftReversalHandler {
 	}
 
 	async restoreReversedGift(giftCode: GiftCode): Promise<void> {
+		if (!isPremiumGiftCode(giftCode)) return;
 		const redeemerId = giftCode.redeemedByUserId;
 		if (!redeemerId) {
 			return;
@@ -338,7 +335,9 @@ export class StripeGiftReversalHandler {
 	}
 
 	computeRemainingGiftEntitlement(redeemedGifts: Array<GiftCode>, excludedCode: string): RemainingGiftEntitlement {
+		// Item codes carry no premium time and take no part in it.
 		const sortedGifts = redeemedGifts
+			.filter(isPremiumGiftCode)
 			.filter(
 				(giftCode) =>
 					giftCode.code !== excludedCode &&

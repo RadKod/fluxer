@@ -78,7 +78,7 @@ impl IntoResponse for AppError {
                 head {
                     meta charset="UTF-8";
                     meta name="viewport" content="width=device-width, initial-scale=1.0";
-                    title { (status_code) " " (status_text) " ~ Fluxer Admin" }
+                    title { (status_code) " " (status_text) " ~ Micup Admin" }
                 }
                 body class="min-h-screen bg-neutral-50 flex items-center justify-center" {
                     div class="mx-auto max-w-lg px-4 py-16 text-center" {

@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Stands in for the frame's padded column: the shop body (ShopTab) pads its own column under a full-width hero. */
+.body {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+}

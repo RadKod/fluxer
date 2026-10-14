@@ -1,0 +1,170 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.main {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	background-color: var(--background-secondary-lighter);
+}
+
+.header {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	height: var(--layout-header-height);
+	padding: 0 var(--channel-header-padding-inline);
+	border-bottom: 0.0625rem solid var(--user-area-divider-color);
+	box-sizing: border-box;
+}
+
+.headerTitle {
+	margin: 0;
+	min-width: 0;
+	overflow: hidden;
+	color: var(--text-primary);
+	font-size: 1.25rem;
+	font-weight: 700;
+	line-height: 1.75rem;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.sidebarHeaderTitle {
+	composes: headerTitle;
+	align-self: center;
+	padding: 0 1rem;
+}
+
+/* Desktop layout: "Feed" and a divider before the tabs, in the smaller header type. */
+.headerDivider {
+	flex-shrink: 0;
+	width: 0.0625rem;
+	height: 1.375rem;
+	margin-inline: 0.875rem;
+	background: var(--border-color-hover);
+}
+
+/* Only this title: .headerTitle is also the sidebar title (composes), the post page's "Post" and "Your posts". */
+:global(html:not(.auth-page):not(.mobile-layout)) .feedTitle {
+	font-size: 0.9375rem;
+}
+
+/* Discover / People you follow: the tabs fill the header height, so the selected line sits on the header border. */
+.tabList {
+	display: flex;
+	align-self: stretch;
+	gap: 1rem;
+	min-width: 0;
+}
+
+.tab {
+	display: flex;
+	align-items: center;
+	margin-bottom: -0.0625rem;
+	padding: 0 0.25rem;
+	border: none;
+	border-bottom: 0.125rem solid transparent;
+	background: none;
+	color: var(--text-primary-muted);
+	font-size: 1rem;
+	font-weight: 600;
+	line-height: 1.5rem;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.tab:hover {
+	color: var(--text-primary);
+}
+
+.tab.tabSelected {
+	border-bottom-color: var(--brand-primary);
+	color: var(--text-primary);
+}
+
+:global(html:not(.auth-page):not(.mobile-layout)) .tabList {
+	gap: 1.125rem;
+}
+
+:global(html:not(.auth-page):not(.mobile-layout)) .tab {
+	font-size: 0.875rem;
+}
+
+/* The timeline column and the profile rail. The rail's width breakpoint queries this box
+   (FeedProfileAside.module.css). */
+.body {
+	display: flex;
+	flex: 1 1 auto;
+	min-height: 0;
+	container-type: inline-size;
+}
+
+/* Centred in the space beside the rail; no column lines, the posts are divided by their rows. */
+.timeline {
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 37.5rem;
+	min-width: 0;
+	margin-inline: auto;
+}
+
+/* Outside the scroller: the virtual list measures rows from the top of its scroll element (scrollMargin 0). */
+.composerColumn {
+	flex-shrink: 0;
+}
+
+.listArea {
+	position: relative;
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.newPosts {
+	position: absolute;
+	top: 0.75rem;
+	left: 50%;
+	z-index: 3;
+	transform: translateX(-50%);
+}
+
+/* Micup: on the desktop layout with a mouse the pill sits on the line above the list, so it no longer
+   covers the first row's name. Touch and the phone layout keep it below the line: the 44px pill would reach the
+   composer's tool buttons. */
+@media (hover: hover) and (pointer: fine) {
+	:global(html:not(.auth-page):not(.mobile-layout)) .newPosts {
+		top: 0;
+		transform: translate(-50%, -50%);
+	}
+}
+
+.newPosts .newPostsButton {
+	border-radius: var(--radius-full);
+	box-shadow: var(--shadow-lg);
+}
+
+/* Narrow screens and touch: 44px pill; three parts to outrank .button.small (0,2,0). */
+@media (max-width: 640px), (pointer: coarse) {
+	.listArea .newPosts .newPostsButton {
+		min-height: 2.75rem;
+	}
+
+	.tabList .tab {
+		min-height: 2.75rem;
+	}
+}
+
+/* Micup: the X "Lights out" look in the coal and dark themes; the light theme keeps the rules above.
+   The custom theme guard, as on the other Micup coal surfaces, also lifts these rules (1,1,1) over the desktop layout
+   and hover rules, so each state they change is restated here. */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .main {
+	background-color: var(--background-secondary-lighter);
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .feedTitle {
+	font-size: 1.25rem;
+}

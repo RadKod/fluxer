@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {ChannelID, MessageID, RoleID, UserID, WebhookID} from '@app/api/BrandedTypes';
-import type {MessageRow} from '@app/api/database/types/MessageTypes';
+import type {MessageActionRowData, MessageRow} from '@app/api/database/types/MessageTypes';
 import {Attachment} from '@app/api/models/Attachment';
 import {CallInfo} from '@app/api/models/CallInfo';
 import {Embed} from '@app/api/models/Embed';
@@ -35,6 +35,7 @@ export class Message {
 	readonly call: CallInfo | null;
 	readonly hasReaction: boolean | null;
 	readonly version: number;
+	readonly components: ReadonlyArray<MessageActionRowData>;
 
 	constructor(row: MessageRow) {
 		this.channelId = row.channel_id;
@@ -67,6 +68,7 @@ export class Message {
 		this.call = row.call ? new CallInfo(row.call) : null;
 		this.hasReaction = row.has_reaction ?? null;
 		this.version = row.version;
+		this.components = row.micup_components ?? [];
 	}
 
 	toRow(): MessageRow {
@@ -96,6 +98,7 @@ export class Message {
 			call: this.call?.toMessageCall() ?? null,
 			has_reaction: this.hasReaction ?? null,
 			version: this.version,
+			micup_components: this.components.length > 0 ? [...this.components] : null,
 		};
 	}
 }

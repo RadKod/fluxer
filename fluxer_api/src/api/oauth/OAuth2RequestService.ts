@@ -10,6 +10,7 @@ import type {GuildService} from '@app/api/guild/services/GuildService';
 import {resolveProtectedBitActor, stripThreadPermissionBits} from '@app/api/guild/services/ThreadPermissionBits';
 import {Logger} from '@app/api/Logger';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
 import type {ApplicationService} from '@app/api/oauth/ApplicationService';
 import {ApplicationNotOwnedError} from '@app/api/oauth/ApplicationService';
 import type {BotAuthService} from '@app/api/oauth/BotAuthService';
@@ -210,6 +211,10 @@ export class OAuth2RequestService {
 		const responseType = params.body.response_type ?? (isBotOnly ? undefined : 'code');
 		const guildId = params.body.guild_id ? createGuildID(params.body.guild_id) : null;
 		const channelId = params.body.channel_id ? createChannelID(params.body.channel_id) : null;
+		if (scopeSet.has('bot') && (guildId || channelId)) {
+			const initiator = await this.apiContext.services.users.findUniqueAssert(params.userId);
+			getUsernameSelectionGate().assertMayAct(initiator, guildId ? 'bot_add' : 'group_dm');
+		}
 		if (guildId && channelId) {
 			throw InputValidationError.create('channel_id', 'channel_id cannot be used with guild_id');
 		}

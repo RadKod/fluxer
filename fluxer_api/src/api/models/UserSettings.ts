@@ -67,6 +67,9 @@ export class UserSettings {
 	readonly staffDmAccessUserIds: Set<UserID>;
 	readonly syncedPreferences: string;
 	readonly profilePrivacy: ProfilePrivacyLevel;
+	readonly gameActivityVisibility: 'off' | 'friends';
+	readonly gameActivityPolicyRevision: bigint;
+	private readonly storedGameActivityPolicyRevision: bigint | null;
 	readonly defaultShareVoiceActivity: boolean;
 	readonly version: number;
 
@@ -114,6 +117,9 @@ export class UserSettings {
 		this.staffDmAccessUserIds = row.staff_dm_access_user_ids ?? new Set<UserID>();
 		this.syncedPreferences = normalizeStoredSyncedPreferences(row.synced_preferences);
 		this.profilePrivacy = (row.profile_privacy ?? ProfilePrivacyLevels.ALL_GUILDS) as ProfilePrivacyLevel;
+		this.gameActivityVisibility = row.game_activity_visibility === 'friends' ? 'friends' : 'off';
+		this.storedGameActivityPolicyRevision = row.game_activity_policy_revision ?? null;
+		this.gameActivityPolicyRevision = this.storedGameActivityPolicyRevision ?? 0n;
 		this.defaultShareVoiceActivity = row.default_share_voice_activity ?? true;
 		this.version = row.version;
 	}
@@ -170,6 +176,8 @@ export class UserSettings {
 			staff_dm_access_user_ids: this.staffDmAccessUserIds.size > 0 ? this.staffDmAccessUserIds : null,
 			synced_preferences: this.syncedPreferences === '' ? null : this.syncedPreferences,
 			profile_privacy: this.profilePrivacy,
+			game_activity_visibility: this.gameActivityVisibility,
+			game_activity_policy_revision: this.storedGameActivityPolicyRevision,
 			default_share_voice_activity: this.defaultShareVoiceActivity,
 			version: this.version,
 		};
@@ -180,11 +188,13 @@ export class UserSettings {
 		locale,
 		isAdult,
 		theme,
+		publicProfile = false,
 	}: {
 		userId: UserID;
 		locale: LocaleCode;
 		isAdult: boolean;
 		theme?: ThemeType | null;
+		publicProfile?: boolean; // 16 or older with a date of birth
 	}): UserSettingsRow {
 		let explicitContentFilter: number = UserExplicitContentFilterTypes.NON_FRIENDS;
 		if (isAdult) {
@@ -197,7 +207,7 @@ export class UserSettings {
 		return {
 			user_id: userId,
 			locale,
-			theme: theme ?? ThemeTypes.DARK,
+			theme: theme ?? ThemeTypes.COAL,
 			status: 'online',
 			status_resets_at: null,
 			status_resets_to: null,
@@ -242,7 +252,9 @@ export class UserSettings {
 			suppress_unprivileged_self_mentions_bypass_user_ids: null,
 			staff_dm_access_user_ids: null,
 			synced_preferences: null,
-			profile_privacy: ProfilePrivacyLevels.ALL_GUILDS,
+			profile_privacy: publicProfile ? ProfilePrivacyLevels.EVERYONE : ProfilePrivacyLevels.ALL_GUILDS,
+			game_activity_visibility: 'off',
+			game_activity_policy_revision: null,
 			default_share_voice_activity: true,
 			version: 1,
 		};

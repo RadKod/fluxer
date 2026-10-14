@@ -7,6 +7,7 @@ import type {AuthenticatedChannel} from '@app/api/channel/services/Authenticated
 import type {CrosspostPropagation} from '@app/api/channel/services/message/CrosspostPropagation';
 import {emitMessageUpdated} from '@app/api/channel/services/message/MessageActivity';
 import type {MessageChannelAuthService} from '@app/api/channel/services/message/MessageChannelAuthService';
+import {assertComponentsWritable} from '@app/api/channel/services/message/MessageComponentRules';
 import type {MessageDispatchService} from '@app/api/channel/services/message/MessageDispatchService';
 import type {MessageEmbedAttachmentResolver} from '@app/api/channel/services/message/MessageEmbedAttachmentResolver';
 import {isOperationDisabled, isPersonalNotesChannel} from '@app/api/channel/services/message/MessageHelpers';
@@ -17,9 +18,12 @@ import type {MessageSearchService} from '@app/api/channel/services/message/Messa
 import type {MessageValidationService} from '@app/api/channel/services/message/MessageValidationService';
 import type {MessageWriteLock} from '@app/api/channel/services/message/MessageWriteLock';
 import {assertThreadInteractionAllowed} from '@app/api/channel/services/thread/ThreadInteractionGuards';
+import type {MessageActionRowData} from '@app/api/database/types/MessageTypes';
 import type {ThreadViewer} from '@app/api/experiment/ChannelThreadsGate';
+import {notifyMicupBotMessage} from '@app/api/guild/micupbot/MicupBotMessageHook';
 import {Logger} from '@app/api/Logger';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
 import type {Message} from '@app/api/models/Message';
 import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
@@ -63,6 +67,7 @@ export class MessageEditService {
 		channelId,
 		messageId,
 		data,
+		components,
 		requestCache,
 	}: {
 		userId: UserID;
@@ -70,8 +75,10 @@ export class MessageEditService {
 		channelId: ChannelID;
 		messageId: MessageID;
 		data: MessageUpdateRequest;
+		components?: ReadonlyArray<MessageActionRowData>;
 		requestCache: RequestCache;
 	}): Promise<EditMessageResult> {
+		if (components) assertComponentsWritable(userId, components);
 		const authChannel = await this.deps.channelAuthService.getChannelAuthenticated({
 			userId,
 			channelId,
@@ -101,6 +108,7 @@ export class MessageEditService {
 		}
 		const message = await this.deps.channelRepository.messages.getMessage(channelId, messageId);
 		if (!message) throw new UnknownMessageError();
+		if (components && message.authorId !== userId) throw new MissingPermissionsError();
 		if (message.authorId === userId) {
 			assertGuildMemberCanCommunicate(member);
 		}
@@ -109,6 +117,7 @@ export class MessageEditService {
 			throw new MissingPermissionsError();
 		}
 		const user = await this.deps.userRepository.findUnique(userId);
+		if (user) getUsernameSelectionGate().assertMayAct(user, 'message');
 		this.deps.validationService.validateMessageEditable(message);
 		this.deps.validationService.validateMessageContent(data, user, {
 			isUpdate: true,
@@ -190,6 +199,7 @@ export class MessageEditService {
 					isBot: user?.isBot,
 					isBugHunterBot,
 					locale: user?.locale,
+					components,
 				}),
 			);
 		});
@@ -230,6 +240,7 @@ export class MessageEditService {
 		if (channel.indexedAt != null) {
 			void this.deps.searchService.updateMessageIndex(updatedMessage);
 		}
+		if (user) notifyMicupBotMessage({guild, member, channel, message: updatedMessage, user, isEdit: true});
 		return {message: updatedMessage, authChannel};
 	}
 

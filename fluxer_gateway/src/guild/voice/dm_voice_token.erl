@@ -55,10 +55,7 @@ handle_token_rpc_error(UserId, ChannelId, Body, State) ->
         "dm_voice_token_create_rpc_error: user_id=~p channel_id=~p body=~p",
         [UserId, ChannelId, Body]
     ),
-    case guild_voice_unclaimed_account_utils:parse_unclaimed_error(Body) of
-        true -> {reply, gateway_errors:error(voice_unclaimed_account), State};
-        false -> {reply, gateway_errors:error(voice_token_failed), State}
-    end.
+    {reply, gateway_errors:error(gateway_errors:voice_token_error(Body)), State}.
 
 -spec handle_dm_token_success(map(), token_request()) -> {reply, map(), dm_state()}.
 handle_dm_token_success(Data, Req) ->
@@ -221,11 +218,7 @@ handle_get_token_rpc_error(UserId, ChannelId, Body, SessionPid) ->
         "dm_voice_get_voice_token_rpc_error: user_id=~p channel_id=~p body=~p",
         [UserId, ChannelId, Body]
     ),
-    _ =
-        case guild_voice_unclaimed_account_utils:parse_unclaimed_error(Body) of
-            true -> _ = SessionPid ! {voice_error, voice_unclaimed_account};
-            false -> _ = SessionPid ! {voice_error, voice_token_failed}
-        end,
+    SessionPid ! {voice_error, gateway_errors:voice_token_error(Body)},
     error.
 
 -spec handle_get_voice_token_ok(map(), integer(), integer(), pid()) -> ok.

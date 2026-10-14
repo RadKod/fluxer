@@ -28,6 +28,8 @@ import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
 import {WarningAlert} from '@app/features/ui/warning_alert/WarningAlert';
 import * as UserCommands from '@app/features/user/commands/UserCommands';
 import styles from '@app/features/user/components/modals/FluxerTagChangeModal.module.css';
+import {UsernamePickerModal} from '@app/features/user/components/modals/UsernamePickerModal';
+import {stripUsernamePrefix} from '@app/features/user/hooks/useUsernameSelectionAvailability';
 import type {User} from '@app/features/user/models/User';
 import {getFormattedDateTime} from '@app/features/user/utils/DateFormatting';
 import {isVisionaryDiscriminator0000Blocked} from '@app/features/user/utils/FluxerTagDiscriminatorUtils';
@@ -81,7 +83,7 @@ interface FluxerTagChangeModalProps {
 	user: User;
 }
 
-export const FluxerTagChangeModal = observer(({user}: FluxerTagChangeModalProps) => {
+const LegacyFluxerTagChangeModal = observer(({user}: FluxerTagChangeModalProps) => {
 	const PREMIUM_PRODUCT_NAME = getPremiumProductName();
 	const {i18n} = useLingui();
 	const usernameRef = useRef<HTMLInputElement>(null);
@@ -89,7 +91,7 @@ export const FluxerTagChangeModal = observer(({user}: FluxerTagChangeModalProps)
 		{feature_custom_discriminator: LimitResolver.resolve({key: 'feature_custom_discriminator', fallback: 0})},
 		'feature_custom_discriminator',
 	);
-	const usernameOnly = RuntimeConfig.usesUniqueUsernames;
+	const usernameOnly = RuntimeConfig.usesUniqueUsernames && !user.bot;
 	const isVisionary = user.premiumType === UserPremiumTypes.LIFETIME;
 	const showPremium = shouldShowPremiumFeatures();
 	const skipAvailabilityCheckRef = useRef(false);
@@ -113,7 +115,7 @@ export const FluxerTagChangeModal = observer(({user}: FluxerTagChangeModalProps)
 	}, [form]);
 	const onSubmit = useCallback(
 		async (data: FormInputs) => {
-			const usernameValue = data.username.trim();
+			const usernameValue = stripUsernamePrefix(data.username);
 			if (usernameOnly) {
 				await UserCommands.update({username: usernameValue});
 				ModalCommands.pop();
@@ -356,7 +358,7 @@ export const FluxerTagChangeModal = observer(({user}: FluxerTagChangeModalProps)
 							</div>
 							<div className={styles.validationBox} data-flx="user.fluxer-tag-change-modal.validation-box">
 								<UsernameValidationRules
-									username={form.watch('username')}
+									username={stripUsernamePrefix(form.watch('username'))}
 									data-flx="user.fluxer-tag-change-modal.username-validation-rules"
 								/>
 							</div>
@@ -417,3 +419,14 @@ export const FluxerTagChangeModal = observer(({user}: FluxerTagChangeModalProps)
 		</Modal.Root>
 	);
 });
+
+export const FluxerTagChangeModal = observer(({user}: FluxerTagChangeModalProps) =>
+	!user.bot &&
+	(RuntimeConfig.usernameMigration.state === 'selecting' ||
+		user.usernameState === 'selected' ||
+		user.usernameState === 'reselect_required') ? (
+		<UsernamePickerModal user={user} />
+	) : (
+		<LegacyFluxerTagChangeModal user={user} />
+	),
+);

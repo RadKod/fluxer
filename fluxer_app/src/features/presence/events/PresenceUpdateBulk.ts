@@ -12,11 +12,6 @@ export interface PresenceUpdateBulkPayload {
 export function handlePresenceUpdateBulk(data: PresenceUpdateBulkPayload, _context: GatewayHandlerContext): void {
 	const guildId = data.guild_id;
 	for (const presence of data.presences) {
-		(
-			presence as {
-				guild_id?: string;
-			}
-		).guild_id = guildId;
-		Presence.handlePresenceUpdate(presence);
+		Presence.handlePresenceUpdate({...presence, guild_id: guildId ?? presence.guild_id});
 	}
 }

@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::common::{CommandSpec, require_any_env, require_env, run_command};
-use crate::desktop::file_name_string;
+use crate::desktop::{file_name_string, package_origin_base};
 use anyhow::{Context, Result, bail, ensure};
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
-const PKGS_BASE_URL: &str = "https://pkgs.fluxer.com";
 const PKGS_DESKTOP_PREFIX: &str = "desktop";
 const APPIMAGE_PLATFORM: &str = "linux";
 const APPIMAGE_FORMAT: &str = "appimage";
@@ -28,8 +27,9 @@ struct UpdateInfoSpan {
 }
 
 pub(crate) fn build_update_feed_step() -> Result<()> {
-    let channel = published_channel(&require_env("BUILD_CHANNEL")?)?;
-    let arch = published_arch(&require_any_env(&["DESKTOP_ARCH", "ARCH"])?)?;
+    let origin = package_origin_base()?;
+    let channel = published_channel(&origin, &require_env("BUILD_CHANNEL")?)?;
+    let arch = published_arch(&origin, &require_any_env(&["DESKTOP_ARCH", "ARCH"])?)?;
     let staging = Path::new("upload_staging");
     let artifacts = appimage_artifacts(staging)?;
     ensure!(
@@ -39,12 +39,12 @@ pub(crate) fn build_update_feed_step() -> Result<()> {
     );
     for artifact in artifacts {
         let name = file_name_string(&artifact)?;
-        let information = update_information(&channel, &arch);
+        let information = update_information(&origin, &channel, &arch);
         write_update_information(&artifact, &information)?;
         println!("Stamped {name} with {information}");
 
         let control = artifact.with_file_name(control_name(&name));
-        let url = artifact_url(&channel, &arch, &name);
+        let url = artifact_url(&origin, &channel, &arch, &name);
         run_command(zsyncmake_command(&artifact, &name, &url, &control))?;
         ensure!(
             control.is_file(),
@@ -56,18 +56,18 @@ pub(crate) fn build_update_feed_step() -> Result<()> {
     Ok(())
 }
 
-fn published_channel(channel: &str) -> Result<String> {
+fn published_channel(origin: &str, channel: &str) -> Result<String> {
     ensure!(
         PUBLISHED_CHANNELS.contains(&channel),
-        "{channel:?} is not a published desktop channel, so it has no {PKGS_BASE_URL} update feed."
+        "{channel:?} is not a published desktop channel, so it has no {origin} update feed."
     );
     Ok(channel.to_owned())
 }
 
-fn published_arch(arch: &str) -> Result<String> {
+fn published_arch(origin: &str, arch: &str) -> Result<String> {
     ensure!(
         PUBLISHED_ARCHES.contains(&arch),
-        "{arch:?} is not a published Linux architecture, so it has no {PKGS_BASE_URL} update feed."
+        "{arch:?} is not a published Linux architecture, so it has no {origin} update feed."
     );
     Ok(arch.to_owned())
 }
@@ -92,19 +92,19 @@ fn control_name(artifact_name: &str) -> String {
     format!("{artifact_name}{ZSYNC_SUFFIX}")
 }
 
-fn published_arch_url(channel: &str, arch: &str) -> String {
-    format!("{PKGS_BASE_URL}/{PKGS_DESKTOP_PREFIX}/{channel}/{APPIMAGE_PLATFORM}/{arch}")
+fn published_arch_url(origin: &str, channel: &str, arch: &str) -> String {
+    format!("{origin}/{PKGS_DESKTOP_PREFIX}/{channel}/{APPIMAGE_PLATFORM}/{arch}")
 }
 
-fn update_information(channel: &str, arch: &str) -> String {
+fn update_information(origin: &str, channel: &str, arch: &str) -> String {
     format!(
         "zsync|{}/{LATEST_ALIAS}/{APPIMAGE_FORMAT}{ZSYNC_SUFFIX}",
-        published_arch_url(channel, arch)
+        published_arch_url(origin, channel, arch)
     )
 }
 
-fn artifact_url(channel: &str, arch: &str, name: &str) -> String {
-    format!("{}/{name}", published_arch_url(channel, arch))
+fn artifact_url(origin: &str, channel: &str, arch: &str, name: &str) -> String {
+    format!("{}/{name}", published_arch_url(origin, channel, arch))
 }
 
 fn zsyncmake_command(artifact: &Path, name: &str, url: &str, control: &Path) -> CommandSpec {
@@ -314,6 +314,8 @@ fn read_u64(bytes: &[u8], offset: usize) -> u64 {
 mod tests {
     use super::*;
 
+    const ORIGIN: &str = "https://pkgs.fluxer.com";
+
     const SECTION_SIZE: u64 = 1024;
 
     fn write_elf(path: &Path, section_kind: u32, section_size: u64, payload: &[u8]) {
@@ -360,7 +362,7 @@ mod tests {
         write_elf(&path, 1, SECTION_SIZE, &payload);
         let before = fs::read(&path).unwrap();
 
-        let information = update_information("canary", "x64");
+        let information = update_information(ORIGIN, "canary", "x64");
         write_update_information(&path, &information).unwrap();
 
         let after = fs::read(&path).unwrap();
@@ -420,11 +422,11 @@ mod tests {
     #[test]
     fn update_information_points_at_the_mutable_latest_alias_on_the_packages_box() {
         assert_eq!(
-            update_information("canary", "x64"),
+            update_information(ORIGIN, "canary", "x64"),
             "zsync|https://pkgs.fluxer.com/desktop/canary/linux/x64/latest/appimage.zsync"
         );
         assert_eq!(
-            update_information("stable", "arm64"),
+            update_information(ORIGIN, "stable", "arm64"),
             "zsync|https://pkgs.fluxer.com/desktop/stable/linux/arm64/latest/appimage.zsync"
         );
     }
@@ -433,6 +435,7 @@ mod tests {
     fn the_control_file_downloads_the_immutable_versioned_artifact() {
         assert_eq!(
             artifact_url(
+                ORIGIN,
                 "stable",
                 "arm64",
                 "Fluxer-2026.904.135113-linux-arm64.AppImage"
@@ -443,14 +446,16 @@ mod tests {
 
     #[test]
     fn only_published_channels_and_arches_are_stamped() {
-        assert_eq!(published_channel("canary").unwrap(), "canary");
-        assert_eq!(published_arch("arm64").unwrap(), "arm64");
-        let channel = published_channel("nightly").unwrap_err().to_string();
+        assert_eq!(published_channel(ORIGIN, "canary").unwrap(), "canary");
+        assert_eq!(published_arch(ORIGIN, "arm64").unwrap(), "arm64");
+        let channel = published_channel(ORIGIN, "nightly")
+            .unwrap_err()
+            .to_string();
         assert!(
             channel.contains("not a published desktop channel"),
             "{channel}"
         );
-        let arch = published_arch("x86_64").unwrap_err().to_string();
+        let arch = published_arch(ORIGIN, "x86_64").unwrap_err().to_string();
         assert!(
             arch.contains("not a published Linux architecture"),
             "{arch}"
@@ -463,6 +468,7 @@ mod tests {
             Path::new("upload_staging/Fluxer-2026.904.135113-linux-x86_64.AppImage"),
             "Fluxer-2026.904.135113-linux-x86_64.AppImage",
             &artifact_url(
+                ORIGIN,
                 "stable",
                 "x64",
                 "Fluxer-2026.904.135113-linux-x86_64.AppImage",

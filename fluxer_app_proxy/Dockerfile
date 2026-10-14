@@ -40,6 +40,7 @@ COPY packages/desktop_ipc/package.json ./packages/desktop_ipc/
 COPY packages/geo_utils/package.json ./packages/geo_utils/
 COPY packages/instance_bootstrap/package.json ./packages/instance_bootstrap/
 COPY packages/limits/package.json ./packages/limits/
+COPY packages/game_catalog/package.json ./packages/game_catalog/
 COPY packages/schema/package.json ./packages/schema/
 COPY packages/snowflake/package.json ./packages/snowflake/
 COPY packages/voice_engine_v2/package.json ./packages/voice_engine_v2/
@@ -54,6 +55,7 @@ COPY packages/constants/ ./packages/constants/
 COPY packages/date_utils/ ./packages/date_utils/
 COPY packages/desktop_ipc/ ./packages/desktop_ipc/
 COPY packages/geo_utils/ ./packages/geo_utils/
+COPY packages/game_catalog/ ./packages/game_catalog/
 COPY packages/instance_bootstrap/ ./packages/instance_bootstrap/
 COPY packages/limits/ ./packages/limits/
 COPY packages/schema/ ./packages/schema/

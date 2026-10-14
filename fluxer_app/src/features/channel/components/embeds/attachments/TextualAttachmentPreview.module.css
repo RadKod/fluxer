@@ -407,7 +407,7 @@
 
 .languageItemSelected {
 	background-color: var(--brand-primary);
-	color: #fff;
+	color: var(--text-on-brand-primary);
 }
 
 .languageItemSelected.languageItemHighlighted {

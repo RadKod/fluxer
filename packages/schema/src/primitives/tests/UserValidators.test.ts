@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
+import {ChangeUsernameRequest} from '@fluxer/schema/src/domains/admin/AdminUserSchemas';
+import {FriendRequestByTagRequest} from '@fluxer/schema/src/domains/user/UserRequestSchemas';
+import {SlackWebhookRequest, WebhookMessageRequest} from '@fluxer/schema/src/domains/webhook/WebhookRequestSchemas';
 import {
 	DiscriminatorType,
 	EmailType,
 	GlobalNameType,
 	PasswordType,
+	UsernameLookupType,
 	UsernameType,
 	WebhookNameType,
 } from '@fluxer/schema/src/primitives/UserValidators';
@@ -141,6 +145,49 @@ describe('UsernameType', () => {
 		const result = UsernameType.safeParse('EVERYONE');
 		expect(result.success).toBe(false);
 	});
+	it.each(['micupdestek', 'MiCuP', 'resmi_Micup'])('rejects the Micup brand in %s', (username) => {
+		const result = UsernameType.safeParse(username);
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0].message).toBe(ValidationErrorCodes.USERNAME_CANNOT_CONTAIN_MICUP);
+		}
+	});
+	it('still rejects "fluxer" itself with the reserved terms code', () => {
+		const result = UsernameType.safeParse('fluxer');
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0].message).toBe(ValidationErrorCodes.USERNAME_CANNOT_CONTAIN_RESERVED_TERMS);
+		}
+	});
+	it.each(['oyuncu', 'microphone'])('accepts the ordinary username %s', (username) => {
+		expect(UsernameType.safeParse(username).success).toBe(true);
+	});
+	it.each(['m1cup', 'rnicup', 'mi_cup', 'MlCUP', 'micup_official', 'Resmi_M1CUP'])(
+		'rejects the look-alike brand spelling %s',
+		(username) => {
+			const result = UsernameType.safeParse(username);
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues[0].message).toBe(ValidationErrorCodes.USERNAME_CANNOT_CONTAIN_MICUP);
+			}
+		},
+	);
+	it.each(['destek', 'ekip_lideri', 'micro_cup'])('accepts %s, which does not spell the brand', (username) => {
+		expect(UsernameType.safeParse(username).success).toBe(true);
+	});
+});
+
+describe('UsernameLookupType', () => {
+	it('lets a friend request by tag and a staff rename name the official micup account', () => {
+		expect(UsernameLookupType.safeParse('micup').success).toBe(true);
+		expect(FriendRequestByTagRequest.safeParse({username: 'micup', discriminator: '0001'}).success).toBe(true);
+		expect(ChangeUsernameRequest.safeParse({user_id: '1', username: 'micup'}).success).toBe(true);
+	});
+	it('keeps the upstream username rules', () => {
+		expect(UsernameLookupType.safeParse('everyone').success).toBe(false);
+		expect(UsernameLookupType.safeParse('fluxer').success).toBe(false);
+		expect(UsernameLookupType.safeParse('has space').success).toBe(false);
+	});
 });
 
 describe('GlobalNameType', () => {
@@ -187,6 +234,61 @@ describe('GlobalNameType', () => {
 		if (!result.success) {
 			expect(result.error.issues[0].message).toBe(ValidationErrorCodes.GLOBAL_NAME_CANNOT_CONTAIN_RESERVED_TERMS);
 		}
+	});
+	it.each([
+		'Micup Destek',
+		'Micup Resmi',
+		'micup_official',
+		'MİCUP DESTEK',
+		'M1cup Support',
+		'Rnicup Yönetim',
+		'Мicup Ekibi',
+		'ＭＩＣＵＰ Resmi',
+		'Micup Mod',
+		'Micup',
+		'Micup Yetkili',
+		'Micup Yardım',
+		'Micup Güvenlik',
+		'Micup Sistem',
+		'Micup Duyuru',
+		'Micup Moderasyon',
+		'MICUP YETKİLİSİ',
+		'MicupDuyurular',
+		'Micup Güvenliği',
+		'Micup Desteği',
+		'Micup System',
+		'Micup Security',
+		'Micup Help',
+		'Micup Announcements',
+		'Micup Moderation',
+		'ᴍɪᴄᴜᴘ Destek',
+		'ᴍɪᴄᴜᴘ',
+		'ｍｉｃｕｐ Destek',
+	])('rejects %s, which passes for an official Micup account', (name) => {
+		const result = GlobalNameType.safeParse(name);
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues[0].message).toBe(ValidationErrorCodes.GLOBAL_NAME_CANNOT_IMPERSONATE_MICUP);
+		}
+	});
+	it.each([
+		'Ekip Lideri',
+		'Destek',
+		'Resmi Ali',
+		'Micup sever Ali',
+		'Micup Badminton',
+		'Micup Modern',
+		'Sunucu Yetkilisi',
+		'Duyurular',
+		'Sistem Botu',
+		'Yardım Masası',
+		'Güvenlik Görevlisi',
+		'Moderasyon Ekibi',
+		'System Help',
+		'Micuplu değil',
+		'ᴍɪᴄᴜᴘ sever',
+	])('accepts %s, which mentions the brand or an official word but not both', (name) => {
+		expect(GlobalNameType.safeParse(name).success).toBe(true);
 	});
 });
 
@@ -243,5 +345,23 @@ describe('WebhookNameType', () => {
 	it('trims and normalizes webhook names', () => {
 		const result = WebhookNameType.parse('  My Webhook  ');
 		expect(result).toBe('My Webhook');
+	});
+	it.each(['Micup', 'Micup Duyuru', 'ᴍɪᴄᴜᴘ Destek'])(
+		'rejects %s, which passes for an official Micup account',
+		(name) => {
+			const result = WebhookNameType.safeParse(name);
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues[0].message).toBe(ValidationErrorCodes.GLOBAL_NAME_CANNOT_IMPERSONATE_MICUP);
+			}
+		},
+	);
+	it('refuses the same name as a per-message override and on a Slack-compatible hook', () => {
+		expect(WebhookMessageRequest.safeParse({content: 'x', username: 'Micup Sistem'}).success).toBe(false);
+		expect(SlackWebhookRequest.safeParse({text: 'x', username: 'Micup Yetkili'}).success).toBe(false);
+		expect(WebhookMessageRequest.safeParse({content: 'x', username: 'Sistem Botu'}).success).toBe(true);
+	});
+	it.each(['Duyurular', 'Sistem Botu', 'Micup Haberci'])('accepts %s', (name) => {
+		expect(WebhookNameType.safeParse(name).success).toBe(true);
 	});
 });

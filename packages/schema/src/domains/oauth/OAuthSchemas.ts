@@ -199,6 +199,7 @@ export type OAuth2TokenResponse = z.infer<typeof OAuth2TokenResponse>;
 export const OAuth2UserInfoResponse = z.object({
 	sub: SnowflakeStringType.describe('The subject identifier of the user'),
 	id: SnowflakeStringType.describe('The unique identifier of the user'),
+	identity_version: z.string().regex(/^\d+$/).optional().describe('Committed username ownership generation'),
 	username: z.string().describe('The username of the user'),
 	discriminator: z.string().describe('The discriminator of the user'),
 	global_name: z.string().nullable().describe('The global display name of the user'),

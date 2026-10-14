@@ -2,6 +2,7 @@
 
 import {
 	createAuthHarness,
+	createTestAccount,
 	createUniqueEmail,
 	createUniqueUsername,
 	registerUser,
@@ -19,7 +20,7 @@ import {afterAll, beforeAll, beforeEach, describe, expect, it} from 'vitest';
 async function registerAndFlag(
 	harness: ApiTestHarness,
 	flags: Array<string>,
-): Promise<{email: string; password: string; userId: string}> {
+): Promise<{email: string; password: string; userId: string; token: string}> {
 	const email = createUniqueEmail('captcha-flags');
 	const password = 'a-strong-password';
 	const reg = await registerUser(harness, {
@@ -36,7 +37,7 @@ async function registerAndFlag(
 			.body({set_flags: flags})
 			.execute();
 	}
-	return {email, password, userId: reg.user_id};
+	return {email, password, userId: reg.user_id, token: reg.token};
 }
 
 describe('Auth Captcha Bypass Flags', () => {
@@ -86,5 +87,27 @@ describe('Auth Captcha Bypass Flags', () => {
 		} finally {
 			config.instance.selfHosted = originalSelfHosted;
 		}
+	});
+	it('does not let a signed-in user borrow an APP_STORE_REVIEWER email from the request body', async () => {
+		const reviewer = await registerAndFlag(harness, ['APP_STORE_REVIEWER']);
+		const other = await createTestAccount(harness);
+		await useCheapCaptcha();
+		// A form content type keeps the global content filter from reading the body first.
+		for (const contentType of ['application/json', 'application/x-www-form-urlencoded']) {
+			const borrowed = await harness.requestJson({
+				path: '/premium/trial',
+				method: 'POST',
+				headers: {Authorization: other.token, [CAPTCHA_TEST_HEADER]: 'true', 'content-type': contentType},
+				body: {email: reviewer.email},
+			});
+			expect(borrowed.status).toBe(HTTP_STATUS.BAD_REQUEST);
+			expect(((await borrowed.json()) as {code?: string}).code).toBe(APIErrorCodes.CAPTCHA_REQUIRED);
+		}
+		const own = await harness.requestJson({
+			path: '/premium/trial',
+			method: 'POST',
+			headers: {Authorization: reviewer.token, [CAPTCHA_TEST_HEADER]: 'true'},
+		});
+		expect(((await own.json()) as {code?: string}).code).not.toBe(APIErrorCodes.CAPTCHA_REQUIRED);
 	});
 });

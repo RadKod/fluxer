@@ -1,0 +1,97 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* The full height of the list inside the Scroller's flex column: shrunk to the view, the scroll range would end at the
+   last mounted post and a list mounted again could not scroll back to its place (FeedTimelineListCss.test.ts). */
+.rows {
+	position: relative;
+	flex-shrink: 0;
+	width: 100%;
+}
+
+.row {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	/* The divider is a border on the element the virtualizer measures, never a margin. */
+	border-bottom: 0.0625rem solid var(--border-color);
+	box-sizing: border-box;
+}
+
+.status {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.75rem;
+	margin: 0;
+	padding: 1.5rem 1rem;
+	color: var(--text-primary-muted);
+	text-align: center;
+}
+
+/* The empty home feed: icon and title on the desktop layout, then the text and the Discover button. */
+.empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.625rem;
+	padding: 1.5rem 1rem;
+	text-align: center;
+}
+
+:global(html:not(.auth-page):not(.mobile-layout)) .empty {
+	padding: 6.875rem 1.5rem;
+}
+
+.emptyIcon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 4rem;
+	height: 4rem;
+	margin-bottom: 0.375rem;
+	border: 0.0625rem dashed var(--background-modifier-accent-focus);
+	border-radius: 30%;
+	color: var(--text-primary-muted);
+}
+
+.emptyTitle {
+	margin: 0;
+	color: var(--text-primary);
+	font-size: 1.125rem;
+	font-weight: 700;
+	text-wrap: balance;
+}
+
+.emptyText {
+	max-width: 40ch;
+	margin: 0 0 0.5rem;
+	color: var(--text-primary-muted);
+}
+
+.emptyActions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.5rem;
+}
+
+/* Narrow screens and touch: 44px for the Fluxer Buttons under the list. Sibling of .rows plus the element,
+   or two classes plus the element, outrank .button.small (0,2,0) without touching the component. */
+@media (max-width: 640px), (pointer: coarse) {
+	.rows ~ .status > button {
+		min-height: 2.75rem;
+	}
+
+	.empty .emptyActions > button {
+		min-height: 2.75rem;
+	}
+}
+
+/* Micup: X look in the coal and dark themes (FeedPage.module.css): the primary Discover button is X's
+   bold pill. No :has() root: with a bare tag target it would restyle the whole page on every DOM change. */
+:global(html:is(.theme-coal, .theme-dark)) .empty .emptyActions > button {
+	border-radius: var(--radius-full);
+	font-weight: 700;
+}

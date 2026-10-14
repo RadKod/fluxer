@@ -13,7 +13,7 @@ use crate::{
     media_process, mime, request_log,
 };
 use axum::{
-    Router,
+    Extension, Router,
     http::{Extensions, HeaderMap, StatusCode, Version, header},
     middleware,
     routing::{any, get, post, put},
@@ -58,8 +58,9 @@ pub async fn run(cfg: Config) -> anyhow::Result<()> {
             "attachment url signature policy active"
         );
     }
+    let metrics_allowed = Arc::new(routes::ops::MetricsAllowList::from_env()?);
     let drain = HttpRequestDrain::new();
-    let app = build_router(Arc::clone(&state), drain.clone());
+    let app = build_router(Arc::clone(&state), drain.clone(), metrics_allowed);
     let listener = TcpListener::bind(addr).await?;
     info!(%addr, "media proxy listening");
     axum::serve(
@@ -107,10 +108,17 @@ fn is_compressible_static_response(
         })
 }
 
-fn build_router(state: Arc<AppState>, drain: HttpRequestDrain) -> Router {
+fn build_router(
+    state: Arc<AppState>,
+    drain: HttpRequestDrain,
+    metrics_allowed: Arc<routes::ops::MetricsAllowList>,
+) -> Router {
     let router = Router::new()
         .route("/_health", get(routes::ops::health))
-        .route("/_metrics", get(routes::ops::metrics_handler))
+        .route(
+            "/_metrics",
+            get(routes::ops::metrics_handler).layer(Extension(metrics_allowed)),
+        )
         .route("/_metadata", post(routes::internal::metadata_handler))
         .route("/_sniff", post(routes::internal::sniff_handler))
         .route("/_thumbnail", post(routes::internal::thumbnail_handler))
@@ -249,7 +257,11 @@ mod tests {
     }
 
     fn test_router_for(cfg: Config) -> Router {
-        build_router(Arc::new(AppState::for_tests(cfg)), HttpRequestDrain::new())
+        build_router(
+            Arc::new(AppState::for_tests(cfg)),
+            HttpRequestDrain::new(),
+            Arc::default(),
+        )
     }
 
     async fn send(router: Router, request: Request<Body>) -> Response {
@@ -342,7 +354,7 @@ mod tests {
         ));
         let cfg = Config::load_from_iter(env).expect("signature router config");
         let state = Arc::new(AppState::for_tests(cfg));
-        let router = build_router(Arc::clone(&state), HttpRequestDrain::new());
+        let router = build_router(Arc::clone(&state), HttpRequestDrain::new(), Arc::default());
 
         let refused = probe(router.clone(), ATTACHMENT_PATH, Method::GET).await;
         assert_eq!(StatusCode::NOT_FOUND, refused.status());
@@ -772,9 +784,34 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn the_metrics_route_uses_the_configured_allow_list() {
+        let request = || {
+            Request::builder()
+                .method(Method::GET)
+                .uri("/_metrics")
+                .extension(ConnectInfo(SocketAddr::from(([10, 77, 0, 3], 40000))))
+                .body(Body::empty())
+                .expect("metrics request")
+        };
+        let state = Arc::new(AppState::for_tests(test_config("mp", &[])));
+        let allowed = routes::ops::MetricsAllowList::parse("10.77.0.0/24").expect("allow list");
+        let open = build_router(
+            Arc::clone(&state),
+            HttpRequestDrain::new(),
+            Arc::new(allowed),
+        );
+        let closed = build_router(state, HttpRequestDrain::new(), Arc::default());
+        assert_eq!(StatusCode::OK, send(open, request()).await.status());
+        assert_eq!(
+            StatusCode::FORBIDDEN,
+            send(closed, request()).await.status()
+        );
+    }
+
+    #[tokio::test]
     async fn a_refused_read_through_the_router_has_security_and_version_headers() {
         let state = Arc::new(AppState::for_tests(test_config("mp", ENFORCE)));
-        let router = build_router(Arc::clone(&state), HttpRequestDrain::new());
+        let router = build_router(Arc::clone(&state), HttpRequestDrain::new(), Arc::default());
         let response = send(
             router,
             Request::builder()

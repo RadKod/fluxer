@@ -41,6 +41,8 @@ import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
 
 export interface ApiTestHarness {
 	app: HonoApp;
+	// The logger the app writes its request log to (Request completed), for request log tests.
+	logger: NoopLogger;
 	kvProvider: IKVProvider;
 	storageService: MockStorageService;
 	mockBlueskyOAuthService: MockBlueskyOAuthService;
@@ -61,6 +63,9 @@ interface CreateApiTestHarnessOptions {
 }
 
 export async function createApiTestHarness(options: CreateApiTestHarnessOptions = {}): Promise<ApiTestHarness> {
+	const originalBackend = Config.database.backend;
+	// Micup: the native in-memory Cassandra executor must use the matching backend contract.
+	Config.database.backend = 'cassandra';
 	resetApiServicesForTesting();
 	await clearBannedIpsState();
 	setCassandraQueryExecutorForTesting(new InMemoryCassandraQueryExecutor());
@@ -98,6 +103,7 @@ export async function createApiTestHarness(options: CreateApiTestHarnessOptions 
 	try {
 		await initializeApp();
 	} catch (error) {
+		Config.database.backend = originalBackend;
 		console.error('Failed to initialize API app for tests:', error);
 		throw error;
 	}
@@ -119,30 +125,34 @@ export async function createApiTestHarness(options: CreateApiTestHarnessOptions 
 	}
 	async function shutdown(): Promise<void> {
 		try {
-			await drainSearchTasks();
-		} catch (_error) {}
-		try {
-			await shutdownApp();
-		} catch (_error) {}
-		resetCassandraQueryExecutorForTesting();
-		getInstanceConfigRepository().clearCacheForTesting();
-		if (searchProvider) {
 			try {
-				await searchProvider.shutdown();
+				await drainSearchTasks();
 			} catch (_error) {}
+			try {
+				await shutdownApp();
+			} catch (_error) {}
+			resetCassandraQueryExecutorForTesting();
+			getInstanceConfigRepository().clearCacheForTesting();
+			if (searchProvider) {
+				try {
+					await searchProvider.shutdown();
+				} catch (_error) {}
+			}
+			setInjectedWorkerService(new NoopWorkerService());
+			setInjectedGatewayService(new NoopGatewayService());
+			setInjectedKVProvider(new MockKVProvider());
+			setInjectedUnfurlerService(undefined);
+			resetSharedListsForTests();
+			const fallbackStorageService = new MockStorageService();
+			setInjectedStorageService(fallbackStorageService);
+			setInjectedMediaService(new TestMediaService(fallbackStorageService));
+			setInjectedSearchProviderService(new NullSearchProvider());
+			setInjectedBlueskyOAuthService(new MockBlueskyOAuthService());
+			await resetServiceStateForTesting();
+			resetApiServicesForTesting();
+		} finally {
+			Config.database.backend = originalBackend;
 		}
-		setInjectedWorkerService(new NoopWorkerService());
-		setInjectedGatewayService(new NoopGatewayService());
-		setInjectedKVProvider(new MockKVProvider());
-		setInjectedUnfurlerService(undefined);
-		resetSharedListsForTests();
-		const fallbackStorageService = new MockStorageService();
-		setInjectedStorageService(fallbackStorageService);
-		setInjectedMediaService(new TestMediaService(fallbackStorageService));
-		setInjectedSearchProviderService(new NullSearchProvider());
-		setInjectedBlueskyOAuthService(new MockBlueskyOAuthService());
-		await resetServiceStateForTesting();
-		resetApiServicesForTesting();
 	}
 	async function requestJson(params: {
 		path: string;
@@ -177,6 +187,7 @@ export async function createApiTestHarness(options: CreateApiTestHarnessOptions 
 	}
 	return {
 		app,
+		logger: harnessLogger,
 		kvProvider,
 		storageService,
 		mockBlueskyOAuthService,

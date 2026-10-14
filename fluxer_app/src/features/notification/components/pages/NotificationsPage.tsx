@@ -7,7 +7,10 @@ import {
 	SkeletonSimplePageRoute,
 } from '@app/features/app/components/skeleton/SkeletonLayoutMemory';
 import {useSkeletonLayoutReport} from '@app/features/app/hooks/useSkeletonLayoutMemoryCapture';
+import {isFeedEnabled} from '@app/features/feed/utils/FeedUtils';
 import {MENTIONS_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
+import {FeedActivityContent} from '@app/features/inbox/components/FeedActivityContent';
+import FeedNotifications from '@app/features/inbox/state/FeedNotifications';
 import {RecentMentionsContent} from '@app/features/messaging/components/popouts/RecentMentionsContent';
 import styles from '@app/features/notification/components/pages/NotificationsPage.module.css';
 import MentionFeed from '@app/features/notification/state/MentionFeed';
@@ -23,6 +26,12 @@ const UNREADS_DESCRIPTOR = msg({
 	message: 'Unreads',
 	comment: 'Short label in the notifications page. Keep it concise.',
 });
+const ACTIVITY_DESCRIPTOR = msg({
+	message: 'Activity',
+	context: 'feed-activity',
+	comment:
+		'Filter label in the notifications page listing likes and comments on your feed posts and your new followers.',
+});
 const OPEN_BOOKMARKS_DESCRIPTOR = msg({
 	message: 'Open bookmarks',
 	comment: 'Button or menu action label in the notifications page. Keep it concise.',
@@ -34,15 +43,18 @@ interface NotificationsPageProps {
 
 export const NotificationsPage = observer(({onBookmarksClick}: NotificationsPageProps) => {
 	const {i18n} = useLingui();
-	const [filter, setFilter] = useState<'unreads' | 'mentions'>('unreads');
+	const [selectedFilter, setFilter] = useState<'unreads' | 'mentions' | 'activity'>('unreads');
 	const [headerActions, setHeaderActions] = useState<React.ReactNode>(null);
+	const feedEnabled = isFeedEnabled();
 	const filterOptions = useMemo(
 		() => [
 			{label: i18n._(UNREADS_DESCRIPTOR), value: 'unreads' as const},
 			{label: i18n._(MENTIONS_DESCRIPTOR), value: 'mentions' as const},
+			...(feedEnabled ? [{label: i18n._(ACTIVITY_DESCRIPTOR), value: 'activity' as const}] : []),
 		],
-		[i18n.locale],
+		[i18n.locale, feedEnabled],
 	);
+	const filter = selectedFilter === 'activity' && !feedEnabled ? 'unreads' : selectedFilter;
 	const unreadChannelCount = getUnreadChannels().length;
 	const mentionCount = MentionFeed.getAccessibleMentions().length;
 	let body: SkeletonSimplePageBody = SkeletonSimplePageBody.CHANNEL_LIST;
@@ -50,6 +62,8 @@ export const NotificationsPage = observer(({onBookmarksClick}: NotificationsPage
 	if (filter === 'mentions') {
 		body = SkeletonSimplePageBody.MESSAGE_LIST;
 		rowCount = mentionCount;
+	} else if (filter === 'activity') {
+		rowCount = FeedNotifications.notifications.length;
 	}
 	useSkeletonLayoutReport(() => {
 		reportSkeletonSimplePageLayout(SkeletonSimplePageRoute.NOTIFICATIONS, body, rowCount);
@@ -93,6 +107,9 @@ export const NotificationsPage = observer(({onBookmarksClick}: NotificationsPage
 						onHeaderActionsChange={setHeaderActions}
 						data-flx="notification.notifications-page.recent-mentions-content"
 					/>
+				)}
+				{filter === 'activity' && (
+					<FeedActivityContent data-flx="notification.notifications-page.feed-activity-content" />
 				)}
 			</div>
 		</div>

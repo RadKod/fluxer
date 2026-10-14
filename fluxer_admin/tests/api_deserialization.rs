@@ -364,6 +364,78 @@ fn deserialize_guild_audit_logs_with_unknown_keys() {
 }
 
 #[test]
+fn deserialize_gateway_rollout_from_api_before_game_activity() {
+    let json = serde_json::json!({
+        "session_rollout_percentage": 100,
+        "session_rollout_mode": "modulo",
+        "guild_rollout_percentage": 100,
+        "rpc_request_timeout_ms": 10000,
+        "max_concurrent_session_starts": 512,
+        "max_concurrent_guild_starts": 256,
+        "gateway_dispatch_relay_shards": 32,
+        "gateway_dispatch_relay_max_queue": 50000,
+        "voice_e2ee_scope": "guild_feature_only"
+    });
+    let resp: generated_types::GatewayRolloutConfigResponse =
+        serde_json::from_value(json.clone()).expect("older APIs omit game activity rollout fields");
+    assert_eq!(serde_json::to_value(&resp).unwrap()["max_connections"], 0);
+    assert!(!resp.game_activity_enabled);
+    assert_eq!(
+        serde_json::to_value(&resp).unwrap()["game_activity_epoch"],
+        0
+    );
+
+    let mut current = json.clone();
+    current["max_connections"] = serde_json::json!(18000);
+    current["game_activity_enabled"] = serde_json::json!(true);
+    current["game_activity_epoch"] = serde_json::json!(9007199254740991_u64);
+    let resp: generated_types::GatewayRolloutConfigResponse =
+        serde_json::from_value(current).expect("current API rollout fields must be preserved");
+    assert!(resp.game_activity_enabled);
+    assert_eq!(
+        serde_json::to_value(&resp).unwrap()["max_connections"],
+        18000
+    );
+    assert_eq!(
+        serde_json::to_value(&resp).unwrap()["game_activity_epoch"],
+        9007199254740991_u64
+    );
+
+    for invalid_epoch in [
+        serde_json::json!(null),
+        serde_json::json!("1"),
+        serde_json::json!(1.5),
+    ] {
+        let mut invalid = json.clone();
+        invalid["game_activity_epoch"] = invalid_epoch;
+        assert!(
+            serde_json::from_value::<generated_types::GatewayRolloutConfigResponse>(invalid)
+                .is_err()
+        );
+    }
+
+    for cap in [0, 1, 200000] {
+        let mut current = json.clone();
+        current["max_connections"] = serde_json::json!(cap);
+        let resp: generated_types::GatewayRolloutConfigResponse =
+            serde_json::from_value(current).expect("valid connection caps must be preserved");
+        assert_eq!(serde_json::to_value(&resp).unwrap()["max_connections"], cap);
+    }
+    for invalid_cap in [
+        serde_json::json!(null),
+        serde_json::json!("18000"),
+        serde_json::json!(1.5),
+    ] {
+        let mut invalid = json.clone();
+        invalid["max_connections"] = invalid_cap;
+        assert!(
+            serde_json::from_value::<generated_types::GatewayRolloutConfigResponse>(invalid)
+                .is_err()
+        );
+    }
+}
+
+#[test]
 fn deserialize_instance_config_response_with_unknown_keys() {
     let json = r##"{
         "sso": {
@@ -389,9 +461,12 @@ fn deserialize_instance_config_response_with_unknown_keys() {
             "rpc_request_timeout_ms": 10000,
             "max_concurrent_session_starts": 512,
             "max_concurrent_guild_starts": 256,
+            "max_connections": 0,
             "gateway_dispatch_relay_shards": 32,
             "gateway_dispatch_relay_max_queue": 50000,
             "voice_e2ee_scope": "guild_feature_only",
+            "game_activity_enabled": false,
+            "game_activity_epoch": 0,
             "future_rollout_knob": 3
         },
         "push_relay": {
@@ -447,6 +522,24 @@ fn deserialize_instance_config_response_with_unknown_keys() {
             "excluded_user_ids": []
         },
         "experiment_delivery": {"poll_interval_seconds": 300, "poll_jitter_percent": 15},
+        "voice_noise_suppression": {
+            "enabled": true,
+            "config_version": 4,
+            "default_backend": "rnnoise",
+            "enabled_backends": ["none", "standard", "rnnoise"],
+            "allow_user_override": true,
+            "rollout_basis_points": 10000,
+            "rollout_salt": "voice-ns-v1",
+            "included_user_ids": [],
+            "excluded_user_ids": [],
+            "guild_overrides": [],
+            "suppression_strength": 80,
+            "future_presentation_knob": "verbose",
+            "future_knob": 7,
+            "future_object_knob": {"nested": true},
+            "future_list_knob": ["a", "b"]
+        },
+        "voice_room": {"rooms_enabled": true, "games_enabled": false, "room_cameras_enabled": true},
         "registration": {
             "mode": "open",
             "admin_registration_urls_enabled": false,
@@ -482,6 +575,8 @@ fn deserialize_instance_config_response_with_unknown_keys() {
             "direct_messages_locked": false,
             "guild_create_access": false,
             "premium_mode": "mirror",
+            "premium_trial_days": 7,
+            "official_apps": [],
             "services": {
                 "gif_enabled": true,
                 "youtube_enabled": true,
@@ -611,10 +706,16 @@ fn deserialize_instance_config_response_with_unknown_keys() {
     assert!(resp.channel_threads.enabled);
     assert_eq!(resp.channel_threads.config_version, 3);
     assert_eq!(resp.channel_threads.enabled_guild_ids.len(), 1);
+    assert!(resp.voice_noise_suppression.enabled);
+    assert_eq!(resp.voice_noise_suppression.config_version, 4);
+    assert_eq!(resp.voice_noise_suppression.rollout_basis_points, 10000);
+    assert_eq!(*resp.voice_noise_suppression.rollout_salt, "voice-ns-v1");
+    assert_eq!(resp.voice_noise_suppression.enabled_backends.len(), 3);
     assert_eq!(resp.experiment_delivery.poll_interval_seconds, 300);
     assert!(resp.policy.single_community_guild_id.is_none());
     assert_eq!(resp.policy.services.gif_enabled, Some(true));
     assert_eq!(resp.app_public.branding.product_name, "Fluxer");
+    assert!(resp.app_public.legal.source_url.is_none());
     assert_eq!(resp.app_public.branding.premium_product_name, "Gold");
     assert!(resp.billing.billing_active);
     assert!(resp.media.attachment_decay.effective.enabled);
@@ -679,6 +780,37 @@ fn deserialize_instance_config_response_with_unknown_keys() {
 }
 
 #[test]
+fn app_public_legal_source_url_is_optional() {
+    let with_source: types::AppPublicConfigResponse = serde_json::from_str(
+        r#"{"legal": {"terms_url": null, "privacy_url": null, "source_url": "https://example.com/source"}}"#,
+    )
+    .unwrap();
+    assert_eq!(
+        with_source.legal.source_url.as_deref(),
+        Some("https://example.com/source")
+    );
+
+    let without_source: types::AppPublicConfigResponse = serde_json::from_str(
+        r#"{"legal": {"terms_url": "https://example.com/terms", "privacy_url": null}}"#,
+    )
+    .unwrap();
+    assert!(without_source.legal.source_url.is_none());
+    assert_eq!(
+        without_source.legal.terms_url.as_deref(),
+        Some("https://example.com/terms")
+    );
+
+    let clear_source = types::AppLegalConfigUpdateRequest {
+        source_url: Some(None),
+        ..Default::default()
+    };
+    assert_eq!(
+        serde_json::to_value(&clear_source).unwrap(),
+        serde_json::json!({"source_url": null})
+    );
+}
+
+#[test]
 fn deserialize_channel_threads_config() {
     let config: types::ChannelThreadsConfigResponse = serde_json::from_str(
         r#"{
@@ -733,6 +865,158 @@ fn serialize_channel_threads_update_never_sends_server_owned_fields() {
             "enabled_guild_ids": ["1600000000000000001"],
         }})
     );
+}
+
+#[test]
+fn deserialize_instance_config_voice_room_switches() {
+    let config = |voice_room: &str| {
+        format!(
+            r#"{{
+                "sso": {{"enabled": false, "enforced": false}},
+                "gateway_rollout": {{
+                    "session_rollout_percentage": 100,
+                    "session_rollout_mode": "modulo",
+                    "guild_rollout_percentage": 100,
+                    "rpc_request_timeout_ms": 5000,
+                    "max_concurrent_session_starts": 16,
+                    "max_concurrent_guild_starts": 16,
+                    "voice_e2ee_scope": "guild_feature_only"
+                }}{voice_room}
+            }}"#
+        )
+    };
+    let parse = |json: String| {
+        serde_json::from_str::<types::InstanceConfigResponse>(&json)
+            .expect("instance config")
+            .voice_room
+    };
+
+    let live = parse(config(
+        r#", "voice_room": {"rooms_enabled": true, "games_enabled": true, "room_cameras_enabled": true, "future_knob": 1}"#,
+    ));
+    assert!(live.rooms_enabled);
+    assert!(live.games_enabled);
+    assert!(live.room_cameras_enabled);
+
+    // An API from before the camera switch omits the field; the switch reads off.
+    let older = parse(config(
+        r#", "voice_room": {"rooms_enabled": true, "games_enabled": true}"#,
+    ));
+    assert!(older.rooms_enabled);
+    assert!(!older.room_cameras_enabled);
+
+    for missing in ["", r#", "voice_room": {}"#] {
+        let off = parse(config(missing));
+        assert!(!off.rooms_enabled, "{missing}");
+        assert!(!off.games_enabled, "{missing}");
+        assert!(!off.room_cameras_enabled, "{missing}");
+    }
+}
+
+#[test]
+fn voice_pipeline_v2_defaults_off_and_preserves_explicit_switches() {
+    let older: types::VoiceNoiseSuppressionConfigResponse = serde_json::from_value(
+        serde_json::json!({"guild_overrides": [{"guild_id": "123", "backend": "deep_filter"}]}),
+    )
+    .unwrap();
+    assert!(!older.pipeline_v2_enabled);
+    assert!(!older.pipeline_v2_all);
+    assert!(!older.guild_overrides[0].pipeline_v2);
+
+    let value = serde_json::json!({
+        "pipeline_v2_enabled": true,
+        "pipeline_v2_all": true,
+        "guild_overrides": [{"guild_id": "123", "backend": "deep_filter", "pipeline_v2": true}]
+    });
+    let config: types::VoiceNoiseSuppressionConfigResponse = serde_json::from_value(value).unwrap();
+    assert!(config.pipeline_v2_enabled);
+    assert!(config.pipeline_v2_all);
+    assert!(config.guild_overrides[0].pipeline_v2);
+
+    let mut older_generated = serde_json::to_value(&older).unwrap();
+    let object = older_generated.as_object_mut().unwrap();
+    object.remove("pipeline_v2_enabled");
+    object.remove("pipeline_v2_all");
+    object.get_mut("guild_overrides").unwrap()[0]
+        .as_object_mut()
+        .unwrap()
+        .remove("pipeline_v2");
+    let generated: generated_types::VoiceNoiseSuppressionConfigResponse =
+        serde_json::from_value(older_generated).expect("older generated response contract");
+    let value = serde_json::to_value(generated).unwrap();
+    assert_eq!(value["pipeline_v2_enabled"], false);
+    assert_eq!(value["pipeline_v2_all"], false);
+
+    for config in [older, config] {
+        let value = serde_json::to_value(config).unwrap();
+        let generated: generated_types::VoiceNoiseSuppressionConfigResponse =
+            serde_json::from_value(value.clone()).expect("generated response contract");
+        assert_eq!(serde_json::to_value(generated).unwrap(), value);
+    }
+
+    let update = types::VoiceNoiseSuppressionConfigUpdateRequest {
+        pipeline_v2_enabled: Some(false),
+        ..Default::default()
+    };
+    let value = serde_json::to_value(update).unwrap();
+    assert_eq!(value, serde_json::json!({"pipeline_v2_enabled": false}));
+    serde_json::from_value::<generated_types::VoiceNoiseSuppressionConfigUpdateRequest>(value)
+        .expect("generated update contract");
+}
+
+#[test]
+fn voice_pipeline_v2_tuning_defaults_from_older_apis_and_round_trips() {
+    let defaults = serde_json::json!({
+        "pipeline_v2_gate_open_probability": 0.6,
+        "pipeline_v2_gate_refresh_probability": 0.35,
+        "pipeline_v2_gate_hangover_ms": 400,
+        "pipeline_v2_gain_target_dbfs": -26,
+        "pipeline_v2_gain_max_db": 20
+    });
+    let tuning = serde_json::json!({
+        "pipeline_v2_gate_open_probability": 0.8,
+        "pipeline_v2_gate_refresh_probability": 0.2,
+        "pipeline_v2_gate_hangover_ms": 900,
+        "pipeline_v2_gain_target_dbfs": -30,
+        "pipeline_v2_gain_max_db": 12
+    });
+    let older: types::VoiceNoiseSuppressionConfigResponse =
+        serde_json::from_value(serde_json::json!({})).unwrap();
+    let configured: types::VoiceNoiseSuppressionConfigResponse =
+        serde_json::from_value(tuning.clone()).unwrap();
+    for (response, fields) in [(&older, &defaults), (&configured, &tuning)] {
+        let value = serde_json::to_value(response).unwrap();
+        for (key, expected) in fields.as_object().unwrap() {
+            assert_eq!(&value[key], expected, "{key}");
+        }
+        let generated: generated_types::VoiceNoiseSuppressionConfigResponse =
+            serde_json::from_value(value.clone()).expect("generated response contract");
+        assert_eq!(serde_json::to_value(generated).unwrap(), value);
+    }
+
+    let mut older_value = serde_json::to_value(&older).unwrap();
+    for key in defaults.as_object().unwrap().keys() {
+        older_value.as_object_mut().unwrap().remove(key);
+    }
+    let generated: generated_types::VoiceNoiseSuppressionConfigResponse =
+        serde_json::from_value(older_value).expect("older generated response contract");
+    let value = serde_json::to_value(generated).unwrap();
+    for (key, expected) in defaults.as_object().unwrap() {
+        assert_eq!(&value[key], expected, "{key}");
+    }
+
+    let update = types::VoiceNoiseSuppressionConfigUpdateRequest {
+        pipeline_v2_gate_open_probability: Some(0.8),
+        pipeline_v2_gate_refresh_probability: Some(0.2),
+        pipeline_v2_gate_hangover_ms: Some(900),
+        pipeline_v2_gain_target_dbfs: Some(-30),
+        pipeline_v2_gain_max_db: Some(12),
+        ..Default::default()
+    };
+    let value = serde_json::to_value(update).unwrap();
+    assert_eq!(value, tuning);
+    serde_json::from_value::<generated_types::VoiceNoiseSuppressionConfigUpdateRequest>(value)
+        .expect("generated update contract");
 }
 
 #[test]

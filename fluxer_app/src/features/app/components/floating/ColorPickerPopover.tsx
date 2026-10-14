@@ -3,11 +3,13 @@
 import {
 	getColorWithHue,
 	getColorWithSaturationBrightness,
+	getDefaultPickerHex,
 	getUnitPointFromClientPosition,
 	getUnitValueFromClientX,
 	shouldSyncPickerColorFromProp,
 } from '@app/features/app/components/floating/ColorPickerMath';
 import styles from '@app/features/app/components/floating/ColorPickerPopover.module.css';
+import Theme from '@app/features/theme/state/Theme';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import {Trans} from '@lingui/react/macro';
 import {observer} from 'mobx-react-lite';
@@ -35,14 +37,15 @@ export const ColorPickerPopover = observer(
 		onChange: (color: string) => void;
 		onReset: () => void;
 	}) => {
-		const hasCustomColor = color !== null && color !== '#4641D9';
+		const defaultHex = getDefaultPickerHex(Theme.effectiveTheme);
+		const hasCustomColor = color !== null && color !== defaultHex;
 		const parsedColor = useMemo(() => {
 			try {
 				return parseColor(color).toFormat('hsb');
 			} catch {
-				return parseColor('#4641D9').toFormat('hsb');
+				return parseColor(defaultHex).toFormat('hsb');
 			}
-		}, [color]);
+		}, [color, defaultHex]);
 		const activeDragRef = useRef<{pointerId: number; target: DragTarget} | null>(null);
 		const colorRef = useRef<Color>(parsedColor);
 		const [pickerColor, setPickerColor] = useState(parsedColor);

@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::api::types::{
+    NoiseSuppressionBackend, VOICE_NS_MAX_GUILD_OVERRIDES, VoiceNoiseSuppressionConfigResponse,
+};
 use crate::{
     api::types::{
         AccountIdentityConfigResponse, AccountIdentityMode, AppPublicConfigResponse,
@@ -10,7 +13,7 @@ use crate::{
         InstanceMediaResponse, InstancePolicyResponse, InstanceRegistrationResponse,
         LimitConfigResponse, PLUTONIUM_PAGE_DEFAULT_SALT, PendingRegistrationResponse,
         PlutoniumPageConfigResponse, PushRelayConfigResponse, RegistrationUrlResponse,
-        SsoConfigResponse, TagStyle,
+        SsoConfigResponse, TagStyle, VOICE_ROOM_THEME_OPTIONS, VoiceRoomConfigResponse,
     },
     config::AdminConfig,
     middleware::auth::AuthContext,
@@ -37,6 +40,36 @@ fn format_percent(value: f64) -> String {
         format!("{}", value as u64)
     } else {
         value.to_string()
+    }
+}
+
+fn username_configuration_link(base: &str, admin_acls: &[String]) -> Markup {
+    html! {
+        @if crate::acl::has_permission(admin_acls, crate::acl::INSTANCE_CONFIG_VIEW) {
+            (section_card_with_description(
+                "Username policy and migration",
+                "Save all three short-name tiers and the admission budget together. Review migration prerequisites before starting selection.",
+                secondary_button_link("Manage usernames", &format!("{base}/username-migration")),
+            ))
+        }
+    }
+}
+
+#[cfg(test)]
+mod username_config_tests {
+    use super::*;
+
+    #[test]
+    fn username_config_link_is_hidden_without_read_permission() {
+        assert!(
+            username_configuration_link("/admin", &[])
+                .into_string()
+                .is_empty()
+        );
+        let markup =
+            username_configuration_link("/admin", &[crate::acl::INSTANCE_CONFIG_VIEW.to_owned()])
+                .into_string();
+        assert!(markup.contains("href=\"/admin/username-migration\""));
     }
 }
 
@@ -82,6 +115,28 @@ fn number_field(
     )
 }
 
+fn bounded_number_field(
+    name: &str,
+    label: &str,
+    value: &str,
+    min: &str,
+    max: &str,
+    step: &str,
+    helper: &str,
+) -> Markup {
+    form_field_group(
+        label,
+        name,
+        false,
+        None,
+        Some(helper),
+        html! {
+            input type="number" id=(name) name=(name) step=(step) value=(value)
+                min=(min) max=(max) class=(FORM_INPUT_CLASS);
+        },
+    )
+}
+
 pub fn instance_config_page(
     config: &AdminConfig,
     auth: &AuthContext,
@@ -92,6 +147,10 @@ pub fn instance_config_page(
     let base = &config.base_path;
     let content = html! {
         (page_header("Instance Configuration", Some("Manage instance-wide settings")))
+        (username_configuration_link(
+            base,
+            auth.admin_user.as_ref().map(|user| user.acls.as_slice()).unwrap_or(&[]),
+        ))
         div class="space-y-10" {
             @if let Some(instance_config) = instance_config {
                 @if instance_config.self_hosted {
@@ -135,7 +194,7 @@ pub fn instance_config_page(
                 @if instance_config.self_hosted {
                     (config_group(
                         "Community & policy",
-                        "Community shape, direct messaging, the premium model, and optional embed services.",
+                        "Community shape, direct messaging, the Plus model, and optional embed services.",
                         html! {
                             (policy_config_section(
                                 base,
@@ -190,6 +249,8 @@ pub fn instance_config_page(
                     "Gateway rollout behavior and the limit rules applied to users and guilds.",
                     html! {
                         (gateway_rollout_section(base, csrf_token, &instance_config.gateway_rollout))
+                        (voice_noise_suppression_section(base, csrf_token, &instance_config.voice_noise_suppression))
+                        (voice_room_section(base, csrf_token, &instance_config.voice_room))
                         @if !instance_config.self_hosted {
                             (domain_migration_section(base, csrf_token, &instance_config.domain_migration))
                         }
@@ -254,7 +315,7 @@ fn policy_config_section(
     section_card_with_description(
         "Community & Policy",
         "Control whether this instance runs as a single community, whether direct messages and \
-         friends are available, which premium model applies, and which optional embed services \
+         friends are available, which Plus model applies, and which optional embed services \
          are enabled.",
         html! {
             div class="space-y-8" {
@@ -364,16 +425,16 @@ fn premium_mode_form(
     let everyone_label = format!("Everyone (every member gets {premium_name} limits)");
     html! {
         div class="space-y-4 border-t border-neutral-200 pt-6" {
-            h3 class="text-sm font-semibold text-neutral-900" { "Premium model" }
+            h3 class="text-sm font-semibold text-neutral-900" { "Plus model" }
             form method="post" action={(base) "/instance-config?action=update_policy"} {
                 (csrf_input(csrf_token))
                 div class="space-y-4" {
-                    (select_input("policy_premium_mode", "Premium model", &[
+                    (select_input("policy_premium_mode", "Plus model", &[
                         ("mirror", mirror_label.as_str()),
                         ("everyone", everyone_label.as_str()),
                     ], policy.premium_mode.as_str()))
                     (form_actions(html! {
-                        (submit_button("Save premium model"))
+                        (submit_button("Save Plus model"))
                     }))
                 }
             }
@@ -960,9 +1021,18 @@ fn app_public_config_section(
                                     app_public.legal.privacy_url.as_deref().unwrap_or(""),
                                     "https://example.com/privacy",
                                 ))
+                                (text_input(
+                                    "app_source_url",
+                                    "Source code URL",
+                                    app_public.legal.source_url.as_deref().unwrap_or(""),
+                                    "https://example.com/source",
+                                ))
                             }
                             p class="text-xs text-neutral-500" {
-                                "Registration asks for agreement only to the documents configured here. Leave both blank to hide legal consent on self-hosted registration."
+                                "Registration asks for agreement only to the documents configured here. Leave the terms and privacy URLs blank to hide legal consent on self-hosted registration."
+                            }
+                            p class="text-xs text-neutral-500" {
+                                "Source code URL is shown as a small 'Source code' link at the bottom of user settings. Leave blank to hide it."
                             }
                             (form_actions(html! {
                                 (submit_button("Save Legal Documents"))
@@ -1037,6 +1107,13 @@ fn gateway_rollout_section(
                         ("platform_wide", "Platform-wide (every guild voice channel, DM, and GDM)"),
                     ], gateway_rollout.voice_e2ee_scope.as_str()))
 
+                    (number_field(
+                        "gateway_rollout_max_connections",
+                        "Max Connections / Azami Bağlantı", &gateway_rollout.max_connections.to_string(),
+                        Some(0), Some(200000), "1",
+                        Some("0 = env value; 1–200000 sets a per-node soft limit. / 0 = env değeri; 1–200000 düğüm başına yumuşak sınır belirler."),
+                    ))
+
                     (form_actions(html! {
                         (submit_button("Save Gateway Rollout Configuration"))
                     }))
@@ -1109,6 +1186,395 @@ fn push_relay_section(
 
                     (form_actions(html! {
                         (submit_button("Save Push Relay Settings"))
+                    }))
+                }
+            }
+        },
+    )
+}
+
+fn voice_noise_suppression_section(
+    base: &str,
+    csrf_token: &str,
+    voice_noise_suppression: &VoiceNoiseSuppressionConfigResponse,
+) -> Markup {
+    let status = if voice_noise_suppression.enabled {
+        ("Live", BadgeVariant::Success)
+    } else {
+        ("Inert", BadgeVariant::Default)
+    };
+    let backend_labels =
+        NoiseSuppressionBackend::ALL.map(|backend| (backend.to_string(), backend.label()));
+    let backend_options = backend_labels
+        .iter()
+        .map(|(value, label)| (value.as_str(), *label))
+        .collect::<Vec<_>>();
+    let included_user_ids = voice_noise_suppression.included_user_ids.join("\n");
+    let excluded_user_ids = voice_noise_suppression.excluded_user_ids.join("\n");
+    let guild_overrides = voice_noise_suppression
+        .guild_overrides
+        .iter()
+        .map(|entry| format!("{}={}", entry.guild_id, entry.backend))
+        .collect::<Vec<_>>()
+        .join("\n");
+    section_card_with_description(
+        "Voice Noise Suppression",
+        "Pick which noise suppression backend targeted clients load in voice calls, and how many \
+         of them are targeted. While the master switch below is off nothing on this form reaches \
+         any client: every user keeps the audio pipeline they have today, whatever the rest of \
+         these fields say.",
+        html! {
+            form method="post" action={(base) "/instance-config?action=update_voice_noise_suppression"} {
+                (csrf_input(csrf_token))
+                div class="space-y-6" {
+                    div class="flex flex-wrap items-center gap-2" {
+                        h3 class="text-sm font-semibold text-neutral-900" { "Master switch" }
+                        (badge(status.0, status.1))
+                        span class="text-xs text-neutral-500" {
+                            "Config version " (voice_noise_suppression.config_version)
+                        }
+                    }
+                    (checkbox(
+                        "voice_ns_enabled",
+                        "true",
+                        "Serve noise suppression assignments to clients",
+                        voice_noise_suppression.enabled,
+                        true,
+                    ))
+                    p class="text-xs text-neutral-500" {
+                        "Off is the safe state. With this unchecked every client is told the \
+                         feature is inert and keeps its current behavior, so the rollout, targeting \
+                         and override fields below have no effect at all."
+                    }
+
+                    h3 class="text-sm font-semibold text-neutral-900" { "Voice pipeline v2" }
+                    (checkbox(
+                        "voice_ns_pipeline_v2_enabled",
+                        "true",
+                        "Voice pipeline v2",
+                        voice_noise_suppression.pipeline_v2_enabled,
+                        true,
+                    ))
+                    (checkbox(
+                        "voice_ns_pipeline_v2_all",
+                        "true",
+                        "Enable for everyone",
+                        voice_noise_suppression.pipeline_v2_all,
+                        true,
+                    ))
+                    p class="text-xs text-neutral-500" {
+                        "Requires noise suppression assignments and the pipeline master switch. \
+                         Enable for everyone includes all eligible, non-excluded clients; \
+                         otherwise only selected guild overrides use v2."
+                    }
+                    div class="grid grid-cols-1 gap-4 sm:grid-cols-2" {
+                        (bounded_number_field(
+                            "voice_ns_pipeline_v2_gate_open_probability",
+                            "Gate open probability",
+                            &voice_noise_suppression.pipeline_v2_gate_open_probability.to_string(),
+                            "0.3", "0.95", "0.01",
+                            "Speech probability that opens the gate, 0.3 to 0.95. Higher keeps more background out but can clip quiet speech.",
+                        ))
+                        (bounded_number_field(
+                            "voice_ns_pipeline_v2_gate_refresh_probability",
+                            "Gate refresh probability",
+                            &voice_noise_suppression.pipeline_v2_gate_refresh_probability.to_string(),
+                            "0.1", "0.9", "0.01",
+                            "Speech probability that keeps an open gate open, 0.1 to 0.9. Clients cap it at the open probability.",
+                        ))
+                        (bounded_number_field(
+                            "voice_ns_pipeline_v2_gate_hangover_ms",
+                            "Gate hangover (ms)",
+                            &voice_noise_suppression.pipeline_v2_gate_hangover_ms.to_string(),
+                            "100", "1500", "1",
+                            "How long the gate stays open after speech stops, 100 to 1500 ms.",
+                        ))
+                        (bounded_number_field(
+                            "voice_ns_pipeline_v2_gain_target_dbfs",
+                            "Gain target (dBFS)",
+                            &voice_noise_suppression.pipeline_v2_gain_target_dbfs.to_string(),
+                            "-40", "-14", "1",
+                            "Speech level the automatic gain aims for, -40 to -14 dBFS.",
+                        ))
+                        (bounded_number_field(
+                            "voice_ns_pipeline_v2_gain_max_db",
+                            "Maximum gain (dB)",
+                            &voice_noise_suppression.pipeline_v2_gain_max_db.to_string(),
+                            "0", "30", "1",
+                            "Most the automatic gain may boost a quiet microphone, 0 to 30 dB.",
+                        ))
+                    }
+                    p class="text-xs text-neutral-500" {
+                        "Clients pick up these values on their next assignment poll and apply them \
+                         to calls in progress without reconnecting."
+                    }
+
+                    h3 class="text-sm font-semibold text-neutral-900" { "Backends" }
+                    (select_input(
+                        "voice_ns_default_backend",
+                        "Default Backend",
+                        &backend_options,
+                        &voice_noise_suppression.default_backend.to_string(),
+                    ))
+                    p class="text-xs text-neutral-500" {
+                        "The backend assigned by always-on user rules and the canary. A default \
+                         that is not ticked below is unavailable, but per-guild overrides can \
+                         still target users."
+                    }
+                    div class="grid grid-cols-1 gap-2 sm:grid-cols-2" {
+                        @for backend in NoiseSuppressionBackend::ALL {
+                            (checkbox(
+                                "voice_ns_enabled_backends[]",
+                                &backend.to_string(),
+                                backend.label(),
+                                voice_noise_suppression.enabled_backends.contains(&backend),
+                                true,
+                            ))
+                        }
+                    }
+                    p class="text-xs text-neutral-500" {
+                        "Backends clients are allowed to load. Unticking one withdraws it from \
+                         every user, including anyone who picked it themselves."
+                    }
+                    (checkbox(
+                        "voice_ns_allow_user_override",
+                        "true",
+                        "Let users pick their own backend from the ticked list",
+                        voice_noise_suppression.allow_user_override,
+                        true,
+                    ))
+                    p class="text-xs text-neutral-500" {
+                        "Applies only to users who are already targeted. It never pulls anyone \
+                         into the rollout."
+                    }
+
+                    h3 class="text-sm font-semibold text-neutral-900" { "Rollout" }
+                    (number_field(
+                        "voice_ns_rollout_basis_points",
+                        "Rollout (basis points)",
+                        &voice_noise_suppression.rollout_basis_points.to_string(),
+                        Some(0), Some(10000), "1",
+                        Some("Share of users bucketed into the canary, in basis points: 0 is nobody, 100 is 1%, 10000 is everybody."),
+                    ))
+                    div class="flex flex-col gap-2" {
+                        (text_input(
+                            "voice_ns_rollout_salt",
+                            "Rollout Salt",
+                            &voice_noise_suppression.rollout_salt,
+                            "voice-ns-v1",
+                        ))
+                        p class="text-xs text-neutral-500" {
+                            "Seeds the bucketing hash. Changing it reshuffles which users fall \
+                             inside the percentage above. Leave it alone to keep the current \
+                             cohort stable."
+                        }
+                    }
+                    div class="flex flex-col gap-2" {
+                        (textarea_input(
+                            "voice_ns_included_user_ids",
+                            "Always-on User IDs",
+                            "1500000000000000001\n1500000000000000002",
+                            &included_user_ids,
+                            4,
+                            false,
+                        ))
+                        (entry_count_hint(
+                            voice_noise_suppression.included_user_ids.len(),
+                            EXPERIMENT_MAX_TARGETED_USERS,
+                        ))
+                        p class="text-xs text-neutral-500" {
+                            "One snowflake per line, or comma separated. These users are targeted \
+                             regardless of the percentage above. IDs must contain 1 to 20 decimal \
+                             digits. Invalid entries prevent the save. Blank entries and duplicate \
+                             IDs are ignored."
+                        }
+                    }
+                    div class="flex flex-col gap-2" {
+                        (textarea_input(
+                            "voice_ns_excluded_user_ids",
+                            "Never-on User IDs",
+                            "1500000000000000003\n1500000000000000004",
+                            &excluded_user_ids,
+                            4,
+                            false,
+                        ))
+                        (entry_count_hint(
+                            voice_noise_suppression.excluded_user_ids.len(),
+                            EXPERIMENT_MAX_TARGETED_USERS,
+                        ))
+                        p class="text-xs text-neutral-500" {
+                            "Same format. Exclusion wins over both the always-on list and the \
+                             percentage. This is the per-user kill switch."
+                        }
+                    }
+
+                    h3 class="text-sm font-semibold text-neutral-900" { "Per-guild overrides" }
+                    div class="flex flex-col gap-2" {
+                        (textarea_input(
+                            "voice_ns_guild_overrides",
+                            "Guild Overrides",
+                            "1600000000000000001=rnnoise\n1600000000000000002=deep_filter",
+                            &guild_overrides,
+                            4,
+                            false,
+                        ))
+                        (entry_count_hint(
+                            voice_noise_suppression.guild_overrides.len(),
+                            VOICE_NS_MAX_GUILD_OVERRIDES,
+                        ))
+                        p class="text-xs text-neutral-500" {
+                            "One per line as guild_id=backend. A guild \
+                             rule targets callers even outside the canary. Always-on user rules \
+                             take precedence, and excluded users stay off. Invalid lines and \
+                             conflicting rules for the same guild prevent the save. \
+                             Unticked backends stay stored but are inactive."
+                        }
+                        @for entry in &voice_noise_suppression.guild_overrides {
+                            (checkbox(
+                                "voice_ns_pipeline_v2_guild_ids[]",
+                                &entry.guild_id,
+                                &format!("Voice pipeline v2 for guild {} ({})", entry.guild_id, entry.backend),
+                                entry.pipeline_v2,
+                                true,
+                            ))
+                        }
+                        p class="text-xs text-neutral-500" {
+                            "Save a new guild override first, then select its Voice pipeline v2 \
+                             checkbox and save again. Removing a guild rule also removes its pipeline switch."
+                        }
+                    }
+
+                    h3 class="text-sm font-semibold text-neutral-900" { "Processing" }
+                    div class="grid grid-cols-1 gap-4 sm:grid-cols-2" {
+                        (number_field(
+                            "voice_ns_suppression_strength",
+                            "Suppression Strength",
+                            &voice_noise_suppression.suppression_strength.to_string(),
+                            Some(0), Some(100), "1",
+                            Some("How aggressively the backend removes noise, 0 to 100. Higher values cut more background but chew more of the voice."),
+                        ))
+                    }
+
+                    (form_actions(html! {
+                        (submit_button("Save Voice Noise Suppression Configuration"))
+                    }))
+                }
+            }
+            form method="post" action={(base) "/instance-config?action=disable_voice_pipeline_v2"} {
+                (csrf_input(csrf_token))
+                (form_actions(html! {
+                    (submit_button("Disable Voice pipeline v2"))
+                }))
+                p class="text-xs text-neutral-500" {
+                    "Turns off only the pipeline master switch and keeps the rest of the configuration."
+                }
+            }
+        },
+    )
+}
+
+fn voice_room_section(
+    base: &str,
+    csrf_token: &str,
+    voice_room: &VoiceRoomConfigResponse,
+) -> Markup {
+    let status = |live: bool| {
+        if live {
+            ("Live", BadgeVariant::Success)
+        } else {
+            ("Inert", BadgeVariant::Default)
+        }
+    };
+    let rooms = status(voice_room.rooms_enabled);
+    let games = status(voice_room.rooms_enabled && voice_room.games_enabled);
+    let cameras = status(voice_room.rooms_enabled && voice_room.room_cameras_enabled);
+    let theme_options: Vec<_> = std::iter::once(("", "Disabled"))
+        .chain(VOICE_ROOM_THEME_OPTIONS.iter().copied())
+        .collect();
+    section_card_with_description(
+        "3D Voice Rooms and Table Games",
+        "Show voice channels that have a room theme as a 3D room, and let members play Okey, \
+         101 Okey, Chess, Turkish Draughts, Draughts and Backgammon at its tables. Every switch \
+         starts off. Clients pick up a change on their next experiments poll (see Experiment \
+         Delivery).",
+        html! {
+            form method="post" action={(base) "/instance-config?action=update_voice_room"} {
+                (csrf_input(csrf_token))
+                div class="space-y-6" {
+                    div class="flex flex-wrap items-center gap-2" {
+                        h3 class="text-sm font-semibold text-neutral-900" { "3D rooms" }
+                        (badge(rooms.0, rooms.1))
+                    }
+                    (checkbox(
+                        "voice_room_rooms_enabled",
+                        "true",
+                        "Serve 3D voice rooms to clients",
+                        voice_room.rooms_enabled,
+                        true,
+                    ))
+                    p class="text-xs text-neutral-500" {
+                        "Off is the safe state: every voice channel shows the flat view and nobody \
+                         is given a new seat. Switching rooms off also switches table games and \
+                         room cameras off."
+                    }
+
+                    (select_input(
+                        "voice_room_default_room_theme",
+                        "Default room theme",
+                        &theme_options,
+                        voice_room.default_room_theme.as_deref().unwrap_or(""),
+                    ))
+                    p class="text-xs text-neutral-500" {
+                        "Voice channels without a theme selection, including older 'None' values stored as null, \
+                         use this theme when 3D rooms are on. Disabled keeps those channels in the flat view. \
+                         Select the new 'None' option in channel settings to keep an individual channel in the flat view."
+                    }
+
+                    div class="flex flex-wrap items-center gap-2" {
+                        h3 class="text-sm font-semibold text-neutral-900" { "Table games" }
+                        (badge(games.0, games.1))
+                    }
+                    (checkbox(
+                        "voice_room_games_enabled",
+                        "true",
+                        "Serve table games inside 3D rooms",
+                        voice_room.games_enabled,
+                        voice_room.rooms_enabled,
+                    ))
+                    @if !voice_room.rooms_enabled {
+                        p class="text-xs text-neutral-500" {
+                            "Turn 3D rooms on and save before enabling table games."
+                        }
+                    }
+                    p class="text-xs text-neutral-500" {
+                        "Switching games off cancels the tables in progress at their next move \
+                         or timer tick."
+                    }
+
+                    div class="flex flex-wrap items-center gap-2" {
+                        h3 class="text-sm font-semibold text-neutral-900" { "Room cameras" }
+                        (badge(cameras.0, cameras.1))
+                    }
+                    (checkbox(
+                        "voice_room_room_cameras_enabled",
+                        "true",
+                        "Show cameras on avatars inside 3D rooms",
+                        voice_room.room_cameras_enabled,
+                        voice_room.rooms_enabled,
+                    ))
+                    @if !voice_room.rooms_enabled {
+                        p class="text-xs text-neutral-500" {
+                            "Turn 3D rooms on and save before enabling room cameras."
+                        }
+                    }
+                    p class="text-xs text-neutral-500" {
+                        "Off shows avatars only. Each viewer receives a capped number of room \
+                         cameras; switch this off if voice server bandwidth runs high. The flat \
+                         call view keeps showing cameras."
+                    }
+
+                    (form_actions(html! {
+                        (submit_button("Save 3D Room Configuration"))
                     }))
                 }
             }
@@ -2123,7 +2589,7 @@ fn sso_config_section(base: &str, csrf_token: &str, sso: &SsoConfigResponse) -> 
 
 fn limit_config_section(base: &str, limit_config: &LimitConfigResponse) -> Markup {
     let description = if limit_config.self_hosted.unwrap_or(false) {
-        "Self-hosted instance with all premium features enabled by default. Configure user and guild limits."
+        "Self-hosted instance with all Plus features enabled. Configure user and guild limits."
     } else {
         "Configure limit rules that control user and guild restrictions based on traits and features."
     };
@@ -2145,6 +2611,100 @@ fn limit_config_section(base: &str, limit_config: &LimitConfigResponse) -> Marku
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::types::VoiceNoiseSuppressionGuildOverride;
+
+    fn connection_cap_rollout(value: u64) -> GatewayRolloutConfigResponse {
+        serde_json::from_value(serde_json::json!({
+            "session_rollout_percentage": 100,
+            "session_rollout_mode": "modulo",
+            "guild_rollout_percentage": 100,
+            "rpc_request_timeout_ms": 10000,
+            "max_concurrent_session_starts": 512,
+            "max_concurrent_guild_starts": 256,
+            "voice_e2ee_scope": "guild_feature_only",
+            "max_connections": value
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn gateway_rollout_section_shows_connection_cap_and_env_help() {
+        let markup =
+            gateway_rollout_section("/admin", "csrf", &connection_cap_rollout(0)).into_string();
+        assert!(markup.contains("gateway_rollout_max_connections"));
+        assert!(markup.contains("0 = env value"));
+        assert!(markup.contains("0 = env değeri"));
+    }
+
+    #[test]
+    fn gateway_rollout_section_shows_connection_cap_value_and_bounds() {
+        for value in [0, 18000, 200000] {
+            let markup = gateway_rollout_section("/admin", "csrf", &connection_cap_rollout(value))
+                .into_string();
+            let input = markup
+                .split("id=\"gateway_rollout_max_connections\"")
+                .nth(1)
+                .unwrap()
+                .split('>')
+                .next()
+                .unwrap();
+            assert!(input.contains(&format!("value=\"{value}\"")));
+            assert!(input.contains("min=\"0\""));
+            assert!(input.contains("max=\"200000\""));
+            assert!(input.contains("step=\"1\""));
+        }
+    }
+
+    #[test]
+    fn gateway_rollout_section_describes_per_node_soft_limit_in_both_languages() {
+        let markup =
+            gateway_rollout_section("/admin", "csrf", &connection_cap_rollout(0)).into_string();
+        assert!(markup.contains("Max Connections / Azami Bağlantı"));
+        assert!(markup.contains("per-node soft limit"));
+        assert!(markup.contains("düğüm başına yumuşak sınır"));
+        assert!(markup.contains("action=\"/admin/instance-config?action=update_gateway_rollout\""));
+    }
+
+    fn rendered_voice_noise_suppression_section(
+        voice_noise_suppression: &VoiceNoiseSuppressionConfigResponse,
+    ) -> String {
+        voice_noise_suppression_section("/admin", "csrf", voice_noise_suppression).into_string()
+    }
+
+    #[test]
+    fn voice_noise_suppression_section_shows_list_counts_and_caps() {
+        let voice_noise_suppression = VoiceNoiseSuppressionConfigResponse {
+            included_user_ids: vec!["1500000000000000001".to_owned()],
+            excluded_user_ids: vec![
+                "1500000000000000002".to_owned(),
+                "1500000000000000003".to_owned(),
+            ],
+            guild_overrides: vec![VoiceNoiseSuppressionGuildOverride {
+                guild_id: "1600000000000000001".to_owned(),
+                backend: NoiseSuppressionBackend::Rnnoise,
+                pipeline_v2: false,
+            }],
+            ..VoiceNoiseSuppressionConfigResponse::default()
+        };
+        let markup = rendered_voice_noise_suppression_section(&voice_noise_suppression);
+        assert!(markup.contains("1 of 1000 stored"));
+        assert!(markup.contains("2 of 1000 stored"));
+        assert!(markup.contains("1 of 200 stored"));
+        assert!(!markup.contains("at the cap"));
+    }
+
+    #[test]
+    fn voice_noise_suppression_section_flags_a_list_at_its_cap() {
+        let voice_noise_suppression = VoiceNoiseSuppressionConfigResponse {
+            included_user_ids: (0..EXPERIMENT_MAX_TARGETED_USERS)
+                .map(|index| index.to_string())
+                .collect(),
+            ..VoiceNoiseSuppressionConfigResponse::default()
+        };
+        let markup = rendered_voice_noise_suppression_section(&voice_noise_suppression);
+        assert!(markup.contains("1000 of 1000 stored"));
+        assert!(markup.contains("at the cap"));
+    }
 
     #[test]
     fn username_instances_hide_email_delivery_and_the_smtp_test() {

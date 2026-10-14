@@ -32,6 +32,10 @@ class FakeUsersServiceClient implements IUsersServiceClient {
 		return result;
 	}
 
+	async getContentHiddenSince(userIds: Array<UserID>): Promise<Map<UserID, Date | null>> {
+		return new Map(userIds.filter((id) => this.partialsById.has(id)).map((id) => [id, null]));
+	}
+
 	async invalidateUserCache(userId: UserID): Promise<void> {
 		this.invalidated.push(userId);
 	}

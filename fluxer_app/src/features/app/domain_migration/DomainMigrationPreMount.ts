@@ -17,6 +17,7 @@ import {
 	DOMAIN_MIGRATION_CUSTOM_SOUNDS_MAX_BYTES,
 	DOMAIN_MIGRATION_DEFAULT_NEXT_PATH,
 	DOMAIN_MIGRATION_DEVICE_KEY,
+	DOMAIN_MIGRATION_ENABLED,
 	DOMAIN_MIGRATION_MARKER_KEY,
 	DOMAIN_MIGRATION_MAX_FAILED_ATTEMPTS,
 	DOMAIN_MIGRATION_NOTIFICATIONS_KEY,
@@ -764,7 +765,7 @@ async function handleTarget(side: DomainMigrationSide): Promise<boolean> {
 }
 
 export async function runDomainMigrationPreMount(): Promise<boolean> {
-	if (typeof window === 'undefined') {
+	if (!DOMAIN_MIGRATION_ENABLED || typeof window === 'undefined') {
 		return false;
 	}
 	const side = resolveDomainMigrationSide(window.location.origin);

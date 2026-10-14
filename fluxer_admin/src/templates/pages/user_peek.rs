@@ -93,7 +93,7 @@ pub fn user_peek_fragment(
                     }
                 }
                 @if let Some(pt) = user.premium_type {
-                    (data_field_text("Premium type", premium_type_label(pt)))
+                    (data_field_text("Plus type", premium_type_label(pt)))
                 }
                 @if user.flags != 0 {
                     (data_field_mono("Flags", &user.flags.to_string()))

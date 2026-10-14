@@ -8,6 +8,7 @@ import {SERVER_MUTE_ATTRIBUTE} from '@app/api/infrastructure/LiveKitService';
 import {isDMRoom, parseParticipantMetadataWithRaw, parseRoomName} from '@app/api/infrastructure/VoiceRoomContext';
 import {Logger} from '@app/api/Logger';
 import type {VoiceTopology} from '@app/api/voice/VoiceTopology';
+import type {VoiceMembershipHooks} from '@app/api/voice_seat/VoiceMembershipHooks';
 import type {WebhookEvent} from 'livekit-server-sdk';
 import {TrackSource, WebhookReceiver} from 'livekit-server-sdk';
 
@@ -32,6 +33,7 @@ export class LiveKitWebhookService {
 		private gatewayService: IGatewayService,
 		private liveKitService: ILiveKitService,
 		private voiceTopology: VoiceTopology,
+		private voiceMembershipHooks: typeof VoiceMembershipHooks,
 	) {
 		this.receivers = new Map();
 		this.serverMap = new Map();
@@ -186,6 +188,7 @@ export class LiveKitWebhookService {
 				{guildId: context.guildId.toString(), channelId: context.channelId.toString()},
 				'Cleared guild voice room server pinning',
 			);
+			await this.voiceMembershipHooks.onRoomFinished(context.channelId);
 		}
 	}
 
@@ -285,6 +288,16 @@ export class LiveKitWebhookService {
 					Logger.error({error: disconnectError}, 'Failed to disconnect rejected participant');
 				}
 				return;
+			}
+			if (context.type === 'guild') {
+				await this.voiceMembershipHooks.onJoined({
+					guildId: context.guildId,
+					channelId: context.channelId,
+					userId: context.userId,
+					connectionId: context.connectionId,
+					regionId: raw.region_id ?? null,
+					serverId: raw.server_id ?? null,
+				});
 			}
 		} catch (error) {
 			Logger.error({error, type: context.type}, 'Error processing participant_joined');
@@ -419,23 +432,42 @@ export class LiveKitWebhookService {
 				},
 				'LiveKit participant_left - disconnecting voice user',
 			);
-			const result = await this.gatewayService.disconnectVoiceUserIfInChannel({
-				guildId,
-				channelId: context.channelId,
-				userId: context.userId,
-				connectionId: context.connectionId,
-			});
-			Logger.debug(
-				{
-					type: context.type,
-					guildId: guildId?.toString(),
-					userId: context.userId.toString(),
-					channelId: context.channelId.toString(),
+			try {
+				const result = await this.gatewayService.disconnectVoiceUserIfInChannel({
+					guildId,
+					channelId: context.channelId,
+					userId: context.userId,
 					connectionId: context.connectionId,
-					result,
-				},
-				'LiveKit participant_left voice disconnect result',
-			);
+					tokenNonce: raw.token_nonce,
+				});
+				Logger.debug(
+					{
+						type: context.type,
+						guildId: guildId?.toString(),
+						userId: context.userId.toString(),
+						channelId: context.channelId.toString(),
+						connectionId: context.connectionId,
+						result,
+					},
+					'LiveKit participant_left voice disconnect result',
+				);
+			} finally {
+				// Only here, past the stale-server, still-present and unknown-presence guards: a stale left must not free a
+				// seat. In finally: a failing gateway disconnect does not skip the seat release.
+				if (context.type === 'guild') {
+					await this.voiceMembershipHooks.onLeft(
+						{
+							guildId: context.guildId,
+							channelId: context.channelId,
+							userId: context.userId,
+							connectionId: context.connectionId,
+							regionId: raw.region_id ?? null,
+							serverId: raw.server_id ?? null,
+						},
+						'webhook',
+					);
+				}
+			}
 		} catch (error) {
 			Logger.error({error, type: context.type}, 'Error processing participant_left');
 		}

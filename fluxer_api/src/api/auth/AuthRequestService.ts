@@ -22,7 +22,7 @@ import {
 	encodePushSessionIdHash,
 	recordPushSessionPredecessor,
 } from '@app/api/user/services/WebPushOriginReplacement';
-import {isUsernameTaken} from '@app/api/user/UniqueUsernames';
+import {checkUsernameClaimAvailability, isUsernameTaken} from '@app/api/user/UniqueUsernames';
 import {mapUserToPartialResponse} from '@app/api/user/UserMappers';
 import {lookupGeoip} from '@app/api/utils/IpUtils';
 import {parseJsonRecord} from '@app/api/utils/JsonBoundaryUtils';
@@ -336,6 +336,10 @@ export class AuthRequestService {
 	}
 
 	async getUsernameAvailability(username: string): Promise<UsernameAvailabilityResponse> {
+		if ((await getInstanceConfigRepository().getUsernameMigrationConfig()).state !== 'legacy') {
+			const result = await checkUsernameClaimAvailability(username, null);
+			return {available: !result.taken, ...(result.reason ? {reason: result.reason} : {})};
+		}
 		return {available: !(await isUsernameTaken(this.apiContext.services.users, username))};
 	}
 

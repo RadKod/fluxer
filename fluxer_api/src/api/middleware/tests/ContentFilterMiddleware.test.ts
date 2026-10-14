@@ -81,6 +81,11 @@ describe('shouldSkipContentFilterPath', () => {
 		const result = paths.map((path) => shouldSkipContentFilterPath(path));
 		expect(result).toEqual([false, false, false]);
 	});
+	test('skips the Bunny Stream webhook, whose body is only ids, but still checks a video post text', () => {
+		const paths = ['/feed/videos/webhook', '/feed/videos'];
+		expect(paths.map((path) => shouldSkipContentFilterPath(path))).toEqual([true, false]);
+	});
+
 	test('skips blocklist writes whose values are the blocked content', () => {
 		const paths = [
 			'/admin/blocklists/phrase/entries',

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import Accessibility from '@app/features/accessibility/state/Accessibility';
 import styles from '@app/features/ui/stepped_carousel/SteppedCarousel.module.css';
 import {
 	createSteppedCarouselSnapshot,
@@ -9,7 +10,7 @@ import {
 	transitionSteppedCarouselSnapshot,
 } from '@app/features/ui/stepped_carousel/SteppedCarouselStateMachine';
 import {flxElementClassName} from '@app/lib/react';
-import {AnimatePresence, motion, type Transition, useReducedMotion, type Variants} from 'framer-motion';
+import {AnimatePresence, motion, type Transition, type Variants} from 'framer-motion';
 import type React from 'react';
 import {useCallback, useLayoutEffect, useRef, useState} from 'react';
 
@@ -98,7 +99,7 @@ export function SteppedCarousel<Step extends string>({
 	ariaLive,
 	'data-flx': dataFlx,
 }: SteppedCarouselProps<Step>): React.ReactElement {
-	const shouldReduceMotion = useReducedMotion();
+	const shouldReduceMotion = Accessibility.useReducedMotion;
 	const [snapshot, setSnapshot] = useState(() =>
 		createSteppedCarouselSnapshot({step, steps, direction: directionProp, focusOnStepChange}),
 	);

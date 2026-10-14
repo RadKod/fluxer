@@ -169,6 +169,56 @@ afterEach(() => {
 });
 
 describe('the migration plan', () => {
+	test.each([
+		{owner: OTHER_USER_ID, expectedScope: OTHER_SCOPE},
+		{owner: null, expectedScope: ACTIVE_SCOPE},
+		{owner: 'unknown-user', expectedScope: null},
+	])('claims the deployed cursor only for its owner $owner', async ({owner, expectedScope}) => {
+		const {migration} = await loadModules();
+		const value = JSON.stringify({lastReadAt: 1000, lastReadUserId: owner, __mps__: {version: 1}});
+		window.localStorage.setItem('FeedNotifications', value);
+		const plan = migration.buildLegacyAppStorageMigrationPlan({
+			storage: window.localStorage,
+			accounts: KEYED_ACCOUNTS,
+			contentScope: ACTIVE_SCOPE,
+			sharedContentScopes: DEPLOYED_ACCOUNT_SCOPES,
+		});
+		expect(plan.writes.filter((write) => write.key === 'FeedNotifications')).toEqual(
+			expectedScope === null ? [] : [{scope: expectedScope, key: 'FeedNotifications', value, ifAbsent: true}],
+		);
+		expect(window.localStorage.getItem('FeedNotifications')).toBe(value);
+	});
+
+	test('does not infer the cursor instance from the active account when its user exists on two instances', async () => {
+		const {migration} = await loadModules();
+		const foreign = {...KEYED_ACCOUNTS[0]!, storageKey: `https://other.test/api::${ACTIVE_USER_ID}`};
+		const plan = migration.buildLegacyAppStorageMigrationPlan({
+			storage: window.localStorage,
+			accounts: [...KEYED_ACCOUNTS, foreign],
+			contentScope: ACTIVE_SCOPE,
+			sharedContentScopes: [...DEPLOYED_ACCOUNT_SCOPES, foreign.storageKey],
+		});
+		expect(plan.writes.filter((write) => write.key === 'FeedNotifications')).toEqual([]);
+		expect(window.localStorage.getItem('FeedNotifications')).not.toBeNull();
+	});
+
+	test('does not import a cursor snapshot naming another user', async () => {
+		const {migration} = await loadModules();
+		const accounts = KEYED_ACCOUNTS.map((account) => ({
+			...account,
+			managedStorageData: {
+				FeedNotifications: JSON.stringify({lastReadAt: 1000, lastReadUserId: ACTIVE_USER_ID}),
+			},
+		}));
+		const plan = migration.buildLegacyAppStorageMigrationPlan({
+			storage: window.localStorage,
+			accounts,
+			contentScope: ACTIVE_SCOPE,
+			sharedContentScopes: DEPLOYED_ACCOUNT_SCOPES,
+		});
+		expect(plan.writes.some((write) => write.key === 'FeedNotifications' && write.scope === OTHER_SCOPE)).toBe(false);
+	});
+
 	test('pins the names item 34 must clear and item 40 must invalidate', async () => {
 		const {migration} = await loadModules();
 

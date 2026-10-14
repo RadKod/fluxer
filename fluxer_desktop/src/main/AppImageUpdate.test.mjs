@@ -191,7 +191,9 @@ describe('AppImageUpdate target resolution', () => {
 		assertUnavailable(resolveAppImageTarget(), 'appimage-path-not-a-file');
 	});
 
-	test('falls back when the containing directory is not writable', {skip: process.getuid?.() === 0}, () => {
+	test('falls back when the containing directory is not writable', {
+		skip: process.platform === 'win32' || process.getuid?.() === 0,
+	}, () => {
 		const install = createInstall();
 		chmodSync(install.applications, 0o500);
 		try {
@@ -240,7 +242,7 @@ describe('AppImageUpdate in-place replacement', () => {
 		assert.deepEqual(readdirSync(install.applications), [INSTALLED_NAME]);
 		assert.equal(readFileSync(install.installedPath).equals(NEW_BYTES), true);
 		assert.equal(createHash('sha256').update(readFileSync(install.installedPath)).digest('hex'), NEW_SHA256);
-		assert.equal(statSync(install.installedPath).mode & 0o111, 0o111);
+		if (process.platform !== 'win32') assert.equal(statSync(install.installedPath).mode & 0o111, 0o111);
 	});
 
 	test('stages inside the install directory so the rename cannot cross filesystems', async () => {
@@ -654,7 +656,9 @@ describe('AppImageUpdate abandoned staging cleanup', () => {
 		assert.deepEqual(stagingLeftovers(install.applications), []);
 	});
 
-	test('unlinks a staging-named symlink instead of following it out of the install directory', () => {
+	test('unlinks a staging-named symlink instead of following it out of the install directory', {
+		skip: process.platform === 'win32',
+	}, () => {
 		const install = createInstall();
 		const outside = mkdtempSync(join(tmpdir(), 'fluxer-outside-test-'));
 		writeFileSync(join(outside, 'keep-me'), 'not ours to delete');

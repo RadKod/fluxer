@@ -105,17 +105,6 @@ async function expectRoutesNotFound(
 	}
 }
 
-async function expectRoutesRegistered(
-	harness: ApiTestHarness,
-	token: string,
-	routes: ReadonlyArray<readonly [RouteMethod, string]>,
-): Promise<void> {
-	for (const [method, path] of routes) {
-		const result = await readRouteStatus(harness, token, method, path);
-		expect({path, code: result.code}).not.toEqual({path, code: APIErrorCodes.NOT_FOUND});
-	}
-}
-
 async function postSignedWebhook(harness: ApiTestHarness, secret: string): Promise<number> {
 	const payload = webhookPayload();
 	const {response} = await createBuilderWithoutAuth(harness)
@@ -278,11 +267,13 @@ describe('self-hosted premium routes', () => {
 				.post(`/gifts/${code}/redeem`)
 				.expect(HTTP_STATUS.NO_CONTENT)
 				.execute();
-			const gifts = await createBuilder<Array<unknown>>(harness, account.token).get('/users/@me/gifts').execute();
-			expect(gifts).toEqual([]);
+			await createBuilder(harness, account.token)
+				.get('/users/@me/gifts')
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
+				.execute();
 		});
 
-		test('credits admin generated gift codes to the issuing admin', async () => {
+		test('attributes admin generated gift codes to the system user', async () => {
 			const admin = await setUserACLs(harness, await createTestAccount(harness), [
 				AdminACLs.AUTHENTICATE,
 				AdminACLs.GIFT_CODES_GENERATE,
@@ -295,7 +286,7 @@ describe('self-hosted premium routes', () => {
 			const gift = await createBuilderWithoutAuth<{created_by: {id: string} | null}>(harness)
 				.get(`/gifts/${code}`)
 				.execute();
-			expect(gift.created_by?.id).toBe(admin.userId);
+			expect(gift.created_by?.id).toBe('0');
 		});
 
 		test('keeps purchase and hosted-only routes unavailable', async () => {
@@ -307,10 +298,10 @@ describe('self-hosted premium routes', () => {
 			]);
 		});
 
-		test('keeps servicing routes and the webhook available while a Stripe key is configured', async () => {
+		test('hides servicing routes and the webhook even with a configured Stripe key', async () => {
 			const account = await createTestAccount(harness);
-			await expectRoutesRegistered(harness, account.token, SERVICING_ROUTES);
-			expect(await postSignedWebhook(harness, 'whsec_test_fluxer')).toBe(HTTP_STATUS.OK);
+			await expectRoutesNotFound(harness, account.token, SERVICING_ROUTES);
+			expect(await postSignedWebhook(harness, 'whsec_test_fluxer')).toBe(HTTP_STATUS.NOT_FOUND);
 		});
 
 		test('hides servicing routes and the webhook without a Stripe key', async () => {
@@ -336,7 +327,7 @@ describe('self-hosted premium routes', () => {
 			expect(discovery.features).toMatchObject({
 				premium_enabled: true,
 				stripe_enabled: false,
-				stripe_serviceable: true,
+				stripe_serviceable: false,
 			});
 		});
 	});
@@ -346,27 +337,27 @@ describe('self-hosted premium routes', () => {
 			await setPremiumMode('mirror');
 		});
 
-		test('serves price ids from the env catalog', async () => {
+		test('hides price ids even with a configured env catalog', async () => {
 			getConfig().stripe.prices = {...USD_PRICES};
 			server.use(...createStripeApiHandlers().handlers);
-			const priceIds = await createBuilderWithoutAuth<Record<string, unknown>>(harness)
+			await createBuilderWithoutAuth<Record<string, unknown>>(harness)
 				.get('/premium/price-ids?country_code=US')
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
 				.execute();
-			expect(priceIds).toMatchObject({monthly: USD_PRICES.monthlyUsd, yearly: USD_PRICES.yearlyUsd});
 			const discovery = await createBuilderWithoutAuth<WellKnownFluxerResponse>(harness)
 				.get('/.well-known/fluxer')
 				.execute();
-			expect(discovery.features).toMatchObject({premium_enabled: true, stripe_enabled: true});
+			expect(discovery.features).toMatchObject({premium_enabled: true, stripe_enabled: false});
 		});
 
-		test('verifies webhooks with the operator webhook secret', async () => {
+		test('hides webhooks before checking configured operator signatures', async () => {
 			await getInstanceConfigRepository().setInstanceBillingConfig({
 				enabled: true,
 				stripe_webhook_secret: OPERATOR_WEBHOOK_SECRET,
 				prices: {GBP: {monthly: 'price_monthlygbp', yearly: 'price_yearlygbp'}},
 			});
 			const missing = await createBuilderWithoutAuth(harness).post('/stripe/webhook').body('{}').executeRaw();
-			expect(missing.response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+			expect(missing.response.status).toBe(HTTP_STATUS.NOT_FOUND);
 			const payload = webhookPayload();
 			const accepted = await createBuilderWithoutAuth(harness)
 				.post('/stripe/webhook')
@@ -374,17 +365,17 @@ describe('self-hosted premium routes', () => {
 				.header('content-type', 'application/json')
 				.body(payload)
 				.executeRaw();
-			expect(accepted.response.status).toBe(HTTP_STATUS.OK);
+			expect(accepted.response.status).toBe(HTTP_STATUS.NOT_FOUND);
 			const rejected = await createBuilderWithoutAuth(harness)
 				.post('/stripe/webhook')
 				.header('stripe-signature', signWebhook(payload, 'whsec_test_fluxer'))
 				.header('content-type', 'application/json')
 				.body(payload)
 				.executeRaw();
-			expect(rejected.response.status).toBe(HTTP_STATUS.UNAUTHORIZED);
+			expect(rejected.response.status).toBe(HTTP_STATUS.NOT_FOUND);
 		});
 
-		test('keeps servicing routes and the webhook available after billing is disabled', async () => {
+		test('keeps servicing routes and the webhook unavailable after billing is disabled', async () => {
 			await getInstanceConfigRepository().setInstanceBillingConfig({
 				enabled: false,
 				stripe_webhook_secret: OPERATOR_WEBHOOK_SECRET,
@@ -392,15 +383,15 @@ describe('self-hosted premium routes', () => {
 			});
 			const account = await createTestAccount(harness);
 			await expectRoutesNotFound(harness, account.token, PURCHASE_ROUTES);
-			await expectRoutesRegistered(harness, account.token, SERVICING_ROUTES);
-			expect(await postSignedWebhook(harness, OPERATOR_WEBHOOK_SECRET)).toBe(HTTP_STATUS.OK);
+			await expectRoutesNotFound(harness, account.token, SERVICING_ROUTES);
+			expect(await postSignedWebhook(harness, OPERATOR_WEBHOOK_SECRET)).toBe(HTTP_STATUS.NOT_FOUND);
 			const discovery = await createBuilderWithoutAuth<WellKnownFluxerResponse>(harness)
 				.get('/.well-known/fluxer')
 				.execute();
 			expect(discovery.features).toMatchObject({
 				premium_enabled: true,
 				stripe_enabled: false,
-				stripe_serviceable: true,
+				stripe_serviceable: false,
 			});
 		});
 
@@ -438,10 +429,11 @@ describe('hosted premium routes', () => {
 		restoreGlobalState(original);
 	});
 
-	test('keeps every Stripe and gift route registered regardless of premium mode', async () => {
+	test('hides all Stripe routes while keeping hosted gift and store routes registered', async () => {
 		setCachedInstancePremiumMode('everyone');
 		const account = await createTestAccount(harness);
-		const routes = [...BILLING_ROUTES, ...GIFT_ROUTES, ...HOSTED_ONLY_ROUTES, ...STORE_BILLING_ROUTES].filter(
+		await expectRoutesNotFound(harness, account.token, [...BILLING_ROUTES, ...HOSTED_ONLY_ROUTES]);
+		const routes = [...GIFT_ROUTES, ...STORE_BILLING_ROUTES].filter(
 			([, path]) => path !== '/users/@me/age-verification',
 		);
 		for (const [method, path] of routes) {
@@ -449,7 +441,7 @@ describe('hosted premium routes', () => {
 			expect({path, code: result.code}).not.toEqual({path, code: APIErrorCodes.NOT_FOUND});
 		}
 		const webhook = await createBuilderWithoutAuth(harness).post('/stripe/webhook').body('{}').executeRaw();
-		expect(webhook.response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+		expect(webhook.response.status).toBe(HTTP_STATUS.NOT_FOUND);
 	});
 
 	test('serves admin generated gift codes', async () => {
@@ -459,7 +451,7 @@ describe('hosted premium routes', () => {
 		expect(gift.code).toBe(code);
 	});
 
-	test('reports premium enabled and Stripe from the configured catalog in discovery', async () => {
+	test('reports Stripe disabled regardless of the configured catalog in discovery', async () => {
 		const before = await createBuilderWithoutAuth<WellKnownFluxerResponse>(harness)
 			.get('/.well-known/fluxer')
 			.execute();
@@ -469,7 +461,7 @@ describe('hosted premium routes', () => {
 			const after = await createBuilderWithoutAuth<WellKnownFluxerResponse>(harness)
 				.get('/.well-known/fluxer')
 				.execute();
-			expect(after.features).toMatchObject({premium_enabled: true, stripe_enabled: true});
+			expect(after.features).toMatchObject({premium_enabled: true, stripe_enabled: false});
 		} finally {
 			getConfig().stripe.prices = original.prices;
 		}

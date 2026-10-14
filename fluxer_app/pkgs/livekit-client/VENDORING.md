@@ -18,6 +18,12 @@ Every file went through the same mechanical steps, so a fresh upstream tree can 
 
 `connectionHelper`, `createLocalScreenTracks`, `getStereoAudioStreamTrack`, `isLocalPub`, the frame metadata worker, `room/token-source/test-tokens.ts`, `utils/subscribeToEvents.ts`, and the `DataTrackPacket`, data track packet extension and `LocalTrackRecorder` exports. `createV0RtcUrl`, `truncateBytes`, `videoQualityForRid` and `STOP_REFETCH_DELAY_MS` are no longer exported.
 
+## Behaviour changes to carry forward
+
+`DeviceManager.getDevices` stops every track of its temporary permission stream in `finally`, including when the second `enumerateDevices` fails. The stream is owned by device enumeration and is never handed to a caller. Keep this cleanup on each update; `DeviceManager.test.ts` covers failure and successful enumeration, with no-capture controls.
+
+`LocalTrack.restart` does nothing once the track was stopped with `stop()`. Upstream clears `manuallyStopped` there and re-acquires the device with `getUserMedia`, so an `unmute()`, a `restartTrack()`, a permission grant after a revoke or a mobile return from the background that reaches a track already stopped by a room disconnect opens a microphone or camera capture nobody owns, and it stays live until the page reloads. Re-acquisition after the device ended the capture (`ended` without `stop()`), after `stopOnMute`, after a device change while muted and after the camera mute released the capture is unchanged. The subclass overrides stop at the same point: `LocalAudioTrack.restart` skips the silence check (a temporary `AudioContext` and an `AudioSilenceDetected` event) and `LocalVideoTrack.restartTrack` skips the simulcast sender swap (an ended clone handed to `replaceTrack`) once the track was stopped. Every update has to keep these guards; `LocalAudioTrack.test.ts` ("microphone re-acquisition") and `LocalVideoTrack.test.ts` ("camera re-acquisition") fail without them.
+
 ## Updating from upstream
 
 1. Read the upstream changelog for the target version.

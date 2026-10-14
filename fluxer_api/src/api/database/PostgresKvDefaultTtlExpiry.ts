@@ -6,6 +6,7 @@ import {
 	recordPostgresKvCleanPass,
 } from '@app/api/database/PostgresKvQueryExecutor';
 import * as DonationTables from '@app/api/donation/DonationTables';
+import * as FeedTables from '@app/api/feed/FeedTables';
 import * as Tables from '@app/api/Tables';
 import {type IPostgresClient, quoteIdentifier} from '@pkgs/postgres/src/Client';
 import {ms} from 'itty-time';
@@ -17,7 +18,7 @@ const CLEAN_PASS_INTERVAL_MS = ms('1 day');
 const OWN_EXPIRY_PASS = new Set<string>([Tables.JobsById.name, Tables.JobsByDayBucket.name]);
 
 export const DEFAULT_TTL_TABLES: ReadonlyArray<{name: string; defaultTtlSeconds: number}> = [
-	...[...Object.values(Tables), ...Object.values(DonationTables)].flatMap((table) =>
+	...[...Object.values(Tables), ...Object.values(DonationTables), ...Object.values(FeedTables)].flatMap((table) =>
 		table.defaultTtlSeconds === undefined || OWN_EXPIRY_PASS.has(table.name)
 			? []
 			: [{name: table.name, defaultTtlSeconds: table.defaultTtlSeconds}],

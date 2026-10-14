@@ -23,7 +23,9 @@ import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import MobileLayout from '@app/features/ui/state/MobileLayout';
 import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
 import * as UserProfileCommands from '@app/features/user/commands/UserProfileCommands';
+import {PremiumUserBadge} from '@app/features/user/components/PremiumUserBadge';
 import {UserProfileBadges} from '@app/features/user/components/popouts/UserProfileBadges';
+import profileCardStyles from '@app/features/user/components/profile/profile_card/ProfileCardUserInfo.module.css';
 import type {Profile} from '@app/features/user/models/Profile';
 import Users from '@app/features/user/state/Users';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
@@ -273,20 +275,30 @@ export const DMWelcomeSection: React.FC<DMWelcomeSectionProps> = observer(functi
 						/>
 					</button>
 				</FocusRing>
-				<FocusRing offset={-2} data-flx="channel.direct-message.dm-welcome-section.focus-ring--2">
-					<button
-						type="button"
-						onClick={openFullProfile}
-						onContextMenu={handleUserContextMenu}
-						className={styles.usernameButton}
-						data-flx="channel.direct-message.dm-welcome-section.username-button.open-full-profile"
-					>
-						<span className={styles.username} data-flx="channel.direct-message.dm-welcome-section.username">
-							{fluxerTag}
-						</span>
-					</button>
-				</FocusRing>
+				{/* Micup: the premium crown shares the name's line (the badge row below no longer shows premium). */}
+				<div className={profileCardStyles.nameRow} data-flx="channel.direct-message.dm-welcome-section.name-row">
+					<FocusRing offset={-2} data-flx="channel.direct-message.dm-welcome-section.focus-ring--2">
+						<button
+							type="button"
+							onClick={openFullProfile}
+							onContextMenu={handleUserContextMenu}
+							className={styles.usernameButton}
+							data-flx="channel.direct-message.dm-welcome-section.username-button.open-full-profile"
+						>
+							<span className={styles.username} data-flx="channel.direct-message.dm-welcome-section.username">
+								{fluxerTag}
+							</span>
+						</button>
+					</FocusRing>
+					<PremiumUserBadge
+						user={user}
+						size={20}
+						className={profileCardStyles.userTagWrapper}
+						data-flx="channel.direct-message.dm-welcome-section.premium-user-badge"
+					/>
+				</div>
 				<UserProfileBadges
+					showPremium={false}
 					user={user}
 					profile={profile}
 					isModal={true}

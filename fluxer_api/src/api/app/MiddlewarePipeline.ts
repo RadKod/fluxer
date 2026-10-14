@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {createRedactedInfoRequestLogger} from '@app/api/app/RequestLogRedaction';
 import type {ILogger} from '@app/api/ILogger';
 import {ActivityContextMiddleware} from '@app/api/infrastructure/activity/ActivityMeta';
 import {AuditLogMiddleware} from '@app/api/middleware/AuditLogMiddleware';
@@ -20,7 +21,7 @@ import {Headers as HttpHeaders} from '@fluxer/constants/src/Headers';
 import {InvalidApiOriginError} from '@fluxer/errors/src/domains/core/InvalidApiOriginError';
 import {cors} from '@fluxer/hono/src/middleware/Cors';
 import {applyMiddlewareStack} from '@fluxer/hono/src/middleware/MiddlewareStack';
-import {createInfoRequestLogger, requestLogger} from '@fluxer/hono/src/middleware/RequestLogger';
+import {requestLogger} from '@fluxer/hono/src/middleware/RequestLogger';
 import {resolveClientIpHeaderName} from '@fluxer/ip_utils/src/ClientIp';
 
 interface MiddlewarePipelineOptions {
@@ -80,7 +81,7 @@ export function configureMiddleware(routes: HonoApp, options: MiddlewarePipeline
 	routes.use(IpBanMiddleware);
 	routes.use(
 		requestLogger({
-			log: createInfoRequestLogger(logger),
+			log: createRedactedInfoRequestLogger(logger),
 			skip: ['/_health'],
 		}),
 	);

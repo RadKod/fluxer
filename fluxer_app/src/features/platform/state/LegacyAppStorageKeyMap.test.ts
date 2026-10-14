@@ -40,6 +40,23 @@ function rowLabel(row: LegacyAppStorageKeyRow): string {
 }
 
 describe('legacy key map totality', () => {
+	test('the deployed feed read cursor is account content rather than a shared preference', () => {
+		expect(resolveLegacyAppStorageKey('FeedNotifications')?.row).toEqual({
+			kind: 'exact',
+			key: 'FeedNotifications',
+			scope: 'account',
+			fanout: 'content',
+		});
+	});
+	test('the deployed shared feed tab preference has an exact global row', () => {
+		expect(resolveLegacyAppStorageKey('FeedTabs')?.row).toEqual({
+			kind: 'exact',
+			key: 'FeedTabs',
+			scope: 'global',
+			fanout: 'preference',
+		});
+	});
+
 	test('every deployed golden key is mapped or explicitly not migrated', () => {
 		for (const entry of GOLDEN_DEPLOYED_STORAGE_ENTRIES) {
 			const covered = resolveLegacyAppStorageKey(entry.key) !== null || isNotMigratedLegacyKey(entry.key);
@@ -125,7 +142,7 @@ describe('persisted stores', () => {
 describe('fan-out split', () => {
 	test('exactly the golden content keys carry the content fan-out', () => {
 		const contentRows = LEGACY_APP_STORAGE_KEY_MAP.filter((row) => row.fanout === 'content');
-		expect(CONTENT_STORAGE_KEYS).toHaveLength(22);
+		expect(CONTENT_STORAGE_KEYS).toHaveLength(23);
 		for (const key of CONTENT_STORAGE_KEYS) {
 			expect(resolveLegacyAppStorageKey(key)?.row.fanout, key).toBe('content');
 		}
@@ -188,7 +205,7 @@ describe('fan-out split', () => {
 			expect(isLegacyAccountSwappedKey(key), key).toBe(false);
 		}
 		for (const key of OWNED_CONTENT_STORAGE_KEYS) {
-			expect(isLegacyAccountSwappedKey(key), key).toBe(true);
+			expect(isLegacyAccountSwappedKey(key), key).toBe(key !== 'FeedNotifications');
 		}
 	});
 

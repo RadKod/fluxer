@@ -3,8 +3,11 @@
 import type {ApiContext} from '@app/api/ApiContext';
 import type {AdminAuditService} from '@app/api/admin/services/AdminAuditService';
 import {createUserID, type UserID} from '@app/api/BrandedTypes';
+import {Logger} from '@app/api/Logger';
 import type {Relationship} from '@app/api/models/Relationship';
+import {GameActivityPolicyService} from '@app/api/user/services/GameActivityPolicyService';
 import {RelationshipTypes} from '@fluxer/constants/src/UserConstants';
+import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
 import type {
 	AdminRelationshipEntry,
@@ -105,17 +108,22 @@ export class AdminUserRelationshipService {
 		if (!relationship) {
 			throw new UnknownUserError();
 		}
-		await this.removePair({userId, targetUserId, category: data.category});
-		await auditService.createAuditLog({
-			adminUserId,
-			targetType: 'user',
-			targetId: BigInt(userId),
-			action: 'remove_relationship',
-			auditLogReason,
-			metadata: new Map([
-				['target_user_id', targetUserId.toString()],
-				['category', data.category],
-			]),
+		await this.removePair({
+			userId,
+			targetUserId,
+			category: data.category,
+			onPersisted: () =>
+				auditService.createAuditLog({
+					adminUserId,
+					targetType: 'user',
+					targetId: BigInt(userId),
+					action: 'remove_relationship',
+					auditLogReason,
+					metadata: new Map([
+						['target_user_id', targetUserId.toString()],
+						['category', data.category],
+					]),
+				}),
 		});
 	}
 
@@ -134,52 +142,104 @@ export class AdminUserRelationshipService {
 		const type = CATEGORY_TO_TYPE[data.category];
 		const allRelationships = await userRepository.listRelationships(userId);
 		const matching: Array<Relationship> = allRelationships.filter((rel) => rel.type === type);
-		for (const rel of matching) {
-			await this.removePair({userId, targetUserId: rel.targetUserId, category: data.category});
+		let removedCount = 0;
+		let failed = false;
+		let removalError: unknown;
+		try {
+			for (const rel of matching) {
+				await this.removePair({
+					userId,
+					targetUserId: rel.targetUserId,
+					category: data.category,
+					onPersisted: async () => {
+						removedCount++;
+					},
+				});
+			}
+		} catch (error) {
+			failed = true;
+			removalError = error;
 		}
-		await auditService.createAuditLog({
-			adminUserId,
-			targetType: 'user',
-			targetId: BigInt(userId),
-			action: 'remove_relationships_by_category',
-			auditLogReason,
-			metadata: new Map([
-				['category', data.category],
-				['removed_count', matching.length.toString()],
-			]),
-		});
-		return {removed_count: matching.length};
+		if (removedCount > 0 || !failed) {
+			try {
+				await auditService.createAuditLog({
+					adminUserId,
+					targetType: 'user',
+					targetId: BigInt(userId),
+					action: 'remove_relationships_by_category',
+					auditLogReason,
+					metadata: new Map([
+						['category', data.category],
+						['removed_count', removedCount.toString()],
+					]),
+				});
+			} catch (error) {
+				if (!failed) throw error;
+				Logger.error({error}, 'Failed to audit a partially persisted relationship removal');
+			}
+		}
+		if (failed) throw removalError;
+		return {removed_count: removedCount};
 	}
 
 	private async removePair({
 		userId,
 		targetUserId,
 		category,
+		onPersisted,
 	}: {
 		userId: UserID;
 		targetUserId: UserID;
 		category: RelationshipCategory;
+		onPersisted: () => Promise<unknown>;
 	}): Promise<void> {
 		const {users: userRepository, gateway: gatewayService} = this.deps.apiContext.services;
 		switch (category) {
 			case 'friend': {
+				const policyService = new GameActivityPolicyService({users: userRepository, gateway: gatewayService});
+				const fences = await policyService.fencePair(userId, targetUserId);
 				await userRepository.deleteRelationship(userId, targetUserId, RelationshipTypes.FRIEND);
 				await userRepository.deleteRelationship(targetUserId, userId, RelationshipTypes.FRIEND);
-				await gatewayService.dispatchPresence({
-					userId,
-					event: 'RELATIONSHIP_REMOVE',
-					data: {id: targetUserId.toString()},
-				});
-				await gatewayService.dispatchPresence({
-					userId: targetUserId,
-					event: 'RELATIONSHIP_REMOVE',
-					data: {id: userId.toString()},
-				});
+				let auditFailed = false;
+				let auditError: unknown;
+				try {
+					await onPersisted();
+				} catch (error) {
+					auditFailed = true;
+					auditError = error;
+				}
+				try {
+					await policyService.applyPair(fences);
+				} catch (error) {
+					Logger.error({error}, 'Relationship was persisted but game activity revocation acknowledgement failed');
+					if (auditFailed) throw auditError;
+					throw new ServiceUnavailableError({
+						message: 'Relationship saved; game activity revocation acknowledgement is pending',
+						data: {relationship_persisted: true, game_activity_revocation_pending: true},
+					});
+				}
+				try {
+					await gatewayService.dispatchPresence({
+						userId,
+						event: 'RELATIONSHIP_REMOVE',
+						data: {id: targetUserId.toString()},
+					});
+					await gatewayService.dispatchPresence({
+						userId: targetUserId,
+						event: 'RELATIONSHIP_REMOVE',
+						data: {id: userId.toString()},
+					});
+				} catch (error) {
+					if (!auditFailed) throw error;
+					Logger.error({error}, 'Failed to notify persisted relationship removal after an audit failure');
+				}
+				if (auditFailed) throw auditError;
 				return;
 			}
 			case 'outgoing_request': {
 				await userRepository.deleteRelationship(userId, targetUserId, RelationshipTypes.OUTGOING_REQUEST);
 				await userRepository.deleteRelationship(targetUserId, userId, RelationshipTypes.INCOMING_REQUEST);
+				await onPersisted();
 				await gatewayService.dispatchPresence({
 					userId,
 					event: 'RELATIONSHIP_REMOVE',
@@ -195,6 +255,7 @@ export class AdminUserRelationshipService {
 			case 'incoming_request': {
 				await userRepository.deleteRelationship(userId, targetUserId, RelationshipTypes.INCOMING_REQUEST);
 				await userRepository.deleteRelationship(targetUserId, userId, RelationshipTypes.OUTGOING_REQUEST);
+				await onPersisted();
 				await gatewayService.dispatchPresence({
 					userId,
 					event: 'RELATIONSHIP_REMOVE',
@@ -209,6 +270,7 @@ export class AdminUserRelationshipService {
 			}
 			case 'blocked': {
 				await userRepository.deleteRelationship(userId, targetUserId, RelationshipTypes.BLOCKED);
+				await onPersisted();
 				await gatewayService.dispatchPresence({
 					userId,
 					event: 'RELATIONSHIP_REMOVE',

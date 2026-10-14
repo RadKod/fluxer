@@ -4,6 +4,7 @@ import styles from '@app/features/app/components/layout/AppLayout.module.css';
 import {useAppLayoutState} from '@app/features/app/components/layout/app_layout/AppLayoutHooks';
 import Authentication from '@app/features/auth/state/Authentication';
 import GatewayConnection from '@app/features/gateway/transport/GatewayConnection';
+import {StoreAutostartPromptManager} from '@app/features/platform/components/StoreAutostartPromptManager';
 import {RecoveryKitReminderGate} from '@app/features/user/components/RecoveryKitReminderGate';
 import {MediaDeviceStartupPreloadManager} from '@app/features/voice/components/MediaDeviceStartupPreloadManager';
 import {NewDeviceMonitoringManager} from '@app/features/voice/components/NewDeviceMonitoringManager';
@@ -23,6 +24,7 @@ export const AppLayout = observer(({children}: {children: React.ReactNode}) => {
 				<MediaDeviceStartupPreloadManager data-flx="app.app-layout.media-device-startup-preload-manager" />
 			)}
 			{isAuthenticated && <NewDeviceMonitoringManager data-flx="app.app-layout.new-device-monitoring-manager" />}
+			{isAuthenticated && <StoreAutostartPromptManager data-flx="app.app-layout.store-autostart-prompt-manager" />}
 			{isAuthenticated && <RecoveryKitReminderGate data-flx="app.app-layout.recovery-kit-reminder-gate" />}
 			<div
 				className={clsx(styles.appLayout, appState.isStandalone && styles.appLayoutStandalone)}

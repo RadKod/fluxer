@@ -73,7 +73,11 @@ function createExpiredStoreUserHarness(storeRows: Array<StorePurchaseRow>) {
 		userRepository,
 		storeEntitlementService,
 		workerService,
-		userCacheService: {setUserPartialResponseFromUserInBackground: () => {}} as never,
+		userCacheService: {
+			setUserPartialResponseFromUserInBackground: () => {},
+			setUserPartialResponseFromUserInRequestCache: () => {},
+			setUserPartialResponseFromUser: async () => {},
+		} as never,
 		gatewayService: {dispatchPresence: async () => {}} as never,
 	});
 	return {patches, jobs};

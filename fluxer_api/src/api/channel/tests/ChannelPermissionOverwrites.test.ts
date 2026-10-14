@@ -451,4 +451,81 @@ describe('Channel Permission Overwrites', () => {
 		const overwrite = childData.permission_overwrites?.find((o) => o.id === targetRole.id);
 		expect(overwrite).toBeUndefined();
 	});
+	describe('creating a channel in a private category', () => {
+		async function setupPrivateCategory() {
+			const {owner, members, guild} = await setupTestGuildWithMembers(harness, 1);
+			const manager = members[0]!;
+			const managerRole = await createRole(harness, owner.token, guild.id, {
+				name: 'Channel Manager',
+				permissions: Permissions.MANAGE_CHANNELS.toString(),
+			});
+			await addMemberRole(harness, owner.token, guild.id, manager.userId, managerRole.id);
+			const category = await createChannel(harness, owner.token, guild.id, 'staff', ChannelTypes.GUILD_CATEGORY);
+			await createPermissionOverwrite(harness, owner.token, category.id, guild.id, {
+				type: 0,
+				allow: '0',
+				deny: Permissions.VIEW_CHANNEL.toString(),
+			});
+			await createPermissionOverwrite(harness, owner.token, category.id, managerRole.id, {
+				type: 0,
+				allow: Permissions.VIEW_CHANNEL.toString(),
+				deny: '0',
+			});
+			return {owner, manager, guild, category};
+		}
+
+		test('treats an empty overwrite list as absent and inherits the category overwrites', async () => {
+			const {manager, guild, category} = await setupPrivateCategory();
+			const child = await createBuilder<ChannelResponse>(harness, manager.token)
+				.post(`/guilds/${guild.id}/channels`)
+				.body({name: 'staff-chat', type: ChannelTypes.GUILD_TEXT, parent_id: category.id, permission_overwrites: []})
+				.expect(HTTP_STATUS.OK)
+				.execute();
+			const everyone = child.permission_overwrites?.find((o) => o.id === guild.id);
+			expect(everyone?.deny).toBe(Permissions.VIEW_CHANNEL.toString());
+			expect(child.permission_overwrites).toHaveLength(2);
+		});
+
+		test('keeps the channel private when a member with MANAGE_ROLES sends an empty overwrite list', async () => {
+			const {owner, guild, category} = await setupPrivateCategory();
+			const child = await createBuilder<ChannelResponse>(harness, owner.token)
+				.post(`/guilds/${guild.id}/channels`)
+				.body({name: 'staff-voice', type: ChannelTypes.GUILD_VOICE, parent_id: category.id, permission_overwrites: []})
+				.expect(HTTP_STATUS.OK)
+				.execute();
+			const everyone = child.permission_overwrites?.find((o) => o.id === guild.id);
+			expect(everyone?.deny).toBe(Permissions.VIEW_CHANNEL.toString());
+		});
+
+		test('still requires MANAGE_ROLES for a non-empty overwrite list', async () => {
+			const {manager, guild, category} = await setupPrivateCategory();
+			await createBuilder(harness, manager.token)
+				.post(`/guilds/${guild.id}/channels`)
+				.body({
+					name: 'staff-chat',
+					type: ChannelTypes.GUILD_TEXT,
+					parent_id: category.id,
+					permission_overwrites: [{id: guild.id, type: 0, allow: '0', deny: Permissions.SEND_MESSAGES.toString()}],
+				})
+				.expect(HTTP_STATUS.FORBIDDEN)
+				.execute();
+		});
+
+		test('uses a non-empty overwrite list as given instead of the category overwrites', async () => {
+			const {owner, guild, category} = await setupPrivateCategory();
+			const child = await createBuilder<ChannelResponse>(harness, owner.token)
+				.post(`/guilds/${guild.id}/channels`)
+				.body({
+					name: 'staff-chat',
+					type: ChannelTypes.GUILD_TEXT,
+					parent_id: category.id,
+					permission_overwrites: [{id: guild.id, type: 0, allow: '0', deny: Permissions.SEND_MESSAGES.toString()}],
+				})
+				.expect(HTTP_STATUS.OK)
+				.execute();
+			expect(child.permission_overwrites).toEqual([
+				expect.objectContaining({id: guild.id, allow: '0', deny: Permissions.SEND_MESSAGES.toString()}),
+			]);
+		});
+	});
 });

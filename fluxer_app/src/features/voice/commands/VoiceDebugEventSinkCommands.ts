@@ -24,22 +24,28 @@ function describeStatsSnapshotError(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
-function publishBrowserOpeningStatsSnapshot(): void {
-	if (!canOpenBrowserVoiceDebugEventSinkPopout()) return;
+function renderOpeningStatsHtml(): string {
 	const generatedAtIso = getGeneratedAtIso();
 	try {
-		setBrowserVoiceDebugEventSinkStatsHtml(renderVoiceDebugStatsHtml(collectStatsForNerdsSnapshot(), generatedAtIso));
+		return renderVoiceDebugStatsHtml(collectStatsForNerdsSnapshot(), generatedAtIso);
 	} catch (error) {
-		setBrowserVoiceDebugEventSinkStatsHtml(
-			renderVoiceDebugStatsUnavailableHtml(
-				`Failed to collect stats snapshot before opening event sink: ${describeStatsSnapshotError(error)}`,
-				generatedAtIso,
-			),
+		return renderVoiceDebugStatsUnavailableHtml(
+			`Failed to collect stats snapshot before opening event sink: ${describeStatsSnapshotError(error)}`,
+			generatedAtIso,
 		);
 	}
 }
 
+function publishOpeningStatsSnapshot(): void {
+	const electron = getElectronAPI();
+	const canOpenBrowser = canOpenBrowserVoiceDebugEventSinkPopout();
+	if (!electron?.setVoiceDebugEventSinkStatsHtml && !canOpenBrowser) return;
+	const html = renderOpeningStatsHtml();
+	electron?.setVoiceDebugEventSinkStatsHtml?.(html);
+	if (canOpenBrowser) setBrowserVoiceDebugEventSinkStatsHtml(html);
+}
+
 export async function openVoiceDebugEventSinkPopout(): Promise<void> {
-	publishBrowserOpeningStatsSnapshot();
+	publishOpeningStatsSnapshot();
 	await voiceEngineV2AppDebugEventSinkHostAdapter.openEventSinkPopout();
 }

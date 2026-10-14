@@ -119,6 +119,22 @@ export interface MessageSnapshot {
 	flags: number;
 }
 
+export interface MessageComponentData {
+	type: number;
+	style: Nullish<number>;
+	label: Nullish<string>;
+	emoji_name: Nullish<string>;
+	emoji_id: Nullish<EmojiID>;
+	emoji_animated: Nullish<boolean>;
+	custom_id: Nullish<string>;
+	disabled: Nullish<boolean>;
+}
+
+export interface MessageActionRowData {
+	type: number;
+	components: Nullish<Array<MessageComponentData>>;
+}
+
 export interface MessageCall {
 	participant_ids: Nullish<Set<UserID>>;
 	ended_timestamp: Nullish<Date>;
@@ -149,6 +165,8 @@ export interface MessageRow {
 	call: Nullish<MessageCall>;
 	has_reaction: Nullish<boolean>;
 	version: number;
+	// Optional: rows written before the column existed have no key.
+	micup_components?: Nullish<Array<MessageActionRowData>>;
 }
 
 export const MESSAGE_COLUMNS = [
@@ -176,6 +194,7 @@ export const MESSAGE_COLUMNS = [
 	'call',
 	'has_reaction',
 	'version',
+	'micup_components',
 ] as const satisfies ReadonlyArray<keyof MessageRow>;
 
 export interface ChannelPinRow {

@@ -56,10 +56,13 @@ export default class DeviceManager {
 					audio: kind !== 'videoinput' && {deviceId: {ideal: 'default'}},
 				};
 				const stream = await navigator.mediaDevices.getUserMedia(permissionsToAcquire);
-				devices = await navigator.mediaDevices.enumerateDevices();
-				stream.getTracks().forEach((track) => {
-					track.stop();
-				});
+				try {
+					devices = await navigator.mediaDevices.enumerateDevices();
+				} finally {
+					stream.getTracks().forEach((track) => {
+						track.stop();
+					});
+				}
 			}
 		}
 		this._previousDevices = devices;

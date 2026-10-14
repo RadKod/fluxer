@@ -37,6 +37,7 @@ dependencies = [
  "napi-build",
  "napi-derive",
  "windows",
+ "windows-future",
 ]
 
 [[package]]

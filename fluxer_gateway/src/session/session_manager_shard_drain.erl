@@ -107,6 +107,7 @@ push_and_drain_session(TargetNode, SessionId, Pid) ->
 do_push_and_drain(TargetNode, SessionId, SessionState, Pid) ->
     case session_state_transfer:push_state(TargetNode, SessionId, SessionState) of
         ok ->
+            ok = session_state_transfer:note_handoff(SessionId, TargetNode),
             gen_server:cast(Pid, handoff_fence),
             ok;
         {error, Reason} = Error ->
@@ -183,6 +184,8 @@ build_session_data(Data, IdentifyData, Version, SocketPid, SessionId, UserDataMa
         version => Version,
         user_data => term_detach:detach(build_user_data(UserDataMap)),
         custom_status => DetachedCustomStatus,
+        game_activity_policy => maps:get(<<"game_activity_policy">>, Data, undefined),
+        game_activity_request_nonce => maps:get(game_activity_request_nonce, Data, undefined),
         token_hash => utils:hash_token(maps:get(token, IdentifyData)),
         auth_session_id_hash => extract_auth_session_id_hash(Data),
         properties => term_detach:detach(Properties),
@@ -244,7 +247,11 @@ build_user_data(UserDataMap) ->
         <<"flags">> => maps:get(<<"flags">>, UserDataMap),
         <<"mention_flags">> => map_utils:get_safe(UserDataMap, <<"mention_flags">>, undefined)
     },
-    Normalized = user_utils:normalize_user(UserData0),
+    Cosmetics = maps:with(
+        [<<"avatar_decoration_data">>, <<"avatar_ultra_data">>, <<"nameplate_data">>],
+        UserDataMap
+    ),
+    Normalized = user_utils:normalize_user(maps:merge(UserData0, Cosmetics)),
     Normalized#{<<"is_staff">> => maps:get(<<"is_staff">>, UserDataMap, false)}.
 
 -spec detach_custom_status(map() | null) -> map() | null.
@@ -288,7 +295,15 @@ is_truthy(_) -> false.
 
 -spec build_ready_data_for_session(map()) -> map().
 build_ready_data_for_session(Data) ->
-    Detached = term_detach:detach(Data#{<<"guilds">> => []}),
+    Public = maps:without(
+        [
+            game_activity_request_nonce,
+            <<"game_activity_request_nonce">>,
+            <<"game_activity_policy">>
+        ],
+        Data
+    ),
+    Detached = term_detach:detach(Public#{<<"guilds">> => []}),
     case Detached of
         M when is_map(M) -> M;
         _ -> #{}
@@ -412,8 +427,10 @@ do_fetch_rpc_data(Request, PeerIP) ->
     Lon = session_manager_shard_lookup:normalize_coordinate(
         map_utils:get_safe(Properties, <<"longitude">>, undefined)
     ),
+    Nonce = base64:encode(crypto:strong_rand_bytes(24)),
     RpcRequest = #{
         <<"type">> => <<"session">>,
+        <<"game_activity_request_nonce">> => Nonce,
         <<"token">> => maps:get(token, IdentifyData),
         <<"version">> => maps:get(version, Request),
         <<"ip">> => PeerIP
@@ -423,7 +440,18 @@ do_fetch_rpc_data(Request, PeerIP) ->
         RpcWithCoords, thread_channels_capable(IdentifyData)
     ),
     RpcResult = api_rpc_client:call_with_retry(RpcWithCapability, ?SESSION_RPC_RETRY_CONFIG),
-    classify_rpc_result(RpcResult, PeerIP).
+    bind_game_activity_nonce(classify_rpc_result(RpcResult, PeerIP), Nonce).
+
+-spec bind_game_activity_nonce({ok, map()} | {error, term()}, binary()) ->
+    {ok, map()} | {error, term()}.
+bind_game_activity_nonce({ok, Data}, Nonce) ->
+    Clean = maps:remove(game_activity_request_nonce, Data),
+    case maps:get(<<"game_activity_request_nonce">>, Data, undefined) of
+        Nonce -> {ok, Clean#{game_activity_request_nonce => Nonce}};
+        _ -> {ok, Clean}
+    end;
+bind_game_activity_nonce(Error, _Nonce) ->
+    Error.
 
 -spec add_thread_channels_capable(map(), boolean()) -> map().
 add_thread_channels_capable(RpcRequest, true) ->

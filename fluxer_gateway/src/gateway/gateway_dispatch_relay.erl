@@ -10,6 +10,7 @@
     dispatch/4,
     dispatch_many/3,
     dispatch_many/4,
+    dispatch_game_activity_many/2,
     dispatch_direct/3,
     dispatch_grouped/4,
     dispatch_remote_pids/2,
@@ -58,6 +59,10 @@ dispatch_many(SessionPids, Event, Payload) ->
 -spec dispatch_many([pid()], atom(), term(), term()) -> ok.
 dispatch_many(SessionPids, Event, Payload, _IgnoredPartitionKey) ->
     dispatch_many(SessionPids, Event, Payload).
+
+-spec dispatch_game_activity_many([pid()], map()) -> ok | busy.
+dispatch_game_activity_many(SessionPids, Payload) ->
+    gateway_dispatch_relay_batch:relay_game_activity_many(SessionPids, Payload).
 
 -spec dispatch_direct(term(), term(), term()) -> ok.
 dispatch_direct(SessionPid, Event, Payload) when is_pid(SessionPid) ->

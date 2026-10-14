@@ -2,6 +2,12 @@
 
 import type {ValueOf} from '@fluxer/constants/src/ValueOf';
 
+export const ApplicationCommandGatewayEvents = {
+	APPLICATION_COMMANDS_UPDATE: 'APPLICATION_COMMANDS_UPDATE',
+	INTERACTION_CREATE: 'INTERACTION_CREATE',
+	INTERACTION_RESPONSE_CREATE: 'INTERACTION_RESPONSE_CREATE',
+} as const;
+
 export const GatewayOpcodes = {
 	DISPATCH: 0,
 	HEARTBEAT: 1,

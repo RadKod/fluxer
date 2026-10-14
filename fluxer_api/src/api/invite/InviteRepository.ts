@@ -4,6 +4,7 @@ import type {ChannelID, GuildID, InviteCode, UserID} from '@app/api/BrandedTypes
 import {createInviteCode} from '@app/api/BrandedTypes';
 import {
 	BatchBuilder,
+	deleteOneOrMany,
 	executeConditional,
 	fetchMany,
 	fetchOne,
@@ -40,6 +41,27 @@ interface CreateInviteParams {
 	temporary?: boolean;
 }
 
+// A row with neither a guild nor a channel belongs to no one: see InviteRepository.takeOverUnowned.
+export function isUnownedInvite(invite: Invite): boolean {
+	return invite.guildId == null && invite.channelId == null;
+}
+
+function toInviteRow(data: CreateInviteParams): InviteRow {
+	return {
+		code: data.code,
+		type: data.type,
+		guild_id: data.guild_id,
+		channel_id: data.channel_id ?? null,
+		inviter_id: data.inviter_id ?? null,
+		created_at: new Date(),
+		uses: data.uses,
+		max_uses: data.max_uses,
+		max_age: data.max_age,
+		temporary: data.temporary ?? false,
+		version: 1,
+	};
+}
+
 export class InviteRepository extends IInviteRepository {
 	async findUnique(code: InviteCode): Promise<Invite | null> {
 		const invite = await fetchOne<InviteRow>(FETCH_INVITE_BY_CODE_CQL, {code});
@@ -73,19 +95,7 @@ export class InviteRepository extends IInviteRepository {
 	}
 
 	async create(data: CreateInviteParams): Promise<Invite> {
-		const inviteRow: InviteRow = {
-			code: data.code,
-			type: data.type,
-			guild_id: data.guild_id,
-			channel_id: data.channel_id ?? null,
-			inviter_id: data.inviter_id ?? null,
-			created_at: new Date(),
-			uses: data.uses,
-			max_uses: data.max_uses,
-			max_age: data.max_age,
-			temporary: data.temporary ?? false,
-			version: 1,
-		};
+		const inviteRow = toInviteRow(data);
 		const batch = new BatchBuilder();
 		const hasExpiry = inviteRow.max_age > 0;
 		if (hasExpiry) {
@@ -172,6 +182,60 @@ export class InviteRepository extends IInviteRepository {
 		return new Invite(inviteRow);
 	}
 
+	async createIfAbsent(data: CreateInviteParams): Promise<boolean> {
+		const row = toInviteRow(data);
+		const ttl = row.max_age;
+		const applied = await executeConditional(
+			ttl > 0 ? Invites.insertIfNotExistsWithTtl(row, ttl) : Invites.insertIfNotExists(row),
+		);
+		if (!applied) {
+			// A claim left by an interrupted create for the same owner is completed and a row no one owns is taken
+			// over; any other owner's row refuses the claim.
+			const existing = await this.findUnique(row.code);
+			if (existing != null && isUnownedInvite(existing)) {
+				if (!(await this.takeOverUnowned(row, existing.uses))) return false;
+			} else if (existing?.guildId !== row.guild_id || existing.channelId !== row.channel_id) {
+				return false;
+			}
+		}
+		const batch = new BatchBuilder();
+		if (row.guild_id) {
+			const byGuild = {guild_id: row.guild_id, code: row.code};
+			batch.addPrepared(ttl > 0 ? InvitesByGuild.insertWithTtl(byGuild, ttl) : InvitesByGuild.insert(byGuild));
+		}
+		if (row.channel_id) {
+			const byChannel = {channel_id: row.channel_id, code: row.code};
+			batch.addPrepared(ttl > 0 ? InvitesByChannel.insertWithTtl(byChannel, ttl) : InvitesByChannel.insert(byChannel));
+		}
+		await batch.execute();
+		return true;
+	}
+
+	// Joins count uses with a plain write (no Paxos on a hot vanity code), so a use landing after the code was
+	// released — or stamped later by a skewed clock — leaves a row holding only `uses`. Claims take such a row
+	// over through Paxos; the condition never matches a row that has an owner.
+	private async takeOverUnowned(row: InviteRow, observedUses: number): Promise<boolean> {
+		const patch = {
+			type: Db.set(row.type),
+			guild_id: Db.set(row.guild_id),
+			channel_id: Db.set(row.channel_id),
+			inviter_id: Db.set(row.inviter_id),
+			created_at: Db.set(row.created_at),
+			uses: Db.set(row.uses),
+			max_uses: Db.set(row.max_uses),
+			max_age: Db.set(row.max_age),
+			temporary: Db.set(row.temporary),
+			version: Db.set(row.version),
+		};
+		const expected = {guild_id: null, channel_id: null, uses: observedUses};
+		const pk = {code: row.code};
+		return executeConditional(
+			row.max_age > 0
+				? Invites.conditionalPatchByPkWithTtl(pk, patch, expected, row.max_age)
+				: Invites.conditionalPatchByPk(pk, patch, expected),
+		);
+	}
+
 	async updateInviteUses(code: InviteCode, uses: number, invite: Invite): Promise<void> {
 		if (invite.maxAge > 0) {
 			await upsertOne(
@@ -215,6 +279,10 @@ export class InviteRepository extends IInviteRepository {
 		if (!invite) {
 			return;
 		}
+		if (invite.guildId && !invite.channelId) {
+			await this.deleteVanity(code, invite.guildId);
+			return;
+		}
 		const batch = new BatchBuilder();
 		batch.addPrepared(Invites.deleteByPk({code}));
 		if (invite.guildId) {
@@ -224,5 +292,13 @@ export class InviteRepository extends IInviteRepository {
 			batch.addPrepared(InvitesByChannel.deleteByPk({channel_id: invite.channelId, code}));
 		}
 		await batch.execute();
+	}
+
+	// Vanity codes are claimed through Paxos (createIfAbsent), so they are released through Paxos too: a plain
+	// tombstone can carry a later timestamp than the next claim's ballot and hide that claim. The condition also
+	// keeps a guild from releasing a code another guild holds.
+	async deleteVanity(code: InviteCode, guildId: GuildID): Promise<void> {
+		await executeConditional(Invites.conditionalDeleteByPk({code}, {guild_id: guildId, channel_id: null}));
+		await deleteOneOrMany(InvitesByGuild.deleteByPk({guild_id: guildId, code}));
 	}
 }

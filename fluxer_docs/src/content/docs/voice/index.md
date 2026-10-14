@@ -173,7 +173,7 @@ An entrance sound is a short clip an account plays for everyone already connecte
 
 Fluxer records which clip belongs to which scope and nothing more. [Play entrance sound](/http-api/entrance-sounds/#play-entrance-sound) names the clip explicitly, so the client decides which selection applies to a given channel.
 
-Playback requires a voice state in the target channel and no channel permission. A caller that holds none is refused at the `channel_id` path with the validation code `ENTRANCE_SOUND_INVALID_SCOPE`, and a channel ID naming no channel is refused the same way. A successful call sends one [ENTRANCE_SOUND_PLAY](/gateway/events/#entrance-sound-play) Dispatch to every other account with a voice state in the channel, at most once per account and never back to the caller. That Dispatch has the clip's CDN URL, and each recipient fetches and plays it locally, so no audio track is published for it.
+Playback requires a voice state in the target channel and the `feature_voice_entrance_sounds` entitlement; it requires no channel permission. A caller that holds no voice state is refused at the `channel_id` path with the validation code `ENTRANCE_SOUND_INVALID_SCOPE`, and a channel ID naming no channel is refused the same way. A successful call sends one [ENTRANCE_SOUND_PLAY](/gateway/events/#entrance-sound-play) Dispatch to every other account with a voice state in the channel, at most once per account and never back to the caller. That Dispatch has the clip's CDN URL, and each recipient fetches and plays it locally, so no audio track is published for it.
 
 Every session the account holds receives the Dispatch, including sessions that are not in the channel. A client filters on `channel_id`.
 

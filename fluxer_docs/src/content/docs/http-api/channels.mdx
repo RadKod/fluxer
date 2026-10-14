@@ -32,6 +32,7 @@ A channel object always has its identity and type. Every other field is present 
 | user_limit?<sup>4</sup> | ?integer | The configured member occupancy limit, present only for a guild voice channel |
 | voice_connection_limit?<sup>5</sup> | ?integer | The number of simultaneous voice connections one user may hold, present only for a guild voice channel |
 | rtc_region?<sup>6</sup> | ?string | The ID of the selected RTC region, present only for a guild voice channel |
+| room_theme? | ?string | The [room theme](/http-api/voice-seats/#room-themes) of the 3D room view, present only for a guild voice channel, or null when it has none |
 | last_message_id? | ?snowflake | The ID of the most recent message, null when the channel has none |
 | last_pin_timestamp? | ?ISO8601 timestamp | The time a message was most recently pinned, or null when nothing has ever been pinned |
 | permission_overwrites?<sup>7</sup> | array[[permission overwrite](#permission-overwrite-object) object] | The overwrites applied to this channel, present only for a guild channel |
@@ -420,6 +421,7 @@ Every field is optional, and an omitted field preserves its current value. The g
 | content_warning_text?<sup>10</sup> | ?string | The content warning text (max 200 characters) |
 | rate_limit_per_user?<sup>11</sup> | ?integer | The slowmode interval in seconds (0-21,600) for a guild text, announcement, or voice channel |
 | rtc_region?<sup>12</sup> | ?string | The ID of the RTC region (1-64 characters) for a guild voice channel, where null selects automatic routing |
+| room_theme?<sup>15</sup> | ?string | The [room theme](/http-api/voice-seats/#room-themes) of the 3D room view, where null removes it |
 
 <sup>1</sup> An explicit null preserves the current name. In a guild without flexible channel names, Fluxer lowercases a guild text or announcement channel name, replaces its whitespace with hyphens, and removes disallowed punctuation
 
@@ -446,6 +448,8 @@ Every field is optional, and an omitted field preserves its current value. The g
 <sup>12</sup> Applied only to a guild voice channel. Supplying the field at all, including as null, requires [UPDATE_RTC_REGION](/http-api/permissions/)
 
 <sup>13</sup> The stored value is capped at 96,000 unless the guild holds an [audio bitrate feature](/http-api/guilds/#guild-features). A higher value is stored at the cap rather than rejected
+
+<sup>15</sup> Applied only to a guild voice channel, and accepted while 3D rooms are switched off. A value that is not a theme this server version defines returns 400 `INVALID_FORM_BODY` on any channel type
 
 <sup>14</sup> Absent, null, or equal to the stored type keeps the type. Any other conversion returns 400 `CHANNEL_TYPE_CONVERSION_NOT_SUPPORTED`
 
@@ -504,7 +508,7 @@ Fluxer trims a stored nickname, and a value that is null or empty after trimming
 
 A guild channel change emits [Channel Update](/gateway/events/#channel-update) to every session subscribed to its guild. Replacing a category's permission overwrites also replaces them on each child whose overwrites still exactly match the category's previous values, with one Dispatch per changed child. A child whose overwrites had differed is left unchanged.
 
-Changing `rate_limit_per_user` clears the remaining slowmode delay of every user in the channel, so each user's next message is checked against the new interval. Changing `rtc_region` on a guild voice channel moves its active voice connections to the selected region.
+Changing `rate_limit_per_user` clears the remaining slowmode delay of every user in the channel, so each user's next message is checked against the new interval. Changing `rtc_region` on a guild voice channel moves its active voice connections to the selected region. Changing or removing `room_theme` ends each [game table](/http-api/table-games/#table-lifecycle) at a slot the new theme lacks, as `canceled` with reason `theme_changed`, on the next move or tick at it.
 
 Converting an announcement channel into a text channel deletes every [channel follower webhook](/http-api/webhooks/#webhook-types) that follows it. The deletion runs in the background after the response, emits [Webhooks Update](/gateway/events/#webhooks-update) for each target channel, and writes no audit log entry. Copies already delivered stay in the target channels, and later edits and deletions of the published messages still reach them.
 

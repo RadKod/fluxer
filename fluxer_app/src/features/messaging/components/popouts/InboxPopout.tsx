@@ -4,8 +4,10 @@ import {
 	getMarkableUnreadChannels,
 	UnreadChannelsContent,
 } from '@app/features/app/components/floating/UnreadChannelsContent';
+import {isFeedEnabled} from '@app/features/feed/utils/FeedUtils';
 import {MENTIONS_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import * as InboxCommands from '@app/features/inbox/commands/InboxCommands';
+import {FeedActivityContent, FeedActivityTabIcon} from '@app/features/inbox/components/FeedActivityContent';
 import Inbox, {type InboxTab} from '@app/features/inbox/state/Inbox';
 import styles from '@app/features/messaging/components/popouts/InboxPopout.module.css';
 import {RecentMentionsContent} from '@app/features/messaging/components/popouts/RecentMentionsContent';
@@ -38,6 +40,11 @@ const UNREAD_DESCRIPTOR = msg({
 const BOOKMARKS_DESCRIPTOR = msg({
 	message: 'Bookmarks',
 	comment: 'Tab label in the inbox popout listing the user bookmarks.',
+});
+const ACTIVITY_DESCRIPTOR = msg({
+	message: 'Activity',
+	context: 'feed-activity',
+	comment: 'Tab label in the inbox popout listing likes and comments on your feed posts and your new followers.',
 });
 const INBOX_TABS_DESCRIPTOR = msg({
 	message: 'Inbox tabs',
@@ -139,6 +146,15 @@ export const InboxPopout = observer(({initialTab}: {initialTab?: InboxTab} = {})
 			icon: <AtIcon weight="bold" className={styles.iconSmall} data-flx="messaging.inbox-popout.icon-small--3" />,
 		},
 	];
+	if (isFeedEnabled()) {
+		tabs.push({
+			key: 'activity',
+			label: i18n._(ACTIVITY_DESCRIPTOR),
+			icon: (
+				<FeedActivityTabIcon className={styles.iconSmall} data-flx="messaging.inbox-popout.feed-activity-tab-icon" />
+			),
+		});
+	}
 	const normalizedActiveTab = tabs.some((tab) => tab.key === activeTab) ? activeTab : tabs[0].key;
 	const setActiveTab = useCallback((tab: InboxTab) => {
 		InboxCommands.setTab(tab);
@@ -240,6 +256,19 @@ export const InboxPopout = observer(({initialTab}: {initialTab?: InboxTab} = {})
 						onHeaderActionsChange={setHeaderActions}
 						data-flx="messaging.inbox-popout.recent-mentions-content"
 					/>
+				</div>
+			)}
+			{normalizedActiveTab === 'activity' && (
+				<div
+					id="inbox-panel-activity"
+					className={styles.tabContent}
+					role="tabpanel"
+					tabIndex={-1}
+					aria-labelledby="activity"
+					data-autofocus=""
+					data-flx="messaging.inbox-popout.inbox-panel-activity"
+				>
+					<FeedActivityContent data-flx="messaging.inbox-popout.feed-activity-content" />
 				</div>
 			)}
 		</div>

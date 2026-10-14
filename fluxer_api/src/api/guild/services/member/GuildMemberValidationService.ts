@@ -2,7 +2,7 @@
 
 import type {GuildID, RoleID, UserID} from '@app/api/BrandedTypes';
 import {guildIdToRoleId} from '@app/api/BrandedTypes';
-import {isIpBanExempt} from '@app/api/ban/IpBanExemptions';
+import {shouldEnforceGuildIpBan} from '@app/api/ban/IpBanCgnatGuard';
 import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
 import type {GuildMember} from '@app/api/models/GuildMember';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
@@ -15,6 +15,7 @@ import {IpBannedFromGuildError} from '@fluxer/errors/src/domains/guild/IpBannedF
 import {UnknownGuildRoleError} from '@fluxer/errors/src/domains/guild/UnknownGuildRoleError';
 import {isSameIpDecisionMatch} from '@fluxer/ip_utils/src/IpAddress';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
+import type {IpInfoService} from '@pkgs/geoip/src/IpInfoService';
 
 function ensureNotEveryoneRole(roleId: RoleID, guildId: GuildID, path: string): void {
 	if (roleId === guildIdToRoleId(guildId)) {
@@ -26,6 +27,7 @@ export class GuildMemberValidationService {
 	constructor(
 		private readonly guildRepository: IGuildRepositoryAggregate,
 		private readonly userRepository: IUserRepository,
+		private readonly ipInfoService: IpInfoService,
 	) {}
 
 	async validateAndGetRoleIds(params: {
@@ -94,12 +96,14 @@ export class GuildMemberValidationService {
 		const bans = await this.guildRepository.listBans(guildId);
 		const user = await this.userRepository.findUnique(userId);
 		const userIp = user?.lastActiveIp;
+		let enforceIpBan: boolean | undefined;
 		for (const ban of bans) {
 			if (ban.userId === userId) {
 				throw new BannedFromGuildError();
 			}
-			if (isSameIpDecisionMatch(userIp, ban.ipAddress) && !isIpBanExempt(userIp)) {
-				throw new IpBannedFromGuildError();
+			if (isSameIpDecisionMatch(userIp, ban.ipAddress)) {
+				enforceIpBan ??= await shouldEnforceGuildIpBan(userIp, ban.ipAddress, this.ipInfoService);
+				if (enforceIpBan) throw new IpBannedFromGuildError();
 			}
 		}
 	}

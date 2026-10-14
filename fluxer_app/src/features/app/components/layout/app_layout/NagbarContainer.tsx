@@ -18,8 +18,11 @@ import {PremiumExpiredNagbar} from '@app/features/app/components/layout/app_layo
 import {PremiumGracePeriodNagbar} from '@app/features/app/components/layout/app_layout/nagbars/PremiumGracePeriodNagbar';
 import {PremiumOnboardingNagbar} from '@app/features/app/components/layout/app_layout/nagbars/PremiumOnboardingNagbar';
 import {PriceAnnouncementNagbar} from '@app/features/app/components/layout/app_layout/nagbars/PriceAnnouncementNagbar';
+import {ProfilePrivacyChangedNagbar} from '@app/features/app/components/layout/app_layout/nagbars/ProfilePrivacyChangedNagbar';
+import {ProfilePublicOfferNagbar} from '@app/features/app/components/layout/app_layout/nagbars/ProfilePublicOfferNagbar';
 import {ScheduledMaintenanceNagbar} from '@app/features/app/components/layout/app_layout/nagbars/ScheduledMaintenanceNagbar';
 import {StreamerModeNagbar} from '@app/features/app/components/layout/app_layout/nagbars/StreamerModeNagbar';
+import {TaskbarPinNagbar} from '@app/features/app/components/layout/app_layout/nagbars/TaskbarPinNagbar';
 import {TermsAcceptanceNagbar} from '@app/features/app/components/layout/app_layout/nagbars/TermsAcceptanceNagbar';
 import {UnclaimedAccountNagbar} from '@app/features/app/components/layout/app_layout/nagbars/UnclaimedAccountNagbar';
 import {VisionaryMfaNagbar} from '@app/features/app/components/layout/app_layout/nagbars/VisionaryMfaNagbar';
@@ -216,6 +219,14 @@ export const NagbarContainer: React.FC<NagbarContainerProps> = observer(({nagbar
 								data-flx="app.app-layout.nagbar-container.voice-session-restore-nagbar"
 							/>
 						);
+					case NagbarType.TASKBAR_PIN:
+						return (
+							<TaskbarPinNagbar
+								key={nagbar.type}
+								isMobile={mobileLayout.enabled}
+								data-flx="app.app-layout.nagbar-container.taskbar-pin"
+							/>
+						);
 					case NagbarType.SOFTWARE_ENCODER:
 						return (
 							<SoftwareEncoderNagbar
@@ -229,6 +240,22 @@ export const NagbarContainer: React.FC<NagbarContainerProps> = observer(({nagbar
 								key={nagbar.type}
 								isMobile={mobileLayout.enabled}
 								data-flx="app.app-layout.nagbar-container.streamer-mode-nagbar"
+							/>
+						);
+					case NagbarType.PROFILE_PRIVACY_WIDENED:
+						return (
+							<ProfilePrivacyChangedNagbar
+								key={nagbar.type}
+								isMobile={mobileLayout.enabled}
+								data-flx="app.app-layout.nagbar-container.profile-privacy-changed-nagbar"
+							/>
+						);
+					case NagbarType.PROFILE_PUBLIC_OFFER:
+						return (
+							<ProfilePublicOfferNagbar
+								key={nagbar.type}
+								isMobile={mobileLayout.enabled}
+								data-flx="app.app-layout.nagbar-container.profile-public-offer-nagbar"
 							/>
 						);
 					case NagbarType.DOMAIN_MOVED:

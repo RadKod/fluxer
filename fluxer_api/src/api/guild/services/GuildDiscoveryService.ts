@@ -8,9 +8,11 @@ import {type ThreadViewer, viewerActive} from '@app/api/experiment/ChannelThread
 import {mapGuildToGuildResponse} from '@app/api/guild/GuildModel';
 import type {IGuildDiscoveryRepository} from '@app/api/guild/repositories/GuildDiscoveryRepository';
 import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import {withGuildUpdateLock} from '@app/api/guild/services/GuildService';
 import {contentModerationService} from '@app/api/infrastructure/ContentModerationService';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import {Logger} from '@app/api/Logger';
+import {getCacheService} from '@app/api/middleware/ServiceSingletons';
 import type {IGuildSearchService} from '@app/api/search/IGuildSearchService';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {
@@ -512,12 +514,16 @@ export class GuildDiscoveryService extends IGuildDiscoveryService {
 		return {guilds, total, category_counts: categoryCounts};
 	}
 
+	// both feature writes run under the guild update lock, so a boost recompute never writes over them.
 	private async addDiscoverableFeature(guildId: GuildID): Promise<void> {
-		const guild = await this.guildRepository.findUnique(guildId);
-		if (!guild) return;
-		const newFeatures = new Set(guild.features);
-		newFeatures.add(GuildFeatures.DISCOVERABLE);
-		const updatedGuild = await this.guildRepository.upsertPartial(guildId, {features: newFeatures}, guild.toRow());
+		const updatedGuild = await withGuildUpdateLock(getCacheService(), guildId, async () => {
+			const guild = await this.guildRepository.findUnique(guildId);
+			if (!guild) return null;
+			const newFeatures = new Set(guild.features);
+			newFeatures.add(GuildFeatures.DISCOVERABLE);
+			return this.guildRepository.upsertPartial(guildId, {features: newFeatures}, guild.toRow());
+		});
+		if (!updatedGuild) return;
 		await this.gatewayService.dispatchGuild({
 			guildId,
 			event: 'GUILD_UPDATE',
@@ -526,11 +532,14 @@ export class GuildDiscoveryService extends IGuildDiscoveryService {
 	}
 
 	private async removeDiscoverableFeature(guildId: GuildID): Promise<void> {
-		const guild = await this.guildRepository.findUnique(guildId);
-		if (!guild) return;
-		const newFeatures = new Set(guild.features);
-		newFeatures.delete(GuildFeatures.DISCOVERABLE);
-		const updatedGuild = await this.guildRepository.upsertPartial(guildId, {features: newFeatures}, guild.toRow());
+		const updatedGuild = await withGuildUpdateLock(getCacheService(), guildId, async () => {
+			const guild = await this.guildRepository.findUnique(guildId);
+			if (!guild) return null;
+			const newFeatures = new Set(guild.features);
+			newFeatures.delete(GuildFeatures.DISCOVERABLE);
+			return this.guildRepository.upsertPartial(guildId, {features: newFeatures}, guild.toRow());
+		});
+		if (!updatedGuild) return;
 		await this.gatewayService.dispatchGuild({
 			guildId,
 			event: 'GUILD_UPDATE',

@@ -92,6 +92,7 @@ export interface AuthSessionDependencies {
 	readonly closeLayers: () => void | Promise<void>;
 	readonly clearSudoToken: () => void;
 	readonly sendInvisiblePresence: (reason: AccountScopedWorkTransitionReason) => void | Promise<void>;
+	readonly captureForegroundFeedSnapshot: (accountKey: string) => void | Promise<void>;
 	readonly cleanupGatewaySession: (reason: AccountScopedWorkTransitionReason) => void | Promise<void>;
 	readonly resetSyncedUserSettings: (reason: AccountScopedWorkTransitionReason) => Promise<void>;
 	readonly captureSyncedUserSettingsCheckpoint: () => Promise<UserSettingsAccountTransitionCheckpoint>;
@@ -140,6 +141,12 @@ export function createDefaultAuthSessionDependencies(): AuthSessionDependencies 
 			import('@app/features/gateway/transport/GatewayConnection').then((module) => {
 				module.default.sendInvisiblePresenceForCurrentSession(reason);
 			}),
+		captureForegroundFeedSnapshot: async (accountKey) => {
+			const {default: snapshotSync} = await import('@app/features/gateway/snapshot/SnapshotSync');
+			if (!snapshotSync.hasForegroundSnapshot(accountKey)) return;
+			const module = await import('@app/features/gateway/snapshot/SnapshotHydration');
+			module.captureForegroundFeedSnapshot(accountKey);
+		},
 		cleanupGatewaySession: (reason) =>
 			import('@app/features/gateway/transport/GatewayConnection').then((module) => {
 				return module.default.retireForAccountTransition(reason);

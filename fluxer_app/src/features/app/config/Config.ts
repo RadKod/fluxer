@@ -34,7 +34,14 @@ function clientReleaseChannel(value: (typeof buildInfo)['PUBLIC_RELEASE_CHANNEL'
 	}
 }
 
+const analyticsMeasurementId =
+	typeof document === 'undefined'
+		? null
+		: (document.querySelector<HTMLMetaElement>('meta[name="micup-ga4-measurement-id"]')?.content ?? null);
+
 export default {
 	PUBLIC_BUILD_VERSION: buildInfo.PUBLIC_BUILD_VERSION,
+	PUBLIC_GA4_MEASUREMENT_ID:
+		analyticsMeasurementId && /^G-[A-Z0-9]{4,20}$/u.test(analyticsMeasurementId) ? analyticsMeasurementId : null,
 	PUBLIC_RELEASE_CHANNEL: clientReleaseChannel(buildInfo.PUBLIC_RELEASE_CHANNEL),
 } as const;

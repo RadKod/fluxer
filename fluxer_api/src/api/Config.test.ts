@@ -212,6 +212,39 @@ describe('buildAPIConfigFromMaster optional outbound lookups', () => {
 	});
 });
 
+function withEmailHtml(
+	master: MasterConfig,
+	html: Pick<MasterConfig['integrations']['email'], 'html_enabled' | 'html_footer'>,
+): MasterConfig {
+	return {...master, integrations: {...master.integrations, email: {...master.integrations.email, ...html}}};
+}
+
+describe('buildAPIConfigFromMaster email HTML part', () => {
+	let master: MasterConfig;
+	beforeAll(async () => {
+		master = await loadConfig();
+	});
+
+	it('leaves the HTML part off with no footer by default', () => {
+		const config = buildAPIConfigFromMaster(withEmailHtml(master, {}));
+		expect(config.email.htmlEnabled).toBe(false);
+		expect(config.email.htmlFooter).toEqual({});
+	});
+
+	it('carries the switch and the footer map onto the api config', () => {
+		const footer = {tr: 'Metin', 'en-US': 'Text'};
+		const config = buildAPIConfigFromMaster(withEmailHtml(master, {html_enabled: true, html_footer: footer}));
+		expect(config.email.htmlEnabled).toBe(true);
+		expect(config.email.htmlFooter).toEqual(footer);
+	});
+
+	it('refuses a footer entry that is not a string', () => {
+		expect(() =>
+			buildAPIConfigFromMaster(withEmailHtml(master, {html_footer: {tr: 5} as unknown as Record<string, string>})),
+		).toThrow(/FLUXER_EMAIL_HTML_FOOTER/);
+	});
+});
+
 async function trustedCallersFromEnv(env: Record<string, string>) {
 	for (const [key, value] of Object.entries(env)) {
 		vi.stubEnv(key, value);

@@ -12,6 +12,12 @@ export const UserRateLimitConfigs = {
 		bucket: 'user:profile::target_id',
 		config: {limit: 100, windowMs: ms('10 seconds')},
 	} as RouteRateLimitConfig,
+	// one account's profile reads, whatever the target (the bucket above is per
+	// target). Outside the global limit: the per-target bucket after it already counts the request there.
+	USER_GET_PROFILE_ACCOUNT: {
+		bucket: 'user:profile:account',
+		config: {limit: 120, windowMs: ms('1 minute'), exemptFromGlobal: true},
+	} as RouteRateLimitConfig,
 	USER_CHECK_TAG: {
 		bucket: 'user:check_tag',
 		config: {limit: 60, windowMs: ms('10 seconds')},

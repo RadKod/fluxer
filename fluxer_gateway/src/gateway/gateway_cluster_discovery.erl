@@ -448,12 +448,15 @@ init_seeds_existing_peers_from_persistent_term_test() ->
     PreviousPeers = persistent_term:get(?PEERS_KEY, undefined),
     OldPeers = ['fluxer_gateway@127.0.0.2'],
     persistent_term:put(?PEERS_KEY, OldPeers),
+    %% init/1 traps exits; keep the eunit process as it was.
+    {trap_exit, TrapExit} = process_info(self(), trap_exit),
     {ok, State} = init(#{
         dns_name => undefined,
         node_basename => "fluxer_gateway",
         poll_interval_ms => 5000,
         resolver => fun(_Name) -> {ok, []} end
     }),
+    process_flag(trap_exit, TrapExit),
     ?assertEqual(OldPeers, maps:get(peers, State)),
     cancel_timer(maps:get(timer, State)),
     case PreviousPeers of

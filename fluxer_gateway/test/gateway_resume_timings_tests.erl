@@ -135,6 +135,7 @@ fake_not_resumable_session_loop(Token) ->
     end.
 
 assert_resumed_dispatch_without_timings(ExpectedSeq) ->
+    assert_current_rollout_dispatch(ExpectedSeq),
     receive
         {dispatch, resumed, ResumedData, ExpectedSeq} ->
             ?assertNot(maps:is_key(<<"_timings_gw">>, ResumedData))
@@ -143,6 +144,7 @@ assert_resumed_dispatch_without_timings(ExpectedSeq) ->
     end.
 
 assert_resumed_timing_dispatch(ExpectedSeq) ->
+    assert_current_rollout_dispatch(ExpectedSeq),
     receive
         {dispatch, resumed, ResumedData, ExpectedSeq} ->
             Timings = maps:get(<<"_timings_gw">>, ResumedData),
@@ -178,10 +180,79 @@ fake_resume_session_loop(Token, CurrentSeq, IsStaff) ->
         {'$gen_call', From, {is_staff}} ->
             gen_server:reply(From, IsStaff),
             fake_resume_session_loop(Token, CurrentSeq, IsStaff);
+        {'$gen_cast', {game_activity_resume, SocketPid}} ->
+            {noreply, _} = session:handle_cast({game_activity_resume, SocketPid}, #{
+                socket_pid => SocketPid,
+                game_activity_resuming => SocketPid,
+                seq => CurrentSeq,
+                user_id => 1,
+                bot => false,
+                relationships => #{},
+                channels => #{}
+            }),
+            fake_resume_session_loop(Token, CurrentSeq, IsStaff);
         stop ->
             ok
     after 30000 ->
         ok
+    end.
+
+rollout_order_ignores_internal_session_messages_test() ->
+    drain_mailbox(),
+    Seq = 12,
+    Data = #{
+        <<"game_activity_enabled">> => gateway_rollout_config:game_activity_allowed(),
+        <<"game_activity_epoch">> => maps:get(
+            <<"game_activity_epoch">>, gateway_rollout_config:get(), 0
+        )
+    },
+    self() ! {guild_connect, 9001, 0},
+    self() ! {dispatch, gateway_rollout_update, Data, Seq},
+    try
+        assert_current_rollout_dispatch(Seq)
+    after
+        drain_mailbox()
+    end.
+
+rollout_order_rejects_resumed_first_test() ->
+    drain_mailbox(),
+    Resumed = {dispatch, resumed, #{}, 12},
+    self() ! Resumed,
+    try
+        ?assertError(
+            {expected_rollout_before_resumed, Resumed}, assert_current_rollout_dispatch(12)
+        )
+    after
+        drain_mailbox()
+    end.
+
+rollout_order_rejects_incorrect_sequence_test() ->
+    drain_mailbox(),
+    WrongSequence = {dispatch, gateway_rollout_update, #{}, 13},
+    self() ! WrongSequence,
+    try
+        ?assertError(
+            {expected_rollout_before_resumed, WrongSequence},
+            assert_current_rollout_dispatch(12)
+        )
+    after
+        drain_mailbox()
+    end.
+
+assert_current_rollout_dispatch(ExpectedSeq) ->
+    receive
+        {dispatch, gateway_rollout_update, Data, ExpectedSeq} ->
+            ?assertEqual(
+                gateway_rollout_config:game_activity_allowed(),
+                maps:get(<<"game_activity_enabled">>, Data)
+            ),
+            ?assertEqual(
+                maps:get(<<"game_activity_epoch">>, gateway_rollout_config:get(), 0),
+                maps:get(<<"game_activity_epoch">>, Data)
+            );
+        {dispatch, _, _, _} = Other ->
+            error({expected_rollout_before_resumed, Other})
+    after 1000 -> ?assert(false, rollout_not_dispatched)
     end.
 
 find_trace_span(Name, Trace) ->

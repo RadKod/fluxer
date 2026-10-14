@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import styles from '@app/features/app/components/dialogs/components/PricingCard.module.css';
+import {WAS_PRICE_DESCRIPTOR} from '@app/features/shop/utils/ShopMessageDescriptors';
 import {Button} from '@app/features/ui/button/Button';
 import * as LocaleUtils from '@app/features/user/utils/LocaleUtils';
 import {msg} from '@lingui/core/macro';
@@ -8,6 +9,7 @@ import {Trans, useLingui} from '@lingui/react/macro';
 import {formatNumber} from '@pkgs/number_utils/src/NumberFormatting';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
+import type React from 'react';
 import {useCallback} from 'react';
 
 const REMAINING_SLOTS_DESCRIPTOR = msg({
@@ -18,9 +20,11 @@ export const PricingCard = observer(
 	({
 		title,
 		price,
+		originalPrice,
 		period,
 		badge,
 		isPopular,
+		highlightLabel,
 		isSoldOut,
 		soldOut,
 		owned,
@@ -30,12 +34,17 @@ export const PricingCard = observer(
 		isLoading = false,
 		disabled = false,
 		className,
+		footer,
 	}: {
 		title: string;
 		price: string;
+		// Micup (shop): a campaign's pre-sale price, struck through next to the price.
+		originalPrice?: string;
 		period?: string;
 		badge?: string;
 		isPopular?: boolean;
+		// Micup (shop): replaces "Most popular" on the highlighted card.
+		highlightLabel?: string;
 		isSoldOut?: boolean;
 		soldOut?: boolean;
 		owned?: boolean;
@@ -45,6 +54,8 @@ export const PricingCard = observer(
 		isLoading?: boolean;
 		disabled?: boolean;
 		className?: string;
+		// Micup (shop): shown under the badge, above the button (a campaign countdown).
+		footer?: React.ReactNode;
 	}) => {
 		const {i18n} = useLingui();
 		const locale = LocaleUtils.getCurrentLocale();
@@ -76,8 +87,11 @@ export const PricingCard = observer(
 			>
 				<div className={styles.popularBadgeSpace} data-flx="app.pricing-card.popular-badge-space">
 					{isPopular ? (
-						<div className={styles.popularBadge} data-flx="app.pricing-card.popular-badge">
-							<Trans>Most popular</Trans>
+						<div
+							className={clsx(styles.popularBadge, highlightLabel && styles.popularBadgeLabel)}
+							data-flx="app.pricing-card.popular-badge"
+						>
+							{highlightLabel ?? <Trans>Most popular</Trans>}
 						</div>
 					) : remainingSlots !== undefined && remainingSlots >= 0 && !actuallySoldOut ? (
 						<div className={styles.popularBadge} data-flx="app.pricing-card.popular-badge--2">
@@ -104,6 +118,19 @@ export const PricingCard = observer(
 						data-flx="app.pricing-card.card-price"
 					>
 						{price}
+						{originalPrice && (
+							<s
+								className={isPopular ? styles.originalPricePopular : styles.originalPriceDefault}
+								data-flx="app.pricing-card.original-price"
+							>
+								<span className={styles.srOnly} data-flx="app.pricing-card.original-price-label">
+									{i18n._(WAS_PRICE_DESCRIPTOR, {price: originalPrice})}
+								</span>
+								<span aria-hidden="true" data-flx="app.pricing-card.original-price-value">
+									{originalPrice}
+								</span>
+							</s>
+						)}
 					</p>
 					{period && (
 						<p
@@ -128,6 +155,11 @@ export const PricingCard = observer(
 							</span>
 						)}
 					</div>
+					{footer && (
+						<div className={isPopular ? styles.footerPopular : styles.footerDefault} data-flx="app.pricing-card.footer">
+							{footer}
+						</div>
+					)}
 				</div>
 				<Button
 					variant={getButtonVariant()}

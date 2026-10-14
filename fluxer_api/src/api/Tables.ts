@@ -25,6 +25,10 @@ import {
 	type BannedProfileSubstringRow,
 	type BannedUrlDomainRow,
 	type BannedUrlRow,
+	DISPOSABLE_EMAIL_DOMAIN_COLUMNS,
+	type DisposableEmailDomainRow,
+	SUSPICIOUS_EMAIL_DOMAIN_COLUMNS,
+	type SuspiciousEmailDomainRow,
 } from '@app/api/database/types/AdminArchiveTypes';
 import {
 	ADMIN_API_KEY_BY_CREATOR_COLUMNS,
@@ -261,6 +265,16 @@ import {
 	type MessageReportSubmissionByReporterRow,
 } from '@app/api/database/types/ReportTypes';
 import {
+	REGISTRATION_EVENT_BY_EMAIL_DOMAIN_COLUMNS,
+	REGISTRATION_EVENT_BY_IP_COLUMNS,
+	REGISTRATION_EVENT_BY_PLUS_ADDRESS_BASE_COLUMNS,
+	REGISTRATION_EVENT_BY_SUBNET_COLUMNS,
+	type RegistrationEventByEmailDomainRow,
+	type RegistrationEventByIpRow,
+	type RegistrationEventByPlusAddressBaseRow,
+	type RegistrationEventBySubnetRow,
+} from '@app/api/database/types/RiskTypes';
+import {
 	STORE_ACCOUNT_TOKEN_BY_USER_COLUMNS,
 	STORE_ACCOUNT_TOKEN_COLUMNS,
 	STORE_PURCHASE_BY_USER_COLUMNS,
@@ -322,6 +336,11 @@ import {
 	USER_GUILD_SETTINGS_COLUMNS,
 	USER_HARVEST_COLUMNS,
 	USER_SETTINGS_COLUMNS,
+	USERNAME_CLAIM_COLUMNS,
+	USERNAME_ENTITLEMENT_COLUMNS,
+	USERNAME_HOLD_BY_BUCKET_COLUMNS,
+	USERNAME_OP_INTENT_COLUMNS,
+	USERNAME_OWNER_COLUMNS,
 	USERS_PENDING_DELETION_COLUMNS,
 	type UserByEmailRow,
 	type UserByLastActiveIpRow,
@@ -336,6 +355,11 @@ import {
 	type UserEntranceSoundSelectionRow,
 	type UserGuildSettingsRow,
 	type UserHarvestRow,
+	type UsernameClaimRow,
+	type UsernameEntitlementRow,
+	type UsernameHoldByBucketRow,
+	type UsernameOpIntentRow,
+	type UsernameOwnerRow,
 	type UserRow,
 	type UserSettingsRow,
 	type UsersPendingDeletionRow,
@@ -348,6 +372,42 @@ export const Users = defineTable<UserRow, 'user_id'>({
 	columns: USER_COLUMNS,
 	primaryKey: ['user_id'],
 });
+export const UsernameOwners = defineTable<UsernameOwnerRow, 'user_id'>({
+	name: 'username_owners',
+	columns: USERNAME_OWNER_COLUMNS,
+	primaryKey: ['user_id'],
+});
+
+export const UsernameClaims = defineTable<UsernameClaimRow, 'username'>({
+	name: 'username_claims',
+	columns: USERNAME_CLAIM_COLUMNS,
+	primaryKey: ['username'],
+});
+
+export const UsernameEntitlements = defineTable<UsernameEntitlementRow, 'user_id'>({
+	name: 'username_entitlements',
+	columns: USERNAME_ENTITLEMENT_COLUMNS,
+	primaryKey: ['user_id'],
+});
+
+export const UsernameOpIntents = defineTable<
+	UsernameOpIntentRow,
+	'bucket' | 'day' | 'user_id' | 'op_id',
+	'bucket' | 'day'
+>({
+	name: 'username_op_intents',
+	columns: USERNAME_OP_INTENT_COLUMNS,
+	primaryKey: ['bucket', 'day', 'user_id', 'op_id'],
+	partitionKey: ['bucket', 'day'],
+});
+
+export const UsernameHoldsByBucket = defineTable<UsernameHoldByBucketRow, 'bucket' | 'username', 'bucket'>({
+	name: 'username_holds_by_bucket',
+	columns: USERNAME_HOLD_BY_BUCKET_COLUMNS,
+	primaryKey: ['bucket', 'username'],
+	partitionKey: ['bucket'],
+});
+
 export const UsersPendingDeletion = defineTable<
 	UsersPendingDeletionRow,
 	'deletion_date' | 'pending_deletion_at' | 'user_id'
@@ -906,10 +966,11 @@ export const BannedAvatarHashes = defineTable<BannedAvatarHashRow, 'hash_short'>
 	columns: BANNED_AVATAR_HASH_COLUMNS,
 	primaryKey: ['hash_short'],
 });
-export const BannedProfileSubstrings = defineTable<BannedProfileSubstringRow, 'scope' | 'substring'>({
+export const BannedProfileSubstrings = defineTable<BannedProfileSubstringRow, 'scope' | 'substring', 'scope'>({
 	name: 'banned_profile_substrings',
 	columns: BANNED_PROFILE_SUBSTRING_COLUMNS,
 	primaryKey: ['scope', 'substring'],
+	partitionKey: ['scope'],
 });
 export const IARSubmissions = defineTable<IARSubmissionRow, 'report_id'>({
 	name: 'iar_submissions',
@@ -1460,4 +1521,55 @@ export const BillingActionIntents = defineTable<BillingActionIntentRow, 'intent_
 	name: 'billing_action_intents',
 	columns: BILLING_ACTION_INTENT_COLUMNS,
 	primaryKey: ['intent_id'],
+});
+
+export const RegistrationEventsByIp = defineTable<RegistrationEventByIpRow, 'ip' | 'created_at' | 'user_id', 'ip'>({
+	name: 'registration_events_by_ip',
+	columns: REGISTRATION_EVENT_BY_IP_COLUMNS,
+	primaryKey: ['ip', 'created_at', 'user_id'],
+	partitionKey: ['ip'],
+	defaultTtlSeconds: seconds('30 days'),
+});
+export const RegistrationEventsBySubnet = defineTable<
+	RegistrationEventBySubnetRow,
+	'subnet' | 'created_at' | 'user_id',
+	'subnet'
+>({
+	name: 'registration_events_by_subnet',
+	columns: REGISTRATION_EVENT_BY_SUBNET_COLUMNS,
+	primaryKey: ['subnet', 'created_at', 'user_id'],
+	partitionKey: ['subnet'],
+	defaultTtlSeconds: seconds('30 days'),
+});
+export const RegistrationEventsByEmailDomain = defineTable<
+	RegistrationEventByEmailDomainRow,
+	'email_domain' | 'created_at' | 'user_id',
+	'email_domain'
+>({
+	name: 'registration_events_by_email_domain',
+	columns: REGISTRATION_EVENT_BY_EMAIL_DOMAIN_COLUMNS,
+	primaryKey: ['email_domain', 'created_at', 'user_id'],
+	partitionKey: ['email_domain'],
+	defaultTtlSeconds: seconds('30 days'),
+});
+export const RegistrationEventsByPlusAddressBase = defineTable<
+	RegistrationEventByPlusAddressBaseRow,
+	'plus_address_base' | 'created_at' | 'user_id',
+	'plus_address_base'
+>({
+	name: 'registration_events_by_plus_address_base',
+	columns: REGISTRATION_EVENT_BY_PLUS_ADDRESS_BASE_COLUMNS,
+	primaryKey: ['plus_address_base', 'created_at', 'user_id'],
+	partitionKey: ['plus_address_base'],
+	defaultTtlSeconds: seconds('30 days'),
+});
+export const SuspiciousEmailDomains = defineTable<SuspiciousEmailDomainRow, 'domain'>({
+	name: 'suspicious_email_domains',
+	columns: SUSPICIOUS_EMAIL_DOMAIN_COLUMNS,
+	primaryKey: ['domain'],
+});
+export const DisposableEmailDomains = defineTable<DisposableEmailDomainRow, 'domain'>({
+	name: 'disposable_email_domains',
+	columns: DISPOSABLE_EMAIL_DOMAIN_COLUMNS,
+	primaryKey: ['domain'],
 });

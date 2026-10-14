@@ -12,6 +12,7 @@ import {
 	withThreadParentFields,
 	withThreadParentFieldsMany,
 } from '@app/api/channel/services/thread/ThreadParentSettings';
+import {assertMatureContentSettingsWrite} from '@app/api/channel/utils/MatureContentSettingsGate';
 import type {PermissionOverwrite} from '@app/api/database/types/ChannelTypes';
 import {
 	ensureActiveGuildTainted,
@@ -34,6 +35,7 @@ import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder'
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {Channel} from '@app/api/models/Channel';
 import {ChannelPermissionOverwrite} from '@app/api/models/ChannelPermissionOverwrite';
+import type {IUserRepository} from '@app/api/user/IUserRepository';
 import {applyProtectedOverwriteBits, permissionWriteMask, protectedThreadBits} from '@app/api/utils/featureUtils';
 import {AuditLogActionType} from '@fluxer/constants/src/AuditLogActionType';
 import {ALL_PERMISSIONS, ChannelTypes, Permissions} from '@fluxer/constants/src/ChannelConstants';
@@ -72,6 +74,7 @@ export class ChannelOperationsService {
 		private readonly snowflakeService: ISnowflakeService,
 		private readonly guildAuditLogService: GuildAuditLogService,
 		private readonly limitConfigService: LimitConfigService,
+		private readonly userRepository: IUserRepository,
 	) {}
 
 	async createChannel(
@@ -98,7 +101,10 @@ export class ChannelOperationsService {
 		}
 		const newPosition = ChannelHelpers.getNextGlobalChannelPosition(params.data.type, parentId, channels);
 		let permissionOverwrites: Map<RoleID | UserID, PermissionOverwrite> | null = null;
-		const requestedOverwrites = params.data.permission_overwrites ?? null;
+		// TEMPORARY (Micup deviation from Fluxer): older Micup mobile builds send permission_overwrites: [] on create, which
+		// upstream treats as given, so a channel in a private category came out public. An empty list is read as omitted.
+		// Trigger: the old mobile builds are closed by a forced update. Path: back to upstream `?? null` semantics.
+		const requestedOverwrites = params.data.permission_overwrites?.length ? params.data.permission_overwrites : null;
 		if (requestedOverwrites) {
 			const canManageRoles = await this.gatewayService.checkPermission({
 				guildId: params.guildId,
@@ -211,6 +217,17 @@ export class ChannelOperationsService {
 			params.data.content_warning_text == null ? null : params.data.content_warning_text.trim();
 		const requestedContentWarningText =
 			trimmedContentWarningText && trimmedContentWarningText.length > 0 ? trimmedContentWarningText : null;
+		await assertMatureContentSettingsWrite({
+			limitConfigService: this.limitConfigService,
+			userRepository: this.userRepository,
+			userId: params.userId,
+			current: {nsfw: null, contentWarningLevel: ContentWarningLevel.INHERIT, contentWarningText: null},
+			next: {
+				nsfw: requestedNsfwOverride,
+				contentWarningLevel: requestedContentWarningLevel,
+				contentWarningText: requestedContentWarningText,
+			},
+		});
 		const channelId = createChannelID(await this.snowflakeService.generate());
 		const channel = await this.channelRepository.upsert({
 			channel_id: channelId,
@@ -753,6 +770,7 @@ export class ChannelOperationsService {
 			ctx,
 			'max_channels_per_category',
 			maxChannels,
+			'guild',
 		);
 		if (count >= maxChannels) {
 			throw new MaxCategoryChannelsError(maxChannels);
@@ -764,7 +782,13 @@ export class ChannelOperationsService {
 		let maxChannels = MAX_GUILD_CHANNELS;
 		const guild = await this.guildRepository.findUnique(guildId);
 		const ctx = createLimitMatchContext({user: null, guildFeatures: guild?.features ?? null});
-		maxChannels = resolveLimitSafe(this.limitConfigService.getConfigSnapshot(), ctx, 'max_guild_channels', maxChannels);
+		maxChannels = resolveLimitSafe(
+			this.limitConfigService.getConfigSnapshot(),
+			ctx,
+			'max_guild_channels',
+			maxChannels,
+			'guild',
+		);
 		if (count >= maxChannels) {
 			throw new MaxGuildChannelsError(maxChannels);
 		}

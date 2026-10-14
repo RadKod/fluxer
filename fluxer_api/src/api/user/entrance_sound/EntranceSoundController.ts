@@ -86,11 +86,10 @@ export function EntranceSoundController(app: HonoApp) {
 			tags: ['Users'],
 		}),
 		async (ctx) => {
-			const userId = ctx.get('user').id;
 			const service: EntranceSoundService = ctx.get('entranceSoundService');
 			const {name, audio} = ctx.req.valid('json');
 			assertAccountNotLimited(ctx.get('user'));
-			const created = await service.upload({userId, name, base64Audio: audio});
+			const created = await service.upload({user: ctx.get('user'), name, base64Audio: audio});
 			return ctx.json(serializeSound(created), 201);
 		},
 	);
@@ -161,14 +160,13 @@ export function EntranceSoundController(app: HonoApp) {
 			tags: ['Users'],
 		}),
 		async (ctx) => {
-			const userId = ctx.get('user').id;
 			const service: EntranceSoundService = ctx.get('entranceSoundService');
 			const {scope_id, sound_id} = ctx.req.valid('json');
 			if (sound_id) {
 				assertAccountNotLimited(ctx.get('user'));
 			}
 			await service.setSelection({
-				userId,
+				user: ctx.get('user'),
 				scopeId: scope_id,
 				soundId: sound_id ? createEntranceSoundID(BigInt(sound_id)) : null,
 			});

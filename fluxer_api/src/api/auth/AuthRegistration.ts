@@ -29,15 +29,20 @@ import type {InviteService} from '@app/api/invite/InviteService';
 import {Logger} from '@app/api/Logger';
 import {profileSubstringBlocklistCache} from '@app/api/middleware/ProfileSubstringBlocklistCache';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getUsernameOwnershipService} from '@app/api/middleware/ServiceRegistry';
 import type {User} from '@app/api/models/User';
 import {UserSettings} from '@app/api/models/UserSettings';
+import type {ReferralService} from '@app/api/referral/ReferralService';
+import type {IRegistrationEventsRepository} from '@app/api/risk/adapters/VelocityAdapter';
+import {canHavePublicProfile} from '@app/api/user/profile/ProfilePrivacy';
 import {
 	deriveAvailableUsername,
 	isUsernameTaken,
 	reserveUsername,
 	type UsernameReservation,
 } from '@app/api/user/UniqueUsernames';
-import {USERNAME_MODE_DISCRIMINATOR} from '@app/api/user/UserTag';
+import {USERNAME_CLAIM_ERROR_CODES} from '@app/api/user/username/UsernameOwnershipService';
+import {UsernamePolicyService} from '@app/api/user/username/UsernamePolicyService';
 import * as AgeUtils from '@app/api/utils/AgeUtils';
 import {extractEmailDomain} from '@app/api/utils/EmailDomainUtils';
 import {lookupGeoip} from '@app/api/utils/IpUtils';
@@ -47,6 +52,7 @@ import {deriveUsernameFromDisplayName} from '@app/api/utils/UsernameSuggestionUt
 import {inputValidationErrorFromZodIssues} from '@app/api/Validator';
 import {AccountIdentityModes, TagStyles} from '@fluxer/constants/src/AccountIdentityConstants';
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
+import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {getRegionalMinimumAge} from '@fluxer/constants/src/RegionalMinimumAge';
 import {ProfileFieldPrivacyFlags, UserFlags} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
@@ -54,6 +60,7 @@ import {RegistrationClosedError} from '@fluxer/errors/src/domains/auth/Registrat
 import {RegistrationUrlInvalidError} from '@fluxer/errors/src/domains/auth/RegistrationUrlInvalidError';
 import {ContentBlockedError} from '@fluxer/errors/src/domains/content/ContentBlockedError';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
+import {FluxerError} from '@fluxer/errors/src/FluxerError';
 import {requireClientIp} from '@fluxer/ip_utils/src/ClientIp';
 import {getSameIpDecisionKey, getSubnet} from '@fluxer/ip_utils/src/IpAddress';
 import type {RegisterRequest} from '@fluxer/schema/src/domains/auth/AuthSchemas';
@@ -61,6 +68,14 @@ import {UsernameType} from '@fluxer/schema/src/primitives/UserValidators';
 import {parseAcceptLanguage} from '@pkgs/locale/src/LocaleService';
 import {types} from 'cassandra-driver';
 import {ms} from 'itty-time';
+
+// Micup: Turkish law sets 15 as the floor for every registration, with or without a GeoIP country; a stricter
+// regional minimum still applies.
+const MICUP_MINIMUM_REGISTRATION_AGE = 15;
+
+export function getMinimumRegistrationAge(countryCode: string | null | undefined): number {
+	return Math.max(MICUP_MINIMUM_REGISTRATION_AGE, getRegionalMinimumAge(countryCode));
+}
 
 function parseDobLocalDate(dateOfBirth: string): types.LocalDate {
 	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOfBirth);
@@ -89,6 +104,10 @@ export interface RegistrationDependencies {
 	singleCommunityService: SingleCommunityService;
 	discriminatorService: IDiscriminatorService;
 	kvActivityTracker: KVActivityTracker;
+	isEmailDomainSuspicious: (domain: string) => Promise<boolean>;
+	isEmailDomainDisposable: (domain: string) => Promise<boolean>;
+	registrationEventsRepository: IRegistrationEventsRepository;
+	referralService: ReferralService;
 }
 
 interface RegistrationTokenResult {
@@ -128,9 +147,29 @@ async function registerAccount(
 		deps;
 	const appPublicConfig = await instanceConfigRepository.getAppPublicConfig();
 	const emailEnabled = await instanceConfigRepository.isEmailEnabled();
-	const accountIdentity = await instanceConfigRepository.getAccountIdentity();
+	const accountIdentity = {
+		...(await instanceConfigRepository.getAccountIdentity()),
+		usernameMigration: await instanceConfigRepository.getUsernameMigrationConfig(),
+	};
 	const usernameMode = accountIdentity.mode === AccountIdentityModes.USERNAME;
-	const uniqueUsernames = accountIdentity.tagStyle === TagStyles.NONE;
+	const selectingUsername = accountIdentity.usernameMigration?.state === 'selecting';
+	const uniqueUsernames =
+		(accountIdentity.usernameMigration?.state ?? 'legacy') === 'legacy' && accountIdentity.tagStyle === TagStyles.NONE;
+	if (selectingUsername && !data.username) {
+		throw InputValidationError.fromCode('username', ValidationErrorCodes.USERNAME_LENGTH_INVALID);
+	}
+	if (selectingUsername) {
+		const rejection = await new UsernamePolicyService(instanceConfigRepository).prevalidate(
+			data.username!.toLowerCase(),
+			{kind: 'human', userId: createUserID(0n)},
+			false,
+		);
+		if (rejection)
+			throw new FluxerError({
+				code: USERNAME_CLAIM_ERROR_CODES[rejection],
+				status: rejection === 'UNAVAILABLE' ? 503 : 400,
+			});
+	}
 	let olderAppUsername: string | undefined;
 	if (usernameMode) {
 		assertUsernameModeRegistration(data);
@@ -152,17 +191,19 @@ async function registerAccount(
 	const collectDateOfBirth = appPublicConfig.registration.collect_date_of_birth;
 	let dateOfBirth: types.LocalDate | null = null;
 	let isAdult = true;
+	let publicProfile = false;
 	if (collectDateOfBirth) {
 		const dateOfBirthInput = data.date_of_birth?.trim();
 		if (!dateOfBirthInput) {
 			throw InputValidationError.fromCode('date_of_birth', ValidationErrorCodes.INVALID_DATE_OF_BIRTH_FORMAT);
 		}
 		dateOfBirth = parseDobLocalDate(dateOfBirthInput);
-		const minAge = getRegionalMinimumAge(countryCode);
+		const minAge = getMinimumRegistrationAge(countryCode);
 		if (!AuthUtility.validateAge(ctx, {dateOfBirth: dateOfBirthInput, minAge})) {
 			throw InputValidationError.fromCode('date_of_birth', ValidationErrorCodes.MUST_BE_MINIMUM_AGE, {minAge});
 		}
 		isAdult = AgeUtils.isUserAdult(dateOfBirthInput);
+		publicProfile = canHavePublicProfile(dateOfBirthInput);
 	}
 	if (data.password && (await AuthPassword.isPasswordPwned(ctx, data.password))) {
 		throw InputValidationError.fromCode('password', ValidationErrorCodes.PASSWORD_IS_TOO_COMMON);
@@ -171,11 +212,17 @@ async function registerAccount(
 	const emailKey = rawEmail ? rawEmail.toLowerCase() : null;
 	const enforceRateLimits = !config.dev.relaxRegistrationRateLimits;
 	await enforceRegistrationRateLimits(ctx, {enforceRateLimits, clientIp, emailKey});
+	let contactDomainAdminListed = false;
+	let contactDomainDisposable = false;
 	if (rawEmail) {
 		if (isBlockedEmailDomain(extractEmailDomain(rawEmail))) {
 			throw InputValidationError.fromCode('email', ValidationErrorCodes.INVALID_EMAIL_ADDRESS);
 		}
 		await assertEmailNotBlocklisted(rawEmail, 'email');
+		const domain = extractEmailDomain(rawEmail);
+		[contactDomainAdminListed, contactDomainDisposable] = domain
+			? await Promise.all([deps.isEmailDomainSuspicious(domain), deps.isEmailDomainDisposable(domain)])
+			: [false, false];
 		const hasValidDns = await emailDnsValidation.hasValidDnsRecords(rawEmail);
 		if (!hasValidDns) {
 			throw InputValidationError.fromCode('email', ValidationErrorCodes.EMAIL_DOMAIN_CANNOT_RECEIVE_MAIL);
@@ -183,10 +230,11 @@ async function registerAccount(
 		const emailTaken = await users.findByEmail(rawEmail);
 		if (emailTaken) throw InputValidationError.fromCode('email', ValidationErrorCodes.EMAIL_ALREADY_IN_USE);
 	}
-	let usernameCandidate: string | undefined = data.username ?? olderAppUsername;
+	let usernameCandidate: string | undefined = selectingUsername
+		? data.username!.toLowerCase()
+		: (data.username ?? olderAppUsername);
 	let discriminator: number | null = null;
 	if (uniqueUsernames) {
-		discriminator = USERNAME_MODE_DISCRIMINATOR;
 		if (usernameCandidate) {
 			if (await isUsernameTaken(users, usernameCandidate)) {
 				throw InputValidationError.fromCode('username', ValidationErrorCodes.USERNAME_ALREADY_TAKEN);
@@ -218,6 +266,24 @@ async function registerAccount(
 		discriminator = await allocateDiscriminator(discriminatorService, usernameCandidate);
 	}
 	const username = usernameCandidate!;
+	if (!selectingUsername) {
+		const policy = new UsernamePolicyService(instanceConfigRepository);
+		const snapshot = await policy.readCached().catch((cause) => {
+			throw new FluxerError({code: APIErrorCodes.USERNAME_UNAVAILABLE, status: 503, cause});
+		});
+		const rejection = policy.check(
+			username.toLowerCase(),
+			{kind: 'human', userId: createUserID(0n)},
+			false,
+			snapshot,
+			null,
+		);
+		if (rejection)
+			throw new FluxerError({
+				code: USERNAME_CLAIM_ERROR_CODES[rejection],
+				status: rejection === 'UNAVAILABLE' ? 503 : 400,
+			});
+	}
 	const grantBootstrapAdmin =
 		shouldAttemptBootstrapAdminGrant(config, {
 			rawEmail,
@@ -241,6 +307,7 @@ async function registerAccount(
 		user_id: userId,
 		username,
 		discriminator,
+		username_state: null,
 		global_name: data.global_name || null,
 		bot: false,
 		system: false,
@@ -322,6 +389,14 @@ async function registerAccount(
 		}
 		createAttempted = true;
 		user = await users.create(userRow);
+		if (selectingUsername) {
+			try {
+				const claimed = await getUsernameOwnershipService().claimSelf(user.id, username);
+				if (claimed.ok) user = await users.findUniqueAssert(user.id);
+			} catch (error) {
+				Logger.warn({error, userId: user.id}, 'Registration username selection remains incomplete');
+			}
+		}
 	} catch (error) {
 		if (!createAttempted) {
 			await withdrawSignupOfUncreatedAccount(instanceConfigRepository, {
@@ -340,6 +415,7 @@ async function registerAccount(
 			locale: userLocale,
 			isAdult,
 			theme: data.theme,
+			publicProfile,
 		}),
 	);
 	void kvActivityTracker.updateActivity(user.id, now).catch((error: unknown) => {
@@ -365,6 +441,20 @@ async function registerAccount(
 	);
 	if (rawEmail && emailEnabled) await maybeSendVerificationEmail(ctx, {user, email: rawEmail});
 	await users.createAuthorizedIp(userId, clientIp);
+	void deps.registrationEventsRepository
+		.recordEvent({
+			userId: userId.toString(),
+			email: rawEmail,
+			emailDomain: rawEmail ? extractEmailDomain(rawEmail) : null,
+			ip: clientIp,
+			locale: userLocale,
+			createdAt: now,
+		})
+		.catch((error: unknown) => Logger.warn({userId: userId.toString(), error}, 'Failed to record registration event'));
+	const referral = {refereeId: userId, code: data.referral_code, ip: clientIp, now};
+	deps.referralService
+		.attachAtRegistration({...referral, riskBlocked: contactDomainAdminListed || contactDomainDisposable})
+		.catch((error) => Logger.warn({userId: userId.toString(), error}, '[AuthRegistration] Referral not recorded'));
 	if (registrationAccess.pendingApproval) {
 		return {
 			registration_pending_approval: true,
@@ -563,7 +653,7 @@ async function enforceRegistrationRateLimits(
 
 async function allocateDiscriminator(discriminatorService: IDiscriminatorService, username: string): Promise<number> {
 	const result = await discriminatorService.generateDiscriminator({username});
-	if (!result.available || result.discriminator === -1) {
+	if (!result.available || result.discriminator <= 0) {
 		throw InputValidationError.fromCode('username', ValidationErrorCodes.TOO_MANY_USERS_WITH_THIS_USERNAME);
 	}
 	return result.discriminator;

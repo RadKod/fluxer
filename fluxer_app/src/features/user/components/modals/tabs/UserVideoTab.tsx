@@ -58,11 +58,11 @@ const PRODUCT_NEEDS_CAMERA_ACCESS_DESCRIPTOR = msg({
 });
 const UNLOCK_HD_SCREEN_SHARE_DESCRIPTOR = msg({
 	message: 'Unlock HD screen share with {premiumProductName}',
-	comment: 'Premium upsell title in video settings.',
+	comment: 'Plus upsell title in video settings.',
 });
 const HIGH_FRAME_RATE_REQUIRES_PREMIUM_DESCRIPTOR = msg({
 	message: 'Frame rates above 30 FPS require {premiumProductName}',
-	comment: 'Video settings note shown when higher frame rates require premium.',
+	comment: 'Video settings note shown when higher frame rates require Plus.',
 });
 const SELF_HOSTED_VIDEO_QUALITY_LIMIT_DESCRIPTOR = msg({
 	message: 'This instance currently allows screen sharing up to 720p at 30 FPS.',

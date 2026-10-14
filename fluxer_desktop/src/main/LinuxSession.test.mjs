@@ -83,7 +83,7 @@ describe('getLinuxDesktopId', () => {
 			const host = loadTsModule('@electron/main/LinuxSandbox', {
 				stubs: {...BUILD_CHANNEL_STUB, 'node:fs': {existsSync: () => false}},
 			});
-			assert.equal(host.getLinuxDesktopId(), 'app.fluxer.FluxerDesktop');
+			assert.equal(host.getLinuxDesktopId(), 'micup');
 		} finally {
 			Object.defineProperty(process, 'platform', platform);
 			if (previousId === undefined) delete process.env.FLATPAK_ID;

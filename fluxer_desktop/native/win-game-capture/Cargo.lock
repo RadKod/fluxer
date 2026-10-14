@@ -64,6 +64,7 @@ dependencies = [
  "parking_lot",
  "windows",
  "windows-core",
+ "windows-future",
  "windows-sys",
 ]
 

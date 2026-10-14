@@ -424,7 +424,7 @@ function buildRoute(
 		if (Node.isIdentifier(arg)) {
 			const name = arg.getText();
 			route.middlewares.push(name);
-			if (name === 'LoginRequired') route.hasLoginRequired = true;
+			if (name === 'LoginRequired' || name === 'LoginRequiredAllowSuspicious') route.hasLoginRequired = true;
 			if (name === 'DefaultUserOnly') route.hasDefaultUserOnly = true;
 			if (name === 'BotOnly') route.hasBotOnly = true;
 			continue;

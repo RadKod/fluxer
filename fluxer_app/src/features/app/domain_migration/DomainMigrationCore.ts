@@ -6,6 +6,8 @@ import {isIOSMobileOrTabletUserAgent} from '@app/features/platform/notifications
 import type {DomainMigrationDiscoveryResponse} from '@fluxer/schema/src/domains/admin/DomainMigrationSchemas';
 import {experimentBucket} from '@fluxer/schema/src/domains/experiment/ExperimentBucket';
 
+export const DOMAIN_MIGRATION_ENABLED: boolean = false;
+
 export const DOMAIN_MIGRATION_SOURCE_TO_TARGET: Readonly<Record<string, string>> = {
 	'https://web.fluxer.app': 'https://fluxer.com',
 	'https://web.canary.fluxer.app': 'https://canary.fluxer.com',

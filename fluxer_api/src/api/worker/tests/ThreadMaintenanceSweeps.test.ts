@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import fs from 'node:fs';
+import path from 'node:path';
 import {createTestAccount, setUserACLs, type TestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createChannelID, createGuildID, createUserID} from '@app/api/BrandedTypes';
 import {acceptInvite, createChannel, createChannelInvite, createGuild} from '@app/api/channel/tests/ChannelTestUtils';
@@ -199,7 +200,7 @@ describe('thread maintenance sweeps', () => {
 		const writeFile = vi.spyOn(fs.promises, 'writeFile');
 		await harvestGuildData(payload!, helpers());
 		const threadFile = writeFile.mock.calls.find(([file]) =>
-			String(file).endsWith(`channels/${s.threadId}/messages.json`),
+			String(file).endsWith(path.join('channels', s.threadId, 'messages.json')),
 		);
 		expect(threadFile).toBeDefined();
 		const written = JSON.parse(String(threadFile![1])) as Array<{id: string}>;

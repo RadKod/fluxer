@@ -142,6 +142,14 @@ describe('ApnsPushService', () => {
 		expect(payload.aps).toHaveProperty('mutable-content', 1);
 		expect(payload.author_avatar_url).toBe('https://cdn.example/avatar.png');
 	});
+	it('titles an untitled push with the Micup product name', () => {
+		const payload = ApnsPushServiceTestHooks.buildApnsPayload({
+			tag: 'channel:123:456',
+			data: {channel_id: '123', message_id: '456'},
+			notification: {body: 'Hello'},
+		});
+		expect((payload.aps as {alert: {title: string}}).alert.title).toBe('Micup');
+	});
 	it('imports the APNs signing key once per PEM and rejects a truncated one every time', async () => {
 		const {privateKey} = generateKeyPairSync('ec', {namedCurve: 'prime256v1'});
 		const der = privateKey.export({type: 'pkcs8', format: 'der'});

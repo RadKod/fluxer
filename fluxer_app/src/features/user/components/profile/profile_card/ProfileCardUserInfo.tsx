@@ -5,6 +5,8 @@ import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import {useTextOverflow} from '@app/features/ui/hooks/useTextOverflow';
 import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
 import styles from '@app/features/user/components/profile/profile_card/ProfileCardUserInfo.module.css';
+import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge';
+import {useProfileBadgeMetrics} from '@app/features/user/hooks/useProfileBadgeMetrics';
 import type {User} from '@app/features/user/models/User';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import {Trans} from '@lingui/react/macro';
@@ -27,6 +29,8 @@ interface ProfileCardUserInfoProps {
 	onUsernameClick?: () => void;
 	actions?: React.ReactNode;
 	usernameActions?: React.ReactNode;
+	// Micup: a row right under the name, above the username and pronouns (the profile popout's badges).
+	belowName?: React.ReactNode;
 }
 
 export const ProfileCardUserInfo: React.FC<ProfileCardUserInfoProps> = observer(
@@ -42,8 +46,10 @@ export const ProfileCardUserInfo: React.FC<ProfileCardUserInfoProps> = observer(
 		onUsernameClick,
 		actions,
 		usernameActions,
+		belowName,
 	}) => {
 		const displayNameRef = useRef<HTMLButtonElement>(null);
+		const {badgeStyle, bindNameRef} = useProfileBadgeMetrics(displayNameRef, displayName);
 		const isDisplayNameOverflowing = useTextOverflow(displayNameRef, {
 			content: displayName,
 			measureTextRange: true,
@@ -53,7 +59,7 @@ export const ProfileCardUserInfo: React.FC<ProfileCardUserInfoProps> = observer(
 		};
 		const displayNameButton = (
 			<button
-				ref={displayNameRef}
+				ref={bindNameRef}
 				type="button"
 				onClick={onDisplayNameClick}
 				className={clsx(styles.nameButton, displayNameClassName, isClickable && styles.nameButtonClickable)}
@@ -73,6 +79,7 @@ export const ProfileCardUserInfo: React.FC<ProfileCardUserInfoProps> = observer(
 		return (
 			<div
 				className={styles.userInfoContainer}
+				style={badgeStyle}
 				data-flx="user.profile.profile-card.profile-card-user-info.user-info-container"
 			>
 				<div className={styles.nameRow} data-flx="user.profile.profile-card.profile-card-user-info.name-row">
@@ -88,6 +95,11 @@ export const ProfileCardUserInfo: React.FC<ProfileCardUserInfoProps> = observer(
 						className={styles.badgeContainer}
 						data-flx="user.profile.profile-card.profile-card-user-info.badge-container"
 					>
+						<VerifiedUserBadge
+							user={user}
+							className={styles.userTagWrapper}
+							data-flx="user.profile.profile-card.profile-card-user-info.verified-user-badge"
+						/>
 						{(user.bot || isWebhook) && (
 							<UserTag
 								className={styles.userTagWrapper}
@@ -105,6 +117,11 @@ export const ProfileCardUserInfo: React.FC<ProfileCardUserInfoProps> = observer(
 						</div>
 					)}
 				</div>
+				{belowName && (
+					<div className={styles.belowName} data-flx="user.profile.profile-card.profile-card-user-info.below-name">
+						{belowName}
+					</div>
+				)}
 				{showUsername && (
 					<div className={styles.usernameRow} data-flx="user.profile.profile-card.profile-card-user-info.username-row">
 						<FocusRing offset={-2} data-flx="user.profile.profile-card.profile-card-user-info.focus-ring--2">

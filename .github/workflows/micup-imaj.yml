@@ -1,0 +1,197 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Builds each fork image in the self-hosting compose configuration, or explicitly selected fluxer-docs,
+# pushes it to ghcr.io/<owner>/micup-v2/<image>:<sha> as a private package, and leaves imajlar.env
+# (MICUP_SHA, BUILD_VERSION, FLUXER_DEV_SHA256, KIMLIK_*, OZET_*) as an artifact.
+# KIMLIK_* = imaj yapılandırma özeti (docker image inspect .Id, klasik depo), OZET_* = kayıt defteri manifest
+# özeti (compose'da image: ...@sha256:<OZET>). Yalnız elle tetiklenir; girdi olarak birleştirme kapısından geçmiş
+# micup/main verilir.
+name: Micup imaj
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Derlenecek dal ya da commit (birleştirme kapısından geçmiş micup/main)
+        required: true
+        default: micup/main
+      imajlar:
+        description: Yalnız bu imajlar, boşlukla (ör. fluxer-static, fluxer-docs); boş = compose imajları (tam imajlar.env yalnız boşken)
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: micup-imaj-${{ inputs.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.meta.outputs.sha }}
+      build_version: ${{ steps.meta.outputs.build_version }}
+      source_date: ${{ steps.meta.outputs.source_date }}
+      imajlar: ${{ steps.meta.outputs.imajlar }}
+      tam: ${{ steps.meta.outputs.tam }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.ref }}
+      - id: meta
+        env:
+          SECILEN: ${{ inputs.imajlar }}
+        run: |
+          mapfile -t hepsi < <(grep -oE '/fluxer-[a-z0-9-]+:\$\{FLUXER_IMAGE_TAG' deploy/self-hosting/docker-compose.yml \
+            | sed -E 's|^/||; s|:.*||' | sort -u)
+          (( ${#hepsi[@]} > 0 )) || { echo "::error::compose'da çatal imajı bulunamadı"; exit 1; }
+          read -ra secilen <<<"${SECILEN:-${hepsi[*]}}"
+          for b in "${secilen[@]}"; do
+            [[ $b == fluxer-docs ]] || printf '%s\n' "${hepsi[@]}" | grep -qxF "$b" || { echo "::error::$b self-hosting compose'unda yok"; exit 1; }
+          done
+          read -r y ay g sa dk sn < <(TZ=UTC git log -1 --no-show-signature --format=%cd --date=format-local:'%Y %m %d %H %M %S' HEAD)
+          {
+            echo "sha=$(git rev-parse HEAD)"
+            echo "build_version=$y.$((10#$ay))$g.$((10#$sa$dk$sn))"
+            echo "source_date=$y-$ay-${g}T$sa:$dk:${sn}Z"
+            echo "imajlar=$(printf '%s\n' "${secilen[@]}" | jq -Rcs 'split("\n") | map(select(. != ""))')"
+            echo "tam=$([[ -z $SECILEN ]] && echo 1 || echo 0)"
+          } | tee -a "$GITHUB_OUTPUT"
+
+  derle:
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        imaj: ${{ fromJSON(needs.plan.outputs.imajlar) }}
+    env:
+      IMAJ: ${{ matrix.imaj }}
+      SHA: ${{ needs.plan.outputs.sha }}
+      BUILD_VERSION: ${{ needs.plan.outputs.build_version }}
+      SOURCE_DATE: ${{ needs.plan.outputs.source_date }}
+    steps:
+      - name: Disk aç
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
+      - name: GHCR girişi ve buildx
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker buildx create --name micup --driver docker-container --use
+      - name: Derle ve it
+        run: |
+          depo="ghcr.io/${GITHUB_REPOSITORY,,}/$IMAJ"
+          ek=()
+          if [[ $IMAJ == fluxer-app-proxy-self-hosted ]]; then
+            df=fluxer_app_proxy/Dockerfile
+            # TEMPORARY: app bundles come from app-proxy on the same origin: ~24.4 MB of origin egress per client/version,
+            # only for voice participants routed to the origin. Trigger: app-proxy egress > 0.3 Gbit/s; path: /assets to CDN.
+            ek=(--build-arg PUBLIC_ASSET_BASE_URL= --build-arg BUNDLE_LOCAL_ASSETS=true)
+          elif [[ $IMAJ == fluxer-docs ]]; then
+            df=fluxer_docs/Dockerfile
+            . ./fluxer_docs/micup.env
+            ek=(
+              --build-arg "FLUXER_DOCS_PRODUCT_NAME=$FLUXER_DOCS_PRODUCT_NAME"
+              --build-arg "FLUXER_BASE_DOMAIN=$FLUXER_BASE_DOMAIN"
+              --build-arg "FLUXER_PUBLIC_SCHEME=$FLUXER_PUBLIC_SCHEME"
+              --build-arg "FLUXER_PUBLIC_PORT=$FLUXER_PUBLIC_PORT"
+              --build-arg "FLUXER_DOCS_ENDPOINT=$FLUXER_DOCS_ENDPOINT"
+            )
+          else
+            df="${IMAJ//-/_}/Dockerfile"
+          fi
+          test -f "$df"
+          docker buildx build -f "$df" --platform linux/amd64 --provenance=false --push \
+            -t "$depo:$SHA" \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --build-arg "BUILD_VERSION=$BUILD_VERSION" --build-arg "SOURCE_SHA=$SHA" --build-arg "SOURCE_DATE=$SOURCE_DATE" \
+            "${ek[@]}" \
+            --cache-from "type=registry,ref=$depo:buildcache" \
+            --cache-to "type=registry,ref=$depo:buildcache,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true" \
+            --metadata-file "$RUNNER_TEMP/meta.json" .
+          kimlik=$(jq -r '."containerimage.config.digest"' "$RUNNER_TEMP/meta.json")
+          ozet=$(jq -r '."containerimage.digest"' "$RUNNER_TEMP/meta.json")
+          [[ $kimlik =~ ^sha256:[0-9a-f]{64}$ && $ozet =~ ^sha256:[0-9a-f]{64}$ ]] || { cat "$RUNNER_TEMP/meta.json"; exit 1; }
+          ad=$(tr '[:lower:]-' '[:upper:]_' <<<"${IMAJ#fluxer-}")
+          mkdir -p "$RUNNER_TEMP/imaj"
+          printf 'KIMLIK_FLUXER_%s=%s\nOZET_FLUXER_%s=%s\n' "$ad" "$kimlik" "$ad" "$ozet" | tee "$RUNNER_TEMP/imaj/$IMAJ.env"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: imaj-${{ matrix.imaj }}
+          path: ${{ runner.temp }}/imaj/${{ matrix.imaj }}.env
+          retention-days: 7
+
+  topla:
+    needs: [plan, derle]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: read
+    env:
+      SHA: ${{ needs.plan.outputs.sha }}
+      BUILD_VERSION: ${{ needs.plan.outputs.build_version }}
+      TAM: ${{ needs.plan.outputs.tam }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: imaj-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/imaj
+      - name: app-proxy index.html varlıkları aynı kökenden mi
+        if: needs.plan.outputs.tam == '1'
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker run --rm --entrypoint cat "ghcr.io/${GITHUB_REPOSITORY,,}/fluxer-app-proxy-self-hosted:$SHA" \
+            /srv/app/static/index.html >"$RUNNER_TEMP/index.html"
+          grep -oE '"[^"]*/assets/[^"]*"' "$RUNNER_TEMP/index.html" | sort -u >"$RUNNER_TEMP/varlik"
+          [[ -s $RUNNER_TEMP/varlik ]] || { echo "::error::index.html'de /assets/ varlığı yok"; exit 1; }
+          if grep -v '^"/assets/' "$RUNNER_TEMP/varlik"; then
+            echo "::error::index.html dış kökenli varlık adresi içeriyor (BUNDLE_LOCAL_ASSETS/PUBLIC_ASSET_BASE_URL)"
+            exit 1
+          fi
+          echo "index.html: $(wc -l <"$RUNNER_TEMP/varlik") varlık, hepsi /assets/"
+      - if: needs.plan.outputs.tam == '1'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
+      - if: needs.plan.outputs.tam == '1'
+        uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
+        with:
+          toolchain: '1.98.1'
+      - name: fluxer-dev (sema.sh için)
+        if: needs.plan.outputs.tam == '1'
+        run: |
+          cargo build --release --locked -p fluxer-dev
+          cp target/release/fluxer-dev "$RUNNER_TEMP/imaj/fluxer-dev"
+      - name: imajlar.env
+        run: |
+          cd "$RUNNER_TEMP/imaj"
+          {
+            printf '# micup-imaj.yml yazdı — %s (UTC), koşu %s. Elle düzenlemeyin.\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+              "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            printf 'MICUP_SHA=%s\nBUILD_VERSION=%s\nMICUP_REGISTRY=ghcr.io/%s\n' "$SHA" "$BUILD_VERSION" "${GITHUB_REPOSITORY,,}"
+            if [[ $TAM == 1 ]]; then printf 'FLUXER_DEV_SHA256=%s\n' "$(sha256sum fluxer-dev | cut -d' ' -f1)"; fi
+            cat fluxer-*.env | sort
+          } >imajlar.env
+          rm fluxer-*.env
+          cat imajlar.env | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: imajlar-${{ needs.plan.outputs.sha }}
+          path: ${{ runner.temp }}/imaj/
+          retention-days: 30

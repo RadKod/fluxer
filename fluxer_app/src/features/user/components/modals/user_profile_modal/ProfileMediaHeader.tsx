@@ -11,6 +11,7 @@ import {
 import * as ContextMenuCommands from '@app/features/ui/commands/ContextMenuCommands';
 import {StatusAwareAvatar} from '@app/features/ui/components/StatusAwareAvatar';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
+import MobileLayout from '@app/features/ui/state/MobileLayout';
 import {getAppRemScale} from '@app/features/ui/utils/AppZoomUtils';
 import userProfileModalStyles from '@app/features/user/components/modals/UserProfileModal.module.css';
 import {
@@ -18,6 +19,8 @@ import {
 	type ProfileMediaHeaderProps,
 } from '@app/features/user/components/modals/user_profile_modal/UserProfileModalShared';
 import {
+	getProfileAvatarDecorationBounds,
+	getProfileAvatarLeft,
 	PROFILE_MODAL_BANNER_AVATAR_CUTOUT,
 	PROFILE_MODAL_GEOMETRY,
 	PROFILE_MODAL_GEOMETRY_STYLE,
@@ -58,6 +61,7 @@ export const ProfileMediaHeader: React.FC<ProfileMediaHeaderProps> = observer(
 		avatarUrl,
 		hoverAvatarUrl,
 		renderActionButtons,
+		identity,
 	}) => {
 		const {i18n} = useLingui();
 		const reactId = useId();
@@ -95,13 +99,39 @@ export const ProfileMediaHeader: React.FC<ProfileMediaHeaderProps> = observer(
 		}, [bannerElement]);
 		const avatarScale = getProfileModalScale(bannerWidth);
 		const avatarSize = PROFILE_MODAL_GEOMETRY.avatarSizePx * avatarScale;
+		const avatarBorder = PROFILE_MODAL_GEOMETRY.avatarBorderPx * avatarScale;
+		const bounds = identity ? getProfileAvatarDecorationBounds(user, avatarSize, avatarBorder) : null;
+		const wideUltra = Boolean(identity && user.avatarUltra && !MobileLayout.enabled);
+		const avatarLeft =
+			bounds && !wideUltra
+				? getProfileAvatarLeft({
+						decorationLeft: bounds.left,
+						size: avatarSize,
+						border: avatarBorder,
+						edgePadding: PROFILE_MODAL_GEOMETRY.avatarLeftPx * avatarScale,
+						containerWidth: bannerWidth ?? PROFILE_MODAL_BANNER_AVATAR_CUTOUT.viewBoxWidthPx * avatarScale,
+					})
+				: PROFILE_MODAL_GEOMETRY.avatarLeftPx * avatarScale;
+		const avatarTop = bounds
+			? Math.max(
+					PROFILE_MODAL_GEOMETRY.avatarTopPx * avatarScale,
+					-PROFILE_MODAL_GEOMETRY.bannerViewBoxHeightPx * avatarScale - avatarBorder - bounds.top,
+				)
+			: PROFILE_MODAL_GEOMETRY.avatarTopPx * avatarScale;
+		const headerStyle = bounds
+			? ({
+					'--profile-avatar-clearance-width': `calc(${wideUltra ? avatarLeft + avatarBorder + bounds.right : Math.max(avatarLeft + avatarBorder + bounds.right, bounds.right - bounds.left)}px - 1rem * var(--profile-modal-scale))`,
+					'--profile-avatar-clearance-height': `max(0px, calc(${avatarTop + avatarBorder + bounds.bottom}px - 1rem * var(--profile-modal-scale)))`,
+					'--profile-identity-min-width': wideUltra ? '340px' : undefined,
+				} as React.CSSProperties)
+			: undefined;
 		const avatarContainerStyle = useMemo<React.CSSProperties>(
 			() => ({
-				top: PROFILE_MODAL_GEOMETRY.avatarTopPx * avatarScale,
-				left: PROFILE_MODAL_GEOMETRY.avatarLeftPx * avatarScale,
+				top: avatarTop,
+				left: avatarLeft,
 				borderWidth: PROFILE_MODAL_GEOMETRY.avatarBorderPx * avatarScale,
 			}),
-			[avatarScale],
+			[avatarScale, avatarTop, avatarLeft],
 		);
 		const menuUrlOptions = {user, profile, profileContext, previewOverrides};
 		const hasAvatarMenu = Boolean(getUserMenuAvatarUrl(menuUrlOptions));
@@ -176,8 +206,17 @@ export const ProfileMediaHeader: React.FC<ProfileMediaHeaderProps> = observer(
 					/>
 					<circle
 						fill="black"
-						cx={PROFILE_MODAL_BANNER_AVATAR_CUTOUT.cx}
-						cy={PROFILE_MODAL_BANNER_AVATAR_CUTOUT.cy}
+						cx={
+							identity
+								? (avatarLeft + avatarBorder + avatarSize / 2) / avatarScale
+								: PROFILE_MODAL_BANNER_AVATAR_CUTOUT.cx
+						}
+						cy={
+							identity
+								? PROFILE_MODAL_BANNER_AVATAR_CUTOUT.viewBoxHeightPx +
+									(avatarTop + avatarBorder + avatarSize / 2) / avatarScale
+								: PROFILE_MODAL_BANNER_AVATAR_CUTOUT.cy
+						}
 						r={PROFILE_MODAL_BANNER_AVATAR_CUTOUT.r}
 						data-flx="user.user-profile-modal.profile-media-header.circle"
 					/>
@@ -205,6 +244,7 @@ export const ProfileMediaHeader: React.FC<ProfileMediaHeaderProps> = observer(
 		const avatarContent = (
 			<StatusAwareAvatar
 				size={avatarSize / getAppRemScale()}
+				decorationSurface="profile"
 				user={user}
 				avatarUrl={avatarUrl}
 				hoverAvatarUrl={hoverAvatarUrl}
@@ -237,7 +277,8 @@ export const ProfileMediaHeader: React.FC<ProfileMediaHeaderProps> = observer(
 					</div>
 				</FocusRing>
 				<div
-					className={userProfileModalStyles.headerContainer}
+					className={`${userProfileModalStyles.headerContainer} ${identity ? userProfileModalStyles.headerContainerIdentity : ''}`}
+					style={headerStyle}
 					data-flx="user.user-profile-modal.profile-media-header.div--3"
 				>
 					<FocusRing
@@ -264,12 +305,14 @@ export const ProfileMediaHeader: React.FC<ProfileMediaHeaderProps> = observer(
 							{avatarContent}
 						</div>
 					</FocusRing>
-					<div
-						className={userProfileModalStyles.actionButtonsContainer}
-						data-flx="user.user-profile-modal.profile-media-header.div--5"
-					>
-						{renderActionButtons()}
-					</div>
+					{identity ?? (
+						<div
+							className={userProfileModalStyles.actionButtonsContainer}
+							data-flx="user.user-profile-modal.profile-media-header.div--5"
+						>
+							{renderActionButtons()}
+						</div>
+					)}
 				</div>
 			</header>
 		);

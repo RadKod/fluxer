@@ -93,6 +93,22 @@ export interface BannedEmailRow {
 
 export const BANNED_EMAIL_COLUMNS = ['email_lower'] as const satisfies ReadonlyArray<keyof BannedEmailRow>;
 
+export interface SuspiciousEmailDomainRow {
+	domain: string;
+}
+
+export const SUSPICIOUS_EMAIL_DOMAIN_COLUMNS = ['domain'] as const satisfies ReadonlyArray<
+	keyof SuspiciousEmailDomainRow
+>;
+
+export interface DisposableEmailDomainRow {
+	domain: string;
+}
+
+export const DISPOSABLE_EMAIL_DOMAIN_COLUMNS = ['domain'] as const satisfies ReadonlyArray<
+	keyof DisposableEmailDomainRow
+>;
+
 export interface BannedPhraseRow {
 	phrase: string;
 }
@@ -184,9 +200,10 @@ export const BANNED_AVATAR_HASH_COLUMNS = [
 ] as const satisfies ReadonlyArray<keyof BannedAvatarHashRow>;
 
 export type BannedProfileSubstringScope = 'username' | 'global_name' | 'nickname' | 'bio' | 'pronouns';
+export type UsernameDictionaryGenerationScope = `uname_${'exact' | 'contains' | 'allow'}:g${number}`;
 
 export interface BannedProfileSubstringRow {
-	scope: BannedProfileSubstringScope;
+	scope: BannedProfileSubstringScope | UsernameDictionaryGenerationScope;
 	substring: string;
 	added_at: Date | null;
 	added_by: bigint | null;

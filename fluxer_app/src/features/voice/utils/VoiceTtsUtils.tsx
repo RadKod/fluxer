@@ -437,8 +437,8 @@ function handleIncomingTtsMessage(message: Message): void {
 	if (message.message_reference?.message_id) {
 		const refChannelId = message.message_reference.channel_id ?? message.channel_id;
 		const refMessageId = message.message_reference.message_id;
-		const ref = MessageReferences.getMessageReference(refChannelId, refMessageId);
-		if (ref.state === MessageReferenceState.LOADED) {
+		const ref = MessageReferences.getMessageReference(refChannelId, refMessageId, message.referenced_message);
+		if (ref.state === MessageReferenceState.LOADED && !Relationships.isBlocked(ref.message.author.id)) {
 			const replyAuthor = Users.getUser(ref.message.author.id);
 			if (replyAuthor) {
 				replyAuthorName = NicknameUtils.getNickname(replyAuthor, channel.guildId ?? null);

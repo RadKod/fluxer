@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {mkdtemp, readFile, rm} from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import {
 	type ChannelID,
 	createChannelID,
@@ -16,7 +19,9 @@ import {ThreadMember} from '@app/api/models/ThreadMember';
 import {User} from '@app/api/models/User';
 import {mapStorePurchaseToResponse} from '@app/api/store_billing/StoreBillingMappers';
 import {buildStorePurchaseRow} from '@app/api/store_billing/tests/StoreBillingTestUtils';
+import * as harvestTask from '@app/api/worker/tasks/HarvestUserData';
 import {buildUserDataJson, collectThreadMemberships, harvestMessages} from '@app/api/worker/tasks/HarvestUserData';
+import {createArchiveJsonBuffer} from '@app/api/worker/utils/ArchiveJson';
 import {ChannelThreadsConfigSchema} from '@fluxer/schema/src/domains/admin/ChannelThreadsSchemas';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 
@@ -155,9 +160,9 @@ describe('collectThreadMemberships', () => {
 	});
 	let reads = 0;
 	const threads = {
-		listJoinedThreadIds: async (_userId: UserID, id: GuildID) => {
+		listJoinedThreadIdsPage: async (_userId: UserID, id: GuildID) => {
 			reads++;
-			return id === guildId ? [threadId] : [];
+			return {threadIds: id === guildId ? [threadId] : [], cursor: null};
 		},
 		getMember: async () => member,
 	};
@@ -174,15 +179,177 @@ describe('collectThreadMemberships', () => {
 
 	it('reads nothing on an instance that never enabled threads', async () => {
 		setEverEnabled(false);
-		expect(await collectThreadMemberships(threads, AUTHOR, [guildId])).toEqual([]);
+		const collected: Array<ThreadMember> = [];
+		await collectThreadMemberships(threads, AUTHOR, [guildId], async (page) => {
+			collected.push(...page);
+		});
+		expect(collected).toEqual([]);
 		expect(reads).toBe(0);
 	});
 
 	it('collects the joined thread memberships of every tainted guild and skips the rest', async () => {
 		setEverEnabled(true);
 		tainted.add(guildId.toString());
-		const collected = await collectThreadMemberships(threads, AUTHOR, [guildId, createGuildID(1400000000000000002n)]);
+		const collected: Array<ThreadMember> = [];
+		await collectThreadMemberships(threads, AUTHOR, [guildId, createGuildID(1400000000000000002n)], async (page) => {
+			collected.push(...page);
+		});
 		expect(collected).toEqual([member]);
 		expect(reads).toBe(1);
+	});
+
+	function pagedThreads(
+		count: number,
+		readMember = async (id: ChannelID) => new ThreadMember({...member.toRow(), thread_id: id}),
+	) {
+		const ids = Array.from({length: count}, (_, index) => createChannelID(threadId + BigInt(index)));
+		const cursors: Array<string | null | undefined> = [];
+		return {
+			cursors,
+			listJoinedThreadIds: async () => ids,
+			listJoinedThreadIdsPage: async (
+				_userId: UserID,
+				_guildId: GuildID,
+				opts: {limit: number; cursor?: string | null},
+			) => {
+				cursors.push(opts.cursor);
+				const start = Number(opts.cursor ?? 0);
+				const end = Math.min(start + opts.limit, ids.length);
+				return {threadIds: ids.slice(start, end), cursor: end < ids.length ? String(end) : null};
+			},
+			getMember: async (id: ChannelID) => readMember(id),
+		};
+	}
+
+	it('emits a large membership history in bounded pages with an opaque cursor', async () => {
+		setEverEnabled(true);
+		tainted.add(guildId.toString());
+		const repo = pagedThreads(2505);
+		const pages: Array<Array<ThreadMember>> = [];
+		await collectThreadMemberships(repo, AUTHOR, [guildId], async (page) => {
+			pages.push(page);
+		});
+		expect(pages.map((page) => page.length)).toEqual([1000, 1000, 505]);
+		expect(repo.cursors).toEqual([undefined, '1000', '2000']);
+		expect(pages.flat().map((entry) => entry.threadId)).toEqual(
+			Array.from({length: 2505}, (_, index) => createChannelID(threadId + BigInt(index))),
+		);
+	});
+
+	it('shares one read concurrency bound across simultaneous exports', async () => {
+		setEverEnabled(true);
+		tainted.add(guildId.toString());
+		let active = 0;
+		let maximum = 0;
+		let count = 0;
+		const repo = pagedThreads(1050, async (id) => {
+			active++;
+			maximum = Math.max(maximum, active);
+			await new Promise<void>((resolve) => setImmediate(resolve));
+			active--;
+			return new ThreadMember({...member.toRow(), thread_id: id});
+		});
+		await Promise.all(
+			Array.from({length: 3}, () =>
+				collectThreadMemberships(repo, AUTHOR, [guildId], async (page) => {
+					count += page.length;
+				}),
+			),
+		);
+		expect(maximum).toBeLessThanOrEqual(10);
+		expect(count).toBe(3150);
+	});
+
+	it('awaits each output page before reading the next page', async () => {
+		setEverEnabled(true);
+		tainted.add(guildId.toString());
+		const repo = pagedThreads(2001);
+		let outputPages = 0;
+		await collectThreadMemberships(repo, AUTHOR, [guildId], async () => {
+			outputPages++;
+			await new Promise<void>((resolve) => setImmediate(resolve));
+			expect(repo.cursors).toHaveLength(outputPages);
+		});
+		expect(outputPages).toBe(3);
+	});
+
+	it('follows a cursor even when Cassandra returns an empty intermediate page', async () => {
+		setEverEnabled(true);
+		tainted.add(guildId.toString());
+		const repo = pagedThreads(1);
+		repo.listJoinedThreadIdsPage = async (_userId, _guildId, opts) =>
+			opts.cursor ? {threadIds: [threadId], cursor: null} : {threadIds: [], cursor: 'resume'};
+		const output: Array<ThreadMember> = [];
+		await collectThreadMemberships(repo, AUTHOR, [guildId], async (page) => {
+			output.push(...page);
+		});
+		expect(output).toEqual([member]);
+	});
+
+	it('releases the shared read slots after a membership read fails', async () => {
+		setEverEnabled(true);
+		tainted.add(guildId.toString());
+		const broken = pagedThreads(30, async () => {
+			throw new Error('membership read failed');
+		});
+		await expect(collectThreadMemberships(broken, AUTHOR, [guildId], async () => {})).rejects.toThrow(
+			'membership read failed',
+		);
+		let count = 0;
+		await collectThreadMemberships(pagedThreads(30), AUTHOR, [guildId], async (page) => {
+			count += page.length;
+		});
+		expect(count).toBe(30);
+	});
+
+	it('stages paged memberships in user.json with the existing JSON shape and ASCII escaping', async () => {
+		setEverEnabled(true);
+		tainted.add(guildId.toString());
+		expect(typeof harvestTask.writeUserDataJson).toBe('function');
+		const directory = await mkdtemp(path.join(os.tmpdir(), 'fluxer-harvest-test-'));
+		try {
+			const file = path.join(directory, 'user.json');
+			const metadata = buildUserDataJson(userDataParams());
+			metadata.user.username = 'çağrı';
+			await harvestTask.writeUserDataJson(file, createArchiveJsonBuffer(metadata), threads, AUTHOR, [guildId]);
+			const text = await readFile(file, 'utf8');
+			expect(text).toMatch(/\\u00e7/);
+			expect(JSON.parse(text)).toEqual({
+				...metadata,
+				thread_memberships: [
+					{
+						thread_id: threadId.toString(),
+						guild_id: guildId.toString(),
+						parent_id: member.parentId.toString(),
+						join_timestamp: member.joinTimestamp.toISOString(),
+						flags: member.flags,
+						muted: member.muted,
+					},
+				],
+			});
+		} finally {
+			await rm(directory, {recursive: true, force: true});
+		}
+	});
+
+	it('omits an empty membership array and closes the staged file after a read failure', async () => {
+		setEverEnabled(true);
+		tainted.add(guildId.toString());
+		expect(typeof harvestTask.writeUserDataJson).toBe('function');
+		const directory = await mkdtemp(path.join(os.tmpdir(), 'fluxer-harvest-test-'));
+		try {
+			const file = path.join(directory, 'user.json');
+			const metadata = buildUserDataJson(userDataParams());
+			await harvestTask.writeUserDataJson(file, createArchiveJsonBuffer(metadata), pagedThreads(0), AUTHOR, [guildId]);
+			expect(JSON.parse(await readFile(file, 'utf8'))).toEqual(metadata);
+			const broken = pagedThreads(1, async () => {
+				throw new Error('membership unavailable');
+			});
+			await expect(
+				harvestTask.writeUserDataJson(file, createArchiveJsonBuffer(metadata), broken, AUTHOR, [guildId]),
+			).rejects.toThrow('membership unavailable');
+		} finally {
+			await rm(directory, {recursive: true, force: true});
+		}
 	});
 });

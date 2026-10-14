@@ -24,7 +24,7 @@ const PREMIUM_GRACE_PERIOD_MESSAGE_DESCRIPTOR = msg({
 	message:
 		"Your subscription failed to renew, but you still have access to {premiumProductName} perks until {formattedGraceDate}. Take action now or you'll lose all perks.",
 	comment:
-		'Nagbar body shown while a premium subscription is in its grace period. {premiumProductName} is the premium product name and {formattedGraceDate} is already localized.',
+		'Nagbar body shown while a Plus subscription is in its grace period. {premiumProductName} is the Plus product name and {formattedGraceDate} is already localized.',
 });
 const CUSTOMER_PORTAL_FAILED_TITLE_DESCRIPTOR = msg({
 	message: "Couldn't open the billing portal",

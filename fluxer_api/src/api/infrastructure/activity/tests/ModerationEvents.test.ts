@@ -46,6 +46,7 @@ describe('moderation activity events', () => {
 	test('a moderator ban and unban publish facts about the target without addresses', async () => {
 		const {owner, members, guild} = await setupTestGuildWithMembers(harness, 1);
 		const target = members[0]!;
+		await createBuilder(harness, '').post(`/test/guilds/${guild.id}/member-count`).body({member_count: 2}).execute();
 		await ban(owner.token, `/guilds/${guild.id}/bans/${target.userId}`);
 		const [banned] = publisher.of('guild_member_banned');
 		expect(banned?.key).toBe(target.userId);

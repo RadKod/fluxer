@@ -76,7 +76,9 @@ const CHANNEL_TYPE_OPTIONS: ReadonlyArray<{value: number; name: MessageDescripto
 ];
 
 export function getChannelTypeOptions(i18n: I18n, {forums = false}: {forums?: boolean} = {}): Array<ChannelTypeOption> {
-	const options = CHANNEL_TYPE_OPTIONS.map((option) => ({
+	// TEMPORARY: announcement channels are closed; open only after bucketing ((source_channel_id, bucket), source_message_id) and capping followers, on a product decision.
+	const offered = CHANNEL_TYPE_OPTIONS.filter((option) => option.value !== ChannelTypes.GUILD_ANNOUNCEMENT);
+	const options = offered.map((option) => ({
 		value: option.value,
 		name: i18n._(option.name),
 		desc: i18n._(option.desc),

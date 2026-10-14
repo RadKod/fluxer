@@ -8,10 +8,12 @@ import {makeAutoObservable, runInAction} from 'mobx';
 const DEFAULT_DISCOVERY_PAGE_SIZE = 36;
 
 class Discovery {
+	view: 'communities' | 'apps' = 'communities';
 	guilds: Array<DiscoveryGuild> = [];
 	loadedCount = 0;
 	total = 0;
 	loading = false;
+	searchSettled = false;
 	error = false;
 	query = '';
 	category: number | null = null;
@@ -30,6 +32,10 @@ class Discovery {
 
 	constructor() {
 		makeAutoObservable(this, {}, {autoBind: true});
+	}
+
+	setView(view: 'communities' | 'apps'): void {
+		this.view = view;
 	}
 
 	async search(params: {
@@ -88,6 +94,7 @@ class Discovery {
 				this.total = result.total;
 				this.categoryCounts = result.categoryCounts;
 				this.loading = false;
+				this.searchSettled = true;
 			});
 		} catch {
 			runInAction(() => {
@@ -95,6 +102,7 @@ class Discovery {
 					return;
 				}
 				this.loading = false;
+				this.searchSettled = true;
 				this.error = true;
 			});
 		}
@@ -139,12 +147,14 @@ class Discovery {
 	}
 
 	reset(): void {
+		this.view = 'communities';
 		this.activeSearchToken += 1;
 		this.guilds = [];
 		this.loadedCount = 0;
 		this.total = 0;
 		this.categoryCounts = null;
 		this.loading = false;
+		this.searchSettled = false;
 		this.error = false;
 		this.query = '';
 		this.category = null;

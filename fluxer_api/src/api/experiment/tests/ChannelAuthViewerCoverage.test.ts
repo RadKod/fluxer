@@ -16,6 +16,7 @@ const EXPECTED_CALL_SITES: Readonly<Record<string, number>> = {
 	'channel/services/ChannelService.ts': 1,
 	'channel/services/MessageInteractionService.ts': 10,
 	'channel/services/channel_data/ChannelOperationsService.ts': 4,
+	'channel/services/interaction/MessageComponentService.ts': 1,
 	'channel/services/message/MessageDeleteService.ts': 3,
 	'channel/services/message/MessageCrosspostService.ts': 1,
 	'channel/services/message/MessageEditService.ts': 1,
@@ -27,8 +28,12 @@ const EXPECTED_CALL_SITES: Readonly<Record<string, number>> = {
 	'channel/services/thread/ThreadMemberService.ts': 1,
 	'channel/services/thread/ThreadMemberSettingsService.ts': 1,
 	'favorite_meme/FavoriteMemeService.ts': 1,
+	'guild/micupbot/MicupBotCommands.ts': 1,
+	'guild/roster/tests/GuildRosterComponentTestUtils.ts': 1,
 	'report/ReportService.ts': 1,
+	'table_game/TableGameService.ts': 1,
 	'user/services/UserContentService.ts': 1,
+	'voice_seat/VoiceSeatService.ts': 2,
 	'webhook/ChannelFollowService.ts': 2,
 };
 

@@ -1,0 +1,227 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: Cosmetics
+description: The avatar decoration, ultra decoration, profile effect and nameplate catalog, ultra decoration sizes and in-front images, and wearing an item.
+---
+
+import RouteHeader from '@/components/RouteHeader.astro';
+
+A cosmetic is an image an account wears next to its avatar, over its profile, or behind its name. The catalog lists the items on offer; the [Admin API](/admin-api/cosmetics/) adds and changes them. An account wears at most one item of each type.
+
+Every route on this page is user-only, requires no permission, and acts on the caller's own account.
+
+## Cosmetic item types
+
+| Value | Description |
+| --- | --- |
+| avatar_decoration | A frame drawn around the avatar |
+| avatar_ultra | A large decoration drawn behind or in front of the avatar on supported surfaces |
+| profile_effect | An effect played over the profile card |
+| nameplate | A background behind the name in member and direct message lists |
+
+## Cosmetic availability
+
+| Value | Description |
+| --- | --- |
+| free | Every account can wear it |
+| premium | Accounts with [premium](/http-api/premium/) can wear it, and so can an account that owns it |
+| owned | Only accounts that own it can wear it |
+
+## Cosmetic item object
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | snowflake | The ID of the item |
+| type | string | The [cosmetic item type](#cosmetic-item-types) |
+| name | string | The display name of the item (1-64 characters) |
+| description | ?string | A short description of the item (1-256 characters) |
+| asset<sup>1</sup> | string | The hash of the item image |
+| availability | string | The [cosmetic availability](#cosmetic-availability) |
+| ultra_layout<sup>2</sup> | ?[ultra layout](#ultra-layout-object) object | The sizes of an ultra decoration on each surface |
+| ultra_front<sup>3</sup> | ?[ultra front](#ultra-front-object) object | The images of an ultra decoration drawn in front of the avatar |
+
+<sup>1</sup> Eight hexadecimal characters, prefixed with `a_` when the image is animated. The media proxy serves the image at `/branding/cosmetic-{type}-{id}/{asset}.webp` on the instance's media endpoint, with `size` between 128 and 480 and `animated=true` for the moving image
+
+<sup>2</sup> Null for every other type, and for an ultra decoration the admin gave no sizes, which then uses the fixed sizes
+
+<sup>3</sup> Null for every other type, and for an ultra decoration drawn behind the avatar
+
+### Example
+
+```json
+{
+  "id": "1501314428688998182",
+  "type": "avatar_decoration",
+  "name": "Gold ring",
+  "description": null,
+  "asset": "a_1a2b3c4d",
+  "availability": "premium",
+  "ultra_layout": null,
+  "ultra_front": null
+}
+```
+
+## Ultra layout object
+
+The sizes an admin gave an ultra decoration, one entry for each surface. A client that does not read it draws the fixed sizes, and so does a client whose request for it fails.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| compact | ?[ultra layout surface](#ultra-layout-surface-object) object | The size in chat and in the member list, null for the fixed size |
+| voice | ?[ultra layout surface](#ultra-layout-surface-object) object | The size on voice tiles, null for the fixed size |
+| profile | ?[ultra layout surface](#ultra-layout-surface-object) object | The size on the profile card, null for the fixed size |
+
+## Ultra layout surface object
+
+Every value is a multiple of the avatar diameter, on the scale of the fixed sizes 2.30, 3.20 and 3.40. Fluxer keeps three decimal places.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| width | number | The width of the decoration (0.5-6) |
+| height | number | The height of the decoration (0.5-6) |
+| offset_x | number | The horizontal shift from the centre of the avatar (-3 to 3) |
+| offset_y | number | The vertical shift from the centre of the avatar (-3 to 3) |
+
+## Ultra front object
+
+The images an admin gave an ultra decoration to draw it in front of the avatar. Each one is the left half of the decoration, twice as tall as it is wide, and a client draws the right half as its mirror image.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| closed | string | The hash of the still image shown while the decoration is closed |
+| open | array[string] | The hashes of the still opening frames in order, 2 to 30 of them |
+| idle | string | The hash of the animated loop played while the decoration is open, prefixed with `a_` |
+
+The media proxy serves each image like `asset`, under the same item path. A client asks for them with `size` up to 600, since an image can be 576 pixels tall.
+
+A client that reads it draws the decoration over the avatar in a square 3.468 times the avatar diameter on every surface, and `ultra_layout` applies only to drawing behind. The decoration rests on `closed`. When the avatar is interacted with, such as on hover, on keyboard focus, or when a profile opens, the opening frames play forward at 30 frames per second and `idle` loops. Letting go plays the frames back from the one showing. With reduced motion or data saving on, the decoration stays closed.
+
+A client loads the frames and the loop on the first open and replays every later open from what it loaded. It draws no ultra decoration before it has read the item through [List cosmetic items by ID](#list-cosmetic-items-by-id), so a decoration never jumps from behind the avatar to the front. A client that does not read it, or whose request for the item fails, draws `asset` behind the avatar.
+
+## Cosmetic asset data object
+
+The item an account wears, as it appears on the partial user and the profile. A field that carries it is always present and is null when the account wears nothing of that type.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| asset<sup>1</sup> | string | The hash of the image the account put on |
+| item_id | snowflake | The ID of the worn item |
+
+<sup>1</sup> Copied when the item is put on, so an account keeps the image it put on after the item's image changes. The [ultra front](#ultra-front-object) images are not copied: a client reads them from the item, so a new set reaches every account that wears it
+
+The partial user carries `avatar_decoration_data`, `avatar_ultra_data` and `nameplate_data`. The profile carries `profile_effect_data`.
+
+## List cosmetic catalog
+
+<RouteHeader method="GET" path="/v1/cosmetics/catalog" />
+
+Returns the items on offer. An item taken off sale is not listed.
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| type? | string | Only return items of this [cosmetic item type](#cosmetic-item-types) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | array[[cosmetic item](#cosmetic-item-object) object] | Catalog was returned |
+
+Each API process keeps the catalog for up to 60 seconds, so a catalog change can take that long to appear.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `cosmetics:catalog` bucket.
+
+## List cosmetic items by ID
+
+<RouteHeader method="GET" path="/v1/cosmetics/items" />
+
+Returns up to 50 items by ID, including items taken off sale, as an array of [cosmetic item](#cosmetic-item-object) objects. A client uses it to draw what other accounts wear, such as the sizes and in-front images of an ultra decoration, with one request for every batch of new items it sees. An unknown ID is left out, and a repeated ID is returned once.
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| ids | string | Comma separated item IDs, 1 to 50 of them |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | array[[cosmetic item](#cosmetic-item-object) object] | The known items were returned |
+| 400 | [error response](/http-api/#error-response) | More than 50 IDs, or an ID that is not a positive 64-bit integer, returned as `INVALID_FORM_BODY` |
+
+Each API process keeps an item for up to 60 seconds, and at most 5,000 items, so a change an admin makes can take that long to appear.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `cosmetics:items` bucket.
+
+## List my cosmetics
+
+<RouteHeader method="GET" path="/v1/users/@me/cosmetics" />
+
+Returns the items the current account owns and the items it wears.
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| owned | array[[cosmetic item](#cosmetic-item-object) object] | The items the account owns, including items taken off sale |
+| equipped | [equipped cosmetics](#equipped-cosmetics-object) object | The items the account wears |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | Items were returned |
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `cosmetics:list_own` bucket.
+
+## Equipped cosmetics object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| avatar_decoration_id | ?snowflake | The avatar decoration being worn |
+| avatar_ultra_id | ?snowflake | The ultra decoration being worn |
+| profile_effect_id | ?snowflake | The profile effect being worn |
+| nameplate_id | ?snowflake | The nameplate being worn |
+
+## Wear or take off cosmetics
+
+<RouteHeader method="PUT" path="/v1/users/@me/cosmetics/equipped" />
+
+Puts items on and takes them off. Returns the [equipped cosmetics](#equipped-cosmetics-object) object.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| avatar_decoration_id? | ?snowflake | The avatar decoration to wear, or null to take it off |
+| avatar_ultra_id? | ?snowflake | The ultra decoration to wear, or null to take it off |
+| profile_effect_id? | ?snowflake | The profile effect to wear, or null to take it off |
+| nameplate_id? | ?snowflake | The nameplate to wear, or null to take it off |
+
+An omitted field leaves that type as it is.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [equipped cosmetics](#equipped-cosmetics-object) object | Items were put on or taken off |
+| 403 | [error response](/http-api/#error-response) | `COSMETIC_NOT_OWNED`: an item is unknown, is not of the field's type, or the account may not wear it |
+
+### Side effects
+
+When a worn item changes, the account's sessions receive [User Update](/gateway/events/#user-update) with the current user object. A changed avatar decoration, ultra decoration or nameplate also reaches every guild the account is in as [Guild Member Update](/gateway/events/#guild-member-update). A request that changes nothing writes nothing and emits nothing.
+
+### Rate limit
+
+5 requests per 10 minutes for each authenticated user, on the `cosmetics:equip` bucket.

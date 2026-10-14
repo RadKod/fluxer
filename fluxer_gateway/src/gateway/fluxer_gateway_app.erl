@@ -19,6 +19,7 @@ init_subsystems() ->
     ok = gateway_guild_pin_keeper:apply_boot_pins(),
     gateway_compress:init(),
     gateway_cluster_metrics:init(),
+    gateway_connection_metrics:init(),
     process_registry:init(),
     guild_thread_store:init(),
     passive_sync_registry:init(),

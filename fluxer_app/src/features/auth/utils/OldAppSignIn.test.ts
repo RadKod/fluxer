@@ -4,23 +4,23 @@ import {shouldOfferOldAppSignIn} from '@app/features/auth/utils/OldAppSignIn';
 import {describe, expect, it} from 'vitest';
 
 describe('shouldOfferOldAppSignIn', () => {
-	it('offers the old app sign-in in an installed WebKit app on an official target origin', () => {
+	it('keeps the old app sign-in disabled in an installed WebKit app on an official target origin', () => {
 		expect(
 			shouldOfferOldAppSignIn({origin: 'https://fluxer.com', installKind: 'webkit', hasStoredAccounts: false}),
-		).toBe(true);
+		).toBe(false);
 		expect(
 			shouldOfferOldAppSignIn({origin: 'https://canary.fluxer.com', installKind: 'webkit', hasStoredAccounts: false}),
-		).toBe(true);
+		).toBe(false);
 	});
 
-	it('offers the old app sign-in in an installed Android Chromium app on an official target origin', () => {
+	it('keeps the old app sign-in disabled in an installed Android Chromium app on an official target origin', () => {
 		expect(
 			shouldOfferOldAppSignIn({
 				origin: 'https://fluxer.com',
 				installKind: 'chromium-android',
 				hasStoredAccounts: false,
 			}),
-		).toBe(true);
+		).toBe(false);
 	});
 
 	it('does not offer it once an account is stored', () => {

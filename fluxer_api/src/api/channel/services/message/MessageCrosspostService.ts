@@ -19,6 +19,8 @@ import type {ThreadViewer} from '@app/api/experiment/ChannelThreadsGate';
 import {contentModerationService} from '@app/api/infrastructure/ContentModerationService';
 import {Logger} from '@app/api/Logger';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
+import {getUserRepository} from '@app/api/middleware/ServiceSingletons';
 import type {Message} from '@app/api/models/Message';
 import {assertGuildMemberCanCommunicate} from '@app/api/utils/GuildCommunicationUtils';
 import {WorkerQueueOverflowError} from '@app/api/worker/WorkerQueueOverflowError';
@@ -70,6 +72,8 @@ export class MessageCrosspostService {
 		messageId: MessageID;
 		requestCache: RequestCache;
 	}): Promise<CrosspostMessageResult> {
+		const user = await getUserRepository().findUnique(userId);
+		if (user) getUsernameSelectionGate().assertMayAct(user, 'message');
 		const authChannel = await this.deps.channelAuthService.getChannelAuthenticated({userId, channelId, viewer});
 		const {channel, guild, member, hasPermission, checkPermission} = authChannel;
 		if (channel.type !== ChannelTypes.GUILD_ANNOUNCEMENT) {

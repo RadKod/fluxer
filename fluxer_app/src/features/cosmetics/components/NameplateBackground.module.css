@@ -1,0 +1,41 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Positioned against the row itself so the plate spans its padding and rounded corners. */
+.image {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: right center;
+	border-radius: inherit;
+	pointer-events: none;
+	user-select: none;
+	-webkit-user-drag: none;
+	/* Faint and muted under the name, opaque from 90%. */
+	mask-image: linear-gradient(
+		to right,
+		rgb(0 0 0 / 0) 0%,
+		rgb(0 0 0 / 0.058) 10%,
+		rgb(0 0 0 / 0.117) 20%,
+		rgb(0 0 0 / 0.181) 30%,
+		rgb(0 0 0 / 0.301) 40%,
+		rgb(0 0 0 / 0.495) 50%,
+		rgb(0 0 0 / 0.755) 60%,
+		rgb(0 0 0 / 0.898) 70%,
+		rgb(0 0 0 / 0.987) 80%,
+		black 90%
+	);
+	filter: saturate(0.78) brightness(0.85);
+}
+
+/* Lifts the row content above the plate and fills the row so hovering anywhere on it counts. */
+.content {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-self: stretch;
+	width: 100%;
+	min-width: 0;
+}

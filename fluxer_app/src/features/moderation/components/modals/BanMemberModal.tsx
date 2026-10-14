@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import Accessibility from '@app/features/accessibility/state/Accessibility';
 import * as Modal from '@app/features/app/components/dialogs/Modal';
-import {useAnimatedMediaVideoPlayback} from '@app/features/app/hooks/useAnimatedMediaPlayback';
-import {useSaveData} from '@app/features/app/hooks/useSaveData';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import * as GuildCommands from '@app/features/guild/commands/GuildCommands';
 import {
@@ -17,7 +14,7 @@ import {
 import {showModerationErrorModal} from '@app/features/moderation/components/alerts/ModerationErrorModalUtils';
 import styles from '@app/features/moderation/components/modals/BanMemberModal.module.css';
 import {BAN_DELETE_MESSAGE_OPTIONS} from '@app/features/moderation/constants/BanDeleteMessageOptions';
-import {BANNED_MP4, BANNED_POSTER, BANNED_WEBM} from '@app/features/moderation/constants/BanModalMedia';
+import {BANNED_POSTER} from '@app/features/moderation/constants/BanModalMedia';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {Button} from '@app/features/ui/button/Button';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
@@ -32,7 +29,7 @@ import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
-import {useCallback, useRef, useState} from 'react';
+import {useCallback, useState} from 'react';
 
 const PERMANENT_DESCRIPTOR = msg({
 	message: 'Permanent',
@@ -98,11 +95,7 @@ interface ComboboxOption {
 
 export const BanMemberModal: React.FC<{guildId: string; targetUser: User}> = observer(({guildId, targetUser}) => {
 	const {i18n} = useLingui();
-	const videoRef = useRef<HTMLVideoElement>(null);
-	const dataSaverOn = useSaveData();
 	const showArtwork = !RuntimeConfig.isSelfHosted();
-	const motionArtworkAllowed = showArtwork && !Accessibility.useReducedMotion && !dataSaverOn;
-	const videoPlaybackAllowed = useAnimatedMediaVideoPlayback(videoRef, {enabled: motionArtworkAllowed});
 	const [reason, setReason] = useState('');
 	const [deleteMessageSeconds, setDeleteMessageSeconds] = useState<number>(60 * 60 * 24);
 	const [banDuration, setBanDuration] = useState<number>(0);
@@ -153,23 +146,7 @@ export const BanMemberModal: React.FC<{guildId: string; targetUser: User}> = obs
 			/>
 			<Modal.Content data-flx="moderation.ban-member-modal.modal-content">
 				<div className={styles.content} data-flx="moderation.ban-member-modal.content">
-					{motionArtworkAllowed ? (
-						<video
-							ref={videoRef}
-							autoPlay={videoPlaybackAllowed}
-							loop
-							muted
-							playsInline
-							poster={BANNED_POSTER}
-							width={480}
-							height={240}
-							className={styles.video}
-							data-flx="moderation.ban-member-modal.video"
-						>
-							<source src={BANNED_WEBM} type="video/webm" data-flx="moderation.ban-member-modal.source.video-webm" />
-							<source src={BANNED_MP4} type="video/mp4" data-flx="moderation.ban-member-modal.source.video-mp4" />
-						</video>
-					) : showArtwork ? (
+					{showArtwork ? (
 						<img
 							src={BANNED_POSTER}
 							alt=""

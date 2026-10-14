@@ -25,11 +25,13 @@ const EMAIL_I18N_ID_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "Terima kasih atas donasimu untuk {product_name}",
-		"body": "Halo,\n\nTerima kasih atas donasimu untuk {product_name}! Donasi {interval, select,\n  month {berulang}\n  year {berulang}\n  other {satu kali}\n} kamu telah berhasil {interval, select,\n  month {diatur}\n  year {diatur}\n  other {diproses}\n}.\n\nDetail donasi:\nJumlah: {amount} {interval, select,\n  month {per bulan}\n  year {per tahun}\n  other {}\n}\n\nStripe akan segera mengirimi kamu email tanda terima terpisah beserta PDF fakturmu. Ini mencakup semua detail pembayaran dan bisa dipakai untuk keperluan pajak.\n\nKamu bisa melihat riwayat donasimu, mengunduh faktur, {interval, select,\n  month {dan mengelola atau membatalkan langgananmu}\n  year {dan mengelola atau membatalkan langgananmu}\n  other {dan mengelola donasi di masa mendatang}\n} kapan saja lewat tautan ini:\n\n{manageUrl}\n\nDukunganmu membantu {product_name} tetap berjalan. Terima kasih!\n\n– Tim {product_name}"
+		"body": "Halo,\n\nTerima kasih atas donasimu untuk {product_name}! Donasi {interval, select,\n  month {berulang}\n  year {berulang}\n  other {satu kali}\n} kamu telah berhasil {interval, select,\n  month {diatur}\n  year {diatur}\n  other {diproses}\n}.\n\nDetail donasi:\nJumlah: {amount} {interval, select,\n  month {per bulan}\n  year {per tahun}\n  other {}\n}\n\nStripe akan segera mengirimi kamu email tanda terima terpisah beserta PDF fakturmu. Ini mencakup semua detail pembayaran dan bisa dipakai untuk keperluan pajak.\n\nKamu bisa melihat riwayat donasimu, mengunduh faktur, {interval, select,\n  month {dan mengelola atau membatalkan langgananmu}\n  year {dan mengelola atau membatalkan langgananmu}\n  other {dan mengelola donasi di masa mendatang}\n} kapan saja lewat tautan ini:\n\n{manageUrl}\n\nDukunganmu membantu {product_name} tetap berjalan. Terima kasih!\n\n– Tim {product_name}",
+		"button": "Kelola donasi"
 	},
 	"donation_magic_link": {
 		"subject": "Kelola donasimu untuk {product_name}",
-		"body": "Halo,\n\nKlik tautan di bawah untuk mengakses portal donaturmu:\n\n{manageUrl}\n\nDi portal itu, kamu bisa mengelola langganan, mengunduh faktur, dan melihat riwayat donasimu.\n\nTautan ini kedaluwarsa pada {expiresAt, date, full} pukul {expiresAt, time, short}.\n\nJika kamu tidak meminta tautan ini, kamu bisa mengabaikan email ini dengan aman.\n\n– Tim {product_name}"
+		"body": "Halo,\n\nKlik tautan di bawah untuk mengakses portal donaturmu:\n\n{manageUrl}\n\nDi portal itu, kamu bisa mengelola langganan, mengunduh faktur, dan melihat riwayat donasimu.\n\nTautan ini kedaluwarsa pada {expiresAt, date, full} pukul {expiresAt, time, short}.\n\nJika kamu tidak meminta tautan ini, kamu bisa mengabaikan email ini dengan aman.\n\n– Tim {product_name}",
+		"button": "Kelola donasi"
 	},
 	"dsa_report_verification": {
 		"subject": "Verifikasi emailmu untuk laporan DSA",
@@ -45,11 +47,13 @@ const EMAIL_I18N_ID_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "Email {product_name} kamu telah diubah",
-		"body": "Halo {username},\n\nAlamat email di akun {product_name} kamu telah diubah menjadi {newEmail}.\n\nJika ini memang kamu, tidak ada yang perlu dilakukan. Jika bukan, kamu bisa membatalkan perubahan itu dan mengamankan akunmu lewat tautan ini:\n\n{revertUrl}\n\nTindakan ini akan mengembalikan email lamamu, mengeluarkanmu dari semua perangkat, menonaktifkan MFA, dan mengharuskanmu membuat kata sandi baru.\n\n– Tim Keamanan {product_name}"
+		"body": "Halo {username},\n\nAlamat email di akun {product_name} kamu telah diubah menjadi {newEmail}.\n\nJika ini memang kamu, tidak ada yang perlu dilakukan. Jika bukan, kamu bisa membatalkan perubahan itu dan mengamankan akunmu lewat tautan ini:\n\n{revertUrl}\n\nTindakan ini akan mengembalikan email lamamu, mengeluarkanmu dari semua perangkat, menonaktifkan MFA, dan mengharuskanmu membuat kata sandi baru.\n\n– Tim Keamanan {product_name}",
+		"button": "Batalkan perubahan ini"
 	},
 	"email_verification": {
 		"subject": "Verifikasi alamat email {product_name} kamu",
-		"body": "Halo {username},\n\nSilakan verifikasi alamat email untuk akun {product_name} kamu dengan mengeklik tautan di bawah ini:\n\n{verifyUrl}\n\nJika kamu tidak membuat akun {product_name}, kamu bisa mengabaikan email ini dengan aman.\n\nTautan ini berlaku selama 24 jam.\n\n– Tim {product_name}"
+		"body": "🎉 Halo {username},\n\nSilakan verifikasi alamat email untuk akun {product_name} kamu dengan mengeklik tautan di bawah ini:\n\n{verifyUrl}\n\nJika kamu tidak membuat akun {product_name}, kamu bisa mengabaikan email ini dengan aman.\n\nTautan ini berlaku selama 24 jam.\n\n– Tim {product_name}",
+		"button": "Verifikasi email"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Manfaat dari hadiah yang kamu tukarkan telah dihapus",
@@ -57,15 +61,18 @@ const EMAIL_I18N_ID_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "Ekspor data {product_name} kamu siap diunduh",
-		"body": "Halo {username},\n\nEkspor datamu sudah siap.\n\nTautan unduh:\n{downloadUrl}\n\nPesan yang disertakan: {totalMessages, number}\nUkuran file: {fileSizeMB, number} MB\n\nTautan ini kedaluwarsa pada {expiresAt, date, full} pukul {expiresAt, time, short}.\n\nJika kamu tidak meminta ekspor ini, segera ubah kata sandimu dan hubungi tim dukungan kami.\n\n– Tim {product_name}"
+		"body": "Halo {username},\n\nEkspor datamu sudah siap.\n\nTautan unduh:\n{downloadUrl}\n\nPesan yang disertakan: {totalMessages, number}\nUkuran file: {fileSizeMB, number} MB\n\nTautan ini kedaluwarsa pada {expiresAt, date, full} pukul {expiresAt, time, short}.\n\nJika kamu tidak meminta ekspor ini, segera ubah kata sandimu dan hubungi tim dukungan kami.\n\n– Tim {product_name}",
+		"button": "Unduh dataku"
 	},
 	"inactivity_warning": {
 		"subject": "Akun {product_name} kamu akan dihapus karena tidak aktif",
-		"body": "Halo {username},\n\nKami belum melihat aktivitas apa pun di akun {product_name} kamu sejak {lastActiveDate, date, full}.\n\nJika kamu tidak masuk sebelum {deletionDate, date, full} pukul {deletionDate, time, short}, akunmu akan dihapus permanen karena tidak aktif.\n\nMasuk di sini:\n{loginUrl}\n\nJika kamu baru saja menggunakan {product_name}, segera hubungi tim dukungan kami.\n\n– Tim {product_name}"
+		"body": "Halo {username},\n\nKami belum melihat aktivitas apa pun di akun {product_name} kamu sejak {lastActiveDate, date, full}.\n\nJika kamu tidak masuk sebelum {deletionDate, date, full} pukul {deletionDate, time, short}, akunmu akan dihapus permanen karena tidak aktif.\n\nMasuk di sini:\n{loginUrl}\n\nJika kamu baru saja menggunakan {product_name}, segera hubungi tim dukungan kami.\n\n– Tim {product_name}",
+		"button": "Masuk"
 	},
 	"ip_authorization": {
 		"subject": "Otorisasi masuk dari alamat IP baru",
-		"body": "Halo {username},\n\nKami mendeteksi upaya masuk ke akun {product_name} kamu dari alamat IP baru:\n\nAlamat IP: {ipAddress}\nLokasi: {location}\n\nJika ini memang kamu, silakan otorisasi alamat IP ini dengan mengeklik tautan di bawah ini:\n\n{authUrl}\n\nJika kamu tidak mencoba masuk, segera ubah kata sandimu.\n\nTautan ini berlaku selama 30 menit.\n\n– Tim {product_name}"
+		"body": "Halo {username},\n\nKami mendeteksi upaya masuk ke akun {product_name} kamu dari alamat IP baru:\n\nAlamat IP: {ipAddress}\nLokasi: {location}\n\nJika ini memang kamu, silakan otorisasi alamat IP ini dengan mengeklik tautan di bawah ini:\n\n{authUrl}\n\nJika kamu tidak mencoba masuk, segera ubah kata sandimu.\n\nTautan ini berlaku selama 30 menit.\n\n– Tim {product_name}",
+		"button": "Otorisasi masuk ini"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Konfirmasi akses ke kode cadangan {product_name} kamu",
@@ -77,11 +84,17 @@ const EMAIL_I18N_ID_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "Atur ulang kata sandi {product_name} kamu",
-		"body": "Halo {username},\n\nKamu meminta pengaturan ulang kata sandi {product_name}. Gunakan tautan di bawah ini untuk mengatur kata sandi baru:\n\n{resetUrl}\n\nJika kamu tidak meminta ini, kamu bisa mengabaikan email ini dengan aman.\n\nTautan ini berlaku selama 1 jam.\n\n– Tim {product_name}"
+		"body": "Halo {username},\n\nKamu meminta pengaturan ulang kata sandi {product_name}. Gunakan tautan di bawah ini untuk mengatur kata sandi baru:\n\n{resetUrl}\n\nJika kamu tidak meminta ini, kamu bisa mengabaikan email ini dengan aman.\n\nTautan ini berlaku selama 1 jam.\n\n– Tim {product_name}",
+		"button": "Atur ulang kata sandi"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "Pendaftaranmu di {product_name} telah disetujui",
-		"body": "Halo {username},\n\nKabar baik: pendaftaranmu di {product_name} telah disetujui.\n\nKamu sekarang bisa masuk ke aplikasi {product_name} di sini:\n{channelsUrl}\n\nSelamat datang di komunitas {product_name}.\n\n– Tim {product_name}"
+		"body": "🎉 Halo {username},\n\nKabar baik: pendaftaranmu di {product_name} telah disetujui.\n\nKamu sekarang bisa masuk ke aplikasi {product_name} di sini:\n{channelsUrl}\n\nSelamat datang di komunitas {product_name}.\n\n– Tim {product_name}",
+		"button": "Buka {product_name}"
 	},
 	"report_resolved": {
 		"subject": "Laporanmu di {product_name} telah ditinjau",
@@ -97,7 +110,7 @@ const EMAIL_I18N_ID_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "Penangguhan akun {product_name} kamu telah dicabut",
-		"body": "Halo {username},\n\nKabar baik: penangguhan akun {product_name} kamu telah dicabut.\n\n{reason, select,\n  null {}\n  other {Alasan: {reason}}\n}\n\nKamu sekarang bisa masuk lagi dan terus menggunakan {product_name} seperti biasa.\n\n– Tim Keamanan {product_name}"
+		"body": "🎉 Halo {username},\n\nKabar baik: penangguhan akun {product_name} kamu telah dicabut.\n\n{reason, select,\n  null {}\n  other {Alasan: {reason}}\n}\n\nKamu sekarang bisa masuk lagi dan terus menggunakan {product_name} seperti biasa.\n\n– Tim Keamanan {product_name}"
 	}
 });
 

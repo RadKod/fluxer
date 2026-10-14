@@ -574,7 +574,7 @@ pub(crate) fn validate_desktop_release_module_files(
         );
         for (module, listed) in &manifest.modules {
             ensure!(
-                listed.url == desktop_module_package_url(channel, module, &listed.sha256),
+                listed.url == desktop_module_package_url(channel, module, &listed.sha256)?,
                 "Desktop module manifest {:?} points {module} at {:?}",
                 entry.release_asset,
                 listed.url
@@ -1508,7 +1508,7 @@ mod tests {
             entries.insert(
                 module.to_string(),
                 crate::desktop::DesktopChannelManifestEntry {
-                    url: desktop_module_package_url(SAMPLE_CHANNEL, module, &sha256),
+                    url: desktop_module_package_url(SAMPLE_CHANNEL, module, &sha256).unwrap(),
                     sha256,
                     bytes: size,
                     minimum_shell_version: "0.0.0".to_string(),

@@ -3,6 +3,8 @@
 import {Routes} from '@app/app/Routes';
 import {GuildSettingsModal, UserSettingsModal} from '@app/features/app/components/dialogs/LoadableSettingsModals';
 import Authentication from '@app/features/auth/state/Authentication';
+import {openGuildBoostPanel} from '@app/features/boost/commands/GuildBoostPanelCommands';
+import {isGuildBoostAvailable} from '@app/features/boost/utils/GuildBoostLevels';
 import {CategoryCreateModal} from '@app/features/channel/components/modals/CategoryCreateModal';
 import {ChannelCreateModal} from '@app/features/channel/components/modals/ChannelCreateModal';
 import Channels from '@app/features/channel/state/Channels';
@@ -39,6 +41,7 @@ import * as ReadStateCommands from '@app/features/read_state/commands/ReadStateC
 import ReadStates from '@app/features/read_state/state/ReadStates';
 import {getUnreadThreadIds} from '@app/features/threads/utils/ThreadViewUtils';
 import {
+	BoostIcon,
 	CopyIdIcon,
 	CreateCategoryIcon,
 	CreateChannelIcon,
@@ -90,6 +93,11 @@ const EDIT_COMMUNITY_PROFILE_DESCRIPTOR = msg({
 	message: 'Edit community profile',
 	comment: 'Action that opens the community profile editor for the current member.',
 });
+const BOOST_THIS_COMMUNITY_DESCRIPTOR = msg({
+	message: 'Boost this community',
+	comment:
+		'Community context menu and mobile sheet action for members: opens the community boosts, where they can boost it.',
+});
 const DEBUG_COMMUNITY_DESCRIPTOR = msg({
 	message: 'Debug community',
 	comment: 'Developer-mode action that opens the community debug modal.',
@@ -105,6 +113,7 @@ export interface GuildMenuHandlers {
 	handleMarkAsRead: () => void;
 	handleInviteMembers: () => void;
 	handleCommunitySettings: () => void;
+	handleBoostCommunity: () => void;
 	handleCreateChannel: () => void;
 	handleCreateCategory: () => void;
 	handleNotificationSettings: () => void;
@@ -221,6 +230,10 @@ export function useGuildMenuData(guild: Guild, options: UseGuildMenuDataOptions)
 						'guild-settings',
 					),
 				);
+			},
+			// The header row and menu share the lazy perks entry.
+			handleBoostCommunity: () => {
+				ModalCommands.runAfterBottomSheetClose(onClose, () => openGuildBoostPanel(guild.id));
 			},
 			handleCreateChannel: () => {
 				ModalCommands.pushAfterBottomSheetClose(
@@ -394,6 +407,12 @@ export function useGuildMenuData(guild: Guild, options: UseGuildMenuDataOptions)
 				label: i18n._(GUILD_SETTINGS_LABEL_DESCRIPTOR),
 				items: settingsSubItems,
 				onTriggerSelect: handlers.handleCommunitySettings,
+			});
+		} else if (isGuildBoostAvailable(guild)) {
+			quickActions.push({
+				icon: <BoostIcon size={20} data-flx="ui.action-menu.items.guild-menu-data.groups.boost-icon" />,
+				label: i18n._(BOOST_THIS_COMMUNITY_DESCRIPTOR),
+				onClick: handlers.handleBoostCommunity,
 			});
 		}
 		if (canManageChannels) {

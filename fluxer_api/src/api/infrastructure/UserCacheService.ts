@@ -80,9 +80,27 @@ export class UserCacheService {
 		return results;
 	}
 
+	async getContentHiddenSince(userIds: Array<UserID>, requestCache: RequestCache): Promise<Map<UserID, Date | null>> {
+		const result = new Map<UserID, Date | null>();
+		const missing: Array<UserID> = [];
+		for (const id of new Set(userIds)) {
+			if (requestCache.contentHiddenSince.has(id)) result.set(id, requestCache.contentHiddenSince.get(id)!);
+			else missing.push(id);
+		}
+		if (missing.length > 0) {
+			const cutoffs = await this.usersServiceClient.getContentHiddenSince(missing);
+			for (const [id, cutoff] of cutoffs) {
+				result.set(id, cutoff);
+				requestCache.contentHiddenSince.set(id, cutoff);
+			}
+		}
+		return result;
+	}
+
 	async setUserPartialResponseFromUser(user: User, requestCache?: RequestCache): Promise<UserPartialResponse> {
 		const response = mapUserToPartialResponse(user);
 		requestCache?.userPartials.set(user.id, response);
+		requestCache?.contentHiddenSince.set(user.id, user.contentHiddenSince);
 		await this.invalidateUserCache(user.id);
 		return response;
 	}
@@ -90,6 +108,7 @@ export class UserCacheService {
 	setUserPartialResponseFromUserInBackground(user: User, requestCache?: RequestCache): UserPartialResponse {
 		const response = mapUserToPartialResponse(user);
 		requestCache?.userPartials.set(user.id, response);
+		requestCache?.contentHiddenSince.set(user.id, user.contentHiddenSince);
 		void this.invalidateUserCache(user.id);
 		return response;
 	}
@@ -97,6 +116,7 @@ export class UserCacheService {
 	setUserPartialResponseFromUserInRequestCache(user: User, requestCache: RequestCache): UserPartialResponse {
 		const response = mapUserToPartialResponse(user);
 		requestCache.userPartials.set(user.id, response);
+		requestCache.contentHiddenSince.set(user.id, user.contentHiddenSince);
 		return response;
 	}
 

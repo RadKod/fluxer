@@ -25,11 +25,13 @@ const EMAIL_I18N_VI_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "Cảm ơn bạn đã ủng hộ {product_name}",
-		"body": "Xin chào,\n\nCảm ơn bạn đã ủng hộ {product_name}! {interval, select,\n  month {Khoản ủng hộ định kỳ}\n  year {Khoản ủng hộ định kỳ}\n  other {Khoản ủng hộ một lần}\n} của bạn đã được {interval, select,\n  month {thiết lập}\n  year {thiết lập}\n  other {xử lý}\n} thành công.\n\nChi tiết ủng hộ:\nSố tiền: {amount} {interval, select,\n  month {mỗi tháng}\n  year {mỗi năm}\n  other {}\n}\n\nStripe sẽ sớm gửi cho bạn một email biên lai riêng kèm hóa đơn PDF. Biên lai này gồm đầy đủ chi tiết thanh toán và có thể dùng cho mục đích thuế.\n\nBạn có thể xem lịch sử ủng hộ, tải xuống hóa đơn, {interval, select,\n  month {và quản lý hoặc hủy gói đăng ký}\n  year {và quản lý hoặc hủy gói đăng ký}\n  other {và quản lý các khoản ủng hộ trong tương lai}\n} bất cứ lúc nào bằng cách sử dụng liên kết này:\n\n{manageUrl}\n\nSự hỗ trợ của bạn giúp {product_name} tiếp tục hoạt động. Cảm ơn bạn!\n\n– Đội ngũ {product_name}"
+		"body": "Xin chào,\n\nCảm ơn bạn đã ủng hộ {product_name}! {interval, select,\n  month {Khoản ủng hộ định kỳ}\n  year {Khoản ủng hộ định kỳ}\n  other {Khoản ủng hộ một lần}\n} của bạn đã được {interval, select,\n  month {thiết lập}\n  year {thiết lập}\n  other {xử lý}\n} thành công.\n\nChi tiết ủng hộ:\nSố tiền: {amount} {interval, select,\n  month {mỗi tháng}\n  year {mỗi năm}\n  other {}\n}\n\nStripe sẽ sớm gửi cho bạn một email biên lai riêng kèm hóa đơn PDF. Biên lai này gồm đầy đủ chi tiết thanh toán và có thể dùng cho mục đích thuế.\n\nBạn có thể xem lịch sử ủng hộ, tải xuống hóa đơn, {interval, select,\n  month {và quản lý hoặc hủy gói đăng ký}\n  year {và quản lý hoặc hủy gói đăng ký}\n  other {và quản lý các khoản ủng hộ trong tương lai}\n} bất cứ lúc nào bằng cách sử dụng liên kết này:\n\n{manageUrl}\n\nSự hỗ trợ của bạn giúp {product_name} tiếp tục hoạt động. Cảm ơn bạn!\n\n– Đội ngũ {product_name}",
+		"button": "Quản lý khoản ủng hộ"
 	},
 	"donation_magic_link": {
 		"subject": "Quản lý các khoản ủng hộ {product_name} của bạn",
-		"body": "Xin chào,\n\nNhấp vào liên kết bên dưới để truy cập cổng thông tin người ủng hộ của bạn:\n\n{manageUrl}\n\nTrong cổng thông tin, bạn có thể quản lý gói đăng ký, tải xuống hóa đơn và xem lịch sử ủng hộ của mình.\n\nLiên kết này hết hạn vào {expiresAt, date, full} lúc {expiresAt, time, short}.\n\nNếu bạn không yêu cầu liên kết này, bạn có thể bỏ qua email này.\n\n– Đội ngũ {product_name}"
+		"body": "Xin chào,\n\nNhấp vào liên kết bên dưới để truy cập cổng thông tin người ủng hộ của bạn:\n\n{manageUrl}\n\nTrong cổng thông tin, bạn có thể quản lý gói đăng ký, tải xuống hóa đơn và xem lịch sử ủng hộ của mình.\n\nLiên kết này hết hạn vào {expiresAt, date, full} lúc {expiresAt, time, short}.\n\nNếu bạn không yêu cầu liên kết này, bạn có thể bỏ qua email này.\n\n– Đội ngũ {product_name}",
+		"button": "Quản lý khoản ủng hộ"
 	},
 	"dsa_report_verification": {
 		"subject": "Xác minh email của bạn cho báo cáo DSA",
@@ -45,11 +47,13 @@ const EMAIL_I18N_VI_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "Email của bạn trên {product_name} đã được thay đổi",
-		"body": "Xin chào {username},\n\nĐịa chỉ email trên tài khoản {product_name} của bạn đã được thay đổi thành {newEmail}.\n\nNếu bạn đã thực hiện thay đổi này, bạn không cần thực hiện hành động nào. Nếu không, bạn có thể hoàn tác thay đổi và bảo mật tài khoản của mình bằng cách sử dụng liên kết này:\n\n{revertUrl}\n\nThao tác này sẽ khôi phục email trước đó của bạn, đăng xuất khỏi tất cả thiết bị, tắt MFA và yêu cầu bạn đặt mật khẩu mới.\n\n– Đội ngũ An toàn {product_name}"
+		"body": "Xin chào {username},\n\nĐịa chỉ email trên tài khoản {product_name} của bạn đã được thay đổi thành {newEmail}.\n\nNếu bạn đã thực hiện thay đổi này, bạn không cần thực hiện hành động nào. Nếu không, bạn có thể hoàn tác thay đổi và bảo mật tài khoản của mình bằng cách sử dụng liên kết này:\n\n{revertUrl}\n\nThao tác này sẽ khôi phục email trước đó của bạn, đăng xuất khỏi tất cả thiết bị, tắt MFA và yêu cầu bạn đặt mật khẩu mới.\n\n– Đội ngũ An toàn {product_name}",
+		"button": "Hoàn tác thay đổi này"
 	},
 	"email_verification": {
 		"subject": "Xác minh địa chỉ email của bạn trên {product_name}",
-		"body": "Xin chào {username},\n\nVui lòng xác minh địa chỉ email cho tài khoản {product_name} của bạn bằng cách nhấp vào liên kết bên dưới:\n\n{verifyUrl}\n\nNếu bạn không tạo tài khoản {product_name}, bạn có thể bỏ qua email này.\n\nLiên kết này có hiệu lực trong 24 giờ.\n\n– Đội ngũ {product_name}"
+		"body": "🎉 Xin chào {username},\n\nVui lòng xác minh địa chỉ email cho tài khoản {product_name} của bạn bằng cách nhấp vào liên kết bên dưới:\n\n{verifyUrl}\n\nNếu bạn không tạo tài khoản {product_name}, bạn có thể bỏ qua email này.\n\nLiên kết này có hiệu lực trong 24 giờ.\n\n– Đội ngũ {product_name}",
+		"button": "Xác minh email"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Các đặc quyền từ quà tặng đã đổi của bạn đã bị gỡ bỏ",
@@ -57,15 +61,18 @@ const EMAIL_I18N_VI_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "Bản xuất dữ liệu {product_name} của bạn đã sẵn sàng để tải xuống",
-		"body": "Xin chào {username},\n\nBản xuất dữ liệu của bạn đã sẵn sàng.\n\nLiên kết tải xuống:\n{downloadUrl}\n\nSố tin nhắn bao gồm: {totalMessages, number}\nKích thước tệp: {fileSizeMB, number} MB\n\nLiên kết này hết hạn vào {expiresAt, date, full} lúc {expiresAt, time, short}.\n\nNếu bạn không yêu cầu xuất dữ liệu này, vui lòng thay đổi mật khẩu ngay lập tức và liên hệ đội ngũ hỗ trợ của chúng tôi.\n\n– Đội ngũ {product_name}"
+		"body": "Xin chào {username},\n\nBản xuất dữ liệu của bạn đã sẵn sàng.\n\nLiên kết tải xuống:\n{downloadUrl}\n\nSố tin nhắn bao gồm: {totalMessages, number}\nKích thước tệp: {fileSizeMB, number} MB\n\nLiên kết này hết hạn vào {expiresAt, date, full} lúc {expiresAt, time, short}.\n\nNếu bạn không yêu cầu xuất dữ liệu này, vui lòng thay đổi mật khẩu ngay lập tức và liên hệ đội ngũ hỗ trợ của chúng tôi.\n\n– Đội ngũ {product_name}",
+		"button": "Tải xuống dữ liệu của tôi"
 	},
 	"inactivity_warning": {
 		"subject": "Tài khoản {product_name} của bạn sẽ bị xóa do không hoạt động",
-		"body": "Xin chào {username},\n\nChúng tôi chưa thấy bất kỳ hoạt động nào trên tài khoản {product_name} của bạn kể từ {lastActiveDate, date, full}.\n\nNếu bạn không đăng nhập trước {deletionDate, date, full} lúc {deletionDate, time, short}, tài khoản của bạn sẽ bị xóa vĩnh viễn do không hoạt động.\n\nĐăng nhập tại đây:\n{loginUrl}\n\nNếu bạn đã sử dụng {product_name} gần đây, vui lòng liên hệ đội ngũ hỗ trợ của chúng tôi ngay lập tức.\n\n– Đội ngũ {product_name}"
+		"body": "Xin chào {username},\n\nChúng tôi chưa thấy bất kỳ hoạt động nào trên tài khoản {product_name} của bạn kể từ {lastActiveDate, date, full}.\n\nNếu bạn không đăng nhập trước {deletionDate, date, full} lúc {deletionDate, time, short}, tài khoản của bạn sẽ bị xóa vĩnh viễn do không hoạt động.\n\nĐăng nhập tại đây:\n{loginUrl}\n\nNếu bạn đã sử dụng {product_name} gần đây, vui lòng liên hệ đội ngũ hỗ trợ của chúng tôi ngay lập tức.\n\n– Đội ngũ {product_name}",
+		"button": "Đăng nhập"
 	},
 	"ip_authorization": {
 		"subject": "Cho phép đăng nhập từ địa chỉ IP mới",
-		"body": "Xin chào {username},\n\nChúng tôi phát hiện một lần thử đăng nhập vào tài khoản {product_name} của bạn từ một địa chỉ IP mới:\n\nĐịa chỉ IP: {ipAddress}\nVị trí: {location}\n\nNếu đó là bạn, vui lòng cho phép địa chỉ IP này bằng cách nhấp vào liên kết bên dưới:\n\n{authUrl}\n\nNếu bạn không thực hiện lần đăng nhập này, vui lòng đổi mật khẩu ngay.\n\nLiên kết này có hiệu lực trong 30 phút.\n\n– Đội ngũ {product_name}"
+		"body": "Xin chào {username},\n\nChúng tôi phát hiện một lần thử đăng nhập vào tài khoản {product_name} của bạn từ một địa chỉ IP mới:\n\nĐịa chỉ IP: {ipAddress}\nVị trí: {location}\n\nNếu đó là bạn, vui lòng cho phép địa chỉ IP này bằng cách nhấp vào liên kết bên dưới:\n\n{authUrl}\n\nNếu bạn không thực hiện lần đăng nhập này, vui lòng đổi mật khẩu ngay.\n\nLiên kết này có hiệu lực trong 30 phút.\n\n– Đội ngũ {product_name}",
+		"button": "Cho phép lần đăng nhập này"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Xác nhận quyền truy cập mã dự phòng {product_name} của bạn",
@@ -77,11 +84,17 @@ const EMAIL_I18N_VI_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "Đặt lại mật khẩu của bạn trên {product_name}",
-		"body": "Xin chào {username},\n\nBạn đã yêu cầu đặt lại mật khẩu {product_name}. Sử dụng liên kết bên dưới để đặt mật khẩu mới:\n\n{resetUrl}\n\nNếu bạn không yêu cầu điều này, bạn có thể bỏ qua email này.\n\nLiên kết này có hiệu lực trong 1 giờ.\n\n– Đội ngũ {product_name}"
+		"body": "Xin chào {username},\n\nBạn đã yêu cầu đặt lại mật khẩu {product_name}. Sử dụng liên kết bên dưới để đặt mật khẩu mới:\n\n{resetUrl}\n\nNếu bạn không yêu cầu điều này, bạn có thể bỏ qua email này.\n\nLiên kết này có hiệu lực trong 1 giờ.\n\n– Đội ngũ {product_name}",
+		"button": "Đặt lại mật khẩu"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "Đăng ký {product_name} của bạn đã được chấp thuận",
-		"body": "Xin chào {username},\n\nTin tốt: đăng ký {product_name} của bạn đã được chấp thuận.\n\nBây giờ bạn có thể đăng nhập vào ứng dụng {product_name} tại đây:\n{channelsUrl}\n\nChào mừng bạn đến với cộng đồng {product_name}.\n\n– Đội ngũ {product_name}"
+		"body": "🎉 Xin chào {username},\n\nTin tốt: đăng ký {product_name} của bạn đã được chấp thuận.\n\nBây giờ bạn có thể đăng nhập vào ứng dụng {product_name} tại đây:\n{channelsUrl}\n\nChào mừng bạn đến với cộng đồng {product_name}.\n\n– Đội ngũ {product_name}",
+		"button": "Mở {product_name}"
 	},
 	"report_resolved": {
 		"subject": "Báo cáo {product_name} của bạn đã được xem xét",
@@ -97,7 +110,7 @@ const EMAIL_I18N_VI_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "Lệnh đình chỉ tài khoản {product_name} của bạn đã được gỡ bỏ",
-		"body": "Xin chào {username},\n\nTin tốt: lệnh đình chỉ tài khoản {product_name} của bạn đã được gỡ bỏ.\n\n{reason, select,\n  null {}\n  other {Lý do: {reason}}\n}\n\nBây giờ bạn có thể đăng nhập lại và tiếp tục sử dụng {product_name} như bình thường.\n\n– Đội ngũ An toàn {product_name}"
+		"body": "🎉 Xin chào {username},\n\nTin tốt: lệnh đình chỉ tài khoản {product_name} của bạn đã được gỡ bỏ.\n\n{reason, select,\n  null {}\n  other {Lý do: {reason}}\n}\n\nBây giờ bạn có thể đăng nhập lại và tiếp tục sử dụng {product_name} như bình thường.\n\n– Đội ngũ An toàn {product_name}"
 	}
 });
 

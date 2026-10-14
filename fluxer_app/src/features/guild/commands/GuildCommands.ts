@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import * as AnalyticsCommands from '@app/features/analytics/commands/AnalyticsCommands';
 import type {ChannelMoveOperation} from '@app/features/app/components/layout/utils/ChannelMoveOperation';
 import {Endpoints} from '@app/features/app/constants/Endpoints';
 import type {ChannelWire} from '@app/features/channel/models/Channel';
@@ -77,6 +78,7 @@ export interface GuildBan {
 
 async function requestGuildCreate(params: GuildCreateParams | GuildTemplateCreateParams): Promise<Guild> {
 	const response = await http.post<Guild>(Endpoints.GUILDS, {body: params});
+	AnalyticsCommands.track('guild_create');
 	return response.body;
 }
 

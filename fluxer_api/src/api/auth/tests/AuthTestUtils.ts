@@ -86,6 +86,15 @@ export async function registerUser(harness: ApiTestHarness, body: Record<string,
 	return createBuilder<RegisterResponse>(harness, '').post('/auth/register').body(body).execute();
 }
 
+// A local calendar date `years` years before today, a day earlier so a birthday today never decides the case.
+export function bornYearsAgo(years: number): string {
+	const date = new Date();
+	date.setFullYear(date.getFullYear() - years);
+	date.setDate(date.getDate() - 1);
+	const pad = (value: number) => String(value).padStart(2, '0');
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 export async function createTestAccount(
 	harness: ApiTestHarness,
 	params?: CreateTestAccountParams,
@@ -325,7 +334,12 @@ export async function enableSso(
 		redirect_uri: '',
 		...overrides,
 	};
-	await createBuilder(harness, token).patch('/admin/instance/config').body({sso: ssoConfig}).execute();
+	// SSO auto-provisioning is refused while the instance collects a date of birth (see SsoAgeGate.test.ts),
+	// so SSO flow tests run against an instance that does not collect one.
+	await createBuilder(harness, token)
+		.patch('/admin/instance/config')
+		.body({sso: ssoConfig, app_public: {registration: {collect_date_of_birth: false}}})
+		.execute();
 }
 
 export async function disableSso(harness: ApiTestHarness, token: string): Promise<void> {

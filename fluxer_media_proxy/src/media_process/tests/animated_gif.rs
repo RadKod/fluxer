@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use super::super::animated_transform::gif_resize_dims;
+use super::super::animated_transform::{gif_resize_dims, source_can_stand_in_for_resize};
 use super::super::{
     AnimationLimits, AnimationMode, ImageOptions, ImageQuality, MediaError, ResizeMode,
 };
-use super::fixtures::{animated_mode, parse_png_chunks, png_ihdr_dimensions, transform_image};
+use super::fixtures::{
+    animated_mode, assert_animated_webp, parse_png_chunks, png_ihdr_dimensions, transform_image,
+};
 use crate::{
     mime,
     output_format::OutputFormat,
     test_fixtures::{
-        animated_gif_fixture, animated_gif_frames, first_webp_anim_frame_size, gif_frame_delays_cs,
-        gif_loop_count, webp_canvas_size,
+        animated_gif_fixture, animated_gif_frames, animated_gif_pixel_frames_on_canvas,
+        animated_gif_solid_frames, first_webp_anim_frame_size, gif_frame_delays_cs, gif_loop_count,
+        webp_anim_frame_sizes, webp_canvas_size,
     },
 };
 
@@ -101,7 +104,7 @@ fn animated_gif_encodes_to_animated_webp_with_alpha() {
 
 #[test]
 fn animated_gif_resize_preserves_last_frame_delay() {
-    let gif = animated_gif_fixture();
+    let gif = animated_gif_solid_frames(2, 20, 64);
     assert_eq!(vec![20, 20], gif_frame_delays_cs(&gif));
 
     let resized = transform_image(
@@ -118,6 +121,10 @@ fn animated_gif_resize_preserves_last_frame_delay() {
     .unwrap();
 
     assert_eq!("image/gif", resized.content_type);
+    assert!(
+        resized.bytes.len() < gif.len(),
+        "the resize itself is served"
+    );
     assert_eq!(vec![20, 20], gif_frame_delays_cs(&resized.bytes));
 }
 
@@ -227,7 +234,7 @@ fn animated_gif_resize_keeps_every_frame_past_the_encode_caps() {
     // a long GIF came back whole; binding the encode budget here cut the tail off anything past
     // FLUXER_MEDIA_PROXY_MAX_ENCODE_DURATION_MS while the same GIF passed through untouched when
     // no resize was asked for.
-    let gif = animated_gif_frames(5, 20);
+    let gif = animated_gif_solid_frames(5, 20, 64);
     assert_eq!(vec![20u16; 5], gif_frame_delays_cs(&gif));
 
     let uncapped = resized_animated_gif_with_encode_limits(&gif, 4_096, 30_000);
@@ -299,7 +306,7 @@ fn a_zero_delay_source_resizes_to_the_hundred_millisecond_browser_default() {
     // A GIF that declares a 0 cs delay is not a 20 ms animation: authoring tools emit 0 and
     // every renderer shows it at 100 ms. Clamping it to the fast-frame minimum instead played
     // the resized animation five times faster than the original.
-    let gif = animated_gif_frames(5, 0);
+    let gif = animated_gif_solid_frames(5, 0, 64);
     assert_eq!(vec![0u16; 5], gif_frame_delays_cs(&gif));
 
     let resized = transform_image(
@@ -319,7 +326,7 @@ fn a_zero_delay_source_resizes_to_the_hundred_millisecond_browser_default() {
 #[test]
 fn a_sub_minimum_nonzero_delay_still_clamps_to_the_fast_frame_minimum() {
     // A declared-but-tiny delay keeps the 20 ms floor; only "no delay at all" means 100 ms.
-    let gif = animated_gif_frames(5, 1);
+    let gif = animated_gif_solid_frames(5, 1, 64);
     let resized = transform_image(
         &gif,
         &ImageOptions {
@@ -355,8 +362,13 @@ fn animated_gif_resize_still_errors_on_an_expired_deadline() {
 
 #[test]
 fn animated_gif_resize_preserves_the_source_loop_count() {
-    let gif = animated_gif_fixture();
-    assert_eq!(Some(0), gif_loop_count(&gif));
+    let mut gif = animated_gif_solid_frames(2, 20, 64);
+    let netscape = gif
+        .windows(11)
+        .position(|window| window == b"NETSCAPE2.0")
+        .expect("the fixture carries a NETSCAPE loop extension");
+    gif[netscape + 13] = 3;
+    assert_eq!(Some(3), gif_loop_count(&gif));
 
     let resized = transform_image(
         &gif,
@@ -372,7 +384,11 @@ fn animated_gif_resize_preserves_the_source_loop_count() {
     .unwrap();
 
     assert_eq!("image/gif", resized.content_type);
-    assert_eq!(gif_loop_count(&gif), gif_loop_count(&resized.bytes));
+    assert!(
+        resized.bytes.len() < gif.len(),
+        "the resize itself is served"
+    );
+    assert_eq!(Some(3), gif_loop_count(&resized.bytes));
 }
 
 #[test]
@@ -397,4 +413,111 @@ fn animated_gif_two_bounds_fit_inside_without_distortion() {
 
     assert_eq!(240, dims.width);
     assert_eq!(180, dims.height);
+}
+
+fn gif_resized_to_width(input: &[u8], width: u32) -> Vec<u8> {
+    let resized = transform_image(
+        input,
+        &ImageOptions {
+            width: Some(width),
+            format: OutputFormat::GIF,
+            quality: ImageQuality::Lossless,
+            animation: animated_mode(),
+            ..Default::default()
+        },
+    )
+    .expect("animated gif resizes");
+    assert_eq!("image/gif", resized.content_type);
+    resized.bytes
+}
+
+#[test]
+fn a_gif_resize_falls_back_to_its_source_only_while_the_source_is_barely_larger() {
+    // The resizer writes every frame as a full canvas with its own palette, so a source built
+    // from small offset sub-frames grows when it is resized.
+    let grows = animated_gif_pixel_frames_on_canvas(5, 16);
+    assert_eq!(grows, gif_resized_to_width(&grows, 12));
+
+    // Four times the requested pixels is past the 1.5x-per-edge bound: the client would decode
+    // far more per frame than it asked for, so the larger resize is still served.
+    let resized = gif_resized_to_width(&grows, 8);
+    assert!(resized.len() > grows.len());
+    assert_eq!(Some((8, 8)), gif_canvas_size(&resized));
+
+    let shrinks = animated_gif_solid_frames(5, 20, 64);
+    let resized = gif_resized_to_width(&shrinks, 8);
+    assert!(resized.len() < shrinks.len());
+    assert_eq!(vec![20u16; 5], gif_frame_delays_cs(&resized));
+}
+
+fn gif_canvas_size(bytes: &[u8]) -> Option<(u16, u16)> {
+    (bytes.len() >= 10).then(|| {
+        (
+            u16::from_le_bytes([bytes[6], bytes[7]]),
+            u16::from_le_bytes([bytes[8], bytes[9]]),
+        )
+    })
+}
+
+#[test]
+fn a_source_stands_in_for_a_resize_only_within_one_and_a_half_times_per_edge() {
+    let gif = |width, height| mime::SniffInfo {
+        mime: "image/gif",
+        animated: true,
+        width,
+        height,
+        ..Default::default()
+    };
+    let boxed = |size| ImageOptions {
+        width: Some(size),
+        height: Some(size),
+        format: OutputFormat::WebP,
+        animation: animated_mode(),
+        ..Default::default()
+    };
+    for (sniffed, size, expected) in [
+        (gif(604, 340), 480, true),
+        (gif(604, 340), 600, true),
+        (gif(604, 340), 1024, true),
+        (gif(300, 300), 200, true),
+        (gif(300, 300), 199, false),
+        (gif(1920, 1080), 550, false),
+        (gif(512, 512), 128, false),
+    ] {
+        assert_eq!(
+            expected,
+            source_can_stand_in_for_resize(sniffed, &boxed(size)),
+            "{}x{} in a {size} box",
+            sniffed.width,
+            sniffed.height
+        );
+    }
+}
+
+#[test]
+fn an_animated_gif_encodes_to_webp_frames_that_carry_only_the_changed_region() {
+    // Only one pixel in the middle of the canvas changes between frames, so the frames after
+    // the first keyframe re-encode that region instead of the whole canvas.
+    let gif = animated_gif_pixel_frames_on_canvas(4, 512);
+    let webp = transform_image(
+        &gif,
+        &ImageOptions {
+            width: Some(128),
+            height: Some(128),
+            format: OutputFormat::WebP,
+            animation: animated_mode(),
+            ..Default::default()
+        },
+    )
+    .expect("animated gif encodes to animated webp");
+    assert_eq!("image/webp", webp.content_type);
+    assert_animated_webp(&webp.bytes, 4);
+    let frames = webp_anim_frame_sizes(&webp.bytes);
+    assert_eq!(Some(&(128, 128)), frames.first());
+    assert!(
+        frames[1..]
+            .iter()
+            .all(|&(width, height)| width * height < 128 * 128),
+        "{frames:?}"
+    );
 }

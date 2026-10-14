@@ -222,18 +222,10 @@ describe('ConfigLoader', () => {
 		]);
 	});
 
-	test('includes the app origin alongside the default passkey origins', async () => {
+	test('limits default passkey origins to the deployment app origin', async () => {
 		stubMinimalEnv();
 		const config = await loadConfig();
-		expect(config.auth.passkeys.additional_allowed_origins).toEqual([
-			'https://fluxer.app',
-			'https://web.fluxer.app',
-			'https://web.canary.fluxer.app',
-			'https://fluxer.com',
-			'https://canary.fluxer.com',
-			'android:apk-key-hash:keSY4bimyLqZQV7bKXgpa2xYuqXi0qZJzsYtp6gpx7w',
-			'http://localhost:8088',
-		]);
+		expect(config.auth.passkeys.additional_allowed_origins).toEqual(['http://localhost:8088']);
 	});
 
 	test('defaults to no app origin aliases', async () => {
@@ -280,7 +272,7 @@ describe('ConfigLoader', () => {
 		expect(config.auth.passkeys.rp_id).toBe('chat.example.com');
 	});
 
-	test('a blank origin list keeps the built-in origins', async () => {
+	test('a blank origin list uses only the deployment app origin', async () => {
 		stubMinimalEnv({
 			FLUXER_BASE_DOMAIN: 'chat.example.com',
 			FLUXER_PUBLIC_SCHEME: 'https',
@@ -290,8 +282,7 @@ describe('ConfigLoader', () => {
 
 		const config = await loadConfig();
 
-		expect(config.auth.passkeys.additional_allowed_origins).toContain('https://web.fluxer.app');
-		expect(config.auth.passkeys.additional_allowed_origins).toContain('https://chat.example.com');
+		expect(config.auth.passkeys.additional_allowed_origins).toEqual(['https://chat.example.com']);
 	});
 
 	test('blank values fall back to the code defaults', async () => {
@@ -387,6 +378,105 @@ describe('ConfigLoader', () => {
 		const config = await loadConfig();
 
 		expect(config.services.gateway).not.toHaveProperty('push_enabled');
+	});
+
+	test('accepts the feed worker lane', async () => {
+		stubMinimalEnv({FLUXER_API_WORKER_MODE: 'single_lane', FLUXER_API_WORKER_LANE: 'feed'});
+		const config = await loadConfig();
+		expect(config.services.api.worker?.lane).toBe('feed');
+	});
+
+	test('accepts the video worker lane', async () => {
+		stubMinimalEnv({
+			FLUXER_API_WORKER_MODE: 'single_lane',
+			FLUXER_API_WORKER_LANE: 'video',
+			FLUXER_API_WORKER_LANE_CONCURRENCY_OVERRIDES: '{"video": 2}',
+		});
+		const config = await loadConfig();
+		expect(config.services.api.worker?.lane).toBe('video');
+		expect(config.services.api.worker?.lane_concurrency_overrides?.video).toBe(2);
+	});
+
+	test('accepts the views worker lane', async () => {
+		stubMinimalEnv({
+			FLUXER_API_WORKER_MODE: 'single_lane',
+			FLUXER_API_WORKER_LANE: 'views',
+			FLUXER_API_WORKER_LANE_CONCURRENCY_OVERRIDES: '{"views": 2}',
+		});
+		const config = await loadConfig();
+		expect(config.services.api.worker?.lane).toBe('views');
+		expect(config.services.api.worker?.lane_concurrency_overrides?.views).toBe(2);
+	});
+
+	test('accepts the micupbot lanes', async () => {
+		for (const lane of ['micupbot_live', 'micupbot_roles', 'micupbot']) {
+			resetConfig();
+			stubMinimalEnv({
+				FLUXER_API_WORKER_MODE: 'single_lane',
+				FLUXER_API_WORKER_LANE: lane,
+				FLUXER_API_WORKER_LANE_CONCURRENCY_OVERRIDES: '{"micupbot_live":2,"micupbot_roles":3,"micupbot":4}',
+			});
+			const config = await loadConfig();
+			expect(config.services.api.worker?.lane).toBe(lane);
+			expect(config.services.api.worker?.lane_concurrency_overrides).toEqual({
+				micupbot_live: 2,
+				micupbot_roles: 3,
+				micupbot: 4,
+			});
+		}
+	});
+	test('reads FLUXER_MICUPBOT_APPLICATION_ID', async () => {
+		stubMinimalEnv({FLUXER_MICUPBOT_APPLICATION_ID: '1490000000000000001'});
+		expect((await loadConfig()).instance.micupbot_application_id).toBe('1490000000000000001');
+	});
+	test('accepts the roster worker lane', async () => {
+		stubMinimalEnv({
+			FLUXER_API_WORKER_MODE: 'single_lane',
+			FLUXER_API_WORKER_LANE: 'roster',
+			FLUXER_API_WORKER_LANE_CONCURRENCY_OVERRIDES: '{"roster": 2}',
+		});
+		const config = await loadConfig();
+		expect(config.services.api.worker?.lane).toBe('roster');
+		expect(config.services.api.worker?.lane_concurrency_overrides?.roster).toBe(2);
+	});
+
+	test('accepts the roster_live worker lane', async () => {
+		stubMinimalEnv({
+			FLUXER_API_WORKER_MODE: 'single_lane',
+			FLUXER_API_WORKER_LANE: 'roster_live',
+			FLUXER_API_WORKER_LANE_CONCURRENCY_OVERRIDES: '{"roster": 2, "roster_live": 4}',
+		});
+		const config = await loadConfig();
+		expect(config.services.api.worker?.lane).toBe('roster_live');
+		expect(config.services.api.worker?.lane_concurrency_overrides).toEqual({roster: 2, roster_live: 4});
+	});
+
+	test('reads FLUXER_ROSTER_BOT_APPLICATION_ID', async () => {
+		stubMinimalEnv({FLUXER_ROSTER_BOT_APPLICATION_ID: '1490000000000000001'});
+		expect((await loadConfig()).instance.roster_bot_application_id).toBe('1490000000000000001');
+	});
+
+	test('accepts the referral worker lane', async () => {
+		stubMinimalEnv({
+			FLUXER_API_WORKER_MODE: 'single_lane',
+			FLUXER_API_WORKER_LANE: 'referral',
+			FLUXER_API_WORKER_LANE_CONCURRENCY_OVERRIDES: '{"referral": 2}',
+		});
+		const config = await loadConfig();
+		expect(config.services.api.worker?.lane).toBe('referral');
+		expect(config.services.api.worker?.lane_concurrency_overrides?.referral).toBe(2);
+	});
+
+	test('reads the feed view flush partition concurrency and refuses 0 or 9', async () => {
+		stubMinimalEnv({FLUXER_API_WORKER_FEED_VIEW_FLUSH_PARTITION_CONCURRENCY: '4'});
+		expect((await loadConfig()).services.api.worker?.feed_view_flush_partition_concurrency).toBe(4);
+		resetConfig();
+		for (const value of ['0', '9']) {
+			stubMinimalEnv({FLUXER_API_WORKER_FEED_VIEW_FLUSH_PARTITION_CONCURRENCY: value});
+			await expect(loadConfig()).rejects.toThrow(
+				'FLUXER_API_WORKER_FEED_VIEW_FLUSH_PARTITION_CONCURRENCY must be an integer between 1 and 8',
+			);
+		}
 	});
 
 	test('accepts the crosspost worker lane', async () => {
@@ -516,6 +606,41 @@ describe('ConfigLoader', () => {
 		await expect(loadConfig()).rejects.toThrow('FLUXER_PROFILE_PSEUDONYM_SECRET is required');
 	});
 
+	test('retains the legacy account contact policy settings', async () => {
+		const policy = {version: 1, profiles: {capabilities: {allow_users_without_email: true}}};
+		stubMinimalEnv({
+			FLUXER_ACCOUNT_POLICY_DSL: JSON.stringify(policy),
+			FLUXER_ABUSE_POLICY_PHONE_FLAGGING_ENABLED: 'false',
+		});
+		const config = await loadConfig();
+		expect(config.integrations.risk_integration.account_policy_dsl).toEqual(policy);
+		expect(config.instance.abuse_policy.phone_flagging.enabled).toBe(false);
+	});
+
+	test('reads the pseudonym secret file without changing its shared bytes', async () => {
+		const directory = mkdtempSync(join(tmpdir(), 'profile-pseudonym-'));
+		const secretFile = join(directory, 'secret');
+		try {
+			writeFileSync(secretFile, ' shared-secret-bytes \r\n');
+			stubMinimalEnv({FLUXER_PROFILE_PSEUDONYM_SECRET: '', FLUXER_PROFILE_PSEUDONYM_SECRET_FILE: secretFile});
+			expect((await loadConfig()).auth.profile_pseudonym_secret).toBe(' shared-secret-bytes ');
+		} finally {
+			rmSync(directory, {recursive: true, force: true});
+		}
+	});
+
+	test('retains the default legacy phone flagging setting', async () => {
+		stubMinimalEnv();
+		expect((await loadConfig()).instance.abuse_policy.phone_flagging.enabled).toBe(true);
+	});
+
+	test.each(['disabled', 'true', '12', '1.5'])('preserves legacy raw account policy value %s', async (raw) => {
+		stubMinimalEnv({FLUXER_ACCOUNT_POLICY_DSL: raw});
+		expect((await loadConfig()).integrations.risk_integration.account_policy_dsl).toEqual(
+			raw === 'disabled' ? raw : JSON.parse(raw),
+		);
+	});
+
 	test('rejects unsafe production Postgres defaults', async () => {
 		stubMinimalEnv({FLUXER_ENV: 'production'});
 		await expect(loadConfig()).rejects.toThrow('FLUXER_POSTGRES_HOST');
@@ -565,6 +690,45 @@ describe('ConfigLoader', () => {
 		});
 
 		await expect(loadConfig()).rejects.toThrow('FLUXER_POSTGRES_SSL must be true');
+	});
+
+	test('refuses production Cassandra without a quorum consistency', async () => {
+		stubMinimalEnv({FLUXER_ENV: 'production', FLUXER_DATABASE_BACKEND: 'cassandra'});
+		await expect(loadConfig()).rejects.toThrow('FLUXER_CASSANDRA_CONSISTENCY must be local_quorum');
+		resetConfig();
+		vi.stubEnv('FLUXER_CASSANDRA_CONSISTENCY', 'local_one');
+		await expect(loadConfig()).rejects.toThrow('FLUXER_CASSANDRA_CONSISTENCY must be local_quorum');
+	});
+
+	test('accepts production Cassandra with local_quorum or quorum', async () => {
+		for (const consistency of ['local_quorum', 'quorum']) {
+			resetConfig();
+			stubMinimalEnv({
+				FLUXER_ENV: 'production',
+				FLUXER_DATABASE_BACKEND: 'cassandra',
+				FLUXER_CASSANDRA_CONSISTENCY: consistency,
+			});
+			expect((await loadConfig()).database.cassandra.consistency).toBe(consistency);
+		}
+	});
+
+	test('leaves the Cassandra consistency optional outside production', async () => {
+		for (const env of ['test', 'development']) {
+			resetConfig();
+			stubMinimalEnv({FLUXER_ENV: env, FLUXER_DATABASE_BACKEND: 'cassandra'});
+			expect((await loadConfig()).database.cassandra.consistency).toBeUndefined();
+		}
+	});
+
+	test('rejects an explicitly blank Cassandra consistency', async () => {
+		stubMinimalEnv({FLUXER_CASSANDRA_CONSISTENCY: ''});
+		await expect(loadConfig()).rejects.toThrow('Invalid FLUXER_CASSANDRA_CONSISTENCY: ');
+	});
+
+	test('preserves the IPInfo key used by shared-network ban classification', async () => {
+		stubMinimalEnv({FLUXER_RISK_IPINFO_API_KEY: 'test-ipinfo-key'});
+		const config = await loadConfig();
+		expect(Reflect.get(config.integrations, 'risk_integration')).toEqual({ipinfo_api_key: 'test-ipinfo-key'});
 	});
 
 	test('parses self-host branding, setup, and search engine environment variables', async () => {
@@ -732,6 +896,16 @@ describe('ConfigLoader', () => {
 		expect((await loadConfig()).integrations.cache_purge).toEqual({
 			adapter: 'none',
 			http: {endpoint: '', token: '', timeout_ms: 10_000},
+			bunny: {
+				api_base: 'https://api.bunny.net',
+				api_key: '',
+				timeout_ms: 10_000,
+				concurrency: 8,
+				mode: 'prefix',
+				pull_zone_id: 0,
+				rate_per_minute: 30,
+				burst: 20,
+			},
 		});
 	});
 
@@ -745,6 +919,16 @@ describe('ConfigLoader', () => {
 		expect((await loadConfig()).integrations.cache_purge).toEqual({
 			adapter: 'http',
 			http: {endpoint: 'https://purge.internal/purge', token: 'purge-token', timeout_ms: 5000},
+			bunny: {
+				api_base: 'https://api.bunny.net',
+				api_key: '',
+				timeout_ms: 10_000,
+				concurrency: 8,
+				mode: 'prefix',
+				pull_zone_id: 0,
+				rate_per_minute: 30,
+				burst: 20,
+			},
 		});
 	});
 
@@ -785,6 +969,31 @@ describe('ConfigLoader', () => {
 		);
 	});
 
+	test('refuses a plain http Payriff base URL at startup, which would send the secret key in clear text', async () => {
+		stubMinimalEnv({FLUXER_PAYRIFF_BASE_URL: 'http://api.payriff.com/api/v3'});
+		await expect(loadConfig()).rejects.toThrow('FLUXER_PAYRIFF_BASE_URL must be an https URL');
+
+		resetConfig();
+		stubMinimalEnv({FLUXER_PAYRIFF_BASE_URL: 'https://api.payriff.com/api/v3'});
+		expect((await loadConfig()).integrations.payriff.base_url).toBe('https://api.payriff.com/api/v3');
+	});
+
+	test('refuses a plain http Bunny API base, which would send the account key in clear text', async () => {
+		stubMinimalEnv({
+			FLUXER_CACHE_PURGE_ADAPTER: 'bunny',
+			FLUXER_CACHE_PURGE_BUNNY_API_BASE: 'http://api.bunny.net',
+			FLUXER_CACHE_PURGE_BUNNY_API_KEY: 'bunny-key',
+		});
+		await expect(loadConfig()).rejects.toThrow('FLUXER_CACHE_PURGE_BUNNY_API_BASE must be an https URL');
+
+		stubMinimalEnv({
+			FLUXER_CACHE_PURGE_ADAPTER: 'http',
+			FLUXER_CACHE_PURGE_HTTP_ENDPOINT: 'http://purge.internal/purge',
+			FLUXER_CACHE_PURGE_HTTP_TOKEN: 'purge-token',
+		});
+		expect((await loadConfig()).integrations.cache_purge.http.endpoint).toBe('http://purge.internal/purge');
+	});
+
 	test('rejects a cache purge timeout outside 1000 to 10000', async () => {
 		for (const timeout of ['999', '10001']) {
 			stubMinimalEnv({
@@ -812,12 +1021,148 @@ describe('ConfigLoader', () => {
 		}
 	});
 
+	test('loads the queue_only cache purge adapter without an endpoint or a provider key', async () => {
+		stubMinimalEnv({FLUXER_CACHE_PURGE_ADAPTER: 'queue_only'});
+		const cachePurge = (await loadConfig()).integrations.cache_purge;
+		expect(cachePurge.adapter).toBe('queue_only');
+		expect(cachePurge.http.token).toBe('');
+		expect(cachePurge.bunny.api_key).toBe('');
+	});
+
+	test.each([
+		['FLUXER_CACHE_PURGE_BUNNY_API_KEY', 'bunny-account-key'],
+		['FLUXER_CACHE_PURGE_HTTP_TOKEN', 'purge-token'],
+	])('refuses %s in a queue_only process without echoing it', async (envName, value) => {
+		stubMinimalEnv({FLUXER_CACHE_PURGE_ADAPTER: 'queue_only', [envName]: value});
+		const error: unknown = await loadConfig().catch((caught: unknown) => caught);
+		expect(error).toBeInstanceOf(Error);
+		expect((error as Error).message).toBe(`${envName} must be empty when FLUXER_CACHE_PURGE_ADAPTER is queue_only`);
+	});
+
 	test('leaves the cache purge settings unvalidated when the adapter is none', async () => {
 		stubMinimalEnv({
 			FLUXER_CACHE_PURGE_HTTP_ENDPOINT: 'ftp://purge.internal/purge',
 			FLUXER_CACHE_PURGE_HTTP_TIMEOUT_MS: '1',
 		});
 		expect((await loadConfig()).integrations.cache_purge.adapter).toBe('none');
+	});
+
+	const BUNNY_STREAM_ENV: Record<string, string> = {
+		FLUXER_BUNNY_STREAM_LIBRARY_ID: '761025',
+		FLUXER_BUNNY_STREAM_API_KEY: 'stream-library-key',
+		FLUXER_BUNNY_STREAM_READ_ONLY_API_KEY: 'stream-read-only-key',
+		FLUXER_BUNNY_STREAM_CDN_HOSTNAME: 'vz-example.b-cdn.net',
+		FLUXER_BUNNY_STREAM_TOKEN_KEY: 'stream-token-key',
+		FLUXER_BUNNY_STREAM_STORAGE_ZONE: 'vz-example-zone',
+		FLUXER_BUNNY_STREAM_STORAGE_PASSWORD: 'storage-read-only-password',
+	};
+
+	function withoutEnv(envName: string): Record<string, string> {
+		return Object.fromEntries(Object.entries(BUNNY_STREAM_ENV).filter(([key]) => key !== envName));
+	}
+
+	test('maps FLUXER_BUNNY_STREAM_* into integrations.bunny_stream', async () => {
+		stubMinimalEnv({
+			...BUNNY_STREAM_ENV,
+			FLUXER_BUNNY_STREAM_STORAGE_HOST: 'de.storage.bunnycdn.com',
+			FLUXER_BUNNY_STREAM_API_BASE: 'https://video.example.net',
+			FLUXER_BUNNY_STREAM_TUS_ENDPOINT: 'https://video.example.net/tusupload',
+			FLUXER_BUNNY_STREAM_TIMEOUT_MS: '5000',
+		});
+		expect((await loadConfig()).integrations.bunny_stream).toEqual({
+			enabled: true,
+			library_id: 761025,
+			api_key: 'stream-library-key',
+			read_only_api_key: 'stream-read-only-key',
+			cdn_hostname: 'vz-example.b-cdn.net',
+			token_key: 'stream-token-key',
+			storage_zone: 'vz-example-zone',
+			storage_password: 'storage-read-only-password',
+			storage_host: 'de.storage.bunnycdn.com',
+			api_base: 'https://video.example.net',
+			tus_endpoint: 'https://video.example.net/tusupload',
+			timeout_ms: 5000,
+		});
+	});
+
+	test('defaults the Bunny Stream hosts and timeout', async () => {
+		stubMinimalEnv(BUNNY_STREAM_ENV);
+		expect((await loadConfig()).integrations.bunny_stream).toMatchObject({
+			enabled: true,
+			storage_host: 'storage.bunnycdn.com',
+			api_base: 'https://video.bunnycdn.com',
+			tus_endpoint: 'https://video.bunnycdn.com/tusupload',
+			timeout_ms: 10_000,
+		});
+	});
+
+	test.each(Object.keys(BUNNY_STREAM_ENV))('refuses a partial Bunny Stream config without %s', async (envName) => {
+		stubMinimalEnv(withoutEnv(envName));
+		await expect(loadConfig()).rejects.toThrow(`${envName} is required`);
+	});
+
+	test('leaves Bunny Stream disabled without a token key or storage password', async () => {
+		stubMinimalEnv();
+		expect((await loadConfig()).integrations.bunny_stream).toMatchObject({
+			enabled: false,
+			token_key: '',
+			storage_password: '',
+		});
+		resetConfig();
+		// Hosts and the timeout alone configure nothing, so they are not checked either.
+		stubMinimalEnv({FLUXER_BUNNY_STREAM_API_BASE: 'http://video.example.net', FLUXER_BUNNY_STREAM_TIMEOUT_MS: '1'});
+		expect((await loadConfig()).integrations.bunny_stream.enabled).toBe(false);
+		for (const envName of ['FLUXER_BUNNY_STREAM_TOKEN_KEY', 'FLUXER_BUNNY_STREAM_STORAGE_PASSWORD']) {
+			resetConfig();
+			clearFluxerEnv();
+			stubMinimalEnv(withoutEnv(envName));
+			await expect(loadConfig()).rejects.toThrow(`${envName} is required`);
+		}
+	});
+
+	test.each([
+		['FLUXER_BUNNY_STREAM_API_BASE', 'http://video.bunnycdn.com'],
+		['FLUXER_BUNNY_STREAM_API_BASE', 'https://user:secret@video.bunnycdn.com'],
+		['FLUXER_BUNNY_STREAM_TUS_ENDPOINT', 'http://video.bunnycdn.com/tusupload'],
+	])('refuses an http api base: %s=%s', async (envName, value) => {
+		stubMinimalEnv({...BUNNY_STREAM_ENV, [envName]: value});
+		await expect(loadConfig()).rejects.toThrow(`${envName} must be an https URL without credentials`);
+	});
+
+	test.each(['VZ-Zone', 'zone_1', 'zone/1', 'zone 1'])(
+		'refuses a storage zone name outside [a-z0-9-]: %s',
+		async (zone) => {
+			stubMinimalEnv({...BUNNY_STREAM_ENV, FLUXER_BUNNY_STREAM_STORAGE_ZONE: zone});
+			await expect(loadConfig()).rejects.toThrow('FLUXER_BUNNY_STREAM_STORAGE_ZONE must be lowercase letters');
+		},
+	);
+
+	test.each([
+		['FLUXER_BUNNY_STREAM_CDN_HOSTNAME', 'https://vz-example.b-cdn.net'],
+		['FLUXER_BUNNY_STREAM_STORAGE_HOST', 'storage.bunnycdn.com/zone'],
+	])('refuses a Bunny Stream host with a scheme or path: %s', async (envName, value) => {
+		stubMinimalEnv({...BUNNY_STREAM_ENV, [envName]: value});
+		await expect(loadConfig()).rejects.toThrow(`${envName} must be a hostname`);
+	});
+
+	test.each([
+		'FLUXER_BUNNY_STREAM_API_KEY',
+		'FLUXER_BUNNY_STREAM_READ_ONLY_API_KEY',
+		'FLUXER_BUNNY_STREAM_TOKEN_KEY',
+		'FLUXER_BUNNY_STREAM_STORAGE_PASSWORD',
+	])('refuses %s with invisible characters without echoing it', async (envName) => {
+		stubMinimalEnv({...BUNNY_STREAM_ENV, [envName]: 'secret with space'});
+		const error: unknown = await loadConfig().catch((caught: unknown) => caught);
+		expect((error as Error).message).toBe(`${envName} must contain only visible ASCII characters`);
+	});
+
+	test.each([
+		['FLUXER_BUNNY_STREAM_LIBRARY_ID', '-1'],
+		['FLUXER_BUNNY_STREAM_TIMEOUT_MS', '999'],
+		['FLUXER_BUNNY_STREAM_TIMEOUT_MS', '30001'],
+	])('refuses %s=%s', async (envName, value) => {
+		stubMinimalEnv({...BUNNY_STREAM_ENV, [envName]: value});
+		await expect(loadConfig()).rejects.toThrow(envName);
 	});
 
 	test('leaves the optional outbound lookups unset by default', async () => {

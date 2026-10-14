@@ -29,8 +29,15 @@ import {
 	WHAT_SHOULD_PEOPLE_CALL_YOU_DESCRIPTOR,
 } from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {useLocation} from '@app/features/platform/components/router/RouterReact';
+import {clearReferralCode, readReferralCode} from '@app/features/referral/utils/ReferralCodeStorage';
 import {Button} from '@app/features/ui/button/Button';
 import {createRecoveryKitWithPasswordAndOpen} from '@app/features/user/commands/RecoveryKitCommands';
+import {UsernamePicker} from '@app/features/user/components/UsernamePicker';
+import {
+	normalizeUsername,
+	stripUsernamePrefix,
+	type UsernameSelectionAvailability,
+} from '@app/features/user/hooks/useUsernameSelectionAvailability';
 import {useUsernameSuggestions} from '@app/features/user/hooks/useUsernameSuggestions';
 import type {ThemeType} from '@fluxer/constants/src/UserConstants';
 import {msg} from '@lingui/core/macro';
@@ -114,13 +121,16 @@ export const AuthRegisterFormCore = observer(function AuthRegisterFormCore({
 	offerRecoveryKit = false,
 }: AuthRegisterFormCoreProps) {
 	const {i18n} = useLingui();
+	const selectingUsername = runtimeSnapshot.usernameMigration?.state === 'selecting';
+	const [selectionAvailability, setSelectionAvailability] = useState<UsernameSelectionAvailability>({state: 'idle'});
 	const {
 		showEmail = false,
 		showPassword = false,
 		showPasswordConfirmation = false,
 		showUsernameValidation = false,
-		requireUsername = false,
+		requireUsername: configuredRequireUsername = false,
 	} = fields;
+	const requireUsername = configuredRequireUsername || selectingUsername;
 	const location = useLocation();
 	const draftKey = `register:${location.pathname}${location.search}`;
 	const registrationUrlCode = useMemo(() => {
@@ -208,6 +218,13 @@ export const AuthRegisterFormCore = observer(function AuthRegisterFormCore({
 		[persistDraft],
 	);
 	const handleRegisterSubmit = async (values: Record<string, string>) => {
+		const selectedUsername = selectingUsername
+			? normalizeUsername(values.username ?? '')
+			: stripUsernamePrefix(values.username ?? '');
+		if (selectingUsername && !/^[a-z0-9_]{1,32}$/.test(selectedUsername)) {
+			form.setError('username', i18n._(msg`Choose a valid username to continue.`));
+			return false;
+		}
 		if (showPasswordConfirmation && showPassword && values.password !== values.confirm_password) {
 			form.setError('confirm_password', i18n._(PASSWORDS_DO_NOT_MATCH_DESCRIPTOR));
 			return false;
@@ -223,17 +240,19 @@ export const AuthRegisterFormCore = observer(function AuthRegisterFormCore({
 		const response = await AuthenticationCommands.register(
 			{
 				global_name: values.global_name || undefined,
-				username: (requireUsername ? values.username.trim() : values.username) || undefined,
+				username: (requireUsername ? selectedUsername.trim() : selectedUsername) || undefined,
 				email: showEmail ? values.email : undefined,
 				password: showPassword ? values.password : undefined,
 				date_of_birth: dateOfBirth,
 				consent: effectiveConsent,
 				invite_code: inviteCode,
 				registration_url_code: registrationUrlCode,
+				referral_code: readReferralCode(),
 				theme,
 			},
 			registrationTarget,
 		);
+		clearReferralCode();
 		if (AuthenticationCommands.isRegistrationPendingApprovalResponse(response)) {
 			clearRegisterFormDraft(draftKey);
 			setPendingApprovalUserId(response.user_id);
@@ -280,8 +299,8 @@ export const AuthRegisterFormCore = observer(function AuthRegisterFormCore({
 		[form, persistDraft],
 	);
 	const {suggestions} = useUsernameSuggestions({
-		globalName: form.getValue('global_name'),
-		username: form.getValue('username'),
+		globalName: selectingUsername ? '' : form.getValue('global_name'),
+		username: selectingUsername ? '_' : form.getValue('username'),
 		target: registrationTarget.http,
 	});
 	const missingFields = useMemo(() => {
@@ -320,13 +339,15 @@ export const AuthRegisterFormCore = observer(function AuthRegisterFormCore({
 		| {type: 'suggestion'; username: string}
 		| null;
 	const usernameValue = form.getValue('username');
-	const trimmedUsername = usernameValue?.trim() || '';
+	const trimmedUsername = selectingUsername
+		? normalizeUsername(usernameValue ?? '')
+		: stripUsernamePrefix(usernameValue ?? '');
 	const usernameFormatValid = trimmedUsername.length <= MAX_USERNAME_LENGTH && USERNAME_PATTERN.test(trimmedUsername);
 	const uniqueUsernames = usesUniqueUsernames(runtimeSnapshot.features);
 	const usernameAvailability = useUsernameAvailability(
 		registrationTarget.http,
 		trimmedUsername,
-		uniqueUsernames && trimmedUsername.length > 0 && usernameFormatValid,
+		!selectingUsername && uniqueUsernames && trimmedUsername.length > 0 && usernameFormatValid,
 	);
 	const helperTextState = useMemo<HelperTextState>(() => {
 		if ((showUsernameValidation || requireUsername) && trimmedUsername.length > 0) {
@@ -367,6 +388,8 @@ export const AuthRegisterFormCore = observer(function AuthRegisterFormCore({
 		form.isSubmitting ||
 		isPublicRegistrationClosed ||
 		pendingApprovalUserId !== null ||
+		(selectingUsername &&
+			(selectionAvailability.state !== 'available' || selectionAvailability.username !== trimmedUsername)) ||
 		(requireUsername && !usernameFormatValid) ||
 		(uniqueUsernames && usernameAvailability === 'taken') ||
 		shouldDisableSubmit(effectiveConsent, missingFields);
@@ -416,71 +439,84 @@ export const AuthRegisterFormCore = observer(function AuthRegisterFormCore({
 				data-flx="auth.flow.auth-register-form-core.form-field.set-drafted-form-value.text"
 			/>
 			<div data-flx="auth.flow.auth-register-form-core.div">
-				<FormField
-					id={usernameId}
-					name="username"
-					type="text"
-					autoComplete="username"
-					autoCapitalize={requireUsername ? 'none' : undefined}
-					autoCorrect={requireUsername ? 'off' : undefined}
-					spellCheck={requireUsername ? false : undefined}
-					required={requireUsername}
-					label={i18n._(requireUsername ? USERNAME_DESCRIPTOR : USERNAME_OPTIONAL_DESCRIPTOR)}
-					placeholder={requireUsername ? undefined : i18n._(LEAVE_BLANK_FOR_A_RANDOM_USERNAME_DESCRIPTOR)}
-					value={usernameValue}
-					onChange={(value) => setDraftedFormValue('username', value)}
-					error={form.getError('username') || fieldErrors?.get('username')}
-					data-flx="auth.flow.auth-register-form-core.form-field.set-drafted-form-value.text--2"
-				/>
-				<AnimatePresence mode="wait" initial={false} data-flx="auth.flow.auth-register-form-core.animate-presence">
-					{helperTextState?.type === 'error' && (
-						<motion.span
-							key="error"
-							className={styles.usernameError}
-							initial={Accessibility.useReducedMotion ? {opacity: 1, y: 0} : {opacity: 0, y: -5}}
-							animate={{opacity: 1, y: 0}}
-							exit={Accessibility.useReducedMotion ? {opacity: 1, y: 0} : {opacity: 0, y: 5}}
-							transition={{duration: Accessibility.useReducedMotion ? 0 : 0.2}}
-							data-flx="auth.flow.auth-register-form-core.username-error"
-						>
-							{helperTextState.message}
-						</motion.span>
-					)}
-					{helperTextState?.type === 'hint' && (
-						<motion.span
-							key={`hint-${helperTextState.message}`}
-							className={styles.usernameHint}
-							initial={Accessibility.useReducedMotion ? {opacity: 1, y: 0} : {opacity: 0, y: -5}}
-							animate={{opacity: 1, y: 0}}
-							exit={Accessibility.useReducedMotion ? {opacity: 1, y: 0} : {opacity: 0, y: 5}}
-							transition={{duration: Accessibility.useReducedMotion ? 0 : 0.2}}
-							data-flx="auth.flow.auth-register-form-core.username-sign-in-hint"
-						>
-							{helperTextState.message}
-						</motion.span>
-					)}
-					{helperTextState?.type === 'suggestion' && (
-						<motion.span
-							key="suggestion"
-							className={styles.usernameHint}
-							initial={Accessibility.useReducedMotion ? {opacity: 1, y: 0} : {opacity: 0, y: -5}}
-							animate={{opacity: 1, y: 0}}
-							exit={Accessibility.useReducedMotion ? {opacity: 1, y: 0} : {opacity: 0, y: 5}}
-							transition={{duration: Accessibility.useReducedMotion ? 0 : 0.2}}
-							data-flx="auth.flow.auth-register-form-core.username-hint"
-						>
-							<Trans>How about:</Trans>{' '}
-							<button
-								type="button"
-								className={styles.suggestionLink}
-								onClick={() => setDraftedFormValue('username', helperTextState.username)}
-								data-flx="auth.flow.auth-register-form-core.suggestion-link.set-drafted-form-value.button"
-							>
-								{helperTextState.username}
-							</button>
-						</motion.span>
-					)}
-				</AnimatePresence>
+				{selectingUsername ? (
+					<UsernamePicker
+						id={usernameId}
+						value={usernameValue}
+						onChange={(value) => setDraftedFormValue('username', value)}
+						target={registrationTarget.http}
+						onAvailabilityChange={setSelectionAvailability}
+						error={form.getError('username') || fieldErrors?.get('username')}
+					/>
+				) : (
+					<>
+						<FormField
+							id={usernameId}
+							name="username"
+							type="text"
+							autoComplete="username"
+							autoCapitalize={requireUsername ? 'none' : undefined}
+							autoCorrect={requireUsername ? 'off' : undefined}
+							spellCheck={requireUsername ? false : undefined}
+							required={requireUsername}
+							label={i18n._(requireUsername ? USERNAME_DESCRIPTOR : USERNAME_OPTIONAL_DESCRIPTOR)}
+							placeholder={requireUsername ? undefined : i18n._(LEAVE_BLANK_FOR_A_RANDOM_USERNAME_DESCRIPTOR)}
+							value={usernameValue}
+							onChange={(value) => setDraftedFormValue('username', value)}
+							error={form.getError('username') || fieldErrors?.get('username')}
+							data-flx="auth.flow.auth-register-form-core.form-field.set-drafted-form-value.text--2"
+						/>
+						<AnimatePresence mode="wait" initial={false} data-flx="auth.flow.auth-register-form-core.animate-presence">
+							{helperTextState?.type === 'error' && (
+								<motion.span
+									key="error"
+									className={styles.usernameError}
+									initial={Accessibility.useReducedMotion ? {opacity: 1, y: 0} : {opacity: 0, y: -5}}
+									animate={{opacity: 1, y: 0}}
+									exit={Accessibility.useReducedMotion ? {opacity: 1, y: 0} : {opacity: 0, y: 5}}
+									transition={{duration: Accessibility.useReducedMotion ? 0 : 0.2}}
+									data-flx="auth.flow.auth-register-form-core.username-error"
+								>
+									{helperTextState.message}
+								</motion.span>
+							)}
+							{helperTextState?.type === 'hint' && (
+								<motion.span
+									key={`hint-${helperTextState.message}`}
+									className={styles.usernameHint}
+									initial={Accessibility.useReducedMotion ? {opacity: 1, y: 0} : {opacity: 0, y: -5}}
+									animate={{opacity: 1, y: 0}}
+									exit={Accessibility.useReducedMotion ? {opacity: 1, y: 0} : {opacity: 0, y: 5}}
+									transition={{duration: Accessibility.useReducedMotion ? 0 : 0.2}}
+									data-flx="auth.flow.auth-register-form-core.username-sign-in-hint"
+								>
+									{helperTextState.message}
+								</motion.span>
+							)}
+							{helperTextState?.type === 'suggestion' && (
+								<motion.span
+									key="suggestion"
+									className={styles.usernameHint}
+									initial={Accessibility.useReducedMotion ? {opacity: 1, y: 0} : {opacity: 0, y: -5}}
+									animate={{opacity: 1, y: 0}}
+									exit={Accessibility.useReducedMotion ? {opacity: 1, y: 0} : {opacity: 0, y: 5}}
+									transition={{duration: Accessibility.useReducedMotion ? 0 : 0.2}}
+									data-flx="auth.flow.auth-register-form-core.username-hint"
+								>
+									<Trans>How about:</Trans>{' '}
+									<button
+										type="button"
+										className={styles.suggestionLink}
+										onClick={() => setDraftedFormValue('username', helperTextState.username)}
+										data-flx="auth.flow.auth-register-form-core.suggestion-link.set-drafted-form-value.button"
+									>
+										{helperTextState.username}
+									</button>
+								</motion.span>
+							)}
+						</AnimatePresence>
+					</>
+				)}
 			</div>
 			{showPassword && (
 				<FormField

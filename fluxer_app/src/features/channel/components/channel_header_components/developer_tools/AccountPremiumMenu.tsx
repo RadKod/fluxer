@@ -41,7 +41,7 @@ const ACCOUNT_STATE_DESCRIPTOR = msg({
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const FAILED_TO_UPDATE_PREMIUM_PERK_STATE_DESCRIPTOR = msg({
-	message: 'Failed to update premium perk state.',
+	message: 'Failed to update Plus perk state.',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const VISIONARY_BADGE_DESCRIPTOR = msg({
@@ -57,7 +57,7 @@ const SUBSCRIPTION_SCENARIOS_DESCRIPTOR = msg({
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const ACCOUNT_PREMIUM_OVERRIDES_DESCRIPTOR = msg({
-	message: 'Account & premium overrides',
+	message: 'Account & Plus overrides',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const AccountStateMenu: React.FC = observer(() => {
@@ -132,7 +132,7 @@ const PremiumTypeMenu: React.FC = observer(() => {
 							}}
 							data-flx="channel.channel-header-components.developer-tools-context-menu.premium-type-menu.checkbox-item"
 						>
-							<Trans>Backend premium override</Trans>
+							<Trans>Backend Plus override</Trans>
 						</CheckboxItem>
 					)}
 					{user?.isClaimed() && (
@@ -151,7 +151,7 @@ const PremiumTypeMenu: React.FC = observer(() => {
 							}}
 							data-flx="channel.channel-header-components.developer-tools-context-menu.premium-type-menu.checkbox-item--2"
 						>
-							<Trans>Disable backend premium perks</Trans>
+							<Trans>Disable backend Plus perks</Trans>
 						</CheckboxItem>
 					)}
 					<DeveloperOptionCheckbox

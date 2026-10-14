@@ -1,0 +1,120 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.preview {
+	min-width: 0;
+	margin-top: 0.25rem;
+}
+
+/* Twitch, Kick and any preview without a player: one button, the image (when the proxy has one) flush against its edge
+   beside the text. */
+.card {
+	display: flex;
+	align-items: stretch;
+	width: 100%;
+	max-width: 28rem;
+	min-width: 0;
+	margin: 0.25rem 0 0;
+	padding: 0;
+	overflow: hidden;
+	border: 0.0625rem solid var(--background-modifier-accent);
+	border-radius: var(--radius-xl);
+	background: var(--background-secondary-alt);
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* The desktop column takes the full width; the mobile layout keeps its cap. */
+:global(html:not(.auth-page):not(.mobile-layout)) .card {
+	max-width: none;
+}
+
+/* The muted text moves up with the hover: muted is 4.21:1 on control-button-hover-bg in the light theme. */
+@media (hover: hover) and (pointer: fine) {
+	.card:hover {
+		background: var(--control-button-hover-bg);
+	}
+
+	.card:hover .provider,
+	.card:hover .description {
+		color: var(--text-secondary);
+	}
+}
+
+/* 0.99, not the buttons' 0.97: the card is as wide as the post text. */
+.card:active {
+	transform: scale(0.99);
+}
+
+/* Motion off: Fluxer's own reduced-motion setting, with the press selector. */
+:global(html.reduced-motion) .card,
+:global(html.reduced-motion) .card:active {
+	transition: none;
+	transform: none;
+}
+
+/* Size containment keeps the picture's own ratio out of the card: it takes the text's height, at least 84px. */
+.image {
+	flex: none;
+	align-self: stretch;
+	width: 7.5rem;
+	min-height: 5.25rem;
+	contain: size;
+	border-radius: 0;
+	object-fit: cover;
+}
+
+.text {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 0.125rem;
+	min-width: 0;
+	padding: 0.625rem 0.75rem;
+}
+
+.provider {
+	color: var(--text-primary-muted);
+	font-size: 0.75rem;
+	font-weight: 600;
+	line-height: 1rem;
+}
+
+/* The design's small-capital label, on the desktop layout only. */
+:global(html:not(.auth-page):not(.mobile-layout)) .provider {
+	font-size: 0.6875rem;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.title {
+	display: -webkit-box;
+	overflow: hidden;
+	color: var(--text-primary);
+	font-size: 0.875rem;
+	font-weight: 700;
+	line-height: 1.25rem;
+	overflow-wrap: anywhere;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+.description {
+	display: -webkit-box;
+	overflow: hidden;
+	color: var(--text-primary-muted);
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+	overflow-wrap: anywhere;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+
+/* Narrow screens and touch: a 44px target. */
+@media (max-width: 640px), (pointer: coarse) {
+	.card {
+		min-height: 2.75rem;
+	}
+}

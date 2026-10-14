@@ -5,6 +5,7 @@
 use axum::{
     Json, Router,
     body::{Body, to_bytes},
+    extract::State,
     http::{HeaderMap, Method, Request, StatusCode, Uri, header},
     response::{IntoResponse, Response},
 };
@@ -15,6 +16,7 @@ use fluxer_admin::{
     session,
 };
 use serde_json::{Value, json};
+use std::sync::{Arc, Mutex};
 use tokio::net::TcpListener;
 use tower::ServiceExt;
 
@@ -24,6 +26,7 @@ const ADMIN_API_KEY_SECRET: &str = "fa_1900000000000000001_OneTimeSecretForAccep
 struct TestApp {
     router: Router,
     session_cookie: String,
+    config_updates: Arc<Mutex<Vec<Value>>>,
 }
 
 #[tokio::test]
@@ -461,6 +464,10 @@ async fn mutating_admin_pages_render_usable_csrf_tokens() {
             ][..],
         ),
         ("/gift-codes", &["/gift-codes"][..]),
+        (
+            "/shop",
+            &["/shop?action=settings", "/shop?action=save_prices"][..],
+        ),
         ("/search-index", &["/search-index?action=reindex"][..]),
         ("/gateway", &["/gateway?action=reload_all"][..]),
         (
@@ -468,6 +475,8 @@ async fn mutating_admin_pages_render_usable_csrf_tokens() {
             &[
                 "/instance-config?action=update_gateway_rollout",
                 "/instance-config?action=update_sso",
+                "/instance-config?action=update_voice_noise_suppression",
+                "/instance-config?action=disable_voice_pipeline_v2",
                 "/instance-config?action=update_domain_migration",
                 "/instance-config?action=update_channel_threads",
                 "/instance-config?action=update_plutonium_page",
@@ -484,6 +493,158 @@ async fn mutating_admin_pages_render_usable_csrf_tokens() {
             assert_form_has_csrf(&body, form_action, &csrf_token);
         }
     }
+}
+
+#[tokio::test]
+async fn voice_pipeline_v2_controls_save_guild_switches_and_disable_only_the_master() {
+    let app = setup().await;
+    let (headers, body) = get_with_headers(&app, "/instance-config", &[]).await;
+    let csrf_token = csrf_cookie(&headers).unwrap();
+    for marker in [
+        "Voice pipeline v2",
+        "Enable for everyone",
+        r#"name="voice_ns_pipeline_v2_enabled""#,
+        r#"name="voice_ns_pipeline_v2_all""#,
+        r#"name="voice_ns_pipeline_v2_guild_ids[]""#,
+    ] {
+        assert!(body.contains(marker), "{body}");
+    }
+    assert_form_has_csrf(
+        &body,
+        "/instance-config?action=disable_voice_pipeline_v2",
+        &csrf_token,
+    );
+    let cookie = format!("{}; csrf_token={csrf_token}", app.session_cookie);
+    let request_headers = [
+        ("HX-Request", "true"),
+        ("HX-Target", "flash-container"),
+        ("Cookie", cookie.as_str()),
+    ];
+    let (status, _, response) = post_form_with_headers(
+        &app,
+        "/instance-config?action=update_voice_noise_suppression",
+        &request_headers,
+        &format!("_csrf={csrf_token}&voice_ns_pipeline_v2_enabled=true&voice_ns_pipeline_v2_all=true&voice_ns_guild_overrides=1600000000000000001%3Ddeep_filter&voice_ns_pipeline_v2_guild_ids%5B%5D=1600000000000000001"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{response}");
+    let update = app.config_updates.lock().unwrap()[0].clone();
+    assert_eq!(
+        update["voice_noise_suppression"]["pipeline_v2_enabled"],
+        true
+    );
+    assert_eq!(update["voice_noise_suppression"]["pipeline_v2_all"], true);
+    assert_eq!(
+        update["voice_noise_suppression"]["guild_overrides"],
+        json!([{"guild_id": "1600000000000000001", "backend": "deep_filter", "pipeline_v2": true}])
+    );
+
+    let (status, _, response) = post_form_with_headers(
+        &app,
+        "/instance-config?action=disable_voice_pipeline_v2",
+        &request_headers,
+        &format!("_csrf={csrf_token}&voice_ns_enabled=true&voice_ns_pipeline_v2_all=false"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{response}");
+    assert_eq!(
+        app.config_updates.lock().unwrap()[1],
+        json!({"voice_noise_suppression": {"pipeline_v2_enabled": false}})
+    );
+
+    let (status, _, response) = post_form_with_headers(
+        &app,
+        "/instance-config?action=update_voice_noise_suppression",
+        &request_headers,
+        &format!("_csrf={csrf_token}&voice_ns_guild_overrides=1600000000000000002%3Drnnoise&voice_ns_pipeline_v2_guild_ids%5B%5D=1600000000000000001"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{response}");
+    let update = app.config_updates.lock().unwrap()[2].clone();
+    assert_eq!(
+        update["voice_noise_suppression"]["pipeline_v2_enabled"],
+        false
+    );
+    assert_eq!(update["voice_noise_suppression"]["pipeline_v2_all"], false);
+    assert_eq!(
+        update["voice_noise_suppression"]["guild_overrides"],
+        json!([{"guild_id": "1600000000000000002", "backend": "rnnoise", "pipeline_v2": false}])
+    );
+}
+
+#[tokio::test]
+async fn voice_pipeline_v2_tuning_form_shows_current_values_and_patches_bounded_numbers() {
+    let app = setup().await;
+    let (headers, body) = get_with_headers(&app, "/instance-config", &[]).await;
+    let csrf_token = csrf_cookie(&headers).unwrap();
+    for marker in [
+        r#"name="voice_ns_pipeline_v2_gate_open_probability""#,
+        r#"name="voice_ns_pipeline_v2_gate_refresh_probability""#,
+        r#"name="voice_ns_pipeline_v2_gate_hangover_ms""#,
+        r#"name="voice_ns_pipeline_v2_gain_target_dbfs""#,
+        r#"name="voice_ns_pipeline_v2_gain_max_db""#,
+        r#"step="0.01" value="0.7" min="0.3" max="0.95""#,
+        r#"step="0.01" value="0.3" min="0.1" max="0.9""#,
+        r#"step="1" value="600" min="100" max="1500""#,
+        r#"step="1" value="-24" min="-40" max="-14""#,
+        r#"step="1" value="15" min="0" max="30""#,
+    ] {
+        assert!(body.contains(marker), "{body}");
+    }
+    let cookie = format!("{}; csrf_token={csrf_token}", app.session_cookie);
+    let request_headers = [
+        ("HX-Request", "true"),
+        ("HX-Target", "flash-container"),
+        ("Cookie", cookie.as_str()),
+    ];
+    let (status, _, response) = post_form_with_headers(
+        &app,
+        "/instance-config?action=update_voice_noise_suppression",
+        &request_headers,
+        &format!("_csrf={csrf_token}&voice_ns_pipeline_v2_gate_open_probability=0.8&voice_ns_pipeline_v2_gate_refresh_probability=0.2&voice_ns_pipeline_v2_gate_hangover_ms=900&voice_ns_pipeline_v2_gain_target_dbfs=-30&voice_ns_pipeline_v2_gain_max_db=12"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{response}");
+    let update = app.config_updates.lock().unwrap()[0].clone();
+    for (key, expected) in [
+        ("pipeline_v2_gate_open_probability", json!(0.8)),
+        ("pipeline_v2_gate_refresh_probability", json!(0.2)),
+        ("pipeline_v2_gate_hangover_ms", json!(900)),
+        ("pipeline_v2_gain_target_dbfs", json!(-30)),
+        ("pipeline_v2_gain_max_db", json!(12)),
+    ] {
+        assert_eq!(update["voice_noise_suppression"][key], expected, "{key}");
+    }
+
+    let (status, response_headers, response) = post_form_with_headers(
+        &app,
+        "/instance-config?action=update_voice_noise_suppression",
+        &request_headers,
+        &format!("_csrf={csrf_token}&voice_ns_pipeline_v2_gate_open_probability=0.96"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{response}");
+    let toast = response_headers
+        .get("X-Fluxer-Admin-Toast")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    assert!(
+        toast.contains("Gate open probability must be a number between 0.3 and 0.95"),
+        "{toast}"
+    );
+    assert_eq!(app.config_updates.lock().unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn voice_pipeline_v2_disable_requires_csrf_and_an_admin_session() {
+    let app = setup().await;
+    let action = "/instance-config?action=disable_voice_pipeline_v2";
+    let (status, _, _) = post_form_with_headers(&app, action, &[], "").await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (status, _, _) = post_form_with_headers(&app, action, &[("Cookie", "")], "").await;
+    assert_ne!(status, StatusCode::OK);
+    assert_ne!(status, StatusCode::NO_CONTENT);
+    assert!(app.config_updates.lock().unwrap().is_empty());
 }
 
 #[tokio::test]
@@ -727,12 +888,14 @@ struct TabCase {
 }
 
 async fn setup() -> TestApp {
-    let api_endpoint = spawn_mock_api().await;
+    let config_updates = Arc::new(Mutex::new(Vec::new()));
+    let api_endpoint = spawn_mock_api(config_updates.clone()).await;
     let router = build_router(test_config(api_endpoint));
     let session_value = session::create_session("1500000000000000000", "test-token", SECRET_KEY);
     TestApp {
         router,
         session_cookie: format!("{}={session_value}", session::SESSION_COOKIE_NAME),
+        config_updates,
     }
 }
 
@@ -853,20 +1016,33 @@ fn assert_fragment(body: &str) {
     assert!(!body.contains(r#"id="main-content""#), "{body}");
 }
 
-async fn spawn_mock_api() -> String {
+async fn spawn_mock_api(config_updates: Arc<Mutex<Vec<Value>>>) -> String {
     let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move {
-        axum::serve(listener, Router::new().fallback(mock_api))
-            .await
-            .unwrap();
+        axum::serve(
+            listener,
+            Router::new().fallback(mock_api).with_state(config_updates),
+        )
+        .await
+        .unwrap();
     });
     format!("http://{addr}")
 }
 
-async fn mock_api(method: Method, uri: Uri) -> Response {
+async fn mock_api(
+    method: Method,
+    uri: Uri,
+    State(config_updates): State<Arc<Mutex<Vec<Value>>>>,
+    request: Request<Body>,
+) -> Response {
     let path = uri.path().to_owned();
     if method == Method::PATCH && path == "/admin/instance/config" {
+        let bytes = to_bytes(request.into_body(), usize::MAX).await.unwrap();
+        config_updates
+            .lock()
+            .unwrap()
+            .push(serde_json::from_slice(&bytes).unwrap());
         return json_response(instance_config());
     }
     match (method, path.as_str()) {
@@ -917,6 +1093,26 @@ async fn mock_api(method: Method, uri: Uri) -> Response {
         (Method::GET, "/admin/jobs/1900000000000000001") => {
             json_response(json!({ "job": searched_job() }))
         }
+        (Method::GET, "/admin/shop") => json_response(json!({
+            "settings": {
+                "premium_sales_open": false,
+                "item_sales_open": false,
+                "premium_discount_percent": 0,
+                "usd_to_azn_rate_micro": 1_700_000,
+                "try_to_azn_rate_micro": null,
+                "try_rate_date": null,
+                "try_rate_fetched_at": null,
+                "try_to_azn_rate_override_micro": null,
+                "try_rate_override_at": null,
+                "payriff_configured": false
+            },
+            "prices": [],
+            "health": {
+                "busy_refusals_last_hour": 0,
+                "reconcile_lag_seconds": 0,
+                "payriff_backing_off": false
+            }
+        })),
         (Method::GET, "/admin/instance/config") => json_response(instance_config()),
         (Method::POST, "/admin/instance/registration-urls") => json_response(json!({
             "registration_url": registration_url_fixture(),
@@ -1227,6 +1423,32 @@ fn instance_config() -> Value {
             "max_concurrent_session_starts": 16,
             "max_concurrent_guild_starts": 16,
             "voice_e2ee_scope": "guild_feature_only"
+        },
+        "voice_noise_suppression": {
+            "enabled": false,
+            "config_version": 0,
+            "default_backend": "standard",
+            "enabled_backends": [
+                "none",
+                "standard",
+                "gate",
+                "speex",
+                "rnnoise",
+                "gtcrn",
+                "deep_filter"
+            ],
+            "allow_user_override": true,
+            "rollout_basis_points": 0,
+            "rollout_salt": "voice-ns-v1",
+            "included_user_ids": [],
+            "excluded_user_ids": [],
+            "guild_overrides": [{"guild_id": "1600000000000000001", "backend": "deep_filter", "pipeline_v2": true}],
+            "suppression_strength": 80,
+            "pipeline_v2_gate_open_probability": 0.7,
+            "pipeline_v2_gate_refresh_probability": 0.3,
+            "pipeline_v2_gate_hangover_ms": 600,
+            "pipeline_v2_gain_target_dbfs": -24,
+            "pipeline_v2_gain_max_db": 15
         },
         "domain_migration": {
             "enabled": false,

@@ -642,3 +642,9 @@
 	box-shadow: 0 0 0 0.08rem var(--channel-header-background);
 	pointer-events: none;
 }
+
+/* Micup: coal channel header on its own step */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .headerContainer,
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .headerWrapper {
+	--background-secondary-lighter: var(--background-channel-header);
+}

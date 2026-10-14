@@ -87,22 +87,30 @@ init(Args) ->
     process_flag(trap_exit, true),
     erlang:process_flag(fullsweep_after, 0),
     ShardIndex = maps:get(shard_index, Args),
+    ok = gateway_connection_metrics:note_shard_sessions(ShardIndex, 0),
     {ok,
-        #{
+        session_manager_shard_rollout:init(#{
             sessions => #{},
             session_refs => #{},
             identify_attempts => [],
             pending_identifies => #{},
             identify_workers => #{},
             shard_index => ShardIndex
-        },
-        hibernate}.
+        }), hibernate}.
 
--spec handle_call(Request, From, State) -> Result when
+%% Micup: after every call and message the shard writes its session count for the node
+%% (gateway_connection_metrics: fluxer_gateway_sessions and the Identify soft limit).
+-spec handle_call(term(), gen_server:from(), state()) ->
+    {reply, term(), state()} | {noreply, state()}.
+handle_call(Request, From, State) ->
+    publish_call_session_count(handle_shard_call(Request, From, State)).
+
+-spec handle_shard_call(Request, From, State) -> Result when
     Request ::
         {start, identify_request(), pid()}
         | {lookup, session_id()}
         | {lookup_or_rehydrate, session_id(), binary(), pid()}
+        | {rehydrate_handoff, session_id(), binary(), pid()}
         | get_local_count
         | get_global_count
         | reconnect_drain
@@ -118,36 +126,45 @@ init(Args) ->
         | {ok, non_neg_integer()}
         | {ok, #{attempted := non_neg_integer(), handed_off := non_neg_integer()}}
         | ok.
-handle_call({start, Request, SocketPid}, From, State) when is_map(Request), is_pid(SocketPid) ->
+handle_shard_call({start, Request, SocketPid}, From, State) when
+    is_map(Request), is_pid(SocketPid)
+->
     session_manager_shard_lifecycle:handle_start_call(
         gateway_node_router:is_draining(), Request, SocketPid, From, State
     );
-handle_call({lookup, SessionId}, _From, State) when is_binary(SessionId) ->
+handle_shard_call({lookup, SessionId}, _From, State) when is_binary(SessionId) ->
     {Reply, NewState} = session_manager_shard_lookup:lookup_session_anywhere(SessionId, State),
     {reply, Reply, NewState};
-handle_call({lookup, _InvalidSessionId}, _From, State) ->
+handle_shard_call({lookup, _InvalidSessionId}, _From, State) ->
     {reply, {error, not_found}, State};
-handle_call({lookup_or_rehydrate, SessionId, Token, SocketPid}, _From, State) when
+handle_shard_call({lookup_or_rehydrate, SessionId, Token, SocketPid}, _From, State) when
     is_binary(SessionId), is_binary(Token), is_pid(SocketPid)
 ->
     handle_lookup_or_rehydrate(SessionId, Token, SocketPid, State);
-handle_call({lookup_or_rehydrate, _InvalidSessionId, _Token, _SocketPid}, _From, State) ->
+handle_shard_call({lookup_or_rehydrate, _InvalidSessionId, _Token, _SocketPid}, _From, State) ->
     {reply, {error, not_found}, State};
-handle_call(get_local_count, _From, State) ->
+handle_shard_call({rehydrate_handoff, SessionId, Token, SocketPid}, _From, State) when
+    is_binary(SessionId), is_binary(Token), is_pid(SocketPid)
+->
+    {Reply, NewState} = session_manager_shard_lookup:rehydrate_handoff(
+        SessionId, Token, SocketPid, State
+    ),
+    {reply, Reply, NewState};
+handle_shard_call(get_local_count, _From, State) ->
     handle_session_count(State);
-handle_call(get_global_count, _From, State) ->
+handle_shard_call(get_global_count, _From, State) ->
     handle_session_count(State);
-handle_call(reconnect_drain, _From, State) ->
+handle_shard_call(reconnect_drain, _From, State) ->
     DrainCount = session_manager_shard_drain:broadcast_reconnect_drain(State),
     {reply, {ok, DrainCount}, State};
-handle_call({transfer_to, TargetNode}, _From, State) when is_atom(TargetNode) ->
+handle_shard_call({transfer_to, TargetNode}, _From, State) when is_atom(TargetNode) ->
     TransferCount = session_manager_shard_drain:broadcast_transfer_to(TargetNode, State),
     {reply, {ok, TransferCount}, State};
-handle_call({transfer_to_topology, TargetNodes}, _From, State) ->
+handle_shard_call({transfer_to_topology, TargetNodes}, _From, State) ->
     handle_transfer_topology(TargetNodes, State);
-handle_call({handoff_to_topology, TargetNodes}, _From, State) ->
+handle_shard_call({handoff_to_topology, TargetNodes}, _From, State) ->
     handle_handoff_topology(TargetNodes, State);
-handle_call(_, _From, State) ->
+handle_shard_call(_, _From, State) ->
     {reply, ok, State}.
 
 -spec handle_lookup_or_rehydrate(session_id(), binary(), pid(), state()) ->
@@ -189,28 +206,50 @@ handle_handoff_topology(TargetNodes, State) ->
 handle_cast(_, State) ->
     {noreply, State}.
 
--spec handle_info(Info, State) -> {noreply, state()} when
+-spec handle_info(term(), state()) -> {noreply, state()}.
+handle_info(Info, State) ->
+    {noreply, NewState} = handle_shard_info(Info, State),
+    ok = note_session_count(NewState),
+    {noreply, NewState}.
+
+-spec handle_shard_info(Info, State) -> {noreply, state()} when
     Info :: {'DOWN', reference(), process, pid(), term()} | term(),
     State :: state().
-handle_info({identify_slot_acquired, SessionId, WorkerToken}, State) when
+handle_shard_info({identify_slot_acquired, SessionId, WorkerToken}, State) when
     is_binary(SessionId), is_reference(WorkerToken)
 ->
     session_manager_shard_lifecycle:note_identify_slot_acquired(
         SessionId, WorkerToken, State
     );
-handle_info({identify_fetch_result, SessionId, WorkerToken, FetchResult}, State) when
+handle_shard_info({identify_fetch_result, SessionId, WorkerToken, FetchResult}, State) when
     is_binary(SessionId), is_reference(WorkerToken)
 ->
     session_manager_shard_lifecycle:complete_identify_fetch(
         SessionId, WorkerToken, FetchResult, State
     );
-handle_info({identify_fetch_result, SessionId, FetchResult}, State) when is_binary(SessionId) ->
+handle_shard_info({identify_fetch_result, SessionId, FetchResult}, State) when
+    is_binary(SessionId)
+->
     session_manager_shard_lifecycle:complete_identify_fetch(SessionId, FetchResult, State);
-handle_info({identify_fetch_timeout, SessionId, WorkerRef}, State) when
+handle_shard_info({identify_fetch_timeout, SessionId, WorkerRef}, State) when
     is_binary(SessionId), is_reference(WorkerRef)
 ->
     session_manager_shard_lifecycle:handle_identify_fetch_timeout(SessionId, WorkerRef, State);
-handle_info({'DOWN', Ref, process, Pid, Reason}, State) when is_reference(Ref), is_pid(Pid) ->
+handle_shard_info(
+    {'DOWN', Ref, process, Pid, _Reason},
+    #{rollout_config_monitor := Ref, rollout_config_pid := Pid} = State
+) ->
+    {noreply, session_manager_shard_rollout:down(State)};
+handle_shard_info(rollout_config_changed, State) ->
+    {noreply, session_manager_shard_rollout:changed(State)};
+handle_shard_info(retry_rollout_config, State) ->
+    {noreply, session_manager_shard_rollout:retry(State)};
+handle_shard_info({session_game_activity_rollout_batch, Iterator}, State) ->
+    ok = session_manager_shard_rollout:batch(Iterator),
+    {noreply, State};
+handle_shard_info({'DOWN', Ref, process, Pid, Reason}, State) when
+    is_reference(Ref), is_pid(Pid)
+->
     IdentifyWorkers = maps:get(identify_workers, State),
     case maps:take(Ref, IdentifyWorkers) of
         {{SessionId, _WorkerPid}, RemainingWorkers} ->
@@ -221,16 +260,30 @@ handle_info({'DOWN', Ref, process, Pid, Reason}, State) when is_reference(Ref), 
         error ->
             {noreply, session_manager_shard_session_index:cleanup_down(Ref, Pid, State)}
     end;
-handle_info({'EXIT', Pid, _Reason}, State) when is_pid(Pid) ->
+handle_shard_info({'EXIT', Pid, _Reason}, State) when is_pid(Pid) ->
     {noreply, State};
-handle_info(_, State) ->
+handle_shard_info(_, State) ->
     {noreply, State}.
+
+-spec publish_call_session_count({reply, term(), state()} | {noreply, state()}) ->
+    {reply, term(), state()} | {noreply, state()}.
+publish_call_session_count({reply, _Reply, NewState} = Result) ->
+    ok = note_session_count(NewState),
+    Result;
+publish_call_session_count({noreply, NewState} = Result) ->
+    ok = note_session_count(NewState),
+    Result.
+
+-spec note_session_count(state()) -> ok.
+note_session_count(#{shard_index := ShardIndex, sessions := Sessions}) ->
+    gateway_connection_metrics:note_shard_sessions(ShardIndex, map_size(Sessions)).
 
 -spec terminate(Reason, State) -> ok when
     Reason :: term(),
     State :: state().
-terminate(_Reason, _State) ->
-    ok.
+terminate(_Reason, #{shard_index := ShardIndex} = State) ->
+    ok = session_manager_shard_rollout:terminate(State),
+    gateway_connection_metrics:note_shard_sessions(ShardIndex, 0).
 
 -spec code_change(term(), state(), term()) -> {ok, state()}.
 code_change(_OldVsn, State, _Extra) ->

@@ -1,0 +1,83 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Okey tiles are ivory plastic with coloured numerals in every theme, like the chess board's fixed squares. */
+.tile {
+	--okey-ink: #1f1d1a;
+
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 100%;
+	aspect-ratio: 5 / 7;
+	border-radius: 0.3em;
+	background: linear-gradient(180deg, #fbf8f0 0%, #f1ead8 100%);
+	box-shadow:
+		inset 0 -0.16em 0 #d9ccaf,
+		0 0.0625rem 0.125rem rgb(0 0 0 / 0.35);
+	color: var(--okey-ink);
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+	user-select: none;
+}
+
+.tile[data-size='rack'] {
+	font-size: clamp(0.8125rem, 4.4cqi, 1.375rem);
+}
+
+.tile[data-size='small'] {
+	width: 1.375rem;
+	font-size: 0.8125rem;
+}
+
+.tile[data-color='0'] {
+	--okey-ink: #a36b00;
+}
+
+.tile[data-color='1'] {
+	--okey-ink: #1d4fa8;
+}
+
+.tile[data-color='2'] {
+	--okey-ink: #1f1d1a;
+}
+
+.tile[data-color='3'] {
+	--okey-ink: #c0262d;
+}
+
+.number {
+	margin-top: -0.12em;
+}
+
+/* The real okey keeps its face and wears a gold ring, so it reads as wild at a glance. */
+.tile[data-okey='wild'] {
+	box-shadow:
+		inset 0 0 0 0.12em #d9a521,
+		inset 0 -0.16em 0 #d9ccaf,
+		0 0.0625rem 0.125rem rgb(0 0 0 / 0.35);
+}
+
+.star {
+	position: absolute;
+	top: 0.12em;
+	right: 0.16em;
+	font-size: 0.5em;
+	color: #c8921a;
+}
+
+.clover {
+	margin-top: -0.18em;
+	font-size: 1.05em;
+	color: #2e7a4a;
+}
+
+.plays {
+	position: absolute;
+	right: 0.18em;
+	bottom: 0.3em;
+	font-size: 0.48em;
+	color: var(--okey-ink);
+}

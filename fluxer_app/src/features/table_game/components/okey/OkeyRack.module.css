@@ -1,0 +1,79 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* A wooden rack with two shelves; each shelf is a row of cells with a lip the tiles lean on. */
+.rack {
+	--rack-wood: #7a5536;
+	--rack-wood-dark: #5c3f28;
+
+	container-type: inline-size;
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+	padding: 0.5rem 0.375rem 0.375rem;
+	border-radius: var(--radius-md);
+	background: linear-gradient(180deg, var(--rack-wood) 0%, var(--rack-wood-dark) 100%);
+	box-shadow:
+		inset 0 0.0625rem 0 rgb(255 255 255 / 0.14),
+		0 0.125rem 0.375rem rgb(0 0 0 / 0.3);
+}
+
+.row {
+	display: grid;
+	grid-template-columns: repeat(15, minmax(0, 1fr));
+	gap: 0.1875rem;
+	padding-bottom: 0.25rem;
+	border-bottom: 0.1875rem solid rgb(0 0 0 / 0.28);
+}
+
+.cell {
+	position: relative;
+	display: flex;
+	align-items: flex-end;
+	min-width: 0;
+	padding: 0;
+	border: none;
+	border-radius: 0.3em;
+	background: rgb(0 0 0 / 0.16);
+	aspect-ratio: 5 / 7;
+	cursor: pointer;
+	transition: transform 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.cell[data-tile] {
+	background: transparent;
+}
+
+.cell[data-tile]:active {
+	transform: scale(0.96);
+}
+
+/* A selected tile rises off the shelf; the ring keeps it readable without motion. */
+.cell[aria-pressed='true'] {
+	transform: translateY(-22%);
+}
+
+.cell[aria-pressed='true'] > * {
+	box-shadow:
+		inset 0 -0.16em 0 #d9ccaf,
+		0 0 0 0.125rem #e8ba3e,
+		0 0.25rem 0.5rem rgb(0 0 0 / 0.35);
+}
+
+/* The tile taken from the side is not in the rack yet. */
+.cell[data-pending='true'] > * {
+	outline: 0.125rem dashed #e8ba3e;
+	outline-offset: 0.125rem;
+}
+
+.cell[data-dragging='true'] {
+	opacity: 0.35;
+}
+
+.cell[data-over='true'] {
+	box-shadow: inset 0 0 0 0.125rem rgb(255 255 255 / 0.7);
+}
+
+.cell:focus-visible {
+	outline: 0.125rem solid #fff;
+	outline-offset: 0.0625rem;
+}

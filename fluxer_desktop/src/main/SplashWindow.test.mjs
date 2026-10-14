@@ -1293,7 +1293,7 @@ describe('splash preload rendering', () => {
 
 		harness.sendState({status: 'shell-update-downloading'});
 
-		assert.equal(harness.statusText(), 'Updating Fluxer…');
+		assert.equal(harness.statusText(), 'Updating Micup…');
 		assert.notEqual(harness.query('.progress-placeholder'), null);
 
 		harness.sendState({status: 'shell-update-downloading', progress: 12});
@@ -1401,7 +1401,7 @@ describe('splash preload rendering', () => {
 
 		harness.sendState(serializeSplashState({status: 'blocked-shell-update', action: SplashAction.DOWNLOAD}));
 
-		assert.equal(harness.statusText(), 'A new version of Fluxer is required');
+		assert.equal(harness.statusText(), 'A new version of Micup is required');
 		assert.equal(harness.query('.splash-action').textContent, 'Download update');
 
 		harness.click('.splash-action');
@@ -1416,7 +1416,7 @@ describe('splash preload rendering', () => {
 
 		harness.sendState(serializeSplashState({status: 'blocked-shell-update-managed', action: SplashAction.QUIT}));
 
-		assert.equal(harness.statusText(), 'Update Fluxer through your package manager');
+		assert.equal(harness.statusText(), 'Update Micup through your package manager');
 		assert.equal(harness.query('.splash-action').textContent, 'Quit');
 
 		harness.click('.splash-action');
@@ -1472,7 +1472,7 @@ describe('splash preload manual update layout', () => {
 			progress: null,
 			seconds: null,
 			action: null,
-			message: 'A new version of Fluxer is ready to install.',
+			message: 'A new version of Micup is ready to install.',
 			versionLabel: 'Version 2026.823.1 available',
 			options: MANUAL_UPDATE_OPTIONS,
 			...patch,
@@ -1488,7 +1488,7 @@ describe('splash preload manual update layout', () => {
 		assert.equal(harness.mount.replaceChildrenCalls, 2);
 		assert.equal(harness.query('.splash-inner-dl').children.length, 4);
 		assert.equal(harness.query('.splash-mark-dl').querySelector('img').getAttribute('src'), './symbol.svg');
-		assert.equal(harness.query('.dl-update-message').textContent, 'A new version of Fluxer is ready to install.');
+		assert.equal(harness.query('.dl-update-message').textContent, 'A new version of Micup is ready to install.');
 		assert.equal(harness.query('.dl-version-message').textContent, 'Version 2026.823.1 available');
 		assert.deepEqual(
 			harness.queryAll('option').map((node) => [node.value, node.textContent]),
@@ -1557,7 +1557,7 @@ describe('splash preload manual update layout', () => {
 
 		assert.equal(harness.query('.dl-select-frame'), null);
 		assert.equal(harness.query('#dl-button').textContent, 'Quit');
-		assert.equal(harness.query('.dl-update-message').textContent, 'A new version of Fluxer is ready to install.');
+		assert.equal(harness.query('.dl-update-message').textContent, 'A new version of Micup is ready to install.');
 
 		harness.click('#dl-button');
 
@@ -1648,17 +1648,17 @@ describe('splash preload contract', () => {
 		assert.equal(textFor({status: SplashStatus.INSTALLING_UPDATES, current: 5, total: 7}), 'Installing update 5 of 7…');
 		assert.equal(textFor({status: SplashStatus.VERIFYING}), 'Verifying files…');
 		assert.equal(textFor({status: SplashStatus.UPDATE_FAILURE, seconds: 8}), 'Update failed. Retrying in 8 sec…');
-		assert.equal(textFor({status: SplashStatus.SHELL_UPDATE_DOWNLOADING}), 'Updating Fluxer…');
+		assert.equal(textFor({status: SplashStatus.SHELL_UPDATE_DOWNLOADING}), 'Updating Micup…');
 		assert.equal(textFor({status: SplashStatus.SHELL_UPDATE_RESTARTING}), 'Restarting to finish the update…');
 		assert.equal(textFor({status: SplashStatus.BLOCKED_UPDATE_REQUIRED}), 'Update required to continue');
-		assert.equal(textFor({status: SplashStatus.BLOCKED_SHELL_UPDATE}), 'A new version of Fluxer is required');
+		assert.equal(textFor({status: SplashStatus.BLOCKED_SHELL_UPDATE}), 'A new version of Micup is required');
 		assert.equal(
 			textFor({status: SplashStatus.BLOCKED_SHELL_UPDATE_MANAGED}),
-			'Update Fluxer through your package manager',
+			'Update Micup through your package manager',
 		);
 		assert.equal(
 			textFor({status: SplashStatus.BLOCKED_UNSUPPORTED_BUILD}),
-			'This installation is incomplete. Reinstall Fluxer',
+			'This installation is incomplete. Reinstall Micup',
 		);
 		assert.equal(textFor({status: SplashStatus.LAUNCHING}), 'Starting…');
 		assert.equal(textFor({status: SplashStatus.UNREACHABLE_LAUNCH}), 'Starting offline…');

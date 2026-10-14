@@ -21,6 +21,7 @@ import {IConnectionService, type InitiateConnectionResult} from '@app/api/connec
 import {DomainConnectionVerifier} from '@app/api/connection/verification/DomainConnectionVerifier';
 import type {RevisionedUserConnectionRow, UserConnectionRow} from '@app/api/database/types/ConnectionTypes';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
+import {getProfileAccessCache} from '@app/api/middleware/ServiceSingletons';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {
 	type ConnectionType,
@@ -100,6 +101,8 @@ export class ConnectionService extends IConnectionService {
 	}
 
 	private async dispatchConnectionsUpdate(userId: UserID): Promise<void> {
+		// Every connection write ends here, so the cached profile view drops the old list at once.
+		await getProfileAccessCache().forgetView(userId);
 		const connections = await this.repository.findByUserId(userId);
 		await this.gateway.dispatchPresence({
 			userId,

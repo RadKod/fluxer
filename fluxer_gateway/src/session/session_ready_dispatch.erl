@@ -123,6 +123,8 @@ filter_pending_presences(Pending, Covered) ->
     end.
 
 -spec covered_entry(term(), #{integer() => true}) -> boolean().
+covered_entry(#{data := #{<<"game_activity">> := _}}, _Covered) ->
+    false;
 covered_entry(#{user_id := UserId}, Covered) when is_integer(UserId) ->
     maps:is_key(UserId, Covered);
 covered_entry(_Entry, _Covered) ->
@@ -303,7 +305,9 @@ guild_state_event(GuildState) ->
 -spec dispatch_event(atom(), map(), session_state()) -> session_state().
 dispatch_event(Event, Data, #{seq := Seq, socket_pid := SocketPid} = State) ->
     NewSeq = Seq + 1,
-    send_dispatch_to_socket(SocketPid, Event, Data, NewSeq),
+    send_dispatch_to_socket(
+        SocketPid, Event, session_game_activity:wire(Event, Data, State), NewSeq
+    ),
     State#{seq => NewSeq}.
 
 -spec send_dispatch_to_socket(pid() | undefined, atom(), map(), non_neg_integer()) -> ok.
@@ -364,6 +368,73 @@ dispatch_call_create_from_pid(CallPid, ChannelId, _SessionId, SessionPid) ->
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+
+username_migration_ready_preserves_configuration_and_own_private_state_test() ->
+    Migration = #{
+        <<"state">> => <<"selecting">>,
+        <<"epoch">> => 2,
+        <<"preparing_at">> => <<"2026-10-01T00:00:00Z">>,
+        <<"started_at">> => <<"2026-10-01T00:01:00Z">>,
+        <<"forced_at">> => <<"2026-10-08T00:01:00Z">>
+    },
+    Tiers = #{<<"1">> => <<"locked">>, <<"2">> => <<"for_sale">>, <<"3">> => <<"public">>},
+    Own = #{
+        <<"id">> => <<"123">>,
+        <<"username">> => <<"selected">>,
+        <<"identity_version">> => <<"9007199254740993">>,
+        <<"username_state">> => <<"selected">>,
+        <<"username_change_available_at">> => <<"2026-10-22T00:00:00Z">>,
+        <<"username_free_change_available">> => true
+    },
+    Other = #{
+        <<"id">> => <<"456">>,
+        <<"username">> => <<"legacy">>,
+        <<"username_state">> => <<"legacy">>,
+        <<"identity_version">> => <<"0">>
+    },
+    RpcData = #{
+        <<"user">> => Own,
+        <<"username_migration">> => Migration,
+        <<"username_tiers">> => Tiers,
+        <<"guilds">> => [],
+        <<"relationships">> => [#{<<"user">> => Own}]
+    },
+    Ready = session_manager_shard_drain:build_ready_data_for_session(RpcData),
+    State = #{ready => Ready, channels => #{}, bot => false},
+    Users = session_ready_collect:collect_ready_users(State, []),
+    Final = guild_data_wire:payload(
+        build_final_ready_data(
+            State, [], [], [], Users, #{}, 1, <<"own-session">>, false
+        )
+    ),
+    ?assertEqual(Migration, maps:get(<<"username_migration">>, Final)),
+    ?assertEqual(Tiers, maps:get(<<"username_tiers">>, Final)),
+    ?assertEqual(Own, maps:get(<<"user">>, Final)),
+    [Public] = maps:get(<<"users">>, Final),
+    ?assertEqual(<<"9007199254740993">>, maps:get(<<"identity_version">>, Public)),
+    lists:foreach(
+        fun(Key) -> ?assertNot(maps:is_key(Key, Public)) end,
+        [
+            <<"username_state">>,
+            <<"username_change_available_at">>,
+            <<"username_free_change_available">>
+        ]
+    ),
+    OtherReady = session_manager_shard_drain:build_ready_data_for_session(
+        RpcData#{<<"user">> => Other, <<"relationships">> => []}
+    ),
+    OtherFinal = build_final_ready_data(
+        #{ready => OtherReady},
+        [],
+        [],
+        [],
+        [],
+        #{},
+        1,
+        <<"other-session">>,
+        false
+    ),
+    ?assertEqual(Other, maps:get(<<"user">>, OtherFinal)).
 
 dispatch_call_create_from_pid_always_casts_to_session_test() ->
     ChannelId = 1234,

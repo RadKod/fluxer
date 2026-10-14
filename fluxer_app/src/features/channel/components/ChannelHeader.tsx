@@ -105,6 +105,7 @@ import MobileLayout from '@app/features/ui/state/MobileLayout';
 import PopoutState from '@app/features/ui/state/Popout';
 import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
 import * as UserProfileCommands from '@app/features/user/commands/UserProfileCommands';
+import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge';
 import * as CallCommands from '@app/features/voice/commands/CallCommands';
 import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
 import CallState from '@app/features/voice/state/CallState';
@@ -676,6 +677,11 @@ export const ChannelHeader = observer(
 																	{directMessageName}
 																</span>
 															</Tooltip>
+															<VerifiedUserBadge
+																user={recipient}
+																className={styles.userTag}
+																data-flx="channel.channel-header.verified-user-badge"
+															/>
 															{isBotDMRecipient && (
 																<UserTag
 																	className={styles.userTag}
@@ -768,6 +774,11 @@ export const ChannelHeader = observer(
 															{directMessageName}
 														</span>
 													</Tooltip>
+													<VerifiedUserBadge
+														user={recipient}
+														className={styles.userTag}
+														data-flx="channel.channel-header.verified-user-badge--2"
+													/>
 													{isBotDMRecipient && (
 														<UserTag
 															className={styles.userTag}

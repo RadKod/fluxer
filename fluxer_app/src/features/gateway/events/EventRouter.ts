@@ -12,7 +12,12 @@ import {handleFavoriteMemeCreate} from '@app/features/expressions/events/Favorit
 import {handleFavoriteMemeDelete} from '@app/features/expressions/events/FavoriteMemeDelete';
 import {handleFavoriteMemeUpdate} from '@app/features/expressions/events/FavoriteMemeUpdate';
 import {handleWebhooksUpdate} from '@app/features/expressions/events/WebhooksUpdate';
+import {handleFeedNotificationAck} from '@app/features/feed/events/FeedNotificationAck';
+import {handleFeedNotificationCreate} from '@app/features/feed/events/FeedNotificationCreate';
+import {handleFollowCreate} from '@app/features/follow/events/FollowCreate';
+import {handleFollowDelete} from '@app/features/follow/events/FollowDelete';
 import {handleReady} from '@app/features/gateway/events/GatewayReady';
+import {handleGatewayRolloutUpdate} from '@app/features/gateway/events/GatewayRolloutUpdate';
 import type {GatewaySocket} from '@app/features/gateway/transport/GatewaySocket';
 import {handleChannelMemberCountsUpdate} from '@app/features/guild/events/ChannelMemberCountsUpdate';
 import {handleGuildBanAdd, handleGuildBanRemove} from '@app/features/guild/events/GuildBan';
@@ -55,6 +60,7 @@ import {handlePresenceUpdateBulk} from '@app/features/presence/events/PresenceUp
 import {handleRelationshipAdd} from '@app/features/relationship/events/RelationshipAdd';
 import {handleRelationshipRemove} from '@app/features/relationship/events/RelationshipRemove';
 import {handleRelationshipUpdate} from '@app/features/relationship/events/RelationshipUpdate';
+import {handleTableGameUpdate} from '@app/features/table_game/events/TableGameUpdate';
 import {handleForumUnreads} from '@app/features/threads/events/ForumUnreads';
 import {handleThreadCreate} from '@app/features/threads/events/ThreadCreate';
 import {handleThreadDelete} from '@app/features/threads/events/ThreadDelete';
@@ -87,6 +93,7 @@ export interface GatewayGeoipPayload {
 export interface GatewayHandlerContext {
 	socket: GatewaySocket | null;
 	accountKey: string | null;
+	settingsEpoch: number | null;
 	expectedUserId: string | null;
 	previousSessionId: string | null;
 	setPreviousSessionId: (id: string) => void;
@@ -101,6 +108,7 @@ export type GatewayHandlerRegistry = Map<string, GatewayEventHandler>;
 export function createHandlerRegistry(): GatewayHandlerRegistry {
 	const registry: GatewayHandlerRegistry = new Map();
 	registry.set('READY', handleReady as GatewayEventHandler);
+	registry.set('GATEWAY_ROLLOUT_UPDATE', handleGatewayRolloutUpdate as GatewayEventHandler);
 	registry.set('AUTH_SESSION_CHANGE', handleAuthSessionChange as GatewayEventHandler);
 	registry.set('USER_UPDATE', handleUserUpdate as GatewayEventHandler);
 	registry.set('USER_SETTINGS_UPDATE', handleUserSettingsUpdate as GatewayEventHandler);
@@ -178,5 +186,10 @@ export function createHandlerRegistry(): GatewayHandlerRegistry {
 	registry.set('FAVORITE_MEME_UPDATE', handleFavoriteMemeUpdate as GatewayEventHandler);
 	registry.set('FAVORITE_MEME_DELETE', handleFavoriteMemeDelete as GatewayEventHandler);
 	registry.set('SESSIONS_REPLACE', () => {});
+	registry.set('FOLLOW_CREATE', handleFollowCreate as GatewayEventHandler);
+	registry.set('FOLLOW_DELETE', handleFollowDelete as GatewayEventHandler);
+	registry.set('FEED_NOTIFICATION_CREATE', handleFeedNotificationCreate as GatewayEventHandler);
+	registry.set('FEED_NOTIFICATION_ACK', handleFeedNotificationAck as GatewayEventHandler);
+	registry.set('TABLE_GAME_UPDATE', handleTableGameUpdate as GatewayEventHandler);
 	return registry;
 }

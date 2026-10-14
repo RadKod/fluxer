@@ -24,6 +24,7 @@ import {
 	setupFanoutWorld,
 } from '@app/api/channel/tests/CrosspostWorkerTestUtils';
 import {getPngDataUrl} from '@app/api/emoji/tests/EmojiTestUtils';
+import {overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {NoopGatewayService} from '@app/api/test/NoopGatewayService';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
@@ -63,6 +64,7 @@ describe('Follower webhook management', () => {
 	beforeEach(async () => {
 		await harness.reset();
 		world = await announcementWorld(harness);
+		overrideLimits({feature_mature_content_settings: 1});
 	});
 
 	afterEach(() => {

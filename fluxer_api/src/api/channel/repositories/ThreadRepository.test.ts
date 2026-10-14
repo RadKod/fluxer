@@ -860,6 +860,7 @@ describe('thread storage leaves control storage untouched', () => {
 			'user_limit',
 			'voice_connection_limit',
 			'rtc_region',
+			'room_theme',
 			'last_message_id',
 			'last_pin_timestamp',
 			'permission_overwrites',
@@ -893,6 +894,7 @@ describe('thread storage leaves control storage untouched', () => {
 			'call',
 			'has_reaction',
 			'version',
+			'micup_components',
 		]);
 	});
 

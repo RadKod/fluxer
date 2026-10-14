@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {GuildID, UserID} from '@app/api/BrandedTypes';
+import type {TokenRange} from '@app/api/database/TokenRangeScan';
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import type {User} from '@app/api/models/User';
 import {UserEmailOwnershipRepository} from '@app/api/user/repositories/account/crud/UserEmailOwnershipRepository';
@@ -59,6 +60,17 @@ export class UserAccountRepository implements IUserAccountRepository {
 		return this.accountRepo.scanAllUsersPage(limit, pageState);
 	}
 
+	async scanUsersTokenRangePage(
+		range: TokenRange,
+		limit: number,
+		pageState?: string | null,
+	): Promise<{
+		users: Array<User>;
+		pageState: string | null;
+	}> {
+		return this.accountRepo.scanUsersTokenRangePage(range, limit, pageState);
+	}
+
 	async listUsers(userIds: Array<UserID>): Promise<Array<User>> {
 		return this.accountRepo.listUsers(userIds);
 	}
@@ -67,8 +79,13 @@ export class UserAccountRepository implements IUserAccountRepository {
 		return this.accountRepo.upsert(data, oldData);
 	}
 
-	async patchUpsert(userId: UserID, patchData: Partial<UserRow>, oldData?: UserRow | null): Promise<User> {
-		return this.accountRepo.patchUpsert(userId, patchData, oldData);
+	async patchUpsert(
+		userId: UserID,
+		patchData: Partial<UserRow>,
+		oldData?: UserRow | null,
+		legacyIdentityDeadlineAt?: number,
+	): Promise<User> {
+		return this.accountRepo.patchUpsert(userId, patchData, oldData, legacyIdentityDeadlineAt);
 	}
 
 	async compareAndSetFlags(user: User, flags: bigint): Promise<User | null> {

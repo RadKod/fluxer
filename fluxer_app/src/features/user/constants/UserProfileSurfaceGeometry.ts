@@ -1,9 +1,61 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {
+	CANVAS_RATIO,
+	DECORATION_SCALE,
+	FRONT_SCALE,
+	ULTRA_BOX_SCALE,
+} from '@app/features/cosmetics/constants/AvatarDecorationGeometry';
+import UltraLayouts from '@app/features/cosmetics/state/UltraLayouts';
 import {remFromPx} from '@app/features/theme/layout/RemFromPx';
 import {getStatusGeometry} from '@app/features/ui/constants/AvatarStatusGeometry';
+import type {User} from '@app/features/user/models/User';
 
 type CssLengthVariables = Record<`--${string}`, string>;
+
+export function getProfileAvatarLeft({
+	decorationLeft,
+	size,
+	border,
+	edgePadding,
+	containerWidth,
+}: {
+	decorationLeft: number;
+	size: number;
+	border: number;
+	edgePadding: number;
+	containerWidth: number;
+}) {
+	const decorationAwareLeft = Math.max(edgePadding, edgePadding - border - decorationLeft);
+	return Math.min(decorationAwareLeft, Math.max(edgePadding, containerWidth - size - border * 2 - edgePadding));
+}
+
+// Bounds relative to the avatar image, including the frame and both possible ultra placements.
+export function getProfileAvatarDecorationBounds(user: User, size: number, border: number) {
+	const frameOverhang = user.avatarDecoration ? ((DECORATION_SCALE - 1) * size) / 2 : 0;
+	const bounds = {
+		left: -Math.max(border, frameOverhang),
+		top: -Math.max(border, frameOverhang),
+		right: size + Math.max(border, frameOverhang),
+		bottom: size + Math.max(border, frameOverhang),
+	};
+	if (!user.avatarUltra) return bounds;
+	const itemId = user.avatarUltra.item_id;
+	const front = UltraLayouts.frontFor(itemId);
+	const layout = UltraLayouts.layoutFor(itemId)?.profile;
+	// Reserve the fallback too: a failed front asset switches to the item's behind layout.
+	const width = size * (layout ? layout.width * CANVAS_RATIO : ULTRA_BOX_SCALE.profile);
+	const height = size * (layout ? layout.height * CANVAS_RATIO : ULTRA_BOX_SCALE.profile);
+	const left = (size - width) / 2 + (layout?.offset_x ?? 0) * size;
+	const top = (size - height) / 2 + (layout?.offset_y ?? 0) * size;
+	const frontOverhang = front ? ((FRONT_SCALE - 1) * size) / 2 : 0;
+	return {
+		left: Math.min(bounds.left, left, -frontOverhang),
+		top: Math.min(bounds.top, top, -frontOverhang),
+		right: Math.max(bounds.right, left + width, size + frontOverhang),
+		bottom: Math.max(bounds.bottom, top + height, size + frontOverhang),
+	};
+}
 
 const PROFILE_POPOUT_AVATAR_SIZE_PX = 80;
 const PROFILE_MODAL_AVATAR_SIZE_PX = 120;

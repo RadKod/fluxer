@@ -1,0 +1,276 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Over the canvas, under the scene toolbar (z-index 2). Clicks fall through to the camera except on the anchors' content. */
+.overlay {
+	--voice-scene-overlay-ease: var(--voice-scene-ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+	--voice-scene-overlay-surface: rgb(12 14 18 / 0.72);
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	overflow: hidden;
+	pointer-events: none;
+}
+
+.nonCameraLayer {
+	display: contents;
+}
+
+/* Moved by VoiceSceneAnchor straight from handle.project; never animated, so it stays glued to the camera. */
+.anchor {
+	position: absolute;
+	top: 0;
+	left: 0;
+	pointer-events: none;
+}
+
+.anchor > * {
+	pointer-events: auto;
+}
+
+.anchor[data-camera-card-anchor] > * {
+	width: 100%;
+	height: 100%;
+}
+
+.avatar {
+	position: relative;
+	display: block;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: none;
+	cursor: pointer;
+	transition: transform 140ms var(--voice-scene-overlay-ease);
+}
+
+.avatar:active {
+	transform: scale(0.96);
+}
+
+.avatar:focus-visible {
+	outline: 0.125rem solid #fff;
+	outline-offset: 0.1875rem;
+}
+
+/* Same ring as the call tiles, painted after the avatar's decoration so a frame or wings never cover it. Speaking
+   flips many times a minute, so it switches without a transition. */
+.avatar[data-speaking='true']::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	box-shadow: 0 0 0 0.1875rem var(--status-online);
+	pointer-events: none;
+}
+
+.avatar[data-camera-card] {
+	width: 100%;
+	height: 100%;
+	border-radius: 0.5rem;
+	background: #000;
+}
+
+.avatar[data-camera-card] > :not(video) {
+	visibility: hidden;
+}
+
+.avatar[data-camera-card][data-speaking='true']::after {
+	border-radius: inherit;
+}
+
+.standing {
+	display: block;
+}
+
+/* An empty seat: a quiet ring that fills in when pointed at. */
+.marker {
+	display: block;
+	width: 1.125rem;
+	height: 1.125rem;
+	padding: 0;
+	border: 0.125rem solid rgb(255 255 255 / 0.55);
+	border-radius: 50%;
+	background-color: rgb(12 14 18 / 0.45);
+	box-shadow: 0 0.0625rem 0.25rem rgb(0 0 0 / 0.45);
+	cursor: pointer;
+	transition-property: transform, background-color, border-color;
+	transition-duration: 150ms;
+	transition-timing-function: var(--voice-scene-overlay-ease);
+}
+
+/* A table seat opens the table; drawn square like the table it belongs to. */
+.markerTable {
+	width: 0.875rem;
+	height: 0.875rem;
+	border-radius: 0.25rem;
+}
+
+/* A watch seat beside a table: the lounge ring, smaller and dashed, so it reads as "watch", not "join". */
+.markerWatch {
+	width: 0.875rem;
+	height: 0.875rem;
+	border-style: dashed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.marker:not(:disabled):hover {
+		transform: scale(1.2);
+		border-color: #fff;
+		background-color: rgb(255 255 255 / 0.24);
+	}
+}
+
+.marker:not(:disabled):active {
+	transform: scale(0.94);
+}
+
+.marker:focus-visible {
+	outline: 0.125rem solid #fff;
+	outline-offset: 0.125rem;
+}
+
+.marker:disabled {
+	cursor: default;
+	opacity: 0.5;
+}
+
+/* The table's chip, with "Back to table" under it while I sit there and look at the room. */
+.tableLabel {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.25rem;
+}
+
+.backToTable {
+	position: relative;
+	isolation: isolate;
+	min-width: max(24px, 1.5rem);
+	min-height: max(24px, 1.5rem);
+	box-sizing: border-box;
+	padding: max(5px, 0.3125rem) max(6px, 0.375rem);
+	border: none;
+	border-radius: 999px;
+	background: none;
+	color: #000;
+	font-weight: 600;
+	font-size: calc(max(11px, 0.6875rem) + 0.0625rem);
+	line-height: max(14px, 0.875rem);
+	white-space: nowrap;
+	cursor: pointer;
+	transition: transform 120ms var(--voice-scene-overlay-ease);
+}
+
+.backToTable::before {
+	content: '';
+	position: absolute;
+	inset: max(3px, 0.1875rem) 0;
+	z-index: -1;
+	border-radius: inherit;
+	background-color: rgb(255 255 255 / 0.9);
+	box-shadow: 0 0.0625rem 0.1875rem rgb(0 0 0 / 0.2);
+	pointer-events: none;
+}
+
+.backToTable:active {
+	transform: scale(0.96);
+}
+
+.backToTable:focus-visible {
+	outline: 0.125rem solid #fff;
+	outline-offset: 0.125rem;
+}
+
+/* People beyond the drawn standing avatars. Bottom centre: the scene toolbar holds the bottom left corner. */
+.overflow {
+	position: absolute;
+	bottom: 0.75rem;
+	left: 50%;
+	transform: translateX(-50%);
+	padding: 0.25rem 0.625rem;
+	border-radius: 999px;
+	background-color: var(--voice-scene-overlay-surface);
+	backdrop-filter: blur(6px);
+	color: #fff;
+	font-weight: 700;
+	font-size: 0.75rem;
+	line-height: 1rem;
+	font-variant-numeric: tabular-nums;
+	pointer-events: auto;
+}
+
+.poster {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+	max-width: 14rem;
+	padding: 0.75rem 1rem;
+	border: 0.0625rem solid rgb(255 255 255 / 0.1);
+	border-radius: 0.75rem;
+	background-color: var(--voice-scene-overlay-surface);
+	backdrop-filter: blur(8px);
+	color: #fff;
+}
+
+.posterWho {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	min-width: 0;
+	max-width: 100%;
+}
+
+.posterName {
+	overflow: hidden;
+	font-weight: 600;
+	font-size: 0.8125rem;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+/* Live: the one moving thing on the poster. */
+.posterLive {
+	flex: none;
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 50%;
+	background-color: var(--status-danger);
+	animation: voiceScenePosterLive 2s ease-in-out infinite;
+}
+
+@keyframes voiceScenePosterLive {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 rgb(242 63 67 / 0.45);
+	}
+	50% {
+		box-shadow: 0 0 0 0.25rem rgb(242 63 67 / 0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.posterLive {
+		animation: none;
+	}
+}
+
+/* Hung under the TV's bottom edge. */
+.tvClose {
+	transform: translateY(calc(50% + 0.5rem));
+}
+
+/* Placed on the screen quad by the scene (CSS3D); the holder sets its pixel size. */
+.screen {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	background-color: #000;
+}
+
+.screenVideo {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}

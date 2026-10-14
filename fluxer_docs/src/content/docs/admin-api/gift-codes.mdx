@@ -1,14 +1,14 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Gift codes
-description: Administrative generation of one-use premium gift codes.
+description: Administrative generation and revocation of one-use premium gift codes and item codes.
 ---
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
 Admin gift code generation issues [premium](/http-api/premium/) codes in bulk, each one redeemable once and each granting a fixed span of entitlement. [Gifts](/http-api/gifts/) defines the public record of a code and its single redemption.
 
-This resource has that one operation. No Admin operation lists, revokes, or redeems a code, or reports who redeemed one.
+This resource has three operations: generating premium codes, generating [item codes](/http-api/gifts/#item-codes) that each give one cosmetic item, and revoking unredeemed codes of either kind. No Admin operation lists or redeems a code, or reports who redeemed one.
 
 :::caution[A self-hosted instance needs the `mirror` premium mode]
 A self-hosted instance whose [premium mode](/admin-api/instance/#premium-modes) is `everyone` answers 403 `FEATURE_NOT_AVAILABLE_SELF_HOSTED`. Body validation runs first, so it answers a body that fails validation with 400 `INVALID_FORM_BODY`. Generated codes need no payment provider.
@@ -82,3 +82,88 @@ The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-obje
 ### Rate limit
 
 30 requests per minute for each authenticated user, on the `admin:code:generation` bucket.
+
+## Create item codes
+
+<RouteHeader method="POST" path="/v1/admin/gift-codes/cosmetic" auditReason />
+
+Generates the requested number of unredeemed [item codes](/http-api/gifts/#item-codes), each giving one owned-availability cosmetic item instead of premium time. Requires both `gift_codes:generate` and `cosmetics:manage`. Returns the complete redemption links on success.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| count | integer | The number of codes to generate (1-100) |
+| item_id | snowflake | The owned-availability [cosmetic item](/http-api/cosmetics/#cosmetic-item-object) each code gives |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The codes were generated, returned as in [Create gift codes](#create-gift-codes) |
+| 400 | [error response](/admin-api/#error-response) | The body fails validation, or the item is unknown or not owned-availability, returned as `INVALID_FORM_BODY` |
+| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account lacks an ACL, or the instance is self-hosted outside the `mirror` premium mode |
+
+<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, as `MISSING_ACL` without `gift_codes:generate` or `cosmetics:manage`, and as `FEATURE_NOT_AVAILABLE_SELF_HOSTED` on a self-hosted instance with the `everyone` premium mode
+
+### Side effects
+
+The codes have the same shape and creator as premium codes, and carry the item in place of a duration. [Get gift](/http-api/gifts/#get-gift) answers them with 404, [Get code preview](/http-api/shop/#get-code-preview) shows the item, and [Revoke gift codes](#revoke-gift-codes) revokes them like premium codes.
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `generate_cosmetic_gift_codes`, target type `gift_code`, target ID `0`, and metadata keys `count` and `item_id`. The codes are not recorded. It emits no Gateway Dispatch.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:code:generation` bucket that [Create gift codes](#create-gift-codes) also counts against.
+
+## Revoke gift codes
+
+<RouteHeader method="POST" path="/v1/admin/gift-codes/revoke" auditReason />
+
+Revokes unredeemed gift codes so that they can no longer be read or redeemed. Requires `gift_codes:revoke`. A redeemed code is left unchanged, so revocation never takes back entitlement a code has already granted.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| codes<sup>1</sup> | array[string] | The codes to revoke (1-100 entries, each 1-32 characters) |
+
+<sup>1</sup> A code repeated in the array is handled once
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| revoked | array[string] | The codes that can no longer be redeemed, including codes an earlier request revoked, in request order |
+| already_redeemed | array[string] | The codes left unchanged because they were already redeemed, in request order |
+| not_found | array[string] | The codes that do not exist, in request order |
+
+```json
+{
+  "revoked": ["aB3dEfGhIjKlMnOpQrStUvWxYz012345"],
+  "already_redeemed": ["Zy9XwVuTsRqPoNmLkJiHgFeDcBa543210"],
+  "not_found": []
+}
+```
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | Every code was classified |
+| 400 | [error response](/admin-api/#error-response) | The body fails validation, returned as `INVALID_FORM_BODY` |
+| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate`, does not hold `gift_codes:revoke`, or the instance is self-hosted |
+
+<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, as `MISSING_ACL` with that but without `gift_codes:revoke`, and as `FEATURE_NOT_AVAILABLE_SELF_HOSTED` on a self-hosted instance with the `everyone` premium mode
+
+### Side effects
+
+Revocation and [redemption](/http-api/gifts/#redeem-gift) are both conditional writes on the code's version, so a code is never both revoked and redeemed: whichever write lands first wins. [Get gift](/http-api/gifts/#get-gift) and Redeem gift answer a revoked code with 404 `UNKNOWN_GIFT_CODE`.
+
+A failed request can leave earlier codes of the array revoked without returning them. Repeating the request is safe: a code that is already revoked is reported as revoked again and keeps its original revocation time.
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `revoke_gift_codes`, target type `gift_code`, target ID `0`, and metadata keys `count`, `revoked`, `already_redeemed`, and `not_found`, each holding a number of codes. The codes are not recorded. It emits no Gateway Dispatch.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:code:generation` bucket that [Create gift codes](#create-gift-codes) also counts against.

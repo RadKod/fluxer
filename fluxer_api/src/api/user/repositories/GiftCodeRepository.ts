@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {UserID} from '@app/api/BrandedTypes';
+import {SYSTEM_USER_ID} from '@app/api/constants/Core';
 import {
 	BatchBuilder,
+	deleteOneOrMany,
 	executeConditional,
 	fetchMany,
 	fetchOne,
@@ -12,6 +14,10 @@ import {Db, type DbOp} from '@app/api/database/CassandraTypes';
 import type {GiftCodeRow} from '@app/api/database/types/PaymentTypes';
 import {GiftCode, mapGiftCodeDurationToMonths, mapGiftDurationMonthsToFields} from '@app/api/models/GiftCode';
 import {GiftCodes, GiftCodesByCreator, GiftCodesByPaymentIntent, GiftCodesByRedeemer} from '@app/api/Tables';
+import {GiftCodeAlreadyRedeemedError} from '@fluxer/errors/src/domains/payment/GiftCodeAlreadyRedeemedError';
+import {UnknownGiftCodeError} from '@fluxer/errors/src/domains/payment/UnknownGiftCodeError';
+
+const MAX_REVOKE_ATTEMPTS = 3;
 
 const FETCH_GIFT_CODES_BY_CREATOR_QUERY = GiftCodesByCreator.selectCql({
 	where: GiftCodesByCreator.where.eq('created_by_user_id'),
@@ -30,6 +36,17 @@ const FETCH_GIFT_CODE_QUERY = GiftCodes.selectCql({
 });
 
 function normaliseGiftCodeRowForWrite(data: GiftCodeRow): GiftCodeRow {
+	// An item code carries no premium time, so no duration is written that a reader could take for one.
+	if (data.cosmetic_item_id != null) {
+		return {
+			...data,
+			duration_type: null,
+			duration_quantity: null,
+			duration_months: null,
+			revoked_at: data.revoked_at ?? null,
+			premium_reversed_seconds: data.premium_reversed_seconds ?? null,
+		};
+	}
 	let durationType = data.duration_type ?? null;
 	let durationQuantity = data.duration_quantity ?? null;
 	let durationMonths = data.duration_months ?? null;
@@ -54,6 +71,7 @@ function normaliseGiftCodeRowForWrite(data: GiftCodeRow): GiftCodeRow {
 		duration_quantity: durationQuantity,
 		duration_months: durationMonths,
 		revoked_at: data.revoked_at ?? null,
+		cosmetic_item_id: data.cosmetic_item_id ?? null,
 		premium_reversed_seconds: data.premium_reversed_seconds ?? null,
 	};
 }
@@ -63,12 +81,16 @@ export class GiftCodeRepository {
 		const normalisedData = normaliseGiftCodeRowForWrite(data);
 		await upsertOne(GiftCodes.insert(normalisedData));
 		const batch = new BatchBuilder();
-		batch.addPrepared(
-			GiftCodesByCreator.upsertAll({
-				created_by_user_id: normalisedData.created_by_user_id,
-				code: normalisedData.code,
-			}),
-		);
+		// Micup: admin-issued keys are all created by the system user, so indexing them would pile every sold key into
+		// one partition. The index only serves a user listing, or exporting, the gifts they bought themselves.
+		if (normalisedData.created_by_user_id !== SYSTEM_USER_ID) {
+			batch.addPrepared(
+				GiftCodesByCreator.upsertAll({
+					created_by_user_id: normalisedData.created_by_user_id,
+					code: normalisedData.code,
+				}),
+			);
+		}
 		if (normalisedData.stripe_payment_intent_id) {
 			batch.addPrepared(
 				GiftCodesByPaymentIntent.upsertAll({
@@ -146,16 +168,31 @@ export class GiftCodeRepository {
 		return gifts;
 	}
 
+	// Redemption is a version compare-and-set, so one code can never go to two users even when the
+	// KV lock and sentinels in front of it are lost. Every code is created with version 1; a row
+	// without a version is refused by the conditional write rather than redeemed unguarded.
 	async redeemGiftCode(code: string, userId: UserID): Promise<void> {
-		await upsertOne(
-			GiftCodes.patchByPk(
-				{code},
-				{
-					redeemed_by_user_id: Db.set(userId),
-					redeemed_at: Db.set(new Date()),
-				},
-			),
-		);
+		const row = await fetchOne<GiftCodeRow>(FETCH_GIFT_CODE_QUERY, {code});
+		if (row?.revoked_at != null) {
+			throw new UnknownGiftCodeError();
+		}
+		const applied =
+			row !== null &&
+			row.redeemed_by_user_id == null &&
+			(await executeConditional(
+				GiftCodes.conditionalPatchByPk(
+					{code},
+					{
+						redeemed_by_user_id: Db.set(userId),
+						redeemed_at: Db.set(new Date()),
+						version: Db.set(row.version + 1),
+					},
+					{version: row.version},
+				),
+			));
+		if (!applied) {
+			throw new GiftCodeAlreadyRedeemedError();
+		}
 		await upsertOne(
 			GiftCodesByRedeemer.upsertAll({
 				redeemed_by_user_id: userId,
@@ -165,26 +202,85 @@ export class GiftCodeRepository {
 	}
 
 	async unredeemGiftCode(code: string, userId: UserID): Promise<void> {
-		const batch = new BatchBuilder();
-		batch.addPrepared(
-			GiftCodes.patchByPk(
+		const row = await fetchOne<GiftCodeRow>(FETCH_GIFT_CODE_QUERY, {code});
+		if (row === null || row.redeemed_by_user_id !== userId) {
+			return;
+		}
+		const applied = await executeConditional(
+			GiftCodes.conditionalPatchByPk(
 				{code},
 				{
 					redeemed_by_user_id: Db.set(null),
 					redeemed_at: Db.set(null),
+					version: Db.set(row.version + 1),
 				},
+				{version: row.version},
 			),
 		);
-		batch.addPrepared(GiftCodesByRedeemer.deleteByPk({redeemed_by_user_id: userId, code}));
-		await batch.execute();
+		if (applied) {
+			await deleteOneOrMany(GiftCodesByRedeemer.deleteByPk({redeemed_by_user_id: userId, code}));
+		}
 	}
 
+	// Revocation takes the same version compare-and-set as redemption, so a code is never both redeemed and
+	// revoked: whichever write lands first wins. An already revoked code is left as it is.
 	async revokeGiftCode(code: string): Promise<void> {
-		await upsertOne(GiftCodes.patchByPk({code}, {revoked_at: Db.set(new Date())}));
+		for (let attempt = 0; attempt < MAX_REVOKE_ATTEMPTS; attempt++) {
+			const row = await fetchOne<GiftCodeRow>(FETCH_GIFT_CODE_QUERY, {code});
+			if (row === null) {
+				throw new UnknownGiftCodeError();
+			}
+			if (row.revoked_at != null) {
+				return;
+			}
+			if (row.redeemed_by_user_id != null) {
+				throw new GiftCodeAlreadyRedeemedError();
+			}
+			const applied = await executeConditional(
+				GiftCodes.conditionalPatchByPk(
+					{code},
+					{revoked_at: Db.set(new Date()), version: Db.set(row.version + 1)},
+					{version: row.version},
+				),
+			);
+			if (applied) {
+				return;
+			}
+		}
+		throw new Error('Gift code revocation lost too many concurrent updates');
 	}
 
 	async unrevokeGiftCode(code: string): Promise<void> {
 		await upsertOne(GiftCodes.patchByPk({code}, {revoked_at: Db.set(null)}));
+	}
+
+	async revokeGiftCodeForStoreRefund(code: string, purchaserId: UserID, redeemerId: UserID | null): Promise<void> {
+		for (let attempt = 0; attempt < MAX_REVOKE_ATTEMPTS; attempt++) {
+			const row = await fetchOne<GiftCodeRow>(FETCH_GIFT_CODE_QUERY, {code});
+			if (
+				row === null ||
+				row.created_by_user_id !== purchaserId ||
+				row.redeemed_by_user_id !== redeemerId ||
+				row.stripe_payment_intent_id != null
+			) {
+				throw new UnknownGiftCodeError();
+			}
+			if (row.revoked_at != null) {
+				return;
+			}
+			if (
+				await executeConditional(
+					GiftCodes.conditionalPatchByPk(
+						{code},
+						{revoked_at: Db.set(new Date()), version: Db.set(row.version + 1)},
+						{version: row.version, created_by_user_id: purchaserId, redeemed_by_user_id: redeemerId},
+					),
+				)
+			) {
+				return;
+			}
+		}
+		throw new Error('Store gift refund revocation lost too many concurrent updates');
 	}
 
 	async markGiftPremiumReversed(gift: GiftCode, seconds: number): Promise<boolean> {

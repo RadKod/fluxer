@@ -12,13 +12,20 @@ const CONTENT_I18N_NO_MESSAGES = defineContentI18nLocaleMessages({
 	"billing.eu_withdrawal_waiver_checkout": "Hvis jeg er forbruker i EU/EØS, samtykker jeg uttrykkelig til at det digitale innholdet i {product_name} {premium_tier_name} leveres umiddelbart, og erkjenner at jeg mister min lovbestemte angrerett når jeg får tilgang. Dette påvirker ikke andre lovpålagte forbrukerrettigheter. Se [tjenestevilkårene]({terms_url}).",
 	"bulk_message_deletion.complete": "Vi er ferdige med å slette meldingene dine. Vi fjernet {message_count, plural, =0 {0 meldinger} one {# melding} other {# meldinger}} fra {channel_count, plural, =0 {0 steder} one {# sted} other {# steder}}.",
 	"content.virus_detected": "Filen ble flagget som potensielt utrygg og er fjernet.",
+	"feed.comment_removed_by_moderator": "En moderator har fjernet en av kommentarene dine i feeden på grunn av brudd på våre vilkår for bruk eller retningslinjer for fellesskapet.",
+	"feed.post_removed_by_moderator": "En moderator har fjernet ett av innleggene dine i feeden på grunn av brudd på våre vilkår for bruk eller retningslinjer for fellesskapet.",
+	"feed.video_failed": "Videoen din til feeden kunne ikke behandles og ble derfor ikke publisert.",
+	"feed.video_gone": "Innlegget ditt i feeden ble fjernet fordi videoen ikke lenger er tilgjengelig.",
+	"feed.video_rejected": "Videoen din besto ikke innholdskontrollene våre og vises derfor ikke i feeden.",
+	"feed.video_too_large": "Videoen din ble ikke publisert i feeden fordi den er større enn 500 MB.",
 	"guild.bulk_create.emoji_limit": "Maksimalt antall emojier nådd ({limit}).",
 	"guild.bulk_create.sticker_limit": "Maksimalt antall klistremerker nådd ({limit}).",
 	"guild.bulk_create.unknown_error": "Ukjent feil.",
 	"guild.default_category_text": "Tekstkanaler",
 	"guild.default_category_voice": "Talekanaler",
 	"guild.default_channel_text": "generelt",
-	"guild.default_channel_voice": "Generelt"
+	"guild.default_channel_voice": "Generelt",
+	"referral.reward_ready": "Henvisningsbelønningen din er klar. Du kan se den under Innstillinger → Henvisning."
 });
 
 export default CONTENT_I18N_NO_MESSAGES;

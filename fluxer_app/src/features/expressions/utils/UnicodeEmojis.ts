@@ -336,6 +336,10 @@ const toEmojiSurrogateMatch = (text: string, start: number, end: number): EmojiS
 });
 
 function* matchEmojiSurrogates(text: string, startIndex = 0): Generator<EmojiSurrogateMatch, void> {
+	// Skip impossible candidates before building the index; exact emoji matching stays below.
+	// biome-ignore format: Keep the UTF-16 range endpoints readable.
+	if (!/[\u00a9\u00ae\u2000-\uffff]/.test(text)) return;
+
 	const regex = getEmojiIndex().emojiSurrogateRegex;
 	let index = startIndex;
 	if (isInsideRegionalIndicatorPair(text, index)) {

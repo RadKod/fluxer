@@ -26,12 +26,15 @@ export interface UserRow {
 	user_id: UserID;
 	username: string;
 	discriminator: number;
+	username_state?: Nullish<'selected' | 'reselect_required'>;
+	identity_version?: Nullish<bigint>;
 	global_name: Nullish<string>;
 	bot: Nullish<boolean>;
 	system: Nullish<boolean>;
 	email: Nullish<string>;
 	email_verified: Nullish<boolean>;
 	email_bounced: Nullish<boolean>;
+	has_verified_phone?: Nullish<boolean>;
 	password_hash: Nullish<string>;
 	password_last_changed_at: Nullish<Date>;
 	totp_secret: Nullish<string>;
@@ -60,6 +63,7 @@ export interface UserRow {
 	stripe_subscription_id: Nullish<string>;
 	stripe_customer_id: Nullish<string>;
 	has_ever_purchased: Nullish<boolean>;
+	suspicious_activity_flags?: Nullish<number>;
 	terms_agreed_at: Nullish<Date>;
 	privacy_agreed_at: Nullish<Date>;
 	last_active_at: Nullish<Date>;
@@ -84,6 +88,14 @@ export interface UserRow {
 	premium_onboarding_dismissed_at: Nullish<Date>;
 	mention_flags?: Nullish<MentionReplyPreference>;
 	last_voice_activity_sharing_change_at: Nullish<Date>;
+	avatar_decoration_id?: Nullish<bigint>;
+	avatar_ultra_id?: Nullish<bigint>;
+	profile_effect_id?: Nullish<bigint>;
+	nameplate_id?: Nullish<bigint>;
+	avatar_decoration_asset?: Nullish<string>;
+	avatar_ultra_asset?: Nullish<string>;
+	profile_effect_asset?: Nullish<string>;
+	nameplate_asset?: Nullish<string>;
 	version: number;
 }
 
@@ -91,12 +103,15 @@ export const USER_COLUMNS = [
 	'user_id',
 	'username',
 	'discriminator',
+	'username_state',
+	'identity_version',
 	'global_name',
 	'bot',
 	'system',
 	'email',
 	'email_verified',
 	'email_bounced',
+	'has_verified_phone',
 	'password_hash',
 	'password_last_changed_at',
 	'totp_secret',
@@ -125,6 +140,7 @@ export const USER_COLUMNS = [
 	'stripe_subscription_id',
 	'stripe_customer_id',
 	'has_ever_purchased',
+	'suspicious_activity_flags',
 	'terms_agreed_at',
 	'privacy_agreed_at',
 	'last_active_at',
@@ -149,18 +165,29 @@ export const USER_COLUMNS = [
 	'premium_onboarding_dismissed_at',
 	'mention_flags',
 	'last_voice_activity_sharing_change_at',
+	'avatar_decoration_id',
+	'avatar_ultra_id',
+	'profile_effect_id',
+	'nameplate_id',
+	'avatar_decoration_asset',
+	'avatar_ultra_asset',
+	'profile_effect_asset',
+	'nameplate_asset',
 	'version',
 ] as const satisfies ReadonlyArray<keyof UserRow>;
 export const EMPTY_USER_ROW: UserRow = {
 	user_id: -1n as UserID,
 	username: '',
 	discriminator: 0,
+	username_state: null,
+	identity_version: null,
 	global_name: null,
 	bot: null,
 	system: null,
 	email: null,
 	email_verified: null,
 	email_bounced: null,
+	has_verified_phone: null,
 	password_hash: null,
 	password_last_changed_at: null,
 	totp_secret: null,
@@ -189,6 +216,7 @@ export const EMPTY_USER_ROW: UserRow = {
 	stripe_subscription_id: null,
 	stripe_customer_id: null,
 	has_ever_purchased: null,
+	suspicious_activity_flags: null,
 	terms_agreed_at: null,
 	privacy_agreed_at: null,
 	last_active_at: null,
@@ -213,6 +241,14 @@ export const EMPTY_USER_ROW: UserRow = {
 	premium_onboarding_dismissed_at: null,
 	mention_flags: null,
 	last_voice_activity_sharing_change_at: null,
+	avatar_decoration_id: null,
+	avatar_ultra_id: null,
+	profile_effect_id: null,
+	nameplate_id: null,
+	avatar_decoration_asset: null,
+	avatar_ultra_asset: null,
+	profile_effect_asset: null,
+	nameplate_asset: null,
 	version: 1,
 };
 
@@ -273,6 +309,8 @@ export interface UserSettingsRow {
 	staff_dm_access_user_ids: Nullish<Set<UserID>>;
 	synced_preferences: Nullish<string>;
 	profile_privacy: Nullish<number>;
+	game_activity_visibility?: Nullish<'off' | 'friends'>;
+	game_activity_policy_revision?: Nullish<bigint>;
 	default_share_voice_activity: Nullish<boolean>;
 	version: number;
 }
@@ -512,6 +550,8 @@ export const USER_SETTINGS_COLUMNS = [
 	'staff_dm_access_user_ids',
 	'synced_preferences',
 	'profile_privacy',
+	'game_activity_visibility',
+	'game_activity_policy_revision',
 	'default_share_voice_activity',
 	'version',
 ] as const satisfies ReadonlyArray<keyof UserSettingsRow>;
@@ -680,3 +720,155 @@ export const USER_ENTRANCE_SOUND_SELECTION_COLUMNS = [
 	'scope_id',
 	'sound_id',
 ] as const satisfies ReadonlyArray<keyof UserEntranceSoundSelectionRow>;
+
+export interface UsernameOwnerRow {
+	user_id: UserID;
+	username: Nullish<string>;
+	owned_gen: bigint;
+	seq: bigint;
+	status: 'active' | 'reselect_required' | 'deleted';
+	reselect_reason: Nullish<string>;
+	selected_at: Nullish<Date>;
+	changed_at: Nullish<Date>;
+	free_change_used: boolean;
+	last_proj_ts: bigint;
+	op_id: Nullish<string>;
+	op_seq: Nullish<bigint>;
+	op_kind: Nullish<'self' | 'admin_assign' | 'moderation' | 'delete'>;
+	op_phase: Nullish<'pending' | 'committed' | 'aborted'>;
+	op_new: Nullish<string>;
+	op_old: Nullish<string>;
+	op_old_gen: Nullish<bigint>;
+	op_at: Nullish<Date>;
+	op_proj_ts: Nullish<bigint>;
+	op_policy_rev: Nullish<number>;
+	op_dict_gen: Nullish<number>;
+	op_grant_ref: Nullish<string>;
+	op_old_grant_ref: Nullish<string>;
+	op_old_index_username: Nullish<string>;
+	op_old_index_disc: Nullish<number>;
+	op_ent_version: Nullish<number>;
+	op_ban_old: Nullish<boolean>;
+	op_neutral_disc: Nullish<number>;
+	op_anon_identity: Nullish<string>;
+	op_admin_id: Nullish<UserID>;
+	op_reason: Nullish<string>;
+	version: number;
+}
+
+export const USERNAME_OWNER_COLUMNS = [
+	'user_id',
+	'username',
+	'owned_gen',
+	'seq',
+	'status',
+	'reselect_reason',
+	'selected_at',
+	'changed_at',
+	'free_change_used',
+	'last_proj_ts',
+	'op_id',
+	'op_seq',
+	'op_kind',
+	'op_phase',
+	'op_new',
+	'op_old',
+	'op_old_gen',
+	'op_at',
+	'op_proj_ts',
+	'op_policy_rev',
+	'op_dict_gen',
+	'op_grant_ref',
+	'op_old_grant_ref',
+	'op_old_index_username',
+	'op_old_index_disc',
+	'op_ent_version',
+	'op_ban_old',
+	'op_neutral_disc',
+	'op_anon_identity',
+	'op_admin_id',
+	'op_reason',
+	'version',
+] as const satisfies ReadonlyArray<keyof UsernameOwnerRow>;
+
+export interface UsernameClaimRow {
+	username: string;
+	state: 'pending' | 'assigned' | 'held' | 'released' | 'banned';
+	user_id: Nullish<UserID>;
+	owned_gen: Nullish<bigint>;
+	op_id: Nullish<string>;
+	prev_state: Nullish<'none' | 'held' | 'released'>;
+	prev_blocked_until: Nullish<Date>;
+	from_hold: boolean;
+	blocked_until: Nullish<Date>;
+	held_by: Nullish<UserID>;
+	note: Nullish<string>;
+	updated_at: Date;
+	index_ts: bigint;
+	version: number;
+}
+
+export const USERNAME_CLAIM_COLUMNS = [
+	'username',
+	'state',
+	'user_id',
+	'owned_gen',
+	'op_id',
+	'prev_state',
+	'prev_blocked_until',
+	'from_hold',
+	'blocked_until',
+	'held_by',
+	'note',
+	'updated_at',
+	'index_ts',
+	'version',
+] as const satisfies ReadonlyArray<keyof UsernameClaimRow>;
+
+export interface UsernameEntitlementRow {
+	user_id: UserID;
+	username: string;
+	source: 'admin' | 'purchase';
+	grant_ref: string;
+	bound_gen: Nullish<bigint>;
+	created_at: Date;
+	revoked_at: Nullish<Date>;
+	version: number;
+}
+
+export const USERNAME_ENTITLEMENT_COLUMNS = [
+	'user_id',
+	'username',
+	'source',
+	'grant_ref',
+	'bound_gen',
+	'created_at',
+	'revoked_at',
+	'version',
+] as const satisfies ReadonlyArray<keyof UsernameEntitlementRow>;
+
+export interface UsernameOpIntentRow {
+	bucket: number;
+	day: types.LocalDate;
+	user_id: UserID;
+	op_id: string;
+	created_at: Date;
+}
+
+export const USERNAME_OP_INTENT_COLUMNS = [
+	'bucket',
+	'day',
+	'user_id',
+	'op_id',
+	'created_at',
+] as const satisfies ReadonlyArray<keyof UsernameOpIntentRow>;
+
+export interface UsernameHoldByBucketRow {
+	bucket: number;
+	username: string;
+	held_at: Date;
+}
+
+export const USERNAME_HOLD_BY_BUCKET_COLUMNS = ['bucket', 'username', 'held_at'] as const satisfies ReadonlyArray<
+	keyof UsernameHoldByBucketRow
+>;

@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use crate::api::types::{
+    NoiseSuppressionBackend, VOICE_NS_MAX_GUILD_OVERRIDES,
+    VoiceNoiseSuppressionConfigUpdateRequest, VoiceNoiseSuppressionGuildOverride,
+};
 use crate::{
     api::{
         client::AdminApiClient,
@@ -20,7 +24,7 @@ use crate::{
             InstanceServicesUpdateRequest, InstanceYoutubeIntegrationUpdateRequest,
             LimitConfigUpdateRequest, LimitRule, LimitRuleFilters,
             PlutoniumPageConfigUpdateRequest, PremiumMode, PushRelayConfigUpdateRequest,
-            RegistrationMode, SsoConfigUpdateRequest, VoiceE2eeScope,
+            RegistrationMode, SsoConfigUpdateRequest, VoiceE2eeScope, VoiceRoomConfigUpdateRequest,
         },
     },
     config::AdminConfig,
@@ -171,10 +175,10 @@ pub async fn instance_config_post(
             let update = build_sso_update(&form);
             instance_config_result(client.update_instance_config(&update).await)
         }
-        "update_gateway_rollout" => {
-            let update = build_gateway_rollout_update(&form);
-            instance_config_result(client.update_instance_config(&update).await)
-        }
+        "update_gateway_rollout" => match build_gateway_rollout_update(&form) {
+            Ok(update) => instance_config_result(client.update_instance_config(&update).await),
+            Err(message) => FlashData::error(message),
+        },
         "update_registration" => {
             let update = build_registration_update(&form);
             instance_config_result(client.update_instance_config(&update).await)
@@ -218,6 +222,24 @@ pub async fn instance_config_post(
             instance_config_result(client.update_instance_config(&update).await)
         }
         "update_domain_migration" => match build_domain_migration_update(&form) {
+            Ok(update) => instance_config_result(client.update_instance_config(&update).await),
+            Err(message) => FlashData::error(message),
+        },
+        "update_voice_noise_suppression" => match build_voice_noise_suppression_update(&form) {
+            Ok(update) => instance_config_result(client.update_instance_config(&update).await),
+            Err(message) => FlashData::error(message),
+        },
+        "disable_voice_pipeline_v2" => {
+            let update = InstanceConfigUpdateRequest {
+                voice_noise_suppression: Some(VoiceNoiseSuppressionConfigUpdateRequest {
+                    pipeline_v2_enabled: Some(false),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            };
+            instance_config_result(client.update_instance_config(&update).await)
+        }
+        "update_voice_room" => match build_voice_room_update(&form) {
             Ok(update) => instance_config_result(client.update_instance_config(&update).await),
             Err(message) => FlashData::error(message),
         },
@@ -454,7 +476,9 @@ fn build_sso_update(form: &MultiValueForm) -> InstanceConfigUpdateRequest {
     }
 }
 
-fn build_gateway_rollout_update(form: &MultiValueForm) -> InstanceConfigUpdateRequest {
+fn build_gateway_rollout_update(
+    form: &MultiValueForm,
+) -> Result<InstanceConfigUpdateRequest, String> {
     let get_f64 = |key: &str| {
         form.first(key)
             .and_then(|value| value.trim().parse::<f64>().ok())
@@ -469,7 +493,7 @@ fn build_gateway_rollout_update(form: &MultiValueForm) -> InstanceConfigUpdateRe
         Some("guild_feature_only") => Some(VoiceE2eeScope::GuildFeatureOnly),
         _ => None,
     };
-    InstanceConfigUpdateRequest {
+    Ok(InstanceConfigUpdateRequest {
         gateway_rollout: Some(GatewayRolloutConfigUpdateRequest {
             session_rollout_percentage: get_f64("gateway_rollout_session_rollout_percentage"),
             session_rollout_mode,
@@ -480,11 +504,19 @@ fn build_gateway_rollout_update(form: &MultiValueForm) -> InstanceConfigUpdateRe
             max_concurrent_guild_starts: form
                 .parse_u64("gateway_rollout_max_concurrent_guild_starts"),
             voice_e2ee_scope,
+            max_connections: parse_form_number(
+                form,
+                "gateway_rollout_max_connections",
+                "Max connections",
+                0,
+                200000,
+            )?,
         }),
         ..Default::default()
-    }
+    })
 }
 
+const VOICE_NS_SUPPRESSION_STRENGTH_MAX: u32 = 100;
 const EXPERIMENT_ROLLOUT_BASIS_POINTS_MAX: u32 = 10_000;
 const EXPERIMENT_MAX_ROLLOUT_SALT_CHARS: usize = 64;
 const EXPERIMENT_MAX_SNOWFLAKE_LENGTH: usize = 20;
@@ -513,10 +545,25 @@ where
     Ok(Some(value))
 }
 
-fn parse_experiment_rollout_salt(
+fn parse_form_decimal(
     form: &MultiValueForm,
     key: &str,
-) -> Result<Option<String>, String> {
+    label: &str,
+    min: f64,
+    max: f64,
+) -> Result<Option<f64>, String> {
+    let Some(raw) = form.first(key) else {
+        return Ok(None);
+    };
+    match raw.trim().parse::<f64>() {
+        Ok(value) if (min..=max).contains(&value) => Ok(Some(value)),
+        _ => Err(format!("{label} must be a number between {min} and {max}")),
+    }
+}
+
+// Voice noise suppression salts follow VoiceNoiseSuppressionSchemas: any text of 1 to 64 UTF-16
+// units. The experiment schemas below additionally restrict their salts to printable ASCII.
+fn parse_rollout_salt(form: &MultiValueForm, key: &str) -> Result<Option<String>, String> {
     let Some(raw) = form.first(key) else {
         return Ok(None);
     };
@@ -526,13 +573,22 @@ fn parse_experiment_rollout_salt(
             "Rollout salt must be between 1 and {EXPERIMENT_MAX_ROLLOUT_SALT_CHARS} characters"
         ));
     }
-    if !salt
-        .bytes()
-        .all(|byte| byte.is_ascii_graphic() || byte == b' ')
+    Ok(Some(salt.to_owned()))
+}
+
+fn parse_experiment_rollout_salt(
+    form: &MultiValueForm,
+    key: &str,
+) -> Result<Option<String>, String> {
+    let salt = parse_rollout_salt(form, key)?;
+    if let Some(salt) = &salt
+        && !salt
+            .bytes()
+            .all(|byte| byte.is_ascii_graphic() || byte == b' ')
     {
         return Err("Rollout salt must use printable ASCII".to_owned());
     }
-    Ok(Some(salt.to_owned()))
+    Ok(salt)
 }
 
 fn is_experiment_snowflake(value: &str) -> bool {
@@ -565,6 +621,157 @@ fn parse_experiment_user_ids(value: &str, label: &str) -> Result<Vec<String>, St
         ids.push(candidate.to_owned());
     }
     Ok(ids)
+}
+
+fn parse_voice_noise_suppression_guild_overrides(
+    value: &str,
+) -> Result<Vec<VoiceNoiseSuppressionGuildOverride>, String> {
+    let mut overrides: Vec<VoiceNoiseSuppressionGuildOverride> = Vec::new();
+    for (index, line) in value.lines().enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let line_number = index + 1;
+        let (guild_id, backend) = line.split_once('=').ok_or_else(|| {
+            format!("Guild overrides line {line_number} must use guild_id=backend")
+        })?;
+        let guild_id = guild_id.trim();
+        if !is_experiment_snowflake(guild_id) {
+            return Err(format!(
+                "Guild overrides line {line_number} must use a guild ID with 1 to 20 decimal digits"
+            ));
+        }
+        let backend = backend.trim().parse().map_err(|_| {
+            format!("Guild overrides line {line_number} must name a supported backend")
+        })?;
+        if let Some(existing) = overrides
+            .iter()
+            .find(|existing| existing.guild_id == guild_id)
+        {
+            if existing.backend != backend {
+                return Err(format!(
+                    "Guild overrides line {line_number} conflicts with an earlier rule for guild {guild_id}"
+                ));
+            }
+            continue;
+        }
+        if overrides.len() == VOICE_NS_MAX_GUILD_OVERRIDES {
+            return Err(format!(
+                "Guild overrides must contain at most {VOICE_NS_MAX_GUILD_OVERRIDES} unique guilds"
+            ));
+        }
+        overrides.push(VoiceNoiseSuppressionGuildOverride {
+            guild_id: guild_id.to_owned(),
+            backend,
+            pipeline_v2: false,
+        });
+    }
+    Ok(overrides)
+}
+
+fn build_voice_noise_suppression_update(
+    form: &MultiValueForm,
+) -> Result<InstanceConfigUpdateRequest, String> {
+    let mut guild_overrides = parse_voice_noise_suppression_guild_overrides(
+        form.first("voice_ns_guild_overrides").unwrap_or_default(),
+    )?;
+    let pipeline_v2_guild_ids = form.list_values_any(&[
+        "voice_ns_pipeline_v2_guild_ids[]",
+        "voice_ns_pipeline_v2_guild_ids",
+    ]);
+    for entry in &mut guild_overrides {
+        entry.pipeline_v2 = pipeline_v2_guild_ids.contains(&entry.guild_id);
+    }
+    let selected: Vec<NoiseSuppressionBackend> = form
+        .list_values_any(&["voice_ns_enabled_backends[]", "voice_ns_enabled_backends"])
+        .into_iter()
+        .map(|value| {
+            value.parse().map_err(|_| {
+                "Enabled backends must name supported noise suppression backends".to_owned()
+            })
+        })
+        .collect::<Result<_, _>>()?;
+    let enabled_backends = NoiseSuppressionBackend::ALL
+        .into_iter()
+        .filter(|backend| selected.contains(backend))
+        .collect();
+    Ok(InstanceConfigUpdateRequest {
+        voice_noise_suppression: Some(VoiceNoiseSuppressionConfigUpdateRequest {
+            enabled: Some(form.bool_value("voice_ns_enabled")),
+            pipeline_v2_enabled: Some(form.bool_value("voice_ns_pipeline_v2_enabled")),
+            pipeline_v2_all: Some(form.bool_value("voice_ns_pipeline_v2_all")),
+            pipeline_v2_gate_open_probability: parse_form_decimal(
+                form,
+                "voice_ns_pipeline_v2_gate_open_probability",
+                "Gate open probability",
+                0.3,
+                0.95,
+            )?,
+            pipeline_v2_gate_refresh_probability: parse_form_decimal(
+                form,
+                "voice_ns_pipeline_v2_gate_refresh_probability",
+                "Gate refresh probability",
+                0.1,
+                0.9,
+            )?,
+            pipeline_v2_gate_hangover_ms: parse_form_number(
+                form,
+                "voice_ns_pipeline_v2_gate_hangover_ms",
+                "Gate hangover",
+                100,
+                1500,
+            )?,
+            pipeline_v2_gain_target_dbfs: parse_form_number(
+                form,
+                "voice_ns_pipeline_v2_gain_target_dbfs",
+                "Gain target",
+                -40,
+                -14,
+            )?,
+            pipeline_v2_gain_max_db: parse_form_number(
+                form,
+                "voice_ns_pipeline_v2_gain_max_db",
+                "Maximum gain",
+                0,
+                30,
+            )?,
+            default_backend: form
+                .first("voice_ns_default_backend")
+                .map(|value| {
+                    value.parse().map_err(|_| {
+                        "Default backend must name a supported noise suppression backend".to_owned()
+                    })
+                })
+                .transpose()?,
+            enabled_backends: Some(enabled_backends),
+            allow_user_override: Some(form.bool_value("voice_ns_allow_user_override")),
+            rollout_basis_points: parse_form_number(
+                form,
+                "voice_ns_rollout_basis_points",
+                "Rollout basis points",
+                0,
+                EXPERIMENT_ROLLOUT_BASIS_POINTS_MAX,
+            )?,
+            rollout_salt: parse_rollout_salt(form, "voice_ns_rollout_salt")?,
+            included_user_ids: Some(parse_experiment_user_ids(
+                form.first("voice_ns_included_user_ids").unwrap_or_default(),
+                "Included user IDs",
+            )?),
+            excluded_user_ids: Some(parse_experiment_user_ids(
+                form.first("voice_ns_excluded_user_ids").unwrap_or_default(),
+                "Excluded user IDs",
+            )?),
+            guild_overrides: Some(guild_overrides),
+            suppression_strength: parse_form_number(
+                form,
+                "voice_ns_suppression_strength",
+                "Suppression strength",
+                0,
+                VOICE_NS_SUPPRESSION_STRENGTH_MAX,
+            )?,
+        }),
+        ..Default::default()
+    })
 }
 
 fn build_push_relay_update(form: &MultiValueForm) -> InstanceConfigUpdateRequest {
@@ -614,6 +821,33 @@ fn build_domain_migration_update(
                 EXPERIMENT_ROLLOUT_BASIS_POINTS_MAX,
             )?,
             standalone_forwarding: Some(form.bool_value("domain_migration_standalone_forwarding")),
+        }),
+        ..Default::default()
+    })
+}
+
+fn build_voice_room_update(form: &MultiValueForm) -> Result<InstanceConfigUpdateRequest, String> {
+    let rooms_enabled = form.bool_value("voice_room_rooms_enabled");
+    let default_room_theme = form
+        .contains_key("voice_room_default_room_theme")
+        .then(|| form.clean("voice_room_default_room_theme"));
+    if let Some(Some(theme)) = &default_room_theme
+        && !crate::api::types::VOICE_ROOM_THEME_OPTIONS
+            .iter()
+            .any(|(id, _)| *id == theme)
+    {
+        return Err("Choose a valid default room theme".to_owned());
+    }
+    Ok(InstanceConfigUpdateRequest {
+        voice_room: Some(VoiceRoomConfigUpdateRequest {
+            rooms_enabled: Some(rooms_enabled),
+            // Table games and room cameras only run inside 3D rooms, so switching rooms off
+            // switches them off.
+            games_enabled: Some(rooms_enabled && form.bool_value("voice_room_games_enabled")),
+            room_cameras_enabled: Some(
+                rooms_enabled && form.bool_value("voice_room_room_cameras_enabled"),
+            ),
+            default_room_theme,
         }),
         ..Default::default()
     })
@@ -776,6 +1010,7 @@ fn build_app_legal_update(form: &MultiValueForm) -> InstanceConfigUpdateRequest 
             legal: Some(AppLegalConfigUpdateRequest {
                 terms_url: optional("app_terms_url"),
                 privacy_url: optional("app_privacy_url"),
+                source_url: optional("app_source_url"),
             }),
             registration: None,
         }),
@@ -1029,12 +1264,28 @@ fn update_limit_rule_values(
     rule: &mut LimitRule,
     form: &MultiValueForm,
     limit_keys: &[String],
+    metadata: &std::collections::BTreeMap<String, crate::api::types::LimitKeyMetadata>,
     fallback_limits: Option<&std::collections::BTreeMap<String, u64>>,
 ) {
     let mut limits = std::collections::BTreeMap::new();
     for key in limit_keys {
         if let Some(parsed) = form.parse_u64(key) {
             limits.insert(key.clone(), parsed);
+        }
+    }
+    // Micup: an unticked checkbox posts no field, and a missing key falls back to the API default,
+    // so a toggle could never be saved off. Save 0 for every toggle the rule already holds that the
+    // form left unticked, also when the form carries no value at all; a toggle the rule does not
+    // hold stays absent, so a rule that only raises other limits does not gain it. The defaults
+    // below fill only a rule left with nothing: one that holds no toggle and got no value from the
+    // form, such as a new rule saved empty; a rule holding a toggle keeps it at 0 instead.
+    for key in limit_keys {
+        if rule.limits.contains_key(key)
+            && metadata
+                .get(key)
+                .is_some_and(|key_metadata| key_metadata.is_toggle)
+        {
+            limits.entry(key.clone()).or_insert(0);
         }
     }
     if limits.is_empty()
@@ -1124,7 +1375,13 @@ pub async fn limit_config_post(
                 .defaults
                 .get(&rule_id)
                 .or_else(|| current.defaults.get("default"));
-            update_limit_rule_values(rule, &form, &current.limit_keys, fallback);
+            update_limit_rule_values(
+                rule,
+                &form,
+                &current.limit_keys,
+                &current.metadata,
+                fallback,
+            );
             let request = LimitConfigUpdateRequest { limit_config };
             let result = client.update_limit_config(&request).await;
             let flash = limit_config_result(
@@ -1226,6 +1483,44 @@ mod tests {
     use super::*;
 
     #[test]
+    fn gateway_rollout_form_includes_connection_cap() {
+        let form = MultiValueForm::parse(b"gateway_rollout_max_connections=18000");
+        let update = build_gateway_rollout_update(&form).unwrap();
+        let json = serde_json::to_value(update).unwrap();
+        assert_eq!(json["gateway_rollout"]["max_connections"], 18000);
+    }
+
+    #[test]
+    fn gateway_rollout_connection_cap_accepts_env_and_bounds() {
+        for value in [0, 1, 200000] {
+            let form = MultiValueForm::parse(
+                format!("gateway_rollout_max_connections={value}").as_bytes(),
+            );
+            let update = build_gateway_rollout_update(&form).unwrap();
+            let json = serde_json::to_value(update).unwrap();
+            assert_eq!(json["gateway_rollout"]["max_connections"], value);
+        }
+    }
+
+    #[test]
+    fn gateway_rollout_connection_cap_rejects_invalid_values() {
+        for value in ["-1", "200001", "1.5", "invalid", "", "18446744073709551616"] {
+            let form = MultiValueForm::parse(
+                format!("gateway_rollout_max_connections={value}").as_bytes(),
+            );
+            assert!(build_gateway_rollout_update(&form).is_err(), "{value:?}");
+        }
+    }
+
+    #[test]
+    fn gateway_rollout_connection_cap_omits_missing_field() {
+        let form = MultiValueForm::parse(b"gateway_rollout_rpc_request_timeout_ms=15000");
+        let json = serde_json::to_value(build_gateway_rollout_update(&form).unwrap()).unwrap();
+        assert!(json["gateway_rollout"].get("max_connections").is_none());
+        assert_eq!(json["gateway_rollout"]["rpc_request_timeout_ms"], 15000);
+    }
+
+    #[test]
     fn build_integrations_update_leaves_email_alone_when_its_fields_are_hidden() {
         let hidden = build_integrations_update(&MultiValueForm::parse(
             b"integration_klipy_api_key=&integration_youtube_api_key=",
@@ -1288,6 +1583,60 @@ mod tests {
                 "example.net".to_owned()
             ])
         );
+    }
+
+    #[test]
+    fn voice_room_form_sends_default_theme_null_to_clear_and_omits_missing_field() {
+        for (body, expected) in [
+            (
+                b"voice_room_default_room_theme=kahvehane".as_slice(),
+                serde_json::json!("kahvehane"),
+            ),
+            (
+                b"voice_room_default_room_theme=".as_slice(),
+                serde_json::Value::Null,
+            ),
+        ] {
+            let update =
+                build_voice_room_update(&MultiValueForm::parse(body)).expect("valid theme");
+            let json = serde_json::to_value(update).expect("serializable voice room form update");
+            assert!(
+                json["voice_room"]
+                    .as_object()
+                    .unwrap()
+                    .contains_key("default_room_theme")
+            );
+            assert_eq!(json["voice_room"]["default_room_theme"], expected);
+        }
+        let update =
+            build_voice_room_update(&MultiValueForm::parse(b"voice_room_rooms_enabled=true"))
+                .unwrap();
+        let json = serde_json::to_value(update).unwrap();
+        assert!(
+            !json["voice_room"]
+                .as_object()
+                .unwrap()
+                .contains_key("default_room_theme")
+        );
+    }
+
+    #[test]
+    fn build_app_legal_update_sends_the_source_url_and_clears_it_when_blank() {
+        let legal_of = |body: &[u8]| {
+            build_app_legal_update(&MultiValueForm::parse(body))
+                .app_public
+                .and_then(|app_public| app_public.legal)
+                .expect("legal update")
+        };
+        let legal = legal_of(
+            b"app_terms_url=https%3A%2F%2Fexample.com%2Fterms&app_privacy_url=&app_source_url=%20https%3A%2F%2Fexample.com%2Fsource%20",
+        );
+        assert_eq!(
+            legal.source_url,
+            Some(Some("https://example.com/source".to_owned()))
+        );
+        let legal = legal_of(b"app_terms_url=https%3A%2F%2Fexample.com%2Fterms&app_source_url=");
+        assert_eq!(legal.source_url, Some(None));
     }
 
     #[test]
@@ -1714,11 +2063,501 @@ mod tests {
             limits: std::collections::BTreeMap::new(),
             modified_fields: None,
         };
-        update_limit_rule_values(&mut rule, &form, &["message_send".to_owned()], None);
+        update_limit_rule_values(
+            &mut rule,
+            &form,
+            &["message_send".to_owned()],
+            &std::collections::BTreeMap::new(),
+            None,
+        );
         assert_eq!(rule.limits.get("message_send"), Some(&1));
         assert_eq!(
             rule.filters.expect("filters").traits,
             vec!["trial".to_owned()]
         );
+    }
+
+    const FEED_LIMIT_KEYS: [&str; 4] = [
+        "feature_feed",
+        "feature_feed_video",
+        "max_guild_members",
+        "max_guilds",
+    ];
+
+    fn feed_limit_keys() -> Vec<String> {
+        FEED_LIMIT_KEYS.map(str::to_owned).to_vec()
+    }
+
+    fn feed_limit_metadata()
+    -> std::collections::BTreeMap<String, crate::api::types::LimitKeyMetadata> {
+        FEED_LIMIT_KEYS
+            .iter()
+            .map(|&key| {
+                let metadata = crate::api::types::LimitKeyMetadata {
+                    key: key.to_owned(),
+                    label: key.to_owned(),
+                    description: String::new(),
+                    category: "features".to_owned(),
+                    scope: "user".to_owned(),
+                    is_toggle: key.starts_with("feature_"),
+                    unit: None,
+                    min: None,
+                    max: None,
+                };
+                (key.to_owned(), metadata)
+            })
+            .collect()
+    }
+
+    fn limit_values(values: &[(&str, u64)]) -> std::collections::BTreeMap<String, u64> {
+        values
+            .iter()
+            .map(|&(key, value)| (key.to_owned(), value))
+            .collect()
+    }
+
+    fn limit_rule_with(values: &[(&str, u64)]) -> LimitRule {
+        LimitRule {
+            id: "default".to_owned(),
+            filters: None,
+            limits: limit_values(values),
+            modified_fields: None,
+        }
+    }
+
+    #[test]
+    fn update_limit_rule_values_writes_zero_for_an_unchecked_toggle() {
+        let form = MultiValueForm::parse(b"max_guilds=100");
+        let mut rule = limit_rule_with(&[
+            ("feature_feed", 1),
+            ("feature_feed_video", 0),
+            ("max_guild_members", 1000),
+            ("max_guilds", 100),
+        ]);
+        update_limit_rule_values(
+            &mut rule,
+            &form,
+            &feed_limit_keys(),
+            &feed_limit_metadata(),
+            None,
+        );
+        assert_eq!(
+            rule.limits,
+            limit_values(&[
+                ("feature_feed", 0),
+                ("feature_feed_video", 0),
+                ("max_guilds", 100),
+            ])
+        );
+    }
+
+    #[test]
+    fn update_limit_rule_values_keeps_a_checked_toggle_at_one() {
+        let form = MultiValueForm::parse(b"feature_feed=1&max_guilds=100");
+        let mut rule = limit_rule_with(&[
+            ("feature_feed", 1),
+            ("feature_feed_video", 0),
+            ("max_guilds", 100),
+        ]);
+        update_limit_rule_values(
+            &mut rule,
+            &form,
+            &feed_limit_keys(),
+            &feed_limit_metadata(),
+            None,
+        );
+        assert_eq!(
+            rule.limits,
+            limit_values(&[
+                ("feature_feed", 1),
+                ("feature_feed_video", 0),
+                ("max_guilds", 100),
+            ])
+        );
+    }
+
+    #[test]
+    fn update_limit_rule_values_turns_every_toggle_off_in_a_rule_that_holds_only_toggles() {
+        // Every box unticked: the form posts no limit field at all.
+        let form = MultiValueForm::parse(b"traits=premium");
+        let mut rule = limit_rule_with(&[("feature_feed", 1), ("feature_feed_video", 1)]);
+        let fallback = limit_values(&[("feature_feed", 1), ("max_guilds", 100)]);
+        update_limit_rule_values(
+            &mut rule,
+            &form,
+            &feed_limit_keys(),
+            &feed_limit_metadata(),
+            Some(&fallback),
+        );
+        assert_eq!(
+            rule.limits,
+            limit_values(&[("feature_feed", 0), ("feature_feed_video", 0)])
+        );
+    }
+
+    #[test]
+    fn update_limit_rule_values_keeps_the_default_fallback_for_an_empty_form() {
+        // A new rule saved with no values takes the defaults.
+        let form = MultiValueForm::parse(b"traits=");
+        let mut rule = limit_rule_with(&[]);
+        let fallback = limit_values(&[("feature_feed", 1), ("max_guilds", 100)]);
+        update_limit_rule_values(
+            &mut rule,
+            &form,
+            &feed_limit_keys(),
+            &feed_limit_metadata(),
+            Some(&fallback),
+        );
+        assert_eq!(rule.limits, fallback);
+    }
+
+    #[test]
+    fn update_limit_rule_values_leaves_absent_toggles_absent() {
+        let form = MultiValueForm::parse(b"max_guild_members=1000&guild_features=VERY_LARGE_GUILD");
+        let mut rule = limit_rule_with(&[("max_guild_members", 1000)]);
+        update_limit_rule_values(
+            &mut rule,
+            &form,
+            &feed_limit_keys(),
+            &feed_limit_metadata(),
+            None,
+        );
+        assert_eq!(rule.limits, limit_values(&[("max_guild_members", 1000)]));
+        assert_eq!(
+            rule.filters.expect("filters").guild_features,
+            vec!["VERY_LARGE_GUILD".to_owned()]
+        );
+    }
+}
+
+#[cfg(test)]
+mod voice_noise_compatibility_tests {
+    use super::*;
+    #[test]
+    fn build_voice_noise_suppression_update_collects_backends_and_validates_numbers() {
+        let form = MultiValueForm::parse(
+            b"voice_ns_enabled=true&voice_ns_allow_user_override=on&voice_ns_default_backend=rnnoise&voice_ns_enabled_backends%5B%5D=deep_filter&voice_ns_enabled_backends%5B%5D=none&voice_ns_enabled_backends%5B%5D=none&voice_ns_rollout_basis_points=10000&voice_ns_suppression_strength=100&voice_ns_rollout_salt=%20voice-ns-v2%20",
+        );
+        let request = build_voice_noise_suppression_update(&form).expect("valid form");
+        let update = request
+            .voice_noise_suppression
+            .expect("voice noise suppression update");
+        assert_eq!(update.enabled, Some(true));
+        assert_eq!(update.allow_user_override, Some(true));
+        assert_eq!(
+            update.default_backend,
+            Some(NoiseSuppressionBackend::Rnnoise)
+        );
+        assert_eq!(
+            update.enabled_backends,
+            Some(vec![
+                NoiseSuppressionBackend::None,
+                NoiseSuppressionBackend::DeepFilter
+            ])
+        );
+        assert_eq!(update.rollout_basis_points, Some(10_000));
+        assert_eq!(update.suppression_strength, Some(100));
+        assert_eq!(update.rollout_salt, Some("voice-ns-v2".to_owned()));
+    }
+
+    #[test]
+    fn build_voice_noise_suppression_update_leaves_the_feature_inert_when_nothing_is_submitted() {
+        let form = MultiValueForm::parse(b"_csrf=token");
+        let request = build_voice_noise_suppression_update(&form).expect("valid form");
+        assert_eq!(
+            serde_json::to_value(request).expect("serializable update"),
+            serde_json::json!({"voice_noise_suppression": {
+                "enabled": false,
+                "pipeline_v2_enabled": false,
+                "pipeline_v2_all": false,
+                "allow_user_override": false,
+                "enabled_backends": [],
+                "included_user_ids": [],
+                "excluded_user_ids": [],
+                "guild_overrides": [],
+            }})
+        );
+    }
+    #[test]
+    fn build_voice_noise_suppression_update_reads_user_id_textareas() {
+        let form = MultiValueForm::parse(
+            b"voice_ns_included_user_ids=1500000000000000001%0A1500000000000000002&voice_ns_excluded_user_ids=1500000000000000003%2C%201500000000000000004",
+        );
+        let update = build_voice_noise_suppression_update(&form)
+            .expect("valid form")
+            .voice_noise_suppression
+            .expect("voice noise suppression update");
+        assert_eq!(
+            update.included_user_ids,
+            Some(vec![
+                "1500000000000000001".to_owned(),
+                "1500000000000000002".to_owned()
+            ])
+        );
+        assert_eq!(
+            update.excluded_user_ids,
+            Some(vec![
+                "1500000000000000003".to_owned(),
+                "1500000000000000004".to_owned()
+            ])
+        );
+    }
+
+    #[test]
+    fn parse_voice_noise_suppression_guild_overrides_rejects_malformed_lines() {
+        for (line, message) in [
+            ("456", "Guild overrides line 3 must use guild_id=backend"),
+            (
+                "=gate",
+                "Guild overrides line 3 must use a guild ID with 1 to 20 decimal digits",
+            ),
+            (
+                "not-a-guild=gate",
+                "Guild overrides line 3 must use a guild ID with 1 to 20 decimal digits",
+            ),
+            (
+                "999999999999999999999=gate",
+                "Guild overrides line 3 must use a guild ID with 1 to 20 decimal digits",
+            ),
+            (
+                "456=unknown_backend",
+                "Guild overrides line 3 must name a supported backend",
+            ),
+            (
+                "456=",
+                "Guild overrides line 3 must name a supported backend",
+            ),
+            (
+                "123=gate",
+                "Guild overrides line 3 conflicts with an earlier rule for guild 123",
+            ),
+        ] {
+            assert_eq!(
+                parse_voice_noise_suppression_guild_overrides(&format!("\n123=rnnoise\n{line}"))
+                    .expect_err("invalid guild rule"),
+                message,
+                "{line}"
+            );
+        }
+    }
+
+    #[test]
+    fn build_voice_noise_suppression_update_rejects_invalid_numbers() {
+        for (key, message, above_max) in [
+            (
+                "voice_ns_rollout_basis_points",
+                "Rollout basis points must be a whole number between 0 and 10000",
+                "10001",
+            ),
+            (
+                "voice_ns_suppression_strength",
+                "Suppression strength must be a whole number between 0 and 100",
+                "101",
+            ),
+        ] {
+            for value in [
+                "",
+                "%20%20",
+                "abc",
+                "-1",
+                "1.5",
+                "9999999999999999999999999",
+                above_max,
+            ] {
+                let form = MultiValueForm::parse(format!("{key}={value}").as_bytes());
+                assert_eq!(
+                    build_voice_noise_suppression_update(&form).expect_err("invalid number"),
+                    message,
+                    "{key}={value}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn build_voice_noise_suppression_update_rejects_invalid_pipeline_v2_tuning() {
+        for (key, message, below_min, above_max) in [
+            (
+                "voice_ns_pipeline_v2_gate_open_probability",
+                "Gate open probability must be a number between 0.3 and 0.95",
+                "0.29",
+                "0.96",
+            ),
+            (
+                "voice_ns_pipeline_v2_gate_refresh_probability",
+                "Gate refresh probability must be a number between 0.1 and 0.9",
+                "0.09",
+                "0.91",
+            ),
+            (
+                "voice_ns_pipeline_v2_gate_hangover_ms",
+                "Gate hangover must be a whole number between 100 and 1500",
+                "99",
+                "1501",
+            ),
+            (
+                "voice_ns_pipeline_v2_gain_target_dbfs",
+                "Gain target must be a whole number between -40 and -14",
+                "-41",
+                "-13",
+            ),
+            (
+                "voice_ns_pipeline_v2_gain_max_db",
+                "Maximum gain must be a whole number between 0 and 30",
+                "-1",
+                "31",
+            ),
+        ] {
+            for value in [
+                "",
+                "%20%20",
+                "abc",
+                "NaN",
+                "inf",
+                "12.5",
+                "9999999999999999999999999",
+                below_min,
+                above_max,
+            ] {
+                let form = MultiValueForm::parse(format!("{key}={value}").as_bytes());
+                assert_eq!(
+                    build_voice_noise_suppression_update(&form).expect_err("invalid tuning"),
+                    message,
+                    "{key}={value}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn build_voice_noise_suppression_update_reads_pipeline_v2_tuning_at_the_bounds() {
+        let form = MultiValueForm::parse(
+            b"voice_ns_pipeline_v2_gate_open_probability=%200.95%20&voice_ns_pipeline_v2_gate_refresh_probability=0.1&voice_ns_pipeline_v2_gate_hangover_ms=100&voice_ns_pipeline_v2_gain_target_dbfs=-14&voice_ns_pipeline_v2_gain_max_db=30",
+        );
+        let update = build_voice_noise_suppression_update(&form)
+            .expect("valid form")
+            .voice_noise_suppression
+            .expect("voice noise suppression update");
+        assert_eq!(update.pipeline_v2_gate_open_probability, Some(0.95));
+        assert_eq!(update.pipeline_v2_gate_refresh_probability, Some(0.1));
+        assert_eq!(update.pipeline_v2_gate_hangover_ms, Some(100));
+        assert_eq!(update.pipeline_v2_gain_target_dbfs, Some(-14));
+        assert_eq!(update.pipeline_v2_gain_max_db, Some(30));
+    }
+    #[test]
+    fn build_voice_noise_suppression_update_accepts_padded_numbers() {
+        let form = MultiValueForm::parse(b"voice_ns_rollout_basis_points=%20250%20");
+        let update = build_voice_noise_suppression_update(&form)
+            .expect("valid form")
+            .voice_noise_suppression
+            .expect("voice noise suppression update");
+        assert_eq!(update.rollout_basis_points, Some(250));
+    }
+
+    #[test]
+    fn build_voice_noise_suppression_update_rejects_invalid_rollout_salts() {
+        for salt in [
+            String::new(),
+            "   ".to_owned(),
+            "é".repeat(65),
+            "🎲".repeat(33),
+        ] {
+            let form = MultiValueForm::parse(format!("voice_ns_rollout_salt={salt}").as_bytes());
+            assert_eq!(
+                build_voice_noise_suppression_update(&form).expect_err("invalid salt"),
+                "Rollout salt must be between 1 and 64 characters"
+            );
+        }
+    }
+
+    #[test]
+    fn build_voice_noise_suppression_update_preserves_valid_rollout_salts() {
+        for salt in ["x".to_owned(), "é".repeat(64), "🎲".repeat(32)] {
+            let form =
+                MultiValueForm::parse(format!("voice_ns_rollout_salt=%20{salt}%20").as_bytes());
+            let update = build_voice_noise_suppression_update(&form)
+                .expect("valid form")
+                .voice_noise_suppression
+                .expect("voice noise suppression update");
+            assert_eq!(update.rollout_salt, Some(salt));
+        }
+    }
+
+    #[test]
+    fn parse_voice_noise_suppression_guild_overrides_normalizes_identical_rules() {
+        let overrides = parse_voice_noise_suppression_guild_overrides(
+            " 1600000000000000001 = rnnoise \n\n1600000000000000001=rnnoise\n1600000000000000002=speex\n",
+        ).expect("valid guild rules");
+        assert_eq!(
+            overrides,
+            vec![
+                VoiceNoiseSuppressionGuildOverride {
+                    guild_id: "1600000000000000001".to_owned(),
+                    backend: NoiseSuppressionBackend::Rnnoise,
+                    pipeline_v2: false,
+                },
+                VoiceNoiseSuppressionGuildOverride {
+                    guild_id: "1600000000000000002".to_owned(),
+                    backend: NoiseSuppressionBackend::Speex,
+                    pipeline_v2: false,
+                },
+            ]
+        );
+    }
+    #[test]
+    fn parse_voice_noise_suppression_guild_overrides_rejects_exceeding_the_cap() {
+        let value = (0..VOICE_NS_MAX_GUILD_OVERRIDES)
+            .map(|index| format!("{index}=gate"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let overrides =
+            parse_voice_noise_suppression_guild_overrides(&format!("{value}\n199=gate"))
+                .expect("valid guild rules at cap");
+        assert_eq!(overrides.len(), VOICE_NS_MAX_GUILD_OVERRIDES);
+        assert_eq!(
+            overrides.last().map(|entry| entry.guild_id.as_str()),
+            Some("199")
+        );
+        assert_eq!(
+            parse_voice_noise_suppression_guild_overrides(&format!("{value}\n200=gate"))
+                .expect_err("too many guild rules"),
+            "Guild overrides must contain at most 200 unique guilds"
+        );
+    }
+
+    #[test]
+    fn build_voice_noise_suppression_update_reports_invalid_targeting_fields() {
+        for (form, message) in [
+            (
+                "voice_ns_default_backend=unknown",
+                "Default backend must name a supported noise suppression backend",
+            ),
+            (
+                "voice_ns_default_backend=",
+                "Default backend must name a supported noise suppression backend",
+            ),
+            (
+                "voice_ns_enabled_backends%5B%5D=rnnoise&voice_ns_enabled_backends%5B%5D=unknown",
+                "Enabled backends must name supported noise suppression backends",
+            ),
+            (
+                "voice_ns_included_user_ids=123%2Cinvalid",
+                "Included user IDs entry 2 must contain 1 to 20 decimal digits",
+            ),
+            (
+                "voice_ns_excluded_user_ids=123%2Cinvalid",
+                "Excluded user IDs entry 2 must contain 1 to 20 decimal digits",
+            ),
+            (
+                "voice_ns_guild_overrides=123%3Dgate%0A123%3Drnnoise",
+                "Guild overrides line 2 conflicts with an earlier rule for guild 123",
+            ),
+        ] {
+            let form = MultiValueForm::parse(form.as_bytes());
+            assert_eq!(
+                build_voice_noise_suppression_update(&form).expect_err("invalid targeting"),
+                message
+            );
+        }
     }
 }

@@ -319,11 +319,13 @@ export function bindRoomEvents(
 				void playSelfJoinChimeOnce(connectionId || null, 'livekit-room');
 			}
 			await dependencies.media.playEntranceSound();
-			if (guildId && channelId) {
-				dependencies.permissions.syncWithPermissionState(guildId, channelId, room);
-			}
-			await dependencies.media.ensureMicrophone(room, channelId);
-			dependencies.media.applyAllLocalAudioPreferences(room);
+			guard(attemptId, async () => {
+				if (guildId && channelId) {
+					dependencies.permissions.syncWithPermissionState(guildId, channelId, room);
+				}
+				await dependencies.media.ensureMicrophone(room, channelId);
+				dependencies.media.applyAllLocalAudioPreferences(room);
+			})();
 		}),
 	);
 	room.on(

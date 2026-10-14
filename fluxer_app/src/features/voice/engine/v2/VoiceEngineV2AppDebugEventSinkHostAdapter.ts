@@ -5,8 +5,12 @@ import {Logger} from '@app/features/platform/utils/AppLogger';
 import {getElectronAPI} from '@app/features/ui/utils/NativeUtils';
 import {
 	appendBrowserVoiceDebugEventSinkEntries,
+	isBrowserVoiceDebugEventSinkPopoutOpen,
 	openBrowserVoiceDebugEventSinkPopout,
+	releaseClosedBrowserVoiceDebugEventSinkPopout,
+	VOICE_DEBUG_EVENT_SINK_MAX_HISTORY_BYTES,
 } from '@app/features/voice/diagnostics/VoiceDebugBrowserEventSinkPopout';
+import {Store} from '@app/features/voice/engine/Store';
 import {asVoiceTrackSource, VoiceTrackSource} from '@app/features/voice/engine/VoiceTrackSource';
 import {assertNonNullObject, assertString} from '@app/features/voice/engine/v2/VoiceEngineV2AppAdapterAssertions';
 import type {DesktopVoiceDebugEventSinkEntry} from '@app/types/electron.d';
@@ -24,6 +28,8 @@ const logger = new Logger('VoiceEngineV2AppDebugEventSinkHostAdapter');
 
 export const VOICE_ENGINE_V2_APP_DEBUG_EVENT_SINK_MAX_ENTRIES = 1000;
 export const VOICE_ENGINE_V2_APP_DEBUG_EVENT_SINK_MAX_LINE_CHARS = 262_144;
+// Retained history is estimated at two bytes per UTF-16 code unit; the budget still fits several maximum-size lines.
+export const VOICE_ENGINE_V2_APP_DEBUG_EVENT_SINK_MAX_HISTORY_BYTES = VOICE_DEBUG_EVENT_SINK_MAX_HISTORY_BYTES;
 const SCREEN_SHARE_CODEC_NEGOTIATION_TOPIC = 'fluxer.rtc.codec-negotiation.v1';
 const TEXT_DECODER = new TextDecoder();
 
@@ -84,7 +90,7 @@ class BoundedRing<T> {
 		this.count += 1;
 	}
 
-	private popFront(): T | null {
+	popFront(): T | null {
 		if (this.count === 0) return null;
 		const item = this.items[this.head];
 		assert.notEqual(item, null, `${this.label} front slot must exist`);
@@ -188,6 +194,10 @@ function stringifyEventSinkEntry(sequence: number, event: VoiceDebugEventSinkEve
 			}),
 		);
 	}
+}
+
+function estimateEventSinkEntryBytes(entry: DesktopVoiceDebugEventSinkEntry): number {
+	return entry.line.length * 2;
 }
 
 function createEventSinkEntry(sequence: number, event: VoiceDebugEventSinkEvent): DesktopVoiceDebugEventSinkEntry {
@@ -304,7 +314,7 @@ function parseAllowedDataMessage(payload: Uint8Array, topic: string | undefined)
 	}
 }
 
-export class VoiceEngineV2AppDebugEventSinkHostAdapter {
+export class VoiceEngineV2AppDebugEventSinkHostAdapter extends Store {
 	private channelId: string | null = null;
 	private connectionId: string | null = null;
 	private room: Room | null = null;
@@ -313,8 +323,13 @@ export class VoiceEngineV2AppDebugEventSinkHostAdapter {
 		VOICE_ENGINE_V2_APP_DEBUG_EVENT_SINK_MAX_ENTRIES,
 		'voice debug event sink history',
 	);
+	private eventSinkHistoryBytes = 0;
 	private eventSinkSequence = 0;
 	private eventSinkForwardFailureCount = 0;
+	// TEMPORARY: the desktop shell does not report when its popout closes, so once opened it counts as open for the
+	// rest of the session. Upgrade path: have the desktop main process notify the renderer on popout close; remove
+	// this once a desktop release that sends that notification ships.
+	private desktopEventSinkPopoutOpened = false;
 
 	getEventSinkEntries(): Array<DesktopVoiceDebugEventSinkEntry> {
 		assert.ok(
@@ -324,12 +339,28 @@ export class VoiceEngineV2AppDebugEventSinkHostAdapter {
 		return this.eventSinkEntries.toArray();
 	}
 
+	isEventSinkPopoutOpen(): boolean {
+		return this.desktopEventSinkPopoutOpened || isBrowserVoiceDebugEventSinkPopoutOpen();
+	}
+
+	handleEventSinkPopoutClosed(): void {
+		releaseClosedBrowserVoiceDebugEventSinkPopout();
+		this.emitChange();
+	}
+
+	resetEventSinkPopoutStateForTests(): void {
+		this.desktopEventSinkPopoutOpened = false;
+		this.emitChange();
+	}
+
 	async openEventSinkPopout(): Promise<void> {
 		const electron = getElectronAPI();
 		const entries = this.getEventSinkEntries();
 		if (electron?.openVoiceDebugEventSinkPopout) {
 			try {
 				await electron.openVoiceDebugEventSinkPopout(entries);
+				this.desktopEventSinkPopoutOpened = true;
+				this.emitChange();
 				return;
 			} catch (error) {
 				logger.warn('Failed to open voice debug event sink desktop popout', {error});
@@ -340,6 +371,7 @@ export class VoiceEngineV2AppDebugEventSinkHostAdapter {
 			if (!opened) {
 				logger.warn('Failed to open voice debug event sink browser popout');
 			}
+			this.emitChange();
 		} catch (error) {
 			logger.warn('Failed to open voice debug event sink browser popout', {error});
 		}
@@ -520,14 +552,28 @@ export class VoiceEngineV2AppDebugEventSinkHostAdapter {
 		this.eventSinkSequence += 1;
 		assert.ok(Number.isSafeInteger(this.eventSinkSequence), 'event sink sequence must stay safe');
 		const entry = createEventSinkEntry(this.eventSinkSequence, event);
-		this.eventSinkEntries.pushDropOldest(entry);
+		this.pushEventSinkHistory(entry);
 		this.forwardEventSinkEntries([entry]);
+	}
+
+	private pushEventSinkHistory(entry: DesktopVoiceDebugEventSinkEntry): void {
+		const dropped = this.eventSinkEntries.pushDropOldest(entry);
+		this.eventSinkHistoryBytes += estimateEventSinkEntryBytes(entry);
+		if (dropped) this.eventSinkHistoryBytes -= estimateEventSinkEntryBytes(dropped);
+		while (
+			this.eventSinkHistoryBytes > VOICE_ENGINE_V2_APP_DEBUG_EVENT_SINK_MAX_HISTORY_BYTES &&
+			this.eventSinkEntries.length > 1
+		) {
+			const oldest = this.eventSinkEntries.popFront();
+			assert.ok(oldest !== null, 'event sink history must have an oldest entry to drop');
+			this.eventSinkHistoryBytes -= estimateEventSinkEntryBytes(oldest);
+		}
 	}
 
 	private forwardEventSinkEntries(entries: Array<DesktopVoiceDebugEventSinkEntry>): void {
 		assert.ok(entries.length >= 1, 'event sink forward requires at least one entry');
 		const electron = getElectronAPI();
-		if (electron?.appendVoiceDebugEventSinkEntries) {
+		if (this.desktopEventSinkPopoutOpened && electron?.appendVoiceDebugEventSinkEntries) {
 			try {
 				electron.appendVoiceDebugEventSinkEntries(entries);
 				this.eventSinkForwardFailureCount = 0;

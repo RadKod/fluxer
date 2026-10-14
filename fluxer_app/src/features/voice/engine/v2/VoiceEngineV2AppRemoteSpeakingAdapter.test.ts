@@ -1,0 +1,196 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+
+vi.mock('@app/features/platform/utils/AppLogger', () => ({
+	Logger: class {
+		debug = vi.fn();
+		info = vi.fn();
+		warn = vi.fn();
+		error = vi.fn();
+	},
+}));
+vi.mock('@app/features/voice/engine/VoiceMediaEngineBridge', () => ({
+	getRoomFromMediaEngine: () => null,
+	setVoiceEngineV2ParticipantAudioLevelSpeaking: vi.fn(),
+}));
+vi.mock('@app/features/voice/state/ParticipantVolume', () => ({default: {applySettingsToParticipant: vi.fn()}}));
+vi.mock('@app/features/voice/state/RemoteVoicePlaybackBoost', () => ({
+	clearRemoteVoicePlaybackBoost: vi.fn(),
+	setRemoteVoicePlaybackBoost: vi.fn(),
+}));
+vi.mock('@app/features/voice/state/VoiceSettings', () => ({default: {getVadThreshold: () => -60}}));
+vi.mock('@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime', () => ({
+	readVoicePipelineV2Enabled: () => false,
+}));
+
+class FakeNode {
+	constructor(readonly context: FakeAudioContext) {}
+	readonly connect = vi.fn();
+	readonly disconnect = vi.fn();
+	fftSize = 2048;
+	smoothingTimeConstant = 0.8;
+	getFloatTimeDomainData(): void {}
+}
+
+class FakeAudioContext {
+	state = 'running';
+	readonly sources: Array<FakeNode> = [];
+	readonly createMediaStreamSource = vi.fn(() => {
+		const node = new FakeNode(this);
+		this.sources.push(node);
+		return node;
+	});
+	readonly createAnalyser = vi.fn(() => new FakeNode(this));
+}
+
+let context: FakeAudioContext;
+vi.mock('@app/features/voice/engine/VoiceSharedAudioContext', () => ({
+	getSharedVoiceAudioContext: () => context,
+}));
+
+const {VoiceEngineV2AppRemoteSpeakingAdapter} = await import(
+	'@app/features/voice/engine/v2/VoiceEngineV2AppRemoteSpeakingAdapter'
+);
+
+interface FakeMediaStreamTrack {
+	readyState: 'live' | 'ended';
+}
+
+function fakeTrack(): {kind: 'audio'; mediaStreamTrack: FakeMediaStreamTrack} {
+	return {kind: 'audio', mediaStreamTrack: {readyState: 'live'}};
+}
+
+const participant = {identity: 'user_1_conn', isLocal: false};
+
+function fakePublication(track: ReturnType<typeof fakeTrack>) {
+	return {source: 'microphone', isSubscribed: true, track};
+}
+
+function fakeRoom(publication: ReturnType<typeof fakePublication>) {
+	return {
+		remoteParticipants: new Map([
+			[participant.identity, {...participant, audioTrackPublications: new Map([['TR_1', publication]])}],
+		]),
+	};
+}
+
+const visibility = new EventTarget() as EventTarget & {hidden: boolean};
+
+function setHidden(hidden: boolean): void {
+	visibility.hidden = hidden;
+	visibility.dispatchEvent(new Event('visibilitychange'));
+}
+
+type Adapter = InstanceType<typeof VoiceEngineV2AppRemoteSpeakingAdapter>;
+type AttachArgs = Parameters<Adapter['attachIfApplicable']>;
+
+function attach(adapter: Adapter, publication: ReturnType<typeof fakePublication>): void {
+	adapter.attachIfApplicable(
+		participant as unknown as AttachArgs[0],
+		publication as unknown as AttachArgs[1],
+		publication.track as unknown as AttachArgs[2],
+	);
+}
+
+function detachOnMute(adapter: Adapter, publication: ReturnType<typeof fakePublication>): void {
+	adapter.detachIfTrackMatches(participant as unknown as AttachArgs[0], publication as unknown as AttachArgs[1]);
+}
+
+beforeEach(() => {
+	context = new FakeAudioContext();
+	visibility.hidden = false;
+	vi.stubGlobal('window', {setInterval, clearInterval});
+	vi.stubGlobal('document', visibility);
+	vi.stubGlobal(
+		'MediaStream',
+		class {
+			constructor(readonly tracks: Array<unknown>) {}
+		},
+	);
+});
+
+afterEach(() => {
+	vi.unstubAllGlobals();
+});
+
+describe('remote speaking analyser source nodes', () => {
+	it('mute and unmute of the same track reuse one source node', () => {
+		const adapter = new VoiceEngineV2AppRemoteSpeakingAdapter({autoSchedule: false});
+		const publication = fakePublication(fakeTrack());
+		attach(adapter, publication);
+		for (let i = 0; i < 10; i++) {
+			detachOnMute(adapter, publication);
+			expect(adapter.analyserCount).toBe(0);
+			attach(adapter, publication);
+			expect(adapter.analyserCount).toBe(1);
+		}
+		expect(context.createMediaStreamSource).toHaveBeenCalledTimes(1);
+	});
+
+	it('hiding and showing the window reuse one source node per track', () => {
+		const adapter = new VoiceEngineV2AppRemoteSpeakingAdapter({autoSchedule: false});
+		const publication = fakePublication(fakeTrack());
+		adapter.hydrateFromRoom(fakeRoom(publication) as unknown as Parameters<Adapter['hydrateFromRoom']>[0]);
+		expect(adapter.analyserCount).toBe(1);
+		for (let i = 0; i < 10; i++) {
+			setHidden(true);
+			expect(adapter.analyserCount).toBe(0);
+			setHidden(false);
+			expect(adapter.analyserCount).toBe(1);
+		}
+		expect(context.createMediaStreamSource).toHaveBeenCalledTimes(1);
+	});
+
+	it('a reused source node is reconnected to its analyser', () => {
+		const adapter = new VoiceEngineV2AppRemoteSpeakingAdapter({autoSchedule: false});
+		const publication = fakePublication(fakeTrack());
+		attach(adapter, publication);
+		const [source] = context.sources;
+		detachOnMute(adapter, publication);
+		expect(source!.disconnect).toHaveBeenCalled();
+		attach(adapter, publication);
+		expect(source!.connect).toHaveBeenCalledTimes(2);
+	});
+
+	it('a new track for the same participant gets its own source and drops the old one', () => {
+		const adapter = new VoiceEngineV2AppRemoteSpeakingAdapter({autoSchedule: false});
+		const first = fakePublication(fakeTrack());
+		attach(adapter, first);
+		const second = fakePublication(fakeTrack());
+		attach(adapter, second);
+		expect(context.createMediaStreamSource).toHaveBeenCalledTimes(2);
+		expect(context.sources[0]!.disconnect).toHaveBeenCalled();
+		detachOnMute(adapter, second);
+		attach(adapter, first);
+		expect(context.createMediaStreamSource).toHaveBeenCalledTimes(3);
+	});
+
+	it('after a track ends, the ended track stays detached and its replacement gets a source', () => {
+		const adapter = new VoiceEngineV2AppRemoteSpeakingAdapter({autoSchedule: false});
+		const ended = fakePublication(fakeTrack());
+		attach(adapter, ended);
+		ended.track.mediaStreamTrack.readyState = 'ended';
+		adapter.tickHost(performance.now() + 1_000);
+		expect(adapter.analyserCount).toBe(0);
+		attach(adapter, ended);
+		expect(adapter.analyserCount).toBe(0);
+		const replacement = fakePublication(fakeTrack());
+		attach(adapter, replacement);
+		expect(adapter.analyserCount).toBe(1);
+		expect(context.createMediaStreamSource).toHaveBeenCalledTimes(2);
+	});
+
+	it('a new audio context gets new source nodes', () => {
+		const adapter = new VoiceEngineV2AppRemoteSpeakingAdapter({autoSchedule: false});
+		const publication = fakePublication(fakeTrack());
+		attach(adapter, publication);
+		detachOnMute(adapter, publication);
+		const previous = context;
+		previous.state = 'closed';
+		context = new FakeAudioContext();
+		attach(adapter, publication);
+		expect(previous.createMediaStreamSource).toHaveBeenCalledTimes(1);
+		expect(context.createMediaStreamSource).toHaveBeenCalledTimes(1);
+	});
+});

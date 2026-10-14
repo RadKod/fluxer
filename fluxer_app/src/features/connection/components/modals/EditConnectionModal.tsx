@@ -8,7 +8,7 @@ import {Button} from '@app/features/ui/button/Button';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {Switch} from '@app/features/ui/components/form/FormSwitch';
 import {WarningAlert} from '@app/features/ui/warning_alert/WarningAlert';
-import UserSettings from '@app/features/user/state/UserSettings';
+import {getEffectiveProfilePrivacy} from '@app/features/user/utils/ProfilePrivacyUtils';
 import {ConnectionVisibilityFlags} from '@fluxer/constants/src/ConnectionConstants';
 import {ProfilePrivacyLevels} from '@fluxer/constants/src/UserConstants';
 import {msg} from '@lingui/core/macro';
@@ -31,9 +31,9 @@ export const EditConnectionModal = observer(({connection}: Props) => {
 	const [submitting, setSubmitting] = useState(false);
 	const hasFlag = useCallback((flag: number) => (visibilityFlags & flag) === flag, [visibilityFlags]);
 	const everyoneEnabled = (visibilityFlags & ConnectionVisibilityFlags.EVERYONE) === ConnectionVisibilityFlags.EVERYONE;
-	const profilePrivacy = UserSettings.getProfilePrivacy();
-	const profilePrivacyLimited =
-		profilePrivacy === ProfilePrivacyLevels.SMALL_GUILDS_ONLY || profilePrivacy === ProfilePrivacyLevels.FRIENDS_ONLY;
+	// Micup: the Everyone flag shows a connection to anyone who can see the full profile, so below a public
+	// profile it reaches fewer people.
+	const profilePrivacyLimited = getEffectiveProfilePrivacy() !== ProfilePrivacyLevels.EVERYONE;
 	const handleToggle = useCallback(
 		(flag: number, value: boolean) => {
 			setVisibilityFlags((prev) => {
@@ -70,8 +70,7 @@ export const EditConnectionModal = observer(({connection}: Props) => {
 					{profilePrivacyLimited && (
 						<WarningAlert data-flx="connection.edit-connection-modal.limited-profile-warning-alert">
 							<Trans>
-								Your profile privacy is limited, so some people still won't see this connection even when Everyone is
-								enabled.
+								Only people who can see your full profile will see this connection, even when Everyone is enabled.
 							</Trans>
 						</WarningAlert>
 					)}

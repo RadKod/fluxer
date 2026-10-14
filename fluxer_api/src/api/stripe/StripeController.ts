@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {Config} from '@app/api/Config';
 import {DefaultUserOnly, LoginRequired} from '@app/api/middleware/AuthMiddleware';
 import {CaptchaMiddleware} from '@app/api/middleware/CaptchaMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
@@ -13,7 +12,9 @@ import {
 	isStripeServiceable,
 } from '@app/api/stripe/BillingConfigCache';
 import {mapGiftCodeToMetadataResponse, mapGiftCodeToResponse} from '@app/api/stripe/StripeModel';
+import {assertGiftCodesAvailable} from '@app/api/stripe/services/StripeGiftService';
 import type {HonoApp, HonoEnv} from '@app/api/types/HonoEnv';
+import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
 import {lookupGeoip} from '@app/api/utils/IpUtils';
 import {Validator} from '@app/api/Validator';
 import {AppNotFoundHandler} from '@fluxer/errors/src/domains/core/ErrorHandlers';
@@ -44,9 +45,65 @@ async function getPurchaseGeoipCountryCode(request: Request): Promise<string | n
 	return geoip.countryCode ?? null;
 }
 
+export function GiftCodeRoutes(app: HonoApp) {
+	app.get(
+		'/gifts/:code',
+		GiftRouteAvailable,
+		RateLimitMiddleware(RateLimitConfigs.GIFT_CODE_GET),
+		OpenAPI({
+			operationId: 'get_gift_code',
+			summary: 'Get gift code',
+			description: 'Retrieves information about a gift code, including sender details and premium entitlements.',
+			responseSchema: GiftCodeResponse,
+			statusCode: 200,
+			security: [],
+			tags: 'Gifts',
+		}),
+		Validator('param', GiftCodeParam),
+		async (ctx) => {
+			assertGiftCodesAvailable();
+			const {code} = ctx.req.valid('param');
+			const giftCode = await ctx.get('stripeService').getGiftCode(code);
+			const response = await mapGiftCodeToResponse({
+				giftCode,
+				userCacheService: ctx.get('userCacheService'),
+				requestCache: ctx.get('requestCache'),
+				includeCreator: true,
+			});
+			return ctx.json(response);
+		},
+	);
+	app.post(
+		'/gifts/:code/redeem',
+		GiftRouteAvailable,
+		RateLimitMiddleware(RateLimitConfigs.GIFT_CODE_REDEEM),
+		LoginRequired,
+		DefaultUserOnly,
+		CaptchaMiddleware,
+		OpenAPI({
+			operationId: 'redeem_gift_code',
+			summary: 'Redeem gift code',
+			description: 'Redeems a gift code for the authenticated user, applying premium benefits.',
+			responseSchema: null,
+			statusCode: 204,
+			security: ['bearerToken', 'sessionToken'],
+			tags: 'Gifts',
+		}),
+		Validator('param', GiftCodeParam),
+		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
+			assertGiftCodesAvailable();
+			const {code} = ctx.req.valid('param');
+			const userId = ctx.get('user').id;
+			await ctx.get('stripeService').redeemGiftCode(userId, code);
+			return ctx.body(null, 204);
+		},
+	);
+}
+
 function routeAvailableWhen(isAvailable: () => boolean) {
 	return createMiddleware<HonoEnv>(async (ctx, next) => {
-		if (Config.instance.selfHosted && !isAvailable()) {
+		if (!isAvailable()) {
 			return AppNotFoundHandler(ctx);
 		}
 		return next();
@@ -115,6 +172,7 @@ export function StripeController(app: HonoApp) {
 		}),
 		Validator('json', CreateCheckoutSessionRequest),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const {
 				price_id,
 				country_code,
@@ -155,6 +213,7 @@ export function StripeController(app: HonoApp) {
 		}),
 		Validator('json', CreateCheckoutSessionRequest),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const {price_id, country_code, client_geoip_country_code, eu_withdrawal_waiver_accepted, is_business} =
 				ctx.req.valid('json');
 			const userId = ctx.get('user').id;
@@ -171,56 +230,7 @@ export function StripeController(app: HonoApp) {
 			return ctx.json({url: checkoutUrl});
 		},
 	);
-	app.get(
-		'/gifts/:code',
-		GiftRouteAvailable,
-		RateLimitMiddleware(RateLimitConfigs.GIFT_CODE_GET),
-		OpenAPI({
-			operationId: 'get_gift_code',
-			summary: 'Get gift code',
-			description: 'Retrieves information about a gift code, including sender details and premium entitlements.',
-			responseSchema: GiftCodeResponse,
-			statusCode: 200,
-			security: [],
-			tags: 'Gifts',
-		}),
-		Validator('param', GiftCodeParam),
-		async (ctx) => {
-			const {code} = ctx.req.valid('param');
-			const giftCode = await ctx.get('stripeService').getGiftCode(code);
-			const response = await mapGiftCodeToResponse({
-				giftCode,
-				userCacheService: ctx.get('userCacheService'),
-				requestCache: ctx.get('requestCache'),
-				includeCreator: true,
-			});
-			return ctx.json(response);
-		},
-	);
-	app.post(
-		'/gifts/:code/redeem',
-		GiftRouteAvailable,
-		RateLimitMiddleware(RateLimitConfigs.GIFT_CODE_REDEEM),
-		LoginRequired,
-		DefaultUserOnly,
-		CaptchaMiddleware,
-		OpenAPI({
-			operationId: 'redeem_gift_code',
-			summary: 'Redeem gift code',
-			description: 'Redeems a gift code for the authenticated user, applying premium benefits.',
-			responseSchema: null,
-			statusCode: 204,
-			security: ['bearerToken', 'sessionToken'],
-			tags: 'Gifts',
-		}),
-		Validator('param', GiftCodeParam),
-		async (ctx) => {
-			const {code} = ctx.req.valid('param');
-			const userId = ctx.get('user').id;
-			await ctx.get('stripeService').redeemGiftCode(userId, code);
-			return ctx.body(null, 204);
-		},
-	);
+	GiftCodeRoutes(app);
 	app.get(
 		'/users/@me/gifts',
 		GiftRouteAvailable,
@@ -311,6 +321,7 @@ export function StripeController(app: HonoApp) {
 			tags: 'Premium',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
 			const url = await ctx.get('stripeService').createCustomerPortalSession(userId);
 			return ctx.json({url});
@@ -333,6 +344,7 @@ export function StripeController(app: HonoApp) {
 			tags: 'Premium',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
 			await ctx.get('stripeService').endPremiumGracePeriod(userId);
 			return ctx.json({success: true as const});
@@ -355,6 +367,7 @@ export function StripeController(app: HonoApp) {
 			tags: 'Billing',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const ageVerificationService = ctx.get('ageVerificationService');
 			if (!ageVerificationService) {
 				return AppNotFoundHandler(ctx);
@@ -403,6 +416,7 @@ export function StripeController(app: HonoApp) {
 			tags: 'Billing',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
 			const result = await ctx.get('stripeService').refundLatestPurchase(userId);
 			return ctx.json(result);
@@ -424,6 +438,7 @@ export function StripeController(app: HonoApp) {
 			tags: 'Premium',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
 			await ctx.get('stripeService').cancelSubscriptionAtPeriodEnd(userId);
 			return ctx.body(null, 204);
@@ -445,6 +460,7 @@ export function StripeController(app: HonoApp) {
 			tags: 'Premium',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
 			await ctx.get('stripeService').reactivateSubscription(userId);
 			return ctx.body(null, 204);
@@ -468,6 +484,7 @@ export function StripeController(app: HonoApp) {
 		}),
 		Validator('json', ChangeSubscriptionRequest),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
 			const {billing_cycle, effective_at} = ctx.req.valid('json');
 			await ctx.get('stripeService').changeSubscriptionBillingCycle(userId, billing_cycle, effective_at);
@@ -491,6 +508,7 @@ export function StripeController(app: HonoApp) {
 			tags: 'Premium',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
 			const result = await ctx.get('stripeService').switchSubscriptionToCurrentListPrice(userId);
 			return ctx.json(result);
@@ -513,6 +531,7 @@ export function StripeController(app: HonoApp) {
 			tags: 'Premium',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
 			await ctx.get('stripeService').cancelPendingSubscriptionChange(userId);
 			return ctx.body(null, 204);
@@ -534,6 +553,7 @@ export function StripeController(app: HonoApp) {
 			tags: 'Premium',
 		}),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const userId = ctx.get('user').id;
 			await ctx.get('stripeService').rejoinVisionariesGuild(userId);
 			return ctx.body(null, 204);

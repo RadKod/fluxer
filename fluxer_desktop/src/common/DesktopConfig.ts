@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {BUILD_CHANNEL} from '@electron/common/BuildChannel';
 import {CANARY_MIGRATED_APP_ORIGIN, CHANNEL_APP_URLS, STABLE_MIGRATED_APP_ORIGIN} from '@electron/common/Constants';
+import {type GameActivityLocalRule, isGameActivityLocalRule} from '@electron/common/GameActivityTypes';
 import {
 	GLOBAL_SHORTCUT_DESCRIPTION_MAX_LENGTH,
 	type GlobalShortcutAction,
@@ -24,6 +25,7 @@ interface DesktopConfig extends Record<string, unknown> {
 	window_behavior?: PersistedDesktopWindowBehaviorSettings;
 	troubleshooting?: PersistedDesktopTroubleshootingSettings;
 	theme_allowed_local_files?: Array<string>;
+	game_activity_rules?: Record<string, Array<GameActivityLocalRule>>;
 	app_origin?: string;
 	preboot_theme?: string;
 	global_shortcuts?: PersistedGlobalShortcutsSettings;
@@ -262,6 +264,17 @@ function sanitizeDesktopConfig(value: unknown): DesktopConfig {
 		return {};
 	}
 	const nextConfig: DesktopConfig = {...value};
+	if (isRecord(value.game_activity_rules)) {
+		const rules: Record<string, Array<GameActivityLocalRule>> = Object.create(null);
+		for (const [accountId, accountRules] of Object.entries(value.game_activity_rules)) {
+			if (/^\d{1,32}$/.test(accountId) && Array.isArray(accountRules)) {
+				rules[accountId] = accountRules.filter(isGameActivityLocalRule).slice(0, 50);
+			}
+		}
+		nextConfig.game_activity_rules = rules;
+	} else {
+		delete nextConfig.game_activity_rules;
+	}
 	delete nextConfig.app_url;
 	const appOrigin = sanitizeAppOrigin(value.app_origin);
 	if (appOrigin) {
@@ -585,5 +598,22 @@ export function markMacScreenRecordingRequested(): void {
 
 export function clearAllowedThemeLocalFiles(): void {
 	delete config.theme_allowed_local_files;
+	saveDesktopConfig();
+}
+
+export function getGameActivityRules(accountId: string): Array<GameActivityLocalRule> {
+	return (config.game_activity_rules?.[accountId] ?? [])
+		.filter(isGameActivityLocalRule)
+		.slice(0, 50)
+		.map((rule) => ({...rule}));
+}
+
+export function setGameActivityRules(accountId: string, rules: ReadonlyArray<GameActivityLocalRule>): void {
+	if (!/^\d{1,32}$/.test(accountId)) throw new Error('Invalid game activity account');
+	config.game_activity_rules ??= Object.create(null) as Record<string, Array<GameActivityLocalRule>>;
+	config.game_activity_rules[accountId] = rules
+		.filter(isGameActivityLocalRule)
+		.slice(0, 50)
+		.map((rule) => ({...rule}));
 	saveDesktopConfig();
 }

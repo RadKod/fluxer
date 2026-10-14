@@ -13,6 +13,9 @@
     | concurrency
     | rollout_mode
     | voice_e2ee_scope
+    | connection_limit
+    | boolean
+    | epoch
     | invalid.
 
 -spec validate(term(), map()) -> {ok, map()} | {error, term()}.
@@ -36,7 +39,10 @@ config_fields() ->
         <<"max_concurrent_guild_starts">>,
         <<"gateway_dispatch_relay_shards">>,
         <<"gateway_dispatch_relay_max_queue">>,
-        <<"voice_e2ee_scope">>
+        <<"voice_e2ee_scope">>,
+        <<"max_connections">>,
+        <<"game_activity_enabled">>,
+        <<"game_activity_epoch">>
     ].
 
 -spec validate_fields([binary()], map()) -> ok | {error, term()}.
@@ -54,6 +60,10 @@ valid_config_field(Key, Value) ->
     case config_field_kind(Key) of
         percentage ->
             valid_percentage_value(Value);
+        boolean ->
+            is_boolean(Value);
+        epoch ->
+            is_integer(Value) andalso Value >= 0 andalso Value =< 9007199254740991;
         positive_integer ->
             is_integer(Value) andalso Value > 0;
         relay_max_queue ->
@@ -67,6 +77,8 @@ valid_config_field(Key, Value) ->
         voice_e2ee_scope ->
             Value =:= <<"guild_feature_only">> orelse
                 Value =:= <<"platform_wide">>;
+        connection_limit ->
+            is_integer(Value) andalso Value >= 0 andalso Value =< 200000;
         invalid ->
             false
     end.
@@ -81,6 +93,9 @@ config_field_kind(<<"max_concurrent_session_starts">>) -> concurrency;
 config_field_kind(<<"max_concurrent_guild_starts">>) -> concurrency;
 config_field_kind(<<"session_rollout_mode">>) -> rollout_mode;
 config_field_kind(<<"voice_e2ee_scope">>) -> voice_e2ee_scope;
+config_field_kind(<<"max_connections">>) -> connection_limit;
+config_field_kind(<<"game_activity_enabled">>) -> boolean;
+config_field_kind(<<"game_activity_epoch">>) -> epoch;
 config_field_kind(_) -> invalid.
 
 -spec valid_percentage_value(term()) -> boolean().

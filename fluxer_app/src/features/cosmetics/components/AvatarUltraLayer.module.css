@@ -1,0 +1,50 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* DOM order keeps this behind the avatar image. It does not move layout or take clicks. */
+.ultra {
+	--ultra-scale: calc(2.3 * 648.4 / 635.6);
+	position: absolute;
+	top: calc((1 - var(--ultra-scale)) * 50%);
+	left: calc((1 - var(--ultra-scale)) * 50%);
+	width: calc(var(--ultra-scale) * 100%);
+	height: calc(var(--ultra-scale) * 100%);
+	max-width: none;
+	object-fit: contain;
+	pointer-events: none;
+	user-select: none;
+	-webkit-user-drag: none;
+}
+
+/* The voice tile is a size container that clips. Cap the decoration at its height on short tiles. */
+.ultraVoice {
+	--ultra-scale: calc(3.2 * 648.4 / 635.6);
+	top: 50%;
+	left: 50%;
+	width: min(calc(var(--ultra-scale) * 100%), 100cqh);
+	height: min(calc(var(--ultra-scale) * 100%), 100cqh);
+	transform: translate(-50%, -50%);
+}
+
+.ultraProfile {
+	--ultra-scale: calc(3.4 * 648.4 / 635.6);
+}
+
+/* Admin-set size: the numbers use the scale of the fixed sizes above, so the canvas ratio still applies. */
+.ultraCustom {
+	--ultra-box-w: calc(var(--ultra-w) * 648.4 / 635.6);
+	--ultra-box-h: calc(var(--ultra-h) * 648.4 / 635.6);
+	top: calc((1 - var(--ultra-box-h)) * 50% + var(--ultra-y) * 100%);
+	left: calc((1 - var(--ultra-box-w)) * 50% + var(--ultra-x) * 100%);
+	width: calc(var(--ultra-box-w) * 100%);
+	height: calc(var(--ultra-box-h) * 100%);
+}
+
+/* On short voice tiles the height caps at the tile and the width follows the ratio. */
+.ultraVoice.ultraCustom {
+	top: calc(50% + var(--ultra-y) * 100%);
+	left: calc(50% + var(--ultra-x) * 100%);
+	height: min(calc(var(--ultra-box-h) * 100%), 100cqh);
+	width: auto;
+	aspect-ratio: var(--ultra-w) / var(--ultra-h);
+	transform: translate(-50%, -50%);
+}

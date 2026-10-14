@@ -34,6 +34,7 @@ import {
 } from '@app/api/experiment/ChannelThreadsGate';
 import {mapFavoriteMemeToResponse} from '@app/api/favorite_meme/FavoriteMemeModel';
 import type {IFavoriteMemeRepository} from '@app/api/favorite_meme/IFavoriteMemeRepository';
+import type {FeedNotificationService} from '@app/api/feed/notification/FeedNotificationService';
 import {
 	mapGuildEmojiToResponse,
 	mapGuildMemberToResponse,
@@ -56,6 +57,7 @@ import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {GUILD_MEMBER_COUNT_COUNTER, removeGuildMemberCounted} from '@app/api/middleware/ServiceSingletons';
 import type {AuthSession as AuthSessionModel} from '@app/api/models/AuthSession';
 import type {Channel} from '@app/api/models/Channel';
 import type {FavoriteMeme} from '@app/api/models/FavoriteMeme';
@@ -84,6 +86,7 @@ import {
 } from '@app/api/rpc/RpcTimings';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
 import {CustomStatusValidator} from '@app/api/user/services/CustomStatusValidator';
+import {GameActivityPolicyService} from '@app/api/user/services/GameActivityPolicyService';
 import {getCachedUserPartialResponse} from '@app/api/user/UserCacheHelpers';
 import {
 	mapUserGuildSettingsForViewer,
@@ -103,6 +106,7 @@ import {calculateDistance, parseCoordinate} from '@app/api/utils/GeoUtils';
 import {lookupGeoip} from '@app/api/utils/IpUtils';
 import type {VoiceAccessContext, VoiceAvailabilityService} from '@app/api/voice/VoiceAvailabilityService';
 import type {VoiceService} from '@app/api/voice/VoiceService';
+import {VoiceMembershipHooks} from '@app/api/voice_seat/VoiceMembershipHooks';
 import type {IWebhookRepository} from '@app/api/webhook/IWebhookRepository';
 import {ensureGuildThreadPermissionsSeeded} from '@app/api/worker/tasks/SeedThreadPermissions';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
@@ -120,6 +124,7 @@ import {RateLimitError} from '@fluxer/errors/src/domains/core/RateLimitError';
 import {UnauthorizedError} from '@fluxer/errors/src/domains/core/UnauthorizedError';
 import {UnknownGuildError} from '@fluxer/errors/src/domains/guild/UnknownGuildError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
+import {resolveVoiceRoomAssignment} from '@fluxer/schema/src/domains/admin/VoiceRoomConfigSchemas';
 import type {ChannelResponse} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
 import type {VoiceStateResponse} from '@fluxer/schema/src/domains/gateway/GatewaySchemas';
 import type {GuildMemberResponse} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
@@ -150,6 +155,7 @@ interface HandleSessionRequestParams {
 	ip?: string;
 	latitude?: string;
 	longitude?: string;
+	gameActivityRequestNonce?: string;
 	threadChannelsCapable?: boolean;
 }
 
@@ -190,11 +196,13 @@ interface RpcVoiceParticipantSnapshot {
 const GUILD_COLLECTION_DEFAULT_LIMIT = 250;
 const GUILD_COLLECTION_MAX_LIMIT = 1000;
 const RPC_RESPONSE_MAP_CONCURRENCY = 32;
-const VOICE_STATE_KV_KEY_PREFIX = 'voice:guild:states:';
+export const VOICE_STATE_KV_KEY_PREFIX = 'voice:guild:states:';
 const PREMIUM_RECONCILE_ENQUEUE_COOLDOWN_SECONDS = 10 * 60;
 const PREMIUM_RECONCILE_ENQUEUE_COOLDOWN_KEY_PREFIX = 'rpc:premium:reconcile:enqueue:';
 const PAYMENT_RECONCILE_ENQUEUE_COOLDOWN_SECONDS = 30 * 60;
 const PAYMENT_RECONCILE_ENQUEUE_COOLDOWN_KEY_PREFIX = 'rpc:payment:reconcile:enqueue:';
+const GUILD_MEMBER_RECOUNT_ENQUEUE_COOLDOWN_SECONDS = 24 * 60 * 60;
+const GUILD_MEMBER_RECOUNT_ENQUEUE_COOLDOWN_KEY_PREFIX = 'rpc:guild:member_recount:enqueue:';
 
 function serializeCoordinate(value: number | null | undefined): string | undefined {
 	if (value === null || value === undefined || !Number.isFinite(value)) {
@@ -282,6 +290,7 @@ export class RpcService {
 		private readonly instanceConfigRepository: InstanceConfigRepository,
 		private voiceService: VoiceService | null,
 		private voiceAvailabilityService: VoiceAvailabilityService | null,
+		private readonly feedNotificationService: FeedNotificationService,
 	) {
 		this.customStatusValidator = new CustomStatusValidator(
 			this.userRepository,
@@ -312,13 +321,6 @@ export class RpcService {
 		await ensurePersonalNotesChannelExists({channelRepository: this.channelRepository, userId: user.id});
 	}
 
-	private async updateGuildMemberCount(guild: Guild, actualMemberCount: number): Promise<Guild> {
-		if (guild.memberCount === actualMemberCount) {
-			return guild;
-		}
-		return await this.guildRepository.upsertPartial(guild.id, {member_count: actualMemberCount}, guild.toRow());
-	}
-
 	private async migrateStickerAnimated(sticker: GuildSticker): Promise<GuildSticker> {
 		if (sticker.animated !== null && sticker.animated !== undefined) {
 			return sticker;
@@ -347,6 +349,14 @@ export class RpcService {
 
 	async handleRpcRequest({request, requestCache}: HandleRpcRequestParams): Promise<RpcResponse> {
 		switch (request.type) {
+			case 'get_game_activity_grants':
+				return {
+					type: 'get_game_activity_grants',
+					data: await new GameActivityPolicyService({
+						users: this.userRepository,
+						gateway: this.gatewayService,
+					}).getGrants(createUserID(request.viewer_id), request.targets.map(createUserID), request.request_nonce),
+				};
 			case 'session':
 				return {
 					type: 'session',
@@ -357,6 +367,7 @@ export class RpcService {
 						ip: request.ip,
 						latitude: request.latitude,
 						longitude: request.longitude,
+						gameActivityRequestNonce: request.game_activity_request_nonce,
 						threadChannelsCapable: request.thread_channels_capable === true,
 					}),
 				};
@@ -665,7 +676,7 @@ export class RpcService {
 				};
 			}
 			case 'get_gateway_rollout_config': {
-				const rolloutConfig = await this.instanceConfigRepository.getGatewayRolloutConfig();
+				const rolloutConfig = await this.instanceConfigRepository.getGatewayRolloutConfig({authoritative: true});
 				return {
 					type: 'get_gateway_rollout_config',
 					data: {config: rolloutConfig},
@@ -968,6 +979,34 @@ export class RpcService {
 			});
 	}
 
+	/**
+	 * The member count repair recounts the guild's member rows, so it runs in the worker at most once a day per
+	 * guild instead of on every guild load; the fix reaches Cassandra through the KV counter and its flush.
+	 */
+	// TEMPORARY: The recount reads the whole member partition in 5 000-row pages, and a gateway restart
+	// queues every guild at once on the batch lane. Trigger: a recount over 1 s or a guild over 100 K members ->
+	// split the partition by user_id range and count the pieces in parallel; rebuilds delaying the batch lane over
+	// 30 s -> give rebuildCounter its own lane.
+	private queueGuildMemberRecount(guildId: GuildID): void {
+		const guildIdString = guildId.toString();
+		const cooldownKey = `${GUILD_MEMBER_RECOUNT_ENQUEUE_COOLDOWN_KEY_PREFIX}${guildIdString}`;
+		void this.kvClient
+			.setnx(cooldownKey, new Date().toISOString(), GUILD_MEMBER_RECOUNT_ENQUEUE_COOLDOWN_SECONDS)
+			.then(async (queueAllowed) => {
+				if (!queueAllowed) {
+					return;
+				}
+				await this.workerService.addJob(
+					'rebuildCounter',
+					{namespace: GUILD_MEMBER_COUNT_COUNTER, id: guildIdString},
+					{skipLedger: true},
+				);
+			})
+			.catch((error) => {
+				Logger.warn({guildId: guildIdString, error}, 'Failed to queue a guild member recount during RPC guild loading');
+			});
+	}
+
 	private async handleSessionRequest({
 		token,
 		version,
@@ -975,6 +1014,7 @@ export class RpcService {
 		ip,
 		latitude,
 		longitude,
+		gameActivityRequestNonce,
 		threadChannelsCapable = false,
 	}: HandleSessionRequestParams): Promise<RpcResponseSessionData> {
 		const timings = new RpcTimingRecorder();
@@ -1069,6 +1109,9 @@ export class RpcService {
 			throw new UnauthorizedError();
 		}
 		let user = userData.user;
+		// the feed inbox state starts now, beside the repairs and the session start; awaited with the READY
+		// mapping below. It never rejects and gives up after 250 ms.
+		const feedNotificationState = this.feedNotificationService.getReadyState(user, userData.relationships);
 		if (user.avatarHash && user.avatarColor == null) {
 			const avatarRepairSteps: RpcTimingSteps = {};
 			const avatarRepairStartedAtNs = startRpcTiming();
@@ -1181,7 +1224,7 @@ export class RpcService {
 			preloadUserPartialsStartedAtNs,
 			preloadUserPartialsSteps,
 		);
-		const [privateChannels, relationships, guilds] = await Promise.all([
+		const [privateChannels, relationships, guilds, readyFeedNotificationState] = await Promise.all([
 			timeRpcStep(readyPayloadSteps, 'map_private_channels', async () =>
 				this.mapRpcSessionPrivateChannels({
 					channels: userData.privateChannels,
@@ -1199,6 +1242,7 @@ export class RpcService {
 			timeRpcStepSync(readyPayloadSteps, 'map_guild_ids', () =>
 				userData.guildIds.map((guildId) => ({id: guildId.toString()})),
 			),
+			timeRpcStep(readyPayloadSteps, 'await_feed_notification_state', async () => feedNotificationState),
 		]);
 		timings.record('map_ready_payloads', readyPayloadStartedAtNs, readyPayloadSteps);
 		const rtcRegions = timings.timeSync('build_rtc_regions', () => {
@@ -1258,8 +1302,18 @@ export class RpcService {
 			Promise.all(userData.guildSettings.map((settings) => mapUserGuildSettingsForViewer(settings, sessionViewer))),
 		);
 		const responseBuildSteps: RpcTimingSteps = {};
+		const [usernameMigration, usernamePolicy] = await timings.time('load_username_configuration', () =>
+			Promise.all([
+				this.instanceConfigRepository.getUsernameMigrationConfig(),
+				this.instanceConfigRepository.getUsernamePolicyConfig(),
+			]),
+		);
 		const responseBuildStartedAtNs = startRpcTiming();
 		const responsePayload = {
+			game_activity_policy: sessionStartResult.gameActivityPolicy,
+			...(gameActivityRequestNonce && {game_activity_request_nonce: gameActivityRequestNonce}),
+			username_migration: usernameMigration,
+			username_tiers: usernamePolicy.tiers,
 			auth_session_id_hash: timeRpcStepSync(responseBuildSteps, 'map_auth_session_id_hash', () =>
 				authSession ? uint8ArrayToBase64(authSession.sessionIdHash, {urlSafe: true}) : undefined,
 			),
@@ -1295,6 +1349,7 @@ export class RpcService {
 				),
 			),
 			version,
+			...(readyFeedNotificationState && {feed_notification_state: readyFeedNotificationState}),
 		};
 		timings.record('build_session_response_payload', responseBuildStartedAtNs, responseBuildSteps);
 		if ((user.flags & UserFlags.STAFF) === 0n) {
@@ -1372,9 +1427,8 @@ export class RpcService {
 	}): Promise<RpcResponseGuildCollectionData> {
 		const guild = await this.getGuildOrThrow(guildId);
 		await this.ensureThreadPermissionsSeeded(guildId);
-		const memberCount = await this.guildRepository.countMembers(guildId);
-		const repairedMemberCountGuild = await this.updateGuildMemberCount(guild, memberCount);
-		const repairedBannerGuild = await this.repairGuildBannerHeight(repairedMemberCountGuild);
+		this.queueGuildMemberRecount(guildId);
+		const repairedBannerGuild = await this.repairGuildBannerHeight(guild);
 		const repairedSplashGuild = await this.repairGuildSplashDimensions(repairedBannerGuild);
 		const repairedEmbedSplashGuild = await this.repairGuildEmbedSplashDimensions(repairedSplashGuild);
 		const response = mapGuildToGuildResponse(repairedEmbedSplashGuild);
@@ -1649,9 +1703,35 @@ export class RpcService {
 		await this.kvClient.hset(this.guildVoiceStatesKey(guildId), connectionId, JSON.stringify(normalizedVoiceState));
 	}
 
+	// While table games are on, the removed state is read first: its user and channel back up the table presence
+	// check (a lost LiveKit participant_left) and drop its j: seat mark; seats follow the webhook. Upserts: no hook.
 	private async removeGuildVoiceState(params: {guildId: GuildID; connectionId: string}): Promise<void> {
 		const {guildId, connectionId} = params;
-		await this.kvClient.hdel(this.guildVoiceStatesKey(guildId), connectionId);
+		const key = this.guildVoiceStatesKey(guildId);
+		const stored = (await this.tableGamesEnabled()) ? await this.kvClient.hget(key, connectionId) : null;
+		await this.kvClient.hdel(key, connectionId);
+		const removed = stored === null ? null : this.parseRemovedVoiceState(stored);
+		if (removed) {
+			await VoiceMembershipHooks.onLeft({guildId, ...removed, connectionId, regionId: null, serverId: null}, 'rpc');
+		}
+	}
+
+	private async tableGamesEnabled(): Promise<boolean> {
+		try {
+			return resolveVoiceRoomAssignment(await this.instanceConfigRepository.getVoiceRoomConfig()).games;
+		} catch {
+			return false;
+		}
+	}
+
+	private parseRemovedVoiceState(serialized: string): {userId: UserID; channelId: ChannelID} | null {
+		try {
+			const parsed: unknown = JSON.parse(serialized);
+			if (!this.isPersistedVoiceState(parsed) || parsed.channel_id === null) return null;
+			return {userId: createUserID(BigInt(parsed.user_id)), channelId: createChannelID(BigInt(parsed.channel_id))};
+		} catch {
+			return null;
+		}
 	}
 
 	private async migrateGuildStickersForRpc(
@@ -2115,8 +2195,7 @@ export class RpcService {
 							this.guildRepository.findUnique(guildId),
 						]);
 						if (member?.isTemporary && guild) {
-							await this.guildRepository.deleteMember(guildId, userId);
-							await this.updateGuildMemberCount(guild, Math.max(0, guild.memberCount - 1));
+							await removeGuildMemberCounted(this.guildRepository, guildId, userId);
 							await this.gatewayService.dispatchGuild({
 								guildId,
 								event: 'GUILD_MEMBER_REMOVE',

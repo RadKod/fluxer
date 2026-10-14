@@ -19,6 +19,7 @@ import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
 import type {Channel} from '@app/api/models/Channel';
 import type {User} from '@app/api/models/User';
 import {deleteChannelMessageSearchDocuments} from '@app/api/search/MessageSearchIndexCleanup';
@@ -124,6 +125,7 @@ export class GroupDmOperationsService {
 
 	private async assertInviterNotLimited(userId: UserID): Promise<void> {
 		const user = await this.userRepository.findUnique(userId);
+		if (user) getUsernameSelectionGate().assertMayAct(user, 'group_dm');
 		if (user) assertAccountNotLimited(user);
 	}
 
@@ -138,6 +140,8 @@ export class GroupDmOperationsService {
 		inviterId?: UserID | null;
 		requestCache: RequestCache;
 	}): Promise<Channel> {
+		const user = await this.userRepository.findUnique(recipientId);
+		if (user) getUsernameSelectionGate().assertMayAct(user, 'group_dm');
 		const {channel} = await this.addRecipientViaInviteWithResult({
 			channelId,
 			recipientId,

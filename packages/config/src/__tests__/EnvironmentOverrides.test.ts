@@ -114,6 +114,37 @@ describe('buildNamedFluxerEnvOverrides', () => {
 		});
 	});
 
+	test('reads the premium trial email hash key only under its FLUXER_API_ name', () => {
+		const key = 'k'.repeat(32);
+		expect(buildNamedFluxerEnvOverrides({FLUXER_API_PREMIUM_TRIAL_EMAIL_HASH_KEY: key})).toEqual({
+			services: {api: {premium_trial_email_hash_key: key}},
+		});
+		expect(buildNamedFluxerEnvOverrides({FLUXER_PREMIUM_TRIAL_EMAIL_HASH_KEY: key})).toEqual({});
+	});
+
+	test('maps the email HTML switch and its footer map', () => {
+		expect(
+			buildNamedFluxerEnvOverrides({
+				FLUXER_EMAIL_HTML_ENABLED: 'true',
+				FLUXER_EMAIL_HTML_FOOTER: '{"tr":"Metin","en-US":"Text"}',
+			}),
+		).toEqual({integrations: {email: {html_enabled: true, html_footer: {tr: 'Metin', 'en-US': 'Text'}}}});
+	});
+
+	test('maps the Payriff variables onto integrations.payriff', () => {
+		expect(
+			buildNamedFluxerEnvOverrides({
+				FLUXER_PAYRIFF_ENABLED: 'true',
+				FLUXER_PAYRIFF_SECRET_KEY: 'secret-from-env',
+				FLUXER_PAYRIFF_BASE_URL: 'https://api.payriff.com/api/v3',
+			}),
+		).toEqual({
+			integrations: {
+				payriff: {enabled: true, secret_key: 'secret-from-env', base_url: 'https://api.payriff.com/api/v3'},
+			},
+		});
+	});
+
 	test('rejects a non-integer value for an integer override', () => {
 		expect(() => buildNamedFluxerEnvOverrides({FLUXER_API_PORT: '80a'})).toThrow(
 			'FLUXER_API_PORT must be an integer, got "80a"',

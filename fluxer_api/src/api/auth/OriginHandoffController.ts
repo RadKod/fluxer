@@ -8,6 +8,7 @@ import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import type {HonoApp} from '@app/api/types/HonoEnv';
 import {Validator} from '@app/api/Validator';
+import {AccessDeniedError} from '@fluxer/errors/src/domains/core/AccessDeniedError';
 import {FileSizeTooLargeError} from '@fluxer/errors/src/domains/core/FileSizeTooLargeError';
 import {InvalidApiOriginError} from '@fluxer/errors/src/domains/core/InvalidApiOriginError';
 import {
@@ -45,6 +46,7 @@ export function OriginHandoffController(app: HonoApp) {
 				'Store encrypted client state for up to two minutes so another first-party web origin can redeem it once. The receiving origin must present the nonce whose SHA-256 digest is sent here.',
 		}),
 		async (ctx) => {
+			if (Config.instance.selfHosted) throw new AccessDeniedError();
 			const body = ctx.req.valid('json');
 			const handoffId = await createOriginHandoff(ctx.get('cacheService'), {
 				userId: ctx.get('user').id,
@@ -70,6 +72,7 @@ export function OriginHandoffController(app: HonoApp) {
 				'Return the encrypted client state stored by create origin handoff and delete it in the same step. A wrong nonce also consumes the handoff. On the official instance the request must come from a first-party web origin.',
 		}),
 		async (ctx) => {
+			if (Config.instance.selfHosted) throw new AccessDeniedError();
 			if (!Config.instance.selfHosted) {
 				const origin = ctx.req.header('origin');
 				if (origin === undefined || !Config.endpoints.webAppOrigins.includes(origin)) {

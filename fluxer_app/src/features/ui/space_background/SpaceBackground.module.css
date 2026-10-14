@@ -87,13 +87,6 @@
 	}
 }
 
-@media (prefers-reduced-motion: reduce) {
-	.starfield::before,
-	.starfield::after {
-		animation: none;
-	}
-}
-
 :global(html.reduced-motion) .starfield::before,
 :global(html.reduced-motion) .starfield::after {
 	animation: none;

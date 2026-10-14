@@ -8,6 +8,7 @@ import {
 	type MessageID,
 	type UserID,
 } from '@app/api/BrandedTypes';
+import {Config} from '@app/api/Config';
 import {SYSTEM_USER_ID} from '@app/api/constants/Core';
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import {EMPTY_USER_ROW} from '@app/api/database/types/UserTypes';
@@ -28,11 +29,12 @@ import {
 	stopAccountActionConsumer,
 } from '@app/api/worker/AccountActionConsumer';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
+import {HarvestNotReadyError} from '@fluxer/errors/src/domains/moderation/HarvestNotReadyError';
 import type {AdminArchiveResponse} from '@fluxer/schema/src/domains/admin/AdminArchiveSchemas';
 import {createSnowflakeFromTimestamp} from '@fluxer/snowflake/src/Snowflake';
 import {AckPolicy, DeliverPolicy, type JsMsg, jetstream, jetstreamManager} from '@nats-io/jetstream';
 import {connect} from '@nats-io/transport-node';
-import {afterAll, beforeAll, beforeEach, describe, expect, it} from 'vitest';
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const USER_ID = '1174109840998400001';
 const NOW = 1_759_000_000_000;
@@ -54,7 +56,7 @@ function archiveAt(
 		requested_by: requestedBy.toString(),
 		requested_at: new Date(requestedAtMs).toISOString(),
 		started_at: null,
-		completed_at: null,
+		completed_at: new Date(requestedAtMs).toISOString(),
 		failed_at: failed ? new Date(requestedAtMs + 1_000).toISOString() : null,
 		file_size: null,
 		progress_percent: 0,
@@ -207,6 +209,11 @@ function harness(): Harness {
 				const archive = archiveAt(NOW, userId, requestedBy, String(9000 + h.archives.length));
 				h.archives.push(archive);
 				return archive;
+			},
+			getDownloadUrl: async (_subjectType, _subjectId, archiveId) => {
+				const archive = h.archives.find((entry) => entry.archive_id === archiveId.toString());
+				if (!archive?.completed_at || archive.failed_at !== null) throw new HarvestNotReadyError();
+				return {downloadUrl: 'https://example.com/archive', expiresAt: new Date(NOW + DAY_MS).toISOString()};
 			},
 		},
 		messageDeletionQueue: {
@@ -594,14 +601,58 @@ describe('account action apply', () => {
 	});
 
 	it('reuses an archive from the last day and makes a new one when it is older or failed', async () => {
-		h.archives.push(archiveAt(NOW - DAY_MS + 60_000, userId, createUserID(42n), '777'));
+		h.archives.push(archiveAt(NOW - DAY_MS + 60_000, userId, SYSTEM_USER_ID, '777'));
 		expect((await applyAction(h.deps, purgeEnvelope())).detail).toMatch(/^archive=777 reused=true /);
 		expect(h.archiveRequests).toEqual([]);
 		h.archives.length = 0;
-		h.archives.push(archiveAt(NOW - DAY_MS - 60_000, userId, createUserID(42n), '778'));
-		h.archives.push(archiveAt(NOW - 60_000, userId, createUserID(42n), '779', true));
+		h.archives.push(archiveAt(NOW - DAY_MS - 60_000, userId, SYSTEM_USER_ID, '778'));
+		h.archives.push(archiveAt(NOW - 60_000, userId, SYSTEM_USER_ID, '779', true));
 		h.users.put();
 		expect((await applyAction(h.deps, purgeEnvelope())).detail).toMatch(/^archive=9002 reused=false /);
+		expect(h.archiveRequests).toHaveLength(1);
+	});
+
+	it('waits for a queued archive to complete before scheduling deletion', async () => {
+		const archive: AdminArchiveResponse = {...archiveAt(NOW, userId, SYSTEM_USER_ID, '777'), completed_at: null};
+		h.archives.push(archive);
+		await expect(applyAction(h.deps, purgeEnvelope())).rejects.toThrow(HarvestNotReadyError);
+		expect(h.queued.size).toBe(0);
+		expect(h.users.current().pendingBulkMessageDeletionAt).toBeNull();
+		expect(h.archiveRequests).toEqual([]);
+		archive.completed_at = new Date(NOW).toISOString();
+		expect((await applyAction(h.deps, purgeEnvelope())).status).toBe('applied');
+	});
+
+	it('does not schedule deletion when a newly requested archive is still queued', async () => {
+		const trigger = h.deps.state.archives.triggerUserArchive;
+		h.deps.state.archives.triggerUserArchive = async (...args) => {
+			const archive = await trigger(...args);
+			archive.completed_at = null;
+			return archive;
+		};
+		await expect(applyAction(h.deps, purgeEnvelope())).rejects.toThrow(HarvestNotReadyError);
+		await expect(applyAction(h.deps, purgeEnvelope())).rejects.toThrow(HarvestNotReadyError);
+		expect(h.archiveRequests).toEqual([{userId, requestedBy: SYSTEM_USER_ID, includeAttachments: true}]);
+		expect(h.queued.size).toBe(0);
+		expect(h.users.current().pendingBulkMessageDeletionAt).toBeNull();
+	});
+
+	it('requires the completed archive to be downloadable before scheduling deletion', async () => {
+		h.archives.push(archiveAt(NOW, userId, SYSTEM_USER_ID, '777'));
+		h.deps.state.archives.getDownloadUrl = async () => {
+			throw new HarvestNotReadyError();
+		};
+		await expect(applyAction(h.deps, purgeEnvelope())).rejects.toThrow(HarvestNotReadyError);
+		expect(h.queued.size).toBe(0);
+		expect(h.users.current().pendingBulkMessageDeletionAt).toBeNull();
+	});
+
+	it('creates a fresh archive when the existing archive expires before deletion', async () => {
+		h.archives.push({
+			...archiveAt(NOW, userId, SYSTEM_USER_ID, '777'),
+			expires_at: new Date(NOW + DELETION_DELAY_MS - 1).toISOString(),
+		});
+		expect((await applyAction(h.deps, purgeEnvelope())).status).toBe('applied');
 		expect(h.archiveRequests).toHaveLength(1);
 	});
 
@@ -741,9 +792,46 @@ describe('account action messages', () => {
 	});
 });
 
+describe('self-hosted automatic action boundary', () => {
+	let selfHosted: boolean;
+	beforeEach(() => {
+		selfHosted = Config.instance.selfHosted;
+	});
+	afterEach(async () => {
+		await stopAccountActionConsumer();
+		Config.instance.selfHosted = selfHosted;
+	});
+	it('does not subscribe to or apply a rogue internal moderation publication', async () => {
+		Config.instance.selfHosted = true;
+		const h = harness();
+		h.users.put();
+		const rogue = fakeMsg(JSON.stringify(limitEnvelope()), 1);
+		const get = vi.fn(async () => ({
+			info: async () => ({config: {ack_policy: AckPolicy.Explicit}}),
+			consume: async () => ({
+				close: async () => {},
+				async *[Symbol.asyncIterator]() {
+					yield rogue.msg;
+				},
+			}),
+		}));
+		h.deps.js = {consumers: {get}} as unknown as AccountActionDeps['js'];
+		h.deps.publishOutcome = async () => {};
+		startAccountActionConsumer(h.deps);
+		await new Promise((resolve) => setImmediate(resolve));
+		expect(get).not.toHaveBeenCalled();
+		expect(h.users.current().flags).toBe(0n);
+		expect(h.presence).toEqual([]);
+		expect(rogue.state.acked).toBe(0);
+	});
+});
+
 describe.skipIf(!NATS_URL)('account action consumer against JetStream', () => {
 	let nc: Awaited<ReturnType<typeof connect>>;
+	let selfHosted: boolean;
 	beforeAll(async () => {
+		selfHosted = Config.instance.selfHosted;
+		Config.instance.selfHosted = false;
 		nc = await connect({servers: NATS_URL, token: process.env.FLUXER_TEST_ACTIVITY_NATS_TOKEN});
 		const jsm = await jetstreamManager(nc);
 		await jsm.streams.delete(ACTIONS_STREAM).catch(() => undefined);
@@ -761,6 +849,7 @@ describe.skipIf(!NATS_URL)('account action consumer against JetStream', () => {
 	afterAll(async () => {
 		await stopAccountActionConsumer();
 		await nc?.close();
+		Config.instance.selfHosted = selfHosted;
 	});
 
 	it('applies each action in order and acknowledges it after the outcome', async () => {

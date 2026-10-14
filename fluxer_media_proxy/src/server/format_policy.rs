@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::{
-    constants::AssetExtension, image_quality::ImageQuality, image_transform::EncodeEffort, mime,
-    output_format, output_format::OutputFormat, server::params::extension_of,
+    constants::AssetExtension,
+    image_quality::ImageQuality,
+    image_transform::{EncodeEffort, ResizeMode},
+    mime, output_format,
+    output_format::OutputFormat,
+    server::params::extension_of,
 };
 
 pub(in crate::server) fn effective_animated_image_output_format(
@@ -23,6 +27,24 @@ pub(in crate::server) fn effective_animated_image_output_format(
         return OutputFormat::GIF;
     }
     requested_out_ext
+}
+
+// An animated GIF asset keeps GIF only while the request needs no resize, so the untouched
+// original is served. Shrinking it for a WebP request encodes animated WebP, because a
+// resized GIF can outweigh the original several times over.
+pub(in crate::server) fn animated_gif_asset_resizes_to_webp(
+    sniffed: mime::SniffInfo,
+    requested_out_ext: OutputFormat,
+    animated: bool,
+    size: Option<u32>,
+    resize_mode: ResizeMode,
+) -> bool {
+    animated
+        && requested_out_ext == OutputFormat::WebP
+        && resize_mode == ResizeMode::Fit
+        && sniffed.mime == "image/gif"
+        && sniffed.animated
+        && size.is_some_and(|size| size < sniffed.width || size < sniffed.height)
 }
 
 pub(in crate::server) fn default_transform_quality(
@@ -319,6 +341,70 @@ mod tests {
             &HashMap::from([("animatd".to_owned(), "true".to_owned())]),
             false
         ));
+    }
+
+    fn animated_gif_sniff(width: u32, height: u32) -> mime::SniffInfo {
+        mime::SniffInfo {
+            mime: "image/gif",
+            animated: true,
+            width,
+            height,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn an_animated_gif_asset_resizes_to_webp_only_when_the_webp_request_shrinks_it() {
+        let gif = animated_gif_sniff(604, 340);
+        let still = mime::SniffInfo {
+            animated: false,
+            ..gif
+        };
+        let webp = mime::SniffInfo {
+            mime: "image/webp",
+            ..gif
+        };
+        let apng = mime::SniffInfo {
+            mime: "image/apng",
+            ..gif
+        };
+        let (fit, cover) = (ResizeMode::Fit, ResizeMode::Cover);
+        let cases = [
+            (gif, OutputFormat::WebP, true, Some(480), fit, true),
+            (gif, OutputFormat::WebP, true, Some(600), fit, true),
+            (
+                animated_gif_sniff(340, 604),
+                OutputFormat::WebP,
+                true,
+                Some(480),
+                fit,
+                true,
+            ),
+            (gif, OutputFormat::WebP, true, Some(604), fit, false),
+            (gif, OutputFormat::WebP, true, Some(1024), fit, false),
+            (gif, OutputFormat::WebP, true, None, fit, false),
+            (gif, OutputFormat::GIF, true, Some(480), fit, false),
+            (gif, OutputFormat::WebP, false, Some(480), fit, false),
+            (gif, OutputFormat::WebP, true, Some(480), cover, false),
+            (still, OutputFormat::WebP, true, Some(480), fit, false),
+            (webp, OutputFormat::WebP, true, Some(480), fit, false),
+            (apng, OutputFormat::WebP, true, Some(480), fit, false),
+            (
+                animated_gif_sniff(0, 0),
+                OutputFormat::WebP,
+                true,
+                Some(480),
+                fit,
+                false,
+            ),
+        ];
+        for (sniffed, requested, animated, size, resize_mode, expected) in cases {
+            assert_eq!(
+                expected,
+                animated_gif_asset_resizes_to_webp(sniffed, requested, animated, size, resize_mode),
+                "{sniffed:?} {requested:?} animated={animated} size={size:?} {resize_mode:?}"
+            );
+        }
     }
 
     #[test]

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import assert from 'node:assert/strict';
+import * as AnalyticsCommands from '@app/features/analytics/commands/AnalyticsCommands';
 import {showGenericErrorModal} from '@app/features/app/components/alerts/GenericErrorModalCommands';
 import Authentication from '@app/features/auth/state/Authentication';
 import type {Channel} from '@app/features/channel/models/Channel';
@@ -58,7 +59,7 @@ import {
 } from '@app/features/voice/engine/media_engine_facade/VoiceSessionRestoreSync';
 import ScreenShareCodecNegotiation from '@app/features/voice/engine/ScreenShareCodecNegotiation';
 import ScreenSharePublicationMigration from '@app/features/voice/engine/ScreenSharePublicationMigration';
-import {Store, useStoreVersion} from '@app/features/voice/engine/Store';
+import {Store, type StoreLike, useStoreVersion} from '@app/features/voice/engine/Store';
 import {shouldMoveToAfkOnTick} from '@app/features/voice/engine/VoiceAfkTracking';
 import {
 	checkChannelLimit,
@@ -486,7 +487,6 @@ class MediaEngineFacade extends Store {
 		this.voiceEngineV2ProjectionStore.subscribe(forwardChange);
 		voiceEngineV2AppConnectionHostAdapter.subscribe(forwardChange);
 		voiceEngineV2AppVoiceStateAdapter.subscribe(forwardChange);
-		this.statsHostAdapter.subscribe(forwardChange);
 		voiceEngineV2AppMediaExecutionAdapter.subscribe(forwardChange);
 		voiceEngineV2AppScreenShareExecutionAdapter.subscribe(forwardChange);
 		VoiceEngineV2AppSubscriptionAdapter.subscribe(forwardChange);
@@ -671,6 +671,7 @@ class MediaEngineFacade extends Store {
 	}
 
 	get localConnectionQuality(): VoiceConnectionQuality | LiveKitConnectionQuality {
+		// React consumers refresh this value only on the statistics clock.
 		return this.room?.localParticipant?.connectionQuality ?? 'unknown';
 	}
 
@@ -678,8 +679,20 @@ class MediaEngineFacade extends Store {
 		return voiceEngineV2AppVoiceStateAdapter.getConnectionVoiceStates();
 	}
 
+	get statsStore(): StoreLike {
+		return this.statsHostAdapter;
+	}
+
 	get currentLatency(): number | null {
 		return this.statsHostAdapter.currentLatency;
+	}
+
+	get mediaLatency(): number | null {
+		return this.statsHostAdapter.mediaLatency;
+	}
+
+	get signalLatency(): number | null {
+		return this.statsHostAdapter.signalLatency;
 	}
 
 	get averageLatency(): number | null {
@@ -715,6 +728,7 @@ class MediaEngineFacade extends Store {
 	}
 
 	get estimatedLatency(): number | null {
+		// React consumers refresh this value only on the statistics clock.
 		return this.statsHostAdapter.estimatedLatency;
 	}
 
@@ -1068,6 +1082,7 @@ class MediaEngineFacade extends Store {
 		channelId: string,
 		options: ConnectToVoiceChannelOptions = {},
 	): Promise<void> {
+		AnalyticsCommands.track('voice_join');
 		this.terminalUnloadVoiceDisconnectSent = false;
 		VoiceCallLayout.reset();
 		const voiceChannel = this.resolveVoiceConnectChannel(guildId, channelId);
@@ -2088,6 +2103,7 @@ class MediaEngineFacade extends Store {
 		},
 		publishOptions?: TrackPublishOptions,
 	): Promise<void> {
+		if (enabled) AnalyticsCommands.track('screen_share_start');
 		await voiceEngineV2AppScreenShareExecutionAdapter.setScreenShareEnabled(
 			this.room,
 			enabled,
@@ -2691,9 +2707,18 @@ class MediaEngineFacade extends Store {
 }
 
 const instance = new MediaEngineFacade();
+const inactiveConnectionStore = new Store();
+
+export function useMediaEngineConnectionVersion(enabled = true): number {
+	return useStoreVersion(enabled ? voiceEngineV2AppConnectionHostAdapter : inactiveConnectionStore);
+}
 
 export function useMediaEngineVersion(): number {
 	return useStoreVersion(instance);
+}
+
+export function useMediaEngineStatsVersion(): number {
+	return useStoreVersion(instance.statsStore);
 }
 
 export function getVoiceEngineV2Model(): VoiceEngineV2Model {

@@ -135,6 +135,7 @@ The `flags` field of the [Admin user object](#admin-user-object) is a 64-bit bit
 | 1 &lt;&lt; 4 | FRIENDLY_BOT | Bot accepts friend requests from users |
 | 1 &lt;&lt; 5 | FRIENDLY_BOT_MANUAL_APPROVAL | Bot requires manual approval for friend requests |
 | 1 &lt;&lt; 6 | SPAMMER | Account is flagged as a spammer |
+| 1 &lt;&lt; 29 | VERIFIED | Account is verified by the instance |
 | 1 &lt;&lt; 33 | HIGH_GLOBAL_RATE_LIMIT | Account has elevated global rate limits |
 | 1 &lt;&lt; 34 | DELETED | Account has been deleted |
 | 1 &lt;&lt; 36 | SELF_DELETED | Account was self-deleted |
@@ -1182,6 +1183,45 @@ The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-obje
 
 100 requests per minute for each authenticated user, on the `admin:user:modify` bucket.
 
+## Clear legacy account restriction
+
+<RouteHeader method="POST" path="/v1/admin/users/{user_id}/clear-legacy-restriction" auditReason />
+
+Clears the required-action flags an older release stored on the account and returns the resulting account. Requires `user:clear:legacy_restriction` and every ACL the target account holds, and a target holding an ACL the caller lacks returns 403 `MISSING_ACL`.
+
+[Account flags](#account-flags) are left as they are, so an [account limitation](/http-api/users/#account-limitation) stays in place. Lift one with [Update user flags](#update-user-flags).
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the target account |
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user | [Admin user](#admin-user-object) object | The resulting account |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The stored required-action flags were cleared |
+| 400 | [error response](/admin-api/#error-response) | The path parameter is not a snowflake |
+| 403 | [error response](/admin-api/#error-response) | ACL evaluation denies the request, or the target holds an ACL the caller lacks |
+| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_USER`, because the account does not exist |
+
+### Side effects
+
+[User Update](/gateway/events/#user-update) is emitted to the account's own sessions.
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `clear_legacy_restriction`, target type `user`, and the metadata keys `old_suspicious_activity_flags` and `new_suspicious_activity_flags`.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:user:modify` bucket.
+
 ## Update user premium flags
 
 <RouteHeader method="PATCH" path="/v1/admin/users/{user_id}/premium-flags" auditReason />
@@ -1227,6 +1267,120 @@ The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-obje
 ### Rate limit
 
 100 requests per minute for each authenticated user, on the `admin:user:modify` bucket.
+
+## End user premium now
+
+<RouteHeader method="POST" path="/v1/admin/users/{user_id}/premium/end" auditReason />
+
+Ends the premium time an account holds now, for example after a refund. Requires `user:update:flags`, the same ACL as [Update user flags](#update-user-flags). Every kind of premium time ends: purchased, from a gift code, or from the trial.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the target account |
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| previous_paid_until | ?ISO8601 timestamp | The end of the account's premium time before the call, null when it had none |
+| paid_until | ?ISO8601 timestamp | The end now, which is the time of the call when the call cut it |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | Premium time ends now, or had already ended |
+| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_USER`, because the account does not exist |
+| 423 | [error response](/admin-api/#error-response) | Another premium change to the account holds its lock, returning `GENERAL_ERROR` with `Retry-After: 2` |
+
+### Side effects
+
+The end of the account's premium time becomes the time of the call, and the history of applied grants and the trial is kept, so premium bought later starts from then. Repeating the call changes nothing. Lifetime premium, including Visionary, is not ended. Use [Take Visionary from user](#take-visionary-from-user) for that.
+
+When the account's premium end moved, [User Update](/gateway/events/#user-update) is emitted to the account's own sessions, and the premium expiration job later clears its premium-only perks.
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `end_user_premium`, target type `user`, and the metadata key `previous_paid_until`, absent when the account had no premium time.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:user:modify` bucket.
+
+## Make user a Visionary
+
+<RouteHeader method="POST" path="/v1/admin/users/{user_id}/visionary" auditReason />
+
+Gives an account a [Visionary](/http-api/shop/#visionary) number, lifetime premium and the Visionary reward items. Requires both `shop:manage` and `user:update:flags`. An account that already has lifetime premium stays as it is.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the target account |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| slot? | integer | A free number to give (1-100000), or the lowest free number when omitted |
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the account |
+| slot | ?integer | The Visionary number of the account, null when it has none |
+| lifetime | boolean | Whether the account has lifetime premium after the call |
+| changed | boolean | False when the account already had lifetime premium, or on a take back had none |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The account is a Visionary |
+| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_USER` for an unknown or deleted account, or `SHOP_ITEM_UNAVAILABLE` when the number is taken or none is free |
+| 423 | [error response](/admin-api/#error-response) | Another premium change to the account holds its lock, returning `GENERAL_ERROR` with `Retry-After: 2` |
+
+### Side effects
+
+The number is never above the total the [Admin shop](/admin-api/shop/#set-visionary-numbers) sets. The grant runs under the account's premium lock, as a shop delivery of Visionary does, so an account never holds two numbers. The account gets lifetime premium with the number as its premium lifetime sequence, its premium end dates are cleared, and the time it first got premium is kept. The grant does not mark the account as a buyer. Each reward item is added and worn, as a shop delivery does. The account's sessions receive [User Update](/gateway/events/#user-update).
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `grant_visionary`, target type `user`, and the metadata keys `slot`, `changed` and `reward_count`.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:shop:manage` bucket.
+
+## Take Visionary from user
+
+<RouteHeader method="DELETE" path="/v1/admin/users/{user_id}/visionary" auditReason />
+
+Takes an account's Visionary number, its lifetime premium and its Visionary reward items back. Requires both `shop:manage` and `user:update:flags`. It does not require `cosmetics:manage`, because the only items it takes back are the reward items the number gave. The response body is the one [Make user a Visionary](#make-user-a-visionary) returns, and an account without lifetime premium stays as it is.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the target account |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The account is no longer a Visionary |
+| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_USER`, because the account does not exist |
+| 423 | [error response](/admin-api/#error-response) | Another premium change to the account holds its lock, returning `GENERAL_ERROR` with `Retry-After: 2` |
+
+### Side effects
+
+The number is retired and never sold again. Its row keeps the account as owner and records when it was taken back, so a retried delivery of the shop order that bought it gives nothing. The lifetime premium and the premium lifetime sequence are cleared. Premium time the account still holds, such as purchased months, is written back in the same step. An account that wears the discriminator `0000` gets the `DISCRIMINATOR` [premium flag](#premium-flags), so its tag is reset at its next session start. The reward items are taken back as [Take cosmetic item back from user](/admin-api/cosmetics/#take-cosmetic-item-back-from-user) does, and a reward item that no longer exists is skipped. A reward item the account owned from another source before, such as a purchase, an item code or an admin gift, stays, and `rewards_taken_back` does not count it. The account's sessions receive [User Update](/gateway/events/#user-update).
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `revoke_visionary`, target type `user`, and the metadata keys `slot`, `changed` and `rewards_taken_back`.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:shop:manage` bucket.
 
 ## List user store purchases
 
@@ -2265,3 +2419,182 @@ The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-obje
 ### Rate limit
 
 200 requests per minute for each authenticated user, on the `admin:lookup` bucket.
+
+## List username reservations
+
+<RouteHeader method="GET" path="/v1/admin/usernames/reservations" auditReason />
+
+Reads one reservation bucket from the authoritative username claims. Requires `username:reserve`.
+
+### Query parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| bucket | integer | The bucket to read (0-1023) |
+| limit? | integer | Items to return (1-100), 50 by default |
+| cursor? | string | `next_cursor` of the previous page, a username from the same bucket |
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| bucket | integer | The bucket that was read |
+| items<sup>1</sup> | array[object] | Up to `limit` held or pending names |
+| next_cursor | ?string | The cursor of the next page, or null on the last page |
+
+<sup>1</sup> Each item has `username`, `state` (`held` or `pending`), `user_id`, `owned_gen`, `held_by`, `note`, `blocked_until`, `updated_at`, and `index_ts`
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The bucket was read |
+| 400 | [error response](/admin-api/#error-response) | Query validation fails or the cursor belongs to another bucket |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `list_blocklist_entries`, target type `username`, target ID `0`, and metadata keys `bucket`, `result_count` for the names in `items`, and `has_more`. The cursor and the names are not recorded. A 400 records nothing.
+
+### Rate limit
+
+200 requests per minute for each authenticated user, on the `admin:lookup` bucket.
+
+## Reserve username
+
+<RouteHeader method="POST" path="/v1/admin/usernames/reserve" auditReason />
+
+Holds a username for a later admin assignment through the ownership protocol. Requires `username:reserve` and an audit reason.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| username | string | The username, trimmed and lowercased (1-32 ASCII letters, digits, or underscores) |
+| note? | string | A note shown in the reservation list (up to 1000 characters) |
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| ok | boolean | Always `true` on success |
+| username | string | The held username |
+| noop | boolean | Whether the name was already held, so nothing changed |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The username is held |
+| 400 | [error response](/admin-api/#error-response) | Body validation fails or the audit reason is missing |
+| 409 | [error response](/admin-api/#error-response) | A `USERNAME_` code such as `USERNAME_TAKEN`, with `available_at` when a wait applies |
+| 429 | [error response](/admin-api/#error-response) | The username rate limit denies the request and returns `USERNAME_RATE_LIMITED` |
+| 503 | [error response](/admin-api/#error-response) | `USERNAME_UNAVAILABLE`, because the ownership store cannot be reached |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `reserve_username`, target type `username`, target ID `0`, and metadata keys `username` and `note`.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:user:modify` bucket.
+
+## Release username reservation
+
+<RouteHeader method="POST" path="/v1/admin/usernames/unreserve" auditReason />
+
+Releases a held username. The name keeps its release embargo before anyone can select it. Requires `username:reserve` and an audit reason.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| username | string | The held username, trimmed and lowercased |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | none | The hold was released |
+| 400 | [error response](/admin-api/#error-response) | Body validation fails or the audit reason is missing |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `unreserve_username`, target type `username`, target ID `0`, and metadata key `username`.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:user:modify` bucket.
+
+## Assign username
+
+<RouteHeader method="POST" path="/v1/admin/usernames/assign" auditReason />
+
+Assigns a username to a person through the ownership protocol, without bypassing active claims, bans, or embargoes. Requires `username:reserve`, `user:update:username`, and an audit reason. A bot or system account cannot receive one.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| username | string | The username to assign |
+| user_id | snowflake | The ID of the receiving account |
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| ok | boolean | Always `true` on success |
+| username | string | The assigned username |
+| noop | boolean | Whether the account already held the name |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The username was assigned |
+| 400 | [error response](/admin-api/#error-response) | Body validation fails, the target is a bot, or the audit reason is missing |
+| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_USER`, because the account does not exist or is a system account |
+| 409 | [error response](/admin-api/#error-response) | A `USERNAME_` code such as `USERNAME_TAKEN`, with `available_at` when a wait applies |
+| 503 | [error response](/admin-api/#error-response) | `USERNAME_UNAVAILABLE`, because the ownership store cannot be reached |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `assign_username`, target type `user`, and metadata key `username`.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:user:modify` bucket.
+
+## Require username reselection
+
+<RouteHeader method="POST" path="/v1/admin/users/{user_id}/username/reselect" auditReason />
+
+Requires a person to select another username and finishes the moderation before it returns. Requires `user:update:username` and an audit reason. It works only while the username migration is `selecting`, so the person can choose a new name.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the target account |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| ban_name | boolean | Whether the previous name is banned from selection |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | none | The person must select a new username |
+| 400 | [error response](/admin-api/#error-response) | Body validation fails, the target is a bot, or the audit reason is missing |
+| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_USER`, because the account does not exist or is a system account |
+| 503 | [error response](/admin-api/#error-response) | `USERNAME_UNAVAILABLE`, because the account is suspended, the migration is not `selecting`, or the store cannot be reached |
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `force_username_reselect`, target type `user`, and metadata key `ban_name`.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:user:modify` bucket.

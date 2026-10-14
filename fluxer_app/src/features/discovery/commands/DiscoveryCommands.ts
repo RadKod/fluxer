@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import * as AnalyticsCommands from '@app/features/analytics/commands/AnalyticsCommands';
 import {Endpoints} from '@app/features/app/constants/Endpoints';
 import {http} from '@app/features/platform/transport/RestTransport';
 import {Logger} from '@app/features/platform/utils/AppLogger';
@@ -127,5 +128,6 @@ export async function getChannelPreview(guildId: string, channelId: string): Pro
 
 export async function joinGuild(guildId: string): Promise<void> {
 	await http.post(Endpoints.DISCOVERY_JOIN(guildId));
+	AnalyticsCommands.track('guild_join');
 	logger.info('Joined guild via discovery', {guildId});
 }

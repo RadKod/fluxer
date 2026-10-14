@@ -29,6 +29,7 @@ import {
 } from '@app/features/forum/utils/ForumChannelUtils';
 import * as D from '@app/features/forum/utils/ForumMessageDescriptors';
 import Guilds from '@app/features/guild/state/Guilds';
+import {shouldShowChannelMatureContentSettings} from '@app/features/mature_content/utils/MatureContentSettingsUtils';
 import Permission from '@app/features/permissions/state/Permission';
 import {ThreadDefaultsSection} from '@app/features/threads/components/ThreadDefaultsSection';
 import ThreadGuilds from '@app/features/threads/state/ThreadGuilds';
@@ -77,6 +78,7 @@ function remoteValuesFor(forum: Channel): ForumFormInputs {
 		content_warning_level: forum.contentWarningLevel ?? ContentWarningLevel.INHERIT,
 		content_warning_text: forum.contentWarningText ?? '',
 		rtc_region: null,
+		room_theme: null,
 		default_auto_archive_duration: forum.defaultAutoArchiveDuration ?? DEFAULT_THREAD_AUTO_ARCHIVE_DURATION,
 		default_thread_rate_limit_per_user: forum.defaultThreadRateLimitPerUser,
 		default_reaction: getDefaultReaction(forum),
@@ -368,17 +370,19 @@ const ForumOverviewForm = observer(({forum}: {forum: Channel}) => {
 						data-flx="forum.settings.forum-overview-tab.forum-overview-form.thread-defaults-section"
 					/>
 				</div>
-				<div
-					className={overviewStyles.settingsGroup}
-					data-flx="forum.settings.forum-overview-tab.forum-overview-form.div--6"
-				>
-					<MatureContentSection
-						form={sharedForm}
-						channel={forum}
-						guild={guild}
-						data-flx="forum.settings.forum-overview-tab.forum-overview-form.mature-content-section"
-					/>
-				</div>
+				{shouldShowChannelMatureContentSettings(forum, guild) && (
+					<div
+						className={overviewStyles.settingsGroup}
+						data-flx="forum.settings.forum-overview-tab.forum-overview-form.div--6"
+					>
+						<MatureContentSection
+							form={sharedForm}
+							channel={forum}
+							guild={guild}
+							data-flx="forum.settings.forum-overview-tab.forum-overview-form.mature-content-section"
+						/>
+					</div>
+				)}
 			</Form>
 		</div>
 	);

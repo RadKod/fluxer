@@ -33,7 +33,8 @@
 
 -spec handle_session_connect(connect_request(), pid(), state()) ->
     {reply, {ok, [map()]}, state()}.
-handle_session_connect(Request, Pid, State) ->
+handle_session_connect(Request, Pid, State0) ->
+    State = bootstrap_game_activity(Request, State0),
     #{session_id := SessionId0} = Request,
     SessionId = normalize_session_id(SessionId0),
     Status = normalize_status(maps:get(status, Request, offline)),
@@ -66,6 +67,14 @@ handle_session_connect(Request, Pid, State) ->
             SessionsData = presence_status:collect_sessions_for_replace(NewSessions),
             {reply, {ok, SessionsData}, NewState}
     end.
+
+-spec bootstrap_game_activity(map(), state()) -> state().
+bootstrap_game_activity(
+    #{game_activity_request_nonce := Nonce, game_activity_policy := Policy}, State
+) when is_binary(Nonce), byte_size(Nonce) > 0, is_map(Policy) ->
+    presence_game_activity:bootstrap({session, Nonce}, Policy, State);
+bootstrap_game_activity(_Request, State) ->
+    State.
 
 -spec refresh_existing_session(
     session_entry(), pid(), status(), boolean(), boolean(), pid() | undefined, state()

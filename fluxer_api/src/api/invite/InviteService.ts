@@ -13,6 +13,8 @@ import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
+import {getGuildBoostService} from '@app/api/middleware/ServiceSingletons';
 import type {Channel} from '@app/api/models/Channel';
 import {Invite} from '@app/api/models/Invite';
 import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
@@ -250,6 +252,9 @@ export class InviteService {
 	async acceptInvite({userId, inviteCode, requestCache}: AcceptInviteParams): Promise<Invite> {
 		const invite = await this.findInviteWithLowercaseFallback(inviteCode);
 		if (!invite) throw new UnknownInviteError();
+		const user = await this.apiContext.services.users.findUnique(userId);
+		if (user)
+			getUsernameSelectionGate().assertMayAct(user, invite.type === InviteTypes.GROUP_DM ? 'group_dm' : 'guild_join');
 		if (invite.maxUses > 0 && invite.uses >= invite.maxUses) {
 			if (invite.type === InviteTypes.GUILD && invite.guildId) {
 				const guild = await this.guildService.data.getGuildSystem(invite.guildId);
@@ -264,7 +269,6 @@ export class InviteService {
 		}
 		if (invite.type === InviteTypes.GROUP_DM) {
 			if (!invite.channelId) throw new UnknownInviteError();
-			const user = await this.apiContext.services.users.findUnique(userId);
 			if (user?.isUnclaimedAccount()) {
 				throw new UnclaimedAccountCannotJoinGroupDmsError();
 			}
@@ -310,6 +314,14 @@ export class InviteService {
 		}
 		const vanityCode = guild.vanityUrlCode ? vanityCodeToInviteCode(guild.vanityUrlCode) : null;
 		const isVanityInvite = invite.code === vanityCode;
+		// a custom invite code held after its boost level ended is reserved but closed to joins.
+		if (
+			isVanityInvite &&
+			!guild.features.has(GuildFeatures.VANITY_URL) &&
+			(await getGuildBoostService().isVanityHeld(guild.id))
+		) {
+			throw new UnknownInviteError();
+		}
 		const guildId = invite.guildId;
 		const reservedInvite = await this.reserveInviteUse(invite);
 		await this.withReservedInviteUse(reservedInvite, () =>

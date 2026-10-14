@@ -1,0 +1,15 @@
+/* The camera takes the avatar's disc; decorations outside it and the speaking ring (painted after) stay visible. */
+.camera {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+	object-fit: cover;
+	object-position: center;
+	pointer-events: none;
+}
+
+[data-camera-card] > .camera {
+	border-radius: inherit;
+}

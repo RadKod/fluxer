@@ -27,7 +27,9 @@
     voice_queue_timer := reference() | undefined,
     pending_identify := {map(), pid()} | undefined,
     pending_identify_retry_timer := {reference(), reference()} | reference() | undefined,
-    connection_acquired => boolean()
+    connection_acquired => boolean(),
+    identify_received => boolean(),
+    game_activity_clear_session => pid() | undefined
 }.
 
 -type ws_frame() :: {text, binary()} | {binary, binary()}.
@@ -83,10 +85,18 @@ init(Req, _Opts) ->
 websocket_init(#{version := 1} = State) ->
     case gateway_ip_connections:acquire(maps:get(peer_ip, State, undefined)) of
         ok ->
+            ok = gateway_connection_metrics:record_accepted(),
+            ok = maybe_schedule_identify_timeout(),
             do_websocket_init(State#{connection_acquired => true});
         {error, too_many_connections} ->
             gateway_handler_encode:close_with_reason(
                 rate_limited, <<"Too many connections">>, State
+            );
+        {error, Capacity} when
+            Capacity =:= at_capacity; Capacity =:= unidentified_at_capacity
+        ->
+            gateway_handler_encode:close_with_reason(
+                rate_limited, <<"Gateway at capacity">>, State
             )
     end;
 websocket_init(State) ->
@@ -147,8 +157,32 @@ websocket_info({process_voice_queue}, State) ->
     QueueState = State#{voice_queue_timer => undefined},
     NewState = gateway_handler_voice:process_queued_voice_updates(QueueState),
     {ok, NewState};
+websocket_info(
+    identify_timeout, #{session_pid := undefined, pending_identify := undefined} = State
+) ->
+    ok = gateway_connection_metrics:record_rejection(identify_timeout_reason(State)),
+    gateway_handler_encode:close_with_reason(not_authenticated, <<"Identify timeout">>, State);
 websocket_info(_, State) ->
     {ok, State}.
+
+%% An Identify or Resume that was held without a session (its IP was past the Identify rate) was
+%% dropped, not missing: count it apart from sockets that never sent one.
+-spec identify_timeout_reason(state()) -> identify_timeout | identify_dropped.
+identify_timeout_reason(#{identify_received := true}) -> identify_dropped;
+identify_timeout_reason(_State) -> identify_timeout.
+
+%% With FLUXER_GATEWAY_IDENTIFY_TIMEOUT_MS above zero, a socket that has not sent Identify or Resume
+%% that long after Hello is closed; heartbeats do not extend it. Once a session started or its start
+%% is held, the message falls through to the catch-all clause. The timer dies with the process.
+-spec maybe_schedule_identify_timeout() -> ok.
+maybe_schedule_identify_timeout() ->
+    case fluxer_gateway_env:get(identify_timeout_ms) of
+        Ms when is_integer(Ms), Ms > 0 ->
+            _ = erlang:send_after(Ms, self(), identify_timeout),
+            ok;
+        _ ->
+            ok
+    end.
 
 -spec terminate(term(), cowboy_req:req(), state() | term()) -> ok.
 terminate(Reason, _Req, State) when is_map(State) ->
@@ -297,11 +331,43 @@ handle_decode({error, _Reason}, State) ->
     map()
 ) -> ws_result().
 dispatch_after_rate_limit({ok, RLState}, OpAtom, Payload) ->
-    gateway_handler_dispatch:handle_opcode(OpAtom, Payload, RLState);
+    note_resume_outcome(
+        OpAtom,
+        gateway_handler_dispatch:handle_opcode(
+            OpAtom, Payload, note_identify_attempt(OpAtom, RLState)
+        )
+    );
+dispatch_after_rate_limit({opcode_rate_limited, RLState}, presence_update, Payload) ->
+    gateway_handler_dispatch:handle_rate_limited_game_clear(Payload, RLState);
 dispatch_after_rate_limit({opcode_rate_limited, RLState}, _OpAtom, _Payload) ->
     {ok, RLState};
 dispatch_after_rate_limit({rate_limited, RLState}, _OpAtom, _Payload) ->
     gateway_handler_encode:close_with_reason(rate_limited, <<"Rate limited">>, RLState).
+
+%% Identify or Resume takes the socket out of the unidentified budget. An eviction design (close
+%% the oldest unidentified socket when the budget is full) should take it out only once
+%% session_pid is set, not on the attempt. An Identify marks the socket for identify_dropped.
+-spec note_identify_attempt(atom(), state()) -> state().
+note_identify_attempt(identify, State) ->
+    ok = gateway_ip_connections:note_identified(),
+    State#{identify_received => true};
+note_identify_attempt(resume, State) ->
+    ok = gateway_ip_connections:note_identified(),
+    State;
+note_identify_attempt(_Op, State) ->
+    State.
+
+%% A Resume held by the Identify rate limit (no reply, no session) marks the socket. One answered
+%% without a session (Invalid Session) was served, so it clears the mark.
+-spec note_resume_outcome(atom(), ws_result()) -> ws_result().
+note_resume_outcome(resume, {ok, #{session_pid := undefined} = State}) ->
+    {ok, State#{identify_received => true}};
+note_resume_outcome(resume, {Frames, #{session_pid := undefined} = State}) when
+    is_list(Frames)
+->
+    {Frames, State#{identify_received => false}};
+note_resume_outcome(_Op, Result) ->
+    Result.
 
 -spec extract_client_ip(cowboy_req:req()) -> binary().
 extract_client_ip(Req) ->

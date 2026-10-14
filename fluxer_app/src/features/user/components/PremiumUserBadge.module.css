@@ -1,0 +1,6 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Micup: the crown opens the premium page; preflight already strips the button chrome. */
+.button {
+	cursor: pointer;
+}

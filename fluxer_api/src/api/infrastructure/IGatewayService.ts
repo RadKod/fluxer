@@ -5,6 +5,12 @@ import type {GatewayDispatchEvent} from '@app/api/constants/Gateway';
 import type {ChannelResponse} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
 import type {GuildMemberResponse} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
+import type {
+	GameActivityPairPolicyAck,
+	GameActivityPairPolicyRequest,
+	GameActivityPolicyAck,
+	GameActivityPolicyRequest,
+} from '@fluxer/schema/src/domains/rpc/RpcSchemas';
 
 interface VoiceState {
 	user_id: string;
@@ -145,6 +151,8 @@ export interface GatewayMentionSourcesPage {
 }
 
 export abstract class IGatewayService {
+	abstract gameActivityPolicy(request: GameActivityPolicyRequest): Promise<GameActivityPolicyAck>;
+	abstract gameActivityPairPolicy(request: GameActivityPairPolicyRequest): Promise<GameActivityPairPolicyAck>;
 	abstract dispatchGuild(params: {guildId: GuildID; event: GatewayDispatchEvent; data: unknown}): Promise<void>;
 
 	abstract dispatchGuildMany(params: {
@@ -330,6 +338,7 @@ export abstract class IGatewayService {
 		channelId: ChannelID;
 		userId: UserID;
 		connectionId?: string;
+		tokenNonce?: string;
 	}): Promise<{
 		success: boolean;
 		ignored?: boolean;

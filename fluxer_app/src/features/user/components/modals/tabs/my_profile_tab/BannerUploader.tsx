@@ -65,7 +65,7 @@ const DON_T_SHOW_DESCRIPTOR = msg({
 });
 const PROFILE_BANNERS_REQUIRE_PREMIUM_DESCRIPTOR = msg({
 	message: 'Profile banners require {premiumProductName}.',
-	comment: 'Profile banner uploader notice shown when profile banners require premium.',
+	comment: 'Profile banner uploader notice shown when profile banners require Plus.',
 });
 const PROFILE_BANNERS_NOT_ENABLED_DESCRIPTOR = msg({
 	message: 'Profile banners are not enabled on this instance.',

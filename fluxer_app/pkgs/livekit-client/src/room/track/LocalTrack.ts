@@ -470,7 +470,10 @@ export default abstract class LocalTrack<TrackKind extends Track.Kind = Track.Ki
 	}
 
 	protected async restart(constraints?: MediaTrackConstraints, isUnmuting?: boolean) {
-		this.manuallyStopped = false;
+		if (this.manuallyStopped) {
+			this.log.warn('track was stopped, not reacquiring the device', this.logContext);
+			return this;
+		}
 		const unlock = await this.trackChangeLock.lock();
 		const previousProvidedByUser = this.providedByUser;
 		let newTrack: MediaStreamTrack | undefined;

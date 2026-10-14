@@ -25,11 +25,13 @@ const EMAIL_I18N_HU_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "Köszönjük, hogy adományoddal támogatod a {product_name} működését",
-		"body": "Szia!\n\nKöszönjük, hogy adományoddal támogatod a {product_name} működését! {interval, select,\n  month {Sikeresen beállítottuk a rendszeres adományodat.}\n  year {Sikeresen beállítottuk a rendszeres adományodat.}\n  other {Sikeresen feldolgoztuk az egyszeri adományodat.}\n}\n\nAz adomány részletei:\nÖsszeg: {amount} {interval, select,\n  month {havonta}\n  year {évente}\n  other {}\n}\n\nA Stripe hamarosan külön e-mailben küld nyugtát és egy PDF-számlát. Ezek tartalmazzák az összes fizetési adatot, és adózási célokra is használhatók.\n\nAz alábbi linken bármikor megtekintheted korábbi adományaidat, letöltheted a számlákat, {interval, select,\n  month {valamint kezelheted vagy lemondhatod az előfizetésedet}\n  year {valamint kezelheted vagy lemondhatod az előfizetésedet}\n  other {valamint kezelheted a jövőbeli adományaidat}\n}:\n\n{manageUrl}\n\nTámogatásod segít fenntartani a {product_name} működését. Köszönjük!\n\n– {product_name} csapata"
+		"body": "Szia!\n\nKöszönjük, hogy adományoddal támogatod a {product_name} működését! {interval, select,\n  month {Sikeresen beállítottuk a rendszeres adományodat.}\n  year {Sikeresen beállítottuk a rendszeres adományodat.}\n  other {Sikeresen feldolgoztuk az egyszeri adományodat.}\n}\n\nAz adomány részletei:\nÖsszeg: {amount} {interval, select,\n  month {havonta}\n  year {évente}\n  other {}\n}\n\nA Stripe hamarosan külön e-mailben küld nyugtát és egy PDF-számlát. Ezek tartalmazzák az összes fizetési adatot, és adózási célokra is használhatók.\n\nAz alábbi linken bármikor megtekintheted korábbi adományaidat, letöltheted a számlákat, {interval, select,\n  month {valamint kezelheted vagy lemondhatod az előfizetésedet}\n  year {valamint kezelheted vagy lemondhatod az előfizetésedet}\n  other {valamint kezelheted a jövőbeli adományaidat}\n}:\n\n{manageUrl}\n\nTámogatásod segít fenntartani a {product_name} működését. Köszönjük!\n\n– {product_name} csapata",
+		"button": "Adományok kezelése"
 	},
 	"donation_magic_link": {
 		"subject": "A {product_name} működését támogató adományaid kezelése",
-		"body": "Szia!\n\nKattints az alábbi linkre az adományozói portálod eléréséhez:\n\n{manageUrl}\n\nA portálon kezelheted az előfizetéseket, letöltheted a számlákat, és megtekintheted az adománytörténetedet.\n\nEz a link {expiresAt, date, full} {expiresAt, time, short} időpontban jár le.\n\nHa nem kérted ezt a linket, nyugodtan figyelmen kívül hagyhatod ezt az e-mailt.\n\n– {product_name} csapata"
+		"body": "Szia!\n\nKattints az alábbi linkre az adományozói portálod eléréséhez:\n\n{manageUrl}\n\nA portálon kezelheted az előfizetéseket, letöltheted a számlákat, és megtekintheted az adománytörténetedet.\n\nEz a link {expiresAt, date, full} {expiresAt, time, short} időpontban jár le.\n\nHa nem kérted ezt a linket, nyugodtan figyelmen kívül hagyhatod ezt az e-mailt.\n\n– {product_name} csapata",
+		"button": "Adományok kezelése"
 	},
 	"dsa_report_verification": {
 		"subject": "Erősítsd meg e-mail-címedet a DSA-bejelentéshez",
@@ -45,11 +47,13 @@ const EMAIL_I18N_HU_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "Megváltozott {product_name}-fiókod e-mail-címe",
-		"body": "Szia, {username}!\n\n{product_name}-fiókod e-mail-címe a következőre változott: {newEmail}.\n\nHa te módosítottad, nincs további teendőd. Ha nem te voltál, az alábbi linken visszavonhatod a módosítást, és biztonságba helyezheted a fiókodat:\n\n{revertUrl}\n\nEzzel visszaállítjuk a korábbi e-mail-címedet, mindenhol kijelentkeztetünk, kikapcsoljuk a többfaktoros azonosítást, és új jelszót kell beállítanod.\n\n– {product_name} biztonsági csapata"
+		"body": "Szia, {username}!\n\n{product_name}-fiókod e-mail-címe a következőre változott: {newEmail}.\n\nHa te módosítottad, nincs további teendőd. Ha nem te voltál, az alábbi linken visszavonhatod a módosítást, és biztonságba helyezheted a fiókodat:\n\n{revertUrl}\n\nEzzel visszaállítjuk a korábbi e-mail-címedet, mindenhol kijelentkeztetünk, kikapcsoljuk a többfaktoros azonosítást, és új jelszót kell beállítanod.\n\n– {product_name} biztonsági csapata",
+		"button": "Módosítás visszavonása"
 	},
 	"email_verification": {
 		"subject": "Erősítsd meg {product_name}-fiókod e-mail-címét",
-		"body": "Szia, {username}!\n\nErősítsd meg a {product_name}-fiókod e-mail-címét az alábbi linkre kattintva:\n\n{verifyUrl}\n\nHa nem hoztál létre {product_name}-fiókot, nyugodtan figyelmen kívül hagyhatod ezt az e-mailt.\n\nEz a link 24 óráig érvényes.\n\n– {product_name} csapata"
+		"body": "🎉 Szia, {username}!\n\nErősítsd meg a {product_name}-fiókod e-mail-címét az alábbi linkre kattintva:\n\n{verifyUrl}\n\nHa nem hoztál létre {product_name}-fiókot, nyugodtan figyelmen kívül hagyhatod ezt az e-mailt.\n\nEz a link 24 óráig érvényes.\n\n– {product_name} csapata",
+		"button": "E-mail-cím megerősítése"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Megszűntek a beváltott ajándékodhoz tartozó előnyök",
@@ -57,15 +61,18 @@ const EMAIL_I18N_HU_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "A {product_name} adatexportja elkészült, letöltheted az adataidat",
-		"body": "Szia, {username}!\n\nAz adatexportod elkészült.\n\nLetöltési link:\n{downloadUrl}\n\nÜzenetek száma: {totalMessages, number}\nFájlméret: {fileSizeMB, number} MB\n\nEz a link {expiresAt, date, full} {expiresAt, time, short} időpontban jár le.\n\nHa nem kérted ezt az exportálást, azonnal változtasd meg a jelszavadat, és vedd fel a kapcsolatot az ügyfélszolgálatunkkal.\n\n– {product_name} csapata"
+		"body": "Szia, {username}!\n\nAz adatexportod elkészült.\n\nLetöltési link:\n{downloadUrl}\n\nÜzenetek száma: {totalMessages, number}\nFájlméret: {fileSizeMB, number} MB\n\nEz a link {expiresAt, date, full} {expiresAt, time, short} időpontban jár le.\n\nHa nem kérted ezt az exportálást, azonnal változtasd meg a jelszavadat, és vedd fel a kapcsolatot az ügyfélszolgálatunkkal.\n\n– {product_name} csapata",
+		"button": "Adataim letöltése"
 	},
 	"inactivity_warning": {
 		"subject": "{product_name}-fiókodat inaktivitás miatt törölni fogjuk",
-		"body": "Szia, {username}!\n\nEzen dátum óta nem észleltünk tevékenységet {product_name}-fiókodban: {lastActiveDate, date, full}.\n\nHa nem jelentkezel be az alábbi időpontig, inaktivitás miatt véglegesen töröljük a fiókodat: {deletionDate, date, full} {deletionDate, time, short}.\n\nItt jelentkezhetsz be:\n{loginUrl}\n\nHa mostanában használtad a {product_name} alkalmazást, azonnal vedd fel a kapcsolatot ügyfélszolgálatunkkal.\n\n– {product_name} csapata"
+		"body": "Szia, {username}!\n\nEzen dátum óta nem észleltünk tevékenységet {product_name}-fiókodban: {lastActiveDate, date, full}.\n\nHa nem jelentkezel be az alábbi időpontig, inaktivitás miatt véglegesen töröljük a fiókodat: {deletionDate, date, full} {deletionDate, time, short}.\n\nItt jelentkezhetsz be:\n{loginUrl}\n\nHa mostanában használtad a {product_name} alkalmazást, azonnal vedd fel a kapcsolatot ügyfélszolgálatunkkal.\n\n– {product_name} csapata",
+		"button": "Bejelentkezés"
 	},
 	"ip_authorization": {
 		"subject": "Új IP-címről való bejelentkezés engedélyezése",
-		"body": "Szia, {username}!\n\nBejelentkezési kísérletet észleltünk a {product_name}-fiókodba egy új IP-címről:\n\nIP-cím: {ipAddress}\nHelyszín: {location}\n\nHa te voltál, engedélyezd ezt az IP-címet az alábbi linkre kattintva:\n\n{authUrl}\n\nHa nem te próbáltál bejelentkezni, azonnal változtasd meg a jelszavadat.\n\nEz a link 30 percig érvényes.\n\n– {product_name} csapata"
+		"body": "Szia, {username}!\n\nBejelentkezési kísérletet észleltünk a {product_name}-fiókodba egy új IP-címről:\n\nIP-cím: {ipAddress}\nHelyszín: {location}\n\nHa te voltál, engedélyezd ezt az IP-címet az alábbi linkre kattintva:\n\n{authUrl}\n\nHa nem te próbáltál bejelentkezni, azonnal változtasd meg a jelszavadat.\n\nEz a link 30 percig érvényes.\n\n– {product_name} csapata",
+		"button": "Bejelentkezés engedélyezése"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Erősítsd meg {product_name}-fiókod biztonsági kódjainak megtekintését",
@@ -77,11 +84,17 @@ const EMAIL_I18N_HU_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "Állítsd vissza {product_name}-fiókod jelszavát",
-		"body": "Szia, {username}!\n\n{product_name}-fiókod jelszavának visszaállítását kérted. Használd az alábbi linket új jelszó beállításához:\n\n{resetUrl}\n\nHa nem kérted ezt, nyugodtan figyelmen kívül hagyhatod ezt az e-mailt.\n\nEz a link 1 óráig érvényes.\n\n– {product_name} csapata"
+		"body": "Szia, {username}!\n\n{product_name}-fiókod jelszavának visszaállítását kérted. Használd az alábbi linket új jelszó beállításához:\n\n{resetUrl}\n\nHa nem kérted ezt, nyugodtan figyelmen kívül hagyhatod ezt az e-mailt.\n\nEz a link 1 óráig érvényes.\n\n– {product_name} csapata",
+		"button": "Jelszó visszaállítása"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "Jóváhagytuk a regisztrációdat a {product_name} felületén",
-		"body": "Szia, {username}!\n\nJó hír: jóváhagytuk a regisztrációdat a {product_name} felületén.\n\nMost már bejelentkezhetsz az alkalmazásba:\n{channelsUrl}\n\nÜdvözlünk a {product_name} közösségében!\n\n– {product_name} csapata"
+		"body": "🎉 Szia, {username}!\n\nJó hír: jóváhagytuk a regisztrációdat a {product_name} felületén.\n\nMost már bejelentkezhetsz az alkalmazásba:\n{channelsUrl}\n\nÜdvözlünk a {product_name} közösségében!\n\n– {product_name} csapata",
+		"button": "{product_name} megnyitása"
 	},
 	"report_resolved": {
 		"subject": "Elbíráltuk a {product_name} felületén tett bejelentésedet",
@@ -97,7 +110,7 @@ const EMAIL_I18N_HU_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "Feloldottuk {product_name}-fiókod felfüggesztését",
-		"body": "Szia, {username}!\n\nJó hír: feloldottuk {product_name}-fiókod felfüggesztését.\n\n{reason, select,\n  null {}\n  other {Indok: {reason}}\n}\n\nMost már újra bejelentkezhetsz, és a megszokott módon használhatod a {product_name} alkalmazást.\n\n– {product_name} biztonsági csapata"
+		"body": "🎉 Szia, {username}!\n\nJó hír: feloldottuk {product_name}-fiókod felfüggesztését.\n\n{reason, select,\n  null {}\n  other {Indok: {reason}}\n}\n\nMost már újra bejelentkezhetsz, és a megszokott módon használhatod a {product_name} alkalmazást.\n\n– {product_name} biztonsági csapata"
 	}
 });
 

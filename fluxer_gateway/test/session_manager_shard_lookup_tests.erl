@@ -103,6 +103,132 @@ lookup_or_rehydrate_restores_state_on_invalid_token_test() ->
         ?assertEqual({ok, TransferState}, session_state_transfer:pop_state(SessionId))
     end).
 
+lookup_or_rehydrate_skips_a_handoff_target_that_is_not_connected_test() ->
+    with_cluster_members(['gateway_b@127.0.0.1'], fun() ->
+        with_restorable_session(fun(SessionId, Token, TransferState, SessionPid) ->
+            ok = session_state_transfer:push_state(node(), SessionId, TransferState),
+            ok = session_state_transfer:note_handoff(SessionId, 'gateway_b@127.0.0.1'),
+            {Reply, _} = session_manager_shard_lookup:lookup_or_rehydrate(
+                SessionId, Token, self(), new_test_state()
+            ),
+            ?assertEqual({ok, SessionPid}, Reply)
+        end)
+    end).
+
+lookup_or_rehydrate_never_calls_a_disconnected_handoff_target_test() ->
+    with_handoff_target_here(fun(SessionId) ->
+        {Reply, _} = session_manager_shard_lookup:lookup_or_rehydrate(
+            SessionId, <<"token">>, self(), [], new_test_state()
+        ),
+        ?assertEqual({error, not_found}, Reply),
+        ?assertNot(meck:called(session_manager, call_shard, '_')),
+        ?assert(meck:called(gateway_node_router, active_nodes, '_'))
+    end).
+
+lookup_or_rehydrate_maps_the_handoff_target_reply_test() ->
+    with_handoff_target_here(fun(SessionId) ->
+        SessionPid = self(),
+        Cases = [
+            {fun() -> {ok, SessionPid} end, {ok, SessionPid}, no_lookup},
+            {fun() -> {error, invalid_token} end, {error, invalid_token}, no_lookup},
+            {fun() -> {error, not_found} end, {error, not_found}, cluster_lookup},
+            {fun() -> {error, timeout} end, {error, not_found}, no_lookup},
+            {fun() -> exit(target_crashed) end, {error, not_found}, no_lookup}
+        ],
+        lists:foreach(
+            fun({TargetReply, Expected, Lookup}) ->
+                meck:reset(gateway_node_router),
+                ok = meck:expect(session_manager, call_shard, fun(_, _, _) -> TargetReply() end),
+                {Reply, _} = session_manager_shard_lookup:lookup_or_rehydrate(
+                    SessionId, <<"token">>, self(), [node()], new_test_state()
+                ),
+                ?assertEqual(Expected, Reply),
+                ?assertEqual(
+                    Lookup =:= cluster_lookup,
+                    meck:called(gateway_node_router, active_nodes, '_')
+                )
+            end,
+            Cases
+        )
+    end).
+
+lookup_or_rehydrate_restores_through_the_handoff_target_shard_test() ->
+    with_restorable_session(fun(SessionId, Token, TransferState, SessionPid) ->
+        ok = session_state_transfer:push_state(node(), SessionId, TransferState),
+        with_handoff_target_here(fun(_) ->
+            ok = meck:expect(session_manager, call_shard, fun(Id, Request, _Timeout) ->
+                Id = SessionId,
+                {reply, Reply, _} = session_manager_shard:handle_call(
+                    Request, {self(), make_ref()}, new_test_state()
+                ),
+                Reply
+            end),
+            {Wrong, _} = session_manager_shard_lookup:lookup_or_rehydrate(
+                SessionId, <<"unexpected">>, self(), [node()], new_test_state()
+            ),
+            ?assertEqual({error, invalid_token}, Wrong),
+            {Reply, _} = session_manager_shard_lookup:lookup_or_rehydrate(
+                SessionId, Token, self(), [node()], new_test_state()
+            ),
+            ?assertEqual({ok, SessionPid}, Reply),
+            ?assertEqual({error, not_found}, session_state_transfer:pop_state(SessionId)),
+            ?assertNot(meck:called(gateway_node_router, active_nodes, '_'))
+        end)
+    end).
+
+lookup_or_rehydrate_without_handoff_target_restores_locally_test() ->
+    with_restorable_session(fun(SessionId, Token, TransferState, SessionPid) ->
+        ok = session_state_transfer:push_state(node(), SessionId, TransferState),
+        {Reply, StateAfter} = session_manager_shard_lookup:lookup_or_rehydrate(
+            SessionId, Token, self(), new_test_state()
+        ),
+        ?assertEqual({ok, SessionPid}, Reply),
+        ?assert(maps:is_key(SessionId, maps:get(sessions, StateAfter))),
+        ?assertEqual({error, not_found}, session_state_transfer:pop_state(SessionId))
+    end).
+
+rehydrate_handoff_restores_the_transferred_session_test() ->
+    with_restorable_session(fun(SessionId, Token, TransferState, SessionPid) ->
+        ok = session_state_transfer:push_state(node(), SessionId, TransferState),
+        {Reply, StateAfter} = session_manager_shard_lookup:rehydrate_handoff(
+            SessionId, Token, self(), new_test_state()
+        ),
+        ?assertEqual({ok, SessionPid}, Reply),
+        {Again, _} = session_manager_shard_lookup:rehydrate_handoff(
+            SessionId, Token, self(), StateAfter
+        ),
+        ?assertEqual({ok, SessionPid}, Again),
+        ?assertEqual({error, not_found}, session_state_transfer:pop_state(SessionId))
+    end).
+
+rehydrate_handoff_keeps_the_state_for_a_wrong_token_test() ->
+    with_session_state_transfer(fun() ->
+        SessionId = <<"session-handoff-wrong-token">>,
+        TransferState = #{token_hash => utils:hash_token(<<"expected">>)},
+        ok = session_state_transfer:push_state(node(), SessionId, TransferState),
+        {Reply, _} = session_manager_shard_lookup:rehydrate_handoff(
+            SessionId, <<"unexpected">>, self(), new_test_state()
+        ),
+        ?assertEqual({error, invalid_token}, Reply),
+        ?assertEqual({ok, TransferState}, session_state_transfer:pop_state(SessionId))
+    end).
+
+rehydrate_handoff_without_state_does_not_search_the_cluster_test() ->
+    with_cluster_members(['gateway_b@127.0.0.1'], fun() ->
+        with_session_state_transfer(fun() ->
+            ok = meck:new(gateway_node_router, [passthrough, no_link]),
+            try
+                {Reply, _} = session_manager_shard_lookup:rehydrate_handoff(
+                    <<"session-handoff-missing">>, <<"token">>, self(), new_test_state()
+                ),
+                ?assertEqual({error, not_found}, Reply),
+                ?assertEqual(0, meck:num_calls(gateway_node_router, active_nodes, '_'))
+            after
+                meck:unload(gateway_node_router)
+            end
+        end)
+    end).
+
 lookup_remote_on_nodes_empty_test() ->
     ?assertEqual(
         {error, not_found},
@@ -240,3 +366,65 @@ with_session_state_transfer(Fun) ->
         _Pid ->
             Fun()
     end.
+
+with_cluster_members(Peers, Fun) ->
+    Keys = [
+        {gateway_cluster_membership, members}, {gateway_cluster_membership, members_by_role}
+    ],
+    Saved = [{Key, persistent_term:get(Key, undefined)} || Key <- Keys],
+    Members = lists:usort([node() | Peers]),
+    persistent_term:put({gateway_cluster_membership, members}, Members),
+    persistent_term:put({gateway_cluster_membership, members_by_role}, #{all => Members}),
+    try
+        Fun()
+    after
+        lists:foreach(
+            fun
+                ({Key, undefined}) -> persistent_term:erase(Key);
+                ({Key, Value}) -> persistent_term:put(Key, Value)
+            end,
+            Saved
+        )
+    end.
+
+%% The handoff record points at this node, so a test can stand in for the target's shard.
+with_handoff_target_here(Fun) ->
+    with_session_state_transfer(fun() ->
+        Unique = integer_to_binary(erlang:unique_integer([positive])),
+        SessionId = <<"session-handoff-", Unique/binary>>,
+        Here = node(),
+        ok = meck:new(session_state_transfer, [passthrough, no_link]),
+        ok = meck:new(session_manager, [passthrough, no_link]),
+        ok = meck:new(gateway_node_router, [passthrough, no_link]),
+        try
+            ok = meck:expect(session_state_transfer, handoff_target, fun(_) -> {ok, Here} end),
+            ok = meck:expect(session_manager, call_shard, fun(_, _, _) -> {error, not_found} end),
+            Fun(SessionId)
+        after
+            meck:unload([gateway_node_router, session_manager, session_state_transfer])
+        end
+    end).
+
+with_restorable_session(Fun) ->
+    with_session_state_transfer(fun() ->
+        Unique = integer_to_binary(erlang:unique_integer([positive])),
+        SessionId = <<"session-restorable-", Unique/binary>>,
+        Token = <<"resume-token">>,
+        TransferState = #{token_hash => utils:hash_token(Token), seq => 3},
+        SessionPid = spawn(fun() ->
+            receive
+                stop -> ok
+            end
+        end),
+        ok = meck:new(session, [passthrough, no_link]),
+        try
+            ok = meck:expect(session, start_link, fun(_SessionData) -> {ok, SessionPid} end),
+            Fun(SessionId, Token, TransferState, SessionPid)
+        after
+            meck:unload(session),
+            process_registry:safe_unregister(
+                process_registry:build_process_key(session, SessionId)
+            ),
+            SessionPid ! stop
+        end
+    end).

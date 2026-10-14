@@ -29,6 +29,7 @@ mod video_thumbnail;
 #[cfg(test)]
 mod tests;
 
+pub(crate) use animated_transform::source_can_stand_in_for_resize;
 pub use av_metadata::{
     AVMetadata, AVMetadataFrame, AVProbe, NSFW_PREVIEW_MAX_DIMENSION, probe_av_metadata,
 };

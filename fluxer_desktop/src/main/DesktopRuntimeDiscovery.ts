@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {BUILD_CHANNEL} from '@electron/common/BuildChannel';
+import {CHANNEL_APP_URLS} from '@electron/common/Constants';
 import {getLaunchInstanceEndpointOverride} from '@electron/common/DesktopConfig';
 import {createChildLogger} from '@electron/common/Logger';
 import {getDesktopAppStorage} from '@electron/main/DesktopAppStorage';
@@ -121,7 +123,7 @@ export async function resolveDesktopRuntimePlan({
 }
 
 export function desktopRuntimeInitialInput(): string | null {
-	return getLaunchInstanceEndpointOverride();
+	return getLaunchInstanceEndpointOverride() ?? `${CHANNEL_APP_URLS[BUILD_CHANNEL]}/api`;
 }
 
 async function fetchRuntimePlan(

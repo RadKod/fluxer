@@ -9,6 +9,7 @@
     handle_session_down/1,
     handle_session_reconnect/1,
     handle_presence_update/3,
+    handle_rate_limited_game_clear/2,
     handle_request_guild_members/3,
     handle_request_guild_members_worker_down/1,
     handle_request_worker_down/4,
@@ -219,12 +220,42 @@ handle_presence_update(Data, Pid, State) ->
     case validate_presence_data(Data) of
         {ok, PresenceData} ->
             gen_server:cast(Pid, {presence_update, PresenceData}),
-            {ok, State};
+            {ok, track_game_clear(PresenceData, Pid, State)};
         {error, _} ->
             gateway_handler_encode:close_with_reason(
                 decode_error, <<"Invalid presence payload">>, State
             )
     end.
+
+-spec handle_rate_limited_game_clear(map(), state()) -> ws_result().
+handle_rate_limited_game_clear(
+    #{<<"d">> := #{<<"game_activity">> := null} = Data}, #{session_pid := Pid} = State
+) when is_pid(Pid) ->
+    case validate_presence_data(Data) of
+        {ok, _} ->
+            send_game_clear(Pid, State);
+        {error, _} ->
+            gateway_handler_encode:close_with_reason(
+                decode_error, <<"Invalid presence payload">>, State
+            )
+    end;
+handle_rate_limited_game_clear(_Payload, State) ->
+    {ok, State}.
+
+-spec send_game_clear(pid(), state()) -> ws_result().
+send_game_clear(Pid, #{game_activity_clear_session := Pid} = State) ->
+    {ok, State};
+send_game_clear(Pid, State) ->
+    gen_server:cast(Pid, {game_activity_clear}),
+    {ok, State#{game_activity_clear_session => Pid}}.
+
+-spec track_game_clear(map(), pid(), state()) -> state().
+track_game_clear(#{<<"game_activity">> := null}, Pid, State) ->
+    State#{game_activity_clear_session => Pid};
+track_game_clear(#{<<"game_activity">> := Activity}, _Pid, State) when is_map(Activity) ->
+    State#{game_activity_clear_session => undefined};
+track_game_clear(_, _, State) ->
+    State.
 
 -spec validate_presence_data(map()) -> {ok, map()} | {error, invalid_presence}.
 validate_presence_data(Data) when is_map(Data) ->
@@ -244,10 +275,55 @@ parse_presence_status(StatusRaw, Data) ->
         Mobile = presence_boolean(<<"mobile">>, Data),
         Base = #{status => AdjustedStatus, afk => Afk, mobile => Mobile},
         Result = maybe_add_custom_status(Base, Data),
-        {ok, Result}
+        add_game_activity(Result, Data)
     catch
         error:function_clause -> {error, invalid_presence}
     end.
+
+-spec add_game_activity(map(), map()) -> {ok, map()} | {error, invalid_presence}.
+add_game_activity(Base, #{<<"game_activity">> := null}) ->
+    {ok, Base#{<<"game_activity">> => null}};
+add_game_activity(Base, #{<<"game_activity">> := Activity}) ->
+    case valid_game_activity(Activity) of
+        true -> {ok, Base#{<<"game_activity">> => Activity}};
+        false -> {error, invalid_presence}
+    end;
+add_game_activity(Base, _) ->
+    {ok, Base}.
+
+-spec valid_game_activity(term()) -> boolean().
+valid_game_activity(#{<<"started_at">> := Start} = Activity) when map_size(Activity) =:= 2 ->
+    is_integer(Start) andalso abs(Start) =< 9007199254740991 andalso
+        valid_game_identity(Activity);
+valid_game_activity(_) ->
+    false.
+
+-spec valid_game_identity(map()) -> boolean().
+valid_game_identity(#{<<"game_id">> := Id}) when is_binary(Id), byte_size(Id) =< 48 ->
+    re:run(Id, <<"^[a-z0-9][a-z0-9-]{0,47}\\z">>, [{capture, none}]) =:= match;
+valid_game_identity(#{<<"manual_name">> := Name}) when
+    is_binary(Name), byte_size(Name) > 0, byte_size(Name) =< 256
+->
+    case unicode:characters_to_list(Name, utf8) of
+        Chars when is_list(Chars), length(Chars) =< 64 ->
+            valid_game_characters(Name);
+        _ ->
+            false
+    end;
+valid_game_identity(_) ->
+    false.
+
+-spec valid_game_characters(binary()) -> boolean().
+valid_game_characters(Name) ->
+    re:run(
+        Name,
+        <<
+            "[\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}\\x{034F}\\x{115F}-\\x{1160}"
+            "\\x{17B4}-\\x{17B5}\\x{180B}-\\x{180F}\\x{FE00}-\\x{FE0F}"
+            "\\x{3164}\\x{FFA0}\\x{E0100}-\\x{E01EF}]"
+        >>,
+        [unicode, {capture, none}]
+    ) =:= nomatch.
 
 -spec presence_boolean(binary(), map()) -> boolean().
 presence_boolean(Key, Data) ->

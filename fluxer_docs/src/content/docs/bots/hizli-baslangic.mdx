@@ -1,0 +1,70 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: "Hızlı başlangıç: kendi botunu yap"
+description: Micup'ta bot oluştur, sunucuna ekle ve Python ile ilk mesajını gönder.
+---
+
+Micup hesabın, botu ekleyebileceğin bir sunucu ve Python 3 ile başlayabilirsin. Aşağıdaki örnek seçtiğin metin kanalına bir mesaj gönderip kapanır.
+
+## 1. Botunu oluştur
+
+Micup'ta **Ayarlar › Uygulamalar** bölümünü aç. **Uygulama oluştur** seçeneğiyle bir ad ver; uygulamayla birlikte bot hesabı da oluşturulur. Uygulama ayrıntılarından botun kullanıcı adını ve profilini düzenleyebilirsin.
+
+**Bot token** değerini oluşturulduğu anda güvenli bir yerde sakla: tam token yalnız oluşturma veya yenileme yanıtında verilir. Daha sonra görünen önizleme kimlik doğrulamada kullanılamaz. Tokenı kaybettiysen ya da paylaştıysan **Yeniden oluştur** seçeneğini kullan ve botunda kayıtlı değeri değiştir. Önceki token hemen geçersiz olur. [Token güvenliği ve yenileme](/authentication/#token-formats).
+
+## 2. Sunucuna davet et
+
+Uygulamanın **OAuth2 URL oluşturucu** bölümünde yalnız `bot` kapsamını seç. Bu örnek için **Kanalları görüntüle** (`VIEW_CHANNEL`) ve **Mesaj gönder** (`SEND_MESSAGES`) izinleri yeterlidir. Kanal izinleri botun erişimine izin vermelidir. [İzinler](/http-api/permissions/).
+
+Bu basit davet için OAuth2 kod izni gerektiren seçeneği kapalı tut; yönlendirme adresi gerekmez. Oluşan yetkilendirme bağlantısını kopyala, tarayıcıda aç ve botu eklemeye yetkili olduğun sunucuyu seç. Bağlantı şu biçimdedir; `UYGULAMA_ID` yerine uygulamanın kimliğini koy:
+
+```text
+https://micup.gg/oauth2/authorize?client_id=UYGULAMA_ID&scope=bot&permissions=3072
+```
+
+`3072`, bu iki iznin toplamıdır. Davet bağlantısına token ekleme. Başkalarının da botu eklemesini istiyorsan uygulamanın herkese açık bot ayarını kullan. [Bot daveti ve OAuth2](/http-api/oauth2/).
+
+## 3. İlk mesajını gönder
+
+Hedef metin kanalının bağlantısındaki son kimliği al: `https://micup.gg/channels/SUNUCU_ID/KANAL_ID`. Aşağıdaki kodu `bot.py` olarak kaydet ve terminalde `python bot.py` çalıştır. Token gizli girişle sorulur; kaynak dosyaya yazılmaz.
+
+Örnek, [Mesaj oluşturma](/http-api/messages/#create-message) sözleşmesini kullanır. Önce Micup'ın [keşif yanıtını](/http-api/instance/#get-instance-discovery) okur ve `endpoints.api_public` değerini kullanır; API adresini sabitlemez. İsteklerde [bot kimlik doğrulaması](/authentication/#authorization-schemes) için `Authorization: Bot <token>` gönderir.
+
+```python
+import getpass
+import json
+import urllib.error
+import urllib.request
+
+token = getpass.getpass("Bot token: ").strip()
+channel_id = input("Kanal kimliği: ").strip()
+if not token or not channel_id.isascii() or not channel_id.isdigit():
+    raise SystemExit("Token ve sayısal kanal kimliği gerekli.")
+
+try:
+    with urllib.request.urlopen(
+        "https://micup.gg/.well-known/fluxer", timeout=15
+    ) as response:
+        api = json.load(response)["endpoints"]["api_public"].rstrip("/")
+
+    request = urllib.request.Request(
+        f"{api}/v1/channels/{channel_id}/messages",
+        data=json.dumps({"content": "Merhaba, Micup!"}).encode("utf-8"),
+        headers={
+            "Authorization": f"Bot {token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=15) as response:
+        message = json.load(response)
+    print("Mesaj gönderildi:", message["id"])
+except urllib.error.HTTPError as error:
+    raise SystemExit(f"HTTP {error.code}: tokenı ve kanal izinlerini kontrol et.")
+except urllib.error.URLError:
+    raise SystemExit("Micup'a bağlanılamadı; bağlantını kontrol et.")
+```
+
+Başarılı olduğunda kanalda **Merhaba, Micup!** mesajını görürsün. `401` alırsan tokenı, `403` alırsan botun üyeliğini ve kanal izinlerini kontrol et. `429` alırsan [hız sınırına](/topics/rate-limits/) göre bekle; reddedilen isteği sürekli tekrarlama.
+
+Bu örnek sürekli mesaj dinlemez. `!ping` gibi komutlara tepki veren bir bot için [Gateway bağlantısı](/gateway/overview/), [Identify](/gateway/commands/#identify) ve [Message Create olayı](/gateway/events/#message-create) gerekir. Keşif yanıtındaki `endpoints.gateway` adresini kullan; botların mesajlarını yok sayarak yanıt döngülerini önle.

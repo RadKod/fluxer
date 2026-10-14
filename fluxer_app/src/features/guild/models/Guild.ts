@@ -61,6 +61,8 @@ export class Guild {
 	readonly unavailable: boolean;
 	readonly messageHistoryCutoff: string | null;
 	readonly memberCount: number;
+	readonly premiumTier: number | null;
+	readonly premiumSubscriptionCount: number | null;
 
 	constructor(guild: GuildConstructorInput, options?: GuildRecordOptions) {
 		this.instanceId =
@@ -100,6 +102,12 @@ export class Guild {
 		this.messageHistoryCutoff = this.normalizeMessageHistoryCutoff(guild);
 		this.unavailable = guild.unavailable ?? false;
 		this.memberCount = this.normalizeMemberCount(guild);
+		this.premiumTier = this.normalizeField(guild, 'premium_tier', 'premiumTier');
+		this.premiumSubscriptionCount = this.normalizeField(
+			guild,
+			'premium_subscription_count',
+			'premiumSubscriptionCount',
+		);
 	}
 
 	private normalizeField<T>(guild: GuildConstructorInput, snakeCase: keyof WireGuild, camelCase: keyof Guild): T {
@@ -323,6 +331,8 @@ export class Guild {
 			joined_at: this.joinedAt ?? undefined,
 			unavailable: this.unavailable,
 			member_count: this.memberCount,
+			premium_tier: this.premiumTier ?? undefined,
+			premium_subscription_count: this.premiumSubscriptionCount ?? undefined,
 			roles: Object.values(this.roles).map((role) => role.toJSON()),
 		};
 	}
@@ -366,6 +376,8 @@ export class Guild {
 						: this.messageHistoryCutoff,
 				unavailable: guild.unavailable ?? this.unavailable,
 				memberCount: guild.member_count ?? this.memberCount,
+				premiumTier: guild.premium_tier ?? this.premiumTier,
+				premiumSubscriptionCount: guild.premium_subscription_count ?? this.premiumSubscriptionCount,
 			},
 			{instanceId: this.instanceId},
 		);
@@ -515,6 +527,8 @@ export class Guild {
 		if (this.messageHistoryCutoff !== other.messageHistoryCutoff) return false;
 		if (this.unavailable !== other.unavailable) return false;
 		if (this.memberCount !== other.memberCount) return false;
+		if (this.premiumTier !== other.premiumTier) return false;
+		if (this.premiumSubscriptionCount !== other.premiumSubscriptionCount) return false;
 		if (this.features.size !== other.features.size) return false;
 		for (const feature of this.features) {
 			if (!other.features.has(feature)) return false;

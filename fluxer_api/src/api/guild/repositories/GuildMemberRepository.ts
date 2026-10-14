@@ -8,6 +8,7 @@ import {GUILD_MEMBER_COLUMNS} from '@app/api/database/types/GuildTypes';
 import {IGuildMemberRepository} from '@app/api/guild/repositories/IGuildMemberRepository';
 import {GuildMember} from '@app/api/models/GuildMember';
 import {GuildMembers, GuildMembersByUserId, GuildMembershipMetadata} from '@app/api/Tables';
+import {onUserGuildsChanged} from '@app/api/user/lifecycle/UserLifecycleHooks';
 
 const FETCH_GUILD_MEMBER_BY_GUILD_AND_USER_ID_QUERY = GuildMembers.selectCql({
 	where: [GuildMembers.where.eq('guild_id'), GuildMembers.where.eq('user_id')],
@@ -85,6 +86,7 @@ export class GuildMemberRepository extends IGuildMemberRepository {
 				guild_id: guildId,
 			}),
 		);
+		if (result.previousData === null) await onUserGuildsChanged({userId});
 		return new GuildMember({...data, version: result.finalVersion ?? 1});
 	}
 
@@ -122,6 +124,7 @@ export class GuildMemberRepository extends IGuildMemberRepository {
 			}),
 		);
 		await batch.execute();
+		await onUserGuildsChanged({userId});
 	}
 
 	async getMembershipMetadata(guildId: GuildID, userId: UserID): Promise<GuildMembershipMetadataRow | null> {

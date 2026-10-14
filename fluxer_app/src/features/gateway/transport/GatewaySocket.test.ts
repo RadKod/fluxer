@@ -459,3 +459,87 @@ describe('authentication failure', () => {
 		expect(socket.getState()).toBe(GatewayState.Reconnecting);
 	});
 });
+
+describe('gateway capacity and identify timeout backoff', () => {
+	beforeEach(() => {
+		vi.setSystemTime(1_000_000);
+	});
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	test('capacity closes back off exponentially up to 60 seconds', () => {
+		vi.spyOn(Math, 'random').mockReturnValue(0.5);
+		const socket = createSocket();
+		const reconnect = vi.spyOn(socket, 'connect').mockImplementation(() => {});
+		for (const delay of [1000, 2000, 4000, 8000, 16000, 32000, 60000, 60000]) {
+			reconnect.mockClear();
+			internals(socket).handleSocketClose({code: 4008, reason: 'Gateway at capacity', wasClean: true});
+			vi.advanceTimersByTime(delay - 1);
+			expect(reconnect).not.toHaveBeenCalled();
+			vi.advanceTimersByTime(1);
+			expect(reconnect).toHaveBeenCalledOnce();
+		}
+	});
+
+	test('jitter spreads rejected clients across different retry times', () => {
+		const thirdDelay = (random: number) => {
+			vi.spyOn(Math, 'random').mockReturnValue(random);
+			const socket = createSocket();
+			const reconnectTimes: Array<number> = [];
+			vi.spyOn(socket, 'connect').mockImplementation(() => {
+				reconnectTimes.push(Date.now());
+			});
+			for (let attempt = 0; attempt < 3; attempt++) {
+				const before = Date.now();
+				internals(socket).handleSocketClose({code: 4008, reason: 'Gateway at capacity', wasClean: true});
+				vi.advanceTimersByTime(70_000);
+				if (attempt === 2) return reconnectTimes.at(-1)! - before;
+			}
+			throw new Error('Missing retry');
+		};
+		expect(thirdDelay(0)).toBe(3000);
+		expect(thirdDelay(0.999)).toBe(4998);
+	});
+
+	test.each([4008, 4003])('close %i retries instead of failing authentication', (code) => {
+		const socket = createSocket();
+		const reconnect = vi.spyOn(socket, 'connect').mockImplementation(() => {});
+		internals(socket).handleSocketClose({code, reason: 'Retry later', wasClean: true});
+		expect(socket.getState()).toBe(GatewayState.Reconnecting);
+		vi.advanceTimersByTime(70_000);
+		expect(reconnect).toHaveBeenCalledOnce();
+	});
+});
+
+describe('GatewaySocket game activity presence', () => {
+	function sender() {
+		const socket = createSocket({compression: 'none'});
+		const transport = {readyState: WebSocket.OPEN as number, send: vi.fn()};
+		Object.assign(socket, {socket: transport, connectionState: GatewayState.Connected});
+		return {socket, transport};
+	}
+	test('forwards activity and explicit null while preserving the complete presence', () => {
+		const {socket, transport} = sender();
+		const activity = {game_id: 'valorant', started_at: 1000};
+		expect(socket.updatePresence('dnd', true, false, {text: 'keep'}, activity)).toBe(true);
+		expect(JSON.parse(transport.send.mock.calls[0][0])).toEqual({
+			op: 3,
+			d: {status: 'dnd', afk: true, mobile: false, custom_status: {text: 'keep'}, game_activity: activity},
+		});
+		expect(socket.updatePresence('online', false, false, null, null)).toBe(true);
+		expect(JSON.parse(transport.send.mock.calls[1][0]).d.game_activity).toBeNull();
+	});
+	test('omits absent activity and reports unavailable or failed sends', () => {
+		const {socket, transport} = sender();
+		expect(socket.updatePresence('online')).toBe(true);
+		expect(JSON.parse(transport.send.mock.calls[0][0]).d).toEqual({status: 'online'});
+		transport.send.mockImplementation(() => {
+			throw new Error('transport unavailable');
+		});
+		expect(socket.updatePresence('online', false, false, null, null)).toBe(false);
+		transport.readyState = WebSocket.CLOSED;
+		expect(socket.updatePresence('online', false, false, null, null)).toBe(false);
+		expect(transport.send).toHaveBeenCalledTimes(2);
+	});
+});

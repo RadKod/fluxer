@@ -5,6 +5,7 @@ import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import * as GuildCommands from '@app/features/guild/commands/GuildCommands';
 import styles from '@app/features/guild/components/modals/guild_tabs/GuildModerationTab.module.css';
 import Guilds from '@app/features/guild/state/Guilds';
+import {shouldShowGuildMatureContentSettings} from '@app/features/mature_content/utils/MatureContentSettingsUtils';
 import Permission from '@app/features/permissions/state/Permission';
 import * as ToastCommands from '@app/features/ui/commands/ToastCommands';
 import * as UnsavedChangesCommands from '@app/features/ui/commands/UnsavedChangesCommands';
@@ -400,66 +401,68 @@ const GuildModerationTab: React.FC<{guildId: string}> = observer(({guildId}) => 
 							data-flx="guild.guild-tabs.guild-moderation-tab.controller--2"
 						/>
 					</div>
-					<div className={styles.section} data-flx="guild.guild-tabs.guild-moderation-tab.section--3">
-						<h3 className={styles.sectionTitle} data-flx="guild.guild-tabs.guild-moderation-tab.section-title--3">
-							<Trans>Mature content & content warnings</Trans>
-						</h3>
-						<Controller
-							name="nsfw"
-							control={form.control}
-							render={({field}) => (
-								<CompactComboboxRow<string>
-									label={i18n._(MATURE_CONTENT_DESCRIPTOR)}
-									value={field.value ? 'on' : 'off'}
-									onChange={(value) => field.onChange(value === 'on')}
-									options={matureContentOptions}
-									isSearchable={false}
-									controlWidth="small"
-									disabled={!canManageGuild}
-									dataFlx="guild.guild-tabs.guild-moderation-tab.mature-content-select"
-									data-flx="guild.guild-tabs.guild-moderation-tab.compact-combobox-row.change"
-								/>
-							)}
-							data-flx="guild.guild-tabs.guild-moderation-tab.controller--3"
-						/>
-						<Controller
-							name="content_warning_level"
-							control={form.control}
-							render={({field}) => (
-								<Switch
-									label={i18n._(SHOW_CONTENT_WARNING_SWITCH_LABEL_DESCRIPTOR)}
-									value={field.value === ContentWarningLevel.CONTENT_WARNING}
-									onChange={(value) =>
-										field.onChange(value ? ContentWarningLevel.CONTENT_WARNING : ContentWarningLevel.INHERIT)
-									}
-									disabled={!canManageGuild}
-									data-flx="guild.guild-tabs.guild-moderation-tab.switch.change--2"
-								/>
-							)}
-							data-flx="guild.guild-tabs.guild-moderation-tab.controller--4"
-						/>
-						{form.watch('content_warning_level') === ContentWarningLevel.CONTENT_WARNING && (
+					{shouldShowGuildMatureContentSettings(guild) && (
+						<div className={styles.section} data-flx="guild.guild-tabs.guild-moderation-tab.section--3">
+							<h3 className={styles.sectionTitle} data-flx="guild.guild-tabs.guild-moderation-tab.section-title--3">
+								<Trans>Mature content & content warnings</Trans>
+							</h3>
 							<Controller
-								name="content_warning_text"
+								name="nsfw"
 								control={form.control}
 								render={({field}) => (
-									<Textarea
-										label={i18n._(CUSTOM_CONTENT_WARNING_TEXT_FIELD_LABEL_DESCRIPTOR)}
-										placeholder={i18n._(CUSTOM_CONTENT_WARNING_TEXT_PLACEHOLDER_DESCRIPTOR)}
-										value={field.value ?? ''}
-										onChange={(e) => field.onChange(e.target.value)}
-										maxLength={CONTENT_WARNING_TEXT_MAX_LENGTH}
-										minRows={2}
-										maxRows={4}
-										showCharacterCount={true}
+									<CompactComboboxRow<string>
+										label={i18n._(MATURE_CONTENT_DESCRIPTOR)}
+										value={field.value ? 'on' : 'off'}
+										onChange={(value) => field.onChange(value === 'on')}
+										options={matureContentOptions}
+										isSearchable={false}
+										controlWidth="small"
 										disabled={!canManageGuild}
-										data-flx="guild.guild-tabs.guild-moderation-tab.textarea.change"
+										dataFlx="guild.guild-tabs.guild-moderation-tab.mature-content-select"
+										data-flx="guild.guild-tabs.guild-moderation-tab.compact-combobox-row.change"
 									/>
 								)}
-								data-flx="guild.guild-tabs.guild-moderation-tab.controller--5"
+								data-flx="guild.guild-tabs.guild-moderation-tab.controller--3"
 							/>
-						)}
-					</div>
+							<Controller
+								name="content_warning_level"
+								control={form.control}
+								render={({field}) => (
+									<Switch
+										label={i18n._(SHOW_CONTENT_WARNING_SWITCH_LABEL_DESCRIPTOR)}
+										value={field.value === ContentWarningLevel.CONTENT_WARNING}
+										onChange={(value) =>
+											field.onChange(value ? ContentWarningLevel.CONTENT_WARNING : ContentWarningLevel.INHERIT)
+										}
+										disabled={!canManageGuild}
+										data-flx="guild.guild-tabs.guild-moderation-tab.switch.change--2"
+									/>
+								)}
+								data-flx="guild.guild-tabs.guild-moderation-tab.controller--4"
+							/>
+							{form.watch('content_warning_level') === ContentWarningLevel.CONTENT_WARNING && (
+								<Controller
+									name="content_warning_text"
+									control={form.control}
+									render={({field}) => (
+										<Textarea
+											label={i18n._(CUSTOM_CONTENT_WARNING_TEXT_FIELD_LABEL_DESCRIPTOR)}
+											placeholder={i18n._(CUSTOM_CONTENT_WARNING_TEXT_PLACEHOLDER_DESCRIPTOR)}
+											value={field.value ?? ''}
+											onChange={(e) => field.onChange(e.target.value)}
+											maxLength={CONTENT_WARNING_TEXT_MAX_LENGTH}
+											minRows={2}
+											maxRows={4}
+											showCharacterCount={true}
+											disabled={!canManageGuild}
+											data-flx="guild.guild-tabs.guild-moderation-tab.textarea.change"
+										/>
+									)}
+									data-flx="guild.guild-tabs.guild-moderation-tab.controller--5"
+								/>
+							)}
+						</div>
+					)}
 					{isGuildOwner && (
 						<div className={styles.section} data-flx="guild.guild-tabs.guild-moderation-tab.section--4">
 							<h3 className={styles.sectionTitle} data-flx="guild.guild-tabs.guild-moderation-tab.section-title--4">

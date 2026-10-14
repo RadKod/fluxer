@@ -12,7 +12,7 @@ import {Validator} from '@app/api/Validator';
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
 import {InvalidChannelTypeError} from '@fluxer/errors/src/domains/channel/InvalidChannelTypeError';
 import {UnknownChannelError} from '@fluxer/errors/src/domains/channel/UnknownChannelError';
-import {ListGuildThreadsResponse} from '@fluxer/schema/src/domains/admin/AdminThreadSchemas';
+import {ListGuildThreadsQuery, ListGuildThreadsResponse} from '@fluxer/schema/src/domains/admin/AdminThreadSchemas';
 import {ChannelIdParam, GuildIdParam} from '@fluxer/schema/src/domains/common/CommonParamSchemas';
 
 export function ThreadAdminController(app: HonoApp) {
@@ -21,11 +21,12 @@ export function ThreadAdminController(app: HonoApp) {
 		RateLimitMiddleware(AdminRateLimitConfigs.ADMIN_LOOKUP),
 		requireAdminACL(AdminACLs.GUILD_LOOKUP),
 		Validator('param', GuildIdParam),
+		Validator('query', ListGuildThreadsQuery),
 		OpenAPI({
 			operationId: 'list_admin_guild_threads',
 			summary: 'List guild threads',
 			description:
-				'Lists every thread of a guild, active and archived, whether or not the channel threads experiment is active for it. Requires GUILD_LOOKUP permission.',
+				'Pages through active and archived threads by parent ID then thread ID, whether or not the channel threads experiment is active. Each request reads one parent page. Follow next_cursor even when threads is empty. Requires GUILD_LOOKUP permission.',
 			responseSchema: ListGuildThreadsResponse,
 			statusCode: 200,
 			security: 'adminApiKey',
@@ -34,14 +35,14 @@ export function ThreadAdminController(app: HonoApp) {
 		}),
 		async (ctx) => {
 			const guildId = createGuildID(ctx.req.valid('param').guild_id);
-			const threads = await ctx.get('threadService').lists.listGuildThreadsForAdmin(guildId);
+			const page = await ctx.get('threadService').lists.listGuildThreadsForAdmin(guildId, ctx.req.valid('query'));
 			await recordAdminRead(ctx, {
 				targetType: 'guild',
 				targetId: guildId,
 				action: AdminAuditReadActions.LIST_GUILD_THREADS,
-				metadata: {result_count: threads.length},
+				metadata: {result_count: page.threads.length},
 			});
-			return ctx.json({threads});
+			return ctx.json(page);
 		},
 	);
 	app.delete(

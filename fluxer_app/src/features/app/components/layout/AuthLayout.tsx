@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import i18n, {initI18n, isI18nInitialized} from '@app/app/I18n';
+import {AnalyticsPreferencesLink} from '@app/features/analytics/components/AnalyticsPreferencesLink';
 import styles from '@app/features/app/components/layout/AuthLayout.module.css';
 import {CorruptedInstallationNagbar} from '@app/features/app/components/layout/app_layout/nagbars/CorruptedInstallationNagbar';
 import {NativeDragRegion} from '@app/features/app/components/layout/NativeDragRegion';
@@ -192,6 +193,7 @@ const AuthLayoutContent = observer(function AuthLayoutContent({children}: {child
 									data-flx="app.auth-layout.auth-layout-content.auth-surface-transition"
 								>
 									{children}
+									<AnalyticsPreferencesLink data-flx="app.auth-layout.auth-layout-content.analytics-preferences-link" />
 								</AuthSurfaceTransition>
 							</flx-app-auth-layout-mobile-main>
 						</Scroller>
@@ -282,6 +284,7 @@ const AuthLayoutContent = observer(function AuthLayoutContent({children}: {child
 												data-flx="app.auth-layout.auth-layout-content.auth-card-container"
 											>
 												{children}
+												<AnalyticsPreferencesLink data-flx="app.auth-layout.auth-layout-content.analytics-preferences-link--2" />
 											</AuthCardContainer>
 										</AuthSurfaceTransition>
 									</flx-app-auth-layout-main>

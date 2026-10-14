@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.widget {
+	display: flex;
+	justify-content: center;
+	min-height: 4.0625rem;
+	margin-bottom: 1rem;
+}

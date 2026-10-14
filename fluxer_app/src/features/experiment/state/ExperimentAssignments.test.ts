@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {RestResponse} from '@app/features/platform/types/TransportTypes';
+import {effectiveRoomTheme} from '@app/features/voice_scene/utils/EffectiveRoomTheme';
+import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import type {DomainMigrationAssignmentResponse} from '@fluxer/schema/src/domains/admin/DomainMigrationSchemas';
 import {
 	type ExperimentAssignmentsResponse,
 	INERT_EXPERIMENT_ASSIGNMENTS_RESPONSE,
 	readChannelThreadsAssignment,
 	readDomainMigrationAssignment,
+	readVoiceRoomAssignment,
 } from '@fluxer/schema/src/domains/experiment/ExperimentSchemas';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
@@ -147,6 +150,25 @@ describe('ExperimentAssignments response handling', () => {
 	it('reads no channel_threads assignment when the key is absent', async () => {
 		await adopt(CANARY_ENVELOPE);
 		expect(readChannelThreadsAssignment(ExperimentAssignments.response)).toBeNull();
+	});
+
+	it('adopts other assignments and stays flat when the server default theme is unknown', async () => {
+		const voiceRoom = {rooms: true, games: true, cameras: true, default_room_theme: 'uzay-gemisi'};
+		const envelope = {...CANARY_ENVELOPE, assignments: {...CANARY_ENVELOPE.assignments, voice_room: voiceRoom}};
+		vi.mocked(http.get).mockResolvedValue(reply(200, envelope));
+		ExperimentAssignments.start();
+		await settle();
+		expect(vi.mocked(http.get).mock.calls[0]?.[0]).toBe('/experiments');
+		expect(ExperimentAssignments.response).toEqual(envelope);
+		expect(readVoiceRoomAssignment(ExperimentAssignments.response)).toEqual(voiceRoom);
+		expect(readDomainMigrationAssignment(ExperimentAssignments.response)).toEqual(CANARY_ASSIGNMENT);
+		expect(
+			effectiveRoomTheme(
+				null,
+				readVoiceRoomAssignment(ExperimentAssignments.response).default_room_theme,
+				ChannelTypes.GUILD_VOICE,
+			),
+		).toBeNull();
 	});
 
 	it('requests the shared experiment endpoint', async () => {

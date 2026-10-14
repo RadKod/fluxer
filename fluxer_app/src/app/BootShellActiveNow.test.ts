@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+// Idle and LocalPresence import each other; loading Idle first keeps its timer from calling a half-loaded store.
+import '@app/features/ui/state/Idle';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {FriendsSkeleton} from '@app/features/app/components/skeleton/FriendsSkeleton';

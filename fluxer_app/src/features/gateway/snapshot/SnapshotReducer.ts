@@ -49,6 +49,10 @@ import type {GuildReadyData} from '@app/features/gateway/types/GatewayGuildTypes
 import type {PresenceRecord} from '@app/features/gateway/types/GatewayPresenceTypes';
 import type {VoiceState} from '@app/features/gateway/types/GatewayVoiceTypes';
 import type {RelationshipWire} from '@app/features/relationship/models/Relationship';
+import type {
+	FeedNotificationAckResponse,
+	FeedNotificationStateResponse,
+} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import type {GuildMemberData} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
 import type {Guild as WireGuild} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 
@@ -250,8 +254,23 @@ export class SnapshotReducer {
 		};
 	}
 
+	setFeedNotificationState(
+		emit: SnapshotEmit,
+		state: FeedNotificationStateResponse,
+		ack: FeedNotificationAckResponse | null,
+		localCount = false,
+	): void {
+		this.accountReducer.setFeedNotificationState(emit, state, ack, localCount);
+	}
+
 	applyDispatch(emit: SnapshotEmit, dispatch: SnapshotDispatch): void {
 		switch (dispatch.type) {
+			case 'FEED_NOTIFICATION_CREATE':
+				this.accountReducer.applyFeedNotificationCreate(emit, dispatch.data);
+				return;
+			case 'FEED_NOTIFICATION_ACK':
+				this.accountReducer.applyFeedNotificationAck(emit, dispatch.data);
+				return;
 			case 'GUILD_CREATE':
 			case 'GUILD_SYNC':
 				this.applyGuildCreate(emit, dispatch.data);

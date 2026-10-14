@@ -11,6 +11,7 @@ import {SkeletonLine} from '@app/features/app/components/skeleton/SkeletonLine';
 import {createSkeletonRandomFromKey} from '@app/features/app/components/skeleton/SkeletonSeed';
 import {SkeletonEmphasis, SkeletonRadius} from '@app/features/app/components/skeleton/SkeletonStyle';
 import {shouldShowPremiumFeatures} from '@app/features/premium/utils/PremiumUtils';
+import {isShopPageAvailable} from '@app/features/shop/utils/ShopAvailability';
 import MobileLayout from '@app/features/ui/state/MobileLayout';
 import {flxElementClassName} from '@app/lib/react';
 import {observer} from 'mobx-react-lite';
@@ -20,6 +21,7 @@ const QUICK_SWITCHER_HEIGHT = '1.75rem';
 const FRIENDS_ACTION_LABEL_WIDTH = '4.5rem';
 const PERSONAL_NOTES_ACTION_LABEL_WIDTH = '7.75rem';
 const PREMIUM_ACTION_LABEL_WIDTH = '5.75rem';
+const SHOP_ACTION_LABEL_WIDTH = '4rem';
 const ACTION_ICON_SIZE = '2rem';
 const ACTION_LABEL_HEIGHT = '0.75rem';
 const SECTION_LABEL_WIDTH = '6rem';
@@ -68,6 +70,8 @@ function createDMActionSkeletonSpecs(
 	}
 	if (layout?.premiumVisible ?? (shouldShowPremiumFeatures() && !isMobile)) {
 		specs.push({key: 'premium', labelWidth: PREMIUM_ACTION_LABEL_WIDTH});
+		// Micup: the shop row sits under premium wherever the shop runs, which only happens where premium shows.
+		if (isShopPageAvailable()) specs.push({key: 'shop', labelWidth: SHOP_ACTION_LABEL_WIDTH});
 	}
 	return Object.freeze(specs);
 }

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import * as AnalyticsCommands from '@app/features/analytics/commands/AnalyticsCommands';
 import styles from '@app/features/app/components/layout/app_layout/nagbars/DesktopDownloadNagbar.module.css';
 import {Nagbar} from '@app/features/app/components/layout/Nagbar';
 import {NagbarButton} from '@app/features/app/components/layout/NagbarButton';
@@ -21,6 +22,7 @@ const DESKTOP_APP_DOWNLOAD_MESSAGE_DESCRIPTOR = msg({
 export const DesktopDownloadNagbar = observer(({isMobile}: {isMobile: boolean}) => {
 	const {i18n} = useLingui();
 	const handleDownload = () => {
+		AnalyticsCommands.track('desktop_download_click');
 		openExternalUrl(DESKTOP_DOWNLOAD_URL);
 	};
 	const handleDismiss = () => {

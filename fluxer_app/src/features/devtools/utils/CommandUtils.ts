@@ -17,6 +17,7 @@ import Users from '@app/features/user/state/Users';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import {FLUXERBOT_ID} from '@fluxer/constants/src/AppConstants';
 import {MessageStates, MessageTypes} from '@fluxer/constants/src/ChannelConstants';
+import type {UserPartial} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import * as SnowflakeUtils from '@fluxer/snowflake/src/SnowflakeUtils';
 import type {I18n} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
@@ -206,7 +207,7 @@ export function doesCommandSendCurrentChannelMessage(command: ParsedCommand): bo
 	return command.type === 'me' || command.type === 'spoiler' || command.type === 'tts' || command.type === 'unknown';
 }
 
-export function createSystemMessage(channelId: string, content: string): Message {
+export function createSystemMessage(channelId: string, content: string, author?: UserPartial): Message {
 	const fluxerbotUser = new User({
 		id: FLUXERBOT_ID,
 		username: 'Fluxerbot',
@@ -222,7 +223,7 @@ export function createSystemMessage(channelId: string, content: string): Message
 	return new Message({
 		id: nonce,
 		channel_id: channelId,
-		author: fluxerbotUser.toJSON(),
+		author: author ?? fluxerbotUser.toJSON(),
 		type: MessageTypes.CLIENT_SYSTEM,
 		flags: 0,
 		pinned: false,

@@ -29,14 +29,18 @@ a_dm_read_by_replying_on_desktop_is_not_pushed_when_desktop_disconnects_test() -
         dispatch(PresencePid, message_create, dm_message(?PARTNER_MSG, ?PARTNER)),
         dispatch(PresencePid, message_create, dm_message(?REPLY_MSG, ?USER)),
         ?assertEqual([], push_buffer(PresencePid)),
-        MRef = monitor(process, PresencePid),
         SessionPid ! stop,
+        wait_until_idle(PresencePid, 200),
+        ?assert(is_process_alive(PresencePid)),
+        PushedWhileIdle = pushed_message_ids([]),
+        MRef = monitor(process, PresencePid),
+        PresencePid ! game_activity_idle_expired,
         receive
             {'DOWN', MRef, process, PresencePid, normal} -> ok
         after 2000 ->
             ?assert(false)
         end,
-        pushed_message_ids([])
+        PushedWhileIdle ++ pushed_message_ids([])
     end),
     ?assertEqual([], Pushed).
 
@@ -487,6 +491,17 @@ buffered_message_ids(PresencePid) ->
 sync(Pid) ->
     _ = sys:get_state(Pid),
     ok.
+
+wait_until_idle(_PresencePid, 0) ->
+    ?assert(false);
+wait_until_idle(PresencePid, Attempts) ->
+    case maps:get(sessions, sys:get_state(PresencePid)) of
+        Sessions when map_size(Sessions) =:= 0 ->
+            ok;
+        _ ->
+            timer:sleep(10),
+            wait_until_idle(PresencePid, Attempts - 1)
+    end.
 
 pushed_message_ids(Acc) ->
     receive

@@ -22,7 +22,13 @@ import {
 	WHAT_SHOULD_PEOPLE_CALL_YOU_DESCRIPTOR,
 } from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {useLocation} from '@app/features/platform/components/router/RouterReact';
+import {clearReferralCode, readReferralCode} from '@app/features/referral/utils/ReferralCodeStorage';
 import {Button} from '@app/features/ui/button/Button';
+import {UsernamePicker} from '@app/features/user/components/UsernamePicker';
+import {
+	normalizeUsername,
+	type UsernameSelectionAvailability,
+} from '@app/features/user/hooks/useUsernameSelectionAvailability';
 import type {ThemeType} from '@fluxer/constants/src/UserConstants';
 import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
@@ -56,6 +62,8 @@ export const AuthMinimalRegisterFormCore = observer(function AuthMinimalRegister
 	theme,
 }: AuthMinimalRegisterFormCoreProps) {
 	const {i18n} = useLingui();
+	const selectingUsername = runtimeSnapshot.usernameMigration?.state === 'selecting';
+	const [selectionAvailability, setSelectionAvailability] = useState<UsernameSelectionAvailability>({state: 'idle'});
 	const location = useLocation();
 	const draftKey = `register:${location.pathname}${location.search}`;
 	const registrationUrlCode = useMemo(() => {
@@ -90,6 +98,7 @@ export const AuthMinimalRegisterFormCore = observer(function AuthMinimalRegister
 	const effectiveConsent = legalConsentConfig.requirement ? consent : true;
 	const initialValues: Record<string, string> = {
 		global_name: initialDraft.formValues.global_name ?? '',
+		...(selectingUsername ? {username: initialDraft.formValues.username ?? ''} : {}),
 	};
 	const persistDraft = useCallback(
 		(partialDraft: Partial<AuthRegisterFormDraft>) => {
@@ -133,6 +142,11 @@ export const AuthMinimalRegisterFormCore = observer(function AuthMinimalRegister
 		[persistDraft],
 	);
 	const handleRegisterSubmit = async (values: Record<string, string>) => {
+		const selectedUsername = normalizeUsername(values.username ?? '');
+		if (selectingUsername && !/^[a-z0-9_]{1,32}$/.test(selectedUsername)) {
+			form.setError('username', i18n._(msg`Choose a valid username to continue.`));
+			return false;
+		}
 		if (isPublicRegistrationClosed) {
 			return false;
 		}
@@ -144,14 +158,17 @@ export const AuthMinimalRegisterFormCore = observer(function AuthMinimalRegister
 		const response = await AuthenticationCommands.register(
 			{
 				global_name: values.global_name || undefined,
+				...(selectingUsername ? {username: selectedUsername} : {}),
 				date_of_birth: dateOfBirth,
 				consent: effectiveConsent,
 				invite_code: inviteCode,
 				registration_url_code: registrationUrlCode,
+				referral_code: readReferralCode(),
 				theme,
 			},
 			registrationTarget,
 		);
+		clearReferralCode();
 		if (AuthenticationCommands.isRegistrationPendingApprovalResponse(response)) {
 			clearRegisterFormDraft(draftKey);
 			setPendingApprovalUserId(response.user_id);
@@ -197,11 +214,15 @@ export const AuthMinimalRegisterFormCore = observer(function AuthMinimalRegister
 		return missing;
 	}, [selectedMonth, selectedDay, selectedYear, collectDateOfBirth, i18n.locale]);
 	const globalNameValue = form.getValue('global_name');
+	const usernameValue = form.getValue('username') ?? '';
 	const submitDisabled =
 		isLoading ||
 		form.isSubmitting ||
 		isPublicRegistrationClosed ||
 		pendingApprovalUserId !== null ||
+		(selectingUsername &&
+			(selectionAvailability.state !== 'available' ||
+				selectionAvailability.username !== normalizeUsername(usernameValue))) ||
 		shouldDisableSubmit(effectiveConsent, missingFields);
 	return (
 		<form
@@ -238,6 +259,15 @@ export const AuthMinimalRegisterFormCore = observer(function AuthMinimalRegister
 				error={form.getError('global_name') || fieldErrors?.get('global_name')}
 				data-flx="auth.flow.auth-minimal-register-form-core.form-field.set-drafted-form-value.text"
 			/>
+			{selectingUsername && (
+				<UsernamePicker
+					value={usernameValue}
+					onChange={(value) => setDraftedFormValue('username', value)}
+					target={registrationTarget.http}
+					onAvailabilityChange={setSelectionAvailability}
+					error={form.getError('username') || fieldErrors?.get('username')}
+				/>
+			)}
 			{collectDateOfBirth ? (
 				<DateOfBirthField
 					selectedMonth={selectedMonth}

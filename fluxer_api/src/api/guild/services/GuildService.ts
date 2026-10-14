@@ -36,6 +36,7 @@ import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import type {InviteRepository} from '@app/api/invite/InviteRepository';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getIpInfoService} from '@app/api/middleware/ServiceSingletons';
 import type {GuildAuditLog} from '@app/api/models/GuildAuditLog';
 import type {Webhook} from '@app/api/models/Webhook';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
@@ -90,6 +91,37 @@ interface GuildAuth {
 const GUILD_UPDATE_LOCK_TTL_SECONDS = 10;
 const GUILD_UPDATE_LOCK_RETRY_DELAY_MS = 50;
 const GUILD_UPDATE_LOCK_MAX_WAIT_MS = 5000;
+
+// Micup: every read-modify-write of a guild's features (settings update, boost recompute, admin feature change,
+// discovery approval) runs under this one lock, so none of them writes the features set over another.
+export async function withGuildUpdateLock<T>(
+	cacheService: ICacheService,
+	guildId: GuildID,
+	fn: () => Promise<T>,
+): Promise<T> {
+	const lockKey = `guild:${guildId}:update`;
+	const lockToken = await acquireGuildUpdateLock(cacheService, lockKey);
+	if (!lockToken) {
+		throw new ResourceLockedError();
+	}
+	try {
+		return await fn();
+	} finally {
+		await cacheService.releaseLock(lockKey, lockToken);
+	}
+}
+
+async function acquireGuildUpdateLock(cacheService: ICacheService, lockKey: string): Promise<string | null> {
+	const startTime = Date.now();
+	while (Date.now() - startTime < GUILD_UPDATE_LOCK_MAX_WAIT_MS) {
+		const token = await cacheService.acquireLock(lockKey, GUILD_UPDATE_LOCK_TTL_SECONDS);
+		if (token) {
+			return token;
+		}
+		await new Promise((resolve) => setTimeout(resolve, GUILD_UPDATE_LOCK_RETRY_DELAY_MS));
+	}
+	return null;
+}
 
 export class GuildService {
 	public readonly data: GuildDataService;
@@ -159,6 +191,7 @@ export class GuildService {
 			rateLimitService,
 			guildAuditLogService,
 			limitConfigService,
+			getIpInfoService(),
 		);
 		this.roles = new GuildRoleService(
 			guildRepository,
@@ -176,6 +209,7 @@ export class GuildService {
 			userCacheService,
 			workerService,
 			guildAuditLogService,
+			getIpInfoService(),
 		);
 		this.content = new GuildContentService(
 			guildRepository,
@@ -217,9 +251,10 @@ export class GuildService {
 		auditLogReason?: string | null,
 	): Promise<GuildResponse> {
 		const {guildId, requestCache} = params;
-		const {guild, previousFeatures, updatedFeatures} = await this.withGuildUpdateLock(guildId, requestCache, () =>
-			this.data.updateGuild(params, auditLogReason),
-		);
+		const {guild, previousFeatures, updatedFeatures} = await withGuildUpdateLock(this.cacheService, guildId, () => {
+			requestCache.guilds.delete(guildId);
+			return this.data.updateGuild(params, auditLogReason);
+		});
 		if (
 			previousFeatures.has(GuildFeatures.TEXT_CHANNEL_FLEXIBLE_NAMES) &&
 			!updatedFeatures.has(GuildFeatures.TEXT_CHANNEL_FLEXIBLE_NAMES)
@@ -227,32 +262,6 @@ export class GuildService {
 			await this.channels.sanitizeTextChannelNames({guildId, requestCache});
 		}
 		return guild;
-	}
-
-	private async withGuildUpdateLock<T>(guildId: GuildID, requestCache: RequestCache, fn: () => Promise<T>): Promise<T> {
-		const lockKey = `guild:${guildId}:update`;
-		const lockToken = await this.acquireGuildUpdateLock(lockKey);
-		if (!lockToken) {
-			throw new ResourceLockedError();
-		}
-		try {
-			requestCache.guilds.delete(guildId);
-			return await fn();
-		} finally {
-			await this.cacheService.releaseLock(lockKey, lockToken);
-		}
-	}
-
-	private async acquireGuildUpdateLock(lockKey: string): Promise<string | null> {
-		const startTime = Date.now();
-		while (Date.now() - startTime < GUILD_UPDATE_LOCK_MAX_WAIT_MS) {
-			const token = await this.cacheService.acquireLock(lockKey, GUILD_UPDATE_LOCK_TTL_SECONDS);
-			if (token) {
-				return token;
-			}
-			await new Promise((resolve) => setTimeout(resolve, GUILD_UPDATE_LOCK_RETRY_DELAY_MS));
-		}
-		return null;
 	}
 
 	async getEmojiMetadata(emojiId: EmojiID): Promise<GuildEmojiMetadataResponse> {

@@ -5,11 +5,13 @@ import {SettingsSection} from '@app/features/app/components/dialogs/shared/Setti
 import {SettingsTabContainer} from '@app/features/app/components/dialogs/shared/SettingsTabLayout';
 import {PRODUCT_NAME} from '@app/features/app/config/I18nDisplayConstants';
 import {MacPermissionsSettingsRow} from '@app/features/permissions/system/components/MacPermissionsSettingsRow';
+import TaskbarPin from '@app/features/platform/state/TaskbarPin';
 import {
 	getAutostartStatus,
 	getCachedAutostartStatus,
 	setAutostartEnabled,
 } from '@app/features/platform/utils/Autostart';
+import {Button} from '@app/features/ui/button/Button';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {modal} from '@app/features/ui/commands/ModalCommands';
 import {Switch} from '@app/features/ui/components/form/FormSwitch';
@@ -48,6 +50,10 @@ const RESTART_DESCRIPTOR = msg({
 const LATER_DESCRIPTOR = msg({
 	message: 'Later',
 	comment: 'Short label in the desktop settings tab. Keep it concise.',
+});
+const PIN_TO_TASKBAR_DESCRIPTOR = msg({
+	message: 'Pin to taskbar',
+	comment: 'Desktop settings button that opens the Windows taskbar pin confirmation.',
 });
 const DesktopSettingsTab: React.FC = observer(() => {
 	const {i18n} = useLingui();
@@ -93,6 +99,7 @@ const DesktopSettingsTab: React.FC = observer(() => {
 			setDesktopWindowBehaviorBusy(false);
 		};
 		void initDesktopSettings();
+		void TaskbarPin.refresh();
 		void getDesktopWindowBehaviorPendingRestart().then((pending) => {
 			if (mounted) setTrayChangePendingRestart(pending);
 		});
@@ -159,6 +166,17 @@ const DesktopSettingsTab: React.FC = observer(() => {
 						onChange={handleAutostartChange}
 						data-flx="user.desktop-settings-tab.switch.autostart-change"
 					/>
+				)}
+				{TaskbarPin.canPin && (
+					<Button
+						onClick={() => {
+							void TaskbarPin.requestPin();
+						}}
+						submitting={TaskbarPin.busy}
+						data-flx="user.desktop-settings-tab.pin-to-taskbar"
+					>
+						{i18n._(PIN_TO_TASKBAR_DESCRIPTOR)}
+					</Button>
 				)}
 				{isDesktop() && desktopWindowBehavior?.startMinimized !== undefined && (
 					<Switch

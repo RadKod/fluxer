@@ -192,7 +192,7 @@
 	width: var(--guild-icon-size);
 	flex-shrink: 0;
 	cursor: pointer;
-	border-radius: var(--radius-full);
+	border-radius: 30%;
 	background-color: transparent;
 	background-size: cover;
 	background-position: center;
@@ -236,7 +236,7 @@
 .guildIconSelected.guildIconNoImage {
 	border-radius: 30%;
 	background-color: var(--brand-primary);
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -248,7 +248,7 @@
 	.guildListItem.contextMenuHover .guildIconNoImage {
 		border-radius: 30%;
 		background-color: var(--brand-primary);
-		color: white;
+		color: var(--text-on-brand-primary);
 	}
 }
 
@@ -405,7 +405,7 @@
 
 .fluxerButtonIconSelected {
 	background-color: var(--brand-primary);
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -416,7 +416,7 @@
 		.fluxerButtonIcon:hover,
 	.fluxerButton.contextMenuHover .fluxerButtonIcon {
 		background-color: var(--brand-primary);
-		color: white;
+		color: var(--text-on-brand-primary);
 	}
 }
 
@@ -432,7 +432,7 @@
 	width: var(--guild-icon-size);
 	flex-shrink: 0;
 	cursor: pointer;
-	border-radius: var(--radius-full);
+	border-radius: 30%;
 	border: 0.125rem dashed var(--background-modifier-accent);
 	background-color: transparent;
 	color: var(--text-primary);
@@ -450,6 +450,21 @@
 	.createGuildButton.contextMenuHover .createGuildButtonIcon {
 		border-color: var(--text-primary);
 	}
+}
+
+/* Micup: the selected Discovery/Feed tile is solid white in the coal and dark themes; its dashed ring goes, also
+   under the pointer (.createGuildButton in front outranks the hover rule above) */
+:global(html:is(.theme-coal, .theme-dark)) .createGuildButton [aria-current='page'] > .createGuildButtonIcon {
+	border-color: transparent;
+}
+
+/* Micup: in the coal and dark themes a selected or hovered rail tile is a soft gray lift like the feed's
+   selected row, not solid white, and its glyph stays light. Set on the tiles themselves, so their brand-primary rules and
+   the Discovery/Feed inline styles follow while folders keep the real accent. */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style)))
+:is(.fluxerButtonIcon, .guildIconNoImage, .createGuildButtonIcon) {
+	--brand-primary: color-mix(in srgb, var(--guild-list-foreground) 88%, var(--text-primary) 12%);
+	--text-on-brand-primary: var(--text-primary);
 }
 
 .guildDividerSlot {
@@ -495,9 +510,10 @@
 	width: 100%;
 }
 
+/* Micup: rail glyph smaller (upstream 1.75rem) */
 .messageBubbleIcon {
-	height: 1.75rem;
-	width: 1.75rem;
+	height: 1.375rem;
+	width: 1.375rem;
 	color: currentColor;
 }
 
@@ -505,9 +521,10 @@
 	position: relative;
 }
 
+/* Micup: rail glyph smaller (upstream 1.75rem) */
 .favoritesIcon {
-	height: 1.75rem;
-	width: 1.75rem;
+	height: 1.375rem;
+	width: 1.375rem;
 }
 
 .unavailableContainer {
@@ -522,7 +539,7 @@
 	cursor: pointer;
 	align-items: center;
 	justify-content: center;
-	border-radius: var(--radius-full);
+	border-radius: 30%;
 	border: 0.125rem solid var(--status-danger);
 	background-color: transparent;
 	color: var(--text-primary);
@@ -874,4 +891,25 @@
 :global(.theme-light) .combinePreviewGrid {
 	background-color: color-mix(in srgb, var(--background-secondary) 92%, var(--brand-primary) 8%);
 	outline-color: var(--brand-primary);
+}
+
+/* Micup: lighter side panels in the coal theme */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .userAreaWrapper {
+	--background-secondary: var(--side-panel-background);
+}
+
+/* Micup: user area in the channel list column */
+.guildListScrollerWrapper {
+	--layout-user-area-overlay-height: 0px;
+}
+
+.userAreaWrapper {
+	--user-area-avatar-lead: var(--user-area-padding-x);
+	left: calc(var(--layout-guild-list-width) + var(--outline-frame-border-width));
+	width: var(--layout-sidebar-width);
+}
+
+/* Micup: rounded frame corner by the channel list */
+.outlineFrame {
+	--outline-radius: var(--outline-frame-radius-native);
 }

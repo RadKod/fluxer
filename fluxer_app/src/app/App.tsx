@@ -6,6 +6,7 @@ import * as AccessibilityCommands from '@app/features/accessibility/commands/Acc
 import {NekoSprite} from '@app/features/accessibility/components/NekoSprite';
 import Accessibility from '@app/features/accessibility/state/Accessibility';
 import ScreenReader from '@app/features/accessibility/state/ScreenReader';
+import {AnalyticsConsentBanner} from '@app/features/analytics/components/AnalyticsConsentBanner';
 import {DndContext} from '@app/features/app/components/layout/DndContext';
 import GlobalOverlays from '@app/features/app/components/layout/GlobalOverlays';
 import {NativeTitlebar} from '@app/features/app/components/layout/NativeTitlebar';
@@ -52,6 +53,7 @@ import Popout from '@app/features/ui/state/Popout';
 import {getDesktopWindowBehaviorSettings} from '@app/features/ui/utils/DesktopWindowBehaviorUtils';
 import {attachExternalLinkInterceptor, isDesktop} from '@app/features/ui/utils/NativeUtils';
 import {UNFOCUSED_FULLY_INTERACTIVE_CLASS} from '@app/features/ui/utils/WindowFocusInteractionGuard';
+import {UsernameSelectionGate} from '@app/features/user/components/UsernameSelectionGate';
 import UserSettings from '@app/features/user/state/UserSettings';
 import {IncomingCallManager} from '@app/features/voice/components/IncomingCallManager';
 import {VoiceLiveKitRoot} from '@app/features/voice/components/VoiceLiveKitRoot';
@@ -214,7 +216,7 @@ export const AppWrapper = observer(({children}: AppWrapperProps) => {
 						{isNative && !useSystemTitleBar && !isRootDocumentFullscreen && (
 							<NativeTitlebar platform={platform} data-flx="app.app.app-wrapper.native-titlebar" />
 						)}
-						{children}
+						<UsernameSelectionGate>{children}</UsernameSelectionGate>
 					</FocusRingScope>
 				</div>
 				<div ref={overlayScopeRef} className={styles.overlayScope} data-flx="app.app.app-wrapper.overlay-scope">
@@ -227,6 +229,7 @@ export const AppWrapper = observer(({children}: AppWrapperProps) => {
 						data-flx="app.app.app-wrapper.quick-switcher-portal"
 					/>
 					<GlobalOverlays data-flx="app.app.app-wrapper.global-overlays" />
+					<AnalyticsConsentBanner data-flx="app.app.app-wrapper.analytics-consent-banner" />
 					<IncomingCallManager data-flx="app.app.app-wrapper.incoming-call-manager" />
 				</div>
 			</VoiceLiveKitRoot>

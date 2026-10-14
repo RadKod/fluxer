@@ -21,11 +21,13 @@
 	},
 	"donation_confirmation": {
 		"subject": "Dziękujemy za darowiznę dla {product_name}",
-		"body": "Witaj,\n\nDziękujemy za darowiznę dla {product_name}! Twoja {interval, select,\n  month {cykliczna darowizna}\n  year {cykliczna darowizna}\n  other {jednorazowa darowizna}\n} została {interval, select,\n  month {uruchomiona}\n  year {uruchomiona}\n  other {przetworzona}\n} pomyślnie.\n\nSzczegóły darowizny:\nKwota: {amount} {interval, select,\n  month {miesięcznie}\n  year {rocznie}\n  other {}\n}\n\nStripe wkrótce wyśle Ci osobną wiadomość e-mail z potwierdzeniem i fakturą w formacie PDF. Potwierdzenie zawiera wszystkie szczegóły płatności i może służyć do celów podatkowych.\n\nMożesz przeglądać historię swoich darowizn, pobierać faktury {interval, select,\n  month {oraz zarządzać subskrypcją lub ją anulować}\n  year {oraz zarządzać subskrypcją lub ją anulować}\n  other {oraz zarządzać przyszłymi darowiznami}\n} w dowolnym momencie, korzystając z tego linku:\n\n{manageUrl}\n\nTwoje wsparcie pomaga utrzymać {product_name}. Dziękujemy!\n\n– Zespół {product_name}"
+		"body": "Witaj,\n\nDziękujemy za darowiznę dla {product_name}! Twoja {interval, select,\n  month {cykliczna darowizna}\n  year {cykliczna darowizna}\n  other {jednorazowa darowizna}\n} została {interval, select,\n  month {uruchomiona}\n  year {uruchomiona}\n  other {przetworzona}\n} pomyślnie.\n\nSzczegóły darowizny:\nKwota: {amount} {interval, select,\n  month {miesięcznie}\n  year {rocznie}\n  other {}\n}\n\nStripe wkrótce wyśle Ci osobną wiadomość e-mail z potwierdzeniem i fakturą w formacie PDF. Potwierdzenie zawiera wszystkie szczegóły płatności i może służyć do celów podatkowych.\n\nMożesz przeglądać historię swoich darowizn, pobierać faktury {interval, select,\n  month {oraz zarządzać subskrypcją lub ją anulować}\n  year {oraz zarządzać subskrypcją lub ją anulować}\n  other {oraz zarządzać przyszłymi darowiznami}\n} w dowolnym momencie, korzystając z tego linku:\n\n{manageUrl}\n\nTwoje wsparcie pomaga utrzymać {product_name}. Dziękujemy!\n\n– Zespół {product_name}",
+		"button": "Zarządzaj darowiznami"
 	},
 	"donation_magic_link": {
 		"subject": "Zarządzaj darowiznami dla {product_name}",
-		"body": "Witaj,\n\nKliknij poniższy link, aby przejść do portalu darczyńcy:\n\n{manageUrl}\n\nW portalu możesz zarządzać subskrypcjami, pobierać faktury i przeglądać historię swoich darowizn.\n\nTen link wygasa {expiresAt, date, full} o {expiresAt, time, short}.\n\nJeśli nie prosiłeś o ten link, możesz bezpiecznie zignorować tę wiadomość e-mail.\n\n– Zespół {product_name}"
+		"body": "Witaj,\n\nKliknij poniższy link, aby przejść do portalu darczyńcy:\n\n{manageUrl}\n\nW portalu możesz zarządzać subskrypcjami, pobierać faktury i przeglądać historię swoich darowizn.\n\nTen link wygasa {expiresAt, date, full} o {expiresAt, time, short}.\n\nJeśli nie prosiłeś o ten link, możesz bezpiecznie zignorować tę wiadomość e-mail.\n\n– Zespół {product_name}",
+		"button": "Zarządzaj darowiznami"
 	},
 	"dsa_report_verification": {
 		"subject": "Zweryfikuj adres e-mail na potrzeby zgłoszenia DSA",
@@ -41,11 +43,13 @@
 	},
 	"email_change_revert": {
 		"subject": "Twój adres e-mail w {product_name} został zmieniony",
-		"body": "Witaj {username},\n\nAdres e-mail przypisany do Twojego konta {product_name} został zmieniony na {newEmail}.\n\nJeśli ta zmiana została dokonana przez Ciebie, nie musisz nic robić. Jeśli nie, możesz cofnąć zmianę i zabezpieczyć swoje konto, korzystając z tego linku:\n\n{revertUrl}\n\nSpowoduje to przywrócenie poprzedniego adresu e-mail, wylogowanie ze wszystkich urządzeń, wyłączenie MFA i konieczność ustawienia nowego hasła.\n\n– Zespół ds. bezpieczeństwa {product_name}"
+		"body": "Witaj {username},\n\nAdres e-mail przypisany do Twojego konta {product_name} został zmieniony na {newEmail}.\n\nJeśli ta zmiana została dokonana przez Ciebie, nie musisz nic robić. Jeśli nie, możesz cofnąć zmianę i zabezpieczyć swoje konto, korzystając z tego linku:\n\n{revertUrl}\n\nSpowoduje to przywrócenie poprzedniego adresu e-mail, wylogowanie ze wszystkich urządzeń, wyłączenie MFA i konieczność ustawienia nowego hasła.\n\n– Zespół ds. bezpieczeństwa {product_name}",
+		"button": "Cofnij tę zmianę"
 	},
 	"email_verification": {
 		"subject": "Zweryfikuj adres e-mail w {product_name}",
-		"body": "Witaj {username},\n\nZweryfikuj adres e-mail swojego konta {product_name}, klikając poniższy link:\n\n{verifyUrl}\n\nJeśli nie utworzyłeś konta {product_name}, możesz bezpiecznie zignorować tę wiadomość e-mail.\n\nTen link jest ważny przez 24 godziny.\n\n– Zespół {product_name}"
+		"body": "🎉 Witaj {username},\n\nZweryfikuj adres e-mail swojego konta {product_name}, klikając poniższy link:\n\n{verifyUrl}\n\nJeśli nie utworzyłeś konta {product_name}, możesz bezpiecznie zignorować tę wiadomość e-mail.\n\nTen link jest ważny przez 24 godziny.\n\n– Zespół {product_name}",
+		"button": "Zweryfikuj e-mail"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Usunięto bonusy z wykorzystanego prezentu",
@@ -53,15 +57,18 @@
 	},
 	"harvest_completed": {
 		"subject": "Twój eksport danych z {product_name} jest gotowy do pobrania",
-		"body": "Witaj {username},\n\nTwój eksport danych jest gotowy.\n\nLink do pobrania:\n{downloadUrl}\n\nLiczba uwzględnionych wiadomości: {totalMessages, number}\nRozmiar pliku: {fileSizeMB, number} MB\n\nTen link wygasa {expiresAt, date, full} o {expiresAt, time, short}.\n\nJeśli nie prosiłeś o ten eksport, natychmiast zmień hasło i skontaktuj się z naszym zespołem wsparcia.\n\n– Zespół {product_name}"
+		"body": "Witaj {username},\n\nTwój eksport danych jest gotowy.\n\nLink do pobrania:\n{downloadUrl}\n\nLiczba uwzględnionych wiadomości: {totalMessages, number}\nRozmiar pliku: {fileSizeMB, number} MB\n\nTen link wygasa {expiresAt, date, full} o {expiresAt, time, short}.\n\nJeśli nie prosiłeś o ten eksport, natychmiast zmień hasło i skontaktuj się z naszym zespołem wsparcia.\n\n– Zespół {product_name}",
+		"button": "Pobierz moje dane"
 	},
 	"inactivity_warning": {
 		"subject": "Twoje konto {product_name} zostanie usunięte z powodu braku aktywności",
-		"body": "Witaj {username},\n\nNie odnotowaliśmy żadnej aktywności na Twoim koncie {product_name} od {lastActiveDate, date, full}.\n\nJeśli nie zalogujesz się do {deletionDate, date, full} o {deletionDate, time, short}, Twoje konto zostanie usunięte na stałe z powodu nieaktywności.\n\nZaloguj się tutaj:\n{loginUrl}\n\nJeśli ostatnio korzystałeś z {product_name}, natychmiast skontaktuj się z naszym zespołem wsparcia.\n\n– Zespół {product_name}"
+		"body": "Witaj {username},\n\nNie odnotowaliśmy żadnej aktywności na Twoim koncie {product_name} od {lastActiveDate, date, full}.\n\nJeśli nie zalogujesz się do {deletionDate, date, full} o {deletionDate, time, short}, Twoje konto zostanie usunięte na stałe z powodu nieaktywności.\n\nZaloguj się tutaj:\n{loginUrl}\n\nJeśli ostatnio korzystałeś z {product_name}, natychmiast skontaktuj się z naszym zespołem wsparcia.\n\n– Zespół {product_name}",
+		"button": "Zaloguj się"
 	},
 	"ip_authorization": {
 		"subject": "Autoryzuj logowanie z nowego adresu IP",
-		"body": "Witaj {username},\n\nWykryliśmy próbę logowania do Twojego konta {product_name} z nowego adresu IP:\n\nAdres IP: {ipAddress}\nLokalizacja: {location}\n\nJeśli to Ty, autoryzuj ten adres IP, klikając poniższy link:\n\n{authUrl}\n\nJeśli nie próbowałeś się zalogować, natychmiast zmień hasło.\n\nTen link jest ważny przez 30 minut.\n\n– Zespół {product_name}"
+		"body": "Witaj {username},\n\nWykryliśmy próbę logowania do Twojego konta {product_name} z nowego adresu IP:\n\nAdres IP: {ipAddress}\nLokalizacja: {location}\n\nJeśli to Ty, autoryzuj ten adres IP, klikając poniższy link:\n\n{authUrl}\n\nJeśli nie próbowałeś się zalogować, natychmiast zmień hasło.\n\nTen link jest ważny przez 30 minut.\n\n– Zespół {product_name}",
+		"button": "Autoryzuj to logowanie"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Potwierdź dostęp do kodów zapasowych w {product_name}",
@@ -73,11 +80,17 @@
 	},
 	"password_reset": {
 		"subject": "Zresetuj hasło w {product_name}",
-		"body": "Witaj {username},\n\nPoprosiłeś o zresetowanie hasła w {product_name}. Użyj poniższego linku, aby ustawić nowe hasło:\n\n{resetUrl}\n\nJeśli nie prosiłeś o to, możesz bezpiecznie zignorować tę wiadomość e-mail.\n\nTen link jest ważny przez 1 godzinę.\n\n– Zespół {product_name}"
+		"body": "Witaj {username},\n\nPoprosiłeś o zresetowanie hasła w {product_name}. Użyj poniższego linku, aby ustawić nowe hasło:\n\n{resetUrl}\n\nJeśli nie prosiłeś o to, możesz bezpiecznie zignorować tę wiadomość e-mail.\n\nTen link jest ważny przez 1 godzinę.\n\n– Zespół {product_name}",
+		"button": "Zresetuj hasło"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "Twoja rejestracja w {product_name} została zatwierdzona",
-		"body": "Witaj {username},\n\nDobre wieści: Twoja rejestracja w {product_name} została zatwierdzona.\n\nMożesz teraz zalogować się do aplikacji {product_name} tutaj:\n{channelsUrl}\n\nWitaj w społeczności {product_name}.\n\n– Zespół {product_name}"
+		"body": "🎉 Witaj {username},\n\nDobre wieści: Twoja rejestracja w {product_name} została zatwierdzona.\n\nMożesz teraz zalogować się do aplikacji {product_name} tutaj:\n{channelsUrl}\n\nWitaj w społeczności {product_name}.\n\n– Zespół {product_name}",
+		"button": "Otwórz {product_name}"
 	},
 	"report_resolved": {
 		"subject": "Twoje zgłoszenie w {product_name} zostało rozpatrzone",
@@ -93,6 +106,6 @@
 	},
 	"unban_notification": {
 		"subject": "Zawieszenie Twojego konta {product_name} zostało zniesione",
-		"body": "Witaj {username},\n\nDobre wieści: zawieszenie Twojego konta {product_name} zostało zniesione.\n\n{reason, select,\n  null {}\n  other {Powód: {reason}}\n}\n\nMożesz teraz ponownie się zalogować i kontynuować korzystanie z {product_name} jak zwykle.\n\n– Zespół ds. bezpieczeństwa {product_name}"
+		"body": "🎉 Witaj {username},\n\nDobre wieści: zawieszenie Twojego konta {product_name} zostało zniesione.\n\n{reason, select,\n  null {}\n  other {Powód: {reason}}\n}\n\nMożesz teraz ponownie się zalogować i kontynuować korzystanie z {product_name} jak zwykle.\n\n– Zespół ds. bezpieczeństwa {product_name}"
 	}
 }

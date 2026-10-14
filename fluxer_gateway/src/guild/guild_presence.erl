@@ -382,7 +382,9 @@ handle_user_data_update(UserId, UserData, State) ->
 -spec apply_user_data_update(user_id(), map(), member(), guild_state()) -> guild_state().
 apply_user_data_update(UserId, UserData, Member, State) ->
     CurrentUserData = maps:get(<<"user">>, Member, #{}),
-    NormalizedUserData = user_utils:normalize_user(UserData),
+    NormalizedUserData = user_utils:merge_user(
+        CurrentUserData, user_utils:normalize_user(UserData)
+    ),
     case utils:check_user_data_differs(CurrentUserData, NormalizedUserData) of
         false ->
             State;

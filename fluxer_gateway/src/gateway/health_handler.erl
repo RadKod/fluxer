@@ -41,7 +41,27 @@ readiness_response(Req) ->
         false ->
             {403, <<"FORBIDDEN">>};
         true ->
-            readiness_status(gateway_node_router:is_ready())
+            readiness_status(
+                gateway_node_router:is_ready() andalso cluster_rpc_ready()
+            )
+    end.
+
+-spec cluster_rpc_ready() -> boolean().
+cluster_rpc_ready() ->
+    case fluxer_gateway_env:get(cluster_enabled) of
+        true ->
+            gateway_cluster_membership:rpc_ready() andalso
+                role_subscriptions_ready(fluxer_gateway_sup:current_role()) andalso
+                gateway_cluster_membership:rpc_ready();
+        _ ->
+            true
+    end.
+
+-spec role_subscriptions_ready(atom()) -> boolean().
+role_subscriptions_ready(Role) ->
+    case gateway_nats_rpc:rpc_subjects_for_role(Role) of
+        [] -> true;
+        _ -> gateway_nats_rpc:rpc_ready() andalso gateway_nats_pool:rpc_ready()
     end.
 
 -spec readiness_status(boolean()) -> {200 | 503, binary()}.
@@ -105,6 +125,20 @@ normalize_mode_test() ->
     ?assertEqual(readiness, normalize_mode(readiness)),
     ?assertEqual(drain, normalize_mode(drain)),
     ?assertEqual(undrain, normalize_mode(undrain)).
+
+cluster_rpc_gate_readiness_test() ->
+    Key = {fluxer_gateway, runtime_config},
+    Previous = persistent_term:get(Key, undefined),
+    persistent_term:put(Key, #{cluster_enabled => true}),
+    try
+        ?assertEqual({503, <<"DRAINING">>}, readiness_response(#{peer => {{127, 0, 0, 1}, 1}})),
+        ?assertEqual({403, <<"FORBIDDEN">>}, readiness_response(#{peer => {{10, 0, 0, 1}, 1}}))
+    after
+        case Previous of
+            undefined -> persistent_term:erase(Key);
+            _ -> persistent_term:put(Key, Previous)
+        end
+    end.
 
 readiness_status_test() ->
     ?assertEqual({200, <<"OK">>}, readiness_status(true)),

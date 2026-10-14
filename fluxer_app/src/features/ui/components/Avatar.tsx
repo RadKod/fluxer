@@ -4,6 +4,8 @@ import {getStatusTypeLabel} from '@app/features/app/constants/AppConstants';
 import {useHover} from '@app/features/app/hooks/useHover';
 import {useMergeRefs} from '@app/features/app/hooks/useMergeRefs';
 import {useShouldAnimate} from '@app/features/app/hooks/useShouldAnimate';
+import {AvatarDecorationLayer} from '@app/features/cosmetics/components/AvatarDecorationLayer';
+import {type AvatarDecorationSurface, AvatarUltraLayer} from '@app/features/cosmetics/components/AvatarUltraLayer';
 import GuildMembers from '@app/features/member/state/GuildMembers';
 import * as ImageCacheUtils from '@app/features/messaging/utils/ImageCacheUtils';
 import {BaseAvatar} from '@app/features/ui/components/BaseAvatar';
@@ -35,6 +37,7 @@ interface AvatarProps {
 	guildId?: string | null;
 	mediaSize?: MediaProxyImageSize;
 	animateStatusCutout?: boolean;
+	decorationSurface?: AvatarDecorationSurface;
 	title?: never;
 }
 
@@ -57,6 +60,7 @@ const AvatarComponent = React.forwardRef<HTMLDivElement, AvatarProps>(
 			guildId,
 			mediaSize,
 			animateStatusCutout = false,
+			decorationSurface = 'none',
 			...props
 		},
 		ref,
@@ -165,6 +169,7 @@ const AvatarComponent = React.forwardRef<HTMLDivElement, AvatarProps>(
 		const displayName = NicknameUtils.getNickname(user, guildId ?? null);
 		const avatarRefs = useMemo(() => [ref, hoverRef], [ref, hoverRef]);
 		const mergedRef = useMergeRefs(avatarRefs);
+		const decorationAnimate = isHovering || forceAnimate || forceAnimateIgnoringSettings;
 		return (
 			<BaseAvatar
 				ref={mergedRef}
@@ -185,6 +190,34 @@ const AvatarComponent = React.forwardRef<HTMLDivElement, AvatarProps>(
 				statusLabel={statusLabel}
 				disableStatusTooltip={disableStatusTooltip}
 				animateStatusCutout={animateStatusCutout}
+				underlay={
+					<AvatarUltraLayer
+						ultra={user.avatarUltra}
+						size={size}
+						animate={decorationAnimate}
+						surface={decorationSurface}
+						data-flx="ui.avatar.avatar-component.avatar-ultra-layer"
+					/>
+				}
+				decoration={
+					<>
+						<AvatarDecorationLayer
+							decoration={user.avatarDecoration}
+							size={size}
+							animate={decorationAnimate}
+							data-flx="ui.avatar.avatar-component.avatar-decoration-layer"
+						/>
+						{/* Micup (angel-wings): an ultra decoration with in-front images draws here, over the frame. */}
+						<AvatarUltraLayer
+							ultra={user.avatarUltra}
+							size={size}
+							animate={decorationAnimate}
+							surface={decorationSurface}
+							placement="front"
+							data-flx="ui.avatar.avatar-component.avatar-ultra-front"
+						/>
+					</>
+				}
 				data-flx="ui.avatar.avatar-component.base-avatar"
 				data-flx-user-id={userId}
 				data-flx-user-username={NicknameUtils.formatNameForStreamerMode(user.username)}

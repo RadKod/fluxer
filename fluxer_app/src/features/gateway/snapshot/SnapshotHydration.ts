@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import AccountAccess from '@app/features/auth/state/AccountAccess';
+import {parseAccountStorageKey} from '@app/features/auth/state/AccountStorageKey';
 import AuthSession from '@app/features/auth/state/AuthSession';
 import type {ChannelWire} from '@app/features/channel/models/Channel';
 import Channels from '@app/features/channel/state/Channels';
@@ -37,10 +38,12 @@ import GuildList from '@app/features/guild/state/GuildList';
 import GuildReadState from '@app/features/guild/state/GuildReadState';
 import Guilds from '@app/features/guild/state/Guilds';
 import GuildVerification from '@app/features/guild/state/GuildVerification';
+import FeedNotifications from '@app/features/inbox/state/FeedNotifications';
 import GuildMembers from '@app/features/member/state/GuildMembers';
 import MemberSearch from '@app/features/member/state/MemberSearch';
 import Permission from '@app/features/permissions/state/Permission';
 import SessionManager from '@app/features/platform/state/AuthSession';
+import {getAppStorageScope} from '@app/features/platform/state/PersistentStorage';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import Presence from '@app/features/presence/state/Presence';
 import ReadStates from '@app/features/read_state/state/ReadStates';
@@ -102,6 +105,18 @@ class SnapshotHydrationUnavailableError extends Error {
 }
 
 const logger = new Logger('SnapshotHydration');
+
+export function captureForegroundFeedSnapshot(storageKey: string): void {
+	if (!isDesktopSnapshotAvailable() || storageKey !== getAppStorageScope()) return;
+	const userId = parseAccountStorageKey(storageKey)?.userId;
+	if (userId == null || userId !== FeedNotifications.lastReadUserId) return;
+	SnapshotSync.setFeedNotificationState(
+		storageKey,
+		FeedNotifications.captureSnapshotState(),
+		FeedNotifications.captureSnapshotAck(),
+		FeedNotifications.serverUnread === null,
+	);
+}
 
 const defaultDependencies: SnapshotHydrationDependencies = {
 	readSnapshot: (storageKey) => SnapshotSync.readSnapshot(storageKey),
@@ -243,15 +258,24 @@ function hydrateThreads(parsed: ParsedSnapshot): void {
 	ChannelThreads.handleGatewayReady(guilds);
 }
 
-function applyParsedSnapshot(storageKey: string, parsed: ParsedSnapshot, selfUserId: string): void {
+function applyParsedSnapshot(
+	storageKey: string,
+	parsed: ParsedSnapshot & {readonly userSettings: NonNullable<ParsedSnapshot['userSettings']>},
+	selfUserId: string,
+	settingsEpoch: number,
+): void {
 	runInAction(() => {
 		hydrateAccountMetadata(parsed.accountMetadata);
+		if (storageKey === getAppStorageScope() && parseAccountStorageKey(storageKey)?.userId === selfUserId) {
+			FeedNotifications.handleGatewayReady(parsed.accountMetadata.feedNotifications, selfUserId);
+			if (parsed.accountMetadata.feedNotificationAck)
+				FeedNotifications.handleAck(parsed.accountMetadata.feedNotificationAck);
+			if (parsed.accountMetadata.feedNotificationLocalCount) FeedNotifications.serverUnread = null;
+		}
 		Users.hydrateFromSnapshot(storageKey, parsed.selfUser, parsed.users);
 		Relationships.hydrateFromSnapshot(parsed.relationships);
 		Guilds.hydrateFromSnapshot(parsed.guilds);
-		if (parsed.userSettings != null) {
-			UserSettings.handleGatewayReady(parsed.userSettings);
-		}
+		UserSettings.handleGatewayReady(parsed.userSettings, settingsEpoch);
 		GuildList.handleGatewayReady(parsed.guilds);
 		GuildCount.handleGatewayReady(parsed.guilds);
 		GuildMembers.handleGatewayReady(parsed.guilds);
@@ -300,6 +324,7 @@ export async function runSnapshotScopeHydration(
 	mentionCounts: ReadonlyMap<string, number> | null,
 ): Promise<void> {
 	const epoch = ++hydrationEpoch;
+	const settingsEpoch = UserSettings.getSettingsEpoch();
 	const selfUserId = await dependencies.resolveSelfUserId(storageKey);
 	if (epoch !== hydrationEpoch) {
 		return;
@@ -324,8 +349,13 @@ export async function runSnapshotScopeHydration(
 	if (epoch !== hydrationEpoch) {
 		return;
 	}
+	// Without the account's settings a warm promotion would leave them unhydrated; a cold READY carries them.
+	const userSettings = parseSnapshotSingleton(entries, 'user_settings');
+	if (userSettings == null) {
+		throw new SnapshotHydrationUnavailableError(storageKey);
+	}
 	try {
-		const snapshot = parseSnapshot(entries, selfUserId);
+		const snapshot = {...parseSnapshot(entries, selfUserId), userSettings};
 		const parsed =
 			mentionCounts === null
 				? snapshot
@@ -335,9 +365,9 @@ export async function runSnapshotScopeHydration(
 			if (checkedSelfUser.id !== selfUserId) {
 				throw new Error(`Checked self user ${checkedSelfUser.id} does not match snapshot user ${selfUserId}`);
 			}
-			applyParsedSnapshot(storageKey, {...parsed, selfUser: checkedSelfUser}, selfUserId);
+			applyParsedSnapshot(storageKey, {...parsed, selfUser: checkedSelfUser}, selfUserId, settingsEpoch);
 		} else {
-			applyParsedSnapshot(storageKey, parsed, selfUserId);
+			applyParsedSnapshot(storageKey, parsed, selfUserId, settingsEpoch);
 		}
 	} catch (error) {
 		await dependencies.evictSnapshot(storageKey);

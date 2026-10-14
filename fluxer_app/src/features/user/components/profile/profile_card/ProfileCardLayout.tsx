@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {ProfileEffectOverlay} from '@app/features/cosmetics/components/ProfileEffectOverlay';
 import styles from '@app/features/user/components/profile/profile_card/ProfileCardLayout.module.css';
+import type {CosmeticAssetDataResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
 import {Trans} from '@lingui/react/macro';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
@@ -13,11 +15,12 @@ interface ProfileCardLayoutProps {
 	hoverRef?: (instance: HTMLDivElement | null) => void;
 	className?: string;
 	style?: React.CSSProperties;
+	profileEffect?: CosmeticAssetDataResponse | null;
 	children: React.ReactNode;
 }
 
 export const ProfileCardLayout: React.FC<ProfileCardLayoutProps> = observer(
-	({borderColor, showPreviewLabel = false, hoverRef, className, style, children}) => {
+	({borderColor, showPreviewLabel = false, hoverRef, className, style, profileEffect, children}) => {
 		const cardStyle = useMemo<React.CSSProperties>(() => ({...style, borderColor}), [borderColor, style]);
 		return (
 			<div data-flx="user.profile.profile-card.profile-card-layout.div">
@@ -33,6 +36,10 @@ export const ProfileCardLayout: React.FC<ProfileCardLayoutProps> = observer(
 					data-flx="user.profile.profile-card.profile-card-layout.profile-card"
 				>
 					{children}
+					<ProfileEffectOverlay
+						effect={profileEffect}
+						data-flx="user.profile.profile-card.profile-card-layout.profile-effect-overlay"
+					/>
 				</div>
 			</div>
 		);

@@ -8,6 +8,7 @@ import {
 	type CreateThreadMember,
 	type CreateThreadParams,
 	IThreadRepository,
+	type JoinedThreadIdsPage,
 	type ThreadMemberAddResult,
 	type ThreadMemberRemoveResult,
 	type ThreadMemberSettingsPatch,
@@ -22,6 +23,7 @@ import {
 	fetchMany,
 	fetchManyInChunks,
 	fetchOne,
+	fetchPage,
 	upsertOne,
 } from '@app/api/database/CassandraQueryExecution';
 import {Db, type DbOp, type PreparedQuery} from '@app/api/database/CassandraTypes';
@@ -67,13 +69,23 @@ import {
 } from '@fluxer/constants/src/ThreadConstants';
 import {MaxThreadMembersError} from '@fluxer/errors/src/domains/channel/MaxThreadMembersError';
 import {ThreadAlreadyCreatedForMessageError} from '@fluxer/errors/src/domains/channel/ThreadAlreadyCreatedForMessageError';
+import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
+import {SnowflakeType} from '@fluxer/schema/src/primitives/SchemaPrimitives';
 import {snowflakeToDate} from '@fluxer/snowflake/src/Snowflake';
+import {z} from 'zod';
 
 const STATE_CAS_ATTEMPTS = 3;
 const DANGLING_CREATE_REPAIR_MS = 30_000;
 const ENUMERATION_PAGE_SIZE = 1000;
 const MEMBER_PAGE_SIZE = 1000;
+const ADMIN_THREAD_CURSOR = z
+	.object({
+		guild_id: SnowflakeType,
+		parent_id: SnowflakeType,
+		after: SnowflakeType.nullable(),
+	})
+	.strict();
 
 const FETCH_STATE = ThreadStateTable.select({where: ThreadStateTable.where.eq('thread_id'), limit: 1});
 const FETCH_STATES = ThreadStateTable.select({where: ThreadStateTable.where.in('thread_id', 'thread_ids')});
@@ -594,6 +606,19 @@ export class ThreadRepository extends IThreadRepository {
 		return rows.map((row) => row.thread_id);
 	}
 
+	async listJoinedThreadIdsPage(
+		userId: UserID,
+		guildId: GuildID,
+		opts: {limit: number; cursor?: string | null},
+	): Promise<JoinedThreadIdsPage> {
+		const page = await fetchPage<ThreadMembersByUserRow>(
+			FETCH_JOINED_BY_GUILD.bind({user_id: userId, guild_id: guildId}),
+			undefined,
+			{pageSize: opts.limit, pageState: opts.cursor},
+		);
+		return {threadIds: page.rows.map((row) => row.thread_id), cursor: page.pageState};
+	}
+
 	async repairThreadIndexes(threadIds: Array<ChannelID>): Promise<void> {
 		const states = await this.getStates(threadIds);
 		for (const state of states) {
@@ -904,6 +929,48 @@ export class ThreadRepository extends IThreadRepository {
 			return next;
 		}
 		throw new ServiceUnavailableError();
+	}
+
+	async listGuildThreadIdsPage(
+		guildId: GuildID,
+		opts: {limit: number; cursor?: string | null},
+	): Promise<{threadIds: Array<ChannelID>; cursor: string | null}> {
+		if (!Number.isSafeInteger(opts.limit) || opts.limit < 1 || opts.limit > 100) {
+			throw InputValidationError.create('limit', 'Thread page limit must be between 1 and 100');
+		}
+		let cursor: z.infer<typeof ADMIN_THREAD_CURSOR> | null = null;
+		if (opts.cursor) {
+			try {
+				const decoded = Buffer.from(opts.cursor, 'base64url');
+				if (opts.cursor.length > 256 || decoded.toString('base64url') !== opts.cursor)
+					throw new Error('Invalid cursor');
+				cursor = ADMIN_THREAD_CURSOR.parse(JSON.parse(decoded.toString('utf8')));
+				if (cursor.guild_id !== guildId) throw new Error('Cursor belongs to another guild');
+			} catch {
+				throw InputValidationError.create('cursor', 'Invalid thread page cursor');
+			}
+		}
+		const parents = (await this.channelData.listGuildChannels(guildId, 'maintenance'))
+			.filter((parent) => THREAD_PARENT_CHANNEL_TYPES.has(parent.type))
+			.sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
+		const cursorParentId = cursor?.parent_id;
+		const parentIndex = cursorParentId === undefined ? 0 : parents.findIndex((parent) => parent.id === cursorParentId);
+		if (parentIndex < 0) throw InputValidationError.create('cursor', 'Thread page parent is not in this guild');
+		const parent = parents[parentIndex];
+		if (!parent || !(await isTainted(guildId, {fresh: true}))) return {threadIds: [], cursor: null};
+		const threadIds = await this.listThreadIdsByParent(parent.id, {
+			limit: opts.limit,
+			...(cursor?.after !== null && cursor?.after !== undefined ? {after: cursor.after as ChannelID} : {}),
+		});
+		const nextParent = threadIds.length === opts.limit ? parent : parents[parentIndex + 1];
+		const next = nextParent
+			? {
+					guild_id: guildId.toString(),
+					parent_id: nextParent.id.toString(),
+					after: nextParent === parent ? threadIds[threadIds.length - 1]!.toString() : null,
+				}
+			: null;
+		return {threadIds, cursor: next ? Buffer.from(JSON.stringify(next)).toString('base64url') : null};
 	}
 
 	async listGuildThreadIds(

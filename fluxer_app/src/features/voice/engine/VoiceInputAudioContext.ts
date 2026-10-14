@@ -9,6 +9,8 @@ const VOICE_INPUT_SAMPLE_RATE = 48000;
 const RESUME_GESTURE_EVENTS = ['pointerdown', 'keydown'] as const;
 const IDLE_SUSPEND_DELAY_MS = 500;
 const IDLE_CLOSE_DELAY_MS = 60_000;
+const CLOSE_RESUME_WAIT_MS = 1000;
+const CLOSE_DRAIN_MS = 50;
 const RATE_KEYED_CANDIDATE_RATES = [48000, 44100, 32000, 24000, 16000];
 const INAUDIBLE_OUTPUT_OFFSET = 1e-6;
 
@@ -87,10 +89,20 @@ function closeEntry(entry: VoiceInputContextEntry): void {
 	if (entry.suspendTimer !== null) clearTimeout(entry.suspendTimer);
 	if (entry.closeTimer !== null) clearTimeout(entry.closeTimer);
 	entries.delete(entry);
-	if (entry.context.state === 'closed') return;
-	void entry.context.close().catch((error) => {
-		logger.debug('Failed to close a voice input AudioContext', {error});
-	});
+	const {context} = entry;
+	if (context.state === 'closed') return;
+	// Chromium keeps an AudioWorkletNode, and through it this context, alive after close() until its processor's
+	// process() has returned false. Let processors disposed on this context render once before it closes. A slow
+	// output device can take a while to wake, but resume() never settles for a context that was not allowed to
+	// start, so the wait for it is bounded.
+	const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+	const resumed = context.state === 'suspended' ? context.resume().catch(() => {}) : Promise.resolve();
+	void Promise.race([resumed, delay(CLOSE_RESUME_WAIT_MS)])
+		.then(() => delay(CLOSE_DRAIN_MS))
+		.then(() => context.close())
+		.catch((error) => {
+			logger.debug('Failed to close a voice input AudioContext', {error});
+		});
 }
 
 function readTrackSampleRate(track: MediaStreamTrack | null): number | null {
@@ -158,10 +170,8 @@ function leaseEntry(entry: VoiceInputContextEntry, holdsSource: boolean): VoiceI
 			if (holdsSource) entry.sourceHolders--;
 			if (entry.holders > 0) return;
 			syncEntryResume(entry);
-			if (!entries.has(entry)) {
-				closeEntry(entry);
-				return;
-			}
+			// Unshared and discarded contexts take the idle path too: worklet nodes released with them are
+			// disposed by their pool after a delay, and that dispose must reach a context that can still render.
 			entry.suspendTimer = setTimeout(() => suspendIdleEntry(entry), IDLE_SUSPEND_DELAY_MS);
 		},
 	};
@@ -223,7 +233,6 @@ export function discardVoiceInputContext(context: AudioContext): void {
 	for (const entry of entries) {
 		if (entry.context !== context) continue;
 		entries.delete(entry);
-		if (entry.holders === 0) closeEntry(entry);
 		return;
 	}
 }

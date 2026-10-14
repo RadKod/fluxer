@@ -217,6 +217,11 @@ export class TestEmailService implements ITestEmailService {
 		return this.record(email, 'gift_chargeback_notification');
 	}
 
+	async sendReferralRewardReadyEmail(email: string, username: string, _locale?: string | null): Promise<boolean> {
+		this.logger.info(`Referral reward ready email sent to ${email} for user ${username}`);
+		return this.record(email, 'referral_reward_ready');
+	}
+
 	async sendReportResolvedEmail(
 		email: string,
 		username: string,

@@ -48,7 +48,8 @@ pub fn account_tab(
             @if can_create_reset_link {
                 (password_reset_link_card(base, user, csrf_token, options.password_reset_link))
             }
-            (edit_account_card(base, user, csrf_token, username_sign_in))
+            (edit_account_card(base, user, csrf_token, username_sign_in,
+                acl::has_permission(options.admin_acls, acl::USER_UPDATE_USERNAME)))
             (sessions_card(config, sessions))
             (quick_actions_card(base, user, csrf_token, username_sign_in, can_revoke_recovery_kit))
             (clear_fields_card(base, user, csrf_token))
@@ -128,15 +129,26 @@ fn edit_account_card(
     user: &AdminUser,
     csrf_token: &str,
     username_sign_in: bool,
+    can_update_username: bool,
 ) -> Markup {
     html! {
         (card_with_header("Edit Account Information", html! {
             div class="grid gap-4 md:grid-cols-2" {
+                @if can_update_username {
                 (post_form(base, &user.id, "change_username", "account",
                     "Are you sure you want to change this user\\'s username?", html! {
                     p class="text-sm font-medium text-neutral-700" { "Change Username:" }
                     input type="text" name="username" placeholder="New username"
                         required class=(INPUT_CLS);
+                    label for="change-username-reason" class="text-sm font-medium text-neutral-700" { "Reason (audit log)" }
+                    input type="text" id="change-username-reason" name="audit_log_reason" required maxlength="512"
+                        placeholder="Reason for changing this username" class=(INPUT_CLS);
+                    @if !user.bot {
+                        p class="text-xs text-neutral-500" {
+                            "Assignments are unavailable during migration preparation. After migration starts, "
+                            "the name must be available, unbanned, and outside its release waiting period."
+                        }
+                    }
                     @if !crate::utils::user_tag::unique_usernames() || user.bot {
                         input type="text" name="discriminator"
                             placeholder="Discriminator (optional)" inputmode="numeric" pattern="[0-9]{1,4}" maxlength="4"
@@ -146,6 +158,7 @@ fn edit_account_card(
                         (submit_button("Change Username"))
                     }))
                 }, csrf_token))
+                }
                 @if !username_sign_in {
                     (post_form(base, &user.id, "change_email", "account",
                         "Are you sure you want to change this user\\'s email address?", html! {

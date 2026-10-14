@@ -45,6 +45,8 @@ vi.mock('@app/features/channel/state/Channels', () => ({
 	},
 }));
 
+// Idle and LocalPresence import each other; loading Idle first keeps its timer from calling a half-loaded store.
+await import('@app/features/ui/state/Idle');
 const {AccountScopedWork, AccountScopedWorkTransitionReason} = await import(
 	'@app/features/platform/state/AccountScopedWork'
 );

@@ -7,6 +7,7 @@ import path from 'node:path';
 import {describe, test} from 'node:test';
 import {fileURLToPath} from 'node:url';
 import vm from 'node:vm';
+import {loadMainModule} from './WinShellTestHarness.mjs';
 
 const require = createRequire(import.meta.url);
 const esbuild = require('esbuild');
@@ -77,6 +78,14 @@ function loadWindowsShortcuts(initialFiles) {
 	};
 
 	const module = {exports: {}};
+	const sharedWinShell = loadMainModule(
+		'WinShell',
+		{
+			'node:module': {createRequire: () => () => winShell},
+			'electron-log': {warn() {}},
+		},
+		{platform: 'win32'},
+	);
 	const context = vm.createContext({
 		module,
 		exports: module.exports,
@@ -84,6 +93,7 @@ function loadWindowsShortcuts(initialFiles) {
 		Buffer,
 		process: {platform: 'win32', execPath: CURRENT_EXE, env: {APPDATA, USERPROFILE}},
 		require: (specifier) => {
+			if (specifier === '@electron/main/WinShell') return sharedWinShell;
 			if (specifier === 'node:fs') {
 				return {default: fakeFs, ...fakeFs};
 			}

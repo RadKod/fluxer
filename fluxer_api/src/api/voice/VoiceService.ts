@@ -7,6 +7,7 @@ import type {ListParticipantsResult} from '@app/api/infrastructure/ILiveKitServi
 import type {LiveKitService} from '@app/api/infrastructure/LiveKitService';
 import type {PinnedRoomServer, VoiceRoomStore} from '@app/api/infrastructure/VoiceRoomStore';
 import {Logger} from '@app/api/Logger';
+import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
 import type {VoiceAccessContext, VoiceAvailabilityService} from '@app/api/voice/VoiceAvailabilityService';
 import type {VoiceRegionAvailability, VoiceServerRecord} from '@app/api/voice/VoiceModel';
@@ -83,6 +84,7 @@ export class VoiceService {
 		if (!user) {
 			throw new UnknownUserError();
 		}
+		getUsernameSelectionGate().assertMayAct(user, 'voice_join');
 		const channel = await this.channelRepository.findUnique(channelId);
 		if (!channel) {
 			throw new UnknownChannelError();

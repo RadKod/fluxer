@@ -12,6 +12,10 @@
 	position: relative;
 	overflow: hidden;
 	contain: strict;
+	/* The filler waits above the loaded history while the reader sits at the bottom: off-screen, its shimmer would
+	   repaint the message list every frame. Skipped content neither styles nor paints; the size comes from the inline
+	   height, so nothing shifts when it scrolls into view. */
+	content-visibility: auto;
 	transition: none;
 	padding-top: 1rem;
 	padding-bottom: var(--message-filler-padding-bottom);

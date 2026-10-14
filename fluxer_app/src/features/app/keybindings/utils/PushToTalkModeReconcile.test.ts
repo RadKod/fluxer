@@ -153,6 +153,8 @@ function emit(status: GlobalShortcutsStatus): void {
 
 describe('push-to-talk mode reconcile', () => {
 	beforeAll(async () => {
+		// Idle and LocalPresence import each other; loading Idle first keeps its timer from calling a half-loaded store.
+		await import('@app/features/ui/state/Idle');
 		const {default: AppStorage} = await import('@app/features/platform/state/PersistentStorage');
 		AppStorage.setJSON(PORTAL_ASSIGNED_ACTIONS_KEY, ['voice_push_to_talk']);
 		const {default: GlobalShortcuts} = await import('@app/features/input/state/GlobalShortcuts');

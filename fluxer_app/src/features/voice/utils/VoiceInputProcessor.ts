@@ -21,17 +21,26 @@ import {
 	type VoiceNoiseSuppressionBackend,
 } from '@app/features/voice/utils/noise_suppression/NoiseSuppressionBackends';
 import {createNoiseSuppressionWorkletNode} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionChain';
-import {readCaptureNoiseSuppressionBackend} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime';
+import {
+	readCaptureNoiseSuppressionBackend,
+	readEffectiveNoiseSuppression,
+	readNoiseSuppressionStrength,
+	resolveRuntimeVoiceProcessing,
+} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime';
 import type {NoiseSuppressionWorkletBackend} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionWorkletTypes';
 import {
 	createVoiceActivityGate,
+	createVoiceSoftGain,
 	loadVoiceActivityGate,
+	loadVoiceSoftGain,
 	type VoiceActivityGateConfig,
 	type VoiceInputLevel,
 } from '@app/features/voice/utils/VoiceActivityGate';
+import {VOICE_PIPELINE_TUNING, type VoicePipelineTuning} from '@app/features/voice/utils/VoicePipelineTuning';
 import {
 	getActiveInputDeviceLabel,
 	resolveVoiceProcessingFromStateForDeviceLabel,
+	type VoiceProcessingMode,
 } from '@app/features/voice/utils/VoiceProcessingProfile';
 import {inputVoiceVolumePercentToGain} from '@app/features/voice/utils/VoiceVolumeUtils';
 import type {ProcessorOptions, Track, TrackProcessor} from 'livekit-client';
@@ -48,7 +57,11 @@ const PAUSE_WAIT_MAX_MS = 3000;
 export type VoiceInputChannelCount = 1 | 2;
 
 export interface VoiceInputConfig {
+	pipelineV2Enabled?: boolean;
+	pipelineV2Tuning?: VoicePipelineTuning;
+	processingMode: VoiceProcessingMode;
 	backend: VoiceNoiseSuppressionBackend;
+	suppressionStrength: number;
 	inputVolumePercent: number;
 	gateEnabled: boolean;
 	gateAuto: boolean;
@@ -56,20 +69,22 @@ export interface VoiceInputConfig {
 }
 
 export function isVoiceActivityGateEnabled(): boolean {
-	const profile = resolveVoiceProcessingFromStateForDeviceLabel(
-		VoiceSettings,
-		getActiveInputDeviceLabel(VoiceSettings),
+	const profile = resolveRuntimeVoiceProcessing(
+		resolveVoiceProcessingFromStateForDeviceLabel(VoiceSettings, getActiveInputDeviceLabel(VoiceSettings)),
 	);
 	return Keybind.transmitMode === 'voice_activity' && profile.mode !== 'studio' && !profile.stereoCapture;
 }
 
 export function resolveVoiceInputConfig(): VoiceInputConfig {
-	const profile = resolveVoiceProcessingFromStateForDeviceLabel(
-		VoiceSettings,
-		getActiveInputDeviceLabel(VoiceSettings),
+	const profile = resolveRuntimeVoiceProcessing(
+		resolveVoiceProcessingFromStateForDeviceLabel(VoiceSettings, getActiveInputDeviceLabel(VoiceSettings)),
 	);
 	return {
+		pipelineV2Enabled: profile.pipelineV2Enabled,
+		pipelineV2Tuning: readEffectiveNoiseSuppression(48000).pipelineV2Tuning,
+		processingMode: profile.mode,
 		backend: profile.noiseSuppressionBackend,
+		suppressionStrength: readNoiseSuppressionStrength(profile),
 		inputVolumePercent: VoiceSettings.getInputVolume(),
 		gateEnabled: isVoiceActivityGateEnabled(),
 		gateAuto: profile.mode !== 'custom' || VoiceSettings.getVadAutoSensitivity(),
@@ -82,6 +97,8 @@ type SuppressionSlotKey = 'passthrough' | 'deep_filter' | NoiseSuppressionWorkle
 interface SuppressionSlot {
 	readonly key: SuppressionSlotKey;
 	readonly output: GainNode;
+	readonly suppressionStrength?: number;
+	configureHealth?(enabled: boolean): void;
 	dispose(): void;
 }
 
@@ -112,9 +129,16 @@ export class VoiceInputGraph {
 	private readonly gate: GainNode;
 	private readonly volume: GainNode;
 	private readonly softClip: {input: GainNode; output: WaveShaperNode} | null;
+	private readonly observerSink: GainNode;
+	private directInput: boolean | null = null;
 	private gateNode: AudioWorkletNode | null = null;
 	private gateLoad: Promise<void> | null = null;
 	private gateFailed = false;
+	private pipelineV2Load: Promise<void> | null = null;
+	private pipelineV2Failed = false;
+	private pipelineV2Routed = false;
+	private highpass: BiquadFilterNode | null = null;
+	private softGain: AudioWorkletNode | null = null;
 	private level: VoiceInputLevel | null = null;
 	private configureRun: Promise<void> | null = null;
 	private configureDirty = false;
@@ -137,10 +161,11 @@ export class VoiceInputGraph {
 		this.gate = context.createGain();
 		this.volume = context.createGain();
 		this.softClip = createVoiceSoftClipNode(context);
+		this.output = context.createGain();
+		this.observerSink = context.createGain();
+		this.observerSink.gain.value = 0;
+		this.observerSink.connect(this.output);
 		this.slot.output.connect(this.gate);
-		this.gate.connect(this.volume);
-		if (this.softClip) this.volume.connect(this.softClip.input);
-		this.output = this.softClip?.output ?? this.volume;
 		const config = resolveConfig();
 		this.gate.gain.value = 1;
 		this.volume.gain.value = inputVoiceVolumePercentToGain(config.inputVolumePercent);
@@ -171,6 +196,7 @@ export class VoiceInputGraph {
 		this.source = source;
 		this.sourceTrack = track;
 		this.gateNode?.port.postMessage({type: 'reset'});
+		this.softGain?.port.postMessage({type: 'reset'});
 		this.onRuntimeChange();
 	}
 
@@ -214,9 +240,19 @@ export class VoiceInputGraph {
 				this.configureDirty = false;
 				const config = this.resolveConfig();
 				this.applyParameters(config);
+				if (this.isPipelineV2Enabled(config) && !this.pipelineV2Failed) {
+					this.pipelineV2Load ??= this.installPipelineV2();
+					await this.pipelineV2Load;
+					if (this.disposed) return;
+					this.applyParameters(this.resolveConfig());
+				}
 				const key = this.resolveSlotKey(config.backend);
-				if (key === this.slot.key) continue;
-				const slot = this.reviveRetiringSlot(key) ?? (await this.buildSlot(key));
+				if (
+					key === this.slot.key &&
+					(this.slot.suppressionStrength === undefined || this.slot.suppressionStrength === config.suppressionStrength)
+				)
+					continue;
+				const slot = this.reviveRetiringSlot(key, config.suppressionStrength) ?? (await this.buildSlot(key));
 				if (!slot) continue;
 				if (this.disposed) {
 					slot.dispose();
@@ -243,20 +279,122 @@ export class VoiceInputGraph {
 	}
 
 	private gateConfig(config: VoiceInputConfig): VoiceActivityGateConfig {
+		const pipelineV2Enabled = this.isPipelineV2Enabled(config) && !this.pipelineV2Failed;
 		return {
+			pipelineV2Enabled,
 			apply: config.gateEnabled && this.channelCount === 1,
 			auto: config.gateAuto,
 			manualThresholdRms: config.gateThresholdRms,
+			...(pipelineV2Enabled ? {tuning: config.pipelineV2Tuning ?? VOICE_PIPELINE_TUNING} : {}),
 		};
 	}
 
+	private isPipelineV2Enabled(config: VoiceInputConfig): boolean {
+		return config.pipelineV2Enabled === true && this.channelCount === 1 && config.processingMode !== 'studio';
+	}
+
+	private async installPipelineV2(): Promise<void> {
+		try {
+			await this.loadGate();
+			if (this.disposed || !this.gateNode) return;
+			await loadVoiceActivityGate(this.context, this.buildController.signal, true);
+			await loadVoiceSoftGain(this.context, this.buildController.signal);
+			if (this.disposed || !this.gateNode) return;
+			this.highpass = this.context.createBiquadFilter();
+			this.highpass.type = 'highpass';
+			this.highpass.frequency.value = VOICE_PIPELINE_TUNING.highpassHz;
+			this.highpass.Q.value = VOICE_PIPELINE_TUNING.highpassQ;
+			this.softGain = createVoiceSoftGain(
+				this.context,
+				() => this.failPipelineV2(),
+				(processingMs, audioMs) => this.reportProcessingHealth('gain', processingMs, audioMs),
+				this.resolveConfig().pipelineV2Tuning,
+			);
+		} catch (error) {
+			if (this.disposed || this.buildController.signal.aborted) return;
+			logger.warn('Voice pipeline could not start; keeping the previous input chain', {error});
+			this.failPipelineV2();
+		}
+	}
+
+	private failPipelineV2(): void {
+		if (this.disposed || this.pipelineV2Failed) return;
+		this.pipelineV2Failed = true;
+		logger.warn('Voice pipeline failed; restoring the previous input chain');
+		this.applyParameters(this.resolveConfig());
+		this.destroyPipelineV2();
+		NoiseSuppressionAvailability.markPipelineV2Failed();
+	}
+
+	private destroyPipelineV2(): void {
+		this.highpass?.disconnect();
+		this.highpass = null;
+		if (!this.softGain) return;
+		this.softGain.onprocessorerror = null;
+		this.softGain.port.onmessage = null;
+		this.softGain.port.postMessage({type: 'dispose'});
+		this.softGain.port.close();
+		this.softGain.disconnect();
+		this.softGain = null;
+	}
+
 	private applyParameters(config: VoiceInputConfig): void {
+		this.routeOutput(config);
+		this.slot.configureHealth?.(this.isPipelineV2Enabled(config) && !this.pipelineV2Failed);
+		this.configureProcessingHealth();
 		this.volume.gain.setTargetAtTime(
 			inputVoiceVolumePercentToGain(config.inputVolumePercent),
 			this.context.currentTime,
 			VOLUME_TIME_CONSTANT,
 		);
 		if (this.gateNode) this.gateNode.port.postMessage({type: 'config', ...this.gateConfig(config)});
+		if (this.pipelineV2Routed)
+			this.softGain?.port.postMessage({type: 'config', tuning: config.pipelineV2Tuning ?? VOICE_PIPELINE_TUNING});
+	}
+
+	private routeOutput(config: VoiceInputConfig): void {
+		const directInput = config.processingMode === 'studio';
+		const pipelineV2 =
+			this.isPipelineV2Enabled(config) &&
+			!this.pipelineV2Failed &&
+			!!this.gateNode &&
+			!!this.highpass &&
+			!!this.softGain;
+		if (directInput === this.directInput && pipelineV2 === this.pipelineV2Routed) return;
+		this.directInput = directInput;
+		this.pipelineV2Routed = pipelineV2;
+		disconnectEdge(this.inputMix, this.volume);
+		disconnectEdge(this.gate, this.volume);
+		if (this.gateNode) {
+			disconnectEdge(this.gateNode, this.volume);
+			disconnectEdge(this.gateNode, this.observerSink);
+			if (this.highpass) disconnectEdge(this.gateNode, this.highpass);
+			if (this.softGain) disconnectEdge(this.gateNode, this.softGain);
+		}
+		this.highpass?.disconnect();
+		this.softGain?.disconnect();
+		this.softGain?.port.postMessage({type: 'configure-health', enabled: pipelineV2});
+		this.volume.disconnect();
+		this.softClip?.output.disconnect();
+		if (directInput) {
+			// Studio keeps the selected gain, but sends neither the gate's lookahead
+			// nor the soft clip. The worklet remains a silent speaking observer.
+			this.inputMix.connect(this.volume);
+			this.volume.connect(this.output);
+			this.gateNode?.connect(this.observerSink);
+		} else {
+			if (pipelineV2) {
+				this.gateNode!.connect(this.highpass!);
+				this.highpass!.connect(this.softGain!);
+				this.gateNode!.connect(this.softGain!, 1, 1);
+				this.softGain!.port.postMessage({type: 'reset'});
+				this.softGain!.connect(this.volume);
+			} else (this.gateNode ?? this.gate).connect(this.volume);
+			if (this.softClip) {
+				this.volume.connect(this.softClip.input);
+				this.softClip.output.connect(this.output);
+			} else this.volume.connect(this.output);
+		}
 	}
 
 	private async installGate(): Promise<void> {
@@ -271,6 +409,8 @@ export class VoiceInputGraph {
 					if (this.disposed) return;
 					this.level = level;
 					reportVoiceInputLevel(this.context, level.contextTime);
+					if (level.processingMs !== undefined && level.audioMs !== undefined)
+						this.reportProcessingHealth('gate', level.processingMs, level.audioMs);
 					this.onLevel(level);
 				},
 				() => this.failGate(),
@@ -278,7 +418,8 @@ export class VoiceInputGraph {
 			this.gateNode = node;
 			disconnectEdge(this.gate, this.volume);
 			this.gate.connect(node);
-			node.connect(this.volume);
+			this.directInput = null;
+			this.routeOutput(this.resolveConfig());
 			this.gate.gain.value = 1;
 		} catch (error) {
 			if (this.disposed || this.buildController.signal.aborted) return;
@@ -293,7 +434,8 @@ export class VoiceInputGraph {
 		discardVoiceInputContext(this.context);
 		this.destroyGate();
 		this.gate.disconnect();
-		this.gate.connect(this.volume);
+		this.directInput = null;
+		this.routeOutput(this.resolveConfig());
 		this.gate.gain.value = 1;
 		this.onGateFailure();
 	}
@@ -308,6 +450,37 @@ export class VoiceInputGraph {
 		node.port.close();
 		node.disconnect();
 		this.gateNode = null;
+	}
+
+	private processingBackend(): VoiceNoiseSuppressionBackend {
+		if (this.slot.key !== 'passthrough') return this.slot.key;
+		return this.sourceTrack ? readCaptureNoiseSuppressionBackend(this.sourceTrack) : 'standard';
+	}
+
+	private configureProcessingHealth(reset = false): void {
+		const sources: Array<'filter' | 'gate' | 'gain'> = [];
+		if (this.isPipelineV2Enabled(this.resolveConfig()) && !this.pipelineV2Failed) {
+			if (this.slot.key === 'deep_filter' || this.slot.key === 'rnnoise') sources.push('filter');
+			if (this.gateNode) sources.push('gate');
+			if (this.pipelineV2Routed) sources.push('gain');
+		}
+		NoiseSuppressionAvailability.configureProcessingHealth(this, this.processingBackend(), sources, reset);
+	}
+
+	private reportProcessingHealth(source: 'filter' | 'gate' | 'gain', processingMs: number, audioMs: number): void {
+		if (this.disposed) return;
+		this.configureProcessingHealth();
+		const backend = this.processingBackend();
+		const overBudget = NoiseSuppressionAvailability.reportProcessingHealth(
+			backend,
+			processingMs,
+			audioMs,
+			this.isPipelineV2Enabled(this.resolveConfig()) && !this.pipelineV2Failed,
+			source,
+			this,
+		);
+		if (overBudget && backend !== 'deep_filter' && backend !== 'rnnoise')
+			this.gateNode?.port.postMessage({type: 'disable-vad'});
 	}
 
 	private createPassthroughSlot(initialGain: number): SuppressionSlot {
@@ -350,8 +523,19 @@ export class VoiceInputGraph {
 
 	private async buildDeepFilterSlot(): Promise<SuppressionSlot> {
 		const signal = this.buildController.signal;
-		if (this.source && !hasIdleDeepFilterNode(this.context)) await this.waitForSpeechPause(signal);
-		const lease = await acquireDeepFilterNode(this.context, signal, () => void this.configure());
+		const suppressionStrength = this.resolveConfig().suppressionStrength;
+		if (this.source && !hasIdleDeepFilterNode(this.context, suppressionStrength)) await this.waitForSpeechPause(signal);
+		let slot: SuppressionSlot | null = null;
+		const lease = await acquireDeepFilterNode(
+			this.context,
+			signal,
+			() => void this.configure(),
+			suppressionStrength,
+			() => this.isPipelineV2Enabled(this.resolveConfig()),
+			(processingMs, audioMs) => {
+				if (slot === this.slot) this.reportProcessingHealth('filter', processingMs, audioMs);
+			},
+		);
 		const output = this.context.createGain();
 		output.gain.value = 0;
 		const dispose = () => {
@@ -368,12 +552,20 @@ export class VoiceInputGraph {
 			throw new DOMException('Voice input graph disposed', 'AbortError');
 		}
 		if (lease.builtOverLiveSource) this.recreateSource();
-		return {key: 'deep_filter', output, dispose};
+		slot = {key: 'deep_filter', output, dispose, suppressionStrength};
+		return slot;
 	}
 
 	private async buildWorkletSlot(backend: NoiseSuppressionWorkletBackend): Promise<SuppressionSlot> {
+		const suppressionStrength = this.resolveConfig().suppressionStrength;
+		let slot: SuppressionSlot | null = null;
 		const worklet = await createNoiseSuppressionWorkletNode(this.context, backend, {
 			signal: this.buildController.signal,
+			suppressionStrength,
+			pipelineV2Enabled: false,
+			onHealth: (processingMs, audioMs) => {
+				if (slot === this.slot) this.reportProcessingHealth('filter', processingMs, audioMs);
+			},
 			onRuntimeFailure: (error) => {
 				logger.warn('Noise suppression worklet failed while running; using browser noise suppression', {
 					backend,
@@ -392,8 +584,10 @@ export class VoiceInputGraph {
 		output.gain.value = 0;
 		this.inputMix.connect(worklet.node);
 		worklet.node.connect(output);
-		return {
+		slot = {
 			key: backend,
+			configureHealth: (enabled) => worklet.node.port.postMessage({type: 'configure-health', enabled}),
+			suppressionStrength: backend === 'gate' ? suppressionStrength : undefined,
 			output,
 			dispose: () => {
 				disconnectEdge(this.inputMix, worklet.node);
@@ -401,16 +595,21 @@ export class VoiceInputGraph {
 				worklet.dispose();
 			},
 		};
+		return slot;
 	}
 
 	private swapSlot(next: SuppressionSlot): void {
 		const previous = this.slot;
+		previous.configureHealth?.(false);
 		next.output.connect(this.gate);
 		rampGain(next.output.gain, 1, this.context);
 		rampGain(previous.output.gain, 0, this.context);
 		this.slot = next;
+		next.configureHealth?.(this.isPipelineV2Enabled(this.resolveConfig()) && !this.pipelineV2Failed);
+		this.configureProcessingHealth(true);
 		this.onRuntimeChange();
 		this.gateNode?.port.postMessage({type: 'reset'});
+		this.softGain?.port.postMessage({type: 'reset'});
 		this.retireSlot(previous);
 	}
 
@@ -424,9 +623,10 @@ export class VoiceInputGraph {
 		);
 	}
 
-	private reviveRetiringSlot(key: SuppressionSlotKey): SuppressionSlot | null {
+	private reviveRetiringSlot(key: SuppressionSlotKey, strength: number): SuppressionSlot | null {
 		for (const [slot, timer] of this.retiringSlots) {
-			if (slot.key !== key) continue;
+			if (slot.key !== key || (slot.suppressionStrength !== undefined && slot.suppressionStrength !== strength))
+				continue;
 			clearTimeout(timer);
 			this.retiringSlots.delete(slot);
 			return slot;
@@ -439,6 +639,7 @@ export class VoiceInputGraph {
 		this.disposed = true;
 		this.buildController.abort(new DOMException('Voice input graph disposed', 'AbortError'));
 		this.destroyGate();
+		this.destroyPipelineV2();
 		for (const [slot, timer] of this.retiringSlots) {
 			clearTimeout(timer);
 			slot.dispose();
@@ -449,6 +650,8 @@ export class VoiceInputGraph {
 		this.inputMix.disconnect();
 		this.gate.disconnect();
 		this.volume.disconnect();
+		this.observerSink.disconnect();
+		this.output.disconnect();
 		this.softClip?.input.disconnect();
 		this.softClip?.output.disconnect();
 	}

@@ -6,6 +6,7 @@ import {getNativeLocaleIdentifier} from '@app/features/platform/types/Platform';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {loadLazyModule} from '@app/features/platform/utils/LazyModuleLoader';
 import {noteLocale} from '@app/features/theme/fonts/ScriptFontLoader';
+import type {InstanceAppPublic} from '@fluxer/instance_bootstrap/src/Types';
 import {type I18n, i18n, type Messages} from '@lingui/core';
 import {createAtom, runInAction} from 'mobx';
 
@@ -178,6 +179,22 @@ function detectBrowserLocale(): LocaleCode | null {
 	return null;
 }
 
+let instanceLocalization: InstanceAppPublic['localization'];
+let savedLocaleAtInitialization: string | null = null;
+let instanceDefaultApplied = false;
+function detectInstanceDefaultLocale(): LocaleCode | null {
+	const localization = instanceLocalization;
+	const instanceLocale = localization?.default_locale ? resolveLocale(localization.default_locale) : null;
+	if (!instanceLocale) {
+		return null;
+	}
+	const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+	if (timeZone && localization?.default_locale_time_zones?.includes(timeZone)) {
+		return instanceLocale;
+	}
+	return detectBrowserLocale() ?? instanceLocale;
+}
+
 function detectPreferredLocale(forceLocale?: string): LocaleCode {
 	if (forceLocale) {
 		return normalizeLocale(forceLocale);
@@ -185,6 +202,10 @@ function detectPreferredLocale(forceLocale?: string): LocaleCode {
 	const storedLocale = AppStorage.getItem('locale');
 	if (storedLocale) {
 		return normalizeLocale(storedLocale);
+	}
+	const instanceLocale = detectInstanceDefaultLocale();
+	if (instanceLocale) {
+		return instanceLocale;
 	}
 	const nativeLocale = getNativeLocaleIdentifier();
 	if (nativeLocale) {
@@ -241,6 +262,10 @@ export async function loadLocaleCatalog(localeCode: string): Promise<LocaleCode>
 	return normalized;
 }
 
+export function getRequestedLocale(): LocaleCode | null {
+	return requestedLocale;
+}
+
 export function applyLocaleChange(localeCode: string): LocaleCode {
 	const normalized = normalizeLocale(localeCode);
 	requestedLocale = normalized;
@@ -264,6 +289,7 @@ export function isI18nInitialized(): boolean {
 
 export async function initI18n(forceLocale?: string) {
 	if (!initPromise) {
+		savedLocaleAtInitialization = AppStorage.getItem('locale');
 		initPromise = (async () => {
 			try {
 				const localeToLoad = detectPreferredLocale(forceLocale);
@@ -277,6 +303,15 @@ export async function initI18n(forceLocale?: string) {
 		})();
 	}
 	return initPromise;
+}
+
+export async function applyInstanceDefaultLocale(localization: InstanceAppPublic['localization']): Promise<void> {
+	instanceLocalization = localization;
+	if (!initialized || savedLocaleAtInitialization !== null || instanceDefaultApplied) return;
+	const locale = detectInstanceDefaultLocale();
+	if (locale === null) return;
+	instanceDefaultApplied = true;
+	await loadLocaleCatalog(locale);
 }
 
 const localeAtom = createAtom('i18nLocale');

@@ -204,6 +204,20 @@ pub(super) fn gif_resize_dims(
     })
 }
 
+// A source stands in for its own downscale only while it is at most 1.5x the target on each
+// edge (9/4 of the area): past that a client would decode far more pixels per frame than the
+// request asked for, whatever the source saves in bytes.
+pub(crate) fn source_can_stand_in_for_resize(
+    sniffed: mime::SniffInfo,
+    options: &ImageOptions,
+) -> bool {
+    gif_resize_dims(sniffed, options).is_none_or(|dims| {
+        let source = u64::from(sniffed.width) * u64::from(sniffed.height);
+        let target = u64::from(dims.width.unsigned_abs()) * u64::from(dims.height.unsigned_abs());
+        source * 4 <= target * 9
+    })
+}
+
 pub(super) fn resize_animated_gif_with_ffmpeg(
     input: &[u8],
     dims: GifResizeDims,

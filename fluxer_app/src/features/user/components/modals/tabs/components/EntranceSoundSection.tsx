@@ -77,7 +77,7 @@ const USED_FOR_ALL_DIRECT_MESSAGE_CALLS_DESCRIPTOR = msg({
 });
 const CUSTOM_ENTRANCE_SOUNDS_PREMIUM_DESCRIPTOR = msg({
 	message: 'Custom entrance sounds with {premiumProductName}',
-	comment: 'Premium upsell title in entrance sound settings.',
+	comment: 'Plus upsell title in entrance sound settings.',
 });
 const USED_ONLY_IN_THIS_COMMUNITY_DESCRIPTOR = msg({
 	message: 'Used only in this community.',

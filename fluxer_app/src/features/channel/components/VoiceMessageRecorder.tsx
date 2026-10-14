@@ -204,6 +204,8 @@ export default function VoiceMessageRecorder({channelId, disabled, tooltipAnchor
 	const lastWaveformUpdateRef = useRef(0);
 	const previousWaveformBarsRef = useRef<Array<number>>(new Array(VOICE_MESSAGE_WAVEFORM_BAR_COUNT).fill(0));
 	const isMountedRef = useRef(true);
+	const recordingStartPendingRef = useRef(false);
+	const recordingStartGenerationRef = useRef(0);
 	const clearTooltipTimer = useCallback(() => {
 		if (tooltipTimerRef.current) {
 			clearTimeout(tooltipTimerRef.current);
@@ -221,6 +223,15 @@ export default function VoiceMessageRecorder({channelId, disabled, tooltipAnchor
 		},
 		[clearTooltipTimer],
 	);
+	const cancelPendingRecordingStart = useCallback(() => {
+		if (!recordingStartPendingRef.current) return;
+		recordingStartGenerationRef.current++;
+		recordingStartPendingRef.current = false;
+		pointerIdRef.current = null;
+		pointerStartRef.current = null;
+		clearTooltipTimer();
+		setTooltipText(null);
+	}, [clearTooltipTimer]);
 	const clearRecordingTimer = useCallback(() => {
 		if (recordingTimerRef.current) {
 			clearInterval(recordingTimerRef.current);
@@ -261,8 +272,13 @@ export default function VoiceMessageRecorder({channelId, disabled, tooltipAnchor
 	const cleanupResources = useCallback(() => {
 		clearRecordingTimer();
 		stopWaveformUpdates();
-		releaseStream();
+		const recorder = mediaRecorderRef.current;
 		mediaRecorderRef.current = null;
+		if (recorder && recorder.state !== 'inactive') {
+			stopActionRef.current = 'discard';
+			recorder.stop();
+		}
+		releaseStream();
 		chunksRef.current = [];
 	}, [clearRecordingTimer, releaseStream, stopWaveformUpdates]);
 	const updateWaveform = useCallback(() => {
@@ -303,12 +319,12 @@ export default function VoiceMessageRecorder({channelId, disabled, tooltipAnchor
 				(window as typeof window & {webkitAudioContext?: typeof AudioContext}).webkitAudioContext;
 			if (!contextClass) return;
 			const audioContext = new contextClass();
+			audioContextRef.current = audioContext;
 			const source = audioContext.createMediaStreamSource(stream);
 			const analyser = audioContext.createAnalyser();
 			analyser.fftSize = 256;
 			analyser.smoothingTimeConstant = 0.8;
 			source.connect(analyser);
-			audioContextRef.current = audioContext;
 			analyserRef.current = analyser;
 			waveformDataRef.current = new Uint8Array(analyser.frequencyBinCount);
 			lastWaveformUpdateRef.current = 0;
@@ -390,7 +406,7 @@ export default function VoiceMessageRecorder({channelId, disabled, tooltipAnchor
 		[channelId, cleanupResources, resetState, showTooltip, i18n],
 	);
 	const startRecording = useCallback(async () => {
-		if (isRecording || isSending || disabled) return;
+		if (isRecording || isSending || disabled || recordingStartPendingRef.current) return;
 		if (typeof navigator.mediaDevices === 'undefined' || typeof MediaRecorder === 'undefined') {
 			showTooltip(i18n._(VOICE_RECORDING_IS_NOT_SUPPORTED_IN_THIS_BROWSER_DESCRIPTOR));
 			return;
@@ -401,18 +417,28 @@ export default function VoiceMessageRecorder({channelId, disabled, tooltipAnchor
 			return;
 		}
 		let acquiredStream: MediaStream | null = null;
+		const generation = ++recordingStartGenerationRef.current;
+		recordingStartPendingRef.current = true;
 		try {
 			const stream = await navigator.mediaDevices.getUserMedia({audio: true});
 			acquiredStream = stream;
+			if (!isMountedRef.current || generation !== recordingStartGenerationRef.current) {
+				stream.getTracks().forEach((track) => track.stop());
+				return;
+			}
 			const recorder = new MediaRecorder(stream, {mimeType: preferredType});
 			chunksRef.current = [];
-			recorder.addEventListener('dataavailable', handleDataAvailable);
+			recorder.addEventListener('dataavailable', (event) => {
+				if (mediaRecorderRef.current !== recorder) return;
+				handleDataAvailable(event);
+			});
 			recorder.addEventListener('stop', () => {
+				if (mediaRecorderRef.current !== recorder) return;
 				handleRecorderStop(recorder.mimeType);
 			});
-			recorder.start();
 			mediaRecorderRef.current = recorder;
 			streamRef.current = stream;
+			recorder.start();
 			setIsRecording(true);
 			setIsLocked(false);
 			setIsSending(false);
@@ -426,19 +452,27 @@ export default function VoiceMessageRecorder({channelId, disabled, tooltipAnchor
 			recordingTimerRef.current = window.setInterval(updateRecordingDuration, VOICE_MESSAGE_RECORDING_TICK_MS);
 			startWaveform(stream);
 		} catch (error) {
+			if (generation !== recordingStartGenerationRef.current) return;
 			logger.error('Failed to start voice recording', error);
 			if (acquiredStream !== null && streamRef.current !== acquiredStream) {
 				acquiredStream.getTracks().forEach((track) => track.stop());
 			}
+			cleanupResources();
+			if (!isMountedRef.current) return;
+			resetState();
 			showTooltip(i18n._(UNABLE_TO_START_RECORDING_PLEASE_ALLOW_MICROPHONE_ACCESS_DESCRIPTOR));
+		} finally {
+			if (generation === recordingStartGenerationRef.current) recordingStartPendingRef.current = false;
 		}
 	}, [
 		clearRecordingTimer,
+		cleanupResources,
 		disabled,
 		handleDataAvailable,
 		handleRecorderStop,
 		isRecording,
 		isSending,
+		resetState,
 		showTooltip,
 		startWaveform,
 		updateRecordingDuration,
@@ -476,7 +510,7 @@ export default function VoiceMessageRecorder({channelId, disabled, tooltipAnchor
 	);
 	const handlePointerDown = useCallback(
 		(event: React.PointerEvent<HTMLButtonElement>) => {
-			if (disabled || isSending || isRecording) return;
+			if (disabled || isSending || isRecording || recordingStartPendingRef.current) return;
 			event.preventDefault();
 			pointerIdRef.current = event.pointerId;
 			pointerStartRef.current = {x: event.clientX, y: event.clientY};
@@ -501,6 +535,10 @@ export default function VoiceMessageRecorder({channelId, disabled, tooltipAnchor
 				event.currentTarget.releasePointerCapture(event.pointerId);
 			} catch {}
 			pointerIdRef.current = null;
+			if (recordingStartPendingRef.current) {
+				cancelPendingRecordingStart();
+				return;
+			}
 			updateLockPreview(event.clientX, event.clientY);
 			if (!isRecording || isSending) {
 				pointerStartRef.current = null;
@@ -521,19 +559,23 @@ export default function VoiceMessageRecorder({channelId, disabled, tooltipAnchor
 			const shouldSend = durationMs >= VOICE_MESSAGE_MIN_SEND_DURATION_MS;
 			stopRecording(shouldSend ? 'send' : 'discard');
 		},
-		[getDurationMs, isLocked, isRecording, isSending, stopRecording, updateLockPreview],
+		[cancelPendingRecordingStart, getDurationMs, isLocked, isRecording, isSending, stopRecording, updateLockPreview],
 	);
 	const handlePointerCancel = useCallback(
 		(event: React.PointerEvent<HTMLButtonElement>) => {
 			if (pointerIdRef.current !== event.pointerId) return;
 			pointerIdRef.current = null;
 			pointerStartRef.current = null;
+			if (recordingStartPendingRef.current) {
+				cancelPendingRecordingStart();
+				return;
+			}
 			if (!isRecording || isSending || isLocked) return;
 			const durationMs = getDurationMs();
 			const shouldSend = durationMs >= VOICE_MESSAGE_MIN_SEND_DURATION_MS;
 			stopRecording(shouldSend ? 'send' : 'discard');
 		},
-		[getDurationMs, isLocked, isRecording, isSending, stopRecording],
+		[cancelPendingRecordingStart, getDurationMs, isLocked, isRecording, isSending, stopRecording],
 	);
 	const handleDiscardClick = useCallback(() => {
 		if (!isRecording || isSending) return;
@@ -549,23 +591,33 @@ export default function VoiceMessageRecorder({channelId, disabled, tooltipAnchor
 		isMountedRef.current = true;
 		return () => {
 			isMountedRef.current = false;
+			recordingStartGenerationRef.current++;
+			recordingStartPendingRef.current = false;
 			clearTooltipTimer();
-			clearRecordingTimer();
-			stopWaveformUpdates();
-			releaseStream();
-			if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-				stopActionRef.current = 'discard';
-				mediaRecorderRef.current.stop();
-			}
-			mediaRecorderRef.current = null;
+			cleanupResources();
 		};
-	}, [clearRecordingTimer, clearTooltipTimer, releaseStream, stopWaveformUpdates]);
+	}, [cleanupResources, clearTooltipTimer]);
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') cancelPendingRecordingStart();
+		};
+		const handleVisibilityChange = () => {
+			if (document.hidden) cancelPendingRecordingStart();
+		};
+		window.addEventListener('keydown', handleKeyDown);
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+		return () => {
+			window.removeEventListener('keydown', handleKeyDown);
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	}, [cancelPendingRecordingStart]);
 	useEffect(() => {
 		if (!disabled) return;
+		cancelPendingRecordingStart();
 		if (isRecording && !isSending) {
 			stopRecording('discard');
 		}
-	}, [disabled, isRecording, isSending, stopRecording]);
+	}, [cancelPendingRecordingStart, disabled, isRecording, isSending, stopRecording]);
 	useEffect(() => {
 		const anchorElement = tooltipAnchorRef?.current ?? buttonWrapperRef.current;
 		tooltipRefs.setReference(anchorElement);

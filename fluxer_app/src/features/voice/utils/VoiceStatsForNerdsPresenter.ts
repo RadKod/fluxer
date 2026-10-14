@@ -69,6 +69,7 @@ export interface StatsForNerdsData {
 	};
 	audio: {
 		echoCancellation: boolean;
+		noiseSuppression: boolean;
 		autoGainControl: boolean;
 		noiseSuppressionBackend: VoiceNoiseSuppressionBackend;
 		requestedNoiseSuppressionBackend: VoiceNoiseSuppressionBackend;

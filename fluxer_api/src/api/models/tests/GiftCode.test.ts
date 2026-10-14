@@ -154,6 +154,23 @@ describe('GiftCode', () => {
 			);
 			expect(giftCode.durationMonths).toBe(24);
 		});
+		test('accepts an item code row without a duration and ignores any duration on it', () => {
+			const blank = new GiftCode(
+				createGiftCodeRow({cosmetic_item_id: 7n, duration_type: null, duration_quantity: null, duration_months: null}),
+			);
+			expect([blank.cosmeticItemId, blank.durationType, blank.durationQuantity, blank.durationMonths]).toEqual([
+				7n,
+				null,
+				null,
+				null,
+			]);
+			// A zero duration would read as lifetime premium; on an item code it is not read at all.
+			const zero = new GiftCode(
+				createGiftCodeRow({cosmetic_item_id: 7n, duration_type: 'months', duration_quantity: 0, duration_months: 0}),
+			);
+			expect([zero.durationType, zero.durationQuantity, zero.durationMonths]).toEqual([null, null, null]);
+			expect(zero.toRow()).toMatchObject({cosmetic_item_id: 7n, duration_type: null, duration_quantity: null});
+		});
 	});
 	describe('toRow round-trip', () => {
 		test.each<{

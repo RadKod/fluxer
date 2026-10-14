@@ -53,7 +53,7 @@ pub fn settings_tab(user: &AdminUser) -> Markup {
                     (detail_row("User Flags (raw)", html! {
                         span class="text-xs" { (user.flags) }
                     }))
-                    (detail_row("Premium Flags (raw)", html! {
+                    (detail_row("Plus Flags (raw)", html! {
                         span class="text-xs" { (user.premium_flags) }
                     }))
                     (detail_row("Active flag bits", html! {

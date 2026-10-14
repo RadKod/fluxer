@@ -1,0 +1,163 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.board {
+	--okey-turn: #e8ba3e;
+	--okey-felt: #2e5b45;
+	--okey-felt-dark: #23473a;
+
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-3);
+	width: min(100%, 36rem);
+	min-width: 0;
+	margin-inline: auto;
+}
+
+/* The three other players, read left to right as they sit: previous, across, next. */
+.opponents {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: var(--spacing-2);
+}
+
+.seat {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	min-width: 0;
+	padding: 0.375rem 0.5rem;
+	border-radius: var(--radius-md);
+	background-color: var(--background-tertiary);
+	transition: box-shadow 160ms ease;
+}
+
+.seat[data-turn='true'] {
+	box-shadow: inset 0 0 0 0.125rem var(--okey-turn);
+}
+
+.seat[data-connected='false'] {
+	opacity: 0.55;
+}
+
+.seatHead,
+.seatBody {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.375rem;
+	min-width: 0;
+	min-height: 1.75rem;
+}
+
+.seatName {
+	overflow: hidden;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--text-primary);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.count {
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+	color: var(--text-primary-muted);
+	white-space: nowrap;
+}
+
+.deadline {
+	position: relative;
+	display: grid;
+	flex-shrink: 0;
+	place-items: center;
+	width: 1.75rem;
+	height: 1.75rem;
+}
+
+.ring {
+	position: absolute;
+	inset: 0;
+	transform: rotate(-90deg);
+}
+
+.ringTrack,
+.ringFill {
+	fill: none;
+	stroke-width: 3;
+}
+
+.ringTrack {
+	stroke: color-mix(in srgb, var(--text-primary-muted) 25%, transparent);
+}
+
+.ringFill {
+	stroke: var(--okey-turn);
+	stroke-dasharray: 1;
+	stroke-linecap: round;
+	transition: stroke-dashoffset 1s linear;
+}
+
+.deadline[data-low='true'] .ringFill {
+	stroke: var(--status-danger);
+}
+
+.seconds {
+	font-size: 0.6875rem;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	color: var(--text-primary);
+}
+
+/* The felt between the players: the indicator and what is left of the pile. */
+.center {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--spacing-4);
+	padding: var(--spacing-2) var(--spacing-3);
+	border-radius: var(--radius-md);
+	background: linear-gradient(180deg, var(--okey-felt) 0%, var(--okey-felt-dark) 100%);
+	box-shadow: inset 0 0.0625rem 0.25rem rgb(0 0 0 / 0.3);
+}
+
+.indicator {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.centerLabel,
+.pile {
+	font-size: 0.75rem;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	color: rgb(255 255 255 / 0.78);
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: var(--spacing-2);
+}
+
+.withTile {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+}
+
+.hint,
+.error {
+	margin: 0;
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+}
+
+.hint {
+	color: var(--text-primary-muted);
+}
+
+.error {
+	color: var(--status-danger);
+}

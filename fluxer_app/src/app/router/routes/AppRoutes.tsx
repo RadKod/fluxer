@@ -20,7 +20,6 @@ import {DMLayout} from '@app/features/channel/components/direct_message/DirectMe
 import Channels from '@app/features/channel/state/Channels';
 import GatewayConnection from '@app/features/gateway/transport/GatewayConnection';
 import SelectedChannel from '@app/features/navigation/state/SelectedChannel';
-import {navigateToLinkedUserProfile} from '@app/features/navigation/utils/DeepLinkUtils';
 import {getDirectMessagesFallbackPath} from '@app/features/navigation/utils/DefaultLandingUtils';
 import {
 	createDefaultLoadableComponent,
@@ -31,6 +30,8 @@ import {notFound} from '@app/features/platform/components/router/RouterErrors';
 import {useParams} from '@app/features/platform/components/router/RouterReact';
 import {Redirect} from '@app/features/platform/components/router/RouterTypes';
 import SessionManager from '@app/features/platform/state/AuthSession';
+import {isPremiumPageAvailable} from '@app/features/premium/utils/PremiumUtils';
+import {isShopPageAvailable} from '@app/features/shop/utils/ShopAvailability';
 import ThreadGuilds from '@app/features/threads/state/ThreadGuilds';
 import MobileLayout from '@app/features/ui/state/MobileLayout';
 import {ME} from '@fluxer/constants/src/AppConstants';
@@ -72,14 +73,29 @@ const NotificationsPage = createNamedLoadableComponent<AppRouteComponentProps>({
 	displayName: 'NotificationsPage',
 	load: async () => (await import('@app/features/notification/components/pages/NotificationsPage')).NotificationsPage,
 });
-const PlutoniumPageLayout = createNamedLoadableComponent<AppRouteComponentProps>({
-	displayName: 'PlutoniumPageLayout',
-	load: async () =>
-		(await import('@app/features/premium/components/plutonium_page/PlutoniumPageLayout')).PlutoniumPageLayout,
-});
 const PremiumCallbackPage = createDefaultLoadableComponent<AppRouteComponentProps>({
 	displayName: 'PremiumCallbackPage',
 	load: () => import('@app/features/premium/components/pages/PremiumCallbackPage'),
+});
+const FeedPage = createNamedLoadableComponent<AppRouteComponentProps>({
+	displayName: 'FeedPage',
+	load: async () => (await import('@app/features/feed/components/pages/FeedPage')).FeedPage,
+});
+const PremiumPage = createNamedLoadableComponent<AppRouteComponentProps>({
+	displayName: 'PremiumPage',
+	load: async () => (await import('@app/features/premium/components/pages/PremiumPage')).PremiumPage,
+});
+const ShopPage = createNamedLoadableComponent<AppRouteComponentProps>({
+	displayName: 'ShopPage',
+	load: async () => (await import('@app/features/shop/components/pages/ShopPage')).ShopPage,
+});
+const BotsPage = createNamedLoadableComponent<AppRouteComponentProps>({
+	displayName: 'BotsPage',
+	load: async () => (await import('@app/features/bots/components/pages/BotsPage')).BotsPage,
+});
+const UserProfilePage = createNamedLoadableComponent<{userId: string}>({
+	displayName: 'UserProfilePage',
+	load: async () => (await import('@app/features/user/components/pages/UserProfilePage')).UserProfilePage,
 });
 const StatusChangeBottomSheet = createNamedLoadableComponent<AppRouteComponentProps>({
 	displayName: 'StatusChangeBottomSheet',
@@ -172,7 +188,6 @@ export const premiumCallbackRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	id: 'premiumCallback',
 	path: Routes.PREMIUM_CALLBACK,
-	onEnter: requireAuthentication,
 	preload: PremiumCallbackPage.preload,
 	component: () => <PremiumCallbackPage data-flx="app.router.app-routes.premium-callback-page" />,
 });
@@ -204,6 +219,42 @@ const mentionsRoute = createRoute({
 	path: Routes.MENTIONS,
 	component: () => <DMLayout data-flx="app.router.app-routes.dm-layout--2" />,
 });
+// Micup: premium and the shop open beside the DM list, like bookmarks and mentions; elsewhere they fall back to Friends.
+const premiumRoute = createRoute({
+	getParentRoute: () => guildsLayoutRoute,
+	id: 'premium',
+	path: Routes.PREMIUM,
+	preload: PremiumPage.preload,
+	onEnter: () => (isPremiumPageAvailable() ? undefined : new Redirect(Routes.ME)),
+	component: () => (
+		<DMLayout data-flx="app.router.app-routes.premium-dm-layout">
+			<PremiumPage data-flx="app.router.app-routes.premium-page" />
+		</DMLayout>
+	),
+});
+const shopRoute = createRoute({
+	getParentRoute: () => guildsLayoutRoute,
+	id: 'shop',
+	path: Routes.SHOP,
+	preload: ShopPage.preload,
+	onEnter: () => (isShopPageAvailable() ? undefined : new Redirect(Routes.ME)),
+	component: () => (
+		<DMLayout data-flx="app.router.app-routes.shop-dm-layout">
+			<ShopPage data-flx="app.router.app-routes.shop-page" />
+		</DMLayout>
+	),
+});
+const botsRoute = createRoute({
+	getParentRoute: () => guildsLayoutRoute,
+	id: 'bots',
+	path: Routes.BOTS,
+	preload: BotsPage.preload,
+	component: () => (
+		<DMLayout data-flx="app.router.app-routes.bots-dm-layout">
+			<BotsPage data-flx="app.router.app-routes.bots-page" />
+		</DMLayout>
+	),
+});
 const meRoute = createRoute({
 	getParentRoute: () => guildsLayoutRoute,
 	id: 'me',
@@ -230,14 +281,69 @@ const discoverRoute = createRoute({
 	path: '/channels/@discover',
 	component: () => <DiscoveryLayout data-flx="app.router.app-routes.discovery-layout" />,
 });
+const feedRoute = createRoute({
+	getParentRoute: () => guildsLayoutRoute,
+	id: 'feed',
+	path: Routes.FEED,
+	preload: FeedPage.preload,
+	component: () => <FeedPage data-flx="app.router.app-routes.feed-page" />,
+});
+// Same guard as /feed (the page sends a closed feed to ME); no flag of its own.
+const feedPostRoute = createRoute({
+	getParentRoute: () => guildsLayoutRoute,
+	id: 'feedPost',
+	path: Routes.FEED_POST,
+	preload: FeedPage.preload,
+	component: () => {
+		const {postId} = useParams() as {postId: string};
+		return <FeedPage postId={postId} data-flx="app.router.app-routes.feed-page--2" />;
+	},
+});
+// Micup: premium, the shop and the bots opened from the feed, beside the feed sidebar (FeedSectionPages).
+const feedPremiumRoute = createRoute({
+	getParentRoute: () => guildsLayoutRoute,
+	id: 'feedPremium',
+	path: Routes.FEED_PREMIUM,
+	preload: () => Promise.all([FeedPage.preload(), PremiumPage.preload()]),
+	onEnter: () => (isPremiumPageAvailable() ? undefined : new Redirect(Routes.FEED)),
+	component: () => (
+		<FeedPage data-flx="app.router.app-routes.feed-premium-page">
+			<PremiumPage data-flx="app.router.app-routes.feed-premium-page.premium-page" />
+		</FeedPage>
+	),
+});
+const feedShopRoute = createRoute({
+	getParentRoute: () => guildsLayoutRoute,
+	id: 'feedShop',
+	path: Routes.FEED_SHOP,
+	preload: () => Promise.all([FeedPage.preload(), ShopPage.preload()]),
+	onEnter: () => (isShopPageAvailable() ? undefined : new Redirect(Routes.FEED)),
+	component: () => (
+		<FeedPage data-flx="app.router.app-routes.feed-shop-page">
+			<ShopPage data-flx="app.router.app-routes.feed-shop-page.shop-page" />
+		</FeedPage>
+	),
+});
+const feedBotsRoute = createRoute({
+	getParentRoute: () => guildsLayoutRoute,
+	id: 'feedBots',
+	path: Routes.FEED_BOTS,
+	preload: () => Promise.all([FeedPage.preload(), BotsPage.preload()]),
+	component: () => (
+		<FeedPage data-flx="app.router.app-routes.feed-bots-page">
+			<BotsPage data-flx="app.router.app-routes.feed-bots-page.bots-page" />
+		</FeedPage>
+	),
+});
 const plutoniumRoute = createRoute({
 	getParentRoute: () => guildsLayoutRoute,
 	id: 'plutonium',
+	onEnter: () => (isPremiumPageAvailable() ? undefined : new Redirect(Routes.ME)),
 	path: Routes.PLUTONIUM,
-	preload: PlutoniumPageLayout.preload,
+	preload: PremiumPage.preload,
 	component: () => (
 		<DMLayout data-flx="app.router.app-routes.dm-layout--plutonium">
-			<PlutoniumPageLayout data-flx="app.router.app-routes.plutonium-page-layout" />
+			<PremiumPage data-flx="app.router.app-routes.plutonium-page-layout" />
 		</DMLayout>
 	),
 });
@@ -247,16 +353,20 @@ const legacyPlutoniumRoute = createRoute({
 	path: Routes.LEGACY_PLUTONIUM,
 	onEnter: () => new Redirect(Routes.PLUTONIUM),
 });
+// Micup: the full profile page beside the DM list, as premium and shop; the page checks the id
+// before any request.
 const userProfileRoute = createRoute({
-	getParentRoute: () => appLayoutRoute,
+	getParentRoute: () => guildsLayoutRoute,
 	id: 'userProfile',
 	path: Routes.USER_PROFILE,
+	preload: UserProfilePage.preload,
 	component: () => {
 		const {userId} = useParams() as {userId: string};
-		useEffect(() => {
-			navigateToLinkedUserProfile(userId, {replace: true});
-		}, [userId]);
-		return null;
+		return (
+			<DMLayout data-flx="app.router.app-routes.user-profile-dm-layout">
+				<UserProfilePage userId={userId} data-flx="app.router.app-routes.user-profile-page" />
+			</DMLayout>
+		);
 	},
 });
 const favoritesRoute = createRoute({
@@ -377,12 +487,20 @@ const threadPanelRoute = createRoute({
 export const appRouteTree = appLayoutRoute.addChildren([
 	notificationsRoute,
 	youRoute,
-	userProfileRoute,
 	guildsLayoutRoute.addChildren([
 		bookmarksRoute,
 		mentionsRoute,
+		premiumRoute,
+		shopRoute,
+		botsRoute,
 		meRoute,
 		discoverRoute,
+		feedRoute,
+		feedPostRoute,
+		feedPremiumRoute,
+		feedShopRoute,
+		feedBotsRoute,
+		userProfileRoute,
 		plutoniumRoute,
 		legacyPlutoniumRoute,
 		favoritesRoute.addChildren([favoritesChannelRoute]),

@@ -29,6 +29,8 @@ const REPORT_TYPE_BY_FILTER = {
 	message: 0,
 	user: 1,
 	guild: 2,
+	feed_post: 3,
+	feed_comment: 4,
 } as const;
 
 const REPORT_SORT_FIELD_BY_QUERY = {

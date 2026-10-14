@@ -6,7 +6,7 @@
 -export([
     disconnect_all_voice_users_in_channel/2,
     disconnect_user_from_expected_channel/4,
-    disconnect_connection_from_expected_channel/5
+    disconnect_connection_from_expected_channel/6
 ]).
 
 -export_type([
@@ -91,15 +91,15 @@ disconnect_user_from_expected_channel(UserId, ExpectedChannelId, VoiceStates, St
     end.
 
 -spec disconnect_connection_from_expected_channel(
-    integer(), integer(), binary(), voice_state_map(), guild_state()
+    integer(), integer(), binary(), term(), voice_state_map(), guild_state()
 ) -> {reply, map(), guild_state()}.
 disconnect_connection_from_expected_channel(
-    UserId, ExpectedChannelId, ConnId, VoiceStates, State
+    UserId, ExpectedChannelId, ConnId, TokenNonce, VoiceStates, State
 ) ->
     case maps:get(ConnId, VoiceStates, undefined) of
         undefined ->
-            State1 = guild_voice_disconnect_broadcast:clear_pending_voice_connection(
-                ConnId, State
+            State1 = clear_pending_connection_in_expected_channel(
+                UserId, ExpectedChannelId, ConnId, TokenNonce, State
             ),
             {reply, #{success => true, ignored => true, reason => <<"connection_not_found">>},
                 State1};
@@ -108,6 +108,47 @@ disconnect_connection_from_expected_channel(
                 UserId, ExpectedChannelId, ConnId, VoiceState, VoiceStates, State
             )
     end.
+
+%% A move keeps the connection id, so its pending entry for the target channel must
+%% survive the source room's participant_left. An abandoned pending join takes its
+%% transition flags with it, as the pending sweep does. The flag clearing only takes
+%% effect when the guild process handles the request itself: the guild voice server
+%% writes back voice_states, pending joins, recent disconnects and e2ee keys only
+%% (guild_voice_server_state:merge_guild_state/2) and drops virtual_channel_access*
+%% writes, the sweep's included. That is upstream behaviour, tracked separately.
+-spec clear_pending_connection_in_expected_channel(
+    integer(), integer(), binary(), term(), guild_state()
+) -> guild_state().
+clear_pending_connection_in_expected_channel(
+    UserId, ExpectedChannelId, ConnId, TokenNonce, State
+) ->
+    Pending = maps:get(ConnId, maps:get(pending_voice_connections, State, #{}), undefined),
+    case is_pending_of_left_connection(Pending, UserId, ExpectedChannelId, TokenNonce) of
+        true ->
+            State1 = guild_voice_disconnect_broadcast:clear_pending_voice_connection(
+                ConnId, State
+            ),
+            guild_virtual_channel_access:clear_transition_flags(
+                UserId, ExpectedChannelId, State1
+            );
+        false ->
+            State
+    end.
+
+%% participant_left names the token its connection joined with. A pending entry minted
+%% after that token (a move back into the same channel) belongs to the newer join.
+%% Without a nonce on either side the entry is cleared as before.
+-spec is_pending_of_left_connection(term(), integer(), integer(), term()) -> boolean().
+is_pending_of_left_connection(
+    #{user_id := UserId, channel_id := ChannelId} = Pending, UserId, ChannelId, TokenNonce
+) when is_binary(TokenNonce) ->
+    maps:get(token_nonce, Pending, TokenNonce) =:= TokenNonce;
+is_pending_of_left_connection(
+    #{user_id := UserId, channel_id := ChannelId}, UserId, ChannelId, _
+) ->
+    true;
+is_pending_of_left_connection(_Pending, _UserId, _ChannelId, _TokenNonce) ->
+    false.
 
 -spec check_and_disconnect_connection(
     integer(), integer(), binary(), voice_state(), voice_state_map(), guild_state()

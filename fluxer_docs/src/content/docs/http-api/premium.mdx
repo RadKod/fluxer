@@ -8,7 +8,7 @@ import RouteHeader from '@/components/RouteHeader.astro';
 
 Premium is the paid tier of a Fluxer account. A recurring subscription, a redeemed gift, or a lifetime Visionary purchase pays for it. The routes here read that entitlement and run the subscription self-service operations, while [Billing](/http-api/billing/) owns purchase creation, refunds and the payment provider webhook.
 
-Every route except [get price IDs](#get-price-ids) is user-only. A [self-hosted deployment](/http-api/deployment-availability/) always serves [get premium state](#get-premium-state) and [set premium perks disabled](#set-premium-perks-disabled). It never serves [switch subscription to the list price](#switch-subscription-to-the-list-price) or [rejoin Visionary guild](#rejoin-visionary-guild), serves [get price IDs](#get-price-ids) only while billing is active, and serves the subscription management routes while Stripe is serviceable.
+Every route except [get price IDs](#get-price-ids) is user-only. A [self-hosted deployment](/http-api/deployment-availability/) always serves [get premium state](#get-premium-state) and [set premium perks disabled](#set-premium-perks-disabled). It never serves [switch subscription to the list price](#switch-subscription-to-the-list-price) or [rejoin Visionary guild](#rejoin-visionary-guild), serves [get price IDs](#get-price-ids) only while billing is active, and serves the subscription management routes while Stripe is serviceable. It also serves [get premium trial eligibility](#get-premium-trial-eligibility) and [start premium trial](#start-premium-trial).
 
 | Object | Purpose |
 | --- | --- |
@@ -23,6 +23,7 @@ Every route except [get price IDs](#get-price-ids) is user-only. A [self-hosted 
 | [Billing invoice](#billing-invoice-object) | One mirrored invoice |
 | [Billing payment method](#billing-payment-method-object) | One mirrored payment method |
 | [Premium pricing state](#premium-pricing-state-object) | The resolved checkout catalogue |
+| [Premium trial eligibility](#premium-trial-eligibility-object) | Whether the account can start the one-time free trial |
 | [Store subscription](#store-subscription-object) | The active [in-app purchase](/http-api/in-app-purchases/) subscription |
 
 :::note[Manage billing through the customer portal]
@@ -553,6 +554,42 @@ The checkout catalogue resolved for the request. A client can render prices with
 
 Fluxer reports an unresolvable catalogue as null here, and the request still succeeds. [Get price IDs](#get-price-ids) answers 400 `STRIPE_ERROR` for the same condition.
 
+## Premium trial eligibility object
+
+Whether the authenticated account can start the one-time free premium trial, which needs no payment method. [Get premium trial eligibility](#get-premium-trial-eligibility) returns it.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| eligible | boolean | Whether the account can start the trial now |
+| days<sup>1</sup> | integer | The length of the trial in days, 0 when the instance offers no trial |
+| reason<sup>2</sup> | ?string | Why the account cannot start the trial, or null when `eligible` is true |
+
+<sup>1</sup> The instance policy `premium_trial_days` value from the [instance policy object](/admin-api/instance/#instance-policy-object). It is 0 unless the deployment is self-hosted with the `mirror` [premium mode](/admin-api/instance/#premium-modes), a trial email hash key is configured, and the [ALTCHA CAPTCHA check](/admin-api/instance/#captcha-configuration-object) is enabled
+
+<sup>2</sup> One of `unavailable`, `not_eligible` or `already_used`, described below
+
+| Reason | Meaning |
+| --- | --- |
+| unavailable | The instance offers no trial, and `days` is 0 |
+| not_eligible<sup>3</sup> | The account is of a kind that cannot start a trial |
+| already_used | The account started its trial before, or another account started one with the same normalised email address |
+
+<sup>3</sup> A bot or system account, an account with no verified email, one that has ever purchased premium or holds premium now, and one whose email address is on a disposable domain
+
+Fluxer normalises an email address by lowercasing it and dropping a `+` suffix from its local part. For `gmail.com` and `googlemail.com` it also drops the dots from the local part and treats both domains as one.
+
+### Example
+
+```json
+{
+  "eligible": true,
+  "days": 7,
+  "reason": null
+}
+```
+
 ## Store subscription object
 
 The App Store or Google Play subscription that grants the account premium. The [store purchase](/http-api/in-app-purchases/#store-purchase-object) it comes from is listed by [list in-app purchases](/http-api/in-app-purchases/#list-in-app-purchases).
@@ -1005,3 +1042,61 @@ A new or existing member then receives the Visionary role, which records a `MEMB
 ### Rate limit
 
 5 requests per minute for each authenticated user, on the `stripe:visionary:rejoin` bucket.
+
+## Get premium trial eligibility
+
+<RouteHeader method="GET" path="/v1/premium/trial" />
+
+Returns the [premium trial eligibility](#premium-trial-eligibility-object) object for the authenticated account. A client reads it before offering the trial, so it can show the trial length or the reason the account cannot start it.
+
+The read changes nothing, and an instance that offers no trial still answers 200 with `reason` `unavailable`.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [premium trial eligibility](#premium-trial-eligibility-object) object | The eligibility was returned |
+
+### Rate limit
+
+20 requests per minute for each authenticated user, on the `premium:trial:get` bucket.
+
+## Start premium trial
+
+<RouteHeader method="POST" path="/v1/premium/trial" />
+
+Starts the one-time free premium trial for the authenticated account without a payment method and returns 204 with an empty body. The operation is [CAPTCHA gated](/topics/captcha/), and the instance offers the trial only when its [ALTCHA CAPTCHA check](/admin-api/instance/#captcha-configuration-object) is enabled.
+
+Each account can start the trial once, and so can each normalised email address, whichever account holds it. The [premium trial eligibility object](#premium-trial-eligibility-object) describes both checks and the normalisation.
+
+### Request headers
+
+| Field | Type | Description |
+| --- | --- | --- |
+| X-Captcha-Token?<sup>1</sup> | string | The solved ALTCHA challenge in the [token format](/topics/captcha/#token-format) |
+
+<sup>1</sup> A missing proof returns 400 `CAPTCHA_REQUIRED` and a rejected proof returns 400 `INVALID_CAPTCHA`. Verification is skipped for an exempt account, as described by [CAPTCHA handling](/topics/captcha/)
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The trial started |
+| 400 | [error response](/http-api/#error-response) | CAPTCHA failed |
+| 403<sup>1</sup> | [error response](/http-api/#error-response) | The instance offers no trial, or the account is not eligible |
+| 409<sup>2</sup> | [error response](/http-api/#error-response) | The trial was already used |
+| 429 | [rate limit response](/topics/rate-limits/#rate-limit-response-object) | The route bucket or the network quota below denies the request |
+
+<sup>1</sup> Returned as `TRIAL_UNAVAILABLE` when the instance offers no trial and as `TRIAL_NOT_ELIGIBLE` for an account that eligibility reports as `not_eligible`
+
+<sup>2</sup> Returned as `TRIAL_ALREADY_USED` when the account or its normalised email address already started the trial, and also while another start request for the same account is still running
+
+### Side effects
+
+The account gains premium for the trial length, counted from the moment the trial starts. Every account session receives [User Update](/gateway/events/#user-update). Fluxer records the claim against a keyed hash of the normalised email address, never the address itself, so the same address cannot start another trial on a different account.
+
+A request that the instance, the eligibility checks or the email address refuses changes nothing and spends no network quota. A request that only the network quota refuses keeps the address reserved for the same account, so a later retry from that account can still start the trial.
+
+### Rate limit
+
+3 requests per hour for each authenticated user, on the `premium:trial:claim` bucket. A trial that passes every check also draws on 20 requests per day for each IPv4 /24 or IPv6 /48 client network, on the shared `premium:trial:claim:network` bucket, so accounts created in bulk behind one network cannot all start a trial.

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {Gift} from '@app/features/gift/commands/GiftCommands';
+import type {AnyGift, CosmeticGift, Gift} from '@app/features/gift/commands/GiftCommands';
 import * as GiftCommands from '@app/features/gift/commands/GiftCommands';
 import {AccountScopedWork} from '@app/features/platform/state/AccountScopedWork';
 import {type InstanceHTTPTarget, instanceTargetIdentity} from '@app/features/platform/transport/InstanceHTTP';
@@ -11,6 +11,8 @@ interface GiftState {
 	loading: boolean;
 	error: Error | null;
 	data: Gift | null;
+	// An item code lives here, never in `data`: the chat embed and the signed-out gift pages read `data` as premium time.
+	item?: CosmeticGift;
 	invalid?: boolean;
 }
 
@@ -20,7 +22,7 @@ function giftResourceKey(code: string, target: InstanceHTTPTarget): string {
 
 class Gifts {
 	gifts: Map<string, GiftState> = observable.map();
-	pendingRequests: Map<string, Promise<Gift>> = observable.map();
+	pendingRequests: Map<string, Promise<AnyGift>> = observable.map();
 
 	constructor() {
 		makeAutoObservable(
@@ -49,6 +51,8 @@ class Gifts {
 				...existingGift,
 				data: updatedGift,
 			});
+		} else if (existingGift?.item) {
+			this.gifts.set(resourceKey, {...existingGift, item: {...existingGift.item, redeemed: true}});
 		}
 	}
 
@@ -61,7 +65,7 @@ class Gifts {
 		});
 	}
 
-	async fetchGift(code: string, target: InstanceHTTPTarget): Promise<Gift> {
+	async fetchGift(code: string, target: InstanceHTTPTarget): Promise<AnyGift> {
 		const resourceKey = giftResourceKey(code, target);
 		const existingGift = this.gifts.get(resourceKey);
 		if (existingGift?.invalid) {
@@ -71,8 +75,9 @@ class Gifts {
 		if (existingRequest) {
 			return existingRequest;
 		}
-		if (existingGift?.data) {
-			return existingGift.data;
+		const existingData = existingGift?.data ?? existingGift?.item;
+		if (existingData) {
+			return existingData;
 		}
 		this.gifts.set(resourceKey, {loading: true, error: null, data: null});
 		const promise = GiftCommands.fetch(code, target);
@@ -80,12 +85,19 @@ class Gifts {
 		try {
 			const gift = await promise;
 			runInAction(() => {
+				if (this.pendingRequests.get(resourceKey) !== promise) return;
 				this.pendingRequests.delete(resourceKey);
-				this.gifts.set(resourceKey, {loading: false, error: null, data: gift});
+				this.gifts.set(
+					resourceKey,
+					gift.kind === 'cosmetic'
+						? {loading: false, error: null, data: null, item: gift}
+						: {loading: false, error: null, data: gift},
+				);
 			});
 			return gift;
 		} catch (error) {
 			runInAction(() => {
+				if (this.pendingRequests.get(resourceKey) !== promise) return;
 				this.pendingRequests.delete(resourceKey);
 				this.gifts.set(resourceKey, {
 					loading: false,

@@ -22,6 +22,14 @@ import {SystemDmAdminController} from '@app/api/admin/controllers/SystemDmAdminC
 import {ThreadAdminController} from '@app/api/admin/controllers/ThreadAdminController';
 import {UserAdminController} from '@app/api/admin/controllers/UserAdminController';
 import {VoiceAdminController} from '@app/api/admin/controllers/VoiceAdminController';
+import {BadgeAdminController} from '@app/api/badge/BadgeAdminController';
+import {CosmeticAdminController} from '@app/api/cosmetics/CosmeticAdminController';
+import {FeedModerationAdminController} from '@app/api/feed/moderation/FeedModerationAdminController';
+import {PremiumLedgerAdminController} from '@app/api/premium/ledger/PremiumLedgerAdminController';
+import {VisionaryAdminController} from '@app/api/premium/visionary/VisionaryAdminController';
+import {ReferralAdminController} from '@app/api/referral/ReferralAdminController';
+import {ShopAdminController} from '@app/api/shop/ShopAdminController';
+import {ShopOrderAdminController} from '@app/api/shop/ShopOrderAdminController';
 import type {HonoApp} from '@app/api/types/HonoEnv';
 
 export function registerAdminControllers(app: HonoApp) {
@@ -47,4 +55,12 @@ export function registerAdminControllers(app: HonoApp) {
 	DiscoveryAdminController(app);
 	SystemDmAdminController(app);
 	JobsAdminController(app);
+	BadgeAdminController(app);
+	CosmeticAdminController(app);
+	FeedModerationAdminController(app);
+	ShopAdminController(app);
+	ShopOrderAdminController(app);
+	PremiumLedgerAdminController(app);
+	VisionaryAdminController(app);
+	ReferralAdminController(app);
 }

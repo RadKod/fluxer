@@ -2,11 +2,14 @@
 
 import type {UserID} from '@app/api/BrandedTypes';
 import {createUserID} from '@app/api/BrandedTypes';
+import {Config} from '@app/api/Config';
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import {Logger} from '@app/api/Logger';
+import {getCachedInstancePremiumMode} from '@app/api/limits/InstancePremiumModeCache';
 import {getBillingRepository} from '@app/api/middleware/ServiceRegistry';
-import {type GiftCode, mapGiftDurationMonthsToFields} from '@app/api/models/GiftCode';
+import {getCosmeticService, getPremiumLedgerService} from '@app/api/middleware/ServiceSingletons';
+import {isPremiumGiftCode, mapGiftDurationMonthsToFields, type PremiumGiftCode} from '@app/api/models/GiftCode';
 import type {User} from '@app/api/models/User';
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
 import {getBillingBranding} from '@app/api/stripe/BillingBranding';
@@ -18,16 +21,25 @@ import type {IUserRepository} from '@app/api/user/IUserRepository';
 import {mapUserToPrivateResponse} from '@app/api/user/UserMappers';
 import * as RandomUtils from '@app/api/utils/RandomUtils';
 import {UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
+import {FeatureNotAvailableSelfHostedError} from '@fluxer/errors/src/domains/core/FeatureNotAvailableSelfHostedError';
 import {CannotRedeemPlutoniumWithVisionaryError} from '@fluxer/errors/src/domains/payment/CannotRedeemPlutoniumWithVisionaryError';
 import {GiftCodeAlreadyRedeemedError} from '@fluxer/errors/src/domains/payment/GiftCodeAlreadyRedeemedError';
 import {NoActiveSubscriptionError} from '@fluxer/errors/src/domains/payment/NoActiveSubscriptionError';
 import {StripeError} from '@fluxer/errors/src/domains/payment/StripeError';
 import {StripeGiftRedemptionInProgressError} from '@fluxer/errors/src/domains/payment/StripeGiftRedemptionInProgressError';
 import {UnknownGiftCodeError} from '@fluxer/errors/src/domains/payment/UnknownGiftCodeError';
+import {CosmeticAlreadyOwnedError} from '@fluxer/errors/src/domains/user/CosmeticAlreadyOwnedError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
 import type {ICacheService} from '@pkgs/cache/src/ICacheService';
 import {seconds} from 'itty-time';
 import type Stripe from 'stripe';
+
+// Micup: a self-hosted instance issues and redeems premium keys only while premium is sold (mirror mode).
+export function assertGiftCodesAvailable(): void {
+	if (Config.instance.selfHosted && getCachedInstancePremiumMode() !== 'mirror') {
+		throw new FeatureNotAvailableSelfHostedError();
+	}
+}
 
 export class StripeGiftService {
 	constructor(
@@ -41,9 +53,11 @@ export class StripeGiftService {
 		private storeEntitlementService: StoreEntitlementService | null = null,
 	) {}
 
-	async getGiftCode(code: string): Promise<GiftCode> {
+	// An item code answers as unknown here: GiftCodeResponse describes premium time only, so older clients never show
+	// an item code as premium (K-kod). GET /shop/codes/:code previews both kinds.
+	async getGiftCode(code: string): Promise<PremiumGiftCode> {
 		const giftCode = await this.userRepository.findGiftCode(code);
-		if (!giftCode || giftCode.revokedAt) {
+		if (!giftCode || giftCode.revokedAt || !isPremiumGiftCode(giftCode)) {
 			throw new UnknownGiftCodeError();
 		}
 		return giftCode;
@@ -79,7 +93,9 @@ export class StripeGiftService {
 				},
 				'Loaded gift code for redemption',
 			);
-			if (giftCode.redeemedByUserId) {
+			// Micup: a self-hosted claim is never handed back (see the catch below), so its owner's retry finishes the grant.
+			const resumesOwnClaim = Config.instance.selfHosted && giftCode.redeemedByUserId === userId;
+			if (giftCode.redeemedByUserId && !resumesOwnClaim) {
 				await this.cacheService.set(appliedKey, true, seconds('365 days'));
 				Logger.debug(
 					{
@@ -103,7 +119,7 @@ export class StripeGiftService {
 			}
 			const user = await this.userRepository.findUnique(userId);
 			if (!user) {
-				Logger.error({userId, giftCode: code}, 'Redeemer user not found during gift redemption');
+				Logger.error({userId}, 'Redeemer user not found during gift redemption');
 				throw new UnknownUserError();
 			}
 			Logger.debug(
@@ -120,11 +136,24 @@ export class StripeGiftService {
 			);
 			this.checkoutService.validateUserCanPurchase(user);
 			Logger.debug({userId, giftCode: code}, 'Redeemer passed gift purchase validation');
+			// an item code never reaches the premium path below, so no duration on its row can grant premium time
+			// or lifetime premium, and a lifetime account may redeem one.
+			if (giftCode.cosmeticItemId !== null) {
+				await this.redeemCosmeticCode(userId, code, giftCode.cosmeticItemId, resumesOwnClaim);
+				await this.cacheService.set(`redeemed_gift_codes:${code}`, true, seconds('5 minutes'));
+				await this.cacheService.set(appliedKey, true, seconds('365 days'));
+				return;
+			}
+			if (!isPremiumGiftCode(giftCode)) {
+				throw new UnknownGiftCodeError();
+			}
 			if (user.premiumType === UserPremiumTypes.LIFETIME) {
 				Logger.debug({userId, giftCode: code}, 'Rejecting redemption for lifetime user');
 				throw new CannotRedeemPlutoniumWithVisionaryError((await getBillingBranding()).premiumName);
 			}
-			await this.userRepository.redeemGiftCode(code, userId);
+			if (!resumesOwnClaim) {
+				await this.userRepository.redeemGiftCode(code, userId);
+			}
 			Logger.debug({userId, giftCode: code}, 'Applied gift redemption row update');
 			try {
 				const premiumType = giftCode.durationQuantity === 0 ? UserPremiumTypes.LIFETIME : UserPremiumTypes.SUBSCRIPTION;
@@ -195,6 +224,21 @@ export class StripeGiftService {
 						giftCode.visionarySequenceNumber,
 					);
 					await this.userRepository.reserveVisionarySlot(giftCode.visionarySequenceNumber, userId);
+				} else if (Config.instance.selfHosted) {
+					// Micup: the premium ledger is the only writer of premium time on a self-hosted instance, so a key's
+					// time is added once per code and is not lost to a concurrent grant or an expiration cleanup.
+					const {newlyApplied} = await getPremiumLedgerService().grant({
+						userId,
+						grantKey: code,
+						duration: {unit: giftCode.durationType, quantity: giftCode.durationQuantity},
+						source: 'gift',
+					});
+					// A resumed claim whose time the ledger already holds is this user's own finished redemption, answered
+					// as a success. The key rows (premium_grant_keys) keep grant keys past 200, so a code claimed long ago
+					// is never granted twice.
+					if (!newlyApplied && !resumesOwnClaim) {
+						throw new GiftCodeAlreadyRedeemedError();
+					}
 				} else {
 					Logger.debug(
 						{
@@ -216,15 +260,20 @@ export class StripeGiftService {
 				}
 				Logger.debug({userId, giftCode: code}, 'Completed entitlement grant path for redeemed gift');
 			} catch (entitlementError: unknown) {
+				// Micup: the ledger grant can be applied even when a later step throws, so handing the code back
+				// could grant its time twice. The code stays claimed and the grant is idempotent per code.
+				if (Config.instance.selfHosted) {
+					throw entitlementError;
+				}
 				try {
 					await this.userRepository.unredeemGiftCode(code, userId);
 					Logger.warn(
-						{userId, giftCode: code, error: entitlementError},
+						{userId, error: entitlementError},
 						'Rolled back gift code redemption after entitlement grant failure',
 					);
 				} catch (rollbackError: unknown) {
 					Logger.error(
-						{userId, giftCode: code, entitlementError, rollbackError},
+						{userId, entitlementError, rollbackError},
 						'Failed to roll back gift code redemption after entitlement grant failure',
 					);
 				}
@@ -256,11 +305,12 @@ export class StripeGiftService {
 		}
 	}
 
-	async getUserGifts(userId: UserID): Promise<Array<GiftCode>> {
+	async getUserGifts(userId: UserID): Promise<Array<PremiumGiftCode>> {
 		const gifts = await this.userRepository.findGiftCodesByCreator(userId);
 		const redeemedGracePeriodMs = 7 * 24 * 60 * 60 * 1000;
 		const cutoff = Date.now() - redeemedGracePeriodMs;
 		return gifts
+			.filter(isPremiumGiftCode)
 			.filter((gift) => gift.revokedAt === null)
 			.filter((gift) => gift.redeemedAt === null || gift.redeemedAt.getTime() > cutoff)
 			.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
@@ -285,10 +335,7 @@ export class StripeGiftService {
 			const existingGift = await this.userRepository.findGiftCodeByPaymentIntent(paymentIntentId);
 			if (existingGift) {
 				await this.userRepository.linkGiftCodeToCheckoutSession(existingGift.code, checkoutSessionId);
-				Logger.warn(
-					{checkoutSessionId, paymentIntentId, code: existingGift.code},
-					'Reused existing gift code for checkout session',
-				);
+				Logger.warn({checkoutSessionId, paymentIntentId}, 'Reused existing gift code for checkout session');
 				return existingGift.code;
 			}
 		}
@@ -353,6 +400,40 @@ export class StripeGiftService {
 		await this.dispatchUser(updatedUser);
 	}
 
+	// One delivery per code (grant key 'gift:<code>'). The user x item lock makes a second code for the same item wait
+	// or see the item owned, so it is not spent; a resubmitted own code never gives back an item taken back since.
+	private async redeemCosmeticCode(
+		userId: UserID,
+		code: string,
+		itemId: bigint,
+		resumesOwnClaim: boolean,
+	): Promise<void> {
+		const itemLockKey = `cosmetic:redeem:${userId}:${itemId}`;
+		const itemLockToken = await this.cacheService.acquireLock(itemLockKey, seconds('30 seconds'));
+		if (!itemLockToken) {
+			throw new StripeGiftRedemptionInProgressError();
+		}
+		try {
+			const cosmetics = getCosmeticService();
+			if (!(await cosmetics.getItem(itemId))) {
+				throw new UnknownGiftCodeError();
+			}
+			if (!resumesOwnClaim) {
+				if (await cosmetics.isOwned(userId, itemId)) {
+					throw new CosmeticAlreadyOwnedError();
+				}
+				await this.userRepository.redeemGiftCode(code, userId);
+			}
+			const result = await cosmetics.deliverOwned(userId, itemId, `gift:${code}`, 'gift');
+			if (result === 'already_delivered' && resumesOwnClaim) {
+				throw new GiftCodeAlreadyRedeemedError();
+			}
+			Logger.debug({userId, giftCode: code, itemId, result}, 'Item code redeemed');
+		} finally {
+			await this.cacheService.releaseLock(itemLockKey, itemLockToken);
+		}
+	}
+
 	private async generateUniqueGiftCode(): Promise<string> {
 		let code: string;
 		let exists = true;
@@ -366,7 +447,7 @@ export class StripeGiftService {
 
 	private async tryStackSubscriptionGiftOntoStripeSubscription(
 		user: User,
-		giftCode: GiftCode,
+		giftCode: PremiumGiftCode,
 		code: string,
 	): Promise<boolean> {
 		const hasCurrentSubscriptionState = this.hasCurrentSubscriptionState(user);
@@ -407,7 +488,6 @@ export class StripeGiftService {
 				Logger.error(
 					{
 						userId: user.id,
-						giftCode: code,
 						error,
 					},
 					'Stripe stacking failed and is not eligible for fallback',
@@ -417,7 +497,6 @@ export class StripeGiftService {
 			Logger.warn(
 				{
 					userId: user.id,
-					giftCode: code,
 					error,
 				},
 				'Stripe stacking failed; falling back to premium field grant',
@@ -426,7 +505,6 @@ export class StripeGiftService {
 			Logger.warn(
 				{
 					userId: user.id,
-					giftCode: code,
 					stripeSubscriptionId: user.stripeSubscriptionId,
 				},
 				'Falling back to premium-field gift grant after missing or inactive Stripe subscription',

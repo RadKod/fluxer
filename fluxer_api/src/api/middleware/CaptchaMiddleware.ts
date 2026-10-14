@@ -4,6 +4,7 @@ import {createHmac} from 'node:crypto';
 import {Config} from '@app/api/Config';
 import {sharedListHas} from '@app/api/infrastructure/activity/SharedLists';
 import {usesUsernameSignIn} from '@app/api/instance/AccountIdentityModeCache';
+import type {InstanceCaptchaEffectiveConfig} from '@app/api/instance/InstanceConfigRepository';
 import {Logger} from '@app/api/Logger';
 import {getKVClient} from '@app/api/middleware/ServiceRegistry';
 import type {User} from '@app/api/models/User';
@@ -12,8 +13,10 @@ import {extractEmailDomain} from '@app/api/utils/EmailDomainUtils';
 import {Headers} from '@fluxer/constants/src/Headers';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import {CaptchaRequiredError, InvalidCaptchaError} from '@fluxer/errors/src/CaptchaErrors';
+import {extractClientIp} from '@fluxer/ip_utils/src/ClientIp';
 import type {CaptchaConfig} from '@fluxer/schema/src/domains/admin/CaptchaSchemas';
 import {AltchaProvider} from '@pkgs/captcha/src/providers/AltchaProvider';
+import {TurnstileProvider} from '@pkgs/captcha/src/providers/TurnstileProvider';
 import type {Context} from 'hono';
 import {createMiddleware} from 'hono/factory';
 
@@ -40,16 +43,37 @@ async function altchaChallengeData(altcha: AltchaProvider): Promise<Record<strin
 	return {captcha_provider: 'altcha', altcha_challenge: await altcha.createChallenge()};
 }
 
+async function verifyTurnstileToken(
+	ctx: Context<HonoEnv>,
+	config: Extract<InstanceCaptchaEffectiveConfig, {provider: 'turnstile'}>,
+	token: string | undefined,
+): Promise<true> {
+	const challenge = {captcha_provider: 'turnstile', turnstile_site_key: config.turnstile_site_key};
+	if (!token) {
+		throw new CaptchaRequiredError(challenge);
+	}
+	const turnstile = new TurnstileProvider({secretKey: config.turnstile_secret_key, logger: Logger});
+	const remoteIp = extractClientIp(ctx.req.raw, {
+		trustClientIpHeader: Config.proxy.trust_client_ip_header,
+		clientIpHeaderName: Config.proxy.client_ip_header,
+	});
+	if (!(await turnstile.verify({token, remoteIp: remoteIp ?? undefined}))) {
+		throw new InvalidCaptchaError(challenge);
+	}
+	return true;
+}
+
 export async function verifyCaptchaToken(ctx: Context<HonoEnv>): Promise<boolean> {
 	if (Config.dev.testModeEnabled && ctx.req.header(TEST_ENABLE_CAPTCHA_HEADER) !== 'true') return false;
-	const config = await ctx.get('instanceConfigRepository').getCaptchaConfig();
-	if (!config.enabled) return false;
+	const config = await ctx.get('instanceConfigRepository').getEffectiveCaptchaConfig();
+	if (config.provider === 'none') return false;
 	const user = ctx.get('user') as User | undefined;
 	if (sharedListHas('email_domain_exempt', extractEmailDomain(user?.email))) return false;
 	if (userHasCaptchaExemptFlag(user)) return false;
-	if (await requestUserHasCaptchaExemptFlag(ctx)) return false;
-	const altcha = createAltchaProvider(config);
+	if (!user && (await requestUserHasCaptchaExemptFlag(ctx))) return false;
 	const token = ctx.req.header(Headers.X_CAPTCHA_TOKEN);
+	if (config.provider === 'turnstile') return await verifyTurnstileToken(ctx, config, token);
+	const altcha = createAltchaProvider(config);
 	if (!token) {
 		throw new CaptchaRequiredError(await altchaChallengeData(altcha));
 	}

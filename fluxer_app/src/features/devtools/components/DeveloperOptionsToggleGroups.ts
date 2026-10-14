@@ -5,7 +5,7 @@ import type {MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
 
 const ENABLE_SELF_HOSTED_MODE_CLIENT_SIDE_HIDES_ALL_DESCRIPTOR = msg({
-	message: 'Enable self-hosted mode client-side. Hides all premium and billing UI.',
+	message: 'Enable self-hosted mode client-side. Hides all Plus and billing UI.',
 	comment:
 		'Developer / debug surface — keep terse and technical. Tooltip / description for the self-hosted mode override toggle.',
 });

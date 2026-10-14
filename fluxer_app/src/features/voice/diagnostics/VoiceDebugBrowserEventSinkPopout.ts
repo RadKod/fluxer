@@ -16,6 +16,7 @@ const VOICE_DEBUG_EVENT_SINK_INITIAL_LOG_STATUS_PLACEHOLDER = '__FLUXER_VOICE_DE
 const VOICE_DEBUG_EVENT_SINK_SCRIPT_URL_PLACEHOLDER = '__FLUXER_VOICE_DEBUG_EVENT_SINK_SCRIPT_URL__';
 const VOICE_DEBUG_EVENT_SINK_MAX_ENTRIES = 1000;
 const VOICE_DEBUG_EVENT_SINK_MAX_LINE_CHARS = 262_144;
+export const VOICE_DEBUG_EVENT_SINK_MAX_HISTORY_BYTES = 4 * 1024 * 1024;
 const VOICE_DEBUG_EVENT_SINK_MAX_STATS_HTML_CHARS = 1_048_576;
 const VOICE_DEBUG_EVENT_SINK_EMPTY_STATS_HTML = '<p>No stats snapshot captured before popout opened.</p>';
 
@@ -92,6 +93,7 @@ const VOICE_DEBUG_EVENT_SINK_HTML = `<!doctype html>
 const VOICE_DEBUG_EVENT_SINK_SCRIPT = String.raw`(() => {
 "use strict";
 const maxEntries = 1000;
+const maxHistoryBytes = ${VOICE_DEBUG_EVENT_SINK_MAX_HISTORY_BYTES};
 const log = document.getElementById("log");
 const status = document.getElementById("status");
 const stats = document.getElementById("stats");
@@ -129,6 +131,14 @@ function sanitizeEntry(entry) {
 }
 function trimEntries() {
 	if (entries.length > maxEntries) entries = entries.slice(entries.length - maxEntries);
+	let bytes = 0;
+	for (const entry of entries) bytes += entry.line.length * 2;
+	let start = 0;
+	while (bytes > maxHistoryBytes && start < entries.length - 1) {
+		bytes -= entries[start].line.length * 2;
+		start += 1;
+	}
+	if (start > 0) entries = entries.slice(start);
 }
 function getVisibleEntries() {
 	const text = filter.value.trim().toLowerCase();
@@ -421,8 +431,16 @@ function normalizeEntries(
 }
 
 function trimEntries(): void {
-	if (eventSinkEntries.length <= VOICE_DEBUG_EVENT_SINK_MAX_ENTRIES) return;
-	eventSinkEntries = eventSinkEntries.slice(eventSinkEntries.length - VOICE_DEBUG_EVENT_SINK_MAX_ENTRIES);
+	let start = Math.max(0, eventSinkEntries.length - VOICE_DEBUG_EVENT_SINK_MAX_ENTRIES);
+	let bytes = 0;
+	for (let index = start; index < eventSinkEntries.length; index += 1) {
+		bytes += (eventSinkEntries[index]?.line.length ?? 0) * 2;
+	}
+	while (bytes > VOICE_DEBUG_EVENT_SINK_MAX_HISTORY_BYTES && start < eventSinkEntries.length - 1) {
+		bytes -= (eventSinkEntries[start]?.line.length ?? 0) * 2;
+		start += 1;
+	}
+	if (start > 0) eventSinkEntries = eventSinkEntries.slice(start);
 }
 
 function appendNormalizedEventSinkEntries(entries: ReadonlyArray<DesktopVoiceDebugEventSinkEntry>): void {
@@ -434,6 +452,7 @@ function appendNormalizedEventSinkEntries(entries: ReadonlyArray<DesktopVoiceDeb
 
 function replaceEventSinkEntries(entries: ReadonlyArray<DesktopVoiceDebugEventSinkEntry>): void {
 	eventSinkEntries = normalizeEntries(entries);
+	trimEntries();
 }
 
 function serializeInitialState(initialState: BrowserVoiceDebugEventSinkInitialState): string {
@@ -596,6 +615,24 @@ function canCreatePopoutUrl(): boolean {
 	return typeof URL.createObjectURL === 'function';
 }
 
+function releasePopout(): void {
+	removeMessageListener();
+	closeBroadcastChannel();
+	revokePopoutUrl();
+	eventSinkWindow = null;
+	eventSinkEntries = [];
+	eventSinkStatsHtml = '';
+}
+
+export function isBrowserVoiceDebugEventSinkPopoutOpen(): boolean {
+	return isOpenWindow(eventSinkWindow);
+}
+
+export function releaseClosedBrowserVoiceDebugEventSinkPopout(): void {
+	if (eventSinkWindow === null || isOpenWindow(eventSinkWindow)) return;
+	releasePopout();
+}
+
 export function canOpenBrowserVoiceDebugEventSinkPopout(): boolean {
 	if (typeof window === 'undefined') return false;
 	if (typeof window.open !== 'function') return false;
@@ -605,6 +642,7 @@ export function canOpenBrowserVoiceDebugEventSinkPopout(): boolean {
 export async function openBrowserVoiceDebugEventSinkPopout(
 	entries: ReadonlyArray<DesktopVoiceDebugEventSinkEntry>,
 ): Promise<boolean> {
+	releaseClosedBrowserVoiceDebugEventSinkPopout();
 	replaceEventSinkEntries(entries);
 	if (!isOpenWindow(eventSinkWindow)) {
 		return createBrowserPopoutWindow() !== null;
@@ -615,9 +653,12 @@ export async function openBrowserVoiceDebugEventSinkPopout(
 }
 
 export function appendBrowserVoiceDebugEventSinkEntries(entries: ReadonlyArray<DesktopVoiceDebugEventSinkEntry>): void {
+	if (!isOpenWindow(eventSinkWindow)) {
+		releaseClosedBrowserVoiceDebugEventSinkPopout();
+		return;
+	}
 	const normalizedEntries = normalizeEntries(entries);
 	appendNormalizedEventSinkEntries(normalizedEntries);
-	if (!isOpenWindow(eventSinkWindow)) return;
 	postMessageToPopout({
 		protocol: VOICE_DEBUG_EVENT_SINK_MESSAGE_PROTOCOL,
 		type: 'appendEntries',
@@ -626,6 +667,7 @@ export function appendBrowserVoiceDebugEventSinkEntries(entries: ReadonlyArray<D
 }
 
 export function setBrowserVoiceDebugEventSinkStatsHtml(html: string): void {
+	releaseClosedBrowserVoiceDebugEventSinkPopout();
 	eventSinkStatsHtml = truncateStatsHtml(html);
 	if (!isOpenWindow(eventSinkWindow)) return;
 	postMessageToPopout({
@@ -636,10 +678,5 @@ export function setBrowserVoiceDebugEventSinkStatsHtml(html: string): void {
 }
 
 export function resetBrowserVoiceDebugEventSinkPopoutForTests(): void {
-	removeMessageListener();
-	closeBroadcastChannel();
-	revokePopoutUrl();
-	eventSinkWindow = null;
-	eventSinkEntries = [];
-	eventSinkStatsHtml = '';
+	releasePopout();
 }

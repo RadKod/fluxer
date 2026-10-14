@@ -200,6 +200,8 @@ export const GuildResponse = z.object({
 	approximate_presence_count: Int32Type.optional().describe(
 		'Approximate online member count (only when with_counts is true)',
 	),
+	premium_tier: Int32Type.optional().describe('The boost tier of the guild (0-3)'),
+	premium_subscription_count: Int32Type.optional().describe('How many boosts the guild has'),
 	threads_active: withSchemaMetadata(
 		z
 			.literal(true)
@@ -277,6 +279,8 @@ export interface Guild {
 	readonly online_count?: number;
 	readonly approximate_member_count?: number;
 	readonly approximate_presence_count?: number;
+	readonly premium_tier?: number;
+	readonly premium_subscription_count?: number;
 	readonly roles?: ReadonlyArray<GuildRoleResponse>;
 	readonly emojis?: ReadonlyArray<GuildEmojiResponse>;
 	readonly stickers?: ReadonlyArray<GuildStickerResponse>;

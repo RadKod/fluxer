@@ -181,3 +181,9 @@
 .enable-forced-colors .radioGroupOption[data-disabled] .innerDotRadio {
 	fill: GrayText;
 }
+
+/* Micup: the checked radio fills with the v1 white accent in the coal and dark themes, so its dot takes the on-accent
+   colour (it vanished white on white). The light theme keeps its own #fff above. */
+:global(html:is(.theme-coal, .theme-dark)) .group {
+	--radio-dot-fill: var(--text-on-brand-primary);
+}

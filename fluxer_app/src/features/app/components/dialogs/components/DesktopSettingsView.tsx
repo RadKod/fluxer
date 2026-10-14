@@ -10,6 +10,7 @@ import styles from '@app/features/app/components/dialogs/components/DesktopSetti
 import {LogoutModal} from '@app/features/app/components/dialogs/components/LogoutModal';
 import {SettingsModalHeader} from '@app/features/app/components/dialogs/components/SettingsModalHeader';
 import {SettingsSearch} from '@app/features/app/components/dialogs/components/SettingsSearch';
+import {SourceCodeLink} from '@app/features/app/components/dialogs/components/SourceCodeLink';
 import {SettingsCurrentTabProvider} from '@app/features/app/components/dialogs/shared/SettingsCurrentTabContext';
 import {
 	SettingsModalDesktopContent,
@@ -443,6 +444,7 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = observer(
 									>
 										<Trans>Privacy policy</Trans>
 									</a>
+									<SourceCodeLink className={styles.legalLink} data-flx="app.desktop-settings-view.legal-link--3" />
 								</div>
 								<div className={styles.footerSpacer} data-flx="app.desktop-settings-view.footer-spacer" />
 							</div>

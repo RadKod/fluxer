@@ -4,11 +4,11 @@ import {showDmActionErrorModal} from '@app/features/app/components/alerts/DmActi
 import {ConfirmModal} from '@app/features/app/components/dialogs/ConfirmModal';
 import {UserSettingsModal} from '@app/features/app/components/dialogs/LoadableSettingsModals';
 import {CustomStatusDisplay} from '@app/features/app/components/shared/custom_status_display/CustomStatusDisplay';
-import {useHover} from '@app/features/app/hooks/useHover';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import Authentication from '@app/features/auth/state/Authentication';
 import * as PrivateChannelCommands from '@app/features/channel/commands/PrivateChannelCommands';
 import DeveloperOptions from '@app/features/devtools/state/DeveloperOptions';
+import {GameActivityDisplay} from '@app/features/game_activity/components/GameActivityDisplay';
 import {
 	BLOCKED_USER_DM_WARNING_DESCRIPTOR,
 	OPEN_DM_DESCRIPTOR,
@@ -37,14 +37,7 @@ import {LimitedProfileNotice} from '@app/features/user/components/popouts/Limite
 import {UserProfileBadges} from '@app/features/user/components/popouts/UserProfileBadges';
 import {UserProfileDataWarning} from '@app/features/user/components/popouts/UserProfileDataWarning';
 import styles from '@app/features/user/components/popouts/UserProfilePopout.module.css';
-import {
-	UserProfileConnections,
-	UserProfileMembershipInfo,
-	UserProfilePreviewBio,
-	UserProfileRoles,
-	UserProfileTimezoneInfo,
-} from '@app/features/user/components/popouts/UserProfileShared';
-import {ProfileCardActions} from '@app/features/user/components/profile/profile_card/ProfileCardActions';
+import {UserProfilePreviewBio, UserProfileRoles} from '@app/features/user/components/popouts/UserProfileShared';
 import {ProfileCardBanner} from '@app/features/user/components/profile/profile_card/ProfileCardBanner';
 import {ProfileCardContent} from '@app/features/user/components/profile/profile_card/ProfileCardContent';
 import {ProfileCardFooter} from '@app/features/user/components/profile/profile_card/ProfileCardFooter';
@@ -65,7 +58,7 @@ import {MEDIA_PROXY_PROFILE_BANNER_SIZE_POPOUT} from '@fluxer/constants/src/Medi
 import {RelationshipTypes} from '@fluxer/constants/src/UserConstants';
 import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
-import {ChatTeardropIcon, PencilIcon} from '@phosphor-icons/react';
+import {ChatTeardropIcon, PencilIcon, UserCircleIcon} from '@phosphor-icons/react';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {useCallback, useEffect, useMemo, useRef} from 'react';
@@ -73,6 +66,11 @@ import {useCallback, useEffect, useMemo, useRef} from 'react';
 const YOU_CAN_T_MESSAGE_YOURSELF_DESCRIPTOR = msg({
 	message: "You can't message yourself",
 	comment: 'Error message in the user profile popout.',
+});
+const OPEN_PROFILE_DESCRIPTOR = msg({
+	message: 'Open profile',
+	comment:
+		'Button on the small profile card, the profile modal and the mobile profile sheet that opens the full profile page.',
 });
 const logger = new Logger('UserProfilePopout');
 
@@ -89,7 +87,6 @@ interface UserProfilePopoutProps {
 export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 	({popoutKey, user, isWebhook, guildId, guildMember: providedGuildMember, isPreview, onClose}) => {
 		const {i18n} = useLingui();
-		const [hoverRef, isHovering] = useHover();
 		const storedGuildMember = guildId ? GuildMembers.getMember(guildId, user.id) : null;
 		const profileGuildId = isWebhook ? undefined : guildId;
 		const fallbackProfile = useMemo(() => createMockProfile(user), [user]);
@@ -132,22 +129,18 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 			}
 			PopoutCommands.close(popoutKey);
 		}, [onClose, popoutKey]);
-		const openFullProfile = useCallback(
-			(autoFocusNote?: boolean) => {
-				if (isWebhook) {
-					return;
-				}
-				UserProfileCommands.openUserProfile(user.id, guildId, autoFocusNote);
-				requestClose();
-			},
-			[isWebhook, user.id, guildId, requestClose],
-		);
 		const handleOpenFullProfile = useCallback(() => {
-			openFullProfile();
-		}, [openFullProfile]);
-		const handleOpenFullProfileNote = useCallback(() => {
-			openFullProfile(true);
-		}, [openFullProfile]);
+			if (isWebhook) {
+				return;
+			}
+			UserProfileCommands.openUserProfile(user.id, guildId);
+			requestClose();
+		}, [isWebhook, user.id, guildId, requestClose]);
+		// Micup: the full profile page; the card stays what a name in chat opens.
+		const handleOpenProfilePage = useCallback(() => {
+			UserProfileCommands.openProfilePage(user.id);
+			requestClose();
+		}, [user.id, requestClose]);
 		useEffect(() => {
 			if (!guildId || !user.id || isWebhook) {
 				return;
@@ -280,9 +273,9 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 				<div ref={popoutContainerRef} data-flx="user.user-profile-popout.div">
 					<ProfileCardLayout
 						borderColor={borderColor}
-						hoverRef={hoverRef}
 						className={styles.profilePopoutCard}
 						style={PROFILE_POPOUT_GEOMETRY_STYLE}
+						profileEffect={profile?.profileEffect}
 						data-flx="user.user-profile-popout.profile-card-layout"
 					>
 						<ProfileCardBanner
@@ -299,13 +292,6 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 							onBannerContextMenu={handleBannerContextMenu}
 							data-flx="user.user-profile-popout.profile-card-banner"
 						/>
-						{!isWebhook && (
-							<UserProfileBadges
-								user={user}
-								profile={profile}
-								data-flx="user.user-profile-popout.user-profile-badges"
-							/>
-						)}
 						<ProfileCardContent isWebhook={isWebhook} data-flx="user.user-profile-popout.profile-card-content">
 							{showProfileDataWarning && (
 								<div className={styles.profileDataWarning} data-flx="user.user-profile-popout.profile-data-warning">
@@ -322,18 +308,21 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 								displayNameClassName={styles.profileDisplayName}
 								user={user}
 								pronouns={profileData?.pronouns}
-								showUsername={!isWebhook}
+								showUsername={false}
 								isClickable={!isWebhook}
 								isWebhook={isWebhook}
 								onDisplayNameClick={!isWebhook ? handleOpenFullProfile : undefined}
-								onUsernameClick={!isWebhook ? handleOpenFullProfile : undefined}
-								actions={
+								belowName={
+									// Micup: Discord's short card. Badges right under the name, in the modal's row
+									// layout; the #tag, follow, posts, note, copy ID, timezone, member since and connections live in
+									// the full profile.
 									!isWebhook && (
-										<ProfileCardActions
-											userId={user.id}
-											isHovering={isHovering}
-											onNoteClick={handleOpenFullProfileNote}
-											data-flx="user.user-profile-popout.profile-card-actions"
+										<UserProfileBadges
+											user={user}
+											profile={profile}
+											isModal={true}
+											largeProfile
+											data-flx="user.user-profile-popout.user-profile-badges"
 										/>
 									)
 								}
@@ -352,6 +341,12 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 								</div>
 							)}
 							{!isWebhook && (
+								<GameActivityDisplay
+									userId={user.id}
+									fullProfile={!!profile && !profile.profileLimited && !showProfileDataWarning}
+								/>
+							)}
+							{!isWebhook && (
 								<VoiceActivitySection
 									userId={user.id}
 									onNavigate={handleClosePopout}
@@ -366,19 +361,6 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 									data-flx="user.user-profile-popout.user-profile-preview-bio"
 								/>
 							)}
-							{profile && (
-								<UserProfileTimezoneInfo
-									profile={profile}
-									data-flx="user.user-profile-popout.user-profile-timezone-info"
-								/>
-							)}
-							{profile && (
-								<UserProfileMembershipInfo
-									profile={profile}
-									user={user}
-									data-flx="user.user-profile-popout.user-profile-membership-info"
-								/>
-							)}
 							{!isWebhook && profile && (
 								<UserProfileRoles
 									profile={profile}
@@ -386,13 +368,6 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 									memberRoles={[...memberRoles]}
 									canManageRoles={canManageRoles}
 									data-flx="user.user-profile-popout.user-profile-roles"
-								/>
-							)}
-							{profile && (
-								<UserProfileConnections
-									profile={profile}
-									variant="compact"
-									data-flx="user.user-profile-popout.user-profile-connections"
 								/>
 							)}
 						</ProfileCardContent>
@@ -449,6 +424,20 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 										data-flx="user.user-profile-popout.button.open-blocked-dm"
 									>
 										{isBlocked ? i18n._(OPEN_DM_DESCRIPTOR) : <Trans context="message-action">Message</Trans>}
+									</Button>
+								)}
+								{!isPreview && (
+									<Button
+										small={true}
+										fitContainer={true}
+										variant="secondary"
+										leftIcon={
+											<UserCircleIcon className={styles.iconSmall} data-flx="user.user-profile-popout.icon-small--4" />
+										}
+										onClick={handleOpenProfilePage}
+										data-flx="user.user-profile-popout.button.open-profile-page"
+									>
+										{i18n._(OPEN_PROFILE_DESCRIPTOR)}
 									</Button>
 								)}
 							</ProfileCardFooter>

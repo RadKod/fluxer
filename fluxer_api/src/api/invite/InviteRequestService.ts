@@ -25,6 +25,7 @@ import type {
 	InviteMetadataResponseSchema,
 	InviteResponseSchema,
 } from '@fluxer/schema/src/domains/invite/InviteSchemas';
+import type {ICacheService} from '@pkgs/cache/src/ICacheService';
 
 interface MappingHelpers {
 	userCacheService: UserCacheService;
@@ -40,6 +41,9 @@ interface MappingHelpers {
 	gatewayService: IGatewayService;
 }
 
+const INVITE_RESPONSE_TTL_SECONDS = 30;
+const inviteResponseKey = (code: InviteCode) => `invite:response:${code}`;
+
 export class InviteRequestService {
 	constructor(
 		private readonly inviteService: InviteService,
@@ -47,11 +51,17 @@ export class InviteRequestService {
 		private readonly guildService: GuildService,
 		private readonly gatewayService: IGatewayService,
 		private readonly userCacheService: UserCacheService,
+		private readonly cacheService?: ICacheService,
 	) {}
 
+	// Micup: a public invite card (Keşfet, feed posts) makes every reader ask for the same code, and the answer is the
+	// same for everyone (the route needs no login), so it is kept 30 s. getOrSet fills once per code at a time and never
+	// keeps a failed fill, so an unknown invite is not cached. Accept reads the database as before.
 	async getInvite(params: {inviteCode: InviteCode; requestCache: RequestCache}): Promise<InviteResponseSchema> {
-		const invite = await this.inviteService.getInvite(params.inviteCode);
-		return this.mapInviteResponse(invite, params.requestCache);
+		const load = async () =>
+			this.mapInviteResponse(await this.inviteService.getInvite(params.inviteCode), params.requestCache);
+		if (!this.cacheService) return load();
+		return this.cacheService.getOrSet(inviteResponseKey(params.inviteCode), load, INVITE_RESPONSE_TTL_SECONDS);
 	}
 
 	async acceptInvite(params: {
@@ -74,6 +84,7 @@ export class InviteRequestService {
 			{userId: params.userId, viewer: params.viewer, inviteCode: params.inviteCode},
 			params.auditLogReason,
 		);
+		await this.cacheService?.delete(inviteResponseKey(invite.code));
 		await this.inviteService.dispatchInviteDelete(invite);
 	}
 

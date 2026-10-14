@@ -14,6 +14,7 @@ interface ChannelHeaderIconProps extends Omit<React.ButtonHTMLAttributes<HTMLBut
 	icon: Icon;
 	iconWeight?: IconWeight;
 	label: string;
+	badge?: React.ReactNode;
 	isSelected?: boolean;
 	onClick?: React.MouseEventHandler<HTMLButtonElement>;
 	onContextMenu?: React.MouseEventHandler<HTMLButtonElement>;
@@ -26,6 +27,7 @@ export const ChannelHeaderIcon = React.forwardRef<HTMLButtonElement, ChannelHead
 		icon: Icon,
 		iconWeight,
 		label,
+		badge,
 		isSelected = false,
 		onClick,
 		disabled = false,
@@ -59,7 +61,7 @@ export const ChannelHeaderIcon = React.forwardRef<HTMLButtonElement, ChannelHead
 				ref={mergedRef}
 				type="button"
 				className={clsx(isSelected ? styles.iconButtonSelected : styles.iconButtonDefault, className)}
-				aria-label={label}
+				aria-label={rest['aria-label'] ?? label}
 				aria-pressed={ariaPressed}
 				onClick={disabled ? undefined : onClick}
 				disabled={disabled}
@@ -70,6 +72,7 @@ export const ChannelHeaderIcon = React.forwardRef<HTMLButtonElement, ChannelHead
 					className={styles.buttonIcon}
 					data-flx="channel.channel-header-components.channel-header-icon.button-icon"
 				/>
+				{badge}
 			</button>
 		</FocusRing>
 	);

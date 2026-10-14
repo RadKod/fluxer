@@ -2,12 +2,17 @@
 
 import {CustomStatusDisplay} from '@app/features/app/components/shared/custom_status_display/CustomStatusDisplay';
 import {UserTag} from '@app/features/channel/components/ChannelUserTag';
+import {ProfilePostsButton} from '@app/features/feed/components/ProfilePostsButton';
+import {ProfileFollowActions} from '@app/features/follow/components/ProfileFollowActions';
+import {GameActivityDisplay} from '@app/features/game_activity/components/GameActivityDisplay';
 import userProfileModalStyles from '@app/features/user/components/modals/UserProfileModal.module.css';
 import type {UserInfoProps} from '@app/features/user/components/modals/user_profile_modal/UserProfileModalShared';
 import {LimitedProfileNotice} from '@app/features/user/components/popouts/LimitedProfileNotice';
 import {UserProfileBadges} from '@app/features/user/components/popouts/UserProfileBadges';
 import {UserProfileDataWarning} from '@app/features/user/components/popouts/UserProfileDataWarning';
+import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge';
 import {useAutoplayExpandedProfileAnimations} from '@app/features/user/hooks/useAutoplayExpandedProfileAnimations';
+import {useProfileBadgeMetrics} from '@app/features/user/hooks/useProfileBadgeMetrics';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import {
 	getProfileMembershipDisplayName,
@@ -17,14 +22,22 @@ import {Trans} from '@lingui/react/macro';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
+import {useRef} from 'react';
 
-export const UserInfo: React.FC<UserInfoProps> = observer(({user, profile, guildId, showProfileDataWarning}) => {
+export const UserInfo: React.FC<UserInfoProps> = observer((props) => {
+	const {user, profile, guildId, showProfileDataWarning, onPage} = props;
 	const membership = resolveProfileGuildMembership(profile);
 	const displayName = getProfileMembershipDisplayName(user, membership, guildId);
+	const displayNameRef = useRef<HTMLSpanElement>(null);
+	const {badgeStyle, bindNameRef} = useProfileBadgeMetrics(displayNameRef, displayName);
 	const effectiveProfile = profile?.getEffectiveProfile() ?? null;
 	const shouldAutoplayProfileAnimations = useAutoplayExpandedProfileAnimations();
 	return (
-		<div className={userProfileModalStyles.userInfo} data-flx="user.user-profile-modal.user-info.div">
+		<div
+			className={clsx(userProfileModalStyles.userInfo, onPage && userProfileModalStyles.userInfoPage)}
+			style={badgeStyle}
+			data-flx="user.user-profile-modal.user-info.div"
+		>
 			<div
 				className={clsx(userProfileModalStyles.userInfoHeader, userProfileModalStyles.userInfoHeaderDesktop)}
 				data-flx="user.user-profile-modal.user-info.div--2"
@@ -38,7 +51,7 @@ export const UserInfo: React.FC<UserInfoProps> = observer(({user, profile, guild
 							<UserProfileDataWarning data-flx="user.user-profile-modal.user-info.user-profile-data-warning" />
 						</div>
 					)}
-					{profile?.profileLimited && (
+					{profile?.profileLimited && !onPage && (
 						<div
 							className={userProfileModalStyles.profileDataWarning}
 							data-flx="user.user-profile-modal.user-info.profile-limited-notice"
@@ -47,9 +60,14 @@ export const UserInfo: React.FC<UserInfoProps> = observer(({user, profile, guild
 						</div>
 					)}
 					<div className={userProfileModalStyles.nameRow} data-flx="user.user-profile-modal.user-info.div--5">
-						<span className={userProfileModalStyles.userName} data-flx="user.user-profile-modal.user-info.span">
+						<span
+							ref={bindNameRef}
+							className={userProfileModalStyles.userName}
+							data-flx="user.user-profile-modal.user-info.span"
+						>
 							{displayName}
 						</span>
+						<VerifiedUserBadge user={user} size={20} data-flx="user.user-profile-modal.user-info.verified-user-badge" />
 						{user.bot && (
 							<UserTag
 								className={userProfileModalStyles.userTag}
@@ -59,19 +77,33 @@ export const UserInfo: React.FC<UserInfoProps> = observer(({user, profile, guild
 							/>
 						)}
 					</div>
+					<div className={userProfileModalStyles.badgesWrapper} data-flx="user.user-profile-modal.user-info.div--8">
+						<UserProfileBadges
+							user={user}
+							profile={profile}
+							isModal={true}
+							isMobile={false}
+							largeProfile={onPage}
+							data-flx="user.user-profile-modal.user-info.user-profile-badges"
+						/>
+					</div>
 					<div className={userProfileModalStyles.tagBadgeRow} data-flx="user.user-profile-modal.user-info.div--6">
 						<div className={userProfileModalStyles.usernameRow} data-flx="user.user-profile-modal.user-info.div--7">
 							{NicknameUtils.formatTagForStreamerMode(user.tag)}
 						</div>
-						<div className={userProfileModalStyles.badgesWrapper} data-flx="user.user-profile-modal.user-info.div--8">
-							<UserProfileBadges
-								user={user}
-								profile={profile}
-								isModal={true}
-								isMobile={false}
-								data-flx="user.user-profile-modal.user-info.user-profile-badges"
-							/>
-						</div>
+						{!onPage && (
+							<>
+								<ProfileFollowActions
+									userId={user.id}
+									hideFollowButton
+									data-flx="user.user-profile-modal.user-info.profile-follow-actions"
+								/>
+								<ProfilePostsButton
+									userId={user.id}
+									data-flx="user.user-profile-modal.user-info.profile-posts-button"
+								/>
+							</>
+						)}
 					</div>
 					{effectiveProfile?.pronouns && (
 						<div className={userProfileModalStyles.pronouns} data-flx="user.user-profile-modal.user-info.div--9">
@@ -92,6 +124,10 @@ export const UserInfo: React.FC<UserInfoProps> = observer(({user, profile, guild
 							data-flx="user.user-profile-modal.user-info.custom-status-display"
 						/>
 					</div>
+					<GameActivityDisplay
+						userId={user.id}
+						fullProfile={!!profile && !profile.profileLimited && !showProfileDataWarning}
+					/>
 				</div>
 			</div>
 		</div>

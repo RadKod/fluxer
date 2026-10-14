@@ -35,6 +35,12 @@ import {UserNotInVoiceError} from '@fluxer/errors/src/domains/user/UserNotInVoic
 import type {ChannelResponse} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
 import type {GuildMemberResponse} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
+import {
+	GameActivityPairPolicyAck,
+	GameActivityPairPolicyRequest,
+	GameActivityPolicyAck,
+	GameActivityPolicyRequest,
+} from '@fluxer/schema/src/domains/rpc/RpcSchemas';
 import {ms} from 'itty-time';
 
 const USER_PERMISSIONS_BATCH_SIZE = 100;
@@ -284,9 +290,9 @@ export class GatewayService {
 		this.rpcClient = GatewayRpcClient.getInstance();
 	}
 
-	private async call<T>(method: string, params: Record<string, unknown>): Promise<T> {
+	private async call<T>(method: string, params: Record<string, unknown>, retry = true): Promise<T> {
 		try {
-			return await this.rpcClient.call<T>(method, params);
+			return await this.rpcClient.call<T>(method, params, retry);
 		} catch (error) {
 			throw this.transformGatewayError(error);
 		}
@@ -703,6 +709,74 @@ export class GatewayService {
 			event,
 			data,
 		});
+	}
+
+	async gameActivityPolicy(request: GameActivityPolicyRequest): Promise<GameActivityPolicyAck> {
+		const params = GameActivityPolicyRequest.parse(request);
+		const ack = GameActivityPolicyAck.parse(await this.gameActivityControl('presence.game_activity_policy', params));
+		if (
+			ack.request_id !== params.request_id ||
+			ack.phase !== params.phase ||
+			ack.policy_revision !== params.policy_revision ||
+			(params.phase === 'fence' && params.owner_epoch !== null && ack.owner_epoch !== params.owner_epoch)
+		) {
+			throw new BadGatewayError();
+		}
+		return ack;
+	}
+
+	async gameActivityPairPolicy(request: GameActivityPairPolicyRequest): Promise<GameActivityPairPolicyAck> {
+		const params = GameActivityPairPolicyRequest.parse(request);
+		const ack = GameActivityPairPolicyAck.parse(
+			await this.gameActivityControl('presence.game_activity_pair_policy', params),
+		);
+		if (
+			ack.request_id !== params.request_id ||
+			ack.phase !== params.phase ||
+			(params.phase === 'apply' &&
+				(ack.owner_epoch !== params.owner_epoch || ack.pair_generation !== params.pair_generation))
+		) {
+			throw new BadGatewayError();
+		}
+		return ack;
+	}
+
+	private async gameActivityControl(method: string, params: Record<string, unknown>): Promise<unknown> {
+		let timeout: NodeJS.Timeout | undefined;
+		const retryApply = method === 'presence.game_activity_policy' && params.phase === 'apply';
+		const deadline = performance.now() + 5000;
+		const deliver = async (): Promise<unknown> => {
+			while (performance.now() < deadline) {
+				try {
+					return await this.call<unknown>(method, params, !retryApply);
+				} catch (error) {
+					if (
+						!retryApply ||
+						!(
+							error instanceof ServiceUnavailableError ||
+							error instanceof GatewayTimeoutError ||
+							this.rpcClient.shouldRetry(error, method)
+						)
+					) {
+						throw error;
+					}
+					const remaining = deadline - performance.now();
+					if (remaining <= 0) break;
+					await new Promise((resolve) => setTimeout(resolve, Math.min(100, remaining)));
+				}
+			}
+			throw new GatewayTimeoutError();
+		};
+		try {
+			return await Promise.race([
+				deliver(),
+				new Promise<never>((_, reject) => {
+					timeout = setTimeout(() => reject(new GatewayTimeoutError()), 5000);
+				}),
+			]);
+		} finally {
+			clearTimeout(timeout);
+		}
 	}
 
 	async clearPushChannelNotifications({
@@ -1438,11 +1512,13 @@ export class GatewayService {
 		userId,
 		channelId,
 		connectionId,
+		tokenNonce,
 	}: {
 		guildId?: GuildID;
 		channelId: ChannelID;
 		userId: UserID;
 		connectionId?: string;
+		tokenNonce?: string;
 	}): Promise<{
 		success: boolean;
 		ignored?: boolean;
@@ -1456,6 +1532,9 @@ export class GatewayService {
 		}
 		if (connectionId) {
 			params['connection_id'] = connectionId;
+		}
+		if (tokenNonce) {
+			params['token_nonce'] = tokenNonce;
 		}
 		const result = await this.call<{
 			success: boolean;

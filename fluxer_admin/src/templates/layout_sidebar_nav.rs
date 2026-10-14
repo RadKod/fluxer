@@ -41,7 +41,19 @@ pub const NAV_SECTIONS: &[NavSection] = &[
     NavSection {
         title: "Moderation",
         items: &[
+            item!(
+                "Username Reservations",
+                "/usernames-reserve",
+                "usernames-reserve",
+                [acl::USERNAME_RESERVE]
+            ),
             item!("Reports", "/reports", "reports", [acl::REPORT_VIEW]),
+            item!(
+                "Feed Moderation",
+                "/feed-moderation",
+                "feed-moderation",
+                [acl::FEED_MODERATE]
+            ),
             item!(
                 "Discovery Review",
                 "/discovery",
@@ -129,6 +141,12 @@ pub const NAV_SECTIONS: &[NavSection] = &[
         title: "Content Blocklists",
         items: &[
             item!(
+                "Username Dictionary",
+                "/username-dictionary",
+                "username-dictionary",
+                [acl::BAN_PROFILE_SUBSTRING_CHECK]
+            ),
+            item!(
                 "URL Blocklist",
                 "/url-bans",
                 "url-bans",
@@ -215,11 +233,24 @@ pub const NAV_SECTIONS: &[NavSection] = &[
                 "voice-servers",
                 [acl::VOICE_SERVER_LIST]
             ),
+            item!(
+                "Cosmetics",
+                "/cosmetics",
+                "cosmetics",
+                [acl::COSMETICS_MANAGE]
+            ),
+            item!("Badges", "/badges", "badges", [acl::BADGES_MANAGE]),
         ],
     },
     NavSection {
         title: "Configuration",
         items: &[
+            item!(
+                "Username Migration",
+                "/username-migration",
+                "username-migration",
+                [acl::INSTANCE_CONFIG_VIEW, acl::USERNAME_MIGRATION_START]
+            ),
             item!(
                 "Instance Config",
                 "/instance-config",
@@ -244,19 +275,40 @@ pub const NAV_SECTIONS: &[NavSection] = &[
         ],
     },
     NavSection {
-        title: "Premium",
-        items: &[item!(
-            "Gift Codes",
-            "/gift-codes",
-            "gift-codes",
-            [acl::GIFT_CODES_GENERATE]
-        )],
+        title: "Plus & Shop",
+        items: &[
+            item!(
+                "Gift Codes",
+                "/gift-codes",
+                "gift-codes",
+                [acl::GIFT_CODES_GENERATE]
+            ),
+            item!("Shop", "/shop", "shop", [acl::SHOP_MANAGE]),
+            item!("Referral", "/referral", "referral", [acl::REFERRAL_MANAGE]),
+        ],
     },
 ];
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn username_navigation_uses_the_matching_read_permissions() {
+        for (key, required) in [
+            ("usernames-reserve", acl::USERNAME_RESERVE),
+            ("username-dictionary", acl::BAN_PROFILE_SUBSTRING_CHECK),
+            ("username-migration", acl::USERNAME_MIGRATION_START),
+        ] {
+            let item = NAV_SECTIONS
+                .iter()
+                .flat_map(|section| section.items)
+                .find(|item| item.active_key == key)
+                .expect("username navigation item");
+            assert!(item.required_acls.contains(&required));
+            assert!(!acl::has_any_permission(&[], item.required_acls));
+        }
+    }
 
     #[test]
     fn bulk_actions_nav_covers_every_acl_the_page_renders_a_section_for() {

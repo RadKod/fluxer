@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import '@app/api/stripe/tests/DormantStripeTestFixture';
 import crypto from 'node:crypto';
 import {createTestAccount, findLastTestEmail, listTestEmails} from '@app/api/auth/tests/AuthTestUtils';
 import {createUserID} from '@app/api/BrandedTypes';

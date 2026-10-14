@@ -85,11 +85,12 @@ handle_disconnect_if_in_channel(
     GuildId = validation:snowflake_or_throw(<<"guild_id">>, GIB),
     UserId = validation:snowflake_or_throw(<<"user_id">>, UIB),
     ExpCId = validation:snowflake_or_throw(<<"expected_channel_id">>, ECIB),
-    Req = build_disconnect_if_in_channel_req(
+    Req0 = build_disconnect_if_in_channel_req(
         UserId,
         ExpCId,
         maps:get(<<"connection_id">>, P, undefined)
     ),
+    Req = Req0#{token_nonce => maps:get(<<"token_nonce">>, P, undefined)},
     gateway_rpc_guild_infra:with_voice_server(GuildId, fun(VPid, _) ->
         call_disconnect_if_in_channel(VPid, Req)
     end).

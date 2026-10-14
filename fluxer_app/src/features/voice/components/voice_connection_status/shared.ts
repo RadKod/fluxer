@@ -43,6 +43,14 @@ export const CURRENT_PING_DESCRIPTOR = msg({
 	message: 'Current ping:',
 	comment: 'Field label in the voice connection status popout. Shows the latest RTT in ms.',
 });
+export const VOICE_SERVER_PING_DESCRIPTOR = msg({
+	message: 'Voice server:',
+	comment: 'Voice connection popout label for the selected media transport round-trip time, excluding signaling.',
+});
+export const SIGNAL_PING_DESCRIPTOR = msg({
+	message: 'Signal:',
+	comment: 'Voice connection popout label for the signaling connection round-trip time, separate from media.',
+});
 export const MEASURING_DESCRIPTOR = msg({
 	message: 'Measuring…',
 	comment:

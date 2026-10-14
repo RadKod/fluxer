@@ -46,13 +46,6 @@ class InvalidAuthDocumentLocationError extends Error {
 	}
 }
 
-class DesktopAuthRuntimeUnavailableError extends Error {
-	constructor() {
-		super('Desktop authentication cannot read the initial runtime target');
-		this.name = 'DesktopAuthRuntimeUnavailableError';
-	}
-}
-
 function reduceAuthRuntimeResolution<Runtime>(
 	state: AuthRuntimeResolutionState<Runtime>,
 	action: AuthRuntimeResolutionAction<Runtime>,
@@ -153,7 +146,9 @@ async function resolveBrowserAuthRuntime(signal: AbortSignal): Promise<RuntimeCo
 async function resolveDesktopAuthRuntime(signal: AbortSignal): Promise<RuntimeConfigSnapshot | null> {
 	const api = getElectronAPI()?.desktopRuntimeConfig;
 	if (api === undefined) {
-		throw new DesktopAuthRuntimeUnavailableError();
+		// TEMPORARY: desktop shells released before the runtime-config bridge load the hosted web app, so the document
+		// origin is the instance, exactly as in a browser. Remove once every supported desktop build ships the bridge.
+		return resolveBrowserAuthRuntime(signal);
 	}
 	const initialInput = await api.initialInput();
 	signal.throwIfAborted();

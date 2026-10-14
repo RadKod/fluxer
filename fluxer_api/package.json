@@ -60,6 +60,7 @@
 		"argon2": "catalog:",
 		"bowser": "catalog:",
 		"cassandra-driver": "catalog:",
+		"chess.js": "catalog:",
 		"emoji-regex": "catalog:",
 		"fast-xml-parser": "catalog:",
 		"hi-base32": "catalog:",
@@ -88,6 +89,7 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
+		"@livekit/protocol": "catalog:",
 		"@types/archiver": "catalog:",
 		"@types/lodash": "catalog:",
 		"esbuild": "catalog:",

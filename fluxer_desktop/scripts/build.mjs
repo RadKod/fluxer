@@ -58,6 +58,7 @@ const electronExternals = [
 	'@fluxer/gateway-socket',
 	'@fluxer/hardware-encoder',
 	'@fluxer/webauthn',
+	'@fluxer/win-shell',
 	'hunspell-asm',
 ];
 class UnsupportedDesktopBuildArgumentError extends Error {

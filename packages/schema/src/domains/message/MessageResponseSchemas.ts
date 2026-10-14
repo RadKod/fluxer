@@ -10,6 +10,7 @@ import {ChannelResponse, ThreadChannelResponse} from '@fluxer/schema/src/domains
 import {ThreadMemberResponse} from '@fluxer/schema/src/domains/channel/ThreadSchemas';
 import type {GuildMemberData} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
 import {type MessageEmbed, MessageEmbedResponse} from '@fluxer/schema/src/domains/message/EmbedSchemas';
+import {MessageActionRowResponse} from '@fluxer/schema/src/domains/message/MessageComponentSchemas';
 import {type UserPartial, UserPartialResponse} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import {MessageReferenceTypeSchema, MessageTypeSchema} from '@fluxer/schema/src/primitives/MessageValidators';
 import {
@@ -157,6 +158,7 @@ const MessageBaseResponseSchema = z.object({
 	message_snapshots: z.array(MessageSnapshotResponse).nullish().describe('Snapshots of forwarded messages'),
 	nonce: z.string().nullish().describe('A client-provided value for message deduplication'),
 	call: MessageCallResponse.nullish().describe('Call information if this message represents a call'),
+	components: z.array(MessageActionRowResponse).nullish().describe('Button rows; only first-party bots write them'),
 	thread: z
 		.lazy(() => ThreadChannelResponse)
 		.optional()
@@ -358,6 +360,7 @@ export interface Message {
 	readonly referenced_message?: Message | null;
 	readonly message_snapshots?: ReadonlyArray<MessageSnapshot>;
 	readonly call?: MessageCall | null;
+	readonly components?: ReadonlyArray<z.infer<typeof MessageActionRowResponse>>;
 	readonly thread?: ThreadChannelResponse;
 	readonly state?: string;
 	readonly nonce?: string;

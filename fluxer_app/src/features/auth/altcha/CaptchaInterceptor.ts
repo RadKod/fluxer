@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {type AltchaChallenge, readAltchaChallenge, solveAltchaChallenge} from '@app/features/auth/altcha/AltchaSolver';
+import {requestTurnstileToken} from '@app/features/auth/components/modals/TurnstileModal';
 import {http} from '@app/features/platform/transport/RestTransport';
 import {HttpError} from '@app/features/platform/types/EndpointError';
 import type {RestResponse} from '@app/features/platform/types/TransportTypes';
@@ -23,11 +24,22 @@ const MAX_SOLVES = 2;
 const SLOW_SOLVE_HINT_DELAY_MS = 2000;
 const SLOW_SOLVE_HINT_TIMEOUT_MS = 60_000;
 
-function readCaptchaChallenge(status: number, body: unknown): AltchaChallenge | null {
+type CaptchaChallenge = {provider: 'altcha'; challenge: AltchaChallenge} | {provider: 'turnstile'; siteKey: string};
+
+function readTurnstileSiteKey(body: unknown): string | null {
+	if (typeof body !== 'object' || body === null) return null;
+	const {captcha_provider: provider, turnstile_site_key: siteKey} = body as Record<string, unknown>;
+	return provider === 'turnstile' && typeof siteKey === 'string' && siteKey.length > 0 ? siteKey : null;
+}
+
+function readCaptchaChallenge(status: number, body: unknown): CaptchaChallenge | null {
 	if (status !== 400) return null;
 	const code = replyCode(body);
 	if (code !== 'CAPTCHA_REQUIRED' && code !== 'INVALID_CAPTCHA') return null;
-	return readAltchaChallenge(body);
+	const siteKey = readTurnstileSiteKey(body);
+	if (siteKey) return {provider: 'turnstile', siteKey};
+	const challenge = readAltchaChallenge(body);
+	return challenge ? {provider: 'altcha', challenge} : null;
 }
 
 class CaptchaInterceptor {
@@ -53,13 +65,16 @@ class CaptchaInterceptor {
 	}
 
 	private async solveAndRetry(
-		initialChallenge: AltchaChallenge,
+		initialChallenge: CaptchaChallenge,
 		retry: (extraHeaders: Record<string, string>) => Promise<RestResponse>,
 	): Promise<RestResponse | undefined> {
 		let challenge = initialChallenge;
 		let failed: () => RestResponse | undefined = () => undefined;
 		for (let solves = 1; ; solves++) {
-			const token = await this.solveWithHint(challenge);
+			const token =
+				challenge.provider === 'turnstile'
+					? await requestTurnstileToken(challenge.siteKey)
+					: await this.solveWithHint(challenge.challenge);
 			if (!token) return failed();
 			try {
 				const next = await retry({[Headers.X_CAPTCHA_TOKEN]: token});

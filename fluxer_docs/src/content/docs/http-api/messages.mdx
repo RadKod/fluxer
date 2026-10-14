@@ -51,6 +51,7 @@ A message object is the full stored form of one post in a channel.
 | message_snapshots? | array[[message snapshot](#message-snapshot-object) object] | The immutable copies captured for a forward |
 | nonce?<sup>6</sup> | string | Caller-supplied message nonce, echoed to the sender as a string of 1 through 32 characters |
 | call? | [message call](#message-call-object) object | Call state attached to a call message |
+| components? | array[[action row](#action-row-object) object] | [Button rows](#message-components) written by a first-party bot |
 | referenced_message?<sup>7</sup> | ?[message](#message-object) object | Resolved referenced message without a nested `referenced_message` field |
 
 <sup>1</sup> Built for a webhook-authored message and for a stored author ID that no longer resolves
@@ -855,6 +856,110 @@ The page has no cursor field. The next request repeats the operation with `befor
 | --- | --- | --- |
 | channel_id | snowflake | The ID of the channel |
 | messages | array[[message](#message-object) object] | Reverse-chronological message window |
+
+## Message components
+
+Message components are rows of buttons stored with a message. Only the instance's first-party bots have them: server code attaches the rows when such a bot sends or edits its own message. No request body can set them. [Create message](#create-message), [Modify message](#modify-message), and the [webhook](/http-api/webhooks/) message bodies have no `components` field, and a `components` key sent by a user, a bot token, or a webhook is dropped while the rest of the request proceeds.
+
+[Micup Roster](/http-api/guild-roster-events/) puts a Join button (`roster:join`) and a Leave button (`roster:leave`) on each announcement, next to the ✅ reaction, which keeps working. Both buttons are disabled once the roster closes.
+
+A message has at most 5 action rows, and each row has 1 through 5 buttons. A label has at most 80 characters, and a `custom_id` has 1 through 100. The server refuses an empty row list, so a bot disables its buttons instead of removing them, and a bot's edit that leaves the buttons out keeps the stored ones.
+
+A [forward](#message-reference-types) copies no components into its [message snapshot](#message-snapshot-object). [Click message button](#click-message-button) sends a click to the bot that wrote the message.
+
+### Action row object
+
+#### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| type | integer | Always `1` |
+| components | array[[button](#button-object) object] | 1 through 5 buttons |
+
+### Button object
+
+#### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| type | integer | Always `2` |
+| style | integer | [Button style](#button-styles) |
+| label? | string | The button text, at most 80 characters |
+| emoji? | [button emoji](#button-emoji-object) object | The emoji shown on the button |
+| custom_id | string | The value a click sends back, 1 through 100 characters |
+| disabled | boolean | Whether the button refuses clicks |
+
+### Button emoji object
+
+#### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| name | string | Emoji name or Unicode value |
+| id | ?snowflake | The ID of the custom emoji, or null for a Unicode emoji |
+| animated | boolean | Whether a custom emoji is animated, false for a Unicode emoji |
+
+### Button styles
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 1 | PRIMARY | The main action |
+| 2 | SECONDARY | A secondary action, such as the Roster Leave button |
+| 3 | SUCCESS | A positive action, such as the Roster Join button |
+| 4 | DANGER | A destructive action |
+
+### Click reply object
+
+#### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| code | string | A [click reply code](#click-reply-codes) |
+| channel_id | ?snowflake | A channel the reply points to, null for every Roster code |
+
+### Click reply codes
+
+The set is closed. The server never sends reply text, and the client shows its own translated message for each code, visible only to the clicker.
+
+| Value | Description |
+| --- | --- |
+| component_unavailable | Nothing handled the click: no such button, a disabled one, or a bot that is off or not in the guild |
+| roster_joined | The clicker joined the roster |
+| roster_already_joined | The clicker was already on this roster |
+| roster_left | The clicker left the roster |
+| roster_not_joined | The clicker was not on this roster |
+| roster_full | Every main, substitute, and waiting place is taken |
+| roster_closed | The roster has closed for its hour or no longer exists |
+| roster_busy | The clicker is already on another event roster in the same guild and hour |
+
+### Example
+
+The action rows of an open Micup Roster announcement:
+
+```json
+[
+  {
+    "type": 1,
+    "components": [
+      {
+        "type": 2,
+        "style": 3,
+        "label": "Katıl",
+        "emoji": {"name": "✅", "id": null, "animated": false},
+        "custom_id": "roster:join",
+        "disabled": false
+      },
+      {
+        "type": 2,
+        "style": 2,
+        "label": "Ayrıl",
+        "custom_id": "roster:leave",
+        "disabled": false
+      }
+    ]
+  }
+]
+```
 
 ## List channel messages
 
@@ -2283,6 +2388,68 @@ Fluxer deletes every reaction on the message and emits one [Message Reaction Rem
 ### Rate limit
 
 30 requests per 10 seconds for each authenticated user and channel ID, on the `channel:reactions::channel_id` bucket.
+
+## Click message button
+
+<RouteHeader method="POST" path="/v1/channels/{channel_id}/messages/{message_id}/components" />
+
+Clicks a [button](#message-components) on a first-party bot's message and returns the bot's [reply code](#click-reply-codes). The bot handles the click before the response is sent.
+
+### Limitations
+
+- This is a user-only operation, and a bot credential is refused with 403 `ACCESS_DENIED`.
+- Only a guild channel has clickable buttons. A direct message, group direct message, or personal notes channel returns 404 `UNKNOWN_MESSAGE`.
+- The caller must be able to view the text-bearing channel and must not be timed out. A caller without [READ_MESSAGE_HISTORY](/http-api/permissions/) can click only a message on or after the guild's message history cutoff, and no message when the guild has no cutoff.
+- The caller must have a verified email, and one that does not receives 403 `EMAIL_VERIFICATION_REQUIRED`.
+- The caller must have started a session, and one that has not receives the field code `MUST_START_SESSION_BEFORE_SENDING`. An unclaimed account is refused with 400 `UNCLAIMED_ACCOUNT_CANNOT_SEND_MESSAGES`.
+- No other permission is checked, and the guild's [REACTIONS disabled operation](/http-api/guilds/#disabled-guild-operations) does not block clicks. Each bot has its own feature flag instead.
+- The message author picks the bot, and the `custom_id` must carry that bot's prefix, such as `roster:` for Micup Roster. A `custom_id` that is not on the message, a disabled button, a webhook message, a message by any other author, and a bot that is not configured, has its feature flag at `0`, or is not in the guild all answer 200 with `component_unavailable`, and no bot handles the click.
+- The bot's guild membership is read through a cache of up to 30 seconds; only a positive membership result is cached.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| channel_id | snowflake | The ID of the channel |
+| message_id | snowflake | The ID of the message |
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| custom_id | string | The `custom_id` of the clicked button (1-100 characters) |
+
+### Response body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| reply<sup>1</sup> | ?[click reply](#click-reply-object) object | The bot's answer for the clicker |
+
+<sup>1</sup> Nullable in the schema, but the server always returns an object, with `component_unavailable` when no bot handled the click
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The click was handled, or it answered `component_unavailable` |
+| 400 | [error response](/http-api/#error-response) | The path or body is invalid |
+| 400 | [error response](/http-api/#error-response) | The channel has no messages and the request returns `CANNOT_SEND_MESSAGES_IN_NON_TEXT_CHANNEL` |
+| 400 | [error response](/http-api/#error-response) | The account has not started a session and the request returns `MUST_START_SESSION_BEFORE_SENDING` |
+| 400 | [error response](/http-api/#error-response) | The account is unclaimed and the request returns `UNCLAIMED_ACCOUNT_CANNOT_SEND_MESSAGES` |
+| 403 | [error response](/http-api/#error-response) | Caller is a bot and the request returns `ACCESS_DENIED` |
+| 403 | [error response](/http-api/#error-response) | Caller lacks `VIEW_CHANNEL` and the request returns `MISSING_PERMISSIONS` |
+| 403 | [error response](/http-api/#error-response) | The caller is timed out and the request returns `COMMUNICATION_DISABLED` |
+| 403 | [error response](/http-api/#error-response) | The caller has an unverified email and the request returns `EMAIL_VERIFICATION_REQUIRED` |
+| 404 | [error response](/http-api/#error-response) | Channel or message does not exist, the channel is not a guild channel, or the message is outside the cutoff |
+| 423 | [error response](/http-api/#error-response) | The Roster event lock stayed held through the retries, returning `GENERAL_ERROR` with `Retry-After: 2` |
+
+### Side effects
+
+The click itself emits no Gateway event. A Roster Join or Leave changes the roster before the response, and the announcement edit that shows it follows as a [Message Update](/gateway/events/#message-update) within the roster's two-second edit window. A Roster Leave, including one that answers `roster_not_joined`, removes the clicker's own ✅ from the announcement when present, and that removal emits the usual [Message Reaction Remove](/gateway/events/#message-reaction-remove).
+
+### Rate limit
+
+10 requests per 10 seconds for each authenticated user and channel ID, on the `channel:message:components::channel_id` bucket.
 
 ## Indicate typing
 

@@ -13,11 +13,14 @@
     session_rollout_mode/0,
     guild_rollout_percentage/0,
     voice_e2ee_scope/0,
+    game_activity_allowed/0,
+    game_activity_generation/0,
     gateway_dispatch_relay_shards/0,
     gateway_dispatch_relay_max_queue/0,
     rpc_request_timeout_ms/0,
     max_concurrent_session_starts/0,
     max_concurrent_guild_starts/0,
+    max_connections/0,
     is_session_eligible/1,
     is_guild_eligible/1,
     session_start_rollout_decision/1,
@@ -30,11 +33,20 @@
 -define(FETCH_DELAY_MS, 2000).
 -define(NATS_SUBSCRIBE_RETRY_MS, 2000).
 -define(NATS_SUBJECT, <<"config.gateway.rollout">>).
+-define(GAME_GATE_KEY, {?MODULE, game_activity_gate}).
+-define(FETCH_INTERVAL_MS, 25000).
+-define(FETCH_TIMEOUT_MS, 4500).
+-define(GAME_FRESHNESS_MS, 45000).
 
 -type state() :: #{
     subscribers := [{pid(), reference()}],
     nats_subscription := term(),
-    nats_monitor := reference() | undefined
+    nats_monitor := reference() | undefined,
+    fetch_worker => {pid(), reference(), reference(), reference()},
+    fetch_periodic_timer => reference(),
+    fetch_retry_timer => reference(),
+    fetch_retry_attempt => non_neg_integer(),
+    fetch_pending => boolean()
 }.
 -type store_result() :: updated | unchanged | rejected.
 -spec start_link() -> gen_server:start_ret().
@@ -85,6 +97,24 @@ voice_e2ee_scope() ->
         _ -> guild_feature_only
     end.
 
+-spec game_activity_allowed() -> boolean().
+game_activity_allowed() ->
+    Config = get(),
+    Gate = persistent_term:get(?GAME_GATE_KEY, #{}),
+    case maps:get(validated_at, Gate, undefined) of
+        Stamp when is_integer(Stamp) ->
+            maps:get(<<"game_activity_enabled">>, Config, false) andalso
+                maps:get(epoch, Gate, undefined) =:=
+                    maps:get(<<"game_activity_epoch">>, Config, 0) andalso
+                erlang:monotonic_time(millisecond) - Stamp < ?GAME_FRESHNESS_MS;
+        _ ->
+            false
+    end.
+
+-spec game_activity_generation() -> integer().
+game_activity_generation() ->
+    maps:get(generation, persistent_term:get(?GAME_GATE_KEY, #{}), 0).
+
 -spec gateway_dispatch_relay_shards() -> pos_integer().
 gateway_dispatch_relay_shards() ->
     max(1, maps:get(<<"gateway_dispatch_relay_shards">>, get(), 32)).
@@ -104,6 +134,10 @@ max_concurrent_session_starts() ->
 -spec max_concurrent_guild_starts() -> integer().
 max_concurrent_guild_starts() ->
     maps:get(<<"max_concurrent_guild_starts">>, get(), 256).
+
+-spec max_connections() -> non_neg_integer().
+max_connections() ->
+    maps:get(<<"max_connections">>, get(), 0).
 
 -spec is_session_eligible(binary()) -> boolean().
 is_session_eligible(UserId) ->
@@ -152,9 +186,16 @@ unsubscribe_changes(Pid) ->
 init([]) ->
     erlang:process_flag(fullsweep_after, 50),
     persistent_term:put(?PERSISTENT_TERM_KEY, initial_config()),
+    invalidate_game_gate(),
     self() ! subscribe_nats,
-    erlang:send_after(?FETCH_DELAY_MS, self(), fetch_initial_config),
-    {ok, #{subscribers => [], nats_subscription => undefined, nats_monitor => undefined}}.
+    {ok, #{
+        subscribers => [],
+        nats_subscription => undefined,
+        nats_monitor => undefined,
+        fetch_periodic_timer => erlang:start_timer(
+            ?FETCH_DELAY_MS, self(), fetch_periodic_config
+        )
+    }}.
 
 -spec handle_call(term(), gen_server:from(), state()) -> {reply, term(), state()}.
 handle_call(_Request, _From, State) ->
@@ -184,21 +225,96 @@ handle_cast(_Msg, State) ->
 handle_info(subscribe_nats, State) ->
     {noreply, subscribe_to_nats(State)};
 handle_info(fetch_initial_config, State) ->
-    maybe_notify_subscribers(fetch_config_from_api(), State),
+    {noreply, start_config_fetch(ensure_periodic_fetch(State))};
+handle_info(
+    {timeout, Timer, fetch_periodic_config}, #{fetch_periodic_timer := Timer} = State
+) ->
+    {noreply,
+        start_config_fetch(ensure_periodic_fetch(maps:remove(fetch_periodic_timer, State)))};
+handle_info({nats_resubscribed, ?NATS_SUBJECT}, #{fetch_worker := _} = State) ->
+    {noreply, State#{fetch_pending => true}};
+handle_info({nats_resubscribed, ?NATS_SUBJECT}, State) ->
+    {noreply, start_config_fetch(State)};
+handle_info(
+    {timeout, Timer, fetch_initial_config}, #{fetch_retry_timer := Timer} = State
+) ->
+    {noreply, start_config_fetch(State)};
+handle_info(
+    {rollout_fetch_result, Token, Result},
+    #{fetch_worker := {_Pid, Monitor, Token, Timer}} = State
+) ->
+    _ = erlang:cancel_timer(Timer),
+    erlang:demonitor(Monitor, [flush]),
+    Applied =
+        case maps:get(fetch_pending, State, false) of
+            true -> unchanged;
+            false -> apply_api_result(Result)
+        end,
+    {noreply, finish_config_fetch(Applied, maps:remove(fetch_worker, State))};
+handle_info(
+    {rollout_fetch_timeout, Token},
+    #{fetch_worker := {Pid, Monitor, Token, Timer}} = State
+) ->
+    _ = erlang:cancel_timer(Timer),
+    exit(Pid, kill),
+    erlang:demonitor(Monitor, [flush]),
+    logger:warning("Gateway rollout config authoritative fetch timed out"),
+    {noreply, finish_config_fetch(rejected, maps:remove(fetch_worker, State))};
+handle_info({game_activity_stale, Stamp}, State) ->
+    case persistent_term:get(?GAME_GATE_KEY, #{}) of
+        #{validated_at := Stamp} ->
+            invalidate_game_gate(),
+            notify_subscribers(State);
+        _ ->
+            ok
+    end,
+    {noreply, State};
+handle_info({notify_rollout_subscribers, Subscribers}, State) ->
+    notify_batch(Subscribers, 100),
     {noreply, State};
 handle_info({nats_msg, ?NATS_SUBJECT, Payload, _ReplyTo}, State) when is_binary(Payload) ->
-    maybe_notify_subscribers(apply_nats_payload(Payload), State),
-    {noreply, State};
+    Result = apply_nats_payload(Payload),
+    maybe_notify_subscribers(Result, State),
+    case Result =/= rejected andalso maps:is_key(fetch_worker, State) of
+        true -> {noreply, State#{fetch_pending => true}};
+        false -> {noreply, State}
+    end;
 handle_info({'DOWN', MonRef, process, _Pid, _Reason}, #{nats_monitor := MonRef} = State) ->
     erlang:send_after(?NATS_SUBSCRIBE_RETRY_MS, self(), subscribe_nats),
+    self() ! reconcile_config,
     {noreply, State#{nats_subscription => undefined, nats_monitor => undefined}};
+handle_info(reconcile_config, State) ->
+    {noreply, start_config_fetch(State)};
+handle_info(
+    {'DOWN', Monitor, process, _Pid, Reason},
+    #{fetch_worker := {_Worker, Monitor, _Token, Timer}} = State
+) ->
+    _ = erlang:cancel_timer(Timer),
+    logger:warning("Gateway rollout config fetch worker exited", #{reason => Reason}),
+    {noreply, finish_config_fetch(rejected, maps:remove(fetch_worker, State))};
 handle_info({'DOWN', _MonRef, process, Pid, _Reason}, #{subscribers := Subs} = State) ->
     {noreply, State#{subscribers => lists:keydelete(Pid, 1, Subs)}};
 handle_info(_Info, State) ->
     {noreply, State}.
 
 -spec terminate(term(), state()) -> ok.
-terminate(_Reason, _State) ->
+terminate(_Reason, State) ->
+    cancel_fetch_retry(State),
+    case maps:get(fetch_periodic_timer, State, undefined) of
+        PeriodicTimer when is_reference(PeriodicTimer) ->
+            _ = erlang:cancel_timer(PeriodicTimer),
+            ok;
+        _ ->
+            ok
+    end,
+    case maps:get(fetch_worker, State, undefined) of
+        {Pid, _Monitor, _Token, Timer} ->
+            _ = erlang:cancel_timer(Timer),
+            exit(Pid, kill);
+        _ ->
+            ok
+    end,
+    invalidate_game_gate(),
     ok.
 
 -spec code_change(term(), state(), term()) -> {ok, state()}.
@@ -227,7 +343,10 @@ default_config() ->
         <<"max_concurrent_guild_starts">> => 256,
         <<"gateway_dispatch_relay_shards">> => 32,
         <<"gateway_dispatch_relay_max_queue">> => 50000,
-        <<"voice_e2ee_scope">> => <<"guild_feature_only">>
+        <<"voice_e2ee_scope">> => <<"guild_feature_only">>,
+        <<"max_connections">> => 0,
+        <<"game_activity_enabled">> => false,
+        <<"game_activity_epoch">> => 0
     }.
 
 -spec initial_config() -> map().
@@ -246,10 +365,65 @@ validated_or_default(Config) ->
 validate_config(Config) ->
     gateway_rollout_config_validate:validate(Config, default_config()).
 
--spec fetch_config_from_api() -> store_result().
-fetch_config_from_api() ->
-    RpcRequest = #{<<"type">> => <<"get_gateway_rollout_config">>},
-    case api_rpc_client:call(RpcRequest) of
+-spec start_config_fetch(state()) -> state().
+start_config_fetch(#{fetch_worker := _} = State) ->
+    State;
+start_config_fetch(State) ->
+    cancel_fetch_retry(State),
+    Parent = self(),
+    Token = make_ref(),
+    {Pid, Monitor} = spawn_monitor(fun() ->
+        Result = api_rpc_client:call(#{<<"type">> => <<"get_gateway_rollout_config">>}),
+        Parent ! {rollout_fetch_result, Token, Result}
+    end),
+    Timer = erlang:send_after(?FETCH_TIMEOUT_MS, self(), {rollout_fetch_timeout, Token}),
+    (maps:remove(fetch_retry_timer, State))#{fetch_worker => {Pid, Monitor, Token, Timer}}.
+
+-spec ensure_periodic_fetch(state()) -> state().
+ensure_periodic_fetch(#{fetch_periodic_timer := _} = State) ->
+    State;
+ensure_periodic_fetch(State) ->
+    State#{
+        fetch_periodic_timer => erlang:start_timer(
+            ?FETCH_INTERVAL_MS, self(), fetch_periodic_config
+        )
+    }.
+
+-spec finish_config_fetch(store_result(), state()) -> state().
+finish_config_fetch(Result, State) ->
+    maybe_notify_subscribers(Result, State),
+    Next =
+        case Result of
+            rejected ->
+                Attempt = maps:get(fetch_retry_attempt, State, 0),
+                Delay = backoff_utils:calculate_with_jitter(Attempt),
+                State#{
+                    fetch_retry_timer => erlang:start_timer(
+                        Delay, self(), fetch_initial_config
+                    ),
+                    fetch_retry_attempt => min(Attempt + 1, 32)
+                };
+            _ ->
+                maps:without([fetch_retry_timer, fetch_retry_attempt], State)
+        end,
+    case maps:get(fetch_pending, Next, false) of
+        true -> start_config_fetch(maps:remove(fetch_pending, Next));
+        false -> Next
+    end.
+
+-spec cancel_fetch_retry(state()) -> ok.
+cancel_fetch_retry(State) ->
+    case maps:get(fetch_retry_timer, State, undefined) of
+        undefined ->
+            ok;
+        Timer ->
+            _ = erlang:cancel_timer(Timer),
+            ok
+    end.
+
+-spec apply_api_result(term()) -> store_result().
+apply_api_result(Result) ->
+    case Result of
         {ok, #{<<"config">> := Config}} when is_map(Config) ->
             store_valid_config(Config, api);
         {ok, _Other} ->
@@ -299,13 +473,72 @@ store_valid_config(Config, Source) ->
     end.
 
 -spec store_validated_config(map(), map(), api | nats) -> store_result().
-store_validated_config(OldConfig, OldConfig, _Source) ->
-    unchanged;
 store_validated_config(OldConfig, NewConfig, Source) ->
-    log_config_transitions(OldConfig, NewConfig),
-    persistent_term:put(?PERSISTENT_TERM_KEY, NewConfig),
-    logger:info("Gateway rollout config updated", #{source => Source}),
-    updated.
+    OldEpoch = maps:get(<<"game_activity_epoch">>, OldConfig, 0),
+    NewEpoch = maps:get(<<"game_activity_epoch">>, NewConfig, 0),
+    OldEnabled = maps:get(<<"game_activity_enabled">>, OldConfig, false),
+    NewEnabled = maps:get(<<"game_activity_enabled">>, NewConfig, false),
+    AcceptGame =
+        NewEpoch > OldEpoch orelse
+            (NewEpoch =:= OldEpoch andalso NewEnabled =:= OldEnabled),
+    Accepted =
+        case AcceptGame of
+            true ->
+                NewConfig;
+            false ->
+                NewConfig#{
+                    <<"game_activity_epoch">> => OldEpoch,
+                    <<"game_activity_enabled">> => OldEnabled
+                }
+        end,
+    case AcceptGame andalso NewEpoch =/= OldEpoch of
+        true -> invalidate_game_gate();
+        false -> ok
+    end,
+    Changed = Accepted =/= OldConfig,
+    case Changed of
+        true ->
+            log_config_transitions(OldConfig, Accepted),
+            persistent_term:put(?PERSISTENT_TERM_KEY, Accepted),
+            logger:info("Gateway rollout config updated", #{source => Source});
+        false ->
+            ok
+    end,
+    GateChanged =
+        case Source =:= api andalso AcceptGame of
+            true -> refresh_game_gate(NewEpoch);
+            false -> false
+        end,
+    case Changed orelse GateChanged of
+        true -> updated;
+        false -> unchanged
+    end.
+
+-spec invalidate_game_gate() -> ok.
+invalidate_game_gate() ->
+    persistent_term:put(
+        ?GAME_GATE_KEY,
+        #{generation => erlang:unique_integer([monotonic, positive])}
+    ),
+    ok.
+
+-spec refresh_game_gate(non_neg_integer()) -> boolean().
+refresh_game_gate(Epoch) ->
+    WasAllowed = game_activity_allowed(),
+    Gate = persistent_term:get(?GAME_GATE_KEY, #{}),
+    Stamp = erlang:monotonic_time(millisecond),
+    %% A delayed freshness timer must not let old grants survive a stale interval.
+    Generation =
+        case WasAllowed of
+            true -> maps:get(generation, Gate, 0);
+            false -> erlang:unique_integer([monotonic, positive])
+        end,
+    persistent_term:put(
+        ?GAME_GATE_KEY,
+        #{epoch => Epoch, validated_at => Stamp, generation => Generation}
+    ),
+    erlang:send_after(?GAME_FRESHNESS_MS, self(), {game_activity_stale, Stamp}),
+    not WasAllowed andalso game_activity_allowed().
 
 -spec subscribe_to_nats(state()) -> state().
 subscribe_to_nats(#{nats_subscription := Sid} = State) when Sid =/= undefined ->
@@ -376,10 +609,14 @@ maybe_notify_subscribers(_Result, _State) ->
 
 -spec notify_subscribers(state()) -> ok.
 notify_subscribers(#{subscribers := Subs}) ->
-    lists:foreach(
-        fun({Pid, _MonRef}) ->
-            Pid ! rollout_config_changed
-        end,
-        Subs
-    ),
-    ok.
+    notify_batch(Subs, 100).
+
+-spec notify_batch([{pid(), reference()}], non_neg_integer()) -> ok.
+notify_batch([], _) ->
+    ok;
+notify_batch(Rest, 0) ->
+    self() ! {notify_rollout_subscribers, Rest},
+    ok;
+notify_batch([{Pid, _Monitor} | Rest], Remaining) ->
+    Pid ! rollout_config_changed,
+    notify_batch(Rest, Remaining - 1).

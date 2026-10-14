@@ -158,6 +158,9 @@ message NagbarDismissals {
   map<string, bool> guild_mfa_requirement = 17;
   map<string, bool> price_announcement = 18;
   map<string, bool> legacy_price_opt_in = 19;
+  // Micup: field numbers from 1000 up, so an upstream field never collides.
+  bool micup_profile_privacy_widened = 1000;
+  bool micup_profile_public_offer = 1001;
 }
 
 message DismissedUpsells {

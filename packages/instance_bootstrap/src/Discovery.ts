@@ -11,6 +11,7 @@ import {
 	CURRENT_INSTANCE_CODENAME,
 	type InstanceAgePolicy,
 	type InstanceAgePolicyGeo,
+	type InstanceAppPublic,
 	type InstanceAppRegistration,
 	type InstanceBranding,
 	type InstanceCommunity,
@@ -27,7 +28,9 @@ import {
 	REGISTRATION_MODES,
 } from '@fluxer/instance_bootstrap/src/Types';
 import type {LimitConfigSnapshot, LimitConfigWireFormat, LimitFilter, LimitRule} from '@fluxer/limits/src/LimitTypes';
+import {UsernameTiersSchema} from '@fluxer/schema/src/domains/admin/UsernameSchemas';
 import {EXPERIMENT_BUCKET_RESOLUTION} from '@fluxer/schema/src/domains/experiment/ExperimentBucket';
+import {UsernameMigrationSchema} from '@fluxer/schema/src/domains/instance/InstanceSchemas';
 
 export const INSTANCE_DISCOVERY_PATH = '/.well-known/fluxer';
 const INSTANCE_DISCOVERY_CONVENTIONAL_ENDPOINT_PATH = '/api';
@@ -62,6 +65,7 @@ const FEATURE_FLAG_KEYS = Object.freeze([
 	'stripe_serviceable',
 	'phone_verification_enabled',
 	'desktop_modules_enabled',
+	'gift_codes_enabled',
 ] as const) satisfies ReadonlyArray<keyof InstanceFeatures>;
 
 const BRANDING_URL_KEYS = Object.freeze([
@@ -96,6 +100,7 @@ interface InstanceDiscoveryAppPublic {
 	readonly setup: Readonly<Partial<InstanceSetup>>;
 	readonly legal: Readonly<Partial<InstanceLegal>>;
 	readonly registration: Readonly<Partial<InstanceAppRegistration>>;
+	readonly localization?: InstanceAppPublic['localization'];
 }
 
 export interface InstanceDiscoveryDocument {
@@ -113,6 +118,8 @@ export interface InstanceDiscoveryDocument {
 	readonly appPublic: InstanceDiscoveryAppPublic | null;
 	readonly agePolicy: InstanceAgePolicy | null;
 	readonly domainMigration: InstanceDomainMigration | null;
+	readonly usernameMigration?: ReturnType<typeof UsernameMigrationSchema.parse>;
+	readonly usernameTiers?: ReturnType<typeof UsernameTiersSchema.parse>;
 }
 
 interface InstanceDiscoveryAttempt {
@@ -274,6 +281,9 @@ export function parseInstanceDiscoveryDocument(payload: unknown): InstanceDiscov
 		appPublic: parseAppPublic(source.app_public),
 		agePolicy: parseAgePolicy(source.age_policy),
 		domainMigration: parseInstanceDomainMigration(source.domain_migration),
+		usernameMigration:
+			source.username_migration === undefined ? undefined : UsernameMigrationSchema.parse(source.username_migration),
+		usernameTiers: source.username_tiers === undefined ? undefined : UsernameTiersSchema.parse(source.username_tiers),
 	};
 }
 
@@ -500,6 +510,21 @@ function parseFeatures(value: unknown): Readonly<Partial<InstanceFeatures>> {
 	if (maxBackgroundGatewayConnections != null) {
 		features.max_background_gateway_connections = maxBackgroundGatewayConnections;
 	}
+	const premiumTrialDays = readInteger(source, 'premium_trial_days', 0, Number.MAX_SAFE_INTEGER);
+	if (premiumTrialDays != null) {
+		features.premium_trial_days = premiumTrialDays;
+	}
+	if (Array.isArray(source.official_apps)) {
+		const apps: NonNullable<InstanceFeatures['official_apps']> = [];
+		for (const value of source.official_apps) {
+			const app = asRecord(value);
+			if (app == null || typeof app.application_id !== 'string' || typeof app.invite_permissions !== 'string') {
+				return features;
+			}
+			apps.push({application_id: app.application_id, invite_permissions: app.invite_permissions});
+		}
+		features.official_apps = apps;
+	}
 	return features;
 }
 
@@ -710,7 +735,17 @@ function parseAppPublic(value: unknown): InstanceDiscoveryAppPublic | null {
 		setup: parseSetup(source.setup),
 		legal: parseLegal(source.legal),
 		registration: parseAppRegistration(source.registration),
+		localization: parseLocalization(source.localization),
 	};
+}
+
+function parseLocalization(value: unknown): InstanceAppPublic['localization'] {
+	const source = asRecord(value);
+	if (source == null || (source.default_locale !== null && typeof source.default_locale !== 'string')) {
+		return undefined;
+	}
+	const timeZones = readStringArray(source, 'default_locale_time_zones');
+	return timeZones == null ? undefined : {default_locale: source.default_locale, default_locale_time_zones: timeZones};
 }
 
 function parseBranding(value: unknown): Readonly<Partial<InstanceBranding>> {
@@ -765,6 +800,9 @@ function parseLegal(value: unknown): Readonly<Partial<InstanceLegal>> {
 	}
 	if (Object.hasOwn(source, 'privacy_url')) {
 		legal.privacy_url = readAbsoluteHTTPURL(source, 'privacy_url');
+	}
+	if (Object.hasOwn(source, 'source_url')) {
+		legal.source_url = readAbsoluteHTTPURL(source, 'source_url');
 	}
 	return legal;
 }

@@ -125,6 +125,9 @@ A connection moves through these states: Opening, Unauthenticated, Starting, Rep
 | WebSocket accepted. `v=1` and connection capacity available | Send Hello | Unauthenticated |
 | Invalid version. `v` is absent or is not `1` | Close with `4012` and reason `Invalid API version` | Closed |
 | Concurrent connection limit reached. The source IP already holds 256 connections | Close with `4008` and reason `Too many connections` | Closed |
+| IPv6 prefix limit reached. The source /48 holds the operator's per-/48 limit | Close with `4008` and reason `Too many connections` | Closed |
+| Node limit reached. The node holds more than its connection limit plus 5% | Close with `4008` and reason `Gateway at capacity` | Closed |
+| Unidentified budget full. The operator's budget for sockets without Identify or Resume is used | Close with `4008` and reason `Gateway at capacity` | Closed |
 
 ### Unauthenticated
 
@@ -133,6 +136,8 @@ A connection moves through these states: Opening, Unauthenticated, Starting, Rep
 | Identify. Valid Identify payload and Identify capacity available | Begin session creation | Starting |
 | Identify. Gateway draining, node at capacity, session starts paused, or the account outside the session rollout | Hold the payload and retry it in the background | Unauthenticated |
 | Identify. The source IP Identify budget is exhausted | Discard the payload without a reply | Unauthenticated |
+| Identify. The node holds more WebSockets or sessions than its connection limit | Close with `4008` and reason `Gateway at capacity` | Closed |
+| Identify timeout. The operator's timeout after Hello passes with no session and no held start | Close with `4003` and reason `Identify timeout` | Closed |
 | Resume. Valid Resume payload | Look up the retained session named by `session_id` | Starting |
 | Authenticated command. Any command other than Heartbeat, Identify, or Resume | Close with `4003` and reason `Not authenticated` | Closed |
 

@@ -29,7 +29,7 @@ export function useVirtualRows(
 	emojisPerRow: number = EMOJIS_PER_ROW,
 ) {
 	const {i18n} = useLingui();
-	const collapsedCategories = EmojiPicker.collapsedCategories;
+	const collapsedCategories = JSON.stringify(EmojiPicker.collapsedCategories);
 	return useMemo(() => {
 		const rows: Array<VirtualRow> = [];
 		let currentIndex = 0;

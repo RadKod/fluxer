@@ -10,7 +10,7 @@ const DIRECT_LOAD =
 	/(?:channelRepository|ChannelRepository\(\)|ChannelDataRepository\(\)|channelRepo|channelDataRepository|channelData|get\('channelRepository'\))\.findUnique\(/g;
 const GATE_REFERENCE = /ChannelThreadsGate|\bisThread\w*\(|THREAD_\w*CHANNEL_TYPES/;
 
-type Coverage = 'gated' | 'dm_or_voice_only' | 'admin_or_system';
+type Coverage = 'gated' | 'dm_or_voice_only' | 'text_or_voice_only' | 'admin_or_system';
 
 const EXPECTED_LOADS: Readonly<Record<string, readonly [number, Coverage]>> = {
 	'admin/controllers/ThreadAdminController.ts': [1, 'admin_or_system'],
@@ -38,6 +38,10 @@ const EXPECTED_LOADS: Readonly<Record<string, readonly [number, Coverage]>> = {
 	'channel/services/thread/ThreadCreationService.ts': [4, 'gated'],
 	'channel/services/thread/ThreadDeletionService.ts': [1, 'admin_or_system'],
 	'csam/NcmecSubmissionService.ts': [1, 'admin_or_system'],
+	'guild/micupbot/MicupBotCommands.ts': [1, 'text_or_voice_only'],
+	'guild/micupbot/MicupBotSettingsService.ts': [1, 'text_or_voice_only'],
+	'guild/roster/GuildRosterRuntime.ts': [1, 'text_or_voice_only'],
+	'guild/roster/GuildRosterSettingsService.ts': [2, 'text_or_voice_only'],
 	'guild/services/channel/ChannelOperationsService.ts': [2, 'gated'],
 	'guild/services/GuildDiscoveryService.ts': [1, 'gated'],
 	'guild/services/data/GuildOperationsService.ts': [2, 'gated'],

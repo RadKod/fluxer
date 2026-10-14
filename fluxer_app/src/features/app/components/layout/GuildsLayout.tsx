@@ -33,6 +33,7 @@ import {AddGuildButton} from '@app/features/app/components/layout/sidebar_nav/Ad
 import {DiscoveryButton} from '@app/features/app/components/layout/sidebar_nav/DiscoveryButton';
 import {DownloadButton} from '@app/features/app/components/layout/sidebar_nav/DownloadButton';
 import {FavoritesButton} from '@app/features/app/components/layout/sidebar_nav/FavoritesButton';
+import {FeedButton} from '@app/features/app/components/layout/sidebar_nav/FeedButton';
 import {FluxerButton} from '@app/features/app/components/layout/sidebar_nav/FluxerButton';
 import {GuildFolderItem} from '@app/features/app/components/layout/sidebar_nav/GuildFolderItem';
 import {resolveDMListItemUnreadState} from '@app/features/app/components/layout/sidebar_nav/GuildListDMItem';
@@ -77,6 +78,7 @@ import {
 import {useRovingFocusList} from '@app/features/app/hooks/useRovingFocusList';
 import Initialization from '@app/features/app/state/Initialization';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
+import {LimitResolver} from '@app/features/app/utils/LimitResolverAdapter';
 import {openClaimAccountModal} from '@app/features/auth/components/modals/ClaimAccountModal';
 import type {Channel} from '@app/features/channel/models/Channel';
 import Channels from '@app/features/channel/state/Channels';
@@ -193,6 +195,7 @@ type GuildNavigationRow =
 	| (NavigationRow & {readonly kind: 'outage'})
 	| (NavigationRow & {readonly kind: 'organized-item'; readonly item: OrganizedItem})
 	| (NavigationRow & {readonly kind: 'bottom-drop-zone'})
+	| (NavigationRow & {readonly kind: 'feed'})
 	| (NavigationRow & {readonly kind: 'discovery'})
 	| (NavigationRow & {readonly kind: 'add-guild'})
 	| (NavigationRow & {readonly kind: 'download'})
@@ -201,16 +204,21 @@ type GuildNavigationRow =
 interface GuildNavigationVisibility {
 	readonly fluxerVisible: boolean;
 	readonly favoritesVisible: boolean;
+	readonly feedVisible: boolean;
 	readonly discoveryVisible: boolean;
 	readonly addGuildVisible: boolean;
 	readonly downloadVisible: boolean;
 	readonly helpVisible: boolean;
 }
 
+// Micup: the feed rail button is shown; it still follows the feature_feed limit, and false hides it again.
+const FEED_RAIL_BUTTON_ENABLED = true;
+
 function useGuildNavigationVisibility(): GuildNavigationVisibility {
 	const communityActionsVisible = !RuntimeConfig.singleCommunityEnabled;
 	const fluxerVisible = !RuntimeConfig.directMessagesDisabled;
 	const favoritesVisible = Accessibility.showFavorites;
+	const feedVisible = FEED_RAIL_BUTTON_ENABLED && LimitResolver.resolve({key: 'feature_feed', fallback: 0}) > 0;
 	const downloadVisible = !Platform.isElectron && !Platform.isPWA && !HiddenGuildListButtons.downloadButtonHidden;
 	const helpVisible = !HiddenGuildListButtons.helpButtonHidden;
 	return useMemo(
@@ -218,12 +226,13 @@ function useGuildNavigationVisibility(): GuildNavigationVisibility {
 			Object.freeze({
 				fluxerVisible,
 				favoritesVisible,
+				feedVisible,
 				discoveryVisible: communityActionsVisible,
 				addGuildVisible: communityActionsVisible,
 				downloadVisible,
 				helpVisible,
 			}),
-		[communityActionsVisible, downloadVisible, favoritesVisible, fluxerVisible, helpVisible],
+		[communityActionsVisible, downloadVisible, favoritesVisible, feedVisible, fluxerVisible, helpVisible],
 	);
 }
 
@@ -252,6 +261,15 @@ function createGuildNavigationRows({
 	visibility,
 }: CreateGuildNavigationRowsRequest): Array<GuildNavigationRow> {
 	const rows: Array<GuildNavigationRow> = [];
+	// Micup: the feed button leads the rail (upstream: after the guilds, before discovery).
+	if (visibility.feedVisible) {
+		rows.push({
+			kind: 'feed',
+			key: 'feed',
+			focusable: true,
+			focusTargetIdentity: 'feed',
+		});
+	}
 	if (visibility.fluxerVisible) {
 		rows.push({
 			kind: 'fluxer',
@@ -350,6 +368,7 @@ function createGuildNavigationRows({
 function hasGapAfterGuildNavigationRow(row: GuildNavigationRow, nextRow: GuildNavigationRow | null): boolean {
 	switch (row.kind) {
 		case 'fluxer':
+		case 'feed':
 		case 'discovery':
 		case 'add-guild':
 		case 'download':
@@ -394,6 +413,7 @@ function resolveSelectedGuildNavigationKey({
 		}
 	}
 	if (visibility.favoritesVisible && pathname === Routes.FAVORITES) return 'favorites';
+	if (visibility.feedVisible && Routes.isFeedRoute(pathname)) return 'feed';
 	if (visibility.discoveryVisible && Routes.isDiscoverRoute(pathname)) return 'discovery';
 	if (visibility.fluxerVisible && pathname === Routes.ME) return 'fluxer';
 	return null;
@@ -1283,8 +1303,11 @@ const SKELETON_NAGBAR_ROW_SHAPES: Record<NagbarType, SkeletonNagbarRowShape> = {
 	[NagbarType.VISIONARY_MFA]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 	[NagbarType.VOICE_SESSION_RESTORE]: {tone: SkeletonNagbarTone.VOICE, hasActions: true},
 	[NagbarType.TERMS_ACCEPTANCE]: {tone: SkeletonNagbarTone.LEGAL, hasActions: true},
+	[NagbarType.TASKBAR_PIN]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 	[NagbarType.SOFTWARE_ENCODER]: {tone: SkeletonNagbarTone.ENCODER, hasActions: true},
 	[NagbarType.STREAMER_MODE]: {tone: SkeletonNagbarTone.STREAMER, hasActions: true},
+	[NagbarType.PROFILE_PRIVACY_WIDENED]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
+	[NagbarType.PROFILE_PUBLIC_OFFER]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 	[NagbarType.DOMAIN_MOVED]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 };
 
@@ -1489,6 +1512,7 @@ function createGuildRailSkeletonLayout({
 		outageVisible: hasUnavailableGuilds,
 		fluxerVisible: visibility.fluxerVisible,
 		favoritesVisible: visibility.favoritesVisible,
+		feedVisible: visibility.feedVisible,
 		discoveryVisible: visibility.discoveryVisible,
 		addGuildVisible: visibility.addGuildVisible,
 		downloadVisible: visibility.downloadVisible,
@@ -2045,6 +2069,8 @@ const GuildList = observer(() => {
 						/>
 					</flx-app-guild-list-drop-zone>
 				);
+			case 'feed':
+				return <FeedButton data-flx="app.guilds-layout.render-guild-navigation-row.feed-button" />;
 			case 'discovery':
 				return <DiscoveryButton data-flx="app.guilds-layout.render-guild-navigation-row.discovery-button" />;
 			case 'add-guild':
@@ -2147,6 +2173,7 @@ export const GuildsLayout = observer(({children}: {children: React.ReactNode}) =
 		mobileLayout.enabled &&
 		(location.pathname === Routes.ME ||
 			Routes.isDiscoverRoute(location.pathname) ||
+			location.pathname === Routes.FEED ||
 			(Routes.isChannelRoute(location.pathname) && location.pathname.split('/').length === 3));
 	const showBottomNav =
 		!isVoiceCallFullscreenActive &&
@@ -2154,6 +2181,7 @@ export const GuildsLayout = observer(({children}: {children: React.ReactNode}) =
 		(location.pathname === Routes.ME ||
 			location.pathname === Routes.FAVORITES ||
 			Routes.isDiscoverRoute(location.pathname) ||
+			location.pathname === Routes.FEED ||
 			location.pathname === Routes.NOTIFICATIONS ||
 			location.pathname === Routes.YOU ||
 			(Routes.isGuildChannelRoute(location.pathname) && location.pathname.split('/').length === 3));

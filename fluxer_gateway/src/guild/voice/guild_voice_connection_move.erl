@@ -92,6 +92,11 @@ do_request_move_token(Context, ChannelIdValue, Member, SessionId, MoveState, Gui
 ) -> {reply, map(), guild_state()} | {reply, {error, atom(), atom()}, guild_state()}.
 handle_move_token_result({ok, TokenData}, Build) ->
     build_move_result(Build#{token_data => TokenData});
+handle_move_token_result({error, username_selection_required}, Build) ->
+    #{state := State, context := Context, channel_id := ChannelIdValue} = Build,
+    UserId = maps:get(user_id, Context),
+    {reply, gateway_errors:error(username_selection_required),
+        clear_move_flags(UserId, ChannelIdValue, State)};
 handle_move_token_result({error, _Reason}, Build) ->
     #{state := State, context := Context, channel_id := ChannelIdValue} = Build,
     UserId = maps:get(user_id, Context),
@@ -185,7 +190,6 @@ move_build_fields(Build) ->
         token_data => maps:get(token_data, Build),
         token_nonce => maps:get(token_nonce, Build)
     }.
-
 -spec move_e2ee_capable(context(), guild_state()) -> boolean().
 move_e2ee_capable(Context, State) ->
     guild_voice_e2ee:context_e2ee_capable_guild(Context, State).
@@ -244,3 +248,26 @@ build_move_pending(Build) ->
         created_at => Now,
         expires_at => Now + 30000
     }.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+selection_token_error_preserves_connection_and_clears_move_flags_test() ->
+    VoiceStates = #{<<"old">> => #{<<"channel_id">> => <<"100">>}},
+    State = guild_virtual_channel_access:mark_transition_flags(
+        10,
+        200,
+        #{voice_states => VoiceStates, pending_voice_connections => #{}}
+    ),
+    Build = #{state => State, context => #{user_id => 10}, channel_id => 200},
+    {reply, Error, UpdatedState} = handle_move_token_result(
+        {error, username_selection_required}, Build
+    ),
+    ?assertEqual(gateway_errors:error(username_selection_required), Error),
+    ?assertEqual(VoiceStates, maps:get(voice_states, UpdatedState)),
+    ?assertEqual(#{}, maps:get(pending_voice_connections, UpdatedState)),
+    ?assertEqual(
+        guild_virtual_channel_access:clear_transition_flags(10, 200, State), UpdatedState
+    ).
+
+-endif.

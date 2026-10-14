@@ -1,0 +1,14 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.image {
+	position: absolute;
+	top: -10%;
+	left: -10%;
+	width: 120%;
+	height: 120%;
+	/* The preflight img rule caps max-width at 100%, which squeezes the 120% frame sideways. */
+	max-width: none;
+	pointer-events: none;
+	user-select: none;
+	-webkit-user-drag: none;
+}

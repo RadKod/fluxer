@@ -1,0 +1,135 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.backButton {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	margin-inline-end: 0.5rem;
+	padding: 0;
+	border: none;
+	border-radius: var(--radius-md);
+	background: none;
+	color: var(--text-primary-muted);
+	cursor: pointer;
+}
+
+.backButton:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-primary);
+}
+
+.post {
+	padding-bottom: 1rem;
+}
+
+/* The time line inside the card, above its actions (desktop layout; the phone layout keeps .meta under the card). */
+.cardStamp {
+	padding: 0.625rem 0;
+	margin-bottom: 0.25rem;
+	border-bottom: 0.0625rem solid var(--border-color);
+	color: var(--text-primary-muted);
+	font-size: 0.8125rem;
+}
+
+.meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.625rem 1rem;
+	border-block: 0.0625rem solid var(--background-modifier-accent);
+}
+
+.stamp {
+	color: var(--text-primary-muted);
+	font-size: 0.8125rem;
+}
+
+.likersButton {
+	padding: 0.25rem 0.5rem;
+	border: none;
+	border-radius: var(--radius-lg);
+	background: none;
+	color: var(--text-primary-muted);
+	font-size: 0.8125rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+/* The hover text moves off muted: muted is 4.21:1 on control-button-hover-bg in the light theme. 32px in the card's
+   action row on the desktop layout with a mouse; touch keeps its 44px (the touch block below). */
+@media (hover: hover) and (pointer: fine) {
+	.likersButton:hover {
+		background-color: var(--control-button-hover-bg);
+		color: var(--text-primary);
+	}
+
+	:global(html:not(.auth-page):not(.mobile-layout)) .likersButton {
+		height: 2rem;
+	}
+}
+
+/* The page lists the comments under the post, not in the bordered panel a card opens in the feed (FeedComments uses the
+   card's .comments class in both layouts). */
+.comments > section {
+	margin-top: 0;
+	padding: 1rem 1rem 0.75rem;
+	border: none;
+	border-radius: 0;
+	background: none;
+}
+
+/* The divider the time line row drew above the comments on the desktop layout, now that it sits in the card. */
+:global(html:not(.auth-page):not(.mobile-layout)) .comments {
+	border-top: 0.0625rem solid var(--border-color);
+}
+
+:global(html:not(.auth-page):not(.mobile-layout)) .comments > section {
+	padding: 1rem 1.25rem 0.25rem;
+}
+
+/* Micup: the comment box (the section's first child on the page) sits as far from the first comment as
+   from the line above it: 16px on both sides, the comments 12px apart. */
+.comments > section > :first-child {
+	margin-bottom: 0.25rem;
+}
+
+.status {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.75rem;
+	margin: 0;
+	padding: 1.5rem 1rem;
+	color: var(--text-primary-muted);
+	text-align: center;
+}
+
+/* Narrow screens and touch: 44px back and likers buttons, See who liked also inside the card. */
+@media (max-width: 640px), (pointer: coarse) {
+	.backButton {
+		width: 2.75rem;
+		height: 2.75rem;
+	}
+
+	.likersButton {
+		min-height: 2.75rem;
+	}
+}
+
+/* Micup: X look in the coal and dark themes (FeedPostCard.module.css): the time line in X's muted 15px,
+   with X's room above the action row its line divides from the text. */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .cardStamp {
+	padding: 1rem 0;
+	color: var(--text-tertiary);
+	font-size: 0.9375rem;
+}
+
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .stamp {
+	color: var(--text-tertiary);
+	font-size: 0.9375rem;
+}

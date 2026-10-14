@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import Accessibility from '@app/features/accessibility/state/Accessibility';
 import {useBottomSheetBackHandler} from '@app/features/app/hooks/useBottomSheetBackHandler';
 import {CLOSE_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {useAccountTransitionDismissal} from '@app/features/platform/hooks/useAccountTransitionDismissal';
@@ -129,7 +130,7 @@ function getViewportOffsetBottom(): number {
 
 function getTransitionDuration(enabled: boolean): string {
 	if (!enabled) return '0ms';
-	if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+	if (Accessibility.useReducedMotion) {
 		return '1ms';
 	}
 	return `${SHEET_ANIMATION_MS}ms`;

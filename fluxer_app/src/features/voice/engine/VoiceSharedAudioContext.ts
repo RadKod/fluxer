@@ -106,7 +106,7 @@ export function createVoiceSoftClipNode(context: BaseAudioContext): {input: Gain
 	input.gain.value = 1 / VOICE_TRACK_MAX_TOTAL_GAIN;
 	const output = context.createWaveShaper();
 	output.curve = createVoiceSoftClipCurve();
-	output.oversample = 'none';
+	output.oversample = '4x';
 	input.connect(output);
 	return {input, output};
 }
@@ -145,6 +145,7 @@ function installMasterSoftClip(context: AudioContext): void {
 }
 
 let sharedAudioContext: AudioContext | null = null;
+let sharedAudioContextSuspendedAfterCall = false;
 
 function resolveAudioContextConstructor(): AudioContextConstructor | null {
 	if (typeof window === 'undefined') return null;
@@ -187,12 +188,24 @@ function installResumeOnUserGesture(context: AudioContext): void {
 
 export function getSharedVoiceAudioContext(): AudioContext | null {
 	if (sharedAudioContext && sharedAudioContext.state !== 'closed') {
+		if (sharedAudioContextSuspendedAfterCall) {
+			sharedAudioContextSuspendedAfterCall = false;
+			void sharedAudioContext.resume().catch((error) => {
+				logger.debug('Failed to resume shared voice AudioContext for a new call', {error});
+			});
+		}
 		return sharedAudioContext;
 	}
+	sharedAudioContextSuspendedAfterCall = false;
 	sharedAudioContext = createVoiceAudioContext({latencyHint: 'interactive'});
 	if (!sharedAudioContext) return null;
 	assert.notEqual(sharedAudioContext.state, 'closed', 'shared voice AudioContext must not start closed');
 	installMasterSoftClip(sharedAudioContext);
+	// Teardown after the call can still resume the context: LiveKit rebuilds a track's graph and resumes when the room
+	// view drops its spatial nodes, and the first-click resume may fire late. Until the next call, suspend it again.
+	sharedAudioContext.addEventListener('statechange', () => {
+		if (sharedAudioContextSuspendedAfterCall) suspendSharedVoiceAudioContext();
+	});
 	if (sharedAudioContext.state === 'suspended') {
 		void sharedAudioContext.resume().catch((error) => {
 			logger.debug('Initial resume of shared voice AudioContext rejected', {error});
@@ -200,4 +213,15 @@ export function getSharedVoiceAudioContext(): AudioContext | null {
 		installResumeOnUserGesture(sharedAudioContext);
 	}
 	return sharedAudioContext;
+}
+
+// Media stream and media element sources stay alive while their context runs, even after disconnect(); suspending
+// the context once the call is over lets the call's sources be collected.
+export function suspendSharedVoiceAudioContext(): void {
+	const context = sharedAudioContext;
+	if (context?.state !== 'running') return;
+	sharedAudioContextSuspendedAfterCall = true;
+	void context.suspend().catch((error) => {
+		logger.debug('Failed to suspend shared voice AudioContext after the call', {error});
+	});
 }

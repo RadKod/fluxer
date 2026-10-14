@@ -2,6 +2,9 @@
 
 import {GenericErrorModal} from '@app/features/app/components/alerts/GenericErrorModal';
 import {Endpoints} from '@app/features/app/constants/Endpoints';
+import InstanceSnapshotStore from '@app/features/app/state/InstanceSnapshotStore';
+import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
+import Cosmetics from '@app/features/cosmetics/state/Cosmetics';
 import DeveloperOptions from '@app/features/devtools/state/DeveloperOptions';
 import {GiftAcceptModal} from '@app/features/expressions/components/modals/GiftAcceptModal';
 import {GiftSendToFriendModal} from '@app/features/expressions/components/modals/GiftSendToFriendModal';
@@ -12,16 +15,28 @@ import {
 	GIFT_NOT_FOUND_TITLE_DESCRIPTOR,
 } from '@app/features/gift/utils/GiftMessageDescriptors';
 import {extractGiftCode} from '@app/features/gift/utils/GiftUtils';
-import {type InstanceHTTPTarget, instanceRequest} from '@app/features/platform/transport/InstanceHTTP';
+import {
+	currentInstanceTarget,
+	type InstanceHTTPTarget,
+	instanceRequest,
+} from '@app/features/platform/transport/InstanceHTTP';
 import {http} from '@app/features/platform/transport/RestTransport';
 import {HttpError} from '@app/features/platform/types/EndpointError';
 import {Logger} from '@app/features/platform/utils/AppLogger';
+import ShopCatalog from '@app/features/shop/state/ShopCatalog';
+import {
+	ALREADY_OWNED_CODE_KEPT_DESCRIPTOR,
+	ALREADY_OWNED_DESCRIPTOR,
+} from '@app/features/shop/utils/ShopMessageDescriptors';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {modal} from '@app/features/ui/commands/ModalCommands';
 import * as ToastCommands from '@app/features/ui/commands/ToastCommands';
+import * as UserProfileCommands from '@app/features/user/commands/UserProfileCommands';
 import Users from '@app/features/user/state/Users';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {MS_PER_DAY} from '@fluxer/date_utils/src/DateConstants';
+import type {CosmeticItemResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
+import type {ShopCodeResponse} from '@fluxer/schema/src/domains/shop/ShopResponseSchemas';
 import type {UserPartial} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import type {I18n} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
@@ -136,6 +151,11 @@ function handleRedeemFailure(i18n: I18n, code: string, target: InstanceHTTPTarge
 				i18n._(THIS_GIFT_CODE_IS_INVALID_OR_HAS_ALREADY_BEEN_REDEEMED_DESCRIPTOR),
 			);
 			break;
+		// The code stays unused; the account's item list was stale, so it catches up and the dialog shows "owned".
+		case APIErrorCodes.COSMETIC_ALREADY_OWNED:
+			void Cosmetics.load();
+			giftErrorModal(i18n._(ALREADY_OWNED_DESCRIPTOR), i18n._(ALREADY_OWNED_CODE_KEPT_DESCRIPTOR));
+			break;
 		case APIErrorCodes.GIFT_CODE_ALREADY_REDEEMED:
 			Gifts.markAsRedeemed(code, target);
 			giftErrorModal(
@@ -184,13 +204,25 @@ function mockGiftMetadata(): Array<GiftMetadata> {
 	];
 }
 
+// Premium time. Every gift screen reads this shape; an item code never takes it.
 export interface Gift {
+	kind?: 'premium';
 	code: string;
 	duration_type: GiftDurationType;
 	duration_quantity: number;
 	redeemed: boolean;
 	created_by?: UserPartial;
 }
+
+// An item code (mirror instances only): redeeming adds the item to the account and wears it.
+export interface CosmeticGift {
+	kind: 'cosmetic';
+	code: string;
+	redeemed: boolean;
+	item: CosmeticItemResponse;
+}
+
+export type AnyGift = Gift | CosmeticGift;
 
 export interface GiftMetadata {
 	code: string;
@@ -202,11 +234,24 @@ export interface GiftMetadata {
 	redeemed_by: UserPartial | null;
 }
 
-export async function fetch(rawCode: string, target: InstanceHTTPTarget): Promise<Gift> {
+function giftFromShopCode({code, redeemed, grant}: ShopCodeResponse): AnyGift {
+	return grant.type === 'cosmetic'
+		? {kind: 'cosmetic', code, redeemed, item: grant.item}
+		: {code, redeemed, duration_type: grant.duration_type, duration_quantity: grant.duration_quantity};
+}
+
+// GET /gifts/:code answers an item code as unknown, so old clients never show it as premium time; a mirror
+// instance, where item codes exist, previews every code through the shop instead.
+export async function fetch(rawCode: string, target: InstanceHTTPTarget = currentInstanceTarget()): Promise<AnyGift> {
 	const code = extractGiftCode(rawCode);
 	try {
-		const response = await instanceRequest<Gift>({method: 'GET', path: Endpoints.GIFT(code), target});
-		const gift = response.body;
+		const selfHosted =
+			InstanceSnapshotStore.get(target.instanceKey)?.features.self_hosted ?? RuntimeConfig.isSelfHosted();
+		const gift = selfHosted
+			? giftFromShopCode(
+					(await instanceRequest<ShopCodeResponse>({method: 'GET', path: Endpoints.SHOP_CODE(code), target})).body,
+				)
+			: (await instanceRequest<Gift>({method: 'GET', path: Endpoints.GIFT(code), target})).body;
 		logger.debug('Gift fetched', {code});
 		return gift;
 	} catch (error) {
@@ -215,11 +260,17 @@ export async function fetch(rawCode: string, target: InstanceHTTPTarget): Promis
 	}
 }
 
-export async function fetchWithCoalescing(rawCode: string, target: InstanceHTTPTarget): Promise<Gift> {
+export async function fetchWithCoalescing(
+	rawCode: string,
+	target: InstanceHTTPTarget = currentInstanceTarget(),
+): Promise<AnyGift> {
 	return Gifts.fetchGift(extractGiftCode(rawCode), target);
 }
 
-export async function openAcceptModal(rawCode: string, target: InstanceHTTPTarget): Promise<void> {
+export async function openAcceptModal(
+	rawCode: string,
+	target: InstanceHTTPTarget = currentInstanceTarget(),
+): Promise<void> {
 	const code = extractGiftCode(rawCode);
 	void fetchWithCoalescing(code, target).catch(() => {});
 	ModalCommands.pushWithKey(
@@ -230,13 +281,26 @@ export async function openAcceptModal(rawCode: string, target: InstanceHTTPTarge
 	);
 }
 
-export async function redeem(i18n: I18n, rawCode: string, target: InstanceHTTPTarget): Promise<void> {
+export async function redeem(
+	i18n: I18n,
+	rawCode: string,
+	target: InstanceHTTPTarget = currentInstanceTarget(),
+): Promise<void> {
 	const code = extractGiftCode(rawCode);
+	const item = Gifts.getGift(code, target)?.item?.item ?? null;
 	try {
 		await instanceRequest({method: 'POST', path: Endpoints.GIFT_REDEEM(code), target});
 		logger.info('Gift redeemed', {code});
 		Gifts.markAsRedeemed(code, target);
-		ToastCommands.success(i18n._(GIFT_REDEEMED_SUCCESSFULLY_DESCRIPTOR));
+		if (item) {
+			// The server added the item and wore it; the gift dialog says so, so no toast.
+			void Cosmetics.load();
+			if (item.type === 'profile_effect') UserProfileCommands.clearCurrentUserProfiles();
+		} else {
+			ToastCommands.success(i18n._(GIFT_REDEEMED_SUCCESSFULLY_DESCRIPTOR));
+		}
+		// Only a session that opened the shop holds a catalog; premium time changes its member discount.
+		if (ShopCatalog.status !== 'idle') void ShopCatalog.load(true);
 	} catch (error) {
 		logger.error('Gift redeem failed', error);
 		if (error instanceof HttpError) {

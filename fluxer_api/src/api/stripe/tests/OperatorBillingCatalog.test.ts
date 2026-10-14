@@ -32,7 +32,7 @@ import processStripeWebhook from '@app/api/worker/tasks/ProcessStripeWebhook';
 import {setWorkerDependenciesForTest} from '@app/api/worker/WorkerContext';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
-import type {PremiumStateResponse, PriceIdsResponse} from '@fluxer/schema/src/domains/premium/PremiumSchemas';
+import type {PremiumStateResponse} from '@fluxer/schema/src/domains/premium/PremiumSchemas';
 import type {WorkerTaskHelpers} from '@pkgs/worker/src/contracts/WorkerTask';
 import {HttpResponse, http} from 'msw';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest';
@@ -129,15 +129,12 @@ function useOperatorBilling(overrides: Partial<StoredBillingConfig> = {}): void 
 	setStoredBillingConfig(operatorBilling(overrides));
 }
 
-function sessionField(session: object | undefined, key: string): unknown {
-	return session ? (session as Record<string, unknown>)[key] : undefined;
-}
-
 function signWebhook(payload: string, timestamp: number, secret: string): string {
 	const signature = crypto.createHmac('sha256', secret).update(`${timestamp}.${payload}`).digest('hex');
 	return `t=${timestamp},v1=${signature}`;
 }
 
+// COZ-API karar 10: yap?land?r?lm?? anahtarlar ve kataloglar Micup ?zerinde Stripe hizmetini a?maz.
 describe('operator billing catalog', () => {
 	let harness: ApiTestHarness;
 	let stripeHandlers: StripeApiHandlers;
@@ -247,53 +244,45 @@ describe('operator billing catalog', () => {
 			expect(registry.getProduct('price_legacybrl')?.currency).toBe('BRL');
 		});
 
-		test('serves the localized SEK price ids for a Swedish request', async () => {
-			const prices = await createBuilder<PriceIdsResponse>(harness, '')
+		test('hides env price ids despite configured Swedish prices', async () => {
+			const token = await createPurchaser();
+			await createBuilder(harness, token)
 				.get('/premium/price-ids?country_code=SE')
-				.expect(HTTP_STATUS.OK)
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
 				.execute();
-			expect(prices.currency).toBe('SEK');
-			expect(prices.monthly).toBe('price_envmonthlysek');
-			expect(prices.gift_currency).toBe('SEK');
+			expect(stripeHandlers.spies.createdCheckoutSessions).toHaveLength(0);
 		});
 
-		test('keeps the hosted tier name, required terms consent and tax collection on hosted', async () => {
-			setStoredBillingConfig(operatorBilling({terms_consent_required: false, automatic_tax: false}));
+		test('rejects hosted gift checkout despite configured consent and tax', async () => {
 			const token = await createPurchaser();
 			await createBuilder(harness, token)
 				.post('/stripe/checkout/gift')
 				.body({price_id: 'price_envgiftmonthusd'})
-				.expect(HTTP_STATUS.OK)
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
 				.execute();
-			const session = stripeHandlers.spies.createdCheckoutSessions[0];
-			expect(session?.line_items?.[0]?.price).toBe('price_envgiftmonthusd');
-			expect(session?.custom_text?.terms_of_service_acceptance?.message).toContain('Fluxer Plutonium');
-			expect(session?.consent_collection?.terms_of_service).toBe('required');
-			expect(sessionField(session, 'automatic_tax')).toEqual({enabled: 'true'});
-			expect(sessionField(session, 'tax_id_collection')).toEqual({enabled: 'true'});
+			expect(stripeHandlers.spies.createdCheckoutSessions).toHaveLength(0);
 		});
 
-		test('opens the portal with the stored customer on hosted without checking it first', async () => {
-			server.use(...createStripeApiHandlers({customerShouldFail: true}).handlers);
+		test('rejects the hosted portal without altering a stored customer', async () => {
 			const account = await createAccount();
 			await createBuilder(harness, account.token)
 				.post(`/test/users/${account.userId}/premium`)
 				.body({stripe_customer_id: 'cus_hosted_existing'})
 				.execute();
-			await createBuilder<{url: string}>(harness, account.token)
+			await createBuilder(harness, account.token)
 				.post('/premium/customer-portal')
-				.expect(HTTP_STATUS.OK)
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
 				.execute();
 			const user = await getUserRepository().findUnique(createUserID(BigInt(account.userId)));
 			expect(user?.stripeCustomerId).toBe('cus_hosted_existing');
 		});
 
-		test('still rejects a localized recurring price without a country code', async () => {
+		test('rejects localized recurring checkout before country validation', async () => {
 			const token = await createPurchaser();
 			await createBuilder(harness, token)
 				.post('/stripe/checkout/subscription')
 				.body({price_id: 'price_envmonthlybrl'})
-				.expect(HTTP_STATUS.BAD_REQUEST, APIErrorCodes.STRIPE_INVALID_PRODUCT_CONFIGURATION)
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
 				.execute();
 			expect(stripeHandlers.spies.createdCheckoutSessions).toHaveLength(0);
 		});
@@ -323,31 +312,13 @@ describe('operator billing catalog', () => {
 			expect(isLocalizedCurrency('BRL')).toBe(false);
 		});
 
-		test('routes countries through country_currencies, then the default currency', async () => {
-			const swedish = await createBuilder<PriceIdsResponse>(harness, '')
+		test('hides operator price ids for every country', async () => {
+			const token = await createPurchaser();
+			await createBuilder(harness, token)
 				.get('/premium/price-ids?country_code=SE')
-				.expect(HTTP_STATUS.OK)
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
 				.execute();
-			expect(swedish.currency).toBe('SEK');
-			expect(swedish.monthly).toBe('price_opsekmonthly');
-			expect(swedish.yearly).toBe('price_opsekyearly');
-			expect(swedish.gift_currency).toBe('GBP');
-			expect(swedish.gift_1_month).toBe('price_opgbpgiftmonth');
-
-			const swiss = await createBuilder<PriceIdsResponse>(harness, '')
-				.get('/premium/price-ids?country_code=CH')
-				.expect(HTTP_STATUS.OK)
-				.execute();
-			expect(swiss.currency).toBe('CHF');
-			expect(swiss.gift_currency).toBe('CHF');
-
-			const american = await createBuilder<PriceIdsResponse>(harness, '')
-				.get('/premium/price-ids?country_code=US')
-				.expect(HTTP_STATUS.OK)
-				.execute();
-			expect(american.currency).toBe('GBP');
-			expect(american.yearly).toBe('price_opgbpyearly');
-			expect(american.gift_1_year).toBe('price_opgbpgiftyear');
+			expect(stripeHandlers.spies.createdCheckoutSessions).toHaveLength(0);
 		});
 
 		test('falls back to the first configured currency without a default', () => {
@@ -356,180 +327,126 @@ describe('operator billing catalog', () => {
 			expect(getGiftCurrencyPreferences('US')).toEqual(['GBP', 'CHF']);
 		});
 
-		test('creates a GBP checkout with the stored price id and no country enforcement', async () => {
+		test('rejects operator checkout with a configured GBP price', async () => {
 			const token = await createPurchaser();
-			const withoutCountry = await createBuilder<{url: string}>(harness, token)
-				.post('/stripe/checkout/subscription')
-				.body({price_id: 'price_opgbpmonthly'})
-				.expect(HTTP_STATUS.OK)
-				.execute();
-			expect(withoutCountry.url).toContain('checkout.stripe.com');
-			const session = stripeHandlers.spies.createdCheckoutSessions[0];
-			expect(session?.mode).toBe('subscription');
-			expect(session?.line_items?.[0]?.price).toBe('price_opgbpmonthly');
-			expect(session?.metadata?.price_id).toBe('price_opgbpmonthly');
-			expect(session?.payment_method_types).toBeUndefined();
-			expect(session?.payment_method_options).toBeUndefined();
-			expect(session?.consent_collection).toBeUndefined();
-			expect(session?.custom_text).toBeUndefined();
-			expect(sessionField(session, 'automatic_tax')).toEqual({enabled: 'false'});
-			expect(sessionField(session, 'tax_id_collection')).toEqual({enabled: 'false'});
-		});
-
-		test('sends terms consent and tax collection when the operator turns them on', async () => {
-			useOperatorBilling({automatic_tax: true, tax_id_collection: true, terms_consent_required: true});
-			const token = await createPurchaser();
-			await createBuilder<{url: string}>(harness, token)
-				.post('/stripe/checkout/subscription')
-				.body({price_id: 'price_opgbpyearly'})
-				.expect(HTTP_STATUS.OK)
-				.execute();
-			const session = stripeHandlers.spies.createdCheckoutSessions[0];
-			expect(session?.consent_collection?.terms_of_service).toBe('required');
-			expect(session?.custom_text?.terms_of_service_acceptance?.message).toBeTruthy();
-			expect(sessionField(session, 'automatic_tax')).toEqual({enabled: 'true'});
-			expect(sessionField(session, 'tax_id_collection')).toEqual({enabled: 'true'});
-		});
-
-		test('rejects legacy price ids for new checkouts', async () => {
-			const token = await createPurchaser();
-			expect(getProductRegistry().getProduct('price_opgbplegacymonthly')).not.toBeNull();
 			await createBuilder(harness, token)
 				.post('/stripe/checkout/subscription')
-				.body({price_id: 'price_opgbplegacymonthly'})
-				.expect(HTTP_STATUS.BAD_REQUEST, APIErrorCodes.STRIPE_INVALID_PRODUCT)
+				.body({price_id: 'price_opgbpmonthly'})
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
 				.execute();
 			expect(stripeHandlers.spies.createdCheckoutSessions).toHaveLength(0);
 		});
 
-		test('serves subscription prices without gifts when no currency has gift prices', async () => {
+		test('rejects checkout even when the operator enables terms and tax', async () => {
+			useOperatorBilling({automatic_tax: true, tax_id_collection: true, terms_consent_required: true});
+			const token = await createPurchaser();
+			await createBuilder(harness, token)
+				.post('/stripe/checkout/subscription')
+				.body({price_id: 'price_opgbpyearly'})
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
+				.execute();
+			expect(stripeHandlers.spies.createdCheckoutSessions).toHaveLength(0);
+		});
+
+		test('rejects checkout even for recognized legacy prices', async () => {
+			const token = await createPurchaser();
+			await createBuilder(harness, token)
+				.post('/stripe/checkout/subscription')
+				.body({price_id: 'price_opgbplegacymonthly'})
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
+				.execute();
+			expect(stripeHandlers.spies.createdCheckoutSessions).toHaveLength(0);
+		});
+
+		test('hides subscription prices even when the operator configures no gifts', async () => {
 			useOperatorBilling({
 				prices: {
 					GBP: {monthly: 'price_opgbpmonthly', yearly: 'price_opgbpyearly', gift_1_month: null, gift_1_year: null},
 				},
 			});
-			const prices = await createBuilder<PriceIdsResponse>(harness, '')
+			const token = await createPurchaser();
+			await createBuilder(harness, token)
 				.get('/premium/price-ids?country_code=GB')
-				.expect(HTTP_STATUS.OK)
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
 				.execute();
-			expect(prices.currency).toBe('GBP');
-			expect(prices.monthly).toBe('price_opgbpmonthly');
-			expect(prices.yearly).toBe('price_opgbpyearly');
-			expect(prices.gift_1_month ?? null).toBeNull();
-			expect(prices.gift_1_year ?? null).toBeNull();
-			expect(prices.gift_currency).toBeNull();
+			expect(stripeHandlers.spies.createdCheckoutSessions).toHaveLength(0);
+		});
+
+		test('does not fetch or mirror Stripe prices while serving premium state', async () => {
+			const monthly = `price_disabled${crypto.randomBytes(4).toString('hex')}monthly`;
+			useOperatorBilling({
+				prices: {GBP: {monthly, yearly: 'price_disabledyearly', gift_1_month: null, gift_1_year: null}},
+			});
 			const account = await createAccount();
 			const state = await createBuilder<PremiumStateResponse>(harness, account.token)
 				.get('/premium/state')
 				.expect(HTTP_STATUS.OK)
 				.execute();
-			expect(state.pricing.localized?.monthly).toBe('price_opgbpmonthly');
-			expect(state.pricing.localized?.yearly).toBe('price_opgbpyearly');
-			expect(state.pricing.localized?.gift_1_month ?? null).toBeNull();
-			expect(state.pricing.localized?.gift_currency).toBeNull();
-		});
-
-		test('fills premium state amounts from Stripe when the price mirror has no row', async () => {
-			const suffix = crypto.randomBytes(4).toString('hex');
-			const monthly = `price_mirrormiss${suffix}monthly`;
-			const yearly = `price_mirrormiss${suffix}yearly`;
-			useOperatorBilling({prices: {GBP: {monthly, yearly, gift_1_month: null, gift_1_year: null}}});
+			expect(state.pricing.localized?.monthly_amount_minor ?? null).toBeNull();
 			expect(await getBillingRepository().prices.findById(monthly)).toBeNull();
-			const account = await createAccount();
-			const state = await createBuilder<PremiumStateResponse>(harness, account.token)
-				.get('/premium/state')
-				.expect(HTTP_STATUS.OK)
-				.execute();
-			expect(state.pricing.localized?.monthly_amount_minor).toBe(499);
-			expect(state.pricing.localized?.yearly_amount_minor).toBe(4999);
-			expect(Number((await getBillingRepository().prices.findById(monthly))?.unit_amount)).toBe(499);
 		});
 
-		test('replaces a stored customer that no longer exists in the configured Stripe account', async () => {
-			server.use(
-				...createStripeApiHandlers({
-					subscriptionsListEmpty: true,
-					customerShouldFail: true,
-					subscriptionShouldFail: true,
-				}).handlers,
-			);
+		test('rejects the operator portal without replacing stored billing identities', async () => {
 			const account = await createAccount();
-			await createBuilder(harness, account.token)
-				.post(`/test/users/${account.userId}/security-flags`)
-				.body({email_verified: true})
-				.execute();
 			await createBuilder(harness, account.token)
 				.post(`/test/users/${account.userId}/premium`)
 				.body({stripe_customer_id: 'cus_from_old_account', stripe_subscription_id: 'sub_from_old_account'})
 				.execute();
 			useOperatorBilling();
-			const portal = await createBuilder<{url: string}>(harness, account.token)
+			await createBuilder(harness, account.token)
 				.post('/premium/customer-portal')
-				.expect(HTTP_STATUS.OK)
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
 				.execute();
-			expect(portal.url).toContain('billing.stripe.com');
 			const user = await getUserRepository().findUnique(createUserID(BigInt(account.userId)));
-			expect(user?.stripeCustomerId).toBeTruthy();
-			expect(user?.stripeCustomerId).not.toBe('cus_from_old_account');
-			expect(user?.stripeSubscriptionId).toBeNull();
-			await createBuilder<{url: string}>(harness, account.token)
-				.post('/stripe/checkout/subscription')
-				.body({price_id: 'price_opgbpmonthly'})
-				.expect(HTTP_STATUS.OK)
-				.execute();
+			expect(user?.stripeCustomerId).toBe('cus_from_old_account');
+			expect(user?.stripeSubscriptionId).toBe('sub_from_old_account');
+			expect(stripeHandlers.spies.createdCheckoutSessions).toHaveLength(0);
 		});
 
-		test('accepts an operator price that does not match the buyer country', async () => {
-			const token = await createPurchaser();
-			await createBuilder<{url: string}>(harness, token)
-				.post('/stripe/checkout/subscription')
-				.body({price_id: 'price_opchfyearly', country_code: 'SE'})
-				.expect(HTTP_STATUS.OK)
-				.execute();
-			expect(stripeHandlers.spies.createdCheckoutSessions[0]?.line_items?.[0]?.price).toBe('price_opchfyearly');
-		});
-
-		test('rejects pix and upi for operator prices', async () => {
+		test('rejects configured operator checkout regardless of buyer country', async () => {
 			const token = await createPurchaser();
 			await createBuilder(harness, token)
 				.post('/stripe/checkout/subscription')
-				.body({price_id: 'price_opgbpmonthly', payment_method: 'pix'})
-				.expect(HTTP_STATUS.BAD_REQUEST, APIErrorCodes.STRIPE_INVALID_PRODUCT_CONFIGURATION)
+				.body({price_id: 'price_opchfyearly', country_code: 'SE'})
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
 				.execute();
 			expect(stripeHandlers.spies.createdCheckoutSessions).toHaveLength(0);
 		});
 
-		test('names the configured premium tier in the checkout terms on a self-hosted instance', async () => {
-			useOperatorBilling({terms_consent_required: true});
+		test('rejects operator checkout before payment method validation', async () => {
+			const token = await createPurchaser();
+			await createBuilder(harness, token)
+				.post('/stripe/checkout/subscription')
+				.body({price_id: 'price_opgbpmonthly', payment_method: 'pix'})
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
+				.execute();
+			expect(stripeHandlers.spies.createdCheckoutSessions).toHaveLength(0);
+		});
+
+		test('rejects self-hosted gift checkout with a configured premium tier', async () => {
 			const token = await createPurchaser();
 			await createBuilder(harness, token)
 				.post('/stripe/checkout/gift')
 				.body({price_id: 'price_opgbpgiftmonth'})
-				.expect(HTTP_STATUS.OK)
+				.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
 				.execute();
-			const message =
-				stripeHandlers.spies.createdCheckoutSessions[0]?.custom_text?.terms_of_service_acceptance?.message;
-			expect(message).toContain('Premium');
-			expect(message).not.toContain('Plutonium');
+			expect(stripeHandlers.spies.createdCheckoutSessions).toHaveLength(0);
 		});
 	});
 
 	describe('stripe client', () => {
-		test('is shared while the secret stays the same and rebuilt when it changes', () => {
+		test('remains unavailable when the stored secret changes', async () => {
 			useOperatorBilling();
-			const first = getStripeClient();
-			expect(first).not.toBeNull();
-			expect(getStripeClient()).toBe(first);
+			expect(getStripeClient()).toBeNull();
 			setStoredBillingConfig(operatorBilling({stripe_secret_key: 'sk_test_operator_b'}));
-			const second = getStripeClient();
-			expect(second).not.toBeNull();
-			expect(second).not.toBe(first);
+			expect(getStripeClient()).toBeNull();
+			expect(isBillingActive()).toBe(false);
 		});
 
-		test('stays available on self-hosted after billing is disabled so subscriptions can be serviced', () => {
+		test('keeps servicing unavailable on self-hosted even with stored credentials', async () => {
 			useOperatorBilling({enabled: false});
 			expect(isBillingActive()).toBe(false);
-			expect(getStripeClient()).not.toBeNull();
+			expect(getStripeClient()).toBeNull();
 		});
 
 		test('is unavailable on hosted when env billing is disabled', () => {
@@ -543,34 +460,43 @@ describe('operator billing catalog', () => {
 			}
 		});
 
-		test('sends requests with the currently stored secret key', async () => {
+		test('sends no Stripe requests after stored credentials rotate', async () => {
 			const authorizations: Array<string | null> = [];
 			server.use(
-				http.get('https://api.stripe.com/v1/prices/:id', ({request, params}) => {
+				http.get('https://api.stripe.com/v1/prices/:id', ({request}) => {
 					authorizations.push(request.headers.get('authorization'));
-					return HttpResponse.json({id: params.id, object: 'price', unit_amount: 500, currency: 'gbp'});
+					return HttpResponse.json({});
 				}),
 			);
-			const suffix = crypto.randomBytes(4).toString('hex');
-			const pricesFor = (tag: string) => ({
-				GBP: {
-					monthly: `price_${tag}${suffix}monthly`,
-					yearly: `price_${tag}${suffix}yearly`,
-					gift_1_month: `price_${tag}${suffix}giftmonth`,
-					gift_1_year: `price_${tag}${suffix}giftyear`,
-				},
-			});
-			useOperatorBilling({stripe_secret_key: 'sk_test_rotate_a', prices: pricesFor('a')});
-			await createBuilder(harness, '').get('/premium/price-ids').expect(HTTP_STATUS.OK).execute();
-			setStoredBillingConfig(operatorBilling({stripe_secret_key: 'sk_test_rotate_b', prices: pricesFor('b')}));
-			await createBuilder(harness, '').get('/premium/price-ids').expect(HTTP_STATUS.OK).execute();
-			expect(authorizations.slice(0, 4).every((value) => value === 'Bearer sk_test_rotate_a')).toBe(true);
-			expect(authorizations.slice(4)).toHaveLength(4);
-			expect(authorizations.slice(4).every((value) => value === 'Bearer sk_test_rotate_b')).toBe(true);
+			for (const key of ['sk_test_rotate_a', 'sk_test_rotate_b']) {
+				useOperatorBilling({stripe_secret_key: key});
+				await createBuilder(harness, '')
+					.get('/premium/price-ids')
+					.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.NOT_FOUND)
+					.execute();
+			}
+			expect(authorizations).toEqual([]);
 		});
 	});
 
 	describe('premium purchase availability', () => {
+		test('reports purchases enabled with Payriff active and Stripe inactive', async () => {
+			const enabled = Config.payriff.enabled;
+			try {
+				useOperatorBilling({enabled: false});
+				Config.payriff.enabled = true;
+				expect(isBillingActive()).toBe(false);
+				const account = await createAccount();
+				const state = await createBuilder<PremiumStateResponse>(harness, account.token)
+					.get('/premium/state')
+					.expect(HTTP_STATUS.OK)
+					.execute();
+				expect(state.effective.premium_purchase_disabled).toBe(false);
+			} finally {
+				Config.payriff.enabled = enabled;
+			}
+		});
+
 		test('reports purchases disabled while billing is inactive', async () => {
 			Config.stripe.prices = {};
 			expect(isBillingActive()).toBe(false);
@@ -583,14 +509,14 @@ describe('operator billing catalog', () => {
 			expect(state.billing.list_price_switch.reason).toBe('feature_unavailable');
 		});
 
-		test('reports purchases enabled while billing is active', async () => {
-			expect(isBillingActive()).toBe(true);
+		test('reports purchases disabled despite configured Stripe catalog', async () => {
+			expect(isBillingActive()).toBe(false);
 			const account = await createAccount();
 			const state = await createBuilder<PremiumStateResponse>(harness, account.token)
 				.get('/premium/state')
 				.expect(HTTP_STATUS.OK)
 				.execute();
-			expect(state.effective.premium_purchase_disabled).toBe(false);
+			expect(state.effective.premium_purchase_disabled).toBe(true);
 		});
 
 		test('reports purchases disabled on a self-hosted instance where everyone is premium', async () => {
@@ -627,12 +553,12 @@ describe('operator billing catalog', () => {
 			return response.status;
 		}
 
-		test('verifies the signature with the stored webhook secret in the api and the worker', async () => {
-			expect(await sendWebhook(STORED_WEBHOOK_SECRET)).toBe(200);
+		test('hides the Stripe webhook even with a valid stored signature', async () => {
+			expect(await sendWebhook(STORED_WEBHOOK_SECRET)).toBe(HTTP_STATUS.NOT_FOUND);
 		});
 
-		test('rejects a signature made with the overridden env secret', async () => {
-			expect(await sendWebhook(ENV_WEBHOOK_SECRET)).toBe(401);
+		test('hides the Stripe webhook before validating an env signature', async () => {
+			expect(await sendWebhook(ENV_WEBHOOK_SECRET)).toBe(HTTP_STATUS.NOT_FOUND);
 		});
 
 		function signedJob(secret: string): {body: string; signature: string} {

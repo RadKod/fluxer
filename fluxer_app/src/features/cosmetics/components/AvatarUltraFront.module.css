@@ -1,0 +1,43 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* In front of the avatar (the decoration slot): 3.468 × the avatar on every surface. Voice tiles clip it; nothing
+   shrinks it. It never takes a click. */
+.front {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 346.8%;
+	height: 346.8%;
+	transform: translate(-50%, -50%);
+	pointer-events: none;
+	user-select: none;
+}
+
+/* Open over a chat or member row: the same box in the tooltip layer, placed inline where the avatar's box was
+   measured, so no scroller cuts it. It never takes a click. */
+.floating {
+	position: fixed;
+	z-index: var(--z-index-tooltip);
+	pointer-events: none;
+	user-select: none;
+}
+
+/* Every part is the left half; the right half is the same image mirrored, so both halves share one URL. */
+.half {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 50%;
+	height: 100%;
+	max-width: none;
+	-webkit-user-drag: none;
+}
+
+.mirror {
+	left: 50%;
+	transform: scaleX(-1);
+}
+
+.hidden {
+	visibility: hidden;
+}

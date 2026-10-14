@@ -986,6 +986,7 @@ const VoiceParticipantTileInner = observer(function VoiceParticipantTileInner({
 						<Avatar
 							user={participantUser}
 							size={TILE_AVATAR_BASE}
+							decorationSurface="voice"
 							mediaSize={TILE_AVATAR_MEDIA_SIZE}
 							forceAnimate={shouldAnimateTileAvatar}
 							className={styles.avatarFlexShrink}

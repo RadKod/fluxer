@@ -32,4 +32,5 @@ pub struct GuildThreadItem {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ListGuildThreadsResponse {
     pub threads: Vec<GuildThreadItem>,
+    pub next_cursor: Option<String>,
 }

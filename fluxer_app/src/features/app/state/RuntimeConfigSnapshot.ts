@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {DEFAULT_PREMIUM_PRODUCT_NAME} from '@app/features/app/config/ProductConstants';
 import type {GifProvider} from '@app/features/app/state/GifProviderConfig';
 import {AccountIdentityModes, TagStyles} from '@fluxer/constants/src/AccountIdentityConstants';
 import {LIMIT_KEYS, type LimitKey} from '@fluxer/constants/src/LimitConfigMetadata';
@@ -28,9 +29,13 @@ import {
 	REGISTRATION_MODES,
 } from '@fluxer/instance_bootstrap/src/Types';
 import type {LimitConfigSnapshot, LimitFilter, LimitRule} from '@fluxer/limits/src/LimitTypes';
+import {UsernameTiersSchema} from '@fluxer/schema/src/domains/admin/UsernameSchemas';
+import {UsernameMigrationSchema} from '@fluxer/schema/src/domains/instance/InstanceSchemas';
+
+export type UsernameMigration = ReturnType<typeof UsernameMigrationSchema.parse>;
+export type UsernameTiers = ReturnType<typeof UsernameTiersSchema.parse>;
 
 const LIMIT_KEYS_SET = new Set<string>(LIMIT_KEYS);
-const DEFAULT_PREMIUM_PRODUCT_NAME = 'Plutonium';
 
 export interface RuntimeConfigIdentity {
 	readonly apiEndpoint: string;
@@ -61,6 +66,8 @@ export interface RuntimeConfigSnapshot extends RuntimeConfigIdentity {
 	readonly appPublic: InstanceAppPublic;
 	readonly agePolicy: InstanceAgePolicy | null;
 	readonly domainMigration: InstanceDomainMigration | null;
+	readonly usernameMigration?: UsernameMigration;
+	readonly usernameTiers?: UsernameTiers;
 }
 
 export class InvalidRuntimeConfigSnapshotError extends Error {
@@ -220,6 +227,19 @@ function readStringArray(value: unknown, path: string): Array<string> {
 	return [...value];
 }
 
+function readOfficialApps(value: unknown): InstanceFeatures['official_apps'] {
+	if (value === undefined) return [];
+	if (!Array.isArray(value)) invalid('features.official_apps', 'must be an array');
+	return value.map((entry, index) => {
+		const path = `features.official_apps[${index.toString()}]`;
+		const source = readRecord(entry, path);
+		return {
+			application_id: readNonEmptyString(source, 'application_id', `${path}.application_id`),
+			invite_permissions: readNonEmptyString(source, 'invite_permissions', `${path}.invite_permissions`),
+		};
+	});
+}
+
 function readFeatures(value: unknown): InstanceFeatures {
 	const source = readRecord(value, 'features');
 	const features: InstanceFeatures = {
@@ -233,6 +253,16 @@ function readFeatures(value: unknown): InstanceFeatures {
 		),
 		emails_enabled: readBoolean(source, 'emails_enabled', 'features.emails_enabled'),
 		premium_enabled: false,
+		premium_trial_days:
+			readOptionalBoundedInteger(
+				source,
+				'premium_trial_days',
+				'features.premium_trial_days',
+				0,
+				Number.MAX_SAFE_INTEGER,
+			) ?? 0,
+		gift_codes_enabled: readOptionalBoolean(source, 'gift_codes_enabled', 'features.gift_codes_enabled') ?? false,
+		official_apps: readOfficialApps(source.official_apps),
 		stripe_serviceable: readOptionalBoolean(source, 'stripe_serviceable', 'features.stripe_serviceable') ?? false,
 		phone_verification_enabled: false,
 	};
@@ -399,6 +429,8 @@ function readAppPublic(value: unknown): InstanceAppPublic {
 	const setup = readRecord(source.setup, 'appPublic.setup');
 	const legal = readRecord(source.legal, 'appPublic.legal');
 	const registration = readRecord(source.registration, 'appPublic.registration');
+	const localization =
+		source.localization === undefined ? null : readRecord(source.localization, 'appPublic.localization');
 	return {
 		branding: {
 			product_name: readNonEmptyString(branding, 'product_name', 'appPublic.branding.product_name'),
@@ -422,7 +454,21 @@ function readAppPublic(value: unknown): InstanceAppPublic {
 		legal: {
 			terms_url: readNullableAbsoluteHttpUrl(legal, 'terms_url', 'appPublic.legal.terms_url'),
 			privacy_url: readNullableAbsoluteHttpUrl(legal, 'privacy_url', 'appPublic.legal.privacy_url'),
+			source_url: Object.hasOwn(legal, 'source_url')
+				? readNullableAbsoluteHttpUrl(legal, 'source_url', 'appPublic.legal.source_url')
+				: null,
 		},
+		...(localization === null
+			? {}
+			: {
+					localization: {
+						default_locale: readOptionalText(localization, 'default_locale'),
+						default_locale_time_zones: readStringArray(
+							localization.default_locale_time_zones ?? [],
+							'appPublic.localization.default_locale_time_zones',
+						),
+					},
+				}),
 		registration: {
 			collect_date_of_birth: readBoolean(
 				registration,
@@ -487,5 +533,8 @@ export function requireRuntimeConfigSnapshot(value: unknown): RuntimeConfigSnaps
 		appPublic: readAppPublic(source.appPublic),
 		agePolicy: readAgePolicy(source.agePolicy),
 		domainMigration: parseInstanceDomainMigration(source.domainMigration),
+		usernameMigration:
+			source.usernameMigration === undefined ? undefined : UsernameMigrationSchema.parse(source.usernameMigration),
+		usernameTiers: source.usernameTiers === undefined ? undefined : UsernameTiersSchema.parse(source.usernameTiers),
 	};
 }

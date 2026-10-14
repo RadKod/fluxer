@@ -39,6 +39,7 @@ export interface IUserContentRepository {
 	redeemGiftCode(code: string, userId: UserID): Promise<void>;
 	unredeemGiftCode(code: string, userId: UserID): Promise<void>;
 	revokeGiftCode(code: string): Promise<void>;
+	revokeGiftCodeForStoreRefund(code: string, purchaserId: UserID, redeemerId: UserID | null): Promise<void>;
 	unrevokeGiftCode(code: string): Promise<void>;
 	markGiftPremiumReversed(gift: GiftCode, seconds: number): Promise<boolean>;
 	clearGiftPremiumReversed(code: string, seconds: number): Promise<boolean>;

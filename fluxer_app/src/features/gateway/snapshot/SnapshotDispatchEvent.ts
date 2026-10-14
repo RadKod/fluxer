@@ -44,6 +44,10 @@ import type {GatewayGuildSettings} from '@app/features/user/state/UserGuildSetti
 import type {WebAuthnCredential} from '@app/features/user/state/WebAuthnCredentials';
 import type {Channel as WireChannel} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
 import type {ConnectionListResponse} from '@fluxer/schema/src/domains/connection/ConnectionSchemas';
+import type {
+	FeedNotificationAckResponse,
+	FeedNotificationCreateEvent,
+} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import type {Guild as WireGuild} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import type {Message} from '@fluxer/schema/src/domains/message/MessageResponseSchemas';
 
@@ -83,6 +87,8 @@ export interface SnapshotRelationshipRemovePayload {
 }
 
 export interface SnapshotDispatchDataMap {
+	readonly FEED_NOTIFICATION_CREATE: FeedNotificationCreateEvent;
+	readonly FEED_NOTIFICATION_ACK: FeedNotificationAckResponse;
 	readonly GUILD_CREATE: GuildReadyData;
 	readonly GUILD_SYNC: GuildReadyData;
 	readonly GUILD_UPDATE: WireGuild;
@@ -135,6 +141,8 @@ export interface SnapshotDispatchDataMap {
 }
 
 export const SnapshotDispatchEvent = Object.freeze({
+	FEED_NOTIFICATION_CREATE: 'FEED_NOTIFICATION_CREATE',
+	FEED_NOTIFICATION_ACK: 'FEED_NOTIFICATION_ACK',
 	GUILD_CREATE: 'GUILD_CREATE',
 	GUILD_SYNC: 'GUILD_SYNC',
 	GUILD_UPDATE: 'GUILD_UPDATE',

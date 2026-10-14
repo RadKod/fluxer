@@ -32,6 +32,7 @@ const REGIONAL_MINIMUM_AGE: Readonly<Record<string, number>> = {
 	SK: 16,
 	SM: 16,
 	SX: 16,
+	TR: 15,
 	VE: 14,
 	VN: 15,
 };

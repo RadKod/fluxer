@@ -5,14 +5,8 @@ import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import * as CodeLinkUtils from '@app/features/messaging/utils/CodeLinkUtils';
 import {buildMediaProxyURLForInstance} from '@app/features/messaging/utils/MediaProxyUtils';
 
-const OFFICIAL_THEME_URL_BASES = Object.freeze([
-	'https://fluxer.app/theme',
-	'https://canary.fluxer.app/theme',
-	'https://web.fluxer.app/theme',
-	'https://web.canary.fluxer.app/theme',
-	'https://fluxer.com/theme',
-	'https://canary.fluxer.com/theme',
-]);
+// Micup: Fluxer's theme hosts are another service's.
+const OFFICIAL_THEME_URL_BASES = Object.freeze(['https://micup.gg/theme']);
 const appendThemePath = (endpoint: string | null | undefined): string | null => {
 	if (!endpoint) return null;
 	const trimmed = endpoint.replace(/\/$/, '');

@@ -159,6 +159,33 @@ export class AdminUserSecurityService {
 		};
 	}
 
+	async clearLegacyRestriction(
+		userId: UserID,
+		adminUserId: UserID,
+		auditLogReason: string | null,
+		acls: ReadonlySet<string>,
+	) {
+		const {users, cache} = this.deps.apiContext.services;
+		const user = await users.findUnique(userId);
+		if (!user) throw new UnknownUserError();
+		assertCallerHoldsTargetAcls(user.acls, acls);
+		const updatedUser = await users.patchUpsert(userId, {suspicious_activity_flags: 0}, user.toRow());
+		await this.deps.updatePropagator.propagateUserUpdate({userId, oldUser: user, updatedUser});
+		await this.deps.auditService.createAuditLog({
+			adminUserId,
+			targetType: 'user',
+			targetId: BigInt(userId),
+			action: 'clear_legacy_restriction',
+			auditLogReason,
+			metadata: new Map([
+				['old_suspicious_activity_flags', user.suspiciousActivityFlags.toString()],
+				['new_suspicious_activity_flags', '0'],
+			]),
+		});
+		await emitAdminAction(adminUserId, userId, 'update_flags');
+		return {user: await mapUserToAdminResponse(updatedUser, cache, acls)};
+	}
+
 	async updatePremiumFlags({
 		userId,
 		data,

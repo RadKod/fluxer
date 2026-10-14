@@ -140,6 +140,89 @@ pub fn animated_gif_frames(frames: usize, delay_cs: u16) -> Vec<u8> {
     gif
 }
 
+// Frames that each redraw one pixel in the middle of a `side` square canvas, alternating black
+// and white, so only that pixel changes between frames.
+pub fn animated_gif_pixel_frames_on_canvas(frames: usize, side: u16) -> Vec<u8> {
+    let centre = side / 2;
+    let mut gif = Vec::new();
+    gif.extend_from_slice(b"GIF89a");
+    gif.extend_from_slice(&side.to_le_bytes());
+    gif.extend_from_slice(&side.to_le_bytes());
+    gif.extend_from_slice(&[0x80, 0x00, 0x00]);
+    gif.extend_from_slice(&[0x00, 0x00, 0x00, 0xff, 0xff, 0xff]);
+    gif.extend_from_slice(b"\x21\xff\x0bNETSCAPE2.0");
+    gif.extend_from_slice(&[0x03, 0x01, 0x00, 0x00, 0x00]);
+    for index in 0..frames {
+        gif.extend_from_slice(&[0x21, 0xf9, 0x04, 0x00, 0x14, 0x00, 0x00, 0x00]);
+        gif.push(0x2c);
+        gif.extend_from_slice(&centre.to_le_bytes());
+        gif.extend_from_slice(&centre.to_le_bytes());
+        gif.extend_from_slice(&1u16.to_le_bytes());
+        gif.extend_from_slice(&1u16.to_le_bytes());
+        gif.extend_from_slice(&[0x00, 0x02, 0x02]);
+        gif.extend_from_slice(if index % 2 == 0 {
+            &[0x44, 0x01]
+        } else {
+            &[0x4c, 0x01]
+        });
+        gif.push(0x00);
+    }
+    gif.push(0x3b);
+    gif
+}
+
+// Full-canvas frames of one solid colour each, written as uncompressed LZW (a clear code
+// before every pixel keeps every code three bits wide), so any downscale shrinks the file.
+pub fn animated_gif_solid_frames(frames: usize, delay_cs: u16, side: u16) -> Vec<u8> {
+    let mut gif = Vec::new();
+    gif.extend_from_slice(b"GIF89a");
+    gif.extend_from_slice(&side.to_le_bytes());
+    gif.extend_from_slice(&side.to_le_bytes());
+    gif.extend_from_slice(&[0x81, 0x00, 0x00]);
+    gif.extend_from_slice(&[
+        0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff,
+    ]);
+    gif.extend_from_slice(b"\x21\xff\x0bNETSCAPE2.0");
+    gif.extend_from_slice(&[0x03, 0x01, 0x00, 0x00, 0x00]);
+    for index in 0..frames {
+        gif.extend_from_slice(&[0x21, 0xf9, 0x04, 0x00]);
+        gif.extend_from_slice(&delay_cs.to_le_bytes());
+        gif.extend_from_slice(&[0x00, 0x00]);
+        gif.extend_from_slice(&[0x2c, 0x00, 0x00, 0x00, 0x00]);
+        gif.extend_from_slice(&side.to_le_bytes());
+        gif.extend_from_slice(&side.to_le_bytes());
+        gif.extend_from_slice(&[0x00, 0x02]);
+        let colour = (index % 4) as u32;
+        let mut data = Vec::new();
+        let mut bits = 0u32;
+        let mut bit_count = 0u32;
+        let mut emit = |code: u32| {
+            bits |= code << bit_count;
+            bit_count += 3;
+            while bit_count >= 8 {
+                data.push(bits as u8);
+                bits >>= 8;
+                bit_count -= 8;
+            }
+        };
+        for _ in 0..usize::from(side) * usize::from(side) {
+            emit(4);
+            emit(colour);
+        }
+        emit(5);
+        if bit_count > 0 {
+            data.push(bits as u8);
+        }
+        for block in data.chunks(255) {
+            gif.push(block.len() as u8);
+            gif.extend_from_slice(block);
+        }
+        gif.push(0x00);
+    }
+    gif.push(0x3b);
+    gif
+}
+
 pub fn read_u24_le(bytes: &[u8]) -> Option<u32> {
     (bytes.len() >= 3)
         .then(|| bytes[0] as u32 | ((bytes[1] as u32) << 8) | ((bytes[2] as u32) << 16))
@@ -191,6 +274,21 @@ pub fn first_webp_anim_frame_size(bytes: &[u8]) -> Option<(u32, u32)> {
     let width = read_u24_le(&anmf[6..9])? + 1;
     let height = read_u24_le(&anmf[9..12])? + 1;
     Some((width, height))
+}
+
+pub fn webp_anim_frame_sizes(bytes: &[u8]) -> Vec<(u32, u32)> {
+    webp_chunk_payloads(bytes, b"ANMF")
+        .into_iter()
+        .map_while(|anmf| {
+            if anmf.len() < 16 {
+                return None;
+            }
+            Some((
+                read_u24_le(&anmf[6..9])? + 1,
+                read_u24_le(&anmf[9..12])? + 1,
+            ))
+        })
+        .collect()
 }
 
 pub fn webp_animation_loop_count(bytes: &[u8]) -> Option<u16> {

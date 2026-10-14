@@ -37,6 +37,7 @@ interface Props {
 	links?: React.ReactNode;
 	linksWrapperClassName?: string;
 	disableSubmit?: boolean;
+	afterSubmit?: React.ReactNode;
 	footerStart?: React.ReactNode;
 	statusMessage?: string | null;
 	identifierField?: 'email' | 'login';
@@ -52,6 +53,7 @@ export default function AuthLoginEmailPasswordForm({
 	links,
 	linksWrapperClassName,
 	disableSubmit,
+	afterSubmit,
 	footerStart,
 	statusMessage,
 	identifierField = 'email',
@@ -129,6 +131,7 @@ export default function AuthLoginEmailPasswordForm({
 					{submitLabel}
 				</Button>
 			</flx-auth-login-email-password-form-footer>
+			{afterSubmit}
 		</form>
 	);
 }

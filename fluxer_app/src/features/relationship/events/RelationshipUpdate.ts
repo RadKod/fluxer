@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
 import type {GatewayHandlerContext} from '@app/features/gateway/events/EventRouter';
 import MemberSearch from '@app/features/member/state/MemberSearch';
 import Messages from '@app/features/messaging/state/MessagingMessages';
@@ -16,6 +17,7 @@ interface RelationshipPayload {
 }
 
 export function handleRelationshipUpdate(data: RelationshipPayload, _context: GatewayHandlerContext): void {
+	if (data.type !== RelationshipTypes.FRIEND) GameActivityStore.clear(data.id);
 	Relationships.updateRelationship(data as RelationshipWire);
 	MemberSearch.handleFriendshipChange(data.id, data.type === RelationshipTypes.FRIEND);
 	Messages.handleRelationshipUpdate();

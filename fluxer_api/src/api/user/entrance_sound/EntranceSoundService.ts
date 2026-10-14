@@ -6,7 +6,11 @@ import {Config} from '@app/api/Config';
 import type {IMediaService} from '@app/api/infrastructure/IMediaService';
 import type {IStorageService} from '@app/api/infrastructure/IStorageService';
 import {Logger} from '@app/api/Logger';
+import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
+import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
+import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import {EntranceSound, EntranceSoundSelection} from '@app/api/models/EntranceSound';
+import type {User} from '@app/api/models/User';
 import {resolveEntranceSoundDurationMs} from '@app/api/user/entrance_sound/EntranceSoundDurationProbe';
 import type {EntranceSoundRepository} from '@app/api/user/entrance_sound/EntranceSoundRepository';
 import {
@@ -26,7 +30,7 @@ import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidat
 import {generateSnowflake} from '@fluxer/snowflake/src/Snowflake';
 
 interface UploadEntranceSoundParams {
-	userId: UserID;
+	user: User;
 	name: string;
 	base64Audio: string;
 }
@@ -38,7 +42,7 @@ interface RenameEntranceSoundParams {
 }
 
 interface SetSelectionParams {
-	userId: UserID;
+	user: User;
 	scopeId: string;
 	soundId: EntranceSoundID | null;
 }
@@ -55,7 +59,20 @@ export class EntranceSoundService {
 		private readonly repository: EntranceSoundRepository,
 		private readonly storageService: IStorageService,
 		private readonly mediaService: IMediaService,
+		private readonly limitConfigService: LimitConfigService,
 	) {}
+
+	assertEntranceSoundFeature(user: User, field: 'audio' | 'sound_id'): void {
+		const enabled = resolveLimitSafe(
+			this.limitConfigService.getConfigSnapshot(),
+			createLimitMatchContext({user}),
+			'feature_voice_entrance_sounds',
+			0,
+		);
+		if (enabled <= 0) {
+			throw InputValidationError.fromCode(field, ValidationErrorCodes.ENTRANCE_SOUNDS_REQUIRE_PREMIUM);
+		}
+	}
 
 	cdnUrlFor(sound: EntranceSound): string {
 		return `${Config.endpoints.media}/${SOUND_PATH_PREFIX}/${sound.userId}/${sound.hash}.${sound.extension}`;
@@ -89,7 +106,9 @@ export class EntranceSoundService {
 	}
 
 	async upload(params: UploadEntranceSoundParams): Promise<EntranceSoundLibraryEntry> {
-		const {userId, base64Audio} = params;
+		this.assertEntranceSoundFeature(params.user, 'audio');
+		const {base64Audio} = params;
+		const userId = params.user.id;
 		const name = this.normalizeName(params.name);
 		const existing = await this.repository.listSounds(userId);
 		if (existing.length >= ENTRANCE_SOUND_MAX_PER_USER) {
@@ -219,7 +238,11 @@ export class EntranceSoundService {
 	}
 
 	async setSelection(params: SetSelectionParams): Promise<EntranceSoundSelection | null> {
-		const {userId, scopeId, soundId} = params;
+		const {user, scopeId, soundId} = params;
+		if (soundId !== null) {
+			this.assertEntranceSoundFeature(user, 'sound_id');
+		}
+		const userId = user.id;
 		if (!isValidEntranceSoundScopeId(scopeId)) {
 			throw InputValidationError.fromCode('scope_id', ValidationErrorCodes.ENTRANCE_SOUND_INVALID_SCOPE);
 		}

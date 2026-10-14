@@ -227,7 +227,7 @@ export function useVoiceCallFullscreenViewState({
 	const openFullscreenView = useCallback(() => {
 		if (!VOICE_CALL_FULLSCREEN_ENABLED) return;
 		if (!active) return;
-		VoiceCallFullscreen.open(scopeKey);
+		VoiceCallFullscreen.open(scopeKey, 'call');
 	}, [active, scopeKey]);
 	const closeFullscreenView = useCallback(() => {
 		const wasActive = VoiceCallFullscreen.isScopeActive(scopeKey);

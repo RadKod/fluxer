@@ -16,9 +16,15 @@ import {
 	PublicUserFlags,
 	PublicUserFlagsDescriptions,
 } from '@fluxer/constants/src/UserConstants';
+import {BadgeResponse} from '@fluxer/schema/src/domains/badge/BadgeResponseSchemas';
 import {ConnectionResponse} from '@fluxer/schema/src/domains/connection/ConnectionSchemas';
+import {CosmeticAssetDataResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
 import {GuildMemberResponse} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
 import {MessageResponseSchema} from '@fluxer/schema/src/domains/message/MessageResponseSchemas';
+import {
+	GameActivityPolicyRevisionSchema,
+	GameActivityVisibilitySchema,
+} from '@fluxer/schema/src/domains/user/GameActivitySchemas';
 import {LocaleSchema} from '@fluxer/schema/src/primitives/LocaleSchema';
 import {
 	createBitflagInt32Type,
@@ -34,7 +40,7 @@ import {
 import {
 	GuildFolderIconSchema,
 	MentionReplyPreferencesSchema,
-	ProfilePrivacyLevelSchema,
+	ProfilePrivacyLevelResponseSchema,
 	RelationshipTypesSchema,
 	RenderSpoilersSchema,
 	SensitiveMediaFilterLevelSchema,
@@ -48,6 +54,7 @@ import {
 import {z} from 'zod';
 
 export const UserPartialResponse = z.object({
+	identity_version: z.string().regex(/^\d+$/).optional().describe('Committed username ownership generation'),
 	id: SnowflakeStringType.describe('The unique identifier (snowflake) for this user'),
 	username: z.string().describe('The username of the user, not unique across the platform'),
 	discriminator: z.string().describe('The four-digit discriminator tag of the user'),
@@ -67,11 +74,24 @@ export const UserPartialResponse = z.object({
 		.describe(
 			"The user's account-wide reply mention preference. Omitted when the user has no preference set (treated as NO_PREFERENCE).",
 		),
+	avatar_decoration_data: CosmeticAssetDataResponse.nullish().describe(
+		'The avatar decoration the user wears; omitted or null when none',
+	),
+	avatar_ultra_data: CosmeticAssetDataResponse.nullish().describe(
+		'The ultra decoration the user wears; null when none',
+	),
+	nameplate_data: CosmeticAssetDataResponse.nullish().describe(
+		'The nameplate the user wears; omitted or null when none',
+	),
 });
 
 export type UserPartialResponse = z.infer<typeof UserPartialResponse>;
 
 export const UserPrivateResponse = UserPartialResponse.extend({
+	username_state: z
+		.enum(['legacy', 'selected', 'reselect_required'])
+		.optional()
+		.describe('Private username selection state'),
 	is_staff: z.boolean().describe('Whether the user has staff permissions'),
 	acls: z.array(z.string()).describe('Access control list entries for the user'),
 	traits: z.array(z.string()).describe('Special traits assigned to the user account'),
@@ -138,6 +158,10 @@ export const UserPrivateResponse = UserPartialResponse.extend({
 		),
 	required_actions: z.array(z.string()).describe('Deprecated. Always empty.'),
 	nsfw_allowed: z.boolean().describe('Whether the user is allowed to view NSFW content'),
+	public_profile_allowed: z
+		.boolean()
+		.optional()
+		.describe('Whether the account may choose the public profile (16 or older with a date of birth)'),
 	has_dismissed_premium_onboarding: z.boolean().describe('Whether the user has dismissed the premium onboarding flow'),
 	has_ever_purchased: z.boolean().describe('Whether the user has ever made a purchase'),
 	has_unread_gift_inventory: z.boolean().describe('Whether there are unread items in the gift inventory'),
@@ -281,6 +305,16 @@ export const CustomStatusResponse = z.object({
 export type CustomStatusResponse = z.infer<typeof CustomStatusResponse>;
 
 export const UserSettingsResponse = z.object({
+	game_activity_visibility: GameActivityVisibilitySchema.nullable()
+		.transform((value) => value ?? 'off')
+		.pipe(GameActivityVisibilitySchema)
+		.default('off')
+		.describe('Who can see the current game'),
+	game_activity_policy_revision: GameActivityPolicyRevisionSchema.nullable()
+		.transform((value) => value ?? '0')
+		.pipe(GameActivityPolicyRevisionSchema)
+		.default('0')
+		.describe('Server-owned game sharing policy revision as a decimal string'),
 	status: z.string().describe('The current online status of the user'),
 	status_resets_at: z.iso.datetime().nullish().describe('ISO8601 timestamp of when the status will reset'),
 	status_resets_to: z.string().nullish().describe('The status to reset to after the scheduled reset'),
@@ -367,8 +401,8 @@ export const UserSettingsResponse = z.object({
 			'Account-wide client preferences as a base64-encoded protobuf snapshot. Empty string when nothing has been synced yet.',
 		),
 	profile_privacy: withFieldDescription(
-		ProfilePrivacyLevelSchema,
-		'Controls who sees the full profile: all guild members, only small-guild members, or only friends',
+		ProfilePrivacyLevelResponseSchema,
+		'Controls who sees the full profile: everyone, shared communities, friends and mutual follows, or only the owner',
 	),
 	default_share_voice_activity: z
 		.boolean()
@@ -457,6 +491,7 @@ export interface PendingBulkMessageDeletion {
 export type UserProfile = Readonly<UserProfileResponse>;
 
 export interface UserPartial {
+	readonly identity_version?: string;
 	readonly id: string;
 	readonly username: string;
 	readonly discriminator: string;
@@ -467,9 +502,13 @@ export interface UserPartial {
 	readonly system?: boolean;
 	readonly flags: number;
 	readonly mention_flags?: MentionReplyPreference;
+	readonly avatar_decoration_data?: CosmeticAssetDataResponse | null;
+	readonly avatar_ultra_data?: CosmeticAssetDataResponse | null;
+	readonly nameplate_data?: CosmeticAssetDataResponse | null;
 }
 
 export interface UserPrivate extends UserPartial, UserProfile {
+	readonly username_state?: 'legacy' | 'selected' | 'reselect_required';
 	readonly is_staff: boolean;
 	readonly email: string | null;
 	readonly email_bounced?: boolean;
@@ -499,6 +538,7 @@ export interface UserPrivate extends UserPartial, UserProfile {
 	readonly last_voice_activity_sharing_change_at: string | null;
 	readonly required_actions: ReadonlyArray<string>;
 	readonly nsfw_allowed: boolean;
+	readonly public_profile_allowed?: boolean;
 	readonly pending_bulk_message_deletion: PendingBulkMessageDeletion | null;
 	readonly has_dismissed_premium_onboarding: boolean;
 	readonly has_ever_purchased: boolean;
@@ -550,7 +590,22 @@ export type EmailTokenResponse = z.infer<typeof EmailTokenResponse>;
 
 export const UserTagCheckResponse = z.object({
 	taken: z.boolean().describe('Whether the username/discriminator combination is already taken'),
+	reason: z.string().optional(),
+	available_at: z.string().nullable().optional(),
 });
+
+export const UserUsernameStatusResponse = z.object({
+	state: z.enum(['legacy', 'selected', 'reselect_required']),
+	changeAvailableAt: z.string().nullable(),
+	freeChangeAvailable: z.boolean(),
+});
+export type UserUsernameStatusResponse = z.infer<typeof UserUsernameStatusResponse>;
+
+export const UserUsernamePromptResponse = z.union([
+	z.object({show: z.literal(false), retry_after_ms: z.number().int().positive()}),
+	z.object({show: z.boolean()}),
+]);
+export type UserUsernamePromptResponse = z.infer<typeof UserUsernamePromptResponse>;
 
 export type UserTagCheckResponse = z.infer<typeof UserTagCheckResponse>;
 
@@ -600,6 +655,13 @@ export const UserProfileFullResponse = z.object({
 		.describe(
 			'True when the target user has restricted their profile and the viewer does not meet the visibility tier; bio, pronouns, badges, and connected accounts have been stripped.',
 		),
+	profile_effect_data: CosmeticAssetDataResponse.nullish().describe(
+		'The profile effect the user wears; omitted or null when none',
+	),
+	badges: z.array(BadgeResponse).optional().describe('Catalog badges the user holds; omitted on a restricted profile'),
+	follower_count: Int32Type.optional().describe('How many accounts follow the user'),
+	following_count: Int32Type.optional().describe('How many accounts the user follows'),
+	is_following: z.boolean().optional().describe('Whether the current user follows the user'),
 });
 
 export type UserProfileFullResponse = z.infer<typeof UserProfileFullResponse>;

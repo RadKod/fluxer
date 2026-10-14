@@ -1,17 +1,46 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {BlockList, isIP} from 'node:net';
 import {isLoopbackIpAddress} from '@fluxer/ip_utils/src/IpAddress';
 import type {HttpBindings} from '@hono/node-server';
 import type {Context, Handler, MiddlewareHandler} from 'hono';
 
 const SKIP_PATHS = new Set(['/_health', '/_healthz', '/_metrics']);
+const METRICS_ALLOWED_CIDRS_ENV = 'FLUXER_METRICS_ALLOWED_CIDRS';
 
-function isLoopbackPeer(env: unknown): boolean {
+function allowedCidrsFromEnv(): Array<string> {
+	return (process.env[METRICS_ALLOWED_CIDRS_ENV] ?? '')
+		.split(',')
+		.map((entry) => entry.trim())
+		.filter((entry) => entry !== '');
+}
+
+function buildAllowList(cidrs: ReadonlyArray<string>): BlockList {
+	const allowList = new BlockList();
+	for (const cidr of cidrs) {
+		const [address, prefix, ...rest] = cidr.split('/');
+		const family = isIP(address);
+		const bits = family === 4 ? 32 : 128;
+		const prefixLength = prefix === undefined ? bits : Number(prefix);
+		if (family === 0 || rest.length > 0 || !/^\d{1,3}$/.test(prefix ?? '0') || prefixLength > bits) {
+			throw new Error(`${METRICS_ALLOWED_CIDRS_ENV} contains an invalid CIDR: ${cidr}`);
+		}
+		allowList.addSubnet(address, prefixLength, family === 4 ? 'ipv4' : 'ipv6');
+	}
+	return allowList;
+}
+
+// Judged by the socket peer, never a forwarded header: loopback always, plus the configured networks.
+function isAllowedPeer(env: unknown, allowList: BlockList): boolean {
 	const remoteAddress = (env as Partial<HttpBindings> | null | undefined)?.incoming?.socket?.remoteAddress;
 	if (typeof remoteAddress !== 'string' || remoteAddress === '') {
 		return false;
 	}
-	return isLoopbackIpAddress(remoteAddress);
+	if (isLoopbackIpAddress(remoteAddress)) {
+		return true;
+	}
+	const family = isIP(remoteAddress);
+	return family !== 0 && allowList.check(remoteAddress, family === 4 ? 'ipv4' : 'ipv6');
 }
 
 const DEFAULT_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
@@ -162,17 +191,18 @@ function renderRegisteredMetrics(): Array<string> {
 
 const METRICS_CONTENT_TYPE = 'text/plain; version=0.0.4; charset=utf-8';
 
-function renderMetricsResponse(c: Context, sections: Array<string>): Response {
-	if (!isLoopbackPeer(c.env)) {
+function renderMetricsResponse(c: Context, sections: Array<string>, allowList: BlockList): Response {
+	if (!isAllowedPeer(c.env, allowList)) {
 		return c.text('FORBIDDEN', 403, {'Content-Type': 'text/plain'});
 	}
-	return c.text(`${[...sections, ...renderRegisteredMetrics()].join('\n\n')}\n`, 200, {
+	return c.text(`${[...sections, ...renderRegisteredSections(), ...renderRegisteredMetrics()].join('\n\n')}\n`, 200, {
 		'Content-Type': METRICS_CONTENT_TYPE,
 	});
 }
 
-export function createRegisteredMetricsHandler(): Handler {
-	return (c) => renderMetricsResponse(c, []);
+export function createRegisteredMetricsHandler(options: MetricsOptions = {}): Handler {
+	const allowList = buildAllowList(options.allowedCidrs ?? allowedCidrsFromEnv());
+	return (c) => renderMetricsResponse(c, [], allowList);
 }
 
 interface MetricsState {
@@ -188,9 +218,14 @@ interface MetricsResult {
 	state: MetricsState;
 }
 
-export function createMetricsMiddleware(serviceName: string): MetricsResult {
+interface MetricsOptions {
+	allowedCidrs?: ReadonlyArray<string>;
+}
+
+export function createMetricsMiddleware(serviceName: string, options: MetricsOptions = {}): MetricsResult {
 	const prefix = `fluxer_${serviceName}`;
 	const startTime = performance.now();
+	const allowList = buildAllowList(options.allowedCidrs ?? allowedCidrsFromEnv());
 
 	const requestsTotal = new Counter();
 	const errorsTotal = new Counter();
@@ -222,13 +257,16 @@ export function createMetricsMiddleware(serviceName: string): MetricsResult {
 	};
 
 	const metricsHandler: Handler = (c) =>
-		renderMetricsResponse(c, [
-			requestsTotal.render(`${prefix}_http_requests_total`, 'Total HTTP requests'),
-			requestDuration.render(`${prefix}_http_request_duration_seconds`, 'HTTP request duration in seconds'),
-			errorsTotal.render(`${prefix}_http_errors_total`, 'Total HTTP 5xx errors'),
-			uptime.render(`${prefix}_uptime_seconds`, 'Process uptime in seconds'),
-			...renderRegisteredSections(),
-		]);
+		renderMetricsResponse(
+			c,
+			[
+				requestsTotal.render(`${prefix}_http_requests_total`, 'Total HTTP requests'),
+				requestDuration.render(`${prefix}_http_request_duration_seconds`, 'HTTP request duration in seconds'),
+				errorsTotal.render(`${prefix}_http_errors_total`, 'Total HTTP 5xx errors'),
+				uptime.render(`${prefix}_uptime_seconds`, 'Process uptime in seconds'),
+			],
+			allowList,
+		);
 
 	return {middleware, metricsHandler, state};
 }

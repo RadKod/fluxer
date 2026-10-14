@@ -22,7 +22,7 @@ import {
 	SnowflakeType,
 	withFieldDescription,
 } from '@fluxer/schema/src/primitives/SchemaPrimitives';
-import {DiscriminatorType, EmailType, UsernameType} from '@fluxer/schema/src/primitives/UserValidators';
+import {DiscriminatorType, EmailType, UsernameLookupType} from '@fluxer/schema/src/primitives/UserValidators';
 import {z} from 'zod';
 
 export const UserAdminResponseSchema = z.object({
@@ -274,7 +274,7 @@ export type AdminPasswordResetLinkResponse = z.infer<typeof AdminPasswordResetLi
 
 export const ChangeUsernameRequest = z.object({
 	user_id: SnowflakeType.describe('ID of the user to change username for'),
-	username: UsernameType.describe('New username for the user'),
+	username: UsernameLookupType.describe('New username for the user'),
 	discriminator: DiscriminatorType.optional().describe('Legacy discriminator value'),
 });
 

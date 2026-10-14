@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import Accessibility from '@app/features/accessibility/state/Accessibility';
 import * as Modal from '@app/features/app/components/dialogs/Modal';
 import styles from '@app/features/app/components/setup/SelfHostedSetupWizardGate.module.css';
 import {
@@ -86,7 +87,7 @@ import type {MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {ArrowLeftIcon, ArrowRightIcon, CheckIcon, WrenchIcon} from '@phosphor-icons/react';
-import {AnimatePresence, motion, type Transition, useReducedMotion} from 'framer-motion';
+import {AnimatePresence, motion, type Transition} from 'framer-motion';
 import {observer} from 'mobx-react-lite';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 
@@ -424,7 +425,7 @@ function buildMediaPatch(draft: MediaExpiryDraft) {
 
 export const SelfHostedSetupWizardGate = observer(() => {
 	const {i18n} = useLingui();
-	const shouldReduceMotion = useReducedMotion();
+	const shouldReduceMotion = Accessibility.useReducedMotion;
 	const authStoreAuthenticated = Authentication.isAuthenticated;
 	const accountWorkAdmitted = !AccountScopedWork.isSuspended;
 	const themeHydrated = Theme.isHydrated;

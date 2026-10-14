@@ -18,14 +18,16 @@ import {
 } from '@app/api/channel/tests/ChannelTestUtils';
 import {SYSTEM_USER_ID} from '@app/api/constants/Core';
 import {ensureSessionStarted} from '@app/api/message/tests/MessageTestUtils';
+import {setInjectedUsernameOwnershipService} from '@app/api/middleware/ServiceRegistry';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {UserRepository} from '@app/api/user/repositories/UserRepository';
+import {compileUsernameDictionary, UsernamePolicyService} from '@app/api/user/username/UsernamePolicyService';
 import {FLUXERBOT_ID} from '@fluxer/constants/src/AppConstants';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
-import {afterAll, beforeAll, beforeEach, describe, expect, test} from 'vitest';
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi} from 'vitest';
 
 interface PrivateChannelsResponse extends Array<MinimalChannelResponse> {}
 
@@ -44,6 +46,22 @@ describe('UserChannelService', () => {
 	});
 	beforeEach(async () => {
 		await harness.reset();
+		// Micup: these tests exercise DMs; bot creation requires a published, readable username policy.
+		vi.spyOn(UsernamePolicyService.prototype, 'readAuthoritative').mockResolvedValue({
+			policyRevision: 1,
+			tiers: {1: 'locked', 2: 'locked', 3: 'locked'},
+			migration: {state: 'legacy', epoch: 0, startedAt: null, forcedAt: null},
+			admission: {globalPerSecond: 10, paused: false},
+			dictionary: compileUsernameDictionary(1, {uname_exact: [], uname_contains: [], uname_allow: []}),
+		});
+		setInjectedUsernameOwnershipService({
+			repository: {readEntitlement: async () => null},
+			readClaimForAvailability: async () => null,
+		} as never);
+	});
+	afterEach(() => {
+		vi.restoreAllMocks();
+		setInjectedUsernameOwnershipService(undefined);
 	});
 	afterAll(async () => {
 		await harness?.shutdown();

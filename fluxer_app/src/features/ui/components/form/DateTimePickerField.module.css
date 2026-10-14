@@ -279,7 +279,7 @@
 
 .rdpSelected .rdpDayButton {
 	background-color: var(--brand-primary);
-	color: #fff;
+	color: var(--text-on-brand-primary);
 	font-weight: 600;
 }
 

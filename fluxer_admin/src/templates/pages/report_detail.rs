@@ -44,6 +44,8 @@ fn report_type_label(report_type: i32) -> &'static str {
         0 => "Message",
         1 => "User",
         2 => "Guild",
+        3 => "Feed Post",
+        4 => "Feed Comment",
         _ => "Unknown",
     }
 }
@@ -208,6 +210,9 @@ fn reported_entity_section(config: &AdminConfig, report: &ReportEntry) -> Markup
                     }
                     2 => {
                         (reported_guild_field(config, report))
+                    }
+                    3 | 4 => {
+                        (reported_user_field(config, "Author", report))
                     }
                     _ => {
                         (data_field_text("Entity", "Unknown"))
@@ -378,10 +383,13 @@ fn actions_card(config: &AdminConfig, report: &ReportEntry, csrf_token: &str) ->
                 @if report.status == 0 {
                     (resolve_report_form(base, &report.report_id, csrf_token))
                 }
-                @if report.report_type == 0 || report.report_type == 1 {
+                @if matches!(report.report_type, 0 | 1 | 3 | 4) {
                     @if let Some(ref reported_id) = report.reported_user_id {
                         (nav_link(&format!("{base}/users/{reported_id}"), "View Reported User"))
                     }
+                }
+                @if matches!(report.report_type, 3 | 4) {
+                    (nav_link(&format!("{base}/feed-moderation"), "Open Feed Moderation"))
                 }
                 @if report.report_type == 2 {
                     @if let Some(ref guild_id) = report.reported_guild_id {
@@ -444,7 +452,8 @@ fn message_context_section(
     let Some(values) = &report.message_context else {
         return html! {};
     };
-    if report.report_type != 0 || values.is_empty() {
+    // Feed reports (3, 4) bring the post or comment as message context, so NCMEC shows too.
+    if !matches!(report.report_type, 0 | 3 | 4) || values.is_empty() {
         return html! {};
     }
     let messages = ordered_messages(values);

@@ -811,7 +811,9 @@ describe('ModuleStore', () => {
 		await assert.rejects(store.commit({fluxer_grammars: RENDERER_V1.sha256}), ModuleStoreInstallationMissingError);
 	});
 
-	test('a symlinked store directory is never served, even when it points at a real installation', async () => {
+	test('a symlinked store directory is never served, even when it points at a real installation', {
+		skip: process.platform === 'win32',
+	}, async () => {
 		const userDataPath = createUserData();
 		const store = await openStore(userDataPath);
 		const renderer = await install(store, RENDERER_V1);

@@ -97,9 +97,20 @@ const PRE_HYDRATION_APP_STORAGE_KEYS: ReadonlyArray<string> = [
 	'SoftwareEncoderWarning_neverShowAgain',
 ];
 
+// Motion preferences and the one-time migration marker belong to this device and survive resets and logout.
+export const ACCESSIBILITY_MOTION_STORAGE_KEY = 'Accessibility:motion';
+export const ACCESSIBILITY_MOTION_SYNC_DEFAULT_OFF_MIGRATED_V1_STORAGE_KEY =
+	'Accessibility:motionSyncDefaultOffMigratedV1';
+
+const MOTION_RAW_MIRROR_KEYS: ReadonlyArray<string> = [
+	ACCESSIBILITY_MOTION_STORAGE_KEY,
+	ACCESSIBILITY_MOTION_SYNC_DEFAULT_OFF_MIGRATED_V1_STORAGE_KEY,
+];
+
 const RAW_MIRRORED_APP_STORAGE_KEYS: ReadonlySet<string> = new Set([
 	...PREBOOT_MIRROR_KEYS,
 	...PRE_HYDRATION_APP_STORAGE_KEYS,
+	...MOTION_RAW_MIRROR_KEYS,
 	AppStorageKey.ACCESSIBILITY_LEGACY_STORE,
 	AppStorageKey.MESSAGING_DRAFTS,
 	AppStorageKey.MESSAGING_MESSAGE_EDIT,
@@ -498,6 +509,14 @@ function replaceScopedCache(next: ReadonlyMap<string, string>): void {
 }
 
 function replayRawMirror(scope: string): void {
+	if (getPersistentStorageBackend().kind === PersistentStorageBackendKind.DESKTOP) {
+		for (const key of MOTION_RAW_MIRROR_KEYS) {
+			const value = scopedCache.get(key);
+			if (value !== undefined || resetTombstones.has(key)) {
+				writeRawStorageItem(key, value ?? null);
+			}
+		}
+	}
 	for (const key of RAW_MIRRORED_APP_STORAGE_KEYS) {
 		if (RAW_ONLY_APP_STORAGE_KEYS.has(key)) {
 			continue;
@@ -957,6 +976,23 @@ const AppStorage = createStorage();
 
 export default AppStorage;
 
-export const PRESERVED_RESET_STORAGE_KEYS = [AppStorageKey.MESSAGING_DRAFTS] as const;
+// Micup: the device flag of Accessibility's one-time 16px to 15px chat text move. The size is synced, the flag is not:
+// once cleared, the move runs again and takes a 16px chosen since back to 15px on every device. Resets and logout keep it.
+export const ACCESSIBILITY_FONT_SIZE_DEFAULT_MIGRATED_V1_STORAGE_KEY = 'Accessibility:fontSizeDefault15MigratedV1';
+// Discovery belongs to this device and survives logout and authentication storage resets.
+export const VOICE_ROOM_CONTROL_DISCOVERY_STORAGE_KEY = 'VoiceRoomControlDiscovery';
+// The taskbar offer is dismissed once per device, including after logout or an authentication reset.
+export const TASKBAR_PIN_STORAGE_KEY = 'TaskbarPin';
+
+export const PRESERVED_DEVICE_STORAGE_KEYS = [
+	'analytics_consent',
+	ACCESSIBILITY_FONT_SIZE_DEFAULT_MIGRATED_V1_STORAGE_KEY,
+	ACCESSIBILITY_MOTION_STORAGE_KEY,
+	ACCESSIBILITY_MOTION_SYNC_DEFAULT_OFF_MIGRATED_V1_STORAGE_KEY,
+	VOICE_ROOM_CONTROL_DISCOVERY_STORAGE_KEY,
+	TASKBAR_PIN_STORAGE_KEY,
+] as const;
+
+export const PRESERVED_RESET_STORAGE_KEYS = [...PRESERVED_DEVICE_STORAGE_KEYS, AppStorageKey.MESSAGING_DRAFTS] as const;
 
 export const PRESERVED_RESET_STORAGE_KEY_PREFIXES = DOMAIN_MIGRATION_STORAGE_KEY_PREFIXES;

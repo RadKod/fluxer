@@ -225,12 +225,12 @@ describe('BillingConfigCache', () => {
 			tiering: boolean;
 			billing: boolean;
 		}> = [
-			{selfHosted: false, premiumMode: 'everyone', stored: null, tiering: true, billing: true},
-			{selfHosted: false, premiumMode: 'mirror', stored: null, tiering: true, billing: true},
+			{selfHosted: false, premiumMode: 'everyone', stored: null, tiering: true, billing: false},
+			{selfHosted: false, premiumMode: 'mirror', stored: null, tiering: true, billing: false},
 			{selfHosted: true, premiumMode: 'everyone', stored: null, tiering: false, billing: false},
-			{selfHosted: true, premiumMode: 'mirror', stored: null, tiering: true, billing: true},
+			{selfHosted: true, premiumMode: 'mirror', stored: null, tiering: true, billing: false},
 			{selfHosted: true, premiumMode: 'everyone', stored: operatorConfig(), tiering: false, billing: false},
-			{selfHosted: true, premiumMode: 'mirror', stored: operatorConfig(), tiering: true, billing: true},
+			{selfHosted: true, premiumMode: 'mirror', stored: operatorConfig(), tiering: true, billing: false},
 			{
 				selfHosted: true,
 				premiumMode: 'mirror',
@@ -259,7 +259,7 @@ describe('BillingConfigCache', () => {
 				premiumMode: 'everyone',
 				stored: operatorConfig({prices: {}, enabled: false}),
 				tiering: true,
-				billing: true,
+				billing: false,
 			},
 		];
 
@@ -274,7 +274,7 @@ describe('BillingConfigCache', () => {
 			},
 		);
 
-		it('is inactive without a secret key, or when env billing is disabled', () => {
+		it('stays inactive with missing keys, disabled env, or enabled stored billing', () => {
 			instance.selfHosted = false;
 			stripe.secretKey = '';
 			expect(isBillingActive()).toBe(false);
@@ -284,7 +284,7 @@ describe('BillingConfigCache', () => {
 			setStoredBillingConfig(operatorConfig({enabled: true}));
 			expect(isBillingActive()).toBe(false);
 			instance.selfHosted = true;
-			expect(isBillingActive()).toBe(true);
+			expect(isBillingActive()).toBe(false);
 		});
 
 		it('is inactive in env mode when no recurring pair is configured', () => {
@@ -319,7 +319,7 @@ describe('BillingConfigCache', () => {
 			expect(config.automaticTax).toBe(true);
 			expect(config.taxIdCollection).toBe(true);
 			expect(config.termsConsentRequired).toBe(true);
-			expect(isBillingActive()).toBe(true);
+			expect(isBillingActive()).toBe(false);
 		});
 	});
 
@@ -348,10 +348,10 @@ describe('BillingConfigCache', () => {
 	});
 
 	describe('isStripeServiceable and getStripeClient', () => {
-		it('follows env enabled plus key on hosted, exactly like before', () => {
+		it('never constructs a hosted Stripe client even with enabled env and key', () => {
 			instance.selfHosted = false;
-			expect(isStripeServiceable()).toBe(true);
-			expect(getStripeClient()).not.toBeNull();
+			expect(isStripeServiceable()).toBe(false);
+			expect(getStripeClient()).toBeNull();
 			stripe.enabled = false;
 			expect(isStripeServiceable()).toBe(false);
 			expect(getStripeClient()).toBeNull();
@@ -361,11 +361,11 @@ describe('BillingConfigCache', () => {
 			expect(getStripeClient()).toBeNull();
 		});
 
-		it('keeps servicing on self-hosted after sales are switched off or prices removed', () => {
+		it('never services Stripe on self-hosted mirror mode even with a secret', () => {
 			setStoredBillingConfig(operatorConfig({enabled: false, prices: {}}));
 			expect(isBillingActive()).toBe(false);
-			expect(isStripeServiceable()).toBe(true);
-			expect(getStripeClient()).not.toBeNull();
+			expect(isStripeServiceable()).toBe(false);
+			expect(getStripeClient()).toBeNull();
 		});
 
 		it('stops servicing on self-hosted without a key or without premium tiering', () => {

@@ -22,6 +22,8 @@ const logger = new Logger('SyncedField');
 
 interface SyncedFieldUserSettings {
 	isHydrated(): boolean;
+	isAccountReleased(): boolean;
+	getAccountEpoch(): number;
 	getSubPreference<F extends SyncedPreferencesField>(field: F): SyncedPreferences[F] | undefined;
 	setSubPreference<F extends SyncedPreferencesField>(field: F, value: NonNullable<SyncedPreferences[F]>): Promise<void>;
 }
@@ -91,6 +93,8 @@ export async function makeSyncedField<
 	let lastPreparedBytes: number | null = null;
 	let ownerUserId: string | null = null;
 	let observedUserId: string | null = null;
+	let dataEpoch = 0;
+	let adoptingAccount = false;
 	const suspend = (reason: SyncedFieldFailureReason, message: string, error?: unknown): void => {
 		logger.error(`${tag}: ${message}; synced persistence disabled:`, error);
 		transitionMachine({
@@ -133,7 +137,10 @@ export async function makeSyncedField<
 	};
 	const applyRemote = (snapshot: M): void => {
 		let effective = snapshot;
-		if (config.mergeRemote && (ownerUserId === null || ownerUserId === observedUserId)) {
+		const sameOwner = adoptingAccount
+			? ownerUserId !== null && ownerUserId === observedUserId
+			: ownerUserId === null || ownerUserId === observedUserId;
+		if (config.mergeRemote && sameOwner) {
 			try {
 				effective = create(schema, config.mergeRemote(buildMessage(), snapshot)) as M;
 			} catch (error) {
@@ -148,14 +155,18 @@ export async function makeSyncedField<
 		} catch (error) {
 			logger.error(`${tag}: applyMessage threw:`, error);
 		}
-		ownerUserId = observedUserId;
+		ownerUserId = adoptingAccount || UserSettings.getAccountEpoch() === dataEpoch ? observedUserId : null;
 		transitionOnly({type: 'sync.applyFinished'});
 	};
 	const preparePush = (candidate: M): void => {
+		if (UserSettings.isAccountReleased()) {
+			transitionOnly({type: 'sync.localAlreadySynced'});
+			return;
+		}
 		ownerUserId ??= observedUserId;
 		try {
 			const current = UserSettings.getSubPreference(config.field);
-			if (current !== undefined && equals(schema, current as M, candidate)) {
+			if (equals(schema, (current as M | undefined) ?? create(schema), candidate)) {
 				transitionOnly({type: 'sync.localAlreadySynced'});
 				return;
 			}
@@ -242,6 +253,7 @@ export async function makeSyncedField<
 	}
 	const maxEncodedBytes = config.maxEncodedBytes ?? DEFAULT_SYNCED_FIELD_MAX_ENCODED_BYTES;
 	const [UserSettings, SessionManager] = await Promise.all([userSettingsReady, sessionManagerReady]);
+	dataEpoch = UserSettings.isAccountReleased() ? -1 : UserSettings.getAccountEpoch();
 	const applyDefaultsForUserChange = (userId: string): void => {
 		try {
 			runInAction(() => {
@@ -258,15 +270,18 @@ export async function makeSyncedField<
 				snapshot: getRemoteSnapshot(),
 				userId: SessionManager?.userId ?? null,
 				hydrated: UserSettings.isHydrated(),
+				accountEpoch: UserSettings.getAccountEpoch(),
 			}),
-			({snapshot, userId, hydrated}) => {
+			({snapshot, userId, hydrated, accountEpoch}) => {
 				observedUserId = userId;
+				adoptingAccount = hydrated && accountEpoch !== dataEpoch;
 				if (
+					isEnabled() &&
 					snapshot === undefined &&
 					hydrated &&
 					userId != null &&
-					ownerUserId != null &&
 					ownerUserId !== userId &&
+					(ownerUserId != null || adoptingAccount) &&
 					selectSyncedFieldMachineModel(machine).isActive
 				) {
 					applyDefaultsForUserChange(userId);
@@ -276,6 +291,10 @@ export async function makeSyncedField<
 					enabled: isEnabled(),
 					snapshot,
 				});
+				if (adoptingAccount) {
+					dataEpoch = accountEpoch;
+					adoptingAccount = false;
+				}
 			},
 			{fireImmediately: true, equals: compareShallow},
 		);

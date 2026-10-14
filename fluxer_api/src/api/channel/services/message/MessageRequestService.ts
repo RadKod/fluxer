@@ -10,6 +10,7 @@ import type {MessageResponseDataService} from '@app/api/channel/services/message
 import {carriesThreadArtifact, maskThreadArtifactsFor} from '@app/api/channel/services/message/ThreadMessageResponses';
 import {everEnabled, isTainted, type ThreadViewer, viewerActive} from '@app/api/experiment/ChannelThreadsGate';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
 import type {User} from '@app/api/models/User';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
 import {THREAD_FEATURE_CHANNEL_TYPES} from '@fluxer/constants/src/ThreadConstants';
@@ -186,6 +187,7 @@ export class MessageRequestService {
 		data: MessageRequest;
 		requestCache: RequestCache;
 	}): Promise<MessageResponse> {
+		getUsernameSelectionGate().assertMayAct(params.user, 'message');
 		if (
 			params.user.isUnclaimedAccount() &&
 			!isPersonalNotesChannel({userId: params.user.id, channelId: params.channelId})
@@ -252,6 +254,7 @@ export class MessageRequestService {
 		parentAuth: AuthenticatedChannel;
 		data: MessageRequest;
 	}): Promise<void> {
+		getUsernameSelectionGate().assertMayAct(params.user, 'message');
 		if (params.user.isUnclaimedAccount()) throw new UnclaimedAccountCannotSendMessagesError();
 		await this.channelService.messages.send.validateForumStarter(params);
 	}
@@ -264,6 +267,7 @@ export class MessageRequestService {
 		data: MessageRequest;
 		requestCache: RequestCache;
 	}): Promise<MessageResponse> {
+		getUsernameSelectionGate().assertMayAct(params.user, 'message');
 		if (params.user.isUnclaimedAccount()) throw new UnclaimedAccountCannotSendMessagesError();
 		const {message, authChannel} = await this.channelService.messages.send.sendMessage({
 			viewer: params.viewer,

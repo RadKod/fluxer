@@ -22,7 +22,10 @@ init_records_self_under_current_role_test() ->
             {fluxer_gateway, runtime_config},
             #{gateway_role => guilds}
         ),
+        %% init/1 traps exits; keep the eunit process as it was.
+        {trap_exit, TrapExit} = process_info(self(), trap_exit),
         {ok, State} = gateway_cluster_membership:init(#{auto_subscribe => false}),
+        process_flag(trap_exit, TrapExit),
         RoleMembers = maps:get(members_by_role, State),
         ?assertEqual([node()], maps:get(guilds, RoleMembers)),
         ?assertEqual(RoleMembers, persistent_term:get(?ROLE_MEMBERS_KEY)),
@@ -291,6 +294,148 @@ update_members_role_lookups_run_concurrently_test() ->
         ?assertEqual(lists:usort(Nodes), maps:get(sessions, maps:get(members_by_role, State1)))
     end).
 
+rpc_initial_readiness_waits_for_stability_test() ->
+    with_rpc_membership(100, fun(_) -> all end, fun(Pid) ->
+        ?assertNot(gateway_cluster_membership:rpc_ready()),
+        discover_rpc_peer(Pid),
+        ?assertNot(gateway_cluster_membership:rpc_ready()),
+        await_rpc_ready(),
+        ?assertEqual(undefined, maps:get(rpc_stability_timer, sys:get_state(Pid)))
+    end).
+
+rpc_repeated_drops_reset_stability_test() ->
+    with_rpc_membership(160, fun(_) -> all end, fun(Pid) ->
+        discover_rpc_peer(Pid),
+        await_rpc_ready(),
+        rpc_peer_event(Pid, nodedown),
+        ?assertNot(gateway_cluster_membership:rpc_ready()),
+        rpc_peer_event(Pid, nodeup),
+        ?assertNot(gateway_cluster_membership:rpc_ready()),
+        timer:sleep(90),
+        rpc_peer_event(Pid, nodedown),
+        rpc_peer_event(Pid, nodeup),
+        timer:sleep(90),
+        ?assertNot(gateway_cluster_membership:rpc_ready()),
+        await_rpc_ready()
+    end).
+
+rpc_stale_stability_timer_cannot_reopen_test() ->
+    with_rpc_membership(100, fun(_) -> all end, fun(Pid) ->
+        discover_rpc_peer(Pid),
+        ?assertNot(gateway_cluster_membership:rpc_ready()),
+        OldTimer = maps:get(rpc_stability_timer, sys:get_state(Pid)),
+        rpc_peer_event(Pid, nodedown),
+        Pid ! {timeout, OldTimer, rpc_stable},
+        _ = sys:get_state(Pid),
+        ?assertNot(gateway_cluster_membership:rpc_ready()),
+        rpc_peer_event(Pid, nodeup),
+        NewTimer = maps:get(rpc_stability_timer, sys:get_state(Pid)),
+        ?assertNotEqual(OldTimer, NewTimer),
+        Pid ! {timeout, OldTimer, rpc_stable},
+        _ = sys:get_state(Pid),
+        ?assertNot(gateway_cluster_membership:rpc_ready()),
+        discover_rpc_peer(Pid),
+        ?assertEqual(NewTimer, maps:get(rpc_stability_timer, sys:get_state(Pid))),
+        await_rpc_ready()
+    end).
+
+rpc_membership_restart_requires_fresh_stability_test() ->
+    with_rpc_membership(100, fun(_) -> all end, fun(Pid) ->
+        discover_rpc_peer(Pid),
+        OldTimer = maps:get(rpc_stability_timer, sys:get_state(Pid), undefined),
+        await_rpc_ready(),
+        gen_server:stop(Pid),
+        ?assertNot(gateway_cluster_membership:rpc_ready()),
+        {ok, Restarted} = start_rpc_membership(fun(_) -> all end),
+        try
+            ?assertNot(gateway_cluster_membership:rpc_ready()),
+            Restarted ! {timeout, OldTimer, rpc_stable},
+            _ = sys:get_state(Restarted),
+            ?assertNot(gateway_cluster_membership:rpc_ready()),
+            discover_rpc_peer(Restarted),
+            ?assertNot(gateway_cluster_membership:rpc_ready()),
+            await_rpc_ready()
+        after
+            gen_server:stop(Restarted)
+        end
+    end).
+
+rpc_loss_closes_before_role_lookup_test() ->
+    Parent = self(),
+    RoleFun = fun(_) ->
+        Parent ! {role_lookup_rpc_permission, gateway_cluster_membership:rpc_ready()},
+        all
+    end,
+    with_rpc_membership(0, RoleFun, fun(Pid) ->
+        discover_rpc_peer(Pid),
+        ?assert(gateway_cluster_membership:rpc_ready()),
+        flush_role_permissions(),
+        rpc_peer_event(Pid, nodedown),
+        receive
+            {role_lookup_rpc_permission, Ready} -> ?assertNot(Ready)
+        after 500 -> ?assert(false)
+        end,
+        ?assertNot(gateway_cluster_membership:rpc_ready()),
+        rpc_peer_event(Pid, nodeup),
+        ?assert(gateway_cluster_membership:rpc_ready())
+    end).
+
+with_rpc_membership(StabilityMs, RoleFun, Fun) ->
+    with_clean_cluster_terms(fun() ->
+        persistent_term:put({fluxer_gateway, runtime_config}, #{
+            cluster_enabled => true,
+            cluster_min_peers_for_rpc => 2,
+            cluster_rpc_stability_ms => StabilityMs
+        }),
+        {ok, Pid} = start_rpc_membership(RoleFun),
+        try
+            Fun(Pid)
+        after
+            case is_process_alive(Pid) of
+                true -> gen_server:stop(Pid);
+                false -> ok
+            end,
+            flush_role_permissions()
+        end
+    end).
+
+start_rpc_membership(RoleFun) ->
+    gateway_cluster_membership:start_link(#{
+        auto_subscribe => false,
+        connect_fun => fun(_) -> true end,
+        connected_nodes_fun => fun() -> [] end,
+        role_fun => RoleFun
+    }).
+
+discover_rpc_peer(Pid) ->
+    Pid ! {cluster_peers_changed, ['peer@rpc']},
+    _ = sys:get_state(Pid),
+    ok.
+
+rpc_peer_event(Pid, Event) ->
+    Pid ! {Event, 'peer@rpc'},
+    _ = sys:get_state(Pid),
+    ok.
+
+await_rpc_ready() ->
+    await_rpc_ready(erlang:monotonic_time(millisecond) + 1000).
+
+await_rpc_ready(Deadline) ->
+    case gateway_cluster_membership:rpc_ready() of
+        true ->
+            ok;
+        false ->
+            ?assert(erlang:monotonic_time(millisecond) < Deadline),
+            timer:sleep(5),
+            await_rpc_ready(Deadline)
+    end.
+
+flush_role_permissions() ->
+    receive
+        {role_lookup_rpc_permission, _} -> flush_role_permissions()
+    after 0 -> ok
+    end.
+
 base_state(Overrides) ->
     Defaults = #{
         members => [node()],
@@ -335,6 +480,7 @@ with_clean_cluster_terms(Fun) ->
             ?MEMBERS_KEY,
             ?ROLE_MEMBERS_KEY,
             ?NODE_POD_NAMES_KEY,
+            {gateway_cluster_membership, rpc_ready},
             {fluxer_gateway, runtime_config}
         ],
         fun() ->

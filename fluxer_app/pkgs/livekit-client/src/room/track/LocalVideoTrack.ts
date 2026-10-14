@@ -281,6 +281,7 @@ export default class LocalVideoTrack extends LocalTrack<Track.Kind.Video> {
 			}
 		}
 		await this.restart(constraints);
+		if (this.manuallyStopped) return;
 
 		this.isCpuConstrained = false;
 

@@ -1,14 +1,14 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Gifts
-description: Gift code objects, duration units, public lookup, and one-time redemption.
+description: Gift code objects, duration units, item codes, public lookup, and one-time redemption.
 ---
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A gift is a code that grants premium to the account that redeems it. Until then it belongs to no account. [Create gift checkout](/http-api/billing/#create-gift-checkout) defines how one is bought.
+A gift is a code that grants premium to the account that redeems it. Until then it belongs to no account. [Create gift checkout](/http-api/billing/#create-gift-checkout) defines how one is bought. An [item code](#item-codes) grants a cosmetic item instead.
 
-A self-hosted deployment serves both routes only while its [premium mode](/admin-api/instance/#premium-modes) is `mirror`, as [deployment availability](/http-api/deployment-availability/) describes. [Redeem gift](#redeem-gift) is user-only.
+Every deployment registers both routes. A self-hosted instance answers them only in the `mirror` [premium mode](/admin-api/instance/#premium-modes), and returns 403 `FEATURE_NOT_AVAILABLE_SELF_HOSTED` in any other mode, as [deployment availability](/http-api/deployment-availability/#registered-routes-that-resolve-differently) describes. [Redeem gift](#redeem-gift) is user-only.
 
 :::caution[A code is a bearer credential]
 A gift records no recipient, so Fluxer binds the code to whichever eligible account presents it first. [Get gift](#get-gift) takes no credential and returns the full public record for any code. Treat an unredeemed code as a secret.
@@ -71,13 +71,26 @@ A purchased gift is always whole months or whole years, because a purchase of tw
 
 <sup>1</sup> A calendar month is added in UTC and clamped to the last day of the target month, so 31 January extended by one month lands on 28 or 29 February
 
+## Item codes
+
+An item code gives one owned-availability [cosmetic item](/http-api/cosmetics/#cosmetic-item-object) instead of premium time. [Create item codes](/admin-api/gift-codes/#create-item-codes) issues them, and they exist only where gift codes do.
+
+- [Get gift](#get-gift) answers an item code with 404 `UNKNOWN_GIFT_CODE`, so a client that knows only premium gifts never shows one as premium. [Get code preview](/http-api/shop/#get-code-preview) returns what any code gives.
+- [Redeem gift](#redeem-gift) redeems an item code with the same 204 and the same account checks. The item is added to the account and worn in the slot of its type, as a shop order delivers it.
+- An account that already owns the item receives 409 `COSMETIC_ALREADY_OWNED`, and the code stays unredeemed.
+- An account with lifetime premium can redeem an item code, because the lifetime refusal applies only to premium codes.
+- A code whose item no longer exists receives 404 `UNKNOWN_GIFT_CODE`.
+- Deliveries of one item to one account run one at a time, so a redemption waits while another delivery of the same item, such as a shop order, runs. After about 5 seconds it returns 423 `GENERAL_ERROR` with `Retry-After: 2`. The code then stays claimed by the account, and on a self-hosted instance presenting it again from the same account delivers the item.
+
+An item an admin takes back never comes back from the same code. The account that redeemed it receives 400 `GIFT_CODE_ALREADY_REDEEMED` when it presents the code again.
+
 ## Get gift
 
 <RouteHeader method="GET" path="/v1/gifts/{code}" unauthenticated />
 
 Reads a gift by its code. Returns the [gift](#gift-object) object on success.
 
-A code that does not exist and one that has been revoked both return 404 `UNKNOWN_GIFT_CODE`, so a revoked code is never distinguishable from one that was never issued.
+A code that does not exist and one that has been revoked both return 404 `UNKNOWN_GIFT_CODE`, so a revoked code is never distinguishable from one that was never issued. An [item code](#item-codes) returns the same 404.
 
 A chargeback or a refund for the purchase revokes the gift when [Receive Stripe webhook](/http-api/billing/#receive-stripe-webhook) processes it and the gift is still unredeemed. The gift also leaves [List current user gifts](/http-api/users/gifts/#list-current-user-gifts), so the buyer has no route that reports the reversal. A gift that was already redeemed when the same event arrives stays readable, and Fluxer recomputes the redeemer's entitlement from their remaining redeemed gifts.
 
@@ -143,6 +156,8 @@ One redemption can be in flight for a code across the whole deployment, and a se
 | 400 | [error response](/http-api/#error-response) | CAPTCHA failed, the code is redeemed or a redemption is in flight, the account is unclaimed or holds lifetime entitlement, the payment provider rejected the change to the active subscription, or the Visionary guild join for a lifetime gift failed |
 | 403 | [error response](/http-api/#error-response) | The email address is unverified, or purchases are disabled for the account |
 | 404 | [error response](/http-api/#error-response) | No gift exists for the code, the gift was revoked, the authenticated account record no longer exists, or the configured Visionary guild does not exist |
+| 409 | [error response](/http-api/#error-response) | The account already owns the item of an item code, returned as `COSMETIC_ALREADY_OWNED` |
+| 423 | [error response](/http-api/#error-response) | Another delivery of the same item to the account held it for about 5 seconds, returning `GENERAL_ERROR` with `Retry-After: 2` |
 
 ### Side effects
 

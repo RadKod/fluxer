@@ -1,0 +1,291 @@
+---
+# SPDX-License-Identifier: AGPL-3.0-or-later
+title: Badges
+description: Administrative management of the catalog badges shown on user profiles.
+---
+
+import RouteHeader from '@/components/RouteHeader.astro';
+
+A badge is an icon with a short text that an Admin gives to an account. Every badge an account holds is listed in `badges` on its [full user profile](/http-api/users/#full-user-profile-object) object. Badges are separate from the [public user flags](/http-api/users/#public-user-flags): giving a badge never changes an account's flags, and no badge grants the permissions of the staff flag.
+
+This resource has seven operations: listing, creating, and updating catalog badges, giving a badge to an account or taking it back, and starting or stopping [pioneer numbering](#numbered-badges). No operation deletes a badge from the catalog.
+
+:::note[Profiles pick up catalog changes within a minute]
+Each API process caches the catalog for up to one minute, so a new badge, icon, or text can take that long to reach every profile read. Giving and taking a badge applies to the next profile read. No operation here emits a Gateway Dispatch, so a client reads badges from the profile.
+:::
+
+## Badge object
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | snowflake | The ID of the badge |
+| icon<sup>1</sup> | string | The hash of the badge icon |
+| description | string | The text shown for the badge (1-128 characters) |
+
+<sup>1</sup> Eight lowercase hexadecimal characters, prefixed with `a_` when the icon is animated. The media proxy serves the icon as [instance branding](/media-proxy/routes/#get-instance-branding) with the entity key `badge-{id}`, for example `/branding/badge-1215712461409427456/9f3c2b1a.webp?size=128`
+
+### Example
+
+```json
+{
+  "id": "1215712461409427456",
+  "icon": "9f3c2b1a",
+  "description": "Early supporter"
+}
+```
+
+## Badge icons
+
+An icon is a base64 string of at most 256 KB, sent with or without a `data:` URL prefix. The media type in the prefix is ignored. The decoded bytes have to start with a PNG signature or a RIFF WebP header, and the media proxy has to read them as PNG, APNG, or WebP. Any other image, SVG included, returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_IMAGE_FORMAT` at path `icon`, and nothing is stored.
+
+Fluxer removes the metadata chunks of the image before it stores the icon. A new icon gets a new hash, and the previous icon file stays in storage so that URLs already cached keep resolving.
+
+## Numbered badges
+
+A badge whose text contains `{n}` is numbered. Profiles and the data export show its text with `{n}` replaced by the number stored for the account, so the text `Pioneer #{n}` reads `Pioneer #1234`. A renamed badge keeps the numbers, and the catalog operations return the text with `{n}` in place.
+
+Fluxer numbers one badge, the pioneer badge, which [Start pioneer numbering](#start-pioneer-numbering) selects. Numbers run from 1 to 10000 in the order accounts qualify: number 1 goes to the account the request names, the accounts that already qualify follow in ascending ID order, and after that each account gets the next number when it qualifies. A number is never given twice or reused, and no account gets a pioneer badge once number 10000 is given.
+
+An account qualifies when its e-mail address is verified and it is not a bot or the system user, not deleted or waiting for deletion, not permanently banned, not disabled for suspicious activity or marked as a spammer, and is not under an [account limitation](/http-api/users/#account-limitation). A timed ban and a user disabling their own account do not stop it. An account held back by a limitation gets the next number when the limitation ends.
+
+A permanent Admin ban or a CSAM ban takes the pioneer badge off the profile. The account keeps its number, and [Give badge to user](#give-badge-to-user) gives the same number back. Account deletion unlinks the number from the account, and no other account gets it.
+
+## List badges
+
+<RouteHeader method="GET" path="/v1/admin/badges" auditReason />
+
+Returns every [badge](#badge-object) in the catalog in ascending ID order, which is creation order. Requires `badges:manage`.
+
+### Response body
+
+The body is an array of [badge](#badge-object) objects.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | response body | The catalog was returned |
+| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
+
+<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `list_badges`, target type `badge`, target ID `0`, and metadata key `result_count`.
+
+### Rate limit
+
+60 requests per minute for each authenticated user, on the `admin:badge:list` bucket.
+
+## Create badge
+
+<RouteHeader method="POST" path="/v1/admin/badges" auditReason />
+
+Stores the icon and adds a badge to the catalog. Requires `badges:manage`. Returns the new [badge](#badge-object).
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| icon | string | The [badge icon](#badge-icons), base64 PNG, APNG, or WebP (at most 256 KB) |
+| description | string | The text shown for the badge (1-128 characters) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [badge](#badge-object) object | The badge was created |
+| 400 | [error response](/admin-api/#error-response) | The body fails validation or the icon is refused, returned as `INVALID_FORM_BODY` |
+| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
+
+<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
+
+### Side effects
+
+A failed request after the icon upload can leave an icon file that no badge uses. Retrying creates a new badge with a new ID.
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `create_badge`, target type `badge`, the new badge as the target ID, and metadata keys `icon` and `description`. It emits no Gateway Dispatch.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:badge:update` bucket.
+
+## Update badge
+
+<RouteHeader method="PATCH" path="/v1/admin/badges/{badge_id}" auditReason />
+
+Changes the icon or the text of a catalog badge. Requires `badges:manage`. Returns the updated [badge](#badge-object). Every account holding the badge shows the change.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| badge_id | snowflake | The ID of the badge |
+
+### JSON body
+
+Every field is optional and an omitted field is left unchanged.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| icon? | string | The new [badge icon](#badge-icons), base64 PNG, APNG, or WebP (at most 256 KB) |
+| description? | string | The new text shown for the badge (1-128 characters) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 200 | [badge](#badge-object) object | The badge was updated |
+| 400 | [error response](/admin-api/#error-response) | The body fails validation or the icon is refused, returned as `INVALID_FORM_BODY` |
+| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
+| 404 | [error response](/admin-api/#error-response) | No badge has the ID, returned as `NOT_FOUND` |
+
+<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `update_badge`, target type `badge`, the badge as the target ID, and metadata keys `icon` and `description` holding the values after the update. It emits no Gateway Dispatch.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:badge:update` bucket that [Create badge](#create-badge) also counts against.
+
+## Give badge to user
+
+<RouteHeader method="POST" path="/v1/admin/users/{user_id}/badges/{badge_id}" auditReason />
+
+Adds a catalog badge to the profile of an account and returns 204 with an empty body. Requires `badges:manage`. Giving a badge the account already holds changes nothing visible.
+
+A [numbered badge](#numbered-badges) is only given with its number. For the pioneer badge the operation gives back the number the account already holds, and every other numbered badge is refused.
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the target account |
+| badge_id | snowflake | The ID of the badge |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The account holds the badge |
+| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
+| 404 | [error response](/admin-api/#error-response) | `UNKNOWN_USER` when the target account does not exist, or `NOT_FOUND` when no badge has the ID |
+| 409 | [error response](/admin-api/#error-response) | `CONFLICT` for a numbered badge the account holds no number for |
+
+<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
+
+### Side effects
+
+The account's [public user flags](/http-api/users/#public-user-flags) are not changed. The badge is dropped with the rest of the account data when the account is deleted, and the account's data export lists it.
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `grant_user_badge`, target type `user`, the account as the target ID, and metadata key `badge_id`. It emits no Gateway Dispatch.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:user:badge:update` bucket.
+
+## Take badge from user
+
+<RouteHeader method="DELETE" path="/v1/admin/users/{user_id}/badges/{badge_id}" auditReason />
+
+Removes a badge from the profile of an account and returns 204 with an empty body. Requires `badges:manage`. Taking a badge the account does not hold, or a badge that does not exist, also returns 204. Taking the pioneer badge keeps the account's number for a later [Give badge to user](#give-badge-to-user).
+
+### Path parameters
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The ID of the target account |
+| badge_id | snowflake | The ID of the badge |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The account no longer holds the badge |
+| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
+| 409 | [error response](/admin-api/#error-response) | `CONFLICT` when the pioneer record kept changing. The badge is off the profile, and a retry settles the record |
+
+<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
+
+### Side effects
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `revoke_user_badge`, target type `user`, the account as the target ID, and metadata key `badge_id`. The 409 answer records the same entry with the extra metadata key `record_settled` set to `false`. It emits no Gateway Dispatch.
+
+### Rate limit
+
+100 requests per minute for each authenticated user, on the `admin:user:badge:update` bucket that [Give badge to user](#give-badge-to-user) also counts against.
+
+## Start pioneer numbering
+
+<RouteHeader method="POST" path="/v1/admin/badges/pioneer/backfill" auditReason />
+
+Makes a catalog badge the pioneer badge and queues a background job that numbers today's accounts, then opens numbering on e-mail verification. Returns 204 with an empty body. Requires `badges:manage`. Runs only while numbering is stopped and has never finished. See [numbered badges](#numbered-badges) for the order of the numbers.
+
+### JSON body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| badge_id | snowflake | The catalog badge whose text carries `{n}` |
+| first_user_id | snowflake | The account that gets number 1 |
+| excluded_user_ids | array[snowflake] | Accounts that never get a number (max 100 entries) |
+| dry_run? | boolean | Only count the accounts that would get a number (default `false`) |
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | The job was queued |
+| 400 | [error response](/admin-api/#error-response) | The body fails validation, returned as `INVALID_FORM_BODY` |
+| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
+| 404 | [error response](/admin-api/#error-response) | `NOT_FOUND` when no badge has the ID, or `UNKNOWN_USER` when the first account does not exist |
+| 409<sup>2</sup> | [error response](/admin-api/#error-response) | `CONFLICT` when the request cannot start numbering |
+
+<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
+
+<sup>2</sup> The badge text has no `{n}`, numbering already belongs to another badge, the first account does not qualify or is excluded, numbering is running or has finished, or another dry run is running
+
+### Side effects
+
+Without `dry_run`, the request switches numbering to the backfill state and queues one `backfillPioneerBadges` job in the `lifecycle` [processing lane](/admin-api/jobs/#processing-lanes). The job records the excluded accounts, gives number 1 to the first account, numbers every qualifying account in ascending ID order, opens numbering on e-mail verification, and then numbers the accounts that qualified while it ran. An exclusion is permanent, and an account that already holds a number keeps it.
+
+A dry run writes no number and no numbering state. Only one dry run runs at a time.
+
+When the job cannot be queued the request fails, and numbering stays stopped. The badge stays the pioneer badge, so a retry has to name the same badge.
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `start_pioneer_backfill`, target type `badge`, the badge as the target ID, and metadata keys `first_user_id`, `excluded_count`, and `dry_run`. When the job ends it records an entry with action `pioneer_backfill` whose metadata names the first and the excluded accounts in `first_username` and `excluded_usernames` and counts the verified accounts waiting only on a suspicious activity requirement in `flagged_waiting`. A dry run adds `would_assign`, the number of accounts that would get a number, and a real run adds `first_user_number`, `status`, `next_slot`, `catch_up_count`, and `catch_up_failed`. It emits no Gateway Dispatch.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:badge:update` bucket that [Create badge](#create-badge) also counts against.
+
+## Stop pioneer numbering
+
+<RouteHeader method="POST" path="/v1/admin/badges/pioneer/stop" auditReason />
+
+Stops numbering new accounts and returns 204 with an empty body. Requires `badges:manage`. Numbers already given stay. Queued numbering jobs and the remaining items of a running backfill job give no number. Stopping numbering that is stopped or has finished changes nothing.
+
+[Start pioneer numbering](#start-pioneer-numbering) runs again after a stop. Accounts keep their numbers, and an account whose numbering was cut short completes with its own number.
+
+### Response
+
+| Status | Body | Condition |
+| --- | --- | --- |
+| 204 | empty | Numbering is stopped |
+| 403<sup>1</sup> | [error response](/admin-api/#error-response) | The account does not hold `admin:authenticate` or `badges:manage` |
+| 409 | [error response](/admin-api/#error-response) | `CONFLICT` when the numbering state changed during the request. A retry stops it |
+
+<sup>1</sup> Returned as `MISSING_PERMISSIONS` without `admin:authenticate`, and as `MISSING_ACL` with that but without `badges:manage`
+
+### Side effects
+
+A stop does not cancel a running backfill job. Cancel it through [background jobs](/admin-api/jobs/) and wait for its `pioneer_backfill` audit entry before starting numbering again. A cancelled backfill job never opens numbering: it stops numbering that is still in the backfill and records `stopped_by_cancel` in that entry. Once the job has opened numbering, cancelling it stops nothing, not even its numbering of the accounts that qualified while it ran. This operation stops both.
+
+The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `stop_pioneer`, target type `badge`, target ID `0`, and no metadata. It emits no Gateway Dispatch.
+
+### Rate limit
+
+30 requests per minute for each authenticated user, on the `admin:badge:update` bucket that [Create badge](#create-badge) also counts against.

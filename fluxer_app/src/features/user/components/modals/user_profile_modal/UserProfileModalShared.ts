@@ -20,6 +20,11 @@ export interface UserInfoProps {
 	profile: Profile;
 	guildId?: string;
 	showProfileDataWarning?: boolean;
+	// Micup: the settings profile preview's full profile; its premium crown is a picture (see PremiumUserBadge).
+	isPreview: boolean;
+	// Micup: the full profile page, which shows the follow counts, the Posts tab and the limited note
+	// itself.
+	onPage?: boolean;
 }
 
 export interface UserNoteEditorProps {
@@ -35,6 +40,8 @@ export interface ProfileContentProps {
 	userNote: string | null;
 	autoFocusNote?: boolean;
 	noteRef?: React.RefObject<HTMLTextAreaElement | null>;
+	// Micup: what leaving for a voice channel does — the modal closes itself, the page does nothing.
+	onNavigate: () => void;
 }
 
 export interface ProfileMediaHeaderProps {
@@ -48,6 +55,7 @@ export interface ProfileMediaHeaderProps {
 	avatarUrl: string | null;
 	hoverAvatarUrl?: string | null;
 	renderActionButtons: () => React.ReactNode;
+	identity?: React.ReactNode;
 }
 
 export interface ProfileBodyProps {
@@ -57,6 +65,12 @@ export interface ProfileBodyProps {
 	autoFocusNote?: boolean;
 	noteRef?: React.RefObject<HTMLTextAreaElement | null>;
 	showProfileDataWarning?: boolean;
+	isPreview: boolean;
+	// Micup: the page's About tab has no modal to close or replace. It shows the user info
+	// above the tabs itself, leaves for a community or group without closing anything, and opens a mutual friend's page.
+	hideUserInfo?: boolean;
+	onLeave?: () => void;
+	onOpenUser?: (userId: string) => void;
 }
 
 export interface ProfileModalContentProps {
@@ -68,6 +82,7 @@ export interface ProfileModalContentProps {
 	renderActionButtons: () => React.ReactNode;
 	previewOverrides?: ProfileDisplayUtils.ProfilePreviewOverrides;
 	showProfileDataWarning?: boolean;
+	isPreview: boolean;
 }
 
 export function isKeyboardContextMenuTrigger(event: React.KeyboardEvent<HTMLElement>): boolean {

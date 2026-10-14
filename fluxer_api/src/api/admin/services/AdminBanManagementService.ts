@@ -4,6 +4,7 @@ import type {ApiContext} from '@app/api/ApiContext';
 import type {IAdminRepository} from '@app/api/admin/IAdminRepository';
 import type {AdminAuditService} from '@app/api/admin/services/AdminAuditService';
 import {createUserID, type UserID} from '@app/api/BrandedTypes';
+import {isHighCgnatBlastRadiusRisk} from '@app/api/ban/IpBanCgnatGuard';
 import {isIpBanExempt} from '@app/api/ban/IpBanExemptions';
 import {
 	BANNED_AVATAR_HASHES_REFRESH_CHANNEL,
@@ -16,19 +17,31 @@ import {
 	ContentBlocklistSeverity,
 } from '@app/api/constants/ContentModeration';
 import {IP_BAN_REFRESH_CHANNEL} from '@app/api/constants/IpBan';
-import type {BannedProfileSubstringScope} from '@app/api/database/types/AdminArchiveTypes';
+import {deleteOneOrMany, fetchMany, upsertOne} from '@app/api/database/CassandraQueryExecution';
+import type {BannedProfileSubstringRow, BannedProfileSubstringScope} from '@app/api/database/types/AdminArchiveTypes';
+import type {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
+import {Logger} from '@app/api/Logger';
 import {bannedAvatarHashCache} from '@app/api/middleware/BannedAvatarHashCache';
 import {fileShaCache} from '@app/api/middleware/FileShaCache';
 import {ipBanCache} from '@app/api/middleware/IpBanMiddleware';
 import {phraseBlocklistCache} from '@app/api/middleware/PhraseBlocklistCache';
 import {profileSubstringBlocklistCache} from '@app/api/middleware/ProfileSubstringBlocklistCache';
+import {getInstanceConfigRepository, getIpInfoService} from '@app/api/middleware/ServiceSingletons';
 import {urlBlocklistCache} from '@app/api/middleware/UrlBlocklistCache';
+import {BannedProfileSubstrings} from '@app/api/Tables';
+import {
+	computeUsernameDictionaryManifest,
+	type UsernameDictionaryEntries,
+	type UsernameDictionaryScope,
+} from '@app/api/user/username/UsernamePolicyService';
+import {parseIpBanEntry} from '@app/api/utils/IpRangeUtils';
 import {canonicalizeStoredPhrase} from '@app/api/utils/PhraseBlocklistNormalization';
 import {parseUrlDomainEntry} from '@app/api/utils/UrlHostRules';
 import {canonicalizeUrl} from '@app/api/utils/UrlNormalizer';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {BadRequestError} from '@fluxer/errors/src/domains/core/BadRequestError';
+import {ConflictError} from '@fluxer/errors/src/domains/core/ConflictError';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {NotFoundError} from '@fluxer/errors/src/domains/core/NotFoundError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
@@ -38,6 +51,7 @@ interface AdminBanManagementServiceDeps {
 	apiContext: ApiContext;
 	adminRepository: IAdminRepository;
 	auditService: AdminAuditService;
+	usernameDictionaryPublisher?: UsernameDictionaryPublisher;
 }
 
 interface AdminBlocklistEntry {
@@ -130,6 +144,43 @@ function withReasonMetadata(entries: Array<[string, string]>, reason: string | u
 export class AdminBanManagementService {
 	constructor(private readonly deps: AdminBanManagementServiceDeps) {}
 
+	private getUsernameDictionaryPublisher(): UsernameDictionaryPublisher {
+		return (
+			this.deps.usernameDictionaryPublisher ??
+			new UsernameDictionaryPublisher(new CassandraUsernameDictionaryStorage(getInstanceConfigRepository()))
+		);
+	}
+
+	async getUsernameDictionary() {
+		return this.getUsernameDictionaryPublisher().current();
+	}
+
+	async cleanupUsernameDictionaryGenerations(now?: Date): Promise<number> {
+		return cleanupUsernameDictionaryGenerations(now);
+	}
+
+	async publishUsernameDictionary(
+		data: {scope: UsernameDictionaryScope; add: ReadonlyArray<string>; remove: ReadonlyArray<string>},
+		adminUserId: UserID,
+		auditLogReason: string | null,
+	) {
+		if (!auditLogReason?.trim()) throw InputValidationError.create('audit_log_reason', 'A reason is required');
+		const result = await this.getUsernameDictionaryPublisher().change(data);
+		await this.createBlocklistAuditLog({
+			adminUserId,
+			targetType: 'username_dictionary',
+			action: 'publish_username_dictionary',
+			auditLogReason,
+			metadata: new Map([
+				['scope', data.scope],
+				['dictionary_gen', String(result.dictionary_gen)],
+				['count', String(result.count)],
+				['hash', result.hash],
+			]),
+		});
+		return result;
+	}
+
 	async banIp(
 		data: {
 			ip: string;
@@ -138,41 +189,42 @@ export class AdminBanManagementService {
 		adminUserId: UserID,
 		auditLogReason: string | null,
 	) {
-		const {adminRepository, auditService} = this.deps;
-		const {cache: cacheService} = this.deps.apiContext.services;
-		if (isIpBanExempt(data.ip)) {
-			await auditService.createAuditLog({
+		const exempt = isIpBanExempt(data.ip);
+		if (exempt || (await this.shouldSkipIpBanForCgnat(data.ip))) {
+			await this.createBlocklistAuditLog({
 				adminUserId,
 				targetType: 'ip',
-				targetId: BigInt(0),
-				action: 'ban_ip_skipped_exempt',
+				action: exempt ? 'ban_ip_skipped_exempt' : 'ban_ip_skipped_cgnat',
 				auditLogReason,
 				metadata: new Map([['ip', data.ip]]),
 			});
 			throw new BadRequestError({
 				code: APIErrorCodes.IP_BAN_DECLINED,
-				message: 'This IP address is on the instance exemption list',
+				message: 'This IP address has a shared-network exemption',
 			});
 		}
-		const durationHours = data.duration_hours ?? 0;
+		const ttlSeconds = data.duration_hours ? data.duration_hours * 3600 : null;
+		const expiresAt = await this.deps.adminRepository.banIp(data.ip, ttlSeconds);
+		ipBanCache.replaceBan(data.ip, expiresAt);
+		await this.deps.apiContext.services.cache.publish(IP_BAN_REFRESH_CHANNEL, 'refresh');
 		const metadata = new Map([['ip', data.ip]]);
-		if (durationHours > 0) {
-			const ttlSeconds = durationHours * 3600;
-			await adminRepository.banIp(data.ip, ttlSeconds);
-			metadata.set('duration_hours', durationHours.toString());
-			metadata.set('expires_at', new Date(Date.now() + ttlSeconds * 1000).toISOString());
-		} else {
-			await adminRepository.banIp(data.ip);
+		if (ttlSeconds !== null) {
+			metadata.set('duration_hours', String(data.duration_hours));
+			if (expiresAt) metadata.set('expires_at', expiresAt.toISOString());
 		}
-		await ipBanCache.refresh();
-		await cacheService.publish(IP_BAN_REFRESH_CHANNEL, 'refresh');
-		await this.createBlocklistAuditLog({
-			adminUserId,
-			targetType: 'ip',
-			action: 'ban_ip',
-			auditLogReason,
-			metadata,
-		});
+		await this.createBlocklistAuditLog({adminUserId, targetType: 'ip', action: 'ban_ip', auditLogReason, metadata});
+	}
+
+	private async shouldSkipIpBanForCgnat(ip: string): Promise<boolean> {
+		if (parseIpBanEntry(ip)?.type !== 'single') return false;
+		try {
+			return isHighCgnatBlastRadiusRisk(
+				await getIpInfoService().lookup(ip, {source: 'admin.ip_ban', reason: 'pre_write_cgnat_guard'}),
+			);
+		} catch (error) {
+			Logger.warn({error, ip}, 'IPInfo CGNAT guard failed while adding IP ban');
+			return false;
+		}
 	}
 
 	async unbanIp(
@@ -790,17 +842,21 @@ export class AdminBanManagementService {
 				);
 			}
 			case 'profile-substring': {
-				const rows = await adminRepository.loadAllBannedProfileSubstrings();
-				return rows
-					.filter((row) => scope == null || row.scope === scope)
-					.map((row) =>
-						createBlocklistEntry(listType, row.substring, {
-							scope: row.scope,
-							notes: row.notes,
-							created_at: toIsoString(row.added_at),
-							created_by_user_id: toSnowflakeString(row.added_by),
-						}),
-					);
+				const partitions: ReadonlyArray<BannedProfileSubstringScope> =
+					scope == null ? ['username', 'global_name', 'nickname', 'bio', 'pronouns'] : [scope];
+				const rows = (
+					await Promise.all(
+						partitions.map((scope) => fetchMany<BannedProfileSubstringRow>(readPartition.bind({scope}))),
+					)
+				).flat();
+				return rows.map((row) =>
+					createBlocklistEntry(listType, row.substring, {
+						scope: row.scope,
+						notes: row.notes,
+						created_at: toIsoString(row.added_at),
+						created_by_user_id: toSnowflakeString(row.added_by),
+					}),
+				);
 			}
 		}
 	}
@@ -819,6 +875,174 @@ export class AdminBanManagementService {
 			action,
 			auditLogReason,
 			metadata,
+		});
+	}
+}
+
+interface Reservation {
+	generation: number;
+	baseGeneration: number;
+	baseRevision: number;
+	baseHash: string | null;
+	createdAt: string;
+}
+export interface UsernameDictionaryStorage {
+	readPolicy(): Promise<{dictionary_gen: number; dictionary_hash: string | null; revision: number}>;
+	reserve(): Promise<Reservation>;
+	read(generation: number): Promise<UsernameDictionaryEntries>;
+	write(generation: number, entries: UsernameDictionaryEntries): Promise<void>;
+	publish(reservation: Reservation, hash: string): Promise<boolean>;
+	delete(generation: number): Promise<void>;
+}
+
+const scopes: ReadonlyArray<UsernameDictionaryScope> = ['uname_exact', 'uname_contains', 'uname_allow'];
+const readPartition = BannedProfileSubstrings.select({where: BannedProfileSubstrings.where.eq('scope')});
+const deletePartition = BannedProfileSubstrings.delete({where: BannedProfileSubstrings.where.eq('scope')});
+
+export class CassandraUsernameDictionaryStorage implements UsernameDictionaryStorage {
+	constructor(private readonly config: InstanceConfigRepository) {}
+	readPolicy() {
+		return this.config.readUsernamePolicyConfig();
+	}
+	reserve() {
+		return this.config.reserveUsernameDictionaryGeneration();
+	}
+	publish(reservation: Reservation, hash: string) {
+		return this.config.publishUsernameDictionaryGeneration(reservation, hash);
+	}
+	async read(generation: number): Promise<UsernameDictionaryEntries> {
+		const entries: Record<UsernameDictionaryScope, Array<string>> = {
+			uname_exact: [],
+			uname_contains: [],
+			uname_allow: [],
+		};
+		if (generation === 0) return entries;
+		for (const scope of scopes) {
+			const rows = await fetchMany<BannedProfileSubstringRow>(readPartition.bind({scope: `${scope}:g${generation}`}));
+			entries[scope] = rows.map((row) => row.substring);
+		}
+		return entries;
+	}
+	async write(generation: number, entries: UsernameDictionaryEntries): Promise<void> {
+		for (const scope of scopes) {
+			for (const substring of entries[scope]) {
+				await upsertOne(
+					BannedProfileSubstrings.insert({
+						scope: `${scope}:g${generation}`,
+						substring,
+						added_at: new Date(),
+						added_by: null,
+						notes: null,
+					}),
+				);
+			}
+		}
+	}
+	async delete(generation: number): Promise<void> {
+		for (const scope of scopes) await deleteOneOrMany(deletePartition.bind({scope: `${scope}:g${generation}`}));
+	}
+	async cleanupUsernameDictionaryGenerations(now = new Date()): Promise<number> {
+		const day = now.toISOString().slice(0, 10);
+		let state = await this.config.readUsernameDictionaryCleanupState();
+		if (state && state.day > day) return 0;
+		if (!state || state.day !== day) {
+			const next = {day, cursor: 1};
+			if (!(await this.config.compareAndSetUsernameDictionaryCleanupState(state, next))) return 0;
+			state = next;
+		}
+		const policy = await this.config.readUsernamePolicyConfig();
+		const candidates = new Set<number>();
+		for (let generation = state.cursor; generation < policy.next_dictionary_gen; generation++) {
+			if (generation === policy.dictionary_gen || generation === policy.previous_dictionary_gen) continue;
+			const metadata = await this.config.readUsernameDictionaryGenerationMetadata(generation);
+			if (metadata && new Date(metadata.created_at).getTime() < now.getTime() - 86_400_000) candidates.add(generation);
+		}
+		// Micup: fence old publisher revisions before deleting any staged generation.
+		if (candidates.size && !(await this.config.fenceUsernameDictionaryGenerationCleanup(policy))) return 0;
+		let deleted = 0;
+		for (let generation = state.cursor; generation < policy.next_dictionary_gen; generation++) {
+			if (candidates.has(generation)) {
+				await this.delete(generation);
+				deleted++;
+			}
+			const next = {day, cursor: generation + 1};
+			if (!(await this.config.compareAndSetUsernameDictionaryCleanupState(state, next))) return deleted;
+			state = next;
+		}
+		return deleted;
+	}
+}
+
+export async function cleanupUsernameDictionaryGenerations(now?: Date): Promise<number> {
+	return new CassandraUsernameDictionaryStorage(getInstanceConfigRepository()).cleanupUsernameDictionaryGenerations(
+		now,
+	);
+}
+
+export class UsernameDictionaryPublisher {
+	constructor(private readonly storage: UsernameDictionaryStorage) {}
+	async current() {
+		const policy = await this.storage.readPolicy();
+		const entries = await this.storage.read(policy.dictionary_gen);
+		const manifest = computeUsernameDictionaryManifest(entries);
+		if (policy.dictionary_gen > 0 && manifest.hash !== policy.dictionary_hash)
+			throw new Error('Username dictionary hash mismatch');
+		return {dictionary_gen: policy.dictionary_gen, ...manifest, entries};
+	}
+	async change(change: {scope: UsernameDictionaryScope; add: ReadonlyArray<string>; remove: ReadonlyArray<string>}) {
+		for (let attempt = 0; attempt < 5; attempt++) {
+			const reservation = await this.storage.reserve();
+			let publishing = false;
+			try {
+				const base = await this.storage.read(reservation.baseGeneration);
+				if (reservation.baseGeneration > 0 && computeUsernameDictionaryManifest(base).hash !== reservation.baseHash) {
+					throw new Error('Username dictionary hash mismatch');
+				}
+				const removed = new Set(change.remove.map((entry) => entry.trim().toLowerCase()));
+				const entries: Record<UsernameDictionaryScope, Array<string>> = {
+					uname_exact: [],
+					uname_contains: [],
+					uname_allow: [],
+				};
+				for (const scope of scopes) {
+					const values =
+						scope === change.scope
+							? [...base[scope].filter((entry) => !removed.has(entry)), ...change.add]
+							: base[scope];
+					entries[scope] = Array.from(new Set(values.map((entry) => entry.trim().toLowerCase()))).sort();
+				}
+				if (scopes.reduce((count, scope) => count + entries[scope].length, 0) > 20_000) {
+					throw InputValidationError.create('add', 'Username dictionary exceeds 20000 entries');
+				}
+				const manifest = computeUsernameDictionaryManifest(entries);
+				await this.storage.write(reservation.generation, entries);
+				publishing = true;
+				let applied: boolean;
+				try {
+					applied = await this.storage.publish(reservation, manifest.hash);
+				} catch (error) {
+					const policy = await this.storage.readPolicy();
+					if (policy.dictionary_gen === reservation.generation && policy.dictionary_hash === manifest.hash) {
+						return {dictionary_gen: reservation.generation, ...manifest, entries};
+					}
+					throw error;
+				}
+				if (applied) return {dictionary_gen: reservation.generation, ...manifest, entries};
+				const policy = await this.storage.readPolicy();
+				if (policy.dictionary_gen === reservation.generation) {
+					if (policy.dictionary_hash !== manifest.hash) throw new Error('Username dictionary hash mismatch');
+					return {dictionary_gen: reservation.generation, ...manifest, entries};
+				}
+				publishing = false;
+			} catch (error) {
+				if (!publishing) await this.storage.delete(reservation.generation);
+				throw error;
+			}
+			await this.storage.delete(reservation.generation);
+		}
+		throw new ConflictError({
+			code: APIErrorCodes.CONFLICT,
+			message: 'Username dictionary publication raced with another update',
 		});
 	}
 }

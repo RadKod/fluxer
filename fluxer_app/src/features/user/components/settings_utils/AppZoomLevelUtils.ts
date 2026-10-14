@@ -3,5 +3,5 @@
 import {Platform} from '@app/features/platform/types/Platform';
 
 export function shouldShowAppZoomLevel(): boolean {
-	return Platform.isElectron;
+	return Platform.isElectron || !Platform.isMobileBrowser;
 }

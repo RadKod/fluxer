@@ -40,6 +40,14 @@ function resolveEmailAppBaseUrl(master: MasterConfig): string {
 	}
 }
 
+function resolveEmailHtmlFooter(master: MasterConfig): Record<string, string> {
+	const footer = master.integrations.email.html_footer ?? {};
+	for (const [locale, text] of Object.entries(footer)) {
+		if (typeof text !== 'string') throw new Error(`FLUXER_EMAIL_HTML_FOOTER.${locale} must be a string`);
+	}
+	return footer;
+}
+
 function isBoolean(value: unknown): value is boolean {
 	return typeof value === 'boolean';
 }
@@ -165,6 +173,10 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 	if (Buffer.from(uploadRelaySecretBase64, 'base64').length < 32) {
 		throw new Error('FLUXER_MEDIA_PROXY_UPLOAD_RELAY_SECRET_BASE64 must decode to at least 32 bytes');
 	}
+	const premiumTrialEmailHashKey = (master.services.api.premium_trial_email_hash_key ?? '').trim();
+	if (premiumTrialEmailHashKey.length > 0 && premiumTrialEmailHashKey.length < 32) {
+		throw new Error('FLUXER_API_PREMIUM_TRIAL_EMAIL_HASH_KEY must be at least 32 characters');
+	}
 	const trustedCallers = buildTrustedCallers(master);
 	if (!s3Config) {
 		throw new Error('S3 configuration is required for the API');
@@ -196,6 +208,7 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 			localDc: cassandraSource?.local_dc ?? '',
 			username: cassandraSource?.username ?? '',
 			password: cassandraSource?.password ?? '',
+			consistency: cassandraSource?.consistency,
 		},
 		postgres: {
 			url: postgresSource?.url ?? '',
@@ -295,6 +308,8 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 			fromName: master.integrations.email.from_name,
 			replyToEmail: master.integrations.email.reply_to_email,
 			appBaseUrl: resolveEmailAppBaseUrl(master),
+			htmlEnabled: master.integrations.email.html_enabled ?? false,
+			htmlFooter: resolveEmailHtmlFooter(master),
 			smtp: master.integrations.email.smtp
 				? {
 						host: master.integrations.email.smtp.host,
@@ -305,8 +320,16 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 					}
 				: undefined,
 		},
+		risk: {
+			ipinfoApiKey: master.integrations.risk_integration?.ipinfo_api_key || undefined,
+			accountPolicyDsl: master.integrations.risk_integration?.account_policy_dsl,
+		},
+		abusePolicy: {phoneFlagging: {enabled: master.instance.abuse_policy.phone_flagging.enabled}},
 		blocklistFeeds: {
 			enabled: master.integrations.blocklist_feeds.enabled ?? !master.instance.self_hosted,
+		},
+		premiumTrial: {
+			emailHashKey: premiumTrialEmailHashKey,
 		},
 		breachedPasswordCheck: {
 			enabled: master.integrations.breached_password_check.enabled ?? !master.instance.self_hosted,
@@ -372,6 +395,30 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 				token: master.integrations.cache_purge.http.token,
 				timeoutMs: master.integrations.cache_purge.http.timeout_ms,
 			},
+			bunny: {
+				apiBase: master.integrations.cache_purge.bunny.api_base,
+				apiKey: master.integrations.cache_purge.bunny.api_key,
+				timeoutMs: master.integrations.cache_purge.bunny.timeout_ms,
+				concurrency: master.integrations.cache_purge.bunny.concurrency,
+				mode: master.integrations.cache_purge.bunny.mode,
+				pullZoneId: master.integrations.cache_purge.bunny.pull_zone_id,
+				ratePerMinute: master.integrations.cache_purge.bunny.rate_per_minute,
+				burst: master.integrations.cache_purge.bunny.burst,
+			},
+		},
+		bunnyStream: {
+			enabled: master.integrations.bunny_stream.enabled,
+			libraryId: master.integrations.bunny_stream.library_id,
+			apiKey: master.integrations.bunny_stream.api_key,
+			readOnlyApiKey: master.integrations.bunny_stream.read_only_api_key,
+			cdnHostname: master.integrations.bunny_stream.cdn_hostname,
+			tokenKey: master.integrations.bunny_stream.token_key,
+			apiBase: master.integrations.bunny_stream.api_base,
+			tusEndpoint: master.integrations.bunny_stream.tus_endpoint,
+			timeoutMs: master.integrations.bunny_stream.timeout_ms,
+			storageHost: master.integrations.bunny_stream.storage_host,
+			storageZone: master.integrations.bunny_stream.storage_zone,
+			storagePassword: master.integrations.bunny_stream.storage_password,
 		},
 		clamav: {
 			enabled: master.integrations.clamav.enabled,
@@ -385,6 +432,11 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 			username: master.integrations.ncmec.username,
 			password: master.integrations.ncmec.password,
 			reporterEmail: master.integrations.ncmec.reporter_email ?? '',
+		},
+		payriff: {
+			enabled: master.integrations.payriff.enabled && master.integrations.payriff.secret_key.trim().length > 0,
+			secretKey: master.integrations.payriff.secret_key,
+			baseUrl: master.integrations.payriff.base_url,
 		},
 		admin: {
 			oauthClientSecret: master.services.admin.oauth_client_secret,
@@ -416,6 +468,8 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 			selfHosted: master.instance.self_hosted,
 			baseDomain: master.domain.base_domain,
 			autoJoinInviteCode: master.instance.auto_join_invite_code,
+			rosterBotApplicationId: master.instance.roster_bot_application_id,
+			micupBotApplicationId: master.instance.micupbot_application_id,
 			visionariesGuildId: master.instance.visionaries_guild_id,
 			visionariesGuildVisionaryRoleId: master.instance.visionaries_guild_visionary_role_id,
 			branding: {
@@ -501,8 +555,19 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 				unfurl: apiWorkerConfig?.lane_concurrency_overrides?.unfurl,
 				lifecycle: apiWorkerConfig?.lane_concurrency_overrides?.lifecycle,
 				batch: apiWorkerConfig?.lane_concurrency_overrides?.batch,
+				purge: apiWorkerConfig?.lane_concurrency_overrides?.purge,
+				feed: apiWorkerConfig?.lane_concurrency_overrides?.feed,
+				video: apiWorkerConfig?.lane_concurrency_overrides?.video,
+				views: apiWorkerConfig?.lane_concurrency_overrides?.views,
+				referral: apiWorkerConfig?.lane_concurrency_overrides?.referral,
+				roster: apiWorkerConfig?.lane_concurrency_overrides?.roster,
+				roster_live: apiWorkerConfig?.lane_concurrency_overrides?.roster_live,
+				micupbot_live: apiWorkerConfig?.lane_concurrency_overrides?.micupbot_live,
+				micupbot_roles: apiWorkerConfig?.lane_concurrency_overrides?.micupbot_roles,
+				micupbot: apiWorkerConfig?.lane_concurrency_overrides?.micupbot,
 				crosspost: apiWorkerConfig?.lane_concurrency_overrides?.crosspost,
 			},
+			feedViewFlushPartitionConcurrency: apiWorkerConfig?.feed_view_flush_partition_concurrency ?? 2,
 		},
 	};
 }

@@ -1,0 +1,14 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Micup MSIX sandbox test: run paketle.ps1 -TestSign first, then open this file (Windows Sandbox, S6). -->
+<Configuration>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>E:\micup-sandbox\store</HostFolder>
+      <SandboxFolder>C:\micup</SandboxFolder>
+      <ReadOnly>false</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <Command>powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\micup\sandbox-e2e.ps1</Command>
+  </LogonCommand>
+</Configuration>

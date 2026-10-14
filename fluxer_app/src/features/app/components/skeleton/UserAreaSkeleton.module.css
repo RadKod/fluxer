@@ -75,3 +75,15 @@
 	flex-shrink: 0;
 	padding-left: var(--spacing-3);
 }
+
+/* Micup: lighter side panels in the coal theme */
+:global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .userArea {
+	--background-secondary: var(--side-panel-background);
+}
+
+/* Micup: user area in the channel list column */
+.userArea {
+	--user-area-avatar-lead: var(--user-area-padding-x);
+	left: calc(var(--layout-guild-list-width) + var(--outline-frame-border-width));
+	width: var(--layout-sidebar-width);
+}

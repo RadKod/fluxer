@@ -10,6 +10,8 @@ import type {Guild} from '@app/features/guild/models/Guild';
 import type {GuildMember} from '@app/features/member/models/GuildMember';
 import type {Message} from '@app/features/messaging/models/MessagingMessage';
 import styles from '@app/features/theme/styles/Message.module.css';
+import {PremiumUserBadge} from '@app/features/user/components/PremiumUserBadge';
+import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge';
 import type {User} from '@app/features/user/models/User';
 import * as DateUtils from '@app/features/user/utils/DateFormatting';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
@@ -104,6 +106,17 @@ export const MessageAuthorInfo = observer((props: MessageAuthorInfoProps) => {
 						<span className={styles.messageAuthorPart} data-flx="channel.message-author-info.message-author-part">
 							{timeoutIndicator}
 							{username}
+							<VerifiedUserBadge
+								user={author}
+								className={styles.userTagOffset}
+								data-flx="channel.message-author-info.verified-user-badge"
+							/>
+							<PremiumUserBadge
+								user={author}
+								className={styles.userTagOffset}
+								focusable={false}
+								data-flx="channel.message-author-info.premium-user-badge"
+							/>
 							{(author.bot || message.isCrosspostCopy) && (
 								<UserTag
 									className={styles.userTagOffset}

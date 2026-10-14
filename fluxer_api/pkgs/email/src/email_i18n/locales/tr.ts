@@ -25,15 +25,17 @@ const EMAIL_I18N_TR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "{product_name}'a yaptığın bağış için teşekkürler",
-		"body": "Merhaba,\n\n{product_name}'a yaptığın bağış için teşekkürler! {interval, select,\n  month {tekrarlayan bağışın}\n  year {tekrarlayan bağışın}\n  other {tek seferlik bağışın}\n} başarıyla {interval, select,\n  month {ayarlandı}\n  year {ayarlandı}\n  other {işlendi}\n}.\n\nBağış detayları:\nTutar: {amount} {interval, select,\n  month {aylık}\n  year {yıllık}\n  other {}\n}\n\nStripe, kısa süre içinde fatura PDF'ini içeren ayrı bir makbuzu sana e-posta ile gönderecektir. Bu, tüm ödeme detaylarını içerir ve vergi amaçlı kullanılabilir.\n\nBu bağlantıyı kullanarak istediğin zaman bağış geçmişini görüntüleyebilir, faturaları indirebilir, {interval, select,\n  month {ve aboneliğini yönetebilir veya iptal edebilirsin}\n  year {ve aboneliğini yönetebilir veya iptal edebilirsin}\n  other {ve gelecekteki bağışlarını yönetebilirsin}\n}:\n\n{manageUrl}\n\nDesteğin {product_name}'ın çalışmaya devam etmesine yardımcı oluyor. Teşekkürler!\n\n– {product_name} Ekibi"
+		"body": "Merhaba,\n\n{product_name}'a yaptığın bağış için teşekkürler! {interval, select,\n  month {tekrarlayan bağışın}\n  year {tekrarlayan bağışın}\n  other {tek seferlik bağışın}\n} başarıyla {interval, select,\n  month {ayarlandı}\n  year {ayarlandı}\n  other {işlendi}\n}.\n\nBağış detayları:\nTutar: {amount} {interval, select,\n  month {aylık}\n  year {yıllık}\n  other {}\n}\n\nStripe, kısa süre içinde fatura PDF'ini içeren ayrı bir makbuzu sana e-posta ile gönderecektir. Bu, tüm ödeme detaylarını içerir ve vergi amaçlı kullanılabilir.\n\nBu bağlantıyı kullanarak istediğin zaman bağış geçmişini görüntüleyebilir, faturaları indirebilir, {interval, select,\n  month {ve aboneliğini yönetebilir veya iptal edebilirsin}\n  year {ve aboneliğini yönetebilir veya iptal edebilirsin}\n  other {ve gelecekteki bağışlarını yönetebilirsin}\n}:\n\n{manageUrl}\n\nDesteğin {product_name}'un çalışmaya devam etmesine yardımcı oluyor. Teşekkürler!\n\n– {product_name} Ekibi",
+		"button": "Bağışlarımı yönet"
 	},
 	"donation_magic_link": {
 		"subject": "{product_name} bağışlarını yönet",
-		"body": "Merhaba,\n\nBağışçı portalına erişmek için aşağıdaki bağlantıya tıkla:\n\n{manageUrl}\n\nPortalda aboneliklerini yönetebilir, faturaları indirebilir ve bağış geçmişini görüntüleyebilirsin.\n\nBu bağlantı {expiresAt, date, full} {expiresAt, time, short} tarihinde sona erecektir.\n\nBu bağlantıyı sen talep etmediysen, bu e-postayı güvenle yok sayabilirsin.\n\n– {product_name} Ekibi"
+		"body": "Merhaba,\n\nBağışçı portalına erişmek için aşağıdaki bağlantıya tıkla:\n\n{manageUrl}\n\nPortalda aboneliklerini yönetebilir, faturaları indirebilir ve bağış geçmişini görüntüleyebilirsin.\n\nBu bağlantı {expiresAt, date, full} {expiresAt, time, short} tarihinde sona erecektir.\n\nBu bağlantıyı sen talep etmediysen, bu e-postayı güvenle yok sayabilirsin.\n\n– {product_name} Ekibi",
+		"button": "Bağışlarımı yönet"
 	},
 	"dsa_report_verification": {
 		"subject": "DSA raporu için e-postanı doğrula",
-		"body": "Merhaba,\n\n{product_name}'daki Dijital Hizmetler Yasası raporunu göndermek için aşağıdaki doğrulama kodunu kullan:\n\n{code}\n\nBu kod {expiresAt, date, full} {expiresAt, time, short} tarihinde sona erecektir.\n\nBunu sen talep etmediysen, bu e-postayı güvenle yok sayabilirsin.\n\n– {product_name} Güvenlik Ekibi"
+		"body": "Merhaba,\n\n{product_name}'taki Dijital Hizmetler Yasası raporunu göndermek için aşağıdaki doğrulama kodunu kullan:\n\n{code}\n\nBu kod {expiresAt, date, full} {expiresAt, time, short} tarihinde sona erecektir.\n\nBunu sen talep etmediysen, bu e-postayı güvenle yok sayabilirsin.\n\n– {product_name} Güvenlik Ekibi"
 	},
 	"email_change_new": {
 		"subject": "Yeni {product_name} e-posta adresini doğrula",
@@ -45,11 +47,13 @@ const EMAIL_I18N_TR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "{product_name} e-posta adresin değiştirildi",
-		"body": "Merhaba {username},\n\n{product_name} hesabındaki e-posta adresi {newEmail} olarak değiştirildi.\n\nBu değişikliği sen yaptıysan, herhangi bir işlem yapmana gerek yok. Yapmadıysan, bu bağlantıyı kullanarak değişikliği geri alabilir ve hesabını güvence altına alabilirsin:\n\n{revertUrl}\n\nBu işlem önceki e-posta adresini geri yükleyecek, tüm cihazlardaki oturumlarını kapatacak, MFA'yı devre dışı bırakacak ve yeni bir şifre belirlemeni gerektirecek.\n\n– {product_name} Güvenlik Ekibi"
+		"body": "Merhaba {username},\n\n{product_name} hesabındaki e-posta adresi {newEmail} olarak değiştirildi.\n\nBu değişikliği sen yaptıysan, herhangi bir işlem yapmana gerek yok. Yapmadıysan, bu bağlantıyı kullanarak değişikliği geri alabilir ve hesabını güvence altına alabilirsin:\n\n{revertUrl}\n\nBu işlem önceki e-posta adresini geri yükleyecek, tüm cihazlardaki oturumlarını kapatacak, MFA'yı devre dışı bırakacak ve yeni bir şifre belirlemeni gerektirecek.\n\n– {product_name} Güvenlik Ekibi",
+		"button": "Değişikliği geri al"
 	},
 	"email_verification": {
 		"subject": "{product_name} e-posta adresini doğrula",
-		"body": "Merhaba {username},\n\n{product_name} hesabının e-posta adresini aşağıdaki bağlantıya tıklayarak doğrula:\n\n{verifyUrl}\n\nBir {product_name} hesabı oluşturmadıysan, bu e-postayı güvenle yok sayabilirsin.\n\nBu bağlantı 24 saat geçerlidir.\n\n– {product_name} Ekibi"
+		"body": "🎉 Merhaba {username},\n\n{product_name} hesabının e-posta adresini aşağıdaki bağlantıya tıklayarak doğrula:\n\n{verifyUrl}\n\nBir {product_name} hesabı oluşturmadıysan, bu e-postayı güvenle yok sayabilirsin.\n\nBu bağlantı 24 saat geçerlidir.\n\n– {product_name} Ekibi",
+		"button": "E-postamı doğrula"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Kullandığın hediyenin avantajları kaldırıldı",
@@ -57,15 +61,18 @@ const EMAIL_I18N_TR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "{product_name} veri dışa aktarımın indirilmeye hazır",
-		"body": "Merhaba {username},\n\nVeri dışa aktarımın hazır.\n\nİndirme bağlantısı:\n{downloadUrl}\n\nDahil edilen mesajlar: {totalMessages, number}\nDosya boyutu: {fileSizeMB, number} MB\n\nBu bağlantı {expiresAt, date, full} {expiresAt, time, short} tarihinde sona erecektir.\n\nBu dışa aktarımı sen talep etmediysen, lütfen hemen şifreni değiştir ve destek ekibimizle iletişime geç.\n\n– {product_name} Ekibi"
+		"body": "Merhaba {username},\n\nVeri dışa aktarımın hazır.\n\nİndirme bağlantısı:\n{downloadUrl}\n\nDahil edilen mesajlar: {totalMessages, number}\nDosya boyutu: {fileSizeMB, number} MB\n\nBu bağlantı {expiresAt, date, full} {expiresAt, time, short} tarihinde sona erecektir.\n\nBu dışa aktarımı sen talep etmediysen, lütfen hemen şifreni değiştir ve destek ekibimizle iletişime geç.\n\n– {product_name} Ekibi",
+		"button": "Verilerimi indir"
 	},
 	"inactivity_warning": {
 		"subject": "{product_name} hesabın hareketsizlik nedeniyle silinecek",
-		"body": "Merhaba {username},\n\n{lastActiveDate, date, full} tarihinden beri {product_name} hesabında herhangi bir etkinlik görmedik.\n\n{deletionDate, date, full} {deletionDate, time, short} tarihine kadar giriş yapmazsan, hesabın hareketsizlik nedeniyle kalıcı olarak silinecektir.\n\nBuradan giriş yap:\n{loginUrl}\n\n{product_name}'ı yakın zamanda kullandıysan, lütfen hemen destek ekibimizle iletişime geç.\n\n– {product_name} Ekibi"
+		"body": "Merhaba {username},\n\n{lastActiveDate, date, full} tarihinden beri {product_name} hesabında herhangi bir etkinlik görmedik.\n\n{deletionDate, date, full} {deletionDate, time, short} tarihine kadar giriş yapmazsan, hesabın hareketsizlik nedeniyle kalıcı olarak silinecektir.\n\nBuradan giriş yap:\n{loginUrl}\n\n{product_name}'u yakın zamanda kullandıysan, lütfen hemen destek ekibimizle iletişime geç.\n\n– {product_name} Ekibi",
+		"button": "Giriş yap"
 	},
 	"ip_authorization": {
 		"subject": "Yeni bir IP adresinden girişi yetkilendir",
-		"body": "Merhaba {username},\n\n{product_name} hesabına yeni bir IP adresinden giriş denemesi tespit ettik:\n\nIP adresi: {ipAddress}\nKonum: {location}\n\nBu işlemi sen yaptıysan, lütfen aşağıdaki bağlantıya tıklayarak bu IP adresini yetkilendir:\n\n{authUrl}\n\nGiriş yapmaya sen çalışmadıysan, lütfen hemen şifreni değiştir.\n\nBu bağlantı 30 dakika geçerlidir.\n\n– {product_name} Ekibi"
+		"body": "Merhaba {username},\n\n{product_name} hesabına yeni bir IP adresinden giriş denemesi tespit ettik:\n\nIP adresi: {ipAddress}\nKonum: {location}\n\nBu işlemi sen yaptıysan, lütfen aşağıdaki bağlantıya tıklayarak bu IP adresini yetkilendir:\n\n{authUrl}\n\nGiriş yapmaya sen çalışmadıysan, lütfen hemen şifreni değiştir.\n\nBu bağlantı 30 dakika geçerlidir.\n\n– {product_name} Ekibi",
+		"button": "Bu girişi onayla"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "{product_name} yedek kodlarına erişimi onayla",
@@ -77,15 +84,21 @@ const EMAIL_I18N_TR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "{product_name} şifreni sıfırla",
-		"body": "Merhaba {username},\n\n{product_name} şifre sıfırlama talebinde bulundun. Yeni bir şifre belirlemek için aşağıdaki bağlantıyı kullan:\n\n{resetUrl}\n\nBunu sen talep etmediysen, bu e-postayı güvenle yok sayabilirsin.\n\nBu bağlantı 1 saat geçerlidir.\n\n– {product_name} Ekibi"
+		"body": "Merhaba {username},\n\n{product_name} şifre sıfırlama talebinde bulundun. Yeni bir şifre belirlemek için aşağıdaki bağlantıyı kullan:\n\n{resetUrl}\n\nBunu sen talep etmediysen, bu e-postayı güvenle yok sayabilirsin.\n\nBu bağlantı 1 saat geçerlidir.\n\n– {product_name} Ekibi",
+		"button": "Şifremi sıfırla"
+	},
+	"referral_reward_ready": {
+		"subject": "Referans ödülün hazır",
+		"body": "🎉 Merhaba {username},\n\nReferans ödülün hazır. {product_name}'ta Ayarlar → Referans bölümünden görebilirsin.\n\n– {product_name} Ekibi"
 	},
 	"registration_approved": {
 		"subject": "{product_name} kaydın onaylandı",
-		"body": "Merhaba {username},\n\nİyi haber: {product_name} kaydın onaylandı.\n\nArtık {product_name} uygulamasına buradan giriş yapabilirsin:\n{channelsUrl}\n\n{product_name} topluluğuna hoş geldin.\n\n– {product_name} Ekibi"
+		"body": "🎉 Merhaba {username},\n\nİyi haber: {product_name} kaydın onaylandı.\n\nArtık {product_name} uygulamasına buradan giriş yapabilirsin:\n{channelsUrl}\n\n{product_name} topluluğuna hoş geldin.\n\n– {product_name} Ekibi",
+		"button": "{product_name}'u aç"
 	},
 	"report_resolved": {
 		"subject": "{product_name} raporun incelendi",
-		"body": "Merhaba {username},\n\nRaporun (Kimlik: {reportId}) Güvenlik Ekibimiz tarafından incelendi.{hasComment, select, yes {\n\nGüvenlik Ekibinin yanıtı:\n{publicComment}} other {}}\n\n{product_name}'ı herkes için güvenli tutmaya yardımcı olduğun için teşekkür ederiz. Tüm raporları ciddiye alıyoruz ve topluluğa katkını takdir ediyoruz.\n\nBu sonuç hakkında herhangi bir sorun veya endişen varsa, lütfen {safety_email} adresine ulaş.\n\n– {product_name} Güvenlik Ekibi"
+		"body": "Merhaba {username},\n\nRaporun (Kimlik: {reportId}) Güvenlik Ekibimiz tarafından incelendi.{hasComment, select, yes {\n\nGüvenlik Ekibinin yanıtı:\n{publicComment}} other {}}\n\n{product_name}'u herkes için güvenli tutmaya yardımcı olduğun için teşekkür ederiz. Tüm raporları ciddiye alıyoruz ve topluluğa katkını takdir ediyoruz.\n\nBu sonuç hakkında herhangi bir sorun veya endişen varsa, lütfen {safety_email} adresine ulaş.\n\n– {product_name} Güvenlik Ekibi"
 	},
 	"scheduled_deletion_notification": {
 		"subject": "{product_name} hesabın kalıcı olarak silinecek",
@@ -97,7 +110,7 @@ const EMAIL_I18N_TR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "{product_name} hesabının askıya alınması kaldırıldı",
-		"body": "Merhaba {username},\n\nİyi haber: {product_name} hesabının askıya alınması kaldırıldı.\n\n{reason, select,\n  null {}\n  other {Sebep: {reason}}\n}\n\nArtık tekrar giriş yapabilir ve {product_name}'ı normal şekilde kullanmaya devam edebilirsin.\n\n– {product_name} Güvenlik Ekibi"
+		"body": "🎉 Merhaba {username},\n\nİyi haber: {product_name} hesabının askıya alınması kaldırıldı.\n\n{reason, select,\n  null {}\n  other {Sebep: {reason}}\n}\n\nArtık tekrar giriş yapabilir ve {product_name}'u normal şekilde kullanmaya devam edebilirsin.\n\n– {product_name} Güvenlik Ekibi"
 	}
 });
 

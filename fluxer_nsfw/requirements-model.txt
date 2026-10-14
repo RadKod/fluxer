@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# fluxer-nsfw model stage only (Dockerfile; never in the served image): what export_onnx.py and test_model.py need on
+# top of requirements.txt. python 3.12, linux x86_64. Installed with
+#   pip install --no-deps --only-binary=:all: --require-hashes -r requirements.txt -r requirements-model.txt
+# Closure of opennsfw2[keras3] + jax (KERAS_BACKEND=jax) + onnx, minus opencv-python and matplotlib, which opennsfw2
+# imports only for video/Grad-CAM helpers this build never calls (hence --no-deps), minus requirements.txt's pins.
+# Regenerate: uv pip compile (in: opennsfw2 keras jax jaxlib onnx pins + requirements.txt's pins; override:
+#   "opencv-python ; sys_platform == 'never'" and the same for matplotlib and flatbuffers) --python-version 3.12
+#   --python-platform x86_64-manylinux_2_28 --only-binary :all:, dropping requirements.txt's pins and keeping the
+#   sha256 of every manylinux x86_64 / cp312 / py3-none-any wheel of each pin.
+
+absl-py==2.5.0 \
+    --hash=sha256:0f17b89f2a4eaaedc4f28c622998aa690564b3012a396a4ffad0821007fe03ba
+beautifulsoup4==4.15.0 \
+    --hash=sha256:d6f88de62e1d4e38ecb1077eb9724cd0eff29d2a08ca16a401e9b9e93f117cf9
+certifi==2026.7.22 \
+    --hash=sha256:62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775
+charset-normalizer==3.5.2 \
+    --hash=sha256:3d31298449090ab8d47b7b1b2a555ff73cac7ed438a08b7ac160980c7ebed649 \
+    --hash=sha256:1c50fe28bbc2ced33386f298650d91218076c05420e6cbd790b913adc41659e7 \
+    --hash=sha256:b6b751274acb69d77b3323d6b7dbaa3c7fdfc1eb829b7eb61d262f32e1af9685
+filelock==4.0.9 \
+    --hash=sha256:9287fd61b99a806e5202be29a83034c0808a1b9830e820537c2f5773981f7eeb
+gdown==6.4.1 \
+    --hash=sha256:8c14467f32ddd8591b54ee1eae430d25134e04f0228326ba61e33fd8dee5ac61
+h5py==3.16.0 \
+    --hash=sha256:dfc21898ff025f1e8e67e194965a95a8d4754f452f83454538f98f8a3fcb207e
+idna==3.20 \
+    --hash=sha256:ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c
+imageio==2.38.0 \
+    --hash=sha256:474ea3a39e36e0e8e02d81d7f10412aaecec7a2825e5fbc4f44cbcd7bb7cebfc
+jax==0.11.2 \
+    --hash=sha256:59e7ed9bd9ace049f4856752fe580c890e0164e1c023f40fadac386408daad66
+jaxlib==0.11.2 \
+    --hash=sha256:6338a1f0956f60d02529404ac33a8070015a52635cdb6bbb15d0d199757077bb
+keras==3.15.1 \
+    --hash=sha256:836460e480930acbd19bb7a17e62f9ecad40e8a9af9a651fc8d0586a96d27e20
+lazy-loader==0.6 \
+    --hash=sha256:77253be3391b06124a0e16105bd663b6c54470af1a9ca8e1cf026f38d58ed056
+markdown-it-py==4.2.0 \
+    --hash=sha256:9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a
+mdurl==0.1.2 \
+    --hash=sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8
+ml-dtypes==0.6.0 \
+    --hash=sha256:3b4a480aa8fd54a1805b8ac10f3f91763926a74f73c0c364c10f9231854f4170
+namex==0.1.0 \
+    --hash=sha256:e2012a474502f1e2251267062aae3114611f07df4224b6e06334c57b0f2ce87c
+networkx==3.7 \
+    --hash=sha256:e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0
+onnx==1.23.1 \
+    --hash=sha256:40ea7e62fb3d4f808900dbb0406ccf5ab1f1e757065a90f60710ecd937fb5de5
+opennsfw2==0.19.0 \
+    --hash=sha256:58fae192bc0c07bbfa28c451d07268153c8ef14b8738480d77cdab83f7eba73e
+opt-einsum==3.4.0 \
+    --hash=sha256:69bb92469f86a1565195ece4ac0323943e83477171b91d24c35afe028a90d7cd
+optree==0.20.0 \
+    --hash=sha256:5c4ed341ea1ee7eb04eff01527b88a868cb19aac672a667e0aefadf7d14c0260
+packaging==26.3 \
+    --hash=sha256:d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c
+protobuf==7.36.2 \
+    --hash=sha256:89f23aa53c24553a2416fd4fd1ec06f74fa42b14b546d8883128813f775bbfd2 \
+    --hash=sha256:bdb3a345d48db958e6ce1f18e508beb0cc981d64f24088427549c866cd039f1e
+pygments==2.21.0 \
+    --hash=sha256:2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9
+pysocks==1.7.1 \
+    --hash=sha256:2725bd0a9925919b9b51739eea5f9e2bae91e83288108a9ad338b2e3a4435ee5
+requests==2.34.2 \
+    --hash=sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0
+rich==15.0.0 \
+    --hash=sha256:33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb
+scikit-image==0.26.0 \
+    --hash=sha256:7df650e79031634ac90b11e64a9eedaf5a5e06fcd09bcd03a34be01745744466
+scipy==1.18.1 \
+    --hash=sha256:f55fa87b6c612ecd6b058f167c53231b1d14e412efe361d3d6e38b3631c73218
+soupsieve==2.10 \
+    --hash=sha256:8596eb8967d744174820280fa62b4542a2e955bfaccca73ed8a13c6eb8e9b502
+tifffile==2026.9.20 \
+    --hash=sha256:9b913167b8f66a57f2e7c0454486c4c4607196d494797461226166bd0755c0e6
+tqdm==4.70.1 \
+    --hash=sha256:c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73
+typing-extensions==4.16.0 \
+    --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8
+urllib3==2.8.0 \
+    --hash=sha256:0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3

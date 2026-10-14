@@ -12,13 +12,20 @@ const CONTENT_I18N_NL_MESSAGES = defineContentI18nLocaleMessages({
 	"billing.eu_withdrawal_waiver_checkout": "Als ik een EU/EER-consument ben, geef ik uitdrukkelijk toestemming dat de digitale inhoud van {product_name} {premium_tier_name} onmiddellijk wordt geleverd en erken ik dat ik mijn wettelijke herroepingsrecht verlies zodra toegang wordt verleend. Dit heeft geen invloed op andere dwingende consumentenrechten. Zie de [Servicevoorwaarden]({terms_url}).",
 	"bulk_message_deletion.complete": "We zijn klaar met het verwijderen van je berichten. We hebben {message_count, plural, =0 {0 berichten} one {# bericht} other {# berichten}} verwijderd uit {channel_count, plural, =0 {0 plekken} one {# plek} other {# plekken}}.",
 	"content.virus_detected": "Dit bestand is gemarkeerd als mogelijk onveilig en is verwijderd.",
+	"feed.comment_removed_by_moderator": "Een moderator heeft een van je feedreacties verwijderd wegens schending van onze Gebruiksvoorwaarden of Communityrichtlijnen.",
+	"feed.post_removed_by_moderator": "Een moderator heeft een van je feedberichten verwijderd wegens schending van onze Gebruiksvoorwaarden of Communityrichtlijnen.",
+	"feed.video_failed": "Je feedvideo kon niet worden verwerkt en is daarom niet geplaatst.",
+	"feed.video_gone": "Je feedbericht is verwijderd omdat de video niet meer beschikbaar is.",
+	"feed.video_rejected": "Je video is niet door onze inhoudscontroles gekomen en wordt daarom niet in de feed getoond.",
+	"feed.video_too_large": "Je video is niet in de feed geplaatst omdat deze groter is dan 500 MB.",
 	"guild.bulk_create.emoji_limit": "Maximaal aantal emoji bereikt ({limit}).",
 	"guild.bulk_create.sticker_limit": "Maximaal aantal stickers bereikt ({limit}).",
 	"guild.bulk_create.unknown_error": "Onbekende fout.",
 	"guild.default_category_text": "Tekstkanalen",
 	"guild.default_category_voice": "Spraakkanalen",
 	"guild.default_channel_text": "algemeen",
-	"guild.default_channel_voice": "Algemeen"
+	"guild.default_channel_voice": "Algemeen",
+	"referral.reward_ready": "Je beloning voor het doorverwijzen staat klaar. Je kunt deze bekijken onder Instellingen → Doorverwijzingen."
 });
 
 export default CONTENT_I18N_NL_MESSAGES;

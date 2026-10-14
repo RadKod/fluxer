@@ -5,7 +5,6 @@ import type {Channel} from '@app/features/channel/models/Channel';
 import type {Guild} from '@app/features/guild/models/Guild';
 import {AvatarStack} from '@app/features/ui/avatars/AvatarStack';
 import {StackUserAvatar} from '@app/features/ui/avatars/StackUserAvatar';
-import type {User} from '@app/features/user/models/User';
 import Users from '@app/features/user/state/Users';
 import {
 	createVoiceParticipantSortSnapshot,
@@ -48,16 +47,8 @@ export const CollapsedCategoryVoiceParticipants = observer(
 			});
 			return {firstChannelByUserId, userIds: sortedUserIds};
 		}, [allVoiceStates, guild.id, voiceChannels]);
-		const users = useMemo(() => {
-			const nextUsers: Array<User> = [];
-			for (const userId of voiceUserSummary.userIds) {
-				const user = Users.getUser(userId);
-				if (user) {
-					nextUsers.push(user);
-				}
-			}
-			return nextUsers;
-		}, [voiceUserSummary.userIds, Users.usersList]);
+		// Read during render so the observer tracks each shown user (a new avatar or name re-renders) and nothing else.
+		const users = voiceUserSummary.userIds.flatMap((userId) => Users.getUser(userId) ?? []);
 		if (voiceUserSummary.userIds.length === 0) return null;
 		return (
 			<div className={styles.container} data-flx="app.collapsed-category-voice-participants.container">
@@ -107,16 +98,8 @@ export const CollapsedChannelAvatarStack = observer(({guild, channel}: {guild: G
 			channelId: channel.id,
 		});
 	}, [channel.id, channelStates, guild.id]);
-	const users = useMemo(() => {
-		const nextUsers: Array<User> = [];
-		for (const userId of uniqueUserIds) {
-			const user = Users.getUser(userId);
-			if (user) {
-				nextUsers.push(user);
-			}
-		}
-		return nextUsers;
-	}, [uniqueUserIds, Users.usersList]);
+	// Read during render so the observer tracks each shown user (a new avatar or name re-renders) and nothing else.
+	const users = uniqueUserIds.flatMap((userId) => Users.getUser(userId) ?? []);
 	return (
 		<div
 			className={styles.channelContainer}

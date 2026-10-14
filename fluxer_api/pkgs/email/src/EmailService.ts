@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createLogger} from '@fluxer/logger/src/Logger';
+import {renderEmailHtml} from '@pkgs/email/src/EmailHtml';
 import type {IEmailI18nService} from '@pkgs/email/src/EmailI18nService';
 import type {EmailConfig, IEmailProvider, UserBouncedEmailChecker} from '@pkgs/email/src/EmailProviderTypes';
 import type {EmailTemplateVariables} from '@pkgs/email/src/email_i18n/EmailI18nTypes';
@@ -10,6 +11,17 @@ import {ms} from 'itty-time';
 
 const logger = createLogger('email-service');
 const DEFAULT_LOCALE = 'en-US';
+
+function capitalizeFirst(value: string, locale: string | null): string {
+	const [first = ''] = value;
+	let upper: string;
+	try {
+		upper = first.toLocaleUpperCase(locale || DEFAULT_LOCALE);
+	} catch {
+		upper = first.toUpperCase();
+	}
+	return [...upper].length === 1 ? upper + value.slice(first.length) : value;
+}
 
 function formatMinorUnitAmount(amountMinor: number, currency: string, locale: string | null): string {
 	const formatter = new Intl.NumberFormat(locale || DEFAULT_LOCALE, {style: 'currency', currency});
@@ -45,10 +57,8 @@ export class EmailService implements IEmailService {
 		resetToken: string,
 		locale: string | null = null,
 	): Promise<boolean> {
-		return this.sendTemplatedEmail(email, 'password_reset', locale, {
-			username,
-			resetUrl: `${this.config.appBaseUrl}/reset#token=${resetToken}`,
-		});
+		const resetUrl = `${this.config.appBaseUrl}/reset#token=${resetToken}`;
+		return this.sendTemplatedEmail(email, 'password_reset', locale, {username, resetUrl}, resetUrl);
 	}
 
 	async sendEmailVerification(
@@ -57,10 +67,8 @@ export class EmailService implements IEmailService {
 		verificationToken: string,
 		locale: string | null = null,
 	): Promise<boolean> {
-		return this.sendTemplatedEmail(email, 'email_verification', locale, {
-			username,
-			verifyUrl: `${this.config.appBaseUrl}/verify#token=${verificationToken}`,
-		});
+		const verifyUrl = `${this.config.appBaseUrl}/verify#token=${verificationToken}`;
+		return this.sendTemplatedEmail(email, 'email_verification', locale, {username, verifyUrl}, verifyUrl);
 	}
 
 	async sendIpAuthorizationEmail(
@@ -71,12 +79,14 @@ export class EmailService implements IEmailService {
 		location: string,
 		locale: string | null = null,
 	): Promise<boolean> {
-		return this.sendTemplatedEmail(email, 'ip_authorization', locale, {
-			username,
-			authUrl: `${this.config.appBaseUrl}/authorize-ip#token=${authorizationToken}`,
-			ipAddress,
-			location,
-		});
+		const authUrl = `${this.config.appBaseUrl}/authorize-ip#token=${authorizationToken}`;
+		return this.sendTemplatedEmail(
+			email,
+			'ip_authorization',
+			locale,
+			{username, authUrl, ipAddress, location},
+			authUrl,
+		);
 	}
 
 	async sendAccountTempBannedEmail(
@@ -188,12 +198,14 @@ export class EmailService implements IEmailService {
 		lastActiveDate: Date,
 		locale: string | null = null,
 	): Promise<boolean> {
-		return this.sendTemplatedEmail(email, 'inactivity_warning', locale, {
-			username,
-			deletionDate,
-			lastActiveDate,
-			loginUrl: `${this.config.appBaseUrl}/login`,
-		});
+		const loginUrl = `${this.config.appBaseUrl}/login`;
+		return this.sendTemplatedEmail(
+			email,
+			'inactivity_warning',
+			locale,
+			{username, deletionDate, lastActiveDate, loginUrl},
+			loginUrl,
+		);
 	}
 
 	async sendHarvestCompletedEmail(
@@ -206,13 +218,13 @@ export class EmailService implements IEmailService {
 		locale: string | null = null,
 	): Promise<boolean> {
 		const fileSizeMB = Number.parseFloat((fileSize / 1024 / 1024).toFixed(2));
-		return this.sendTemplatedEmail(email, 'harvest_completed', locale, {
-			username,
+		return this.sendTemplatedEmail(
+			email,
+			'harvest_completed',
+			locale,
+			{username, downloadUrl, totalMessages, fileSizeMB, expiresAt},
 			downloadUrl,
-			totalMessages,
-			fileSizeMB,
-			expiresAt,
-		});
+		);
 	}
 
 	async sendGiftChargebackNotification(
@@ -221,6 +233,10 @@ export class EmailService implements IEmailService {
 		locale: string | null = null,
 	): Promise<boolean> {
 		return this.sendTemplatedEmail(email, 'gift_chargeback_notification', locale, {username});
+	}
+
+	async sendReferralRewardReadyEmail(email: string, username: string, locale: string | null = null): Promise<boolean> {
+		return this.sendTemplatedEmail(email, 'referral_reward_ready', locale, {username});
 	}
 
 	async sendReportResolvedEmail(
@@ -248,10 +264,8 @@ export class EmailService implements IEmailService {
 	}
 
 	async sendRegistrationApprovedEmail(email: string, username: string, locale: string | null = null): Promise<boolean> {
-		return this.sendTemplatedEmail(email, 'registration_approved', locale, {
-			username,
-			channelsUrl: `${this.config.appBaseUrl}/channels/@me`,
-		});
+		const channelsUrl = `${this.config.appBaseUrl}/channels/@me`;
+		return this.sendTemplatedEmail(email, 'registration_approved', locale, {username, channelsUrl}, channelsUrl);
 	}
 
 	async sendPasswordChangeVerification(
@@ -313,11 +327,8 @@ export class EmailService implements IEmailService {
 		token: string,
 		locale: string | null = null,
 	): Promise<boolean> {
-		return this.sendTemplatedEmail(email, 'email_change_revert', locale, {
-			username,
-			revertUrl: `${this.config.appBaseUrl}/wasntme#token=${token}`,
-			newEmail,
-		});
+		const revertUrl = `${this.config.appBaseUrl}/wasntme#token=${token}`;
+		return this.sendTemplatedEmail(email, 'email_change_revert', locale, {username, revertUrl, newEmail}, revertUrl);
 	}
 
 	async sendDonationMagicLink(
@@ -327,7 +338,7 @@ export class EmailService implements IEmailService {
 		expiresAt: Date,
 		locale: string | null = null,
 	): Promise<boolean> {
-		return this.sendTemplatedEmail(email, 'donation_magic_link', locale, {manageUrl, expiresAt});
+		return this.sendTemplatedEmail(email, 'donation_magic_link', locale, {manageUrl, expiresAt}, manageUrl);
 	}
 
 	async sendDonationConfirmation(
@@ -338,12 +349,18 @@ export class EmailService implements IEmailService {
 		manageUrl: string,
 		locale: string | null = null,
 	): Promise<boolean> {
-		return this.sendTemplatedEmail(email, 'donation_confirmation', locale, {
-			amount: formatMinorUnitAmount(amountCents, currency, locale),
-			currency: currency.toUpperCase(),
-			interval,
+		return this.sendTemplatedEmail(
+			email,
+			'donation_confirmation',
+			locale,
+			{
+				amount: formatMinorUnitAmount(amountCents, currency, locale),
+				currency: currency.toUpperCase(),
+				interval,
+				manageUrl,
+			},
 			manageUrl,
-		});
+		);
 	}
 
 	private async sendTemplatedEmail<T extends EmailTemplateKey>(
@@ -351,13 +368,18 @@ export class EmailService implements IEmailService {
 		templateKey: T,
 		locale: string | null,
 		variables: EmailTemplateVariables[T],
+		actionUrl?: string,
 	): Promise<boolean> {
-		const result = this.emailI18n.getTemplate(templateKey, locale, variables);
+		const named =
+			'username' in variables && typeof variables.username === 'string'
+				? {...variables, username: capitalizeFirst(variables.username, locale)}
+				: variables;
+		const result = this.emailI18n.getTemplate(templateKey, locale, named);
 		if (!result.ok) {
 			logger.error({key: templateKey, locale: result.locale, error: result.error}, 'Failed to resolve email template');
 			return false;
 		}
-		const {subject, body} = result.value;
+		const {subject, body, button} = result.value;
 		if (!this.config.enabled || !this.provider) {
 			logger.info(
 				{templateKey},
@@ -378,6 +400,15 @@ export class EmailService implements IEmailService {
 			...(this.config.replyTo ? {replyTo: this.config.replyTo} : {}),
 			subject,
 			text: body,
+			...(this.config.html && {
+				html: renderEmailHtml({
+					subject,
+					body,
+					locale: result.locale,
+					branding: this.config.html,
+					action: button && actionUrl ? {url: actionUrl, label: button} : undefined,
+				}),
+			}),
 		});
 	}
 }

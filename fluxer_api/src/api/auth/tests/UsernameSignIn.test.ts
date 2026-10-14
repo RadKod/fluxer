@@ -234,7 +234,7 @@ describe('Username sign-in', () => {
 				emailVerified: true,
 				username: 'withemail',
 			});
-			expect((await fetchCurrentUser(registration.token)).discriminator).toBe('0000');
+			expect((await fetchCurrentUser(registration.token)).discriminator).toMatch(/^(?!0000)\d{4}$/);
 			expect(await listTestEmails(harness, {recipient: existing.email})).toEqual([]);
 			await createBuilderWithoutAuth(harness)
 				.post('/auth/register')
@@ -257,7 +257,7 @@ describe('Username sign-in', () => {
 			const me = await fetchCurrentUser(registration.token);
 			expect({username: me.username, discriminator: me.discriminator, email: me.email}).toEqual({
 				username: 'Local_Person',
-				discriminator: '0000',
+				discriminator: expect.stringMatching(/^(?!0000)\d{4}$/),
 				email: null,
 			});
 			expect((await login({email: 'Local.Person@chat.example.org', password: PASSWORD})).user_id).toBe(
@@ -387,9 +387,10 @@ describe('Username sign-in', () => {
 		it('refuses a username that is already taken in any case', async () => {
 			await useUsernameMode();
 			await registerUsernameAccount('TakenName');
-			await expectFieldErrors({path: '/auth/register', body: {username: 'takenname', password: PASSWORD}}, [
-				{path: 'username', code: ValidationErrorCodes.USERNAME_ALREADY_TAKEN},
-			]);
+			await expectFieldErrors(
+				{path: '/auth/register', body: {username: 'takenname', password: PASSWORD, date_of_birth: '2000-01-01'}},
+				[{path: 'username', code: ValidationErrorCodes.USERNAME_ALREADY_TAKEN}],
+			);
 		});
 
 		it('derives a free username for an unclaimed account', async () => {
@@ -397,7 +398,7 @@ describe('Username sign-in', () => {
 			await registerUsernameAccount('sharedname');
 			const unclaimed = await createBuilderWithoutAuth<{user_id: string; token: string}>(harness)
 				.post('/auth/register')
-				.body({global_name: 'sharedname'})
+				.body({global_name: 'sharedname', date_of_birth: '2000-01-01'})
 				.execute();
 			const user = await getUserRepository().findUniqueAssert(createUserID(BigInt(unclaimed.user_id)));
 			expect(user.username.toLowerCase()).not.toBe('sharedname');
@@ -767,7 +768,7 @@ describe('Username sign-in', () => {
 			await useUsernameMode();
 			const unclaimed = await createBuilderWithoutAuth<{user_id: string; token: string}>(harness)
 				.post('/auth/register')
-				.body({global_name: 'Guest'})
+				.body({global_name: 'Guest', date_of_birth: '2000-01-01'})
 				.execute();
 			await markSessionStarted(unclaimed.user_id);
 			const claimed = await createBuilder<CurrentUser>(harness, unclaimed.token)
@@ -776,7 +777,7 @@ describe('Username sign-in', () => {
 				.execute();
 			expect({username: claimed.username, discriminator: claimed.discriminator}).toEqual({
 				username: 'claimedguest',
-				discriminator: '0000',
+				discriminator: expect.stringMatching(/^(?!0000)\d{4}$/),
 			});
 			const result = await login({login: 'claimedguest', password: PASSWORD});
 			expect(result.user_id).toBe(unclaimed.user_id);
@@ -976,7 +977,7 @@ describe('Username sign-in', () => {
 			await getInstanceConfigRepository().setAccountIdentityMode(AccountIdentityModes.USERNAME, 'setup', 'random');
 			expect(await getInstanceConfigRepository().getTagStyle()).toBe('none');
 			const account = await registerUsernameAccount('ForcedUnique');
-			expect((await fetchCurrentUser(account.token)).discriminator).toBe('0000');
+			expect((await fetchCurrentUser(account.token)).discriminator).toMatch(/^(?!0000)\d{4}$/);
 			await expectFieldErrors(
 				{
 					path: '/auth/register',
@@ -986,16 +987,16 @@ describe('Username sign-in', () => {
 			);
 		});
 
-		it('gives every new person the 0000 tag', async () => {
+		it('gives every new legacy person a nonzero tag', async () => {
 			await useUsernameMode();
 			const account = await registerUsernameAccount('tagperson');
-			expect((await fetchCurrentUser(account.token)).discriminator).toBe('0000');
+			expect((await fetchCurrentUser(account.token)).discriminator).toMatch(/^(?!0000)\d{4}$/);
 			const unclaimed = await createBuilderWithoutAuth<{user_id: string}>(harness)
 				.post('/auth/register')
-				.body({global_name: 'tagperson'})
+				.body({global_name: 'tagperson', date_of_birth: '2000-01-01'})
 				.execute();
 			const unclaimedUser = await getUserRepository().findUniqueAssert(createUserID(BigInt(unclaimed.user_id)));
-			expect(unclaimedUser.discriminator).toBe(0);
+			expect(unclaimedUser.discriminator).toBeGreaterThan(0);
 			expect(unclaimedUser.username.toLowerCase()).not.toBe('tagperson');
 		});
 
@@ -1003,9 +1004,10 @@ describe('Username sign-in', () => {
 			await useUsernameMode();
 			await registerUsernameAccount('OnlyOne');
 			for (const username of ['onlyone', 'ONLYONE', 'DeletedUser']) {
-				await expectFieldErrors({path: '/auth/register', body: {username, password: PASSWORD}}, [
-					{path: 'username', code: ValidationErrorCodes.USERNAME_ALREADY_TAKEN},
-				]);
+				await expectFieldErrors(
+					{path: '/auth/register', body: {username, password: PASSWORD, date_of_birth: '2000-01-01'}},
+					[{path: 'username', code: ValidationErrorCodes.USERNAME_ALREADY_TAKEN}],
+				);
 			}
 		});
 
@@ -1017,25 +1019,30 @@ describe('Username sign-in', () => {
 				.put(`/admin/users/${target.userId}/deletion`)
 				.body({reason_code: 2, days_until_deletion: 30})
 				.execute();
-			await expectFieldErrors({path: '/auth/register', body: {username: 'pendinggone', password: PASSWORD}}, [
-				{path: 'username', code: ValidationErrorCodes.USERNAME_ALREADY_TAKEN},
-			]);
+			await expectFieldErrors(
+				{path: '/auth/register', body: {username: 'pendinggone', password: PASSWORD, date_of_birth: '2000-01-01'}},
+				[{path: 'username', code: ValidationErrorCodes.USERNAME_ALREADY_TAKEN}],
+			);
 		});
 
-		it('signs in with name#0 and name#0000 and refuses any other tag', async () => {
+		it('signs in with the allocated legacy tag and refuses a zero tag', async () => {
 			await useUsernameMode();
 			const account = await registerUsernameAccount('ZeroTag');
-			expect((await login({login: 'zerotag#0', password: PASSWORD})).user_id).toBe(account.userId);
-			expect((await login({login: 'ZeroTag#0000', password: PASSWORD})).user_id).toBe(account.userId);
-			await expectFieldErrors({path: '/auth/login', body: {login: 'zerotag#0001', password: PASSWORD}}, [
+			const me = await fetchCurrentUser(account.token);
+			expect((await login({login: `zerotag#${Number(me.discriminator)}`, password: PASSWORD})).user_id).toBe(
+				account.userId,
+			);
+			expect((await login({login: `ZeroTag#${me.discriminator}`, password: PASSWORD})).user_id).toBe(account.userId);
+			await expectFieldErrors({path: '/auth/login', body: {login: 'zerotag#0000', password: PASSWORD}}, [
 				{path: 'login', code: ValidationErrorCodes.INVALID_LOGIN_OR_PASSWORD},
 				{path: 'password', code: ValidationErrorCodes.INVALID_LOGIN_OR_PASSWORD},
 			]);
 		});
 
-		it('refuses a tag change, even with the custom tag perk, and keeps 0000 through renames', async () => {
+		it('refuses a tag change, even with the custom tag perk, and preserves the legacy tag through renames', async () => {
 			await useUsernameMode();
 			const account = await registerUsernameAccount('fixedtag');
+			const initial = await fetchCurrentUser(account.token);
 			await grantPremium(harness, account.userId, UserPremiumTypes.SUBSCRIPTION);
 			await expectFieldErrors(
 				{path: '/users/@me', method: 'PATCH', token: account.token, body: {discriminator: '1234', password: PASSWORD}},
@@ -1052,25 +1059,30 @@ describe('Username sign-in', () => {
 			);
 			const unchanged = await createBuilder<CurrentUser>(harness, account.token)
 				.patch('/users/@me')
-				.body({discriminator: '0000', password: PASSWORD})
+				.body({discriminator: initial.discriminator, password: PASSWORD})
 				.execute();
-			expect(unchanged.discriminator).toBe('0000');
+			expect(unchanged.discriminator).toBe(initial.discriminator);
+			await expectFieldErrors(
+				{path: '/users/@me', method: 'PATCH', token: account.token, body: {discriminator: '0000', password: PASSWORD}},
+				DISCRIMINATOR_REFUSED,
+			);
 			const renamed = await createBuilder<CurrentUser>(harness, account.token)
 				.patch('/users/@me')
 				.body({username: 'FixedTagTwo', password: PASSWORD})
 				.execute();
 			expect({username: renamed.username, discriminator: renamed.discriminator}).toEqual({
 				username: 'FixedTagTwo',
-				discriminator: '0000',
+				discriminator: initial.discriminator,
 			});
 			const user = await getUserRepository().findUniqueAssert(createUserID(BigInt(account.userId)));
 			expect(user.premiumFlags & PremiumFlags.DISCRIMINATOR).toBe(0);
 		});
 
-		it('refuses an admin tag change and keeps 0000 on admin renames', async () => {
+		it('refuses an admin tag change and preserves the legacy tag on admin renames', async () => {
 			await useUsernameMode();
 			const admin = await registerUsernameAccount('tagadmin');
 			const target = await registerUsernameAccount('tagtarget');
+			const initial = await fetchCurrentUser(target.token);
 			const {response, json} = await createBuilder<ValidationErrorBody>(harness, admin.token)
 				.patch(`/admin/users/${target.userId}/username`)
 				.body({username: 'tagtargetnew', discriminator: '0007'})
@@ -1084,13 +1096,14 @@ describe('Username sign-in', () => {
 			const user = await getUserRepository().findUniqueAssert(createUserID(BigInt(target.userId)));
 			expect({username: user.username, discriminator: user.discriminator}).toEqual({
 				username: 'TagTargetNew',
-				discriminator: 0,
+				discriminator: Number(initial.discriminator),
 			});
 		});
 
 		it('skips the premium tag reroll at session start', async () => {
 			await useUsernameMode();
 			const account = await registerUsernameAccount('noreroll');
+			const initial = await fetchCurrentUser(account.token);
 			await markPremiumDiscriminator(account.userId);
 			const previousPremiumMode = getCachedInstancePremiumMode();
 			setCachedInstancePremiumMode('mirror');
@@ -1100,7 +1113,7 @@ describe('Username sign-in', () => {
 				setCachedInstancePremiumMode(previousPremiumMode);
 			}
 			const user = await getUserRepository().findUniqueAssert(createUserID(BigInt(account.userId)));
-			expect(user.discriminator).toBe(0);
+			expect(user.discriminator).toBe(Number(initial.discriminator));
 			expect(user.premiumFlags & PremiumFlags.DISCRIMINATOR).toBe(PremiumFlags.DISCRIMINATOR);
 		});
 
@@ -1131,10 +1144,11 @@ describe('Username sign-in', () => {
 			expect(await checkTag('freetag', '0000')).toBe(false);
 		});
 
-		it('shows bare names in the change log and finds people by bare name', async () => {
+		it('shows legacy tags in the change log and finds people by bare name', async () => {
 			await useUsernameMode();
 			const admin = await registerUsernameAccount('logadmin');
 			const target = await registerUsernameAccount('logbefore');
+			const initial = await fetchCurrentUser(target.token);
 			await createBuilder(harness, target.token)
 				.patch('/users/@me')
 				.body({username: 'logafter', password: PASSWORD})
@@ -1148,7 +1162,9 @@ describe('Username sign-in', () => {
 			const tagChanges = log.entries
 				.filter((entry) => entry.field === 'fluxer_tag')
 				.map(({old_value, new_value}) => ({old_value, new_value}));
-			expect(tagChanges).toEqual([{old_value: 'logbefore', new_value: 'logafter'}]);
+			expect(tagChanges).toEqual([
+				{old_value: `logbefore#${initial.discriminator}`, new_value: `logafter#${initial.discriminator}`},
+			]);
 			const found = await createBuilder<{users: Array<{id: string}>}>(harness, admin.token)
 				.get('/admin/users?resolve=LogAfter')
 				.execute();
@@ -1159,14 +1175,19 @@ describe('Username sign-in', () => {
 	describe('email mode with unique usernames', () => {
 		const TAG_REFUSED = [{path: 'discriminator', code: ValidationErrorCodes.DISCRIMINATOR_NOT_SUPPORTED_ON_INSTANCE}];
 
-		it('gives email registrations 0000 and refuses a taken name in any case', async () => {
+		it('gives legacy email registrations nonzero tags and refuses a taken name in any case', async () => {
 			await useSelfHostedEmailUniqueMode();
 			const account = await registerEmailAccount('EmailUnique');
-			expect((await fetchCurrentUser(account.token)).discriminator).toBe('0000');
+			expect((await fetchCurrentUser(account.token)).discriminator).toMatch(/^(?!0000)\d{4}$/);
 			await expectFieldErrors(
 				{
 					path: '/auth/register',
-					body: {email: 'other-unique@example.com', username: 'emailunique', password: PASSWORD},
+					body: {
+						email: 'other-unique@example.com',
+						username: 'emailunique',
+						password: PASSWORD,
+						date_of_birth: '2000-01-01',
+					},
 				},
 				[{path: 'username', code: ValidationErrorCodes.USERNAME_ALREADY_TAKEN}],
 			);
@@ -1185,6 +1206,7 @@ describe('Username sign-in', () => {
 			await useSelfHostedEmailUniqueMode();
 			await registerEmailAccount('heldbyother');
 			const account = await registerEmailAccount('renamer');
+			const initial = await fetchCurrentUser(account.token);
 			await grantPremium(harness, account.userId, UserPremiumTypes.SUBSCRIPTION);
 			await expectFieldErrors(
 				{
@@ -1205,7 +1227,7 @@ describe('Username sign-in', () => {
 				.execute();
 			expect({username: renamed.username, discriminator: renamed.discriminator}).toEqual({
 				username: 'renamedfree',
-				discriminator: '0000',
+				discriminator: initial.discriminator,
 			});
 			const user = await getUserRepository().findUniqueAssert(createUserID(BigInt(account.userId)));
 			expect(user.premiumFlags & PremiumFlags.DISCRIMINATOR).toBe(0);
@@ -1214,6 +1236,7 @@ describe('Username sign-in', () => {
 		it('skips the premium tag reroll at session start', async () => {
 			await useSelfHostedEmailUniqueMode();
 			const account = await registerEmailAccount('emailnoreroll');
+			const initial = await fetchCurrentUser(account.token);
 			await markPremiumDiscriminator(account.userId);
 			const previousPremiumMode = getCachedInstancePremiumMode();
 			setCachedInstancePremiumMode('mirror');
@@ -1223,7 +1246,7 @@ describe('Username sign-in', () => {
 				setCachedInstancePremiumMode(previousPremiumMode);
 			}
 			const user = await getUserRepository().findUniqueAssert(createUserID(BigInt(account.userId)));
-			expect(user.discriminator).toBe(0);
+			expect(user.discriminator).toBe(Number(initial.discriminator));
 			expect(user.premiumFlags & PremiumFlags.DISCRIMINATOR).toBe(PremiumFlags.DISCRIMINATOR);
 		});
 

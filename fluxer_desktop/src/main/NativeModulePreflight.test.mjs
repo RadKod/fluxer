@@ -49,6 +49,7 @@ function loadPreflight({
 	}
 
 	function requireStub(specifier) {
+		if (specifier === '@electron/common/DesktopIdentity') return {DESKTOP_APP_NAME: 'Micup'};
 		if (specifier === 'node:child_process') return {spawnSync: spawnSyncStub};
 		if (specifier === 'node:crypto') return crypto;
 		if (specifier === 'node:path') return nodePath;
@@ -72,6 +73,9 @@ function loadPreflight({
 					},
 				}),
 			};
+		}
+		if (specifier === '@electron/main/WinShell') {
+			return {disableWinShell() {}, isWinShellDisabled: () => false, registerWinShellPreflightInvalidator() {}};
 		}
 		if (specifier === '@electron/main/AppStoreNativeBoundary') return {APP_STORE_ADDON_PACKAGE: '@fluxer/app-store'};
 		if (specifier === '@electron/main/GatewaySocketNativeBoundary') {

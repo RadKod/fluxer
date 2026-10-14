@@ -39,6 +39,9 @@ fn sample_user(id: u64) -> ApiUserPartialResponse {
         system: None,
         flags: 0,
         mention_flags: None,
+        avatar_decoration_data: None,
+        avatar_ultra_data: None,
+        nameplate_data: None,
     }
 }
 
@@ -138,6 +141,7 @@ fn sample_message(index: u64) -> ApiMessageResponse {
         message_snapshots: None,
         nonce: None,
         call: None,
+        components: None,
         referenced_message: None,
     }
 }

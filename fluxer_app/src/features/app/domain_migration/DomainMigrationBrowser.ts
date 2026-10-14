@@ -2,6 +2,7 @@
 
 import {
 	classifyDomainMigrationInstallKind,
+	DOMAIN_MIGRATION_ENABLED,
 	type DomainMigrationDisplayMode,
 	type DomainMigrationEnvironment,
 	type DomainMigrationGateInput,
@@ -39,7 +40,11 @@ const DISPLAY_MODES: ReadonlyArray<DomainMigrationDisplayMode> = [
 ];
 
 function domainMigrationDiscoveryApiEndpoint(): string | null {
-	if (typeof window === 'undefined' || resolveDomainMigrationSide(window.location.origin) === null) {
+	if (
+		!DOMAIN_MIGRATION_ENABLED ||
+		typeof window === 'undefined' ||
+		resolveDomainMigrationSide(window.location.origin) === null
+	) {
 		return null;
 	}
 	try {

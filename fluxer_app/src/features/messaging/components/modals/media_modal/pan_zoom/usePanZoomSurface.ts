@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import Accessibility from '@app/features/accessibility/state/Accessibility';
 import {
 	clampPanForScale,
 	clampScale,
@@ -21,7 +22,7 @@ import {useLatestRef} from '@app/features/messaging/components/modals/media_moda
 import type {ZoomState} from '@app/features/messaging/components/modals/media_modal/shared';
 import {wasPointerDownInside} from '@app/lib/overlay/DismissGuard';
 import type {AnimationPlaybackControls, MotionValue} from 'framer-motion';
-import {animate, useMotionValue, useReducedMotion} from 'framer-motion';
+import {animate, useMotionValue} from 'framer-motion';
 import type React from 'react';
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 
@@ -179,7 +180,6 @@ export function usePanZoomSurface(options: UsePanZoomSurfaceOptions): PanZoomSur
 	const y = useMotionValue(0);
 	const scale = useMotionValue(minScale);
 	const requestedTransformRef = useRef({scale: minScale, x: 0, y: 0});
-	const prefersReducedMotion = useReducedMotion();
 	const [internalZoomState, setInternalZoomState] = useState<ZoomState>(controlledZoomState ?? 'fit');
 	const [isDragging, setIsDragging] = useState(false);
 	const [isHoveringContent, setIsHoveringContent] = useState(false);
@@ -345,7 +345,7 @@ export function usePanZoomSurface(options: UsePanZoomSurfaceOptions): PanZoomSur
 		(next: {scale: number; x: number; y: number}, animated: boolean) => {
 			stopAnimations();
 			commitRequestedTransform(next);
-			if (animated && !prefersReducedMotion) {
+			if (animated && !Accessibility.useReducedMotion) {
 				const start = {
 					scale: scale.get(),
 					x: x.get(),
@@ -372,7 +372,7 @@ export function usePanZoomSurface(options: UsePanZoomSurfaceOptions): PanZoomSur
 				scale.set(next.scale);
 			}
 		},
-		[commitRequestedTransform, prefersReducedMotion, scale, stopAnimations, x, y],
+		[commitRequestedTransform, scale, stopAnimations, x, y],
 	);
 	const zoomTo = useCallback(
 		(nextZoomState: ZoomState, origin?: Point) => {

@@ -145,18 +145,17 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
 								</>
 							)}
 						</div>
-						<div
-							className={clsx(styles.spinnerWrapper, {[styles.hidden]: !submitting})}
-							data-flx="ui.button.button.spinner-wrapper"
-						>
-							<span className={styles.spinner} data-flx="ui.button.button.spinner">
-								<span className={styles.spinnerInner} data-flx="ui.button.button.spinner-inner">
-									<span className={styles.spinnerItem} data-flx="ui.button.button.span" />
-									<span className={styles.spinnerItem} data-flx="ui.button.button.span--2" />
-									<span className={styles.spinnerItem} data-flx="ui.button.button.span--3" />
+						{submitting && (
+							<div className={styles.spinnerWrapper} data-flx="ui.button.button.spinner-wrapper">
+								<span className={styles.spinner} data-flx="ui.button.button.spinner">
+									<span className={styles.spinnerInner} data-flx="ui.button.button.spinner-inner">
+										<span className={styles.spinnerItem} data-flx="ui.button.button.span" />
+										<span className={styles.spinnerItem} data-flx="ui.button.button.span--2" />
+										<span className={styles.spinnerItem} data-flx="ui.button.button.span--3" />
+									</span>
 								</span>
-							</span>
-						</div>
+							</div>
+						)}
 					</div>
 				</div>
 			</BaseButton>

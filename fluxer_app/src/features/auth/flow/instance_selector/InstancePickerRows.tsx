@@ -22,7 +22,7 @@ import {ArrowRightIcon, GlobeIcon, PlusIcon, TrashIcon} from '@phosphor-icons/re
 import {type MouseEvent, type ReactNode, useCallback} from 'react';
 
 const USE_OFFICIAL_INSTANCE_DESCRIPTOR = msg({
-	message: 'Use the official Fluxer instance',
+	message: 'Use the official Micup instance',
 	comment: 'Accessible label for the official Fluxer instance option.',
 });
 const USE_INSTANCE_DESCRIPTOR = msg({
@@ -62,6 +62,7 @@ export function InstancePickerRows({
 }: InstancePickerRowsProps) {
 	const {i18n} = useLingui();
 	const isDiscovering = discoveryStatus === InstanceDiscoveryStatus.DISCOVERING;
+	const showOfficialInstance = OFFICIAL_INSTANCE_DISPLAY_HOST.toLowerCase() === 'micup.gg';
 	const handleKnownInstanceContextMenu = useCallback(
 		(event: MouseEvent<HTMLButtonElement>, instance: InstanceInfo) => {
 			if (disabled || isDiscovering) {
@@ -155,73 +156,75 @@ export function InstancePickerRows({
 				role="list"
 				data-flx="auth.flow.instance-selector.instance-picker-rows.instance-group"
 			>
-				<div
-					className={styles.instanceRow}
-					role="listitem"
-					data-flx="auth.flow.instance-selector.instance-picker-rows.instance-row"
-				>
-					<FocusRing offset={-2} data-flx="auth.flow.instance-selector.instance-picker-rows.focus-ring">
-						<button
-							type="button"
-							className={styles.instanceOption}
-							onClick={onSelectOfficial}
-							disabled={disabled || isDiscovering}
-							aria-label={i18n._(USE_OFFICIAL_INSTANCE_DESCRIPTOR)}
-							data-step-focus="true"
-							data-flx="auth.flow.instance-selector.instance-picker-rows.button.select-official"
-						>
-							<span
-								className={styles.instanceLogo}
-								data-flx="auth.flow.instance-selector.instance-picker-rows.instance-logo"
-							>
-								<FluxerLogoAsset
-									role="img"
-									aria-label={OFFICIAL_INSTANCE_NAME}
-									data-flx="auth.flow.instance-selector.instance-picker-rows.img"
-								/>
-							</span>
-							<span
-								className={styles.instanceMeta}
-								data-flx="auth.flow.instance-selector.instance-picker-rows.instance-meta"
+				{showOfficialInstance && (
+					<div
+						className={styles.instanceRow}
+						role="listitem"
+						data-flx="auth.flow.instance-selector.instance-picker-rows.instance-row"
+					>
+						<FocusRing offset={-2} data-flx="auth.flow.instance-selector.instance-picker-rows.focus-ring">
+							<button
+								type="button"
+								className={styles.instanceOption}
+								onClick={onSelectOfficial}
+								disabled={disabled || isDiscovering}
+								aria-label={i18n._(USE_OFFICIAL_INSTANCE_DESCRIPTOR)}
+								data-step-focus="true"
+								data-flx="auth.flow.instance-selector.instance-picker-rows.button.select-official"
 							>
 								<span
-									className={styles.instanceNameRow}
-									data-flx="auth.flow.instance-selector.instance-picker-rows.instance-name-row"
+									className={styles.instanceLogo}
+									data-flx="auth.flow.instance-selector.instance-picker-rows.instance-logo"
 								>
-									<span
-										className={styles.instanceName}
-										data-flx="auth.flow.instance-selector.instance-picker-rows.instance-name"
-									>
-										{OFFICIAL_INSTANCE_NAME}
-									</span>
-									<span
-										className={styles.instanceOfficialBadge}
+									<FluxerLogoAsset
 										role="img"
-										aria-label={i18n._(OFFICIAL_INSTANCE_DESCRIPTOR)}
-										data-flx="auth.flow.instance-selector.instance-picker-rows.instance-official-badge"
-									>
-										<VerifiedConnectionIcon
-											size={16}
-											data-flx="auth.flow.instance-selector.instance-picker-rows.verified-connection-icon"
-										/>
-									</span>
+										aria-label={OFFICIAL_INSTANCE_NAME}
+										data-flx="auth.flow.instance-selector.instance-picker-rows.img"
+									/>
 								</span>
 								<span
-									className={styles.instanceDomain}
-									data-flx="auth.flow.instance-selector.instance-picker-rows.instance-domain"
+									className={styles.instanceMeta}
+									data-flx="auth.flow.instance-selector.instance-picker-rows.instance-meta"
 								>
-									{OFFICIAL_INSTANCE_DISPLAY_HOST}
+									<span
+										className={styles.instanceNameRow}
+										data-flx="auth.flow.instance-selector.instance-picker-rows.instance-name-row"
+									>
+										<span
+											className={styles.instanceName}
+											data-flx="auth.flow.instance-selector.instance-picker-rows.instance-name"
+										>
+											{OFFICIAL_INSTANCE_NAME}
+										</span>
+										<span
+											className={styles.instanceOfficialBadge}
+											role="img"
+											aria-label={i18n._(OFFICIAL_INSTANCE_DESCRIPTOR)}
+											data-flx="auth.flow.instance-selector.instance-picker-rows.instance-official-badge"
+										>
+											<VerifiedConnectionIcon
+												size={16}
+												data-flx="auth.flow.instance-selector.instance-picker-rows.verified-connection-icon"
+											/>
+										</span>
+									</span>
+									<span
+										className={styles.instanceDomain}
+										data-flx="auth.flow.instance-selector.instance-picker-rows.instance-domain"
+									>
+										{OFFICIAL_INSTANCE_DISPLAY_HOST}
+									</span>
 								</span>
-							</span>
-							<ArrowRightIcon
-								size={remFromPx(17)}
-								weight="bold"
-								className={styles.instanceArrow}
-								data-flx="auth.flow.instance-selector.instance-picker-rows.instance-arrow"
-							/>
-						</button>
-					</FocusRing>
-				</div>
+								<ArrowRightIcon
+									size={remFromPx(17)}
+									weight="bold"
+									className={styles.instanceArrow}
+									data-flx="auth.flow.instance-selector.instance-picker-rows.instance-arrow"
+								/>
+							</button>
+						</FocusRing>
+					</div>
+				)}
 				{pinnedInstance != null && renderKnownInstance(pinnedInstance, false)}
 				{instances
 					.filter((instance) => !isOfficialInstanceInfo(instance))

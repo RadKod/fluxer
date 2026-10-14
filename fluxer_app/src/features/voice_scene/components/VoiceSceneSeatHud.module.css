@@ -1,0 +1,55 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* The room toolbar's black material. Right edge, centred a little above mid height: in the seat view my rack fills the
+   bottom centre and the table's near corners the bottom edges; at 50% a 101 stage's buttons reached the discard pile in
+   my right corner, at 46% they keep ≥ 8 px off it. TableGamesEntry's compact panel above follows this. */
+.hud {
+	position: absolute;
+	top: 46%;
+	right: 0.75rem;
+	z-index: 2;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	width: 10.5rem;
+	max-width: calc(100% - 1.5rem);
+	padding: 0.375rem;
+	border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+	border-radius: 0.875rem;
+	background: #000;
+	box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.45);
+	color: #fff;
+	transform: translateY(-50%);
+	pointer-events: auto;
+}
+
+.group {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	margin-top: 0.125rem;
+	padding-top: 0.375rem;
+	border-top: 0.0625rem solid rgba(255, 255, 255, 0.1);
+}
+
+.caption {
+	padding: 0 0.25rem;
+	color: rgba(255, 255, 255, 0.7);
+	font-weight: 600;
+	font-size: 0.75rem;
+	line-height: 1rem;
+}
+
+/* The chess promotion picker lays its four pieces in one row for the 2D panel, wider than this HUD (Bishop and
+   Knight went off screen). Here they sit two per row under the label. */
+.hud > fieldset {
+	display: grid;
+	grid-template-columns: repeat(2, 2.5rem);
+	justify-content: center;
+}
+
+.hud > fieldset > legend {
+	grid-column: 1 / -1;
+	margin: 0;
+	text-align: center;
+}

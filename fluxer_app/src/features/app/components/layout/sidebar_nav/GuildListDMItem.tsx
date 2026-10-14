@@ -8,7 +8,7 @@ import {resolveGuildListIndicatorBarTarget} from '@app/features/app/components/l
 import {VoiceBadge, type VoiceBadgeActivity} from '@app/features/app/components/layout/sidebar_nav/VoiceBadge';
 import {
 	type ChannelUnreadState,
-	getChannelUnreadState,
+	getDMListItemUnreadState,
 } from '@app/features/app/components/layout/utils/ChannelUnreadState';
 import {GroupDMAvatar} from '@app/features/app/components/shared/GroupDMAvatar';
 import {useContextMenuHoverState} from '@app/features/app/hooks/useContextMenuHoverState';
@@ -69,13 +69,12 @@ const ACTIVE_CALL_DESCRIPTOR = msg({
 });
 
 export function resolveDMListItemUnreadState(channelId: string): ChannelUnreadState {
-	return getChannelUnreadState({
+	return getDMListItemUnreadState({
 		hasUnread: ReadStates.hasUnread(channelId),
 		unreadCount: ReadStates.getUnreadCount(channelId),
 		mentionCount: ReadStates.getMentionCount(channelId),
 		isMuted: UserGuildSettings.isChannelDirectlyMuted(null, channelId),
 		showFadedUnreadOnMutedChannels: Accessibility.showFadedUnreadOnMutedChannels,
-		unreadBadgesLevel: null,
 	});
 }
 
@@ -127,7 +126,20 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 	const {keyboardModeEnabled} = KeyboardMode;
 	const isMuted = UserGuildSettings.isChannelDirectlyMuted(null, channel.id);
 	const mentionCount = ReadStates.getMentionCount(channel.id);
-	const unreadState = resolveDMListItemUnreadState(channel.id);
+	const hasUnread = ReadStates.hasUnread(channel.id);
+	const unreadCount = ReadStates.getUnreadCount(channel.id);
+	const showFadedUnreadOnMutedChannels = Accessibility.showFadedUnreadOnMutedChannels;
+	const unreadState = useMemo(
+		() =>
+			getDMListItemUnreadState({
+				hasUnread,
+				unreadCount,
+				mentionCount,
+				isMuted,
+				showFadedUnreadOnMutedChannels,
+			}),
+		[hasUnread, unreadCount, mentionCount, isMuted, showFadedUnreadOnMutedChannels],
+	);
 	const directMessageName = recipient ? NicknameUtils.getNickname(recipient, null, channel.id) : null;
 	const computedDisplayName = ChannelUtils.getDMDisplayName(channel);
 	const displayName = isGroupDM ? computedDisplayName : (directMessageName ?? computedDisplayName);
@@ -385,7 +397,7 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 								<motion.div
 									ref={iconRef}
 									className={guildStyles.dmIcon}
-									animate={{borderRadius: isSelected || showControls ? '30%' : '50%'}}
+									animate={{borderRadius: '30%'}}
 									initial={false}
 									transition={{duration: Accessibility.useReducedMotion ? 0 : 0.07, ease: 'easeOut'}}
 									data-flx="app.sidebar-nav.guild-list-dm-item.dm-list-item.div--2"

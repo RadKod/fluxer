@@ -3,32 +3,47 @@
 pub mod admin;
 pub mod applications;
 pub mod auth;
+pub mod badges;
 pub mod bans;
 mod bans_actions;
 mod billing_actions;
 pub mod codes;
+pub mod cosmetics;
 pub mod discovery;
+pub mod feed_moderation;
 mod guild_tabs;
 pub mod guilds;
 pub mod jobs;
 mod message_actions;
 pub mod messages;
+pub mod referral;
 pub mod reports;
+pub mod shop;
 pub mod system;
 mod system_actions;
 mod user_actions;
 mod user_tabs;
+pub mod username_migration;
+pub mod usernames;
 pub mod users;
 pub mod voice;
 mod voice_actions;
 
-use crate::{config::AdminConfig, middleware, state::AppState};
+use crate::{
+    acl,
+    api::client::ApiError,
+    config::AdminConfig,
+    middleware::{self, auth::AuthContext, error_handler::AppError, flash::FlashData},
+    state::AppState,
+    utils::forms::MultiValueForm,
+};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct ActionQuery {
     pub action: Option<String>,
 }
+
 use axum::{
     Json, Router,
     extract::{Path, Request, State},
@@ -56,15 +71,59 @@ const X_FRAME_OPTIONS_VALUE: &str = "DENY";
 const PERMISSIONS_POLICY_VALUE: &str = "accelerometer=(), camera=(), geolocation=(), \
     gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()";
 
+pub(crate) fn acl_forbidden(
+    config: &AdminConfig,
+    auth: &AuthContext,
+    required: &str,
+) -> Option<Response> {
+    let admin_acls = auth
+        .admin_user
+        .as_ref()
+        .map(|user| user.acls.as_slice())
+        .unwrap_or(&[]);
+    if acl::has_permission(admin_acls, required) {
+        return None;
+    }
+    Some(
+        AppError::forbidden("You do not have permission to use this page.")
+            .with_base_path(&config.base_path)
+            .into_response(),
+    )
+}
+
+pub(crate) fn form_snowflake(form: &MultiValueForm, key: &str) -> Option<String> {
+    form.clean(key)?
+        .parse::<u64>()
+        .ok()
+        .map(|id| id.to_string())
+}
+
+pub(crate) fn api_failure(action: &str, error: &ApiError) -> FlashData {
+    tracing::warn!(%error, action, "admin API request failed");
+    let detail = match error {
+        ApiError::Http { status, .. } => format!("HTTP {status}"),
+        ApiError::Network(_) => "network error".to_owned(),
+        ApiError::Parse(_) => "unexpected API response".to_owned(),
+    };
+    FlashData::error(format!("Failed to {action} ({detail})"))
+}
+
 pub fn build_router(config: AdminConfig) -> Router {
     let state = AppState::new(config);
     let protected = Router::new()
         .merge(users::router())
+        .merge(username_migration::router())
+        .merge(usernames::router())
         .merge(guilds::router())
         .merge(reports::router())
         .merge(bans::router())
         .merge(applications::router())
         .merge(codes::router())
+        .merge(cosmetics::router())
+        .merge(shop::router())
+        .merge(referral::router())
+        .merge(badges::router())
+        .merge(feed_moderation::router())
         .merge(discovery::router())
         .merge(jobs::router())
         .merge(messages::router())

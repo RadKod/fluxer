@@ -164,6 +164,29 @@ export const ASSET_FORMAT_POLICY: Readonly<Record<AssetKind, AssetFormatPolicyEn
 	},
 });
 
+// Micup: cosmetic catalog images (avatar decorations, ultra decorations, profile effects, nameplates) are branding
+// assets held to a narrower rule than branding's guild_icon fallback: raster only (no SVG), 96-480 px on each side,
+// 512 KB, except ultra decorations (wings and the like), which loop at a smooth frame rate within 1,228,800 bytes.
+// Frames and nameplates draw on every member row, so they keep the smaller limit.
+export const COSMETIC_ASSET_POLICY = Object.freeze({
+	upload: Object.freeze<Array<AssetExtension>>(['png', 'apng', 'webp']),
+	maxBytes: 512 * 1024,
+	ultraMaxBytes: 1_228_800,
+	dims: Object.freeze<AssetDimensionPolicy>({min: 96, max: 480}),
+});
+
+// Micup (angel-wings): parts of an ultra decoration drawn in front of the avatar. Each part is the left half
+// (height = 2 × width); the client mirrors it. The main asset stays under COSMETIC_ASSET_POLICY as the fallback.
+export const ULTRA_FRONT_POLICY = Object.freeze({
+	closedMaxBytes: 150 * 1024,
+	openFrameMaxBytes: 64 * 1024,
+	openTotalMaxBytes: 500 * 1024,
+	idleMaxBytes: 1_500_000,
+	minFrames: 2,
+	maxFrames: 30,
+	height: Object.freeze<AssetDimensionPolicy>({min: 96, max: 576}),
+});
+
 export function getPolicy(kind: AssetKind): AssetFormatPolicyEntry {
 	return ASSET_FORMAT_POLICY[kind];
 }

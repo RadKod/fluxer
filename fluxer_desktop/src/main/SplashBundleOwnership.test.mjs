@@ -49,7 +49,7 @@ function readRuntimeEdges(relativePath) {
 	for (const match of source.matchAll(RUNTIME_SPECIFIER)) {
 		const resolved = resolveSpecifier(match[1], relativePath);
 		if (resolved != null) {
-			edges.add(path.relative(SRC_DIR, resolved));
+			edges.add(path.relative(SRC_DIR, resolved).split(path.sep).join('/'));
 		}
 	}
 	return edges;

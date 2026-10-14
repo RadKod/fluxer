@@ -5,7 +5,7 @@ import SessionManager from '@app/features/platform/state/AuthSession';
 import {User} from '@app/features/user/models/User';
 import {shouldShowDiscriminator} from '@app/features/user/utils/UserTagUtils';
 import type {UserPrivate, User as WireUser} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
-import {makeAutoObservable, observableRef, reaction, runInAction} from 'mobx';
+import {getObserverTree, makeAutoObservable, observableRef, reaction, runInAction} from 'mobx';
 
 const CURRENT_USER_PRIVATE_WIRE_KEYS = [
 	'is_staff',
@@ -33,6 +33,7 @@ const CURRENT_USER_PRIVATE_WIRE_KEYS = [
 	'password_last_changed_at',
 	'last_voice_activity_sharing_change_at',
 	'nsfw_allowed',
+	'public_profile_allowed',
 	'pending_bulk_message_deletion',
 	'has_dismissed_premium_onboarding',
 	'has_ever_purchased',
@@ -50,6 +51,10 @@ function isPublicOnlyCurrentUserPayload(user: WireUser): boolean {
 	return !CURRENT_USER_PRIVATE_WIRE_KEYS.some((key) => key in user);
 }
 
+function observerCount(target: object, key: string): number {
+	return getObserverTree(target, key).observers?.length ?? 0;
+}
+
 class CurrentUserHydrationMismatchError extends Error {
 	constructor(accountKey: string, userId: string) {
 		super(`Cannot hydrate user ${userId} outside its active account ${accountKey}`);
@@ -60,11 +65,58 @@ class CurrentUserHydrationMismatchError extends Error {
 class Users {
 	users: Record<string, User> = {};
 	userCount = 0;
+	private retainCounts = new Map<string, number>();
 	viewAccountKey: string | null = null;
 	private hydratedAccountKey: string | null = null;
 
 	constructor() {
-		makeAutoObservable<Users, 'hydratedAccountKey'>(this, {hydratedAccountKey: observableRef}, {autoBind: true});
+		makeAutoObservable<Users, 'hydratedAccountKey' | 'retainCounts'>(
+			this,
+			{hydratedAccountKey: observableRef, retainCounts: false},
+			{autoBind: true},
+		);
+	}
+
+	retainUsers(userIds: Iterable<string>): void {
+		for (const userId of userIds) {
+			this.retainCounts.set(userId, (this.retainCounts.get(userId) ?? 0) + 1);
+		}
+	}
+
+	releaseUsers(userIds: Iterable<string>): void {
+		for (const userId of userIds) {
+			const count = this.retainCounts.get(userId) ?? 0;
+			if (count > 1) {
+				this.retainCounts.set(userId, count - 1);
+			} else {
+				this.retainCounts.delete(userId);
+			}
+		}
+	}
+
+	evictUsers(userIds: Iterable<string>, keep: ReadonlySet<string>): void {
+		const currentUserId = this.currentUserId;
+		const users = this.users;
+		// While observed, usersList reads every entry, so each one carries that single extra observer.
+		// Debug names are not unique in production builds, so it is discounted by count, not by name.
+		const listObservers = observerCount(this, 'usersList') > 0 ? 1 : 0;
+		let evictedCount = 0;
+		for (const userId of userIds) {
+			if (
+				userId === currentUserId ||
+				keep.has(userId) ||
+				this.retainCounts.has(userId) ||
+				!(userId in users) ||
+				observerCount(users, userId) > listObservers
+			) {
+				continue;
+			}
+			// TEMPORARY: users is one dictionary; the delete that drops it to a quarter full rehashes the rest in one go
+			// (~5 ms at 100K cached users, linear). Past ~150K cached users back this store with an observable map.
+			delete users[userId];
+			evictedCount += 1;
+		}
+		this.userCount -= evictedCount;
 	}
 
 	get currentUser(): User | null {
@@ -107,12 +159,11 @@ class Users {
 	}
 
 	getUserByTag(tag: string): User | undefined {
-		const bareName = tag.toLowerCase();
-		return this.usersList.find(
-			(user) =>
-				user.tag === tag ||
-				`${user.username}#${user.discriminator}` === tag ||
-				(!shouldShowDiscriminator(user) && user.username.toLowerCase() === bareName),
+		const lookup = tag.trim().replace(/^@/, '').toLowerCase();
+		return this.usersList.find((user) =>
+			shouldShowDiscriminator(user)
+				? `${user.username}#${user.discriminator}`.toLowerCase() === lookup
+				: user.username.toLowerCase() === lookup,
 		);
 	}
 
@@ -160,6 +211,7 @@ class Users {
 	}
 
 	resetAccountState(): void {
+		this.retainCounts.clear();
 		this.users = {};
 		this.userCount = 0;
 		this.hydratedAccountKey = null;

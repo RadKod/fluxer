@@ -18,8 +18,10 @@ export const USER_SETTINGS_DEEP_LINK_PATH = '/settings/user';
 
 const USER_SETTINGS_TAB_TYPES = new Set<UserSettingsTabType>([
 	'my_profile',
+	'profile_cosmetics',
 	'account_security',
 	'plutonium',
+	'shop',
 	'gift_inventory',
 	'privacy_safety',
 	'authorized_apps',
@@ -29,6 +31,7 @@ const USER_SETTINGS_TAB_TYPES = new Set<UserSettingsTabType>([
 	'accessibility',
 	'chat_settings',
 	'voice_video',
+	'game_overlay',
 	'notifications',
 	'desktop_settings',
 	'advanced_settings',

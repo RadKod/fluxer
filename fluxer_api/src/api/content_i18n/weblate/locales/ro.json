@@ -8,11 +8,18 @@
 	"billing.eu_withdrawal_waiver_checkout": "Dacă sunt un consumator din UE/SEE, îmi exprim consimțământul expres ca conținutul digital {product_name} {premium_tier_name} să fie furnizat imediat și recunosc că pierd dreptul legal de retragere odată ce accesul este acordat. Acest lucru nu afectează alte drepturi obligatorii ale consumatorilor. Vezi [Termenii și condițiile]({terms_url}).",
 	"bulk_message_deletion.complete": "Am terminat de șters mesajele tale. Am eliminat {message_count, plural, =0 {0 mesaje} one {# mesaj} few {# mesaje} other {# de mesaje}} din {channel_count, plural, =0 {0 locuri} one {# loc} few {# locuri} other {# de locuri}}.",
 	"content.virus_detected": "Acest fișier a fost marcat ca potențial nesigur și a fost eliminat.",
+	"feed.comment_removed_by_moderator": "Un moderator a eliminat unul dintre comentariile tale din feed pentru încălcarea Termenilor și condițiilor sau a regulilor comunității.",
+	"feed.post_removed_by_moderator": "Un moderator a eliminat una dintre postările tale din feed pentru încălcarea Termenilor și condițiilor sau a regulilor comunității.",
+	"feed.video_failed": "Videoclipul dvs. pentru flux nu a putut fi procesat, așa că nu a fost publicat.",
+	"feed.video_gone": "Postarea dvs. din flux a fost eliminată deoarece videoclipul nu mai este disponibil.",
+	"feed.video_rejected": "Videoclipul dvs. nu a trecut de verificările noastre de conținut, așa că nu este afișat în flux.",
+	"feed.video_too_large": "Videoclipul dvs. nu a fost publicat în flux deoarece depășește 500 MB.",
 	"guild.bulk_create.emoji_limit": "S-a atins numărul maxim de emojiuri ({limit}).",
 	"guild.bulk_create.sticker_limit": "S-a atins numărul maxim de stickere ({limit}).",
 	"guild.bulk_create.unknown_error": "A apărut o eroare necunoscută.",
 	"guild.default_category_text": "Canale text",
 	"guild.default_category_voice": "Canale de voce",
 	"guild.default_channel_text": "general",
-	"guild.default_channel_voice": "General"
+	"guild.default_channel_voice": "General",
+	"referral.reward_ready": "Recompensa dvs. pentru recomandare este gata. O puteți vedea în Setări → Recomandări."
 }

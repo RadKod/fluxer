@@ -85,3 +85,41 @@ normalize_voice_states_ignores_malformed_entries_test() ->
             #{<<"connection_id">> => undefined, <<"user_id">> => 84, <<"channel_id">> => 9}
         ])
     ).
+
+%% LiveKit's participant_left carries the token nonce of the connection that left. The
+%% guild voice server needs it to tell a stale event from the connection's newer token.
+disconnect_if_in_channel_forwards_token_nonce_test() ->
+    Self = self(),
+    VoicePid = spawn_link(fun() ->
+        receive
+            {'$gen_call', From, {disconnect_voice_user_if_in_channel, Req}} ->
+                Self ! {voice_request, Req},
+                gen:reply(From, #{success => true})
+        end
+    end),
+    meck:new(gateway_rpc_guild_routing, [passthrough, no_link]),
+    meck:new(gateway_rpc_guild_infra, [passthrough, no_link]),
+    meck:expect(gateway_rpc_guild_routing, guild_owner_scope, fun(_) -> local end),
+    meck:expect(gateway_rpc_guild_infra, with_voice_server, fun(_, Fun) ->
+        Fun(VoicePid, Self)
+    end),
+    try
+        ?assertEqual(
+            #{<<"success">> => true},
+            gateway_rpc_voice:execute_method(<<"voice.disconnect_user_if_in_channel">>, #{
+                <<"guild_id">> => <<"1">>,
+                <<"channel_id">> => <<"2">>,
+                <<"user_id">> => <<"3">>,
+                <<"connection_id">> => <<"conn">>,
+                <<"token_nonce">> => <<"nonce">>
+            })
+        ),
+        receive
+            {voice_request, Req} ->
+                ?assertEqual(<<"conn">>, maps:get(connection_id, Req)),
+                ?assertEqual(<<"nonce">>, maps:get(token_nonce, Req, undefined))
+        after 1000 -> ?assert(false)
+        end
+    after
+        meck:unload([gateway_rpc_guild_routing, gateway_rpc_guild_infra])
+    end.

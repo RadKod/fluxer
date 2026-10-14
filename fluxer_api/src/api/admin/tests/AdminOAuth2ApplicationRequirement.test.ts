@@ -2,11 +2,13 @@
 
 import {createAdminApiKey} from '@app/api/admin/tests/AdminTestUtils';
 import {createTestAccount, setUserACLs} from '@app/api/auth/tests/AuthTestUtils';
+import {createApplicationID} from '@app/api/BrandedTypes';
+import {ApplicationRepository} from '@app/api/oauth/repositories/ApplicationRepository';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {ADMIN_OAUTH2_APPLICATION_ID} from '@fluxer/constants/src/Core';
-import {beforeEach, describe, test} from 'vitest';
+import {beforeEach, describe, expect, test} from 'vitest';
 
 interface OAuth2TokenResponse {
 	token: string;
@@ -184,5 +186,13 @@ describe('Admin OAuth2 Application Requirement', () => {
 				.expect(HTTP_STATUS.FORBIDDEN, 'MISSING_ACL')
 				.execute();
 		});
+	});
+
+	// Micup: admins read this name on the OAuth2 consent screen and in their authorized apps.
+	test('names the admin OAuth2 application Micup Admin', async () => {
+		const application = await new ApplicationRepository().getApplication(
+			createApplicationID(ADMIN_OAUTH2_APPLICATION_ID),
+		);
+		expect(application?.name).toBe('Micup Admin');
 	});
 });

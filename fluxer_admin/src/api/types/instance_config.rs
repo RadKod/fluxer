@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+pub use crate::api::generated::types::VoiceNoiseSuppressionBackendSchema as NoiseSuppressionBackend;
+
 use super::{InstanceBillingResponse, InstanceBillingUpdateRequest};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -34,6 +36,10 @@ pub struct InstanceConfigResponse {
     pub channel_threads: ChannelThreadsConfigResponse,
     #[serde(default)]
     pub experiment_delivery: ExperimentDeliveryConfigResponse,
+    #[serde(default)]
+    pub voice_noise_suppression: VoiceNoiseSuppressionConfigResponse,
+    #[serde(default)]
+    pub voice_room: VoiceRoomConfigResponse,
     #[serde(default)]
     pub billing: InstanceBillingResponse,
 }
@@ -421,6 +427,7 @@ pub struct AppSetupConfigResponse {
 pub struct AppLegalConfigResponse {
     pub terms_url: Option<String>,
     pub privacy_url: Option<String>,
+    pub source_url: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -473,6 +480,8 @@ pub struct GatewayRolloutConfigResponse {
     pub max_concurrent_session_starts: u64,
     pub max_concurrent_guild_starts: u64,
     pub voice_e2ee_scope: VoiceE2eeScope,
+    #[serde(default)]
+    pub max_connections: u64,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -713,6 +722,126 @@ pub struct ChannelThreadsConfigUpdateRequest {
     pub excluded_user_ids: Option<Vec<String>>,
 }
 
+pub const VOICE_NS_MAX_GUILD_OVERRIDES: usize = 200;
+
+impl NoiseSuppressionBackend {
+    pub const ALL: [Self; 7] = [
+        Self::None,
+        Self::Standard,
+        Self::Gate,
+        Self::Speex,
+        Self::Rnnoise,
+        Self::Gtcrn,
+        Self::DeepFilter,
+    ];
+
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::None => "None (pass-through)",
+            Self::Standard => "Standard (WebRTC)",
+            Self::Gate => "Noise gate",
+            Self::Speex => "Speex",
+            Self::Rnnoise => "RNNoise",
+            Self::Gtcrn => "GTCRN",
+            Self::DeepFilter => "DeepFilterNet",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct VoiceNoiseSuppressionGuildOverride {
+    pub guild_id: String,
+    pub backend: NoiseSuppressionBackend,
+    #[serde(default)]
+    pub pipeline_v2: bool,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(default)]
+pub struct VoiceNoiseSuppressionConfigResponse {
+    pub enabled: bool,
+    pub pipeline_v2_enabled: bool,
+    pub pipeline_v2_all: bool,
+    pub pipeline_v2_gate_open_probability: f64,
+    pub pipeline_v2_gate_refresh_probability: f64,
+    pub pipeline_v2_gate_hangover_ms: u32,
+    pub pipeline_v2_gain_target_dbfs: i32,
+    pub pipeline_v2_gain_max_db: u32,
+    pub config_version: u64,
+    pub default_backend: NoiseSuppressionBackend,
+    pub enabled_backends: Vec<NoiseSuppressionBackend>,
+    pub allow_user_override: bool,
+    pub rollout_basis_points: u32,
+    pub rollout_salt: String,
+    pub included_user_ids: Vec<String>,
+    pub excluded_user_ids: Vec<String>,
+    pub guild_overrides: Vec<VoiceNoiseSuppressionGuildOverride>,
+    pub suppression_strength: u32,
+}
+
+impl Default for VoiceNoiseSuppressionConfigResponse {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            pipeline_v2_enabled: false,
+            pipeline_v2_all: false,
+            pipeline_v2_gate_open_probability: 0.6,
+            pipeline_v2_gate_refresh_probability: 0.35,
+            pipeline_v2_gate_hangover_ms: 400,
+            pipeline_v2_gain_target_dbfs: -26,
+            pipeline_v2_gain_max_db: 20,
+            config_version: 0,
+            default_backend: NoiseSuppressionBackend::Standard,
+            enabled_backends: NoiseSuppressionBackend::ALL.to_vec(),
+            allow_user_override: true,
+            rollout_basis_points: 0,
+            rollout_salt: "voice-ns-v1".to_owned(),
+            included_user_ids: Vec::new(),
+            excluded_user_ids: Vec::new(),
+            guild_overrides: Vec::new(),
+            suppression_strength: 80,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct VoiceNoiseSuppressionConfigUpdateRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pipeline_v2_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pipeline_v2_all: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pipeline_v2_gate_open_probability: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pipeline_v2_gate_refresh_probability: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pipeline_v2_gate_hangover_ms: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pipeline_v2_gain_target_dbfs: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pipeline_v2_gain_max_db: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_backend: Option<NoiseSuppressionBackend>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled_backends: Option<Vec<NoiseSuppressionBackend>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allow_user_override: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rollout_basis_points: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rollout_salt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub included_user_ids: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub excluded_user_ids: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub guild_overrides: Option<Vec<VoiceNoiseSuppressionGuildOverride>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub suppression_strength: Option<u32>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct ExperimentDeliveryConfigResponse {
@@ -735,6 +864,33 @@ pub struct ExperimentDeliveryConfigUpdateRequest {
     pub poll_interval_seconds: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub poll_jitter_percent: Option<u32>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[serde(default)]
+pub struct VoiceRoomConfigResponse {
+    pub rooms_enabled: bool,
+    pub games_enabled: bool,
+    pub room_cameras_enabled: bool,
+    pub default_room_theme: Option<String>,
+}
+
+pub const VOICE_ROOM_THEME_OPTIONS: &[(&str, &str)] = &[
+    ("gece-lounge", "Night Lounge"),
+    ("kahvehane", "Coffeehouse"),
+    ("oyun-odasi", "Game Room"),
+];
+
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct VoiceRoomConfigUpdateRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rooms_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub games_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_cameras_enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_room_theme: Option<Option<String>>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -838,6 +994,10 @@ pub struct InstanceConfigUpdateRequest {
     pub channel_threads: Option<ChannelThreadsConfigUpdateRequest>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub experiment_delivery: Option<ExperimentDeliveryConfigUpdateRequest>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub voice_noise_suppression: Option<VoiceNoiseSuppressionConfigUpdateRequest>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub voice_room: Option<VoiceRoomConfigUpdateRequest>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub billing: Option<InstanceBillingUpdateRequest>,
 }
@@ -1040,6 +1200,8 @@ pub struct AppLegalConfigUpdateRequest {
     pub terms_url: Option<Option<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub privacy_url: Option<Option<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_url: Option<Option<String>>,
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -1104,6 +1266,8 @@ pub struct GatewayRolloutConfigUpdateRequest {
     pub max_concurrent_guild_starts: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub voice_e2ee_scope: Option<VoiceE2eeScope>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_connections: Option<u64>,
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -1129,6 +1293,86 @@ mod tests {
     use super::*;
     use crate::api::generated::types as generated_types;
     use serde_json::json;
+
+    #[test]
+    fn gateway_rollout_connection_cap_defaults_to_env_for_older_responses() {
+        let response: GatewayRolloutConfigResponse = serde_json::from_value(json!({
+            "session_rollout_percentage": 100,
+            "session_rollout_mode": "modulo",
+            "guild_rollout_percentage": 100,
+            "rpc_request_timeout_ms": 10000,
+            "max_concurrent_session_starts": 512,
+            "max_concurrent_guild_starts": 256,
+            "voice_e2ee_scope": "guild_feature_only"
+        }))
+        .unwrap();
+        assert_eq!(response.max_connections, 0);
+    }
+
+    #[test]
+    fn noise_suppression_backend_choices_use_the_generated_wire_contract() {
+        assert_eq!(
+            serde_json::to_value(NoiseSuppressionBackend::ALL).expect("serializable backends"),
+            json!([
+                "none",
+                "standard",
+                "gate",
+                "speex",
+                "rnnoise",
+                "gtcrn",
+                "deep_filter"
+            ])
+        );
+        assert!(serde_json::from_value::<NoiseSuppressionBackend>(json!("deepfilter")).is_err());
+    }
+
+    #[test]
+    fn default_instance_experiment_config_matches_the_published_contract() {
+        let schema: serde_json::Value =
+            serde_json::from_str(include_str!("../../../openapi-admin.json"))
+                .expect("admin schema");
+        let noise = serde_json::from_value::<VoiceNoiseSuppressionConfigResponse>(json!({}))
+            .expect("default noise config");
+        let delivery = serde_json::from_value::<ExperimentDeliveryConfigResponse>(json!({}))
+            .expect("default delivery config");
+        let noise = serde_json::to_value(noise).expect("serializable noise config");
+        let delivery = serde_json::to_value(delivery).expect("serializable delivery config");
+        let generated_noise: generated_types::VoiceNoiseSuppressionConfigResponse =
+            serde_json::from_value(noise.clone()).expect("generated noise config contract");
+        let generated_delivery: generated_types::ExperimentDeliveryConfigResponse =
+            serde_json::from_value(delivery.clone()).expect("generated delivery config contract");
+        assert_eq!(
+            serde_json::to_value(generated_noise).expect("serializable generated noise config"),
+            noise
+        );
+        assert_eq!(
+            serde_json::to_value(generated_delivery)
+                .expect("serializable generated delivery config"),
+            delivery
+        );
+        let voice_room = serde_json::to_value(VoiceRoomConfigResponse::default())
+            .expect("serializable voice room config");
+        let generated_voice_room: generated_types::VoiceRoomConfigResponse =
+            serde_json::from_value(voice_room.clone())
+                .expect("generated voice room config contract");
+        assert_eq!(
+            serde_json::to_value(generated_voice_room)
+                .expect("serializable generated voice room config"),
+            voice_room
+        );
+        for (name, value) in [
+            ("VoiceNoiseSuppressionConfigResponse", noise),
+            ("ExperimentDeliveryConfigResponse", delivery),
+            ("VoiceRoomConfigResponse", voice_room),
+        ] {
+            for (field, value) in value.as_object().expect("config object") {
+                assert_eq!(
+                    value, &schema["components"]["schemas"][name]["properties"][field]["default"],
+                    "{name}.{field}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn default_instance_config_sections_match_the_published_contract() {
@@ -1178,11 +1422,22 @@ mod tests {
                 .expect("serializable generated delivery config"),
             delivery
         );
+        let voice_room = serde_json::to_value(VoiceRoomConfigResponse::default())
+            .expect("serializable voice room config");
+        let generated_voice_room: generated_types::VoiceRoomConfigResponse =
+            serde_json::from_value(voice_room.clone())
+                .expect("generated voice room config contract");
+        assert_eq!(
+            serde_json::to_value(generated_voice_room)
+                .expect("serializable generated voice room config"),
+            voice_room
+        );
         for (name, value) in [
             ("DomainMigrationConfigResponse", domain_migration),
             ("PlutoniumPageConfigResponse", plutonium_page),
             ("CaptchaConfigResponse", captcha),
             ("ExperimentDeliveryConfigResponse", delivery),
+            ("VoiceRoomConfigResponse", voice_room),
         ] {
             for (field, value) in value.as_object().expect("config object") {
                 assert_eq!(
@@ -1190,6 +1445,33 @@ mod tests {
                     "{name}.{field}"
                 );
             }
+        }
+    }
+
+    #[test]
+    fn voice_room_theme_options_match_schema_and_updates_preserve_null() {
+        let schema: serde_json::Value =
+            serde_json::from_str(include_str!("../../../openapi-admin.json"))
+                .expect("valid admin schema");
+        let ids: Vec<_> = VOICE_ROOM_THEME_OPTIONS.iter().map(|(id, _)| *id).collect();
+        assert_eq!(
+            serde_json::json!(ids),
+            schema["components"]["schemas"]["VoiceRoomConfigResponse"]["properties"]["default_room_theme"]
+                ["enum"]
+        );
+        assert_eq!(
+            serde_json::to_value(VoiceRoomConfigUpdateRequest::default()).unwrap(),
+            serde_json::json!({})
+        );
+        for theme in [Some("kahvehane".to_owned()), None] {
+            let update = VoiceRoomConfigUpdateRequest {
+                default_room_theme: Some(theme.clone()),
+                ..Default::default()
+            };
+            let json = serde_json::to_value(update).unwrap();
+            assert_eq!(json, serde_json::json!({"default_room_theme": theme}));
+            serde_json::from_value::<generated_types::VoiceRoomConfigUpdateRequest>(json)
+                .expect("generated theme update contract");
         }
     }
 
@@ -1232,6 +1514,31 @@ mod tests {
         );
         assert_eq!(
             serde_json::to_value(PlutoniumPageConfigUpdateRequest::default())
+                .expect("serializable update"),
+            json!({})
+        );
+    }
+
+    #[test]
+    fn noise_suppression_update_preserves_empty_lists_and_omitted_fields() {
+        let update = VoiceNoiseSuppressionConfigUpdateRequest {
+            enabled_backends: Some(Vec::new()),
+            included_user_ids: Some(Vec::new()),
+            excluded_user_ids: Some(Vec::new()),
+            guild_overrides: Some(Vec::new()),
+            ..Default::default()
+        };
+        let value = serde_json::to_value(update).expect("serializable update");
+        serde_json::from_value::<generated_types::VoiceNoiseSuppressionConfigUpdateRequest>(
+            value.clone(),
+        )
+        .expect("generated update contract");
+        assert_eq!(
+            value,
+            json!({"enabled_backends": [], "included_user_ids": [], "excluded_user_ids": [], "guild_overrides": []})
+        );
+        assert_eq!(
+            serde_json::to_value(VoiceNoiseSuppressionConfigUpdateRequest::default())
                 .expect("serializable update"),
             json!({})
         );

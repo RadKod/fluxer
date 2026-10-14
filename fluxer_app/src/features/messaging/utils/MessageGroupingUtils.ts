@@ -5,6 +5,7 @@ import type {Channel} from '@app/features/channel/models/Channel';
 import type {Message} from '@app/features/messaging/models/MessagingMessage';
 import type {ChannelMessages} from '@app/features/messaging/state/ChannelMessages';
 import LocalUserSpamOverride from '@app/features/moderation/state/LocalUserSpamOverride';
+import Relationships from '@app/features/relationship/state/Relationships';
 import * as DateUtils from '@app/features/user/utils/DateFormatting';
 import {MessageFlags, MessageTypes} from '@fluxer/constants/src/ChannelConstants';
 import type {ValueOf} from '@fluxer/constants/src/ValueOf';
@@ -100,8 +101,9 @@ export function getCollapsedGroupType(
 	_channel: Channel,
 	message: Message,
 	treatSpam: boolean,
+	blocked = Relationships.isBlocked(message.author.id),
 ): ChannelStreamType | null {
-	if (message.blocked) {
+	if (blocked) {
 		return ChannelStreamType.MESSAGE_GROUP_BLOCKED;
 	}
 	if (

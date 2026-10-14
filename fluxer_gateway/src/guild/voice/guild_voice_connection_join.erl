@@ -182,6 +182,8 @@ request_token_and_build(Context, Member, ParsedViewerStreamKey, State, GuildId, 
                 latitude => Latitude,
                 longitude => Longitude
             });
+        {error, username_selection_required} ->
+            {reply, gateway_errors:error(username_selection_required), State};
         {error, _Reason} ->
             {reply, gateway_errors:error(voice_token_failed), State}
     end.
@@ -246,7 +248,6 @@ voice_build_fields(Build) ->
         token_nonce => maps:get(token_nonce, Build),
         session_id => normalize_context_session_id(Context)
     }.
-
 -spec e2ee_capable(context(), guild_state()) -> boolean().
 e2ee_capable(Context, State) ->
     guild_voice_e2ee:context_e2ee_capable_guild(Context, State).
@@ -309,3 +310,29 @@ build_pending_metadata(Build) ->
         created_at => Now,
         expires_at => Now + 30000
     }.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+selection_token_error_does_not_create_pending_connection_test() ->
+    meck:new(voice_utils, [passthrough, no_link, non_strict]),
+    meck:new(guild_voice_connection_token, [passthrough, no_link, non_strict]),
+    meck:expect(voice_utils, compute_voice_permissions, fun(_, _, _) -> #{} end),
+    meck:expect(
+        guild_voice_connection_token,
+        request_voice_token,
+        fun(_, _, _, _, _, _, _, _) -> {error, username_selection_required} end
+    ),
+    State = #{voice_states => #{}, pending_voice_connections => #{}},
+    Context = #{user_id => 10, channel_id => 100},
+    try
+        ?assertEqual(
+            {reply, gateway_errors:error(username_selection_required), State},
+            request_token_and_build(Context, #{}, [], State, 999, <<"999">>)
+        )
+    after
+        meck:unload(guild_voice_connection_token),
+        meck:unload(voice_utils)
+    end.
+
+-endif.

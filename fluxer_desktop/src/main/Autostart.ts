@@ -20,11 +20,15 @@ import {GENERATED_MARKER} from '@electron/main/LinuxDesktopEntry';
 import {getStableLinuxLaunchPath} from '@electron/main/LinuxLaunchPath';
 import {isFlatpakRuntime} from '@electron/main/LinuxSandbox';
 import {t} from '@electron/main/MainI18n';
-import {app, ipcMain} from 'electron';
+import {loadWinShell} from '@electron/main/WinShell';
+import {app, ipcMain, shell} from 'electron';
 import log from 'electron-log';
 
 const requireModule = createRequire(import.meta.url);
 const AUTOSTART_INITIALIZED_FILE = 'autostart-initialized-v2';
+const STORE_AUTOSTART_PROMPT_FILE = 'store-autostart-prompt-v1';
+// TaskId of the StartupTask in packaging/windows/store/extensions.xml (Enabled="false").
+const STORE_STARTUP_TASK_ID = 'MicupStartup';
 const FLATPAK_AUTOSTART_STATE_FILE = 'flatpak-autostart-v1.json';
 
 function getInitializedFilePath(): string {
@@ -77,23 +81,18 @@ async function writeFlatpakAutostartState(enabled: boolean): Promise<void> {
 
 const isMac = process.platform === 'darwin';
 const isWindows = process.platform === 'win32';
+const isWindowsStore = isWindows && process.windowsStore === true;
 const isLinux = process.platform === 'linux';
 const APP_NAME = DESKTOP_APP_NAME;
 const LINUX_DESKTOP_FILE_BASENAME = `${LINUX_DESKTOP_ENTRY_ID}.desktop`;
 const LINUX_STARTUP_WM_CLASS = LINUX_DESKTOP_ENTRY_ID;
+const WINDOWS_STARTUP_APPS_SETTINGS_URL = 'ms-settings:startupapps';
 const LEGACY_LINUX_DESKTOP_FILE_BASENAME = `${LEGACY_LINUX_DESKTOP_ENTRY_ID}.desktop`;
 
 interface AutoLaunchConfig {
 	name: string;
 	path: string;
 	args: Array<string>;
-}
-
-interface WinShellBinding {
-	setCurrentUserRunValue: ((options: {name: string; command: string}) => Promise<void>) | null;
-	deleteCurrentUserRunValue: ((name: string) => Promise<void>) | null;
-	getCurrentUserRunValue: ((name: string) => Promise<string | null>) | null;
-	loadError: Error | null;
 }
 
 interface LinuxPortalsBinding {
@@ -108,23 +107,7 @@ interface LinuxPortalsBinding {
 	loadError: Error | null;
 }
 
-let cachedWinShellBinding: WinShellBinding | null | undefined;
 let cachedLinuxPortalsBinding: LinuxPortalsBinding | null | undefined;
-
-function loadWinShell(): WinShellBinding | null {
-	if (!isWindows) return null;
-	if (cachedWinShellBinding !== undefined) return cachedWinShellBinding;
-	try {
-		cachedWinShellBinding = requireModule('@fluxer/win-shell') as WinShellBinding;
-	} catch (error) {
-		log.warn('[Autostart] Failed to load @fluxer/win-shell:', error);
-		cachedWinShellBinding = null;
-	}
-	if (cachedWinShellBinding?.loadError) {
-		log.warn('[Autostart] @fluxer/win-shell load error:', cachedWinShellBinding.loadError);
-	}
-	return cachedWinShellBinding;
-}
 
 function loadLinuxPortals(): LinuxPortalsBinding | null {
 	if (!isLinux || getLinuxPortalsMode(process.argv) === 'off') return null;
@@ -394,7 +377,7 @@ function buildLinuxDesktopFileContents(): string {
 		GENERATED_MARKER,
 		'Type=Application',
 		`Name=${escapeDesktopEntry(APP_NAME)}`,
-		'Comment=Fluxer',
+		`Comment=${escapeDesktopEntry(APP_NAME)}`,
 		`Exec=${escapeDesktopEntry(execLine)}`,
 		`TryExec=${escapeDesktopEntry(execPath)}`,
 		'Terminal=false',
@@ -512,7 +495,50 @@ function isLinuxAutostartEnabled(): boolean {
 	return linuxDesktopEntryTargetsExistingCommand(entry);
 }
 
+async function openWindowsStartupAppsSettings(): Promise<void> {
+	await shell.openExternal(WINDOWS_STARTUP_APPS_SETTINGS_URL);
+}
+
+async function storeStartupTask(enabled?: boolean): Promise<string | null> {
+	const binding = loadWinShell();
+	try {
+		const state =
+			enabled === undefined
+				? await binding?.getStartupTaskState?.(STORE_STARTUP_TASK_ID)
+				: await binding?.setStartupTaskEnabled?.(STORE_STARTUP_TASK_ID, enabled);
+		return state ?? null;
+	} catch (error) {
+		log.warn('[Autostart] MSIX startup task call failed:', error);
+		return null;
+	}
+}
+
+function isStartupTaskOn(state: string | null): boolean {
+	return state === 'enabled' || state === 'enabled-by-policy';
+}
+
+async function initializeStoreAutostart(): Promise<void> {
+	if (!isWindowsStore || isInitialized()) return;
+	const state = await storeStartupTask();
+	if (state === null || state === 'unknown') return;
+	try {
+		// Preserve a 1.0.6 prompt refusal, even when Windows only reports Disabled.
+		const prompted = fs.existsSync(path.join(app.getPath('userData'), STORE_AUTOSTART_PROMPT_FILE));
+		// Claim before requesting enable so a failed request or a later user choice is never retried.
+		fs.writeFileSync(getInitializedFilePath(), '1', {flag: 'wx'});
+		if (state === 'disabled' && !prompted) await storeStartupTask(true);
+	} catch (error) {
+		log.warn('[Autostart] Failed to claim Store startup initialization:', error);
+	}
+}
+
 async function enableAutostart(): Promise<void> {
+	if (isWindowsStore) {
+		if (!loadWinShell()) return;
+		// Windows keeps a task the user turned off in Settings or Task Manager off; only they can turn it back on there.
+		if (!isStartupTaskOn(await storeStartupTask(true))) await openWindowsStartupAppsSettings();
+		return;
+	}
 	if (isPortableMode()) {
 		log.info('[Autostart] Skipping enable: portable mode is active');
 		return;
@@ -557,6 +583,11 @@ async function enableAutostart(): Promise<void> {
 }
 
 async function disableAutostart(): Promise<void> {
+	if (isWindowsStore) {
+		if (!loadWinShell()) return;
+		if ((await storeStartupTask(false)) === null) await openWindowsStartupAppsSettings();
+		return;
+	}
 	if (isMac) {
 		app.setLoginItemSettings({
 			openAtLogin: false,
@@ -592,6 +623,7 @@ async function disableAutostart(): Promise<void> {
 }
 
 async function isAutostartEnabled(): Promise<boolean> {
+	if (isWindowsStore) return isStartupTaskOn(await storeStartupTask());
 	if (isPortableMode()) return false;
 	if (isMac) {
 		const settings = app.getLoginItemSettings();
@@ -663,6 +695,7 @@ export function rewriteLegacyLinuxAutostartContents(contents: string, execPath: 
 async function migrateLegacyLinuxAutostartEntry(): Promise<void> {
 	if (!isLinux || isFlatpakRuntime() || isPortableMode()) return;
 	const legacyPath = getLegacyLinuxDesktopFilePath();
+	if (legacyPath === getLinuxDesktopFilePath()) return;
 	let contents: string;
 	try {
 		contents = await fs.promises.readFile(legacyPath, 'utf8');
@@ -686,6 +719,7 @@ async function migrateLegacyLinuxAutostartEntry(): Promise<void> {
 }
 
 export function registerAutostartHandlers(): void {
+	void initializeStoreAutostart();
 	void migrateLegacyLinuxAutostartEntry().then(repairLinuxAutostartEntry);
 	ipcMain.handle('autostart-enable', async (): Promise<void> => {
 		await enableAutostart();
@@ -697,9 +731,12 @@ export function registerAutostartHandlers(): void {
 		return isAutostartEnabled();
 	});
 	ipcMain.handle('autostart-is-initialized', (): boolean => {
-		return isInitialized();
+		return isWindowsStore || isInitialized();
 	});
 	ipcMain.handle('autostart-mark-initialized', (): void => {
 		markInitialized();
+	});
+	ipcMain.handle('autostart-claim-store-prompt', async (): Promise<boolean> => {
+		return false;
 	});
 }

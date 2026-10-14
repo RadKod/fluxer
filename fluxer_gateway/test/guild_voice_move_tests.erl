@@ -5,11 +5,13 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Every move here passes <<"old-conn">>, and the API mints the token with the connection
+%% id it is given (VoiceService: `providedConnectionId || generateConnectionId()`).
 token_rpc_data() ->
     #{
         <<"token">> => <<"tok">>,
         <<"endpoint">> => <<"wss://voice.example">>,
-        <<"connectionId">> => <<"new-conn">>,
+        <<"connectionId">> => <<"old-conn">>,
         <<"regionId">> => <<"us-east">>,
         <<"serverId">> => <<"voice-1">>
     }.
@@ -147,11 +149,11 @@ client_move_success_scenario() ->
     ?assertEqual(true, maps:get(success, Reply)),
     ?assertEqual(true, maps:get(needs_token, Reply)),
     ?assertEqual(<<"tok">>, maps:get(token, Reply)),
-    ?assertEqual(<<"new-conn">>, maps:get(connection_id, Reply)),
+    ?assertEqual(<<"old-conn">>, maps:get(connection_id, Reply)),
     ?assertNot(maps:is_key(<<"old-conn">>, maps:get(voice_states, NewState))),
     Pending = maps:get(pending_voice_connections, NewState),
-    ?assert(maps:is_key(<<"new-conn">>, Pending)),
-    Meta = maps:get(<<"new-conn">>, Pending),
+    Meta = maps:get(<<"old-conn">>, Pending),
+    ?assertEqual(200, maps:get(channel_id, Meta)),
     ?assert(is_binary(maps:get(token_nonce, Meta))),
     ?assert(maps:get(expires_at, Meta) > maps:get(created_at, Meta)),
     ?assertEqual(
@@ -174,11 +176,11 @@ client_move_reply_shape_scenario() ->
     ?assertNot(maps:is_key(<<"latitude">>, ReplyVS)),
     ?assertNot(maps:is_key(<<"longitude">>, ReplyVS)),
     ?assertEqual(<<"200">>, maps:get(<<"channel_id">>, ReplyVS)),
-    ?assertEqual(<<"new-conn">>, maps:get(<<"connection_id">>, ReplyVS)),
+    ?assertEqual(<<"old-conn">>, maps:get(<<"connection_id">>, ReplyVS)),
     ?assertEqual(true, maps:get(<<"self_deaf">>, ReplyVS)),
     assert_complete_voice_state_fields(ReplyVS),
     PendingVS = maps:get(
-        voice_state, maps:get(<<"new-conn">>, maps:get(pending_voice_connections, NewState))
+        voice_state, maps:get(<<"old-conn">>, maps:get(pending_voice_connections, NewState))
     ),
     ?assertEqual(<<"1.0">>, maps:get(<<"latitude">>, PendingVS)).
 
@@ -320,7 +322,7 @@ moderator_move_pending_scenario() ->
         sessions => #{<<"sess1">> => #{pid => self(), user_id => 10}}
     },
     {ConnId, Meta} = send_moderator_move_update(StateData),
-    ?assertEqual(<<"new-conn">>, ConnId),
+    ?assertEqual(<<"old-conn">>, ConnId),
     ?assert(is_binary(maps:get(token_nonce, Meta))),
     ?assert(is_integer(maps:get(created_at, Meta))),
     ?assert(maps:get(expires_at, Meta) > maps:get(created_at, Meta)),
@@ -341,7 +343,7 @@ moderator_move_pending_scenario() ->
     ),
     Payload = receive_voice_server_update(),
     ?assertEqual(<<"tok">>, maps:get(<<"token">>, Payload)),
-    ?assertEqual(<<"new-conn">>, maps:get(<<"connection_id">>, Payload)),
+    ?assertEqual(<<"old-conn">>, maps:get(<<"connection_id">>, Payload)),
     assert_pending_restores(ConnId, Meta).
 
 assert_pending_restores(ConnId, Meta) ->
@@ -489,3 +491,181 @@ self_move_revokes_lease_scenario() ->
     ?assertNot(guild_virtual_channel_access:has_virtual_access(10, 100, NewState)),
     DeletePayload = receive_channel_dispatch(channel_delete),
     ?assertEqual(<<"100">>, maps:get(<<"id">>, DeletePayload)).
+
+%% The API mints a move token with the connection id it is given
+%% (VoiceService: `providedConnectionId || generateConnectionId()`), so the pending entry
+%% for the target channel shares its key with the connection that LiveKit then reports
+%% as having left the source channel's room. Both moves store it through the real path.
+moderator_move_pending_survives_source_room_participant_left_test() ->
+    with_token_rpc({ok, token_rpc_data()}, fun() ->
+        with_guild_voice_server_stub(fun moderator_move_source_left_scenario/0)
+    end).
+
+moderator_move_source_left_scenario() ->
+    ExistingVS = existing_voice_state(<<"old-conn">>, 10, <<"100">>),
+    VoiceStates = #{<<"old-conn">> => ExistingVS},
+    {reply, _, MovedState} = guild_voice_move_execute:handle_move(
+        VoiceStates, 200, 10, 10, <<"old-conn">>, VoiceStates, base_move_state(VoiceStates)
+    ),
+    {ConnId, Meta} = send_moderator_move_update(base_move_state(#{})),
+    {reply, ok, #{pending_voice_connections := Pending}} = guild_voice_server:handle_call(
+        {store_pending_connection, ConnId, Meta},
+        {self(), make_ref()},
+        #{pending_voice_connections => #{}}
+    ),
+    assert_source_left_then_target_confirms(MovedState#{pending_voice_connections => Pending}).
+
+self_move_pending_survives_source_room_participant_left_test() ->
+    with_token_rpc({ok, token_rpc_data()}, fun self_move_source_left_scenario/0).
+
+self_move_source_left_scenario() ->
+    ExistingVS = existing_voice_state(<<"old-conn">>, 10, <<"100">>),
+    VoiceStates = #{<<"old-conn">> => ExistingVS},
+    {_Reply, MovedState} = run_client_move(VoiceStates, base_move_state(VoiceStates)),
+    assert_source_left_then_target_confirms(MovedState).
+
+assert_source_left_then_target_confirms(PendingState) ->
+    #{<<"old-conn">> := #{channel_id := 200, token_nonce := Nonce}} =
+        maps:get(pending_voice_connections, PendingState),
+    {reply, #{success := true}, AfterSourceLeft} =
+        guild_voice:disconnect_voice_user_if_in_channel(
+            #{user_id => 10, expected_channel_id => 100, connection_id => <<"old-conn">>},
+            PendingState
+        ),
+    {reply, Reply, ConfirmedState} =
+        guild_voice_connection:confirm_voice_connection_from_livekit(
+            #{connection_id => <<"old-conn">>, token_nonce => Nonce}, AfterSourceLeft
+        ),
+    ?assertEqual(#{success => true}, Reply),
+    MovedVS = maps:get(<<"old-conn">>, maps:get(voice_states, ConfirmedState)),
+    ?assertEqual(<<"200">>, maps:get(<<"channel_id">>, MovedVS)).
+
+source_room_participant_left_clears_pending_join_in_that_channel_test() ->
+    State = (base_move_state(#{}))#{
+        pending_voice_connections => #{<<"join-conn">> => #{user_id => 10, channel_id => 100}}
+    },
+    {reply, #{success := true}, NewState} = guild_voice:disconnect_voice_user_if_in_channel(
+        #{user_id => 10, expected_channel_id => 100, connection_id => <<"join-conn">>}, State
+    ),
+    ?assertEqual(#{}, maps:get(pending_voice_connections, NewState)).
+
+%% A connection that leaves the target room before LiveKit confirms it abandons the move.
+%% Its transition flags must go with its pending entry, as the pending sweep does.
+abandoned_move_pending_clears_transition_flags_test() ->
+    ExistingVS = existing_voice_state(<<"old-conn">>, 10, <<"100">>),
+    VoiceStates = #{<<"old-conn">> => ExistingVS},
+    {reply, _, MovedState} = guild_voice_move_execute:handle_move(
+        VoiceStates, 200, 10, 10, <<"old-conn">>, VoiceStates, base_move_state(VoiceStates)
+    ),
+    ?assert(guild_virtual_channel_access:is_move_pending(10, 200, MovedState)),
+    PendingState = MovedState#{
+        pending_voice_connections => #{
+            <<"old-conn">> => target_channel_pending(<<"move-nonce">>)
+        }
+    },
+    {reply, #{success := true}, NewState} = guild_voice:disconnect_voice_user_if_in_channel(
+        #{user_id => 10, expected_channel_id => 200, connection_id => <<"old-conn">>},
+        PendingState
+    ),
+    ?assertEqual(#{}, maps:get(pending_voice_connections, NewState)),
+    ?assertNot(guild_virtual_channel_access:is_move_pending(10, 200, NewState)),
+    ?assertNot(guild_virtual_channel_access:has_preserve(10, 200, NewState)),
+    ?assertNot(guild_virtual_channel_access:is_pending_join(10, 200, NewState)).
+
+%% A -> B -> A: LiveKit can deliver the first participant_left for A after the user was
+%% moved back to A. It carries the older token's nonce and must not drop the pending join
+%% the move back stored for A.
+move_back_pending_survives_stale_participant_left_test() ->
+    with_token_rpc({ok, token_rpc_data()}, fun move_back_scenario/0).
+
+move_back_scenario() ->
+    VoiceStates = #{<<"old-conn">> => existing_voice_state(<<"old-conn">>, 10, <<"100">>)},
+    {_, InB} = run_client_move(VoiceStates, base_move_state(VoiceStates)),
+    ConfirmedB = confirm_pending(InB),
+    {reply, _, BackToA} = guild_voice_connection_move:handle_client_channel_move(
+        move_context(),
+        100,
+        test_member(10),
+        <<"old-conn">>,
+        maps:get(voice_states, ConfirmedB),
+        ConfirmedB
+    ),
+    StaleLeftA = #{
+        user_id => 10,
+        expected_channel_id => 100,
+        connection_id => <<"old-conn">>,
+        token_nonce => <<"first-join-nonce">>
+    },
+    {reply, #{success := true}, AfterStaleLeft} =
+        guild_voice:disconnect_voice_user_if_in_channel(StaleLeftA, BackToA),
+    ?assertMatch(
+        #{<<"old-conn">> := #{channel_id := 100}},
+        maps:get(pending_voice_connections, AfterStaleLeft)
+    ),
+    ConfirmedA = confirm_pending(AfterStaleLeft),
+    MovedVS = maps:get(<<"old-conn">>, maps:get(voice_states, ConfirmedA)),
+    ?assertEqual(<<"100">>, maps:get(<<"channel_id">>, MovedVS)).
+
+confirm_pending(State) ->
+    #{<<"old-conn">> := #{token_nonce := Nonce}} = maps:get(pending_voice_connections, State),
+    {reply, #{success := true}, NewState} =
+        guild_voice_connection:confirm_voice_connection_from_livekit(
+            #{connection_id => <<"old-conn">>, token_nonce => Nonce}, State
+        ),
+    NewState.
+
+participant_left_with_the_pending_token_nonce_clears_it_test() ->
+    State = (base_move_state(#{}))#{
+        pending_voice_connections => #{<<"old-conn">> => target_channel_pending(<<"n1">>)}
+    },
+    Left = #{
+        user_id => 10,
+        expected_channel_id => 200,
+        connection_id => <<"old-conn">>,
+        token_nonce => <<"n1">>
+    },
+    {reply, #{success := true}, NewState} =
+        guild_voice:disconnect_voice_user_if_in_channel(Left, State),
+    ?assertEqual(#{}, maps:get(pending_voice_connections, NewState)).
+
+%% The same through the guild voice server, which is where the RPC lands in production.
+voice_server_keeps_pending_on_stale_nonce_and_clears_it_on_match_test() ->
+    Stub = guild_server_stub(base_move_state(#{}), self()),
+    ServerState = #{
+        guild_id => 999,
+        guild_pid => Stub,
+        voice_states => #{},
+        pending_voice_connections => #{<<"old-conn">> => target_channel_pending(<<"n2">>)},
+        recently_disconnected_voice_states => #{},
+        e2ee_room_keys => #{}
+    },
+    Left = fun(Nonce) ->
+        {disconnect_voice_user_if_in_channel, #{
+            user_id => 10,
+            expected_channel_id => 200,
+            connection_id => <<"old-conn">>,
+            token_nonce => Nonce
+        }}
+    end,
+    {reply, #{success := true}, AfterStale} =
+        guild_voice_server:handle_call(Left(<<"n1">>), {self(), make_ref()}, ServerState),
+    ?assertMatch(
+        #{<<"old-conn">> := #{token_nonce := <<"n2">>}},
+        maps:get(pending_voice_connections, AfterStale)
+    ),
+    {reply, #{success := true}, AfterMatch} =
+        guild_voice_server:handle_call(Left(<<"n2">>), {self(), make_ref()}, AfterStale),
+    ?assertEqual(#{}, maps:get(pending_voice_connections, AfterMatch)).
+
+target_channel_pending(Nonce) ->
+    Now = erlang:system_time(millisecond),
+    #{
+        user_id => 10,
+        guild_id => 999,
+        channel_id => 200,
+        session_id => <<"sess1">>,
+        member => test_member(10),
+        token_nonce => Nonce,
+        created_at => Now,
+        expires_at => Now + 30000
+    }.

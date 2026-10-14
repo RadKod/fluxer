@@ -23,6 +23,7 @@ import {
 	THREAD_NAME_MIN_LENGTH,
 	THREAD_RATE_LIMIT_PER_USER_MAX,
 } from '@fluxer/constants/src/ThreadConstants';
+import {VOICE_ROOM_THEME_IDS} from '@fluxer/constants/src/VoiceRoomThemes';
 import {ChannelNicknameOverrides} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
 import {
 	ForumChannelRequestFields,
@@ -143,6 +144,12 @@ const ChannelUpdateCommon = ChannelCommonBase.extend({
 		.nullish()
 		.describe(
 			`Voice region ID for the voice channel (${RTC_REGION_ID_MIN_LENGTH}-${RTC_REGION_ID_MAX_LENGTH} characters)`,
+		),
+	room_theme: z
+		.enum(['none', ...VOICE_ROOM_THEME_IDS])
+		.nullish()
+		.describe(
+			'Room theme for a voice channel; null inherits the default, none disables it. Ignored on other channel types',
 		),
 });
 const ChannelCreateTextRequest = ChannelCreateCommon.extend({

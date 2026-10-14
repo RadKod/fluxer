@@ -517,3 +517,12 @@
 :global(html.mobile-layout) .formFooter button {
 	width: 100% !important;
 }
+
+/* Micup: in the coal and dark themes a window is the chat box (--background-primary), not the rail's near-black.
+   The token is re-scoped for the window, so its header, footer and every child painted with it follow; the rail
+   keeps its own. The palette gives --background-secondary-alt the same color, so raised boxes and hovers inside
+   take one step up (--control-button-hover-bg), the order upstream coal has (surface darker than secondary-alt). */
+:global(html:is(.theme-coal, .theme-dark)) .root {
+	--background-secondary: var(--background-primary);
+	--background-secondary-alt: var(--control-button-hover-bg);
+}

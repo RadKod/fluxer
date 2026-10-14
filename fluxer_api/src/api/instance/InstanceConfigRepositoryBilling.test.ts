@@ -168,8 +168,8 @@ describe('InstanceConfigRepository billing and premium branding', () => {
 			prices: {GBP: GBP_PRICES},
 			country_currencies: null,
 			legacy_prices: null,
-			billing_active: true,
-			stripe_serviceable: true,
+			billing_active: false,
+			stripe_serviceable: false,
 			catalog_mode: 'operator',
 			webhook_url: `${Config.endpoints.apiPublic.replace(/\/+$/, '')}/stripe/webhook`,
 		});

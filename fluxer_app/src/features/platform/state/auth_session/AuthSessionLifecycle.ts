@@ -207,6 +207,9 @@ export class AuthSessionLifecycle {
 							await this.checkpoints.captureSyncedUserSettings(checkpoint);
 							await this.dependencies.resetSyncedUserSettings(reason);
 						}
+						if (cleanupPreviousGateway) {
+							await this.dependencies.captureForegroundFeedSnapshot(previousAccountKey);
+						}
 						const runtime = await this.checkpoints.prepareAccountScope(
 							account.instance,
 							account.storageKey,
@@ -331,6 +334,10 @@ export class AuthSessionLifecycle {
 							await this.checkpoints.captureSyncedUserSettings(checkpoint);
 							await this.dependencies.resetSyncedUserSettings(reason);
 							await this.accountPersistence.stash(nextAccount);
+							const previousAccountKey = this.state.getCurrentAccountKey();
+							if (previousAccountKey !== null) {
+								await this.dependencies.captureForegroundFeedSnapshot(previousAccountKey);
+							}
 							const runtime = await this.checkpoints.prepareAccountScope(
 								nextAccount.instance,
 								nextAccount.storageKey,

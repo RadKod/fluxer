@@ -5,7 +5,7 @@ import {PASSWORD_MANAGER_IGNORE_ATTRIBUTES} from '@app/features/platform/utils/P
 import {Combobox} from '@app/features/ui/components/form/FormCombobox';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import {isMobileExperienceEnabled} from '@app/features/ui/utils/MobileExperience';
-import {getCurrentLocale} from '@app/features/user/utils/LocaleUtils';
+import {getCurrentOrDetectedLocale} from '@app/features/user/utils/LocaleUtils';
 import {getDateFieldOrder, getMonthNames} from '@fluxer/date_utils/src/DateIntrospection';
 import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
@@ -139,7 +139,7 @@ export const DateOfBirthField = observer(function DateOfBirthField({
 	const monthPlaceholder = i18n._(MONTH_DESCRIPTOR);
 	const dayPlaceholder = i18n._(DAY_DESCRIPTOR);
 	const yearPlaceholder = i18n._(YEAR_DESCRIPTOR);
-	const locale = getCurrentLocale();
+	const locale = getCurrentOrDetectedLocale();
 	const fieldOrder = useMemo(() => getDateFieldOrder(locale), [locale]);
 	const dateOptions = useMemo(() => {
 		const currentDate = new Date();

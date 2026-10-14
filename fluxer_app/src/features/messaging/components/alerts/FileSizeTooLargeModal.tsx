@@ -37,13 +37,13 @@ const FILE_SIZE_LIMIT_EXCEEDED_DESCRIPTOR = msg({
 });
 const INSTANCE_ADMIN_LIMIT_DESCRIPTOR = msg({
 	message: 'This limit is configured by your instance administrator.',
-	comment: 'Extra file-too-large alert sentence shown when premium upload-limit upgrades are unavailable.',
+	comment: 'Extra file-too-large alert sentence shown when Plus upload-limit upgrades are unavailable.',
 });
 const PREMIUM_FILE_SIZE_UPSELL_DESCRIPTOR = msg({
 	message:
 		'With {premiumProductName}, your per-file upload limit increases to {fileSizeLimit}. You also get animated avatars, longer messages, and many other {premiumProductName} perks.',
 	comment:
-		'Premium upsell sentence in the file-too-large alert. premiumProductName is the paid product name; fileSizeLimit is a localized file size.',
+		'Plus upsell sentence in the file-too-large alert. premiumProductName is the paid product name; fileSizeLimit is a localized file size.',
 });
 
 interface FileSizeTooLargeModalProps {

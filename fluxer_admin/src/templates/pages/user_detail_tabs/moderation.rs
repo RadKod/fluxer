@@ -118,9 +118,38 @@ pub fn moderation_tab(
     let can_shred_messages = acl::has_permission(admin_acls, acl::MESSAGE_SHRED);
     html! {
         div class="space-y-6" {
+            @if !user.bot && !user.system && acl::has_permission(admin_acls, acl::USER_UPDATE_USERNAME) {
+                (card_with_header("Require a New Username", html! {
+                    p class="mb-3 text-sm text-neutral-600" {
+                        "Available after migration starts. The user can select another name immediately. "
+                        "Suspended accounts cannot be required to reselect until their suspension ends."
+                    }
+                    form method="post" action={(base) "/users/" (user.id) "?action=force_username_reselect&tab=moderation"} {
+                        (csrf_input(csrf_token))
+                        div class="space-y-3" {
+                            label for="username-reselect-reason" class="text-sm font-medium text-neutral-700" { "Reason (audit log)" }
+                            input type="text" id="username-reselect-reason" name="audit_log_reason" required maxlength="512"
+                                class="block w-full rounded-md border border-neutral-300 px-3 py-2 text-sm";
+                            (checkbox("ban_name", "true", "Ban the previous username", false, true))
+                            (checkbox("confirm", "true", &format!("Require {} to select a new username", user.username), false, true))
+                            (form_actions(html! {(danger_button("Require a New Username"))}))
+                        }
+                    }
+                }))
+            }
             div class="grid grid-cols-1 gap-6 md:grid-cols-2" {
                 (ban_actions_card(base, user, csrf_token, context.current_ban.as_ref(), context.username_sign_in))
                 (deletion_card(base, user, csrf_token, context.deletion_scheduler, context.username_sign_in))
+            }
+            @if acl::has_permission(admin_acls, acl::USER_CLEAR_LEGACY_RESTRICTION) {
+                (card_with_header("Legacy Account Restriction", html! {
+                    p class="mb-3 text-sm text-neutral-600" { "Clear legacy email and phone verification requirements. Any current account limitation remains active." }
+                    form method="post" action={(base) "/users/" (user.id) "?action=clear_legacy_restriction&tab=moderation"} {
+                        (csrf_input(csrf_token))
+                        input type="text" name="private_reason" placeholder="Private reason (audit log)" class="mb-3 block w-full rounded-md border border-neutral-300 px-3 py-2 text-sm";
+                        (form_actions(html! {(submit_button("Clear Legacy Restriction"))}))
+                    }
+                }))
             }
             @if can_delete_all_messages {
                 (delete_all_messages_card(base, user, csrf_token, delete_all_messages_dry_run))

@@ -275,7 +275,7 @@ struct RawTranslateArgs {
     catalog: Option<CatalogName>,
     #[arg(
         long = "msgctxt",
-        help = "Only translate entries with this PO msgctxt or static catalog key; repeatable. Email fields use <template>.<subject|body>."
+        help = "Only translate entries with this PO msgctxt or static catalog key; repeatable. Email fields use <template>.<subject|body|button>."
     )]
     msgctxts: Vec<String>,
     #[arg(

@@ -700,7 +700,7 @@ describe('App Store purchases', () => {
 		const result = await claim(account, await signStoredTransaction('production', transactionId));
 		fake.updateTransaction('production', transactionId, {revocationDate: Date.now() - 1000, revocationReason: 0});
 		const revoke = vi
-			.spyOn(getUserRepository(), 'revokeGiftCode')
+			.spyOn(getUserRepository(), 'revokeGiftCodeForStoreRefund')
 			.mockRejectedValueOnce(new Error('Cassandra write timed out'));
 		try {
 			await expect(service.syncAppStorePurchase(giftSyncParams(transactionId))).rejects.toThrow();
@@ -866,7 +866,7 @@ describe('App Store purchases', () => {
 		const stackedEnd = (await findUser(redeemer.userId)).premiumGiftExtensionEndsAt!;
 		fake.updateTransaction('production', transactionId, {revocationDate: Date.now() - 1000, revocationReason: 0});
 		const revoke = vi
-			.spyOn(getUserRepository(), 'revokeGiftCode')
+			.spyOn(getUserRepository(), 'revokeGiftCodeForStoreRefund')
 			.mockRejectedValueOnce(new Error('Cassandra write timed out'));
 		try {
 			await expect(service.syncAppStorePurchase(giftSyncParams(transactionId))).rejects.toThrow();
@@ -879,6 +879,118 @@ describe('App Store purchases', () => {
 			stackedEnd.getTime() - oneMonth,
 		);
 		expect((await getUserRepository().findGiftCode(result.gift_code!))?.revokedAt).not.toBeNull();
+	});
+
+	it('keeps general revocation closed for a redeemed store gift', async () => {
+		const purchaser = await createTestAccount(harness);
+		const redeemer = await createTestAccount(harness);
+		const transactionId = seedGift('production');
+		const result = await claim(purchaser, await signStoredTransaction('production', transactionId));
+		await redeem(redeemer, result.gift_code!);
+		await expect(getUserRepository().revokeGiftCode(result.gift_code!)).rejects.toMatchObject({
+			code: APIErrorCodes.GIFT_CODE_ALREADY_REDEEMED,
+		});
+		expect((await getUserRepository().findGiftCode(result.gift_code!))?.revokedAt).toBeNull();
+	});
+
+	it('defers a gift refund until an in-flight redemption finishes granting premium', async () => {
+		const purchaser = await createTestAccount(harness);
+		const redeemer = await createTestAccount(harness);
+		const transactionId = seedGift('production');
+		const code = (await claim(purchaser, await signStoredTransaction('production', transactionId))).gift_code!;
+		const repository = getUserRepository();
+		const redeemGiftCode = repository.redeemGiftCode.bind(repository);
+		let markClaimed!: () => void;
+		const claimed = new Promise<void>((resolve) => {
+			markClaimed = resolve;
+		});
+		let finishGrant!: () => void;
+		const grantReady = new Promise<void>((resolve) => {
+			finishGrant = resolve;
+		});
+		const pausedRedemption = vi.spyOn(repository, 'redeemGiftCode').mockImplementationOnce(async (giftCode, userId) => {
+			await redeemGiftCode(giftCode, userId);
+			markClaimed();
+			await grantReady;
+		});
+		const redemption = redeem(redeemer, code);
+		try {
+			await claimed;
+			fake.updateTransaction('production', transactionId, {revocationDate: Date.now() - 1000, revocationReason: 0});
+			await expect(service.syncAppStorePurchase(giftSyncParams(transactionId))).rejects.toMatchObject({
+				code: APIErrorCodes.STORE_BILLING_UNAVAILABLE,
+			});
+			expect((await repository.findGiftCode(code))?.revokedAt).toBeNull();
+			expect((await findUser(redeemer.userId)).isPremium()).toBe(false);
+		} finally {
+			finishGrant();
+			await redemption;
+			pausedRedemption.mockRestore();
+		}
+		expect((await findUser(redeemer.userId)).isPremium()).toBe(true);
+		await service.syncAppStorePurchase(giftSyncParams(transactionId));
+		expect((await repository.findGiftCode(code))?.revokedAt).not.toBeNull();
+		expect((await findUser(redeemer.userId)).isPremium()).toBe(false);
+	});
+
+	it('revokes the original gift after its purchase has been rebound to another account', async () => {
+		const purchaser = await createTestAccount(harness);
+		const nextOwner = await createTestAccount(harness);
+		const transactionId = seedGift('production');
+		const code = (await claim(purchaser, await signStoredTransaction('production', transactionId))).gift_code!;
+		await service.unbindAllForUser(createUserID(BigInt(purchaser.userId)));
+		const rebound = await claim(nextOwner, await signStoredTransaction('production', transactionId));
+		expect(rebound.gift_code).toBe(code);
+		const stored = await getStoreBillingRepository().findPurchase(`app_store:production:${transactionId}`);
+		expect(stored?.user_id).toBe(createUserID(BigInt(nextOwner.userId)));
+		expect((await getUserRepository().findGiftCode(code))?.createdByUserId).toBe(
+			createUserID(BigInt(purchaser.userId)),
+		);
+		fake.updateTransaction('production', transactionId, {revocationDate: Date.now() - 1000, revocationReason: 0});
+		await notify(await signNotification('REFUND', 'production', transactionId));
+		expect((await getUserRepository().findGiftCode(code))?.revokedAt).not.toBeNull();
+	});
+
+	it('reverses a redeemed gift refund after its purchaser has been unbound', async () => {
+		const purchaser = await createTestAccount(harness);
+		const redeemer = await createTestAccount(harness);
+		const transactionId = seedGift('production');
+		const result = await claim(purchaser, await signStoredTransaction('production', transactionId));
+		const code = result.gift_code!;
+		await redeem(redeemer, code);
+		await service.unbindAllForUser(createUserID(BigInt(purchaser.userId)));
+		fake.updateTransaction('production', transactionId, {revocationDate: Date.now() - 1000, revocationReason: 0});
+
+		await notify(await signNotification('REFUND', 'production', transactionId));
+
+		expect((await getUserRepository().findGiftCode(code))?.revokedAt).not.toBeNull();
+		expect((await findUser(redeemer.userId)).isPremium()).toBe(false);
+	});
+
+	it('binds store refund revocation to the purchaser and current redeemer', async () => {
+		const purchaser = await createTestAccount(harness);
+		const redeemer = await createTestAccount(harness);
+		const transactionId = seedGift('production');
+		const result = await claim(purchaser, await signStoredTransaction('production', transactionId));
+		const code = result.gift_code!;
+		await redeem(redeemer, code);
+		const repository = getUserRepository();
+		const purchaserId = createUserID(BigInt(purchaser.userId));
+		const redeemerId = createUserID(BigInt(redeemer.userId));
+		const before = (await repository.findGiftCode(code))!;
+		await expect(repository.revokeGiftCodeForStoreRefund(code, redeemerId, redeemerId)).rejects.toMatchObject({
+			code: APIErrorCodes.UNKNOWN_GIFT_CODE,
+		});
+		await expect(repository.revokeGiftCodeForStoreRefund(code, purchaserId, null)).rejects.toMatchObject({
+			code: APIErrorCodes.UNKNOWN_GIFT_CODE,
+		});
+		await repository.revokeGiftCodeForStoreRefund(code, purchaserId, redeemerId);
+		await repository.revokeGiftCodeForStoreRefund(code, purchaserId, redeemerId);
+		const after = (await repository.findGiftCode(code))!;
+		expect(after.revokedAt).not.toBeNull();
+		expect(after.redeemedByUserId).toBe(redeemerId);
+		expect(after.redeemedAt).toEqual(before.redeemedAt);
+		expect((await repository.findGiftCodesByRedeemer(redeemerId)).map((gift) => gift.code)).toEqual([code]);
 	});
 
 	it('credits a reversed gift refund once when the reinstatement is retried', async () => {

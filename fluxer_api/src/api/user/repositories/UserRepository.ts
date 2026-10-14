@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {ChannelID, GuildID, MessageID, UserID} from '@app/api/BrandedTypes';
+import type {TokenRange} from '@app/api/database/TokenRangeScan';
 import type {
 	AuthSessionRow,
 	EmailRevertTokenRow,
@@ -44,6 +45,7 @@ import type {
 	PrivateChannelSummary,
 } from '@app/api/user/repositories/IUserChannelRepository';
 import type {IUserRepositoryAggregate} from '@app/api/user/repositories/IUserRepositoryAggregate';
+import type {UserSettingsPatchOptions} from '@app/api/user/repositories/IUserSettingsRepository';
 import {UserAccountRepository} from '@app/api/user/repositories/UserAccountRepository';
 import {UserAuthRepository} from '@app/api/user/repositories/UserAuthRepository';
 import {UserChannelRepository} from '@app/api/user/repositories/UserChannelRepository';
@@ -79,8 +81,13 @@ export class UserRepository implements IUserRepositoryAggregate {
 		return this.accountRepo.upsert(data, oldData);
 	}
 
-	async patchUpsert(userId: UserID, patchData: Partial<UserRow>, oldData?: UserRow | null): Promise<User> {
-		return this.accountRepo.patchUpsert(userId, patchData, oldData);
+	async patchUpsert(
+		userId: UserID,
+		patchData: Partial<UserRow>,
+		oldData?: UserRow | null,
+		legacyIdentityDeadlineAt?: number,
+	): Promise<User> {
+		return this.accountRepo.patchUpsert(userId, patchData, oldData, legacyIdentityDeadlineAt);
 	}
 
 	async compareAndSetFlags(user: User, flags: bigint): Promise<User | null> {
@@ -168,6 +175,17 @@ export class UserRepository implements IUserRepositoryAggregate {
 		return this.accountRepo.scanAllUsersPage(limit, pageState);
 	}
 
+	async scanUsersTokenRangePage(
+		range: TokenRange,
+		limit: number,
+		pageState?: string | null,
+	): Promise<{
+		users: Array<User>;
+		pageState: string | null;
+	}> {
+		return this.accountRepo.scanUsersTokenRangePage(range, limit, pageState);
+	}
+
 	async getUserGuildIds(userId: UserID): Promise<Array<GuildID>> {
 		return this.accountRepo.getUserGuildIds(userId);
 	}
@@ -232,12 +250,20 @@ export class UserRepository implements IUserRepositoryAggregate {
 		return this.accountRepo.updateSubscriptionStatus(userId, updates);
 	}
 
-	async findSettings(userId: UserID): Promise<UserSettings | null> {
-		return this.settingsRepo.findSettings(userId);
+	async findSettings(userId: UserID, options?: {authoritative?: boolean}): Promise<UserSettings | null> {
+		return this.settingsRepo.findSettings(userId, options);
 	}
 
 	async upsertSettings(settings: UserSettingsRow): Promise<UserSettings> {
 		return this.settingsRepo.upsertSettings(settings);
+	}
+
+	async patchSettings(
+		userId: UserID,
+		patch: Partial<Omit<UserSettingsRow, 'user_id' | 'version' | 'game_activity_policy_revision'>>,
+		options?: UserSettingsPatchOptions,
+	): Promise<UserSettings> {
+		return this.settingsRepo.patchSettings(userId, patch, options);
 	}
 
 	async deleteUserSettings(userId: UserID): Promise<void> {
@@ -439,12 +465,20 @@ export class UserRepository implements IUserRepositoryAggregate {
 		return this.relationshipRepo.listBlockedUserIds(sourceUserId);
 	}
 
+	async listIncomingRelationships(targetUserId: UserID, options: {limit: number}) {
+		return this.relationshipRepo.listIncomingRelationships(targetUserId, options);
+	}
+
 	async hasReachedRelationshipLimit(sourceUserId: UserID, limit: number): Promise<boolean> {
 		return this.relationshipRepo.hasReachedRelationshipLimit(sourceUserId, limit);
 	}
 
 	async getRelationship(sourceUserId: UserID, targetUserId: UserID, type: number): Promise<Relationship | null> {
 		return this.relationshipRepo.getRelationship(sourceUserId, targetUserId, type);
+	}
+
+	async getIncomingRelationship(userId: UserID, sourceUserId: UserID, type: number) {
+		return this.relationshipRepo.getIncomingRelationship(userId, sourceUserId, type);
 	}
 
 	async upsertRelationship(relationship: RelationshipRow): Promise<Relationship> {
@@ -664,6 +698,10 @@ export class UserRepository implements IUserRepositoryAggregate {
 
 	async unrevokeGiftCode(code: string): Promise<void> {
 		return this.contentRepo.unrevokeGiftCode(code);
+	}
+
+	async revokeGiftCodeForStoreRefund(code: string, purchaserId: UserID, redeemerId: UserID | null): Promise<void> {
+		return this.contentRepo.revokeGiftCodeForStoreRefund(code, purchaserId, redeemerId);
 	}
 
 	async markGiftPremiumReversed(gift: GiftCode, seconds: number): Promise<boolean> {

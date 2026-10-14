@@ -9,6 +9,7 @@ import {ChevronRightIcon, NewGroupIcon, OwnerCrownIcon} from '@app/features/ui/a
 import {StatusAwareAvatar} from '@app/features/ui/components/StatusAwareAvatar';
 import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
 import * as UserProfileCommands from '@app/features/user/commands/UserProfileCommands';
+import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge';
 import type {User} from '@app/features/user/models/User';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
@@ -121,11 +122,15 @@ export const DMMembersList: React.FC<DMMembersListProps> = ({
 													</span>
 												)}
 											</span>
-											{(user.bot || isOwner) && (
+											{(user.bot || isOwner || user.isVerified()) && (
 												<div
 													className={styles.memberItemTags}
 													data-flx="channel.channel-details-bottom-sheet.member-item-tags"
 												>
+													<VerifiedUserBadge
+														user={user}
+														data-flx="channel.channel-details-bottom-sheet.verified-user-badge"
+													/>
 													{user.bot && (
 														<UserTag system={user.system} data-flx="channel.channel-details-bottom-sheet.user-tag" />
 													)}

@@ -151,7 +151,7 @@ export const MessageAdminAuditCases: ReadonlyArray<AdminAuditCoverageCase> = [
 						attachment_upload_mode: 'form_data',
 						attachment_upload_request_ip: '127.0.0.1',
 						attachment_upload_requested_at: expect.any(String),
-						attachment_upload_ip_source: 'attachment upload request handled directly by Fluxer API',
+						attachment_upload_ip_source: 'attachment upload request handled directly by Micup API',
 					},
 				},
 			};

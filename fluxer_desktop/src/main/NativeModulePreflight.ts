@@ -5,8 +5,10 @@ import {createHash} from 'node:crypto';
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import path from 'node:path';
+import {DESKTOP_APP_NAME} from '@electron/common/DesktopIdentity';
 import {APP_STORE_ADDON_PACKAGE} from '@electron/main/AppStoreNativeBoundary';
 import {GATEWAY_SOCKET_ADDON_PACKAGE} from '@electron/main/GatewaySocketNativeBoundary';
+import {disableWinShell, isWinShellDisabled, registerWinShellPreflightInvalidator} from '@electron/main/WinShell';
 import {app} from 'electron';
 import log from 'electron-log';
 
@@ -422,26 +424,43 @@ export function runNativeModulePreflight(): NativeModulePreflightResult {
 	if (!shouldRunNativeModulePreflight()) {
 		return {degraded: []};
 	}
+	registerWinShellPreflightInvalidator(clearPreflightMarker);
 	const {resolved, failures: resolveFailures} = resolveSpecs();
+	const marker = readPreflightMarker();
 	const fingerprint = preflightFingerprint(resolved);
-	if (!resolveFailures.some((failure) => failure.severity === 'fatal')) {
-		const marker = readPreflightMarker();
-		if (marker && marker.fingerprint === fingerprint) {
-			log.info('[NativeModulePreflight] Skipped: install fingerprint matches successful previous run', {
-				completedAt: marker.completedAt,
-				degraded: marker.degraded,
-			});
-			return {degraded: marker.degraded};
-		}
+	if (
+		!resolveFailures.some((failure) => failure.severity === 'fatal') &&
+		!isWinShellDisabled() &&
+		marker?.fingerprint === fingerprint
+	) {
+		log.info('[NativeModulePreflight] Skipped: install fingerprint matches successful previous run', {
+			completedAt: marker.completedAt,
+			degraded: marker.degraded,
+		});
+		return {degraded: marker.degraded};
 	}
-	const outcome = probeAllModules(resolved);
-	if (outcome.inconclusive !== null && resolveFailures.length === 0) {
+	const optional = resolved.filter((entry) => entry.spec.name === '@fluxer/win-shell');
+	const required = resolved.filter((entry) => entry.spec.name !== '@fluxer/win-shell');
+	const requiredResolveFailures = resolveFailures.filter((failure) => failure.name !== '@fluxer/win-shell');
+	// Probe separately so an optional native crash cannot interrupt required checks.
+	const optionalOutcome = probeAllModules(optional);
+	const winShellUnavailable =
+		isWinShellDisabled() ||
+		resolveFailures.some((failure) => failure.name === '@fluxer/win-shell') ||
+		optionalOutcome.failures.length > 0 ||
+		optionalOutcome.inconclusive !== null;
+	if (winShellUnavailable) {
+		disableWinShell(optionalOutcome.inconclusive !== null ? 'preflight-inconclusive' : 'preflight-failed');
+		clearPreflightMarker();
+	}
+	const outcome = probeAllModules(required);
+	if (outcome.inconclusive !== null && requiredResolveFailures.length === 0) {
 		log.warn('[NativeModulePreflight] Skipped: preflight could not be completed on this machine', {
 			reason: outcome.inconclusive,
 		});
 		return {degraded: []};
 	}
-	const failures = [...resolveFailures, ...outcome.failures];
+	const failures = [...requiredResolveFailures, ...outcome.failures];
 	const fatal = failures.filter((failure) => failure.severity === 'fatal');
 	const degraded = failures.filter((failure) => failure.severity === 'degraded');
 	if (degraded.length > 0) {
@@ -453,9 +472,11 @@ export function runNativeModulePreflight(): NativeModulePreflightResult {
 	if (fatal.length > 0) {
 		clearPreflightMarker();
 		const details = fatal.map(formatNativeModulePreflightFailure).join('\n');
-		throw new Error(`Fluxer native module preflight failed on ${process.platform}/${process.arch}.\n${details}`);
+		throw new Error(
+			`${DESKTOP_APP_NAME} native module preflight failed on ${process.platform}/${process.arch}.\n${details}`,
+		);
 	}
 	const degradedModules = degraded.map((failure) => failure.name);
-	writePreflightMarker(fingerprint, degradedModules);
+	if (!winShellUnavailable) writePreflightMarker(fingerprint, degradedModules);
 	return {degraded: degradedModules};
 }

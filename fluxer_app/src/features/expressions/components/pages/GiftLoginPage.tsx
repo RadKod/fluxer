@@ -16,7 +16,7 @@ import Authentication, {LoginState} from '@app/features/auth/state/Authenticatio
 import {useAuthRuntimeTarget} from '@app/features/auth/state/AuthRuntimeTarget';
 import {safeRedirectTarget} from '@app/features/auth/utils/SafeRedirect';
 import * as GiftCommands from '@app/features/gift/commands/GiftCommands';
-import {fetchWithCoalescing, type Gift} from '@app/features/gift/commands/GiftCommands';
+import {type AnyGift, fetchWithCoalescing} from '@app/features/gift/commands/GiftCommands';
 import Gifts from '@app/features/gift/state/Gifts';
 import {
 	GIFT_ALREADY_REDEEMED_TITLE_DESCRIPTOR,
@@ -43,7 +43,7 @@ const CLAIM_GIFT_DESCRIPTOR = msg({
 
 interface GiftLoginPageProps {
 	readonly code: string;
-	readonly gift: Gift;
+	readonly gift: AnyGift;
 	readonly onLoginComplete: () => void;
 }
 
@@ -129,7 +129,8 @@ const GiftLoginPageContent = observer(function GiftLoginPageContent({runtimeSnap
 	if (!giftState || giftState.loading) {
 		return <AuthLoadingState data-flx="expressions.gift-login-page.gift-login-page-container.auth-loading-state" />;
 	}
-	if (giftState.error || !giftState.data) {
+	const gift = giftState.data ?? giftState.item;
+	if (giftState.error || !gift) {
 		return (
 			<AuthErrorState
 				title={i18n._(GIFT_NOT_FOUND_TITLE_DESCRIPTOR)}
@@ -141,7 +142,6 @@ const GiftLoginPageContent = observer(function GiftLoginPageContent({runtimeSnap
 			/>
 		);
 	}
-	const gift = giftState.data;
 	if (gift.redeemed) {
 		return (
 			<AuthErrorState

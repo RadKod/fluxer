@@ -12,7 +12,24 @@ const LIMIT_RULE_IDS = {
 	DEFAULT: 'default',
 	HOSTED_UPGRADE: 'premium',
 	VERY_LARGE_GUILD: 'very_large_guild',
+	MORE_EMOJI: 'more_emoji',
+	MORE_STICKERS: 'more_stickers',
 } as const;
+
+// Micup: guild boost levels (guild/boost/GuildBoostLevels.ts) grant MORE_EMOJI and MORE_STICKERS; these stock rules
+// are what make those features raise the slots. An operator can still change the values in the limit config.
+const BOOST_GUILD_FEATURE_RULES: Array<LimitRule> = [
+	{
+		id: LIMIT_RULE_IDS.MORE_EMOJI,
+		filters: {guildFeatures: [GuildFeatures.MORE_EMOJI]},
+		limits: {max_guild_emojis: 1000},
+	},
+	{
+		id: LIMIT_RULE_IDS.MORE_STICKERS,
+		filters: {guildFeatures: [GuildFeatures.MORE_STICKERS]},
+		limits: {max_guild_stickers: 1000},
+	},
+];
 
 export function getLegacyLimitConfigKvKey(selfHosted: boolean): string {
 	return `limit_config:${selfHosted ? 'self_hosted' : 'saas'}`;
@@ -76,6 +93,7 @@ export function createDefaultLimitConfig(options?: {
 						filters: {guildFeatures: [GuildFeatures.VERY_LARGE_GUILD]},
 						limits: {max_guild_members: MAX_GUILD_MEMBERS_VERY_LARGE_GUILD},
 					},
+					...BOOST_GUILD_FEATURE_RULES,
 				]
 			: [
 					{
@@ -87,6 +105,7 @@ export function createDefaultLimitConfig(options?: {
 						filters: {guildFeatures: [GuildFeatures.VERY_LARGE_GUILD]},
 						limits: {max_guild_members: MAX_GUILD_MEMBERS_VERY_LARGE_GUILD},
 					},
+					...BOOST_GUILD_FEATURE_RULES,
 				],
 	};
 	return sanitizeLimitConfigForInstance(cloneLimitConfigSnapshot(hostedDefault), {selfHosted, premiumMode});

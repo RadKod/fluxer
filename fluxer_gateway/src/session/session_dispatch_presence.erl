@@ -209,7 +209,7 @@ dispatch_presence_now(P, State) ->
     {NewBuffer, Dropped} = limited_deque:push_trimmed(
         Request, limited_deque:entry_bytes(Request), Deque
     ),
-    send_to_socket(SocketPid, Event, Data, NewSeq),
+    send_to_socket(SocketPid, Event, session_game_activity:wire(Event, Data, State), NewSeq),
     State#{
         seq => NewSeq,
         buffer => NewBuffer,
@@ -231,13 +231,24 @@ flush_all_pending_presences(State) ->
 -spec maybe_sync_presence_targets(event(), [user_id()], session_state()) -> session_state().
 maybe_sync_presence_targets(Event, FlushedIds, State) ->
     case event_changes_presence_targets(Event) of
-        true -> sync_presence_targets(FlushedIds, State);
-        false -> State
+        true ->
+            Synced = sync_presence_targets(FlushedIds, State),
+            maybe_sync_game_friends(Event, Synced);
+        false ->
+            State
     end.
+
+-spec maybe_sync_game_friends(event(), session_state()) -> session_state().
+maybe_sync_game_friends(Event, State) when
+    Event =:= relationship_add; Event =:= relationship_update; Event =:= relationship_remove
+->
+    session_game_activity:sync_friends(State);
+maybe_sync_game_friends(_, State) ->
+    State.
 
 -spec sync_presence_targets(session_state()) -> session_state().
 sync_presence_targets(State) ->
-    sync_presence_targets([], State).
+    session_game_activity:sync_friends(sync_presence_targets([], State)).
 
 -spec event_changes_presence_targets(event()) -> boolean().
 event_changes_presence_targets(relationship_add) -> true;

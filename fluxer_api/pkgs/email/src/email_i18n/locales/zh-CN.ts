@@ -25,11 +25,13 @@ const EMAIL_I18N_ZH_CN_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "感谢你的 {product_name} 捐赠",
-		"body": "你好，\n\n感谢你对 {product_name} 的捐赠！你的{interval, select,\n  month {定期捐赠}\n  year {定期捐赠}\n  other {一次性捐赠}\n}{interval, select,\n  month {已成功设置}\n  year {已成功设置}\n  other {已成功处理}\n}。\n\n捐赠详情：\n金额：{amount} {interval, select,\n  month {每月}\n  year {每年}\n  other {}\n}\n\nStripe 稍后会另外发送一封收据邮件，其中附有发票 PDF。邮件包含所有付款详情，可用于报税。\n\n你可以随时使用此链接查看你的捐赠历史、下载发票，以及{interval, select,\n  month {管理或取消你的订阅}\n  year {管理或取消你的订阅}\n  other {管理你的未来捐赠}\n}：\n\n{manageUrl}\n\n你的支持有助于 {product_name} 的持续运行。谢谢！\n\n– {product_name} 团队"
+		"body": "你好，\n\n感谢你对 {product_name} 的捐赠！你的{interval, select,\n  month {定期捐赠}\n  year {定期捐赠}\n  other {一次性捐赠}\n}{interval, select,\n  month {已成功设置}\n  year {已成功设置}\n  other {已成功处理}\n}。\n\n捐赠详情：\n金额：{amount} {interval, select,\n  month {每月}\n  year {每年}\n  other {}\n}\n\nStripe 稍后会另外发送一封收据邮件，其中附有发票 PDF。邮件包含所有付款详情，可用于报税。\n\n你可以随时使用此链接查看你的捐赠历史、下载发票，以及{interval, select,\n  month {管理或取消你的订阅}\n  year {管理或取消你的订阅}\n  other {管理你的未来捐赠}\n}：\n\n{manageUrl}\n\n你的支持有助于 {product_name} 的持续运行。谢谢！\n\n– {product_name} 团队",
+		"button": "管理捐赠"
 	},
 	"donation_magic_link": {
 		"subject": "管理你的 {product_name} 捐赠",
-		"body": "你好，\n\n点击下方链接访问你的捐赠者门户：\n\n{manageUrl}\n\n在门户中，你可以管理订阅、下载发票和查看捐赠历史。\n\n此链接将于 {expiresAt, date, full} {expiresAt, time, short} 失效。\n\n如果你未请求此链接，可以放心忽略此邮件。\n\n– {product_name} 团队"
+		"body": "你好，\n\n点击下方链接访问你的捐赠者门户：\n\n{manageUrl}\n\n在门户中，你可以管理订阅、下载发票和查看捐赠历史。\n\n此链接将于 {expiresAt, date, full} {expiresAt, time, short} 失效。\n\n如果你未请求此链接，可以放心忽略此邮件。\n\n– {product_name} 团队",
+		"button": "管理捐赠"
 	},
 	"dsa_report_verification": {
 		"subject": "验证邮箱以提交 DSA 举报",
@@ -45,11 +47,13 @@ const EMAIL_I18N_ZH_CN_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "你的 {product_name} 邮箱已变更",
-		"body": "你好 {username}，\n\n你的 {product_name} 账号邮箱已变更为 {newEmail}。\n\n如果你进行了此更改，则无需采取任何操作。如果不是你本人操作，请使用此链接撤销更改并保护账号安全：\n\n{revertUrl}\n\n这将恢复你之前的邮箱，让你在所有设备上退出登录，禁用 MFA，并要求你设置新密码。\n\n– {product_name} 安全团队"
+		"body": "你好 {username}，\n\n你的 {product_name} 账号邮箱已变更为 {newEmail}。\n\n如果你进行了此更改，则无需采取任何操作。如果不是你本人操作，请使用此链接撤销更改并保护账号安全：\n\n{revertUrl}\n\n这将恢复你之前的邮箱，让你在所有设备上退出登录，禁用 MFA，并要求你设置新密码。\n\n– {product_name} 安全团队",
+		"button": "撤销此更改"
 	},
 	"email_verification": {
 		"subject": "验证你的 {product_name} 邮箱地址",
-		"body": "你好 {username}，\n\n请点击下方链接验证你的 {product_name} 账号邮箱地址：\n\n{verifyUrl}\n\n如果你未创建 {product_name} 账号，可以放心忽略此邮件。\n\n此链接 24 小时内有效。\n\n– {product_name} 团队"
+		"body": "🎉 你好 {username}，\n\n请点击下方链接验证你的 {product_name} 账号邮箱地址：\n\n{verifyUrl}\n\n如果你未创建 {product_name} 账号，可以放心忽略此邮件。\n\n此链接 24 小时内有效。\n\n– {product_name} 团队",
+		"button": "验证邮箱"
 	},
 	"gift_chargeback_notification": {
 		"subject": "已移除你兑换礼品所获得的福利",
@@ -57,15 +61,18 @@ const EMAIL_I18N_ZH_CN_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "你的 {product_name} 数据导出已准备就绪",
-		"body": "你好 {username}，\n\n你的数据导出已准备就绪。\n\n下载链接：\n{downloadUrl}\n\n包含消息数：{totalMessages, number}\n文件大小：{fileSizeMB, number} MB\n\n此链接将于 {expiresAt, date, full} {expiresAt, time, short} 失效。\n\n如果你未请求此导出，请立即更改密码并联系我们的支持团队。\n\n– {product_name} 团队"
+		"body": "你好 {username}，\n\n你的数据导出已准备就绪。\n\n下载链接：\n{downloadUrl}\n\n包含消息数：{totalMessages, number}\n文件大小：{fileSizeMB, number} MB\n\n此链接将于 {expiresAt, date, full} {expiresAt, time, short} 失效。\n\n如果你未请求此导出，请立即更改密码并联系我们的支持团队。\n\n– {product_name} 团队",
+		"button": "下载我的数据"
 	},
 	"inactivity_warning": {
 		"subject": "你的 {product_name} 账号将因长期未活动而被删除",
-		"body": "你好 {username}，\n\n自 {lastActiveDate, date, full} 以来，我们未检测到你的 {product_name} 账号有任何活动。\n\n如果你未在 {deletionDate, date, full} {deletionDate, time, short} 前登录，你的账号将因长期未活动而被永久删除。\n\n立即登录：\n{loginUrl}\n\n如果你最近使用过 {product_name}，请立即联系我们的支持团队。\n\n– {product_name} 团队"
+		"body": "你好 {username}，\n\n自 {lastActiveDate, date, full} 以来，我们未检测到你的 {product_name} 账号有任何活动。\n\n如果你未在 {deletionDate, date, full} {deletionDate, time, short} 前登录，你的账号将因长期未活动而被永久删除。\n\n立即登录：\n{loginUrl}\n\n如果你最近使用过 {product_name}，请立即联系我们的支持团队。\n\n– {product_name} 团队",
+		"button": "登录"
 	},
 	"ip_authorization": {
 		"subject": "授权新 IP 地址登录",
-		"body": "你好 {username}，\n\n我们检测到你的 {product_name} 账号有来自新 IP 地址的登录尝试：\n\nIP 地址：{ipAddress}\n位置：{location}\n\n如果你本人进行了此操作，请点击下方链接授权此 IP 地址：\n\n{authUrl}\n\n如果这不是你本人的登录尝试，请立即更改密码。\n\n此链接 30 分钟内有效。\n\n– {product_name} 团队"
+		"body": "你好 {username}，\n\n我们检测到你的 {product_name} 账号有来自新 IP 地址的登录尝试：\n\nIP 地址：{ipAddress}\n位置：{location}\n\n如果你本人进行了此操作，请点击下方链接授权此 IP 地址：\n\n{authUrl}\n\n如果这不是你本人的登录尝试，请立即更改密码。\n\n此链接 30 分钟内有效。\n\n– {product_name} 团队",
+		"button": "授权此次登录"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "确认访问你的 {product_name} 备用码",
@@ -77,11 +84,17 @@ const EMAIL_I18N_ZH_CN_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "重置你的 {product_name} 账号密码",
-		"body": "你好 {username}，\n\n你请求重置 {product_name} 账号密码。请使用下方链接设置新密码：\n\n{resetUrl}\n\n如果你未请求此操作，可以放心忽略此邮件。\n\n此链接 1 小时内有效。\n\n– {product_name} 团队"
+		"body": "你好 {username}，\n\n你请求重置 {product_name} 账号密码。请使用下方链接设置新密码：\n\n{resetUrl}\n\n如果你未请求此操作，可以放心忽略此邮件。\n\n此链接 1 小时内有效。\n\n– {product_name} 团队",
+		"button": "重置密码"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "你的 {product_name} 注册已通过",
-		"body": "你好 {username}，\n\n好消息：你的 {product_name} 注册已通过。\n\n你现在可以登录 {product_name} 应用：\n{channelsUrl}\n\n欢迎加入 {product_name} 社区。\n\n– {product_name} 团队"
+		"body": "🎉 你好 {username}，\n\n好消息：你的 {product_name} 注册已通过。\n\n你现在可以登录 {product_name} 应用：\n{channelsUrl}\n\n欢迎加入 {product_name} 社区。\n\n– {product_name} 团队",
+		"button": "打开 {product_name}"
 	},
 	"report_resolved": {
 		"subject": "你的 {product_name} 举报已完成审核",
@@ -97,7 +110,7 @@ const EMAIL_I18N_ZH_CN_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "你的 {product_name} 账号已解除封禁",
-		"body": "你好 {username}，\n\n好消息：你的 {product_name} 账号已解除封禁。\n\n{reason, select,\n  null {}\n  other {原因：{reason}}\n}\n\n你现在可以重新登录，继续正常使用 {product_name}。\n\n– {product_name} 安全团队"
+		"body": "🎉 你好 {username}，\n\n好消息：你的 {product_name} 账号已解除封禁。\n\n{reason, select,\n  null {}\n  other {原因：{reason}}\n}\n\n你现在可以重新登录，继续正常使用 {product_name}。\n\n– {product_name} 安全团队"
 	}
 });
 

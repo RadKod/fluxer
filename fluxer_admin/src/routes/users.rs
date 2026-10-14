@@ -268,6 +268,11 @@ async fn user_detail_post(
     };
     let client = AdminApiClient::new(state.http_client(), config, &auth.0.session);
     let action = aq.action.as_deref().unwrap_or("");
+    if matches!(action, "change_username" | "force_username_reselect")
+        && let Some(response) = super::acl_forbidden(config, &auth.0, acl::USER_UPDATE_USERNAME)
+    {
+        return response;
+    }
     if action == "create_password_reset_link" {
         return create_password_reset_link(&state, &headers, &auth.0, &csrf.0.0, &client, &user_id)
             .await;

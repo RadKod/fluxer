@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {UserID} from '@app/api/BrandedTypes';
-import {BatchBuilder} from '@app/api/database/CassandraQueryExecution';
+import {BatchBuilder, upsertOne} from '@app/api/database/CassandraQueryExecution';
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import {
 	UserByEmail,
@@ -14,9 +14,21 @@ import {
 import {getSameIpDecisionKey} from '@fluxer/ip_utils/src/IpAddress';
 
 export class UserIndexRepository {
-	async syncIndices(data: UserRow, oldData?: UserRow | null): Promise<void> {
+	async createLegacyUsernameIndex(data: UserRow, timestamp: bigint): Promise<void> {
+		await upsertOne(
+			UserByUsername.upsertAll(
+				{username: data.username.toLowerCase(), discriminator: data.discriminator, user_id: data.user_id},
+				{timestamp},
+			),
+		);
+	}
+	async syncIndices(data: UserRow, oldData?: UserRow | null, skipUsername = false): Promise<void> {
 		const batch = new BatchBuilder();
-		if (data.username && data.discriminator != null && data.discriminator !== undefined) {
+		// Micup: human identity changes only through the legacy identity writer; ownership projections own their keys.
+		const writeUsername =
+			!skipUsername &&
+			(data.bot || data.system || oldData?.username !== data.username || oldData?.discriminator !== data.discriminator);
+		if (writeUsername && data.username && data.discriminator != null && data.discriminator !== undefined) {
 			batch.addPrepared(
 				UserByUsername.upsertAll({
 					username: data.username.toLowerCase(),
@@ -25,7 +37,7 @@ export class UserIndexRepository {
 				}),
 			);
 		}
-		if (oldData?.username && oldData.discriminator != null && oldData.discriminator !== undefined) {
+		if (writeUsername && oldData?.username && oldData.discriminator != null && oldData.discriminator !== undefined) {
 			if (
 				oldData.username.toLowerCase() !== data.username?.toLowerCase() ||
 				oldData.discriminator !== data.discriminator
@@ -174,15 +186,17 @@ export class UserIndexRepository {
 		stripeCustomerId?: string | null,
 		stripeSubscriptionId?: string | null,
 		lastActiveIp?: string | null,
+		skipUsername = false,
 	): Promise<void> {
 		const batch = new BatchBuilder();
-		batch.addPrepared(
-			UserByUsername.deleteByPk({
-				username: username.toLowerCase(),
-				discriminator: discriminator,
-				user_id: userId,
-			}),
-		);
+		if (!skipUsername)
+			batch.addPrepared(
+				UserByUsername.deleteByPk({
+					username: username.toLowerCase(),
+					discriminator: discriminator,
+					user_id: userId,
+				}),
+			);
 		if (email) {
 			batch.addPrepared(
 				UserByEmail.deleteByPk({

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {ApplicationID, UserID} from '@app/api/BrandedTypes';
+import {micupBotApplicationId} from '@app/api/guild/micupbot/MicupBotBot';
+import {rosterBotApplicationId} from '@app/api/guild/roster/GuildRosterBot';
 import {generateOAuthTokenSecret} from '@app/api/oauth/OAuthTokenSecret';
 import type {IApplicationRepository} from '@app/api/oauth/repositories/IApplicationRepository';
 import type {IUserRepository} from '@app/api/user/IUserRepository';
@@ -39,6 +41,7 @@ export class BotAuthService {
 			return null;
 		}
 		const {applicationId, secret} = parsed;
+		if (applicationId === rosterBotApplicationId() || applicationId === micupBotApplicationId()) return null;
 		const application = await this.applicationRepository.getApplication(applicationId);
 		if (!application?.hasBotUser() || !application.botTokenHash) {
 			return null;

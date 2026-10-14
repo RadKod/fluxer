@@ -52,7 +52,7 @@ describe('DesktopAccountStoreTelemetry', () => {
 	test('a missing store file is unknown, not a hardening failure', () => {
 		assert.equal(
 			probeDesktopStorePermissions(path.join(userDataDir(), 'nope.sqlite3')),
-			DesktopStorePermissionState.UNKNOWN,
+			process.platform === 'win32' ? DesktopStorePermissionState.UNSUPPORTED : DesktopStorePermissionState.UNKNOWN,
 		);
 	});
 

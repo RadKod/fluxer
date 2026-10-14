@@ -19,22 +19,20 @@ import {useState} from 'react';
 const PREMIUM_EXPIRED_MESSAGE_DESCRIPTOR = msg({
 	message:
 		'Your {premiumProductName} subscription has expired. You have lost all {premiumProductName} perks. Reactivate your subscription to regain access.',
-	comment:
-		'Nagbar body shown when a premium subscription has expired. {premiumProductName} is the premium product name.',
+	comment: 'Nagbar body shown when a Plus subscription has expired. {premiumProductName} is the Plus product name.',
 });
 const REACTIVATE_DESCRIPTOR = msg({
 	message: 'Reactivate',
-	comment: 'Button label on the premium-expired nagbar. Opens billing so the user can reactivate their subscription.',
+	comment: 'Button label on the Plus-expired nagbar. Opens billing so the user can reactivate their subscription.',
 });
 const CUSTOMER_PORTAL_FAILED_TITLE_DESCRIPTOR = msg({
 	message: "Couldn't open the billing portal",
 	comment:
-		'Title of the error modal shown when opening the billing customer portal from the premium-expired nagbar fails.',
+		'Title of the error modal shown when opening the billing customer portal from the Plus-expired nagbar fails.',
 });
 const CUSTOMER_PORTAL_FAILED_MESSAGE_DESCRIPTOR = msg({
 	message: 'Something went wrong while opening the billing portal. Please try again in a moment.',
-	comment:
-		'Body of the error modal shown when opening the billing customer portal from the premium-expired nagbar fails.',
+	comment: 'Body of the error modal shown when opening the billing customer portal from the Plus-expired nagbar fails.',
 });
 const logger = new Logger('PremiumExpiredNagbar');
 export const PremiumExpiredNagbar = observer(({isMobile}: {isMobile: boolean}) => {

@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import CosmeticsSettingsTab from '@app/features/cosmetics/components/CosmeticsSettingsTab';
+import GameOverlaySettingsTab from '@app/features/game_overlay/components/GameOverlaySettingsTab';
+import ReferralSettingsTab from '@app/features/referral/components/ReferralSettingsTab';
 import {AccessibilityTab} from '@app/features/user/components/modals/tabs/AccessibilityTab';
 import AccountSecurityTab from '@app/features/user/components/modals/tabs/AccountSecurityTab';
 import AdvancedSettingsTab from '@app/features/user/components/modals/tabs/AdvancedSettingsTab';
@@ -23,6 +26,8 @@ import type React from 'react';
 
 const DESKTOP_TAB_COMPONENTS: Partial<Record<UserSettingsTabType, React.ComponentType<Record<string, unknown>>>> = {
 	my_profile: MyProfileTab,
+	profile_cosmetics: CosmeticsSettingsTab,
+	referral: ReferralSettingsTab,
 	account_security: AccountSecurityTab,
 	plutonium: PlutoniumTab,
 	gift_inventory: GiftInventoryTab,
@@ -35,6 +40,7 @@ const DESKTOP_TAB_COMPONENTS: Partial<Record<UserSettingsTabType, React.Componen
 	accessibility: AccessibilityTab,
 	chat_settings: ChatSettingsTab,
 	voice_video: VoiceVideoTab,
+	game_overlay: GameOverlaySettingsTab,
 	keybinds: KeybindsTab,
 	notifications: NotificationsTab,
 	language: LanguageTab,

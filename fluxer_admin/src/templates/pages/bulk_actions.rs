@@ -126,7 +126,19 @@ const PATCHABLE_USER_FLAGS: &[UserFlag] = &[
     },
     UserFlag {
         name: "LIMIT_EXEMPT",
-        value: 1 << 62,
+        value: crate::admin_flags::user_flag_bits::LIMIT_EXEMPT,
+    },
+    UserFlag {
+        name: "DISABLED_SUSPICIOUS_ACTIVITY",
+        value: crate::admin_flags::user_flag_bits::DISABLED_SUSPICIOUS_ACTIVITY,
+    },
+    UserFlag {
+        name: "FORCE_INBOUND_PHONE_VERIFICATION",
+        value: crate::admin_flags::user_flag_bits::FORCE_INBOUND_PHONE_VERIFICATION,
+    },
+    UserFlag {
+        name: "NOT_SUSPICIOUS",
+        value: crate::admin_flags::user_flag_bits::NOT_SUSPICIOUS,
     },
 ];
 
@@ -460,5 +472,37 @@ mod tests {
         assert!(markup.contains(r#"value="CLONE_STICKER_DISABLED""#));
         assert!(markup.contains("CLONE_EMOJI_DISABLED (deprecated, removal only)"));
         assert!(markup.contains(r#"value="CLONE_EMOJI_ENABLED""#));
+    }
+}
+#[cfg(test)]
+mod flag_compatibility_tests {
+    use super::PATCHABLE_USER_FLAGS;
+
+    #[test]
+    fn bulk_limit_exempt_uses_bit_59_without_reusing_legacy_flags() {
+        let flag = PATCHABLE_USER_FLAGS
+            .iter()
+            .find(|flag| flag.name == "LIMIT_EXEMPT")
+            .unwrap();
+        assert_eq!(flag.value, 1 << 59);
+        assert_eq!(flag.value & ((1 << 35) | (1 << 61) | (1 << 62)), 0);
+    }
+
+    #[test]
+    fn legacy_user_flag_labels_keep_their_stored_meanings() {
+        for (name, bit) in [
+            ("DISABLED_SUSPICIOUS_ACTIVITY", 35),
+            ("FORCE_INBOUND_PHONE_VERIFICATION", 61),
+            ("NOT_SUSPICIOUS", 62),
+        ] {
+            assert_eq!(
+                PATCHABLE_USER_FLAGS
+                    .iter()
+                    .find(|flag| flag.name == name)
+                    .map(|flag| flag.value),
+                Some(1 << bit),
+                "{name}"
+            );
+        }
     }
 }

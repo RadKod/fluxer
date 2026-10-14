@@ -27,3 +27,7 @@ export const NOISE_SUPPRESSION_WASM_URLS = {
 export const DEEP_FILTER_WORKLET_URL = new URL('./deepFilterProcessor.worklet.js', import.meta.url).href;
 
 export const VOICE_GATE_WORKLET_URL = new URL('../voiceGateProcessor.worklet.js', import.meta.url).href;
+
+export const VOICE_VAD_WORKLET_URL = new URL('@jitsi/rnnoise-wasm/dist/rnnoise-sync.js', import.meta.url).href;
+
+export const VOICE_SOFT_GAIN_WORKLET_URL = new URL('../voiceSoftGain.worklet.js', import.meta.url).href;

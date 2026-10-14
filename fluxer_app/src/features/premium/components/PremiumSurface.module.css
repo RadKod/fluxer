@@ -1,0 +1,110 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Micup: the premium and shop pages' own type scale, palette and card, composed by both pages' modules
+   (`composes: tokens from '@app/features/premium/components/PremiumSurface.module.css'`). Nothing here reaches the
+   rest of the app. Colours of text, surfaces and edges are the theme's tokens; the wing palette below is the only new
+   colour, used by the heroes (a dark brand banner in every theme) and the halo. */
+.tokens {
+	/* Wing palette, sampled from the Fallen Angel ultra decoration. */
+	--premium-ice: #ddf8fc;
+	--premium-sky: #aacaf4;
+	--premium-periwinkle: #8b87f4;
+	--premium-lavender: #b594f7;
+	--premium-violet: #7e64ef;
+	--premium-deep: #5a3fd3;
+	--premium-night: #140f33;
+	--premium-gold: #ffd36e;
+	--premium-blush: #f6bcdd;
+	--premium-rose: #e58fc4;
+	--premium-mint: #7fe3c1;
+	/* Text on the heroes, which stay dark in the light theme too. */
+	--premium-hero-ink: #f2f2f4;
+
+	/* Type scale: hero 32–56 px, section 32–36, card title 18, body 15, small 13, price 40. */
+	--premium-fs-display: clamp(2rem, 1.3rem + 2.6vw, 3.5rem);
+	--premium-fs-section: clamp(2rem, 1.7rem + 0.8vw, 2.25rem);
+	--premium-fs-lead: 1.125rem;
+	--premium-fs-price: 2.5rem;
+	--premium-fs-title: 1.125rem;
+	--premium-fs-body: 0.9375rem;
+	--premium-fs-small: 0.8125rem;
+	--premium-lh-head: 1.1;
+	--premium-track-head: -0.025em;
+
+	/* Radius by rank: control 8, card 16, showcase 24. */
+	--premium-radius-control: 0.5rem;
+	--premium-radius-card: 1rem;
+	--premium-radius-showcase: 1.5rem;
+
+	--premium-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+	/* Matte card: one step above the page, a low-alpha edge, a faint top light, no outer shadow. */
+	--premium-card-bg: var(--background-secondary);
+	--premium-card-hover: var(--background-secondary-alt);
+	--premium-card-edge: var(--background-modifier-accent);
+	--premium-card-shade: inset 0 0.0625rem 0 color-mix(in srgb, var(--text-primary) 4%, transparent);
+	/* Only the floating buy capsule and the recommended plan lift off the page. */
+	--premium-float-shade: 0 1rem 2.5rem -0.75rem rgb(0 0 0 / 0.55);
+	/* The shop's card ground: a barely seen lavender wash at the top, fading to the card surface. */
+	--premium-card-wash: linear-gradient(
+		180deg,
+		color-mix(in srgb, var(--premium-lavender) 6%, var(--premium-card-bg)),
+		var(--premium-card-bg) 75%
+	);
+	/* The shop's buy button: the violet accent, in every theme. */
+	--premium-buy: var(--premium-violet);
+
+	font-family: var(--font-sans);
+}
+
+.card {
+	background: var(--premium-card-wash);
+	border: 0.0625rem solid var(--premium-card-edge);
+	border-radius: var(--premium-radius-card);
+	box-shadow: var(--premium-card-shade);
+	transition: background-color 0.2s var(--premium-ease-out);
+}
+
+/* A card that reacts to the pointer: only its surface lightens a step. */
+@media (hover: hover) and (pointer: fine) {
+	:global(:where(html.window-focused, html.unfocused-fully-interactive):not(.window-focus-activation-guard))
+		.cardHover:hover {
+		background: var(--premium-card-hover);
+	}
+}
+
+/* Headings of the shop and the Plus page: white fading to lavender at the foot of the letters. */
+.headingFill {
+	background: linear-gradient(
+		180deg,
+		var(--text-primary) 35%,
+		color-mix(in srgb, var(--premium-lavender) 65%, var(--text-primary))
+	);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+/* A buy button in the violet accent: the button's brand colours, redefined for what it holds. */
+.buyAccent {
+	--brand-primary: var(--premium-buy);
+	--brand-secondary: color-mix(in srgb, var(--premium-buy) 82%, white);
+	--brand-primary-fill: var(--premium-hero-ink);
+}
+
+/* A buy button in white over the violet art, so it stands out with its halo glowing behind it: night text (about
+   18:1 on white), an ice tint on hover. */
+.buyLight {
+	--brand-primary: #fff;
+	--brand-secondary: var(--premium-ice);
+	--brand-primary-fill: var(--premium-night);
+}
+
+.srOnly {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}

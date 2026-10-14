@@ -57,8 +57,10 @@ export const UserFlags = {
 	FRIENDLY_BOT: 1n << 4n,
 	FRIENDLY_BOT_MANUAL_APPROVAL: 1n << 5n,
 	SPAMMER: 1n << 6n,
+	VERIFIED: 1n << 29n,
 	PROFILE_HIDDEN: 1n << 7n,
 	DELETED: 1n << 34n,
+	DISABLED_SUSPICIOUS_ACTIVITY: 1n << 35n,
 	SELF_DELETED: 1n << 36n,
 	DISABLED: 1n << 38n,
 	HAS_SESSION_STARTED: 1n << 39n,
@@ -69,8 +71,11 @@ export const UserFlags = {
 	HAS_DISMISSED_PREMIUM_ONBOARDING: 1n << 51n,
 	APP_STORE_REVIEWER: 1n << 53n,
 	STAFF_HIDDEN: 1n << 57n,
+	// Micup: 62 remains NOT_SUSPICIOUS for existing rows and rollback readers; upstream LIMIT_EXEMPT uses the free 59.
+	LIMIT_EXEMPT: 1n << 59n,
 	AGE_VERIFIED_ADULT: 1n << 60n,
-	LIMIT_EXEMPT: 1n << 62n,
+	FORCE_INBOUND_PHONE_VERIFICATION: 1n << 61n,
+	NOT_SUSPICIOUS: 1n << 62n,
 } as const;
 export const UserFlagsDescriptions: Record<keyof typeof UserFlags, string> = {
 	STAFF: 'User is a staff member',
@@ -80,8 +85,10 @@ export const UserFlagsDescriptions: Record<keyof typeof UserFlags, string> = {
 	FRIENDLY_BOT: 'Bot accepts friend requests from users',
 	FRIENDLY_BOT_MANUAL_APPROVAL: 'Bot requires manual approval for friend requests',
 	SPAMMER: 'User is flagged as a spammer',
+	VERIFIED: 'User account is verified',
 	PROFILE_HIDDEN: 'User profile details are hidden from other users',
 	DELETED: 'User account has been deleted',
+	DISABLED_SUSPICIOUS_ACTIVITY: 'User account disabled due to suspicious activity',
 	SELF_DELETED: 'User account was self-deleted',
 	DISABLED: 'User account is disabled',
 	HAS_SESSION_STARTED: 'User has started a session',
@@ -94,6 +101,10 @@ export const UserFlagsDescriptions: Record<keyof typeof UserFlags, string> = {
 	STAFF_HIDDEN: 'User staff status is hidden from public flags',
 	AGE_VERIFIED_ADULT: 'User has verified their age as an adult via credit card verification',
 	LIMIT_EXEMPT: 'User is permanently exempt from account limitation',
+	FORCE_INBOUND_PHONE_VERIFICATION:
+		'User is forced through inbound (expensive-destination) phone verification regardless of phone prefix, for debugging',
+	NOT_SUSPICIOUS:
+		'User is permanently exempt from automatic suspicious-activity flagging on RPC session start (does not require a prior payment)',
 };
 export const PremiumFlags = {
 	DISCRIMINATOR: 1 << 0,
@@ -131,8 +142,7 @@ export const LEGACY_PREMIUM_FLAGS_MASK: bigint = LEGACY_PREMIUM_FLAG_BITS_TO_NEW
 	(mask, [legacy]) => mask | legacy,
 	0n,
 );
-export const LEGACY_DEAD_USER_FLAGS_MASK: bigint =
-	(1n << 35n) | (1n << 52n) | (1n << 54n) | (1n << 55n) | (1n << 56n) | (1n << 58n) | (1n << 61n);
+export const LEGACY_DEAD_USER_FLAGS_MASK: bigint = (1n << 52n) | (1n << 54n) | (1n << 55n) | (1n << 56n) | (1n << 58n);
 
 export function extractPremiumFlagsFromLegacyUserFlags(legacyFlags: bigint): number {
 	let result = 0;
@@ -150,7 +160,8 @@ export const PUBLIC_USER_FLAGS =
 	UserFlags.BUG_HUNTER |
 	UserFlags.FRIENDLY_BOT |
 	UserFlags.FRIENDLY_BOT_MANUAL_APPROVAL |
-	UserFlags.SPAMMER;
+	UserFlags.SPAMMER |
+	UserFlags.VERIFIED;
 export const DELETED_USER_USERNAME = 'DeletedUser';
 export const DELETED_USER_GLOBAL_NAME = 'Deleted User';
 export const DELETED_USER_DISCRIMINATOR = 0;
@@ -162,6 +173,10 @@ export const PublicUserFlags = {
 	FRIENDLY_BOT: Number(UserFlags.FRIENDLY_BOT),
 	FRIENDLY_BOT_MANUAL_APPROVAL: Number(UserFlags.FRIENDLY_BOT_MANUAL_APPROVAL),
 	SPAMMER: Number(UserFlags.SPAMMER),
+	VERIFIED: Number(UserFlags.VERIFIED),
+	// Micup: derived on every read from premium state (UserMappers.ts, Rust public_user_flags), never stored, so it
+	// stays out of UserFlags and PUBLIC_USER_FLAGS.
+	PREMIUM_BADGE: 1 << 30,
 } as const;
 export const PublicUserFlagsDescriptions: Record<keyof typeof PublicUserFlags, string> = {
 	STAFF: 'User is a staff member',
@@ -170,7 +185,24 @@ export const PublicUserFlagsDescriptions: Record<keyof typeof PublicUserFlags, s
 	FRIENDLY_BOT: 'Bot accepts friend requests from users',
 	FRIENDLY_BOT_MANUAL_APPROVAL: 'Bot requires manual approval for friend requests',
 	SPAMMER: 'User is flagged as a spammer',
+	VERIFIED: 'User account is verified',
+	PREMIUM_BADGE:
+		'User has premium and shows the premium badge next to their name (computed on every read, never stored)',
 };
+export const SuspiciousActivityFlags = {
+	REQUIRE_VERIFIED_EMAIL: 1 << 0,
+	REQUIRE_REVERIFIED_EMAIL: 1 << 1,
+	REQUIRE_VERIFIED_PHONE: 1 << 2,
+	REQUIRE_REVERIFIED_PHONE: 1 << 3,
+	REQUIRE_VERIFIED_EMAIL_OR_VERIFIED_PHONE: 1 << 4,
+	REQUIRE_REVERIFIED_EMAIL_OR_VERIFIED_PHONE: 1 << 5,
+	REQUIRE_VERIFIED_EMAIL_OR_REVERIFIED_PHONE: 1 << 6,
+	REQUIRE_REVERIFIED_EMAIL_OR_REVERIFIED_PHONE: 1 << 7,
+	REQUIRE_INBOUND_PHONE_VERIFICATION: 1 << 8,
+} as const;
+export const DEFERRED_PHONE_ON_COMMUNITY_JOIN = 1 << 16;
+export const DEFERRABLE_PHONE_FLAGS =
+	SuspiciousActivityFlags.REQUIRE_VERIFIED_PHONE | SuspiciousActivityFlags.REQUIRE_REVERIFIED_PHONE;
 export const ThemeTypes = {
 	DARK: 'dark',
 	DARK_LEGACY: 'dark_legacy',
@@ -282,14 +314,20 @@ export const ProfilePrivacyLevels = {
 	ALL_GUILDS: 0,
 	SMALL_GUILDS_ONLY: 1,
 	FRIENDS_ONLY: 2,
+	// Four-option profile visibility. 0 and the legacy 1 read as "shared communities" (1 is kept as
+	// written so older clients keep working), 2 as "friends and mutual follows".
+	EVERYONE: 100,
+	ONLY_ME: 101,
 } as const;
 
 export type ProfilePrivacyLevel = (typeof ProfilePrivacyLevels)[keyof typeof ProfilePrivacyLevels];
 
 export const ProfilePrivacyLevelsDescriptions: Record<keyof typeof ProfilePrivacyLevels, string> = {
-	ALL_GUILDS: 'Profile visible to friends and members of any shared guild',
-	SMALL_GUILDS_ONLY: 'Profile visible to friends and members of shared guilds with at most 200 members',
-	FRIENDS_ONLY: 'Profile visible only to friends',
+	ALL_GUILDS: 'Profile visible to friends, mutual follows and members of any shared guild',
+	SMALL_GUILDS_ONLY: 'Legacy value; read as ALL_GUILDS',
+	FRIENDS_ONLY: 'Profile visible to friends and mutual follows',
+	EVERYONE: 'Profile visible to every signed-in user (16 or older with a date of birth)',
+	ONLY_ME: 'Profile content visible only to the owner',
 };
 export const ProfileFieldPrivacyFlags = {
 	EVERYONE: 1 << 0,
@@ -302,7 +340,6 @@ export const ProfileFieldPrivacyFlagsDescriptions: Record<keyof typeof ProfileFi
 	FRIENDS: 'Allow friends to see this profile field',
 	MUTUAL_GUILDS: 'Allow members from mutual guilds to see this profile field',
 };
-export const SMALL_GUILD_MEMBER_THRESHOLD = 200;
 export const VOICE_ACTIVITY_SHARING_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 export const UserNotificationSettings = {
 	ALL_MESSAGES: 0,

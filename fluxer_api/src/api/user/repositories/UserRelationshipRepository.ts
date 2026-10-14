@@ -8,6 +8,7 @@ import type {NoteRow, RelationshipRow} from '@app/api/database/types/UserTypes';
 import {Relationship} from '@app/api/models/Relationship';
 import {UserNote} from '@app/api/models/UserNote';
 import {Notes, Relationships, RelationshipsByTarget} from '@app/api/Tables';
+import {onUserPairChanged} from '@app/api/user/lifecycle/UserLifecycleHooks';
 import type {IUserRelationshipRepository} from '@app/api/user/repositories/IUserRelationshipRepository';
 import {RelationshipTypes} from '@fluxer/constants/src/UserConstants';
 
@@ -33,6 +34,15 @@ const FETCH_RELATIONSHIP_CQL = Relationships.selectCql({
 		Relationships.where.eq('source_user_id'),
 		Relationships.where.eq('target_user_id'),
 		Relationships.where.eq('type'),
+	],
+	limit: 1,
+});
+const FETCH_INCOMING_RELATIONSHIP_CQL = RelationshipsByTarget.selectCql({
+	columns: ['source_user_id', 'type'],
+	where: [
+		RelationshipsByTarget.where.eq('target_user_id'),
+		RelationshipsByTarget.where.eq('source_user_id'),
+		RelationshipsByTarget.where.eq('type'),
 	],
 	limit: 1,
 });
@@ -112,6 +122,7 @@ export class UserRelationshipRepository implements IUserRelationshipRepository {
 				}),
 			),
 		]);
+		await onUserPairChanged({userId: sourceUserId, targetId: targetUserId});
 	}
 
 	async getRelationship(sourceUserId: UserID, targetUserId: UserID, type: number): Promise<Relationship | null> {
@@ -121,6 +132,22 @@ export class UserRelationshipRepository implements IUserRelationshipRepository {
 			type,
 		});
 		return relationship ? new Relationship(relationship) : null;
+	}
+
+	/**
+	 * whether `sourceUserId` holds a relationship of `type` toward `userId`, read from `userId`'s own
+	 * relationships_by_target partition, so a profile check never reads the owner's partition for a block on the viewer.
+	 */
+	async getIncomingRelationship(
+		userId: UserID,
+		sourceUserId: UserID,
+		type: number,
+	): Promise<Pick<RelationshipRow, 'source_user_id' | 'type'> | null> {
+		return fetchOne<Pick<RelationshipRow, 'source_user_id' | 'type'>>(FETCH_INCOMING_RELATIONSHIP_CQL, {
+			target_user_id: userId,
+			source_user_id: sourceUserId,
+			type,
+		});
 	}
 
 	async getUserNote(sourceUserId: UserID, targetUserId: UserID): Promise<UserNote | null> {
@@ -158,6 +185,20 @@ export class UserRelationshipRepository implements IUserRelationshipRepository {
 	async listIncomingRequests(userId: UserID): Promise<Array<Relationship>> {
 		const relationships = await this.listRelationships(userId);
 		return relationships.filter((rel) => rel.type === RelationshipTypes.INCOMING_REQUEST);
+	}
+
+	/** Relationships other accounts hold toward `targetUserId`, at most `limit` rows (Micup Keşfet: blocks toward a reader). */
+	async listIncomingRelationships(
+		targetUserId: UserID,
+		options: {limit: number},
+	): Promise<Array<Pick<RelationshipRow, 'source_user_id' | 'type'>>> {
+		return fetchMany<Pick<RelationshipRow, 'source_user_id' | 'type'>>(
+			RelationshipsByTarget.select({
+				columns: ['source_user_id', 'type'],
+				where: RelationshipsByTarget.where.eq('target_user_id'),
+				limit: options.limit,
+			}).bind({target_user_id: targetUserId}),
+		);
 	}
 
 	async hasReachedRelationshipLimit(sourceUserId: UserID, limit: number): Promise<boolean> {
@@ -229,6 +270,7 @@ export class UserRelationshipRepository implements IUserRelationshipRepository {
 			}),
 			RelationshipsByTarget,
 		);
+		await onUserPairChanged({userId: relationship.source_user_id, targetId: relationship.target_user_id});
 		return new Relationship(finalRelationship);
 	}
 

@@ -1,0 +1,32 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.countdown {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	font-size: 0.75rem;
+	line-height: 1rem;
+	color: var(--text-secondary);
+}
+
+.dialog {
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+}
+
+/* Under a day the whole countdown turns the warning colour and the time inherits it, so a colour set through
+   className reaches the time too. */
+.countdown:has(.warning) {
+	color: var(--text-warning);
+}
+
+/* A parent may size the clock with --shop-countdown-icon-size (the shop card lines it up with its other icons). */
+.icon {
+	flex: 0 0 auto;
+	width: var(--shop-countdown-icon-size, 1em);
+	height: var(--shop-countdown-icon-size, 1em);
+}
+
+.time {
+	font-variant-numeric: tabular-nums;
+}

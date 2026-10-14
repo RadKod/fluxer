@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::pseudonym::pseudonym;
-use fluxer_common::user_flags::{AccountStanding, USER_FLAG_STAFF, visible_user_flags};
+use fluxer_common::user_flags::{AccountStanding, USER_FLAG_STAFF, public_user_flags};
 #[cfg(test)]
-use fluxer_common::user_flags::{USER_FLAG_PARTNER, USER_FLAG_STAFF_HIDDEN};
+use fluxer_common::user_flags::{
+    PUBLIC_USER_FLAG_PREMIUM_BADGE, USER_FLAG_PARTNER, USER_FLAG_STAFF_HIDDEN, USER_FLAG_VERIFIED,
+};
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,6 +49,8 @@ pub struct User {
     pub user_id: i64,
     pub username: String,
     pub discriminator: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identity_version: Option<i64>,
     pub bot: Option<bool>,
     pub system: Option<bool>,
     pub email: Option<String>,
@@ -100,6 +104,12 @@ pub struct User {
     pub last_voice_activity_sharing_change_at: Option<i64>,
     pub timezone: Option<String>,
     pub timezone_privacy_flags: Option<i32>,
+    pub avatar_decoration_id: Option<i64>,
+    pub avatar_decoration_asset: Option<String>,
+    pub avatar_ultra_id: Option<i64>,
+    pub avatar_ultra_asset: Option<String>,
+    pub nameplate_id: Option<i64>,
+    pub nameplate_asset: Option<String>,
     #[serde(default)]
     pub content_hidden_since: Option<i64>,
 }
@@ -109,18 +119,35 @@ pub struct UserPartial {
     pub user_id: i64,
     pub username: String,
     pub discriminator: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identity_version: Option<i64>,
     pub global_name: Option<String>,
     pub avatar_hash: Option<String>,
     pub bot: Option<bool>,
     pub system: Option<bool>,
     pub flags: Option<i64>,
+    pub premium_type: Option<i32>,
+    pub premium_flags: Option<i32>,
     pub banner_hash: Option<String>,
     pub banner_color: Option<i32>,
     pub accent_color: Option<i32>,
     pub avatar_color: Option<i32>,
     pub mention_flags: Option<i32>,
+    pub avatar_decoration_id: Option<i64>,
+    pub avatar_decoration_asset: Option<String>,
+    pub avatar_ultra_id: Option<i64>,
+    pub avatar_ultra_asset: Option<String>,
+    pub nameplate_id: Option<i64>,
+    pub nameplate_asset: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content_hidden_since: Option<i64>,
+}
+
+/// Micup: a worn cosmetic, the catalog item and the image hash copied onto the user row when it was put on.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ApiCosmeticAssetData {
+    pub asset: String,
+    pub item_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -128,6 +155,8 @@ pub struct ApiUserPartial {
     pub id: String,
     pub username: String,
     pub discriminator: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identity_version: Option<String>,
     pub global_name: Option<String>,
     pub avatar: Option<String>,
     pub avatar_color: Option<i32>,
@@ -138,10 +167,15 @@ pub struct ApiUserPartial {
     pub flags: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mention_flags: Option<i32>,
+    // Always serialized, as null when nothing is worn: the client keeps a field a payload leaves out and the gateway
+    // compares these, so they must match the API's own partial user field for field.
+    pub avatar_decoration_data: Option<ApiCosmeticAssetData>,
+    pub avatar_ultra_data: Option<ApiCosmeticAssetData>,
+    pub nameplate_data: Option<ApiCosmeticAssetData>,
 }
 
 const FLUXER_SYSTEM_USER_ID: i64 = 0;
-const FLUXER_SYSTEM_USERNAME: &str = "Fluxer";
+const FLUXER_SYSTEM_USERNAME: &str = "Micup";
 const FLUXER_SYSTEM_DISCRIMINATOR: &str = "0000";
 
 pub fn now_ms() -> i64 {
@@ -170,16 +204,25 @@ impl User {
             user_id: self.user_id,
             username: self.username.clone(),
             discriminator: self.discriminator,
+            identity_version: self.identity_version,
             global_name: self.global_name.clone(),
             avatar_hash: self.avatar_hash.clone(),
             bot: self.bot,
             system: self.system,
             flags: self.flags,
+            premium_type: self.premium_type,
+            premium_flags: self.premium_flags,
             banner_hash: self.banner_hash.clone(),
             banner_color: self.banner_color,
             accent_color: self.accent_color,
             avatar_color: self.avatar_color,
             mention_flags: self.mention_flags,
+            avatar_decoration_id: self.avatar_decoration_id,
+            avatar_decoration_asset: self.avatar_decoration_asset.clone(),
+            avatar_ultra_id: self.avatar_ultra_id,
+            avatar_ultra_asset: self.avatar_ultra_asset.clone(),
+            nameplate_id: self.nameplate_id,
+            nameplate_asset: self.nameplate_asset.clone(),
             content_hidden_since: self.content_hidden_since,
         }
     }
@@ -200,6 +243,14 @@ impl UserPartial {
             banner_color: None,
             accent_color: None,
             avatar_color: None,
+            premium_type: None,
+            premium_flags: None,
+            avatar_decoration_id: None,
+            avatar_decoration_asset: None,
+            avatar_ultra_id: None,
+            avatar_ultra_asset: None,
+            nameplate_id: None,
+            nameplate_asset: None,
             ..self
         }
     }
@@ -212,15 +263,37 @@ impl UserPartial {
             id: self.user_id.to_string(),
             username: self.username.clone(),
             discriminator: format!("{:04}", self.discriminator),
+            identity_version: self.identity_version.map(|version| version.to_string()),
             global_name: self.global_name.clone(),
             avatar: self.avatar_hash.clone(),
             avatar_color: self.avatar_color,
             bot: self.bot.filter(|bot| *bot),
             system: self.system.filter(|system| *system),
-            flags: visible_user_flags(self.flags.unwrap_or_default()),
+            flags: public_user_flags(
+                self.flags.unwrap_or_default(),
+                self.bot.unwrap_or_default(),
+                self.premium_type,
+                self.premium_flags,
+            ),
             mention_flags: self.mention_flags.filter(|flags| *flags != 0),
+            avatar_decoration_data: cosmetic_asset_data(
+                self.avatar_decoration_id,
+                self.avatar_decoration_asset.as_deref(),
+            ),
+            avatar_ultra_data: cosmetic_asset_data(
+                self.avatar_ultra_id,
+                self.avatar_ultra_asset.as_deref(),
+            ),
+            nameplate_data: cosmetic_asset_data(self.nameplate_id, self.nameplate_asset.as_deref()),
         }
     }
+}
+
+fn cosmetic_asset_data(item_id: Option<i64>, asset: Option<&str>) -> Option<ApiCosmeticAssetData> {
+    Some(ApiCosmeticAssetData {
+        asset: asset?.to_owned(),
+        item_id: item_id?.to_string(),
+    })
 }
 
 fn fluxer_system_user() -> ApiUserPartial {
@@ -228,6 +301,7 @@ fn fluxer_system_user() -> ApiUserPartial {
         id: FLUXER_SYSTEM_USER_ID.to_string(),
         username: FLUXER_SYSTEM_USERNAME.to_owned(),
         discriminator: FLUXER_SYSTEM_DISCRIMINATOR.to_owned(),
+        identity_version: None,
         global_name: None,
         avatar: None,
         avatar_color: None,
@@ -235,6 +309,9 @@ fn fluxer_system_user() -> ApiUserPartial {
         system: Some(true),
         flags: USER_FLAG_STAFF as i32,
         mention_flags: None,
+        avatar_decoration_data: None,
+        avatar_ultra_data: None,
+        nameplate_data: None,
     }
 }
 
@@ -262,21 +339,63 @@ mod tests {
 
     const USER_FLAG_DELETED: i64 = 1 << 34;
 
+    #[test]
+    fn api_partial_preserves_identity_version_without_private_username_state() {
+        let mut value = serde_json::to_value(partial_with_flags(42, 0).to_api_partial()).unwrap();
+        value["identity_version"] = json!("9223372036854775808");
+        value["username_state"] = json!("selected");
+        value["username_change_available_at"] = json!(123);
+        value["username_free_change_available"] = json!(true);
+        let partial: ApiUserPartial = serde_json::from_value(value).unwrap();
+        let serialized = serde_json::to_value(partial).unwrap();
+        assert_eq!(serialized["identity_version"], json!("9223372036854775808"));
+        for key in [
+            "username_state",
+            "username_change_available_at",
+            "username_free_change_available",
+        ] {
+            assert!(serialized.get(key).is_none());
+        }
+    }
+
+    #[test]
+    fn api_partial_does_not_invent_identity_version_for_legacy_rows() {
+        let value = serde_json::to_value(partial_with_flags(42, 0).to_api_partial()).unwrap();
+        assert!(value.get("identity_version").is_none());
+    }
+
+    #[test]
+    fn api_partial_serializes_projected_bigint_version_as_decimal() {
+        let mut partial = partial_with_flags(42, 0);
+        partial.identity_version = Some(i64::MAX);
+        let value = serde_json::to_value(partial.to_api_partial()).unwrap();
+        assert_eq!(value["identity_version"], json!("9223372036854775807"));
+    }
+
     fn partial_with_flags(user_id: i64, flags: i64) -> UserPartial {
         UserPartial {
             user_id,
             username: "Ada".to_owned(),
             discriminator: 7,
+            identity_version: None,
             global_name: Some("Ada Lovelace".to_owned()),
             avatar_hash: Some("avatar_hash".to_owned()),
             bot: Some(false),
             system: Some(false),
             flags: Some(flags),
+            premium_type: None,
+            premium_flags: None,
             banner_hash: None,
             banner_color: None,
             accent_color: None,
             avatar_color: Some(0x336699),
             mention_flags: Some(0),
+            avatar_decoration_id: None,
+            avatar_decoration_asset: None,
+            avatar_ultra_id: None,
+            avatar_ultra_asset: None,
+            nameplate_id: None,
+            nameplate_asset: None,
             content_hidden_since: None,
         }
     }
@@ -286,6 +405,7 @@ mod tests {
             user_id,
             username: "Ada".to_owned(),
             discriminator: 7,
+            identity_version: None,
             bot: Some(false),
             system: Some(false),
             email: Some("ada@example.com".to_owned()),
@@ -339,6 +459,12 @@ mod tests {
             last_voice_activity_sharing_change_at: None,
             timezone: Some("Europe/London".to_owned()),
             timezone_privacy_flags: Some(1),
+            avatar_decoration_id: None,
+            avatar_decoration_asset: None,
+            avatar_ultra_id: None,
+            avatar_ultra_asset: None,
+            nameplate_id: None,
+            nameplate_asset: None,
             content_hidden_since: None,
         }
     }
@@ -357,8 +483,20 @@ mod tests {
         assert_eq!(api_partial.avatar_color, Some(0x336699));
         assert_eq!(api_partial.bot, None);
         assert_eq!(api_partial.system, None);
-        assert_eq!(api_partial.flags, USER_FLAG_STAFF as i32);
+        // Micup: the premium columns are part of the partial now; this premium user shows the badge bit.
+        assert_eq!(
+            api_partial.flags,
+            USER_FLAG_STAFF as i32 | PUBLIC_USER_FLAG_PREMIUM_BADGE
+        );
         assert_eq!(api_partial.mention_flags, None);
+    }
+
+    #[test]
+    fn to_partial_keeps_the_premium_columns() {
+        let partial = user_with_flags(123, 0).to_partial();
+
+        assert_eq!(partial.premium_type, Some(2));
+        assert_eq!(partial.premium_flags, Some(1));
     }
 
     #[test]
@@ -415,10 +553,20 @@ mod tests {
                     "global_name": "Ada Lovelace",
                     "avatar": "avatar_hash",
                     "avatar_color": 0x336699,
-                    "flags": 1
+                    "flags": 1,
+                    "avatar_decoration_data": null,
+                    "avatar_ultra_data": null,
+                    "nameplate_data": null
                 }]
             })
         );
+    }
+
+    #[test]
+    fn api_partial_carries_the_verified_flag() {
+        let api_partial = partial_with_flags(123, USER_FLAG_VERIFIED).to_api_partial();
+
+        assert_eq!(api_partial.flags, 1 << 29);
     }
 
     #[test]
@@ -450,7 +598,7 @@ mod tests {
     fn api_partial_maps_system_user_like_the_api_mapper() {
         let system = partial_with_flags(FLUXER_SYSTEM_USER_ID, USER_FLAG_STAFF).to_api_partial();
 
-        assert_eq!(system.username, FLUXER_SYSTEM_USERNAME);
+        assert_eq!(system.username, "Micup");
         assert_eq!(system.bot, Some(true));
         assert_eq!(system.system, Some(true));
         assert_eq!(

@@ -184,14 +184,32 @@ describe('Origin handoff', () => {
 		expect(redeemed.payload).toBe(PAYLOAD);
 	});
 
-	it('skips the origin check on a self-hosted instance', async () => {
+	it('refuses creation on a self-hosted instance', async () => {
+		const account = await createTestAccount(harness);
 		getConfig().instance.selfHosted = true;
+
+		await createBuilder(harness, account.token)
+			.post(CREATE_PATH)
+			.body({nonce_hash: createNonce().nonceHash, payload: PAYLOAD})
+			.expect(HTTP_STATUS.FORBIDDEN)
+			.execute();
+	});
+
+	it('refuses redemption on a self-hosted instance without consuming the handoff', async () => {
 		const account = await createTestAccount(harness);
 		const {nonce, nonceHash} = createNonce();
 		const handoffId = await createHandoff(account.token, nonceHash);
+		getConfig().instance.selfHosted = true;
 
+		await createBuilderWithoutAuth(harness)
+			.post(REDEEM_PATH)
+			.body({handoff_id: handoffId, nonce})
+			.expect(HTTP_STATUS.FORBIDDEN)
+			.execute();
+		getConfig().instance.selfHosted = false;
 		const redeemed = await createBuilderWithoutAuth<OriginHandoffRedeemResponse>(harness)
 			.post(REDEEM_PATH)
+			.header('origin', webAppOrigin)
 			.body({handoff_id: handoffId, nonce})
 			.execute();
 		expect(redeemed.payload).toBe(PAYLOAD);

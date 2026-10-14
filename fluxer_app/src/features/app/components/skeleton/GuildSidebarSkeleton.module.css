@@ -81,3 +81,14 @@
 	flex: 0 0 auto;
 	height: calc(var(--layout-user-area-overlay-height, var(--layout-user-area-reserved-height, 0px)) + var(--spacing-2));
 }
+
+/* Micup: Discord-like channel rows */
+.rowChannel {
+	margin-top: var(--channel-item-gap);
+	padding-top: var(--channel-item-padding-block);
+	padding-bottom: var(--channel-item-padding-block);
+}
+
+.rowCategory {
+	margin-top: var(--channel-category-gap);
+}

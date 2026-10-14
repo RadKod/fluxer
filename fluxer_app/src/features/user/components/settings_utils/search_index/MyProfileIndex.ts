@@ -203,7 +203,7 @@ const BADGE_DESCRIPTOR = msg({
 	comment: 'Settings search entry label. Also used as a search synonym in the settings search bar.',
 });
 const PREMIUM_BADGE_DESCRIPTOR = msg({
-	message: 'Premium badge',
+	message: 'Plus badge',
 	comment: 'Settings search synonym. Used to match this term when the user types it in the settings search bar.',
 });
 const CONFIGURE_YOUR_PROFILE_BADGE_DESCRIPTOR = msg({

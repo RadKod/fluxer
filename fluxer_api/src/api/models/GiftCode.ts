@@ -103,8 +103,10 @@ export function addGiftCodeDuration(
 
 export class GiftCode {
 	readonly code: string;
-	readonly durationType: GiftCodeDurationType;
-	readonly durationQuantity: number;
+	// Micup item codes (shop, 3.4) give this cosmetic instead of premium time; their row carries no duration.
+	readonly cosmeticItemId: bigint | null;
+	readonly durationType: GiftCodeDurationType | null;
+	readonly durationQuantity: number | null;
 	readonly durationMonths: number | null;
 	readonly createdAt: Date;
 	readonly createdByUserId: UserID;
@@ -118,11 +120,15 @@ export class GiftCode {
 	readonly version: number;
 
 	constructor(row: GiftCodeRow) {
-		const duration = normaliseGiftCodeDuration(row);
 		this.code = row.code;
-		this.durationType = duration.durationType;
-		this.durationQuantity = duration.durationQuantity;
-		this.durationMonths = mapGiftCodeDurationToMonths(duration.durationType, duration.durationQuantity);
+		this.cosmeticItemId = row.cosmetic_item_id ?? null;
+		// A duration on an item code row is never read: a zero there would mean lifetime premium.
+		const duration = this.cosmeticItemId === null ? normaliseGiftCodeDuration(row) : null;
+		this.durationType = duration?.durationType ?? null;
+		this.durationQuantity = duration?.durationQuantity ?? null;
+		this.durationMonths = duration
+			? mapGiftCodeDurationToMonths(duration.durationType, duration.durationQuantity)
+			: null;
 		this.createdAt = row.created_at;
 		this.createdByUserId = row.created_by_user_id as UserID;
 		this.redeemedAt = row.redeemed_at ?? null;
@@ -149,8 +155,19 @@ export class GiftCode {
 			visionary_sequence_number: this.visionarySequenceNumber,
 			checkout_session_id: this.checkoutSessionId,
 			revoked_at: this.revokedAt,
+			cosmetic_item_id: this.cosmeticItemId,
 			premium_reversed_seconds: this.premiumReversedSeconds,
 			version: this.version,
 		};
 	}
+}
+
+export type PremiumGiftCode = GiftCode & {
+	cosmeticItemId: null;
+	durationType: GiftCodeDurationType;
+	durationQuantity: number;
+};
+
+export function isPremiumGiftCode(code: GiftCode): code is PremiumGiftCode {
+	return code.cosmeticItemId === null;
 }

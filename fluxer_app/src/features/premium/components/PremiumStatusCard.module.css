@@ -1,0 +1,58 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* The member's status box inside the premium hero, which stays dark in every theme. */
+.status {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.875rem;
+	margin-top: 2rem;
+	padding: 0.625rem 0.625rem 0.625rem 1.125rem;
+	border-radius: var(--premium-radius-card);
+	background: color-mix(in srgb, var(--premium-night) 38%, transparent);
+	border: 0.0625rem solid color-mix(in srgb, var(--premium-hero-ink) 22%, transparent);
+	text-align: left;
+}
+
+.dot {
+	flex-shrink: 0;
+	width: 0.625rem;
+	height: 0.625rem;
+	border-radius: var(--radius-full);
+	background: var(--status-online);
+}
+
+.text {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: 0.125rem;
+}
+
+.title {
+	margin: 0;
+	font-weight: 600;
+	font-size: var(--premium-fs-body);
+	line-height: 1.25rem;
+	color: var(--premium-hero-ink);
+}
+
+.detail {
+	margin: 0;
+	font-size: var(--premium-fs-small);
+	line-height: 1.25rem;
+	color: color-mix(in srgb, var(--premium-hero-ink) 78%, transparent);
+	font-variant-numeric: tabular-nums;
+}
+
+/* A narrow page: "Add time" runs across the box under the text, like the hero's buy button. The button fills its halo
+   (fitContainer), which elsewhere is as wide as the button. */
+@container premium-page (max-width: 47.5rem) {
+	.status {
+		display: flex;
+	}
+
+	.addTime {
+		flex: 1 1 100%;
+	}
+}

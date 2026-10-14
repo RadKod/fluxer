@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {AdminRepository} from '@app/api/admin/AdminRepository';
 import {ipBanCache} from '@app/api/middleware/IpBanMiddleware';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
@@ -9,9 +10,71 @@ beforeEach(() => {
 
 afterEach(() => {
 	vi.useRealTimers();
+	vi.restoreAllMocks();
 });
 
 describe('IpBanCache', () => {
+	it('replaces a permanent entry with the exact persisted temporary expiry', () => {
+		vi.useFakeTimers({toFake: ['Date']});
+		const expiry = new Date(Date.now() + 3_600_000);
+		ipBanCache.ban('203.0.113.60');
+		ipBanCache.replaceBan('203.0.113.60', expiry);
+		expect(ipBanCache.getMatch('203.0.113.60')).toMatchObject({kind: 'temporary_24h', expiresAt: expiry});
+		vi.advanceTimersByTime(3_600_001);
+		expect(ipBanCache.getMatch('203.0.113.60')).toBeNull();
+		ipBanCache.replaceBan('203.0.113.60', null);
+		expect(ipBanCache.getMatch('203.0.113.60')).toMatchObject({kind: 'permanent', expiresAt: null});
+	});
+	it('builds the replacement index during refresh and clears it during reset', async () => {
+		vi.useFakeTimers({toFake: ['Date']});
+		const first = '2a01:e0a:d10:3333::1';
+		const sibling = '2a01:e0a:d10:3333::2';
+		const expiry = new Date(Date.now() + 3_600_000);
+		vi.spyOn(AdminRepository.prototype, 'loadAllBannedIpEntries').mockResolvedValue([
+			{ip: first, kind: 'permanent', reason: null, expiresAt: null, createdAt: null},
+			{ip: sibling, kind: 'permanent', reason: null, expiresAt: null, createdAt: null},
+		]);
+		await ipBanCache.refresh();
+		ipBanCache.replaceBan(first, expiry);
+		expect(ipBanCache.getMatch(first)?.kind).toBe('permanent');
+		ipBanCache.replaceBan(sibling, expiry);
+		expect(ipBanCache.getMatch(first)?.expiresAt).toEqual(expiry);
+		ipBanCache.resetCaches();
+		ipBanCache.replaceBan(first, expiry);
+		expect(ipBanCache.getMatch(first)?.expiresAt).toEqual(expiry);
+		vi.advanceTimersByTime(3_600_001);
+		expect(ipBanCache.getMatch(sibling)).toBeNull();
+	});
+	it('replaces a range entry without retaining its prior permanent state', () => {
+		const expiry = new Date(Date.now() + 3_600_000);
+		ipBanCache.ban('203.0.113.0/24');
+		ipBanCache.replaceBan('203.0.113.0/24', expiry);
+		expect(ipBanCache.getMatch('203.0.113.70')).toMatchObject({kind: 'temporary_24h', expiresAt: expiry});
+	});
+	it('retains sibling permanent bans while replacing one IPv6 entry', () => {
+		vi.useFakeTimers({toFake: ['Date']});
+		const first = '2a01:e0a:d10:2222::1';
+		const sibling = '2a01:e0a:d10:2222::2';
+		const rotated = '2a01:e0a:d10:2222::3';
+		ipBanCache.ban(first);
+		ipBanCache.ban(sibling);
+		ipBanCache.replaceBan(first, new Date(Date.now() + 3_600_000));
+		vi.advanceTimersByTime(3_600_001);
+		expect(ipBanCache.getMatch(rotated)?.kind).toBe('permanent');
+		ipBanCache.replaceBan(sibling, new Date(Date.now() + 3_600_000));
+		vi.advanceTimersByTime(3_600_001);
+		expect(ipBanCache.getMatch(rotated)).toBeNull();
+	});
+	it('does not remove a sibling permanent /64 ban when unbanning a temporary entry', () => {
+		vi.useFakeTimers({toFake: ['Date']});
+		const temporary = '2a01:e0a:d10:4444::1';
+		const permanent = '2a01:e0a:d10:4444::2';
+		ipBanCache.replaceBan(temporary, new Date(Date.now() + 3_600_000));
+		ipBanCache.replaceBan(permanent, null);
+		ipBanCache.unban(temporary);
+		vi.advanceTimersByTime(3_600_001);
+		expect(ipBanCache.getMatch('2a01:e0a:d10:4444::3')?.kind).toBe('permanent');
+	});
 	it('blocks IPv4-mapped IPv6 when a single IPv4 address is banned', () => {
 		ipBanCache.ban('127.0.0.1');
 		expect(ipBanCache.isBanned('127.0.0.1')).toBe(true);

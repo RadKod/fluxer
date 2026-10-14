@@ -5,6 +5,56 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+identity_updates_keep_latest_name_for_fresh_friend_session_test() ->
+    maybe_start_presence_bus(),
+    maybe_start_presence_cache(),
+    TargetId = 2200,
+    New = #{
+        <<"id">> => <<"2200">>,
+        <<"username">> => <<"new">>,
+        <<"discriminator">> => <<"0000">>,
+        <<"identity_version">> => <<"8">>
+    },
+    Old = New#{
+        <<"username">> => <<"old">>,
+        <<"identity_version">> => <<"7">>,
+        <<"avatar">> => <<"updated">>
+    },
+    ok = presence_cache:put(TargetId, #{
+        <<"status">> => <<"online">>,
+        <<"user">> => New#{<<"identity_version">> => <<"6">>}
+    }),
+    sync_presence_cache(),
+    WatcherState = #{user_id => 1100, sessions => #{}},
+    {noreply, _} = presence_broadcast:dispatch_global_presence(
+        TargetId,
+        #{<<"user">> => New, <<"user_update">> => true},
+        WatcherState
+    ),
+    sync_presence_cache(),
+    {noreply, _} = presence_broadcast:dispatch_global_presence(
+        TargetId,
+        #{<<"user">> => Old, <<"user_update">> => true},
+        WatcherState
+    ),
+    sync_presence_cache(),
+    {ok, Cached} = presence_cache:get(TargetId),
+    CachedUser = maps:get(<<"user">>, Cached),
+    ?assertEqual(<<"new">>, maps:get(<<"username">>, CachedUser)),
+    ?assertEqual(<<"8">>, maps:get(<<"identity_version">>, CachedUser)),
+    ?assertEqual(<<"updated">>, maps:get(<<"avatar">>, CachedUser)),
+    {ok, PresencePid} = presence:start_link(presence_data(1100, [TargetId])),
+    SessionPid = start_session_probe(PresencePid, connect_req(<<"fresh-identity">>)),
+    try
+        assert_session_connected(SessionPid),
+        assert_probe_dispatch(SessionPid, presence_update, Cached)
+    after
+        SessionPid ! stop,
+        ok = gen_server:stop(PresencePid),
+        ok = presence_cache:delete(TargetId),
+        sync_presence_cache()
+    end.
+
 session_connect_sends_cached_friend_presence_to_new_session_test() ->
     maybe_start_presence_bus(),
     maybe_start_presence_cache(),

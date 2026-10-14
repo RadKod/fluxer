@@ -35,11 +35,12 @@ import {
 	type ExternalAudioProcessorMatch,
 	findExternalProcessorForDevice,
 } from '@app/features/voice/utils/ExternalAudioProcessor';
-import {prefetchDeepFilterAssets} from '@app/features/voice/utils/noise_suppression/DeepFilter';
 import type {VoiceNoiseSuppressionBackend} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionBackends';
 import {
 	getNoiseSuppressionChoiceValues,
 	getSelectedNoiseSuppressionChoice,
+	isAutoGainControlChoiceAvailable,
+	isNoiseSuppressionChoiceSelectable,
 	isStereoMicrophoneChoiceAvailable,
 	isStereoMicrophoneEnabled,
 	setNoiseSuppressionChoice,
@@ -207,6 +208,9 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 		inputVolume,
 		outputVolume,
 		echoCancellation,
+		noiseSuppression,
+		deepFilterNoiseSuppression,
+		deepFilterNoiseSuppressionLevel,
 		autoGainControl,
 		vadThreshold,
 		vadAutoSensitivity,
@@ -257,9 +261,6 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 	useEffect(() => {
 		if (pttReleaseDelay !== selectedPttReleaseDelay) Keybind.setPushToTalkReleaseDelay(selectedPttReleaseDelay);
 	}, [pttReleaseDelay, selectedPttReleaseDelay]);
-	useEffect(() => {
-		prefetchDeepFilterAssets();
-	}, [voiceProcessingMode]);
 	const handleInputDeviceChange = (value: string) => {
 		VoiceSettingsCommands.update({inputDeviceId: value});
 	};
@@ -303,8 +304,10 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 		getNoiseSuppressionChoiceValues().map((backend) => ({
 			value: backend,
 			label: getNoiseSuppressionChoiceLabel(i18n, backend),
+			isDisabled: !isNoiseSuppressionChoiceSelectable(backend),
 		}));
 	const stereoMicrophoneAvailable = isStereoMicrophoneChoiceAvailable(activeInputLabel);
+	const autoGainControlAvailable = isAutoGainControlChoiceAvailable(activeInputLabel);
 	const setPushToTalkEnabled = (enabled: boolean) => {
 		const mode = enabled ? 'voice_push_to_talk' : 'voice_activity';
 		if (enabled && !isNativeDesktop) {
@@ -447,16 +450,17 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 			)}
 		</>
 	);
-	const renderAutoGainControlSwitch = () => (
-		<Switch
-			label={i18n._(VOICE_AUTOMATIC_GAIN_CONTROL_DESCRIPTOR)}
-			description={i18n._(AUTO_GAIN_DESCRIPTION_DESCRIPTOR)}
-			value={autoGainControl}
-			onChange={(value) => VoiceSettingsCommands.update({autoGainControl: value})}
-			ariaLabel={i18n._(VOICE_AUTOMATIC_GAIN_CONTROL_DESCRIPTOR)}
-			data-flx="user.voice-tab.render-auto-gain-control-switch.switch.update-auto-gain-control"
-		/>
-	);
+	const renderAutoGainControlSwitch = () =>
+		autoGainControlAvailable && (
+			<Switch
+				label={i18n._(VOICE_AUTOMATIC_GAIN_CONTROL_DESCRIPTOR)}
+				description={i18n._(AUTO_GAIN_DESCRIPTION_DESCRIPTOR)}
+				value={autoGainControl}
+				onChange={(value) => VoiceSettingsCommands.update({autoGainControl: value})}
+				ariaLabel={i18n._(VOICE_AUTOMATIC_GAIN_CONTROL_DESCRIPTOR)}
+				data-flx="user.voice-tab.render-auto-gain-control-switch.switch.update-auto-gain-control"
+			/>
+		);
 	const renderStereoMicrophoneSwitch = (dataFlx: string) =>
 		stereoMicrophoneAvailable && (
 			<Switch
@@ -514,6 +518,7 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 				description={noiseSuppressionFallbackMessage}
 				value={noiseSuppressionChoice}
 				options={noiseSuppressionOptions}
+				disabled={noiseSuppressionOptions.every((option) => option.isDisabled)}
 				onChange={setNoiseSuppressionChoice}
 				isSearchable={false}
 				controlWidth="medium"
@@ -587,7 +592,9 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 					label={i18n._(VOICE_OUTPUT_DEVICE_DESCRIPTOR)}
 					description={
 						!canSelectOutputDevice ? (
-							<Trans>Voice uses your system output device in this browser. Change it in your system settings.</Trans>
+							<Trans comment="Voice output device help text when the browser cannot select an output device.">
+								Voice uses your system output device in this browser. Change it in your system settings.
+							</Trans>
 						) : null
 					}
 					value={effectiveOutputDeviceId}
@@ -713,6 +720,9 @@ export const VoiceTab: React.FC<VoiceTabProps> = observer(({voiceSettings, autoR
 						inputVolume,
 						outputVolume,
 						echoCancellation,
+						noiseSuppression,
+						deepFilterNoiseSuppression,
+						deepFilterNoiseSuppressionLevel,
 						autoGainControl,
 						voiceProcessingMode,
 						stereoMicrophone: isStereoMicrophoneEnabled(),

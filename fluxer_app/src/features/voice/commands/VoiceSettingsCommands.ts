@@ -22,6 +22,9 @@ type VoiceSettingsPatch = Partial<{
 	inputVolume: number;
 	outputVolume: number;
 	echoCancellation: boolean;
+	noiseSuppression: boolean;
+	deepFilterNoiseSuppression: boolean;
+	deepFilterNoiseSuppressionLevel: number;
 	autoGainControl: boolean;
 	noiseSuppressionBackend: VoiceNoiseSuppressionBackend | null;
 	stereoMicrophone: boolean | null;

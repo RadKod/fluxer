@@ -367,13 +367,24 @@ function isActiveCandidatePair(report: RTCStatsEntry): boolean {
 	if (report.type !== 'candidate-pair') return false;
 	if (report.state !== 'succeeded') return false;
 	if (report.selected) return true;
-	return report.nominated !== false;
+	return report.nominated === true;
 }
 
 function shouldAdoptActivePair(report: RTCStatsEntry, activePair: RTCStatsEntry | null): boolean {
 	if (!activePair) return true;
+	if (report.selected !== activePair.selected) return report.selected === true;
 	if (typeof report.availableOutgoingBitrate !== 'number') return false;
 	return !activePair.availableOutgoingBitrate;
+}
+
+function validRtt(value: number | undefined): number | null {
+	return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function maxRtt(first: number | null, second: number | null): number | null {
+	if (first === null) return second;
+	if (second === null) return first;
+	return Math.max(first, second);
 }
 
 function hasUsableJitterBuffer(report: RTCStatsEntry): boolean {
@@ -538,8 +549,8 @@ function buildTransportInfo(
 		remoteCandidateType: remote?.candidateType,
 		remoteProtocol: remote?.protocol,
 		currentRoundTripTimeMs:
-			typeof activePair?.currentRoundTripTime === 'number'
-				? Math.round(activePair.currentRoundTripTime * 1000)
+			validRtt(activePair?.currentRoundTripTime) !== null
+				? Math.round(activePair!.currentRoundTripTime! * 1000)
 				: undefined,
 		availableOutgoingBitrate: activePair?.availableOutgoingBitrate,
 		availableIncomingBitrate: activePair?.availableIncomingBitrate,
@@ -562,11 +573,11 @@ async function collectFromStatsSource(
 	peerConnectionMode?: string,
 ): Promise<{
 	tracks: Array<PerTrackStats>;
-	rtt: number;
+	rtt: number | null;
 	transport: TransportInfo | null;
 }> {
 	const reports = await source.getStats();
-	if (!reports) return {tracks: [], rtt: 0, transport: null};
+	if (!reports) return {tracks: [], rtt: null, transport: null};
 	const midToSenderTrackId = new Map<string, string>();
 	for (const transceiver of source.getTransceivers?.() ?? []) {
 		const senderTrackId = transceiver.sender?.track?.id;
@@ -578,14 +589,11 @@ async function collectFromStatsSource(
 		reportsById.set(statsEntry.id, statsEntry);
 	}
 	const tracks: Array<PerTrackStats> = [];
-	let rtt = 0;
 	let activePair: RTCStatsEntry | null = null;
 	let transportReport: RTCStatsEntry | null = null;
 	for (const raw of reports.values()) {
 		const report = raw as RTCStatsEntry;
 		if (isActiveCandidatePair(report)) {
-			const crt = report.currentRoundTripTime;
-			if (crt) rtt = Math.max(rtt, crt * 1000);
 			if (shouldAdoptActivePair(report, activePair)) activePair = report;
 			continue;
 		}
@@ -602,12 +610,12 @@ async function collectFromStatsSource(
 			buildPerTrackStat({report, sourceId, isOutbound, isInbound, now, rtpCounters, reportsById, midToSenderTrackId}),
 		);
 	}
-	if (!activePair && transportReport?.selectedCandidatePairId) {
+	if (transportReport?.selectedCandidatePairId) {
 		const selectedPair = reportsById.get(transportReport.selectedCandidatePairId);
-		if (selectedPair?.type === 'candidate-pair') activePair = selectedPair;
+		activePair = selectedPair?.type === 'candidate-pair' && selectedPair.state === 'succeeded' ? selectedPair : null;
 	}
 	const transport = buildTransportInfo(activePair, transportReport, reportsById, peerConnectionMode);
-	return {tracks, rtt, transport};
+	return {tracks, rtt: validRtt(transport?.currentRoundTripTimeMs), transport};
 }
 
 function toVoiceEngineV2TrackKind(kind: PerTrackStats['kind']): VoiceEngineV2TrackKind | null {
@@ -713,7 +721,6 @@ export class VoiceEngineV2AppStatsHostAdapter extends Store {
 	private statsIntervalId: unknown = null;
 	private statsClockIntervalId: unknown = null;
 	private statsSnapshot: VoiceStatsSnapshot = createVoiceStatsSnapshot();
-	currentLatency: number | null = null;
 	averageLatency: number | null = null;
 	latencyHistory: Array<LatencyDataPoint> = [];
 	voiceStats: VoiceStats = createInitialVoiceStats();
@@ -746,7 +753,6 @@ export class VoiceEngineV2AppStatsHostAdapter extends Store {
 
 	private syncFromStatsSnapshot(): void {
 		const context = this.statsSnapshot.context;
-		this.currentLatency = context.currentLatency;
 		this.averageLatency = context.averageLatency;
 		this.latencyHistory = context.latencyHistory;
 		this.voiceStats = context.voiceStats;
@@ -780,6 +786,22 @@ export class VoiceEngineV2AppStatsHostAdapter extends Store {
 		return measured !== null ? measured : this.estimatedLatency;
 	}
 
+	get signalLatency(): number | null {
+		const rtt = validRtt((this.room as RoomWithEngine | null)?.engine?.client?.rtt);
+		return rtt === null || rtt === 0 ? null : Math.round(rtt);
+	}
+
+	get mediaLatency(): number | null {
+		return maxRtt(
+			validRtt(this.publisherTransport?.currentRoundTripTimeMs),
+			validRtt(this.subscriberTransport?.currentRoundTripTimeMs),
+		);
+	}
+
+	get currentLatency(): number | null {
+		return this.mediaLatency ?? this.signalLatency;
+	}
+
 	get duration(): number {
 		if (!this.connectionStartTime) return 0;
 		return Math.floor((this.now() - this.connectionStartTime) / 1000);
@@ -799,7 +821,7 @@ export class VoiceEngineV2AppStatsHostAdapter extends Store {
 		const engine = room?.engine;
 		if (!engine?.pcManager) {
 			return {
-				rttMs: this.currentLatency ?? this.displayLatency,
+				rttMs: this.signalLatency,
 				outbound: [],
 				inbound: [],
 			};
@@ -809,7 +831,7 @@ export class VoiceEngineV2AppStatsHostAdapter extends Store {
 		const tracks: Array<PerTrackStats> = [];
 		const activeCounterIds = new Set<string>();
 		const rtpCounters = new Map<string, VoiceStatsRtpCounter>(this.statsSnapshot.context.rtpCounters);
-		let rtt = 0;
+		let rtt: number | null = null;
 		if (engine.pcManager.publisher) {
 			const result = await collectFromStatsSource(
 				engine.pcManager.publisher,
@@ -819,7 +841,7 @@ export class VoiceEngineV2AppStatsHostAdapter extends Store {
 				activeCounterIds,
 			);
 			tracks.push(...result.tracks);
-			if (result.rtt > rtt) rtt = result.rtt;
+			rtt = maxRtt(rtt, result.rtt);
 		}
 		if (engine.pcManager.subscriber) {
 			const result = await collectFromStatsSource(
@@ -830,10 +852,9 @@ export class VoiceEngineV2AppStatsHostAdapter extends Store {
 				activeCounterIds,
 			);
 			tracks.push(...result.tracks);
-			if (result.rtt > rtt) rtt = result.rtt;
+			rtt = maxRtt(rtt, result.rtt);
 		}
-		if (rtt === 0 && engine.client?.rtt) rtt = engine.client.rtt;
-		const result = toVoiceEngineV2Stats(rtt > 0 ? Math.round(rtt) : null, tracks);
+		const result = toVoiceEngineV2Stats(rtt ?? this.signalLatency, tracks);
 		assertNonNullObject(result, 'result');
 		assert.ok(Array.isArray(result.outbound), 'result.outbound must be array');
 		return result;
@@ -857,12 +878,11 @@ export class VoiceEngineV2AppStatsHostAdapter extends Store {
 
 	private onLatencyTick(): void {
 		const timestamp = this.now();
-		const engineWrap = this.room as RoomWithEngine;
-		if (!engineWrap?.engine?.client?.rtt) {
+		const rtt = this.currentLatency;
+		if (rtt === null) {
 			this.transitionStats({type: 'latency.gap', timestamp});
 			return;
 		}
-		const rtt = Math.round(engineWrap.engine.client.rtt);
 		this.transitionStats({type: 'latency.sample', timestamp, latency: rtt});
 	}
 
@@ -910,6 +930,7 @@ export class VoiceEngineV2AppStatsHostAdapter extends Store {
 			await this.collectAndDispatchStats(roomSnapshot, decision, statsGeneration);
 		} catch (error) {
 			logger.debug('Error collecting stats', error);
+			this.transitionStats({type: 'stats.collectionFailed', generation: statsGeneration});
 		} finally {
 			this.transitionStats({type: 'stats.collectionFinished', generation: statsGeneration});
 		}
@@ -922,16 +943,14 @@ export class VoiceEngineV2AppStatsHostAdapter extends Store {
 	): Promise<void> {
 		const room = roomSnapshot as RoomWithEngine | null;
 		const engine = room?.engine;
-		if (!engine?.pcManager) return;
-		const publisher = engine.pcManager.publisher;
-		const subscriber = engine.pcManager.subscriber;
-		const peerConnectionMode = engine.pcManager.mode;
-		if (!publisher && !subscriber) return;
+		const publisher = engine?.pcManager?.publisher;
+		const subscriber = engine?.pcManager?.subscriber;
+		const peerConnectionMode = engine?.pcManager?.mode;
 		const now = this.now();
 		const tracks: Array<PerTrackStats> = [];
 		const activeCounterIds = new Set<string>();
 		const rtpCounters = new Map<string, VoiceStatsRtpCounter>(decision.rtpCounters);
-		let rtt = 0;
+		let rtt: number | null = null;
 		let publisherTransport: TransportInfo | null = null;
 		let subscriberTransport: TransportInfo | null = null;
 		if (publisher) {
@@ -944,7 +963,7 @@ export class VoiceEngineV2AppStatsHostAdapter extends Store {
 				peerConnectionMode,
 			);
 			tracks.push(...result.tracks);
-			if (result.rtt > rtt) rtt = result.rtt;
+			rtt = maxRtt(rtt, result.rtt);
 			publisherTransport = result.transport;
 		}
 		if (subscriber) {
@@ -957,17 +976,16 @@ export class VoiceEngineV2AppStatsHostAdapter extends Store {
 				peerConnectionMode,
 			);
 			tracks.push(...result.tracks);
-			if (result.rtt > rtt) rtt = result.rtt;
+			rtt = maxRtt(rtt, result.rtt);
 			subscriberTransport = result.transport;
 		}
-		if (rtt === 0 && engine.client?.rtt) rtt = engine.client.rtt;
 		this.transitionStats({
 			type: 'stats.collectionSucceeded',
 			generation: statsGeneration,
 			roomIdentity: decision.roomIdentity,
 			timestamp: now,
 			participantCount: roomSnapshot?.numParticipants ?? 0,
-			rtt,
+			rtt: rtt ?? this.signalLatency ?? 0,
 			tracks,
 			publisherTransport,
 			subscriberTransport,

@@ -37,9 +37,11 @@ handle_dispatch(Event, Data, State) ->
 
 -spec handle_plain_dispatch(event(), map() | list(), session_state()) ->
     {noreply, session_state()}.
-handle_plain_dispatch(Event, Data, State) ->
+handle_plain_dispatch(Event, Data, State0) ->
+    {Current, State} = session_game_activity:prepare(Event, Data, State0),
     case
-        should_skip_for_shard(Event, Data, State) orelse should_ignore_event(Event, Data, State)
+        not Current orelse should_skip_for_shard(Event, Data, State) orelse
+            should_ignore_event(Event, Data, State)
     of
         true -> {noreply, State};
         false -> route_bot_guild_event(Event, Data, State)
@@ -260,7 +262,12 @@ dispatch_with_replay(Event, Data, NewSeq, Request, RequestBytes, State) ->
                 Buffer
         end,
     {NewBuffer, Dropped} = limited_deque:push_trimmed(Request, RequestBytes, Deque),
-    send_to_socket(maps:get(socket_pid, State, undefined), Event, Data, NewSeq),
+    send_to_socket(
+        maps:get(socket_pid, State, undefined),
+        Event,
+        session_game_activity:wire(Event, Data, State),
+        NewSeq
+    ),
     StateAfterMain = apply_state_updates(Event, Data, State, #{
         seq => NewSeq,
         buffer => NewBuffer,
@@ -272,7 +279,12 @@ dispatch_with_replay(Event, Data, NewSeq, Request, RequestBytes, State) ->
 -spec dispatch_without_replay(event(), map() | list(), non_neg_integer(), session_state()) ->
     {noreply, session_state()}.
 dispatch_without_replay(Event, Data, NewSeq, State) ->
-    send_to_socket(maps:get(socket_pid, State, undefined), Event, Data, NewSeq),
+    send_to_socket(
+        maps:get(socket_pid, State, undefined),
+        Event,
+        session_game_activity:wire(Event, Data, State),
+        NewSeq
+    ),
     StateAfterMain = apply_state_updates(Event, Data, State, #{seq => NewSeq}),
     finalize_dispatch(Event, Data, StateAfterMain).
 
@@ -297,7 +309,12 @@ do_handle_dispatch_pre_encoded(Event, {pre_encoded, EncodedData} = Data, State) 
     Seq = maps:get(seq, State),
     NewSeq = Seq + 1,
     BufferedState = buffer_pre_encoded_event(Event, Data, NewSeq, State),
-    send_to_socket(maps:get(socket_pid, State, undefined), Event, Data, NewSeq),
+    send_to_socket(
+        maps:get(socket_pid, State, undefined),
+        Event,
+        session_game_activity:wire(Event, Data, State),
+        NewSeq
+    ),
     StateAfterMain =
         case needs_state_update(Event) of
             true -> apply_pre_encoded_state_update(Event, EncodedData, BufferedState, NewSeq);

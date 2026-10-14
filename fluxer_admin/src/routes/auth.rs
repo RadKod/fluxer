@@ -261,7 +261,7 @@ fn oauth_start_page(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fluxer Admin</title>
+<title>Micup Admin</title>
 </head>
 <body>
 <p>Starting authentication...</p>
@@ -292,7 +292,7 @@ fn oauth_callback_page(config: &AdminConfig, code: Option<&str>, state: Option<&
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fluxer Admin</title>
+<title>Micup Admin</title>
 </head>
 <body>
 <p>Completing authentication...</p>

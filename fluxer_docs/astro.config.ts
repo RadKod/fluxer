@@ -8,14 +8,23 @@ import node from '@astrojs/node';
 import starlight from '@astrojs/starlight';
 import {defineConfig} from 'astro/config';
 import type {Root, RootContent} from 'hast';
+import {remarkDocsBranding} from './src/branding/DocsBranding';
 import {jetBrainsMonoFont, notoSansFont, radioCanadaBigFont} from './src/fonts/Fonts';
-import {docsBaseDomain, docsListenHost, docsListenPort, docsPublicEndpoint} from './src/server/DocsConfig';
+import {
+	docsBaseDomain,
+	docsListenHost,
+	docsListenPort,
+	docsProductName,
+	docsPublicEndpoint,
+} from './src/server/DocsConfig';
 import {resolveViteDevWebSocket} from './src/server/ViteDevWebSocket';
 import {fluxerDarkCodeTheme, fluxerLightCodeTheme} from './src/styles/CodeTheme';
 import {rehypeTableColumnWidths} from './src/table/RehypeTableColumns.ts';
 
 const docsEndpoint = new URL(docsPublicEndpoint());
 const staticDirectory = fileURLToPath(new URL('../fluxer_static/', import.meta.url));
+const productName = docsProductName();
+const branded = productName !== 'Fluxer';
 
 const resolveDocsBasePath = (endpoint: URL): string => {
 	if (endpoint.pathname === '/') {
@@ -95,7 +104,7 @@ export default defineConfig({
 				'./src/styles/content.css',
 				'./src/styles/route-header.css',
 			],
-			description: 'Fluxer external API and protocol reference.',
+			description: `${productName} external API and protocol reference.`,
 			expressiveCode: {
 				styleOverrides: {
 					borderColor: 'var(--flx-code-border)',
@@ -149,18 +158,20 @@ export default defineConfig({
 				},
 				themes: [fluxerDarkCodeTheme, fluxerLightCodeTheme],
 			},
-			favicon: '/favicon-32x32.png',
-			logo: {
-				replacesTitle: true,
-				src: path.join(staticDirectory, 'marketing/branding/logo-color.svg'),
-			},
+			favicon: branded ? '/micup-docs-icon.svg' : '/favicon-32x32.png',
+			logo: branded
+				? undefined
+				: {
+						replacesTitle: true,
+						src: path.join(staticDirectory, 'marketing/branding/logo-color.svg'),
+					},
 			sidebar: [
 				{
 					label: 'Reference',
 					items: [{label: 'Introduction', link: '/'}, 'authentication', 'snowflakes'],
 				},
 				{
-					label: 'Self-hosting',
+					label: branded ? 'Upstream self-hosting' : 'Self-hosting',
 					items: [
 						'operator/get-started',
 						'operator/sign-in',
@@ -169,12 +180,14 @@ export default defineConfig({
 						'operator/upgrading',
 					],
 				},
+				...(branded ? [{label: 'Bots', items: ['bots/hizli-baslangic']}] : []),
 				{
 					label: 'Topics',
 					items: [
 						'http-api/errors',
 						'topics/rate-limits',
-						'topics/announcement-channels',
+						// TEMPORARY: withheld while announcement channels are closed, as CLOSED_DOCS_PAGES in DocsBranding.ts.
+						...(branded ? [] : ['topics/announcement-channels']),
 						'http-api/permissions',
 						'topics/captcha',
 						'topics/uploads',
@@ -204,6 +217,7 @@ export default defineConfig({
 						'http-api/users/email-and-password',
 						'http-api/users/mfa',
 						'http-api/users/relationships',
+						'http-api/users/follows',
 						'http-api/users/notes',
 						'http-api/users/private-channels',
 						'http-api/users/push-notifications',
@@ -230,6 +244,8 @@ export default defineConfig({
 						'http-api/guild-channels',
 						'http-api/guild-members',
 						'http-api/guild-member-search',
+						'http-api/guild-roster-events',
+						'http-api/guild-micupbot',
 						'http-api/guild-moderation',
 						'http-api/guild-emojis',
 						'http-api/guild-stickers',
@@ -239,7 +255,7 @@ export default defineConfig({
 				},
 				{
 					label: 'Discovery and content',
-					items: ['http-api/discovery', 'http-api/invites', 'http-api/search', 'http-api/unfurl'],
+					items: ['http-api/discovery', 'http-api/feed', 'http-api/invites', 'http-api/search', 'http-api/unfurl'],
 				},
 				{
 					label: 'Commerce',
@@ -249,6 +265,9 @@ export default defineConfig({
 						'http-api/in-app-purchases',
 						'http-api/gifts',
 						'http-api/donations',
+						'http-api/cosmetics',
+						'http-api/shop',
+						'http-api/referral',
 					],
 				},
 				{
@@ -286,7 +305,14 @@ export default defineConfig({
 				},
 				{
 					label: 'Voice',
-					items: ['voice', 'http-api/calls', 'http-api/streams', 'http-api/entrance-sounds'],
+					items: [
+						'voice',
+						'http-api/calls',
+						'http-api/streams',
+						'http-api/entrance-sounds',
+						'http-api/voice-seats',
+						'http-api/table-games',
+					],
 				},
 				{
 					label: 'Admin API',
@@ -298,11 +324,16 @@ export default defineConfig({
 						'admin-api/applications',
 						'admin-api/reports',
 						'admin-api/messages',
+						'admin-api/feed',
 						'admin-api/blocklists',
 						'admin-api/discovery',
 						'admin-api/system-dms',
 						'admin-api/instance',
 						'admin-api/gift-codes',
+						'admin-api/badges',
+						'admin-api/cosmetics',
+						'admin-api/shop',
+						'admin-api/referral',
 						'admin-api/gateway',
 						'admin-api/voice',
 						'admin-api/jobs',
@@ -312,20 +343,23 @@ export default defineConfig({
 					],
 				},
 			],
-			social: [
-				{
-					href: 'https://github.com/fluxerapp/fluxer',
-					icon: 'github',
-					label: 'GitHub',
-				},
-			],
+			social: branded
+				? []
+				: [
+						{
+							href: 'https://github.com/fluxerapp/fluxer',
+							icon: 'github',
+							label: 'GitHub',
+						},
+					],
 			tableOfContents: {maxHeadingLevel: 2, minHeadingLevel: 2},
-			title: 'Fluxer API',
+			title: `${productName} API`,
 		}),
 		mdx(),
 	],
 	markdown: {
 		processor: unified({
+			remarkPlugins: [remarkDocsBranding],
 			rehypePlugins: [rehypeRootRelativeLinkPrefix(basePath), rehypeTableColumnWidths()],
 		}),
 	},

@@ -2,8 +2,10 @@
 
 import {Profile} from '@app/features/user/models/Profile';
 import type {User} from '@app/features/user/models/User';
+import UserProfile from '@app/features/user/state/UserProfile';
 import {ProfileFieldPrivacyFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {getCurrentTimeZoneOffsetMinutes} from '@fluxer/date_utils/src/TimeZoneUtils';
+import type {CosmeticAssetDataResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
 
 export interface BadgeSettings {
 	premium_badge_hidden?: boolean;
@@ -75,6 +77,7 @@ export function createMockProfile(
 		previewAccentColor?: number | null;
 		previewBadgeSettings?: BadgeSettings;
 		previewTimezoneOffset?: number | null;
+		previewProfileEffect?: CosmeticAssetDataResponse | null;
 	},
 ): Profile {
 	const finalBanner = options?.hasClearedBanner
@@ -85,6 +88,8 @@ export function createMockProfile(
 	const finalBio = options?.previewBio !== undefined ? options.previewBio : user.bio || null;
 	const finalPronouns = options?.previewPronouns !== undefined ? options.previewPronouns : user.pronouns || null;
 	const visiblePremiumData = computeVisiblePremiumData(user, options?.previewBadgeSettings);
+	// Micup: badges and the profile effect live on the profile, not the user; the preview keeps the loaded ones.
+	const loadedProfile = UserProfile.getProfile(user.id);
 	return new Profile({
 		user: user.toJSON(),
 		user_profile: {
@@ -102,5 +107,10 @@ export function createMockProfile(
 		premium_type: visiblePremiumData.premiumType ?? undefined,
 		premium_since: visiblePremiumData.premiumSince ?? undefined,
 		premium_lifetime_sequence: visiblePremiumData.premiumLifetimeSequence ?? undefined,
+		profile_effect_data:
+			options?.previewProfileEffect !== undefined
+				? options.previewProfileEffect
+				: (loadedProfile?.profileEffect ?? null),
+		badges: loadedProfile?.badges ? [...loadedProfile.badges] : undefined,
 	});
 }

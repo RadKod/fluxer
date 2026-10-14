@@ -11,6 +11,8 @@ export interface IKVPipeline {
 	zadd(key: string, score: number, value: string): this;
 	zrem(key: string, ...members: Array<string>): this;
 	hgetall(key: string): this;
+	hset(key: string, field: string, value: string): this;
+	hdel(key: string, ...fields: Array<string>): this;
 	mset(...args: Array<string>): this;
 	exec(): Promise<Array<[Error | null, unknown]>>;
 }
@@ -54,6 +56,14 @@ export interface IKVProvider {
 	expire(key: string, ttlSeconds: number): Promise<number>;
 	ttl(key: string): Promise<number>;
 	incr(key: string): Promise<number>;
+	counterAdd(
+		counterKey: string,
+		dirtyKey: string,
+		member: string,
+		delta: number,
+		base: number | null,
+	): Promise<number | null>;
+	counterClaim(dirtyKey: string, inflightKey: string, max: number): Promise<Array<string>>;
 	getex(key: string, ttlSeconds: number): Promise<string | null>;
 	getdel(key: string): Promise<string | null>;
 	sadd(key: string, ...members: Array<string>): Promise<number>;
@@ -65,6 +75,9 @@ export interface IKVProvider {
 	zadd(key: string, ...scoreMembers: Array<number | string>): Promise<number>;
 	zrem(key: string, ...members: Array<string>): Promise<number>;
 	zcard(key: string): Promise<number>;
+	zrevrangeWithScores(key: string, start: number, stop: number): Promise<Array<{member: string; score: number}>>;
+	zrevrank(key: string, member: string): Promise<number | null>;
+	zremrangebyrank(key: string, start: number, stop: number): Promise<number>;
 	zrangebyscore(
 		key: string,
 		min: string | number,
@@ -78,6 +91,7 @@ export interface IKVProvider {
 	ltrim(key: string, start: number, stop: number): Promise<void>;
 	hset(key: string, field: string, value: string): Promise<number>;
 	hdel(key: string, ...fields: Array<string>): Promise<number>;
+	hincrby(key: string, field: string, increment: number): Promise<number>;
 	hget(key: string, field: string): Promise<string | null>;
 	hgetall(key: string): Promise<Record<string, string>>;
 	publish(channel: string, message: string): Promise<number>;

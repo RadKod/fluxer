@@ -14,6 +14,8 @@ vi.mock('@app/features/platform/transport/RestTransport', () => ({
 	http: {get: vi.fn(), post: vi.fn(), patch: mocks.patch},
 }));
 
+// Idle and LocalPresence import each other; loading Idle first keeps its timer from calling a half-loaded store.
+await import('@app/features/ui/state/Idle');
 const {AccountScopedWork, AccountScopedWorkTransitionReason, accountScopedWorkAbortError} = await import(
 	'@app/features/platform/state/AccountScopedWork'
 );
@@ -27,19 +29,22 @@ async function settle(): Promise<void> {
 }
 
 function hydrate(): void {
-	UserSettings.updateUserSettings({
-		status: 'online',
-		flags: 0,
-		locale: 'en-US',
-		developer_mode: false,
-		message_display_compact: false,
-		restricted_guilds: [],
-		bot_restricted_guilds: [],
-		guild_folders: [],
-		trusted_domains: [],
-		staff_dm_access_user_ids: [],
-		suppress_unprivileged_self_mentions_bypass_user_ids: [],
-	});
+	UserSettings.updateUserSettings(
+		{
+			status: 'online',
+			flags: 0,
+			locale: 'en-US',
+			developer_mode: false,
+			message_display_compact: false,
+			restricted_guilds: [],
+			bot_restricted_guilds: [],
+			guild_folders: [],
+			trusted_domains: [],
+			staff_dm_access_user_ids: [],
+			suppress_unprivileged_self_mentions_bypass_user_ids: [],
+		},
+		{settingsEpoch: UserSettings.getSettingsEpoch()},
+	);
 }
 
 describe('UserSettings synced preference flush across account transitions', () => {

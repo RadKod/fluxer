@@ -255,6 +255,7 @@ function removeFile(filePath: string, reason: string): boolean {
 }
 
 function removeLegacyGeneratedDesktopEntry(): boolean {
+	if (LEGACY_DESKTOP_FILE_BASENAME === DESKTOP_FILE_BASENAME) return false;
 	const legacyPath = path.join(getUserApplicationsDir(), LEGACY_DESKTOP_FILE_BASENAME);
 	const contents = readExistingDesktopFile(legacyPath);
 	if (contents === null || !contents.includes(GENERATED_MARKER)) return false;

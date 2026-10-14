@@ -7,7 +7,7 @@ import type {UpdaterDownloadFormat, UpdaterDownloadOption} from '@app/features/p
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {modal} from '@app/features/ui/commands/ModalCommands';
 import {Combobox} from '@app/features/ui/components/form/FormCombobox';
-import {isCanaryDesktop, openExternalUrl} from '@app/features/ui/utils/NativeUtils';
+import {isCanaryDesktop, isNativeWindows, openExternalUrl} from '@app/features/ui/utils/NativeUtils';
 import styles from '@app/features/updater/commands/UpdaterModalCommands.module.css';
 import {i18n, type MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
@@ -322,9 +322,12 @@ export function pushUnsupportedUpdateModal(
 						primaryText={i18n._(OPEN_SOFTWARE_CENTER_DESCRIPTOR)}
 						secondaryText={i18n._(CLOSE_DESCRIPTOR)}
 						onPrimary={() => {
-							const appstreamUrl = isCanaryDesktop()
-								? 'appstream://app.fluxer.FluxerCanary'
-								: 'appstream://app.fluxer.Fluxer';
+							// Micup: on Windows the system-managed install is the Microsoft Store copy (Partner Center 9P1SNJ2H2W9H).
+							const appstreamUrl = isNativeWindows()
+								? 'ms-windows-store://pdp/?ProductId=9P1SNJ2H2W9H'
+								: isCanaryDesktop()
+									? 'appstream://app.fluxer.FluxerCanary'
+									: 'appstream://app.fluxer.Fluxer';
 
 							void openExternalUrl(appstreamUrl);
 						}}

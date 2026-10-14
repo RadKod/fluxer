@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {IKVPipeline, IKVProvider, IKVSubscription, KVRateLimitResult} from '@pkgs/kv_client/src/IKVProvider';
+import {computeHashSlot} from '@pkgs/kv_client/src/KVHashSlots';
 import {vi} from 'vitest';
 
 type MessageCallback = (channel: string, message: string) => void;
@@ -106,6 +107,15 @@ interface MockKVProviderOptions {
 	subscriptionOptions?: MockKVSubscriptionOptions;
 }
 
+type MockKVScript = (store: MockKVProvider, key: string, args: Array<string>) => unknown;
+
+const registeredMockKVScripts = new Map<string, MockKVScript>();
+
+// Feature tests register a JS twin of their single-key Lua script by command name; real Valkey parity runs in CI.
+export function registerMockKVScript(command: string, fn: MockKVScript): void {
+	registeredMockKVScripts.set(command, fn);
+}
+
 export class MockKVProvider implements IKVProvider {
 	rpushCalls: Array<{
 		key: string;
@@ -130,6 +140,8 @@ export class MockKVProvider implements IKVProvider {
 	readonly expireSpy = vi.fn();
 	readonly ttlSpy = vi.fn();
 	readonly incrSpy = vi.fn();
+	readonly counterAddSpy = vi.fn();
+	readonly counterClaimSpy = vi.fn();
 	readonly getexSpy = vi.fn();
 	readonly getdelSpy = vi.fn();
 	readonly saddSpy = vi.fn();
@@ -141,12 +153,16 @@ export class MockKVProvider implements IKVProvider {
 	readonly zaddSpy = vi.fn();
 	readonly zremSpy = vi.fn();
 	readonly zcardSpy = vi.fn();
+	readonly zrevrangeWithScoresSpy = vi.fn();
+	readonly zrevrankSpy = vi.fn();
+	readonly zremrangebyrankSpy = vi.fn();
 	readonly zrangebyscoreSpy = vi.fn();
 	readonly rpushSpy = vi.fn();
 	readonly lpopSpy = vi.fn();
 	readonly llenSpy = vi.fn();
 	readonly hsetSpy = vi.fn();
 	readonly hdelSpy = vi.fn();
+	readonly hincrbySpy = vi.fn();
 	readonly hgetSpy = vi.fn();
 	readonly hgetallSpy = vi.fn();
 	readonly publishSpy = vi.fn();
@@ -279,6 +295,58 @@ export class MockKVProvider implements IKVProvider {
 		this.ensureType(key, 'string');
 		this.stringStore.set(key, String(value));
 		return value;
+	}
+
+	async counterAdd(
+		counterKey: string,
+		dirtyKey: string,
+		member: string,
+		delta: number,
+		base: number | null,
+	): Promise<number | null> {
+		this.counterAddSpy(counterKey, dirtyKey, member, delta, base);
+		if (this.clustered && computeHashSlot(counterKey) !== computeHashSlot(dirtyKey)) {
+			throw new Error("CROSSSLOT Keys in request don't hash to the same slot");
+		}
+		this.evictIfExpired(counterKey);
+		const current = this.stringStore.get(counterKey);
+		if (current === undefined && base === null) {
+			return null;
+		}
+		const value = Number.parseInt(current ?? String(base), 10) + delta;
+		this.ensureType(counterKey, 'string');
+		this.stringStore.set(counterKey, String(value));
+		this.expiries.delete(counterKey);
+		this.evictIfExpired(dirtyKey);
+		this.ensureType(dirtyKey, 'set');
+		this.setStore.get(dirtyKey)!.add(member);
+		return value;
+	}
+
+	async counterClaim(dirtyKey: string, inflightKey: string, max: number): Promise<Array<string>> {
+		this.counterClaimSpy(dirtyKey, inflightKey, max);
+		if (this.clustered && computeHashSlot(dirtyKey) !== computeHashSlot(inflightKey)) {
+			throw new Error("CROSSSLOT Keys in request don't hash to the same slot");
+		}
+		this.evictIfExpired(dirtyKey);
+		this.evictIfExpired(inflightKey);
+		this.ensureType(dirtyKey, 'set');
+		const dirty = this.setStore.get(dirtyKey)!;
+		for (const member of this.setStore.get(inflightKey) ?? []) {
+			dirty.add(member);
+		}
+		this.deleteKey(inflightKey);
+		const claimed = Array.from(dirty).slice(0, max);
+		for (const member of claimed) {
+			dirty.delete(member);
+		}
+		if (claimed.length > 0) {
+			this.ensureType(inflightKey, 'set');
+			for (const member of claimed) {
+				this.setStore.get(inflightKey)!.add(member);
+			}
+		}
+		return claimed;
 	}
 
 	async getex(key: string, ttlSeconds: number): Promise<string | null> {
@@ -417,6 +485,41 @@ export class MockKVProvider implements IKVProvider {
 		return this.zsetStore.get(key)?.size ?? 0;
 	}
 
+	private sortedSetEntries(key: string): Array<{member: string; score: number}> {
+		this.evictIfExpired(key);
+		return Array.from(this.zsetStore.get(key) ?? [], ([member, score]) => ({member, score})).sort(
+			(a, b) => a.score - b.score || Buffer.compare(Buffer.from(a.member), Buffer.from(b.member)),
+		);
+	}
+
+	async zrevrangeWithScores(key: string, start: number, stop: number): Promise<Array<{member: string; score: number}>> {
+		this.zrevrangeWithScoresSpy(key, start, stop);
+		const entries = this.sortedSetEntries(key).reverse();
+		const first = Math.max(0, start < 0 ? entries.length + start : start);
+		const last = stop < 0 ? entries.length + stop : stop;
+		return last < first ? [] : entries.slice(first, last + 1);
+	}
+
+	async zrevrank(key: string, member: string): Promise<number | null> {
+		this.zrevrankSpy(key, member);
+		const rank = this.sortedSetEntries(key)
+			.reverse()
+			.findIndex((entry) => entry.member === member);
+		return rank < 0 ? null : rank;
+	}
+
+	async zremrangebyrank(key: string, start: number, stop: number): Promise<number> {
+		this.zremrangebyrankSpy(key, start, stop);
+		const entries = this.sortedSetEntries(key);
+		const first = Math.max(0, start < 0 ? entries.length + start : start);
+		const last = stop < 0 ? entries.length + stop : stop;
+		const removed = last < first ? [] : entries.slice(first, last + 1);
+		const members = this.zsetStore.get(key);
+		for (const entry of removed) members?.delete(entry.member);
+		if (members?.size === 0) this.deleteKey(key);
+		return removed.length;
+	}
+
 	async zrangebyscore(
 		key: string,
 		min: string | number,
@@ -529,7 +632,21 @@ export class MockKVProvider implements IKVProvider {
 				removed++;
 			}
 		}
+		// Valkey drops a hash, and its TTL, with its last field.
+		if (hash.size === 0) {
+			this.deleteKey(key);
+		}
 		return removed;
+	}
+
+	async hincrby(key: string, field: string, increment: number): Promise<number> {
+		this.hincrbySpy(key, field, increment);
+		this.evictIfExpired(key);
+		this.ensureType(key, 'hash');
+		const hash = this.hashStore.get(key)!;
+		const value = Number.parseInt(hash.get(field) ?? '0', 10) + increment;
+		hash.set(field, String(value));
+		return value;
 	}
 
 	async hget(key: string, field: string): Promise<string | null> {
@@ -728,6 +845,9 @@ export class MockKVProvider implements IKVProvider {
 		tokensConsumed: number;
 	}> {
 		this.dequeuePurgeBatchSpy(queueKey, bucketKey, maxItems, maxTokens, refillRate, refillIntervalMs);
+		if (this.clustered && computeHashSlot(queueKey) !== computeHashSlot(bucketKey)) {
+			throw new Error("CROSSSLOT Keys in request don't hash to the same slot");
+		}
 		const now = Date.now();
 		let tokens = maxTokens;
 		let lastRefill = now;
@@ -782,6 +902,26 @@ export class MockKVProvider implements IKVProvider {
 		}
 		if (command === 'emailOwnerRelease') {
 			return this.evalEmailOwnerRelease(key, String(args[1]), String(args[2] ?? ''));
+		}
+		if (command === 'feedUnreadIncrement') {
+			return this.evalFeedUnreadIncrement(key, Number(args[1]), String(args[2]), String(args[3]), Number(args[4]));
+		}
+		if (command === 'feedUnreadAck') {
+			return this.evalFeedUnreadAck(
+				key,
+				Number(args[1]),
+				String(args[2]),
+				String(args[3]),
+				String(args[4]),
+				Number(args[5]),
+			);
+		}
+		if (command === 'profileCacheReplace') {
+			return this.evalCompareAndSet(key, String(args[1]), String(args[2]), Number(args[3]));
+		}
+		const registered = registeredMockKVScripts.get(command);
+		if (registered) {
+			return registered(this, key, args.slice(1).map(String));
 		}
 		throw new Error(`Unsupported mock script command: ${command}`);
 	}
@@ -861,6 +1001,14 @@ export class MockKVProvider implements IKVProvider {
 			},
 			hgetall: (key: string) => {
 				operations.push(async () => await this.hgetall(key));
+				return pipeline;
+			},
+			hset: (key: string, field: string, value: string) => {
+				operations.push(async () => await this.hset(key, field, value));
+				return pipeline;
+			},
+			hdel: (key: string, ...fields: Array<string>) => {
+				operations.push(async () => await this.hdel(key, ...fields));
 				return pipeline;
 			},
 			mset: (...args: Array<string>) => {
@@ -973,6 +1121,59 @@ export class MockKVProvider implements IKVProvider {
 		);
 		this.expiries.delete(key);
 		return JSON.stringify({status: 'finalized', ownerUserId});
+	}
+
+	// FeedNotificationService's UNREAD_INCREMENT_SCRIPT, step for step.
+	private evalFeedUnreadIncrement(
+		key: string,
+		updatedAtMs: number,
+		counted: string,
+		nowMs: string,
+		ttlSeconds: number,
+	): number | null {
+		this.evictIfExpired(key);
+		const [ackedSeq = '0', ackedAt] = this.hashStore.get(key)?.get('acked')?.split(':') ?? [];
+		if (ackedAt !== undefined && updatedAtMs <= Number(ackedAt)) return null;
+		if (counted !== '' && Number(counted) > Number(ackedSeq)) return null;
+		this.ensureType(key, 'hash');
+		const hash = this.hashStore.get(key)!;
+		const seq = Number(hash.get('seq') ?? 0) + 1;
+		hash.set('seq', String(seq));
+		if (!hash.has('epoch')) hash.set('epoch', nowMs);
+		this.expiries.set(key, Date.now() + ttlSeconds * 1000);
+		return seq;
+	}
+
+	// FeedNotificationService's UNREAD_ACK_SCRIPT, step for step.
+	private evalFeedUnreadAck(
+		key: string,
+		seenSeq: number,
+		seenEpoch: string,
+		cursorMs: string,
+		nowMs: string,
+		ttlSeconds: number,
+	): [number, string] {
+		this.ensureType(key, 'hash');
+		const hash = this.hashStore.get(key)!;
+		const seen = (hash.get('epoch') ?? '0') === seenEpoch ? seenSeq : 0;
+		const ackedSeq = Math.max(
+			Number((hash.get('acked') ?? '0').split(':')[0]),
+			Math.min(seen, Number(hash.get('seq') ?? 0)),
+		);
+		hash.set('acked', `${ackedSeq}:${cursorMs}`);
+		hash.delete('ready');
+		if (!hash.has('epoch')) hash.set('epoch', nowMs);
+		this.expiries.set(key, Date.now() + ttlSeconds * 1000);
+		return [ackedSeq, hash.get('epoch')!];
+	}
+
+	// Micup ProfileAccessCache: SET key value EX ttl only while the key still holds `expected`.
+	private evalCompareAndSet(key: string, expected: string, value: string, ttlSeconds: number): number {
+		this.evictIfExpired(key);
+		if (this.stringStore.get(key) !== expected) return 0;
+		this.stringStore.set(key, value);
+		this.expiries.set(key, Date.now() + ttlSeconds * 1000);
+		return 1;
 	}
 
 	private evalEmailOwnerRelease(key: string, userId: string, expectedToken: string): string {
@@ -1124,6 +1325,8 @@ export class MockKVProvider implements IKVProvider {
 		this.expireSpy.mockClear();
 		this.ttlSpy.mockClear();
 		this.incrSpy.mockClear();
+		this.counterAddSpy.mockClear();
+		this.counterClaimSpy.mockClear();
 		this.getexSpy.mockClear();
 		this.getdelSpy.mockClear();
 		this.saddSpy.mockClear();
@@ -1135,12 +1338,16 @@ export class MockKVProvider implements IKVProvider {
 		this.zaddSpy.mockClear();
 		this.zremSpy.mockClear();
 		this.zcardSpy.mockClear();
+		this.zrevrangeWithScoresSpy.mockClear();
+		this.zrevrankSpy.mockClear();
+		this.zremrangebyrankSpy.mockClear();
 		this.zrangebyscoreSpy.mockClear();
 		this.rpushSpy.mockClear();
 		this.lpopSpy.mockClear();
 		this.llenSpy.mockClear();
 		this.hsetSpy.mockClear();
 		this.hdelSpy.mockClear();
+		this.hincrbySpy.mockClear();
 		this.hgetSpy.mockClear();
 		this.hgetallSpy.mockClear();
 		this.publishSpy.mockClear();

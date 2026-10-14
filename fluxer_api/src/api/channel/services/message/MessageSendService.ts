@@ -19,6 +19,7 @@ import type {AuthenticatedChannel} from '@app/api/channel/services/Authenticated
 import type {CrosspostPropagation} from '@app/api/channel/services/message/CrosspostPropagation';
 import {emitMessageCreated} from '@app/api/channel/services/message/MessageActivity';
 import type {MessageChannelAuthService} from '@app/api/channel/services/message/MessageChannelAuthService';
+import {assertComponentsWritable} from '@app/api/channel/services/message/MessageComponentRules';
 import type {DmNsfwContext} from '@app/api/channel/services/message/MessageContentService';
 import type {MessageDispatchService} from '@app/api/channel/services/message/MessageDispatchService';
 import type {MessageEmbedAttachmentResolver} from '@app/api/channel/services/message/MessageEmbedAttachmentResolver';
@@ -40,15 +41,17 @@ import type {ThreadMessageActivity} from '@app/api/channel/services/message/Thre
 import {assertThreadAllowed} from '@app/api/channel/services/thread/ThreadDenials';
 import {enqueueThreadSearchSync} from '@app/api/channel/threads/ThreadJobs';
 import {SYSTEM_USER_ID} from '@app/api/constants/Core';
-import type {MessageAttachment, MessageReference} from '@app/api/database/types/MessageTypes';
+import type {MessageActionRowData, MessageAttachment, MessageReference} from '@app/api/database/types/MessageTypes';
 import type {ThreadViewer} from '@app/api/experiment/ChannelThreadsGate';
 import type {IFavoriteMemeRepository} from '@app/api/favorite_meme/IFavoriteMemeRepository';
+import {notifyMicupBotMessage} from '@app/api/guild/micupbot/MicupBotMessageHook';
 import type {GatewayChannelMention, IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {ISnowflakeService} from '@app/api/infrastructure/ISnowflakeService';
 import type {IStorageService} from '@app/api/infrastructure/IStorageService';
 import {Logger} from '@app/api/Logger';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
+import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
 import type {Channel} from '@app/api/models/Channel';
 import type {Message} from '@app/api/models/Message';
 import type {MessageSnapshot} from '@app/api/models/MessageSnapshot';
@@ -342,6 +345,7 @@ export class MessageSendService {
 		parentAuth: AuthenticatedChannel;
 		data: MessageRequest;
 	}): Promise<void> {
+		getUsernameSelectionGate().assertMayAct(user, 'message');
 		if (!user.isBot && user.id !== SYSTEM_USER_ID && !(user.flags & UserFlags.HAS_SESSION_STARTED)) {
 			throw InputValidationError.fromCode('content', ValidationErrorCodes.MUST_START_SESSION_BEFORE_SENDING);
 		}
@@ -414,6 +418,7 @@ export class MessageSendService {
 		channelId: ChannelID;
 		data: MessageRequest;
 	}): Promise<void> {
+		getUsernameSelectionGate().assertMayAct(user, 'message');
 		const authChannel = await this.deps.channelAuthService.getChannelAuthenticated({
 			userId: user.id,
 			viewer,
@@ -915,6 +920,7 @@ export class MessageSendService {
 		viewer,
 		channelId,
 		data,
+		components,
 		requestCache,
 		forumStarter,
 	}: {
@@ -922,9 +928,12 @@ export class MessageSendService {
 		viewer: ThreadViewer;
 		channelId: ChannelID;
 		data: MessageRequest;
+		components?: ReadonlyArray<MessageActionRowData>;
 		requestCache: RequestCache;
 		forumStarter?: {parentAuth: AuthenticatedChannel};
 	}): Promise<SendMessageResult> {
+		getUsernameSelectionGate().assertMayAct(user, 'message');
+		if (components) assertComponentsWritable(user.id, components);
 		const authChannel = await this.deps.channelAuthService.getChannelAuthenticated({
 			userId: user.id,
 			viewer,
@@ -1133,6 +1142,7 @@ export class MessageSendService {
 			mentionData,
 			allowEmbeds: canEmbedLinks,
 			dmNsfwContext,
+			components,
 			threadInsert: authChannel.thread !== undefined,
 		});
 		this.cacheMentionChannels({
@@ -1223,6 +1233,7 @@ export class MessageSendService {
 		if (searchIndexOptions && !suppressDmRecipientDelivery) {
 			void this.deps.searchService.indexMessage(message, user.isBot, searchIndexOptions);
 		}
+		notifyMicupBotMessage({guild, member, channel, message, user});
 		return {message, authChannel};
 	}
 

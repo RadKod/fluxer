@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createRequire} from 'node:module';
-import {WINDOWS_APP_USER_MODEL_ID, WINDOWS_TOAST_ACTIVATOR_CLSID} from '@electron/common/DesktopIdentity';
+import {
+	DESKTOP_APP_NAME,
+	WINDOWS_APP_USER_MODEL_ID,
+	WINDOWS_TOAST_ACTIVATOR_CLSID,
+} from '@electron/common/DesktopIdentity';
 import {type ModulePollPlan, nextModulePollDelay, resolveModulePollPlan} from '@electron/common/ModulePollPlan';
 import {
 	decideModuleSystemDisableRequest,
@@ -21,7 +25,6 @@ import type {
 	ModuleUpdaterStatus,
 } from '@electron/main/ModuleUpdater';
 import type {SplashState, SplashStatus} from '@electron/main/SplashWindow';
-import {repairWindowsShortcuts} from '@electron/main/WindowsShortcuts';
 import {type BrowserWindow, app as electronApp} from 'electron';
 
 declare const __FLUXER_MAIN_APP_OUTPUT_FILE__: string;
@@ -29,24 +32,13 @@ declare const __FLUXER_MAIN_APP_OUTPUT_FILE__: string;
 const requireModule = createRequire(import.meta.url);
 
 if (process.platform === 'win32') {
-	const {VelopackApp} = requireModule('velopack') as typeof import('velopack');
-	VelopackApp.build()
-		.onAfterInstallFastCallback(() => {
-			repairWindowsShortcuts();
-		})
-		.onAfterUpdateFastCallback(() => {
-			repairWindowsShortcuts();
-		})
-		.onFirstRun(() => {
-			repairWindowsShortcuts();
-		})
-		.onRestarted(() => {
-			repairWindowsShortcuts();
-		})
-		.run();
-	repairWindowsShortcuts();
+	if (!process.windowsStore) {
+		const {VelopackApp} = requireModule('velopack') as typeof import('velopack');
+		// Fast install/update callbacks defer native shortcut repair to the next normal launch after preflight.
+		VelopackApp.build().run();
+		electronApp.setAppUserModelId(WINDOWS_APP_USER_MODEL_ID);
+	}
 	electronApp.setToastActivatorCLSID(WINDOWS_TOAST_ACTIVATOR_CLSID);
-	electronApp.setAppUserModelId(WINDOWS_APP_USER_MODEL_ID);
 }
 
 armOpenUrlForwarding();
@@ -65,8 +57,7 @@ const MODULE_SYSTEM_LAUNCH = resolveModuleSystemLaunch({hasOfflineRenderer: HAS_
 
 const MODULE_LAUNCH_PERMIT = Symbol('fluxer.desktop.moduleLaunchPermit');
 
-const UPDATE_SERVER_UNREACHABLE_MESSAGE =
-	"Fluxer couldn't reach its update server to download app files. Check your internet connection, proxy or firewall. Fluxer keeps retrying.";
+const UPDATE_SERVER_UNREACHABLE_MESSAGE = `${DESKTOP_APP_NAME} couldn't reach its update server to download app files. Check your internet connection, proxy or firewall. ${DESKTOP_APP_NAME} keeps retrying.`;
 
 interface ModuleLaunchPermit {
 	readonly [MODULE_LAUNCH_PERMIT]: true;
@@ -248,7 +239,7 @@ async function refuseUnsupportedBuild(reason: string): Promise<never> {
 	const {onSplashQuit, openSplashWindow, setSplashState, SplashAction} = await import('@electron/main/SplashWindow');
 	const logger = createChildLogger('Bootstrap');
 	logger.error('This build cannot start a renderer, refusing to launch', {reason});
-	process.stderr.write(`Fluxer cannot start: ${reason}\n`);
+	process.stderr.write(`${DESKTOP_APP_NAME} cannot start: ${reason}\n`);
 	await app.whenReady();
 	openSplashWindow();
 	setSplashState({status: 'blocked-unsupported-build', action: SplashAction.QUIT});
@@ -266,6 +257,7 @@ async function runModuleBootstrap(): Promise<void> {
 	const {appendWindowsGpuDriverWorkaroundSwitches} = await import('@electron/main/ChromiumRuntime');
 	const {applyPreReadyChromiumConfiguration} = await import('@electron/main/PreReadyChromium');
 	const {configureUserDataPath} = await import('@electron/common/UserDataPath');
+	const {initializeMainI18n} = await import('@electron/main/MainI18n');
 	const {armNativeProbeCache} = await import('@electron/main/NativeProbeCache');
 	const {isStartMinimizedLaunch} = await import('@electron/main/AutostartLaunch');
 	const {relaunchStableLaunchPath} = await import('@electron/main/LinuxLaunchPath');
@@ -463,6 +455,7 @@ async function runModuleBootstrap(): Promise<void> {
 						launchAttempt: outcome.launchAttempt,
 					};
 				case 'blocked-shell-update': {
+					initializeMainI18n();
 					const plan = resolveShellUpdatePlan();
 					logger.warn('A shell update is required before the modules can converge', {
 						latestVersion: outcome.latestVersion,

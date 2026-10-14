@@ -9,8 +9,17 @@ export interface IUserRelationshipRepository {
 	listRelationships(sourceUserId: UserID): Promise<Array<Relationship>>;
 	listBlockedUserIds(sourceUserId: UserID): Promise<Array<UserID>>;
 	listIncomingRequests(userId: UserID): Promise<Array<Relationship>>;
+	listIncomingRelationships(
+		targetUserId: UserID,
+		options: {limit: number},
+	): Promise<Array<Pick<RelationshipRow, 'source_user_id' | 'type'>>>;
 	hasReachedRelationshipLimit(sourceUserId: UserID, limit: number): Promise<boolean>;
 	getRelationship(sourceUserId: UserID, targetUserId: UserID, type: number): Promise<Relationship | null>;
+	getIncomingRelationship(
+		userId: UserID,
+		sourceUserId: UserID,
+		type: number,
+	): Promise<Pick<RelationshipRow, 'source_user_id' | 'type'> | null>;
 	upsertRelationship(relationship: RelationshipRow): Promise<Relationship>;
 	bulkUpdateFriendShareVoiceActivity(sourceUserId: UserID, value: boolean): Promise<Array<Relationship>>;
 	deleteRelationship(sourceUserId: UserID, targetUserId: UserID, type: number): Promise<void>;

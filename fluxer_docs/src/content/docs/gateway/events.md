@@ -61,6 +61,10 @@ A Dispatch is buffered for [Resume](/gateway/commands/#resume) replay unless it 
 | [Favorite Meme Create](#favorite-meme-create) | The current user saves a meme | Current user |
 | [Favorite Meme Update](#favorite-meme-update) | One of the current user's memes changes | Current user |
 | [Favorite Meme Delete](#favorite-meme-delete) | The current user deletes a meme | Current user |
+| [Feed Notification Ack](#feed-notification-ack) | The current user marks feed notifications read on one of their sessions | Current user |
+| [Feed Notification Create](#feed-notification-create) | A feed notification aimed at the current user is created or updated | Current user |
+| [Follow Create](#follow-create) | The current user follows an account | Current user |
+| [Follow Delete](#follow-delete) | A follow by the current user ends | Current user |
 | [Guild Create](#guild-create) | A guild becomes available to the session | Guild connection |
 | [Guild Sync](#guild-sync) | A subscribed session receives the guild's full current state again | Guild connection |
 | [Guild Update](#guild-update) | A guild's configuration changes | Guild connection |
@@ -107,6 +111,7 @@ A Dispatch is buffered for [Resume](/gateway/commands/#resume) replay unless it 
 | [Voice State Update](#voice-state-update) | A guild or call participant's voice state changes | Channel visibility |
 | [Voice Server Update](#voice-server-update) | The session receives or replaces its own voice grant | Current session |
 | [Entrance Sound Play](#entrance-sound-play) | A participant's entrance sound plays in a voice channel | Voice channel |
+| [Table Game Update](#table-game-update) | A game table the current user plays at or watches changes | Table participant |
 | [Call Create](#call-create) | A private channel call begins or becomes visible | Call recipient |
 | [Call Update](#call-update) | The ringing set, participant roster, or region of a call changes | Call recipient |
 | [Call Delete](#call-delete) | A call ends or becomes unavailable | Call recipient |
@@ -142,6 +147,7 @@ The initial session state. Sent once after a successful [Identify](/gateway/comm
 | latitude? | string | Latitude resolved from the connecting address, rendered as a decimal string |
 | longitude? | string | Longitude resolved from the connecting address, rendered as a decimal string |
 | auth_session_id_hash? | string | Base64url hash identifying the authentication session |
+| feed_notification_state? | [notification state](/http-api/feed/#notification-state-object) object | The feed inbox read cursor and unread count; absent for bots, with the feed off, or when it could not be read in time |
 | shard? | array[integer] | The accepted `[shard_id, shard_count]` pair, present only when Identify supplied one |
 | _timings? | object | HTTP-side timing breakdown, present only for a staff account |
 | _timings_gw? | object | Gateway-side timing breakdown, present only for a staff account |
@@ -373,6 +379,36 @@ The current user deleted a meme.
 | Field | Type | Description |
 | --- | --- | --- |
 | meme_id | snowflake | The deleted meme |
+
+### <span id="feed-notification-ack"></span>FEED_NOTIFICATION_ACK
+
+The current user marked feed notifications read on one of their sessions. Sent to all of the user's sessions, never to anyone else. The payload is the response of [Mark notifications read](/http-api/feed/#mark-notifications-read).
+
+| Field | Type | Description |
+| --- | --- | --- |
+| last_read_at | ISO8601 timestamp | The read cursor after the read |
+| unread_seq | integer | The unread sequence the read covers |
+| unread_epoch | integer | The epoch of that sequence; see the [notification state object](/http-api/feed/#notification-state-object) |
+
+A client sets its unread count to the lower of its count and the rise of the last sequence it saw over `unread_seq`; the event never raises a count. Under a later epoch than the client's, the client's last sequence counts as 0; under an earlier one, the event changes no count.
+
+### <span id="feed-notification-create"></span>FEED_NOTIFICATION_CREATE
+
+A like, comment or follow aimed at the current user created or updated a feed notification. The payload is the complete [notification object](/http-api/feed/#notification-object); an update carries the same `id` with the new `actors`, `actor_count` and `updated_at`. An account receives at most one a minute, carrying its newest change; see [List notifications](/http-api/feed/#list-notifications).
+
+The payload also carries `unread_seq`, the recipient's unread sequence after this notification, and `unread_epoch`, the epoch of that sequence. A client adds the rise since the last value it saw (READY, an earlier push or an ack) to its unread count; a repeated or late push adds nothing, and neither does a push of a notification no newer than the client's read cursor. Under a later epoch than the client's, the rise counts from 0; a push under an earlier epoch adds nothing.
+
+### <span id="follow-create"></span>FOLLOW_CREATE
+
+The current user followed an account. The payload is a [follow object](/http-api/users/follows/#follow-object) whose `user` is the followed account. The followed account receives no event.
+
+### <span id="follow-delete"></span>FOLLOW_DELETE
+
+A follow by the current user ended: the current user unfollowed the account, the account removed the current user as a follower, or one of the two blocked the other.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| user_id | snowflake | The account the current user no longer follows |
 
 ## Guilds and channels
 
@@ -991,6 +1027,21 @@ A participant asked for their entrance sound to play in a voice channel they are
 
 Recipients are every other account with a voice state in that channel, one Dispatch each and at most one per account. The requesting account never receives its own sound.
 
+### <span id="table-game-update"></span>TABLE_GAME_UPDATE
+
+A [game table](/http-api/table-games/) in a guild voice channel changed. Each recipient receives the table as that recipient may see it.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| channel_id | snowflake | Voice channel the table is in |
+| guild_id | snowflake | Guild the channel belongs to |
+| slot | string | Table slot of the channel's room theme |
+| view | [table game view](/http-api/table-games/#table-game-view-object) object | The table as this recipient sees it |
+
+Recipients are the players at the table, its subscribed spectators, and a player who has just left it, one Dispatch each after every change to the table. A player's `view` carries that player's own rack, and every other `view` has `rack` null. No Dispatch carries another player's rack or the order of the pile.
+
+Fluxer addresses the Dispatch to the account, so every session that account holds receives it. A recipient whose Dispatch fails is skipped. A client that missed one reads the table again with [Get a table game](/http-api/table-games/#get-a-table-game). A change of the spectators alone sends no Dispatch.
+
 ### <span id="call-create"></span>CALL_CREATE
 
 A private channel call began, or became visible in the session's initial state.
@@ -1074,6 +1125,30 @@ A channel the session cannot view, and a channel on which it lacks `VIEW_CHANNEL
 | channel_id | snowflake | Channel the counts describe |
 | member_count | integer | Members that can view the channel |
 | online_count | integer | Online members that can view the channel |
+
+## Application command contract events
+
+The following event names are reserved for application commands and interactions. This release defines the shared contract but does not emit these Dispatches. Their delivery scope and replay behaviour are not yet available, and clients MUST NOT depend on receiving them.
+
+### <span id="application-commands-update"></span>APPLICATION_COMMANDS_UPDATE
+
+The shared payload identifies a command set revision without carrying its commands.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| application_id | snowflake | Application that owns the command set |
+| scope_id | snowflake | Scope identifier |
+| version | snowflake | Command set revision |
+
+Each field is a non-zero snowflake string within the signed 64-bit range.
+
+### <span id="interaction-create"></span>INTERACTION_CREATE
+
+Reserved for interaction delivery. This release defines the event name alone and does not define its Dispatch payload.
+
+### <span id="interaction-response-create"></span>INTERACTION_RESPONSE_CREATE
+
+Reserved for interaction response delivery. This release defines the event name alone and does not define its Dispatch payload.
 
 ## Resource representation
 

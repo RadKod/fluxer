@@ -4,6 +4,7 @@ import type {GuildID, UserID} from '@app/api/BrandedTypes';
 import {BatchBuilder, fetchMany} from '@app/api/database/CassandraQueryExecution';
 import type {GuildMemberByUserIdRow} from '@app/api/database/types/GuildTypes';
 import {GuildMembers, GuildMembersByUserId} from '@app/api/Tables';
+import {onUserGuildsChanged} from '@app/api/user/lifecycle/UserLifecycleHooks';
 
 const FETCH_GUILD_MEMBERS_BY_USER_CQL = GuildMembersByUserId.selectCql({
 	where: GuildMembersByUserId.where.eq('user_id'),
@@ -37,5 +38,6 @@ export class UserGuildRepository {
 			);
 		}
 		await batch.execute();
+		await onUserGuildsChanged({userId});
 	}
 }

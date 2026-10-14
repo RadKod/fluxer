@@ -98,6 +98,8 @@ export interface KvQueryMeta<Row extends object = Record<string, unknown>> {
 	pkColumns?: ReadonlyArray<ColumnName<Row>>;
 	ttlSeconds?: number;
 	ttlParamName?: string;
+	timestampParamName?: string;
+	writeTime?: Partial<Record<ColumnName<Row>, string>>;
 	nowColumn?: ColumnName<Row>;
 	conditions?: ReadonlyArray<KvQueryCondition<Row>>;
 	batchEntries?: ReadonlyArray<KvConditionalBatchEntry<Row>>;
@@ -165,6 +167,12 @@ export type WhereExpr<Row extends object> =
 			param: string;
 	  }
 	| {
+			kind: 'tokenRange';
+			col: ColumnName<Row>;
+			startParam: string;
+			endParam: string;
+	  }
+	| {
 			kind: 'tupleGt';
 			cols: ReadonlyArray<ColumnName<Row>>;
 			params: ReadonlyArray<string>;
@@ -187,6 +195,10 @@ export type ConditionalWriteEntry<Row extends object, PK extends ColumnName<Row>
 	  }
 	| {action: 'delete'; pk: Pick<Row, PK>; expected: Partial<Row>};
 
+export interface CassandraWriteOptions {
+	timestamp: bigint;
+}
+
 export interface Table<Row extends object, PK extends ColumnName<Row>, PartKey extends ColumnName<Row> = PK> {
 	name: string;
 	columns: ReadonlyArray<ColumnName<Row>>;
@@ -195,6 +207,7 @@ export interface Table<Row extends object, PK extends ColumnName<Row>, PartKey e
 	defaultTtlSeconds: number | undefined;
 	selectCql(opts?: {
 		columns?: ReadonlyArray<ColumnName<Row>>;
+		writeTime?: Partial<Record<ColumnName<Row>, string>>;
 		where?: WhereExpr<Row> | ReadonlyArray<WhereExpr<Row>>;
 		orderBy?: OrderBy<Row>;
 		limit?: number;
@@ -202,18 +215,20 @@ export interface Table<Row extends object, PK extends ColumnName<Row>, PartKey e
 	}): string;
 	select(opts?: {
 		columns?: ReadonlyArray<ColumnName<Row>>;
+		writeTime?: Partial<Record<ColumnName<Row>, string>>;
 		where?: WhereExpr<Row> | ReadonlyArray<WhereExpr<Row>>;
 		orderBy?: OrderBy<Row>;
 		limit?: number;
 	}): QueryTemplate;
 	updateAllCql(): string;
 	paramsFromRow(row: Row): CassandraParams;
-	upsertAll(row: Row): PreparedQuery;
+	upsertAll(row: Row, options?: CassandraWriteOptions): PreparedQuery;
 	patchByPk(
 		pk: Pick<Row, PK>,
 		patch: Partial<{
 			[K in Exclude<ColumnName<Row>, PK>]: DbOp<RowValue<Row, K>>;
 		}>,
+		options?: CassandraWriteOptions,
 	): PreparedQuery;
 	conditionalPatchByPk(
 		pk: Pick<Row, PK>,
@@ -233,7 +248,7 @@ export interface Table<Row extends object, PK extends ColumnName<Row>, PartKey e
 	conditionalBatch(entries: ReadonlyArray<ConditionalWriteEntry<Row, PK>>): PreparedQuery;
 	deleteCql(opts?: {where?: WhereExpr<Row> | ReadonlyArray<WhereExpr<Row>>}): string;
 	delete(opts?: {where?: WhereExpr<Row> | ReadonlyArray<WhereExpr<Row>>}): QueryTemplate;
-	deleteByPk(pk: Pick<Row, PK>): PreparedQuery;
+	deleteByPk(pk: Pick<Row, PK>, options?: CassandraWriteOptions): PreparedQuery;
 	conditionalDeleteByPk(pk: Pick<Row, PK>, expected: Partial<Row>): PreparedQuery;
 	deletePartition(pk: Pick<Row, PartKey>): PreparedQuery;
 	insertCql(opts?: {ttlParam?: string}): string;
@@ -270,6 +285,7 @@ export interface Table<Row extends object, PK extends ColumnName<Row>, PartKey e
 		lte: <K extends ColumnName<Row>>(col: K, param?: string) => WhereExpr<Row>;
 		gte: <K extends ColumnName<Row>>(col: K, param?: string) => WhereExpr<Row>;
 		tokenGt: <K extends ColumnName<Row>>(col: K, param: string) => WhereExpr<Row>;
+		tokenRange: <K extends ColumnName<Row>>(col: K, startParam: string, endParam: string) => WhereExpr<Row>;
 		tupleGt: <K extends ColumnName<Row>>(cols: ReadonlyArray<K>, params: ReadonlyArray<string>) => WhereExpr<Row>;
 	};
 }

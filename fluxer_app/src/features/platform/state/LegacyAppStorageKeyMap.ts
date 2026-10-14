@@ -40,6 +40,8 @@ const MOBX_PERSIST_ROWS: ReadonlyArray<LegacyAppStorageKeyRow> = [
 	{kind: 'exact', key: 'LocalVoiceState', scope: 'global', fanout: 'preference'},
 	{kind: 'exact', key: 'VoiceSessionRestore', scope: 'global', fanout: 'preference'},
 	{kind: 'exact', key: 'Notification', scope: 'account', fanout: 'preference'},
+	{kind: 'exact', key: 'FeedNotifications', scope: 'account', fanout: 'content'},
+	{kind: 'exact', key: 'FeedTabs', scope: 'global', fanout: 'preference'},
 	{kind: 'exact', key: 'Inbox', scope: 'account', fanout: 'content'},
 	{kind: 'exact', key: 'Location', scope: 'account', fanout: 'content'},
 	{kind: 'exact', key: 'GuildFolderExpanded', scope: 'account', fanout: 'preference'},
@@ -66,6 +68,14 @@ const MOBX_PERSIST_ROWS: ReadonlyArray<LegacyAppStorageKeyRow> = [
 ];
 
 const PLAIN_ROWS: ReadonlyArray<LegacyAppStorageKeyRow> = [
+	{kind: 'exact', key: 'analytics_consent', scope: 'global', fanout: 'preference'},
+	{kind: 'exact', key: 'Accessibility:fontSizeDefault15MigratedV1', scope: 'global', fanout: 'preference'},
+	{kind: 'exact', key: 'Accessibility:motionSyncDefaultOffMigratedV1', scope: 'global', fanout: 'preference'},
+	{kind: 'exact', key: 'VoiceRoomControlDiscovery', scope: 'global', fanout: 'preference'},
+	{kind: 'exact', key: 'TaskbarPin', scope: 'global', fanout: 'preference'},
+	{kind: 'exact', key: 'VoiceSceneSettings', scope: 'global', fanout: 'preference'},
+	{kind: 'exact', key: 'GameOverlaySettings', scope: 'global', fanout: 'preference'},
+
 	{kind: 'exact', key: 'theme', scope: 'global', fanout: 'preference'},
 	{kind: 'exact', key: 'locale', scope: 'global', fanout: 'preference'},
 	{kind: 'exact', key: 'debugLoggingEnabled', scope: 'global', fanout: 'preference'},
@@ -109,7 +119,7 @@ const ACCESSIBILITY_ROWS: ReadonlyArray<LegacyAppStorageKeyRow> = [
 	{kind: 'exact', key: 'Accessibility:zoomLevel', scope: 'account', fanout: 'preference'},
 	{kind: 'exact', key: 'Accessibility:customThemeCss', scope: 'account', fanout: 'preference'},
 	{kind: 'exact', key: 'Accessibility:customThemeCssSyncAcrossDevices', scope: 'account', fanout: 'preference'},
-	{kind: 'exact', key: 'Accessibility:motion', scope: 'account', fanout: 'preference'},
+	{kind: 'exact', key: 'Accessibility:motion', scope: 'global', fanout: 'preference'},
 	{kind: 'exact', key: 'Accessibility:videoSeekPreviewThumbnails', scope: 'account', fanout: 'preference'},
 	{kind: 'suffixed', prefix: 'Accessibility:showNeko', scope: 'account', fanout: 'preference'},
 	{kind: 'suffixed', prefix: 'Accessibility:keepNekoStill', scope: 'account', fanout: 'preference'},

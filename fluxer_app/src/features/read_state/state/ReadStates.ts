@@ -34,6 +34,7 @@ import {
 import Relationships from '@app/features/relationship/state/Relationships';
 import Dimension from '@app/features/ui/state/Dimension';
 import Users from '@app/features/user/state/Users';
+import {LRUMap} from '@app/lib/list/ListLruMap';
 import {
 	ChannelTypes,
 	GUILD_TEXT_BASED_CHANNEL_TYPES,
@@ -48,9 +49,11 @@ import {observable, runInAction} from 'mobx';
 export type {GatewayReadState};
 
 const logger = new Logger('ReadStates');
+const PROCESSED_MESSAGE_CACHE_CAPACITY = 1000;
 
 class ReadStates {
 	private readonly states = new Map<ChannelId, ReadStateEntry>();
+	private readonly processedMessageIds = new LRUMap<string, ChannelId>(PROCESSED_MESSAGE_CACHE_CAPACITY);
 	private readonly archivedStates = new Map<ChannelId, ArchivedReadState>();
 	private readonly mentionChannels = new Set<ChannelId>();
 	private readonly listeners = new Set<() => void>();
@@ -143,6 +146,17 @@ class ReadStates {
 		this.refreshMentionChannel(state.channelId);
 	}
 
+	private clearProcessedMessages(channelId: string, ackMessageId?: string): void {
+		for (const [messageId, processedChannelId] of this.processedMessageIds.entries()) {
+			if (
+				processedChannelId === channelId &&
+				(ackMessageId == null || compareMessageIds(messageId, ackMessageId) <= 0)
+			) {
+				this.processedMessageIds.delete(messageId);
+			}
+		}
+	}
+
 	private clearUnreadStateIfRead(state: ReadStateEntry): void {
 		if (!state.hasUnread()) {
 			state.estimated = false;
@@ -215,6 +229,7 @@ class ReadStates {
 	}
 
 	clear(channelId: string): boolean {
+		this.clearProcessedMessages(channelId);
 		const entry = this.states.get(channelId as ChannelId);
 		if (entry == null) {
 			return false;
@@ -245,6 +260,7 @@ class ReadStates {
 
 	private reset(): void {
 		this.states.clear();
+		this.processedMessageIds.clear();
 		this.archivedStates.clear();
 		this.mentionChannels.clear();
 		this.pendingChanges.clear();
@@ -507,6 +523,8 @@ class ReadStates {
 
 	handleIncomingMessage(action: {channelId: string; message: WireMessage}): void {
 		const state = this.get(action.channelId);
+		const alreadyProcessed = this.processedMessageIds.has(action.message.id);
+		this.processedMessageIds.set(action.message.id, action.channelId as ChannelId);
 		if (action.message.guild_id != null) {
 			state.storedGuildId = action.message.guild_id;
 		}
@@ -570,7 +588,11 @@ class ReadStates {
 				if (!decision.coveredByLastMessage) {
 					state.unreadCount++;
 				}
-				if (currentUser != null && state.shouldMentionFor(action.message, currentUser.id, state.isPrivate)) {
+				if (
+					!alreadyProcessed &&
+					currentUser != null &&
+					state.shouldMentionFor(action.message, currentUser.id, state.isPrivate)
+				) {
 					this.setMentionCount(state, state.mentionCount + 1);
 				}
 				this.notifyChange(action.channelId);
@@ -667,6 +689,7 @@ class ReadStates {
 				action.channel.type === ChannelTypes.GROUP_DM ||
 				action.channel.type === ChannelTypes.DM_PERSONAL_NOTES)
 		) {
+			this.clearProcessedMessages(action.channel.id);
 			if (action.channel.type === ChannelTypes.GROUP_DM) {
 				this.cancelPendingAck(action.channel.id);
 			}
@@ -801,6 +824,7 @@ class ReadStates {
 				state.clearStickyUnread();
 				state.ackedManually = true;
 				state.rebuild(action.messageId, {recomputeMentions: true});
+				this.clearProcessedMessages(action.channelId, action.messageId);
 				state.serverVersion = action.version ?? state.serverVersion;
 				this.cancelPendingAck(action.channelId);
 				AutoAck.disableForChannel(action.channelId);
@@ -813,6 +837,7 @@ class ReadStates {
 				state.serverVersion = action.version ?? state.serverVersion;
 				return;
 			case 'refreshCurrentAck':
+				this.clearProcessedMessages(action.channelId, action.messageId);
 				state.serverVersion = action.version ?? state.serverVersion;
 				if (decision.shouldUpdateMentionCount && mentionCount != null) {
 					this.setMentionCount(state, mentionCount);
@@ -916,6 +941,7 @@ class ReadStates {
 		if (decision.type === 'ignored') {
 			return {acked: false, messageId: null, hadMentions: false};
 		}
+		this.clearProcessedMessages(state.channelId, decision.messageId);
 		if (decision.shouldPreserveStickyUnread) {
 			state.stickyUnreadMessageId = state.oldestUnreadMessageId;
 		}

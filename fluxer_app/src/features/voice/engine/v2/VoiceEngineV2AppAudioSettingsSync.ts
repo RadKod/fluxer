@@ -4,14 +4,24 @@ import assert from 'node:assert/strict';
 import VoiceDevicePermissionState from '@app/features/voice/engine/VoiceDevicePermissionState';
 import VoiceSettings from '@app/features/voice/state/VoiceSettings';
 import type {VoiceNoiseSuppressionBackend} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionBackends';
+import {
+	readEffectiveNoiseSuppression,
+	readNoiseSuppressionStrength,
+	resolveRuntimeVoiceProcessing,
+} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime';
 import {isVoiceActivityGateEnabled} from '@app/features/voice/utils/VoiceInputProcessor';
+import {isSameVoicePipelineTuning, type VoicePipelineTuning} from '@app/features/voice/utils/VoicePipelineTuning';
 import {
 	getActiveInputDeviceLabel,
 	resolveVoiceProcessingFromStateForDeviceLabel,
 	type VoiceProcessingMode,
 } from '@app/features/voice/utils/VoiceProcessingProfile';
 
+const MICROPHONE_CAPTURE_SAMPLE_RATE = 48000;
+
 export interface VoiceEngineV2AppAudioSettingsSnapshot {
+	readonly pipelineV2Enabled: boolean;
+	readonly pipelineV2Tuning: VoicePipelineTuning;
 	readonly inputVolume: number;
 	readonly outputVolume: number;
 	readonly vadThreshold: number;
@@ -25,8 +35,10 @@ export interface VoiceEngineV2AppAudioSettingsSnapshot {
 	readonly browserNoiseSuppression: boolean;
 	readonly autoGainControl: boolean;
 	readonly deepFilter: boolean;
+	readonly deepFilterNoiseReductionLevel: number;
 	readonly contentHint: '' | 'speech' | 'music';
 	readonly noiseSuppressionBackend: VoiceNoiseSuppressionBackend;
+	readonly suppressionStrength: number;
 	readonly stereoCapture: boolean;
 }
 
@@ -53,13 +65,19 @@ function assertAudioSettingsSnapshot(snapshot: VoiceEngineV2AppAudioSettingsSnap
 	assert.equal(typeof snapshot.autoGainControl, 'boolean', `${name}.autoGainControl must be a boolean`);
 	assert.equal(typeof snapshot.deepFilter, 'boolean', `${name}.deepFilter must be a boolean`);
 	assert.equal(typeof snapshot.noiseSuppressionBackend, 'string', `${name}.noiseSuppressionBackend must be a string`);
+	assert.equal(typeof snapshot.suppressionStrength, 'number', `${name}.suppressionStrength must be a number`);
 	assert.equal(typeof snapshot.stereoCapture, 'boolean', `${name}.stereoCapture must be a boolean`);
 }
 
 export function createVoiceEngineV2AppAudioSettingsSnapshot(): VoiceEngineV2AppAudioSettingsSnapshot {
 	const activeInputDeviceLabel = getActiveInputDeviceLabel(VoiceSettings);
-	const profile = resolveVoiceProcessingFromStateForDeviceLabel(VoiceSettings, activeInputDeviceLabel);
+	const effective = readEffectiveNoiseSuppression(MICROPHONE_CAPTURE_SAMPLE_RATE);
+	const profile = resolveRuntimeVoiceProcessing(
+		resolveVoiceProcessingFromStateForDeviceLabel(VoiceSettings, activeInputDeviceLabel),
+	);
 	return {
+		pipelineV2Enabled: profile.pipelineV2Enabled,
+		pipelineV2Tuning: effective.pipelineV2Tuning,
 		inputVolume: VoiceSettings.getInputVolume(),
 		outputVolume: VoiceSettings.getOutputVolume(),
 		vadThreshold: VoiceSettings.getVadThreshold(),
@@ -73,8 +91,10 @@ export function createVoiceEngineV2AppAudioSettingsSnapshot(): VoiceEngineV2AppA
 		browserNoiseSuppression: profile.browserNoiseSuppression,
 		autoGainControl: profile.autoGainControl,
 		deepFilter: profile.deepFilter,
+		deepFilterNoiseReductionLevel: profile.deepFilterNoiseReductionLevel,
 		contentHint: profile.contentHint,
 		noiseSuppressionBackend: profile.noiseSuppressionBackend,
+		suppressionStrength: readNoiseSuppressionStrength(profile),
 		stereoCapture: profile.stereoCapture,
 	};
 }
@@ -108,9 +128,14 @@ export function hasVoiceEngineV2InputProcessorSettingsChanged(
 ): boolean {
 	assertAudioSettingsSnapshot(previous, 'previous');
 	assertAudioSettingsSnapshot(current, 'current');
-	if (previous.noiseSuppressionBackend !== current.noiseSuppressionBackend) return true;
+	if (previous.pipelineV2Enabled !== current.pipelineV2Enabled) return true;
+	if (!isSameVoicePipelineTuning(previous.pipelineV2Tuning, current.pipelineV2Tuning)) return true;
+	if (previous.deepFilter !== current.deepFilter) return true;
+	if (previous.deepFilterNoiseReductionLevel !== current.deepFilterNoiseReductionLevel) return true;
 	if (previous.voiceActivityGate !== current.voiceActivityGate) return true;
 	if (previous.vadAutoSensitivity !== current.vadAutoSensitivity) return true;
+	if (previous.noiseSuppressionBackend !== current.noiseSuppressionBackend) return true;
+	if (previous.suppressionStrength !== current.suppressionStrength) return true;
 	if (previous.vadThreshold !== current.vadThreshold) return true;
 	if (previous.inputVolume !== current.inputVolume) return true;
 	if (previous.processingMode !== current.processingMode) return true;

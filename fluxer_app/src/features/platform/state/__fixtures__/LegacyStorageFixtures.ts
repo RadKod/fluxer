@@ -57,6 +57,48 @@ const SESSION_ENTRIES: ReadonlyArray<GoldenStorageEntry> = [
 
 const MOBX_PERSIST_ENTRIES: ReadonlyArray<GoldenStorageEntry> = [
 	{
+		key: 'FeedNotifications',
+		value: mobxPersistBlob({lastReadAt: 1_800_000_000_000, lastReadUserId: GOLDEN_ACCOUNT_USER_ID}),
+		kind: 'mobx-persist',
+		destination: 'content-account',
+		source: 'features/inbox/state/FeedNotifications.ts',
+	},
+	{
+		key: 'FeedTabs',
+		value: mobxPersistBlob({selectedTab: 'home'}),
+		kind: 'mobx-persist',
+		destination: 'global',
+		source: 'features/feed/state/FeedTabs.ts',
+	},
+	{
+		key: 'GameOverlaySettings',
+		value: mobxPersistBlob({enabled: true, mode: 'speaking', corner: 'top-left'}),
+		kind: 'mobx-persist',
+		destination: 'global',
+		source: 'features/game_overlay/state/GameOverlaySettings.ts',
+	},
+	{
+		key: 'VoiceSceneSettings',
+		value: mobxPersistBlob({preferRoom: true, spatialAudio: true, showRoomCameras: true}),
+		kind: 'mobx-persist',
+		destination: 'global',
+		source: 'features/voice_scene/state/VoiceSceneSettings.ts',
+	},
+	{
+		key: 'TaskbarPin',
+		value: mobxPersistBlob({dismissed: true}),
+		kind: 'mobx-persist',
+		destination: 'global',
+		source: 'features/platform/state/TaskbarPin.ts',
+	},
+	{
+		key: 'VoiceRoomControlDiscovery',
+		value: mobxPersistBlob({dismissed: true, shimmerShown: true}),
+		kind: 'mobx-persist',
+		destination: 'global',
+		source: 'features/voice_scene/state/VoiceRoomControlDiscovery.ts',
+	},
+	{
 		key: 'Theme',
 		value: mobxPersistBlob({syncAcrossDevices: true, localTheme: 'dark', serverTheme: 'dark'}),
 		kind: 'mobx-persist',
@@ -616,7 +658,7 @@ const ACCESSIBILITY_ENTRIES: ReadonlyArray<GoldenStorageEntry> = [
 		key: 'Accessibility:motion',
 		value: JSON.stringify({syncReducedMotionWithSystem: false, reducedMotionOverride: true}),
 		kind: 'accessibility',
-		destination: 'every-account',
+		destination: 'global',
 		source: 'features/accessibility/state/Accessibility.ts:37',
 	},
 	{

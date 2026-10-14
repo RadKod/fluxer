@@ -38,14 +38,17 @@ pub const BAN_AVATAR_HASH_REMOVE: &str = "ban:avatar_hash:remove";
 pub const BAN_PROFILE_SUBSTRING_ADD: &str = "ban:profile_substring:add";
 pub const BAN_PROFILE_SUBSTRING_CHECK: &str = "ban:profile_substring:check";
 pub const BAN_PROFILE_SUBSTRING_REMOVE: &str = "ban:profile_substring:remove";
+pub const BADGES_MANAGE: &str = "badges:manage";
 pub const BULK_ADD_GUILD_MEMBERS: &str = "bulk:add:guild_members";
 pub const BULK_DELETE_USERS: &str = "bulk:delete:users";
 pub const BULK_DELETE_USER_MESSAGES: &str = "bulk:delete:user_messages";
 pub const BULK_UPDATE_GUILD_FEATURES: &str = "bulk:update:guild_features";
 pub const BULK_UPDATE_USER_FLAGS: &str = "bulk:update:user_flags";
+pub const COSMETICS_MANAGE: &str = "cosmetics:manage";
 pub const CSAM_SUBMIT_NCMEC: &str = "csam:submit_ncmec";
 pub const DISCOVERY_REMOVE: &str = "discovery:remove";
 pub const DISCOVERY_REVIEW: &str = "discovery:review";
+pub const FEED_MODERATE: &str = "feed:moderate";
 pub const GATEWAY_MEMORY_STATS: &str = "gateway:memory_stats";
 pub const GATEWAY_RELOAD_ALL: &str = "gateway:reload_all";
 pub const GIFT_CODES_GENERATE: &str = "gift_codes:generate";
@@ -74,6 +77,8 @@ pub const MESSAGE_SHRED: &str = "message:shred";
 pub const REPORT_RESOLVE: &str = "report:resolve";
 pub const REPORT_VIEW: &str = "report:view";
 pub const REPORT_VIEW_REPORTER_PII: &str = "report:view:reporter_pii";
+pub const REFERRAL_MANAGE: &str = "referral:manage";
+pub const SHOP_MANAGE: &str = "shop:manage";
 pub const SYSTEM_DM_SEND: &str = "system_dm:send";
 pub const USER_CANCEL_BULK_MESSAGE_DELETION: &str = "user:cancel:bulk_message_deletion";
 pub const USER_CREATE_PASSWORD_RESET_LINK: &str = "user:create:password_reset_link";
@@ -93,10 +98,13 @@ pub const USER_TEMP_BAN: &str = "user:temp_ban";
 pub const USER_UPDATE_DOB: &str = "user:update:dob";
 pub const USER_UPDATE_EMAIL: &str = "user:update:email";
 pub const USER_UPDATE_FLAGS: &str = "user:update:flags";
+pub const USER_CLEAR_LEGACY_RESTRICTION: &str = "user:clear:legacy_restriction";
 pub const USER_UPDATE_MFA: &str = "user:update:mfa";
 pub const USER_UPDATE_PROFILE: &str = "user:update:profile";
 pub const USER_UPDATE_TRAITS: &str = "user:update:traits";
 pub const USER_UPDATE_USERNAME: &str = "user:update:username";
+pub const USERNAME_RESERVE: &str = "username:reserve";
+pub const USERNAME_MIGRATION_START: &str = "username:migration:start";
 pub const VOICE_REGION_CREATE: &str = "voice:region:create";
 pub const VOICE_REGION_DELETE: &str = "voice:region:delete";
 pub const VOICE_REGION_LIST: &str = "voice:region:list";
@@ -144,14 +152,17 @@ pub const ALL_ACLS: &[&str] = &[
     BAN_PROFILE_SUBSTRING_ADD,
     BAN_PROFILE_SUBSTRING_CHECK,
     BAN_PROFILE_SUBSTRING_REMOVE,
+    BADGES_MANAGE,
     BULK_ADD_GUILD_MEMBERS,
     BULK_DELETE_USERS,
     BULK_DELETE_USER_MESSAGES,
     BULK_UPDATE_GUILD_FEATURES,
     BULK_UPDATE_USER_FLAGS,
+    COSMETICS_MANAGE,
     CSAM_SUBMIT_NCMEC,
     DISCOVERY_REMOVE,
     DISCOVERY_REVIEW,
+    FEED_MODERATE,
     GATEWAY_MEMORY_STATS,
     GATEWAY_RELOAD_ALL,
     GIFT_CODES_GENERATE,
@@ -180,6 +191,8 @@ pub const ALL_ACLS: &[&str] = &[
     REPORT_RESOLVE,
     REPORT_VIEW,
     REPORT_VIEW_REPORTER_PII,
+    REFERRAL_MANAGE,
+    SHOP_MANAGE,
     SYSTEM_DM_SEND,
     USER_CANCEL_BULK_MESSAGE_DELETION,
     USER_CREATE_PASSWORD_RESET_LINK,
@@ -199,10 +212,13 @@ pub const ALL_ACLS: &[&str] = &[
     USER_UPDATE_DOB,
     USER_UPDATE_EMAIL,
     USER_UPDATE_FLAGS,
+    USER_CLEAR_LEGACY_RESTRICTION,
     USER_UPDATE_MFA,
     USER_UPDATE_PROFILE,
     USER_UPDATE_TRAITS,
     USER_UPDATE_USERNAME,
+    USERNAME_RESERVE,
+    USERNAME_MIGRATION_START,
     VOICE_REGION_CREATE,
     VOICE_REGION_DELETE,
     VOICE_REGION_LIST,
@@ -242,6 +258,32 @@ mod tests {
     #[test]
     fn has_permission_exact_match() {
         assert!(has_permission(&acls(&[USER_LOOKUP]), USER_LOOKUP));
+    }
+
+    #[test]
+    fn username_permissions_are_registered_and_do_not_grant_each_other() {
+        assert!(ALL_ACLS.contains(&USERNAME_RESERVE));
+        assert!(ALL_ACLS.contains(&USERNAME_MIGRATION_START));
+        assert!(has_permission(
+            &acls(&["USERNAME_RESERVE"]),
+            USERNAME_RESERVE
+        ));
+        assert!(has_permission(
+            &acls(&["USERNAME_MIGRATION_START"]),
+            USERNAME_MIGRATION_START
+        ));
+        assert!(!has_permission(
+            &acls(&[USERNAME_RESERVE]),
+            USERNAME_MIGRATION_START
+        ));
+        assert!(!has_permission(
+            &acls(&[USERNAME_MIGRATION_START]),
+            USERNAME_RESERVE
+        ));
+        assert!(!has_permission(
+            &acls(&[USER_UPDATE_USERNAME]),
+            USERNAME_RESERVE
+        ));
     }
 
     #[test]

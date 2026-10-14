@@ -1,0 +1,51 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Fills the call's main area edge to edge, under the header and the control bar rows. */
+.scene {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	background: #000;
+	--voice-scene-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.stage {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	transition: opacity 240ms var(--voice-scene-ease-out);
+	touch-action: none;
+}
+
+.stageReady {
+	opacity: 1;
+}
+
+.themeSelector {
+	position: absolute;
+	bottom: 0.75rem;
+	right: 0.75rem;
+	z-index: 2;
+	width: 13rem;
+	max-width: calc(100% - 1.5rem);
+}
+
+/* Cached rooms open in well under a second; the spinner only shows when the wait is noticeable. */
+.loading {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	pointer-events: none;
+	animation: voiceSceneLoadingIn 200ms var(--voice-scene-ease-out) 300ms both;
+}
+
+@keyframes voiceSceneLoadingIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}

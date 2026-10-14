@@ -18,6 +18,7 @@ import {
 	createPermissionOverwrite,
 	updateGuild,
 } from '@app/api/channel/tests/ChannelTestUtils';
+import {overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
@@ -26,7 +27,7 @@ import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {ChannelTypes, Permissions, WebhookTypes} from '@fluxer/constants/src/ChannelConstants';
 import {ContentWarningLevel} from '@fluxer/constants/src/GuildConstants';
 import type {ChannelResponse} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
-import {afterAll, beforeAll, beforeEach, describe, expect, test} from 'vitest';
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi} from 'vitest';
 
 describe('Channel follow permissions and content rules', () => {
 	let harness: ApiTestHarness;
@@ -39,6 +40,11 @@ describe('Channel follow permissions and content rules', () => {
 	beforeEach(async () => {
 		await harness.reset();
 		world = await announcementWorld(harness);
+		overrideLimits({feature_mature_content_settings: 1});
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
 	});
 
 	afterAll(async () => {

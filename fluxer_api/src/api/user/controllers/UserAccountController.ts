@@ -10,7 +10,7 @@ import {
 	RequireEmailAccountIdentity,
 	RequireUsernameAccountIdentity,
 } from '@app/api/middleware/AccountIdentityMiddleware';
-import {DefaultUserOnly, LoginRequired} from '@app/api/middleware/AuthMiddleware';
+import {DefaultUserOnly, LoginRequired, LoginRequiredAllowSuspicious} from '@app/api/middleware/AuthMiddleware';
 import {LocalAuthMiddleware} from '@app/api/middleware/LocalAuthMiddleware';
 import {requireOAuth2ScopeForBearer} from '@app/api/middleware/OAuth2ScopeMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
@@ -18,6 +18,7 @@ import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {SudoModeMiddleware} from '@app/api/middleware/SudoModeMiddleware';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import type {HonoApp} from '@app/api/types/HonoEnv';
+import {profileViewer} from '@app/api/user/profile/ProfileViewer';
 import {classifyWebPushOrigin} from '@app/api/user/services/WebPushOriginReplacement';
 import {getCachedUserPartialResponse} from '@app/api/user/UserCacheHelpers';
 import {gateChannelOverrideFlags, mapUserGuildSettingsForViewer} from '@app/api/user/UserGuildSettingsThreadView';
@@ -89,15 +90,56 @@ import {
 	UserSettingsResponse,
 	UserTagCheckResponse,
 	UserUpdateResponse,
+	UserUsernamePromptResponse,
+	UserUsernameStatusResponse,
 } from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import {uint8ArrayToBase64} from 'uint8array-extras';
 
 export function UserAccountController(app: HonoApp) {
 	app.get(
+		'/users/@me/username',
+		RateLimitMiddleware(RateLimitConfigs.USER_SETTINGS_GET),
+		LoginRequiredAllowSuspicious,
+		DefaultUserOnly,
+		OpenAPI({
+			operationId: 'get_current_username_status',
+			summary: 'Get username selection status',
+			description: 'Returns private username selection status and next available change time for the current account.',
+			responseSchema: UserUsernameStatusResponse,
+			statusCode: 200,
+			security: ['sessionToken'],
+			tags: ['Users'],
+		}),
+		async (ctx) => {
+			if (ctx.get('authTokenType') !== 'session') throw new MissingAccessError();
+			return ctx.json(await ctx.get('userAccountRequestService').getUsernameStatus(ctx.get('user').id));
+		},
+	);
+	app.post(
+		'/users/@me/username-prompt',
+		RateLimitMiddleware(RateLimitConfigs.USER_SETTINGS_GET),
+		LoginRequiredAllowSuspicious,
+		DefaultUserOnly,
+		Validator('json', EmptyBodyRequest),
+		OpenAPI({
+			operationId: 'claim_username_selection_prompt',
+			summary: 'Claim the daily username prompt',
+			description: 'Returns whether the current account may see the daily username selection reminder.',
+			responseSchema: UserUsernamePromptResponse,
+			statusCode: 200,
+			security: ['sessionToken'],
+			tags: ['Users'],
+		}),
+		async (ctx) => {
+			if (ctx.get('authTokenType') !== 'session') throw new MissingAccessError();
+			return ctx.json(await ctx.get('userAccountRequestService').getUsernamePrompt(ctx.get('user')));
+		},
+	);
+	app.get(
 		'/users/@me',
 		RateLimitMiddleware(RateLimitConfigs.USER_SETTINGS_GET),
 		requireOAuth2ScopeForBearer('identify'),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		OpenAPI({
 			operationId: 'get_current_user',
 			summary: 'Get current user profile',
@@ -122,7 +164,7 @@ export function UserAccountController(app: HonoApp) {
 	app.patch(
 		'/users/@me',
 		RateLimitMiddleware(RateLimitConfigs.USER_UPDATE_SELF),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		SudoModeMiddleware,
 		Validator('json', UserUpdateWithVerificationRequest),
@@ -153,7 +195,7 @@ export function UserAccountController(app: HonoApp) {
 	app.post(
 		'/users/@me/email-change/start',
 		RateLimitMiddleware(RateLimitConfigs.USER_EMAIL_CHANGE_START),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		RequireEmailAccountIdentity,
 		Validator('json', EmptyBodyRequest),
@@ -176,7 +218,7 @@ export function UserAccountController(app: HonoApp) {
 	app.post(
 		'/users/@me/email-change/resend-original',
 		RateLimitMiddleware(RateLimitConfigs.USER_EMAIL_CHANGE_RESEND_ORIGINAL),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		RequireEmailAccountIdentity,
 		Validator('json', EmailChangeTicketRequest),
@@ -200,7 +242,7 @@ export function UserAccountController(app: HonoApp) {
 	app.post(
 		'/users/@me/email-change/verify-original',
 		RateLimitMiddleware(RateLimitConfigs.USER_EMAIL_CHANGE_VERIFY_ORIGINAL),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		RequireEmailAccountIdentity,
 		Validator('json', EmailChangeVerifyOriginalRequest),
@@ -224,7 +266,7 @@ export function UserAccountController(app: HonoApp) {
 	app.post(
 		'/users/@me/email-change/request-new',
 		RateLimitMiddleware(RateLimitConfigs.USER_EMAIL_CHANGE_REQUEST_NEW),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		RequireEmailAccountIdentity,
 		Validator('json', EmailChangeRequestNewRequest),
@@ -250,7 +292,7 @@ export function UserAccountController(app: HonoApp) {
 	app.post(
 		'/users/@me/email-change/resend-new',
 		RateLimitMiddleware(RateLimitConfigs.USER_EMAIL_CHANGE_RESEND_NEW),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		RequireEmailAccountIdentity,
 		Validator('json', EmailChangeTicketRequest),
@@ -274,7 +316,7 @@ export function UserAccountController(app: HonoApp) {
 	app.post(
 		'/users/@me/email-change/verify-new',
 		RateLimitMiddleware(RateLimitConfigs.USER_EMAIL_CHANGE_VERIFY_NEW),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		RequireEmailAccountIdentity,
 		Validator('json', EmailChangeVerifyNewRequest),
@@ -300,7 +342,7 @@ export function UserAccountController(app: HonoApp) {
 	app.post(
 		'/users/@me/email-change/apply',
 		RateLimitMiddleware(RateLimitConfigs.USER_EMAIL_CHANGE_APPLY),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		RequireEmailAccountIdentity,
 		SudoModeMiddleware,
@@ -332,7 +374,7 @@ export function UserAccountController(app: HonoApp) {
 	app.post(
 		'/users/@me/email-change/bounced/request-new',
 		RateLimitMiddleware(RateLimitConfigs.USER_EMAIL_CHANGE_BOUNCED_REQUEST_NEW),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		RequireEmailAccountIdentity,
 		Validator('json', EmailChangeBouncedRequestNewRequest),
@@ -356,7 +398,7 @@ export function UserAccountController(app: HonoApp) {
 	app.post(
 		'/users/@me/email-change/bounced/resend-new',
 		RateLimitMiddleware(RateLimitConfigs.USER_EMAIL_CHANGE_BOUNCED_RESEND_NEW),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		RequireEmailAccountIdentity,
 		Validator('json', EmailChangeTicketRequest),
@@ -380,7 +422,7 @@ export function UserAccountController(app: HonoApp) {
 	app.post(
 		'/users/@me/email-change/bounced/verify-new',
 		RateLimitMiddleware(RateLimitConfigs.USER_EMAIL_CHANGE_BOUNCED_VERIFY_NEW),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		RequireEmailAccountIdentity,
 		Validator('json', EmailChangeBouncedVerifyNewRequest),
@@ -572,14 +614,13 @@ export function UserAccountController(app: HonoApp) {
 		async (ctx) => {
 			const {username, discriminator} = ctx.req.valid('query');
 			const currentUser = ctx.get('user');
-			const userAccountRequestService = ctx.get('userAccountRequestService');
-			if (!userAccountRequestService.checkTagAvailability({currentUser, username, discriminator})) {
-				return ctx.json({taken: false});
-			}
-			const taken = await ctx
-				.get('userService')
-				.accountService.lookupService.checkUsernameDiscriminatorAvailability({username, discriminator, currentUser});
-			return ctx.json({taken});
+			const result = await ctx.get('userService').accountService.lookupService.checkUsernameDiscriminatorAvailability({
+				username,
+				discriminator,
+				currentUser,
+				includePrivateStatus: ctx.get('authTokenType') !== 'bearer',
+			});
+			return ctx.json(result);
 		},
 	);
 	app.get(
@@ -613,6 +654,7 @@ export function UserAccountController(app: HonoApp) {
 	);
 	app.get(
 		'/users/:target_id/profile',
+		RateLimitMiddleware(RateLimitConfigs.USER_GET_PROFILE_ACCOUNT),
 		RateLimitMiddleware(RateLimitConfigs.USER_GET_PROFILE),
 		LoginRequired,
 		Validator('param', TargetIdParam),
@@ -640,6 +682,7 @@ export function UserAccountController(app: HonoApp) {
 					guildId: guild_id ?? undefined,
 					withMutualFriends: with_mutual_friends,
 					withMutualGuilds: with_mutual_guilds,
+					viewer: profileViewer(ctx, {countStranger: true}),
 					requestCache: ctx.get('requestCache'),
 				}),
 			);
@@ -648,7 +691,7 @@ export function UserAccountController(app: HonoApp) {
 	app.get(
 		'/users/@me/settings',
 		RateLimitMiddleware(RateLimitConfigs.USER_SETTINGS_GET),
-		LoginRequired,
+		LoginRequiredAllowSuspicious,
 		DefaultUserOnly,
 		OpenAPI({
 			operationId: 'get_current_user_settings',

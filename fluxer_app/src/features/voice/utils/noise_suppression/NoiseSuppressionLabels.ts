@@ -5,6 +5,7 @@ import type {VoiceNoiseSuppressionBackend} from '@app/features/voice/utils/noise
 import {
 	readEffectiveNoiseSuppressionBackend,
 	readRequestedNoiseSuppressionBackend,
+	readVoicePipelineV2Enabled,
 } from '@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime';
 import type {I18n, MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
@@ -95,12 +96,40 @@ export function getNoiseSuppressionChoiceDescriptionDescriptor(
 export function getNoiseSuppressionFallbackMessage(i18n: I18n): string | null {
 	const requested = readRequestedNoiseSuppressionBackend();
 	const fallback = NoiseSuppressionAvailability.getFallback(requested);
+	if (readVoicePipelineV2Enabled()) {
+		const requestedLabel = getNoiseSuppressionChoiceLabel(i18n, requested);
+		const running = NoiseSuppressionAvailability.runningBackend;
+		if (running === null) {
+			return i18n._(msg({message: `Microphone inactive. Requested filter: ${requestedLabel}.`}));
+		}
+		const runningLabel = getNoiseSuppressionChoiceLabel(i18n, running);
+		const status = i18n._(msg({message: `Running filter: ${runningLabel}. Requested: ${requestedLabel}.`}));
+		let reason: string | null = null;
+		if (fallback === 'cpu_budget') {
+			reason = i18n._(msg({message: 'Switched filters because of processor load.'}));
+		} else if (fallback === 'failed') {
+			reason = i18n._(msg({message: 'The requested filter could not start.'}));
+		} else if (fallback === 'loading' || running !== requested) {
+			reason = i18n._(msg({message: 'Loading.'}));
+		}
+		return reason ? `${status} ${reason}` : status;
+	}
 	if (!fallback) return null;
 	const requestedLabel = getNoiseSuppressionChoiceLabel(i18n, requested);
 	const effectiveLabel = getNoiseSuppressionChoiceLabel(i18n, readEffectiveNoiseSuppressionBackend());
 	return fallback === 'loading'
-		? i18n._(msg`Using ${effectiveLabel} until ${requestedLabel} is ready.`)
-		: i18n._(msg`${requestedLabel} could not start. Using ${effectiveLabel} instead.`);
+		? i18n._(
+				msg({
+					message: `Using ${effectiveLabel} until ${requestedLabel} is ready.`,
+					comment: 'Voice settings notice while the requested noise suppression filter is loading.',
+				}),
+			)
+		: i18n._(
+				msg({
+					message: `${requestedLabel} could not start. Using ${effectiveLabel} instead.`,
+					comment: 'Voice settings notice when the requested noise suppression filter failed to start.',
+				}),
+			);
 }
 
 export {STEREO_MICROPHONE_DESCRIPTION_DESCRIPTOR, STEREO_MICROPHONE_DESCRIPTOR};

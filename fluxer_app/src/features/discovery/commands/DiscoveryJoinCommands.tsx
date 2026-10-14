@@ -114,14 +114,14 @@ function showJoinGuildErrorModal(error: unknown): void {
 
 export async function joinDiscoveryGuild(
 	guildId: string,
-	target?: {channelId: string; messageId?: string},
+	target?: {channelId?: string; messageId?: string; open?: boolean},
 ): Promise<boolean> {
 	if (blockIfAccountLimited()) return false;
 	try {
 		await DiscoveryCommands.joinGuild(guildId);
-		if (target) {
+		if (target?.channelId) {
 			NavigationCommands.selectChannel(guildId, target.channelId, target.messageId);
-		} else {
+		} else if (target?.open !== false) {
 			NavigationCommands.selectGuild(guildId);
 		}
 		return true;

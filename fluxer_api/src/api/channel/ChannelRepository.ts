@@ -166,6 +166,25 @@ export class ChannelRepository extends IChannelRepository {
 		return this.repository.messageInteractions.countUniqueReactions(channelId, messageId);
 	}
 
+	async hasReactionUsers(
+		channelId: ChannelID,
+		messageId: MessageID,
+		emojiName: string,
+		emojiId?: EmojiID,
+	): Promise<boolean> {
+		return this.repository.messageInteractions.hasReactionUsers(channelId, messageId, emojiName, emojiId);
+	}
+
+	async countReactionUsersUpTo(
+		channelId: ChannelID,
+		messageId: MessageID,
+		emojiName: string,
+		emojiId: EmojiID | undefined,
+		limit: number,
+	): Promise<number> {
+		return this.repository.messageInteractions.countReactionUsersUpTo(channelId, messageId, emojiName, emojiId, limit);
+	}
+
 	async checkUserReactionExists(
 		channelId: ChannelID,
 		messageId: MessageID,

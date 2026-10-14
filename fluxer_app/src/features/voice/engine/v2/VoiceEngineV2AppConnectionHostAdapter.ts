@@ -24,7 +24,10 @@ import {
 	ownE2EEWorker,
 	releaseE2EEWorker,
 } from '@app/features/voice/engine/VoiceE2EEKeyProvider';
-import {getSharedVoiceAudioContext} from '@app/features/voice/engine/VoiceSharedAudioContext';
+import {
+	getSharedVoiceAudioContext,
+	suspendSharedVoiceAudioContext,
+} from '@app/features/voice/engine/VoiceSharedAudioContext';
 import {selectLocalMediaPublicationsForConnectionRepublish} from '@app/features/voice/engine/VoiceTrackPublicationUtils';
 import {
 	assertDisconnectReason,
@@ -42,6 +45,7 @@ import {
 	getRoomVideoPublishDefaults,
 } from '@app/features/voice/utils/CodecCapabilityDetector';
 import {getH264HardwareProfilesSync} from '@app/features/voice/utils/GpuEncoderCapabilities';
+import {setNoiseSuppressionScopeGuildId} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionSelection';
 import {SCREEN_SHARE_MAX_VIDEO_BITRATE_BPS} from '@app/features/voice/utils/ScreenShareOptions';
 import {
 	clearScreenShareDecodeFailures,
@@ -349,6 +353,7 @@ export class VoiceEngineV2AppConnectionHostAdapter extends Store {
 			voiceServerEndpoint: context.voiceServerEndpoint,
 			connectionId: context.connectionId,
 		};
+		setNoiseSuppressionScopeGuildId(context.guildId);
 		this.hotSwapState = {
 			pendingRoom: context.hotSwap.pendingRoom as Room | null,
 			previousRoom: context.hotSwap.previousRoom as Room | null,
@@ -903,6 +908,7 @@ export class VoiceEngineV2AppConnectionHostAdapter extends Store {
 		this.update(() => {
 			this.transitionConnection({type: 'connection.disconnected', reason});
 		});
+		suspendSharedVoiceAudioContext();
 		this.invalidateThrottleAttempt();
 		this.throttle.setInFlightConnect(false);
 		this.reconnect.setReconnectState(reason);
@@ -942,6 +948,7 @@ export class VoiceEngineV2AppConnectionHostAdapter extends Store {
 		this.update(() => {
 			this.transitionConnection({type: 'connection.disconnected', reason});
 		});
+		suspendSharedVoiceAudioContext();
 		this.invalidateThrottleAttempt();
 		this.reconnect.setReconnectState(reason);
 		this.update(() => {
@@ -1231,6 +1238,7 @@ export class VoiceEngineV2AppConnectionHostAdapter extends Store {
 			this.isLocalDisconnecting = false;
 			this.transitionConnection({type: 'connection.cleanup'});
 		});
+		suspendSharedVoiceAudioContext();
 		this.throttle.reset();
 		this.invalidateThrottleAttempt();
 		this.reconnect.cleanup();

@@ -198,7 +198,7 @@ export const Checkbox: React.FC<CheckboxProps> = observer(
 								<CheckIcon
 									size={checkIconSizeRem}
 									weight="bold"
-									color={inverted ? 'var(--brand-primary)' : '#ffffff'}
+									color={inverted ? 'var(--brand-primary)' : 'var(--text-on-brand-primary)'}
 									className={clsx(styles.checkIcon, inverted && styles.invertedIcon)}
 									data-flx="ui.checkbox.checkbox.check-icon"
 								/>
@@ -258,7 +258,7 @@ export const Checkbox: React.FC<CheckboxProps> = observer(
 								<CheckIcon
 									size={checkIconSizeRem}
 									weight="bold"
-									color={inverted ? 'var(--brand-primary)' : '#ffffff'}
+									color={inverted ? 'var(--brand-primary)' : 'var(--text-on-brand-primary)'}
 									className={clsx(styles.checkIcon, inverted && styles.invertedIcon)}
 									data-flx="ui.checkbox.checkbox.check-icon--2"
 								/>

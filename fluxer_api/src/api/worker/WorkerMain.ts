@@ -34,16 +34,20 @@ import {
 	getLimitConfigService,
 } from '@app/api/middleware/ServiceSingletons';
 import {initializeSearch, shutdownSearch} from '@app/api/SearchFactory';
+import {registerMicupUserLifecycleHooks} from '@app/api/user/lifecycle/MicupUserLifecycleHooks';
 import {accountStateDepsFromContext} from '@app/api/user/services/AccountStateApplier';
 import {awaitAll} from '@app/api/utils/ConcurrencyUtils';
 import {startAccountActionConsumer, stopAccountActionConsumer} from '@app/api/worker/AccountActionConsumer';
 import {queueBlocklistFeedStartupJobs} from '@app/api/worker/BlocklistFeedStartup';
 import {CronScheduler} from '@app/api/worker/CronScheduler';
 import {JetStreamWorkerQueue, JOBS_STREAM_MAX_AGE_MS} from '@app/api/worker/JetStreamWorkerQueue';
+import {queueShopTryRateStartupJob} from '@app/api/worker/ShopTryRateStartup';
 import {clearWorkerDependencies, setWorkerDependencies} from '@app/api/worker/WorkerContext';
 import {initializeWorkerDependencies, type WorkerDependencies} from '@app/api/worker/WorkerDependencies';
 import {WorkerHeartbeat} from '@app/api/worker/WorkerHeartbeat';
 import {
+	queuesUnconsumedPurgeRuns,
+	queuesUnconsumedViewFlushes,
 	resolveCronSchedulerEnabled,
 	resolveWorkerLanes,
 	validateLaneCompleteness,
@@ -68,7 +72,11 @@ function startWorkerMetricsServer(port: number): ServerType {
 	return createServer(app, {port, onListen: (info) => Logger.info({port: info.port}, 'Worker metrics listening')});
 }
 
-function registerCronJobs(cron: CronScheduler, jobsStreamMaxAgeMs: number): void {
+export function registerCronJobs(cron: CronScheduler, jobsStreamMaxAgeMs: number): void {
+	cron.upsert('processUsernameRepair', 'processUsernameRepair', {}, '*/30 * * * * *', {ledger: false});
+	cron.upsert('scanUsernameMigration', 'scanUsernameMigration', {}, '*/30 * * * * *', {ledger: false});
+	cron.upsert('cleanupUsernameDictionary', 'cleanupUsernameDictionary', {}, '0 20 4 * * *', {ledger: false});
+	cron.upsert('syncShopTryRate', 'syncShopTryRate', {}, '0 0 */6 * * *', {ledger: true});
 	cron.upsert('processAssetDeletionQueue', 'processAssetDeletionQueue', {}, '0 */5 * * * *', {ledger: false});
 	if (Config.cachePurge.adapter !== 'none') {
 		cron.upsert('processCachePurgeQueue', 'processCachePurgeQueue', {}, '*/10 * * * * *', {ledger: false});
@@ -90,6 +98,10 @@ function registerCronJobs(cron: CronScheduler, jobsStreamMaxAgeMs: number): void
 			ledger: false,
 		});
 	}
+	cron.upsert('processPremiumExpirations', 'processPremiumExpirations', {}, '0 5 * * * *', {ledger: false});
+	cron.upsert('processGuildEntitlementExpirations', 'processGuildEntitlementExpirations', {}, '0 10 * * * *', {
+		ledger: false,
+	});
 	cron.upsert('processInactivityDeletions', 'processInactivityDeletions', {}, '0 0 */6 * * *', {ledger: false});
 	cron.upsert('expireAttachments', 'expireAttachments', {}, '0 0 */12 * * *', {ledger: false});
 	if (jobsStreamMaxAgeMs > 0 && jobsStreamMaxAgeMs <= JOBS_STREAM_MAX_AGE_MS) {
@@ -107,6 +119,34 @@ function registerCronJobs(cron: CronScheduler, jobsStreamMaxAgeMs: number): void
 		cron.upsert('syncFileShaBlocklists', 'syncFileShaBlocklists', {}, '0 0 */12 * * *', {ledger: true});
 	}
 	cron.upsert('flushUserActivityBuffer', 'flushUserActivityBuffer', {}, '*/10 * * * * *', {ledger: false});
+	cron.upsert('flushCounters', 'flushCounters', {}, '*/10 * * * * *', {ledger: false});
+	// the views lane's minute flush; with the flag off its 16 slices find empty sets and end in ms.
+	cron.upsert('flushFeedViewCounters', 'flushFeedViewCounters', {}, '0 * * * * *', {ledger: false});
+	cron.upsert('refreshFeedDiscover', 'refreshFeedDiscover', {}, '*/30 * * * * *', {ledger: false});
+	// A held cursor makes each run reread its slots, 6× as often as a minute cron (GEÇİCİ, ShopOrderService.reconcile).
+	cron.upsert('reconcileShopOrders', 'reconcileShopOrders', {}, '*/10 * * * * *', {ledger: false});
+	// Micup referral: each minute, the evaluations of the hour check slots that closed.
+	cron.upsert('processReferralChecks', 'processReferralChecks', {}, '0 * * * * *', {ledger: false});
+	// Micup roster bot: every hour the announcement at :25 and the voice check at :35; both return at once while
+	// feature_guild_roster is 0 or no bot application is configured.
+	cron.upsert('guildRosterAnnounce', 'queueGuildRosterSlots', {phase: 'announce'}, '0 25 * * * *', {ledger: false});
+	cron.upsert('guildRosterCheck', 'queueGuildRosterSlots', {phase: 'check'}, '0 35 * * * *', {ledger: false});
+	// Micup MicupBOT: the XP flush each minute at :40 (apart from the feed builds; it always runs so XP left in KV after
+	// feature_micupbot goes to 0 still lands) and the voice XP walk every 5 minutes (returns at once while the flag is 0).
+	cron.upsert('flushMicupBotXp', 'flushMicupBotXp', {}, '40 * * * * *', {ledger: false});
+	cron.upsert('micupBotVoiceTurn', 'queueMicupBotVoiceSlots', {}, '0 */5 * * * *', {ledger: false});
+
+	// the suggestion pool, once a minute at :20 (apart from the Keşfet builds); while
+	// feature_feed_suggestions is off it only deletes the ranking floor and writes an empty pool.
+	cron.upsert('refreshFeedSuggestions', 'refreshFeedSuggestions', {}, '20 * * * * *', {ledger: false});
+	// game table deadlines, every second; with games off it finds no work (and cancels running tables).
+	cron.upsert('processTableGameTimers', 'processTableGameTimers', {}, '* * * * * *', {ledger: false});
+	// Micup feed videos, only while Bunny Stream is configured: the hourly check of videos whose webhook never came, and
+	// each minute the video jobs whose wait was over a minute (at :30, so none runs more than 30 s late).
+	if (Config.bunnyStream.enabled) {
+		cron.upsert('reconcileFeedVideos', 'reconcileFeedVideos', {}, '0 7 * * * *', {ledger: false});
+		cron.upsert('drainFeedVideoJobs', 'drainFeedVideoJobs', {}, '30 * * * * *', {ledger: false});
+	}
 	cron.upsert('drainActivitySpool', 'drainActivitySpool', {}, '*/5 * * * * *', {ledger: false});
 	cron.upsert('archiveInactiveThreads', 'archiveInactiveThreads', {}, '0 * * * * *', {
 		ledger: false,
@@ -115,6 +155,7 @@ function registerCronJobs(cron: CronScheduler, jobsStreamMaxAgeMs: number): void
 	Logger.info(
 		{
 			blocklistFeeds: Config.blocklistFeeds.enabled,
+			bunnyStream: Config.bunnyStream.enabled,
 			cachePurgeAdapter: Config.cachePurge.adapter,
 			selfHosted: Config.instance.selfHosted,
 		},
@@ -124,6 +165,8 @@ function registerCronJobs(cron: CronScheduler, jobsStreamMaxAgeMs: number): void
 
 export async function startWorkerMain(): Promise<void> {
 	Logger.info('Starting worker backend...');
+	// Micup: account deletion and the data export run here, so their feature hooks register in this process too.
+	registerMicupUserLifecycleHooks();
 	let cassandraInitialized = false;
 	let postgresInitialized = false;
 	let jsConnectionManager: JetStreamConnectionManager | null = null;
@@ -239,6 +282,7 @@ export async function startWorkerMain(): Promise<void> {
 				username: Config.cassandra.username || undefined,
 				password: Config.cassandra.password || undefined,
 				readTimeoutMs: BACKGROUND_READ_TIMEOUT_MS,
+				consistency: Config.cassandra.consistency,
 			});
 			cassandraInitialized = true;
 			Logger.info('Cassandra client initialised for worker backend');
@@ -262,6 +306,18 @@ export async function startWorkerMain(): Promise<void> {
 			},
 			'Worker runtime configuration resolved',
 		);
+		if (queuesUnconsumedPurgeRuns(activeWorkerLanes, cronSchedulerEnabled, Config.cachePurge.adapter)) {
+			Logger.warn(
+				{lanes: activeWorkerLanes.map((lane) => lane.name).join(', ')},
+				'This worker queues cache purge runs but runs no purge lane; unless another worker runs FLUXER_API_WORKER_LANE=purge, deleted and reported media stay on the CDN',
+			);
+		}
+		if (queuesUnconsumedViewFlushes(activeWorkerLanes, cronSchedulerEnabled)) {
+			Logger.warn(
+				{lanes: activeWorkerLanes.map((lane) => lane.name).join(', ')},
+				'This worker queues feed view flushes but runs no views lane; unless another worker runs FLUXER_API_WORKER_LANE=views, view counts stay in KV and never reach Cassandra',
+			);
+		}
 		snowflakeService = createSnowflakeService();
 		await snowflakeService.initialize();
 		setInjectedSnowflakeService(snowflakeService);
@@ -291,6 +347,11 @@ export async function startWorkerMain(): Promise<void> {
 		}
 		dependencies = await initializeWorkerDependencies(snowflakeService);
 		setWorkerDependencies(dependencies);
+		void queueShopTryRateStartupJob(
+			dependencies.kvClient,
+			workerService,
+			instanceConfigRepository.getShopConfig.bind(instanceConfigRepository),
+		).catch((error) => Logger.warn({error}, 'Shop TRY rate startup prefill failed'));
 		await startContentBlocklistCaches({kvClient: dependencies.kvClient, storageService: dependencies.storageService});
 		Logger.info('Content blocklist caches initialised for worker backend');
 		await queueBlocklistFeedStartupJobs(dependencies.kvClient, workerService, Config.blocklistFeeds.enabled);
@@ -302,7 +363,7 @@ export async function startWorkerMain(): Promise<void> {
 			spoolWhileMissing: !Config.instance.selfHosted,
 		});
 		startSharedListWatch(jsConnectionManager.getJetStreamClient());
-		if (activeWorkerLanes.some((lane) => lane.name === 'lifecycle')) {
+		if (!Config.instance.selfHosted && activeWorkerLanes.some((lane) => lane.name === 'lifecycle')) {
 			const apiContext = createApiContext();
 			startAccountActionConsumer({
 				js: jsConnectionManager.getJetStreamClient(),
@@ -311,7 +372,6 @@ export async function startWorkerMain(): Promise<void> {
 					getAdminRepository(),
 					{
 						userCacheService: dependencies.userCacheService,
-						guildRepository: dependencies.guildRepository,
 					},
 					{
 						archives: getAdminArchiveService(),

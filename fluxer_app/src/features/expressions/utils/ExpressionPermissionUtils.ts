@@ -14,7 +14,7 @@ import {msg} from '@lingui/core/macro';
 
 const UNLOCK_CUSTOM_EMOJIS_IN_DMS_WITH_DESCRIPTOR = msg({
 	message: 'Unlock custom emojis in DMs with {premiumProductName}',
-	comment: 'Premium upsell shown when sending custom emoji in a DM without a subscription.',
+	comment: 'Plus upsell shown when sending custom emoji in a DM without a subscription.',
 });
 const YOU_NEED_THE_PERMISSION_TO_USE_EXTERNAL_EMOJI_DESCRIPTOR = msg({
 	message: 'You need the "{permissionLabel}" permission to use emoji from other communities here.',
@@ -22,11 +22,11 @@ const YOU_NEED_THE_PERMISSION_TO_USE_EXTERNAL_EMOJI_DESCRIPTOR = msg({
 });
 const UNLOCK_EXTERNAL_CUSTOM_EMOJIS_WITH_DESCRIPTOR = msg({
 	message: 'Use emoji from other communities with {premiumProductName}',
-	comment: 'Premium upsell shown when sending external emoji without a subscription.',
+	comment: 'Plus upsell shown when sending external emoji without a subscription.',
 });
 const UNLOCK_STICKERS_IN_DMS_WITH_DESCRIPTOR = msg({
 	message: 'Unlock stickers in DMs with {premiumProductName}',
-	comment: 'Premium upsell shown when sending custom stickers in a DM without a subscription.',
+	comment: 'Plus upsell shown when sending custom stickers in a DM without a subscription.',
 });
 const YOU_NEED_THE_PERMISSION_TO_USE_EXTERNAL_STICKERS_DESCRIPTOR = msg({
 	message: 'You need the "{permissionLabel}" permission to use stickers from other communities here.',
@@ -34,7 +34,7 @@ const YOU_NEED_THE_PERMISSION_TO_USE_EXTERNAL_STICKERS_DESCRIPTOR = msg({
 });
 const UNLOCK_EXTERNAL_STICKERS_WITH_DESCRIPTOR = msg({
 	message: 'Use stickers from other communities with {premiumProductName}',
-	comment: 'Premium upsell shown when sending external stickers without a subscription.',
+	comment: 'Plus upsell shown when sending external stickers without a subscription.',
 });
 
 export interface AvailabilityCheck {

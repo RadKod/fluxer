@@ -11,13 +11,16 @@ use crate::{
     config::PolicyMode,
     constants::{self, AssetExtension, AssetKind},
     image_quality::ImageQuality,
-    image_transform::{AnimationMode, ResizeMode},
-    media_process, mime, output_format,
+    image_transform::{AnimationLimits, AnimationMode, ResizeMode},
+    media_limits::MediaLimits,
+    media_process::{self, MediaError},
+    mime,
+    output_format::{self, OutputFormat},
     server::{
         asset_path::{ParsedAssetPath, asset_filename_hint},
         attachment_signature,
         format_policy::{
-            OriginalImageRequest, default_transform_quality,
+            OriginalImageRequest, animated_gif_asset_resizes_to_webp, default_transform_quality,
             effective_animated_image_output_format, extension_from_mime, is_svg_content_type,
             same_format_loaded_image_request_can_use_original_with_sniff,
         },
@@ -38,7 +41,7 @@ use crate::{
                 coalescer_failure_response,
             },
             cache_key::{TransformCacheKeyInput, transform_cache_key},
-            execution::{coalesced_work_result, deadline_instant, run_transform},
+            execution::{coalesced_work_result, deadline_instant, run_transform_within},
             original_image_content_type,
             parameters::TransformRoute,
             serve_bytes_or_transform,
@@ -50,6 +53,7 @@ use axum::{
     http::{HeaderMap, Method, StatusCode, header},
     response::Response,
 };
+use bytes::Bytes;
 pub(in crate::server) use passthrough::serve_stored_raw;
 use passthrough::{PassthroughDisposition, serve_stored_passthrough_stream};
 use std::{collections::HashMap, sync::Arc};
@@ -102,8 +106,26 @@ pub(in crate::server) async fn serve_asset_image(
             .unwrap_or(asset.original_ext)
     };
     let serve_content_type = original_image_content_type(&object.content_type, Some(source_format));
-    let out_ext =
-        effective_animated_image_output_format(Some(source_format), selected.format, animated);
+    let original_response = |method: Method, data: Bytes| {
+        media_response(MediaResponse {
+            method,
+            data: data.into(),
+            content_type: &serve_content_type,
+            range_header,
+            disposition: Some(content_disposition_header(
+                &serve_content_type,
+                requested_download,
+                Some(&asset_filename),
+            )),
+        })
+    };
+    let gif_resizes_to_webp =
+        animated_gif_asset_resizes_to_webp(sniffed, selected.format, animated, width, resize_mode);
+    let out_ext = if gif_resizes_to_webp {
+        OutputFormat::WebP
+    } else {
+        effective_animated_image_output_format(Some(source_format), selected.format, animated)
+    };
     let quality = requested_quality
         .unwrap_or_else(|| default_transform_quality(out_ext, animated, ImageQuality::High));
     if same_format_loaded_image_request_can_use_original_with_sniff(
@@ -119,18 +141,30 @@ pub(in crate::server) async fn serve_asset_image(
             animated,
         },
     ) {
-        return media_response(MediaResponse {
-            method,
-            data: object.data.into(),
-            content_type: &serve_content_type,
-            range_header,
-            disposition: Some(content_disposition_header(
-                &serve_content_type,
-                requested_download,
-                Some(&asset_filename),
-            )),
-        });
+        return original_response(method, object.data);
     }
+    let options = media_process::ImageOptions {
+        width,
+        height,
+        format: out_ext,
+        quality,
+        animation: AnimationMode::new(
+            animated,
+            if gif_resizes_to_webp {
+                whole_animation_limits(runtime.limits(), app.media.animation())
+            } else {
+                app.media.animation()
+            },
+        ),
+        effort_override: None,
+        resize_mode,
+        deadline_ms: runtime.transform_deadline_ms(),
+    };
+    // This URL serves the original GIF whenever no resize is needed, so the original also
+    // stands in for a WebP that does not come out smaller, as long as it is barely larger
+    // than the request.
+    let original_stands_in =
+        gif_resizes_to_webp && media_process::source_can_stand_in_for_resize(sniffed, &options);
     let cache_key = transform_cache_key(TransformCacheKeyInput {
         route: TransformRoute::Asset,
         asset_kind: Some(asset.kind),
@@ -144,6 +178,9 @@ pub(in crate::server) async fn serve_asset_image(
         resize_mode: Some(resize_mode),
     });
     if let Some(hit) = cached_transform_hit(runtime, &cache_key) {
+        if original_stands_in && hit.data.len() >= object.data.len() {
+            return original_response(method, object.data);
+        }
         return media_response(MediaResponse {
             method,
             data: hit.data.as_bytes().clone().into(),
@@ -156,15 +193,14 @@ pub(in crate::server) async fn serve_asset_image(
             )),
         });
     }
-    let options = media_process::ImageOptions {
-        width,
-        height,
-        format: out_ext,
-        quality,
-        animation: AnimationMode::new(animated, app.media.animation()),
-        effort_override: None,
-        resize_mode,
-        deadline_ms: runtime.transform_deadline_ms(),
+    // Encoding stops once the WebP reaches the original, and the original is cached in its
+    // place, so a GIF whose WebP would not be smaller is encoded once rather than per request.
+    let media_limits = if original_stands_in {
+        runtime
+            .limits()
+            .with_max_media_proxy_bytes(object.data.len())
+    } else {
+        runtime.limits()
     };
     let source_data = object.data.clone();
     let transformed = match cached_transform(CachedTransformRequest {
@@ -173,8 +209,17 @@ pub(in crate::server) async fn serve_asset_image(
         format: out_ext,
         deadline: deadline_instant(options.deadline_ms),
         work: move || async move {
-            coalesced_work_result(run_transform(runtime, source_data, options).await)
-                .map(|media| media_process::MediaBytes::from(media.bytes))
+            match run_transform_within(runtime, source_data.clone(), options, media_limits).await {
+                Err(error)
+                    if original_stands_in
+                        && error.downcast_ref::<MediaError>()
+                            == Some(&MediaError::StreamTooLong) =>
+                {
+                    Ok(media_process::MediaBytes::from(source_data.to_vec()))
+                }
+                result => coalesced_work_result(result)
+                    .map(|media| media_process::MediaBytes::from(media.bytes)),
+            }
         },
     })
     .await
@@ -199,6 +244,9 @@ pub(in crate::server) async fn serve_asset_image(
             });
         }
     };
+    if original_stands_in && transformed.len() >= object.data.len() {
+        return original_response(method, object.data);
+    }
     media_response(MediaResponse {
         method,
         data: transformed.into(),
@@ -210,6 +258,12 @@ pub(in crate::server) async fn serve_asset_image(
             Some(&asset_filename),
         )),
     })
+}
+
+// A resize is not a re-time: like the GIF resizer, a GIF resized to WebP keeps every frame, so
+// only the decode limits and the transform deadline bound it, never the encode caps.
+fn whole_animation_limits(media_limits: MediaLimits, fallback: AnimationLimits) -> AnimationLimits {
+    AnimationLimits::new(media_limits.animated_frames(), i32::MAX as u32).unwrap_or(fallback)
 }
 
 struct AssetTransformFailure<'a> {

@@ -44,6 +44,10 @@ class VoiceDevicePermissionState {
 		return this.deviceState;
 	}
 
+	whenDevicesInUse(): Promise<void> {
+		return voiceDeviceManager.whenInUse();
+	}
+
 	subscribe(listener: DeviceListener): () => void {
 		this.deviceListeners.add(listener);
 		listener(this.deviceState);

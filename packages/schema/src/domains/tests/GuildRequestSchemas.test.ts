@@ -6,6 +6,7 @@ import {
 	MAX_TEMP_BAN_DURATION_SECONDS,
 	MIN_TEMP_BAN_DURATION_SECONDS,
 } from '@fluxer/constants/src/LimitConstants';
+import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {
 	DiscoveryApplicationPatchRequest,
 	DiscoveryApplicationRequest,
@@ -15,6 +16,7 @@ import {
 	GuildBanCreateRequest,
 	GuildMemberUpdateRequest,
 	GuildStickerCreateRequest,
+	MyGuildMemberUpdateRequest,
 } from '@fluxer/schema/src/domains/guild/GuildRequestSchemas';
 import {TemplateChannel} from '@fluxer/schema/src/domains/guild/GuildTemplateSchemas';
 import {describe, expect, it} from 'vitest';
@@ -60,6 +62,19 @@ describe('GuildMemberUpdateRequest', () => {
 	});
 	it('rejects one role beyond the guild role limit', () => {
 		expect(GuildMemberUpdateRequest.safeParse({roles: buildRoleIds(MAX_GUILD_ROLES + 1)}).success).toBe(false);
+	});
+	it.each(['Micup Destek', 'Micup Yetkili', 'ᴍɪᴄᴜᴘ Moderasyon'])(
+		'rejects the nickname %s, which passes for an official Micup account',
+		(nick) => {
+			for (const schema of [GuildMemberUpdateRequest, MyGuildMemberUpdateRequest]) {
+				expect(schema.safeParse({nick}).error?.issues[0]?.message).toBe(
+					ValidationErrorCodes.GLOBAL_NAME_CANNOT_IMPERSONATE_MICUP,
+				);
+			}
+		},
+	);
+	it.each(['Sunucu Yetkilisi', 'Micup sever', null, ''])('accepts the nickname %j', (nick) => {
+		expect(MyGuildMemberUpdateRequest.safeParse({nick}).success).toBe(true);
 	});
 });
 

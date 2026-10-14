@@ -13,7 +13,10 @@ import '@app/app/globals.css';
 import '@app/features/theme/styles/generated/color-system.css';
 import '@app/features/theme/styles/generated/message-layout.css';
 import '@app/features/theme/styles/preflight.css';
-import {resolveDomainMigrationSide} from '@app/features/app/domain_migration/DomainMigrationCore';
+import {
+	DOMAIN_MIGRATION_ENABLED,
+	resolveDomainMigrationSide,
+} from '@app/features/app/domain_migration/DomainMigrationCore';
 import {runDomainMigrationPreMount} from '@app/features/app/domain_migration/DomainMigrationPreMount';
 import {installRuntimeConfigEffects} from '@app/features/app/state/RuntimeConfigEffects';
 import {Logger} from '@app/features/platform/utils/AppLogger';
@@ -36,7 +39,9 @@ function loadAppBootstrap() {
 async function bootstrap(): Promise<void> {
 	installRuntimeConfigEffects();
 	const passkeyBridgeSide =
-		window.location.pathname === PASSKEY_BRIDGE_PATH ? resolveDomainMigrationSide(window.location.origin) : null;
+		DOMAIN_MIGRATION_ENABLED && window.location.pathname === PASSKEY_BRIDGE_PATH
+			? resolveDomainMigrationSide(window.location.origin)
+			: null;
 	if (passkeyBridgeSide !== null) {
 		const {runPasskeyBridge} = await loadAppBootstrap();
 		await runPasskeyBridge(passkeyBridgeSide);

@@ -1,0 +1,56 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.container {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	margin-left: 0.25rem;
+}
+
+.iconButton,
+.countsButton {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	border: none;
+	background: transparent;
+	padding: 0.25rem 0 0;
+	color: var(--text-primary-muted);
+	font: inherit;
+	font-size: 0.875rem;
+	font-weight: 500;
+	line-height: 1.25rem;
+	cursor: pointer;
+}
+
+.iconButton:hover,
+.countsButton:hover {
+	color: var(--text-primary);
+}
+
+.iconButton:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.icon {
+	width: 1.25rem;
+	height: 1.25rem;
+}
+
+/* Micup akis-takip: the profile header's Follow button once following; a mouse hover shows Unfollow, in the danger
+   colour like the Discover post pill (FeedPostCard.module.css). Not on touch: a tap leaves a sticky :hover. */
+.followHoverLabel {
+	display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.followingButton:hover .followIdleLabel {
+		display: none;
+	}
+
+	.followingButton:hover .followHoverLabel {
+		display: inline;
+		color: var(--status-danger);
+	}
+}

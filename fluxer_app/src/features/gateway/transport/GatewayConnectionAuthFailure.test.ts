@@ -10,6 +10,12 @@ import LayerManager from '@app/features/ui/state/LayerManager';
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 
 const mocks = vi.hoisted(() => ({sequence: [] as Array<string>}));
+const matureContentConsent = vi.hoisted(() => ({
+	agreedChannelIds: ['channel'],
+	agreedCategoryIds: ['category'],
+	agreedGuildIds: ['guild'],
+	localAgreedChannelIds: ['forum'],
+}));
 
 vi.mock('@app/features/channel/state/ChannelFrecency', () => ({default: {handleLogout: vi.fn()}}));
 
@@ -105,9 +111,11 @@ vi.mock('@app/features/app/state/Initialization', () => ({
 
 vi.mock('@app/features/app/state/RuntimeCrash', () => ({default: {triggerFatalCrash: vi.fn()}}));
 
+vi.mock('@app/features/user/state/UserSettings', () => ({default: {getSettingsEpoch: () => 0}}));
+
 vi.mock('@app/features/expressions/state/FavoriteMemes', () => ({default: {reset: vi.fn()}}));
 
-vi.mock('@app/features/guild/state/GuildMatureContentAgree', () => ({default: {reset: vi.fn()}}));
+vi.mock('@app/features/guild/state/GuildMatureContentAgree', () => ({default: matureContentConsent}));
 
 vi.mock('@app/features/member/state/MemberSearch', () => ({default: {handleLogout: vi.fn()}}));
 
@@ -120,6 +128,10 @@ vi.mock('@app/features/navigation/state/SelectedGuild', () => ({
 }));
 
 vi.mock('@app/features/permissions/state/Permission', () => ({default: {}}));
+
+vi.mock('@app/features/game_activity/state/GameActivitySettings', () => ({
+	default: {getEffectiveSharing: () => false, getDetectionEnabled: () => false},
+}));
 
 vi.mock('@app/features/presence/state/LocalPresence', () => ({
 	default: {
@@ -229,6 +241,17 @@ describe('gateway authentication failure', () => {
 		expect(resetClientState).not.toHaveBeenCalled();
 		expect(LayerManager.closeAll).not.toHaveBeenCalled();
 		expect(Authentication.handleConnectionClosed).not.toHaveBeenCalled();
+	});
+
+	test('a gateway logout leaves mature content consent unchanged', () => {
+		adoptSocket();
+
+		GatewayConnection.logout();
+
+		expect(matureContentConsent.agreedChannelIds).toEqual(['channel']);
+		expect(matureContentConsent.agreedCategoryIds).toEqual(['category']);
+		expect(matureContentConsent.agreedGuildIds).toEqual(['guild']);
+		expect(matureContentConsent.localAgreedChannelIds).toEqual(['forum']);
 	});
 
 	test('a retired socket never logs the current account out', () => {

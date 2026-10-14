@@ -86,7 +86,8 @@ const GiftRegisterPageContent = observer(function GiftRegisterPageContent({
 	if (!giftState || giftState.loading) {
 		return <AuthLoadingState data-flx="expressions.gift-register-page.auth-loading-state" />;
 	}
-	if (giftState.error || !giftState.data) {
+	const gift = giftState.data ?? giftState.item;
+	if (giftState.error || !gift) {
 		return (
 			<AuthErrorState
 				title={i18n._(GIFT_NOT_FOUND_TITLE_DESCRIPTOR)}
@@ -98,7 +99,6 @@ const GiftRegisterPageContent = observer(function GiftRegisterPageContent({
 			/>
 		);
 	}
-	const gift = giftState.data;
 	if (gift.redeemed) {
 		return (
 			<AuthErrorState

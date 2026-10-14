@@ -121,10 +121,7 @@ handle_token_rpc_error(GuildId, ChannelId, UserId, ConnectionId, Status, Body) -
     log_token_failure(
         token_rpc_error_log_message(), GuildId, ChannelId, UserId, ConnectionId, [Status, Body]
     ),
-    case guild_voice_unclaimed_account_utils:parse_unclaimed_error(Body) of
-        true -> {error, voice_unclaimed_account};
-        false -> {error, voice_token_failed}
-    end.
+    {error, gateway_errors:voice_token_error(Body)}.
 
 -spec handle_token_error(integer(), integer(), integer(), binary() | null, term()) ->
     {error, atom()}.

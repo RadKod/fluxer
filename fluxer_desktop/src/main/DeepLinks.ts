@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {execFile} from 'node:child_process';
 import {APP_PROTOCOL} from '@electron/common/Constants';
+import {WINDOWS_STORE_IDENTITY_NAME} from '@electron/common/DesktopIdentity';
 import {parseJumpListTaskFromArgv} from '@electron/main/JumpList';
 import {recordRecentDeepLink} from '@electron/main/RecentDocuments';
 import {getMainWindow, showWindow} from '@electron/main/Window';
@@ -12,6 +14,8 @@ let initialDeepLink: string | null = null;
 const DUPLICATE_URL_SUPPRESS_MS = 1500;
 const APP_PROTOCOL_SCHEME = `${APP_PROTOCOL}:`;
 const DEEP_LINK_RENDERER_PAYLOAD_BLOCKLIST = /["'<>\\|\t\r\n]/;
+const WINDOWS_PACKAGES_REGISTRY_KEY =
+	'HKEY_CURRENT_USER\\Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository\\Packages';
 const INSTANCE_DESIGNATING_KEYS = new Set([
 	'api',
 	'apibase',
@@ -114,13 +118,37 @@ function normalizeDeepLinkForRenderer(rawUrl: string): string | null {
 	}
 }
 
+function isWindowsStorePackageInstalled(): Promise<boolean> {
+	return new Promise((resolve) => {
+		execFile(
+			'reg.exe',
+			['query', WINDOWS_PACKAGES_REGISTRY_KEY],
+			{encoding: 'utf8', windowsHide: true},
+			(error, stdout) => {
+				resolve(!error && stdout.toLowerCase().includes(`\\${WINDOWS_STORE_IDENTITY_NAME.toLowerCase()}_`));
+			},
+		);
+	});
+}
+
+function registerProtocolClient(): void {
+	if (app.isPackaged) {
+		app.setAsDefaultProtocolClient(APP_PROTOCOL);
+	}
+}
+
 export function initializeDeepLinks(): void {
-	if (process.platform === 'linux') {
+	if (process.platform === 'linux' || process.windowsStore) {
 		registerInitialDeepLinkHandler();
 		return;
 	}
-	if (app.isPackaged) {
-		app.setAsDefaultProtocolClient(APP_PROTOCOL);
+	if (process.platform === 'win32') {
+		void isWindowsStorePackageInstalled().then((storeInstalled) => {
+			if (storeInstalled) app.removeAsDefaultProtocolClient(APP_PROTOCOL);
+			else registerProtocolClient();
+		});
+	} else {
+		registerProtocolClient();
 	}
 	registerInitialDeepLinkHandler();
 }

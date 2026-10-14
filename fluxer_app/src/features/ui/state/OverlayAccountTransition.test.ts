@@ -12,6 +12,8 @@ vi.mock('@lingui/core/macro', () => ({
 vi.mock('@lingui/react/macro', () => ({Trans: () => null, useLingui: () => ({i18n: {_: () => ''}})}));
 vi.mock('@app/features/ui/state/MobileLayout', () => ({default: {enabled: true, isMobileLayout: () => true}}));
 
+// Idle and LocalPresence import each other; loading Idle first keeps its timer from calling a half-loaded store.
+await import('@app/features/ui/state/Idle');
 const {AccountScopedWork, AccountScopedWorkTransitionReason} = await import(
 	'@app/features/platform/state/AccountScopedWork'
 );

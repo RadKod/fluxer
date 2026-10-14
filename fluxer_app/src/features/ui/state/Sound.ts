@@ -5,6 +5,11 @@ import {SoundType} from '@app/features/notification/utils/SoundUtils';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {initializeStore} from '@app/features/platform/utils/StoreInitialization';
 import StreamerMode from '@app/features/streamer_mode/state/StreamerMode';
+import {
+	TABLE_GAME_ONE_SHOT_SOUND_POLICIES,
+	TABLE_GAME_SOUND_TYPES,
+	tableGameSoundVolumeScale,
+} from '@app/features/table_game/sound/TableGameSoundFiles';
 import {makeSyncedField} from '@app/features/user/state/SyncedField';
 import {SoundSettingsSchema} from '@fluxer/schema/src/gen/fluxer/user/preferences/v1/pickers_pb';
 import {makeAutoObservable, reaction, runInAction} from 'mobx';
@@ -55,6 +60,7 @@ export const DEAFEN_SUPPRESSED_SOUND_TYPES: ReadonlySet<SoundType> = new Set([
 	SoundType.UserMove,
 	SoundType.ViewerJoin,
 	SoundType.ViewerLeave,
+	...TABLE_GAME_SOUND_TYPES,
 ]);
 const DEFAULT_ONE_SHOT_SOUND_POLICY: OneShotSoundPolicy = {
 	group: 'default',
@@ -126,6 +132,7 @@ const ONE_SHOT_SOUND_POLICIES: Partial<Record<SoundType, OneShotSoundPolicy>> = 
 	[SoundType.ScreenShareStart]: VOICE_MEDIA_ONE_SHOT_SOUND_POLICY,
 	[SoundType.ScreenShareStop]: VOICE_MEDIA_ONE_SHOT_SOUND_POLICY,
 	[SoundType.VoiceDisconnect]: VOICE_DISCONNECT_ONE_SHOT_SOUND_POLICY,
+	...TABLE_GAME_ONE_SHOT_SOUND_POLICIES,
 };
 const clampVolume = (value: number): number => Math.max(0, Math.min(MAX_VOLUME_PERCENT, Math.round(value)));
 const isDefaultDisabledSound = (soundType: SoundType): boolean => DEFAULT_DISABLED_SOUNDS[soundType] === true;
@@ -501,7 +508,7 @@ class Sound {
 	private getEffectiveMultiplier(soundType: SoundType): number {
 		const override = this.settings.soundOverrides?.[soundType];
 		const percent = override !== undefined ? override : (this.settings.masterVolume ?? DEFAULT_MASTER_VOLUME);
-		return Math.max(0, Math.min(MAX_VOLUME_PERCENT, percent)) / 100;
+		return (Math.max(0, Math.min(MAX_VOLUME_PERCENT, percent)) / 100) * tableGameSoundVolumeScale(soundType);
 	}
 
 	private queueOneShotSound(sound: SoundType, volume: number, bypassSelfDeafened: boolean): void {
@@ -632,6 +639,8 @@ class Sound {
 			if (!result) return false;
 			this.addCurrentlyPlayingSound(sound);
 			const remove = (): void => {
+				result.removeEventListener('ended', remove);
+				result.removeEventListener('error', remove);
 				signal?.removeEventListener('abort', remove);
 				this.removeCurrentlyPlayingSound(sound);
 			};

@@ -13,8 +13,10 @@ import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import type {HonoApp} from '@app/api/types/HonoEnv';
+import {holdBucket} from '@app/api/user/username/UsernameOwnershipRepository';
 import {inputValidationErrorFromZodIssues, Validator} from '@app/api/Validator';
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
+import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {MissingACLError} from '@fluxer/errors/src/domains/core/MissingACLError';
 import {ListUserGuildsResponse} from '@fluxer/schema/src/domains/admin/AdminGuildSchemas';
 import {SearchUsersResponse} from '@fluxer/schema/src/domains/admin/AdminSchemas';
@@ -52,6 +54,15 @@ import {
 	TerminateSessionsResponse,
 	UserMutationResponse,
 } from '@fluxer/schema/src/domains/admin/AdminUserSchemas';
+import {
+	UsernameAssignRequest,
+	UsernameClaimResponse,
+	UsernameReselectRequest,
+	UsernameReservationListQuery,
+	UsernameReservationListResponse,
+	UsernameReserveRequest,
+	UsernameUnreserveRequest,
+} from '@fluxer/schema/src/domains/admin/UsernameSchemas';
 import {WebAuthnCredentialListResponse} from '@fluxer/schema/src/domains/auth/AuthSchemas';
 import {UserIdParam} from '@fluxer/schema/src/domains/common/CommonParamSchemas';
 
@@ -62,6 +73,151 @@ function requireSelectorACL(granted: ReadonlySet<string>, acl: string): void {
 }
 
 export function UserAdminController(app: HonoApp) {
+	app.get(
+		'/admin/usernames/reservations',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_LOOKUP),
+		requireAdminACL(AdminACLs.USERNAME_RESERVE),
+		Validator('query', UsernameReservationListQuery),
+		OpenAPI({
+			operationId: 'list_admin_username_reservations',
+			summary: 'List username reservations',
+			responseSchema: UsernameReservationListResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'Read one bounded reservation bucket using authoritative claims and notes. Requires USERNAME_RESERVE permission.',
+		}),
+		async (ctx) => {
+			const {bucket, cursor, limit} = ctx.req.valid('query');
+			if (cursor && holdBucket(cursor) !== bucket)
+				throw InputValidationError.create('cursor', 'Cursor belongs to another bucket');
+			const result = await ctx
+				.get('adminService')
+				.userService.profileService.listUsernameReservations(bucket, cursor ?? null, limit);
+			await recordAdminRead(ctx, {
+				targetType: 'username',
+				targetId: 0n,
+				action: AdminAuditReadActions.LIST_USERNAME_RESERVATIONS,
+				metadata: {bucket, result_count: result.items.length, has_more: result.next_cursor !== null},
+			});
+			return ctx.json(result);
+		},
+	);
+	app.post(
+		'/admin/usernames/reserve',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.USERNAME_RESERVE),
+		Validator('json', UsernameReserveRequest),
+		OpenAPI({
+			operationId: 'reserve_admin_username',
+			summary: 'Reserve a username',
+			requestSchema: UsernameReserveRequest,
+			responseSchema: UsernameClaimResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description: 'Hold a username for an admin assignment through the ownership protocol. Requires an audit reason.',
+		}),
+		async (ctx) => {
+			const {username, note} = ctx.req.valid('json');
+			return ctx.json(
+				await ctx
+					.get('adminService')
+					.userService.profileService.reserveUsername(
+						username,
+						note,
+						ctx.get('adminUserId'),
+						ctx.get('auditLogReason'),
+					),
+			);
+		},
+	);
+	app.post(
+		'/admin/usernames/unreserve',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.USERNAME_RESERVE),
+		Validator('json', UsernameUnreserveRequest),
+		OpenAPI({
+			operationId: 'unreserve_admin_username',
+			summary: 'Release a username reservation',
+			requestSchema: UsernameUnreserveRequest,
+			responseSchema: null,
+			statusCode: 204,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description: 'Release a held username while preserving its release embargo. Requires an audit reason.',
+		}),
+		async (ctx) => {
+			await ctx
+				.get('adminService')
+				.userService.profileService.unreserveUsername(
+					ctx.req.valid('json').username,
+					ctx.get('adminUserId'),
+					ctx.get('auditLogReason'),
+				);
+			return ctx.body(null, 204);
+		},
+	);
+	app.post(
+		'/admin/usernames/assign',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.USERNAME_RESERVE),
+		requireAdminACL(AdminACLs.USER_UPDATE_USERNAME),
+		Validator('json', UsernameAssignRequest),
+		OpenAPI({
+			operationId: 'assign_admin_username',
+			summary: 'Assign a username to a user',
+			requestSchema: UsernameAssignRequest,
+			responseSchema: UsernameClaimResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'Assign through the ownership protocol without bypassing active claims, bans, or embargoes. Requires both reserve and username update ACLs and an audit reason.',
+		}),
+		async (ctx) => {
+			const {username, user_id} = ctx.req.valid('json');
+			return ctx.json(
+				await ctx
+					.get('adminService')
+					.userService.profileService.assignUsername(
+						username,
+						createUserID(user_id),
+						ctx.get('adminUserId'),
+						ctx.get('auditLogReason'),
+					),
+			);
+		},
+	);
+	app.post(
+		'/admin/users/:user_id/username/reselect',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.USER_UPDATE_USERNAME),
+		Validator('param', UserIdParam),
+		Validator('json', UsernameReselectRequest),
+		OpenAPI({
+			operationId: 'force_admin_username_reselect',
+			summary: 'Require a user to select another username',
+			requestSchema: UsernameReselectRequest,
+			responseSchema: null,
+			statusCode: 204,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description: 'Synchronously finalize moderation and optionally ban the previous name. Requires an audit reason.',
+		}),
+		async (ctx) => {
+			await ctx
+				.get('adminService')
+				.userService.profileService.forceUsernameReselect(
+					createUserID(ctx.req.valid('param').user_id),
+					ctx.req.valid('json').ban_name,
+					ctx.get('adminUserId'),
+					ctx.get('auditLogReason'),
+				);
+			return ctx.body(null, 204);
+		},
+	);
 	app.get(
 		'/admin/acls',
 		RateLimitMiddleware(RateLimitConfigs.ADMIN_LOOKUP),
@@ -604,6 +760,7 @@ export function UserAdminController(app: HonoApp) {
 	app.patch(
 		'/admin/users/:user_id/username',
 		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.USERNAME_RESERVE),
 		requireAdminACL(AdminACLs.USER_UPDATE_USERNAME),
 		Validator('param', UserIdParam),
 		Validator('json', AdminUserUsernameUpdateRequest),
@@ -615,7 +772,7 @@ export function UserAdminController(app: HonoApp) {
 			security: 'adminApiKey',
 			tags: 'Admin',
 			description:
-				'Change user username. New username must meet requirements and be unique. Creates audit log entry. Requires USER_UPDATE_USERNAME permission.',
+				'Change user username. New username must meet requirements and be unique. Creates audit log entry. Requires USERNAME_RESERVE and USER_UPDATE_USERNAME permissions.',
 		}),
 		async (ctx) => {
 			const adminService = ctx.get('adminService');
@@ -1093,6 +1250,33 @@ export function UserAdminController(app: HonoApp) {
 				}),
 			);
 		},
+	);
+	app.post(
+		'/admin/users/:user_id/clear-legacy-restriction',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_USER_MODIFY),
+		requireAdminACL(AdminACLs.USER_CLEAR_LEGACY_RESTRICTION),
+		Validator('param', UserIdParam),
+		OpenAPI({
+			operationId: 'clear_admin_user_legacy_restriction',
+			summary: 'Clear legacy account restriction',
+			responseSchema: UserMutationResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'Clear persisted legacy required-action flags. Preserves all user flags, including the current account limitation. Creates audit log entry. Requires USER_CLEAR_LEGACY_RESTRICTION permission.',
+		}),
+		async (ctx) =>
+			ctx.json(
+				await ctx
+					.get('adminService')
+					.userService.securityService.clearLegacyRestriction(
+						createUserID(ctx.req.valid('param').user_id),
+						ctx.get('adminUserId'),
+						ctx.get('auditLogReason'),
+						ctx.get('adminUserAcls'),
+					),
+			),
 	);
 	app.patch(
 		'/admin/users/:user_id/premium-flags',

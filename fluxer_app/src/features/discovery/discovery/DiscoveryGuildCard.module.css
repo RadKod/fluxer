@@ -160,3 +160,16 @@
 	font-size: 0.75rem;
 	line-height: 1.2;
 }
+
+/* Micup: the violet, indigo and magenta placeholder tints are v1 greys in the coal and dark themes */
+:global(html:is(.theme-coal, .theme-dark)) .bannerTintViolet {
+	background-color: #9a9aa4;
+}
+
+:global(html:is(.theme-coal, .theme-dark)) .bannerTintIndigo {
+	background-color: #8e8e98;
+}
+
+:global(html:is(.theme-coal, .theme-dark)) .bannerTintMagenta {
+	background-color: #c4c4cc;
+}

@@ -1,0 +1,348 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Collection bands keep horizontal overflow inside each row, including on narrow screens. */
+.page {
+	composes: tokens from '@app/features/premium/components/PremiumSurface.module.css';
+	/* Every shop card's ground: a barely seen lavender wash at the top, fading to the card surface. */
+	--shop-card-wash: linear-gradient(
+		180deg,
+		color-mix(in srgb, var(--premium-lavender) 6%, var(--background-secondary-alt)),
+		var(--background-secondary-alt) 75%
+	);
+	position: relative;
+	isolation: isolate;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	min-width: 0;
+}
+
+.content {
+	display: flex;
+	flex-direction: column;
+	gap: 3rem;
+	box-sizing: border-box;
+	min-width: 0;
+	width: 100%;
+	max-width: 79rem;
+	margin: 0 auto;
+	padding: 1.5rem 2rem 5.5rem;
+}
+
+@media (max-width: 767px) {
+	.content {
+		padding: 1rem 1rem 4rem;
+	}
+}
+
+.notice {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.75rem 1rem;
+	border: 0.0625rem solid var(--background-modifier-accent);
+	border-radius: var(--radius-lg);
+	background: var(--background-secondary-alt);
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	color: var(--text-secondary);
+}
+
+.noticeIcon {
+	flex: 0 0 auto;
+	width: 1.25rem;
+	height: 1.25rem;
+	color: var(--text-secondary);
+}
+
+.catalog {
+	display: flex;
+	flex-direction: column;
+	gap: 3rem;
+	min-width: 0;
+}
+
+.section {
+	min-width: 0;
+	scroll-margin-top: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+/* The heading on the left, the collection's purchase on the right. */
+.sectionHead {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem 1rem;
+	min-width: 0;
+}
+
+.sectionTitle {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	min-width: 0;
+	margin: 0;
+	font-size: 1.25rem;
+	font-weight: 700;
+	line-height: var(--premium-lh-head);
+	letter-spacing: var(--premium-track-head);
+	text-wrap: balance;
+	/* Headings in the shop: white fading to lavender at the foot of the letters, readable on the page and the art. */
+	background: linear-gradient(
+		180deg,
+		var(--text-primary) 35%,
+		color-mix(in srgb, var(--premium-lavender, var(--brand-primary)) 65%, var(--text-primary))
+	);
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+}
+
+/* The loading shelf: cards of the real card's size and edge, the name and price bars where the text will be. */
+.grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, 15.25rem);
+	gap: 1.5rem;
+	justify-content: start;
+}
+
+.skeletonCard {
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	width: 15.25rem;
+	height: 15.25rem;
+	border: 0.0625rem solid color-mix(in srgb, var(--text-primary) 9%, transparent);
+	border-radius: 0.5rem;
+	background: var(--background-secondary-alt);
+}
+
+.skeletonLines {
+	display: flex;
+	flex-direction: column;
+	gap: 0.625rem;
+	padding: 1rem;
+}
+
+.skeletonName,
+.skeletonPrice {
+	height: 0.75rem;
+	border-radius: var(--radius-full);
+	background: var(--background-modifier-accent);
+	opacity: var(--skeleton-opacity-default);
+}
+
+.skeletonName {
+	width: 70%;
+}
+
+.skeletonPrice {
+	width: 40%;
+}
+
+/* The arrows sit over the row's ends, so the row keeps no room for a scrollbar. */
+.rowFrame {
+	position: relative;
+	min-width: 0;
+}
+
+.collectionRow {
+	display: flex;
+	align-items: stretch;
+	gap: 1.5rem;
+	min-width: 0;
+	padding: 0.125rem;
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	scroll-snap-type: x mandatory;
+	scrollbar-width: none;
+}
+
+.collectionRow::-webkit-scrollbar {
+	display: none;
+}
+
+.collectionRow > * {
+	flex: 0 0 auto;
+	scroll-snap-align: start;
+}
+
+.rowArrow {
+	position: absolute;
+	top: 50%;
+	z-index: 1;
+	transform: translateY(-50%);
+}
+
+.rowArrow[data-side='start'] {
+	inset-inline-start: 0.75rem;
+}
+
+.rowArrow[data-side='end'] {
+	inset-inline-end: 0.75rem;
+}
+
+.rowArrowIcon {
+	width: 1.125rem;
+	height: 1.125rem;
+}
+
+:global([dir='rtl']) .rowArrowIcon {
+	transform: scaleX(-1);
+}
+
+/* Touch scrolls the row by swiping, and the next card peeks at the edge; the arrows are for a fine pointer. */
+@media not ((hover: hover) and (pointer: fine)) {
+	.rowArrow {
+		display: none;
+	}
+}
+
+/* The art across the top of the page, behind the column: the featured set's on the front page, the set's own on its
+   page. It fades into the page, and the first row of cards stands over its lower part. (Two classes: the art's own
+   module sets its position too.) */
+.catalog > .backdrop,
+.setPage > .backdrop {
+	position: absolute;
+	inset: 0 0 auto;
+	z-index: -1;
+	height: clamp(22rem, 36vw, 32rem);
+	mask-image: linear-gradient(180deg, #000 55%, transparent);
+}
+
+/* The featured set: its name as the page heading over the art, "Buy the collection" on the right. */
+.section[data-hero] {
+	padding-top: clamp(3.5rem, 7vw, 6rem);
+	gap: clamp(2.5rem, 6vw, 5.5rem);
+}
+
+.sectionHead[data-hero] .sectionTitle,
+.section[data-hero] .sectionTitle {
+	font-size: clamp(1.75rem, 3vw, 2.5rem);
+	font-weight: 800;
+	line-height: 1.05;
+	letter-spacing: -0.02em;
+	/* A dark shadow keeps it readable on any art; a faint lavender glow around it. */
+	filter: drop-shadow(0 0.125rem 0.375rem color-mix(in srgb, var(--background-tertiary) 80%, transparent))
+		drop-shadow(0 0 1.25rem color-mix(in srgb, var(--premium-lavender, var(--brand-primary)) 35%, transparent));
+}
+
+/* A set page's heading takes the focus when the page opens; it is not a control, so it draws no ring. */
+.sectionTitle:focus {
+	outline: none;
+}
+
+/* Two set tiles side by side. */
+.promos {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1.5rem;
+}
+
+@media (max-width: 899px) {
+	.promos {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/* A set's page. */
+.setPage {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+	min-width: 0;
+}
+
+.breadcrumb {
+	display: flex;
+	align-items: center;
+	align-self: flex-start;
+	gap: 0.5rem;
+	min-width: 0;
+	max-width: 100%;
+	padding: 0.25rem 0.625rem;
+	border-radius: var(--radius-md);
+	background: color-mix(in srgb, var(--background-tertiary) 72%, transparent);
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+}
+
+.breadcrumbLink {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--text-secondary);
+	font: inherit;
+	cursor: pointer;
+	transition: color 0.15s ease;
+}
+
+.breadcrumbLink:hover,
+.breadcrumbLink:focus-visible {
+	color: var(--text-primary);
+}
+
+.breadcrumbSeparator {
+	color: var(--text-tertiary);
+}
+
+.breadcrumbCurrent {
+	overflow: hidden;
+	font-weight: 600;
+	color: var(--text-primary);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.setPage > .sectionHead {
+	padding-top: clamp(2.5rem, 6vw, 5rem);
+	margin-bottom: clamp(1rem, 4vw, 3.5rem);
+}
+
+/* The set's bundles, wide, two to a row; then its items, square, four to a row. The cards take the column's width. */
+.bundleGrid,
+.itemGrid {
+	display: grid;
+	gap: 1.5rem;
+	min-width: 0;
+}
+
+.bundleGrid {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.itemGrid {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.bundleGrid > [role='listitem'] {
+	width: auto;
+	height: 16.5rem;
+}
+
+.itemGrid > [role='listitem'] {
+	width: auto;
+	height: auto;
+	aspect-ratio: 1;
+}
+
+@media (max-width: 1099px) {
+	.itemGrid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 899px) {
+	.bundleGrid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.itemGrid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}

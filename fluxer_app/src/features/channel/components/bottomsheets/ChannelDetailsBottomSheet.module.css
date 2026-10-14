@@ -582,7 +582,7 @@
 }
 
 .newGroupIconWhite {
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 .newGroupContent {
@@ -770,7 +770,7 @@
 
 .quickActionButtonActive {
 	background-color: var(--brand-primary);
-	color: white;
+	color: var(--text-on-brand-primary);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -872,4 +872,9 @@
 	100% {
 		background-position: -200% 0;
 	}
+}
+
+/* Micup: static list skeletons */
+.skeleton {
+	animation: none;
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
+import {displayNamePassesForMicup, nameContainsMicup} from '@fluxer/schema/src/primitives/MicupBrandGuard';
 import {
 	MAX_STRING_PROCESSING_LENGTH,
 	normalizeString,
@@ -74,22 +75,28 @@ export const DiscriminatorType = withOpenApiType(
 		}),
 	'DiscriminatorType',
 );
+const UpstreamUsernameType = z
+	.string()
+	.trim()
+	.pipe(withStringLengthRangeValidation(z.string(), 1, 32, ValidationErrorCodes.USERNAME_LENGTH_INVALID))
+	.refine((value) => FLUXER_TAG_REGEX.test(value), ValidationErrorCodes.USERNAME_INVALID_CHARACTERS)
+	.refine((value) => {
+		const lowerValue = value.toLowerCase();
+		return lowerValue !== 'everyone' && lowerValue !== 'here';
+	}, ValidationErrorCodes.USERNAME_RESERVED_VALUE)
+	.refine((value) => {
+		const lowerValue = value.toLowerCase();
+		return !lowerValue.includes('fluxer') && !lowerValue.includes('system message');
+	}, ValidationErrorCodes.USERNAME_CANNOT_CONTAIN_RESERVED_TERMS);
+// Micup: a username someone picks for themselves or a bot; the brand in any spelling passes for staff or the
+// system account.
 export const UsernameType = withOpenApiType(
-	z
-		.string()
-		.trim()
-		.pipe(withStringLengthRangeValidation(z.string(), 1, 32, ValidationErrorCodes.USERNAME_LENGTH_INVALID))
-		.refine((value) => FLUXER_TAG_REGEX.test(value), ValidationErrorCodes.USERNAME_INVALID_CHARACTERS)
-		.refine((value) => {
-			const lowerValue = value.toLowerCase();
-			return lowerValue !== 'everyone' && lowerValue !== 'here';
-		}, ValidationErrorCodes.USERNAME_RESERVED_VALUE)
-		.refine((value) => {
-			const lowerValue = value.toLowerCase();
-			return !lowerValue.includes('fluxer') && !lowerValue.includes('system message');
-		}, ValidationErrorCodes.USERNAME_CANNOT_CONTAIN_RESERVED_TERMS),
+	UpstreamUsernameType.refine((value) => !nameContainsMicup(value), ValidationErrorCodes.USERNAME_CANNOT_CONTAIN_MICUP),
 	'UsernameType',
 );
+// Micup: a username that names an existing account (friend request by tag) or that staff assign, so it must still
+// reach the official micup account. Same wire contract as UsernameType.
+export const UsernameLookupType = withOpenApiType(UpstreamUsernameType, 'UsernameType');
 export const GlobalNameType = z
 	.string()
 	.superRefine((value, ctx) => {
@@ -111,7 +118,8 @@ export const GlobalNameType = z
 	.refine((value) => {
 		const lowerValue = value.toLowerCase();
 		return !lowerValue.includes('system message');
-	}, ValidationErrorCodes.GLOBAL_NAME_CANNOT_CONTAIN_RESERVED_TERMS);
+	}, ValidationErrorCodes.GLOBAL_NAME_CANNOT_CONTAIN_RESERVED_TERMS)
+	.refine((value) => !displayNamePassesForMicup(value), ValidationErrorCodes.GLOBAL_NAME_CANNOT_IMPERSONATE_MICUP);
 export const PasswordType = withOpenApiType(
 	z
 		.string()
@@ -119,7 +127,9 @@ export const PasswordType = withOpenApiType(
 		.pipe(withStringLengthRangeValidation(z.string(), 8, 256, ValidationErrorCodes.PASSWORD_LENGTH_INVALID)),
 	'PasswordType',
 );
+// Micup: a webhook name is shown as the author of its messages, so it follows the display name rule.
 export const WebhookNameType = z
 	.string()
 	.overwrite(normalizeString)
-	.pipe(withStringLengthRangeValidation(z.string(), 1, 80, ValidationErrorCodes.WEBHOOK_NAME_LENGTH_INVALID));
+	.pipe(withStringLengthRangeValidation(z.string(), 1, 80, ValidationErrorCodes.WEBHOOK_NAME_LENGTH_INVALID))
+	.refine((value) => !displayNamePassesForMicup(value), ValidationErrorCodes.GLOBAL_NAME_CANNOT_IMPERSONATE_MICUP);

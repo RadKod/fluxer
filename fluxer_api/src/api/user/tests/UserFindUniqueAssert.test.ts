@@ -31,7 +31,7 @@ describe('UserRepository.findUniqueAssert', () => {
 		const user = await new UserRepository().findUniqueAssert(SYSTEM_USER_ID);
 		expect(user.id.toString()).toBe('0');
 		expect(user.isSystem).toBe(true);
-		expect(user.username).toBe('Fluxer');
+		expect(user.username).toBe('Micup');
 	});
 	test('throws UnknownUserError when the row is gone', async () => {
 		const repository = new UserRepository();

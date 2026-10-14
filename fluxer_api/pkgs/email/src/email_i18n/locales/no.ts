@@ -25,11 +25,13 @@ const EMAIL_I18N_NO_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"donation_confirmation": {
 		"subject": "Takk for bidraget ditt til {product_name}",
-		"body": "Hei,\n\nTakk for bidraget ditt til {product_name}! {interval, select,\n  month {Det faste bidraget ditt er opprettet.}\n  year {Det faste bidraget ditt er opprettet.}\n  other {Engangsbidraget ditt er behandlet.}\n}\n\nDetaljer om bidraget:\nBeløp: {amount} {interval, select,\n  month {per måned}\n  year {per år}\n  other {}\n}\n\nStripe sender deg snart en egen kvittering med fakturaen som PDF. Kvitteringen inneholder alle betalingsdetaljer og kan brukes til skatteformål.\n\nDu kan når som helst se bidragshistorikken din, laste ned fakturaer og {interval, select,\n  month {administrere eller si opp abonnementet ditt}\n  year {administrere eller si opp abonnementet ditt}\n  other {administrere framtidige bidrag}\n} via denne lenken:\n\n{manageUrl}\n\nStøtten din bidrar til å holde {product_name} i gang. Takk!\n\n– {product_name}-teamet"
+		"body": "Hei,\n\nTakk for bidraget ditt til {product_name}! {interval, select,\n  month {Det faste bidraget ditt er opprettet.}\n  year {Det faste bidraget ditt er opprettet.}\n  other {Engangsbidraget ditt er behandlet.}\n}\n\nDetaljer om bidraget:\nBeløp: {amount} {interval, select,\n  month {per måned}\n  year {per år}\n  other {}\n}\n\nStripe sender deg snart en egen kvittering med fakturaen som PDF. Kvitteringen inneholder alle betalingsdetaljer og kan brukes til skatteformål.\n\nDu kan når som helst se bidragshistorikken din, laste ned fakturaer og {interval, select,\n  month {administrere eller si opp abonnementet ditt}\n  year {administrere eller si opp abonnementet ditt}\n  other {administrere framtidige bidrag}\n} via denne lenken:\n\n{manageUrl}\n\nStøtten din bidrar til å holde {product_name} i gang. Takk!\n\n– {product_name}-teamet",
+		"button": "Administrer bidrag"
 	},
 	"donation_magic_link": {
 		"subject": "Administrer {product_name}-bidragene dine",
-		"body": "Hei,\n\nKlikk på lenken nedenfor for å få tilgang til giverportalen din:\n\n{manageUrl}\n\nI portalen kan du administrere abonnementer, laste ned fakturaer og se bidragshistorikken din.\n\nDenne lenken utløper {expiresAt, date, full} kl. {expiresAt, time, short}.\n\nHvis du ikke ba om denne lenken, kan du trygt ignorere denne e-posten.\n\n– {product_name}-teamet"
+		"body": "Hei,\n\nKlikk på lenken nedenfor for å få tilgang til giverportalen din:\n\n{manageUrl}\n\nI portalen kan du administrere abonnementer, laste ned fakturaer og se bidragshistorikken din.\n\nDenne lenken utløper {expiresAt, date, full} kl. {expiresAt, time, short}.\n\nHvis du ikke ba om denne lenken, kan du trygt ignorere denne e-posten.\n\n– {product_name}-teamet",
+		"button": "Administrer bidrag"
 	},
 	"dsa_report_verification": {
 		"subject": "Bekreft e-postadressen din for en DSA-rapport",
@@ -45,11 +47,13 @@ const EMAIL_I18N_NO_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"email_change_revert": {
 		"subject": "E-postadressen på {product_name}-kontoen din er endret",
-		"body": "Hei {username},\n\nE-postadressen på {product_name}-kontoen din ble endret til {newEmail}.\n\nHvis du gjorde denne endringen, trenger du ikke å gjøre noe. Hvis det ikke var deg, kan du angre endringen og sikre kontoen din via denne lenken:\n\n{revertUrl}\n\nDette gjenoppretter den forrige e-postadressen din, logger deg ut overalt, deaktiverer flerfaktorautentisering (MFA) og krever at du angir et nytt passord.\n\n– Sikkerhetsteamet hos {product_name}"
+		"body": "Hei {username},\n\nE-postadressen på {product_name}-kontoen din ble endret til {newEmail}.\n\nHvis du gjorde denne endringen, trenger du ikke å gjøre noe. Hvis det ikke var deg, kan du angre endringen og sikre kontoen din via denne lenken:\n\n{revertUrl}\n\nDette gjenoppretter den forrige e-postadressen din, logger deg ut overalt, deaktiverer flerfaktorautentisering (MFA) og krever at du angir et nytt passord.\n\n– Sikkerhetsteamet hos {product_name}",
+		"button": "Angre denne endringen"
 	},
 	"email_verification": {
 		"subject": "Bekreft e-postadressen din for {product_name}",
-		"body": "Hei {username},\n\nBekreft e-postadressen til {product_name}-kontoen din ved å klikke på lenken nedenfor:\n\n{verifyUrl}\n\nHvis du ikke opprettet en {product_name}-konto, kan du trygt se bort fra denne e-posten.\n\nDenne lenken er gyldig i 24 timer.\n\n– {product_name}-teamet"
+		"body": "🎉 Hei {username},\n\nBekreft e-postadressen til {product_name}-kontoen din ved å klikke på lenken nedenfor:\n\n{verifyUrl}\n\nHvis du ikke opprettet en {product_name}-konto, kan du trygt se bort fra denne e-posten.\n\nDenne lenken er gyldig i 24 timer.\n\n– {product_name}-teamet",
+		"button": "Bekreft e-post"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Fordelene fra gaven du løste inn, er fjernet",
@@ -57,15 +61,18 @@ const EMAIL_I18N_NO_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"harvest_completed": {
 		"subject": "{product_name}-dataeksporten din er klar til nedlasting",
-		"body": "Hei {username},\n\nDataeksporten din er klar.\n\nNedlastingslenke:\n{downloadUrl}\n\nAntall meldinger: {totalMessages, number}\nFilstørrelse: {fileSizeMB, number} MB\n\nDenne lenken utløper {expiresAt, date, full} kl. {expiresAt, time, short}.\n\nHvis du ikke ba om denne eksporten, må du endre passordet ditt umiddelbart og kontakte kundestøtten vår.\n\n– {product_name}-teamet"
+		"body": "Hei {username},\n\nDataeksporten din er klar.\n\nNedlastingslenke:\n{downloadUrl}\n\nAntall meldinger: {totalMessages, number}\nFilstørrelse: {fileSizeMB, number} MB\n\nDenne lenken utløper {expiresAt, date, full} kl. {expiresAt, time, short}.\n\nHvis du ikke ba om denne eksporten, må du endre passordet ditt umiddelbart og kontakte kundestøtten vår.\n\n– {product_name}-teamet",
+		"button": "Last ned dataene mine"
 	},
 	"inactivity_warning": {
 		"subject": "{product_name}-kontoen din vil bli slettet på grunn av inaktivitet",
-		"body": "Hei {username},\n\nVi har ikke sett noen aktivitet på {product_name}-kontoen din siden {lastActiveDate, date, full}.\n\nHvis du ikke logger inn innen {deletionDate, date, full} kl. {deletionDate, time, short}, blir kontoen din permanent slettet på grunn av inaktivitet.\n\nLogg inn her:\n{loginUrl}\n\nHvis du har brukt {product_name} nylig, må du kontakte kundestøtten vår med en gang.\n\n– {product_name}-teamet"
+		"body": "Hei {username},\n\nVi har ikke sett noen aktivitet på {product_name}-kontoen din siden {lastActiveDate, date, full}.\n\nHvis du ikke logger inn innen {deletionDate, date, full} kl. {deletionDate, time, short}, blir kontoen din permanent slettet på grunn av inaktivitet.\n\nLogg inn her:\n{loginUrl}\n\nHvis du har brukt {product_name} nylig, må du kontakte kundestøtten vår med en gang.\n\n– {product_name}-teamet",
+		"button": "Logg inn"
 	},
 	"ip_authorization": {
 		"subject": "Godkjenn pålogging fra en ny IP-adresse",
-		"body": "Hei {username},\n\nVi oppdaget et forsøk på å logge inn på {product_name}-kontoen din fra en ny IP-adresse:\n\nIP-adresse: {ipAddress}\nSted: {location}\n\nHvis det var deg, kan du godkjenne IP-adressen ved å klikke på lenken nedenfor:\n\n{authUrl}\n\nHvis du ikke forsøkte å logge inn, må du endre passordet ditt med en gang.\n\nDenne lenken er gyldig i 30 minutter.\n\n– {product_name}-teamet"
+		"body": "Hei {username},\n\nVi oppdaget et forsøk på å logge inn på {product_name}-kontoen din fra en ny IP-adresse:\n\nIP-adresse: {ipAddress}\nSted: {location}\n\nHvis det var deg, kan du godkjenne IP-adressen ved å klikke på lenken nedenfor:\n\n{authUrl}\n\nHvis du ikke forsøkte å logge inn, må du endre passordet ditt med en gang.\n\nDenne lenken er gyldig i 30 minutter.\n\n– {product_name}-teamet",
+		"button": "Godkjenn denne påloggingen"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Bekreft tilgang til {product_name}-reservekodene dine",
@@ -77,11 +84,17 @@ const EMAIL_I18N_NO_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"password_reset": {
 		"subject": "Tilbakestill {product_name}-passordet ditt",
-		"body": "Hei {username},\n\nDu ba om å tilbakestille {product_name}-passordet ditt. Bruk lenken nedenfor for å angi et nytt passord:\n\n{resetUrl}\n\nHvis du ikke ba om dette, kan du trygt se bort fra denne e-posten.\n\nDenne lenken er gyldig i 1 time.\n\n– {product_name}-teamet"
+		"body": "Hei {username},\n\nDu ba om å tilbakestille {product_name}-passordet ditt. Bruk lenken nedenfor for å angi et nytt passord:\n\n{resetUrl}\n\nHvis du ikke ba om dette, kan du trygt se bort fra denne e-posten.\n\nDenne lenken er gyldig i 1 time.\n\n– {product_name}-teamet",
+		"button": "Tilbakestill passord"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "{product_name}-registreringen din er godkjent",
-		"body": "Hei {username},\n\nGode nyheter! Registreringen din hos {product_name} er godkjent.\n\nDu kan nå logge inn på {product_name}-appen her:\n{channelsUrl}\n\nVelkommen til {product_name}-fellesskapet.\n\n– {product_name}-teamet"
+		"body": "🎉 Hei {username},\n\nGode nyheter! Registreringen din hos {product_name} er godkjent.\n\nDu kan nå logge inn på {product_name}-appen her:\n{channelsUrl}\n\nVelkommen til {product_name}-fellesskapet.\n\n– {product_name}-teamet",
+		"button": "Åpne {product_name}"
 	},
 	"report_resolved": {
 		"subject": "{product_name}-rapporten din er gjennomgått",
@@ -97,7 +110,7 @@ const EMAIL_I18N_NO_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "Suspensjonen av {product_name}-kontoen din er opphevet",
-		"body": "Hei {username},\n\nGode nyheter! Suspensjonen av {product_name}-kontoen din er opphevet.\n\n{reason, select,\n  null {}\n  other {Årsak: {reason}}\n}\n\nDu kan nå logge inn igjen og fortsette å bruke {product_name} som normalt.\n\n– Sikkerhetsteamet hos {product_name}"
+		"body": "🎉 Hei {username},\n\nGode nyheter! Suspensjonen av {product_name}-kontoen din er opphevet.\n\n{reason, select,\n  null {}\n  other {Årsak: {reason}}\n}\n\nDu kan nå logge inn igjen og fortsette å bruke {product_name} som normalt.\n\n– Sikkerhetsteamet hos {product_name}"
 	}
 });
 

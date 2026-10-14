@@ -21,11 +21,13 @@
 	},
 	"donation_confirmation": {
 		"subject": "Dėkojame už tavo {product_name} paramą",
-		"body": "Sveiki,\n\nDėkojame už tavo paramą {product_name}! Tavo {interval, select,\n  month {pasikartojanti parama}\n  year {pasikartojanti parama}\n  other {vienkartinė parama}\n} sėkmingai {interval, select,\n  month {nustatyta}\n  year {nustatyta}\n  other {apdorota}\n}.\n\nParamos informacija:\nSuma: {amount} {interval, select,\n  month {per mėnesį}\n  year {per metus}\n  other {}\n}\n\nStripe netrukus atsiųs tau atskirą kvitą su sąskaitos faktūros PDF. Jame nurodyta visa mokėjimo informacija ir jį galima naudoti mokesčių tikslais.\n\nBet kuriuo metu šia nuoroda gali peržiūrėti savo paramos istoriją, atsisiųsti sąskaitas faktūras {interval, select,\n  month {ir valdyti arba atšaukti savo prenumeratą}\n  year {ir valdyti arba atšaukti savo prenumeratą}\n  other {ir valdyti būsimą paramą}\n}:\n\n{manageUrl}\n\nTavo parama padeda {product_name} veikti. Ačiū!\n\n– {product_name} komanda"
+		"body": "Sveiki,\n\nDėkojame už tavo paramą {product_name}! Tavo {interval, select,\n  month {pasikartojanti parama}\n  year {pasikartojanti parama}\n  other {vienkartinė parama}\n} sėkmingai {interval, select,\n  month {nustatyta}\n  year {nustatyta}\n  other {apdorota}\n}.\n\nParamos informacija:\nSuma: {amount} {interval, select,\n  month {per mėnesį}\n  year {per metus}\n  other {}\n}\n\nStripe netrukus atsiųs tau atskirą kvitą su sąskaitos faktūros PDF. Jame nurodyta visa mokėjimo informacija ir jį galima naudoti mokesčių tikslais.\n\nBet kuriuo metu šia nuoroda gali peržiūrėti savo paramos istoriją, atsisiųsti sąskaitas faktūras {interval, select,\n  month {ir valdyti arba atšaukti savo prenumeratą}\n  year {ir valdyti arba atšaukti savo prenumeratą}\n  other {ir valdyti būsimą paramą}\n}:\n\n{manageUrl}\n\nTavo parama padeda {product_name} veikti. Ačiū!\n\n– {product_name} komanda",
+		"button": "Tvarkyti paramą"
 	},
 	"donation_magic_link": {
 		"subject": "Tvarkyk savo {product_name} paramą",
-		"body": "Sveiki,\n\nSpustelėk žemiau esančią nuorodą, kad pasiektum savo rėmėjo portalą:\n\n{manageUrl}\n\nPortale gali valdyti prenumeratas, atsisiųsti sąskaitas faktūras ir peržiūrėti savo paramos istoriją.\n\nŠi nuoroda galioja iki {expiresAt, date, full} {expiresAt, time, short}.\n\nJei neprašei šios nuorodos, gali saugiai ignoruoti šį el. laišką.\n\n– {product_name} komanda"
+		"body": "Sveiki,\n\nSpustelėk žemiau esančią nuorodą, kad pasiektum savo rėmėjo portalą:\n\n{manageUrl}\n\nPortale gali valdyti prenumeratas, atsisiųsti sąskaitas faktūras ir peržiūrėti savo paramos istoriją.\n\nŠi nuoroda galioja iki {expiresAt, date, full} {expiresAt, time, short}.\n\nJei neprašei šios nuorodos, gali saugiai ignoruoti šį el. laišką.\n\n– {product_name} komanda",
+		"button": "Tvarkyti paramą"
 	},
 	"dsa_report_verification": {
 		"subject": "Patvirtink savo el. paštą DSA pranešimui pateikti",
@@ -41,11 +43,13 @@
 	},
 	"email_change_revert": {
 		"subject": "Tavo {product_name} el. paštas buvo pakeistas",
-		"body": "Sveiki, {username},\n\nTavo {product_name} paskyros el. pašto adresas pakeistas į {newEmail}.\n\nJei šį pakeitimą atlikai tu, nieko daryti nereikia. Jei ne, šia nuoroda gali atšaukti pakeitimą ir apsaugoti savo paskyrą:\n\n{revertUrl}\n\nTai atkurs ankstesnį el. pašto adresą, atjungs tave visuose įrenginiuose, išjungs MFA ir pareikalaus nustatyti naują slaptažodį.\n\n– {product_name} saugos komanda"
+		"body": "Sveiki, {username},\n\nTavo {product_name} paskyros el. pašto adresas pakeistas į {newEmail}.\n\nJei šį pakeitimą atlikai tu, nieko daryti nereikia. Jei ne, šia nuoroda gali atšaukti pakeitimą ir apsaugoti savo paskyrą:\n\n{revertUrl}\n\nTai atkurs ankstesnį el. pašto adresą, atjungs tave visuose įrenginiuose, išjungs MFA ir pareikalaus nustatyti naują slaptažodį.\n\n– {product_name} saugos komanda",
+		"button": "Atšaukti šį pakeitimą"
 	},
 	"email_verification": {
 		"subject": "Patvirtink savo {product_name} el. pašto adresą",
-		"body": "Sveiki, {username},\n\nSpustelėk žemiau esančią nuorodą ir patvirtink savo {product_name} paskyros el. pašto adresą:\n\n{verifyUrl}\n\nJei {product_name} paskyros nekūrei, gali saugiai ignoruoti šį el. laišką.\n\nŠi nuoroda galioja 24 valandas.\n\n– {product_name} komanda"
+		"body": "🎉 Sveiki, {username},\n\nSpustelėk žemiau esančią nuorodą ir patvirtink savo {product_name} paskyros el. pašto adresą:\n\n{verifyUrl}\n\nJei {product_name} paskyros nekūrei, gali saugiai ignoruoti šį el. laišką.\n\nŠi nuoroda galioja 24 valandas.\n\n– {product_name} komanda",
+		"button": "Patvirtinti el. paštą"
 	},
 	"gift_chargeback_notification": {
 		"subject": "Privilegijos, gautos už išpirktą dovaną, pašalintos",
@@ -53,15 +57,18 @@
 	},
 	"harvest_completed": {
 		"subject": "Tavo {product_name} duomenų eksportas paruoštas atsisiųsti",
-		"body": "Sveiki, {username},\n\nTavo duomenų eksportas paruoštas.\n\nAtsisiuntimo nuoroda:\n{downloadUrl}\n\nĮtrauktos žinutės: {totalMessages, number}\nFailo dydis: {fileSizeMB, number} MB\n\nŠi nuoroda galioja iki {expiresAt, date, full} {expiresAt, time, short}.\n\nJei šio eksporto neprašei, nedelsiant pakeisk slaptažodį ir susisiek su mūsų palaikymo komanda.\n\n– {product_name} komanda"
+		"body": "Sveiki, {username},\n\nTavo duomenų eksportas paruoštas.\n\nAtsisiuntimo nuoroda:\n{downloadUrl}\n\nĮtrauktos žinutės: {totalMessages, number}\nFailo dydis: {fileSizeMB, number} MB\n\nŠi nuoroda galioja iki {expiresAt, date, full} {expiresAt, time, short}.\n\nJei šio eksporto neprašei, nedelsiant pakeisk slaptažodį ir susisiek su mūsų palaikymo komanda.\n\n– {product_name} komanda",
+		"button": "Atsisiųsti mano duomenis"
 	},
 	"inactivity_warning": {
 		"subject": "Tavo {product_name} paskyra bus ištrinta dėl neaktyvumo",
-		"body": "Sveiki, {username},\n\nNuo {lastActiveDate, date, full} tavo {product_name} paskyroje nematėme jokios veiklos.\n\nJei neprisijungsi iki {deletionDate, date, full} {deletionDate, time, short}, tavo paskyra bus visam laikui ištrinta dėl neaktyvumo.\n\nPrisijunk čia:\n{loginUrl}\n\nJei neseniai naudojaisi {product_name}, nedelsiant susisiek su mūsų palaikymo komanda.\n\n– {product_name} komanda"
+		"body": "Sveiki, {username},\n\nNuo {lastActiveDate, date, full} tavo {product_name} paskyroje nematėme jokios veiklos.\n\nJei neprisijungsi iki {deletionDate, date, full} {deletionDate, time, short}, tavo paskyra bus visam laikui ištrinta dėl neaktyvumo.\n\nPrisijunk čia:\n{loginUrl}\n\nJei neseniai naudojaisi {product_name}, nedelsiant susisiek su mūsų palaikymo komanda.\n\n– {product_name} komanda",
+		"button": "Prisijungti"
 	},
 	"ip_authorization": {
 		"subject": "Patvirtink prisijungimą iš naujo IP adreso",
-		"body": "Sveiki, {username},\n\nAptikome bandymą prisijungti prie tavo {product_name} paskyros iš naujo IP adreso:\n\nIP adresas: {ipAddress}\nVieta: {location}\n\nJei tai buvai tu, spustelėk žemiau esančią nuorodą ir patvirtink šį IP adresą:\n\n{authUrl}\n\nJei prisijungti nebandei, nedelsiant pakeisk slaptažodį.\n\nŠi nuoroda galioja 30 minučių.\n\n– {product_name} komanda"
+		"body": "Sveiki, {username},\n\nAptikome bandymą prisijungti prie tavo {product_name} paskyros iš naujo IP adreso:\n\nIP adresas: {ipAddress}\nVieta: {location}\n\nJei tai buvai tu, spustelėk žemiau esančią nuorodą ir patvirtink šį IP adresą:\n\n{authUrl}\n\nJei prisijungti nebandei, nedelsiant pakeisk slaptažodį.\n\nŠi nuoroda galioja 30 minučių.\n\n– {product_name} komanda",
+		"button": "Patvirtinti šį prisijungimą"
 	},
 	"mfa_backup_codes_view": {
 		"subject": "Patvirtink prieigą prie savo {product_name} atsarginių kodų",
@@ -73,11 +80,17 @@
 	},
 	"password_reset": {
 		"subject": "Iš naujo nustatyk savo {product_name} slaptažodį",
-		"body": "Sveiki, {username},\n\nPaprašei iš naujo nustatyti {product_name} slaptažodį. Naudok žemiau esančią nuorodą, kad nustatytum naują slaptažodį:\n\n{resetUrl}\n\nJei to neprašei, gali saugiai ignoruoti šį el. laišką.\n\nŠi nuoroda galioja 1 valandą.\n\n– {product_name} komanda"
+		"body": "Sveiki, {username},\n\nPaprašei iš naujo nustatyti {product_name} slaptažodį. Naudok žemiau esančią nuorodą, kad nustatytum naują slaptažodį:\n\n{resetUrl}\n\nJei to neprašei, gali saugiai ignoruoti šį el. laišką.\n\nŠi nuoroda galioja 1 valandą.\n\n– {product_name} komanda",
+		"button": "Nustatyti slaptažodį iš naujo"
+	},
+	"referral_reward_ready": {
+		"subject": "Your referral reward is ready",
+		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	},
 	"registration_approved": {
 		"subject": "Tavo {product_name} registracija patvirtinta",
-		"body": "Sveiki, {username},\n\nGeros naujienos: tavo {product_name} registracija patvirtinta.\n\nDabar gali prisijungti prie {product_name} programėlės čia:\n{channelsUrl}\n\nSveiki atvykę į {product_name} bendruomenę.\n\n– {product_name} komanda"
+		"body": "🎉 Sveiki, {username},\n\nGeros naujienos: tavo {product_name} registracija patvirtinta.\n\nDabar gali prisijungti prie {product_name} programėlės čia:\n{channelsUrl}\n\nSveiki atvykę į {product_name} bendruomenę.\n\n– {product_name} komanda",
+		"button": "Atidaryti {product_name}"
 	},
 	"report_resolved": {
 		"subject": "Tavo {product_name} pranešimas peržiūrėtas",
@@ -93,6 +106,6 @@
 	},
 	"unban_notification": {
 		"subject": "Tavo {product_name} paskyros sustabdymas panaikintas",
-		"body": "Sveiki, {username},\n\nGeros naujienos: tavo {product_name} paskyros sustabdymas panaikintas.\n\n{reason, select,\n  null {}\n  other {Priežastis: {reason}}\n}\n\nDabar gali vėl prisijungti ir toliau naudotis {product_name} kaip įprasta.\n\n– {product_name} saugos komanda"
+		"body": "🎉 Sveiki, {username},\n\nGeros naujienos: tavo {product_name} paskyros sustabdymas panaikintas.\n\n{reason, select,\n  null {}\n  other {Priežastis: {reason}}\n}\n\nDabar gali vėl prisijungti ir toliau naudotis {product_name} kaip įprasta.\n\n– {product_name} saugos komanda"
 	}
 }

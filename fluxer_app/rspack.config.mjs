@@ -482,6 +482,14 @@ export default () => {
 					},
 				},
 				{
+					test: /[\\/]@jitsi[\\/]rnnoise-wasm[\\/]dist[\\/]rnnoise-sync\.js$/,
+					type: 'asset/resource',
+					use: [{loader: path.join(ROOT_DIR, 'scripts/build/rspack/voice-vad-worklet-loader.cjs')}],
+					generator: {
+						filename: isProduction ? 'assets/[contenthash:16].worklet.js' : 'assets/[name].[hash].worklet.js',
+					},
+				},
+				{
 					test: /[\\/]src[\\/].+\.worklet\.js$/,
 					type: 'asset/resource',
 					generator: {
@@ -713,13 +721,31 @@ export default () => {
 								enforce: true,
 								chunks: (chunk) => !chunk.canBeInitial() && !isWorkerPath({chunk}),
 							},
+							// Micup: the feed video player imports hls.js on the first play; kept out of the start-up vendor chunk.
+							hls: {
+								test: /[\\/]node_modules[\\/]hls\.js[\\/]/,
+								name: 'hls',
+								priority: 54,
+								reuseExistingChunk: true,
+								enforce: true,
+								chunks: (chunk) => isMainRuntimeChunk(chunk) && !chunk.canBeInitial(),
+							},
 							tts: {
-								test: /[\\/]node_modules[\\/]mespeak[\\/]/,
+								test: /[\\/]node_modules[\\/]mespeak[\\/](?!voices[\\/])/,
 								name: 'tts',
 								priority: 54,
 								reuseExistingChunk: true,
 								enforce: true,
 								chunks: (chunk) => !chunk.canBeInitial() && !isWorkerPath({chunk}),
+							},
+							// The room renderer is lazy; keep its Three/BVH dependencies out of the shared initial vendor.
+							voiceScene: {
+								test: /[\\/]node_modules[\\/](three|three-mesh-bvh)[\\/]/,
+								name: 'voice-scene',
+								priority: 53,
+								reuseExistingChunk: true,
+								enforce: true,
+								chunks: (chunk) => isMainRuntimeChunk(chunk) && !chunk.canBeInitial(),
 							},
 							editor: {
 								test: /[\\/]node_modules[\\/](@codemirror|@lezer|codemirror|style-mod|w3c-keyname|crelt|@marijn)[\\/]/,
@@ -894,7 +920,7 @@ export default () => {
 								test: (module) => {
 									if (!module.resource) return false;
 									if (!/[\\/]node_modules[\\/]/.test(module.resource)) return false;
-									if (/[\\/](@arborium|@phosphor-icons|katex)[\\/]/.test(module.resource)) return false;
+									if (/[\\/](@arborium|@phosphor-icons|katex|hls\.js|mespeak)[\\/]/.test(module.resource)) return false;
 									if (/[\\/]\.pnpm[\\/]@arborium\+/.test(module.resource)) return false;
 									return true;
 								},

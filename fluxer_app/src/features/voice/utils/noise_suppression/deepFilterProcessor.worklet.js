@@ -164,6 +164,9 @@ class DeepFilterProcessor extends AudioWorkletProcessor {
 		this.healthSamples = 0;
 		this.healthNonFinite = false;
 		this.processedFrames = 0;
+		this.processingMs = 0;
+		this.audioMs = 0;
+		this.pipelineV2Enabled = false;
 		this.silence = new Float32Array(RENDER_QUANTUM);
 		this.port.onmessage = (event) => this.handleMessage(event.data);
 		try {
@@ -201,6 +204,12 @@ class DeepFilterProcessor extends AudioWorkletProcessor {
 
 	handleMessage(message) {
 		if (!message || typeof message !== 'object') return;
+		if (message.type === 'pipeline') {
+			this.pipelineV2Enabled = message.enabled === true;
+			this.processingMs = 0;
+			this.audioMs = 0;
+			return;
+		}
 		if (message.type === 'flush' && this.running) {
 			this.resetRings();
 			return;
@@ -266,7 +275,12 @@ class DeepFilterProcessor extends AudioWorkletProcessor {
 				this.frame[i] = this.inputRing[this.inputRead];
 				this.inputRead = (this.inputRead + 1) % this.ringSize;
 			}
+			const startedAt = this.pipelineV2Enabled ? Date.now() : 0;
 			const processed = this.bindings.processFrame(this.handle, this.frame);
+			if (this.pipelineV2Enabled) {
+				this.processingMs += Math.max(0, Date.now() - startedAt);
+				this.audioMs += (frameLength / sampleRate) * 1000;
+			}
 			let finite = true;
 			for (let i = 0; i < processed.length; i++) {
 				if (!Number.isFinite(processed[i])) {
@@ -305,6 +319,8 @@ class DeepFilterProcessor extends AudioWorkletProcessor {
 			nonFinite: this.healthNonFinite,
 			frame: this.processedFrames,
 			contextTime: currentTime,
+			processingMs: this.processingMs,
+			audioMs: this.audioMs,
 		});
 		this.healthFrames = 0;
 		this.healthInputEnergy = 0;

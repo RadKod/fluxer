@@ -3,6 +3,7 @@
 import type {AdminAuditLog, BannedIpEntry, BannedIpKind, IAdminRepository} from '@app/api/admin/IAdminRepository';
 import {createUserID} from '@app/api/BrandedTypes';
 import {isIpBanExempt} from '@app/api/ban/IpBanExemptions';
+import {Config} from '@app/api/Config';
 import {ContentBlocklistCategory} from '@app/api/constants/ContentModeration';
 import {
 	deleteOneOrMany,
@@ -20,6 +21,7 @@ import type {
 	BannedUrlDomainRow,
 	BannedUrlRow,
 } from '@app/api/database/types/AdminArchiveTypes';
+import {sharedListHas} from '@app/api/infrastructure/activity/SharedLists';
 import {
 	AdminAuditLogs,
 	BannedAvatarHashes,
@@ -30,6 +32,8 @@ import {
 	BannedProfileSubstrings,
 	BannedUrlDomains,
 	BannedUrls,
+	DisposableEmailDomains,
+	SuspiciousEmailDomains,
 } from '@app/api/Tables';
 import {parseIpBanEntry, tryParseSingleIp} from '@app/api/utils/IpRangeUtils';
 import {canonicalizeStoredPhrase} from '@app/api/utils/PhraseBlocklistNormalization';
@@ -46,6 +50,12 @@ const IS_EMAIL_BANNED_QUERY = BannedEmails.select({
 	where: BannedEmails.where.eq('email_lower'),
 });
 const LOAD_ALL_BANNED_EMAILS_QUERY = BannedEmails.select();
+const IS_EMAIL_DOMAIN_SUSPICIOUS_QUERY = SuspiciousEmailDomains.select({
+	where: SuspiciousEmailDomains.where.eq('domain'),
+});
+const IS_EMAIL_DOMAIN_DISPOSABLE_QUERY = DisposableEmailDomains.select({
+	where: DisposableEmailDomains.where.eq('domain'),
+});
 
 function getEmailBlocklistKeys(email: string): Array<string> {
 	const emailLower = email.trim().toLowerCase();
@@ -161,20 +171,20 @@ export class AdminRepository implements IAdminRepository {
 		return false;
 	}
 
-	async banIp(ip: string, ttlSeconds: number | null = null): Promise<void> {
-		await this.writeIpBan(ip, 'platform_admin_enforcement', ttlSeconds);
+	async banIp(ip: string, ttlSeconds: number | null = null): Promise<Date | null> {
+		return this.writeIpBan(ip, 'platform_admin_enforcement', ttlSeconds);
 	}
 
 	async banIpTemp(ip: string, ttlSeconds: number): Promise<void> {
 		await this.writeIpBan(ip, 'abusive_api_access_patterns', ttlSeconds);
 	}
 
-	private async writeIpBan(ip: string, reason: string, ttlSeconds: number | null): Promise<void> {
+	private async writeIpBan(ip: string, reason: string, ttlSeconds: number | null): Promise<Date | null> {
 		if (ttlSeconds !== null && (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0)) {
 			throw new RangeError('Temporary IP ban TTL must be a positive integer');
 		}
 		if (isIpBanExempt(ip)) {
-			return;
+			return null;
 		}
 		const canonicalIp = canonicalizeBannedIpEntry(ip);
 		const createdAt = new Date();
@@ -188,20 +198,22 @@ export class AdminRepository implements IAdminRepository {
 					created_at: createdAt,
 				}),
 			);
-			return;
+			return null;
 		}
+		const expiresAt = new Date(createdAt.getTime() + ttlSeconds * 1000);
 		await upsertOne(
 			BannedIps.insertWithTtl(
 				{
 					ip: canonicalIp,
 					ban_kind: 'temporary_24h',
 					reason,
-					expires_at: new Date(createdAt.getTime() + ttlSeconds * 1000),
+					expires_at: expiresAt,
 					created_at: createdAt,
 				},
 				ttlSeconds,
 			),
 		);
+		return expiresAt;
 	}
 
 	async unbanIp(ip: string): Promise<void> {
@@ -243,6 +255,19 @@ export class AdminRepository implements IAdminRepository {
 				expiresAt: row.expires_at ?? null,
 				createdAt: row.created_at ?? null,
 			}));
+	}
+
+	async isEmailDomainSuspicious(domain: string): Promise<boolean> {
+		const domainLower = domain.toLowerCase();
+		if (sharedListHas('email_domain_exempt', domainLower)) return false;
+		return !!(await fetchOne<{domain: string}>(IS_EMAIL_DOMAIN_SUSPICIOUS_QUERY.bind({domain: domainLower})));
+	}
+
+	async isEmailDomainDisposable(domain: string): Promise<boolean> {
+		if (!Config.blocklistFeeds.enabled) return false;
+		const domainLower = domain.toLowerCase();
+		if (sharedListHas('email_domain_exempt', domainLower)) return false;
+		return !!(await fetchOne<{domain: string}>(IS_EMAIL_DOMAIN_DISPOSABLE_QUERY.bind({domain: domainLower})));
 	}
 
 	async isEmailBanned(email: string): Promise<boolean> {

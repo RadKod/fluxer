@@ -67,6 +67,7 @@ import {
 	PlusIcon,
 	ProhibitIcon,
 	PushPinIcon,
+	RocketLaunchIcon,
 	ShieldIcon,
 	SignOutIcon,
 	SmileyIcon,
@@ -279,6 +280,13 @@ export const CreateCategoryIcon: React.FC<IconProps> = observer(({size = 16}) =>
 ));
 export const SettingsIcon: React.FC<IconProps> = observer(({size = 16}) => (
 	<GearIcon size={remFromPx(size)} weight="fill" data-flx="ui.action-menu.context-menu-icons.settings-icon.gear-icon" />
+));
+export const BoostIcon: React.FC<IconProps> = observer(({size = 16}) => (
+	<RocketLaunchIcon
+		size={remFromPx(size)}
+		weight="fill"
+		data-flx="ui.action-menu.context-menu-icons.boost-icon.rocket-launch-icon"
+	/>
 ));
 export const PrivacySettingsIcon: React.FC<IconProps> = observer(({size = 16}) => (
 	<ShieldIcon

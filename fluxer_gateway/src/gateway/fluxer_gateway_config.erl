@@ -72,8 +72,19 @@ env_gateway_config() ->
 env_gateway_base_config() ->
     #{
         <<"port">> => env_int("FLUXER_GATEWAY_PORT", 8771),
+        <<"max_connections">> => env_int("FLUXER_GATEWAY_MAX_CONNECTIONS", 0),
+        <<"zstd_window_log">> => env_int("FLUXER_GATEWAY_ZSTD_WINDOW_LOG", 0),
+        <<"max_connections_per_ipv6_48">> => env_int(
+            "FLUXER_GATEWAY_MAX_CONNECTIONS_PER_IPV6_48", 0
+        ),
+        <<"max_unidentified_connections">> => env_int(
+            "FLUXER_GATEWAY_MAX_UNIDENTIFIED_CONNECTIONS", 0
+        ),
+        <<"identify_timeout_ms">> => env_int("FLUXER_GATEWAY_IDENTIFY_TIMEOUT_MS", 0),
+        <<"count_ipv6_by_64">> => env_bool("FLUXER_GATEWAY_COUNT_IPV6_BY_64", false),
         <<"gateway_role">> => env_optional_binary("FLUXER_GATEWAY_ROLE"),
         <<"rpc_auth_token">> => env_binary("FLUXER_GATEWAY_RPC_AUTH_TOKEN", <<>>),
+        <<"metrics_allowed_cidrs">> => env_optional_binary("FLUXER_METRICS_ALLOWED_CIDRS"),
         <<"push_enabled">> => env_bool("FLUXER_GATEWAY_PUSH_ENABLED", true),
         <<"push_enrolled_clear_notifications_enabled">> => env_bool(
             "FLUXER_GATEWAY_PUSH_ENROLLED_CLEAR_NOTIFICATIONS_ENABLED", true
@@ -84,6 +95,12 @@ env_gateway_base_config() ->
         <<"logger_level">> => env_optional_binary("FLUXER_GATEWAY_LOGGER_LEVEL"),
         <<"api_rpc_endpoint">> => env_optional_binary("FLUXER_GATEWAY_API_RPC_ENDPOINT"),
         <<"cluster_enabled">> => env_bool("FLUXER_GATEWAY_CLUSTER_ENABLED", false),
+        <<"cluster_min_peers_for_rpc">> => env_int(
+            "FLUXER_GATEWAY_CLUSTER_MIN_PEERS_FOR_RPC", 1
+        ),
+        <<"cluster_rpc_stability_ms">> => env_int(
+            "FLUXER_GATEWAY_CLUSTER_RPC_STABILITY_MS", 5000
+        ),
         <<"cluster_discovery_dns_name">> => env_optional_binary(
             "FLUXER_GATEWAY_CLUSTER_DISCOVERY_DNS_NAME"
         ),
@@ -161,6 +178,14 @@ build_config(RawConfig) ->
 build_core_config(Service, Internal, Nats, Proxy) ->
     #{
         port => get_int(Service, <<"port">>, 8080),
+        max_connections => get_int(Service, <<"max_connections">>, 0),
+        zstd_window_log => validated_zstd_window_log(
+            get_int(Service, <<"zstd_window_log">>, 0)
+        ),
+        max_connections_per_ipv6_48 => get_int(Service, <<"max_connections_per_ipv6_48">>, 0),
+        max_unidentified_connections => get_int(Service, <<"max_unidentified_connections">>, 0),
+        identify_timeout_ms => get_int(Service, <<"identify_timeout_ms">>, 0),
+        count_ipv6_by_64 => get_bool(Service, <<"count_ipv6_by_64">>, false),
         gateway_role => normalize_gateway_role(get_value(Service, <<"gateway_role">>)),
         client_ip_header => get_binary(Proxy, <<"client_ip_header">>, <<"x-forwarded-for">>),
         trust_client_ip_header => get_bool(Proxy, <<"trust_client_ip_header">>, false),
@@ -169,6 +194,9 @@ build_core_config(Service, Internal, Nats, Proxy) ->
         nats_core_url => get_string(Nats, <<"core_url">>, "nats://127.0.0.1:4222"),
         nats_auth_token => get_string(Nats, <<"auth_token">>, ""),
         rpc_auth_token => get_string(Service, <<"rpc_auth_token">>, ""),
+        metrics_allowed_networks => gateway_metrics_access:parse_allowed_cidrs(
+            get_optional_binary(Service, <<"metrics_allowed_cidrs">>)
+        ),
         gateway_nats_rpc_max_handlers =>
             get_int(Service, <<"gateway_nats_rpc_max_handlers">>, 512),
         identify_rate_limit_enabled => get_bool(
@@ -230,6 +258,12 @@ build_http_config(Service) ->
 build_cluster_config(Service, Public) ->
     #{
         cluster_enabled => get_bool(Service, <<"cluster_enabled">>, false),
+        cluster_min_peers_for_rpc => validated_cluster_min_peers_for_rpc(
+            get_int(Service, <<"cluster_min_peers_for_rpc">>, 1)
+        ),
+        cluster_rpc_stability_ms => validated_cluster_rpc_stability_ms(
+            get_int(Service, <<"cluster_rpc_stability_ms">>, 5000)
+        ),
         cluster_discovery_dns_name =>
             optional_string(get_optional_binary(Service, <<"cluster_discovery_dns_name">>)),
         cluster_discovery_node_basename =>
@@ -369,6 +403,21 @@ characters_to_binary_or_default(Value, Default) ->
         Binary when is_binary(Binary) -> Binary;
         _ -> Default
     end.
+
+-spec validated_cluster_min_peers_for_rpc(integer()) -> pos_integer().
+validated_cluster_min_peers_for_rpc(Value) when Value >= 1, Value =< 512 -> Value;
+validated_cluster_min_peers_for_rpc(Value) ->
+    erlang:error({invalid_cluster_min_peers_for_rpc, Value}).
+
+-spec validated_cluster_rpc_stability_ms(integer()) -> non_neg_integer().
+validated_cluster_rpc_stability_ms(Value) when Value >= 0, Value =< 60000 -> Value;
+validated_cluster_rpc_stability_ms(Value) ->
+    erlang:error({invalid_cluster_rpc_stability_ms, Value}).
+
+-spec validated_zstd_window_log(integer()) -> integer().
+validated_zstd_window_log(0) -> 0;
+validated_zstd_window_log(Value) when is_integer(Value), Value >= 10, Value =< 23 -> Value;
+validated_zstd_window_log(Value) -> erlang:error({invalid_zstd_window_log, Value}).
 
 -spec env_int(string(), integer()) -> integer().
 env_int(Name, Default) ->

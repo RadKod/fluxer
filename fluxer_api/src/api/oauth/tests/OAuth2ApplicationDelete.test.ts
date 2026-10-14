@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
+import {createUserID} from '@app/api/BrandedTypes';
+import {getUserRepository} from '@app/api/middleware/ServiceSingletons';
 import {
 	createOAuth2Application,
 	createUniqueApplicationName,
@@ -179,4 +181,36 @@ describe('OAuth2 Application Delete', () => {
 			.expect(HTTP_STATUS.UNAUTHORIZED)
 			.execute();
 	});
+	test.each([false, true])(
+		'lets a legacy restricted owner delete an application with verified phone %s',
+		async (verified) => {
+			const owner = await createTestAccount(harness);
+			const other = await createTestAccount(harness);
+			const owned = await createOAuth2Application(harness, owner.token, {name: createUniqueApplicationName()});
+			const foreign = await createOAuth2Application(harness, other.token, {name: createUniqueApplicationName()});
+			const repository = getUserRepository();
+			const user = await repository.findUniqueAssert(createUserID(BigInt(owner.userId)));
+			await repository.upsert(
+				{...user.toRow(), suspicious_activity_flags: 4, has_verified_phone: verified},
+				user.toRow(),
+			);
+			await createBuilder(harness, owner.token)
+				.delete(`/oauth2/applications/${owned.application.id}`)
+				.body({})
+				.expect(403, 'SUDO_MODE_REQUIRED')
+				.execute();
+			await createBuilder(harness, owner.token)
+				.delete(`/oauth2/applications/${foreign.application.id}`)
+				.body({password: owner.password})
+				.expect(403)
+				.execute();
+			await deleteOAuth2Application(harness, owner.token, owned.application.id, owner.password);
+			await createBuilder(harness, `Bot ${owned.botToken}`).get('/users/@me').expect(401).execute();
+			await createBuilder(harness, owner.token)
+				.patch(`/oauth2/applications/${foreign.application.id}`)
+				.body({name: 'blocked'})
+				.expect(403, verified ? 'ACCESS_DENIED' : 'ACCOUNT_LIMITED')
+				.execute();
+		},
+	);
 });

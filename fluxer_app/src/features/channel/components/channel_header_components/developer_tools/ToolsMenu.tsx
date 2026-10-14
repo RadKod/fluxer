@@ -68,20 +68,19 @@ const THIS_REMOVES_ALL_TRUSTED_DOMAINS_YOU_WILL_SEE_DESCRIPTOR = msg({
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const PREMIUM_STATE_RESET_ON_THE_BACKEND_DESCRIPTOR = msg({
-	message: 'Premium state reset on the backend.',
+	message: 'Plus state reset on the backend.',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const FAILED_TO_RESET_PREMIUM_STATE_DESCRIPTOR = msg({
-	message: 'Failed to reset premium state.',
+	message: 'Failed to reset Plus state.',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const RESET_PREMIUM_STATE_DESCRIPTOR = msg({
-	message: 'Reset premium state',
+	message: 'Reset Plus state',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const THIS_CLEARS_YOUR_BACKEND_PREMIUM_STATE_ENTIRELY_INCLUDING_DESCRIPTOR = msg({
-	message:
-		'This clears your backend premium state entirely, including premium type, billing metadata, and override flags.',
+	message: 'This clears your backend Plus state entirely, including Plus type, billing metadata, and override flags.',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const CLEAR_TRUST_ALL_SETTING_DESCRIPTOR = msg({
@@ -109,7 +108,7 @@ const CLEARING_TRUSTED_DOMAINS_DESCRIPTOR = msg({
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 const RESETTING_PREMIUM_STATE_DESCRIPTOR = msg({
-	message: 'Resetting premium state...',
+	message: 'Resetting Plus state...',
 	comment: 'Developer tools debug menu label. Internal-only surface for developers; translators may keep this terse.',
 });
 export const ToolsMenu: React.FC<{onClose: () => void}> = observer(({onClose}) => {

@@ -99,6 +99,8 @@ class NewDeviceMonitoring {
 				syncAcrossTabs: true,
 			});
 			if (!this.isStarted || epoch !== this.startEpoch) return;
+			await VoiceDevicePermissionState.whenDevicesInUse();
+			if (!this.isStarted || epoch !== this.startEpoch) return;
 			await this.refreshDeviceSnapshot();
 			if (!this.isStarted || epoch !== this.startEpoch) return;
 			this.startMonitoring();

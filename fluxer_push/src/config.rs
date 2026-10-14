@@ -733,3 +733,28 @@ impl Env {
             .ok_or_else(|| anyhow::anyhow!("{key} is required"))
     }
 }
+
+#[cfg(test)]
+mod managed_relay_tests {
+    use super::*;
+
+    #[test]
+    fn the_hosted_relay_stays_behind_the_consent_gate_unless_the_operator_lists_others() {
+        for vars in [
+            vec![],
+            vec![("FLUXER_PUSH_SERVICE_MANAGED_RELAY_HOSTS", "")],
+        ] {
+            assert_eq!(
+                managed_relay_hosts(&Env::from_iter(vars)),
+                vec![DEFAULT_MANAGED_RELAY_HOST]
+            );
+        }
+        assert_eq!(
+            managed_relay_hosts(&Env::from_iter([(
+                "FLUXER_PUSH_SERVICE_MANAGED_RELAY_HOSTS",
+                " Push.Micup.Example, relay.micup.example "
+            ),])),
+            vec!["push.micup.example", "relay.micup.example"]
+        );
+    }
+}

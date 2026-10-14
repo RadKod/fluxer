@@ -68,6 +68,7 @@ import {StorePurchaseInvalidError} from '@fluxer/errors/src/domains/payment/Stor
 import {StorePurchaseOwnedByOtherAccountError} from '@fluxer/errors/src/domains/payment/StorePurchaseOwnedByOtherAccountError';
 import {StorePurchaseSandboxNotEntitledError} from '@fluxer/errors/src/domains/payment/StorePurchaseSandboxNotEntitledError';
 import {UnknownStorePurchaseError} from '@fluxer/errors/src/domains/payment/UnknownStorePurchaseError';
+import {KVCacheProvider} from '@pkgs/cache/src/providers/KVCacheProvider';
 import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
 import {seconds} from 'itty-time';
 
@@ -194,6 +195,7 @@ export class StoreEntitlementService {
 			giftReversalHandler: deps.giftReversalHandler,
 			googlePlaySettlement: this.googlePlaySettlement,
 			entitlementWriter: this.entitlementWriter,
+			cacheService: new KVCacheProvider({client: deps.kvClient}),
 		});
 	}
 

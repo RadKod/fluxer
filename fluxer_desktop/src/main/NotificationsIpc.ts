@@ -153,6 +153,7 @@ function getLinuxNotificationsModule(): NativeNotificationsModule | null {
 interface NotificationHandle {
 	type: 'electron';
 	notification: Notification;
+	inActionCenter?: boolean;
 }
 
 interface LinuxNotificationHandle {
@@ -179,6 +180,28 @@ function deleteActiveNotification(id: string, handle: ActiveNotificationHandle):
 	if (activeNotifications.get(id) === handle) {
 		activeNotifications.delete(id);
 	}
+}
+
+// Windows keeps at most 20 toasts per app in Action Center.
+const MAX_ACTION_CENTER_NOTIFICATIONS = 20;
+
+// A toast that timed out on Windows moves to Action Center and stays clickable there. Keep its handle:
+// a garbage-collected Notification loses its delegate, so the click would never reach this process, and
+// close-notification could no longer remove it once the channel is read.
+function retainActionCenterNotification(handle: NotificationHandle): void {
+	handle.inActionCenter = true;
+	const retained = [...activeNotifications].filter(([, h]) => h.type === 'electron' && h.inActionCenter);
+	for (const [id, h] of retained.slice(0, Math.max(0, retained.length - MAX_ACTION_CENTER_NOTIFICATIONS))) {
+		deleteActiveNotification(id, h);
+	}
+}
+
+function revealMainWindow(mainWindow: BrowserWindow): void {
+	if (mainWindow.isMinimized()) {
+		mainWindow.restore();
+	}
+	mainWindow.show();
+	mainWindow.focus();
 }
 
 function ensureLinuxNativeClient(getMainWindow: () => BrowserWindow | null): NativeNotificationClient {
@@ -318,6 +341,15 @@ async function showLinuxNativeNotification(
 }
 
 export function registerNotificationIpcHandlers(getMainWindow: () => BrowserWindow | null): void {
+	if (process.platform === 'win32') {
+		// Clicks on toasts with no live Notification object (left in Action Center by an earlier process,
+		// or released above) arrive only here. Electron's toast carries no launch arguments, so this can
+		// bring the window forward but cannot tell which channel the toast belonged to.
+		Notification.handleActivation(() => {
+			const mainWindow = getMainWindow();
+			if (mainWindow) revealMainWindow(mainWindow);
+		});
+	}
 	ipcMain.handle('notification-sound-allowed', async (): Promise<boolean> => shouldPlayNotificationSound());
 	ipcMain.handle(
 		'show-notification',
@@ -362,16 +394,16 @@ export function registerNotificationIpcHandlers(getMainWindow: () => BrowserWind
 			notification.on('click', () => {
 				const mainWindow = getMainWindow();
 				if (mainWindow) {
-					if (mainWindow.isMinimized()) {
-						mainWindow.restore();
-					}
-					mainWindow.show();
-					mainWindow.focus();
+					revealMainWindow(mainWindow);
 					mainWindow.webContents.send('notification-click', id, options.url);
 				}
 				deleteActiveNotification(id, handle);
 			});
-			notification.on('close', () => {
+			notification.on('close', (details) => {
+				if (details.reason === 'timedOut') {
+					retainActionCenterNotification(handle);
+					return;
+				}
 				deleteActiveNotification(id, handle);
 			});
 			notification.show();

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {BuildChannel} from '@electron/common/BuildChannel';
+import type {GameActivityAPI} from '@electron/common/GameActivityTypes';
 import type {DesktopAccountStorageAPI} from '@fluxer/desktop_ipc/src/AccountContract';
 import type {DesktopHandoffAPI} from '@fluxer/desktop_ipc/src/BrowserHandoffContract';
 import type {DesktopCapabilityManifest} from '@fluxer/desktop_ipc/src/CapabilityManifest';
@@ -644,7 +645,24 @@ export type TrayActionPayload =
 			action: 'check-for-updates';
 	  };
 
-export interface ElectronAPI {
+export type DesktopGameOverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+export interface DesktopGameOverlayLayout {
+	visible: boolean;
+	corner: DesktopGameOverlayCorner;
+	width: number; // CSS px = DIP
+	height: number;
+}
+
+export interface TaskbarPinState {
+	supported: boolean;
+	pinned: boolean;
+	lafRequired: boolean;
+}
+
+export interface ElectronAPI extends GameActivityAPI {
+	getTaskbarPinState?: () => Promise<TaskbarPinState>;
+	requestTaskbarPin?: () => Promise<boolean>;
 	platform: NodeJS.Platform;
 	buildChannel: BuildChannel;
 	localDevelopmentInstanceUrl: string | null;
@@ -689,6 +707,7 @@ export interface ElectronAPI {
 	openVoiceDebugEventSinkPopout: (entries: Array<DesktopVoiceDebugEventSinkEntry>) => Promise<void>;
 	appendVoiceDebugEventSinkEntries: (entries: Array<DesktopVoiceDebugEventSinkEntry>) => void;
 	setVoiceDebugEventSinkStatsHtml: (html: string) => void;
+	setGameOverlayLayout: (layout: DesktopGameOverlayLayout) => void;
 	onWindowLiveResizeChange: (callback: (resizing: boolean) => void) => () => void;
 	onWindowMaximizeChange: (callback: (maximized: boolean) => void) => () => void;
 	openExternal: (url: string) => Promise<void>;
@@ -703,6 +722,7 @@ export interface ElectronAPI {
 	autostartIsEnabled: () => Promise<boolean>;
 	autostartIsInitialized: () => Promise<boolean>;
 	autostartMarkInitialized: () => Promise<void>;
+	autostartClaimStorePrompt: () => Promise<boolean>;
 	checkMediaAccess: (type: MediaAccessType) => Promise<MediaAccessStatus>;
 	requestMediaAccess: (type: MediaAccessType) => Promise<boolean>;
 	openMediaAccessSettings: (type: MediaAccessType) => Promise<void>;

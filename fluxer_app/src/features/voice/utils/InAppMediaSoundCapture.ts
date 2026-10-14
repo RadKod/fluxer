@@ -18,6 +18,7 @@ interface RoutedElement {
 }
 
 const routedElements: WeakMap<HTMLMediaElement, RoutedElement> = new WeakMap();
+const elementSources: WeakMap<HTMLMediaElement, MediaElementAudioSourceNode> = new WeakMap();
 const pendingElements: Set<WeakRef<HTMLMediaElement>> = new Set();
 
 function syncGainFromElement(el: HTMLMediaElement, gain: GainNode): void {
@@ -51,19 +52,29 @@ function attachToCaptureGraph(element: HTMLMediaElement): void {
 		logger.debug('Sound capture context unavailable; leaving media element on native playback', {error});
 		return;
 	}
-	let source: MediaElementAudioSourceNode;
-	let gain: GainNode;
+	let source = elementSources.get(element);
+	let gain: GainNode | undefined;
 	try {
-		source = ctx.createMediaElementSource(element);
+		if (!source) {
+			source = ctx.createMediaElementSource(element);
+			elementSources.set(element, source);
+		}
 		gain = ctx.createGain();
 		source.connect(gain);
 		gain.connect(master);
 	} catch (error) {
+		try {
+			source?.disconnect();
+		} catch {}
+		try {
+			gain?.disconnect();
+		} catch {}
 		logger.debug('Failed to route media element through sound capture graph', {error});
 		return;
 	}
 	syncGainFromElement(element, gain);
-	const volumeListener = (): void => syncGainFromElement(element, gain);
+	const routedGain = gain;
+	const volumeListener = (): void => syncGainFromElement(element, routedGain);
 	element.addEventListener('volumechange', volumeListener);
 	routedElements.set(element, {source, gain, volumeListener, connected: true});
 }

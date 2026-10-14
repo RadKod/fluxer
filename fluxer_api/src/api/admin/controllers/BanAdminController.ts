@@ -48,6 +48,10 @@ import {
 	BulkJobResponse,
 	CheckAvatarHashRequest,
 } from '@fluxer/schema/src/domains/admin/AdminSchemas';
+import {
+	UsernameDictionaryResponse,
+	UsernameDictionaryUpdateRequest,
+} from '@fluxer/schema/src/domains/admin/UsernameSchemas';
 import {UserIdParam} from '@fluxer/schema/src/domains/common/CommonParamSchemas';
 import type {ZodType} from 'zod';
 
@@ -258,6 +262,63 @@ async function checkBlocklistEntry(
 }
 
 export function BanAdminController(app: HonoApp) {
+	app.get(
+		'/admin/username-dictionary',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_LOOKUP),
+		requireAdminACL(AdminACLs.BAN_PROFILE_SUBSTRING_CHECK),
+		OpenAPI({
+			operationId: 'get_admin_username_dictionary',
+			summary: 'Get username dictionary',
+			responseSchema: UsernameDictionaryResponse,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description: 'Read the complete published username dictionary generation.',
+		}),
+		async (ctx) => {
+			const result = await ctx.get('adminService').banManagementService.getUsernameDictionary();
+			await recordAdminRead(ctx, {
+				targetType: 'username_dictionary',
+				targetId: 0n,
+				action: AdminAuditReadActions.LIST_BLOCKLIST_ENTRIES,
+				metadata: {dictionary_gen: result.dictionary_gen, result_count: result.count},
+			});
+			return ctx.json(result);
+		},
+	);
+	app.patch(
+		'/admin/username-dictionary',
+		RateLimitMiddleware(RateLimitConfigs.ADMIN_BAN_OPERATION),
+		requireAnyAdminACL([AdminACLs.BAN_PROFILE_SUBSTRING_ADD, AdminACLs.BAN_PROFILE_SUBSTRING_REMOVE]),
+		Validator('json', UsernameDictionaryUpdateRequest),
+		OpenAPI({
+			operationId: 'update_admin_username_dictionary',
+			summary: 'Update username dictionary',
+			responseSchema: UsernameDictionaryResponse,
+			requestSchema: UsernameDictionaryUpdateRequest,
+			statusCode: 200,
+			security: 'adminApiKey',
+			tags: 'Admin',
+			description:
+				'Publish an immutable username dictionary generation. Blocking entries require ban permission to add and unban permission to remove; allow entries use the inverse permissions. Requires an audit reason.',
+		}),
+		async (ctx) => {
+			const data = ctx.req.valid('json');
+			const acls = ctx.get('adminUserAcls');
+			const addAcl =
+				data.scope === 'uname_allow' ? AdminACLs.BAN_PROFILE_SUBSTRING_REMOVE : AdminACLs.BAN_PROFILE_SUBSTRING_ADD;
+			const removeAcl =
+				data.scope === 'uname_allow' ? AdminACLs.BAN_PROFILE_SUBSTRING_ADD : AdminACLs.BAN_PROFILE_SUBSTRING_REMOVE;
+			if (data.add.length && !acls.has(addAcl) && !acls.has(AdminACLs.WILDCARD)) throw new MissingACLError(addAcl);
+			if (data.remove.length && !acls.has(removeAcl) && !acls.has(AdminACLs.WILDCARD))
+				throw new MissingACLError(removeAcl);
+			return ctx.json(
+				await ctx
+					.get('adminService')
+					.banManagementService.publishUsernameDictionary(data, ctx.get('adminUserId'), ctx.get('auditLogReason')),
+			);
+		},
+	);
 	app.get(
 		'/admin/blocklists',
 		RateLimitMiddleware(RateLimitConfigs.ADMIN_BAN_OPERATION),

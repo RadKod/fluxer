@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {CANARY_APP_URL, STABLE_APP_URL, STATIC_CDN_URL} from '@electron/common/Constants';
+
 const DESKTOP_CEILING_CONNECT_SOURCES: ReadonlyArray<string> = Object.freeze(['https:', 'wss:', 'blob:', 'data:']);
 const DESKTOP_CEILING_IMAGE_SOURCES: ReadonlyArray<string> = Object.freeze(['https:', 'blob:', 'data:']);
 const DESKTOP_CEILING_MEDIA_SOURCES: ReadonlyArray<string> = Object.freeze(['https:', 'blob:', 'data:']);
@@ -10,42 +12,35 @@ const FRAME_SOURCES: ReadonlyArray<string> = Object.freeze([
 ]);
 
 const IMAGE_SOURCES: ReadonlyArray<string> = Object.freeze([
-	'https://*.fluxer.app',
+	STATIC_CDN_URL,
 	'https://i.ytimg.com',
 	'https://*.youtube.com',
-	'https://*.fluxer.media',
-	'https://fluxer.media',
 ]);
 
-const MEDIA_SOURCES: ReadonlyArray<string> = Object.freeze([
-	'https://*.fluxer.app',
-	'https://*.youtube.com',
-	'https://*.fluxer.media',
-	'https://fluxer.media',
-]);
+const MEDIA_SOURCES: ReadonlyArray<string> = Object.freeze([STATIC_CDN_URL, 'https://*.youtube.com']);
 
-const SCRIPT_SOURCES: ReadonlyArray<string> = Object.freeze(['https://*.fluxer.app']);
+const SCRIPT_SOURCES: ReadonlyArray<string> = Object.freeze([STABLE_APP_URL, CANARY_APP_URL, STATIC_CDN_URL]);
 
 const STYLE_SOURCES: ReadonlyArray<string> = Object.freeze([
-	'https://*.fluxer.app',
+	STABLE_APP_URL,
+	CANARY_APP_URL,
+	STATIC_CDN_URL,
 	'https://fonts.googleapis.com',
 	'https://api.fonts.coollabs.io',
 ]);
 
 const FONT_SOURCES: ReadonlyArray<string> = Object.freeze([
-	'https://*.fluxer.app',
+	STATIC_CDN_URL,
 	'https://fonts.gstatic.com',
 	'https://api.fonts.coollabs.io',
 ]);
 
 const CONNECT_SOURCES: ReadonlyArray<string> = Object.freeze([
-	'https://*.fluxer.app',
-	'wss://*.fluxer.app',
-	'https://*.fluxer.media',
-	'wss://*.fluxer.media',
-	'https://fluxer-uploads.ewr1.vultrobjects.com',
-	'https://fluxerstatus.com',
-	'https://fluxer.media',
+	STABLE_APP_URL,
+	CANARY_APP_URL,
+	STATIC_CDN_URL,
+	'wss://micup.gg',
+	'wss://canary.micup.gg',
 ]);
 
 const LOOPBACK_HTTP_SOURCES: ReadonlyArray<string> = Object.freeze([
@@ -54,9 +49,9 @@ const LOOPBACK_HTTP_SOURCES: ReadonlyArray<string> = Object.freeze([
 	'http://127.0.0.1:*',
 ]);
 
-const WORKER_SOURCES: ReadonlyArray<string> = Object.freeze(['https://*.fluxer.app', 'blob:']);
+const WORKER_SOURCES: ReadonlyArray<string> = Object.freeze([STATIC_CDN_URL, 'blob:']);
 
-const MANIFEST_SOURCES: ReadonlyArray<string> = Object.freeze(['https://*.fluxer.app']);
+const MANIFEST_SOURCES: ReadonlyArray<string> = Object.freeze([STABLE_APP_URL, CANARY_APP_URL, STATIC_CDN_URL]);
 
 const SELF_SOURCE = "'self'";
 const NONE_SOURCE = "'none'";

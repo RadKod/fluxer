@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {Gift, GiftDurationType} from '@app/features/gift/commands/GiftCommands';
-import {getPremiumProductName} from '@app/features/premium/utils/PremiumUtils';
+import {getPremiumProductFullName} from '@app/features/premium/utils/PremiumUtils';
 import type {I18n} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
 
 const VISIONARY_LIFETIME_DESCRIPTOR = msg({
 	message: 'Visionary (lifetime {premiumProductName})',
-	comment: 'Gift duration label for a lifetime Visionary benefit that includes the premium product name.',
+	comment: 'Gift duration label for a lifetime Visionary benefit that includes the Plus product name.',
 });
 const OTHER_OF_DESCRIPTOR = msg({
 	message: '{durationQuantity, plural, one {# day} other {# days}} of {premiumProductName}',
@@ -27,7 +27,7 @@ const OTHER_OF_4_DESCRIPTOR = msg({
 });
 const LIFETIME_DESCRIPTOR = msg({
 	message: 'Lifetime {premiumProductName}',
-	comment: 'Gift duration label for a lifetime premium gift.',
+	comment: 'Gift duration label for a lifetime Plus gift.',
 });
 
 interface GiftDurationTextConfig {
@@ -77,29 +77,29 @@ export function formatGiftDurationText(
 
 export function getPlutoniumDurationConfig(i18n: I18n): GiftDurationTextConfig {
 	return {
-		lifetime: i18n._(VISIONARY_LIFETIME_DESCRIPTOR, {premiumProductName: getPremiumProductName()}),
+		lifetime: i18n._(VISIONARY_LIFETIME_DESCRIPTOR, {premiumProductName: getPremiumProductFullName()}),
 		days: (durationQuantity: number) =>
-			i18n._(OTHER_OF_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductName()}),
+			i18n._(OTHER_OF_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductFullName()}),
 		weeks: (durationQuantity: number) =>
-			i18n._(OTHER_OF_2_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductName()}),
+			i18n._(OTHER_OF_2_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductFullName()}),
 		months: (durationQuantity: number) =>
-			i18n._(OTHER_OF_3_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductName()}),
+			i18n._(OTHER_OF_3_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductFullName()}),
 		years: (durationQuantity: number) =>
-			i18n._(OTHER_OF_4_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductName()}),
+			i18n._(OTHER_OF_4_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductFullName()}),
 	};
 }
 
 export function getPremiumDurationConfig(i18n: I18n): GiftDurationTextConfig {
 	return {
-		lifetime: i18n._(LIFETIME_DESCRIPTOR, {premiumProductName: getPremiumProductName()}),
+		lifetime: i18n._(LIFETIME_DESCRIPTOR, {premiumProductName: getPremiumProductFullName()}),
 		days: (durationQuantity: number) =>
-			i18n._(OTHER_OF_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductName()}),
+			i18n._(OTHER_OF_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductFullName()}),
 		weeks: (durationQuantity: number) =>
-			i18n._(OTHER_OF_2_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductName()}),
+			i18n._(OTHER_OF_2_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductFullName()}),
 		months: (durationQuantity: number) =>
-			i18n._(OTHER_OF_3_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductName()}),
+			i18n._(OTHER_OF_3_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductFullName()}),
 		years: (durationQuantity: number) =>
-			i18n._(OTHER_OF_4_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductName()}),
+			i18n._(OTHER_OF_4_DESCRIPTOR, {durationQuantity, premiumProductName: getPremiumProductFullName()}),
 	};
 }
 

@@ -218,6 +218,8 @@ extract_core_fields(
         user_id => UserId,
         user_data => UserData,
         custom_status => maps:get(custom_status, D, null),
+        game_activity_policy => maps:get(game_activity_policy, D, undefined),
+        game_activity_request_nonce => maps:get(game_activity_request_nonce, D, undefined),
         version => Version,
         token_hash => TokenHash,
         auth_session_id_hash => AuthSessionIdHash,

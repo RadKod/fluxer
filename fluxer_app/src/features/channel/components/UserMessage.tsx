@@ -44,12 +44,13 @@ import markupStyles from '@app/features/theme/styles/Markup.module.css';
 import styles from '@app/features/theme/styles/Message.module.css';
 import MobileLayout from '@app/features/ui/state/MobileLayout';
 import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
+import {PremiumUserBadge} from '@app/features/user/components/PremiumUserBadge';
+import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge';
 import UserSettings from '@app/features/user/state/UserSettings';
 import Users from '@app/features/user/state/Users';
 import * as DateUtils from '@app/features/user/utils/DateFormatting';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
-import {FLUXERBOT_ID} from '@fluxer/constants/src/AppConstants';
-import {MessageFlags, MessageStates, MessageTypes} from '@fluxer/constants/src/ChannelConstants';
+import {MessageFlags, MessageStates} from '@fluxer/constants/src/ChannelConstants';
 import type {I18n} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
@@ -117,7 +118,8 @@ export const UserMessage = observer(() => {
 	} = useMessageViewContext();
 	const isEditing = MessageEdit.isEditing(message.channelId, message.id);
 	const userAuthor = Users.getUser(message.author.id);
-	const author = message.webhookId != null ? message.author : (userAuthor ?? message.author);
+	const author =
+		previewOverrides?.author ?? (message.webhookId != null ? message.author : (userAuthor ?? message.author));
 	const formattedDate = DateUtils.getRelativeDateString(message.timestamp, i18n);
 	const jumpHeadingLabel = useMemo(() => {
 		const displayName = previewOverrides?.displayName ?? NicknameUtils.getDisplayName(message.author);
@@ -400,7 +402,7 @@ export const UserMessage = observer(() => {
 			</div>
 		);
 	}, [handleRetryFailedMessage, message.nonce, mobileLayout.enabled, previewContext, shouldShowFailedFooter, i18n]);
-	if (message.type === MessageTypes.CLIENT_SYSTEM && message.author.id === FLUXERBOT_ID) {
+	if (message.isClientSystemMessage()) {
 		return (
 			<SpoilerSyncProvider data-flx="channel.user-message.spoiler-sync-provider">
 				<div className={styles.messageContent} data-flx="channel.user-message.message-content">
@@ -610,6 +612,17 @@ export const UserMessage = observer(() => {
 										previewName={previewOverrides?.displayName}
 										data-flx="channel.user-message.message-username--2"
 									/>
+									<VerifiedUserBadge
+										user={author}
+										className={styles.userTagOffset}
+										data-flx="channel.user-message.verified-user-badge"
+									/>
+									<PremiumUserBadge
+										user={author}
+										className={styles.userTagOffset}
+										focusable={false}
+										data-flx="channel.user-message.premium-user-badge"
+									/>
 									{(author.bot || message.isCrosspostCopy) && (
 										<UserTag
 											className={styles.userTagOffset}
@@ -716,6 +729,17 @@ export const UserMessage = observer(() => {
 									previewColor={previewOverrides?.usernameColor}
 									previewName={previewOverrides?.displayName}
 									data-flx="channel.user-message.message-username--3"
+								/>
+								<VerifiedUserBadge
+									user={author}
+									className={styles.userTagOffset}
+									data-flx="channel.user-message.verified-user-badge--2"
+								/>
+								<PremiumUserBadge
+									user={author}
+									className={styles.userTagOffset}
+									focusable={false}
+									data-flx="channel.user-message.premium-user-badge--2"
 								/>
 								{(author.bot || message.isCrosspostCopy) && (
 									<UserTag

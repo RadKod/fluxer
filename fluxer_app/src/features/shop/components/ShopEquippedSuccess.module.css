@@ -1,0 +1,78 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.success {
+	--shop-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: var(--spacing-2);
+	text-align: center;
+}
+
+.visual {
+	position: relative;
+	width: 18rem;
+	margin-bottom: var(--spacing-2);
+}
+
+.crownBox {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	aspect-ratio: 9 / 7;
+	border-radius: var(--radius-lg);
+	background: var(--background-secondary-lighter);
+}
+
+.crown {
+	width: 3rem;
+	height: 3rem;
+	color: var(--plutonium-icon);
+}
+
+/* The one reward moment: fades and settles in once, never from zero size. */
+.check {
+	position: absolute;
+	right: -0.5rem;
+	bottom: -0.5rem;
+	width: 2.25rem;
+	height: 2.25rem;
+	border-radius: var(--radius-full);
+	background: var(--background-secondary);
+	color: var(--status-online);
+	animation: checkIn 0.22s var(--shop-ease-out) both;
+}
+
+@keyframes checkIn {
+	from {
+		opacity: 0;
+		transform: scale(0.9);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.title {
+	margin: 0;
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: var(--text-primary);
+	outline: none;
+}
+
+.body {
+	margin: 0;
+	font-size: 0.875rem;
+	color: var(--text-secondary);
+}
+
+.items {
+	margin: 0;
+	padding: 0;
+	font-size: 0.875rem;
+	color: var(--text-primary);
+	list-style: none;
+}

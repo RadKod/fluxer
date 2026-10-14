@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type {AvatarDecorationSurface} from '@app/features/cosmetics/components/AvatarUltraLayer';
 import Presence from '@app/features/presence/state/Presence';
 import TransientPresence from '@app/features/presence/state/TransientPresence';
 import {Avatar} from '@app/features/ui/components/Avatar';
@@ -27,6 +28,7 @@ export interface StatusAwareAvatarProps {
 	mediaSize?: MediaProxyImageSize;
 	status?: string | null;
 	animateStatusCutout?: boolean;
+	decorationSurface?: AvatarDecorationSurface;
 }
 
 function getStatusWithTransientFallback(userId: string): StatusType {
@@ -55,6 +57,7 @@ export const StatusAwareAvatar: React.FC<StatusAwareAvatarProps> = observer(
 		mediaSize,
 		status: externalStatus,
 		animateStatusCutout,
+		decorationSurface,
 	}) => {
 		if (!user) {
 			return null;
@@ -85,6 +88,7 @@ export const StatusAwareAvatar: React.FC<StatusAwareAvatarProps> = observer(
 				guildId={guildId}
 				mediaSize={mediaSize}
 				animateStatusCutout={animateStatusCutout}
+				decorationSurface={decorationSurface}
 				data-flx="ui.status-aware-avatar.avatar"
 			/>
 		);

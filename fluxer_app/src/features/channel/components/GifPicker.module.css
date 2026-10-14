@@ -657,3 +657,17 @@
 		box-shadow: none;
 	}
 }
+
+/* Micup: white accent in the coal and dark themes */
+:global(html:is(.theme-coal, .theme-dark)) .gridItemFavorites .gridItemCategoryTitleText,
+:global(html:is(.theme-coal, .theme-dark)) .gridItemFavorites .gridItemIcon,
+:global(html:is(.theme-coal, .theme-dark)) .gridItemCategoryEmpty .gridItemCategoryTitleText,
+:global(html:is(.theme-coal, .theme-dark)) .gridItemCategoryEmpty .gridItemIcon {
+	color: var(--text-on-brand-primary);
+}
+
+/* Micup: static list skeletons */
+.skeletonItem {
+	animation: none;
+	will-change: auto;
+}

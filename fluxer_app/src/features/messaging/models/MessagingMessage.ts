@@ -17,6 +17,7 @@ import Users from '@app/features/user/state/Users';
 import {LRUMap} from '@app/lib/list/ListLruMap';
 import {MessageFlags, MessageStates, MessageTypes} from '@fluxer/constants/src/ChannelConstants';
 import type {MessageEmbed} from '@fluxer/schema/src/domains/message/EmbedSchemas';
+import type {MessageActionRow} from '@fluxer/schema/src/domains/message/MessageComponentSchemas';
 import type {
 	AllowedMentions,
 	ChannelMention,
@@ -132,9 +133,12 @@ interface MessageRecordOptions {
 	instanceId?: string;
 	missingReactions?: 'empty' | 'preserve';
 	skipReactionHydration?: boolean;
+	snapshotIdentity?: object;
+	referencedSnapshotIdentity?: object;
 }
 
 export class Message {
+	readonly snapshotIdentity: object;
 	readonly instanceId: string;
 	readonly id: string;
 	readonly channelId: string;
@@ -168,8 +172,10 @@ export class Message {
 	readonly _allowedMentions?: AllowedMentions;
 	readonly _favoriteMemeId?: string;
 	readonly stickers?: ReadonlyArray<MessageStickerItem>;
+	readonly components: ReadonlyArray<MessageActionRow>;
 
 	constructor(message: MessageInput, options?: MessageRecordOptions) {
+		this.snapshotIdentity = options?.snapshotIdentity ?? {};
 		this.instanceId = options?.instanceId ?? RuntimeConfig.localInstanceDomain;
 		const shouldCacheAuthor = !message.webhook_id;
 		if (!options?.skipUserCache) {
@@ -227,6 +233,7 @@ export class Message {
 					skipUserCache: true,
 					missingReactions: 'preserve',
 					skipReactionHydration: options?.skipReactionHydration,
+					snapshotIdentity: options?.referencedSnapshotIdentity,
 				})
 			: undefined;
 		this.messageSnapshots = message.message_snapshots ? Object.freeze(message.message_snapshots) : undefined;
@@ -238,6 +245,7 @@ export class Message {
 		this._allowedMentions = message._allowedMentions;
 		this._favoriteMemeId = message._favoriteMemeId;
 		this.stickers = message.stickers ? Object.freeze(message.stickers) : undefined;
+		this.components = Object.freeze(message.components ?? []);
 	}
 
 	hasFlag(flag: number): boolean {
@@ -344,13 +352,20 @@ export class Message {
 				referenced_message: updates.referenced_message ?? this.referencedMessage?.toJSON(),
 				message_snapshots: updates.message_snapshots ?? this.messageSnapshots,
 				call: updates.call ?? this.call,
+				components: 'components' in updates ? updates.components : this.components,
 				state: updates.state ?? this.state,
 				nonce: updates.nonce ?? this.nonce,
 				blocked: updates.blocked ?? this.blocked,
 				_allowedMentions: updates._allowedMentions ?? this._allowedMentions,
 				_favoriteMemeId: updates._favoriteMemeId ?? this._favoriteMemeId,
 			},
-			{skipUserCache: true, instanceId: this.instanceId},
+			{
+				skipUserCache: true,
+				instanceId: this.instanceId,
+				snapshotIdentity: this.snapshotIdentity,
+				referencedSnapshotIdentity:
+					updates.referenced_message == null ? this.referencedMessage?.snapshotIdentity : undefined,
+			},
 		);
 	}
 
@@ -421,6 +436,9 @@ export class Message {
 		if (this.invites.length !== other.invites.length) return false;
 		if (this.gifts.length !== other.gifts.length) return false;
 		if (this.themes.length !== other.themes.length) return false;
+		if (this.components !== other.components && JSON.stringify(this.components) !== JSON.stringify(other.components)) {
+			return false;
+		}
 		for (let i = 0; i < this.mentions.length; i++) {
 			if (!this.mentions[i].equals(other.mentions[i])) return false;
 		}
@@ -550,6 +568,7 @@ export class Message {
 			referenced_message: this.referencedMessage?.toJSON(),
 			message_snapshots: this.messageSnapshots,
 			call: this.call,
+			components: this.components,
 			state: this.state,
 			nonce: this.nonce,
 			blocked: this.blocked,
