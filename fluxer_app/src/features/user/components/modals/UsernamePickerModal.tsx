@@ -115,7 +115,7 @@ export const UsernamePickerModal = observer(
 				{announcement ? (
 					<>
 						<p>
-							<Trans>Micup no longer uses #1234 tags. Everyone has a unique username: @yourname.</Trans>
+							<Trans>sanalyer no longer uses #1234 tags. Everyone has a unique username: @yourname.</Trans>
 						</p>
 						<p>
 							<Trans>Choose a unique username. Your friends can find and add you with this name.</Trans>
@@ -135,7 +135,7 @@ export const UsernamePickerModal = observer(
 					</>
 				) : (
 					<p>
-						<Trans>Tagged names are no longer used. Choose a unique username to continue using Micup.</Trans>
+						<Trans>Tagged names are no longer used. Choose a unique username to continue using sanalyer.</Trans>
 					</p>
 				)}
 				<UsernamePicker

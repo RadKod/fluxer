@@ -87,7 +87,7 @@ function previousReleaseRecord(apiEndpoint: string, token: string = TOKEN): Reco
 			publicPushVapidKey: null,
 			limits: {version: 1, traitDefinitions: [], rules: []},
 			appPublic: {
-				branding: {product_name: 'Micup'},
+				branding: {product_name: 'sanalyer'},
 				setup: {configured: true, admin_url: null},
 				legal: {terms_url: null, privacy_url: null, source_url: null},
 				registration: {collect_date_of_birth: true},

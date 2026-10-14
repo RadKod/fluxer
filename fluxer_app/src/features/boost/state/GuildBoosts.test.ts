@@ -195,7 +195,7 @@ describe('GuildBoosts', () => {
 	it('ignores an older count response after reopening the same community', async () => {
 		guildState.guilds[GUILD_ID] = new Guild({
 			id: GUILD_ID,
-			name: 'Micup',
+			name: 'sanalyer',
 			icon: null,
 			vanity_url_code: null,
 			owner_id: '1',

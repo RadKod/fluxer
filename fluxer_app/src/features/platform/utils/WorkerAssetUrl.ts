@@ -6,7 +6,7 @@ const OFFICIAL_WORKER_ASSET_HOSTS = new Set([
 	'web.canary.fluxer.app',
 	'fluxer.com',
 	'canary.fluxer.com',
-	'micup.gg',
+	'sanalyer.com',
 ]);
 const WORKER_ASSET_VERSION_QUERY_PARAM = 'v';
 

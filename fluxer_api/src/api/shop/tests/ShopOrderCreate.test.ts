@@ -150,7 +150,7 @@ describe('shop order creation', () => {
 			display_rate_micro: 50_000,
 		});
 		expect(payriffCreates()[0]!.body).toMatchObject({
-			description: `Micup Plus · 1 ay — mağazadaki fiyat 67,6 TL. Bu ödeme Azerbaycan manatı ile alınır: 3,38 AZN. Sipariş #${created.id}`,
+			description: `sanalyer Plus · 1 ay — mağazadaki fiyat 67,6 TL. Bu ödeme Azerbaycan manatı ile alınır: 3,38 AZN. Sipariş #${created.id}`,
 		});
 		await getInstanceConfigRepository().updateShopConfig(() => ({try_to_azn_rate_override_micro: 60_000}));
 		expect(
@@ -177,7 +177,7 @@ describe('shop order creation', () => {
 		const created = await createOrder('premium:1');
 		expect(created).toMatchObject({display_currency: 'AZN', display_amount_minor: 338, display_rate_micro: null});
 		expect(payriffCreates()[0]!.body).toMatchObject({
-			description: `Micup Plus · 1 ay — mağazadaki fiyat 3,38 AZN. Sipariş #${created.id}`,
+			description: `sanalyer Plus · 1 ay — mağazadaki fiyat 3,38 AZN. Sipariş #${created.id}`,
 		});
 	});
 

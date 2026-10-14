@@ -7,7 +7,7 @@ import {makeAutoObservable} from 'mobx';
 
 // Micup: Fluxer's hosts (fluxer.app and every subdomain, fluxer.gg, fluxer.gift, fluxerstatus.com) are another
 // service's and open with the usual warning.
-const BUILT_IN_TRUST_PATTERNS = ['micup.gg', 'canary.micup.gg'] as const;
+const BUILT_IN_TRUST_PATTERNS = ['sanalyer.com'] as const;
 const TRUST_EVERYTHING_PATTERN = '*';
 const LEGACY_TRUSTED_DOMAINS_KEY = 'TrustedDomain';
 

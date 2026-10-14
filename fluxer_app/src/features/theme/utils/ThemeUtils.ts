@@ -6,7 +6,7 @@ import * as CodeLinkUtils from '@app/features/messaging/utils/CodeLinkUtils';
 import {buildMediaProxyURLForInstance} from '@app/features/messaging/utils/MediaProxyUtils';
 
 // Micup: Fluxer's theme hosts are another service's.
-const OFFICIAL_THEME_URL_BASES = Object.freeze(['https://micup.gg/theme']);
+const OFFICIAL_THEME_URL_BASES = Object.freeze(['https://sanalyer.com/theme']);
 const appendThemePath = (endpoint: string | null | undefined): string | null => {
 	if (!endpoint) return null;
 	const trimmed = endpoint.replace(/\/$/, '');

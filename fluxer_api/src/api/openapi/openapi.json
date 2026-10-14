@@ -43815,7 +43815,7 @@
 					"A YouTube video",
 					"A Twitch channel, video or clip",
 					"A Kick channel, video or clip",
-					"A Micup community invite"
+					"A sanalyer community invite"
 				],
 				"enum": ["youtube", "twitch", "kick", "invite"],
 				"type": "string"
@@ -47399,7 +47399,7 @@
 				"type": "string"
 			},
 			"ProfilePrivacyLevel": {
-				"description": "Profile privacy visibility level (response; Micup adds EVERYONE and ONLY_ME)",
+				"description": "Profile privacy visibility level (response; sanalyer adds EVERYONE and ONLY_ME)",
 				"type": "integer",
 				"enum": [0, 1, 2, 100, 101],
 				"format": "int32",

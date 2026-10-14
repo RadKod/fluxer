@@ -22,7 +22,7 @@ vi.mock('@lingui/react/macro', () => ({
 		},
 	}),
 }));
-vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PRODUCT_NAME: 'Micup'}));
+vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PRODUCT_NAME: 'sanalyer'}));
 vi.mock('@app/features/app/state/Initialization', async () => {
 	const {observable} = await import('mobx');
 	state.ready = observable.box(true);
@@ -126,7 +126,7 @@ describe('StoreAutostartPromptManager', () => {
 		expect(api.autostartClaimStorePrompt).toHaveBeenCalledTimes(1);
 		expect(pushed).toHaveLength(1);
 		const prompt = mount(pushed[0]());
-		expect(prompt.querySelector('h1')?.textContent).toBe('Start Micup when your computer starts?');
+		expect(prompt.querySelector('h1')?.textContent).toBe('Start sanalyer when your computer starts?');
 		const buttons = [...prompt.querySelectorAll('button')];
 		expect(buttons.map((button) => button.textContent)).toEqual(['No', 'Yes']);
 

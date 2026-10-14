@@ -228,7 +228,7 @@ export async function startDeepLinkHandling(): Promise<void> {
 }
 
 // Micup: Fluxer's app hosts are another service's, so their channel links are not opened in place.
-const OFFICIAL_INTERNAL_APP_HOSTS = ['micup.gg'];
+const OFFICIAL_INTERNAL_APP_HOSTS = ['sanalyer.com'];
 const getNormalizedWebAppHost = (): string => {
 	try {
 		return new URL(RuntimeConfig.webAppBaseUrl).host.toLowerCase();

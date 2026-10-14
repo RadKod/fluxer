@@ -106,7 +106,7 @@ describe('Bot System catalog', () => {
 	it('opens developer documentation through the external link warning', async () => {
 		await render([]);
 		await act(async () => button('Developer documentation').click());
-		expect(links.openExternalUrlWithWarning).toHaveBeenCalledWith('https://micup.gg/docs');
+		expect(links.openExternalUrlWithWarning).toHaveBeenCalledWith('https://docs.fluxer.app');
 		expect(container.querySelector('[data-flx="discovery.apps.scroller"]')).toBeNull();
 	});
 	it('each card shows the public application name and icon', async () => {

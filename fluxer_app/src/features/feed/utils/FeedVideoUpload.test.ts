@@ -265,7 +265,7 @@ describe('uploadFeedVideo', () => {
 		expect(resign).toHaveBeenCalledTimes(1);
 	});
 
-	it('never sends the Micup session token to Bunny', async () => {
+	it('never sends the sanalyer session token to Bunny', async () => {
 		patchReply = (_, index) => (index === 0 ? 'drop' : undefined);
 		await expect(upload(clip(9 * MiB))).resolves.toBe('ok');
 		expect(requests.map((request) => request.method)).toContain('HEAD');

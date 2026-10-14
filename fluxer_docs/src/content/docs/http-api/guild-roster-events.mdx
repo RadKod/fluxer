@@ -1,12 +1,12 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Guild roster events
-description: Hourly roster event settings, permissions, and the Micup Roster bot's announcements and voice checks.
+description: Hourly roster event settings, permissions, and the sanalyer Roster bot's announcements and voice checks.
 ---
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-Micup Roster announces a guild's hourly events, collects participants through the Join and Leave buttons on each announcement and, during the transition to buttons, through ✅ reactions, and checks their voice channels at the start time. Manage events in **Server Settings → Event bot** or through the four routes below. These routes expose settings, not roster membership.
+sanalyer Roster announces a guild's hourly events, collects participants through the Join and Leave buttons on each announcement and, during the transition to buttons, through ✅ reactions, and checks their voice channels at the start time. Manage events in **Server Settings → Event bot** or through the four routes below. These routes expose settings, not roster membership.
 
 Every route requires a signed-in user, guild membership, and [MANAGE_GUILD](/http-api/permissions/). Bot and OAuth2 bearer credentials are refused with 403 `ACCESS_DENIED`. `MANAGE_GUILD` is an [elevated permission](/http-api/permissions/#elevated-permissions): a non-owner must have an enrolled authenticator when the guild requires MFA, or the request returns 400 `TWO_FACTOR_REQUIRED`.
 
@@ -218,7 +218,7 @@ Field validation returns 400 `INVALID_FORM_BODY`. Its `errors` entries carry a f
 | SNOWFLAKE_OUT_OF_RANGE | A supplied ID is outside the supported snowflake range |
 | INVALID_FORMAT | A required value is missing, has the wrong type or range, or an update has no recognised fields |
 
-## Invite Micup Roster
+## Invite sanalyer Roster
 
 Use the `application_id` and `invite_permissions` from the list response. On the instance's client origin, the bot invite URL has this form:
 
@@ -240,7 +240,7 @@ This uses the normal [OAuth2 bot invitation](/http-api/oauth2/) flow. The invite
 
 Move the bot's role above the roles of members it needs to move, and allow its permissions in the selected channels. It cannot move the guild owner. The invite does not request `MENTION_EVERYONE`: make the selected role mentionable if the bot does not separately have that permission. The caller passing the role check does not give the bot permission to mention the role.
 
-Micup Roster runs through the instance's own services without a separate Gateway session, so it can appear offline in the member list. Its bot token is not used for this feature and is refused for bot-token authentication.
+sanalyer Roster runs through the instance's own services without a separate Gateway session, so it can appear offline in the member list. Its bot token is not used for this feature and is refused for bot-token authentication.
 
 ## Hourly behaviour
 

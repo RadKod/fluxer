@@ -1513,8 +1513,8 @@ msgstr "{displayName} ekranı"
 
 #. Instance selector error shown when the instance speaks a protocol generation this client does not know. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts:24
-msgid "{domain} runs a newer version of Micup than this app. Update Micup, then try again."
-msgstr "{domain} daha yeni bir Micup sürümü çalıştırıyor. Micup'ı güncelleyin, sonra tekrar deneyin."
+msgid "{domain} runs a newer version of sanalyer than this app. Update sanalyer, then try again."
+msgstr "{domain} daha yeni bir sanalyer sürümü çalıştırıyor. sanalyer'i güncelleyin, sonra tekrar deneyin."
 
 #. Profile timezone difference text. duration is a localized hours/minutes phrase for how far ahead the target user's local time is.
 #: src/features/user/components/popouts/UserProfileShared.tsx:65
@@ -2027,8 +2027,8 @@ msgstr "Aylık {price}"
 
 #. Secondary shop price for someone without the Micup Plus discount. {price} is formatted in TL or AZN.
 #: src/features/shop/components/ShopPriceLine.tsx:27
-msgid "{price} with Micup Plus"
-msgstr "Micup Plus ile {price}"
+msgid "{price} with sanalyer Plus"
+msgstr "sanalyer Plus ile {price}"
 
 #: src/features/app/components/BootstrapErrorScreen.tsx:75
 msgid "{PRODUCT_NAME} failed to start properly. This could be due to corrupted data or a temporary issue."
@@ -3188,7 +3188,7 @@ msgstr "bir dakika"
 #. Desktop updater modal body when the exact target version is unknown. productName is the app name.
 #: src/features/updater/commands/UpdaterModalCommands.tsx:25
 msgid "A new desktop version is available. Download the installer, then run it to update {productName}."
-msgstr "Yeni bir masaüstü sürümü mevcut. Kurulum dosyasını indirin ve ardından {productName}'u güncellemek için çalıştırın."
+msgstr "Yeni bir masaüstü sürümü mevcut. Kurulum dosyasını indirin ve ardından {productName}'i güncellemek için çalıştırın."
 
 #. Description for has:poll. Sentence case, no trailing punctuation.
 #: src/features/search/utils/SearchUtils.ts:55
@@ -4499,12 +4499,12 @@ msgstr "{everyoneMention} ve {hereMention} etiketlerine izin ver"
 #. Shown in video settings on the macOS app when camera access is denied. {PRODUCT_NAME} is the app name. Keep 'System Settings', 'Privacy & Security' and the permission name as macOS shows them in this language.
 #: src/features/user/components/modals/tabs/UserVideoTab.tsx:230
 msgid "Allow {PRODUCT_NAME} to access your camera in System Settings → Privacy & Security → Camera."
-msgstr "Kameranıza erişmesi için {PRODUCT_NAME}'a Sistem Ayarları → Gizlilik ve Güvenlik → Kamera bölümünden izin verin."
+msgstr "Kameranıza erişmesi için {PRODUCT_NAME}'e Sistem Ayarları → Gizlilik ve Güvenlik → Kamera bölümünden izin verin."
 
 #. Shown in voice settings on the macOS app when microphone access is denied. {PRODUCT_NAME} is the app name. Keep 'System Settings', 'Privacy & Security' and the permission name as macOS shows them in this language.
 #: src/features/user/components/modals/tabs/UserVoiceTab.tsx:551
 msgid "Allow {PRODUCT_NAME} to access your microphone in System Settings → Privacy & Security → Microphone."
-msgstr "{PRODUCT_NAME}'un mikrofonunuza erişmesine İzin Verin → Sistem Ayarları → Gizlilik ve Güvenlik → Mikrofon."
+msgstr "{PRODUCT_NAME}'in mikrofonunuza erişmesine İzin Verin → Sistem Ayarları → Gizlilik ve Güvenlik → Mikrofon."
 
 #: src/features/user/components/modals/tabs/UserVoiceTab.tsx:556
 msgid "Allow {PRODUCT_NAME} to access your microphone. Check your browser's address bar or settings."
@@ -4513,7 +4513,7 @@ msgstr "{PRODUCT_NAME} uygulamasının mikrofonunuza erişmesine izin verin. Tar
 #. Body in the screen-share picker after the user has opened macOS screen recording settings and the permission is not active yet. {productName} and {productName2} are the app name. Keep "Screen Recording" and "System Settings" as macOS shows them in this language.
 #: src/features/voice/components/modals/screen_share_picker_modal/ScreenSharePickerDisplayPermissionPrompt.tsx:36
 msgid "Allow {productName} under Screen Recording in System Settings. If it is already allowed, relaunch {productName2} so macOS applies it."
-msgstr "Sistem Ayarları'ndaki Ekran Kaydı altında {productName}'a izin verin. Zaten izin verildiyse, macOS'un bunu uygulayabilmesi için {productName2}'u yeniden başlatın."
+msgstr "Sistem Ayarları'ndaki Ekran Kaydı altında {productName}'e izin verin. Zaten izin verildiyse, macOS'un bunu uygulayabilmesi için {productName2}'u yeniden başlatın."
 
 #. Private thread setting that lets non-moderators add other members.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts:222
@@ -5262,7 +5262,7 @@ msgstr "Herkes hesap isteyebilir ancak bir yönetici onaylamalıdır."
 #. Privacy > Profile privacy: helper text under the Everyone option. {productName} is the app name. Legal-effect text.
 #: src/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab.tsx:32
 msgid "Anyone signed in to {productName} can see your bio, follow lists, posts and media. New posts can appear in Discover."
-msgstr "{productName}'a giriş yapmış herkes biyografinizi, takip listelerinizi, gönderilerinizi ve medyanızı görebilir. Yeni gönderileriniz Keşfet'te çıkabilir."
+msgstr "{productName}'e giriş yapmış herkes biyografinizi, takip listelerinizi, gönderilerinizi ve medyanızı görebilir. Yeni gönderileriniz Keşfet'te çıkabilir."
 
 #. Warning under the recovery key in the recovery kit modal.
 #: src/features/auth/components/modals/RecoveryKitModal.tsx:59
@@ -6293,7 +6293,7 @@ msgstr "Geri"
 #. Button on the expired passkey page that returns to the app. productName is the app name.
 #: src/features/auth/passkey_migration/PasskeyBridgePage.tsx:44
 msgid "Back to {productName}"
-msgstr "{productName}'a geri dön"
+msgstr "{productName}'e geri dön"
 
 #. Accessible label for returning from the account switcher authentication form to the account list.
 #: src/features/auth/components/accounts/account_switcher_modal/AccountSwitcherOverlay.tsx:31
@@ -11805,8 +11805,8 @@ msgstr "Bu mesaj yayınlanamadı"
 
 #. Instance selector error shown when no Fluxer instance answered at the address. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts:20
-msgid "Couldn't reach a Micup instance at {domain}. Check the address and that the instance is online."
-msgstr "{domain} adresinde bir Micup örneğine ulaşılamadı. Adresi ve örneğin çevrimiçi olup olmadığını kontrol edin."
+msgid "Couldn't reach a sanalyer instance at {domain}. Check the address and that the instance is online."
+msgstr "{domain} adresinde bir sanalyer örneğine ulaşılamadı. Adresi ve örneğin çevrimiçi olup olmadığını kontrol edin."
 
 #. Title of the generic fallback error modal shown when reactivating a Plutonium subscription fails.
 #: src/features/app/components/dialogs/components/plutonium/hooks/useSubscriptionActions.ts:50
@@ -13887,7 +13887,7 @@ msgstr "Masaüstü güncellemesi hazır"
 #. Desktop updater modal body. The version placeholder is the downloaded app version; productName is the app name.
 #: src/features/updater/commands/UpdaterModalCommands.tsx:91
 msgid "Desktop version {version} has been downloaded. Restart {productName} to finish installing."
-msgstr "Masaüstü sürümü {version} indirildi. Kurulumu tamamlamak için {productName}'u yeniden başlatın."
+msgstr "Masaüstü sürümü {version} indirildi. Kurulumu tamamlamak için {productName}'i yeniden başlatın."
 
 #. Desktop updater modal body. The version placeholder is the target app version; productName is the app name.
 #: src/features/updater/commands/UpdaterModalCommands.tsx:20
@@ -17709,7 +17709,7 @@ msgstr "Florida"
 #. Placeholder for the product name input in the setup wizard.
 #: src/features/app/components/setup/SetupWizardSteps.tsx:179
 msgid "Fluxer"
-msgstr "Micup"
+msgstr "sanalyer"
 
 #. Settings search synonym. Used to match this term when the user types it in the settings search bar.
 #: src/features/user/components/settings_utils/section_registry/AccessibilitySections.ts:179
@@ -18979,7 +18979,7 @@ msgstr "Geri dönün ve geçerli bir e-posta adresi girin."
 #. Body of the page shown after a passkey confirmation finished in a separate tab. productName is the app name.
 #: src/features/auth/passkey_migration/PasskeyBridgePage.tsx:52
 msgid "Go back to {productName} to continue."
-msgstr "{productName}'a geri dönerek devam edin."
+msgstr "{productName}'e geri dönerek devam edin."
 
 #. Accessible label for the community row of an expression info card, which opens a community the viewer is already a member of. {communityName} is the community name.
 #: src/features/expressions/components/ExpressionInfoCard.tsx:89
@@ -19526,7 +19526,7 @@ msgstr "Yardım Merkezi düğmesi kenar çubuğunda"
 
 #: src/features/user/components/modals/tabs/LanguageTab.tsx:350
 msgid "Help translate {PRODUCT_NAME} into your language on <0>{I18N_WEBLATE_DOMAIN}</0>."
-msgstr "{PRODUCT_NAME}'u <0>{I18N_WEBLATE_DOMAIN}</0> üzerinde dilinize çevirmemize yardım edin."
+msgstr "{PRODUCT_NAME}'i <0>{I18N_WEBLATE_DOMAIN}</0> üzerinde dilinize çevirmemize yardım edin."
 
 #. Settings search synonym. Codec name; keep literal. Used to match this term in the settings search bar.
 #: src/features/user/components/settings_utils/search_index/VoiceVideoIndex.ts:104
@@ -20101,7 +20101,7 @@ msgstr "Eğer bir hesap bu adresi kullanıyorsa, şifre sıfırlama talimatları
 #. Advice shown after the user asks for the macOS Screen Recording or Input Monitoring permission. macOS then shows its own dialog with the buttons Quit & Reopen and Later. {productName} picks up the change without restarting, so the user should choose Later. Use the button name macOS shows in this language. {productName} is the app name.
 #: src/features/permissions/system/components/useMacPermissionControl.ts:39
 msgid "If macOS asks to quit and reopen {productName}, choose Later."
-msgstr "macOS sizden {productName}'u kapatıp yeniden açmanızı isterse, Sonra'yı seçin."
+msgstr "macOS sizden {productName}'i kapatıp yeniden açmanızı isterse, Sonra'yı seçin."
 
 #. IAR modal: inline safety note for self-harm reports.
 #: src/features/moderation/components/report_modal/IARModalCopy.ts:374
@@ -21566,7 +21566,7 @@ msgstr "Katıldın"
 #. Community members table column header for the date the account joined Fluxer.
 #: src/features/channel/components/guild_members_page/MembersTableHeaderRow.tsx:29
 msgid "Joined {productName}"
-msgstr "{productName}'a katılma tarihi"
+msgstr "{productName}'e katılma tarihi"
 
 #. Generic short action label that scrolls/navigates to a specific message.
 #: src/features/i18n/utils/CommonMessageDescriptors.ts:508
@@ -21688,7 +21688,7 @@ msgstr "Sadece katıl (diğer bağlantıları koru)"
 #. Hint under the Plutonium page hero buttons. productName is the app name. donateLink is a link whose text is "Donate instead".
 #: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts:17
 msgid "Just want to support {productName}'s open source development? {donateLink}."
-msgstr "Yalnızca {productName}'un açık kaynak geliştirme sürecini desteklemek mi istiyorsunuz? {donateLink}."
+msgstr "Yalnızca {productName}'in açık kaynak geliştirme sürecini desteklemek mi istiyorsunuz? {donateLink}."
 
 #: src/features/input/utils/KeybindUtils.ts:110
 msgctxt "keyboard-key-name"
@@ -22330,8 +22330,8 @@ msgstr "Ömür boyu {premiumProductName}, numaralı rozet, #0000 etiketi ve yaln
 
 #. Note in the Visionary buy dialog, under the currency note.
 #: src/features/shop/utils/ShopMessageDescriptors.ts:331
-msgid "Lifetime means for as long as Micup runs."
-msgstr "Ömür boyu: Micup hizmet verdiği sürece."
+msgid "Lifetime means for as long as sanalyer runs."
+msgstr "Ömür boyu: sanalyer hizmet verdiği sürece."
 
 #. Settings search synonym. Used to match this term when the user types it in the settings search bar.
 #: src/features/expressions/components/modals/sticker_form/StickerPreview.tsx:53
@@ -24271,22 +24271,22 @@ msgstr "Mikrofon, kamera ve ekran paylaşımı içeriği uçtan uca şifrelenmi�
 
 #. Payment currency explanation on the shop, Micup Plus page, checkout and FAQ. Keep the company location explicit.
 #: src/features/shop/components/ShopCurrencyNote.tsx:6
-msgid "Micup is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate."
-msgstr "Micup bir Azerbaycan şirketi olduğu için ödemeler Azerbaycan manatı (AZN) ile alınır. TL tutarı Azerbaycan Merkez Bankası'nın günlük kuruyla bilgi amaçlıdır."
+msgid "sanalyer is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate."
+msgstr "sanalyer bir Azerbaycan şirketi olduğu için ödemeler Azerbaycan manatı (AZN) ile alınır. TL tutarı Azerbaycan Merkez Bankası'nın günlük kuruyla bilgi amaçlıdır."
 
 #: src/features/user/components/modals/UsernamePickerModal.tsx:118
-msgid "Micup no longer uses #1234 tags. Everyone has a unique username: @yourname."
-msgstr "Micup'ta artık #1234 etiketleri yok. Herkesin kendine ait, tek bir kullanıcı adı var: @adınız."
+msgid "sanalyer no longer uses #1234 tags. Everyone has a unique username: @yourname."
+msgstr "sanalyer'de artık #1234 etiketleri yok. Herkesin kendine ait, tek bir kullanıcı adı var: @adınız."
 
 #. Status shown when browser sign-in status polling gives up after repeated failures.
 #: src/features/auth/flow/auth_login_core/AuthLoginBrowserStep.tsx:72
-msgid "Micup stopped checking whether the browser approved this sign-in. It didn't lose your code."
-msgstr "Micup, tarayıcının bu oturum açma işlemini onaylayıp onaylamadığını kontrol etmeyi bıraktı. Kodunuzu kaybetmedi."
+msgid "sanalyer stopped checking whether the browser approved this sign-in. It didn't lose your code."
+msgstr "sanalyer, tarayıcının bu oturum açma işlemini onaylayıp onaylamadığını kontrol etmeyi bıraktı. Kodunuzu kaybetmedi."
 
 #. Product name on the Visionary card and buy dialog. A product name: keep it as written.
 #: src/features/shop/utils/ShopMessageDescriptors.ts:314
-msgid "Micup Visionary"
-msgstr "Micup Visionary"
+msgid "sanalyer Visionary"
+msgstr "sanalyer Visionary"
 
 #: src/features/input/utils/KeybindUtils.ts:52
 msgctxt "mouse-button-name"
@@ -26822,8 +26822,8 @@ msgstr "Resmi örnek"
 
 #. Description of the official applications listed in the bot catalog.
 #: src/features/bots/components/pages/BotsPage.tsx:25
-msgid "Official Micup bots you can add to your community."
-msgstr "Topluluğunuza ekleyebileceğiniz resmi Micup botları."
+msgid "Official sanalyer bots you can add to your community."
+msgstr "Topluluğunuza ekleyebileceğiniz resmi sanalyer botları."
 
 #. Generic presence-status label indicating the user is offline.
 #: src/features/i18n/utils/CommonMessageDescriptors.ts:649
@@ -27621,7 +27621,7 @@ msgstr "Sistem Ayarları'nı Aç"
 #. Body in the screen-share picker when macOS screen recording permission is missing. {productName} is the app name. Keep "System Settings", "Privacy & Security" and the permission name as macOS shows them in this language.
 #: src/features/voice/components/modals/screen_share_picker_modal/ScreenSharePickerDisplayPermissionPrompt.tsx:26
 msgid "Open System Settings → Privacy & Security → Screen Recording, then allow {productName}."
-msgstr "Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı'nı açın, ardından {productName}'a izin verin."
+msgstr "Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı'nı açın, ardından {productName}'e izin verin."
 
 #: src/features/guild/components/modals/add_guild_modal/TemplateImportForm.tsx:532
 msgid "Open template JSON"
@@ -32080,7 +32080,7 @@ msgstr "{appName} uygulamasını yeniden başlat"
 #. Button label that restarts the app to apply a desktop update. productName is the app name.
 #: src/features/updater/commands/UpdaterModalCommands.tsx:100
 msgid "Restart {productName}"
-msgstr "{productName}'u yeniden başlat"
+msgstr "{productName}'i yeniden başlat"
 
 #. Desktop setting description shown when a tray-icon change on Linux requires restart.
 #: src/features/user/components/modals/tabs/DesktopSettingsTab.tsx:37
@@ -32090,12 +32090,12 @@ msgstr "Bu değişikliğin geçerli olması için {productName} uygulamasını y
 #. Tooltip on the channel header updater icon prompting a restart to apply a downloaded update of unknown version. productName is the app name.
 #: src/features/channel/components/channel_header_components/UpdaterIcon.tsx:72
 msgid "Restart {productName} to install desktop update"
-msgstr "{productName}'u yeniden başlatarak masaüstü güncellemesini yükleyin"
+msgstr "{productName}'i yeniden başlatarak masaüstü güncellemesini yükleyin"
 
 #. Tooltip on the channel header updater icon prompting a restart to apply a downloaded versioned update. productName is the app name.
 #: src/features/channel/components/channel_header_components/UpdaterIcon.tsx:67
 msgid "Restart {productName} to install desktop update {version}"
-msgstr "{productName}'u yeniden başlatarak {version} masaüstü güncellemesini yükleyin"
+msgstr "{productName}'i yeniden başlatarak {version} masaüstü güncellemesini yükleyin"
 
 #. Confirmation prompt in advanced settings. Preserve {productName}; it is inserted by code.
 #. Confirmation prompt in advanced settings. Preserve {productName}; it is inserted by code.
@@ -37653,8 +37653,8 @@ msgid "Tag name"
 msgstr "Etiket adı"
 
 #: src/features/user/components/modals/UsernamePickerModal.tsx:138
-msgid "Tagged names are no longer used. Choose a unique username to continue using Micup."
-msgstr "Etiketli adlar artık kullanılmıyor. Micup'u kullanmaya devam etmek için kendinize özel bir kullanıcı adı seçin."
+msgid "Tagged names are no longer used. Choose a unique username to continue using sanalyer."
+msgstr "Etiketli adlar artık kullanılmıyor. sanalyer'i kullanmaya devam etmek için kendinize özel bir kullanıcı adı seçin."
 
 #. Label of the tag filter in a forum channel and of the tags section in forum settings.
 #. Short label in the theme studio library section. Keep it concise.
@@ -38161,7 +38161,7 @@ msgstr "Masaüstü güncellemesi indirilemedi. Bağlantınız kararlı olduğund
 #. Desktop updater modal body when the downloaded version is unknown. productName is the app name.
 #: src/features/updater/commands/UpdaterModalCommands.tsx:96
 msgid "The desktop update has been downloaded. Restart {productName} to finish installing."
-msgstr "Masaüstü güncellemesi indirildi. Kurulumu tamamlamak için {productName}'u yeniden başlatın."
+msgstr "Masaüstü güncellemesi indirildi. Kurulumu tamamlamak için {productName}'i yeniden başlatın."
 
 #. Help text below the Linux package format selector in the desktop updater modal.
 #: src/features/updater/commands/UpdaterModalCommands.tsx:156
@@ -42199,8 +42199,8 @@ msgstr "Saat biçimi için sistem yerel ayarını kullan"
 
 #. Accessible label for the official Fluxer instance option.
 #: src/features/auth/flow/instance_selector/InstancePickerRows.tsx:24
-msgid "Use the official Micup instance"
-msgstr "Resmi Micup örneğini kullan"
+msgid "Use the official sanalyer instance"
+msgstr "Resmi sanalyer örneğini kullan"
 
 #. Settings search entry description. One-line summary of what the settings search entry controls.
 #: src/features/user/components/settings_utils/search_index/DesktopSettingsIndex.ts:175
@@ -44106,7 +44106,7 @@ msgstr "{premiumProductFullName}'a hoş geldiniz. Yıllık aboneliğiniz {format
 #. Setup wizard title shown once the operator is signed in as the instance admin.
 #: src/features/app/components/setup/SetupWelcomeGate.tsx:12
 msgid "Welcome to {productName}"
-msgstr "{productName}'a hoş geldiniz"
+msgstr "{productName}'e hoş geldiniz"
 
 #: src/features/channel/components/direct_message/GroupDMWelcomeSection.tsx:84
 msgid "Welcome to <0>{displayName}</0>. Add friends to get the group going."
@@ -44491,7 +44491,7 @@ msgstr "Azaltılmış hareket açıkken çıkartmalar yalnızca etkileşimde can
 #. Analytics cookie consent banner (legal text, KVKK), also shown to signed-out visitors. {productName} is the app name. "Settings > Privacy" names the settings tab and "Cookie preferences" the link on the sign-in pages where consent is withdrawn; keep both names as translated elsewhere. Do not call the data anonymous.
 #: src/features/analytics/components/AnalyticsConsentBanner.tsx:23
 msgid "With your permission, we use Google Analytics to collect usage statistics that help us improve {productName}: which pages are opened and which features are used. Your messages, username, email, and server and channel details are not sent. The data is transferred abroad (Google, USA). You can withdraw your permission at any time: in Settings > Privacy when signed in, or with Cookie preferences at the bottom of the sign-in and registration pages."
-msgstr "İzin verirsen {productName}'u geliştirmek için Google Analytics ile kullanım istatistikleri toplarız: hangi sayfaların açıldığı, hangi özelliklerin kullanıldığı. Mesajların, kullanıcı adın, e-postan, sunucu ve kanal bilgilerin gönderilmez. Veriler yurt dışına (Google, ABD) aktarılır. İznini istediğin zaman geri alabilirsin: oturum açıkken Ayarlar > Gizlilik'ten, açık değilken giriş ve kayıt sayfalarının altındaki Çerez tercihleri bağlantısından."
+msgstr "İzin verirsen {productName}'i geliştirmek için Google Analytics ile kullanım istatistikleri toplarız: hangi sayfaların açıldığı, hangi özelliklerin kullanıldığı. Mesajların, kullanıcı adın, e-postan, sunucu ve kanal bilgilerin gönderilmez. Veriler yurt dışına (Google, ABD) aktarılır. İznini istediğin zaman geri alabilirsin: oturum açıkken Ayarlar > Gizlilik'ten, açık değilken giriş ve kayıt sayfalarının altındaki Çerez tercihleri bağlantısından."
 
 #: src/features/guild/components/modals/guild_tabs/GuildDiscoveryTab.tsx:622
 msgid "Withdraw"

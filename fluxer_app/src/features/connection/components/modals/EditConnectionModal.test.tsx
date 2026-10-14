@@ -41,7 +41,7 @@ vi.mock('@app/features/user/state/Users', () => ({
 
 const {EditConnectionModal} = await import('@app/features/connection/components/modals/EditConnectionModal');
 
-describe('EditConnectionModal profile visibility note (Micup four options)', () => {
+describe('EditConnectionModal profile visibility note (sanalyer four options)', () => {
 	let container: HTMLDivElement;
 	let root: ReturnType<typeof createRoot>;
 	const connection = {type: 'github', id: '1', visibilityFlags: 1} as never;

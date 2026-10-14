@@ -144,7 +144,7 @@ export class UserDataRepository {
 			return new User({
 				...EMPTY_USER_ROW,
 				user_id: createUserID(FLUXER_BOT_USER_ID),
-				username: 'Micup',
+				username: 'sanalyer',
 				discriminator: 0,
 				bot: true,
 				system: true,

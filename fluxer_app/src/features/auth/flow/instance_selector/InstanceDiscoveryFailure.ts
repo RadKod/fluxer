@@ -18,11 +18,11 @@ export const INSTANCE_ADDRESS_INVALID_DESCRIPTOR = msg({
 		'Instance selector error shown when the typed address cannot be an address at all. Example instance domain is interpolated.',
 });
 const INSTANCE_UNREACHABLE_DESCRIPTOR = msg({
-	message: "Couldn't reach a Micup instance at {domain}. Check the address and that the instance is online.",
+	message: "Couldn't reach a sanalyer instance at {domain}. Check the address and that the instance is online.",
 	comment: 'Instance selector error shown when no Fluxer instance answered at the address. Domain is interpolated.',
 });
 const INSTANCE_NEEDS_NEWER_CLIENT_DESCRIPTOR = msg({
-	message: '{domain} runs a newer version of Micup than this app. Update Micup, then try again.',
+	message: '{domain} runs a newer version of sanalyer than this app. Update sanalyer, then try again.',
 	comment:
 		'Instance selector error shown when the instance speaks a protocol generation this client does not know. Domain is interpolated.',
 });

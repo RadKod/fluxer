@@ -15,7 +15,7 @@ async function loadHydratedTheme() {
 	return theme;
 }
 
-describe('Micup default theme', () => {
+describe('sanalyer default theme', () => {
 	beforeEach(() => {
 		window.localStorage.clear();
 	});

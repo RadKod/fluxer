@@ -33,5 +33,5 @@ export const ROSTER_TEXT = {
 		`⚠️ **${name}**: ${count} kişi etkinlik odasına taşınamadı; kadroda bırakıldı. Lütfen üyelerin etkinlik odasını görme ve bağlanma izinlerini kontrol edin.`,
 	roomDeletedWarning: (name: string, count: number) =>
 		`⚠️ **${name}**: Etkinlik odası silinmiş; ${count} kişi kadroda bırakıldı. Etkinlik ayarlarından yeni bir sesli oda seçin.`,
-	auditReason: (name: string) => `Micup Roster: ${name}`,
+	auditReason: (name: string) => `sanalyer Roster: ${name}`,
 } as const;

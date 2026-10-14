@@ -46,7 +46,7 @@ function toHex(value: string): string {
 
 const VIOLET_HEX = /#(?:7c3aed|c026d3|5865f2|4641d9|a99adf|9ba4dd|cd9ac9|a855f7)\b|rgb\(168, 85, 247\)/i;
 
-describe('Micup v1 surfaces in the coal and dark themes', () => {
+describe('sanalyer v1 surfaces in the coal and dark themes', () => {
 	it('paints windows with the v1 box color instead of the rail near-black', () => {
 		const css = read('features/app/components/dialogs/Modal.module.css');
 		const inside = rule(css, `${COAL} .root`);

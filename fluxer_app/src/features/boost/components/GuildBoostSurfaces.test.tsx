@@ -49,7 +49,7 @@ vi.mock('@app/features/boost/state/GuildBoosts', () => ({default: Object.assign(
 vi.mock('@app/features/guild/components/alerts/GuildErrorModalUtils', () => ({showGuildErrorModal: mocks.error}));
 vi.mock('@app/features/premium/utils/PremiumUtils', () => ({shouldShowPremiumFeatures: () => true}));
 vi.mock('@app/features/app/utils/UserLimits', () => ({Limits: {getPremiumValue: () => 5}}));
-vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PREMIUM_PRODUCT_NAME: 'Micup Plus'}));
+vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PREMIUM_PRODUCT_NAME: 'sanalyer Plus'}));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({
 	default: {
 		limits: {
@@ -285,7 +285,7 @@ describe('community boost surfaces', () => {
 		update(() => {
 			boosts.hasFreeSlot = false;
 		});
-		expect(container.querySelector('[data-flx="boost.action.button"]')!.textContent).toBe('Get Micup Plus');
+		expect(container.querySelector('[data-flx="boost.action.button"]')!.textContent).toBe('Get sanalyer Plus');
 		await act(async () => container.querySelector<HTMLButtonElement>('[data-flx="boost.action.button"]')!.click());
 		expect(mocks.boost).toHaveBeenCalledTimes(2);
 	});
@@ -296,7 +296,7 @@ describe('community boost surfaces', () => {
 		update(() => {
 			boosts.hasFreeSlot = false;
 		});
-		expect(container.querySelector('[data-flx="boost.action.button"]')!.textContent).toBe('Get Micup Plus');
+		expect(container.querySelector('[data-flx="boost.action.button"]')!.textContent).toBe('Get sanalyer Plus');
 		await act(async () => container.querySelector<HTMLButtonElement>('[data-flx="boost.action.button"]')!.click());
 		expect(mocks.boost).toHaveBeenCalledOnce();
 	});

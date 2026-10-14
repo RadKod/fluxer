@@ -109,12 +109,12 @@ describe('instance default locale (app_public.localization)', () => {
 	});
 
 	it('leaves the other app_public settings untouched', async () => {
-		await setAppPublic({branding: {product_name: 'Micup Test'}, registration: {collect_date_of_birth: false}})
+		await setAppPublic({branding: {product_name: 'sanalyer Test'}, registration: {collect_date_of_birth: false}})
 			.expect(200)
 			.execute();
 		await setLocalization({default_locale: 'tr'}).expect(200).execute();
 		for (const appPublic of [(await discovery()).app_public, (await adminConfig()).app_public]) {
-			expect(appPublic.branding.product_name).toBe('Micup Test');
+			expect(appPublic.branding.product_name).toBe('sanalyer Test');
 			expect(appPublic.registration.collect_date_of_birth).toBe(false);
 		}
 	});

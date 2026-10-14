@@ -38,7 +38,7 @@ vi.mock('@app/features/app/state/RuntimeConfig', () => ({
 	default: {
 		isSelfHosted: () => false,
 		inviteUrlBase: '',
-		mediaEndpoint: 'https://media.micup.gg',
+		mediaEndpoint: 'https://sanalyer.com/media',
 		staticCdnEndpoint: '',
 	},
 }));
@@ -61,16 +61,16 @@ vi.mock('@app/features/platform/transport/InstanceHTTP', () => ({}));
 vi.mock('@app/features/messaging/utils/MessagingUrlUtils', () => ({setPathQueryParams: vi.fn()}));
 vi.mock('@app/features/user/components/settings_utils/UserSettingsDeepLinks', () => ({}));
 
-describe('Micup brand hosts', () => {
-	it('recognizes micup.gg invite, gift and theme links and app links', () => {
-		expect(findInvite('https://micup.gg/invite/abcDEF12')).toBe('abcDEF12');
-		expect(findGifts('https://micup.gg/gift/abcDEF12')).toEqual(['abcDEF12']);
-		expect(findThemes('https://micup.gg/theme/abcDEF12')).toEqual(['abcDEF12']);
-		expect(isInternalChannelHost('micup.gg')).toBe(true);
+describe('sanalyer brand hosts', () => {
+	it('recognizes sanalyer.com invite, gift and theme links and app links', () => {
+		expect(findInvite('https://sanalyer.com/invite/abcDEF12')).toBe('abcDEF12');
+		expect(findGifts('https://sanalyer.com/gift/abcDEF12')).toEqual(['abcDEF12']);
+		expect(findThemes('https://sanalyer.com/theme/abcDEF12')).toEqual(['abcDEF12']);
+		expect(isInternalChannelHost('sanalyer.com')).toBe(true);
 	});
 
 	// Micup is not Fluxer: a fluxer.gg/<code> link is another service's invite, and Fluxer's hosts are not ours.
-	it('treats no Fluxer link as a Micup invite, gift, theme or app link', () => {
+	it('treats no Fluxer link as a sanalyer invite, gift, theme or app link', () => {
 		expect(findInvite('https://fluxer.gg/abcDEF12')).toBeNull();
 		expect(findInvite('https://fluxer.app/invite/abcDEF12')).toBeNull();
 		expect(findGifts('https://fluxer.gift/abcDEF12')).toEqual([]);
@@ -80,10 +80,8 @@ describe('Micup brand hosts', () => {
 		}
 	});
 
-	it('trusts micup.gg, canary.micup.gg and the configured media host', () => {
-		expect(TrustedDomain.isTrustedDomain('micup.gg')).toBe(true);
-		expect(TrustedDomain.isTrustedDomain('canary.micup.gg')).toBe(true);
-		expect(TrustedDomain.isTrustedDomain('media.micup.gg')).toBe(true);
+	it('trusts sanalyer.com and the configured media host', () => {
+		expect(TrustedDomain.isTrustedDomain('sanalyer.com')).toBe(true);
 	});
 
 	it('warns before opening any Fluxer host', () => {
@@ -99,12 +97,12 @@ describe('Micup brand hosts', () => {
 		}
 	});
 
-	// No *.micup.gg wildcard: one dangling CNAME taken over by someone else would otherwise open phishing links
-	// without a warning. dl.micup.gg needs no entry because the updater opens it directly, not through this list.
-	it('warns before opening any other micup.gg subdomain', () => {
-		expect(TrustedDomain.isTrustedDomain('evil.micup.gg')).toBe(false);
-		expect(TrustedDomain.isTrustedDomain('dl.micup.gg')).toBe(false);
-		expect(TrustedDomain.isTrustedDomain('x.canary.micup.gg')).toBe(false);
+	// No *.sanalyer.com wildcard: one dangling CNAME taken over by someone else would otherwise open phishing links
+	// without a warning.
+	it('warns before opening any sanalyer.com subdomain and the old micup.gg hosts', () => {
+		expect(TrustedDomain.isTrustedDomain('evil.sanalyer.com')).toBe(false);
+		expect(TrustedDomain.isTrustedDomain('micup.gg')).toBe(false);
+		expect(TrustedDomain.isTrustedDomain('canary.micup.gg')).toBe(false);
 	});
 
 	it('points the support contact to pr@premate.gg', () => {
@@ -114,7 +112,7 @@ describe('Micup brand hosts', () => {
 });
 
 // An upstream merge must not bring Fluxer's name, its premium name or its jokes back into what users read.
-describe('Micup brand text', () => {
+describe('sanalyer brand text', () => {
 	const localesDir = resolve(dirname(fileURLToPath(import.meta.url)), '../../i18n/locales');
 	const catalogs = readdirSync(localesDir, {withFileTypes: true})
 		.filter((entry) => entry.isDirectory())
@@ -145,7 +143,7 @@ describe('Micup brand text', () => {
 	const EXTERNAL_PUSH_RELAY_MSGID =
 		"The official Fluxer mobile apps receive notifications through Fluxer's push relay, which hands them to Apple and Google. Self-hosted UnifiedPush and ntfy endpoints never reach the relay and need no agreement.";
 
-	it('keeps Micup product branding in all 34 languages', () => {
+	it('keeps sanalyer product branding in all 34 languages', () => {
 		expect(catalogs).toHaveLength(34);
 		const leaks = catalogs.flatMap(({locale, entries}) =>
 			entries
@@ -170,22 +168,22 @@ describe('Micup brand text', () => {
 		expect(wizard).toContain('href={PUSH_RELAY_NOTICE_URL}');
 	});
 
-	// Upstream's Turkish suffixes fit "Fluxer" ('i, 'e, 'de). "Micup" takes back vowels and a voiceless t after p:
-	// Micup'u, Micup'a, Micup'ta, Micup'tan, Micup'un.
-	it('attaches Turkish suffixes that fit "Micup" to the product name', () => {
+	// "sanalyer" ends in a front vowel and a voiced r, like upstream's "Fluxer": sanalyer'i, sanalyer'e, sanalyer'de,
+	// sanalyer'den, sanalyer'in. Micup's back-vowel suffixes ('u, 'a, 'ta) must not come back.
+	it('attaches Turkish suffixes that fit "sanalyer" to the product name', () => {
 		const tr = catalogs.find(({locale}) => locale === 'tr')?.entries ?? [];
 		const suffixes = tr.flatMap(([, msgstr]) =>
 			[...msgstr.matchAll(/\{(?:productName|PRODUCT_NAME)\}['’](\p{L}+)/gu)].map((match) => match[1]),
 		);
 		expect(suffixes.length).toBeGreaterThan(0);
-		expect(suffixes.filter((suffix) => /[eıioöü]/.test(suffix) || /^[dyn]/.test(suffix))).toEqual([]);
+		expect(suffixes.filter((suffix) => suffix !== 's' && (/[aıou]/.test(suffix) || /^[tyn]/.test(suffix)))).toEqual([]);
 	});
 
 	// No window in the service worker, so its push notification titles use this fallback.
-	it('names the product Micup and its premium plan Micup Premium without a bootstrap', () => {
-		expect(PRODUCT_NAME).toBe('Micup');
-		expect(PREMIUM_PRODUCT_NAME).toBe('Micup Plus');
-		expect(PREMIUM_PRODUCT_FULL_NAME).toBe('Micup Plus');
+	it('names the product sanalyer and its premium plan sanalyer Premium without a bootstrap', () => {
+		expect(PRODUCT_NAME).toBe('sanalyer');
+		expect(PREMIUM_PRODUCT_NAME).toBe('sanalyer Plus');
+		expect(PREMIUM_PRODUCT_FULL_NAME).toBe('sanalyer Plus');
 	});
 
 	it('uses neutral example values in form placeholders', () => {
@@ -195,13 +193,15 @@ describe('Micup brand text', () => {
 
 	// Catalog text is checked above; these values are filled into it at runtime. The listed ones are never shown on
 	// Micup: Weblate and fluxer.dev links render only when the instance is not self-hosted, the rest are unused.
-	it('keeps Fluxer addresses only in display constants Micup never shows', async () => {
+	it('keeps Fluxer addresses only in display constants sanalyer never shows', async () => {
 		const constants = await import('@app/features/app/config/I18nDisplayConstants');
 		const fluxerValued = Object.entries(constants)
 			.filter(([, value]) => typeof value === 'string' && /fluxer/i.test(value))
 			.map(([name]) => name)
 			.sort();
+		// DESKTOP_DOWNLOAD_URL: until sanalyer ships its own clients, members use the official Fluxer apps.
 		expect(fluxerValued).toEqual([
+			'DESKTOP_DOWNLOAD_URL',
 			'FLUXER_BLUESKY_HANDLE',
 			'FLUXER_DOCS_DOMAIN',
 			'FLUXER_DOCS_URL',

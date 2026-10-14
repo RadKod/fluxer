@@ -62,7 +62,7 @@ export interface VisionarySlotRow {
 	slot_index: number;
 	user_id: UserID | null;
 	// Micup Visionary sale. Optional so upstream's partial writes stay valid.
-	version?: Nullish<number>; // CAS counter; rows Micup opens start at 1, rows without one are never handed out
+	version?: Nullish<number>; // CAS counter; rows sanalyer opens start at 1, rows without one are never handed out
 	order_id?: Nullish<bigint>; // the order holding the number, kept after it is taken (retry proof)
 	held_until?: Nullish<Date>; // no owner: end of a pending order's hold; an owner: when an admin took the number back
 }

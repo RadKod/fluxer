@@ -189,10 +189,10 @@ describe('Admin OAuth2 Application Requirement', () => {
 	});
 
 	// Micup: admins read this name on the OAuth2 consent screen and in their authorized apps.
-	test('names the admin OAuth2 application Micup Admin', async () => {
+	test('names the admin OAuth2 application sanalyer Admin', async () => {
 		const application = await new ApplicationRepository().getApplication(
 			createApplicationID(ADMIN_OAUTH2_APPLICATION_ID),
 		);
-		expect(application?.name).toBe('Micup Admin');
+		expect(application?.name).toBe('sanalyer Admin');
 	});
 });

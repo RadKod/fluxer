@@ -114,7 +114,7 @@ describe('ShopPriceLine', () => {
 		state.settings = {...SETTINGS, try_to_azn_rate_micro: 34000};
 		render(itemEntry(PRICE));
 		expect(part('final')).toBe('250 TLPayable: 8.50 AZN');
-		expect(part('premium')).toBe('175 TL with Micup Plus');
+		expect(part('premium')).toBe('175 TL with sanalyer Plus');
 		expect(container.querySelectorAll('[data-flx="shop.shop-price.payable"]')).toHaveLength(1);
 		expect(part('was')).toBeNull();
 
@@ -143,7 +143,7 @@ describe('ShopPriceLine', () => {
 		render(itemEntry(PRICE));
 		expect(part('final')).toBe('8.50 AZN');
 		expect(part('was')).toBeNull();
-		expect(part('premium')).toBe('5.95 AZN with Micup Plus');
+		expect(part('premium')).toBe('5.95 AZN with sanalyer Plus');
 
 		state.premiumDiscount = true;
 		render(itemEntry({...PRICE}));
@@ -156,7 +156,7 @@ describe('ShopPriceLine', () => {
 		state.premiumUser = true;
 		render(itemEntry(PRICE));
 		expect(part('final')).toBe('8.50 AZN');
-		expect(part('premium')).toBe('5.95 AZN with Micup Plus');
+		expect(part('premium')).toBe('5.95 AZN with sanalyer Plus');
 	});
 
 	it('campaign: the sale price, the struck price and the badge; a member pays the premium price', () => {
@@ -164,7 +164,7 @@ describe('ShopPriceLine', () => {
 		expect(part('final')).toBe('6.80 AZN');
 		expect(part('was')).toBe('8.50 AZN');
 		expect(part('badge')).toBe('-20%');
-		expect(part('premium')).toBe('4.76 AZN with Micup Plus');
+		expect(part('premium')).toBe('4.76 AZN with sanalyer Plus');
 		expect(countdown()).toBeNull();
 
 		state.premiumDiscount = true;
@@ -230,7 +230,7 @@ describe('ShopPriceLine', () => {
 			state.settings = {...SETTINGS, usd_to_azn_rate_micro: rate};
 			render(itemEntry(PRICE));
 			expect(part('final')).toBe('8.50 AZN');
-			expect(part('premium')).toBe('5.95 AZN with Micup Plus');
+			expect(part('premium')).toBe('5.95 AZN with sanalyer Plus');
 		},
 	);
 
@@ -252,7 +252,7 @@ describe('ShopPriceLine', () => {
 		expect(part('final')).toBe('8.50 AZN');
 		expect(part('was')).toBeNull();
 		expect(part('badge')).toBeNull();
-		expect(part('premium')).toBe('5.95 AZN with Micup Plus');
+		expect(part('premium')).toBe('5.95 AZN with sanalyer Plus');
 		expect(countdown()).toBeNull();
 	});
 });

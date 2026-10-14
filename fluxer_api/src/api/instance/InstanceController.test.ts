@@ -316,7 +316,7 @@ describe('InstanceController discovery captcha', () => {
 		});
 	});
 
-	describe('Micup premium features', () => {
+	describe('sanalyer premium features', () => {
 		let previous: {selfHosted: boolean; key: string};
 
 		beforeEach(() => {

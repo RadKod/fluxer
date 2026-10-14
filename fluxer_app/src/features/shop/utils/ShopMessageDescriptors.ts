@@ -312,7 +312,7 @@ export const PAYMENT_RETURN_PENDING_DESCRIPTOR = msg({
 
 // Micup Visionary: lifetime Plus with a numbered badge, sold on the Plus page.
 export const VISIONARY_NAME_DESCRIPTOR = msg({
-	message: 'Micup Visionary',
+	message: 'sanalyer Visionary',
 	comment: 'Product name on the Visionary card and buy dialog. A product name: keep it as written.',
 });
 export const VISIONARY_REWARDS_DESCRIPTOR = msg({
@@ -329,7 +329,7 @@ export const VISIONARY_SOLD_OUT_DESCRIPTOR = msg({
 	comment: 'Body of the Visionary buy dialog when no spot is left.',
 });
 export const LIFETIME_MEANS_DESCRIPTOR = msg({
-	message: 'Lifetime means for as long as Micup runs.',
+	message: 'Lifetime means for as long as sanalyer runs.',
 	comment: 'Note in the Visionary buy dialog, under the currency note.',
 });
 export const REMAINING_TIME_NOT_REFUNDED_DESCRIPTOR = msg({

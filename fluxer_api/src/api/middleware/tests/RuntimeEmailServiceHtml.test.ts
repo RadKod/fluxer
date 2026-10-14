@@ -9,7 +9,7 @@ import nodemailer from 'nodemailer';
 import {describe, expect, it, vi} from 'vitest';
 
 const BRANDING: InstanceBranding = {
-	product_name: 'Micup',
+	product_name: 'sanalyer',
 	premium_product_name: 'Plus',
 	premium_info_url: null,
 	icon_url: 'https://static.example.test/icon.png',
@@ -30,7 +30,7 @@ async function sendThroughRuntime(htmlEnabled: boolean) {
 		...Config.email,
 		enabled: true,
 		provider: 'smtp',
-		fromName: 'Micup Bildirim',
+		fromName: 'sanalyer Bildirim',
 		smtp: {host: 'smtp.example.test', port: 465, username: 'user', password: 'pass', secure: true},
 		htmlEnabled,
 		htmlFooter: {},
@@ -77,8 +77,8 @@ describe('runtime email service HTML part', () => {
 		expect(brandingReads).toBe(1);
 		expect(html).toContain('src="https://static.example.test/icon.png"');
 		expect(html).toContain('background-color:#0B0B0C');
-		expect(html).toContain('>Micup</span>');
-		expect(html).not.toContain('Micup Bildirim');
+		expect(html).toContain('>sanalyer</span>');
+		expect(html).not.toContain('sanalyer Bildirim');
 		expect(mime).toMatch(/^Content-Type: multipart\/alternative/m);
 		expect(mime).toMatch(/^Content-Type: text\/plain/m);
 		expect(mime).toMatch(/^Content-Type: text\/html/m);

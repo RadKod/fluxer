@@ -44,7 +44,7 @@ function LoginDecision() {
 	);
 }
 
-it('carries the native cold-start Micup target through the auth boundary into the login decision', async () => {
+it('carries the native cold-start sanalyer target through the auth boundary into the login decision', async () => {
 	(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
 	const repo = resolve(process.cwd(), '..');
 	const input = execFileSync(

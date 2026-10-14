@@ -922,9 +922,9 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let served = read_document(response).await;
 
-        assert!(served.contains("<title>Micup</title>"));
+        assert!(served.contains("<title>sanalyer</title>"));
         assert!(served.contains(r#"<meta name="description""#));
-        assert!(served.contains(r#"<meta property="og:title" content="Micup">"#));
+        assert!(served.contains(r#"<meta property="og:title" content="sanalyer">"#));
         assert!(served.contains(
             r#"<meta property="og:image" content="https://cdn.example.test/web/og-image-default.png">"#
         ));
@@ -953,7 +953,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let served = read_document(response).await;
 
-        assert!(served.contains("<title>Micup</title>"));
+        assert!(served.contains("<title>sanalyer</title>"));
         assert!(served.contains(r#"<meta name="description""#));
     }
 

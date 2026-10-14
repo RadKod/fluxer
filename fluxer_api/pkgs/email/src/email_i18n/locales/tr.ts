@@ -24,8 +24,8 @@ const EMAIL_I18N_TR_MESSAGES = defineEmailI18nLocaleMessages({
 		"body": "Merhaba {username},\n\nHizmet Şartlarımızı veya Topluluk Kurallarımızı ihlal ettiğin için {product_name} hesabını geçici olarak askıya aldık.\n\nSüre: {durationHours, plural,\n  =1 {1 saat}\n  other {# saat}\n}\nŞu tarihe kadar askıda: {bannedUntil, date, full} {bannedUntil, time, short}\n\n{reason, select,\n  null {}\n  other {Sebep: {reason}}\n}\n\nBu süre boyunca hesabına erişemeyeceksin.\n\nLütfen şunları incele:\n- Hizmet Şartları: {termsUrl}\n- Topluluk Kuralları: {guidelinesUrl}\n\nBu yaptırım kararının yanlış veya haksız olduğuna inanıyorsan, itiraz gönderebilirsin. Bu e-posta adresinden {appeals_email} adresine e-posta gönder ve kararın neden yanlış olduğunu düşündüğünü açıkça anlat. İtirazını inceleyip kararımızı sana bildireceğiz.\n\n– {product_name} Güvenlik Ekibi"
 	},
 	"donation_confirmation": {
-		"subject": "{product_name}'a yaptığın bağış için teşekkürler",
-		"body": "Merhaba,\n\n{product_name}'a yaptığın bağış için teşekkürler! {interval, select,\n  month {tekrarlayan bağışın}\n  year {tekrarlayan bağışın}\n  other {tek seferlik bağışın}\n} başarıyla {interval, select,\n  month {ayarlandı}\n  year {ayarlandı}\n  other {işlendi}\n}.\n\nBağış detayları:\nTutar: {amount} {interval, select,\n  month {aylık}\n  year {yıllık}\n  other {}\n}\n\nStripe, kısa süre içinde fatura PDF'ini içeren ayrı bir makbuzu sana e-posta ile gönderecektir. Bu, tüm ödeme detaylarını içerir ve vergi amaçlı kullanılabilir.\n\nBu bağlantıyı kullanarak istediğin zaman bağış geçmişini görüntüleyebilir, faturaları indirebilir, {interval, select,\n  month {ve aboneliğini yönetebilir veya iptal edebilirsin}\n  year {ve aboneliğini yönetebilir veya iptal edebilirsin}\n  other {ve gelecekteki bağışlarını yönetebilirsin}\n}:\n\n{manageUrl}\n\nDesteğin {product_name}'un çalışmaya devam etmesine yardımcı oluyor. Teşekkürler!\n\n– {product_name} Ekibi",
+		"subject": "{product_name}'e yaptığın bağış için teşekkürler",
+		"body": "Merhaba,\n\n{product_name}'e yaptığın bağış için teşekkürler! {interval, select,\n  month {tekrarlayan bağışın}\n  year {tekrarlayan bağışın}\n  other {tek seferlik bağışın}\n} başarıyla {interval, select,\n  month {ayarlandı}\n  year {ayarlandı}\n  other {işlendi}\n}.\n\nBağış detayları:\nTutar: {amount} {interval, select,\n  month {aylık}\n  year {yıllık}\n  other {}\n}\n\nStripe, kısa süre içinde fatura PDF'ini içeren ayrı bir makbuzu sana e-posta ile gönderecektir. Bu, tüm ödeme detaylarını içerir ve vergi amaçlı kullanılabilir.\n\nBu bağlantıyı kullanarak istediğin zaman bağış geçmişini görüntüleyebilir, faturaları indirebilir, {interval, select,\n  month {ve aboneliğini yönetebilir veya iptal edebilirsin}\n  year {ve aboneliğini yönetebilir veya iptal edebilirsin}\n  other {ve gelecekteki bağışlarını yönetebilirsin}\n}:\n\n{manageUrl}\n\nDesteğin {product_name}'in çalışmaya devam etmesine yardımcı oluyor. Teşekkürler!\n\n– {product_name} Ekibi",
 		"button": "Bağışlarımı yönet"
 	},
 	"donation_magic_link": {
@@ -35,7 +35,7 @@ const EMAIL_I18N_TR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"dsa_report_verification": {
 		"subject": "DSA raporu için e-postanı doğrula",
-		"body": "Merhaba,\n\n{product_name}'taki Dijital Hizmetler Yasası raporunu göndermek için aşağıdaki doğrulama kodunu kullan:\n\n{code}\n\nBu kod {expiresAt, date, full} {expiresAt, time, short} tarihinde sona erecektir.\n\nBunu sen talep etmediysen, bu e-postayı güvenle yok sayabilirsin.\n\n– {product_name} Güvenlik Ekibi"
+		"body": "Merhaba,\n\n{product_name}'deki Dijital Hizmetler Yasası raporunu göndermek için aşağıdaki doğrulama kodunu kullan:\n\n{code}\n\nBu kod {expiresAt, date, full} {expiresAt, time, short} tarihinde sona erecektir.\n\nBunu sen talep etmediysen, bu e-postayı güvenle yok sayabilirsin.\n\n– {product_name} Güvenlik Ekibi"
 	},
 	"email_change_new": {
 		"subject": "Yeni {product_name} e-posta adresini doğrula",
@@ -66,7 +66,7 @@ const EMAIL_I18N_TR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"inactivity_warning": {
 		"subject": "{product_name} hesabın hareketsizlik nedeniyle silinecek",
-		"body": "Merhaba {username},\n\n{lastActiveDate, date, full} tarihinden beri {product_name} hesabında herhangi bir etkinlik görmedik.\n\n{deletionDate, date, full} {deletionDate, time, short} tarihine kadar giriş yapmazsan, hesabın hareketsizlik nedeniyle kalıcı olarak silinecektir.\n\nBuradan giriş yap:\n{loginUrl}\n\n{product_name}'u yakın zamanda kullandıysan, lütfen hemen destek ekibimizle iletişime geç.\n\n– {product_name} Ekibi",
+		"body": "Merhaba {username},\n\n{lastActiveDate, date, full} tarihinden beri {product_name} hesabında herhangi bir etkinlik görmedik.\n\n{deletionDate, date, full} {deletionDate, time, short} tarihine kadar giriş yapmazsan, hesabın hareketsizlik nedeniyle kalıcı olarak silinecektir.\n\nBuradan giriş yap:\n{loginUrl}\n\n{product_name}'i yakın zamanda kullandıysan, lütfen hemen destek ekibimizle iletişime geç.\n\n– {product_name} Ekibi",
 		"button": "Giriş yap"
 	},
 	"ip_authorization": {
@@ -89,16 +89,16 @@ const EMAIL_I18N_TR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"referral_reward_ready": {
 		"subject": "Referans ödülün hazır",
-		"body": "🎉 Merhaba {username},\n\nReferans ödülün hazır. {product_name}'ta Ayarlar → Referans bölümünden görebilirsin.\n\n– {product_name} Ekibi"
+		"body": "🎉 Merhaba {username},\n\nReferans ödülün hazır. {product_name}'de Ayarlar → Referans bölümünden görebilirsin.\n\n– {product_name} Ekibi"
 	},
 	"registration_approved": {
 		"subject": "{product_name} kaydın onaylandı",
 		"body": "🎉 Merhaba {username},\n\nİyi haber: {product_name} kaydın onaylandı.\n\nArtık {product_name} uygulamasına buradan giriş yapabilirsin:\n{channelsUrl}\n\n{product_name} topluluğuna hoş geldin.\n\n– {product_name} Ekibi",
-		"button": "{product_name}'u aç"
+		"button": "{product_name}'i aç"
 	},
 	"report_resolved": {
 		"subject": "{product_name} raporun incelendi",
-		"body": "Merhaba {username},\n\nRaporun (Kimlik: {reportId}) Güvenlik Ekibimiz tarafından incelendi.{hasComment, select, yes {\n\nGüvenlik Ekibinin yanıtı:\n{publicComment}} other {}}\n\n{product_name}'u herkes için güvenli tutmaya yardımcı olduğun için teşekkür ederiz. Tüm raporları ciddiye alıyoruz ve topluluğa katkını takdir ediyoruz.\n\nBu sonuç hakkında herhangi bir sorun veya endişen varsa, lütfen {safety_email} adresine ulaş.\n\n– {product_name} Güvenlik Ekibi"
+		"body": "Merhaba {username},\n\nRaporun (Kimlik: {reportId}) Güvenlik Ekibimiz tarafından incelendi.{hasComment, select, yes {\n\nGüvenlik Ekibinin yanıtı:\n{publicComment}} other {}}\n\n{product_name}'i herkes için güvenli tutmaya yardımcı olduğun için teşekkür ederiz. Tüm raporları ciddiye alıyoruz ve topluluğa katkını takdir ediyoruz.\n\nBu sonuç hakkında herhangi bir sorun veya endişen varsa, lütfen {safety_email} adresine ulaş.\n\n– {product_name} Güvenlik Ekibi"
 	},
 	"scheduled_deletion_notification": {
 		"subject": "{product_name} hesabın kalıcı olarak silinecek",
@@ -110,7 +110,7 @@ const EMAIL_I18N_TR_MESSAGES = defineEmailI18nLocaleMessages({
 	},
 	"unban_notification": {
 		"subject": "{product_name} hesabının askıya alınması kaldırıldı",
-		"body": "🎉 Merhaba {username},\n\nİyi haber: {product_name} hesabının askıya alınması kaldırıldı.\n\n{reason, select,\n  null {}\n  other {Sebep: {reason}}\n}\n\nArtık tekrar giriş yapabilir ve {product_name}'u normal şekilde kullanmaya devam edebilirsin.\n\n– {product_name} Güvenlik Ekibi"
+		"body": "🎉 Merhaba {username},\n\nİyi haber: {product_name} hesabının askıya alınması kaldırıldı.\n\n{reason, select,\n  null {}\n  other {Sebep: {reason}}\n}\n\nArtık tekrar giriş yapabilir ve {product_name}'i normal şekilde kullanmaya devam edebilirsin.\n\n– {product_name} Güvenlik Ekibi"
 	}
 });
 

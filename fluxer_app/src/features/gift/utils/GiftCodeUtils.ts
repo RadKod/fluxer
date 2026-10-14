@@ -4,7 +4,7 @@ import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import * as CodeLinkUtils from '@app/features/messaging/utils/CodeLinkUtils';
 
 // Micup: Fluxer's gift hosts are another service's.
-const OFFICIAL_GIFT_URL_BASES = Object.freeze(['https://micup.gg/gift']);
+const OFFICIAL_GIFT_URL_BASES = Object.freeze(['https://sanalyer.com/gift']);
 const GIFT_CONFIG: CodeLinkUtils.CodeLinkConfig = {
 	path: 'gift',
 	get urlBases() {

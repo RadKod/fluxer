@@ -491,7 +491,7 @@ export const RpcResponseSessionData = z.object({
 		.array(WebAuthnCredentialResponse)
 		.describe('Registered WebAuthn credentials (passkeys) for the authenticated user'),
 	feed_notification_state: FeedNotificationStateResponse.optional().describe(
-		'Micup: the feed inbox read cursor and unread count; absent for bots, with the feed off, or when it could not be read in time',
+		'sanalyer: the feed inbox read cursor and unread count; absent for bots, with the feed off, or when it could not be read in time',
 	),
 	version: z.number().int().describe('Session data version for cache invalidation'),
 });

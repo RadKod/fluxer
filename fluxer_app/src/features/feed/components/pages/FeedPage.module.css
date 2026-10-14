@@ -159,7 +159,7 @@
 }
 
 /* Micup: the X "Lights out" look in the coal and dark themes; the light theme keeps the rules above.
-   The custom theme guard, as on the other Micup coal surfaces, also lifts these rules (1,1,1) over the desktop layout
+   The custom theme guard, as on the other sanalyer coal surfaces, also lifts these rules (1,1,1) over the desktop layout
    and hover rules, so each state they change is restated here. */
 :global(html:is(.theme-coal, .theme-dark):not(:has(#fluxer-custom-theme-style))) .main {
 	background-color: var(--background-secondary-lighter);

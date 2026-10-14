@@ -175,7 +175,7 @@ pub struct ApiUserPartial {
 }
 
 const FLUXER_SYSTEM_USER_ID: i64 = 0;
-const FLUXER_SYSTEM_USERNAME: &str = "Micup";
+const FLUXER_SYSTEM_USERNAME: &str = "sanalyer";
 const FLUXER_SYSTEM_DISCRIMINATOR: &str = "0000";
 
 pub fn now_ms() -> i64 {
@@ -598,7 +598,7 @@ mod tests {
     fn api_partial_maps_system_user_like_the_api_mapper() {
         let system = partial_with_flags(FLUXER_SYSTEM_USER_ID, USER_FLAG_STAFF).to_api_partial();
 
-        assert_eq!(system.username, "Micup");
+        assert_eq!(system.username, "sanalyer");
         assert_eq!(system.bot, Some(true));
         assert_eq!(system.system, Some(true));
         assert_eq!(

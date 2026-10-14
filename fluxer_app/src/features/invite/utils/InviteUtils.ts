@@ -13,7 +13,7 @@ import {ChannelTypes, GUILD_TEXT_BASED_CHANNEL_TYPES, Permissions} from '@fluxer
 import {compareChannelOrdering} from '@fluxer/schema/src/domains/channel/GuildChannelOrdering';
 
 // Micup: Fluxer's invite hosts are another service's; fluxer.gg/<code> is not a Micup invite.
-const OFFICIAL_INVITE_URL_BASES = Object.freeze(['https://micup.gg/invite']);
+const OFFICIAL_INVITE_URL_BASES = Object.freeze(['https://sanalyer.com/invite']);
 const INVITE_CONFIG: CodeLinkUtils.CodeLinkConfig = {
 	path: 'invite',
 	get urlBases() {

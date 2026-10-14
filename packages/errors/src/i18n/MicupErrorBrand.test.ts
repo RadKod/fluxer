@@ -16,7 +16,7 @@ const CATALOGS: Record<string, Record<string, string>> = {
 	...ERROR_I18N_LOCALE_MESSAGES,
 };
 
-describe('Micup error brand', () => {
+describe('sanalyer error brand', () => {
 	it.each(Object.keys(CATALOGS))('%s names no upstream brand or support address', (locale) => {
 		const leaks = Object.entries(CATALOGS[locale])
 			.filter(([, message]) => UPSTREAM_BRAND.test(message))
@@ -24,17 +24,17 @@ describe('Micup error brand', () => {
 		expect(leaks).toEqual([]);
 	});
 
-	it('sends IP ban appeals to Micup support', () => {
+	it('sends IP ban appeals to sanalyer support', () => {
 		const message = getErrorMessage('permissions.global_ip_banned', 'en-US', {ipAddress: '203.0.113.1'});
-		expect(message).toContain('Micup API');
+		expect(message).toContain('sanalyer API');
 		expect(message).toContain('pr@premate.gg');
 		const error = new IpBannedError({ipAddress: '203.0.113.1', kind: 'permanent'});
 		expect(error.data?.appeal_email).toBe('pr@premate.gg');
 	});
 
-	it('calls the premium tier Micup Plus', () => {
+	it('calls the premium tier sanalyer Plus', () => {
 		expect(new CannotRedeemPlutoniumWithVisionaryError().messageVariables).toEqual({
-			premium_tier_name: 'Micup Plus',
+			premium_tier_name: 'sanalyer Plus',
 		});
 	});
 });

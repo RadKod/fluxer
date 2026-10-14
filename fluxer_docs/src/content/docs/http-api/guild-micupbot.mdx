@@ -52,7 +52,7 @@ The inviter needs the normal guild management and permission-granting rights. Th
 
 The bot runs through the instance's services without its own Gateway session and can appear offline. Its token is refused for bot-token authentication.
 
-**Discover → Applications** reads `features.official_apps` from [instance discovery](/http-api/instance/). Each entry has `application_id` and `invite_permissions`, both strings. Applications appear in order: MicupBOT, then Micup Roster, each only when its own instance feature is enabled and its application ID is configured. Disabled or unconfigured entries are omitted. A listed application does not prove it has joined a guild. Cards fetch application details from `GET /oauth2/applications/{application_id}/public` and use the same `scope=bot` invitation, without a preselected guild.
+**Discover → Applications** reads `features.official_apps` from [instance discovery](/http-api/instance/). Each entry has `application_id` and `invite_permissions`, both strings. Applications appear in order: MicupBOT, then sanalyer Roster, each only when its own instance feature is enabled and its application ID is configured. Disabled or unconfigured entries are omitted. A listed application does not prove it has joined a guild. Cards fetch application details from `GET /oauth2/applications/{application_id}/public` and use the same `scope=bot` invitation, without a preselected guild.
 
 ## Permission and safety rules
 

@@ -33,7 +33,7 @@ vi.mock('@app/features/cosmetics/state/UltraLayouts', () => ({
 }));
 vi.mock('@app/features/ui/commands/ModalCommands', () => modalCommands);
 vi.mock('@app/features/ui/commands/ToastCommands', () => ({createToast: vi.fn()}));
-vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PREMIUM_PRODUCT_NAME: 'Micup Plus'}));
+vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PREMIUM_PRODUCT_NAME: 'sanalyer Plus'}));
 vi.mock('@app/features/user/state/Users', () => ({
 	default: {
 		get currentUser() {
@@ -198,7 +198,7 @@ describe('ShopItemDetailModal', () => {
 
 		const premiumItem = entry('avatar_ultra', 'premium');
 		render(premiumItem, false);
-		expect(button('Get Micup Plus')?.closest('[data-halo]')).toBeNull();
+		expect(button('Get sanalyer Plus')?.closest('[data-halo]')).toBeNull();
 		account.premium = true;
 		render({...premiumItem}, false);
 		expect(button('Equip')?.closest('[data-halo]')).toBeNull();
@@ -223,7 +223,7 @@ describe('ShopItemDetailModal', () => {
 	it('Get Premium opens the checkout on the first package on sale, on top, and Okay closes both but keeps settings open', () => {
 		const premiumItem = entry('avatar_ultra', 'premium');
 		render(premiumItem);
-		act(() => button('Get Micup Plus')?.click());
+		act(() => button('Get sanalyer Plus')?.click());
 		expect(modalCommands.push).toHaveBeenCalledTimes(1);
 		const pushed = (modalCommands.push.mock.calls[0][0] as ModalRender)();
 		expect(pushed.type).toBe(ShopCheckoutModal);
@@ -239,7 +239,7 @@ describe('ShopItemDetailModal', () => {
 	it('stays open when the checkout closes without a purchase', () => {
 		const premiumItem = entry('avatar_ultra', 'premium');
 		render(premiumItem);
-		act(() => button('Get Micup Plus')?.click());
+		act(() => button('Get sanalyer Plus')?.click());
 		render(premiumItem, false);
 		render(premiumItem, true);
 		expect(modalCommands.pop).not.toHaveBeenCalled();

@@ -38,7 +38,7 @@ describe('GuildSettingsConstants', () => {
 		expect(appImports).toEqual([]);
 	});
 
-	it('leaves the tab component registry as the only importer of the Micup tab modules', () => {
+	it('leaves the tab component registry as the only importer of the sanalyer tab modules', () => {
 		const tabModules = [
 			'features/boost/components/GuildBoostTab',
 			'features/roster/components/GuildRosterTab',

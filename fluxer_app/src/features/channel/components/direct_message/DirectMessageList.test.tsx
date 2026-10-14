@@ -30,13 +30,13 @@ vi.mock('@app/features/platform/components/router/RouterReact', () => ({
 vi.mock('@app/features/navigation/utils/RouterUtils', () => routerUtils);
 vi.mock('@app/features/premium/commands/PremiumModalCommands', () => premiumModalCommands);
 vi.mock('@app/features/premium/utils/PremiumUtils', () => ({
-	getPremiumProductName: () => 'Micup Plus',
+	getPremiumProductName: () => 'sanalyer Plus',
 	shouldShowPremiumFeatures: () => state.premium,
 	isPremiumPageAvailable: () => state.premiumPage,
 }));
 vi.mock('@app/features/shop/utils/ShopAvailability', () => ({isShopPageAvailable: () => state.shop}));
 vi.mock('@app/features/ui/state/MobileLayout', () => ({default: {isMobileLayout: () => state.mobile}}));
-vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PREMIUM_PRODUCT_NAME: 'Micup Plus'}));
+vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PREMIUM_PRODUCT_NAME: 'sanalyer Plus'}));
 vi.mock('@app/features/i18n/utils/CommonMessageDescriptors', () => ({
 	PERSONAL_NOTES_DESCRIPTOR: {message: 'Personal notes'},
 }));
@@ -122,19 +122,19 @@ describe('DMList quick links', () => {
 	const rows = () =>
 		[...container.querySelectorAll('button, [role="button"]')]
 			.map((row) => row.textContent ?? '')
-			.filter((text) => ['Friends', 'Personal notes', 'Micup Plus', 'Bot System', 'Shop'].includes(text));
+			.filter((text) => ['Friends', 'Personal notes', 'sanalyer Plus', 'Bot System', 'Shop'].includes(text));
 	const row = (label: string) =>
 		[...container.querySelectorAll<HTMLElement>('button, [role="button"]')].find((el) => el.textContent === label);
 
 	it('lists the shop right under premium, Bot System after them', () => {
 		render();
-		expect(rows()).toEqual(['Friends', 'Personal notes', 'Micup Plus', 'Shop', 'Bot System']);
+		expect(rows()).toEqual(['Friends', 'Personal notes', 'sanalyer Plus', 'Shop', 'Bot System']);
 	});
 
 	// The same rows as the feed sidebar (DMListPageItems): premium and the shop carry the accent.
 	it('draws premium and the shop with the accent, Bot System without it', () => {
 		render();
-		expect(row('Micup Plus')?.classList).toContain(pageItemStyles.accent);
+		expect(row('sanalyer Plus')?.classList).toContain(pageItemStyles.accent);
 		expect(row('Shop')?.classList).toContain(pageItemStyles.accent);
 		expect(row('Bot System')?.classList).not.toContain(pageItemStyles.accent);
 		expect(row('Friends')?.classList).not.toContain(pageItemStyles.accent);
@@ -143,7 +143,7 @@ describe('DMList quick links', () => {
 	it('hides the shop row where the shop does not run', () => {
 		state.shop = false;
 		render();
-		expect(rows()).toEqual(['Friends', 'Personal notes', 'Micup Plus', 'Bot System']);
+		expect(rows()).toEqual(['Friends', 'Personal notes', 'sanalyer Plus', 'Bot System']);
 	});
 
 	it('the shop row goes to the shop page and is selected there', () => {
@@ -160,19 +160,19 @@ describe('DMList quick links', () => {
 
 	it('the premium row opens premium and is selected on the premium page', () => {
 		render();
-		act(() => row('Micup Plus')?.click());
+		act(() => row('sanalyer Plus')?.click());
 		expect(premiumModalCommands.open).toHaveBeenCalledTimes(1);
-		expect(row('Micup Plus')?.getAttribute('aria-current')).toBeNull();
+		expect(row('sanalyer Plus')?.getAttribute('aria-current')).toBeNull();
 
 		state.pathname = '/premium';
 		render();
-		expect(row('Micup Plus')?.getAttribute('aria-current')).toBe('page');
+		expect(row('sanalyer Plus')?.getAttribute('aria-current')).toBe('page');
 	});
 
 	it('on mobile, premium and the shop sit together under personal notes where they are pages', () => {
 		state.mobile = true;
 		render();
-		expect(rows()).toEqual(['Personal notes', 'Micup Plus', 'Shop', 'Bot System']);
+		expect(rows()).toEqual(['Personal notes', 'sanalyer Plus', 'Shop', 'Bot System']);
 		act(() => row('Shop')?.click());
 		expect(routerUtils.transitionTo).toHaveBeenCalledWith('/shop');
 
@@ -185,7 +185,7 @@ describe('DMList quick links', () => {
 	it('on mobile, draws premium and the shop with the desktop accent, Bot System without it', () => {
 		state.mobile = true;
 		render();
-		for (const label of ['Micup Plus', 'Shop']) {
+		for (const label of ['sanalyer Plus', 'Shop']) {
 			expect(row(label)?.classList).toContain(pageItemStyles.accent);
 			expect(row(label)?.querySelector(`.${pageItemStyles.accentIcon}`)).not.toBeNull();
 			expect(row(label)?.querySelector(`.${pageItemStyles.accentLabel}`)?.textContent).toBe(label);

@@ -140,7 +140,7 @@ describe('profile visibility', () => {
 		expect(own.flags & PROFILE_HIDDEN_BIT).toBe(0);
 	});
 
-	it('clears every worn Micup cosmetic and the derived Plus badge when hidden', () => {
+	it('clears every worn sanalyer cosmetic and the derived Plus badge when hidden', () => {
 		const styled = user({
 			flags: UserFlags.PROFILE_HIDDEN | UserFlags.VERIFIED,
 			premium_type: UserPremiumTypes.SUBSCRIPTION,

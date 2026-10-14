@@ -21,11 +21,11 @@ const PAYABLE_DESCRIPTOR = msg({
 });
 const MONTHLY_DESCRIPTOR = msg({
 	message: '{price} a month',
-	comment: 'Monthly TL equivalent of a Micup Plus package; the AZN amount below is the full package total.',
+	comment: 'Monthly TL equivalent of a sanalyer Plus package; the AZN amount below is the full package total.',
 });
 const DAILY_DESCRIPTOR = msg({
 	message: '≈ {price} a day',
-	comment: 'Informational daily TL equivalent of a Micup Plus package, using 30 days per month.',
+	comment: 'Informational daily TL equivalent of a sanalyer Plus package, using 30 days per month.',
 });
 
 interface ShopPriceProps {

@@ -11,7 +11,7 @@ const withoutParamNames = (path: string) => path.replace(/\{[^}]+\}/g, '{}');
 const apiPaths = new Set(Object.keys(spec.paths).map(withoutParamNames));
 const P = '{}';
 
-describe('Micup endpoints', () => {
+describe('sanalyer endpoints', () => {
 	it('builds guild-scoped community bot endpoints', () => {
 		expect(Endpoints.GUILD_MICUPBOT_SETTINGS('123')).toBe('/guilds/123/micupbot/settings');
 		expect(Endpoints.GUILD_MICUPBOT_AUTOMOD('123')).toBe('/guilds/123/micupbot/automod');

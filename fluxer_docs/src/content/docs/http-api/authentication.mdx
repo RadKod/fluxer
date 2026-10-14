@@ -574,7 +574,7 @@ Registration verifies a [CAPTCHA](/topics/captcha/). It permits 3 attempts per h
 
 <sup>7</sup> Never fails the registration. A code that is unknown, malformed, overlong, or the account's own, and any code while the referral programme is closed, is ignored without an error. A valid code links the new account to the code's owner as a pending referral. The code does not affect `invite_code` or any other registration policy
 
-Micup requires accounts to be at least 15 years old in every region, including an unknown region. An age below that minimum returns the field code `MUST_BE_MINIMUM_AGE`, and the applied minimum appears only in the localised message.
+sanalyer requires accounts to be at least 15 years old in every region, including an unknown region. An age below that minimum returns the field code `MUST_BE_MINIMUM_AGE`, and the applied minimum appears only in the localised message.
 
 Registration returns 403 `REGISTRATION_CLOSED` when the instance is closed and no valid registration URL was supplied. A username whose discriminator space is exhausted returns the field code `TOO_MANY_USERS_WITH_THIS_USERNAME`. A username or display name containing a blocked substring returns 403 `CONTENT_BLOCKED`.
 

@@ -19,13 +19,13 @@ const SMALL_COMMUNITIES_GONE_DESCRIPTOR = msg({
 	message:
 		'Profile privacy options have changed: "Friends and small communities only" is gone. Your profile is now on "Shared communities": your friends, people you follow each other with and members of communities you share can see it.',
 	comment:
-		'Micup nagbar for a user whose profile privacy was the removed "Friends and small communities only" option; it now reads as "Shared communities". The quoted names are option labels in Privacy settings. Legal-effect text: approved before release.',
+		'sanalyer nagbar for a user whose profile privacy was the removed "Friends and small communities only" option; it now reads as "Shared communities". The quoted names are option labels in Privacy settings. Legal-effect text: approved before release.',
 });
 const FRIENDS_NOW_INCLUDE_MUTUALS_DESCRIPTOR = msg({
 	message:
 		'Profile privacy options have changed: "Friends only" is now "Friends and mutual follows". People you follow each other with can see your profile too.',
 	comment:
-		'Micup nagbar for a user whose profile privacy was "Friends only", which now also lets mutual follows (people who follow each other) see the profile. The quoted names are option labels in Privacy settings. Legal-effect text: approved before release.',
+		'sanalyer nagbar for a user whose profile privacy was "Friends only", which now also lets mutual follows (people who follow each other) see the profile. The quoted names are option labels in Privacy settings. Legal-effect text: approved before release.',
 });
 
 // Micup: the old small-communities (1) and friends-only (2) settings widened at release; their

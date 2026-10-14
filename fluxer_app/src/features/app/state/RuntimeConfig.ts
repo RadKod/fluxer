@@ -114,7 +114,7 @@ interface RuntimeConfigPublication {
 	phase: RuntimeConfigPublicationPhase;
 }
 
-const DEFAULT_PREMIUM_PRODUCT_NAME = 'Micup Plus';
+const DEFAULT_PREMIUM_PRODUCT_NAME = 'sanalyer Plus';
 const LEGACY_USERNAME_MIGRATION: UsernameMigration = Object.freeze({
 	state: 'legacy',
 	epoch: 0,

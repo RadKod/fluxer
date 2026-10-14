@@ -17,7 +17,7 @@ describe('NCMEC report service name', () => {
 		harness = undefined;
 	});
 
-	test('names Micup, never Fluxer, in the submitted report', async () => {
+	test('names sanalyer, never Fluxer, in the submitted report', async () => {
 		harness = await createApiTestHarness();
 		const admin = await setUserACLs(harness, await createTestAccount(harness), [AdminACLs.WILDCARD]);
 		const author = await createTestAccount(harness);
@@ -37,15 +37,15 @@ describe('NCMEC report service name', () => {
 				reporter_full_name: 'Brand Reporter',
 				confirmed_viewed: true,
 			},
-			headers: {Authorization: admin.token, 'X-Audit-Log-Reason': 'Micup NCMEC brand check'},
+			headers: {Authorization: admin.token, 'X-Audit-Log-Reason': 'sanalyer NCMEC brand check'},
 		});
 		expect(response.status).toBe(200);
 
 		const [report] = fakeNcmecServer.getReports();
-		expect(report?.reportXml).toContain('<platform>Micup</platform>');
-		expect(report?.reportXml).toContain('<espService>Micup</espService>');
-		expect(report?.reportXml).toContain('Micup admin attachment report.');
-		expect(report?.reportXml).toContain('handled directly by Micup API');
+		expect(report?.reportXml).toContain('<platform>sanalyer</platform>');
+		expect(report?.reportXml).toContain('<espService>sanalyer</espService>');
+		expect(report?.reportXml).toContain('sanalyer admin attachment report.');
+		expect(report?.reportXml).toContain('handled directly by sanalyer API');
 		expect(report?.reportXml).not.toMatch(/Fluxer/);
 	});
 });

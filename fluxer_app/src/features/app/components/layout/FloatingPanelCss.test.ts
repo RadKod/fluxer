@@ -8,7 +8,7 @@ import {describe, expect, it} from 'vitest';
 // channel list and the content. The floating layout lived only in CSS blocks and two tokens. Only the frame's top-left
 // corner, by the channel list, stays round like the former cards (MARKER blocks).
 const SRC_ROOT = fileURLToPath(new URL('../../../../', import.meta.url));
-const MARKER = '/* Micup: rounded frame corner by the channel list */';
+const MARKER = '/* sanalyer: rounded frame corner by the channel list */';
 
 function cssFiles(dir: string): Array<string> {
 	return readdirSync(dir, {withFileTypes: true, recursive: true})
@@ -50,13 +50,13 @@ describe('flush desktop panels', () => {
 // Micup: the user area (voice panel and user row) sits in the channel list column, inside the frame's left line, as in
 // v1; upstream stretches it under the server rail too. The rail runs to the bottom on its own surface and stops
 // reserving room for the user area; the channel and DM lists keep reserving it (USER_AREA_MARKER blocks).
-const USER_AREA_MARKER = '/* Micup: user area in the channel list column */';
+const USER_AREA_MARKER = '/* sanalyer: user area in the channel list column */';
 
 function micupSection(file: string, marker: string): string {
 	const css = readFileSync(`${SRC_ROOT}${file}`, 'utf8');
 	expect(css.split(marker)).toHaveLength(2);
 	const after = css.slice(css.indexOf(marker) + marker.length);
-	const next = after.indexOf('/* Micup:');
+	const next = after.indexOf('/* sanalyer:');
 	return (next === -1 ? after : after.slice(0, next)).replace(/\s+/g, ' ').trim();
 }
 

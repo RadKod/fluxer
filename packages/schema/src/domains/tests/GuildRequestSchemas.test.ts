@@ -63,8 +63,8 @@ describe('GuildMemberUpdateRequest', () => {
 	it('rejects one role beyond the guild role limit', () => {
 		expect(GuildMemberUpdateRequest.safeParse({roles: buildRoleIds(MAX_GUILD_ROLES + 1)}).success).toBe(false);
 	});
-	it.each(['Micup Destek', 'Micup Yetkili', 'ᴍɪᴄᴜᴘ Moderasyon'])(
-		'rejects the nickname %s, which passes for an official Micup account',
+	it.each(['sanalyer Destek', 'sanalyer Yetkili', 'ᴍɪᴄᴜᴘ Moderasyon'])(
+		'rejects the nickname %s, which passes for an official sanalyer account',
 		(nick) => {
 			for (const schema of [GuildMemberUpdateRequest, MyGuildMemberUpdateRequest]) {
 				expect(schema.safeParse({nick}).error?.issues[0]?.message).toBe(
@@ -73,7 +73,7 @@ describe('GuildMemberUpdateRequest', () => {
 			}
 		},
 	);
-	it.each(['Sunucu Yetkilisi', 'Micup sever', null, ''])('accepts the nickname %j', (nick) => {
+	it.each(['Sunucu Yetkilisi', 'sanalyer sever', null, ''])('accepts the nickname %j', (nick) => {
 		expect(MyGuildMemberUpdateRequest.safeParse({nick}).success).toBe(true);
 	});
 });

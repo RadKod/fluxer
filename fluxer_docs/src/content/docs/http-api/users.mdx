@@ -67,7 +67,7 @@ A system account never receives the deleted representation. An account only sche
 :::
 
 :::note[An instance without tags]
-On an instance whose `tag_style` [feature](/http-api/instance/#instance-features-object) is `none`, a selected human username is unique and has the discriminator `0000`. Micup displays it as `@alex`. During username migration, people who have not selected a name keep their nonzero discriminator and display as `Alex#4821`, even though the instance uses `none`. Bot accounts keep their random discriminators and display them. A tag such as `alex#4821` resolves only to a legacy account; it never resolves to a person who has selected `@alex`. Names do not change account IDs, mentions or profile links. Micup sign-in remains email-only.
+On an instance whose `tag_style` [feature](/http-api/instance/#instance-features-object) is `none`, a selected human username is unique and has the discriminator `0000`. sanalyer displays it as `@alex`. During username migration, people who have not selected a name keep their nonzero discriminator and display as `Alex#4821`, even though the instance uses `none`. Bot accounts keep their random discriminators and display them. A tag such as `alex#4821` resolves only to a legacy account; it never resolves to a person who has selected `@alex`. Names do not change account IDs, mentions or profile links. sanalyer sign-in remains email-only.
 :::
 
 ## Public user flags
@@ -101,7 +101,7 @@ A guild member has the same enumeration in its own `mention_flags`, where `NO_PR
 
 ## User object
 
-During Micup username migration, the owner-only `username_state` is `legacy`, `selected`, or `reselect_required`. It is absent from public users, members, presence, search and OAuth2 identity responses. `GET /users/@me/username` also returns `state`, `changeAvailableAt` (an ISO timestamp or null) and `freeChangeAvailable`. The first selection and one subsequent change have no waiting period; further changes require 14 days. `POST /users/@me/username-prompt` returns `show`; the server allows at most one prompt per person per Istanbul day.
+During sanalyer username migration, the owner-only `username_state` is `legacy`, `selected`, or `reselect_required`. It is absent from public users, members, presence, search and OAuth2 identity responses. `GET /users/@me/username` also returns `state`, `changeAvailableAt` (an ISO timestamp or null) and `freeChangeAvailable`. The first selection and one subsequent change have no waiting period; further changes require 14 days. `POST /users/@me/username-prompt` returns `show`; the server allows at most one prompt per person per Istanbul day.
 
 After the migration deadline, an unselected person must choose a name before creating messages, reactions, friendships, guilds or DMs, joining guilds, adding bots or joining/moving voice. `USERNAME_SELECTION_REQUIRED` carries the same requirement for HTTP and voice. Sign-out, email verification, sudo/MFA, password recovery, account deletion, data export, settings, support, blocking/reporting and reading remain available. Suspended accounts are not forced to choose a name until their suspension ends.
 
@@ -705,7 +705,7 @@ The caller's current tag returns `false`. The username comparison is case-insens
 
 When the caller is not a bot on an instance with the `none` tag style, the discriminator is ignored. There `taken` reports whether another account that is not a bot holds the username in any letter case. An account waiting to be deleted still holds its username.
 
-During Micup migration, the availability response preserves `taken` and can also include `reason` and `available_at`. A name can be unavailable because it is taken, reserved, blocked, in a locked or sale tier, or still within its 14-day release embargo. `available_at` is the embargo/cooldown opening time when provided. Availability never reveals the owner and does not reserve the name; another selection may win before submission. Inputs accept an optional leading `@`.
+During sanalyer migration, the availability response preserves `taken` and can also include `reason` and `available_at`. A name can be unavailable because it is taken, reserved, blocked, in a locked or sale tier, or still within its 14-day release embargo. `available_at` is the embargo/cooldown opening time when provided. Availability never reveals the owner and does not reserve the name; another selection may win before submission. Inputs accept an optional leading `@`.
 
 A reserved username fails validation with `USERNAME_RESERVED_VALUE` or `USERNAME_CANNOT_CONTAIN_RESERVED_TERMS`, and no `taken` value comes back for it.
 

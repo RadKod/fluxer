@@ -93,7 +93,7 @@ export const PremiumBadgeSettings = observer(
 						disabled={disabled}
 						data-flx="user.my-profile-tab.premium-badge-settings.switch.toggle"
 					/>
-					{/* Micup: no "hide purchase date" switch. The date only showed in the premium badge row tooltip, which the
+					{/* sanalyer: no "hide purchase date" switch. The date only showed in the premium badge row tooltip, which the
 					crown next to the name replaced; premium_badge_timestamp_hidden stays on the server and is saved unchanged. */}
 					{hasLifetimePremium && (
 						<Switch

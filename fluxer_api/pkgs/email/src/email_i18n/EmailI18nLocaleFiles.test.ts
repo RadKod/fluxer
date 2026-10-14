@@ -174,7 +174,7 @@ describe('EmailI18n locale files', () => {
 			username: 'ayse',
 			channelsUrl: 'https://example.com/channels/@me',
 		});
-		expect(template.ok && template.value.button).toBe("Micup'u aç");
+		expect(template.ok && template.value.button).toBe("sanalyer'i aç");
 	});
 	it.each(LOCALES)('%s keeps the source placeholders in every template', (locale) => {
 		const messages: Partial<Record<EmailTemplateKey, {subject: string; body: string}>> =

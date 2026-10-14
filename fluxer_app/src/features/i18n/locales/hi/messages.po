@@ -1513,7 +1513,7 @@ msgstr "{displayName}'s screen"
 
 #. Instance selector error shown when the instance speaks a protocol generation this client does not know. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts:24
-msgid "{domain} runs a newer version of Micup than this app. Update Micup, then try again."
+msgid "{domain} runs a newer version of sanalyer than this app. Update sanalyer, then try again."
 msgstr "{domain} फ़्लक्सर का एक नया संस्करण चलाता है जो इस ऐप से पुराना है। फ़्लक्सर को अपडेट करें, फिर पुनः प्रयास करें।"
 
 #. Profile timezone difference text. duration is a localized hours/minutes phrase for how far ahead the target user's local time is.
@@ -2027,8 +2027,8 @@ msgstr "{price} प्रति माह"
 
 #. Secondary shop price for someone without the Micup Plus discount. {price} is formatted in TL or AZN.
 #: src/features/shop/components/ShopPriceLine.tsx:27
-msgid "{price} with Micup Plus"
-msgstr "Micup Plus के साथ {price}"
+msgid "{price} with sanalyer Plus"
+msgstr "sanalyer Plus के साथ {price}"
 
 #: src/features/app/components/BootstrapErrorScreen.tsx:75
 msgid "{PRODUCT_NAME} failed to start properly. This could be due to corrupted data or a temporary issue."
@@ -11805,8 +11805,8 @@ msgstr "यह संदेश प्रकाशित नहीं हो स�
 
 #. Instance selector error shown when no Fluxer instance answered at the address. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts:20
-msgid "Couldn't reach a Micup instance at {domain}. Check the address and that the instance is online."
-msgstr "{domain} पर कोई Micup इंस्टेंस नहीं मिला। पता जांचें और सुनिश्चित करें कि इंस्टेंस ऑनलाइन है।"
+msgid "Couldn't reach a sanalyer instance at {domain}. Check the address and that the instance is online."
+msgstr "{domain} पर कोई sanalyer इंस्टेंस नहीं मिला। पता जांचें और सुनिश्चित करें कि इंस्टेंस ऑनलाइन है।"
 
 #. Title of the generic fallback error modal shown when reactivating a Plutonium subscription fails.
 #: src/features/app/components/dialogs/components/plutonium/hooks/useSubscriptionActions.ts:50
@@ -22330,8 +22330,8 @@ msgstr "लाइफ़टाइम {premiumProductName}, एक नंबर �
 
 #. Note in the Visionary buy dialog, under the currency note.
 #: src/features/shop/utils/ShopMessageDescriptors.ts:331
-msgid "Lifetime means for as long as Micup runs."
-msgstr "लाइफ़टाइम का मतलब है जब तक Micup चलता है।"
+msgid "Lifetime means for as long as sanalyer runs."
+msgstr "लाइफ़टाइम का मतलब है जब तक sanalyer चलता है।"
 
 #. Settings search synonym. Used to match this term when the user types it in the settings search bar.
 #: src/features/expressions/components/modals/sticker_form/StickerPreview.tsx:53
@@ -24271,22 +24271,22 @@ msgstr "माइक्रोफ़ोन, कैमरा और स्क्�
 
 #. Payment currency explanation on the shop, Micup Plus page, checkout and FAQ. Keep the company location explicit.
 #: src/features/shop/components/ShopCurrencyNote.tsx:6
-msgid "Micup is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate."
-msgstr "Micup एक अज़रबैजानी कंपनी है, इसलिए भुगतान अज़रबैजानी मनात (AZN) में लिए जाते हैं। तुर्की लीरा (TL) की रकम केवल जानकारी के लिए है और अज़रबैजान के केंद्रीय बैंक की दैनिक विनिमय दर पर आधारित है।"
+msgid "sanalyer is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate."
+msgstr "sanalyer एक अज़रबैजानी कंपनी है, इसलिए भुगतान अज़रबैजानी मनात (AZN) में लिए जाते हैं। तुर्की लीरा (TL) की रकम केवल जानकारी के लिए है और अज़रबैजान के केंद्रीय बैंक की दैनिक विनिमय दर पर आधारित है।"
 
 #: src/features/user/components/modals/UsernamePickerModal.tsx:118
-msgid "Micup no longer uses #1234 tags. Everyone has a unique username: @yourname."
-msgstr "Micup अब #1234 टैग का उपयोग नहीं करता है। प्रत्येक व्यक्ति का एक अद्वितीय उपयोगकर्ता नाम होता है: @yourname।"
+msgid "sanalyer no longer uses #1234 tags. Everyone has a unique username: @yourname."
+msgstr "sanalyer अब #1234 टैग का उपयोग नहीं करता है। प्रत्येक व्यक्ति का एक अद्वितीय उपयोगकर्ता नाम होता है: @yourname।"
 
 #. Status shown when browser sign-in status polling gives up after repeated failures.
 #: src/features/auth/flow/auth_login_core/AuthLoginBrowserStep.tsx:72
-msgid "Micup stopped checking whether the browser approved this sign-in. It didn't lose your code."
-msgstr "Micup ने यह जांचना बंद कर दिया कि ब्राउज़र ने इस साइन-इन को मंजूरी दी है या नहीं। इसने आपका कोड नहीं खोया है।"
+msgid "sanalyer stopped checking whether the browser approved this sign-in. It didn't lose your code."
+msgstr "sanalyer ने यह जांचना बंद कर दिया कि ब्राउज़र ने इस साइन-इन को मंजूरी दी है या नहीं। इसने आपका कोड नहीं खोया है।"
 
 #. Product name on the Visionary card and buy dialog. A product name: keep it as written.
 #: src/features/shop/utils/ShopMessageDescriptors.ts:314
-msgid "Micup Visionary"
-msgstr "Micup Visionary"
+msgid "sanalyer Visionary"
+msgstr "sanalyer Visionary"
 
 #: src/features/input/utils/KeybindUtils.ts:52
 msgctxt "mouse-button-name"
@@ -26822,8 +26822,8 @@ msgstr "आधिकारिक इंस्टेंस"
 
 #. Description of the official applications listed in the bot catalog.
 #: src/features/bots/components/pages/BotsPage.tsx:25
-msgid "Official Micup bots you can add to your community."
-msgstr "Micup के आधिकारिक बॉट जिन्हें आप अपनी कम्युनिटी में जोड़ सकते हैं।"
+msgid "Official sanalyer bots you can add to your community."
+msgstr "sanalyer के आधिकारिक बॉट जिन्हें आप अपनी कम्युनिटी में जोड़ सकते हैं।"
 
 #. Generic presence-status label indicating the user is offline.
 #: src/features/i18n/utils/CommonMessageDescriptors.ts:649
@@ -37653,8 +37653,8 @@ msgid "Tag name"
 msgstr "टैग का नाम"
 
 #: src/features/user/components/modals/UsernamePickerModal.tsx:138
-msgid "Tagged names are no longer used. Choose a unique username to continue using Micup."
-msgstr "टैग किए गए नाम अब उपयोग नहीं किए जाते. Micup का उपयोग जारी रखने के लिए एक अद्वितीय उपयोगकर्ता नाम चुनें।"
+msgid "Tagged names are no longer used. Choose a unique username to continue using sanalyer."
+msgstr "टैग किए गए नाम अब उपयोग नहीं किए जाते. sanalyer का उपयोग जारी रखने के लिए एक अद्वितीय उपयोगकर्ता नाम चुनें।"
 
 #. Label of the tag filter in a forum channel and of the tags section in forum settings.
 #. Short label in the theme studio library section. Keep it concise.
@@ -42199,8 +42199,8 @@ msgstr "समय फ़ॉर्मैट के लिए सिस्टम �
 
 #. Accessible label for the official Fluxer instance option.
 #: src/features/auth/flow/instance_selector/InstancePickerRows.tsx:24
-msgid "Use the official Micup instance"
-msgstr "आधिकारिक Micup इंस्टेंस का उपयोग करें"
+msgid "Use the official sanalyer instance"
+msgstr "आधिकारिक sanalyer इंस्टेंस का उपयोग करें"
 
 #. Settings search entry description. One-line summary of what the settings search entry controls.
 #: src/features/user/components/settings_utils/search_index/DesktopSettingsIndex.ts:175

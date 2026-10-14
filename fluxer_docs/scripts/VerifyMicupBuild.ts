@@ -119,9 +119,9 @@ for (let start = 0; start < assetList.length; start += 8) {
 }
 for (const path of ['', 'bots/hizli-baslangic/']) {
 	const html = pages.get(new URL(path, base).href) ?? '';
-	if (!/<title>[^<]*Micup[^<]*<\/title>/i.test(html)) errors.push(`Missing Micup title: ${path || 'homepage'}`);
+	if (!/<title>[^<]*sanalyer[^<]*<\/title>/i.test(html)) errors.push(`Missing sanalyer title: ${path || 'homepage'}`);
 	if (!html.includes('https://micup.gg/.well-known/fluxer'))
-		errors.push(`Missing Micup discovery: ${path || 'homepage'}`);
+		errors.push(`Missing sanalyer discovery: ${path || 'homepage'}`);
 }
 const example = pages.get(new URL('bots/hizli-baslangic/', base).href) ?? '';
 for (const expected of ['api_public', '/v1/channels/', 'Authorization', 'Bot']) {
@@ -129,7 +129,7 @@ for (const expected of ['api_public', '/v1/channels/', 'Authorization', 'Bot']) 
 }
 const discovery = pages.get(new URL('http-api/instance/', base).href) ?? '';
 for (const endpoint of ['https://micup.gg/api', 'wss://micup.gg/gateway', 'https://micup.gg/media']) {
-	if (!discovery.includes(endpoint)) errors.push(`Missing Micup endpoint mapping: ${endpoint}`);
+	if (!discovery.includes(endpoint)) errors.push(`Missing sanalyer endpoint mapping: ${endpoint}`);
 }
 console.log(
 	JSON.stringify(

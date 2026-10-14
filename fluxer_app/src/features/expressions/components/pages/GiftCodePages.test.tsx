@@ -133,7 +133,7 @@ describe('gift code pages', () => {
 		page: FC,
 		code: string,
 		body: unknown,
-		branding = {product_name: 'Micup', premium_product_name: 'Plus'},
+		branding = {product_name: 'sanalyer', premium_product_name: 'Plus'},
 	) => {
 		route.code = code;
 		http.dispatch.mockResolvedValueOnce({body});
@@ -191,7 +191,7 @@ describe('gift code pages', () => {
 		});
 
 		expect(container.textContent).toContain("You've received a gift");
-		expect(container.textContent).toContain('1 month of Micup Plus');
+		expect(container.textContent).toContain('1 month of sanalyer Plus');
 	});
 
 	it('a premium code from /gifts keeps its sender', async () => {
@@ -208,7 +208,7 @@ describe('gift code pages', () => {
 		expect(http.dispatch).toHaveBeenCalledWith('GET', '/gifts/PremPage0002', expect.any(Object));
 		expect(http.matchesConfiguredRouting).toHaveBeenCalledWith('https://micup.test/api', 9);
 		expect(container.textContent).toContain('Sender sent you a gift');
-		expect(container.textContent).toContain('1 month of Micup Plus');
+		expect(container.textContent).toContain('1 month of sanalyer Plus');
 	});
 
 	it('a premium gift uses the selected instance product and plan names', async () => {

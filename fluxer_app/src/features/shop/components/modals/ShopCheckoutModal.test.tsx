@@ -16,8 +16,8 @@ const TR_DESIGN: Record<string, string> = {
 	'Payable: {amount} AZN': 'Ödenecek: {amount} AZN',
 	'{price} a month': 'Aylık {price}',
 	'≈ {price} a day': 'Günde ≈ {price}',
-	"Micup is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate.":
-		"Micup bir Azerbaycan şirketi olduğu için ödemeler Azerbaycan manatı (AZN) ile alınır. TL tutarı Azerbaycan Merkez Bankası'nın günlük kuruyla bilgi amaçlıdır.",
+	"sanalyer is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate.":
+		"sanalyer bir Azerbaycan şirketi olduğu için ödemeler Azerbaycan manatı (AZN) ile alınır. TL tutarı Azerbaycan Merkez Bankası'nın günlük kuruyla bilgi amaçlıdır.",
 	'The TL amount on your card statement may differ slightly: your bank converts AZN at its own exchange rate and may charge a foreign transaction fee.':
 		"Kart ekstrenizdeki TL tutarı biraz farklı olabilir: bankanız AZN'yi kendi kuruyla çevirir ve yurt dışı işlem ücreti alabilir.",
 };
@@ -313,7 +313,7 @@ describe('ShopCheckoutModal', () => {
 		render({kind: 'item', sku: 'cosmetic:5'});
 
 		expect(text()).toContain(
-			"Micup bir Azerbaycan şirketi olduğu için ödemeler Azerbaycan manatı (AZN) ile alınır. TL tutarı Azerbaycan Merkez Bankası'nın günlük kuruyla bilgi amaçlıdır.",
+			"sanalyer bir Azerbaycan şirketi olduğu için ödemeler Azerbaycan manatı (AZN) ile alınır. TL tutarı Azerbaycan Merkez Bankası'nın günlük kuruyla bilgi amaçlıdır.",
 		);
 		expect(text()).toContain(
 			"Kart ekstrenizdeki TL tutarı biraz farklı olabilir: bankanız AZN'yi kendi kuruyla çevirir ve yurt dışı işlem ücreti alabilir.",
@@ -346,7 +346,7 @@ describe('ShopCheckoutModal', () => {
 		});
 		render({kind: 'item', sku: 'cosmetic:5'});
 
-		expect(texts('dt')).toEqual(['Price', 'Sale (-20%)', 'Micup Plus discount (-30%)', 'Total']);
+		expect(texts('dt')).toEqual(['Price', 'Sale (-20%)', 'sanalyer Plus discount (-30%)', 'Total']);
 		expect(texts('dd')).toEqual(['8.50 AZN', '−1.70 AZN', '−2.04 AZN', '4.76 AZN']);
 		expect(container.querySelector('[data-stage="5"]')).not.toBeNull();
 	});
@@ -613,14 +613,14 @@ describe('ShopCheckoutModal', () => {
 		users.currentUser = userWith({premium: true});
 		render({kind: 'visionary'});
 
-		expect(texts('h2')).toEqual(['Micup Visionary']);
+		expect(texts('h2')).toEqual(['sanalyer Visionary']);
 		expect(texts('dt')).toEqual(['Price', 'Total']);
 		expect(texts('p')).toEqual(
 			expect.arrayContaining([
-				'Lifetime Micup Plus, a numbered badge, the #0000 tag and a decoration only Visionaries have.',
-				"Micup is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate. The TL amount on your card statement may differ slightly: your bank converts AZN at its own exchange rate and may charge a foreign transaction fee.",
-				'Lifetime means for as long as Micup runs.',
-				'Your remaining Micup Plus time becomes part of the lifetime plan. It is not refunded.',
+				'Lifetime sanalyer Plus, a numbered badge, the #0000 tag and a decoration only Visionaries have.',
+				"sanalyer is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate. The TL amount on your card statement may differ slightly: your bank converts AZN at its own exchange rate and may charge a foreign transaction fee.",
+				'Lifetime means for as long as sanalyer runs.',
+				'Your remaining sanalyer Plus time becomes part of the lifetime plan. It is not refunded.',
 			]),
 		);
 

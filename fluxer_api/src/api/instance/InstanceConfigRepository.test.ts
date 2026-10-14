@@ -508,7 +508,7 @@ describe('InstanceConfigRepository', () => {
 		});
 	});
 
-	describe('keeps the stored Micup config rows through a read and a rewrite', () => {
+	describe('keeps the stored sanalyer config rows through a read and a rewrite', () => {
 		const LIVE_VOICE_NOISE_SUPPRESSION_ROW = {
 			enabled: true,
 			pipeline_v2_enabled: true,
@@ -675,7 +675,7 @@ describe('InstanceConfigRepository', () => {
 			const repository = createRepository(new MockKVProvider());
 			const row = {
 				branding: {
-					product_name: 'Micup',
+					product_name: 'sanalyer',
 					icon_url: 'https://media.micup.gg/branding/0/14a74a1a.png',
 					symbol_url: 'https://media.micup.gg/branding/0/2502f636.png',
 					logo_url: 'https://media.micup.gg/branding/0/2502f636.png',

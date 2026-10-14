@@ -1513,8 +1513,8 @@ msgstr "{displayName}'s screen"
 
 #. Instance selector error shown when the instance speaks a protocol generation this client does not know. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts:24
-msgid "{domain} runs a newer version of Micup than this app. Update Micup, then try again."
-msgstr "{domain} はこのアプリより新しいバージョンの Micup を実行しています。Micup をアップデートしてから、もう一度お試しください。"
+msgid "{domain} runs a newer version of sanalyer than this app. Update sanalyer, then try again."
+msgstr "{domain} はこのアプリより新しいバージョンの sanalyer を実行しています。sanalyer をアップデートしてから、もう一度お試しください。"
 
 #. Profile timezone difference text. duration is a localized hours/minutes phrase for how far ahead the target user's local time is.
 #: src/features/user/components/popouts/UserProfileShared.tsx:65
@@ -2027,8 +2027,8 @@ msgstr "月額 {price}"
 
 #. Secondary shop price for someone without the Micup Plus discount. {price} is formatted in TL or AZN.
 #: src/features/shop/components/ShopPriceLine.tsx:27
-msgid "{price} with Micup Plus"
-msgstr "Micup Plus なら {price}"
+msgid "{price} with sanalyer Plus"
+msgstr "sanalyer Plus なら {price}"
 
 #: src/features/app/components/BootstrapErrorScreen.tsx:75
 msgid "{PRODUCT_NAME} failed to start properly. This could be due to corrupted data or a temporary issue."
@@ -11805,8 +11805,8 @@ msgstr "このメッセージを公開できませんでした"
 
 #. Instance selector error shown when no Fluxer instance answered at the address. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts:20
-msgid "Couldn't reach a Micup instance at {domain}. Check the address and that the instance is online."
-msgstr "{domain} の Micup インスタンスに接続できませんでした。アドレスを確認し、インスタンスがオンラインであることを確認してください。"
+msgid "Couldn't reach a sanalyer instance at {domain}. Check the address and that the instance is online."
+msgstr "{domain} の sanalyer インスタンスに接続できませんでした。アドレスを確認し、インスタンスがオンラインであることを確認してください。"
 
 #. Title of the generic fallback error modal shown when reactivating a Plutonium subscription fails.
 #: src/features/app/components/dialogs/components/plutonium/hooks/useSubscriptionActions.ts:50
@@ -22330,8 +22330,8 @@ msgstr "永久{premiumProductName}、番号入りバッジ、#0000タグ、そ�
 
 #. Note in the Visionary buy dialog, under the currency note.
 #: src/features/shop/utils/ShopMessageDescriptors.ts:331
-msgid "Lifetime means for as long as Micup runs."
-msgstr "「永久」とは、Micupがサービスを提供している限りという意味です。"
+msgid "Lifetime means for as long as sanalyer runs."
+msgstr "「永久」とは、sanalyerがサービスを提供している限りという意味です。"
 
 #. Settings search synonym. Used to match this term when the user types it in the settings search bar.
 #: src/features/expressions/components/modals/sticker_form/StickerPreview.tsx:53
@@ -24271,22 +24271,22 @@ msgstr "マイク、カメラ、画面共有のコンテンツはエンドツー
 
 #. Payment currency explanation on the shop, Micup Plus page, checkout and FAQ. Keep the company location explicit.
 #: src/features/shop/components/ShopCurrencyNote.tsx:6
-msgid "Micup is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate."
-msgstr "Micup はアゼルバイジャンの企業であるため、お支払いはアゼルバイジャン・マナト（AZN）で請求されます。トルコリラ（TL）の金額は参考表示であり、アゼルバイジャン中央銀行の当日の為替レートに基づいています。"
+msgid "sanalyer is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate."
+msgstr "sanalyer はアゼルバイジャンの企業であるため、お支払いはアゼルバイジャン・マナト（AZN）で請求されます。トルコリラ（TL）の金額は参考表示であり、アゼルバイジャン中央銀行の当日の為替レートに基づいています。"
 
 #: src/features/user/components/modals/UsernamePickerModal.tsx:118
-msgid "Micup no longer uses #1234 tags. Everyone has a unique username: @yourname."
-msgstr "Micup は #1234 タグを使用しなくなりました。誰もが固有のユーザー名 @yourname を持っています。"
+msgid "sanalyer no longer uses #1234 tags. Everyone has a unique username: @yourname."
+msgstr "sanalyer は #1234 タグを使用しなくなりました。誰もが固有のユーザー名 @yourname を持っています。"
 
 #. Status shown when browser sign-in status polling gives up after repeated failures.
 #: src/features/auth/flow/auth_login_core/AuthLoginBrowserStep.tsx:72
-msgid "Micup stopped checking whether the browser approved this sign-in. It didn't lose your code."
-msgstr "Micup はブラウザでのサインイン承認の確認を停止しました。コードは失われていません。"
+msgid "sanalyer stopped checking whether the browser approved this sign-in. It didn't lose your code."
+msgstr "sanalyer はブラウザでのサインイン承認の確認を停止しました。コードは失われていません。"
 
 #. Product name on the Visionary card and buy dialog. A product name: keep it as written.
 #: src/features/shop/utils/ShopMessageDescriptors.ts:314
-msgid "Micup Visionary"
-msgstr "Micup Visionary"
+msgid "sanalyer Visionary"
+msgstr "sanalyer Visionary"
 
 #: src/features/input/utils/KeybindUtils.ts:52
 msgctxt "mouse-button-name"
@@ -26822,8 +26822,8 @@ msgstr "公式インスタンス"
 
 #. Description of the official applications listed in the bot catalog.
 #: src/features/bots/components/pages/BotsPage.tsx:25
-msgid "Official Micup bots you can add to your community."
-msgstr "コミュニティに追加できるMicup公式ボット。"
+msgid "Official sanalyer bots you can add to your community."
+msgstr "コミュニティに追加できるsanalyer公式ボット。"
 
 #. Generic presence-status label indicating the user is offline.
 #: src/features/i18n/utils/CommonMessageDescriptors.ts:649
@@ -37653,8 +37653,8 @@ msgid "Tag name"
 msgstr "タグ名"
 
 #: src/features/user/components/modals/UsernamePickerModal.tsx:138
-msgid "Tagged names are no longer used. Choose a unique username to continue using Micup."
-msgstr "タグ付きの名前は使用されなくなりました。 Micup の使用を続けるには、一意のユーザー名を選択してください。"
+msgid "Tagged names are no longer used. Choose a unique username to continue using sanalyer."
+msgstr "タグ付きの名前は使用されなくなりました。 sanalyer の使用を続けるには、一意のユーザー名を選択してください。"
 
 #. Label of the tag filter in a forum channel and of the tags section in forum settings.
 #. Short label in the theme studio library section. Keep it concise.
@@ -42199,8 +42199,8 @@ msgstr "時刻形式にシステムのロケールを使用"
 
 #. Accessible label for the official Fluxer instance option.
 #: src/features/auth/flow/instance_selector/InstancePickerRows.tsx:24
-msgid "Use the official Micup instance"
-msgstr "公式のMicupインスタンスを使用"
+msgid "Use the official sanalyer instance"
+msgstr "公式のsanalyerインスタンスを使用"
 
 #. Settings search entry description. One-line summary of what the settings search entry controls.
 #: src/features/user/components/settings_utils/search_index/DesktopSettingsIndex.ts:175

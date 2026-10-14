@@ -24,7 +24,7 @@ function validReportXml(overrides: {priorNcmecReportIds?: Array<string>} = {}): 
 			id: 42n,
 			screenName: 'evil-user',
 			displayName: 'Evil User',
-			espService: 'Micup',
+			espService: 'sanalyer',
 			permanentlyDisabledAt: null,
 			person: {
 				emails: [{address: 'evil-user@example.com', type: 'Home', verified: true}],
@@ -119,7 +119,7 @@ describe('NcmecReporter', () => {
 		expect(xml).toContain('<personOrUserReported>');
 		expect(xml).toContain('<personOrUserReportedPerson>');
 		expect(xml).toContain('<espIdentifier>42</espIdentifier>');
-		expect(xml).toContain('<espService>Micup</espService>');
+		expect(xml).toContain('<espService>sanalyer</espService>');
 		expect(xml).toContain('<screenName>evil-user</screenName>');
 		expect(xml).toContain('<displayName>Evil User</displayName>');
 		expect(xml).toContain('<email type="Home" verified="true">evil-user@example.com</email>');
@@ -131,7 +131,7 @@ describe('NcmecReporter', () => {
 		expect(xml).toContain('<priorCTReports>NCMEC-200</priorCTReports>');
 		expect(xml).toContain('<allEmailsReported>true</allEmailsReported>');
 		expect(xml).toContain('<incidentType>Child Pornography (possession, manufacture, and distribution)</incidentType>');
-		expect(xml).toContain('<platform>Micup</platform>');
+		expect(xml).toContain('<platform>sanalyer</platform>');
 	});
 	test('buildNcmecReportXml emits incident additionalInfo at the report root', () => {
 		const xml = validReportXml();

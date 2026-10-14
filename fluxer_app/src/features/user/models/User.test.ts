@@ -106,7 +106,7 @@ describe('User username selection privacy', () => {
 	});
 });
 
-describe('User Micup limits', () => {
+describe('User sanalyer limits', () => {
 	it('resolves the follow, feed and boost limits by their own keys', () => {
 		const user = new User(wireUser());
 		expect([user.maxFollowing, user.maxFeedPostsPerDay, user.maxBoostSlots]).toEqual([11, 12, 13]);

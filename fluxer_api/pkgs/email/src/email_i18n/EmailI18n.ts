@@ -12,7 +12,7 @@ const DEFAULT_LOCALE = 'en-US';
 // Micup support address; appeals and safety share it.
 const MICUP_CONTACT_EMAIL = 'pr@premate.gg';
 const DEFAULT_EMAIL_TEMPLATE_VARIABLES = {
-	product_name: 'Micup',
+	product_name: 'sanalyer',
 	appeals_email: MICUP_CONTACT_EMAIL,
 	safety_email: MICUP_CONTACT_EMAIL,
 } satisfies Record<string, string>;

@@ -34,7 +34,7 @@ describe('MicupBotAutomodDetect', () => {
 			expect(detectMicupBotViolation({...base, content, rules: [rule({rule: 'invites'})]}), content).toBeNull();
 		}
 	});
-	it("allows listed domains and Micup's own", () => {
+	it("allows listed domains and sanalyer's own", () => {
 		const rules = [rule({rule: 'links', allowed_domains: new Set(['example.org'])})];
 		for (const content of ['https://example.org/a', 'www.example.org/a', 'https://app.micup.test/help']) {
 			expect(detectMicupBotViolation({...base, content, rules}), content).toBeNull();

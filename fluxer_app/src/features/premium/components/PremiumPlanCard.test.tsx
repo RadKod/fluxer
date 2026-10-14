@@ -120,7 +120,7 @@ describe('PremiumPlanCard', () => {
 
 		expect(
 			[...container.querySelectorAll('[data-flx="premium.premium-plan-card.perk"]')].map((li) => li.textContent),
-		).toEqual(['All Micup Plus perks', 'Does not renew']);
+		).toEqual(['All sanalyer Plus perks', 'Does not renew']);
 	});
 
 	it('shows monthly and daily TL on the one month plan', () => {

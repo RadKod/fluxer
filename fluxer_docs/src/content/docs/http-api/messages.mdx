@@ -861,7 +861,7 @@ The page has no cursor field. The next request repeats the operation with `befor
 
 Message components are rows of buttons stored with a message. Only the instance's first-party bots have them: server code attaches the rows when such a bot sends or edits its own message. No request body can set them. [Create message](#create-message), [Modify message](#modify-message), and the [webhook](/http-api/webhooks/) message bodies have no `components` field, and a `components` key sent by a user, a bot token, or a webhook is dropped while the rest of the request proceeds.
 
-[Micup Roster](/http-api/guild-roster-events/) puts a Join button (`roster:join`) and a Leave button (`roster:leave`) on each announcement, next to the ✅ reaction, which keeps working. Both buttons are disabled once the roster closes.
+[sanalyer Roster](/http-api/guild-roster-events/) puts a Join button (`roster:join`) and a Leave button (`roster:leave`) on each announcement, next to the ✅ reaction, which keeps working. Both buttons are disabled once the roster closes.
 
 A message has at most 5 action rows, and each row has 1 through 5 buttons. A label has at most 80 characters, and a `custom_id` has 1 through 100. The server refuses an empty row list, so a bot disables its buttons instead of removing them, and a bot's edit that leaves the buttons out keeps the stored ones.
 
@@ -934,7 +934,7 @@ The set is closed. The server never sends reply text, and the client shows its o
 
 ### Example
 
-The action rows of an open Micup Roster announcement:
+The action rows of an open sanalyer Roster announcement:
 
 ```json
 [
@@ -2403,7 +2403,7 @@ Clicks a [button](#message-components) on a first-party bot's message and return
 - The caller must have a verified email, and one that does not receives 403 `EMAIL_VERIFICATION_REQUIRED`.
 - The caller must have started a session, and one that has not receives the field code `MUST_START_SESSION_BEFORE_SENDING`. An unclaimed account is refused with 400 `UNCLAIMED_ACCOUNT_CANNOT_SEND_MESSAGES`.
 - No other permission is checked, and the guild's [REACTIONS disabled operation](/http-api/guilds/#disabled-guild-operations) does not block clicks. Each bot has its own feature flag instead.
-- The message author picks the bot, and the `custom_id` must carry that bot's prefix, such as `roster:` for Micup Roster. A `custom_id` that is not on the message, a disabled button, a webhook message, a message by any other author, and a bot that is not configured, has its feature flag at `0`, or is not in the guild all answer 200 with `component_unavailable`, and no bot handles the click.
+- The message author picks the bot, and the `custom_id` must carry that bot's prefix, such as `roster:` for sanalyer Roster. A `custom_id` that is not on the message, a disabled button, a webhook message, a message by any other author, and a bot that is not configured, has its feature flag at `0`, or is not in the guild all answer 200 with `component_unavailable`, and no bot handles the click.
 - The bot's guild membership is read through a cache of up to 30 seconds; only a positive membership result is cached.
 
 ### Path parameters

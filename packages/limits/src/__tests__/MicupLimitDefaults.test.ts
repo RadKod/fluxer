@@ -35,7 +35,7 @@ function pick(limits: Record<LimitKey, number>): Record<string, number> {
 	return Object.fromEntries(MICUP_KEYS.map((key) => [key, limits[key]]));
 }
 
-describe('Micup limit keys', () => {
+describe('sanalyer limit keys', () => {
 	test('registers every key with user scope metadata', () => {
 		for (const key of MICUP_KEYS) {
 			expect(LIMIT_KEYS).toContain(key);

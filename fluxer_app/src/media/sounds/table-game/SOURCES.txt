@@ -1,4 +1,4 @@
-Micup table game sounds (okey, 101, chess, Turkish and normal draughts, backgammon/tavla)
+sanalyer table game sounds (okey, 101, chess, Turkish and normal draughts, backgammon/tavla)
 
 Source: generated with ElevenLabs Sound Effects (text to sound effects API, /v1/sound-generation,
 output mp3_44100_128), ElevenLabs Pro plan, which grants commercial use of generated output.

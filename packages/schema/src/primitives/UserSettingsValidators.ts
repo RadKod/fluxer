@@ -164,6 +164,6 @@ export const ProfilePrivacyLevelResponseSchema = createInt32EnumType(
 		[ProfilePrivacyLevels.EVERYONE, 'EVERYONE', ProfilePrivacyLevelsDescriptions.EVERYONE],
 		[ProfilePrivacyLevels.ONLY_ME, 'ONLY_ME', ProfilePrivacyLevelsDescriptions.ONLY_ME],
 	],
-	'Profile privacy visibility level (response; Micup adds EVERYONE and ONLY_ME)',
+	'Profile privacy visibility level (response; sanalyer adds EVERYONE and ONLY_ME)',
 	'ProfilePrivacyLevel',
 );

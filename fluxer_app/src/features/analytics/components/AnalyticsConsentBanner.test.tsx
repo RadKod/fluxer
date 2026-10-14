@@ -17,7 +17,7 @@ vi.mock('@app/app/Routes', () => ({Routes: {privacy: () => 'https://micup.gg/mar
 vi.mock('@app/features/app/config/Config', () => ({
 	default: {PUBLIC_GA4_MEASUREMENT_ID: 'G-TEST1234', PUBLIC_BUILD_VERSION: '9.9.9'},
 }));
-vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PRODUCT_NAME: 'Micup'}));
+vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PRODUCT_NAME: 'sanalyer'}));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {privacyUrl: 'https://micup.gg/gizlilik'}}));
 vi.mock('@app/features/ui/utils/NativeUtils', () => ({isDesktop: () => false}));
 vi.mock('@app/features/analytics/state/AnalyticsConsent', () => ({default: state}));

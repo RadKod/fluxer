@@ -25,8 +25,8 @@ import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 
 const WITH_MICUP_PLUS_DESCRIPTOR = msg({
-	message: '{price} with Micup Plus',
-	comment: 'Secondary shop price for someone without the Micup Plus discount. {price} is formatted in TL or AZN.',
+	message: '{price} with sanalyer Plus',
+	comment: 'Secondary shop price for someone without the sanalyer Plus discount. {price} is formatted in TL or AZN.',
 });
 
 export interface ShownPrice {

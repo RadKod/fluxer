@@ -31,9 +31,9 @@ function resolveStaticCdnEndpoint(staticCdnEndpoint) {
 function generateManifest(staticCdnEndpoint) {
 	const cdn = resolveStaticCdnEndpoint(staticCdnEndpoint);
 	const manifest = {
-		name: 'Micup',
-		short_name: 'Micup',
-		description: 'Micup; arkadaşlar, gruplar ve topluluklar için anlık mesajlaşma ve sesli sohbet uygulaması.',
+		name: 'sanalyer',
+		short_name: 'sanalyer',
+		description: 'sanalyer; arkadaşlar, gruplar ve topluluklar için anlık mesajlaşma ve sesli sohbet uygulaması.',
 		start_url: '/',
 		id: '/',
 		display: 'standalone',

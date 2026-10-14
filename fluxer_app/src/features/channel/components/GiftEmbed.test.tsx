@@ -45,7 +45,7 @@ vi.mock('@app/features/platform/transport/InstanceHTTP', () => ({
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({
 	default: {
 		isSelfHosted: () => runtime.selfHosted,
-		getSnapshotOrNull: () => ({appPublic: {branding: {product_name: 'Micup', premium_product_name: 'Plus'}}}),
+		getSnapshotOrNull: () => ({appPublic: {branding: {product_name: 'sanalyer', premium_product_name: 'Plus'}}}),
 	},
 }));
 vi.mock('@app/features/ui/commands/ModalCommands', () => modalCommands);
@@ -146,7 +146,7 @@ describe('GiftEmbed', () => {
 		});
 		http.post.mockResolvedValueOnce({body: null});
 
-		expect(container.textContent).toContain('1 month of Micup Plus');
+		expect(container.textContent).toContain('1 month of sanalyer Plus');
 		expect(container.textContent).not.toContain('Ultra decoration');
 
 		await act(async () => button().click());

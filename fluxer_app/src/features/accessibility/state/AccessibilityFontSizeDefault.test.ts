@@ -36,7 +36,7 @@ function applySyncedFontSize(accessibility: {fontSize: number}, fontSize: number
 	});
 }
 
-describe('Micup chat text default (15px)', () => {
+describe('sanalyer chat text default (15px)', () => {
 	beforeEach(() => {
 		window.localStorage.clear();
 	});

@@ -18,8 +18,8 @@ import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
 import type {BadgeResponse} from '@fluxer/schema/src/domains/badge/BadgeResponseSchemas';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
-const TEXT = "Öncü #{n} — Micup'ın ilk 10.000 kullanıcısından";
-const shown = (n: number) => `Öncü #${n} — Micup'ın ilk 10.000 kullanıcısından`;
+const TEXT = "Öncü #{n} — sanalyer'in ilk 10.000 kullanıcısından";
+const shown = (n: number) => `Öncü #${n} — sanalyer'in ilk 10.000 kullanıcısından`;
 
 // One test only: the PioneerService singleton caches "closed" for the rest of the file (a new file's harness clears
 // the singletons). The worker object is injected before the test, as in PioneerRoutes.test.ts.

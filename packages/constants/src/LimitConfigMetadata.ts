@@ -666,7 +666,7 @@ export const LIMIT_KEY_METADATA: Record<LimitKey, LimitKeyMetadata> = {
 		key: 'feature_guild_roster',
 		label: 'Guild Roster Bot',
 		description:
-			'Instance-wide: the official Micup Roster bot announces hourly rosters and moves members at :35; 0 stops announcements, checks, reaction joins and settings writes, stored events stay',
+			'Instance-wide: the official sanalyer Roster bot announces hourly rosters and moves members at :35; 0 stops announcements, checks, reaction joins and settings writes, stored events stay',
 		category: 'features',
 		scope: 'user',
 		isToggle: true,

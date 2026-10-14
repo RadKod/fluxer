@@ -22,7 +22,7 @@ import {ArrowRightIcon, GlobeIcon, PlusIcon, TrashIcon} from '@phosphor-icons/re
 import {type MouseEvent, type ReactNode, useCallback} from 'react';
 
 const USE_OFFICIAL_INSTANCE_DESCRIPTOR = msg({
-	message: 'Use the official Micup instance',
+	message: 'Use the official sanalyer instance',
 	comment: 'Accessible label for the official Fluxer instance option.',
 });
 const USE_INSTANCE_DESCRIPTOR = msg({
@@ -62,7 +62,7 @@ export function InstancePickerRows({
 }: InstancePickerRowsProps) {
 	const {i18n} = useLingui();
 	const isDiscovering = discoveryStatus === InstanceDiscoveryStatus.DISCOVERING;
-	const showOfficialInstance = OFFICIAL_INSTANCE_DISPLAY_HOST.toLowerCase() === 'micup.gg';
+	const showOfficialInstance = OFFICIAL_INSTANCE_DISPLAY_HOST.toLowerCase() === 'sanalyer.com';
 	const handleKnownInstanceContextMenu = useCallback(
 		(event: MouseEvent<HTMLButtonElement>, instance: InstanceInfo) => {
 			if (disabled || isDiscovering) {

@@ -406,8 +406,8 @@ function ttlFromOptions(options: string): number {
 	return match ? Number(match[1]) : 0;
 }
 
-describe('Micup Cassandra schema parity', () => {
-	it('defines every pinned Micup table in a module table file and nothing else', () => {
+describe('sanalyer Cassandra schema parity', () => {
+	it('defines every pinned sanalyer table in a module table file and nothing else', () => {
 		expect(DSL_TABLES.map((table) => table.name).sort()).toEqual(Object.keys(MICUP_TABLES).sort());
 	});
 

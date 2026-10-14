@@ -27,7 +27,7 @@ vi.mock('@app/features/guild/state/Guilds', () => ({default: {getGuild: () => nu
 const premium = vi.hoisted(() => ({open: vi.fn()}));
 vi.mock('@app/features/premium/commands/PremiumModalCommands', () => ({open: premium.open}));
 vi.mock('@app/features/premium/utils/PremiumUtils', () => ({
-	getPremiumProductFullName: () => 'Micup Plus',
+	getPremiumProductFullName: () => 'sanalyer Plus',
 	shouldShowPremiumFeatures: () => true,
 }));
 vi.mock('@app/features/ui/button/Button', () => ({Button: () => null}));

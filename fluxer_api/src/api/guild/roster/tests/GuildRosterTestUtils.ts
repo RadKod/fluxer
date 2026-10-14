@@ -70,7 +70,7 @@ export const OPEN_STATE = {
 
 export async function createRosterFixture(harness: ApiTestHarness, memberCount = 2) {
 	const setup = await setupTestGuildWithMembers(harness, memberCount);
-	const app = await createOAuth2Application(harness, setup.owner.token, {name: 'Micup Roster'});
+	const app = await createOAuth2Application(harness, setup.owner.token, {name: 'sanalyer Roster'});
 	await authorizeBot(
 		harness,
 		setup.owner.token,

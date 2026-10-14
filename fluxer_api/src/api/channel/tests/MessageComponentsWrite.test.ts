@@ -81,7 +81,7 @@ async function requestChannelService(): Promise<ChannelService> {
 
 async function createFixture(botPermissions = ROSTER_BOT_INVITE_PERMISSIONS) {
 	const setup = await setupTestGuildWithMembers(harness, 1);
-	const app = await createOAuth2Application(harness, setup.owner.token, {name: 'Micup Roster'});
+	const app = await createOAuth2Application(harness, setup.owner.token, {name: 'sanalyer Roster'});
 	await authorizeBot(
 		harness,
 		setup.owner.token,

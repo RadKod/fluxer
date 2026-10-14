@@ -41,7 +41,7 @@ const {UserProfileBadges} = await import('@app/features/user/components/popouts/
 const userWithFlags = (flags: number) => ({flags}) as User;
 const profileWith = (fields: Partial<Profile>) => ({badges: null, premiumType: null, ...fields}) as Profile;
 
-describe('UserProfileBadges on Micup', () => {
+describe('UserProfileBadges on sanalyer', () => {
 	let container: HTMLDivElement;
 	let root: ReturnType<typeof createRoot>;
 
@@ -62,10 +62,10 @@ describe('UserProfileBadges on Micup', () => {
 		act(() => root.render(createElement(UserProfileBadges, {user, profile})));
 	const images = () => [...container.querySelectorAll('img')];
 
-	it('labels the STAFF flag "Micup Ekibi" with the Micup icon', () => {
+	it('labels the STAFF flag "sanalyer Ekibi" with the sanalyer icon', () => {
 		render(userWithFlags(PublicUserFlags.STAFF), null);
 
-		expect(images().map((img) => img.alt)).toEqual(['Micup Ekibi']);
+		expect(images().map((img) => img.alt)).toEqual(['sanalyer Ekibi']);
 		expect(images()[0].src).toBe('https://static.micup.gg/badges/micup-staff.svg?v=3');
 	});
 
@@ -80,7 +80,7 @@ describe('UserProfileBadges on Micup', () => {
 			'/badges/micup-bug-hunter.svg',
 			'/badges/micup-partner.svg',
 		]);
-		expect(images().map((img) => img.alt)).toEqual(['Micup Ekibi', 'Micup Hata Avcısı', 'Micup İş Ortağı']);
+		expect(images().map((img) => img.alt)).toEqual(['sanalyer Ekibi', 'sanalyer Hata Avcısı', 'sanalyer İş Ortağı']);
 		expect(container.querySelector('a')).toBeNull();
 	});
 
@@ -88,7 +88,7 @@ describe('UserProfileBadges on Micup', () => {
 		render(userWithFlags(PublicUserFlags.PREMIUM_BADGE), null);
 		expect(images()).toHaveLength(1);
 		expect(images()[0].src).toContain('micup-premium-badge.png');
-		expect(images()[0].alt).toBe('Micup Plus');
+		expect(images()[0].alt).toBe('sanalyer Plus');
 	});
 
 	it('keeps every catalog badge between Premium and Bug Hunter in the server order', () => {
@@ -111,12 +111,12 @@ describe('UserProfileBadges on Micup', () => {
 				badge instanceof HTMLImageElement ? badge.alt : badge.textContent,
 			),
 		).toEqual([
-			'Micup Ekibi',
-			'Micup Plus',
+			'sanalyer Ekibi',
+			'sanalyer Plus',
 			'Catalog first',
 			'Catalog second',
-			'Micup Hata Avcısı',
-			'Micup İş Ortağı',
+			'sanalyer Hata Avcısı',
+			'sanalyer İş Ortağı',
 			'#42',
 		]);
 	});
@@ -185,7 +185,7 @@ describe('UserProfileBadges on Micup', () => {
 				}),
 			),
 		);
-		expect(images().map((img) => img.alt)).toEqual(['Micup Ekibi', 'Micup Plus', 'Öncü', 'Micup Hata Avcısı']);
+		expect(images().map((img) => img.alt)).toEqual(['sanalyer Ekibi', 'sanalyer Plus', 'Öncü', 'sanalyer Hata Avcısı']);
 		for (const image of images()) expect(image.classList.contains(styles.badge)).toBe(true);
 	});
 
@@ -218,9 +218,9 @@ describe('UserProfileBadges on Micup', () => {
 			),
 		);
 		expect(images().map((img) => img.alt)).toEqual([
-			'Micup Ekibi',
-			'Micup İş Ortağı',
-			'Micup Hata Avcısı',
+			'sanalyer Ekibi',
+			'sanalyer İş Ortağı',
+			'sanalyer Hata Avcısı',
 			'Catalog badge',
 		]);
 		for (const image of images()) {
@@ -287,7 +287,7 @@ describe('UserProfileBadges on Micup', () => {
 		);
 
 		expect(images().map((img) => [img.alt, img.getAttribute('src')])).toEqual([
-			['Micup Ekibi', 'https://static.micup.gg/badges/micup-staff.svg?v=3'],
+			['sanalyer Ekibi', 'https://static.micup.gg/badges/micup-staff.svg?v=3'],
 			['<b>Erken</b> destekçi', 'https://media.micup.gg/branding/badge-1300000000000000002/aaaa1111.webp?size=128'],
 			['Moderatör', 'https://media.micup.gg/branding/badge-1300000000000000001/a_bbbb2222.webp?size=128'],
 		]);

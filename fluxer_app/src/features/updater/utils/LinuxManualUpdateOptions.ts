@@ -30,7 +30,7 @@ const LINUX_MANUAL_ARCH_TOKENS: Record<LinuxManualDownloadFormat, Record<LinuxDo
 	tar_gz: {x64: 'x64', arm64: 'arm64'},
 };
 
-const PACKAGE_ORIGIN_BASE = 'https://dl.micup.gg';
+const PACKAGE_ORIGIN_BASE = 'https://pkgs.fluxer.com';
 
 interface ParsedLinuxDownloadUrl {
 	downloadBase: string;

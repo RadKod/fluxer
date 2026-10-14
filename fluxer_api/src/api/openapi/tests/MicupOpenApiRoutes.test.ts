@@ -138,12 +138,12 @@ function missingOperations(specPath: string, operations: ReadonlyArray<string>):
 	});
 }
 
-describe('Micup routes in the OpenAPI specs', () => {
-	it('lists every public Micup operation in openapi.json', () => {
+describe('sanalyer routes in the OpenAPI specs', () => {
+	it('lists every public sanalyer operation in openapi.json', () => {
 		expect(missingOperations('fluxer_api/src/api/openapi/openapi.json', PUBLIC_OPERATIONS)).toEqual([]);
 	});
 
-	it('lists every admin Micup operation in openapi-admin.json', () => {
+	it('lists every admin sanalyer operation in openapi-admin.json', () => {
 		expect(missingOperations('fluxer_admin/openapi-admin.json', ADMIN_OPERATIONS)).toEqual([]);
 	});
 });

@@ -17,7 +17,7 @@ import {ContentBlockedError} from '@fluxer/errors/src/domains/content/ContentBlo
 // How long a feed preview may hold an unfurl lane slot. The NATS unfurler keeps its own 12 s timeout
 // and does not stop on the signal, so the wait is cut here and a late answer is dropped.
 const UNFURL_TIMEOUT_MS = 5000;
-const PROVIDER_NAMES = {youtube: 'YouTube', twitch: 'Twitch', kick: 'Kick', invite: 'Micup'} as const;
+const PROVIDER_NAMES = {youtube: 'YouTube', twitch: 'Twitch', kick: 'Kick', invite: 'sanalyer'} as const;
 
 export type FeedEmbedResult = 'stored' | 'none' | 'gone' | 'blocked';
 

@@ -16,7 +16,7 @@ vi.mock('@lingui/react/macro', () => ({Trans: ({children}: {children: unknown}) 
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({
 	default: {isSelfHosted: () => false, giftCodesEnabled: false, getSnapshotOrNull: () => null},
 }));
-vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PREMIUM_PRODUCT_FULL_NAME: 'Micup Plus'}));
+vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PREMIUM_PRODUCT_FULL_NAME: 'sanalyer Plus'}));
 vi.mock('@app/features/ui/utils/NativeUtils', () => ({
 	getElectronAPI: () => native.electron,
 	guessPlatform: () => native.platform,

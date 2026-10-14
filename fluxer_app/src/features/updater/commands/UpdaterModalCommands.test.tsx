@@ -37,7 +37,7 @@ describe('system-managed install update button', () => {
 		pushed.render = null;
 	});
 
-	it('opens the Micup Microsoft Store page from the Store copy on Windows', () => {
+	it('opens the sanalyer Microsoft Store page from the Store copy on Windows', () => {
 		native.windows = true;
 
 		pressPrimary();

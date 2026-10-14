@@ -6,7 +6,7 @@ import {DeletionReasons} from '@fluxer/constants/src/Core';
 import {getRegionalMinimumAge} from '@fluxer/constants/src/RegionalMinimumAge';
 import {describe, expect, it} from 'vitest';
 
-describe('Micup upstream registration age contract', () => {
+describe('sanalyer upstream registration age contract', () => {
 	it.each([null, undefined, '', 'TR', 'DE', 'US', 'ZZ', 'AT', 'FR'])(
 		'never admits under 15 and keeps a stricter regional minimum in %j',
 		(country) => {

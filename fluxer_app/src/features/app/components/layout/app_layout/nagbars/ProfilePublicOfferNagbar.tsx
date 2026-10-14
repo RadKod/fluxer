@@ -15,7 +15,7 @@ const PUBLIC_PROFILE_OFFER_DESCRIPTOR = msg({
 	message:
 		'Would you like to make your profile public? If you do, everyone signed in can see your profile. Your earlier posts marked public (most of what you shared while on "Shared communities") open to everyone too, and those from the last 72 hours can appear in Discover.',
 	comment:
-		'Micup one-time nagbar offering a public profile. It must say that earlier posts marked public open to everyone and that the last 72 hours of them can appear in Discover. "Shared communities" is an option label in Privacy settings. Legal-effect text: approved before release.',
+		'sanalyer one-time nagbar offering a public profile. It must say that earlier posts marked public open to everyone and that the last 72 hours of them can appear in Discover. "Shared communities" is an option label in Privacy settings. Legal-effect text: approved before release.',
 });
 const MAKE_IT_PUBLIC_DESCRIPTOR = msg({
 	message: 'Make it public',

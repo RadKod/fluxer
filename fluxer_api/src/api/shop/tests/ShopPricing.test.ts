@@ -159,11 +159,11 @@ describe('shop pricing', () => {
 				},
 			),
 		).toBe(
-			`Micup Plus · ${months} ay — mağazadaki fiyat 68 TL. Bu ödeme Azerbaycan manatı ile alınır: 3,38 AZN. Sipariş #7`,
+			`sanalyer Plus · ${months} ay — mağazadaki fiyat 68 TL. Bu ödeme Azerbaycan manatı ile alınır: 3,38 AZN. Sipariş #7`,
 		);
 	});
 
-	it('describes an order with its Micup number for the Payriff panel', () => {
+	it('describes an order with its sanalyer number for the Payriff panel', () => {
 		const quote = {display_currency: 'TRY' as const, display_amount_minor: 6801n, amount_minor: 338};
 		expect(
 			describeShopOrder(1490000000000000009n, {kind: 'cosmetic', itemName: 'Yitik Melek', months: null}, quote),
@@ -176,7 +176,7 @@ describe('shop pricing', () => {
 				{kind: 'premium', itemName: null, months: 1},
 				{display_currency: 'AZN', display_amount_minor: 338n, amount_minor: 338},
 			),
-		).toBe('Micup Plus · 1 ay — mağazadaki fiyat 3,38 AZN. Sipariş #1');
+		).toBe('sanalyer Plus · 1 ay — mağazadaki fiyat 3,38 AZN. Sipariş #1');
 		expect(
 			describeShopOrder(1n, {kind: 'cosmetic', itemName: 'x'.repeat(300), months: null}, quote).length,
 		).toBeLessThanOrEqual(200);
@@ -200,7 +200,7 @@ describe('shop pricing', () => {
 				{kind: 'visionary', itemName: null, months: null},
 				{display_currency: 'TRY', display_amount_minor: 6800n, amount_minor: 338},
 			),
-		).toBe('Micup Visionary — mağazadaki fiyat 68 TL. Bu ödeme Azerbaycan manatı ile alınır: 3,38 AZN. Sipariş #7');
+		).toBe('sanalyer Visionary — mağazadaki fiyat 68 TL. Bu ödeme Azerbaycan manatı ile alınır: 3,38 AZN. Sipariş #7');
 	});
 
 	it('reads bundle skus with an int64 bundle ID', () => {

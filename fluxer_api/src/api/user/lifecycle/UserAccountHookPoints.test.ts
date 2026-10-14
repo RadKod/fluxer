@@ -10,7 +10,7 @@ import {registerUserAccountWriteHook, registerUserBannedHook} from '@app/api/use
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest';
 
-describe('Micup account write and ban hook points', () => {
+describe('sanalyer account write and ban hook points', () => {
 	let harness: ApiTestHarness;
 	const writes: Array<{previous: UserRow | null; updated: UserRow}> = [];
 	const bans: Array<string> = [];

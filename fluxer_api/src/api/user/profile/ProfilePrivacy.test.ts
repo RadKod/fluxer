@@ -3,7 +3,7 @@
 import {canHavePublicProfile, resolveProfileAudience} from '@app/api/user/profile/ProfilePrivacy';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
-describe('profile privacy levels (Micup, Epha 3 Oct)', () => {
+describe('profile privacy levels (sanalyer, Epha 3 Oct)', () => {
 	beforeEach(() => vi.useFakeTimers({now: new Date('2026-10-03T12:00:00Z')}));
 	afterEach(() => vi.useRealTimers());
 

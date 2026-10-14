@@ -186,7 +186,7 @@ function buildApnsPayload(payload: Record<string, unknown>): Record<string, unkn
 	}
 	const data = isRecord(payload.data) ? payload.data : {};
 	const notification = isRecord(payload.notification) ? payload.notification : {};
-	const title = optionalString(notification.title) ?? optionalString(payload.title) ?? 'Micup';
+	const title = optionalString(notification.title) ?? optionalString(payload.title) ?? 'sanalyer';
 	const body = optionalString(notification.body) ?? optionalString(payload.body) ?? '';
 	const badge = normalizeBadgeCount(data.badge_count);
 	const channelId = optionalString(data.channel_id);

@@ -34,7 +34,7 @@ vi.mock('@lingui/react/macro', () => ({
 		},
 	}),
 }));
-vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PRODUCT_NAME: 'Micup'}));
+vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PRODUCT_NAME: 'sanalyer'}));
 vi.mock('@app/features/app/components/layout/Nagbar', () => ({
 	Nagbar: ({children, onDismiss}: {children: ReactNode; onDismiss: () => void}) =>
 		createElement('div', null, children, createElement('button', {type: 'button', onClick: onDismiss}, 'Dismiss')),
@@ -98,7 +98,7 @@ afterEach(async () => {
 });
 it('requests only after the nagbar Pin click and closes after a refusal', async () => {
 	await act(async () => root.render(createElement(TaskbarPinNagbar, {isMobile: false})));
-	expect(host.textContent).toContain('Pin Micup to your taskbar');
+	expect(host.textContent).toContain('Pin sanalyer to your taskbar');
 	expect(state.request).not.toHaveBeenCalled();
 	await act(async () => button('Pin')!.click());
 	expect(state.request).toHaveBeenCalledTimes(1);

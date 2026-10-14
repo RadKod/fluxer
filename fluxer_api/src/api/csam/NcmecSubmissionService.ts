@@ -253,7 +253,7 @@ export class NcmecSubmissionService {
 				id: attachment.userId !== null ? BigInt(attachment.userId) : null,
 				screenName: reportedUser.screenName,
 				displayName: reportedUser.displayName,
-				espService: 'Micup',
+				espService: 'sanalyer',
 				permanentlyDisabledAt: existingWorkflow?.deleted_at ?? null,
 				person: buildReportedUserPerson(reportedUser),
 				ipCaptureEvents: buildReportedUserIpCaptureEvents(attachmentUploadTrace),
@@ -867,7 +867,7 @@ function buildAdditionalInfo(args: {
 	attachmentUploadTrace: AttachmentUploadTraceByAttachmentRow | null;
 }): string {
 	const lines = [
-		'Micup admin attachment report.',
+		'sanalyer admin attachment report.',
 		`Channel ID: ${args.channelId.toString()}`,
 		`Message ID: ${args.messageId.toString()}`,
 		`Attachment ID: ${args.attachmentId.toString()}`,
@@ -963,12 +963,12 @@ function getBestEffortUploadTimestamp(trace: AttachmentUploadTraceByAttachmentRo
 
 function describeBestEffortUploadIpSource(trace: AttachmentUploadTraceByAttachmentRow): string {
 	if (trace.completion_ip && trace.completed_at) {
-		return 'multipart completion callback observed by Micup API';
+		return 'multipart completion callback observed by sanalyer API';
 	}
 	if (trace.upload_mode === 'form_data') {
-		return 'attachment upload request handled directly by Micup API';
+		return 'attachment upload request handled directly by sanalyer API';
 	}
-	return 'presigned upload authorization request observed by Micup API';
+	return 'presigned upload authorization request observed by sanalyer API';
 }
 
 function buildAuditMetadata(args: {

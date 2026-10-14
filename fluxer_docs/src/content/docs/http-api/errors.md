@@ -1768,7 +1768,7 @@ Display name can't contain "system message"
 
 ### `GLOBAL_NAME_CANNOT_IMPERSONATE_MICUP`
 
-Display name can't pass for an official Micup account
+Display name can't pass for an official sanalyer account
 
 ### `GLOBAL_NAME_LENGTH_INVALID`
 

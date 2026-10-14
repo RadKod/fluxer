@@ -83,7 +83,7 @@ function purples(value: string): Array<string> {
 	return hits;
 }
 
-describe('Micup v1 palette in the coal and dark themes', () => {
+describe('sanalyer v1 palette in the coal and dark themes', () => {
 	let css = '';
 	beforeAll(async () => {
 		await import('@app_scripts/GenerateColorSystem');

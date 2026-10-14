@@ -25,7 +25,7 @@ function text(props: {mentionCount: number; max?: number}): string {
 	return content;
 }
 
-describe('MentionBadge max (Micup 2a.9b)', () => {
+describe('MentionBadge max (sanalyer 2a.9b)', () => {
 	it('shows a capped count as its cap with a plus, and nothing at 0', () => {
 		expect(text({mentionCount: 9, max: 9})).toBe('9');
 		expect(text({mentionCount: 10, max: 9})).toBe('9+');

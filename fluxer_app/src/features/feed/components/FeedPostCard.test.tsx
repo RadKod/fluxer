@@ -326,7 +326,7 @@ describe('FeedPostCard', () => {
 		);
 		renderPost('110');
 		const crown = byFlx('feed.feed-post-card.premium-user-badge');
-		expect(crown?.getAttribute('aria-label')).toBe('Micup Plus');
+		expect(crown?.getAttribute('aria-label')).toBe('sanalyer Plus');
 		expect(crown!.previousElementSibling?.getAttribute('aria-label')).toBe('Verified account');
 		expect(crown!.nextElementSibling).toBe(byFlx('feed.feed-post-card.tag'));
 		renderPost('100');

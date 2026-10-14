@@ -23,7 +23,7 @@ import {observer} from 'mobx-react-lite';
 import {useEffect, useState} from 'react';
 
 const DESCRIPTION = msg({
-	message: 'Official Micup bots you can add to your community.',
+	message: 'Official sanalyer bots you can add to your community.',
 	comment: 'Description of the official applications listed in the bot catalog.',
 });
 const EMPTY = msg({message: 'No apps yet.', comment: 'Shown when no official applications are configured.'});

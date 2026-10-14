@@ -99,7 +99,7 @@ describe('PremiumCompareTable', () => {
 		render();
 
 		const table = container.querySelector('table')!;
-		expect(container.querySelector('h2')?.textContent).toBe('16 things change with Micup Plus');
+		expect(container.querySelector('h2')?.textContent).toBe('16 things change with sanalyer Plus');
 		expect(table.getAttribute('aria-labelledby')).toBe(container.querySelector('h2')?.id);
 		expect([...table.querySelectorAll('th[scope="rowgroup"]')].map((th) => th.textContent)).toEqual([
 			'Appearance',
@@ -116,7 +116,7 @@ describe('PremiumCompareTable', () => {
 		render();
 
 		const heads = [...container.querySelectorAll('thead th')].map((th) => th.textContent);
-		expect(heads).toEqual(['Pricing and features', 'Free0.00 AZN', 'Micup PlusFrom 8.48 AZN']);
+		expect(heads).toEqual(['Pricing and features', 'Free0.00 AZN', 'sanalyer PlusFrom 8.48 AZN']);
 		expect(container.querySelector('[data-flx="premium.premium-compare-table.ribbon"]')?.textContent).toBe(
 			'Recommended',
 		);
@@ -124,7 +124,7 @@ describe('PremiumCompareTable', () => {
 		// A campaign that puts the yearly package under the monthly one moves the start price.
 		catalog.packageEntries = [pack(1, price(499)), pack(12, price(4999, 399))];
 		render();
-		expect(container.querySelector('thead th:last-child')?.textContent).toBe('Micup PlusFrom 6.78 AZN');
+		expect(container.querySelector('thead th:last-child')?.textContent).toBe('sanalyer PlusFrom 6.78 AZN');
 	});
 
 	it('drops an ended campaign from the start price, also while the page is open, on the catalog clock alone', () => {
@@ -133,11 +133,11 @@ describe('PremiumCompareTable', () => {
 		const endsAt = new Date(Date.now() + DAY_MS).toISOString();
 		catalog.packageEntries = [pack(1, price(499)), pack(12, {...price(4999, 399), campaign_ends_at: endsAt})];
 		render();
-		expect(container.querySelector('thead th:last-child')?.textContent).toBe('Micup PlusFrom 6.78 AZN');
+		expect(container.querySelector('thead th:last-child')?.textContent).toBe('sanalyer PlusFrom 6.78 AZN');
 		expect(vi.getTimerCount()).toBe(0);
 
 		act(() => runInAction(() => clock.set(Date.now() + DAY_MS + 1)));
-		expect(container.querySelector('thead th:last-child')?.textContent).toBe('Micup PlusFrom 8.48 AZN');
+		expect(container.querySelector('thead th:last-child')?.textContent).toBe('sanalyer PlusFrom 8.48 AZN');
 	});
 
 	it('leaves the prices out when nothing is on sale', () => {
@@ -147,7 +147,7 @@ describe('PremiumCompareTable', () => {
 		expect([...container.querySelectorAll('thead th')].map((th) => th.textContent)).toEqual([
 			'Pricing and features',
 			'Free',
-			'Micup Plus',
+			'sanalyer Plus',
 		]);
 	});
 
@@ -177,6 +177,6 @@ describe('PremiumCompareTable', () => {
 
 		expect(row('Plus decorations')).toBeUndefined();
 		expect(row('Special discounts in the shop')).toBeUndefined();
-		expect(container.querySelector('h2')?.textContent).toBe('14 things change with Micup Plus');
+		expect(container.querySelector('h2')?.textContent).toBe('14 things change with sanalyer Plus');
 	});
 });

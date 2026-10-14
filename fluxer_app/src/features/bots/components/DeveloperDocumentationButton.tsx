@@ -6,7 +6,7 @@ import {Button} from '@app/features/ui/button/Button';
 import {useLingui} from '@lingui/react/macro';
 import {BookOpenIcon} from '@phosphor-icons/react';
 
-export const BOT_DOCUMENTATION_URL = 'https://micup.gg/docs';
+export const BOT_DOCUMENTATION_URL = 'https://docs.fluxer.app';
 
 export function DeveloperDocumentationButton() {
 	const {i18n} = useLingui();

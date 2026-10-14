@@ -1513,8 +1513,8 @@ msgstr "{displayName}'s screen"
 
 #. Instance selector error shown when the instance speaks a protocol generation this client does not know. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts:24
-msgid "{domain} runs a newer version of Micup than this app. Update Micup, then try again."
-msgstr "{domain} používá novější verzi Micupu než tato aplikace. Aktualizujte Micup a zkuste to znovu."
+msgid "{domain} runs a newer version of sanalyer than this app. Update sanalyer, then try again."
+msgstr "{domain} používá novější verzi Micupu než tato aplikace. Aktualizujte sanalyer a zkuste to znovu."
 
 #. Profile timezone difference text. duration is a localized hours/minutes phrase for how far ahead the target user's local time is.
 #: src/features/user/components/popouts/UserProfileShared.tsx:65
@@ -2027,8 +2027,8 @@ msgstr "{price} za měsíc"
 
 #. Secondary shop price for someone without the Micup Plus discount. {price} is formatted in TL or AZN.
 #: src/features/shop/components/ShopPriceLine.tsx:27
-msgid "{price} with Micup Plus"
-msgstr "{price} s Micup Plus"
+msgid "{price} with sanalyer Plus"
+msgstr "{price} s sanalyer Plus"
 
 #: src/features/app/components/BootstrapErrorScreen.tsx:75
 msgid "{PRODUCT_NAME} failed to start properly. This could be due to corrupted data or a temporary issue."
@@ -11805,7 +11805,7 @@ msgstr "Nepodařilo se publikovat tuto zprávu"
 
 #. Instance selector error shown when no Fluxer instance answered at the address. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts:20
-msgid "Couldn't reach a Micup instance at {domain}. Check the address and that the instance is online."
+msgid "Couldn't reach a sanalyer instance at {domain}. Check the address and that the instance is online."
 msgstr "Nepodařilo se navázat spojení s instancí Micupu na adrese {domain}. Zkontrolujte adresu a zda je instance online."
 
 #. Title of the generic fallback error modal shown when reactivating a Plutonium subscription fails.
@@ -22330,8 +22330,8 @@ msgstr "{premiumProductName} navždy, číslovaný odznak, štítek #0000 a deko
 
 #. Note in the Visionary buy dialog, under the currency note.
 #: src/features/shop/utils/ShopMessageDescriptors.ts:331
-msgid "Lifetime means for as long as Micup runs."
-msgstr "„Doživotně“ znamená, dokud Micup běží."
+msgid "Lifetime means for as long as sanalyer runs."
+msgstr "„Doživotně“ znamená, dokud sanalyer běží."
 
 #. Settings search synonym. Used to match this term when the user types it in the settings search bar.
 #: src/features/expressions/components/modals/sticker_form/StickerPreview.tsx:53
@@ -24271,22 +24271,22 @@ msgstr "Zvuk mikrofonu, obraz kamery a sdílená obrazovka jsou chráněny konco
 
 #. Payment currency explanation on the shop, Micup Plus page, checkout and FAQ. Keep the company location explicit.
 #: src/features/shop/components/ShopCurrencyNote.tsx:6
-msgid "Micup is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate."
-msgstr "Micup je ázerbájdžánská společnost, proto se platby vybírají v ázerbájdžánských manatech (AZN). Částky v tureckých lirách (TL) jsou pouze informativní a vycházejí z denního směnného kurzu Centrální banky Ázerbájdžánu."
+msgid "sanalyer is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate."
+msgstr "sanalyer je ázerbájdžánská společnost, proto se platby vybírají v ázerbájdžánských manatech (AZN). Částky v tureckých lirách (TL) jsou pouze informativní a vycházejí z denního směnného kurzu Centrální banky Ázerbájdžánu."
 
 #: src/features/user/components/modals/UsernamePickerModal.tsx:118
-msgid "Micup no longer uses #1234 tags. Everyone has a unique username: @yourname."
-msgstr "Micup již nepoužívá značky #1234. Každý má jedinečné uživatelské jméno: @yourname."
+msgid "sanalyer no longer uses #1234 tags. Everyone has a unique username: @yourname."
+msgstr "sanalyer již nepoužívá značky #1234. Každý má jedinečné uživatelské jméno: @yourname."
 
 #. Status shown when browser sign-in status polling gives up after repeated failures.
 #: src/features/auth/flow/auth_login_core/AuthLoginBrowserStep.tsx:72
-msgid "Micup stopped checking whether the browser approved this sign-in. It didn't lose your code."
-msgstr "Micup přestal kontrolovat, zda prohlížeč schválil toto přihlášení. Váš kód neztratil."
+msgid "sanalyer stopped checking whether the browser approved this sign-in. It didn't lose your code."
+msgstr "sanalyer přestal kontrolovat, zda prohlížeč schválil toto přihlášení. Váš kód neztratil."
 
 #. Product name on the Visionary card and buy dialog. A product name: keep it as written.
 #: src/features/shop/utils/ShopMessageDescriptors.ts:314
-msgid "Micup Visionary"
-msgstr "Micup Visionary"
+msgid "sanalyer Visionary"
+msgstr "sanalyer Visionary"
 
 #: src/features/input/utils/KeybindUtils.ts:52
 msgctxt "mouse-button-name"
@@ -26822,8 +26822,8 @@ msgstr "Oficiální instance"
 
 #. Description of the official applications listed in the bot catalog.
 #: src/features/bots/components/pages/BotsPage.tsx:25
-msgid "Official Micup bots you can add to your community."
-msgstr "Oficiální boti Micup, které můžeš přidat do své komunity."
+msgid "Official sanalyer bots you can add to your community."
+msgstr "Oficiální boti sanalyer, které můžeš přidat do své komunity."
 
 #. Generic presence-status label indicating the user is offline.
 #: src/features/i18n/utils/CommonMessageDescriptors.ts:649
@@ -37653,8 +37653,8 @@ msgid "Tag name"
 msgstr "Název značky"
 
 #: src/features/user/components/modals/UsernamePickerModal.tsx:138
-msgid "Tagged names are no longer used. Choose a unique username to continue using Micup."
-msgstr "Označené názvy se již nepoužívají. Chcete-li nadále používat Micup, vyberte si jedinečné uživatelské jméno."
+msgid "Tagged names are no longer used. Choose a unique username to continue using sanalyer."
+msgstr "Označené názvy se již nepoužívají. Chcete-li nadále používat sanalyer, vyberte si jedinečné uživatelské jméno."
 
 #. Label of the tag filter in a forum channel and of the tags section in forum settings.
 #. Short label in the theme studio library section. Keep it concise.
@@ -42199,7 +42199,7 @@ msgstr "Použít systémové nastavení pro formát času"
 
 #. Accessible label for the official Fluxer instance option.
 #: src/features/auth/flow/instance_selector/InstancePickerRows.tsx:24
-msgid "Use the official Micup instance"
+msgid "Use the official sanalyer instance"
 msgstr "Použít oficiální instanci Micupu"
 
 #. Settings search entry description. One-line summary of what the settings search entry controls.

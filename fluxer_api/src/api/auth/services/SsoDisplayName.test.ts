@@ -58,8 +58,8 @@ describe('SSO display name', () => {
 		await harness?.shutdown();
 	});
 
-	it.each(['Micup Destek', 'ᴍɪᴄᴜᴘ Yetkili'])(
-		'drops the provider name %s, which passes for Micup, and shows the username instead',
+	it.each(['sanalyer Destek', 'ᴍɪᴄᴜᴘ Yetkili'])(
+		'drops the provider name %s, which passes for sanalyer, and shows the username instead',
 		async (name) => {
 			const me = await provisionWithName(name);
 			expect(me.global_name).toBeNull();

@@ -20,7 +20,7 @@ const settings = {
 	deepFilterNoiseSuppressionLevel: 57,
 };
 
-describe('Micup suppression contracts', () => {
+describe('sanalyer suppression contracts', () => {
 	it('uses the schema pipeline scope even without a backend rollout target', () => {
 		const assignment = {
 			...INERT_VOICE_NOISE_SUPPRESSION_ASSIGNMENT,

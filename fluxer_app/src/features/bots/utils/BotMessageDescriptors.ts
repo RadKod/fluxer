@@ -12,5 +12,5 @@ export const CREATE_YOUR_OWN_BOT_DESCRIPTOR = msg({
 });
 export const DEVELOPER_DOCUMENTATION_DESCRIPTOR = msg({
 	message: 'Developer documentation',
-	comment: 'Button opening Micup developer documentation with the external link warning.',
+	comment: 'Button opening sanalyer developer documentation with the external link warning.',
 });

@@ -75,7 +75,7 @@ const USER_BATCH_CONCURRENCY: usize = 8;
 const USER_CACHE_MIN_GENERATION_STRIPES: usize = 4096;
 const USER_CACHE_MAX_GENERATION_STRIPES: usize = 1 << 20;
 const FLUXER_SYSTEM_USER_ID: i64 = 0;
-const FLUXER_SYSTEM_USERNAME: &str = "Micup";
+const FLUXER_SYSTEM_USERNAME: &str = "sanalyer";
 const FLUXER_SYSTEM_DISCRIMINATOR: i32 = 0;
 const USER_FLAG_STAFF: i64 = 1;
 
@@ -1384,7 +1384,7 @@ mod tests {
         let partial = fluxer_system_user().to_partial();
 
         assert_eq!(partial.user_id, 0);
-        assert_eq!(partial.username, "Micup");
+        assert_eq!(partial.username, "sanalyer");
         assert_eq!(partial.discriminator, 0);
         assert_eq!(partial.global_name, None);
         assert_eq!(partial.bot, Some(true));

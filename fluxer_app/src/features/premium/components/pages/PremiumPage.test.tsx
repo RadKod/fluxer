@@ -44,7 +44,7 @@ vi.mock('@app/features/app/hooks/useShouldAnimate', () => ({
 }));
 vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({
 	PREMIUM_PRODUCT_NAME: 'Plus',
-	PREMIUM_PRODUCT_FULL_NAME: 'Micup Plus',
+	PREMIUM_PRODUCT_FULL_NAME: 'sanalyer Plus',
 }));
 vi.mock('@app/features/channel/components/ChannelHeader', () => ({
 	ChannelHeader: ({leftContent}: {leftContent: React.ReactNode}) => createElement('header', null, leftContent),
@@ -206,7 +206,7 @@ describe('PremiumPage', () => {
 
 	it('titles the bar and offers Home, Plans and Compare as jump links, not tab panels', () => {
 		render();
-		expect(container.querySelector('header')?.textContent).toContain('Micup Plus');
+		expect(container.querySelector('header')?.textContent).toContain('sanalyer Plus');
 		expect(tabs().map((el) => el.textContent)).toEqual(['Home', 'Plans', 'Compare']);
 		expect(container.querySelector('[role="tab"], [role="tablist"], [role="tabpanel"]')).toBeNull();
 		expect(current()).toBe('Home');

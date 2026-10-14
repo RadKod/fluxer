@@ -46,7 +46,7 @@ const {ProfilePrivacyTabContent} = await import(
 	'@app/features/user/components/modals/tabs/privacy_safety_tab/ProfilePrivacyTab'
 );
 
-describe('ProfilePrivacyTab (Micup four options)', () => {
+describe('ProfilePrivacyTab (sanalyer four options)', () => {
 	let container: HTMLDivElement;
 	let root: ReturnType<typeof createRoot>;
 	const radios = () => [...container.querySelectorAll<HTMLButtonElement>('[role="radio"]')];

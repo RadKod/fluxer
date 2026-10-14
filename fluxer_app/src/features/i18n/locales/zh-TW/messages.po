@@ -1513,8 +1513,8 @@ msgstr "{displayName}'s screen"
 
 #. Instance selector error shown when the instance speaks a protocol generation this client does not know. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts:24
-msgid "{domain} runs a newer version of Micup than this app. Update Micup, then try again."
-msgstr "{domain} 執行了比此應用程式更新版本的 Micup。請更新 Micup，然後再試一次。"
+msgid "{domain} runs a newer version of sanalyer than this app. Update sanalyer, then try again."
+msgstr "{domain} 執行了比此應用程式更新版本的 sanalyer。請更新 sanalyer，然後再試一次。"
 
 #. Profile timezone difference text. duration is a localized hours/minutes phrase for how far ahead the target user's local time is.
 #: src/features/user/components/popouts/UserProfileShared.tsx:65
@@ -2027,8 +2027,8 @@ msgstr "每月 {price}"
 
 #. Secondary shop price for someone without the Micup Plus discount. {price} is formatted in TL or AZN.
 #: src/features/shop/components/ShopPriceLine.tsx:27
-msgid "{price} with Micup Plus"
-msgstr "使用 Micup Plus 時為 {price}"
+msgid "{price} with sanalyer Plus"
+msgstr "使用 sanalyer Plus 時為 {price}"
 
 #: src/features/app/components/BootstrapErrorScreen.tsx:75
 msgid "{PRODUCT_NAME} failed to start properly. This could be due to corrupted data or a temporary issue."
@@ -11805,8 +11805,8 @@ msgstr "無法發布此訊息"
 
 #. Instance selector error shown when no Fluxer instance answered at the address. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts:20
-msgid "Couldn't reach a Micup instance at {domain}. Check the address and that the instance is online."
-msgstr "無法連線到 {domain} 的 Micup 執行個體。請檢查位址並確認執行個體已上線。"
+msgid "Couldn't reach a sanalyer instance at {domain}. Check the address and that the instance is online."
+msgstr "無法連線到 {domain} 的 sanalyer 執行個體。請檢查位址並確認執行個體已上線。"
 
 #. Title of the generic fallback error modal shown when reactivating a Plutonium subscription fails.
 #: src/features/app/components/dialogs/components/plutonium/hooks/useSubscriptionActions.ts:50
@@ -22330,8 +22330,8 @@ msgstr "終身 {premiumProductName}、專屬編號徽章、#0000 標籤，以及
 
 #. Note in the Visionary buy dialog, under the currency note.
 #: src/features/shop/utils/ShopMessageDescriptors.ts:331
-msgid "Lifetime means for as long as Micup runs."
-msgstr "終身是指 Micup 持續營運期間。"
+msgid "Lifetime means for as long as sanalyer runs."
+msgstr "終身是指 sanalyer 持續營運期間。"
 
 #. Settings search synonym. Used to match this term when the user types it in the settings search bar.
 #: src/features/expressions/components/modals/sticker_form/StickerPreview.tsx:53
@@ -24271,22 +24271,22 @@ msgstr "麥克風、相機和螢幕分享內容已進行端對端加密。"
 
 #. Payment currency explanation on the shop, Micup Plus page, checkout and FAQ. Keep the company location explicit.
 #: src/features/shop/components/ShopCurrencyNote.tsx:6
-msgid "Micup is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate."
-msgstr "Micup 是一家亞塞拜然公司，因此款項以亞塞拜然馬納特（AZN）收取。土耳其里拉（TL）金額僅供參考，按亞塞拜然中央銀行的每日匯率計算。"
+msgid "sanalyer is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate."
+msgstr "sanalyer 是一家亞塞拜然公司，因此款項以亞塞拜然馬納特（AZN）收取。土耳其里拉（TL）金額僅供參考，按亞塞拜然中央銀行的每日匯率計算。"
 
 #: src/features/user/components/modals/UsernamePickerModal.tsx:118
-msgid "Micup no longer uses #1234 tags. Everyone has a unique username: @yourname."
-msgstr "Micup 不再使用 #1234 標籤。每個人都有一個唯一的使用者名稱：@yourname。"
+msgid "sanalyer no longer uses #1234 tags. Everyone has a unique username: @yourname."
+msgstr "sanalyer 不再使用 #1234 標籤。每個人都有一個唯一的使用者名稱：@yourname。"
 
 #. Status shown when browser sign-in status polling gives up after repeated failures.
 #: src/features/auth/flow/auth_login_core/AuthLoginBrowserStep.tsx:72
-msgid "Micup stopped checking whether the browser approved this sign-in. It didn't lose your code."
-msgstr "Micup 已停止檢查瀏覽器是否核准此登入。您的驗證碼並未遺失。"
+msgid "sanalyer stopped checking whether the browser approved this sign-in. It didn't lose your code."
+msgstr "sanalyer 已停止檢查瀏覽器是否核准此登入。您的驗證碼並未遺失。"
 
 #. Product name on the Visionary card and buy dialog. A product name: keep it as written.
 #: src/features/shop/utils/ShopMessageDescriptors.ts:314
-msgid "Micup Visionary"
-msgstr "Micup Visionary"
+msgid "sanalyer Visionary"
+msgstr "sanalyer Visionary"
 
 #: src/features/input/utils/KeybindUtils.ts:52
 msgctxt "mouse-button-name"
@@ -26822,8 +26822,8 @@ msgstr "官方伺服器"
 
 #. Description of the official applications listed in the bot catalog.
 #: src/features/bots/components/pages/BotsPage.tsx:25
-msgid "Official Micup bots you can add to your community."
-msgstr "可新增至社群的Micup官方機器人。"
+msgid "Official sanalyer bots you can add to your community."
+msgstr "可新增至社群的sanalyer官方機器人。"
 
 #. Generic presence-status label indicating the user is offline.
 #: src/features/i18n/utils/CommonMessageDescriptors.ts:649
@@ -37653,8 +37653,8 @@ msgid "Tag name"
 msgstr "標籤名稱"
 
 #: src/features/user/components/modals/UsernamePickerModal.tsx:138
-msgid "Tagged names are no longer used. Choose a unique username to continue using Micup."
-msgstr "不再使用標記名稱。選擇一個唯一的使用者名稱以繼續使用 Micup。"
+msgid "Tagged names are no longer used. Choose a unique username to continue using sanalyer."
+msgstr "不再使用標記名稱。選擇一個唯一的使用者名稱以繼續使用 sanalyer。"
 
 #. Label of the tag filter in a forum channel and of the tags section in forum settings.
 #. Short label in the theme studio library section. Keep it concise.
@@ -42199,8 +42199,8 @@ msgstr "使用系統地區設定來顯示時間格式"
 
 #. Accessible label for the official Fluxer instance option.
 #: src/features/auth/flow/instance_selector/InstancePickerRows.tsx:24
-msgid "Use the official Micup instance"
-msgstr "使用官方 Micup 伺服器"
+msgid "Use the official sanalyer instance"
+msgstr "使用官方 sanalyer 伺服器"
 
 #. Settings search entry description. One-line summary of what the settings search entry controls.
 #: src/features/user/components/settings_utils/search_index/DesktopSettingsIndex.ts:175

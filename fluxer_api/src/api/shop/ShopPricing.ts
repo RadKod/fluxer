@@ -129,9 +129,9 @@ export function describeShopOrder(
 	const suffix = ` — mağazadaki fiyat ${storePrice}. Sipariş #${orderId}`;
 	const name =
 		prepared.kind === 'visionary'
-			? 'Micup Visionary'
+			? 'sanalyer Visionary'
 			: prepared.kind === 'premium'
-				? `Micup Plus · ${prepared.months} ay`
+				? `sanalyer Plus · ${prepared.months} ay`
 				: (prepared.itemName ?? '');
 	const room = MAX_ORDER_DESCRIPTION_LENGTH - suffix.length;
 	const fitted = name.length <= room ? name : `${name.slice(0, room - 1).replace(/[\uD800-\uDBFF]$/, '')}…`;

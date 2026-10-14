@@ -752,7 +752,7 @@ mod managed_relay_tests {
         assert_eq!(
             managed_relay_hosts(&Env::from_iter([(
                 "FLUXER_PUSH_SERVICE_MANAGED_RELAY_HOSTS",
-                " Push.Micup.Example, relay.micup.example "
+                " Push.sanalyer.Example, relay.micup.example "
             ),])),
             vec!["push.micup.example", "relay.micup.example"]
         );

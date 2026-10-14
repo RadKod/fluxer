@@ -533,7 +533,7 @@ const ERROR_I18N_SV_SE_MESSAGES = defineErrorI18nLocaleMessages({
 	"usernames_and_tags.discriminator_not_supported_on_instance": "Den här instansen använder inte taggar. Ditt användarnamn är unikt i sig självt.",
 	"usernames_and_tags.discriminator_out_of_range": "Diskriminatorn måste ligga mellan {min} och {max}.",
 	"usernames_and_tags.discriminator_required": "Diskriminator är obligatorisk.",
-	"usernames_and_tags.display_name_cannot_impersonate_micup": "Visningsnamnet får inte utge sig för att vara ett officiellt Micup-konto.",
+	"usernames_and_tags.display_name_cannot_impersonate_micup": "Visningsnamnet får inte utge sig för att vara ett officiellt sanalyer-konto.",
 	"usernames_and_tags.display_name_length_invalid": "Visningsnamnet måste vara mellan {min} och {max} tecken långt.",
 	"usernames_and_tags.display_name_reserved_terms": "Visningsnamnet får inte innehålla \"system message\".",
 	"usernames_and_tags.display_name_reserved_value": "Visningsnamnet får inte vara \"everyone\" eller \"here\".",

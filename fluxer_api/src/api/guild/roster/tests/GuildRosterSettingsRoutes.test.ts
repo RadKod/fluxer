@@ -103,7 +103,7 @@ describe('Guild roster settings routes', () => {
 	});
 
 	it('the roster bot token is refused', async () => {
-		const bot = await createOAuth2Application(harness, fixture.owner.token, {name: 'Micup Roster'});
+		const bot = await createOAuth2Application(harness, fixture.owner.token, {name: 'sanalyer Roster'});
 		Config.instance.rosterBotApplicationId = bot.application.id;
 		await createBuilder(harness, `Bot ${bot.botToken}`).get('/users/@me').expect(401).execute();
 	});
@@ -209,7 +209,7 @@ describe('Guild roster settings routes', () => {
 	});
 
 	it('bot.in_guild turns true once the bot is a member', async () => {
-		const bot = await createOAuth2Application(harness, fixture.owner.token, {name: 'Micup Roster'});
+		const bot = await createOAuth2Application(harness, fixture.owner.token, {name: 'sanalyer Roster'});
 		Config.instance.rosterBotApplicationId = bot.application.id;
 		expect((await list()).bot?.in_guild).toBe(false);
 		await authorizeBot(harness, fixture.owner.token, bot.application.id, ['bot'], fixture.guild.id, '17910848');

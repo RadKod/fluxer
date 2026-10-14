@@ -75,7 +75,7 @@ describe('PremiumStatusCard', () => {
 		users.currentUser = user({premiumUntil: until});
 		render(addTimeHandler);
 
-		expect(container.textContent).toContain('Micup Plus is active');
+		expect(container.textContent).toContain('sanalyer Plus is active');
 		expect(container.textContent).toContain(`Until ${getFormattedLongDate(until, 'en')}, 26 days left`);
 
 		act(() => addTime()!.click());
@@ -93,7 +93,7 @@ describe('PremiumStatusCard', () => {
 		users.currentUser = user({premiumUntil: new Date(Date.now() + DAY_MS)});
 		render(null);
 
-		expect(container.textContent).toContain('Micup Plus is active');
+		expect(container.textContent).toContain('sanalyer Plus is active');
 		expect(addTime()).toBeUndefined();
 	});
 

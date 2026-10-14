@@ -1,14 +1,14 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: "Hızlı başlangıç: kendi botunu yap"
-description: Micup'ta bot oluştur, sunucuna ekle ve Python ile ilk mesajını gönder.
+description: sanalyer'de bot oluştur, sunucuna ekle ve Python ile ilk mesajını gönder.
 ---
 
-Micup hesabın, botu ekleyebileceğin bir sunucu ve Python 3 ile başlayabilirsin. Aşağıdaki örnek seçtiğin metin kanalına bir mesaj gönderip kapanır.
+sanalyer hesabın, botu ekleyebileceğin bir sunucu ve Python 3 ile başlayabilirsin. Aşağıdaki örnek seçtiğin metin kanalına bir mesaj gönderip kapanır.
 
 ## 1. Botunu oluştur
 
-Micup'ta **Ayarlar › Uygulamalar** bölümünü aç. **Uygulama oluştur** seçeneğiyle bir ad ver; uygulamayla birlikte bot hesabı da oluşturulur. Uygulama ayrıntılarından botun kullanıcı adını ve profilini düzenleyebilirsin.
+sanalyer'de **Ayarlar › Uygulamalar** bölümünü aç. **Uygulama oluştur** seçeneğiyle bir ad ver; uygulamayla birlikte bot hesabı da oluşturulur. Uygulama ayrıntılarından botun kullanıcı adını ve profilini düzenleyebilirsin.
 
 **Bot token** değerini oluşturulduğu anda güvenli bir yerde sakla: tam token yalnız oluşturma veya yenileme yanıtında verilir. Daha sonra görünen önizleme kimlik doğrulamada kullanılamaz. Tokenı kaybettiysen ya da paylaştıysan **Yeniden oluştur** seçeneğini kullan ve botunda kayıtlı değeri değiştir. Önceki token hemen geçersiz olur. [Token güvenliği ve yenileme](/authentication/#token-formats).
 
@@ -28,7 +28,7 @@ https://micup.gg/oauth2/authorize?client_id=UYGULAMA_ID&scope=bot&permissions=30
 
 Hedef metin kanalının bağlantısındaki son kimliği al: `https://micup.gg/channels/SUNUCU_ID/KANAL_ID`. Aşağıdaki kodu `bot.py` olarak kaydet ve terminalde `python bot.py` çalıştır. Token gizli girişle sorulur; kaynak dosyaya yazılmaz.
 
-Örnek, [Mesaj oluşturma](/http-api/messages/#create-message) sözleşmesini kullanır. Önce Micup'ın [keşif yanıtını](/http-api/instance/#get-instance-discovery) okur ve `endpoints.api_public` değerini kullanır; API adresini sabitlemez. İsteklerde [bot kimlik doğrulaması](/authentication/#authorization-schemes) için `Authorization: Bot <token>` gönderir.
+Örnek, [Mesaj oluşturma](/http-api/messages/#create-message) sözleşmesini kullanır. Önce sanalyer'in [keşif yanıtını](/http-api/instance/#get-instance-discovery) okur ve `endpoints.api_public` değerini kullanır; API adresini sabitlemez. İsteklerde [bot kimlik doğrulaması](/authentication/#authorization-schemes) için `Authorization: Bot <token>` gönderir.
 
 ```python
 import getpass
@@ -49,7 +49,7 @@ try:
 
     request = urllib.request.Request(
         f"{api}/v1/channels/{channel_id}/messages",
-        data=json.dumps({"content": "Merhaba, Micup!"}).encode("utf-8"),
+        data=json.dumps({"content": "Merhaba, sanalyer!"}).encode("utf-8"),
         headers={
             "Authorization": f"Bot {token}",
             "Content-Type": "application/json",
@@ -62,9 +62,9 @@ try:
 except urllib.error.HTTPError as error:
     raise SystemExit(f"HTTP {error.code}: tokenı ve kanal izinlerini kontrol et.")
 except urllib.error.URLError:
-    raise SystemExit("Micup'a bağlanılamadı; bağlantını kontrol et.")
+    raise SystemExit("sanalyer'e bağlanılamadı; bağlantını kontrol et.")
 ```
 
-Başarılı olduğunda kanalda **Merhaba, Micup!** mesajını görürsün. `401` alırsan tokenı, `403` alırsan botun üyeliğini ve kanal izinlerini kontrol et. `429` alırsan [hız sınırına](/topics/rate-limits/) göre bekle; reddedilen isteği sürekli tekrarlama.
+Başarılı olduğunda kanalda **Merhaba, sanalyer!** mesajını görürsün. `401` alırsan tokenı, `403` alırsan botun üyeliğini ve kanal izinlerini kontrol et. `429` alırsan [hız sınırına](/topics/rate-limits/) göre bekle; reddedilen isteği sürekli tekrarlama.
 
 Bu örnek sürekli mesaj dinlemez. `!ping` gibi komutlara tepki veren bir bot için [Gateway bağlantısı](/gateway/overview/), [Identify](/gateway/commands/#identify) ve [Message Create olayı](/gateway/events/#message-create) gerekir. Keşif yanıtındaki `endpoints.gateway` adresini kullan; botların mesajlarını yok sayarak yanıt döngülerini önle.

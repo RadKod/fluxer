@@ -33,8 +33,8 @@ import type {BadgeResponse} from '@fluxer/schema/src/domains/badge/BadgeResponse
 import type {UserProfileFullResponse} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
-const TEXT = "Öncü #{n} — Micup'ın ilk 10.000 kullanıcısından";
-const shown = (n: number) => `Öncü #${n} — Micup'ın ilk 10.000 kullanıcısından`;
+const TEXT = "Öncü #{n} — sanalyer'in ilk 10.000 kullanıcısından";
+const shown = (n: number) => `Öncü #${n} — sanalyer'in ilk 10.000 kullanıcısından`;
 
 // harness.reset() does not clear ServiceSingletons: getPioneerService() keeps the worker object it saw first. One
 // object, injected before every test, keeps that true; spies go on this object. A test that closes the distribution

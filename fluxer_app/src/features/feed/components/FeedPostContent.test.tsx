@@ -54,7 +54,7 @@ vi.mock('@app/app/I18n', async () => ({
 }));
 // The markdown renderers pull in stores that read the page bootstrap at import time.
 (window as unknown as {__FLUXER_BOOTSTRAP__: unknown}).__FLUXER_BOOTSTRAP__ = {
-	instance: {app_public: {branding: {product_name: 'Micup'}}},
+	instance: {app_public: {branding: {product_name: 'sanalyer'}}},
 	config: {releaseChannel: 'stable', bootstrapApiEndpoint: 'https://micup.test/api'},
 	geoip: {
 		countryCode: 'TR',

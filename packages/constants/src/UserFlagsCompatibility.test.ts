@@ -3,7 +3,7 @@
 import {LEGACY_DEAD_USER_FLAGS_MASK, UserFlags} from '@fluxer/constants/src/UserConstants';
 import {describe, expect, it} from 'vitest';
 
-describe('Micup account flag compatibility', () => {
+describe('sanalyer account flag compatibility', () => {
 	it.each([
 		['DISABLED_SUSPICIOUS_ACTIVITY', 35n],
 		['FORCE_INBOUND_PHONE_VERIFICATION', 61n],

@@ -64,7 +64,7 @@ function buildAdminApplication(secretHash: string | null): Application {
 	const row: ApplicationRow = {
 		application_id: createApplicationID(ADMIN_OAUTH2_APPLICATION_ID),
 		owner_user_id: SYSTEM_USER_ID,
-		name: 'Micup Admin',
+		name: 'sanalyer Admin',
 		bot_user_id: null,
 		bot_is_public: false,
 		bot_require_code_grant: false,

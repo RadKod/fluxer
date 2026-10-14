@@ -8,7 +8,7 @@ import {describe, expect, it} from 'vitest';
 // scaled with it. Upstream's rule stays as is; the Micup block at the end of the file overrides it (MARKER). The build
 // takes 1px off every font size (micup-shrink-font-size), so the line renders at 0.7625rem instead of 0.6875rem.
 const CSS = readFileSync(fileURLToPath(new URL('./VoiceConnectionStatus.module.css', import.meta.url)), 'utf8');
-const MARKER = '/* Micup: voice panel channel line 10% larger */';
+const MARKER = '/* sanalyer: voice panel channel line 10% larger */';
 
 const flat = (text: string) => text.replace(/\s+/g, ' ').trim();
 
@@ -26,7 +26,7 @@ it('shares the media row equally between the visible controls', () => {
 });
 
 describe('voice panel channel line', () => {
-	it('is 10% larger in a Micup block at the end of the file', () => {
+	it('is 10% larger in a sanalyer block at the end of the file', () => {
 		expect(CSS.split(MARKER)).toHaveLength(2);
 		expect(flat(CSS.slice(CSS.indexOf(MARKER) + MARKER.length))).toBe(
 			'.channelSourceLink { font-size: 0.825rem; line-height: 1.1rem; }',

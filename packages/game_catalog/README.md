@@ -12,7 +12,7 @@ These are basename identity hints, not authenticated proof that a game is being 
 
 ## Provenance and rights
 
-Names were cross-checked against 136 official Steam store `appdetails` responses and publisher product pages/search-indexed publisher titles for the 14 non-Steam entries (links below). Several publisher pages require JavaScript or failed direct retrieval; name evidence is not executable evidence. Display names omit trademark symbols and may use familiar short names. No Discord detectable list, CDN asset or old Micup code was used.
+Names were cross-checked against 136 official Steam store `appdetails` responses and publisher product pages/search-indexed publisher titles for the 14 non-Steam entries (links below). Several publisher pages require JavaScript or failed direct retrieval; name evidence is not executable evidence. Display names omit trademark symbols and may use familiar short names. No Discord detectable list, CDN asset or old sanalyer code was used.
 
 The two upstream factual rules come from [Fluxer detectables at ac1738dcde92eca5df0c6343cf0b8d1ab9cb13b2](https://github.com/fluxerapp/detectables/tree/ac1738dcde92eca5df0c6343cf0b8d1ab9cb13b2). Its [LICENSE](https://github.com/fluxerapp/detectables/blob/ac1738dcde92eca5df0c6343cf0b8d1ab9cb13b2/LICENSE) dedicates factual application mappings to CC0-1.0; schema/documentation are Apache-2.0, and images remain their owners' property. Only the Bedrock and osu! filename facts were reused; upstream schema, code and images were not copied. Minecraft Java's argument-dependent upstream rule is intentionally unsupported.
 

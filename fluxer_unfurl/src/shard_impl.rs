@@ -238,7 +238,7 @@ fn build_l2_cache(
 
 fn base_http_client_builder() -> reqwest::ClientBuilder {
     reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 (compatible; Micupbot/1.0; +https://micup.gg)")
+        .user_agent("Mozilla/5.0 (compatible; sanalyerbot/1.0; +https://sanalyer.com)")
         .timeout(Duration::from_secs(10))
         .redirect(reqwest::redirect::Policy::none())
 }

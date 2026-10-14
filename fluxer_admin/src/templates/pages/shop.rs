@@ -129,7 +129,7 @@ fn order_lookup(base: &str, data: &ShopPageData<'_>) -> Markup {
         div class="flex flex-col gap-4" {
             h2 class="text-base font-semibold text-neutral-900" { "Find an order" }
             p class="text-sm text-neutral-500" {
-                "Payriff shows each payment as \"Micup #<order number> …\"."
+                "Payriff shows each payment as \"sanalyer #<order number> …\"."
             }
             form method="get" action={(base) "/shop"} class="flex flex-wrap items-end gap-2" {
                 div class="w-72" {
