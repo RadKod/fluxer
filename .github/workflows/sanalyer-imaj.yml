@@ -1,19 +1,19 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Builds each fork image in the self-hosting compose configuration, or explicitly selected fluxer-docs,
-# pushes it to ghcr.io/<owner>/micup-v2/<image>:<sha> as a private package, and leaves imajlar.env
-# (MICUP_SHA, BUILD_VERSION, FLUXER_DEV_SHA256, KIMLIK_*, OZET_*) as an artifact.
+# pushes it to ghcr.io/radkod/fluxer/<image>:<sha>, and leaves imajlar.env
+# (SANALYER_SHA, BUILD_VERSION, KIMLIK_*, OZET_*) as an artifact.
+# sanalyer: Micup'ın micup-imaj.yml'inden uyarlandı; fluxer-dev (sema.sh) adımı çıkarıldı.
 # KIMLIK_* = imaj yapılandırma özeti (docker image inspect .Id, klasik depo), OZET_* = kayıt defteri manifest
-# özeti (compose'da image: ...@sha256:<OZET>). Yalnız elle tetiklenir; girdi olarak birleştirme kapısından geçmiş
-# micup/main verilir.
-name: Micup imaj
+# özeti (compose'da image: ...@sha256:<OZET>). Yalnız elle tetiklenir; girdi olarak sanalyer dalı verilir.
+name: sanalyer imaj
 
 on:
   workflow_dispatch:
     inputs:
       ref:
-        description: Derlenecek dal ya da commit (birleştirme kapısından geçmiş micup/main)
+        description: Derlenecek dal ya da commit
         required: true
-        default: micup/main
+        default: sanalyer
       imajlar:
         description: Yalnız bu imajlar, boşlukla (ör. fluxer-static, fluxer-docs); boş = compose imajları (tam imajlar.env yalnız boşken)
         required: false
@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: micup-imaj-${{ inputs.ref }}
+  group: sanalyer-imaj-${{ inputs.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -89,7 +89,7 @@ jobs:
           TOKEN: ${{ github.token }}
         run: |
           printf '%s' "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker buildx create --name micup --driver docker-container --use
+          docker buildx create --name sanalyer --driver docker-container --use
       - name: Derle ve it
         run: |
           depo="ghcr.io/${GITHUB_REPOSITORY,,}/$IMAJ"
@@ -165,27 +165,13 @@ jobs:
             exit 1
           fi
           echo "index.html: $(wc -l <"$RUNNER_TEMP/varlik") varlık, hepsi /assets/"
-      - if: needs.plan.outputs.tam == '1'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: ${{ needs.plan.outputs.sha }}
-      - if: needs.plan.outputs.tam == '1'
-        uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de
-        with:
-          toolchain: '1.98.1'
-      - name: fluxer-dev (sema.sh için)
-        if: needs.plan.outputs.tam == '1'
-        run: |
-          cargo build --release --locked -p fluxer-dev
-          cp target/release/fluxer-dev "$RUNNER_TEMP/imaj/fluxer-dev"
       - name: imajlar.env
         run: |
           cd "$RUNNER_TEMP/imaj"
           {
-            printf '# micup-imaj.yml yazdı — %s (UTC), koşu %s. Elle düzenlemeyin.\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            printf '# sanalyer-imaj.yml yazdı — %s (UTC), koşu %s. Elle düzenlemeyin.\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
               "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            printf 'MICUP_SHA=%s\nBUILD_VERSION=%s\nMICUP_REGISTRY=ghcr.io/%s\n' "$SHA" "$BUILD_VERSION" "${GITHUB_REPOSITORY,,}"
-            if [[ $TAM == 1 ]]; then printf 'FLUXER_DEV_SHA256=%s\n' "$(sha256sum fluxer-dev | cut -d' ' -f1)"; fi
+            printf 'SANALYER_SHA=%s\nBUILD_VERSION=%s\nFLUXER_REGISTRY=ghcr.io/%s\n' "$SHA" "$BUILD_VERSION" "${GITHUB_REPOSITORY,,}"
             cat fluxer-*.env | sort
           } >imajlar.env
           rm fluxer-*.env
