@@ -291,6 +291,7 @@ export async function getDesktopDebugInfo(
 function formatWindowBehavior(settings: DesktopWindowBehaviorSettings): string {
 	return [
 		`showTrayIcon=${settings.showTrayIcon}`,
+		`coloredTrayIcon=${settings.coloredTrayIcon}`,
 		`minimizeToTray=${settings.minimizeToTray}`,
 		`closeToTray=${settings.closeToTray}`,
 		`startMinimized=${settings.startMinimized}`,
