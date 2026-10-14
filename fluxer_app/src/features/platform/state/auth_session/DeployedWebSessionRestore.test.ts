@@ -11,11 +11,13 @@ import type {MessageDescriptor} from '@lingui/core';
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 
 vi.mock('@lingui/core/macro', () => ({msg: (descriptor: MessageDescriptor) => descriptor}));
-vi.mock('@app/features/gateway/transport/GatewayConnection', () => ({
+vi.mock('@app/features/gateway/transport/GatewaySessionPool', () => ({
 	default: {
-		sendInvisiblePresenceForCurrentSession: () => undefined,
-		retireForAccountTransition: async () => undefined,
-		logout: () => undefined,
+		foregroundConnection: {
+			sendInvisiblePresenceForCurrentSession: () => undefined,
+			retireForAccountTransition: async () => undefined,
+			logout: () => undefined,
+		},
 	},
 }));
 vi.mock('@app/features/presence/state/LocalPresence', () => ({

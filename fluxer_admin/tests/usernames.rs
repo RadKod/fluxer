@@ -9,7 +9,7 @@ use axum::{
 };
 use fluxer_admin::{
     build_router,
-    config::{AdminConfig, ProxyConfig, RuntimeEnv},
+    config::{AdminConfig, ProxyConfig},
     session,
 };
 use serde_json::{Value, json};
@@ -522,10 +522,9 @@ async fn mock_api(
 ) -> Response {
     let path = uri.path();
     if method == Method::GET && path == "/admin/users/@me" {
-        let mut user: Value =
-            serde_json::from_str(include_str!("parity/fixtures/api/admin_user_me.json")).unwrap();
-        user["user"]["acls"] = json!(state.acls);
-        return Json(user).into_response();
+        let mut user = admin_user();
+        user["acls"] = json!(state.acls);
+        return Json(json!({ "user": user })).into_response();
     }
     if method == Method::GET && path == "/admin/username-dictionary" {
         return Json(state.dictionary).into_response();
@@ -573,7 +572,6 @@ fn dictionary() -> Value {
 
 fn test_config(api_endpoint: String) -> AdminConfig {
     AdminConfig {
-        env: RuntimeEnv::Test,
         host: "127.0.0.1".to_owned(),
         port: 0,
         secret_key_base: SECRET.to_owned(),
@@ -581,6 +579,7 @@ fn test_config(api_endpoint: String) -> AdminConfig {
         api_endpoint,
         media_endpoint: "https://media.example.test".to_owned(),
         static_cdn_endpoint: "https://static.example.test".to_owned(),
+        reports_bucket_origin: "https://reports.example.test".to_owned(),
         admin_endpoint: "https://admin.example.test".to_owned(),
         web_app_endpoint: "https://app.example.test".to_owned(),
         oauth_client_id: "admin-client".to_owned(),
@@ -593,4 +592,48 @@ fn test_config(api_endpoint: String) -> AdminConfig {
             client_ip_header_name: "x-forwarded-for".to_owned(),
         },
     }
+}
+
+fn admin_user() -> Value {
+    json!({
+        "id": "1130650140672000000",
+        "username": "AdminUser",
+        "discriminator": 0,
+        "global_name": "AdminUser",
+        "email": "admin@example.com",
+        "acls": ["*"],
+        "bot": false,
+        "system": false,
+        "flags": "0",
+        "premium_flags": 0,
+        "avatar": null,
+        "banner": null,
+        "bio": null,
+        "pronouns": null,
+        "accent_color": null,
+        "email_verified": true,
+        "email_bounced": false,
+        "date_of_birth": null,
+        "locale": "en-US",
+        "premium_type": null,
+        "premium_since": null,
+        "premium_until": null,
+        "premium_grace_ends_at": null,
+        "premium_lifetime_sequence": null,
+        "temp_banned_until": null,
+        "pending_deletion_at": null,
+        "pending_bulk_message_deletion_at": null,
+        "deletion_reason_code": null,
+        "deletion_public_reason": null,
+        "deletion_audit_log_reason": null,
+        "deletion_scheduled_by": null,
+        "deletion_scheduled_at": null,
+        "traits": [],
+        "has_totp": false,
+        "authenticator_types": [],
+        "last_active_at": null,
+        "last_active_ip": null,
+        "last_active_ip_reverse": null,
+        "last_active_location": null
+    })
 }

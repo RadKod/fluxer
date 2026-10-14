@@ -22,6 +22,7 @@ vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PREMIUM_PRODUCT
 vi.mock('@app/features/premium/utils/PremiumUtils', () => ({
 	shouldShowPremiumFeatures: () => true,
 	getPremiumProductFullName: () => 'sanalyer Plus',
+	getPremiumProductName: () => 'sanalyer Plus',
 }));
 vi.mock('@app/features/ui/utils/NativeUtils', () => ({
 	getElectronAPI: () => null,

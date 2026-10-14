@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {createHash} from 'node:crypto';
 import {createTestAccount, setUserACLs, type TestAccount} from '@app/api/auth/tests/AuthTestUtils';
-import {createAttachmentID, createReportID, createUserID, userIdToChannelId} from '@app/api/BrandedTypes';
+import {createReportID, createUserID, userIdToChannelId} from '@app/api/BrandedTypes';
 import {Config, getConfig} from '@app/api/Config';
 import {loadFixture} from '@app/api/channel/tests/AttachmentTestUtils';
 import {setupTestGuildWithMembers} from '@app/api/channel/tests/ChannelTestUtils';
-import {NcmecSubmissionService} from '@app/api/csam/NcmecSubmissionService';
-import type {NcmecAttachmentSubmissionRow, NcmecUserWorkflowRow} from '@app/api/database/types/CsamTypes';
 import type {FeedMedia, FeedPostRow} from '@app/api/database/types/FeedTypes';
 import {sendFeedAuthorDm} from '@app/api/feed/FeedAuthorDm';
 import {
@@ -23,7 +20,6 @@ import {Logger} from '@app/api/Logger';
 import {getKVClient, getSnowflakeService} from '@app/api/middleware/ServiceRegistry';
 import {
 	getAdminRepository,
-	getChannelRepository,
 	getFeedDiscoverRepository,
 	getFeedPostService,
 	getFeedVideoRepository,
@@ -34,7 +30,6 @@ import {
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {BUNNY_TEST_SETTINGS, fakeBunnyStream} from '@app/api/test/msw/handlers/BunnyStreamHandlers';
-import {fakeNcmecServer} from '@app/api/test/Setup';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import deleteFeedVideo from '@app/api/worker/tasks/DeleteFeedVideo';
@@ -77,7 +72,7 @@ interface AdminReport {
 		channel_id: string;
 		author_id: string;
 		content: string;
-		attachments: Array<{id: string; filename: string; ncmec_status: string}>;
+		attachments: Array<{id: string; filename: string}>;
 	}>;
 }
 
@@ -216,10 +211,10 @@ describe('feed reports and moderation', () => {
 				channel_id: aliceChannel,
 				author_id: alice.userId,
 				content: 'şikayetlik',
-				attachments: [expect.objectContaining({id: media.id, filename: 'photo.png', ncmec_status: 'not_submitted'})],
+				attachments: [expect.objectContaining({id: media.id, filename: 'photo.png'})],
 			}),
 		]);
-		// The image is copied to the reports bucket under the key the NCMEC submission reads (channel, attachment, name).
+		// The image is copied to the reports bucket under its channel, attachment and file name.
 		const reportKey = `attachments/${aliceChannel}/${media.id}/photo.png`;
 		expect(await harness.storageService.getObjectMetadata(Config.s3.buckets.reports, reportKey)).not.toBeNull();
 
@@ -321,81 +316,6 @@ describe('feed reports and moderation', () => {
 		const logs = await getAdminRepository().listAllAuditLogsPaginated(1000);
 		const log = logs.find((entry) => entry.action === 'delete_feed_post' && entry.targetId === BigInt(post.id));
 		expect(log?.metadata.get('evidence_keys')).toBe(cdnKey);
-	});
-
-	it('removes a feed post when the NCMEC report of its image is finalized, with the priority CDN purge', async () => {
-		const {owner: alice, members} = await setupTestGuildWithMembers(harness, 1);
-		const bob = members[0]!;
-		const post = await createPost(harness, alice, {attachments: [await uploadImage(alice)]}).execute();
-		const media = post.attachments[0]!;
-		const reported = await report(bob, 'feed-post', {post_id: post.id, category: 'spam'}).execute();
-		const aliceChannel = userIdToChannelId(createUserID(BigInt(alice.userId)));
-		const cdnKey = `attachments/${aliceChannel}/${media.id}/photo.png`;
-		const now = new Date();
-		const submission: NcmecAttachmentSubmissionRow = {
-			attachment_id: BigInt(media.id),
-			user_id: BigInt(alice.userId),
-			channel_id: BigInt(aliceChannel),
-			message_id: BigInt(post.id),
-			filename: 'photo.png',
-			source_report_id: BigInt(reported.report_id),
-			status: 'submitted',
-			ncmec_report_id: '1',
-			ncmec_file_id: 'file-1',
-			submitted_at: now,
-			submitted_by_admin_id: 1n,
-			reporter_full_name: 'Reporter',
-			failure_reason: null,
-			archive_completed_at: null,
-			content_deleted_at: null,
-			created_at: now,
-			updated_at: now,
-		};
-		// Archived before any ban, so finalizing goes straight to removing the content.
-		const workflow: NcmecUserWorkflowRow = {
-			user_id: BigInt(alice.userId),
-			deleted_at: null,
-			deleted_by_admin_id: null,
-			deletion_private_reason: null,
-			deletion_ncmec_report_id: null,
-			archive_id: 5n,
-			archive_requested_at: now,
-			archive_requested_by_admin_id: 1n,
-			archive_audit_log_reason: null,
-			archive_completed_at: now,
-			deletion_job_queued_at: now,
-			previous_report_ids: null,
-			created_at: now,
-			updated_at: now,
-		};
-		const written: Array<NcmecAttachmentSubmissionRow> = [];
-		const purge = vi.spyOn(getPurgeQueue(), 'addUrls');
-		const service = new NcmecSubmissionService({
-			ncmecRepository: {
-				getAttachmentSubmission: async () => submission,
-				getUserWorkflow: async () => workflow,
-				upsertAttachmentSubmission: async (row: NcmecAttachmentSubmissionRow) => {
-					written.push(row);
-				},
-				upsertUserWorkflow: async () => {},
-			},
-			adminArchiveService: {getArchive: async () => ({completed_at: now.toISOString()})},
-			channelRepository: getChannelRepository(),
-			reportRepository: getReportRepository(),
-			feedPostService: getFeedPostService(),
-			purgeQueue: getPurgeQueue(),
-			updatePropagator: {},
-		} as unknown as ConstructorParameters<typeof NcmecSubmissionService>[0]);
-
-		await service.finalizeAttachmentReport(createAttachmentID(BigInt(media.id)));
-
-		await createBuilder(harness, bob.token)
-			.get(`/feed/posts/${post.id}`)
-			.expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.UNKNOWN_FEED_POST)
-			.execute();
-		expect(await harness.storageService.getObjectMetadata(Config.s3.buckets.cdn, cdnKey)).toBeNull();
-		expect(purge).toHaveBeenCalledWith([`${Config.endpoints.media}/${cdnKey}`], {priority: true});
-		expect(written.at(-1)?.content_deleted_at).toBeInstanceOf(Date);
 	});
 
 	it('lets a FEED_MODERATE admin put a report-hidden public post back on Keşfet, audit logged', async () => {
@@ -564,8 +484,8 @@ describe('feed reports and moderation', () => {
 		expect(fakeBunnyStream.getVideo(guid)).toBeNull();
 	});
 
-	// every priority removal records the key before its job, the NCMEC and link blocklist ones included.
-	it('keeps the evidence of a video post an NCMEC removal takes when only a plain delete job runs', async () => {
+	// every priority removal records the key before its job, the moderator and link blocklist ones included.
+	it('keeps the evidence of a video post a priority removal takes when only a plain delete job runs', async () => {
 		const alice = await createTestAccount(harness);
 		const {post, media, guid} = await publishVideoPost(alice);
 		const key = feedStreamEvidenceKey(post.author_id, media);
@@ -632,6 +552,7 @@ describe('feed reports and moderation', () => {
 		const {post, media, guid} = await publishVideoPost(alice);
 		const key = feedStreamEvidenceKey(post.author_id, media);
 		const jobs = captureJobs();
+		const copyObject = vi.spyOn(harness.storageService, 'copyObject');
 
 		const reported = await report(bob, 'feed-post', {post_id: post.post_id.toString(), category: 'spam'}).execute();
 
@@ -647,7 +568,7 @@ describe('feed reports and moderation', () => {
 		const channelId = userIdToChannelId(post.author_id);
 		expect(`attachments/${channelId}/${attachment!.attachment_id}/${attachment!.filename}`).toBe(key);
 		// A video has no CDN object to copy; its evidence comes from the video lane only.
-		const copies = harness.storageService.copyObjectSpy.mock.calls as Array<[{destinationKey: string}]>;
+		const copies = copyObject.mock.calls as Array<[{destinationKey: string}]>;
 		expect(copies.filter(([params]) => params.destinationKey === key)).toEqual([]);
 	});
 
@@ -718,47 +639,19 @@ describe('feed reports and moderation', () => {
 		expect(Object.keys(attachment!)).not.toContain('stream_mp4_file');
 	});
 
-	it('a reported video’s evidence can be submitted to NCMEC', async () => {
+	it('a reported video keeps its evidence bytes in the reports bucket', async () => {
 		const {owner: alice, members} = await setupTestGuildWithMembers(harness, 1);
 		const bob = members[0]!;
 		const {post, media, guid} = await publishVideoPost(alice);
 		const expected = hlsBytes(guid);
 		const jobs = captureJobs();
-		const reported = await report(bob, 'feed-post', {
-			post_id: post.post_id.toString(),
-			category: 'child_safety',
-		}).execute();
+		await report(bob, 'feed-post', {post_id: post.post_id.toString(), category: 'child_safety'}).execute();
+
 		expect(await runQueued(jobs, 'keepFeedVideoEvidence', keepFeedVideoEvidence)).toBe(1);
 		const key = feedStreamEvidenceKey(post.author_id, media);
 		expect(Buffer.from(await harness.storageService.readObject(Config.s3.buckets.reports, key)).equals(expected)).toBe(
 			true,
 		);
-		const admin = await setUserACLs(harness, await createTestAccount(harness), [AdminACLs.WILDCARD]);
-
-		const response = await harness.requestJson({
-			path: '/admin/messages/ncmec-reports',
-			method: 'POST',
-			body: {
-				channel_id: userIdToChannelId(post.author_id).toString(),
-				message_id: post.post_id.toString(),
-				attachment_id: media.attachment_id.toString(),
-				filename: 'evidence.ts',
-				source_report_id: reported.report_id,
-				reporter_full_name: 'Feed Reporter',
-				confirmed_viewed: true,
-			},
-			headers: {Authorization: admin.token, 'X-Audit-Log-Reason': 'feed video NCMEC'},
-		});
-
-		expect(response.status).toBe(200);
-		const [ncmecReport] = fakeNcmecServer.getReports();
-		expect(ncmecReport?.files).toEqual([
-			expect.objectContaining({
-				filename: 'evidence.ts',
-				size: expected.length,
-				md5: createHash('md5').update(expected).digest('hex'),
-			}),
-		]);
 	});
 
 	it('reporting a reply with parent_comment_id files it; without the parent it is unknown', async () => {

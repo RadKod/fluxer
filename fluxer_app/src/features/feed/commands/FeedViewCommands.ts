@@ -4,6 +4,7 @@ import {Endpoints} from '@app/features/app/constants/Endpoints';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import Authentication from '@app/features/auth/state/Authentication';
 import {AccountScopedWork} from '@app/features/platform/state/AccountScopedWork';
+import SessionManager from '@app/features/platform/state/AuthSession';
 import {http} from '@app/features/platform/transport/RestTransport';
 import type {RestResponse} from '@app/features/platform/types/TransportTypes';
 import {reaction} from 'mobx';
@@ -131,7 +132,7 @@ export async function sendViews(): Promise<void> {
 export function sendViewsOnExit(now = Date.now()): void {
 	// The server would refuse it: a batch is on its way, or its minute gate is still closed.
 	if (AccountScopedWork.isSuspended || sending || pending.size === 0 || now < nextSendAt) return;
-	const token = Authentication.authToken;
+	const token = SessionManager.token;
 	const url = new URL(
 		`${RuntimeConfig.apiEndpoint}/v${RuntimeConfig.apiCodeVersion}${Endpoints.FEED_VIEWS}`,
 		location.origin,

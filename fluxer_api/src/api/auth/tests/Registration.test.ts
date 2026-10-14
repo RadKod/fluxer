@@ -404,7 +404,12 @@ describe('Setup token registration', () => {
 
 	it('creates a plain account for an unclaimed registration that presents the setup token', async () => {
 		await withSetupTokenInstance(async () => {
-			const {status, json} = await register({global_name: 'Unclaimed Operator', setup_token: SETUP_TOKEN});
+			const {status, json} = await register({
+				global_name: 'Unclaimed Operator',
+				// Micup: registration always asks for a date of birth.
+				date_of_birth: '2000-01-01',
+				setup_token: SETUP_TOKEN,
+			});
 			expect(status).toBe(HTTP_STATUS.OK);
 			await expectUserACLs(json.user_id!, []);
 			await expect(getInstanceConfigRepository().isAdminBootstrapped()).resolves.toBe(false);

@@ -12,10 +12,14 @@ const updatedUsers = vi.hoisted(() => new Map<string, {toJSON: () => WireMessage
 
 // UI/account stores are unrelated to the lifetime under test. The message record,
 // channel window, buffers, reaction state, and MobX cache are the real modules.
-vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {localInstanceDomain: 'micup.test'}}));
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({
+	default: {localInstanceDomain: 'micup.test', getSnapshotOrNull: () => null},
+}));
 vi.mock('@app/features/auth/state/Authentication', () => ({default: {currentUserId: null}}));
 vi.mock('@app/features/channel/state/Channels', () => ({default: {}}));
-vi.mock('@app/features/gateway/transport/GatewayConnection', () => ({default: {isConnected: false}}));
+vi.mock('@app/features/gateway/transport/GatewaySessionPool', () => ({
+	default: {foregroundConnection: {isConnected: false}},
+}));
 vi.mock('@app/features/guild/state/Guilds', () => ({default: {}}));
 vi.mock('@app/features/member/state/GuildMembers', () => ({default: {getMember: () => undefined}}));
 vi.mock('@app/features/navigation/state/SelectedChannel', () => ({default: {currentChannelId: null}}));
@@ -28,7 +32,11 @@ vi.mock('@app/features/search/state/QuickSwitcher', () => ({default: {recomputeI
 vi.mock('@app/features/ui/state/Notification', () => ({default: {handleRelationshipNotification: vi.fn()}}));
 vi.mock('@app/features/guild/state/GuildVerification', () => ({default: {handleUserUpdate: vi.fn()}}));
 vi.mock('@app/features/permissions/state/Permission', () => ({default: {handleUserUpdate: vi.fn()}}));
-vi.mock('@app/features/user/state/SyncedField', () => ({makeSyncedField: vi.fn()}));
+vi.mock('@app/features/user/state/SyncedField', () => ({
+	makeSyncedField: vi.fn(),
+	setSyncedFieldSessionManager: vi.fn(),
+	setSyncedFieldUserSettings: vi.fn(),
+}));
 vi.mock('@app/features/user/state/Users', () => ({
 	default: {
 		cacheUsers: vi.fn(),

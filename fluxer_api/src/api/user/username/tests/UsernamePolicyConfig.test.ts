@@ -11,11 +11,11 @@ import {InstanceConfigRepository} from '@app/api/instance/InstanceConfigReposito
 import {InstanceConfigWriteRaceExecutor} from '@app/api/instance/tests/InstanceConfigWriteRaceExecutor';
 import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {createBuilderWithoutAuth} from '@app/api/test/TestRequestBuilder';
 import {UsernameOwnershipService} from '@app/api/user/username/UsernameOwnershipService';
 import {compileUsernameDictionary, UsernamePolicyService} from '@app/api/user/username/UsernamePolicyService';
 import {readUsernameMigrationStartEvidence} from '@app/api/worker/tasks/UsernameMigrationEvidence';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const legacy = {state: 'legacy', epoch: 0, started_at: null, forced_at: null};

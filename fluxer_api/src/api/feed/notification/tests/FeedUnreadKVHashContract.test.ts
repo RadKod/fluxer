@@ -4,9 +4,9 @@ import {spawnSync} from 'node:child_process';
 import {createServer} from 'node:net';
 import {unreadAck, unreadIncrement} from '@app/api/feed/notification/FeedNotificationService';
 import {startDockerContainer} from '@app/api/test/DockerTestContainer';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
 import {KVClient} from '@pkgs/kv_client/src/KVClient';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, beforeAll, describe, expect, it, vi} from 'vitest';
 
 // The hash commands the feed inbox's unread state uses: the test double and a real Valkey must agree.

@@ -20,7 +20,8 @@ import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import {getErrorMessageUnsafe} from '@fluxer/errors/src/i18n/ErrorI18n';
 import {OAuth2UserInfoResponse} from '@fluxer/schema/src/domains/oauth/OAuthSchemas';
 import {FriendRequestByTagRequest, UserTagCheckQueryRequest} from '@fluxer/schema/src/domains/user/UserRequestSchemas';
-import {InMemoryProvider} from '@pkgs/cache/src/providers/InMemoryProvider';
+import {KVCacheProvider} from '@pkgs/cache/src/providers/KVCacheProvider';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
 
 function makeUser(flags = 0n, identityVersion = 12n) {
@@ -37,7 +38,10 @@ function makeUser(flags = 0n, identityVersion = 12n) {
 
 describe('username identity privacy', () => {
 	beforeAll(() => {
-		new LimitConfigService(new InstanceConfigRepository(), new InMemoryProvider()).setAsGlobalInstance();
+		new LimitConfigService(
+			new InstanceConfigRepository(),
+			new KVCacheProvider({client: new MockKVProvider()}),
+		).setAsGlobalInstance();
 	});
 	afterAll(() => {
 		resetGlobalLimitConfigServiceForTesting();

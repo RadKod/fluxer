@@ -2,6 +2,7 @@
 
 import {createTestAccount, setUserACLs} from '@app/api/auth/tests/AuthTestUtils';
 import {createApplicationID} from '@app/api/BrandedTypes';
+import {setCachedProductName} from '@app/api/instance/ProductName';
 import {ApplicationRepository} from '@app/api/oauth/repositories/ApplicationRepository';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
@@ -121,10 +122,16 @@ describe('Admin OAuth2 Application Requirement', () => {
 	});
 
 	// Micup: admins read this name on the OAuth2 consent screen and in their authorized apps.
+	// The name follows branding.product_name, which the live instance sets to sanalyer.
 	test('names the admin OAuth2 application sanalyer Admin', async () => {
-		const application = await new ApplicationRepository().getApplication(
-			createApplicationID(ADMIN_OAUTH2_APPLICATION_ID),
-		);
-		expect(application?.name).toBe('sanalyer Admin');
+		setCachedProductName('sanalyer');
+		try {
+			const application = await new ApplicationRepository().getApplication(
+				createApplicationID(ADMIN_OAUTH2_APPLICATION_ID),
+			);
+			expect(application?.name).toBe('sanalyer Admin');
+		} finally {
+			setCachedProductName(null);
+		}
 	});
 });

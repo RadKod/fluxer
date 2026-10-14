@@ -55,7 +55,7 @@ const {default: UserSettings} = await import('@app/features/user/state/UserSetti
 const {loadLocaleCatalog} = await import('@app/app/I18n');
 const {default: AppStorage} = await import('@app/features/platform/state/PersistentStorage');
 const {encodeSyncedPreferences, createEmptySyncedPreferences, decodeSyncedPreferencesLenient} = await import(
-	'@app/features/user/state/SyncedPreferencesEngine'
+	'@fluxer/schema/src/domains/user/SyncedPreferencesCodec'
 );
 const {default: GuildMatureContentAgree, MatureContentGateReason} = await import(
 	'@app/features/guild/state/GuildMatureContentAgree'
@@ -179,14 +179,14 @@ describe('a READY whose user settings are null', () => {
 	it('hydrates the next account with defaults instead of the previous account settings', async () => {
 		await switchFromAToBWhoseReadyHasNoSettings();
 
-		expect.soft(UserSettings.getRestrictedGuilds()).toEqual([]);
-		expect.soft(UserSettings.getBotRestrictedGuilds()).toEqual([]);
-		expect.soft(UserSettings.getGuildFolders().flatMap((folder) => folder.guildIds)).not.toContain(A_GUILD);
-		expect.soft(UserSettings.getGuildFolders().map((folder) => folder.name)).not.toContain('A private folder');
+		expect.soft(UserSettings.restrictedGuilds).toEqual([]);
+		expect.soft(UserSettings.botRestrictedGuilds).toEqual([]);
+		expect.soft(UserSettings.guildFolders.flatMap((folder) => folder.guildIds)).not.toContain(A_GUILD);
+		expect.soft(UserSettings.guildFolders.map((folder) => folder.name)).not.toContain('A private folder');
 		expect.soft(UserSettings.getCustomStatus()).toBeNull();
-		expect.soft(UserSettings.getStatus()).toBe('online');
-		expect.soft(UserSettings.getDeveloperMode()).toBe(false);
-		expect.soft(UserSettings.getTrustedDomains()).toEqual([]);
+		expect.soft(UserSettings.status).toBe('online');
+		expect.soft(UserSettings.developerMode).toBe(false);
+		expect.soft(UserSettings.trustedDomains).toEqual([]);
 		expect.soft(UserSettings.isHydrated()).toBe(true);
 		expect.soft(UserSettings.isAccountReleased()).toBe(false);
 	});
@@ -194,29 +194,29 @@ describe('a READY whose user settings are null', () => {
 	it('shows what the server enforces for an account without a settings record', async () => {
 		await switchFromAToBWhoseReadyHasNoSettings();
 
-		expect.soft(UserSettings.getIncomingCallFlags()).toBe(IncomingCallFlags.EVERYONE);
+		expect.soft(UserSettings.incomingCallFlags).toBe(IncomingCallFlags.EVERYONE);
 		expect
-			.soft(UserSettings.getFriendSourceFlags())
+			.soft(UserSettings.friendSourceFlags)
 			.toBe(FriendSourceFlags.NO_RELATION | FriendSourceFlags.MUTUAL_FRIENDS | FriendSourceFlags.MUTUAL_GUILDS);
-		expect.soft(UserSettings.getGroupDmAddPermissionFlags()).toBe(GroupDmAddPermissionFlags.EVERYONE);
-		expect.soft(UserSettings.getDefaultGuildsRestricted()).toBe(false);
-		expect.soft(UserSettings.getBotDefaultGuildsRestricted()).toBe(false);
+		expect.soft(UserSettings.groupDmAddPermissionFlags).toBe(GroupDmAddPermissionFlags.EVERYONE);
+		expect.soft(UserSettings.defaultGuildsRestricted).toBe(false);
+		expect.soft(UserSettings.botDefaultGuildsRestricted).toBe(false);
 		expect.soft(UserSettings.getProfilePrivacy()).toBe(ProfilePrivacyLevels.ALL_GUILDS);
 		expect.soft(UserSettings.getGameActivityVisibility()).toBe('off');
-		expect.soft(UserSettings.getDefaultShareVoiceActivity()).toBe(true);
-		expect.soft(UserSettings.getSuppressUnprivilegedSelfMentions()).toBe(false);
-		expect.soft(UserSettings.getStaffDmAccessUserIds()).toEqual([]);
-		expect.soft(UserSettings.getDefaultHideMutedChannels()).toBe(false);
+		expect.soft(UserSettings.defaultShareVoiceActivity).toBe(true);
+		expect.soft(UserSettings.suppressUnprivilegedSelfMentions).toBe(false);
+		expect.soft(UserSettings.staffDmAccessUserIds).toEqual([]);
+		expect.soft(UserSettings.defaultHideMutedChannels).toBe(false);
 	});
 
 	it('applies the conservative defaults to settings the client enforces itself', async () => {
 		await switchFromAToBWhoseReadyHasNoSettings();
 
-		expect.soft(UserSettings.getSensitiveContentFriendDmFilter()).toBe(SensitiveMediaFilterLevel.BLUR);
-		expect.soft(UserSettings.getSensitiveContentNonFriendDmFilter()).toBe(SensitiveMediaFilterLevel.BLOCK);
-		expect.soft(UserSettings.getSensitiveContentGuildFilter()).toBe(SensitiveMediaFilterLevel.BLUR);
+		expect.soft(UserSettings.sensitiveContentFriendDmFilter).toBe(SensitiveMediaFilterLevel.BLUR);
+		expect.soft(UserSettings.sensitiveContentNonFriendDmFilter).toBe(SensitiveMediaFilterLevel.BLOCK);
+		expect.soft(UserSettings.sensitiveContentGuildFilter).toBe(SensitiveMediaFilterLevel.BLUR);
 		expect.soft(UserSettings.theme).toBe(ThemeTypes.COAL);
-		expect.soft(UserSettings.getTimeFormat()).toBe(TimeFormatTypes.AUTO);
+		expect.soft(UserSettings.timeFormat).toBe(TimeFormatTypes.AUTO);
 		expect.soft(UserSettings.getAfkTimeout()).toBe(600);
 		expect.soft(UserSettings.messageDisplayCompact).toBe(false);
 	});
@@ -230,7 +230,7 @@ describe('a READY whose user settings are null', () => {
 		await settle();
 
 		expect(UserSettings.isHydrated()).toBe(true);
-		expect(UserSettings.getLocale()).toBe('tr');
+		expect(UserSettings.locale).toBe('tr');
 		expect(i18n.locale).toBe('tr');
 		expect(AppStorage.getItem('locale')).toBe('tr');
 	});
@@ -245,7 +245,7 @@ describe('a READY whose user settings are null', () => {
 		await settle();
 
 		expect(i18n.locale).toBe('de');
-		expect(UserSettings.getLocale()).toBe('de');
+		expect(UserSettings.locale).toBe('de');
 	});
 
 	it('does not send synced preferences of an account without a settings record until one arrives', async () => {
@@ -293,7 +293,7 @@ describe('a READY whose user settings are null', () => {
 		failSave(new Error('rejected by the server'));
 
 		await expect(save).rejects.toThrow('rejected by the server');
-		expect(UserSettings.getRestrictedGuilds()).toEqual([A_GUILD]);
+		expect(UserSettings.restrictedGuilds).toEqual([A_GUILD]);
 	});
 
 	it('does not hydrate the next account from a null READY of the outgoing session', async () => {
@@ -332,7 +332,7 @@ describe('a READY whose user settings are null', () => {
 		failSave(new Error('cancelled by the account switch'));
 
 		await expect(save).rejects.toThrow('cancelled by the account switch');
-		expect(UserSettings.getRestrictedGuilds()).toEqual([B_GUILD]);
+		expect(UserSettings.restrictedGuilds).toEqual([B_GUILD]);
 	});
 
 	it('keeps the previous account server ids out of a bulk privacy change on the next account', async () => {

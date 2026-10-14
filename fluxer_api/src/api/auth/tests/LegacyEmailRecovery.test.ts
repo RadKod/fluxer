@@ -12,11 +12,11 @@ import {resetActivityEventsForTests, startActivityEvents} from '@app/api/infrast
 import type {Event} from '@app/api/infrastructure/activity/Contract.generated';
 import {getAdminRepository, getUserRepository} from '@app/api/middleware/ServiceSingletons';
 import type {ApiTestHarness} from '@app/api/test/ApiTestHarness';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {createBuilder, createBuilderWithoutAuth} from '@app/api/test/TestRequestBuilder';
 import {EmailChangeRepository} from '@app/api/user/repositories/auth/EmailChangeRepository';
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest';
 
 describe('legacy restriction recovery', () => {

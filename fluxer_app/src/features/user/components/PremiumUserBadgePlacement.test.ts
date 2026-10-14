@@ -8,7 +8,6 @@ import {describe, expect, it} from 'vitest';
 // of these surfaces needs most of the app, so the sources are read: each tick is followed by the crown for the same
 // user, at the same size and with the same class.
 const PLACEMENTS = [
-	'../../channel/components/MessageAuthorInfo.tsx',
 	'../../channel/components/UserMessage.tsx',
 	'../../channel/components/CompactMessageLayout.tsx',
 	'../../channel/components/MemberListItem.tsx',
@@ -66,7 +65,7 @@ describe('PremiumUserBadge placement', () => {
 	it.each([...PLACEMENTS, ...NAME_ONLY_PLACEMENTS.map(({file}) => file)])(
 		'%s makes the crown unfocusable only inside the member row and the message headers',
 		(file) => {
-			const mouseOnly = /\/(MemberListItem|MessageAuthorInfo|UserMessage|CompactMessageLayout)\.tsx$/.test(file);
+			const mouseOnly = /\/(MemberListItem|UserMessage|CompactMessageLayout)\.tsx$/.test(file);
 			for (const [crown] of read(file).matchAll(/<PremiumUserBadge\b[\s\S]*?\/>/g)) {
 				expect(prop(crown, 'focusable'), crown).toBe(mouseOnly ? 'false' : undefined);
 			}
@@ -111,9 +110,10 @@ describe('PremiumUserBadge placement', () => {
 		expect(read(file)).toContain('showPremium={false}');
 	});
 
-	it('draws the crown in exactly eight nonprofile places', () => {
+	// Upstream folded the cozy message header into one place in UserMessage, so it holds one crown, not two.
+	it('draws the crown in exactly six nonprofile places', () => {
 		const files = [...PLACEMENTS, ...NAME_ONLY_PLACEMENTS.map(({file}) => file)];
 		const crowns = files.map((file) => read(file).match(/<PremiumUserBadge\b/g)?.length ?? 0);
-		expect(crowns.reduce((sum, count) => sum + count, 0)).toBe(8);
+		expect(crowns.reduce((sum, count) => sum + count, 0)).toBe(6);
 	});
 });

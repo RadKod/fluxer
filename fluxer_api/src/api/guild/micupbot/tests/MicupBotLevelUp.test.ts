@@ -115,7 +115,7 @@ it("the level-up message goes to the level-up channel or the message's channel a
 it('on an elevated-MFA community the reward is skipped and counted', async () => {
 	const f = await rewardFixture(harness);
 	const guild = (await f.deps.guildRepository.findUnique(f.guildId))!;
-	await f.deps.guildRepository.upsert({...guild.toRow(), mfa_level: 1});
+	await f.deps.guildRepository.upsertPartial(guild.id, {mfa_level: 1});
 	const info = vi.spyOn(Logger.child({}), 'info');
 	await f.levels.handleLevelUp({...f.payload, level: 1});
 	expect((await f.deps.guildRepository.getMember(f.guildId, f.userId))?.roleIds.size).toBe(0);

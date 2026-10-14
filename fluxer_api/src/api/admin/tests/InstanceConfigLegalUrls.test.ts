@@ -75,7 +75,12 @@ describe('community guidelines URL on a self-hosted instance', () => {
 		const admin = await createAdmin(context.harness);
 		const before = await getUserFlow(context.harness);
 		const updated = await patchLegal(context.harness, admin, {guidelines_url: ` ${RULES_URL} `}).execute();
-		expect(updated.app_public.legal).toEqual({terms_url: null, privacy_url: null, guidelines_url: RULES_URL});
+		expect(updated.app_public.legal).toEqual({
+			terms_url: null,
+			privacy_url: null,
+			guidelines_url: RULES_URL,
+			source_url: null,
+		});
 		const reread = await createBuilder<InstanceConfigResponse>(context.harness, admin.token)
 			.get('/admin/instance/config')
 			.execute();
@@ -113,7 +118,12 @@ describe('community guidelines URL on a self-hosted instance', () => {
 			privacy_url: '',
 			guidelines_url: '',
 		}).execute();
-		expect(cleared.app_public.legal).toEqual({terms_url: null, privacy_url: null, guidelines_url: null});
+		expect(cleared.app_public.legal).toEqual({
+			terms_url: null,
+			privacy_url: null,
+			guidelines_url: null,
+			source_url: null,
+		});
 		expect((await getUserFlow(context.harness)).guidelines_url).toBeNull();
 	});
 

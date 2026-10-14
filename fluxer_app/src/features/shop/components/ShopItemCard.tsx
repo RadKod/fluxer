@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {PurchaseDisabledWrapper} from '@app/features/app/components/dialogs/components/plutonium/PurchaseDisabledWrapper';
 import {PREMIUM_PRODUCT_NAME} from '@app/features/app/config/I18nDisplayConstants';
 import {useHover} from '@app/features/app/hooks/useHover';
 import {useMergeRefs} from '@app/features/app/hooks/useMergeRefs';
@@ -12,6 +11,7 @@ import {
 import {PremiumHalo} from '@app/features/premium/components/PremiumHalo';
 import {ShopCheckoutModal, type ShopCheckoutTarget} from '@app/features/shop/components/modals/ShopCheckoutModal';
 import {ShopItemDetailModal} from '@app/features/shop/components/modals/ShopItemDetailModal';
+import {PurchaseDisabledWrapper} from '@app/features/shop/components/PurchaseDisabledWrapper';
 import styles from '@app/features/shop/components/ShopItemCard.module.css';
 import {ShopItemStage} from '@app/features/shop/components/ShopItemStage';
 import {ShopPrice} from '@app/features/shop/components/ShopPrice';

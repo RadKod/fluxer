@@ -12,10 +12,10 @@ import {Logger} from '@app/api/Logger';
 import type {User} from '@app/api/models/User';
 import {lifetimePremiumPatch, type PremiumLedgerService} from '@app/api/premium/ledger/PremiumLedgerService';
 import type {VisionaryRepository} from '@app/api/premium/visionary/VisionaryRepository';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
-import {BaseUserUpdatePropagator} from '@app/api/user/services/BaseUserUpdatePropagator';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {propagateIfPartialChanged} from '@app/api/user/services/PartialUserChangePropagation';
 import {createPremiumClearPatch} from '@app/api/user/UserHelpers';
+import {dispatchUserUpdate} from '@app/api/user/UserMappers';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {PremiumFlags, UserFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
@@ -47,7 +47,7 @@ export interface VisionaryDelivery {
 
 export interface VisionaryServiceDeps {
 	repository: VisionaryRepository;
-	userRepository: Pick<IUserRepository, 'findUnique' | 'patchUpsert'>;
+	userRepository: Pick<UserRepository, 'findUnique' | 'patchUpsert'>;
 	userCacheService: UserCacheService;
 	gatewayService: IGatewayService;
 	kvClient: IKVProvider;
@@ -73,14 +73,7 @@ function isFree(slot: VisionarySlotRow, now: Date): boolean {
 // Micup's Visionary sale on Fluxer's own lifetime premium (premium_type 2, premium_lifetime_sequence, visionary_slots).
 // Numbers are held and taken only with CAS on the slot row; a retired number keeps its owner id.
 export class VisionaryService {
-	private readonly propagator: BaseUserUpdatePropagator;
-
-	constructor(private readonly deps: VisionaryServiceDeps) {
-		this.propagator = new BaseUserUpdatePropagator({
-			userCacheService: deps.userCacheService,
-			gatewayService: deps.gatewayService,
-		});
-	}
+	constructor(private readonly deps: VisionaryServiceDeps) {}
 
 	async getStock(now: Date = new Date()): Promise<VisionaryStock> {
 		const [slots, overCap] = await Promise.all([
@@ -303,7 +296,7 @@ export class VisionaryService {
 			} finally {
 				await this.propagateBadge(user, current, 'after a Visionary take-back');
 			}
-			await this.propagator.dispatchUserUpdate(current);
+			await dispatchUserUpdate(this.deps.gatewayService, current);
 			return user.premiumLifetimeSequence;
 		});
 		if (slot === undefined) {

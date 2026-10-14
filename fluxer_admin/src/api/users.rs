@@ -109,7 +109,8 @@ impl AdminApiClient {
         reason: Option<&str>,
     ) -> ApiResult<AdminUser> {
         let resp: UserMutationResponse = self
-            .post_with_reason(
+            .send(
+                Method::POST,
                 &format!("/admin/users/{user_id}/clear-legacy-restriction"),
                 Some(&json!({})),
                 reason,
@@ -365,7 +366,8 @@ impl AdminApiClient {
         ban_name: bool,
         reason: &str,
     ) -> ApiResult<()> {
-        self.post_void_with_reason(
+        self.send_void(
+            Method::POST,
             &format!(
                 "/admin/users/{}/username/reselect",
                 urlencoding::encode(user_id)
@@ -629,7 +631,13 @@ impl AdminApiClient {
     // Premium refunds: ends bought, gift code and trial premium time now; used after a Payriff refund.
     pub async fn end_premium(&self, user_id: &str, reason: &str) -> ApiResult<AdminEndPremium> {
         let path = format!("/admin/users/{}/premium/end", urlencoding::encode(user_id));
-        self.post_with_reason(&path, None, Some(reason)).await
+        self.send(
+            Method::POST,
+            &path,
+            None::<&serde_json::Value>,
+            Some(reason),
+        )
+        .await
     }
 
     // Micup (shop, Visionary): the number asked for, or the lowest free one when None.
@@ -640,14 +648,24 @@ impl AdminApiClient {
         reason: &str,
     ) -> ApiResult<AdminVisionary> {
         let body = slot.map_or_else(|| json!({}), |slot| json!({ "slot": slot }));
-        self.post_with_reason(&visionary_path(user_id), Some(&body), Some(reason))
-            .await
+        self.send(
+            Method::POST,
+            &visionary_path(user_id),
+            Some(&body),
+            Some(reason),
+        )
+        .await
     }
 
     // Micup (shop, Visionary): the number is retired; the API takes the reward items back.
     pub async fn revoke_visionary(&self, user_id: &str, reason: &str) -> ApiResult<AdminVisionary> {
-        self.delete_with_reason(&visionary_path(user_id), None, Some(reason))
-            .await
+        self.send(
+            Method::DELETE,
+            &visionary_path(user_id),
+            None::<&serde_json::Value>,
+            Some(reason),
+        )
+        .await
     }
 }
 

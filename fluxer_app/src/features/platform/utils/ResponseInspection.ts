@@ -59,6 +59,11 @@ export function failureMessage(error: unknown): string | undefined {
 	return failureResponse(error)?.message;
 }
 
+// Micup: the shop's checkout shows how long a rate-limited order has to wait.
+export function failureRetryAfter(error: unknown): number | undefined {
+	return failureResponse(error)?.retryAfterSeconds;
+}
+
 export function failureValidationErrors(error: unknown): ReadonlyArray<ValidationFault> | undefined {
 	return failureResponse(error)?.fields;
 }

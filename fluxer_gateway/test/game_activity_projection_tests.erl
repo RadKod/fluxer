@@ -181,8 +181,11 @@ owner_only_restart_inherits_fence_dual_loss_requires_fresh_grant_test() ->
     with_rollout(fun assert_owner_restart_fence/0).
 
 assert_owner_restart_fence() ->
-    meck:new(presence_broadcast, [passthrough]),
-    meck:expect(presence_broadcast, ensure_initial_global_subscriptions, fun(S) -> S end),
+    %% Micup: upstream moved the initial subscription hook into presence_broadcast_subscriptions.
+    meck:new(presence_broadcast_subscriptions, [passthrough]),
+    meck:expect(
+        presence_broadcast_subscriptions, ensure_initial_global_subscriptions, fun(S) -> S end
+    ),
     try
         Original = presence_game_activity_policy:new(),
         {ok, Pending} = presence_game_activity_policy:control(
@@ -229,7 +232,7 @@ assert_owner_restart_fence() ->
         ),
         ?assertNotEqual(maps:get(owner_epoch, Original), maps:get(owner_epoch, Game))
     after
-        meck:unload(presence_broadcast)
+        meck:unload(presence_broadcast_subscriptions)
     end.
 
 session_snapshot_cannot_reopen_fence_test() ->
@@ -350,7 +353,9 @@ assert_guild_payloads(Member, Common) ->
             member_presence => Tab,
             connected_user_ids => sets:from_list([1])
         },
-        LazyItem = guild_member_list_connected:add_presence_to_member(Member, GuildState),
+        LazyItem = guild_member_list_connected:add_presence_to_member(
+            Member, 1, guild_member_list_connected:presence_context(GuildState)
+        ),
         ?assertEqual(false, has_game(LazyItem)),
         Create = guild_data:get_guild_state(2, GuildState),
         ?assertEqual(false, has_game(Create))

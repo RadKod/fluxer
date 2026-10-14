@@ -13,11 +13,11 @@ import {FeedRepository, feedDay} from '@app/api/feed/FeedRepository';
 import {FeedInteractionRepository} from '@app/api/feed/interaction/FeedInteractionRepository';
 import {startDockerContainer} from '@app/api/test/DockerTestContainer';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {UserRelationshipRepository} from '@app/api/user/repositories/UserRelationshipRepository';
 import {RelationshipTypes} from '@fluxer/constants/src/UserConstants';
 import {createSnowflakeFromTimestamp} from '@fluxer/snowflake/src/Snowflake';
 import {initCassandra, shutdownCassandra} from '@pkgs/cassandra/src/Client';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import cassandra from 'cassandra-driver';
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
 

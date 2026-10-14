@@ -528,12 +528,12 @@ assert_source_left_then_target_confirms(PendingState) ->
     #{<<"old-conn">> := #{channel_id := 200, token_nonce := Nonce}} =
         maps:get(pending_voice_connections, PendingState),
     {reply, #{success := true}, AfterSourceLeft} =
-        guild_voice:disconnect_voice_user_if_in_channel(
+        guild_voice_disconnect_user:disconnect_voice_user_if_in_channel(
             #{user_id => 10, expected_channel_id => 100, connection_id => <<"old-conn">>},
             PendingState
         ),
     {reply, Reply, ConfirmedState} =
-        guild_voice_connection:confirm_voice_connection_from_livekit(
+        guild_voice_connection_confirm:confirm_voice_connection_from_livekit(
             #{connection_id => <<"old-conn">>, token_nonce => Nonce}, AfterSourceLeft
         ),
     ?assertEqual(#{success => true}, Reply),
@@ -544,7 +544,7 @@ source_room_participant_left_clears_pending_join_in_that_channel_test() ->
     State = (base_move_state(#{}))#{
         pending_voice_connections => #{<<"join-conn">> => #{user_id => 10, channel_id => 100}}
     },
-    {reply, #{success := true}, NewState} = guild_voice:disconnect_voice_user_if_in_channel(
+    {reply, #{success := true}, NewState} = guild_voice_disconnect_user:disconnect_voice_user_if_in_channel(
         #{user_id => 10, expected_channel_id => 100, connection_id => <<"join-conn">>}, State
     ),
     ?assertEqual(#{}, maps:get(pending_voice_connections, NewState)).
@@ -563,7 +563,7 @@ abandoned_move_pending_clears_transition_flags_test() ->
             <<"old-conn">> => target_channel_pending(<<"move-nonce">>)
         }
     },
-    {reply, #{success := true}, NewState} = guild_voice:disconnect_voice_user_if_in_channel(
+    {reply, #{success := true}, NewState} = guild_voice_disconnect_user:disconnect_voice_user_if_in_channel(
         #{user_id => 10, expected_channel_id => 200, connection_id => <<"old-conn">>},
         PendingState
     ),
@@ -597,7 +597,7 @@ move_back_scenario() ->
         token_nonce => <<"first-join-nonce">>
     },
     {reply, #{success := true}, AfterStaleLeft} =
-        guild_voice:disconnect_voice_user_if_in_channel(StaleLeftA, BackToA),
+        guild_voice_disconnect_user:disconnect_voice_user_if_in_channel(StaleLeftA, BackToA),
     ?assertMatch(
         #{<<"old-conn">> := #{channel_id := 100}},
         maps:get(pending_voice_connections, AfterStaleLeft)
@@ -609,7 +609,7 @@ move_back_scenario() ->
 confirm_pending(State) ->
     #{<<"old-conn">> := #{token_nonce := Nonce}} = maps:get(pending_voice_connections, State),
     {reply, #{success := true}, NewState} =
-        guild_voice_connection:confirm_voice_connection_from_livekit(
+        guild_voice_connection_confirm:confirm_voice_connection_from_livekit(
             #{connection_id => <<"old-conn">>, token_nonce => Nonce}, State
         ),
     NewState.
@@ -625,7 +625,7 @@ participant_left_with_the_pending_token_nonce_clears_it_test() ->
         token_nonce => <<"n1">>
     },
     {reply, #{success := true}, NewState} =
-        guild_voice:disconnect_voice_user_if_in_channel(Left, State),
+        guild_voice_disconnect_user:disconnect_voice_user_if_in_channel(Left, State),
     ?assertEqual(#{}, maps:get(pending_voice_connections, NewState)).
 
 %% The same through the guild voice server, which is where the RPC lands in production.

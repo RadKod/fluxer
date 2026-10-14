@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {type MockKVProvider, registerMockKVScript} from '@app/api/test/mocks/MockKVProvider';
+import {type MockKVProvider, registerMockKVScript} from '@pkgs/kv_client/src/testing/MockKVProvider';
 
 // Line-by-line JS twins of the voice seat Lua scripts in VoiceSeatRepository.
 // Real Valkey runs the Lua itself in the valkey block of VoiceSeatRepository.test.ts (CI KL2).

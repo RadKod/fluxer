@@ -1427,6 +1427,7 @@ fn instance_legal_config_carries_the_guidelines_url() {
         terms_url: Some(None),
         privacy_url: None,
         guidelines_url: Some(Some("https://example.com/rules".to_owned())),
+        ..Default::default()
     };
     let body = serde_json::to_value(&update).expect("serialize legal update");
     assert_eq!(

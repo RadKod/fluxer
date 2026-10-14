@@ -41,6 +41,25 @@ export class MessagePinService {
 		private readonly guildAuditLogService: GuildAuditLogService,
 	) {}
 
+	private async assertMessageHistoryAccess({
+		authChannel,
+		messageId,
+	}: {
+		authChannel: AuthenticatedChannel;
+		messageId: MessageID;
+	}): Promise<void> {
+		if (!authChannel.guild) {
+			return;
+		}
+		if (await authChannel.hasPermission(Permissions.READ_MESSAGE_HISTORY)) {
+			return;
+		}
+		const cutoff = authChannel.guild.message_history_cutoff;
+		if (!cutoff || snowflakeToDate(messageId).getTime() < new Date(cutoff).getTime()) {
+			throw new UnknownMessageError();
+		}
+	}
+
 	async getChannelPins({
 		authChannel,
 		userId,

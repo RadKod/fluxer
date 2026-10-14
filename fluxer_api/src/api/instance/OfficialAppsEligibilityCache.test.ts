@@ -5,7 +5,7 @@ import {INSTANCE_CONFIG_REFRESH_CHANNEL} from '@app/api/instance/InstanceConfigR
 import {OfficialAppsEligibilityCache} from '@app/api/instance/OfficialAppsEligibilityCache';
 import {Application} from '@app/api/models/Application';
 import {ApplicationRepository, officialAppMutationKey} from '@app/api/oauth/repositories/ApplicationRepository';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 
 const application = new Application({

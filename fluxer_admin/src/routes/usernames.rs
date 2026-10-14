@@ -17,6 +17,7 @@ use axum::{
     response::{Html, IntoResponse, Response},
     routing::get,
 };
+use reqwest::Method;
 use serde::Deserialize;
 use serde_json::json;
 
@@ -315,7 +316,8 @@ async fn reserve_post(
     let client = AdminApiClient::new(state.http_client(), state.config(), &auth.0.session);
     let flash = match action {
         "hold" => match client
-            .post_with_reason::<ClaimResponse>(
+            .send::<ClaimResponse, _>(
+                Method::POST,
                 "/admin/usernames/reserve",
                 Some(&json!({"username":name, "note":note})),
                 Some(reason),
@@ -326,7 +328,8 @@ async fn reserve_post(
             Err(error) => api_error("hold reservation", &error),
         },
         "unhold" => match client
-            .post_void_with_reason(
+            .send_void(
+                Method::POST,
                 "/admin/usernames/unreserve",
                 Some(&json!({"username":name})),
                 Some(reason),
@@ -348,7 +351,8 @@ async fn reserve_post(
                 );
             }
             match client
-                .post_with_reason::<ClaimResponse>(
+                .send::<ClaimResponse, _>(
+                    Method::POST,
                     "/admin/usernames/assign",
                     Some(&json!({"username":name, "user_id":user_id})),
                     Some(reason),
@@ -516,7 +520,8 @@ async fn dictionary_post(
         page: None,
     };
     match client
-        .patch_with_reason::<UsernameDictionary>(
+        .send::<UsernameDictionary, _>(
+            Method::PATCH,
             "/admin/username-dictionary",
             Some(&json!({"scope":scope, "add":add, "remove":remove})),
             Some(reason),

@@ -18,7 +18,6 @@ import {
 	getUserRepository,
 } from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
-import type {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import type {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
@@ -27,6 +26,7 @@ import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import type {FeedCommentListResponse, FeedPostListResponse} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import {createSnowflake} from '@fluxer/snowflake/src/Snowflake';
+import type {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const HOUR = 3_600_000;

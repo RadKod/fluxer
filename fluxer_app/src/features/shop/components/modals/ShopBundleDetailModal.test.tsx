@@ -41,7 +41,7 @@ vi.mock('@app/features/ui/button/Button', () => ({
 	Button: ({children, disabled, onClick}: {children: ReactNode; disabled?: boolean; onClick?: () => void}) =>
 		createElement('button', {type: 'button', disabled, onClick}, children),
 }));
-vi.mock('@app/features/app/components/dialogs/components/plutonium/PurchaseDisabledWrapper', () => ({
+vi.mock('@app/features/shop/components/PurchaseDisabledWrapper', () => ({
 	PurchaseDisabledWrapper: ({children, tooltipText}: {children: ReactNode; tooltipText: string}) =>
 		createElement('div', {'data-tooltip': tooltipText}, children),
 }));
@@ -125,10 +125,8 @@ describe('ShopBundleDetailModal', () => {
 	});
 
 	it('keeps an unknown bundle item name visible without translating an unsupported type', () => {
-		const future = {
-			...entry,
-			bundle: {...entry.bundle, items: [{...entry.bundle.items[0], name: 'Future item', type: 'future_cosmetic'}]},
-		};
+		const futureItem = {...entry.bundle.items[0], name: 'Future item', type: 'future_cosmetic'};
+		const future = {...entry, bundle: {...entry.bundle, items: [futureItem]}} as unknown as ShopBundleEntry;
 		act(() => root.render(createElement(ShopBundleDetailModal, {entry: future})));
 		expect(container.textContent).toContain('Future item');
 		expect(container.textContent).not.toContain('future_cosmetic');

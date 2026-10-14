@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {DEFAULT_MINIMUM_AGE, getRegionalMinimumAge} from '@fluxer/constants/src/RegionalMinimumAge';
+import {getRegionalMinimumAge} from '@fluxer/constants/src/RegionalMinimumAge';
 import {describe, expect, it} from 'vitest';
 
+// Micup: registration raises this to a flat 15 in fluxer_api (getMinimumRegistrationAge); this table stays upstream's.
 describe('upstream regional minimum ages', () => {
 	it.each([null, undefined, '', 'ZZ', 'US'])('defaults to 13 for %s', (country) => {
-		expect(DEFAULT_MINIMUM_AGE).toBe(13);
 		expect(getRegionalMinimumAge(country)).toBe(13);
 	});
 

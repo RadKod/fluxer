@@ -7,7 +7,7 @@ import type {PioneerByUserRow, PioneerStatus} from '@app/api/database/types/Badg
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import {Logger} from '@app/api/Logger';
 import {isMicupAccountLimited} from '@app/api/user/AccountLimit';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
@@ -118,7 +118,7 @@ function keepSmallest(sorted: Array<bigint>, id: bigint, limit: number): void {
 interface PioneerServiceDeps {
 	repository: PioneerRepository;
 	badgeRepository: BadgeRepository;
-	userRepository: IUserRepository;
+	userRepository: UserRepository;
 	kvClient: IKVProvider;
 	workerService: IWorkerService<WorkerTaskName>;
 }

@@ -87,8 +87,7 @@ async function commandFixture(harness: ApiTestHarness, permissions: bigint) {
 		limitConfigService: getLimitConfigService(),
 	} as WorkerDependencies;
 	const guild = (await deps.guildRepository.findUnique(base.guildId))!;
-	await deps.guildRepository.upsert({
-		...guild.toRow(),
+	await deps.guildRepository.upsertPartial(guild.id, {
 		features: new Set([...guild.features, GuildFeatures.MICUPBOT_COMMANDS]),
 	});
 	const send = vi.spyOn(channelService.messages.send, 'sendMessage');

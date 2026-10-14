@@ -46,9 +46,9 @@ vi.mock('@app/features/boost/commands/GuildBoostPanelCommands', () => ({
 	openGuildBoostSettings: mocks.openSettings,
 }));
 vi.mock('@app/features/boost/state/GuildBoosts', () => ({default: Object.assign(boosts, mocks)}));
-vi.mock('@app/features/guild/components/alerts/GuildErrorModalUtils', () => ({showGuildErrorModal: mocks.error}));
+vi.mock('@app/features/app/components/alerts/GenericErrorModalCommands', () => ({showGenericErrorModal: mocks.error}));
 vi.mock('@app/features/premium/utils/PremiumUtils', () => ({shouldShowPremiumFeatures: () => true}));
-vi.mock('@app/features/app/utils/UserLimits', () => ({Limits: {getPremiumValue: () => 5}}));
+vi.mock('@app/features/app/utils/UserLimits', () => ({Limits: {getStockValue: () => 5}}));
 vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PREMIUM_PRODUCT_NAME: 'sanalyer Plus'}));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({
 	default: {

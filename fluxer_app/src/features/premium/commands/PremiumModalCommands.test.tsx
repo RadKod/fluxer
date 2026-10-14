@@ -14,6 +14,7 @@ const runtime = vi.hoisted(() => ({
 }));
 const modalCommands = vi.hoisted(() => ({push: vi.fn(), popAll: vi.fn(), modal: (render: () => unknown) => render}));
 const routerUtils = vi.hoisted(() => ({transitionTo: vi.fn()}));
+const plutoniumPage = vi.hoisted(() => ({openPlutoniumPage: vi.fn(), openGiftPlutoniumModal: vi.fn()}));
 // The modal stack as Fluxer's Modal store tells it: whether the user settings are open.
 const modalStack = vi.hoisted(() => ({settingsOpen: true}));
 const UserSettingsModalStub = vi.hoisted(() => () => null);
@@ -26,7 +27,7 @@ vi.mock('@lingui/react/macro', () => ({
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: runtime}));
 vi.mock('@app/features/ui/commands/ModalCommands', () => modalCommands);
 vi.mock('@app/features/navigation/utils/RouterUtils', () => routerUtils);
-vi.mock('@app/features/premium/components/modals/PremiumModal', () => ({PremiumModal: () => null}));
+vi.mock('@app/features/premium/commands/PlutoniumPageCommands', () => plutoniumPage);
 vi.mock('@app/features/ui/state/Modal', () => ({
 	default: {hasModalOfType: (type: unknown) => type === UserSettingsModalStub && modalStack.settingsOpen},
 	registerKeyboardModeStateResolver: vi.fn(),
@@ -39,21 +40,16 @@ vi.mock('@app/features/user/components/settings_utils/SettingsConstants', () => 
 
 // Idle and LocalPresence import each other; loading Idle first keeps its timer from calling a half-loaded store.
 await import('@app/features/ui/state/Idle');
-const {PremiumModal} = await import('@app/features/premium/components/modals/PremiumModal');
 const PremiumModalCommands = await import('@app/features/premium/commands/PremiumModalCommands');
 const {default: UnsavedChanges} = await import('@app/features/ui/state/UnsavedChanges');
-
-function pushedElement(): {type: unknown; props: Record<string, unknown>} {
-	expect(modalCommands.push).toHaveBeenCalledTimes(1);
-	const render = modalCommands.push.mock.calls[0][0] as () => {type: unknown; props: Record<string, unknown>};
-	return render();
-}
 
 describe('PremiumModalCommands.open', () => {
 	beforeEach(() => {
 		modalCommands.push.mockClear();
 		modalCommands.popAll.mockClear();
 		routerUtils.transitionTo.mockClear();
+		plutoniumPage.openPlutoniumPage.mockClear();
+		plutoniumPage.openGiftPlutoniumModal.mockClear();
 		runtime.selfHosted = true;
 		runtime.premiumTrialDays = 7;
 		runtime.giftCodesEnabled = true;
@@ -62,12 +58,12 @@ describe('PremiumModalCommands.open', () => {
 		UnsavedChanges.clearUnsavedChanges('webhooks');
 	});
 
-	it('keeps the Stripe premium modal off self-hosted instances', () => {
+	it('keeps the Stripe premium surfaces off self-hosted instances', () => {
 		runtime.selfHosted = false;
 		PremiumModalCommands.open(true);
-		const element = pushedElement();
-		expect(element.type).toBe(PremiumModal);
-		expect(element.props.defaultGiftMode).toBe(true);
+		expect(plutoniumPage.openGiftPlutoniumModal).toHaveBeenCalledTimes(1);
+		PremiumModalCommands.open();
+		expect(plutoniumPage.openPlutoniumPage).toHaveBeenCalledTimes(1);
 		expect(routerUtils.transitionTo).not.toHaveBeenCalled();
 	});
 
@@ -85,11 +81,11 @@ describe('PremiumModalCommands.open', () => {
 	// settings' own unsaved-changes guard runs first (the banner flashes, nothing closes).
 	it('keeps the settings open and flashes the unsaved-changes banner while a tab has unsaved changes', () => {
 		UnsavedChanges.setUnsavedChanges('my_profile', true);
-		const flashes = UnsavedChanges.getFlashTrigger('my_profile');
+		const flashes = UnsavedChanges.flashTriggers.my_profile ?? 0;
 		PremiumModalCommands.open();
 		expect(modalCommands.popAll).not.toHaveBeenCalled();
 		expect(routerUtils.transitionTo).not.toHaveBeenCalled();
-		expect(UnsavedChanges.getFlashTrigger('my_profile')).toBe(flashes + 1);
+		expect(UnsavedChanges.flashTriggers.my_profile ?? 0).toBe(flashes + 1);
 	});
 
 	// useWebhookUpdates (guild and channel settings) never clears its entry: a dialog closed from outside leaves `true`
@@ -98,20 +94,20 @@ describe('PremiumModalCommands.open', () => {
 		modalStack.settingsOpen = false;
 		UnsavedChanges.setUnsavedChanges('webhooks', true);
 		UnsavedChanges.setUnsavedChanges('my_profile', true);
-		const flashes = UnsavedChanges.getFlashTrigger('my_profile');
+		const flashes = UnsavedChanges.flashTriggers.my_profile ?? 0;
 		PremiumModalCommands.open();
 		expect(modalCommands.popAll).toHaveBeenCalledTimes(1);
 		expect(routerUtils.transitionTo).toHaveBeenCalledWith('/premium');
-		expect(UnsavedChanges.getFlashTrigger('my_profile')).toBe(flashes);
+		expect(UnsavedChanges.flashTriggers.my_profile ?? 0).toBe(flashes);
 	});
 
 	it('goes to the premium page when the unsaved entry is not a tab of the open settings', () => {
 		UnsavedChanges.setUnsavedChanges('webhooks', true);
-		const flashes = UnsavedChanges.getFlashTrigger('webhooks');
+		const flashes = UnsavedChanges.flashTriggers.webhooks ?? 0;
 		PremiumModalCommands.open();
 		expect(modalCommands.popAll).toHaveBeenCalledTimes(1);
 		expect(routerUtils.transitionTo).toHaveBeenCalledWith('/premium');
-		expect(UnsavedChanges.getFlashTrigger('webhooks')).toBe(flashes);
+		expect(UnsavedChanges.flashTriggers.webhooks ?? 0).toBe(flashes);
 	});
 
 	it('goes to the premium page when the settings tab has no unsaved changes left', () => {

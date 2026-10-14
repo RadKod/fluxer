@@ -94,7 +94,7 @@ describe('Notification desktop notifications default', () => {
 
 		const notification = await loadNotification();
 
-		expect(notification.getBrowserNotificationsEnabled()).toBe(true);
+		expect(notification.browserNotificationsEnabled).toBe(true);
 	});
 
 	it('turns them on in the desktop app without a browser prompt', async () => {
@@ -102,7 +102,7 @@ describe('Notification desktop notifications default', () => {
 
 		const notification = await loadNotification();
 
-		expect(notification.getBrowserNotificationsEnabled()).toBe(true);
+		expect(notification.browserNotificationsEnabled).toBe(true);
 	});
 
 	it('waits for the permission prompt while the browser permission is still default', async () => {
@@ -110,10 +110,10 @@ describe('Notification desktop notifications default', () => {
 
 		const notification = await loadNotification();
 
-		expect(notification.getBrowserNotificationsEnabled()).toBe(false);
+		expect(notification.browserNotificationsEnabled).toBe(false);
 		setBrowserPermission('granted');
 		notification.handleNotificationPermissionGranted();
-		expect(notification.getBrowserNotificationsEnabled()).toBe(true);
+		expect(notification.browserNotificationsEnabled).toBe(true);
 	});
 
 	it('moves an off saved by the old default to on once', async () => {
@@ -122,7 +122,7 @@ describe('Notification desktop notifications default', () => {
 
 		const notification = await loadNotification();
 
-		expect(notification.getBrowserNotificationsEnabled()).toBe(true);
+		expect(notification.browserNotificationsEnabled).toBe(true);
 		expect(readStored().browserNotificationsDefaultOnMigratedV1).toBe(true);
 	});
 
@@ -130,13 +130,13 @@ describe('Notification desktop notifications default', () => {
 		setBrowserPermission('granted');
 		window.localStorage.setItem(STORAGE_KEY, OLD_DEFAULT_STORED);
 		const first = await loadNotification();
-		expect(first.getBrowserNotificationsEnabled()).toBe(true);
+		expect(first.browserNotificationsEnabled).toBe(true);
 
 		first.handleNotificationPermissionDenied();
 		flushPersistedWrites();
 		const second = await loadNotification();
 
-		expect(second.getBrowserNotificationsEnabled()).toBe(false);
+		expect(second.browserNotificationsEnabled).toBe(false);
 	});
 
 	it('keeps the migration flag with the value when storage was reset mid-session', async () => {
@@ -153,7 +153,7 @@ describe('Notification desktop notifications default', () => {
 			browserNotificationsDefaultOnMigratedV1: true,
 		});
 		const second = await loadNotification();
-		expect(second.getBrowserNotificationsEnabled()).toBe(false);
+		expect(second.browserNotificationsEnabled).toBe(false);
 	});
 
 	it('does not write on when the browser has blocked notifications', async () => {
@@ -167,7 +167,7 @@ describe('Notification desktop notifications default', () => {
 			browserNotificationsEnabled: false,
 			browserNotificationsDefaultOnMigratedV1: true,
 		});
-		expect(notification.getBrowserNotificationsEnabled()).toBe(false);
+		expect(notification.browserNotificationsEnabled).toBe(false);
 	});
 
 	it('registers the installed-app push subscription only once permission is granted', async () => {

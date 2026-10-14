@@ -3,12 +3,12 @@
 import {createGuildID, createUserID} from '@app/api/BrandedTypes';
 import {isHighCgnatBlastRadiusRisk, isHighSharedAccessBlastRadiusRisk} from '@app/api/ban/IpBanCgnatGuard';
 import {EMPTY_USER_ROW} from '@app/api/database/types/UserTypes';
-import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import {GuildModerationService} from '@app/api/guild/services/GuildModerationService';
 import {GuildMemberValidationService} from '@app/api/guild/services/member/GuildMemberValidationService';
 import {GuildBan} from '@app/api/models/GuildBan';
 import {User} from '@app/api/models/User';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {BannedFromGuildError} from '@fluxer/errors/src/domains/guild/BannedFromGuildError';
 import {createUnavailableIpInfoService} from '@pkgs/geoip/src/IpInfoService';
 import {expect, test, vi} from 'vitest';
@@ -37,10 +37,10 @@ test.each(['moderation', 'membership'])(
 		const guildRepository = {
 			listBans: vi.fn().mockResolvedValue(bans),
 			getBanByEmail: vi.fn().mockResolvedValue(null),
-		} as unknown as IGuildRepositoryAggregate;
+		} as unknown as GuildRepository;
 		const userRepository = {
 			findUnique: vi.fn().mockResolvedValue(new User({...EMPTY_USER_ROW, user_id: userId, last_active_ip: ip})),
-		} as unknown as IUserRepository;
+		} as unknown as UserRepository;
 		const service =
 			kind === 'membership'
 				? new GuildMemberValidationService(guildRepository, userRepository, {lookup})

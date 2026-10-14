@@ -119,18 +119,18 @@ export interface MessageSnapshot {
 
 export interface MessageComponentData {
 	type: number;
-	style: Nullish<number>;
-	label: Nullish<string>;
-	emoji_name: Nullish<string>;
-	emoji_id: Nullish<EmojiID>;
-	emoji_animated: Nullish<boolean>;
-	custom_id: Nullish<string>;
-	disabled: Nullish<boolean>;
+	style: number | null;
+	label: string | null;
+	emoji_name: string | null;
+	emoji_id: EmojiID | null;
+	emoji_animated: boolean | null;
+	custom_id: string | null;
+	disabled: boolean | null;
 }
 
 export interface MessageActionRowData {
 	type: number;
-	components: Nullish<Array<MessageComponentData>>;
+	components: Array<MessageComponentData> | null;
 }
 
 export interface MessageCall {
@@ -164,7 +164,7 @@ export interface MessageRow {
 	has_reaction: boolean | null;
 	version: number;
 	// Optional: rows written before the column existed have no key.
-	micup_components?: Nullish<Array<MessageActionRowData>>;
+	micup_components?: Array<MessageActionRowData> | null;
 }
 
 export const MESSAGE_COLUMNS = [

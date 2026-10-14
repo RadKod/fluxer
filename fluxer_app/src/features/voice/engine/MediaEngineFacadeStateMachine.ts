@@ -460,6 +460,7 @@ export function selectMediaEngineGatewayErrorDecision(
 			showUnavailableToast: false,
 			disconnectReason: null,
 			toast: null,
+			p2pRefusal: null,
 		};
 	}
 	if (!voiceGatewayErrorCodes.has(input.code)) return {type: 'ignore'};

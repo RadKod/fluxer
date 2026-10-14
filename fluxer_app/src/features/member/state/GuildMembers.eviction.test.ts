@@ -70,14 +70,16 @@ vi.mock('@app/features/auth/state/Authentication', () => ({
 vi.mock('@app/features/platform/state/AuthSession', () => ({
 	default: {currentAccountKey: 'micup-test-account', userId: 'me'},
 }));
-vi.mock('@app/features/gateway/transport/GatewayConnection', () => ({
+vi.mock('@app/features/gateway/transport/GatewaySessionPool', () => ({
 	default: {
-		socket,
-		isReady: true,
-		isConnected: true,
-		sessionId: 'session-1',
-		hasCompletedGuildSync: () => false,
-		syncGuildIfNeeded: () => {},
+		foregroundConnection: {
+			socket,
+			isReady: true,
+			isConnected: true,
+			sessionId: 'session-1',
+			hasCompletedGuildSync: () => false,
+			syncGuildIfNeeded: () => {},
+		},
 	},
 }));
 vi.mock('@app/features/navigation/state/SelectedGuild', async () => {

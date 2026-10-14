@@ -37,7 +37,7 @@ await import('@app/features/ui/state/Idle');
 const {default: UserSettings} = await import('@app/features/user/state/UserSettings');
 const {setSyncedFieldSessionManager} = await import('@app/features/user/state/SyncedField');
 const {decodeSyncedPreferencesLenient, encodeSyncedPreferences} = await import(
-	'@app/features/user/state/SyncedPreferencesEngine'
+	'@fluxer/schema/src/domains/user/SyncedPreferencesCodec'
 );
 
 async function settle(): Promise<void> {

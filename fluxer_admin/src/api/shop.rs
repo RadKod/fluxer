@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use reqwest::Method;
+
 use super::client::{AdminApiClient, ApiResult};
 use super::types::{ShopAdmin, ShopAdminOrder, ShopAdminVisionary};
-use serde::de::IgnoredAny;
 use serde_json::Value;
 
 // Micup: the page reloads the shop after every write, so write responses are not read.
@@ -12,28 +13,38 @@ impl AdminApiClient {
     }
 
     pub async fn update_shop_settings(&self, body: &Value) -> ApiResult<()> {
-        self.patch::<IgnoredAny>("/admin/shop/settings", Some(body))
+        self.send_void(Method::PATCH, "/admin/shop/settings", Some(body), None)
             .await
-            .map(drop)
     }
 
     pub async fn refresh_shop_try_rate(&self) -> ApiResult<()> {
-        self.post_void("/admin/shop/settings/refresh-try-rate", None)
-            .await
+        self.send_void(
+            Method::POST,
+            "/admin/shop/settings/refresh-try-rate",
+            None::<&Value>,
+            None,
+        )
+        .await
     }
 
     pub async fn set_shop_prices(&self, body: &Value) -> ApiResult<()> {
-        self.put_void_with_reason("/admin/shop/prices", Some(body), None)
+        self.send_void(Method::PUT, "/admin/shop/prices", Some(body), None)
             .await
     }
 
     pub async fn apply_shop_campaign(&self, body: &Value) -> ApiResult<()> {
-        self.post_void("/admin/shop/campaigns", Some(body)).await
+        self.send_void(Method::POST, "/admin/shop/campaigns", Some(body), None)
+            .await
     }
 
     pub async fn remove_shop_campaign(&self, body: &Value) -> ApiResult<()> {
-        self.post_void("/admin/shop/campaigns/remove", Some(body))
-            .await
+        self.send_void(
+            Method::POST,
+            "/admin/shop/campaigns/remove",
+            Some(body),
+            None,
+        )
+        .await
     }
 
     pub async fn get_shop_order(&self, order_id: &str) -> ApiResult<ShopAdminOrder> {
@@ -46,23 +57,29 @@ impl AdminApiClient {
     }
 
     pub async fn set_visionary_slots(&self, body: &Value) -> ApiResult<()> {
-        self.put_void_with_reason("/admin/shop/visionary/slots", Some(body), None)
+        self.send_void(Method::PUT, "/admin/shop/visionary/slots", Some(body), None)
             .await
     }
 
     pub async fn create_shop_bundle(&self, body: &Value) -> ApiResult<()> {
-        self.post_void("/admin/shop/bundles", Some(body)).await
+        self.send_void(Method::POST, "/admin/shop/bundles", Some(body), None)
+            .await
     }
 
     pub async fn update_shop_bundle(&self, bundle_id: &str, body: &Value) -> ApiResult<()> {
-        self.patch::<IgnoredAny>(&bundle_path(bundle_id), Some(body))
+        self.send_void(Method::PATCH, &bundle_path(bundle_id), Some(body), None)
             .await
-            .map(drop)
     }
 
     /// The API deletes the bundle's price with it.
     pub async fn delete_shop_bundle(&self, bundle_id: &str) -> ApiResult<()> {
-        self.delete_void(&bundle_path(bundle_id), None).await
+        self.send_void(
+            Method::DELETE,
+            &bundle_path(bundle_id),
+            None::<&Value>,
+            None,
+        )
+        .await
     }
 }
 

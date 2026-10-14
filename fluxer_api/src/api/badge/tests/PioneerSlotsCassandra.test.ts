@@ -12,10 +12,10 @@ import {PioneerService} from '@app/api/badge/PioneerService';
 import {setCassandraQueryExecutorForTesting} from '@app/api/database/CassandraQueryExecution';
 import {startDockerContainer} from '@app/api/test/DockerTestContainer';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import {initCassandra, shutdownCassandra} from '@pkgs/cassandra/src/Client';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import type {IWorkerService} from '@pkgs/worker/src/contracts/IWorkerService';
 import cassandra from 'cassandra-driver';
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
@@ -72,7 +72,7 @@ describe.skipIf(!dockerAvailable)('Öncü slot claims against Cassandra 5.0', ()
 	const service = new PioneerService({
 		repository,
 		badgeRepository: new BadgeRepository(),
-		userRepository: {} as IUserRepository,
+		userRepository: {} as UserRepository,
 		kvClient: new MockKVProvider(),
 		workerService: {} as IWorkerService<WorkerTaskName>,
 	});

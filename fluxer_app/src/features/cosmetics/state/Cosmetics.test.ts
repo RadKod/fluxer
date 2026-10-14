@@ -1,9 +1,16 @@
+// @vitest-environment happy-dom
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {GatewayHandlerContext} from '@app/features/gateway/events/EventRouter';
 import type {CosmeticItemResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
 import type {UserPrivate} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
+
+vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor}));
+vi.mock('@lingui/react/macro', () => ({
+	Trans: ({children}: {children: unknown}) => children,
+	useLingui: () => ({i18n: {locale: 'en-US', _: (descriptor: {message: string}) => descriptor.message}}),
+}));
 
 vi.mock('@app/features/platform/transport/RestTransport', () => ({
 	http: {get: vi.fn(), put: vi.fn()},
@@ -13,7 +20,9 @@ vi.mock('@app/features/auth/state/Authentication', () => ({default: {userId: 'me
 vi.mock('@app/features/platform/state/AuthSession', () => ({
 	default: {currentAccountKey: 'micup-test-account', userId: 'me'},
 }));
-vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {localInstanceDomain: 'micup.test'}}));
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({
+	default: {localInstanceDomain: 'micup.test', getSnapshotOrNull: () => null},
+}));
 vi.mock('@app/features/app/utils/LimitResolverAdapter', () => ({LimitResolver: {resolve: () => -1}}));
 vi.mock('@app/features/devtools/state/DeveloperOptions', () => ({default: {}}));
 // USER_UPDATE also reaches these stores; only the Users store matters here.

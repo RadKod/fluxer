@@ -13,10 +13,14 @@ vi.mock('@app/features/platform/transport/InstanceHTTP', () => ({instanceRequest
 vi.mock('@app/features/platform/state/PersistentStorage', () => ({default: {getItem: () => null, setItem: () => {}}}));
 vi.mock('@app/features/auth/state/Accounts', () => ({default: {}}));
 vi.mock('@app/features/auth/state/Authentication', () => ({default: {}}));
-vi.mock('@app/features/gateway/transport/GatewayConnection', () => ({default: {}}));
 vi.mock('@app/features/user/commands/UserSettingsCommands', () => ({}));
 vi.mock('@app/features/user/state/UserSettings', () => ({
-	default: {getLocale: () => locales.saved, isHydrated: () => locales.hydrated},
+	default: {
+		get locale() {
+			return locales.saved;
+		},
+		isHydrated: () => locales.hydrated,
+	},
 }));
 vi.mock('@app/app/I18n', () => ({
 	default: {
@@ -52,7 +56,7 @@ beforeEach(() => {
 
 describe('auth requests carry the language on screen (K1)', () => {
 	it('registers a signed-out visitor in the language the page shows, not the unsaved en-US default', async () => {
-		await register(REGISTRATION, {http: TARGET});
+		await register(REGISTRATION, TARGET);
 		expect(acceptLanguageSent()).toBe('tr');
 		expect(request.mock.lastCall?.[0].target).toEqual(TARGET);
 	});
@@ -65,7 +69,7 @@ describe('auth requests carry the language on screen (K1)', () => {
 	it('keeps sending the saved language once the account settings are loaded', async () => {
 		locales.hydrated = true;
 		locales.saved = 'de';
-		await register(REGISTRATION, {http: TARGET});
+		await register(REGISTRATION, TARGET);
 		expect(acceptLanguageSent()).toBe('de');
 	});
 });

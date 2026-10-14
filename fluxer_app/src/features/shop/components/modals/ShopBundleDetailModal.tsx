@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {PurchaseDisabledWrapper} from '@app/features/app/components/dialogs/components/plutonium/PurchaseDisabledWrapper';
 import * as Modal from '@app/features/app/components/dialogs/Modal';
 import {COSMETIC_TYPE_LABELS} from '@app/features/cosmetics/utils/CosmeticLabels';
 import {CLOSE_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {ShopCheckoutModal} from '@app/features/shop/components/modals/ShopCheckoutModal';
 import styles from '@app/features/shop/components/modals/ShopItemDetailModal.module.css';
+import {PurchaseDisabledWrapper} from '@app/features/shop/components/PurchaseDisabledWrapper';
 import {ShopDetailPreview} from '@app/features/shop/components/previews/ShopDetailPreview';
 import {ShopItemStage} from '@app/features/shop/components/ShopItemStage';
 import {ShopPriceLine} from '@app/features/shop/components/ShopPriceLine';

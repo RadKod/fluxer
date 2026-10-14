@@ -4,7 +4,7 @@ import {Config} from '@app/api/Config';
 import {createCachePurgeAdapter} from '@app/api/infrastructure/CachePurgeAdapter';
 import {setInjectedKVProvider} from '@app/api/middleware/ServiceRegistry';
 import {getPurgeQueue, resetServiceSingletonsForTesting} from '@app/api/middleware/ServiceSingletons';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
 describe('queue_only cache purge adapter', () => {

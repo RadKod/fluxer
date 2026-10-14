@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {registerMockKVScript} from '@app/api/test/mocks/MockKVProvider';
+import {registerMockKVScript} from '@pkgs/kv_client/src/testing/MockKVProvider';
 
 // The mock KV's commands are async; a script body must not interleave with another script, as in Valkey.
 let tail: Promise<unknown> = Promise.resolve();

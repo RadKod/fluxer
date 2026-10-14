@@ -3,6 +3,7 @@
 import * as Modal from '@app/features/app/components/dialogs/Modal';
 import {THE_OTHER_PLATFORM_TEMPLATE_EXAMPLE_URL} from '@app/features/app/config/I18nDisplayConstants';
 import {useFormSubmit} from '@app/features/app/hooks/useFormSubmit';
+import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import * as GuildCommands from '@app/features/guild/commands/GuildCommands';
 import styles from '@app/features/guild/components/modals/AddGuildModal.module.css';
 import {
@@ -217,7 +218,10 @@ export const TemplateImportForm = observer(() => {
 			if (result.ok) {
 				if (applyTemplateResponse(result.template) === 'invalid') {
 					urlForm.setError('url', {
-						message: i18n._(THE_OTHER_PLATFORM_TEMPLATE_UNREADABLE_DESCRIPTOR, {theOtherPlatform: THE_OTHER_PLATFORM}),
+						message: i18n._(THE_OTHER_PLATFORM_TEMPLATE_UNREADABLE_DESCRIPTOR, {
+							theOtherPlatform: THE_OTHER_PLATFORM,
+							productName: RuntimeConfig.productName,
+						}),
 					});
 					return;
 				}

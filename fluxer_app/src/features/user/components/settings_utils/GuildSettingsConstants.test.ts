@@ -32,10 +32,11 @@ describe('GuildSettingsConstants', () => {
 		);
 	});
 
-	it('imports no app module, so loading tab metadata cannot start a tab component', () => {
+	// Upstream shares its category labels through a descriptor module; it holds message descriptors, no component.
+	it('imports no app module but the shared descriptors, so loading tab metadata cannot start a tab component', () => {
 		const source = readFileSync(join(HERE, 'GuildSettingsConstants.ts'), 'utf8');
 		const appImports = runtimeSpecifiers(source).filter((specifier) => /^(@app\/|\.)/.test(specifier));
-		expect(appImports).toEqual([]);
+		expect(appImports).toEqual(['@app/features/user/components/settings_utils/section_registry/SharedDescriptors']);
 	});
 
 	it('leaves the tab component registry as the only importer of the sanalyer tab modules', () => {

@@ -176,7 +176,9 @@ function matchesWhere(row: Row, where: ReadonlyArray<WhereExpr<Row>> | undefined
 			case 'gte':
 				if (compareValues(row[clause.col], getParam(params, clause.param)) < 0) return false;
 				break;
+			// Rows come back in primary key order, so a value comparison pages the way the Postgres KV executor does.
 			case 'tokenGt':
+				if (compareValues(row[clause.col], getParam(params, clause.param)) <= 0) return false;
 				break;
 			case 'tokenRange': {
 				const token = murmur3Token(row[clause.col]);

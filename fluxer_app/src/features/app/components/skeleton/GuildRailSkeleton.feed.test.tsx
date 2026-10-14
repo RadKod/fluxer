@@ -7,8 +7,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const runtime = vi.hoisted(() => ({
 	iconUrl: null as string | null,
-	singleCommunityEnabled: false,
-	directMessagesDisabled: false,
+	getSnapshotOrNull: () => null,
 }));
 
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: runtime}));

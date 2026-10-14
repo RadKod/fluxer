@@ -17,6 +17,9 @@ const assets = vi.hoisted(() => ({
 // The real loaders, for the case that counts what reaches the network.
 const real = vi.hoisted(() => ({}) as Partial<Assets>);
 const ultraLayouts = vi.hoisted(() => ({frontFailed: vi.fn<(itemId: string) => void>()}));
+// The image cache keeps a decoded copy of each loaded frame in a second Image (served from the browser cache, not the
+// network); counting it would double every load these tests count.
+vi.mock('@app/features/messaging/utils/ImageRetention', () => ({retainImage: () => {}}));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {mediaEndpoint: 'https://media.micup.test/'}}));
 // The tooltip layer's root as the real hook gives it outside a portal host: the given document's root, one render
 // later. The real module pulls in app stores.

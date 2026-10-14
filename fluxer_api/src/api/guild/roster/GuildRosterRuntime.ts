@@ -33,7 +33,6 @@ import {
 } from '@app/api/guild/roster/GuildRosterEmbed';
 import {GuildRosterRepository} from '@app/api/guild/roster/GuildRosterRepository';
 import {type GuildRosterRef, GuildRosterService} from '@app/api/guild/roster/GuildRosterService';
-import type {ILogger} from '@app/api/ILogger';
 import {Logger} from '@app/api/Logger';
 import {createRequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {User} from '@app/api/models/User';
@@ -52,6 +51,7 @@ import {UnknownGuildError} from '@fluxer/errors/src/domains/guild/UnknownGuildEr
 import {UnknownGuildMemberError} from '@fluxer/errors/src/domains/guild/UnknownGuildMemberError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
 import {UserNotInVoiceError} from '@fluxer/errors/src/domains/user/UserNotInVoiceError';
+import type {LoggerInterface} from '@fluxer/logger/src/LoggerInterface';
 
 // GEÇİCİ: one bot and its in-flight read per process, refreshed every 60s. At users read p99 >500ms
 // or :25 lag_ms p95 >30s, use a shared bot cache and reuse it in the core initial-reaction user read.
@@ -102,7 +102,7 @@ export class GuildRosterRuntime {
 	private readonly roster: GuildRosterService;
 	constructor(
 		private readonly deps: WorkerDependencies,
-		private readonly logger: Pick<ILogger, 'info' | 'warn'> = Logger,
+		private readonly logger: Pick<LoggerInterface, 'info' | 'warn'> = Logger,
 	) {
 		this.roster = new GuildRosterService(deps);
 	}

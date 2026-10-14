@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {FeedDiscoverRepository} from '@app/api/feed/discover/FeedDiscoverRepository';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {normalizeScoreBound, parseRangeByScoreArguments} from '@pkgs/kv_client/src/KVCommandArguments';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {describe, expect, it} from 'vitest';
 
 // The mock KV reads Redis' exclusive '(' bounds; the real KVClient rejects them before Redis sees them. Check the

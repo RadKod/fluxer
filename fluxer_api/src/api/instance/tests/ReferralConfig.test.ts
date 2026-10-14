@@ -4,7 +4,7 @@ import {setCassandraQueryExecutorForTesting} from '@app/api/database/CassandraQu
 import {InstanceConfigRepository, type ReferralTierConfig} from '@app/api/instance/InstanceConfigRepository';
 import {InstanceConfigWriteRaceExecutor} from '@app/api/instance/tests/InstanceConfigWriteRaceExecutor';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
 const REFERRAL_CONFIG_KEY = 'referral_config';

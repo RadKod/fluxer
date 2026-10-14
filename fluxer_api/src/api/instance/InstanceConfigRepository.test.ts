@@ -843,10 +843,12 @@ describe('InstanceConfigRepository', () => {
 				localization: {default_locale: 'tr', default_locale_time_zones: ['Europe/Istanbul']},
 			};
 			await repository.setConfig(APP_PUBLIC_CONFIG_KEY, JSON.stringify(row));
+			// The branding schema lowercases the theme colour on read, so the rewrite stores it lowercased too.
+			const normalized = {...row, branding: {...row.branding, theme_color: '#0b0b0c'}};
 
-			await expect(repository.getAppPublicConfig()).resolves.toMatchObject(row);
+			await expect(repository.getAppPublicConfig()).resolves.toMatchObject(normalized);
 			await repository.setAppPublicConfig({legal: row.legal});
-			expect(await storedRow(repository, APP_PUBLIC_CONFIG_KEY)).toMatchObject(row);
+			expect(await storedRow(repository, APP_PUBLIC_CONFIG_KEY)).toMatchObject(normalized);
 		});
 	});
 

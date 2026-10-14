@@ -188,7 +188,8 @@ const SETTINGS_WITHOUT_SERVER_RECORD = {
 	default_share_voice_activity: true,
 	game_activity_visibility: 'off',
 	game_activity_policy_revision: '0',
-	// Micup: such an account cannot save a privacy review (every settings write returns 404), so treat it as reviewed.
+	// Micup: the server's fallback is 0 (never reviewed), but such an account cannot save a review (every settings write
+	// returns 404), so it counts as reviewed here; otherwise the privacy setup would open again on every start.
 	privacy_setup_version: PRIVACY_SETUP_VERSION,
 	privacy_setup_completed_at: null,
 } satisfies Omit<UserSettingsResponse, 'locale'>;

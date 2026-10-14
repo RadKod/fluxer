@@ -50,7 +50,7 @@ import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import type {User} from '@app/api/models/User';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {isContentHidden} from '@app/api/user/UserHelpers';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
@@ -63,7 +63,7 @@ import {NotFoundError} from '@fluxer/errors/src/domains/core/NotFoundError';
 import {RateLimitError} from '@fluxer/errors/src/domains/core/RateLimitError';
 import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
 import {UnauthorizedError} from '@fluxer/errors/src/domains/core/UnauthorizedError';
-import {DEFAULT_FREE_LIMITS} from '@fluxer/limits/src/LimitDefaults';
+import {DEFAULT_RESTRICTED_LIMITS} from '@fluxer/limits/src/LimitDefaults';
 import {
 	FEED_VIDEO_MAX_BYTES,
 	type FeedVideoCreateRequest,
@@ -113,7 +113,7 @@ export interface FeedVideoServiceDeps {
 	worker: FeedVideoWorker;
 	snowflake: Pick<ISnowflakeService, 'generate'>;
 	limits: Pick<LimitConfigService, 'getConfigSnapshot'>;
-	users: Pick<IUserRepository, 'findUnique'>;
+	users: Pick<UserRepository, 'findUnique'>;
 	storage: Pick<IStorageService, 'getObjectMetadata' | 'uploadObject'>;
 	purgeQueue: IPurgeQueue;
 	notifyAuthor: (authorId: UserID, key: FeedVideoDmKey) => Promise<void>;
@@ -1185,7 +1185,7 @@ export class FeedVideoService {
 			this.deps.limits.getConfigSnapshot(),
 			createLimitMatchContext({user}),
 			key,
-			DEFAULT_FREE_LIMITS[key],
+			DEFAULT_RESTRICTED_LIMITS[key],
 		);
 	}
 }

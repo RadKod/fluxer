@@ -14,6 +14,7 @@ import {inputValidationErrorFromZodIssues, Validator} from '@app/api/Validator';
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {BadRequestError} from '@fluxer/errors/src/domains/core/BadRequestError';
+import {MissingACLError} from '@fluxer/errors/src/domains/core/MissingACLError';
 import {
 	AdminBlocklistAvatarHashUpdateRequest,
 	AdminBlocklistBulkDeleteRequest,

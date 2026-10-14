@@ -22,7 +22,7 @@ import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import type {User} from '@app/api/models/User';
 import type {IGuildSearchService} from '@app/api/search/IGuildSearchService';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {mapUserToPartialResponse} from '@app/api/user/UserMappers';
 import {isUserAdult} from '@app/api/utils/AgeUtils';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
@@ -30,7 +30,7 @@ import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import {GuildFeatures, GuildNSFWLevel, getEffectiveGuildVerificationLevel} from '@fluxer/constants/src/GuildConstants';
 import type {LimitKey} from '@fluxer/constants/src/LimitConfigMetadata';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
-import {DEFAULT_FREE_LIMITS} from '@fluxer/limits/src/LimitDefaults';
+import {DEFAULT_RESTRICTED_LIMITS} from '@fluxer/limits/src/LimitDefaults';
 import type {SearchableGuild} from '@fluxer/schema/src/contracts/search/SearchDocumentTypes';
 import type {FeedSuggestionsResponse} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import type {UserPartialResponse} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
@@ -74,7 +74,7 @@ export interface FeedSuggestionSnapshot {
 interface FeedSuggestionServiceDeps {
 	repository: FeedSuggestionRepository;
 	followRepository: FollowRepository;
-	userRepository: Pick<IUserRepository, 'listUsers' | 'findSettings' | 'getUserGuildIds'>;
+	userRepository: Pick<UserRepository, 'listUsers' | 'findSettings' | 'getUserGuildIds'>;
 	kvCounterService: Pick<KVCounterService, 'getMany'>;
 	limitConfigService: LimitConfigService;
 	discover: Pick<FeedDiscoverService, 'blockedAmong'>;
@@ -425,7 +425,7 @@ export class FeedSuggestionService {
 			this.deps.limitConfigService.getConfigSnapshot(),
 			createLimitMatchContext({user}),
 			key,
-			DEFAULT_FREE_LIMITS[key],
+			DEFAULT_RESTRICTED_LIMITS[key],
 		);
 	}
 }

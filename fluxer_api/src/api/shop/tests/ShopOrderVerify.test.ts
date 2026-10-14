@@ -12,8 +12,8 @@ import {
 	getShopOrderRepository,
 	getUserRepository,
 	getVisionaryService,
-	getVisionarySlotRepository,
 } from '@app/api/middleware/ServiceSingletons';
+import {clearVisionarySlots} from '@app/api/premium/visionary/tests/VisionaryTestUtils';
 import {shopOrderCheckShard, shopOrderCheckSlot} from '@app/api/shop/ShopOrderRepository';
 import {
 	createShopAdmin,
@@ -126,7 +126,7 @@ describe('shop order verification and delivery', () => {
 	async function openVisionary(total: number): Promise<void> {
 		await openShop(harness, admin, {visionary_on_sale: true});
 		await setPrices(harness, admin, {visionary: 5000});
-		await getVisionarySlotRepository().shrinkVisionarySlots(0);
+		await clearVisionarySlots();
 		await getVisionaryService().setTotal(total);
 	}
 

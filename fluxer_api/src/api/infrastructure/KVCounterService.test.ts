@@ -12,11 +12,11 @@ import {
 	KVCounterService,
 } from '@app/api/infrastructure/KVCounterService';
 import {startDockerContainer} from '@app/api/test/DockerTestContainer';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {ResourceLockedError} from '@fluxer/errors/src/domains/core/ResourceLockedError';
 import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
 import {KVClient} from '@pkgs/kv_client/src/KVClient';
 import {computeHashSlot} from '@pkgs/kv_client/src/KVHashSlots';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const NS = 'test_counter';

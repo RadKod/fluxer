@@ -58,8 +58,8 @@ const NO_DESCRIPTOR = msg({
 });
 
 // Discord's plan comparison as one table: a group heading per group, the free
-// column with a value or a cross, the premium column highlighted with a value or a check. Upstream
-// FeatureComparisonTable stays as it is for the Stripe dialog.
+// column with a value or a cross, the premium column highlighted with a value or a check. Perk labels and values come
+// from upstream's FeatureComparisonTable helpers.
 export const PremiumCompareTable = observer(() => {
 	const {i18n} = useLingui();
 	const headingId = useId();

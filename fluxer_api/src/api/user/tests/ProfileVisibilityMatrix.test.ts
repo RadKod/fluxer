@@ -224,12 +224,21 @@ describe('GET /users/:id/profile — the visibility matrix (Kapı 2)', () => {
 		const [first, second, viewer] = [await account(), await account(), await account()];
 		await createFriendship(harness, first, viewer);
 		await createFriendship(harness, second, viewer);
+		// The high global limit (1200) keeps the global bucket out of the way, so only the account bucket answers.
+		const viewerId = createUserID(BigInt(viewer.userId));
+		const viewerUser = (await getUserRepository().findUnique(viewerId))!;
+		await getUserRepository().patchUpsert(
+			viewerId,
+			{flags: viewerUser.flags | UserFlags.HIGH_GLOBAL_RATE_LIMIT},
+			viewerUser.toRow(),
+		);
 		vi.useFakeTimers({now: Date.now(), toFake: ['Date']}); // the leaky bucket does not drain during the loop
 		// 60 per target: the per-target bucket (100 in 10 s) never answers, only the account bucket can.
 		const request = (index: number) =>
-			getProfile(harness, viewer.token, index % 2 === 0 ? first : second)
-				.header('x-fluxer-test-enable-rate-limits', 'true')
-				.header('x-fluxer-test-global-rate-limit', '100000');
+			getProfile(harness, viewer.token, index % 2 === 0 ? first : second).header(
+				'x-fluxer-test-enable-rate-limits',
+				'true',
+			);
 		for (let index = 0; index < 120; index++) await request(index).execute();
 		const refused = await request(120).executeRaw();
 		expect(refused.response.status).toBe(429);

@@ -62,7 +62,7 @@ vi.mock('@app/features/auth/flow/AuthErrorState', () => ({
 }));
 vi.mock('@app/features/auth/flow/AuthLoadingState', () => ({AuthLoadingState: Nothing}));
 vi.mock('@app/features/auth/flow/AuthBottomLink', () => ({AuthBottomLink: Nothing}));
-vi.mock('@app/features/auth/flow/AuthMinimalRegisterFormCore', () => ({AuthMinimalRegisterFormCore: Nothing}));
+vi.mock('@app/features/auth/flow/AuthRegisterFormCore', () => ({AuthRegisterFormCore: Nothing}));
 vi.mock('@app/features/auth/flow/AuthSsoPanel', () => ({AuthSsoPanel: Nothing, resolveAuthPanelSso: () => null}));
 vi.mock('@app/features/auth/flow/DesktopDeepLinkPrompt', () => ({DesktopDeepLinkPrompt: Nothing}));
 vi.mock('@app/features/auth/flow/DesktopHandoffMfaStep', () => ({DesktopHandoffMfaStep: Nothing}));

@@ -4,13 +4,13 @@ import {createChannelID, createGuildID, createUserID} from '@app/api/BrandedType
 import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
 import {TableGameService} from '@app/api/table_game/TableGameService';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
-import type {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {VoiceMembershipHooks} from '@app/api/voice_seat/VoiceMembershipHooks';
 import {VOICE_MEMBERSHIP_HOOK_CONCURRENCY} from '@app/api/voice_seat/VoiceSeatLimits';
 import {voiceSeatsKey} from '@app/api/voice_seat/VoiceSeatRepository';
 import {VoiceSeatService} from '@app/api/voice_seat/VoiceSeatService';
+import type {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const GUILD_ID = '900000000000000001';

@@ -189,7 +189,7 @@ function createApp(
 	const playService = new EntranceSoundPlayService(
 		service,
 		gateway as unknown as IGatewayService,
-		channels as unknown as ChannelRepository,
+		{channelData: channels} as unknown as ChannelRepository,
 	);
 	const app = new Hono<HonoEnv>();
 	app.onError(AppErrorHandler);

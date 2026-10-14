@@ -6,7 +6,6 @@ import type {GatewayVoiceStateEntry, IGatewayService} from '@app/api/infrastruct
 import type {ILiveKitService} from '@app/api/infrastructure/ILiveKitService';
 import type {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
 import {Logger} from '@app/api/Logger';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import type {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {registerVoiceSeatMockScripts} from '@app/api/voice_seat/tests/VoiceSeatMockScripts';
 import {useThemeWatchSeats} from '@app/api/voice_seat/tests/VoiceSeatTestThemes';
@@ -16,6 +15,7 @@ import {type VoiceParticipantContext, VoiceSeatService} from '@app/api/voice_sea
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import {themeLoungeSeats, VOICE_ROOM_THEME_IDS} from '@fluxer/constants/src/VoiceRoomThemes';
 import {RateLimitError} from '@fluxer/errors/src/domains/core/RateLimitError';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const THEME = VOICE_ROOM_THEME_IDS[0];

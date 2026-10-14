@@ -30,7 +30,10 @@ vi.mock('@app/features/app/components/layout/DiscoveryLayout', () => ({Discovery
 vi.mock('@app/features/app/components/layout/FavoritesLayout', () => ({FavoritesLayout: none}));
 vi.mock('@app/features/app/components/layout/GuildsLayout', () => ({GuildsLayout: none}));
 vi.mock('@app/features/app/components/pages/NotFoundPage', () => ({NotFoundPage: none}));
-vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {getSnapshotOrNull: () => null}}));
+// A configured instance: without a snapshot or before setup the login guard lets every page through.
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({
+	default: {getSnapshotOrNull: () => ({}), requiresSelfHostedSetup: () => false},
+}));
 vi.mock('@app/features/auth/state/Authentication', () => ({
 	default: {
 		get isAuthenticated() {
@@ -52,8 +55,8 @@ vi.mock('@app/features/navigation/utils/RouterUtils', () => ({}));
 vi.mock('@app/features/navigation/utils/DefaultLandingUtils', () => ({getDirectMessagesFallbackPath: () => '/'}));
 vi.mock('@app/features/platform/components/router/RouterReact', () => ({useParams: () => ({userId: '42'})}));
 vi.mock('@app/features/platform/state/AuthSession', () => ({default: {isInitialized: true}}));
-vi.mock('@app/features/ui/state/MobileLayout', () => ({default: {}}));
-vi.mock('@app/features/gateway/transport/GatewayConnection', () => ({default: {}}));
+vi.mock('@app/features/ui/state/MobileLayout', () => ({default: {isMobileLayout: () => false}}));
+vi.mock('@app/features/gateway/transport/GatewaySessionPool', () => ({default: {foregroundConnection: {}}}));
 vi.mock('@app/features/threads/state/ThreadGuilds', () => ({default: {}}));
 
 const {appRouteTree, premiumCallbackRoute} = await import('@app/app/router/routes/AppRoutes');

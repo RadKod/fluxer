@@ -27,7 +27,7 @@ import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import type {User} from '@app/api/models/User';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import type {LimitKey} from '@fluxer/constants/src/LimitConfigMetadata';
@@ -37,7 +37,7 @@ import {UnknownFeedPostError} from '@fluxer/errors/src/domains/content/UnknownFe
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {MissingPermissionsError} from '@fluxer/errors/src/domains/core/MissingPermissionsError';
 import {RateLimitError} from '@fluxer/errors/src/domains/core/RateLimitError';
-import {DEFAULT_FREE_LIMITS} from '@fluxer/limits/src/LimitDefaults';
+import {DEFAULT_RESTRICTED_LIMITS} from '@fluxer/limits/src/LimitDefaults';
 import type {FeedPollCreateRequest} from '@fluxer/schema/src/domains/feed/FeedRequestSchemas';
 import type {ClientUploadedAttachmentRequest} from '@fluxer/schema/src/domains/message/AttachmentSchemas';
 import {snowflakeToDate} from '@fluxer/snowflake/src/Snowflake';
@@ -54,7 +54,7 @@ const EXPORT_VIDEO_URL_SECONDS = 7 * 24 * 3600;
 interface FeedPostServiceDeps {
 	repository: FeedRepository;
 	followRepository: FollowRepository;
-	userRepository: IUserRepository;
+	userRepository: UserRepository;
 	kvCounterService: KVCounterService;
 	workerService: IWorkerService<WorkerTaskName>;
 	snowflakeService: ISnowflakeService;
@@ -295,7 +295,7 @@ export class FeedPostService {
 			this.deps.limitConfigService.getConfigSnapshot(),
 			createLimitMatchContext({user}),
 			key,
-			DEFAULT_FREE_LIMITS[key],
+			DEFAULT_RESTRICTED_LIMITS[key],
 		);
 	}
 }

@@ -2,9 +2,9 @@
 
 import {createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createUserID} from '@app/api/BrandedTypes';
+import type {GatewayRpcTransport} from '@app/api/infrastructure/GatewayRpcClient';
 import {GatewayRpcClient} from '@app/api/infrastructure/GatewayRpcClient';
 import {GatewayService} from '@app/api/infrastructure/GatewayService';
-import type {IGatewayRpcTransport} from '@app/api/infrastructure/IGatewayRpcTransport';
 import {getInstanceConfigRepository, getUserRepository} from '@app/api/middleware/ServiceSingletons';
 import {UserSettings} from '@app/api/models/UserSettings';
 import {createApiTestHarness} from '@app/api/test/ApiTestHarness';
@@ -194,7 +194,7 @@ describe('game activity RPC bootstrap boundary', () => {
 		GatewayRpcClient.createForTests({
 			call: vi.fn(async () => ack),
 			destroy: vi.fn(async () => {}),
-		} as unknown as IGatewayRpcTransport);
+		} as unknown as GatewayRpcTransport);
 		await expect(new GatewayService().gameActivityPolicy(request)).rejects.toThrow();
 	});
 	it.each(['fence', 'apply'] as const)('policy_ack_epoch_is_phase_correct_for_%s', async (phase) => {
@@ -218,7 +218,7 @@ describe('game activity RPC bootstrap boundary', () => {
 		GatewayRpcClient.createForTests({
 			call: vi.fn(async () => ack),
 			destroy: vi.fn(async () => {}),
-		} as unknown as IGatewayRpcTransport);
+		} as unknown as GatewayRpcTransport);
 		const result = new GatewayService().gameActivityPolicy(request);
 		if (phase === 'fence') await expect(result).rejects.toThrow();
 		else await expect(result).resolves.toEqual(ack);
@@ -226,7 +226,7 @@ describe('game activity RPC bootstrap boundary', () => {
 	it('control_ack_timeout_is_five_seconds_and_never_cast_fallback', async () => {
 		vi.useFakeTimers();
 		const call = vi.fn(() => new Promise(() => {}));
-		GatewayRpcClient.createForTests({call, destroy: vi.fn(async () => {})} as unknown as IGatewayRpcTransport);
+		GatewayRpcClient.createForTests({call, destroy: vi.fn(async () => {})} as unknown as GatewayRpcTransport);
 		const pending = new GatewayService().gameActivityPairPolicy({
 			owner_id: '1',
 			viewer_id: '2',

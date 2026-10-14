@@ -1,28 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {Config} from '@app/api/Config';
-
 export interface ContactEmails {
 	appealsEmail: string | null;
 	safetyEmail: string | null;
 	supportEmail: string | null;
 }
 
-// Micup support address; appeals and safety share it.
+// Micup: sanalyer runs with self_hosted=true yet answers its own support, appeals and safety mail, so these
+// addresses do not depend on Config.instance.selfHosted the way upstream's fluxer.com addresses do.
 const MICUP_CONTACT_EMAIL = 'info@sanalyer.com';
 
-const HOSTED_CONTACT_EMAILS: ContactEmails = {
+const CONTACT_EMAILS: ContactEmails = {
 	appealsEmail: MICUP_CONTACT_EMAIL,
 	safetyEmail: MICUP_CONTACT_EMAIL,
 	supportEmail: MICUP_CONTACT_EMAIL,
 };
 
-const SELF_HOSTED_CONTACT_EMAILS: ContactEmails = {
-	appealsEmail: null,
-	safetyEmail: null,
-	supportEmail: null,
-};
-
 export function resolveContactEmails(): ContactEmails {
-	return Config.instance.selfHosted ? SELF_HOSTED_CONTACT_EMAILS : HOSTED_CONTACT_EMAILS;
+	return CONTACT_EMAILS;
 }

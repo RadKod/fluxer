@@ -5,7 +5,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import type {GuildID, RoleID, UserID} from '@app/api/BrandedTypes';
 import {micupBotUserId} from '@app/api/guild/micupbot/MicupBotBot';
 import {micupBotRoleProblem} from '@app/api/guild/micupbot/MicupBotRoleRules';
-import type {IGuildRoleRepository} from '@app/api/guild/repositories/IGuildRoleRepository';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import type {GuildService} from '@app/api/guild/services/GuildService';
 import {Logger} from '@app/api/Logger';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
@@ -15,7 +15,7 @@ import {ResourceLockedError} from '@fluxer/errors/src/domains/core/ResourceLocke
 import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
 export interface MicupBotRoleGrantDeps {
 	kvClient: Pick<IKVProvider, 'acquireLock' | 'releaseLock' | 'extendLock'>;
-	guildRepository: Pick<IGuildRoleRepository, 'getRole'>;
+	guildRepository: Pick<GuildRepository, 'getRole'>;
 	guildService: {members: Pick<GuildService['members'], 'addMemberRole' | 'removeMemberRole'>};
 }
 export interface MicupBotRoleGrantParams {

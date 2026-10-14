@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {useForceUpdate} from '@app/features/app/hooks/useForceUpdate';
 import * as FeedCommands from '@app/features/feed/commands/FeedCommands';
 import {FeedPostCard} from '@app/features/feed/components/FeedPostCard';
 import styles from '@app/features/feed/components/FeedTimelineList.module.css';
@@ -18,7 +17,7 @@ import {CompassIcon, UsersIcon} from '@phosphor-icons/react';
 import {useVirtualizer, type VirtualItem} from '@tanstack/react-virtual';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
-import {useCallback, useEffect, useLayoutEffect, useRef} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useReducer, useRef} from 'react';
 
 const ESTIMATED_POST_HEIGHT_PX = 180;
 const OVERSCAN_POSTS = 4;
@@ -79,8 +78,8 @@ export const FeedTimelineList = observer((props: FeedTimelineListProps) => {
 	});
 	// The Scroller around this list sets its handle only after the list's layout effects ran, so on mount the virtualizer
 	// finds no scroll element. One more render after the commit lets it bind, or posts already in the store never show.
-	const forceUpdate = useForceUpdate();
-	useEffect(() => forceUpdate(), [forceUpdate]);
+	const [, rerender] = useReducer((renders: number) => renders + 1, 0);
+	useEffect(() => rerender(), []);
 	useEffect(
 		() => () => {
 			savedScrolls.delete(timelineKey);

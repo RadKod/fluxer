@@ -145,7 +145,7 @@ it('sendMessage stores components for a first-party bot and the response carries
 	expect(await storedComponents(fixture.channelId, message.id)).toEqual(ROWS);
 	const requests: Array<Record<string, unknown>> = [];
 	setInjectedMessageResponseDataService(capturingMessageService(requests));
-	await createMessageResponseDataService().buildMessageForChannel({channel: {guildId: null}, message});
+	await createMessageResponseDataService().buildBroadcastMessage({channel: {guildId: null}, message});
 	expect((requests[0]!.message as Record<string, unknown>).micup_components).toEqual([
 		{
 			type: 1,

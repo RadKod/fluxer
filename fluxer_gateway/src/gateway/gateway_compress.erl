@@ -434,7 +434,7 @@ zstd_window_log_parameter_test() ->
     try
         lists:foreach(
             fun(Value) ->
-                _ = fluxer_gateway_env:patch(#{zstd_window_log => Value}),
+                _ = put_zstd_window_log(Value),
                 ?assertMatch(
                     {ok, _, _},
                     set_zstd_stream_compression_level(make_ref(), new_context(zstd_stream))
@@ -446,16 +446,19 @@ zstd_window_log_parameter_test() ->
             end,
             [undefined, 0]
         ),
-        _ = fluxer_gateway_env:patch(#{zstd_window_log => 18}),
+        _ = put_zstd_window_log(18),
         ?assertMatch(
             {ok, _, _}, set_zstd_stream_compression_level(make_ref(), new_context(zstd_stream))
         ),
         ?assertEqual({zstd_parameter, zstd_c_compression_level, 3}, receive_zstd_parameter()),
         ?assertEqual({zstd_parameter, zstd_c_window_log, 18}, receive_zstd_parameter())
     after
-        _ = fluxer_gateway_env:patch(#{zstd_window_log => Previous}),
+        _ = put_zstd_window_log(Previous),
         meck:unload(ezstd)
     end.
+
+put_zstd_window_log(Value) ->
+    fluxer_gateway_env:update(fun(Config) -> Config#{zstd_window_log => Value} end).
 
 receive_zstd_parameter() ->
     receive
@@ -473,7 +476,7 @@ zstd_window_log_parameter_failure_test() ->
     meck:new(ezstd, [passthrough]),
     Previous = fluxer_gateway_env:get(zstd_window_log),
     try
-        _ = fluxer_gateway_env:patch(#{zstd_window_log => 18}),
+        _ = put_zstd_window_log(18),
         lists:foreach(
             fun({Result, Expected}) ->
                 meck:expect(ezstd, set_compression_parameter, fun
@@ -491,7 +494,7 @@ zstd_window_log_parameter_failure_test() ->
             ]
         )
     after
-        _ = fluxer_gateway_env:patch(#{zstd_window_log => Previous}),
+        _ = put_zstd_window_log(Previous),
         meck:unload(ezstd)
     end.
 
@@ -499,7 +502,7 @@ zstd_window_log_18_round_trip_test() ->
     ?assert(probe_ezstd_stream_available()),
     Previous = fluxer_gateway_env:get(zstd_window_log),
     try
-        _ = fluxer_gateway_env:patch(#{zstd_window_log => 18}),
+        _ = put_zstd_window_log(18),
         Data = binary:copy(<<"window-limited-stream">>, 32768),
         {ok, Compressed, Ctx} = compress(Data, new_context(zstd_stream)),
         Decoder = ezstd:create_decompression_context(?ZSTD_STREAM_BUFFER_SIZE),
@@ -510,7 +513,7 @@ zstd_window_log_18_round_trip_test() ->
         {ok, Next, _} = compress(Data, Ctx),
         ?assertEqual(Data, iolist_to_binary(ezstd:decompress_streaming(Decoder, Next)))
     after
-        _ = fluxer_gateway_env:patch(#{zstd_window_log => Previous})
+        _ = put_zstd_window_log(Previous)
     end.
 
 parse_compression_test_() ->

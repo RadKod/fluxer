@@ -14,7 +14,6 @@ import {
 	getVoiceSeatService,
 } from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
-import type {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import type {NoopGatewayService} from '@app/api/test/NoopGatewayService';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
@@ -24,6 +23,7 @@ import {VOICE_SEAT_CHANNEL_CHANGES_PER_WINDOW, VOICE_SEAT_CHANNEL_WINDOW_S} from
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {ChannelTypes, Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {themeLoungeSeats, VOICE_ROOM_THEME_IDS} from '@fluxer/constants/src/VoiceRoomThemes';
+import type {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const THEME = VOICE_ROOM_THEME_IDS[0];

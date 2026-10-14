@@ -5,6 +5,9 @@ import {loadFrontIdle, preloadFrontFrames} from '@app/features/cosmetics/utils/U
 import * as ImageCacheUtils from '@app/features/messaging/utils/ImageCacheUtils';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
+// The image cache keeps a decoded copy of each loaded frame in a second Image (served from the browser cache, not the
+// network); counting it would double every load these tests count.
+vi.mock('@app/features/messaging/utils/ImageRetention', () => ({retainImage: () => {}}));
 const created: Array<string> = [];
 const failing = new Set<string>();
 

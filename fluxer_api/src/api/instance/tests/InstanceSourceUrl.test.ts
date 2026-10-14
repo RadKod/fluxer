@@ -91,7 +91,12 @@ describe('instance source code offer (app_public.legal.source_url)', () => {
 		// The admin form sends every legal field. The request Validator turns an object whose values are all null into
 		// null, so a blank source URL is sent next to the other legal URLs, as the form does.
 		await setLegal({terms_url: 'https://x.test/terms', privacy_url: '', source_url: ''});
-		expect(await discoveredLegal()).toEqual({terms_url: 'https://x.test/terms', privacy_url: null, source_url: null});
+		expect(await discoveredLegal()).toEqual({
+			terms_url: 'https://x.test/terms',
+			privacy_url: null,
+			guidelines_url: null,
+			source_url: null,
+		});
 	});
 
 	it('keeps the source URL when only another legal URL changes', async () => {
@@ -100,6 +105,7 @@ describe('instance source code offer (app_public.legal.source_url)', () => {
 		expect(await discoveredLegal()).toEqual({
 			terms_url: 'https://x.test/terms',
 			privacy_url: null,
+			guidelines_url: null,
 			source_url: SOURCE_URL,
 		});
 	});
@@ -109,7 +115,12 @@ describe('instance source code offer (app_public.legal.source_url)', () => {
 		Config.instance.selfHosted = true;
 		try {
 			await setLegal({source_url: SOURCE_URL});
-			expect(await discoveredLegal()).toEqual({terms_url: null, privacy_url: null, source_url: SOURCE_URL});
+			expect(await discoveredLegal()).toEqual({
+				terms_url: null,
+				privacy_url: null,
+				guidelines_url: null,
+				source_url: SOURCE_URL,
+			});
 			await createBuilder(harness, '')
 				.post('/auth/register')
 				.body({

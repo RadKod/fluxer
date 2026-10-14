@@ -76,7 +76,6 @@ vi.mock('@app/features/relationship/state/Relationships', () => ({
 	default: {getRelationship: () => (state.relationship === undefined ? undefined : {type: state.relationship})},
 }));
 vi.mock('@app/features/relationship/utils/RelationshipActionUtils', () => ({
-	canSendFriendRequest: (_id: string, isBot: boolean) => !isBot && state.relationship === undefined,
 	sendFriendRequest: vi.fn(),
 	cancelFriendRequest: vi.fn(),
 	showAcceptFriendRequestConfirmation: vi.fn(),

@@ -11,6 +11,7 @@ import {UserSettings} from '@app/api/models/UserSettings';
 import {NoopGatewayService} from '@app/api/test/NoopGatewayService';
 import {resolveProfileAudience} from '@app/api/user/profile/ProfilePrivacy';
 import {GameActivityPolicyService} from '@app/api/user/services/GameActivityPolicyService';
+import * as PartialUserChangePropagation from '@app/api/user/services/PartialUserChangePropagation';
 import {UserAccountSettingsService} from '@app/api/user/services/UserAccountSettingsService';
 import {ProfilePrivacyLevels, RelationshipTypes} from '@fluxer/constants/src/UserConstants';
 import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
@@ -100,15 +101,14 @@ async function fixture(privacy: number = ProfilePrivacyLevels.FRIENDS_ONLY) {
 			calls.push('audit');
 		}),
 	};
+	vi.spyOn(PartialUserChangePropagation, 'propagateUserUpdate').mockImplementation(async () => {
+		calls.push('user-update');
+	});
 	const apiContext = {services: {users, gateway}} as unknown as ApiContext;
 	const profile = new AdminUserProfileService({
 		apiContext,
 		auditService: auditService as never,
-		updatePropagator: {
-			propagateUserUpdate: vi.fn(async () => {
-				calls.push('user-update');
-			}),
-		} as never,
+		userUpdateDeps: {} as never,
 		discriminatorService: {} as never,
 		entityAssetService: {} as never,
 		guildRepository: {} as never,
@@ -117,8 +117,6 @@ async function fixture(privacy: number = ProfilePrivacyLevels.FRIENDS_ONLY) {
 	const grants = new GameActivityPolicyService({users, gateway});
 	const accountSettings = new UserAccountSettingsService({
 		userAccountRepository: users,
-		userSettingsRepository: users,
-		userRelationshipRepository: users,
 		updatePropagator: {dispatchUserSettingsUpdate: async () => {}} as never,
 		gatewayService: gateway,
 		userCacheService: {} as never,

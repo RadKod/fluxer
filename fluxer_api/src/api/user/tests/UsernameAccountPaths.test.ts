@@ -9,6 +9,7 @@ import * as LimitConfig from '@app/api/limits/LimitConfigService';
 import {getUsernameSelectionGate, setInjectedUsernameOwnershipService} from '@app/api/middleware/ServiceRegistry';
 import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
 import {User} from '@app/api/models/User';
+import * as PartialUserChangePropagation from '@app/api/user/services/PartialUserChangePropagation';
 import {UserAccountSecurityService} from '@app/api/user/services/UserAccountSecurityService';
 import {UserAccountService} from '@app/api/user/services/UserAccountService';
 import {UserChannelService} from '@app/api/user/services/UserChannelService';
@@ -92,6 +93,7 @@ function accountService(
 		: changeDisplayName
 			? new User({...user.toRow(), global_name: 'New name'})
 			: user;
+	vi.spyOn(PartialUserChangePropagation, 'propagateUserUpdate').mockResolvedValue();
 	const worker = {addJob: vi.fn().mockResolvedValue(1n)};
 	const repository = {
 		patchUpsert: vi.fn().mockResolvedValue(updated),
@@ -107,7 +109,7 @@ function accountService(
 			processSecurityUpdates: vi.fn().mockResolvedValue({updates: {}, metadata: {usernameClaim, usernameReservation}}),
 		},
 		contactChangeLogService: {recordDiff: vi.fn()},
-		updatePropagator: {dispatchUserUpdate: vi.fn(), propagatePartialUserChange: vi.fn()},
+		userUpdateDeps: {},
 		searchIndexService: {updateUserMembers: vi.fn()},
 	});
 	return {user, worker, repository, service};

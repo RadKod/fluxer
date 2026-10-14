@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {showGenericErrorModal} from '@app/features/app/components/alerts/GenericErrorModalCommands';
 import GuildBoosts from '@app/features/boost/state/GuildBoosts';
-import {showGuildErrorModal} from '@app/features/guild/components/alerts/GuildErrorModalUtils';
 import {
 	SOMETHING_WENT_WRONG_DESCRIPTOR,
 	TRY_AGAIN_IN_A_MOMENT_DESCRIPTOR,
@@ -14,10 +14,11 @@ export function useGuildBoostAction() {
 	const [acting, setActing] = useState(false);
 	const inFlight = useRef(false);
 	const showError = useCallback(() => {
-		showGuildErrorModal({
+		showGenericErrorModal({
 			title: i18n._(SOMETHING_WENT_WRONG_DESCRIPTOR),
 			message: i18n._(TRY_AGAIN_IN_A_MOMENT_DESCRIPTOR),
 			dataFlx: 'boost.action.error-modal',
+			defer: true,
 		});
 	}, [i18n]);
 	const handleBoost = useCallback(async () => {

@@ -5,7 +5,7 @@ import {Config} from '@app/api/Config';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
-import {DEFAULT_FREE_LIMITS} from '@fluxer/limits/src/LimitDefaults';
+import {DEFAULT_RESTRICTED_LIMITS} from '@fluxer/limits/src/LimitDefaults';
 import {SnowflakeType} from '@fluxer/schema/src/primitives/SchemaPrimitives';
 export function micupBotApplicationId(): ApplicationID | null {
 	const result = SnowflakeType.safeParse(Config.instance.micupBotApplicationId);
@@ -22,7 +22,7 @@ export function isMicupBotLive(limitConfigService: LimitConfigService): boolean 
 			limitConfigService.getConfigSnapshot(),
 			createLimitMatchContext({user: null}),
 			'feature_micupbot',
-			DEFAULT_FREE_LIMITS.feature_micupbot,
+			DEFAULT_RESTRICTED_LIMITS.feature_micupbot,
 		) !== 0
 	);
 }

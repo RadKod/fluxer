@@ -3,12 +3,7 @@
 import {createTestAccount, setUserACLs} from '@app/api/auth/tests/AuthTestUtils';
 import {createChannelID} from '@app/api/BrandedTypes';
 import {createChannel, createGuild} from '@app/api/channel/tests/ChannelTestUtils';
-import {
-	ALL_THREADS_ACTIVE,
-	resetChannelThreadsConfig,
-	setChannelThreadsConfig,
-	threadsRequest,
-} from '@app/api/channel/tests/ThreadTestUtils';
+import {threadsRequest} from '@app/api/channel/tests/ThreadTestUtils';
 import {getChannelRepository} from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
@@ -25,15 +20,12 @@ describe('admin thread HTTP pagination', () => {
 	});
 	beforeEach(async () => {
 		await harness.resetData();
-		resetChannelThreadsConfig();
 	});
 	afterAll(async () => {
-		resetChannelThreadsConfig();
 		await harness.shutdown();
 	});
 
-	it('walks active and archived threads in bounded pages even when the experiment is disabled', async () => {
-		await setChannelThreadsConfig(ALL_THREADS_ACTIVE);
+	it('walks active and archived threads in bounded pages', async () => {
 		const owner = await createTestAccount(harness);
 		const guild = await createGuild(harness, owner.token, 'paged-threads');
 		const parent = await createChannel(harness, owner.token, guild.id, 'thread-parent');
@@ -49,7 +41,6 @@ describe('admin thread HTTP pagination', () => {
 				await getChannelRepository().threads.updateState(createChannelID(BigInt(thread.id)), () => ({archived: true}));
 			}
 		}
-		await setChannelThreadsConfig({...ALL_THREADS_ACTIVE, enabled: false});
 		const admin = await setUserACLs(harness, await createTestAccount(harness), [
 			AdminACLs.AUTHENTICATE,
 			AdminACLs.GUILD_LOOKUP,

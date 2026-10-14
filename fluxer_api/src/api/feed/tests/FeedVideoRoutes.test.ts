@@ -3,7 +3,6 @@
 import {createTestAccount, type TestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createUserID, userIdToChannelId} from '@app/api/BrandedTypes';
 import {Config, getConfig} from '@app/api/Config';
-import {getContentType} from '@app/api/channel/services/message/MessageHelpers';
 import {loadFixture} from '@app/api/channel/tests/AttachmentTestUtils';
 import {createPost, overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
@@ -15,6 +14,7 @@ import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import type {FeedPostListResponse} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import type {ClientUploadedAttachmentRequest} from '@fluxer/schema/src/domains/message/AttachmentSchemas';
 import type {PresignedAttachmentUploadResponse} from '@fluxer/schema/src/domains/message/AttachmentUploadSchemas';
+import {getContentTypeFromFilename} from '@pkgs/mime_utils/src/ContentTypeUtils';
 import {afterAll, afterEach, beforeAll, describe, expect, it, vi} from 'vitest';
 
 const MB = 1024 * 1024;
@@ -43,7 +43,9 @@ describe('feed video routes', () => {
 	function plan(account: TestAccount, files: Array<{filename: string; file_size: number}>) {
 		return createBuilder<PresignedAttachmentUploadResponse>(harness, account.token)
 			.post('/feed/attachments')
-			.body({attachments: files.map((file, id) => ({id, ...file, content_type: getContentType(file.filename)}))});
+			.body({
+				attachments: files.map((file, id) => ({id, ...file, content_type: getContentTypeFromFilename(file.filename)})),
+			});
 	}
 
 	// An image upload the client may then name anything when it posts.

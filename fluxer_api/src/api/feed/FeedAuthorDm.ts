@@ -3,7 +3,7 @@
 import type {UserID} from '@app/api/BrandedTypes';
 import {getContentMessage} from '@app/api/content_i18n/ContentI18n';
 import {isHiddenFeedAuthor} from '@app/api/feed/FeedTimelineService';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import type {IWorkerService} from '@pkgs/worker/src/contracts/IWorkerService';
 
@@ -20,7 +20,7 @@ export type FeedAuthorDmKey =
  * (banned) account gets none.
  */
 export async function sendFeedAuthorDm(
-	deps: {users: Pick<IUserRepository, 'findUnique'>; worker: Pick<IWorkerService<WorkerTaskName>, 'addJob'>},
+	deps: {users: Pick<UserRepository, 'findUnique'>; worker: Pick<IWorkerService<WorkerTaskName>, 'addJob'>},
 	authorId: UserID,
 	key: FeedAuthorDmKey,
 ): Promise<void> {

@@ -43,7 +43,7 @@ const appStartCheckpoint = UserSettings.captureAccountTransitionCheckpoint();
 const {handleUserSettingsUpdate} = await import('@app/features/user/events/UserSettingsUpdate');
 const {default: AppStorage} = await import('@app/features/platform/state/PersistentStorage');
 const {createEmptySyncedPreferences, decodeSyncedPreferencesLenient, encodeSyncedPreferences} = await import(
-	'@app/features/user/state/SyncedPreferencesEngine'
+	'@fluxer/schema/src/domains/user/SyncedPreferencesCodec'
 );
 
 const ACCOUNT_A = '1100000000000000001';

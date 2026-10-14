@@ -5,10 +5,10 @@ import {FEED_VIEW_COUNT_COUNTER} from '@app/api/feed/interaction/FeedInteraction
 import {FeedViewService, feedViewGateKey} from '@app/api/feed/views/FeedViewService';
 import {signFeedViewTicket} from '@app/api/feed/views/FeedViews';
 import {Logger} from '@app/api/Logger';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import type {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {FeatureTemporarilyDisabledError} from '@fluxer/errors/src/domains/core/FeatureTemporarilyDisabledError';
 import {RateLimitError} from '@fluxer/errors/src/domains/core/RateLimitError';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const SECRET = 'feed-view-service-test-secret';

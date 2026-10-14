@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {queueShopTryRateStartupJob} from '@app/api/worker/ShopTryRateStartup';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {describe, expect, it, vi} from 'vitest';
 
 describe('shop rate startup', () => {

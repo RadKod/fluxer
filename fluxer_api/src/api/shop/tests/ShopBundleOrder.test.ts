@@ -27,10 +27,10 @@ import {
 } from '@app/api/shop/tests/ShopTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
+import {NoopGatewayService} from '@app/api/test/NoopGatewayService';
 import {fakePayriffServer} from '@app/api/test/Setup';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {collectUserHarvestExtensions} from '@app/api/user/lifecycle/UserLifecycleHooks';
-import {BaseUserUpdatePropagator} from '@app/api/user/services/BaseUserUpdatePropagator';
 import verifyShopOrder from '@app/api/worker/tasks/VerifyShopOrder';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import {ResourceLockedError} from '@fluxer/errors/src/domains/core/ResourceLockedError';
@@ -42,6 +42,10 @@ import type {ShopAdminBundle, ShopAdminOrderResponse} from '@fluxer/schema/src/d
 import type {ShopOrderResponse} from '@fluxer/schema/src/domains/shop/ShopResponseSchemas';
 import type {WorkerTaskHelpers} from '@pkgs/worker/src/contracts/WorkerTask';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
+
+function userUpdateCount(dispatch: {mock: {calls: Array<Array<{event: string}>>}}): number {
+	return dispatch.mock.calls.filter(([params]) => params?.event === 'USER_UPDATE').length;
+}
 
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 const HELPERS: WorkerTaskHelpers = {
@@ -194,7 +198,7 @@ describe('bundle orders: delivery, frozen item list and visibility', () => {
 		const order = await createOrder(bundle.sku);
 		await pay(order.id);
 		const userWrites = vi.spyOn(getUserRepository(), 'patchUpsert');
-		const userUpdates = vi.spyOn(BaseUserUpdatePropagator.prototype, 'dispatchUserUpdate');
+		const userUpdates = vi.spyOn(NoopGatewayService.prototype, 'dispatchPresence');
 
 		await verify(order.id);
 
@@ -202,7 +206,7 @@ describe('bundle orders: delivery, frozen item list and visibility', () => {
 		expect(buyer.avatarDecorationId).toBe(BigInt(items[0]!.id));
 		expect(buyer.nameplateId).toBe(BigInt(items[2]!.id));
 		expect(userWrites).toHaveBeenCalledTimes(1);
-		expect(userUpdates).toHaveBeenCalledTimes(1);
+		expect(userUpdateCount(userUpdates)).toBe(1);
 	});
 
 	it('an item the account already owned leaves its slot to the next item of its type', async () => {

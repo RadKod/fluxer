@@ -8,6 +8,7 @@
 
 -export([
     start_link/0,
+    lookup/1,
     start_or_lookup/1,
     dispatch_to_user/3,
     handoff_for_drain/0,
@@ -32,6 +33,30 @@
 -spec start_link() -> {ok, pid()} | {error, term()}.
 start_link() ->
     normalize_start_link(gen_server:start_link({local, ?MODULE}, ?MODULE, [], [])).
+
+%% Micup: game activity resolves existing presences without starting new ones.
+-spec lookup(user_id()) -> {ok, pid()} | {error, not_found}.
+lookup(UserId) ->
+    case presence_manager_cache:lookup(UserId) of
+        {hit, Pid} ->
+            {ok, Pid};
+        miss ->
+            lookup_and_cache(UserId)
+    end.
+
+-spec lookup_and_cache(user_id()) -> {ok, pid()} | {error, not_found}.
+lookup_and_cache(UserId) ->
+    case
+        presence_manager_routing:call_owner_manager(
+            UserId, {lookup, UserId}, ?DEFAULT_GEN_SERVER_TIMEOUT
+        )
+    of
+        {ok, Pid} when is_pid(Pid) ->
+            presence_manager_cache:put_if_local(UserId, Pid),
+            {ok, Pid};
+        _ ->
+            {error, not_found}
+    end.
 
 -spec start_or_lookup(map()) -> {ok, pid()} | {error, term()}.
 start_or_lookup(Request) when is_map(Request) ->

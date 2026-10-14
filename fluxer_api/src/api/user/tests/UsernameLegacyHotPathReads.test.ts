@@ -13,12 +13,12 @@ import {RpcSessionStartService} from '@app/api/rpc/RpcSessionStartService';
 import type {UserData} from '@app/api/rpc/RpcTypes';
 import {UserByUsername, Users} from '@app/api/Tables';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {UserAccountRepository} from '@app/api/user/repositories/account/UserAccountRepository';
 import {resolveUsernameHandle} from '@app/api/user/UniqueUsernames';
 import type {UsernameOwnershipService} from '@app/api/user/username/UsernameOwnershipService';
 import {AccountIdentityModes, TagStyles} from '@fluxer/constants/src/AccountIdentityConstants';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 
 const id = createUserID(1000000000000000001n);

@@ -6,7 +6,7 @@ import {defineTable} from '@app/api/database/CassandraTableDsl';
 import {ensurePostgresKvSchema, PostgresKvQueryExecutor} from '@app/api/database/PostgresKvQueryExecutor';
 import {MAX_TOKEN, MIN_TOKEN, scanByTokenRanges, splitTokenRing} from '@app/api/database/TokenRangeScan';
 import {startDockerContainer} from '@app/api/test/DockerTestContainer';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {
 	getDefaultPostgresClient,
 	type IPostgresClient,
@@ -72,26 +72,36 @@ function numericKey(rowKey: string): bigint {
 	return BigInt((JSON.parse(rowKey) as {value: string}).value);
 }
 
-// Stands in for Postgres: stores upserts and answers the bounded numeric index scan; any other read is a full scan.
+// Stands in for Postgres: stores upserts and answers the keyset walk over the numeric index when it is bounded by the
+// token range ceiling; any other read is a full scan.
 function fakeKvClient(): {client: IPostgresClient; fullScans: () => number} {
 	const stored = new Map<string, unknown>();
 	let fullScans = 0;
 	const all = () => [...stored].map(([row_key, row_data]) => ({row_key, row_data}));
+	const param = (text: string, pattern: RegExp, values: Array<unknown>): string | null => {
+		const match = pattern.exec(text);
+		return match ? String(values[Number(match[1]) - 1]) : null;
+	};
 	const client = {
 		async query(text: string, values: Array<unknown> = []) {
 			if (text.startsWith('INSERT')) {
 				stored.set(values[2] as string, JSON.parse(values[3] as string));
 				return {rows: [], rowCount: 1};
 			}
-			if (!text.includes('<= $5::numeric')) {
+			const upper = param(text, /<= \$(\d+)::numeric/, values);
+			if (upper === null) {
 				fullScans += 1;
 				return {rows: all(), rowCount: stored.size};
 			}
-			const [, after, afterKey, limit, upper] = values as [string, string, string, number, string];
+			const limit = values[1] as number;
+			const floor = param(text, />= \$(\d+)::numeric/, values);
+			const afterMatch = /> \(\$(\d+)::numeric, \$(\d+)\)/.exec(text);
+			const after = afterMatch ? BigInt(String(values[Number(afterMatch[1]) - 1])) : null;
+			const afterKey = afterMatch ? String(values[Number(afterMatch[2]) - 1]) : null;
 			const key = (row: {row_key: string}) => numericKey(row.row_key);
 			const rows = all()
-				.filter((row) => key(row) <= BigInt(upper))
-				.filter((row) => key(row) > BigInt(after) || (key(row) === BigInt(after) && row.row_key > afterKey))
+				.filter((row) => key(row) <= BigInt(upper) && (floor === null || key(row) >= BigInt(floor)))
+				.filter((row) => after === null || key(row) > after || (key(row) === after && row.row_key > afterKey!))
 				.sort((a, b) => (key(a) === key(b) ? 0 : key(a) < key(b) ? -1 : 1))
 				.slice(0, limit);
 			return {rows, rowCount: rows.length};

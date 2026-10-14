@@ -6,7 +6,6 @@ import {
 	createOAuth2Application,
 	createUniqueApplicationName,
 	deleteOAuth2Application,
-	updateOAuth2Application,
 } from '@app/api/oauth/tests/OAuth2TestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
@@ -142,7 +141,11 @@ describe('official app instance config admin API', () => {
 			bot_public: true,
 			bot: {id: bot.botUserId},
 		});
-		await updateOAuth2Application(harness, owner.token, entry.application_id, {bot_public: false});
+		await createBuilder(harness, owner.token)
+			.patch(`/oauth2/applications/${entry.application_id}`)
+			.body({bot_public: false})
+			.expect(HTTP_STATUS.OK)
+			.execute();
 		expect(await publicView().execute()).toMatchObject({id: entry.application_id, bot_public: false});
 		const discoverApps = async () =>
 			(
@@ -151,7 +154,11 @@ describe('official app instance config admin API', () => {
 					.execute()
 			).features.official_apps;
 		await vi.waitFor(async () => expect(await discoverApps()).not.toContainEqual(entry));
-		await updateOAuth2Application(harness, owner.token, entry.application_id, {bot_public: true});
+		await createBuilder(harness, owner.token)
+			.patch(`/oauth2/applications/${entry.application_id}`)
+			.body({bot_public: true})
+			.expect(HTTP_STATUS.OK)
+			.execute();
 		await vi.waitFor(async () => expect(await discoverApps()).toContainEqual(entry));
 		await deleteOAuth2Application(harness, owner.token, entry.application_id, owner.password);
 		await publicView().expect(HTTP_STATUS.NOT_FOUND, APIErrorCodes.UNKNOWN_APPLICATION).execute();

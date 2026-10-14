@@ -36,7 +36,7 @@ import {MaxFeedCommentsError} from '@fluxer/errors/src/domains/content/MaxFeedCo
 import {UnknownFeedCommentError} from '@fluxer/errors/src/domains/content/UnknownFeedCommentError';
 import {MissingPermissionsError} from '@fluxer/errors/src/domains/core/MissingPermissionsError';
 import {RateLimitError} from '@fluxer/errors/src/domains/core/RateLimitError';
-import {DEFAULT_FREE_LIMITS} from '@fluxer/limits/src/LimitDefaults';
+import {DEFAULT_RESTRICTED_LIMITS} from '@fluxer/limits/src/LimitDefaults';
 import type {FeedCommentResponse} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import type {UserPartialResponse} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import {snowflakeToDate} from '@fluxer/snowflake/src/Snowflake';
@@ -549,7 +549,7 @@ export class FeedInteractionService {
 			this.deps.limitConfigService.getConfigSnapshot(),
 			createLimitMatchContext({user}),
 			'max_comments_per_post',
-			DEFAULT_FREE_LIMITS.max_comments_per_post,
+			DEFAULT_RESTRICTED_LIMITS.max_comments_per_post,
 		);
 		if ((await kvCounterService.add(FEED_COMMENT_COUNT_COUNTER, postKey, 1)) > maxComments) {
 			await kvCounterService.add(FEED_COMMENT_COUNT_COUNTER, postKey, -1);
@@ -569,7 +569,7 @@ export class FeedInteractionService {
 			this.deps.limitConfigService.getConfigSnapshot(),
 			createLimitMatchContext({user: null}),
 			key,
-			DEFAULT_FREE_LIMITS[key],
+			DEFAULT_RESTRICTED_LIMITS[key],
 		);
 	}
 

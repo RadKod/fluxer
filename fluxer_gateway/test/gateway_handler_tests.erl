@@ -751,13 +751,16 @@ identify_timeout_ignored_while_session_start_is_held_test() ->
     State = (new_json_state())#{pending_identify => {#{}, self()}},
     ?assertMatch({ok, _}, gateway_handler:websocket_info(identify_timeout, State)).
 
+put_env(Key, Value) ->
+    fluxer_gateway_env:update(fun(Config) -> Config#{Key => Value} end).
+
 with_env_key(Key, Value, Fun) ->
     Previous = fluxer_gateway_env:get(Key),
-    _ = fluxer_gateway_env:patch(#{Key => Value}),
+    _ = put_env(Key, Value),
     try
         Fun()
     after
-        _ = fluxer_gateway_env:patch(#{Key => Previous})
+        _ = put_env(Key, Previous)
     end.
 
 with_identify_timeout(Ms, Fun) -> with_env_key(identify_timeout_ms, Ms, Fun).

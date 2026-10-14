@@ -2,7 +2,7 @@
 
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import {snapMediaProxyImageSize} from '@app/features/messaging/utils/MediaProxyUtils';
-import {buildMediaUrl, parseAvatarHash} from '@app/features/user/utils/AvatarMediaUtils';
+import {normalizeEndpoint, parseAvatarHash} from '@app/features/user/utils/AvatarUtils';
 import type {MediaProxyImageSize} from '@fluxer/constants/src/MediaProxyImageSizes';
 import type {
 	CosmeticAssetDataResponse,
@@ -29,12 +29,6 @@ export function getCosmeticAssetURL(
 	const playAnimated = isAnimated && animated;
 	const snapped = snapMediaProxyImageSize(cssSize);
 	const size = snapped < COSMETIC_MEDIA_MIN_SIZE ? COSMETIC_MEDIA_MIN_SIZE : snapped > maxSize ? maxSize : snapped;
-	return buildMediaUrl({
-		endpoint,
-		path: 'branding',
-		id: `cosmetic-${type}-${data.item_id}`,
-		hash: playAnimated ? data.asset : hash,
-		size,
-		animated: playAnimated,
-	});
+	const query = playAnimated ? `size=${size}&animated=true` : `size=${size}`;
+	return `${normalizeEndpoint(endpoint)}/branding/cosmetic-${type}-${data.item_id}/${playAnimated ? data.asset : hash}.webp?${query}`;
 }

@@ -4,7 +4,7 @@ import type {UserID} from '@app/api/BrandedTypes';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {ContentWarningLevel} from '@fluxer/constants/src/GuildConstants';
 import {FeatureTemporarilyDisabledError} from '@fluxer/errors/src/domains/core/FeatureTemporarilyDisabledError';
 import type {LimitMatchContext} from '@fluxer/limits/src/LimitTypes';
@@ -18,7 +18,7 @@ export interface MatureContentSettings {
 // While feature_mature_content_settings is 0 a write may keep or clear these settings, but not turn one on or set new warning text.
 export async function assertMatureContentSettingsWrite(params: {
 	limitConfigService: LimitConfigService;
-	userRepository: IUserRepository;
+	userRepository: UserRepository;
 	userId: UserID;
 	current: MatureContentSettings;
 	next: MatureContentSettings;

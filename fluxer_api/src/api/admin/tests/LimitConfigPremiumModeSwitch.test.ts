@@ -145,6 +145,9 @@ describe('limit config across premium model switches on a self-hosted instance',
 			{id: 'premium', filters: {traits: ['premium']}, limits: {}},
 			{id: 'default', limits: {max_bio_length: 300}},
 			{id: 'very_large_guild', filters: {guildFeatures: ['VERY_LARGE_GUILD']}, limits: {}},
+			// Micup: the boost tiers add their emoji and sticker rules.
+			{id: 'more_emoji', filters: {guildFeatures: ['MORE_EMOJI']}, limits: {}},
+			{id: 'more_stickers', filters: {guildFeatures: ['MORE_STICKERS']}, limits: {}},
 		]);
 	});
 
@@ -251,7 +254,12 @@ describe('limit config across premium model switches on a self-hosted instance',
 		await saveRule(admin, 'premium', edits);
 		await setPremiumMode(admin, 'everyone');
 		const hidden = await getLimitConfig(admin);
-		expect(hidden.limit_config.rules.map((rule) => rule.id)).toEqual(['default', 'very_large_guild']);
+		expect(hidden.limit_config.rules.map((rule) => rule.id)).toEqual([
+			'default',
+			'very_large_guild',
+			'more_emoji',
+			'more_stickers',
+		]);
 		expect(hidden.limit_config.traitDefinitions).toEqual([]);
 		await saveDefaultRule(admin, {max_bio_length: 300});
 		await setPremiumMode(admin, 'mirror');

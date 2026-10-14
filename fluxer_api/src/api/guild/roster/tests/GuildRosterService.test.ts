@@ -14,10 +14,10 @@ import {
 	USER_B,
 	USER_C,
 } from '@app/api/guild/roster/tests/GuildRosterTestUtils';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {NoopWorkerService} from '@app/api/test/NoopWorkerService';
 import type {WorkerDependencies} from '@app/api/worker/WorkerDependencies';
 import {ResourceLockedError} from '@fluxer/errors/src/domains/core/ResourceLockedError';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 describe('GuildRosterService', () => {

@@ -35,9 +35,9 @@ import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {createRequestCache, type RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {User} from '@app/api/models/User';
 import type {UserSettings} from '@app/api/models/UserSettings';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
 import type {ProfileViewer} from '@app/api/user/profile/ProfileAccessRules';
 import {resolveProfileAudience} from '@app/api/user/profile/ProfilePrivacy';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {UserAccountLookupService} from '@app/api/user/services/UserAccountLookupService';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
@@ -160,7 +160,7 @@ interface FeedTimelineServiceDeps {
 	repository: FeedRepository;
 	followRepository: FollowRepository;
 	userRepository: Pick<
-		IUserRepository,
+		UserRepository,
 		'listUsers' | 'listBlockedUserIds' | 'listIncomingRelationships' | 'getRelationship'
 	>;
 	// The owner side record's level for Keşfet, outside a request.

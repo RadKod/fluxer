@@ -86,9 +86,16 @@ function createDummyGuildResponse(params: {guildId: GuildID; userId: UserID}): G
 }
 
 export class NoopGatewayService implements IGatewayService {
+	// Micup: voice seat and table game tests seed who is in a voice channel.
+	private readonly voiceStatesByChannel = new Map<string, Array<GatewayVoiceStateEntry>>();
+
 	constructor() {
 		guildOwners.clear();
 		guildMembers.clear();
+	}
+
+	private getVoiceStateKey(params: {guildId?: GuildID; channelId: ChannelID}): string {
+		return `${params.guildId?.toString() ?? 'dm'}:${params.channelId.toString()}`;
 	}
 
 	setGuildOwner(guildId: GuildID, ownerId: UserID): void {
@@ -108,6 +115,14 @@ export class NoopGatewayService implements IGatewayService {
 			guildMembers.set(guildId.toString(), members);
 		}
 		members.add(userId);
+	}
+
+	setVoiceStatesForChannel(params: {
+		guildId?: GuildID;
+		channelId: ChannelID;
+		voiceStates: Array<GatewayVoiceStateEntry>;
+	}): void {
+		this.voiceStatesByChannel.set(this.getVoiceStateKey(params), [...params.voiceStates]);
 	}
 
 	async dispatchGuild(_params: {guildId: GuildID; event: GatewayDispatchEvent; data: unknown}): Promise<void> {}
@@ -837,11 +852,11 @@ export class NoopGatewayService implements IGatewayService {
 		return {success: false};
 	}
 
-	async getVoiceStatesForChannel(_params: {
+	async getVoiceStatesForChannel(params: {
 		guildId?: GuildID;
 		channelId: ChannelID;
 	}): Promise<{voiceStates: Array<GatewayVoiceStateEntry>}> {
-		return {voiceStates: []};
+		return {voiceStates: [...(this.voiceStatesByChannel.get(this.getVoiceStateKey(params)) ?? [])]};
 	}
 
 	async getVoiceState(_params: {guildId: GuildID; userId: UserID}): Promise<{

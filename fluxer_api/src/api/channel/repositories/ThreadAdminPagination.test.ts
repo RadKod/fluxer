@@ -2,7 +2,7 @@
 
 import {createChannelID, createGuildID} from '@app/api/BrandedTypes';
 import type {ChannelDataRepository} from '@app/api/channel/repositories/ChannelDataRepository';
-import type {IMessageRepository} from '@app/api/channel/repositories/IMessageRepository';
+import type {MessageRepository} from '@app/api/channel/repositories/MessageRepository';
 import {ThreadRepository} from '@app/api/channel/repositories/ThreadRepository';
 import {setCassandraQueryExecutorForTesting, upsertOne} from '@app/api/database/CassandraQueryExecution';
 import type {PreparedQuery} from '@app/api/database/CassandraTypes';
@@ -49,7 +49,7 @@ describe('admin guild thread index paging', () => {
 					{id: parentId, type: ChannelTypes.GUILD_TEXT},
 				],
 			} as unknown as ChannelDataRepository,
-			{} as IMessageRepository,
+			{} as MessageRepository,
 		);
 	});
 

@@ -40,7 +40,7 @@ export function GuildBoostController(app: HonoApp) {
 			const guildId = createGuildID(ctx.req.valid('param').guild_id);
 			const {before, limit} = ctx.req.valid('query');
 			// Membership check: the Gateway guild read refuses a non-member or an unavailable guild.
-			await ctx.get('guildService').data.getGuild({userId: ctx.get('user').id, guildId});
+			await ctx.get('guildService').data.operations.getGuild({userId: ctx.get('user').id, guildId});
 			return ctx.json(
 				await ctx.get('guildBoostService').listBoosts({guildId, limit, before, requestCache: ctx.get('requestCache')}),
 			);
@@ -66,7 +66,7 @@ export function GuildBoostController(app: HonoApp) {
 		async (ctx) => {
 			const user = ctx.get('user');
 			const guildId = createGuildID(ctx.req.valid('param').guild_id);
-			const guild = await ctx.get('guildService').data.getGuild({userId: user.id, guildId});
+			const guild = await ctx.get('guildService').data.operations.getGuild({userId: user.id, guildId});
 			return ctx.json(
 				await ctx.get('guildBoostService').boost({
 					user,

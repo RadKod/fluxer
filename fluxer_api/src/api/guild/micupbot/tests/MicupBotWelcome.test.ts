@@ -31,7 +31,7 @@ it('welcome renders the template in the channel and pings only the member', asyn
 
 it('a template with @everyone in the community name pings nobody', async () => {
 	const f = await fixture({welcome_message: '{server}'});
-	await f.deps.guildRepository.upsert({...f.guildModel.toRow(), name: '@everyone'});
+	await f.deps.guildRepository.upsertPartial(f.guildModel.id, {name: '@everyone'});
 	await f.runner.run(f.payload);
 	expect(f.send.mock.calls[0]![0].data.allowed_mentions?.parse).toEqual([]);
 	const {message} = await f.send.mock.results[0]!.value;

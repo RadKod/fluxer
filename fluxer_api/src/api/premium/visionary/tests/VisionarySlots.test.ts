@@ -12,13 +12,17 @@ import {lifetimeUser, readUser, slotRows} from '@app/api/premium/visionary/tests
 import {StripePremiumService} from '@app/api/stripe/services/StripePremiumService';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import type {NoopLogger} from '@app/api/test/mocks/NoopLogger';
-import {BaseUserUpdatePropagator} from '@app/api/user/services/BaseUserUpdatePropagator';
+import {NoopGatewayService} from '@app/api/test/NoopGatewayService';
 import {UserFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {ResourceLockedError} from '@fluxer/errors/src/domains/core/ResourceLockedError';
 import {ShopItemUnavailableError} from '@fluxer/errors/src/domains/payment/ShopItemUnavailableError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
 import {ms} from 'itty-time';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
+
+function userUpdateCount(dispatch: {mock: {calls: Array<Array<{event: string}>>}}): number {
+	return dispatch.mock.calls.filter(([params]) => params?.event === 'USER_UPDATE').length;
+}
 
 const NOW = new Date('2026-10-15T12:00:00.000Z');
 const OVER_CAP_MESSAGE = 'Visionary number given above the admin total: the payment arrived after its hold ended';
@@ -175,7 +179,7 @@ describe('Visionary numbers', () => {
 		await visionary().setTotal(2);
 		const [buyer] = await accounts(1);
 		await visionary().holdForOrder(buyer!, 21n);
-		const dispatch = vi.spyOn(BaseUserUpdatePropagator.prototype, 'dispatchUserUpdate');
+		const dispatch = vi.spyOn(NoopGatewayService.prototype, 'dispatchPresence');
 
 		expect(await visionary().deliverForOrder(buyer!, 21n)).toEqual({slot: 1, outcome: 'granted', overCap: false});
 		expect(await visionary().deliverForOrder(buyer!, 21n)).toEqual({
@@ -184,7 +188,7 @@ describe('Visionary numbers', () => {
 			overCap: false,
 		});
 
-		expect(dispatch).toHaveBeenCalledTimes(1);
+		expect(userUpdateCount(dispatch)).toBe(1);
 		expect((await readUser(buyer!)).premiumLifetimeSequence).toBe(1);
 		expect(await visionary().getStock()).toMatchObject({sold: 1, held: 0, remaining: 1});
 	});
@@ -212,7 +216,7 @@ describe('Visionary numbers', () => {
 		// The first order's delivery stopped after taking its number; the second order was delivered in full meanwhile.
 		expect(await visionary().takeSlot(buyer!, {orderId: 81n, allowOverCap: true})).toEqual({slot: 1, overCap: false});
 		expect(await visionary().deliverForOrder(buyer!, 82n)).toEqual({slot: 2, outcome: 'granted', overCap: false});
-		const dispatch = vi.spyOn(BaseUserUpdatePropagator.prototype, 'dispatchUserUpdate');
+		const dispatch = vi.spyOn(NoopGatewayService.prototype, 'dispatchPresence');
 
 		expect(await visionary().deliverForOrder(buyer!, 81n)).toEqual({
 			slot: null,
@@ -220,7 +224,7 @@ describe('Visionary numbers', () => {
 			overCap: false,
 		});
 
-		expect(dispatch).not.toHaveBeenCalled();
+		expect(userUpdateCount(dispatch)).toBe(0);
 		expect((await readUser(buyer!)).premiumLifetimeSequence).toBe(2);
 	});
 

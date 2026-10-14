@@ -38,7 +38,9 @@ vi.mock('@app/features/platform/utils/AppLogger', () => ({
 }));
 vi.mock('@app/features/theme/state/Theme', () => ({default: {updateServerTheme: vi.fn()}}));
 vi.mock('@app/features/ui/state/MobileLayout', () => ({default: {isMobileLayout: () => false}}));
-vi.mock('@app/features/ui/state/Idle', () => ({default: {getIdleSince: () => 0}}));
+vi.mock('@app/features/ui/state/Idle', () => ({
+	default: {getIdleSince: () => 0, setAfkTimeoutMs: () => {}, isAfk: () => false, isIdle: () => false},
+}));
 vi.mock('@app/features/platform/utils/DeferUntilModulesLoaded', () => ({deferUntilModulesLoaded: vi.fn()}));
 vi.mock('@app/features/expressions/utils/UnicodeEmojis', () => ({
 	default: {normalizeEmojiNameToSurrogate: (name: string) => name},
@@ -157,7 +159,7 @@ describe('game sharing replies with the real settings store', () => {
 			expect(LocalPresence.getStatus()).toBe('invisible');
 			pending.resolve();
 			expect(await pending.saving).toBe(path === 'fallback' ? 'Reply lost' : 'success');
-			expect(UserSettings.getStatus()).toBe('invisible');
+			expect(UserSettings.status).toBe('invisible');
 			expect(LocalPresence.getStatus()).toBe('invisible');
 			expect(UserSettings.getCustomStatus()?.text).toBe('new status');
 			expect(LocalPresence.getPresence().custom_status?.text).toBe('new status');

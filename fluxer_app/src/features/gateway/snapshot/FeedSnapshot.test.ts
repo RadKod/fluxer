@@ -6,7 +6,7 @@ import type {
 	PreparedRuntimeConfig,
 	RuntimeConfigSnapshot,
 } from '@app/features/app/state/RuntimeConfig';
-import type {StoredAccount} from '@app/features/auth/state/AccountStorage';
+import type {StoredAccount} from '@app/features/auth/state/AccountStorageContract';
 import type {ReadyPayload} from '@app/features/gateway/events/GatewayReady';
 import type {GatewayDispatchDelivery} from '@app/features/gateway/transport/GatewaySocket';
 import type {AuthSessionDependencies} from '@app/features/platform/state/auth_session/AuthSessionDependencies';

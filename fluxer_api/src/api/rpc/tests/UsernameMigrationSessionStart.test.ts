@@ -19,13 +19,13 @@ import {RpcSessionStartService} from '@app/api/rpc/RpcSessionStartService';
 import type {UserData} from '@app/api/rpc/RpcTypes';
 import {UsernameOpIntents, Users} from '@app/api/Tables';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {FakeUsernamePolicyService} from '@app/api/user/username/tests/FakeUsernamePolicyService';
 import {UsernameOwnershipService} from '@app/api/user/username/UsernameOwnershipService';
 import {AccountIdentityModes, TagStyles} from '@fluxer/constants/src/AccountIdentityConstants';
 import {PremiumFlags, UserFlags} from '@fluxer/constants/src/UserConstants';
-import {InMemoryProvider} from '@pkgs/cache/src/providers/InMemoryProvider';
+import {KVCacheProvider} from '@pkgs/cache/src/providers/KVCacheProvider';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, afterEach, beforeAll, describe, expect, it, vi} from 'vitest';
 
 describe('username migration READY repair', () => {
@@ -37,7 +37,10 @@ describe('username migration READY repair', () => {
 		getConfig().instance.selfHosted = originalSelfHosted;
 	});
 	beforeAll(() => {
-		new LimitConfigService(new InstanceConfigRepository(), new InMemoryProvider()).setAsGlobalInstance();
+		new LimitConfigService(
+			new InstanceConfigRepository(),
+			new KVCacheProvider({client: new MockKVProvider()}),
+		).setAsGlobalInstance();
 	});
 	afterAll(() => {
 		resetGlobalLimitConfigServiceForTesting();

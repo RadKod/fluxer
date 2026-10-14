@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+use reqwest::Method;
+
 use super::client::{AdminApiClient, ApiResult};
 use super::types::{AdminUserCosmetic, CosmeticItem};
 use serde_json::{Value, json};
@@ -23,7 +25,8 @@ impl AdminApiClient {
     }
 
     pub async fn create_cosmetic_item(&self, body: &Value) -> ApiResult<CosmeticItem> {
-        self.post("/admin/cosmetics/items", Some(body)).await
+        self.send(Method::POST, "/admin/cosmetics/items", Some(body), None)
+            .await
     }
 
     pub async fn update_cosmetic_item(
@@ -31,11 +34,13 @@ impl AdminApiClient {
         item_id: &str,
         body: &Value,
     ) -> ApiResult<CosmeticItem> {
-        self.patch(&item_path(item_id), Some(body)).await
+        self.send(Method::PATCH, &item_path(item_id), Some(body), None)
+            .await
     }
 
     pub async fn retire_cosmetic_item(&self, item_id: &str) -> ApiResult<()> {
-        self.delete_void(&item_path(item_id), None).await
+        self.send_void(Method::DELETE, &item_path(item_id), None::<&Value>, None)
+            .await
     }
 
     // Micup (shop): the reason reaches the audit log as the X-Audit-Log-Reason header.
@@ -45,8 +50,13 @@ impl AdminApiClient {
         item_id: &str,
         reason: &str,
     ) -> ApiResult<AdminUserCosmetic> {
-        self.post_with_reason(&user_item_path(user_id, item_id), None, Some(reason))
-            .await
+        self.send(
+            Method::POST,
+            &user_item_path(user_id, item_id),
+            None::<&Value>,
+            Some(reason),
+        )
+        .await
     }
 
     pub async fn revoke_user_cosmetic(
@@ -55,8 +65,13 @@ impl AdminApiClient {
         item_id: &str,
         reason: &str,
     ) -> ApiResult<AdminUserCosmetic> {
-        self.delete_with_reason(&user_item_path(user_id, item_id), None, Some(reason))
-            .await
+        self.send(
+            Method::DELETE,
+            &user_item_path(user_id, item_id),
+            None::<&Value>,
+            Some(reason),
+        )
+        .await
     }
 
     // Micup (shop): null puts the fixed sizes back.
@@ -66,6 +81,7 @@ impl AdminApiClient {
         layout: &Value,
     ) -> ApiResult<CosmeticItem> {
         let body = json!({ "ultra_layout": layout });
-        self.patch(&item_path(item_id), Some(&body)).await
+        self.send(Method::PATCH, &item_path(item_id), Some(&body), None)
+            .await
     }
 }

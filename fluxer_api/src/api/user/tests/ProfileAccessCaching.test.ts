@@ -17,7 +17,6 @@ import {getProfileAccessCache, getUserRepository} from '@app/api/middleware/Serv
 import type {User} from '@app/api/models/User';
 import type {UserSettings} from '@app/api/models/UserSettings';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {onUserBanned} from '@app/api/user/lifecycle/UserLifecycleHooks';
@@ -26,6 +25,7 @@ import {ProfileAccessService} from '@app/api/user/services/ProfileAccessService'
 import {getProfile, sharedGuild} from '@app/api/user/tests/ProfileTestUtils';
 import {sendFriendRequest} from '@app/api/user/tests/RelationshipTestUtils';
 import {ProfilePrivacyLevels, UserFlags} from '@fluxer/constants/src/UserConstants';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {types} from 'cassandra-driver';
 import {afterAll, afterEach, beforeAll, describe, expect, it, vi} from 'vitest';
 
@@ -224,6 +224,7 @@ describe('profile access through the cache (Epha 3 Oct 10:52)', () => {
 			await repository.updateSubscriptionStatus(id, {
 				premiumWillCancel: true,
 				computedPremiumUntil: new Date(Date.now() + 24 * HOUR),
+				periodStart: null,
 			});
 			expect(await afterSubscription()).toBe('forgotten');
 

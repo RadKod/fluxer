@@ -12,7 +12,7 @@ import {GUILD_BOOST_COUNT_COUNTER} from '@app/api/guild/boost/GuildBoostCounters
 import {GUILD_BOOST_FEATURES, guildBoostFeatures, guildBoostTier} from '@app/api/guild/boost/GuildBoostLevels';
 import type {GuildBoostRepository} from '@app/api/guild/boost/GuildBoostRepository';
 import {mapGuildToGuildResponse} from '@app/api/guild/GuildModel';
-import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import {setGuildVanityCode, withGuildVanityLock} from '@app/api/guild/services/data/GuildVanityService';
 import {withGuildUpdateLock} from '@app/api/guild/services/GuildService';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
@@ -28,8 +28,7 @@ import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {Guild} from '@app/api/models/Guild';
 import type {User} from '@app/api/models/User';
 import type {PremiumLedgerRepository} from '@app/api/premium/ledger/PremiumLedgerRepository';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
-import {getCachedUserPartialResponses} from '@app/api/user/UserCacheHelpers';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {getEffectivePremiumUntil, PREMIUM_GRACE_PERIOD_MS} from '@app/api/user/UserHelpers';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
@@ -49,7 +48,7 @@ import {ms} from 'itty-time';
 
 interface GuildBoostServiceDeps {
 	repository: GuildBoostRepository;
-	guildRepository: IGuildRepositoryAggregate;
+	guildRepository: GuildRepository;
 	kvClient: IKVProvider;
 	workerService: IWorkerService<WorkerTaskName>;
 	gatewayService: IGatewayService;
@@ -57,7 +56,7 @@ interface GuildBoostServiceDeps {
 	snowflakeService: ISnowflakeService;
 	kvCounterService: KVCounterService;
 	cacheService: ICacheService;
-	userRepository: Pick<IUserRepository, 'findUnique'>;
+	userRepository: Pick<UserRepository, 'findUnique'>;
 	userCacheService: UserCacheService;
 	inviteRepository: InviteRepository;
 	premiumLedgerRepository: Pick<PremiumLedgerRepository, 'find'>;
@@ -683,11 +682,10 @@ export class GuildBoostService {
 	}
 
 	private async mapBoosts(rows: Array<GuildBoostRow>, requestCache: RequestCache): Promise<Array<GuildBoostResponse>> {
-		const users = await getCachedUserPartialResponses({
-			userIds: [...new Set(rows.map((row) => row.user_id))],
-			userCacheService: this.deps.userCacheService,
+		const users = await this.deps.userCacheService.getUserPartialResponses(
+			[...new Set(rows.map((row) => row.user_id))],
 			requestCache,
-		});
+		);
 		const responses: Array<GuildBoostResponse> = [];
 		for (const row of rows) {
 			const user = users.get(row.user_id);

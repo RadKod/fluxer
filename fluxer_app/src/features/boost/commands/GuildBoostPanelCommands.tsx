@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {showGuildErrorModal} from '@app/features/guild/components/alerts/GuildErrorModalUtils';
+import {showGenericErrorModal} from '@app/features/app/components/alerts/GenericErrorModalCommands';
 import {GuildSettingsModal} from '@app/features/guild/components/modals/GuildSettingsModal';
 import {
 	SOMETHING_WENT_WRONG_DESCRIPTOR,
@@ -28,10 +28,11 @@ export function openGuildBoostPanel(guildId: string): void {
 			);
 		})
 		.catch(() => {
-			showGuildErrorModal({
+			showGenericErrorModal({
 				title: i18n._(SOMETHING_WENT_WRONG_DESCRIPTOR),
 				message: i18n._(TRY_AGAIN_IN_A_MOMENT_DESCRIPTOR),
 				dataFlx: 'boost.panel.load-error',
+				defer: true,
 			});
 		});
 }

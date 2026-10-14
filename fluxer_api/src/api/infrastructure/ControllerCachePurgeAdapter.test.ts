@@ -10,6 +10,16 @@ const CONFIG: APICachePurgeConfig = {
 	adapter: 'controller',
 	http: {endpoint: '', token: '', timeoutMs: 10_000},
 	controller: {endpoint: ENDPOINT, token: 'pak_test', timeoutMs: 10_000},
+	bunny: {
+		apiBase: '',
+		apiKey: '',
+		timeoutMs: 10_000,
+		concurrency: 8,
+		mode: 'prefix',
+		pullZoneId: 0,
+		ratePerMinute: 30,
+		burst: 20,
+	},
 };
 
 function prefixes(count: number): Array<string> {

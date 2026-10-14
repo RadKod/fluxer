@@ -424,7 +424,7 @@ const FriendshipButton = observer(({user, relationshipType}: {user: User; relati
 			),
 			onClick: () => void RelationshipActionUtils.cancelFriendRequest(i18n, user.id),
 		};
-	} else if (RelationshipActionUtils.canSendFriendRequest(user.id, user.bot)) {
+	} else if (!user.bot && relationshipType !== RelationshipTypes.FRIEND) {
 		action = {
 			label: i18n._(ADD_FRIEND_DESCRIPTOR),
 			icon: <UserPlusIcon className={styles.buttonIcon} data-flx="user.user-profile-page.friend.user-plus-icon" />,

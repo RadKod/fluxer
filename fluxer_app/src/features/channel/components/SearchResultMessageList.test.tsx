@@ -114,7 +114,7 @@ const searchResult = (id: string, flags = 0) => {
 
 afterEach(() => {
 	Relationships.loadRelationships([]);
-	LocalUserSpamOverride.clearAllOverrides();
+	LocalUserSpamOverride.clearOverride(authorId);
 });
 
 describe('detached search result blocking', () => {

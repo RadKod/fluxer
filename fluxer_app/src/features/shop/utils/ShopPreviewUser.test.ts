@@ -36,7 +36,9 @@ const user = new User({
 
 describe('ShopPreviewUser', () => {
 	it('does not forward unknown cosmetic types to a preview surface', () => {
-		const preview = previewUserForSurface(user, 'chat', [item('99', 'future_cosmetic')]);
+		const preview = previewUserForSurface(user, 'chat', [
+			item('99', 'future_cosmetic' as CosmeticItemResponse['type']),
+		]);
 		expect([preview.avatarDecoration, preview.avatarUltra, preview.nameplate]).toEqual([null, null, null]);
 	});
 	it('keeps nameplates exclusively on member rows and avatar decorations on supported surfaces', () => {

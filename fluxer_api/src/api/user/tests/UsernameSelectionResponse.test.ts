@@ -7,15 +7,15 @@ import {setCassandraQueryExecutorForTesting, upsertOne} from '@app/api/database/
 import {EMPTY_USER_ROW} from '@app/api/database/types/UserTypes';
 import * as LimitConfig from '@app/api/limits/LimitConfigService';
 import {setInjectedUsernameOwnershipService} from '@app/api/middleware/ServiceRegistry';
-import type {User} from '@app/api/models/User';
 import {Users} from '@app/api/Tables';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {UserSearchRepository} from '@app/api/user/repositories/account/crud/UserSearchRepository';
 import {UserAccountRepository} from '@app/api/user/repositories/account/UserAccountRepository';
+import * as PartialUserChangePropagation from '@app/api/user/services/PartialUserChangePropagation';
 import {UserAccountService} from '@app/api/user/services/UserAccountService';
 import {FakeUsernamePolicyService} from '@app/api/user/username/tests/FakeUsernamePolicyService';
 import {UsernameOwnershipService} from '@app/api/user/username/UsernameOwnershipService';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeEach, expect, test, vi} from 'vitest';
 
 const id = createUserID(1174109840998400011n);
@@ -51,7 +51,7 @@ afterEach(() => {
 test('a successful selection answers, indexes and dispatches the projected identity', async () => {
 	const repository = new UserAccountRepository(new MockKVProvider());
 	const searched = vi.spyOn(UserSearchRepository.prototype, 'updateUser').mockResolvedValue();
-	const dispatchUserUpdate = vi.fn(async (_user: User) => {});
+	const propagated = vi.spyOn(PartialUserChangePropagation, 'propagateUserUpdate').mockResolvedValue();
 	const service: UserAccountService = Object.assign(Object.create(UserAccountService.prototype), {
 		apiContext: {services: {worker: {addJob: vi.fn().mockResolvedValue(1n)}}},
 		userAccountRepository: repository,
@@ -61,7 +61,7 @@ test('a successful selection answers, indexes and dispatches the projected ident
 			processSecurityUpdates: vi.fn().mockResolvedValue({updates: {}, metadata: {usernameClaim: 'chosen'}}),
 		},
 		contactChangeLogService: {recordDiff: vi.fn()},
-		updatePropagator: {dispatchUserUpdate, propagatePartialUserChange: vi.fn()},
+		userUpdateDeps: {},
 		searchIndexService: {updateUserMembers: vi.fn()},
 	});
 	const user = await repository.findUniqueAssert(id);
@@ -73,7 +73,7 @@ test('a successful selection answers, indexes and dispatches the projected ident
 	});
 	const projected = {username: 'chosen', discriminator: 0, usernameState: 'selected', identityVersion: 1n};
 	expect(result.user).toMatchObject(projected);
-	expect(dispatchUserUpdate.mock.calls.at(-1)?.[0]).toMatchObject(projected);
+	expect(propagated.mock.calls.at(-1)?.[2]).toMatchObject(projected);
 	expect(searched.mock.calls.at(-1)?.[0]).toMatchObject(projected);
 	expect(await repository.findUniqueAssert(id)).toMatchObject(projected);
 });

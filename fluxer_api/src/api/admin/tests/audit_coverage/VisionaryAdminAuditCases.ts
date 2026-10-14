@@ -2,7 +2,7 @@
 
 import type {AdminAuditCoverageCase} from '@app/api/admin/tests/audit_coverage/AdminAuditCoverage';
 import {createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
-import {getVisionarySlotRepository} from '@app/api/middleware/ServiceSingletons';
+import {clearVisionarySlots} from '@app/api/premium/visionary/tests/VisionaryTestUtils';
 import type {ApiTestHarness} from '@app/api/test/ApiTestHarness';
 
 async function adminRequest(
@@ -17,12 +17,6 @@ async function adminRequest(
 		throw new Error(`Expected 200, got ${response.status}: ${await response.text()}`);
 	}
 	await response.arrayBuffer();
-}
-
-// Stripe test mode opens 100 upstream test slots at startup (VisionarySlotInitializer); a Micup instance starts with
-// none, so each case starts from an empty table.
-function clearVisionarySlots(): Promise<void> {
-	return getVisionarySlotRepository().shrinkVisionarySlots(0);
 }
 
 function putVisionarySlots(harness: ApiTestHarness, token: string, total: number): Promise<void> {

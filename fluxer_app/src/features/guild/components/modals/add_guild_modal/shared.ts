@@ -152,9 +152,9 @@ export const THE_OTHER_PLATFORM_TEMPLATE_RATE_LIMITED_DESCRIPTOR = msg({
 		'Error in the import-template form when the third-party platform named by {theOtherPlatform} temporarily refused the desktop app template lookup because of too many requests.',
 });
 export const THE_OTHER_PLATFORM_TEMPLATE_UNREADABLE_DESCRIPTOR = msg({
-	message: "This {theOtherPlatform} template couldn't be read. It may use a format Fluxer doesn't support yet.",
+	message: "This {theOtherPlatform} template couldn't be read. It may use a format {productName} doesn't support yet.",
 	comment:
-		'Error in the import-template form when the desktop app loaded the template from the third-party platform named by {theOtherPlatform} but its contents were not in the expected shape.',
+		'Error in the import-template form when the desktop app loaded the template from the third-party platform named by {theOtherPlatform} but its contents were not in the expected shape. {productName} is the app name.',
 });
 export const IMPORT_TEMPLATE_FORM_DESCRIPTOR = msg({
 	message: 'Import template form',

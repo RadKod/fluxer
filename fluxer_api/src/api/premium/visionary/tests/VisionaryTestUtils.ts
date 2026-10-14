@@ -2,7 +2,7 @@
 
 import {createTestAccount, type TestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createUserID, type UserID} from '@app/api/BrandedTypes';
-import {fetchMany} from '@app/api/database/CassandraQueryExecution';
+import {BatchBuilder, fetchMany} from '@app/api/database/CassandraQueryExecution';
 import type {VisionarySlotRow} from '@app/api/database/types/PaymentTypes';
 import {setCachedInstancePremiumMode} from '@app/api/limits/InstancePremiumModeCache';
 import {getInstanceConfigRepository, getUserRepository} from '@app/api/middleware/ServiceSingletons';
@@ -54,6 +54,15 @@ export async function lifetimeUser(
 export async function slotRows(): Promise<Array<VisionarySlotRow>> {
 	const rows = await fetchMany<VisionarySlotRow>(VisionarySlots.selectCql(), {});
 	return rows.sort((a, b) => a.slot_index - b.slot_index);
+}
+
+// Stripe test mode opens upstream's test slots at startup (VisionarySlotInitializer); a Micup instance starts with none.
+export async function clearVisionarySlots(): Promise<void> {
+	const batch = new BatchBuilder();
+	for (const row of await slotRows()) {
+		batch.addPrepared(VisionarySlots.deleteByPk({slot_index: row.slot_index}));
+	}
+	await batch.execute();
 }
 
 // Owned, unpriced items of the given slots, saved as the Visionary rewards; the admin needs SHOP_MANAGE and

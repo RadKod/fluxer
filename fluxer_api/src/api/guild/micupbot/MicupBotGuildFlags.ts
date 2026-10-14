@@ -4,7 +4,7 @@ import type {GuildID} from '@app/api/BrandedTypes';
 import type {MicupBotAutomodRuleRow, MicupBotGuildSettingsRow} from '@app/api/database/types/MicupBotTypes';
 import {mapGuildToGuildResponse} from '@app/api/guild/GuildModel';
 import type {MicupBotRepository} from '@app/api/guild/micupbot/MicupBotRepository';
-import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import {withGuildUpdateLock} from '@app/api/guild/services/GuildService';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
@@ -42,7 +42,7 @@ export async function syncMicupBotGuildFlags({
 	guildId: GuildID;
 	botPresent: boolean;
 	deps: {
-		guildRepository: IGuildRepositoryAggregate;
+		guildRepository: GuildRepository;
 		gatewayService: IGatewayService;
 		cacheService: ICacheService;
 		repository: MicupBotRepository;

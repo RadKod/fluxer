@@ -54,7 +54,7 @@ describe('username gateway source contracts', () => {
 
 	test('the wire error and Rust public partial retain the exact public contract', () => {
 		expect(read('fluxer_gateway/src/gateway/gateway_errors.erl')).toContain('<<"USERNAME_SELECTION_REQUIRED">>');
-		const rust = read('fluxer_users/src/types.rs').match(/pub struct ApiUserPartial \{([\s\S]*?)\n\}/)?.[1];
+		const rust = read('fluxer_common/src/user_partial.rs').match(/pub struct ApiUserPartial \{([\s\S]*?)\n\}/)?.[1];
 		expect(rust).toContain('pub identity_version: Option<String>');
 		for (const field of ['username_state', 'change_available_at', 'free_change_available']) {
 			expect(rust).not.toContain(`pub ${field}:`);

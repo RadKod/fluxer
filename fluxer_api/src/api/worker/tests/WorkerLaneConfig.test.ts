@@ -11,7 +11,7 @@ import {
 	WORKER_LANES,
 } from '@app/api/worker/WorkerLaneConfig';
 import {workerTasks} from '@app/api/worker/WorkerTaskRegistry';
-import {getConfig} from '@fluxer/config/src/ConfigLoader';
+import {loadConfig} from '@fluxer/config/src/ConfigLoader';
 import {describe, expect, it} from 'vitest';
 
 describe('WorkerLaneConfig', () => {
@@ -61,8 +61,8 @@ describe('WorkerLaneConfig', () => {
 			expect(lane!.maxDeliver).toBeGreaterThanOrEqual(8);
 		}
 	});
-	it('preserves both roster lane concurrency overrides in the API config', () => {
-		const master = getConfig();
+	it('preserves both roster lane concurrency overrides in the API config', async () => {
+		const master = await loadConfig();
 		const config = buildAPIConfigFromMaster({
 			...master,
 			services: {

@@ -10,7 +10,7 @@ use axum::{
 use base64::Engine;
 use fluxer_admin::{
     build_router,
-    config::{AdminConfig, ProxyConfig, RuntimeEnv},
+    config::{AdminConfig, ProxyConfig},
     middleware::flash,
     session,
 };
@@ -400,12 +400,11 @@ async fn reports_list_labels_feed_report_types() {
 }
 
 #[tokio::test]
-async fn feed_report_detail_offers_ncmec_and_feed_moderation() {
+async fn feed_report_detail_offers_feed_moderation() {
     let app = setup(&["*"], false, "everyone").await;
     let (status, _, body) = get(&app, "/reports/1800000000000000003").await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert!(body.contains("Feed Post"), "{body}");
-    assert!(body.contains("ncmec-report-btn"), "{body}");
     assert!(body.contains(r#"href="/feed-moderation"#), "{body}");
 }
 
@@ -1411,8 +1410,7 @@ fn feed_report(report_id: &str, report_type: i32) -> Value {
                 "filename": "photo.png",
                 "url": "https://media.example.test/attachments/1700000000000000001/1700000000000000005/photo.png",
                 "content_type": "image/png",
-                "size": 1024,
-                "ncmec_status": "not_submitted"
+                "size": 1024
             }]
         }]
     })
@@ -1481,7 +1479,6 @@ fn instance_config(premium_mode: &str) -> Value {
 
 fn test_config(api_endpoint: String, self_hosted: bool) -> AdminConfig {
     AdminConfig {
-        env: RuntimeEnv::Test,
         host: "127.0.0.1".to_owned(),
         port: 0,
         secret_key_base: SECRET_KEY.to_owned(),
@@ -1489,6 +1486,7 @@ fn test_config(api_endpoint: String, self_hosted: bool) -> AdminConfig {
         api_endpoint,
         media_endpoint: "https://media.example.test".to_owned(),
         static_cdn_endpoint: "https://static.example.test".to_owned(),
+        reports_bucket_origin: "https://reports.example.test".to_owned(),
         admin_endpoint: "https://admin.example.test".to_owned(),
         web_app_endpoint: "https://app.example.test".to_owned(),
         oauth_client_id: "admin-client".to_owned(),

@@ -12,14 +12,14 @@ import {addGiftCodeDuration} from '@app/api/models/GiftCode';
 import type {User} from '@app/api/models/User';
 import type {PremiumLedgerRepository} from '@app/api/premium/ledger/PremiumLedgerRepository';
 import type {VisionaryRepository} from '@app/api/premium/visionary/VisionaryRepository';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
-import {BaseUserUpdatePropagator} from '@app/api/user/services/BaseUserUpdatePropagator';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {propagateIfPartialChanged} from '@app/api/user/services/PartialUserChangePropagation';
 import {
 	checkHasActivePaidPremium,
 	getEffectivePremiumUntil,
 	shouldStripExpiredPremium,
 } from '@app/api/user/UserHelpers';
+import {dispatchUserUpdate} from '@app/api/user/UserMappers';
 import {PremiumFlags, UserFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {ResourceLockedError} from '@fluxer/errors/src/domains/core/ResourceLockedError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
@@ -43,7 +43,7 @@ export interface PremiumLedgerState {
 
 interface PremiumLedgerServiceDeps {
 	repository: PremiumLedgerRepository;
-	userRepository: Pick<IUserRepository, 'findUnique' | 'patchUpsert'>;
+	userRepository: Pick<UserRepository, 'findUnique' | 'patchUpsert'>;
 	kvClient: IKVProvider;
 	workerService: IWorkerService;
 	gatewayService: IGatewayService;
@@ -100,14 +100,7 @@ export function lifetimePremiumPatch(user: User, slot: number): Partial<UserRow>
 }
 
 export class PremiumLedgerService {
-	private readonly propagator: BaseUserUpdatePropagator;
-
-	constructor(private readonly deps: PremiumLedgerServiceDeps) {
-		this.propagator = new BaseUserUpdatePropagator({
-			userCacheService: deps.userCacheService,
-			gatewayService: deps.gatewayService,
-		});
-	}
+	constructor(private readonly deps: PremiumLedgerServiceDeps) {}
 
 	async grant(p: PremiumGrant): Promise<{paidUntil: Date; newlyApplied: boolean}> {
 		if (!Number.isSafeInteger(p.duration.quantity) || p.duration.quantity <= 0) {
@@ -206,7 +199,7 @@ export class PremiumLedgerService {
 					{premium_gift_extension_ends_at: at, premium_grace_ends_at: at},
 					user.toRow(),
 				);
-				await this.propagator.dispatchUserUpdate(updatedUser);
+				await dispatchUserUpdate(this.deps.gatewayService, updatedUser);
 			}
 			if (ledgerCut || userCut) {
 				await this.trackExpiration(userId, at);
@@ -301,7 +294,7 @@ export class PremiumLedgerService {
 			updatedUser,
 			context,
 		);
-		await this.propagator.dispatchUserUpdate(updatedUser);
+		await dispatchUserUpdate(this.deps.gatewayService, updatedUser);
 		return updatedUser;
 	}
 

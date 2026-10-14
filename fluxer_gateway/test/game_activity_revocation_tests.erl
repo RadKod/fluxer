@@ -126,9 +126,10 @@ owner_and_manager_crash_before_persist_apply_test() ->
     with_rollout(fun assert_dual_crash_policy_recovery/0).
 
 assert_dual_crash_policy_recovery() ->
-    meck:new(presence_broadcast, [passthrough, no_link]),
+    %% Micup: upstream moved the initial subscription hook into presence_broadcast_subscriptions.
+    meck:new(presence_broadcast_subscriptions, [passthrough, no_link]),
     meck:expect(
-        presence_broadcast,
+        presence_broadcast_subscriptions,
         ensure_initial_global_subscriptions,
         fun(State) -> State end
     ),
@@ -142,7 +143,7 @@ assert_dual_crash_policy_recovery() ->
         stop_policy_actors(Owner, Manager),
         assert_replacement_policy(Ack)
     after
-        meck:unload(presence_broadcast)
+        meck:unload(presence_broadcast_subscriptions)
     end.
 
 assert_replacement_policy(Ack) ->

@@ -1,13 +1,23 @@
+// @vitest-environment happy-dom
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {RoomEventCallbacks, RoomEventDependencies} from '@app/features/voice/engine/VoiceRoomEventBinder';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
+vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor}));
+vi.mock('@lingui/react/macro', () => ({
+	Trans: ({children}: {children: unknown}) => children,
+	useLingui: () => ({i18n: {locale: 'en-US', _: (descriptor: {message: string}) => descriptor.message}}),
+}));
+
 const h = vi.hoisted(() => ({latestAttemptId: 1}));
 
 vi.mock('@app/features/notification/utils/SoundUtils', () => ({SoundType: {}}));
 vi.mock('@app/features/platform/utils/AppLogger', () => ({
-	Logger: class {
+	Logger: class Logger {
+		static create() {
+			return new Logger();
+		}
 		debug() {}
 		info() {}
 		warn() {}
@@ -25,6 +35,7 @@ vi.mock('@app/features/voice/engine/VoiceEffectiveAudioState', () => ({
 	getEffectiveAudioState: () => ({effectiveDeaf: false}),
 }));
 vi.mock('@app/features/voice/engine/VoiceIdleActivityBridge', () => ({noteLocalVoiceActivity: () => {}}));
+vi.mock('@app/features/voice/engine/mesh/VoiceMeshRoom', () => ({isVoiceMeshRoom: () => false}));
 vi.mock('@app/features/voice/engine/VoiceMediaGraphStore', () => ({voiceMediaGraphStore: {}}));
 vi.mock('@app/features/voice/engine/VoiceSelfJoinChime', () => ({
 	playSelfJoinChimeOnce: async () => false,
@@ -45,9 +56,11 @@ vi.mock('@app/features/voice/utils/ScreenShareCodecDiagnostics', () => ({
 	monitorScreenShareDecodeHealth: () => () => {},
 }));
 vi.mock('@app/features/voice/utils/VideoDecoderCapabilities', () => ({markScreenShareDecodeFailure: () => false}));
-vi.mock('livekit-client', () => {
+vi.mock('livekit-client', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('livekit-client')>();
 	const eventNames = new Proxy({}, {get: (_target, key) => String(key)});
 	return {
+		...actual,
 		ConnectionState: {Disconnected: 'disconnected', Connecting: 'connecting', Connected: 'connected'},
 		ParticipantEvent: eventNames,
 		RoomEvent: eventNames,

@@ -22,9 +22,7 @@ const APP_OWNERS = [
 	'features/voice/engine/voice_screen_share_manager/DeviceMediaCapture.ts',
 	'features/voice/engine/voice_screen_share_manager/DisplayMediaCapture.ts',
 	'features/voice/utils/InAppMediaSoundCapture.ts',
-	'features/voice/utils/LinuxScreenShareAudio.ts',
 	'features/voice/utils/VoiceDeviceManager.ts',
-	'features/voice/utils/native_screen_capture_bridge/createChromiumPreviewBridge.ts',
 ];
 
 const LIVEKIT_OWNERS = [

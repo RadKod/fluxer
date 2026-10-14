@@ -70,8 +70,9 @@ vi.mock('@app/features/voice/state/PopoutWindowManager', () => ({
 vi.mock('@app/features/voice_scene/video/RoomCameraStore', () => ({
 	default: {qualityOf: (identity: string) => env.planned.get(identity) ?? null},
 }));
-vi.mock('@app/features/voice/components/useVoiceCallAppFullscreen', () => ({
-	getVoiceCallFullscreenElement: () => fullscreen.element,
+vi.mock('@app/features/platform/utils/FullscreenMediaUtils', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@app/features/platform/utils/FullscreenMediaUtils')>()),
+	getFullscreenElement: () => fullscreen.element,
 }));
 vi.mock('@app/features/voice_scene/components/VoiceSceneTvPicker', () => ({
 	VoiceSceneTvPicker: ({sources}: {sources: Array<{kind: string; identity: string}>}) =>

@@ -91,7 +91,7 @@ vi.mock('@app/features/shop/components/ShopItemStage', () => ({
 vi.mock('@app/features/ui/focus_ring/FocusRing', () => ({
 	default: ({children}: {children: React.ReactNode}) => children,
 }));
-vi.mock('@app/features/app/components/dialogs/components/plutonium/PurchaseDisabledWrapper', () => ({
+vi.mock('@app/features/shop/components/PurchaseDisabledWrapper', () => ({
 	PurchaseDisabledWrapper: ({
 		disabled,
 		tooltipText,

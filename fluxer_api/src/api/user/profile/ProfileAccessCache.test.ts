@@ -2,9 +2,9 @@
 
 import {createUserID} from '@app/api/BrandedTypes';
 import {feedDayStart} from '@app/api/feed/FeedRepository';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {ProfileAccessCache, STRANGER_DAILY_CAP} from '@app/api/user/profile/ProfileAccessCache';
 import type {ProfileSide} from '@app/api/user/services/ProfileAccessService';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {beforeEach, describe, expect, it} from 'vitest';
 
 const side = (audience: ProfileSide['audience'], guildIds: Array<string> = ['7']): ProfileSide => ({

@@ -29,10 +29,12 @@ vi.mock('@app/features/platform/utils/AppLogger', () => ({
 		warn() {}
 	},
 }));
-vi.mock('@app/features/gateway/transport/GatewayConnection', () => ({
+vi.mock('@app/features/gateway/transport/GatewaySessionPool', () => ({
 	default: {
-		get isConnected() {
-			return state.connected;
+		foregroundConnection: {
+			get isConnected() {
+				return state.connected;
+			},
 		},
 	},
 }));

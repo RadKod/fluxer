@@ -4,12 +4,12 @@ import {spawnSync} from 'node:child_process';
 import {createServer} from 'node:net';
 import {type ChannelID, createChannelID, createUserID, type UserID} from '@app/api/BrandedTypes';
 import {startDockerContainer} from '@app/api/test/DockerTestContainer';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {registerVoiceSeatMockScripts} from '@app/api/voice_seat/tests/VoiceSeatMockScripts';
 import {VOICE_SEAT_CHANNEL_CHANGES_PER_WINDOW, VOICE_SEAT_HASH_TTL_S} from '@app/api/voice_seat/VoiceSeatLimits';
 import {VoiceSeatRepository, voiceSeatsKey} from '@app/api/voice_seat/VoiceSeatRepository';
 import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
 import {KVClient} from '@pkgs/kv_client/src/KVClient';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, beforeAll, beforeEach, describe, expect, it, onTestFinished, vi} from 'vitest';
 
 const dockerAvailable = spawnSync('docker', ['version'], {stdio: 'ignore'}).status === 0;

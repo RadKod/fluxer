@@ -14,7 +14,9 @@ const i18n = {_: (descriptor: {message: string}) => descriptor.message};
 
 vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor}));
 vi.mock('@lingui/react/macro', () => ({useLingui: () => ({i18n}), Trans: passThrough}));
-vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {localInstanceDomain: 'micup.test'}}));
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({
+	default: {localInstanceDomain: 'micup.test', getSnapshotOrNull: () => null},
+}));
 vi.mock('@app/features/app/utils/LimitResolverAdapter', () => ({LimitResolver: {}}));
 vi.mock('@app/features/auth/state/Authentication', () => ({default: {currentUserId: 'me'}}));
 vi.mock('@app/features/channel/components/ChannelUserTag', () => ({UserTag: () => null}));
@@ -29,7 +31,10 @@ vi.mock('@app/features/member/hooks/useMemberListCustomStatus', () => ({useMembe
 vi.mock('@app/features/member/hooks/useMemberListPresence', () => ({useMemberListPresence: () => 'online'}));
 const premium = vi.hoisted(() => ({open: vi.fn()}));
 vi.mock('@app/features/premium/commands/PremiumModalCommands', () => ({open: premium.open}));
-vi.mock('@app/features/premium/utils/PremiumUtils', () => ({shouldShowPremiumFeatures: () => true}));
+vi.mock('@app/features/premium/utils/PremiumUtils', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@app/features/premium/utils/PremiumUtils')>()),
+	shouldShowPremiumFeatures: () => true,
+}));
 vi.mock('@app/features/typing/state/TypingIndicator', () => ({default: {isMemberListTyping: () => false}}));
 vi.mock('@app/features/ui/action_menu/GroupDMContextMenu', () => ({GroupDMMemberContextMenu: () => null}));
 vi.mock('@app/features/ui/action_menu/GuildMemberContextMenu', () => ({GuildMemberContextMenu: () => null}));

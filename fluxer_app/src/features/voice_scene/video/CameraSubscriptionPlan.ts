@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {VideoQualityLevel} from '@app/features/voice/engine/v2/VoiceEngineV2AppSubscriptionAdapter';
+import type {VoiceMediaGraphVideoQuality} from '@app/features/voice/engine/VoiceMediaGraph';
 
 // per viewer at worst 4 × 360p + 5 × 180p ≈ 2.6 Mbit/s (+ 720p on the TV), whatever the room size.
 export const ROOM_CAMERA_MAX = 9; // TV included
@@ -14,7 +14,7 @@ export const ROOM_CAMERA_REPLAN_THROTTLE_MS = 500;
 // TEMPORARY: the caps above are compiled-in constants. Trigger: SFU node egress > 70 % or quality
 // complaints. Path: move them to VoiceRoomConfig + /experiments.
 
-export type RoomCameraQuality = VideoQualityLevel;
+export type RoomCameraQuality = VoiceMediaGraphVideoQuality;
 
 export interface CameraCandidate {
 	identity: string;

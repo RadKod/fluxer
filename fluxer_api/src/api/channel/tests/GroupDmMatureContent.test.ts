@@ -42,7 +42,8 @@ describe('group dm mature content', () => {
 	}
 
 	async function joinAsMinor(groupId: string, owner: TestAccount, status: number, code?: string) {
-		const minor = await createTestAccount(harness, {dateOfBirth: '2012-01-01'});
+		// Micup: accounts start at 15, so the minor is 16.
+		const minor = await createTestAccount(harness, {dateOfBirth: '2010-06-01'});
 		const invite = await createChannelInvite(harness, owner.token, groupId);
 		await createBuilder(harness, minor.token).post(`/invites/${invite.code}`).body({}).expect(status, code).execute();
 	}

@@ -88,7 +88,7 @@ describe('DSA user lookup by tag', () => {
 		expect(await reportedUserIdOf(result.report_id)).toBe(target.userId);
 	});
 
-	test('an instance without tags finds the user by bare username and by username#0000', async () => {
+	test('an instance without tags finds the user by bare username and by its tag', async () => {
 		const config = getConfig();
 		const originalSelfHosted = config.instance.selfHosted;
 		config.instance.selfHosted = true;
@@ -96,8 +96,8 @@ describe('DSA user lookup by tag', () => {
 			await getInstanceConfigRepository().setAccountIdentityMode(AccountIdentityModes.EMAIL, 'setup', TagStyles.NONE);
 			const target = await createTestAccount(harness);
 			const me = await readMe(harness, target.token);
-			expect(me.discriminator).toBe('0000');
-			for (const userTag of [me.username, `  ${me.username.toUpperCase()}  `, `${me.username}#0000`]) {
+			// Micup: a tagless instance keeps the allocated discriminator on new accounts, so the tag form uses it.
+			for (const userTag of [me.username, `  ${me.username.toUpperCase()}  `, `${me.username}#${me.discriminator}`]) {
 				const result = await submitUserReport(harness, await issueTicket(harness), userTag)
 					.expect(HTTP_STATUS.OK)
 					.execute();

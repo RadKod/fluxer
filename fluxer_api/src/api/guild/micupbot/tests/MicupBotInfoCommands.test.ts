@@ -83,7 +83,7 @@ it('disabled instance and community switches stop commands', async () => {
 	const f = await fixture();
 	const payload = await f.command(`#ban ${f.target.userId}`);
 	const guild = (await f.deps.guildRepository.findUnique(f.guildId))!;
-	await f.deps.guildRepository.upsert({...guild.toRow(), features: new Set()});
+	await f.deps.guildRepository.upsertPartial(guild.id, {features: new Set()});
 	await f.runner.run(payload);
 	expect(f.send).not.toHaveBeenCalled();
 	Config.instance.micupBotApplicationId = undefined;
@@ -115,8 +115,7 @@ it('the worker consumes no per-user bucket and claims delivery before reading Ca
 it('missing leaderboard queues one rebuild and returns the empty text', async () => {
 	const f = await fixture();
 	const guild = (await f.deps.guildRepository.findUnique(f.guildId))!;
-	await f.deps.guildRepository.upsert({
-		...guild.toRow(),
+	await f.deps.guildRepository.upsertPartial(guild.id, {
 		features: new Set([...guild.features, GuildFeatures.MICUPBOT_LEVELS]),
 	});
 	const jobs = vi.spyOn(f.deps.workerService, 'addJob');

@@ -4,7 +4,7 @@ import {useChannelHoverPreload} from '@app/features/app/hooks/useChannelHoverPre
 import {useHoverPreload} from '@app/features/app/hooks/useHoverPreload';
 import type {Channel} from '@app/features/channel/models/Channel';
 import Channels from '@app/features/channel/state/Channels';
-import GatewayConnection from '@app/features/gateway/transport/GatewayConnection';
+import GatewaySessions from '@app/features/gateway/transport/GatewaySessionPool';
 import type {Guild} from '@app/features/guild/models/Guild';
 import GuildCount from '@app/features/guild/state/GuildCount';
 import {filterViewableChannels} from '@app/features/messaging/utils/ChannelShared';
@@ -73,7 +73,7 @@ export function useGuildListItemPreload({
 		enabled: !guild.unavailable && !isSortingList,
 	});
 	const preloadCounts = useCallback(() => {
-		if (GatewayConnection.isConnected) GuildCount.requestCounts(guild.id, {force: false});
+		if (GatewaySessions.foregroundConnection.isConnected) GuildCount.requestCounts(guild.id, {force: false});
 	}, [guild.id]);
 	const {schedule: scheduleCounts, cancel: cancelCounts} = useHoverPreload(
 		'guild-count',

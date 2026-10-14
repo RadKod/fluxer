@@ -29,9 +29,8 @@ async function fixture() {
 		gateway,
 	});
 	const service = new UserAccountSettingsService({
-		userSettingsRepository: repository,
-		userAccountRepository: {findUnique: async () => account} as never,
-		userRelationshipRepository: {} as never,
+		// The account is a stub; settings reads and writes reach the real settings table.
+		userAccountRepository: Object.assign(Object.create(repository), {findUnique: async () => account}) as never,
 		updatePropagator: {dispatchUserSettingsUpdate: async () => {}} as never,
 		gatewayService: gateway,
 		userCacheService: {} as never,

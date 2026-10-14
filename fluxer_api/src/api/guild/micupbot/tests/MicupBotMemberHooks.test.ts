@@ -65,9 +65,11 @@ it('a temporary member gets no welcome and no goodbye', async () => {
 it('a join hook failure never fails the join', async () => {
 	const f = await fixture();
 	const warn = vi.spyOn(Logger.child({}), 'warn');
-	vi.spyOn(Registry, 'getWorkerService').mockImplementation(() => {
-		throw new Error('queue unavailable');
-	});
+	// Only the MicupBOT queue fails; the member write's own thread-membership job still queues.
+	f.jobs.mockImplementation((async (task: string) => {
+		if (task === 'handleMicupBotMemberEvent') throw new Error('queue unavailable');
+		return 0n;
+	}) as never);
 	await expect(f.rejoin()).resolves.toMatchObject({userId: f.userId});
 	expect(warn).toHaveBeenCalledWith(expect.objectContaining({error: expect.any(Error)}), expect.any(String));
 });
@@ -99,7 +101,7 @@ it('a pending goodbye lookup never delays member removal and removed false reads
 		}),
 	);
 	await expect(removeGuildMemberCounted(f.deps.guildRepository, f.guildId, f.userId)).resolves.toBe(true);
-	expect(f.jobs).not.toHaveBeenCalled();
+	expect(f.jobs.mock.calls.filter(([name]) => name === 'handleMicupBotMemberEvent')).toHaveLength(0);
 	resolve(original);
 	await drainMemberHooks();
 	expect(f.jobs).toHaveBeenCalledWith(

@@ -7,7 +7,6 @@ import {Config} from '@app/api/Config';
 import type {AttachmentUploadTraceRepository} from '@app/api/channel/repositories/message/AttachmentUploadTraceRepository';
 import {
 	assertAttachmentFileSizesWithinLimit,
-	getContentType,
 	makeAttachmentCdnKey,
 	makeAttachmentCdnUrl,
 	validateAttachmentIds,
@@ -40,6 +39,7 @@ import type {
 	PresignedAttachmentUploadResponseItem,
 } from '@fluxer/schema/src/domains/message/AttachmentUploadSchemas';
 import type {MessageAttachmentResponse} from '@fluxer/schema/src/domains/message/MessageResponseSchemas';
+import {getContentTypeFromFilename} from '@pkgs/mime_utils/src/ContentTypeUtils';
 import type {IVirusScanService} from '@pkgs/virus_scan/src/IVirusScanService';
 import {temporaryFile} from 'tempy';
 
@@ -102,7 +102,7 @@ export class FeedMediaService {
 			attachments.map(({filename}) => filename),
 		);
 		attachments.forEach((attachment, index) => {
-			if (!FEED_MEDIA_TYPES.has(getContentType(attachment.filename))) {
+			if (!FEED_MEDIA_TYPES.has(getContentTypeFromFilename(attachment.filename))) {
 				throw InputValidationError.fromCode(
 					`attachments.${index}.filename`,
 					ValidationErrorCodes.ATTACHMENT_MUST_BE_IMAGE,
@@ -120,7 +120,7 @@ export class FeedMediaService {
 		return Promise.all(
 			attachments.map(async (attachment) => {
 				const uploadKey = crypto.randomUUID();
-				const contentType = getContentType(attachment.filename);
+				const contentType = getContentTypeFromFilename(attachment.filename);
 				await attachmentUploadTraceRepository.recordRequestedUpload({
 					uploadKey,
 					userId: user.id,
@@ -254,7 +254,7 @@ export class FeedMediaService {
 		const field = `attachments.${index}.upload_filename`;
 		const channelId = userIdToChannelId(user.id);
 		// The name becomes the last segment of the CDN key, so it has to read as an image as well.
-		if (!FEED_MEDIA_TYPES.has(getContentType(attachment.filename))) {
+		if (!FEED_MEDIA_TYPES.has(getContentTypeFromFilename(attachment.filename))) {
 			throw InputValidationError.fromCode(
 				`attachments.${index}.filename`,
 				ValidationErrorCodes.ATTACHMENT_MUST_BE_IMAGE,
@@ -369,7 +369,7 @@ export class FeedMediaService {
 	// 1 the image check refuses it with 400, like every other name that is not an image.
 	private refuseLegacyVideo(user: User, filenames: ReadonlyArray<string>): void {
 		if (
-			filenames.some((filename) => LEGACY_VIDEO_TYPES.has(getContentType(filename))) &&
+			filenames.some((filename) => LEGACY_VIDEO_TYPES.has(getContentTypeFromFilename(filename))) &&
 			this.limit(user, 'feature_feed_video', 0) === 0
 		) {
 			throw new FeatureTemporarilyDisabledError();

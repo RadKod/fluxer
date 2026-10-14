@@ -27,11 +27,11 @@ describe('Guild channel limit scope', () => {
 		guildId = (await createGuild(harness, owner.token, 'Channel limits')).id;
 		// The test gateway has no channel counter; derive it from persisted channels.
 		vi.spyOn(NoopGatewayService.prototype, 'getChannelCount').mockImplementation(async ({guildId}) => {
-			return (await getChannelRepository().listGuildChannels(guildId, 'complete')).length;
+			return (await getChannelRepository().channelData.listGuildChannels(guildId, 'complete')).length;
 		});
 		vi.spyOn(NoopGatewayService.prototype, 'getCategoryChannelCount').mockImplementation(
 			async ({guildId, categoryId}) => {
-				return (await getChannelRepository().listGuildChannels(guildId, 'complete')).filter(
+				return (await getChannelRepository().channelData.listGuildChannels(guildId, 'complete')).filter(
 					(channel) => channel.parentId === categoryId,
 				).length;
 			},
@@ -68,7 +68,7 @@ describe('Guild channel limit scope', () => {
 	}
 
 	async function seedChannels(count: number, targetGuildId = guildId): Promise<void> {
-		const repository = getChannelRepository();
+		const repository = getChannelRepository().channelData;
 		const channels = await repository.listGuildChannels(createGuildID(BigInt(targetGuildId)), 'complete');
 		const row = channels[0].toRow();
 		for (let index = channels.length; index < count; index++) {
@@ -95,9 +95,9 @@ describe('Guild channel limit scope', () => {
 		await seedChannels(500);
 		const channel = await createChannel(harness, owner.token, guildId, 'channel-501');
 		expect(channel.guild_id).toBe(guildId);
-		expect(await getChannelRepository().listGuildChannels(createGuildID(BigInt(guildId)), 'complete')).toHaveLength(
-			501,
-		);
+		expect(
+			await getChannelRepository().channelData.listGuildChannels(createGuildID(BigInt(guildId)), 'complete'),
+		).toHaveLength(501);
 	});
 
 	test('foreign_guild_does_not_inherit_limit', async () => {
@@ -107,7 +107,7 @@ describe('Guild channel limit scope', () => {
 		await seedChannels(500, foreignGuild.id);
 		await expectLimitRejected(foreignGuild.id);
 		expect(
-			await getChannelRepository().listGuildChannels(createGuildID(BigInt(foreignGuild.id)), 'complete'),
+			await getChannelRepository().channelData.listGuildChannels(createGuildID(BigInt(foreignGuild.id)), 'complete'),
 		).toHaveLength(500);
 	});
 
@@ -117,9 +117,9 @@ describe('Guild channel limit scope', () => {
 		await seedChannels(limit - 1);
 		await createChannel(harness, owner.token, guildId, 'last-channel');
 		await expectLimitRejected();
-		expect(await getChannelRepository().listGuildChannels(createGuildID(BigInt(guildId)), 'complete')).toHaveLength(
-			limit,
-		);
+		expect(
+			await getChannelRepository().channelData.listGuildChannels(createGuildID(BigInt(guildId)), 'complete'),
+		).toHaveLength(limit);
 	});
 
 	test('higher_admin_limit_survives_lower_feature_override', async () => {
@@ -128,16 +128,16 @@ describe('Guild channel limit scope', () => {
 		await seedChannels(899);
 		await createChannel(harness, owner.token, guildId, 'last-admin-channel');
 		await expectLimitRejected();
-		expect(await getChannelRepository().listGuildChannels(createGuildID(BigInt(guildId)), 'complete')).toHaveLength(
-			900,
-		);
+		expect(
+			await getChannelRepository().channelData.listGuildChannels(createGuildID(BigInt(guildId)), 'complete'),
+		).toHaveLength(900);
 	});
 
 	test('category_limit_is_unchanged', async () => {
 		setOperatorLimit(600);
 		await setFeatures([GuildFeatures.MORE_EMOJI]);
 		const category = await createChannel(harness, owner.token, guildId, 'Category', ChannelTypes.GUILD_CATEGORY);
-		const repository = getChannelRepository();
+		const repository = getChannelRepository().channelData;
 		const [template] = await repository.listGuildChannels(createGuildID(BigInt(guildId)), 'complete');
 		for (let index = 0; index < MAX_CHANNELS_PER_CATEGORY - 1; index++) {
 			await repository.upsert({
@@ -171,7 +171,7 @@ describe('Guild channel limit scope', () => {
 		});
 		await setFeatures([GuildFeatures.MORE_EMOJI]);
 		const category = await createChannel(harness, owner.token, guildId, 'Category', ChannelTypes.GUILD_CATEGORY);
-		const repository = getChannelRepository();
+		const repository = getChannelRepository().channelData;
 		const [template] = await repository.listGuildChannels(createGuildID(BigInt(guildId)), 'complete');
 		for (let index = 0; index < MAX_CHANNELS_PER_CATEGORY; index++) {
 			await repository.upsert({
@@ -200,16 +200,16 @@ describe('Guild channel limit scope', () => {
 			.body({name: 'unauthorized', type: ChannelTypes.GUILD_TEXT})
 			.expect(403, APIErrorCodes.MISSING_PERMISSIONS)
 			.execute();
-		expect(await getChannelRepository().listGuildChannels(createGuildID(BigInt(guildId)), 'complete')).toHaveLength(
-			500,
-		);
+		expect(
+			await getChannelRepository().channelData.listGuildChannels(createGuildID(BigInt(guildId)), 'complete'),
+		).toHaveLength(500);
 	});
 
 	test('downgrade_keeps_existing_channels', async () => {
 		setOperatorLimit(750);
 		await setFeatures([GuildFeatures.MORE_EMOJI]);
 		await seedChannels(750);
-		const repository = getChannelRepository();
+		const repository = getChannelRepository().channelData;
 		const before = await repository.listGuildChannels(createGuildID(BigInt(guildId)), 'complete');
 		await setFeatures([], [GuildFeatures.MORE_EMOJI]);
 		await expectLimitRejected();
@@ -227,7 +227,7 @@ describe('Guild channel limit scope', () => {
 		});
 		let reads = 0;
 		vi.spyOn(NoopGatewayService.prototype, 'getChannelCount').mockImplementation(async ({guildId}) => {
-			const count = (await getChannelRepository().listGuildChannels(guildId, 'complete')).length;
+			const count = (await getChannelRepository().channelData.listGuildChannels(guildId, 'complete')).length;
 			if (++reads === 2) releaseCounts();
 			await bothCountsRead;
 			return count;
@@ -238,8 +238,8 @@ describe('Guild channel limit scope', () => {
 			createChannel(harness, owner.token, guildId, 'concurrent-two'),
 		]);
 		expect(results[0].id).not.toBe(results[1].id);
-		expect(await getChannelRepository().listGuildChannels(createGuildID(BigInt(guildId)), 'complete')).toHaveLength(
-			601,
-		);
+		expect(
+			await getChannelRepository().channelData.listGuildChannels(createGuildID(BigInt(guildId)), 'complete'),
+		).toHaveLength(601);
 	});
 });

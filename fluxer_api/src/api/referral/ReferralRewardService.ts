@@ -40,7 +40,7 @@ import {
 } from '@app/api/referral/ReferralRules';
 import type {IRegistrationEventsRepository} from '@app/api/risk/adapters/VelocityAdapter';
 import {isMicupAccountLimited} from '@app/api/user/AccountLimit';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import {MS_PER_DAY, SECONDS_PER_DAY} from '@fluxer/date_utils/src/DateConstants';
@@ -54,7 +54,7 @@ export interface ReferralRewardServiceDeps {
 	instanceConfigRepository: InstanceConfigRepository;
 	kvCounterService: KVCounterService;
 	kvClient: IKVProvider;
-	userRepository: IUserRepository;
+	userRepository: UserRepository;
 	registrationEventsRepository: IRegistrationEventsRepository;
 	cosmeticService: CosmeticService;
 	premiumLedgerService: PremiumLedgerService;

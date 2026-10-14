@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {GuildID, UserID} from '@app/api/BrandedTypes';
-import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import {rosterBotUserId} from '@app/api/guild/roster/GuildRosterBot';
 
 // The configured first-party bots may write message buttons (Roster; MicupBOT later).
@@ -18,7 +18,7 @@ const MEMBERSHIP_MAX_ENTRIES = 50_000;
 const membership = new Map<string, {value: boolean; expiresAt: number}>();
 
 export async function isOfficialBotInGuild(
-	guildRepository: Pick<IGuildRepositoryAggregate, 'getMember'>,
+	guildRepository: Pick<GuildRepository, 'getMember'>,
 	botId: UserID,
 	guildId: GuildID,
 ): Promise<boolean> {

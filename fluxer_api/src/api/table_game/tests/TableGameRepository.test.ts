@@ -5,10 +5,10 @@ import {createServer} from 'node:net';
 import {type TableEnvelope, TableGameRepository, tableGameTimerShard} from '@app/api/table_game/TableGameRepository';
 import {registerTableGameMockScripts} from '@app/api/table_game/tests/TableGameMockScripts';
 import {startDockerContainer} from '@app/api/test/DockerTestContainer';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {TABLE_GAME_SPECTATOR_LIMIT, TABLE_GAME_TIMER_SHARDS} from '@fluxer/constants/src/TableGameConstants';
 import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
 import {KVClient} from '@pkgs/kv_client/src/KVClient';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
 
 registerTableGameMockScripts();

@@ -66,7 +66,7 @@
 	},
 	"inactivity_warning": {
 		"subject": "{product_name} hesabın hareketsizlik nedeniyle silinecek",
-		"body": "Merhaba {username},\n\n{lastActiveDate, date, full} tarihinden beri {product_name} hesabında herhangi bir etkinlik görmedik.\n\n{deletionDate, date, full} {deletionDate, time, short} tarihine kadar giriş yapmazsan, hesabın hareketsizlik nedeniyle kalıcı olarak silinecektir.\n\nBuradan giriş yap:\n{loginUrl}\n\n{product_name}'i yakın zamanda kullandıysan, lütfen hemen destek ekibimizle iletişime geç.\n\n– {product_name} Ekibi",
+		"body": "Merhaba {username},\n\n{lastActiveDate, date, full} tarihinden beri {product_name} hesabında herhangi bir etkinlik görmedik.\n\n{deletionDate, date, full} {deletionDate, time, short} tarihine kadar giriş yapmazsan, hesabın hareketsizlik nedeniyle kalıcı olarak silinecektir.\n\nBuradan giriş yap:\n{loginUrl}\n\n{support_email, select, null {{product_name}'i yakın zamanda kullandıysan, lütfen hemen bu kurulumun yöneticileriyle iletişime geç.} other {{product_name}'i yakın zamanda kullandıysan, lütfen hemen destek ekibimizle iletişime geç.}}\n\n– {product_name} Ekibi",
 		"button": "Giriş yap"
 	},
 	"ip_authorization": {
@@ -93,7 +93,7 @@
 	},
 	"report_resolved": {
 		"subject": "{product_name} raporun incelendi",
-		"body": "Merhaba {username},\n\nRaporun (Kimlik: {reportId}) Güvenlik Ekibimiz tarafından incelendi.{hasComment, select, yes {\n\nGüvenlik Ekibinin yanıtı:\n{publicComment}} other {}}\n\n{product_name}'i herkes için güvenli tutmaya yardımcı olduğun için teşekkür ederiz. Tüm raporları ciddiye alıyoruz ve topluluğa katkını takdir ediyoruz.\n\nBu sonuç hakkında herhangi bir sorun veya endişen varsa, lütfen {safety_email} adresine ulaş.\n\n– {product_name} Güvenlik Ekibi"
+		"body": "Merhaba {username},\n\nRaporun (Kimlik: {reportId}) Güvenlik Ekibimiz tarafından incelendi.{hasComment, select, yes {\n\nGüvenlik Ekibinin yanıtı:\n{publicComment}} other {}}\n\n{product_name}'i herkes için güvenli tutmaya yardımcı olduğun için teşekkür ederiz. Tüm raporları ciddiye alıyoruz ve topluluğa katkını takdir ediyoruz.\n\n{safety_email, select, null {Bu sonuç hakkında herhangi bir sorun veya endişen varsa, lütfen bu kurulumun yöneticileriyle iletişime geç.} other {Bu sonuç hakkında herhangi bir sorun veya endişen varsa, lütfen {safety_email} adresine ulaş.}}\n\n– {product_name} Güvenlik Ekibi"
 	},
 	"scheduled_deletion_notification": {
 		"subject": "{product_name} hesabın kalıcı olarak silinecek",

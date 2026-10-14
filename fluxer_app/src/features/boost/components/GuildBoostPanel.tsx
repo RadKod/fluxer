@@ -63,7 +63,7 @@ export const GuildBoostPanel = observer(({guildId}: {guildId: string}) => {
 	const levels = getGuildBoostLevelPerks(RuntimeConfig.limits);
 	const {status, ready, failed} = GuildBoosts;
 	const goal = status?.next?.boosts ?? levels[levels.length - 1].boosts;
-	const slots = Limits.getPremiumValue('max_boost_slots', DEFAULT_STOCK_LIMITS.max_boost_slots);
+	const slots = Limits.getStockValue('max_boost_slots', DEFAULT_STOCK_LIMITS.max_boost_slots);
 	return (
 		<Modal.Root size="medium" centered data-flx="boost.panel.modal-root">
 			<Modal.Header title={i18n._(PERKS_DESCRIPTOR)} icon={<BoostGemIcon size={24} />} data-flx="boost.panel.header" />

@@ -16,6 +16,11 @@
     get_members_cursor/2
 ]).
 
+-ifdef(TEST).
+%% Micup: username identity writer tests hydrate member list items directly.
+-export([hydrate_engine_items/2]).
+-endif.
+
 -type guild_state() :: map().
 -type list_id() :: binary().
 -type range() :: {non_neg_integer(), non_neg_integer()}.
@@ -562,6 +567,11 @@ offline_hidden(StoreGroups) ->
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+
+-spec hydrate_engine_items([store_item()], guild_state()) -> [list_item()].
+hydrate_engine_items(StoreItems, State) ->
+    Groups = [{Id, Count} || {group, Id, Count} <- StoreItems],
+    hydrate_engine_items(<<"0">>, StoreItems, Groups, State).
 
 group_visible_is_threshold_based_test() ->
     Threshold = guild_member_list_offline:threshold(),

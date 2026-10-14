@@ -3,8 +3,8 @@ import type {UserID} from '@app/api/BrandedTypes';
 import {getGatewayService} from '@app/api/middleware/ServiceRegistry';
 import {getDiscriminatorService, getUserCacheService, getUserRepository} from '@app/api/middleware/ServiceSingletons';
 import type {User} from '@app/api/models/User';
-import {BaseUserUpdatePropagator} from '@app/api/user/services/BaseUserUpdatePropagator';
 import {propagatePartialUserChange} from '@app/api/user/services/PartialUserChangePropagation';
+import {dispatchUserUpdate} from '@app/api/user/UserMappers';
 import {
 	UsernameOwnershipService,
 	UsernameOwnershipUnavailableError,
@@ -45,11 +45,7 @@ export function createUsernameOwnershipRuntime(deps: {
 			propagateUsernameOwnership(
 				{
 					readUser: (id) => getUserRepository().findUnique(id),
-					dispatchUserUpdate: (user) =>
-						new BaseUserUpdatePropagator({
-							userCacheService: getUserCacheService(),
-							gatewayService: getGatewayService(),
-						}).dispatchUserUpdate(user),
+					dispatchUserUpdate: (user) => dispatchUserUpdate(getGatewayService(), user),
 					propagatePartialUserChange: (user) =>
 						propagatePartialUserChange({userCacheService: getUserCacheService(), usernameOwnership: true}, user),
 					enqueue: (id, generation) => enqueueUsernameReindex(deps.worker, id, generation),

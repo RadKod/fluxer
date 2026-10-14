@@ -25,16 +25,15 @@ import type {VisionaryService} from '@app/api/premium/visionary/VisionaryService
 import type {ShopCatalogService} from '@app/api/shop/ShopCatalogService';
 import {type ShopOrderRepository, shopOrderCheckShard, shopOrderCheckSlot} from '@app/api/shop/ShopOrderRepository';
 import {describeShopOrder, formatRateMicro, parseShopSku} from '@app/api/shop/ShopPricing';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
-import {NotFoundError as ItemNotFoundError} from '@fluxer/errors/src/domains/core/NotFoundError';
+import {NotFoundError} from '@fluxer/errors/src/domains/core/NotFoundError';
 import {ResourceLockedError} from '@fluxer/errors/src/domains/core/ResourceLockedError';
 import {ShopBusyError} from '@fluxer/errors/src/domains/payment/ShopBusyError';
 import {ShopTooManyOpenOrdersError} from '@fluxer/errors/src/domains/payment/ShopTooManyOpenOrdersError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
 import {FluxerError} from '@fluxer/errors/src/FluxerError';
-import {NotFoundError} from '@fluxer/errors/src/HttpErrors';
 import type {EquipCosmeticsRequest} from '@fluxer/schema/src/domains/cosmetics/CosmeticRequestSchemas';
 import type {ShopAdminOrderResponse} from '@fluxer/schema/src/domains/shop/ShopAdminSchemas';
 import type {ShopOrderResponse} from '@fluxer/schema/src/domains/shop/ShopResponseSchemas';
@@ -49,7 +48,7 @@ export interface ShopOrderServiceDeps {
 	cosmeticService: CosmeticService;
 	premiumLedgerService: PremiumLedgerService;
 	visionaryService: VisionaryService;
-	userRepository: Pick<IUserRepository, 'findUnique'>;
+	userRepository: Pick<UserRepository, 'findUnique'>;
 	kvClient: IKVProvider;
 	workerService: IWorkerService<WorkerTaskName>;
 	snowflakeService: ISnowflakeService;
@@ -258,13 +257,13 @@ export class ShopOrderService {
 	// Another account's order answers like an unknown one.
 	async getOrderForUser(userId: UserID, orderId: bigint): Promise<ShopOrderRow> {
 		const row = await this.deps.orderRepository.find(orderId);
-		if (!row || row.user_id !== userId) throw new NotFoundError();
+		if (!row || row.user_id !== userId) throw new NotFoundError({code: APIErrorCodes.NOT_FOUND});
 		return row;
 	}
 
 	async getOrderForAdmin(orderId: bigint): Promise<ShopOrderRow> {
 		const row = await this.deps.orderRepository.find(orderId);
-		if (!row) throw new NotFoundError();
+		if (!row) throw new NotFoundError({code: APIErrorCodes.NOT_FOUND});
 		return row;
 	}
 
@@ -613,7 +612,7 @@ export class ShopOrderService {
 				.deliverOwned(order.user_id, itemId, `payriff:${orderId}:${itemId}`, 'payriff', {wear: false})
 				.catch((error: unknown) => {
 					// Only the missing item; a deleted account (UnknownUserError is a NotFoundError too) fails the order.
-					if (!(error instanceof ItemNotFoundError) || error.code !== APIErrorCodes.NOT_FOUND) throw error;
+					if (!(error instanceof NotFoundError) || error.code !== APIErrorCodes.NOT_FOUND) throw error;
 					Logger.warn({orderId, itemId: `${itemId}`}, 'Bundle item is gone; skipped, refund it by hand');
 					return 'skipped' as const;
 				});

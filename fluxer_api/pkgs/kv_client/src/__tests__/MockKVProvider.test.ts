@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {MockKVProvider, registerMockKVScript} from '@app/api/test/mocks/MockKVProvider';
+import {MockKVProvider, registerMockKVScript} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {describe, expect, it} from 'vitest';
 
 describe('MockKVProvider scripts', () => {

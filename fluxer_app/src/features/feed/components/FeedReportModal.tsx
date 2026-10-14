@@ -1,24 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import * as Modal from '@app/features/app/components/dialogs/Modal';
+import styles from '@app/features/feed/components/FeedReportModal.module.css';
+import {
+	type FeedReportCategoryId,
+	type FeedReportReasonId,
+	type FeedReportStep,
+	getFeedReportCategory,
+	getFeedReportCategoryOptions,
+	getFeedReportCategoryTitle,
+	getFeedReportChildSafetyNote,
+	getFeedReportModalDescription,
+	getFeedReportReasonOptions,
+	getFeedReportReasonTitle,
+	getFeedReportSafetyNote,
+	getFeedReportSuccessCopy,
+} from '@app/features/feed/utils/FeedReportCopy';
 import {CANCEL_DESCRIPTOR, CONTINUE_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
-import {
-	getReportCategoryForReason,
-	type IARRuleCategoryId,
-	type IARRuleReasonId,
-} from '@app/features/moderation/components/report_modal/IARFlowUtils';
-import styles from '@app/features/moderation/components/report_modal/IARModal.module.css';
-import {
-	getIARCategoryTitle,
-	getIARChildSafetyRoutingNote,
-	getIARModalDescription,
-	getIARReasonTitle,
-	getIARRuleCategoryOptions,
-	getIARRuleReasonOptions,
-	getIARSpecialSafetyNote,
-	getIARSuccessCopy,
-} from '@app/features/moderation/components/report_modal/IARModalCopy';
-import type {IARStep} from '@app/features/moderation/components/report_modal/IARModalTypes';
 import {canSubmitReport, showReportRestrictionDialog} from '@app/features/moderation/utils/ReportVerificationGate';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {Button} from '@app/features/ui/button/Button';
@@ -49,7 +47,7 @@ const COULDN_T_SEND_DESCRIPTOR = msg({
 });
 
 const logger = new Logger('FeedReportModal');
-const STEP_ORDER: ReadonlyArray<IARStep> = ['category', 'reason', 'success'];
+const STEP_ORDER: ReadonlyArray<FeedReportStep> = ['category', 'reason', 'success'];
 
 interface FeedReportModalProps {
 	title: string;
@@ -60,9 +58,9 @@ interface FeedReportModalProps {
 // as a message report, sent to POST /reports/feed-post or /reports/feed-comment with the message category mapping.
 export const FeedReportModal = observer(({title, onSubmit}: FeedReportModalProps) => {
 	const {i18n} = useLingui();
-	const [step, setStep] = useState<IARStep>('category');
-	const [category, setCategory] = useState<IARRuleCategoryId | null>(null);
-	const [reason, setReason] = useState<IARRuleReasonId | null>(null);
+	const [step, setStep] = useState<FeedReportStep>('category');
+	const [category, setCategory] = useState<FeedReportCategoryId | null>(null);
+	const [reason, setReason] = useState<FeedReportReasonId | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 	const handleContinue = () => {
 		if (!canSubmitReport()) {
@@ -80,7 +78,7 @@ export const FeedReportModal = observer(({title, onSubmit}: FeedReportModalProps
 		}
 		setSubmitting(true);
 		try {
-			await onSubmit(getReportCategoryForReason('message', reason));
+			await onSubmit(getFeedReportCategory(reason));
 			setStep('success');
 		} catch (error) {
 			logger.error('Failed to submit feed report:', error);
@@ -97,22 +95,22 @@ export const FeedReportModal = observer(({title, onSubmit}: FeedReportModalProps
 		}
 		ModalCommands.pop();
 	};
-	const childSafetyNote = getIARChildSafetyRoutingNote(i18n, 'message', reason);
-	const safetyNote = step === 'reason' ? getIARSpecialSafetyNote(i18n, reason) : null;
-	const successCopy = getIARSuccessCopy(i18n);
+	const childSafetyNote = getFeedReportChildSafetyNote(i18n, reason);
+	const safetyNote = step === 'reason' ? getFeedReportSafetyNote(i18n, reason) : null;
+	const successCopy = getFeedReportSuccessCopy(i18n);
 	const renderStep = () => {
 		switch (step) {
 			case 'category':
 				return (
 					<div className={styles.step} data-flx="feed.feed-report-modal.category-step">
 						<h2 className={styles.stepTitle} data-flx="feed.feed-report-modal.category-step-title">
-							{getIARCategoryTitle(i18n)}
+							{getFeedReportCategoryTitle(i18n)}
 						</h2>
-						<RadioGroup<IARRuleCategoryId>
-							options={getIARRuleCategoryOptions(i18n)}
+						<RadioGroup<FeedReportCategoryId>
+							options={getFeedReportCategoryOptions(i18n)}
 							value={category}
 							onChange={setCategory}
-							aria-label={getIARCategoryTitle(i18n)}
+							aria-label={getFeedReportCategoryTitle(i18n)}
 							data-flx="feed.feed-report-modal.radio-group.set-category"
 						/>
 					</div>
@@ -121,13 +119,13 @@ export const FeedReportModal = observer(({title, onSubmit}: FeedReportModalProps
 				return (
 					<div className={styles.step} data-flx="feed.feed-report-modal.reason-step">
 						<h2 className={styles.stepTitle} data-flx="feed.feed-report-modal.reason-step-title">
-							{getIARReasonTitle(i18n)}
+							{getFeedReportReasonTitle(i18n)}
 						</h2>
-						<RadioGroup<IARRuleReasonId>
-							options={getIARRuleReasonOptions(i18n, 'message', category)}
+						<RadioGroup<FeedReportReasonId>
+							options={getFeedReportReasonOptions(i18n, category)}
 							value={reason}
 							onChange={setReason}
-							aria-label={getIARReasonTitle(i18n)}
+							aria-label={getFeedReportReasonTitle(i18n)}
 							data-flx="feed.feed-report-modal.radio-group.set-reason"
 						/>
 						{childSafetyNote !== null && (
@@ -161,7 +159,7 @@ export const FeedReportModal = observer(({title, onSubmit}: FeedReportModalProps
 			<Modal.Content data-flx="feed.feed-report-modal.modal-content">
 				<Modal.ContentLayout data-flx="feed.feed-report-modal.modal-content-layout">
 					<Modal.ScreenReaderLabel
-						text={getIARModalDescription(i18n)}
+						text={getFeedReportModalDescription(i18n)}
 						data-flx="feed.feed-report-modal.modal-screen-reader-label"
 					/>
 					<SteppedCarousel step={step} steps={STEP_ORDER} data-flx="feed.feed-report-modal.stepped-carousel">

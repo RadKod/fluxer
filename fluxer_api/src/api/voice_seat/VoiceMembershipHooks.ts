@@ -129,6 +129,6 @@ export function createVoiceMembershipHooks(
 export const VoiceMembershipHooks = createVoiceMembershipHooks({
 	voiceSeatService: () => getVoiceSeatService(),
 	tableGameService: () => getTableGameService(),
-	channelRepository: () => getChannelRepository(),
+	channelRepository: () => getChannelRepository().channelData,
 	instanceConfigRepository: () => getInstanceConfigRepository(),
 });

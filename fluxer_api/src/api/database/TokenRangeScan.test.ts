@@ -12,8 +12,8 @@ import {
 } from '@app/api/database/TokenRangeScan';
 import {EMPTY_USER_ROW} from '@app/api/database/types/UserTypes';
 import {Users} from '@app/api/Tables';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {UserDataRepository} from '@app/api/user/repositories/account/crud/UserDataRepository';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {describe, expect, it, vi} from 'vitest';
 
 const RING_SIZE = 2n ** 64n;

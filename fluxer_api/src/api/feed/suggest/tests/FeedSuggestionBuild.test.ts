@@ -9,7 +9,7 @@ import {FOLLOWER_COUNT_COUNTER} from '@app/api/follow/FollowCounters';
 import {FollowRepository} from '@app/api/follow/FollowRepository';
 import {counterPartition} from '@app/api/infrastructure/KVCounterService';
 import {Logger} from '@app/api/Logger';
-import {getInjectedSearchProvider, getKVClient} from '@app/api/middleware/ServiceRegistry';
+import {getKVClient} from '@app/api/middleware/ServiceRegistry';
 import {
 	getFeedSuggestionService,
 	getFollowRepository,
@@ -24,6 +24,7 @@ import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHa
 import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {NoopGatewayService} from '@app/api/test/NoopGatewayService';
 import {NoopWorkerService} from '@app/api/test/NoopWorkerService';
+import {InMemorySearchProvider} from '@app/api/test/search/InMemorySearchProvider';
 import {onUserBanned} from '@app/api/user/lifecycle/UserLifecycleHooks';
 import {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {mapUserToPartialResponse} from '@app/api/user/UserMappers';
@@ -504,7 +505,7 @@ describe('feed suggestion build', () => {
 		expect((await snapshot()).guilds).toEqual([]);
 		expect(await poolIds()).toEqual(ids(person));
 
-		vi.spyOn(getInjectedSearchProvider()!, 'getGuildSearchService').mockReturnValue(null);
+		vi.spyOn(InMemorySearchProvider.prototype, 'getGuildSearchService').mockReturnValue(null as never);
 		await build();
 		expect((await snapshot()).guilds).toEqual([]);
 		expect(await poolIds()).toEqual(ids(person));

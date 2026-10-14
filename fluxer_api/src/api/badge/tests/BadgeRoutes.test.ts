@@ -5,7 +5,7 @@ import {createTestAccount, setUserACLs, type TestAccount} from '@app/api/auth/te
 import {createUserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
 import {createFriendship} from '@app/api/channel/tests/ChannelTestUtils';
-import {getGifDataUrl, getPngDataUrl, getSvgDataUrl} from '@app/api/emoji/tests/EmojiTestUtils';
+import {getGifDataUrl, getPngDataUrl} from '@app/api/emoji/tests/EmojiTestUtils';
 import {acceptInvite, createChannelInvite, createGuild, getChannel} from '@app/api/guild/tests/GuildTestUtils';
 import {getBadgeRepository} from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
@@ -26,7 +26,9 @@ interface ValidationErrorResponse {
 	errors?: Array<{path?: string; code?: string}>;
 }
 
-const SVG_BASE64 = getSvgDataUrl().split(',')[1]!;
+const SVG_BASE64 = Buffer.from(
+	'<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="24" fill="#5865f2"/><circle cx="64" cy="64" r="32" fill="#ffffff"/></svg>',
+).toString('base64');
 
 const BADGE_ENDPOINTS = [
 	['get', '/admin/badges', null],
@@ -153,7 +155,7 @@ describe('badge admin routes and profile badges', () => {
 	});
 
 	it.each([
-		['an SVG icon', getSvgDataUrl()],
+		['an SVG icon', `data:image/svg+xml;base64,${SVG_BASE64}`],
 		['SVG bytes sent as a PNG data URL', getPngDataUrl(SVG_BASE64)],
 		['a GIF icon', getGifDataUrl()],
 	])('rejects %s by its bytes and stores nothing', async (_label, icon) => {

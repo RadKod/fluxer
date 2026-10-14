@@ -3,8 +3,8 @@
 import {setCassandraQueryExecutorForTesting} from '@app/api/database/CassandraQueryExecution';
 import {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {VOICE_ROOM_THEME_IDS} from '@fluxer/constants/src/VoiceRoomThemes';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
 const VOICE_ROOM_CONFIG_KEY = 'voice_room_config';

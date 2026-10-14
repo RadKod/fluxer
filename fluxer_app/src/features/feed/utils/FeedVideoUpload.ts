@@ -205,8 +205,6 @@ export async function uploadFeedVideo(
 	const backoff = new ExponentialBackoff({
 		minDelay: RETRY_MIN_DELAY_MS,
 		maxDelay: RETRY_MAX_DELAY_MS,
-		maxNumOfAttempts: RETRY_ATTEMPTS,
-		jitter: true,
 	});
 	let resigned = false;
 	let uploadUrl: string | null = hooks.uploadUrl ?? null;
@@ -243,7 +241,7 @@ export async function uploadFeedVideo(
 				await onlineAgain(signal);
 				continue;
 			}
-			if (backoff.isExhausted()) throw error;
+			if (backoff.getCurrentAttempts() >= RETRY_ATTEMPTS) throw error;
 			const retryAfterMs = error instanceof TusFailure ? error.retryAfterMs : 0;
 			await sleep(Math.max(backoff.next(), retryAfterMs), signal);
 		}

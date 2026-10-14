@@ -4,7 +4,7 @@ import {Routes} from '@app/app/Routes';
 import {UserSettingsModal} from '@app/features/app/components/dialogs/LoadableSettingsModals';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import * as AuthenticationCommands from '@app/features/auth/commands/AuthenticationCommands';
-import {ClaimAccountModal} from '@app/features/auth/components/modals/ClaimAccountModal';
+import {openClaimAccountModal} from '@app/features/auth/components/modals/ClaimAccountModal';
 import {createNamedLoadableComponent} from '@app/features/platform/components/loadable/LoadableComponent';
 import {useLocation} from '@app/features/platform/components/router/RouterReact';
 import SessionManager from '@app/features/platform/state/AuthSession';
@@ -163,6 +163,7 @@ export const UsernameSelectionGate = observer(({children}: {children: ReactNode}
 
 	const openSettings = () =>
 		ModalCommands.push(ModalCommands.modal(() => <UserSettingsModal initialTab="account_security" />, 'user-settings'));
+	const helpUrl = Routes.help();
 	return (
 		<>
 			<div className={styles.app} inert={fullscreen || undefined}>
@@ -186,16 +187,18 @@ export const UsernameSelectionGate = observer(({children}: {children: ReactNode}
 								<Trans>Settings and account security</Trans>
 							</Button>
 							{!user.email && (
-								<Button onClick={() => ModalCommands.push(ModalCommands.modal(() => <ClaimAccountModal />))}>
+								<Button onClick={() => openClaimAccountModal({force: true})}>
 									<Trans>Claim your account</Trans>
 								</Button>
 							)}
 							<Button onClick={() => UsernameSelection.readAllowed(accountKey)}>
 								<Trans>Read messages, block or report</Trans>
 							</Button>
-							<a href={Routes.help()} target="_blank" rel="noopener noreferrer">
-								<Trans>Support</Trans>
-							</a>
+							{helpUrl != null && (
+								<a href={helpUrl} target="_blank" rel="noopener noreferrer">
+									<Trans>Support</Trans>
+								</a>
+							)}
 							<Button
 								onClick={() => {
 									void AuthenticationCommands.logout().catch((error: unknown) =>

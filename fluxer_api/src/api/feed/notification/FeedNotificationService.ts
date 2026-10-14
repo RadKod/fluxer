@@ -14,7 +14,7 @@ import {Logger} from '@app/api/Logger';
 import {createRequestCache, type RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {Relationship} from '@app/api/models/Relationship';
 import type {User} from '@app/api/models/User';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import {RelationshipTypes, UserFlags} from '@fluxer/constants/src/UserConstants';
 import {
@@ -150,7 +150,7 @@ interface FeedNotificationServiceDeps {
 	gatewayService: IGatewayService;
 	kvClient: IKVProvider;
 	userCacheService: UserCacheService;
-	userRepository: IUserRepository;
+	userRepository: UserRepository;
 	snowflakeService: ISnowflakeService;
 	workerService: IWorkerService<WorkerTaskName>;
 }

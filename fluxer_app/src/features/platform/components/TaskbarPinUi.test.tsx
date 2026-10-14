@@ -35,6 +35,7 @@ vi.mock('@lingui/react/macro', () => ({
 	}),
 }));
 vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PRODUCT_NAME: 'sanalyer'}));
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {productName: 'sanalyer'}}));
 vi.mock('@app/features/app/components/layout/Nagbar', () => ({
 	Nagbar: ({children, onDismiss}: {children: ReactNode; onDismiss: () => void}) =>
 		createElement('div', null, children, createElement('button', {type: 'button', onClick: onDismiss}, 'Dismiss')),

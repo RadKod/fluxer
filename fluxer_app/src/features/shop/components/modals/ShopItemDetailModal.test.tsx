@@ -73,7 +73,7 @@ vi.mock('@app/features/premium/components/PremiumHalo', () => ({
 	PremiumHalo: ({size, children}: {size: string; children: React.ReactNode}) =>
 		createElement('span', {'data-halo': size}, children),
 }));
-vi.mock('@app/features/app/components/dialogs/components/plutonium/PurchaseDisabledWrapper', () => ({
+vi.mock('@app/features/shop/components/PurchaseDisabledWrapper', () => ({
 	PurchaseDisabledWrapper: ({children}: {children: React.ReactNode}) => children,
 }));
 // Each surface has its own test; here they only mark where they are drawn.

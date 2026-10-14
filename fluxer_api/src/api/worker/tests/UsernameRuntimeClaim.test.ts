@@ -12,10 +12,10 @@ import {profileSubstringBlocklistCache} from '@app/api/middleware/ProfileSubstri
 import * as registry from '@app/api/middleware/ServiceRegistry';
 import {UsernameOpIntents, UsernameOwners, Users} from '@app/api/Tables';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {compileUsernameDictionary} from '@app/api/user/username/UsernamePolicyService';
 import {createUsernameOwnershipRuntime} from '@app/api/worker/tasks/UsernameRuntimeAdapters';
-import {InMemoryProvider} from '@pkgs/cache/src/providers/InMemoryProvider';
+import {KVCacheProvider} from '@pkgs/cache/src/providers/KVCacheProvider';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, afterEach, beforeAll, beforeEach, expect, test, vi} from 'vitest';
 
 const id = createUserID(1000000000000000002n);
@@ -40,7 +40,10 @@ function runtime(grant: number) {
 }
 
 beforeAll(() => {
-	new LimitConfigService(new InstanceConfigRepository(), new InMemoryProvider()).setAsGlobalInstance();
+	new LimitConfigService(
+		new InstanceConfigRepository(),
+		new KVCacheProvider({client: new MockKVProvider()}),
+	).setAsGlobalInstance();
 });
 afterAll(() => resetGlobalLimitConfigServiceForTesting());
 beforeEach(async () => {

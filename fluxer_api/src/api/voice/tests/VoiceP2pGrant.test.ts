@@ -75,7 +75,8 @@ describe('VoiceService peer-to-peer grant', () => {
 		const grant = await voiceService.getVoiceToken({...params, p2p: true, p2pInitiator: true});
 		expect(grant).toEqual({
 			p2p: true,
-			connectionId: expect.stringMatching(/^[a-z]+-[a-z]+$/u),
+			// Micup: connection ids carry a random hex suffix after the word pair.
+			connectionId: expect.stringMatching(/^[a-z]+-[a-z]+-[0-9a-f]{8}$/u),
 			iceServers: [],
 			maxParticipants: 2,
 		});

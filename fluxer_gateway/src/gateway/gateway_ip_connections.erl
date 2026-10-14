@@ -596,13 +596,16 @@ drop_connection_row(IP) ->
             ok
     end.
 
+put_env(Key, Value) ->
+    fluxer_gateway_env:update(fun(Config) -> Config#{Key => Value} end).
+
 with_env_key(Key, Value, Fun) ->
     Previous = fluxer_gateway_env:get(Key),
-    _ = fluxer_gateway_env:patch(#{Key => Value}),
+    _ = put_env(Key, Value),
     try
         Fun()
     after
-        _ = fluxer_gateway_env:patch(#{Key => Previous})
+        _ = put_env(Key, Previous)
     end.
 
 with_node_limit(Limit, Fun) -> with_env_key(max_connections, Limit, Fun).

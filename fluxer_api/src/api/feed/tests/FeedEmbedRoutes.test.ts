@@ -18,7 +18,6 @@ import type {MediaProxyNsfwMode} from '@app/api/infrastructure/IMediaService';
 import {IUnfurlerService, type UnfurlOptions, type UnfurlResult} from '@app/api/infrastructure/IUnfurlerService';
 import {getKVClient, getMediaService, getSnowflakeService, getWorkerService} from '@app/api/middleware/ServiceRegistry';
 import {
-	getChannelRepository,
 	getFeedDiscoverRepository,
 	getFeedInteractionRepository,
 	getFeedRepository,
@@ -27,7 +26,6 @@ import {
 } from '@app/api/middleware/ServiceSingletons';
 import {urlBlocklistCache} from '@app/api/middleware/UrlBlocklistCache';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
-import type {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {TestMediaService} from '@app/api/test/TestMediaService';
@@ -37,6 +35,7 @@ import {clearWorkerDependencies, setWorkerDependenciesForTest} from '@app/api/wo
 import {GatewayTimeoutError} from '@fluxer/errors/src/domains/core/GatewayTimeoutError';
 import {FeedPostResponse} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import type {MessageEmbedResponse} from '@fluxer/schema/src/domains/message/EmbedSchemas';
+import type {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import type {WorkerTaskHelpers} from '@pkgs/worker/src/contracts/WorkerTask';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
@@ -157,7 +156,7 @@ describe('feed link previews', () => {
 		unfurler = new FakeUnfurler();
 		setInjectedUnfurlerService(unfurler);
 		setWorkerDependenciesForTest({
-			embedService: new EmbedService(getChannelRepository(), unfurler, getMediaService(), getWorkerService()),
+			embedService: new EmbedService(unfurler, getMediaService(), getWorkerService()),
 		});
 		// TestMediaService answers one fixed URL; this one shows which link each proxy URL is for.
 		vi.spyOn(TestMediaService.prototype, 'getExternalMediaProxyURL').mockImplementation(proxied as () => string);

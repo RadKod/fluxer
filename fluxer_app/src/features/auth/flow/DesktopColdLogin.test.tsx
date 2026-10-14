@@ -27,7 +27,7 @@ vi.mock('@app/features/auth/flow/AuthInstanceSelectorControl', () => ({AuthInsta
 
 function LoginDecision() {
 	const target = useAuthRuntimeTarget();
-	const showInstanceSelector = shouldRenderInstanceStep(null);
+	const showInstanceSelector = shouldRenderInstanceStep();
 	const flow = useAuthLoginFlow({
 		startWithAddAccount: false,
 		forceCredentials: false,

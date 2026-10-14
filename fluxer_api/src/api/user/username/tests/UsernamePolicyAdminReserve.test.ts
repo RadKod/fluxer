@@ -51,7 +51,7 @@ function setup(
 		discriminatorService: {},
 		entityAssetService: {},
 		auditService,
-		updatePropagator: {},
+		userUpdateDeps: {},
 		guildRepository: {},
 		usernameOwnershipService: realOwnership ?? (withOwnership ? ownership : undefined),
 	} as never);

@@ -124,11 +124,10 @@ fn thread_row(
 mod tests {
     use super::threads_tab;
     use crate::api::types::GuildInfo;
-    use crate::config::{AdminConfig, ProxyConfig, RuntimeEnv};
+    use crate::config::{AdminConfig, ProxyConfig};
 
     fn config() -> AdminConfig {
         AdminConfig {
-            env: RuntimeEnv::Test,
             host: "127.0.0.1".into(),
             port: 3020,
             secret_key_base: "test".into(),
@@ -136,6 +135,7 @@ mod tests {
             api_endpoint: "http://api.test".into(),
             media_endpoint: "http://media.test".into(),
             static_cdn_endpoint: String::new(),
+            reports_bucket_origin: String::new(),
             admin_endpoint: "http://admin.test".into(),
             web_app_endpoint: "http://app.test".into(),
             oauth_client_id: "123".into(),
@@ -164,7 +164,6 @@ mod tests {
             None,
             Some("opaque_next"),
             false,
-            false,
             "csrf",
         )
         .into_string();
@@ -181,7 +180,6 @@ mod tests {
             &[],
             Some("opaque_current"),
             None,
-            false,
             false,
             "csrf",
         )

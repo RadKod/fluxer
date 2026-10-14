@@ -135,6 +135,7 @@ function sessionData() {
 		guilds: [],
 		pinned_dms: [],
 		country_code: 'TR',
+		geoip_country_code: 'TR',
 		rtc_regions: [],
 		webauthn_credentials: [],
 		version: 1,

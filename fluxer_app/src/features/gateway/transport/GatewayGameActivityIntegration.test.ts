@@ -25,8 +25,15 @@ vi.mock('@app/features/game_activity/utils/DesktopGameActivityBridge', () => ({d
 vi.mock('@app/features/game_activity/state/GameActivitySettings', () => ({
 	default: {getEffectiveSharing: () => true, getDetectionEnabled: () => true},
 }));
-vi.mock('@app/features/ui/utils/NativeUtils', () => ({getElectronAPI: () => undefined}));
+vi.mock('@app/features/ui/utils/NativeUtils', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@app/features/ui/utils/NativeUtils')>()),
+	getElectronAPI: () => undefined,
+}));
 vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor}));
+vi.mock('@lingui/react/macro', () => ({
+	Trans: ({children}: {children: unknown}) => children,
+	useLingui: () => ({i18n: {locale: 'en-US', _: (descriptor: {message: string}) => descriptor.message}}),
+}));
 vi.mock('@app/features/channel/state/ChannelFrecency', () => ({default: {handleLogout: vi.fn()}}));
 vi.mock('@app/features/forum/state/ForumPosts', () => ({default: {reset: vi.fn(), handleGatewayReady: vi.fn()}}));
 vi.mock('@app/features/forum/state/ForumReadState', () => ({default: {handleGatewayReady: vi.fn()}}));

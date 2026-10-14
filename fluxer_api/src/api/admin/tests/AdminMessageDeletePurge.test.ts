@@ -5,15 +5,14 @@ import type {AdminAuditService} from '@app/api/admin/services/AdminAuditService'
 import {AdminMessageService} from '@app/api/admin/services/AdminMessageService';
 import {createAttachmentID, createChannelID, createMessageID, createUserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
-import type {IChannelRepository} from '@app/api/channel/IChannelRepository';
-import type {NcmecSubmissionService} from '@app/api/csam/NcmecSubmissionService';
-import type {IGuildRepositoryAggregate} from '@app/api/guild/repositories/IGuildRepositoryAggregate';
+import type {ChannelRepository} from '@app/api/channel/ChannelRepository';
+import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import {setInjectedKVProvider} from '@app/api/middleware/ServiceRegistry';
 import {resetServiceSingletonsForTesting, setInjectedStorageService} from '@app/api/middleware/ServiceSingletons';
 import {Message} from '@app/api/models/Message';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {MockStorageService} from '@app/api/test/mocks/MockStorageService';
 import {MessageTypes} from '@fluxer/constants/src/ChannelConstants';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 
 function messageWithAttachment(): Message {
@@ -91,13 +90,11 @@ describe('AdminMessageService.deleteMessage', () => {
 		const service = new AdminMessageService({
 			apiContext: {services: {gateway: {}}} as unknown as ApiContext,
 			channelRepository: {
-				findUnique: async () => null,
-				getMessage: async () => message,
-				deleteMessage: async () => {},
-			} as unknown as IChannelRepository,
-			guildRepository: {} as IGuildRepositoryAggregate,
+				channelData: {findUnique: async () => null},
+				messages: {getMessage: async () => message, deleteMessage: async () => {}},
+			} as unknown as ChannelRepository,
+			guildRepository: {} as GuildRepository,
 			auditService: {createAuditLog: async () => {}} as unknown as AdminAuditService,
-			ncmecSubmissionService: {} as NcmecSubmissionService,
 		});
 
 		await service.deleteMessage({channel_id: 10n, message_id: 100n}, createUserID(1n), null);

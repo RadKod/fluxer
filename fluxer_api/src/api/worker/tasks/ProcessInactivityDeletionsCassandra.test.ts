@@ -13,12 +13,12 @@ import type {KVAccountDeletionQueueService} from '@app/api/infrastructure/KVAcco
 import type {KVActivityTracker} from '@app/api/infrastructure/KVActivityTracker';
 import {startDockerContainer} from '@app/api/test/DockerTestContainer';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {UserDeletionEligibilityService} from '@app/api/user/services/UserDeletionEligibilityService';
 import {processInactivityDeletionsCore} from '@app/api/worker/tasks/ProcessInactivityDeletions';
 import {initCassandra, shutdownCassandra} from '@pkgs/cassandra/src/Client';
 import {TestEmailService} from '@pkgs/email/src/TestEmailService';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import cassandra from 'cassandra-driver';
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
 

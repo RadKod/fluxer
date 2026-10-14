@@ -73,6 +73,7 @@ function reply(authorId = 'target-author'): Message {
 			channelId: 'channel',
 			author: {id: authorId, flags: 0},
 			content: `quote by ${authorId}`,
+			isUserMessage: () => true,
 		},
 	} as unknown as Message;
 }

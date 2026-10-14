@@ -8,8 +8,9 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 const fullscreen = vi.hoisted(() => ({element: null as Element | null}));
 const persistence = vi.hoisted(() => ({makePersistent: vi.fn()}));
 
-vi.mock('@app/features/voice/components/useVoiceCallAppFullscreen', () => ({
-	getVoiceCallFullscreenElement: () => fullscreen.element,
+vi.mock('@app/features/platform/utils/FullscreenMediaUtils', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@app/features/platform/utils/FullscreenMediaUtils')>()),
+	getFullscreenElement: () => fullscreen.element,
 }));
 vi.mock('@app/features/platform/utils/MobXPersistence', () => persistence);
 

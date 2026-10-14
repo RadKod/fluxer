@@ -31,11 +31,11 @@ async function sendThroughRuntime(htmlEnabled: boolean) {
 		enabled: true,
 		provider: 'smtp',
 		fromName: 'sanalyer Bildirim',
-		smtp: {host: 'smtp.example.test', port: 465, username: 'user', password: 'pass', secure: true},
+		smtp: {host: 'smtp.example.test', port: 465, username: 'user', password: 'pass', tlsMode: 'implicit'},
 		htmlEnabled,
 		htmlFooter: {},
 	};
-	const getAppPublicConfig = vi.fn(async () => ({branding: BRANDING}));
+	const getAppPublicConfig = vi.fn(async () => ({branding: BRANDING, legal: {terms_url: null, guidelines_url: null}}));
 	const repository = {
 		getEffectiveEmailConfig: async () => emailConfig,
 		getAppPublicConfig,
@@ -63,9 +63,9 @@ async function sendThroughRuntime(htmlEnabled: boolean) {
 }
 
 describe('runtime email service HTML part', () => {
-	it('sends the upstream single-part text email and skips the branding read when the flag is off', async () => {
-		const {html, mime, brandingReads} = await sendThroughRuntime(false);
-		expect(brandingReads).toBe(0);
+	// The app public config is read on every send for the legal links, so only the MIME shape depends on the flag.
+	it('sends the upstream single-part text email when the flag is off', async () => {
+		const {html, mime} = await sendThroughRuntime(false);
 		expect(html).toBeUndefined();
 		expect(mime).toMatch(/^Content-Type: text\/plain/m);
 		expect(mime).not.toContain('multipart');

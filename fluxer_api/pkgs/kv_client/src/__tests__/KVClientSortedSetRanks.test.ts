@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {KVClient} from '@pkgs/kv_client/src/KVClient';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import Redis, {Cluster} from 'ioredis';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
-import {MockKVProvider} from '../../../../src/api/test/mocks/MockKVProvider';
 
 const key = 'micupbot:lb:42';
 

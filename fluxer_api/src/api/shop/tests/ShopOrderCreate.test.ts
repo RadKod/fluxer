@@ -13,11 +13,11 @@ import {
 	getShopOrderRepository,
 	getShopPriceRepository,
 	getVisionaryService,
-	getVisionarySlotRepository,
 } from '@app/api/middleware/ServiceSingletons';
 import {hashCallbackToken} from '@app/api/payriff/PayriffCallbackToken';
 import {PayriffClient} from '@app/api/payriff/PayriffClient';
 import {PayriffRateLimiter} from '@app/api/payriff/PayriffRateLimiter';
+import {clearVisionarySlots} from '@app/api/premium/visionary/tests/VisionaryTestUtils';
 import {VisionaryService} from '@app/api/premium/visionary/VisionaryService';
 import {ShopOrderRepository, shopOrderCheckShard, shopOrderCheckSlot} from '@app/api/shop/ShopOrderRepository';
 import {ShopPriceRepository} from '@app/api/shop/ShopPriceRepository';
@@ -108,7 +108,7 @@ describe('shop order creation', () => {
 	async function openVisionary(total: number): Promise<void> {
 		await openShop(harness, admin, {visionary_on_sale: true});
 		await setPrices(harness, admin, {visionary: 5000});
-		await getVisionarySlotRepository().shrinkVisionarySlots(0);
+		await clearVisionarySlots();
 		await getVisionaryService().setTotal(total);
 	}
 

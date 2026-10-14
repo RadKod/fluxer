@@ -23,10 +23,7 @@ export async function spendPremiumTrialNetworkQuota(ctx: Context<HonoEnv>): Prom
 	if (!enforced || !rateLimitService) return;
 	const ip = getRequestClientIp(ctx);
 	const network = (ip && getIpNetworkKey(ip, {ipv4PrefixLength: 24, ipv6PrefixLength: 48})) ?? 'unknown';
-	const result = await rateLimitService.checkBucketLimit(`ipnet:${network}:${bucket}`, {
-		...config,
-		algorithm: 'leaky_bucket',
-	});
+	const result = await rateLimitService.checkBucketLimit(`ipnet:${network}:${bucket}`, config);
 	if (!result.allowed) {
 		throw new RateLimitError({
 			retryAfter: getRetryAfterSeconds(result),

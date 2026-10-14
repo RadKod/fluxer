@@ -2,7 +2,7 @@
 
 import {createChannelID, createGuildID, createUserID} from '@app/api/BrandedTypes';
 import type {ChannelDataRepository} from '@app/api/channel/repositories/ChannelDataRepository';
-import type {IMessageRepository} from '@app/api/channel/repositories/IMessageRepository';
+import type {MessageRepository} from '@app/api/channel/repositories/MessageRepository';
 import {ThreadRepository} from '@app/api/channel/repositories/ThreadRepository';
 import {
 	type CassandraQueryExecutorForTesting,
@@ -15,7 +15,7 @@ describe('ThreadRepository joined membership cursor paging', () => {
 	afterEach(() => setCassandraQueryExecutorForTesting(new InMemoryCassandraQueryExecutor()));
 
 	it('keeps the compound clustering query and forwards Cassandra page state without decoding it', async () => {
-		const repo = new ThreadRepository({} as ChannelDataRepository, {} as IMessageRepository);
+		const repo = new ThreadRepository({} as ChannelDataRepository, {} as MessageRepository);
 		const userId = createUserID(100n);
 		const guildId = createGuildID(200n);
 		const ids = [createChannelID(400n), createChannelID(300n)];

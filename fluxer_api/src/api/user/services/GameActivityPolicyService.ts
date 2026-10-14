@@ -5,9 +5,9 @@ import type {UserID} from '@app/api/BrandedTypes';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {User} from '@app/api/models/User';
 import type {UserSettings} from '@app/api/models/UserSettings';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
 import {decideProfileView} from '@app/api/user/profile/ProfileAccessRules';
 import {resolveProfileAudience} from '@app/api/user/profile/ProfilePrivacy';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {calculateAge} from '@app/api/utils/AgeUtils';
 import {RelationshipTypes} from '@fluxer/constants/src/UserConstants';
 import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
@@ -53,7 +53,7 @@ export interface GameActivityPairFence extends GameActivityPairPolicyAck {
 }
 
 interface GameActivityPolicyDeps {
-	users: Pick<IUserRepository, 'findUnique' | 'findSettings' | 'getRelationship' | 'getIncomingRelationship'>;
+	users: Pick<UserRepository, 'findUnique' | 'findSettings' | 'getRelationship' | 'getIncomingRelationship'>;
 	gateway: Pick<IGatewayService, 'gameActivityPolicy' | 'gameActivityPairPolicy'>;
 }
 

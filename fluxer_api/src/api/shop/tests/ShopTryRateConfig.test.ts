@@ -5,7 +5,7 @@ import {InstanceConfigRepository} from '@app/api/instance/InstanceConfigReposito
 import {InstanceConfigWriteRaceExecutor} from '@app/api/instance/tests/InstanceConfigWriteRaceExecutor';
 import {planShopTryRateUpdate} from '@app/api/shop/ShopTryRate';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, describe, expect, it} from 'vitest';
 
 describe('shop rate LWT writes', () => {

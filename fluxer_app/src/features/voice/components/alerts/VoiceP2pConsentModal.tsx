@@ -2,6 +2,7 @@
 
 import * as Modal from '@app/features/app/components/dialogs/Modal';
 import {CANCEL_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
+import {getPremiumProductName} from '@app/features/premium/utils/PremiumUtils';
 import {Button} from '@app/features/ui/button/Button';
 import {Checkbox} from '@app/features/ui/checkbox/Checkbox';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
@@ -77,7 +78,7 @@ export const VoiceP2pConsentModal = observer(
 								{i18n._(VOICE_P2P_LOWER_LATENCY_DESCRIPTOR)}
 							</li>
 							<li data-flx="voice.voice-p2p-consent-modal.point.quality">
-								{i18n._(VOICE_P2P_STREAM_QUALITY_DESCRIPTOR)}
+								{i18n._(VOICE_P2P_STREAM_QUALITY_DESCRIPTOR, {premiumProductName: getPremiumProductName()})}
 							</li>
 							<li data-flx="voice.voice-p2p-consent-modal.point.ip-address">
 								{i18n._(VOICE_P2P_IP_ADDRESS_DESCRIPTOR)}

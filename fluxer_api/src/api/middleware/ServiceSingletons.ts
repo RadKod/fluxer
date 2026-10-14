@@ -64,7 +64,6 @@ import {
 	MicupBotSettingsService,
 } from '@app/api/guild/micupbot/MicupBotSettingsService';
 import {createMicupBotXpCounterFlusher} from '@app/api/guild/micupbot/MicupBotXpCounters';
-import {GuildDataRepository} from '@app/api/guild/repositories/GuildDataRepository';
 import {GuildDiscoveryRepository} from '@app/api/guild/repositories/GuildDiscoveryRepository';
 import {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import {GuildRosterRepository} from '@app/api/guild/roster/GuildRosterRepository';
@@ -452,19 +451,18 @@ export const GUILD_MEMBER_COUNT_COUNTER = 'guild_member_count';
 const GUILD_MEMBER_RECOUNT_PAGE_SIZE = 5000;
 
 function createGuildMemberCountFlusher(guildRepository: GuildRepository): CounterFlusher {
-	const guildData = new GuildDataRepository();
 	return {
 		namespace: GUILD_MEMBER_COUNT_COUNTER,
 		async readBase(id) {
-			return (await guildData.findMemberCount(createGuildID(BigInt(id)))) ?? 0;
+			return (await guildRepository.findMemberCount(createGuildID(BigInt(id)))) ?? 0;
 		},
 		async flush(id, value) {
 			const guildId = createGuildID(BigInt(id));
 			const memberCount = Math.max(0, value);
-			const stored = await guildData.findMemberCount(guildId);
+			const stored = await guildRepository.findMemberCount(guildId);
 			// A missing row means the guild was deleted; writing would resurrect it as a partial row.
 			if (stored !== null && stored !== memberCount) {
-				await guildData.setMemberCount(guildId, memberCount);
+				await guildRepository.setMemberCount(guildId, memberCount);
 			}
 		},
 		async recount(id) {

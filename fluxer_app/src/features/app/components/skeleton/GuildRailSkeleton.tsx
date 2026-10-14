@@ -19,6 +19,7 @@ import {
 } from '@app/features/app/components/skeleton/SkeletonRuntimeConfig';
 import {SkeletonEmphasis, SkeletonRadius} from '@app/features/app/components/skeleton/SkeletonStyle';
 import {skeletonSurfaceVar} from '@app/features/app/components/skeleton/SkeletonSurfaceContract';
+import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import {Platform} from '@app/features/platform/types/Platform';
 import {getRemScaleForDocument} from '@app/features/theme/layout/RemFromPx';
 import Dimension from '@app/features/ui/state/Dimension';

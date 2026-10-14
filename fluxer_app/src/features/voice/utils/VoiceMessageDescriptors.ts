@@ -354,9 +354,10 @@ export const VOICE_P2P_LOWER_LATENCY_DESCRIPTOR = msg({
 	comment: 'Bullet point in the P2P call dialog. A benefit of peer-to-peer mode.',
 });
 export const VOICE_P2P_STREAM_QUALITY_DESCRIPTOR = msg({
-	message: 'Everyone in the call gets Plutonium stream quality for free: up to 4K source resolution and 60 fps.',
+	message:
+		'Everyone in the call gets {premiumProductName} stream quality for free: up to 4K source resolution and 60 fps.',
 	comment:
-		'Bullet point in the P2P call dialog. Plutonium is the name of the paid subscription and must not be translated. 4K and fps are video terms.',
+		'Bullet point in the P2P call dialog. {premiumProductName} is the name of the paid subscription. 4K and fps are video terms.',
 });
 export const VOICE_P2P_IP_ADDRESS_DESCRIPTOR = msg({
 	message: 'Other participants can see your IP address.',

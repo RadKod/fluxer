@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {ILogger} from '@app/api/ILogger';
 import {COUNTER_PARTITIONS, type KVCounterService} from '@app/api/infrastructure/KVCounterService';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
+import type {LoggerInterface} from '@fluxer/logger/src/LoggerInterface';
 
 const BATCH = 1000;
 
@@ -25,7 +25,7 @@ export async function flushCounterSetSlice({
 	budgetMs: number;
 	concurrency: number;
 	label: {name: string; backlog: string};
-	logger: Pick<ILogger, 'error' | 'info' | 'warn'>;
+	logger: Pick<LoggerInterface, 'error' | 'info' | 'warn'>;
 }): Promise<void> {
 	const partitionsPerSlice = COUNTER_PARTITIONS / slices;
 	const start = minute % partitionsPerSlice;

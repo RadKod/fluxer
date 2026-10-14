@@ -7,7 +7,7 @@ use crate::{
     middleware::auth::AuthContext,
     templates::{
         components::{
-            alert::{alert_error, alert_success},
+            alert::{AlertVariant, alert},
             form::{
                 FORM_INPUT_CLASS, FORM_SELECT_CLASS, FORM_TEXTAREA_CLASS, csrf_input, form_actions,
                 form_field_group, submit_button,
@@ -111,13 +111,13 @@ pub fn gift_codes_page(
 
         @if let Some(generated) = generated {
             @if let Some(error) = generated.error {
-                (alert_error("Generation stopped", html! {
+                (alert(AlertVariant::Error, Some("Generation stopped"), html! {
                     "Generated " (generated.urls.len()) " of " (generated.requested)
                     " codes before stopping (" (error) "). The codes below are valid and \
                      are not stored by the admin panel: copy them before leaving this page."
                 }))
             } @else {
-                (alert_success("Codes generated", html! {
+                (alert(AlertVariant::Success, Some("Codes generated"), html! {
                     (generated.urls.len()) " gift codes. They are not stored by the admin \
                      panel: copy them before leaving this page."
                 }))

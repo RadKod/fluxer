@@ -19,6 +19,7 @@ use axum::{
     response::{Html, IntoResponse, Response},
     routing::get,
 };
+use reqwest::Method;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use time::{Duration, OffsetDateTime, format_description::well_known::Rfc3339};
@@ -404,7 +405,8 @@ async fn apply_action(client: &AdminApiClient, action: &str, form: &MultiValueFo
             Err(message) => return FlashData::error(message),
         };
         return match client
-            .patch_with_reason::<UsernamePolicy>(
+            .send::<UsernamePolicy, _>(
+                Method::PATCH,
                 "/admin/instance/username-policy",
                 Some(&body),
                 Some(&reason),
@@ -499,7 +501,7 @@ async fn apply_action(client: &AdminApiClient, action: &str, form: &MultiValueFo
     };
     let path = format!("/admin/instance/username-migration/{action}");
     match client
-        .post_typed_with_reason::<MigrationStatus, _>(&path, &body, Some(&reason))
+        .send::<MigrationStatus, _>(Method::POST, &path, Some(&body), Some(&reason))
         .await
     {
         Ok(status)

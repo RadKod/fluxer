@@ -14,7 +14,6 @@ import type {TableGameEngineRegistry} from '@app/api/table_game/TableGameEngines
 import {type TableEnvelope, TableGameRepository} from '@app/api/table_game/TableGameRepository';
 import {TableGameService, type TableGameServiceDeps} from '@app/api/table_game/TableGameService';
 import {registerTableGameMockScripts} from '@app/api/table_game/tests/TableGameMockScripts';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import {UnknownChannelError} from '@fluxer/errors/src/domains/channel/UnknownChannelError';
 import type {VoiceRoomConfig} from '@fluxer/schema/src/domains/admin/VoiceRoomConfigSchemas';
@@ -23,6 +22,7 @@ import type {
 	TableGameUpdateEvent,
 	TableGameView,
 } from '@fluxer/schema/src/domains/table_game/TableGameSchemas';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {vi} from 'vitest';
 
 registerTableGameMockScripts();

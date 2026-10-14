@@ -38,6 +38,7 @@ const MODULE_REGISTRY_TEST_FILES = [
 	'src/api/stripe/tests/StripeWebhookInvoice.test.ts',
 	'src/api/stripe/tests/StripeWebhookRefund.test.ts',
 	'src/api/stripe/tests/StripeWebhookSubscription.test.ts',
+	'src/api/stripe/tests/StripeGiftSubscriptionShift.test.ts',
 	'src/api/channel/tests/MessageCrosspostFanout.test.ts',
 	'src/api/experiment/tests/ExperimentController.test.ts',
 	'src/api/referral/tests/ReferralBackfill.test.ts',

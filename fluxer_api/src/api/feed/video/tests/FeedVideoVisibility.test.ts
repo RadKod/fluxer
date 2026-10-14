@@ -30,7 +30,6 @@ import {
 	getUserRepository,
 } from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
-import type {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {BUNNY_TEST_SETTINGS, fakeBunnyStream} from '@app/api/test/msw/handlers/BunnyStreamHandlers';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
@@ -44,6 +43,7 @@ import type {
 	FeedPostResponse,
 } from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import {createSnowflake} from '@fluxer/snowflake/src/Snowflake';
+import type {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import type {WorkerTaskHandler, WorkerTaskHelpers} from '@pkgs/worker/src/contracts/WorkerTask';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 

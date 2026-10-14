@@ -17,7 +17,11 @@ vi.mock('@app/features/platform/utils/AppLogger', () => ({
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {apiEndpoint: '/api', apiCodeVersion: 1}}));
 vi.mock('@app/features/auth/state/Authentication', async () => {
 	const {observable} = await import('mobx');
-	return {default: observable({currentUserId: '1' as string | null, authToken: null as string | null})};
+	return {default: observable({currentUserId: '1' as string | null})};
+});
+vi.mock('@app/features/platform/state/AuthSession', async () => {
+	const {observable} = await import('mobx');
+	return {default: observable({token: null as string | null})};
 });
 
 // The real REST client runs over a fake XMLHttpRequest, so what it sends by itself (the session token, a retry) shows.
@@ -26,7 +30,9 @@ const {http} = await import('@app/features/platform/transport/RestTransport');
 const {default: RuntimeConfig} = await import('@app/features/app/state/RuntimeConfig');
 const {default: Authentication} = await import('@app/features/auth/state/Authentication');
 // The mock's fields are plain observables; the real store's are getters.
-const auth = Authentication as unknown as {currentUserId: string | null; authToken: string | null};
+const {default: SessionManager} = await import('@app/features/platform/state/AuthSession');
+const auth = Authentication as unknown as {currentUserId: string | null};
+const session = SessionManager as unknown as {token: string | null};
 const runtime = RuntimeConfig as unknown as {apiEndpoint: string; apiCodeVersion: number};
 const {FEED_VIEW_SEND_MS, FEED_VIEW_THRESHOLDS, isHalfVisible, recordView, resetViews} = await import(
 	'@app/features/feed/commands/FeedViewCommands'
@@ -148,7 +154,7 @@ describe('FeedViewCommands', () => {
 		http.installAuth(() => SESSION_TOKEN);
 		http.configure({baseUrl: '/api', apiVersion: 1});
 		runInAction(() => {
-			auth.authToken = SESSION_TOKEN;
+			session.token = SESSION_TOKEN;
 		});
 		runtime.apiEndpoint = '/api';
 		resetViews();
@@ -450,7 +456,7 @@ describe('FeedViewCommands', () => {
 		// Same origin but signed out: no token to send.
 		runtime.apiEndpoint = '/api';
 		runInAction(() => {
-			auth.authToken = null;
+			session.token = null;
 		});
 		hide();
 		expect(fetchMock).not.toHaveBeenCalled();

@@ -41,7 +41,7 @@ vi.mock('@app/features/voice/engine/MediaEngineFacade', () => ({
 	},
 	useMediaEngineVersion: () => useSyncExternalStore(engine.subscribe, engine.getVersion),
 }));
-vi.mock('@app/features/gateway/transport/GatewayConnection', () => ({default: {socket: {}}}));
+vi.mock('@app/features/gateway/transport/GatewaySessionPool', () => ({default: {foregroundConnection: {socket: {}}}}));
 vi.mock('@app/features/platform/utils/AppLogger', () => ({
 	Logger: class {
 		info() {}

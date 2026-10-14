@@ -11,9 +11,9 @@ import {
 	getShopOrderRepository,
 	getUserRepository,
 	getVisionaryService,
-	getVisionarySlotRepository,
 } from '@app/api/middleware/ServiceSingletons';
 import type {VerifyShopOrderPayload} from '@app/api/payriff/PayriffVerifyTrigger';
+import {clearVisionarySlots} from '@app/api/premium/visionary/tests/VisionaryTestUtils';
 import {
 	createShopAdmin,
 	createShopItem,
@@ -23,15 +23,19 @@ import {
 } from '@app/api/shop/tests/ShopTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
+import {NoopGatewayService} from '@app/api/test/NoopGatewayService';
 import {NoopWorkerService} from '@app/api/test/NoopWorkerService';
 import {fakePayriffServer} from '@app/api/test/Setup';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
-import {BaseUserUpdatePropagator} from '@app/api/user/services/BaseUserUpdatePropagator';
 import verifyShopOrder from '@app/api/worker/tasks/VerifyShopOrder';
 import {UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import type {ShopOrderResponse} from '@fluxer/schema/src/domains/shop/ShopResponseSchemas';
 import type {WorkerTaskHelpers} from '@pkgs/worker/src/contracts/WorkerTask';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
+
+function userUpdateCount(dispatch: {mock: {calls: Array<Array<{event: string}>>}}): number {
+	return dispatch.mock.calls.filter(([params]) => params?.event === 'USER_UPDATE').length;
+}
 
 const HELPERS: WorkerTaskHelpers = {
 	logger: new NoopLogger(),
@@ -183,14 +187,14 @@ describe('one delivery per paid shop order', () => {
 	it('5 callbacks, 2 returns and a reconcile give one Visionary number and one USER_UPDATE', async () => {
 		await openShop(harness, admin, {visionary_on_sale: true});
 		await setPrices(harness, admin, {visionary: 5000});
-		await getVisionarySlotRepository().shrinkVisionarySlots(0);
+		await clearVisionarySlots();
 		await getVisionaryService().setTotal(3);
 		const {order, token} = await openPaidOrder('visionary');
-		const userUpdates = vi.spyOn(BaseUserUpdatePropagator.prototype, 'dispatchUserUpdate');
+		const userUpdates = vi.spyOn(NoopGatewayService.prototype, 'dispatchPresence');
 
 		await everyTrigger(order.id, token);
 
-		expect(userUpdates).toHaveBeenCalledTimes(1);
+		expect(userUpdateCount(userUpdates)).toBe(1);
 		const buyer = (await getUserRepository().findUnique(userId))!;
 		expect([buyer.premiumType, buyer.premiumLifetimeSequence]).toEqual([UserPremiumTypes.LIFETIME, 1]);
 		expect(await getVisionaryService().getStock()).toMatchObject({sold: 1, held: 0, remaining: 2});

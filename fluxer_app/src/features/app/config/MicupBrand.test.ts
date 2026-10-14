@@ -4,6 +4,7 @@
 import {readdirSync, readFileSync} from 'node:fs';
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import * as constants from '@app/features/app/config/I18nDisplayConstants';
 import {
 	EXAMPLE_FLUXER_TAG,
 	EXAMPLE_PERSONAL_EMAIL,
@@ -43,7 +44,7 @@ vi.mock('@app/features/app/state/RuntimeConfig', () => ({
 	},
 }));
 vi.mock('@app/features/user/state/UserSettings', () => ({
-	default: {getTrustedDomains: () => [], trustAllDomains: () => false},
+	default: {trustedDomains: [], trustAllDomains: () => false},
 }));
 // DeepLinkUtils' UI side (modals, commands, router) is not under test here.
 vi.mock('@app/features/auth/state/Authentication', () => ({default: {}}));
@@ -135,8 +136,10 @@ describe('sanalyer brand text', () => {
 			}
 			return {locale: entry.name, entries: entries.filter(([msgid]) => msgid !== '')};
 		});
-	// Not brand text: the domain verification file name and placeholder names the API and code rely on.
-	const ALLOWED = /fluxer-verification|\{exampleFluxerTagFull\}|\{fluxerTag\}/g;
+	const tr = catalogs.find(({locale}) => locale === 'tr')?.entries ?? [];
+	// Not brand text: the domain verification file name, placeholder and environment variable names the API and code rely
+	// on, and the bundled typeface's own name (Fluxer Sans, offered as the non-system font on Windows).
+	const ALLOWED = /fluxer-verification|\{exampleFluxerTagFull\}|\{fluxerTag\}|FLUXER_SETUP_TOKEN|Fluxer Sans/g;
 	// Never rendered: the self-hosted setup wizard placeholder and a settings search synonym.
 	const UNRENDERED_MSGIDS = new Set(['Fluxer', 'Plutonium']);
 	// This consent notice attributes a third-party relay, linked to its provider's privacy notice.
@@ -169,9 +172,9 @@ describe('sanalyer brand text', () => {
 	});
 
 	// "sanalyer" ends in a front vowel and a voiced r, like upstream's "Fluxer": sanalyer'i, sanalyer'e, sanalyer'de,
-	// sanalyer'den, sanalyer'in. Micup's back-vowel suffixes ('u, 'a, 'ta) must not come back.
+	// sanalyer'den, sanalyer'in. Micup's back-vowel suffixes (Micup'u, Micup'a, Micup'ta, Micup'tan, Micup'un) must not
+	// come back.
 	it('attaches Turkish suffixes that fit "sanalyer" to the product name', () => {
-	// Micup'u, Micup'a, Micup'ta, Micup'tan, Micup'un.
 		const suffixes = tr.flatMap(([, msgstr]) =>
 			[...msgstr.matchAll(/\{(?:productName|PRODUCT_NAME)\}['’](\p{L}+)/gu)].map((match) => match[1]),
 		);
@@ -191,10 +194,9 @@ describe('sanalyer brand text', () => {
 		expect(EXAMPLE_PERSONAL_EMAIL).toBe('name@example.com');
 	});
 
-	// Catalog text is checked above; these values are filled into it at runtime. The listed ones are never shown on
-	// Micup: Weblate and fluxer.dev links render only when the instance is not self-hosted, the rest are unused.
-	it('keeps Fluxer addresses only in display constants sanalyer never shows', async () => {
-	// Micup: Weblate and fluxer.dev links render only when the instance is not self-hosted, the rest are unused.
+	// Catalog text is checked above; these values are filled into it at runtime. Micup: Weblate and fluxer.dev links
+	// render only when the instance is not self-hosted, the Bluesky handle is unused.
+	it('keeps Fluxer addresses only in display constants sanalyer never shows', () => {
 		const fluxerValued = Object.entries(constants)
 			.filter(([, value]) => typeof value === 'string' && /fluxer/i.test(value))
 			.map(([name]) => name)
@@ -205,12 +207,8 @@ describe('sanalyer brand text', () => {
 			'FLUXER_BLUESKY_HANDLE',
 			'FLUXER_DOCS_DOMAIN',
 			'FLUXER_DOCS_URL',
-			'FLUXER_TAG_LABEL',
-			'I18N_EMAIL',
-			'I18N_EMAIL_MAILTO',
 			'I18N_WEBLATE_DOMAIN',
 			'I18N_WEBLATE_URL',
-			'SPLASH_IRC_SERVER',
 		]);
 	});
 });

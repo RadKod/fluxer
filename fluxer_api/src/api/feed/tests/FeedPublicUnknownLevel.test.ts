@@ -5,10 +5,10 @@ import {createPost, setProfileLevel} from '@app/api/feed/tests/FeedTestUtils';
 import {getKVClient} from '@app/api/middleware/ServiceRegistry';
 import {getFeedDiscoverRepository, getFeedTimelineService} from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
-import type {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
+import type {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterAll, beforeAll, beforeEach, describe, expect, it} from 'vitest';
 
 const HOUR = 3_600_000;

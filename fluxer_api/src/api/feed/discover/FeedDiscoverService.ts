@@ -26,12 +26,12 @@ import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import {createRequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {User} from '@app/api/models/User';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {UserAccountLookupService} from '@app/api/user/services/UserAccountLookupService';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
 import type {LimitKey} from '@fluxer/constants/src/LimitConfigMetadata';
 import {RelationshipTypes} from '@fluxer/constants/src/UserConstants';
-import {DEFAULT_FREE_LIMITS} from '@fluxer/limits/src/LimitDefaults';
+import {DEFAULT_RESTRICTED_LIMITS} from '@fluxer/limits/src/LimitDefaults';
 import type {FeedPostResponse} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 
 const SCAN_PAGE = 1000;
@@ -60,7 +60,7 @@ interface FeedDiscoverServiceDeps {
 	repository: FeedDiscoverRepository;
 	feedRepository: FeedRepository;
 	userRepository: Pick<
-		IUserRepository,
+		UserRepository,
 		'listUsers' | 'listBlockedUserIds' | 'listIncomingRelationships' | 'getRelationship'
 	>;
 	profiles: Pick<UserAccountLookupService, 'getProfileAudience'>;
@@ -354,7 +354,7 @@ export class FeedDiscoverService {
 			this.deps.limitConfigService.getConfigSnapshot(),
 			createLimitMatchContext({user}),
 			key,
-			DEFAULT_FREE_LIMITS[key],
+			DEFAULT_RESTRICTED_LIMITS[key],
 		);
 	}
 }

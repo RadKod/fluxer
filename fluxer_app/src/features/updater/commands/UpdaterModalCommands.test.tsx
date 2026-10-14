@@ -8,6 +8,7 @@ const pushed = vi.hoisted((): {render: (() => ReactElement) | null} => ({render:
 
 vi.mock('@lingui/core/macro', () => ({msg: (descriptor: {message: string}) => descriptor}));
 vi.mock('@lingui/core', () => ({i18n: {_: (descriptor: {message: string}) => descriptor.message}}));
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {productName: 'sanalyer'}}));
 vi.mock('@app/features/app/components/dialogs/ConfirmModal', () => ({ConfirmModal: () => null}));
 vi.mock('@app/features/ui/components/form/FormCombobox', () => ({Combobox: () => null}));
 vi.mock('@app/features/ui/commands/ModalCommands', () => ({

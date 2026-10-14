@@ -124,7 +124,7 @@ it('the audit log names the author, not the bot', async () => {
 it('on an elevated-MFA community a moderator without 2FA is refused', async () => {
 	const f = await fixture();
 	const guild = (await f.deps.guildRepository.findUnique(f.guildId))!;
-	await f.deps.guildRepository.upsert({...guild.toRow(), mfa_level: GuildMFALevel.ELEVATED});
+	await f.deps.guildRepository.upsertPartial(guild.id, {mfa_level: GuildMFALevel.ELEVATED});
 	for (const command of [`#ban ${f.target.userId}`, `#mute ${f.target.userId} 10m`]) {
 		await f.run(command);
 		expect(f.reply()?.content).toBe(MICUPBOT_TEXT.mfaRequired);

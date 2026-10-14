@@ -105,7 +105,7 @@
 	},
 	"unban_notification": {
 		"subject": "Your {product_name} account suspension has been lifted",
-		"body": "🎉 Hello {username},\n\nGood news: your {product_name} account suspension has been lifted.\n\n{reason, select,\n  null {}\n  other {Reason: {reason}}\n}\n\nYou can now log back in and continue using {product_name} as normal.\n\n– {product_name} Safety Team"
+		"body": "🎉 Hello {username},\n\nGood news: your {product_name} account suspension has been lifted.\n\n{reason, select,\n  null {}\n  other {Reason: {reason}\n\n}\n}You can now log back in and continue using {product_name} as normal.\n\n– {product_name} Safety Team"
 	},
 	"referral_reward_ready": {
 		"subject": "Your referral reward is ready",

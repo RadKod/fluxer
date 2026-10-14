@@ -6,7 +6,6 @@ import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {ILiveKitService} from '@app/api/infrastructure/ILiveKitService';
 import type {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
 import {Logger} from '@app/api/Logger';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import type {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {registerVoiceSeatMockScripts} from '@app/api/voice_seat/tests/VoiceSeatMockScripts';
 import {createVoiceMembershipHooks, type VoiceMembershipHookServices} from '@app/api/voice_seat/VoiceMembershipHooks';
@@ -14,6 +13,7 @@ import {VoiceSeatRepository, voiceSeatsKey} from '@app/api/voice_seat/VoiceSeatR
 import {type VoiceParticipantContext, VoiceSeatService} from '@app/api/voice_seat/VoiceSeatService';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import {VOICE_ROOM_THEME_IDS} from '@fluxer/constants/src/VoiceRoomThemes';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeAll, describe, expect, it, vi} from 'vitest';
 
 const CTX: VoiceParticipantContext = {

@@ -13,13 +13,13 @@ import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {User} from '@app/api/models/User';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
 import type {ProfileExtension} from '@app/api/user/profile/ProfileExtensionProviders';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
 import {RelationshipTypes} from '@fluxer/constants/src/UserConstants';
 import {MissingAccessError} from '@fluxer/errors/src/domains/core/MissingAccessError';
 import {MaxFollowingError} from '@fluxer/errors/src/domains/user/MaxFollowingError';
-import {DEFAULT_FREE_LIMITS} from '@fluxer/limits/src/LimitDefaults';
+import {DEFAULT_RESTRICTED_LIMITS} from '@fluxer/limits/src/LimitDefaults';
 import type {FollowListResponse} from '@fluxer/schema/src/domains/follow/FollowResponseSchemas';
 import {snowflakeToDate} from '@fluxer/snowflake/src/Snowflake';
 
@@ -28,7 +28,7 @@ const DELETION_CONCURRENCY = 16;
 
 interface FollowServiceDeps {
 	repository: FollowRepository;
-	userRepository: IUserRepository;
+	userRepository: UserRepository;
 	userCacheService: UserCacheService;
 	gatewayService: IGatewayService;
 	kvCounterService: KVCounterService;
@@ -236,7 +236,7 @@ export class FollowService {
 			this.deps.limitConfigService.getConfigSnapshot(),
 			createLimitMatchContext({user}),
 			'max_following',
-			DEFAULT_FREE_LIMITS.max_following,
+			DEFAULT_RESTRICTED_LIMITS.max_following,
 		);
 	}
 

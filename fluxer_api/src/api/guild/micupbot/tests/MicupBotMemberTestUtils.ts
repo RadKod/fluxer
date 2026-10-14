@@ -128,8 +128,7 @@ async function createMemberFixture(harness: ApiTestHarness, patch: Partial<Micup
 	await repository.putSettings(settings, null);
 	await invalidateMicupBotGuildConfig(guildId);
 	const initialGuild = (await guildRepository.findUnique(guildId))!;
-	const guild = await guildRepository.upsert({
-		...initialGuild.toRow(),
+	const guild = await guildRepository.upsertPartial(initialGuild.id, {
 		features: new Set([...initialGuild.features, GuildFeatures.MICUPBOT_JOIN]),
 	});
 	Config.instance.micupBotApplicationId = application.application.id;

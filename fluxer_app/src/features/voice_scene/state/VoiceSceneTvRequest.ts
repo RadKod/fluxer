@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {ResettableStates} from '@app/features/app/state/ResettableStates';
-import {getVoiceCallFullscreenElement} from '@app/features/voice/components/useVoiceCallAppFullscreen';
+import {getFullscreenElement} from '@app/features/platform/utils/FullscreenMediaUtils';
 import {VoiceTrackSource} from '@app/features/voice/engine/VoiceTrackSource';
 import VoiceCallLayout from '@app/features/voice/state/VoiceCallLayout';
 import type {TvSource} from '@app/features/voice_scene/video/TvSource';
@@ -83,7 +83,7 @@ export function useVoiceSceneTvFullscreen({
 			request.kind === 'screen' ? VoiceTrackSource.ScreenShare : VoiceTrackSource.Camera,
 		);
 		void enterFullscreen().then(() => {
-			if (!getVoiceCallFullscreenElement()) VoiceSceneTvRequest.clearFullscreen();
+			if (!getFullscreenElement()) VoiceSceneTvRequest.clearFullscreen();
 		});
 		return () => {
 			VoiceCallLayout.setPinnedParticipant(pinnedParticipantIdentity, pinnedParticipantSource);

@@ -7,7 +7,7 @@ import {INSTANCE_CONFIG_REFRESH_CHANNEL} from '@app/api/instance/InstanceConfigR
 import {ApplicationRepository} from '@app/api/oauth/repositories/ApplicationRepository';
 import {Applications, InstanceConfiguration} from '@app/api/Tables';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 describe('application eligibility mutation notifications', () => {

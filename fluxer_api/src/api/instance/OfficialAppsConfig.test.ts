@@ -3,9 +3,9 @@
 import {setCassandraQueryExecutorForTesting} from '@app/api/database/CassandraQueryExecution';
 import {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {ALL_PERMISSIONS, Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {InstanceConfigUpdateRequest} from '@fluxer/schema/src/domains/admin/AdminSchemas';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, describe, expect, it} from 'vitest';
 import {z} from 'zod';
 

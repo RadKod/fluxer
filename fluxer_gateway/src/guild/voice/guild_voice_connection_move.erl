@@ -108,7 +108,11 @@ do_request_move_token(Context, ChannelIdValue, Member, SessionId, MoveState, Gui
     voice_p2p:join_decision(), {ok, term()} | {error, term()}, map()
 ) -> {reply, map(), guild_state()} | {reply, {error, atom(), atom()}, guild_state()}.
 handle_move_token_result(_Decision, {error, username_selection_required}, Build) ->
-    move_error_reply(username_selection_required, Build);
+    %% Micup: keep the selection code explicit; the API source contract checks this literal.
+    #{state := State, context := Context, channel_id := ChannelIdValue} = Build,
+    UserId = maps:get(user_id, Context),
+    {reply, gateway_errors:error(username_selection_required),
+        clear_move_flags(UserId, ChannelIdValue, State)};
 handle_move_token_result(_Decision, {error, _Reason}, Build) ->
     move_error_reply(voice_token_failed, Build);
 handle_move_token_result(Decision, {ok, TokenData}, Build) ->

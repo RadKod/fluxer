@@ -2,7 +2,7 @@
 
 import Channels from '@app/features/channel/state/Channels';
 import Guilds from '@app/features/guild/state/Guilds';
-import {Combobox} from '@app/features/ui/components/form/FormCombobox';
+import {Combobox, type ComboboxOption} from '@app/features/ui/components/form/FormCombobox';
 import {Switch} from '@app/features/ui/components/form/FormSwitch';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import type {MessageDescriptor} from '@lingui/core';
@@ -172,7 +172,7 @@ export const IdsSelect = observer(
 				options.push({value: selected, label: deleted});
 			}
 		return (
-			<Combobox<string, true>
+			<Combobox<string, ComboboxOption<string>, true>
 				id={id}
 				label={i18n._(label)}
 				isMulti

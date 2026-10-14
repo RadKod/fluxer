@@ -26,7 +26,6 @@ import {
 import type {MediaProxyMetadataRequest, MediaProxyMetadataResponse} from '@app/api/infrastructure/IMediaService';
 import {Logger} from '@app/api/Logger';
 import {User} from '@app/api/models/User';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {MockStorageService} from '@app/api/test/mocks/MockStorageService';
 import type {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {
@@ -40,6 +39,7 @@ import {NotFoundError} from '@fluxer/errors/src/domains/core/NotFoundError';
 import {RateLimitError} from '@fluxer/errors/src/domains/core/RateLimitError';
 import {UnauthorizedError} from '@fluxer/errors/src/domains/core/UnauthorizedError';
 import {createSnowflakeFromTimestamp, snowflakeToDate} from '@fluxer/snowflake/src/Snowflake';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import sharp from 'sharp';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 

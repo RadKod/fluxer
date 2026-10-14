@@ -13,11 +13,12 @@ import type {
 import {Logger} from '@app/api/Logger';
 import type {User} from '@app/api/models/User';
 import type {ReferralRepository} from '@app/api/referral/ReferralRepository';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
+import {ConflictError} from '@fluxer/errors/src/domains/core/ConflictError';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
-import {ConflictError, NotFoundError} from '@fluxer/errors/src/HttpErrors';
+import {NotFoundError} from '@fluxer/errors/src/domains/core/NotFoundError';
 import type {
 	CreateReferralTierRequest,
 	DeliverReferralRewardRequest,
@@ -40,7 +41,7 @@ export interface ReferralAdminServiceDeps {
 	repository: ReferralRepository;
 	instanceConfigRepository: InstanceConfigRepository;
 	cosmeticService: CosmeticService;
-	userRepository: IUserRepository;
+	userRepository: UserRepository;
 	workerService: IWorkerService<WorkerTaskName>;
 	emailService: IEmailService;
 	snowflakeService: ISnowflakeService;
@@ -235,7 +236,8 @@ export class ReferralAdminService {
 				code,
 				note: request.note ?? null,
 			}));
-		if (!delivered) throw new ConflictError({message: 'The reward is not waiting for delivery'});
+		if (!delivered)
+			throw new ConflictError({code: APIErrorCodes.CONFLICT, message: 'The reward is not waiting for delivery'});
 		await this.deps.repository.deletePendingReward({
 			month: referralPendingMonth(reward.granted_at),
 			created_at: reward.granted_at,
@@ -256,7 +258,7 @@ export class ReferralAdminService {
 	async notify(userId: UserID, tierId: bigint, content: string): Promise<void> {
 		const reward = await this.requireReward(userId, tierId);
 		if (reward.status !== 'pending_admin' && reward.status !== 'delivered') {
-			throw new ConflictError({message: 'Only an off-site reward takes a message'});
+			throw new ConflictError({code: APIErrorCodes.CONFLICT, message: 'Only an off-site reward takes a message'});
 		}
 		refuseCode('content', content, [reward.code]);
 		await this.sendSystemDm(userId, content);

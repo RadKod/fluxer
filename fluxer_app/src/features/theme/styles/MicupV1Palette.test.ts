@@ -157,9 +157,11 @@ describe('sanalyer v1 palette in the coal and dark themes', () => {
 
 	it('keeps the light theme accent and surfaces upstream', () => {
 		const light = theme(css, '.theme-light');
-		expect(resolve(light, '--brand-primary')).toBe('hsl(242, calc(70% * var(--saturation-factor)), 55%)');
-		expect(resolve(light, '--text-on-brand-primary')).toBe('hsl(0, 0%, 98%)');
-		expect(resolve(light, '--brand-primary-fill')).toBe('hsl(0, 0%, 100%)');
+		expect(resolve(light, '--brand-primary')).toBe(
+			'var(--instance-brand-primary, hsl(242, calc(70% * var(--saturation-factor)), 55%))',
+		);
+		expect(resolve(light, '--text-on-brand-primary')).toBe('var(--instance-text-on-brand-primary, hsl(0, 0%, 98%))');
+		expect(resolve(light, '--brand-primary-fill')).toBe('var(--instance-brand-primary-fill, hsl(0, 0%, 100%))');
 		expect(resolve(light, '--background-primary')).toBe('hsl(220, calc(10% * var(--saturation-factor)), 98.5%)');
 		expect(resolve(light, '--text-primary')).toBe('hsl(220, calc(10% * var(--saturation-factor)), 15%)');
 		expect(light.has('--side-panel-background')).toBe(false);

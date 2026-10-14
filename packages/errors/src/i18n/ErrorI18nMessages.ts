@@ -355,6 +355,7 @@ export const ERROR_I18N_MESSAGES = {
 		"You've reached the maximum of {count, plural, one {# emoji} other {# emojis}}.",
 	'limits.at_least_one_entry_required': 'At least one entry is required.',
 	'limits.base64_length_invalid': 'Base64 string length must be between {min} and {maxLength} characters.',
+	'limits.cannot_shrink_reserved_slots': "You can't shrink reserved slots.",
 	'limits.cannot_specify_before_and_after': "You can't specify both `before` and `after`.",
 	'limits.content_exceeds_max_length':
 		'Text must not exceed {maxLength, plural, one {# character} other {# characters}}.',
@@ -600,7 +601,8 @@ export const ERROR_I18N_MESSAGES = {
 		"This instance doesn't use tags. Your username is unique on its own.",
 	'usernames_and_tags.discriminator_out_of_range': 'Discriminator must be between {min} and {max}.',
 	'usernames_and_tags.discriminator_required': 'Discriminator is required.',
-	'usernames_and_tags.display_name_cannot_impersonate_micup': "Display name can't pass for an official sanalyer account.",
+	'usernames_and_tags.display_name_cannot_impersonate_micup':
+		"Display name can't pass for an official sanalyer account.",
 	'usernames_and_tags.display_name_reserved_terms': 'Display name can\'t contain "system message".',
 	'usernames_and_tags.global_name_length_invalid': 'Global name must be between {min} and {max} characters.',
 	'usernames_and_tags.global_name_reserved_value': 'Global name can\'t be "everyone" or "here".',

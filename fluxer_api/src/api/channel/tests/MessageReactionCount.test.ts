@@ -17,7 +17,7 @@ import {
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
 import {MAX_USERS_PER_MESSAGE_REACTION} from '@fluxer/constants/src/LimitConstants';
-import {DEFAULT_FREE_LIMITS} from '@fluxer/limits/src/LimitDefaults';
+import {DEFAULT_RESTRICTED_LIMITS} from '@fluxer/limits/src/LimitDefaults';
 import * as LimitResolver from '@fluxer/limits/src/LimitResolver';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
@@ -41,7 +41,7 @@ describe('Message reaction user counts (K10)', () => {
 		// Guild-scoped reaction limits use their base value in the upstream user context.
 		const resolveLimit = LimitResolver.resolveLimit;
 		vi.spyOn(LimitResolver, 'resolveLimit').mockImplementation((snapshot, ctx, key, options) =>
-			resolveLimit(snapshot, ctx, key, {...options, baseLimits: {...DEFAULT_FREE_LIMITS, ...limits}}),
+			resolveLimit(snapshot, ctx, key, {...options, baseLimits: {...DEFAULT_RESTRICTED_LIMITS, ...limits}}),
 		);
 	}
 

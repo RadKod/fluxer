@@ -16,11 +16,10 @@ import type {ISnowflakeService} from '@app/api/infrastructure/ISnowflakeService'
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
 import {getKVClient} from '@app/api/middleware/ServiceRegistry';
 import type {User} from '@app/api/models/User';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
-import {BaseUserUpdatePropagator} from '@app/api/user/services/BaseUserUpdatePropagator';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {propagatePartialUserChange} from '@app/api/user/services/PartialUserChangePropagation';
 import {checkIsPremium} from '@app/api/user/UserHelpers';
-import {hasPartialUserFieldsChanged} from '@app/api/user/UserMappers';
+import {dispatchUserUpdate, hasPartialUserFieldsChanged} from '@app/api/user/UserMappers';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {COSMETIC_ASSET_POLICY, ULTRA_FRONT_POLICY} from '@fluxer/constants/src/AssetFormatPolicy';
@@ -52,7 +51,7 @@ import type {IWorkerService} from '@pkgs/worker/src/contracts/IWorkerService';
 
 interface CosmeticServiceDeps {
 	repository: CosmeticRepository;
-	userRepository: IUserRepository;
+	userRepository: UserRepository;
 	userCacheService: UserCacheService;
 	gatewayService: IGatewayService;
 	workerService: IWorkerService<WorkerTaskName>;
@@ -208,16 +207,10 @@ function uploadedHash(prepared: PreparedAssetUpload): string {
 }
 
 export class CosmeticService implements CosmeticGrantPort {
-	private readonly updatePropagator: BaseUserUpdatePropagator;
 	private readonly catalogCache = new Map<CosmeticItemType, {expiresAt: number; items: Array<CosmeticItemResponse>}>();
 	private readonly itemCache = new Map<bigint, {expiresAt: number; item: CosmeticItemResponse}>();
 
-	constructor(readonly deps: CosmeticServiceDeps) {
-		this.updatePropagator = new BaseUserUpdatePropagator({
-			userCacheService: deps.userCacheService,
-			gatewayService: deps.gatewayService,
-		});
-	}
+	constructor(readonly deps: CosmeticServiceDeps) {}
 
 	async listCatalog(type?: CosmeticItemType): Promise<Array<CosmeticItemResponse>> {
 		const lists = await Promise.all((type ? [type] : COSMETIC_TYPES).map((itemType) => this.listCatalogType(itemType)));
@@ -277,7 +270,7 @@ export class CosmeticService implements CosmeticGrantPort {
 			return mapEquipped(user);
 		}
 		const updatedUser = await this.deps.userRepository.patchUpsert(user.id, patch, row);
-		await this.updatePropagator.dispatchUserUpdate(updatedUser);
+		await dispatchUserUpdate(this.deps.gatewayService, updatedUser);
 		if (hasPartialUserFieldsChanged(user, updatedUser)) {
 			await propagatePartialUserChange({userCacheService: this.deps.userCacheService}, updatedUser);
 		}
@@ -302,7 +295,7 @@ export class CosmeticService implements CosmeticGrantPort {
 		);
 		if (Object.keys(patch).length === 0) return;
 		const updatedUser = await this.deps.userRepository.patchUpsert(userId, patch, row);
-		await this.updatePropagator.dispatchUserUpdate(updatedUser);
+		await dispatchUserUpdate(this.deps.gatewayService, updatedUser);
 		await propagatePartialUserChange({userCacheService: this.deps.userCacheService}, updatedUser);
 	}
 
@@ -604,7 +597,7 @@ export class CosmeticService implements CosmeticGrantPort {
 
 	private async writeSlot(user: User, patch: Partial<UserRow>): Promise<void> {
 		const updatedUser = await this.deps.userRepository.patchUpsert(user.id, patch, user.toRow());
-		await this.updatePropagator.dispatchUserUpdate(updatedUser);
+		await dispatchUserUpdate(this.deps.gatewayService, updatedUser);
 		if (hasPartialUserFieldsChanged(user, updatedUser)) {
 			await propagatePartialUserChange({userCacheService: this.deps.userCacheService}, updatedUser);
 		}

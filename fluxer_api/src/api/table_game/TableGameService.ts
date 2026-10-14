@@ -4,7 +4,7 @@ import {createHash, randomUUID} from 'node:crypto';
 import {setTimeout as delay} from 'node:timers/promises';
 import type {ChannelID, GuildID, UserID} from '@app/api/BrandedTypes';
 import {createChannelID, createGuildID, createUserID} from '@app/api/BrandedTypes';
-import type {IChannelDataRepository} from '@app/api/channel/repositories/IChannelDataRepository';
+import type {ChannelDataRepository} from '@app/api/channel/repositories/ChannelDataRepository';
 import type {ChannelAuthService} from '@app/api/channel/services/channel_data/ChannelAuthService';
 import type {GatewayVoiceStateEntry, IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
@@ -98,7 +98,7 @@ export interface TableGameServiceDeps {
 	channelAuthService: ChannelAuthService;
 	gatewayService: IGatewayService;
 	voiceSeatService: TableGameVoiceSeats;
-	channelRepository: IChannelDataRepository; // the timer's theme read; no user is at hand there
+	channelRepository: ChannelDataRepository; // the timer's theme read; no user is at hand there
 	engines?: TableGameEngineRegistry;
 }
 
@@ -158,7 +158,7 @@ function timeoutsOf(state: unknown, position: TablePosition): number {
 
 export class TableGameService {
 	private readonly engines: TableGameEngineRegistry;
-	private readonly channels: IChannelDataRepository;
+	private readonly channels: ChannelDataRepository;
 
 	constructor(readonly deps: TableGameServiceDeps) {
 		this.engines = deps.engines ?? TABLE_GAME_ENGINES;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::api::generated::types as generated_types;
+use reqwest::Method;
 
 use super::client::{AdminApiClient, ApiError, ApiResult};
 use super::types::CodesResponse;
@@ -39,6 +40,12 @@ impl AdminApiClient {
         item_id: &str,
     ) -> ApiResult<CodesResponse> {
         let body = serde_json::json!({ "count": count, "item_id": item_id });
-        self.post("/admin/gift-codes/cosmetic", Some(&body)).await
+        self.send(
+            Method::POST,
+            "/admin/gift-codes/cosmetic",
+            Some(&body),
+            None,
+        )
+        .await
     }
 }

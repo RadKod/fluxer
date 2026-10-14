@@ -38,6 +38,7 @@ vi.mock('@app/api/middleware/ServiceSingletons', () => ({
 		usesUniqueUsernames: async () => state.unique,
 	}),
 }));
+vi.mock('@app/api/user/services/PartialUserChangePropagation', () => ({propagateUserUpdate: vi.fn()}));
 vi.mock('@app/api/admin/models/UserTypes', () => ({mapUserToAdminResponse: async (user: unknown) => user}));
 
 function setup(isBot = false, ownership?: {adminAssign: ReturnType<typeof vi.fn>}) {
@@ -57,7 +58,7 @@ function setup(isBot = false, ownership?: {adminAssign: ReturnType<typeof vi.fn>
 		apiContext: {services: {users, cache: {}, contactChangeLog: {recordDiff}}},
 		discriminatorService,
 		auditService,
-		updatePropagator: {propagateUserUpdate: vi.fn().mockResolvedValue(undefined)},
+		userUpdateDeps: {},
 		entityAssetService: {},
 		guildRepository: {},
 		usernameOwnershipService: ownership,

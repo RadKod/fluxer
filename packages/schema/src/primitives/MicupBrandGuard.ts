@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Micup: vanity codes and names that could pass for Micup itself, its founder, its staff, or a page of the app.
+// Micup: vanity codes and names that could pass for Micup itself (display names: sanalyer too), its founder, its
+// staff, or a page of the app.
 // Every word rule is checked on the text as written and with look-alikes folded (see foldLookalikes).
 
 const BRAND = 'micup';
+// Micup: the instance now ships as sanalyer, so a display name may not pass for an official sanalyer account either
+// ("sanalyer Destek", "sanalyer Team"). Usernames and vanity codes still check only BRAND.
+const DISPLAY_NAME_BRANDS = [BRAND, 'sanalyer'];
 // Rejected anywhere in a vanity code, hyphens ignored (mi-cup, resmidestek, destekekibi). Accepted side effect:
 // ordinary words that contain one are refused too (ekipler, ekipman, destekci, supporters).
 const OFFICIAL_WORDS = ['destek', 'resmi', 'official', 'support', 'admin', 'yonetim', 'ekip', 'staff', 'moderator'];
@@ -194,12 +198,15 @@ export function nameContainsMicup(name: string): boolean {
 	return readName(name).some((reading) => joinParts(reading).includes(BRAND));
 }
 
-// A display name may mention Micup ("Micup sever Ali") or an official word ("Ekip Lideri") on its own. It is
-// refused when it is the bare brand or pairs the brand with an official word ("Micup Destek", "M1cup Resmi").
+// A display name may mention Micup or sanalyer ("sanalyer sever Ali") or an official word ("Ekip Lideri") on its own.
+// It is refused when it is a bare brand or pairs a brand with an official word ("Micup Destek", "sanalyer Resmi").
 export function displayNamePassesForMicup(name: string): boolean {
 	const readings = readName(name);
-	if (!readings.some((reading) => joinParts(reading).includes(BRAND))) return false;
-	return readings.some((reading) => joinParts(reading) === BRAND || containsWord(reading, NAME_OFFICIAL_WORDS, []));
+	const brands = DISPLAY_NAME_BRANDS.filter((brand) => readings.some((reading) => joinParts(reading).includes(brand)));
+	if (brands.length === 0) return false;
+	return readings.some(
+		(reading) => brands.includes(joinParts(reading)) || containsWord(reading, NAME_OFFICIAL_WORDS, []),
+	);
 }
 
 export {LOOKALIKE_DIGITS, LOOKALIKE_LETTERS};

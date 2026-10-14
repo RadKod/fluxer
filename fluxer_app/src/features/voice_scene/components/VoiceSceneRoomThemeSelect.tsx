@@ -6,7 +6,6 @@ import type {Channel} from '@app/features/channel/models/Channel';
 import ExperimentAssignments from '@app/features/experiment/state/ExperimentAssignments';
 import Permission from '@app/features/permissions/state/Permission';
 import {Combobox} from '@app/features/ui/components/form/FormCombobox';
-import {usePortalHost} from '@app/features/ui/overlay/PortalHostContext';
 import styles from '@app/features/voice_scene/components/VoiceSceneView.module.css';
 import {ROOM_THEME_LABEL_DESCRIPTOR, roomThemeOptions} from '@app/features/voice_scene/utils/RoomThemeOptions';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
@@ -27,7 +26,6 @@ const ROOM_THEME_TRY_AGAIN_DESCRIPTOR = msg({
 
 export const VoiceSceneRoomThemeSelect = observer(function VoiceSceneRoomThemeSelect({channel}: {channel: Channel}) {
 	const {i18n} = useLingui();
-	const portalHost = usePortalHost();
 	const [isUpdating, setIsUpdating] = useState(false);
 	const assignment = readVoiceRoomAssignment(ExperimentAssignments.response);
 	const canManageChannel =
@@ -64,7 +62,6 @@ export const VoiceSceneRoomThemeSelect = observer(function VoiceSceneRoomThemeSe
 				isSearchable={false}
 				isClearable={false}
 				menuPlacement="top"
-				portalProps={{container: portalHost}}
 				density="compact"
 				data-flx="voice-scene.room-theme.select"
 			/>

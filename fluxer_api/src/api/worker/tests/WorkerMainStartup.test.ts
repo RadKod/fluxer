@@ -7,7 +7,6 @@ import * as ContentBlocklistCaches from '@app/api/middleware/ContentBlocklistCac
 import * as ServiceRegistry from '@app/api/middleware/ServiceRegistry';
 import * as ServiceSingletons from '@app/api/middleware/ServiceSingletons';
 import * as SearchFactory from '@app/api/SearchFactory';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {MockSnowflakeService} from '@app/api/test/mocks/MockSnowflakeService';
 import * as LifecycleHooks from '@app/api/user/lifecycle/MicupUserLifecycleHooks';
 import * as AccountActions from '@app/api/worker/AccountActionConsumer';
@@ -22,6 +21,7 @@ import {WorkerRunner} from '@app/api/worker/WorkerRunner';
 import {WorkerService} from '@app/api/worker/WorkerService';
 import * as Server from '@fluxer/hono/src/Server';
 import * as Cassandra from '@pkgs/cassandra/src/Client';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {JetStreamConnectionManager} from '@pkgs/nats/src/JetStreamConnectionManager';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
@@ -88,6 +88,7 @@ describe('worker TRY prefill isolation', () => {
 			Object.assign(Config.worker, {mode: 'lane', laneName: 'lifecycle'});
 			vi.spyOn(WorkerDependencies, 'initializeWorkerDependencies').mockResolvedValue({
 				kvClient: new MockKVProvider(),
+				channelRepository: {channelData: {}, messages: {}},
 			} as unknown as WorkerDependencies.WorkerDependencies);
 			const startActions = vi.spyOn(AccountActions, 'startAccountActionConsumer').mockImplementation(() => {});
 			await startWorkerMain();

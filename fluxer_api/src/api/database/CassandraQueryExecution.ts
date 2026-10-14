@@ -350,6 +350,12 @@ export class BatchBuilder {
 		return this;
 	}
 
+	// Micup: referral, cosmetics and discovery batches add rows conditionally inside one chain.
+	addPreparedIf(condition: boolean, q: PreparedQuery): this {
+		if (condition) this.addPrepared(q);
+		return this;
+	}
+
 	async execute(atomic = true): Promise<void> {
 		if (this.queries.length === 0) return;
 		await executeBatch(this.queries, atomic);

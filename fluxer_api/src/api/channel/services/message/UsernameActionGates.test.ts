@@ -124,7 +124,7 @@ function groups(): GroupDmOperationsService {
 function voice(): VoiceService {
 	return subject(VoiceService.prototype, {
 		userRepository: {findUnique: async () => state.user},
-		channelRepository: {findUnique: next},
+		channelRepository: {channelData: {findUnique: next}},
 	});
 }
 
@@ -158,7 +158,7 @@ function invite(type: number): InviteService {
 		findInviteWithLowercaseFallback: async () => ({type, channelId: CHANNEL, guildId: GUILD, maxUses: 0}),
 		apiContext: {services: {users: {findUnique: async () => state.user}}},
 		channelService: {channelData: {operations: {getChannelSystem: next}}},
-		guildService: {data: {getGuildSystem: next}},
+		guildService: {data: {operations: {getGuildSystem: next}}},
 	});
 }
 
@@ -444,7 +444,7 @@ describe('Username selection actor and escape routes', () => {
 		).rejects.toBe(NEXT);
 	});
 	it('reaction removal reaches its existing access check', async () => {
-		const service = subject(MessageReactionService.prototype, {ensureTextChannel: next});
+		const service = subject(MessageReactionService.prototype, {assertReactionRemovalAllowed: next});
 		await expect(
 			service.removeReaction({
 				authChannel: auth,

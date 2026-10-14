@@ -14,9 +14,9 @@ import {ReferralRepository, type ReferralStatsField} from '@app/api/referral/Ref
 import {ReferralRewardService, type ReferralRewardServiceDeps} from '@app/api/referral/ReferralRewardService';
 import type {RegistrationEventRecord} from '@app/api/risk/adapters/VelocityAdapter';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {getIpNetworkKey} from '@fluxer/ip_utils/src/IpAddress';
 import type {ReferralTierReward} from '@fluxer/schema/src/domains/referral/ReferralRequestSchemas';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {vi} from 'vitest';
 
 export const DAY_MS = 86_400_000;

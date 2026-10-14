@@ -58,7 +58,7 @@ it("an auto role above the bot's highest role is skipped", async () => {
 
 it('on an elevated-MFA community the auto role is skipped and counted', async () => {
 	const f = await fixture();
-	await f.deps.guildRepository.upsert({...f.guildModel.toRow(), mfa_level: 1});
+	await f.deps.guildRepository.upsertPartial(f.guildModel.id, {mfa_level: 1});
 	const debug = vi.spyOn(Logger.child({}), 'debug');
 	await expect(f.rejoin()).resolves.toMatchObject({userId: f.userId});
 	await f.runner.run(f.payload);

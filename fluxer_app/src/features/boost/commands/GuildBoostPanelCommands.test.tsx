@@ -10,7 +10,7 @@ vi.mock('@app/features/boost/components/GuildBoostPanel', () => {
 	state.evaluations++;
 	return {GuildBoostPanel: () => null};
 });
-vi.mock('@app/features/guild/components/alerts/GuildErrorModalUtils', () => ({showGuildErrorModal: vi.fn()}));
+vi.mock('@app/features/app/components/alerts/GenericErrorModalCommands', () => ({showGenericErrorModal: vi.fn()}));
 vi.mock('@app/features/ui/commands/ModalCommands', () => ({
 	modal: (render: () => React.ReactElement) => render,
 	pushWithKey: state.push,

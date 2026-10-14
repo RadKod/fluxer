@@ -3,7 +3,7 @@
 import {createTestAccount, type TestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {acceptInvite, createChannelInvite} from '@app/api/channel/tests/ChannelTestUtils';
 import {overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
-import {createGuild, getGuildChannels, getUserGuilds} from '@app/api/guild/tests/GuildTestUtils';
+import {createGuild, getGuildChannels} from '@app/api/guild/tests/GuildTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
@@ -198,7 +198,7 @@ describe('mature content settings while feature_mature_content_settings is 0', (
 		])('creates the community with mature content off when the template marks %s as mature', async (_label, index) => {
 			const channels = TEMPLATE_CHANNELS.map((channel, i) => (i === index ? {...channel, nsfw: true} : channel));
 			const created = await createGuildFromTemplate(channels).execute();
-			const guilds = await getUserGuilds(harness, owner.token);
+			const guilds = await createBuilder<Array<GuildResponse>>(harness, owner.token).get('/users/@me/guilds').execute();
 			expect(guilds.map((g) => g.id).sort()).toEqual([guild.id, created.id].sort());
 			const createdChannels = await getGuildChannels(harness, owner.token, created.id);
 			expect(createdChannels).toHaveLength(2);

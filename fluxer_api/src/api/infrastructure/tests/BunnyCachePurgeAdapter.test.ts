@@ -6,12 +6,12 @@ import type {APICachePurgeConfig} from '@app/api/config/APIConfig';
 import {createBunnyCachePurgeAdapter} from '@app/api/infrastructure/BunnyCachePurgeAdapter';
 import {CachePurgeQueue} from '@app/api/infrastructure/CachePurgeQueue';
 import {Logger} from '@app/api/Logger';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
 import {server} from '@app/api/test/msw/server';
 import processCachePurgeQueue from '@app/api/worker/tasks/ProcessCachePurgeQueue';
 import {clearWorkerDependencies, setWorkerDependenciesForTest} from '@app/api/worker/WorkerContext';
 import {loadConfig, resetConfig} from '@fluxer/config/src/ConfigLoader';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import type {WorkerTaskHelpers} from '@pkgs/worker/src/contracts/WorkerTask';
 import {delay, HttpResponse, http} from 'msw';
 import {afterAll, afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
@@ -33,6 +33,7 @@ function bunnyConfig(overrides: Partial<APICachePurgeConfig['bunny']> = {}): API
 	return {
 		adapter: 'bunny',
 		http: {endpoint: '', token: '', timeoutMs: 10_000},
+		controller: {endpoint: '', token: '', timeoutMs: 10_000},
 		bunny: {
 			apiBase: API_BASE,
 			apiKey: API_KEY,

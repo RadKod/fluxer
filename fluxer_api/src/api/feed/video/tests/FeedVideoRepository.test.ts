@@ -5,8 +5,8 @@ import type {FeedVideoRow} from '@app/api/database/types/FeedTypes';
 import {FeedVideos} from '@app/api/feed/FeedTables';
 import {FeedVideoRepository, pendingHour, pendingHourAt, pendingShard} from '@app/api/feed/video/FeedVideoRepository';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {createSnowflakeFromTimestamp} from '@fluxer/snowflake/src/Snowflake';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const AUTHOR = createUserID(4242n);

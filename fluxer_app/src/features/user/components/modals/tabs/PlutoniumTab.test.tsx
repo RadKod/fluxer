@@ -24,10 +24,12 @@ vi.mock('@lingui/react/macro', () => ({
 }));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: runtime}));
 vi.mock('@app/features/user/state/Users', () => ({default: {getCurrentUser: () => ({isClaimed: () => true})}}));
-// Stripe checkout, pricing, invoices and payment methods all live under PlutoniumContent.
-vi.mock('@app/features/app/components/dialogs/components/PlutoniumContent', () => ({
-	PlutoniumContent: () => (
-		<div data-testid="stripe-plutonium" data-flx="user.plutonium-tab-test.plutonium-content.stripe-plutonium" />
+// Upstream retired the inline Stripe tab; the settings tab now hands off to the premium page.
+const openPlutoniumPage = vi.hoisted(() => vi.fn());
+vi.mock('@app/features/premium/commands/PlutoniumPageCommands', () => ({openPlutoniumPage}));
+vi.mock('@app/features/premium/components/plutonium_page/PlutoniumPageLinkCard', () => ({
+	PlutoniumPageLinkCard: () => (
+		<div data-testid="plutonium-page-link" data-flx="user.plutonium-tab-test.plutonium-page-link-card" />
 	),
 }));
 
@@ -84,9 +86,10 @@ describe('PlutoniumTab', () => {
 		container.remove();
 	});
 
-	it('hosted still draws PlutoniumContent', () => {
+	it('hosted hands off to the premium page', () => {
 		configure(false, 0, false);
 		act(() => root.render(createElement(PlutoniumTab)));
-		expect(container.querySelector('[data-testid="stripe-plutonium"]')).not.toBeNull();
+		expect(container.querySelector('[data-testid="plutonium-page-link"]')).not.toBeNull();
+		expect(openPlutoniumPage).toHaveBeenCalledOnce();
 	});
 });

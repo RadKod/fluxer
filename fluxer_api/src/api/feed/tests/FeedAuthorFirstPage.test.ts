@@ -5,8 +5,8 @@ import {setCassandraQueryExecutorForTesting} from '@app/api/database/CassandraQu
 import type {FeedPostRow} from '@app/api/database/types/FeedTypes';
 import {FeedRepository} from '@app/api/feed/FeedRepository';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
-import {MockKVProvider} from '@app/api/test/mocks/MockKVProvider';
 import {createSnowflakeFromTimestamp} from '@fluxer/snowflake/src/Snowflake';
+import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const AUTHOR = createUserID(42n);

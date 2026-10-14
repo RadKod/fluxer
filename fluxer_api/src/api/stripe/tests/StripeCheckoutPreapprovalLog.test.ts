@@ -4,7 +4,7 @@ import {Logger} from '@app/api/Logger';
 import type {ProductRegistry} from '@app/api/stripe/ProductRegistry';
 import {StripeCheckoutService} from '@app/api/stripe/services/StripeCheckoutService';
 import type {NoopLogger} from '@app/api/test/mocks/NoopLogger';
-import type {IUserRepository} from '@app/api/user/IUserRepository';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {ICacheService} from '@pkgs/cache/src/ICacheService';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 
@@ -25,7 +25,7 @@ describe('localized card preapproval logging', () => {
 		};
 		const service = new StripeCheckoutService(
 			null,
-			{} as IUserRepository,
+			{} as UserRepository,
 			{} as ProductRegistry,
 			cache as unknown as ICacheService,
 		);

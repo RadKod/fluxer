@@ -36,9 +36,8 @@ async function settingsFixture(visibility: 'off' | 'friends' = 'off') {
 	const account = {id: userId, isBot: false, isSystem: false, dateOfBirth: '2000-01-01'};
 	const dispatch = vi.fn(async () => {});
 	const service = new UserAccountSettingsService({
-		userSettingsRepository: repository,
-		userAccountRepository: {findUnique: vi.fn(async () => account)} as never,
-		userRelationshipRepository: {} as never,
+		// The account is a stub; settings reads and writes reach the real settings table.
+		userAccountRepository: Object.assign(Object.create(repository), {findUnique: vi.fn(async () => account)}) as never,
 		updatePropagator: {dispatchUserSettingsUpdate: dispatch} as never,
 		gatewayService: {} as never,
 		userCacheService: {} as never,

@@ -54,7 +54,7 @@ export async function readUsernameMigration() {
 }
 
 export async function resolveUsernameHandle(
-	users: Pick<IUserRepository, 'findUnique' | 'findByUsernameDiscriminator'>,
+	users: Pick<UserRepository, 'findUnique' | 'findByUsernameDiscriminator'>,
 	input: string,
 	discriminator?: number,
 ): Promise<User | null> {
@@ -247,7 +247,7 @@ async function findPeopleByUsername(users: UsernameLookup, username: string): Pr
 }
 
 export async function findPersonByLoginHandle(
-	users: UsernameLookup & Pick<IUserRepository, 'findUnique' | 'findByUsernameDiscriminator'>,
+	users: UsernameLookup & Pick<UserRepository, 'findUnique' | 'findByUsernameDiscriminator'>,
 	handle: ParsedLoginHandle,
 ): Promise<User | null> {
 	const migration = await readUsernameMigration();

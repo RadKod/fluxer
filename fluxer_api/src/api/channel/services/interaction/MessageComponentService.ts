@@ -2,7 +2,7 @@
 
 import {requireEmailVerified} from '@app/api/auth/EmailVerificationUtils';
 import type {ChannelID, MessageID} from '@app/api/BrandedTypes';
-import type {IChannelRepositoryAggregate} from '@app/api/channel/repositories/IChannelRepositoryAggregate';
+import type {ChannelRepository} from '@app/api/channel/ChannelRepository';
 import type {ChannelService} from '@app/api/channel/services/ChannelService';
 import {MessageInteractionBase} from '@app/api/channel/services/interaction/MessageInteractionBase';
 import {findClickableButton} from '@app/api/channel/services/message/MessageComponentRules';
@@ -18,7 +18,7 @@ import {UnknownMessageError} from '@fluxer/errors/src/domains/channel/UnknownMes
 import type {MessageComponentClickResponse} from '@fluxer/schema/src/domains/message/MessageComponentSchemas';
 
 export interface MessageComponentServiceDeps {
-	channelRepository: IChannelRepositoryAggregate;
+	channelRepository: ChannelRepository;
 	channelService: ChannelService;
 }
 
