@@ -61,9 +61,10 @@ const measureCatalogBadge = (event: React.SyntheticEvent<HTMLImageElement>) => {
 	}
 };
 
-// Micup: the flag badge icons are Micup's own, served under /badges/micup-*.
+// Micup: Micup served its own flag badge icons from its CDN, and they are not in the source. sanalyer uses the
+// CC BY-SA 4.0 badges that fluxer_static already ships under /badges/.
 const badgeAssetUrl = (fileName: string) =>
-	`${RuntimeConfig.staticCdnEndpoint}/badges/micup-${fileName}?v=${BADGE_ASSET_VERSION}`;
+	`${RuntimeConfig.staticCdnEndpoint}/badges/${fileName}?v=${BADGE_ASSET_VERSION}`;
 
 const STAFF_DESCRIPTOR = msg({
 	message: '{productName} Staff',

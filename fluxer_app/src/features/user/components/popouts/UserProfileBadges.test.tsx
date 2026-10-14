@@ -66,7 +66,7 @@ describe('UserProfileBadges on sanalyer', () => {
 		render(userWithFlags(PublicUserFlags.STAFF), null);
 
 		expect(images().map((img) => img.alt)).toEqual(['sanalyer Ekibi']);
-		expect(images()[0].src).toBe('https://static.micup.gg/badges/micup-staff.svg?v=3');
+		expect(images()[0].src).toBe('https://static.micup.gg/badges/staff.svg?v=3');
 	});
 
 	it('keeps premium hidden when the public flag is absent, even for a premium profile', () => {
@@ -76,9 +76,9 @@ describe('UserProfileBadges on sanalyer', () => {
 		);
 
 		expect(images().map((img) => new URL(img.src).pathname)).toEqual([
-			'/badges/micup-staff.svg',
-			'/badges/micup-bug-hunter.svg',
-			'/badges/micup-partner.svg',
+			'/badges/staff.svg',
+			'/badges/bug-hunter.svg',
+			'/badges/partner.svg',
 		]);
 		expect(images().map((img) => img.alt)).toEqual(['sanalyer Ekibi', 'sanalyer Hata Avcısı', 'sanalyer İş Ortağı']);
 		expect(container.querySelector('a')).toBeNull();
@@ -287,7 +287,7 @@ describe('UserProfileBadges on sanalyer', () => {
 		);
 
 		expect(images().map((img) => [img.alt, img.getAttribute('src')])).toEqual([
-			['sanalyer Ekibi', 'https://static.micup.gg/badges/micup-staff.svg?v=3'],
+			['sanalyer Ekibi', 'https://static.micup.gg/badges/staff.svg?v=3'],
 			['<b>Erken</b> destekçi', 'https://media.micup.gg/branding/badge-1300000000000000002/aaaa1111.webp?size=128'],
 			['Moderatör', 'https://media.micup.gg/branding/badge-1300000000000000001/a_bbbb2222.webp?size=128'],
 		]);
