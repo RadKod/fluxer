@@ -151,7 +151,7 @@ describe('ErrorI18n', () => {
 		it.each([
 			[
 				'phone.country_not_supported',
-				"We don't send verification texts to this country. Use a mobile number from another country, or email pr@premate.gg and a person will review your account.",
+				"We don't send verification texts to this country. Use a mobile number from another country, or email info@sanalyer.com and a person will review your account.",
 			],
 			[
 				'phone.inbound_verification_required',
@@ -163,15 +163,15 @@ describe('ErrorI18n', () => {
 			],
 			[
 				'phone.number_not_in_service',
-				"Your carrier says this number isn't in service. Check the number and try again, or email pr@premate.gg if it's correct.",
+				"Your carrier says this number isn't in service. Check the number and try again, or email info@sanalyer.com if it's correct.",
 			],
 			[
 				'phone.number_not_mobile',
-				"This isn't a mobile number, so it can't receive our text. Use a mobile number, or email pr@premate.gg if you think that's wrong.",
+				"This isn't a mobile number, so it can't receive our text. Use a mobile number, or email info@sanalyer.com if you think that's wrong.",
 			],
 			[
 				'phone.verification_needs_review',
-				"We couldn't verify this number automatically. Email pr@premate.gg and a person will review your account.",
+				"We couldn't verify this number automatically. Email info@sanalyer.com and a person will review your account.",
 			],
 		])('resolves %s to its own message', (code, expected) => {
 			const message = getErrorMessageUnsafe(code, 'en-US');
@@ -184,7 +184,7 @@ describe('ErrorI18n', () => {
 			'phone.number_not_mobile',
 			'phone.verification_needs_review',
 		])('routes %s to support', (code) => {
-			expect(getErrorMessageUnsafe(code, 'en-US')).toContain('pr@premate.gg');
+			expect(getErrorMessageUnsafe(code, 'en-US')).toContain('info@sanalyer.com');
 		});
 		it('blames us for a lookup outage and invites the same number again', () => {
 			const message = getErrorMessage('phone.lookup_unavailable', 'en-US');

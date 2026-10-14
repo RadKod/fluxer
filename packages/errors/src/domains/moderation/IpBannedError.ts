@@ -11,7 +11,7 @@ interface IpBannedErrorOptions {
 	expiresAt?: Date | null;
 }
 
-const SUPPORT_EMAIL = 'pr@premate.gg';
+const SUPPORT_EMAIL = 'info@sanalyer.com';
 
 export class IpBannedError extends ForbiddenError {
 	constructor(options: IpBannedErrorOptions) {

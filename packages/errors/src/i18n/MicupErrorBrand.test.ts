@@ -27,9 +27,9 @@ describe('sanalyer error brand', () => {
 	it('sends IP ban appeals to sanalyer support', () => {
 		const message = getErrorMessage('permissions.global_ip_banned', 'en-US', {ipAddress: '203.0.113.1'});
 		expect(message).toContain('sanalyer API');
-		expect(message).toContain('pr@premate.gg');
+		expect(message).toContain('info@sanalyer.com');
 		const error = new IpBannedError({ipAddress: '203.0.113.1', kind: 'permanent'});
-		expect(error.data?.appeal_email).toBe('pr@premate.gg');
+		expect(error.data?.appeal_email).toBe('info@sanalyer.com');
 	});
 
 	it('calls the premium tier sanalyer Plus', () => {

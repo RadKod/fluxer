@@ -71,7 +71,7 @@ test('a local startup failure still offers the reset of app data', () => {
 
 test('opens only the sanalyer support address outside the app window', () => {
 	const markup = renderToStaticMarkup(<BootstrapErrorScreen />);
-	expect(markup).toContain('href="mailto:pr@premate.gg"');
+	expect(markup).toContain('href="mailto:info@sanalyer.com"');
 	expect(markup).toContain('target="_blank"');
 	expect(markup).toContain('rel="noopener noreferrer"');
 	expect(markup).not.toMatch(/bluesky|support@fluxer/i);

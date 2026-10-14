@@ -10,7 +10,7 @@ import type {EmailTemplate, EmailTemplateKey} from '@pkgs/email/src/email_i18n/E
 
 const DEFAULT_LOCALE = 'en-US';
 // Micup support address; appeals and safety share it.
-const MICUP_CONTACT_EMAIL = 'pr@premate.gg';
+const MICUP_CONTACT_EMAIL = 'info@sanalyer.com';
 const DEFAULT_EMAIL_TEMPLATE_VARIABLES = {
 	product_name: 'sanalyer',
 	appeals_email: MICUP_CONTACT_EMAIL,

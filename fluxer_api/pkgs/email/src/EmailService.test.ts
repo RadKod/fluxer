@@ -273,15 +273,15 @@ describe('EmailService dark layout', () => {
 });
 
 describe('EmailService contact address', () => {
-	it('names pr@premate.gg as the appeals and safety contact', async () => {
+	it('names info@sanalyer.com as the appeals and safety contact', async () => {
 		const tempBan = await capture(CONFIG, (service) =>
 			service.sendAccountTempBannedEmail('user@example.test', 'ayse', null, 24, new Date('2026-09-26T00:00:00Z'), 'tr'),
 		);
 		const report = await capture(CONFIG, (service) =>
 			service.sendReportResolvedEmail('user@example.test', 'ayse', '123', '', 'tr'),
 		);
-		expect(tempBan.text).toContain('pr@premate.gg');
-		expect(report.text).toContain('pr@premate.gg');
+		expect(tempBan.text).toContain('info@sanalyer.com');
+		expect(report.text).toContain('info@sanalyer.com');
 		expect(`${tempBan.text}${report.text}`).not.toContain('destek@micup.gg');
 	});
 });

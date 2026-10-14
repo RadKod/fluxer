@@ -19,7 +19,7 @@ export const PIX_PAYMENT_METHOD = 'Pix';
 export const UPI_PAYMENT_METHOD = 'UPI';
 export const BLIK_PAYMENT_METHOD = 'BLIK';
 // Micup support contact.
-export const SUPPORT_EMAIL = 'pr@premate.gg';
+export const SUPPORT_EMAIL = 'info@sanalyer.com';
 export const SUPPORT_EMAIL_MAILTO = `mailto:${SUPPORT_EMAIL}`;
 export const I18N_EMAIL = 'i18n@fluxer.app';
 export const I18N_EMAIL_MAILTO = `mailto:${I18N_EMAIL}`;

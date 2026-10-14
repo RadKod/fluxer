@@ -105,9 +105,9 @@ describe('sanalyer brand hosts', () => {
 		expect(TrustedDomain.isTrustedDomain('canary.micup.gg')).toBe(false);
 	});
 
-	it('points the support contact to pr@premate.gg', () => {
-		expect(SUPPORT_EMAIL).toBe('pr@premate.gg');
-		expect(SUPPORT_EMAIL_MAILTO).toBe('mailto:pr@premate.gg');
+	it('points the support contact to info@sanalyer.com', () => {
+		expect(SUPPORT_EMAIL).toBe('info@sanalyer.com');
+		expect(SUPPORT_EMAIL_MAILTO).toBe('mailto:info@sanalyer.com');
 	});
 });
 
