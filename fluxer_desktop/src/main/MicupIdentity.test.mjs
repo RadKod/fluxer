@@ -216,7 +216,7 @@ describe('Micup desktop identity', () => {
 			assert.match(source, /DESKTOP_APP_NAME|`Micup /, file);
 		}
 		const menu = readFileSync(new URL('./Menu.ts', import.meta.url), 'utf8');
-		assert.match(menu, /openExternalDeduped\('mailto:pr@premate\.gg'\)/);
+		assert.match(menu, /openExternalDeduped\('mailto:info@sanalyer\.com'\)/);
 		// AGPL source offer: Help > Source code opens the Micup source page, not upstream GitHub.
 		assert.match(
 			menu,

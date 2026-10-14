@@ -102,7 +102,6 @@ import syncCrosspostedMessage from '@app/api/worker/tasks/SyncCrosspostedMessage
 import syncDiscoveryIndex from '@app/api/worker/tasks/SyncDiscoveryIndex';
 import syncFileShaBlocklists from '@app/api/worker/tasks/SyncFileShaBlocklists';
 import syncGuildRosterReaction from '@app/api/worker/tasks/SyncGuildRosterReaction';
-import syncShopTryRate from '@app/api/worker/tasks/SyncShopTryRate';
 import syncStripeCustomerEmail from '@app/api/worker/tasks/SyncStripeCustomerEmail';
 import syncUrlBlocklists from '@app/api/worker/tasks/SyncUrlBlocklists';
 import {
@@ -200,7 +199,6 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	syncFileShaBlocklists,
 	syncUrlBlocklists,
 	syncDiscoveryIndex,
-	syncShopTryRate,
 	syncCrosspostCopies,
 	syncCrosspostedMessage,
 	flushUserActivityBuffer,

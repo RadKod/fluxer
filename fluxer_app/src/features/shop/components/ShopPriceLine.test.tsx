@@ -54,18 +54,15 @@ const SETTINGS: ShopSettingsResponse = {
 	premium_sales_open: true,
 	item_sales_open: true,
 	premium_discount_percent: 30,
-	usd_to_azn_rate: '1.7000',
-	usd_to_azn_rate_micro: 1700000,
-	try_to_azn_rate_micro: null,
 };
 const PRICE: ShopPriceResponse = {
-	base_usd_cents: 500,
+	base_try_minor: 500,
 	campaign_percent: null,
 	campaign_ends_at: null,
-	sale_usd_cents: 500,
-	premium_usd_cents: 350,
+	sale_try_minor: 500,
+	premium_try_minor: 350,
 };
-const CAMPAIGN: ShopPriceResponse = {...PRICE, campaign_percent: 20, sale_usd_cents: 400, premium_usd_cents: 280};
+const CAMPAIGN: ShopPriceResponse = {...PRICE, campaign_percent: 20, sale_try_minor: 400, premium_try_minor: 280};
 const ENDS_AT = new Date(NOW + 2 * 86_400_000).toISOString();
 
 function itemEntry(
@@ -110,67 +107,63 @@ describe('ShopPriceLine', () => {
 		container.querySelector(`[data-flx="shop.shop-price-line.${name}"]`)?.textContent ?? null;
 	const countdown = () => container.querySelector('[data-countdown]')?.getAttribute('data-countdown') ?? null;
 
-	it('uses the viewer discount for the primary TL price in the dialog', () => {
-		state.settings = {...SETTINGS, try_to_azn_rate_micro: 34000};
+	it('uses the viewer discount for the primary price in the dialog', () => {
 		render(itemEntry(PRICE));
-		expect(part('final')).toBe('250 TLPayable: 8.50 AZN');
-		expect(part('premium')).toBe('175 TL with sanalyer Plus');
-		expect(container.querySelectorAll('[data-flx="shop.shop-price.payable"]')).toHaveLength(1);
+		expect(part('final')).toBe('₺5');
+		expect(part('premium')).toBe('₺3.50 with sanalyer Plus');
 		expect(part('was')).toBeNull();
 
 		state.premiumDiscount = true;
 		render(itemEntry({...PRICE}));
-		expect(part('final')).toBe('175 TLPayable: 5.95 AZN');
-		expect(part('was')).toBe('250 TL');
+		expect(part('final')).toBe('₺3.50');
+		expect(part('was')).toBe('₺5');
 		expect(part('premium')).toBeNull();
 	});
 
-	// The card keeps one row; the AZN amount and the Plus price are in the dialog.
-	it('uses the viewer discount for the primary TL price on the card, on one row', () => {
-		state.settings = {...SETTINGS, try_to_azn_rate_micro: 34000};
+	// The card keeps one row; the Plus price is in the dialog.
+	it('uses the viewer discount for the primary price on the card, on one row', () => {
 		render(itemEntry(PRICE), 'card');
-		expect(part('final')).toBe('250 TL');
+		expect(part('final')).toBe('₺5');
 		expect(part('premium')).toBeNull();
-		expect(container.querySelector('[data-flx="shop.shop-price.payable"]')).toBeNull();
 
 		state.premiumDiscount = true;
 		render(itemEntry({...PRICE}), 'card');
-		expect(part('final')).toBe('175 TL');
-		expect(part('was')).toBe('250 TL');
+		expect(part('final')).toBe('₺3.50');
+		expect(part('was')).toBe('₺5');
 	});
 
 	it('normal: the price and a muted premium line; a member sees the premium price over the struck price', () => {
 		render(itemEntry(PRICE));
-		expect(part('final')).toBe('8.50 AZN');
+		expect(part('final')).toBe('₺5');
 		expect(part('was')).toBeNull();
-		expect(part('premium')).toBe('5.95 AZN with sanalyer Plus');
+		expect(part('premium')).toBe('₺3.50 with sanalyer Plus');
 
 		state.premiumDiscount = true;
 		render(itemEntry({...PRICE}));
-		expect(part('final')).toBe('5.95 AZN');
-		expect(part('was')).toBe('8.50 AZN');
+		expect(part('final')).toBe('₺3.50');
+		expect(part('was')).toBe('₺5');
 		expect(part('premium')).toBeNull();
 	});
 
 	it('a trial account that may wear premium items still sees the non-member prices', () => {
 		state.premiumUser = true;
 		render(itemEntry(PRICE));
-		expect(part('final')).toBe('8.50 AZN');
-		expect(part('premium')).toBe('5.95 AZN with sanalyer Plus');
+		expect(part('final')).toBe('₺5');
+		expect(part('premium')).toBe('₺3.50 with sanalyer Plus');
 	});
 
 	it('campaign: the sale price, the struck price and the badge; a member pays the premium price', () => {
 		render(itemEntry(CAMPAIGN));
-		expect(part('final')).toBe('6.80 AZN');
-		expect(part('was')).toBe('8.50 AZN');
+		expect(part('final')).toBe('₺4');
+		expect(part('was')).toBe('₺5');
 		expect(part('badge')).toBe('-20%');
-		expect(part('premium')).toBe('4.76 AZN with sanalyer Plus');
+		expect(part('premium')).toBe('₺2.80 with sanalyer Plus');
 		expect(countdown()).toBeNull();
 
 		state.premiumDiscount = true;
 		render(itemEntry({...CAMPAIGN}));
-		expect(part('final')).toBe('4.76 AZN');
-		expect(part('was')).toBe('8.50 AZN');
+		expect(part('final')).toBe('₺2.80');
+		expect(part('was')).toBe('₺5');
 		expect(part('badge')).toBe('-20%');
 		expect(part('premium')).toBeNull();
 	});
@@ -184,14 +177,14 @@ describe('ShopPriceLine', () => {
 	});
 
 	it('premium discount 0: no premium line, and a member sees the plain price', () => {
-		const price = {...PRICE, premium_usd_cents: null};
+		const price = {...PRICE, premium_try_minor: null};
 		render(itemEntry(price));
-		expect(part('final')).toBe('8.50 AZN');
+		expect(part('final')).toBe('₺5');
 		expect(part('premium')).toBeNull();
 
 		state.premiumDiscount = true;
 		render(itemEntry({...price}));
-		expect(part('final')).toBe('8.50 AZN');
+		expect(part('final')).toBe('₺5');
 		expect(part('was')).toBeNull();
 	});
 
@@ -216,43 +209,27 @@ describe('ShopPriceLine', () => {
 
 	it('a package shows the campaign and the countdown but never a premium line, even to a member', () => {
 		state.premiumDiscount = true;
-		render(packageEntry({...CAMPAIGN, premium_usd_cents: null, campaign_ends_at: ENDS_AT}));
-		expect(part('final')).toBe('6.80 AZN');
-		expect(part('was')).toBe('8.50 AZN');
+		render(packageEntry({...CAMPAIGN, premium_try_minor: null, campaign_ends_at: ENDS_AT}));
+		expect(part('final')).toBe('₺4');
+		expect(part('was')).toBe('₺5');
 		expect(part('badge')).toBe('-20%');
 		expect(part('premium')).toBeNull();
 		expect(countdown()).toBe(ENDS_AT);
 	});
 
-	it.each([undefined, null])(
-		'keeps catalog prices visible when an older server sends the decimal USD rate with micro %s',
-		(rate) => {
-			state.settings = {...SETTINGS, usd_to_azn_rate_micro: rate};
-			render(itemEntry(PRICE));
-			expect(part('final')).toBe('8.50 AZN');
-			expect(part('premium')).toBe('5.95 AZN with sanalyer Plus');
-		},
-	);
-
-	it('renders only AZN when the effective TL rate is absent', () => {
-		render(itemEntry(PRICE));
-		expect(part('final')).toBe('8.50 AZN');
-		expect(container.textContent).not.toMatch(/USD|\$|TRY|₺/);
+	// sanalyer: Turkish lira is the only currency; no second amount or other currency shows anywhere.
+	it('renders Turkish lira only', () => {
+		render(itemEntry(CAMPAIGN));
+		expect(container.textContent).not.toMatch(/AZN|USD|\$|TL/);
 		expect(container.querySelector('[data-flx="shop.shop-price.payable"]')).toBeNull();
-	});
-
-	it.each(['', 'invalid', '0', '-1', 'Infinity'])('hides prices for invalid legacy rate %s', (rate) => {
-		state.settings = {...SETTINGS, usd_to_azn_rate_micro: undefined, usd_to_azn_rate: rate};
-		render(itemEntry(PRICE));
-		expect(part('final')).toBe('');
 	});
 
 	it('drops a campaign that ended on the client and draws the normal prices', () => {
 		render(itemEntry({...CAMPAIGN, campaign_ends_at: new Date(NOW - 60_000).toISOString()}));
-		expect(part('final')).toBe('8.50 AZN');
+		expect(part('final')).toBe('₺5');
 		expect(part('was')).toBeNull();
 		expect(part('badge')).toBeNull();
-		expect(part('premium')).toBe('5.95 AZN with sanalyer Plus');
+		expect(part('premium')).toBe('₺3.50 with sanalyer Plus');
 		expect(countdown()).toBeNull();
 	});
 });
@@ -286,7 +263,7 @@ describe('ShopPriceLine card', () => {
 
 	it('a non-member sees the sale price alone', () => {
 		render(itemEntry(PRICE));
-		expect(part('final')).toBe('8.50 AZN');
+		expect(part('final')).toBe('₺5');
 		expect(part('was')).toBeNull();
 		expect(part('premium')).toBeNull();
 		expect(lines()).toBe(1);
@@ -295,15 +272,15 @@ describe('ShopPriceLine card', () => {
 	it('a member sees the member price over the struck list price', () => {
 		state.premiumDiscount = true;
 		render(itemEntry(PRICE));
-		expect(part('final')).toBe('5.95 AZN');
-		expect(part('was')).toBe('8.50 AZN');
+		expect(part('final')).toBe('₺3.50');
+		expect(part('was')).toBe('₺5');
 		expect(lines()).toBe(1);
 	});
 
 	it('campaign: sale price, struck price and the sale on one row, no countdown', () => {
 		render(itemEntry({...CAMPAIGN, campaign_ends_at: ENDS_AT}));
-		expect(part('final')).toBe('6.80 AZN');
-		expect(part('was')).toBe('8.50 AZN');
+		expect(part('final')).toBe('₺4');
+		expect(part('was')).toBe('₺5');
 		expect(part('badge')).toBe('-20%');
 		expect(container.querySelector('[data-flx="shop.shop-price-line.badge"]')?.parentElement).toBe(
 			container.querySelector('[data-flx="shop.shop-price-line.row"]'),
@@ -315,7 +292,7 @@ describe('ShopPriceLine card', () => {
 	it('a trial account that may wear premium items still sees the list price', () => {
 		state.premiumUser = true;
 		render(itemEntry(PRICE));
-		expect(part('final')).toBe('8.50 AZN');
+		expect(part('final')).toBe('₺5');
 		expect(part('was')).toBeNull();
 	});
 
@@ -338,8 +315,8 @@ describe('ShopPriceLine card', () => {
 
 	it('a package shows the campaign on one row', () => {
 		state.premiumDiscount = true;
-		render(packageEntry({...CAMPAIGN, premium_usd_cents: null, campaign_ends_at: ENDS_AT}));
-		expect(part('final')).toBe('6.80 AZN');
+		render(packageEntry({...CAMPAIGN, premium_try_minor: null, campaign_ends_at: ENDS_AT}));
+		expect(part('final')).toBe('₺4');
 		expect(part('badge')).toBe('-20%');
 		expect(container.querySelector('[data-countdown]')).toBeNull();
 	});

@@ -7314,7 +7314,7 @@
 						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
 					}
 				},
-				"description": "Returns the shop settings, every price row with what the shop shows for it now, and the Payriff budget health. Requires SHOP_MANAGE permission.",
+				"description": "Returns the shop settings, every price row with what the shop shows for it now, and the payment provider budget health. Requires SHOP_MANAGE permission.",
 				"security": [{"adminApiKey": []}]
 			}
 		},
@@ -7667,7 +7667,7 @@
 						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
 					}
 				},
-				"description": "Returns one shop order with its buyer, amounts, Payriff order ID and status, for support and refunds. The Payriff page description carries the same order ID. Requires SHOP_MANAGE permission.",
+				"description": "Returns one shop order with its buyer, amounts in Turkish lira, payment provider order ID and status, for support and refunds. The payment page description carries the same order ID. Requires SHOP_MANAGE permission.",
 				"security": [{"adminApiKey": []}],
 				"parameters": [
 					{
@@ -7732,7 +7732,7 @@
 						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
 					}
 				},
-				"description": "Sets the list price of up to 200 products in US cents; null takes a product out of the shop. Campaigns on the products stay. Requires SHOP_MANAGE permission.",
+				"description": "Sets the list price of up to 200 products in Turkish lira (kuruş); null takes a product out of the shop. Campaigns on the products stay. Requires SHOP_MANAGE permission.",
 				"security": [{"adminApiKey": []}],
 				"requestBody": {
 					"required": true,
@@ -7789,62 +7789,12 @@
 						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
 					}
 				},
-				"description": "Opens or closes premium and item sales, sets the premium member discount, the US dollar to manat rate and the Visionary switches; an omitted field stays as it is. Requires SHOP_MANAGE permission.",
+				"description": "Opens or closes premium and item sales, sets the premium member discount and the Visionary switches; an omitted field stays as it is. Requires SHOP_MANAGE permission.",
 				"security": [{"adminApiKey": []}],
 				"requestBody": {
 					"required": false,
 					"content": {"application/json": {"schema": {"$ref": "#/components/schemas/UpdateShopSettingsRequest"}}}
 				}
-			}
-		},
-		"/admin/shop/settings/refresh-try-rate": {
-			"post": {
-				"operationId": "refresh_admin_shop_try_rate",
-				"summary": "Refresh the shop TRY display rate",
-				"tags": ["Admin"],
-				"responses": {
-					"204": {"description": "No Content"},
-					"400": {
-						"description": "Bad Request - The request was malformed or contained invalid data",
-						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
-					},
-					"401": {
-						"description": "Unauthorized - Authentication is required or the token is invalid",
-						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
-					},
-					"403": {
-						"description": "Forbidden - You do not have permission to perform this action",
-						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
-					},
-					"429": {
-						"description": "Too Many Requests - You are being rate limited",
-						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ThrottledError"}}},
-						"headers": {
-							"Retry-After": {
-								"description": "Number of seconds to wait before retrying (only on 429)",
-								"schema": {"type": "integer"}
-							},
-							"X-RateLimit-Limit": {
-								"description": "The number of requests that can be made in the current window",
-								"schema": {"type": "integer"}
-							},
-							"X-RateLimit-Remaining": {
-								"description": "The number of remaining requests that can be made",
-								"schema": {"type": "integer"}
-							},
-							"X-RateLimit-Reset": {
-								"description": "Unix timestamp when the rate limit resets",
-								"schema": {"type": "integer"}
-							}
-						}
-					},
-					"500": {
-						"description": "Internal Server Error - An unexpected error occurred",
-						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
-					}
-				},
-				"description": "Queues a CBAR bulletin refresh. Requires SHOP_MANAGE permission. Payment amounts remain in AZN.",
-				"security": [{"adminApiKey": []}]
 			}
 		},
 		"/admin/shop/visionary": {
@@ -14183,21 +14133,9 @@
 			"UpdateShopSettingsRequest": {
 				"type": "object",
 				"properties": {
-					"try_to_azn_rate_override": {
-						"description": "AZN per TRY, 0.001–1 with up to six decimal places; null restores CBAR. Display only.",
-						"nullable": true,
-						"type": "string",
-						"pattern": "^\\d+(?:\\.\\d{1,6})?$"
-					},
 					"premium_sales_open": {"type": "boolean"},
 					"item_sales_open": {"type": "boolean"},
 					"premium_discount_percent": {"type": "integer", "minimum": 0, "maximum": 95},
-					"usd_to_azn_rate_micro": {
-						"description": "AZN per USD in millionths; 1.70 = 1700000; the bounds catch 0.017 and 17",
-						"type": "integer",
-						"minimum": 1000000,
-						"maximum": 3000000
-					},
 					"visionary_on_sale": {"type": "boolean"},
 					"visionary_reward_item_ids": {
 						"description": "Replaces the list; each must be an owned-availability item that is not on sale",
@@ -14210,48 +14148,13 @@
 			"ShopAdminSettingsResponse": {
 				"type": "object",
 				"properties": {
-					"try_to_azn_rate_micro": {
-						"description": "Automatic CBAR AZN per TRY in millionths",
-						"nullable": true,
-						"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
-					},
-					"try_rate_date": {
-						"description": "Automatic CBAR bulletin date",
-						"nullable": true,
-						"type": "string",
-						"format": "date",
-						"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-					},
-					"try_rate_fetched_at": {
-						"description": "Last successful CBAR fetch",
-						"nullable": true,
-						"type": "string",
-						"format": "date-time",
-						"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-					},
-					"try_to_azn_rate_override_micro": {
-						"description": "Manual display rate; null uses CBAR",
-						"nullable": true,
-						"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
-					},
-					"try_rate_override_at": {
-						"description": "When the manual display rate was set",
-						"nullable": true,
-						"type": "string",
-						"format": "date-time",
-						"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-					},
 					"premium_sales_open": {"type": "boolean", "description": "Admin switch for premium packages and Visionary"},
 					"item_sales_open": {"type": "boolean", "description": "Admin switch for owned items and bundles"},
 					"premium_discount_percent": {
 						"description": "Discount paid premium members get on items and bundles, 0–95",
 						"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
 					},
-					"usd_to_azn_rate_micro": {
-						"description": "AZN per USD in millionths; 1.70 = 1700000",
-						"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
-					},
-					"payriff_configured": {
+					"payment_provider_configured": {
 						"type": "boolean",
 						"description": "false keeps every sale closed whatever the switches say"
 					},
@@ -14266,8 +14169,7 @@
 					"premium_sales_open",
 					"item_sales_open",
 					"premium_discount_percent",
-					"usd_to_azn_rate_micro",
-					"payriff_configured",
+					"payment_provider_configured",
 					"visionary_on_sale",
 					"visionary_reward_item_ids"
 				],
@@ -14284,15 +14186,15 @@
 							"type": "object",
 							"properties": {
 								"sku": {"allOf": [{"$ref": "#/components/schemas/ShopSku"}]},
-								"base_usd_cents": {
+								"base_try_minor": {
 									"nullable": true,
-									"description": "null takes the product out of the shop",
+									"description": "List price in kuruş, ₺1–₺100 000; null takes the product out of the shop",
 									"type": "integer",
-									"minimum": 1,
+									"minimum": 100,
 									"maximum": 10000000
 								}
 							},
-							"required": ["sku", "base_usd_cents"]
+							"required": ["sku", "base_try_minor"]
 						}
 					}
 				},
@@ -14316,27 +14218,6 @@
 			"ShopAdminOrderResponse": {
 				"type": "object",
 				"properties": {
-					"display_currency": {
-						"description": "Store currency frozen at checkout; null for legacy orders",
-						"nullable": true,
-						"type": "string",
-						"enum": ["TRY", "AZN"]
-					},
-					"display_amount_minor": {
-						"description": "Store price frozen at checkout, in kuruş or qepik",
-						"nullable": true,
-						"allOf": [{"$ref": "#/components/schemas/NonNegativeSafeIntegerType"}]
-					},
-					"display_rate_micro": {
-						"description": "Frozen AZN per TRY in millionths; null for AZN or legacy orders",
-						"nullable": true,
-						"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
-					},
-					"usd_to_azn_rate_micro": {
-						"description": "Exact AZN per USD in millionths used for this amount",
-						"nullable": true,
-						"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
-					},
 					"id": {
 						"description": "The ID of the shop order",
 						"allOf": [{"$ref": "#/components/schemas/SnowflakeStringType"}]
@@ -14349,16 +14230,17 @@
 						"type": "string",
 						"enum": ["amount_mismatch", "account_deleted", "item_deleted", "provider_error"]
 					},
-					"base_usd_cents": {"$ref": "#/components/schemas/Int32Type"},
-					"campaign_percent": {"$ref": "#/components/schemas/Int32Type"},
-					"premium_percent": {"$ref": "#/components/schemas/Int32Type"},
-					"final_usd_cents": {"$ref": "#/components/schemas/Int32Type"},
-					"amount_azn_minor": {
-						"description": "What Payriff charges, in qepik",
+					"base_try_minor": {
+						"description": "List price in kuruş",
 						"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
 					},
-					"usd_to_azn_rate": {"type": "string", "description": "Decimal with four places, e.g. 1.7000"},
-					"currency": {"type": "string", "enum": ["AZN"]},
+					"campaign_percent": {"$ref": "#/components/schemas/Int32Type"},
+					"premium_percent": {"$ref": "#/components/schemas/Int32Type"},
+					"final_try_minor": {
+						"description": "What the order charges, in kuruş",
+						"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
+					},
+					"currency": {"type": "string", "enum": ["TRY"]},
 					"created_at": {
 						"type": "string",
 						"format": "date-time",
@@ -14372,12 +14254,12 @@
 					"user_id": {"description": "The buyer", "allOf": [{"$ref": "#/components/schemas/SnowflakeStringType"}]},
 					"provider_order_id": {
 						"nullable": true,
-						"description": "The Payriff order ID; null until Payriff opened the order",
+						"description": "The payment provider order ID; null until the provider opened the order",
 						"type": "string"
 					},
 					"provider_status": {
 						"nullable": true,
-						"description": "The last Payriff payment status seen",
+						"description": "The last payment status the provider reported",
 						"type": "string"
 					},
 					"paid_at": {
@@ -14402,12 +14284,10 @@
 					"sku",
 					"status",
 					"failure_reason",
-					"base_usd_cents",
+					"base_try_minor",
 					"campaign_percent",
 					"premium_percent",
-					"final_usd_cents",
-					"amount_azn_minor",
-					"usd_to_azn_rate",
+					"final_try_minor",
 					"currency",
 					"created_at",
 					"user_id",
@@ -22255,18 +22135,21 @@
 						"description": "Age of the oldest reconcile slot still waiting; 0 when caught up",
 						"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
 					},
-					"payriff_backing_off": {"type": "boolean", "description": "Payriff answered 429 in the last 30 seconds"}
+					"provider_backing_off": {
+						"type": "boolean",
+						"description": "The payment provider answered 429 in the last 30 seconds"
+					}
 				},
-				"required": ["busy_refusals_last_hour", "reconcile_lag_seconds", "payriff_backing_off"],
+				"required": ["busy_refusals_last_hour", "reconcile_lag_seconds", "provider_backing_off"],
 				"additionalProperties": false,
-				"description": "The temporary Payriff budget triggers, visible to admins"
+				"description": "The temporary payment provider budget triggers, visible to admins"
 			},
 			"ShopAdminPriceRow": {
 				"type": "object",
 				"properties": {
 					"sku": {"allOf": [{"$ref": "#/components/schemas/ShopSku"}]},
-					"base_usd_cents": {
-						"description": "List price in US cents",
+					"base_try_minor": {
+						"description": "List price in kuruş",
 						"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
 					},
 					"campaign_percent": {
@@ -22282,8 +22165,8 @@
 					},
 					"now": {
 						"properties": {
-							"base_usd_cents": {
-								"description": "List price in US cents",
+							"base_try_minor": {
+								"description": "List price in kuruş",
 								"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
 							},
 							"campaign_percent": {
@@ -22298,11 +22181,11 @@
 								"format": "date-time",
 								"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
 							},
-							"sale_usd_cents": {
-								"description": "Price after the campaign; equals base_usd_cents without one",
+							"sale_try_minor": {
+								"description": "Price after the campaign in kuruş; equals base_try_minor without one",
 								"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
 							},
-							"premium_usd_cents": {
+							"premium_try_minor": {
 								"nullable": true,
 								"description": "Items and bundles only: what a premium member pays; null when the premium discount is 0, and for packages",
 								"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
@@ -22312,14 +22195,14 @@
 						"allOf": [{"$ref": "#/components/schemas/ShopPriceResponse"}]
 					}
 				},
-				"required": ["sku", "base_usd_cents", "campaign_percent", "campaign_ends_at", "now"],
+				"required": ["sku", "base_try_minor", "campaign_percent", "campaign_ends_at", "now"],
 				"additionalProperties": false
 			},
 			"ShopPriceResponse": {
 				"type": "object",
 				"properties": {
-					"base_usd_cents": {
-						"description": "List price in US cents",
+					"base_try_minor": {
+						"description": "List price in kuruş",
 						"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
 					},
 					"campaign_percent": {
@@ -22334,17 +22217,17 @@
 						"format": "date-time",
 						"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
 					},
-					"sale_usd_cents": {
-						"description": "Price after the campaign; equals base_usd_cents without one",
+					"sale_try_minor": {
+						"description": "Price after the campaign in kuruş; equals base_try_minor without one",
 						"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
 					},
-					"premium_usd_cents": {
+					"premium_try_minor": {
 						"nullable": true,
 						"description": "Items and bundles only: what a premium member pays; null when the premium discount is 0, and for packages",
 						"allOf": [{"$ref": "#/components/schemas/Int32Type"}]
 					}
 				},
-				"required": ["base_usd_cents", "campaign_percent", "campaign_ends_at", "sale_usd_cents", "premium_usd_cents"],
+				"required": ["base_try_minor", "campaign_percent", "campaign_ends_at", "sale_try_minor", "premium_try_minor"],
 				"additionalProperties": false
 			},
 			"UsernameDictionaryScopeSchema": {"type": "string", "enum": ["uname_exact", "uname_contains", "uname_allow"]},

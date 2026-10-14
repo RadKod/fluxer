@@ -10,19 +10,17 @@ import type {InstanceConfigRepository, ShopConfig} from '@app/api/instance/Insta
 import {getCachedInstancePremiumMode} from '@app/api/limits/InstancePremiumModeCache';
 import type {User} from '@app/api/models/User';
 import type {PremiumLedgerRepository} from '@app/api/premium/ledger/PremiumLedgerRepository';
+import {isShopPaymentProviderConfigured} from '@app/api/shop/ShopPaymentProvider';
 import type {ShopPriceRepository} from '@app/api/shop/ShopPriceRepository';
 import {
 	bundleSku,
 	computeShopPrice,
-	formatRateMicro,
 	isPaidPremiumForShop,
 	isSellable,
 	parseShopSku,
-	roundHalfUpDiv,
 	type ShopPriceBreakdown,
 	sellsAsCosmetic,
 } from '@app/api/shop/ShopPricing';
-import {getEffectiveShopTryRate, getShopTryRateExpiresAt} from '@app/api/shop/ShopTryRate';
 import {assertUserCanPurchase} from '@app/api/stripe/services/StripeCheckoutService';
 import {checkIsPremium} from '@app/api/user/UserHelpers';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
@@ -54,7 +52,6 @@ import type {
 	ShopCatalogResponse,
 	ShopPackageResponse,
 	ShopPriceResponse,
-	ShopSettingsResponse,
 } from '@fluxer/schema/src/domains/shop/ShopResponseSchemas';
 import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
 
@@ -80,7 +77,6 @@ export interface PreparedCheckout {
 	item: CosmeticItemRow | null;
 	months: 1 | 3 | 12 | null;
 	price: ShopPriceBreakdown;
-	display: {currency: 'TRY' | 'AZN'; amountMinor: number; rateMicro: number | null} | null;
 	// Bundles only: the items in bundle order, from the bundle row this check read.
 	bundle: {name: string; itemIds: Array<bigint>} | null;
 }
@@ -96,13 +92,8 @@ type CachedCatalog = {
 	value: SharedCatalog;
 	onSale: ReadonlyMap<string, CosmeticItemResponse>;
 	config: ShopConfig;
-	// Quote reads share onSale, but must never inspect display-only TL fields, even on a cold cache.
-	display?: {
-		settings: Pick<ShopSettingsResponse, 'try_to_azn_rate_micro' | 'try_rate_date' | 'try_rate_expires_at'>;
-		expiresAt: number | null;
-	};
 };
-type PriceFields = Pick<ShopPriceRow, 'sku' | 'base_usd_cents' | 'campaign_percent' | 'campaign_ends_at'>;
+type PriceFields = Pick<ShopPriceRow, 'sku' | 'base_try_minor' | 'campaign_percent' | 'campaign_ends_at'>;
 
 const PACKAGE_MONTHS = [1, 3, 12] as const;
 // TEMPORARY: each API process keeps the shared catalog for 60 s and
@@ -129,12 +120,11 @@ export function assertShopAvailable(): void {
 // The premium member discount only ever applies to items and bundles; packages and Visionary take campaigns only.
 function priceOf(row: PriceFields, config: ShopConfig, memberDiscount: boolean, now: Date): ShopPriceBreakdown {
 	return computeShopPrice({
-		baseUsdCents: row.base_usd_cents,
+		baseTryMinor: row.base_try_minor,
 		campaignPercent: row.campaign_percent ?? null,
 		campaignEndsAt: row.campaign_ends_at ?? null,
 		premiumPercent: config.premium_discount_percent,
 		applyPremium: memberDiscount,
-		rateMicro: config.usd_to_azn_rate_micro,
 		now,
 	});
 }
@@ -143,21 +133,21 @@ function priceResponse(row: PriceFields, config: ShopConfig, now: Date): ShopPri
 	const price = priceOf(row, config, sellsAsCosmetic(parseShopSku(row.sku)), now);
 	const campaign = price.campaignPercent > 0;
 	return {
-		base_usd_cents: row.base_usd_cents,
+		base_try_minor: row.base_try_minor,
 		campaign_percent: campaign ? price.campaignPercent : null,
 		campaign_ends_at: campaign ? (row.campaign_ends_at?.toISOString() ?? null) : null,
-		sale_usd_cents: price.campaignUsdCents,
-		premium_usd_cents: price.premiumPercent > 0 ? price.finalUsdCents : null,
+		sale_try_minor: price.campaignTryMinor,
+		premium_try_minor: price.premiumPercent > 0 ? price.finalTryMinor : null,
 	};
 }
 
 // Admin writes check the worst stacking (campaign and, on items, the member discount) so no product ends below
-// 0.10 AZN; order creation checks again.
+// ₺1; order creation checks again.
 function assertSellable(row: PriceFields, config: ShopConfig, path: string, now: Date): void {
 	if (!isSellable(priceOf(row, config, sellsAsCosmetic(parseShopSku(row.sku)), now))) {
 		throw InputValidationError.create(
 			path,
-			`Final price would be below 0.10 AZN for ${row.sku}; raise the price or lower the discount`,
+			`Final price would be below ₺1 for ${row.sku}; raise the price or lower the discount`,
 		);
 	}
 }
@@ -226,29 +216,12 @@ export class ShopCatalogService {
 		this.bundleCache = null;
 	}
 
-	isPayriffConfigured(): boolean {
-		return Config.payriff.enabled;
-	}
-
 	async getCatalog(user: User): Promise<ShopCatalogResponse> {
 		assertShopAvailable();
 		const [cached, premiumDiscount] = await Promise.all([this.sharedCatalog(), this.premiumDiscountFor(user)]);
-		const now = new Date();
-		if (!cached.display || (cached.display.expiresAt !== null && cached.display.expiresAt <= now.getTime())) {
-			const expiresAt = getShopTryRateExpiresAt(cached.config, now);
-			cached.display = {
-				settings: {
-					try_to_azn_rate_micro: getEffectiveShopTryRate(cached.config, now),
-					try_rate_date: cached.config.try_rate_date ?? null,
-					try_rate_expires_at: expiresAt,
-				},
-				expiresAt: expiresAt === null ? null : Date.parse(expiresAt),
-			};
-		}
 		return {
 			...cached.value,
-			settings: {...cached.value.settings, ...cached.display.settings},
-			server_time: now.toISOString(),
+			server_time: new Date().toISOString(),
 			viewer: {premium_discount: premiumDiscount},
 		};
 	}
@@ -278,7 +251,7 @@ export class ShopCatalogService {
 			settings: this.adminSettings(config),
 			prices: rows.map((row) => ({
 				sku: row.sku,
-				base_usd_cents: row.base_usd_cents,
+				base_try_minor: row.base_try_minor,
 				campaign_percent: row.campaign_percent ?? null,
 				campaign_ends_at: row.campaign_ends_at?.toISOString() ?? null,
 				now: priceResponse(row, config, now),
@@ -290,42 +263,28 @@ export class ShopCatalogService {
 
 	adminSettings(config: ShopConfig): ShopAdminSettingsResponse {
 		return {
-			try_to_azn_rate_micro: config.try_to_azn_rate_micro ?? null,
-			try_rate_date: config.try_rate_date ?? null,
-			try_rate_fetched_at: config.try_rate_fetched_at ?? null,
-			try_to_azn_rate_override_micro: config.try_to_azn_rate_override_micro ?? null,
-			try_rate_override_at: config.try_rate_override_at ?? null,
 			premium_sales_open: config.premium_sales_open,
 			item_sales_open: config.item_sales_open,
 			premium_discount_percent: config.premium_discount_percent,
-			usd_to_azn_rate_micro: config.usd_to_azn_rate_micro,
-			payriff_configured: this.isPayriffConfigured(),
+			payment_provider_configured: isShopPaymentProviderConfigured(),
 			visionary_on_sale: config.visionary_on_sale,
 			visionary_reward_item_ids: config.visionary_reward_item_ids,
 		};
 	}
 
 	async updateSettings(patch: UpdateShopSettingsRequest): Promise<{before: ShopConfig; after: ShopConfig}> {
-		const {visionary_reward_item_ids: rewardIds, try_to_azn_rate_override: override, ...switches} = patch;
+		const {visionary_reward_item_ids: rewardIds, ...switches} = patch;
 		const rows = await this.deps.priceRepository.listPrices();
 		const next = Object.fromEntries(
 			Object.entries(switches).filter(([, value]) => value !== undefined),
 		) as Partial<ShopConfig>;
-		if (override !== undefined) {
-			next.try_to_azn_rate_override_micro = override === null ? null : Math.round(Number(override) * 1_000_000);
-		}
 		if (rewardIds !== undefined) next.visionary_reward_item_ids = await this.checkRewardItems(rewardIds, rows);
 		const now = new Date();
 		let before = null as ShopConfig | null;
 		const after = await this.deps.instanceConfigRepository.updateShopConfig((current) => {
 			before = current;
 			for (const row of rows) assertSellable(row, {...current, ...next}, 'settings', now);
-			return {
-				...next,
-				...(override !== undefined && next.try_to_azn_rate_override_micro !== current.try_to_azn_rate_override_micro
-					? {try_rate_override_at: override === null ? null : now.toISOString()}
-					: {}),
-			};
+			return next;
 		});
 		return {before: before!, after};
 	}
@@ -374,7 +333,7 @@ export class ShopCatalogService {
 
 	// Returns the audit changes (`sku:old→new`).
 	async setPrices(entries: SetShopPricesRequest['prices']): Promise<Array<string>> {
-		const wanted = new Map(entries.map((entry) => [entry.sku, entry.base_usd_cents]));
+		const wanted = new Map(entries.map((entry) => [entry.sku, entry.base_try_minor]));
 		const [config, rows] = await Promise.all([
 			this.deps.instanceConfigRepository.readStoredShopConfig(),
 			this.deps.priceRepository.listPrices(),
@@ -416,7 +375,7 @@ export class ShopCatalogService {
 			const row: ShopPriceRow = {
 				catalog: SHOP_PRICE_CATALOG,
 				sku,
-				base_usd_cents: base,
+				base_try_minor: base,
 				campaign_percent: current?.campaign_percent ?? null,
 				campaign_ends_at: current?.campaign_ends_at ?? null,
 				updated_at: now,
@@ -426,7 +385,7 @@ export class ShopCatalogService {
 		}
 		await Promise.all([this.deps.priceRepository.putPrices(puts), this.deps.priceRepository.deletePrices(deletes)]);
 		return [...wanted].flatMap(([sku, base]) =>
-			auditChange(sku, String(existing.get(sku)?.base_usd_cents ?? 'none'), String(base ?? 'none')),
+			auditChange(sku, String(existing.get(sku)?.base_try_minor ?? 'none'), String(base ?? 'none')),
 		);
 	}
 
@@ -477,7 +436,7 @@ export class ShopCatalogService {
 				? await this.deps.instanceConfigRepository.readStoredShopConfig()
 				: await this.deps.instanceConfigRepository.getShopConfig();
 		const salesOpen = sellsAsCosmetic(ref) ? config.item_sales_open : config.premium_sales_open;
-		if (!salesOpen || !this.isPayriffConfigured()) throw new ShopSalesClosedError();
+		if (!salesOpen || !isShopPaymentProviderConfigured()) throw new ShopSalesClosedError();
 		if (ref.kind === 'visionary' && !config.visionary_on_sale) throw new ShopItemUnavailableError();
 		const row =
 			reads === 'direct'
@@ -506,21 +465,7 @@ export class ShopCatalogService {
 		const now = new Date();
 		const price = priceOf(row, config, memberDiscount, now);
 		if (!isSellable(price)) throw new ShopItemUnavailableError();
-		const displayRate = reads === 'direct' ? getEffectiveShopTryRate(config, now) : null;
-		// Max 30 million qepik × 1 million and rate >= 1000 keep half-up arithmetic exact;
-		// up to 30 billion kuruş fits Cassandra bigint, exceeding int32.
-		const display =
-			reads === 'direct'
-				? {
-						currency: displayRate === null ? ('AZN' as const) : ('TRY' as const),
-						amountMinor:
-							displayRate === null
-								? price.amountAznMinor
-								: roundHalfUpDiv(price.amountAznMinor * 1_000_000, displayRate),
-						rateMicro: displayRate,
-					}
-				: null;
-		return {sku, kind: ref.kind, item, months: ref.kind === 'premium' ? ref.months : null, price, display, bundle};
+		return {sku, kind: ref.kind, item, months: ref.kind === 'premium' ? ref.months : null, price, bundle};
 	}
 
 	// 'cached' (quotes): the bundle from the 5 s list and its items from the shop tab's on-sale
@@ -602,16 +547,14 @@ export class ShopCatalogService {
 		]);
 		const onSale = new Map(items.map((item) => [item.id, item]));
 		const now = new Date();
-		const payriff = this.isPayriffConfigured();
+		const payments = isShopPaymentProviderConfigured();
 		const visionaryRow = prices.get('visionary');
 		const stock = visionaryRow ? await this.sharedVisionaryStock() : null;
 		const value: SharedCatalog = {
 			settings: {
-				premium_sales_open: config.premium_sales_open && payriff,
-				item_sales_open: config.item_sales_open && payriff,
+				premium_sales_open: config.premium_sales_open && payments,
+				item_sales_open: config.item_sales_open && payments,
 				premium_discount_percent: config.premium_discount_percent,
-				usd_to_azn_rate: formatRateMicro(config.usd_to_azn_rate_micro),
-				usd_to_azn_rate_micro: config.usd_to_azn_rate_micro,
 			},
 			items: items.flatMap((item): Array<ShopCatalogItemResponse> => {
 				if (item.availability === 'premium') return [{item, price: null}];
@@ -629,7 +572,7 @@ export class ShopCatalogService {
 							price: priceResponse(visionaryRow, config, now),
 							total: stock.total,
 							remaining: stock.remaining,
-							visible: config.premium_sales_open && config.visionary_on_sale && payriff,
+							visible: config.premium_sales_open && config.visionary_on_sale && payments,
 						}
 					: null,
 			// Bundle items come embedded: a bundle-only item has no price, so it is not in items. TEMPORARY: up to 200 × 10 embedded items. Trigger: more than 20 priced bundles or a catalog answer over
@@ -707,7 +650,7 @@ export class ShopCatalogService {
 		return unique;
 	}
 
-	// The temporary Payriff budget triggers: the busy counter per hour since the
+	// The temporary payment provider budget triggers: the busy counter per hour since the
 	// epoch (floor(ms / 3 600 000)), the reconcile lag in seconds and the 429 back-off flag.
 	private async readHealth(): Promise<ShopAdminHealth> {
 		const hour = Math.floor(Date.now() / HOUR_MS);
@@ -720,7 +663,7 @@ export class ShopCatalogService {
 		return {
 			busy_refusals_last_hour: counter(busyNow) + counter(busyBefore),
 			reconcile_lag_seconds: counter(lag),
-			payriff_backing_off: backoff !== null,
+			provider_backing_off: backoff !== null,
 		};
 	}
 }

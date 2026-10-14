@@ -6,7 +6,6 @@ import {Config} from '@app/api/Config';
 import {
 	getCosmeticRepository,
 	getCosmeticService,
-	getInstanceConfigRepository,
 	getShopCatalogService,
 	getUserRepository,
 } from '@app/api/middleware/ServiceSingletons';
@@ -88,46 +87,10 @@ describe('shop bundles in the catalog and at checkout', () => {
 	}
 
 	describe('quote and order checks', () => {
-		it.each(['cold', 'expired'])(
-			'never reads TL fields for a bundle quote with a %s shared catalog',
-			async (cacheState) => {
-				const bundle = await pricedBundle();
-				const service = getShopCatalogService();
-				service.clearCachesForTesting();
-				if (cacheState === 'expired') {
-					await catalog();
-					vi.useFakeTimers({toFake: ['Date']});
-					vi.setSystemTime(Date.now() + 61_000);
-				}
-				const repository = getInstanceConfigRepository();
-				const config = await repository.getShopConfig();
-				for (const key of [
-					'try_to_azn_rate_micro',
-					'try_rate_date',
-					'try_rate_fetched_at',
-					'try_to_azn_rate_override_micro',
-					'try_rate_override_at',
-				]) {
-					Object.defineProperty(config, key, {
-						get: () => {
-							throw new Error(`Bundle quote read ${key}`);
-						},
-					});
-				}
-				vi.spyOn(repository, 'getShopConfig').mockResolvedValue(config);
-				expect((await service.quote(await loadUser(), bundle.sku)).price.amountAznMinor).toBe(1530);
-				expect((await service.prepareCheckout(await loadUser(), bundle.sku, 'cached')).price.amountAznMinor).toBe(1530);
-				expect(await service.prepareCheckout(await loadUser(), bundle.sku, 'direct')).toMatchObject({
-					price: {amountAznMinor: 1530},
-					display: {currency: 'AZN', amountMinor: 1530, rateMicro: null},
-				});
-			},
-		);
-
 		it('opens with the item switch, not the premium one', async () => {
 			const bundle = await pricedBundle({premium_sales_open: false, item_sales_open: true});
 
-			expect(await quote(bundle.sku)).toMatchObject({sku: bundle.sku, final_usd_cents: 900, amount_azn_minor: 1530});
+			expect(await quote(bundle.sku)).toMatchObject({sku: bundle.sku, final_try_minor: 900, currency: 'TRY'});
 
 			await createBuilder(harness, admin.token)
 				.patch('/admin/shop/settings')
@@ -142,8 +105,8 @@ describe('shop bundles in the catalog and at checkout', () => {
 			await grantPremium(harness, paid.userId, UserPremiumTypes.SUBSCRIPTION);
 			await grantPremium(harness, user.userId, UserPremiumTypes.LIFETIME);
 
-			expect(await quote(bundle.sku, paid)).toMatchObject({premium_percent: 30, final_usd_cents: 630});
-			expect(await quote(bundle.sku)).toMatchObject({premium_percent: 30, final_usd_cents: 630});
+			expect(await quote(bundle.sku, paid)).toMatchObject({premium_percent: 30, final_try_minor: 630});
+			expect(await quote(bundle.sku)).toMatchObject({premium_percent: 30, final_try_minor: 630});
 		});
 
 		it('refuses an account that owns any one item of the bundle', async () => {
@@ -188,7 +151,7 @@ describe('shop bundles in the catalog and at checkout', () => {
 				months: null,
 				bundle: {name: 'Melek', itemIds: bundle.item_ids.map(BigInt)},
 			});
-			expect(prepared.price.finalUsdCents).toBe(900);
+			expect(prepared.price.finalTryMinor).toBe(900);
 		});
 
 		it('a cached quote reads ownership of each bundle item only and reuses the shop tab catalog', async () => {
@@ -228,11 +191,11 @@ describe('shop bundles in the catalog and at checkout', () => {
 					description: null,
 					items: bundle.item_ids.map((id) => expect.objectContaining({id, availability: 'owned'})),
 					price: {
-						base_usd_cents: 900,
+						base_try_minor: 900,
 						campaign_percent: null,
 						campaign_ends_at: null,
-						sale_usd_cents: 900,
-						premium_usd_cents: null,
+						sale_try_minor: 900,
+						premium_try_minor: null,
 					},
 				},
 			]);
@@ -262,11 +225,11 @@ describe('shop bundles in the catalog and at checkout', () => {
 				.execute();
 
 			expect((await catalog()).bundles?.[0]?.price).toEqual({
-				base_usd_cents: 900,
+				base_try_minor: 900,
 				campaign_percent: 20,
 				campaign_ends_at: null,
-				sale_usd_cents: 720,
-				premium_usd_cents: 504,
+				sale_try_minor: 720,
+				premium_try_minor: 504,
 			});
 		});
 	});

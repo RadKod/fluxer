@@ -7,7 +7,7 @@ use crate::{
     },
     config::AdminConfig,
     middleware::auth::AuthContext,
-    routes::shop::{count_of, format_usd, turkey_time_label},
+    routes::shop::{count_of, format_try, try_input_value, turkey_time_label},
     templates::{
         components::{
             badge::{BadgeVariant, badge},
@@ -25,7 +25,6 @@ use crate::{
     utils::timestamps::format_admin_timestamp,
 };
 use maud::{Markup, PreEscaped, html};
-use time::{OffsetDateTime, UtcOffset, format_description::well_known::Rfc3339};
 
 // Visionary is also a campaign row; it never takes the premium member discount.
 const PACKAGES: &[(&str, &str)] = &[
@@ -101,7 +100,8 @@ pub fn shop_page(
         div class="space-y-6" {
             (page_header_with_actions(
                 "Shop",
-                Some("Prices, campaigns and whether the shop sells. Payriff charges AZN; users see TL (CBAR daily rate) and the AZN amount"),
+                // sanalyer: everything is priced and charged in Turkish lira.
+                Some("Prices in Turkish lira, campaigns and whether the shop sells"),
                 html! {
                     a href={(base) "/gift-codes"} class="font-medium text-blue-600 text-sm hover:underline" {
                         "Generate codes →"
@@ -129,7 +129,7 @@ fn order_lookup(base: &str, data: &ShopPageData<'_>) -> Markup {
         div class="flex flex-col gap-4" {
             h2 class="text-base font-semibold text-neutral-900" { "Find an order" }
             p class="text-sm text-neutral-500" {
-                "Payriff shows each payment as \"sanalyer #<order number> …\"."
+                "The order number from the user's receipt or the payment provider's record."
             }
             form method="get" action={(base) "/shop"} class="flex flex-wrap items-end gap-2" {
                 div class="w-72" {
@@ -170,7 +170,7 @@ fn order_details(base: &str, order: &ShopAdminOrder, items: Option<&[CosmeticIte
                     // A paid bundle order is refunded whole; an unpaid one gave nothing.
                     @if order.paid_at.is_some() {
                         p class="text-xs text-neutral-500" {
-                            "To refund: refund the whole order in Payriff, then take back on the user \
+                            "To refund: refund the whole order with the payment provider, then take back on the user \
                              page the items this order gave; an item another order gave stays (the API \
                              log names it)."
                         }
@@ -183,14 +183,12 @@ fn order_details(base: &str, order: &ShopAdminOrder, items: Option<&[CosmeticIte
                     span class="ml-2 text-neutral-500" { (reason) }
                 }
             }))
+            // sanalyer: the order charges its final price in lira; there is no other currency or rate.
             (detail_row("Price", html! {
-                (format_usd(order.final_usd_cents)) " (list " (format_usd(order.base_usd_cents))
+                (format_try(order.final_try_minor)) " (list " (format_try(order.base_try_minor))
                 ", campaign " (order.campaign_percent) "%, Plus member " (order.premium_percent) "%)"
             }))
-            (detail_row("Charged", html! {
-                (format_azn(order.amount_azn_minor)) " at " (order.usd_to_azn_rate) " AZN per USD"
-            }))
-            (detail_row("Payriff order", html! {
+            (detail_row("Provider order", html! {
                 span class="font-mono" { (order.provider_order_id.as_deref().unwrap_or("—")) }
                 " · " (order.provider_status.as_deref().unwrap_or("no status yet"))
             }))
@@ -202,17 +200,19 @@ fn order_details(base: &str, order: &ShopAdminOrder, items: Option<&[CosmeticIte
     }
 }
 
+// sanalyer: prices are set in lira, so the USD → AZN rate, the CBAR TRY rate and its override are gone.
 fn sales_card(base: &str, csrf_token: &str, shop: &ShopAdmin) -> Markup {
     let settings = &shop.settings;
-    let now = OffsetDateTime::now_utc();
-    let rate_age = rate_age_days(settings.try_rate_date.as_deref(), now);
-    let override_age = rate_age_days(settings.try_rate_override_at.as_deref(), now);
     html! {
         div class="flex flex-col gap-4" {
             h2 class="text-base font-semibold text-neutral-900" { "Sales" }
-            @if !settings.payriff_configured {
-                div {
-                    (badge("Payriff is not configured: nothing sells until it is", BadgeVariant::Warning))
+            @if !settings.payment_provider_configured {
+                div class="flex flex-col gap-1" {
+                    (badge("No payment provider is configured: sales stay closed", BadgeVariant::Warning))
+                    p class="text-xs text-neutral-500" {
+                        "Nothing can be bought until one is. Give Plus and items with gift codes or \
+                         from the user page."
+                    }
                 }
             }
             form method="post" action={(base) "/shop?action=settings"} data-admin-result-form="true" {
@@ -226,13 +226,6 @@ fn sales_card(base: &str, csrf_token: &str, shop: &ShopAdmin) -> Markup {
                         "Off hides the buy buttons and the API refuses new orders. Paid orders still deliver."
                     }
                     div class="grid grid-cols-1 gap-4 sm:grid-cols-2" {
-                        (form_field_group("USD → AZN rate", "shop-rate", true, None,
-                            Some("Payriff charges USD × rate in AZN, rounded half up to 2 decimals."),
-                            html! {
-                                input type="number" id="shop-rate" name="usd_to_azn_rate"
-                                    value=(rate_input_value(settings.usd_to_azn_rate_micro))
-                                    step="0.0001" min="1" max="3" required[true] class=(FORM_INPUT_CLASS);
-                            }))
                         (form_field_group("Plus member discount (%)", "shop-premium-discount", true, None,
                             Some("Items only, applied after any campaign."),
                             html! {
@@ -241,63 +234,12 @@ fn sales_card(base: &str, csrf_token: &str, shop: &ShopAdmin) -> Markup {
                                     step="1" min="0" max="95" required[true] class=(FORM_INPUT_CLASS);
                             }))
                     }
-                    div class="grid grid-cols-1 gap-4 sm:grid-cols-2" {
-                        div class="space-y-2 text-sm text-neutral-600" {
-                            h3 class="font-semibold text-neutral-900" { "Automatic CBAR rate (AZN per TRY)" }
-                            p { (settings.try_to_azn_rate_micro.map(rate_input_value).unwrap_or_else(|| "Not available".to_owned())) }
-                            p { "Bulletin date: " (settings.try_rate_date.as_deref().unwrap_or("Not available")) }
-                            p { "Last successful fetch: " (settings.try_rate_fetched_at.as_deref().unwrap_or("Never")) }
-                            @if let Some(days) = rate_age {
-                                p { (days) " days old" }
-                                @if days > 10 {
-                                    (badge("Automatic rate is older than 10 days; TL is hidden unless an override is set.", BadgeVariant::Warning))
-                                }
-                            }
-                        }
-                        div class="space-y-2 text-sm text-neutral-600" {
-                            (form_field_group("TRY → AZN override", "shop-try-override", false, None,
-                                Some("Blank uses the automatic rate. This only changes the TL estimate; AZN charges stay the same."),
-                                html! {
-                                    input type="number" id="shop-try-override" name="try_to_azn_rate_override"
-                                        value=(settings.try_to_azn_rate_override_micro.map(rate_input_value).unwrap_or_default())
-                                        step="0.000001" min="0.001" max="1" class=(FORM_INPUT_CLASS);
-                                }))
-                            @if settings.try_to_azn_rate_override_micro.is_some() {
-                                p { "Override set: " (settings.try_rate_override_at.as_deref().unwrap_or("Unknown")) }
-                                @if let Some(days) = override_age {
-                                    p { (days) " days old" }
-                                }
-                            }
-                            (badge("TRY loses ~1.3% of its value per month; review overrides regularly.", BadgeVariant::Warning))
-                        }
-                    }
                     (form_actions(html! { (submit_button("Save settings")) }))
                 }
-            }
-            form method="post" action={(base) "/shop?action=refresh_try_rate"} data-admin-result-form="true" {
-                (csrf_input(csrf_token))
-                (submit_button("Fetch now"))
             }
             (health_line(&shop.health))
         }
     }
-}
-
-// Match the API's bulletin age: calendar days in Asia/Baku, independently of the fetch time.
-fn rate_age_days(value: Option<&str>, now: OffsetDateTime) -> Option<i64> {
-    let value = value?;
-    let at = if value.len() == 10 {
-        OffsetDateTime::parse(&format!("{value}T00:00:00+04:00"), &Rfc3339)
-    } else {
-        OffsetDateTime::parse(value, &Rfc3339)
-    }
-    .ok()?;
-    let baku = UtcOffset::from_hms(4, 0, 0).expect("UTC+4 is a valid offset");
-    Some(
-        (now.to_offset(baku).date() - at.to_offset(baku).date())
-            .whole_days()
-            .max(0),
-    )
 }
 
 fn health_line(health: &ShopAdminHealth) -> Markup {
@@ -306,7 +248,7 @@ fn health_line(health: &ShopAdminHealth) -> Markup {
     html! {
         div class="flex flex-col gap-2 border-t border-neutral-200 pt-4" {
             div class="flex flex-wrap items-center gap-2 text-sm text-neutral-600" {
-                span class="font-medium text-neutral-900" { "Payriff health" }
+                span class="font-medium text-neutral-900" { "Payment provider health" }
                 @if busy > 0 {
                     (badge(&format!("Orders refused as busy in the last hour: {busy}"), BadgeVariant::Warning))
                 } @else {
@@ -317,12 +259,12 @@ fn health_line(health: &ShopAdminHealth) -> Markup {
                 } @else {
                     span { "Reconcile on time." }
                 }
-                @if health.payriff_backing_off {
-                    (badge("Payriff answered 429; every order waits while we are backing off", BadgeVariant::Warning))
+                @if health.provider_backing_off {
+                    (badge("The payment provider answered 429; every order waits while we are backing off", BadgeVariant::Warning))
                 }
             }
             p class="text-xs text-neutral-500" {
-                "A warning here means today's Payriff rate limit is too small: ask Payriff for a higher one."
+                "A warning here means the payment provider's rate limit is too small: ask the provider for a higher one."
             }
         }
     }
@@ -337,7 +279,7 @@ fn visionary_card(
 ) -> Markup {
     let on_sale = shop.settings.visionary_on_sale;
     let price = price_row(shop, "visionary")
-        .map(|row| format_usd(row.base_usd_cents)[1..].to_owned())
+        .map(|row| try_input_value(row.base_try_minor))
         .unwrap_or_default();
     let total = data
         .visionary
@@ -362,12 +304,13 @@ fn visionary_card(
                 form method="post" action={(base) "/shop?action=visionary_price"}
                     data-admin-result-form="true" class="flex flex-col gap-4" {
                     (csrf_input(csrf_token))
-                    (form_field_group("Price (USD)", "visionary-price", false, None,
-                        Some("Blank takes Visionary out of the shop. A campaign from the table below \
-                              applies; the Plus member discount never does."),
+                    // sanalyer: lira, comma or dot decimals; a text field because a number field refuses "149,99".
+                    (form_field_group("Price (₺)", "visionary-price", false, None,
+                        Some("₺1–₺100000, e.g. 149,99. Blank takes Visionary out of the shop. A campaign \
+                              from the table below applies; the Plus member discount never does."),
                         html! {
-                            input type="number" id="visionary-price" name="visionary_price" value=(price)
-                                step="0.01" min="0.01" class=(FORM_INPUT_CLASS);
+                            input type="text" id="visionary-price" name="visionary_price" value=(price)
+                                inputmode="decimal" maxlength="9" class=(FORM_INPUT_CLASS);
                         }))
                     (form_actions(html! { (submit_button("Save price")) }))
                 }
@@ -652,7 +595,7 @@ fn prices_card(
                                     input type="checkbox" data-shop-select-all="true"
                                         aria-label="Select every product";
                                 }
-                                @for header in ["Image", "Product", "Price (USD)", "Campaign", "Now"] {
+                                @for header in ["Image", "Product", "Price (₺)", "Campaign", "Now"] {
                                     (table_header_cell(header))
                                 }
                             }
@@ -664,7 +607,8 @@ fn prices_card(
                         }))
                     })))
                     p class="text-xs text-neutral-500" {
-                        "A blank price takes the product out of the shop. Only changed prices are saved."
+                        "Prices in lira, ₺1–₺100000, comma or dot for kuruş (149,99). A blank price takes the \
+                         product out of the shop. Only changed prices are saved."
                     }
                     (form_actions(html! { (submit_button("Save prices")) }))
                 }
@@ -790,7 +734,7 @@ fn item_image_url(config: &AdminConfig, item: &CosmeticItem) -> String {
 fn product_row(row: &ProductRow<'_>) -> Markup {
     let price_value = row
         .price
-        .map(|price| format_usd(price.base_usd_cents)[1..].to_owned())
+        .map(|price| try_input_value(price.base_try_minor))
         .unwrap_or_default();
     html! {
         tr class="hover:bg-neutral-50 transition-colors" {
@@ -816,8 +760,8 @@ fn product_row(row: &ProductRow<'_>) -> Markup {
                     span class="text-neutral-500 text-sm" { "Visionary reward: cannot be sold" }
                 } @else {
                     div class="w-28" {
-                        input type="number" name={"price_" (row.sku)} value=(price_value) step="0.01" min="0.01"
-                            aria-label={"Price of " (row.label) " in USD"} class=(FORM_INPUT_CLASS);
+                        input type="text" name={"price_" (row.sku)} value=(price_value) inputmode="decimal"
+                            maxlength="9" aria-label={"Price of " (row.label) " in lira"} class=(FORM_INPUT_CLASS);
                     }
                 }
             }
@@ -853,25 +797,11 @@ fn now_label(price: Option<&ShopAdminPriceRow>) -> Markup {
         @match price {
             None => span class="text-neutral-400" { "not in shop" },
             Some(price) => {
-                span class="font-medium text-neutral-900" { (format_usd(price.now.sale_usd_cents)) }
-                @if let Some(premium) = price.now.premium_usd_cents {
-                    span class="text-neutral-500" { " · Plus " (format_usd(premium)) }
+                span class="font-medium text-neutral-900" { (format_try(price.now.sale_try_minor)) }
+                @if let Some(premium) = price.now.premium_try_minor {
+                    span class="text-neutral-500" { " · Plus " (format_try(premium)) }
                 }
             }
         }
     }
-}
-
-// 1_700_000 shows as "1.7000"; a rate set with more decimals keeps them, so saving never rounds it.
-fn rate_input_value(micro: i32) -> String {
-    let (whole, fraction) = (micro / 1_000_000, micro % 1_000_000);
-    if fraction % 100 == 0 {
-        format!("{whole}.{:04}", fraction / 100)
-    } else {
-        format!("{whole}.{fraction:06}")
-    }
-}
-
-fn format_azn(minor: i32) -> String {
-    format!("{}.{:02} AZN", minor / 100, minor % 100)
 }

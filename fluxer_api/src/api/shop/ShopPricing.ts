@@ -5,13 +5,15 @@ import type {ShopOrderRow} from '@app/api/database/types/ShopTypes';
 import type {User} from '@app/api/models/User';
 import {checkIsPremium} from '@app/api/user/UserHelpers';
 import {UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
-import {formatShopAzn, formatShopTry} from '@fluxer/schema/src/domains/shop/ShopPriceFormatting';
+import {formatShopTry} from '@fluxer/schema/src/domains/shop/ShopPriceFormatting';
 
-// The one price function of the shop. Amounts are whole numbers: US cents, qepik and the rate in
-// millionths; every division rounds half up. The largest inputs the admin can set (10 000 000 cents, rate 3.0) stay far
-// below Number.MAX_SAFE_INTEGER, so plain numbers are exact.
+// The one price function of the shop. sanalyer: every amount is Turkish lira in kuruş, the currency the shop
+// shows and charges; Micup's USD list price, USD to AZN rate and TL display rate are gone. Every division rounds half
+// up; the largest list price the admin can set (10 000 000 kuruş) stays far below Number.MAX_SAFE_INTEGER.
 
-export const SHOP_MIN_AZN_MINOR = 10;
+export const SHOP_CURRENCY = 'TRY' as const;
+// ₺1: a campaign or member discount that pushes a price below this takes the product off sale.
+export const SHOP_MIN_TRY_MINOR = 100;
 const INT64_MAX = 9_223_372_036_854_775_807n;
 const MAX_ORDER_DESCRIPTION_LENGTH = 200;
 
@@ -52,23 +54,20 @@ export function isCampaignActive(percent: number | null, endsAt: Date | null, no
 }
 
 export interface ShopPriceInput {
-	baseUsdCents: number;
+	baseTryMinor: number;
 	campaignPercent: number | null;
 	campaignEndsAt: Date | null;
 	premiumPercent: number;
 	applyPremium: boolean;
-	rateMicro: number;
 	now: Date;
 }
 
 export interface ShopPriceBreakdown {
-	baseUsdCents: number;
+	baseTryMinor: number;
 	campaignPercent: number;
-	campaignUsdCents: number;
+	campaignTryMinor: number;
 	premiumPercent: number;
-	finalUsdCents: number;
-	rateMicro: number;
-	amountAznMinor: number;
+	finalTryMinor: number;
 }
 
 export function computeShopPrice(input: ShopPriceInput): ShopPriceBreakdown {
@@ -76,26 +75,18 @@ export function computeShopPrice(input: ShopPriceInput): ShopPriceBreakdown {
 		? input.campaignPercent!
 		: 0;
 	const premiumPercent = input.applyPremium ? input.premiumPercent : 0;
-	const campaignUsdCents = roundHalfUpDiv(input.baseUsdCents * (100 - campaignPercent), 100);
-	const finalUsdCents = roundHalfUpDiv(campaignUsdCents * (100 - premiumPercent), 100);
+	const campaignTryMinor = roundHalfUpDiv(input.baseTryMinor * (100 - campaignPercent), 100);
 	return {
-		baseUsdCents: input.baseUsdCents,
+		baseTryMinor: input.baseTryMinor,
 		campaignPercent,
-		campaignUsdCents,
+		campaignTryMinor,
 		premiumPercent,
-		finalUsdCents,
-		rateMicro: input.rateMicro,
-		amountAznMinor: roundHalfUpDiv(finalUsdCents * input.rateMicro, 1_000_000),
+		finalTryMinor: roundHalfUpDiv(campaignTryMinor * (100 - premiumPercent), 100),
 	};
 }
 
 export function isSellable(price: ShopPriceBreakdown): boolean {
-	return price.finalUsdCents >= 1 && price.amountAznMinor >= SHOP_MIN_AZN_MINOR;
-}
-
-export function formatRateMicro(rateMicro: number): string {
-	const tenThousandths = roundHalfUpDiv(rateMicro, 100);
-	return `${Math.floor(tenThousandths / 10_000)}.${String(tenThousandths % 10_000).padStart(4, '0')}`;
+	return price.finalTryMinor >= SHOP_MIN_TRY_MINOR;
 }
 
 // Premium member discount only for accounts that bought premium: a trial is given only to an
@@ -115,18 +106,13 @@ export function isPaidPremiumForShop(
 	return false;
 }
 
-// The Payriff description uses the store quote frozen on the order, never the current settings.
+// The payment page description uses the amount frozen on the order, never the current settings.
 export function describeShopOrder(
 	orderId: bigint,
 	prepared: {kind: 'cosmetic' | 'premium' | 'visionary' | 'bundle'; itemName: string | null; months: number | null},
-	quote: Pick<ShopOrderRow, 'display_currency' | 'display_amount_minor' | 'amount_minor'>,
+	quote: Pick<ShopOrderRow, 'amount_minor'>,
 ): string {
-	const amountAzn = `${formatShopAzn(quote.amount_minor, 'tr')} AZN`;
-	const storePrice =
-		quote.display_currency === 'TRY'
-			? `${formatShopTry(Number(quote.display_amount_minor), 'tr')}. Bu ödeme Azerbaycan manatı ile alınır: ${amountAzn}`
-			: `${formatShopAzn(Number(quote.display_amount_minor), 'tr')} AZN`;
-	const suffix = ` — mağazadaki fiyat ${storePrice}. Sipariş #${orderId}`;
+	const suffix = ` — ${formatShopTry(quote.amount_minor, 'tr')}. Sipariş #${orderId}`;
 	const name =
 		prepared.kind === 'visionary'
 			? 'sanalyer Visionary'

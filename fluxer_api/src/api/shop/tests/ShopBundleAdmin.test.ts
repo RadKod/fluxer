@@ -63,7 +63,7 @@ describe('shop bundle admin', () => {
 		return createBuilder(harness, admin.token).delete(`/admin/shop/bundles/${id}`).expect(status).execute();
 	}
 
-	function putPrices(prices: Array<{sku: string; base_usd_cents: number | null}>, status = 200) {
+	function putPrices(prices: Array<{sku: string; base_try_minor: number | null}>, status = 200) {
 		return createBuilder<ShopAdminResponse>(harness, admin.token)
 			.put('/admin/shop/prices')
 			.body({prices})
@@ -100,7 +100,7 @@ describe('shop bundle admin', () => {
 			item_ids: [a!.id, b!.id],
 		});
 		expect((await view()).bundles).toEqual([created]);
-		await putPrices([{sku: created.sku, base_usd_cents: 900}]);
+		await putPrices([{sku: created.sku, base_try_minor: 900}]);
 
 		const updated = await update(created.id, {
 			name: 'Melek Seti',
@@ -171,7 +171,7 @@ describe('shop bundle admin', () => {
 		const [priced, bundleOnly, offSale] = await items(3);
 		const premium = await createShopItem(harness, admin, 'premium', 'Premium');
 		const free = await createShopItem(harness, admin, 'free', 'Free');
-		await putPrices([{sku: `cosmetic:${priced!.id}`, base_usd_cents: 500}]);
+		await putPrices([{sku: `cosmetic:${priced!.id}`, base_try_minor: 500}]);
 		await createBuilder(harness, admin.token).delete(`/admin/cosmetics/items/${offSale!.id}`).expect(204).execute();
 
 		expect((await create({name: 'x', item_ids: [priced!.id, bundleOnly!.id]})).item_ids).toEqual([
@@ -197,9 +197,9 @@ describe('shop bundle admin', () => {
 		const [a, b] = await items(2);
 		const bundle = await createBundle(harness, admin, [a!.id, b!.id]);
 
-		await putPrices([{sku: `bundle:${UNKNOWN_ID}`, base_usd_cents: 500}], 400);
-		await putPrices([{sku: `bundle:${UNKNOWN_ID}`, base_usd_cents: null}]);
-		expect((await putPrices([{sku: bundle.sku, base_usd_cents: 500}])).prices.map((row) => row.sku)).toEqual([
+		await putPrices([{sku: `bundle:${UNKNOWN_ID}`, base_try_minor: 500}], 400);
+		await putPrices([{sku: `bundle:${UNKNOWN_ID}`, base_try_minor: null}]);
+		expect((await putPrices([{sku: bundle.sku, base_try_minor: 500}])).prices.map((row) => row.sku)).toEqual([
 			bundle.sku,
 		]);
 	});

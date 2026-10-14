@@ -44,9 +44,6 @@ vi.mock('@app/features/shop/state/ShopCatalog', () => ({
 			premium_sales_open: true,
 			item_sales_open: true,
 			premium_discount_percent: 30,
-			usd_to_azn_rate: '1.7000',
-			usd_to_azn_rate_micro: 1700000,
-			try_to_azn_rate_micro: null,
 		},
 		premiumDiscount: false,
 		packageEntries: [{kind: 'package', sku: 'premium:1', months: 1}],
@@ -140,11 +137,11 @@ const {ShopItemDetailModal} = await import('@app/features/shop/components/modals
 const {ShopItemCard} = await import('@app/features/shop/components/ShopItemCard');
 
 const PRICE: ShopPriceResponse = {
-	base_usd_cents: 500,
+	base_try_minor: 500,
 	campaign_percent: null,
 	campaign_ends_at: null,
-	sale_usd_cents: 500,
-	premium_usd_cents: 350,
+	sale_try_minor: 500,
+	premium_try_minor: 350,
 };
 
 function entry(availability: CosmeticItemResponse['availability'] = 'owned'): ShopItemEntry {
@@ -249,7 +246,7 @@ describe('ShopItemCard', () => {
 	it('Satın al opens the checkout with only the sku', () => {
 		render(entry());
 		expect(chip()).toBeNull();
-		expect(action()?.textContent).toBe('Buy for 8.50 AZN');
+		expect(action()?.textContent).toBe('Buy for ₺5');
 		act(() => action()?.click());
 		const opened = pushed();
 		expect(opened.type).toBe(ShopCheckoutModal);
@@ -321,7 +318,7 @@ describe('ShopItemCard', () => {
 		const button = container.querySelector('[data-flx="shop.shop-item-card.card-button.open"]');
 		const name = button?.querySelector('[data-flx="shop.shop-item-card.name"]');
 		expect(name?.nextElementSibling?.getAttribute('data-flx')).toBe('shop.shop-price-line.price-line');
-		expect(container.querySelector('[data-flx="shop.shop-price-line.final"]')?.textContent).toBe('8.50 AZN');
+		expect(container.querySelector('[data-flx="shop.shop-price-line.final"]')?.textContent).toBe('₺5');
 		// The Plus price is in the dialog; the card keeps one price row.
 		expect(container.querySelector('[data-flx="shop.shop-price-line.premium"]')).toBeNull();
 	});
@@ -353,7 +350,7 @@ describe('ShopItemCard', () => {
 	it('the action stays in the page, reachable by Tab, while the card is not hovered', async () => {
 		const card = () => container.querySelector('[data-flx="shop.shop-item-card.card"]');
 		render(entry());
-		expect(action()?.textContent).toBe('Buy for 8.50 AZN');
+		expect(action()?.textContent).toBe('Buy for ₺5');
 		expect(action()?.getAttribute('tabindex')).toBeNull();
 		expect(action()?.closest('[aria-hidden], [inert]')).toBeNull();
 		expect(card()?.className).toMatch(/hasAction/);

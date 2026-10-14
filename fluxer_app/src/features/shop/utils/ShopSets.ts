@@ -3,7 +3,7 @@
 import {Routes} from '@app/app/Routes';
 import type {ShopCollection} from '@app/features/shop/utils/ShopCollections';
 import type {ShopBundleEntry, ShopItemEntry} from '@app/features/shop/utils/ShopEntries';
-import {shownCents} from '@app/features/shop/utils/ShopPriceFormat';
+import {shownTryMinor} from '@app/features/shop/utils/ShopPriceFormat';
 
 const PROMO_COUNT = 2;
 
@@ -26,12 +26,12 @@ export function bundleSavingsPercent(
 	for (const item of entry.bundle.items) {
 		const price = prices.get(item.id);
 		if (!price) return null;
-		total += shownCents(price, now);
+		total += shownTryMinor(price, now);
 	}
-	const cents = shownCents(entry.price, now);
-	if (total <= 0 || cents <= 0) return null;
+	const bundlePrice = shownTryMinor(entry.price, now);
+	if (total <= 0 || bundlePrice <= 0) return null;
 	// Rounded down: a paid bundle never reads 100%, and no saving is promised beyond the prices.
-	const percent = Math.floor(((total - cents) * 100) / total);
+	const percent = Math.floor(((total - bundlePrice) * 100) / total);
 	return percent > 0 ? percent : null;
 }
 

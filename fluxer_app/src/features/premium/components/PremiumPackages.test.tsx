@@ -17,10 +17,7 @@ interface FakeUser {
 const DAY_MS = 24 * 60 * 60 * 1000;
 const i18n = setupI18n({locale: 'en', messages: {en: {}}});
 const catalog = vi.hoisted(() => ({
-	settings: {premium_sales_open: true, usd_to_azn_rate: '1.7000'} as {
-		premium_sales_open: boolean;
-		usd_to_azn_rate: string;
-	} | null,
+	settings: {premium_sales_open: true} as {premium_sales_open: boolean} | null,
 	packageEntries: [] as Array<ShopPackageEntry>,
 	now: () => Date.now(),
 }));
@@ -68,11 +65,11 @@ const {PremiumPackages} = await import('@app/features/premium/components/Premium
 
 function price(base: number, campaign?: {percent: number; endsAt: string | null}): ShopPriceResponse {
 	return {
-		base_usd_cents: base,
+		base_try_minor: base,
 		campaign_percent: campaign?.percent ?? null,
 		campaign_ends_at: campaign?.endsAt ?? null,
-		sale_usd_cents: campaign ? Math.round((base * (100 - campaign.percent)) / 100) : base,
-		premium_usd_cents: null,
+		sale_try_minor: campaign ? Math.round((base * (100 - campaign.percent)) / 100) : base,
+		premium_try_minor: null,
 	};
 }
 
@@ -93,7 +90,7 @@ describe('PremiumPackages', () => {
 		(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
 		vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout', 'Date']});
 		vi.setSystemTime(new Date('2026-09-28T12:00:00Z'));
-		catalog.settings = {premium_sales_open: true, usd_to_azn_rate: '1.7000'};
+		catalog.settings = {premium_sales_open: true};
 		catalog.packageEntries = [
 			pack(1, price(500)),
 			pack(3, price(1200)),
@@ -161,7 +158,7 @@ describe('PremiumPackages', () => {
 	});
 
 	it('an info box instead of packages when premium sales are closed, pointing at the page’s code field', () => {
-		catalog.settings = {premium_sales_open: false, usd_to_azn_rate: '1.7000'};
+		catalog.settings = {premium_sales_open: false};
 		render();
 
 		expect(cards()).toHaveLength(0);

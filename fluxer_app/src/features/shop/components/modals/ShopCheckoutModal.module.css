@@ -189,16 +189,8 @@
 	color: var(--text-primary);
 }
 
-.row .azn {
-	grid-column: 1 / -1;
-	font-size: 0.875rem;
-	font-weight: 400;
-	color: var(--text-secondary);
-}
-
 .row.changed dd,
-.row.changed dt,
-.row .azn.changed {
+.row.changed dt {
 	color: var(--text-warning);
 }
 

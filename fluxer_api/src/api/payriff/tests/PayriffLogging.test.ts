@@ -34,11 +34,16 @@ describe('Payriff logging', () => {
 		const logs = captureLogs();
 		for (const mode of ['rate_limit', 'server_error', 'bad_code'] as const) {
 			fakePayriffServer.failNext('create', mode);
-			await client.createOrder({amountMinor: 476, description: 'Kuzgun — $2.80', callbackUrl: CALLBACK});
+			await client.createOrder({
+				amountMinor: 476,
+				currency: 'TRY',
+				description: 'Kuzgun — ₺4,76',
+				callbackUrl: CALLBACK,
+			});
 			fakePayriffServer.failNext('get', mode);
 			await client.getOrder('unknown-order');
 		}
-		await client.createOrder({amountMinor: 476, description: 'Kuzgun — $2.80', callbackUrl: CALLBACK});
+		await client.createOrder({amountMinor: 476, currency: 'TRY', description: 'Kuzgun — ₺4,76', callbackUrl: CALLBACK});
 		await client.getOrder('unknown-order');
 		fakePayriffServer.failNext('get', 'timeout');
 		await new PayriffClient({...CONFIG, timeoutMs: 50}).getOrder('slow');

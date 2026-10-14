@@ -39,15 +39,14 @@ class ShopCatalog {
 	private loadedAt = 0;
 	private loadedFor: string | null = null;
 	private pending: Promise<void> | null = null;
-	private tryRateExpiryTimer: ReturnType<typeof setTimeout> | null = null;
 	// Moves when a shown campaign ends; now() reads it, so everything drawn from the clock is drawn again.
 	private campaignClock = 0;
 	private campaignTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor() {
-		makeAutoObservable<this, 'tryRateExpiryTimer' | 'campaignTimer' | 'generation'>(
+		makeAutoObservable<this, 'campaignTimer' | 'generation'>(
 			this,
-			{tryRateExpiryTimer: false, campaignTimer: false, generation: false},
+			{campaignTimer: false, generation: false},
 			{autoBind: true},
 		);
 	}
@@ -55,7 +54,6 @@ class ShopCatalog {
 	// viewer.premium_discount belongs to one account, so a switched account reads the catalog again.
 	load(force = false): Promise<void> {
 		if (AccountScopedWork.isSuspended) return Promise.resolve();
-		this.refreshTryRateExpiry();
 		const fresh =
 			this.status === 'ready' &&
 			this.loadedFor === SessionManager.currentAccountKey &&
@@ -68,10 +66,6 @@ class ShopCatalog {
 
 	reset(): void {
 		this.generation++;
-		if (this.tryRateExpiryTimer !== null) clearTimeout(this.tryRateExpiryTimer);
-		this.tryRateExpiryTimer = null;
-		if (typeof document !== 'undefined')
-			document.removeEventListener('visibilitychange', this.onTryRateVisibilityChange);
 		this.status = 'idle';
 		this.settings = null;
 		this.itemEntries = [];
@@ -105,8 +99,8 @@ class ShopCatalog {
 				this.visionary = catalog.visionary;
 				this.premiumDiscount = catalog.viewer.premium_discount;
 				this.serverTimeOffsetMs = Date.parse(catalog.server_time) - Date.now();
-				this.refreshTryRateExpiry();
 				this.refreshCampaignEnd();
+
 				this.loadedAt = Date.now();
 				this.loadedFor = viewerId;
 				this.status = 'ready';
@@ -115,7 +109,6 @@ class ShopCatalog {
 			// A failed reload in the background keeps the catalog it had on screen.
 			runInAction(() => {
 				if (generation !== this.generation) return;
-				this.refreshTryRateExpiry();
 				if (this.status !== 'ready') this.status = 'failed';
 			});
 		} finally {
@@ -124,23 +117,6 @@ class ShopCatalog {
 				this.pending = null;
 			});
 		}
-	}
-
-	// One local timer for the catalog, never a fetch or a timer per price. Overrides have no expiry.
-	private refreshTryRateExpiry(): void {
-		if (this.tryRateExpiryTimer !== null) clearTimeout(this.tryRateExpiryTimer);
-		this.tryRateExpiryTimer = null;
-		if (typeof document !== 'undefined')
-			document.removeEventListener('visibilitychange', this.onTryRateVisibilityChange);
-		const settings = this.settings;
-		if (settings?.try_to_azn_rate_micro == null || !settings.try_rate_expires_at) return;
-		const remaining = Date.parse(settings.try_rate_expires_at) - this.now();
-		if (remaining <= 0) {
-			settings.try_to_azn_rate_micro = null;
-			return;
-		}
-		this.tryRateExpiryTimer = setTimeout(this.refreshTryRateExpiry, remaining);
-		if (typeof document !== 'undefined') document.addEventListener('visibilitychange', this.onTryRateVisibilityChange);
 	}
 
 	// One timer for the catalog, at the first shown campaign's end among every price it sells.
@@ -164,10 +140,6 @@ class ShopCatalog {
 	private onCampaignEnd(): void {
 		this.campaignClock++;
 		this.refreshCampaignEnd();
-	}
-
-	private onTryRateVisibilityChange(): void {
-		if (document.visibilityState === 'visible') this.refreshTryRateExpiry();
 	}
 
 	// Visionary is not a shop entry: it lives in `visionary` and the premium page sells it.

@@ -17,15 +17,15 @@ vi.mock('@app/features/platform/state/AuthSession', () => ({default: session}));
 
 const NOW = Date.parse('2026-09-28T20:00:00.000Z');
 const PRICE: ShopPriceResponse = {
-	base_usd_cents: 500,
+	base_try_minor: 500,
 	campaign_percent: null,
 	campaign_ends_at: null,
-	sale_usd_cents: 500,
-	premium_usd_cents: 350,
+	sale_try_minor: 500,
+	premium_try_minor: 350,
 };
 const VISIONARY: ShopVisionaryResponse = {
 	sku: 'visionary',
-	price: {...PRICE, base_usd_cents: 9900, sale_usd_cents: 9900, premium_usd_cents: null},
+	price: {...PRICE, base_try_minor: 9900, sale_try_minor: 9900, premium_try_minor: null},
 	total: 100,
 	remaining: 42,
 	visible: true,
@@ -42,7 +42,7 @@ const BUNDLE: ShopBundleResponse = {
 	name: 'Gece seti',
 	description: null,
 	items: [item('71', 'owned'), item('11', 'owned')],
-	price: {...PRICE, base_usd_cents: 900, sale_usd_cents: 900, premium_usd_cents: 630},
+	price: {...PRICE, base_try_minor: 900, sale_try_minor: 900, premium_try_minor: 630},
 };
 
 function catalog(extra: Partial<ShopCatalogResponse> = {}): ShopCatalogResponse {
@@ -51,14 +51,13 @@ function catalog(extra: Partial<ShopCatalogResponse> = {}): ShopCatalogResponse 
 			premium_sales_open: true,
 			item_sales_open: true,
 			premium_discount_percent: 30,
-			usd_to_azn_rate: '1.7000',
 		},
 		items: [
 			{item: item('11', 'owned'), price: PRICE},
 			{item: item('12', 'premium'), price: null},
 			{item: item('13', 'premium'), price: null},
 		],
-		packages: [{sku: 'premium:3', months: 3, price: {...PRICE, premium_usd_cents: null}}],
+		packages: [{sku: 'premium:3', months: 3, price: {...PRICE, premium_try_minor: null}}],
 		visionary: null,
 		server_time: new Date(NOW).toISOString(),
 		viewer: {premium_discount: false},
@@ -146,7 +145,7 @@ describe('ShopCatalog', () => {
 		const sale = (ms: number): ShopPriceResponse => ({
 			...PRICE,
 			campaign_percent: 50,
-			sale_usd_cents: 250,
+			sale_try_minor: 250,
 			campaign_ends_at: new Date(NOW + ms).toISOString(),
 		});
 		http.get.mockResolvedValue({
@@ -181,88 +180,6 @@ describe('ShopCatalog', () => {
 		expect(ShopCatalog.serverTimeOffsetMs).toBe(90_000);
 		vi.setSystemTime(NOW + 1_000);
 		expect(ShopCatalog.now()).toBe(NOW + 91_000);
-	});
-
-	it('expires an age-10 bulletin at Baku midnight on the open page using the server clock', async () => {
-		const expires = Date.parse('2026-10-06T20:00:00Z'); // Oct 7, Baku 00:00, age 11 for Sep 26.
-		const serverTime = expires - 60_000;
-		vi.setSystemTime(serverTime - 90_000);
-		http.get.mockResolvedValue({
-			body: catalog({
-				server_time: new Date(serverTime).toISOString(),
-				settings: {
-					...catalog().settings,
-					try_to_azn_rate_micro: 40000,
-					try_rate_date: '2026-09-26',
-					try_rate_expires_at: new Date(expires).toISOString(),
-				},
-			}),
-		});
-		await ShopCatalog.load();
-		expect(ShopCatalog.settings?.try_to_azn_rate_micro).toBe(40000);
-		expect(vi.getTimerCount()).toBe(1);
-		vi.advanceTimersByTime(59_999);
-		expect(ShopCatalog.settings?.try_to_azn_rate_micro).toBe(40000);
-		vi.advanceTimersByTime(1);
-		expect(ShopCatalog.settings?.try_to_azn_rate_micro).toBeNull();
-		expect(ShopCatalog.entryForSku('premium:3')).not.toBeNull();
-		expect(http.get).toHaveBeenCalledTimes(1);
-	});
-
-	it('keeps TL expired when a background reload fails and rejects an already expired catalog response', async () => {
-		const settings = {
-			...catalog().settings,
-			try_to_azn_rate_micro: 40000,
-			try_rate_expires_at: new Date(NOW + 60_000).toISOString(),
-		};
-		http.get.mockResolvedValue({body: catalog({settings})});
-		await ShopCatalog.load();
-		vi.advanceTimersByTime(60_000);
-		http.get.mockRejectedValueOnce(new Error('offline'));
-		await ShopCatalog.load(true);
-		expect(ShopCatalog.settings?.try_to_azn_rate_micro).toBeNull();
-		expect(ShopCatalog.status).toBe('ready');
-		http.get.mockResolvedValue({body: catalog({settings, server_time: new Date(NOW + 60_000).toISOString()})});
-		await ShopCatalog.load(true);
-		expect(ShopCatalog.settings?.try_to_azn_rate_micro).toBeNull();
-	});
-
-	it('cancels the automatic expiry when an override with no expiry replaces it', async () => {
-		http.get.mockResolvedValue({
-			body: catalog({
-				settings: {
-					...catalog().settings,
-					try_to_azn_rate_micro: 40000,
-					try_rate_expires_at: new Date(NOW + 60_000).toISOString(),
-				},
-			}),
-		});
-		await ShopCatalog.load();
-		expect(vi.getTimerCount()).toBe(1);
-		http.get.mockResolvedValue({
-			body: catalog({settings: {...catalog().settings, try_to_azn_rate_micro: 45000, try_rate_expires_at: null}}),
-		});
-		await ShopCatalog.load(true);
-		expect(vi.getTimerCount()).toBe(0);
-		vi.advanceTimersByTime(11 * 86_400_000);
-		expect(ShopCatalog.settings?.try_to_azn_rate_micro).toBe(45000);
-	});
-
-	it('expires on visible resume even when a suspended browser has not run its timer', async () => {
-		http.get.mockResolvedValue({
-			body: catalog({
-				settings: {
-					...catalog().settings,
-					try_to_azn_rate_micro: 40000,
-					try_rate_expires_at: new Date(NOW + 60_000).toISOString(),
-				},
-			}),
-		});
-		await ShopCatalog.load();
-		vi.setSystemTime(NOW + 61_000);
-		document.dispatchEvent(new Event('visibilitychange'));
-		expect(ShopCatalog.settings?.try_to_azn_rate_micro).toBeNull();
-		expect(vi.getTimerCount()).toBe(0);
 	});
 
 	it('counts premium-included items', async () => {

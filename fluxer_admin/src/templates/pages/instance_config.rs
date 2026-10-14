@@ -1331,6 +1331,9 @@ fn gateway_rollout_section(
                         ("platform_wide", "Platform-wide (every guild voice channel, DM, and GDM)"),
                     ], gateway_rollout.voice_e2ee_scope.as_str()))
 
+                    h3 class="text-sm font-semibold text-neutral-900" { "Game activity" }
+                    (checkbox("gateway_rollout_game_activity_enabled", "true", "Show what members are playing (detected by the desktop app)", gateway_rollout.game_activity_enabled, true))
+
                     (number_field(
                         "gateway_rollout_max_connections",
                         "Max Connections / Azami Bağlantı", &gateway_rollout.max_connections.to_string(),

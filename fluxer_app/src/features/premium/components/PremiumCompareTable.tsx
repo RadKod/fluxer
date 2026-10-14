@@ -7,7 +7,7 @@ import {premiumBadgeUrl} from '@app/features/premium/utils/PremiumBadgeAsset';
 import {getPremiumCompareGroups, type PremiumCompareCell} from '@app/features/premium/utils/PremiumCompareRows';
 import {ShopPrice} from '@app/features/shop/components/ShopPrice';
 import ShopCatalog from '@app/features/shop/state/ShopCatalog';
-import {shownCents} from '@app/features/shop/utils/ShopPriceFormat';
+import {shownTryMinor} from '@app/features/shop/utils/ShopPriceFormat';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {CheckIcon, XIcon} from '@phosphor-icons/react';
@@ -37,7 +37,8 @@ const FREE_DESCRIPTOR = msg({
 });
 const FROM_PRICE_DESCRIPTOR = msg({
 	message: 'From {price}',
-	comment: 'Under the Plus column heading of the comparison table. {price} is the lowest package price, in TL or AZN.',
+	comment:
+		'Under the Plus column heading of the comparison table. {price} is the lowest package price, in Turkish lira.',
 });
 const BETA_DESCRIPTOR = msg({
 	message: 'Beta',
@@ -72,8 +73,8 @@ export const PremiumCompareTable = observer(() => {
 	// The start price follows a campaign; the catalog's clock moves when it ends, so a page left open drops it.
 	const now = ShopCatalog.now();
 	const lowest = ShopCatalog.packageEntries.reduce<number | null>((min, entry) => {
-		const cents = shownCents(entry.price, now);
-		return min === null || cents < min ? cents : min;
+		const price = shownTryMinor(entry.price, now);
+		return min === null || price < min ? price : min;
 	}, null);
 	const hasBeta = groups.some((group) => group.rows.some((row) => row.beta));
 	const firstItem = premiumItems[0]?.item;
@@ -147,7 +148,7 @@ export const PremiumCompareTable = observer(() => {
 								</span>
 								{lowest !== null && (
 									<span className={styles.planPrice} data-flx="premium.premium-compare-table.plan-price">
-										<ShopPrice cents={0} primaryOnly />
+										<ShopPrice tryMinor={0} primaryOnly />
 									</span>
 								)}
 							</th>
@@ -165,7 +166,7 @@ export const PremiumCompareTable = observer(() => {
 								</span>
 								{lowest !== null && (
 									<span className={styles.planPrice} data-flx="premium.premium-compare-table.plan-price--2">
-										<ShopPrice cents={lowest} label={FROM_PRICE_DESCRIPTOR} />
+										<ShopPrice tryMinor={lowest} label={FROM_PRICE_DESCRIPTOR} />
 									</span>
 								)}
 							</th>

@@ -73,11 +73,11 @@ describe('shop catalog', () => {
 
 		expect(catalog.items.map(({item}) => item.id).sort()).toEqual([priced.id, premium.id].sort());
 		expect(catalog.items.find(({item}) => item.id === priced.id)?.price).toEqual({
-			base_usd_cents: 500,
+			base_try_minor: 500,
 			campaign_percent: null,
 			campaign_ends_at: null,
-			sale_usd_cents: 500,
-			premium_usd_cents: null,
+			sale_try_minor: 500,
+			premium_try_minor: null,
 		});
 		expect(catalog.items.find(({item}) => item.id === premium.id)?.price).toBeNull();
 		expect(catalog.items.some(({item}) => item.id === unpriced.id)).toBe(false);
@@ -85,47 +85,8 @@ describe('shop catalog', () => {
 			premium_sales_open: true,
 			item_sales_open: true,
 			premium_discount_percent: 0,
-			usd_to_azn_rate: '1.7000',
-			usd_to_azn_rate_micro: 1_700_000,
-			try_to_azn_rate_micro: null,
-			try_rate_date: null,
-			try_rate_expires_at: null,
 		});
 		expect(catalog.viewer).toEqual({premium_discount: false});
-	});
-
-	it('returns the exact pricing rate and hides stale TL without making an external request', async () => {
-		vi.useFakeTimers({toFake: ['Date']});
-		vi.setSystemTime(new Date('2026-10-15T12:00:00Z'));
-		await openShop(harness, admin, {usd_to_azn_rate_micro: 1_700_051});
-		await getInstanceConfigRepository().updateShopConfig(() => ({
-			try_to_azn_rate_micro: 40_000,
-			try_rate_date: '2026-10-02',
-		}));
-		expect((await getCatalog()).settings).toMatchObject({
-			usd_to_azn_rate_micro: 1_700_051,
-			try_to_azn_rate_micro: null,
-			try_rate_date: '2026-10-02',
-		});
-		await getInstanceConfigRepository().updateShopConfig(() => ({try_to_azn_rate_override_micro: 50_000}));
-		vi.setSystemTime(Date.now() + 61_000);
-		expect((await getCatalog()).settings.try_to_azn_rate_micro).toBe(50_000);
-	});
-
-	it('returns an automatic expiry and hides TL at Baku midnight even while the shared catalog is cached', async () => {
-		vi.useFakeTimers({toFake: ['Date']});
-		vi.setSystemTime(new Date('2026-10-12T19:59:59Z'));
-		await openShop(harness, admin);
-		await getInstanceConfigRepository().updateShopConfig(() => ({
-			try_to_azn_rate_micro: 40_000,
-			try_rate_date: '2026-10-02',
-		}));
-		expect((await getCatalog()).settings).toMatchObject({
-			try_to_azn_rate_micro: 40_000,
-			try_rate_expires_at: '2026-10-12T20:00:00.000Z',
-		});
-		vi.setSystemTime(new Date('2026-10-12T20:00:00Z'));
-		expect((await getCatalog()).settings).toMatchObject({try_to_azn_rate_micro: null, try_rate_expires_at: null});
 	});
 
 	it('lists priced packages in 1, 3, 12 order', async () => {
@@ -140,11 +101,11 @@ describe('shop catalog', () => {
 			['premium:12', 12],
 		]);
 		expect(packages[2]!.price).toEqual({
-			base_usd_cents: 4800,
+			base_try_minor: 4800,
 			campaign_percent: null,
 			campaign_ends_at: null,
-			sale_usd_cents: 4800,
-			premium_usd_cents: null,
+			sale_try_minor: 4800,
+			premium_try_minor: null,
 		});
 	});
 
@@ -180,7 +141,7 @@ describe('shop catalog', () => {
 		const item = await createShopItem(harness, admin, 'owned');
 		await setPrices(harness, admin, {[`cosmetic:${item.id}`]: 500, 'premium:1': 500});
 		const before = await getCatalog();
-		expect(before.items[0]!.price!.premium_usd_cents).toBeNull();
+		expect(before.items[0]!.price!.premium_try_minor).toBeNull();
 
 		await createBuilder(harness, admin.token)
 			.patch('/admin/shop/settings')
@@ -189,8 +150,8 @@ describe('shop catalog', () => {
 		vi.setSystemTime(Date.now() + 61_000);
 		const after = await getCatalog();
 
-		expect(after.items[0]!.price!.premium_usd_cents).toBe(350);
-		expect(after.packages[0]!.price.premium_usd_cents).toBeNull();
+		expect(after.items[0]!.price!.premium_try_minor).toBe(350);
+		expect(after.packages[0]!.price.premium_try_minor).toBeNull();
 		expect(after.settings.premium_discount_percent).toBe(30);
 	});
 
@@ -230,11 +191,11 @@ describe('shop catalog', () => {
 			expect(catalog.visionary).toEqual({
 				sku: 'visionary',
 				price: {
-					base_usd_cents: 29_900,
+					base_try_minor: 29_900,
 					campaign_percent: null,
 					campaign_ends_at: null,
-					sale_usd_cents: 29_900,
-					premium_usd_cents: null,
+					sale_try_minor: 29_900,
+					premium_try_minor: null,
 				},
 				total: 100,
 				remaining: 0,
@@ -280,11 +241,11 @@ describe('shop catalog', () => {
 			const catalog = await serviceWithStock({total: 100, remaining: 40}).getCatalog(await viewer());
 
 			expect(catalog.visionary?.price).toEqual({
-				base_usd_cents: 29_900,
+				base_try_minor: 29_900,
 				campaign_percent: 20,
 				campaign_ends_at: '2099-01-01T00:00:00.000Z',
-				sale_usd_cents: 23_920,
-				premium_usd_cents: null,
+				sale_try_minor: 23_920,
+				premium_try_minor: null,
 			});
 		});
 	});

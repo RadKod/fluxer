@@ -48,7 +48,7 @@ export async function setPremiumMode(
 		.execute();
 }
 
-// Self-hosted in mirror mode, Payriff configured, both sales open, 1.70 AZN per USD. harness.reset() keeps service
+// Self-hosted in mirror mode, a payment provider (the fake Payriff) configured, both sales open. harness.reset() keeps service
 // singletons, so this also empties the shop's process caches left by an earlier test.
 export async function openShop(
 	harness: ApiTestHarness,
@@ -61,7 +61,7 @@ export async function openShop(
 	await setPremiumMode(harness, admin, 'mirror');
 	await createBuilder(harness, admin.token)
 		.patch('/admin/shop/settings')
-		.body({premium_sales_open: true, item_sales_open: true, usd_to_azn_rate_micro: 1_700_000, ...settings})
+		.body({premium_sales_open: true, item_sales_open: true, ...settings})
 		.execute();
 }
 
@@ -72,7 +72,7 @@ export async function setPrices(
 ): Promise<void> {
 	await createBuilder(harness, admin.token)
 		.put('/admin/shop/prices')
-		.body({prices: Object.entries(prices).map(([sku, base]) => ({sku, base_usd_cents: base}))})
+		.body({prices: Object.entries(prices).map(([sku, base]) => ({sku, base_try_minor: base}))})
 		.execute();
 }
 

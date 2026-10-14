@@ -71,13 +71,11 @@ const BUNDLE_TARGET: ShopCheckoutTarget = {kind: 'bundle', sku: 'bundle:70'};
 const PAYMENT_URL = 'https://pay.payriff.com/pay/900';
 const quoteFor = (sku: string, fields: Partial<ShopQuoteResponse> = {}): ShopQuoteResponse => ({
 	sku,
-	base_usd_cents: 500,
+	base_try_minor: 500,
 	campaign_percent: 20,
 	premium_percent: 0,
-	final_usd_cents: 400,
-	amount_azn_minor: 680,
-	usd_to_azn_rate: '1.7000',
-	currency: 'AZN',
+	final_try_minor: 400,
+	currency: 'TRY',
 	...fields,
 });
 const orderFor = (sku: string, fields: Partial<ShopOrderResponse> = {}): ShopOrderResponse => ({
@@ -218,14 +216,14 @@ describe('useShopCheckout', () => {
 
 	it('does not open the payment page when the order amount differs from the quote', async () => {
 		shopCommands.createOrder.mockImplementation(async (sku: string) =>
-			orderFor(sku, {campaign_percent: 0, final_usd_cents: 500, amount_azn_minor: 850}),
+			orderFor(sku, {campaign_percent: 0, final_try_minor: 500}),
 		);
 		await mount({kind: 'item', sku: 'cosmetic:5'});
 		checkout.start();
 		await flush();
 
 		expect(checkout.state).toBe('price_changed');
-		expect(checkout.order?.final_usd_cents).toBe(500);
+		expect(checkout.order?.final_try_minor).toBe(500);
 		expect(nativeUtils.openExternalUrl).not.toHaveBeenCalled();
 		await vi.advanceTimersByTimeAsync(30_000);
 		expect(shopCommands.fetchOrder).not.toHaveBeenCalled();

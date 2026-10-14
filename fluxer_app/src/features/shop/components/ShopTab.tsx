@@ -11,7 +11,6 @@ import {
 } from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {ShopBundleBuyButton, ShopBundleCard} from '@app/features/shop/components/ShopBundleCard';
 import {ShopCollectionSection} from '@app/features/shop/components/ShopCollectionSection';
-import {ShopCurrencyNote} from '@app/features/shop/components/ShopCurrencyNote';
 import {ShopItemCard} from '@app/features/shop/components/ShopItemCard';
 import {ShopRedeemField} from '@app/features/shop/components/ShopRedeemField';
 import {ShopSetArt, ShopSetTile} from '@app/features/shop/components/ShopSetArt';
@@ -113,9 +112,6 @@ export const ShopTab = observer(function ShopTab({filter, redeemInputId, setId}:
 					collectionIdPrefix={collectionIdPrefix}
 					data-flx="shop.shop-tab.shop-catalog-view"
 				/>
-				<p className={styles.notice} data-flx="shop.shop-tab.notice">
-					<ShopCurrencyNote data-flx="shop.shop-tab.shop-currency-note" />
-				</p>
 				{RuntimeConfig.giftCodesEnabled && (
 					<ShopRedeemField variant="bar" inputId={redeemInputId} data-flx="shop.shop-tab.shop-redeem-field" />
 				)}

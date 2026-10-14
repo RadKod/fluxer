@@ -13,13 +13,10 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 // design's Turkish  stands in, and a drifted translation fails here once it ships.
 const TR_CATALOG = readFileSync('src/features/i18n/locales/tr/messages.po', 'utf8');
 const TR_DESIGN: Record<string, string> = {
-	'Payable: {amount} AZN': 'Ödenecek: {amount} AZN',
 	'{price} a month': 'Aylık {price}',
 	'≈ {price} a day': 'Günde ≈ {price}',
-	"sanalyer is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate.":
-		"sanalyer bir Azerbaycan şirketi olduğu için ödemeler Azerbaycan manatı (AZN) ile alınır. TL tutarı Azerbaycan Merkez Bankası'nın günlük kuruyla bilgi amaçlıdır.",
-	'The TL amount on your card statement may differ slightly: your bank converts AZN at its own exchange rate and may charge a foreign transaction fee.':
-		"Kart ekstrenizdeki TL tutarı biraz farklı olabilir: bankanız AZN'yi kendi kuruyla çevirir ve yurt dışı işlem ücreti alabilir.",
+	'{price} in total': 'Toplam {price}',
+	'You will pay {price}.': 'Ödenecek tutar: {price}.',
 };
 let locale = 'en';
 
@@ -65,7 +62,7 @@ const flow = vi.hoisted(() => ({
 const useShopCheckout = vi.hoisted(() => vi.fn());
 const NOW = Date.parse('2026-09-28T20:00:00.000Z');
 const catalog = vi.hoisted(() => ({
-	settings: {usd_to_azn_rate_micro: 1700000, try_to_azn_rate_micro: null as number | null},
+	settings: {premium_discount_percent: 30},
 	entryForSku: vi.fn(),
 	packageEntries: [] as Array<unknown>,
 	now: (): number => 0,
@@ -144,14 +141,11 @@ const bundleItem = (id: string, type: string) =>
 const BUNDLE = {name: 'Gece seti', items: [bundleItem('1', 'avatar_decoration'), bundleItem('2', 'profile_effect')]};
 const quoteFor = (sku: string, fields: Partial<ShopQuoteResponse> = {}): ShopQuoteResponse => ({
 	sku,
-	base_usd_cents: 500,
+	base_try_minor: 500,
 	campaign_percent: 0,
 	premium_percent: 0,
-	final_usd_cents: 500,
-	amount_azn_minor: 850,
-	usd_to_azn_rate: '1.7000',
-	usd_to_azn_rate_micro: 1700000,
-	currency: 'AZN',
+	final_try_minor: 500,
+	currency: 'TRY',
 	...fields,
 });
 const ORDER: ShopOrderResponse = {
@@ -163,11 +157,11 @@ const ORDER: ShopOrderResponse = {
 	created_at: '2026-09-28T20:00:00.000Z',
 };
 const packagePrice = (cents: number, campaign: number | null = null) => ({
-	base_usd_cents: cents,
+	base_try_minor: cents,
 	campaign_percent: campaign,
 	campaign_ends_at: null,
-	sale_usd_cents: campaign ? Math.round((cents * (100 - campaign)) / 100) : cents,
-	premium_usd_cents: null,
+	sale_try_minor: campaign ? Math.round((cents * (100 - campaign)) / 100) : cents,
+	premium_try_minor: null,
 });
 const userWith = (fields: {verified?: boolean; claimed?: boolean; premium?: boolean}) => ({
 	verified: fields.verified ?? true,
@@ -190,7 +184,6 @@ describe('ShopCheckoutModal', () => {
 	beforeEach(() => {
 		(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
 		locale = 'en';
-		catalog.settings.try_to_azn_rate_micro = null;
 		Object.assign(flow, {
 			state: 'ready',
 			quote: quoteFor('cosmetic:5'),
@@ -208,9 +201,9 @@ describe('ShopCheckoutModal', () => {
 		nativeUtils.isDesktop.mockReturnValue(false);
 		catalog.entryForSku.mockImplementation((sku: string) => {
 			if (sku === 'cosmetic:5') {
-				return {kind: 'item', sku, item: ITEM, price: {...packagePrice(500), premium_usd_cents: 350}};
+				return {kind: 'item', sku, item: ITEM, price: {...packagePrice(500), premium_try_minor: 350}};
 			}
-			return sku === 'bundle:70' ? {kind: 'bundle', sku, price: {...packagePrice(900), premium_usd_cents: 630}} : null;
+			return sku === 'bundle:70' ? {kind: 'bundle', sku, price: {...packagePrice(900), premium_try_minor: 630}} : null;
 		});
 		catalog.packageEntries = [
 			{kind: 'package', sku: 'premium:1', months: 1, price: packagePrice(500)},
@@ -233,169 +226,89 @@ describe('ShopCheckoutModal', () => {
 		cosmetics.load.mockReset();
 	});
 
-	it.each(['payment_ready', 'awaiting', 'price_changed', 'contents_changed'])(
-		'shows the persisted Turkish quote in %s independently of the current catalog rate',
-		(state) => {
-			locale = 'tr';
-			catalog.settings.try_to_azn_rate_micro = 999999;
-			Object.assign(flow, {
-				state,
-				order: {
-					...ORDER,
-					amount_azn_minor: 338,
-					display_currency: 'TRY',
-					display_amount_minor: 6800,
-					display_rate_micro: 49706,
-				},
-			});
-			render({kind: 'item', sku: 'cosmetic:5'});
-			expect(text()).toContain('Ödeme sayfası Azerbaycan manatı gösterecek: 3,38 AZN (mağazadaki fiyat 68 TL).');
-			expect(text()).not.toContain('bankanız');
-			expect(flow.openPaymentPage).not.toHaveBeenCalled();
-		},
-	);
-
-	it('shows the persisted English quote before opening the payment page on Continue', () => {
-		Object.assign(flow, {
-			state: 'payment_ready',
-			order: {
-				...ORDER,
-				amount_azn_minor: 338,
-				display_currency: 'TRY',
-				display_amount_minor: 6838,
-				display_rate_micro: 49430,
-			},
-		});
+	// sanalyer: the order is charged in Turkish lira, the amount the shop shows; no second currency is explained.
+	it.each(['payment_ready', 'awaiting'])('shows the persisted order total in Turkish in %s', (state) => {
+		locale = 'tr';
+		Object.assign(flow, {state, order: {...ORDER, final_try_minor: 14999}});
 		render({kind: 'item', sku: 'cosmetic:5'});
-		expect(text()).toContain('The payment page will show Azerbaijani manat: 3.38 AZN (store price 68.38 TL).');
+		expect(text()).toContain('Ödenecek tutar: ₺149,99.');
+		expect(text()).not.toMatch(/AZN|manat|Azerbaycan/);
+		expect(flow.openPaymentPage).not.toHaveBeenCalled();
+	});
+
+	it('shows the persisted English total before opening the payment page on Continue', () => {
+		Object.assign(flow, {state: 'payment_ready', order: ORDER});
+		render({kind: 'item', sku: 'cosmetic:5'});
+		expect(text()).toContain('You will pay ₺5.');
 		expect(flow.openPaymentPage).not.toHaveBeenCalled();
 		act(() => button('Continue')!.click());
 		expect(flow.openPaymentPage).toHaveBeenCalledTimes(1);
 	});
 
-	it.each(['AZN', null, undefined])('shows AZN store price for no-rate and legacy %s orders', (currency) => {
+	it('a changed price shows the order total in the summary, without a second note', () => {
 		locale = 'tr';
-		catalog.settings.try_to_azn_rate_micro = 40000;
-		Object.assign(flow, {
-			state: 'payment_ready',
-			order: {
-				...ORDER,
-				amount_azn_minor: 338,
-				display_currency: currency,
-				display_amount_minor: currency === 'AZN' ? 338 : null,
-				display_rate_micro: null,
-			},
-		});
+		Object.assign(flow, {state: 'price_changed', order: {...ORDER, base_try_minor: 15000, final_try_minor: 15000}});
 		render({kind: 'item', sku: 'cosmetic:5'});
-		expect(text()).toContain('Ödeme sayfası Azerbaycan manatı gösterecek: 3,38 AZN (mağazadaki fiyat 3,38 AZN).');
-		expect(text()).not.toContain('TL');
+		expect(texts('dd').at(-1)).toBe('₺150');
+		expect(container.querySelector('[data-flx="shop.shop-checkout-modal.payment-price-note"]')).toBeNull();
 	});
 
-	it('keeps changed-price total equal to the persisted TRY quote after the catalog rate changes', () => {
-		locale = 'tr';
-		catalog.settings.try_to_azn_rate_micro = 999999;
-		Object.assign(flow, {
-			state: 'price_changed',
-			order: {
-				...ORDER,
-				amount_azn_minor: 338,
-				display_currency: 'TRY',
-				display_amount_minor: 6800,
-				display_rate_micro: 49706,
-			},
-		});
-		render({kind: 'item', sku: 'cosmetic:5'});
-		expect(texts('dd').at(-1)).toBe('68 TLÖdenecek: 3,38 AZN');
-	});
-
-	it('shows the AZN note word for word', () => {
+	it('shows Turkish lira only, with no currency note', () => {
 		locale = 'tr';
 		render({kind: 'item', sku: 'cosmetic:5'});
-
-		expect(text()).toContain(
-			"sanalyer bir Azerbaycan şirketi olduğu için ödemeler Azerbaycan manatı (AZN) ile alınır. TL tutarı Azerbaycan Merkez Bankası'nın günlük kuruyla bilgi amaçlıdır.",
-		);
-		expect(text()).toContain(
-			"Kart ekstrenizdeki TL tutarı biraz farklı olabilir: bankanız AZN'yi kendi kuruyla çevirir ve yurt dışı işlem ücreti alabilir.",
-		);
-		expect(texts('dd')).toContain('8,50 AZN');
+		expect(texts('dd')).toContain('₺5');
+		expect(text()).not.toMatch(/AZN|manat|Azerbaycan|USD|\$/);
 	});
 
-	it('converts only for display and keeps the authoritative quote AZN when catalog pricing differs', () => {
-		catalog.settings.try_to_azn_rate_micro = 40000;
-		flow.quote = quoteFor('cosmetic:5', {amount_azn_minor: 851});
+	it('shows the Plus hint in Turkish lira and no payable line', () => {
 		render({kind: 'item', sku: 'cosmetic:5'});
-		expect(texts('dd').at(-1)).toBe('212.75 TLPayable: 8.51 AZN');
-		expect(text()).not.toMatch(/USD|\$/);
-	});
-
-	it('shows one authoritative payable amount while the Plus hint stays informational', () => {
-		catalog.settings.try_to_azn_rate_micro = 40000;
-		flow.quote = quoteFor('cosmetic:5', {amount_azn_minor: 851});
-		render({kind: 'item', sku: 'cosmetic:5'});
-		expect(texts('[data-flx="shop.shop-price.payable"]')).toEqual(['Payable: 8.51 AZN']);
-		expect(texts('[data-flx="shop.shop-checkout-modal.premium-hint-text"]')).toEqual(['Plus: 148.75 TL']);
+		expect(texts('[data-flx="shop.shop-checkout-modal.premium-hint-text"]')).toEqual(['Plus: ₺3.50']);
+		expect(container.querySelector('[data-flx="shop.shop-price.payable"]')).toBeNull();
 	});
 
 	it('lists the campaign and the premium discount from the server quote', () => {
 		flow.quote = quoteFor('cosmetic:5', {
 			campaign_percent: 20,
 			premium_percent: 30,
-			final_usd_cents: 280,
-			amount_azn_minor: 476,
+			final_try_minor: 280,
 		});
 		render({kind: 'item', sku: 'cosmetic:5'});
 
 		expect(texts('dt')).toEqual(['Price', 'Sale (-20%)', 'sanalyer Plus discount (-30%)', 'Total']);
-		expect(texts('dd')).toEqual(['8.50 AZN', '−1.70 AZN', '−2.04 AZN', '4.76 AZN']);
+		expect(texts('dd')).toEqual(['₺5', '−₺1', '−₺1.20', '₺2.80']);
 		expect(container.querySelector('[data-stage="5"]')).not.toBeNull();
 	});
 
-	it('uses the quote rate for every summary row even when the catalog rate is older', () => {
+	it('discount rows are differences of rounded levels, so they add up to the total', () => {
 		flow.quote = quoteFor('cosmetic:5', {
-			usd_to_azn_rate: '2.0000',
-			usd_to_azn_rate_micro: 2000000,
-			amount_azn_minor: 1000,
-		});
-		render({kind: 'item', sku: 'cosmetic:5'});
-		expect(texts('dd')).toEqual(['10.00 AZN', '10.00 AZN']);
-	});
-
-	it.each([null, 40001])('subtracts converted cumulative amounts so discount rows add up with TRY rate %s', (rate) => {
-		catalog.settings.try_to_azn_rate_micro = rate;
-		flow.quote = quoteFor('cosmetic:5', {
-			base_usd_cents: 499,
+			base_try_minor: 499,
 			campaign_percent: 15,
-			final_usd_cents: 424,
-			amount_azn_minor: 721,
+			final_try_minor: 424,
 		});
 		render({kind: 'item', sku: 'cosmetic:5'});
-		expect(texts('dd')).toEqual(
-			rate === null ? ['8.48 AZN', '−1.27 AZN', '7.21 AZN'] : ['211.99 TL', '−31.74 TL', '180.25 TLPayable: 7.21 AZN'],
-		);
+		expect(texts('dd')).toEqual(['₺4.99', '−₺0.75', '₺4.24']);
 	});
 
-	it('uses the legacy quote rate for summary rows from an older server', () => {
+	it('lists the campaign alone when no Plus discount applies', () => {
 		flow.quote = quoteFor('cosmetic:5', {
 			campaign_percent: 20,
-			final_usd_cents: 400,
-			amount_azn_minor: 680,
-			usd_to_azn_rate_micro: undefined,
+			final_try_minor: 400,
 		});
 		render({kind: 'item', sku: 'cosmetic:5'});
 		expect(texts('dt')).toEqual(['Price', 'Sale (-20%)', 'Total']);
-		expect(texts('dd')).toEqual(['8.50 AZN', '−1.70 AZN', '6.80 AZN']);
+		expect(texts('dd')).toEqual(['₺5', '−₺1', '₺4']);
 	});
 
 	it('premium mode has 1/3/12 month choices with the incoming one selected', () => {
-		flow.quote = quoteFor('premium:3', {base_usd_cents: 1200, final_usd_cents: 1200, amount_azn_minor: 2040});
+		flow.quote = quoteFor('premium:3', {base_try_minor: 1200, final_try_minor: 1200});
 		render({kind: 'premium', months: 3});
 
 		const radios = [...container.querySelectorAll('[role="radio"]')];
 		expect(radios.map((radio) => radio.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
 		expect(text()).toContain('1 month');
-		expect(text()).toContain('20.40 AZN');
-		expect(text()).toContain('68.00 AZN');
+		expect(text()).toContain('₺4 a month');
+		expect(text()).toContain('₺12 in total');
+		expect(text()).toContain('₺40 in total');
 		expect(text()).toContain('One-time payment. It does not renew.');
 		expect(useShopCheckout).toHaveBeenLastCalledWith({kind: 'premium', months: 3});
 
@@ -407,11 +320,13 @@ describe('ShopCheckoutModal', () => {
 	it('a package whose campaign has ended since the catalog was read shows its full price', () => {
 		const ended = {...packagePrice(5000, 20), campaign_ends_at: new Date(NOW - 1).toISOString()};
 		catalog.packageEntries = [{kind: 'package', sku: 'premium:12', months: 12, price: ended}];
-		flow.quote = quoteFor('premium:12', {base_usd_cents: 5000, final_usd_cents: 5000, amount_azn_minor: 8500});
+		flow.quote = quoteFor('premium:12', {base_try_minor: 5000, final_try_minor: 5000});
 		render({kind: 'premium', months: 12});
 
-		expect(texts('[data-flx="shop.shop-checkout-modal.package-amount"]')).toEqual(['85.00 AZN']);
-		expect(text()).not.toMatch(/TRY|₺|USD|\$/);
+		expect(texts('[data-flx="shop.shop-checkout-modal.package-amount"]')).toEqual([
+			'₺4.17 a month≈ ₺0.14 a day₺50 in total',
+		]);
+		expect(text()).not.toMatch(/AZN|USD|\$/);
 		expect(container.querySelector(`.${styles.badge}`)).toBeNull();
 	});
 
@@ -446,7 +361,8 @@ describe('ShopCheckoutModal', () => {
 		expect(link?.getAttribute('href')).toBe(ORDER.payment_url);
 		expect(link?.getAttribute('target')).toBe('_blank');
 		expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
-		expect(text()).toContain('The Payriff page is in English and shows the amount in AZN: 8.50 AZN.');
+		expect(text()).toContain('The payment page opened in a new tab.');
+		expect(text()).not.toMatch(/Payriff|AZN/);
 
 		nativeUtils.isDesktop.mockReturnValue(true);
 		render({kind: 'item', sku: 'cosmetic:5'});
@@ -467,14 +383,14 @@ describe('ShopCheckoutModal', () => {
 	it('marks what changed in the price and opens the payment page only on a new click', () => {
 		Object.assign(flow, {
 			state: 'price_changed',
-			quote: quoteFor('cosmetic:5', {campaign_percent: 20, final_usd_cents: 400, amount_azn_minor: 680}),
+			quote: quoteFor('cosmetic:5', {campaign_percent: 20, final_try_minor: 400}),
 			order: ORDER,
 		});
 		render({kind: 'item', sku: 'cosmetic:5'});
 
 		expect(texts('h2')).toContain('The price changed');
-		expect(texts('dd')).toEqual(['8.50 AZN', '8.50 AZN']);
-		expect(texts(`.${styles.changed}`)).toEqual(['Total8.50 AZN']);
+		expect(texts('dd')).toEqual(['₺5', '₺5']);
+		expect(texts(`.${styles.changed}`)).toEqual(['Total₺5']);
 		expect(flow.openPaymentPage).not.toHaveBeenCalled();
 
 		act(() => button('Continue at the new price')!.click());
@@ -517,7 +433,7 @@ describe('ShopCheckoutModal', () => {
 		const listed = () => texts('[data-flx="shop.shop-checkout-modal.bundle-item"]');
 
 		beforeEach(() => {
-			Object.assign(flow, {item: null, bundle: BUNDLE, quote: quoteFor('bundle:70', {base_usd_cents: 900})});
+			Object.assign(flow, {item: null, bundle: BUNDLE, quote: quoteFor('bundle:70', {base_try_minor: 900})});
 		});
 
 		it.each(['Okay', 'Profile decorations'])(
@@ -566,7 +482,7 @@ describe('ShopCheckoutModal', () => {
 			expect(container.querySelector('[data-stage="1,2"]')).not.toBeNull();
 			expect(text()).toContain('Includes');
 			expect(listed()).toEqual(['Avatar decorationitem 1', 'Profile effectitem 2']);
-			expect(text()).toContain('Plus: 10.71 AZN');
+			expect(text()).toContain('Plus: ₺6.30');
 		});
 
 		// the list the order froze, shown before a second click opens the payment page.
@@ -608,7 +524,7 @@ describe('ShopCheckoutModal', () => {
 	it('a Visionary checkout shows the lifetime note, no discount rows and the kept-time line for a premium member', () => {
 		Object.assign(flow, {
 			item: null,
-			quote: quoteFor('visionary', {base_usd_cents: 10000, final_usd_cents: 10000, amount_azn_minor: 17000}),
+			quote: quoteFor('visionary', {base_try_minor: 10000, final_try_minor: 10000}),
 		});
 		users.currentUser = userWith({premium: true});
 		render({kind: 'visionary'});
@@ -618,7 +534,6 @@ describe('ShopCheckoutModal', () => {
 		expect(texts('p')).toEqual(
 			expect.arrayContaining([
 				'Lifetime sanalyer Plus, a numbered badge, the #0000 tag and a decoration only Visionaries have.',
-				"sanalyer is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate. The TL amount on your card statement may differ slightly: your bank converts AZN at its own exchange rate and may charge a foreign transaction fee.",
 				'Lifetime means for as long as sanalyer runs.',
 				'Your remaining sanalyer Plus time becomes part of the lifetime plan. It is not refunded.',
 			]),

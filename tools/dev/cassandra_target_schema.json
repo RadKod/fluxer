@@ -9667,7 +9667,7 @@
 					"type": "int"
 				},
 				{
-					"name": "base_usd_cents",
+					"name": "base_try_minor",
 					"type": "int"
 				},
 				{
@@ -9679,27 +9679,7 @@
 					"type": "int"
 				},
 				{
-					"name": "final_usd_cents",
-					"type": "int"
-				},
-				{
-					"name": "rate_micro",
-					"type": "int"
-				},
-				{
 					"name": "amount_minor",
-					"type": "int"
-				},
-				{
-					"name": "display_currency",
-					"type": "text"
-				},
-				{
-					"name": "display_amount_minor",
-					"type": "bigint"
-				},
-				{
-					"name": "display_rate_micro",
 					"type": "int"
 				},
 				{
@@ -9805,7 +9785,7 @@
 					"type": "text"
 				},
 				{
-					"name": "base_usd_cents",
+					"name": "base_try_minor",
 					"type": "int"
 				},
 				{

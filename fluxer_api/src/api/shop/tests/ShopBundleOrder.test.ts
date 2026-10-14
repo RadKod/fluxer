@@ -11,7 +11,6 @@ import type {ShopOrderRow} from '@app/api/database/types/ShopTypes';
 import {Logger} from '@app/api/Logger';
 import {
 	getCosmeticRepository,
-	getInstanceConfigRepository,
 	getShopCatalogService,
 	getShopOrderRepository,
 	getShopOrderService,
@@ -156,30 +155,6 @@ describe('bundle orders: delivery, frozen item list and visibility', () => {
 		return vi.spyOn(Logger.child({}) as unknown as NoopLogger, 'warn');
 	}
 
-	it('cached bundle eligibility does not read TL fields with a cold shared catalog', async () => {
-		const {bundle} = await pricedBundle();
-		getShopCatalogService().clearCachesForTesting();
-		const repository = getInstanceConfigRepository();
-		const config = await repository.readStoredShopConfig();
-		for (const key of [
-			'try_to_azn_rate_micro',
-			'try_rate_date',
-			'try_rate_fetched_at',
-			'try_to_azn_rate_override_micro',
-			'try_rate_override_at',
-		]) {
-			Object.defineProperty(config, key, {
-				get: () => {
-					throw new Error(`Bundle order read ${key}`);
-				},
-			});
-		}
-		vi.spyOn(repository, 'getShopConfig').mockResolvedValue(config);
-		const order = await createOrder(bundle.sku);
-		expect(order.amount_azn_minor).toBe(1530);
-		expect((await stored(order.id)).amount_minor).toBe(1530);
-	});
-
 	it('delivers every item under its own grant key and grants the order', async () => {
 		const {bundle, items} = await pricedBundle();
 		const order = await createOrder(bundle.sku);
@@ -283,7 +258,7 @@ describe('bundle orders: delivery, frozen item list and visibility', () => {
 		const second = await createOrder(bundle.sku);
 
 		expect(second.id).not.toBe(first.id);
-		expect(second.final_usd_cents).toBe(first.final_usd_cents);
+		expect(second.final_try_minor).toBe(first.final_try_minor);
 		expect(first.item_ids).toEqual(items.map((item) => item.id));
 		expect(second.item_ids).toEqual([items[0]!.id, items[1]!.id, swapped.id]);
 	});
@@ -374,7 +349,7 @@ describe('bundle orders: delivery, frozen item list and visibility', () => {
 		expect(await ownedIds()).toEqual([]);
 	});
 
-	it('an amount one qepik off fails the bundle order without delivery', async () => {
+	it('an amount one kuruş off fails the bundle order without delivery', async () => {
 		const {bundle} = await pricedBundle();
 		const order = await createOrder(bundle.sku);
 		const row = await stored(order.id);

@@ -17,7 +17,6 @@ const SETTINGS: ShopSettingsResponse = {
 	premium_sales_open: true,
 	item_sales_open: true,
 	premium_discount_percent: 30,
-	usd_to_azn_rate: '1.7000',
 };
 
 const catalog = vi.hoisted(() => ({
@@ -110,11 +109,11 @@ function entry(
 		item: {id, type, name: `item ${id}`, description: null, asset: `hash${id}`, availability},
 		price: priced
 			? {
-					base_usd_cents: 500,
+					base_try_minor: 500,
 					campaign_percent: null,
 					campaign_ends_at: null,
-					sale_usd_cents: 500,
-					premium_usd_cents: null,
+					sale_try_minor: 500,
+					premium_try_minor: null,
 				}
 			: null,
 	};

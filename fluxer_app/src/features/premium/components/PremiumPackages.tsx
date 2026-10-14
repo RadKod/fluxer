@@ -3,7 +3,6 @@
 import {PREMIUM_PRODUCT_NAME} from '@app/features/app/config/I18nDisplayConstants';
 import styles from '@app/features/premium/components/PremiumPackages.module.css';
 import {PremiumPlanCard} from '@app/features/premium/components/PremiumPlanCard';
-import {ShopCurrencyNote} from '@app/features/shop/components/ShopCurrencyNote';
 import {ShopRedeemJumpButton} from '@app/features/shop/components/ShopRedeemField';
 import ShopCatalog from '@app/features/shop/state/ShopCatalog';
 import {
@@ -85,9 +84,6 @@ export const PremiumPackages = observer(({sectionRef, codeInputId}: PremiumPacka
 				{isPremium
 					? `${i18n._(ONE_TIME_PAYMENT_DESCRIPTOR)} ${i18n._(TIME_ADDED_ON_TOP_DESCRIPTOR)}`
 					: `${i18n._(ONE_TIME_PAYMENT_DESCRIPTOR)}`}
-			</p>
-			<p className={styles.note}>
-				<ShopCurrencyNote />
 			</p>
 		</div>
 	);

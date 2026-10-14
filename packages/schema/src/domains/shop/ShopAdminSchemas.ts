@@ -12,16 +12,10 @@ import {
 import {z} from 'zod';
 
 export const ShopAdminSettingsResponse = z.object({
-	try_to_azn_rate_micro: Int32Type.nullish().describe('Automatic CBAR AZN per TRY in millionths'),
-	try_rate_date: z.iso.date().nullish().describe('Automatic CBAR bulletin date'),
-	try_rate_fetched_at: z.iso.datetime().nullish().describe('Last successful CBAR fetch'),
-	try_to_azn_rate_override_micro: Int32Type.nullish().describe('Manual display rate; null uses CBAR'),
-	try_rate_override_at: z.iso.datetime().nullish().describe('When the manual display rate was set'),
 	premium_sales_open: z.boolean().describe('Admin switch for premium packages and Visionary'),
 	item_sales_open: z.boolean().describe('Admin switch for owned items and bundles'),
 	premium_discount_percent: Int32Type.describe('Discount paid premium members get on items and bundles, 0–95'),
-	usd_to_azn_rate_micro: Int32Type.describe('AZN per USD in millionths; 1.70 = 1700000'),
-	payriff_configured: z.boolean().describe('false keeps every sale closed whatever the switches say'),
+	payment_provider_configured: z.boolean().describe('false keeps every sale closed whatever the switches say'),
 	visionary_on_sale: z.boolean().describe('Visionary shown and sold, or hidden'),
 	visionary_reward_item_ids: z
 		.array(SnowflakeStringType)
@@ -32,7 +26,7 @@ export type ShopAdminSettingsResponse = z.infer<typeof ShopAdminSettingsResponse
 
 export const ShopAdminPriceRow = z.object({
 	sku: ShopSku,
-	base_usd_cents: Int32Type.describe('List price in US cents'),
+	base_try_minor: Int32Type.describe('List price in kuruş'),
 	campaign_percent: Int32Type.nullable().describe('Campaign discount as stored, ended ones included'),
 	campaign_ends_at: z.iso.datetime().nullable(),
 	now: ShopPriceResponse.describe('What the shop shows right now, from the one price function'),
@@ -44,9 +38,9 @@ export const ShopAdminHealth = z
 	.object({
 		busy_refusals_last_hour: Int32Type.describe('Orders refused with SHOP_BUSY in the current and previous hour'),
 		reconcile_lag_seconds: Int32Type.describe('Age of the oldest reconcile slot still waiting; 0 when caught up'),
-		payriff_backing_off: z.boolean().describe('Payriff answered 429 in the last 30 seconds'),
+		provider_backing_off: z.boolean().describe('The payment provider answered 429 in the last 30 seconds'),
 	})
-	.describe('The temporary Payriff budget triggers, visible to admins');
+	.describe('The temporary payment provider budget triggers, visible to admins');
 
 export type ShopAdminHealth = z.infer<typeof ShopAdminHealth>;
 
@@ -71,8 +65,11 @@ export type ShopAdminResponse = z.infer<typeof ShopAdminResponse>;
 
 export const ShopAdminOrderResponse = ShopOrderResponse.omit({payment_url: true}).extend({
 	user_id: SnowflakeStringType.describe('The buyer'),
-	provider_order_id: z.string().nullable().describe('The Payriff order ID; null until Payriff opened the order'),
-	provider_status: z.string().nullable().describe('The last Payriff payment status seen'),
+	provider_order_id: z
+		.string()
+		.nullable()
+		.describe('The payment provider order ID; null until the provider opened the order'),
+	provider_status: z.string().nullable().describe('The last payment status the provider reported'),
 	paid_at: z.iso.datetime().nullable(),
 	granted_at: z.iso.datetime().nullable(),
 	check_count: Int32Type.describe('Reconcile checks made, 0–4'),
@@ -81,23 +78,9 @@ export const ShopAdminOrderResponse = ShopOrderResponse.omit({payment_url: true}
 export type ShopAdminOrderResponse = z.infer<typeof ShopAdminOrderResponse>;
 
 export const UpdateShopSettingsRequest = z.object({
-	try_to_azn_rate_override: z
-		.string()
-		.regex(/^\d+(?:\.\d{1,6})?$/)
-		.refine((value) => Number(value) >= 0.001 && Number(value) <= 1)
-		.nullable()
-		.optional()
-		.describe('AZN per TRY, 0.001–1 with up to six decimal places; null restores CBAR. Display only.'),
 	premium_sales_open: z.boolean().optional(),
 	item_sales_open: z.boolean().optional(),
 	premium_discount_percent: z.number().int().min(0).max(95).optional(),
-	usd_to_azn_rate_micro: z
-		.number()
-		.int()
-		.min(1_000_000)
-		.max(3_000_000)
-		.optional()
-		.describe('AZN per USD in millionths; 1.70 = 1700000; the bounds catch 0.017 and 17'),
 	visionary_on_sale: z.boolean().optional(),
 	visionary_reward_item_ids: z
 		.array(SnowflakeType)
@@ -149,13 +132,13 @@ export const SetShopPricesRequest = z.object({
 		.array(
 			z.object({
 				sku: ShopSku,
-				base_usd_cents: z
+				base_try_minor: z
 					.number()
 					.int()
-					.min(1)
+					.min(100)
 					.max(10_000_000)
 					.nullable()
-					.describe('null takes the product out of the shop'),
+					.describe('List price in kuruş, ₺1–₺100 000; null takes the product out of the shop'),
 			}),
 		)
 		.min(1)

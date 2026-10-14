@@ -684,7 +684,7 @@ export const LIMIT_KEY_METADATA: Record<LimitKey, LimitKeyMetadata> = {
 	},
 	feature_micupbot: {
 		key: 'feature_micupbot',
-		label: 'MicupBOT',
+		label: 'SanalyerBot',
 		description:
 			'Instance-wide: the official community bot (welcome, auto roles, reaction roles, levels, # commands, automod); 0 stops every hook, job and settings write, stored settings stay',
 		category: 'features',

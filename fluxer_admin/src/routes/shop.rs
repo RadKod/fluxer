@@ -26,8 +26,9 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use time::{OffsetDateTime, UtcOffset, format_description::well_known::Rfc3339};
 
-// SetShopPricesRequest takes at most 10,000,000 cents ($100,000.00).
-const MAX_PRICE_CENTS: i64 = 10_000_000;
+// sanalyer: SetShopPricesRequest takes kuruş from 100 (₺1) to 10,000,000 (₺100.000).
+const MIN_PRICE_KURUS: i64 = 100;
+const MAX_PRICE_KURUS: i64 = 10_000_000;
 // ApplyShopCampaignRequest and RemoveShopCampaignRequest take at most 200 SKUs.
 const MAX_SKUS_PER_REQUEST: usize = 200;
 
@@ -99,7 +100,7 @@ async fn shop_page(
     Html(markup.into_string()).into_response()
 }
 
-// Payriff shows every payment as "Micup #<order_id> …", so support starts from that number.
+// sanalyer: support starts from the order number the user or the payment provider shows.
 async fn find_order(client: &AdminApiClient, raw: &str) -> Result<ShopAdminOrder, FlashData> {
     let Some(order_id) = raw.trim().parse::<i64>().ok().filter(|id| *id > 0) else {
         return Err(FlashData::error("Enter an order number."));
@@ -129,10 +130,6 @@ async fn shop_post(
             let client = AdminApiClient::new(state.http_client(), config, &auth.0.session);
             match aq.action.as_deref().unwrap_or("") {
                 "settings" => save_settings(&client, &form).await,
-                "refresh_try_rate" => match client.refresh_shop_try_rate().await {
-                    Ok(()) => FlashData::success("CBAR rate refresh queued."),
-                    Err(error) => api_failure("queue the CBAR rate refresh", &error),
-                },
                 "save_prices" => save_prices(&client, &form).await,
                 "apply_campaign" => apply_campaign(&client, &form).await,
                 "remove_campaign" => remove_campaign(&client, &form).await,
@@ -154,19 +151,8 @@ async fn shop_post(
     )
 }
 
+// sanalyer: prices are set in lira directly, so there is no exchange rate to save.
 async fn save_settings(client: &AdminApiClient, form: &MultiValueForm) -> FlashData {
-    let rate = match parse_rate_micro(form.first("usd_to_azn_rate").unwrap_or("")) {
-        Ok(rate) => rate,
-        Err(message) => return FlashData::error(message),
-    };
-    let try_override = form.first("try_to_azn_rate_override").unwrap_or("").trim();
-    if !try_override.is_empty()
-        && !matches!(parse_decimal(try_override, 6), Some(1_000..=1_000_000))
-    {
-        return FlashData::error(
-            "The TRY → AZN override must be 0.001–1.0 with at most six decimals, or blank for automatic.",
-        );
-    }
     let Some(discount) = form
         .parse_u32("premium_discount_percent")
         .filter(|percent| *percent <= 95)
@@ -176,9 +162,7 @@ async fn save_settings(client: &AdminApiClient, form: &MultiValueForm) -> FlashD
     let body = json!({
         "premium_sales_open": form.bool_value("premium_sales_open"),
         "item_sales_open": form.bool_value("item_sales_open"),
-        "usd_to_azn_rate_micro": rate,
         "premium_discount_percent": discount,
-        "try_to_azn_rate_override": (!try_override.is_empty()).then_some(try_override),
     });
     match client.update_shop_settings(&body).await {
         Ok(()) => FlashData::success("Shop settings saved."),
@@ -194,13 +178,13 @@ async fn save_prices(client: &AdminApiClient, form: &MultiValueForm) -> FlashDat
         let Some(input) = form.first(&format!("price_{sku}")) else {
             continue;
         };
-        let cents = match parse_usd_cents(input) {
-            Ok(cents) => cents,
+        let kurus = match parse_try_minor(input) {
+            Ok(kurus) => kurus,
             Err(message) => return FlashData::error(format!("{sku}: {message}")),
         };
-        let shown = parse_usd_cents(form.first(&format!("was_{sku}")).unwrap_or(""));
-        if Ok(cents) != shown {
-            changes.push(json!({ "sku": sku, "base_usd_cents": cents }));
+        let shown = parse_try_minor(form.first(&format!("was_{sku}")).unwrap_or(""));
+        if Ok(kurus) != shown {
+            changes.push(json!({ "sku": sku, "base_try_minor": kurus }));
         }
     }
     if changes.is_empty() {
@@ -270,14 +254,14 @@ async fn remove_campaign(client: &AdminApiClient, form: &MultiValueForm) -> Flas
 
 // Micup (Visionary): blank takes it out of the shop, like a blank row in the price table.
 async fn save_visionary_price(client: &AdminApiClient, form: &MultiValueForm) -> FlashData {
-    let cents = match parse_usd_cents(form.first("visionary_price").unwrap_or("")) {
-        Ok(cents) => cents,
+    let kurus = match parse_try_minor(form.first("visionary_price").unwrap_or("")) {
+        Ok(kurus) => kurus,
         Err(message) => return FlashData::error(message),
     };
-    let body = json!({ "prices": [{ "sku": "visionary", "base_usd_cents": cents }] });
+    let body = json!({ "prices": [{ "sku": "visionary", "base_try_minor": kurus }] });
     match client.set_shop_prices(&body).await {
-        Ok(()) => FlashData::success(match cents {
-            Some(cents) => format!("Visionary price set to {}.", format_usd(cents)),
+        Ok(()) => FlashData::success(match kurus {
+            Some(kurus) => format!("Visionary price set to {}.", format_try(kurus)),
             None => "Visionary is out of the shop: it has no price.".to_owned(),
         }),
         Err(error) => api_failure("save the Visionary price", &error),
@@ -416,46 +400,37 @@ pub(crate) fn count_of(count: usize, noun: &str) -> String {
     format!("{count} {noun}{plural}")
 }
 
-// "12.34" with at most `decimals` digits after the point, in units of 10^-decimals.
-fn parse_decimal(input: &str, decimals: usize) -> Option<i64> {
+// sanalyer: "149,99" or "149.99" (Turkish keyboards type a comma) with at most two decimals, in kuruş.
+// One separator at most, so "1.250" is refused rather than guessed as ₺1.25 or ₺1250.
+fn parse_lira_decimal(input: &str) -> Option<i64> {
     let input = input.trim();
-    let (whole, fraction) = input.split_once('.').unwrap_or((input, ""));
+    let (whole, fraction) = input.split_once([',', '.']).unwrap_or((input, ""));
     let digits = |part: &str| part.bytes().all(|byte| byte.is_ascii_digit());
-    if whole.is_empty() || fraction.len() > decimals || !digits(whole) || !digits(fraction) {
+    if whole.is_empty() || fraction.len() > 2 || !digits(whole) || !digits(fraction) {
         return None;
     }
-    let fraction: i64 = format!("{fraction:0<decimals$}").parse().ok()?;
+    let fraction: i64 = format!("{fraction:0<2}").parse().ok()?;
     whole
         .parse::<i64>()
         .ok()?
-        .checked_mul(10_i64.pow(decimals as u32))?
+        .checked_mul(100)?
         .checked_add(fraction)
 }
 
-/// "1.7", "1.7000" and "2" read as 1_700_000, 1_700_000 and 2_000_000 AZN per USD in millionths.
-/// At most four decimals, because the API shows every rate with four (orders, the shop), so the rate
-/// support reads is the rate that was charged; anything outside 1.0000–3.0000 is refused.
-pub(crate) fn parse_rate_micro(input: &str) -> Result<i32, String> {
-    match parse_decimal(input, 6) {
-        Some(micro @ 1_000_000..=3_000_000) if micro % 100 == 0 => Ok(micro as i32),
-        _ => Err(
-            "The USD → AZN rate must be a number from 1.0000 to 3.0000 with at most four decimals."
-                .to_owned(),
-        ),
-    }
-}
-
-/// A blank price takes the product out of the shop (`Ok(None)`); "5", "5.00" and "0.06" read as
-/// 500, 500 and 6 cents. At most two decimals; zero and negative prices are refused.
-pub(crate) fn parse_usd_cents(input: &str) -> Result<Option<i32>, String> {
+/// sanalyer: prices are Turkish lira. A blank price takes the product out of the shop (`Ok(None)`);
+/// "150", "149,99", "149.99" and "149,5" read as 15000, 14999, 14999 and 14950 kuruş.
+/// ₺1–₺100000 with at most two decimals, as SetShopPricesRequest takes.
+pub(crate) fn parse_try_minor(input: &str) -> Result<Option<i32>, String> {
     if input.trim().is_empty() {
         return Ok(None);
     }
-    match parse_decimal(input, 2) {
-        Some(cents @ 1..=MAX_PRICE_CENTS) => Ok(Some(cents as i32)),
-        Some(0) => Err("Price must be at least $0.01.".to_owned()),
-        _ => Err(
-            "Enter the price in dollars with at most two decimals, up to $100000.00.".to_owned(),
+    match parse_lira_decimal(input) {
+        Some(kurus @ MIN_PRICE_KURUS..=MAX_PRICE_KURUS) => Ok(Some(kurus as i32)),
+        Some(_) => Err("Price must be from ₺1 to ₺100000.".to_owned()),
+        None => Err(
+            "Enter the price in lira with at most two decimals and no thousands separator, \
+             e.g. 149,99."
+                .to_owned(),
         ),
     }
 }
@@ -474,9 +449,34 @@ pub(crate) fn turkey_local_to_utc(input: &str) -> Result<Option<String>, String>
         .ok_or_else(|| "Enter the campaign end as a date and time, or leave it blank.".to_owned())
 }
 
-/// 500 cents read as "$5.00"; display only, the API prices everything.
-pub(crate) fn format_usd(cents: i32) -> String {
-    format!("${}.{:02}", cents / 100, cents % 100)
+/// sanalyer: kuruş as the app shows them (Intl tr-TR, TRY, narrow symbol): a whole-lira price drops the
+/// decimals, any other shows two, "." groups thousands. 15000 reads "₺150", 14999 "₺149,99",
+/// 125000 "₺1.250". Display only, the API prices everything.
+pub(crate) fn format_try(kurus: i32) -> String {
+    format!("₺{}", lira_number(kurus, Some('.')))
+}
+
+/// kuruş as a price field shows them: "150" or "149,99", no symbol or thousands separator, so
+/// parse_try_minor reads it back unchanged.
+pub(crate) fn try_input_value(kurus: i32) -> String {
+    lira_number(kurus, None)
+}
+
+fn lira_number(kurus: i32, group: Option<char>) -> String {
+    let sign = if kurus < 0 { "-" } else { "" };
+    let kurus = kurus.unsigned_abs();
+    let whole = (kurus / 100).to_string();
+    let mut grouped = String::new();
+    for (index, digit) in whole.chars().enumerate() {
+        if let Some(group) = group.filter(|_| index > 0 && (whole.len() - index) % 3 == 0) {
+            grouped.push(group);
+        }
+        grouped.push(digit);
+    }
+    match kurus % 100 {
+        0 => format!("{sign}{grouped}"),
+        fraction => format!("{sign}{grouped},{fraction:02}"),
+    }
 }
 
 /// An API timestamp in Turkey time, as the admin typed it: "5 Oct 23:59".
@@ -500,37 +500,31 @@ mod tests {
     use super::*;
 
     #[test]
-    fn rate_reads_up_to_four_decimals_between_one_and_three() {
-        assert_eq!(parse_rate_micro("1.7"), Ok(1_700_000));
-        assert_eq!(parse_rate_micro("1.7000"), Ok(1_700_000));
-        assert_eq!(parse_rate_micro("2"), Ok(2_000_000));
-        assert_eq!(parse_rate_micro(" 1.7023 "), Ok(1_702_300));
-        assert_eq!(parse_rate_micro("1.702300"), Ok(1_702_300));
+    fn price_reads_lira_with_comma_or_dot_and_blank_takes_the_product_out() {
+        assert_eq!(parse_try_minor(""), Ok(None));
+        assert_eq!(parse_try_minor("  "), Ok(None));
+        assert_eq!(parse_try_minor("150"), Ok(Some(15_000)));
+        assert_eq!(parse_try_minor("149,99"), Ok(Some(14_999)));
+        assert_eq!(parse_try_minor("149.99"), Ok(Some(14_999)));
+        assert_eq!(parse_try_minor(" 149,5 "), Ok(Some(14_950)));
+        assert_eq!(parse_try_minor("1"), Ok(Some(100)));
+        assert_eq!(parse_try_minor("1,00"), Ok(Some(100)));
+        assert_eq!(parse_try_minor("100000"), Ok(Some(10_000_000)));
         for input in [
-            "0.017",
-            "17",
+            "0",
+            "0,99",
+            "0.5",
+            "-1",
+            "149,999",
+            "1.250",
+            "1.250,00",
             "abc",
-            "",
-            "1.7000001",
-            "1.702345",
-            "1.70001",
-            "-1.7",
-            "1e0",
+            "100000,01",
+            "₺150",
+            "1e3",
+            ",50",
         ] {
-            assert!(parse_rate_micro(input).is_err(), "{input}");
-        }
-    }
-
-    #[test]
-    fn price_reads_dollars_and_blank_takes_the_product_out() {
-        assert_eq!(parse_usd_cents(""), Ok(None));
-        assert_eq!(parse_usd_cents("  "), Ok(None));
-        assert_eq!(parse_usd_cents("5"), Ok(Some(500)));
-        assert_eq!(parse_usd_cents("5.00"), Ok(Some(500)));
-        assert_eq!(parse_usd_cents("0.06"), Ok(Some(6)));
-        assert_eq!(parse_usd_cents("100000"), Ok(Some(10_000_000)));
-        for input in ["0", "0.00", "-1", "5.001", "abc", "100000.01"] {
-            assert!(parse_usd_cents(input).is_err(), "{input}");
+            assert!(parse_try_minor(input).is_err(), "{input}");
         }
     }
 
@@ -614,9 +608,20 @@ mod tests {
     }
 
     #[test]
-    fn labels_show_dollars_and_turkey_time() {
-        assert_eq!(format_usd(500), "$5.00");
-        assert_eq!(format_usd(6), "$0.06");
+    fn labels_show_lira_and_turkey_time() {
+        assert_eq!(format_try(15_000), "₺150");
+        assert_eq!(format_try(14_999), "₺149,99");
+        assert_eq!(format_try(14_950), "₺149,50");
+        assert_eq!(format_try(125_000), "₺1.250");
+        assert_eq!(format_try(10_000_000), "₺100.000");
+        assert_eq!(format_try(123_456_789), "₺1.234.567,89");
+        assert_eq!(format_try(6), "₺0,06");
+        assert_eq!(try_input_value(15_000), "150");
+        assert_eq!(try_input_value(14_999), "149,99");
+        assert_eq!(try_input_value(125_000), "1250");
+        for kurus in [100, 14_999, 15_000, 125_050, 10_000_000] {
+            assert_eq!(parse_try_minor(&try_input_value(kurus)), Ok(Some(kurus)));
+        }
         assert_eq!(turkey_time_label("2026-10-05T20:59:00.000Z"), "5 Oct 23:59");
         assert_eq!(turkey_time_label("2025-12-31T22:00:00Z"), "1 Jan 01:00");
     }

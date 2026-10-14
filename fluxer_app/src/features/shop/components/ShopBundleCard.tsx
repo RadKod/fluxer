@@ -9,7 +9,7 @@ import {PurchaseDisabledWrapper} from '@app/features/shop/components/PurchaseDis
 import styles from '@app/features/shop/components/ShopItemCard.module.css';
 import {ShopItemStage} from '@app/features/shop/components/ShopItemStage';
 import {ShopPrice} from '@app/features/shop/components/ShopPrice';
-import {cardPayCents, ShopPriceLine} from '@app/features/shop/components/ShopPriceLine';
+import {cardPayTryMinor, ShopPriceLine} from '@app/features/shop/components/ShopPriceLine';
 import ShopCatalog from '@app/features/shop/state/ShopCatalog';
 import type {ShopBundleEntry} from '@app/features/shop/utils/ShopEntries';
 import {
@@ -96,7 +96,7 @@ export const ShopBundleCard = observer(function ShopBundleCard({entry, opensDeta
 		);
 	};
 	const buyLabel = i18n._(BUY_ITEM_DESCRIPTOR, {name: bundle.name});
-	const pay = cardPayCents(entry.price);
+	const pay = cardPayTryMinor(entry.price);
 	// The saving shows beside a price only: not when the card says Owned or Not on sale instead.
 	const savings =
 		action.kind === 'none' ? null : bundleSavingsPercent(entry, ShopCatalog.itemEntries, ShopCatalog.now());
@@ -116,7 +116,7 @@ export const ShopBundleCard = observer(function ShopBundleCard({entry, opensDeta
 							i18n._(PURCHASE_DESCRIPTOR)
 						) : (
 							<ShopPrice
-								cents={pay}
+								tryMinor={pay}
 								label={BUY_FOR_PRICE_DESCRIPTOR}
 								primaryOnly
 								data-flx="shop.shop-bundle-card.buy-for-price"

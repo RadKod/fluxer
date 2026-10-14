@@ -12,12 +12,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const i18n = setupI18n({locale: 'en', messages: {en: {}}});
 const catalog = vi.hoisted(() => ({
-	settings: {
-		usd_to_azn_rate: '1.7000',
-		usd_to_azn_rate_micro: 1700000,
-		try_to_azn_rate_micro: 40000 as number | null,
-		try_rate_date: '2026-09-28',
-	},
+	settings: {premium_sales_open: true, item_sales_open: true, premium_discount_percent: 0},
 	// The catalog's shared clock (ShopCatalog.now reads an observable that moves when a campaign ends).
 	now: () => clock.get(),
 	packageEntries: [] as Array<ShopPackageEntry>,
@@ -61,11 +56,11 @@ const {ShopCheckoutModal} = await import('@app/features/shop/components/modals/S
 
 function price(base: number, campaign?: {percent: number; endsAt: string | null}): ShopPriceResponse {
 	return {
-		base_usd_cents: base,
+		base_try_minor: base,
 		campaign_percent: campaign?.percent ?? null,
 		campaign_ends_at: campaign?.endsAt ?? null,
-		sale_usd_cents: campaign ? Math.round((base * (100 - campaign.percent)) / 100) : base,
-		premium_usd_cents: null,
+		sale_try_minor: campaign ? Math.round((base * (100 - campaign.percent)) / 100) : base,
+		premium_try_minor: null,
 	};
 }
 
@@ -86,12 +81,7 @@ describe('PremiumPlanCard', () => {
 		vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout', 'Date']});
 		vi.setSystemTime(new Date('2026-09-28T12:00:00Z'));
 		runInAction(() => clock.set(Date.now()));
-		catalog.settings = {
-			usd_to_azn_rate: '1.7000',
-			usd_to_azn_rate_micro: 1700000,
-			try_to_azn_rate_micro: 40000,
-			try_rate_date: '2026-09-28',
-		};
+		catalog.settings = {premium_sales_open: true, item_sales_open: true, premium_discount_percent: 0};
 		modalCommands.push.mockClear();
 		container = document.createElement('div');
 		document.body.append(container);
@@ -109,32 +99,30 @@ describe('PremiumPlanCard', () => {
 	const text = (flx: string) => container.querySelector(`[data-flx="premium.premium-plan-card.${flx}"]`)?.textContent;
 	const button = () => container.querySelector('button')!;
 
-	it('shows the price, the monthly price, the AZN amount and two perks', () => {
-		render(pack(3, price(1299)));
+	it('shows the monthly price, the daily price, the package total and two perks', () => {
+		render(pack(3, price(44999)));
 
 		expect(text('title')).toBe('3 months');
-		expect(text('price')).toBe('184 TL a month≈ 6.13 TL a dayPayable: 22.08 AZN');
-		expect(container.textContent).not.toMatch(/USD|\$/);
-
-		// 1299 × 1.7 = 2208.3 qepik.
+		expect(text('price')).toBe('₺150 a month≈ ₺5 a day₺449.99 in total');
+		expect(container.textContent).not.toMatch(/AZN|USD|\$/);
 
 		expect(
 			[...container.querySelectorAll('[data-flx="premium.premium-plan-card.perk"]')].map((li) => li.textContent),
 		).toEqual(['All sanalyer Plus perks', 'Does not renew']);
 	});
 
-	it('shows monthly and daily TL on the one month plan', () => {
-		render(pack(1, price(499)));
+	it('shows the monthly and daily price on the one month plan, without a separate total', () => {
+		render(pack(1, price(14999)));
 
-		expect(text('price')).toBe('212 TL a month≈ 7.07 TL a dayPayable: 8.48 AZN');
+		expect(text('price')).toBe('₺149.99 a month≈ ₺5 a day');
 	});
 
 	it('shows the campaign badge, the struck price and the countdown', () => {
 		const endsAt = new Date(Date.now() + 2 * DAY_MS).toISOString();
-		render(pack(12, price(5000, {percent: 20, endsAt})));
+		render(pack(12, price(150000, {percent: 20, endsAt})));
 
-		expect(text('price')).toBe('141.67 TL a month≈ 4.72 TL a dayPayable: 68.00 AZN');
-		expect(container.querySelector('s')?.textContent).toContain('177.08 TL');
+		expect(text('price')).toBe('₺100 a month≈ ₺3.33 a day₺1,200 in total');
+		expect(container.querySelector('s')?.textContent).toContain('₺125');
 		expect(text('discount')).toBe('-20%');
 
 		const countdown = container.querySelector('[data-testid="countdown"]');
@@ -143,31 +131,17 @@ describe('PremiumPlanCard', () => {
 	});
 
 	it('drops the campaign once its end passes, also while the page is open, on the catalog clock alone', () => {
-		render(pack(12, price(5000, {percent: 20, endsAt: new Date(Date.now() + 2 * DAY_MS).toISOString()})));
+		render(pack(12, price(150000, {percent: 20, endsAt: new Date(Date.now() + 2 * DAY_MS).toISOString()})));
 		expect(container.querySelector('s')).not.toBeNull();
 		// No timer of its own: the catalog runs one for every card.
 		expect(vi.getTimerCount()).toBe(0);
 
 		moveClock(Date.now() + 2 * DAY_MS + 1);
 
-		expect(text('price')).toBe('177.08 TL a month≈ 5.9 TL a dayPayable: 85.00 AZN');
+		expect(text('price')).toBe('₺125 a month≈ ₺4.17 a day₺1,500 in total');
 		expect(container.querySelector('s')).toBeNull();
 		expect(text('discount')).toBeUndefined();
 		expect(container.querySelector('[data-testid="countdown"]')).toBeNull();
-	});
-
-	it('shows the exact quote amount even when the legacy rate text rounded away micro precision', () => {
-		catalog.settings.usd_to_azn_rate_micro = 1700049;
-		render(pack(1, price(20000)));
-		expect(text('price')).toContain('Payable: 340.01 AZN');
-	});
-
-	it.each(['missing', 'stale'])('hides TL for a %s effective rate and keeps total AZN', () => {
-		catalog.settings.try_to_azn_rate_micro = null;
-		catalog.settings.try_rate_date = '2026-09-01';
-		render(pack(3, price(1299)));
-		expect(text('price')).toBe('22.08 AZN');
-		expect(container.textContent).not.toMatch(/TRY|₺|USD|\$/);
 	});
 
 	it('says in green what a month of the package saves against the monthly plan', () => {

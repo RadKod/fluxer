@@ -220,7 +220,7 @@ describe('PremiumPage', () => {
 		expect(section('perks').querySelector('[data-testid="perk-tiles"]')).not.toBeNull();
 		expect(section('compare').querySelector('[data-testid="comparison"]')).not.toBeNull();
 		expect(section('plans').querySelector('[data-testid="packages"]')).not.toBeNull();
-		expect(section('faq').querySelectorAll('details')).toHaveLength(4);
+		expect(section('faq').querySelectorAll('details')).toHaveLength(3);
 	});
 
 	it('the hero speaks in sentence case, reads live limits and buys through the halo', () => {
@@ -380,7 +380,7 @@ describe('PremiumPage', () => {
 		render();
 		expect(container.querySelector('[data-testid="code-card"]')).toBeNull();
 		expect(container.querySelector('[data-testid="jump"]')).toBeNull();
-		expect(section('faq').querySelectorAll('details')).toHaveLength(4);
+		expect(section('faq').querySelectorAll('details')).toHaveLength(3);
 	});
 
 	it('moves the hero lights and buy halo only when Fluxer allows it, on hover or focus', () => {

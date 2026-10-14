@@ -2,7 +2,7 @@
 
 import Accessibility from '@app/features/accessibility/state/Accessibility';
 import * as Modal from '@app/features/app/components/dialogs/Modal';
-import {PAYMENT_PROVIDER_NAME, PREMIUM_PRODUCT_NAME} from '@app/features/app/config/I18nDisplayConstants';
+import {PREMIUM_PRODUCT_NAME} from '@app/features/app/config/I18nDisplayConstants';
 import type {CosmeticType} from '@app/features/cosmetics/state/Cosmetics';
 import {COSMETIC_TYPE_LABELS} from '@app/features/cosmetics/utils/CosmeticLabels';
 import {
@@ -17,7 +17,6 @@ import {ShopBundleDetailModal} from '@app/features/shop/components/modals/ShopBu
 import styles from '@app/features/shop/components/modals/ShopCheckoutModal.module.css';
 import {ShopItemDetailModal} from '@app/features/shop/components/modals/ShopItemDetailModal';
 import {PurchaseDisabledWrapper} from '@app/features/shop/components/PurchaseDisabledWrapper';
-import {ShopCurrencyNote} from '@app/features/shop/components/ShopCurrencyNote';
 import {ShopEquippedSuccess} from '@app/features/shop/components/ShopEquippedSuccess';
 import {ShopItemStage} from '@app/features/shop/components/ShopItemStage';
 import {ShopPrice} from '@app/features/shop/components/ShopPrice';
@@ -49,7 +48,6 @@ import {
 	PAYMENT_NOT_APPROVED_DESCRIPTOR,
 	PAYMENT_NOT_COMPLETED_DESCRIPTOR,
 	PAYMENT_NOT_CONFIRMED_YET_DESCRIPTOR,
-	PAYMENT_PAGE_LANGUAGE_DESCRIPTOR,
 	PAYMENT_PAGE_OPENED_DESCRIPTOR,
 	PAYMENT_TIMEOUT_DESCRIPTOR,
 	PREMIUM_DISCOUNT_PERCENT_DESCRIPTOR,
@@ -71,15 +69,7 @@ import {
 	VISIONARY_SOLD_OUT_DESCRIPTOR,
 	WAITING_FOR_PAYMENT_DESCRIPTOR,
 } from '@app/features/shop/utils/ShopMessageDescriptors';
-import {
-	campaignShown,
-	formatAzn,
-	formatDiscount,
-	formatTry,
-	percentOff,
-	usdCentsToAznMinor,
-	usdToAznRateMicro,
-} from '@app/features/shop/utils/ShopPriceFormat';
+import {campaignShown, formatDiscount, formatTry, percentOff} from '@app/features/shop/utils/ShopPriceFormat';
 import {Button} from '@app/features/ui/button/Button';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {modal} from '@app/features/ui/commands/ModalCommands';
@@ -122,29 +112,25 @@ const LOCKED_DESCRIPTOR = msg({
 	comment: 'Shop buy dialog for Plus, opened from a Plus-only decoration. {name} is the decoration name.',
 });
 const COPY_DESCRIPTOR = msg({message: 'Copy', comment: 'Copies the order number in the shop buy dialog.'});
+// sanalyer: the order is charged in Turkish lira, the same amount the shop shows; no second currency to explain.
 const PAYMENT_PRICE_NOTE_DESCRIPTOR = msg({
-	message: 'The payment page will show Azerbaijani manat: {amount} AZN (store price {price}).',
-	comment: 'Shown before opening Payriff. Both prices come from the persisted order quote.',
+	message: 'You will pay {price}.',
+	comment:
+		'Shown in the buy dialog before and while the payment page is open. {price} is the order total in Turkish lira.',
 });
 
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 type PriceParts = Pick<
 	ShopQuoteResponse,
-	| 'base_usd_cents'
-	| 'campaign_percent'
-	| 'premium_percent'
-	| 'final_usd_cents'
-	| 'amount_azn_minor'
-	| 'usd_to_azn_rate_micro'
-	| 'usd_to_azn_rate'
+	'base_try_minor' | 'campaign_percent' | 'premium_percent' | 'final_try_minor'
 >;
 
-// The campaign step rounds half up as the server does. Summary rows subtract the converted cumulative levels,
-// including the authoritative final amount, rather than converting USD discounts independently.
-function saleCents(price: PriceParts): number {
-	if (price.premium_percent === 0) return price.final_usd_cents;
-	return percentOff(price.base_usd_cents, price.campaign_percent);
+// The campaign step rounds half up as the server does. Discount rows are differences between cumulative levels
+// ending in the server's final amount, so the rows always add up to the total.
+function saleTryMinor(price: PriceParts): number {
+	if (price.premium_percent === 0) return price.final_try_minor;
+	return percentOff(price.base_try_minor, price.campaign_percent);
 }
 
 // Takes focus when a new state appears.
@@ -154,39 +140,30 @@ const focusOnMount = (node: HTMLHeadingElement | null) => node?.focus();
 interface SummaryProps {
 	price: PriceParts;
 	before?: PriceParts;
-	order?: ShopOrderResponse;
 }
 
-const Summary = observer(({price, before, order}: SummaryProps) => {
+const Summary = observer(({price, before}: SummaryProps) => {
 	const {i18n} = useLingui();
 	const percent = (value: number) => formatDiscount(value, i18n.locale);
 	const rowsOf = (parts: PriceParts) => {
-		const rate = usdToAznRateMicro(parts);
-		const base = rate == null ? null : usdCentsToAznMinor(parts.base_usd_cents, rate);
-		const sale =
-			rate == null
-				? null
-				: parts.premium_percent === 0
-					? parts.amount_azn_minor
-					: usdCentsToAznMinor(saleCents(parts), rate);
-		const rows = [{key: 'price', label: i18n._(PRICE_DESCRIPTOR), amount: base, subtract: 0}];
+		const base = parts.base_try_minor;
+		const sale = saleTryMinor(parts);
+		const rows = [{key: 'price', label: i18n._(PRICE_DESCRIPTOR), amount: base}];
 		if (parts.campaign_percent > 0) {
 			const label = i18n._(SALE_PERCENT_DESCRIPTOR, {percent: percent(parts.campaign_percent)});
-			rows.push({key: 'sale', label, amount: base, subtract: sale ?? 0});
+			rows.push({key: 'sale', label, amount: base - sale});
 		}
 		if (parts.premium_percent > 0) {
 			const label = i18n._(PREMIUM_DISCOUNT_PERCENT_DESCRIPTOR, {
 				premiumProductName: PREMIUM_PRODUCT_NAME,
 				percent: percent(parts.premium_percent),
 			});
-			rows.push({key: 'premium', label, amount: sale, subtract: parts.amount_azn_minor});
+			rows.push({key: 'premium', label, amount: sale - parts.final_try_minor});
 		}
-		rows.push({key: 'total', label: i18n._(TOTAL_DESCRIPTOR), amount: parts.amount_azn_minor, subtract: 0});
+		rows.push({key: 'total', label: i18n._(TOTAL_DESCRIPTOR), amount: parts.final_try_minor});
 		return rows;
 	};
-	const earlier = before
-		? new Map(rowsOf(before).map((row) => [row.key, row.amount === null ? null : row.amount - row.subtract]))
-		: null;
+	const earlier = before ? new Map(rowsOf(before).map((row) => [row.key, row.amount])) : null;
 	return (
 		<dl className={styles.summary} aria-live="polite" data-flx="shop.shop-checkout-modal.summary">
 			{rowsOf(price).map((row) => (
@@ -195,26 +172,14 @@ const Summary = observer(({price, before, order}: SummaryProps) => {
 					className={clsx(
 						styles.row,
 						row.key === 'total' && styles.totalRow,
-						earlier &&
-							earlier.get(row.key) !== (row.amount === null ? null : row.amount - row.subtract) &&
-							styles.changed,
+						earlier && earlier.get(row.key) !== row.amount && styles.changed,
 					)}
 					data-flx="shop.shop-checkout-modal.row"
 				>
 					<dt data-flx="shop.shop-checkout-modal.row-label">{row.label}</dt>
 					<dd data-flx="shop.shop-checkout-modal.row-value">
-						{row.amount !== null && (
-							<>
-								{(row.key === 'sale' || row.key === 'premium') && '−'}
-								<ShopPrice
-									aznMinor={row.amount}
-									subtractAznMinor={row.subtract}
-									primaryOnly={row.key !== 'total'}
-									displayQuote={order}
-									data-flx="shop.shop-checkout-modal.summary.shop-price"
-								/>
-							</>
-						)}
+						{(row.key === 'sale' || row.key === 'premium') && '−'}
+						<ShopPrice tryMinor={row.amount} primaryOnly data-flx="shop.shop-checkout-modal.summary.shop-price" />
 					</dd>
 				</div>
 			))}
@@ -226,7 +191,7 @@ const Summary = observer(({price, before, order}: SummaryProps) => {
 const PackageOption = observer(({entry}: {entry: ShopPackageEntry}) => {
 	const {i18n} = useLingui();
 	const sale = campaignShown(entry.price, ShopCatalog.now());
-	const cents = sale ? entry.price.sale_usd_cents : entry.price.base_usd_cents;
+	const tryMinor = sale ? entry.price.sale_try_minor : entry.price.base_try_minor;
 	return (
 		<div className={styles.package} data-flx="shop.shop-checkout-modal.package">
 			<span className={styles.packageName} data-flx="shop.shop-checkout-modal.package-name">
@@ -235,7 +200,7 @@ const PackageOption = observer(({entry}: {entry: ShopPackageEntry}) => {
 			<span className={styles.packagePrice} data-flx="shop.shop-checkout-modal.package-price">
 				<span data-flx="shop.shop-checkout-modal.package-amount">
 					<ShopPrice
-						cents={cents}
+						tryMinor={tryMinor}
 						months={entry.months}
 						data-flx="shop.shop-checkout-modal.package-option.shop-price"
 					/>
@@ -270,14 +235,9 @@ const OrderNumber = ({orderId}: {orderId: string}) => {
 
 const PaymentPriceNote = ({order}: {order: ShopOrderResponse}) => {
 	const {i18n} = useLingui();
-	const amount = formatAzn(order.amount_azn_minor, i18n.locale);
-	const price =
-		order.display_currency === 'TRY' && order.display_amount_minor != null
-			? formatTry(order.display_amount_minor, i18n.locale)
-			: `${formatAzn(order.display_amount_minor ?? order.amount_azn_minor, i18n.locale)} AZN`;
 	return (
 		<p className={styles.note} data-flx="shop.shop-checkout-modal.payment-price-note">
-			{i18n._(PAYMENT_PRICE_NOTE_DESCRIPTOR, {amount, price})}
+			{i18n._(PAYMENT_PRICE_NOTE_DESCRIPTOR, {price: formatTry(order.final_try_minor, i18n.locale)})}
 		</p>
 	);
 };
@@ -389,7 +349,7 @@ const SummaryView = observer(
 		const isPremiumMember = Users.currentUser?.isPremium() ?? false;
 		const itemPremiumPrice =
 			(target.kind === 'item' || target.kind === 'bundle') && quote?.premium_percent === 0
-				? (ShopCatalog.entryForSku(target.sku)?.price?.premium_usd_cents ?? null)
+				? (ShopCatalog.entryForSku(target.sku)?.price?.premium_try_minor ?? null)
 				: null;
 		return (
 			<div className={styles.layout} data-flx="shop.shop-checkout-modal.layout">
@@ -435,9 +395,6 @@ const SummaryView = observer(
 								<span className={styles.skeletonTotal} data-flx="shop.shop-checkout-modal.skeleton-total" />
 							</div>
 						)}
-						<p className={styles.note} data-flx="shop.shop-checkout-modal.azn-note">
-							<ShopCurrencyNote data-flx="shop.shop-checkout-modal.summary-view.shop-currency-note" />
-						</p>
 						{target.kind === 'premium' && (
 							<p className={styles.note} data-flx="shop.shop-checkout-modal.one-time-note">
 								{i18n._(ONE_TIME_PAYMENT_DESCRIPTOR)}
@@ -463,7 +420,7 @@ const SummaryView = observer(
 								<CrownIcon weight="fill" className={styles.hintCrown} data-flx="shop.shop-checkout-modal.hint-crown" />
 								<span data-flx="shop.shop-checkout-modal.premium-hint-text">
 									<ShopPrice
-										cents={itemPremiumPrice}
+										tryMinor={itemPremiumPrice}
 										label={PREMIUM_PRICE_DESCRIPTOR}
 										primaryOnly
 										data-flx="shop.shop-checkout-modal.summary-view.shop-price"
@@ -482,7 +439,7 @@ const SummaryView = observer(
 // as Fluxer opens Stripe; no deep link back.
 const PaymentPageButton = ({checkout, label}: {checkout: ShopCheckoutFlow; label: string}) => {
 	const url = checkout.order?.payment_url;
-	// The server only hands out https Payriff pages; anything else never becomes a link.
+	// The server only hands out https payment pages; anything else never becomes a link.
 	if (!url?.startsWith('https://')) return null;
 	if (isDesktop()) {
 		return (
@@ -619,14 +576,10 @@ export const ShopCheckoutModal = observer<ShopCheckoutModalProps>(({target}) => 
 						<BundleContents items={checkout.bundle.items} data-flx="shop.shop-checkout-modal.changed-contents" />
 					)}
 					{order && checkout.quote && (
-						<Summary
-							price={order}
-							before={checkout.quote}
-							order={order}
-							data-flx="shop.shop-checkout-modal.new-summary"
-						/>
+						<Summary price={order} before={checkout.quote} data-flx="shop.shop-checkout-modal.new-summary" />
 					)}
-					{order && <PaymentPriceNote order={order} />}
+					{/* sanalyer: the summary's total is the amount charged; the note only stands in when there is none. */}
+					{order && !checkout.quote && <PaymentPriceNote order={order} />}
 				</div>
 			);
 			footer = (
@@ -646,19 +599,11 @@ export const ShopCheckoutModal = observer<ShopCheckoutModalProps>(({target}) => 
 				<StatusView
 					icon={<ArrowSquareOutIcon className={styles.statusIcon} data-flx="shop.shop-checkout-modal.arrow-icon" />}
 					title={i18n._(FINISH_PAYING_IN_BROWSER_DESCRIPTOR)}
-					body={i18n._(PAYMENT_PAGE_OPENED_DESCRIPTOR, {paymentProviderName: PAYMENT_PROVIDER_NAME})}
+					body={i18n._(PAYMENT_PAGE_OPENED_DESCRIPTOR)}
 					orderId={order?.id}
 					data-flx="shop.shop-checkout-modal.awaiting"
 				>
 					{order && <PaymentPriceNote order={order} />}
-					{order && (
-						<p className={styles.statusBody} data-flx="shop.shop-checkout-modal.payment-language">
-							{i18n._(PAYMENT_PAGE_LANGUAGE_DESCRIPTOR, {
-								paymentProviderName: PAYMENT_PROVIDER_NAME,
-								amount: `${formatAzn(order.amount_azn_minor, i18n.locale)} AZN`,
-							})}
-						</p>
-					)}
 					<div className={styles.waiting} role="status" data-flx="shop.shop-checkout-modal.waiting">
 						<Spinner size="small" data-flx="shop.shop-checkout-modal.spinner" />
 						<span data-flx="shop.shop-checkout-modal.waiting-text">{i18n._(WAITING_FOR_PAYMENT_DESCRIPTOR)}</span>

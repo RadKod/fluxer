@@ -2016,12 +2016,17 @@ msgstr "{premiumProductName}-Abonnement"
 msgid "{presenceCount} online"
 msgstr "{presenceCount} online"
 
-#. Monthly TL equivalent of a sanalyer Plus package; the AZN amount below is the full package total.
+#. Monthly price of a sanalyer Plus package, in Turkish lira. The package total is charged at once.
 #: src/features/shop/components/ShopPrice.tsx
 msgid "{price} a month"
 msgstr "{price} pro Monat"
 
-#. Secondary shop price for someone without the sanalyer Plus discount. {price} is formatted in TL or AZN.
+#. Full price of a multi-month sanalyer Plus package, charged at once, in Turkish lira. Under the monthly price.
+#: src/features/shop/components/ShopPrice.tsx
+msgid "{price} in total"
+msgstr "{price} insgesamt"
+
+#. Secondary shop price for someone without the sanalyer Plus discount. {price} is a price in Turkish lira.
 #: src/features/shop/components/ShopPriceLine.tsx
 msgid "{price} with sanalyer Plus"
 msgstr "{price} mit sanalyer Plus"
@@ -2762,7 +2767,7 @@ msgstr "<0>Weitergeleitet aus</0>{sourceInfo}"
 msgid "<0>Kenji</0>, <1>Amara</1> and <2>Mateo</2> are typing..."
 msgstr "<0>Kenji</0>, <1>Amara</1> und <2>Mateo</2> schreiben …"
 
-#. Informational daily TL equivalent of a sanalyer Plus package, using 30 days per month.
+#. Approximate daily price of a sanalyer Plus package, in Turkish lira, using 30 days per month.
 #: src/features/shop/components/ShopPrice.tsx
 msgid "≈ {price} a day"
 msgstr "≈ {price} pro Tag"
@@ -7142,7 +7147,7 @@ msgstr "Kaufe ein {premiumProductName}-Geschenk im Tab „{premiumProductName}�
 msgid "Buy all: {name}"
 msgstr "Alle kaufen: {name}"
 
-#. Button on a shop card that opens the buy dialog. {price} is the price the user pays, in TL or AZN.
+#. Button on a shop card that opens the buy dialog. {price} is the price the user pays, in Turkish lira.
 #: src/features/shop/utils/ShopMessageDescriptors.ts
 msgid "Buy for {price}"
 msgstr "Für {price} kaufen"
@@ -17700,7 +17705,7 @@ msgstr "Von"
 msgid "From {creatorTag}"
 msgstr "Von {creatorTag}"
 
-#. Under the Plus column heading of the comparison table. {price} is the lowest package price, in TL or AZN.
+#. Under the Plus column heading of the comparison table. {price} is the lowest package price, in Turkish lira.
 #: src/features/premium/components/PremiumCompareTable.tsx
 msgid "From {price}"
 msgstr "Ab {price}"
@@ -21527,7 +21532,7 @@ msgstr "Lebenslang {premiumProductName}"
 msgid "Lifetime {premiumProductName}, a numbered badge, the #0000 tag and a decoration only Visionaries have."
 msgstr "{premiumProductName} auf Lebenszeit, ein nummeriertes Abzeichen, das Tag #0000 und eine Dekoration, die nur Visionaries haben."
 
-#. Note in the Visionary buy dialog, under the currency note.
+#. Note in the Visionary buy dialog, under the price.
 #: src/features/shop/utils/ShopMessageDescriptors.ts
 msgid "Lifetime means for as long as sanalyer runs."
 msgstr "Lebenslang heißt: solange es sanalyer gibt."
@@ -27347,11 +27352,6 @@ msgstr "Zahle mit {pixPaymentMethod} Automático, um wiederkehrende Abbuchungen 
 msgid "Pay with {upiPaymentMethod} to set up an RBI-compliant e-mandate from your Indian bank. Or choose \"Use card\" to enter a credit card on {paymentProviderName}'s next screen."
 msgstr "Zahle mit {upiPaymentMethod}, um ein RBI-konformes E-Mandat von deiner indischen Bank einzurichten. Oder wähle \"Karte verwenden\", um auf dem nächsten Bildschirm von {paymentProviderName} eine Kreditkarte einzugeben."
 
-#. Exact total charged by Payriff, under the informational TL price.
-#: src/features/shop/components/ShopPrice.tsx
-msgid "Payable: {amount} AZN"
-msgstr "Zu zahlen: {amount} AZN"
-
 #: src/features/premium/components/pages/PremiumCallbackPage.tsx
 msgid "Payment canceled"
 msgstr "Zahlung abgebrochen"
@@ -28004,7 +28004,7 @@ msgstr "Plus-Typ"
 msgid "Plus until date"
 msgstr "Plus bis"
 
-#. Price line with what a Plus member pays for a shop item. {price} is a formatted price in TL or AZN.
+#. Price line with what a Plus member pays for a shop item. {price} is a price in Turkish lira.
 #: src/features/shop/utils/ShopMessageDescriptors.ts
 msgid "Plus: {price}"
 msgstr "Plus: {price}"
@@ -31431,11 +31431,6 @@ msgstr "Same position three times"
 #: src/features/user/components/popouts/UserProfileShared.tsx
 msgid "Same time as you"
 msgstr "Gleiche Uhrzeit wie bei dir"
-
-#. Payment currency explanation on the shop, sanalyer Plus page, checkout and FAQ. Keep the company location explicit.
-#: src/features/shop/components/ShopCurrencyNote.tsx
-msgid "sanalyer is an Azerbaijani company, so payments are collected in Azerbaijani manat (AZN). TL amounts are informational, based on the Central Bank of Azerbaijan's daily exchange rate."
-msgstr "sanalyer ist ein aserbaidschanisches Unternehmen, daher werden Zahlungen in aserbaidschanischen Manat (AZN) eingezogen. Beträge in türkischen Lira (TL) dienen nur zur Information und basieren auf dem täglichen Wechselkurs der Zentralbank Aserbaidschans."
 
 #: src/features/user/components/modals/UsernamePickerModal.tsx
 msgid "sanalyer no longer uses #1234 tags. Everyone has a unique username: @yourname."
@@ -36700,16 +36695,6 @@ msgstr "That tile is not in your rack."
 msgid "That's all of them."
 msgstr "Das waren alle."
 
-#. Body of the buy dialog while it waits for the payment. {amount} is the charge in Azerbaijani manat, such as 4.76 AZN.
-#: src/features/shop/utils/ShopMessageDescriptors.ts
-msgid "The {paymentProviderName} page is in English and shows the amount in AZN: {amount}."
-msgstr "Die Seite von {paymentProviderName} ist auf Englisch und zeigt den Betrag in AZN an: {amount}."
-
-#. Body of the buy dialog while it waits for the payment. {paymentProviderName} is the payment provider.
-#: src/features/shop/utils/ShopMessageDescriptors.ts
-msgid "The {paymentProviderName} payment page opened in a new tab. This window updates by itself once the payment is confirmed."
-msgstr "Die Zahlungsseite von {paymentProviderName} wurde in einem neuen Tab geöffnet. Dieses Fenster aktualisiert sich automatisch, sobald die Zahlung bestätigt ist."
-
 #. Line under the Plus page headline. {fileSize} is the Plus upload limit (for example "500 MB"), {videoQuality} the best video quality (for example "4K/60fps"). Preserve the placeholders.
 #: src/features/premium/components/pages/PremiumPageSections.tsx
 msgid "The {premiumProductName} badge, an animated avatar and the decorations included with {premiumProductName}. On top of that, {fileSize} uploads, {videoQuality} video and emoji everywhere."
@@ -37015,10 +37000,10 @@ msgstr "Die Berechtigungsüberschreibung verweigerte {permissions}"
 msgid "The page you're looking for doesn't exist or has been moved."
 msgstr "Die Seite, die du suchst, existiert nicht oder wurde verschoben."
 
-#. Shown before opening Payriff. Both prices come from the persisted order quote.
-#: src/features/shop/components/modals/ShopCheckoutModal.tsx
-msgid "The payment page will show Azerbaijani manat: {amount} AZN (store price {price})."
-msgstr "The payment page will show Azerbaijani manat: {amount} AZN (store price {price})."
+#. Body of the buy dialog while it waits for the payment.
+#: src/features/shop/utils/ShopMessageDescriptors.ts
+msgid "The payment page opened in a new tab. This window updates by itself once the payment is confirmed."
+msgstr "Die Zahlungsseite wurde in einem neuen Tab geöffnet. Dieses Fenster aktualisiert sich von selbst, sobald die Zahlung bestätigt ist."
 
 #. Body in the buy dialog when the payment was declined, canceled or timed out.
 #: src/features/shop/utils/ShopMessageDescriptors.ts
@@ -37114,11 +37099,6 @@ msgstr "The table changed in the meantime. Look again and retry."
 #: src/features/table_game/components/TableGameResult.tsx
 msgid "The table was closed"
 msgstr "The table was closed"
-
-#. Card statement disclaimer after the AZN payment explanation on the shop, sanalyer Plus page, checkout and FAQ.
-#: src/features/shop/components/ShopCurrencyNote.tsx
-msgid "The TL amount on your card statement may differ slightly: your bank converts AZN at its own exchange rate and may charge a foreign transaction fee."
-msgstr "Der Betrag in türkischen Lira (TL) auf deiner Kartenabrechnung kann leicht abweichen: Deine Bank rechnet AZN zu ihrem eigenen Wechselkurs um und erhebt möglicherweise eine Gebühr für Auslandstransaktionen."
 
 #. Setup wizard body explaining why the operator has to enter the setup token.
 #: src/features/app/components/setup/SetupWizardSteps.tsx
@@ -42828,11 +42808,6 @@ msgstr "Welche Communitys"
 msgid "Which conversations"
 msgstr "Welche Unterhaltungen"
 
-#. Question in the FAQ at the bottom of the Plus page.
-#: src/features/premium/components/PremiumFaq.tsx
-msgid "Which currency am I charged in?"
-msgstr "In welcher Währung wird abgerechnet?"
-
 #. IAR modal: reason-step title for the platform-report path after a category has been picked.
 #: src/features/feed/utils/FeedReportCopy.ts
 msgid "Which rule was broken?"
@@ -43903,6 +43878,11 @@ msgstr "Dein Ton wurde von Moderatoren ausgeschaltet"
 #: src/features/auth/components/pages/oauth_authorize_page/OAuthAuthorizeActions.tsx
 msgid "You will be taken to {redirectHostname} after authorizing."
 msgstr "Nach der Autorisierung wirst du zu {redirectHostname} weitergeleitet."
+
+#. Shown in the buy dialog before and while the payment page is open. {price} is the order total in Turkish lira.
+#: src/features/shop/components/modals/ShopCheckoutModal.tsx
+msgid "You will pay {price}."
+msgstr "Du zahlst {price}."
 
 #. Table game sound setting label. You win a table game.
 #: src/features/table_game/sound/TableGameSoundLabels.ts

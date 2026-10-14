@@ -2,7 +2,6 @@
 
 import {PREMIUM_PRODUCT_NAME} from '@app/features/app/config/I18nDisplayConstants';
 import styles from '@app/features/premium/components/PremiumFaq.module.css';
-import {SHOP_CURRENCY_NOTE_DESCRIPTOR, ShopCurrencyNote} from '@app/features/shop/components/ShopCurrencyNote';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 
@@ -15,10 +14,6 @@ const RENEWS_ANSWER_DESCRIPTOR = msg({
 		'No. You pay for a package once, and {premiumProductName} turns off by itself when the time runs out. To keep it, buy another package with Add time; the new time is added on top of what you have left.',
 	comment:
 		'Answer in the Plus page FAQ. "Add time" is the name of the button on the Plus page. Preserve {premiumProductName}.',
-});
-const CURRENCY_QUESTION_DESCRIPTOR = msg({
-	message: 'Which currency am I charged in?',
-	comment: 'Question in the FAQ at the bottom of the Plus page.',
 });
 const DECORATIONS_QUESTION_DESCRIPTOR = msg({
 	message: 'What happens to my decorations when {premiumProductName} ends?',
@@ -40,7 +35,7 @@ const GIFT_ANSWER_DESCRIPTOR = msg({
 
 const ITEMS = [
 	[RENEWS_QUESTION_DESCRIPTOR, RENEWS_ANSWER_DESCRIPTOR],
-	[CURRENCY_QUESTION_DESCRIPTOR, SHOP_CURRENCY_NOTE_DESCRIPTOR],
+	// sanalyer: no currency question; prices are Turkish lira and charged as shown.
 	[DECORATIONS_QUESTION_DESCRIPTOR, DECORATIONS_ANSWER_DESCRIPTOR],
 	[GIFT_QUESTION_DESCRIPTOR, GIFT_ANSWER_DESCRIPTOR],
 ] as const;
@@ -62,7 +57,7 @@ export function PremiumFaq() {
 						{i18n._(question, values)}
 					</summary>
 					<p className={styles.answer} data-flx="premium.premium-faq.answer">
-						{answer === SHOP_CURRENCY_NOTE_DESCRIPTOR ? <ShopCurrencyNote /> : i18n._(answer, values)}
+						{i18n._(answer, values)}
 					</p>
 				</details>
 			))}

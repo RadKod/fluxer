@@ -487,7 +487,6 @@ async fn shop_page_is_forbidden_without_shop_manage() {
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
     for action in [
         "settings",
-        "refresh_try_rate",
         "save_prices",
         "apply_campaign",
         "remove_campaign",
@@ -496,7 +495,7 @@ async fn shop_page_is_forbidden_without_shop_manage() {
         "bundle_delete",
     ] {
         let uri = format!("/shop?action={action}");
-        let form = "rows=premium:1&price_premium:1=1.00&product_ids=premium:1&discount_percent=20\
+        let form = "rows=premium:1&price_premium:1=1,00&product_ids=premium:1&discount_percent=20\
                     &bundle_id=1600000000000000001&name=Set&item_ids=7&item_ids=8";
         let (status, _, body) = post(&app, "/shop", &uri, form).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{action}: {body}");
@@ -514,14 +513,15 @@ async fn shop_page_is_forbidden_without_shop_manage() {
     assert!(!page.contains(r#"href="/shop""#), "{page}");
 }
 
+// sanalyer: prices are lira, so the settings form has no exchange rate to send.
 #[tokio::test]
-async fn shop_settings_form_sends_the_rate_in_millionths() {
+async fn shop_settings_form_sends_the_switches_and_the_discount() {
     let app = setup(&["*"], true, "mirror").await;
     let (status, headers, body) = post(
         &app,
         "/shop",
         "/shop?action=settings",
-        "usd_to_azn_rate=1.7000&premium_discount_percent=30&premium_sales_open=on",
+        "premium_discount_percent=30&premium_sales_open=on",
     )
     .await;
     assert_eq!(status, StatusCode::SEE_OTHER, "{body}");
@@ -532,143 +532,49 @@ async fn shop_settings_form_sends_the_rate_in_millionths() {
         vec![json!({
             "premium_sales_open": true,
             "item_sales_open": false,
-            "usd_to_azn_rate_micro": 1_700_000,
-            "premium_discount_percent": 30,
-            "try_to_azn_rate_override": null
+            "premium_discount_percent": 30
         })]
     );
 }
 
+// sanalyer: the shop sells in lira only; no AZN, USD, CBAR or Payriff text is left for admins.
 #[tokio::test]
-async fn shop_try_rate_override_sends_decimal_or_null_and_refuses_invalid_rates() {
+async fn shop_page_shows_lira_only_and_no_exchange_rate() {
     let app = setup(&["*"], true, "mirror").await;
-    for (rate, expected) in [("0.038765", json!("0.038765")), ("", Value::Null)] {
-        let form = format!(
-            "usd_to_azn_rate=1.7&premium_discount_percent=30&try_to_azn_rate_override={rate}"
-        );
-        let (status, _, _) = post(&app, "/shop", "/shop?action=settings", &form).await;
-        assert_eq!(status, StatusCode::SEE_OTHER);
-        assert_eq!(
-            shop_writes(&app).last().unwrap()["try_to_azn_rate_override"],
-            expected
-        );
+    let (status, _, page) = get(&app, "/shop?order=1490000000000000009").await;
+    assert_eq!(status, StatusCode::OK, "{page}");
+    assert!(page.contains("Price (₺)"), "{page}");
+    assert!(!page.contains("refresh_try_rate"), "{page}");
+    for gone in ["AZN", "USD", "CBAR", "Payriff", "$", "Baku", "manat"] {
+        assert!(!page.contains(gone), "{gone}: {page}");
     }
-    let before = shop_writes(&app).len();
-    for rate in ["0", "0.000999", "1.000001", "NaN", "1e-2", "0.0387651"] {
-        let form = format!(
-            "usd_to_azn_rate=1.7&premium_discount_percent=30&try_to_azn_rate_override={rate}"
-        );
-        let (_, headers, _) = post(&app, "/shop", "/shop?action=settings", &form).await;
-        assert!(flash_message(&headers).unwrap().contains("0.001"));
-    }
-    assert_eq!(shop_writes(&app).len(), before);
-}
-
-#[tokio::test]
-async fn shop_try_rate_refresh_requires_csrf_and_queues_the_admin_api() {
-    let app = setup(&["*"], true, "mirror").await;
-    let request = Request::builder()
-        .method(Method::POST)
-        .uri("/shop?action=refresh_try_rate")
-        .header(header::COOKIE, &app.session_cookie)
-        .body(Body::empty())
-        .unwrap();
-    assert_eq!(send(&app, request).await.0, StatusCode::FORBIDDEN);
     assert!(
-        !api_requests(&app)
-            .iter()
-            .any(|(_, path)| path.ends_with("refresh-try-rate"))
+        !page.contains("No payment provider is configured"),
+        "{page}"
     );
+    app.api.lock().unwrap().shop_settings = Some(json!({ "payment_provider_configured": false }));
     let (_, _, page) = get(&app, "/shop").await;
-    let refresh_form = page
-        .split("/shop?action=refresh_try_rate")
-        .nth(1)
-        .expect("refresh form")
-        .split("</form>")
-        .next()
-        .unwrap();
-    assert!(refresh_form.contains("name=\"_csrf\""));
-    let (status, headers, _) = post(&app, "/shop", "/shop?action=refresh_try_rate", "").await;
-    assert_eq!(status, StatusCode::SEE_OTHER);
-    assert!(flash_message(&headers).unwrap().contains("queued"));
-    assert!(api_requests(&app).contains(&(
-        Method::POST,
-        "/admin/shop/settings/refresh-try-rate".to_owned()
-    )));
-}
-
-#[tokio::test]
-async fn shop_try_rate_page_shows_automatic_rate_dates_override_and_stale_warning() {
-    let app = setup(&["*"], true, "mirror").await;
-    app.api.lock().unwrap().shop_settings = Some(json!({
-        "try_to_azn_rate_micro": 38_765,
-        "try_rate_date": "2020-01-02",
-        "try_rate_fetched_at": "2020-01-03T12:00:00Z",
-        "try_to_azn_rate_override_micro": 40_123,
-        "try_rate_override_at": "2020-01-04T12:00:00Z"
-    }));
-    let (status, _, page) = get(&app, "/shop").await;
-    assert_eq!(status, StatusCode::OK);
-    for expected in [
-        "0.038765",
-        "2020-01-02",
-        "2020-01-03",
-        "0.040123",
-        "2020-01-04",
-        "days old",
-        "older than 10 days",
-        "~1.3%",
-        "Blank uses the automatic rate",
-        "Payriff charges AZN; users see TL (CBAR daily rate) and the AZN amount",
-    ] {
-        assert!(page.contains(expected), "missing {expected}");
-    }
-}
-
-#[tokio::test]
-async fn shop_try_rate_stale_warning_starts_after_ten_baku_calendar_days() {
-    let app = setup(&["*"], true, "mirror").await;
-    let today = time::OffsetDateTime::now_utc()
-        .to_offset(time::UtcOffset::from_hms(4, 0, 0).unwrap())
-        .date();
-    for days in [10, 11] {
-        app.api.lock().unwrap().shop_settings = Some(json!({
-            "try_to_azn_rate_micro": 38_765,
-            "try_rate_date": (today - time::Duration::days(days)).to_string(),
-            "try_rate_fetched_at": time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339).unwrap()
-        }));
-        let (_, _, page) = get(&app, "/shop").await;
-        assert_eq!(page.contains("older than 10 days"), days > 10);
-    }
-}
-
-#[tokio::test]
-async fn shop_settings_form_refuses_a_rate_outside_one_to_three() {
-    let app = setup(&["*"], true, "mirror").await;
-    for rate in ["0.017", "17"] {
-        let form = format!("usd_to_azn_rate={rate}&premium_discount_percent=0");
-        let (status, headers, body) = post(&app, "/shop", "/shop?action=settings", &form).await;
-        assert_eq!(status, StatusCode::SEE_OTHER, "{body}");
-        let message = flash_message(&headers).unwrap_or_default();
-        assert!(message.contains("1.0000 to 3.0000"), "{rate}: {message}");
-    }
-    assert!(shop_writes(&app).is_empty());
+    assert!(
+        page.contains("No payment provider is configured: sales stay closed"),
+        "{page}"
+    );
+    assert!(page.contains("gift codes"), "{page}");
 }
 
 #[tokio::test]
 async fn shop_prices_form_sends_only_changed_rows_and_blank_as_null() {
     let app = setup(&["*"], true, "mirror").await;
     let form = "rows=premium:1&rows=premium:3&rows=cosmetic:7\
-                &price_premium:1=5.00&price_premium:3=4.99&price_cosmetic:7=\
-                &was_premium:1=5.00&was_premium:3=&was_cosmetic:7=5.00";
+                &price_premium:1=149.99&price_premium:3=399,50&price_cosmetic:7=\
+                &was_premium:1=149,99&was_premium:3=&was_cosmetic:7=500";
     let (status, headers, body) = post(&app, "/shop", "/shop?action=save_prices", form).await;
     assert_eq!(status, StatusCode::SEE_OTHER, "{body}");
     assert!(api_requests(&app).contains(&(Method::PUT, "/admin/shop/prices".to_owned())));
     assert_eq!(
         shop_writes(&app),
         vec![json!({ "prices": [
-            { "sku": "premium:3", "base_usd_cents": 499 },
-            { "sku": "cosmetic:7", "base_usd_cents": null }
+            { "sku": "premium:3", "base_try_minor": 39_950 },
+            { "sku": "cosmetic:7", "base_try_minor": null }
         ] })]
     );
     assert_eq!(flash_message(&headers).as_deref(), Some("Saved 2 prices."));
@@ -681,12 +587,12 @@ async fn shop_prices_form_compares_with_the_prices_it_showed() {
     let app = setup(&["*"], true, "mirror").await;
     let (_, _, page) = get(&app, "/shop").await;
     assert!(
-        page.contains(r#"name="was_premium:1" value="5.00""#),
+        page.contains(r#"name="was_premium:1" value="149,99""#),
         "{page}"
     );
     assert!(page.contains(r#"name="was_premium:3" value="""#), "{page}");
     let form = "rows=premium:1&rows=cosmetic:7\
-                &price_premium:1=6.00&was_premium:1=5.00\
+                &price_premium:1=160&was_premium:1=149,99\
                 &price_cosmetic:7=&was_cosmetic:7=";
     let shop_reads = |app: &TestApp| {
         api_requests(app)
@@ -699,7 +605,7 @@ async fn shop_prices_form_compares_with_the_prices_it_showed() {
     assert_eq!(status, StatusCode::SEE_OTHER, "{body}");
     assert_eq!(
         shop_writes(&app),
-        vec![json!({ "prices": [{ "sku": "premium:1", "base_usd_cents": 600 }] })]
+        vec![json!({ "prices": [{ "sku": "premium:1", "base_try_minor": 16_000 }] })]
     );
     assert_eq!(flash_message(&headers).as_deref(), Some("Saved 1 price."));
     // One read is the page load that `post` does for its CSRF token.
@@ -707,19 +613,21 @@ async fn shop_prices_form_compares_with_the_prices_it_showed() {
 }
 
 #[tokio::test]
-async fn shop_settings_form_refuses_a_rate_the_shop_cannot_show() {
+async fn shop_prices_form_refuses_a_price_outside_one_to_one_hundred_thousand_lira() {
     let app = setup(&["*"], true, "mirror").await;
-    let form = "usd_to_azn_rate=1.702345&premium_discount_percent=0";
-    let (status, headers, body) = post(&app, "/shop", "/shop?action=settings", form).await;
-    assert_eq!(status, StatusCode::SEE_OTHER, "{body}");
-    let message = flash_message(&headers).unwrap_or_default();
-    assert!(message.contains("at most four decimals"), "{message}");
+    for (input, expected) in [
+        ("0,99", "from ₺1 to ₺100000"),
+        ("100000,01", "from ₺1 to ₺100000"),
+        ("1.250", "at most two decimals"),
+        ("149,999", "at most two decimals"),
+    ] {
+        let form = format!("rows=premium:1&price_premium:1={input}&was_premium:1=149,99");
+        let (status, headers, body) = post(&app, "/shop", "/shop?action=save_prices", &form).await;
+        assert_eq!(status, StatusCode::SEE_OTHER, "{body}");
+        let message = flash_message(&headers).unwrap_or_default();
+        assert!(message.contains(expected), "{input}: {message}");
+    }
     assert!(shop_writes(&app).is_empty());
-    let (_, _, page) = get(&app, "/shop").await;
-    assert!(
-        page.contains(r#"name="usd_to_azn_rate" value="1.7000" step="0.0001""#),
-        "{page}"
-    );
 }
 
 #[tokio::test]
@@ -820,8 +728,10 @@ async fn shop_page_shows_the_now_price_from_the_api() {
     let app = setup(&["*"], true, "mirror").await;
     let (status, _, body) = get(&app, "/shop").await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    assert!(body.contains("$4.00"), "{body}");
-    assert!(body.contains("Plus $2.80"), "{body}");
+    assert!(body.contains("₺400"), "{body}");
+    assert!(body.contains("Plus ₺280"), "{body}");
+    assert!(body.contains("₺149,99"), "{body}");
+    assert!(body.contains("₺1.250,50"), "{body}");
     assert!(body.contains("−20% until 5 Oct 23:59"), "{body}");
     assert!(body.contains("Kuzgun (Ultra decoration)"), "{body}");
     assert!(body.contains("not in shop"), "{body}");
@@ -832,7 +742,7 @@ async fn shop_page_shows_the_now_price_from_the_api() {
 }
 
 #[tokio::test]
-async fn shop_page_warns_when_payriff_budget_triggers_fire() {
+async fn shop_page_warns_when_provider_budget_triggers_fire() {
     let app = setup(&["*"], true, "mirror").await;
     let (_, _, calm) = get(&app, "/shop").await;
     assert!(calm.contains("No busy refusals"), "{calm}");
@@ -843,7 +753,7 @@ async fn shop_page_warns_when_payriff_budget_triggers_fire() {
     app.api.lock().unwrap().shop_health = Some(json!({
         "busy_refusals_last_hour": 3,
         "reconcile_lag_seconds": 1200,
-        "payriff_backing_off": true
+        "provider_backing_off": true
     }));
     let (status, _, body) = get(&app, "/shop").await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -865,6 +775,10 @@ async fn shop_order_lookup_shows_the_order() {
         "/admin/shop/orders/1490000000000000009".to_owned()
     )));
     assert!(body.contains("PRF-ORDER-42"), "{body}");
+    assert!(
+        body.contains("₺280 (list ₺500, campaign 20%, Plus member 30%)"),
+        "{body}"
+    );
     assert!(body.contains("APPROVED"), "{body}");
     assert!(body.contains(">granted<"), "{body}");
     assert!(
@@ -1121,7 +1035,7 @@ async fn shop_order_lookup_lists_the_items_of_a_bundle_order() {
     assert!(row.contains("Gece Plakasi, Kuzgun"), "{row}");
     assert!(
         row.contains(
-            "To refund: refund the whole order in Payriff, then take back on the user page the \
+            "To refund: refund the whole order with the payment provider, then take back on the user page the \
              items this order gave; an item another order gave stays (the API log names it)."
         ),
         "{row}"
@@ -1238,9 +1152,6 @@ async fn mock_api(State(api): State<Shared>, method: Method, uri: Uri, body: Byt
             }
             json_response(shop)
         }
-        (Method::POST, "/admin/shop/settings/refresh-try-rate") => {
-            StatusCode::NO_CONTENT.into_response()
-        }
         (Method::GET, "/admin/shop/orders/1490000000000000009") => json_response(shop_order()),
         (Method::GET, "/admin/shop/orders/1490000000000000010") => {
             let mut order = shop_order();
@@ -1281,13 +1192,7 @@ fn shop_admin(health: Option<Value>) -> Value {
             "premium_sales_open": false,
             "item_sales_open": true,
             "premium_discount_percent": 30,
-            "usd_to_azn_rate_micro": 1_700_000,
-            "payriff_configured": true,
-            "try_to_azn_rate_micro": null,
-            "try_rate_date": null,
-            "try_rate_fetched_at": null,
-            "try_to_azn_rate_override_micro": null,
-            "try_rate_override_at": null,
+            "payment_provider_configured": true,
             "visionary_reward_item_ids": ["9"]
         },
         "bundles": [{
@@ -1303,59 +1208,60 @@ fn shop_admin(health: Option<Value>) -> Value {
             "description": null,
             "item_ids": ["7", "1700000000000000010", "1700000000000000099"]
         }],
+        // sanalyer: kuruş; premium:1 is ₺149,99 and the bundle ₺1.250,50 to show both formats.
         "prices": [{
             "sku": "premium:1",
-            "base_usd_cents": 500,
+            "base_try_minor": 14_999,
             "campaign_percent": null,
             "campaign_ends_at": null,
             "now": {
-                "base_usd_cents": 500,
+                "base_try_minor": 14_999,
                 "campaign_percent": null,
                 "campaign_ends_at": null,
-                "sale_usd_cents": 500,
-                "premium_usd_cents": null
+                "sale_try_minor": 14_999,
+                "premium_try_minor": null
             }
         }, {
             "sku": "cosmetic:7",
-            "base_usd_cents": 500,
+            "base_try_minor": 50_000,
             "campaign_percent": 20,
             "campaign_ends_at": "2026-10-05T20:59:00.000Z",
             "now": {
-                "base_usd_cents": 500,
+                "base_try_minor": 50_000,
                 "campaign_percent": 20,
                 "campaign_ends_at": "2026-10-05T20:59:00.000Z",
-                "sale_usd_cents": 400,
-                "premium_usd_cents": 280
+                "sale_try_minor": 40_000,
+                "premium_try_minor": 28_000
             }
         }, {
             "sku": "bundle:1600000000000000001",
-            "base_usd_cents": 900,
+            "base_try_minor": 125_050,
             "campaign_percent": null,
             "campaign_ends_at": null,
             "now": {
-                "base_usd_cents": 900,
+                "base_try_minor": 125_050,
                 "campaign_percent": null,
                 "campaign_ends_at": null,
-                "sale_usd_cents": 900,
-                "premium_usd_cents": 630
+                "sale_try_minor": 125_050,
+                "premium_try_minor": 87_535
             }
         }, {
             "sku": "bundle:1600000000000000009",
-            "base_usd_cents": 300,
+            "base_try_minor": 30_000,
             "campaign_percent": null,
             "campaign_ends_at": null,
             "now": {
-                "base_usd_cents": 300,
+                "base_try_minor": 30_000,
                 "campaign_percent": null,
                 "campaign_ends_at": null,
-                "sale_usd_cents": 300,
-                "premium_usd_cents": 210
+                "sale_try_minor": 30_000,
+                "premium_try_minor": 21_000
             }
         }],
         "health": health.unwrap_or_else(|| json!({
             "busy_refusals_last_hour": 0,
             "reconcile_lag_seconds": 0,
-            "payriff_backing_off": false
+            "provider_backing_off": false
         }))
     })
 }
@@ -1367,13 +1273,11 @@ fn shop_order() -> Value {
         "sku": "cosmetic:7",
         "status": "granted",
         "failure_reason": null,
-        "base_usd_cents": 500,
+        "base_try_minor": 50_000,
         "campaign_percent": 20,
         "premium_percent": 30,
-        "final_usd_cents": 280,
-        "amount_azn_minor": 476,
-        "usd_to_azn_rate": "1.7000",
-        "currency": "AZN",
+        "final_try_minor": 28_000,
+        "currency": "TRY",
         "provider_order_id": "PRF-ORDER-42",
         "provider_status": "APPROVED",
         "check_count": 1,

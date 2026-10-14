@@ -628,7 +628,7 @@ impl AdminApiClient {
         Ok(resp.user)
     }
 
-    // Premium refunds: ends bought, gift code and trial premium time now; used after a Payriff refund.
+    // Premium refunds: ends bought, gift code and trial premium time now; used after a payment provider refund.
     pub async fn end_premium(&self, user_id: &str, reason: &str) -> ApiResult<AdminEndPremium> {
         let path = format!("/admin/users/{}/premium/end", urlencoding::encode(user_id));
         self.send(

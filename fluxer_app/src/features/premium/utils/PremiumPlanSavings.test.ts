@@ -10,9 +10,9 @@ const entry = (months: 1 | 3 | 12, cents: number, sale = cents, endsAt: string |
 	sku: `premium:${months}`,
 	months,
 	price: {
-		base_usd_cents: cents,
-		sale_usd_cents: sale,
-		premium_usd_cents: null,
+		base_try_minor: cents,
+		sale_try_minor: sale,
+		premium_try_minor: null,
 		campaign_percent: sale === cents ? null : Math.round((1 - sale / cents) * 100),
 		campaign_ends_at: endsAt,
 	},

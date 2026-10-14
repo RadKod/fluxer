@@ -15,9 +15,9 @@ vi.mock('@app/app/Routes', () => ({Routes: {SHOP: '/shop'}}));
 
 const NOW = Date.parse('2026-10-08T00:00:00Z');
 const price = (base: number, sale = base, endsAt: string | null = null) => ({
-	base_usd_cents: base,
-	sale_usd_cents: sale,
-	premium_usd_cents: null,
+	base_try_minor: base,
+	sale_try_minor: sale,
+	premium_try_minor: null,
 	campaign_percent: sale === base ? null : Math.round((1 - sale / base) * 100),
 	campaign_ends_at: endsAt,
 });

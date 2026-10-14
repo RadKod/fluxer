@@ -13,8 +13,8 @@ async function adminWrite(harness: ApiTestHarness, token: string, method: string
 	await response.arrayBuffer();
 }
 
-function putPrice(harness: ApiTestHarness, token: string, sku: string, baseUsdCents: number): Promise<void> {
-	return adminWrite(harness, token, 'PUT', '/admin/shop/prices', {prices: [{sku, base_usd_cents: baseUsdCents}]});
+function putPrice(harness: ApiTestHarness, token: string, sku: string, baseTryMinor: number): Promise<void> {
+	return adminWrite(harness, token, 'PUT', '/admin/shop/prices', {prices: [{sku, base_try_minor: baseTryMinor}]});
 }
 
 async function ownedItems(harness: ApiTestHarness, token: string): Promise<[string, string]> {
@@ -61,21 +61,11 @@ export const ShopAdminAuditCases: ReadonlyArray<AdminAuditCoverageCase> = [
 		},
 	},
 	{
-		method: 'POST',
-		route: '/admin/shop/settings/refresh-try-rate',
-		async prepare() {
-			return {
-				request: {path: '/admin/shop/settings/refresh-try-rate', expectStatus: 204},
-				expected: {action: 'refresh_shop_try_rate', targetType: 'shop', targetId: '0', metadata: {}},
-			};
-		},
-	},
-	{
 		method: 'PUT',
 		route: '/admin/shop/prices',
 		async prepare() {
 			return {
-				request: {path: '/admin/shop/prices', body: {prices: [{sku: 'premium:1', base_usd_cents: 500}]}},
+				request: {path: '/admin/shop/prices', body: {prices: [{sku: 'premium:1', base_try_minor: 500}]}},
 				expected: {
 					action: 'set_shop_prices',
 					targetType: 'shop',

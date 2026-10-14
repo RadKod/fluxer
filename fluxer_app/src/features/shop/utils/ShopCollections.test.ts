@@ -5,9 +5,9 @@ import type {ShopBundleEntry, ShopItemEntry} from '@app/features/shop/utils/Shop
 import {describe, expect, it} from 'vitest';
 
 const price = {
-	base_usd_cents: 500,
-	sale_usd_cents: 500,
-	premium_usd_cents: null,
+	base_try_minor: 500,
+	sale_try_minor: 500,
+	premium_try_minor: null,
 	campaign_percent: null,
 	campaign_ends_at: null,
 };

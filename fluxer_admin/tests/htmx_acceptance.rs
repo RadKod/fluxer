@@ -739,19 +739,13 @@ fn micup_config_api(config_updates: Arc<Mutex<Vec<Value>>>) -> Router {
                         "premium_sales_open": false,
                         "item_sales_open": false,
                         "premium_discount_percent": 0,
-                        "usd_to_azn_rate_micro": 1_700_000,
-                        "try_to_azn_rate_micro": null,
-                        "try_rate_date": null,
-                        "try_rate_fetched_at": null,
-                        "try_to_azn_rate_override_micro": null,
-                        "try_rate_override_at": null,
-                        "payriff_configured": false
+                        "payment_provider_configured": false
                     },
                     "prices": [],
                     "health": {
                         "busy_refusals_last_hour": 0,
                         "reconcile_lag_seconds": 0,
-                        "payriff_backing_off": false
+                        "provider_backing_off": false
                     }
                 }))
             }),

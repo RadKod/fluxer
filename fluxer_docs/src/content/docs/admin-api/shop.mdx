@@ -1,22 +1,22 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Shop
-description: Shop settings, prices, campaigns, bundles, order lookup, Payriff budget health, and Visionary numbers.
+description: Shop settings, prices, campaigns, bundles, order lookup, payment provider budget health, and Visionary numbers.
 ---
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-The shop sells owned cosmetic items, bundles of them, premium packages and Visionary through Payriff, as [Shop](/http-api/shop/) describes. These routes set the sales switches, the member discount, the rate, the prices and the campaigns, manage the [bundles](#bundles), look up an order, and manage the Visionary numbers. Every route on this page requires `shop:manage` and records an [Admin audit entry](/admin-api/#admin-audit-entry-object), reads included. The routes answer in every premium mode, so an admin can prepare the shop before opening it.
+The shop sells owned cosmetic items, bundles of them, premium packages and Visionary in Turkish lira, as [Shop](/http-api/shop/) describes. Every amount on this page is in kuruş, so ₺1 is `100`. These routes set the sales switches, the member discount, the prices and the campaigns, manage the [bundles](#bundles), look up an order, and manage the Visionary numbers. Every route on this page requires `shop:manage` and records an [Admin audit entry](/admin-api/#admin-audit-entry-object), reads included. The routes answer in every premium mode, so an admin can prepare the shop before opening it.
 
 A value the shop cannot accept returns 400 `INVALID_FORM_BODY`, with one element in `errors` that names the field and carries an English message. [Make user a Visionary](/admin-api/users/#make-user-a-visionary) and [Take Visionary from user](/admin-api/users/#take-visionary-from-user) are on the Admin users page.
 
 :::caution[Refunds are made by hand]
-Fluxer sends no refund through Payriff. Refund the payment in the Payriff panel, then take back what the order delivered: an item, or each item of a bundle order, with [Take cosmetic item back from user](/admin-api/cosmetics/#take-cosmetic-item-back-from-user), premium time with [End user premium now](/admin-api/users/#end-user-premium-now), or Visionary with Take Visionary from user.
+Fluxer sends no refund through the payment provider. Refund the payment in the provider's panel, then take back what the order delivered: an item, or each item of a bundle order, with [Take cosmetic item back from user](/admin-api/cosmetics/#take-cosmetic-item-back-from-user), premium time with [End user premium now](/admin-api/users/#end-user-premium-now), or Visionary with Take Visionary from user.
 :::
 
 ## Minimum price
 
-Every write that changes a price, a campaign, the member discount or the rate is checked against the worst case, which is the campaign together with the member discount on an item. A write that would leave any product below 1 cent or below 0.10 AZN returns 400 `INVALID_FORM_BODY`, and nothing is written. [Create shop order](/http-api/shop/#create-shop-order) checks the final price again.
+Every write that changes a price, a campaign or the member discount is checked against the worst case, which is the campaign together with the member discount on an item. A write that would leave any product below ₺1 (`100`) returns 400 `INVALID_FORM_BODY`, and nothing is written. [Create shop order](/http-api/shop/#create-shop-order) checks the final price again.
 
 ## Shop admin settings object
 
@@ -25,32 +25,22 @@ Every write that changes a price, a campaign, the member discount or the rate is
 | premium_sales_open | boolean | The switch for premium packages and Visionary |
 | item_sales_open | boolean | The switch for owned items and bundles |
 | premium_discount_percent | integer | The member discount on items and bundles for accounts with paid premium (0-95) |
-| usd_to_azn_rate_micro | integer | Manat per US dollar in millionths, so a rate of 1.70 is `1700000` |
-| try_to_azn_rate_micro | ?integer | Last accepted CBAR rate, in millionths of AZN per TRY; display only |
-| try_rate_date | ?date | Bulletin date from CBAR's XML, in `YYYY-MM-DD` format |
-| try_rate_fetched_at | ?ISO8601 timestamp | Last successful rate refresh |
-| try_to_azn_rate_override_micro | ?integer | Manual display rate; null uses the automatic rate |
-| try_rate_override_at | ?ISO8601 timestamp | When the current override was set; null when cleared |
-| payriff_configured<sup>1</sup> | boolean | Whether the deployment has a Payriff configuration |
+| payment_provider_configured<sup>1</sup> | boolean | Whether the deployment has a payment provider configured |
 | visionary_on_sale | boolean | Whether Visionary is shown and sold, or hidden |
 | visionary_reward_item_ids | array[snowflake] | The items delivered and worn with every Visionary number |
 
-<sup>1</sup> False keeps every sale closed whatever the switches say. It comes from the deployment configuration, and no route changes it. A Fluxer process refuses to start while `FLUXER_PAYRIFF_BASE_URL` is not an https URL, even with Payriff switched off
+<sup>1</sup> False keeps every sale closed whatever the switches say. It comes from the deployment configuration, and no route changes it. The one integration today is Payriff, which stays off unless the deployment enables it. A Fluxer process refuses to start while `FLUXER_PAYRIFF_BASE_URL` is not an https URL, even with Payriff switched off
 
-Both sales switches and `visionary_on_sale` start off, the member discount starts at 0, and the rate starts at `1700000`. The settings live in the instance configuration under the `shop_config` key.
+Both sales switches and `visionary_on_sale` start off, and the member discount starts at 0. The settings live in the instance configuration under the `shop_config` key.
 
-Payriff charges AZN; users see TL (CBAR daily rate) and the AZN amount. The price anchor remains the stored US-cent price and `usd_to_azn_rate_micro`. Changing either TRY rate never changes a quote, an order or the Payriff charge. Legacy dollar fields remain in the API for older clients.
-
-The effective display rate is the override, or the automatic rate if its bulletin is no more than 10 days old. Without an effective rate, the client shows AZN alone and sales continue. The worker checks CBAR every six hours, and queues an initial refresh when no automatic rate is stored. Catalog requests use the existing shared cache and never fetch CBAR themselves.
-
-The refresh reads only the TRY entry, divides `Value` by `Nominal`, and uses the XML bulletin date even when the requested day is a weekend. It rejects malformed XML, DOCTYPE declarations, older bulletins, rates outside 0.001–1.0 AZN per TRY, and changes greater than 25% from the previous automatic rate. A rejected refresh logs a warning and preserves the last accepted rate and admin settings. Requests have a timeout, a response-size limit and no redirects.
+While no payment provider is configured, give items and premium time with [gift codes](/admin-api/gift-codes/) and admin grants such as [Give user a cosmetic item](/admin-api/cosmetics/#give-user-a-cosmetic-item).
 
 ## Shop admin price object
 
 | Field | Type | Description |
 | --- | --- | --- |
 | sku | string | The [product](/http-api/shop/#shop-products) |
-| base_usd_cents | integer | The list price in US cents |
+| base_try_minor | integer | The list price in kuruş |
 | campaign_percent | ?integer | The campaign discount as stored, including a campaign that has ended |
 | campaign_ends_at | ?ISO8601 timestamp | When the campaign ends, null for a campaign with no end |
 | now | [shop price](/http-api/shop/#shop-price-object) object | What the shop shows for the product now |
@@ -60,7 +50,7 @@ The refresh reads only the TRY entry, divides `Value` by `Nominal`, and uses the
 | Field | Type | Description |
 | --- | --- | --- |
 | sku | string | The [product](/http-api/shop/#shop-products) |
-| base_usd_cents | ?integer | The list price in US cents (1-10000000), or null to take the product out of the shop |
+| base_try_minor | ?integer | The list price in kuruş (100-10000000, ₺1 to ₺100,000), or null to take the product out of the shop |
 
 ## Shop admin bundle object
 
@@ -78,11 +68,11 @@ The refresh reads only the TRY entry, divides `Value` by `Nominal`, and uses the
 | --- | --- | --- |
 | busy_refusals_last_hour | integer | The orders refused with `SHOP_BUSY` in the current and the previous clock hour |
 | reconcile_lag_seconds | integer | The age of the oldest scheduled check still waiting, 0 while checks are current |
-| payriff_backing_off | boolean | Whether Payriff answered 429 in the last 30 seconds |
+| provider_backing_off | boolean | Whether the payment provider answered 429 in the last 30 seconds |
 
-### Payriff request budget
+### Payment provider request budget
 
-The budget is a temporary limit sized for the shop's traffic today. Every API and worker process shares about 2 requests per second to Payriff, split into three buckets so that none can starve another. Opening orders has about 0.3 per second, callback checks about 0.5 per second, and scheduled checks about 1.2 per second. The shop therefore opens about 0.3 orders per second, roughly 18 a minute, and refuses the rest with 503 `SHOP_BUSY`. The API logs such a refusal at debug level, as expected load shedding, and counts it in `busy_refusals_last_hour`.
+The budget is a temporary limit sized for the shop's traffic today. Every API and worker process shares about 2 requests per second to the payment provider, split into three buckets so that none can starve another. Opening orders has about 0.3 per second, callback checks about 0.5 per second, and scheduled checks about 1.2 per second. The shop therefore opens about 0.3 orders per second, roughly 18 a minute, and refuses the rest with 503 `SHOP_BUSY`. The API logs such a refusal at debug level, as expected load shedding, and counts it in `busy_refusals_last_hour`.
 
 The three buckets hold at most 6, 10 and 12 requests, 28 together, which stays under the burst of 30 observed from Payriff. The reconcile job runs once a minute or more often, and each run spends only what the reconcile bucket holds, 12 requests when it is full. While `reconcile_lag_seconds` is above 900, every reconcile run also logs a warning.
 
@@ -90,10 +80,10 @@ Grow the budget when any of these appears:
 
 - `busy_refusals_last_hour` above 0.
 - `reconcile_lag_seconds` above 900, which is 15 minutes.
-- `payriff_backing_off` true, after the first 429 from Payriff.
-- Daily orders reaching half of the limit Payriff approved.
+- `provider_backing_off` true, after the first 429 from the provider.
+- Daily orders reaching half of the limit the provider approved.
 
-The first step is a higher Payriff quota, with the three buckets grown together in the same 1 : 1.7 : 4 ratio. The next is a server-side order queue in place of `SHOP_BUSY`. The last is a second payment provider, for which every order already records its provider.
+The first step is a higher provider quota, with the three buckets grown together in the same 1 : 1.7 : 4 ratio. The next is a server-side order queue in place of `SHOP_BUSY`. The last is a second payment provider, for which every order already records its provider.
 
 ## Shop admin object
 
@@ -101,7 +91,7 @@ The first step is a higher Payriff quota, with the three buckets grown together 
 | --- | --- | --- |
 | settings | [shop admin settings](#shop-admin-settings-object) object | The stored settings |
 | prices | array[[shop admin price](#shop-admin-price-object) object] | Every price row, in SKU order |
-| health | [shop health](#shop-health-object) object | The Payriff budget triggers |
+| health | [shop health](#shop-health-object) object | The payment provider budget triggers |
 | bundles | array[[shop admin bundle](#shop-admin-bundle-object) object] | Every bundle, priced or not, in ID order |
 
 ## Shop admin order object
@@ -113,18 +103,13 @@ The first step is a higher Payriff quota, with the three buckets grown together 
 | sku | string | The [product](/http-api/shop/#shop-products) |
 | status | string | The [shop order status](/http-api/shop/#shop-order-statuses) |
 | failure_reason | ?string | The [failure reason](/http-api/shop/#shop-order-failure-reasons), null unless the order failed |
-| base_usd_cents | integer | The list price in US cents when the order opened |
+| base_try_minor | integer | The list price in kuruş when the order opened |
 | campaign_percent | integer | The campaign discount applied, 0 without one |
 | premium_percent | integer | The member discount applied, 0 when it did not apply |
-| final_usd_cents | integer | The US dollar price charged |
-| amount_azn_minor | integer | The amount charged, in qəpik |
-| usd_to_azn_rate | string | The rate used, with four decimal places |
-| currency | string | Always `AZN` |
-| display_currency? | ?string | Currency of the price shown in the shop when the order opened: `TRY` or `AZN`; null on legacy orders |
-| display_amount_minor? | ?integer | That shown price in minor units (kuruş or qəpik), frozen on the order; null on legacy orders |
-| display_rate_micro? | ?integer | Frozen AZN per TRY in millionths used for the shown TRY price; null for AZN or legacy orders |
-| provider_order_id | ?string | The Payriff order ID, null until Payriff opened the order |
-| provider_status | ?string | The last payment status Payriff reported |
+| final_try_minor | integer | The amount charged, in kuruş |
+| currency | string | Always `TRY` |
+| provider_order_id | ?string | The payment provider's order ID, null until the provider opened the order |
+| provider_status | ?string | The last payment status the provider reported |
 | created_at | ISO8601 timestamp | When the order opened |
 | paid_at | ?ISO8601 timestamp | When the payment was confirmed |
 | granted_at | ?ISO8601 timestamp | When delivery finished |
@@ -147,7 +132,7 @@ The first step is a higher Payriff quota, with the three buckets grown together 
 
 The price and campaign operations record what they changed in the `changes` metadata key. It lists each product whose price or campaign changed as `<sku>:<old>→<new>`, joined with commas, and leaves out a product that stayed the same. The key is absent when nothing changed.
 
-- A price reads as US cents, such as `premium:1:500→450`, and `none` stands for no price.
+- A price reads as kuruş, such as `premium:1:50000→45000`, and `none` stands for no price.
 - A campaign reads as its percentage, such as `20%`, or with its end as `20%@2026-10-01T00:00:00.000Z`, and `none` stands for no campaign.
 
 ## Bundles
@@ -204,19 +189,20 @@ The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-obje
 
 <RouteHeader method="PATCH" path="/v1/admin/shop/settings" auditReason />
 
-Opens or closes sales, and sets the member discount, the rate and the Visionary settings. Returns the [shop admin settings](#shop-admin-settings-object) object.
+Opens or closes sales, and sets the member discount and the Visionary settings. Returns the [shop admin settings](#shop-admin-settings-object) object.
 
 ### JSON body
 
 | Field | Type | Description |
 | --- | --- | --- |
-| try_to_azn_rate_override? | ?string | Manual TL display rate in AZN per TRY, `"0.001"` through `"1"` with up to six decimals; null resumes the automatic CBAR rate |
+| premium_sales_open? | boolean | The switch for premium packages and Visionary |
+| item_sales_open? | boolean | The switch for owned items and bundles |
+| premium_discount_percent? | integer | The member discount on items and bundles (0-95) |
+| visionary_on_sale? | boolean | Whether Visionary is shown and sold |
+| visionary_reward_item_ids? | array[snowflake] | The items delivered and worn with every Visionary number |
 
-The sales switches, `premium_discount_percent`, `usd_to_azn_rate_micro`, `visionary_on_sale` and `visionary_reward_item_ids` are optional. An omitted field stays as it is. CBAR fields and override timestamps are read-only.
+An omitted field stays as it is. `payment_provider_configured` is read-only.
 
-- `premium_discount_percent` is 0 through 95.
-- `usd_to_azn_rate_micro` is 1000000 through 3000000, which catches a rate entered as 0.017 or as 17.
-- `try_to_azn_rate_override` is a decimal string from `"0.001"` through `"1"`, with up to six decimal places, in AZN per TRY, or null to resume the automatic rate. It only changes the informational TL display.
 - `visionary_reward_item_ids` replaces the list and holds at most 10 IDs. Each must be an owned-availability item without a shop price and in no bundle, and a repeated ID counts once.
 
 ### Response
@@ -235,20 +221,6 @@ The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-obje
 ### Rate limit
 
 30 requests per minute for each authenticated user, on the `admin:shop:manage` bucket.
-
-## Refresh TRY display rate
-
-<RouteHeader method="POST" path="/v1/admin/shop/settings/refresh-try-rate" auditReason />
-
-Queues the existing worker task to fetch the current CBAR bulletin. Requires `shop:manage`; the admin interface also verifies CSRF. No payment or order is created. The automatic-rate fields are updated only after a valid response, without replacing other shop settings. A manual override stays in force.
-
-### Response
-
-| Status | Body | Condition |
-| --- | --- | --- |
-| 204 | empty | The refresh was queued |
-
-The route uses the shop management rate limit and records an admin write audit entry. A queued refresh may fail or be rejected; check the last-success timestamp and bulletin date to confirm a new rate. The catalog can retain the previous display rate for up to 60 seconds.
 
 ## Set shop prices
 
@@ -440,7 +412,7 @@ Open and paid orders still deliver the items they were opened with. The operatio
 
 <RouteHeader method="GET" path="/v1/admin/shop/orders/{order_id}" auditReason />
 
-Returns one order as a [shop admin order](#shop-admin-order-object) object, for support and refunds. A bundle order lists its items in `item_ids`. The Payriff panel shows the order ID after `sanalyer #` in the order description, followed by the product. The description contains no US-dollar suffix.
+Returns one order as a [shop admin order](#shop-admin-order-object) object, for support and refunds. A bundle order lists its items in `item_ids`. The order description sent to the payment provider names the product and the price in lira, and ends with `Sipariş #` and the order ID, so the provider's panel leads back to the order.
 
 ### Path parameters
 

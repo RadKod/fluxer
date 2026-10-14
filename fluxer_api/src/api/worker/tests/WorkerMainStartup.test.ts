@@ -5,7 +5,6 @@ import * as ActivityEvents from '@app/api/infrastructure/activity/ActivityEvents
 import * as SharedLists from '@app/api/infrastructure/activity/SharedLists';
 import * as ContentBlocklistCaches from '@app/api/middleware/ContentBlocklistCaches';
 import * as ServiceRegistry from '@app/api/middleware/ServiceRegistry';
-import * as ServiceSingletons from '@app/api/middleware/ServiceSingletons';
 import * as SearchFactory from '@app/api/SearchFactory';
 import {MockSnowflakeService} from '@app/api/test/mocks/MockSnowflakeService';
 import * as LifecycleHooks from '@app/api/user/lifecycle/MicupUserLifecycleHooks';
@@ -25,7 +24,7 @@ import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {JetStreamConnectionManager} from '@pkgs/nats/src/JetStreamConnectionManager';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
-describe('worker TRY prefill isolation', () => {
+describe('worker startup', () => {
 	let restoreConfig: () => void;
 	beforeEach(() => {
 		const worker = {...Config.worker};
@@ -37,7 +36,7 @@ describe('worker TRY prefill isolation', () => {
 			Config.instance.selfHosted = selfHosted;
 		};
 		Config.database.backend = 'cassandra';
-		Object.assign(Config.worker, {mode: 'single_task', taskName: 'syncShopTryRate', enableCronScheduler: true});
+		Object.assign(Config.worker, {mode: 'single_task', taskName: 'reconcileShopOrders', enableCronScheduler: true});
 		vi.spyOn(LifecycleHooks, 'registerMicupUserLifecycleHooks').mockImplementation(() => {});
 		vi.spyOn(Cassandra, 'initCassandra').mockResolvedValue(undefined);
 		vi.spyOn(Cassandra, 'shutdownCassandra').mockResolvedValue(undefined);
@@ -100,40 +99,4 @@ describe('worker TRY prefill isolation', () => {
 		vi.restoreAllMocks();
 		restoreConfig();
 	});
-	it.each(['config', 'kv', 'pending'])(
-		'starts runners and shutdown hooks despite %s prefill failure or delay',
-		async (failure) => {
-			const kvClient = new MockKVProvider();
-			vi.spyOn(WorkerDependencies, 'initializeWorkerDependencies').mockResolvedValue({
-				kvClient,
-			} as unknown as WorkerDependencies.WorkerDependencies);
-			const repository = ServiceSingletons.getInstanceConfigRepository();
-			let release!: () => void;
-			const pending = new Promise<void>((resolve) => {
-				release = resolve;
-			});
-			vi.spyOn(repository, 'getShopConfig').mockImplementation(async () => {
-				if (failure === 'config') throw new Error('Cassandra unavailable');
-				if (failure === 'pending') await pending;
-				return {try_to_azn_rate_micro: null} as Awaited<ReturnType<typeof repository.getShopConfig>>;
-			});
-			if (failure === 'kv') vi.spyOn(kvClient, 'setnx').mockRejectedValue(new Error('KV unavailable'));
-			const startup = startWorkerMain();
-			try {
-				const result = await Promise.race([
-					startup.then(() => 'started'),
-					new Promise<string>((resolve) => setTimeout(() => resolve('blocked'), 100)),
-				]);
-				expect(result).toBe('started');
-				expect(WorkerRunner.prototype.start).toHaveBeenCalled();
-				expect(CronScheduler.prototype.start).toHaveBeenCalled();
-				expect(Server.setupGracefulShutdown).toHaveBeenCalled();
-				expect(process.exit).not.toHaveBeenCalled();
-			} finally {
-				release();
-				await startup.catch(() => {});
-				await new Promise((resolve) => setImmediate(resolve));
-			}
-		},
-	);
 });

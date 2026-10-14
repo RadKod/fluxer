@@ -214,7 +214,7 @@ function buildTemplate(): Array<MenuItemConstructorOptions> {
 			{
 				label: t('desktop.appMenu.reportIssue'),
 				click: async () => {
-					await openExternalDeduped('mailto:pr@premate.gg');
+					await openExternalDeduped('mailto:info@sanalyer.com');
 				},
 			},
 			{type: 'separator'},

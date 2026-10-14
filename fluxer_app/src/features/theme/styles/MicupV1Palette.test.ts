@@ -136,16 +136,22 @@ describe('sanalyer v1 palette in the coal and dark themes', () => {
 		}
 	});
 
-	it('turns the accent white with near-black text on it', () => {
+	// sanalyer: the accent follows the instance theme color (admin branding); Micup's white is only the fallback.
+	it('takes the accent from the instance theme color, white with near-black text when none is set', () => {
 		const coal = theme(css, '.theme-coal, .theme-dark');
-		for (const name of ['--brand-primary', '--accent-primary', '--plutonium']) {
-			expect(resolve(coal, name), name).toBe('#f4f4f6');
-		}
-		for (const name of ['--brand-secondary', '--brand-primary-light', '--plutonium-hover']) {
-			expect(resolve(coal, name), name).toBe('#ffffff');
-		}
-		for (const name of ['--text-on-brand-primary', '--brand-primary-fill', '--plutonium-text']) {
-			expect(resolve(coal, name), name).toBe('#0a0a0c');
+		const expected: Record<string, string> = {
+			'--brand-primary': 'var(--instance-brand-primary, #f4f4f6)',
+			'--accent-primary': 'var(--instance-brand-primary, #f4f4f6)',
+			'--plutonium': 'var(--instance-brand-primary, #f4f4f6)',
+			'--brand-secondary': 'var(--instance-brand-secondary, #ffffff)',
+			'--plutonium-hover': 'var(--instance-brand-secondary, #ffffff)',
+			'--brand-primary-light': 'var(--instance-brand-primary-light, #ffffff)',
+			'--text-on-brand-primary': 'var(--instance-text-on-brand-primary, #0a0a0c)',
+			'--plutonium-text': 'var(--instance-text-on-brand-primary, #0a0a0c)',
+			'--brand-primary-fill': 'var(--instance-brand-primary-fill, #0a0a0c)',
+		};
+		for (const [name, value] of Object.entries(expected)) {
+			expect(resolve(coal, name), name).toBe(value);
 		}
 	});
 
@@ -171,8 +177,8 @@ describe('sanalyer v1 palette in the coal and dark themes', () => {
 	// fallback, so only coal and dark define them.
 	it('gives the streamer mode accent and the group DM tones no violet in coal and dark only', () => {
 		const coal = theme(css, '.theme-coal, .theme-dark');
-		expect(resolve(coal, '--streamer-mode-accent')).toBe('#f4f4f6');
-		expect(resolve(coal, '--streamer-mode-accent-text')).toBe('#0a0a0c');
+		expect(resolve(coal, '--streamer-mode-accent')).toBe('var(--instance-brand-primary, #f4f4f6)');
+		expect(resolve(coal, '--streamer-mode-accent-text')).toBe('var(--instance-text-on-brand-primary, #0a0a0c)');
 		expect(resolve(coal, '--group-dm-accent-violet')).toBe('#4d4d58');
 		expect(resolve(coal, '--group-dm-accent-fuchsia')).toBe('#3f3f49');
 		for (const selector of [null, '.theme-light', '.theme-dark_legacy']) {

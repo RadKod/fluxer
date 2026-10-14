@@ -1,22 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-let cachedLocale: string | null = null;
-let tryFormat: Intl.NumberFormat;
-let aznFormat: Intl.NumberFormat;
+// sanalyer: the shop sells in Turkish lira only. Amounts are kuruş; a whole-lira price drops the decimals
+// ("₺150"), any other shows two ("₺149,99", "₺149,50"). The locale decides separators and symbol position.
+const formats = new Map<string, Intl.NumberFormat>();
 
-function cacheFormats(locale: string): void {
-	if (locale === cachedLocale) return;
-	tryFormat = new Intl.NumberFormat(locale, {minimumFractionDigits: 0, maximumFractionDigits: 2});
-	aznFormat = new Intl.NumberFormat(locale, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-	cachedLocale = locale;
+function tryFormat(locale: string, fractionDigits: 0 | 2): Intl.NumberFormat {
+	const key = `${locale}:${fractionDigits}`;
+	let format = formats.get(key);
+	if (!format) {
+		format = new Intl.NumberFormat(locale, {
+			style: 'currency',
+			currency: 'TRY',
+			currencyDisplay: 'narrowSymbol',
+			minimumFractionDigits: fractionDigits,
+			maximumFractionDigits: fractionDigits,
+		});
+		formats.set(key, format);
+	}
+	return format;
 }
 
 export function formatShopTry(minor: number, locale: string): string {
-	cacheFormats(locale);
-	return `${tryFormat.format(minor / 100)} TL`;
-}
-
-export function formatShopAzn(minor: number, locale: string): string {
-	cacheFormats(locale);
-	return aznFormat.format(minor / 100);
+	return tryFormat(locale, minor % 100 === 0 ? 0 : 2).format(minor / 100);
 }

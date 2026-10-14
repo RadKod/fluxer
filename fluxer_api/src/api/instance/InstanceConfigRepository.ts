@@ -234,15 +234,10 @@ export interface InstanceBillingAdminConfig {
 export type InstancePremiumMode = 'mirror' | 'everyone';
 
 // Micup shop settings; not an instance feature, so the public instance response never shows them.
+// sanalyer: prices are Turkish lira, so Micup's USD to AZN rate and CBAR TL display rate settings are gone.
 export interface ShopConfig {
-	try_to_azn_rate_micro?: number | null;
-	try_rate_date?: string | null;
-	try_rate_fetched_at?: string | null;
-	try_to_azn_rate_override_micro?: number | null;
-	try_rate_override_at?: string | null;
 	premium_sales_open: boolean;
 	item_sales_open: boolean;
-	usd_to_azn_rate_micro: number;
 	premium_discount_percent: number;
 	visionary_on_sale: boolean;
 	visionary_reward_item_ids: Array<string>;
@@ -1031,14 +1026,8 @@ function parseStoredInstancePolicyConfig(raw: string | null): InstancePolicyConf
 
 // Both sales start closed; the bounds are the admin request's.
 const StoredShopConfigSchema = z.object({
-	try_to_azn_rate_micro: z.number().int().min(1_000).max(1_000_000).nullable().default(null),
-	try_rate_date: z.iso.date().nullable().default(null),
-	try_rate_fetched_at: z.iso.datetime().nullable().default(null),
-	try_to_azn_rate_override_micro: z.number().int().min(1_000).max(1_000_000).nullable().default(null),
-	try_rate_override_at: z.iso.datetime().nullable().default(null),
 	premium_sales_open: z.boolean().default(false),
 	item_sales_open: z.boolean().default(false),
-	usd_to_azn_rate_micro: UpdateShopSettingsRequest.shape.usd_to_azn_rate_micro.unwrap().default(1_700_000),
 	premium_discount_percent: UpdateShopSettingsRequest.shape.premium_discount_percent.unwrap().default(0),
 	visionary_on_sale: z.boolean().default(false),
 	visionary_reward_item_ids: z.array(StoredSnowflakeStringSchema).max(10).default([]),

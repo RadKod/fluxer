@@ -221,12 +221,7 @@ const MICUP_CORE_COLUMNS: Record<string, {columns: ReadonlyArray<string>; types:
 	shop_bundles: {columns: SHOP_BUNDLE_COLUMNS, types: {item_ids: 'frozen<list<bigint>>'}},
 	shop_orders: {
 		columns: SHOP_ORDER_COLUMNS,
-		types: {
-			item_ids: 'frozen<list<bigint>>',
-			display_currency: 'text',
-			display_amount_minor: 'bigint',
-			display_rate_micro: 'int',
-		},
+		types: {item_ids: 'frozen<list<bigint>>'},
 	},
 	// The KV counter flushes the reply count into the comment row like like_count and comment_count on feed_posts.
 	feed_comments: {columns: FEED_COMMENT_COLUMNS, types: {reply_count: 'int'}},

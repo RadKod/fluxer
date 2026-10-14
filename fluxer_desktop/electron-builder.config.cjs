@@ -1433,7 +1433,7 @@ module.exports = {
 		main: 'dist/main/index.js',
 		name: metadataName,
 		// Micup publishes this build: the author becomes the exe's CompanyName (Windows "Publisher").
-		author: {name: 'Micup', email: 'pr@premate.gg'},
+		author: {name: 'Micup', email: 'info@sanalyer.com'},
 		homepage: 'https://micup.gg',
 		...(process.env.VERSION ? {version: process.env.VERSION} : {}),
 		...(targetPlatform === 'linux' ? {desktopName: `${linuxDesktopId}.desktop`} : {}),

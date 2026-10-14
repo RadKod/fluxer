@@ -67,7 +67,7 @@ export const PremiumPage = observer(function PremiumPage() {
 	useEffect(() => {
 		if (shopRuns) void ShopCatalog.load();
 	}, [shopRuns]);
-	// With premium on sale, or packages priced and shown as paused, the page sells through Payriff.
+	// With premium on sale, or packages priced and shown as paused, the page sells through the shop checkout.
 	const onSale =
 		shopRuns &&
 		ShopCatalog.status === 'ready' &&

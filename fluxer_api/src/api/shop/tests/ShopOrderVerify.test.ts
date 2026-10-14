@@ -172,7 +172,7 @@ describe('shop order verification and delivery', () => {
 		expect(await getCosmeticRepository().getOwned(userId, BigInt(item.id))).toBeNull();
 	});
 
-	it('an amount one qepik off fails the order without delivery', async () => {
+	it('an amount one kuruş off fails the order without delivery', async () => {
 		const {item, order} = await openCosmeticOrder();
 		const row = await stored(order.id);
 		fakePayriffServer.setAmount(row.provider_order_id!, (row.amount_minor - 1) / 100);

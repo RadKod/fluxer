@@ -23,23 +23,14 @@ pub struct ShopAdminBundle {
     pub item_ids: Vec<String>,
 }
 
+// sanalyer: sales are in Turkish lira only, so the USD → AZN rate and the CBAR TRY rate are gone.
 #[derive(Debug, Deserialize)]
 pub struct ShopAdminSettings {
     pub premium_sales_open: bool,
     pub item_sales_open: bool,
     pub premium_discount_percent: i32,
-    pub usd_to_azn_rate_micro: i32,
-    #[serde(default)]
-    pub try_to_azn_rate_micro: Option<i32>,
-    #[serde(default)]
-    pub try_rate_date: Option<String>,
-    #[serde(default)]
-    pub try_rate_fetched_at: Option<String>,
-    #[serde(default)]
-    pub try_to_azn_rate_override_micro: Option<i32>,
-    #[serde(default)]
-    pub try_rate_override_at: Option<String>,
-    pub payriff_configured: bool,
+    /// false keeps every sale closed whatever the switches say.
+    pub payment_provider_configured: bool,
     #[serde(default)]
     pub visionary_on_sale: bool,
     /// Unpriced owned-only items given and worn with every Visionary number.
@@ -50,7 +41,8 @@ pub struct ShopAdminSettings {
 #[derive(Debug, Deserialize)]
 pub struct ShopAdminPriceRow {
     pub sku: String,
-    pub base_usd_cents: i32,
+    /// List price in kuruş (1 TL = 100 kuruş).
+    pub base_try_minor: i32,
     pub campaign_percent: Option<i32>,
     pub campaign_ends_at: Option<String>,
     pub now: ShopPrice,
@@ -60,15 +52,16 @@ pub struct ShopAdminPriceRow {
 pub struct ShopPrice {
     /// None when there is no campaign or it has ended.
     pub campaign_percent: Option<i32>,
-    pub sale_usd_cents: i32,
-    pub premium_usd_cents: Option<i32>,
+    /// Kuruş, like every amount below.
+    pub sale_try_minor: i32,
+    pub premium_try_minor: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ShopAdminHealth {
     pub busy_refusals_last_hour: i32,
     pub reconcile_lag_seconds: i32,
-    pub payriff_backing_off: bool,
+    pub provider_backing_off: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -78,12 +71,12 @@ pub struct ShopAdminOrder {
     pub sku: String,
     pub status: String,
     pub failure_reason: Option<String>,
-    pub base_usd_cents: i32,
+    /// Kuruş.
+    pub base_try_minor: i32,
     pub campaign_percent: i32,
     pub premium_percent: i32,
-    pub final_usd_cents: i32,
-    pub amount_azn_minor: i32,
-    pub usd_to_azn_rate: String,
+    /// What the order charges, in kuruş.
+    pub final_try_minor: i32,
     pub provider_order_id: Option<String>,
     pub provider_status: Option<String>,
     pub check_count: i32,
@@ -116,41 +109,4 @@ pub struct AdminEndPremium {
 pub struct AdminVisionary {
     pub slot: Option<i32>,
     pub changed: bool,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::ShopAdminSettings;
-    use serde_json::json;
-
-    #[test]
-    fn try_rate_fields_accept_legacy_responses_and_explicit_nulls() {
-        let mut response = json!({
-            "premium_sales_open": true,
-            "item_sales_open": true,
-            "premium_discount_percent": 0,
-            "usd_to_azn_rate_micro": 1_700_000,
-            "payriff_configured": true
-        });
-        for explicit_nulls in [false, true] {
-            if explicit_nulls {
-                for field in [
-                    "try_to_azn_rate_micro",
-                    "try_rate_date",
-                    "try_rate_fetched_at",
-                    "try_to_azn_rate_override_micro",
-                    "try_rate_override_at",
-                ] {
-                    response[field] = serde_json::Value::Null;
-                }
-            }
-            let settings: ShopAdminSettings = serde_json::from_value(response.clone()).unwrap();
-            assert_eq!(settings.usd_to_azn_rate_micro, 1_700_000);
-            assert!(settings.try_to_azn_rate_micro.is_none());
-            assert!(settings.try_rate_date.is_none());
-            assert!(settings.try_rate_fetched_at.is_none());
-            assert!(settings.try_to_azn_rate_override_micro.is_none());
-            assert!(settings.try_rate_override_at.is_none());
-        }
-    }
 }

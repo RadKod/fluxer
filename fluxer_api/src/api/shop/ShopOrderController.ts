@@ -24,7 +24,7 @@ export function ShopOrderController(app: HonoApp) {
 			operationId: 'create_shop_order',
 			summary: 'Start a shop order',
 			description:
-				'Opens a Payriff payment for one product at the price the server computes now and returns the order with its payment page. An unpaid order for the same product and price from the last fifteen minutes is returned instead of a new one. The item or premium time is delivered once Payriff confirms the payment.',
+				'Opens a payment for one product at the Turkish lira price the server computes now and returns the order with its payment page. An unpaid order for the same product and price from the last fifteen minutes is returned instead of a new one. The item or premium time is delivered once the payment provider confirms the payment.',
 			responseSchema: ShopOrderResponse,
 			statusCode: 200,
 			security: ['bearerToken', 'sessionToken'],
@@ -47,7 +47,7 @@ export function ShopOrderController(app: HonoApp) {
 			operationId: 'get_shop_order',
 			summary: 'Get a shop order',
 			description:
-				'Returns one of the current account orders as the server last saw it; it never asks Payriff. Orders of other accounts answer like unknown ones.',
+				'Returns one of the current account orders as the server last saw it; it never asks the payment provider. Orders of other accounts answer like unknown ones.',
 			responseSchema: ShopOrderResponse,
 			statusCode: 200,
 			security: ['bearerToken', 'sessionToken'],

@@ -483,6 +483,9 @@ pub struct GatewayRolloutConfigResponse {
     pub voice_e2ee_scope: VoiceE2eeScope,
     #[serde(default)]
     pub max_connections: u64,
+    // sanalyer: read so the admin can toggle game activity; older APIs omit it.
+    #[serde(default)]
+    pub game_activity_enabled: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -1297,6 +1300,8 @@ pub struct GatewayRolloutConfigUpdateRequest {
     pub max_concurrent_guild_starts: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub voice_e2ee_scope: Option<VoiceE2eeScope>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub game_activity_enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_connections: Option<u64>,
 }

@@ -155,7 +155,8 @@ export class ShopCheckoutFlow {
 						return;
 					}
 				}
-				if (order.final_usd_cents !== quote.final_usd_cents || order.amount_azn_minor !== quote.amount_azn_minor) {
+				// sanalyer: one currency (TRY), so the kuruş total is the whole price; there is no separate charged amount.
+				if (order.final_try_minor !== quote.final_try_minor) {
 					this.state = 'price_changed';
 					return;
 				}

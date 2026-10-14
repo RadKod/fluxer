@@ -263,6 +263,7 @@ export interface MasterConfig {
 			legacy_prices?: Record<string, Array<string> | undefined>;
 		};
 		// Micup shop payments (AZN). Only the API and the worker read it; the secret key never leaves the server.
+		// sanalyer: dormant; the shop sells in Turkish lira and FLUXER_PAYRIFF_ENABLED stays unset (ShopPaymentProvider).
 		payriff: {
 			enabled: boolean;
 			secret_key: string;

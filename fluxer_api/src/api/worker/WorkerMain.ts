@@ -40,7 +40,6 @@ import {startAccountActionConsumer, stopAccountActionConsumer} from '@app/api/wo
 import {queueBlocklistFeedStartupJobs} from '@app/api/worker/BlocklistFeedStartup';
 import {CronScheduler} from '@app/api/worker/CronScheduler';
 import {JetStreamWorkerQueue, JOBS_STREAM_MAX_AGE_MS} from '@app/api/worker/JetStreamWorkerQueue';
-import {queueShopTryRateStartupJob} from '@app/api/worker/ShopTryRateStartup';
 import {clearWorkerDependencies, setWorkerDependencies} from '@app/api/worker/WorkerContext';
 import {
 	guildInvitePauseDeps,
@@ -79,7 +78,6 @@ export function registerCronJobs(cron: CronScheduler, jobsStreamMaxAgeMs: number
 	cron.upsert('processUsernameRepair', 'processUsernameRepair', {}, '*/30 * * * * *', {ledger: false});
 	cron.upsert('scanUsernameMigration', 'scanUsernameMigration', {}, '*/30 * * * * *', {ledger: false});
 	cron.upsert('cleanupUsernameDictionary', 'cleanupUsernameDictionary', {}, '0 20 4 * * *', {ledger: false});
-	cron.upsert('syncShopTryRate', 'syncShopTryRate', {}, '0 0 */6 * * *', {ledger: true});
 	cron.upsert('processAssetDeletionQueue', 'processAssetDeletionQueue', {}, '0 */5 * * * *', {ledger: false});
 	if (Config.cachePurge.adapter !== 'none') {
 		cron.upsert('processCachePurgeQueue', 'processCachePurgeQueue', {}, '*/10 * * * * *', {ledger: false});
@@ -352,11 +350,6 @@ export async function startWorkerMain(): Promise<void> {
 		}
 		dependencies = await initializeWorkerDependencies(snowflakeService);
 		setWorkerDependencies(dependencies);
-		void queueShopTryRateStartupJob(
-			dependencies.kvClient,
-			workerService,
-			instanceConfigRepository.getShopConfig.bind(instanceConfigRepository),
-		).catch((error) => Logger.warn({error}, 'Shop TRY rate startup prefill failed'));
 		await startContentBlocklistCaches({kvClient: dependencies.kvClient, storageService: dependencies.storageService});
 		Logger.info('Content blocklist caches initialised for worker backend');
 		await queueBlocklistFeedStartupJobs(dependencies.kvClient, workerService, Config.blocklistFeeds.enabled);

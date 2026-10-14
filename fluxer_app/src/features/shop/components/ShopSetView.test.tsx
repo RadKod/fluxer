@@ -34,9 +34,9 @@ vi.mock('@app/features/shop/components/ShopSetArt', () => ({ShopSetArt: () => nu
 const {ShopSetView} = await import('@app/features/shop/components/ShopSetView');
 
 const PRICE = {
-	base_usd_cents: 500,
-	sale_usd_cents: 500,
-	premium_usd_cents: null,
+	base_try_minor: 500,
+	sale_try_minor: 500,
+	premium_try_minor: null,
 	campaign_percent: null,
 	campaign_ends_at: null,
 };

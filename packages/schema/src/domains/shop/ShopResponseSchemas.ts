@@ -3,19 +3,16 @@
 import {CosmeticItemResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
 import {GiftCodeDurationTypeSchema} from '@fluxer/schema/src/domains/premium/GiftCodeSchemas';
 import {ShopSku} from '@fluxer/schema/src/domains/shop/ShopRequestSchemas';
-import {
-	Int32Type,
-	NonNegativeSafeIntegerType,
-	SnowflakeStringType,
-} from '@fluxer/schema/src/primitives/SchemaPrimitives';
+import {Int32Type, SnowflakeStringType} from '@fluxer/schema/src/primitives/SchemaPrimitives';
 import {z} from 'zod';
 
+// sanalyer: every shop amount is Turkish lira in kuruş (1 TL = 100 kuruş); there is no other currency.
 export const ShopPriceResponse = z.object({
-	base_usd_cents: Int32Type.describe('List price in US cents'),
+	base_try_minor: Int32Type.describe('List price in kuruş'),
 	campaign_percent: Int32Type.nullable().describe('Active campaign discount; null when none or ended'),
 	campaign_ends_at: z.iso.datetime().nullable().describe('When the campaign ends; null when none or open-ended'),
-	sale_usd_cents: Int32Type.describe('Price after the campaign; equals base_usd_cents without one'),
-	premium_usd_cents: Int32Type.nullable().describe(
+	sale_try_minor: Int32Type.describe('Price after the campaign in kuruş; equals base_try_minor without one'),
+	premium_try_minor: Int32Type.nullable().describe(
 		'Items and bundles only: what a premium member pays; null when the premium discount is 0, and for packages',
 	),
 });
@@ -23,21 +20,9 @@ export const ShopPriceResponse = z.object({
 export type ShopPriceResponse = z.infer<typeof ShopPriceResponse>;
 
 export const ShopSettingsResponse = z.object({
-	try_rate_expires_at: z.iso
-		.datetime()
-		.nullish()
-		.describe('When the automatic TRY display rate becomes stale; null for a manual override or no effective rate'),
-	usd_to_azn_rate_micro: Int32Type.nullish().describe(
-		'Exact AZN per USD in millionths for matching the charged amount',
-	),
-	try_to_azn_rate_micro: Int32Type.nullish().describe(
-		'Effective display-only AZN per TRY in millionths; null hides TL',
-	),
-	try_rate_date: z.iso.date().nullish().describe('CBAR bulletin date; the automatic rate expires after 10 days'),
-	premium_sales_open: z.boolean().describe('Admin switch, and Payriff is configured'),
-	item_sales_open: z.boolean().describe('Admin switch, and Payriff is configured'),
+	premium_sales_open: z.boolean().describe('Admin switch, and a payment provider is configured'),
+	item_sales_open: z.boolean().describe('Admin switch, and a payment provider is configured'),
 	premium_discount_percent: Int32Type.describe('Discount premium members get on items and bundles, 0–95'),
-	usd_to_azn_rate: z.string().describe('Decimal with four places, e.g. 1.7000; display only'),
 });
 
 export type ShopSettingsResponse = z.infer<typeof ShopSettingsResponse>;
@@ -60,13 +45,15 @@ export type ShopPackageResponse = z.infer<typeof ShopPackageResponse>;
 export const ShopVisionaryResponse = z.object({
 	sku: z.literal('visionary'),
 	price: ShopPriceResponse.describe(
-		'A campaign applies as on any product; premium_usd_cents is always null: no premium member discount',
+		'A campaign applies as on any product; premium_try_minor is always null: no premium member discount',
 	),
 	total: Int32Type.describe('Numbered slots, set by the admin'),
 	remaining: Int32Type.describe(
 		'Slots without an owner or a live hold; display only, up to 60 s old; order creation decides',
 	),
-	visible: z.boolean().describe('Admin switch (on sale / hidden) and Payriff configured; false refuses new orders'),
+	visible: z
+		.boolean()
+		.describe('Admin switch (on sale / hidden) and a payment provider configured; false refuses new orders'),
 });
 
 export type ShopVisionaryResponse = z.infer<typeof ShopVisionaryResponse>;
@@ -97,22 +84,19 @@ export const ShopCatalogResponse = z.object({
 		.describe('Priced bundles whose items are all owned-availability items on sale'),
 	server_time: z.iso.datetime().describe('Server clock, for campaign countdowns'),
 	viewer: z
-		.object({premium_discount: z.boolean().describe('The viewer pays premium_usd_cents: paid premium, not a trial')})
+		.object({premium_discount: z.boolean().describe('The viewer pays premium_try_minor: paid premium, not a trial')})
 		.describe('Per viewer; everything else is the same for every account and cached'),
 });
 
 export type ShopCatalogResponse = z.infer<typeof ShopCatalogResponse>;
 
 export const ShopQuoteResponse = z.object({
-	usd_to_azn_rate_micro: Int32Type.nullish().describe('Exact AZN per USD in millionths used for this amount'),
 	sku: ShopSku,
-	base_usd_cents: Int32Type,
+	base_try_minor: Int32Type.describe('List price in kuruş'),
 	campaign_percent: Int32Type.describe('0 when none'),
 	premium_percent: Int32Type.describe('0 when not applied'),
-	final_usd_cents: Int32Type,
-	amount_azn_minor: Int32Type.describe('What Payriff charges, in qepik'),
-	usd_to_azn_rate: z.string().describe('Decimal with four places, e.g. 1.7000'),
-	currency: z.literal('AZN'),
+	final_try_minor: Int32Type.describe('What the order charges, in kuruş'),
+	currency: z.literal('TRY'),
 });
 
 export type ShopQuoteResponse = z.infer<typeof ShopQuoteResponse>;
@@ -122,15 +106,6 @@ export const ShopOrderStatus = z.enum(['pending', 'paid', 'granted', 'failed', '
 export type ShopOrderStatus = z.infer<typeof ShopOrderStatus>;
 
 export const ShopOrderResponse = z.object({
-	display_currency: z
-		.enum(['TRY', 'AZN'])
-		.nullish()
-		.describe('Store currency frozen at checkout; null for legacy orders'),
-	display_amount_minor: NonNegativeSafeIntegerType.nullish().describe(
-		'Store price frozen at checkout, in kuruş or qepik',
-	),
-	display_rate_micro: Int32Type.nullish().describe('Frozen AZN per TRY in millionths; null for AZN or legacy orders'),
-	usd_to_azn_rate_micro: Int32Type.nullish().describe('Exact AZN per USD in millionths used for this amount'),
 	id: SnowflakeStringType.describe('The ID of the shop order'),
 	sku: ShopSku,
 	status: ShopOrderStatus,
@@ -138,14 +113,12 @@ export const ShopOrderResponse = z.object({
 		.enum(['amount_mismatch', 'account_deleted', 'item_deleted', 'provider_error'])
 		.nullable()
 		.describe('Why a failed order failed; null otherwise'),
-	base_usd_cents: Int32Type,
+	base_try_minor: Int32Type.describe('List price in kuruş'),
 	campaign_percent: Int32Type,
 	premium_percent: Int32Type,
-	final_usd_cents: Int32Type,
-	amount_azn_minor: Int32Type.describe('What Payriff charges, in qepik'),
-	usd_to_azn_rate: z.string().describe('Decimal with four places, e.g. 1.7000'),
-	currency: z.literal('AZN'),
-	payment_url: z.string().nullable().describe('The Payriff page; only while pending'),
+	final_try_minor: Int32Type.describe('What the order charges, in kuruş'),
+	currency: z.literal('TRY'),
+	payment_url: z.string().nullable().describe('The payment page; only while pending'),
 	created_at: z.iso.datetime(),
 	item_ids: z
 		.array(SnowflakeStringType)

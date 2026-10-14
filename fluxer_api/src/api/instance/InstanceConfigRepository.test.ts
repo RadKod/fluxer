@@ -733,14 +733,8 @@ describe('InstanceConfigRepository', () => {
 			setCassandraQueryExecutorForTesting(new InMemoryCassandraQueryExecutor());
 			const repository = createRepository(new MockKVProvider());
 			const row = {
-				try_to_azn_rate_micro: 41_250,
-				try_rate_date: '2026-10-10',
-				try_rate_fetched_at: '2026-10-10T06:00:00.000Z',
-				try_to_azn_rate_override_micro: 40_500,
-				try_rate_override_at: '2026-10-09T12:00:00.000Z',
 				premium_sales_open: true,
 				item_sales_open: true,
-				usd_to_azn_rate_micro: 1_699_500,
 				premium_discount_percent: 10,
 				visionary_on_sale: true,
 				visionary_reward_item_ids: ['1420000000000000001'],
@@ -750,6 +744,34 @@ describe('InstanceConfigRepository', () => {
 			await expect(repository.getShopConfig()).resolves.toEqual(row);
 			await repository.updateShopConfig((current) => ({premium_discount_percent: current.premium_discount_percent}));
 			expect(await storedRow(repository, 'shop_config')).toEqual(row);
+		});
+
+		// sanalyer: rows written before the switch to Turkish lira still carry Micup's AZN and CBAR rate keys.
+		it('shop: a legacy row with the AZN and CBAR rate keys reads and is rewritten without them', async () => {
+			setCassandraQueryExecutorForTesting(new InMemoryCassandraQueryExecutor());
+			const repository = createRepository(new MockKVProvider());
+			const current = {
+				premium_sales_open: false,
+				item_sales_open: false,
+				premium_discount_percent: 0,
+				visionary_on_sale: false,
+				visionary_reward_item_ids: [],
+			};
+			const legacy = {
+				try_to_azn_rate_micro: 41_250,
+				try_rate_date: '2026-10-10',
+				try_rate_fetched_at: '2026-10-10T06:00:00.000Z',
+				try_to_azn_rate_override_micro: null,
+				try_rate_override_at: null,
+				usd_to_azn_rate_micro: 1_700_000,
+				...current,
+			};
+			await repository.setConfig('shop_config', JSON.stringify(legacy));
+
+			await expect(repository.getShopConfig()).resolves.toEqual(current);
+			await expect(repository.readStoredShopConfig()).resolves.toEqual(current);
+			await repository.updateShopConfig(() => ({item_sales_open: false}));
+			expect(await storedRow(repository, 'shop_config')).toEqual(current);
 		});
 
 		it('referral: a row with settings and tiers', async () => {

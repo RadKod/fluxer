@@ -7,7 +7,6 @@ import {SHOP_PRICE_CATALOG, type ShopOrderRow} from '@app/api/database/types/Sho
 import {getKVClient} from '@app/api/middleware/ServiceRegistry';
 import {
 	getCosmeticService,
-	getInstanceConfigRepository,
 	getPayriffRateLimiter,
 	getPremiumLedgerService,
 	getShopOrderRepository,
@@ -112,109 +111,33 @@ describe('shop order creation', () => {
 		await getVisionaryService().setTotal(total);
 	}
 
-	it('keeps quote, stored order and Payriff AZN identical when automatic and override TL rates change', async () => {
+	// sanalyer: one currency end to end; the quote, the order, the stored row and the provider request agree in TRY.
+	it('keeps the quote, the order, the stored row and the provider amount identical in Turkish lira', async () => {
 		await openShop(harness, admin);
-		await setPrices(harness, admin, {'premium:1': 199});
-		const repository = getInstanceConfigRepository();
-		for (const [automatic, override] of [
-			[40_000, null],
-			[50_000, 60_000],
-			[null, null],
-		]) {
-			await repository.updateShopConfig(() => ({
-				try_to_azn_rate_micro: automatic,
-				try_to_azn_rate_override_micro: override,
-				try_rate_date: '2026-10-02',
-			}));
-			const buyer = await createTestAccount(harness);
-			const quote = await createBuilder<{amount_azn_minor: number}>(harness, buyer.token)
-				.get('/shop/quote?sku=premium:1')
-				.execute();
-			const created = await createOrder('premium:1', buyer);
-			expect(quote.amount_azn_minor).toBe(338);
-			expect(created.amount_azn_minor).toBe(338);
-			expect((await storedOrder(created.id)).amount_minor).toBe(338);
-		}
-		for (const call of payriffCreates()) expect(call.body).toMatchObject({amount: 3.38, currency: 'AZN'});
+		await setPrices(harness, admin, {'premium:1': 14_999});
+		const quote = await createBuilder<{final_try_minor: number; currency: string}>(harness, user.token)
+			.get('/shop/quote?sku=premium:1')
+			.execute();
+		const created = await createOrder('premium:1');
+		expect(quote).toMatchObject({final_try_minor: 14_999, currency: 'TRY'});
+		expect(created).toMatchObject({final_try_minor: 14_999, currency: 'TRY'});
+		expect(await storedOrder(created.id)).toMatchObject({amount_minor: 14_999, currency: 'TRY'});
+		expect(payriffCreates()[0]!.body).toMatchObject({
+			amount: 149.99,
+			currency: 'TRY',
+			description: `sanalyer Plus · 1 ay — ₺149,99. Sipariş #${created.id}`,
+		});
 	});
 
-	it('freezes the direct TRY quote and keeps it after settings change', async () => {
+	it('keeps the stored order amount after the price changes', async () => {
 		await openShop(harness, admin);
-		await getInstanceConfigRepository().updateShopConfig(() => ({try_to_azn_rate_override_micro: 50_000}));
-		await setPrices(harness, admin, {'premium:1': 199});
+		await setPrices(harness, admin, {'premium:1': 19_900});
 		const created = await createOrder('premium:1');
-		expect(created).toMatchObject({display_currency: 'TRY', display_amount_minor: 6760, display_rate_micro: 50_000});
-		expect(await storedOrder(created.id)).toMatchObject({
-			display_currency: 'TRY',
-			display_amount_minor: 6760n,
-			display_rate_micro: 50_000,
-		});
-		expect(payriffCreates()[0]!.body).toMatchObject({
-			description: `sanalyer Plus · 1 ay — mağazadaki fiyat 67,6 TL. Bu ödeme Azerbaycan manatı ile alınır: 3,38 AZN. Sipariş #${created.id}`,
-		});
-		await getInstanceConfigRepository().updateShopConfig(() => ({try_to_azn_rate_override_micro: 60_000}));
+		await setPrices(harness, admin, {'premium:1': 24_900});
 		expect(
 			await createBuilder<ShopOrderResponse>(harness, user.token).get(`/shop/orders/${created.id}`).execute(),
 		).toEqual(created);
 	});
-
-	it('freezes the largest allowed TRY amount without overflowing Cassandra int', async () => {
-		await openShop(harness, admin, {usd_to_azn_rate_micro: 3_000_000});
-		await getInstanceConfigRepository().updateShopConfig(() => ({try_to_azn_rate_override_micro: 1000}));
-		await setPrices(harness, admin, {'premium:1': 10_000_000});
-		const created = await createOrder('premium:1');
-		expect(created).toMatchObject({
-			display_currency: 'TRY',
-			display_amount_minor: 30_000_000_000,
-			display_rate_micro: 1000,
-		});
-		expect(await storedOrder(created.id)).toMatchObject({display_amount_minor: 30_000_000_000n});
-	});
-
-	it('freezes AZN when no current TRY rate exists', async () => {
-		await openShop(harness, admin);
-		await setPrices(harness, admin, {'premium:1': 199});
-		const created = await createOrder('premium:1');
-		expect(created).toMatchObject({display_currency: 'AZN', display_amount_minor: 338, display_rate_micro: null});
-		expect(payriffCreates()[0]!.body).toMatchObject({
-			description: `sanalyer Plus · 1 ay — mağazadaki fiyat 3,38 AZN. Sipariş #${created.id}`,
-		});
-	});
-
-	it.each([
-		['2026-09-27', null, 'AZN', 338, null],
-		['2026-09-28', null, 'TRY', 423, 800_000],
-		['2026-09-27', 50_000, 'TRY', 6760, 50_000],
-	] as const)(
-		'uses the catalog rate validity and half-up rule (date %s, override %s)',
-		async (date, override, currency, amount, rate) => {
-			atTime(Date.parse('2026-10-08T12:00:00Z'));
-			await openShop(harness, admin);
-			await getInstanceConfigRepository().updateShopConfig(() => ({
-				try_to_azn_rate_micro: 800_000,
-				try_rate_date: date,
-				try_to_azn_rate_override_micro: override,
-			}));
-			await setPrices(harness, admin, {'premium:1': 199});
-			expect(await createOrder('premium:1')).toMatchObject({
-				amount_azn_minor: 338,
-				display_currency: currency,
-				display_amount_minor: amount,
-				display_rate_micro: rate,
-			});
-		},
-	);
-
-	it.each([{display_currency: 'TRY' as const}, {display_amount_minor: 339n}, {display_rate_micro: 50_000}])(
-		'rejects reuse when a stored display quote component differs: %o',
-		async (patch) => {
-			await openShop(harness, admin);
-			await setPrices(harness, admin, {'premium:1': 199});
-			const first = await createOrder('premium:1');
-			await patchStored(first.id, patch);
-			expect((await createOrder('premium:1')).id).not.toBe(first.id);
-		},
-	);
 
 	it('checks the direct price before reuse when the cached price still matches the old order', async () => {
 		await openShop(harness, admin);
@@ -224,7 +147,7 @@ describe('shop order creation', () => {
 			{
 				catalog: SHOP_PRICE_CATALOG,
 				sku: 'premium:1',
-				base_usd_cents: 700,
+				base_try_minor: 700,
 				campaign_percent: null,
 				campaign_ends_at: null,
 				updated_at: new Date(),
@@ -233,30 +156,8 @@ describe('shop order creation', () => {
 		const direct = vi.spyOn(ShopPriceRepository.prototype, 'getPrice');
 		const second = await createOrder('premium:1');
 		expect(second.id).not.toBe(first.id);
-		expect(second.final_usd_cents).toBe(700);
+		expect(second.final_try_minor).toBe(700);
 		expect(direct).toHaveBeenCalledTimes(1);
-	});
-
-	it('does not reuse legacy orders with no frozen display quote', async () => {
-		await openShop(harness, admin);
-		await setPrices(harness, admin, {'premium:1': 199});
-		const first = await createOrder('premium:1');
-		await patchStored(first.id, {display_currency: null, display_amount_minor: null, display_rate_micro: null});
-		expect((await createOrder('premium:1')).id).not.toBe(first.id);
-	});
-
-	it('checks the direct TRY rate before reuse even when AZN and rounded TRY amount match', async () => {
-		await openShop(harness, admin);
-		await getInstanceConfigRepository().updateShopConfig(() => ({try_to_azn_rate_override_micro: 50_000}));
-		await setPrices(harness, admin, {'premium:1': 199});
-		const first = await createOrder('premium:1');
-		const repository = getInstanceConfigRepository();
-		const config = await repository.readStoredShopConfig();
-		vi.spyOn(repository, 'getShopConfig').mockResolvedValue(config);
-		vi.spyOn(repository, 'readStoredShopConfig').mockResolvedValue({...config, try_to_azn_rate_override_micro: 50_001});
-		const second = await createOrder('premium:1');
-		expect(second.id).not.toBe(first.id);
-		expect(second).toMatchObject({amount_azn_minor: 338, display_amount_minor: 6760, display_rate_micro: 50_001});
 	});
 
 	it('reuses identical quotes without consuming a depleted provider budget', async () => {
@@ -266,40 +167,6 @@ describe('shop order creation', () => {
 		const budget = vi.spyOn(PayriffRateLimiter.prototype, 'tryAcquire').mockResolvedValue(false);
 		expect((await createOrder('premium:1')).id).toBe(first.id);
 		expect(budget).not.toHaveBeenCalled();
-	});
-
-	it('cached checkout eligibility does not read TL fields', async () => {
-		await openShop(harness, admin);
-		await setPrices(harness, admin, {'premium:1': 199});
-		const repository = getInstanceConfigRepository();
-		const config = await repository.readStoredShopConfig();
-		for (const key of [
-			'try_to_azn_rate_micro',
-			'try_rate_date',
-			'try_rate_fetched_at',
-			'try_to_azn_rate_override_micro',
-			'try_rate_override_at',
-		]) {
-			Object.defineProperty(config, key, {
-				get: () => {
-					throw new Error(`Payment read ${key}`);
-				},
-			});
-		}
-		vi.spyOn(repository, 'getShopConfig').mockResolvedValue(config);
-		expect((await createOrder('premium:1')).amount_azn_minor).toBe(338);
-	});
-
-	it('returns the exact stored order micro rate after the shop rate changes', async () => {
-		await openShop(harness, admin, {usd_to_azn_rate_micro: 1_700_051});
-		await setPrices(harness, admin, {'premium:1': 199});
-		const created = await createOrder('premium:1');
-		expect(created).toMatchObject({usd_to_azn_rate_micro: 1_700_051, amount_azn_minor: 338});
-		await getInstanceConfigRepository().updateShopConfig(() => ({usd_to_azn_rate_micro: 1_800_001}));
-		const retrieved = await createBuilder<ShopOrderResponse>(harness, user.token)
-			.get(`/shop/orders/${created.id}`)
-			.execute();
-		expect(retrieved).toMatchObject({usd_to_azn_rate_micro: 1_700_051, amount_azn_minor: 338});
 	});
 
 	it('writes every price component onto the order and calls Payriff once', async () => {
@@ -319,13 +186,11 @@ describe('shop order creation', () => {
 			sku,
 			status: 'pending',
 			failure_reason: null,
-			base_usd_cents: 500,
+			base_try_minor: 500,
 			campaign_percent: 20,
 			premium_percent: 30,
-			final_usd_cents: 280,
-			amount_azn_minor: 476,
-			usd_to_azn_rate: '1.7000',
-			currency: 'AZN',
+			final_try_minor: 280,
+			currency: 'TRY',
 			payment_url: 'https://pay.payriff.test/r/payriff-order-1?type=direct',
 		});
 		const row = await storedOrder(created.id);
@@ -333,13 +198,11 @@ describe('shop order creation', () => {
 			user_id: createUserID(BigInt(user.userId)),
 			item_id: BigInt(item.id),
 			premium_months: null,
-			base_usd_cents: 500,
+			base_try_minor: 500,
 			campaign_percent: 20,
 			premium_percent: 30,
-			final_usd_cents: 280,
-			rate_micro: 1_700_000,
-			amount_minor: 476,
-			currency: 'AZN',
+			amount_minor: 280,
+			currency: 'TRY',
 			provider: 'payriff',
 			provider_order_id: 'payriff-order-1',
 			status: 'pending',
@@ -349,8 +212,8 @@ describe('shop order creation', () => {
 		const calls = payriffCreates();
 		expect(calls).toHaveLength(1);
 		const body = calls[0]!.body as {amount: number; description: string; callbackUrl: string; currency: string};
-		expect(body.amount).toBe(4.76);
-		expect(body.currency).toBe('AZN');
+		expect(body.amount).toBe(2.8);
+		expect(body.currency).toBe('TRY');
 		expect(body.description.endsWith(`Sipariş #${created.id}`)).toBe(true);
 		const prefix = `/v1/payriff/callback/${created.id}/`;
 		expect(body.callbackUrl).toContain(prefix);
@@ -373,17 +236,17 @@ describe('shop order creation', () => {
 			source: 'trial',
 		});
 
-		expect(await createOrder(`cosmetic:${item.id}`)).toMatchObject({premium_percent: 0, final_usd_cents: 400});
+		expect(await createOrder(`cosmetic:${item.id}`)).toMatchObject({premium_percent: 0, final_try_minor: 400});
 	});
 
 	it('ignores any price the client sends', async () => {
 		await openShop(harness, admin);
 		await setPrices(harness, admin, {'premium:1': 500});
 
-		const created = await order('premium:1', user, {final_usd_cents: 1, amount_azn_minor: 1}).expect(200).execute();
+		const created = await order('premium:1', user, {final_try_minor: 1, amount_minor: 1}).expect(200).execute();
 
-		expect(created).toMatchObject({final_usd_cents: 500, amount_azn_minor: 850});
-		expect((payriffCreates()[0]!.body as {amount: number}).amount).toBe(8.5);
+		expect(created).toMatchObject({final_try_minor: 500});
+		expect((payriffCreates()[0]!.body as {amount: number}).amount).toBe(5);
 	});
 
 	it('order creation reads the price row directly even when the catalog and the quote are cached', async () => {
@@ -395,7 +258,7 @@ describe('shop order creation', () => {
 			{
 				catalog: SHOP_PRICE_CATALOG,
 				sku: 'premium:1',
-				base_usd_cents: 700,
+				base_try_minor: 700,
 				campaign_percent: null,
 				campaign_ends_at: null,
 				updated_at: new Date(),
@@ -406,7 +269,7 @@ describe('shop order creation', () => {
 
 		const created = await createOrder('premium:1');
 
-		expect(created.final_usd_cents).toBe(700);
+		expect(created.final_try_minor).toBe(700);
 		expect(getPrice).toHaveBeenCalledTimes(1);
 		expect(tryAcquire).toHaveBeenCalledWith('create');
 		expect(getPrice.mock.invocationCallOrder[0]).toBeLessThan(tryAcquire.mock.invocationCallOrder[0]!);
@@ -435,7 +298,7 @@ describe('shop order creation', () => {
 		const second = await createOrder('premium:1');
 
 		expect(second.id).not.toBe(first.id);
-		expect(second.final_usd_cents).toBe(600);
+		expect(second.final_try_minor).toBe(600);
 		expect(payriffCreates()).toHaveLength(2);
 	});
 
@@ -624,7 +487,7 @@ describe('shop order creation', () => {
 		expect(await getVisionaryService().getStock()).toMatchObject({held: 0, remaining: 2});
 
 		const created = await createOrder('visionary');
-		expect(created).toMatchObject({sku: 'visionary', base_usd_cents: 5000, premium_percent: 0});
+		expect(created).toMatchObject({sku: 'visionary', base_try_minor: 5000, premium_percent: 0});
 		expect(await storedOrder(created.id)).toMatchObject({item_id: null, premium_months: null});
 		expect(await getVisionaryService().getStock()).toMatchObject({held: 1, remaining: 1});
 	});

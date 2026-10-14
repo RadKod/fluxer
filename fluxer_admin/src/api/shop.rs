@@ -17,16 +17,6 @@ impl AdminApiClient {
             .await
     }
 
-    pub async fn refresh_shop_try_rate(&self) -> ApiResult<()> {
-        self.send_void(
-            Method::POST,
-            "/admin/shop/settings/refresh-try-rate",
-            None::<&Value>,
-            None,
-        )
-        .await
-    }
-
     pub async fn set_shop_prices(&self, body: &Value) -> ApiResult<()> {
         self.send_void(Method::PUT, "/admin/shop/prices", Some(body), None)
             .await

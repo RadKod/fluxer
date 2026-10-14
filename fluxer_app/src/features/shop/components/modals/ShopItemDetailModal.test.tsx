@@ -108,11 +108,11 @@ function entry(type: CosmeticType, availability: CosmeticItemResponse['availabil
 		availability,
 	};
 	const price = {
-		base_usd_cents: 500,
+		base_try_minor: 500,
 		campaign_percent: null,
 		campaign_ends_at: null,
-		sale_usd_cents: 500,
-		premium_usd_cents: 350,
+		sale_try_minor: 500,
+		premium_try_minor: 350,
 	};
 	return {kind: 'item', sku: `cosmetic:${item.id}`, item, price: availability === 'owned' ? price : null};
 }

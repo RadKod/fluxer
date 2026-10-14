@@ -157,7 +157,8 @@ async fn shop_page_shows_the_visionary_card_to_shop_manage() {
         "{page}"
     );
     assert!(page.contains(r#"name="visionary_price""#), "{page}");
-    assert!(page.contains(r#"value="100.00""#), "{page}");
+    // sanalyer: lira, comma decimals, no symbol in the field so it reads back unchanged.
+    assert!(page.contains(r#"value="1250,50""#), "{page}");
     assert!(page.contains("Hidden"), "{page}");
     assert!(page.contains("Put on sale"), "{page}");
     for action in [
@@ -176,7 +177,7 @@ async fn shop_page_shows_the_visionary_card_to_shop_manage() {
         page.contains(r#"name="product_ids" value="visionary""#),
         "{page}"
     );
-    assert!(page.contains("$90.00"), "{page}");
+    assert!(page.contains("₺1.125,45"), "{page}");
 
     let app = setup(&["admin:authenticate", "cosmetics:manage"]).await;
     let (status, _, page) = get(&app, "/shop").await;
@@ -210,14 +211,21 @@ async fn visionary_card_actions_call_the_api() {
             "visionary_price=149.99",
             Method::PUT,
             "/admin/shop/prices",
-            json!({"prices": [{"sku": "visionary", "base_usd_cents": 14999}]}),
+            json!({"prices": [{"sku": "visionary", "base_try_minor": 14999}]}),
+        ),
+        (
+            "visionary_price",
+            "visionary_price=149%2C99",
+            Method::PUT,
+            "/admin/shop/prices",
+            json!({"prices": [{"sku": "visionary", "base_try_minor": 14999}]}),
         ),
         (
             "visionary_price",
             "visionary_price=",
             Method::PUT,
             "/admin/shop/prices",
-            json!({"prices": [{"sku": "visionary", "base_usd_cents": null}]}),
+            json!({"prices": [{"sku": "visionary", "base_try_minor": null}]}),
         ),
         (
             "visionary_sale",
@@ -619,15 +627,15 @@ fn json_response(value: Value) -> Response {
 fn price(sku: &str, base: i32, campaign: Option<i32>, sale: i32) -> Value {
     json!({
         "sku": sku,
-        "base_usd_cents": base,
+        "base_try_minor": base,
         "campaign_percent": campaign,
         "campaign_ends_at": null,
         "now": {
-            "base_usd_cents": base,
+            "base_try_minor": base,
             "campaign_percent": campaign,
             "campaign_ends_at": null,
-            "sale_usd_cents": sale,
-            "premium_usd_cents": null
+            "sale_try_minor": sale,
+            "premium_try_minor": null
         }
     })
 }
@@ -638,24 +646,18 @@ fn shop_admin() -> Value {
             "premium_sales_open": true,
             "item_sales_open": true,
             "premium_discount_percent": 30,
-            "usd_to_azn_rate_micro": 1_700_000,
-            "try_to_azn_rate_micro": null,
-            "try_rate_date": null,
-            "try_rate_fetched_at": null,
-            "try_to_azn_rate_override_micro": null,
-            "try_rate_override_at": null,
-            "payriff_configured": true,
+            "payment_provider_configured": true,
             "visionary_on_sale": false,
             "visionary_reward_item_ids": ["9"]
         },
         "prices": [
             price("cosmetic:7", 500, None, 500),
-            price("visionary", 10_000, Some(10), 9_000)
+            price("visionary", 125_050, Some(10), 112_545)
         ],
         "health": {
             "busy_refusals_last_hour": 0,
             "reconcile_lag_seconds": 0,
-            "payriff_backing_off": false
+            "provider_backing_off": false
         }
     })
 }

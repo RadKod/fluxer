@@ -421,7 +421,7 @@ fn flag_form_shell(
     )
 }
 
-// Used after refunding a premium payment in Payriff. Ending premium leaves
+// Used after refunding a premium payment with the payment provider. Ending premium leaves
 // lifetime premium (Visionary, premium_type 2) as it is, so that account gets a pointer instead.
 fn end_premium_card(config: &AdminConfig, user: &AdminUser, csrf_token: &str) -> Markup {
     card_with_header(
@@ -438,7 +438,7 @@ fn end_premium_card(config: &AdminConfig, user: &AdminUser, csrf_token: &str) ->
                     p class="text-neutral-700 text-sm" {
                         "Ends all Plus time now: bought, from a gift code and from the free trial. \
                          The trial cannot be taken again. Use this after refunding a Plus payment \
-                         in Payriff."
+                         with the payment provider."
                     }
                     (reason_field("end-premium-reason"))
                     (form_actions(html! {

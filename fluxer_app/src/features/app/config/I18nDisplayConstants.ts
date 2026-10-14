@@ -7,7 +7,8 @@ import {THE_OTHER_PLATFORM} from '@fluxer/constants/src/ExternalPlatformConstant
 export {PREMIUM_PRODUCT_FULL_NAME, PREMIUM_PRODUCT_NAME, PRODUCT_NAME};
 export const DESKTOP_ENTRY_NAME = PRODUCT_NAME;
 export const CANARY_DESKTOP_ENTRY_NAME = `${PRODUCT_NAME} Canary`;
-export const PAYMENT_PROVIDER_NAME = 'Payriff';
+// sanalyer: the upstream Stripe subscription flows name Stripe; the TRY shop checkout names no provider.
+export const PAYMENT_PROVIDER_NAME = 'Stripe';
 export const BLUESKY_PROVIDER_NAME = 'Bluesky';
 export const APP_STORE_NAME = 'App Store';
 export const GOOGLE_PLAY_NAME = 'Google Play';

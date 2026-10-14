@@ -4,7 +4,7 @@ import {DefaultUserOnly, LoginRequired} from '@app/api/middleware/AuthMiddleware
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {ShopRateLimitConfigs} from '@app/api/rate_limit_configs/ShopRateLimitConfig';
-import {formatRateMicro} from '@app/api/shop/ShopPricing';
+import {SHOP_CURRENCY} from '@app/api/shop/ShopPricing';
 import type {HonoApp} from '@app/api/types/HonoEnv';
 import {Validator} from '@app/api/Validator';
 import {ShopQuoteQuery} from '@fluxer/schema/src/domains/shop/ShopRequestSchemas';
@@ -38,7 +38,7 @@ export function ShopCatalogController(app: HonoApp) {
 			operationId: 'get_shop_quote',
 			summary: 'Get a shop price quote',
 			description:
-				'Returns what the current account would pay for one product right now: the list price, the campaign and premium member discounts, the US dollar price and the Azerbaijani manat amount Payriff charges. Refuses products that are not on sale, closed sales and items the account already owns.',
+				'Returns what the current account would pay for one product right now: the list price, the campaign and premium member discounts and the final price, all in Turkish lira (kuruş). Refuses products that are not on sale, closed sales and items the account already owns.',
 			responseSchema: ShopQuoteResponse,
 			statusCode: 200,
 			security: ['bearerToken', 'sessionToken'],
@@ -48,14 +48,11 @@ export function ShopCatalogController(app: HonoApp) {
 			const {sku, price} = await ctx.get('shopCatalogService').quote(ctx.get('user'), ctx.req.valid('query').sku);
 			return ctx.json({
 				sku,
-				base_usd_cents: price.baseUsdCents,
+				base_try_minor: price.baseTryMinor,
 				campaign_percent: price.campaignPercent,
 				premium_percent: price.premiumPercent,
-				final_usd_cents: price.finalUsdCents,
-				amount_azn_minor: price.amountAznMinor,
-				usd_to_azn_rate: formatRateMicro(price.rateMicro),
-				usd_to_azn_rate_micro: price.rateMicro,
-				currency: 'AZN' as const,
+				final_try_minor: price.finalTryMinor,
+				currency: SHOP_CURRENCY,
 			});
 		},
 	);

@@ -4,7 +4,7 @@ import {createTestAccount, setUserACLs, type TestAccount} from '@app/api/auth/te
 import {Config} from '@app/api/Config';
 import {fetchOne} from '@app/api/database/CassandraQueryExecution';
 import type {InstanceConfigurationRow} from '@app/api/database/types/InstanceConfigTypes';
-import {getKVClient, getWorkerService} from '@app/api/middleware/ServiceRegistry';
+import {getKVClient} from '@app/api/middleware/ServiceRegistry';
 import {getAdminRepository} from '@app/api/middleware/ServiceSingletons';
 import {createShopAdmin, createShopItem, saveShopEnvironment} from '@app/api/shop/tests/ShopTestUtils';
 import {InstanceConfiguration} from '@app/api/Tables';
@@ -51,7 +51,7 @@ describe('shop admin', () => {
 			.execute();
 	}
 
-	function putPrices(prices: Array<{sku: string; base_usd_cents: number | null}>, status = 200) {
+	function putPrices(prices: Array<{sku: string; base_try_minor: number | null}>, status = 200) {
 		return createBuilder<ShopAdminResponse>(harness, admin.token)
 			.put('/admin/shop/prices')
 			.body({prices})
@@ -79,11 +79,10 @@ describe('shop admin', () => {
 		]);
 		const requests = [
 			createBuilder(harness, cosmeticsAdmin.token).get('/admin/shop'),
-			createBuilder(harness, cosmeticsAdmin.token).post('/admin/shop/settings/refresh-try-rate'),
 			createBuilder(harness, cosmeticsAdmin.token).patch('/admin/shop/settings').body({item_sales_open: true}),
 			createBuilder(harness, cosmeticsAdmin.token)
 				.put('/admin/shop/prices')
-				.body({prices: [{sku: 'premium:1', base_usd_cents: 500}]}),
+				.body({prices: [{sku: 'premium:1', base_try_minor: 500}]}),
 			createBuilder(harness, cosmeticsAdmin.token)
 				.post('/admin/shop/campaigns')
 				.body({skus: ['premium:1'], percent: 20, ends_at: null}),
@@ -97,68 +96,14 @@ describe('shop admin', () => {
 		expect((await view()).prices).toEqual([]);
 	});
 
-	it('stores and audits override changes and clearing returns to automatic', async () => {
-		expect(await patchSettings({try_to_azn_rate_override: '0.040123'})).toMatchObject({
-			try_to_azn_rate_override_micro: 40_123,
-			try_rate_override_at: expect.any(String),
-		});
-		expect(await auditMetadata('update_shop_settings')).toContainEqual(
-			expect.objectContaining({try_to_azn_rate_override_micro_new: '40123'}),
-		);
-		expect(await patchSettings({try_to_azn_rate_override: null})).toMatchObject({
-			try_to_azn_rate_override_micro: null,
-			try_rate_override_at: null,
-		});
-		await patchSettings({try_to_azn_rate_override: '1.01'}, 400);
-	});
-
-	it('queues and audits a manual CBAR refresh', async () => {
-		const addJob = vi.spyOn(getWorkerService(), 'addJob');
-		await createBuilder(harness, admin.token).post('/admin/shop/settings/refresh-try-rate').expect(204).execute();
-		expect(await auditMetadata('refresh_shop_try_rate')).toHaveLength(1);
-		expect(addJob).toHaveBeenCalledWith('syncShopTryRate', {}, expect.objectContaining({requireLedger: true}));
-		addJob.mockRestore();
-	});
-	it('preserves the override timestamp and audit fields on an unrelated settings save', async () => {
-		vi.useFakeTimers({toFake: ['Date']});
-		const initial = await patchSettings({try_to_azn_rate_override: '0.040123'});
-		vi.setSystemTime(Date.now() + 1_000);
-		const auditBefore = await auditMetadata('update_shop_settings');
-		expect(await patchSettings({try_to_azn_rate_override: '0.040123'})).toEqual(initial);
-		expect(await auditMetadata('update_shop_settings')).toEqual(auditBefore);
-		const saved = await patchSettings({try_to_azn_rate_override: '0.040123', item_sales_open: true});
-		expect(saved.try_rate_override_at).toBe(initial.try_rate_override_at);
-		const changes = await auditMetadata('update_shop_settings');
-		expect(changes).toContainEqual({item_sales_open_old: 'false', item_sales_open_new: 'true'});
-		expect(changes.filter((change) => 'try_rate_override_at_new' in change)).toHaveLength(1);
-		const changed = await patchSettings({try_to_azn_rate_override: '0.05'});
-		expect(changed.try_rate_override_at).not.toBe(initial.try_rate_override_at);
-		expect(await auditMetadata('update_shop_settings')).toContainEqual(
-			expect.objectContaining({
-				try_to_azn_rate_override_micro_old: '40123',
-				try_to_azn_rate_override_micro_new: '50000',
-			}),
-		);
-	});
-
 	it('stores the settings under the shop_config key', async () => {
-		const settings = await patchSettings({
-			premium_sales_open: true,
-			premium_discount_percent: 25,
-			usd_to_azn_rate_micro: 1_705_000,
-		});
+		const settings = await patchSettings({premium_sales_open: true, premium_discount_percent: 25});
 
 		expect(settings).toEqual({
-			try_to_azn_rate_micro: null,
-			try_rate_date: null,
-			try_rate_fetched_at: null,
-			try_to_azn_rate_override_micro: null,
-			try_rate_override_at: null,
 			premium_sales_open: true,
 			item_sales_open: false,
 			premium_discount_percent: 25,
-			usd_to_azn_rate_micro: 1_705_000,
-			payriff_configured: true,
+			payment_provider_configured: true,
 			visionary_on_sale: false,
 			visionary_reward_item_ids: [],
 		});
@@ -167,14 +112,8 @@ describe('shop admin', () => {
 			{key: 'shop_config'},
 		);
 		expect(JSON.parse(row!.value!)).toEqual({
-			try_to_azn_rate_micro: null,
-			try_rate_date: null,
-			try_rate_fetched_at: null,
-			try_to_azn_rate_override_micro: null,
-			try_rate_override_at: null,
 			premium_sales_open: true,
 			item_sales_open: false,
-			usd_to_azn_rate_micro: 1_705_000,
 			premium_discount_percent: 25,
 			visionary_on_sale: false,
 			visionary_reward_item_ids: [],
@@ -182,48 +121,45 @@ describe('shop admin', () => {
 		expect((await view()).settings).toEqual(settings);
 	});
 
-	it('starts with both sales closed and reports Payriff as not configured without a key', async () => {
+	it('starts with both sales closed and reports no payment provider without a Payriff key', async () => {
 		const previous = Config.payriff.enabled;
 		Config.payriff.enabled = false;
 		try {
 			expect((await view()).settings).toMatchObject({
 				premium_sales_open: false,
 				item_sales_open: false,
-				usd_to_azn_rate_micro: 1_700_000,
-				payriff_configured: false,
+				payment_provider_configured: false,
 			});
 		} finally {
 			Config.payriff.enabled = previous;
 		}
 	});
 
-	it('refuses a discount above 95, a rate outside 1–3 and a price that ends below 0.10 AZN', async () => {
+	it('refuses a discount above 95, a price below ₺1 and one above ₺100 000', async () => {
 		await patchSettings({premium_discount_percent: 96}, 400);
-		await patchSettings({usd_to_azn_rate_micro: 999_999}, 400);
-		await patchSettings({usd_to_azn_rate_micro: 3_000_001}, 400);
-		await putPrices([{sku: 'premium:1', base_usd_cents: 5}], 400);
-		await putPrices([{sku: 'premium:1', base_usd_cents: 0}], 400);
+		await putPrices([{sku: 'premium:1', base_try_minor: 99}], 400);
+		await putPrices([{sku: 'premium:1', base_try_minor: 0}], 400);
+		await putPrices([{sku: 'premium:1', base_try_minor: 10_000_001}], 400);
 
-		await putPrices([{sku: 'premium:1', base_usd_cents: 6}]);
-		expect((await view()).prices.map(({sku, base_usd_cents}) => [sku, base_usd_cents])).toEqual([['premium:1', 6]]);
+		await putPrices([{sku: 'premium:1', base_try_minor: 100}]);
+		expect((await view()).prices.map(({sku, base_try_minor}) => [sku, base_try_minor])).toEqual([['premium:1', 100]]);
 		expect((await view()).settings.premium_discount_percent).toBe(0);
 	});
 
-	it('refuses a settings change that would push a priced item below 0.10 AZN', async () => {
+	it('refuses a settings change that would push a priced item below ₺1', async () => {
 		const item = await createShopItem(harness, admin, 'owned');
 		await putPrices([
-			{sku: `cosmetic:${item.id}`, base_usd_cents: 10},
-			{sku: 'premium:1', base_usd_cents: 6},
+			{sku: `cosmetic:${item.id}`, base_try_minor: 150},
+			{sku: 'premium:1', base_try_minor: 105},
 		]);
 
-		await patchSettings({premium_discount_percent: 50}, 400); // 10 → 5 cents → 8.5 → 9 qepik
-		await patchSettings({usd_to_azn_rate_micro: 1_500_000}, 400); // 6 cents → 9 qepik
-		await putPrices([{sku: `cosmetic:${item.id}`, base_usd_cents: 12}]);
-		await patchSettings({premium_discount_percent: 50}); // 12 → 6 cents → 10.2 → 10 qepik
+		await patchSettings({premium_discount_percent: 50}, 400); // 150 → 75 kuruş
+		await putPrices([{sku: `cosmetic:${item.id}`, base_try_minor: 200}]);
+		await patchSettings({premium_discount_percent: 50}); // 200 → 100 kuruş
 
-		expect((await view()).settings).toMatchObject({premium_discount_percent: 50, usd_to_azn_rate_micro: 1_700_000});
-		await campaign({skus: [`cosmetic:${item.id}`], percent: 50, ends_at: null}, 400); // 12 → 6 → 3 cents
-		await campaign({skus: ['premium:1'], percent: 10, ends_at: null}, 400); // 6 → 5 cents → 8.5 → 9 qepik
+		expect((await view()).settings).toMatchObject({premium_discount_percent: 50});
+		await campaign({skus: [`cosmetic:${item.id}`], percent: 50, ends_at: null}, 400); // 200 → 100 → 50 kuruş
+		await campaign({skus: ['premium:1'], percent: 10, ends_at: null}, 400); // 105 → 94.5 → 95 kuruş
 	});
 
 	it('takes prices only for owned items and 1, 3, 12 month packages', async () => {
@@ -231,44 +167,44 @@ describe('shop admin', () => {
 		const free = await createShopItem(harness, admin, 'free');
 		const premium = await createShopItem(harness, admin, 'premium');
 
-		await putPrices([{sku: `cosmetic:${free.id}`, base_usd_cents: 500}], 400);
-		await putPrices([{sku: `cosmetic:${premium.id}`, base_usd_cents: 500}], 400);
-		await putPrices([{sku: 'cosmetic:1490000000000000001', base_usd_cents: 500}], 400);
-		await putPrices([{sku: 'premium:2', base_usd_cents: 500}], 400);
+		await putPrices([{sku: `cosmetic:${free.id}`, base_try_minor: 500}], 400);
+		await putPrices([{sku: `cosmetic:${premium.id}`, base_try_minor: 500}], 400);
+		await putPrices([{sku: 'cosmetic:1490000000000000001', base_try_minor: 500}], 400);
+		await putPrices([{sku: 'premium:2', base_try_minor: 500}], 400);
 
 		const response = await putPrices([
-			{sku: `cosmetic:${owned.id}`, base_usd_cents: 500},
-			{sku: 'premium:1', base_usd_cents: 500},
-			{sku: 'premium:3', base_usd_cents: 1300},
-			{sku: 'premium:12', base_usd_cents: 4800},
+			{sku: `cosmetic:${owned.id}`, base_try_minor: 500},
+			{sku: 'premium:1', base_try_minor: 500},
+			{sku: 'premium:3', base_try_minor: 1300},
+			{sku: 'premium:12', base_try_minor: 4800},
 		]);
 		expect(response.prices.map(({sku}) => sku).sort()).toEqual(
 			[`cosmetic:${owned.id}`, 'premium:1', 'premium:12', 'premium:3'].sort(),
 		);
 		expect(response.prices.find(({sku}) => sku === 'premium:3')).toEqual({
 			sku: 'premium:3',
-			base_usd_cents: 1300,
+			base_try_minor: 1300,
 			campaign_percent: null,
 			campaign_ends_at: null,
 			now: {
-				base_usd_cents: 1300,
+				base_try_minor: 1300,
 				campaign_percent: null,
 				campaign_ends_at: null,
-				sale_usd_cents: 1300,
-				premium_usd_cents: null,
+				sale_try_minor: 1300,
+				premium_try_minor: null,
 			},
 		});
 
-		const removed = await putPrices([{sku: 'premium:3', base_usd_cents: null}]);
+		const removed = await putPrices([{sku: 'premium:3', base_try_minor: null}]);
 		expect(removed.prices.map(({sku}) => sku)).not.toContain('premium:3');
 	});
 
 	it('applies a campaign to several products and removes it', async () => {
 		const item = await createShopItem(harness, admin, 'owned');
 		await putPrices([
-			{sku: `cosmetic:${item.id}`, base_usd_cents: 500},
-			{sku: 'premium:1', base_usd_cents: 500},
-			{sku: 'premium:3', base_usd_cents: 1300},
+			{sku: `cosmetic:${item.id}`, base_try_minor: 500},
+			{sku: 'premium:1', base_try_minor: 500},
+			{sku: 'premium:3', base_try_minor: 1300},
 		]);
 
 		await campaign({skus: ['premium:12'], percent: 20, ends_at: null}, 400);
@@ -278,15 +214,15 @@ describe('shop admin', () => {
 		expect(row('premium:1')).toMatchObject({
 			campaign_percent: 20,
 			campaign_ends_at: FUTURE,
-			now: {campaign_percent: 20, campaign_ends_at: FUTURE, sale_usd_cents: 400},
+			now: {campaign_percent: 20, campaign_ends_at: FUTURE, sale_try_minor: 400},
 		});
-		expect(row(`cosmetic:${item.id}`).now.sale_usd_cents).toBe(400);
+		expect(row(`cosmetic:${item.id}`).now.sale_try_minor).toBe(400);
 		expect(row('premium:3').campaign_percent).toBeNull();
 
-		const repriced = await putPrices([{sku: 'premium:1', base_usd_cents: 600}]);
+		const repriced = await putPrices([{sku: 'premium:1', base_try_minor: 600}]);
 		expect(repriced.prices.find((price) => price.sku === 'premium:1')).toMatchObject({
 			campaign_percent: 20,
-			now: {sale_usd_cents: 480},
+			now: {sale_try_minor: 480},
 		});
 
 		const removed = await createBuilder<ShopAdminResponse>(harness, admin.token)
@@ -296,7 +232,7 @@ describe('shop admin', () => {
 		expect(removed.prices.find((price) => price.sku === 'premium:1')).toMatchObject({
 			campaign_percent: null,
 			campaign_ends_at: null,
-			now: {campaign_percent: null, sale_usd_cents: 600},
+			now: {campaign_percent: null, sale_try_minor: 600},
 		});
 		expect(removed.prices.find((price) => price.sku === `cosmetic:${item.id}`)?.campaign_percent).toBe(20);
 	});
@@ -314,7 +250,7 @@ describe('shop admin', () => {
 		]);
 	});
 
-	it('shows the Payriff budget health from its counters', async () => {
+	it('shows the payment provider budget health from its counters', async () => {
 		const hour = Math.floor(Date.now() / 3_600_000);
 		await getKVClient().set(`shop:busy:${hour}`, '2');
 		await getKVClient().set(`shop:busy:${hour - 1}`, '3');
@@ -325,19 +261,19 @@ describe('shop admin', () => {
 		expect((await view()).health).toEqual({
 			busy_refusals_last_hour: 5,
 			reconcile_lag_seconds: 960,
-			payriff_backing_off: true,
+			provider_backing_off: true,
 		});
 	});
 
 	describe('Visionary', () => {
 		it('applies a campaign to Visionary', async () => {
-			await putPrices([{sku: 'visionary', base_usd_cents: 29_900}]);
+			await putPrices([{sku: 'visionary', base_try_minor: 29_900}]);
 
 			const applied = await campaign({skus: ['visionary'], percent: 20, ends_at: null});
 
 			expect(applied.prices.find((price) => price.sku === 'visionary')).toMatchObject({
 				campaign_percent: 20,
-				now: {campaign_percent: 20, sale_usd_cents: 23_920, premium_usd_cents: null},
+				now: {campaign_percent: 20, sale_try_minor: 23_920, premium_try_minor: null},
 			});
 		});
 
@@ -345,7 +281,7 @@ describe('shop admin', () => {
 			const reward = await createShopItem(harness, admin, 'owned', 'Reward');
 			const priced = await createShopItem(harness, admin, 'owned', 'Priced');
 			const premium = await createShopItem(harness, admin, 'premium', 'Premium');
-			await putPrices([{sku: `cosmetic:${priced.id}`, base_usd_cents: 500}]);
+			await putPrices([{sku: `cosmetic:${priced.id}`, base_try_minor: 500}]);
 
 			await patchSettings({visionary_reward_item_ids: [priced.id]}, 400);
 			await patchSettings({visionary_reward_item_ids: [premium.id]}, 400);
@@ -361,7 +297,7 @@ describe('shop admin', () => {
 			const reward = await createShopItem(harness, admin, 'owned', 'Reward');
 			await patchSettings({visionary_reward_item_ids: [reward.id]});
 
-			await putPrices([{sku: `cosmetic:${reward.id}`, base_usd_cents: 500}], 400);
+			await putPrices([{sku: `cosmetic:${reward.id}`, base_try_minor: 500}], 400);
 		});
 
 		it('records old and new Visionary settings', async () => {

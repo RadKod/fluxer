@@ -10,10 +10,11 @@ const CALLBACK = 'https://api.micup.test/v1/payriff/callback/1/abc';
 describe('PayriffClient', () => {
 	const client = new PayriffClient(CONFIG);
 
-	it('creates an AZN purchase in English with the order callback and the secret as Authorization', async () => {
+	it('creates a purchase in the order currency, in English with the order callback and the secret as Authorization', async () => {
 		const result = await client.createOrder({
 			amountMinor: 476,
-			description: 'Yitik Melek — $2.80',
+			currency: 'TRY',
+			description: 'Yitik Melek — ₺4,76',
 			callbackUrl: CALLBACK,
 		});
 
@@ -23,8 +24,8 @@ describe('PayriffClient', () => {
 		expect(call!.body).toEqual({
 			amount: 4.76,
 			language: 'EN',
-			currency: 'AZN',
-			description: 'Yitik Melek — $2.80',
+			currency: 'TRY',
+			description: 'Yitik Melek — ₺4,76',
 			callbackUrl: CALLBACK,
 			cardSave: false,
 			operation: 'PURCHASE',
@@ -36,17 +37,17 @@ describe('PayriffClient', () => {
 		});
 	});
 
-	it('sends whole qepik amounts as two-decimal manat and cuts the description at 200 characters', async () => {
-		await client.createOrder({amountMinor: 10, description: 'x'.repeat(250), callbackUrl: CALLBACK});
-		await client.createOrder({amountMinor: 123_456, description: 'y', callbackUrl: CALLBACK});
+	it('sends minor units as a two-decimal amount and cuts the description at 200 characters', async () => {
+		await client.createOrder({amountMinor: 10, currency: 'TRY', description: 'x'.repeat(250), callbackUrl: CALLBACK});
+		await client.createOrder({amountMinor: 123_456, currency: 'TRY', description: 'y', callbackUrl: CALLBACK});
 
 		const [small, large] = fakePayriffServer.calls();
 		expect(small!.body).toMatchObject({amount: 0.1, description: 'x'.repeat(200)});
 		expect(large!.body).toMatchObject({amount: 1234.56});
 	});
 
-	it('reads status, operation, amount in qepik and currency', async () => {
-		fakePayriffServer.setAmount('payriff-order-9', 4.76, 'AZN');
+	it('reads status, operation, amount in minor units and currency', async () => {
+		fakePayriffServer.setAmount('payriff-order-9', 4.76, 'TRY');
 		fakePayriffServer.setStatus('payriff-order-9', 'APPROVED');
 
 		expect(await client.getOrder('payriff-order-9')).toEqual({
@@ -54,7 +55,7 @@ describe('PayriffClient', () => {
 			paymentStatus: 'APPROVED',
 			operationType: 'PURCHASE',
 			amountMinor: 476,
-			currency: 'AZN',
+			currency: 'TRY',
 		});
 		expect(fakePayriffServer.calls()[0]).toMatchObject({operation: 'get', providerOrderId: 'payriff-order-9'});
 		expect(fakePayriffServer.calls()[0]!.authorization).toBe(fakePayriffServer.secretKey);
@@ -78,7 +79,9 @@ describe('PayriffClient', () => {
 		const outcomes: Array<string> = [];
 		for (const mode of ['rate_limit', 'server_error', 'bad_code', 'timeout'] as const) {
 			fakePayriffServer.failNext('create', mode);
-			outcomes.push((await quick.createOrder({amountMinor: 476, description: 'd', callbackUrl: CALLBACK})).kind);
+			outcomes.push(
+				(await quick.createOrder({amountMinor: 476, currency: 'TRY', description: 'd', callbackUrl: CALLBACK})).kind,
+			);
 		}
 
 		expect(outcomes).toEqual(['rate_limited', 'failed', 'failed', 'failed']);

@@ -22,9 +22,6 @@ const SETTINGS: ShopSettingsResponse = {
 	premium_sales_open: false,
 	item_sales_open: true,
 	premium_discount_percent: 30,
-	usd_to_azn_rate: '1.7000',
-	usd_to_azn_rate_micro: 1700000,
-	try_to_azn_rate_micro: null,
 };
 const state = vi.hoisted(() => ({
 	settings: null as ShopSettingsResponse | null,
@@ -146,11 +143,11 @@ const {ShopBundleDetailModal} = await import('@app/features/shop/components/moda
 const {ShopBundleBuyButton, ShopBundleCard} = await import('@app/features/shop/components/ShopBundleCard');
 
 const PRICE: ShopPriceResponse = {
-	base_usd_cents: 900,
+	base_try_minor: 900,
 	campaign_percent: null,
 	campaign_ends_at: null,
-	sale_usd_cents: 900,
-	premium_usd_cents: 630,
+	sale_try_minor: 900,
+	premium_try_minor: 630,
 };
 
 function item(id: string, type: CosmeticItemResponse['type']): CosmeticItemResponse {
@@ -210,7 +207,7 @@ describe('ShopBundleCard', () => {
 		render();
 
 		expect(container.querySelector('[data-flx="shop.shop-bundle-card.name"]')?.textContent).toBe('2-piece Gece seti');
-		expect(part('final')).toBe('15.30 AZN');
+		expect(part('final')).toBe('₺9');
 		expect(part('premium')).toBeNull();
 		// Every item of the bundle at once on the card's art.
 		expect(stages.at(-1)).toMatchObject({
@@ -236,9 +233,9 @@ describe('ShopBundleCard', () => {
 		state.premiumDiscount = true;
 		render();
 
-		expect(part('final')).toBe('10.71 AZN');
-		expect(part('was')).toBe('15.30 AZN');
-		expect(action()?.textContent).toBe('Buy for 10.71 AZN');
+		expect(part('final')).toBe('₺6.30');
+		expect(part('was')).toBe('₺9');
+		expect(action()?.textContent).toBe('Buy for ₺6.30');
 		expect(action()?.getAttribute('aria-label')).toBe('Buy Gece seti');
 		expect(action()).not.toBeNull();
 	});
@@ -248,7 +245,7 @@ describe('ShopBundleCard', () => {
 		kind: 'item',
 		sku: `cosmetic:${id}`,
 		item: item(id, 'avatar_decoration'),
-		price: {...PRICE, base_usd_cents: cents, sale_usd_cents: cents},
+		price: {...PRICE, base_try_minor: cents, sale_try_minor: cents},
 	});
 
 	it('shows what the bundle saves against its items bought one by one, beside the price only', () => {
@@ -268,27 +265,27 @@ describe('ShopBundleCard', () => {
 		const end = Date.now() + 60_000;
 		const sale = (cents: number) => ({
 			...PRICE,
-			premium_usd_cents: null,
-			base_usd_cents: cents,
-			sale_usd_cents: cents / 2,
+			premium_try_minor: null,
+			base_try_minor: cents,
+			sale_try_minor: cents / 2,
 			campaign_percent: 50,
 			campaign_ends_at: new Date(end).toISOString(),
 		});
 		const items = ['1', '2'].map((id) => ({
 			...priced(id, 600),
-			price: {...PRICE, base_usd_cents: 600, sale_usd_cents: 600},
+			price: {...PRICE, base_try_minor: 600, sale_try_minor: 600},
 		}));
 		state.itemEntries = items;
 		const onSale = {...ENTRY, price: sale(1000), bundle: {...ENTRY.bundle, price: sale(1000)}};
 		runInAction(() => clock.set(end - 1000));
 		act(() => root.render(createElement(ShopBundleCard, {entry: onSale})));
-		expect(part('final')).toBe('8.50 AZN');
-		expect(action()?.textContent).toBe('Buy for 8.50 AZN');
+		expect(part('final')).toBe('₺5');
+		expect(action()?.textContent).toBe('Buy for ₺5');
 		expect(savings()).toBe('-58%');
 
 		act(() => runInAction(() => clock.set(end + 1000)));
-		expect(part('final')).toBe('17.00 AZN');
-		expect(action()?.textContent).toBe('Buy for 17.00 AZN');
+		expect(part('final')).toBe('₺10');
+		expect(action()?.textContent).toBe('Buy for ₺10');
 		expect(savings()).toBe('-16%');
 		runInAction(() => clock.set(Date.now()));
 	});

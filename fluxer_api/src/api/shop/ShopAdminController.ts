@@ -27,9 +27,6 @@ const SETTING_KEYS = [
 	'premium_sales_open',
 	'item_sales_open',
 	'premium_discount_percent',
-	'usd_to_azn_rate_micro',
-	'try_to_azn_rate_override_micro',
-	'try_rate_override_at',
 	'visionary_on_sale',
 	'visionary_reward_item_ids',
 ] as const satisfies ReadonlyArray<keyof ShopConfig>;
@@ -71,7 +68,7 @@ export function ShopAdminController(app: HonoApp) {
 			operationId: 'get_admin_shop',
 			summary: 'Get the shop',
 			description:
-				'Returns the shop settings, every price row with what the shop shows for it now, and the Payriff budget health. Requires SHOP_MANAGE permission.',
+				'Returns the shop settings, every price row with what the shop shows for it now, and the payment provider budget health. Requires SHOP_MANAGE permission.',
 			responseSchema: ShopAdminResponse,
 			statusCode: 200,
 			security: 'adminApiKey',
@@ -97,7 +94,7 @@ export function ShopAdminController(app: HonoApp) {
 			operationId: 'update_admin_shop_settings',
 			summary: 'Update shop settings',
 			description:
-				'Opens or closes premium and item sales, sets the premium member discount, the US dollar to manat rate and the Visionary switches; an omitted field stays as it is. Requires SHOP_MANAGE permission.',
+				'Opens or closes premium and item sales, sets the premium member discount and the Visionary switches; an omitted field stays as it is. Requires SHOP_MANAGE permission.',
 			responseSchema: ShopAdminSettingsResponse,
 			statusCode: 200,
 			security: 'adminApiKey',
@@ -113,31 +110,6 @@ export function ShopAdminController(app: HonoApp) {
 			return ctx.json(service.adminSettings(after));
 		},
 	);
-	app.post(
-		'/admin/shop/settings/refresh-try-rate',
-		RateLimitMiddleware(ShopRateLimitConfigs.ADMIN_SHOP_MANAGE),
-		requireAdminACL(AdminACLs.SHOP_MANAGE),
-		OpenAPI({
-			operationId: 'refresh_admin_shop_try_rate',
-			summary: 'Refresh the shop TRY display rate',
-			description: 'Queues a CBAR bulletin refresh. Requires SHOP_MANAGE permission. Payment amounts remain in AZN.',
-			responseSchema: null,
-			statusCode: 204,
-			security: 'adminApiKey',
-			tags: 'Admin',
-		}),
-		async (ctx) => {
-			await ctx
-				.get('workerService')
-				.addJob(
-					'syncShopTryRate',
-					{},
-					{jobKey: `syncShopTryRate_manual_${Math.floor(Date.now() / 60_000)}`, requireLedger: true},
-				);
-			await recordAdminWrite(ctx, {targetType: 'shop', targetId: 0n, action: 'refresh_shop_try_rate'});
-			return ctx.body(null, 204);
-		},
-	);
 	app.put(
 		'/admin/shop/prices',
 		RateLimitMiddleware(ShopRateLimitConfigs.ADMIN_SHOP_MANAGE),
@@ -147,7 +119,7 @@ export function ShopAdminController(app: HonoApp) {
 			operationId: 'set_admin_shop_prices',
 			summary: 'Set shop prices',
 			description:
-				'Sets the list price of up to 200 products in US cents; null takes a product out of the shop. Campaigns on the products stay. Requires SHOP_MANAGE permission.',
+				'Sets the list price of up to 200 products in Turkish lira (kuruş); null takes a product out of the shop. Campaigns on the products stay. Requires SHOP_MANAGE permission.',
 			responseSchema: ShopAdminResponse,
 			statusCode: 200,
 			security: 'adminApiKey',

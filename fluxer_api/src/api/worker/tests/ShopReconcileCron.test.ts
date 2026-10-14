@@ -8,13 +8,6 @@ import type {WorkerService} from '@app/api/worker/WorkerService';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 
 describe('shop order reconcile cron', () => {
-	it('registers CBAR every six hours with the existing cron ledger', () => {
-		const scheduler = new CronScheduler({addJob: vi.fn()} as unknown as WorkerService, new NoopLogger());
-		const upsert = vi.spyOn(scheduler, 'upsert');
-		registerCronJobs(scheduler, JOBS_STREAM_MAX_AGE_MS);
-		expect(upsert).toHaveBeenCalledWith('syncShopTryRate', 'syncShopTryRate', {}, '0 0 */6 * * *', {ledger: true});
-	});
-
 	afterEach(() => {
 		vi.useRealTimers();
 	});

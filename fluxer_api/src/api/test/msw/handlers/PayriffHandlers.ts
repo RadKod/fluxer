@@ -39,7 +39,7 @@ class MswPayriffServer {
 		this.orderCounter = 1;
 	}
 
-	// Also seeds an order that only exists in the database (amount 0 AZN until setAmount).
+	// Also seeds an order that only exists in the database (amount 0 TRY, the shop currency, until setAmount).
 	setStatus(providerOrderId: string, paymentStatus: string): void {
 		this.order(providerOrderId).paymentStatus = paymentStatus;
 	}
@@ -123,7 +123,7 @@ class MswPayriffServer {
 	private order(providerOrderId: string): FakePayriffOrder {
 		let order = this.orders.get(providerOrderId);
 		if (!order) {
-			order = {amount: 0, currencyType: 'AZN', paymentStatus: 'CREATED'};
+			order = {amount: 0, currencyType: 'TRY', paymentStatus: 'CREATED'};
 			this.orders.set(providerOrderId, order);
 		}
 		return order;

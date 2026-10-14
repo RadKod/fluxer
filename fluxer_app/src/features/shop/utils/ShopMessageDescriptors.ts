@@ -3,8 +3,8 @@
 import {msg} from '@lingui/core/macro';
 
 // Every new shop and Plus sales text, once. Shop components import from here and never
-// write the same text a second time. The labels ("Owned", "Equip", "Equipped", "Included in Plus") and the
-// AZN note keep their Turkish wording exactly.
+// write the same text a second time. The labels ("Owned", "Equip", "Equipped", "Included in Plus") keep their
+// Turkish wording exactly.
 
 export const SHOP_DESCRIPTOR = msg({
 	message: 'Shop',
@@ -63,7 +63,7 @@ export const NOT_ON_SALE_DESCRIPTOR = msg({
 });
 export const PREMIUM_PRICE_DESCRIPTOR = msg({
 	message: 'Plus: {price}',
-	comment: 'Price line with what a Plus member pays for a shop item. {price} is a formatted price in TL or AZN.',
+	comment: 'Price line with what a Plus member pays for a shop item. {price} is a price in Turkish lira.',
 });
 export const WAS_PRICE_DESCRIPTOR = msg({
 	message: 'Was {price}',
@@ -169,14 +169,9 @@ export const FINISH_PAYING_IN_BROWSER_DESCRIPTOR = msg({
 	comment: 'Title in the buy dialog while it waits for the payment.',
 });
 export const PAYMENT_PAGE_OPENED_DESCRIPTOR = msg({
-	message:
-		'The {paymentProviderName} payment page opened in a new tab. This window updates by itself once the payment is confirmed.',
-	comment: 'Body of the buy dialog while it waits for the payment. {paymentProviderName} is the payment provider.',
-});
-export const PAYMENT_PAGE_LANGUAGE_DESCRIPTOR = msg({
-	message: 'The {paymentProviderName} page is in English and shows the amount in AZN: {amount}.',
-	comment:
-		'Body of the buy dialog while it waits for the payment. {amount} is the charge in Azerbaijani manat, such as 4.76 AZN.',
+	message: 'The payment page opened in a new tab. This window updates by itself once the payment is confirmed.',
+	// sanalyer: no provider name; which payment provider (if any) runs is a server setting.
+	comment: 'Body of the buy dialog while it waits for the payment.',
 });
 export const WAITING_FOR_PAYMENT_DESCRIPTOR = msg({
 	message: 'Waiting for payment…',
@@ -330,7 +325,7 @@ export const VISIONARY_SOLD_OUT_DESCRIPTOR = msg({
 });
 export const LIFETIME_MEANS_DESCRIPTOR = msg({
 	message: 'Lifetime means for as long as sanalyer runs.',
-	comment: 'Note in the Visionary buy dialog, under the currency note.',
+	comment: 'Note in the Visionary buy dialog, under the price.',
 });
 export const REMAINING_TIME_NOT_REFUNDED_DESCRIPTOR = msg({
 	message: 'Your remaining {premiumProductName} time becomes part of the lifetime plan. It is not refunded.',
@@ -380,7 +375,7 @@ export const BUNDLE_CARD_TITLE_DESCRIPTOR = msg({
 });
 export const BUY_FOR_PRICE_DESCRIPTOR = msg({
 	message: 'Buy for {price}',
-	comment: 'Button on a shop card that opens the buy dialog. {price} is the price the user pays, in TL or AZN.',
+	comment: 'Button on a shop card that opens the buy dialog. {price} is the price the user pays, in Turkish lira.',
 });
 export const BUY_COLLECTION_DESCRIPTOR = msg({
 	message: 'Buy the collection',

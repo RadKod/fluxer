@@ -16,7 +16,7 @@ const clock = observable.box(Date.now());
 const catalog = vi.hoisted(() => ({
 	itemEntries: [] as Array<ShopItemEntry>,
 	packageEntries: [] as Array<ShopPackageEntry>,
-	settings: {premium_discount_percent: 0, usd_to_azn_rate_micro: 1700000},
+	settings: {premium_discount_percent: 0},
 	// The catalog's shared clock: it moves when a shown campaign ends.
 	now: () => clock.get(),
 }));
@@ -42,11 +42,11 @@ const {PremiumCompareTable} = await import('@app/features/premium/components/Pre
 
 function price(base: number, sale?: number): ShopPriceResponse {
 	return {
-		base_usd_cents: base,
+		base_try_minor: base,
 		campaign_percent: sale === undefined ? null : 20,
 		campaign_ends_at: null,
-		sale_usd_cents: sale ?? base,
-		premium_usd_cents: null,
+		sale_try_minor: sale ?? base,
+		premium_try_minor: null,
 	};
 }
 
@@ -75,7 +75,7 @@ describe('PremiumCompareTable', () => {
 		(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
 		catalog.itemEntries = [premiumItem('1')];
 		catalog.packageEntries = [pack(1, price(499)), pack(3, price(1299)), pack(12, price(4999, 3999))];
-		catalog.settings = {premium_discount_percent: 30, usd_to_azn_rate_micro: 1700000};
+		catalog.settings = {premium_discount_percent: 30};
 		container = document.createElement('div');
 		document.body.append(container);
 		root = createRoot(container);
@@ -112,11 +112,11 @@ describe('PremiumCompareTable', () => {
 		expect(row('Custom username tag')).toBeUndefined();
 	});
 
-	it('heads the columns with Free at 0.00 AZN and premium from its lowest price, recommended', () => {
+	it('heads the columns with Free at ₺0 and premium from its lowest price, recommended', () => {
 		render();
 
 		const heads = [...container.querySelectorAll('thead th')].map((th) => th.textContent);
-		expect(heads).toEqual(['Pricing and features', 'Free0.00 AZN', 'sanalyer PlusFrom 8.48 AZN']);
+		expect(heads).toEqual(['Pricing and features', 'Free₺0', 'sanalyer PlusFrom ₺4.99']);
 		expect(container.querySelector('[data-flx="premium.premium-compare-table.ribbon"]')?.textContent).toBe(
 			'Recommended',
 		);
@@ -124,7 +124,7 @@ describe('PremiumCompareTable', () => {
 		// A campaign that puts the yearly package under the monthly one moves the start price.
 		catalog.packageEntries = [pack(1, price(499)), pack(12, price(4999, 399))];
 		render();
-		expect(container.querySelector('thead th:last-child')?.textContent).toBe('sanalyer PlusFrom 6.78 AZN');
+		expect(container.querySelector('thead th:last-child')?.textContent).toBe('sanalyer PlusFrom ₺3.99');
 	});
 
 	it('drops an ended campaign from the start price, also while the page is open, on the catalog clock alone', () => {
@@ -133,11 +133,11 @@ describe('PremiumCompareTable', () => {
 		const endsAt = new Date(Date.now() + DAY_MS).toISOString();
 		catalog.packageEntries = [pack(1, price(499)), pack(12, {...price(4999, 399), campaign_ends_at: endsAt})];
 		render();
-		expect(container.querySelector('thead th:last-child')?.textContent).toBe('sanalyer PlusFrom 6.78 AZN');
+		expect(container.querySelector('thead th:last-child')?.textContent).toBe('sanalyer PlusFrom ₺3.99');
 		expect(vi.getTimerCount()).toBe(0);
 
 		act(() => runInAction(() => clock.set(Date.now() + DAY_MS + 1)));
-		expect(container.querySelector('thead th:last-child')?.textContent).toBe('sanalyer PlusFrom 8.48 AZN');
+		expect(container.querySelector('thead th:last-child')?.textContent).toBe('sanalyer PlusFrom ₺4.99');
 	});
 
 	it('leaves the prices out when nothing is on sale', () => {
@@ -172,7 +172,7 @@ describe('PremiumCompareTable', () => {
 
 	it('follows the catalog for included decorations and the shop discount', () => {
 		catalog.itemEntries = [];
-		catalog.settings = {premium_discount_percent: 0, usd_to_azn_rate_micro: 1700000};
+		catalog.settings = {premium_discount_percent: 0};
 		render();
 
 		expect(row('Plus decorations')).toBeUndefined();

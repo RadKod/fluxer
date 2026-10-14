@@ -24,7 +24,7 @@ import type {PremiumLedgerService} from '@app/api/premium/ledger/PremiumLedgerSe
 import type {VisionaryService} from '@app/api/premium/visionary/VisionaryService';
 import type {ShopCatalogService} from '@app/api/shop/ShopCatalogService';
 import {type ShopOrderRepository, shopOrderCheckShard, shopOrderCheckSlot} from '@app/api/shop/ShopOrderRepository';
-import {describeShopOrder, formatRateMicro, parseShopSku} from '@app/api/shop/ShopPricing';
+import {describeShopOrder, parseShopSku, SHOP_CURRENCY} from '@app/api/shop/ShopPricing';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
@@ -87,17 +87,11 @@ export function mapShopOrder(row: ShopOrderRow): ShopOrderResponse {
 		sku: row.sku,
 		status: row.status,
 		failure_reason: row.failure_reason ?? null,
-		base_usd_cents: row.base_usd_cents,
+		base_try_minor: row.base_try_minor,
 		campaign_percent: row.campaign_percent,
 		premium_percent: row.premium_percent,
-		final_usd_cents: row.final_usd_cents,
-		amount_azn_minor: row.amount_minor,
-		display_currency: row.display_currency ?? null,
-		display_amount_minor: row.display_amount_minor == null ? null : Number(row.display_amount_minor),
-		display_rate_micro: row.display_rate_micro ?? null,
-		usd_to_azn_rate: formatRateMicro(row.rate_micro),
-		usd_to_azn_rate_micro: row.rate_micro,
-		currency: 'AZN',
+		final_try_minor: row.amount_minor,
+		currency: SHOP_CURRENCY,
 		payment_url: row.status === 'pending' ? (row.payment_url ?? null) : null,
 		created_at: row.created_at.toISOString(),
 		...(row.item_ids ? {item_ids: row.item_ids.map(String)} : {}),
@@ -152,7 +146,6 @@ export class ShopOrderService {
 		try {
 			// One binding quote from the tables, under the user lock, before deciding whether to reuse.
 			const prepared = await deps.catalogService.prepareCheckout(user, sku, 'direct');
-			const display = prepared.display!;
 			const now = Date.now();
 			const recent = await deps.orderRepository.listForUser(user.id, RECENT_ORDERS);
 			const open = (await Promise.all(recent.map((entry) => deps.orderRepository.find(entry.order_id)))).filter(
@@ -162,11 +155,8 @@ export class ShopOrderService {
 				(row) =>
 					row.sku === sku &&
 					row.payment_url &&
-					row.amount_minor === prepared.price.amountAznMinor &&
-					row.final_usd_cents === prepared.price.finalUsdCents &&
-					row.display_currency === display.currency &&
-					row.display_amount_minor === BigInt(display.amountMinor) &&
-					row.display_rate_micro === display.rateMicro &&
+					row.amount_minor === prepared.price.finalTryMinor &&
+					row.base_try_minor === prepared.price.baseTryMinor &&
 					sameItems(row.item_ids, prepared.bundle?.itemIds),
 			);
 			if (reusable) return reusable;
@@ -189,16 +179,12 @@ export class ShopOrderService {
 				// Frozen from the bundle row read just above: delivery gives this list whatever the bundle becomes.
 				item_ids: prepared.bundle?.itemIds ?? null,
 				premium_months: prepared.months,
-				base_usd_cents: price.baseUsdCents,
+				base_try_minor: price.baseTryMinor,
 				campaign_percent: price.campaignPercent,
 				premium_percent: price.premiumPercent,
-				final_usd_cents: price.finalUsdCents,
-				rate_micro: price.rateMicro,
-				amount_minor: price.amountAznMinor,
-				display_currency: display.currency,
-				display_amount_minor: BigInt(display.amountMinor),
-				display_rate_micro: display.rateMicro,
-				currency: 'AZN',
+				// sanalyer: the shop sells in Turkish lira; this is the amount the provider charges.
+				amount_minor: price.finalTryMinor,
+				currency: SHOP_CURRENCY,
 				status: 'pending',
 				failure_reason: null,
 				provider: 'payriff',
@@ -223,6 +209,7 @@ export class ShopOrderService {
 			}
 			const opened = await deps.payriffClient.createOrder({
 				amountMinor: row.amount_minor,
+				currency: row.currency,
 				description: describeShopOrder(
 					row.order_id,
 					{
@@ -323,7 +310,7 @@ export class ShopOrderService {
 			const providerStatus = answer.paymentStatus;
 			const unpaid = (current: ShopOrderRow) => current.status === 'pending' || current.status === 'expired';
 			if (PAYRIFF_PAID_STATUSES.has(providerStatus) && answer.operationType === 'PURCHASE') {
-				if (answer.amountMinor === order.amount_minor && answer.currency === 'AZN') {
+				if (answer.amountMinor === order.amount_minor && answer.currency === order.currency) {
 					// A late payment on an expired order has no check row left: it gets one, so a delivery the callback
 					// job gives up on is still made by reconcile. Like countCheck: the row first, then the order; a lost
 					// race leaves a row the job that finds it drops. The next round delivers it (or sees who did).

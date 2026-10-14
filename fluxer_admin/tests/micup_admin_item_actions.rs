@@ -21,7 +21,7 @@ use tower::ServiceExt;
 const SECRET_KEY: &str = "micup-admin-item-actions-test-secret";
 const END_PREMIUM_WARNING: &str = "Ends all Plus time now: bought, from a gift code and from the \
                                    free trial. The trial cannot be taken again. Use this after \
-                                   refunding a Plus payment in Payriff.";
+                                   refunding a Plus payment with the payment provider.";
 
 #[derive(Clone, Debug)]
 struct Call {

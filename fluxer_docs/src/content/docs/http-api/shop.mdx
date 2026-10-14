@@ -1,17 +1,17 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Shop
-description: The shop catalog, bundles, price quotes, Payriff orders, code previews, the Payriff callback, and Visionary.
+description: The shop catalog, bundles, price quotes, orders, code previews, the payment callback, and Visionary.
 ---
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-The shop sells four kinds of product through the Payriff payment page, charged in Azerbaijani manat (AZN): owned [cosmetic items](/http-api/cosmetics/), [bundles](#shop-bundle-object) of such items, premium packages of 1, 3 or 12 months, and [Visionary](#visionary). Prices are set in US cents and converted at a rate the admin sets. The server computes every amount, and a client sends only the product. The [Admin API](/admin-api/shop/) sets the prices, campaigns and sales switches.
+The shop sells four kinds of product, priced and charged in Turkish lira (TRY): owned [cosmetic items](/http-api/cosmetics/), [bundles](#shop-bundle-object) of such items, premium packages of 1, 3 or 12 months, and [Visionary](#visionary). Every amount is in kuruş, so ₺1 is `100`, and no amount is ever converted to another currency. The server computes every amount, and a client sends only the product. The [Admin API](/admin-api/shop/) sets the prices, campaigns and sales switches.
 
-Every route on this page is user-only, except [Get code preview](#get-code-preview) and the two Payriff callback routes, which take no credential. The catalog, quote and order routes answer only on a self-hosted instance in the `mirror` [premium mode](/admin-api/instance/#premium-modes). Any other instance returns 403 `FEATURE_NOT_AVAILABLE_SELF_HOSTED`.
+Every route on this page is user-only, except [Get code preview](#get-code-preview) and the two payment callback routes, which take no credential. The catalog, quote and order routes answer only on a self-hosted instance in the `mirror` [premium mode](/admin-api/instance/#premium-modes). Any other instance returns 403 `FEATURE_NOT_AVAILABLE_SELF_HOSTED`.
 
 :::note[Sales start closed]
-Both sales switches start off. While the instance has no Payriff configuration, the shop reports both sales closed whatever the switches say.
+Both sales switches start off. The shop takes money only while the deployment has a payment provider configured. The one integration today is Payriff, which is off unless the deployment enables it. Without a provider the shop reports both sales closed whatever the switches say: the catalog still lists the products, the quote and order routes return 403 `SHOP_SALES_CLOSED`, and items and premium time are given through [gift codes](/http-api/gifts/) and admin grants.
 :::
 
 ## Shop products
@@ -33,9 +33,8 @@ The server computes a price in one place, in whole numbers:
 
 1. The campaign discount comes off the list price while the campaign has not ended by the server clock.
 2. The premium member discount comes off that, for cosmetic items and bundles only, and only for an account with paid premium. An account in its free trial gets no member discount. Lifetime premium counts as paid.
-3. The US dollar price is converted to qəpik, hundredths of a manat, at the admin rate.
 
-Each step rounds half up. A list price of 500 cents with a 20% campaign and a 30% member discount comes to 400 cents, then 280 cents ($2.80), which is 476 qəpik (4.76 AZN) at a rate of 1.7000. A product whose final price would fall below 1 cent or below 0.10 AZN is not sold.
+Each step rounds half up, and the result is the amount charged. A list price of ₺500 (`50000`) with a 20% campaign and a 30% member discount comes to ₺400 (`40000`), then ₺280 (`28000`). A product whose final price would fall below ₺1 (`100`) is not sold.
 
 Premium packages and Visionary take campaigns, and never take the member discount.
 
@@ -45,11 +44,11 @@ Each API process keeps the catalog for up to 60 seconds, and the quote reads a p
 
 | Field | Type | Description |
 | --- | --- | --- |
-| base_usd_cents | integer | The list price in US cents |
+| base_try_minor | integer | The list price in kuruş |
 | campaign_percent | ?integer | The campaign discount, null without a running campaign |
 | campaign_ends_at | ?ISO8601 timestamp | When the campaign ends, null without a campaign or without an end |
-| sale_usd_cents | integer | The price after the campaign, equal to `base_usd_cents` without one |
-| premium_usd_cents<sup>1</sup> | ?integer | What an account with paid premium pays for an item or a bundle |
+| sale_try_minor | integer | The price after the campaign in kuruş, equal to `base_try_minor` without one |
+| premium_try_minor<sup>1</sup> | ?integer | What an account with paid premium pays for an item or a bundle, in kuruş |
 
 <sup>1</sup> Null while the member discount is 0, and always null for premium packages and Visionary
 
@@ -60,17 +59,8 @@ Each API process keeps the catalog for up to 60 seconds, and the quote reads a p
 | premium_sales_open | boolean | Whether premium packages and Visionary are on sale |
 | item_sales_open | boolean | Whether cosmetic items and bundles are on sale |
 | premium_discount_percent | integer | The member discount on items and bundles for accounts with paid premium (0-95) |
-| usd_to_azn_rate | string | Manat per US dollar with four decimal places, such as `1.7000`, for display |
-| usd_to_azn_rate_micro? | ?integer | Exact AZN per USD in millionths; use this for catalog AZN display instead of the rounded legacy string |
-| try_to_azn_rate_micro? | ?integer | Effective AZN per TRY in millionths; null means show AZN alone |
-| try_rate_date? | ?date | Automatic CBAR bulletin date in `YYYY-MM-DD` format; null before the first accepted bulletin |
-| try_rate_expires_at? | ?ISO8601 timestamp | When an automatic display rate becomes stale; null for a manual override or no effective rate |
 
-Both sales fields read false while Payriff is not configured.
-
-Clients display the informational TL price and the payable AZN total. Convert the selected catalog US-cent price to qepik using the exact integer rate and the server's half-up rule, then divide that AZN amount by the effective TRY rate for the TL estimate. Quotes and orders provide the authoritative `amount_azn_minor`; a TRY rate must never be used to create or price an order. Existing dollar fields remain for older clients.
-
-The effective TRY rate uses the admin override when set. Otherwise it uses the automatic CBAR rate only while the bulletin is at most 10 calendar days old in Asia/Baku. Clients stop displaying that rate at `try_rate_expires_at`, even if the page stays open or a catalog refresh fails. No rate or a stale automatic bulletin gives null without closing sales. CBAR is refreshed by a worker; catalog requests do not contact CBAR. Bank conversion rates and foreign transaction fees can make the card statement's TL total differ from this estimate.
+Both sales fields read false while no payment provider is configured.
 
 ## Shop catalog item object
 
@@ -110,7 +100,7 @@ The effective TRY rate uses the admin override when set. Otherwise it uses the a
 | price | [shop price](#shop-price-object) object | The price, with any running campaign |
 | total | integer | The number of Visionary numbers the admin set |
 | remaining<sup>1</sup> | integer | The numbers with no owner and no live hold |
-| visible | boolean | Whether Visionary is on sale: premium sales open, Visionary switched on, and Payriff configured |
+| visible | boolean | Whether Visionary is on sale: premium sales open, Visionary switched on, and a payment provider configured |
 
 <sup>1</sup> For display only. Every API process reads one count shared for 60 seconds and keeps its catalog for up to 60 seconds more, so the value can be up to 2 minutes old. [Create shop order](#create-shop-order) decides whether a number is free
 
@@ -118,13 +108,13 @@ The effective TRY rate uses the admin override when set. Otherwise it uses the a
 
 | Field | Type | Description |
 | --- | --- | --- |
-| premium_discount | boolean | Whether the account pays `premium_usd_cents` for items, which needs paid premium rather than a trial |
+| premium_discount | boolean | Whether the account pays `premium_try_minor` for items, which needs paid premium rather than a trial |
 
 ## Shop catalog object
 
 | Field | Type | Description |
 | --- | --- | --- |
-| settings | [shop settings](#shop-settings-object) object | The sales switches, the member discount and the rate |
+| settings | [shop settings](#shop-settings-object) object | The sales switches and the member discount |
 | items | array[[shop catalog item](#shop-catalog-item-object) object] | The priced owned items and the premium items on sale, in catalog order |
 | packages | array[[shop package](#shop-package-object) object] | The priced premium packages, in 1, 3 and 12 month order |
 | visionary | ?[shop Visionary](#shop-visionary-object) object | Visionary, null until the admin sets its price |
@@ -139,35 +129,32 @@ Only `viewer` differs between accounts. The rest is the same for every account.
 | Field | Type | Description |
 | --- | --- | --- |
 | sku | string | The [product](#shop-products) |
-| base_usd_cents | integer | The list price in US cents |
+| base_try_minor | integer | The list price in kuruş |
 | campaign_percent | integer | The campaign discount applied, 0 without one |
 | premium_percent | integer | The member discount applied, 0 when it does not apply |
-| final_usd_cents | integer | The US dollar price after both discounts |
-| amount_azn_minor | integer | The amount Payriff would charge, in qəpik |
-| usd_to_azn_rate | string | The rate used, with four decimal places |
-| usd_to_azn_rate_micro? | ?integer | Exact rate used, in millionths; use it for quote subtotal display rather than a cached catalog rate |
-| currency | string | Always `AZN` |
+| final_try_minor | integer | The price after both discounts, in kuruş, which an order would charge |
+| currency | string | Always `TRY` |
 
 ## Shop order statuses
 
 | Value | Description |
 | --- | --- |
 | pending | The order is open and waiting for payment |
-| paid | Payriff confirmed the payment, and delivery has not finished |
+| paid | The payment provider confirmed the payment, and delivery has not finished |
 | granted | The item, the bundle's items, the premium time or the Visionary number was delivered |
 | failed | Nothing is delivered, and `failure_reason` says why |
-| expired | The order was still unpaid at its last check, and a payment Payriff confirms later still completes it |
+| expired | The order was still unpaid at its last check, and a payment the provider confirms later still completes it |
 
 ## Shop order failure reasons
 
 | Value | Description |
 | --- | --- |
-| amount_mismatch | Payriff reported a payment whose amount or currency differs from the order |
+| amount_mismatch | The payment provider reported a payment whose amount or currency differs from the order |
 | account_deleted | The account was deleted before delivery |
 | item_deleted | The item of a cosmetic order was deleted before delivery |
-| provider_error | Payriff did not open the order |
+| provider_error | The payment provider did not open the order |
 
-Fluxer sends no refund through Payriff. An admin refunds a failed payment by hand in the Payriff panel.
+Fluxer sends no refund through the payment provider. An admin refunds a failed payment by hand in the provider's panel.
 
 ## Shop order object
 
@@ -177,18 +164,12 @@ Fluxer sends no refund through Payriff. An admin refunds a failed payment by han
 | sku | string | The [product](#shop-products) |
 | status | string | The [shop order status](#shop-order-statuses) |
 | failure_reason | ?string | The [failure reason](#shop-order-failure-reasons), null unless the order failed |
-| base_usd_cents | integer | The list price in US cents when the order opened |
+| base_try_minor | integer | The list price in kuruş when the order opened |
 | campaign_percent | integer | The campaign discount applied, 0 without one |
 | premium_percent | integer | The member discount applied, 0 when it does not apply |
-| final_usd_cents | integer | The US dollar price charged |
-| amount_azn_minor | integer | The amount charged, in qəpik |
-| usd_to_azn_rate | string | The rate used, with four decimal places |
-| usd_to_azn_rate_micro? | ?integer | Exact rate stored with this order, in millionths |
-| currency | string | Always `AZN` |
-| display_currency? | ?string | Currency of the price shown in the shop when the order opened: `TRY` or `AZN`; null on legacy orders |
-| display_amount_minor? | ?integer | That shown price in minor units (kuruş or qəpik), frozen on the order; null on legacy orders |
-| display_rate_micro? | ?integer | Frozen AZN per TRY in millionths used for the shown TRY price; null for AZN or legacy orders |
-| payment_url | ?string | The Payriff payment page, null unless the order is pending |
+| final_try_minor | integer | The amount charged, in kuruş |
+| currency | string | Always `TRY` |
+| payment_url | ?string | The payment provider's page, null unless the order is pending |
 | created_at | ISO8601 timestamp | When the order opened |
 | item_ids? | array[snowflake] | Bundle orders only: the items the order delivers, frozen when it opened, in bundle order |
 
@@ -200,13 +181,11 @@ Fluxer sends no refund through Payriff. An admin refunds a failed payment by han
   "sku": "premium:3",
   "status": "pending",
   "failure_reason": null,
-  "base_usd_cents": 1200,
+  "base_try_minor": 40000,
   "campaign_percent": 25,
   "premium_percent": 0,
-  "final_usd_cents": 900,
-  "amount_azn_minor": 1530,
-  "usd_to_azn_rate": "1.7000",
-  "currency": "AZN",
+  "final_try_minor": 30000,
+  "currency": "TRY",
   "payment_url": "https://payment.example.com/pay/abc123",
   "created_at": "2026-09-28T20:15:00.000Z"
 }
@@ -233,20 +212,20 @@ Fluxer sends no refund through Payriff. An admin refunds a failed payment by han
 
 The quote and order routes refuse a product with these codes:
 
-- 403 `SHOP_SALES_CLOSED` when sales of the product's kind are closed or Payriff is not configured. Premium packages and Visionary follow the premium sales switch, and cosmetic items and bundles follow the item sales switch.
-- 404 `SHOP_ITEM_UNAVAILABLE` when the product has no price or no longer exists, when an item, or any item of a bundle, is not an owned-availability item on sale, when the final price would fall below 1 cent or 0.10 AZN, when an account with lifetime premium asks for a package or Visionary, or when Visionary is switched off. An order also receives it when no Visionary number is free.
+- 403 `SHOP_SALES_CLOSED` when sales of the product's kind are closed or no payment provider is configured. Premium packages and Visionary follow the premium sales switch, and cosmetic items and bundles follow the item sales switch.
+- 404 `SHOP_ITEM_UNAVAILABLE` when the product has no price or no longer exists, when an item, or any item of a bundle, is not an owned-availability item on sale, when the final price would fall below ₺1, when an account with lifetime premium asks for a package or Visionary, or when Visionary is switched off. An order also receives it when no Visionary number is free.
 - 409 `COSMETIC_ALREADY_OWNED` when the account already owns the item, or any item of a bundle. A bundle is never sold in part.
-- 409 `SHOP_TOO_MANY_OPEN_ORDERS`, on an order only, when the account already has three open orders. An open order is unpaid, less than 15 minutes old, and not declined, cancelled or expired at Payriff.
-- 503 `SHOP_BUSY`, on an order only, when the shared Payriff request budget is spent, when Payriff is backing off after a 429 or did not open the order, or while another order of the same account is being opened. Retrying after a few seconds is safe.
+- 409 `SHOP_TOO_MANY_OPEN_ORDERS`, on an order only, when the account already has three open orders. An open order is unpaid, less than 15 minutes old, and not declined, cancelled or expired at the payment provider.
+- 503 `SHOP_BUSY`, on an order only, when the shared payment provider request budget is spent, when the provider is backing off after a 429 or did not open the order, or while another order of the same account is being opened. Retrying after a few seconds is safe.
 
 ## Payment and delivery
 
-1. [Create shop order](#create-shop-order) returns an order with `payment_url`, the Payriff payment page, which a client opens in the browser. Payriff shows the page in English and charges manat.
-2. Payriff calls [Receive Payriff callback](#receive-payriff-callback) when the payment changes, and the browser comes back through [Return from Payriff](#return-from-payriff). Neither is trusted. A matching callback token only queues a check, in which the server reads the order from Payriff.
-3. The check accepts a payment only when Payriff reports it `APPROVED` or `PAID` for a purchase, in AZN, for exactly the amount of the order. The order becomes `paid`, is delivered, and becomes `granted`.
-4. A client follows the order with [Get shop order](#get-shop-order), which reads only the server's record and never reaches Payriff.
+1. [Create shop order](#create-shop-order) returns an order with `payment_url`, the payment provider's page, which a client opens in the browser.
+2. The provider calls [Receive Payriff callback](#receive-payriff-callback) when the payment changes, and the browser comes back through [Return from Payriff](#return-from-payriff). Neither is trusted. A matching callback token only queues a check, in which the server reads the order from the provider.
+3. The check accepts a payment only when the provider reports it `APPROVED` or `PAID` for a purchase, in the order's currency, for exactly the amount of the order. The order becomes `paid`, is delivered, and becomes `granted`.
+4. A client follows the order with [Get shop order](#get-shop-order), which reads only the server's record and never reaches the provider.
 
-Apart from callbacks, the server checks every unpaid order with Payriff 2 minutes, 15 minutes, 3 hours and 24 hours after it opened. An order still unpaid at the fourth check expires, and so does an order Payriff reports expired. An order that has no Payriff order ID 10 minutes after it opened fails with `provider_error`.
+Apart from callbacks, the server checks every unpaid order with the provider 2 minutes, 15 minutes, 3 hours and 24 hours after it opened. An order still unpaid at the fourth check expires, and so does an order the provider reports expired. An order that has no provider order ID 10 minutes after it opened fails with `provider_error`.
 
 Scheduled checks leave an expired order alone, so only a callback or a return finds a payment made after the order expired. The check that finds it makes the order `paid` and schedules one more check 2 minutes later, so the delivery still completes when the callback check gives up. A paid order whose delivery has to wait keeps its scheduled check until the delivery finishes.
 
@@ -269,7 +248,7 @@ A bundle order skips an item deleted before delivery and an item the account alr
 
 ## Order records
 
-An order is a financial record. Deleting the account keeps its orders, which hold the account ID, the product, the items of a bundle order, the amounts, the rate, the Payriff order ID and the times, and no email address, name or IP address. The [data harvest](/http-api/users/data-harvest/) lists every order of the account, newest first, without the payment page, whether or not Payriff is configured.
+An order is a financial record. Deleting the account keeps its orders, which hold the account ID, the product, the items of a bundle order, the amounts in kuruş, the currency, the payment provider and its order ID, and the times, and no email address, name or IP address. The [data harvest](/http-api/users/data-harvest/) lists every order of the account, newest first, without the payment page, whether or not a payment provider is configured.
 
 ## Visionary
 
@@ -279,7 +258,7 @@ The `visionary` product takes campaigns, and never takes the member discount. It
 
 Numbers are handed out as follows:
 
-- [Create shop order](#create-shop-order) holds the lowest free number for 15 minutes before it asks Payriff. When no number is free, it returns 404 `SHOP_ITEM_UNAVAILABLE` and Payriff is never called.
+- [Create shop order](#create-shop-order) holds the lowest free number for 15 minutes before it asks the payment provider. When no number is free, it returns 404 `SHOP_ITEM_UNAVAILABLE` and the provider is never called.
 - An order that fails or expires unpaid frees its number.
 - A payment that arrives after the hold ended still gets a number: the held one if it is still free, otherwise the next free one, otherwise one above the total. The Admin API counts a number above the total in `over_cap_grants`.
 - An account that is already a Visionary when its order is delivered gets no second number. The order still becomes `granted`, the number it held is freed because it was never any account's number, and an admin refunds the payment by hand. Two orders of one account delivered together give one number.
@@ -338,7 +317,7 @@ Returns the [shop quote](#shop-quote-object) object: what the account would pay 
 
 <RouteHeader method="POST" path="/v1/shop/orders" />
 
-Opens a Payriff order for one product at the price the server computes now, and returns the [shop order](#shop-order-object) object with its payment page. The order is delivered once Payriff confirms the payment, as [Payment and delivery](#payment-and-delivery) describes.
+Opens a payment provider order for one product at the price the server computes now, and returns the [shop order](#shop-order-object) object with its payment page. The order is delivered once the provider confirms the payment, as [Payment and delivery](#payment-and-delivery) describes.
 
 An open order of the account for the same product at the same amount, and for a bundle with the same items in the same order, is returned instead of a new one, so repeating the request opens no second payment.
 
@@ -364,11 +343,11 @@ An open order of the account for the same product at the same amount, and for a 
 | 403 | [error response](/http-api/#error-response) | Sales are closed, purchases are not allowed for the account, or the instance has no shop |
 | 404 | [error response](/http-api/#error-response) | The product cannot be bought now, returned as `SHOP_ITEM_UNAVAILABLE` |
 | 409 | [error response](/http-api/#error-response) | The account owns the item or an item of the bundle, or already has three open orders |
-| 503 | [error response](/http-api/#error-response) | The server cannot open a Payriff order now, returned as `SHOP_BUSY` |
+| 503 | [error response](/http-api/#error-response) | The server cannot open a payment provider order now, returned as `SHOP_BUSY` |
 
 ### Side effects
 
-The order is written as `pending` with the amounts of the one price computation, and its first scheduled check is set. A Visionary order holds a number before Payriff is asked. A bundle order records the bundle's items in `item_ids`, and a later change to the bundle, or its deletion, leaves them as they are. The catalog can be up to 60 seconds old, so a client compares `item_ids` with the items it showed before it opens the payment page. The Payriff order description names the order ID, the product and the US dollar price, so an admin can find the order with [Get shop order](/admin-api/shop/#get-shop-order) in the Admin API. When Payriff does not open the order, the order fails with `provider_error`, its Visionary number is freed, and the request returns 503 `SHOP_BUSY`.
+The order is written as `pending` with the amounts of the one price computation, and its first scheduled check is set. A Visionary order holds a number before the payment provider is asked. A bundle order records the bundle's items in `item_ids`, and a later change to the bundle, or its deletion, leaves them as they are. The catalog can be up to 60 seconds old, so a client compares `item_ids` with the items it showed before it opens the payment page. The order description sent to the provider names the product, the price in lira and the order ID, so an admin can find the order with [Get shop order](/admin-api/shop/#get-shop-order) in the Admin API. When the provider does not open the order, the order fails with `provider_error`, its Visionary number is freed, and the request returns 503 `SHOP_BUSY`.
 
 ### Rate limit
 
@@ -378,7 +357,7 @@ The order is written as `pending` with the amounts of the one price computation,
 
 <RouteHeader method="GET" path="/v1/shop/orders/{order_id}" />
 
-Returns one order of the account as the server last recorded it, as a [shop order](#shop-order-object) object. The route never asks Payriff, so it is the one to poll while a payment is open.
+Returns one order of the account as the server last recorded it, as a [shop order](#shop-order-object) object. The route never asks the payment provider, so it is the one to poll while a payment is open.
 
 ### Path parameters
 
@@ -432,7 +411,7 @@ The `shop:gift:get` bucket takes the limit of the `gift:get` bucket of [Get gift
 
 <RouteHeader method="GET" path="/v1/payriff/callback/{order_id}/{token}" unauthenticated />
 
-The browser lands here from the Payriff payment page. The route redirects it to the premium callback page of the web app with a status and no order detail. It never answers with an error.
+The browser lands here from the payment provider's page. The route redirects it to the premium callback page of the web app with a status and no order detail. It never answers with an error.
 
 ### Path parameters
 
@@ -441,7 +420,7 @@ The browser lands here from the Payriff payment page. The route redirects it to 
 | order_id | string | The ID of the order |
 | token<sup>1</sup> | string | The callback token of the order |
 
-<sup>1</sup> 32 random bytes in base64url, created with the order. It exists only in the callback address handed to Payriff. The server keeps its SHA-256 hash and compares in constant time, and the request and error logs write the path with the token masked
+<sup>1</sup> 32 random bytes in base64url, created with the order. It exists only in the callback address handed to the provider. The server keeps its SHA-256 hash and compares in constant time, and the request and error logs write the path with the token masked
 
 ### Response
 
@@ -455,7 +434,7 @@ The browser lands here from the Payriff payment page. The route redirects it to 
 
 ### Side effects
 
-A matching token queues a check of the order with Payriff, as [Payment and delivery](#payment-and-delivery) describes. Repeats within 30 seconds queue one check, and each order takes at most 10 callback checks an hour, so replaying a return link cannot spend the Payriff budget. The scheduled checks run whatever the callbacks do. Anything else queues nothing.
+A matching token queues a check of the order with the provider, as [Payment and delivery](#payment-and-delivery) describes. Repeats within 30 seconds queue one check, and each order takes at most 10 callback checks an hour, so replaying a return link cannot spend the provider request budget. The scheduled checks run whatever the callbacks do. Anything else queues nothing.
 
 ### Rate limit
 

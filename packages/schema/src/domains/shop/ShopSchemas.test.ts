@@ -33,22 +33,25 @@ describe('shop schemas', () => {
 		expect(ShopSku.safeParse('cosmetic:10000000000000000000').success).toBe(false);
 	});
 
-	it('holds discounts to 0–95, campaigns to 1–95 and the rate to 1–3 AZN per USD', () => {
+	it('holds discounts to 0–95 and campaigns to 1–95', () => {
 		expect(UpdateShopSettingsRequest.safeParse({premium_discount_percent: 96}).success).toBe(false);
-		expect(UpdateShopSettingsRequest.safeParse({usd_to_azn_rate_micro: 17_000}).success).toBe(false);
-		expect(UpdateShopSettingsRequest.safeParse({usd_to_azn_rate_micro: 1_700_000}).success).toBe(true);
+		expect(UpdateShopSettingsRequest.safeParse({premium_discount_percent: 95}).success).toBe(true);
 		expect(ApplyShopCampaignRequest.safeParse({skus: ['premium:1'], percent: 0, ends_at: null}).success).toBe(false);
 		expect(ApplyShopCampaignRequest.safeParse({skus: ['premium:1'], percent: 95, ends_at: null}).success).toBe(true);
 	});
 
-	it('refuses a price of zero cents and more than 200 rows', () => {
-		expect(SetShopPricesRequest.safeParse({prices: [{sku: 'premium:1', base_usd_cents: 0}]}).success).toBe(false);
-		const rows = Array.from({length: 201}, () => ({sku: 'premium:1', base_usd_cents: 100}));
+	it('takes lira prices from ₺1 to ₺100 000 in kuruş and at most 200 rows', () => {
+		expect(SetShopPricesRequest.safeParse({prices: [{sku: 'premium:1', base_try_minor: 99}]}).success).toBe(false);
+		expect(SetShopPricesRequest.safeParse({prices: [{sku: 'premium:1', base_try_minor: 100}]}).success).toBe(true);
+		expect(SetShopPricesRequest.safeParse({prices: [{sku: 'premium:1', base_try_minor: 10_000_001}]}).success).toBe(
+			false,
+		);
+		const rows = Array.from({length: 201}, () => ({sku: 'premium:1', base_try_minor: 100}));
 		expect(SetShopPricesRequest.safeParse({prices: rows}).success).toBe(false);
 	});
 
 	it('takes the only price field the client may send: none', () => {
-		expect(CreateShopOrderRequest.parse({sku: 'premium:1', final_usd_cents: 1})).toEqual({sku: 'premium:1'});
+		expect(CreateShopOrderRequest.parse({sku: 'premium:1', final_try_minor: 1})).toEqual({sku: 'premium:1'});
 	});
 
 	it('never refuses a Payriff callback path, however malformed', () => {

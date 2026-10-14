@@ -551,6 +551,8 @@ fn build_gateway_rollout_update(
             max_concurrent_guild_starts: form
                 .parse_u64("gateway_rollout_max_concurrent_guild_starts"),
             voice_e2ee_scope,
+            // sanalyer: game activity ("now playing") had no admin control; the checkbox lives in this form.
+            game_activity_enabled: Some(form.bool_value("gateway_rollout_game_activity_enabled")),
             max_connections: parse_form_number(
                 form,
                 "gateway_rollout_max_connections",

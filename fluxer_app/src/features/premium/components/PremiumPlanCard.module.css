@@ -121,14 +121,6 @@
 	color: var(--text-secondary);
 }
 
-.azn {
-	margin: 0.125rem 0 0;
-	font-size: var(--premium-fs-small);
-	line-height: 1.125rem;
-	color: var(--text-tertiary);
-	font-variant-numeric: tabular-nums;
-}
-
 .perks {
 	display: grid;
 	gap: 0.5rem;

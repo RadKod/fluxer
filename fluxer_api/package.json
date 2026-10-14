@@ -62,7 +62,6 @@
 		"cassandra-driver": "catalog:",
 		"chess.js": "catalog:",
 		"emoji-regex": "catalog:",
-		"fast-xml-parser": "catalog:",
 		"hi-base32": "catalog:",
 		"hono": "catalog:",
 		"html-entities": "catalog:",

@@ -17,7 +17,7 @@ import {
 	SAVE_VS_MONTHLY_DESCRIPTOR,
 	WAS_PRICE_DESCRIPTOR,
 } from '@app/features/shop/utils/ShopMessageDescriptors';
-import {campaignShown, formatDiscount, shownCents} from '@app/features/shop/utils/ShopPriceFormat';
+import {campaignShown, formatDiscount, shownTryMinor} from '@app/features/shop/utils/ShopPriceFormat';
 import {Button} from '@app/features/ui/button/Button';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {modal} from '@app/features/ui/commands/ModalCommands';
@@ -63,14 +63,14 @@ interface PremiumPlanCardProps {
 	isPremium: boolean;
 }
 
-// A plan card with its picture. Prices are display only: the checkout shows the server's
-// quote and the AZN amount the order is charged.
+// A plan card with its picture. Prices are display only: the checkout shows the server's quote, which the order
+// charges.
 export const PremiumPlanCard = observer(({entry, recommended, isPremium}: PremiumPlanCardProps) => {
 	const {i18n} = useLingui();
 	const {price, months} = entry;
 	const locale = i18n.locale;
 	const sale = campaignShown(price, ShopCatalog.now());
-	const cents = shownCents(price, ShopCatalog.now());
+	const shown = shownTryMinor(price, ShopCatalog.now());
 
 	const discount = sale ? formatDiscount(price.campaign_percent ?? 0, locale) : null;
 	// What a month of this package saves against the one month package, from the prices on sale now.
@@ -110,15 +110,15 @@ export const PremiumPlanCard = observer(({entry, recommended, isPremium}: Premiu
 			</h3>
 			<div className={styles.priceRow} data-flx="premium.premium-plan-card.price-row">
 				<span className={styles.price} data-flx="premium.premium-plan-card.price">
-					<ShopPrice cents={cents} months={months} />
+					<ShopPrice tryMinor={shown} months={months} />
 				</span>
 				{discount !== null && (
 					<>
 						<span className={styles.srOnly} data-flx="premium.premium-plan-card.was-label">
-							<ShopPrice cents={price.base_usd_cents} months={months} primaryOnly label={WAS_PRICE_DESCRIPTOR} />
+							<ShopPrice tryMinor={price.base_try_minor} months={months} primaryOnly label={WAS_PRICE_DESCRIPTOR} />
 						</span>
 						<s className={styles.was} aria-hidden data-flx="premium.premium-plan-card.was">
-							<ShopPrice cents={price.base_usd_cents} months={months} primaryOnly />
+							<ShopPrice tryMinor={price.base_try_minor} months={months} primaryOnly />
 						</s>
 						<span className={styles.srOnly} data-flx="premium.premium-plan-card.discount-label">
 							{i18n._(DISCOUNT_PERCENT_DESCRIPTOR, {percent: discount})}

@@ -6,7 +6,6 @@ import {Config} from '@app/api/Config';
 import {SHOP_PRICE_CATALOG} from '@app/api/database/types/ShopTypes';
 import {
 	getCosmeticService,
-	getInstanceConfigRepository,
 	getPremiumLedgerService,
 	getShopCatalogService,
 	getShopPriceRepository,
@@ -78,7 +77,7 @@ describe('shop quote and checkout checks', () => {
 			{
 				catalog: SHOP_PRICE_CATALOG,
 				sku,
-				base_usd_cents: base,
+				base_try_minor: base,
 				campaign_percent: campaignPercent,
 				campaign_ends_at: null,
 				updated_at: new Date(),
@@ -86,58 +85,17 @@ describe('shop quote and checkout checks', () => {
 		]);
 	}
 
-	it('cached eligibility never reads TL display fields, while direct checkout freezes its quote', async () => {
-		await openShop(harness, admin);
-		await setPrices(harness, admin, {'premium:1': 199});
-		const repository = getInstanceConfigRepository();
-		const config = await repository.getShopConfig();
-		for (const key of [
-			'try_to_azn_rate_micro',
-			'try_rate_date',
-			'try_rate_fetched_at',
-			'try_to_azn_rate_override_micro',
-			'try_rate_override_at',
-		]) {
-			Object.defineProperty(config, key, {
-				get: () => {
-					throw new Error(`Payment read ${key}`);
-				},
-			});
-		}
-		vi.spyOn(repository, 'getShopConfig').mockResolvedValue(config);
-		expect((await quote('premium:1')).amount_azn_minor).toBe(338);
-		expect(
-			(await getShopCatalogService().prepareCheckout(await loadUser(), 'premium:1', 'cached')).price.amountAznMinor,
-		).toBe(338);
-		expect(await getShopCatalogService().prepareCheckout(await loadUser(), 'premium:1', 'direct')).toMatchObject({
-			price: {amountAznMinor: 338},
-			display: {currency: 'AZN', amountMinor: 338, rateMicro: null},
-		});
-	});
-
-	it('quotes the exact current micro rate while the catalog retains its earlier rate', async () => {
-		await openShop(harness, admin);
-		await setPrices(harness, admin, {'premium:1': 199});
-		expect((await catalog()).settings.usd_to_azn_rate_micro).toBe(1_700_000);
-		await getInstanceConfigRepository().updateShopConfig(() => ({usd_to_azn_rate_micro: 1_700_051}));
-		expect(await quote('premium:1')).toMatchObject({usd_to_azn_rate_micro: 1_700_051, amount_azn_minor: 338});
-		expect((await catalog()).settings.usd_to_azn_rate_micro).toBe(1_700_000);
-	});
-
-	it('quotes the list price in US cents and the manat amount Payriff charges', async () => {
+	it('quotes the list price and the amount charged, both in Turkish lira', async () => {
 		await openShop(harness, admin);
 		await setPrices(harness, admin, {'premium:3': 1300});
 
 		expect(await quote('premium:3')).toEqual({
 			sku: 'premium:3',
-			base_usd_cents: 1300,
+			base_try_minor: 1300,
 			campaign_percent: 0,
 			premium_percent: 0,
-			final_usd_cents: 1300,
-			amount_azn_minor: 2210,
-			usd_to_azn_rate: '1.7000',
-			usd_to_azn_rate_micro: 1_700_000,
-			currency: 'AZN',
+			final_try_minor: 1300,
+			currency: 'TRY',
 		});
 	});
 
@@ -145,17 +103,17 @@ describe('shop quote and checkout checks', () => {
 		vi.useFakeTimers({toFake: ['Date']});
 		await openShop(harness, admin);
 		await setPrices(harness, admin, {'premium:1': 500});
-		expect((await quote('premium:1')).final_usd_cents).toBe(500);
-		expect((await catalog()).packages[0]!.price.base_usd_cents).toBe(500);
+		expect((await quote('premium:1')).final_try_minor).toBe(500);
+		expect((await catalog()).packages[0]!.price.base_try_minor).toBe(500);
 
 		await setPrices(harness, admin, {'premium:1': 700});
 		vi.setSystemTime(Date.now() + 4_000);
-		expect((await quote('premium:1')).final_usd_cents).toBe(500);
+		expect((await quote('premium:1')).final_try_minor).toBe(500);
 		vi.setSystemTime(Date.now() + 2_000);
-		expect((await quote('premium:1')).final_usd_cents).toBe(700);
-		expect((await catalog()).packages[0]!.price.base_usd_cents).toBe(500);
+		expect((await quote('premium:1')).final_try_minor).toBe(700);
+		expect((await catalog()).packages[0]!.price.base_try_minor).toBe(500);
 		vi.setSystemTime(Date.now() + 55_000);
-		expect((await catalog()).packages[0]!.price.base_usd_cents).toBe(700);
+		expect((await catalog()).packages[0]!.price.base_try_minor).toBe(700);
 	});
 
 	it('prepareCheckout with direct reads sees a price change at once', async () => {
@@ -163,18 +121,14 @@ describe('shop quote and checkout checks', () => {
 		await setPrices(harness, admin, {'premium:1': 500});
 		const service = getShopCatalogService();
 		const buyer = await loadUser();
-		expect((await service.quote(buyer, 'premium:1')).price.finalUsdCents).toBe(500);
+		expect((await service.quote(buyer, 'premium:1')).price.finalTryMinor).toBe(500);
 
 		await setPrices(harness, admin, {'premium:1': 700});
-		await createBuilder(harness, admin.token)
-			.patch('/admin/shop/settings')
-			.body({usd_to_azn_rate_micro: 2_000_000})
-			.execute();
 
 		const direct = await service.prepareCheckout(buyer, 'premium:1', 'direct');
 		expect(direct).toMatchObject({sku: 'premium:1', kind: 'premium', item: null, months: 1});
-		expect(direct.price).toMatchObject({finalUsdCents: 700, amountAznMinor: 1400});
-		expect((await service.quote(buyer, 'premium:1')).price.finalUsdCents).toBe(500);
+		expect(direct.price).toMatchObject({baseTryMinor: 700, finalTryMinor: 700});
+		expect((await service.quote(buyer, 'premium:1')).price.finalTryMinor).toBe(500);
 	});
 
 	it('applies the premium discount only for paid premium accounts and only to items', async () => {
@@ -191,10 +145,10 @@ describe('shop quote and checkout checks', () => {
 			source: 'trial',
 		});
 
-		expect(await quote(`cosmetic:${item.id}`, paid)).toMatchObject({premium_percent: 30, final_usd_cents: 350});
-		expect(await quote('premium:1', paid)).toMatchObject({premium_percent: 0, final_usd_cents: 500});
-		expect(await quote(`cosmetic:${item.id}`, trial)).toMatchObject({premium_percent: 0, final_usd_cents: 500});
-		expect(await quote(`cosmetic:${item.id}`, user)).toMatchObject({premium_percent: 0, final_usd_cents: 500});
+		expect(await quote(`cosmetic:${item.id}`, paid)).toMatchObject({premium_percent: 30, final_try_minor: 350});
+		expect(await quote('premium:1', paid)).toMatchObject({premium_percent: 0, final_try_minor: 500});
+		expect(await quote(`cosmetic:${item.id}`, trial)).toMatchObject({premium_percent: 0, final_try_minor: 500});
+		expect(await quote(`cosmetic:${item.id}`, user)).toMatchObject({premium_percent: 0, final_try_minor: 500});
 		expect((await catalog(paid)).viewer.premium_discount).toBe(true);
 		expect((await catalog(trial)).viewer.premium_discount).toBe(false);
 		expect((await catalog(user)).viewer.premium_discount).toBe(false);
@@ -249,9 +203,9 @@ describe('shop quote and checkout checks', () => {
 		await refuse(`cosmetic:${item.id}`, 409, APIErrorCodes.COSMETIC_ALREADY_OWNED);
 	});
 
-	it('refuses a stored price that ends below 0.10 AZN', async () => {
+	it('refuses a stored price that ends below ₺1', async () => {
 		await openShop(harness, admin);
-		await putStoredPrice('premium:1', 5);
+		await putStoredPrice('premium:1', 99);
 
 		await refuse('premium:1', 404, APIErrorCodes.SHOP_ITEM_UNAVAILABLE);
 	});
@@ -274,7 +228,7 @@ describe('shop quote and checkout checks', () => {
 		await expect(service.prepareCheckout(await loadUser(unclaimed), 'premium:1', 'direct')).rejects.toBeInstanceOf(
 			UnclaimedAccountCannotMakePurchasesError,
 		);
-		expect((await service.quote(await loadUser(unverified), 'premium:1')).price.finalUsdCents).toBe(500);
+		expect((await service.quote(await loadUser(unverified), 'premium:1')).price.finalTryMinor).toBe(500);
 	});
 
 	describe('Visionary', () => {
@@ -290,18 +244,15 @@ describe('shop quote and checkout checks', () => {
 
 			expect(await quote('visionary', paid)).toEqual({
 				sku: 'visionary',
-				base_usd_cents: 29_900,
+				base_try_minor: 29_900,
 				campaign_percent: 20,
 				premium_percent: 0,
-				final_usd_cents: 23_920,
-				amount_azn_minor: 40_664,
-				usd_to_azn_rate: '1.7000',
-				usd_to_azn_rate_micro: 1_700_000,
-				currency: 'AZN',
+				final_try_minor: 23_920,
+				currency: 'TRY',
 			});
 			const prepared = await getShopCatalogService().prepareCheckout(await loadUser(paid), 'visionary', 'direct');
 			expect(prepared).toMatchObject({sku: 'visionary', kind: 'visionary', item: null, months: null});
-			expect(prepared.price).toMatchObject({campaignPercent: 20, premiumPercent: 0, finalUsdCents: 23_920});
+			expect(prepared.price).toMatchObject({campaignPercent: 20, premiumPercent: 0, finalTryMinor: 23_920});
 		});
 
 		it('sells Visionary only while it is on sale and premium sales are open', async () => {
@@ -322,7 +273,7 @@ describe('shop quote and checkout checks', () => {
 				.body({premium_sales_open: true})
 				.execute();
 			expect(
-				(await getShopCatalogService().prepareCheckout(await loadUser(), 'visionary', 'direct')).price.finalUsdCents,
+				(await getShopCatalogService().prepareCheckout(await loadUser(), 'visionary', 'direct')).price.finalTryMinor,
 			).toBe(29_900);
 		});
 
@@ -334,7 +285,7 @@ describe('shop quote and checkout checks', () => {
 
 			await refuse('visionary', 404, APIErrorCodes.SHOP_ITEM_UNAVAILABLE);
 			await refuse('premium:1', 404, APIErrorCodes.SHOP_ITEM_UNAVAILABLE);
-			expect((await quote(`cosmetic:${item.id}`)).final_usd_cents).toBe(500);
+			expect((await quote(`cosmetic:${item.id}`)).final_try_minor).toBe(500);
 		});
 	});
 });

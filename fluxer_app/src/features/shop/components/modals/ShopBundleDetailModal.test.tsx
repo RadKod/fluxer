@@ -59,9 +59,9 @@ const {ShopBundleDetailModal} = await import('@app/features/shop/components/moda
 const {ShopCheckoutModal} = await import('@app/features/shop/components/modals/ShopCheckoutModal');
 const {ModalStackContext, UNSTACKED_MODAL_CONTEXT} = await import('@app/features/ui/utils/ModalStackContext');
 const price = {
-	base_usd_cents: 900,
-	sale_usd_cents: 900,
-	premium_usd_cents: 630,
+	base_try_minor: 900,
+	sale_try_minor: 900,
+	premium_try_minor: 630,
 	campaign_percent: null,
 	campaign_ends_at: null,
 };

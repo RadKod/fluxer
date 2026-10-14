@@ -18787,7 +18787,7 @@
 						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
 					}
 				},
-				"description": "Opens a Payriff payment for one product at the price the server computes now and returns the order with its payment page. An unpaid order for the same product and price from the last fifteen minutes is returned instead of a new one. The item or premium time is delivered once Payriff confirms the payment.",
+				"description": "Opens a payment for one product at the Turkish lira price the server computes now and returns the order with its payment page. An unpaid order for the same product and price from the last fifteen minutes is returned instead of a new one. The item or premium time is delivered once the payment provider confirms the payment.",
 				"security": [{"sessionToken": []}],
 				"requestBody": {
 					"required": true,
@@ -18844,7 +18844,7 @@
 						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
 					}
 				},
-				"description": "Returns one of the current account orders as the server last saw it; it never asks Payriff. Orders of other accounts answer like unknown ones.",
+				"description": "Returns one of the current account orders as the server last saw it; it never asks the payment provider. Orders of other accounts answer like unknown ones.",
 				"security": [{"sessionToken": []}],
 				"parameters": [
 					{
@@ -18906,7 +18906,7 @@
 						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
 					}
 				},
-				"description": "Returns what the current account would pay for one product right now: the list price, the campaign and premium member discounts, the US dollar price and the Azerbaijani manat amount Payriff charges. Refuses products that are not on sale, closed sales and items the account already owns.",
+				"description": "Returns what the current account would pay for one product right now: the list price, the campaign and premium member discounts and the final price, all in Turkish lira (kuruş). Refuses products that are not on sale, closed sales and items the account already owns.",
 				"security": [{"sessionToken": []}],
 				"parameters": [
 					{
@@ -33556,53 +33556,22 @@
 			"ShopQuoteResponse": {
 				"type": "object",
 				"properties": {
-					"usd_to_azn_rate_micro": {
-						"description": "Exact AZN per USD in millionths used for this amount",
-						"anyOf": [{"$ref": "#/components/schemas/Int32Type"}, {"type": "null"}]
-					},
 					"sku": {"$ref": "#/components/schemas/ShopSku"},
-					"base_usd_cents": {"$ref": "#/components/schemas/Int32Type"},
+					"base_try_minor": {"description": "List price in kuruş", "$ref": "#/components/schemas/Int32Type"},
 					"campaign_percent": {"description": "0 when none", "$ref": "#/components/schemas/Int32Type"},
 					"premium_percent": {"description": "0 when not applied", "$ref": "#/components/schemas/Int32Type"},
-					"final_usd_cents": {"$ref": "#/components/schemas/Int32Type"},
-					"amount_azn_minor": {
-						"description": "What Payriff charges, in qepik",
+					"final_try_minor": {
+						"description": "What the order charges, in kuruş",
 						"$ref": "#/components/schemas/Int32Type"
 					},
-					"usd_to_azn_rate": {"type": "string", "description": "Decimal with four places, e.g. 1.7000"},
-					"currency": {"type": "string", "const": "AZN"}
+					"currency": {"type": "string", "const": "TRY"}
 				},
-				"required": [
-					"sku",
-					"base_usd_cents",
-					"campaign_percent",
-					"premium_percent",
-					"final_usd_cents",
-					"amount_azn_minor",
-					"usd_to_azn_rate",
-					"currency"
-				],
+				"required": ["sku", "base_try_minor", "campaign_percent", "premium_percent", "final_try_minor", "currency"],
 				"additionalProperties": false
 			},
 			"ShopOrderResponse": {
 				"type": "object",
 				"properties": {
-					"display_currency": {
-						"description": "Store currency frozen at checkout; null for legacy orders",
-						"anyOf": [{"type": "string", "enum": ["TRY", "AZN"]}, {"type": "null"}]
-					},
-					"display_amount_minor": {
-						"description": "Store price frozen at checkout, in kuruş or qepik",
-						"anyOf": [{"$ref": "#/components/schemas/NonNegativeSafeIntegerType"}, {"type": "null"}]
-					},
-					"display_rate_micro": {
-						"description": "Frozen AZN per TRY in millionths; null for AZN or legacy orders",
-						"anyOf": [{"$ref": "#/components/schemas/Int32Type"}, {"type": "null"}]
-					},
-					"usd_to_azn_rate_micro": {
-						"description": "Exact AZN per USD in millionths used for this amount",
-						"anyOf": [{"$ref": "#/components/schemas/Int32Type"}, {"type": "null"}]
-					},
 					"id": {"description": "The ID of the shop order", "$ref": "#/components/schemas/SnowflakeStringType"},
 					"sku": {"$ref": "#/components/schemas/ShopSku"},
 					"status": {"$ref": "#/components/schemas/ShopOrderStatus"},
@@ -33613,17 +33582,15 @@
 						],
 						"description": "Why a failed order failed; null otherwise"
 					},
-					"base_usd_cents": {"$ref": "#/components/schemas/Int32Type"},
+					"base_try_minor": {"description": "List price in kuruş", "$ref": "#/components/schemas/Int32Type"},
 					"campaign_percent": {"$ref": "#/components/schemas/Int32Type"},
 					"premium_percent": {"$ref": "#/components/schemas/Int32Type"},
-					"final_usd_cents": {"$ref": "#/components/schemas/Int32Type"},
-					"amount_azn_minor": {
-						"description": "What Payriff charges, in qepik",
+					"final_try_minor": {
+						"description": "What the order charges, in kuruş",
 						"$ref": "#/components/schemas/Int32Type"
 					},
-					"usd_to_azn_rate": {"type": "string", "description": "Decimal with four places, e.g. 1.7000"},
-					"currency": {"type": "string", "const": "AZN"},
-					"payment_url": {"description": "The Payriff page; only while pending", "type": ["string", "null"]},
+					"currency": {"type": "string", "const": "TRY"},
+					"payment_url": {"description": "The payment page; only while pending", "type": ["string", "null"]},
 					"created_at": {
 						"type": "string",
 						"format": "date-time",
@@ -33640,12 +33607,10 @@
 					"sku",
 					"status",
 					"failure_reason",
-					"base_usd_cents",
+					"base_try_minor",
 					"campaign_percent",
 					"premium_percent",
-					"final_usd_cents",
-					"amount_azn_minor",
-					"usd_to_azn_rate",
+					"final_try_minor",
 					"currency",
 					"payment_url",
 					"created_at"
@@ -33724,7 +33689,7 @@
 						"properties": {
 							"premium_discount": {
 								"type": "boolean",
-								"description": "The viewer pays premium_usd_cents: paid premium, not a trial"
+								"description": "The viewer pays premium_try_minor: paid premium, not a trial"
 							}
 						},
 						"required": ["premium_discount"],
@@ -47174,7 +47139,7 @@
 					"sku": {"type": "string", "const": "visionary"},
 					"price": {
 						"properties": {
-							"base_usd_cents": {"description": "List price in US cents", "$ref": "#/components/schemas/Int32Type"},
+							"base_try_minor": {"description": "List price in kuruş", "$ref": "#/components/schemas/Int32Type"},
 							"campaign_percent": {
 								"anyOf": [{"$ref": "#/components/schemas/Int32Type"}, {"type": "null"}],
 								"description": "Active campaign discount; null when none or ended"
@@ -47190,16 +47155,16 @@
 								],
 								"description": "When the campaign ends; null when none or open-ended"
 							},
-							"sale_usd_cents": {
-								"description": "Price after the campaign; equals base_usd_cents without one",
+							"sale_try_minor": {
+								"description": "Price after the campaign in kuruş; equals base_try_minor without one",
 								"$ref": "#/components/schemas/Int32Type"
 							},
-							"premium_usd_cents": {
+							"premium_try_minor": {
 								"anyOf": [{"$ref": "#/components/schemas/Int32Type"}, {"type": "null"}],
 								"description": "Items and bundles only: what a premium member pays; null when the premium discount is 0, and for packages"
 							}
 						},
-						"description": "A campaign applies as on any product; premium_usd_cents is always null: no premium member discount",
+						"description": "A campaign applies as on any product; premium_try_minor is always null: no premium member discount",
 						"$ref": "#/components/schemas/ShopPriceResponse"
 					},
 					"total": {"description": "Numbered slots, set by the admin", "$ref": "#/components/schemas/Int32Type"},
@@ -47209,7 +47174,7 @@
 					},
 					"visible": {
 						"type": "boolean",
-						"description": "Admin switch (on sale / hidden) and Payriff configured; false refuses new orders"
+						"description": "Admin switch (on sale / hidden) and a payment provider configured; false refuses new orders"
 					}
 				},
 				"required": ["sku", "price", "total", "remaining", "visible"],
@@ -47243,51 +47208,23 @@
 			"ShopSettingsResponse": {
 				"type": "object",
 				"properties": {
-					"try_rate_expires_at": {
-						"description": "When the automatic TRY display rate becomes stale; null for a manual override or no effective rate",
-						"anyOf": [
-							{
-								"type": "string",
-								"format": "date-time",
-								"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-							},
-							{"type": "null"}
-						]
+					"premium_sales_open": {
+						"type": "boolean",
+						"description": "Admin switch, and a payment provider is configured"
 					},
-					"usd_to_azn_rate_micro": {
-						"description": "Exact AZN per USD in millionths for matching the charged amount",
-						"anyOf": [{"$ref": "#/components/schemas/Int32Type"}, {"type": "null"}]
-					},
-					"try_to_azn_rate_micro": {
-						"description": "Effective display-only AZN per TRY in millionths; null hides TL",
-						"anyOf": [{"$ref": "#/components/schemas/Int32Type"}, {"type": "null"}]
-					},
-					"try_rate_date": {
-						"description": "CBAR bulletin date; the automatic rate expires after 10 days",
-						"anyOf": [
-							{
-								"type": "string",
-								"format": "date",
-								"pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-							},
-							{"type": "null"}
-						]
-					},
-					"premium_sales_open": {"type": "boolean", "description": "Admin switch, and Payriff is configured"},
-					"item_sales_open": {"type": "boolean", "description": "Admin switch, and Payriff is configured"},
+					"item_sales_open": {"type": "boolean", "description": "Admin switch, and a payment provider is configured"},
 					"premium_discount_percent": {
 						"description": "Discount premium members get on items and bundles, 0–95",
 						"$ref": "#/components/schemas/Int32Type"
-					},
-					"usd_to_azn_rate": {"type": "string", "description": "Decimal with four places, e.g. 1.7000; display only"}
+					}
 				},
-				"required": ["premium_sales_open", "item_sales_open", "premium_discount_percent", "usd_to_azn_rate"],
+				"required": ["premium_sales_open", "item_sales_open", "premium_discount_percent"],
 				"additionalProperties": false
 			},
 			"ShopPriceResponse": {
 				"type": "object",
 				"properties": {
-					"base_usd_cents": {"description": "List price in US cents", "$ref": "#/components/schemas/Int32Type"},
+					"base_try_minor": {"description": "List price in kuruş", "$ref": "#/components/schemas/Int32Type"},
 					"campaign_percent": {
 						"anyOf": [{"$ref": "#/components/schemas/Int32Type"}, {"type": "null"}],
 						"description": "Active campaign discount; null when none or ended"
@@ -47303,16 +47240,16 @@
 						],
 						"description": "When the campaign ends; null when none or open-ended"
 					},
-					"sale_usd_cents": {
-						"description": "Price after the campaign; equals base_usd_cents without one",
+					"sale_try_minor": {
+						"description": "Price after the campaign in kuruş; equals base_try_minor without one",
 						"$ref": "#/components/schemas/Int32Type"
 					},
-					"premium_usd_cents": {
+					"premium_try_minor": {
 						"anyOf": [{"$ref": "#/components/schemas/Int32Type"}, {"type": "null"}],
 						"description": "Items and bundles only: what a premium member pays; null when the premium discount is 0, and for packages"
 					}
 				},
-				"required": ["base_usd_cents", "campaign_percent", "campaign_ends_at", "sale_usd_cents", "premium_usd_cents"],
+				"required": ["base_try_minor", "campaign_percent", "campaign_ends_at", "sale_try_minor", "premium_try_minor"],
 				"additionalProperties": false
 			},
 			"ShopOrderStatus": {"type": "string", "enum": ["pending", "paid", "granted", "failed", "expired"]},

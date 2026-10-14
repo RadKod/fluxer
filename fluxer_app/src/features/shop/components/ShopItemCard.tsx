@@ -15,7 +15,7 @@ import {PurchaseDisabledWrapper} from '@app/features/shop/components/PurchaseDis
 import styles from '@app/features/shop/components/ShopItemCard.module.css';
 import {ShopItemStage} from '@app/features/shop/components/ShopItemStage';
 import {ShopPrice} from '@app/features/shop/components/ShopPrice';
-import {cardPayCents, ShopPriceLine} from '@app/features/shop/components/ShopPriceLine';
+import {cardPayTryMinor, ShopPriceLine} from '@app/features/shop/components/ShopPriceLine';
 import ShopCatalog from '@app/features/shop/state/ShopCatalog';
 import type {ShopItemEntry} from '@app/features/shop/utils/ShopEntries';
 import {ownsShopItem, purchaseBlockOf, resolveShopItemAction} from '@app/features/shop/utils/ShopItemAction';
@@ -100,7 +100,7 @@ export const ShopItemCard = observer(function ShopItemCard({entry}: ShopItemCard
 		}
 	};
 	const buyLabel = i18n._(BUY_ITEM_DESCRIPTOR, {name: item.name});
-	const pay = entry.price ? cardPayCents(entry.price) : null;
+	const pay = entry.price ? cardPayTryMinor(entry.price) : null;
 	let actionButton: ReactNode = null;
 	switch (action.kind) {
 		case 'buy':
@@ -111,7 +111,7 @@ export const ShopItemCard = observer(function ShopItemCard({entry}: ShopItemCard
 							i18n._(PURCHASE_DESCRIPTOR)
 						) : (
 							<ShopPrice
-								cents={pay}
+								tryMinor={pay}
 								label={BUY_FOR_PRICE_DESCRIPTOR}
 								primaryOnly
 								data-flx="shop.shop-item-card.buy-for-price"

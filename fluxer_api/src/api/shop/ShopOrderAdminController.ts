@@ -23,7 +23,7 @@ export function ShopOrderAdminController(app: HonoApp) {
 			operationId: 'get_admin_shop_order',
 			summary: 'Get a shop order',
 			description:
-				'Returns one shop order with its buyer, amounts, Payriff order ID and status, for support and refunds. The Payriff page description carries the same order ID. Requires SHOP_MANAGE permission.',
+				'Returns one shop order with its buyer, amounts in Turkish lira, payment provider order ID and status, for support and refunds. The payment page description carries the same order ID. Requires SHOP_MANAGE permission.',
 			responseSchema: ShopAdminOrderResponse,
 			statusCode: 200,
 			security: 'adminApiKey',

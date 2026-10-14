@@ -14,7 +14,7 @@ import {
 	OWNED_DESCRIPTOR,
 	WAS_PRICE_DESCRIPTOR,
 } from '@app/features/shop/utils/ShopMessageDescriptors';
-import {campaignShown, formatDiscount, percentOff, shownCents} from '@app/features/shop/utils/ShopPriceFormat';
+import {campaignShown, formatDiscount, percentOff, shownTryMinor} from '@app/features/shop/utils/ShopPriceFormat';
 import Tick from '@app/features/ui/state/Tick';
 import {getCurrentLocale} from '@app/features/user/utils/LocaleUtils';
 import type {ShopPriceResponse} from '@fluxer/schema/src/domains/shop/ShopResponseSchemas';
@@ -26,12 +26,12 @@ import {observer} from 'mobx-react-lite';
 
 const WITH_MICUP_PLUS_DESCRIPTOR = msg({
 	message: '{price} with sanalyer Plus',
-	comment: 'Secondary shop price for someone without the sanalyer Plus discount. {price} is formatted in TL or AZN.',
+	comment: 'Secondary shop price for someone without the sanalyer Plus discount. {price} is a price in Turkish lira.',
 });
 
 export interface ShownPrice {
-	saleCents: number;
-	premiumCents: number | null;
+	saleTryMinor: number;
+	premiumTryMinor: number | null;
 	campaignPercent: number | null;
 	endsAt: string | null;
 }
@@ -39,29 +39,29 @@ export interface ShownPrice {
 // Card prices are display only: the buy dialog shows the server's quote. A campaign that ended since the catalog was
 // read is dropped here and the member price redrawn on the list price, rounded half up like the server.
 export function shownPrice(price: ShopPriceResponse, premiumPercent: number, now: number): ShownPrice {
-	const saleCents = shownCents(price, now);
+	const saleTryMinor = shownTryMinor(price, now);
 	if (campaignShown(price, now)) {
 		return {
-			saleCents,
-			premiumCents: price.premium_usd_cents,
+			saleTryMinor,
+			premiumTryMinor: price.premium_try_minor,
 			campaignPercent: price.campaign_percent,
 			endsAt: price.campaign_ends_at,
 		};
 	}
 	return {
-		saleCents,
-		premiumCents: price.premium_usd_cents === null ? null : percentOff(saleCents, premiumPercent),
+		saleTryMinor,
+		premiumTryMinor: price.premium_try_minor === null ? null : percentOff(saleTryMinor, premiumPercent),
 		campaignPercent: null,
 		endsAt: null,
 	};
 }
 
 // What the viewer pays for a priced item or bundle, as its card shows it: the member price when they get it.
-export function cardPayCents(price: ShopPriceResponse): number | null {
+export function cardPayTryMinor(price: ShopPriceResponse): number | null {
 	const settings = ShopCatalog.settings;
 	if (!settings) return null;
 	const shown = shownPrice(price, settings.premium_discount_percent, ShopCatalog.now());
-	return (ShopCatalog.premiumDiscount ? shown.premiumCents : null) ?? shown.saleCents;
+	return (ShopCatalog.premiumDiscount ? shown.premiumTryMinor : null) ?? shown.saleTryMinor;
 }
 
 interface ShopPriceLineProps {
@@ -110,19 +110,23 @@ export const ShopPriceLine = observer(function ShopPriceLine({entry, size}: Shop
 	if (entry.price.campaign_ends_at) void Tick.nowMinute;
 	const locale = getCurrentLocale();
 	const shown = shownPrice(entry.price, settings.premium_discount_percent, ShopCatalog.now());
-	const base = entry.price.base_usd_cents;
-	const premium = shown.premiumCents;
+	const base = entry.price.base_try_minor;
+	const premium = shown.premiumTryMinor;
 	// viewer.premium_discount, not the user's premium type: a trial may wear premium items but pays the list price.
 	const memberPrice = ShopCatalog.premiumDiscount ? premium : null;
 	const discount = shown.campaignPercent === null ? null : formatDiscount(shown.campaignPercent, locale);
 	if (card) {
-		// One row, as on a shop shelf: the price the viewer pays, the struck list price and the sale. The AZN amount,
-		// the Plus price and the countdown are in the item's dialog.
+		// One row, as on a shop shelf: the price the viewer pays, the struck list price and the sale. The Plus price and
+		// the countdown are in the item's dialog.
 		return (
 			<span className={styles.card} data-flx="shop.shop-price-line.price-line">
 				<span className={styles.cardRow} data-flx="shop.shop-price-line.row">
 					<span className={styles.cardFinal} data-flx="shop.shop-price-line.final">
-						<ShopPrice cents={memberPrice ?? shown.saleCents} primaryOnly data-flx="shop.shop-price-line.shop-price" />
+						<ShopPrice
+							tryMinor={memberPrice ?? shown.saleTryMinor}
+							primaryOnly
+							data-flx="shop.shop-price-line.shop-price"
+						/>
 					</span>
 					<PriceExtras
 						base={base}
@@ -141,7 +145,7 @@ export const ShopPriceLine = observer(function ShopPriceLine({entry, size}: Shop
 			<span className={styles.row} data-flx="shop.shop-price-line.row">
 				<span className={styles.final} data-flx="shop.shop-price-line.final">
 					{memberPrice === null ? (
-						<ShopPrice cents={shown.saleCents} data-flx="shop.shop-price-line.shop-price--3" />
+						<ShopPrice tryMinor={shown.saleTryMinor} data-flx="shop.shop-price-line.shop-price--3" />
 					) : (
 						<>
 							<CrownIcon
@@ -150,7 +154,7 @@ export const ShopPriceLine = observer(function ShopPriceLine({entry, size}: Shop
 								aria-hidden
 								data-flx="shop.shop-price-line.crown-icon"
 							/>
-							<ShopPrice cents={memberPrice} data-flx="shop.shop-price-line.shop-price--4" />
+							<ShopPrice tryMinor={memberPrice} data-flx="shop.shop-price-line.shop-price--4" />
 						</>
 					)}
 				</span>
@@ -172,7 +176,7 @@ export const ShopPriceLine = observer(function ShopPriceLine({entry, size}: Shop
 						data-flx="shop.shop-price-line.premium-crown-icon"
 					/>
 					<ShopPrice
-						cents={premium}
+						tryMinor={premium}
 						label={WITH_MICUP_PLUS_DESCRIPTOR}
 						primaryOnly
 						data-flx="shop.shop-price-line.shop-price--5"
@@ -204,14 +208,14 @@ function PriceExtras({base, struck, discount, wasClassName, badgeClassName}: Pri
 				<>
 					<span className={styles.srOnly} data-flx="shop.shop-price-line.was-label">
 						<ShopPrice
-							cents={base}
+							tryMinor={base}
 							primaryOnly
 							label={WAS_PRICE_DESCRIPTOR}
 							data-flx="shop.shop-price-line.price-extras.shop-price"
 						/>
 					</span>
 					<s className={wasClassName} aria-hidden data-flx="shop.shop-price-line.was">
-						<ShopPrice cents={base} primaryOnly data-flx="shop.shop-price-line.price-extras.shop-price--2" />
+						<ShopPrice tryMinor={base} primaryOnly data-flx="shop.shop-price-line.price-extras.shop-price--2" />
 					</s>
 				</>
 			)}

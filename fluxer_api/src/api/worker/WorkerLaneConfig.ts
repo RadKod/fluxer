@@ -119,7 +119,6 @@ const LANE_CONFIG = {
 			'syncThreadSearchDocument',
 			'backfillThreadSearch',
 			'syncDiscoveryIndex',
-			'syncShopTryRate',
 			'syncUrlBlocklists',
 			'syncFileShaBlocklists',
 			'flushUserActivityBuffer',

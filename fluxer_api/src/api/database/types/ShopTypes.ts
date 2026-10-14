@@ -10,7 +10,8 @@ export type ShopOrderFailureReason = 'amount_mismatch' | 'account_deleted' | 'it
 export interface ShopPriceRow {
 	catalog: string; // always SHOP_PRICE_CATALOG
 	sku: string;
-	base_usd_cents: number;
+	// sanalyer: list price in kuruş; the shop sells in Turkish lira only.
+	base_try_minor: number;
 	campaign_percent: Nullish<number>;
 	campaign_ends_at: Nullish<Date>;
 	updated_at: Date;
@@ -34,15 +35,11 @@ export interface ShopOrderRow {
 	sku: string;
 	item_id: Nullish<bigint>;
 	premium_months: Nullish<number>;
-	base_usd_cents: number;
+	// sanalyer: Turkish lira in kuruş. amount_minor is the price after both discounts, the amount charged.
+	base_try_minor: number;
 	campaign_percent: number;
 	premium_percent: number;
-	final_usd_cents: number;
-	rate_micro: number;
 	amount_minor: number;
-	display_currency: Nullish<'TRY' | 'AZN'>;
-	display_amount_minor: Nullish<bigint>;
-	display_rate_micro: Nullish<number>;
 	currency: string;
 	status: ShopOrderStatus;
 	failure_reason: Nullish<ShopOrderFailureReason>;
@@ -85,7 +82,7 @@ export const SHOP_ORDER_CHECK_SLOT_MS = 300_000;
 export const SHOP_PRICE_COLUMNS = [
 	'catalog',
 	'sku',
-	'base_usd_cents',
+	'base_try_minor',
 	'campaign_percent',
 	'campaign_ends_at',
 	'updated_at',
@@ -107,15 +104,10 @@ export const SHOP_ORDER_COLUMNS = [
 	'sku',
 	'item_id',
 	'premium_months',
-	'base_usd_cents',
+	'base_try_minor',
 	'campaign_percent',
 	'premium_percent',
-	'final_usd_cents',
-	'rate_micro',
 	'amount_minor',
-	'display_currency',
-	'display_amount_minor',
-	'display_rate_micro',
 	'currency',
 	'status',
 	'failure_reason',
