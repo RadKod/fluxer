@@ -34,6 +34,8 @@ COPY --chown=65532:65532 fluxer_static/emoji /srv/fluxer-static/emoji
 # Micup: the gateway's web push badge (push_notification.erl push_badge_url).
 COPY --chown=65532:65532 fluxer_static/marketing/branding/symbol-white.svg /srv/fluxer-static/marketing/branding/symbol-white.svg
 COPY --chown=65532:65532 fluxer_static/web /srv/fluxer-static/web
+# Micup 3D voice rooms: content-hashed GLB files (tools/room_themes/build_manifest.mjs).
+COPY --chown=65532:65532 fluxer_static/rooms /srv/fluxer-static/rooms
 
 RUN setcap -r /usr/bin/caddy \
 	&& mkdir -p /config/caddy /data/caddy \

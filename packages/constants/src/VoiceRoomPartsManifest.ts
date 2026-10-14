@@ -4,6 +4,6 @@
 
 // null: no parts file yet; clients keep the 2D table top texture and never mount a 3D table.
 export const VOICE_ROOM_PARTS_MANIFEST: {readonly file: string; readonly bytes: number} | null = {
-	file: 'masa-parcalari.64ffffe2f754.glb',
-	bytes: 1135636,
+	file: 'masa-parcalari.3a4817a5bd8f.glb',
+	bytes: 251240,
 };

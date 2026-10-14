@@ -13,8 +13,8 @@ export interface VoiceRoomThemeManifestEntry {
 
 export const VOICE_ROOM_THEME_MANIFEST = {
 	'gece-lounge': {
-		file: 'gece-lounge.c76564c1b78e.glb',
-		bytes: 4257628,
+		file: 'gece-lounge.ae099f34df4a.glb',
+		bytes: 2186520,
 		seats: [
 			'seat_A_01',
 			'seat_A_02',
@@ -42,8 +42,8 @@ export const VOICE_ROOM_THEME_MANIFEST = {
 		stands: 12,
 	},
 	kahvehane: {
-		file: 'kahvehane.37719e591aad.glb',
-		bytes: 3474460,
+		file: 'kahvehane.18f9031e923f.glb',
+		bytes: 3002904,
 		seats: [
 			'seat_A_01',
 			'seat_A_02',
@@ -67,8 +67,8 @@ export const VOICE_ROOM_THEME_MANIFEST = {
 		stands: 12,
 	},
 	'oyun-odasi': {
-		file: 'oyun-odasi.5f87cdc44f97.glb',
-		bytes: 3290580,
+		file: 'oyun-odasi.900d8ccf36d7.glb',
+		bytes: 3132868,
 		seats: [
 			'seat_A_01',
 			'seat_A_02',
