@@ -92,6 +92,7 @@ jobs:
       contents: read
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      skip_targets: ${{ steps.targets.outputs.skip_targets }}
     steps:
       - name: Checkout source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -714,6 +715,7 @@ jobs:
     if: ${{ !cancelled() && needs.build.result == 'success' }}
     needs:
       - meta
+      - matrix
       - shared_assets
       - build
     runs-on: ubuntu-24.04-arm
@@ -731,6 +733,8 @@ jobs:
       PUBLIC_BUILD_VERSION: ${{ needs.meta.outputs.version }}
       PUB_DATE: ${{ needs.meta.outputs.pub_date }}
       SOURCE_SHA: ${{ needs.meta.outputs.source_sha }}
+      # Yayın adımları yalnız derlenen hedefleri bekler (atlananlar: matrix işinin skip_targets çıktısı).
+      FLUXER_DESKTOP_SKIP_TARGETS: ${{ needs.matrix.outputs.skip_targets }}
     steps:
       - name: Checkout source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -840,6 +844,7 @@ jobs:
     if: ${{ !cancelled() && inputs.publish_release && needs.upload.result == 'success' }}
     needs:
       - meta
+      - matrix
       - upload
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
@@ -848,6 +853,7 @@ jobs:
     env:
       CHANNEL: ${{ needs.meta.outputs.build_channel }}
       VERSION: ${{ needs.meta.outputs.version }}
+      FLUXER_DESKTOP_SKIP_TARGETS: ${{ needs.matrix.outputs.skip_targets }}
     steps:
       - name: Checkout source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1

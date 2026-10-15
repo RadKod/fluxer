@@ -61,7 +61,31 @@ fn desktop_release_platform(platform: &str) -> Result<&'static DesktopReleasePla
         .ok_or_else(|| anyhow!("Unsupported desktop release platform {platform:?}"))
 }
 
+// sanalyer: FLUXER_DESKTOP_SKIP_TARGETS carries the workflow's skip_targets list (matrix tokens such as
+// "windows-arm64,linux-arm64" or a whole platform "macos") into the release steps, so a release ships the
+// coordinates that were built instead of demanding every platform and arch.
+fn skipped_release_coordinate(platform: &str, arch: &str, skipped: &[String]) -> bool {
+    let matrix_platform = match platform {
+        "win32" => "windows",
+        "darwin" => "macos",
+        other => other,
+    };
+    let matrix_arch = format!("{matrix_platform}-{arch}");
+    skipped
+        .iter()
+        .any(|token| token == matrix_platform || *token == matrix_arch)
+}
+
 pub(crate) fn desktop_release_coordinates() -> Vec<(&'static str, &'static str)> {
+    let skipped = std::env::var("FLUXER_DESKTOP_SKIP_TARGETS")
+        .ok()
+        .map(|raw| {
+            raw.split(',')
+                .map(|token| token.trim().to_ascii_lowercase())
+                .filter(|token| !token.is_empty())
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
     DESKTOP_RELEASE_PLATFORMS
         .iter()
         .flat_map(|entry| {
@@ -69,6 +93,7 @@ pub(crate) fn desktop_release_coordinates() -> Vec<(&'static str, &'static str)>
                 .iter()
                 .map(move |arch| (entry.platform, *arch))
         })
+        .filter(|(platform, arch)| !skipped_release_coordinate(platform, arch, &skipped))
         .collect()
 }
 
