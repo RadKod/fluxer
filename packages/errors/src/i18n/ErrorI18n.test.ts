@@ -19,6 +19,33 @@ describe('ErrorI18n', () => {
 			expect(consoleWarnSpy).not.toHaveBeenCalled();
 		});
 	});
+	describe('Plus appearance errors', () => {
+		it.each([
+			['NAME_STYLES_REQUIRE_PREMIUM', 'en-US', {}, 'Name styles require Plus.'],
+			['PROFILE_THEMES_REQUIRE_PREMIUM', 'tr', {}, 'Profil temaları için Plus gerekli.'],
+			[
+				'NAME_COLORS_NOT_READABLE',
+				'tr',
+				{},
+				'Bu ad renkleri koyu zeminde okunamayacak kadar koyu. Daha açık bir renk seç.',
+			],
+			[
+				'NAME_STYLE_CHANGED_TOO_MANY_TIMES',
+				'en-US',
+				{minutes: 1},
+				"You've changed your name style too often recently. Please try again in 1 minute.",
+			],
+			[
+				'THEME_COLORS_CHANGED_TOO_MANY_TIMES',
+				'tr',
+				{minutes: 12},
+				'Son zamanlarda profil temanı çok sık değiştirdin. Lütfen 12 dakika sonra tekrar dene.',
+			],
+		])('localizes the Plus appearance error %s in %s', (code, locale, variables, expected) => {
+			expect(getErrorMessageUnsafe(code, locale, variables)).toBe(expected);
+			expect(consoleWarnSpy).not.toHaveBeenCalled();
+		});
+	});
 	describe('global IP block messages', () => {
 		const HOSTED = {
 			ipAddress: '203.0.113.20',

@@ -6,6 +6,7 @@ import UserProfile from '@app/features/user/state/UserProfile';
 import {ProfileFieldPrivacyFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {getCurrentTimeZoneOffsetMinutes} from '@fluxer/date_utils/src/TimeZoneUtils';
 import type {CosmeticAssetDataResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
+import type {ThemeColors} from '@fluxer/schema/src/domains/user/PlusAppearanceSchemas';
 
 export interface BadgeSettings {
 	premium_badge_hidden?: boolean;
@@ -78,6 +79,7 @@ export function createMockProfile(
 		previewBadgeSettings?: BadgeSettings;
 		previewTimezoneOffset?: number | null;
 		previewProfileEffect?: CosmeticAssetDataResponse | null;
+		previewThemeColors?: ThemeColors | null;
 	},
 ): Profile {
 	const finalBanner = options?.hasClearedBanner
@@ -97,6 +99,7 @@ export function createMockProfile(
 			banner: finalBanner,
 			pronouns: finalPronouns,
 			accent_color: options?.previewAccentColor !== undefined ? options.previewAccentColor : (user.accentColor ?? null),
+			...(options?.previewThemeColors !== undefined && {theme_colors: options.previewThemeColors}),
 		},
 		timezone_offset:
 			options?.previewTimezoneOffset !== undefined

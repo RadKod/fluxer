@@ -11,8 +11,10 @@ import {profileSubstringBlocklistCache} from '@app/api/middleware/ProfileSubstri
 import type {User} from '@app/api/models/User';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {isProfileSubstringExempt} from '@app/api/user/UserHelpers';
+import {showsPlusAppearance} from '@app/api/user/UserMappers';
 import {deriveDominantAvatarColor} from '@app/api/utils/AvatarColorUtils';
 import * as EmojiUtils from '@app/api/utils/EmojiUtils';
+import {isNameColorsReadableOnDark} from '@fluxer/constants/src/ColorContrast';
 import {MAX_BIO_LENGTH} from '@fluxer/constants/src/LimitConstants';
 import {PremiumFlags, ProfileFieldPrivacyFlags, UserFlags} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
@@ -20,6 +22,7 @@ import {isSupportedTimeZoneId} from '@fluxer/date_utils/src/TimeZoneUtils';
 import {ContentBlockedError} from '@fluxer/errors/src/domains/content/ContentBlockedError';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {MissingAccessError} from '@fluxer/errors/src/domains/core/MissingAccessError';
+import type {NameStyle, ThemeColors} from '@fluxer/schema/src/domains/user/PlusAppearanceSchemas';
 import type {UserUpdateRequest} from '@fluxer/schema/src/domains/user/UserRequestSchemas';
 import type {IRateLimitService} from '@pkgs/rate_limit/src/IRateLimitService';
 import {ms} from 'itty-time';
@@ -81,6 +84,12 @@ export class UserAccountProfileService {
 		}
 		if (data.accent_color !== undefined) {
 			await this.processAccentColorUpdate({user, accentColor: data.accent_color, updates});
+		}
+		if (data.name_style !== undefined) {
+			await this.processNameStyleUpdate({user, nameStyle: data.name_style, updates});
+		}
+		if (data.theme_colors !== undefined) {
+			await this.processThemeColorsUpdate({user, themeColors: data.theme_colors, updates});
 		}
 		if (data.timezone !== undefined) {
 			const nextTimezone = this.processTimezoneUpdate({user, timezone: data.timezone, updates});
@@ -221,6 +230,80 @@ export class UserAccountProfileService {
 			}
 			updates.accent_color = accentColor;
 		}
+	}
+
+	// The limit grants the feature; the read rule must also show it, or the value would be saved and never drawn.
+	private allowsPlusAppearance(user: User, key: 'feature_name_style' | 'feature_profile_theme'): boolean {
+		const ctx = createLimitMatchContext({user});
+		return (
+			showsPlusAppearance(user) && resolveLimitSafe(this.deps.limitConfigService.getConfigSnapshot(), ctx, key, 0) !== 0
+		);
+	}
+
+	private async processNameStyleUpdate(params: {
+		user: User;
+		nameStyle: NameStyle | null;
+		updates: UserFieldUpdates;
+	}): Promise<void> {
+		const {user, nameStyle, updates} = params;
+		const nameFont = nameStyle?.font_id ?? null;
+		const nameColor = nameStyle?.colors[0] ?? null;
+		const nameColor2 = nameStyle?.colors[1] ?? null;
+		if (nameFont === user.nameFont && nameColor === user.nameColor && nameColor2 === user.nameColor2) {
+			return;
+		}
+		if (nameStyle !== null) {
+			if (!this.allowsPlusAppearance(user, 'feature_name_style')) {
+				throw InputValidationError.fromCode('name_style', ValidationErrorCodes.NAME_STYLES_REQUIRE_PREMIUM);
+			}
+			if (!isNameColorsReadableOnDark(nameStyle.colors)) {
+				throw InputValidationError.fromCode('name_style', ValidationErrorCodes.NAME_COLORS_NOT_READABLE);
+			}
+		}
+		const nameStyleRateLimit = await this.deps.rateLimitService.checkLimit({
+			identifier: `name_style_change:${user.id}`,
+			maxAttempts: 5,
+			windowMs: ms('10 minutes'),
+		});
+		if (!nameStyleRateLimit.allowed) {
+			const minutes = Math.ceil((nameStyleRateLimit.retryAfter || 0) / 60);
+			throw InputValidationError.fromCode('name_style', ValidationErrorCodes.NAME_STYLE_CHANGED_TOO_MANY_TIMES, {
+				minutes,
+			});
+		}
+		updates.name_font = nameFont;
+		updates.name_color = nameColor;
+		updates.name_color_2 = nameColor2;
+	}
+
+	private async processThemeColorsUpdate(params: {
+		user: User;
+		themeColors: ThemeColors | null;
+		updates: UserFieldUpdates;
+	}): Promise<void> {
+		const {user, themeColors, updates} = params;
+		const [primaryColor, accentColor] = themeColors ?? [null, null];
+		if (primaryColor === user.themePrimaryColor && accentColor === user.themeAccentColor) {
+			return;
+		}
+		if (themeColors !== null) {
+			if (!this.allowsPlusAppearance(user, 'feature_profile_theme')) {
+				throw InputValidationError.fromCode('theme_colors', ValidationErrorCodes.PROFILE_THEMES_REQUIRE_PREMIUM);
+			}
+		}
+		const themeColorsRateLimit = await this.deps.rateLimitService.checkLimit({
+			identifier: `theme_colors_change:${user.id}`,
+			maxAttempts: 25,
+			windowMs: ms('30 minutes'),
+		});
+		if (!themeColorsRateLimit.allowed) {
+			const minutes = Math.ceil((themeColorsRateLimit.retryAfter || 0) / 60);
+			throw InputValidationError.fromCode('theme_colors', ValidationErrorCodes.THEME_COLORS_CHANGED_TOO_MANY_TIMES, {
+				minutes,
+			});
+		}
+		updates.theme_primary_color = primaryColor;
+		updates.theme_accent_color = accentColor;
 	}
 
 	private processTimezoneUpdate(params: {

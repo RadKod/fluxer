@@ -27,6 +27,8 @@ export const LIMIT_KEYS = [
 	'feature_guild_roster',
 	'feature_mature_content_settings',
 	'feature_micupbot',
+	'feature_name_style',
+	'feature_profile_theme',
 	'feature_global_expressions',
 	'feature_guild_create',
 	'feature_higher_video_quality',
@@ -99,6 +101,8 @@ export const LIMIT_KEY_SCOPES: Record<LimitKey, LimitScope> = {
 	feature_guild_roster: 'user',
 	feature_mature_content_settings: 'user',
 	feature_micupbot: 'user',
+	feature_name_style: 'user',
+	feature_profile_theme: 'user',
 	feature_global_expressions: 'user',
 	feature_guild_create: 'user',
 	feature_higher_video_quality: 'user',
@@ -698,6 +702,24 @@ export const LIMIT_KEY_METADATA: Record<LimitKey, LimitKeyMetadata> = {
 		label: 'SanalyerBot',
 		description:
 			'Instance-wide: the official community bot (welcome, auto roles, reaction roles, levels, # commands, automod); 0 stops every hook, job and settings write, stored settings stay',
+		category: 'features',
+		scope: 'user',
+		isToggle: true,
+	},
+	feature_name_style: {
+		key: 'feature_name_style',
+		label: 'Name Style',
+		description:
+			'Set a name font with a solid or two-colour gradient name colour; 0 refuses setting one (removing stays allowed). A stored style shows only while the account has active premium',
+		category: 'features',
+		scope: 'user',
+		isToggle: true,
+	},
+	feature_profile_theme: {
+		key: 'feature_profile_theme',
+		label: 'Profile Theme',
+		description:
+			'Paint the profile card with a two-colour gradient; 0 refuses setting one (removing stays allowed). A stored theme shows only while the account has active premium',
 		category: 'features',
 		scope: 'user',
 		isToggle: true,

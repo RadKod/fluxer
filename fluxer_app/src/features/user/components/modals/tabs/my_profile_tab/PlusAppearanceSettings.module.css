@@ -1,0 +1,147 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.section {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+}
+
+.title {
+	margin-bottom: 0.5rem;
+	font-weight: 600;
+	font-size: 1.25rem;
+}
+
+.description {
+	font-size: 0.875rem;
+	color: var(--text-primary-muted);
+}
+
+.group {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.label {
+	font-weight: 500;
+	font-size: 0.875rem;
+	color: var(--text-primary);
+}
+
+.fontGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+	gap: var(--spacing-1) var(--spacing-3);
+	margin-top: 0.5rem;
+}
+
+/* Fixed line box: every font sits in the same row height, however tall its glyphs are. */
+.fontSample {
+	display: block;
+	overflow: hidden;
+	height: 1.75rem;
+	color: var(--plus-name-1);
+	font-size: 1.0625rem;
+	line-height: 1.75rem;
+	font-synthesis: none;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.fontSampleGradient {
+	width: fit-content;
+	max-width: 100%;
+	background-image: linear-gradient(90deg, var(--plus-name-1), var(--plus-name-2));
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+/* On the light theme a sample whose colours fail 3:1 there takes the text colour, as the name itself does. */
+:global(html.theme-light) .fontSampleDefaultOnLight.fontSampleDefaultOnLight {
+	color: var(--text-primary);
+	background-image: none;
+	-webkit-text-fill-color: currentColor;
+}
+
+/* Stays in view while the fonts and colours below are picked. */
+.preview {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding-bottom: 0.5rem;
+	background: var(--background-primary);
+}
+
+.previewCard {
+	display: flex;
+	align-items: center;
+	min-height: 3.5rem;
+	padding: 0 1rem;
+	border: 1px solid var(--background-modifier-accent, transparent);
+	border-radius: 0.5rem;
+	background: var(--background-secondary);
+}
+
+.previewName {
+	overflow: hidden;
+	color: var(--text-primary);
+	font-weight: 500;
+	font-size: 1.25rem;
+	line-height: 1.5rem;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.modeGroup {
+	flex-direction: row;
+	gap: var(--spacing-4);
+}
+
+.colorRow {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+	gap: 0.75rem;
+}
+
+.contrast {
+	font-size: 0.875rem;
+	color: var(--text-primary-muted);
+}
+
+.contrastWarning {
+	color: var(--status-danger);
+}
+
+.presets {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.preset {
+	width: 2.5rem;
+	height: 2.5rem;
+	border: 2px solid var(--background-modifier-accent, transparent);
+	border-radius: 0.5rem;
+	cursor: pointer;
+}
+
+.preset:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
+.presetSelected {
+	border-color: var(--brand-primary);
+	box-shadow: 0 0 0 2px var(--background-primary) inset;
+}
+
+.errorMessage {
+	font-size: 0.875rem;
+	color: var(--status-danger);
+}

@@ -219,7 +219,12 @@ build_user_data(UserDataMap) ->
         <<"mention_flags">> => map_utils:get_safe(UserDataMap, <<"mention_flags">>, undefined)
     },
     Cosmetics = maps:with(
-        [<<"avatar_decoration_data">>, <<"avatar_ultra_data">>, <<"nameplate_data">>],
+        [
+            <<"avatar_decoration_data">>,
+            <<"avatar_ultra_data">>,
+            <<"nameplate_data">>,
+            <<"name_style">>
+        ],
         UserDataMap
     ),
     Normalized = user_utils:normalize_user(maps:merge(UserData0, Cosmetics)),

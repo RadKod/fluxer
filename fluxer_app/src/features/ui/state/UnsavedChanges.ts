@@ -8,6 +8,7 @@ export interface TabData {
 	onSave?: () => void;
 	isSubmitting?: boolean;
 	bannerText?: string;
+	saveDisabled?: boolean;
 	resetLabel?: string;
 	saveLabel?: string;
 	saveVariant?: ButtonVariant;

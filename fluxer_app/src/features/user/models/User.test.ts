@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type {NameStyle} from '@fluxer/schema/src/domains/user/PlusAppearanceSchemas';
 import type {User as WireUser} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import {describe, expect, it, vi} from 'vitest';
 
@@ -90,6 +91,52 @@ describe('User cosmetics', () => {
 		expect(user.equals(user.withUpdates({avatar_ultra_data: {...ULTRA}}))).toBe(true);
 		expect(user.equals(user.withUpdates({avatar_ultra_data: {...ULTRA, item_id: '304'}}))).toBe(false);
 		expect(user.toJSON()).toMatchObject({avatar_ultra_data: ULTRA});
+	});
+});
+
+describe('User Plus appearance', () => {
+	const STYLE: NameStyle = {font_id: 6, colors: [0xff5ea8, 0x8b5cf6]};
+	const THEME: [number, number] = [0x3b1d8f, 0x0f8f8a];
+
+	it('reads the name style from the partial user and null when it is missing', () => {
+		expect(new User(wireUser()).nameStyle).toBeNull();
+		expect(new User(wireUser({name_style: STYLE})).nameStyle).toEqual(STYLE);
+	});
+
+	it('keeps the name style through an update that does not mention it and drops it on null', () => {
+		const user = new User(wireUser({name_style: STYLE}));
+		expect(user.withUpdates({global_name: 'Ayşe'}).nameStyle).toEqual(STYLE);
+		expect(user.withUpdates({name_style: null}).nameStyle).toBeNull();
+		expect(user.withUpdates({}, {clearMissingOptionalFields: true}).nameStyle).toBeNull();
+	});
+
+	it('counts another font or colour as a change and the same style as none', () => {
+		const user = new User(wireUser({name_style: STYLE}));
+		expect(user.equals(user.withUpdates({name_style: {...STYLE, colors: [...STYLE.colors]}}))).toBe(true);
+		expect(user.equals(user.withUpdates({name_style: {...STYLE, font_id: 7}}))).toBe(false);
+		expect(user.equals(user.withUpdates({name_style: {...STYLE, colors: [0xff5ea8]}}))).toBe(false);
+		expect(user.equals(user.withUpdates({name_style: null}))).toBe(false);
+	});
+
+	it('writes the name style back to the wire shape', () => {
+		expect(new User(wireUser({name_style: STYLE})).toJSON()).toMatchObject({name_style: STYLE});
+		expect(new User(wireUser()).toJSON()).toMatchObject({name_style: null});
+	});
+
+	it('knows the theme colours only from a private payload', () => {
+		expect(new User(wireUser()).themeColors).toBeUndefined();
+		expect(new User(wireUser({theme_colors: null})).themeColors).toBeNull();
+		expect(new User(wireUser({theme_colors: THEME})).themeColors).toEqual(THEME);
+	});
+
+	it('keeps the theme colours through a partial update, takes new ones and writes them back', () => {
+		const user = new User(wireUser({theme_colors: THEME}));
+		expect(user.withUpdates({global_name: 'Ayşe'}).themeColors).toEqual(THEME);
+		expect(user.withUpdates({theme_colors: null}).themeColors).toBeNull();
+		expect(user.equals(user.withUpdates({theme_colors: [THEME[0], THEME[1]]}))).toBe(true);
+		expect(user.equals(user.withUpdates({theme_colors: [THEME[0], 0]}))).toBe(false);
+		expect(user.toJSON()).toMatchObject({theme_colors: THEME});
+		expect(new User(wireUser()).toJSON()).not.toHaveProperty('theme_colors');
 	});
 });
 

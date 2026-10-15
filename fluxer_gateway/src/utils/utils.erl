@@ -135,6 +135,7 @@ user_field_differs(Field, CurrentUserData, NewUserData) ->
 missing_field_value(<<"avatar_decoration_data">>) -> null;
 missing_field_value(<<"avatar_ultra_data">>) -> null;
 missing_field_value(<<"nameplate_data">>) -> null;
+missing_field_value(<<"name_style">>) -> null;
 missing_field_value(_Field) -> undefined.
 
 -ifdef(TEST).
@@ -169,6 +170,19 @@ check_user_data_differs_cosmetics_test() ->
     ?assertNot(check_user_data_differs(Predates, TakenOff)),
     ?assertNot(check_user_data_differs(Worn, Predates)),
     ?assert(check_user_data_differs(Predates, NewImage)).
+
+check_user_data_differs_name_style_test() ->
+    Solid = #{<<"font_id">> => 3, <<"colors">> => [16#ff5e68]},
+    Gradient = #{<<"font_id">> => 3, <<"colors">> => [16#ff5e68, 16#7b5cff]},
+    Predates = #{<<"id">> => <<"42">>},
+    Unstyled = #{<<"id">> => <<"42">>, <<"name_style">> => null},
+    Styled = #{<<"id">> => <<"42">>, <<"name_style">> => Solid},
+    ?assertNot(check_user_data_differs(Predates, Unstyled)),
+    ?assert(check_user_data_differs(Predates, Styled)),
+    ?assert(check_user_data_differs(Styled, Unstyled)),
+    ?assert(check_user_data_differs(Styled, Styled#{<<"name_style">> => Gradient})),
+    ?assertNot(check_user_data_differs(Styled, Styled)),
+    ?assertNot(check_user_data_differs(Styled, Predates)).
 
 check_user_data_differs_missing_field_test() ->
     Current = #{<<"id">> => <<"123">>, <<"username">> => <<"test">>},

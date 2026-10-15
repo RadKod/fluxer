@@ -14,6 +14,7 @@ import {
 } from '@fluxer/constants/src/UserConstants';
 import {DEFAULT_STOCK_LIMITS} from '@fluxer/limits/src/LimitDefaults';
 import type {CosmeticAssetDataResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
+import type {NameStyle, ThemeColors} from '@fluxer/schema/src/domains/user/PlusAppearanceSchemas';
 import type {UserPartial, UserPrivate, User as WireUser} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import * as SnowflakeUtils from '@fluxer/snowflake/src/SnowflakeUtils';
 
@@ -129,6 +130,16 @@ function cosmeticsEqual(a: CosmeticAssetDataResponse | null, b: CosmeticAssetDat
 	return a != null && b != null && a.asset === b.asset && a.item_id === b.item_id;
 }
 
+function nameStylesEqual(a: NameStyle | null, b: NameStyle | null): boolean {
+	if (a === b) return true;
+	return a != null && b != null && a.font_id === b.font_id && arraysShallowEqual(a.colors, b.colors);
+}
+
+function themeColorsEqual(a: ThemeColors | null | undefined, b: ThemeColors | null | undefined): boolean {
+	if (a == null || b == null) return a === b;
+	return a[0] === b[0] && a[1] === b[1];
+}
+
 export class User {
 	readonly instanceId: string;
 	readonly id: string;
@@ -146,6 +157,7 @@ export class User {
 	readonly avatarDecoration: CosmeticAssetDataResponse | null;
 	readonly avatarUltra: CosmeticAssetDataResponse | null;
 	readonly nameplate: CosmeticAssetDataResponse | null;
+	readonly nameStyle: NameStyle | null;
 	private readonly _isStaff: boolean | undefined;
 	private readonly _email: string | null | undefined;
 	private readonly _emailBounced: boolean | undefined;
@@ -155,6 +167,7 @@ export class User {
 	readonly bannerColor: number | null | undefined;
 	readonly pronouns: string | null | undefined;
 	readonly accentColor: number | null | undefined;
+	readonly themeColors: ThemeColors | null | undefined;
 	readonly timezone: string | null | undefined;
 	readonly timezonePrivacyFlags: number | undefined;
 	readonly mfaEnabled: boolean | undefined;
@@ -204,6 +217,7 @@ export class User {
 		this.avatarDecoration = user.avatar_decoration_data ?? null;
 		this.avatarUltra = user.avatar_ultra_data ?? null;
 		this.nameplate = user.nameplate_data ?? null;
+		this.nameStyle = user.name_style ?? null;
 		this._isStaff = hasKey(user, 'is_staff') ? user.is_staff : undefined;
 		this._email = hasKey(user, 'email') ? (user.email ?? null) : undefined;
 		this._emailBounced = hasKey(user, 'email_bounced') ? user.email_bounced : undefined;
@@ -213,6 +227,7 @@ export class User {
 		this.bannerColor = hasKey(user, 'banner_color') ? (user.banner_color ?? null) : undefined;
 		this.pronouns = hasKey(user, 'pronouns') ? (user.pronouns ?? null) : undefined;
 		this.accentColor = hasKey(user, 'accent_color') ? (user.accent_color ?? null) : undefined;
+		this.themeColors = hasKey(user, 'theme_colors') ? (user.theme_colors ?? null) : undefined;
 		this.timezone = hasKey(user, 'timezone') ? (user.timezone ?? null) : undefined;
 		this.timezonePrivacyFlags = hasKey(user, 'timezone_privacy_flags')
 			? (user.timezone_privacy_flags ?? ProfileFieldPrivacyFlags.EVERYONE)
@@ -419,6 +434,8 @@ export class User {
 		if (avatarUltra !== undefined) result.avatar_ultra_data = avatarUltra;
 		const nameplate = pickField(this.nameplate, u, 'nameplate_data', opts);
 		if (nameplate !== undefined) result.nameplate_data = nameplate;
+		const nameStyle = pickField(this.nameStyle, u, 'name_style', opts);
+		if (nameStyle !== undefined) result.name_style = nameStyle;
 		const isStaff = pickField(this._isStaff, u, 'is_staff', opts);
 		if (isStaff !== undefined) result.is_staff = isStaff;
 		const avatarColor = pickField(this.avatarColor, u, 'avatar_color', opts);
@@ -439,6 +456,8 @@ export class User {
 		if (pronouns !== undefined) result.pronouns = pronouns;
 		const accentColor = pickField(this.accentColor, u, 'accent_color', opts);
 		if (accentColor !== undefined) result.accent_color = accentColor;
+		const themeColors = pickField(this.themeColors, u, 'theme_colors', opts);
+		if (themeColors !== undefined) result.theme_colors = themeColors;
 		const timezone = pickField(this.timezone, u, 'timezone', opts);
 		if (timezone !== undefined) result.timezone = timezone;
 		const timezonePrivacyFlags = pickField(this.timezonePrivacyFlags, u, 'timezone_privacy_flags', opts);
@@ -642,6 +661,7 @@ export class User {
 			cosmeticsEqual(this.avatarDecoration, other.avatarDecoration) &&
 			cosmeticsEqual(this.avatarUltra, other.avatarUltra) &&
 			cosmeticsEqual(this.nameplate, other.nameplate) &&
+			nameStylesEqual(this.nameStyle, other.nameStyle) &&
 			this.bot === other.bot &&
 			this.system === other.system &&
 			this.flags === other.flags &&
@@ -655,6 +675,7 @@ export class User {
 			this.bannerColor === other.bannerColor &&
 			this.pronouns === other.pronouns &&
 			this.accentColor === other.accentColor &&
+			themeColorsEqual(this.themeColors, other.themeColors) &&
 			this.timezone === other.timezone &&
 			this.timezonePrivacyFlags === other.timezonePrivacyFlags &&
 			this.mfaEnabled === other.mfaEnabled &&
@@ -705,6 +726,7 @@ export class User {
 			avatar_decoration_data: this.avatarDecoration,
 			avatar_ultra_data: this.avatarUltra,
 			nameplate_data: this.nameplate,
+			name_style: this.nameStyle,
 		};
 		const privateFields: Record<string, unknown> = {};
 		if (this.usernameState !== undefined) privateFields.username_state = this.usernameState;
@@ -720,6 +742,7 @@ export class User {
 		setOptional('banner_color', this.bannerColor);
 		setOptional('pronouns', this.pronouns);
 		setOptional('accent_color', this.accentColor);
+		setOptional('theme_colors', this.themeColors);
 		if (this.isStaff()) {
 			setOptional('timezone', this.timezone);
 			setOptional('timezone_privacy_flags', this.timezonePrivacyFlags);

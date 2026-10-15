@@ -1,0 +1,21 @@
+{
+	"_comment": "Name style fonts, in font_id order: the id here is the key of packages/constants NameStyleConstants (an app test holds the two together). tools/fonts/build_name_style_fonts.py builds the files from this list; dropping a font = delete its entry and run the build with --prune.",
+	"source": {
+		"repo": "google/fonts",
+		"commit": "67bc647ce1910e92f461bcc82aae30f21d21a9cc"
+	},
+	"fonts": [
+		{"id": "baloo", "label": "Baloo 2", "path": "ofl/baloo2/Baloo2[wght].ttf", "axes": {"wght": 700}},
+		{"id": "playpen", "label": "Playpen Sans", "path": "ofl/playpensans/PlaypenSans[wght].ttf", "axes": {"wght": 600}},
+		{"id": "pacifico", "label": "Pacifico", "path": "ofl/pacifico/Pacifico-Regular.ttf"},
+		{"id": "caveat", "label": "Caveat", "path": "ofl/caveat/Caveat[wght].ttf", "axes": {"wght": 700}},
+		{"id": "pixelify", "label": "Pixelify Sans", "path": "ofl/pixelifysans/PixelifySans[wght].ttf", "axes": {"wght": 500}},
+		{"id": "pressstart", "label": "Press Start 2P", "path": "ofl/pressstart2p/PressStart2P-Regular.ttf"},
+		{"id": "vt323", "label": "VT323", "path": "ofl/vt323/VT323-Regular.ttf"},
+		{"id": "audiowide", "label": "Audiowide", "path": "ofl/audiowide/Audiowide-Regular.ttf"},
+		{"id": "grenze", "label": "Grenze Gotisch", "path": "ofl/grenzegotisch/GrenzeGotisch[wght].ttf", "axes": {"wght": 700}},
+		{"id": "newrocker", "label": "New Rocker", "path": "ofl/newrocker/NewRocker-Regular.ttf"},
+		{"id": "bungee", "label": "Bungee", "path": "ofl/bungee/Bungee-Regular.ttf"},
+		{"id": "righteous", "label": "Righteous", "path": "ofl/righteous/Righteous-Regular.ttf"}
+	]
+}

@@ -79,6 +79,7 @@ export function hiddenUserPartial(partial: UserPartialResponse): UserPartialResp
 		avatar_decoration_data: null,
 		avatar_ultra_data: null,
 		nameplate_data: null,
+		name_style: null,
 		flags: partial.flags & ~PublicUserFlags.PREMIUM_BADGE,
 	};
 }

@@ -1,0 +1,29 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Profile theme: the whole card is the two-colour gradient, veiled only as much as the text needs; the content sits on
+   a scrim panel and every text colour follows the pick. The colours, the WCAG text pick and the veil/scrim come in as
+   --profile-gradient-* variables (ProfileGradient.ts); the card parts read the --profile-card-* / --profile-panel-*
+   hooks. The doubled selector outranks each surface's own background rule. */
+
+.surface.surface {
+	--profile-card-avatar-ring: transparent;
+	--profile-gradient-banner: transparent;
+	--profile-card-panel-background: var(--profile-gradient-scrim);
+	--profile-card-panel-margin: 0 0.5rem;
+	--profile-card-panel-radius: 0.5rem;
+	--profile-card-panel-padding-bottom: 0.75rem;
+	--profile-panel-background: var(--profile-gradient-scrim);
+	--text-primary: var(--profile-gradient-text);
+	--text-chat: var(--profile-gradient-text);
+	--text-primary-muted: color-mix(in srgb, var(--profile-gradient-text) 82%, transparent);
+	--text-secondary: color-mix(in srgb, var(--profile-gradient-text) 82%, transparent);
+	--text-tertiary: color-mix(in srgb, var(--profile-gradient-text) 72%, transparent);
+	/* Inner cards (roles, notes, info) take the scrim too: it is the opposite of the text colour, so a card can only
+	   raise the contrast the text was picked for, never flip it. */
+	--background-secondary: var(--profile-gradient-scrim);
+	--background-secondary-alt: var(--profile-gradient-scrim);
+	--background-tertiary: var(--profile-gradient-scrim);
+	background:
+		linear-gradient(var(--profile-gradient-veil), var(--profile-gradient-veil)),
+		linear-gradient(180deg, var(--profile-gradient-1), var(--profile-gradient-2));
+}

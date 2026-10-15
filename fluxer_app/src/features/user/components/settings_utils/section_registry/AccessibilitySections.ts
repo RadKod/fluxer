@@ -210,6 +210,18 @@ const REDUCED_MOTION_DESCRIPTOR = msg({
 	comment: 'Settings search synonym. Used to match this term when the user types it in the settings search bar.',
 });
 
+const NAME_STYLES_DESCRIPTOR = msg({
+	message: 'Name styles',
+	comment: 'Settings search synonym. Used to match this term when the user types it in the settings search bar.',
+});
+const NAME_FONTS_DESCRIPTOR = msg({
+	message: 'Name fonts',
+	comment: 'Settings search synonym. Used to match this term when the user types it in the settings search bar.',
+});
+const NAME_COLORS_DESCRIPTOR = msg({
+	message: 'Name colors',
+	comment: 'Settings search synonym. Used to match this term when the user types it in the settings search bar.',
+});
 const VISUAL_DESCRIPTOR = msg({
 	message: 'Visual',
 	context: 'accessibility-settings-section',
@@ -276,6 +288,9 @@ export const accessibilitySections = [
 			MESSAGE_PREVIEWS_DESCRIPTOR,
 			DM_MESSAGE_PREVIEW_DESCRIPTOR,
 			INBOX_PREVIEW_DESCRIPTOR,
+			NAME_STYLES_DESCRIPTOR,
+			NAME_FONTS_DESCRIPTOR,
+			NAME_COLORS_DESCRIPTOR,
 		],
 		isAdvanced: false,
 	},

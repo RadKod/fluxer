@@ -162,7 +162,8 @@ message_create_null_cosmetics_on_older_member_data_does_not_dispatch_test() ->
         <<"flags">> => 0,
         <<"avatar_decoration_data">> => null,
         <<"avatar_ultra_data">> => null,
-        <<"nameplate_data">> => null
+        <<"nameplate_data">> => null,
+        <<"name_style">> => null
     },
     NewState = maybe_update_cached_user_data(message_create, #{<<"author">> => Author}, State),
     ?assertEqual(State, NewState),
@@ -181,6 +182,21 @@ message_create_new_cosmetic_updates_member_test() ->
     Members = guild_data_index_members:member_map(maps:get(data, NewState)),
     #{<<"user">> := User} = maps:get(100, Members),
     ?assertEqual(Decoration, maps:get(<<"avatar_decoration_data">>, User)),
+    drain_test_mailbox().
+
+message_create_new_name_style_updates_member_test() ->
+    drain_test_mailbox(),
+    State = normalized_test_state(),
+    Style = #{<<"font_id">> => 3, <<"colors">> => [16#ff5e68]},
+    Author = #{
+        <<"id">> => <<"100">>,
+        <<"username">> => <<"alice">>,
+        <<"name_style">> => Style
+    },
+    NewState = maybe_update_cached_user_data(message_create, #{<<"author">> => Author}, State),
+    Members = guild_data_index_members:member_map(maps:get(data, NewState)),
+    #{<<"user">> := User} = maps:get(100, Members),
+    ?assertEqual(Style, maps:get(<<"name_style">>, User)),
     drain_test_mailbox().
 
 test_state() ->

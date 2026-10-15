@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {ProfileEffectOverlay} from '@app/features/cosmetics/components/ProfileEffectOverlay';
+import {profileGradientSurface} from '@app/features/user/components/profile/ProfileGradientSurface';
 import styles from '@app/features/user/components/profile/profile_card/ProfileCardLayout.module.css';
 import type {CosmeticAssetDataResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
+import type {ThemeColors} from '@fluxer/schema/src/domains/user/PlusAppearanceSchemas';
 import {Trans} from '@lingui/react/macro';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
@@ -11,6 +13,7 @@ import {useMemo} from 'react';
 
 interface ProfileCardLayoutProps {
 	borderColor: string;
+	themeColors?: ThemeColors | null;
 	showPreviewLabel?: boolean;
 	hoverRef?: (instance: HTMLDivElement | null) => void;
 	className?: string;
@@ -20,8 +23,12 @@ interface ProfileCardLayoutProps {
 }
 
 export const ProfileCardLayout: React.FC<ProfileCardLayoutProps> = observer(
-	({borderColor, showPreviewLabel = false, hoverRef, className, style, profileEffect, children}) => {
-		const cardStyle = useMemo<React.CSSProperties>(() => ({...style, borderColor}), [borderColor, style]);
+	({borderColor, themeColors, showPreviewLabel = false, hoverRef, className, style, profileEffect, children}) => {
+		const gradient = useMemo(() => profileGradientSurface(themeColors), [themeColors]);
+		const cardStyle = useMemo<React.CSSProperties>(
+			() => ({...style, borderColor, ...gradient?.style}),
+			[borderColor, style, gradient],
+		);
 		return (
 			<div data-flx="user.profile.profile-card.profile-card-layout.div">
 				{showPreviewLabel && (

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {UserTag} from '@app/features/channel/components/ChannelUserTag';
+import {NameStyleText} from '@app/features/name_style/components/NameStyleText';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import {useTextOverflow} from '@app/features/ui/hooks/useTextOverflow';
 import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
@@ -9,6 +10,8 @@ import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge
 import {useProfileBadgeMetrics} from '@app/features/user/hooks/useProfileBadgeMetrics';
 import type {User} from '@app/features/user/models/User';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
+import {nameReadsOnProfileTheme} from '@app/features/user/utils/ProfileGradient';
+import type {ThemeColors} from '@fluxer/schema/src/domains/user/PlusAppearanceSchemas';
 import {Trans} from '@lingui/react/macro';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
@@ -31,6 +34,8 @@ interface ProfileCardUserInfoProps {
 	usernameActions?: React.ReactNode;
 	// Micup: a row right under the name, above the username and pronouns (the profile popout's badges).
 	belowName?: React.ReactNode;
+	// The card's profile theme: a name whose colours do not read on it takes the card's text colour.
+	themeColors?: ThemeColors | null;
 }
 
 export const ProfileCardUserInfo: React.FC<ProfileCardUserInfoProps> = observer(
@@ -47,6 +52,7 @@ export const ProfileCardUserInfo: React.FC<ProfileCardUserInfoProps> = observer(
 		actions,
 		usernameActions,
 		belowName,
+		themeColors,
 	}) => {
 		const displayNameRef = useRef<HTMLButtonElement>(null);
 		const {badgeStyle, bindNameRef} = useProfileBadgeMetrics(displayNameRef, displayName);
@@ -66,7 +72,13 @@ export const ProfileCardUserInfo: React.FC<ProfileCardUserInfoProps> = observer(
 				style={displayNameStyle}
 				data-flx="user.profile.profile-card.profile-card-user-info.name-button.display-name-click"
 			>
-				{displayName}
+				<NameStyleText
+					nameStyle={isWebhook ? null : user.nameStyle}
+					fontOnly={!nameReadsOnProfileTheme(user.nameStyle, themeColors)}
+					data-flx="user.profile.profile-card.profile-card-user-info.name-style-text"
+				>
+					{displayName}
+				</NameStyleText>
 			</button>
 		);
 		const displayNameContent = isDisplayNameOverflowing ? (

@@ -326,6 +326,12 @@ struct UserPartialServiceResponse {
     nameplate_id: Option<i64>,
     nameplate_asset: Option<String>,
     #[serde(default)]
+    name_font: Option<i32>,
+    #[serde(default)]
+    name_color: Option<i32>,
+    #[serde(default)]
+    name_color_2: Option<i32>,
+    #[serde(default)]
     content_hidden_since: Option<i64>,
 }
 
@@ -1583,6 +1589,7 @@ impl<T: Transport> MessagesShard<T> {
                 avatar_decoration_data: None,
                 avatar_ultra_data: None,
                 nameplate_data: None,
+                name_style: None,
             };
         }
         deleted_user(0)
@@ -3172,6 +3179,9 @@ fn map_user_partial(partial: UserPartialServiceResponse) -> ApiUserPartial {
         avatar_ultra_asset: partial.avatar_ultra_asset,
         nameplate_id: partial.nameplate_id,
         nameplate_asset: partial.nameplate_asset,
+        name_font: partial.name_font,
+        name_color: partial.name_color,
+        name_color_2: partial.name_color_2,
     })
 }
 
@@ -3194,6 +3204,7 @@ fn deleted_user(user_id: i64) -> ApiUserPartial {
         avatar_decoration_data: None,
         avatar_ultra_data: None,
         nameplate_data: None,
+        name_style: None,
     }
 }
 

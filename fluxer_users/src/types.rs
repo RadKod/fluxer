@@ -58,6 +58,9 @@ pub struct UserPartial {
     pub avatar_ultra_asset: Option<String>,
     pub nameplate_id: Option<i64>,
     pub nameplate_asset: Option<String>,
+    pub name_font: Option<i32>,
+    pub name_color: Option<i32>,
+    pub name_color_2: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content_hidden_since: Option<i64>,
 }
@@ -85,6 +88,9 @@ impl UserPartial {
             avatar_ultra_asset: None,
             nameplate_id: None,
             nameplate_asset: None,
+            name_font: None,
+            name_color: None,
+            name_color_2: None,
             ..self
         }
     }
@@ -110,6 +116,9 @@ impl UserPartial {
             avatar_ultra_asset: self.avatar_ultra_asset.clone(),
             nameplate_id: self.nameplate_id,
             nameplate_asset: self.nameplate_asset.clone(),
+            name_font: self.name_font,
+            name_color: self.name_color,
+            name_color_2: self.name_color_2,
         })
     }
 }
@@ -195,6 +204,9 @@ mod tests {
             avatar_ultra_asset: None,
             nameplate_id: None,
             nameplate_asset: None,
+            name_font: None,
+            name_color: None,
+            name_color_2: None,
             content_hidden_since: None,
         }
     }
@@ -256,7 +268,8 @@ mod tests {
                     "flags": 1,
                     "avatar_decoration_data": null,
                     "avatar_ultra_data": null,
-                    "nameplate_data": null
+                    "nameplate_data": null,
+                    "name_style": null
                 }]
             })
         );

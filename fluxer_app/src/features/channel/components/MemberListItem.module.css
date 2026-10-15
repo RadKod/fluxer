@@ -128,3 +128,28 @@
 .userTag {
 	margin-left: 0.25rem;
 }
+
+/* Micup: in the coal and dark themes an offline member keeps a legible name on the lowest text step and dims only the
+   avatar; hovering or an open profile brings the row back to full strength */
+:global(html:is(.theme-coal, .theme-dark)) .buttonOffline {
+	opacity: 1;
+}
+
+:global(html:is(.theme-coal, .theme-dark)) .buttonOffline:where(:not(:hover, [aria-expanded='true'])) {
+	color: var(--text-tertiary-secondary);
+}
+
+/* A coloured name (a role colour on the name or its role span, or the colours of a name style) outranks the colour
+   above, so every coloured name takes the same dimming as opacity */
+:global(html:is(.theme-coal, .theme-dark))
+	.buttonOffline:where(:not(:hover, [aria-expanded='true']))
+	.name:is(.nameRoleColored, :has(> [style*='--role-color'])),
+:global(html:is(.theme-coal, .theme-dark):not(.hide-name-styles))
+	.buttonOffline:where(:not(:hover, [aria-expanded='true']))
+	.name[style*='--name-style-1'] {
+	opacity: 0.6;
+}
+
+:global(html:is(.theme-coal, .theme-dark)) .buttonOffline:where(:not(:hover, [aria-expanded='true'])) .avatarContainer {
+	opacity: 0.4;
+}
