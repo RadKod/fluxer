@@ -69,8 +69,6 @@ const EMAIL_VERIFICATION_REQUIRED_PROFILE_UPDATE_FIELDS: ReadonlyArray<keyof Use
 	'bio',
 	'pronouns',
 	'accent_color',
-	'name_style',
-	'theme_colors',
 	'timezone',
 	'timezone_privacy_flags',
 	'premium_badge_hidden',

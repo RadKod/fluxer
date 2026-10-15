@@ -179,11 +179,6 @@ const MICUP_CORE_COLUMNS: Record<string, {columns: ReadonlyArray<string>; types:
 			avatar_ultra_asset: 'text',
 			profile_effect_asset: 'text',
 			nameplate_asset: 'text',
-			name_font: 'int',
-			name_color: 'int',
-			name_color_2: 'int',
-			theme_primary_color: 'int',
-			theme_accent_color: 'int',
 		},
 	},
 	guilds: {

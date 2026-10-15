@@ -7,8 +7,6 @@ import {useContextMenuHoverState} from '@app/features/app/hooks/useContextMenuHo
 import {PreloadableUserPopout} from '@app/features/channel/components/PreloadableUserPopout';
 import type {VoiceState} from '@app/features/gateway/types/GatewayVoiceTypes';
 import {isKeyboardActivationKey} from '@app/features/input/utils/KeyboardUtils';
-import {NameStyleText} from '@app/features/name_style/components/NameStyleText';
-import {guildNameStyleProps} from '@app/features/name_style/GuildNameStyle';
 import * as NavigationCommands from '@app/features/navigation/commands/NavigationCommands';
 import type {VoiceParticipantMenuSource} from '@app/features/ui/action_menu/items/VoiceParticipantMenuTypes';
 import {VoiceParticipantContextMenu} from '@app/features/ui/action_menu/VoiceParticipantContextMenu';
@@ -260,8 +258,7 @@ export const GroupedVoiceParticipant = observer(function GroupedVoiceParticipant
 								data-flx="app.grouped-voice-participant.avatar-with-presence"
 							/>
 							<div className={styles.nameContainer} data-flx="app.grouped-voice-participant.name-container">
-								<NameStyleText
-									{...guildNameStyleProps(user, guildId)}
+								<span
 									className={clsx(
 										styles.participantName,
 										stateAgg.anySpeaking && styles.participantNameSpeaking,
@@ -270,7 +267,7 @@ export const GroupedVoiceParticipant = observer(function GroupedVoiceParticipant
 									data-flx="app.grouped-voice-participant.participant-name"
 								>
 									{NicknameUtils.getNickname(user, guildId)}
-								</NameStyleText>
+								</span>
 								<Tooltip
 									text={
 										isExpanded

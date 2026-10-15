@@ -87,11 +87,6 @@ export class User {
 	readonly avatarUltraAsset: string | null;
 	readonly profileEffectAsset: string | null;
 	readonly nameplateAsset: string | null;
-	readonly nameFont: number | null;
-	readonly nameColor: number | null;
-	readonly nameColor2: number | null;
-	readonly themePrimaryColor: number | null;
-	readonly themeAccentColor: number | null;
 	readonly version: number;
 
 	constructor(row: UserRow) {
@@ -170,11 +165,6 @@ export class User {
 		this.avatarUltraAsset = row.avatar_ultra_asset ?? null;
 		this.profileEffectAsset = row.profile_effect_asset ?? null;
 		this.nameplateAsset = row.nameplate_asset ?? null;
-		this.nameFont = row.name_font ?? null;
-		this.nameColor = row.name_color ?? null;
-		this.nameColor2 = row.name_color_2 ?? null;
-		this.themePrimaryColor = row.theme_primary_color ?? null;
-		this.themeAccentColor = row.theme_accent_color ?? null;
 		this.version = row.version;
 	}
 
@@ -270,11 +260,6 @@ export class User {
 			avatar_ultra_asset: this.avatarUltraAsset,
 			profile_effect_asset: this.profileEffectAsset,
 			nameplate_asset: this.nameplateAsset,
-			name_font: this.nameFont,
-			name_color: this.nameColor,
-			name_color_2: this.nameColor2,
-			theme_primary_color: this.themePrimaryColor,
-			theme_accent_color: this.themeAccentColor,
 			version: this.version,
 		};
 	}

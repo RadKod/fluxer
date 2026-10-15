@@ -8,8 +8,6 @@ import {VoiceStateIcons} from '@app/features/app/components/layout/VoiceStateIco
 import {useContextMenuHoverState} from '@app/features/app/hooks/useContextMenuHoverState';
 import {PreloadableUserPopout} from '@app/features/channel/components/PreloadableUserPopout';
 import type {VoiceState} from '@app/features/gateway/types/GatewayVoiceTypes';
-import {NameStyleText} from '@app/features/name_style/components/NameStyleText';
-import {guildNameStyleProps} from '@app/features/name_style/GuildNameStyle';
 import * as NavigationCommands from '@app/features/navigation/commands/NavigationCommands';
 import Permission from '@app/features/permissions/state/Permission';
 import type {VoiceParticipantMenuSource} from '@app/features/ui/action_menu/items/VoiceParticipantMenuTypes';
@@ -260,8 +258,7 @@ export const VoiceParticipantItem = observer(function VoiceParticipantItem({
 						</span>
 					</Tooltip>
 				) : (
-					<NameStyleText
-						{...guildNameStyleProps(user, guildId)}
+					<span
 						className={clsx(
 							styles.participantName,
 							isActuallySpeaking && styles.participantNameSpeaking,
@@ -270,7 +267,7 @@ export const VoiceParticipantItem = observer(function VoiceParticipantItem({
 						data-flx="app.voice-participant-item.participant-name--2"
 					>
 						{displayName}
-					</NameStyleText>
+					</span>
 				)}
 				{hasVoiceStateIcons && (
 					<div className={styles.iconsContainer} data-flx="app.voice-participant-item.icons-container">

@@ -120,7 +120,6 @@ describe('profile visibility', () => {
 				banner: null,
 				banner_color: null,
 				accent_color: null,
-				theme_colors: null,
 			});
 		} else {
 			expect(isHiddenPartial(partial)).toBe(false);

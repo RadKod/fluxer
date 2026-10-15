@@ -13,7 +13,6 @@ import {useContextMenuHoverState} from '@app/features/app/hooks/useContextMenuHo
 import * as VoiceStateCommands from '@app/features/devtools/commands/VoiceStateCommands';
 import Keybind from '@app/features/input/state/InputKeybind';
 import {getPushToTalkHoldLabel} from '@app/features/input/utils/PushToTalkHint';
-import {NameStyleText} from '@app/features/name_style/components/NameStyleText';
 import Presence from '@app/features/presence/state/Presence';
 import {SettingsContextMenu} from '@app/features/ui/action_menu/SettingsContextMenu';
 import * as ContextMenuCommands from '@app/features/ui/commands/ContextMenuCommands';
@@ -292,9 +291,7 @@ const UserAreaInner = observer(
 								<StatusAwareAvatar user={user} size={32} data-flx="app.user-area.user-area-inner.status-aware-avatar" />
 								<div className={styles.userInfoText} data-flx="app.user-area.user-area-inner.user-info-text">
 									<div className={styles.userName} data-flx="app.user-area.user-area-inner.user-name">
-										<NameStyleText nameStyle={user.nameStyle} data-flx="app.user-area.user-area-inner.name-style-text">
-											{displayName}
-										</NameStyleText>
+										{displayName}
 									</div>
 									<div className={styles.userStatus} data-flx="app.user-area.user-area-inner.user-status">
 										<div

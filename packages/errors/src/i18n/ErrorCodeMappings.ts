@@ -653,9 +653,4 @@ export const ErrorCodeToI18nKey = {
 	[ValidationErrorCodes.ENTRANCE_SOUND_NAME_LENGTH_INVALID]: 'entrance_sounds.name_length_invalid',
 	[ValidationErrorCodes.ENTRANCE_SOUND_NOT_FOUND]: 'entrance_sounds.not_found',
 	[ValidationErrorCodes.ENTRANCE_SOUND_INVALID_SCOPE]: 'entrance_sounds.invalid_scope',
-	[ValidationErrorCodes.NAME_STYLES_REQUIRE_PREMIUM]: 'premium_and_plans.name_styles_require_premium',
-	[ValidationErrorCodes.NAME_COLORS_NOT_READABLE]: 'usernames_and_tags.name_colors_not_readable',
-	[ValidationErrorCodes.NAME_STYLE_CHANGED_TOO_MANY_TIMES]: 'rate_limits.name_style_changed_too_often',
-	[ValidationErrorCodes.PROFILE_THEMES_REQUIRE_PREMIUM]: 'premium_and_plans.profile_themes_require_premium',
-	[ValidationErrorCodes.THEME_COLORS_CHANGED_TOO_MANY_TIMES]: 'rate_limits.theme_colors_changed_too_often',
 } as const satisfies Record<AllErrorCodes, ErrorI18nKey>;

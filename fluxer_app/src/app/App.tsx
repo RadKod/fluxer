@@ -188,7 +188,6 @@ export const AppWrapper = observer(({children}: AppWrapperProps) => {
 	useDocumentClassToggle('mobile-layout', MobileLayout.platformMobileDetected || MobileLayout.enabled);
 	useDocumentClassToggle(UNFOCUSED_FULLY_INTERACTIVE_CLASS, stayInteractiveWhenUnfocused);
 	useDocumentClassToggle('windows-fluxer-sans', WindowsFont.useFluxerSans);
-	useDocumentClassToggle('hide-name-styles', !Accessibility.showNameStyles);
 	useDesktopAllowTransparency(isNative);
 	useWindowEventListeners();
 	useRemScaleTracking();

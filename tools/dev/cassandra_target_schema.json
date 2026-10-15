@@ -10992,26 +10992,6 @@
 				{
 					"name": "enforcement_decision_id",
 					"type": "bigint"
-				},
-				{
-					"name": "name_font",
-					"type": "int"
-				},
-				{
-					"name": "name_color",
-					"type": "int"
-				},
-				{
-					"name": "name_color_2",
-					"type": "int"
-				},
-				{
-					"name": "theme_primary_color",
-					"type": "int"
-				},
-				{
-					"name": "theme_accent_color",
-					"type": "int"
 				}
 			],
 			"primary_key": "((user_id))",

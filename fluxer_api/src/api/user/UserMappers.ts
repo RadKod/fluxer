@@ -33,7 +33,6 @@ import {
 } from '@fluxer/constants/src/UserConstants';
 import type {WebAuthnCredentialResponse} from '@fluxer/schema/src/domains/auth/AuthSchemas';
 import type {CosmeticAssetDataResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
-import type {NameStyle, ThemeColors} from '@fluxer/schema/src/domains/user/PlusAppearanceSchemas';
 import type {
 	RelationshipResponse,
 	UserGuildSettingsResponse,
@@ -49,42 +48,17 @@ function getVisiblePublicUserFlags(userFlags: bigint): bigint {
 	return (userFlags & UserFlags.STAFF_HIDDEN) !== 0n ? PUBLIC_USER_FLAGS_WITHOUT_STAFF : PUBLIC_USER_FLAGS;
 }
 
-// Micup: the name style and the profile theme stay stored when Plus ends and show only while it lasts: the premium
-// badge rule without BADGE_HIDDEN. The Rust twin is fluxer_users to_api_partial and
-// fluxer_common/src/testdata/plus_appearance_vectors.json binds both. Writes need it too, so nothing is saved that
-// would never show.
-export function showsPlusAppearance(user: User): boolean {
-	return (
-		!user.isBot &&
-		(user.flags & UserFlags.DELETED) === 0n &&
-		(user.premiumType ?? 0) > 0 &&
-		(user.premiumFlags & PremiumFlags.PERKS_DISABLED) === 0
-	);
-}
-
 // Micup: premium badge next to the name; PERKS_DISABLED hides it like BADGE_HIDDEN (the private response then says
 // premium_type NONE). Derived on every read, never stored; the Rust twin is
 // fluxer_common user_flags::public_user_flags and fluxer_common/src/testdata/premium_badge_flag_vectors.json binds both.
 function showsPremiumBadge(user: User): boolean {
-	return showsPlusAppearance(user) && (user.premiumFlags & PremiumFlags.BADGE_HIDDEN) === 0;
-}
-
-function mapNameStyle(user: User): NameStyle | null {
-	if (!showsPlusAppearance(user) || user.nameFont === null || user.nameColor === null) return null;
-	return {
-		font_id: user.nameFont as NameStyle['font_id'],
-		colors: user.nameColor2 === null ? [user.nameColor] : [user.nameColor, user.nameColor2],
-	};
-}
-
-function mapThemeColors(user: User): ThemeColors | null {
-	return showsPlusAppearance(user) && user.themePrimaryColor !== null && user.themeAccentColor !== null
-		? [user.themePrimaryColor, user.themeAccentColor]
-		: null;
-}
-
-function isSameNameStyle(left?: NameStyle | null, right?: NameStyle | null): boolean {
-	return left?.font_id === right?.font_id && left?.colors.join() === right?.colors.join();
+	return (
+		!user.isBot &&
+		(user.flags & UserFlags.DELETED) === 0n &&
+		(user.premiumType ?? 0) > 0 &&
+		(user.premiumFlags & PremiumFlags.BADGE_HIDDEN) === 0 &&
+		(user.premiumFlags & PremiumFlags.PERKS_DISABLED) === 0
+	);
 }
 
 function mapUserFlagsToPublicBitfield(user: User): number {
@@ -152,7 +126,6 @@ function mapUserToOwnPartialResponse(user: User): UserPartialResponse {
 			avatar_decoration_data: null,
 			avatar_ultra_data: null,
 			nameplate_data: null,
-			name_style: null,
 		};
 	}
 	return {
@@ -170,7 +143,6 @@ function mapUserToOwnPartialResponse(user: User): UserPartialResponse {
 		avatar_decoration_data: mapCosmeticAssetData(user.avatarDecorationId, user.avatarDecorationAsset),
 		avatar_ultra_data: mapCosmeticAssetData(user.avatarUltraId, user.avatarUltraAsset),
 		nameplate_data: mapCosmeticAssetData(user.nameplateId, user.nameplateAsset),
-		name_style: mapNameStyle(user),
 	};
 }
 
@@ -190,8 +162,7 @@ export function hasPartialUserFieldsChanged(oldUser: User, newUser: User): boole
 		oldPartial.mention_flags !== newPartial.mention_flags ||
 		!isSameCosmetic(oldPartial.avatar_decoration_data, newPartial.avatar_decoration_data) ||
 		!isSameCosmetic(oldPartial.avatar_ultra_data, newPartial.avatar_ultra_data) ||
-		!isSameCosmetic(oldPartial.nameplate_data, newPartial.nameplate_data) ||
-		!isSameNameStyle(oldPartial.name_style, newPartial.name_style)
+		!isSameCosmetic(oldPartial.nameplate_data, newPartial.nameplate_data)
 	);
 }
 
@@ -223,7 +194,6 @@ export function mapUserToPrivateResponse(user: User): UserPrivateResponse {
 		bio: user.bio,
 		pronouns: user.pronouns,
 		accent_color: user.accentColor,
-		theme_colors: mapThemeColors(user),
 		timezone: user.timezone,
 		timezone_privacy_flags: user.timezonePrivacyFlags,
 		banner: stripBannerForUser(user),
@@ -275,7 +245,7 @@ export function mapUserToPrivateResponse(user: User): UserPrivateResponse {
 
 export function mapUserToProfileResponse(user: User, options?: {restrictProfile?: boolean}): UserProfileResponse {
 	if (isProfileHidden(user)) {
-		return {bio: null, pronouns: null, banner: null, banner_color: null, accent_color: null, theme_colors: null};
+		return {bio: null, pronouns: null, banner: null, banner_color: null, accent_color: null};
 	}
 	if (options?.restrictProfile) {
 		return {
@@ -284,7 +254,6 @@ export function mapUserToProfileResponse(user: User, options?: {restrictProfile?
 			banner: stripBannerForUser(user),
 			banner_color: user.bannerColor,
 			accent_color: user.accentColor,
-			theme_colors: mapThemeColors(user),
 		};
 	}
 	return {
@@ -293,7 +262,6 @@ export function mapUserToProfileResponse(user: User, options?: {restrictProfile?
 		banner: stripBannerForUser(user),
 		banner_color: user.bannerColor,
 		accent_color: user.accentColor,
-		theme_colors: mapThemeColors(user),
 	};
 }
 

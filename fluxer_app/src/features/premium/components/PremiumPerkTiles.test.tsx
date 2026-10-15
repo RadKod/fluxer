@@ -13,9 +13,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 interface FakeUser {
 	id: string;
 	username: string;
-	displayName: string;
 	flags: number;
-	themeColors?: readonly [number, number] | null;
 	isPremium: () => boolean;
 	avatar_decoration_data?: unknown;
 	avatar_ultra_data?: unknown;
@@ -31,8 +29,6 @@ const catalog = vi.hoisted(() => ({
 }));
 const users = vi.hoisted(() => ({currentUser: null as unknown}));
 const motion = vi.hoisted(() => ({hovering: false, saveData: false, reduced: false}));
-// How many times the tiles asked their videos to play or to pause.
-const media = vi.hoisted(() => ({plays: 0, pauses: 0}));
 const cosmetics = vi.hoisted(() => ({wornEffect: null as {id: string; asset: string} | null}));
 // What the Fluxer previews were handed, by preview.
 const seen = vi.hoisted(() => ({
@@ -67,7 +63,6 @@ vi.mock('@app/features/navigation/utils/RouterUtils', () => routerUtils);
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {isSelfHosted: () => true}}));
 vi.mock('@app/features/app/hooks/useHover', () => ({useHover: () => [() => {}, motion.hovering]}));
 vi.mock('@app/features/app/hooks/useSaveData', () => ({useSaveData: () => motion.saveData}));
-vi.mock('@app/features/app/hooks/useViewportPlayback', () => ({useViewportPlayback: () => true}));
 vi.mock('@app/features/accessibility/state/Accessibility', () => ({
 	default: {
 		get useReducedMotion() {
@@ -121,7 +116,6 @@ function fakeUser(fields: Partial<FakeUser> = {}): FakeUser {
 	return {
 		id: '1',
 		username: 'epha',
-		displayName: 'Epha',
 		flags: 0,
 		isPremium: () => false,
 		...fields,
@@ -164,13 +158,6 @@ describe('PremiumPerkTiles', () => {
 		seen.profile = null;
 		seen.avatar = null;
 		seen.row = null;
-		Object.assign(media, {plays: 0, pauses: 0});
-		vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(async () => {
-			media.plays += 1;
-		});
-		vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {
-			media.pauses += 1;
-		});
 		routerUtils.transitionTo.mockClear();
 		container = document.createElement('div');
 		document.body.append(container);
@@ -180,7 +167,6 @@ describe('PremiumPerkTiles', () => {
 	afterEach(() => {
 		act(() => root.unmount());
 		container.remove();
-		vi.restoreAllMocks();
 	});
 
 	// The stores here are plain objects, so each render mounts afresh instead of waiting for a MobX reaction.
@@ -198,9 +184,10 @@ describe('PremiumPerkTiles', () => {
 	it('names sanalyer Plus in every foot and calls nothing active for an account without Plus', () => {
 		render();
 
-		expect(tiles()).toHaveLength(8);
+		expect(tiles()).toHaveLength(5);
 		for (const tile of tiles()) {
 			expect(tile.querySelector('[data-flx="premium.premium-perk-tiles.tier"]')?.textContent).toBe('sanalyer Plus');
+			expect(tile.hasAttribute('data-active')).toBe(false);
 		}
 		expect(activeTitles()).toEqual([]);
 	});
@@ -211,23 +198,18 @@ describe('PremiumPerkTiles', () => {
 		users.currentUser = fakeUser({isPremium: () => true, flags: PublicUserFlags.PREMIUM_BADGE});
 		catalog.premiumDiscount = true;
 		render();
-		// Whether the account holds the Early Access badge is not known on the client, so that tile is never Active.
-		expect(activeTitles()).toEqual(titles().filter((title) => title !== 'Early Access badge'));
+		expect(activeTitles()).toEqual(titles());
+		expect(tiles().every((tile) => tile.hasAttribute('data-active'))).toBe(true);
 		expect(container.querySelector('[data-flx="premium.premium-perk-tiles.active"]')?.textContent).toBe('Active');
 
 		users.currentUser = fakeUser({isPremium: () => true, flags: 0});
 		catalog.premiumDiscount = false;
 		render();
-		expect(activeTitles()).toEqual([
-			'Avatar decoration',
-			'Profile effect',
-			'Nameplate',
-			'Name style',
-			'Profile gradient',
-		]);
+		expect(activeTitles()).toEqual(['Avatar decoration', 'Profile effect', 'Nameplate']);
+		expect(tiles().filter((tile) => tile.hasAttribute('data-active'))).toHaveLength(3);
 	});
 
-	it('shows the profile card and the eight tiles in order', () => {
+	it('shows the profile card and the five tiles in order', () => {
 		render();
 
 		expect(container.querySelector('h2')?.textContent).toBe('Let everyone notice you');
@@ -236,10 +218,7 @@ describe('PremiumPerkTiles', () => {
 			'Avatar decoration',
 			'Profile effect',
 			'Nameplate',
-			'Early Access badge',
-			'Name style',
 			'sanalyer Plus badge',
-			'Profile gradient',
 			'Special discounts in the shop',
 		]);
 	});
@@ -248,14 +227,7 @@ describe('PremiumPerkTiles', () => {
 		catalog.itemEntries = [entry('10', 'avatar_decoration', 'owned'), entry('2', 'profile_effect', 'premium')];
 		render();
 
-		expect(titles()).toEqual([
-			'Profile effect',
-			'Early Access badge',
-			'Name style',
-			'sanalyer Plus badge',
-			'Profile gradient',
-			'Special discounts in the shop',
-		]);
+		expect(titles()).toEqual(['Profile effect', 'sanalyer Plus badge', 'Special discounts in the shop']);
 	});
 
 	it('shows the shop discount tile only above 0', () => {
@@ -313,13 +285,7 @@ describe('PremiumPerkTiles', () => {
 			nameplate_data: null,
 		});
 		expect(seen.profile?.previewProfileEffect).toBeNull();
-		expect(titles()).toEqual([
-			'Early Access badge',
-			'Name style',
-			'sanalyer Plus badge',
-			'Profile gradient',
-			'Special discounts in the shop',
-		]);
+		expect(titles()).toEqual(['sanalyer Plus badge', 'Special discounts in the shop']);
 		expect(container.querySelector('[data-flx="premium.premium-perk-tiles.legend"]')).toBeNull();
 		expect(seen.avatar).toBeNull();
 		expect(seen.row).toBeNull();
@@ -354,69 +320,6 @@ describe('PremiumPerkTiles', () => {
 		expect(badge?.getAttribute('src')).toBe('https://cdn.test/badge.svg');
 		expect(badge?.getAttribute('width')).toBe('48');
 		expect(container.querySelector('[data-flx="premium.premium-perk-tiles.tag"]')).toBeNull();
-	});
-
-	it('draws the profile gradient with the account own colours, or with a sample', () => {
-		render();
-		const card = () => container.querySelector<HTMLElement>('[data-flx="premium.premium-perk-tiles.gradient-card"]')!;
-		expect(card().textContent).toBe('Epha');
-		expect(card().style.getPropertyValue('--profile-gradient-1')).toBe('#1e3a8a');
-		expect(card().style.getPropertyValue('--profile-gradient-2')).toBe('#9333ea');
-
-		users.currentUser = fakeUser({themeColors: [0x112233, 0x445566]});
-		render();
-		expect(card().style.getPropertyValue('--profile-gradient-1')).toBe('#112233');
-	});
-
-	// The name style and shop discount tiles show a short loop instead of a still: muted, never fetched before it
-	// plays, the first frame as its poster, playing all the time while on screen and never under reduced motion.
-	it('loops the name style and discount pictures as muted videos that stay still under reduced motion', () => {
-		const tileVideo = (title: string) =>
-			tiles()
-				.find((el) => el.querySelector('[data-flx="premium.premium-perk-tiles.tile-title"]')?.textContent === title)
-				?.querySelector('video');
-		render();
-		for (const [title, name] of [
-			['Name style', 'kart-ad-stili'],
-			['Special discounts in the shop', 'kart-indirim'],
-		] as const) {
-			const video = tileVideo(title);
-			expect(video?.getAttribute('src')).toContain(`${name}.mp4`);
-			expect(video?.getAttribute('poster')).toContain(`${name}.webp`);
-			expect(video?.getAttribute('preload')).toBe('none');
-			expect(video?.loop).toBe(true);
-			expect(video?.muted).toBe(true);
-			expect(video?.hasAttribute('playsinline')).toBe(true);
-		}
-		expect(container.querySelectorAll('video')).toHaveLength(2);
-		expect(media.plays).toBe(2);
-		expect(media.pauses).toBe(0);
-
-		media.plays = 0;
-		motion.reduced = true;
-		render();
-		expect(media.plays).toBe(0);
-		expect(media.pauses).toBe(2);
-	});
-
-	it('shows the Early Access badge on the same flat colour as every perk, with no photo behind any tile', () => {
-		render();
-
-		const tile = tiles().find(
-			(el) =>
-				el.querySelector('[data-flx="premium.premium-perk-tiles.tile-title"]')?.textContent === 'Early Access badge',
-		);
-		expect(tile?.querySelector('[data-flx="premium.premium-perk-tiles.tile-body"]')?.textContent).toBe(
-			'For members who join sanalyer Plus early. It stays on your profile.',
-		);
-		expect(
-			tile?.querySelector('[data-flx="premium.premium-perk-tiles.early-access-badge"]')?.getAttribute('src'),
-		).toContain('erken-erisim');
-		expect(container.querySelector('[data-flx="premium.premium-perk-tiles.art-backdrop"]')).toBeNull();
-		const tokens = readFileSync('src/features/premium/components/PremiumSurface.module.css', 'utf8');
-		expect(tokens).toContain('--premium-art-bg: #2b2257;');
-		const css = readFileSync('src/features/premium/components/PremiumPerkTiles.module.css', 'utf8');
-		expect(css.split('\n.art {')[1]?.split('}')[0]).toContain('background: var(--premium-art-bg);');
 	});
 
 	it('links to the shop for ultra decorations', () => {

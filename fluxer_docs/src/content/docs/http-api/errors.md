@@ -2247,21 +2247,9 @@ You must have an email address to change it
 
 You must start a session before sending messages
 
-### `NAME_COLORS_NOT_READABLE`
-
-These name colors are too dark to read on a dark background
-
 ### `NAME_EMPTY_AFTER_NORMALIZATION`
 
 Name can't be empty after normalization
-
-### `NAME_STYLES_REQUIRE_PREMIUM`
-
-Name styles require Plus
-
-### `NAME_STYLE_CHANGED_TOO_MANY_TIMES`
-
-You've changed your name style too often recently
 
 ### `NEW_EMAIL_MUST_BE_DIFFERENT`
 
@@ -2338,10 +2326,6 @@ Preceding channel must share the same parent as the moved channel
 ### `PRECEDING_CHANNEL_NOT_IN_GUILD`
 
 Preceding channel isn't present in the community
-
-### `PROFILE_THEMES_REQUIRE_PREMIUM`
-
-Profile themes require Plus
 
 ### `PRONOUNS_CHANGED_TOO_MANY_TIMES`
 
@@ -2426,10 +2410,6 @@ This tag is already taken
 ### `TAG_STYLE_REQUIRES_EMAIL_SIGN_IN`
 
 Tags are only available when people sign in with email
-
-### `THEME_COLORS_CHANGED_TOO_MANY_TIMES`
-
-You've changed your profile theme too often recently
 
 ### `THIS_VANITY_URL_IS_ALREADY_TAKEN`
 

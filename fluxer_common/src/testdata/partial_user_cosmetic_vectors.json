@@ -32,8 +32,7 @@
 			"flags": 0,
 			"avatar_decoration_data": {"asset": "a_1a2b3c4d", "item_id": "1001"},
 			"avatar_ultra_data": null,
-			"nameplate_data": {"asset": "5e6f7a8b", "item_id": "2002"},
-			"name_style": null
+			"nameplate_data": {"asset": "5e6f7a8b", "item_id": "2002"}
 		}
 	},
 	{
@@ -69,8 +68,7 @@
 			"flags": 0,
 			"avatar_decoration_data": null,
 			"avatar_ultra_data": null,
-			"nameplate_data": {"asset": "5e6f7a8b", "item_id": "2002"},
-			"name_style": null
+			"nameplate_data": {"asset": "5e6f7a8b", "item_id": "2002"}
 		}
 	},
 	{
@@ -106,8 +104,7 @@
 			"flags": 0,
 			"avatar_decoration_data": null,
 			"avatar_ultra_data": null,
-			"nameplate_data": null,
-			"name_style": null
+			"nameplate_data": null
 		}
 	},
 	{
@@ -143,8 +140,7 @@
 			"flags": 0,
 			"avatar_decoration_data": null,
 			"avatar_ultra_data": null,
-			"nameplate_data": null,
-			"name_style": null
+			"nameplate_data": null
 		}
 	},
 	{
@@ -180,8 +176,7 @@
 			"flags": 0,
 			"avatar_decoration_data": {"asset": "a_1a2b3c4d", "item_id": "1001"},
 			"avatar_ultra_data": {"asset": "a_7c8d9e0f", "item_id": "3003"},
-			"nameplate_data": null,
-			"name_style": null
+			"nameplate_data": null
 		}
 	},
 	{
@@ -217,8 +212,7 @@
 			"flags": 0,
 			"avatar_decoration_data": null,
 			"avatar_ultra_data": null,
-			"nameplate_data": null,
-			"name_style": null
+			"nameplate_data": null
 		}
 	}
 ]

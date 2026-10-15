@@ -31,8 +31,6 @@ from fontTools.ttLib import TTFont
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_ROOT = REPO_ROOT / "packages" / "fonts"
 FILES_DIR = PACKAGE_ROOT / "files"
-# Built and verified by build_name_style_fonts.py from its own lock.
-NAME_STYLE_FILES_DIR = FILES_DIR / "NameStyle"
 CSS_DIR = PACKAGE_ROOT / "css"
 MANIFEST_PATH = PACKAGE_ROOT / "manifest.json"
 TOOL_ROOT = Path(__file__).resolve().parent
@@ -1437,11 +1435,7 @@ def verify() -> int:
 
     locked_files = set(lock["files"])
     on_disk = (
-        {
-            f"files/{p.relative_to(FILES_DIR)}"
-            for p in FILES_DIR.rglob("*.woff2")
-            if NAME_STYLE_FILES_DIR not in p.parents
-        }
+        {f"files/{p.relative_to(FILES_DIR)}" for p in FILES_DIR.rglob("*.woff2")}
         if FILES_DIR.is_dir()
         else set()
     )
