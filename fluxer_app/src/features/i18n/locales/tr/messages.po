@@ -56367,4 +56367,137 @@ msgstr "Kitaplıktan kaldır"
 #. Hint shown in the favorites sidebar while the list is empty.
 #: src/features/app/components/layout/FavoritesChannelListContent.tsx
 msgid "No favorites yet. Press the star on any channel and it shows up here."
-msgstr "Henüz favori yok. Herhangi bir kanaldaki yıldıza basınca burada görünür."
+msgstr ""
+"Henüz favori yok. Herhangi bir kanaldaki yıldıza basınca burada görünür."
+
+#. Soundboard slot usage; existing sounds remain usable above capacity.
+#: src/features/voice/components/SoundboardPanel.tsx:31
+msgid "{count} / {capacity} sounds"
+msgstr "{count} / {capacity} ses"
+
+#. Soundboard action to upload a community sound.
+#: src/features/voice/components/SoundboardPanel.tsx:30
+msgid "Add sound"
+msgstr "Ses ekleyin"
+
+#. Soundboard form action to return to the sound list.
+#: src/features/voice/components/SoundboardManagePanel.tsx:32
+msgid "Back to sounds"
+msgstr "Seslere dönün"
+
+#. Soundboard upload error for unsupported format or file size.
+#: src/features/voice/components/SoundboardManagePanel.tsx:27
+msgid "Choose an MP3 or Ogg file up to 512,000 bytes."
+msgstr "En fazla 512.000 baytlık bir MP3 veya Ogg dosyası seçin."
+
+#. Soundboard action to choose an MP3 or Ogg file.
+#: src/features/voice/components/SoundboardManagePanel.tsx:22
+msgid "Choose audio"
+msgstr "Ses dosyası seçin"
+
+#. Soundboard sound deletion failure.
+#: src/features/voice/components/SoundboardManagePanel.tsx:49
+msgid "Could not delete this sound. Try again."
+msgstr "Bu ses silinemedi. Tekrar deneyin."
+
+#. Soundboard metadata loading error.
+#: src/features/voice/components/SoundboardPanel.tsx:48
+msgid "Could not load sounds. Try again."
+msgstr "Sesler yüklenemedi. Tekrar deneyin."
+
+#. Error after a soundboard play request fails.
+#: src/features/voice/components/SoundboardPanel.tsx:49
+msgid "Could not play this sound. Try again."
+msgstr "Bu ses çalınamadı. Tekrar deneyin."
+
+#. Soundboard upload or metadata update failure.
+#: src/features/voice/components/SoundboardManagePanel.tsx:37
+msgid "Could not save this sound. Try again."
+msgstr "Bu ses kaydedilemedi. Tekrar deneyin."
+
+#. Soundboard delete confirmation description.
+#: src/features/voice/components/SoundboardManagePanel.tsx:45
+msgid "Delete {name}? This sound will be removed from the community."
+msgstr "{name} sesi silinsin mi? Bu ses sunucudan kaldırılacak."
+
+#. Soundboard action and confirmation title for deleting a sound.
+#: src/features/voice/components/SoundboardManagePanel.tsx:41
+msgid "Delete sound"
+msgstr "Sesi silin"
+
+#. Account-local switch to stop hearing incoming soundboard sounds.
+#: src/features/voice/components/SoundboardPanel.tsx:39
+msgid "Disable soundboard sounds"
+msgstr "Ses paneli seslerini kapatın"
+
+#. Accessible label of a soundboard sound management button.
+#: src/features/voice/components/SoundboardPanel.tsx:59
+msgid "Edit {name}"
+msgstr "{name} sesini düzenleyin"
+
+#. Soundboard metadata loading status.
+#: src/features/voice/components/SoundboardPanel.tsx:47
+msgid "Loading sounds…"
+msgstr "Sesler yükleniyor…"
+
+#. Community sound upload requirements; server validates duration and audio
+#. format.
+#: src/features/voice/components/SoundboardManagePanel.tsx:23
+msgid "MP3 or Ogg, up to 512,000 bytes and 5.2 seconds."
+msgstr "MP3 veya Ogg, en fazla 512.000 bayt ve 5,2 saniye."
+
+#. Action to show the next soundboard page.
+#: src/features/voice/components/SoundboardPanel.tsx:61
+msgid "Next sounds"
+msgstr "Sonraki sesler"
+
+#. Empty community soundboard guidance.
+#: src/features/voice/components/SoundboardPanel.tsx:54
+msgid "No sounds yet. Add an MP3 or Ogg clip to use it in this voice channel."
+msgstr ""
+"Henüz ses yok. Bu ses kanalında kullanmak için bir MP3 veya Ogg ses ekleyin."
+
+#. Current soundboard page status.
+#: src/features/voice/components/SoundboardPanel.tsx:62
+msgid "Page {page} of {pages}"
+msgstr "Sayfa {page} / {pages}"
+
+#. Accessible label of a soundboard sound playback button.
+#: src/features/voice/components/SoundboardPanel.tsx:58
+msgid "Play {name}"
+msgstr "{name} sesini çalın"
+
+#. Action to show the previous soundboard page.
+#: src/features/voice/components/SoundboardPanel.tsx:60
+msgid "Previous sounds"
+msgstr "Önceki sesler"
+
+#. Soundboard form save action.
+#: src/features/voice/components/SoundboardManagePanel.tsx:31
+msgid "Save sound"
+msgstr "Sesi kaydedin"
+
+#. Label for the community soundboard sound name field.
+#: src/features/voice/components/SoundboardManagePanel.tsx:21
+msgid "Sound name"
+msgstr "Ses adı"
+
+#. Soundboard upload lock directing the user to a higher community boost
+#. level.
+#: src/features/voice/components/SoundboardPanel.tsx:35
+msgid "Sound slots are full. Boost to a higher level for more slots."
+msgstr ""
+"Ses yuvaları dolu. Daha fazla yuva için daha yüksek bir seviyeye takviye "
+"yapabilirsiniz."
+
+#. Accessible name of the voice control that opens the community soundboard.
+#. Title of the community soundboard and voice control label.
+#: src/features/voice/components/SoundboardPanel.tsx:29
+#: src/features/voice/components/voice_connection_status/LocalParticipantControls.tsx:91
+msgid "Soundboard"
+msgstr "Ses paneli"
+
+#. Accessible label for the soundboard listening volume slider.
+#: src/features/voice/components/SoundboardPanel.tsx:43
+msgid "Soundboard volume"
+msgstr "Ses paneli ses düzeyi"

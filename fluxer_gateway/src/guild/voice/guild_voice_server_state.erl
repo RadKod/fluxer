@@ -41,8 +41,7 @@ build_guild_state(#{guild_pid := GuildPid} = State) ->
 -spec apply_guild_state(map(), server_state()) -> server_state().
 apply_guild_state(GuildState, State) ->
     NewState = merge_guild_state(GuildState, State),
-    _ = guild_voice_server_sync:sync_voice_state_count_diff(State, NewState),
-    NewState.
+    guild_voice_soundboard:sync(State, NewState).
 
 -spec merge_guild_state(map(), server_state()) -> server_state().
 merge_guild_state(GuildState, State) ->

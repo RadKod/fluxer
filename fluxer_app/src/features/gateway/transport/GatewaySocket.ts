@@ -183,6 +183,7 @@ export interface GatewayDispatchReceipt {
 
 export interface GatewayDispatchDelivery {
 	readonly type: string;
+	readonly isReplay?: boolean;
 	readonly data: unknown;
 	readonly retainedByteSize: number;
 	readonly receipt: GatewayDispatchReceipt;
@@ -960,6 +961,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 
 	private handleDispatchPayload(payload: GatewayPayload, retainedByteSize: number): void {
 		if (!payload.t) return;
+		const isReplay = this.connectionState !== GatewayState.Connected;
 		switch (payload.t) {
 			case 'READY': {
 				const data = payload.d as {
@@ -988,6 +990,7 @@ export class GatewaySocket extends EventEmitter<GatewaySocketEvents> {
 		}
 		this.emitDispatchDeferred({
 			type: payload.t,
+			isReplay,
 			data: payload.d,
 			retainedByteSize,
 			receipt: {sequence: payload.s ?? this.lastSequenceNumber, generation: this.dispatchGeneration},

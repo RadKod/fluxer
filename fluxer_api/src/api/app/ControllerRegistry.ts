@@ -33,6 +33,7 @@ import {GuildBoostController} from '@app/api/guild/boost/GuildBoostController';
 import {GuildController} from '@app/api/guild/controllers/index';
 import {MicupBotController} from '@app/api/guild/micupbot/MicupBotController';
 import {GuildRosterController} from '@app/api/guild/roster/GuildRosterController';
+import {GuildSoundboardController} from '@app/api/guild/soundboard/GuildSoundboardController';
 import {InstanceController} from '@app/api/instance/InstanceController';
 import {InviteController} from '@app/api/invite/InviteController';
 import {OAuth2ApplicationsController} from '@app/api/oauth/OAuth2ApplicationsController';
@@ -83,6 +84,7 @@ export function registerControllers(routes: HonoApp, config: APIConfig): void {
 	ReadStateController(routes);
 	ReportController(routes);
 	GuildController(routes);
+	GuildSoundboardController(routes);
 	SearchController(routes);
 	GifController(routes);
 	ThemeController(routes);

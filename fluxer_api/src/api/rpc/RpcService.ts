@@ -37,6 +37,7 @@ import {
 	mapGuildToGuildResponse,
 } from '@app/api/guild/GuildModel';
 import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
+import {checkGuildSoundboardPlayRateLimit} from '@app/api/guild/soundboard/GuildSoundboardPlayRateLimit';
 import {stripAnimationPrefix} from '@app/api/infrastructure/AssetEntitlementUtils';
 import type {AvatarService} from '@app/api/infrastructure/AvatarService';
 import type {DiscriminatorService} from '@app/api/infrastructure/DiscriminatorService';
@@ -286,6 +287,15 @@ export class RpcService {
 
 	async handleRpcRequest({request, requestCache}: HandleRpcRequestParams): Promise<RpcResponse> {
 		switch (request.type) {
+			case 'soundboard_play_rate_limit':
+				return {
+					type: 'soundboard_play_rate_limit',
+					data: await checkGuildSoundboardPlayRateLimit(
+						this.rateLimitService,
+						createUserID(request.user_id),
+						createChannelID(request.channel_id),
+					),
+				};
 			case 'get_game_activity_grants':
 				return {
 					type: 'get_game_activity_grants',

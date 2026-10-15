@@ -103,11 +103,12 @@ confirm_join(ConnId, GuildState) ->
 
 single_join_dispatches_once_per_recipient_test() ->
     GuildState = confirm_join(<<"conn1">>, base_guild_state()),
+    JoinedVS = (join_voice_state(<<"conn1">>))#{<<"soundboard_epoch">> => 1},
     ?assertEqual(
-        [broadcast_payload(join_voice_state(<<"conn1">>))], collect_voice_state_dispatches()
+        [broadcast_payload(JoinedVS)], collect_voice_state_dispatches()
     ),
     ?assertEqual(
-        join_voice_state(<<"conn1">>),
+        JoinedVS,
         maps:get(<<"conn1">>, maps:get(voice_states, GuildState))
     ).
 
@@ -121,8 +122,9 @@ relay_syncs_guild_cache_without_rebroadcast_test() ->
 
 mute_change_still_dispatches_test() ->
     GuildState0 = confirm_join(<<"conn1">>, base_guild_state()),
+    JoinedVS = (join_voice_state(<<"conn1">>))#{<<"soundboard_epoch">> => 1},
     ?assertEqual(
-        [broadcast_payload(join_voice_state(<<"conn1">>))], collect_voice_state_dispatches()
+        [broadcast_payload(JoinedVS)], collect_voice_state_dispatches()
     ),
     MutedVS = (join_voice_state(<<"conn1">>))#{
         <<"self_mute">> => true, <<"self_deaf">> => true
@@ -136,8 +138,9 @@ mute_change_still_dispatches_test() ->
 
 rejoin_after_leave_still_dispatches_test() ->
     GuildState0 = confirm_join(<<"conn1">>, base_guild_state()),
+    JoinedVS = (join_voice_state(<<"conn1">>))#{<<"soundboard_epoch">> => 1},
     ?assertEqual(
-        [broadcast_payload(join_voice_state(<<"conn1">>))], collect_voice_state_dispatches()
+        [broadcast_payload(JoinedVS)], collect_voice_state_dispatches()
     ),
     LeaveVS = (join_voice_state(<<"conn1">>))#{<<"channel_id">> => null},
     ok = guild_voice_broadcast:broadcast_voice_state_update(
@@ -147,11 +150,12 @@ rejoin_after_leave_still_dispatches_test() ->
     ?assertEqual([broadcast_payload(LeaveVS)], collect_voice_state_dispatches()),
     ?assertNot(maps:is_key(<<"conn1">>, maps:get(voice_states, GuildState1))),
     GuildState2 = confirm_join(<<"conn2">>, GuildState1),
+    RejoinedVS = (join_voice_state(<<"conn2">>))#{<<"soundboard_epoch">> => 1},
     ?assertEqual(
-        [broadcast_payload(join_voice_state(<<"conn2">>))], collect_voice_state_dispatches()
+        [broadcast_payload(RejoinedVS)], collect_voice_state_dispatches()
     ),
     ?assertEqual(
-        join_voice_state(<<"conn2">>),
+        RejoinedVS,
         maps:get(<<"conn2">>, maps:get(voice_states, GuildState2))
     ).
 

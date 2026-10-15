@@ -9,6 +9,7 @@ import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
 import Permission from '@app/features/permissions/state/Permission';
 import NativePermission from '@app/features/permissions/system/state/NativePermission';
 import {VOICE_ROOM_CONTROL_DISCOVERY_STORAGE_KEY} from '@app/features/platform/state/PersistentStorage';
+import {ComponentBus} from '@app/features/platform/utils/ComponentBus';
 import {awaitHydration} from '@app/features/platform/utils/MobXPersistence';
 import * as ContextMenuCommands from '@app/features/ui/commands/ContextMenuCommands';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
@@ -56,7 +57,7 @@ import {Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {VOICE_CHANNEL_CAMERA_USER_LIMIT} from '@fluxer/constants/src/LimitConstants';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
-import {CameraIcon, CameraSlashIcon, CubeIcon, MonitorPlayIcon} from '@phosphor-icons/react';
+import {CameraIcon, CameraSlashIcon, CubeIcon, MonitorPlayIcon, SpeakerHighIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import {type MouseEvent as ReactMouseEvent, useCallback, useEffect, useState} from 'react';
@@ -83,6 +84,10 @@ const NEW_ROOM_CONTROL_DESCRIPTOR = msg({
 	message: 'New',
 	context: 'navigation-badge',
 	comment: 'Accessible hint that the voice panel 3D room control is newly available.',
+});
+const SOUNDBOARD_DESCRIPTOR = msg({
+	message: 'Soundboard',
+	comment: 'Accessible name of the voice control that opens the community soundboard.',
 });
 export const LocalParticipantControls = observer(() => {
 	const {i18n} = useLingui();
@@ -276,6 +281,22 @@ export const LocalParticipantControls = observer(() => {
 	})();
 	return (
 		<>
+			{guildId && channel && (
+				<Tooltip text={i18n._(SOUNDBOARD_DESCRIPTOR)}>
+					<FocusRing offset={-2} enabled={isConnected}>
+						<button
+							type="button"
+							className={styles.mediaButton}
+							disabled={!isConnected}
+							onClick={() => ComponentBus.dispatch('SOUNDBOARD_TOGGLE')}
+							aria-label={i18n._(SOUNDBOARD_DESCRIPTOR)}
+							data-flx="voice.voice-connection-status.local-participant-controls.soundboard-button"
+						>
+							<SpeakerHighIcon weight="fill" className={styles.mediaIcon} />
+						</button>
+					</FocusRing>
+				</Tooltip>
+			)}
 			<Tooltip text={cameraLabel} data-flx="voice.voice-connection-status.local-participant-controls.tooltip">
 				<FocusRing
 					offset={-2}

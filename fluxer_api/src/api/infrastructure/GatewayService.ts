@@ -1069,6 +1069,20 @@ export class GatewayService {
 		};
 	}
 
+	async playGuildSoundboardSound(params: {
+		guild_id: string;
+		channel_id: string;
+		user_id: string;
+		session_id: string;
+		connection_id: string;
+		sound_id: string;
+		event_id: string;
+		asset_version: string;
+		volume: number;
+	}): Promise<{success: boolean; error?: string}> {
+		return this.call('guild.play_soundboard_sound', params);
+	}
+
 	async getVoiceStateCounts(): Promise<GatewayVoiceStateCounts> {
 		const result = await this.call<GatewayVoiceStateCounts>('process.voice_state_counts', {});
 		return {

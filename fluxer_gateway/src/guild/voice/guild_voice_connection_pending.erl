@@ -215,7 +215,10 @@ restore_pending(ConnectionId, PendingConnections, PendingData, VoiceStates, Stat
 -spec finalize_restore(
     binary(), voice_state(), pending_voice_connections(), voice_state_map(), guild_state()
 ) -> {ok, voice_state_map(), guild_state()}.
-finalize_restore(ConnectionId, VoiceState, PendingConnections, VoiceStates, State) ->
+finalize_restore(ConnectionId, VoiceState0, PendingConnections, VoiceStates, State) ->
+    VoiceState = guild_voice_soundboard:with_epoch(
+        VoiceState0, maps:get(ConnectionId, VoiceStates, #{})
+    ),
     NewPending = maps:remove(ConnectionId, PendingConnections),
     S1 = State#{pending_voice_connections => NewPending},
     UpdatedVS = VoiceStates#{ConnectionId => VoiceState},

@@ -146,6 +146,31 @@ function installMasterSoftClip(context: AudioContext): void {
 
 let sharedAudioContext: AudioContext | null = null;
 let sharedAudioContextSuspendedAfterCall = false;
+let sharedAudioContextLeaseCount = 0;
+
+export interface SharedVoiceAudioContextLease {
+	context: AudioContext;
+	release(): void;
+}
+
+export function acquireSharedVoiceAudioContext(): SharedVoiceAudioContextLease | null {
+	const context = getSharedVoiceAudioContext();
+	if (!context) return null;
+	sharedAudioContextLeaseCount += 1;
+	let released = false;
+	return {
+		context,
+		release() {
+			if (released) return;
+			released = true;
+			sharedAudioContextLeaseCount -= 1;
+		},
+	};
+}
+
+export function getSharedVoiceAudioContextLeaseCount(): number {
+	return sharedAudioContextLeaseCount;
+}
 
 export function resolveAudioContextConstructor(): AudioContextConstructor | null {
 	if (typeof window === 'undefined') return null;

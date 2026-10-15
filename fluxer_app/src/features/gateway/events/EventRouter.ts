@@ -81,6 +81,8 @@ import {handleCallCreate} from '@app/features/voice/events/CallCreate';
 import {handleCallDelete} from '@app/features/voice/events/CallDelete';
 import {handleCallUpdate} from '@app/features/voice/events/CallUpdate';
 import {handleEntranceSoundPlay} from '@app/features/voice/events/EntranceSoundPlay';
+import {handleSoundboardLibraryUpdate} from '@app/features/voice/events/SoundboardLibraryUpdate';
+import {handleSoundboardPlay} from '@app/features/voice/events/SoundboardPlay';
 import {handleVoiceServerUpdate} from '@app/features/voice/events/VoiceServerUpdate';
 import {handleVoiceSignal} from '@app/features/voice/events/VoiceSignal';
 import {handleVoiceStateUpdate} from '@app/features/voice/events/VoiceStateUpdate';
@@ -92,6 +94,7 @@ export interface GatewayGeoipPayload {
 }
 
 export interface GatewayHandlerContext {
+	isReplay?: boolean;
 	socket: GatewaySocket | null;
 	accountKey: string | null;
 	settingsEpoch: number | null;
@@ -178,6 +181,8 @@ export function createHandlerRegistry(): GatewayHandlerRegistry {
 	registry.set('CALL_UPDATE', handleCallUpdate as GatewayEventHandler);
 	registry.set('CALL_DELETE', handleCallDelete as GatewayEventHandler);
 	registry.set('ENTRANCE_SOUND_PLAY', handleEntranceSoundPlay as GatewayEventHandler);
+	registry.set('GUILD_SOUNDBOARD_SOUND_PLAY', handleSoundboardPlay as GatewayEventHandler);
+	registry.set('GUILD_SOUNDBOARD_SOUNDS_UPDATE', handleSoundboardLibraryUpdate as GatewayEventHandler);
 	registry.set('INVITE_CREATE', handleInviteCreate as GatewayEventHandler);
 	registry.set('INVITE_DELETE', handleInviteDelete as GatewayEventHandler);
 	registry.set('RELATIONSHIP_ADD', handleRelationshipAdd as GatewayEventHandler);

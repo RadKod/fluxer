@@ -432,7 +432,7 @@ export class PooledGatewayConnection {
 					restore.persistedAuthToken !== null && delivery.type === 'AUTH_SESSION_CHANGE'
 						? {...delivery, persistedAuthTokenAccountKey: accountKey}
 						: delivery;
-				this.handleGatewayDispatch(restore.socket, replayDelivery, accountKey, isCurrent);
+				this.handleGatewayDispatch(restore.socket, {...replayDelivery, isReplay: true}, accountKey, isCurrent);
 			}
 		}
 	}
@@ -522,7 +522,7 @@ export class PooledGatewayConnection {
 		if (!socket.isDispatchActive(delivery.receipt)) {
 			throw new Error('Cannot replay an inactive gateway dispatch receipt');
 		}
-		this.handleGatewayDispatch(socket, delivery, accountKey, isCurrent);
+		this.handleGatewayDispatch(socket, {...delivery, isReplay: true}, accountKey, isCurrent);
 		if (!socket.isConnected()) {
 			throw new Error('Foreground gateway disconnected while replaying a dispatch');
 		}
@@ -545,7 +545,7 @@ export class PooledGatewayConnection {
 			if (!socket.isDispatchActive(delivery.receipt)) {
 				throw new Error('Cannot finalize a promoted foreground gateway with an inactive live dispatch');
 			}
-			this.handleGatewayDispatch(socket, delivery, accountKey, isCurrent);
+			this.handleGatewayDispatch(socket, {...delivery, isReplay: true}, accountKey, isCurrent);
 			if (!socket.isConnected() || socket.isDispatchActive(delivery.receipt)) {
 				throw new Error('Promoted foreground gateway failed while draining live dispatches');
 			}

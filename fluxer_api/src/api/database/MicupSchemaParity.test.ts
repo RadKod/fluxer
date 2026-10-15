@@ -31,6 +31,7 @@ import * as PremiumLedgerTables from '@app/api/premium/ledger/PremiumLedgerTable
 import * as PremiumTrialTables from '@app/api/premium/trial/PremiumTrialTables';
 import * as ReferralTables from '@app/api/referral/ReferralTables';
 import * as ShopTables from '@app/api/shop/ShopTables';
+import {GuildSounds} from '@app/api/Tables';
 import {describe, expect, it} from 'vitest';
 
 const THIS_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -110,6 +111,7 @@ const MICUP_TABLES: Record<string, {primaryKey: string; options: string}> = {
 	},
 	guild_boost_state: {primaryKey: '((guild_id))', options: ''},
 	guild_boosts: {primaryKey: '((guild_id), boost_id)', options: ''},
+	guild_sounds: {primaryKey: '((guild_id), sound_id)', options: 'CLUSTERING ORDER BY (sound_id DESC)'},
 	guild_entitlement_expirations: {primaryKey: '((day, shard), guild_id, entitlement_id)', options: ''},
 	guild_packages: {primaryKey: '((guild_id), package_id)', options: ''},
 	guild_roster_events: {primaryKey: '((guild_id), event_id)', options: ''},
@@ -373,6 +375,7 @@ const CQL_RESERVED_WORDS = new Set([
 ]);
 
 const DSL_TABLES = [
+	GuildSounds,
 	...Object.values(BadgeTables),
 	...Object.values(CosmeticTables),
 	...Object.values(FeedTables),

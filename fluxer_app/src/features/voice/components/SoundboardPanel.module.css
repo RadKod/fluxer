@@ -1,0 +1,70 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.panel,
+.form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-4);
+	min-width: 0;
+}
+
+.toolbar,
+.pagination,
+.actions,
+.sound {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-2);
+	min-width: 0;
+}
+
+.toolbar,
+.pagination {
+	justify-content: space-between;
+	flex-wrap: wrap;
+}
+
+.hint {
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: 0.875rem;
+	line-height: 1.5;
+}
+
+.grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--spacing-2);
+}
+
+.play {
+	flex: 1;
+	min-width: 0;
+	justify-content: flex-start;
+}
+
+.name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.volume,
+.status {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-2);
+}
+
+.error {
+	margin: 0;
+	color: var(--status-danger);
+	font-size: 0.875rem;
+}
+
+@media (max-width: 360px) {
+	.grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

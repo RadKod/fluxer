@@ -100,6 +100,7 @@ export const DEFAULT_RESTRICTED_LIMITS: Record<LimitKey, number> = {
 	max_guild_roles: MAX_GUILD_ROLES,
 	max_guild_stickers_more: MAX_GUILD_STICKERS_MORE_STICKERS,
 	max_guild_stickers: MAX_GUILD_STICKERS,
+	max_guild_soundboard_sounds: 8,
 	max_guilds: 100,
 	max_message_length: MAX_MESSAGE_LENGTH_NON_PREMIUM,
 	max_private_channels_per_user: MAX_PRIVATE_CHANNELS_PER_USER,

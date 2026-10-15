@@ -15,6 +15,7 @@ mod response;
 mod routes;
 mod runtime;
 mod self_origin;
+mod soundboard_path;
 mod state;
 mod stored;
 pub mod transform;

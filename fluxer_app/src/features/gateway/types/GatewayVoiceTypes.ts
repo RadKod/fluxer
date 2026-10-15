@@ -8,6 +8,7 @@ export interface VoiceState {
 	user_id: string;
 	connection_id: string;
 	session_id?: string;
+	soundboard_epoch?: number;
 	is_mobile?: boolean;
 	mute: boolean;
 	deaf: boolean;

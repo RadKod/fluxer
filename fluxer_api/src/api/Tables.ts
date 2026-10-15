@@ -153,6 +153,7 @@ import {
 	type GuildDiscoveryByStatusRow,
 	type GuildDiscoveryRow,
 } from '@app/api/database/types/GuildDiscoveryTypes';
+import {GUILD_SOUND_COLUMNS, type GuildSoundRow} from '@app/api/database/types/GuildSoundTypes';
 import {
 	GUILD_AUDIT_LOG_COLUMNS,
 	GUILD_BAN_BY_EMAIL_COLUMNS,
@@ -463,6 +464,12 @@ export const UserEntranceSounds = defineTable<UserEntranceSoundRow, 'user_id' | 
 	name: 'user_entrance_sound',
 	columns: USER_ENTRANCE_SOUND_COLUMNS,
 	primaryKey: ['user_id', 'sound_id'],
+});
+export const GuildSounds = defineTable<GuildSoundRow, 'guild_id' | 'sound_id'>({
+	name: 'guild_sounds',
+	columns: GUILD_SOUND_COLUMNS,
+	primaryKey: ['guild_id', 'sound_id'],
+	partitionKey: ['guild_id'],
 });
 export const UserEntranceSoundSelections = defineTable<UserEntranceSoundSelectionRow, 'user_id' | 'scope_id'>({
 	name: 'user_entrance_sound_selection',

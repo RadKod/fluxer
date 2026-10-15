@@ -10,6 +10,7 @@ import {
 	type RoleID,
 	type UserID,
 } from '@app/api/BrandedTypes';
+import {Config} from '@app/api/Config';
 import type {ChannelRepository} from '@app/api/channel/ChannelRepository';
 import {
 	type ChannelFollowerRemovalCopyMode,
@@ -36,6 +37,7 @@ import {
 	mapOtherPlatformTemplateChannelType,
 } from '@app/api/guild/services/data/TemplateChannelImport';
 import {memberEndsInvitePause} from '@app/api/guild/services/GuildInvitePauseApplier';
+import {GuildSoundboardRepository} from '@app/api/guild/soundboard/GuildSoundboardRepository';
 import {emitGuildCreated, emitGuildFeaturesChanged} from '@app/api/infrastructure/activity/GuildEvents';
 import {contentModerationService} from '@app/api/infrastructure/ContentModerationService';
 import type {EntityAssetService, PreparedAssetUpload} from '@app/api/infrastructure/EntityAssetService';
@@ -47,7 +49,11 @@ import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
 import {createLimitMatchContext} from '@app/api/limits/LimitMatchContextBuilder';
 import {getUsernameSelectionGate} from '@app/api/middleware/ServiceRegistry';
-import {getGuildBoostService, getKVThreadAutoArchiveQueue} from '@app/api/middleware/ServiceSingletons';
+import {
+	getAssetDeletionQueue,
+	getGuildBoostService,
+	getKVThreadAutoArchiveQueue,
+} from '@app/api/middleware/ServiceSingletons';
 import {Guild} from '@app/api/models/Guild';
 import type {User} from '@app/api/models/User';
 import {getGuildSearchService} from '@app/api/SearchFactory';
@@ -93,6 +99,7 @@ import {
 	VOICE_CHANNEL_USER_LIMIT_MAX,
 } from '@fluxer/constants/src/LimitConstants';
 import {MessageNotifications} from '@fluxer/constants/src/NotificationConstants';
+import {SOUNDBOARD_SOUND_PATH_PREFIX} from '@fluxer/constants/src/SoundboardConstants';
 import {THREAD_ONLY_CHANNEL_TYPES} from '@fluxer/constants/src/ThreadConstants';
 import {
 	DEFAULT_THREAD_PERMISSIONS,
@@ -838,11 +845,30 @@ export class GuildOperationsService {
 		await this.scheduleGuildDeletion(guildId, 'purge');
 	}
 
+	// Micup: soundboard sounds go with the guild; the files leave through the retrying asset queue.
+	private async purgeGuildSoundboard(guildId: GuildID): Promise<void> {
+		try {
+			const sounds = new GuildSoundboardRepository();
+			for (const sound of await sounds.listSounds(guildId, true)) {
+				const key = `${SOUNDBOARD_SOUND_PATH_PREFIX}/${guildId}/${sound.assetHash}.${sound.extension}`;
+				await getAssetDeletionQueue().queueDeletion({
+					s3Key: key,
+					cdnUrl: `${Config.endpoints.media}/${key}`,
+					reason: 'guild_deleted',
+				});
+				await sounds.deleteSound(guildId, sound.soundId);
+			}
+		} catch (error) {
+			Logger.error({guildId, error}, 'Failed to clean up guild soundboard sounds');
+		}
+	}
+
 	private async scheduleGuildDeletion(guildId: GuildID, copyMode: ChannelFollowerRemovalCopyMode): Promise<void> {
 		const guild = await this.guildRepository.findUnique(guildId);
 		if (!guild) {
 			throw new UnknownGuildError();
 		}
+		await this.purgeGuildSoundboard(guildId);
 		const features = new Set(guild.features);
 		for (const feature of GUILD_DELETION_PENDING_FEATURES) {
 			features.add(feature);
@@ -925,6 +951,7 @@ export class GuildOperationsService {
 			await this.channelRepository.threads.purgeGuild(guildId);
 			await getKVThreadAutoArchiveQueue().removeGuild(guildId);
 		}
+		await this.purgeGuildSoundboard(guildId);
 		await this.guildRepository.delete(guildId, guild.ownerId);
 		await this.gatewayService.stopGuild(guildId);
 		const guildSearchService = getGuildSearchService();

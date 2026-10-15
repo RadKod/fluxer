@@ -29,6 +29,8 @@ const openPicker = vi.fn();
 const preloadPicker = vi.fn();
 const openMenu = vi.fn();
 
+const dispatch = vi.fn();
+vi.mock('@app/features/platform/utils/ComponentBus', () => ({ComponentBus: {dispatch}}));
 vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor}));
 vi.mock('@lingui/react/macro', () => ({
 	useLingui: () => ({i18n: {_: (descriptor: {message: string}) => descriptor.message}}),
@@ -383,5 +385,29 @@ describe('voice panel 3D room control', () => {
 		expect(media.participants.local.isScreenShareEnabled).toBe(true);
 		expect(openPicker).toHaveBeenCalledTimes(1);
 		expect(openMenu).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('voice panel soundboard entry', () => {
+	it('provides one accessible soundboard control using the existing toggle bus', async () => {
+		await render();
+		const buttons = host.querySelectorAll<HTMLButtonElement>('button[aria-label="Soundboard"]');
+		expect(buttons).toHaveLength(1);
+		expect(buttons[0].disabled).toBe(false);
+		act(() => buttons[0].click());
+		expect(dispatch).toHaveBeenCalledExactlyOnceWith('SOUNDBOARD_TOGGLE');
+	});
+
+	it.each(['disconnected', 'dm', 'missing_channel'])('does not open a soundboard for %s', async (state) => {
+		runInAction(() => {
+			if (state === 'disconnected') media.connected = false;
+			if (state === 'dm') media.guildId = null;
+		});
+		if (state === 'missing_channel') env.channelMissing = true;
+		await render();
+		const button = host.querySelector<HTMLButtonElement>('button[aria-label="Soundboard"]');
+		button?.click();
+		expect(button === null || button.disabled).toBe(true);
+		expect(dispatch).not.toHaveBeenCalled();
 	});
 });

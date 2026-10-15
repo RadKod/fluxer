@@ -16,6 +16,10 @@
 -spec handle(binary(), map()) -> term().
 handle(<<"guild.update_member_voice">>, P) ->
     handle_update_member_voice(P);
+handle(<<"guild.play_soundboard_sound">>, P) ->
+    handle_play_soundboard_sound(P);
+handle(<<"guild.disconnect_voice_user">>, P) ->
+    handle_disconnect_voice_user(P);
 handle(<<"guild.disconnect_voice_user_if_in_channel">>, P) ->
     handle_disconnect_if_in_channel(P);
 handle(<<"guild.confirm_voice_connection_from_livekit">>, P) ->
@@ -28,6 +32,31 @@ handle(<<"guild.get_voice_state">>, P) ->
     handle_get_voice_state(P);
 handle(<<"guild.switch_voice_region">>, P) ->
     handle_switch_voice_region(P).
+
+-spec handle_play_soundboard_sound(map()) -> map().
+handle_play_soundboard_sound(P) ->
+    GuildId = validation:snowflake_or_throw(<<"guild_id">>, maps:get(<<"guild_id">>, P)),
+    Request = #{
+        guild_id => GuildId,
+        channel_id => validation:snowflake_or_throw(
+            <<"channel_id">>, maps:get(<<"channel_id">>, P)
+        ),
+        user_id => validation:snowflake_or_throw(<<"user_id">>, maps:get(<<"user_id">>, P)),
+        connection_id => maps:get(<<"connection_id">>, P),
+        session_id => maps:get(<<"session_id">>, P),
+        sound_id => maps:get(<<"sound_id">>, P),
+        event_id => maps:get(<<"event_id">>, P),
+        asset_version => maps:get(<<"asset_version">>, P),
+        volume => maps:get(<<"volume">>, P)
+    },
+    gateway_rpc_guild_infra:with_voice_server(GuildId, fun(VoicePid, _) ->
+        case gen_server:call(VoicePid, {play_soundboard_sound, Request}, ?GUILD_CALL_TIMEOUT) of
+            #{success := true} ->
+                #{<<"success">> => true};
+            #{success := false, error := Error} ->
+                #{<<"success">> => false, <<"error">> => Error}
+        end
+    end).
 
 -spec handle_update_member_voice(map()) -> term().
 handle_update_member_voice(#{
@@ -248,3 +277,21 @@ guild_voice_channel_read_malformed_payloads_test() ->
     ).
 
 -endif.
+
+%% Micup: disconnect one user from voice (admin and soundboard flows).
+-spec handle_disconnect_voice_user(map()) -> term().
+handle_disconnect_voice_user(#{<<"guild_id">> := GIB, <<"user_id">> := UIB} = P) ->
+    GuildId = validation:snowflake_or_throw(<<"guild_id">>, GIB),
+    UserId = validation:snowflake_or_throw(<<"user_id">>, UIB),
+    Request = #{user_id => UserId, connection_id => maps:get(<<"connection_id">>, P, null)},
+    gateway_rpc_guild_infra:with_voice_server(GuildId, fun(VPid, _) ->
+        call_disconnect_voice_user(VPid, Request)
+    end).
+
+-spec call_disconnect_voice_user(pid(), map()) -> map().
+call_disconnect_voice_user(VPid, Request) ->
+    case gen_server:call(VPid, {disconnect_voice_user, Request}, ?GUILD_CALL_TIMEOUT) of
+        #{success := true} -> #{<<"success">> => true};
+        #{error := E} -> raise_voice_error(E)
+    end.
+

@@ -122,7 +122,9 @@ apply_voice_state_change(
     R
 ) ->
     OldChannelIdBin = maps:get(<<"channel_id">>, ExistingVoiceState, null),
-    UpdatedVoiceState = build_updated_voice_state(ExistingVoiceState, ChannelIdBin, R),
+    UpdatedVoiceState = guild_voice_soundboard:with_epoch(
+        build_updated_voice_state(ExistingVoiceState, ChannelIdBin, R), ExistingVoiceState
+    ),
     NewVoiceStates = VoiceStates#{ConnectionId => UpdatedVoiceState},
     NewState = State#{voice_states => NewVoiceStates},
     broadcast_voice_change(

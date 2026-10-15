@@ -36,7 +36,10 @@
     voice_states := voice_state_map(),
     pending_voice_connections := map(),
     recently_disconnected_voice_states := map(),
-    e2ee_room_keys := map()
+    e2ee_room_keys := map(),
+    soundboard_channels => #{binary() => #{binary() => true}},
+    soundboard_ready_at => integer(),
+    soundboard_rates => #{{user, integer()} | {channel, binary()} => {number(), integer()}}
 }.
 
 -spec start_link(integer(), pid(), voice_state_map()) -> gen_server:start_ret().
@@ -139,7 +142,9 @@ init(#{guild_id := GuildId, guild_pid := GuildPid} = Args) ->
         e2ee_room_keys => #{}
     },
     ok = schedule_seeded_session_check(first, maps:keys(InitialVoiceStates)),
-    {ok, State}.
+    {ok, (guild_voice_soundboard:rebuild(State))#{
+        soundboard_ready_at => erlang:monotonic_time(millisecond) + 5000
+    }}.
 
 -spec handle_call(term(), gen_server:from(), server_state()) -> {reply, term(), server_state()}.
 handle_call({VoiceRequest, Req} = Msg, _From, S) ->
@@ -188,6 +193,8 @@ handle_call_local({store_pending_connection, ConnectionId, Metadata}, State) ->
     Pending = maps:get(pending_voice_connections, State, #{}),
     NewPending = bounded_put(ConnectionId, Metadata, Pending, ?MAX_PENDING_CONNECTIONS),
     {reply, ok, State#{pending_voice_connections => NewPending}};
+handle_call_local({play_soundboard_sound, Request}, State) when is_map(Request) ->
+    guild_voice_soundboard:play(Request, State);
 handle_call_local({get_voice_states_for_channel, ChIdBin}, State) ->
     {reply, channel_query(voice_states, ChIdBin, State), State};
 handle_call_local({get_voice_states_map}, State) ->
@@ -203,6 +210,11 @@ channel_query(voice_states, ChIdBin, State) ->
         {ok, _, Bin} -> guild_voice_server_state:local_voice_states_for_channel(Bin, State);
         _ -> #{voice_states => []}
     end.
+
+-spec do_set_voice_states(map(), server_state()) -> server_state().
+do_set_voice_states(VoiceStates, State) ->
+    NewVS = voice_state_utils:ensure_voice_states(VoiceStates),
+    guild_voice_soundboard:sync(State, State#{voice_states => NewVS}).
 
 -spec handle_cast(term(), server_state()) -> {noreply, server_state()}.
 handle_cast({store_pending_connection, ConnId, Meta}, State) ->
@@ -232,7 +244,9 @@ handle_cast(_, State) ->
     {noreply, server_state()} | {stop, normal, server_state()}.
 handle_info(sweep_pending_joins, State) ->
     erlang:send_after(?SWEEP_INTERVAL_MS, self(), sweep_pending_joins),
-    State1 = sweep_recently_disconnected(State),
+    State1 = sweep_recently_disconnected(
+        guild_voice_soundboard:sweep(erlang:monotonic_time(millisecond), State)
+    ),
     State2 = sweep_e2ee_room_keys(State1),
     case maps:size(maps:get(pending_voice_connections, State2, #{})) of
         0 ->
@@ -284,7 +298,14 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
     erlang:process_flag(fullsweep_after, 0),
     erlang:garbage_collect(),
-    {ok, State}.
+    case maps:is_key(soundboard_channels, State) of
+        true ->
+            {ok, State};
+        false ->
+            {ok, (guild_voice_soundboard:rebuild(State))#{
+                soundboard_ready_at => erlang:monotonic_time(millisecond) + 5000
+            }}
+    end.
 
 -spec safe_lookup(fun(() -> term())) -> term().
 safe_lookup(Fun) ->

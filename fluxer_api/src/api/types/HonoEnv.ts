@@ -39,6 +39,8 @@ import type {MicupBotSettingsService} from '@app/api/guild/micupbot/MicupBotSett
 import type {GuildRosterSettingsService} from '@app/api/guild/roster/GuildRosterSettingsService';
 import type {GuildDiscoveryService} from '@app/api/guild/services/GuildDiscoveryService';
 import type {GuildService} from '@app/api/guild/services/GuildService';
+import type {GuildSoundboardPlayService} from '@app/api/guild/soundboard/GuildSoundboardPlayService';
+import type {GuildSoundboardService} from '@app/api/guild/soundboard/GuildSoundboardService';
 import type {EntityAssetService} from '@app/api/infrastructure/EntityAssetService';
 import type {ErrorI18nService} from '@app/api/infrastructure/ErrorI18nService';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
@@ -149,6 +151,8 @@ export interface HonoEnv {
 		passwordChangeService: PasswordChangeService;
 		entityAssetService: EntityAssetService;
 		entranceSoundService: EntranceSoundService;
+		guildSoundboardService: GuildSoundboardService;
+		guildSoundboardPlayService: GuildSoundboardPlayService;
 		badgeService: BadgeService;
 		cosmeticService: CosmeticService;
 		feedInteractionService: FeedInteractionService;

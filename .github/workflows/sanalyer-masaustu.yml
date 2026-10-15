@@ -755,6 +755,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs.meta.outputs.source_sha }}
+          # Kabuk sözleşmesi kontrolü upstream'in ilk modül kabuğu commit'ine (7c5fa218) kadar geçmişe bakar;
+          # sığ checkout'ta o commit yok ve adım "Not a valid commit name" ile düşüyordu.
+          fetch-depth: 0
 
       - name: Set up Rust toolchain (CI helpers)
         uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de

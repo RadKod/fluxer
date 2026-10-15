@@ -326,7 +326,9 @@ create_and_decorate_voice_state(Build) ->
         VS1, maps:get(latitude, Build), maps:get(longitude, Build)
     ),
     VS3 = guild_voice_connection_util:maybe_attach_session_id(VS2, maps:get(session_id, Build)),
-    guild_voice_connection_util:maybe_attach_member(VS3, maps:get(member, Build)).
+    guild_voice_soundboard:with_epoch(
+        guild_voice_connection_util:maybe_attach_member(VS3, maps:get(member, Build)), #{}
+    ).
 
 -spec build_pending_metadata(map()) -> map().
 build_pending_metadata(Build) ->

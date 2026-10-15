@@ -103,7 +103,10 @@ activate_pending(ConnectionId, PendingData, PendingConnections, State) ->
 
 -spec finalize_activation(binary(), voice_state(), map(), guild_state()) ->
     {reply, map(), guild_state()} | {reply, {error, atom(), atom()}, guild_state()}.
-finalize_activation(ConnectionId, VoiceState, VoiceStates, State) ->
+finalize_activation(ConnectionId, VoiceState0, VoiceStates, State) ->
+    VoiceState = guild_voice_soundboard:with_epoch(
+        VoiceState0, maps:get(ConnectionId, VoiceStates, #{})
+    ),
     UpdatedVoiceStates = VoiceStates#{ConnectionId => VoiceState},
     case channel_invariant_violation(VoiceState, UpdatedVoiceStates) of
         ok ->
@@ -142,7 +145,10 @@ try_restore_from_recently_disconnected(ConnectionId, State) ->
 
 -spec restore_recently_disconnected(binary(), voice_state(), map(), guild_state()) ->
     {reply, map(), guild_state()} | {reply, {error, atom(), atom()}, guild_state()}.
-restore_recently_disconnected(ConnectionId, VoiceState, Cache, State) ->
+restore_recently_disconnected(ConnectionId, VoiceState0, Cache, State) ->
+    VoiceState = guild_voice_soundboard:with_epoch(
+        VoiceState0, VoiceState0#{<<"channel_id">> => null}
+    ),
     VoiceStates = voice_state_utils:voice_states(State),
     UpdatedVoiceStates = VoiceStates#{ConnectionId => VoiceState},
     case channel_invariant_violation(VoiceState, UpdatedVoiceStates) of

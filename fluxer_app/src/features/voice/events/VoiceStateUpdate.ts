@@ -25,6 +25,7 @@ interface VoiceStateUpdatePayload {
 	channel_id?: string | null;
 	guild_id?: string | null;
 	session_id?: string;
+	soundboard_epoch?: number;
 	connection_id?: string;
 	self_mute?: boolean;
 	self_deaf?: boolean;

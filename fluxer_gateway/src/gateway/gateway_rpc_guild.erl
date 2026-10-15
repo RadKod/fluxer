@@ -66,6 +66,8 @@ route(M, P) ->
     <<"guild.get_channel_count">> => fun gateway_rpc_guild_channels:handle/2,
     <<"guild.resolve_mention_sources_page">> => fun gateway_rpc_guild_mentions:handle/2,
     <<"guild.update_member_voice">> => fun gateway_rpc_guild_voice:handle/2,
+    <<"guild.play_soundboard_sound">> => fun gateway_rpc_guild_voice:handle/2,
+    <<"guild.disconnect_voice_user">> => fun gateway_rpc_guild_voice:handle/2,
     <<"guild.disconnect_voice_user_if_in_channel">> => fun gateway_rpc_guild_voice:handle/2,
     <<"guild.confirm_voice_connection_from_livekit">> => fun gateway_rpc_guild_voice:handle/2,
     <<"guild.get_voice_states_for_channel">> => fun gateway_rpc_guild_voice:handle/2,

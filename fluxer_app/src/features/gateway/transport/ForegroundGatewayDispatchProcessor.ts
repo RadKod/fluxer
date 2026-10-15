@@ -56,6 +56,7 @@ export class ForegroundGatewayDispatchProcessor {
 			const handler = this.handlerRegistry.get(delivery.type);
 			if (handler !== undefined && !ThreadGuilds.isPurgedEvent(delivery.data)) {
 				const context = this.createHandlerContext(accountKey, account?.userId ?? null, isCurrent);
+				context.isReplay = delivery.isReplay === true;
 				runInAction(() => {
 					if (snapshotEvent !== null) {
 						handler(this.foregroundSnapshotEvent(delivery, accountKey, snapshotEvent).data, context);

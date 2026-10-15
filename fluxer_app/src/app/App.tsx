@@ -59,6 +59,7 @@ import {UNFOCUSED_FULLY_INTERACTIVE_CLASS} from '@app/features/ui/utils/WindowFo
 import {UsernameSelectionGate} from '@app/features/user/components/UsernameSelectionGate';
 import UserSettings from '@app/features/user/state/UserSettings';
 import {IncomingCallManager} from '@app/features/voice/components/IncomingCallManager';
+import {SoundboardRoot} from '@app/features/voice/components/SoundboardPanel';
 import {VoiceLiveKitRoot} from '@app/features/voice/components/VoiceLiveKitRoot';
 import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
 import {useElectronScreenSharePicker} from '@app/features/voice/hooks/useElectronScreenSharePicker';
@@ -214,6 +215,7 @@ export const AppWrapper = observer(({children}: AppWrapperProps) => {
 		<LayoutVariantProvider value={layoutVariantContextValue} data-flx="app.app.app-wrapper.layout-variant-provider">
 			<SVGMasks data-flx="app.app.app-wrapper.svg-masks" />
 			<VoiceLiveKitRoot room={room} data-flx="app.app.app-wrapper.voice-live-kit-root">
+				<SoundboardRoot />
 				<div ref={ringsContainerRef} className={styles.appContainer} data-flx="app.app.app-wrapper.app-container">
 					<FocusRingScope containerRef={ringsContainerRef} data-flx="app.app.app-wrapper.focus-ring-scope">
 						<a

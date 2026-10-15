@@ -86,6 +86,13 @@ function createDummyGuildResponse(params: {guildId: GuildID; userId: UserID}): G
 }
 
 export class NoopGatewayService implements IGatewayService {
+	// Micup: soundboard plays are refused outside a real gateway.
+	async playGuildSoundboardSound(
+		_params: Parameters<IGatewayService['playGuildSoundboardSound']>[0],
+	): Promise<{success: boolean; error?: string}> {
+		return {success: false, error: 'forbidden'};
+	}
+
 	// Micup: voice seat and table game tests seed who is in a voice channel.
 	private readonly voiceStatesByChannel = new Map<string, Array<GatewayVoiceStateEntry>>();
 
