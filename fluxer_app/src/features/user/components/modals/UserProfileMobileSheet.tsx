@@ -223,7 +223,6 @@ export const UserProfileMobileSheet: React.FC = observer(function UserProfileMob
 			guildId={guildId}
 			autoFocusNote={autoFocusNote}
 			isLoading={shouldShowProfileLoading}
-			gameActivityProfileFull={!!activeProfile && !activeProfile.profileLimited}
 			onClose={handleClose}
 			data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content"
 		/>
@@ -237,7 +236,6 @@ interface UserProfileMobileSheetContentProps {
 	guildId?: string;
 	autoFocusNote?: boolean;
 	isLoading: boolean;
-	gameActivityProfileFull: boolean;
 	onClose: () => void;
 }
 
@@ -248,16 +246,7 @@ interface EmojiInfoState {
 }
 
 const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps> = observer(
-	function UserProfileMobileSheetContent({
-		user,
-		profile,
-		userNote,
-		guildId,
-		autoFocusNote,
-		isLoading,
-		gameActivityProfileFull,
-		onClose,
-	}) {
+	function UserProfileMobileSheetContent({user, profile, userNote, guildId, autoFocusNote, isLoading, onClose}) {
 		const {i18n} = useLingui();
 		const [noteSheetOpen, setNoteSheetOpen] = useState(false);
 		const [actionsSheetOpen, setActionsSheetOpen] = useState(false);
@@ -713,7 +702,7 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 													/>
 												</div>
 											</div>
-											<GameActivityDisplay userId={user.id} fullProfile={gameActivityProfileFull} />
+											<GameActivityDisplay userId={user.id} />
 											{isCurrentUser ? (
 												!currentUserUnclaimed && (
 													<div

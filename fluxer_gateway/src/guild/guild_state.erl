@@ -197,7 +197,8 @@ resync_channels_after_permission_change(ChanIds, OldState, NewState) ->
 post_update_member_remove(EventData, NewState) ->
     UserId = guild_state_member:extract_user_id(EventData),
     guild_state_member:sync_member_remove(UserId, NewState),
-    State1 = guild_state_member:cleanup_removed_member_sessions(UserId, NewState),
+    State0 = guild_game_activity:member_removed(UserId, NewState),
+    State1 = guild_state_member:cleanup_removed_member_sessions(UserId, State0),
     State2 = guild_state_member:maybe_disconnect_removed_member(UserId, State1),
     guild:update_counts(State2).
 

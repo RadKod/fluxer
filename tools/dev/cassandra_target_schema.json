@@ -10675,6 +10675,10 @@
 					"type": "bigint"
 				},
 				{
+					"name": "game_activity_visibility_source",
+					"type": "text"
+				},
+				{
 					"name": "default_share_voice_activity",
 					"type": "boolean"
 				},

@@ -738,6 +738,9 @@ describe('InstanceConfigRepository', () => {
 				premium_discount_percent: 10,
 				visionary_on_sale: true,
 				visionary_reward_item_ids: ['1420000000000000001'],
+				early_plus_badge_id: '1420000000000000002',
+				early_plus_open: true,
+				early_plus_opened_once: true,
 			};
 			await repository.setConfig('shop_config', JSON.stringify(row));
 
@@ -756,6 +759,9 @@ describe('InstanceConfigRepository', () => {
 				premium_discount_percent: 0,
 				visionary_on_sale: false,
 				visionary_reward_item_ids: [],
+				early_plus_badge_id: null,
+				early_plus_open: false,
+				early_plus_opened_once: false,
 			};
 			const legacy = {
 				try_to_azn_rate_micro: 41_250,

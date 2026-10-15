@@ -222,3 +222,141 @@ describe('game sharing replies with the real settings store', () => {
 		},
 	);
 });
+
+describe('game sharing default and eligibility with the real settings store', () => {
+	const eligibleEveryone = {
+		...baseline,
+		game_activity_visibility: 'everyone',
+		game_activity_eligible: true,
+		game_activity_default_pending: false,
+	};
+	beforeEach(() => {
+		vi.clearAllMocks();
+		GameActivityStore.handleRollout({game_activity_enabled: true, game_activity_epoch: 1});
+		state.accountId = 'account';
+		UserSettings.handleAccountTransition();
+		Sharing.setSharingUnconfirmed('account', false);
+	});
+	const hydrate = (settings: object) =>
+		UserSettings.updateUserSettings(settings, {settingsEpoch: UserSettings.getSettingsEpoch()});
+
+	it('hydrate keeps everyone and reads eligibility and the pending default', () => {
+		hydrate({...eligibleEveryone, game_activity_default_pending: true});
+		expect(UserSettings.getGameActivityVisibility()).toBe('everyone');
+		expect(UserSettings.getGameActivityEligible()).toBe(true);
+		expect(UserSettings.getGameActivityDefaultPending()).toBe(true);
+		expect(Sharing.getEffectiveSharing()).toBe(true);
+	});
+
+	it('missing eligibility from an older server fails closed', () => {
+		hydrate({...baseline, game_activity_visibility: 'everyone'});
+		expect(UserSettings.getGameActivityEligible()).toBe(false);
+		expect(UserSettings.getGameActivityDefaultPending()).toBe(false);
+		expect(Sharing.getEffectiveSharing()).toBe(false);
+	});
+
+	it('unknown visibility hydrates as off', () => {
+		hydrate({...eligibleEveryone, game_activity_visibility: 'strangers'});
+		expect(UserSettings.getGameActivityVisibility()).toBe('off');
+	});
+
+	it('an unrelated settings save keeps eligibility and the pending default', async () => {
+		hydrate({...eligibleEveryone, game_activity_default_pending: true});
+		http.patch.mockResolvedValueOnce({body: {}});
+		await Commands.update({developerMode: true});
+		expect(UserSettings.getGameActivityEligible()).toBe(true);
+		expect(UserSettings.getGameActivityDefaultPending()).toBe(true);
+		expect(UserSettings.getGameActivityVisibility()).toBe('everyone');
+	});
+
+	it('account transition clears eligibility and the pending default', () => {
+		hydrate({...eligibleEveryone, game_activity_default_pending: true});
+		UserSettings.handleAccountTransition();
+		expect(UserSettings.getGameActivityEligible()).toBe(false);
+		expect(UserSettings.getGameActivityDefaultPending()).toBe(false);
+	});
+
+	it('default acknowledgement applies the server confirmation', async () => {
+		hydrate({
+			...baseline,
+			game_activity_visibility: 'off',
+			game_activity_eligible: true,
+			game_activity_default_pending: true,
+		});
+		http.patch.mockResolvedValueOnce({body: eligibleEveryone});
+		await Commands.acknowledgeGameActivityDefault();
+		expect(http.patch).toHaveBeenCalledWith(expect.anything(), {body: {game_activity_default_acknowledged: true}});
+		expect(UserSettings.getGameActivityDefaultPending()).toBe(false);
+		expect(UserSettings.getGameActivityVisibility()).toBe('everyone');
+		expect(Sharing.getEffectiveSharing()).toBe(true);
+	});
+
+	it('failed default acknowledgement keeps the notice pending', async () => {
+		hydrate({
+			...baseline,
+			game_activity_visibility: 'off',
+			game_activity_eligible: true,
+			game_activity_default_pending: true,
+		});
+		http.patch.mockRejectedValueOnce(new Error('503'));
+		await expect(Commands.acknowledgeGameActivityDefault()).rejects.toThrow('503');
+		expect(UserSettings.getGameActivityDefaultPending()).toBe(true);
+		expect(UserSettings.getGameActivityVisibility()).toBe('off');
+	});
+
+	it.each(['pending', 'complete'])('late default acknowledgement preserves a %s visibility save', async (phase) => {
+		hydrate({
+			...baseline,
+			game_activity_visibility: 'off',
+			game_activity_eligible: true,
+			game_activity_default_pending: true,
+		});
+		const acknowledgement = deferred<{body: typeof eligibleEveryone}>();
+		const visibility = deferred<{body: typeof eligibleEveryone}>();
+		http.patch.mockReturnValueOnce(acknowledgement.promise).mockReturnValueOnce(visibility.promise);
+		const ack = Commands.acknowledgeGameActivityDefault();
+		const save = Commands.updateGameActivityVisibility('off');
+		await vi.waitFor(() => expect(http.patch).toHaveBeenCalledTimes(2));
+		const confirmVisibility = () => visibility.resolve({body: {...eligibleEveryone, game_activity_visibility: 'off'}});
+		if (phase === 'complete') {
+			confirmVisibility();
+			await save;
+		}
+		acknowledgement.resolve({body: eligibleEveryone});
+		await ack;
+		try {
+			expect(UserSettings.getGameActivityVisibility()).toBe('off');
+			expect(UserSettings.getGameActivityDefaultPending()).toBe(phase === 'pending');
+			expect(Sharing.getEffectiveSharing()).toBe(false);
+		} finally {
+			if (phase === 'pending') {
+				confirmVisibility();
+				await save;
+			}
+		}
+	});
+
+	it('default acknowledgement reply from another account is ignored', async () => {
+		hydrate({
+			...baseline,
+			game_activity_visibility: 'off',
+			game_activity_eligible: true,
+			game_activity_default_pending: true,
+		});
+		let resolve!: (value: unknown) => void;
+		http.patch.mockReturnValueOnce(
+			new Promise((ok) => {
+				resolve = ok;
+			}),
+		);
+		const ack = Commands.acknowledgeGameActivityDefault().then(
+			() => 'success',
+			(error: Error) => error.message,
+		);
+		state.accountId = 'other';
+		UserSettings.handleAccountTransition();
+		resolve({body: eligibleEveryone});
+		expect(await ack).toContain('Account changed');
+		expect(UserSettings.getGameActivityVisibility()).toBe('off');
+	});
+});

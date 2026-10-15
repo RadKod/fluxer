@@ -745,6 +745,13 @@ Later presences can be delayed until their guild, relationship, or group direct 
 | afk | boolean | Whether every one of the user's sessions is away |
 | custom_status | ?[custom status object](#custom-status-object) | The user's custom status |
 | guild_id? | snowflake | Guild context, present when the presence arrived through a guild |
+| game_activity? | ?object | Game activity with `started_at` and either `game_id` or `manual_name` |
+
+`game_activity` is delivered per session only to authorized viewers and is absent from the shared presence cache. A game update can contain only `user`, `game_activity`, and, for a guild scope, `guild_id`; it does not replace the other presence fields.
+
+With `guild_id`, the activity belongs to that guild scope and reflects shared-guild visibility (`everyone`). Without `guild_id`, it belongs to the friend scope. `game_activity: null` clears only the named scope; an omitted field leaves it unchanged. The client displays the friend scope first, or any remaining guild scope when no friend scope exists.
+
+[Ready](#ready), [Guild Create](#guild-create), member list `SYNC` operations, and [Guild Members Chunk](#guild-members-chunk) do not include game activity. When a cached presence is available, adding a member subscription sends a session-specific Presence Update carrying the visible game activity or `null`.
 
 An account's published `status` is the highest-precedence status across its live sessions, resolved in the order `dnd`, `online`, `idle`, `invisible`, and finally `offline` when no session is live. A session that selected `invisible`, and an account with no live session, both publish `status: "offline"`. A session that lost its transport is published as `offline` 5,000 ms later, even though it stays resumable for the rest of its 60,000 ms retention window. A successful [Resume](/gateway/commands/#resume) republishes the status it last selected.
 

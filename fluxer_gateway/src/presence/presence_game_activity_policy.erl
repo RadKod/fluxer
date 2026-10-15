@@ -8,10 +8,13 @@
     control/2,
     pair_control/2,
     permitted/1,
+    permitted_everyone/1,
+    excluded/1,
     grant_allowed/5,
     stamp/2,
     value/3,
     revoke/3,
+    abandon_requests/1,
     refresh/2,
     ack/3,
     interest_allowed/5,
@@ -90,10 +93,31 @@ bootstrap_nonce(Nonce, Game) -> Nonce =:= maps:get(request_nonce, Game).
 -spec permitted(map()) -> boolean().
 permitted(Game) ->
     Policy = maps:get(policy, Game, unknown),
-    is_map(Policy) andalso value(visibility, Policy, off) =:= <<"friends">> andalso
+    is_map(Policy) andalso
+        lists:member(value(visibility, Policy, off), [<<"friends">>, <<"everyone">>]) andalso
         is_true(value(eligible_16_plus, Policy, false)) andalso
         value(effective_profile_audience, Policy, <<"only_me">>) =/= <<"only_me">> andalso
         is_false(maps:get(fenced, Game, false)).
+
+-spec permitted_everyone(map()) -> boolean().
+permitted_everyone(Game) ->
+    permitted(Game) andalso
+        value(visibility, maps:get(policy, Game), off) =:= <<"everyone">>.
+
+-spec excluded(map()) -> #{integer() => true}.
+excluded(Game) ->
+    Fenced = maps:fold(
+        fun
+            (Viewer, #{fenced := true}, Acc) -> Acc#{Viewer => true};
+            (_Viewer, _Pair, Acc) -> Acc
+        end,
+        #{},
+        maps:get(pairs, Game, #{})
+    ),
+    maps:merge(
+        maps:merge(maps:get(blocked_sync, Game, #{}), maps:get(blocked_pairs, Game, #{})),
+        Fenced
+    ).
 
 -spec control(map(), map()) -> {ok, map()} | {error, stale | busy}.
 control(Request, Game) ->
@@ -314,10 +338,23 @@ apply_pair(Request, Game, Viewer, Pair, Pairs, Id) ->
                 fenced => map_size(Remaining) > 0,
                 request_nonce => base64:encode(crypto:strong_rand_bytes(24))
             },
-            {ok, store_pair(Viewer, Next, Game#{pairs => Pairs})};
+            Blocked = blocked_pairs(value(blocked, Request, undefined), Viewer, Game),
+            {ok, store_pair(Viewer, Next, Blocked#{pairs => Pairs})};
         false ->
             {error, stale}
     end.
+
+%% TEMPORARY: viewers who blocked this owner also land here, so the set is not bounded by
+%% MAX_RELATIONSHIPS while the owner stays online; their own session gate already rejects
+%% the guild scope. Target: the API marks which side blocked and only the owner's own
+%% blocks are kept here. Trigger: an owner exclusion set above 1,000 entries.
+-spec blocked_pairs(term(), term(), map()) -> map().
+blocked_pairs(true, Viewer, Game) ->
+    Game#{blocked_pairs => (maps:get(blocked_pairs, Game, #{}))#{Viewer => true}};
+blocked_pairs(false, Viewer, Game) ->
+    Game#{blocked_pairs => maps:remove(Viewer, maps:get(blocked_pairs, Game, #{}))};
+blocked_pairs(_, _Viewer, Game) ->
+    Game.
 
 -spec track_receiver(integer(), pid(), map()) -> map().
 track_receiver(Viewer, Pid, Game) ->

@@ -113,13 +113,16 @@ route_call(Tag, Msg, From, State) ->
         query -> guild_query_handler:handle_call(Msg, From, State);
         voice -> guild_voice_handler:handle_call(Msg, From, State);
         subscription -> guild_subscription_handler:handle_call(Msg, From, State);
+        game_activity -> guild_game_activity:handle_call(Msg, From, State);
         undefined -> {reply, ok, State}
     end.
 
--spec call_handler(atom()) -> query | voice | subscription | undefined.
+-type call_handler() :: query | voice | subscription | game_activity | undefined.
+
+-spec call_handler(atom()) -> call_handler().
 call_handler(Tag) -> query_call_handler(Tag).
 
--spec query_call_handler(atom()) -> query | voice | subscription | undefined.
+-spec query_call_handler(atom()) -> call_handler().
 query_call_handler(resolve_mention_sources_page) -> query;
 query_call_handler(get_counts) -> query;
 query_call_handler(get_viewer_counts) -> query;
@@ -142,7 +145,7 @@ query_call_handler(get_guild_member) -> query;
 query_call_handler(get_guild_members_batch) -> query;
 query_call_handler(Tag) -> query_call_handler_more(Tag).
 
--spec query_call_handler_more(atom()) -> query | voice | subscription | undefined.
+-spec query_call_handler_more(atom()) -> call_handler().
 query_call_handler_more(has_member) -> query;
 query_call_handler_more(list_guild_members) -> query;
 query_call_handler_more(search_guild_members) -> query;
@@ -155,7 +158,7 @@ query_call_handler_more(get_push_base_state) -> query;
 query_call_handler_more(get_cluster_merge_state) -> query;
 query_call_handler_more(Tag) -> voice_call_handler(Tag).
 
--spec voice_call_handler(atom()) -> voice | subscription | undefined.
+-spec voice_call_handler(atom()) -> call_handler().
 voice_call_handler(voice_state_update) -> voice;
 voice_call_handler(get_voice_state) -> voice;
 voice_call_handler(update_member_voice) -> voice;
@@ -170,9 +173,14 @@ voice_call_handler(store_pending_connection) -> voice;
 voice_call_handler(get_voice_states_for_channel) -> voice;
 voice_call_handler(Tag) -> subscription_call_handler(Tag).
 
--spec subscription_call_handler(atom()) -> subscription | undefined.
+-spec subscription_call_handler(atom()) -> call_handler().
 subscription_call_handler(lazy_subscribe) -> subscription;
-subscription_call_handler(_) -> undefined.
+subscription_call_handler(Tag) -> game_activity_call_handler(Tag).
+
+-spec game_activity_call_handler(atom()) -> call_handler().
+game_activity_call_handler(game_activity_revoke) -> game_activity;
+game_activity_call_handler(game_activity_exclude) -> game_activity;
+game_activity_call_handler(_) -> undefined.
 
 -spec handle_cast_internal(term(), guild_state()) -> cast_reply().
 handle_cast_internal({dispatch, Request}, State) ->
@@ -233,10 +241,11 @@ route_cast(Tag, Msg, State) ->
         voice -> guild_voice_handler:handle_cast(Msg, State);
         subscription -> guild_subscription_handler:handle_cast(Msg, State);
         dm_partners -> guild_dm_partners:handle_cast(Msg, State);
+        game_activity -> guild_game_activity:handle_cast(Msg, State);
         undefined -> {noreply, State}
     end.
 
--spec cast_handler(atom()) -> voice | subscription | dm_partners | undefined.
+-spec cast_handler(atom()) -> voice | subscription | dm_partners | game_activity | undefined.
 cast_handler(relay_voice_state_update) -> voice;
 cast_handler(relay_voice_server_update) -> voice;
 cast_handler(store_pending_connection) -> voice;
@@ -246,6 +255,7 @@ cast_handler(cleanup_virtual_access_for_user) -> voice;
 cast_handler(voice_signal) -> voice;
 cast_handler(update_member_subscriptions) -> subscription;
 cast_handler(update_dm_partners) -> dm_partners;
+cast_handler(game_activity_publish) -> game_activity;
 cast_handler(_) -> undefined.
 
 -spec handle_info_internal(term(), guild_state()) -> info_reply().
@@ -452,7 +462,14 @@ handle_down(Ref, Reason, State) ->
         true ->
             handle_session_connect_worker_down(Ref, Reason, WorkerRefs, State);
         false ->
-            guild_sessions:handle_session_down(Ref, State)
+            handle_game_activity_down(Ref, State)
+    end.
+
+-spec handle_game_activity_down(reference(), guild_state()) -> info_reply().
+handle_game_activity_down(Ref, State) ->
+    case guild_game_activity:handle_down(Ref, State) of
+        {ok, NewState} -> {noreply, NewState};
+        unknown -> guild_sessions:handle_session_down(Ref, State)
     end.
 
 -spec handle_session_connect_worker_down(reference(), term(), map(), guild_state()) ->

@@ -6,6 +6,7 @@ import {
 	type NagbarState,
 	NagbarType,
 } from '@app/features/app/components/layout/app_layout/AppLayoutTypes';
+import {canShowGameActivityDefault} from '@app/features/app/components/layout/app_layout/nagbars/GameActivityDefaultNagbar';
 import {canShowProfilePrivacyWidened} from '@app/features/app/components/layout/app_layout/nagbars/ProfilePrivacyChangedNagbar';
 import {canShowProfilePublicOffer} from '@app/features/app/components/layout/app_layout/nagbars/ProfilePublicOfferNagbar';
 import {isScheduledMaintenanceNagbarDismissed} from '@app/features/app/components/layout/app_layout/ScheduledMaintenanceDismissal';
@@ -20,6 +21,7 @@ import Authentication from '@app/features/auth/state/Authentication';
 import Channels from '@app/features/channel/state/Channels';
 import DeveloperOptions from '@app/features/devtools/state/DeveloperOptions';
 import GatewaySessions from '@app/features/gateway/transport/GatewaySessionPool';
+import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
 import * as NotificationUtils from '@app/features/notification/utils/NotificationUtils';
 import {useTaskbarPinNagbar} from '@app/features/platform/hooks/useTaskbarPinNagbar';
 import {resolvePriceAnnouncementCampaign} from '@app/features/premium/config/PriceAnnouncementCampaign';
@@ -220,6 +222,11 @@ export const useNagbarConditions = (): NagbarConditions => {
 		dismissed: nagbarState.profilePublicOfferDismissed,
 		widenedShown: canShowProfilePrivacyWidenedNotice,
 	});
+	const canShowGameActivityDefaultNotice = canShowGameActivityDefault({
+		pending: UserSettings.getGameActivityDefaultPending(),
+		hydrated: UserSettings.isHydrated(),
+		rolloutEnabled: GameActivityStore.enabled,
+	});
 	void nagbarState.scheduledMaintenanceDismissalVersion;
 	const canShowScheduledMaintenance = (() => {
 		if (nagbarState.forceHideScheduledMaintenance) return false;
@@ -357,6 +364,7 @@ export const useNagbarConditions = (): NagbarConditions => {
 		canShowProfilePublicOffer: canShowProfilePublicOfferNotice,
 		canShowDomainMoved,
 		canShowWindowsFont,
+		canShowGameActivityDefault: canShowGameActivityDefaultNotice,
 	};
 };
 export const useActiveNagbars = (conditions: NagbarConditions): Array<NagbarState> => {
@@ -456,6 +464,12 @@ export const useActiveNagbars = (conditions: NagbarConditions): Array<NagbarStat
 				type: NagbarType.GUILD_MEMBERSHIP_CTA,
 				priority: 6,
 				visible: conditions.canShowGuildMembershipCta,
+				dismissible: true,
+			},
+			{
+				type: NagbarType.GAME_ACTIVITY_DEFAULT,
+				priority: 6.1,
+				visible: conditions.canShowGameActivityDefault,
 				dismissible: true,
 			},
 			{

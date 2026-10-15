@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {randomUUID} from 'node:crypto';
-import type {UserID} from '@app/api/BrandedTypes';
+import {createUserID, type UserID} from '@app/api/BrandedTypes';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {User} from '@app/api/models/User';
 import type {UserSettings} from '@app/api/models/UserSettings';
@@ -20,6 +20,11 @@ import {
 	GameActivityPolicyState,
 } from '@fluxer/schema/src/domains/rpc/RpcSchemas';
 
+export const GAME_ACTIVITY_MIN_AGE = 15;
+
+export type GameActivityAccount = Pick<User, 'isBot' | 'isSystem' | 'dateOfBirth'>;
+type GameActivityVisibility = NonNullable<UserSettings['gameActivityVisibility']>;
+
 export function isGameActivityEligible(user: Pick<User, 'isBot' | 'isSystem' | 'dateOfBirth'>): boolean {
 	if (user.isBot || user.isSystem || !user.dateOfBirth) return false;
 	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(user.dateOfBirth);
@@ -30,8 +35,22 @@ export function isGameActivityEligible(user: Pick<User, 'isBot' | 'isSystem' | '
 		date.getUTCFullYear() === year &&
 		date.getUTCMonth() === month - 1 &&
 		date.getUTCDate() === day &&
-		calculateAge(user.dateOfBirth) >= 16
+		calculateAge(user.dateOfBirth) >= GAME_ACTIVITY_MIN_AGE
 	);
+}
+
+export function effectiveGameActivityVisibility(
+	user: GameActivityAccount | null,
+	settings: UserSettings | null,
+): GameActivityVisibility {
+	if (!user || !settings || !isGameActivityEligible(user)) return 'off';
+	if (settings.gameActivityVisibilitySource === 'default') return settings.gameActivityVisibility ?? 'everyone';
+	if (settings.gameActivityVisibilitySource === 'user') return settings.gameActivityVisibility ?? 'off';
+	return settings.gameActivityVisibility === 'friends' ? 'friends' : 'off';
+}
+
+export function isGameActivityDefaultPending(user: GameActivityAccount | null, settings: UserSettings | null): boolean {
+	return !!user && !!settings && settings.gameActivityVisibilitySource == null && isGameActivityEligible(user);
 }
 
 export function gameActivityPolicyState(
@@ -40,7 +59,7 @@ export function gameActivityPolicyState(
 ) {
 	return GameActivityPolicyState.parse({
 		policy_revision: (settings?.gameActivityPolicyRevision ?? 0n).toString(),
-		visibility: settings?.gameActivityVisibility ?? 'off',
+		visibility: effectiveGameActivityVisibility(user, settings),
 		eligible_16_plus: isGameActivityEligible(user),
 		effective_profile_audience: resolveProfileAudience(settings?.profilePrivacy, user.dateOfBirth),
 	});
@@ -108,7 +127,7 @@ export class GameActivityPolicyService {
 								!!viewer &&
 								!viewer.isBot &&
 								!viewer.isSystem &&
-								state.visibility === 'friends' &&
+								(state.visibility === 'friends' || state.visibility === 'everyone') &&
 								state.eligible_16_plus &&
 								friend &&
 								!blocked &&
@@ -196,6 +215,12 @@ export class GameActivityPolicyService {
 	async applyPair(fences: Array<GameActivityPairFence>): Promise<void> {
 		await Promise.all(
 			fences.map(async (fence) => {
+				const ownerId = createUserID(BigInt(fence.owner_id));
+				const viewerId = createUserID(BigInt(fence.viewer_id));
+				const [outwardBlock, inwardBlock] = await Promise.all([
+					this.deps.users.getRelationship(viewerId, ownerId, RelationshipTypes.BLOCKED),
+					this.deps.users.getIncomingRelationship(viewerId, ownerId, RelationshipTypes.BLOCKED),
+				]);
 				const request = {
 					owner_id: fence.owner_id,
 					viewer_id: fence.viewer_id,
@@ -203,6 +228,7 @@ export class GameActivityPolicyService {
 					request_id: fence.request_id,
 					owner_epoch: fence.owner_epoch,
 					pair_generation: fence.pair_generation,
+					blocked: outwardBlock !== null || inwardBlock !== null,
 				};
 				const ack = GameActivityPairPolicyAck.parse(await this.deps.gateway.gameActivityPairPolicy(request));
 				if (

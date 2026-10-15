@@ -195,6 +195,11 @@ pub const PREMIUM_FLAGS: &[I32Flag] = &[
         name: "PERKS_DISABLED",
         value: 1 << 8,
     },
+    // Micup: set when a refund takes the Early Plus badge back; the Early Plus backfill skips the account.
+    I32Flag {
+        name: "EARLY_PLUS_REFUNDED",
+        value: 1 << 30,
+    },
 ];
 
 pub const DELETION_REASONS: &[(&str, &str)] = &[

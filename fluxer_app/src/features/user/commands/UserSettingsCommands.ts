@@ -4,7 +4,7 @@ import {Endpoints} from '@app/features/app/constants/Endpoints';
 import GameActivitySettings from '@app/features/game_activity/state/GameActivitySettings';
 import DesktopGameActivityBridge from '@app/features/game_activity/utils/DesktopGameActivityBridge';
 import {http} from '@app/features/platform/transport/RestTransport';
-import type {UserSettings} from '@app/features/user/state/UserSettings';
+import type {GameActivityVisibility, UserSettings} from '@app/features/user/state/UserSettings';
 import UserSettingsState from '@app/features/user/state/UserSettings';
 import Users from '@app/features/user/state/Users';
 import {ProfilePrivacyLevels} from '@fluxer/constants/src/UserConstants';
@@ -64,7 +64,13 @@ export async function update(settings: UserSettingsPatch): Promise<void> {
 	assertCurrentGameSharingChange(accountId, change, epoch);
 }
 
-export async function updateGameActivityVisibility(visibility: 'off' | 'friends'): Promise<void> {
+const GAME_ACTIVITY_RESPONSE_FIELDS = [
+	'gameActivityVisibility',
+	'gameActivityEligible',
+	'gameActivityDefaultPending',
+] as const satisfies ReadonlyArray<keyof UserSettings>;
+
+export async function updateGameActivityVisibility(visibility: GameActivityVisibility): Promise<void> {
 	const accountId = Users.currentUser?.id;
 	if (!accountId) throw new Error('No authenticated account');
 	const epoch = UserSettingsState.getAccountEpoch();
@@ -75,7 +81,7 @@ export async function updateGameActivityVisibility(visibility: 'off' | 'friends'
 	await DesktopGameActivityBridge.stopSharing();
 	assertCurrentGameSharingChange(accountId, change, epoch);
 	try {
-		const response = await http.patch<{game_activity_visibility?: 'off' | 'friends'; profile_privacy?: number}>(
+		const response = await http.patch<{game_activity_visibility?: GameActivityVisibility; profile_privacy?: number}>(
 			Endpoints.USER_SETTINGS,
 			{
 				body: {game_activity_visibility: visibility},
@@ -86,7 +92,7 @@ export async function updateGameActivityVisibility(visibility: 'off' | 'friends'
 		UserSettingsState.updateUserSettings(response.body, {
 			hydrate: false,
 			fields: [
-				'gameActivityVisibility',
+				...GAME_ACTIVITY_RESPONSE_FIELDS,
 				...(response.body.profile_privacy === ProfilePrivacyLevels.ONLY_ME ? ['profilePrivacy' as const] : []),
 			],
 		});
@@ -100,14 +106,14 @@ export async function updateGameActivityVisibility(visibility: 'off' | 'friends'
 			gameSharingChanges.get(accountId) === change
 		) {
 			try {
-				const response = await http.get<{game_activity_visibility?: 'off' | 'friends'; profile_privacy?: number}>(
+				const response = await http.get<{game_activity_visibility?: GameActivityVisibility; profile_privacy?: number}>(
 					Endpoints.USER_SETTINGS,
 				);
 				assertCurrentGameSharingChange(accountId, change, epoch);
 				UserSettingsState.updateUserSettings(response.body, {
 					hydrate: false,
 					fields: [
-						'gameActivityVisibility',
+						...GAME_ACTIVITY_RESPONSE_FIELDS,
 						...(response.body.profile_privacy === ProfilePrivacyLevels.ONLY_ME ? ['profilePrivacy' as const] : []),
 					],
 				});
@@ -117,6 +123,20 @@ export async function updateGameActivityVisibility(visibility: 'off' | 'friends'
 		}
 		throw error;
 	}
+}
+
+export async function acknowledgeGameActivityDefault(): Promise<void> {
+	const accountId = Users.currentUser?.id;
+	if (!accountId) throw new Error('No authenticated account');
+	const epoch = UserSettingsState.getAccountEpoch();
+	const change = gameSharingChanges.get(accountId);
+	const response = await http.patch<unknown>(Endpoints.USER_SETTINGS, {
+		body: {game_activity_default_acknowledged: true},
+	});
+	if (Users.currentUser?.id !== accountId || UserSettingsState.getAccountEpoch() !== epoch)
+		throw new Error('Account changed while acknowledging the game activity default');
+	if (gameSharingChanges.get(accountId) !== change) return;
+	UserSettingsState.updateUserSettings(response.body, {hydrate: false, fields: [...GAME_ACTIVITY_RESPONSE_FIELDS]});
 }
 
 export async function updateVoiceActivitySharingDefault(value: boolean): Promise<void> {

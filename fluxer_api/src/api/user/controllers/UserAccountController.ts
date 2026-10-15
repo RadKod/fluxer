@@ -701,7 +701,7 @@ export function UserAccountController(app: HonoApp) {
 		async (ctx) => {
 			const userId = ctx.get('user').id;
 			const settings = await ctx.get('userService').accountService.settingsService.findSettings(userId);
-			return ctx.json(mapUserSettingsToResponse({settings}));
+			return ctx.json(mapUserSettingsToResponse({settings, user: ctx.get('user')}));
 		},
 	);
 	app.patch(
@@ -728,7 +728,7 @@ export function UserAccountController(app: HonoApp) {
 				dateOfBirth: user.dateOfBirth,
 				flags: user.flags,
 			});
-			return ctx.json(mapUserSettingsToResponse({settings: updatedSettings}));
+			return ctx.json(mapUserSettingsToResponse({settings: updatedSettings, user}));
 		},
 	);
 	app.put(

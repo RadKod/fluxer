@@ -94,7 +94,7 @@ export class UserAccountService {
 		this.guildRepository = guildRepository;
 		const profileAccessCache = getProfileAccessCache();
 		this.searchIndexService = new GuildMemberSearchIndexService();
-		this.updatePropagator = new UserAccountUpdatePropagator({gatewayService});
+		this.updatePropagator = new UserAccountUpdatePropagator({gatewayService, userRepository: userAccountRepository});
 		this.lookupService = new UserAccountLookupService({
 			userAccountRepository,
 			guildRepository,

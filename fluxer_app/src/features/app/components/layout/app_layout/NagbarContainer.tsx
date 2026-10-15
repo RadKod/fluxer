@@ -10,6 +10,7 @@ import {DesktopDownloadNagbar} from '@app/features/app/components/layout/app_lay
 import {DesktopNotificationNagbar} from '@app/features/app/components/layout/app_layout/nagbars/DesktopNotificationNagbar';
 import {DomainMovedNagbar} from '@app/features/app/components/layout/app_layout/nagbars/DomainMovedNagbar';
 import {EmailVerificationNagbar} from '@app/features/app/components/layout/app_layout/nagbars/EmailVerificationNagbar';
+import {GameActivityDefaultNagbar} from '@app/features/app/components/layout/app_layout/nagbars/GameActivityDefaultNagbar';
 import {GiftInventoryNagbar} from '@app/features/app/components/layout/app_layout/nagbars/GiftInventoryNagbar';
 import {GuildMembershipCtaNagbar} from '@app/features/app/components/layout/app_layout/nagbars/GuildMembershipCtaNagbar';
 import {LegacyPriceOptInNagbar} from '@app/features/app/components/layout/app_layout/nagbars/LegacyPriceOptInNagbar';
@@ -249,6 +250,14 @@ export const NagbarContainer: React.FC<NagbarContainerProps> = observer(({nagbar
 								key={nagbar.type}
 								isMobile={mobileLayout.enabled}
 								data-flx="app.app-layout.nagbar-container.profile-public-offer-nagbar"
+							/>
+						);
+					case NagbarType.GAME_ACTIVITY_DEFAULT:
+						return (
+							<GameActivityDefaultNagbar
+								key={nagbar.type}
+								isMobile={mobileLayout.enabled}
+								data-flx="app.app-layout.nagbar-container.game-activity-default-nagbar"
 							/>
 						);
 					case NagbarType.DOMAIN_MOVED:

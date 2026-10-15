@@ -1176,6 +1176,7 @@ export class RpcService {
 				userData.settings
 					? mapUserSettingsToResponse({
 							settings: userData.settings,
+							user,
 						})
 					: null,
 			),

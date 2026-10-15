@@ -328,6 +328,14 @@ export const UserSettingsResponse = z.object({
 		.pipe(GameActivityPolicyRevisionSchema)
 		.default('0')
 		.describe('Server-owned game sharing policy revision as a decimal string'),
+	game_activity_eligible: z
+		.boolean()
+		.optional()
+		.describe('Whether the account may share its current game: 15 or older with a valid date of birth'),
+	game_activity_default_pending: z
+		.boolean()
+		.optional()
+		.describe('Whether the one-time notice about the default game sharing audience is still unconfirmed'),
 	status: z.string().describe('The current online status of the user'),
 	status_resets_at: z.iso.datetime().nullish().describe('ISO8601 timestamp of when the status will reset'),
 	status_resets_to: z.string().nullish().describe('The status to reset to after the scheduled reset'),

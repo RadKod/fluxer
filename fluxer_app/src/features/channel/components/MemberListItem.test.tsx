@@ -27,6 +27,12 @@ vi.mock('@app/features/channel/components/ChannelUserTag', () => ({UserTag: () =
 vi.mock('@app/features/channel/components/CompactMemberCustomStatus', () => ({
 	CompactMemberCustomStatus: () => createElement('span', {'data-flx': 'test.custom-status'}),
 }));
+const game = vi.hoisted(() => ({activity: null as {manual_name: string; started_at: number} | null}));
+vi.mock('@app/features/game_activity/hooks/useGameActivity', () => ({useGameActivity: () => game.activity}));
+vi.mock('@app/features/game_activity/components/GameActivityRowStatus', () => ({
+	GameActivityRowStatus: ({activity}: {activity: {manual_name: string}}) =>
+		createElement('span', {'data-flx': 'test.game'}, activity.manual_name),
+}));
 vi.mock('@app/features/channel/components/PreloadableUserPopout', () => ({
 	PreloadableUserPopout: forwardRef<HTMLElement, {children?: ReactNode}>(({children}, _ref) => children ?? null),
 }));
@@ -119,6 +125,42 @@ describe('MemberListItem premium crown', () => {
 
 		expect(container.querySelector('[data-flx="channel.member-list-item.name"]')?.textContent).toBe('Ayse');
 		expect(crown()).toBeNull();
+	});
+});
+
+describe('MemberListItem game activity', () => {
+	let container: HTMLDivElement;
+	let root: ReturnType<typeof createRoot>;
+
+	beforeEach(() => {
+		(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+		container = document.createElement('div');
+		document.body.append(container);
+		root = createRoot(container);
+	});
+
+	afterEach(() => {
+		game.activity = null;
+		act(() => root.unmount());
+		container.remove();
+	});
+
+	const render = () =>
+		act(() => root.render(createElement(MemberListItem, {user: member(0), channelId: '7', status: 'online'})));
+	const slot = (name: string) => container.querySelector(`[data-flx="test.${name}"]`);
+
+	it('shows the game in place of the custom status and brings the status back when it ends', () => {
+		game.activity = {manual_name: 'Chess', started_at: 1};
+		render();
+
+		expect(slot('game')?.textContent).toBe('Chess');
+		expect(slot('custom-status')).toBeNull();
+
+		game.activity = null;
+		render();
+
+		expect(slot('game')).toBeNull();
+		expect(slot('custom-status')).not.toBeNull();
 	});
 });
 

@@ -5,6 +5,7 @@ import {createUserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
 import {getKVClient, getSnowflakeService} from '@app/api/middleware/ServiceRegistry';
 import {
+	getBadgeRepository,
 	getCosmeticRepository,
 	getCosmeticService,
 	getInstanceConfigRepository,
@@ -168,6 +169,7 @@ describe('shop catalog', () => {
 		) {
 			return new ShopCatalogService({
 				priceRepository: getShopPriceRepository(),
+				badgeRepository: getBadgeRepository(),
 				cosmeticService: getCosmeticService(),
 				cosmeticRepository: getCosmeticRepository(),
 				instanceConfigRepository: getInstanceConfigRepository(),

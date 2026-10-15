@@ -107,6 +107,7 @@ export const GameActivityPairPolicyRequest = z.discriminatedUnion('phase', [
 			request_id: GameActivityRequestId,
 			owner_epoch: GameActivityOwnerEpoch,
 			pair_generation: GameActivityPolicyRevisionSchema,
+			blocked: z.boolean().optional(),
 		})
 		.strict(),
 ]);

@@ -18,6 +18,7 @@ vi.mock('@app/features/user/state/UserSettings', () => ({
 		getAccountEpoch: () => state.epoch,
 		getProfilePrivacy: () => state.privacy,
 		getGameActivityVisibility: () => state.visibility,
+		getGameActivityEligible: () => true,
 		isHydrated: () => true,
 		saveSettings: mocks.save,
 		updateUserSettings: mocks.apply,

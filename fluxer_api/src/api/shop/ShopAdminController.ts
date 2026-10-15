@@ -3,13 +3,14 @@
 import {AdminAuditReadActions} from '@app/api/admin/AdminAuditActions';
 import {recordAdminRead, recordAdminWrite} from '@app/api/admin/AdminAuditRecorder';
 import type {ShopConfig} from '@app/api/instance/InstanceConfigRepository';
-import {requireAdminACL} from '@app/api/middleware/AdminMiddleware';
+import {hasAdminACL, requireAdminACL} from '@app/api/middleware/AdminMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {ShopRateLimitConfigs} from '@app/api/rate_limit_configs/ShopRateLimitConfig';
 import type {HonoApp} from '@app/api/types/HonoEnv';
 import {Validator} from '@app/api/Validator';
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
+import {MissingACLError} from '@fluxer/errors/src/domains/core/MissingACLError';
 import {
 	ApplyShopCampaignRequest,
 	CreateShopBundleRequest,
@@ -29,6 +30,8 @@ const SETTING_KEYS = [
 	'premium_discount_percent',
 	'visionary_on_sale',
 	'visionary_reward_item_ids',
+	'early_plus_badge_id',
+	'early_plus_open',
 ] as const satisfies ReadonlyArray<keyof ShopConfig>;
 
 // <field>_old and <field>_new for every setting the update changed.
@@ -102,10 +105,28 @@ export function ShopAdminController(app: HonoApp) {
 		}),
 		async (ctx) => {
 			const service = ctx.get('shopCatalogService');
-			const {before, after} = await service.updateSettings(ctx.req.valid('json'));
+			const body = ctx.req.valid('json');
+			// Choosing the badge or opening gives a catalog badge to many accounts at once.
+			const grantsBadges = body.early_plus_badge_id !== undefined || body.early_plus_open === true;
+			if (grantsBadges && !hasAdminACL(ctx.get('adminUserAcls'), AdminACLs.BADGES_MANAGE)) {
+				throw new MissingACLError(AdminACLs.BADGES_MANAGE);
+			}
+			const {before, after} = await service.updateSettings(body);
 			const metadata = describeSettingsChange(before, after);
 			if (Object.keys(metadata).length > 0) {
 				await recordAdminWrite(ctx, {targetType: 'shop', targetId: 0n, action: 'update_shop_settings', metadata});
+			}
+			// Every open request queues it, so a retry after a failed queue gets one; the minute key keeps it to one a minute.
+			if (body.early_plus_open === true && after.early_plus_open) {
+				await ctx.get('workerService').addJob(
+					'backfillEarlyPlusBadges',
+					{},
+					{
+						jobKey: `backfillEarlyPlusBadges_${Math.floor(Date.now() / 60_000)}`,
+						requestedByUserId: ctx.get('adminUserId'),
+						requireLedger: true,
+					},
+				);
 			}
 			return ctx.json(service.adminSettings(after));
 		},

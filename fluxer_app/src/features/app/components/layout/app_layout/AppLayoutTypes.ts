@@ -29,6 +29,7 @@ export const NagbarType = {
 	PROFILE_PUBLIC_OFFER: 'profile-public-offer',
 	DOMAIN_MOVED: 'domain-moved',
 	WINDOWS_FONT: 'windows-font',
+	GAME_ACTIVITY_DEFAULT: 'game-activity-default',
 } as const;
 
 export type NagbarType = ValueOf<typeof NagbarType>;
@@ -71,4 +72,5 @@ export interface NagbarConditions {
 	canShowProfilePublicOffer: boolean;
 	canShowDomainMoved: boolean;
 	canShowWindowsFont: boolean;
+	canShowGameActivityDefault: boolean;
 }

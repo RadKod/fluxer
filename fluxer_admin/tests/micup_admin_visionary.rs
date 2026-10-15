@@ -21,6 +21,9 @@ use tower::ServiceExt;
 const SECRET_KEY: &str = "micup-admin-visionary-test-secret";
 const TAKE_BACK_WARNING: &str =
     "The number is retired and never sold again. Reward decorations are taken back.";
+const EARLY_PLUS_BADGE_HINT: &str = "Choose a new badge made only for Early Plus. Revoke removes this \
+                                     badge from the user even if it was given by hand.";
+const EARLY_PLUS_FIXED: &str = "The badge is fixed: Early Plus has opened before.";
 const VISIONARY_END_NOTE: &str = "Visionary is lifetime Plus, which ending Plus does not \
                                   change. Use Take Visionary back instead.";
 
@@ -39,6 +42,8 @@ struct MockApi {
     stock: Option<Value>,
     lifetime_sequence: Option<i32>,
     shrink_refused: bool,
+    early_plus_open: bool,
+    early_plus_opened_once: bool,
 }
 
 type Shared = Arc<Mutex<MockApi>>;
@@ -414,6 +419,129 @@ async fn shrink_refusal_shows_a_flash_error() {
 }
 
 #[tokio::test]
+async fn early_plus_card_picks_an_unnumbered_badge_before_the_first_opening() {
+    let app = setup(&["*"]).await;
+    let (status, _, page) = get(&app, "/shop").await;
+    assert_eq!(status, StatusCode::OK, "{page}");
+    assert!(page.contains("Early Plus"), "{page}");
+    assert!(
+        page.contains(r#"action="/shop?action=early_plus_badge""#),
+        "{page}"
+    );
+    assert!(page.contains(r#"name="early_plus_badge_id""#), "{page}");
+    assert!(page.contains(r#"<option value="21""#), "{page}");
+    // A numbered badge is given only with its own number, so it is never offered.
+    assert!(!page.contains(r#"<option value="22""#), "{page}");
+    assert!(page.contains(EARLY_PLUS_BADGE_HINT), "{page}");
+    assert!(
+        page.contains(r#"name="early_plus_open" value="true""#),
+        "{page}"
+    );
+    assert!(page.contains("Choose a badge before opening."), "{page}");
+
+    app.api.lock().unwrap().early_plus_open = true;
+    let (status, _, page) = get(&app, "/shop").await;
+    assert_eq!(status, StatusCode::OK, "{page}");
+    assert!(page.contains("Badge: Erken Plus"), "{page}");
+    assert!(
+        page.contains(r#"name="early_plus_open" value="false""#),
+        "{page}"
+    );
+    assert!(page.contains(EARLY_PLUS_FIXED), "{page}");
+    assert!(!page.contains(r#"name="early_plus_badge_id""#), "{page}");
+
+    // Closed again after the first opening: the badge stays fixed.
+    app.api.lock().unwrap().early_plus_open = false;
+    app.api.lock().unwrap().early_plus_opened_once = true;
+    let (status, _, page) = get(&app, "/shop").await;
+    assert_eq!(status, StatusCode::OK, "{page}");
+    assert!(page.contains(EARLY_PLUS_FIXED), "{page}");
+    assert!(!page.contains(r#"name="early_plus_badge_id""#), "{page}");
+    assert!(
+        page.contains(r#"name="early_plus_open" value="true""#),
+        "{page}"
+    );
+}
+
+// Choosing the badge and opening need badges:manage in the API; closing needs only shop:manage.
+#[tokio::test]
+async fn early_plus_card_without_badges_manage_only_closes() {
+    let app = setup(&["admin:authenticate", "shop:manage"]).await;
+    let (status, _, page) = get(&app, "/shop").await;
+    assert_eq!(status, StatusCode::OK, "{page}");
+    assert!(page.contains("badges:manage"), "{page}");
+    assert!(!page.contains(r#"name="early_plus_badge_id""#), "{page}");
+    assert!(
+        !page.contains(r#"name="early_plus_open" value="true""#),
+        "{page}"
+    );
+    assert!(calls_to(&app, "/admin/badges").is_empty());
+
+    app.api.lock().unwrap().early_plus_open = true;
+    let (status, _, page) = get(&app, "/shop").await;
+    assert_eq!(status, StatusCode::OK, "{page}");
+    assert!(
+        page.contains(r#"name="early_plus_open" value="false""#),
+        "{page}"
+    );
+}
+
+#[tokio::test]
+async fn early_plus_actions_call_the_api() {
+    let app = setup(&["*"]).await;
+    let cases = [
+        (
+            "early_plus_badge",
+            "early_plus_badge_id=21",
+            json!({"early_plus_badge_id": "21"}),
+        ),
+        (
+            "early_plus_badge",
+            "early_plus_badge_id=",
+            json!({"early_plus_badge_id": null}),
+        ),
+        (
+            "early_plus_open",
+            "early_plus_open=true",
+            json!({"early_plus_open": true}),
+        ),
+        (
+            "early_plus_open",
+            "early_plus_open=false",
+            json!({"early_plus_open": false}),
+        ),
+    ];
+    for (action, form, body) in cases {
+        app.api.lock().unwrap().calls.clear();
+        let uri = format!("/shop?action={action}");
+        let (status, headers, page) = post(&app, "/shop", &uri, form).await;
+        assert_eq!(status, StatusCode::SEE_OTHER, "{action}: {page}");
+        let flash = flash(&headers).expect("no flash");
+        assert_eq!(flash.flash_type, "success", "{form}: {}", flash.message);
+        let sent = writes(&app);
+        assert_eq!(sent.len(), 1, "{form}: {sent:?}");
+        assert_eq!(
+            (&sent[0].method, sent[0].path.as_str()),
+            (&Method::PATCH, "/admin/shop/settings")
+        );
+        assert_eq!(sent[0].body, body, "{form}");
+    }
+
+    app.api.lock().unwrap().calls.clear();
+    for form in ["early_plus_badge_id=abc", "early_plus_badge_id=0"] {
+        let (status, headers, page) =
+            post(&app, "/shop", "/shop?action=early_plus_badge", form).await;
+        assert_eq!(status, StatusCode::SEE_OTHER, "{page}");
+        assert_eq!(
+            flash(&headers).map(|f| f.flash_type).as_deref(),
+            Some("error"),
+            "{form}"
+        );
+    }
+    assert!(writes(&app).is_empty(), "{:?}", writes(&app));
+}
+
+#[tokio::test]
 async fn user_overview_shows_the_visionary_form_only_with_both_acls() {
     let app = setup(&["*"]).await;
     let (status, _, page) = get(&app, "/users/1?tab=overview").await;
@@ -564,6 +692,10 @@ async fn mock_api(
         .acls
         .iter()
         .any(|acl| acl == "*" || acl == "cosmetics:manage");
+    let manages_badges = api
+        .acls
+        .iter()
+        .any(|acl| acl == "*" || acl == "badges:manage");
     match (method, path.as_str()) {
         (Method::GET, "/admin/users/@me") => {
             json_response(json!({ "user": user("1500000000000000000", &api.acls, None) }))
@@ -579,7 +711,14 @@ async fn mock_api(
             item("11", "profile_effect", "Kanat Izi", "owned"),
         ])),
         (Method::GET, "/admin/cosmetics/items") => StatusCode::FORBIDDEN.into_response(),
-        (Method::GET, "/admin/shop") => json_response(shop_admin()),
+        (Method::GET, "/admin/badges") if manages_badges => json_response(json!([
+            {"id": "21", "icon": "abcd1234", "description": "Erken Plus"},
+            {"id": "22", "icon": "abcd1234", "description": "Öncü #{n}"},
+        ])),
+        (Method::GET, "/admin/badges") => StatusCode::FORBIDDEN.into_response(),
+        (Method::GET, "/admin/shop") => {
+            json_response(shop_admin(api.early_plus_open, api.early_plus_opened_once))
+        }
         (Method::GET, "/admin/shop/visionary") => json_response(api.stock.clone().unwrap_or_else(
             || json!({"total": 10, "sold": 3, "held": 1, "remaining": 6, "over_cap_grants": 0}),
         )),
@@ -594,10 +733,12 @@ async fn mock_api(
         (Method::PUT, "/admin/shop/visionary/slots") => json_response(json!({
             "total": request["total"], "sold": 3, "held": 1, "remaining": 6, "over_cap_grants": 0
         })),
-        (Method::PATCH, "/admin/shop/settings") => json_response(shop_admin()["settings"].clone()),
+        (Method::PATCH, "/admin/shop/settings") => json_response(
+            shop_admin(api.early_plus_open, api.early_plus_opened_once)["settings"].clone(),
+        ),
         (Method::PUT, "/admin/shop/prices")
         | (Method::POST, "/admin/shop/campaigns" | "/admin/shop/campaigns/remove") => {
-            json_response(shop_admin())
+            json_response(shop_admin(api.early_plus_open, api.early_plus_opened_once))
         }
         (Method::POST, "/admin/users/1/visionary") if request["slot"] == 5 => (
             StatusCode::NOT_FOUND,
@@ -640,7 +781,7 @@ fn price(sku: &str, base: i32, campaign: Option<i32>, sale: i32) -> Value {
     })
 }
 
-fn shop_admin() -> Value {
+fn shop_admin(early_plus_open: bool, early_plus_opened_once: bool) -> Value {
     json!({
         "settings": {
             "premium_sales_open": true,
@@ -648,7 +789,10 @@ fn shop_admin() -> Value {
             "premium_discount_percent": 30,
             "payment_provider_configured": true,
             "visionary_on_sale": false,
-            "visionary_reward_item_ids": ["9"]
+            "visionary_reward_item_ids": ["9"],
+            "early_plus_badge_id": (early_plus_open || early_plus_opened_once).then_some("21"),
+            "early_plus_open": early_plus_open,
+            "early_plus_opened_once": early_plus_open || early_plus_opened_once
         },
         "prices": [
             price("cosmetic:7", 500, None, 500),

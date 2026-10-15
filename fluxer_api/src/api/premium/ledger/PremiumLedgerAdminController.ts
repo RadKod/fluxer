@@ -5,6 +5,7 @@ import {createUserID} from '@app/api/BrandedTypes';
 import {requireAdminACL} from '@app/api/middleware/AdminMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
+import {getEarlyPlusBadgeService} from '@app/api/middleware/ServiceSingletons';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import type {HonoApp} from '@app/api/types/HonoEnv';
 import {Validator} from '@app/api/Validator';
@@ -37,6 +38,8 @@ export function PremiumLedgerAdminController(app: HonoApp) {
 				action: 'end_user_premium',
 				metadata: {previous_paid_until: previousPaidUntil?.toISOString()},
 			});
+			// After the audit entry: a failed take-back answers 500, and repeating the call takes it back.
+			await getEarlyPlusBadgeService().revoke(userId);
 			return ctx.json({
 				previous_paid_until: previousPaidUntil?.toISOString() ?? null,
 				paid_until: paidUntil?.toISOString() ?? null,

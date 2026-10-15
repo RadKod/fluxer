@@ -28,9 +28,11 @@ import {
 } from '@app/features/channel/components/MemberListSkeleton';
 import {MemberListUnavailableFallback} from '@app/features/channel/components/shared/MemberListUnavailableFallback';
 import type {Channel} from '@app/features/channel/models/Channel';
+import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
 import type {Guild} from '@app/features/guild/models/Guild';
 import {OFFLINE_DESCRIPTOR, ONLINE_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {getCachedNumberFormat} from '@app/features/i18n/utils/IntlCache';
+import {resolveMemberListPresence} from '@app/features/member/hooks/useMemberListPresence';
 import {useMemberListSubscription} from '@app/features/member/hooks/useMemberListSubscription';
 import {resolveMemberListViewportModel} from '@app/features/member/state/MemberListViewportStateMachine';
 import MemberSidebar from '@app/features/member/state/MemberSidebar';
@@ -51,6 +53,7 @@ import {
 import type {GroupDMMemberGroup} from '@app/features/member/utils/MemberListUtils';
 import * as MemberListUtils from '@app/features/member/utils/MemberListUtils';
 import * as PermissionUtils from '@app/features/permissions/utils/PermissionUtils';
+import MemberPresenceSubscription from '@app/features/presence/state/MemberPresenceSubscription';
 import Presence from '@app/features/presence/state/Presence';
 import {getRemScaleForDocument} from '@app/features/theme/layout/RemFromPx';
 import {openRoleContextMenu, openRoleContextMenuForElement} from '@app/features/ui/action_menu/RoleContextMenu';
@@ -63,6 +66,7 @@ import {ChannelTypes, Permissions} from '@fluxer/constants/src/ChannelConstants'
 import {MEMBER_LIST_RANGE_MAX_SPAN} from '@fluxer/constants/src/GatewayConstants';
 import {GuildOperations} from '@fluxer/constants/src/GuildConstants';
 import {MEDIA_PROXY_AVATAR_SIZE_DEFAULT} from '@fluxer/constants/src/MediaProxyAssetSizes';
+import {isOfflineStatus} from '@fluxer/constants/src/StatusConstants';
 import {useLingui as useLinguiRuntime} from '@lingui/react';
 import {useLingui} from '@lingui/react/macro';
 import clsx from 'clsx';
@@ -222,6 +226,8 @@ const LazyMemberList = observer(function LazyMemberList({guild, channel}: LazyMe
 	const pendingScrollMetricsRef = useRef<{scrollTop: number; clientHeight: number} | null>(null);
 	const scrollerRef = useRef<ScrollerHandle | null>(null);
 	const viewportHeightRef = useRef<number | null>(null);
+	const viewportRangesRef = useRef<NormalizedMemberListRanges>(EMPTY_MEMBER_LIST_RANGES);
+	const syncVisibleMembersRef = useRef<() => void>(() => {});
 	const [renderWindowRanges, setRenderWindowRanges] = useState<NormalizedMemberListRanges>(INITIAL_RENDER_RANGES);
 	const memberListIdentityKey = MemberSidebar.getListIdentityKey(guild.id, channel.id);
 	const memberListUpdatesDisabled = (guild.disabledOperations & GuildOperations.MEMBER_LIST_UPDATES) !== 0;
@@ -269,6 +275,29 @@ const LazyMemberList = observer(function LazyMemberList({guild, channel}: LazyMe
 		() => (rowOffsets != null ? rowOffsets[rowOffsets.length - 1]! : Math.max(0, totalRows * scaledMemberItemHeight)),
 		[rowOffsets, totalRows, scaledMemberItemHeight],
 	);
+	const gameActivityEnabled = GameActivityStore.enabled;
+	syncVisibleMembersRef.current = () => {
+		const visibleUserIds: Array<string> = [];
+		if (gameActivityEnabled && memberListState) {
+			for (const [start, end] of viewportRangesRef.current) {
+				for (let rowIndex = start; rowIndex <= end; rowIndex += 1) {
+					const userId = memberListState.items.get(rowIndex)?.data.userId;
+					if (
+						userId != null &&
+						userId !== currentUserId &&
+						!isOfflineStatus(resolveMemberListPresence({guildId: guild.id, channelId: channel.id, userId}))
+					) {
+						visibleUserIds.push(userId);
+					}
+				}
+			}
+		}
+		MemberPresenceSubscription.setVisibleMembers(guild.id, visibleUserIds);
+	};
+	useEffect(() => {
+		syncVisibleMembersRef.current();
+	});
+	useEffect(() => () => MemberPresenceSubscription.setVisibleMembers(guild.id, []), [guild.id]);
 	const subscribedRanges = memberListState?.subscribedRanges ?? EMPTY_MEMBER_LIST_RANGES;
 	const viewportModel = useMemo(
 		() =>
@@ -338,6 +367,18 @@ const LazyMemberList = observer(function LazyMemberList({guild, channel}: LazyMe
 				bufferRows: 0,
 				totalRows: totalRows > 0 ? totalRows : undefined,
 			});
+			const nextViewportRanges = buildMemberListRenderWindow({
+				scrollTop,
+				clientHeight,
+				rowHeight: scaledMemberItemHeight,
+				rowOffsets,
+				bufferRows: 0,
+				totalRows: totalRows > 0 ? totalRows : undefined,
+			});
+			if (!areNormalizedMemberListRangesEqual(nextViewportRanges, viewportRangesRef.current)) {
+				viewportRangesRef.current = nextViewportRanges;
+				syncVisibleMembersRef.current();
+			}
 			if (!areNormalizedMemberListRangesEqual(nextRenderRanges, renderRangesRef.current)) {
 				renderRangesRef.current = nextRenderRanges;
 				setRenderWindowRanges(nextRenderRanges);
@@ -396,6 +437,7 @@ const LazyMemberList = observer(function LazyMemberList({guild, channel}: LazyMe
 		const initialRenderRanges = INITIAL_RENDER_RANGES;
 		subscriptionRangesRef.current = initialSubscriptionRanges;
 		renderRangesRef.current = initialRenderRanges;
+		viewportRangesRef.current = EMPTY_MEMBER_LIST_RANGES;
 		viewportHeightRef.current = null;
 		setRenderWindowRanges(initialRenderRanges);
 	}, [memberListIdentityKey, guild.id]);

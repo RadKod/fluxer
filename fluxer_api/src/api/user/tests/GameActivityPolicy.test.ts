@@ -105,13 +105,13 @@ describe('GameActivityPolicy', () => {
 		} as UserSettings);
 		expect((await service.getGrants(viewerId, [ownerId], 'fresh')).grants[0].allowed).toBe(false);
 	});
-	it('age_15_unknown_denied_16_allowed', () => {
+	it('age_14_unknown_denied_15_allowed', () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date('2026-10-06T12:00:00Z'));
-		for (const dateOfBirth of [null, 'invalid', '2010-02-30', '2011-10-06']) {
+		for (const dateOfBirth of [null, 'invalid', '2010-02-30', '2011-10-07']) {
 			expect(isGameActivityEligible({isBot: false, isSystem: false, dateOfBirth})).toBe(false);
 		}
-		expect(isGameActivityEligible({isBot: false, isSystem: false, dateOfBirth: '2010-10-06'})).toBe(true);
+		expect(isGameActivityEligible({isBot: false, isSystem: false, dateOfBirth: '2011-10-06'})).toBe(true);
 		vi.useRealTimers();
 	});
 	it('block_both_directions_and_nonfriend_gdm_denied', async () => {

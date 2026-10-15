@@ -29,6 +29,7 @@ describe('game activity RPC bootstrap boundary', () => {
 			const repository = getUserRepository();
 			await repository.patchSettings(createUserID(BigInt(account.userId)), {
 				game_activity_visibility: 'friends',
+				game_activity_visibility_source: 'user',
 				profile_privacy: 101,
 			});
 			const session = await createBuilder<RpcResponse>(harness, '')
@@ -80,7 +81,11 @@ describe('game activity RPC bootstrap boundary', () => {
 			const account = await createTestAccount(harness, {dateOfBirth: '2000-01-01'});
 			const userId = createUserID(BigInt(account.userId));
 			const repository = getUserRepository();
-			const fresh = await repository.patchSettings(userId, {game_activity_visibility: 'off', profile_privacy: 101});
+			const fresh = await repository.patchSettings(userId, {
+				game_activity_visibility: 'off',
+				game_activity_visibility_source: 'user',
+				profile_privacy: 101,
+			});
 			const stale = new UserSettings({
 				...fresh.toRow(),
 				game_activity_visibility: 'friends',

@@ -116,6 +116,8 @@ export const PremiumFlags = {
 	PURCHASE_DISABLED: 1 << 6,
 	ENABLED_OVERRIDE: 1 << 7,
 	PERKS_DISABLED: 1 << 8,
+	// Micup: a high bit, clear of the upstream ones; only the server sets it.
+	EARLY_PLUS_REFUNDED: 1 << 30,
 } as const;
 export const PremiumFlagsDescriptions: Record<keyof typeof PremiumFlags, string> = {
 	DISCRIMINATOR: 'User has a premium discriminator',
@@ -127,6 +129,7 @@ export const PremiumFlagsDescriptions: Record<keyof typeof PremiumFlags, string>
 	PURCHASE_DISABLED: 'Premium purchase is disabled for this user',
 	ENABLED_OVERRIDE: 'Premium status is enabled via override',
 	PERKS_DISABLED: 'User has temporarily disabled premium perks',
+	EARLY_PLUS_REFUNDED: 'Early Plus badge taken back on a refund; the Early Plus backfill skips the account',
 };
 const LEGACY_PREMIUM_FLAG_BITS_TO_NEW: ReadonlyArray<readonly [bigint, number]> = [
 	[1n << 37n, PremiumFlags.DISCRIMINATOR],

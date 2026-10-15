@@ -241,6 +241,11 @@ export interface ShopConfig {
 	premium_discount_percent: number;
 	visionary_on_sale: boolean;
 	visionary_reward_item_ids: Array<string>;
+	// Early Plus: the catalog badge paid premium and Visionary orders get while the period is open.
+	early_plus_badge_id: string | null;
+	early_plus_open: boolean;
+	// Set by the first opening; from then on the badge is fixed.
+	early_plus_opened_once: boolean;
 }
 
 // Micup referral programme; like the shop settings, never in the public instance response.
@@ -1031,6 +1036,9 @@ const StoredShopConfigSchema = z.object({
 	premium_discount_percent: UpdateShopSettingsRequest.shape.premium_discount_percent.unwrap().default(0),
 	visionary_on_sale: z.boolean().default(false),
 	visionary_reward_item_ids: z.array(StoredSnowflakeStringSchema).max(10).default([]),
+	early_plus_badge_id: StoredSnowflakeStringSchema.nullable().default(null),
+	early_plus_open: z.boolean().default(false),
+	early_plus_opened_once: z.boolean().default(false),
 }) satisfies z.ZodType<ShopConfig>;
 
 function parseStoredShopConfig(raw: string | null): ShopConfig {

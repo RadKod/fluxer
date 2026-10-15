@@ -111,6 +111,7 @@ export class UserSettingsRepository {
 			profile_privacy: _privacy,
 			game_activity_visibility: _visibility,
 			game_activity_policy_revision: _revision,
+			game_activity_visibility_source: _source,
 			...patch
 		} = settings;
 		const profileChanged =
@@ -148,12 +149,17 @@ export class UserSettingsRepository {
 			const intent = {...data};
 			if (profileSourceVersion !== undefined) {
 				if (current.version !== profileSourceVersion) delete intent.profile_privacy;
-				else if (current.gameActivityVisibility !== 'off') throw new ServiceUnavailableError();
+				else if (
+					(current.gameActivityVisibility ?? 'off') !== 'off' ||
+					current.gameActivityVisibilitySource === 'default'
+				)
+					throw new ServiceUnavailableError();
 			}
 			const patch = buildPatchFromData<UserSettingsRow>(intent, row, USER_SETTINGS_COLUMNS, ['user_id']);
 			const policyChanged =
 				options?.gameActivityPolicyChanged === true ||
 				patch.game_activity_visibility !== undefined ||
+				patch.game_activity_visibility_source !== undefined ||
 				patch.profile_privacy !== undefined;
 			const revision = current.gameActivityPolicyRevision;
 			if (policyChanged && revision >= 9223372036854775807n) throw new ServiceUnavailableError();

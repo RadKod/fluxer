@@ -9,6 +9,12 @@ resume_authority_precedes_immediate_fresh_game_test_() ->
 fallback_replay_finishes_before_immediate_fresh_game_test_() ->
     {spawn, fun() -> assert_resume_delivery_order(257) end}.
 
+inline_resume_never_emits_guild_game_before_processed_null_test_() ->
+    {spawn, fun() -> assert_guild_null_resume(2) end}.
+
+finalize_resume_never_emits_guild_game_before_processed_null_test_() ->
+    {spawn, fun() -> assert_guild_null_resume(257) end}.
+
 old_socket_completion_cannot_start_game_subscription_test() ->
     State = session_state(0),
     meck:new(session_game_activity, [passthrough, no_link]),
@@ -32,6 +38,61 @@ resume_rejects_preexisting_subscriber_until_replay_completion_test() ->
         session_game_activity:expect(42, stamp(), Pending)
     ),
     ?assertEqual(Pending, session_game_activity:refresh(42, Pending)).
+
+assert_guild_null_resume(Backlog) ->
+    set_authority(),
+    Base = (session_state(0))#{relationships => #{}, guilds => #{50 => {self(), make_ref()}}},
+    Data = #{
+        <<"user">> => #{<<"id">> => <<"42">>},
+        <<"guild_id">> => <<"50">>,
+        <<"game_activity">> => activity(),
+        game_activity_stamp => #{
+            scope => guild,
+            owner_epoch => <<"owner">>,
+            activity_revision => 1,
+            rollout_epoch => 0
+        }
+    },
+    {noreply, Seen} = session_dispatch:handle_dispatch(presence_update, Data, Base),
+    {noreply, Cleared} = session_dispatch:handle_dispatch(
+        presence_update, Data#{<<"game_activity">> => null}, Seen
+    ),
+    Padding = [
+        #{event => message_create, seq => I, data => #{<<"id">> => I}}
+     || I <- lists:seq(3, Backlog)
+    ],
+    Buffer = limited_deque:to_list(maps:get(buffer, Cleared)) ++ Padding,
+    State = Cleared#{seq => Backlog, buffer => Buffer},
+    {Session, Ref} = spawn_monitor(fun() -> resume_session(State) end),
+    meck:new(session_manager, [passthrough, no_link]),
+    meck:new(session_game_activity, [passthrough, no_link]),
+    meck:expect(session_manager, lookup_or_rehydrate, fun(_, _, _) -> {ok, Session} end),
+    meck:expect(session_game_activity, subscribe, fun(S) -> S end),
+    try
+        {ok, _} = gateway_handler_resume:handle_resume(
+            #{<<"token">> => <<"token">>, <<"session_id">> => <<"resume">>, <<"seq">> => 0},
+            maps:remove(peer_ip, gateway_handler:new_state())
+        ),
+        {Replay, Tail} = lists:split(Backlog, receive_until_resumed([])),
+        ?assertEqual(lists:seq(1, Backlog), [Seq || {dispatch, _, _, Seq} <- Replay]),
+        ?assertEqual([null], [
+            Game
+         || {dispatch, presence_update, #{<<"game_activity">> := Game}, _} <- Replay
+        ]),
+        ?assertMatch(
+            [
+                {dispatch, gateway_rollout_update, _, Backlog}, {dispatch, resumed, _, Backlog}
+            ],
+            Tail
+        )
+    after
+        Session ! stop,
+        receive
+            {'DOWN', Ref, process, Session, _} -> ok
+        after 1000 -> error(session_not_stopped)
+        end,
+        meck:unload([session_manager, session_game_activity])
+    end.
 
 assert_resume_delivery_order(Backlog) ->
     set_authority(),

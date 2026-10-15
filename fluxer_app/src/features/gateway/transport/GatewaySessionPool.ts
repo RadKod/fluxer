@@ -31,12 +31,7 @@ const FOREGROUND_RECOVERY_RETRY_DELAYS_MS = [1_000, 3_000, 10_000] as const;
 const FAILED_FOREGROUND_RECOVERY_REARM_INTERVAL_MS = 60_000;
 
 function isGameActivitySharingEnabled(): boolean {
-	return (
-		GameActivityStore.enabled &&
-		!!SessionManager.userId &&
-		GameActivitySettings.getEffectiveSharing() &&
-		GameActivitySettings.getDetectionEnabled(SessionManager.userId)
-	);
+	return GameActivityStore.enabled && !!SessionManager.userId && GameActivitySettings.getEffectiveSharing();
 }
 
 type ForegroundRecoveryState =

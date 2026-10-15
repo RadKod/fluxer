@@ -17,7 +17,8 @@ interface RelationshipPayload {
 }
 
 export function handleRelationshipAdd(data: RelationshipPayload, _context: GatewayHandlerContext): void {
-	if (data.type !== RelationshipTypes.FRIEND) GameActivityStore.clear(data.id);
+	if (data.type === RelationshipTypes.BLOCKED) GameActivityStore.clear(data.id);
+	else if (data.type !== RelationshipTypes.FRIEND) GameActivityStore.clearFriend(data.id);
 	Relationships.updateRelationship(data as RelationshipWire);
 	MemberSearch.handleFriendshipChange(data.id, data.type === RelationshipTypes.FRIEND);
 	Messages.handleRelationshipUpdate();

@@ -14,6 +14,12 @@ import type {WebAuthnCredential} from '@app/api/models/WebAuthnCredential';
 import {isMicupAccountLimited} from '@app/api/user/AccountLimit';
 import {hiddenUserPartial, isProfileHidden} from '@app/api/user/ProfileVisibility';
 import {canHavePublicProfile} from '@app/api/user/profile/ProfilePrivacy';
+import {
+	effectiveGameActivityVisibility,
+	type GameActivityAccount,
+	isGameActivityDefaultPending,
+	isGameActivityEligible,
+} from '@app/api/user/services/GameActivityPolicyService';
 import {canUserAccessNsfwContent} from '@app/api/utils/AgeUtils';
 import type {ChannelMessageNotifications} from '@fluxer/constants/src/NotificationConstants';
 import {
@@ -354,8 +360,11 @@ interface GuildFolderResponse {
 	guild_ids: Array<string>;
 }
 
-export function mapUserSettingsToResponse(params: {settings: UserSettings}): UserSettingsResponse {
-	const {settings} = params;
+export function mapUserSettingsToResponse(params: {
+	settings: UserSettings;
+	user: GameActivityAccount | null;
+}): UserSettingsResponse {
+	const {settings, user} = params;
 	let guildFolders: Array<GuildFolderResponse>;
 	if (settings.guildFolders != null && settings.guildFolders.length > 0) {
 		guildFolders = settings.guildFolders.map((folder) => ({
@@ -427,8 +436,10 @@ export function mapUserSettingsToResponse(params: {settings: UserSettings}): Use
 		staff_dm_access_user_ids: sortUserIds(settings.staffDmAccessUserIds),
 		synced_preferences: settings.syncedPreferences,
 		profile_privacy: settings.profilePrivacy,
-		game_activity_visibility: settings.gameActivityVisibility,
+		game_activity_visibility: effectiveGameActivityVisibility(user, settings),
 		game_activity_policy_revision: settings.gameActivityPolicyRevision.toString(),
+		game_activity_eligible: user !== null && isGameActivityEligible(user),
+		game_activity_default_pending: isGameActivityDefaultPending(user, settings),
 		default_share_voice_activity: settings.defaultShareVoiceActivity,
 		privacy_setup_version: settings.privacySetupVersion,
 		privacy_setup_completed_at: settings.privacySetupCompletedAt?.toISOString() ?? null,

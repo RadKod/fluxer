@@ -28,10 +28,13 @@ Every write that changes a price, a campaign or the member discount is checked a
 | payment_provider_configured<sup>1</sup> | boolean | Whether the deployment has a payment provider configured |
 | visionary_on_sale | boolean | Whether Visionary is shown and sold, or hidden |
 | visionary_reward_item_ids | array[snowflake] | The items delivered and worn with every Visionary number |
+| early_plus_badge_id | ?snowflake | The catalog badge that paid premium and Visionary orders get while Early Plus is open |
+| early_plus_open | boolean | Whether paid premium and Visionary orders get the Early Plus badge |
+| early_plus_opened_once | boolean | Whether Early Plus has opened at least once, after which its badge can no longer change |
 
 <sup>1</sup> False keeps every sale closed whatever the switches say. It comes from the deployment configuration, and no route changes it. The one integration today is Payriff, which stays off unless the deployment enables it. A Fluxer process refuses to start while `FLUXER_PAYRIFF_BASE_URL` is not an https URL, even with Payriff switched off
 
-Both sales switches and `visionary_on_sale` start off, and the member discount starts at 0. The settings live in the instance configuration under the `shop_config` key.
+Both sales switches, `visionary_on_sale`, `early_plus_open` and `early_plus_opened_once` start off, `early_plus_badge_id` starts null, and the member discount starts at 0. The settings live in the instance configuration under the `shop_config` key.
 
 While no payment provider is configured, give items and premium time with [gift codes](/admin-api/gift-codes/) and admin grants such as [Give user a cosmetic item](/admin-api/cosmetics/#give-user-a-cosmetic-item).
 
@@ -201,9 +204,11 @@ Opens or closes sales, and sets the member discount and the Visionary settings. 
 | visionary_on_sale? | boolean | Whether Visionary is shown and sold |
 | visionary_reward_item_ids? | array[snowflake] | The items delivered and worn with every Visionary number |
 
-An omitted field stays as it is. `payment_provider_configured` is read-only.
+An omitted field stays as it is. `payment_provider_configured` and `early_plus_opened_once` are read-only.
 
 - `visionary_reward_item_ids` replaces the list and holds at most 10 IDs. Each must be an owned-availability item without a shop price and in no bundle, and a repeated ID counts once.
+- `early_plus_badge_id` is a badge from the catalog whose text has no `{n}`, or null. It needs `badges:manage` as well. Once Early Plus has opened, the badge is fixed for good. Choose a badge made only for Early Plus, because a take-back removes that badge even when an admin gave it by hand.
+- `early_plus_open` set to true needs `badges:manage` as well, and a badge. Closing needs only `shop:manage`.
 
 ### Response
 
@@ -211,10 +216,15 @@ An omitted field stays as it is. `payment_provider_configured` is read-only.
 | --- | --- | --- |
 | 200 | [shop admin settings](#shop-admin-settings-object) object | The settings were saved |
 | 400 | [error response](/admin-api/#error-response) | A value is refused, or a product would fall below the [minimum price](#minimum-price) |
+| 403 | [error response](/admin-api/#error-response) | `MISSING_ACL`, because the request chooses the Early Plus badge or opens Early Plus without `badges:manage` |
 
 ### Side effects
 
 The settings are saved with a compare-and-set, and every API process picks them up through the instance configuration refresh. The shop catalog can show the old values for up to 60 seconds. A new reward item reaches only numbers delivered after the change.
+
+While Early Plus is open, every delivered premium or Visionary order gives its buyer the Early Plus badge. Gift codes, admin grants, referral rewards and trials do not, and neither does an order support refunds by hand: a premium order paid by a Visionary, or a Visionary order paid by an account that already is one. Every request that sets `early_plus_open` to true queues a `backfillEarlyPlusBadges` job, at most one a minute, shown on the jobs page. The job gives the badge to the buyer of every premium order delivered so far, and of every Visionary order whose buyer still is a Visionary. It skips deleted accounts and accounts with the `EARLY_PLUS_REFUNDED` [premium flag](/admin-api/users/#premium-flags). Its result holds `granted`, `scanned` and `duration_ms`, and a cancel on the jobs page stops it. Closing stops new badges. Badges already given stay.
+
+Ending paid premium and taking Visionary back both take the badge away and set `EARLY_PLUS_REFUNDED`, and the next delivered premium or Visionary order clears the flag. A refund made before Early Plus existed has no flag, so its badge must be taken away by hand.
 
 The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `update_shop_settings`, target type `shop`, and target ID `0`. For every field the request changed, the metadata holds `<field>_old` and `<field>_new`.
 

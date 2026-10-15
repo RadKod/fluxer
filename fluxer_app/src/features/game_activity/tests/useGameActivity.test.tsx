@@ -3,10 +3,27 @@
 
 import {useGameActivity} from '@app/features/game_activity/hooks/useGameActivity';
 import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
+import {runInAction} from 'mobx';
 import {observer} from 'mobx-react-lite';
 import {act, createElement} from 'react';
 import {createRoot} from 'react-dom/client';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+
+const local = await vi.hoisted(async () => {
+	const {observable} = await import('mobx');
+	return observable({activity: null as null | {game_id: string; started_at: number}, sharing: true}, {}, {deep: false});
+});
+vi.mock('@app/features/user/state/Users', () => ({default: {currentUser: {id: 'self'}}}));
+vi.mock('@app/features/game_activity/state/GameActivitySettings', () => ({
+	default: {getEffectiveSharing: () => local.sharing},
+}));
+vi.mock('@app/features/game_activity/utils/DesktopGameActivityBridge', () => ({
+	default: {
+		get activity() {
+			return local.activity;
+		},
+	},
+}));
 
 const game = {game_id: 'test-game', started_at: 1000};
 const record = {user: {id: 'friend'}, game_activity: game} as Parameters<typeof GameActivityStore.update>[0];
@@ -57,5 +74,30 @@ describe('game activity hook rollout', () => {
 		expect(container.textContent).toBe('empty');
 		await act(async () => GameActivityStore.update(record));
 		expect(container.textContent).toBe('test-game');
+	});
+	it('self_row_shows_own_local_game_only_while_sharing', async () => {
+		GameActivityStore.handleRollout({game_activity_enabled: true, game_activity_epoch: 1});
+		runInAction(() => {
+			local.activity = null;
+			local.sharing = true;
+		});
+		const SelfRow = () => {
+			const activity = useGameActivity({userId: 'self'});
+			return createElement('span', null, activity && 'game_id' in activity ? activity.game_id : 'empty');
+		};
+		await act(async () => root.render(createElement(SelfRow)));
+		expect(container.textContent).toBe('empty');
+		await act(async () => runInAction(() => (local.activity = {game_id: 'own-game', started_at: 5})));
+		expect(container.textContent).toBe('own-game');
+		await act(async () => runInAction(() => (local.sharing = false)));
+		expect(container.textContent).toBe('empty');
+		await act(async () => runInAction(() => (local.sharing = true)));
+		expect(container.textContent).toBe('own-game');
+		await act(async () => GameActivityStore.update({...record, user: {...record.user, id: 'self'}}));
+		await act(async () => runInAction(() => (local.activity = null)));
+		expect(container.textContent).toBe('empty');
+		await act(async () => runInAction(() => (local.activity = {game_id: 'own-game', started_at: 5})));
+		await act(async () => GameActivityStore.handleRollout({game_activity_enabled: false, game_activity_epoch: 2}));
+		expect(container.textContent).toBe('empty');
 	});
 });

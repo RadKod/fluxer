@@ -14651,6 +14651,15 @@
 						"maxItems": 10,
 						"type": "array",
 						"items": {"$ref": "#/components/schemas/SnowflakeType"}
+					},
+					"early_plus_badge_id": {
+						"description": "A catalog badge without {n}; null clears it. Fixed once Early Plus has opened. Needs BADGES_MANAGE",
+						"nullable": true,
+						"allOf": [{"$ref": "#/components/schemas/SnowflakeType"}]
+					},
+					"early_plus_open": {
+						"description": "true needs BADGES_MANAGE and a badge, and queues the backfill for every earlier paid premium and Visionary buyer",
+						"type": "boolean"
 					}
 				}
 			},
@@ -14672,6 +14681,19 @@
 						"type": "array",
 						"items": {"$ref": "#/components/schemas/SnowflakeStringType"},
 						"description": "Non-sale cosmetics delivered with every Visionary grant"
+					},
+					"early_plus_badge_id": {
+						"nullable": true,
+						"description": "The catalog badge paid premium and Visionary orders get while Early Plus is open",
+						"allOf": [{"$ref": "#/components/schemas/SnowflakeStringType"}]
+					},
+					"early_plus_open": {
+						"type": "boolean",
+						"description": "Paid premium and Visionary orders get the Early Plus badge while true"
+					},
+					"early_plus_opened_once": {
+						"type": "boolean",
+						"description": "Early Plus has opened at least once; its badge can no longer change"
 					}
 				},
 				"required": [
@@ -14680,7 +14702,10 @@
 					"premium_discount_percent",
 					"payment_provider_configured",
 					"visionary_on_sale",
-					"visionary_reward_item_ids"
+					"visionary_reward_item_ids",
+					"early_plus_badge_id",
+					"early_plus_open",
+					"early_plus_opened_once"
 				],
 				"additionalProperties": false
 			},
@@ -23646,7 +23671,12 @@
 					{"name": "PERKS_SANITIZED", "value": "32", "description": "User premium perks are sanitized"},
 					{"name": "PURCHASE_DISABLED", "value": "64", "description": "Premium purchase is disabled for this user"},
 					{"name": "ENABLED_OVERRIDE", "value": "128", "description": "Premium status is enabled via override"},
-					{"name": "PERKS_DISABLED", "value": "256", "description": "User has temporarily disabled premium perks"}
+					{"name": "PERKS_DISABLED", "value": "256", "description": "User has temporarily disabled premium perks"},
+					{
+						"name": "EARLY_PLUS_REFUNDED",
+						"value": "1073741824",
+						"description": "Early Plus badge taken back on a refund; the Early Plus backfill skips the account"
+					}
 				]
 			},
 			"NetworkBlockRequest": {

@@ -6,6 +6,8 @@ import {
 	executeConditional,
 	fetchMany,
 	fetchOne,
+	fetchPage,
+	type PagedQueryResult,
 	upsertOne,
 } from '@app/api/database/CassandraQueryExecution';
 import {Db, type DbOp} from '@app/api/database/CassandraTypes';
@@ -17,6 +19,7 @@ import {
 	type ShopOrderRow,
 } from '@app/api/database/types/ShopTypes';
 import {ShopOrderChecks, ShopOrders, ShopOrdersByUser} from '@app/api/shop/ShopTables';
+import {BACKGROUND_READ_TIMEOUT_MS} from '@pkgs/cassandra/src/Client';
 
 // Base guarantee only: every check row is deleted once checked or once its order ends.
 const CHECK_TTL_SECONDS = 7 * 86_400;
@@ -25,6 +28,7 @@ const NO_BEFORE = (1n << 63n) - 1n;
 const NO_AFTER = 0n;
 
 const FETCH_ORDER_CQL = ShopOrders.select({where: ShopOrders.where.eq('order_id'), limit: 1});
+const SCAN_ORDERS_CQL = ShopOrders.selectCql({columns: ['user_id', 'sku', 'status']});
 
 function userOrdersQuery(limit: number) {
 	return ShopOrdersByUser.select({
@@ -53,6 +57,7 @@ export function shopOrderCheckShard(orderId: bigint): number {
 	return Number(orderId % BigInt(SHOP_ORDER_CHECK_SHARDS));
 }
 
+export type ScannedShopOrder = Pick<ShopOrderRow, 'user_id' | 'sku' | 'status'>;
 type ShopOrderPatch = Partial<Omit<ShopOrderRow, 'order_id' | 'user_id' | 'version'>>;
 
 // shop_orders (a financial record, kept after account deletion), its per-user index shop_orders_by_user and the
@@ -91,6 +96,15 @@ export class ShopOrderRepository {
 			ops[column] = Db.set(value);
 		}
 		return executeConditional(ShopOrders.conditionalPatchByPk({order_id: orderId}, ops, {version: expectedVersion}));
+	}
+
+	// Every order, in token order; for one-off admin jobs only.
+	async scanPage(limit: number, pageState: string | null): Promise<PagedQueryResult<ScannedShopOrder>> {
+		return fetchPage<ScannedShopOrder>(
+			SCAN_ORDERS_CQL,
+			{},
+			{pageSize: limit, pageState, readTimeout: BACKGROUND_READ_TIMEOUT_MS},
+		);
 	}
 
 	// Newest first.

@@ -19,6 +19,7 @@ async function settingsFixture(visibility: 'off' | 'friends' = 'off') {
 	await repository.upsertSettings({
 		...UserSettings.getDefaultUserSettings({userId, locale: 'en-US', isAdult: true}),
 		game_activity_visibility: visibility,
+		game_activity_visibility_source: 'user',
 		game_activity_policy_revision: null,
 	});
 	const policy = {
@@ -52,7 +53,7 @@ describe('game activity settings persistence', () => {
 	it('reject_invalid_visibility', async () => {
 		const {userId, service, repository} = await settingsFixture();
 		await expect(
-			service.updateSettings({userId, data: {game_activity_visibility: 'everyone'} as never}),
+			service.updateSettings({userId, data: {game_activity_visibility: 'public'} as never}),
 		).rejects.toThrow();
 		expect((await repository.findSettings(userId))?.gameActivityVisibility).toBe('off');
 	});

@@ -13,7 +13,7 @@ interface RelationshipRemovePayload {
 }
 
 export function handleRelationshipRemove(data: RelationshipRemovePayload, _context: GatewayHandlerContext): void {
-	GameActivityStore.clear(data.id);
+	GameActivityStore.clearFriend(data.id);
 	Relationships.removeRelationship(data.id);
 	MemberSearch.handleFriendshipChange(data.id, false);
 	Messages.handleRelationshipUpdate();

@@ -16,6 +16,7 @@ interface LRUEntry {
 
 class MemberPresenceSubscription {
 	private subscriptions: Map<string, Map<string, number>> = new Map();
+	private visibleMembers: Map<string, Set<string>> = new Map();
 	private activeGuildId: string | null = null;
 	private syncTimeoutId: number | null = null;
 	private pruneIntervalId: number | null = null;
@@ -23,10 +24,14 @@ class MemberPresenceSubscription {
 	subscriptionVersion = 0;
 
 	constructor() {
-		makeAutoObservable<this, 'subscriptions' | 'syncTimeoutId' | 'pruneIntervalId' | 'pendingSyncGuilds'>(
+		makeAutoObservable<
+			this,
+			'subscriptions' | 'visibleMembers' | 'syncTimeoutId' | 'pruneIntervalId' | 'pendingSyncGuilds'
+		>(
 			this,
 			{
 				subscriptions: false,
+				visibleMembers: false,
 				syncTimeoutId: false,
 				pruneIntervalId: false,
 				pendingSyncGuilds: false,
@@ -82,9 +87,37 @@ class MemberPresenceSubscription {
 		this.bumpVersion();
 	}
 
+	// TEMPORARY: visible member list rows reuse the generic member presence subscription, so the regular presence
+	// of those members is also delivered to this session. Target: a game-only interest index (a members
+	// subscription option without presence) or interest derived from the member list ranges in the gateway member
+	// list engine. Trigger: per-guild update_member_subscriptions p99 above 200/s, or subscription-driven presence
+	// above 30% of all presence deliveries.
+	setVisibleMembers(guildId: string, userIds: ReadonlyArray<string>): void {
+		const next = new Set(userIds.slice(0, MEMBER_SUBSCRIPTION_MAX_SIZE));
+		const previous = this.visibleMembers.get(guildId) ?? new Set<string>();
+		if (previous.size === next.size && [...next].every((userId) => previous.has(userId))) {
+			return;
+		}
+		if (next.size > 0) {
+			this.visibleMembers.set(guildId, next);
+		} else {
+			this.visibleMembers.delete(guildId);
+		}
+		const guildSubs = this.getGuildSubscriptions(guildId);
+		const now = Date.now();
+		for (const userId of [...previous, ...next]) {
+			guildSubs.delete(userId);
+			guildSubs.set(userId, now);
+		}
+		this.enforceMaxSize(guildId);
+		this.syncPruneInterval();
+		this.scheduleSyncToGateway(guildId);
+		this.bumpVersion();
+	}
+
 	unsubscribe(guildId: string, userId: string): void {
 		const guildMembers = this.subscriptions.get(guildId);
-		if (!guildMembers) return;
+		if (!guildMembers || this.visibleMembers.get(guildId)?.has(userId)) return;
 		guildMembers.delete(userId);
 		if (guildMembers.size === 0) {
 			this.subscriptions.delete(guildId);
@@ -123,6 +156,7 @@ class MemberPresenceSubscription {
 			}
 		}
 		this.subscriptions.clear();
+		this.visibleMembers.clear();
 		this.activeGuildId = null;
 		this.stopPruneInterval();
 		if (this.syncTimeoutId != null) {
@@ -144,12 +178,15 @@ class MemberPresenceSubscription {
 		if (!guildSubs || guildSubs.size <= MEMBER_SUBSCRIPTION_MAX_SIZE) {
 			return;
 		}
+		const visible = this.visibleMembers.get(guildId);
 		const entries: Array<LRUEntry> = [];
 		for (const [userId, lastAccessed] of guildSubs) {
-			entries.push({userId, lastAccessed});
+			if (!visible?.has(userId)) {
+				entries.push({userId, lastAccessed});
+			}
 		}
 		entries.sort((a, b) => a.lastAccessed - b.lastAccessed);
-		const toRemove = entries.slice(0, entries.length - MEMBER_SUBSCRIPTION_MAX_SIZE);
+		const toRemove = entries.slice(0, guildSubs.size - MEMBER_SUBSCRIPTION_MAX_SIZE);
 		for (const entry of toRemove) {
 			guildSubs.delete(entry.userId);
 		}
@@ -160,9 +197,10 @@ class MemberPresenceSubscription {
 		const cutoff = now - MEMBER_SUBSCRIPTION_TTL_MS;
 		const guildsToSync = new Set<string>();
 		for (const [guildId, guildSubs] of this.subscriptions) {
+			const visible = this.visibleMembers.get(guildId);
 			const toRemove: Array<string> = [];
 			for (const [userId, lastAccessed] of guildSubs) {
-				if (lastAccessed < cutoff) {
+				if (lastAccessed < cutoff && !visible?.has(userId)) {
 					toRemove.push(userId);
 				}
 			}

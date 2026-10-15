@@ -3,6 +3,7 @@
 import Channels from '@app/features/channel/state/Channels';
 import Emoji from '@app/features/emoji/state/Emoji';
 import Sticker from '@app/features/emoji/state/EmojiSticker';
+import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
 import type {GatewayHandlerContext} from '@app/features/gateway/events/EventRouter';
 import ChannelMemberCount from '@app/features/guild/state/ChannelMemberCount';
 import GuildAvailability from '@app/features/guild/state/GuildAvailability';
@@ -51,6 +52,7 @@ export function handleGuildDelete(data: GuildDeletePayload, _context: GatewayHan
 	Permission.handleGuild();
 	Invites.handleGuildDelete(data.id, currentInstanceTarget());
 	Presence.handleGuildDelete(data.id);
+	GameActivityStore.clearGuild(data.id);
 	Webhooks.handleGuildDelete(data.id);
 	MediaEngine.handleGuildDelete(data.id);
 	MemberSidebar.handleGuildDelete(data.id);

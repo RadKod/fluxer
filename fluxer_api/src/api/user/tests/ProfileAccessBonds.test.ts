@@ -40,9 +40,7 @@ describe('the profile access rule by bond and level (Kapı 2 Tablo 1)', () => {
 	// The settings route for the levels it takes; the legacy 1 straight into the settings row (an older client's write).
 	async function writeLevel(owner: TestAccount, level: number): Promise<void> {
 		if (level !== 1) return updateUserSettings(harness, owner.token, {profile_privacy: level});
-		const repository = getUserRepository();
-		const settings = await repository.findSettings(createUserID(BigInt(owner.userId)));
-		await repository.upsertSettings({...settings!.toRow(), profile_privacy: level});
+		await getUserRepository().patchSettings(createUserID(BigInt(owner.userId)), {profile_privacy: level});
 	}
 
 	async function sharedGuild(owner: TestAccount, viewer: TestAccount): Promise<void> {

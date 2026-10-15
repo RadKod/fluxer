@@ -2,7 +2,7 @@
 
 import type {GatewayHandlerContext} from '@app/features/gateway/events/EventRouter';
 import GuildList from '@app/features/guild/state/GuildList';
-import UserSettings from '@app/features/user/state/UserSettings';
+import UserSettings, {type GameActivityVisibility} from '@app/features/user/state/UserSettings';
 
 export interface UserSettingsPayload {
 	flags: number;
@@ -12,7 +12,7 @@ export interface UserSettingsPayload {
 	guild_positions: Array<string>;
 	locale: string;
 	synced_preferences?: string;
-	game_activity_visibility?: 'off' | 'friends' | null;
+	game_activity_visibility?: GameActivityVisibility | null;
 }
 
 export function handleUserSettingsUpdate(data: UserSettingsPayload, context: GatewayHandlerContext): void {

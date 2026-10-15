@@ -8,6 +8,7 @@ import {AdminArchiveService} from '@app/api/admin/services/AdminArchiveService';
 import {createGuildID, type GuildID, type UserID} from '@app/api/BrandedTypes';
 import {BadgeRepository} from '@app/api/badge/BadgeRepository';
 import {BadgeService} from '@app/api/badge/BadgeService';
+import {EarlyPlusBadgeService} from '@app/api/badge/EarlyPlusBadgeService';
 import {PioneerRepository} from '@app/api/badge/PioneerRepository';
 import {PioneerService} from '@app/api/badge/PioneerService';
 import {createKvIpInfoLookupBudget} from '@app/api/ban/IpInfoBudget';
@@ -719,6 +720,7 @@ export const getShopCatalogService = singleton(
 	() =>
 		new ShopCatalogService({
 			priceRepository: getShopPriceRepository(),
+			badgeRepository: getBadgeRepository(),
 			cosmeticService: getCosmeticService(),
 			cosmeticRepository: getCosmeticRepository(),
 			instanceConfigRepository: getInstanceConfigRepository(),
@@ -753,6 +755,7 @@ export const getShopOrderService = singleton(
 			cosmeticService: getCosmeticService(),
 			premiumLedgerService: getPremiumLedgerService(),
 			visionaryService: getVisionaryService(),
+			earlyPlusBadgeService: getEarlyPlusBadgeService(),
 			userRepository: getUserRepository(),
 			kvClient: getKVClient(),
 			workerService: getWorkerService(),
@@ -839,6 +842,16 @@ export const getPioneerService = singleton(
 			userRepository: getUserRepository(),
 			kvClient: getKVClient(),
 			workerService: getWorkerService(),
+		}),
+);
+export const getEarlyPlusBadgeService = singleton(
+	() =>
+		new EarlyPlusBadgeService({
+			badgeRepository: getBadgeRepository(),
+			instanceConfigRepository: getInstanceConfigRepository(),
+			orderRepository: getShopOrderRepository(),
+			userRepository: getUserRepository(),
+			visionaryService: getVisionaryService(),
 		}),
 );
 export const getMicupBotRepository = singleton(() => new MicupBotRepository());

@@ -20,6 +20,11 @@ export const ShopAdminSettingsResponse = z.object({
 	visionary_reward_item_ids: z
 		.array(SnowflakeStringType)
 		.describe('Non-sale cosmetics delivered with every Visionary grant'),
+	early_plus_badge_id: SnowflakeStringType.nullable().describe(
+		'The catalog badge paid premium and Visionary orders get while Early Plus is open',
+	),
+	early_plus_open: z.boolean().describe('Paid premium and Visionary orders get the Early Plus badge while true'),
+	early_plus_opened_once: z.boolean().describe('Early Plus has opened at least once; its badge can no longer change'),
 });
 
 export type ShopAdminSettingsResponse = z.infer<typeof ShopAdminSettingsResponse>;
@@ -87,6 +92,15 @@ export const UpdateShopSettingsRequest = z.object({
 		.max(10)
 		.optional()
 		.describe('Replaces the list; each must be an owned-availability item that is not on sale'),
+	early_plus_badge_id: SnowflakeType.nullable()
+		.optional()
+		.describe('A catalog badge without {n}; null clears it. Fixed once Early Plus has opened. Needs BADGES_MANAGE'),
+	early_plus_open: z
+		.boolean()
+		.optional()
+		.describe(
+			'true needs BADGES_MANAGE and a badge, and queues the backfill for every earlier paid premium and Visionary buyer',
+		),
 });
 
 export type UpdateShopSettingsRequest = z.infer<typeof UpdateShopSettingsRequest>;

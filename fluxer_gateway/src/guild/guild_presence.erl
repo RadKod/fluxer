@@ -125,7 +125,9 @@ build_presence_map(Payload, Member) ->
 
 -spec maybe_handle_offline(atom(), user_id(), guild_state()) -> guild_state().
 maybe_handle_offline(offline, UserId, State) ->
-    guild_sessions_presence:handle_user_offline(UserId, State);
+    guild_game_activity:owner_offline(
+        UserId, guild_sessions_presence:handle_user_offline(UserId, State)
+    );
 maybe_handle_offline(_, _UserId, State) ->
     State.
 
@@ -321,25 +323,25 @@ send_presence_payload_to_session(UserId, SessionId, Payload, State) ->
 ) -> guild_state().
 send_cached_presence_to_known_session(UserId, SessionId, Payload, GuildId, Sessions, State) ->
     case maps:get(SessionId, Sessions, undefined) of
-        #{pid := SessionPid} when is_pid(SessionPid) ->
-            dispatch_cached_presence(UserId, SessionPid, Payload, GuildId, State);
+        #{pid := SessionPid} = Session when is_pid(SessionPid) ->
+            dispatch_cached_presence(UserId, Session, Payload, GuildId, State);
         _ ->
             State
     end.
 
--spec dispatch_cached_presence(user_id(), pid(), map(), integer(), guild_state()) ->
+-spec dispatch_cached_presence(user_id(), map(), map(), integer(), guild_state()) ->
     guild_state().
-dispatch_cached_presence(UserId, SessionPid, Payload, GuildId, State) ->
+dispatch_cached_presence(UserId, #{pid := SessionPid} = Session, Payload, GuildId, State) ->
     case guild_permissions_check:find_member_by_user_id(UserId, State) of
         undefined ->
             State;
         Member ->
             PresenceBase = build_presence_map(Payload, Member),
-            PresenceUpdate = PresenceBase#{<<"guild_id">> => integer_to_binary(GuildId)},
-            gateway_dispatch_relay:dispatch(
-                SessionPid, presence_update, PresenceUpdate, GuildId
+            PresenceUpdate = maps:merge(
+                PresenceBase#{<<"guild_id">> => integer_to_binary(GuildId)},
+                guild_game_activity:snapshot_fields(UserId, Session, State)
             ),
-            State
+            guild_game_activity:send_snapshot(SessionPid, PresenceUpdate, State)
     end.
 
 -spec ensure_atom(atom() | binary()) -> atom().

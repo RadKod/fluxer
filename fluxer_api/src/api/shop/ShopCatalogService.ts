@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type {BadgeRepository} from '@app/api/badge/BadgeRepository';
+import {PIONEER_NUMBER_TOKEN} from '@app/api/badge/PioneerService';
 import {Config} from '@app/api/Config';
 import type {CosmeticRepository} from '@app/api/cosmetics/CosmeticRepository';
 import type {CosmeticService} from '@app/api/cosmetics/CosmeticService';
@@ -62,6 +64,7 @@ export interface VisionaryStockReader {
 
 export interface ShopCatalogServiceDeps {
 	priceRepository: ShopPriceRepository;
+	badgeRepository: Pick<BadgeRepository, 'getBadge'>;
 	cosmeticService: CosmeticService;
 	cosmeticRepository: CosmeticRepository;
 	instanceConfigRepository: InstanceConfigRepository;
@@ -148,6 +151,21 @@ function assertSellable(row: PriceFields, config: ShopConfig, path: string, now:
 		throw InputValidationError.create(
 			path,
 			`Final price would be below ₺1 for ${row.sku}; raise the price or lower the discount`,
+		);
+	}
+}
+
+// One badge for the whole programme: once it has opened, every take-back and backfill means that one badge.
+function assertEarlyPlusChange(current: ShopConfig, next: Partial<ShopConfig>): void {
+	const open = next.early_plus_open ?? current.early_plus_open;
+	const badgeId = next.early_plus_badge_id === undefined ? current.early_plus_badge_id : next.early_plus_badge_id;
+	if (open && badgeId === null) {
+		throw InputValidationError.create('early_plus_open', 'Choose the Early Plus badge before opening it');
+	}
+	if (current.early_plus_opened_once && badgeId !== current.early_plus_badge_id) {
+		throw InputValidationError.create(
+			'early_plus_badge_id',
+			'The Early Plus badge is fixed once Early Plus has opened',
 		);
 	}
 }
@@ -269,22 +287,32 @@ export class ShopCatalogService {
 			payment_provider_configured: isShopPaymentProviderConfigured(),
 			visionary_on_sale: config.visionary_on_sale,
 			visionary_reward_item_ids: config.visionary_reward_item_ids,
+			early_plus_badge_id: config.early_plus_badge_id,
+			early_plus_open: config.early_plus_open,
+			early_plus_opened_once: config.early_plus_opened_once,
 		};
 	}
 
 	async updateSettings(patch: UpdateShopSettingsRequest): Promise<{before: ShopConfig; after: ShopConfig}> {
-		const {visionary_reward_item_ids: rewardIds, ...switches} = patch;
+		const {visionary_reward_item_ids: rewardIds, early_plus_badge_id: earlyPlusBadgeId, ...switches} = patch;
 		const rows = await this.deps.priceRepository.listPrices();
 		const next = Object.fromEntries(
 			Object.entries(switches).filter(([, value]) => value !== undefined),
 		) as Partial<ShopConfig>;
 		if (rewardIds !== undefined) next.visionary_reward_item_ids = await this.checkRewardItems(rewardIds, rows);
+		if (earlyPlusBadgeId !== undefined) {
+			next.early_plus_badge_id = earlyPlusBadgeId === null ? null : await this.checkEarlyPlusBadge(earlyPlusBadgeId);
+		}
 		const now = new Date();
 		let before = null as ShopConfig | null;
 		const after = await this.deps.instanceConfigRepository.updateShopConfig((current) => {
 			before = current;
 			for (const row of rows) assertSellable(row, {...current, ...next}, 'settings', now);
-			return next;
+			assertEarlyPlusChange(current, next);
+			return {
+				...next,
+				...(next.early_plus_open && !current.early_plus_opened_once ? {early_plus_opened_once: true} : {}),
+			};
 		});
 		return {before: before!, after};
 	}
@@ -648,6 +676,16 @@ export class ShopCatalogService {
 			}
 		}
 		return unique;
+	}
+
+	// A numbered badge ({n}) is given only with its own number, so it cannot be the Early Plus badge.
+	private async checkEarlyPlusBadge(badgeId: bigint): Promise<string> {
+		const badge = await this.deps.badgeRepository.getBadge(badgeId);
+		if (!badge) throw InputValidationError.create('early_plus_badge_id', `Badge ${badgeId} does not exist`);
+		if (badge.description.includes(PIONEER_NUMBER_TOKEN)) {
+			throw InputValidationError.create('early_plus_badge_id', 'A numbered badge cannot be the Early Plus badge');
+		}
+		return `${badgeId}`;
 	}
 
 	// The temporary payment provider budget triggers: the busy counter per hour since the

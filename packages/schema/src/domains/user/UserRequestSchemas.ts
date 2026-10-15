@@ -325,6 +325,9 @@ export const UserSettingsUpdateRequest = z
 		game_activity_visibility: GameActivityVisibilitySchema.nullable().describe(
 			'Who can see the current game; null disables sharing',
 		),
+		game_activity_default_acknowledged: z
+			.literal(true)
+			.describe('Confirms the one-time notice about the default game sharing audience'),
 		flags: z.number().int().describe('Bitfield of user settings flags'),
 		status: UserStatusType,
 		status_resets_at: DateTimeType.nullish().describe('When status resets'),
