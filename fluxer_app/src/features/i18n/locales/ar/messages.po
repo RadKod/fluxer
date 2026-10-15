@@ -14371,8 +14371,8 @@ msgid "Download {productName}"
 msgstr "تنزيل {productName}"
 
 #: src/features/connection/components/modals/AddConnectionModal.tsx
-msgid "Download <0>fluxer-verification</0> and place it in your <1>.well-known</1> folder so we can validate the domain."
-msgstr "نزّل <0>fluxer-verification</0> وضعه في مجلد <1>.well-known</1> حتى نتمكن من التحقق من النطاق."
+msgid "Download <0>sanalyer-verification</0> and place it in your <1>.well-known</1> folder so we can validate the domain."
+msgstr "نزّل <0>sanalyer-verification</0> وضعه في مجلد <1>.well-known</1> حتى نتمكن من التحقق من النطاق."
 
 #. Settings search synonym. Used to match this term when the user types it in the settings search bar.
 #: src/features/user/components/settings_utils/search_index/AppearanceIndex.ts
@@ -14409,8 +14409,8 @@ msgid "Download file"
 msgstr "تنزيل الملف"
 
 #: src/features/connection/components/modals/AddConnectionModal.tsx
-msgid "Download fluxer-verification"
-msgstr "تنزيل fluxer-verification"
+msgid "Download sanalyer-verification"
+msgstr "تنزيل sanalyer-verification"
 
 #. Media context menu action that downloads a GIF attachment.
 #: src/features/ui/action_menu/items/MediaMenuData.tsx

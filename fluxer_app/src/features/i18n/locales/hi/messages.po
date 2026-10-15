@@ -14371,8 +14371,8 @@ msgid "Download {productName}"
 msgstr "{productName} डाउनलोड करें"
 
 #: src/features/connection/components/modals/AddConnectionModal.tsx
-msgid "Download <0>fluxer-verification</0> and place it in your <1>.well-known</1> folder so we can validate the domain."
-msgstr "डोमेन को वैलिडेट करने के लिए <0>fluxer-verification</0> डाउनलोड करें और इसे अपने <1>.well-known</1> फ़ोल्डर में रखें।"
+msgid "Download <0>sanalyer-verification</0> and place it in your <1>.well-known</1> folder so we can validate the domain."
+msgstr "डोमेन को वैलिडेट करने के लिए <0>sanalyer-verification</0> डाउनलोड करें और इसे अपने <1>.well-known</1> फ़ोल्डर में रखें।"
 
 #. Settings search synonym. Used to match this term when the user types it in the settings search bar.
 #: src/features/user/components/settings_utils/search_index/AppearanceIndex.ts
@@ -14409,8 +14409,8 @@ msgid "Download file"
 msgstr "फ़ाइल डाउनलोड करें"
 
 #: src/features/connection/components/modals/AddConnectionModal.tsx
-msgid "Download fluxer-verification"
-msgstr "fluxer-verification डाउनलोड करें"
+msgid "Download sanalyer-verification"
+msgstr "sanalyer-verification डाउनलोड करें"
 
 #. Media context menu action that downloads a GIF attachment.
 #: src/features/ui/action_menu/items/MediaMenuData.tsx
