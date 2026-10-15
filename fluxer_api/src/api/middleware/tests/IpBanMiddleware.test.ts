@@ -31,8 +31,8 @@ describe('IpBanCache', () => {
 		const sibling = '2a01:e0a:d10:3333::2';
 		const expiry = new Date(Date.now() + 3_600_000);
 		vi.spyOn(AdminRepository.prototype, 'loadAllBannedIpEntries').mockResolvedValue([
-			{ip: first, kind: 'permanent', reason: null, expiresAt: null, createdAt: null},
-			{ip: sibling, kind: 'permanent', reason: null, expiresAt: null, createdAt: null},
+			{ip: first, kind: 'permanent', reason: null, expiresAt: null, createdAt: null, decisionId: null},
+			{ip: sibling, kind: 'permanent', reason: null, expiresAt: null, createdAt: null, decisionId: null},
 		]);
 		await ipBanCache.refresh();
 		ipBanCache.replaceBan(first, expiry);

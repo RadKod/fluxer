@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {ApiContext} from '@app/api/ApiContext';
-import type {AdminRepository} from '@app/api/admin/AdminRepository';
+import type {AdminRepository, BannedIpEntry} from '@app/api/admin/AdminRepository';
 import type {AdminAuditService} from '@app/api/admin/services/AdminAuditService';
 import {createUserID, type UserID} from '@app/api/BrandedTypes';
 import {isHighCgnatBlastRadiusRisk} from '@app/api/ban/IpBanCgnatGuard';
@@ -45,6 +45,7 @@ import {BadRequestError} from '@fluxer/errors/src/domains/core/BadRequestError';
 import {ConflictError} from '@fluxer/errors/src/domains/core/ConflictError';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {NotFoundError} from '@fluxer/errors/src/domains/core/NotFoundError';
+import {IpBanLinkedToDecisionError} from '@fluxer/errors/src/domains/moderation/IpBanLinkedToDecisionError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';
 import type {AdminBlocklistListType} from '@fluxer/schema/src/domains/admin/AdminBlocklistSchemas';
 
@@ -179,30 +180,37 @@ export class AdminBanManagementService {
 		adminUserId: UserID,
 		auditLogReason: string | null,
 	) {
+		const {adminRepository, auditService} = this.deps;
+		// Micup: shared-network (CGNAT) addresses are refused before the write, upstream only checks the exemption list.
 		const exempt = isIpBanExempt(data.ip);
 		if (exempt || (await this.shouldSkipIpBanForCgnat(data.ip))) {
-			await this.deps.auditService.createAuditLog({
-				targetId: 0n,
+			await auditService.createAuditLog({
 				adminUserId,
 				targetType: 'ip',
+				targetId: BigInt(0),
 				action: exempt ? 'ban_ip_skipped_exempt' : 'ban_ip_skipped_cgnat',
 				auditLogReason,
 				metadata: new Map([['ip', data.ip]]),
 			});
 			throw new BadRequestError({
 				code: APIErrorCodes.IP_BAN_DECLINED,
-				message: 'This IP address has a shared-network exemption',
+				message: exempt
+					? 'This IP address is on the instance exemption list'
+					: 'This IP address has a shared-network exemption',
 			});
 		}
-		const ttlSeconds = data.duration_hours ? data.duration_hours * 3600 : null;
-		const expiresAt = await this.deps.adminRepository.banIp(data.ip, ttlSeconds);
+		await this.assertIpBanNotLinked(data.ip);
+		const durationHours = data.duration_hours ?? 0;
+		const ttlSeconds = durationHours > 0 ? durationHours * 3600 : null;
+		const expiresAt = await adminRepository.banIp(data.ip, ttlSeconds);
 		ipBanCache.replaceBan(data.ip, expiresAt);
 		await this.deps.apiContext.services.cache.publish(IP_BAN_REFRESH_CHANNEL, 'refresh');
 		const metadata = new Map([['ip', data.ip]]);
 		if (ttlSeconds !== null) {
-			metadata.set('duration_hours', String(data.duration_hours));
+			metadata.set('duration_hours', durationHours.toString());
 			if (expiresAt) metadata.set('expires_at', expiresAt.toISOString());
 		}
+		await this.refreshIpBans();
 		await this.deps.auditService.createAuditLog({
 			targetId: 0n,
 			adminUserId,
@@ -234,6 +242,7 @@ export class AdminBanManagementService {
 	) {
 		const {adminRepository} = this.deps;
 		const {cache: cacheService} = this.deps.apiContext.services;
+		await this.assertIpBanNotLinked(data.ip);
 		await adminRepository.unbanIp(data.ip);
 		ipBanCache.unban(data.ip);
 		await cacheService.publish(IP_BAN_REFRESH_CHANNEL, 'refresh');
@@ -250,9 +259,67 @@ export class AdminBanManagementService {
 	async checkIpBan(data: {ip: string}): Promise<{
 		banned: boolean;
 		expires_at: string | null;
+		decision_id: string | null;
 	}> {
 		const match = ipBanCache.getMatch(data.ip);
-		return {banned: match !== null, expires_at: toIsoString(match?.expiresAt)};
+		return {
+			banned: match !== null,
+			expires_at: toIsoString(match?.expiresAt),
+			decision_id: toSnowflakeString(match?.decision?.decisionId),
+		};
+	}
+
+	async blockNetworksForDecision(
+		ips: ReadonlyArray<string>,
+		decisionId: bigint,
+		expiresAt: Date,
+	): Promise<{blocked: Array<BannedIpEntry>; alreadyBlocked: Array<string>}> {
+		const blocked: Array<BannedIpEntry> = [];
+		const alreadyBlocked: Array<string> = [];
+		for (const ip of ips) {
+			const entry = await this.deps.adminRepository.banIpForDecision(ip, decisionId, expiresAt);
+			if (entry) {
+				blocked.push(entry);
+			} else {
+				alreadyBlocked.push(ip);
+			}
+		}
+		if (blocked.length > 0) {
+			await this.refreshIpBans();
+		}
+		return {blocked, alreadyBlocked};
+	}
+
+	async listDecisionNetworkBlocks(decisionId: bigint): Promise<Array<BannedIpEntry>> {
+		return this.deps.adminRepository.listDecisionIpBans(decisionId);
+	}
+
+	async removeDecisionNetworkBlocks(decisionIds: ReadonlyArray<bigint>): Promise<Array<BannedIpEntry>> {
+		const removed = await this.deps.adminRepository.removeDecisionIpBans(decisionIds);
+		if (removed.length > 0) {
+			await this.refreshIpBans();
+		}
+		return removed;
+	}
+
+	async relinkDecisionNetworkBlocks(fromDecisionId: bigint, toDecisionId: bigint): Promise<Array<BannedIpEntry>> {
+		const relinked = await this.deps.adminRepository.relinkDecisionIpBans(fromDecisionId, toDecisionId);
+		if (relinked.length > 0) {
+			await this.refreshIpBans();
+		}
+		return relinked;
+	}
+
+	private async refreshIpBans(): Promise<void> {
+		await ipBanCache.refresh();
+		await this.deps.apiContext.services.cache.publish(IP_BAN_REFRESH_CHANNEL, 'refresh');
+	}
+
+	private async assertIpBanNotLinked(ip: string): Promise<void> {
+		const decisionId = await this.deps.adminRepository.findIpBanDecision(ip);
+		if (decisionId !== null) {
+			throw new IpBanLinkedToDecisionError(decisionId);
+		}
 	}
 
 	async banEmail(

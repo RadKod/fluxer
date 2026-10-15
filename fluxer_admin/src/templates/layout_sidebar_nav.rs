@@ -53,6 +53,12 @@ pub const NAV_SECTIONS: &[NavSection] = &[
                 [acl::FEED_MODERATE]
             ),
             item!(
+                "Decisions",
+                "/decisions",
+                "decisions",
+                [acl::ENFORCEMENT_VIEW]
+            ),
+            item!(
                 "Discovery Review",
                 "/discovery",
                 "discovery",

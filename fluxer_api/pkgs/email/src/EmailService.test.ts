@@ -9,8 +9,6 @@ const CONFIG: EmailConfig = {
 	fromEmail: 'noreply@example.test',
 	fromName: 'sanalyer',
 	appBaseUrl: 'https://app.example.test',
-	termsUrl: 'https://example.test/marketing/terms',
-	guidelinesUrl: 'https://example.test/marketing/guidelines',
 	appealsEmail: 'info@sanalyer.com',
 	safetyEmail: 'info@sanalyer.com',
 	supportEmail: 'info@sanalyer.com',
@@ -44,13 +42,6 @@ function sendIpAuthorization(config: EmailConfig, locale: string, username = 'ay
 	return capture(config, (service) =>
 		service.sendIpAuthorizationEmail('user@example.test', username, 'tok123', '203.0.113.7', 'Istanbul', locale),
 	);
-}
-
-async function tempBanHtml(config: EmailConfig, reason: string): Promise<string> {
-	const message = await capture(config, (service) =>
-		service.sendAccountTempBannedEmail('user@example.test', 'ayse', reason, 24, new Date('2026-09-26T00:00:00Z'), 'tr'),
-	);
-	return message.html ?? '';
 }
 
 describe('EmailService HTML part', () => {
@@ -112,25 +103,6 @@ describe('EmailService HTML part', () => {
 		const html = (await sendIpAuthorization({...CONFIG, html: HTML}, 'tr', '<img src=x onerror=alert(1)>')).html ?? '';
 		expect(html).not.toContain('<img src=x');
 		expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
-	});
-
-	it('cannot break out of a link href with a quote inside a URL', async () => {
-		const html = await tempBanHtml({...CONFIG, html: HTML}, 'https://a.test/x"onmouseover="alert(1)');
-		expect(html).toContain('<a href="https://a.test/x" ');
-		expect(html).not.toContain('"onmouseover');
-		expect(html).toContain('&quot;onmouseover=&quot;alert(1)');
-	});
-
-	it('never turns a javascript: URL into a link', async () => {
-		const html = await tempBanHtml({...CONFIG, html: HTML}, 'javascript:alert(1)');
-		expect(html).toContain('javascript:alert(1)');
-		expect(html).not.toContain('href="javascript');
-	});
-
-	it('escapes markup in the footer and keeps its line breaks', async () => {
-		const html = await tempBanHtml({...CONFIG, html: {...HTML, footer: {tr: '<b>sanalyer</b>\nsatır'}}}, 'spam');
-		expect(html).not.toContain('<b>');
-		expect(html).toContain('&lt;b&gt;sanalyer&lt;/b&gt;<br>satır');
 	});
 
 	it('drops a logo that is not https and a header colour that is not hex', async () => {
@@ -230,17 +202,6 @@ describe('EmailService action button', () => {
 		expect(visibleText(html).split(HARVEST_URL)).toHaveLength(2);
 		expect(html.split(BUTTON_CELL)).toHaveLength(2);
 	});
-
-	it('keeps the terms and guidelines URLs as inline links without a button', async () => {
-		const html = await tempBanHtml({...CONFIG, html: HTML}, 'spam');
-		expect(html).toMatch(
-			/<a href="https:\/\/example\.test\/marketing\/terms" style="color:#6ccff9;[^>]*>https:\/\/example\.test\/marketing\/terms<\/a>/,
-		);
-		expect(html).toMatch(
-			/<a href="https:\/\/example\.test\/marketing\/guidelines"[^>]*>https:\/\/example\.test\/marketing\/guidelines<\/a>/,
-		);
-		expect(html).not.toContain(BUTTON_CELL);
-	});
 });
 
 describe('EmailService dark layout', () => {
@@ -278,15 +239,11 @@ describe('EmailService dark layout', () => {
 
 describe('EmailService contact address', () => {
 	it('names info@sanalyer.com as the appeals and safety contact', async () => {
-		const tempBan = await capture(CONFIG, (service) =>
-			service.sendAccountTempBannedEmail('user@example.test', 'ayse', null, 24, new Date('2026-09-26T00:00:00Z'), 'tr'),
-		);
 		const report = await capture(CONFIG, (service) =>
-			service.sendReportResolvedEmail('user@example.test', 'ayse', '123', '', 'tr'),
+			service.sendReportResolvedEmail('user@example.test', 'ayse', '123', '', 'action_taken' as never, 'tr'),
 		);
-		expect(tempBan.text).toContain('info@sanalyer.com');
 		expect(report.text).toContain('info@sanalyer.com');
-		expect(`${tempBan.text}${report.text}`).not.toContain('destek@micup.gg');
+		expect(report.text).not.toContain('destek@micup.gg');
 	});
 });
 

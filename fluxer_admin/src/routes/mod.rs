@@ -11,6 +11,7 @@ pub mod codes;
 pub mod cosmetics;
 pub mod discovery;
 pub mod feed_moderation;
+pub mod enforcement;
 mod guild_tabs;
 pub mod guilds;
 pub mod jobs;
@@ -159,6 +160,7 @@ pub fn build_router(config: AdminConfig) -> Router {
         .merge(badges::router())
         .merge(feed_moderation::router())
         .merge(discovery::router())
+        .merge(enforcement::router())
         .merge(registrations::router())
         .merge(jobs::router())
         .merge(messages::router())

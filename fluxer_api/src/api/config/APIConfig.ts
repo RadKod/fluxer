@@ -350,7 +350,6 @@ export interface APIConfig {
 	deletionGracePeriodHours: number;
 	reportRetention: {
 		days: number;
-		resolvedDays: number | null;
 		dryRun: boolean;
 	};
 	inactivityDeletionThresholdDays?: number;

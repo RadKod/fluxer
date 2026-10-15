@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::common::{CommandSpec, output_text, parse_version_instant, run_command};
+use crate::common::{output_text_quiet, CommandSpec, output_text, parse_version_instant, run_command};
 use crate::desktop::{
     DESKTOP_CHANNEL_MANIFEST_NAME, DESKTOP_MODULE_PACKAGE_NAME, DESKTOP_MODULES_KEY_SEGMENT,
     DESKTOP_RENDERER_MODULE, DesktopChannelManifest, desktop_module_package_url,
@@ -983,14 +983,16 @@ pub(crate) fn validate_full_sha(label: &str, value: &str) -> Result<String> {
 }
 
 fn release_summaries() -> Result<Vec<ReleaseSummary>> {
-    let output = output_text(
+    let output = output_text_quiet(
         CommandSpec::new("gh")
             .args(["api", "--paginate", "--slurp"])
             .arg(format!("repos/{RELEASE_REPOSITORY}/releases?per_page=100")),
     )?;
     let pages: Vec<Vec<ReleaseSummary>> =
         serde_json::from_str(&output).context("Failed to parse GitHub Release history")?;
-    Ok(pages.into_iter().flatten().collect())
+    let releases: Vec<ReleaseSummary> = pages.into_iter().flatten().collect();
+    println!("Release history: {} release(s) in {RELEASE_REPOSITORY}", releases.len());
+    Ok(releases)
 }
 
 pub(crate) fn desktop_releases(channel: &str) -> Result<Vec<DesktopPublishedRelease>> {

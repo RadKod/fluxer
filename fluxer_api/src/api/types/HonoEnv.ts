@@ -21,6 +21,7 @@ import type {ConnectionRequestService} from '@app/api/connection/ConnectionReque
 import type {ConnectionService} from '@app/api/connection/ConnectionService';
 import type {CosmeticService} from '@app/api/cosmetics/CosmeticService';
 import type {DonationService} from '@app/api/donation/DonationService';
+import type {NetworkBlock} from '@app/api/enforcement/NetworkBlockError';
 import type {FavoriteMemeRequestService} from '@app/api/favorite_meme/FavoriteMemeRequestService';
 import type {FavoriteMemeService} from '@app/api/favorite_meme/FavoriteMemeService';
 import type {FeedPostService} from '@app/api/feed/FeedPostService';
@@ -112,6 +113,7 @@ export interface HonoEnv {
 		user: User;
 		requestId?: string;
 		clientIpResolution?: ClientIpResolution;
+		blockedNetworkSignIn?: NetworkBlock;
 		adminService: AdminService;
 		adminArchiveService: AdminArchiveService;
 		adminApiKeyService: AdminApiKeyService;

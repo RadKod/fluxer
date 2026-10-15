@@ -15,6 +15,7 @@ pub mod codes;
 pub mod cosmetics;
 pub mod discovery;
 pub mod feed;
+pub mod enforcement;
 pub mod guild_assets;
 pub mod guild_threads;
 pub mod guilds;

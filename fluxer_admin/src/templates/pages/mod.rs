@@ -13,6 +13,7 @@ pub mod bulk_actions;
 pub mod cosmetics;
 pub mod discovery;
 pub mod feed_moderation;
+pub mod enforcement_decision;
 pub mod gateway;
 pub mod gateway_leaderboard;
 pub mod gateway_nodes;

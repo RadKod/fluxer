@@ -49,6 +49,8 @@ export const AdminACLs = {
 	DISCOVERY_REMOVE: 'discovery:remove',
 	DISCOVERY_REVIEW: 'discovery:review',
 	FEED_MODERATE: 'feed:moderate',
+	ENFORCEMENT_ANNOTATE: 'enforcement:annotate',
+	ENFORCEMENT_VIEW: 'enforcement:view',
 	GATEWAY_MEMORY_STATS: 'gateway:memory_stats',
 	GATEWAY_RELOAD_ALL: 'gateway:reload_all',
 	GIFT_CODES_GENERATE: 'gift_codes:generate',

@@ -92,7 +92,9 @@ test.each(['preparing', 'selecting'] as const)(
 		expect(queries).toHaveLength(1);
 	},
 );
-test('a delayed initial legacy index cannot undo selection C12 cleanup', async () => {
+// sanalyer: the legacy username index write this simulates was removed in 05b5049ae (Postgres KV rejects USING
+// TIMESTAMP); the scenario no longer exists on this fork.
+test.skip('a delayed initial legacy index cannot undo selection C12 cleanup', async () => {
 	state = 'selecting';
 	const backend = Config.database.backend;
 	Config.database.backend = 'cassandra';

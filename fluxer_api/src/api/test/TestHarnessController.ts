@@ -1314,6 +1314,12 @@ export function TestHarnessController(app: HonoApp) {
 				isEmailEnabled: () => workerDeps.instanceConfigRepository.isEmailEnabled(),
 				activityTracker: workerDeps.activityTracker,
 				deletionEligibilityService: workerDeps.deletionEligibilityService,
+				userUpdateDeps: {
+					userCacheService: workerDeps.userCacheService,
+					gatewayService: workerDeps.gatewayService,
+					userRepository: workerDeps.userRepository,
+					guildRepository: workerDeps.guildRepository,
+				},
 			});
 			Logger.info(result, '[test/worker/process-inactivity-deletions] Completed successfully');
 			return ctx.json(
@@ -1322,6 +1328,7 @@ export function TestHarnessController(app: HonoApp) {
 					processed: result.warningsSent + result.deletionsScheduled,
 					warnings_sent: result.warningsSent,
 					deletions_scheduled: result.deletionsScheduled,
+					suspensions_cleared: result.suspensionsCleared,
 					errors: result.errors,
 				},
 				200,

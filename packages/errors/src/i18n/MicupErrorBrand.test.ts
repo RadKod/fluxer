@@ -25,9 +25,16 @@ describe('sanalyer error brand', () => {
 	});
 
 	it('sends IP ban appeals to sanalyer support', () => {
-		const message = getErrorMessageUnsafe('GLOBAL_IP_BANNED', 'en-US', {ipAddress: '203.0.113.1'});
-		expect(message).toContain('sanalyer API');
+		const message = getErrorMessageUnsafe('GLOBAL_IP_BANNED', 'en-US', {
+			ipAddress: '203.0.113.1',
+			appealEmail: 'info@sanalyer.com',
+			expiresAt: '',
+			reason: 'none',
+			product_name: 'sanalyer',
+		});
+		expect(message).toContain('sanalyer');
 		expect(message).toContain('info@sanalyer.com');
+		expect(message).not.toContain('Fluxer');
 		const error = new IpBannedError({
 			ipAddress: '203.0.113.1',
 			kind: 'permanent',

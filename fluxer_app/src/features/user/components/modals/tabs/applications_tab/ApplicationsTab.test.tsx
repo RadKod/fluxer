@@ -81,7 +81,7 @@ describe('applications settings developer actions', () => {
 		render();
 		expect(button('Developer documentation')).toBeDefined();
 		act(() => button('Developer documentation')?.click());
-		expect(links.openExternalUrlWithWarning).toHaveBeenCalledWith('https://docs.fluxer.app');
+		expect(links.openExternalUrlWithWarning).toHaveBeenCalledWith('https://sanalyer.com/docs');
 	});
 	it('keeps application creation in the settings modal', () => {
 		render();

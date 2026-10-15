@@ -33,8 +33,9 @@ vi.mock('@app/features/messaging/state/MessageReferences', () => ({
 vi.mock('@app/features/messaging/utils/SystemMessageUtils', () => ({SystemMessageUtils: {}}));
 vi.mock('@app/features/navigation/state/SelectedChannel', () => ({default: {currentChannelId: 'channel'}}));
 vi.mock('@app/features/ui/state/Notification', () => ({
-	default: {ttsNotificationMode: 'all'},
-	TTSNotificationMode: {NEVER: 'never', FOR_CURRENT_CHANNEL: 'current'},
+	// Upstream 2026-10: /tts only plays for the channel in view; these tests read messages in the viewed channel.
+	default: {ttsNotificationMode: 'all', isViewingChannel: () => true},
+	TTSNotificationMode: {NEVER: 'never', FOR_CURRENT_CHANNEL: 'current', FOR_ALL_CHANNELS: 'all'},
 }));
 vi.mock('@app/features/ui/utils/NativeUtils', () => ({
 	getNativePlatformSync: () => null,

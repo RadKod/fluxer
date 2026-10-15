@@ -27,6 +27,7 @@ import {CosmeticRepository} from '@app/api/cosmetics/CosmeticRepository';
 import {CosmeticService} from '@app/api/cosmetics/CosmeticService';
 import {DonationRepository} from '@app/api/donation/DonationRepository';
 import {createEmailProvider} from '@app/api/email/EmailProviderFactory';
+import {EnforcementDecisionRepository} from '@app/api/enforcement/EnforcementDecisionRepository';
 import {FavoriteMemeRepository} from '@app/api/favorite_meme/FavoriteMemeRepository';
 import {FeedDiscoverRepository} from '@app/api/feed/discover/FeedDiscoverRepository';
 import {createFeedTrendCounterFlusher, FeedTrendService} from '@app/api/feed/discover/FeedTrendService';
@@ -95,7 +96,6 @@ import {createUsersServiceClient} from '@app/api/infrastructure/UsersServiceClie
 import {VirusScanService} from '@app/api/infrastructure/VirusScanService';
 import {type ContactEmails, resolveContactEmails} from '@app/api/instance/ContactEmails';
 import {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
-import {type LegalUrls, resolveLegalUrls} from '@app/api/instance/LegalUrls';
 import {NatsConfigPublisher} from '@app/api/instance/NatsConfigPublisher';
 import {getInstanceProductName} from '@app/api/instance/ProductName';
 import {ensureSetupToken} from '@app/api/instance/SetupToken';
@@ -192,6 +192,7 @@ export const getReadStateRepository = singleton(() => new ReadStateRepository())
 export const getFavoriteMemeRepository = singleton(() => new FavoriteMemeRepository());
 export const getConnectionRepository = singleton(() => new ConnectionRepository());
 export const getReportRepository = singleton(() => new ReportRepository());
+export const getEnforcementDecisionRepository = singleton(() => new EnforcementDecisionRepository());
 export const getVoiceP2pConnectionReportRepository = singleton(() => new VoiceP2pConnectionReportRepository());
 export const getAdminRepository = singleton(() => new AdminRepository());
 export const getAdminArchiveRepository = singleton(() => new AdminArchiveRepository());
@@ -293,7 +294,6 @@ export const getEmailDnsValidationService = singleton(() => new EmailDnsValidati
 
 function createEmailServiceForConfig(
 	emailConfigSource: APIConfig['email'],
-	legalUrls: LegalUrls,
 	contactEmails: ContactEmails,
 	productName: string,
 	bouncedEmailChecker: UserBouncedEmailChecker,
@@ -305,8 +305,6 @@ function createEmailServiceForConfig(
 		fromName: emailConfigSource.fromName.trim() || productName,
 		replyTo: emailConfigSource.replyToEmail || null,
 		appBaseUrl: emailConfigSource.appBaseUrl,
-		termsUrl: legalUrls.termsUrl,
-		guidelinesUrl: legalUrls.guidelinesUrl,
 		appealsEmail: contactEmails.appealsEmail,
 		safetyEmail: contactEmails.safetyEmail,
 		supportEmail: contactEmails.supportEmail,
@@ -335,7 +333,6 @@ export function createRuntimeEmailService(
 				]);
 				const delegate = createEmailServiceForConfig(
 					emailConfig,
-					resolveLegalUrls(appPublic.legal),
 					resolveContactEmails(),
 					getInstanceProductName(),
 					bouncedEmailChecker,

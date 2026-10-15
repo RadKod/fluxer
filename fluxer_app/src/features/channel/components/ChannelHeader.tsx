@@ -1135,7 +1135,7 @@ export const ChannelHeader = observer(
 									data-flx="channel.channel-header.channel-header-icon.toggle-members"
 								/>
 							)}
-							{!isMobile && channel && !isPersonalNotes && !channel.isThreadOnly() && (
+							{!isMobile && channel && !channel.isThreadOnly() && (
 								<FocusRing offset={-2} within data-flx="channel.channel-header.focus-ring--12">
 									<div
 										className={styles.messageSearchFocusWrapper}

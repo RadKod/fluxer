@@ -36,6 +36,7 @@ import type {
 	NativeAudioStartResult,
 	NativeScreenCaptureLifecycleMessage,
 	SetDesktopTroubleshootingDisableHardwareAccelerationOptions,
+	SetDesktopTroubleshootingDisableModuleUpdatesOptions,
 	SpellcheckBundledDictionary,
 	SpellcheckEngine,
 	SpellcheckResolvedEngineInfo,
@@ -100,6 +101,7 @@ export interface DesktopInfo {
 export interface DesktopWindowBehaviorSettings {
 	showTrayIcon: boolean;
 	coloredTrayIcon?: boolean;
+	darkTaskbarBadge?: boolean;
 	minimizeToTray: boolean;
 	closeToTray: boolean;
 	startMinimized?: boolean;
@@ -307,6 +309,9 @@ export interface ElectronAPI {
 	getDesktopTroubleshootingSettings?(): Promise<DesktopTroubleshootingSettings>;
 	setDesktopDisableHardwareAcceleration?(
 		options: SetDesktopTroubleshootingDisableHardwareAccelerationOptions,
+	): Promise<DesktopTroubleshootingSettings>;
+	setDesktopDisableModuleUpdates?(
+		options: SetDesktopTroubleshootingDisableModuleUpdatesOptions,
 	): Promise<DesktopTroubleshootingSettings>;
 	getStreamerModeCaptureAppStatus?(): Promise<StreamerModeCaptureAppStatus>;
 	getInitialDeepLink(): Promise<string | null>;

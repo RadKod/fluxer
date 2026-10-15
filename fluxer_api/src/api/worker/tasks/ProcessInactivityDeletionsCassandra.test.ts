@@ -160,6 +160,7 @@ describe.skipIf(!dockerAvailable)('token range user scans against Cassandra 5.0'
 			deletionQueueService: {} as KVAccountDeletionQueueService,
 			gatewayService: {} as IGatewayService,
 			emailService: new TestEmailService(),
+			userUpdateDeps: {} as never,
 			isEmailEnabled: async () => false,
 			activityTracker,
 			deletionEligibilityService: {} as UserDeletionEligibilityService,

@@ -97,7 +97,13 @@ describe('AdminMessageService.deleteMessage', () => {
 			auditService: {createAuditLog: async () => {}} as unknown as AdminAuditService,
 		});
 
-		await service.deleteMessage({channel_id: 10n, message_id: 100n}, createUserID(1n), null);
+		await service.deleteMessage(
+			10n as never,
+			100n as never,
+			{basis: {type: 'housekeeping'}} as never,
+			createUserID(1n),
+			null,
+		);
 
 		expect(await kvClient.smembers('cache_purge:{q}:priority')).toEqual(['media.test/attachments/10/200/removed']);
 		expect(await kvClient.smembers('cache_purge:{q}:queue')).toEqual([]);

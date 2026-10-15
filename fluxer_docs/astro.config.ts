@@ -330,6 +330,7 @@ export default defineConfig({
 						'admin-api/threads',
 						'admin-api/applications',
 						'admin-api/reports',
+						'admin-api/enforcement',
 						'admin-api/messages',
 						'admin-api/feed',
 						'admin-api/blocklists',

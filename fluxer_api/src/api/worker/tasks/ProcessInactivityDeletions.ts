@@ -5,12 +5,18 @@ import type {UserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
 import {SYSTEM_USER_ID} from '@app/api/constants/Core';
 import {scanByTokenRanges} from '@app/api/database/TokenRangeScan';
+import {EnforcementDecisionRepository} from '@app/api/enforcement/EnforcementDecisionRepository';
+import {clearExpiredSuspension} from '@app/api/enforcement/SuspensionState';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {KVAccountDeletionQueueService} from '@app/api/infrastructure/KVAccountDeletionQueueService';
 import type {KVActivityTracker} from '@app/api/infrastructure/KVActivityTracker';
 import {Logger} from '@app/api/Logger';
 import type {User} from '@app/api/models/User';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
+import {
+	type PartialUserChangePropagationDeps,
+	propagateUserUpdate,
+} from '@app/api/user/services/PartialUserChangePropagation';
 import {reschedulePendingDeletion} from '@app/api/user/services/PendingDeletionCoordinator';
 import type {UserDeletionEligibilityService} from '@app/api/user/services/UserDeletionEligibilityService';
 import {mapWithConcurrency} from '@app/api/utils/ConcurrencyUtils';
@@ -34,6 +40,7 @@ const SCAN_RANGE_CONCURRENCY = 4;
 interface InactivityCheckResult {
 	warningsSent: number;
 	deletionsScheduled: number;
+	suspensionsCleared: number;
 	errors: number;
 }
 
@@ -72,6 +79,21 @@ interface ProcessUserDeps {
 	isEmailEnabled: () => Promise<boolean>;
 	activityTracker: KVActivityTracker;
 	deletionEligibilityService: UserDeletionEligibilityService;
+	decisionRepository: Pick<EnforcementDecisionRepository, 'get' | 'endIfActive'>;
+	userUpdateDeps: PartialUserChangePropagationDeps;
+}
+
+async function clearSuspensionIfExpired(
+	user: User,
+	deps: ProcessUserDeps,
+	result: InactivityCheckResult,
+): Promise<User> {
+	const expiry = await clearExpiredSuspension({users: deps.userRepository, repository: deps.decisionRepository}, user);
+	if (!expiry) return user;
+	await propagateUserUpdate(deps.userUpdateDeps, expiry.previous, expiry.cleared);
+	result.suspensionsCleared++;
+	Logger.debug({userId: user.id}, 'Cleared an expired suspension');
+	return expiry.cleared;
 }
 
 async function loadPageActivities(
@@ -87,7 +109,7 @@ async function loadPageActivities(
 }
 
 async function processUser(
-	user: User,
+	listedUser: User,
 	deps: ProcessUserDeps,
 	pageActivities: ReadonlyMap<UserID, Date | null> | null,
 	result: InactivityCheckResult,
@@ -101,6 +123,7 @@ async function processUser(
 		activityTracker,
 		deletionEligibilityService,
 	} = deps;
+	const user = await clearSuspensionIfExpired(listedUser, deps, result);
 	const userId = user.id;
 	if (user.pendingDeletionAt) {
 		Logger.debug({userId}, 'User already pending deletion, skipping');
@@ -174,6 +197,7 @@ interface ProcessInactivityDeletionsDeps {
 	isEmailEnabled: () => Promise<boolean>;
 	activityTracker: KVActivityTracker;
 	deletionEligibilityService: UserDeletionEligibilityService;
+	userUpdateDeps: PartialUserChangePropagationDeps;
 }
 
 export async function processInactivityDeletionsCore(
@@ -187,10 +211,12 @@ export async function processInactivityDeletionsCore(
 		isEmailEnabled,
 		activityTracker,
 		deletionEligibilityService,
+		userUpdateDeps,
 	} = deps;
 	const result: InactivityCheckResult = {
 		warningsSent: 0,
 		deletionsScheduled: 0,
+		suspensionsCleared: 0,
 		errors: 0,
 	};
 	Logger.debug('Starting inactivity deletion check');
@@ -207,6 +233,8 @@ export async function processInactivityDeletionsCore(
 		isEmailEnabled,
 		activityTracker,
 		deletionEligibilityService,
+		decisionRepository: new EnforcementDecisionRepository(),
+		userUpdateDeps,
 	};
 	let processedUsers = 0;
 	await scanByTokenRanges<User>({
@@ -242,6 +270,7 @@ export async function processInactivityDeletionsCore(
 			processedUsers,
 			warningsSent: result.warningsSent,
 			deletionsScheduled: result.deletionsScheduled,
+			suspensionsCleared: result.suspensionsCleared,
 			errors: result.errors,
 		},
 		'Completed inactivity deletion processing',
@@ -260,6 +289,8 @@ const processInactivityDeletions: WorkerTaskHandler = async (_payload, helpers) 
 		instanceConfigRepository,
 		activityTracker,
 		deletionEligibilityService,
+		userCacheService,
+		guildRepository,
 	} = getWorkerDependencies();
 	await processInactivityDeletionsCore({
 		kvClient,
@@ -270,6 +301,7 @@ const processInactivityDeletions: WorkerTaskHandler = async (_payload, helpers) 
 		isEmailEnabled: () => instanceConfigRepository.isEmailEnabled(),
 		activityTracker,
 		deletionEligibilityService,
+		userUpdateDeps: {userCacheService, gatewayService, userRepository, guildRepository},
 	});
 };
 

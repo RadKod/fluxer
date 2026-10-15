@@ -110,6 +110,7 @@ async function fixture(privacy: number = ProfilePrivacyLevels.FRIENDS_ONLY) {
 		auditService: auditService as never,
 		userUpdateDeps: {} as never,
 		discriminatorService: {} as never,
+		enforcement: {} as never,
 		entityAssetService: {} as never,
 		guildRepository: {} as never,
 	});

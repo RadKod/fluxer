@@ -263,6 +263,26 @@ pub(crate) fn run_command(spec: CommandSpec) -> Result<()> {
     Ok(())
 }
 
+// sanalyer: like output_text, but the captured stdout is not echoed. Release history reads return hundreds of
+// kilobytes of JSON on one line, and the hosted runner's log pipeline dropped the step after it.
+pub(crate) fn output_text_quiet(spec: CommandSpec) -> Result<String> {
+    println!("+ {} (output not shown)", display_command(&spec.program, &spec.args));
+    let output = spec
+        .to_command()
+        .output()
+        .with_context(|| format!("Failed to run {}", spec.program.to_string_lossy()))?;
+    ensure!(
+        output.status.success(),
+        "Command failed with exit code {}: {}\n{}",
+        output.status.code().unwrap_or(1),
+        display_command(&spec.program, &spec.args),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout)
+        .map(|value| value.trim().to_string())
+        .context("Command output was not valid UTF-8")
+}
+
 pub(crate) fn output_text(spec: CommandSpec) -> Result<String> {
     let output = output(spec)?;
     String::from_utf8(output.stdout)

@@ -11,6 +11,7 @@ import {
 import {createUserID} from '@app/api/BrandedTypes';
 import {fillPioneerNumber, PIONEER_DRY_RUN_KV_KEY} from '@app/api/badge/PioneerService';
 import {getPngDataUrl} from '@app/api/emoji/tests/EmojiTestUtils';
+import {decisionBody, endDecision} from '@app/api/enforcement/tests/EnforcementTestUtils';
 import {getKVClient, getSnowflakeService, setInjectedWorkerService} from '@app/api/middleware/ServiceRegistry';
 import {
 	getAdminRepository,
@@ -58,6 +59,8 @@ describe('Öncü badge', () => {
 			AdminACLs.AUTHENTICATE,
 			AdminACLs.BADGES_MANAGE,
 			AdminACLs.USER_TEMP_BAN,
+			AdminACLs.ENFORCEMENT_ANNOTATE,
+			AdminACLs.ENFORCEMENT_VIEW,
 		]);
 		badge = await createBuilder<BadgeResponse>(harness, admin.token)
 			.post('/admin/badges')
@@ -98,9 +101,10 @@ describe('Öncü badge', () => {
 	}
 
 	function ban(target: TestAccount, hours: number) {
-		return createBuilder(harness, admin.token)
+		return createBuilder<{user: {enforcement_decision_id: string | null}}>(harness, admin.token)
 			.put(`/admin/users/${target.userId}/ban`)
-			.body({duration_hours: hours})
+			.header('X-Audit-Log-Reason', 'test note')
+			.body({duration_hours: hours, decision: decisionBody()})
 			.expect(200)
 			.execute();
 	}
@@ -209,8 +213,9 @@ describe('Öncü badge', () => {
 			.body({password: selfDisabled.password})
 			.expect(204)
 			.execute();
-		await ban(banned, 0);
-		await createBuilder(harness, admin.token).delete(`/admin/users/${banned.userId}/ban`).expect(200).execute();
+		const permanentBan = await ban(banned, 0);
+		// Upstream 2026-10: lifting a ban ends its enforcement decision instead of DELETE /ban.
+		await endDecision(harness, admin, permanentBan.user.enforcement_decision_id!).expect(200).execute();
 
 		expect(await descriptions(timed)).toEqual([shown(2)]);
 		expect(await descriptions(selfDisabled)).toEqual([shown(3)]);

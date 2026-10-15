@@ -15,6 +15,7 @@ import type {
 	AdminAuditLogRow,
 	BannedAvatarHashRow,
 	BannedFileShaRow,
+	BannedIpRow,
 	BannedProfileSubstringRow,
 	BannedProfileSubstringScope,
 	BannedUrlDomainRow,
@@ -57,6 +58,7 @@ export interface BannedIpEntry {
 	reason: string | null;
 	expiresAt: Date | null;
 	createdAt: Date | null;
+	decisionId: bigint | null;
 }
 
 const FETCH_AUDIT_LOG_BY_ID_QUERY = AdminAuditLogs.select({
@@ -66,6 +68,9 @@ const FETCH_AUDIT_LOGS_BY_IDS_QUERY = AdminAuditLogs.select({
 	where: AdminAuditLogs.where.in('log_id', 'log_ids'),
 });
 const LOAD_ALL_BANNED_IPS_QUERY = BannedIps.select();
+const FETCH_BANNED_IP_QUERY = BannedIps.select({
+	where: BannedIps.where.eq('ip'),
+});
 const IS_EMAIL_BANNED_QUERY = BannedEmails.select({
 	where: BannedEmails.where.eq('email_lower'),
 });
@@ -112,6 +117,17 @@ function parseBannedIpKind(value: string | null | undefined): BannedIpKind {
 
 function canonicalizeBannedIpEntry(value: string): string {
 	return parseIpBanEntry(value)?.canonical ?? value;
+}
+
+function toBannedIpEntry(row: BannedIpRow): BannedIpEntry {
+	return {
+		ip: row.ip,
+		kind: parseBannedIpKind(row.ban_kind),
+		reason: row.reason ?? null,
+		expiresAt: row.expires_at ?? null,
+		createdAt: row.created_at ?? null,
+		decisionId: row.decision_id ?? null,
+	};
 }
 
 export class AdminRepository {
@@ -184,6 +200,87 @@ export class AdminRepository {
 		await this.writeIpBan(ip, 'abusive_api_access_patterns', ttlSeconds);
 	}
 
+	async findIpBanDecision(ip: string): Promise<bigint | null> {
+		const row = await this.fetchActiveIpBanRow(canonicalizeBannedIpEntry(ip));
+		return row?.decision_id ?? null;
+	}
+
+	async banIpForDecision(ip: string, decisionId: bigint, expiresAt: Date): Promise<BannedIpEntry | null> {
+		if (isIpBanExempt(ip)) {
+			return null;
+		}
+		const canonicalIp = canonicalizeBannedIpEntry(ip);
+		const existing = await this.fetchActiveIpBanRow(canonicalIp);
+		if (existing && (existing.decision_id ?? decisionId) !== decisionId) {
+			return null;
+		}
+		if (existing && !existing.expires_at) {
+			return null;
+		}
+		const createdAt = new Date();
+		const existingExpiry = existing?.expires_at ?? null;
+		const expiry = existingExpiry && existingExpiry.getTime() > expiresAt.getTime() ? existingExpiry : expiresAt;
+		const row: BannedIpRow = {
+			ip: canonicalIp,
+			ban_kind: 'temporary_24h',
+			reason: 'enforcement_decision',
+			expires_at: expiry,
+			created_at: createdAt,
+			decision_id: decisionId,
+		};
+		const ttlSeconds = Math.ceil((expiry.getTime() - createdAt.getTime()) / 1000);
+		await upsertOne(BannedIps.insertWithTtl(row, ttlSeconds));
+		return toBannedIpEntry(row);
+	}
+
+	async listDecisionIpBans(decisionId: bigint): Promise<Array<BannedIpEntry>> {
+		const entries = await this.loadAllBannedIpEntries();
+		return entries.filter((entry) => entry.decisionId === decisionId);
+	}
+
+	async relinkDecisionIpBans(fromDecisionId: bigint, toDecisionId: bigint): Promise<Array<BannedIpEntry>> {
+		const now = Date.now();
+		const entries = (await this.listDecisionIpBans(fromDecisionId)).filter(
+			(entry) => entry.expiresAt && entry.expiresAt.getTime() > now,
+		);
+		const relinked = entries.map((entry) => ({...entry, decisionId: toDecisionId}));
+		await Promise.all(
+			relinked.map((entry) =>
+				upsertOne(
+					BannedIps.insertWithTtl(
+						{
+							ip: entry.ip,
+							ban_kind: entry.kind,
+							reason: entry.reason,
+							expires_at: entry.expiresAt,
+							created_at: entry.createdAt,
+							decision_id: toDecisionId,
+						},
+						Math.ceil((entry.expiresAt!.getTime() - now) / 1000),
+					),
+				),
+			),
+		);
+		return relinked;
+	}
+
+	async removeDecisionIpBans(decisionIds: ReadonlyArray<bigint>): Promise<Array<BannedIpEntry>> {
+		const ids = new Set(decisionIds);
+		const entries = (await this.loadAllBannedIpEntries()).filter(
+			(entry) => entry.decisionId !== null && ids.has(entry.decisionId),
+		);
+		await Promise.all(entries.map((entry) => deleteOneOrMany(BannedIps.deleteByPk({ip: entry.ip}))));
+		return entries;
+	}
+
+	private async fetchActiveIpBanRow(canonicalIp: string): Promise<BannedIpRow | null> {
+		const row = await fetchOne<BannedIpRow>(FETCH_BANNED_IP_QUERY.bind({ip: canonicalIp}));
+		if (!row || (row.expires_at && row.expires_at.getTime() <= Date.now())) {
+			return null;
+		}
+		return row;
+	}
+
 	private async writeIpBan(ip: string, reason: string, ttlSeconds: number | null): Promise<Date | null> {
 		if (ttlSeconds !== null && (!Number.isInteger(ttlSeconds) || ttlSeconds <= 0)) {
 			throw new RangeError('Temporary IP ban TTL must be a positive integer');
@@ -192,6 +289,9 @@ export class AdminRepository {
 			return null;
 		}
 		const canonicalIp = canonicalizeBannedIpEntry(ip);
+		if ((await this.fetchActiveIpBanRow(canonicalIp))?.decision_id != null) {
+			return null;
+		}
 		const createdAt = new Date();
 		if (ttlSeconds === null) {
 			await upsertOne(
@@ -201,6 +301,7 @@ export class AdminRepository {
 					reason,
 					expires_at: null,
 					created_at: createdAt,
+					decision_id: null,
 				}),
 			);
 			return null;
@@ -214,6 +315,7 @@ export class AdminRepository {
 					reason,
 					expires_at: expiresAt,
 					created_at: createdAt,
+					decision_id: null,
 				},
 				ttlSeconds,
 			),
@@ -238,23 +340,9 @@ export class AdminRepository {
 	}
 
 	async loadAllBannedIpEntries(): Promise<Array<BannedIpEntry>> {
-		const rows = await fetchMany<{
-			ip: string;
-			ban_kind?: string | null;
-			reason?: string | null;
-			expires_at?: Date | null;
-			created_at?: Date | null;
-		}>(LOAD_ALL_BANNED_IPS_QUERY.bind({}));
+		const rows = await fetchMany<BannedIpRow>(LOAD_ALL_BANNED_IPS_QUERY.bind({}));
 		const now = Date.now();
-		return rows
-			.filter((row) => !row.expires_at || row.expires_at.getTime() > now)
-			.map((row) => ({
-				ip: row.ip,
-				kind: parseBannedIpKind(row.ban_kind),
-				reason: row.reason ?? null,
-				expiresAt: row.expires_at ?? null,
-				createdAt: row.created_at ?? null,
-			}));
+		return rows.filter((row) => !row.expires_at || row.expires_at.getTime() > now).map(toBannedIpEntry);
 	}
 
 	async isEmailDomainSuspicious(domain: string): Promise<boolean> {

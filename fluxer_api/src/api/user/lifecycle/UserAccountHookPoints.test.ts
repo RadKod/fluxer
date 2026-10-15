@@ -3,6 +3,7 @@
 import {createTestAccount, setUserACLs} from '@app/api/auth/tests/AuthTestUtils';
 import {createUserID} from '@app/api/BrandedTypes';
 import type {UserRow} from '@app/api/database/types/UserTypes';
+import {decisionBody, endDecision} from '@app/api/enforcement/tests/EnforcementTestUtils';
 import {getUserRepository} from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
@@ -71,19 +72,24 @@ describe('sanalyer account write and ban hook points', () => {
 		const admin = await setUserACLs(harness, await createTestAccount(harness), [
 			AdminACLs.AUTHENTICATE,
 			AdminACLs.USER_TEMP_BAN,
+			AdminACLs.ENFORCEMENT_ANNOTATE,
+			AdminACLs.ENFORCEMENT_VIEW,
 		]);
 		const timed = await createTestAccount(harness);
 		const permanent = await createTestAccount(harness);
 
-		await createBuilder(harness, admin.token)
+		// Upstream 2026-10: a ban is an enforcement decision; lifting it ends the decision instead of DELETE /ban.
+		const timedBan = await createBuilder<{user: {enforcement_decision_id: string | null}}>(harness, admin.token)
 			.put(`/admin/users/${timed.userId}/ban`)
-			.body({duration_hours: 1})
+			.header('X-Audit-Log-Reason', 'test note')
+			.body({duration_hours: 1, decision: decisionBody()})
 			.expect(200)
 			.execute();
-		await createBuilder(harness, admin.token).delete(`/admin/users/${timed.userId}/ban`).expect(200).execute();
+		await endDecision(harness, admin, timedBan.user.enforcement_decision_id!).expect(200).execute();
 		await createBuilder(harness, admin.token)
 			.put(`/admin/users/${permanent.userId}/ban`)
-			.body({duration_hours: 0})
+			.header('X-Audit-Log-Reason', 'test note')
+			.body({duration_hours: 0, decision: decisionBody()})
 			.expect(200)
 			.execute();
 
@@ -94,6 +100,8 @@ describe('sanalyer account write and ban hook points', () => {
 		const admin = await setUserACLs(harness, await createTestAccount(harness), [
 			AdminACLs.AUTHENTICATE,
 			AdminACLs.USER_TEMP_BAN,
+			AdminACLs.ENFORCEMENT_ANNOTATE,
+			AdminACLs.ENFORCEMENT_VIEW,
 		]);
 		const banned = await createTestAccount(harness);
 		const bannedId = createUserID(BigInt(banned.userId));
@@ -107,7 +115,8 @@ describe('sanalyer account write and ban hook points', () => {
 
 		await createBuilder(harness, admin.token)
 			.put(`/admin/users/${banned.userId}/ban`)
-			.body({duration_hours: 0})
+			.header('X-Audit-Log-Reason', 'test note')
+			.body({duration_hours: 0, decision: decisionBody()})
 			.expect(200)
 			.execute();
 
