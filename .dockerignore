@@ -71,3 +71,7 @@
 
 **/.DS_Store
 **/Thumbs.db
+
+# sanalyer: the Dockerfile is read by buildx itself; keeping it out of the context stops a Dockerfile edit from
+# invalidating the rust-builder stage, which copies fluxer_app_proxy/ whole.
+/fluxer_app_proxy/Dockerfile

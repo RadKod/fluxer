@@ -9,8 +9,8 @@ ARG APP_ASSETS_PLATFORM=$BUILDPLATFORM
 # ---------- Stage 1: Build the SPA (fluxer_app) ----------
 FROM node:26-trixie-slim AS app-deps
 
-ARG BUILD_VERSION
-ARG PUBLIC_ASSET_BASE_URL
+# sanalyer: BUILD_VERSION / PUBLIC_ASSET_BASE_URL are declared right before pnpm build (app-build stage). Declared
+# here they joined the cache key of every layer below, so a new version number rebuilt apt, rustup and pnpm install.
 
 WORKDIR /usr/src/app
 
@@ -102,6 +102,8 @@ COPY --from=app-wasm /usr/src/app/fluxer_app/pkgs/libfluxcore/ ./fluxer_app/pkgs
 COPY --from=app-wasm /usr/src/app/fluxer_app/pkgs/libfluxwebp/ ./fluxer_app/pkgs/libfluxwebp/
 COPY --from=app-wasm /usr/src/app/fluxer_app/src/features/messaging/utils/markdown/parser/MarkdownParserWasmBytes.ts ./fluxer_app/src/features/messaging/utils/markdown/parser/MarkdownParserWasmBytes.ts
 
+ARG BUILD_VERSION
+ARG PUBLIC_ASSET_BASE_URL
 ENV BUILD_VERSION=${BUILD_VERSION} \
 	PUBLIC_ASSET_BASE_URL=${PUBLIC_ASSET_BASE_URL} \
 	FLUXER_CI_BIN=/usr/local/bin/fluxer-ci \
