@@ -7,7 +7,7 @@ ARG APP_ASSETS_REF=app-assets
 ARG APP_ASSETS_PLATFORM=$BUILDPLATFORM
 
 # ---------- Stage 1: Build the SPA (fluxer_app) ----------
-FROM node:26-trixie-slim AS app-build
+FROM node:26-trixie-slim AS app-deps
 
 ARG BUILD_VERSION
 ARG PUBLIC_ASSET_BASE_URL
@@ -49,6 +49,27 @@ COPY fluxer_app/pkgs/livekit-client/package.json ./fluxer_app/pkgs/livekit-clien
 
 RUN pnpm install --frozen-lockfile --filter fluxer_app...
 
+# ---------- sanalyer: Rust parçaları ayrı aşamada ----------
+# CI yardımcısı (tools/ci) ve üç wasm paketi yalnız kendi kaynakları değişince yeniden derlenir; bu aşamanın
+# katmanları registry buildcache'te kalır. Aksi halde her imajda sıfırdan 4 dakika sürüyordu.
+FROM app-deps AS app-wasm
+COPY tools/ci/ ./tools/ci/
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+	--mount=type=cache,target=/usr/local/cargo/git \
+	cargo build --release --locked --manifest-path tools/ci/Cargo.toml --target-dir /tmp/fluxer-ci-target \
+	&& cp /tmp/fluxer-ci-target/release/fluxer-ci /usr/local/bin/fluxer-ci \
+	&& rm -rf /tmp/fluxer-ci-target
+COPY packages/markdown_parser/rust/Cargo.toml ./packages/markdown_parser/rust/
+COPY packages/markdown_parser/rust/.cargo/ ./packages/markdown_parser/rust/.cargo/
+COPY packages/markdown_parser/rust/benches/parser.rs ./packages/markdown_parser/rust/benches/
+COPY packages/markdown_parser/rust/src/ ./packages/markdown_parser/rust/src/
+COPY fluxer_app/rust/ ./fluxer_app/rust/
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+	--mount=type=cache,target=/usr/local/cargo/git \
+	/usr/local/bin/fluxer-ci build-app-wasm --app-dir /usr/src/app/fluxer_app
+
+FROM app-deps AS app-build
+
 COPY tsconfigs ./tsconfigs
 COPY packages/constants/ ./packages/constants/
 COPY packages/date_utils/ ./packages/date_utils/
@@ -75,12 +96,18 @@ COPY fluxer_app/rust/ ./fluxer_app/rust/
 COPY fluxer_app/scripts/ ./fluxer_app/scripts/
 COPY fluxer_app/src/ ./fluxer_app/src/
 
-ENV BUILD_VERSION=${BUILD_VERSION} \
-	PUBLIC_ASSET_BASE_URL=${PUBLIC_ASSET_BASE_URL}
+# Hazır wasm çıktıları ve CI yardımcısı; pnpm build içindeki wasm:codegen bunları olduğu gibi kullanır.
+COPY --from=app-wasm /usr/local/bin/fluxer-ci /usr/local/bin/fluxer-ci
+COPY --from=app-wasm /usr/src/app/fluxer_app/pkgs/libfluxcore/ ./fluxer_app/pkgs/libfluxcore/
+COPY --from=app-wasm /usr/src/app/fluxer_app/pkgs/libfluxwebp/ ./fluxer_app/pkgs/libfluxwebp/
+COPY --from=app-wasm /usr/src/app/fluxer_app/src/features/messaging/utils/markdown/parser/MarkdownParserWasmBytes.ts ./fluxer_app/src/features/messaging/utils/markdown/parser/MarkdownParserWasmBytes.ts
 
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-	--mount=type=cache,target=/usr/local/cargo/git \
-	cd fluxer_app && pnpm build
+ENV BUILD_VERSION=${BUILD_VERSION} \
+	PUBLIC_ASSET_BASE_URL=${PUBLIC_ASSET_BASE_URL} \
+	FLUXER_CI_BIN=/usr/local/bin/fluxer-ci \
+	FLUXER_APP_WASM_PREBUILT=1
+
+RUN cd fluxer_app && pnpm build
 
 # ---------- Stage 2: The one canonical asset tree every architecture serves ----------
 # Stage for CI to extract the full dist (docker bake app-dist target)
@@ -92,6 +119,8 @@ ARG BUNDLE_LOCAL_ASSETS=true
 ARG PUBLIC_ASSET_BASE_URL=""
 COPY fluxer_app_proxy/scripts/precompress_assets.sh /usr/local/bin/precompress_assets.sh
 RUN apk add --no-cache brotli
+# sanalyer: q11 dört çekirdekte beş dakika sürüyordu; q9 birkaç yüzde büyük, kat kat hızlı.
+ENV PRECOMPRESS_BROTLI_QUALITY=9 PRECOMPRESS_GZIP_LEVEL=6
 RUN --mount=type=bind,from=app-dist,source=/dist,target=/dist \
 	cp -a /dist /assets \
 	&& if [ "${BUNDLE_LOCAL_ASSETS}" != "true" ]; then \

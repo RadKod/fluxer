@@ -30,6 +30,24 @@ pub struct BuildAppWasmArgs {
 
 pub fn run_build_app_wasm(args: BuildAppWasmArgs) -> Result<()> {
     let app_dir = resolve_app_dir(args.app_dir)?;
+    // sanalyer: the image build compiles the wasm packages in their own Docker stage and copies the outputs in;
+    // with this flag set the codegen only checks that they are there.
+    if env::var("FLUXER_APP_WASM_PREBUILT").is_ok_and(|value| value == "1") {
+        for relative in [
+            "src/features/messaging/utils/markdown/parser/MarkdownParserWasmBytes.ts",
+            "pkgs/libfluxcore/libfluxcore_bg.wasm",
+            "pkgs/libfluxwebp",
+        ] {
+            let path = app_dir.join(relative);
+            ensure!(
+                path.exists(),
+                "FLUXER_APP_WASM_PREBUILT=1 but {} is missing",
+                path.display()
+            );
+        }
+        println!("App wasm packages are prebuilt; skipping build-app-wasm.");
+        return Ok(());
+    }
     build_markdown_parser_wasm(&app_dir)?;
     build_libfluxcore_wasm(&app_dir)?;
     build_libfluxwebp_wasm(&app_dir)
