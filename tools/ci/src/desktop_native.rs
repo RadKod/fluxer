@@ -138,6 +138,17 @@ const DESKTOP_NATIVE_ADDONS: &[DesktopNativeAddon] = &[
         pkg_config: &[],
         special: DesktopNativeSpecialBuild::None,
     },
+    // sanalyer: Micup's Linux screen capture addon (obs-vkcapture based); upstream's table does not know it.
+    DesktopNativeAddon {
+        package_dir: "linux-screen-capture",
+        package_name: "@fluxer/linux-screen-capture",
+        crate_name: "fluxer_linux_screen_capture",
+        node_file_stem: "linux-screen-capture",
+        required_platform: Some("linux"),
+        features: &[],
+        pkg_config: &[],
+        special: DesktopNativeSpecialBuild::None,
+    },
     DesktopNativeAddon {
         package_dir: "mac-app-audio",
         package_name: "@fluxer/mac-app-audio",
@@ -263,6 +274,17 @@ const DESKTOP_NATIVE_ADDONS: &[DesktopNativeAddon] = &[
         package_name: "@fluxer/win-shell",
         crate_name: "fluxer_win_shell",
         node_file_stem: "win-shell",
+        required_platform: Some("win32"),
+        features: &[],
+        pkg_config: &[],
+        special: DesktopNativeSpecialBuild::None,
+    },
+    // sanalyer: Micup's Windows toast activator addon; upstream's table does not know it.
+    DesktopNativeAddon {
+        package_dir: "win-toast",
+        package_name: "@fluxer/win-toast",
+        crate_name: "fluxer_win_toast",
+        node_file_stem: "win-toast",
         required_platform: Some("win32"),
         features: &[],
         pkg_config: &[],
