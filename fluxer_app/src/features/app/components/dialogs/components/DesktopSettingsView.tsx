@@ -3,6 +3,7 @@
 import {msg} from '@lingui/core/macro';
 import '@app/features/app/components/dialogs/components/SettingsSearchHighlight.css';
 import {Routes} from '@app/app/Routes';
+import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import Accessibility from '@app/features/accessibility/state/Accessibility';
 import {AllSettingsRenderer} from '@app/features/app/components/dialogs/components/AllSettingsRenderer';
 import {ClientInfo} from '@app/features/app/components/dialogs/components/ClientInfo';
@@ -423,7 +424,7 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = observer(
 								<ClientInfo data-flx="app.desktop-settings-view.client-info" />
 								<div className={styles.legalLinks} data-flx="app.desktop-settings-view.legal-links">
 									<a
-										href={Routes.terms()}
+										href={RuntimeConfig.termsUrl ?? Routes.terms()}
 										target="_blank"
 										rel="noopener noreferrer"
 										className={styles.legalLink}
@@ -432,7 +433,7 @@ export const DesktopSettingsView: React.FC<DesktopSettingsViewProps> = observer(
 										<Trans>Terms of service</Trans>
 									</a>
 									<a
-										href={Routes.privacy()}
+										href={RuntimeConfig.privacyUrl ?? Routes.privacy()}
 										target="_blank"
 										rel="noopener noreferrer"
 										className={styles.legalLink}

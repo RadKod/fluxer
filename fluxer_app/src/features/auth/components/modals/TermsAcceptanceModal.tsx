@@ -70,8 +70,8 @@ export const TermsAcceptanceModal = observer(() => {
 	}, []);
 	if (!user) return null;
 	const kind = getUpdateKind(user.termsAgreedAt, user.privacyAgreedAt);
-	const termsUrl = Routes.terms();
-	const privacyUrl = Routes.privacy();
+	const termsUrl = RuntimeConfig.termsUrl ?? Routes.terms();
+	const privacyUrl = RuntimeConfig.privacyUrl ?? Routes.privacy();
 	const productName = RuntimeConfig.productName;
 	return (
 		<Modal.Root
