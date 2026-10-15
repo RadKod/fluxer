@@ -56958,6 +56958,18 @@ msgstr ""
 "Profilin \"Yalnız ben\" olarak ayarlı. Arkadaşlar ya da Herkes seçili olsa "
 "bile oyun etkinliğin paylaşılmaz."
 
+#. Keybinds settings warning shown on macOS when Input Monitoring is missing,
+#. so system-wide shortcuts (mute, deafen, push-to-talk) do not fire while the
+#. app is in the background. {productName} is the app name and
+#. {permissionName} is the macOS permission name.
+#: src/features/user/components/modals/tabs/keybinds_tab/MacInputMonitoringShortcutsAlert.tsx
+msgid ""
+"Global shortcuts only work while {productName} is focused until "
+"{permissionName} is enabled."
+msgstr ""
+"{permissionName} izni verilene kadar genel kısayollar yalnız {productName} "
+"öndeyken çalışır."
+
 #. Combined total community channel and role capacities from the effective
 #. limits.
 #: src/features/boost/utils/GuildBoostMessages.ts:132

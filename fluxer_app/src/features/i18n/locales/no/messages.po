@@ -56223,3 +56223,11 @@ msgstr "Din stemme"
 #: src/features/user/components/UsernamePicker.tsx
 msgid "yourname"
 msgstr "navnet ditt"
+
+#. Keybinds settings warning shown on macOS when Input Monitoring is missing,
+#. so system-wide shortcuts (mute, deafen, push-to-talk) do not fire while the
+#. app is in the background. {productName} is the app name and
+#. {permissionName} is the macOS permission name.
+#: src/features/user/components/modals/tabs/keybinds_tab/MacInputMonitoringShortcutsAlert.tsx
+msgid "Global shortcuts only work while {productName} is focused until {permissionName} is enabled."
+msgstr "Global shortcuts only work while {productName} is focused until {permissionName} is enabled."

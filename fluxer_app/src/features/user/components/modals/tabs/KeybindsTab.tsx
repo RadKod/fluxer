@@ -6,6 +6,7 @@ import {SystemShortcutsSection} from '@app/features/user/components/modals/tabs/
 import styles from '@app/features/user/components/modals/tabs/KeybindsTab.module.css';
 import {CustomKeybindsList} from '@app/features/user/components/modals/tabs/keybinds_tab/CustomKeybindsList';
 import {DefaultKeybindsList} from '@app/features/user/components/modals/tabs/keybinds_tab/DefaultKeybindsList';
+import {MacInputMonitoringShortcutsAlert} from '@app/features/user/components/modals/tabs/keybinds_tab/MacInputMonitoringShortcutsAlert';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {MagnifyingGlassIcon} from '@phosphor-icons/react';
@@ -48,6 +49,7 @@ const KeybindsTab: React.FC = observer(() => {
 					data-flx="user.keybinds-tab.input.set-search-query"
 				/>
 			</div>
+			<MacInputMonitoringShortcutsAlert data-flx="user.keybinds-tab.mac-input-monitoring-alert" />
 			<CustomKeybindsList searchQuery={searchQuery} data-flx="user.keybinds-tab.custom-keybinds-list" />
 			<SystemShortcutsSection data-flx="user.keybinds-tab.system-shortcuts-section" />
 			<DefaultKeybindsList searchQuery={searchQuery} data-flx="user.keybinds-tab.default-keybinds-list" />
