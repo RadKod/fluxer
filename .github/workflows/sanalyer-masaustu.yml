@@ -48,6 +48,8 @@ env:
   CHANNEL: ${{ inputs.channel }}
   BUILD_CHANNEL: ${{ inputs.channel == 'canary' && 'canary' || 'stable' }}
   FLUXER_DESKTOP_PACKAGE_ORIGIN_BASE: https://dl.sanalyer.com
+  # Yayın adımları (release asset adları, manifest) da bu başlığı ürün adı olarak kullanır.
+  FLUXER_DESKTOP_PACK_TITLE: sanalyer
 
 jobs:
   meta:

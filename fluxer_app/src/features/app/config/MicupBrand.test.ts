@@ -201,14 +201,7 @@ describe('sanalyer brand text', () => {
 			.filter(([, value]) => typeof value === 'string' && /fluxer/i.test(value))
 			.map(([name]) => name)
 			.sort();
-		// DESKTOP_DOWNLOAD_URL: until sanalyer ships its own clients, members use the official Fluxer apps.
-		expect(fluxerValued).toEqual([
-			'DESKTOP_DOWNLOAD_URL',
-			'FLUXER_BLUESKY_HANDLE',
-			'FLUXER_DOCS_DOMAIN',
-			'FLUXER_DOCS_URL',
-			'I18N_WEBLATE_DOMAIN',
-			'I18N_WEBLATE_URL',
-		]);
+		// Downloads and developer docs moved to sanalyer.com/indir and sanalyer.com/docs on 2026-10-15.
+		expect(fluxerValued).toEqual(['FLUXER_BLUESKY_HANDLE', 'I18N_WEBLATE_DOMAIN', 'I18N_WEBLATE_URL']);
 	});
 });

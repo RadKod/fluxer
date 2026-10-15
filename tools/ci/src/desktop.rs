@@ -4748,7 +4748,7 @@ fn prepare_release_assets_step() -> Result<()> {
     fs::create_dir_all(release_assets)?;
 
     let mut release_builder =
-        DesktopReleaseAssetBuilder::new(&channel, &version, product, release_assets);
+        DesktopReleaseAssetBuilder::new(&channel, &version, &product, release_assets);
     for (platform, arch) in desktop_release_coordinates() {
         let dir = payload_root.join(platform).join(arch);
         ensure!(
@@ -6882,7 +6882,7 @@ fn prepare_modules_release_assets_step() -> Result<()> {
     remove_dir_if_exists(release_assets)?;
     fs::create_dir_all(release_assets)?;
     let mut release_builder =
-        DesktopReleaseAssetBuilder::new(&channel, &version, product, release_assets);
+        DesktopReleaseAssetBuilder::new(&channel, &version, &product, release_assets);
     add_desktop_module_release_assets(&mut release_builder, &payload_root)?;
     let (descriptor_assets, mut descriptor_modules) = release_builder.finish();
     ensure!(

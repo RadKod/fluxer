@@ -196,15 +196,15 @@ export const AddConnectionModal = observer(({defaultType}: AddConnectionModalPro
 		}
 	}, [hasBlueskyConnection]);
 	const hostRecord = useMemo(
-		() => (verificationData?.id ? `_fluxer.${verificationData.id}` : ''),
+		() => (verificationData?.id ? `_sanalyer.${verificationData.id}` : ''),
 		[verificationData?.id],
 	);
 	const dnsValue = useMemo(
-		() => (verificationData?.token ? `fluxer-verification=${verificationData.token}` : ''),
+		() => (verificationData?.token ? `sanalyer-verification=${verificationData.token}` : ''),
 		[verificationData?.token],
 	);
 	const dnsUrl = useMemo(
-		() => (verificationData?.id ? `https://${verificationData.id}/.well-known/fluxer-verification` : ''),
+		() => (verificationData?.id ? `https://${verificationData.id}/.well-known/sanalyer-verification` : ''),
 		[verificationData?.id],
 	);
 	const notifyAndReset = useCallback((setter: (value: boolean) => void) => {
@@ -227,7 +227,7 @@ export const AddConnectionModal = observer(({defaultType}: AddConnectionModalPro
 	}, [dnsValue, i18n, notifyAndReset]);
 	const downloadTokenFile = useCallback(() => {
 		if (!verificationData?.token) return;
-		downloadTextFile(verificationData.token, 'fluxer-verification');
+		downloadTextFile(verificationData.token, 'sanalyer-verification');
 	}, [verificationData?.token]);
 	const hostCopyLabel = hostCopied ? i18n._(COPIED_DESCRIPTOR) : i18n._(COPY_HOST_DESCRIPTOR);
 	const valueCopyLabel = valueCopied ? i18n._(COPIED_DESCRIPTOR) : i18n._(COPY_VALUE_DESCRIPTOR);
@@ -323,7 +323,7 @@ export const AddConnectionModal = observer(({defaultType}: AddConnectionModalPro
 							<Trans>
 								Download{' '}
 								<code className={styles.inlineCode} data-flx="connection.add-connection-modal.inline-code">
-									fluxer-verification
+									sanalyer-verification
 								</code>{' '}
 								and place it in your{' '}
 								<code className={styles.inlineCode} data-flx="connection.add-connection-modal.inline-code--2">
@@ -342,7 +342,7 @@ export const AddConnectionModal = observer(({defaultType}: AddConnectionModalPro
 							disabled={!verificationData?.token}
 							data-flx="connection.add-connection-modal.button.download-token-file"
 						>
-							<Trans>Download fluxer-verification</Trans>
+							<Trans>Download sanalyer-verification</Trans>
 						</Button>
 					</div>
 					<p className={styles.tokenMeta} data-flx="connection.add-connection-modal.token-meta">

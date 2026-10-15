@@ -268,10 +268,17 @@ pub(crate) fn desktop_module_package_release_asset_name(
     ))
 }
 
-pub(crate) fn desktop_release_product(channel: &str) -> Result<&'static str> {
+// sanalyer: the release product follows the Windows pack title (FLUXER_DESKTOP_PACK_TITLE), which is also the
+// electron-builder productName every artifact is named after; without it the upstream Fluxer names apply.
+pub(crate) fn desktop_release_product(channel: &str) -> Result<String> {
+    let base = std::env::var("FLUXER_DESKTOP_PACK_TITLE")
+        .ok()
+        .map(|title| title.trim().replace(' ', "-"))
+        .filter(|title| !title.is_empty())
+        .unwrap_or_else(|| "Fluxer".to_string());
     match channel {
-        "stable" => Ok("Fluxer"),
-        "canary" => Ok("Fluxer-Canary"),
+        "stable" => Ok(base),
+        "canary" => Ok(format!("{base}-Canary")),
         other => bail!("Unsupported desktop release channel {other:?}"),
     }
 }
