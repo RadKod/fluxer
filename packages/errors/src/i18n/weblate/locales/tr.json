@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "AFK kanalı bir sesli kanal olmalı.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "Tüm kanallar bu toplulukta olmalı.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "Hareketli topluluk banner'ı için ANIMATED_BANNER özelliği gerekli.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "Hareketli topluluk simgeleri için ANIMATED_ICON özelliği gerekli.",
 	"channels_and_guilds.announcement_channel_required": "Bu işlem yalnızca duyuru kanallarında kullanılabilir.",
 	"channels_and_guilds.bots_cannot_create_guilds": "Botlar topluluk oluşturamaz.",
 	"channels_and_guilds.cannot_execute_on_dm": "Bu işlem bir DM'de yapılamaz.",

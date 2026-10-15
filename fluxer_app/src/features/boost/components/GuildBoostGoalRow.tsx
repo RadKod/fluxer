@@ -3,8 +3,8 @@
 import Accessibility from '@app/features/accessibility/state/Accessibility';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import {openGuildBoostPanel} from '@app/features/boost/commands/GuildBoostPanelCommands';
-import {BoostGemIcon} from '@app/features/boost/components/BoostGemIcon';
 import styles from '@app/features/boost/components/GuildBoostGoalRow.module.css';
+import {GuildBoostLevelBadge} from '@app/features/boost/components/GuildBoostLevelBadge';
 import {
 	GUILD_BOOST_LEVELS,
 	getGuildBoostLevelPerks,
@@ -60,7 +60,7 @@ export const GuildBoostGoalRow = observer(({guildId, onBanner = false}: {guildId
 				onClick={() => openGuildBoostPanel(guildId)}
 				data-flx="boost.goal-row.button"
 			>
-				<BoostGemIcon size={16} />
+				<GuildBoostLevelBadge level={next?.level ?? level} size={16} />
 				<span className={styles.goal}>{label}</span>
 				<span className={styles.progressGroup}>
 					<span

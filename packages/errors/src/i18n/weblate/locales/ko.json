@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "자리 비움 채널은 음성 채널이어야 해요.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "모든 채널은 이 커뮤니티에 속해야 해요.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "애니메이션 커뮤니티 배너에는 ANIMATED_BANNER 기능이 필요해요.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "애니메이션 커뮤니티 아이콘에는 ANIMATED_ICON 기능이 필요해요.",
 	"channels_and_guilds.announcement_channel_required": "이 작업은 공지 채널에서만 사용할 수 있어요.",
 	"channels_and_guilds.bots_cannot_create_guilds": "봇은 커뮤니티를 만들 수 없어요.",
 	"channels_and_guilds.cannot_execute_on_dm": "DM에서는 이 작업을 수행할 수 없어요.",

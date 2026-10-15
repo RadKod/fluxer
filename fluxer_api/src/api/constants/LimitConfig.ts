@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import assert from 'node:assert/strict';
+import {GUILD_BOOST_LEVELS} from '@fluxer/constants/src/GuildBoostConstants';
 import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
 import type {LimitKey} from '@fluxer/constants/src/LimitConfigMetadata';
 import {LIMIT_KEY_METADATA, LIMIT_KEYS} from '@fluxer/constants/src/LimitConfigMetadata';
@@ -16,8 +17,7 @@ const LIMIT_RULE_IDS = {
 	MORE_STICKERS: 'more_stickers',
 } as const;
 
-// Micup: guild boost levels (guild/boost/GuildBoostLevels.ts) grant MORE_EMOJI and MORE_STICKERS; these stock rules
-// are what make those features raise the slots. An operator can still change the values in the limit config.
+// Keep independent expression grants alongside the level rules; operators can override either.
 const BOOST_GUILD_FEATURE_RULES: Array<LimitRule> = [
 	{
 		id: LIMIT_RULE_IDS.MORE_EMOJI,
@@ -29,6 +29,11 @@ const BOOST_GUILD_FEATURE_RULES: Array<LimitRule> = [
 		filters: {guildFeatures: [GuildFeatures.MORE_STICKERS]},
 		limits: {max_guild_stickers: 1000},
 	},
+	...GUILD_BOOST_LEVELS.map((level) => ({
+		id: `boost_level_${level.level}`,
+		filters: {guildFeatures: [`BOOST_LEVEL_${level.level}`]},
+		limits: {...level.limits},
+	})),
 ];
 
 export const LIMIT_CONFIG_REFRESH_CHANNEL = 'limit-config-refresh';

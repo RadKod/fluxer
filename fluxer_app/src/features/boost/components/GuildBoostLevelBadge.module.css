@@ -1,0 +1,12 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.badge {
+	display: inline-block;
+	flex-shrink: 0;
+	vertical-align: middle;
+	user-select: none;
+}
+
+:where(h2, span) > .badge {
+	margin-inline-end: 0.375rem;
+}

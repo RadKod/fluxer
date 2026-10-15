@@ -7,11 +7,14 @@ import {
 	readStoredLimitOverrides,
 	sanitizeLimitConfigForInstance,
 } from '@app/api/constants/LimitConfig';
-import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
-import {LIMIT_KEYS} from '@fluxer/constants/src/LimitConfigMetadata';
+import {guildBoostFeatures, guildBoostTier} from '@app/api/guild/boost/GuildBoostLevels';
+import {GuildFeatures, getMaxVoiceChannelBitrate} from '@fluxer/constants/src/GuildConstants';
+import {LIMIT_CATEGORY_LABELS, LIMIT_KEY_METADATA, LIMIT_KEYS} from '@fluxer/constants/src/LimitConfigMetadata';
 import {MAX_GUILD_MEMBERS_VERY_LARGE_GUILD} from '@fluxer/constants/src/LimitConstants';
 import {DEFAULT_RESTRICTED_LIMITS, DEFAULT_STOCK_LIMITS} from '@fluxer/limits/src/LimitDefaults';
+import {resolveLimits} from '@fluxer/limits/src/LimitResolver';
 import type {LimitConfigSnapshot, LimitRule} from '@fluxer/limits/src/LimitTypes';
+import {LimitConfigGetResponse, LimitConfigUpdateRequest} from '@fluxer/schema/src/domains/admin/AdminSchemas';
 import {describe, expect, test} from 'vitest';
 
 describe('Limit config storage', () => {
@@ -202,6 +205,9 @@ describe('Limit config defaults', () => {
 			'very_large_guild',
 			'more_emoji',
 			'more_stickers',
+			'boost_level_1',
+			'boost_level_2',
+			'boost_level_3',
 		]);
 	});
 	test('self-hosted defaults include default, very large guild and boost feature rules', () => {
@@ -210,6 +216,141 @@ describe('Limit config defaults', () => {
 			filters: {guildFeatures: [GuildFeatures.VERY_LARGE_GUILD]},
 			limits: {max_guild_members: MAX_GUILD_MEMBERS_VERY_LARGE_GUILD},
 		});
-		expect(config.rules.map((rule) => rule.id)).toEqual(['default', 'very_large_guild', 'more_emoji', 'more_stickers']);
+		expect(config.rules.map((rule) => rule.id)).toEqual([
+			'default',
+			'very_large_guild',
+			'more_emoji',
+			'more_stickers',
+			'boost_level_1',
+			'boost_level_2',
+			'boost_level_3',
+		]);
+	});
+});
+
+describe('Guild boost limit contract', () => {
+	const matrix = [
+		[0, 8, 720, 30, 500, 500, 500, 250, 0, 0, 25 * 1024 * 1024, 96_000],
+		[1, 24, 720, 60, 1000, 500, 500, 250, 1, 0, 25 * 1024 * 1024, 128_000],
+		[2, 36, 1080, 60, 1250, 1000, 600, 300, 1, 1, 50_000_000, 256_000],
+		[3, 48, 1080, 60, 1500, 1250, 750, 350, 1, 1, 100_000_000, 384_000],
+	];
+
+	test.each(matrix)(
+		'resolves the complete level %i product limits',
+		(tier, sounds, height, fps, emojis, stickers, channels, roles, icons, gradient, fileSize, bitrate) => {
+			const features = guildBoostFeatures(tier);
+			const {limits} = resolveLimits(
+				createDefaultLimitConfig(),
+				{traits: new Set(), guildFeatures: features},
+				{evaluationContext: 'guild'},
+			);
+			expect(limits).toMatchObject({
+				max_guild_soundboard_sounds: sounds,
+				max_guild_video_height: height,
+				max_guild_video_fps: fps,
+				max_guild_emojis: emojis,
+				max_guild_stickers: stickers,
+				max_guild_channels: channels,
+				max_guild_roles: roles,
+				feature_role_icons: icons,
+				feature_role_gradient: gradient,
+				max_attachment_file_size: fileSize,
+			});
+			expect(getMaxVoiceChannelBitrate(features)).toBe(bitrate);
+			expect(features.has(GuildFeatures.ANIMATED_ICON)).toBe(tier >= 1);
+			expect(features.has(GuildFeatures.ANIMATED_BANNER)).toBe(tier >= 3);
+			expect(features.has(GuildFeatures.VANITY_URL)).toBe(tier >= 3);
+			for (let level = 1; level <= 3; level++) {
+				expect(features.has(`BOOST_LEVEL_${level}`)).toBe(tier >= level);
+			}
+		},
+	);
+
+	test.each([
+		[0, 0],
+		[1, 0],
+		[2, 1],
+		[6, 1],
+		[7, 2],
+		[13, 2],
+		[14, 3],
+		[99, 3],
+	])('keeps %i boosts at tier %i', (boosts, tier) => {
+		expect(guildBoostTier(boosts)).toBe(tier);
+	});
+
+	test('keeps personal Premium and independent operator grants above the boost tier', () => {
+		const config = createDefaultLimitConfig();
+		config.rules.push({id: 'operator', filters: {guildFeatures: ['OPERATOR']}, limits: {max_guild_channels: 2000}});
+		const {limits} = resolveLimits(
+			config,
+			{traits: new Set(['premium']), guildFeatures: new Set([...guildBoostFeatures(3), 'OPERATOR'])},
+			{evaluationContext: 'guild'},
+		);
+		expect(limits.max_attachment_file_size).toBe(500 * 1024 * 1024);
+		expect(limits.max_guild_channels).toBe(2000);
+		const independent = resolveLimits(
+			config,
+			{traits: new Set(), guildFeatures: new Set([GuildFeatures.MORE_EMOJI, GuildFeatures.MORE_STICKERS])},
+			{evaluationContext: 'guild'},
+		).limits;
+		expect(independent.max_guild_emojis).toBe(1000);
+		expect(independent.max_guild_stickers).toBe(1000);
+	});
+
+	test('does not make personal Premium grant guild role or video upgrades', () => {
+		const {limits} = resolveLimits(
+			createDefaultLimitConfig(),
+			{traits: new Set(['premium']), guildFeatures: new Set()},
+			{evaluationContext: 'guild'},
+		);
+		expect(limits).toMatchObject({
+			feature_role_icons: 0,
+			feature_role_gradient: 0,
+			max_guild_soundboard_sounds: 8,
+			max_guild_video_height: 720,
+			max_guild_video_fps: 30,
+		});
+		expect(limits.feature_higher_video_quality).toBe(1);
+	});
+
+	test('roundtrips every new key through admin schemas and preserves stored overrides', () => {
+		const config = createDefaultLimitConfig();
+		config.rules.push({
+			id: 'custom',
+			filters: {guildFeatures: ['CUSTOM']},
+			limits: {
+				max_guild_soundboard_sounds: 64,
+				max_guild_video_height: 1440,
+				max_guild_video_fps: 120,
+				feature_role_icons: 1,
+				feature_role_gradient: 1,
+			},
+		});
+		const request = LimitConfigUpdateRequest.parse({limit_config: config});
+		const stored = JSON.parse(JSON.stringify(request.limit_config));
+		const merged = mergeWithCurrentDefaults(stored);
+		const response = LimitConfigGetResponse.parse({
+			limit_config: merged,
+			limit_config_json: JSON.stringify(merged),
+			self_hosted: false,
+			defaults: {},
+			metadata: LIMIT_KEY_METADATA,
+			categories: LIMIT_CATEGORY_LABELS,
+			limit_keys: LIMIT_KEYS,
+		});
+		expect(response.limit_config.rules.find((rule) => rule.id === 'custom')?.limits).toEqual(
+			config.rules.at(-1)?.limits,
+		);
+		expect(response.limit_config.rules.find((rule) => rule.id === 'custom')?.modifiedFields).toEqual(
+			expect.arrayContaining([
+				'max_guild_soundboard_sounds',
+				'max_guild_video_height',
+				'max_guild_video_fps',
+				'feature_role_icons',
+				'feature_role_gradient',
+			]),
+		);
 	});
 });

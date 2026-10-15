@@ -219,6 +219,7 @@ export const ERROR_I18N_MESSAGES = {
 	'channels_and_guilds.all_channels_must_belong_to_guild': 'All channels must belong to this community.',
 	'channels_and_guilds.animated_guild_banner_requires_feature':
 		'Animated community banner requires ANIMATED_BANNER feature.',
+	'channels_and_guilds.animated_guild_icon_requires_feature': 'Animated guild icons require the ANIMATED_ICON feature.',
 	'channels_and_guilds.announcement_channel_required': 'This action is only available in announcement channels.',
 	'channels_and_guilds.bots_cannot_create_guilds': "Bots can't create communities.",
 	'channels_and_guilds.channel_already_followed':

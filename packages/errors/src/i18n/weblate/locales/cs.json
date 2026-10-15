@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "AFK kanál musí být hlasový kanál.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "Všechny kanály musí být v této komunitě.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "Animovaný banner komunity vyžaduje funkci ANIMATED_BANNER.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "Animované ikony komunity vyžadují funkci ANIMATED_ICON.",
 	"channels_and_guilds.announcement_channel_required": "Tato akce je dostupná jen v oznamovacích kanálech.",
 	"channels_and_guilds.bots_cannot_create_guilds": "Boti nemohou vytvářet komunity.",
 	"channels_and_guilds.cannot_execute_on_dm": "Tuto akci nelze provést v soukromé konverzaci.",

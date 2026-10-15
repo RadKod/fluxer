@@ -3,6 +3,7 @@
 import {createTestAccount, setUserACLs, type TestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createChannelID, createGuildID, createUserID, type GuildID} from '@app/api/BrandedTypes';
 import {GUILD_BOOST_COUNT_COUNTER} from '@app/api/guild/boost/GuildBoostCounters';
+import {guildBoostFeatures} from '@app/api/guild/boost/GuildBoostLevels';
 import {GuildBoostRepository} from '@app/api/guild/boost/GuildBoostRepository';
 import {
 	GUILD_BOOST_SLOT_COOLDOWN_MS,
@@ -481,8 +482,12 @@ describe('guild boosts', () => {
 		const member = await premiumMember();
 		await boost(member, 'premium:0');
 		await boost(member, 'premium:1');
+		const writeState = GuildBoostRepository.prototype.putState;
 		const putState = vi
 			.spyOn(GuildBoostRepository.prototype, 'putState')
+			.mockImplementationOnce(function (this: GuildBoostRepository, row) {
+				return writeState.call(this, row);
+			})
 			.mockRejectedValueOnce(new Error('stopped after the guild write'));
 		await expect(recompute()).rejects.toThrow('stopped after the guild write');
 		putState.mockRestore();
@@ -491,7 +496,7 @@ describe('guild boosts', () => {
 		await recompute();
 
 		const granted = (await new GuildBoostRepository().getState(guildId))?.granted_features ?? new Set<string>();
-		expect([...granted].sort()).toEqual([GuildFeatures.AUDIO_BITRATE_128_KBPS, GuildFeatures.MORE_EMOJI].sort());
+		expect(granted).toEqual(guildBoostFeatures(1));
 	});
 
 	it('keeps features an admin gave and never adds back one an admin took away', async () => {

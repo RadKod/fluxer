@@ -56957,3 +56957,224 @@ msgid ""
 msgstr ""
 "Profilin \"Yalnız ben\" olarak ayarlı. Arkadaşlar ya da Herkes seçili olsa "
 "bile oyun etkinliğin paylaşılmaz."
+
+#. Combined total community channel and role capacities from the effective
+#. limits.
+#: src/features/boost/utils/GuildBoostMessages.ts:132
+msgid "{channels} channels / {roles} roles in total"
+msgstr "Toplam {channels} kanal / {roles} rol"
+
+#. Remaining boosts, calculated by subtracting current count from the next
+#. total threshold.
+#: src/features/boost/utils/GuildBoostMessages.ts:16
+msgid ""
+"{count, plural, one {# more boost to Level {level}} other {# more boosts to "
+"Level {level}}}"
+msgstr ""
+"{count, plural, one {{level}. seviyeye # takviye kaldı} other {{level}. "
+"seviyeye # takviye kaldı}}"
+
+#. Total community soundboard slots from the effective instance limits.
+#: src/features/boost/utils/GuildBoostMessages.ts:100
+msgid "{count, plural, one {# soundboard slot} other {# soundboard slots}}"
+msgstr ""
+"{count, plural, one {# ses paneli yuvası} other {# ses paneli yuvası}}"
+
+#. Availability of a community perk on a level card.
+#: src/features/boost/utils/GuildBoostMessages.ts:88
+msgid "{perk}: Available"
+msgstr "{perk}: Var"
+
+#. Community perk that is not included at the displayed level.
+#: src/features/boost/utils/GuildBoostMessages.ts:92
+msgid "{perk}: Not included"
+msgstr "{perk}: Yok"
+
+#. Boost perk: animated community logo.
+#: src/features/boost/utils/GuildBoostMessages.ts:74
+msgid "Animated community icon"
+msgstr "Hareketli sunucu logosu"
+
+#. Community perks included without boosts at level 0.
+#: src/features/boost/utils/GuildBoostMessages.ts:8
+msgid "Base perks"
+msgstr "Temel haklar"
+
+#. Upgrade hint and upload error for a community without the animated icon
+#. feature. Static uploads remain available.
+#: src/features/guild/components/modals/guild_tabs/guild_overview_tab/fields/GuildIconUploadField.tsx:34
+msgid "Boost to Level 1 to upload animated icons."
+msgstr ""
+"Hareketli sunucu logosu yüklemek için takviye seviyenizi 1’e yükseltin."
+
+#. Upgrade hint and upload error for a community without the animated banner
+#. feature. Static uploads remain available.
+#: src/features/guild/components/modals/guild_tabs/guild_overview_tab/fields/GuildBannerUploadField.tsx:37
+msgid "Boost to Level 3 to upload animated banners."
+msgstr "Hareketli afiş yüklemek için takviye seviyenizi 3’e yükseltin."
+
+#. Explains the two mutually exclusive role icon choices.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:47
+msgid "Enter one emoji, or choose an emoji from this server."
+msgstr "Tek bir emoji girin veya bu sunucudan bir emoji seçin."
+
+#. Explanation of the static two-color role gradient perk.
+#: src/features/boost/components/GuildBoostPerks.tsx:65
+msgid "Give roles a static gradient with two colors."
+msgstr "Rollere iki renkli statik gradyan verin."
+
+#. Community video profile does not reduce personal streaming or camera
+#. rights.
+#: src/features/boost/components/GuildBoostPerks.tsx:44
+msgid ""
+"In this community’s voice channels. Your personal video allowance still "
+"applies."
+msgstr ""
+"Sunucunun ses kanallarında geçerlidir. Kişisel yayın hakkınız korunur."
+
+#. Level 0 card has no boost threshold or purchase requirement.
+#: src/features/boost/utils/GuildBoostMessages.ts:12
+msgid "Included without boosts"
+msgstr "Takviye gerektirmez"
+
+#. Custom emoji capacity is disabled in the effective instance limits.
+#: src/features/boost/utils/GuildBoostMessages.ts:108
+msgid "No custom emoji slots"
+msgstr "Özel emoji yuvası yok"
+
+#. Custom sticker capacity is disabled in the effective instance limits.
+#: src/features/boost/utils/GuildBoostMessages.ts:112
+msgid "No custom sticker slots"
+msgstr "Özel çıkartma yuvası yok"
+
+#. Empty option in the role icon server emoji selector.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:55
+msgid "No server emoji"
+msgstr "Sunucu emojisi yok"
+
+#. Soundboard capacity is disabled in the effective instance limits.
+#: src/features/boost/utils/GuildBoostMessages.ts:104
+msgid "No soundboard slots"
+msgstr "Ses paneli yuvası yok"
+
+#. Button that clears the second role color, including after boost downgrade.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:63
+msgid "Remove role gradient"
+msgstr "Rol gradyanını kaldır"
+
+#. Button that clears both role icon fields, including after boost downgrade.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:59
+msgid "Remove role icon"
+msgstr "Rol simgesini kaldır"
+
+#. Role editor hint when new gradient assignments are locked.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:35
+msgid ""
+"Role gradients require Server Boost Level 2. You can still remove an "
+"existing gradient."
+msgstr ""
+"Rol gradyanları için 2. seviye Sunucu Takviyesi gerekir. Mevcut gradyanı "
+"kaldırabilirsiniz."
+
+#. Role editor hint when new icon assignments are locked.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:39
+msgid ""
+"Role icons require Server Boost Level 1. You can still remove an existing "
+"icon."
+msgstr ""
+"Rol simgeleri için 1. seviye Sunucu Takviyesi gerekir. Mevcut simgeyi "
+"kaldırabilirsiniz."
+
+#. Boost perk: role icons use Unicode or an emoji from this community.
+#: src/features/boost/utils/GuildBoostMessages.ts:80
+msgid "Role icons: Unicode or community emoji"
+msgstr "Rol simgesi: Unicode veya sunucu emojisi"
+
+#. Label for the static two-color role gradient picker.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:31
+msgid "Second role color"
+msgstr "İkinci rol rengi"
+
+#. Role editor selector restricted to emojis belonging to this server.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:51
+msgid "Server emoji role icon"
+msgstr "Sunucu emojisinden rol simgesi"
+
+#. Community file uploads have no extra allowance above the personal allowance
+#. at this level.
+#: src/features/boost/utils/GuildBoostMessages.ts:124
+msgid "Server file uploads: your personal limit"
+msgstr "Sunucuya dosya yükleme: kişisel sınırınız"
+
+#. The higher of personal and community file allowance; MB is decimal, one
+#. million bytes.
+#: src/features/boost/utils/GuildBoostMessages.ts:128
+msgid "Server file uploads: your personal limit, or {megabytes} MB if higher"
+msgstr ""
+"Sunucuya dosya yükleme: kişisel sınırınız veya daha yüksekse {megabytes} MB"
+
+#. Base community perk: static banner and invite splash.
+#: src/features/boost/utils/GuildBoostMessages.ts:76
+msgid "Static banner and invite background"
+msgstr "Statik afiş ve davet arka planı"
+
+#. Explanation of free static community banner and invite background.
+#: src/features/boost/components/GuildBoostPerks.tsx:37
+msgid "Static images are included without boosts."
+msgstr "Statik görseller için takviye gerekmez."
+
+#. Boost perk: static role gradients with two colors.
+#: src/features/boost/utils/GuildBoostMessages.ts:84
+msgid "Static two-color role gradients"
+msgstr "İki renkli statik rol gradyanı"
+
+#. Community voice-channel video profile; personal video allowances remain
+#. separate.
+#: src/features/boost/utils/GuildBoostMessages.ts:96
+msgid "Streaming and camera up to {height}p / {fps} fps"
+msgstr "Yayın ve kamera: en fazla {height}p / {fps} fps"
+
+#. Explanation of total community channel and role capacities.
+#: src/features/boost/components/GuildBoostPerks.tsx:79
+msgid "Total channels and roles available to this community."
+msgstr "Sunucunun toplam kanal ve rol kapasitesi."
+
+#. Explanation of total community soundboard capacity.
+#: src/features/boost/components/GuildBoostPerks.tsx:51
+msgid "Total sounds in the community soundboard."
+msgstr "Sunucunun ses panelindeki toplam ses sayısı."
+
+#. Role editor input for a single standard emoji.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:43
+msgid "Unicode role icon"
+msgstr "Unicode rol simgesi"
+
+#. Independent community unlimited-emoji feature.
+#: src/features/boost/utils/GuildBoostMessages.ts:116
+msgid "Unlimited custom emoji"
+msgstr "Sınırsız özel emoji"
+
+#. Independent community unlimited-sticker feature.
+#: src/features/boost/utils/GuildBoostMessages.ts:120
+msgid "Unlimited custom stickers"
+msgstr "Sınırsız özel çıkartma"
+
+#. Explanation of the animated community banner perk.
+#: src/features/boost/components/GuildBoostPerks.tsx:30
+msgid "Use an animated community banner."
+msgstr "Sunucunuzda hareketli afiş kullanın."
+
+#. Explanation of the animated community icon perk.
+#: src/features/boost/components/GuildBoostPerks.tsx:23
+msgid "Use an animated logo for your community."
+msgstr "Sunucunuzda hareketli logo kullanın."
+
+#. Role icon perk accepts Unicode or same-community emoji only.
+#: src/features/boost/components/GuildBoostPerks.tsx:58
+msgid "Use Unicode or an emoji from this community as a role icon."
+msgstr "Rol simgesi olarak Unicode veya bu sunucunun emojisini kullanın."
+
+#. Community file rights never reduce personal upload rights.
+#: src/features/boost/components/GuildBoostPerks.tsx:72
+msgid "Your personal upload allowance always applies."
+msgstr "Kişisel dosya yükleme hakkınız korunur."

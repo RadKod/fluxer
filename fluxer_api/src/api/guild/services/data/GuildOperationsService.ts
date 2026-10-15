@@ -92,6 +92,7 @@ import {
 	SystemChannelFlags,
 } from '@fluxer/constants/src/GuildConstants';
 import {
+	MAX_CHANNELS_PER_CATEGORY,
 	MAX_GUILD_CHANNELS,
 	MAX_GUILD_ROLES,
 	VOICE_CHANNEL_BITRATE_DEFAULT,
@@ -108,10 +109,13 @@ import {
 } from '@fluxer/constants/src/ThreadPermissionUtils';
 import {DEFAULT_GUILD_FOLDER_ICON} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
+import {MaxCategoryChannelsError} from '@fluxer/errors/src/domains/channel/MaxCategoryChannelsError';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {MissingPermissionsError} from '@fluxer/errors/src/domains/core/MissingPermissionsError';
 import {BotsCannotCreateGuildsError} from '@fluxer/errors/src/domains/guild/BotsCannotCreateGuildsError';
 import {GuildTemplateInvalidError} from '@fluxer/errors/src/domains/guild/GuildTemplateInvalidError';
+import {MaxGuildChannelsError} from '@fluxer/errors/src/domains/guild/MaxGuildChannelsError';
+import {MaxGuildRolesError} from '@fluxer/errors/src/domains/guild/MaxGuildRolesError';
 import {MaxGuildsError} from '@fluxer/errors/src/domains/guild/MaxGuildsError';
 import {UnclaimedAccountCannotCreateGuildsError} from '@fluxer/errors/src/domains/guild/UnclaimedAccountCannotCreateGuildsError';
 import {UnknownGuildError} from '@fluxer/errors/src/domains/guild/UnknownGuildError';
@@ -123,6 +127,7 @@ import type {
 	TemplateRole,
 	TemplateSerializedGuild,
 } from '@fluxer/schema/src/domains/guild/GuildTemplateSchemas';
+import {isValidSingleUnicodeEmoji} from '@fluxer/schema/src/primitives/EmojiValidators';
 import {extractTimestamp} from '@fluxer/snowflake/src/SnowflakeUtils';
 import type {IWorkerService} from '@pkgs/worker/src/contracts/IWorkerService';
 
@@ -148,6 +153,13 @@ const GUILD_IMAGE_FIELDS = [
 	},
 ] as const;
 
+interface GuildCreationEntities {
+	systemChannelId: ChannelID;
+	channelCount: number;
+	roleCount: number;
+	maxCategoryChildren: number;
+}
+
 interface TemplateGuildSettings {
 	verificationLevel: number;
 	explicitContentFilter: number;
@@ -162,12 +174,7 @@ interface MappedTemplateChannel {
 	fluxerType: number;
 }
 
-const BASE_GUILD_FEATURES: ReadonlyArray<string> = [
-	GuildFeatures.ANIMATED_ICON,
-	GuildFeatures.ANIMATED_BANNER,
-	GuildFeatures.BANNER,
-	GuildFeatures.INVITE_SPLASH,
-];
+const BASE_GUILD_FEATURES: ReadonlyArray<string> = [GuildFeatures.BANNER, GuildFeatures.INVITE_SPLASH];
 const USER_TOGGLEABLE_GUILD_FEATURES: ReadonlySet<string> = new Set([
 	GuildFeatures.INVITES_DISABLED,
 	GuildFeatures.TEXT_CHANNEL_FLEXIBLE_NAMES,
@@ -368,6 +375,23 @@ export class GuildOperationsService {
 			DEFAULT_STOCK_LIMITS.max_guilds,
 		);
 		if (currentGuildCount >= maxGuilds) throw new MaxGuildsError(maxGuilds);
+		const shouldUseEmptyFeatures = data.empty_features ?? false;
+		const featuresSet = shouldUseEmptyFeatures ? new Set<string>() : new Set(BASE_GUILD_FEATURES);
+		const context = createLimitMatchContext({user: null, guildFeatures: featuresSet});
+		const snapshot = this.limitConfigService.getConfigSnapshot();
+		const maxChannels = resolveLimitSafe(snapshot, context, 'max_guild_channels', MAX_GUILD_CHANNELS, 'guild');
+		const maxRoles = resolveLimitSafe(snapshot, context, 'max_guild_roles', MAX_GUILD_ROLES, 'guild');
+		const maxCategory = resolveLimitSafe(
+			snapshot,
+			context,
+			'max_channels_per_category',
+			MAX_CHANNELS_PER_CATEGORY,
+			'guild',
+		);
+		if (data.template) {
+			if (data.template.channels.length > maxChannels) throw new MaxGuildChannelsError(maxChannels);
+			if (data.template.roles.length > maxRoles) throw new MaxGuildRolesError(maxRoles);
+		}
 		// Imported templates (for example from Discord) keep working while the flag is off: mature marks are dropped instead of refused.
 		const template =
 			data.template?.channels.some((channel) => channel.nsfw === true) &&
@@ -393,21 +417,25 @@ export class GuildOperationsService {
 				errorPath: 'icon',
 			});
 		}
+		if (preparedIcon?.isAnimated) {
+			await this.entityAssetService.rollbackAssetUpload(preparedIcon);
+			throw InputValidationError.fromCode('icon', ValidationErrorCodes.ANIMATED_GUILD_ICON_REQUIRES_FEATURE);
+		}
 		const iconKey = preparedIcon?.newHash ?? null;
-		const shouldUseEmptyFeatures = data.empty_features ?? false;
-		const featuresSet = shouldUseEmptyFeatures ? new Set<string>() : new Set(BASE_GUILD_FEATURES);
 		const templateSettings = this.sanitiseTemplateGuildSettings(template);
 		const batch = new BatchBuilder();
-		let systemChannelId: ChannelID;
-		if (template) {
-			const templateBatch = new BatchBuilder();
-			const templateResult = await this.buildTemplateEntities(guildId, template, templateBatch, locale);
-			systemChannelId = templateResult.systemChannelId;
-			await templateBatch.executeChunked(50);
-		} else {
-			const defaultResult = await this.buildDefaultEntities(guildId, batch, locale);
-			systemChannelId = defaultResult.systemChannelId;
-		}
+		const templateBatch = template ? new BatchBuilder() : null;
+		const entities =
+			template && templateBatch
+				? await this.buildTemplateEntities(
+						guildId,
+						template,
+						templateBatch,
+						locale,
+						resolveLimitSafe(snapshot, context, 'feature_role_icons', 0, 'guild') >= 1,
+					)
+				: await this.buildDefaultEntities(guildId, batch, locale);
+		const {systemChannelId} = entities;
 		const guildData: GuildRow = {
 			guild_id: guildId,
 			owner_id: user.id,
@@ -475,7 +503,18 @@ export class GuildOperationsService {
 			}),
 		);
 		batch.addPrepared(GuildMembersByUserId.insert({user_id: user.id, guild_id: guildId}));
-		await batch.execute();
+		let writesStarted = false;
+		try {
+			if (entities.channelCount > maxChannels) throw new MaxGuildChannelsError(maxChannels);
+			if (entities.roleCount > maxRoles) throw new MaxGuildRolesError(maxRoles);
+			if (entities.maxCategoryChildren > maxCategory) throw new MaxCategoryChannelsError(maxCategory);
+			writesStarted = true;
+			await templateBatch?.executeChunked(50);
+			await batch.execute();
+		} catch (error) {
+			if (preparedIcon && !writesStarted) await this.entityAssetService.rollbackAssetUpload(preparedIcon);
+			throw error;
+		}
 		await onUserGuildsChanged({userId: user.id});
 		await this.channelRepository.threads.ensureGuildMarker(guildId, {permsSeededAt: new Date()});
 		const guild = new Guild(guildData);
@@ -805,6 +844,9 @@ export class GuildOperationsService {
 					errorPath: field,
 				});
 				preparedAssets.push(prepared);
+				if (field === 'icon' && prepared.isAnimated && !guild.features.has(GuildFeatures.ANIMATED_ICON)) {
+					throw InputValidationError.fromCode(field, ValidationErrorCodes.ANIMATED_GUILD_ICON_REQUIRES_FEATURE);
+				}
 				if (field === 'banner' && prepared.isAnimated && !guild.features.has(GuildFeatures.ANIMATED_BANNER)) {
 					throw InputValidationError.fromCode(field, ValidationErrorCodes.ANIMATED_GUILD_BANNER_REQUIRES_FEATURE);
 				}
@@ -966,9 +1008,7 @@ export class GuildOperationsService {
 		guildId: GuildID,
 		batch: BatchBuilder,
 		locale: string | null,
-	): Promise<{
-		systemChannelId: ChannelID;
-	}> {
+	): Promise<GuildCreationEntities> {
 		const textCategoryId = createChannelID(await this.snowflakeService.generate());
 		const voiceCategoryId = createChannelID(await this.snowflakeService.generate());
 		const generalChannelId = createChannelID(await this.snowflakeService.generate());
@@ -1058,6 +1098,8 @@ export class GuildOperationsService {
 				position: 0,
 				hoist_position: null,
 				color: 0,
+				color_secondary: null,
+				icon_emoji_id: null,
 				icon_hash: null,
 				unicode_emoji: null,
 				hoist: false,
@@ -1065,7 +1107,7 @@ export class GuildOperationsService {
 				version: 1,
 			}),
 		);
-		return {systemChannelId: generalChannelId};
+		return {systemChannelId: generalChannelId, channelCount: 4, roleCount: 1, maxCategoryChildren: 1};
 	}
 
 	private async buildTemplateEntities(
@@ -1073,15 +1115,8 @@ export class GuildOperationsService {
 		template: TemplateSerializedGuild,
 		batch: BatchBuilder,
 		locale: string | null,
-	): Promise<{
-		systemChannelId: ChannelID;
-	}> {
-		if (template.channels.length > MAX_GUILD_CHANNELS) {
-			throw new GuildTemplateInvalidError();
-		}
-		if (template.roles.length > MAX_GUILD_ROLES) {
-			throw new GuildTemplateInvalidError();
-		}
+		roleIconsEnabled: boolean,
+	): Promise<GuildCreationEntities> {
 		const roleIdMap = new Map<string, RoleID>();
 		const channelIdMap = new Map<string, ChannelID>();
 		const channelTypeMap = new Map<string, number>();
@@ -1152,6 +1187,8 @@ export class GuildOperationsService {
 				position: 0,
 				hoist_position: null,
 				color: 0,
+				color_secondary: null,
+				icon_emoji_id: null,
 				icon_hash: null,
 				unicode_emoji: null,
 				hoist: false,
@@ -1174,8 +1211,13 @@ export class GuildOperationsService {
 					position: nextRolePosition,
 					hoist_position: null,
 					color: role.color ?? 0,
+					color_secondary: null,
+					icon_emoji_id: null,
 					icon_hash: null,
-					unicode_emoji: role.unicode_emoji ?? null,
+					unicode_emoji:
+						roleIconsEnabled && role.unicode_emoji != null && isValidSingleUnicodeEmoji(role.unicode_emoji)
+							? role.unicode_emoji
+							: null,
 					hoist: role.hoist ?? false,
 					mentionable: role.mentionable ?? false,
 					version: 1,
@@ -1184,6 +1226,7 @@ export class GuildOperationsService {
 			nextRolePosition += 1;
 		}
 		let firstTextChannelId: ChannelID | null = null;
+		const categoryChildren = new Map<ChannelID, number>();
 		for (const mappedChannel of mappedChannels) {
 			const {channel, channelId, fluxerType} = mappedChannel;
 			const parentKey = channel.parent_id != null ? this.getTemplateEntityKey(channel.parent_id) : null;
@@ -1192,6 +1235,7 @@ export class GuildOperationsService {
 				fluxerType !== ChannelTypes.GUILD_CATEGORY && parentKey != null && parentType === ChannelTypes.GUILD_CATEGORY
 					? (channelIdMap.get(parentKey) ?? null)
 					: null;
+			if (parentId) categoryChildren.set(parentId, (categoryChildren.get(parentId) ?? 0) + 1);
 			const isVoice = fluxerType === ChannelTypes.GUILD_VOICE;
 			let permissionOverwrites: Map<RoleID | UserID, PermissionOverwrite> | null = null;
 			if (channel.permission_overwrites && channel.permission_overwrites.length > 0) {
@@ -1281,6 +1325,7 @@ export class GuildOperationsService {
 		if (!systemChannelId && firstTextChannelId) {
 			systemChannelId = firstTextChannelId;
 		}
+		const needsFallbackChannel = systemChannelId === null;
 		if (!systemChannelId) {
 			systemChannelId = createChannelID(await this.snowflakeService.generate());
 			batch.addPrepared(
@@ -1322,7 +1367,12 @@ export class GuildOperationsService {
 				}),
 			);
 		}
-		return {systemChannelId};
+		return {
+			systemChannelId,
+			channelCount: mappedChannels.length + Number(needsFallbackChannel),
+			roleCount: nextRolePosition,
+			maxCategoryChildren: Math.max(0, ...categoryChildren.values()),
+		};
 	}
 
 	private parseTemplatePermissionBitfield(value: string | number | undefined, mask: bigint): bigint {

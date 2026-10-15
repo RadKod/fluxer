@@ -32,6 +32,7 @@ export interface GuildBoostStateRow {
 	suppressed_features: Nullish<Set<string>>;
 	downgrade_at: Nullish<Date>;
 	vanity_release_at: Nullish<Date>;
+	pending_feature_changes?: Nullish<string>;
 }
 
 export interface GuildPackageRow {
@@ -79,6 +80,7 @@ export const GUILD_BOOST_STATE_COLUMNS = [
 	'suppressed_features',
 	'downgrade_at',
 	'vanity_release_at',
+	'pending_feature_changes',
 ] as const satisfies ReadonlyArray<keyof GuildBoostStateRow>;
 
 export const GUILD_PACKAGE_COLUMNS = [

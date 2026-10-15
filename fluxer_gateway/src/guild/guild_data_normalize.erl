@@ -37,7 +37,10 @@ role(Role) when is_map(Role) ->
         [<<"color">>, <<"position">>],
         Role2
     ),
-    guild_data_normalize_schema:normalize_nullable_int_fields([<<"hoist_position">>], Role3);
+    Role4 = normalize_nullable_snowflake_fields([<<"icon_emoji_id">>], Role3),
+    guild_data_normalize_schema:normalize_nullable_int_fields(
+        [<<"hoist_position">>, <<"color_secondary">>], Role4
+    );
 role(Role) ->
     Role.
 
@@ -293,3 +296,40 @@ normalize_snowflake_list_field(Key, Map) ->
         {ok, Value} -> Map#{Key => snowflake_id:parse_list(Value)};
         error -> Map
     end.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+role_appearance_normalization_test() ->
+    Role = #{
+        <<"id">> => <<"20">>,
+        <<"permissions">> => <<"0">>,
+        <<"color_secondary">> => <<"0">>,
+        <<"icon_emoji_id">> => <<"30">>,
+        <<"unicode_emoji">> => <<240, 159, 142, 137>>
+    },
+    Expected = Role#{
+        <<"id">> => 20,
+        <<"permissions">> => 0,
+        <<"color_secondary">> => 0,
+        <<"icon_emoji_id">> => 30
+    },
+    ?assertEqual(Expected, role(Role)),
+    Cleared = Expected#{
+        <<"color_secondary">> => null,
+        <<"icon_emoji_id">> => null,
+        <<"unicode_emoji">> => null
+    },
+    ?assertEqual(Cleared, role(Cleared)),
+    ?assertEqual(#{<<"id">> => 20}, role(#{<<"id">> => <<"20">>})),
+    Wire = Role#{<<"color_secondary">> => 0},
+    ?assertEqual(Wire, guild_data_wire:payload(role(Role))),
+    Created = guild_state_roles:handle_role_create(#{<<"role">> => Role}, #{}),
+    ?assertEqual([Wire], maps:get(<<"roles">>, guild_data_wire:payload(Created))),
+    Updated = guild_state_roles:handle_role_update(#{<<"role">> => Cleared}, Created),
+    ClearedWire = guild_data_wire:payload(Cleared),
+    ?assertEqual([ClearedWire], maps:get(<<"roles">>, guild_data_wire:payload(Updated))),
+    Bulk = guild_state_roles:handle_role_update_bulk(#{<<"roles">> => [Role]}, Updated),
+    ?assertEqual([Wire], maps:get(<<"roles">>, guild_data_wire:payload(Bulk))).
+
+-endif.

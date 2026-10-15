@@ -6,6 +6,7 @@ import {CompactMemberCustomStatus} from '@app/features/channel/components/Compac
 import styles from '@app/features/channel/components/MemberListItem.module.css';
 import {PreloadableUserPopout} from '@app/features/channel/components/PreloadableUserPopout';
 import {NameplateBackground} from '@app/features/cosmetics/components/NameplateBackground';
+import {RoleAppearance} from '@app/features/guild/components/RoleAppearance';
 import Guilds from '@app/features/guild/state/Guilds';
 import {useMemberListCustomStatus} from '@app/features/member/hooks/useMemberListCustomStatus';
 import {useMemberListMobile} from '@app/features/member/hooks/useMemberListMobile';
@@ -195,7 +196,9 @@ export const MemberListItem: React.FC<MemberListItemProps> = observer((props) =>
 			style={nameStyle}
 			data-flx="channel.member-list-item.name"
 		>
-			{nickname}
+			<RoleAppearance member={guildMember} colorOverride={guildMember ? undefined : roleColor}>
+				{nickname}
+			</RoleAppearance>
 		</NameStyleText>
 	);
 	const content = (

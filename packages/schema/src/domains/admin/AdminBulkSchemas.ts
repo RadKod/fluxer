@@ -14,6 +14,7 @@ import {z} from 'zod';
 export const AdminBulkTaskType = {
 	UPDATE_USER_FLAGS: 'update_user_flags',
 	UPDATE_GUILD_FEATURES: 'update_guild_features',
+	BACKFILL_GUILD_BOOSTS: 'backfill_guild_boosts',
 	ADD_GUILD_MEMBERS: 'add_guild_members',
 	SCHEDULE_USER_DELETION: 'schedule_user_deletion',
 	DELETE_USER_MESSAGES: 'delete_user_messages',
@@ -22,6 +23,11 @@ export const AdminBulkTaskType = {
 export type AdminBulkTaskType = (typeof AdminBulkTaskType)[keyof typeof AdminBulkTaskType];
 
 export const AdminBulkJobCreateRequest = z.discriminatedUnion('task', [
+	z.object({
+		task: z
+			.literal(AdminBulkTaskType.BACKFILL_GUILD_BOOSTS)
+			.describe('Recomputes existing guild boost entitlements, resuming an incomplete maintenance scan'),
+	}),
 	BulkUpdateUserFlagsRequest.extend({
 		task: z
 			.literal(AdminBulkTaskType.UPDATE_USER_FLAGS)

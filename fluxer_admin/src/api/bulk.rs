@@ -52,6 +52,20 @@ impl AdminApiClient {
         .await
     }
 
+    pub async fn bulk_backfill_guild_boosts(
+        &self,
+        audit_log_reason: Option<&str>,
+    ) -> ApiResult<BulkJobResponse> {
+        let body = generated_types::AdminBulkJobCreateRequest::BackfillGuildBoosts;
+        self.send(
+            Method::POST,
+            "/admin/bulk-jobs",
+            Some(&body),
+            audit_log_reason,
+        )
+        .await
+    }
+
     pub async fn bulk_add_guild_members(
         &self,
         guild_id: &str,

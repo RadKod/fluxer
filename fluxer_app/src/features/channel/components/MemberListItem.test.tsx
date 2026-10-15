@@ -187,8 +187,7 @@ describe('MemberListItem offline name on the coal and dark themes', () => {
 		'dims a role-coloured, a Plus-coloured and a role-coloured Plus name alike on %s',
 		(theme) => {
 			document.documentElement.className = theme;
-			// Role colours reach this fork's row only through the roleColor prop until the role appearance port lands.
-			for (const row of [{plus: true}, {roleColor: '#2ecc71'}, {roleColor: '#2ecc71', plus: true}]) {
+			for (const row of [{role: true}, {plus: true}, {role: true, plus: true}, {roleColor: '#2ecc71'}]) {
 				render(row);
 				expect(opacity(), JSON.stringify(row)).toBe('0.6');
 			}
@@ -202,19 +201,19 @@ describe('MemberListItem offline name on the coal and dark themes', () => {
 		document.documentElement.className = 'theme-dark hide-name-styles';
 		render({plus: true});
 		expect(opacity()).not.toBe('0.6');
-		render({roleColor: '#2ecc71', plus: true});
+		render({role: true, plus: true});
 		expect(opacity()).toBe('0.6');
 	});
 
 	it('brings the name back for an open profile, an online member and the light theme', () => {
 		document.documentElement.className = 'theme-dark';
-		render({roleColor: '#2ecc71', plus: true});
+		render({role: true, plus: true});
 		container.querySelector('button')!.setAttribute('aria-expanded', 'true');
 		expect(opacity()).not.toBe('0.6');
-		render({roleColor: '#2ecc71', plus: true, status: 'online'});
+		render({role: true, plus: true, status: 'online'});
 		expect(opacity()).not.toBe('0.6');
 		document.documentElement.className = 'theme-light';
-		render({roleColor: '#2ecc71', plus: true});
+		render({role: true, plus: true});
 		expect(opacity()).not.toBe('0.6');
 	});
 });

@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "ช่อง AFK ต้องเป็นช่องเสียง",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "ทุกช่องต้องอยู่ในคอมมูนิตี้นี้เท่านั้น",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "แบนเนอร์คอมมูนิตี้แบบเคลื่อนไหวต้องมีฟีเจอร์ ANIMATED_BANNER",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "ไอคอนคอมมูนิตี้แบบเคลื่อนไหวต้องมีฟีเจอร์ ANIMATED_ICON",
 	"channels_and_guilds.announcement_channel_required": "การดำเนินการนี้ใช้ได้เฉพาะในช่องประกาศเท่านั้น",
 	"channels_and_guilds.bots_cannot_create_guilds": "บอทไม่สามารถสร้างคอมมูนิตี้ได้",
 	"channels_and_guilds.cannot_execute_on_dm": "ไม่สามารถดำเนินการนี้ในข้อความส่วนตัวได้",

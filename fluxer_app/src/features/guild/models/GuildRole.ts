@@ -14,6 +14,9 @@ export class GuildRole {
 	readonly guildId: string;
 	readonly name: string;
 	readonly color: number;
+	readonly colorSecondary: number | null;
+	readonly iconEmojiId: string | null;
+	readonly unicodeEmoji: string | null;
 	readonly position: number;
 	readonly hoistPosition: number | null;
 	readonly permissions: bigint;
@@ -26,6 +29,9 @@ export class GuildRole {
 		this.guildId = guildId;
 		this.name = guildRole.name;
 		this.color = guildRole.color;
+		this.colorSecondary = guildRole.color_secondary ?? null;
+		this.iconEmojiId = guildRole.icon_emoji_id ?? null;
+		this.unicodeEmoji = guildRole.unicode_emoji ?? null;
 		this.position = guildRole.position;
 		this.hoistPosition = guildRole.hoist_position ?? null;
 		this.permissions = BigInt(guildRole.permissions);
@@ -45,6 +51,9 @@ export class GuildRole {
 				id: this.id,
 				name: updates.name ?? this.name,
 				color: updates.color ?? this.color,
+				color_secondary: updates.color_secondary !== undefined ? updates.color_secondary : this.colorSecondary,
+				icon_emoji_id: updates.icon_emoji_id !== undefined ? updates.icon_emoji_id : this.iconEmojiId,
+				unicode_emoji: updates.unicode_emoji !== undefined ? updates.unicode_emoji : this.unicodeEmoji,
 				position: updates.position ?? this.position,
 				hoist_position: updates.hoist_position !== undefined ? updates.hoist_position : this.hoistPosition,
 				permissions: updates.permissions ?? this.permissions.toString(),
@@ -64,6 +73,9 @@ export class GuildRole {
 			id: this.id,
 			name: this.name,
 			color: this.color,
+			color_secondary: this.colorSecondary,
+			icon_emoji_id: this.iconEmojiId,
+			unicode_emoji: this.unicodeEmoji,
 			position: this.position,
 			hoist_position: this.hoistPosition,
 			permissions: this.permissions.toString(),

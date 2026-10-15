@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "Le salon AFK doit être un salon vocal.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "Tous les salons doivent appartenir à cette communauté.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "La bannière de communauté animée nécessite la fonctionnalité ANIMATED_BANNER.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "Les icônes de communauté animées nécessitent la fonctionnalité ANIMATED_ICON.",
 	"channels_and_guilds.announcement_channel_required": "Cette action n'est disponible que dans les salons d'annonces.",
 	"channels_and_guilds.bots_cannot_create_guilds": "Les bots ne peuvent pas créer de communautés.",
 	"channels_and_guilds.cannot_execute_on_dm": "Cette action ne peut pas être effectuée dans un MP.",

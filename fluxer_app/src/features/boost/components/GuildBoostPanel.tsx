@@ -7,20 +7,26 @@ import {Limits} from '@app/features/app/utils/UserLimits';
 import {openGuildBoostSettings} from '@app/features/boost/commands/GuildBoostPanelCommands';
 import {BoostGemIcon} from '@app/features/boost/components/BoostGemIcon';
 import {GuildBoostActionButton} from '@app/features/boost/components/GuildBoostActionButton';
+import {GuildBoostLevelBadge} from '@app/features/boost/components/GuildBoostLevelBadge';
 import styles from '@app/features/boost/components/GuildBoostPanel.module.css';
 import {GuildBoostPerks} from '@app/features/boost/components/GuildBoostPerks';
 import {useGuildBoostAction} from '@app/features/boost/hooks/useGuildBoostAction';
 import GuildBoosts from '@app/features/boost/state/GuildBoosts';
 import {getGuildBoostLevelPerks} from '@app/features/boost/utils/GuildBoostLevels';
 import {
+	BASE_INCLUDED_DESCRIPTOR,
+	BASE_PERKS_DESCRIPTOR,
 	BOOST_COUNT_DESCRIPTOR,
 	LEVEL_DESCRIPTOR,
+	LEVEL_TOTAL_DESCRIPTOR,
 	NEXT_LEVEL_DESCRIPTOR,
 	PERKS_DESCRIPTOR,
 	PROGRESS_DESCRIPTOR,
+	REMAINING_BOOSTS_DESCRIPTOR,
 	TOP_LEVEL_DESCRIPTOR,
 	UNLOCKED_DESCRIPTOR,
 } from '@app/features/boost/utils/GuildBoostMessages';
+import Guilds from '@app/features/guild/state/Guilds';
 import {SOMETHING_WENT_WRONG_DESCRIPTOR, TRY_AGAIN_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {Button} from '@app/features/ui/button/Button';
 import {Spinner} from '@app/features/ui/components/Spinner';
@@ -60,7 +66,7 @@ export const GuildBoostPanel = observer(({guildId}: {guildId: string}) => {
 		void GuildBoosts.open(guildId);
 		return GuildBoosts.close;
 	}, [guildId]);
-	const levels = getGuildBoostLevelPerks(RuntimeConfig.limits);
+	const levels = getGuildBoostLevelPerks(RuntimeConfig.limits, Guilds.getGuild(guildId));
 	const {status, ready, failed} = GuildBoosts;
 	const goal = status?.next?.boosts ?? levels[levels.length - 1].boosts;
 	const slots = Limits.getStockValue('max_boost_slots', DEFAULT_STOCK_LIMITS.max_boost_slots);
@@ -84,7 +90,10 @@ export const GuildBoostPanel = observer(({guildId}: {guildId: string}) => {
 							<p className={styles.muted}>{i18n._(BOOST_EXPLANATION_DESCRIPTOR)}</p>
 						</div>
 						<div className={styles.summary}>
-							<span className={styles.currentLevel}>{i18n._(LEVEL_DESCRIPTOR, {level: status.level})}</span>
+							<span className={styles.currentLevel}>
+								<GuildBoostLevelBadge level={status.level} size={24} />
+								{i18n._(LEVEL_DESCRIPTOR, {level: status.level})}
+							</span>
 							<span className={styles.muted}>{i18n._(BOOST_COUNT_DESCRIPTOR, {count: status.count})}</span>
 						</div>
 						<progress
@@ -94,6 +103,14 @@ export const GuildBoostPanel = observer(({guildId}: {guildId: string}) => {
 							aria-label={i18n._(PROGRESS_DESCRIPTOR, {count: status.count, goal})}
 						/>
 						{!status.next && <p className={styles.muted}>{i18n._(TOP_LEVEL_DESCRIPTOR)}</p>}
+						{status.next && (
+							<p className={styles.muted}>
+								{i18n._(REMAINING_BOOSTS_DESCRIPTOR, {
+									count: Math.max(0, status.next.boosts - status.count),
+									level: status.next.level,
+								})}
+							</p>
+						)}
 						<div className={styles.levels}>
 							{levels.map((level) => (
 								<section
@@ -105,10 +122,21 @@ export const GuildBoostPanel = observer(({guildId}: {guildId: string}) => {
 									data-flx="boost.panel.level-card"
 								>
 									<div className={styles.cardHeading}>
-										<h2>{i18n._(LEVEL_DESCRIPTOR, {level: level.level})}</h2>
-										<span className={styles.muted}>{i18n._(BOOST_COUNT_DESCRIPTOR, {count: level.boosts})}</span>
+										<h2>
+											<GuildBoostLevelBadge level={level.level} size={20} />
+											<span>
+												{level.level === 0
+													? i18n._(BASE_PERKS_DESCRIPTOR)
+													: i18n._(LEVEL_DESCRIPTOR, {level: level.level})}
+											</span>
+										</h2>
+										<span className={styles.muted}>
+											{level.level === 0
+												? i18n._(BASE_INCLUDED_DESCRIPTOR)
+												: i18n._(LEVEL_TOTAL_DESCRIPTOR, {level: level.level, count: level.boosts})}
+										</span>
 									</div>
-									{status.level >= level.level ? (
+									{level.level === 0 ? null : status.level >= level.level ? (
 										<span className={styles.mark}>
 											<CheckCircleIcon size={16} aria-hidden="true" />
 											{i18n._(UNLOCKED_DESCRIPTOR)}

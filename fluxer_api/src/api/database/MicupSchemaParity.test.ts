@@ -17,7 +17,7 @@ import {
 	FEED_VIDEO_COLUMNS,
 	FEED_VIDEO_PENDING_COLUMNS,
 } from '@app/api/database/types/FeedTypes';
-import {GUILD_COLUMNS} from '@app/api/database/types/GuildTypes';
+import {GUILD_COLUMNS, GUILD_ROLE_COLUMNS} from '@app/api/database/types/GuildTypes';
 import {MESSAGE_COLUMNS} from '@app/api/database/types/MessageTypes';
 import {GIFT_CODE_COLUMNS, VISIONARY_SLOT_COLUMNS} from '@app/api/database/types/PaymentTypes';
 import {SHOP_BUNDLE_COLUMNS, SHOP_ORDER_COLUMNS} from '@app/api/database/types/ShopTypes';
@@ -192,6 +192,7 @@ const MICUP_CORE_COLUMNS: Record<string, {columns: ReadonlyArray<string>; types:
 	},
 	// 3D room view theme of a voice channel ; additive column, null when the channel has none.
 	channels: {columns: CHANNEL_COLUMNS, types: {room_theme: 'text'}},
+	guild_roles: {columns: GUILD_ROLE_COLUMNS, types: {icon_emoji_id: 'bigint', color_secondary: 'int'}},
 	// The KV counters flush their base values into the post row, so a page of posts needs no second read.
 	feed_posts: {
 		columns: FEED_POST_COLUMNS,

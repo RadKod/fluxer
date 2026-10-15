@@ -4,6 +4,7 @@ import {createTestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createGuildID} from '@app/api/BrandedTypes';
 import {fetchMany} from '@app/api/database/CassandraQueryExecution';
 import {getGuildChannels, getRoles} from '@app/api/guild/tests/GuildTestUtils';
+import {getGuildRepository, getLimitConfigService} from '@app/api/middleware/ServiceSingletons';
 import {ChannelsByGuild, ThreadOnlyChannelsByGuild} from '@app/api/Tables';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
@@ -238,6 +239,63 @@ describe('Guild Template Import', () => {
 		expect(roles.some((role) => role.name === '')).toBe(true);
 		expect(channels.some((channel) => channel.name === '')).toBe(true);
 	});
+	test.each(['😀', 'not an emoji'])('drops imported role icons on an unboosted guild (%s)', async (unicodeEmoji) => {
+		const account = await createTestAccount(harness);
+		const guild = await createBuilder<GuildResponse>(harness, account.token)
+			.post('/guilds')
+			.body({
+				name: 'Imported Icons',
+				template: buildMinimalTemplate({
+					roles: [
+						{id: 0, name: '@everyone', permissions: DEFAULT_EVERYONE_PERMISSIONS},
+						{id: 6100, name: 'Unicode', permissions: '0', unicode_emoji: unicodeEmoji},
+						{id: 6101, name: 'Custom', permissions: '0', icon: 'custom-hash', icon_emoji_id: '123'},
+					],
+				}),
+			})
+			.expect(200)
+			.execute();
+		const roles = await getRoles(harness, account.token, guild.id);
+		expect(roles.filter((role) => role.name !== '@everyone')).toHaveLength(2);
+		for (const role of roles) {
+			expect(role.unicode_emoji).toBeNull();
+			expect(role.icon_emoji_id).toBeNull();
+		}
+		const stored = await getGuildRepository().listRoles(createGuildID(BigInt(guild.id)));
+		expect(stored.every((role) => role.iconHash === null)).toBe(true);
+	});
+	test.each(['😀', 'not an emoji'])(
+		'honours an operator role icon grant while dropping invalid emoji (%s)',
+		async (unicodeEmoji) => {
+			const limits = getLimitConfigService();
+			const snapshot = limits.getConfigSnapshot();
+			await limits.updateConfig({
+				...snapshot,
+				rules: [...snapshot.rules, {id: 'operator_role_icons', limits: {feature_role_icons: 1}}],
+			});
+			try {
+				const account = await createTestAccount(harness);
+				const guild = await createBuilder<GuildResponse>(harness, account.token)
+					.post('/guilds')
+					.body({
+						name: 'Operator Icons',
+						template: buildMinimalTemplate({
+							roles: [
+								{id: 0, name: '@everyone', permissions: DEFAULT_EVERYONE_PERMISSIONS},
+								{id: 6100, name: 'Unicode', permissions: '0', unicode_emoji: unicodeEmoji},
+							],
+						}),
+					})
+					.expect(200)
+					.execute();
+				const role = (await getRoles(harness, account.token, guild.id)).find((role) => role.name === 'Unicode');
+				expect(role?.unicode_emoji).toBe(unicodeEmoji === '😀' ? '😀' : null);
+				expect(role?.icon_emoji_id).toBeNull();
+			} finally {
+				await limits.updateConfig(snapshot);
+			}
+		},
+	);
 	test.each([
 		['a negative slowmode', {rate_limit_per_user: -1}],
 		['a slowmode above the channel maximum', {rate_limit_per_user: 1_000_000_000}],

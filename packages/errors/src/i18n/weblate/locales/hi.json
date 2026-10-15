@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "AFK चैनल एक वॉइस चैनल होना चाहिए।",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "सभी चैनल इस कम्युनिटी के होने चाहिए।",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "एनिमेटेड कम्युनिटी बैनर के लिए ANIMATED_BANNER फ़ीचर ज़रूरी है।",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "एनिमेटेड कम्युनिटी आइकन के लिए ANIMATED_ICON फ़ीचर ज़रूरी है।",
 	"channels_and_guilds.announcement_channel_required": "यह कार्रवाई केवल घोषणा चैनलों में उपलब्ध है।",
 	"channels_and_guilds.bots_cannot_create_guilds": "बॉट कम्युनिटी नहीं बना सकते।",
 	"channels_and_guilds.cannot_execute_on_dm": "यह एक्शन DM में नहीं किया जा सकता।",

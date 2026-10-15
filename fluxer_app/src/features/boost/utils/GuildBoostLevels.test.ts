@@ -11,6 +11,14 @@ import type {LimitConfigSnapshot} from '@fluxer/limits/src/LimitTypes';
 import {describe, expect, it} from 'vitest';
 
 const NO_RULES: LimitConfigSnapshot = {traitDefinitions: [], rules: []};
+const LIMITS: LimitConfigSnapshot = {
+	traitDefinitions: [],
+	rules: GUILD_BOOST_LEVELS.map((level) => ({
+		id: `boost-${level.level}`,
+		filters: {guildFeatures: [`BOOST_LEVEL_${level.level}`]},
+		limits: {...level.limits},
+	})),
+};
 
 describe('GUILD_BOOST_LEVELS', () => {
 	it('shows the table the server decides levels from (@fluxer/constants)', () => {
@@ -37,12 +45,44 @@ describe('getGuildBoostStatus', () => {
 });
 
 describe('getGuildBoostLevelPerks', () => {
-	it('lists only what each level adds, with values from the instance limits', () => {
-		const perks = getGuildBoostLevelPerks(NO_RULES);
-		expect(perks.map((level) => level.perks)).toEqual([
-			[{type: 'bitrate', kbps: 128}],
-			[{type: 'bitrate', kbps: 256}],
-			[{type: 'bitrate', kbps: 384}, {type: 'vanity_url'}],
+	it.each([
+		[0, false, false, false, 720, 30, 8, 96, 500, 500, false, false, null, 500, 250],
+		[1, true, false, false, 720, 60, 24, 128, 1000, 500, true, false, null, 500, 250],
+		[2, true, false, false, 1080, 60, 36, 256, 1250, 1000, true, true, 50_000_000, 600, 300],
+		[3, true, true, true, 1080, 60, 48, 384, 1500, 1250, true, true, 100_000_000, 750, 350],
+	])('shows all 13 effective contract rows for level %i', (...expected) => {
+		const [
+			level,
+			icon,
+			banner,
+			vanity,
+			height,
+			fps,
+			sounds,
+			kbps,
+			emoji,
+			stickers,
+			icons,
+			gradient,
+			bytes,
+			channels,
+			roles,
+		] = expected;
+		const card = getGuildBoostLevelPerks(LIMITS).find((candidate) => candidate.level === level)!;
+		expect(card.perks).toEqual([
+			{type: 'animated_icon', available: icon},
+			{type: 'animated_banner', available: banner},
+			{type: 'static_banner', available: true},
+			{type: 'vanity_url', available: vanity},
+			{type: 'video', height, fps},
+			{type: 'soundboard', count: sounds},
+			{type: 'bitrate', kbps},
+			{type: 'emoji', count: emoji},
+			{type: 'stickers', count: stickers},
+			{type: 'role_icons', available: icons},
+			{type: 'role_gradient', available: gradient},
+			{type: 'file', bytes},
+			{type: 'capacity', channels, roles},
 		]);
 	});
 
@@ -58,8 +98,39 @@ describe('getGuildBoostLevelPerks', () => {
 				},
 			],
 		});
-		expect(perks[0].perks).toContainEqual({type: 'emoji', count: 1000});
-		expect(perks[1].perks).toContainEqual({type: 'stickers', count: 800});
-		expect(perks[2].perks).not.toContainEqual(expect.objectContaining({type: 'emoji'}));
+		expect(perks[1].perks).toContainEqual({type: 'emoji', count: 1000});
+		expect(perks[2].perks).toContainEqual({type: 'stickers', count: 800});
+		expect(perks[3].perks).toContainEqual({type: 'emoji', count: 1000});
+	});
+
+	it('uses configured limits rather than promising table values when level rules are missing', () => {
+		const card = getGuildBoostLevelPerks(NO_RULES)[3];
+		expect(card.perks).toContainEqual({type: 'soundboard', count: 8});
+		expect(card.perks).toContainEqual({type: 'video', height: 720, fps: 30});
+		expect(card.perks).toContainEqual({type: 'file', bytes: null});
+	});
+
+	it('shows independent and grandfather grants from the authoritative current guild features', () => {
+		const card = getGuildBoostLevelPerks(LIMITS, {
+			premiumTier: 0,
+			features: new Set([
+				GuildFeatures.BANNER,
+				GuildFeatures.INVITE_SPLASH,
+				GuildFeatures.ANIMATED_ICON,
+				GuildFeatures.ANIMATED_BANNER,
+				GuildFeatures.UNLIMITED_EMOJI,
+				GuildFeatures.UNLIMITED_STICKERS,
+			]),
+		})[0];
+		expect(card.perks).toContainEqual({type: 'animated_icon', available: true});
+		expect(card.perks).toContainEqual({type: 'animated_banner', available: true});
+		expect(card.perks).toContainEqual({type: 'emoji', count: Number.POSITIVE_INFINITY});
+		expect(card.perks).toContainEqual({type: 'stickers', count: Number.POSITIVE_INFINITY});
+	});
+
+	it('does not grant suppressed assets from premiumTier alone on the current card', () => {
+		const card = getGuildBoostLevelPerks(LIMITS, {premiumTier: 3, features: new Set()})[3];
+		expect(card.perks).toContainEqual({type: 'animated_icon', available: false});
+		expect(card.perks).toContainEqual({type: 'animated_banner', available: false});
 	});
 });

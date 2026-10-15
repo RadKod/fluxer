@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "Az AFK-csatornának hangcsatornának kell lennie.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "Minden csatornának ehhez a közösséghez kell tartoznia.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "Az animált közösségi borítóképhez az ANIMATED_BANNER funkció szükséges.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "Az animált közösségi ikonokhoz az ANIMATED_ICON funkció szükséges.",
 	"channels_and_guilds.announcement_channel_required": "Ez a művelet csak bejelentési csatornákon érhető el.",
 	"channels_and_guilds.bots_cannot_create_guilds": "Botok nem hozhatnak létre közösségeket.",
 	"channels_and_guilds.cannot_execute_on_dm": "Ez a művelet nem végezhető el közvetlen beszélgetésben.",

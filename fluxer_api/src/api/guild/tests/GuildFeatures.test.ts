@@ -93,12 +93,12 @@ describe('Guild Features', () => {
 		test('should preserve base features when toggling user-controlled features', async () => {
 			const account = await createTestAccount(harness);
 			const guild = await createGuild(harness, account.token, 'Base Features Test');
-			expect(guild.features).toContain(GuildFeatures.ANIMATED_ICON);
+			expect(guild.features).not.toContain(GuildFeatures.ANIMATED_ICON);
 			expect(guild.features).toContain(GuildFeatures.BANNER);
 			const updatedGuild = await updateGuild(harness, account.token, guild.id, {
 				features: [...guild.features, GuildFeatures.INVITES_DISABLED],
 			});
-			expect(updatedGuild.features).toContain(GuildFeatures.ANIMATED_ICON);
+			expect(updatedGuild.features).not.toContain(GuildFeatures.ANIMATED_ICON);
 			expect(updatedGuild.features).toContain(GuildFeatures.BANNER);
 			expect(updatedGuild.features).toContain(GuildFeatures.INVITES_DISABLED);
 		});

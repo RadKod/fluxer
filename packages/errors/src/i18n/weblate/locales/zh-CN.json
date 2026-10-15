@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "AFK 频道必须是语音频道。",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "所有频道必须属于此社区。",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "社区动态横幅需要启用 ANIMATED_BANNER 功能。",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "社区动态图标需要启用 ANIMATED_ICON 功能。",
 	"channels_and_guilds.announcement_channel_required": "此操作仅在公告频道中可用。",
 	"channels_and_guilds.bots_cannot_create_guilds": "机器人无法创建社区。",
 	"channels_and_guilds.cannot_execute_on_dm": "此操作不能在私信中执行。",

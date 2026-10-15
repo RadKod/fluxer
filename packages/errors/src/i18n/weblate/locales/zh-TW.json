@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "AFK 頻道必須為語音頻道。",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "所有頻道都必須屬於此社群。",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "社群動畫橫幅需要 ANIMATED_BANNER 功能。",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "社群動畫圖示需要 ANIMATED_ICON 功能。",
 	"channels_and_guilds.announcement_channel_required": "此操作僅能在公告頻道中使用。",
 	"channels_and_guilds.bots_cannot_create_guilds": "機器人無法建立社群。",
 	"channels_and_guilds.cannot_execute_on_dm": "此動作無法在私訊中執行。",

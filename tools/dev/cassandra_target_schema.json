@@ -6414,6 +6414,10 @@
 				{
 					"name": "vanity_release_at",
 					"type": "timestamp"
+				},
+				{
+					"name": "pending_feature_changes",
+					"type": "text"
 				}
 			],
 			"primary_key": "((guild_id))",
@@ -6822,6 +6826,14 @@
 				{
 					"name": "color",
 					"type": "int"
+				},
+				{
+					"name": "color_secondary",
+					"type": "int"
+				},
+				{
+					"name": "icon_emoji_id",
+					"type": "bigint"
 				},
 				{
 					"name": "icon_hash",

@@ -5,12 +5,14 @@ import type {AdminAuditService} from '@app/api/admin/services/AdminAuditService'
 import type {AdminGuildUpdatePropagator} from '@app/api/admin/services/guild/AdminGuildUpdatePropagator';
 import {createGuildID, createUserID, type GuildID, type UserID} from '@app/api/BrandedTypes';
 import type {GuildRow} from '@app/api/database/types/GuildTypes';
+import {GUILD_BOOST_FEATURES} from '@app/api/guild/boost/GuildBoostLevels';
 import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
 import {staffEditTouchesInvitePause} from '@app/api/guild/services/GuildInvitePauseApplier';
 import type {GuildService} from '@app/api/guild/services/GuildService';
 import {emitGuildFeaturesChanged} from '@app/api/infrastructure/activity/GuildEvents';
 import type {EntityAssetService, PreparedAssetUpload} from '@app/api/infrastructure/EntityAssetService';
 import {Logger} from '@app/api/Logger';
+import {getGuildBoostService} from '@app/api/middleware/ServiceSingletons';
 import {UnknownGuildError} from '@fluxer/errors/src/domains/guild/UnknownGuildError';
 import type {
 	ClearGuildFieldsRequest,
@@ -44,26 +46,40 @@ export class AdminGuildUpdateService {
 		auditLogReason: string | null;
 	}) {
 		const {guildRepository, auditService, updatePropagator, guildService} = this.deps;
-		// under the guild update lock, so a boost recompute never writes the features set over this change.
-		const {guild, newFeatures, updatedGuild} = await guildService.withUpdateLock(guildId, async () => {
-			const guild = await guildRepository.findUnique(guildId);
-			if (!guild) {
-				throw new UnknownGuildError();
-			}
-			const newFeatures = new Set(guild.features);
-			for (const feature of addFeatures) {
-				newFeatures.add(feature);
-			}
-			for (const feature of removeFeatures) {
-				newFeatures.delete(feature);
-			}
-			const patch: Partial<GuildRow> = {features: newFeatures};
-			if (staffEditTouchesInvitePause(guild, [...addFeatures, ...removeFeatures])) {
-				patch.invites_paused_until = null;
-			}
-			const updatedGuild = await guildRepository.upsertPartial(guildId, patch, guild.toRow());
-			return {guild, newFeatures, updatedGuild};
-		});
+		// Micup: a change that touches boost-owned features goes through the boost service, which records it as a
+		// durable intent so the next recompute neither re-adds nor drops it.
+		const changesBoostFeatures = [...addFeatures, ...removeFeatures].some((feature) =>
+			GUILD_BOOST_FEATURES.has(feature),
+		);
+		const previous = changesBoostFeatures ? await guildRepository.findUnique(guildId) : null;
+		const {guild, updatedGuild} = changesBoostFeatures
+			? {
+					guild: previous,
+					updatedGuild: await getGuildBoostService().applyAdminFeatureChanges(guildId, addFeatures, removeFeatures),
+				}
+			: await guildService.withUpdateLock(guildId, async () => {
+					const guild = await guildRepository.findUnique(guildId);
+					if (!guild) {
+						throw new UnknownGuildError();
+					}
+					const newFeatures = new Set(guild.features);
+					for (const feature of addFeatures) {
+						newFeatures.add(feature);
+					}
+					for (const feature of removeFeatures) {
+						newFeatures.delete(feature);
+					}
+					const patch: Partial<GuildRow> = {features: newFeatures};
+					if (staffEditTouchesInvitePause(guild, [...addFeatures, ...removeFeatures])) {
+						patch.invites_paused_until = null;
+					}
+					const updatedGuild = await guildRepository.upsertPartial(guildId, patch, guild.toRow());
+					return {guild, updatedGuild};
+				});
+		if (!guild) {
+			throw new UnknownGuildError();
+		}
+		const newFeatures = updatedGuild.features;
 		await updatePropagator.dispatchGuildUpdate(guildId, updatedGuild, {
 			adminUserId,
 			reconcileDiscoveryFeature: true,

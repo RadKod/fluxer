@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "ערוץ AFK חייב להיות ערוץ קולי.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "כל הערוצים חייבים להשתייך לקהילה זו.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "באנר קהילה מונפש דורש את התכונה ANIMATED_BANNER.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "סמלי קהילה מונפשים דורשים את התכונה ANIMATED_ICON.",
 	"channels_and_guilds.announcement_channel_required": "הפעולה הזו זמינה רק בערוצי הכרזות.",
 	"channels_and_guilds.bots_cannot_create_guilds": "בוטים לא יכולים ליצור קהילות.",
 	"channels_and_guilds.cannot_execute_on_dm": "לא ניתן לבצע פעולה זו ב-DM.",

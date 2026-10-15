@@ -300,3 +300,11 @@
 		flex: 0 0 22.5rem;
 	}
 }
+
+/* Micup: boost upgrade hint under the icon and banner upload buttons. */
+.iconUploadDescription,
+.imageUploadDescription {
+	font-size: 0.75rem;
+	line-height: 1.35;
+	color: var(--text-primary-muted);
+}

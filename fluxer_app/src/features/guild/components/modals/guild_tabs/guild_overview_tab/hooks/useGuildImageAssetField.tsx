@@ -88,6 +88,11 @@ export interface ImageAssetFieldController {
 	handleFile: (file: File | null) => Promise<void>;
 	clear: () => void;
 	isProcessing: boolean;
+	isPreviewAnimated: boolean;
+}
+
+interface ApplyDataUrlOptions {
+	animated?: boolean;
 }
 
 export function useGuildImageAssetField({
@@ -110,6 +115,7 @@ export function useGuildImageAssetField({
 	const label = labelForMessages;
 	const requestIdRef = useRef(0);
 	const [isProcessing, setIsProcessing] = useState(false);
+	const [isPreviewAnimated, setIsPreviewAnimated] = useState(Boolean(previewUrl));
 	useEffect(() => {
 		return () => {
 			revokeObjectUrl(previewUrl);
@@ -152,9 +158,10 @@ export function useGuildImageAssetField({
 		[aspectRatio],
 	);
 	const applyDataUrl = useCallback(
-		async (dataUrl: string, blob: Blob, requestId: number) => {
+		async (dataUrl: string, blob: Blob, requestId: number, options?: ApplyDataUrlOptions) => {
 			if (requestId !== requestIdRef.current) return;
 			const nextPreviewUrl = URL.createObjectURL(blob);
+			setIsPreviewAnimated(options?.animated ?? true);
 			setFieldValue(dataUrl);
 			setPreviewUrl(nextPreviewUrl);
 			setHasCleared(false);
@@ -230,7 +237,7 @@ export function useGuildImageAssetField({
 									return;
 								}
 								const croppedBase64 = await blobToDataUrl(croppedBlob);
-								await applyDataUrl(croppedBase64, croppedBlob, requestId);
+								await applyDataUrl(croppedBase64, croppedBlob, requestId, {animated});
 							} catch {
 								showErrorModal(i18n._(FAILED_TO_PROCESS_CROPPED_IMAGE_DESCRIPTOR));
 							} finally {
@@ -244,7 +251,7 @@ export function useGuildImageAssetField({
 								? undefined
 								: async () => {
 										if (requestId !== requestIdRef.current) return;
-										await applyDataUrl(sourceBase64, file, requestId);
+										await applyDataUrl(sourceBase64, file, requestId, {animated});
 									}
 						}
 						data-flx="guild.guild-tabs.guild-overview-tab.use-guild-image-asset-field.handle-file.asset-crop-modal"
@@ -303,10 +310,11 @@ export function useGuildImageAssetField({
 		requestIdRef.current += 1;
 		setFieldValue(null);
 		setPreviewUrl(null);
+		setIsPreviewAnimated(false);
 		setHasCleared(true);
 		if (aspectRatio) {
 			aspectRatio.set(undefined);
 		}
 	}, [aspectRatio, setFieldValue, setHasCleared, setPreviewUrl]);
-	return {pickFile, openSourcePicker, handleFile, clear, isProcessing};
+	return {pickFile, openSourcePicker, handleFile, clear, isProcessing, isPreviewAnimated};
 }

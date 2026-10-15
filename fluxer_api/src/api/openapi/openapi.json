@@ -36245,6 +36245,15 @@
 				"properties": {
 					"name": {"description": "The name of the role (1-100 characters)", "type": "string"},
 					"color": {"description": "The color of the role as an integer", "$ref": "#/components/schemas/ColorType"},
+					"color_secondary": {
+						"description": "The secondary role gradient color as an integer",
+						"anyOf": [{"$ref": "#/components/schemas/ColorType"}, {"type": "null"}]
+					},
+					"icon_emoji_id": {
+						"description": "The ID of a role icon emoji from this guild",
+						"anyOf": [{"$ref": "#/components/schemas/SnowflakeType"}, {"type": "null"}]
+					},
+					"unicode_emoji": {"description": "The Unicode role icon", "type": ["string", "null"]},
 					"permissions": {
 						"description": "The permissions bitfield for the role",
 						"$ref": "#/components/schemas/UnsignedInt64Type"
@@ -36269,6 +36278,14 @@
 					},
 					"name": {"type": "string", "description": "The name of the role"},
 					"color": {"description": "The colour of the role as an integer", "$ref": "#/components/schemas/Int32Type"},
+					"color_secondary": {
+						"description": "The secondary role gradient color as an integer",
+						"anyOf": [{"$ref": "#/components/schemas/ColorType"}, {"type": "null"}]
+					},
+					"icon_emoji_id": {
+						"description": "The ID of a role icon emoji from this guild",
+						"anyOf": [{"$ref": "#/components/schemas/SnowflakeStringType"}, {"type": "null"}]
+					},
 					"position": {
 						"description": "The position of the role in the role hierarchy",
 						"$ref": "#/components/schemas/Int32Type"
@@ -36329,6 +36346,15 @@
 						"description": "The color of the role as an integer (default: 0)",
 						"$ref": "#/components/schemas/ColorType"
 					},
+					"color_secondary": {
+						"description": "The secondary role gradient color as an integer",
+						"anyOf": [{"$ref": "#/components/schemas/ColorType"}, {"type": "null"}]
+					},
+					"icon_emoji_id": {
+						"description": "The ID of a role icon emoji from this guild",
+						"anyOf": [{"$ref": "#/components/schemas/SnowflakeType"}, {"type": "null"}]
+					},
+					"unicode_emoji": {"description": "The Unicode role icon", "type": ["string", "null"]},
 					"permissions": {
 						"description": "The permissions bitfield for the role",
 						"$ref": "#/components/schemas/UnsignedInt64Type"

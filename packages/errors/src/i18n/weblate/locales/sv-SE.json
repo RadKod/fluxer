@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "AFK-kanalen måste vara en röstkanal.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "Alla kanaler måste tillhöra denna community.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "En animerad communitybanner kräver funktionen ANIMATED_BANNER.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "Animerade communityikoner kräver funktionen ANIMATED_ICON.",
 	"channels_and_guilds.announcement_channel_required": "Den här åtgärden är bara tillgänglig i meddelandekanaler.",
 	"channels_and_guilds.bots_cannot_create_guilds": "Botar kan inte skapa communities.",
 	"channels_and_guilds.cannot_execute_on_dm": "Den här åtgärden kan inte utföras i en DM-konversation.",

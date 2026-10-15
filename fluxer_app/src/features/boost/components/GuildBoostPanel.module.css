@@ -9,9 +9,10 @@
 .summary,
 .cardHeading {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: space-between;
 	gap: 0.5rem;
+	flex-wrap: wrap;
 }
 .currentLevel {
 	font-size: 1.25rem;
@@ -35,16 +36,16 @@
 	border-radius: 1rem;
 	overflow: hidden;
 	background: var(--background-header-secondary);
-	accent-color: #bd62df;
+	accent-color: var(--brand-primary);
 }
 .progress::-webkit-progress-bar {
 	background: var(--background-header-secondary);
 }
 .progress::-webkit-progress-value {
-	background: linear-gradient(90deg, #ed58bf, #9466ed);
+	background: var(--brand-primary);
 }
 .progress::-moz-progress-bar {
-	background: linear-gradient(90deg, #ed58bf, #9466ed);
+	background: var(--brand-primary);
 }
 .levels {
 	display: flex;
@@ -58,7 +59,7 @@
 	background: var(--background-secondary);
 }
 .levelCard[data-next='true'] {
-	border-color: #b965d6;
+	border-color: var(--brand-primary);
 }
 .cardHeading h2 {
 	font-size: 1rem;
@@ -74,7 +75,7 @@
 	color: var(--text-primary-muted);
 }
 .next {
-	color: #ed83d0;
+	color: var(--brand-primary);
 }
 .perks {
 	display: flex;
@@ -93,7 +94,7 @@
 }
 .perk > svg {
 	flex: none;
-	color: #cc86dd;
+	color: var(--brand-primary);
 	margin-top: 0.125rem;
 }
 .loading {

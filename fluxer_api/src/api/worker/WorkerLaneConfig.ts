@@ -106,6 +106,7 @@ const LANE_CONFIG = {
 			'processPremiumStateReconciliationQueue',
 			'processPremiumExpirations',
 			'processGuildEntitlementExpirations',
+			'backfillGuildBoosts',
 			'processStorePurchaseRefreshQueue',
 			'pollGooglePlayVoidedPurchases',
 			'pollAppStoreNotificationHistory',

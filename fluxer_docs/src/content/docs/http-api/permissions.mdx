@@ -196,18 +196,20 @@ Roles are named permission masks that a guild assigns to any number of its membe
 | id | snowflake | The ID of the role |
 | name | string | The name of the role (1-100 characters) |
 | color | integer | The colour of the role as an RGB integer, which every operation on this resource writes in the range 0 through 16777215 |
+| color_secondary? | ?integer | Second RGB colour for a static gradient, from 0 through 16777215 |
+| icon_emoji_id? | ?snowflake | Role icon emoji owned by this guild |
 | position<sup>1</sup> | integer | The rank of the role in the permission hierarchy, where a larger value ranks higher |
 | hoist_position<sup>2</sup> | ?integer | The rank of the role among the separately displayed member list groups |
 | permissions | decimal string | The [permission](#permissions) bitfield the role grants |
 | hoist | boolean | Whether members holding the role are displayed as their own member list group |
 | mentionable | boolean | Whether a member without `MENTION_EVERYONE` can mention the role |
-| unicode_emoji?<sup>3</sup> | ?string | The Unicode emoji shown beside the role name |
+| unicode_emoji? | ?string | The Unicode emoji shown beside the role name |
 
 <sup>1</sup> The everyone role is always at position 0, and every other role has a dense position from 1 through the number of remaining roles after any hierarchy mutation
 
 <sup>2</sup> A null value means the role has no explicit member list position, and the role is then ordered by its hierarchy `position` instead
 
-<sup>3</sup> The field is absent from every role these operations return and from every role in a role Gateway Dispatch
+Assigning an icon requires the guild's `feature_role_icons` limit. Assigning a secondary colour requires `feature_role_gradient`. Existing values remain after entitlement loss; preserving or clearing them is allowed. A Unicode icon and `icon_emoji_id` cannot both be set.
 
 The everyone role has the same snowflake as its guild and is named `@everyone`. It defines the base permission set for every member, and it cannot be deleted, reordered, or given a hoist position. Its colour and its permissions remain mutable.
 
@@ -326,6 +328,9 @@ Creates a role and returns its [guild role object](#guild-role-object). Requires
 | --- | --- | --- |
 | name | string | The name of the role (1-100 characters) |
 | color? | integer | The colour of the role as a 24-bit RGB integer (0-16777215, default 0) |
+| color_secondary? | ?integer | Second RGB colour (0-16777215), or null |
+| icon_emoji_id? | ?snowflake | Emoji owned by this guild, or null |
+| unicode_emoji? | ?string | One Unicode emoji, or null |
 | permissions?<sup>1</sup> | decimal string \| integer | The [permission](#permissions) bitfield the role grants |
 
 <sup>1</sup> An omitted field copies the current permissions of the everyone role unchanged. A supplied value is intersected with the set of defined bits, Fluxer clears `VIEW_CHANNEL_MEMBERS` unless the caller's [feature declaration](#feature-gated-permission-bits) includes `view_channel_members_permission`, clears the four thread bits unless the caller is a bot or a user session that declares `channel_threads`, then checks the value against the caller's own permissions
@@ -380,6 +385,9 @@ Every field is optional, and an omitted field leaves the stored value unchanged.
 | --- | --- | --- |
 | name?<sup>1</sup> | string | The name of the role (1-100 characters) |
 | color? | integer | The colour of the role as a 24-bit RGB integer (0-16777215) |
+| color_secondary? | ?integer | Second RGB colour (0-16777215), or null to clear |
+| icon_emoji_id? | ?snowflake | Emoji owned by this guild, or null to clear |
+| unicode_emoji? | ?string | One Unicode emoji, or null to clear |
 | permissions?<sup>2</sup> | decimal string \| integer | The complete replacement [permission](#permissions) bitfield |
 | hoist?<sup>1</sup> | boolean | Whether members holding the role are displayed as their own member list group |
 | hoist_position?<sup>1</sup> | ?integer | The member list position to give the role, or null to clear it |

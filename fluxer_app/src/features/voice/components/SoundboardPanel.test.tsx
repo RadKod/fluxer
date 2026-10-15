@@ -236,6 +236,7 @@ describe('soundboard panel', () => {
 			key: 'max_guild_soundboard_sounds',
 			fallback: 8,
 			context: {guildId: 'g'},
+			evaluationContext: 'guild',
 		});
 	});
 	it.each([8, 24, 36, 48])('uses the current guild limit %i and locks uploads at capacity', async (capacity) => {

@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "El canal AFK debe ser un canal de voz.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "Todos los canales deben pertenecer a esta comunidad.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "El banner animado de la comunidad requiere la función ANIMATED_BANNER.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "Los íconos animados de la comunidad requieren la característica ANIMATED_ICON.",
 	"channels_and_guilds.announcement_channel_required": "Esta acción solo está disponible en canales de anuncios.",
 	"channels_and_guilds.bots_cannot_create_guilds": "Los bots no pueden crear comunidades.",
 	"channels_and_guilds.cannot_execute_on_dm": "Esta acción no se puede realizar en un MD.",

@@ -1584,6 +1584,10 @@ Animated avatars require Premium
 
 Animated community banner requires ANIMATED_BANNER feature
 
+### `ANIMATED_GUILD_ICON_REQUIRES_FEATURE`
+
+Animated community icon requires ANIMATED_ICON feature
+
 ### `ATTACHMENTS_NOT_ALLOWED_FOR_MESSAGE`
 
 Attachments aren't allowed for this message

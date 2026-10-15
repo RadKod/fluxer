@@ -574,6 +574,8 @@ export const ErrorCodeToI18nKey = {
 		'roles.parse_and_users_or_roles_cannot_be_used_together',
 	[ValidationErrorCodes.ANIMATED_GUILD_BANNER_REQUIRES_FEATURE]:
 		'channels_and_guilds.animated_guild_banner_requires_feature',
+	[ValidationErrorCodes.ANIMATED_GUILD_ICON_REQUIRES_FEATURE]:
+		'channels_and_guilds.animated_guild_icon_requires_feature',
 	[ValidationErrorCodes.EMBED_SPLASH_REQUIRES_FEATURE]: 'embeds.embed_splash_requires_feature',
 	[ValidationErrorCodes.GUILD_BANNER_REQUIRES_FEATURE]: 'channels_and_guilds.guild_banner_requires_feature',
 	[ValidationErrorCodes.GUILD_FEATURE_NOT_TOGGLEABLE]: 'channels_and_guilds.guild_feature_not_toggleable',

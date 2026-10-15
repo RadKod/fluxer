@@ -5,16 +5,22 @@ import {StatusSlate} from '@app/features/app/components/dialogs/shared/StatusSla
 import {PREMIUM_PRODUCT_NAME} from '@app/features/app/config/I18nDisplayConstants';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import {GuildBoostActionButton} from '@app/features/boost/components/GuildBoostActionButton';
+import {GuildBoostLevelBadge} from '@app/features/boost/components/GuildBoostLevelBadge';
 import {GuildBoostPerks} from '@app/features/boost/components/GuildBoostPerks';
 import styles from '@app/features/boost/components/GuildBoostTab.module.css';
 import {useGuildBoostAction} from '@app/features/boost/hooks/useGuildBoostAction';
 import GuildBoosts from '@app/features/boost/state/GuildBoosts';
 import {getGuildBoostLevelPerks} from '@app/features/boost/utils/GuildBoostLevels';
 import {
+	BASE_INCLUDED_DESCRIPTOR,
+	BASE_PERKS_DESCRIPTOR,
 	BOOST_COUNT_DESCRIPTOR,
 	LEVEL_DESCRIPTOR,
+	LEVEL_TOTAL_DESCRIPTOR,
+	REMAINING_BOOSTS_DESCRIPTOR,
 	TOP_LEVEL_DESCRIPTOR,
 } from '@app/features/boost/utils/GuildBoostMessages';
+import Guilds from '@app/features/guild/state/Guilds';
 import {
 	CANCEL_DESCRIPTOR,
 	NEXT_DESCRIPTOR,
@@ -39,10 +45,6 @@ import {useCallback, useEffect} from 'react';
 const NO_LEVEL_DESCRIPTOR = msg({
 	message: 'No level yet',
 	comment: 'Shown in the community boosts settings tab when the community has not reached boost level 1.',
-});
-const NEXT_LEVEL_AT_DESCRIPTOR = msg({
-	message: '{goal, plural, one {Next level at # boost} other {Next level at # boosts}}',
-	comment: 'Progress hint under the boost progress bar: how many boosts the next level needs.',
 });
 const PREVIOUS_DESCRIPTOR = msg({
 	message: 'Previous',
@@ -109,7 +111,10 @@ const GuildBoostTab: React.FC<{guildId: string}> = observer(({guildId}) => {
 			<section className={styles.card} data-flx="boost.guild-boost-tab.status-card">
 				<div className={styles.statusRow} data-flx="boost.guild-boost-tab.status-row">
 					<span className={styles.level} data-flx="boost.guild-boost-tab.level">
-						{status.level > 0 ? i18n._(LEVEL_DESCRIPTOR, {level: status.level}) : i18n._(NO_LEVEL_DESCRIPTOR)}
+						<GuildBoostLevelBadge level={status.level} size={20} />
+						<span>
+							{status.level > 0 ? i18n._(LEVEL_DESCRIPTOR, {level: status.level}) : i18n._(NO_LEVEL_DESCRIPTOR)}
+						</span>
 					</span>
 					<span className={styles.muted} data-flx="boost.guild-boost-tab.boost-count">
 						{boostCount}
@@ -123,8 +128,18 @@ const GuildBoostTab: React.FC<{guildId: string}> = observer(({guildId}) => {
 					data-flx="boost.guild-boost-tab.progress"
 				/>
 				<span className={styles.muted} data-flx="boost.guild-boost-tab.next-level">
-					{status.next ? i18n._(NEXT_LEVEL_AT_DESCRIPTOR, {goal: status.next.boosts}) : i18n._(TOP_LEVEL_DESCRIPTOR)}
+					{status.next
+						? i18n._(LEVEL_TOTAL_DESCRIPTOR, {level: status.next.level, count: status.next.boosts})
+						: i18n._(TOP_LEVEL_DESCRIPTOR)}
 				</span>
+				{status.next && (
+					<span className={styles.muted}>
+						{i18n._(REMAINING_BOOSTS_DESCRIPTOR, {
+							count: Math.max(0, status.next.boosts - status.count),
+							level: status.next.level,
+						})}
+					</span>
+				)}
 				<div className={styles.actions} data-flx="boost.guild-boost-tab.actions">
 					{ownBoostId && (
 						<Button
@@ -149,14 +164,19 @@ const GuildBoostTab: React.FC<{guildId: string}> = observer(({guildId}) => {
 				<h3 className={styles.heading} data-flx="boost.guild-boost-tab.perks-heading">
 					<Trans>Level perks</Trans>
 				</h3>
-				{getGuildBoostLevelPerks(RuntimeConfig.limits).map((level) => (
+				{getGuildBoostLevelPerks(RuntimeConfig.limits, Guilds.getGuild(guildId)).map((level) => (
 					<div key={level.level} className={styles.card} data-flx="boost.guild-boost-tab.level-card">
 						<div className={styles.statusRow} data-flx="boost.guild-boost-tab.level-row">
 							<span className={styles.level} data-flx="boost.guild-boost-tab.level-name">
-								{i18n._(LEVEL_DESCRIPTOR, {level: level.level})}
+								<GuildBoostLevelBadge level={level.level} size={20} />
+								<span>
+									{level.level === 0 ? i18n._(BASE_PERKS_DESCRIPTOR) : i18n._(LEVEL_DESCRIPTOR, {level: level.level})}
+								</span>
 							</span>
 							<span className={styles.muted} data-flx="boost.guild-boost-tab.level-boosts">
-								{i18n._(BOOST_COUNT_DESCRIPTOR, {count: level.boosts})}
+								{level.level === 0
+									? i18n._(BASE_INCLUDED_DESCRIPTOR)
+									: i18n._(LEVEL_TOTAL_DESCRIPTOR, {level: level.level, count: level.boosts})}
 							</span>
 						</div>
 						<GuildBoostPerks perks={level.perks} />

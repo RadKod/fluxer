@@ -4,6 +4,7 @@ import modalI18n from '@app/app/I18n';
 import {showGenericErrorModal} from '@app/features/app/components/alerts/GenericErrorModalCommands';
 import {ConfirmModal} from '@app/features/app/components/dialogs/ConfirmModal';
 import {sortRolesByPosition} from '@app/features/app/components/dialogs/shared/PermissionComponents';
+import {LimitResolver} from '@app/features/app/utils/LimitResolverAdapter';
 import * as GuildCommands from '@app/features/guild/commands/GuildCommands';
 import {MobileRoleList} from '@app/features/guild/components/modals/guild_tabs/guild_roles_tab/MobileRoleList';
 import {RoleEditor} from '@app/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor';
@@ -123,6 +124,11 @@ const GuildRolesTab: React.FC<{guildId: string}> = observer(({guildId}) => {
 	const pendingRoleCreationRef = useRef(false);
 	const previousRoleIdsRef = useRef<Array<string>>([]);
 	const canManageRoles = Permission.can(Permissions.MANAGE_ROLES, {guildId});
+	const canSetRoleIcons =
+		LimitResolver.resolve({key: 'feature_role_icons', fallback: 0, context: {guildId}, evaluationContext: 'guild'}) > 0;
+	const canSetRoleGradient =
+		LimitResolver.resolve({key: 'feature_role_gradient', fallback: 0, context: {guildId}, evaluationContext: 'guild'}) >
+		0;
 	const manageRolesPermissionLabel = PermissionUtils.formatPermissionLabel(i18n, Permissions.MANAGE_ROLES);
 	const mentionEveryonePermissionLabel = PermissionUtils.formatPermissionLabel(i18n, Permissions.MENTION_EVERYONE);
 	const isGuildOwner = guild && currentUser ? guild.isOwner(currentUser.id) : false;
@@ -314,6 +320,9 @@ const GuildRolesTab: React.FC<{guildId: string}> = observer(({guildId}) => {
 				const updateData: Record<string, unknown> = {};
 				if (updates.name !== undefined) updateData.name = updates.name;
 				if (updates.color !== undefined) updateData.color = updates.color;
+				if (updates.colorSecondary !== undefined) updateData.color_secondary = updates.colorSecondary;
+				if (updates.iconEmojiId !== undefined) updateData.icon_emoji_id = updates.iconEmojiId;
+				if (updates.unicodeEmoji !== undefined) updateData.unicode_emoji = updates.unicodeEmoji;
 				if (updates.hoist !== undefined) updateData.hoist = updates.hoist;
 				if (updates.mentionable !== undefined) updateData.mentionable = updates.mentionable;
 				if (updates.permissions !== undefined) {
@@ -365,6 +374,9 @@ const GuildRolesTab: React.FC<{guildId: string}> = observer(({guildId}) => {
 				const hasChanges =
 					(merged.name !== undefined && merged.name !== originalRole.name) ||
 					(merged.color !== undefined && merged.color !== originalRole.color) ||
+					(merged.colorSecondary !== undefined && merged.colorSecondary !== originalRole.colorSecondary) ||
+					(merged.iconEmojiId !== undefined && merged.iconEmojiId !== originalRole.iconEmojiId) ||
+					(merged.unicodeEmoji !== undefined && merged.unicodeEmoji !== originalRole.unicodeEmoji) ||
 					(merged.hoist !== undefined && merged.hoist !== originalRole.hoist) ||
 					(merged.mentionable !== undefined && merged.mentionable !== originalRole.mentionable) ||
 					(merged.permissions !== undefined && merged.permissions !== originalRole.permissions);
@@ -401,6 +413,9 @@ const GuildRolesTab: React.FC<{guildId: string}> = observer(({guildId}) => {
 			try {
 				const createdRole = await GuildCommands.createRole(guild.id, copyName, {
 					color: sourceRole.color,
+					colorSecondary: canSetRoleGradient ? sourceRole.colorSecondary : undefined,
+					iconEmojiId: canSetRoleIcons ? sourceRole.iconEmojiId : undefined,
+					unicodeEmoji: canSetRoleIcons ? sourceRole.unicodeEmoji : undefined,
 					permissions: grantablePermissions,
 				});
 				const orderedRoleIds = roles.map((role: GuildRole) => role.id).filter((id) => id !== createdRole.id);
@@ -441,7 +456,7 @@ const GuildRolesTab: React.FC<{guildId: string}> = observer(({guildId}) => {
 				});
 			}
 		},
-		[guild, canManageRoles, roles, isRoleLocked, currentUserPermissions, i18n],
+		[guild, canManageRoles, roles, isRoleLocked, currentUserPermissions, i18n, canSetRoleGradient, canSetRoleIcons],
 	);
 	const handleDeleteRole = useCallback(() => {
 		if (!selectedRole || selectedRole.isEveryone || !guild) return;
@@ -734,6 +749,8 @@ const GuildRolesTab: React.FC<{guildId: string}> = observer(({guildId}) => {
 			selectedRoleWithUpdates={selectedRoleWithUpdates}
 			selectedRoleLocked={selectedRoleLocked}
 			canManageRoles={canManageRoles}
+			canSetRoleIcons={canSetRoleIcons}
+			canSetRoleGradient={canSetRoleGradient}
 			mentionEveryonePermissionLabel={mentionEveryonePermissionLabel}
 			permissionSearchQuery={permissionSearchQuery}
 			filteredPermissionSpecs={filteredPermissionSpecs}

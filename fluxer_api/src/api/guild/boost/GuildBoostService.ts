@@ -9,7 +9,12 @@ import type {
 } from '@app/api/database/types/GuildBoostTypes';
 import type {PremiumLedgerRow} from '@app/api/database/types/PremiumLedgerTypes';
 import {GUILD_BOOST_COUNT_COUNTER} from '@app/api/guild/boost/GuildBoostCounters';
-import {GUILD_BOOST_FEATURES, guildBoostFeatures, guildBoostTier} from '@app/api/guild/boost/GuildBoostLevels';
+import {
+	GUILD_BOOST_FEATURES,
+	GUILD_BOOST_LEVELS,
+	guildBoostFeatures,
+	guildBoostTier,
+} from '@app/api/guild/boost/GuildBoostLevels';
 import type {GuildBoostRepository} from '@app/api/guild/boost/GuildBoostRepository';
 import {mapGuildToGuildResponse} from '@app/api/guild/GuildModel';
 import type {GuildRepository} from '@app/api/guild/repositories/GuildRepository';
@@ -38,6 +43,7 @@ import {PremiumFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstant
 import {ConflictError} from '@fluxer/errors/src/domains/core/ConflictError';
 import {MissingAccessError} from '@fluxer/errors/src/domains/core/MissingAccessError';
 import {NotFoundError} from '@fluxer/errors/src/domains/core/NotFoundError';
+import {UnknownGuildError} from '@fluxer/errors/src/domains/guild/UnknownGuildError';
 import {PREMIUM_BOOST_SLOT_ID_REGEX} from '@fluxer/schema/src/domains/boost/BoostRequestSchemas';
 import type {GuildBoostResponse, UserBoostSlotResponse} from '@fluxer/schema/src/domains/boost/BoostResponseSchemas';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
@@ -45,6 +51,7 @@ import type {ICacheService} from '@pkgs/cache/src/ICacheService';
 import type {IKVProvider} from '@pkgs/kv_client/src/IKVProvider';
 import type {IWorkerService} from '@pkgs/worker/src/contracts/IWorkerService';
 import {ms} from 'itty-time';
+import {z} from 'zod';
 
 interface GuildBoostServiceDeps {
 	repository: GuildBoostRepository;
@@ -77,8 +84,6 @@ export const GUILD_BOOST_TIMER_ENTITLEMENT_ID = 0n;
 const RECOMPUTE_DIRTY_TTL_SECONDS = 3600;
 const RECOMPUTE_QUEUED_TTL_SECONDS = 60;
 const RECOUNT_INTERVAL_SECONDS = 86_400;
-// Long enough for the next recompute of a guild whose recompute stopped (worker retries, the next boost or timer).
-const PENDING_FEATURES_TTL_SECONDS = 7 * 86_400;
 // Boosts landing within this window share one recompute and at most one GUILD_UPDATE.
 const RECOMPUTE_DELAY_MS = 5000;
 const MAX_SLOT_CAS_ATTEMPTS = 5;
@@ -173,6 +178,58 @@ function stateChanged(before: GuildBoostStateRow, after: GuildBoostStateRow): bo
 	);
 }
 
+const pendingFeatures = z
+	.array(z.string().refine((feature) => GUILD_BOOST_FEATURES.has(feature)))
+	.max(GUILD_BOOST_FEATURES.size);
+const pendingTimestamp = z.number().int().min(0).max(8_640_000_000_000_000);
+const pendingChangeSchema = z
+	.object({
+		format_version: z.literal(1),
+		operation_version: z.number().int().min(1).max(2_147_483_647),
+		previous_granted: pendingFeatures,
+		previous_suppressed: pendingFeatures,
+		add: pendingFeatures,
+		remove: pendingFeatures,
+		granted: pendingFeatures,
+		suppressed: pendingFeatures,
+		boost_count: z.number().int().nonnegative(),
+		premium_tier: z.number().int().min(0).max(GUILD_BOOST_LEVELS.length),
+		downgrade_at: pendingTimestamp.nullable(),
+		vanity_release_at: pendingTimestamp.nullable(),
+		updated_at: pendingTimestamp,
+		release_vanity: z.boolean(),
+	})
+	.strict();
+type PendingFeatureChange = z.infer<typeof pendingChangeSchema>;
+
+function readPendingChange(state: GuildBoostStateRow): PendingFeatureChange | null {
+	if (state.pending_feature_changes == null) return null;
+	try {
+		if (state.pending_feature_changes.length > 16_384) throw new Error('Oversized guild boost feature intent');
+		const pending = pendingChangeSchema.parse(JSON.parse(state.pending_feature_changes));
+		if (pending.operation_version !== state.version + 1) throw new Error('Stale guild boost feature intent');
+		return pending;
+	} catch (error) {
+		Logger.warn({error, guildId: state.guild_id.toString()}, 'Ignoring invalid guild boost feature intent');
+		return null;
+	}
+}
+
+function completedState(state: GuildBoostStateRow, pending: PendingFeatureChange): GuildBoostStateRow {
+	return {
+		guild_id: state.guild_id,
+		boost_count: pending.boost_count,
+		premium_tier: pending.premium_tier,
+		granted_features: new Set(pending.granted),
+		suppressed_features: new Set(pending.suppressed),
+		downgrade_at: pending.downgrade_at === null ? null : new Date(pending.downgrade_at),
+		vanity_release_at: pending.vanity_release_at === null ? null : new Date(pending.vanity_release_at),
+		updated_at: new Date(pending.updated_at),
+		version: pending.operation_version,
+		pending_feature_changes: null,
+	};
+}
+
 export interface GuildBoostPlan {
 	tier: number;
 	add: Set<string>;
@@ -216,7 +273,11 @@ export function planGuildBoost(
 	const grantedBefore = [...new Set([...(state?.granted_features ?? []), ...landed])].filter((feature) =>
 		GUILD_BOOST_FEATURES.has(feature),
 	);
-	const suppressed = new Set([...(state?.suppressed_features ?? [])].filter((feature) => !current.has(feature)));
+	const suppressed = new Set(
+		[...(state?.suppressed_features ?? [])].filter(
+			(feature) => GUILD_BOOST_FEATURES.has(feature) && !current.has(feature),
+		),
+	);
 	for (const feature of grantedBefore) {
 		if (!current.has(feature)) suppressed.add(feature);
 	}
@@ -229,7 +290,7 @@ export function planGuildBoost(
 	const granted = new Set([...kept.filter((feature) => !remove.has(feature)), ...add]);
 	let vanityReleaseAt = state?.vanity_release_at ?? null;
 	if (remove.has(GuildFeatures.VANITY_URL) && guild.vanityUrlCode != null) {
-		vanityReleaseAt = new Date(now.getTime() + GUILD_BOOST_VANITY_HOLD_MS);
+		vanityReleaseAt = new Date((state?.downgrade_at ?? now).getTime() + GUILD_BOOST_VANITY_HOLD_MS);
 	}
 	if (features.has(GuildFeatures.VANITY_URL)) {
 		vanityReleaseAt = null;
@@ -241,6 +302,141 @@ export function planGuildBoost(
 export class GuildBoostService {
 	constructor(private readonly deps: GuildBoostServiceDeps) {}
 
+	async applyAdminFeatureChanges(
+		guildId: GuildID,
+		addFeatures: ReadonlyArray<string>,
+		removeFeatures: ReadonlyArray<string>,
+	): Promise<Guild> {
+		return withGuildUpdateLock(this.deps.cacheService, guildId, async () => {
+			let guild = await this.deps.guildRepository.findUnique(guildId);
+			if (!guild) throw new UnknownGuildError();
+			let state = await this.deps.repository.getState(guildId);
+			if (state && readPendingChange(state)) {
+				({guild, state} = await this.finishPendingChange(guild, state));
+			}
+			const features = new Set(guild.features);
+			const legacyRaw = await this.deps.kvClient.get(pendingFeaturesKey(guildId));
+			const legacy = legacyRaw === null ? [] : pendingFeatures.parse(JSON.parse(legacyRaw));
+			const granted = new Set(
+				[...(state?.granted_features ?? []), ...legacy.filter((feature) => features.has(feature))].filter((feature) =>
+					GUILD_BOOST_FEATURES.has(feature),
+				),
+			);
+			const suppressed = new Set(state?.suppressed_features ?? []);
+			for (const feature of addFeatures) {
+				features.add(feature);
+				granted.delete(feature);
+				suppressed.delete(feature);
+			}
+			for (const feature of removeFeatures) {
+				features.delete(feature);
+				granted.delete(feature);
+				if (GUILD_BOOST_FEATURES.has(feature)) suppressed.add(feature);
+			}
+			const plan: GuildBoostPlan = {
+				tier: state?.premium_tier ?? guild.premiumTier ?? 0,
+				features,
+				granted,
+				suppressed,
+				add: new Set([...features].filter((feature) => !guild.features.has(feature))),
+				remove: new Set([...guild.features].filter((feature) => !features.has(feature))),
+				downgradeAt: state?.downgrade_at ?? null,
+				vanityReleaseAt: state?.vanity_release_at ?? null,
+				releaseVanity: false,
+			};
+			return (await this.commitPlan(guild, state, plan, state?.boost_count ?? 0, new Date())).guild;
+		});
+	}
+
+	private async finishPendingChange(
+		guild: Guild,
+		state: GuildBoostStateRow,
+		plannedFeatures?: Set<string>,
+	): Promise<{guild: Guild; state: GuildBoostStateRow}> {
+		const pending = readPendingChange(state)!;
+		// The durable intent now contains legacy ownership; an old KV array must not outlive an admin decision.
+		await this.deps.kvClient.del(pendingFeaturesKey(guild.id));
+		const features =
+			plannedFeatures ?? new Set([...guild.features].filter((feature) => !pending.remove.includes(feature)));
+		for (const feature of pending.add) features.add(feature);
+		if (!setsEqual(features, guild.features) || pending.premium_tier !== (guild.premiumTier ?? 0)) {
+			guild = await this.deps.guildRepository.upsertPartial(
+				guild.id,
+				{features, premium_tier: pending.premium_tier},
+				guild.toRow(),
+			);
+		}
+		const next = completedState(state, pending);
+		if (pending.release_vanity) {
+			guild = (await this.releaseHeldVanity(guild)) ?? guild;
+			next.vanity_release_at = null;
+		}
+		await this.deps.repository.putState(next);
+		return {guild, state: next};
+	}
+
+	private async commitPlan(
+		guild: Guild,
+		state: GuildBoostStateRow | null,
+		plan: GuildBoostPlan,
+		count: number,
+		now: Date,
+	): Promise<{guild: Guild; state: GuildBoostStateRow}> {
+		const next: GuildBoostStateRow = {
+			guild_id: guild.id,
+			boost_count: count,
+			premium_tier: plan.tier,
+			granted_features: plan.granted,
+			suppressed_features: plan.suppressed,
+			downgrade_at: plan.downgradeAt,
+			vanity_release_at: plan.vanityReleaseAt,
+			updated_at: now,
+			version: (state?.version ?? 0) + 1,
+			pending_feature_changes: null,
+		};
+		const needsIntent =
+			plan.add.size > 0 ||
+			plan.remove.size > 0 ||
+			plan.releaseVanity ||
+			plan.tier !== (guild.premiumTier ?? 0) ||
+			!state ||
+			!setsEqual(state.granted_features ?? new Set(), plan.granted) ||
+			!setsEqual(state.suppressed_features ?? new Set(), plan.suppressed);
+		if (!needsIntent) {
+			if (stateChanged(state!, next)) {
+				await this.deps.repository.putState(next);
+				return {guild, state: next};
+			}
+			return {guild, state: state!};
+		}
+		const onlyBoostFeatures = (features: Iterable<string>) =>
+			[...features].filter((feature) => GUILD_BOOST_FEATURES.has(feature));
+		const pending = pendingChangeSchema.parse({
+			format_version: 1,
+			operation_version: next.version,
+			previous_granted: onlyBoostFeatures(state?.granted_features ?? []),
+			previous_suppressed: onlyBoostFeatures(state?.suppressed_features ?? []),
+			add: onlyBoostFeatures(plan.add),
+			remove: onlyBoostFeatures(plan.remove),
+			granted: onlyBoostFeatures(plan.granted),
+			suppressed: onlyBoostFeatures(plan.suppressed),
+			boost_count: count,
+			premium_tier: plan.tier,
+			downgrade_at: plan.downgradeAt?.getTime() ?? null,
+			vanity_release_at: plan.vanityReleaseAt?.getTime() ?? null,
+			updated_at: now.getTime(),
+			release_vanity: plan.releaseVanity,
+		});
+		// Previous ownership stays on the row until the guild and the final state both reflect the intent.
+		const pendingState: GuildBoostStateRow = {
+			...(state ?? {...next, granted_features: null, suppressed_features: null}),
+			version: next.version - 1,
+			pending_feature_changes: JSON.stringify(pending),
+		};
+		await this.deps.repository.putState(pendingState);
+		return this.finishPendingChange(guild, pendingState, plan.features);
+	}
+
 	async getLiveBoostCount(guildId: GuildID): Promise<number> {
 		return this.deps.kvCounterService.get(GUILD_BOOST_COUNT_COUNTER, guildId.toString());
 	}
@@ -248,7 +444,8 @@ export class GuildBoostService {
 	// "reserved but closed": from the end of the level grace until the level comes back or the 30 day hold ends, the
 	// guild keeps its custom invite code but no one joins through it. Read only for a vanity join without VANITY_URL.
 	async isVanityHeld(guildId: GuildID): Promise<boolean> {
-		return (await this.deps.repository.getState(guildId))?.vanity_release_at != null;
+		const state = await this.deps.repository.getState(guildId);
+		return state != null && (state.vanity_release_at != null || readPendingChange(state)?.vanity_release_at != null);
 	}
 
 	async getSlotCount(user: User): Promise<number> {
@@ -453,62 +650,32 @@ export class GuildBoostService {
 
 	async recompute(guildId: GuildID): Promise<void> {
 		const {repository, guildRepository, kvClient} = this.deps;
-		const now = new Date();
 		const result = await withGuildUpdateLock(this.deps.cacheService, guildId, async () => {
-			const guild = await guildRepository.findUnique(guildId);
-			if (!guild) {
-				return null;
+			let guild = await guildRepository.findUnique(guildId);
+			if (!guild) return null;
+			const original = guild;
+			let state = await repository.getState(guildId);
+			const recovered = state ? readPendingChange(state) : null;
+			if (state?.pending_feature_changes != null && !recovered) {
+				state = {...state, pending_feature_changes: null};
+				await repository.putState(state);
 			}
-			const count = await this.getLiveBoostCount(guildId);
-			const state = await repository.getState(guildId);
+			const recoveredChangeLanded =
+				recovered !== null &&
+				(recovered.add.some((feature) => original.features.has(feature)) ||
+					recovered.remove.some((feature) => !original.features.has(feature)) ||
+					(original.premiumTier === recovered.premium_tier && original.premiumTier !== state!.premium_tier));
+			if (recovered) {
+				({guild, state} = await this.finishPendingChange(guild, state!));
+			}
 			const pendingRaw = await kvClient.get(pendingFeaturesKey(guildId));
-			const pending = pendingRaw === null ? [] : (JSON.parse(pendingRaw) as Array<string>);
+			const pending = pendingRaw === null ? [] : pendingFeatures.parse(JSON.parse(pendingRaw));
+			const count = await this.getLiveBoostCount(guildId);
+			const now = new Date();
 			const plan = planGuildBoost(guild, count, state, now, pending);
-			const stateRow = (granted: Set<string>, vanityReleaseAt: Date | null): GuildBoostStateRow => ({
-				guild_id: guildId,
-				boost_count: count,
-				premium_tier: plan.tier,
-				granted_features: granted,
-				suppressed_features: plan.suppressed,
-				downgrade_at: plan.downgradeAt,
-				vanity_release_at: vanityReleaseAt,
-				updated_at: now,
-				version: (state?.version ?? 0) + 1,
-			});
-			// Removed features leave granted_features before the guild write and added ones join it after, so a crash
-			// between the writes can only leave a feature on the guild, never take a paid one away for good.
-			if (plan.remove.size > 0) {
-				const keptOnly = new Set([...plan.granted].filter((feature) => !plan.add.has(feature)));
-				await repository.putState(stateRow(keptOnly, plan.vanityReleaseAt));
-			}
-			if (plan.add.size > 0) {
-				await kvClient.setex(
-					pendingFeaturesKey(guildId),
-					PENDING_FEATURES_TTL_SECONDS,
-					JSON.stringify([...plan.granted]),
-				);
-			}
-			let changed: Guild | null = null;
-			if (plan.add.size > 0 || plan.remove.size > 0 || plan.tier !== (guild.premiumTier ?? 0)) {
-				changed = await guildRepository.upsertPartial(
-					guildId,
-					{features: plan.features, premium_tier: plan.tier},
-					guild.toRow(),
-				);
-			}
-			let vanityReleaseAt = plan.vanityReleaseAt;
-			if (plan.releaseVanity) {
-				changed = (await this.releaseHeldVanity(changed ?? guild)) ?? changed;
-				vanityReleaseAt = null;
-			}
-			const next = stateRow(plan.granted, vanityReleaseAt);
-			if (plan.remove.size > 0 || !state || stateChanged(state, next)) {
-				await repository.putState(next);
-			}
-			if (plan.add.size > 0 || pendingRaw !== null) {
-				await kvClient.del(pendingFeaturesKey(guildId));
-			}
-			const wakeAt = [plan.downgradeAt, vanityReleaseAt]
+			({guild, state} = await this.commitPlan(guild, state, plan, count, now));
+			if (pendingRaw !== null) await kvClient.del(pendingFeaturesKey(guildId));
+			const wakeAt = [state.downgrade_at, state.vanity_release_at]
 				.filter((at): at is Date => at !== null)
 				.sort((a, b) => a.getTime() - b.getTime())[0];
 			if (wakeAt) {
@@ -519,11 +686,15 @@ export class GuildBoostService {
 					entitlement_id: GUILD_BOOST_TIMER_ENTITLEMENT_ID,
 				});
 			}
-			return changed ? {changed, count} : null;
+			const changed =
+				!setsEqual(original.features, guild.features) ||
+				original.premiumTier !== guild.premiumTier ||
+				original.vanityUrlCode !== guild.vanityUrlCode ||
+				recoveredChangeLanded;
+			return changed ? {changed: guild, count} : null;
 		});
 		if (result) {
-			// a GUILD_UPDATE goes out only when the level, the features or the custom invite code changed; the
-			// count alone is read from GET /guilds/:guild_id.
+			// Only public feature, tier and vanity changes fan out; count and grace metadata do not.
 			await this.deps.gatewayService.dispatchGuild({
 				guildId,
 				event: 'GUILD_UPDATE',

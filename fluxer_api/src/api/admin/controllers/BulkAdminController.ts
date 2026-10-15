@@ -3,7 +3,7 @@
 import {recordAdminWrite} from '@app/api/admin/AdminAuditRecorder';
 import {assertNoRestrictionFlagsAdded} from '@app/api/admin/services/AdminUserSecurityService';
 import type {UserID} from '@app/api/BrandedTypes';
-import {requireAnyAdminACL, requireGrantedAdminACLs} from '@app/api/middleware/AdminMiddleware';
+import {requireAdminACL, requireAnyAdminACL, requireGrantedAdminACLs} from '@app/api/middleware/AdminMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {getWorkerService} from '@app/api/middleware/ServiceRegistry';
@@ -19,6 +19,7 @@ import {BulkJobResponse} from '@fluxer/schema/src/domains/admin/AdminSchemas';
 const BULK_TASK_ACLS: Record<AdminBulkTaskType, string> = {
 	[AdminBulkTaskType.UPDATE_USER_FLAGS]: AdminACLs.BULK_UPDATE_USER_FLAGS,
 	[AdminBulkTaskType.UPDATE_GUILD_FEATURES]: AdminACLs.BULK_UPDATE_GUILD_FEATURES,
+	[AdminBulkTaskType.BACKFILL_GUILD_BOOSTS]: AdminACLs.BULK_UPDATE_GUILD_FEATURES,
 	[AdminBulkTaskType.ADD_GUILD_MEMBERS]: AdminACLs.BULK_ADD_GUILD_MEMBERS,
 	[AdminBulkTaskType.SCHEDULE_USER_DELETION]: AdminACLs.BULK_DELETE_USERS,
 	[AdminBulkTaskType.DELETE_USER_MESSAGES]: AdminACLs.BULK_DELETE_USER_MESSAGES,
@@ -32,6 +33,12 @@ async function queueBulkJob(
 	const workerService = getWorkerService();
 	const options = {requestedByUserId: adminUserId, requireLedger: true, ...(auditLogReason && {auditLogReason})};
 	switch (body.task) {
+		case AdminBulkTaskType.BACKFILL_GUILD_BOOSTS:
+			return await workerService.addJob(
+				'backfillGuildBoosts',
+				{admin_user_id: adminUserId.toString(), audit_log_reason: auditLogReason},
+				options,
+			);
 		case AdminBulkTaskType.UPDATE_USER_FLAGS:
 			return await workerService.addJob(
 				'bulkUpdateUserFlags',
@@ -105,11 +112,18 @@ export function BulkAdminController(app: HonoApp) {
 			AdminACLs.BULK_DELETE_USERS,
 			AdminACLs.BULK_DELETE_USER_MESSAGES,
 		]),
+		// Micup: an admin API key for the boost backfill also needs its owner to still hold the guild feature ACL.
+		async (ctx, next) => {
+			if (ctx.req.valid('json').task === AdminBulkTaskType.BACKFILL_GUILD_BOOSTS) {
+				return requireAdminACL(AdminACLs.BULK_UPDATE_GUILD_FEATURES)(ctx, next);
+			}
+			await next();
+		},
 		OpenAPI({
 			operationId: 'create_admin_bulk_job',
 			summary: 'Queue a bulk job',
 			description:
-				'Enqueue one background administrative job. The `task` discriminator selects both the body variant and the ACL evaluated for the request: `update_user_flags` needs bulk:update:user_flags, `update_guild_features` needs bulk:update:guild_features, `add_guild_members` needs bulk:add:guild_members, `schedule_user_deletion` needs bulk:delete:users, and `delete_user_messages` needs bulk:delete:user_messages. Returns a job_id immediately; observe progress at /admin/jobs/:job_id.',
+				'Enqueue one background administrative job. The `task` discriminator selects both the body variant and the ACL evaluated for the request: `update_user_flags` needs bulk:update:user_flags, `update_guild_features` and `backfill_guild_boosts` need bulk:update:guild_features, `add_guild_members` needs bulk:add:guild_members, `schedule_user_deletion` needs bulk:delete:users, and `delete_user_messages` needs bulk:delete:user_messages. The boost backfill scans existing boost states in bounded pages and resumes incomplete scans. Returns a job_id immediately; observe progress and results at /admin/jobs/:job_id (jobs:view required).',
 			responseSchema: BulkJobResponse,
 			statusCode: 200,
 			security: 'adminApiKey',
@@ -138,7 +152,8 @@ export function BulkAdminController(app: HonoApp) {
 				action: 'queue_bulk_job',
 				metadata: {
 					task: body.task,
-					entity_count: 'guild_ids' in body ? body.guild_ids.length : body.user_ids.length,
+					entity_count:
+						'guild_ids' in body ? body.guild_ids.length : 'user_ids' in body ? body.user_ids.length : undefined,
 					guild_id: body.task === AdminBulkTaskType.ADD_GUILD_MEMBERS ? body.guild_id : undefined,
 				},
 			});
