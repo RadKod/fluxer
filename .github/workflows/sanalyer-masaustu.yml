@@ -283,6 +283,11 @@ jobs:
       SOURCE_SHA: ${{ needs.meta.outputs.source_sha }}
       DESKTOP_PLATFORM: ${{ matrix.platform }}
       DESKTOP_ARCH: ${{ matrix.arch }}
+      # sanalyer: Windows paket kimliği (Velopack packId, başlık, yayımcı); üçü birden verilmezse yardımcı Fluxer'ın
+      # kimliğini kullanır ve sanalyer.exe'yi bulamaz. Başlık electron-builder productName ile aynı olmalı.
+      FLUXER_DESKTOP_PACK_ID: sanalyer_desktop
+      FLUXER_DESKTOP_PACK_TITLE: sanalyer
+      FLUXER_DESKTOP_PACK_AUTHORS: sanalyer
       # sanalyer: Azure Trusted Signing secret'ları yoksa Windows paketi imzasız çıkar (SmartScreen uyarısı verir).
       WINDOWS_SIGNING: ${{ secrets.AZURE_CLIENT_ID != '' }}
       FLUXER_DESKTOP_ALLOW_UNSIGNED: ${{ secrets.AZURE_CLIENT_ID == '' && '1' || '' }}
