@@ -28,9 +28,8 @@ const transitionTo = vi.fn();
 const openPicker = vi.fn();
 const preloadPicker = vi.fn();
 const openMenu = vi.fn();
-
 const dispatch = vi.fn();
-vi.mock('@app/features/platform/utils/ComponentBus', () => ({ComponentBus: {dispatch}}));
+
 vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor}));
 vi.mock('@lingui/react/macro', () => ({
 	useLingui: () => ({i18n: {_: (descriptor: {message: string}) => descriptor.message}}),
@@ -39,6 +38,7 @@ vi.mock('@app/features/platform/utils/MobXPersistence', () => ({
 	makePersistent: vi.fn(),
 	awaitHydration: () => hydration.promise,
 }));
+vi.mock('@app/features/platform/utils/ComponentBus', () => ({ComponentBus: {dispatch}}));
 vi.mock('@app/features/accessibility/state/Accessibility', () => ({default: accessibility}));
 vi.mock('@app/features/messaging/utils/MessagingUrlUtils', () => ({marketingUrl: () => ''}));
 vi.mock('@app/features/channel/state/Channels', () => ({
@@ -251,7 +251,7 @@ describe('voice panel 3D room control', () => {
 		if (reason === 'context_lost' || reason === 'load_failed') VoiceSceneSettings.reportFailure(reason);
 		await render();
 		expect(roomButton()).not.toBeNull();
-		expect(host.querySelectorAll('button')).toHaveLength(3);
+		expect(host.querySelectorAll('button')).toHaveLength(4);
 	});
 
 	it.each(['flag_off', 'no_theme', 'mobile', 'no_webgl', 'software_gpu', 'weak_device'])(
@@ -265,7 +265,7 @@ describe('voice panel 3D room control', () => {
 			if (reason === 'weak_device') env.webgl.hardwareConcurrency = 2;
 			await render();
 			expect(roomButton()).toBeNull();
-			expect(host.querySelectorAll('button')).toHaveLength(2);
+			expect(host.querySelectorAll('button')).toHaveLength(3);
 		},
 	);
 

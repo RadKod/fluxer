@@ -12,6 +12,7 @@ vi.mock('@lingui/react/macro', () => ({
 const suspendSharedVoiceAudioContext = vi.fn();
 vi.mock('@app/features/voice/engine/VoiceSharedAudioContext', () => ({
 	getSharedVoiceAudioContext: () => null,
+	acquireSharedVoiceAudioContext: vi.fn(),
 	suspendSharedVoiceAudioContext,
 }));
 vi.mock('@app/features/voice/engine/VoiceChannelConnector', () => ({sendVoiceStateDisconnect: vi.fn()}));
