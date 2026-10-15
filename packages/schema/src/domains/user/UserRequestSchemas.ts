@@ -19,6 +19,7 @@ import {
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {SudoVerificationSchema} from '@fluxer/schema/src/domains/auth/AuthSchemas';
 import {GameActivityVisibilitySchema} from '@fluxer/schema/src/domains/user/GameActivitySchemas';
+import {NameStyleSchema, ThemeColorsSchema} from '@fluxer/schema/src/domains/user/PlusAppearanceSchemas';
 import {
 	isValidSyncedPreferencesEncoding,
 	SYNCED_PREFERENCES_MAX_ENCODED_LENGTH,
@@ -74,6 +75,8 @@ export const UserUpdateRequest = z
 		bio: createStringType(1, 320).nullish().describe('User biography text (max 320 characters)'),
 		pronouns: createStringType(1, 40).nullish().describe('User pronouns (max 40 characters)'),
 		accent_color: ColorType.nullish().describe('Profile accent color as integer'),
+		name_style: NameStyleSchema.nullish().describe('Premium name font and colour; null removes it'),
+		theme_colors: ThemeColorsSchema.nullish().describe('Premium profile card gradient; null removes it'),
 		timezone: createStringType(1, 128).nullish().describe('IANA timezone identifier saved for profile local time'),
 		timezone_privacy_flags: createBitflagInt32Type(
 			ProfileFieldPrivacyFlags,

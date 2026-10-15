@@ -119,17 +119,19 @@ Modifies the current account and returns the resulting [user](/http-api/users/#u
 | bio?<sup>8</sup> | ?string | Biography (1-320 characters), or null to clear |
 | pronouns?<sup>9</sup> | ?string | Pronouns (1-40 characters), or null to clear |
 | accent_color? | ?integer | Packed 24-bit RGB colour (0-16777215), or null to clear |
-| timezone?<sup>10</sup> | ?string | Supported IANA timezone identifier (1-128 characters), or null to clear |
+| name_style?<sup>10</sup> | ?[name style](/http-api/users/#name-style-object) object | Name font and colours, or null to clear |
+| theme_colors?<sup>11</sup> | ?array[integer] | Profile card gradient, top then bottom colour (0-16777215 each), or null to clear |
+| timezone?<sup>12</sup> | ?string | Supported IANA timezone identifier (1-128 characters), or null to clear |
 | timezone_privacy_flags? | integer | [Profile field privacy flags](/http-api/users/#profile-field-privacy-flags) applied to the profile timezone |
 | premium_badge_hidden? | boolean | Whether to hide the premium badge from the public profile |
 | premium_badge_masked? | boolean | Whether to present a lifetime badge as an ordinary subscription badge |
 | premium_badge_timestamp_hidden? | boolean | Whether to hide the premium activation time |
 | premium_badge_sequence_hidden? | boolean | Whether to hide the lifetime premium sequence |
-| premium_enabled_override?<sup>11</sup> | boolean | Whether a staff override grants premium entitlements |
-| has_dismissed_premium_onboarding?<sup>12</sup> | boolean | Whether the premium onboarding flow has been dismissed |
-| has_unread_gift_inventory?<sup>13</sup> | boolean | Whether the gift inventory still holds unread items |
+| premium_enabled_override?<sup>13</sup> | boolean | Whether a staff override grants premium entitlements |
+| has_dismissed_premium_onboarding?<sup>14</sup> | boolean | Whether the premium onboarding flow has been dismissed |
+| has_unread_gift_inventory?<sup>15</sup> | boolean | Whether the gift inventory still holds unread items |
 | mention_flags? | integer | [Reply mention preference](/http-api/users/#reply-mention-preferences), one of `0`, `1`, or `2` |
-| email_token?<sup>14</sup> | string | Email token (1-256 characters) issued by [verify new email](/http-api/users/email-and-password/#verify-new-email) |
+| email_token?<sup>16</sup> | string | Email token (1-256 characters) issued by [verify new email](/http-api/users/email-and-password/#verify-new-email) |
 | mfa_method? | string | [Sudo verification](/http-api/users/mfa/#sudo-mode) method, either `totp` or `webauthn` |
 | mfa_code? | string | [Sudo verification](/http-api/users/mfa/#sudo-mode) authenticator or backup code (1-32 characters) |
 | webauthn_response? | [WebAuthn assertion](/http-api/users/mfa/#webauthn-assertion-object) object | [Sudo verification](/http-api/users/mfa/#sudo-mode) WebAuthn assertion |
@@ -153,15 +155,19 @@ Modifies the current account and returns the resulting [user](/http-api/users/#u
 
 <sup>9</sup> The value is matched against the instance profile substring blocklist like `username`, `global_name`, and `bio`
 
-<sup>10</sup> An unrecognised identifier is rejected with `INVALID_TIMEZONE_IDENTIFIER`. Setting a first timezone without `timezone_privacy_flags` sets those flags to `EVERYONE`
+<sup>10</sup> Every non-null value requires the `feature_name_style` [limit key](/http-api/instance/#limit-keys) and is otherwise rejected with [`NAME_STYLES_REQUIRE_PREMIUM`](/http-api/errors/). Each colour, and the colour halfway along a two-colour gradient, must reach a 4.5:1 contrast with the dark chat background, or the value is rejected with `NAME_COLORS_NOT_READABLE`. The stored style shows only while the account has active Plus
 
-<sup>11</sup> The field requires the [`STAFF`](/http-api/users/#public-user-flags) flag, and a caller without it is rejected with 403 [`MISSING_ACCESS`](/http-api/errors/)
+<sup>11</sup> Every non-null value requires the `feature_profile_theme` [limit key](/http-api/instance/#limit-keys) and is otherwise rejected with [`PROFILE_THEMES_REQUIRE_PREMIUM`](/http-api/errors/). The stored theme shows only while the account has active Plus
 
-<sup>12</sup> Only `true` has an effect, recording the current time as the dismissal moment. `false` is accepted and does nothing
+<sup>12</sup> An unrecognised identifier is rejected with `INVALID_TIMEZONE_IDENTIFIER`. Setting a first timezone without `timezone_privacy_flags` sets those flags to `EVERYONE`
 
-<sup>13</sup> Only `false` has an effect, advancing the gift inventory read cursor to the current sequence. `true` is accepted and does nothing
+<sup>13</sup> The field requires the [`STAFF`](/http-api/users/#public-user-flags) flag, and a caller without it is rejected with 403 [`MISSING_ACCESS`](/http-api/errors/)
 
-<sup>14</sup> Supplying the field applies the verified address the token stands for, and the token is deleted once the update lands
+<sup>14</sup> Only `true` has an effect, recording the current time as the dismissal moment. `false` is accepted and does nothing
+
+<sup>15</sup> Only `false` has an effect, advancing the gift inventory read cursor to the current sequence. `true` is accepted and does nothing
+
+<sup>16</sup> Supplying the field applies the verified address the token stands for, and the token is deleted once the update lands
 
 An omitted field leaves its stored value untouched, and an explicit `null` clears a nullable field. `has_dismissed_premium_onboarding` acts only on `true` and `has_unread_gift_inventory` only on `false`, so neither can be reversed through this route.
 
@@ -169,7 +175,7 @@ To skip the body proof fields, send the sudo token in the `X-Fluxer-Sudo-Mode-JW
 
 A body that has no `email_token` and nothing beyond `mfa_method`, `mfa_code`, `webauthn_response`, and `webauthn_challenge` returns the current account unchanged. Supplying `password` alone is an update with nothing to change, and it still emits [User Update](/gateway/events/#user-update).
 
-A claimed account needs a verified email before changing the username, discriminator, display name, avatar, banner, biography, pronouns, accent colour, timezone, timezone privacy, or any premium badge field. A request without one returns 403 [`PROFILE_EMAIL_VERIFICATION_REQUIRED`](/http-api/errors/).
+A claimed account needs a verified email before changing the username, discriminator, display name, avatar, banner, biography, pronouns, accent colour, name style, profile theme, timezone, timezone privacy, or any premium badge field. A request without one returns 403 [`PROFILE_EMAIL_VERIFICATION_REQUIRED`](/http-api/errors/).
 
 A [limited account](/http-api/users/#account-limitation) cannot change any of those fields. A request that sets one returns 403 [`ACCOUNT_LIMITED`](/http-api/errors/).
 
@@ -197,6 +203,8 @@ Each control is separate from the route bucket. A denial returns 400 `INVALID_FO
 | Biography to a different value | 25 per 30 minutes | `BIO_CHANGED_TOO_MANY_TIMES` |
 | Pronouns to a different value | 25 per 30 minutes | `PRONOUNS_CHANGED_TOO_MANY_TIMES` |
 | Accent colour to a different value | 25 per 30 minutes | `ACCENT_COLOR_CHANGED_TOO_MANY_TIMES` |
+| Name style to a different value | 5 per 10 minutes | `NAME_STYLE_CHANGED_TOO_MANY_TIMES` |
+| Profile theme to a different value | 25 per 30 minutes | `THEME_COLORS_CHANGED_TOO_MANY_TIMES` |
 | Any non-null avatar | 25 per 30 minutes | `AVATAR_CHANGED_TOO_MANY_TIMES` |
 | Any banner value past the entitlement check | 25 per 30 minutes | `BANNER_CHANGED_TOO_MANY_TIMES` |
 

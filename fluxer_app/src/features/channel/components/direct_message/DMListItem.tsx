@@ -25,6 +25,7 @@ import {SafeMarkdown} from '@app/features/messaging/components/markdown';
 import {MarkdownContext} from '@app/features/messaging/components/markdown/renderers/RendererTypes';
 import Messages from '@app/features/messaging/state/MessagingMessages';
 import {SystemMessageUtils} from '@app/features/messaging/utils/SystemMessageUtils';
+import {NameStyleText} from '@app/features/name_style/components/NameStyleText';
 import ReadStates from '@app/features/read_state/state/ReadStates';
 import Relationships from '@app/features/relationship/state/Relationships';
 import RollingTypingStore from '@app/features/typing/rolling/RollingTypingStore';
@@ -46,6 +47,7 @@ import UserGuildSettings from '@app/features/user/state/UserGuildSettings';
 import Users from '@app/features/user/state/Users';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import {ChannelTypes, MessageTypes} from '@fluxer/constants/src/ChannelConstants';
+import type {NameStyle} from '@fluxer/schema/src/domains/user/PlusAppearanceSchemas';
 import {extractTimestamp} from '@fluxer/snowflake/src/SnowflakeUtils';
 import {msg, plural} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
@@ -97,16 +99,17 @@ interface ResolvedDMListItemProps extends DMListItemProps {
 
 interface DMListItemNameTextProps {
 	displayName: string;
+	nameStyle: NameStyle | null | undefined;
 	dataFlx: string;
 }
 
-function DMListItemNameText({displayName, dataFlx}: DMListItemNameTextProps) {
+function DMListItemNameText({displayName, nameStyle, dataFlx}: DMListItemNameTextProps) {
 	const nameRef = useRef<HTMLSpanElement>(null);
 	const isNameOverflowing = useTextOverflow(nameRef, {content: displayName, measureTextRange: true});
 	const content = (
-		<span ref={nameRef} className={styles.dmItemNameText} data-flx={dataFlx}>
+		<NameStyleText ref={nameRef} nameStyle={nameStyle} className={styles.dmItemNameText} data-flx={dataFlx}>
 			{displayName}
-		</span>
+		</NameStyleText>
 	);
 	if (!isNameOverflowing) {
 		return content;

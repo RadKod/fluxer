@@ -141,6 +141,29 @@ describe('buildUserDataJson', () => {
 		const data = buildUserDataJson(userDataParams());
 		expect('recovery_kit' in data).toBe(false);
 	});
+
+	it('exports the stored name style and profile theme even without active Plus', () => {
+		const user = new User({
+			...EMPTY_USER_ROW,
+			user_id: AUTHOR,
+			username: 'exporter',
+			discriminator: 1,
+			premium_type: null,
+			name_font: 6,
+			name_color: 0xffffff,
+			name_color_2: null,
+			theme_primary_color: 0,
+			theme_accent_color: 0x07a3b2,
+		});
+		const data = buildUserDataJson(userDataParams({user}));
+		expect(data.user).toMatchObject({
+			name_font: 6,
+			name_color: 0xffffff,
+			name_color_2: null,
+			theme_primary_color: 0,
+			theme_accent_color: 0x07a3b2,
+		});
+	});
 });
 
 describe('collectThreadMemberships', () => {

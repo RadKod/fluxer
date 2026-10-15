@@ -38,6 +38,14 @@ import {BannerUploader} from '@app/features/user/components/modals/tabs/my_profi
 import {BIO_MARKDOWN_PARSER_FLAGS, BioEditor} from '@app/features/user/components/modals/tabs/my_profile_tab/BioEditor';
 import {UsernameSection} from '@app/features/user/components/modals/tabs/my_profile_tab/MyProfileTabUsernameSection';
 import {PerGuildPremiumUpsell} from '@app/features/user/components/modals/tabs/my_profile_tab/PerGuildPremiumUpsell';
+import {
+	buildPlusAppearancePatch,
+	isUnreadableNameStyleChange,
+	readPlusAppearance,
+	readPlusAppearanceBaseline,
+	resolvePlusAppearanceAccess,
+} from '@app/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceForm';
+import {PlusAppearanceSettings} from '@app/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings';
 import {PremiumBadgeSettings} from '@app/features/user/components/modals/tabs/my_profile_tab/PremiumBadgeSettings';
 import {
 	assignProfileAssetUploadPatch,
@@ -72,6 +80,7 @@ import {GuildMemberProfileFlags} from '@fluxer/constants/src/GuildConstants';
 import {ProfileFieldPrivacyFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {getCurrentTimeZoneOffsetMinutes} from '@fluxer/date_utils/src/TimeZoneUtils';
 import type {GuildMemberData} from '@fluxer/schema/src/domains/guild/GuildMemberSchemas';
+import type {NameStyle, ThemeColors} from '@fluxer/schema/src/domains/user/PlusAppearanceSchemas';
 import type {UserProfile} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
@@ -139,6 +148,10 @@ const YOU_DON_T_HAVE_PERMISSION_TO_CHANGE_YOUR_DESCRIPTOR = msg({
 	comment: 'Label in the my profile tab. Keep the tone plain and specific.',
 });
 
+const NAME_COLORS_BLOCK_SAVING_DESCRIPTOR = msg({
+	message: 'Your name colors are hard to read on dark backgrounds. Pick lighter colors to save.',
+	comment: 'Save bar text in the my profile tab while the chosen name colors fail the contrast check.',
+});
 const logger = new Logger('MyProfileTab');
 
 function hasGuildMemberProfileFlag(member: GuildMemberData, flag: number): boolean {
@@ -185,6 +198,8 @@ interface FormInputs {
 	premium_badge_timestamp_hidden?: boolean;
 	premium_badge_masked?: boolean;
 	premium_badge_sequence_hidden?: boolean;
+	name_style: NameStyle | null;
+	theme_colors: ThemeColors | null;
 }
 
 interface ProfileRemoteValues {
@@ -259,6 +274,8 @@ const MyProfileTabComponent = observer(function MyProfileTabComponent({
 			premium_badge_timestamp_hidden: user?.premiumBadgeTimestampHidden ?? false,
 			premium_badge_masked: user?.premiumBadgeMasked ?? false,
 			premium_badge_sequence_hidden: user?.premiumBadgeSequenceHidden ?? false,
+			name_style: null,
+			theme_colors: null,
 		},
 	});
 	const updateBioFromMarkdown = useCallback(
@@ -309,6 +326,7 @@ const MyProfileTabComponent = observer(function MyProfileTabComponent({
 			premium_badge_timestamp_hidden: user.premiumBadgeTimestampHidden ?? false,
 			premium_badge_masked: user.premiumBadgeMasked ?? false,
 			premium_badge_sequence_hidden: user.premiumBadgeSequenceHidden ?? false,
+			...readPlusAppearance(user),
 		};
 		if (isPerGuildProfile) {
 			if (!activeProfileData?.guildMemberProfile) return null;
@@ -404,6 +422,20 @@ const MyProfileTabComponent = observer(function MyProfileTabComponent({
 	);
 	const showPremiumFeatures = shouldShowPremiumFeatures();
 	const hasPremium = useMemo(() => showPremiumFeatures && (user?.isPremium() ?? false), [showPremiumFeatures, user]);
+	const {nameStyle: canStyleName, profileTheme: canThemeProfile} = resolvePlusAppearanceAccess(
+		(key) => LimitResolver.resolve({key, fallback: 0}),
+		user,
+	);
+	const plusAppearanceAccess = useMemo(
+		() => ({nameStyle: canStyleName, profileTheme: canThemeProfile}),
+		[canStyleName, canThemeProfile],
+	);
+	const watchedNameStyle = form.watch('name_style') ?? null;
+	const watchedThemeColors = form.watch('theme_colors') ?? null;
+	const isNameStyleUnreadable = isUnreadableNameStyleChange(
+		readPlusAppearanceBaseline(form.formState.defaultValues).name_style,
+		watchedNameStyle,
+	);
 	const hasPerGuildProfiles = useMemo(
 		() =>
 			isLimitToggleEnabled(
@@ -516,16 +548,26 @@ const MyProfileTabComponent = observer(function MyProfileTabComponent({
 						premium_badge_timestamp_hidden: user.premiumBadgeTimestampHidden ?? false,
 						premium_badge_masked: user.premiumBadgeMasked ?? false,
 						premium_badge_sequence_hidden: user.premiumBadgeSequenceHidden ?? false,
+						...readPlusAppearance(user),
 					},
 					{avatar: savedAvatar, banner: savedBanner},
 				);
 				ToastCommands.createToast({type: 'success', children: i18n._(COMMUNITY_PROFILE_UPDATED_DESCRIPTOR)});
 			} else {
+				const plusAppearanceBaseline = readPlusAppearanceBaseline(form.formState.defaultValues);
+				if (isUnreadableNameStyleChange(plusAppearanceBaseline.name_style, data.name_style)) {
+					return;
+				}
 				const updateData: Record<string, unknown> = {
 					bio: data.bio,
 					global_name: data.global_name,
 					pronouns: data.pronouns,
 					accent_color: data.accent_color,
+					...buildPlusAppearancePatch(
+						plusAppearanceBaseline,
+						{name_style: data.name_style, theme_colors: data.theme_colors},
+						plusAppearanceAccess,
+					),
 				};
 				assignProfileAssetUploadPatch(updateData, 'avatar', avatarAsset);
 				assignProfileAssetUploadPatch(updateData, 'banner', bannerAsset);
@@ -562,6 +604,8 @@ const MyProfileTabComponent = observer(function MyProfileTabComponent({
 						premium_badge_timestamp_hidden: newUser.premium_badge_timestamp_hidden ?? false,
 						premium_badge_masked: newUser.premium_badge_masked ?? false,
 						premium_badge_sequence_hidden: newUser.premium_badge_sequence_hidden ?? false,
+						name_style: newUser.name_style ?? null,
+						theme_colors: newUser.theme_colors ?? null,
 					},
 					{
 						avatar: createGlobalProfileAssetRemoteState({
@@ -587,6 +631,8 @@ const MyProfileTabComponent = observer(function MyProfileTabComponent({
 			avatarAsset,
 			bannerAsset,
 			profileIdentityKey,
+			plusAppearanceAccess,
+			form,
 		],
 	);
 	const {handleSubmit: handleSave} = useFormSubmit({
@@ -657,8 +703,10 @@ const MyProfileTabComponent = observer(function MyProfileTabComponent({
 			onReset: handleReset,
 			onSave: handleSave,
 			isSubmitting: form.formState.isSubmitting,
+			saveDisabled: isNameStyleUnreadable,
+			bannerText: isNameStyleUnreadable ? i18n._(NAME_COLORS_BLOCK_SAVING_DESCRIPTOR) : undefined,
 		});
-	}, [handleReset, handleSave, form.formState.isSubmitting]);
+	}, [handleReset, handleSave, form.formState.isSubmitting, isNameStyleUnreadable, i18n]);
 	useEffect(() => {
 		if (flashTrigger > lastFlashTrigger) {
 			setLastFlashTrigger(flashTrigger);
@@ -881,6 +929,21 @@ const MyProfileTabComponent = observer(function MyProfileTabComponent({
 											data-flx="user.my-profile-tab.my-profile-tab-component.accent-color-picker.set-value"
 										/>
 									</div>
+									{!isPerGuildProfile &&
+										(showPremiumFeatures || plusAppearanceAccess.nameStyle || plusAppearanceAccess.profileTheme) && (
+											<PlusAppearanceSettings
+												displayName={form.watch('global_name') || profileFallbackDisplayName}
+												value={{name_style: watchedNameStyle, theme_colors: watchedThemeColors}}
+												access={plusAppearanceAccess}
+												disabled={isProfileCustomizationLocked}
+												errorMessage={
+													form.formState.errors.name_style?.message ?? form.formState.errors.theme_colors?.message
+												}
+												onNameStyleChange={(value) => form.setValue('name_style', value, {shouldDirty: true})}
+												onThemeColorsChange={(value) => form.setValue('theme_colors', value, {shouldDirty: true})}
+												data-flx="user.my-profile-tab.my-profile-tab-component.plus-appearance-settings"
+											/>
+										)}
 									<div
 										className={isPerGuildProfile && !hasPerGuildProfiles ? styles.opacityHalf : ''}
 										data-flx="user.my-profile-tab.my-profile-tab-component.opacity-half--2"
@@ -927,6 +990,8 @@ const MyProfileTabComponent = observer(function MyProfileTabComponent({
 										previewAccentColor={form.watch('accent_color')}
 										previewTimezoneOffset={previewTimezoneOffset}
 										previewGlobalName={!isPerGuildProfile ? form.watch('global_name') : undefined}
+										previewNameStyle={!isPerGuildProfile ? watchedNameStyle : undefined}
+										previewThemeColors={!isPerGuildProfile ? watchedThemeColors : undefined}
 										previewNick={isPerGuildProfile ? form.watch('nick') : undefined}
 										guildId={selectedGuildId}
 										guildMember={isPerGuildProfile ? guildMember : undefined}

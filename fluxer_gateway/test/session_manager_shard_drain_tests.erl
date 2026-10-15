@@ -452,3 +452,20 @@ with_session_state_transfer(Fun) ->
         _Pid ->
             Fun()
     end.
+build_session_data_keeps_the_name_style_test() ->
+    Style = #{<<"font_id">> => 6, <<"colors">> => [16#ffffff, 16#7b5cff]},
+    UserDataMap = #{
+        <<"id">> => <<"123">>,
+        <<"username">> => <<"tester">>,
+        <<"discriminator">> => <<"0001">>,
+        <<"avatar">> => null,
+        <<"avatar_color">> => null,
+        <<"flags">> => 0,
+        <<"name_style">> => Style
+    },
+    Data = #{<<"guilds">> => [], <<"user">> => UserDataMap, <<"user_settings">> => null},
+    IdentifyData = #{properties => #{}, token => <<"token">>, presence => null},
+    SessionData = build_test_session_data(Data, IdentifyData, UserDataMap),
+    UserData = maps:get(user_data, SessionData),
+    ?assertEqual(Style, maps:get(<<"name_style">>, UserData)).
+

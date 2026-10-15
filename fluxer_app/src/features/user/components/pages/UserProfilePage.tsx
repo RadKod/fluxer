@@ -41,6 +41,7 @@ import {ProfileMediaHeader} from '@app/features/user/components/modals/user_prof
 import {UserInfo} from '@app/features/user/components/modals/user_profile_modal/UserProfileModalUserInfo';
 import {ProfileMediaGrid} from '@app/features/user/components/pages/ProfileMediaGrid';
 import styles from '@app/features/user/components/pages/UserProfilePage.module.css';
+import {profileGradientSurface} from '@app/features/user/components/profile/ProfileGradientSurface';
 import {UserProfileLoadingSkeleton} from '@app/features/user/components/profile/UserProfileLoadingSkeleton';
 import {useUserProfileSurfaceState} from '@app/features/user/hooks/useUserProfileSurfaceState';
 import type {Profile} from '@app/features/user/models/Profile';
@@ -50,6 +51,7 @@ import UserProfile from '@app/features/user/state/UserProfile';
 import Users from '@app/features/user/state/Users';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import * as ProfileDisplayUtils from '@app/features/user/utils/ProfileDisplayUtils';
+import {profileThemeColors} from '@app/features/user/utils/ProfileGradient';
 import {resolveProfileGuildMembership, toProfileDisplayContext} from '@app/features/user/utils/ProfileGuildMembership';
 import {createMockProfile} from '@app/features/user/utils/ProfileUtils';
 import {
@@ -278,8 +280,13 @@ const ProfilePageHeader = observer(
 			undefined,
 			MEDIA_PROXY_PROFILE_BANNER_SIZE_MODAL,
 		);
+		const gradient = profileGradientSurface(profileThemeColors(user, profile));
 		return (
-			<div className={styles.card} data-flx="user.user-profile-page.header.card">
+			<div
+				className={clsx(styles.card, gradient?.className)}
+				style={gradient?.style}
+				data-flx="user.user-profile-page.header.card"
+			>
 				<ProfileMediaHeader
 					user={user}
 					profile={profile}

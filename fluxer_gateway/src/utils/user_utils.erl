@@ -21,7 +21,8 @@ partial_user_fields() ->
         <<"mention_flags">>,
         <<"avatar_decoration_data">>,
         <<"avatar_ultra_data">>,
-        <<"nameplate_data">>
+        <<"nameplate_data">>,
+        <<"name_style">>
     ].
 
 %% Micup: late profile events may update cosmetics, but must not roll back identity.
@@ -199,10 +200,23 @@ normalize_user_keeps_cosmetics_from_vectors_test() ->
                 fun(Field) ->
                     ?assertEqual(maps:get(Field, Partial), maps:get(Field, Result))
                 end,
-                [<<"avatar_decoration_data">>, <<"avatar_ultra_data">>, <<"nameplate_data">>]
+                [
+                    <<"avatar_decoration_data">>,
+                    <<"avatar_ultra_data">>,
+                    <<"nameplate_data">>,
+                    <<"name_style">>
+                ]
             )
         end,
         read_cosmetic_vectors()
+    ).
+
+normalize_user_keeps_name_style_test() ->
+    Style = #{<<"font_id">> => 6, <<"colors">> => [16#ffffff, 16#7b5cff]},
+    User = #{<<"id">> => <<"42">>, <<"name_style">> => Style},
+    ?assertEqual(Style, maps:get(<<"name_style">>, normalize_user(User))),
+    ?assertEqual(
+        null, maps:get(<<"name_style">>, normalize_user(User#{<<"name_style">> => null}))
     ).
 
 check_user_data_differs_on_cosmetics_from_vectors_test() ->

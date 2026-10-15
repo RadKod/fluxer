@@ -4,10 +4,12 @@ import {useContextMenuHoverState} from '@app/features/app/hooks/useContextMenuHo
 import {CrosspostCommunityPopout} from '@app/features/channel/components/CrosspostCommunityPopout';
 import {useMaybeMessageViewContext} from '@app/features/channel/components/MessageViewContext';
 import {PreloadableUserPopout} from '@app/features/channel/components/PreloadableUserPopout';
+import {RoleAppearance} from '@app/features/guild/components/RoleAppearance';
 import type {Guild} from '@app/features/guild/models/Guild';
 import {isKeyboardActivationKey} from '@app/features/input/utils/KeyboardUtils';
 import type {GuildMember} from '@app/features/member/models/GuildMember';
 import type {Message} from '@app/features/messaging/models/MessagingMessage';
+import {NameStyleText} from '@app/features/name_style/components/NameStyleText';
 import styles from '@app/features/theme/styles/Message.module.css';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import KeyboardMode from '@app/features/ui/state/KeyboardMode';
@@ -53,8 +55,9 @@ export const MessageUsername = observer(
 		const keyboardModeEnabled = KeyboardMode.keyboardModeEnabled;
 		const usernameNode = (
 			<FocusRing data-flx="channel.message-username.focus-ring">
-				{/* biome-ignore lint/a11y/noStaticElementInteractions: the username span is only keyboard-interactive in keyboard mode (role="button"/tabIndex set conditionally); pointer/popout/context-menu interactions are handled by the wrapping PreloadableUserPopout. */}
-				<span
+				<NameStyleText
+					nameStyle={message.webhookId == null ? user.nameStyle : null}
+					guildRoles={guild?.roles}
 					className={clsx(className, contextMenuOpen && styles.contextMenuUnderline)}
 					style={{color}}
 					data-user-id={user.id}
@@ -65,8 +68,10 @@ export const MessageUsername = observer(
 					onKeyDown={handleKeyDown}
 					data-flx="channel.message-username.context-menu-underline.key-down"
 				>
-					{displayName}
-				</span>
+					<RoleAppearance member={member} colorOverride={previewColor}>
+						{displayName}
+					</RoleAppearance>
+				</NameStyleText>
 			</FocusRing>
 		);
 		if (message.isCrosspostCopy) {

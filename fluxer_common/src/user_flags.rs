@@ -47,16 +47,25 @@ pub fn public_user_flags(
 ) -> i32 {
     let badge_hidden = (premium_flags.unwrap_or_default() & PREMIUM_FLAG_BADGE_HIDDEN) != 0
         || (flags & LEGACY_USER_FLAG_PREMIUM_BADGE_HIDDEN) != 0;
-    let shows_premium_badge = !bot
-        && (flags & USER_FLAG_DELETED) == 0
-        && premium_type.unwrap_or_default() > 0
-        && !badge_hidden
-        && (premium_flags.unwrap_or_default() & PREMIUM_FLAG_PERKS_DISABLED) == 0;
-    if shows_premium_badge {
+    if !badge_hidden && premium_perks_visible(flags, bot, premium_type, premium_flags) {
         visible_user_flags(flags) | PUBLIC_USER_FLAG_PREMIUM_BADGE
     } else {
         visible_user_flags(flags)
     }
+}
+
+/// Micup: whether others see a premium account's Plus perks (the badge, unless hidden, and the Plus appearance): any
+/// premium_type above 0, not a bot, not deleted, PERKS_DISABLED off. Stored perk data is never cleared when premium
+/// ends; reads hide it. `testdata/plus_appearance_vectors.json` pins the appearance side against the API.
+pub fn premium_perks_visible(
+    flags: i64,
+    bot: bool,
+    premium_type: Option<i32>,
+    premium_flags: Option<i32>,
+) -> bool {
+    !bot && (flags & USER_FLAG_DELETED) == 0
+        && premium_type.unwrap_or_default() > 0
+        && (premium_flags.unwrap_or_default() & PREMIUM_FLAG_PERKS_DISABLED) == 0
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

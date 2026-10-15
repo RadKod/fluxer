@@ -44,6 +44,15 @@ const DON_T_SHOW_MESSAGE_PREVIEWS_IN_THE_DM_DESCRIPTOR = msg({
 	comment: 'Label in the visual tab.',
 });
 
+const SHOW_NAME_STYLES_DESCRIPTOR = msg({
+	message: 'Show name styles',
+	comment:
+		'Toggle label in the visual accessibility tab. Name styles are the fonts and colours Plus members pick for their names.',
+});
+const SHOW_NAME_STYLES_DESCRIPTION_DESCRIPTOR = msg({
+	message: 'Show the fonts and colors people pick for their names. Turn off to see every name in the app font.',
+	comment: 'Description of the show name styles toggle in the visual accessibility tab. Applies to this device only.',
+});
 const DM_MESSAGE_PREVIEW_MODE_DESCRIPTOR = msg({
 	message: 'DM message preview mode',
 	comment: 'Label in the visual tab.',
@@ -130,6 +139,13 @@ export const VisualTabContent: React.FC = observer(() => {
 				value={dimStrikethroughText}
 				onChange={(value) => AccessibilityCommands.update({dimStrikethroughText: value})}
 				data-flx="user.accessibility-tab.visual-tab.visual-tab-content.switch.update--2"
+			/>
+			<Switch
+				label={i18n._(SHOW_NAME_STYLES_DESCRIPTOR)}
+				description={i18n._(SHOW_NAME_STYLES_DESCRIPTION_DESCRIPTOR)}
+				value={Accessibility.showNameStyles}
+				onChange={(value) => AccessibilityCommands.update({showNameStyles: value})}
+				data-flx="user.accessibility-tab.visual-tab.visual-tab-content.switch.show-name-styles"
 			/>
 			<SettingsTabSection
 				title={<Trans>DM message previews</Trans>}

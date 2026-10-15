@@ -96,6 +96,11 @@ export interface UserRow {
 	avatar_ultra_asset?: string | null;
 	profile_effect_asset?: string | null;
 	nameplate_asset?: string | null;
+	name_font?: Nullish<number>;
+	name_color?: Nullish<number>;
+	name_color_2?: Nullish<number>;
+	theme_primary_color?: Nullish<number>;
+	theme_accent_color?: Nullish<number>;
 	version: number;
 }
 
@@ -174,6 +179,11 @@ export const USER_COLUMNS = [
 	'avatar_ultra_asset',
 	'profile_effect_asset',
 	'nameplate_asset',
+	'name_font',
+	'name_color',
+	'name_color_2',
+	'theme_primary_color',
+	'theme_accent_color',
 	'version',
 ] as const satisfies ReadonlyArray<keyof UserRow>;
 export const EMPTY_USER_ROW: UserRow = {
@@ -251,6 +261,11 @@ export const EMPTY_USER_ROW: UserRow = {
 	avatar_ultra_asset: null,
 	profile_effect_asset: null,
 	nameplate_asset: null,
+	name_font: null,
+	name_color: null,
+	name_color_2: null,
+	theme_primary_color: null,
+	theme_accent_color: null,
 	version: 1,
 };
 

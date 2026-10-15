@@ -9,7 +9,7 @@ const read = (path: string): string => readFileSync(resolve(root, path), 'utf8')
 
 // Micup: these contracts check source parity; native behavior is covered by Erlang and Rust tests.
 describe('username gateway source contracts', () => {
-	test('the public partial whitelist adds only identity_version', () => {
+	test('the public partial whitelist adds only identity_version and name_style', () => {
 		const source = read('fluxer_gateway/src/utils/user_utils.erl');
 		const fields = source.match(/^partial_user_fields\(\) ->\s*\[([\s\S]*?)\]/m)?.[1];
 		expect(fields).toBeDefined();
@@ -28,6 +28,7 @@ describe('username gateway source contracts', () => {
 			'avatar_decoration_data',
 			'avatar_ultra_data',
 			'nameplate_data',
+			'name_style',
 		]);
 	});
 

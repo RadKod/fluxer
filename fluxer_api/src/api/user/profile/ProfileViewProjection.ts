@@ -10,7 +10,8 @@ import {EMPTY_USER_ROW, type UserRow} from '@app/api/database/types/UserTypes';
 import {User} from '@app/api/models/User';
 
 // What mapUserToPartialResponse, mapUserToProfileResponse, the premium fields and their flags, the profile timezone,
-// shouldStripExpiredPremium, the animated avatar and banner entitlements (premium and traits) and the profile effect read.
+// shouldStripExpiredPremium, the animated avatar and banner entitlements (premium and traits), the profile effect and
+// the Plus name style and profile theme read.
 // Never last_active_*: the account write hook ignores those columns, so they would go stale here.
 export const PROFILE_VIEW_USER_COLUMNS = [
 	'user_id',
@@ -49,6 +50,11 @@ export const PROFILE_VIEW_USER_COLUMNS = [
 	'nameplate_asset',
 	'profile_effect_id',
 	'profile_effect_asset',
+	'name_font',
+	'name_color',
+	'name_color_2',
+	'theme_primary_color',
+	'theme_accent_color',
 ] as const satisfies ReadonlyArray<keyof UserRow>;
 
 // An SSO identity trait is a stable external account key; no limit rule matches one account's identity.

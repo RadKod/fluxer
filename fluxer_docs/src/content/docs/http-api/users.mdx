@@ -13,6 +13,7 @@ Every route on this page takes a user session token or a bot token. An OAuth2 be
 | Object | Purpose |
 | --- | --- |
 | [Partial user](#partial-user-object) | Public account representation embedded everywhere |
+| [Name style](#name-style-object) | Plus name font and colours |
 | [User](#user-object) | Private owner representation |
 | [User settings](#user-settings-object) | Account-wide settings record |
 | [Full user profile](#full-user-profile-object) | Profile read for one target account |
@@ -39,6 +40,7 @@ The public account representation embedded by messages, relationships, guild mem
 | avatar_decoration_data | ?[cosmetic asset data](/http-api/cosmetics/#cosmetic-asset-data-object) object | The avatar decoration the account wears, or null when none |
 | avatar_ultra_data | ?[cosmetic asset data](/http-api/cosmetics/#cosmetic-asset-data-object) object | The ultra decoration the account wears, or null when none |
 | nameplate_data | ?[cosmetic asset data](/http-api/cosmetics/#cosmetic-asset-data-object) object | The nameplate the account wears, or null when none |
+| name_style | ?[name style](#name-style-object) object | The name font and colours, or null when none is set or Plus is not active |
 
 <sup>1</sup> An animated avatar hash has the `a_` prefix, and the prefix is removed while the account has no animated avatar entitlement
 
@@ -100,6 +102,36 @@ The account-wide preference applied when another account replies to one of this 
 
 A guild member has the same enumeration in its own `mention_flags`, where `NO_PREFERENCE` inherits the account-wide value.
 
+## Name style object
+
+The Plus name font and colours, set through [Modify current user](/http-api/users/current-user/#modify-current-user). The stored style stays when Plus ends and shows again when it returns. It is null on a hidden profile, a deleted account, and a bot.
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| font_id | integer | [Name style font](#name-style-fonts) |
+| colors | array[integer] | One packed 24-bit RGB colour for a solid name, or two for a gradient |
+
+## Name style fonts
+
+A font ID is stable and never reused.
+
+| Value | Name | Description |
+| --- | --- | --- |
+| 1 | BALOO | Baloo 2 |
+| 2 | PLAYPEN | Playpen Sans |
+| 3 | PACIFICO | Pacifico |
+| 4 | CAVEAT | Caveat |
+| 5 | PIXELIFY | Pixelify Sans |
+| 6 | PRESSSTART | Press Start 2P |
+| 7 | VT323 | VT323 |
+| 8 | AUDIOWIDE | Audiowide |
+| 9 | GRENZE | Grenze Gotisch |
+| 10 | NEWROCKER | New Rocker |
+| 11 | BUNGEE | Bungee |
+| 12 | RIGHTEOUS | Righteous |
+
 ## User object
 
 During sanalyer username migration, the owner-only `username_state` is `legacy`, `selected`, or `reselect_required`. It is absent from public users, members, presence, search and OAuth2 identity responses. `GET /users/@me/username` also returns `state`, `changeAvailableAt` (an ISO timestamp or null) and `freeChangeAvailable`. The first selection and one subsequent change have no waiting period; further changes require 14 days. `POST /users/@me/username-prompt` returns `show`; the server allows at most one prompt per person per Istanbul day.
@@ -127,6 +159,7 @@ The private representation of the current account, returned by [Get current user
 | avatar_decoration_data | ?[cosmetic asset data](/http-api/cosmetics/#cosmetic-asset-data-object) object | The avatar decoration the account wears, or null when none |
 | avatar_ultra_data | ?[cosmetic asset data](/http-api/cosmetics/#cosmetic-asset-data-object) object | The ultra decoration the account wears, or null when none |
 | nameplate_data | ?[cosmetic asset data](/http-api/cosmetics/#cosmetic-asset-data-object) object | The nameplate the account wears, or null when none |
+| name_style | ?[name style](#name-style-object) object | The name font and colours, or null when none is set or Plus is not active |
 | is_staff | boolean | Whether the account has the staff flag, including when that flag is hidden from `flags` |
 | acls<sup>2</sup> <sup>3</sup> | array[string] | The Admin access control entries held by the account |
 | traits<sup>3</sup> <sup>4</sup> | array[string] | The account traits, in sorted order |
@@ -136,6 +169,7 @@ The private representation of the current account, returned by [Get current user
 | bio | ?string | The profile biography, or null when none is set |
 | pronouns | ?string | The profile pronouns, or null when none are set |
 | accent_color | ?integer | The profile accent colour as packed 24-bit RGB, or null when none is set |
+| theme_colors | ?array[integer] | The profile card gradient, top then bottom colour, or null when none is set or Plus is not active |
 | timezone?<sup>6</sup> | ?string | The IANA timezone identifier stored for the account, or null when none is set |
 | timezone_privacy_flags?<sup>6</sup> | integer | [Profile field privacy flags](#profile-field-privacy-flags) applied to the profile timezone |
 | banner<sup>7</sup> | ?string | The image hash of the profile banner, or null when none is set or the entitlement is missing |
@@ -524,6 +558,7 @@ The account-wide profile customisation inside a [full user profile object](#full
 | banner<sup>2</sup> | ?string | The image hash of the profile banner, or null when none is set |
 | banner_color | ?integer | The packed 24-bit RGB colour derived from the stored banner, or null |
 | accent_color | ?integer | The profile accent colour as packed 24-bit RGB, or null when none is set |
+| theme_colors? | ?array[integer] | The profile card gradient, top then bottom colour, or null when unset, hidden, or Plus is not active |
 
 <sup>1</sup> The value is forced to `null` when profile privacy restricts the viewer, which is reported by `profile_limited`
 

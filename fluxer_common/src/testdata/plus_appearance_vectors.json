@@ -1,0 +1,258 @@
+[
+	{
+		"name": "subscription premium shows a solid name and the profile theme",
+		"row": {
+			"flags": 0,
+			"bot": false,
+			"premium_type": 1,
+			"premium_flags": 0,
+			"name_font": 3,
+			"name_color": 16735912,
+			"name_color_2": null,
+			"theme_primary_color": 1973067,
+			"theme_accent_color": 500658
+		},
+		"name_style": {"font_id": 3, "colors": [16735912]},
+		"theme_colors": [1973067, 500658]
+	},
+	{
+		"name": "lifetime premium shows a gradient name",
+		"row": {
+			"flags": 0,
+			"bot": false,
+			"premium_type": 2,
+			"premium_flags": 0,
+			"name_font": 6,
+			"name_color": 16777215,
+			"name_color_2": 8084735,
+			"theme_primary_color": null,
+			"theme_accent_color": null
+		},
+		"name_style": {"font_id": 6, "colors": [16777215, 8084735]},
+		"theme_colors": null
+	},
+	{
+		"name": "a black theme stop (0) is a colour, not a missing value",
+		"row": {
+			"flags": 0,
+			"bot": false,
+			"premium_type": 1,
+			"premium_flags": 0,
+			"name_font": null,
+			"name_color": null,
+			"name_color_2": null,
+			"theme_primary_color": 0,
+			"theme_accent_color": 16777215
+		},
+		"name_style": null,
+		"theme_colors": [0, 16777215]
+	},
+	{
+		"name": "premium_type 0 hides both",
+		"row": {
+			"flags": 0,
+			"bot": false,
+			"premium_type": 0,
+			"premium_flags": 0,
+			"name_font": 3,
+			"name_color": 16735912,
+			"name_color_2": null,
+			"theme_primary_color": 1973067,
+			"theme_accent_color": 500658
+		},
+		"name_style": null,
+		"theme_colors": null
+	},
+	{
+		"name": "premium_type null hides both",
+		"row": {
+			"flags": 0,
+			"bot": false,
+			"premium_type": null,
+			"premium_flags": null,
+			"name_font": 3,
+			"name_color": 16735912,
+			"name_color_2": 8084735,
+			"theme_primary_color": 1973067,
+			"theme_accent_color": 500658
+		},
+		"name_style": null,
+		"theme_colors": null
+	},
+	{
+		"name": "PERKS_DISABLED hides both",
+		"row": {
+			"flags": 0,
+			"bot": false,
+			"premium_type": 2,
+			"premium_flags": 256,
+			"name_font": 3,
+			"name_color": 16735912,
+			"name_color_2": null,
+			"theme_primary_color": 1973067,
+			"theme_accent_color": 500658
+		},
+		"name_style": null,
+		"theme_colors": null
+	},
+	{
+		"name": "ENABLED_OVERRIDE without premium_type shows nothing",
+		"row": {
+			"flags": 0,
+			"bot": false,
+			"premium_type": null,
+			"premium_flags": 128,
+			"name_font": 3,
+			"name_color": 16735912,
+			"name_color_2": null,
+			"theme_primary_color": 1973067,
+			"theme_accent_color": 500658
+		},
+		"name_style": null,
+		"theme_colors": null
+	},
+	{
+		"name": "BADGE_HIDDEN hides only the badge, the style still shows",
+		"row": {
+			"flags": 0,
+			"bot": false,
+			"premium_type": 1,
+			"premium_flags": 2,
+			"name_font": 3,
+			"name_color": 16735912,
+			"name_color_2": null,
+			"theme_primary_color": 1973067,
+			"theme_accent_color": 500658
+		},
+		"name_style": {"font_id": 3, "colors": [16735912]},
+		"theme_colors": [1973067, 500658]
+	},
+	{
+		"name": "the legacy BADGE_HIDDEN bit (40) in flags does not hide the style",
+		"row": {
+			"flags": 1099511627776,
+			"bot": false,
+			"premium_type": 1,
+			"premium_flags": 0,
+			"name_font": 3,
+			"name_color": 16735912,
+			"name_color_2": null,
+			"theme_primary_color": 1973067,
+			"theme_accent_color": 500658
+		},
+		"name_style": {"font_id": 3, "colors": [16735912]},
+		"theme_colors": [1973067, 500658]
+	},
+	{
+		"name": "a bot never shows them",
+		"row": {
+			"flags": 0,
+			"bot": true,
+			"premium_type": 1,
+			"premium_flags": 0,
+			"name_font": 3,
+			"name_color": 16735912,
+			"name_color_2": null,
+			"theme_primary_color": 1973067,
+			"theme_accent_color": 500658
+		},
+		"name_style": null,
+		"theme_colors": null
+	},
+	{
+		"name": "a deleted account never shows them",
+		"row": {
+			"flags": 17179869184,
+			"bot": false,
+			"premium_type": 1,
+			"premium_flags": 0,
+			"name_font": 3,
+			"name_color": 16735912,
+			"name_color_2": null,
+			"theme_primary_color": 1973067,
+			"theme_accent_color": 500658
+		},
+		"name_style": null,
+		"theme_colors": null
+	},
+	{
+		"name": "colours without a font show no name style",
+		"row": {
+			"flags": 0,
+			"bot": false,
+			"premium_type": 1,
+			"premium_flags": 0,
+			"name_font": null,
+			"name_color": 16735912,
+			"name_color_2": 8084735,
+			"theme_primary_color": null,
+			"theme_accent_color": null
+		},
+		"name_style": null,
+		"theme_colors": null
+	},
+	{
+		"name": "a font without its first colour shows no name style",
+		"row": {
+			"flags": 0,
+			"bot": false,
+			"premium_type": 1,
+			"premium_flags": 0,
+			"name_font": 3,
+			"name_color": null,
+			"name_color_2": 8084735,
+			"theme_primary_color": null,
+			"theme_accent_color": null
+		},
+		"name_style": null,
+		"theme_colors": null
+	},
+	{
+		"name": "one theme stop alone shows no theme",
+		"row": {
+			"flags": 0,
+			"bot": false,
+			"premium_type": 1,
+			"premium_flags": 0,
+			"name_font": null,
+			"name_color": null,
+			"name_color_2": null,
+			"theme_primary_color": 1973067,
+			"theme_accent_color": null
+		},
+		"name_style": null,
+		"theme_colors": null
+	},
+	{
+		"name": "the accent stop alone shows no theme",
+		"row": {
+			"flags": 0,
+			"bot": false,
+			"premium_type": 1,
+			"premium_flags": 0,
+			"name_font": null,
+			"name_color": null,
+			"name_color_2": null,
+			"theme_primary_color": null,
+			"theme_accent_color": 500658
+		},
+		"name_style": null,
+		"theme_colors": null
+	},
+	{
+		"name": "premium with nothing stored shows nothing",
+		"row": {
+			"flags": 0,
+			"bot": false,
+			"premium_type": 1,
+			"premium_flags": 0,
+			"name_font": null,
+			"name_color": null,
+			"name_color_2": null,
+			"theme_primary_color": null,
+			"theme_accent_color": null
+		},
+		"name_style": null,
+		"theme_colors": null
+	}
+]

@@ -182,6 +182,8 @@ Each is a leaky bucket like the route buckets. It admits a burst of its full siz
 | [Modify current user](/http-api/users/current-user/#modify-current-user) | 25 per 30 minutes on the biography, when the submitted value differs | `BIO_CHANGED_TOO_MANY_TIMES` |
 | [Modify current user](/http-api/users/current-user/#modify-current-user) | 25 per 30 minutes on the pronouns, when the submitted value differs | `PRONOUNS_CHANGED_TOO_MANY_TIMES` |
 | [Modify current user](/http-api/users/current-user/#modify-current-user) | 25 per 30 minutes on the accent colour, when the submitted value differs | `ACCENT_COLOR_CHANGED_TOO_MANY_TIMES` |
+| [Modify current user](/http-api/users/current-user/#modify-current-user) | 5 per 10 minutes on the name style, when the submitted value differs | `NAME_STYLE_CHANGED_TOO_MANY_TIMES` |
+| [Modify current user](/http-api/users/current-user/#modify-current-user) | 25 per 30 minutes on the profile theme, when the submitted value differs | `THEME_COLORS_CHANGED_TOO_MANY_TIMES` |
 | [Modify current user](/http-api/users/current-user/#modify-current-user) | 25 per 30 minutes on any non-null avatar | `AVATAR_CHANGED_TOO_MANY_TIMES` |
 | [Modify current user](/http-api/users/current-user/#modify-current-user) | 25 per 30 minutes on any banner value past the entitlement check | `BANNER_CHANGED_TOO_MANY_TIMES` |
 | [Update bot profile](/http-api/applications/#update-bot-profile) | 5 per 3 hours on the bot's resulting username or discriminator | `USERNAME_CHANGED_TOO_MANY_TIMES` |

@@ -18,6 +18,108 @@ describe('ErrorI18n', () => {
 			expect(getErrorMessageUnsafe('ENTRANCE_SOUNDS_REQUIRE_PREMIUM', locale)).toBe(expected);
 			expect(consoleWarnSpy).not.toHaveBeenCalled();
 		});
+		it.each([
+			['NAME_STYLES_REQUIRE_PREMIUM', 'en-US', {}, 'Name styles require Plus.'],
+			['PROFILE_THEMES_REQUIRE_PREMIUM', 'tr', {}, 'Profil temaları için Plus gerekli.'],
+			[
+				'NAME_COLORS_NOT_READABLE',
+				'tr',
+				{},
+				'Bu ad renkleri koyu zeminde okunamayacak kadar koyu. Daha açık bir renk seç.',
+			],
+			[
+				'NAME_STYLE_CHANGED_TOO_MANY_TIMES',
+				'en-US',
+				{minutes: 1},
+				"You've changed your name style too often recently. Please try again in 1 minute.",
+			],
+			[
+				'THEME_COLORS_CHANGED_TOO_MANY_TIMES',
+				'tr',
+				{minutes: 12},
+				'Son zamanlarda profil temanı çok sık değiştirdin. Lütfen 12 dakika sonra tekrar dene.',
+			],
+		])('localizes the Plus appearance error %s in %s', (code, locale, variables, expected) => {
+			expect(getErrorMessageUnsafe(code, locale, variables)).toBe(expected);
+			expect(consoleWarnSpy).not.toHaveBeenCalled();
+		});
+		it('returns message for valid key in supported locale', () => {
+			const message = getErrorMessage('rate_limits.rate_limited', 'fr');
+			expect(message).toBe('Vous avez atteint la limite de requêtes.');
+		});
+		it('returns key when translation missing', () => {
+			const message = getErrorMessageUnsafe('nonexistent.key', 'en-US');
+			expect(message).toBe('nonexistent.key');
+			expect(consoleWarnSpy).toHaveBeenCalledWith(
+				'Missing translation for error message: nonexistent.key (locale: en-US)',
+			);
+		});
+		it('returns fallbackMessage when provided and key missing', () => {
+			const message = getErrorMessageUnsafe('nonexistent.key', 'en-US', undefined, 'Custom fallback');
+			expect(message).toBe('Custom fallback');
+		});
+	});
+	describe('getMessage() - locale handling', () => {
+		it('normalizes en-GB locale to en-US', () => {
+			const message = getErrorMessage('rate_limits.rate_limited', 'en-GB');
+			expect(message).toBe("You're being rate limited.");
+		});
+		it('normalizes en-CA locale to en-US', () => {
+			const message = getErrorMessage('rate_limits.rate_limited', 'en-CA');
+			expect(message).toBe("You're being rate limited.");
+		});
+		it('falls back to en-US for unsupported locales', () => {
+			const message = getErrorMessage('rate_limits.rate_limited', 'de-DE');
+			expect(message).toBe("You're being rate limited.");
+			expect(consoleWarnSpy).toHaveBeenCalledWith('Unsupported locale, falling back to en-US: de-DE');
+		});
+		it('handles null locale by defaulting to en-US', () => {
+			const message = getErrorMessage('rate_limits.rate_limited', null);
+			expect(message).toBe("You're being rate limited.");
+		});
+		it('handles undefined locale by defaulting to en-US', () => {
+			const message = getErrorMessage('rate_limits.rate_limited', undefined);
+			expect(message).toBe("You're being rate limited.");
+		});
+		it('loads locale on-demand when first accessed', () => {
+			expect(hasErrorLocale('fr')).toBe(true);
+			const message = getErrorMessage('account.suspended_permanently', 'fr');
+			expect(message).toBe('Ce compte a été suspendu définitivement.');
+		});
+	});
+	describe('getMessage() - variable interpolation', () => {
+		it('interpolates simple {variable} placeholders', () => {
+			const message = getErrorMessage('channels_and_guilds.invalid_channel_id', 'en-US', {
+				channelId: '123456789',
+			});
+			expect(message).toBe('Invalid channel ID: 123456789.');
+		});
+		it('handles MessageFormat plural syntax', () => {
+			const message = getErrorMessage('rate_limits.username_changed_too_often', 'en-US', {
+				minutes: 1,
+			});
+			expect(message).toBe("You've changed your username too often recently. Please try again in 1 minute.");
+		});
+		it('handles MessageFormat plural syntax for multiple values', () => {
+			const message = getErrorMessage('rate_limits.username_changed_too_often', 'en-US', {
+				minutes: 5,
+			});
+			expect(message).toBe("You've changed your username too often recently. Please try again in 5 minutes.");
+		});
+		it('falls back to simple interpolation on MessageFormat failure', () => {
+			const message = getErrorMessage('channels_and_guilds.invalid_channel_id', 'en-US', {
+				channelId: 'test-channel',
+			});
+			expect(message).toBe('Invalid channel ID: test-channel.');
+		});
+		it('returns raw message when no variables provided', () => {
+			const message = getErrorMessage('rate_limits.rate_limited', 'en-US');
+			expect(message).toBe("You're being rate limited.");
+		});
+		it('handles complex nested error keys', () => {
+			const message = getErrorMessage('roles.invalid_role_id', 'en-US', {roleId: '999'});
+			expect(message).toBe('Invalid role ID: 999.');
+		});
 	});
 	describe('global IP block messages', () => {
 		const HOSTED = {
