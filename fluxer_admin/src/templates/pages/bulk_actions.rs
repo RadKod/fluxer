@@ -48,6 +48,7 @@ pub fn bulk_actions_page(config: &AdminConfig, auth: &AuthContext, csrf_token: &
             }
             @if acl::has_permission(admin_acls, acl::BULK_UPDATE_GUILD_FEATURES) {
                 (bulk_update_guild_features_section(base, csrf_token))
+                (backfill_guild_boosts_section(base, csrf_token))
             }
             @if acl::has_permission(admin_acls, acl::BULK_ADD_GUILD_MEMBERS) {
                 (bulk_add_guild_members_section(base, csrf_token))
@@ -160,6 +161,26 @@ fn bulk_update_guild_features_section(base: &str, csrf_token: &str) -> Markup {
                     (text_input("audit_log_reason", "Audit Log Reason (optional)", "", "Reason for this bulk operation"))
                     (form_actions(html! {
                         (submit_button("Update Guild Features"))
+                    }))
+                }
+            }
+        },
+    )
+}
+
+fn backfill_guild_boosts_section(base: &str, csrf_token: &str) -> Markup {
+    section_card_simple(
+        "Recompute Boost Entitlements",
+        html! {
+            form method="post" action={(base) "/bulk-actions?action=backfill-guild-boosts"} {
+                (csrf_input(csrf_token))
+                div class="space-y-4" {
+                    p class="text-neutral-500 text-sm" {
+                        "Recomputes guild boost entitlements and resumes incomplete runs. View results in job details (requires jobs:view permission)."
+                    }
+                    (text_input("audit_log_reason", "Audit Log Reason (optional)", "", "Reason for this bulk operation"))
+                    (form_actions(html! {
+                        (submit_button("Recompute Boost Entitlements"))
                     }))
                 }
             }

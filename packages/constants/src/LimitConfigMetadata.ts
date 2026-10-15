@@ -8,6 +8,10 @@ import {
 } from '@fluxer/constants/src/LimitConstants';
 
 export const LIMIT_KEYS = [
+	'max_guild_video_fps',
+	'max_guild_video_height',
+	'feature_role_gradient',
+	'feature_role_icons',
 	'avatar_max_size',
 	'emoji_max_size',
 	'feature_animated_avatar',
@@ -82,6 +86,10 @@ export type LimitKey = (typeof LIMIT_KEYS)[number];
 export type LimitScope = 'user' | 'guild' | 'both';
 
 export const LIMIT_KEY_SCOPES: Record<LimitKey, LimitScope> = {
+	max_guild_video_fps: 'guild',
+	max_guild_video_height: 'guild',
+	feature_role_gradient: 'guild',
+	feature_role_icons: 'guild',
 	avatar_max_size: 'user',
 	emoji_max_size: 'guild',
 	feature_animated_avatar: 'user',
@@ -177,6 +185,44 @@ export const LIMIT_CATEGORY_LABELS: Record<LimitCategory, string> = {
 	features: 'Feature Toggles',
 };
 export const LIMIT_KEY_METADATA: Record<LimitKey, LimitKeyMetadata> = {
+	max_guild_video_fps: {
+		key: 'max_guild_video_fps',
+		label: 'Max Guild Video FPS',
+		description: 'Maximum video frames per second granted by the guild',
+		category: 'guilds',
+		scope: 'guild',
+		isToggle: false,
+		unit: 'count',
+	},
+	max_guild_video_height: {
+		key: 'max_guild_video_height',
+		label: 'Max Guild Video Height',
+		description: 'Maximum video height in pixels granted by the guild',
+		category: 'guilds',
+		scope: 'guild',
+		isToggle: false,
+		unit: 'count',
+	},
+	feature_role_gradient: {
+		key: 'feature_role_gradient',
+		label: 'Role Gradient',
+		description: 'Assign a second static color to roles',
+		category: 'features',
+		scope: 'guild',
+		isToggle: true,
+		min: 0,
+		max: 1,
+	},
+	feature_role_icons: {
+		key: 'feature_role_icons',
+		label: 'Role Icons',
+		description: 'Assign Unicode or guild emoji icons to roles',
+		category: 'features',
+		scope: 'guild',
+		isToggle: true,
+		min: 0,
+		max: 1,
+	},
 	feature_app_commands: {
 		key: 'feature_app_commands',
 		label: 'Application Commands',

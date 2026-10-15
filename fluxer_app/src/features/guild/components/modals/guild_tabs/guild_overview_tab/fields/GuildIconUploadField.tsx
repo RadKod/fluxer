@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {
-	ANIMATED_ICON_FEATURE,
 	ANIMATED_IMAGE_FORMATS,
 	AVATAR_RECOMMENDED_SIZE_LABEL,
 	STATIC_IMAGE_FORMATS,
 } from '@app/features/app/config/I18nDisplayConstants';
+import {useAnimatedMediaPlaybackAllowed} from '@app/features/app/hooks/useAnimatedMediaPlayback';
+import {useViewportPlayback} from '@app/features/app/hooks/useViewportPlayback';
 import {GlobalLimits} from '@app/features/app/utils/GlobalLimits';
 import {AssetType} from '@app/features/expressions/components/modals/AssetCropModal';
 import {formatImageUploadRecommendedHint} from '@app/features/expressions/utils/AssetUploadHintCopy';
@@ -16,11 +17,13 @@ import {GuildIcon} from '@app/features/guild/components/popouts/GuildIcon';
 import type {FormInputs} from '@app/features/guild/utils/guild_tabs/GuildOverviewTabUtils';
 import {formatFileSize} from '@app/features/messaging/utils/FileUtils';
 import {Button} from '@app/features/ui/button/Button';
+import {parseAvatarHash} from '@app/features/user/utils/AvatarUtils';
 import {getAcceptString} from '@fluxer/constants/src/AssetFormatPolicy';
 import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
 import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
 import type React from 'react';
+import {useState} from 'react';
 import type {UseFormReturn} from 'react-hook-form';
 import {useWatch} from 'react-hook-form';
 
@@ -28,9 +31,10 @@ const ICON_DESCRIPTOR = msg({
 	message: 'Icon',
 	comment: 'Short label in the guild icon upload field. Keep it concise.',
 });
-const ANIMATED_ICONS_REQUIRE_THE_COMMUNITY_FEATURE_DESCRIPTOR = msg({
-	message: 'Animated icons require the {animatedIconFeature} community feature.',
-	comment: 'Description text in the guild icon upload field. Preserve {animatedIconFeature}; it is inserted by code.',
+const ANIMATED_ICON_BOOST_HINT_DESCRIPTOR = msg({
+	message: 'Boost to Level 1 to upload animated icons.',
+	comment:
+		'Upgrade hint and upload error for a community without the animated icon feature. Static uploads remain available.',
 });
 const CHANGE_ICON_DESCRIPTOR = msg({
 	message: 'Change icon',
@@ -48,6 +52,12 @@ export const GuildIconUploadField: React.FC<{
 }> = ({guild, form, canManageGuild, previewIconUrl, setPreviewIconUrl, hasClearedIcon, setHasClearedIcon}) => {
 	const {i18n} = useLingui();
 	const canUseAnimatedIcon = guild.features.has(GuildFeatures.ANIMATED_ICON);
+	const [previewNode, setPreviewNode] = useState<HTMLElement | null>(null);
+	const viewportVisible = useViewportPlayback(previewNode);
+	const playbackAllowed =
+		useAnimatedMediaPlaybackAllowed({
+			isAnimated: Boolean(previewIconUrl || guild.icon?.startsWith('a_')),
+		}) && viewportVisible;
 	const watchedName = useWatch({
 		control: form.control,
 		name: 'name',
@@ -68,9 +78,7 @@ export const GuildIconUploadField: React.FC<{
 		gif: {
 			mode: 'require-feature',
 			isAllowed: () => canUseAnimatedIcon,
-			featureMissingMessage: i18n._(ANIMATED_ICONS_REQUIRE_THE_COMMUNITY_FEATURE_DESCRIPTOR, {
-				animatedIconFeature: ANIMATED_ICON_FEATURE,
-			}),
+			featureMissingMessage: i18n._(ANIMATED_ICON_BOOST_HINT_DESCRIPTOR),
 		},
 		sourceModalTitle: i18n._(CHANGE_ICON_DESCRIPTOR),
 		uploadHint: formatImageUploadRecommendedHint(i18n, {
@@ -89,10 +97,11 @@ export const GuildIconUploadField: React.FC<{
 				<Trans>Icon</Trans>
 			</div>
 			<div
+				ref={setPreviewNode}
 				className={styles.iconUploadContainer}
 				data-flx="guild.guild-tabs.guild-overview-tab.fields.guild-icon-upload-field.icon-upload-container"
 			>
-				{previewIconUrl ? (
+				{previewIconUrl && (!controller.isPreviewAnimated || (canUseAnimatedIcon && playbackAllowed)) ? (
 					<div
 						className={styles.iconPreview}
 						style={{backgroundImage: `url(${previewIconUrl})`}}
@@ -106,7 +115,13 @@ export const GuildIconUploadField: React.FC<{
 						<GuildIcon
 							id={guild.id}
 							name={iconName}
-							icon={hasClearedIcon ? null : guild.icon}
+							icon={
+								hasClearedIcon
+									? null
+									: guild.icon && (!canUseAnimatedIcon || !playbackAllowed)
+										? parseAvatarHash(guild.icon).hash
+										: guild.icon
+							}
 							sizePx={80}
 							data-flx="guild.guild-tabs.guild-overview-tab.fields.guild-icon-upload-field.guild-icon"
 						/>
@@ -141,6 +156,9 @@ export const GuildIconUploadField: React.FC<{
 							</Button>
 						)}
 					</div>
+					{!canUseAnimatedIcon && (
+						<p className={styles.iconUploadDescription}>{i18n._(ANIMATED_ICON_BOOST_HINT_DESCRIPTOR)}</p>
+					)}
 				</div>
 			</div>
 			{form.formState.errors.icon?.message ? (

@@ -7,6 +7,7 @@ import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {AuditLogActionType} from '@fluxer/constants/src/AuditLogActionType';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
+import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 
@@ -41,8 +42,10 @@ const ROLE_SNAPSHOT_KEYS = [
 	'position',
 	'hoist_position',
 	'color',
+	'color_secondary',
 	'icon_hash',
 	'unicode_emoji',
+	'icon_emoji_id',
 	'hoist',
 	'mentionable',
 ];
@@ -71,6 +74,30 @@ describe('Guild audit log role writers', () => {
 	});
 	afterEach(async () => {
 		await harness?.shutdown();
+	});
+
+	test('records appearance assignment and explicit clearing', async () => {
+		await createBuilder(harness, '')
+			.post(`/test/guilds/${guild.id}/features`)
+			.body({add_features: [GuildFeatures.BOOST_LEVEL_1, GuildFeatures.BOOST_LEVEL_2]})
+			.execute();
+		const role = await createRole(harness, owner.token, guild.id, {name: 'Appearance audit'});
+		const patch = (body: Record<string, unknown>) =>
+			createBuilder(harness, owner.token).patch(`/guilds/${guild.id}/roles/${role.id}`).body(body).execute();
+		await patch({unicode_emoji: '🎉', color_secondary: 123});
+		await patch({unicode_emoji: null, color_secondary: null});
+		const entries = (await listEntries(harness, owner.token, guild.id, AuditLogActionType.ROLE_UPDATE)).filter(
+			(entry) => entry.target_id === role.id,
+		);
+		expect(entries).toHaveLength(2);
+		expect(entries.flatMap((entry) => entry.changes ?? [])).toEqual(
+			expect.arrayContaining([
+				{key: 'unicode_emoji', old_value: null, new_value: '🎉'},
+				{key: 'unicode_emoji', old_value: '🎉', new_value: null},
+				{key: 'color_secondary', old_value: null, new_value: 123},
+				{key: 'color_secondary', old_value: 123, new_value: null},
+			]),
+		);
 	});
 
 	test('records the role snapshot and reason on delete', async () => {

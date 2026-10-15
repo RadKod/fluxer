@@ -6,24 +6,25 @@ import type {LimitContextInput} from '@app/features/app/utils/LimitContext';
 import {LimitContext} from '@app/features/app/utils/LimitContext';
 import type {LimitKey} from '@fluxer/constants/src/LimitConfigMetadata';
 import {resolveLimit} from '@fluxer/limits/src/LimitResolver';
-import type {LimitConfigSnapshot} from '@fluxer/limits/src/LimitTypes';
+import type {EvaluationContext, LimitConfigSnapshot} from '@fluxer/limits/src/LimitTypes';
 
 export interface LimitResolveOptions {
 	key: LimitKey;
 	fallback: number;
 	context?: LimitContextInput;
 	instanceDomain?: string;
+	evaluationContext?: EvaluationContext;
 }
 
 class LimitResolverClass {
 	resolve(options: LimitResolveOptions): number {
-		const {key, fallback, context, instanceDomain} = options;
+		const {key, fallback, context, instanceDomain, evaluationContext} = options;
 		const snapshot = this.getSnapshotForInstance(instanceDomain);
 		if (snapshot === null) {
 			return fallback;
 		}
 		const ctx = context ? LimitContext.build(context) : LimitContext.current();
-		const resolved = resolveLimit(snapshot, ctx, key);
+		const resolved = resolveLimit(snapshot, ctx, key, {evaluationContext});
 		if (!Number.isFinite(resolved) || resolved < 0) {
 			return fallback;
 		}

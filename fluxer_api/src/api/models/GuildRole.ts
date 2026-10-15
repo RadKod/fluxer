@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {GuildID, RoleID} from '@app/api/BrandedTypes';
+import type {EmojiID, GuildID, RoleID} from '@app/api/BrandedTypes';
 import type {GuildRoleRow} from '@app/api/database/types/GuildTypes';
 
 export class GuildRole {
@@ -11,6 +11,8 @@ export class GuildRole {
 	readonly position: number;
 	readonly hoistPosition: number | null;
 	readonly color: number;
+	readonly colorSecondary: number | null;
+	readonly iconEmojiId: EmojiID | null;
 	readonly iconHash: string | null;
 	readonly unicodeEmoji: string | null;
 	readonly isHoisted: boolean;
@@ -25,6 +27,8 @@ export class GuildRole {
 		this.position = row.position;
 		this.hoistPosition = row.hoist_position ?? null;
 		this.color = row.color ?? 0;
+		this.colorSecondary = row.color_secondary ?? null;
+		this.iconEmojiId = row.icon_emoji_id ?? null;
 		this.iconHash = row.icon_hash ?? null;
 		this.unicodeEmoji = row.unicode_emoji ?? null;
 		this.isHoisted = row.hoist ?? false;
@@ -45,6 +49,8 @@ export class GuildRole {
 			position: this.position,
 			hoist_position: this.hoistPosition,
 			color: this.color,
+			color_secondary: this.colorSecondary,
+			icon_emoji_id: this.iconEmojiId,
 			icon_hash: this.iconHash,
 			unicode_emoji: this.unicodeEmoji,
 			hoist: this.isHoisted,

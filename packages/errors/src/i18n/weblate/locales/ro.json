@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "Canalul AFK trebuie să fie un canal vocal.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "Toate canalele trebuie să facă parte din această comunitate.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "Bannerul animat al comunității necesită funcția ANIMATED_BANNER.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "Pictogramele animate ale comunității necesită funcția ANIMATED_ICON.",
 	"channels_and_guilds.announcement_channel_required": "Această acțiune este disponibilă doar în canalele de anunțuri.",
 	"channels_and_guilds.bots_cannot_create_guilds": "Boții nu pot crea comunități.",
 	"channels_and_guilds.cannot_execute_on_dm": "Această acțiune nu poate fi efectuată într-un DM.",

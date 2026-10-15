@@ -78,6 +78,7 @@ export const SoundboardPanel = observer(({guildId, channelId}: {guildId: string;
 		key: 'max_guild_soundboard_sounds',
 		fallback: 8,
 		context: {guildId},
+		evaluationContext: 'guild',
 	});
 	const canCreate = Permission.can(Permissions.CREATE_EXPRESSIONS, {guildId});
 	const canManage = Permission.can(Permissions.MANAGE_EXPRESSIONS, {guildId});

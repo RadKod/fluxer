@@ -3,8 +3,7 @@
 import type {Guild} from '@app/features/guild/models/Guild';
 import {GUILD_BOOST_LEVELS, type GuildBoostLevel} from '@fluxer/constants/src/GuildBoostConstants';
 import {GuildFeatures, getMaxVoiceChannelBitrate} from '@fluxer/constants/src/GuildConstants';
-import type {LimitKey} from '@fluxer/constants/src/LimitConfigMetadata';
-import {resolveLimit} from '@fluxer/limits/src/LimitResolver';
+import {resolveLimits} from '@fluxer/limits/src/LimitResolver';
 import type {LimitConfigSnapshot} from '@fluxer/limits/src/LimitTypes';
 
 // Shown for display only: the server decides a community's level and features from the same @fluxer/constants table.
@@ -12,9 +11,14 @@ export {GUILD_BOOST_LEVELS, type GuildBoostLevel};
 
 export type GuildBoostPerk =
 	| {type: 'bitrate'; kbps: number}
-	| {type: 'emoji'; count: number}
-	| {type: 'stickers'; count: number}
-	| {type: 'vanity_url'};
+	| {type: 'emoji' | 'stickers' | 'soundboard'; count: number}
+	| {
+			type: 'animated_icon' | 'animated_banner' | 'static_banner' | 'vanity_url' | 'role_icons' | 'role_gradient';
+			available: boolean;
+	  }
+	| {type: 'video'; height: number; fps: number}
+	| {type: 'file'; bytes: number | null}
+	| {type: 'capacity'; channels: number; roles: number};
 
 export interface GuildBoostStatus {
 	level: number;
@@ -35,27 +39,51 @@ export function getGuildBoostStatus(guild: Pick<Guild, 'premiumTier' | 'premiumS
 	};
 }
 
-function guildLimit(limits: LimitConfigSnapshot, features: Set<string>, key: LimitKey): number {
-	return resolveLimit(limits, {traits: new Set(), guildFeatures: features}, key, {evaluationContext: 'guild'});
-}
-
 export function getGuildBoostLevelPerks(
 	limits: LimitConfigSnapshot,
+	guild?: Pick<Guild, 'premiumTier' | 'features'>,
 ): Array<GuildBoostLevel & {perks: Array<GuildBoostPerk>}> {
-	let features = new Set<string>();
-	return GUILD_BOOST_LEVELS.map((level) => {
-		const previous = features;
-		features = new Set([...previous, ...level.features]);
-		const perks: Array<GuildBoostPerk> = [];
-		const kbps = getMaxVoiceChannelBitrate(features) / 1000;
-		if (kbps > getMaxVoiceChannelBitrate(previous) / 1000) perks.push({type: 'bitrate', kbps});
-		const emoji = guildLimit(limits, features, 'max_guild_emojis');
-		if (emoji > guildLimit(limits, previous, 'max_guild_emojis')) perks.push({type: 'emoji', count: emoji});
-		const stickers = guildLimit(limits, features, 'max_guild_stickers');
-		if (stickers > guildLimit(limits, previous, 'max_guild_stickers')) perks.push({type: 'stickers', count: stickers});
-		if (features.has(GuildFeatures.VANITY_URL) && !previous.has(GuildFeatures.VANITY_URL)) {
-			perks.push({type: 'vanity_url'});
-		}
+	const base: GuildBoostLevel = {
+		level: 0,
+		boosts: 0,
+		features: [GuildFeatures.BANNER, GuildFeatures.INVITE_SPLASH],
+		limits: {},
+	};
+	const personal = resolveLimits(limits, {traits: new Set(), guildFeatures: new Set()}).limits.max_attachment_file_size;
+	let projected = new Set<string>();
+	return [base, ...GUILD_BOOST_LEVELS].map((level) => {
+		projected = new Set([...projected, ...level.features]);
+		// Current features also include independent grants and retained perks during the grace period.
+		const features = guild && level.level === (guild.premiumTier ?? 0) ? new Set(guild.features) : projected;
+		const resolved = resolveLimits(
+			limits,
+			{traits: new Set(), guildFeatures: features},
+			{evaluationContext: 'guild'},
+		).limits;
+		const perks: Array<GuildBoostPerk> = [
+			{type: 'animated_icon', available: features.has(GuildFeatures.ANIMATED_ICON)},
+			{type: 'animated_banner', available: features.has(GuildFeatures.ANIMATED_BANNER)},
+			{
+				type: 'static_banner',
+				available: features.has(GuildFeatures.BANNER) && features.has(GuildFeatures.INVITE_SPLASH),
+			},
+			{type: 'vanity_url', available: features.has(GuildFeatures.VANITY_URL)},
+			{type: 'video', height: resolved.max_guild_video_height, fps: resolved.max_guild_video_fps},
+			{type: 'soundboard', count: resolved.max_guild_soundboard_sounds},
+			{type: 'bitrate', kbps: getMaxVoiceChannelBitrate(features) / 1000},
+			{
+				type: 'emoji',
+				count: features.has(GuildFeatures.UNLIMITED_EMOJI) ? Number.POSITIVE_INFINITY : resolved.max_guild_emojis,
+			},
+			{
+				type: 'stickers',
+				count: features.has(GuildFeatures.UNLIMITED_STICKERS) ? Number.POSITIVE_INFINITY : resolved.max_guild_stickers,
+			},
+			{type: 'role_icons', available: resolved.feature_role_icons > 0},
+			{type: 'role_gradient', available: resolved.feature_role_gradient > 0},
+			{type: 'file', bytes: resolved.max_attachment_file_size > personal ? resolved.max_attachment_file_size : null},
+			{type: 'capacity', channels: resolved.max_guild_channels, roles: resolved.max_guild_roles},
+		];
 		return {...level, perks};
 	});
 }

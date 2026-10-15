@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "AFK kanalas turi būti balso kanalas.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "Visi kanalai turi būti šioje bendruomenėje.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "Animuotam bendruomenės baneriui reikia ANIMATED_BANNER funkcijos.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "Animuotoms bendruomenės piktogramoms reikia ANIMATED_ICON funkcijos.",
 	"channels_and_guilds.announcement_channel_required": "Šis veiksmas galimas tik pranešimų kanaluose.",
 	"channels_and_guilds.bots_cannot_create_guilds": "Botai negali kurti bendruomenių.",
 	"channels_and_guilds.cannot_execute_on_dm": "Šio veiksmo negalima atlikti DM pokalbyje.",

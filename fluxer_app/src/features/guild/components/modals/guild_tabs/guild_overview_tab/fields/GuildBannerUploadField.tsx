@@ -2,11 +2,14 @@
 
 import {ImagePreviewField} from '@app/features/app/components/shared/ImagePreviewField';
 import {
-	ANIMATED_BANNER_FEATURE,
 	ANIMATED_IMAGE_FORMATS,
 	STATIC_IMAGE_FORMATS,
 	WIDE_IMAGE_ASPECT_RATIO_LABEL,
 } from '@app/features/app/config/I18nDisplayConstants';
+import {useAnimatedMediaPlaybackAllowed} from '@app/features/app/hooks/useAnimatedMediaPlayback';
+import {useHover} from '@app/features/app/hooks/useHover';
+import {useShouldAnimate} from '@app/features/app/hooks/useShouldAnimate';
+import {useViewportPlayback} from '@app/features/app/hooks/useViewportPlayback';
 import {GlobalLimits} from '@app/features/app/utils/GlobalLimits';
 import {AssetType, getAssetConfig} from '@app/features/expressions/components/modals/AssetCropModal';
 import {getAspectRatioFromDimensions} from '@app/features/expressions/utils/AssetImageGeometry';
@@ -23,6 +26,7 @@ import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
 import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
 import type React from 'react';
+import {useState} from 'react';
 import type {UseFormReturn} from 'react-hook-form';
 
 const BANNER_DESCRIPTOR = msg({
@@ -30,10 +34,10 @@ const BANNER_DESCRIPTOR = msg({
 	comment:
 		'Button or menu action label in the guild banner upload field. Keep it concise. Keep the tone plain and specific.',
 });
-const ANIMATED_BANNERS_REQUIRE_THE_COMMUNITY_FEATURE_DESCRIPTOR = msg({
-	message: 'Animated banners require the {animatedBannerFeature} community feature.',
+const ANIMATED_BANNER_BOOST_HINT_DESCRIPTOR = msg({
+	message: 'Boost to Level 3 to upload animated banners.',
 	comment:
-		'Description text in the guild banner upload field. Preserve {animatedBannerFeature}; it is inserted by code. Keep the tone plain and specific.',
+		'Upgrade hint and upload error for a community without the animated banner feature. Static uploads remain available.',
 });
 const BANNER_PREVIEW_DESCRIPTOR = msg({
 	message: 'Banner preview',
@@ -71,6 +75,22 @@ export const GuildBannerUploadField: React.FC<{
 	const {i18n} = useLingui();
 	const bannerConfig = getAssetConfig(AssetType.GUILD_BANNER);
 	const canUseAnimatedBanner = guild.features.has(GuildFeatures.ANIMATED_BANNER);
+	const [hoverRef, isHovering] = useHover();
+	const [isFocused, setIsFocused] = useState(false);
+	const [previewNode, setPreviewNode] = useState<HTMLElement | null>(null);
+	const viewportVisible = useViewportPlayback(previewNode);
+	const playbackAllowed =
+		useAnimatedMediaPlaybackAllowed({
+			isAnimated: Boolean(previewBannerUrl || guild.banner?.startsWith('a_')),
+		}) && viewportVisible;
+	// Micup: a stored animated banner stays still once the community loses ANIMATED_BANNER.
+	const shouldAnimate =
+		useShouldAnimate({
+			kind: 'banner',
+			isAnimated: Boolean(guild.banner?.startsWith('a_')),
+			isHovering,
+			isFocused,
+		}) && canUseAnimatedBanner;
 	const bannerFormats = canUseAnimatedBanner ? ANIMATED_IMAGE_FORMATS : STATIC_IMAGE_FORMATS;
 	const bannerMinimumSize = `${bannerConfig.minWidth}×${bannerConfig.minHeight}`;
 	const controller = useGuildImageAssetField({
@@ -86,9 +106,7 @@ export const GuildBannerUploadField: React.FC<{
 		gif: {
 			mode: 'require-feature',
 			isAllowed: () => canUseAnimatedBanner,
-			featureMissingMessage: i18n._(ANIMATED_BANNERS_REQUIRE_THE_COMMUNITY_FEATURE_DESCRIPTOR, {
-				animatedBannerFeature: ANIMATED_BANNER_FEATURE,
-			}),
+			featureMissingMessage: i18n._(ANIMATED_BANNER_BOOST_HINT_DESCRIPTOR),
 		},
 		aspectRatio: {
 			compute: computeAspectRatioFromBase64,
@@ -112,12 +130,21 @@ export const GuildBannerUploadField: React.FC<{
 		? (bannerAspectRatio ?? bannerConfig.aspectRatio)
 		: existingBannerAspectRatio;
 	const imageUrl =
-		previewBannerUrl ||
+		(previewBannerUrl && (!controller.isPreviewAnimated || (canUseAnimatedBanner && playbackAllowed))
+			? previewBannerUrl
+			: null) ||
 		(guild.banner && !hasClearedBanner
-			? AvatarUtils.getGuildBannerURL({id: guild.id, banner: guild.banner}, true)
+			? AvatarUtils.getGuildBannerURL({id: guild.id, banner: guild.banner}, shouldAnimate && playbackAllowed)
 			: null);
 	return (
-		<div data-flx="guild.guild-tabs.guild-overview-tab.fields.guild-banner-upload-field.div">
+		<div
+			ref={hoverRef}
+			onFocusCapture={() => setIsFocused(true)}
+			onBlurCapture={(event) => {
+				if (!event.currentTarget.contains(event.relatedTarget)) setIsFocused(false);
+			}}
+			data-flx="guild.guild-tabs.guild-overview-tab.fields.guild-banner-upload-field.div"
+		>
 			<div
 				className={styles.iconField}
 				data-flx="guild.guild-tabs.guild-overview-tab.fields.guild-banner-upload-field.icon-field"
@@ -157,8 +184,12 @@ export const GuildBannerUploadField: React.FC<{
 							</Button>
 						)}
 					</div>
+					{!canUseAnimatedBanner && (
+						<p className={styles.imageUploadDescription}>{i18n._(ANIMATED_BANNER_BOOST_HINT_DESCRIPTOR)}</p>
+					)}
 				</div>
 				<div
+					ref={setPreviewNode}
 					className={styles.imagePreviewColumn}
 					data-flx="guild.guild-tabs.guild-overview-tab.fields.guild-banner-upload-field.image-preview-column"
 				>

@@ -102,3 +102,22 @@ describe('sanalyer limit keys', () => {
 		});
 	});
 });
+
+describe('Guild boost limit metadata', () => {
+	const defaults = {
+		max_guild_soundboard_sounds: 8,
+		max_guild_video_height: 720,
+		max_guild_video_fps: 30,
+		feature_role_icons: 0,
+		feature_role_gradient: 0,
+	} as const;
+
+	test.each(Object.entries(defaults))('registers %s with guild scope and its S0 default', (key, value) => {
+		expect(LIMIT_KEYS).toContain(key);
+		const limitKey = key as LimitKey;
+		expect(LIMIT_KEY_SCOPES[limitKey]).toBe('guild');
+		expect(LIMIT_KEY_METADATA[limitKey]).toMatchObject({key, scope: 'guild', isToggle: key.startsWith('feature_')});
+		expect(DEFAULT_FREE_LIMITS[limitKey]).toBe(value);
+		expect(DEFAULT_PREMIUM_LIMITS[limitKey]).toBe(value);
+	});
+});

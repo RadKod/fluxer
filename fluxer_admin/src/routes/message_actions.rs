@@ -220,6 +220,11 @@ pub(crate) async fn bulk_actions_post(
                 .bulk_update_guild_features(&guild_ids, &add, &remove, audit_log_reason.as_deref())
                 .await
         }
+        "backfill-guild-boosts" => {
+            client
+                .bulk_backfill_guild_boosts(audit_log_reason.as_deref())
+                .await
+        }
         "bulk-add-guild-members" => {
             let guild_id = form.clean("guild_id").unwrap_or_default();
             let user_ids = form.list_values_any(&["user_ids[]", "user_ids"]);

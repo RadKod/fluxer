@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "Το κανάλι AFK πρέπει να είναι φωνητικό κανάλι.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "Όλα τα κανάλια πρέπει να βρίσκονται σε αυτήν την κοινότητα.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "Το κινούμενο banner κοινότητας απαιτεί τη λειτουργία ANIMATED_BANNER.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "Τα κινούμενα εικονίδια κοινότητας απαιτούν τη λειτουργία ANIMATED_ICON.",
 	"channels_and_guilds.announcement_channel_required": "Αυτή η ενέργεια είναι διαθέσιμη μόνο σε κανάλια ανακοινώσεων.",
 	"channels_and_guilds.bots_cannot_create_guilds": "Τα bot δεν μπορούν να δημιουργήσουν κοινότητες.",
 	"channels_and_guilds.cannot_execute_on_dm": "Αυτή η ενέργεια δεν μπορεί να γίνει σε ένα DM.",

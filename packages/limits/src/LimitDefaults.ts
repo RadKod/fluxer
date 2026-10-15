@@ -42,6 +42,10 @@ import {
 } from '@fluxer/constants/src/LimitConstants';
 
 export const DEFAULT_RESTRICTED_LIMITS: Record<LimitKey, number> = {
+	max_guild_video_fps: 30,
+	max_guild_video_height: 720,
+	feature_role_gradient: 0,
+	feature_role_icons: 0,
 	avatar_max_size: AVATAR_MAX_SIZE,
 	emoji_max_size: EMOJI_MAX_SIZE,
 	feature_animated_avatar: 0,

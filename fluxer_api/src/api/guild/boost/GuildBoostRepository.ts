@@ -160,7 +160,7 @@ export class GuildBoostRepository {
 
 	// Only the recompute writes it, under the guild update lock, so a plain upsert has a single writer.
 	async putState(row: GuildBoostStateRow): Promise<void> {
-		await upsertOne(GuildBoostState.upsertAll(row));
+		await upsertOne(GuildBoostState.upsertAll({...row, pending_feature_changes: row.pending_feature_changes ?? null}));
 	}
 
 	async addExpiration(row: GuildEntitlementExpirationRow): Promise<void> {

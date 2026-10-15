@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "يجب أن تكون قناة AFK قناة صوتية.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "يجب أن تكون جميع القنوات تابعة لهذا المجتمع.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "تتطلب لافتة المجتمع المتحركة ميزة ANIMATED_BANNER.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "تتطلب أيقونات المجتمع المتحركة ميزة ANIMATED_ICON.",
 	"channels_and_guilds.announcement_channel_required": "هذا الإجراء متاح فقط في قنوات الإعلانات.",
 	"channels_and_guilds.bots_cannot_create_guilds": "لا يمكن للبوتات إنشاء مجتمعات.",
 	"channels_and_guilds.cannot_execute_on_dm": "لا يمكن تنفيذ هذا الإجراء في رسالة مباشرة.",

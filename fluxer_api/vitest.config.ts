@@ -23,6 +23,7 @@ const configuredMaxWorkers = parseParallelInteger(process.env.API_TEST_MAX_WORKE
 const configuredMaxConcurrency = parseParallelInteger(process.env.API_TEST_MAX_CONCURRENCY, configuredMaxWorkers);
 
 const MODULE_REGISTRY_TEST_FILES = [
+	'src/api/worker/tests/BackfillGuildBoosts.test.ts',
 	'src/api/donation/tests/DonationCheckout.test.ts',
 	'src/api/donation/tests/DonationManage.test.ts',
 	'src/api/store_billing/tests/StoreBillingStripeCoexistence.test.ts',

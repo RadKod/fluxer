@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {createRoleID, type GuildID, guildIdToRoleId, type RoleID, type UserID} from '@app/api/BrandedTypes';
+import {
+	createEmojiID,
+	createRoleID,
+	type EmojiID,
+	type GuildID,
+	guildIdToRoleId,
+	type RoleID,
+	type UserID,
+} from '@app/api/BrandedTypes';
 import type {ThreadViewer} from '@app/api/experiment/ChannelThreadsGate';
 import type {GuildAuditLogService} from '@app/api/guild/GuildAuditLogService';
 import {mapGuildRoleToResponse} from '@app/api/guild/GuildModel';
@@ -31,6 +39,7 @@ import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidat
 import {MissingPermissionsError} from '@fluxer/errors/src/domains/core/MissingPermissionsError';
 import {ResourceLockedError} from '@fluxer/errors/src/domains/core/ResourceLockedError';
 import {MaxGuildRolesError} from '@fluxer/errors/src/domains/guild/MaxGuildRolesError';
+import {UnknownGuildError} from '@fluxer/errors/src/domains/guild/UnknownGuildError';
 import {UnknownGuildRoleError} from '@fluxer/errors/src/domains/guild/UnknownGuildRoleError';
 import type {
 	GuildRoleCreateRequest,
@@ -38,16 +47,19 @@ import type {
 } from '@fluxer/schema/src/domains/guild/GuildRequestSchemas';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import type {GuildRoleResponse} from '@fluxer/schema/src/domains/guild/GuildRoleSchemas';
+import {isValidSingleUnicodeEmoji} from '@fluxer/schema/src/primitives/EmojiValidators';
 import type {ICacheService} from '@pkgs/cache/src/ICacheService';
 
 type RoleUpdateData = Partial<{
 	name: string;
 	color: number;
+	colorSecondary: number | null;
 	position: number;
 	hoistPosition: number | null;
 	permissions: bigint;
 	iconHash: string | null;
 	unicodeEmoji: string | null;
+	iconEmojiId: EmojiID | null;
 	hoist: boolean;
 	mentionable: boolean;
 }>;
@@ -94,6 +106,8 @@ export class GuildRoleService {
 		const currentRoleCount = await this.guildRepository.countRoles(guildId);
 		const roleLimit = this.resolveGuildLimit(guildData.features, 'max_guild_roles', MAX_GUILD_ROLES);
 		if (currentRoleCount >= roleLimit) throw new MaxGuildRolesError(roleLimit);
+		const guild = await this.getPersistedGuild(guildId);
+		const appearance = await this.buildRoleAppearance(guildId, guild.features, data);
 		const permissionMask = THREAD_AWARE_ALL_PERMISSIONS;
 		const permissions = data.permissions !== undefined ? data.permissions & permissionMask : DEFAULT_PERMISSIONS;
 		const roleId = createRoleID(await this.snowflakeService.generate());
@@ -106,8 +120,10 @@ export class GuildRoleService {
 			position,
 			hoist_position: null,
 			color: data.color || 0,
+			color_secondary: appearance.colorSecondary ?? null,
 			icon_hash: null,
-			unicode_emoji: null,
+			unicode_emoji: appearance.unicodeEmoji ?? null,
+			icon_emoji_id: appearance.iconEmojiId ?? null,
 			hoist: false,
 			mentionable: false,
 			version: 1,
@@ -144,6 +160,8 @@ export class GuildRoleService {
 		const currentRoleCount = await this.guildRepository.countRoles(guildId);
 		const roleLimit = this.resolveGuildLimit(guildData.features, 'max_guild_roles', MAX_GUILD_ROLES);
 		if (currentRoleCount >= roleLimit) throw new MaxGuildRolesError(roleLimit);
+		const guild = await this.getPersistedGuild(guildId);
+		const appearance = await this.buildRoleAppearance(guildId, guild.features, data);
 		const permissions =
 			data.permissions !== undefined
 				? await this.resolveRequestedPermissions({
@@ -167,8 +185,10 @@ export class GuildRoleService {
 			position,
 			hoist_position: null,
 			color: data.color || 0,
+			color_secondary: appearance.colorSecondary ?? null,
 			icon_hash: null,
-			unicode_emoji: null,
+			unicode_emoji: appearance.unicodeEmoji ?? null,
+			icon_emoji_id: appearance.iconEmojiId ?? null,
 			hoist: false,
 			mentionable: false,
 			version: 1,
@@ -277,11 +297,13 @@ export class GuildRoleService {
 			...role.toRow(),
 			name: updateData.name ?? role.name,
 			color: updateData.color ?? role.color,
+			color_secondary: updateData.colorSecondary !== undefined ? updateData.colorSecondary : role.colorSecondary,
 			position: updateData.position ?? role.position,
 			hoist_position: updateData.hoistPosition !== undefined ? updateData.hoistPosition : role.hoistPosition,
 			permissions: updateData.permissions ?? role.permissions,
-			icon_hash: updateData.iconHash ?? role.iconHash,
-			unicode_emoji: updateData.unicodeEmoji ?? role.unicodeEmoji,
+			icon_hash: updateData.iconHash !== undefined ? updateData.iconHash : role.iconHash,
+			unicode_emoji: updateData.unicodeEmoji !== undefined ? updateData.unicodeEmoji : role.unicodeEmoji,
+			icon_emoji_id: updateData.iconEmojiId !== undefined ? updateData.iconEmojiId : role.iconEmojiId,
 			hoist: updateData.hoist ?? role.isHoisted,
 			mentionable: updateData.mentionable ?? role.isMentionable,
 		};
@@ -585,7 +607,8 @@ export class GuildRoleService {
 		getMyPermissions: () => Promise<bigint>;
 	}): Promise<RoleUpdateData> {
 		const {role, guildId, guildData, userId, data, clientFeatures, viewer, getMyPermissions} = params;
-		const updateData: RoleUpdateData = {};
+		const guild = await this.getPersistedGuild(guildId);
+		const updateData: RoleUpdateData = await this.buildRoleAppearance(guildId, guild.features, data, role);
 		const isEveryoneRole = role.id === guildIdToRoleId(guildId);
 		if (data.name !== undefined && !isEveryoneRole) {
 			updateData.name = data.name;
@@ -816,8 +839,10 @@ export class GuildRoleService {
 			position: role.position,
 			hoist_position: role.hoistPosition,
 			color: role.color,
+			color_secondary: role.colorSecondary,
 			icon_hash: role.iconHash ?? null,
 			unicode_emoji: role.unicodeEmoji ?? null,
+			icon_emoji_id: role.iconEmojiId?.toString() ?? null,
 			hoist: role.isHoisted,
 			mentionable: role.isMentionable,
 		};
@@ -865,5 +890,71 @@ export class GuildRoleService {
 	private resolveGuildLimit(guildFeatures: Iterable<string> | null, key: LimitKey, fallback: number): number {
 		const ctx = createLimitMatchContext({guildFeatures});
 		return resolveLimitSafe(this.limitConfigService.getConfigSnapshot(), ctx, key, fallback, 'guild');
+	}
+
+	private async getPersistedGuild(guildId: GuildID) {
+		const guild = await this.guildRepository.findUnique(guildId);
+		if (!guild) throw new UnknownGuildError();
+		return guild;
+	}
+
+	// Micup: role icons (boost level 1) and the second gradient colour (boost level 2) are checked against the
+	// persisted guild features; clearing a value or resending the stored one stays allowed after a downgrade.
+	private async buildRoleAppearance(
+		guildId: GuildID,
+		features: Iterable<string>,
+		data: GuildRoleCreateRequest | GuildRoleUpdateRequest,
+		role?: GuildRole,
+	): Promise<RoleUpdateData> {
+		const result: RoleUpdateData = {};
+		const unicodeEmoji = data.unicode_emoji !== undefined ? data.unicode_emoji : (role?.unicodeEmoji ?? null);
+		const iconEmojiId = data.icon_emoji_id !== undefined ? data.icon_emoji_id : (role?.iconEmojiId ?? null);
+		if (unicodeEmoji != null && iconEmojiId != null) {
+			throw InputValidationError.fromCode('unicode_emoji', ValidationErrorCodes.INVALID_FORMAT);
+		}
+		if (data.unicode_emoji !== undefined) {
+			if (data.unicode_emoji !== null && data.unicode_emoji !== role?.unicodeEmoji) {
+				if (!isValidSingleUnicodeEmoji(data.unicode_emoji)) {
+					throw InputValidationError.fromCode('unicode_emoji', ValidationErrorCodes.NOT_A_VALID_UNICODE_EMOJI);
+				}
+				this.assertAppearanceEntitlement(features, 'feature_role_icons', 'unicode_emoji');
+			}
+			result.unicodeEmoji = data.unicode_emoji;
+		}
+		if (data.icon_emoji_id !== undefined) {
+			if (data.icon_emoji_id !== null && data.icon_emoji_id !== role?.iconEmojiId) {
+				this.assertAppearanceEntitlement(features, 'feature_role_icons', 'icon_emoji_id');
+				const emoji = await this.guildRepository.getEmoji(createEmojiID(data.icon_emoji_id), guildId);
+				if (!emoji || emoji.guildId !== guildId) {
+					throw InputValidationError.fromCode('icon_emoji_id', ValidationErrorCodes.CUSTOM_EMOJI_NOT_FOUND);
+				}
+			}
+			result.iconEmojiId = data.icon_emoji_id === null ? null : createEmojiID(data.icon_emoji_id);
+		}
+		if (data.color_secondary !== undefined) {
+			if (data.color_secondary !== null && data.color_secondary !== role?.colorSecondary) {
+				if (!Number.isInteger(data.color_secondary) || data.color_secondary < 0 || data.color_secondary > 0xffffff) {
+					throw InputValidationError.fromCode('color_secondary', ValidationErrorCodes.INVALID_FORMAT);
+				}
+				this.assertAppearanceEntitlement(features, 'feature_role_gradient', 'color_secondary');
+			}
+			result.colorSecondary = data.color_secondary;
+		}
+		return result;
+	}
+
+	private assertAppearanceEntitlement(
+		features: Iterable<string>,
+		key: 'feature_role_icons' | 'feature_role_gradient',
+		field: string,
+	): void {
+		if (this.resolveGuildLimit(features, key, 0) < 1) {
+			throw InputValidationError.create(
+				field,
+				key === 'feature_role_icons'
+					? 'Role icons require server boost level 1.'
+					: 'Role gradients require server boost level 2.',
+			);
+		}
 	}
 }

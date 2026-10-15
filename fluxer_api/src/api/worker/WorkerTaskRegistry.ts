@@ -5,6 +5,7 @@ import applicationProcessDeletion from '@app/api/worker/tasks/ApplicationProcess
 import applyMicupBotAutomodAction from '@app/api/worker/tasks/ApplyMicupBotAutomodAction';
 import applyMicupBotReactionRole from '@app/api/worker/tasks/ApplyMicupBotReactionRole';
 import assignPioneerBadge from '@app/api/worker/tasks/AssignPioneerBadge';
+import backfillGuildBoosts from '@app/api/worker/tasks/admin_bulk/BackfillGuildBoosts';
 import bulkAddGuildMembers from '@app/api/worker/tasks/admin_bulk/BulkAddGuildMembers';
 import bulkBanFileShas from '@app/api/worker/tasks/admin_bulk/BulkBanFileShas';
 import bulkDeleteMessagesForUsers from '@app/api/worker/tasks/admin_bulk/BulkDeleteMessagesForUsers';
@@ -147,6 +148,7 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	bulkDeleteUserMessages,
 	bulkScheduleUserDeletion: bulkScheduleUserDeletion,
 	bulkUpdateGuildFeatures: bulkUpdateGuildFeatures,
+	backfillGuildBoosts,
 	bulkUpdateUserFlags: bulkUpdateUserFlags,
 	clearAuthenticatedReporterEmails,
 	crosspostMessage,

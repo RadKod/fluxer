@@ -38,6 +38,9 @@ describe('guild boost levels', () => {
 		expect(guildBoostFeatures(0)).toEqual(new Set());
 		expect(guildBoostFeatures(2)).toEqual(
 			new Set([
+				GuildFeatures.BOOST_LEVEL_1,
+				GuildFeatures.BOOST_LEVEL_2,
+				GuildFeatures.ANIMATED_ICON,
 				GuildFeatures.AUDIO_BITRATE_128_KBPS,
 				GuildFeatures.MORE_EMOJI,
 				GuildFeatures.AUDIO_BITRATE_256_KBPS,
@@ -47,11 +50,16 @@ describe('guild boost levels', () => {
 		expect(guildBoostFeatures(3)).toEqual(GUILD_BOOST_FEATURES);
 	});
 
-	it('only ever grants the six level features', () => {
+	it('only ever grants the level feature allowlist', () => {
 		expect([...GUILD_BOOST_FEATURES].sort()).toEqual([
+			'ANIMATED_BANNER',
+			'ANIMATED_ICON',
 			'AUDIO_BITRATE_128_KBPS',
 			'AUDIO_BITRATE_256_KBPS',
 			'AUDIO_BITRATE_384_KBPS',
+			'BOOST_LEVEL_1',
+			'BOOST_LEVEL_2',
+			'BOOST_LEVEL_3',
 			'MORE_EMOJI',
 			'MORE_STICKERS',
 			'VANITY_URL',

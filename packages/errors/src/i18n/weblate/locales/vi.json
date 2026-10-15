@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "Kênh AFK phải là kênh thoại.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "Tất cả các kênh phải thuộc cộng đồng này.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "Ảnh bìa động của cộng đồng yêu cầu tính năng ANIMATED_BANNER.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "Biểu tượng động của cộng đồng yêu cầu tính năng ANIMATED_ICON.",
 	"channels_and_guilds.announcement_channel_required": "Hành động này chỉ khả dụng trong kênh thông báo.",
 	"channels_and_guilds.bots_cannot_create_guilds": "Bot không thể tạo cộng đồng.",
 	"channels_and_guilds.cannot_execute_on_dm": "Không thể thực hiện hành động này trong tin nhắn trực tiếp.",

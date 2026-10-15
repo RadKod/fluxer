@@ -16,6 +16,9 @@ export interface RoleUpdate {
 	id: string;
 	name?: string;
 	color?: number;
+	colorSecondary?: number | null;
+	iconEmojiId?: string | null;
+	unicodeEmoji?: string | null;
 	hoist?: boolean;
 	mentionable?: boolean;
 	permissions?: bigint;
@@ -26,6 +29,9 @@ export function applyRoleUpdate(role: GuildRole, updates: RoleUpdate | undefined
 	return role.withUpdates({
 		name: updates.name ?? role.name,
 		color: updates.color ?? role.color,
+		color_secondary: updates.colorSecondary !== undefined ? updates.colorSecondary : role.colorSecondary,
+		icon_emoji_id: updates.iconEmojiId !== undefined ? updates.iconEmojiId : role.iconEmojiId,
+		unicode_emoji: updates.unicodeEmoji !== undefined ? updates.unicodeEmoji : role.unicodeEmoji,
 		hoist: updates.hoist ?? role.hoist,
 		mentionable: updates.mentionable ?? role.mentionable,
 		permissions: updates.permissions?.toString() ?? role.permissions.toString(),

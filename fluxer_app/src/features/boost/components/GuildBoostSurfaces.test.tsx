@@ -1,7 +1,9 @@
 // @vitest-environment happy-dom
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {GUILD_BOOST_LEVELS} from '@fluxer/constants/src/GuildBoostConstants';
 import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
+import type {LimitConfigSnapshot} from '@fluxer/limits/src/LimitTypes';
 import {setupI18n} from '@lingui/core';
 import {observable, runInAction} from 'mobx';
 import {act, createElement, Profiler, type ReactNode} from 'react';
@@ -18,12 +20,17 @@ const mocks = vi.hoisted(() => ({
 	error: vi.fn(),
 }));
 const accessibility = observable({useReducedMotion: false});
+const baseFeatures = [GuildFeatures.BANNER, GuildFeatures.INVITE_SPLASH];
 const guilds = observable({
-	guild: {premiumTier: 0, premiumSubscriptionCount: 0, unavailable: false} as null | {
+	guild: {premiumTier: 0, premiumSubscriptionCount: 0, unavailable: false, features: new Set(baseFeatures)} as null | {
 		premiumTier: number;
 		premiumSubscriptionCount: number;
 		unavailable: boolean;
+		features: Set<string>;
 	},
+});
+const runtime = observable({
+	limits: {traitDefinitions: [], rules: []} as LimitConfigSnapshot,
 });
 const boosts = observable({
 	ready: true,
@@ -50,14 +57,7 @@ vi.mock('@app/features/app/components/alerts/GenericErrorModalCommands', () => (
 vi.mock('@app/features/premium/utils/PremiumUtils', () => ({shouldShowPremiumFeatures: () => true}));
 vi.mock('@app/features/app/utils/UserLimits', () => ({Limits: {getStockValue: () => 5}}));
 vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PREMIUM_PRODUCT_NAME: 'sanalyer Plus'}));
-vi.mock('@app/features/app/state/RuntimeConfig', () => ({
-	default: {
-		limits: {
-			traitDefinitions: [],
-			rules: [{id: 'emoji', filters: {guildFeatures: [GuildFeatures.MORE_EMOJI]}, limits: {max_guild_emojis: 1000}}],
-		},
-	},
-}));
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: runtime}));
 vi.mock('@app/features/ui/tooltip/Tooltip', () => ({
 	Tooltip: ({children, text}: {children: ReactNode; text: string | (() => ReactNode)}) => (
 		<div>
@@ -113,7 +113,15 @@ describe('community boost surfaces', () => {
 		(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
 		vi.clearAllMocks();
 		update(() => {
-			guilds.guild = {premiumTier: 0, premiumSubscriptionCount: 0, unavailable: false};
+			guilds.guild = {premiumTier: 0, premiumSubscriptionCount: 0, unavailable: false, features: new Set(baseFeatures)};
+			runtime.limits = {
+				traitDefinitions: [],
+				rules: GUILD_BOOST_LEVELS.map((level) => ({
+					id: `boost-${level.level}`,
+					filters: {guildFeatures: [`BOOST_LEVEL_${level.level}`]},
+					limits: {...level.limits},
+				})),
+			};
 			accessibility.useReducedMotion = false;
 			boosts.ready = true;
 			boosts.failed = false;
@@ -153,7 +161,7 @@ describe('community boost surfaces', () => {
 		renderRow();
 		expect(container.innerHTML).toBe('');
 		update(() => {
-			guilds.guild = {premiumTier: 0, premiumSubscriptionCount: 0, unavailable: true};
+			guilds.guild = {premiumTier: 0, premiumSubscriptionCount: 0, unavailable: true, features: new Set(baseFeatures)};
 		});
 		expect(container.innerHTML).toBe('');
 	});
@@ -266,15 +274,18 @@ describe('community boost surfaces', () => {
 		renderPanel();
 		expect(mocks.open).toHaveBeenCalledWith('42');
 		const cards = container.querySelectorAll('[data-flx="boost.panel.level-card"]');
-		expect(cards).toHaveLength(3);
-		expect([...cards].map((card) => card.getAttribute('data-level'))).toEqual(['1', '2', '3']);
-		expect(cards[0].textContent).toContain('Unlocked');
-		expect(cards[1].textContent).toContain('Next level');
-		expect(cards[0].textContent).toContain('2 boosts');
-		expect(cards[1].textContent).toContain('7 boosts');
-		expect(cards[2].textContent).toContain('14 boosts');
-		expect(cards[0].textContent).toContain('1,000 emoji');
-		expect(cards[2].textContent).toContain('Vanity URL');
+		expect(cards).toHaveLength(4);
+		expect([...cards].map((card) => card.getAttribute('data-level'))).toEqual(['0', '1', '2', '3']);
+		expect(cards[0].textContent).toContain('Base perks');
+		expect(cards[0].textContent).not.toContain('requires');
+		expect(cards[1].textContent).toContain('Unlocked');
+		expect(cards[2].textContent).toContain('Next level');
+		expect(cards[1].textContent).toContain('Level 1 requires 2 boosts in total');
+		expect(cards[2].textContent).toContain('Level 2 requires 7 boosts in total');
+		expect(cards[3].textContent).toContain('Level 3 requires 14 boosts in total');
+		expect(cards[1].textContent).toContain('1,000 emoji');
+		expect(cards[3].textContent).toContain('Vanity URL');
+		expect(container.textContent).toContain('4 more boosts to Level 2');
 		expect(container.textContent).toContain('5 boost slots');
 		expect(container.textContent).toContain('What is a boost?');
 	});
@@ -291,7 +302,7 @@ describe('community boost surfaces', () => {
 	});
 	it('settings use the same action and reward list as the panel', async () => {
 		act(() => root.render(createElement(GuildBoostTab, {guildId: '42'})));
-		expect(container.querySelectorAll('[data-flx="boost.perks.list"]')).toHaveLength(3);
+		expect(container.querySelectorAll('[data-flx="boost.perks.list"]')).toHaveLength(4);
 		expect(container.textContent).toContain('Clearer audio in voice channels.');
 		update(() => {
 			boosts.hasFreeSlot = false;
@@ -326,6 +337,81 @@ describe('community boost surfaces', () => {
 		mocks.boost.mockRejectedValueOnce(new Error('offline'));
 		await act(async () => container.querySelector<HTMLButtonElement>('[data-flx="boost.action.button"]')!.click());
 		expect(mocks.error).toHaveBeenCalledTimes(1);
-		expect(container.querySelectorAll('[data-level]')).toHaveLength(3);
+		expect(container.querySelectorAll('[data-level]')).toHaveLength(4);
+	});
+
+	it.each(['panel', 'settings'])('renders all 13 rows per level on the actual %s surface', (surface) => {
+		act(() => root.render(createElement(surface === 'panel' ? GuildBoostPanel : GuildBoostTab, {guildId: '42'})));
+		const lists = [...container.querySelectorAll('[data-flx="boost.perks.list"]')];
+		expect(lists).toHaveLength(4);
+		for (const list of lists) expect(list.querySelectorAll('li')).toHaveLength(13);
+		expect(lists[0].textContent).toContain('720p / 30 fps');
+		expect(lists[1].textContent).toContain('720p / 60 fps');
+		expect(lists[2].textContent).toContain('1080p / 60 fps');
+		expect(lists[3].textContent).toContain('1080p / 60 fps');
+		expect(lists[2].textContent).toContain('your personal limit, or 50 MB if higher');
+		expect(lists[3].textContent).toContain('your personal limit, or 100 MB if higher');
+		expect(container.textContent).not.toMatch(/4K|Server Tag|Stage audience|server themes|default sound pack/i);
+	});
+
+	it('updates current S0 perks from grandfather features without marking them unavailable', () => {
+		renderPanel();
+		const first = () => container.querySelector('[data-flx="boost.perks.list"]')!;
+		expect(first().querySelector('[data-perk="animated_banner"]')?.textContent).toContain('Not included');
+		update(() => {
+			guilds.guild!.features.add(GuildFeatures.ANIMATED_ICON);
+			guilds.guild!.features.add(GuildFeatures.ANIMATED_BANNER);
+		});
+		expect(first().querySelector('[data-perk="animated_icon"]')?.textContent).toContain('Available');
+		expect(first().querySelector('[data-perk="animated_banner"]')?.textContent).toContain('Available');
+	});
+
+	it('renders configured capacities and independent unlimited expression grants readably', () => {
+		update(() => {
+			runtime.limits.rules.push({id: 'operator', limits: {max_guild_soundboard_sounds: 0, max_guild_channels: 900}});
+			guilds.guild!.features.add(GuildFeatures.UNLIMITED_EMOJI);
+			guilds.guild!.features.add(GuildFeatures.UNLIMITED_STICKERS);
+		});
+		renderPanel();
+		const base = container.querySelector('[data-flx="boost.perks.list"]')!;
+		expect(base.textContent).toContain('No soundboard slots');
+		expect(base.textContent).toContain('900 channels');
+		expect(base.textContent).toContain('Unlimited custom emoji');
+		expect(base.textContent).toContain('Unlimited custom stickers');
+	});
+
+	it('settings distinguish remaining boosts from the fixed next-level total', () => {
+		update(() => {
+			boosts.status = {level: 2, count: 9, next: {level: 3, boosts: 14}};
+		});
+		act(() => root.render(createElement(GuildBoostTab, {guildId: '42'})));
+		expect(container.querySelector('[data-flx="boost.guild-boost-tab.next-level"]')?.textContent).toContain(
+			'Level 3 requires 14 boosts in total',
+		);
+		expect(container.textContent).toContain('5 more boosts to Level 3');
+	});
+
+	it('shows the level badge for levels 1 to 3 and none for the base level', () => {
+		const badgeLevels = () =>
+			[...container.querySelectorAll('img[data-flx="boost.level-badge"]')].map((badge) =>
+				badge.getAttribute('data-boost-level'),
+			);
+		renderRow();
+		expect(badgeLevels()).toEqual(['1']);
+		update(() => {
+			guilds.guild!.premiumTier = 3;
+		});
+		expect(badgeLevels()).toEqual(['3']);
+		update(() => {
+			boosts.status = {level: 2, count: 9, next: {level: 3, boosts: 14}};
+		});
+		renderPanel();
+		expect(badgeLevels()).toEqual(['2', '1', '2', '3']);
+		act(() => root.render(createElement(GuildBoostTab, {guildId: '42'})));
+		expect(badgeLevels()).toEqual(['2', '1', '2', '3']);
+		update(() => {
+			boosts.status = {level: 0, count: 0, next: {level: 1, boosts: 2}};
+		});
+		expect(badgeLevels()).toEqual(['1', '2', '3']);
 	});
 });

@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "AFKチャンネルはボイスチャンネルである必要があります。",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "すべてのチャンネルはこのコミュニティに属している必要があります。",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "コミュニティのアニメーションバナーにはANIMATED_BANNER機能が必要です。",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "コミュニティのアニメーションアイコンにはANIMATED_ICON機能が必要です。",
 	"channels_and_guilds.announcement_channel_required": "この操作はアナウンスチャンネルでのみ利用できます。",
 	"channels_and_guilds.bots_cannot_create_guilds": "ボットはコミュニティを作成できません。",
 	"channels_and_guilds.cannot_execute_on_dm": "この操作はDMでは実行できません。",

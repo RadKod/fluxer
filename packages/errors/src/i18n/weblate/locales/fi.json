@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "AFK-kanavan on oltava äänikanava.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "Kaikkien kanavien on kuuluttava tähän yhteisöön.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "Animoidun yhteisöbannerin käyttö edellyttää ANIMATED_BANNER-ominaisuutta.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "Animoitujen yhteisökuvakkeiden käyttö edellyttää ANIMATED_ICON-ominaisuutta.",
 	"channels_and_guilds.announcement_channel_required": "Tämä toiminto on käytettävissä vain tiedotekanavilla.",
 	"channels_and_guilds.bots_cannot_create_guilds": "Botit eivät voi luoda yhteisöjä.",
 	"channels_and_guilds.cannot_execute_on_dm": "Tätä toimintoa ei voi suorittaa suoraviestikeskustelussa.",

@@ -166,6 +166,7 @@
 	"channels_and_guilds.afk_channel_must_be_voice": "AFK-kanalen må være en talekanal.",
 	"channels_and_guilds.all_channels_must_belong_to_guild": "Alle kanaler må tilhøre dette fellesskapet.",
 	"channels_and_guilds.animated_guild_banner_requires_feature": "Et animert fellesskapsbanner krever funksjonen ANIMATED_BANNER.",
+	"channels_and_guilds.animated_guild_icon_requires_feature": "Animerte fellesskapsikoner krever funksjonen ANIMATED_ICON.",
 	"channels_and_guilds.announcement_channel_required": "Denne handlingen er bare tilgjengelig i kunngjøringskanaler.",
 	"channels_and_guilds.bots_cannot_create_guilds": "Botter kan ikke opprette fellesskap.",
 	"channels_and_guilds.cannot_execute_on_dm": "Denne handlingen kan ikke utføres i en direktemeldingssamtale.",

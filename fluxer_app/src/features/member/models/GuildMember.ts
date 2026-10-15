@@ -105,20 +105,36 @@ export class GuildMember {
 	}
 
 	getColorString(): string | undefined {
-		const sortedRoles = this.getSortedRoles();
-		for (const role of sortedRoles) {
-			if (role.color) {
-				return ColorUtils.int2rgb(role.color);
-			}
-		}
+		const role = this.getColorRole();
+		return role ? ColorUtils.int2rgb(role.color) : undefined;
+	}
+
+	getColorRole(): GuildRole | undefined {
+		return this.getHighestRole((role) => role.color !== 0);
+	}
+
+	getIconRole(): GuildRole | undefined {
+		return this.getHighestRole((role) => Boolean(role.iconEmojiId || role.unicodeEmoji));
+	}
+
+	private getHighestRole(matches: (role: GuildRole) => boolean): GuildRole | undefined {
 		const guild = Guilds.getGuild(this.guildId);
-		if (guild) {
-			const everyoneRole = guild.roles[this.guildId];
-			if (everyoneRole?.color) {
-				return ColorUtils.int2rgb(everyoneRole.color);
+		if (!guild) return undefined;
+		let highest: GuildRole | undefined;
+		for (const roleId of this.roles) {
+			const role = guild.roles[roleId];
+			if (!role || !matches(role)) continue;
+			if (
+				!highest ||
+				role.position > highest.position ||
+				(role.position === highest.position && BigInt(role.id) < BigInt(highest.id))
+			) {
+				highest = role;
 			}
 		}
-		return;
+		if (highest) return highest;
+		const everyone = guild.roles[this.guildId];
+		return everyone && matches(everyone) ? everyone : undefined;
 	}
 
 	isCurrentUser(): boolean {
