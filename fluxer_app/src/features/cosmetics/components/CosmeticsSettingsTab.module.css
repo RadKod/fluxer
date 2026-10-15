@@ -36,7 +36,12 @@
 }
 
 @media (min-width: 1024px) {
+	/* sanalyer: the preview stays in view while the long picker scrolls. */
 	.previewColumn {
+		position: sticky;
+		/* Below the settings dialog's own sticky header (3.75rem). */
+		top: 4.25rem;
+		align-self: flex-start;
 		align-items: flex-end;
 	}
 }
