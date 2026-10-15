@@ -430,6 +430,21 @@ jobs:
           cargo run --locked --quiet --manifest-path ${{ github.workspace }}/_ci/tools/ci/Cargo.toml -- build-desktop
           --step install_rust_windows_targets
 
+      # sanalyer: yerel eklentiler (native/*) ve CI yardımcısı her koşuda sıfırdan derleniyordu; registry ve
+      # target dizinleri önbellekte. Anahtar Cargo.lock'lara bağlı, kısmi eşleşme restore-keys ile.
+      - name: Cache cargo (native addons + CI helper)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            _ci/tools/ci/target
+            source/target
+            source/fluxer_desktop/native/*/target
+          key: ${{ runner.os }}-${{ matrix.arch }}-desktop-cargo-${{ hashFiles('source/Cargo.lock', 'source/fluxer_desktop/native/*/Cargo.lock', '_ci/tools/ci/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.arch }}-desktop-cargo-
+
       - name: Install dependencies
         working-directory: ${{ env.WORKDIR }}/fluxer_desktop
         run: >-
