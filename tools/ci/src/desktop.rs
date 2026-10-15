@@ -2764,11 +2764,24 @@ fn verify_bundle_id_step() -> Result<()> {
         "--verbose=4",
         app.to_string_lossy().as_ref(),
     ]))?;
-    run_command(CommandSpec::new("xcrun").args([
-        "stapler",
-        "validate",
-        app.to_string_lossy().as_ref(),
-    ]))?;
+    // `stapler validate` asks Apple's ticket service over the network; the lookup drops the connection now and then
+    // on hosted runners, which says nothing about the build.
+    let mut stapler_attempt = 0;
+    loop {
+        stapler_attempt += 1;
+        match run_command(CommandSpec::new("xcrun").args([
+            "stapler",
+            "validate",
+            app.to_string_lossy().as_ref(),
+        ])) {
+            Ok(()) => break,
+            Err(error) if stapler_attempt < 4 => {
+                println!("stapler validate failed on attempt {stapler_attempt}; retrying: {error:#}");
+                thread::sleep(Duration::from_secs(20));
+            }
+            Err(error) => return Err(error),
+        }
+    }
     run_command(CommandSpec::new("spctl").args([
         "--assess",
         "--type",

@@ -39,3 +39,13 @@
 	width: 100%;
 	min-width: 0;
 }
+
+/* sanalyer: the catalog's nameplates are drawn for a dark member list. In the light theme the plate fades so the dark
+   name text stays readable; in the dark themes the text gets a faint shadow against bright plates. */
+:global(html.theme-light) .image {
+	filter: saturate(0.7) brightness(1.15) opacity(0.45);
+}
+
+:global(html:not(.theme-light)) .content {
+	text-shadow: 0 0.0625rem 0.125rem rgb(0 0 0 / 0.55);
+}

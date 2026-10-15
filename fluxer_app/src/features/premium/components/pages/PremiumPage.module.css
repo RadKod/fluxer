@@ -65,6 +65,13 @@
 	line-height: var(--premium-lh-head);
 	letter-spacing: var(--premium-track-head);
 	text-wrap: balance;
+	/* sanalyer: the hero sits on violet art in every theme, so the title keeps the night ink instead of the theme's
+	   text colour, which turns near-black in the light theme. */
+	background-image: linear-gradient(
+		180deg,
+		var(--premium-hero-ink) 35%,
+		color-mix(in srgb, var(--premium-lavender) 65%, var(--premium-hero-ink))
+	);
 }
 
 .heroLead {
