@@ -117,16 +117,17 @@ fn desktop_release_coordinate_routes(entry: &DesktopReleasePlatform) -> usize {
         + usize::from(entry.update_payload_suffix.is_some())
 }
 
+// Both counts follow desktop_release_coordinates(), so a release built without some targets (sanalyer skips the
+// arm64 Windows and Linux builds) is measured against the coordinates it actually ships.
 fn desktop_release_route_inventory() -> BTreeMap<String, usize> {
-    DESKTOP_RELEASE_PLATFORMS
-        .iter()
-        .flat_map(|entry| {
-            DESKTOP_RELEASE_ARCHES.iter().map(move |arch| {
-                (
-                    format!("{}/{arch}", entry.platform),
-                    desktop_release_coordinate_routes(entry),
-                )
-            })
+    desktop_release_coordinates()
+        .into_iter()
+        .filter_map(|(platform, arch)| {
+            let entry = desktop_release_platform(platform).ok()?;
+            Some((
+                format!("{platform}/{arch}"),
+                desktop_release_coordinate_routes(entry),
+            ))
         })
         .collect()
 }
@@ -136,13 +137,21 @@ fn desktop_release_route_count() -> usize {
 }
 
 fn desktop_release_asset_count() -> usize {
+    let coordinates = desktop_release_coordinates();
     DESKTOP_RELEASE_PLATFORMS
         .iter()
         .map(|entry| {
+            let arches = coordinates
+                .iter()
+                .filter(|(platform, _)| *platform == entry.platform)
+                .count();
+            if arches == 0 {
+                return 0;
+            }
             let builds = if entry.one_build_serves_every_arch {
                 1
             } else {
-                DESKTOP_RELEASE_ARCHES.len()
+                arches
             };
             let feeds = entry
                 .updater_feeds
@@ -151,8 +160,7 @@ fn desktop_release_asset_count() -> usize {
                 .collect::<BTreeSet<_>>()
                 .len();
             entry.shipped_formats.len() * builds
-                + (feeds + usize::from(entry.update_payload_suffix.is_some()))
-                    * DESKTOP_RELEASE_ARCHES.len()
+                + (feeds + usize::from(entry.update_payload_suffix.is_some())) * arches
         })
         .sum()
 }
