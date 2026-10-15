@@ -115,6 +115,8 @@ ENV BUILD_VERSION=${BUILD_VERSION} \
 	FLUXER_CI_BIN=/usr/local/bin/fluxer-ci \
 	FLUXER_APP_WASM_PREBUILT=1
 
+# pnpm 12 'verify deps before run' kontrolü önbellekli katmanda tam install'a kalkışıp masaüstü patch'lerinde düşüyor; bağımlılıklar app-deps aşamasında zaten kuruldu.
+ENV npm_config_verify_deps_before_run=false
 RUN cd fluxer_app && pnpm build
 
 # ---------- Stage 2: The one canonical asset tree every architecture serves ----------
