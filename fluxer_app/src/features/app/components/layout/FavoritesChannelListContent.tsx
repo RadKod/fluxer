@@ -726,7 +726,7 @@ export const FavoritesChannelListContent = observer(() => {
 					data-flx="app.favorites-channel-list-content.region.context-menu"
 				>
 					{/* sanalyer: upstream draws a ghost channel list here; it reads as a stuck loading state, so say it plainly. */}
-					<p className={styles.emptyHint} data-flx="app.favorites-channel-list-content.empty-hint">
+					<p className={favoritesChannelListStyles.emptyHint} data-flx="app.favorites-channel-list-content.empty-hint">
 						{i18n._(EMPTY_FAVORITES_HINT_DESCRIPTOR)}
 					</p>
 					<div className={styles.bottomSpacer} data-flx="app.favorites-channel-list-content.bottom-spacer.empty" />
