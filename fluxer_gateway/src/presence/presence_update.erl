@@ -124,11 +124,12 @@ handle_user_update_event(Data, State) ->
     case utils:check_user_data_differs(CurrentUserData, MergedUserData) of
         true ->
             UserId = maps:get(user_id, State),
-            presence_broadcast:publish_user_update_to_bus(UserId, MergedUserData, State),
-            State#{user_data := MergedUserData};
+            presence_broadcast:publish_user_update_to_bus(UserId, MergedUserData, State);
         false ->
-            State
-    end.
+            ok
+    end,
+    %% Micup: private-only fields (theme_colors) reach the user's own sessions even when nothing public changed.
+    State#{user_data := MergedUserData}.
 
 -spec handle_message_create_event(map(), state()) -> state().
 handle_message_create_event(Data, State) ->

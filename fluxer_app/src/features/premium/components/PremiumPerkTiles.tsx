@@ -5,6 +5,7 @@ import Accessibility from '@app/features/accessibility/state/Accessibility';
 import {PREMIUM_PRODUCT_NAME} from '@app/features/app/config/I18nDisplayConstants';
 import {useHover} from '@app/features/app/hooks/useHover';
 import {useShouldAnimate} from '@app/features/app/hooks/useShouldAnimate';
+import {useViewportPlayback} from '@app/features/app/hooks/useViewportPlayback';
 import {getCosmeticAssetURL} from '@app/features/cosmetics/utils/CosmeticAssetUtils';
 import {COSMETIC_TYPE_DESCRIPTIONS, COSMETIC_TYPE_LABELS} from '@app/features/cosmetics/utils/CosmeticLabels';
 import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
@@ -16,29 +17,29 @@ import ShopCatalog from '@app/features/shop/state/ShopCatalog';
 import {previewEffectFor, previewUserFor} from '@app/features/shop/utils/ShopPreviewUser';
 import {Avatar} from '@app/features/ui/components/Avatar';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
+import {PROFILE_THEME_PRESETS} from '@app/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceForm';
+import {profileGradientSurface} from '@app/features/user/components/profile/ProfileGradientSurface';
 import {ProfilePreview} from '@app/features/user/components/profile/ProfilePreview';
 import Users from '@app/features/user/state/Users';
-import avatarArtUrl from '@app/media/images/premium/plus/kart-avatar.webp';
-import avatarArtSmallUrl from '@app/media/images/premium/plus/kart-avatar-600.webp';
-import indirimArtUrl from '@app/media/images/premium/plus/kart-indirim.webp';
-import indirimArtSmallUrl from '@app/media/images/premium/plus/kart-indirim-600.webp';
-import isimArtUrl from '@app/media/images/premium/plus/kart-isim.webp';
-import isimArtSmallUrl from '@app/media/images/premium/plus/kart-isim-600.webp';
-import profilArtUrl from '@app/media/images/premium/plus/kart-profil.webp';
-import profilArtSmallUrl from '@app/media/images/premium/plus/kart-profil-600.webp';
-import rozetArtUrl from '@app/media/images/premium/plus/kart-rozet.webp';
-import rozetArtSmallUrl from '@app/media/images/premium/plus/kart-rozet-600.webp';
+import earlyAccessBadgeUrl from '@app/media/images/premium/plus/erken-erisim.webp';
+import nameStylePosterUrl from '@app/media/images/premium/plus/kart-ad-stili.webp';
+import discountPosterUrl from '@app/media/images/premium/plus/kart-indirim.webp';
+import nameStyleVideoUrl from '@app/media/videos/premium/plus/kart-ad-stili.mp4';
+import discountVideoUrl from '@app/media/videos/premium/plus/kart-indirim.mp4';
 import {PublicUserFlags} from '@fluxer/constants/src/UserConstants';
 import type {
 	CosmeticAssetDataResponse,
 	CosmeticItemResponse,
 } from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
+import type {ThemeColors} from '@fluxer/schema/src/domains/user/PlusAppearanceSchemas';
 import type {MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {CheckCircleIcon} from '@phosphor-icons/react';
+import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
+import {useEffect, useState} from 'react';
 
 const HEADING_DESCRIPTOR = msg({
 	message: 'Let everyone notice you',
@@ -61,6 +62,30 @@ const BADGE_BODY_DESCRIPTOR = msg({
 	message: 'Next to your name, for everyone to see.',
 	comment: 'Plus perk tile text under the Plus badge title. At most two short lines.',
 });
+const EARLY_ACCESS_TITLE_DESCRIPTOR = msg({
+	message: 'Early Access badge',
+	comment: 'Plus perk tile title: the badge given to members who joined Plus early.',
+});
+const EARLY_ACCESS_BODY_DESCRIPTOR = msg({
+	message: 'For members who join {premiumProductName} early. It stays on your profile.',
+	comment: 'Plus perk tile text under the Early Access badge title. At most two short lines.',
+});
+const PROFILE_GRADIENT_TITLE_DESCRIPTOR = msg({
+	message: 'Profile gradient',
+	comment: 'Plus perk tile title: a two-colour gradient across the profile card.',
+});
+const PROFILE_GRADIENT_BODY_DESCRIPTOR = msg({
+	message: 'Two colours across your profile card.',
+	comment: 'Plus perk tile text under the profile gradient title. At most two short lines.',
+});
+const NAME_STYLE_TITLE_DESCRIPTOR = msg({
+	message: 'Name style',
+	comment: 'Plus perk tile title: a font and colours for the display name.',
+});
+const NAME_STYLE_BODY_DESCRIPTOR = msg({
+	message: 'A font and a gradient for your name in chat, the member list and your profile.',
+	comment: 'Plus perk tile text under the name style title. At most two short lines.',
+});
 const NAMEPLATE_BODY_DESCRIPTOR = msg({
 	message: 'A background behind your name in the member list.',
 	comment: 'Plus perk tile text under the nameplate title. At most two short lines.',
@@ -68,10 +93,6 @@ const NAMEPLATE_BODY_DESCRIPTOR = msg({
 const DISCOUNT_BODY_DESCRIPTOR = msg({
 	message: 'A special discount on shop decorations for {premiumProductName} members.',
 	comment: 'Plus perk tile text under the shop discounts title. At most two short lines.',
-});
-const SPECIAL_DISCOUNT_DESCRIPTOR = msg({
-	message: 'Special discount',
-	comment: 'Small label with the Plus badge in the picture of the Plus shop discounts perk tile.',
 });
 const SEE_ULTRA_IN_SHOP_DESCRIPTOR = msg({
 	message: 'See ultra decorations and more in the shop',
@@ -85,15 +106,8 @@ const ACTIVE_DESCRIPTOR = msg({
 // Asks for the size the profile card's effect uses, so both draw from one cached image.
 const EFFECT_CSS_SIZE = 480;
 const AVATAR_SIZE = 72;
-
-// Each perk card's picture, at 600 and 1200 px wide.
-const PERK_ART: Record<string, readonly [small: string, large: string]> = {
-	avatar_decoration: [avatarArtSmallUrl, avatarArtUrl],
-	profile_effect: [profilArtSmallUrl, profilArtUrl],
-	nameplate: [isimArtSmallUrl, isimArtUrl],
-	badge: [rozetArtSmallUrl, rozetArtUrl],
-	discount: [indirimArtSmallUrl, indirimArtUrl],
-};
+// What the profile gradient tile shows for an account that has not picked its own.
+const SAMPLE_THEME_COLORS: ThemeColors = PROFILE_THEME_PRESETS[1];
 
 // The tiles that show a decoration type, in the design's order.
 const TYPE_TILES = ['avatar_decoration', 'profile_effect', 'nameplate'] as const;
@@ -112,8 +126,6 @@ function openShop(): void {
 }
 
 interface PerkTileProps {
-	// Which perk: picks the card's picture.
-	perk: string;
 	title: string;
 	body: string;
 	// Whether the account has this perk on right now; only then the foot says Active.
@@ -122,32 +134,14 @@ interface PerkTileProps {
 	art: (hovering: boolean) => React.ReactNode;
 }
 
-// A perk card: the picture band (the perk's picture under the user's own preview), the title, the text, and a foot
-// with the plan it comes with and its state.
-function PerkTile({perk, title, body, active, art}: PerkTileProps) {
+// A perk card: the picture band (the perk itself on one flat colour), the title, the text, and a foot with the plan
+// it comes with and its state.
+function PerkTile({title, body, active, art}: PerkTileProps) {
 	const {i18n} = useLingui();
 	const [hoverRef, hovering] = useHover();
 	return (
-		<div
-			ref={hoverRef}
-			className={styles.tile}
-			data-active={active || undefined}
-			data-flx="premium.premium-perk-tiles.tile"
-		>
+		<div ref={hoverRef} className={styles.tile} data-flx="premium.premium-perk-tiles.tile">
 			<div className={styles.art} aria-hidden="true" data-flx="premium.premium-perk-tiles.art">
-				{PERK_ART[perk] && (
-					<img
-						className={styles.artBackdrop}
-						src={PERK_ART[perk][1]}
-						srcSet={`${PERK_ART[perk][0]} 600w, ${PERK_ART[perk][1]} 1200w`}
-						sizes="(max-width: 60rem) 50vw, 20rem"
-						alt=""
-						loading="lazy"
-						decoding="async"
-						draggable={false}
-						data-flx="premium.premium-perk-tiles.art-backdrop"
-					/>
-				)}
 				{art(hovering)}
 			</div>
 			<div className={styles.content} data-flx="premium.premium-perk-tiles.content">
@@ -189,6 +183,36 @@ function PerkTile({perk, title, body, active, art}: PerkTileProps) {
 
 // The effect's banner band. The moving file loads only on hover, never with Data Saver, and reduced motion keeps it
 // still like every decoration (AvatarDecorationLayer).
+// A perk's picture as a short muted loop over the whole band. It plays all the time while it is on screen; under reduced
+// motion only its poster, the first frame, shows.
+const PerkVideo = observer(({src, poster}: {src: string; poster: string}) => {
+	const [video, setVideo] = useState<HTMLVideoElement | null>(null);
+	const plays = useViewportPlayback(video) && !Accessibility.useReducedMotion;
+	useEffect(() => {
+		if (!video) return;
+		if (plays) {
+			void video.play().catch(() => {});
+		} else {
+			video.pause();
+		}
+	}, [video, plays]);
+	return (
+		<video
+			ref={setVideo}
+			className={styles.artVideo}
+			src={src}
+			poster={poster}
+			preload="none"
+			loop
+			muted
+			playsInline
+			disablePictureInPicture
+			draggable={false}
+			data-flx="premium.premium-perk-tiles.art-video"
+		/>
+	);
+});
+
 const EffectArt = observer(({effect, hovering}: {effect: CosmeticAssetDataResponse; hovering: boolean}) => {
 	const animated = useShouldAnimate({kind: 'avatar', isHovering: hovering && !Accessibility.useReducedMotion});
 	const url = getCosmeticAssetURL('profile_effect', effect, EFFECT_CSS_SIZE, animated);
@@ -255,7 +279,6 @@ export const PremiumPerkTiles = observer(() => {
 		return [
 			{
 				key: type,
-				perk: type,
 				title: i18n._(COSMETIC_TYPE_LABELS[type]),
 				body: i18n._(TYPE_BODIES[type]),
 				active: member,
@@ -263,9 +286,35 @@ export const PremiumPerkTiles = observer(() => {
 			},
 		];
 	});
+	const profileGradient = profileGradientSurface(user.themeColors ?? SAMPLE_THEME_COLORS);
+	// Whether this account holds the badge is not known here, so its tile never says Active.
+	tiles.push({
+		key: 'early_access',
+		title: i18n._(EARLY_ACCESS_TITLE_DESCRIPTOR),
+		body: i18n._(EARLY_ACCESS_BODY_DESCRIPTOR, {premiumProductName: PREMIUM_PRODUCT_NAME}),
+		active: false,
+		art: () => (
+			<img
+				className={styles.earlyAccessBadge}
+				src={earlyAccessBadgeUrl}
+				alt=""
+				width={130}
+				height={80}
+				loading="lazy"
+				draggable={false}
+				data-flx="premium.premium-perk-tiles.early-access-badge"
+			/>
+		),
+	});
+	tiles.push({
+		key: 'name_style',
+		title: i18n._(NAME_STYLE_TITLE_DESCRIPTOR),
+		body: i18n._(NAME_STYLE_BODY_DESCRIPTOR),
+		active: member,
+		art: () => <PerkVideo src={nameStyleVideoUrl} poster={nameStylePosterUrl} />,
+	});
 	tiles.push({
 		key: 'badge',
-		perk: 'badge',
 		title: i18n._(BADGE_TITLE_DESCRIPTOR, {premiumProductName: PREMIUM_PRODUCT_NAME}),
 		body: i18n._(BADGE_BODY_DESCRIPTOR),
 		active: badgeShown,
@@ -281,33 +330,30 @@ export const PremiumPerkTiles = observer(() => {
 			/>
 		),
 	});
+	tiles.push({
+		key: 'profile_gradient',
+		title: i18n._(PROFILE_GRADIENT_TITLE_DESCRIPTOR),
+		body: i18n._(PROFILE_GRADIENT_BODY_DESCRIPTOR),
+		active: member,
+		art: () => (
+			<div
+				className={clsx(styles.gradientCard, profileGradient?.className)}
+				style={profileGradient?.style}
+				data-flx="premium.premium-perk-tiles.gradient-card"
+			>
+				<span className={styles.gradientPanel} data-flx="premium.premium-perk-tiles.gradient-panel">
+					{user.displayName}
+				</span>
+			</div>
+		),
+	});
 	if (discount > 0) {
 		tiles.push({
 			key: 'discount',
-			perk: 'discount',
 			title: i18n._(SPECIAL_DISCOUNTS_IN_SHOP_DESCRIPTOR),
 			body: i18n._(DISCOUNT_BODY_DESCRIPTOR, {premiumProductName: PREMIUM_PRODUCT_NAME}),
 			active: ShopCatalog.premiumDiscount,
-			art: () => (
-				<span className={styles.discount} data-flx="premium.premium-perk-tiles.discount">
-					<span className={styles.discountChip} data-flx="premium.premium-perk-tiles.discount-chip">
-						<img
-							className={styles.discountBadge}
-							src={premiumBadgeUrl()}
-							alt=""
-							width={22}
-							height={22}
-							draggable={false}
-							data-flx="premium.premium-perk-tiles.discount-badge"
-						/>
-						{i18n._(SPECIAL_DISCOUNT_DESCRIPTOR)}
-					</span>
-					<span className={styles.priceBars} data-flx="premium.premium-perk-tiles.price-bars">
-						<i className={styles.oldBar} data-flx="premium.premium-perk-tiles.old-bar" />
-						<i className={styles.newBar} data-flx="premium.premium-perk-tiles.new-bar" />
-					</span>
-				</span>
-			),
+			art: () => <PerkVideo src={discountVideoUrl} poster={discountPosterUrl} />,
 		});
 	}
 	const legend = TYPE_TILES.flatMap((type) => {

@@ -56501,3 +56501,459 @@ msgstr "Ses paneli"
 #: src/features/voice/components/SoundboardPanel.tsx:43
 msgid "Soundboard volume"
 msgstr "Ses paneli ses düzeyi"
+
+#. Profile settings section title for the name style and profile theme.
+#. Preserve {premiumProductName}.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:40
+msgid "{premiumProductName} appearance"
+msgstr "{premiumProductName} görünümü"
+
+#. Plus perk tile text under the name style title. At most two short lines.
+#: src/features/premium/components/PremiumPerkTiles.tsx:85
+msgid ""
+"A font and a gradient for your name in chat, the member list and your "
+"profile."
+msgstr "Sohbette, üye listesinde ve profilinde adın için font ve renk geçişi."
+
+#. Security settings section for third-party app access and signed-in devices.
+#: src/features/user/components/modals/tabs/account_security_tab/SecurityTab.tsx:88
+msgid "Account access"
+msgstr "Hesap erişimi"
+
+#. Submenu label that groups further actions.
+#: src/features/ui/action_menu/items/ActionsSubmenu.tsx:37
+msgid "Actions"
+msgstr "İşlemler"
+
+#. Error message in the use channel search hook.
+#: src/features/channel/hooks/useChannelSearch.ts:33
+msgid "An error occurred while searching"
+msgstr "Arama sırasında bir hata oluştu"
+
+#. Boost perk: animated community banner.
+#: src/features/boost/utils/GuildBoostMessages.ts:75
+msgid "Animated banner"
+msgstr "Hareketli afiş"
+
+#: src/features/auth/flow/HandoffApprovalFlow.tsx:206
+msgid "Approve"
+msgstr "Onayla"
+
+#. Accessible name of a name font option: a wide pixel typeface from arcade
+#. games. The option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:85
+msgid "Arcade pixel"
+msgstr "Arcade piksel"
+
+#: src/features/ui/action_menu/items/CategoryMenuItems.tsx:352
+msgid ""
+"Are you sure you want to delete the category \"{categoryName}\"? All "
+"{channelCount, plural, one {# channel} other {# channels}} inside will be "
+"moved to the top of the channel list."
+msgstr ""
+"\"{categoryName}\" kategorisini silmek istediğinizden emin misiniz? İçindeki"
+" {channelCount, plural, one {# kanalın} other {# kanalın}} tümü kanal "
+"listesinin en üstüne taşınacaktır."
+
+#. Confirm dialog body before deleting an empty channel category.
+#: src/features/ui/action_menu/items/CategoryMenuItems.tsx:66
+msgid ""
+"Are you sure you want to delete the category \"{categoryName}\"? This cannot"
+" be undone."
+msgstr ""
+"\"{categoryName}\" kategorisini silmek istediğinizden emin misiniz? Bu işlem"
+" geri alınamaz."
+
+#. IAR modal: disabled-state label on the ban card after the user is banned
+#. from this community.
+#: src/features/moderation/components/report_modal/IARModalCopy.ts:138
+msgid "Banned"
+msgstr "Yasaklandı"
+
+#. Accessible name of a name font option: a heavy, blocky display typeface.
+#. The option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:110
+msgid "Bold block"
+msgstr "Kalın blok"
+
+#. Label for the bottom color of the profile card theme. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:178
+msgid "Bottom color"
+msgstr "Alt renk"
+
+#. IAR modal: quick-action card title for deleting the reported message
+#. (moderator-only).
+#: src/features/moderation/components/report_modal/IARModalCopy.ts:106
+msgid "Delete this message"
+msgstr "Bu mesajı sil"
+
+#. IAR modal: disabled-state label on the delete card after the message has
+#. been deleted.
+#: src/features/moderation/components/report_modal/IARModalCopy.ts:118
+msgid "Deleted"
+msgstr "Silindi"
+
+#. Plus perk tile title: the badge given to members who joined Plus early.
+#: src/features/premium/components/PremiumPerkTiles.tsx:65
+msgid "Early Access badge"
+msgstr "Erken Erişim Rozeti"
+
+#. Contrast check result under the display name colors when they pass.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:158
+msgid "Easy to read on dark backgrounds."
+msgstr "Koyu zeminlerde kolay okunur."
+
+#. Label for the second color of a gradient display name. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:150
+msgid "End color"
+msgstr "Bitiş rengi"
+
+#. Generic radio / dropdown option label for an "enhanced" tier.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts:798
+msgid "Enhanced"
+msgstr "Gelişmiş"
+
+#: src/features/auth/flow/HandoffApprovalFlow.tsx:108
+msgid "Enter the code"
+msgstr "Kodu girin"
+
+#. Purchase mode option for buying a subscription for the current user.
+#: src/features/app/components/dialogs/components/plutonium/PricingSection.tsx:26
+msgid "For me"
+msgstr "Kendim için"
+
+#. Plus perk tile text under the Early Access badge title. At most two short
+#. lines.
+#: src/features/premium/components/PremiumPerkTiles.tsx:69
+msgid ""
+"For members who join {premiumProductName} early. It stays on your profile."
+msgstr ""
+"{premiumProductName} üyeliğine erken katılanlara verilir; profilinde kalır."
+
+#. Field label on the details step of the DSA report form. Required legal name
+#. of the reporter for the formal declaration. Sensitive PII; keep tone
+#. neutral.
+#: src/features/moderation/components/report/ReportStepDetails.tsx:53
+msgid "Full legal name"
+msgstr "Tam yasal ad"
+
+#. Web, legacy desktop and unsupported game detection explanation.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx:51
+msgid ""
+"Game detection requires a supported desktop app. You can still see other "
+"people’s game activity."
+msgstr ""
+"Oyun algılama desteklenen bir masaüstü uygulaması gerektirir. Başkalarının "
+"oyun etkinliğini yine de görebilirsin."
+
+#. Profile settings section description for the name style and profile theme.
+#. Keep the tone plain.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:44
+msgid ""
+"Give your name a font and color, and your profile card a two-color theme."
+msgstr ""
+"Adınıza bir yazı tipi ve renk, profil kartınıza iki renkli bir tema verin."
+
+#. Short label in the whats new modal.
+#: src/features/app/components/whats_new/WhatsNewModal.tsx:37
+msgid "Got it"
+msgstr "Anladım"
+
+#. Accessible name of a name font option: a blackletter, gothic typeface. The
+#. option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:100
+msgid "Gothic"
+msgstr "Gotik"
+
+#. Option for a two-color gradient display name. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:142
+msgid "Gradient"
+msgstr "Gradyan"
+
+#. Accessible name of a name font option: a natural handwritten typeface. The
+#. option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:75
+msgid "Handwriting"
+msgstr "El yazısı"
+
+#. Report category label, community variant. Keep tone plain.
+#: src/features/moderation/components/report/OptionDescriptors.ts:86
+msgid "Harassment"
+msgstr "Taciz"
+
+#. IAR modal: rule label.
+#. Report category label for a user impersonating another person or brand.
+#: src/features/moderation/components/report_modal/IARModalCopy.ts:306
+#: src/features/moderation/components/report/OptionDescriptors.ts:66
+msgid "Impersonation"
+msgstr "Kimliğe bürünme"
+
+#. Label for the installed desktop version in the Linux update modal.
+#: src/features/updater/commands/UpdaterModalCommands.tsx:136
+msgid "Installed"
+msgstr "Yüklü"
+
+#. IAR modal: quick-action card button label.
+#: src/features/moderation/components/report_modal/IARModalCopy.ts:422
+msgid "Leave"
+msgstr "Ayrıl"
+
+#. Helper text describing the maximum file size for an asset upload.
+#: src/features/expressions/utils/AssetFormatCopy.ts:15
+msgid "Max {maxSize}."
+msgstr "Maks. {maxSize}."
+
+#. Column header for saved billing payment methods.
+#: src/features/app/components/dialogs/components/plutonium/PaymentMethodList.tsx:65
+msgid "Method"
+msgstr "Yöntem"
+
+#. Label for the display name color controls. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:134
+msgid "Name color"
+msgstr "Ad rengi"
+
+#. Settings search synonym. Used to match this term when the user types it in
+#. the settings search bar.
+#: src/features/user/components/settings_utils/section_registry/AccessibilitySections.ts:331
+msgid "Name colors"
+msgstr "Ad renkleri"
+
+#. Label above the list of fonts for the display name. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:56
+msgid "Name font"
+msgstr "Ad yazı tipi"
+
+#. Settings search synonym. Used to match this term when the user types it in
+#. the settings search bar.
+#: src/features/user/components/settings_utils/section_registry/AccessibilitySections.ts:327
+msgid "Name fonts"
+msgstr "Ad yazı tipleri"
+
+#. Plus perk tile title: a font and colours for the display name.
+#: src/features/premium/components/PremiumPerkTiles.tsx:81
+msgid "Name style"
+msgstr "Ad stili"
+
+#. Settings search synonym. Used to match this term when the user types it in
+#. the settings search bar.
+#: src/features/user/components/settings_utils/section_registry/AccessibilitySections.ts:323
+msgid "Name styles"
+msgstr "Ad stilleri"
+
+#. Upsell shown in the profile settings to accounts without Plus. Preserve
+#. {premiumProductName}.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:48
+msgid "Name styles and profile themes are part of {premiumProductName}."
+msgstr "Ad stilleri ve profil temaları {premiumProductName} ile gelir."
+
+#. Billing cadence label for a monthly subscription price.
+#: src/features/app/components/dialogs/components/plutonium/PricingSection.tsx:38
+msgid "per month"
+msgstr "aylık"
+
+#. Hint under the name color controls before a font is chosen. Keep the tone
+#. plain.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:154
+msgid "Pick a font first, then choose the colors."
+msgstr "Önce bir yazı tipi seçin, sonra renkleri belirleyin."
+
+#. Accessible name of a name font option: a pixel-art typeface. The option
+#. shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:80
+msgid "Pixel"
+msgstr "Piksel"
+
+#. Short label in the attachment preview utils helper. Keep it concise.
+#: src/features/messaging/utils/AttachmentPreviewUtils.ts:11
+msgid "Plain text"
+msgstr "Düz metin"
+
+#. Accessible name of a name font option: a casual, playful handwritten
+#. typeface. The option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:65
+msgid "Playful handwriting"
+msgstr "Oyuncu el yazısı"
+
+#. Plus perk tile title: a two-colour gradient across the profile card.
+#: src/features/premium/components/PremiumPerkTiles.tsx:73
+msgid "Profile gradient"
+msgstr "Profil gradyanı"
+
+#. Label for the two-color profile card theme controls. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:166
+msgid "Profile theme"
+msgstr "Profil teması"
+
+#. Sort mode label in the mobile channel search bottom sheet. Sorts by
+#. relevance.
+#: src/features/channel/components/bottomsheets/ChannelSearchBottomSheet.tsx:83
+msgid "Relevant"
+msgstr "İlgili"
+
+#. Button that clears the name style and the profile theme; the change is
+#. saved with the save bar.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:182
+msgid "Reset name style and theme"
+msgstr "Ad stilini ve temayı sıfırla"
+
+#. Button label that restarts the app to apply a desktop update. productName
+#. is the app name.
+#: src/features/updater/commands/UpdaterModalCommands.tsx:100
+msgid "Restart {productName}"
+msgstr "{productName}'u yeniden başlat"
+
+#. Accessible name of a name font option: a rounded retro-modern display
+#. typeface. The option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:115
+msgid "Retro modern"
+msgstr "Retro modern"
+
+#. Accessible name of a name font option: a retro, flowing script typeface.
+#. The option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:70
+msgid "Retro script"
+msgstr "Retro yazı"
+
+#. Accessible name of a name font option: a heavy rock-poster typeface. The
+#. option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:105
+msgid "Rock"
+msgstr "Rock"
+
+#. Accessible name of a name font option: a soft, rounded typeface. The option
+#. shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:60
+msgid "Rounded"
+msgstr "Yuvarlak"
+
+#. Price badge comparing a one-year gift to monthly gifts.
+#. Price badge comparing yearly billing to monthly billing.
+#. Short label in the Plutonium gift section. Keep the tone plain and
+#. specific.
+#: src/features/app/components/dialogs/components/plutonium/GiftSection.tsx:28
+#: src/features/app/components/dialogs/components/plutonium/PricingSection.tsx:50
+#: src/features/app/components/dialogs/components/plutonium/PricingSection.tsx:62
+msgid "Save 17%"
+msgstr "%17 tasarruf edin"
+
+#. Badge for a saved non-default payment method.
+#: src/features/app/components/dialogs/components/plutonium/PaymentMethodList.tsx:90
+msgid "Saved"
+msgstr "Kaydedildi"
+
+#. Toggle label in the visual accessibility tab. Name styles are the fonts and
+#. colours Plus members pick for their names.
+#: src/features/user/components/modals/tabs/accessibility_tab/VisualTab.tsx:49
+msgid "Show name styles"
+msgstr "Ad stillerini göster"
+
+#. Description of the show name styles toggle in the visual accessibility tab.
+#. Applies to this device only.
+#: src/features/user/components/modals/tabs/accessibility_tab/VisualTab.tsx:54
+msgid ""
+"Show the fonts and colors people pick for their names. Turn off to see every"
+" name in the app font."
+msgstr ""
+"Kişilerin adları için seçtiği yazı tiplerini ve renkleri gösterir. "
+"Kapatırsanız bütün adlar uygulamanın yazı tipiyle görünür."
+
+#. Short label in the new account guild limit modal. Keep it concise.
+#: src/features/guild/components/alerts/NewAccountGuildLimitModal.tsx:8
+msgid "Slow down"
+msgstr "Yavaşlayın"
+
+#. Option for a single-color display name. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:138
+msgid "Solid"
+msgstr "Düz"
+
+#. Label for the first color of the display name. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:146
+msgid "Start color"
+msgstr "Başlangıç rengi"
+
+#. Accessible name of a name font option: a wide, futuristic techno typeface.
+#. The option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:95
+msgid "Techno"
+msgstr "Tekno"
+
+#. Accessible name of a name font option: a typeface from old computer
+#. terminals. The option shows the user’s own name in that font. Keep it
+#. short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:90
+msgid "Terminal"
+msgstr "Terminal"
+
+#. Contrast check result under the display name colors when they fail; saving
+#. is blocked. Keep it specific.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:162
+msgid ""
+"These colors are hard to read on dark backgrounds. Pick lighter colors to "
+"save."
+msgstr ""
+"Bu renkler koyu zeminlerde zor okunuyor. Kaydetmek için daha açık renkler "
+"seçin."
+
+#. Lowercase phrase used mid-sentence in IAR copy when referring to the
+#. reported user without a name.
+#: src/features/moderation/components/report_modal/IARModalContext.ts:26
+msgid "this user"
+msgstr "bu kullanıcı"
+
+#. Label for the top color of the profile card theme. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:174
+msgid "Top color"
+msgstr "Üst renk"
+
+#. Plus perk tile text under the profile gradient title. At most two short
+#. lines.
+#: src/features/premium/components/PremiumPerkTiles.tsx:77
+msgid "Two colours across your profile card."
+msgstr "Profil kartında iki renkli geçiş."
+
+#. Checkout button for starting a paid subscription.
+#: src/features/app/components/dialogs/components/plutonium/PricingSection.tsx:54
+msgid "Upgrade now"
+msgstr "Şimdi yükselt"
+
+#. Accessible name of a preset profile theme swatch. {top} and {bottom} are
+#. hex colors inserted by code.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:170
+msgid "Use {top} to {bottom}"
+msgstr "Üstte {top}, altta {bottom}"
+
+#. Audit log target-type filter label. Filters entries that target a webhook.
+#: src/features/app/config/AuditLogConstants.ts:177
+msgid "Webhook"
+msgstr "Webhook"
+
+#. Short label in the settings dialog mobile settings view.
+#. Short label in the whats new modal.
+#. Sidebar item in settings that opens the app update notes modal.
+#: src/features/app/components/dialogs/components/DesktopSettingsView.tsx:103
+#: src/features/app/components/dialogs/components/MobileSettingsView.tsx:61
+#: src/features/app/components/whats_new/WhatsNewModal.tsx:25
+msgid "What's new"
+msgstr "Yenilikler"
+
+#. Save bar text in the my profile tab while the chosen name colors fail the
+#. contrast check.
+#: src/features/user/components/modals/tabs/MyProfileTab.tsx:159
+msgid ""
+"Your name colors are hard to read on dark backgrounds. Pick lighter colors "
+"to save."
+msgstr ""
+"Ad renkleriniz koyu zeminlerde zor okunuyor. Kaydetmek için daha açık "
+"renkler seçin."
+
+#. Explain that the Only me profile privacy level hides game activity from
+#. everyone, friends included.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx:37
+msgid ""
+"Your profile is set to Only me. Game activity is not shared, even when "
+"Friends or Everyone is selected."
+msgstr ""
+"Profilin \"Yalnız ben\" olarak ayarlı. Arkadaşlar ya da Herkes seçili olsa "
+"bile oyun etkinliğin paylaşılmaz."

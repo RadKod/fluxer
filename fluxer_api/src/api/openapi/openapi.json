@@ -30296,6 +30296,10 @@
 					"nameplate_data": {
 						"description": "The nameplate the user wears; omitted or null when none",
 						"anyOf": [{"$ref": "#/components/schemas/CosmeticAssetDataResponse"}, {"type": "null"}]
+					},
+					"name_style": {
+						"description": "The name font and colour; omitted or null when none is set or the account has no active premium",
+						"anyOf": [{"$ref": "#/components/schemas/NameStyleSchema"}, {"type": "null"}]
 					}
 				},
 				"required": ["id", "username", "discriminator", "global_name", "avatar", "avatar_color", "flags"],
@@ -30318,6 +30322,10 @@
 							"accent_color": {
 								"anyOf": [{"$ref": "#/components/schemas/Int32Type"}, {"type": "null"}],
 								"description": "User-selected accent color"
+							},
+							"theme_colors": {
+								"description": "The profile card gradient; null when none is set, the profile is hidden or the account has no active premium",
+								"anyOf": [{"$ref": "#/components/schemas/ThemeColorsSchema"}, {"type": "null"}]
 							}
 						},
 						"required": ["bio", "pronouns", "banner", "accent_color"],
@@ -30510,6 +30518,10 @@
 						"description": "The nameplate the user wears; omitted or null when none",
 						"anyOf": [{"$ref": "#/components/schemas/CosmeticAssetDataResponse"}, {"type": "null"}]
 					},
+					"name_style": {
+						"description": "The name font and colour; omitted or null when none is set or the account has no active premium",
+						"anyOf": [{"$ref": "#/components/schemas/NameStyleSchema"}, {"type": "null"}]
+					},
 					"username_state": {
 						"description": "Private username selection state",
 						"type": "string",
@@ -30537,6 +30549,10 @@
 					"accent_color": {
 						"anyOf": [{"$ref": "#/components/schemas/Int32Type"}, {"type": "null"}],
 						"description": "The user-selected accent color as an integer"
+					},
+					"theme_colors": {
+						"anyOf": [{"$ref": "#/components/schemas/ThemeColorsSchema"}, {"type": "null"}],
+						"description": "The profile card gradient; null when none is set or the account has no active premium"
 					},
 					"timezone": {"description": "The IANA timezone identifier saved by the user", "type": ["string", "null"]},
 					"timezone_privacy_flags": {"$ref": "#/components/schemas/ProfileFieldPrivacyFlags"},
@@ -30700,6 +30716,7 @@
 					"bio",
 					"pronouns",
 					"accent_color",
+					"theme_colors",
 					"banner",
 					"banner_color",
 					"mfa_enabled",
@@ -33411,6 +33428,14 @@
 						"description": "Profile accent color as integer",
 						"anyOf": [{"$ref": "#/components/schemas/ColorType"}, {"type": "null"}]
 					},
+					"name_style": {
+						"description": "Premium name font and colour; null removes it",
+						"anyOf": [{"$ref": "#/components/schemas/NameStyleSchemaInput"}, {"type": "null"}]
+					},
+					"theme_colors": {
+						"description": "Premium profile card gradient; null removes it",
+						"anyOf": [{"$ref": "#/components/schemas/ThemeColorsSchema"}, {"type": "null"}]
+					},
 					"timezone": {
 						"description": "IANA timezone identifier saved for profile local time",
 						"type": ["string", "null"]
@@ -33491,6 +33516,10 @@
 						"description": "The nameplate the user wears; omitted or null when none",
 						"anyOf": [{"$ref": "#/components/schemas/CosmeticAssetDataResponse"}, {"type": "null"}]
 					},
+					"name_style": {
+						"description": "The name font and colour; omitted or null when none is set or the account has no active premium",
+						"anyOf": [{"$ref": "#/components/schemas/NameStyleSchema"}, {"type": "null"}]
+					},
 					"username_state": {
 						"description": "Private username selection state",
 						"type": "string",
@@ -33518,6 +33547,10 @@
 					"accent_color": {
 						"anyOf": [{"$ref": "#/components/schemas/Int32Type"}, {"type": "null"}],
 						"description": "The user-selected accent color as an integer"
+					},
+					"theme_colors": {
+						"anyOf": [{"$ref": "#/components/schemas/ThemeColorsSchema"}, {"type": "null"}],
+						"description": "The profile card gradient; null when none is set or the account has no active premium"
 					},
 					"timezone": {"description": "The IANA timezone identifier saved by the user", "type": ["string", "null"]},
 					"timezone_privacy_flags": {"$ref": "#/components/schemas/ProfileFieldPrivacyFlags"},
@@ -33689,6 +33722,7 @@
 					"bio",
 					"pronouns",
 					"accent_color",
+					"theme_colors",
 					"banner",
 					"banner_color",
 					"mfa_enabled",
@@ -41269,6 +41303,22 @@
 				"x-enumDescriptions": ["Time-based one-time password authenticator", "WebAuthn authenticator"]
 			},
 			"SnowflakeStringType": {"type": "string", "pattern": "^(0|[1-9][0-9]*)$", "format": "snowflake"},
+			"NameStyleSchema": {
+				"type": "object",
+				"properties": {
+					"font_id": {"$ref": "#/components/schemas/NameStyleFontIdType"},
+					"colors": {
+						"minItems": 1,
+						"maxItems": 2,
+						"type": "array",
+						"items": {"$ref": "#/components/schemas/ColorType"},
+						"description": "One colour for a solid name, two for a gradient"
+					}
+				},
+				"required": ["font_id", "colors"],
+				"additionalProperties": false,
+				"description": "The name font and colour"
+			},
 			"CosmeticAssetDataResponse": {
 				"type": "object",
 				"properties": {
@@ -41316,6 +41366,41 @@
 						"value": "1073741824",
 						"description": "User has premium and shows the premium badge next to their name (computed on every read, never stored)"
 					}
+				]
+			},
+			"ColorType": {"type": "integer", "minimum": 0, "maximum": 16777215},
+			"NameStyleFontIdType": {
+				"description": "The name font; ids are stable and never reused",
+				"type": "integer",
+				"enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+				"format": "int32",
+				"x-enumNames": [
+					"BALOO",
+					"PLAYPEN",
+					"PACIFICO",
+					"CAVEAT",
+					"PIXELIFY",
+					"PRESSSTART",
+					"VT323",
+					"AUDIOWIDE",
+					"GRENZE",
+					"NEWROCKER",
+					"BUNGEE",
+					"RIGHTEOUS"
+				],
+				"x-enumDescriptions": [
+					"Baloo 2",
+					"Playpen Sans",
+					"Pacifico",
+					"Caveat",
+					"Pixelify Sans",
+					"Press Start 2P",
+					"VT323",
+					"Audiowide",
+					"Grenze Gotisch",
+					"New Rocker",
+					"Bungee",
+					"Righteous"
 				]
 			},
 			"RefreshedAttachmentUrl": {
@@ -42526,7 +42611,6 @@
 					{"type": "null"}
 				]
 			},
-			"ColorType": {"type": "integer", "minimum": 0, "maximum": 16777215},
 			"MessageAttachmentFlags": {
 				"type": "integer",
 				"minimum": 0,
@@ -47893,6 +47977,65 @@
 						"description": "Allow members from mutual guilds to see this profile field"
 					}
 				]
+			},
+			"ThemeColorsSchema": {
+				"type": "array",
+				"prefixItems": [{"$ref": "#/components/schemas/ColorType"}, {"$ref": "#/components/schemas/ColorType"}],
+				"items": false,
+				"minItems": 2,
+				"maxItems": 2,
+				"description": "The profile card gradient, top colour then bottom colour"
+			},
+			"NameStyleSchemaInput": {
+				"type": "object",
+				"properties": {
+					"font_id": {"$ref": "#/components/schemas/NameStyleFontIdTypeInput"},
+					"colors": {
+						"minItems": 1,
+						"maxItems": 2,
+						"type": "array",
+						"items": {"$ref": "#/components/schemas/ColorType"},
+						"description": "One colour for a solid name, two for a gradient"
+					}
+				},
+				"required": ["font_id", "colors"],
+				"description": "The name font and colour"
+			},
+			"NameStyleFontIdTypeInput": {
+				"description": "The name font; ids are stable and never reused",
+				"type": "integer",
+				"minimum": 0,
+				"maximum": 2147483647,
+				"format": "int32",
+				"x-enumNames": [
+					"BALOO",
+					"PLAYPEN",
+					"PACIFICO",
+					"CAVEAT",
+					"PIXELIFY",
+					"PRESSSTART",
+					"VT323",
+					"AUDIOWIDE",
+					"GRENZE",
+					"NEWROCKER",
+					"BUNGEE",
+					"RIGHTEOUS"
+				],
+				"x-enumDescriptions": [
+					"Baloo 2",
+					"Playpen Sans",
+					"Pacifico",
+					"Caveat",
+					"Pixelify Sans",
+					"Press Start 2P",
+					"VT323",
+					"Audiowide",
+					"Grenze Gotisch",
+					"New Rocker",
+					"Bungee",
+					"Righteous"
+				],
+				"enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 			},
 			"UserBoostSlotResponse": {
 				"type": "object",

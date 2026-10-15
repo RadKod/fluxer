@@ -93,6 +93,11 @@ function fullTestUser(overrides: Partial<UserRow> = {}): User {
 		avatar_ultra_asset: 'ultra',
 		profile_effect_asset: 'effect',
 		nameplate_asset: 'nameplate',
+		name_font: 6,
+		name_color: 0xffffff,
+		name_color_2: 0x7b5cff,
+		theme_primary_color: 0x1e1b4b,
+		theme_accent_color: 0x07a3b2,
 		version: 9,
 		...overrides,
 	});

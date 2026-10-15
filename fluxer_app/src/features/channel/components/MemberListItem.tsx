@@ -11,6 +11,7 @@ import {useMemberListCustomStatus} from '@app/features/member/hooks/useMemberLis
 import {useMemberListMobile} from '@app/features/member/hooks/useMemberListMobile';
 import {useMemberListPresence} from '@app/features/member/hooks/useMemberListPresence';
 import type {GuildMember} from '@app/features/member/models/GuildMember';
+import {NameStyleText} from '@app/features/name_style/components/NameStyleText';
 import RollingTypingStore from '@app/features/typing/rolling/RollingTypingStore';
 import {GroupDMMemberContextMenu} from '@app/features/ui/action_menu/GroupDMContextMenu';
 import {GuildMemberContextMenu} from '@app/features/ui/action_menu/GuildMemberContextMenu';
@@ -186,14 +187,16 @@ export const MemberListItem: React.FC<MemberListItemProps> = observer((props) =>
 		});
 	}, [avatarMediaSize, guildId, guildMember, user]);
 	const nameContent = (
-		<span
+		<NameStyleText
 			ref={nameRef}
+			nameStyle={user.nameStyle}
+			guildRoles={user.nameStyle && guildId ? Guilds.getGuild(guildId)?.roles : undefined}
 			className={clsx(styles.name, roleColor && styles.nameRoleColored)}
 			style={nameStyle}
 			data-flx="channel.member-list-item.name"
 		>
 			{nickname}
-		</span>
+		</NameStyleText>
 	);
 	const content = (
 		<FocusRingWrapper

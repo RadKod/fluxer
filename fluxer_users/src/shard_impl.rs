@@ -41,7 +41,7 @@ const PARTIAL_USER_COLUMNS: &str = "\
     mention_flags, \
     avatar_decoration_id, avatar_decoration_asset, \
     avatar_ultra_id, avatar_ultra_asset, \
-    nameplate_id, nameplate_asset, temp_banned_until, pending_deletion_at, deletion_reason_code, \
+    nameplate_id, nameplate_asset, name_font, name_color, name_color_2, temp_banned_until, pending_deletion_at, deletion_reason_code, \
     content_hidden_since";
 const USER_BATCH_SIZE: usize = 128;
 const USER_BATCH_CONCURRENCY: usize = 8;
@@ -108,6 +108,9 @@ struct PartialUserDbRow {
     avatar_ultra_asset: Option<String>,
     nameplate_id: Option<i64>,
     nameplate_asset: Option<String>,
+    name_font: Option<i32>,
+    name_color: Option<i32>,
+    name_color_2: Option<i32>,
     #[serde(default)]
     temp_banned_until: Option<i64>,
     #[serde(default)]
@@ -143,6 +146,9 @@ struct PartialUserScyllaRow {
     avatar_ultra_asset: Option<String>,
     nameplate_id: Option<i64>,
     nameplate_asset: Option<String>,
+    name_font: Option<i32>,
+    name_color: Option<i32>,
+    name_color_2: Option<i32>,
     temp_banned_until: OptionalTimestamp,
     pending_deletion_at: OptionalTimestamp,
     deletion_reason_code: Option<i32>,
@@ -175,6 +181,9 @@ impl From<PartialUserScyllaRow> for PartialUserDbRow {
             avatar_ultra_asset: row.avatar_ultra_asset,
             nameplate_id: row.nameplate_id,
             nameplate_asset: row.nameplate_asset,
+            name_font: row.name_font,
+            name_color: row.name_color,
+            name_color_2: row.name_color_2,
             temp_banned_until: optional_timestamp_millis(row.temp_banned_until),
             pending_deletion_at: optional_timestamp_millis(row.pending_deletion_at),
             deletion_reason_code: row.deletion_reason_code,
@@ -507,6 +516,9 @@ fn system_user_partial() -> UserPartial {
         avatar_ultra_asset: None,
         nameplate_id: None,
         nameplate_asset: None,
+        name_font: None,
+        name_color: None,
+        name_color_2: None,
         content_hidden_since: None,
     }
 }
@@ -601,6 +613,9 @@ impl From<PartialUserDbRow> for UserPartial {
             avatar_ultra_asset: row.avatar_ultra_asset,
             nameplate_id: row.nameplate_id,
             nameplate_asset: row.nameplate_asset,
+            name_font: row.name_font,
+            name_color: row.name_color,
+            name_color_2: row.name_color_2,
             content_hidden_since: row.content_hidden_since,
         }
         .visible_to_others(&standing, unix_millis())
@@ -636,6 +651,9 @@ mod tests {
             avatar_ultra_asset: None,
             nameplate_id: None,
             nameplate_asset: None,
+            name_font: None,
+            name_color: None,
+            name_color_2: None,
             temp_banned_until: None,
             pending_deletion_at: None,
             deletion_reason_code: None,

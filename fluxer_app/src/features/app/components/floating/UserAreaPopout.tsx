@@ -51,6 +51,7 @@ import UserSettings from '@app/features/user/state/UserSettings';
 import Users from '@app/features/user/state/Users';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import * as ProfileDisplayUtils from '@app/features/user/utils/ProfileDisplayUtils';
+import {profileThemeColors} from '@app/features/user/utils/ProfileGradient';
 import {createMockProfile} from '@app/features/user/utils/ProfileUtils';
 import {copyVoiceDiagnostics} from '@app/features/voice/commands/VoiceDiagnosticsCommands';
 import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
@@ -422,6 +423,7 @@ export const UserAreaPopout = observer(() => {
 			<div ref={popoutContainerRef} className={styles.container} data-flx="app.floating.user-area-popout.container">
 				<ProfileCardLayout
 					borderColor={borderColor}
+					themeColors={profileThemeColors(currentUser, profile)}
 					profileEffect={profile.profileEffect}
 					data-flx="app.floating.user-area-popout.profile-card-layout"
 				>

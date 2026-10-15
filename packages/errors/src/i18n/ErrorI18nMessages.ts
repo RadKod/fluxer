@@ -536,7 +536,9 @@ export const ERROR_I18N_MESSAGES = {
 	'premium_and_plans.custom_stickers_outside_source_require_premium':
 		"You can't use custom stickers outside their source communities without Plus.",
 	'premium_and_plans.discriminator_change_requires_premium': 'Changing your discriminator requires Plus.',
+	'premium_and_plans.name_styles_require_premium': 'Name styles require Plus.',
 	'premium_and_plans.no_active_subscription': 'No active subscription.',
+	'premium_and_plans.profile_themes_require_premium': 'Profile themes require Plus.',
 	'premium_and_plans.shop_busy': 'Too many orders right now. Try again in a few seconds.',
 	'premium_and_plans.shop_item_unavailable': "This can't be bought right now.",
 	'premium_and_plans.shop_sales_closed': 'Sales are paused right now.',
@@ -559,12 +561,16 @@ export const ERROR_I18N_MESSAGES = {
 	'rate_limits.ip_authorization_resend_limit_exceeded': 'IP authorization resend limit exceeded.',
 	'rate_limits.message_crosspost_rate_limited':
 		'This channel has reached its publishing limit. It can publish 10 messages in a row, then one more every 6 minutes.',
+	'rate_limits.name_style_changed_too_often':
+		"You've changed your name style too often recently. Please try again in {minutes, plural, one {# minute} other {# minutes}}.",
 	'rate_limits.pronouns_changed_too_often':
 		"You've changed your pronouns too often recently. Please try again in {minutes, plural, one {# minute} other {# minutes}}.",
 	'rate_limits.published_message_edit_rate_limited':
 		'This published message has reached its editing limit. It allows 3 quick edits, then 1 every 20 minutes.',
 	'rate_limits.rate_limited': "You're being rate limited.",
 	'rate_limits.slowmode_rate_limited': 'Slowmode rate limited.',
+	'rate_limits.theme_colors_changed_too_often':
+		"You've changed your profile theme too often recently. Please try again in {minutes, plural, one {# minute} other {# minutes}}.",
 	'rate_limits.username_changed_too_often':
 		"You've changed your username too often recently. Please try again in {minutes, plural, one {# minute} other {# minutes}}.",
 	'rate_limits.voice_activity_sharing_on_cooldown':
@@ -652,6 +658,8 @@ export const ERROR_I18N_MESSAGES = {
 	'usernames_and_tags.display_name_reserved_terms': 'Display name can\'t contain "system message".',
 	'usernames_and_tags.global_name_length_invalid': 'Global name must be between {min} and {max} characters.',
 	'usernames_and_tags.global_name_reserved_value': 'Global name can\'t be "everyone" or "here".',
+	'usernames_and_tags.name_colors_not_readable':
+		'These name colors are too dark to read on a dark background. Pick a lighter color.',
 	'usernames_and_tags.tag_already_taken': 'This tag is already taken.',
 	'usernames_and_tags.too_many_users_with_this_username': 'There are too many users with this username.',
 	'usernames_and_tags.too_many_users_with_username_try_different':

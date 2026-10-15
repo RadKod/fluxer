@@ -51,6 +51,7 @@ export const UnsavedChangesBannerContent: React.FC<UnsavedChangesBannerContentPr
 				<Button
 					small
 					onClick={tabData.onSave}
+					disabled={tabData.saveDisabled}
 					submitting={tabData.isSubmitting}
 					variant={tabData.saveVariant}
 					data-flx={dataFlx.saveButton}

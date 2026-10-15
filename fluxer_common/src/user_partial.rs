@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-use crate::user_flags::{USER_FLAG_STAFF, public_user_flags};
+use crate::user_flags::{USER_FLAG_STAFF, premium_perks_visible, public_user_flags};
 use serde::{Deserialize, Serialize};
 
 pub const FLUXER_SYSTEM_USER_ID: i64 = 0;
@@ -12,6 +12,13 @@ pub const FLUXER_SYSTEM_DISCRIMINATOR: i32 = 0;
 pub struct ApiCosmeticAssetData {
     pub asset: String,
     pub item_id: String,
+}
+
+/// Micup: the Plus name style, a font id and one solid colour or two gradient stops.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ApiNameStyle {
+    pub font_id: i32,
+    pub colors: Vec<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,6 +43,8 @@ pub struct ApiUserPartial {
     pub avatar_decoration_data: Option<ApiCosmeticAssetData>,
     pub avatar_ultra_data: Option<ApiCosmeticAssetData>,
     pub nameplate_data: Option<ApiCosmeticAssetData>,
+    // Micup: always serialized like the cosmetics, as null when unset or when Plus perks are not visible.
+    pub name_style: Option<ApiNameStyle>,
 }
 
 pub struct UserPartialFields {
@@ -58,6 +67,9 @@ pub struct UserPartialFields {
     pub avatar_ultra_asset: Option<String>,
     pub nameplate_id: Option<i64>,
     pub nameplate_asset: Option<String>,
+    pub name_font: Option<i32>,
+    pub name_color: Option<i32>,
+    pub name_color_2: Option<i32>,
 }
 
 impl From<UserPartialFields> for ApiUserPartial {
@@ -91,8 +103,30 @@ impl From<UserPartialFields> for ApiUserPartial {
                 partial.avatar_ultra_asset,
             ),
             nameplate_data: cosmetic_asset_data(partial.nameplate_id, partial.nameplate_asset),
+            name_style: if premium_perks_visible(
+                partial.flags.unwrap_or_default(),
+                partial.bot.unwrap_or_default(),
+                partial.premium_type,
+                partial.premium_flags,
+            ) {
+                name_style(partial.name_font, partial.name_color, partial.name_color_2)
+            } else {
+                None
+            },
         }
     }
+}
+
+// Micup: a font without its first colour is no name style.
+fn name_style(
+    font_id: Option<i32>,
+    color: Option<i32>,
+    color_2: Option<i32>,
+) -> Option<ApiNameStyle> {
+    Some(ApiNameStyle {
+        font_id: font_id?,
+        colors: std::iter::once(color?).chain(color_2).collect(),
+    })
 }
 
 // Micup: an item id without its image is not worn.
@@ -122,5 +156,6 @@ pub fn fluxer_system_user() -> ApiUserPartial {
         avatar_decoration_data: None,
         avatar_ultra_data: None,
         nameplate_data: None,
+        name_style: None,
     }
 }

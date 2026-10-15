@@ -50,6 +50,7 @@ import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
 import * as UserProfileCommands from '@app/features/user/commands/UserProfileCommands';
 import userProfileModalStyles from '@app/features/user/components/modals/UserProfileModal.module.css';
 import {ProfileModalContent} from '@app/features/user/components/modals/user_profile_modal/ProfileModalContent';
+import {profileGradientSurface} from '@app/features/user/components/profile/ProfileGradientSurface';
 import {UserProfileLoadingSkeleton} from '@app/features/user/components/profile/UserProfileLoadingSkeleton';
 import {useUserProfileSurfaceState} from '@app/features/user/hooks/useUserProfileSurfaceState';
 import type {Profile} from '@app/features/user/models/Profile';
@@ -59,6 +60,7 @@ import Users from '@app/features/user/state/Users';
 import {blockedDmConfirmModal, openDMChannelOrShowError} from '@app/features/user/utils/DMActionUtils';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import type * as ProfileDisplayUtils from '@app/features/user/utils/ProfileDisplayUtils';
+import {profileThemeColors} from '@app/features/user/utils/ProfileGradient';
 import {
 	getProfileMembershipDisplayName,
 	resolveProfileGuildMembership,
@@ -808,6 +810,7 @@ export const UserProfileModal: UserProfileModalComponent = observer(
 				: borderProfile?.accent_color;
 		const borderColor = getUserAccentColor(displayUser, borderAccentColor);
 		const decorationOverflow = displayUser.avatarUltra !== null && userProfileModalStyles.decorationOverflow;
+		const gradient = profileGradientSurface(profileThemeColors(displayUser, resolvedProfile));
 		return (
 			<Modal.Root
 				size="medium"
@@ -821,8 +824,8 @@ export const UserProfileModal: UserProfileModalComponent = observer(
 					data-flx="user.user-profile-modal.modal-screen-reader-label"
 				/>
 				<div
-					className={clsx(userProfileModalStyles.modalContainer, decorationOverflow)}
-					style={{borderColor}}
+					className={clsx(userProfileModalStyles.modalContainer, decorationOverflow, gradient?.className)}
+					style={{borderColor, ...gradient?.style}}
 					data-flx="user.user-profile-modal.div"
 				>
 					{showProfileSkeleton ? (

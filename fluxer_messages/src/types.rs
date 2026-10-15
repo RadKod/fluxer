@@ -859,6 +859,7 @@ mod tests {
             avatar_decoration_data: None,
             avatar_ultra_data: None,
             nameplate_data: None,
+            name_style: None,
         };
         ApiMessageResponse {
             id: "2".to_string(),

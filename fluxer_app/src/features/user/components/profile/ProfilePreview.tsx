@@ -34,6 +34,7 @@ import {type BadgeSettings, createMockProfile} from '@app/features/user/utils/Pr
 import {YOU_CAN_T_MESSAGE_YOURSELF_DESCRIPTOR} from '@app/features/user/utils/UserMessageDescriptors';
 import {PublicUserFlags} from '@fluxer/constants/src/UserConstants';
 import type {CosmeticAssetDataResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
+import type {NameStyle, ThemeColors} from '@fluxer/schema/src/domains/user/PlusAppearanceSchemas';
 import type {UserProfile} from '@fluxer/schema/src/domains/user/UserResponseSchemas';
 import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
@@ -58,6 +59,8 @@ interface ProfilePreviewProps {
 	previewAccentColor?: number | null;
 	previewTimezoneOffset?: number | null;
 	previewGlobalName?: string | null;
+	previewNameStyle?: NameStyle | null;
+	previewThemeColors?: ThemeColors | null;
 	previewNick?: string | null;
 	guildId?: string | null;
 	guildMember?: GuildMember | null;
@@ -86,6 +89,8 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 		previewAccentColor,
 		previewTimezoneOffset,
 		previewGlobalName,
+		previewNameStyle,
+		previewThemeColors,
 		previewNick,
 		guildId,
 		guildMember,
@@ -136,8 +141,24 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 			}
 			const bio = previewBio !== undefined ? previewBio : user.bio;
 			const pronouns = previewPronouns !== undefined ? previewPronouns : user.pronouns;
-			return user.withUpdates({bio, pronouns, global_name: globalName, flags});
-		}, [user, previewBio, previewPronouns, previewGlobalName, isCommunityProfile, previewBadgeHidden]);
+			return user.withUpdates({
+				bio,
+				pronouns,
+				global_name: globalName,
+				flags,
+				...(previewNameStyle !== undefined && {name_style: previewNameStyle}),
+				...(previewThemeColors !== undefined && {theme_colors: previewThemeColors}),
+			});
+		}, [
+			user,
+			previewBio,
+			previewPronouns,
+			previewGlobalName,
+			previewNameStyle,
+			previewThemeColors,
+			isCommunityProfile,
+			previewBadgeHidden,
+		]);
 		const mockProfile = useMemo(() => {
 			if (isCommunityProfile && guildId && guildMemberProfile) {
 				const globalProfile = createMockProfile(previewUser, {
@@ -164,6 +185,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 				previewTimezoneOffset,
 				previewBadgeSettings,
 				previewProfileEffect,
+				previewThemeColors,
 			});
 		}, [
 			previewUser,
@@ -175,6 +197,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 			previewTimezoneOffset,
 			previewBadgeSettings,
 			previewProfileEffect,
+			previewThemeColors,
 			guildId,
 			guildMember,
 			guildMemberProfile,
@@ -255,6 +278,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 				>
 					<ProfileCardLayout
 						borderColor={borderColor}
+						themeColors={previewUser.themeColors ?? null}
 						showPreviewLabel={showPreviewLabel}
 						profileEffect={
 							previewProfileEffect !== undefined
@@ -284,6 +308,7 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 								isClickable={true}
 								onDisplayNameClick={openMockProfile}
 								onUsernameClick={openMockProfile}
+								themeColors={previewUser.themeColors ?? null}
 								belowName={
 									<UserProfileBadges
 										user={previewUser}

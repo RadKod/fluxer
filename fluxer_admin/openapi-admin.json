@@ -15799,6 +15799,8 @@
 							"feature_guild_roster",
 							"feature_mature_content_settings",
 							"feature_micupbot",
+							"feature_name_style",
+							"feature_profile_theme",
 							"feature_global_expressions",
 							"feature_guild_create",
 							"feature_higher_video_quality",
@@ -20760,6 +20762,11 @@
 						"description": "The nameplate the user wears; omitted or null when none",
 						"nullable": true,
 						"allOf": [{"$ref": "#/components/schemas/CosmeticAssetDataResponse"}]
+					},
+					"name_style": {
+						"description": "The name font and colour; omitted or null when none is set or the account has no active premium",
+						"nullable": true,
+						"allOf": [{"$ref": "#/components/schemas/NameStyleSchema"}]
 					}
 				},
 				"required": ["id", "username", "discriminator", "global_name", "avatar", "avatar_color", "flags"],
@@ -20850,6 +20857,22 @@
 					"The first message of a thread, pointing at its source"
 				]
 			},
+			"NameStyleSchema": {
+				"type": "object",
+				"properties": {
+					"font_id": {"allOf": [{"$ref": "#/components/schemas/NameStyleFontIdType"}]},
+					"colors": {
+						"minItems": 1,
+						"maxItems": 2,
+						"type": "array",
+						"items": {"$ref": "#/components/schemas/ColorType"},
+						"description": "One colour for a solid name, two for a gradient"
+					}
+				},
+				"required": ["font_id", "colors"],
+				"additionalProperties": false,
+				"description": "The name font and colour"
+			},
 			"CosmeticAssetDataResponse": {
 				"type": "object",
 				"properties": {
@@ -20897,6 +20920,41 @@
 						"value": "1073741824",
 						"description": "User has premium and shows the premium badge next to their name (computed on every read, never stored)"
 					}
+				]
+			},
+			"ColorType": {"type": "integer", "minimum": 0, "maximum": 16777215},
+			"NameStyleFontIdType": {
+				"description": "The name font; ids are stable and never reused",
+				"type": "integer",
+				"enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+				"format": "int32",
+				"x-enumNames": [
+					"BALOO",
+					"PLAYPEN",
+					"PACIFICO",
+					"CAVEAT",
+					"PIXELIFY",
+					"PRESSSTART",
+					"VT323",
+					"AUDIOWIDE",
+					"GRENZE",
+					"NEWROCKER",
+					"BUNGEE",
+					"RIGHTEOUS"
+				],
+				"x-enumDescriptions": [
+					"Baloo 2",
+					"Playpen Sans",
+					"Pacifico",
+					"Caveat",
+					"Pixelify Sans",
+					"Press Start 2P",
+					"VT323",
+					"Audiowide",
+					"Grenze Gotisch",
+					"New Rocker",
+					"Bungee",
+					"Righteous"
 				]
 			},
 			"MessageEmbedChildResponse": {

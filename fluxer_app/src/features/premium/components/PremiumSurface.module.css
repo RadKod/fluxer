@@ -19,6 +19,8 @@
 	--premium-mint: #7fe3c1;
 	/* Text on the heroes, which stay dark in the light theme too. */
 	--premium-hero-ink: #f2f2f4;
+	/* One deep violet behind the pictures of the perk and plan cards, in every theme, so what stands on it shows. */
+	--premium-art-bg: #2b2257;
 
 	/* Type scale: hero 32–56 px, section 32–36, card title 18, body 15, small 13, price 40. */
 	--premium-fs-display: clamp(2rem, 1.3rem + 2.6vw, 3.5rem);
@@ -73,6 +75,38 @@
 	}
 }
 
+/* Micup: in the coal and dark themes the cards take the app's card recipe (raised surface, edge, faint top light, no
+   lavender wash) and the headings are solid. */
+:global(html:is(.theme-coal, .theme-dark)) .tokens {
+	--premium-card-bg: var(--background-secondary-alt);
+	--premium-card-hover: color-mix(in srgb, var(--background-secondary-alt) 96%, white 4%);
+	--premium-card-shade: inset 0 0.0625rem 0 var(--surface-highlight);
+	--premium-card-wash: var(--premium-card-bg);
+	--premium-radius-card: var(--radius-xl);
+}
+
+:global(html:is(.theme-coal, .theme-dark)) .card {
+	transition:
+		background-color var(--duration-hover, 120ms) var(--ease-out-quart),
+		border-color var(--duration-hover, 120ms) var(--ease-out-quart),
+		transform var(--duration-hover, 120ms) var(--ease-out-quart);
+}
+
+:global(html.reduced-motion:is(.theme-coal, .theme-dark)) .card {
+	transition-property: background-color, border-color;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	:global(
+			html:is(.theme-coal, .theme-dark):where(.window-focused, .unfocused-fully-interactive):not(
+				.window-focus-activation-guard
+			)
+		)
+		.cardHover:hover {
+		border-color: var(--background-modifier-accent-focus);
+	}
+}
+
 /* Headings of the shop and the Plus page: white fading to lavender at the foot of the letters. */
 .headingFill {
 	background: linear-gradient(
@@ -85,11 +119,21 @@
 	color: transparent;
 }
 
+:global(html:is(.theme-coal, .theme-dark)) .headingFill {
+	background: none;
+	color: var(--text-primary);
+}
+
 /* A buy button in the violet accent: the button's brand colours, redefined for what it holds. */
 .buyAccent {
 	--brand-primary: var(--premium-buy);
 	--brand-secondary: color-mix(in srgb, var(--premium-buy) 82%, white);
 	--brand-primary-fill: var(--premium-hero-ink);
+}
+
+/* Micup: light text on the violet is 3.8:1 in the coal and dark themes; ink text holds 4.7:1, 6.3:1 hovered. */
+:global(html:is(.theme-coal, .theme-dark)) .buyAccent {
+	--brand-primary-fill: var(--text-on-brand-primary);
 }
 
 /* A buy button in white over the violet art, so it stands out with its halo glowing behind it: night text (about

@@ -5,6 +5,7 @@ import {UserTag} from '@app/features/channel/components/ChannelUserTag';
 import {ProfilePostsButton} from '@app/features/feed/components/ProfilePostsButton';
 import {ProfileFollowActions} from '@app/features/follow/components/ProfileFollowActions';
 import {GameActivityDisplay} from '@app/features/game_activity/components/GameActivityDisplay';
+import {NameStyleText} from '@app/features/name_style/components/NameStyleText';
 import userProfileModalStyles from '@app/features/user/components/modals/UserProfileModal.module.css';
 import type {UserInfoProps} from '@app/features/user/components/modals/user_profile_modal/UserProfileModalShared';
 import {LimitedProfileNotice} from '@app/features/user/components/popouts/LimitedProfileNotice';
@@ -14,6 +15,7 @@ import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge
 import {useAutoplayExpandedProfileAnimations} from '@app/features/user/hooks/useAutoplayExpandedProfileAnimations';
 import {useProfileBadgeMetrics} from '@app/features/user/hooks/useProfileBadgeMetrics';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
+import {nameReadsOnProfileTheme, profileThemeColors} from '@app/features/user/utils/ProfileGradient';
 import {
 	getProfileMembershipDisplayName,
 	resolveProfileGuildMembership,
@@ -60,13 +62,15 @@ export const UserInfo: React.FC<UserInfoProps> = observer((props) => {
 						</div>
 					)}
 					<div className={userProfileModalStyles.nameRow} data-flx="user.user-profile-modal.user-info.div--5">
-						<span
+						<NameStyleText
 							ref={bindNameRef}
+							nameStyle={user.nameStyle}
+							fontOnly={!nameReadsOnProfileTheme(user.nameStyle, profileThemeColors(user, profile))}
 							className={userProfileModalStyles.userName}
 							data-flx="user.user-profile-modal.user-info.span"
 						>
 							{displayName}
-						</span>
+						</NameStyleText>
 						<VerifiedUserBadge user={user} size={20} data-flx="user.user-profile-modal.user-info.verified-user-badge" />
 						{user.bot && (
 							<UserTag

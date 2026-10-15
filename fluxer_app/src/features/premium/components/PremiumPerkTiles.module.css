@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 
-/* What Plus puts on the profile: the profile card beside six perk cards of one size. The section head here (a 20 px
+/* What Plus puts on the profile: the profile card beside the perk cards, three a row. The section head here (a 20 px
    title over a 14 px grey line) is shared with the table and the plans. */
 .section {
 	composes: tokens from '@app/features/premium/components/PremiumSurface.module.css';
@@ -101,8 +101,24 @@
 	transform: none;
 }
 
-.tile[data-active] {
-	border-color: color-mix(in srgb, var(--status-online) 45%, transparent);
+/* Three a row on six tracks, so a last row of two shares the width and a last card alone fills it: no hole. */
+@container (width > 40rem) {
+	.tiles {
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+	}
+
+	.tile {
+		grid-column: span 2;
+	}
+
+	.tile:nth-child(3n + 1):nth-last-child(2),
+	.tile:nth-child(3n + 2):last-child {
+		grid-column: span 3;
+	}
+
+	.tile:nth-child(3n + 1):last-child {
+		grid-column: 1 / -1;
+	}
 }
 
 .art {
@@ -114,18 +130,18 @@
 	height: 9.5rem;
 	padding: 1rem;
 	overflow: hidden;
-	background: var(--premium-card-bg);
+	background: var(--premium-art-bg);
 }
 
-/* The perk's picture fills the band and fades into the card; the user's own preview stands on it. */
-.artBackdrop {
+/* A looping picture fills the whole band, edge to edge. Two classes: the app's global video rule sets height: auto
+   and outranks a single class. */
+.art .artVideo {
 	position: absolute;
 	inset: 0;
 	z-index: -1;
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
-	mask-image: linear-gradient(180deg, #000 55%, transparent);
 	user-select: none;
 }
 
@@ -236,8 +252,40 @@
 }
 
 .badge {
-	width: 3rem;
-	height: 3rem;
+	width: 5rem;
+	height: 5rem;
+}
+
+/* A small profile card in the account's own theme (or a sample one), drawn by the profile card's gradient surface. */
+.gradientCard {
+	display: flex;
+	align-items: flex-end;
+	box-sizing: border-box;
+	width: 11rem;
+	max-width: 100%;
+	height: 6.5rem;
+	padding: 0.5rem;
+	border: 0.0625rem solid transparent;
+	border-radius: var(--premium-radius-control);
+}
+
+.gradientPanel {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 0.375rem 0.625rem;
+	overflow: hidden;
+	border-radius: 0.375rem;
+	background: var(--profile-panel-background);
+	color: var(--text-primary);
+	font-weight: 700;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.earlyAccessBadge {
+	width: auto;
+	height: 4.25rem;
+	user-select: none;
 }
 
 /* A long name ends in "…"; the sample number never shrinks. */
@@ -268,57 +316,6 @@
 
 :global(.theme-light) .tagNumber {
 	color: var(--premium-deep);
-}
-
-.discount {
-	display: grid;
-	justify-items: center;
-	gap: 0.625rem;
-}
-
-.discountChip {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.375rem;
-	padding: 0.3125rem 0.625rem 0.3125rem 0.375rem;
-	border-radius: var(--radius-full);
-	background: var(--background-tertiary);
-	font-size: var(--premium-fs-body);
-	font-weight: 700;
-	white-space: nowrap;
-	color: var(--text-primary);
-}
-
-.discountBadge {
-	flex-shrink: 0;
-	width: 1.375rem;
-	height: 1.375rem;
-}
-
-/* A price line with no numbers: a struck old price and the lower member price. */
-.priceBars {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-}
-
-.oldBar,
-.newBar {
-	display: block;
-	height: 0.5rem;
-	border-radius: 0.25rem;
-}
-
-.oldBar {
-	width: 2.125rem;
-	background:
-		linear-gradient(transparent 0.1875rem, var(--text-tertiary) 0.1875rem 0.3125rem, transparent 0.3125rem),
-		var(--background-modifier-accent);
-}
-
-.newBar {
-	width: 3.25rem;
-	background: var(--premium-lavender);
 }
 
 .more {

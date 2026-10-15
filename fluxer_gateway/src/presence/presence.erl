@@ -408,6 +408,85 @@ thread_user_flip_is_forwarded_to_every_session_test() ->
     after 1000 -> ?assert(false)
     end.
 
+private_only_user_update_reaches_own_sessions_without_bus_publish_test() ->
+    Update = #{<<"id">> => <<"1">>, <<"theme_colors">> => [2, 3]},
+    {CallState, CallSent, CallPublishes} = run_user_update(call, Update),
+    {CastState, CastSent, CastPublishes} = run_user_update(cast, Update),
+    ?assertEqual([2, 3], maps:get(<<"theme_colors">>, maps:get(user_data, CallState))),
+    ?assertEqual([2, 3], maps:get(<<"theme_colors">>, CallSent)),
+    ?assertEqual([2, 3], maps:get(<<"theme_colors">>, maps:get(user_data, CastState))),
+    ?assertEqual([2, 3], maps:get(<<"theme_colors">>, CastSent)),
+    ?assertEqual([], CallPublishes),
+    ?assertEqual([], CastPublishes).
+
+public_user_update_publishes_to_bus_test() ->
+    Decoration = #{<<"asset">> => <<"b">>},
+    Update = #{
+        <<"id">> => <<"1">>,
+        <<"avatar_decoration_data">> => Decoration,
+        <<"email">> => <<"a@b.c">>,
+        <<"theme_colors">> => [2, 3]
+    },
+    {State, Sent, [Payload]} = run_user_update(call, Update),
+    UserData = maps:get(user_data, State),
+    ?assertEqual(Decoration, maps:get(<<"avatar_decoration_data">>, UserData)),
+    ?assertEqual(Decoration, maps:get(<<"avatar_decoration_data">>, Sent)),
+    ?assertEqual(<<"a@b.c">>, maps:get(<<"email">>, Sent)),
+    ?assertEqual([2, 3], maps:get(<<"theme_colors">>, Sent)),
+    BusUser = maps:get(<<"user">>, Payload),
+    ?assertEqual(Decoration, maps:get(<<"avatar_decoration_data">>, BusUser)),
+    ?assertNot(maps:is_key(<<"email">>, BusUser)),
+    ?assertNot(maps:is_key(<<"theme_colors">>, BusUser)).
+
+stale_identity_user_update_keeps_identity_and_applies_profile_test() ->
+    Update = #{
+        <<"id">> => <<"1">>,
+        <<"username">> => <<"old">>,
+        <<"identity_version">> => <<"7">>,
+        <<"theme_colors">> => [2, 3]
+    },
+    {State, Sent, _Publishes} = run_user_update(call, Update),
+    UserData = maps:get(user_data, State),
+    ?assertEqual(<<"new">>, maps:get(<<"username">>, UserData)),
+    ?assertEqual(<<"8">>, maps:get(<<"identity_version">>, UserData)),
+    ?assertEqual([2, 3], maps:get(<<"theme_colors">>, UserData)),
+    ?assertEqual(UserData, Sent).
+
+-spec run_user_update(call | cast, map()) -> {state(), map(), [map()]}.
+run_user_update(Kind, Update) ->
+    UserData = #{
+        <<"id">> => <<"1">>,
+        <<"username">> => <<"new">>,
+        <<"identity_version">> => <<"8">>,
+        <<"theme_colors">> => [0, 1],
+        <<"avatar_decoration_data">> => #{<<"asset">> => <<"a">>}
+    },
+    State0 = test_state(#{<<"s1">> => test_session_entry(self())}),
+    Visible = #{status => <<"online">>},
+    State = State0#{user_data := UserData, last_published_presence := Visible},
+    meck:new(presence_bus, [passthrough]),
+    meck:expect(presence_bus, publish, fun(_UserId, _Payload) -> ok end),
+    try
+        NewState =
+            case Kind of
+                call ->
+                    {reply, ok, CallState} = handle_dispatch_call(user_update, Update, State),
+                    CallState;
+                cast ->
+                    {noreply, CastState} = handle_dispatch_cast(user_update, Update, State),
+                    CastState
+            end,
+        Sent =
+            receive
+                {'$gen_cast', {dispatch, user_update, Data}} -> Data
+            after 1000 -> error(no_dispatch)
+            end,
+        Bus = [P || {_, {presence_bus, publish, [_, P]}, _} <- meck:history(presence_bus)],
+        {NewState, Sent, Bus}
+    after
+        meck:unload(presence_bus)
+    end.
+
 -spec test_state(sessions()) -> state().
 test_state(Sessions) ->
     #{

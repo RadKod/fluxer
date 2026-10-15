@@ -17,6 +17,7 @@ import {ProfileFollowActions} from '@app/features/follow/components/ProfileFollo
 import {GameActivityDisplay} from '@app/features/game_activity/components/GameActivityDisplay';
 import {OPEN_DM_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import GuildMembers from '@app/features/member/state/GuildMembers';
+import {NameStyleText} from '@app/features/name_style/components/NameStyleText';
 import SelectedChannel from '@app/features/navigation/state/SelectedChannel';
 import Permission from '@app/features/permissions/state/Permission';
 import {Logger} from '@app/features/platform/utils/AppLogger';
@@ -57,6 +58,7 @@ import {
 	UserProfileRoles,
 	UserProfileTimezoneInfo,
 } from '@app/features/user/components/popouts/UserProfileShared';
+import {profileGradientSurface} from '@app/features/user/components/profile/ProfileGradientSurface';
 import profileCardStyles from '@app/features/user/components/profile/profile_card/ProfileCardUserInfo.module.css';
 import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge';
 import {useAutoplayExpandedProfileAnimations} from '@app/features/user/hooks/useAutoplayExpandedProfileAnimations';
@@ -70,6 +72,7 @@ import Users from '@app/features/user/state/Users';
 import {blockedDmConfirmModal, openDMChannelOrShowError} from '@app/features/user/utils/DMActionUtils';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import * as ProfileDisplayUtils from '@app/features/user/utils/ProfileDisplayUtils';
+import {nameReadsOnProfileTheme, profileThemeColors} from '@app/features/user/utils/ProfileGradient';
 import {
 	getProfileMembershipDisplayName,
 	resolveProfileGuildMembership,
@@ -103,6 +106,7 @@ import {
 	UserPlusIcon,
 	VideoCameraIcon,
 } from '@phosphor-icons/react';
+import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {useEffect, useMemo, useRef, useState} from 'react';
@@ -333,6 +337,8 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 				setNoteSheetOpen(true);
 			}
 		}, [autoFocusNote, hidePrivateDetails]);
+		const themeColors = profileThemeColors(user, profile);
+		const gradient = profileGradientSurface(themeColors);
 		const notchColor = useMemo(
 			() => getContrastingNotchColor(effectiveProfile?.banner_color ?? null, !!bannerUrl),
 			[effectiveProfile?.banner_color, bannerUrl],
@@ -523,7 +529,8 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 					data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.bottom-sheet"
 				>
 					<div
-						className={styles.container}
+						className={clsx(styles.container, gradient?.className)}
+						style={gradient?.style}
 						data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.container"
 					>
 						{isLoading ? (
@@ -559,7 +566,7 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 										) : (
 											<div
 												className={styles.bannerColor}
-												style={{backgroundColor: bannerColor}}
+												style={{backgroundColor: `var(--profile-gradient-banner, ${bannerColor})`}}
 												data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.banner-color"
 											/>
 										)}
@@ -632,13 +639,15 @@ const UserProfileMobileSheetContent: React.FC<UserProfileMobileSheetContentProps
 													className={styles.usernameRow}
 													data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.username-row"
 												>
-													<span
+													<NameStyleText
 														ref={bindNameRef}
+														nameStyle={user.nameStyle}
+														fontOnly={!nameReadsOnProfileTheme(user.nameStyle, themeColors)}
 														className={styles.username}
 														data-flx="user.user-profile-mobile-sheet.user-profile-mobile-sheet-content.username"
 													>
 														{displayName}
-													</span>
+													</NameStyleText>
 													<VerifiedUserBadge
 														user={user}
 														size={20}

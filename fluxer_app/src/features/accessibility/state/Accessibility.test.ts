@@ -327,3 +327,28 @@ describe('Accessibility default motion', () => {
 		expect(window.localStorage.getItem(MOTION_MIGRATED_KEY)).toBe('true');
 	});
 });
+
+describe('Accessibility name styles', () => {
+	beforeEach(() => {
+		window.localStorage.clear();
+	});
+
+	afterEach(() => {
+		window.localStorage.clear();
+	});
+
+	it('shows name styles by default', async () => {
+		const accessibility = await loadAccessibility();
+
+		expect(accessibility.showNameStyles).toBe(true);
+	});
+
+	it('keeps name styles hidden on this device once turned off', async () => {
+		const accessibility = await loadAccessibility();
+		accessibility.updateSettings({showNameStyles: false});
+
+		const reopened = await loadAccessibility();
+
+		expect(reopened.showNameStyles).toBe(false);
+	});
+});

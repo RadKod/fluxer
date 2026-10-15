@@ -94,6 +94,7 @@ function sessionData() {
 			bio: null,
 			pronouns: null,
 			accent_color: null,
+			theme_colors: null,
 			banner: null,
 			banner_color: null,
 			mfa_enabled: false,

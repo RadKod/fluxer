@@ -1,0 +1,43 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* The root element carries .hide-name-styles when "Show name styles" is off (every name keeps the app font and the
+   surface's colour; a font file is only fetched once a name is drawn in it) and .theme-light on the light theme, where a
+   name whose colours fail 3:1 there (.defaultOnLight) keeps the surface's colour. Doubled selectors outrank the
+   single-class colour rules of the surfaces the name sits in; the text fill also holds over an inline role colour on the
+   name or on its role span. */
+
+:global(html:not(.hide-name-styles)) .font.font {
+	font-family: var(--name-style-font);
+	font-synthesis: none;
+}
+
+:global(html:not(.hide-name-styles)) .solid.solid:not(.defaultOnLight),
+:global(html:not(.hide-name-styles):not(.theme-light)) .solid.solid {
+	color: var(--name-style-1);
+	-webkit-text-fill-color: var(--name-style-1);
+	text-decoration-color: var(--name-style-1);
+}
+
+/* fit-content (and no flex growth in a row) keeps the gradient on the name, not on the whole row; the ellipsis is
+   painted with the text, so it takes the gradient too. */
+:global(html:not(.hide-name-styles)) .gradient.gradient:not(.defaultOnLight),
+:global(html:not(.hide-name-styles):not(.theme-light)) .gradient.gradient {
+	flex-grow: 0;
+	width: fit-content;
+	max-width: 100%;
+	color: var(--name-style-1);
+	text-decoration-color: var(--name-style-1);
+	background-image: linear-gradient(90deg, var(--name-style-1), var(--name-style-2));
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+}
+
+/* A role's own gradient in the name (the role-colour span; the role icon is aria-hidden) gives way to the style. */
+:global(html:not(.hide-name-styles)) .solid.solid:not(.defaultOnLight) > span:not([aria-hidden]),
+:global(html:not(.hide-name-styles):not(.theme-light)) .solid.solid > span:not([aria-hidden]),
+:global(html:not(.hide-name-styles)) .gradient.gradient:not(.defaultOnLight) > span:not([aria-hidden]),
+:global(html:not(.hide-name-styles):not(.theme-light)) .gradient.gradient > span:not([aria-hidden]) {
+	background-image: none;
+	-webkit-text-fill-color: inherit;
+}

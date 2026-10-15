@@ -178,3 +178,13 @@
 	width: 100%;
 	justify-content: center;
 }
+
+/* Micup: in the coal and dark themes the voice activity card sits on a panel or inside the profile card, so it is a
+   tinted well one step above whatever holds it, with the edge, not a second raised card. On a profile theme it takes
+   the theme scrim like the other inner cards. */
+:global(html:is(.theme-coal, .theme-dark)) .card {
+	border-color: var(--background-modifier-accent);
+	border-radius: var(--radius-lg);
+	background-color: var(--profile-panel-background, var(--background-modifier-hover));
+	box-shadow: none;
+}

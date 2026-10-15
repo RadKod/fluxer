@@ -34,10 +34,22 @@
 	top: var(--profile-popout-avatar-top, 3.4375rem);
 	left: var(--profile-popout-avatar-left, 0.625rem);
 	z-index: 1;
-	border: var(--profile-popout-avatar-border, 0.2rem) solid var(--background-primary);
+	border: var(--profile-popout-avatar-border, 0.2rem) solid var(--profile-card-avatar-ring, var(--background-primary));
 	border-radius: 624.9375rem;
-	background-color: var(--background-primary);
+	background-color: var(--profile-card-avatar-ring, var(--background-primary));
 	padding: 0;
 	outline: none;
 	overflow: visible;
+}
+
+/* Micup: follows the profile card's corner and surface in the coal and dark themes; the avatar ring is the card (on a
+   profile theme the theme's ring hook wins). */
+:global(html:is(.theme-coal, .theme-dark)) .bannerWrapper {
+	border-top-left-radius: calc(var(--radius-xl) - var(--profile-card-border-width, 0.15625rem));
+	border-top-right-radius: calc(var(--radius-xl) - var(--profile-card-border-width, 0.15625rem));
+}
+
+:global(html:is(.theme-coal, .theme-dark)) .avatarButton {
+	border-color: var(--profile-card-avatar-ring, var(--background-secondary-alt));
+	background-color: var(--profile-card-avatar-ring, var(--background-secondary-alt));
 }

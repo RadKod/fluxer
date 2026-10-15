@@ -57,6 +57,7 @@ const ACCESSIBILITY_SHOW_NEKO_STORAGE_KEY = 'Accessibility:showNeko';
 const ACCESSIBILITY_KEEP_NEKO_STILL_STORAGE_KEY = 'Accessibility:keepNekoStill';
 const ACCESSIBILITY_PIN_NEKO_TO_TEXTAREA_STORAGE_KEY = 'Accessibility:pinNekoToTextarea';
 const ACCESSIBILITY_VIDEO_SEEK_PREVIEW_THUMBNAILS_STORAGE_KEY = 'Accessibility:videoSeekPreviewThumbnails';
+const ACCESSIBILITY_SHOW_NAME_STYLES_STORAGE_KEY = 'Accessibility:showNameStyles';
 const SYNCED_PREFERENCES_LOCAL_STORAGE_KEY = 'UserSettings:syncedPreferencesLocal';
 const getShowNekoStorageKey = (userId: string): string => `${ACCESSIBILITY_SHOW_NEKO_STORAGE_KEY}:${userId}`;
 const getKeepNekoStillStorageKey = (userId: string): string => `${ACCESSIBILITY_KEEP_NEKO_STILL_STORAGE_KEY}:${userId}`;
@@ -333,6 +334,10 @@ function readLocalVideoSeekPreviewThumbnails(storage: StartupSettingsStorage = A
 	return readStoredBoolean(storage, ACCESSIBILITY_VIDEO_SEEK_PREVIEW_THUMBNAILS_STORAGE_KEY) ?? false;
 }
 
+function readLocalShowNameStyles(storage: StartupSettingsStorage = AppStorage): boolean {
+	return readStoredBoolean(storage, ACCESSIBILITY_SHOW_NAME_STYLES_STORAGE_KEY) ?? true;
+}
+
 function readAndMigrateLocalShowNeko(userId: string | null = readStoredSessionUserId(AppStorage)): boolean {
 	const value = readLocalShowNeko(AppStorage, userId);
 	if (userId === null) {
@@ -404,6 +409,12 @@ function persistLocalKeepNekoStill(value: boolean, userId: string | null = readS
 function persistLocalVideoSeekPreviewThumbnails(value: boolean): void {
 	try {
 		AppStorage.setItem(ACCESSIBILITY_VIDEO_SEEK_PREVIEW_THUMBNAILS_STORAGE_KEY, JSON.stringify(value));
+	} catch {}
+}
+
+function persistLocalShowNameStyles(value: boolean): void {
+	try {
+		AppStorage.setItem(ACCESSIBILITY_SHOW_NAME_STYLES_STORAGE_KEY, JSON.stringify(value));
 	} catch {}
 }
 
@@ -731,6 +742,7 @@ export interface AccessibilitySettings {
 	showNeko: boolean;
 	keepNekoStill: boolean;
 	showVideoSeekPreviewThumbnails: boolean;
+	showNameStyles: boolean;
 }
 
 const getDefaultDmMessagePreviewMode = (): DMMessagePreviewMode =>
@@ -837,6 +849,8 @@ class Accessibility {
 	showNeko = false;
 	keepNekoStill = false;
 	showVideoSeekPreviewThumbnails = false;
+	// Micup: fonts and colours Plus members pick for their names; local to this device.
+	showNameStyles = true;
 	mediaQuery: MediaQueryList | null = null;
 	private _hydrated = false;
 	private unsubscribeZoomStorage: (() => void) | null = null;
@@ -844,6 +858,7 @@ class Accessibility {
 	private unsubscribeShowNekoSession: (() => void) | null = null;
 	private unsubscribeShowNekoStorage: (() => void) | null = null;
 	private unsubscribeVideoSeekPreviewThumbnailsStorage: (() => void) | null = null;
+	private unsubscribeShowNameStylesStorage: (() => void) | null = null;
 
 	constructor() {
 		applyZoomLevelDefaultMigrationV3();
@@ -865,6 +880,7 @@ class Accessibility {
 		this.showNeko = readAndMigrateLocalShowNeko();
 		this.keepNekoStill = readAndMigrateLocalKeepNekoStill();
 		this.showVideoSeekPreviewThumbnails = readLocalVideoSeekPreviewThumbnails();
+		this.showNameStyles = readLocalShowNameStyles();
 		makeAutoObservable(this, {mediaQuery: false}, {autoBind: true});
 		this.initializeMotionDetection();
 		this.initializeZoomStorageSync();
@@ -873,6 +889,7 @@ class Accessibility {
 		this.initializeShowNekoStorageSync();
 		this.initializeVideoSeekPreviewThumbnailsStorageSync();
 		this.initializeCustomThemeCssStorageSync();
+		this.initializeShowNameStylesStorageSync();
 		this.applyStartupPresentationSettings();
 		initializeStore(this, () => this.initPersistence());
 	}
@@ -1297,6 +1314,28 @@ class Accessibility {
 		);
 	}
 
+	private applyStoredShowNameStyles(): void {
+		const showNameStyles = readLocalShowNameStyles();
+		if (showNameStyles === this.showNameStyles) {
+			return;
+		}
+		runInAction(() => {
+			this.showNameStyles = showNameStyles;
+		});
+	}
+
+	private initializeShowNameStylesStorageSync(): void {
+		this.unsubscribeShowNameStylesStorage = AppStorage.subscribe(
+			() => {
+				this.applyStoredShowNameStyles();
+			},
+			{
+				key: ACCESSIBILITY_SHOW_NAME_STYLES_STORAGE_KEY,
+				source: 'external',
+			},
+		);
+	}
+
 	dispose() {
 		if (this.mediaQuery) {
 			this.mediaQuery.removeEventListener('change', this.handleSystemMotionChange);
@@ -1312,6 +1351,8 @@ class Accessibility {
 		this.unsubscribeShowNekoStorage = null;
 		this.unsubscribeVideoSeekPreviewThumbnailsStorage?.();
 		this.unsubscribeVideoSeekPreviewThumbnailsStorage = null;
+		this.unsubscribeShowNameStylesStorage?.();
+		this.unsubscribeShowNameStylesStorage = null;
 	}
 
 	get textSelectionEnabled(): boolean {
@@ -1473,6 +1514,10 @@ class Accessibility {
 			this.showVideoSeekPreviewThumbnails = validated.showVideoSeekPreviewThumbnails;
 			persistLocalVideoSeekPreviewThumbnails(validated.showVideoSeekPreviewThumbnails);
 		}
+		if (validated.showNameStyles !== undefined && validated.showNameStyles !== this.showNameStyles) {
+			this.showNameStyles = validated.showNameStyles;
+			persistLocalShowNameStyles(validated.showNameStyles);
+		}
 	}
 
 	private validateSettings(data: Readonly<Partial<AccessibilitySettings>>): Partial<AccessibilitySettings> {
@@ -1564,6 +1609,7 @@ class Accessibility {
 			showNeko: data.showNeko ?? this.showNeko,
 			keepNekoStill: data.keepNekoStill ?? this.keepNekoStill,
 			showVideoSeekPreviewThumbnails: data.showVideoSeekPreviewThumbnails ?? this.showVideoSeekPreviewThumbnails,
+			showNameStyles: data.showNameStyles ?? this.showNameStyles,
 		};
 	}
 
