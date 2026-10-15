@@ -59,7 +59,7 @@ function compareShellVersions(left: string, right: string): number {
 }
 
 function feedUserAgent(): string {
-	return `Fluxer/${app.getVersion()} (${process.platform}: ${process.arch})`;
+	return `sanalyer/${app.getVersion()} (${process.platform}: ${process.arch})`;
 }
 
 type VelopackUpdateManager = InstanceType<typeof import('velopack').UpdateManager>;

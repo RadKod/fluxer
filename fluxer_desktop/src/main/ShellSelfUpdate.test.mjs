@@ -451,7 +451,7 @@ describe('electron self update', () => {
 			{
 				url: getElectronUpdateFeedUrl(),
 				serverType: 'json',
-				headers: {'User-Agent': `Fluxer/2026.800.0 (${process.platform}: ${process.arch})`},
+				headers: {'User-Agent': `sanalyer/2026.800.0 (${process.platform}: ${process.arch})`},
 			},
 		]);
 		assert.equal(autoUpdater.checks, 1);

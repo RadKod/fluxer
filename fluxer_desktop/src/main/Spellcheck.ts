@@ -105,7 +105,7 @@ const DICTIONARY_RETRY_DELAYS_MS: ReadonlyArray<number> = [5000, 15000, 45000];
 const AUTODETECT_MAX_TEXT_LENGTH = 2000;
 const AUTODETECT_PREFIX_SKIP_CHARS = 20;
 const AUTODETECT_CONTEXT_MAX_LENGTH = 128;
-const BUILTIN_ALLOWLIST: ReadonlyArray<string> = ['Fluxer', 'fluxer', 'Hampus'];
+const BUILTIN_ALLOWLIST: ReadonlyArray<string> = ['sanalyer', 'Fluxer', 'fluxer', 'Hampus'];
 const isLinux = process.platform === 'linux';
 const isMac = process.platform === 'darwin';
 const useChromiumSpellchecker = !isLinux;

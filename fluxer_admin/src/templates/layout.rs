@@ -15,7 +15,7 @@ use super::layout_scripts::{
 };
 use super::layout_sidebar::render_sidebar;
 
-const DEFAULT_PRODUCT_NAME: &str = "Fluxer";
+const DEFAULT_PRODUCT_NAME: &str = "sanalyer";
 
 pub fn product_name(branding: Option<&PremiumBranding>) -> &str {
     branding

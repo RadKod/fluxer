@@ -144,7 +144,7 @@ function defaultConfig(): MasterConfig {
 			profile_pseudonym_secret: '',
 			sso_allow_private_addresses: false,
 			passkeys: {
-				rp_name: 'Fluxer',
+				rp_name: 'sanalyer',
 				rp_id: '',
 				additional_allowed_origins: DEFAULT_PASSKEY_ORIGINS,
 			},
@@ -155,7 +155,7 @@ function defaultConfig(): MasterConfig {
 			},
 			bluesky: {
 				enabled: false,
-				client_name: 'Fluxer',
+				client_name: 'sanalyer',
 				client_uri: '',
 				logo_uri: '',
 				tos_uri: '',
@@ -279,7 +279,7 @@ function defaultConfig(): MasterConfig {
 			self_hosted: false,
 			abuse_policy: {phone_flagging: {enabled: true}},
 			branding: {
-				product_name: 'Fluxer',
+				product_name: 'sanalyer',
 			},
 			setup: {
 				configured: false,

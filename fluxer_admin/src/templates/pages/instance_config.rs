@@ -809,7 +809,7 @@ fn integrations_config_section(
                                 "integration_bluesky_client_name",
                                 "Client name",
                                 integrations.bluesky.client_name.as_deref().unwrap_or(""),
-                                "Fluxer",
+                                "sanalyer",
                             ))
                             (text_input(
                                 "integration_bluesky_client_uri",
@@ -1009,7 +1009,7 @@ fn app_public_config_section(
                                 "app_product_name",
                                 "Product Name",
                                 &app_public.branding.product_name,
-                                "Fluxer",
+                                "sanalyer",
                             ))
                             (text_input(
                                 "app_theme_color",
@@ -1026,13 +1026,13 @@ fn app_public_config_section(
                                 "app_status_page_url",
                                 "Status page URL",
                                 app_public.branding.status_page_url.as_deref().unwrap_or(""),
-                                "https://fluxerstatus.com",
+                                "https://status.example.com",
                             ))
                             (text_input(
                                 "app_status_page_incident_history_url",
                                 "Status page history URL",
                                 app_public.branding.status_page_incident_history_url.as_deref().unwrap_or(""),
-                                "https://fluxerstatus.com/history",
+                                "https://status.example.com/history",
                             ))
                         }
                         div class="space-y-2" {

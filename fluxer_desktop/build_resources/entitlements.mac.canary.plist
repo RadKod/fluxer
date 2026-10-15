@@ -25,6 +25,7 @@
     <string>3G5837T29K.app.fluxer.canary</string>
     <key>com.apple.developer.associated-domains</key>
     <array>
+        <string>webcredentials:sanalyer.com</string>
         <string>webcredentials:fluxer.app</string>
         <string>webcredentials:web.fluxer.app</string>
         <string>webcredentials:web.canary.fluxer.app</string>

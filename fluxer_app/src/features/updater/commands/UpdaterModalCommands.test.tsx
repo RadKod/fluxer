@@ -51,6 +51,6 @@ describe('system-managed install update button', () => {
 
 		pressPrimary();
 
-		expect(native.openExternalUrl).toHaveBeenCalledWith('appstream://app.fluxer.Fluxer');
+		expect(native.openExternalUrl).toHaveBeenCalledWith('appstream://com.sanalyer.desktop');
 	});
 });

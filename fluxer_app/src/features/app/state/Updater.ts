@@ -616,10 +616,10 @@ class Updater {
 		try {
 			const parsed = new URL(url);
 			const fileName = parsed.pathname.split('/').filter(Boolean).pop();
-			if (!fileName) return 'Fluxer-update';
+			if (!fileName) return 'sanalyer-update';
 			return decodeURIComponent(fileName);
 		} catch {
-			return 'Fluxer-update';
+			return 'sanalyer-update';
 		}
 	}
 

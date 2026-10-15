@@ -118,7 +118,9 @@ const UP_TO_DATE_KEY = 'updater-up-to-date';
 const UNSUPPORTED_KEY = 'updater-unsupported';
 const ERROR_KEY = 'updater-error';
 
-function openSoftwareCenter(appId: string = isCanaryDesktop() ? 'app.fluxer.FluxerCanary' : 'app.fluxer.Fluxer'): void {
+function openSoftwareCenter(
+	appId: string = isCanaryDesktop() ? 'com.sanalyer.desktop.canary' : 'com.sanalyer.desktop',
+): void {
 	void openExternalUrl(`appstream://${appId}`);
 }
 

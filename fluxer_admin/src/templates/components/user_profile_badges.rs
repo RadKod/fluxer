@@ -29,16 +29,16 @@ fn premium_tooltip(
     }
     Some(if premium_type == premium_types::LIFETIME {
         match premium_since {
-            Some(since) => format!("Fluxer Visionary since {}", format_admin_timestamp(since)),
-            None => "Fluxer Visionary".into(),
+            Some(since) => format!("sanalyer Visionary since {}", format_admin_timestamp(since)),
+            None => "sanalyer Visionary".into(),
         }
     } else {
         match premium_since {
             Some(since) => format!(
-                "Fluxer Plutonium subscriber since {}",
+                "sanalyer Plutonium subscriber since {}",
                 format_admin_timestamp(since)
             ),
-            None => "Fluxer Plutonium".into(),
+            None => "sanalyer Plutonium".into(),
         }
     })
 }
@@ -58,19 +58,19 @@ pub fn user_profile_badges(
     if flags & user_flag_bits::STAFF != 0 {
         badges.push(BadgeDef {
             icon_url: format!("{cdn}/badges/staff.svg?v=2"),
-            tooltip: "Fluxer Staff".into(),
+            tooltip: "sanalyer Staff".into(),
         });
     }
     if !is_self_hosted && flags & user_flag_bits::PARTNER != 0 {
         badges.push(BadgeDef {
             icon_url: format!("{cdn}/badges/partner.svg"),
-            tooltip: "Fluxer Partner".into(),
+            tooltip: "sanalyer Partner".into(),
         });
     }
     if !is_self_hosted && flags & user_flag_bits::BUG_HUNTER != 0 {
         badges.push(BadgeDef {
             icon_url: format!("{cdn}/badges/bug-hunter.svg"),
-            tooltip: "Fluxer Bug Hunter".into(),
+            tooltip: "sanalyer Bug Hunter".into(),
         });
     }
     if let Some(pt) = premium_type
