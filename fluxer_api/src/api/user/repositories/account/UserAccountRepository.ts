@@ -93,8 +93,6 @@ export class UserAccountRepository {
 	}
 
 	private async writeAccount(data: UserRow, oldData: UserRow | null | undefined, create: boolean): Promise<User> {
-		// Micup: two coordinators may differ by 2s; keep the first index older than any later projection.
-		const initialIndexTimestamp = create ? BigInt(Date.now()) * 1000n - 2000001n : null;
 		const userId = data.user_id;
 		if (oldData === undefined) {
 			oldData = (await this.findUnique(userId))?.toRow() ?? null;
@@ -116,14 +114,11 @@ export class UserAccountRepository {
 			dataCommitted = true;
 			const updatedData = result.updatedData;
 			const previousData = result.previousData;
-			// Micup: creation owns the first tag; profile sync cannot recreate it during migration.
-			if (create && !updatedData.bot && !updatedData.system)
-				await this.indexRepo.createLegacyUsernameIndex(updatedData, initialIndexTimestamp!);
 			await onUserAccountWritten({previous: previousData, updated: updatedData});
 			const updatedUser = new User(updatedData);
 			await this.emailOwnershipRepo.finalizeEmailClaim(emailClaim);
 			await this.releasePreviousEmailIfChanged(previousData, updatedData);
-			await this.indexRepo.syncIndices(updatedData, previousData, create && !updatedData.bot && !updatedData.system);
+			await this.indexRepo.syncIndices(updatedData, previousData);
 			await this.searchRepo.indexUser(updatedUser);
 			return updatedUser;
 		} catch (error) {

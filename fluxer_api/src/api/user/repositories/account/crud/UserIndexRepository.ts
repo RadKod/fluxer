@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {UserID} from '@app/api/BrandedTypes';
-import {BatchBuilder, upsertOne} from '@app/api/database/CassandraQueryExecution';
+import {BatchBuilder} from '@app/api/database/CassandraQueryExecution';
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import {
 	UserByEmail,
@@ -14,20 +14,13 @@ import {
 import {getSameIpDecisionKey} from '@fluxer/ip_utils/src/IpAddress';
 
 export class UserIndexRepository {
-	async createLegacyUsernameIndex(data: UserRow, timestamp: bigint): Promise<void> {
-		await upsertOne(
-			UserByUsername.upsertAll(
-				{username: data.username.toLowerCase(), discriminator: data.discriminator, user_id: data.user_id},
-				{timestamp},
-			),
-		);
-	}
-	async syncIndices(data: UserRow, oldData?: UserRow | null, skipUsername = false): Promise<void> {
+	async syncIndices(data: UserRow, oldData?: UserRow | null): Promise<void> {
 		const batch = new BatchBuilder();
 		// Micup: human identity changes only through the legacy identity writer; ownership projections own their keys.
+		// sanalyer: a new account (no oldData) writes its username key here, in the batch, without a Cassandra write
+		// timestamp, since Postgres KV refuses USING TIMESTAMP.
 		const writeUsername =
-			!skipUsername &&
-			(data.bot || data.system || oldData?.username !== data.username || oldData?.discriminator !== data.discriminator);
+			data.bot || data.system || oldData?.username !== data.username || oldData?.discriminator !== data.discriminator;
 		if (writeUsername && data.username && data.discriminator != null && data.discriminator !== undefined) {
 			batch.addPrepared(
 				UserByUsername.upsertAll({
