@@ -18,7 +18,6 @@ import {GenericChannelItem} from '@app/features/app/components/layout/GenericCha
 import {DragItemType} from '@app/features/app/components/layout/types/DndTypes';
 import {getChannelUnreadState} from '@app/features/app/components/layout/utils/ChannelUnreadState';
 import {GroupDMAvatar} from '@app/features/app/components/shared/GroupDMAvatar';
-import {GuildChannelListSkeleton} from '@app/features/app/components/skeleton/GuildSidebarSkeleton';
 import {useChannelHoverPreload} from '@app/features/app/hooks/useChannelHoverPreload';
 import {useMergeRefs} from '@app/features/app/hooks/useMergeRefs';
 import * as LinkChannelCommands from '@app/features/channel/commands/LinkChannelCommands';
@@ -77,6 +76,10 @@ const DIRECT_MESSAGE_ABBREVIATION_DESCRIPTOR = msg({
 const EMPTY_FAVORITES_DESCRIPTOR = msg({
 	message: 'Empty favorites',
 	comment: 'Short label in the app layout favorites channel list content.',
+});
+const EMPTY_FAVORITES_HINT_DESCRIPTOR = msg({
+	message: 'No favorites yet. Press the star on any channel and it shows up here.',
+	comment: 'Hint shown in the favorites sidebar while the list is empty.',
 });
 type ChannelDragItem = {
 	type: typeof DragItemType.FAVORITES_CHANNEL;
@@ -722,11 +725,10 @@ export const FavoritesChannelListContent = observer(() => {
 					aria-label={i18n._(EMPTY_FAVORITES_DESCRIPTOR)}
 					data-flx="app.favorites-channel-list-content.region.context-menu"
 				>
-					<GuildChannelListSkeleton
-						channelList={null}
-						detachedBannerAspectRatio={null}
-						data-flx="app.favorites-channel-list-content.guild-channel-list-skeleton"
-					/>
+					{/* sanalyer: upstream draws a ghost channel list here; it reads as a stuck loading state, so say it plainly. */}
+					<p className={styles.emptyHint} data-flx="app.favorites-channel-list-content.empty-hint">
+						{i18n._(EMPTY_FAVORITES_HINT_DESCRIPTOR)}
+					</p>
 					<div className={styles.bottomSpacer} data-flx="app.favorites-channel-list-content.bottom-spacer.empty" />
 				</div>
 			</Scroller>

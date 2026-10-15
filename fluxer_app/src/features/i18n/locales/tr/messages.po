@@ -56363,3 +56363,8 @@ msgstr ""
 #: src/features/discovery/themes/DiscoveryThemesPage.tsx
 msgid "Remove from library"
 msgstr "Kitaplıktan kaldır"
+
+#. Hint shown in the favorites sidebar while the list is empty.
+#: src/features/app/components/layout/FavoritesChannelListContent.tsx
+msgid "No favorites yet. Press the star on any channel and it shows up here."
+msgstr "Henüz favori yok. Herhangi bir kanaldaki yıldıza basınca burada görünür."

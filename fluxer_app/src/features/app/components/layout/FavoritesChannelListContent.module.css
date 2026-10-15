@@ -260,3 +260,11 @@
 		display: flex;
 	}
 }
+
+/* sanalyer: shown instead of the ghost channel list while favorites are empty. */
+.emptyHint {
+	margin: 1rem 0.75rem;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	color: var(--text-primary-muted);
+}
