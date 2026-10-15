@@ -42,7 +42,6 @@ describe('profile decorations settings entry', () => {
 	it('finds each decoration type by its name and common synonyms', () => {
 		expect(profileCosmeticsIndex.map((entry) => [entry.tabType, entry.label])).toEqual([
 			['profile_cosmetics', COSMETIC_TYPE_LABELS.avatar_decoration],
-			['profile_cosmetics', COSMETIC_TYPE_LABELS.avatar_ultra],
 			['profile_cosmetics', COSMETIC_TYPE_LABELS.nameplate],
 			['profile_cosmetics', COSMETIC_TYPE_LABELS.profile_effect],
 		]);
@@ -51,8 +50,6 @@ describe('profile decorations settings entry', () => {
 				typeof keyword === 'function' ? keyword() : typeof keyword === 'string' ? keyword : keyword.message,
 			),
 		);
-		expect(words).toEqual(
-			expect.arrayContaining(['Frame', 'Decoration', 'Ultra decoration', 'Nameplate', 'Profile effect']),
-		);
+		expect(words).toEqual(expect.arrayContaining(['Frame', 'Decoration', 'Nameplate', 'Profile effect']));
 	});
 });

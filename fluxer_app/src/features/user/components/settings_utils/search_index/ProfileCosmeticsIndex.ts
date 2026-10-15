@@ -29,13 +29,7 @@ export const profileCosmeticsIndex: Array<SearchableSettingDescriptor> = [
 		keywords: [COSMETIC_TYPE_LABELS.avatar_decoration, FRAME_DESCRIPTOR, DECORATION_DESCRIPTOR],
 		description: COSMETIC_TYPE_DESCRIPTIONS.avatar_decoration,
 	},
-	{
-		id: 'profile-cosmetics-avatar-ultra',
-		tabType: 'profile_cosmetics',
-		label: COSMETIC_TYPE_LABELS.avatar_ultra,
-		keywords: [COSMETIC_TYPE_LABELS.avatar_ultra, DECORATION_DESCRIPTOR],
-		description: COSMETIC_TYPE_DESCRIPTIONS.avatar_ultra,
-	},
+	// sanalyer: ultra decorations are not offered (VISIBLE_COSMETIC_TYPES), so the search does not list them.
 	{
 		id: 'profile-cosmetics-nameplate',
 		tabType: 'profile_cosmetics',

@@ -20,9 +20,16 @@ use crate::{
 };
 use maud::{Markup, PreEscaped, html};
 
+// sanalyer: ultra decorations are not offered; the label stays so an old row still reads. CREATE_ITEM_TYPES feeds
+// the create form.
 const ITEM_TYPES: &[(&str, &str)] = &[
     ("avatar_decoration", "Avatar decoration"),
     ("avatar_ultra", "Ultra decoration"),
+    ("profile_effect", "Profile effect"),
+    ("nameplate", "Nameplate"),
+];
+const CREATE_ITEM_TYPES: &[(&str, &str)] = &[
+    ("avatar_decoration", "Avatar decoration"),
     ("profile_effect", "Profile effect"),
     ("nameplate", "Nameplate"),
 ];
@@ -231,7 +238,7 @@ pub fn cosmetics_page(
         div class="space-y-6" {
             (page_header(
                 "Cosmetics",
-                Some("Avatar decorations, ultra decorations, profile effects and nameplates. Taking an item off \
+                Some("Avatar decorations, profile effects and nameplates. Taking an item off \
                       sale never deletes it: accounts that own or wear it keep it."),
             ))
             (card(html! {
@@ -254,8 +261,11 @@ pub fn cosmetics_page(
             }))
             (card(user_item_form(base, csrf_token, &owned_options)))
             (card(relist_form(base, csrf_token, items.unwrap_or_default())))
-            div id="ultra" {
-                (card(ultra_form(base, csrf_token, items.unwrap_or_default(), ultra_id)))
+            // sanalyer: the ultra size form only while an ultra row exists.
+            @if items.unwrap_or_default().iter().any(|item| item.item_type == "avatar_ultra") {
+                div id="ultra" {
+                    (card(ultra_form(base, csrf_token, items.unwrap_or_default(), ultra_id)))
+                }
             }
             (card(create_form(base, csrf_token)))
             div id="edit" {
@@ -418,7 +428,7 @@ fn create_form(base: &str, csrf_token: &str) -> Markup {
                 div class="flex flex-col gap-4" {
                     div class="grid grid-cols-1 gap-4 sm:grid-cols-2" {
                         (form_field_group("Type", "cosmetic-create-type", true, None, None,
-                            select_field("cosmetic-create-type", "type", ITEM_TYPES, None)))
+                            select_field("cosmetic-create-type", "type", CREATE_ITEM_TYPES, None)))
                         (form_field_group("Availability", "cosmetic-create-availability", true,
                             None, None,
                             select_field("cosmetic-create-availability", "availability",

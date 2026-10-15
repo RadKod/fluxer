@@ -7,7 +7,7 @@ import {PREMIUM_PRODUCT_NAME} from '@app/features/app/config/I18nDisplayConstant
 import styles from '@app/features/cosmetics/components/CosmeticsSettingsTab.module.css';
 import {NameplateBackground} from '@app/features/cosmetics/components/NameplateBackground';
 import Cosmetics, {
-	COSMETIC_TYPES,
+	VISIBLE_COSMETIC_TYPES,
 	type CosmeticItem,
 	type CosmeticSelection,
 	type CosmeticType,
@@ -337,7 +337,7 @@ const CosmeticsSettingsTab = observer(function CosmeticsSettingsTab() {
 			<SettingsTabContent data-flx="cosmetics.cosmetics-settings-tab.settings-tab-content">
 				<div className={styles.layout} data-flx="cosmetics.cosmetics-settings-tab.layout">
 					<div className={styles.pickers} data-flx="cosmetics.cosmetics-settings-tab.pickers">
-						{COSMETIC_TYPES.map((type) => (
+						{VISIBLE_COSMETIC_TYPES.map((type) => (
 							<SettingsSection
 								key={type}
 								id={`profile-cosmetics-${type}`}

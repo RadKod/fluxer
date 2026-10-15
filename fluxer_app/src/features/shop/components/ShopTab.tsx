@@ -2,7 +2,7 @@
 
 import {StatusSlate} from '@app/features/app/components/dialogs/shared/StatusSlate';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
-import Cosmetics, {COSMETIC_TYPES, type CosmeticType} from '@app/features/cosmetics/state/Cosmetics';
+import Cosmetics, {type CosmeticType, VISIBLE_COSMETIC_TYPES} from '@app/features/cosmetics/state/Cosmetics';
 import UltraLayouts from '@app/features/cosmetics/state/UltraLayouts';
 import {
 	SOMETHING_WENT_WRONG_DESCRIPTOR,
@@ -48,7 +48,7 @@ const SHOP_TYPE_RANK = {
 	nameplate: 2,
 	profile_effect: 3,
 } satisfies Record<CosmeticType, number>;
-export const SHOP_TYPE_ORDER: ReadonlyArray<CosmeticType> = [...COSMETIC_TYPES].sort(
+export const SHOP_TYPE_ORDER: ReadonlyArray<CosmeticType> = [...VISIBLE_COSMETIC_TYPES].sort(
 	(a, b) => SHOP_TYPE_RANK[a] - SHOP_TYPE_RANK[b],
 );
 

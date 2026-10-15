@@ -25,12 +25,8 @@ use axum::{
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 
-const ITEM_TYPES: &[&str] = &[
-    "avatar_decoration",
-    "avatar_ultra",
-    "profile_effect",
-    "nameplate",
-];
+// sanalyer: ultra decorations are not offered; the model keeps the type for rows that may exist.
+const ITEM_TYPES: &[&str] = &["avatar_decoration", "profile_effect", "nameplate"];
 const AVAILABILITIES: &[&str] = &["free", "premium", "owned"];
 // Micup (angel-wings): a full in-front set (closed + up to 30 frames + loop) reaches about 3.07 MB
 // once base64 and URL encoded. Only this route needs the larger body; the shared admin form reader

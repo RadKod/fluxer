@@ -38,6 +38,7 @@ vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: runtime}));
 vi.mock('@app/features/shop/state/ShopCatalog', () => ({default: catalog}));
 vi.mock('@app/features/cosmetics/state/Cosmetics', () => ({
 	COSMETIC_TYPES: ['avatar_decoration', 'avatar_ultra', 'nameplate', 'profile_effect'],
+	VISIBLE_COSMETIC_TYPES: ['avatar_decoration', 'nameplate', 'profile_effect'],
 	default: cosmetics,
 }));
 vi.mock('@app/features/cosmetics/state/UltraLayouts', () => ({default: {prime: vi.fn()}}));
@@ -244,11 +245,12 @@ describe('ShopTab', () => {
 		expect(container.textContent).not.toContain('Dress up your profile');
 	});
 
-	it('orders every cosmetic type for the page bar and the sections, ultras first', async () => {
+	// sanalyer: ultra decorations are not offered, so the page bar lists the visible types only.
+	it('orders every visible cosmetic type for the page bar and the sections', async () => {
 		const {SHOP_TYPE_ORDER} = await import('@app/features/shop/components/ShopTab');
-		const {COSMETIC_TYPES} = await import('@app/features/cosmetics/state/Cosmetics');
-		expect(SHOP_TYPE_ORDER).toEqual(['avatar_ultra', 'avatar_decoration', 'nameplate', 'profile_effect']);
-		expect([...SHOP_TYPE_ORDER].sort()).toEqual([...COSMETIC_TYPES].sort());
+		const {VISIBLE_COSMETIC_TYPES} = await import('@app/features/cosmetics/state/Cosmetics');
+		expect(SHOP_TYPE_ORDER).toEqual(['avatar_decoration', 'nameplate', 'profile_effect']);
+		expect([...SHOP_TYPE_ORDER].sort()).toEqual([...VISIBLE_COSMETIC_TYPES].sort());
 	});
 
 	it('the filter comes from the page bar and keeps only its section', async () => {

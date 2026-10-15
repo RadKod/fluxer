@@ -15,6 +15,11 @@ export interface CosmeticItem extends CosmeticItemResponse {
 // The shared schema's CosmeticItemType widens to string, so the four slots are spelled out here.
 export const COSMETIC_TYPES = ['avatar_decoration', 'avatar_ultra', 'nameplate', 'profile_effect'] as const;
 export type CosmeticType = (typeof COSMETIC_TYPES)[number];
+// sanalyer: ultra decorations (Micup's wings) stay in the model and the API, but no screen offers them: the catalog
+// has none and the instance sells none. Pickers, shop tabs and the settings search list these types only.
+export const VISIBLE_COSMETIC_TYPES: ReadonlyArray<CosmeticType> = COSMETIC_TYPES.filter(
+	(type) => type !== 'avatar_ultra',
+);
 export type CosmeticSelection = Partial<Record<CosmeticType, string | null>>;
 
 const EQUIP_FIELDS = {
