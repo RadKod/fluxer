@@ -853,7 +853,8 @@ function ensureBuildChannelFile() {
 function prunePackedRendererModules() {
 	console.log('Pruning module-owned assets from the packed renderer...');
 	const startedAt = Date.now();
-	runDesktopBuildStep('strip_shell_renderer');
+	// sanalyer: upstream's CI helper names the step prune_shell_renderer.
+	runDesktopBuildStep('prune_shell_renderer');
 	const survivors = findMissingEntries(REQUIRED_RENDERER_ENTRIES, RENDERER_DIST_DIR);
 	if (survivors.length !== REQUIRED_RENDERER_ENTRIES.length) {
 		throw new PackedRendererNotPrunedError(RENDERER_DIST_DIR);

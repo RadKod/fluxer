@@ -233,6 +233,29 @@ jobs:
           compression-level: 0
 
 
+      - name: Split renderer into desktop modules
+        run: >-
+          cargo run --locked --quiet --manifest-path ${{ github.workspace }}/_ci/tools/ci/Cargo.toml -- build-desktop
+          --step split_modules
+
+      - name: Pack desktop modules
+        run: >-
+          cargo run --locked --quiet --manifest-path ${{ github.workspace }}/_ci/tools/ci/Cargo.toml -- build-desktop
+          --step pack_modules
+
+      - name: Upload desktop module packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: desktop-modules-${{ needs.meta.outputs.build_channel }}-${{ needs.meta.outputs.version }}-${{ needs.meta.outputs.source_sha }}
+          path: |
+            source/desktop-modules/classification.json
+            source/desktop-modules/*/module.json
+            source/desktop-modules/*/package.br
+            source/desktop-modules/*/package.br.sha256
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
   build:
     name: Build ${{ matrix.platform }} (${{ matrix.arch }})
     needs:
@@ -717,6 +740,17 @@ jobs:
           --step build_payload
 
 
+      - name: Download desktop module packages
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: desktop-modules-${{ needs.meta.outputs.build_channel }}-${{ needs.meta.outputs.version }}-${{ needs.meta.outputs.source_sha }}
+          path: desktop-modules
+
+      - name: Build desktop module manifest
+        run: >-
+          cargo run --locked --quiet --manifest-path tools/ci/Cargo.toml -- build-desktop
+          --step build_module_manifest
+
       - name: Write latest documents (sanalyer)
         run: tools/desktop/yayin-belgeleri.sh payload_tree/desktop "${FLUXER_DESKTOP_PACKAGE_ORIGIN_BASE}"
       - name: Upload payload to dl.sanalyer.com (R2)
@@ -732,7 +766,7 @@ jobs:
         run: |
           set -euo pipefail
           [[ -n "$AWS_ACCESS_KEY_ID" && -n "$AWS_SECRET_ACCESS_KEY" && -n "$R2_ENDPOINT" ]] || { echo "::error::R2 secret'ları eksik (R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT)"; exit 1; }
-          aws s3 sync payload_tree/desktop "s3://$R2_BUCKET/desktop" --endpoint-url "$R2_ENDPOINT" --no-progress --exclude "*/latest" --exclude "*/latest.json" --exclude "*/manifest.json" --exclude "*/RELEASES.json" --exclude "*/releases.json" --exclude "*/releases.win.json"
+          aws s3 sync payload_tree/desktop "s3://$R2_BUCKET/desktop" --endpoint-url "$R2_ENDPOINT" --no-progress --exclude "*/latest" --exclude "*/latest.json" --exclude "*/manifest.json" --exclude "*/RELEASES.json" --exclude "*/releases.json" --exclude "*/releases.win.json" --exclude "*/modules.json"
           # Feed belgeleri en son ve doğru content-type ile: istemciler önce dosyayı, sonra belgeyi görsün.
           find payload_tree/desktop \( -name latest -o -name latest.json -o -name manifest.json -o -name RELEASES.json -o -name releases.json -o -name releases.win.json \) -type f | while read -r f; do
             key="desktop/${f#payload_tree/desktop/}"
