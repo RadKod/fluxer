@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Regenerate desktop icons from the approved Micup PNG (3300ee411).
+"""Regenerate desktop icons from the sanalyer brand symbol (RadKod/sanalyer.com branding/kit/png/simge-1024.png).
 
 Run with Python + Pillow 12.2.0: python fluxer_desktop/scripts/generate-brand-icons.py
 Stable and canary intentionally share artwork; their names and app IDs differ.
-The .icon SVG embeds the PNG because no genuine Micup vector source is available.
+The .icon SVG embeds the PNG; the vector source is branding/kit/simge.svg in the sanalyer.com repo.
 Only the ICNS is packaged on macOS; unused Fluxer Assets.car files are removed.
 """
 
@@ -19,7 +19,7 @@ from PIL import Image, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1] / "build_resources"
 SOURCE = ROOT / "icons-stable/1024x1024.png"
-SOURCE_SHA256 = "564de2999d48c5c635be5efc5b7ee53c774a2f97f0d06b96a8536298b9352869"
+SOURCE_SHA256 = "f80d9174a68dcdf418bb9f782c9f153da3eee3a2bd89597a13f3d282c19a51aa"
 SIZES = (16, 24, 32, 48, 64, 128, 256, 512, 1024)
 ICNS_SIZES = {
     "icp4": 16, "icp5": 32, "icp6": 64, "ic07": 128, "ic08": 256,
@@ -30,7 +30,7 @@ ICNS_SIZES = {
 def main():
     source = SOURCE.read_bytes()
     if hashlib.sha256(source).hexdigest() != SOURCE_SHA256:
-        raise ValueError("The approved Micup source changed; review it before regenerating icons")
+        raise ValueError("The sanalyer source changed; review it before regenerating icons")
     image = Image.open(io.BytesIO(source)).convert("RGBA")
     pngs = {1024: source}
     for size in SIZES[:-1]:
@@ -49,7 +49,8 @@ def main():
     )
     # Extract the white mark from the dark source into Apple's black/alpha template format.
     # Threshold removes the source's faint texture without tracing or inventing a logo.
-    mask = image.convert("L").point(lambda value: max(0, min(255, (value - 32) * 255 // 223)))
+    # The tile is brand purple (luminance ~86); the squares are white and yellow (>=160).
+    mask = image.convert("L").point(lambda value: 255 if value >= 160 else 0)
     mask = ImageChops.multiply(mask, image.getchannel("A"))
     mark = mask.crop(mask.getbbox())
     for channel in ("stable", "canary"):
@@ -63,7 +64,7 @@ def main():
         (icon_root / "AppIcon.icon/Assets/Vector.svg").write_text(svg, encoding="utf-8", newline="\n")
         metadata_path = icon_root / "AppIcon.icon/icon.json"
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-        metadata["fill"] = {"solid": "display-p3:0.03922,0.03922,0.03922,1.00000"}
+        metadata["fill"] = {"solid": "display-p3:0.70980,0.09020,0.61961,1.00000"}
         for group in metadata["groups"]:
             group["shadow"]["opacity"] = 0
             group["translucency"]["enabled"] = False
@@ -79,11 +80,16 @@ def main():
             template = Image.new("RGBA", (size, size), (0, 0, 0, 0))
             template.putalpha(alpha)
             template.save(icon_root / name, compress_level=9)
-    # Existing Windows logos were already generated from this source in stable.
-    # Match canary without touching stable's published Windows icon artwork.
-    for name in ("icon.ico", "StoreLogo.png", *[path.name for path in (ROOT / "icons-stable").glob("Square*Logo.png")]):
-        shutil.copyfile(ROOT / "icons-stable" / name, ROOT / "icons-canary" / name)
-    print(f"Micup source sha256={SOURCE_SHA256}; ICNS={len(icns)} bytes; chunks={','.join(ICNS_SIZES)}")
+    # Windows: the .ico and the Store tiles come from the same source.
+    stable_root = ROOT / "icons-stable"
+    image.save(stable_root / "icon.ico", format="ICO", sizes=[(16, 16), (32, 32), (48, 48), (256, 256)])
+    for logo in list(stable_root.glob("Square*Logo.png")) + [stable_root / "StoreLogo.png"]:
+        with Image.open(logo) as existing:
+            size = existing.size
+        image.resize(size, Image.Resampling.LANCZOS).save(logo, format="PNG", compress_level=9)
+    for name in ("icon.ico", "StoreLogo.png", *[path.name for path in stable_root.glob("Square*Logo.png")]):
+        shutil.copyfile(stable_root / name, ROOT / "icons-canary" / name)
+    print(f"sanalyer source sha256={SOURCE_SHA256}; ICNS={len(icns)} bytes; chunks={','.join(ICNS_SIZES)}")
 
 
 if __name__ == "__main__":

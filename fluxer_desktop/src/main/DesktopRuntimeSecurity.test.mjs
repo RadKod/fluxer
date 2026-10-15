@@ -55,7 +55,7 @@ describe('DesktopRuntimeSecurity', () => {
 			requestHeaders: {Accept: '*/*'},
 		});
 
-		assert.deepEqual({...settlement.requestHeaders}, {Accept: '*/*', Referer: 'https://micup.gg/'});
+		assert.deepEqual({...settlement.requestHeaders}, {Accept: '*/*', Referer: 'https://sanalyer.com/'});
 	});
 
 	test('never invents a referrer for anything but the YouTube embed frame', () => {
@@ -84,7 +84,7 @@ describe('DesktopRuntimeSecurity', () => {
 			requestHeaders: {Accept: '*/*', referer: 'fluxer-app://app/'},
 		});
 
-		assert.deepEqual({...settlement.requestHeaders}, {Accept: '*/*', Referer: 'https://micup.gg/'});
+		assert.deepEqual({...settlement.requestHeaders}, {Accept: '*/*', Referer: 'https://sanalyer.com/'});
 	});
 
 	test('emits request header values Electron will actually send rather than response-shaped arrays', () => {
@@ -125,7 +125,7 @@ describe('DesktopRuntimeSecurity', () => {
 			requestHeaders: {Accept: '*/*', 'X-Fluxer-Desktop-Protocol-Authorization': 'secret'},
 		});
 
-		assert.deepEqual({...settlement.requestHeaders}, {Accept: '*/*', Referer: 'https://micup.gg/'});
+		assert.deepEqual({...settlement.requestHeaders}, {Accept: '*/*', Referer: 'https://sanalyer.com/'});
 	});
 
 	test('leaves a request it has no reason to touch alone', () => {

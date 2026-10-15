@@ -38,7 +38,7 @@ use tempfile::TempDir;
 use walkdir::WalkDir;
 use zip::write::SimpleFileOptions;
 
-const PACKAGE_ORIGIN_BASE: &str = "https://pkgs.fluxer.com";
+const PACKAGE_ORIGIN_BASE: &str = "https://dl.sanalyer.com";
 const PACKAGE_ORIGIN_BASE_ENV: &str = "FLUXER_DESKTOP_PACKAGE_ORIGIN_BASE";
 const PACKAGE_DOWNLOAD_BASE_ENV: &str = "PKGS_DOWNLOAD_BASE_URL";
 const PNPM_VERSION: &str = "12.4.2";

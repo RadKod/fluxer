@@ -6,7 +6,7 @@
 param(
 	[Parameter(Mandatory = $true)][ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version,
 	[switch]$TestSign,
-	[string]$SandboxDir = 'E:\micup-sandbox\store'
+	[string]$SandboxDir = 'E:\sanalyer-sandbox\store'
 )
 $ErrorActionPreference = 'Stop'
 
@@ -31,9 +31,9 @@ try {
 
 	if ($TestSign) {
 		$cert = New-SelfSignedCertificate -Type Custom -Subject $msix.publisher -KeyUsage DigitalSignature `
-			-FriendlyName 'Micup MSIX sandbox test' -CertStoreLocation 'Cert:\CurrentUser\My' `
+			-FriendlyName 'sanalyer MSIX sandbox test' -CertStoreLocation 'Cert:\CurrentUser\My' `
 			-TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
-		$pfx = Join-Path $env:TEMP 'micup-msix-test.pfx'
+		$pfx = Join-Path $env:TEMP 'sanalyer-msix-test.pfx'
 		$password = [guid]::NewGuid().ToString()
 		Export-PfxCertificate -Cert $cert -FilePath $pfx -Password (ConvertTo-SecureString $password -AsPlainText -Force) | Out-Null
 		$env:CSC_LINK = $pfx
@@ -50,20 +50,20 @@ try {
 		if (-not ($natives -match [regex]::Escape("@fluxer\$module\"))) { throw "native module missing from the package: @fluxer/$module" }
 	}
 
-	$package = Get-ChildItem (Join-Path $desktop 'dist-electron') -Filter "Micup-$Version-win-x64.msix" | Select-Object -First 1
+	$package = Get-ChildItem (Join-Path $desktop 'dist-electron') -Filter "sanalyer-$Version-win-x64.msix" | Select-Object -First 1
 	if (-not $package) { throw 'no .msix produced' }
 	Write-Output "MSIX: $($package.FullName) ($Version.0)"
 
 	if ($TestSign) {
 		New-Item -ItemType Directory -Force -Path $SandboxDir | Out-Null
 		Copy-Item $package.FullName, (Join-Path $PSScriptRoot 'sandbox-e2e.ps1') -Destination $SandboxDir -Force
-		Export-Certificate -Cert $cert -FilePath (Join-Path $SandboxDir 'micup-msix-test.cer') | Out-Null
+		Export-Certificate -Cert $cert -FilePath (Join-Path $SandboxDir 'sanalyer-msix-test.cer') | Out-Null
 		Write-Output "Sandbox folder ready: $SandboxDir (open sandbox-e2e.wsb)"
 	}
 } finally {
 	if ($TestSign) {
 		Remove-Item Env:CSC_LINK, Env:CSC_KEY_PASSWORD -ErrorAction SilentlyContinue
-		Remove-Item (Join-Path $env:TEMP 'micup-msix-test.pfx') -ErrorAction SilentlyContinue
+		Remove-Item (Join-Path $env:TEMP 'sanalyer-msix-test.pfx') -ErrorAction SilentlyContinue
 		# The sandbox needs only the exported .cer; the signing key must not stay in the user's store.
 		if ($cert) { Remove-Item -Path "Cert:\CurrentUser\My\$($cert.Thumbprint)" -DeleteKey -ErrorAction SilentlyContinue }
 	}

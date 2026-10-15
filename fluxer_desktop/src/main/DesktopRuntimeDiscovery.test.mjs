@@ -12,7 +12,7 @@ const {BUILD_CHANNEL} = await import('@electron/common/BuildChannel');
 const {CHANNEL_APP_URLS} = await import('@electron/common/Constants');
 const {DEPLOYED_OFFICIAL_DOCUMENT} = await import('@fluxer/instance_bootstrap/src/__tests__/DiscoveryFixtures');
 
-test('a sessionless bundled renderer starts discovery at the configured Micup channel API', () => {
+test('a sessionless bundled renderer starts discovery at the configured sanalyer channel API', () => {
 	assert.equal(desktopRuntimeInitialInput(), `${CHANNEL_APP_URLS[BUILD_CHANNEL]}/api`);
 });
 

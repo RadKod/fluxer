@@ -8,46 +8,46 @@ const {promisify} = require('node:util');
 const execFileAsync = promisify(execFile);
 const CHANNELS = {
 	stable: {
-		productName: 'Micup',
-		linuxOptDirName: 'Micup',
-		artifactProductName: 'Micup',
-		appId: 'gg.micup.desktop',
+		productName: 'sanalyer',
+		linuxOptDirName: 'sanalyer',
+		artifactProductName: 'sanalyer',
+		appId: 'com.sanalyer.desktop',
 		iconDirectory: 'icons-stable',
-		packageName: 'micup_desktop',
-		linuxPackageName: 'micup',
-		linuxDesktopId: 'micup',
+		packageName: 'sanalyer_desktop',
+		linuxPackageName: 'sanalyer',
+		linuxDesktopId: 'sanalyer',
 		linuxComment: 'Instant messaging and VoIP',
-		protocolScheme: 'micup',
+		protocolScheme: 'sanalyer',
 		macEntitlements: 'build_resources/entitlements.mac.development.plist',
 		notarize: true,
 		provisioningProfile: null,
 	},
 	canary: {
-		productName: 'Micup Canary',
-		linuxOptDirName: 'micup-canary',
-		artifactProductName: 'Micup-Canary',
-		appId: 'gg.micup.desktop.canary',
+		productName: 'sanalyer Canary',
+		linuxOptDirName: 'sanalyer-canary',
+		artifactProductName: 'sanalyer-Canary',
+		appId: 'com.sanalyer.desktop.canary',
 		iconDirectory: 'icons-canary',
-		packageName: 'micup_desktop_canary',
-		linuxPackageName: 'micup-canary',
-		linuxDesktopId: 'micup-canary',
-		linuxComment: 'Canary build of Micup',
-		protocolScheme: 'micup',
+		packageName: 'sanalyer_desktop_canary',
+		linuxPackageName: 'sanalyer-canary',
+		linuxDesktopId: 'sanalyer-canary',
+		linuxComment: 'Canary build of sanalyer',
+		protocolScheme: 'sanalyer',
 		macEntitlements: 'build_resources/entitlements.mac.development.plist',
 		notarize: true,
 		provisioningProfile: null,
 	},
 	development: {
-		productName: 'Micup Development',
-		linuxOptDirName: 'micup-development',
-		artifactProductName: 'Micup-Development',
-		appId: 'gg.micup.desktop.development',
+		productName: 'sanalyer Development',
+		linuxOptDirName: 'sanalyer-development',
+		artifactProductName: 'sanalyer-Development',
+		appId: 'com.sanalyer.desktop.development',
 		iconDirectory: 'icons-development',
-		packageName: 'micup_desktop_development',
-		linuxPackageName: 'micup-development',
-		linuxDesktopId: 'micup-development',
-		linuxComment: 'Development build of Micup',
-		protocolScheme: 'micup-development',
+		packageName: 'sanalyer_desktop_development',
+		linuxPackageName: 'sanalyer-development',
+		linuxDesktopId: 'sanalyer-development',
+		linuxComment: 'Development build of sanalyer',
+		protocolScheme: 'sanalyer-development',
 		macEntitlements: 'build_resources/entitlements.mac.development.plist',
 		notarize: false,
 		provisioningProfile: null,
@@ -61,7 +61,7 @@ if (!channel) {
 }
 
 if (buildChannel === 'development' && process.argv.includes('msix')) {
-	throw new Error('Development builds cannot use the Micup Store package identity.');
+	throw new Error('Development builds cannot use the sanalyer Store package identity.');
 }
 
 const isLinuxBuild = process.argv.includes('--linux');
@@ -1412,7 +1412,7 @@ const agplLicenseFile = [{from: 'LICENSE', to: 'LICENSE.txt'}];
 module.exports = {
 	appId,
 	productName: installedProductName,
-	copyright: 'Copyright © 2026 Fluxer Platform AB and Micup',
+	copyright: 'Copyright © 2026 Fluxer Platform AB and RadKod',
 	artifactName: `${artifactProductName}-\${version}-\${os}-\${arch}.\${ext}`,
 	directories: {
 		buildResources: 'build_resources',
@@ -1433,8 +1433,8 @@ module.exports = {
 		main: 'dist/main/index.js',
 		name: metadataName,
 		// Micup publishes this build: the author becomes the exe's CompanyName (Windows "Publisher").
-		author: {name: 'Micup', email: 'info@sanalyer.com'},
-		homepage: 'https://micup.gg',
+		author: {name: 'sanalyer', email: 'info@sanalyer.com'},
+		homepage: 'https://sanalyer.com',
 		...(process.env.VERSION ? {version: process.env.VERSION} : {}),
 		...(targetPlatform === 'linux' ? {desktopName: `${linuxDesktopId}.desktop`} : {}),
 	},
@@ -1568,13 +1568,13 @@ module.exports = {
 			},
 		],
 		extendInfo: {
-			NSMicrophoneUsageDescription: 'Micup needs access to your microphone to enable voice chat features.',
-			NSCameraUsageDescription: 'Micup needs access to your camera to enable video chat features.',
-			NSAppleEventsUsageDescription: 'Micup needs access to Apple Events for automation features.',
-			NSAudioCaptureUsageDescription: 'Micup captures audio from the screen or window you choose to share.',
-			NSScreenCaptureUsageDescription: 'Micup captures the screen or window you choose to share.',
+			NSMicrophoneUsageDescription: 'sanalyer needs access to your microphone to enable voice chat features.',
+			NSCameraUsageDescription: 'sanalyer needs access to your camera to enable video chat features.',
+			NSAppleEventsUsageDescription: 'sanalyer needs access to Apple Events for automation features.',
+			NSAudioCaptureUsageDescription: 'sanalyer captures audio from the screen or window you choose to share.',
+			NSScreenCaptureUsageDescription: 'sanalyer captures the screen or window you choose to share.',
 			NSLocalNetworkUsageDescription:
-				'Micup needs local network access to reach a Micup instance you host on your own network. It never scans your network or connects to devices you have not pointed it at.',
+				'sanalyer needs local network access to reach a sanalyer instance you host on your own network. It never scans your network or connects to devices you have not pointed it at.',
 		},
 	},
 	dmg: {
@@ -1597,11 +1597,11 @@ module.exports = {
 		extraFiles: agplLicenseFile,
 	},
 	msix: {
-		// Partner Center > Micup (9P1SNJ2H2W9H) > Product identity; applicationId as in the published 0.4.4.0 package (keeps pinned tiles).
-		identityName: 'Micup.Micup',
+		// Partner Center > sanalyer (9P1SNJ2H2W9H) > Product identity; applicationId as in the published 0.4.4.0 package (keeps pinned tiles).
+		identityName: 'sanalyer.sanalyer',
 		publisher: 'CN=6B905D36-79B1-4EA5-8E9B-F18A23784188',
-		publisherDisplayName: 'Micup',
-		applicationId: 'Micup',
+		publisherDisplayName: 'sanalyer',
+		applicationId: 'sanalyer',
 		backgroundColor: '#0b0b0c',
 		languages: ['tr-TR', 'en-US'],
 		setBuildNumber: false,

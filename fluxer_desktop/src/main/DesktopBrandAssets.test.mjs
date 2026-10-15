@@ -12,7 +12,7 @@ import vm from 'node:vm';
 const require = createRequire(import.meta.url);
 const desktopRoot = fileURLToPath(new URL('../../', import.meta.url));
 const resourceRoot = path.join(desktopRoot, 'build_resources');
-const sourceHash = '564de2999d48c5c635be5efc5b7ee53c774a2f97f0d06b96a8536298b9352869';
+const sourceHash = 'f80d9174a68dcdf418bb9f782c9f153da3eee3a2bd89597a13f3d282c19a51aa';
 const sizes = [16, 24, 32, 48, 64, 128, 256, 512, 1024];
 const icnsSizes = {
 	icp4: 16,
@@ -57,13 +57,13 @@ function identityFor(channel) {
 for (const channel of ['stable', 'canary']) {
 	const iconDir = `icons-${channel}`;
 	const iconRoot = path.join(resourceRoot, iconDir);
-	const id = channel === 'canary' ? 'micup-canary' : 'micup';
+	const id = channel === 'canary' ? 'sanalyer-canary' : 'sanalyer';
 	test(`${channel} Flatpak wrapper launches the packaged Linux executable`, () => {
 		const wrapperName = channel === 'canary' ? 'app.fluxer.FluxerCanary.sh' : 'app.fluxer.Fluxer.sh';
 		const wrapper = readFileSync(path.join(desktopRoot, 'packaging/linux', wrapperName), 'utf8');
 		assert.ok(wrapper.includes(`exec zypak-wrapper "/app/fluxer/${configFor(channel).extraMetadata.name}" "$@"`));
 	});
-	test(`${channel} Linux package, WM class, icon and protocol share Micup identity`, () => {
+	test(`${channel} Linux package, WM class, icon and protocol share sanalyer identity`, () => {
 		const config = configFor(channel);
 		assert.equal(config.extraMetadata.name, id);
 		assert.equal(config.extraMetadata.desktopName, `${id}.desktop`);
@@ -71,7 +71,7 @@ for (const channel of ['stable', 'canary']) {
 		for (const target of [config.linux, config.deb, config.rpm]) {
 			assert.equal(target.desktop.entry.StartupWMClass, id);
 			assert.equal(target.desktop.entry.Icon, id);
-			assert.equal(target.desktop.entry.MimeType, 'x-scheme-handler/micup;');
+			assert.equal(target.desktop.entry.MimeType, 'x-scheme-handler/sanalyer;');
 			assert.doesNotMatch(target.desktop.entry.Comment, /Fluxer/);
 		}
 		assert.equal(config.linux.icon, `build_resources/${iconDir}`);
@@ -81,7 +81,7 @@ for (const channel of ['stable', 'canary']) {
 		assert.ok(!icons.filter.some((file) => file.includes('Assets.car') || file.includes('.icon')));
 	});
 
-	test(`${channel} PNGs and complete ICNS use the approved Micup source`, () => {
+	test(`${channel} PNGs and complete ICNS use the approved sanalyer source`, () => {
 		const source = readFileSync(path.join(iconRoot, '1024x1024.png'));
 		assert.equal(createHash('sha256').update(source).digest('hex'), sourceHash);
 		for (const size of sizes) {
@@ -106,7 +106,7 @@ for (const channel of ['stable', 'canary']) {
 				icns
 					.subarray(offset + 8, offset + length)
 					.equals(readFileSync(path.join(iconRoot, `${icnsSizes[type]}x${icnsSizes[type]}.png`))),
-				`${type} differs from the Micup PNG`,
+				`${type} differs from the sanalyer PNG`,
 			);
 			chunks.add(type);
 			offset += length;
@@ -115,11 +115,11 @@ for (const channel of ['stable', 'canary']) {
 		assert.equal(existsSync(path.join(iconRoot, '_compiled/Assets.car')), false);
 		const svg = readFileSync(path.join(iconRoot, 'AppIcon.icon/Assets/Vector.svg'), 'utf8');
 		const embedded = svg.match(/href="data:image\/png;base64,([^"]+)"/);
-		assert.ok(embedded, 'the editable source must embed the actual Micup image');
+		assert.ok(embedded, 'the editable source must embed the actual sanalyer image');
 		assert.ok(Buffer.from(embedded[1], 'base64').equals(source));
 	});
 
-	test(`${channel} runtime desktop entry installs Micup hicolor icons and sets the matching WM class`, () => {
+	test(`${channel} runtime desktop entry installs sanalyer hicolor icons and sets the matching WM class`, () => {
 		const writes = new Map();
 		const copies = [];
 		const protocols = [];
@@ -149,11 +149,11 @@ for (const channel of ['stable', 'canary']) {
 					callback(null);
 				},
 			},
-			'@electron/common/Constants': {APP_PROTOCOL: 'micup'},
+			'@electron/common/Constants': {APP_PROTOCOL: 'sanalyer'},
 			'@electron/common/DesktopIdentity': identityFor(channel),
 			'@electron/common/Logger': {createChildLogger: () => ({debug() {}, info() {}, warn() {}})},
 			'@electron/main/JumpList': {TASK_ARG_PREFIX: '--fluxer-task='},
-			'@electron/main/LinuxLaunchPath': {getStableLinuxLaunchPath: () => '/apps/Micup.AppImage'},
+			'@electron/main/LinuxLaunchPath': {getStableLinuxLaunchPath: () => '/apps/sanalyer.AppImage'},
 			'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},
 			'@electron/main/MainI18n': {getNativeLocale: () => 'en-US', t: (key) => key},
 			electron: {
@@ -180,7 +180,7 @@ for (const channel of ['stable', 'canary']) {
 		assert.ok(entry);
 		assert.ok(entry.includes(`Icon=${id}\n`));
 		assert.ok(entry.includes(`StartupWMClass=${id}\n`));
-		assert.ok(entry.includes('MimeType=x-scheme-handler/micup;\n'));
+		assert.ok(entry.includes('MimeType=x-scheme-handler/sanalyer;\n'));
 		assert.equal(copies.length, 8);
 		for (const size of sizes.filter((size) => size <= 512)) {
 			assert.ok(
@@ -191,6 +191,6 @@ for (const channel of ['stable', 'canary']) {
 				),
 			);
 		}
-		assert.deepEqual(protocols, ['micup']);
+		assert.deepEqual(protocols, ['sanalyer']);
 	});
 }

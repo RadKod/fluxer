@@ -27,7 +27,7 @@ function load(name, platform, stubs = {}) {
 		{
 			module,
 			exports: module.exports,
-			process: {platform, argv: [], env: {}, execPath: '/app/Micup', resourcesPath: '/app/resources'},
+			process: {platform, argv: [], env: {}, execPath: '/app/sanalyer', resourcesPath: '/app/resources'},
 			require: (name) => {
 				if (name in stubs) return stubs[name];
 				if (name.startsWith('node:')) return require(name);
@@ -72,6 +72,11 @@ describe('Windows taskbar platform gates', () => {
 			const overlays = [];
 			const module = load('WindowsBadge', platform, {
 				'node:fs': {existsSync: () => true},
+				'@electron/main/UnreadBadge': {
+					UNREAD_BADGE_DOT: -1,
+					parseUnreadBadge: (value) => (typeof value === 'number' ? value : null),
+					describeUnreadBadge: (badge) => String(badge),
+				},
 				'@electron/main/MainI18n': {t: (key) => key, getNativeLocale: () => 'en-US'},
 				electron: {
 					nativeImage: {

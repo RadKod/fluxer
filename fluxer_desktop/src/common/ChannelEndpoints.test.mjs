@@ -9,23 +9,23 @@ const {CHANNEL_APP_PROTOCOLS, CHANNEL_APP_URLS, DOWNLOAD_PAGE_URLS} = await impo
 describe('where each channel points', () => {
 	test('every channel maps to its own legacy app origin', () => {
 		assert.deepEqual(CHANNEL_APP_URLS, {
-			stable: 'https://micup.gg',
-			canary: 'https://canary.micup.gg',
+			stable: 'https://sanalyer.com',
+			canary: 'https://canary.sanalyer.com',
 			development: 'http://localhost:8088',
 		});
 	});
 
 	test('the development build never claims the production deep link scheme', () => {
-		assert.equal(CHANNEL_APP_PROTOCOLS.stable, 'micup');
-		assert.equal(CHANNEL_APP_PROTOCOLS.canary, 'micup');
-		assert.notEqual(CHANNEL_APP_PROTOCOLS.development, 'micup');
+		assert.equal(CHANNEL_APP_PROTOCOLS.stable, 'sanalyer');
+		assert.equal(CHANNEL_APP_PROTOCOLS.canary, 'sanalyer');
+		assert.notEqual(CHANNEL_APP_PROTOCOLS.development, 'sanalyer');
 		assert.match(CHANNEL_APP_PROTOCOLS.development, /^[a-z][a-z0-9+.-]*$/u);
 	});
 
 	test('every channel maps to its own download page', () => {
 		assert.deepEqual(DOWNLOAD_PAGE_URLS, {
-			stable: 'https://micup.gg/indir',
-			canary: 'https://canary.micup.gg/indir',
+			stable: 'https://sanalyer.com/indir',
+			canary: 'https://canary.sanalyer.com/indir',
 			development: 'http://localhost:8088/download',
 		});
 	});

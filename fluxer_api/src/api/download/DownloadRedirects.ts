@@ -2,7 +2,8 @@
 
 import {posix} from 'node:path';
 
-export const PKGS_BASE_URL = 'https://pkgs.fluxer.com';
+// sanalyer: desktop packages and update feeds live in the dl.sanalyer.com bucket (R2).
+export const PKGS_BASE_URL = 'https://dl.sanalyer.com';
 export const DOWNLOAD_PREFIX = '/dl';
 export const DESKTOP_REDIRECT_PREFIX = `${DOWNLOAD_PREFIX}/desktop`;
 

@@ -15,9 +15,9 @@ interface UserDataPaths {
 type ChannelStorageDirectoryMap = Record<BuildChannel, string>;
 
 const channelStorageDirectoryMap: ChannelStorageDirectoryMap = {
-	stable: 'micup_desktop',
-	canary: 'micup_desktop_canary',
-	development: 'micup_desktop_development',
+	stable: 'sanalyer_desktop',
+	canary: 'sanalyer_desktop_canary',
+	development: 'sanalyer_desktop_development',
 };
 
 class UserDataPathConflictError extends Error {

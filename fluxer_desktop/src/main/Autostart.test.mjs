@@ -17,9 +17,9 @@ const autostart = loadTsModule('@electron/main/Autostart', {
 		'electron-log': {info: () => {}, warn: () => {}, error: () => {}},
 		'@electron/common/BuildChannel': {BUILD_CHANNEL: 'stable'},
 		'@electron/common/DesktopIdentity': {
-			DESKTOP_APP_NAME: 'Micup',
-			LINUX_DESKTOP_ENTRY_ID: 'micup',
-			LEGACY_LINUX_DESKTOP_ENTRY_ID: 'micup-legacy',
+			DESKTOP_APP_NAME: 'sanalyer',
+			LINUX_DESKTOP_ENTRY_ID: 'sanalyer',
+			LEGACY_LINUX_DESKTOP_ENTRY_ID: 'sanalyer-legacy',
 		},
 		'@electron/common/UserDataPath': {isPortableMode: () => false},
 		'@electron/main/LinuxDesktopEntry': {GENERATED_MARKER: '# X-Generated-By=fluxer-desktop'},
@@ -35,19 +35,19 @@ const LEGACY = [
 	'Name=Fluxer',
 	'Exec="/opt/Fluxer/fluxer" --autostart --ozone-platform=x11',
 	'TryExec=/opt/Fluxer/fluxer',
-	'StartupWMClass=micup-legacy',
+	'StartupWMClass=sanalyer-legacy',
 	'X-GNOME-Autostart-enabled=false',
 	'X-GNOME-Autostart-Delay=10',
 	'',
 	'[Desktop Action other]',
-	'StartupWMClass=micup-legacy',
+	'StartupWMClass=sanalyer-legacy',
 	'',
 ].join('\n');
 
 describe('rewriteLegacyLinuxAutostartContents', () => {
 	test('keeps user edits and only rewrites the window class when the command still exists', () => {
 		const rewritten = autostart.rewriteLegacyLinuxAutostartContents(LEGACY, '/opt/Fluxer/fluxer', false);
-		assert.equal(rewritten, LEGACY.replace('StartupWMClass=micup-legacy\nX-GNOME', 'StartupWMClass=micup\nX-GNOME'));
+		assert.equal(rewritten, LEGACY.replace('StartupWMClass=sanalyer-legacy\nX-GNOME', 'StartupWMClass=sanalyer\nX-GNOME'));
 	});
 
 	test('repoints Exec and TryExec when the old command is gone', () => {
@@ -57,7 +57,7 @@ describe('rewriteLegacyLinuxAutostartContents', () => {
 		assert.ok(lines.includes('TryExec=/home/u/Fluxer.AppImage'));
 		assert.ok(lines.includes('X-GNOME-Autostart-enabled=false'));
 		assert.ok(lines.includes('X-GNOME-Autostart-Delay=10'));
-		assert.equal(lines.filter((line) => line === 'StartupWMClass=micup-legacy').length, 1);
+		assert.equal(lines.filter((line) => line === 'StartupWMClass=sanalyer-legacy').length, 1);
 	});
 });
 
@@ -77,9 +77,9 @@ describe('Linux autostart with an entry left under the previous desktop id', () 
 					'electron-log': {info: () => {}, warn: () => {}, error: () => {}},
 					'@electron/common/BuildChannel': {BUILD_CHANNEL: 'stable'},
 					'@electron/common/DesktopIdentity': {
-						DESKTOP_APP_NAME: 'Micup',
-						LINUX_DESKTOP_ENTRY_ID: 'micup',
-						LEGACY_LINUX_DESKTOP_ENTRY_ID: 'micup-legacy',
+						DESKTOP_APP_NAME: 'sanalyer',
+						LINUX_DESKTOP_ENTRY_ID: 'sanalyer',
+						LEGACY_LINUX_DESKTOP_ENTRY_ID: 'sanalyer-legacy',
 					},
 					'@electron/common/UserDataPath': {isPortableMode: () => false},
 					'@electron/main/LinuxDesktopEntry': {GENERATED_MARKER: '# X-Generated-By=fluxer-desktop'},
@@ -105,18 +105,18 @@ describe('Linux autostart with an entry left under the previous desktop id', () 
 			else process.env.XDG_CONFIG_HOME = previousConfig;
 		});
 		fs.mkdirSync(dir, {recursive: true});
-		const legacyPath = path.join(dir, 'micup-legacy.desktop');
+		const legacyPath = path.join(dir, 'sanalyer-legacy.desktop');
 		fs.writeFileSync(
 			legacyPath,
 			[
 				'[Desktop Entry]',
 				`Exec="${process.execPath}" --autostart`,
 				`TryExec=${process.execPath}`,
-				'StartupWMClass=micup-legacy',
+				'StartupWMClass=sanalyer-legacy',
 				'',
 			].join('\n'),
 		);
-		fs.mkdirSync(path.join(dir, `micup.desktop.${process.pid}.tmp`, 'blocker'), {recursive: true});
+		fs.mkdirSync(path.join(dir, `sanalyer.desktop.${process.pid}.tmp`, 'blocker'), {recursive: true});
 		const {module, handlers} = loadLinuxAutostart();
 		module.registerAutostartHandlers();
 		await new Promise((resolve) => setTimeout(resolve, 50));
@@ -138,7 +138,7 @@ describe('Linux autostart with an entry left under the previous desktop id', () 
 		});
 		const dir = path.join(root, 'autostart');
 		fs.mkdirSync(dir, {recursive: true});
-		const legacyPath = path.join(dir, 'micup-legacy.desktop');
+		const legacyPath = path.join(dir, 'sanalyer-legacy.desktop');
 		fs.writeFileSync(legacyPath, ['[Desktop Entry]', `Exec="${process.execPath}" --autostart`, ''].join('\n'));
 		const {module, handlers} = loadLinuxAutostart();
 		module.registerAutostartHandlers();

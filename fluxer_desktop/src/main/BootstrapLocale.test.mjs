@@ -16,7 +16,7 @@ import path from 'node:path';
 import {installElectronStub, installTestModuleStub} from './fluxer_desktop/src/main/LocalAppTestSupport.test.mjs';
 const appData = process.argv[1];
 const mode = process.argv[2];
-const savedUserData = path.join(appData, 'micup_desktop');
+const savedUserData = path.join(appData, 'sanalyer_desktop');
 mkdirSync(savedUserData);
 writeFileSync(path.join(savedUserData, 'native-strings.json'), JSON.stringify({locale: 'en-GB', strings: {
   'desktop.shellUpdate.openMicrosoftStore': 'Open Microsoft Store',
@@ -99,7 +99,7 @@ test('the blocked bootstrap loads persisted native strings before importing the 
 	const result = runBootstrap('blocked');
 	assert.equal(result.userData, result.savedUserData);
 	assert.equal(result.state.action.label, 'Open Microsoft Store');
-	assert.equal(result.state.message, 'Install the required security update from Microsoft Store before Micup starts.');
+	assert.equal(result.state.message, 'Install the required security update from Microsoft Store before sanalyer starts.');
 	assert.equal(result.nativeStringReads, 1);
 });
 

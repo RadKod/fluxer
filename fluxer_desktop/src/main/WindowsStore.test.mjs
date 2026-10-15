@@ -13,10 +13,10 @@ import {loadMainModule} from './WinShellTestHarness.mjs';
 const require = createRequire(import.meta.url);
 const esbuild = require('esbuild');
 
-const EXEC_PATH = 'C:\\Program Files\\WindowsApps\\Micup_1.0.1.0_x64__abc\\app\\Micup.exe';
+const EXEC_PATH = 'C:\\Program Files\\WindowsApps\\sanalyer_1.0.1.0_x64__abc\\app\\sanalyer.exe';
 const STORE_PACKAGES_KEY =
 	'HKEY_CURRENT_USER\\Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository\\Packages';
-const STORE_IDENTITY_NAME = 'Micup.Micup';
+const STORE_IDENTITY_NAME = 'sanalyer.sanalyer';
 
 function load(relativePath, stubs, processOverrides) {
 	stubs = {'@electron/common/BuildChannel': {BUILD_CHANNEL: 'stable'}, ...stubs};
@@ -72,7 +72,7 @@ function electronStub() {
 			app: {
 				isPackaged: true,
 				getVersion: () => '1.0.1',
-				getPath: () => 'C:\\Users\\micup\\AppData\\Roaming\\micup',
+				getPath: () => 'C:\\Users\\sanalyer\\AppData\\Roaming\\sanalyer',
 				on() {},
 				getLoginItemSettings: () => ({openAtLogin: false, executableWillLaunchAtLogin: false, launchItems: []}),
 				setLoginItemSettings: (settings) => calls.setLoginItemSettings.push(settings),
@@ -94,11 +94,11 @@ function electronStub() {
 
 const logStub = {info() {}, warn() {}, error() {}, debug() {}, transports: {file: {}, console: {}}};
 const identityStub = {
-	DESKTOP_APP_NAME: 'Micup',
-	LINUX_DESKTOP_ENTRY_ID: 'micup',
-	LEGACY_LINUX_DESKTOP_ENTRY_ID: 'micup',
-	LINUX_ICON_NAME: 'micup',
-	WINDOWS_APP_USER_MODEL_ID: 'gg.micup.desktop',
+	DESKTOP_APP_NAME: 'sanalyer',
+	LINUX_DESKTOP_ENTRY_ID: 'sanalyer',
+	LEGACY_LINUX_DESKTOP_ENTRY_ID: 'sanalyer',
+	LINUX_ICON_NAME: 'sanalyer',
+	WINDOWS_APP_USER_MODEL_ID: 'com.sanalyer.desktop',
 	WINDOWS_LEGACY_APP_USER_MODEL_IDS: [],
 	WINDOWS_STORE_IDENTITY_NAME: STORE_IDENTITY_NAME,
 };
@@ -143,8 +143,8 @@ function loadUpdater(windowsStore) {
 				clearVelopackApplyAttempt() {},
 			},
 			'@electron/main/UpdaterDownloads': {
-				DOWNLOAD_PAGE_URL: 'https://micup.gg/indir',
-				UPDATE_BASE_URL: 'https://dl.micup.gg/desktop/stable/win32/x64',
+				DOWNLOAD_PAGE_URL: 'https://sanalyer.com/indir',
+				UPDATE_BASE_URL: 'https://dl.sanalyer.com/desktop/stable/win32/x64',
 				MANUAL_DESKTOP_FORMATS: [],
 			},
 			'@electron/main/Window': {setQuitting() {}},
@@ -169,7 +169,7 @@ function loadDeepLinks(windowsStore, installedPackages = '') {
 					callback(null, installedPackages);
 				},
 			},
-			'@electron/common/Constants': {APP_PROTOCOL: 'micup'},
+			'@electron/common/Constants': {APP_PROTOCOL: 'sanalyer'},
 			'@electron/common/DesktopIdentity': identityStub,
 			'@electron/main/JumpList': {parseJumpListTaskFromArgv: () => null},
 			'@electron/main/LinuxDesktopEntry': {ensureLinuxProtocolDesktopEntry() {}},
@@ -200,7 +200,7 @@ function loadAutostart(
 	} = {},
 ) {
 	const electron = electronStub();
-	const userData = mkdtempSync(path.join(tmpdir(), 'micup-autostart-'));
+	const userData = mkdtempSync(path.join(tmpdir(), 'sanalyer-autostart-'));
 	userDataDirs.push(userData);
 	if (initialized) writeFileSync(path.join(userData, 'autostart-initialized-v2'), '1');
 	if (prompted) writeFileSync(path.join(userData, 'store-autostart-prompt-v1'), '1');
@@ -312,21 +312,21 @@ describe('Microsoft Store (MSIX) package', () => {
 		);
 	});
 
-	test('does not register micup:// itself inside the Store package', async () => {
+	test('does not register sanalyer:// itself inside the Store package', async () => {
 		const electron = loadDeepLinks(true);
 		await nextTick();
 
 		assert.deepEqual(electron.calls.setAsDefaultProtocolClient, []);
 	});
 
-	test('registers micup:// for the direct download install', async () => {
+	test('registers sanalyer:// for the direct download install', async () => {
 		const electron = loadDeepLinks(undefined, `${STORE_PACKAGES_KEY}\\Some.Other.App_1.0.0.0_x64__xyz\r\n`);
 		await nextTick();
 
-		assert.deepEqual(electron.calls.setAsDefaultProtocolClient, [['micup']]);
+		assert.deepEqual(electron.calls.setAsDefaultProtocolClient, [['sanalyer']]);
 	});
 
-	test('leaves micup:// to the Store copy when it is installed next to the direct download', async () => {
+	test('leaves sanalyer:// to the Store copy when it is installed next to the direct download', async () => {
 		const electron = loadDeepLinks(
 			undefined,
 			`${STORE_PACKAGES_KEY}\\${STORE_IDENTITY_NAME}_1.0.1.0_x64__8wekyb3d8bbwe\r\n`,
@@ -334,7 +334,7 @@ describe('Microsoft Store (MSIX) package', () => {
 		await nextTick();
 
 		assert.deepEqual(electron.calls.setAsDefaultProtocolClient, []);
-		assert.deepEqual(electron.calls.removeAsDefaultProtocolClient, [['micup']]);
+		assert.deepEqual(electron.calls.removeAsDefaultProtocolClient, [['sanalyer']]);
 	});
 
 	test('switches the MSIX startup task instead of login items', async () => {
@@ -352,8 +352,8 @@ describe('Microsoft Store (MSIX) package', () => {
 		assert.deepEqual(
 			startupTaskCalls.filter(([kind]) => kind === 'set'),
 			[
-				['set', 'MicupStartup', true],
-				['set', 'MicupStartup', false],
+				['set', 'SanalyerStartup', true],
+				['set', 'SanalyerStartup', false],
 			],
 		);
 		// Keeps a web build that silently turns autostart on at first launch from doing so in the Store copy.
@@ -384,8 +384,8 @@ describe('Microsoft Store (MSIX) package', () => {
 		const {invoke, startupTaskCalls, userData, setTaskState, register} = loadAutostart(true);
 		await nextTick();
 		assert.deepEqual(startupTaskCalls, [
-			['get', 'MicupStartup'],
-			['set', 'MicupStartup', true],
+			['get', 'SanalyerStartup'],
+			['set', 'SanalyerStartup', true],
 		]);
 		assert.equal(readFileSync(path.join(userData, 'autostart-initialized-v2'), 'utf8'), '1');
 		setTaskState('disabled');
@@ -405,12 +405,12 @@ describe('Microsoft Store (MSIX) package', () => {
 	test('preserves a 1.0.6 Store prompt refusal when the startup task is disabled', async () => {
 		const {startupTaskCalls, userData, invoke, register} = loadAutostart(true, {prompted: true});
 		await nextTick();
-		assert.deepEqual(startupTaskCalls, [['get', 'MicupStartup']]);
+		assert.deepEqual(startupTaskCalls, [['get', 'SanalyerStartup']]);
 		assert.equal(readFileSync(path.join(userData, 'autostart-initialized-v2'), 'utf8'), '1');
 		assert.equal(readFileSync(path.join(userData, 'store-autostart-prompt-v1'), 'utf8'), '1');
 		register();
 		await nextTick();
-		assert.deepEqual(startupTaskCalls, [['get', 'MicupStartup']]);
+		assert.deepEqual(startupTaskCalls, [['get', 'SanalyerStartup']]);
 		assert.equal(await invoke('autostart-claim-store-prompt'), false);
 	});
 
@@ -419,7 +419,7 @@ describe('Microsoft Store (MSIX) package', () => {
 			const {invoke, startupTaskCalls, userData} = loadAutostart(true, {taskState});
 			await nextTick();
 			assert.equal(await invoke('autostart-claim-store-prompt'), false, taskState);
-			assert.deepEqual(startupTaskCalls, [['get', 'MicupStartup']]);
+			assert.deepEqual(startupTaskCalls, [['get', 'SanalyerStartup']]);
 			assert.deepEqual(readdirSync(userData), ['autostart-initialized-v2']);
 		}
 	});
@@ -430,14 +430,14 @@ describe('Microsoft Store (MSIX) package', () => {
 			await nextTick();
 			assert.equal(await invoke('autostart-claim-store-prompt'), false);
 			assert.deepEqual(readdirSync(userData), []);
-			assert.deepEqual(startupTaskCalls, [['get', 'MicupStartup']]);
+			assert.deepEqual(startupTaskCalls, [['get', 'SanalyerStartup']]);
 			setTaskState('disabled');
 			register();
 			await nextTick();
 			assert.deepEqual(startupTaskCalls, [
-				['get', 'MicupStartup'],
-				['get', 'MicupStartup'],
-				['set', 'MicupStartup', true],
+				['get', 'SanalyerStartup'],
+				['get', 'SanalyerStartup'],
+				['set', 'SanalyerStartup', true],
 			]);
 			assert.deepEqual(readdirSync(userData), ['autostart-initialized-v2']);
 		});
@@ -450,8 +450,8 @@ describe('Microsoft Store (MSIX) package', () => {
 			register();
 			await nextTick();
 			assert.deepEqual(startupTaskCalls, [
-				['get', 'MicupStartup'],
-				['set', 'MicupStartup', true],
+				['get', 'SanalyerStartup'],
+				['set', 'SanalyerStartup', true],
 			]);
 			assert.deepEqual(electron.calls.openExternal, []);
 			assert.deepEqual(readdirSync(userData), ['autostart-initialized-v2']);
@@ -478,7 +478,7 @@ describe('Microsoft Store (MSIX) package', () => {
 		assert.match(main, /if \(!process\.windowsStore\) \{\s*app\.setAppUserModelId\(WINDOWS_APP_USER_MODEL_ID\);\s*\}/);
 	});
 
-	test('manifest declares micup://, a disabled startup task and the toast activator main registers', () => {
+	test('manifest declares sanalyer://, a disabled startup task and the toast activator main registers', () => {
 		const previousArch = process.env.ELECTRON_ARCH;
 		process.env.ELECTRON_ARCH = 'x64';
 		let config;
@@ -498,7 +498,7 @@ describe('Microsoft Store (MSIX) package', () => {
 		);
 
 		assert.equal(config.msix.identityName, identity.WINDOWS_STORE_IDENTITY_NAME);
-		// Partner Center > Micup (9P1SNJ2H2W9H) > Product identity; Application Id as in the published 0.4.4.0 package.
+		// Partner Center > sanalyer (9P1SNJ2H2W9H) > Product identity; Application Id as in the published 0.4.4.0 package.
 		assert.deepEqual(
 			{
 				identityName: config.msix.identityName,
@@ -507,21 +507,21 @@ describe('Microsoft Store (MSIX) package', () => {
 				applicationId: config.msix.applicationId,
 			},
 			{
-				identityName: 'Micup.Micup',
+				identityName: 'sanalyer.sanalyer',
 				publisher: 'CN=6B905D36-79B1-4EA5-8E9B-F18A23784188',
-				publisherDisplayName: 'Micup',
-				applicationId: 'Micup',
+				publisherDisplayName: 'sanalyer',
+				applicationId: 'sanalyer',
 			},
 		);
 		assert.deepEqual(config.msix.languages, ['tr-TR', 'en-US']);
 		assert.equal(config.msix.setBuildNumber, false);
 		assert.deepEqual(
 			config.protocols.flatMap((protocol) => protocol.schemes),
-			['micup'],
+			['sanalyer'],
 		);
-		assert.match(extensions, /<desktop:StartupTask TaskId="MicupStartup" Enabled="false"/);
+		assert.match(extensions, /<desktop:StartupTask TaskId="SanalyerStartup" Enabled="false"/);
 		assert.match(extensions, new RegExp(`<com:Class Id="${clsid}"`));
 		assert.match(extensions, new RegExp(`ToastActivatorCLSID="${clsid}"`));
-		assert.equal((extensions.match(/Executable="app\\Micup\.exe"/g) ?? []).length, 2);
+		assert.equal((extensions.match(/Executable="app\\sanalyer\.exe"/g) ?? []).length, 2);
 	});
 });

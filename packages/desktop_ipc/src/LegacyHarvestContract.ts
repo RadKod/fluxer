@@ -57,6 +57,22 @@ export function desktopLegacyReplantMarker(replantedAt: number): string {
 	return JSON.stringify({version: DESKTOP_LEGACY_REPLANT_MARKER_VERSION, replantedAt});
 }
 
+// sanalyer: the reader of the marker the writer above produces (an older shell still checks it).
+export function isDesktopLegacyReplantMarker(value: unknown): boolean {
+	if (typeof value !== 'string') return false;
+	try {
+		const parsed: unknown = JSON.parse(value);
+		return (
+			typeof parsed === 'object' &&
+			parsed !== null &&
+			(parsed as {version?: unknown}).version === DESKTOP_LEGACY_REPLANT_MARKER_VERSION &&
+			typeof (parsed as {replantedAt?: unknown}).replantedAt === 'number'
+		);
+	} catch {
+		return false;
+	}
+}
+
 export interface DesktopLegacyHarvestRecord {
 	readonly key: unknown | null;
 	readonly value: unknown;

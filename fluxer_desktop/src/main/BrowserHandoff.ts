@@ -18,7 +18,11 @@ import type {
 	DesktopHandoffStatusResult,
 	DesktopHandoffUser,
 } from '@fluxer/desktop_ipc/src/BrowserHandoffContract';
-import {DESKTOP_HANDOFF_CHANNELS, DesktopHandoffStatus} from '@fluxer/desktop_ipc/src/BrowserHandoffContract';
+import {
+	DESKTOP_HANDOFF_CHANNELS,
+	DesktopHandoffReturnMethod,
+	DesktopHandoffStatus,
+} from '@fluxer/desktop_ipc/src/BrowserHandoffContract';
 
 const RENDERER_CONTEXT = 'Browser sign-in handoff';
 const INITIATION_CONTEXT = 'Desktop handoff initiation';
@@ -225,7 +229,8 @@ export class DesktopBrowserHandoff {
 		const usablePollSecret = pollSecret != null && HANDOFF_POLL_SECRET_PATTERN.test(pollSecret) ? pollSecret : null;
 		owner.requireCurrent(RENDERER_CONTEXT);
 		this.rememberSession(owner, {code, expiresAtMs, instance, origin, pollSecret: usablePollSecret});
-		return {instance, code, expiresAt};
+		// sanalyer: this shell brings the sign-in back by code only; the deep-link return is a newer upstream flow.
+		return {instance, code, expiresAt, returnMethod: DesktopHandoffReturnMethod.CODE};
 	}
 
 	private async status(event: RendererDocumentIpcEvent, codeValue: unknown): Promise<DesktopHandoffStatusResult> {

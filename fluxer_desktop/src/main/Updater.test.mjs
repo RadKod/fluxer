@@ -34,14 +34,6 @@ const shellDownloadFormatsSource = transform('ShellDownloadFormats.ts');
 const shellUpdateCapabilitySource = transform('ShellUpdateCapability.ts');
 const updaterDownloadsSource = transform('UpdaterDownloads.ts');
 const updaterSource = transform('Updater.ts');
-const updaterPlatformUtilsSource = transform('../../../fluxer_app/src/features/app/utils/UpdaterPlatformUtils.ts');
-
-function loadUpdaterPlatformUtils() {
-	const module = {exports: {}};
-	const context = vm.createContext({module, exports: module.exports, require});
-	vm.runInContext(updaterPlatformUtilsSource.code, context, {filename: updaterPlatformUtilsSource.path});
-	return module.exports;
-}
 
 const INSTALLED_NAME = 'My Fluxer.AppImage';
 const CURRENT_VERSION = '2026.903.231208';
@@ -140,9 +132,14 @@ function loadUpdater({
 		},
 		'@electron/common/BuildChannel': {BUILD_CHANNEL: 'canary'},
 		'@electron/common/Constants': {DOWNLOAD_PAGE_URLS: {canary: 'https://canary.fluxer.app/download'}},
-		'@electron/common/DesktopIdentity': {DESKTOP_ARTIFACT_PRODUCT_NAME: 'Micup-Canary'},
+		'@electron/common/DesktopIdentity': {DESKTOP_ARTIFACT_PRODUCT_NAME: 'sanalyer-Canary'},
 		'@electron/common/UserDataPath': {isPortableMode: () => false},
 		'@electron/main/DesktopTray': {destroyDesktopTray() {}},
+		'@electron/main/UnreadBadge': {
+			UNREAD_BADGE_DOT: -1,
+			parseUnreadBadge: (value) => (typeof value === 'number' ? value : null),
+			describeUnreadBadge: (badge) => String(badge),
+		},
 		'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},
 		'@electron/main/Troubleshooting': {
 			relaunchAndExit() {
@@ -188,7 +185,7 @@ function loadUpdater({
 		clearTimeout,
 		setImmediate,
 		fetch: (input, init) => {
-			const url = String(input).replace(/https:\/\/dl\.micup\.gg\/desktop\/canary\/[^/]+\/[^/]+/, baseUrl);
+			const url = String(input).replace(/https:\/\/dl\.sanalyer\.com\/desktop\/canary\/[^/]+\/[^/]+/, baseUrl);
 			return fetch(url, init);
 		},
 		require: (specifier) => {
@@ -345,7 +342,7 @@ describe('Updater AppImage lifecycle', () => {
 			assert.equal(available.downloadOptions[0].format, 'appimage');
 			assert.equal(
 				available.downloadOptions[0].suggestedName,
-				`Micup-Canary-${PUBLISHED_VERSION}-linux-arm64.AppImage`,
+				`sanalyer-Canary-${PUBLISHED_VERSION}-linux-arm64.AppImage`,
 			);
 		} finally {
 			chmodSync(install.applications, 0o755);
@@ -473,13 +470,13 @@ describe('Updater AppImage lifecycle', () => {
 	test('shows the renderer the download progress the main process reports', async () => {
 		const install = createInstall();
 		const updater = loadUpdater({appImagePath: install.installedPath, appDir: install.mount});
-		const {shouldShowNativeDesktopUpdateDownloadProgress} = loadUpdaterPlatformUtils();
 
 		await updater.check();
 
+		// sanalyer: upstream removed the app's UpdaterPlatformUtils; Linux shows native download progress, so the
+		// main process must report it.
 		const reportsProgress = updater.events.some((event) => event.type === 'progress');
 		assert.equal(reportsProgress, true);
-		assert.equal(shouldShowNativeDesktopUpdateDownloadProgress('linux'), reportsProgress);
 	});
 
 	test('discards a staged update that the user never installed', async () => {

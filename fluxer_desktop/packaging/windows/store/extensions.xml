@@ -1,13 +1,13 @@
-<desktop:Extension Category="windows.startupTask" Executable="app\Micup.exe" EntryPoint="Windows.FullTrustApplication">
-          <desktop:StartupTask TaskId="MicupStartup" Enabled="false" DisplayName="Micup" />
+<desktop:Extension Category="windows.startupTask" Executable="app\sanalyer.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="SanalyerStartup" Enabled="false" DisplayName="sanalyer" />
         </desktop:Extension>
         <com:Extension xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10" Category="windows.comServer">
           <com:ComServer>
-            <com:ExeServer Executable="app\Micup.exe" Arguments="-ToastActivated" DisplayName="Micup">
-              <com:Class Id="0BF67325-4A5A-4569-8C6B-19BFB4FDADE2" DisplayName="Micup toast activator" />
+            <com:ExeServer Executable="app\sanalyer.exe" Arguments="-ToastActivated" DisplayName="sanalyer">
+              <com:Class Id="978334C3-2A4E-47B0-AA72-05256D289C5E" DisplayName="sanalyer toast activator" />
             </com:ExeServer>
           </com:ComServer>
         </com:Extension>
         <desktop:Extension Category="windows.toastNotificationActivation">
-          <desktop:ToastNotificationActivation ToastActivatorCLSID="0BF67325-4A5A-4569-8C6B-19BFB4FDADE2" />
+          <desktop:ToastNotificationActivation ToastActivatorCLSID="978334C3-2A4E-47B0-AA72-05256D289C5E" />
         </desktop:Extension>

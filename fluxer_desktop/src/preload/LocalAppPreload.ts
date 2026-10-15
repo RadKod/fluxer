@@ -27,7 +27,8 @@ import type {
 	DesktopModuleEnsureResult,
 	DesktopPendingModuleUpdate,
 } from '@fluxer/desktop_ipc/src/ModuleContract';
-import {DESKTOP_MODULE_CHANNELS, DESKTOP_MODULE_EVENTS} from '@fluxer/desktop_ipc/src/ModuleContract';
+import {DESKTOP_MODULE_UPDATE_CHANNELS, DESKTOP_MODULE_UPDATE_EVENTS} from '@electron/common/ModuleUpdateChannels';
+import {DESKTOP_MODULE_CHANNELS} from '@fluxer/desktop_ipc/src/ModuleContract';
 
 interface LocalAppPreloadRenderer {
 	invoke: (channel: string, ...args: Array<unknown>) => Promise<unknown>;
@@ -64,12 +65,12 @@ export function createLocalAppPreloadAPI(renderer: LocalAppPreloadRenderer): Loc
 		}),
 		desktopModules: Object.freeze<DesktopModuleAPI>({
 			ensure: (moduleName: string) => invoke<DesktopModuleEnsureResult>(DESKTOP_MODULE_CHANNELS.ensure, moduleName),
-			pendingUpdate: () => invoke<DesktopPendingModuleUpdate | null>(DESKTOP_MODULE_CHANNELS.pendingUpdate),
-			applyPendingUpdate: () => invoke<boolean>(DESKTOP_MODULE_CHANNELS.applyPendingUpdate),
+			pendingUpdate: () => invoke<DesktopPendingModuleUpdate | null>(DESKTOP_MODULE_UPDATE_CHANNELS.pendingUpdate),
+			applyPendingUpdate: () => invoke<boolean>(DESKTOP_MODULE_UPDATE_CHANNELS.applyPendingUpdate),
 			onPendingUpdateChanged: (listener: (pending: DesktopPendingModuleUpdate | null) => void) =>
 				subscribeToChannel<DesktopPendingModuleUpdate | null>(
 					renderer,
-					DESKTOP_MODULE_EVENTS.pendingUpdateChanged,
+					DESKTOP_MODULE_UPDATE_EVENTS.pendingUpdateChanged,
 					listener,
 				),
 			confirmLaunch: () => invoke<void>(DESKTOP_MODULE_CHANNELS.confirmLaunch),

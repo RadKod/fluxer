@@ -29,7 +29,7 @@ function harness({
 	const processStub = {
 		platform,
 		arch: 'x64',
-		execPath: 'C:\\Micup\\current\\Micup.exe',
+		execPath: 'C:\\sanalyer\\current\\sanalyer.exe',
 		env: {APPDATA: 'C:\\AppData', USERPROFILE: 'C:\\User'},
 		argv: [],
 		windowsStore: true,
@@ -108,11 +108,11 @@ function harness({
 			},
 		},
 		'@electron/common/DesktopIdentity': {
-			DESKTOP_APP_NAME: 'Micup',
-			WINDOWS_APP_USER_MODEL_ID: 'gg.micup.desktop',
+			DESKTOP_APP_NAME: 'sanalyer',
+			WINDOWS_APP_USER_MODEL_ID: 'com.sanalyer.desktop',
 			WINDOWS_LEGACY_APP_USER_MODEL_IDS: [],
-			LINUX_DESKTOP_ENTRY_ID: 'micup',
-			WINDOWS_SHORTCUT_AUTHOR: 'Micup',
+			LINUX_DESKTOP_ENTRY_ID: 'sanalyer',
+			WINDOWS_SHORTCUT_AUTHOR: 'sanalyer',
 			WINDOWS_TOAST_ACTIVATOR_CLSID: '{test}',
 		},
 		'@electron/common/BuildChannel': {BUILD_CHANNEL: 'stable'},
@@ -415,7 +415,7 @@ for (const fast of [false, true]) {
 					return {VelopackApp: {build: () => velopack}};
 				},
 				electronApp: {setAppUserModelId() {}, setToastActivatorCLSID() {}},
-				WINDOWS_APP_USER_MODEL_ID: 'gg.micup.desktop',
+				WINDOWS_APP_USER_MODEL_ID: 'com.sanalyer.desktop',
 				WINDOWS_TOAST_ACTIVATOR_CLSID: '{test}',
 			});
 		if (fast) assert.throws(run, /fast-exit/);

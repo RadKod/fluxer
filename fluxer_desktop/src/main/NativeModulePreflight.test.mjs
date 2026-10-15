@@ -49,7 +49,7 @@ function loadPreflight({
 	}
 
 	function requireStub(specifier) {
-		if (specifier === '@electron/common/DesktopIdentity') return {DESKTOP_APP_NAME: 'Micup'};
+		if (specifier === '@electron/common/DesktopIdentity') return {DESKTOP_APP_NAME: 'sanalyer'};
 		if (specifier === 'node:child_process') return {spawnSync: spawnSyncStub};
 		if (specifier === 'node:crypto') return crypto;
 		if (specifier === 'node:path') return nodePath;

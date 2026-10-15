@@ -107,7 +107,8 @@ import {
 import {flashWindowForAttention, stopFlashingWindow} from '@electron/main/WindowFlash';
 import {setWindowsBadgeOverlay} from '@electron/main/WindowsBadge';
 import {registerWindowsToastIpcHandlers} from '@electron/main/WindowsToast';
-import {DESKTOP_MODULE_CHANNELS, DESKTOP_MODULE_EVENTS} from '@fluxer/desktop_ipc/src/ModuleContract';
+import {DESKTOP_MODULE_UPDATE_CHANNELS, DESKTOP_MODULE_UPDATE_EVENTS} from '@electron/common/ModuleUpdateChannels';
+import {DESKTOP_MODULE_CHANNELS} from '@fluxer/desktop_ipc/src/ModuleContract';
 import {app, BrowserWindow, clipboard, dialog, ipcMain, powerMonitor, shell, systemPreferences} from 'electron';
 import log from 'electron-log';
 
@@ -191,12 +192,12 @@ export function registerIpcHandlers(): void {
 		requirePrivilegedRendererDocumentSender(event, DESKTOP_MODULE_CHANNELS.ensure);
 		return ensureDesktopModule(moduleName);
 	});
-	ipcMain.handle(DESKTOP_MODULE_CHANNELS.pendingUpdate, (event) => {
-		requirePrivilegedRendererDocumentSender(event, DESKTOP_MODULE_CHANNELS.pendingUpdate);
+	ipcMain.handle(DESKTOP_MODULE_UPDATE_CHANNELS.pendingUpdate, (event) => {
+		requirePrivilegedRendererDocumentSender(event, DESKTOP_MODULE_UPDATE_CHANNELS.pendingUpdate);
 		return getPendingModuleUpdate();
 	});
-	ipcMain.handle(DESKTOP_MODULE_CHANNELS.applyPendingUpdate, (event) => {
-		requirePrivilegedRendererDocumentSender(event, DESKTOP_MODULE_CHANNELS.applyPendingUpdate);
+	ipcMain.handle(DESKTOP_MODULE_UPDATE_CHANNELS.applyPendingUpdate, (event) => {
+		requirePrivilegedRendererDocumentSender(event, DESKTOP_MODULE_UPDATE_CHANNELS.applyPendingUpdate);
 		return applyPendingModuleUpdate();
 	});
 	ipcMain.handle(DESKTOP_MODULE_CHANNELS.confirmLaunch, (event) => {
@@ -217,7 +218,7 @@ export function registerIpcHandlers(): void {
 		if (mainWindow == null || mainWindow.isDestroyed()) {
 			return;
 		}
-		mainWindow.webContents.send(DESKTOP_MODULE_EVENTS.pendingUpdateChanged, pending);
+		mainWindow.webContents.send(DESKTOP_MODULE_UPDATE_EVENTS.pendingUpdateChanged, pending);
 	});
 	ipcMain.handle('get-desktop-info', () => getDesktopInfo());
 	ipcMain.handle('get-gpu-info', () => getGpuInfo());

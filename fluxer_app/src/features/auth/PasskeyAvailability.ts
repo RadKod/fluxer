@@ -3,7 +3,8 @@
 import type {RuntimeConfigSnapshot} from '@app/features/app/state/RuntimeConfig';
 import {isDesktop} from '@app/features/ui/utils/NativeUtils';
 
-export const DESKTOP_PASSKEY_RELYING_PARTIES: ReadonlyArray<string> = Object.freeze(['fluxer.app']);
+// sanalyer: the desktop shell signs in against sanalyer.com; fluxer.app stays for the upstream instance.
+export const DESKTOP_PASSKEY_RELYING_PARTIES: ReadonlyArray<string> = Object.freeze(['sanalyer.com', 'fluxer.app']);
 
 function hostFromEndpoint(endpoint: string | undefined): string | null {
 	if (endpoint == null || endpoint.length === 0) {

@@ -48,7 +48,7 @@ test('real MSIX expansion produces valid XML and preserves identity and extensio
 	const {default: MsixTarget} = await import(pathToFileURL(join(builderRoot, 'dist/targets/win/MsixTarget.js')).href);
 	const {log} = await import(pathToFileURL(builderRequire.resolve('builder-util')).href);
 	const previousLogStream = log.stream;
-	const output = mkdtempSync(join(tmpdir(), 'micup-manifest-'));
+	const output = mkdtempSync(join(tmpdir(), 'sanalyer-manifest-'));
 	try {
 		log.stream = process.stderr;
 		const packager = {
@@ -59,10 +59,10 @@ test('real MSIX expansion produces valid XML and preserves identity and extensio
 			platformOptions: {},
 			metadata: {dependencies: {}},
 			appInfo: {
-				productFilename: 'Micup',
-				productName: 'Micup',
-				name: 'micup',
-				description: 'Micup',
+				productFilename: 'sanalyer',
+				productName: 'sanalyer',
+				name: 'sanalyer',
+				description: 'sanalyer',
 				getVersionInWeirdWindowsForm: () => '1.0.7.0',
 			},
 		};
@@ -82,11 +82,11 @@ test('real MSIX expansion produces valid XML and preserves identity and extensio
 				{input: xml, encoding: 'utf8'},
 			),
 		);
-		assert.equal(result.identity, 'Micup.Micup');
+		assert.equal(result.identity, 'sanalyer.sanalyer');
 		assert.equal(result.publisher, config.msix.publisher);
 		assert.equal(result.min, '10.0.17763.0');
-		assert.equal(result.app, 'Micup');
-		assert.equal(result.startup, 'MicupStartup');
+		assert.equal(result.app, 'sanalyer');
+		assert.equal(result.startup, 'SanalyerStartup');
 		assert.equal(result.border, 1);
 		assert.equal(result.fulltrust, 1);
 		assert.ok(result.ignorable.split(' ').includes('uap11'));

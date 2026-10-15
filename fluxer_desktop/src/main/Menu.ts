@@ -201,13 +201,13 @@ function buildTemplate(): Array<MenuItemConstructorOptions> {
 			{
 				label: t('desktop.appMenu.website'),
 				click: async () => {
-					await openExternalDeduped('https://micup.gg');
+					await openExternalDeduped('https://sanalyer.com');
 				},
 			},
 			{
 				label: t('desktop.appMenu.sourceCode'),
 				click: async () => {
-					await openExternalDeduped('https://micup.gg/yasal/kaynak');
+					await openExternalDeduped('https://github.com/RadKod/fluxer');
 				},
 			},
 			{type: 'separator'},

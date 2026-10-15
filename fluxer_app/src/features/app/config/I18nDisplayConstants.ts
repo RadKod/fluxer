@@ -41,7 +41,9 @@ export const VISIONARY_LIFETIME_BADGE_LABEL = 'Visionary #42';
 export const LINK_PREVIEW_EXAMPLE_URL = 'https://sanalyer.com';
 export const EXAMPLE_GIF_URLS = `${EXAMPLE_URL}/gif1.gif\n${EXAMPLE_URL}/gif2.gif`;
 export const THE_OTHER_PLATFORM_TEMPLATE_EXAMPLE_URL = `https://${THE_OTHER_PLATFORM.toLowerCase()}.new/abcd1234`;
-export const DESKTOP_DOWNLOAD_URL = 'https://fluxer.app/download';
+// sanalyer: the download page lives on the landing site; the nagbar, the sidebar button, the screen-share CTA and
+// the updater modals all open it.
+export const DESKTOP_DOWNLOAD_URL = 'https://sanalyer.com/indir';
 export const FLUXER_DOCS_DOMAIN = 'fluxer.dev';
 export const FLUXER_DOCS_URL = `https://${FLUXER_DOCS_DOMAIN}`;
 export const FLUXER_BLUESKY_HANDLE = '@fluxer.app';

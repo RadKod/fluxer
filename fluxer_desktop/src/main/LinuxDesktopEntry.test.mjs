@@ -8,7 +8,7 @@ import {afterEach, beforeEach, describe, test} from 'node:test';
 import {loadTsModule} from './fixtures/TsModuleLoader.mjs';
 
 const EXEC_PATH = '/opt/Fluxer/fluxer';
-const DESKTOP_NAME = 'micup.desktop';
+const DESKTOP_NAME = 'sanalyer.desktop';
 const protocolRegistrations = [];
 const inProcessRegistrations = [];
 const childProcessCalls = [];
@@ -43,10 +43,10 @@ const desktopStubs = {
 	electron: {app: electronApp},
 	'@electron/common/BuildChannel': {BUILD_CHANNEL: 'stable'},
 	'@electron/common/DesktopIdentity': {
-		DESKTOP_APP_NAME: 'Micup',
-		LINUX_DESKTOP_ENTRY_ID: 'micup',
-		LINUX_ICON_NAME: 'micup',
-		LEGACY_LINUX_DESKTOP_ENTRY_ID: 'micup-legacy',
+		DESKTOP_APP_NAME: 'sanalyer',
+		LINUX_DESKTOP_ENTRY_ID: 'sanalyer',
+		LINUX_ICON_NAME: 'sanalyer',
+		LEGACY_LINUX_DESKTOP_ENTRY_ID: 'sanalyer-legacy',
 	},
 	'@electron/common/Logger': {createChildLogger: () => noopLogger},
 	'@electron/main/JumpList': {TASK_ARG_PREFIX: '--fluxer-task='},
@@ -67,13 +67,13 @@ function parseMainGroup(contents) {
 }
 
 describe('LinuxDesktopEntry contents', () => {
-	test('uses the Micup desktop id for window matching and the packaged icon', () => {
+	test('uses the sanalyer desktop id for window matching and the packaged icon', () => {
 		const entry = parseMainGroup(desktopEntry.buildDesktopFileContents(EXEC_PATH, false));
-		assert.equal(entry.get('StartupWMClass'), 'micup');
-		assert.equal(entry.get('Icon'), 'micup');
+		assert.equal(entry.get('StartupWMClass'), 'sanalyer');
+		assert.equal(entry.get('Icon'), 'sanalyer');
 		assert.equal(entry.get('Exec'), `"${EXEC_PATH}" %U`);
 		assert.equal(entry.get('TryExec'), EXEC_PATH);
-		assert.equal(entry.get('MimeType'), 'x-scheme-handler/micup;');
+		assert.equal(entry.get('MimeType'), 'x-scheme-handler/sanalyer;');
 		assert.equal(entry.has('Hidden'), false);
 		assert.equal(entry.has('NoDisplay'), false);
 	});
@@ -136,7 +136,7 @@ describe('ensureLinuxDesktopEntry', () => {
 	test('writes the new entry and removes only the generated legacy entry', () => {
 		fs.mkdirSync(userDir(), {recursive: true});
 		fs.writeFileSync(
-			path.join(userDir(), 'micup-legacy.desktop'),
+			path.join(userDir(), 'sanalyer-legacy.desktop'),
 			`[Desktop Entry]\n${desktopEntry.GENERATED_MARKER}\n`,
 		);
 		fs.writeFileSync(
@@ -144,59 +144,59 @@ describe('ensureLinuxDesktopEntry', () => {
 			`[Desktop Entry]\n${desktopEntry.GENERATED_MARKER}\n`,
 		);
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), true);
-		assert.equal(fs.existsSync(path.join(userDir(), 'micup-legacy.desktop')), false);
+		assert.equal(fs.existsSync(path.join(userDir(), 'sanalyer-legacy.desktop')), false);
 		assert.equal(fs.existsSync(path.join(userDir(), 'fluxer-canary.desktop')), true);
-		const written = fs.readFileSync(path.join(userDir(), 'micup.desktop'), 'utf8');
+		const written = fs.readFileSync(path.join(userDir(), 'sanalyer.desktop'), 'utf8');
 		assert.equal(written, desktopEntry.buildDesktopFileContents(EXEC_PATH, false));
 		assert.deepEqual(
 			fs.readdirSync(userDir()).filter((name) => name.endsWith('.tmp')),
 			[],
 		);
-		assert.deepEqual(protocolRegistrations, ['micup']);
+		assert.deepEqual(protocolRegistrations, ['sanalyer']);
 	});
 
 	test('leaves a hand-written legacy entry alone', () => {
 		fs.mkdirSync(userDir(), {recursive: true});
-		fs.writeFileSync(path.join(userDir(), 'micup-legacy.desktop'), '[Desktop Entry]\nExec=/somewhere/else\n');
+		fs.writeFileSync(path.join(userDir(), 'sanalyer-legacy.desktop'), '[Desktop Entry]\nExec=/somewhere/else\n');
 		desktopEntry.ensureLinuxDesktopEntry();
-		assert.equal(fs.existsSync(path.join(userDir(), 'micup-legacy.desktop')), true);
+		assert.equal(fs.existsSync(path.join(userDir(), 'sanalyer-legacy.desktop')), true);
 	});
 
 	test('a system entry wins and removes a generated user copy', () => {
 		fs.mkdirSync(systemDir(), {recursive: true});
-		fs.writeFileSync(path.join(systemDir(), 'micup.desktop'), '[Desktop Entry]\n');
+		fs.writeFileSync(path.join(systemDir(), 'sanalyer.desktop'), '[Desktop Entry]\n');
 		fs.mkdirSync(userDir(), {recursive: true});
-		fs.writeFileSync(path.join(userDir(), 'micup.desktop'), desktopEntry.buildDesktopFileContents(EXEC_PATH, false));
+		fs.writeFileSync(path.join(userDir(), 'sanalyer.desktop'), desktopEntry.buildDesktopFileContents(EXEC_PATH, false));
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), true);
-		assert.equal(fs.existsSync(path.join(userDir(), 'micup.desktop')), false);
+		assert.equal(fs.existsSync(path.join(userDir(), 'sanalyer.desktop')), false);
 	});
 
 	test('a system entry under the previous desktop id keeps the new user entry out of menus', () => {
 		fs.mkdirSync(systemDir(), {recursive: true});
-		fs.writeFileSync(path.join(systemDir(), 'micup-legacy.desktop'), '[Desktop Entry]\nExec=/usr/bin/fluxer\n');
+		fs.writeFileSync(path.join(systemDir(), 'sanalyer-legacy.desktop'), '[Desktop Entry]\nExec=/usr/bin/fluxer\n');
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), true);
-		const written = fs.readFileSync(path.join(userDir(), 'micup.desktop'), 'utf8');
+		const written = fs.readFileSync(path.join(userDir(), 'sanalyer.desktop'), 'utf8');
 		assert.equal(written, desktopEntry.buildDesktopFileContents(EXEC_PATH, true));
-		assert.equal(fs.existsSync(path.join(systemDir(), 'micup-legacy.desktop')), true);
+		assert.equal(fs.existsSync(path.join(systemDir(), 'sanalyer-legacy.desktop')), true);
 	});
 
 	test('FLUXER_DISABLE_DESKTOP_FILE leaves launchers and the scheme handler alone', () => {
 		process.env.FLUXER_DISABLE_DESKTOP_FILE = '1';
 		fs.mkdirSync(userDir(), {recursive: true});
 		fs.writeFileSync(
-			path.join(userDir(), 'micup-legacy.desktop'),
+			path.join(userDir(), 'sanalyer-legacy.desktop'),
 			`[Desktop Entry]\n${desktopEntry.GENERATED_MARKER}\n`,
 		);
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), false);
-		assert.equal(fs.existsSync(path.join(userDir(), 'micup-legacy.desktop')), true);
-		assert.equal(fs.existsSync(path.join(userDir(), 'micup.desktop')), false);
+		assert.equal(fs.existsSync(path.join(userDir(), 'sanalyer-legacy.desktop')), true);
+		assert.equal(fs.existsSync(path.join(userDir(), 'sanalyer.desktop')), false);
 		assert.deepEqual(protocolRegistrations, []);
 	});
 
 	test('FLUXER_DISABLE_DESKTOP_FILE still reports an entry the user installed', () => {
 		process.env.FLUXER_DISABLE_DESKTOP_FILE = '1';
 		fs.mkdirSync(userDir(), {recursive: true});
-		fs.writeFileSync(path.join(userDir(), 'micup.desktop'), '[Desktop Entry]\n');
+		fs.writeFileSync(path.join(userDir(), 'sanalyer.desktop'), '[Desktop Entry]\n');
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), true);
 		assert.deepEqual(protocolRegistrations, []);
 	});
@@ -204,15 +204,15 @@ describe('ensureLinuxDesktopEntry', () => {
 	test('FLUXER_DISABLE_DESKTOP_FILE still points the scheme handler at a packaged entry', () => {
 		process.env.FLUXER_DISABLE_DESKTOP_FILE = '1';
 		fs.mkdirSync(systemDir(), {recursive: true});
-		fs.writeFileSync(path.join(systemDir(), 'micup.desktop'), '[Desktop Entry]\n');
+		fs.writeFileSync(path.join(systemDir(), 'sanalyer.desktop'), '[Desktop Entry]\n');
 		fs.mkdirSync(userDir(), {recursive: true});
 		fs.writeFileSync(
-			path.join(userDir(), 'micup-legacy.desktop'),
+			path.join(userDir(), 'sanalyer-legacy.desktop'),
 			`[Desktop Entry]\n${desktopEntry.GENERATED_MARKER}\n`,
 		);
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), true);
-		assert.equal(fs.existsSync(path.join(userDir(), 'micup-legacy.desktop')), true);
-		assert.deepEqual(protocolRegistrations, ['micup']);
+		assert.equal(fs.existsSync(path.join(userDir(), 'sanalyer-legacy.desktop')), true);
+		assert.deepEqual(protocolRegistrations, ['sanalyer']);
 	});
 
 	test('a matching legacy id never deletes or rewrites the current generated entry on restart', () => {
@@ -222,7 +222,7 @@ describe('ensureLinuxDesktopEntry', () => {
 				...desktopStubs,
 				'@electron/common/DesktopIdentity': {
 					...desktopStubs['@electron/common/DesktopIdentity'],
-					LEGACY_LINUX_DESKTOP_ENTRY_ID: 'micup',
+					LEGACY_LINUX_DESKTOP_ENTRY_ID: 'sanalyer',
 				},
 				'node:fs': {
 					...fs,
@@ -249,7 +249,7 @@ describe('ensureLinuxDesktopEntry', () => {
 
 	const installSystemEntry = () => {
 		fs.mkdirSync(systemDir(), {recursive: true});
-		fs.writeFileSync(path.join(systemDir(), 'micup.desktop'), '[Desktop Entry]\n');
+		fs.writeFileSync(path.join(systemDir(), 'sanalyer.desktop'), '[Desktop Entry]\n');
 	};
 
 	test('the scheme handler is registered off the main thread with a bounded xdg-mime call', () => {
@@ -257,7 +257,7 @@ describe('ensureLinuxDesktopEntry', () => {
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), true);
 		const registrations = childProcessCalls.filter((call) => call.file === 'xdg-mime');
 		assert.equal(registrations.length, 1);
-		assert.deepEqual(registrations[0].args, ['default', DESKTOP_NAME, 'x-scheme-handler/micup']);
+		assert.deepEqual(registrations[0].args, ['default', DESKTOP_NAME, 'x-scheme-handler/sanalyer']);
 		assert.equal(registrations[0].options.timeout, 5000);
 		registrations[0].callback(null);
 		assert.deepEqual(inProcessRegistrations, []);
@@ -278,7 +278,7 @@ describe('ensureLinuxDesktopEntry', () => {
 		assert.deepEqual(inProcessRegistrations, []);
 		const registration = childProcessCalls.find((call) => call.file === 'xdg-mime');
 		registration.callback(Object.assign(new Error('spawn xdg-mime ENOENT'), {code: 'ENOENT'}));
-		assert.deepEqual(inProcessRegistrations, ['micup']);
+		assert.deepEqual(inProcessRegistrations, ['sanalyer']);
 	});
 
 	test('the scheme handler is left alone when the shell has no desktop name', () => {
@@ -292,7 +292,7 @@ describe('ensureLinuxDesktopEntry', () => {
 	test('an unpackaged run leaves launchers and the scheme handler alone', () => {
 		electronApp.isPackaged = false;
 		assert.equal(desktopEntry.ensureLinuxDesktopEntry(), false);
-		assert.equal(fs.existsSync(path.join(userDir(), 'micup.desktop')), false);
+		assert.equal(fs.existsSync(path.join(userDir(), 'sanalyer.desktop')), false);
 		assert.deepEqual(protocolRegistrations, []);
 	});
 });

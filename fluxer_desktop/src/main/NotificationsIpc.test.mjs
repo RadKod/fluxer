@@ -56,7 +56,7 @@ function loadNotificationsIpc() {
 
 	const stubs = {
 		'node:module': {createRequire: () => () => ({})},
-		'@electron/common/DesktopIdentity': {DESKTOP_APP_NAME: 'Micup', LINUX_DESKTOP_ENTRY_ID: 'fluxer'},
+		'@electron/common/DesktopIdentity': {DESKTOP_APP_NAME: 'sanalyer', LINUX_DESKTOP_ENTRY_ID: 'fluxer'},
 		'@electron/common/Logger': {createChildLogger: () => ({warn() {}, info() {}, debug() {}})},
 		'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},
 		'@electron/main/LaunchOptions': {getNativeNotificationsMode: () => 'auto'},

@@ -39,8 +39,8 @@ const CONNECT_SOURCES: ReadonlyArray<string> = Object.freeze([
 	STABLE_APP_URL,
 	CANARY_APP_URL,
 	STATIC_CDN_URL,
-	'wss://micup.gg',
-	'wss://canary.micup.gg',
+	'wss://sanalyer.com',
+	'wss://canary.sanalyer.com',
 ]);
 
 const LOOPBACK_HTTP_SOURCES: ReadonlyArray<string> = Object.freeze([

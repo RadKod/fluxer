@@ -54,54 +54,54 @@ function channelStub(channel) {
 	return {'@electron/common/BuildChannel': {BUILD_CHANNEL: channel}};
 }
 
-describe('Micup desktop identity', () => {
-	test('updates from dl.micup.gg and sends manual downloads to the Micup download page', () => {
+describe('sanalyer desktop identity', () => {
+	test('updates from dl.sanalyer.com and sends manual downloads to the sanalyer download page', () => {
 		const downloads = load('./UpdaterDownloads.ts', {
 			stubs: channelStub('stable'),
 			globals: {process: {platform: 'win32', arch: 'x64'}},
 		});
 
-		assert.equal(downloads.UPDATE_BASE_URL, 'https://dl.micup.gg/desktop/stable/win32/x64');
-		assert.equal(downloads.DOWNLOAD_PAGE_URL, 'https://micup.gg/indir');
+		assert.equal(downloads.UPDATE_BASE_URL, 'https://dl.sanalyer.com/desktop/stable/win32/x64');
+		assert.equal(downloads.DOWNLOAD_PAGE_URL, 'https://sanalyer.com/indir');
 		assert.equal(
 			downloads.buildManualVersionDownloadUrl('1.0.1', 'setup'),
-			'https://dl.micup.gg/desktop/stable/win32/x64/1.0.1/setup',
+			'https://dl.sanalyer.com/desktop/stable/win32/x64/1.0.1/setup',
 		);
 	});
 
-	test('names Linux manual download artefacts after Micup', () => {
+	test('names Linux manual download artefacts after sanalyer', () => {
 		const downloads = load('./UpdaterDownloads.ts', {
 			stubs: channelStub('stable'),
 			globals: {process: {platform: 'linux', arch: 'x64'}},
 		});
 		const [appimage] = downloads.getManualDownloadOptions({version: '1.0.1', pubDate: null, files: {}});
 
-		assert.equal(appimage.url, 'https://dl.micup.gg/desktop/stable/linux/x64/1.0.1/appimage');
-		assert.equal(appimage.suggestedName, 'Micup-1.0.1-linux-x86_64.AppImage');
+		assert.equal(appimage.url, 'https://dl.sanalyer.com/desktop/stable/linux/x64/1.0.1/appimage');
+		assert.equal(appimage.suggestedName, 'sanalyer-1.0.1-linux-x86_64.AppImage');
 	});
 
-	test('opens micup:// links and trusts only Micup web origins', () => {
+	test('opens sanalyer:// links and trusts only sanalyer web origins', () => {
 		const constants = load('../common/Constants.ts', {stubs: channelStub('stable')});
 
-		assert.equal(constants.APP_PROTOCOL, 'micup');
-		assert.equal(constants.STABLE_APP_URL, 'https://micup.gg');
-		assert.equal(constants.CANARY_APP_URL, 'https://canary.micup.gg');
-		assert.equal(constants.STATIC_CDN_URL, 'https://static.micup.gg');
+		assert.equal(constants.APP_PROTOCOL, 'sanalyer');
+		assert.equal(constants.STABLE_APP_URL, 'https://sanalyer.com');
+		assert.equal(constants.CANARY_APP_URL, 'https://canary.sanalyer.com');
+		assert.equal(constants.STATIC_CDN_URL, 'https://sanalyer.com');
 	});
 
 	test('keeps the v1 application id and gets its own Velopack id, AUMID and toast activator', () => {
 		const stable = load('../common/DesktopIdentity.ts', {stubs: channelStub('stable')});
 		const canary = load('../common/DesktopIdentity.ts', {stubs: channelStub('canary')});
 
-		assert.equal(stable.DESKTOP_APP_NAME, 'Micup');
-		assert.equal(stable.MACOS_BUNDLE_ID, 'gg.micup.desktop');
-		assert.equal(stable.LINUX_DESKTOP_ENTRY_ID, 'micup');
-		assert.equal(stable.WINDOWS_VELOPACK_ID, 'micup_desktop');
-		assert.equal(stable.WINDOWS_APP_USER_MODEL_ID, 'gg.micup.desktop');
-		assert.equal(stable.WINDOWS_SHORTCUT_AUTHOR, 'Micup');
-		assert.equal(canary.DESKTOP_APP_NAME, 'Micup Canary');
-		assert.equal(canary.LINUX_DESKTOP_ENTRY_ID, 'micup-canary');
-		assert.equal(canary.WINDOWS_VELOPACK_ID, 'micup_desktop_canary');
+		assert.equal(stable.DESKTOP_APP_NAME, 'sanalyer');
+		assert.equal(stable.MACOS_BUNDLE_ID, 'com.sanalyer.desktop');
+		assert.equal(stable.LINUX_DESKTOP_ENTRY_ID, 'sanalyer');
+		assert.equal(stable.WINDOWS_VELOPACK_ID, 'sanalyer_desktop');
+		assert.equal(stable.WINDOWS_APP_USER_MODEL_ID, 'com.sanalyer.desktop');
+		assert.equal(stable.WINDOWS_SHORTCUT_AUTHOR, 'sanalyer');
+		assert.equal(canary.DESKTOP_APP_NAME, 'sanalyer Canary');
+		assert.equal(canary.LINUX_DESKTOP_ENTRY_ID, 'sanalyer-canary');
+		assert.equal(canary.WINDOWS_VELOPACK_ID, 'sanalyer_desktop_canary');
 		for (const clsid of [stable.WINDOWS_TOAST_ACTIVATOR_CLSID, canary.WINDOWS_TOAST_ACTIVATOR_CLSID]) {
 			assert.match(clsid, GUID_PATTERN);
 			assert.equal(FLUXER_TOAST_ACTIVATOR_CLSIDS.includes(clsid), false);
@@ -109,11 +109,11 @@ describe('Micup desktop identity', () => {
 		assert.notEqual(stable.WINDOWS_TOAST_ACTIVATOR_CLSID, canary.WINDOWS_TOAST_ACTIVATOR_CLSID);
 	});
 
-	test('stores user data apart from the Micup v1 profile in %APPDATA%\\Micup', () => {
-		const appData = path.join('C:', 'Users', 'micup', 'AppData', 'Roaming');
+	test('stores user data apart from the sanalyer v1 profile in %APPDATA%\\sanalyer', () => {
+		const appData = path.join('C:', 'Users', 'sanalyer', 'AppData', 'Roaming');
 		for (const [channel, directoryName] of [
-			['stable', 'micup_desktop'],
-			['canary', 'micup_desktop_canary'],
+			['stable', 'sanalyer_desktop'],
+			['canary', 'sanalyer_desktop_canary'],
 		]) {
 			const setPaths = new Map();
 			const userDataPath = load('../common/UserDataPath.ts', {
@@ -129,20 +129,20 @@ describe('Micup desktop identity', () => {
 						},
 					},
 				},
-				globals: {process: {platform: 'win32', argv: [], env: {}, execPath: path.join(appData, 'Micup.exe')}},
+				globals: {process: {platform: 'win32', argv: [], env: {}, execPath: path.join(appData, 'sanalyer.exe')}},
 			});
 
 			const resolved = userDataPath.configureUserDataPath();
 
 			assert.equal(resolved.directoryName, directoryName);
 			assert.equal(setPaths.get('userData'), path.join(appData, directoryName));
-			// NTFS matches folder names case-insensitively: "micup" would reopen v1's Chromium profile
+			// NTFS matches folder names case-insensitively: "sanalyer" would reopen v1's Chromium profile
 			// (cookies, service worker, zoom) and share its single-instance lock.
-			assert.notEqual(resolved.directoryName.toLowerCase(), 'micup');
+			assert.notEqual(resolved.directoryName.toLowerCase(), 'sanalyer');
 		}
 	});
 
-	test('packages as gg.micup.desktop with the micup protocol', () => {
+	test('packages as com.sanalyer.desktop with the sanalyer protocol', () => {
 		const previousArch = process.env.ELECTRON_ARCH;
 		process.env.ELECTRON_ARCH = 'x64';
 		let config;
@@ -153,15 +153,15 @@ describe('Micup desktop identity', () => {
 			else process.env.ELECTRON_ARCH = previousArch;
 		}
 
-		assert.equal(config.appId, 'gg.micup.desktop');
-		assert.equal(config.productName, 'Micup');
-		assert.match(config.artifactName, /^Micup-/);
+		assert.equal(config.appId, 'com.sanalyer.desktop');
+		assert.equal(config.productName, 'sanalyer');
+		assert.match(config.artifactName, /^sanalyer-/);
 		assert.deepEqual(
 			config.protocols.map((protocol) => protocol.schemes),
-			[['micup']],
+			[['sanalyer']],
 		);
 		// The exe's CompanyName (Task Manager > Startup apps "Publisher") comes from the author.
-		assert.equal(config.extraMetadata.author.name, 'Micup');
+		assert.equal(config.extraMetadata.author.name, 'sanalyer');
 		for (const [key, prompt] of Object.entries(config.mac.extendInfo)) {
 			assert.doesNotMatch(prompt, /Fluxer/, key);
 		}
@@ -179,29 +179,18 @@ describe('Micup desktop identity', () => {
 		);
 	});
 
-	test('points the API download redirects and the app Linux fallback at dl.micup.gg', () => {
+	// sanalyer: upstream removed the app's Linux manual-update options file; the API redirects are what is left to check.
+	test('points the API download redirects at dl.sanalyer.com', () => {
 		const redirects = load('../../../fluxer_api/src/api/download/DownloadRedirects.ts');
-		const linuxOptions = load('../../../fluxer_app/src/features/updater/utils/LinuxManualUpdateOptions.ts', {
-			stubs: {
-				'@app/features/app/config/I18nDisplayConstants': {
-					PRODUCT_NAME: 'Micup',
-					CANARY_RELEASE_CHANNEL_NAME: 'Micup Canary',
-				},
-			},
-		});
 
-		assert.equal(redirects.PKGS_BASE_URL, 'https://dl.micup.gg');
+		assert.equal(redirects.PKGS_BASE_URL, 'https://dl.sanalyer.com');
 		assert.equal(
 			redirects.resolveDownloadRedirect('/dl/desktop/stable/win32/x64/latest').location,
-			'https://dl.micup.gg/desktop/stable/win32/x64/latest.json',
-		);
-		assert.equal(
-			linuxOptions.buildLinuxManualUpdateOptions({})[0].url,
-			'https://dl.micup.gg/desktop/stable/linux/x64/latest/appimage',
+			'https://dl.sanalyer.com/desktop/stable/win32/x64/latest.json',
 		);
 	});
 
-	test('names the tray, app menu, update and startup errors, Theme Studio and autostart entry after Micup', () => {
+	test('names the tray, app menu, update and startup errors, Theme Studio and autostart entry after sanalyer', () => {
 		for (const file of [
 			'./DesktopTray.ts',
 			'./Menu.ts',
@@ -213,20 +202,20 @@ describe('Micup desktop identity', () => {
 		]) {
 			const source = readFileSync(new URL(file, import.meta.url), 'utf8');
 			assert.doesNotMatch(source, /\bFluxer\b/, file);
-			assert.match(source, /DESKTOP_APP_NAME|`Micup /, file);
+			assert.match(source, /DESKTOP_APP_NAME|`sanalyer /, file);
 		}
 		const menu = readFileSync(new URL('./Menu.ts', import.meta.url), 'utf8');
 		assert.match(menu, /openExternalDeduped\('mailto:info@sanalyer\.com'\)/);
-		// AGPL source offer: Help > Source code opens the Micup source page, not upstream GitHub.
+		// AGPL source offer: Help > Source code opens the sanalyer source page, not upstream GitHub.
 		assert.match(
 			menu,
-			/label: t\('desktop\.appMenu\.sourceCode'\),\s*click: async \(\) => \{\s*await openExternalDeduped\('https:\/\/micup\.gg\/yasal\/kaynak'\);/,
+			/label: t\('desktop\.appMenu\.sourceCode'\),\s*click: async \(\) => \{\s*await openExternalDeduped\('https:\/\/github\.com\/RadKod\/fluxer'\);/,
 		);
 		assert.doesNotMatch(menu, /fluxerapp\/fluxer|desktop\.appMenu\.github/);
 	});
 
 	// Desktop 1.0.1 showed "Fluxer uygulamasını gizle": the tray passed its own 'Fluxer' as {appName}.
-	test('fills every native string with Micup, also the ones the renderer sent in Turkish', () => {
+	test('fills every native string with sanalyer, also the ones the renderer sent in Turkish', () => {
 		const i18n = load('./MainI18n.ts', {
 			stubs: {
 				'@electron/common/DesktopIdentity': load('../common/DesktopIdentity.ts', {stubs: channelStub('stable')}),
@@ -246,7 +235,7 @@ describe('Micup desktop identity', () => {
 		for (const key of keys) {
 			assert.doesNotMatch(i18n.t(key), /fluxer/i, key);
 		}
-		assert.equal(i18n.t('desktop.tray.show'), 'Show Micup');
+		assert.equal(i18n.t('desktop.tray.show'), 'Show sanalyer');
 		assert.equal(i18n.t('desktop.appMenu.sourceCode'), 'Source code');
 
 		i18n.setNativeStrings('tr', {
@@ -254,8 +243,8 @@ describe('Micup desktop identity', () => {
 			'desktop.tray.restart': '{appName} uygulamasını yeniden başlat',
 			'desktop.tray.quit': '{appName} uygulamasından çık',
 		});
-		assert.equal(i18n.t('desktop.tray.hide'), 'Micup uygulamasını gizle');
-		assert.equal(i18n.t('desktop.tray.restart'), 'Micup uygulamasını yeniden başlat');
-		assert.equal(i18n.t('desktop.tray.quit'), 'Micup uygulamasından çık');
+		assert.equal(i18n.t('desktop.tray.hide'), 'sanalyer uygulamasını gizle');
+		assert.equal(i18n.t('desktop.tray.restart'), 'sanalyer uygulamasını yeniden başlat');
+		assert.equal(i18n.t('desktop.tray.quit'), 'sanalyer uygulamasından çık');
 	});
 });

@@ -28,7 +28,7 @@ const requireModule = createRequire(import.meta.url);
 const AUTOSTART_INITIALIZED_FILE = 'autostart-initialized-v2';
 const STORE_AUTOSTART_PROMPT_FILE = 'store-autostart-prompt-v1';
 // TaskId of the StartupTask in packaging/windows/store/extensions.xml (Enabled="false").
-const STORE_STARTUP_TASK_ID = 'MicupStartup';
+const STORE_STARTUP_TASK_ID = 'SanalyerStartup';
 const FLATPAK_AUTOSTART_STATE_FILE = 'flatpak-autostart-v1.json';
 
 function getInitializedFilePath(): string {

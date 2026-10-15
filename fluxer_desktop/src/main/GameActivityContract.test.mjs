@@ -289,7 +289,7 @@ export function loadIntegration({platform = 'win32'} = {}) {
 		},
 		'@electron/main/Window': {isTrustedOrigin: (url) => new URL(url).origin === 'https://trusted.test'},
 		'@electron/common/BuildChannel': {BUILD_CHANNEL: 'stable'},
-		'@electron/common/Constants': {DESKTOP_APP_ORIGIN: 'micup-app://app'},
+		'@electron/common/Constants': {DESKTOP_APP_ORIGIN: 'sanalyer-app://app'},
 		'electron-log': {warn() {}, info() {}, error() {}, debug() {}, transports: {file: {}, console: {}}},
 		'node:fs': fakeFs,
 		'node:perf_hooks': {performance: {now: () => monotonic}},
