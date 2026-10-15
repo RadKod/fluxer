@@ -4136,6 +4136,10 @@
 					"type": "text"
 				},
 				{
+					"name": "series",
+					"type": "text"
+				},
+				{
 					"name": "asset_hash",
 					"type": "text"
 				},
@@ -4180,6 +4184,10 @@
 				},
 				{
 					"name": "description",
+					"type": "text"
+				},
+				{
+					"name": "series",
 					"type": "text"
 				},
 				{

@@ -23,6 +23,7 @@ import {dispatchUserUpdate, hasPartialUserFieldsChanged} from '@app/api/user/Use
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {COSMETIC_ASSET_POLICY, ULTRA_FRONT_POLICY} from '@fluxer/constants/src/AssetFormatPolicy';
+import {normalizeCosmeticSeriesName} from '@fluxer/constants/src/CosmeticSeries';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
@@ -169,6 +170,7 @@ function mapItem(item: Omit<CosmeticItemRow, 'version'>): CosmeticItemResponse {
 		type: item.item_type as CosmeticItemType,
 		name: item.name,
 		description: item.description,
+		series: item.series ?? null,
 		asset: item.asset_hash,
 		availability: item.availability as CosmeticAvailability,
 		ultra_layout: item.item_type === 'avatar_ultra' ? fromUltraLayoutMap(item.ultra_layout) : null,
@@ -425,6 +427,7 @@ export class CosmeticService implements CosmeticGrantPort {
 			item_type: request.type,
 			name: request.name,
 			description: request.description ?? null,
+			series: normalizeCosmeticSeriesName(request.series),
 			asset_hash: uploadedHash(prepared),
 			availability: request.availability,
 			created_at: new Date(),
@@ -481,6 +484,7 @@ export class CosmeticService implements CosmeticGrantPort {
 				...current,
 				name: request.name ?? current.name,
 				description: request.description === undefined ? current.description : request.description,
+				series: request.series === undefined ? (current.series ?? null) : normalizeCosmeticSeriesName(request.series),
 				availability: request.availability ?? current.availability,
 				asset_hash: assetHash ?? current.asset_hash,
 				// A row written before the column existed reads it as undefined, which must not be bound.

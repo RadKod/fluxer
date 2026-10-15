@@ -67,7 +67,9 @@ describe('ShopSetView', () => {
 
 	const render = () =>
 		act(() =>
-			root.render(createElement(ShopSetView, {collection: {id: BUNDLE.sku, bundle: BUNDLE, entries: [BUNDLE]}})),
+			root.render(
+				createElement(ShopSetView, {collection: {id: BUNDLE.sku, bundle: BUNDLE, series: null, entries: [BUNDLE]}}),
+			),
 		);
 	const pressEscape = (target: EventTarget = document) =>
 		act(() => {

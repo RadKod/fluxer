@@ -219,6 +219,7 @@ pub fn cosmetics_page(
     items: Option<&[CosmeticItem]>,
     edit_id: Option<&str>,
     ultra_id: Option<&str>,
+    search: Option<&str>,
 ) -> Markup {
     let base = &config.base_path;
     let owned_labels = owned_item_options(items.unwrap_or_default());
@@ -235,11 +236,19 @@ pub fn cosmetics_page(
             ))
             (card(html! {
                 div class="flex flex-col gap-4" {
-                    h2 class="text-base font-semibold text-neutral-900" { "Catalog" }
+                    div class="flex flex-wrap items-center justify-between gap-3" {
+                        h2 class="text-base font-semibold text-neutral-900" {
+                            "Catalog"
+                            @if let Some(items) = items {
+                                span class="ml-2 font-normal text-neutral-500 text-sm" { (items.len()) " items" }
+                            }
+                        }
+                        (catalog_search_form(base, search))
+                    }
                     @match items {
                         None => (error_alert("Failed to load the catalog.")),
                         Some([]) => (empty_state("No cosmetic items yet.")),
-                        Some(items) => (catalog_table(config, csrf_token, items)),
+                        Some(items) => (catalog_by_series(config, csrf_token, items, search)),
                     }
                 }
             }))
@@ -268,7 +277,91 @@ fn image_url(config: &AdminConfig, item: &CosmeticItem) -> String {
     )
 }
 
-fn catalog_table(config: &AdminConfig, csrf_token: &str, items: &[CosmeticItem]) -> Markup {
+// sanalyer: the catalog holds ~1650 items, so the page lists them one series at a time: a collapsed block per
+// series (name, count, how many are on sale), items without a series last as "No series". A search over name, series
+// and ID opens only the matching blocks.
+fn catalog_search_form(base: &str, search: Option<&str>) -> Markup {
+    html! {
+        form method="get" action={(base) "/cosmetics"} class="flex items-center gap-2" {
+            input type="search" name="q" value=(search.unwrap_or("")) placeholder="Search name, series or ID"
+                class=(FORM_INPUT_CLASS) style="min-width: 18rem";
+            button type="submit" class=(SECONDARY_SUBMIT_CLASS) { "Search" }
+            @if search.is_some() {
+                a href={(base) "/cosmetics"} class="text-neutral-500 text-sm hover:underline" { "Clear" }
+            }
+        }
+    }
+}
+
+fn item_matches(item: &CosmeticItem, needle: &str) -> bool {
+    let needle = needle.to_lowercase();
+    item.name.to_lowercase().contains(&needle)
+        || item.id.contains(&needle)
+        || item
+            .series
+            .as_deref()
+            .is_some_and(|series| series.to_lowercase().contains(&needle))
+}
+
+fn catalog_by_series(
+    config: &AdminConfig,
+    csrf_token: &str,
+    items: &[CosmeticItem],
+    search: Option<&str>,
+) -> Markup {
+    let shown: Vec<&CosmeticItem> = match search {
+        Some(needle) => items.iter().filter(|item| item_matches(item, needle)).collect(),
+        None => items.iter().collect(),
+    };
+    if shown.is_empty() {
+        return empty_state("No items match the search.");
+    }
+    // Series in name order (case-insensitive); items without one last.
+    let mut groups: Vec<(Option<String>, Vec<&CosmeticItem>)> = Vec::new();
+    for item in shown {
+        let key = item
+            .series
+            .as_deref()
+            .map(|series| series.trim().to_lowercase())
+            .filter(|series| !series.is_empty());
+        match groups.iter_mut().find(|(group_key, _)| *group_key == key) {
+            Some((_, group)) => group.push(item),
+            None => groups.push((key, vec![item])),
+        }
+    }
+    groups.sort_by(|(a, _), (b, _)| match (a, b) {
+        (None, None) => std::cmp::Ordering::Equal,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (Some(a), Some(b)) => a.cmp(b),
+    });
+    let open_all = search.is_some() || groups.len() == 1;
+    html! {
+        div class="flex flex-col gap-3" {
+            @for (key, group) in &groups {
+                @let label = match key {
+                    Some(_) => group[0].series.as_deref().unwrap_or("").trim().to_owned(),
+                    None => "No series".to_owned(),
+                };
+                @let on_sale = group.iter().filter(|item| item.availability != "owned").count();
+                details class="rounded-lg border border-neutral-200 bg-white" open[open_all] {
+                    summary class="flex cursor-pointer flex-wrap items-center gap-3 px-4 py-3" {
+                        img src=(image_url(config, group[0])) alt="" loading="lazy" class="h-8 w-8 object-contain";
+                        span class="font-medium text-neutral-900" { (label) }
+                        span class="text-neutral-500 text-sm" {
+                            (group.len()) " items, " (on_sale) " on sale"
+                        }
+                    }
+                    div class="border-neutral-200 border-t" {
+                        (catalog_table(config, csrf_token, group))
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn catalog_table(config: &AdminConfig, csrf_token: &str, items: &[&CosmeticItem]) -> Markup {
     let base = &config.base_path;
     let rows = html! {
         @for item in items {
@@ -281,6 +374,9 @@ fn catalog_table(config: &AdminConfig, csrf_token: &str, items: &[CosmeticItem])
                     div class="font-medium text-neutral-900" { (item.name) }
                     @if let Some(description) = &item.description {
                         div class="text-neutral-500 text-xs" { (description) }
+                    }
+                    @if let Some(series) = &item.series {
+                        div class="text-neutral-500 text-xs" { "Series: " (series) }
                     }
                     div class="font-mono text-neutral-400 text-xs" { (item.id) }
                 }
@@ -334,6 +430,9 @@ fn create_form(base: &str, csrf_token: &str) -> Markup {
                     (form_field_group("Description", "cosmetic-create-description", false, None,
                         Some("Optional, up to 256 characters."),
                         text_field("cosmetic-create-description", "description", "", 256, false)))
+                    (form_field_group("Series", "cosmetic-create-series", false, None,
+                        Some("Optional, up to 64 characters; items with the same series are shown together (\"Arcade\")."),
+                        text_field("cosmetic-create-series", "series", "", 64, false)))
                     (image_field("cosmetic-create-image", "asset", "Image", true,
                         "PNG, APNG or WebP, 32-2048 px on each side, at most 8 MiB."))
                     (form_actions(html! { (submit_button("Add item")) }))
@@ -367,6 +466,8 @@ fn edit_form(base: &str, csrf_token: &str, item_id: &str) -> Markup {
                     }
                     (form_field_group("Description", "cosmetic-edit-description", false, None, None,
                         text_field("cosmetic-edit-description", "description", "", 256, false)))
+                    (form_field_group("Series", "cosmetic-edit-series", false, None, None,
+                        text_field("cosmetic-edit-series", "series", "", 64, false)))
                     (image_field("cosmetic-edit-image", "asset", "New image", false,
                         "PNG, APNG or WebP, 32-2048 px on each side, at most 8 MiB."))
                     (form_actions(html! { (submit_button("Save changes")) }))

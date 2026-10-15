@@ -72,6 +72,10 @@ export const CosmeticItemResponse = z.object({
 	type: CosmeticItemType,
 	name: z.string().describe('The display name of the item'),
 	description: z.string().nullable().describe('A short description of the item'),
+	series: z
+		.string()
+		.nullish()
+		.describe('Series the item belongs to, such as "Arcade"; null or absent when it has none'),
 	asset: z
 		.string()
 		.describe('Hash of the item image; the media proxy serves it under branding/cosmetic-<type>-<id>/<asset>'),

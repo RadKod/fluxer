@@ -62,6 +62,7 @@ export function buildShopSetCollection(
 	return {
 		id: entry.sku,
 		bundle: entry,
+		series: null,
 		entries: [entry, ...entry.bundle.items.flatMap((item) => onDisplay.get(item.id) ?? [])],
 	};
 }

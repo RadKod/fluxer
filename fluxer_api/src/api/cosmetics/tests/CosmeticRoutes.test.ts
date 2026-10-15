@@ -29,7 +29,9 @@ const GIF = 'R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"></svg>').toString('base64');
 const RATE_LIMIT_TEST_HEADER = 'x-fluxer-test-enable-rate-limits';
 const TOO_MANY_REQUESTS = 429;
-const PNG_OVER_512_KB = Buffer.concat([Buffer.from(PNG, 'base64'), Buffer.alloc(512 * 1024)]).toString('base64');
+// sanalyer: every cosmetic type takes up to 8 MiB (COSMETIC_ASSET_POLICY).
+const COSMETIC_MAX_BYTES = 8 * 1024 * 1024;
+const PNG_OVER_LIMIT = Buffer.concat([Buffer.from(PNG, 'base64'), Buffer.alloc(COSMETIC_MAX_BYTES)]).toString('base64');
 
 describe('cosmetics', () => {
 	let harness: ApiTestHarness;
@@ -127,15 +129,15 @@ describe('cosmetics', () => {
 				.execute();
 		});
 
-		it('refuses an image above 512 KB', async () => {
+		it('refuses an image above 8 MiB', async () => {
 			await createBuilder(harness, admin.token)
 				.post('/admin/cosmetics/items')
-				.body({type: 'nameplate', name: 'Big', availability: 'free', asset: PNG_OVER_512_KB})
+				.body({type: 'nameplate', name: 'Big', availability: 'free', asset: PNG_OVER_LIMIT})
 				.expect(400, APIErrorCodes.INVALID_FORM_BODY)
 				.execute();
 		});
 
-		it.each([95, 481])('refuses an image %i px wide', async (width) => {
+		it.each([31, 2049])('refuses an image %i px wide', async (width) => {
 			const getMetadata = TestMediaService.prototype.getMetadata;
 			vi.spyOn(TestMediaService.prototype, 'getMetadata').mockImplementation(async function (
 				this: TestMediaService,
@@ -499,28 +501,28 @@ describe('cosmetics', () => {
 		const pngOf = (bytes: number) =>
 			Buffer.concat([PNG_BYTES, Buffer.alloc(bytes - PNG_BYTES.length)]).toString('base64');
 
-		it('takes an ultra decoration up to 1,228,800 bytes and refuses one byte more', async () => {
+		it('takes an ultra decoration up to 8 MiB and refuses one byte more', async () => {
 			await createBuilder(harness, admin.token)
 				.post('/admin/cosmetics/items')
-				.body({type: 'avatar_ultra', name: 'Big', availability: 'free', asset: pngOf(1_228_800)})
+				.body({type: 'avatar_ultra', name: 'Big', availability: 'free', asset: pngOf(COSMETIC_MAX_BYTES)})
 				.expect(200)
 				.execute();
 			await createBuilder(harness, admin.token)
 				.post('/admin/cosmetics/items')
-				.body({type: 'avatar_ultra', name: 'Bigger', availability: 'free', asset: pngOf(1_228_801)})
+				.body({type: 'avatar_ultra', name: 'Bigger', availability: 'free', asset: pngOf(COSMETIC_MAX_BYTES + 1)})
 				.expect(400, APIErrorCodes.INVALID_FORM_BODY)
 				.execute();
 		});
 
-		it('still holds a frame to 524,288 bytes', async () => {
+		it('holds a frame to 8 MiB too', async () => {
 			await createBuilder(harness, admin.token)
 				.post('/admin/cosmetics/items')
-				.body({type: 'avatar_decoration', name: 'Ring', availability: 'free', asset: pngOf(524_288)})
+				.body({type: 'avatar_decoration', name: 'Ring', availability: 'free', asset: pngOf(COSMETIC_MAX_BYTES)})
 				.expect(200)
 				.execute();
 			await createBuilder(harness, admin.token)
 				.post('/admin/cosmetics/items')
-				.body({type: 'avatar_decoration', name: 'Ring+', availability: 'free', asset: pngOf(524_289)})
+				.body({type: 'avatar_decoration', name: 'Ring+', availability: 'free', asset: pngOf(COSMETIC_MAX_BYTES + 1)})
 				.expect(400, APIErrorCodes.INVALID_FORM_BODY)
 				.execute();
 		});
@@ -530,12 +532,12 @@ describe('cosmetics', () => {
 			const ultra = await createItem({type: 'avatar_ultra', name: 'Kuzgun', availability: 'free'});
 			await createBuilder(harness, admin.token)
 				.patch(`/admin/cosmetics/items/${frame.id}`)
-				.body({asset: pngOf(524_289)})
+				.body({asset: pngOf(COSMETIC_MAX_BYTES + 1)})
 				.expect(400, APIErrorCodes.INVALID_FORM_BODY)
 				.execute();
 			await createBuilder(harness, admin.token)
 				.patch(`/admin/cosmetics/items/${ultra.id}`)
-				.body({asset: pngOf(1_228_800)})
+				.body({asset: pngOf(COSMETIC_MAX_BYTES)})
 				.expect(200)
 				.execute();
 		});

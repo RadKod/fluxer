@@ -11,10 +11,10 @@ const price = {
 	campaign_percent: null,
 	campaign_ends_at: null,
 };
-const item = (id: string, type: ShopItemEntry['item']['type'] = 'avatar_ultra'): ShopItemEntry => ({
+const item = (id: string, type: ShopItemEntry['item']['type'] = 'avatar_ultra', series?: string): ShopItemEntry => ({
 	kind: 'item',
 	sku: `cosmetic:${id}`,
-	item: {id, type, name: id, description: null, asset: id, availability: 'owned'},
+	item: {id, type, name: id, description: null, series: series ?? null, asset: id, availability: 'owned'},
 	price,
 });
 const bundle = (id: string, items: Array<ShopItemEntry>): ShopBundleEntry => ({
@@ -25,6 +25,20 @@ const bundle = (id: string, items: Array<ShopItemEntry>): ShopBundleEntry => ({
 });
 
 describe('buildShopCollections', () => {
+	// sanalyer: items outside every bundle sit in one row per series, in name order, and the rest in "other" last.
+	it('groups loose items by series slug and keeps items without a series in other', () => {
+		const neon = item('neon', 'avatar_decoration', 'Arcade');
+		const stick = item('stick', 'avatar_decoration', 'arcade ');
+		const ears = item('ears', 'nameplate', 'All Ears');
+		const loose = item('loose', 'nameplate');
+		const result = buildShopCollections([neon, stick, ears, loose], [], 'all');
+		expect(result.map((group) => [group.id, group.series, group.entries.map((entry) => entry.sku)])).toEqual([
+			['series:all-ears', 'All Ears', ['cosmetic:ears']],
+			['series:arcade', 'Arcade', ['cosmetic:neon', 'cosmetic:stick']],
+			['other', null, ['cosmetic:loose']],
+		]);
+	});
+
 	it('assigns shared items once to the first bundle and preserves every bundle card', () => {
 		const a = item('a');
 		const b = item('b', 'nameplate');

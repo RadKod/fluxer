@@ -9,6 +9,9 @@ export interface CosmeticItemRow {
 	item_type: string;
 	name: string;
 	description: Nullish<string>;
+	// sanalyer: free-text series name ("Arcade", "All Ears"); grouping uses cosmeticSeriesSlug of it. Rows written
+	// before the column existed read it as undefined.
+	series?: Nullish<string>;
 	asset_hash: string;
 	availability: string;
 	created_at: Date;
@@ -46,6 +49,7 @@ export const COSMETIC_ITEM_COLUMNS = [
 	'item_type',
 	'name',
 	'description',
+	'series',
 	'asset_hash',
 	'availability',
 	'created_at',
@@ -59,6 +63,7 @@ export const COSMETIC_ITEM_BY_TYPE_COLUMNS = [
 	'item_id',
 	'name',
 	'description',
+	'series',
 	'asset_hash',
 	'availability',
 	'created_at',

@@ -43,3 +43,21 @@ export const COSMETIC_TYPE_DESCRIPTIONS: Record<CosmeticType, MessageDescriptor>
 		comment: 'Profile decorations settings: what a profile effect is. Also the settings search entry description.',
 	}),
 };
+
+// sanalyer: the profile decorations tab and the shop list items one series at a time.
+export const COSMETIC_SERIES_OTHER_DESCRIPTOR = msg({
+	message: 'Other',
+	comment: 'Group of cosmetic items that belong to no series, in the shop and the profile decorations settings.',
+});
+export const COSMETIC_MINE_DESCRIPTOR = msg({
+	message: 'Mine',
+	comment: 'Profile decorations settings: the group of items the user wears or owns, shown first.',
+});
+export const COSMETIC_SEARCH_PLACEHOLDER_DESCRIPTOR = msg({
+	message: 'Search by name or series…',
+	comment: 'Profile decorations settings: placeholder of the search box over the catalog.',
+});
+export const COSMETIC_SERIES_COUNT_DESCRIPTOR = msg({
+	message: '{count, plural, one {# item} other {# items}}',
+	comment: 'Profile decorations settings: how many items a series holds, next to its name.',
+});

@@ -180,7 +180,7 @@ const ShopCatalogView = observer(function ShopCatalogView({filter, setId, collec
 		<ShopCollectionSection
 			key={collection.id}
 			id={collectionIdPrefix + collection.id}
-			title={collection.bundle?.bundle.name ?? i18n._(OTHER_COLLECTION_DESCRIPTOR)}
+			title={collection.bundle?.bundle.name ?? collection.series ?? i18n._(OTHER_COLLECTION_DESCRIPTOR)}
 			hero={hero}
 			action={
 				collection.bundle && (

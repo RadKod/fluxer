@@ -44807,3 +44807,13 @@ msgstr "Yakınlaştır"
 #: src/features/user/components/settings_utils/search_index/KeybindsIndex.ts
 msgid "Zoom out"
 msgstr "Uzaklaştır"
+
+#. Profile decorations settings: the group of items the user wears or owns, shown first.
+#: src/features/cosmetics/utils/CosmeticLabels.ts
+msgid "Mine"
+msgstr "Benimkiler"
+
+#. Profile decorations settings: placeholder of the search box over the catalog.
+#: src/features/cosmetics/utils/CosmeticLabels.ts
+msgid "Search by name or series…"
+msgstr "Ada ya da seriye göre ara…"

@@ -163,3 +163,66 @@
 	font-weight: 500;
 	color: var(--text-primary);
 }
+
+/* sanalyer: one series at a time */
+.picker {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.seriesGroup {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.seriesHead {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	width: 100%;
+	padding: 0.375rem 0.5rem;
+	border: none;
+	border-radius: var(--radius-md);
+	background: none;
+	color: var(--text-primary);
+	text-align: start;
+	font: inherit;
+}
+
+button.seriesHead {
+	cursor: pointer;
+}
+
+button.seriesHead:hover {
+	background-color: var(--background-secondary);
+}
+
+.seriesCaret {
+	flex-shrink: 0;
+	width: 0.875rem;
+	height: 0.875rem;
+	color: var(--text-muted);
+}
+
+.seriesCover {
+	flex-shrink: 0;
+	width: 1.75rem;
+	height: 1.75rem;
+	object-fit: contain;
+}
+
+.seriesName {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-weight: 600;
+}
+
+.seriesCount {
+	flex-shrink: 0;
+	color: var(--text-muted);
+	font-size: 0.8125rem;
+}

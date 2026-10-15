@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {COSMETIC_ASSET_POLICY, ULTRA_FRONT_POLICY} from '@fluxer/constants/src/AssetFormatPolicy';
+import {COSMETIC_SERIES_MAX_LENGTH} from '@fluxer/constants/src/CosmeticSeries';
 import {
 	CosmeticAvailability,
 	CosmeticItemType,
@@ -39,6 +40,9 @@ export const CosmeticItemCreateRequest = z.object({
 	type: CosmeticItemType,
 	name: createStringType(1, 64).describe('The display name of the item (1-64 characters)'),
 	description: createStringType(1, 256).nullish().describe('A short description (1-256 characters)'),
+	series: createStringType(1, COSMETIC_SERIES_MAX_LENGTH)
+		.nullish()
+		.describe('Series the item belongs to, such as "Arcade" (1-64 characters); null takes it out of its series'),
 	availability: CosmeticAvailability,
 	asset: createBase64StringType(1, base64LengthForBytes(COSMETIC_ASSET_MAX_BYTES)).describe(
 		'Base64 PNG, APNG or WebP image, 8 MiB at most, 32-2048 px on each side; SVG is refused',

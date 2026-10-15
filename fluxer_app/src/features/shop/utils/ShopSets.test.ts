@@ -36,6 +36,7 @@ const bundle = (id: string, items: Array<ShopItemEntry>, bundlePrice = price(100
 const collection = (entry: ShopBundleEntry | null, id = entry?.sku ?? 'other'): ShopCollection => ({
 	id,
 	bundle: entry,
+	series: null,
 	entries: entry ? [entry] : [],
 });
 

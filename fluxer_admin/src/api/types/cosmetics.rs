@@ -9,6 +9,9 @@ pub struct CosmeticItem {
     pub item_type: String,
     pub name: String,
     pub description: Option<String>,
+    // sanalyer: free-text series name; absent or null when the item has none.
+    #[serde(default)]
+    pub series: Option<String>,
     pub asset: String,
     pub availability: String,
     // Micup (shop): ultra decorations only; absent or null keeps the fixed sizes.
