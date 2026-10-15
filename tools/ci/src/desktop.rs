@@ -2700,11 +2700,14 @@ fn verify_bundle_id_step() -> Result<()> {
         info_plist.to_string_lossy().as_ref(),
     ]))?;
 
-    let expected = if build_channel == "canary" {
-        "app.fluxer.canary"
-    } else {
-        "app.fluxer"
-    };
+    // sanalyer: FLUXER_DESKTOP_MAC_BUNDLE_ID names the fork's bundle id; unset keeps Fluxer's.
+    let expected = env_string("FLUXER_DESKTOP_MAC_BUNDLE_ID").unwrap_or_else(|| {
+        if build_channel == "canary" {
+            "app.fluxer.canary".to_string()
+        } else {
+            "app.fluxer".to_string()
+        }
+    });
     let expected_profile = if build_channel == "canary" {
         "3G5837T29K.app.fluxer.canary"
     } else {
@@ -2712,31 +2715,31 @@ fn verify_bundle_id_step() -> Result<()> {
     };
     println!("Bundle id in zip: {bid} (expected: {expected})");
     ensure!(bid == expected, "Unexpected bundle id: {bid}");
-    ensure!(
-        profile.exists(),
-        "Missing provisioning profile: {}",
-        profile.display()
-    );
-
-    let decoded_profile = temp.path().join("embedded.provisionprofile.plist");
-    let decoded = output_bytes(CommandSpec::new("security").args([
-        "cms",
-        "-D",
-        "-i",
-        profile.to_string_lossy().as_ref(),
-    ]))?;
-    fs::write(&decoded_profile, decoded)
-        .with_context(|| format!("Failed to write {}", decoded_profile.display()))?;
-    let profile_app_id = output_text(CommandSpec::new("/usr/libexec/PlistBuddy").args([
-        "-c",
-        "Print :Entitlements:com.apple.application-identifier",
-        decoded_profile.to_string_lossy().as_ref(),
-    ]))?;
-    println!("Provisioning profile app id: {profile_app_id} (expected: {expected_profile})");
-    ensure!(
-        profile_app_id == expected_profile,
-        "Unexpected provisioning profile app id: {profile_app_id}"
-    );
+    // sanalyer: a Developer ID build outside the App Store embeds no provisioning profile; the profile check
+    // runs only when one is present.
+    if profile.exists() {
+        let decoded_profile = temp.path().join("embedded.provisionprofile.plist");
+        let decoded = output_bytes(CommandSpec::new("security").args([
+            "cms",
+            "-D",
+            "-i",
+            profile.to_string_lossy().as_ref(),
+        ]))?;
+        fs::write(&decoded_profile, decoded)
+            .with_context(|| format!("Failed to write {}", decoded_profile.display()))?;
+        let profile_app_id = output_text(CommandSpec::new("/usr/libexec/PlistBuddy").args([
+            "-c",
+            "Print :Entitlements:com.apple.application-identifier",
+            decoded_profile.to_string_lossy().as_ref(),
+        ]))?;
+        println!("Provisioning profile app id: {profile_app_id} (expected: {expected_profile})");
+        ensure!(
+            profile_app_id == expected_profile,
+            "Unexpected provisioning profile app id: {profile_app_id}"
+        );
+    } else {
+        println!("No embedded provisioning profile; Developer ID distribution ships without one.");
+    }
 
     for (rel, expected_macho_arch) in macos_native_runtime_targets(&electron_arch) {
         let native_file = app

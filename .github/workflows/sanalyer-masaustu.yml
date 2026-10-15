@@ -285,6 +285,7 @@ jobs:
       DESKTOP_ARCH: ${{ matrix.arch }}
       # sanalyer: Windows paket kimliği (Velopack packId, başlık, yayımcı); üçü birden verilmezse yardımcı Fluxer'ın
       # kimliğini kullanır ve sanalyer.exe'yi bulamaz. Başlık electron-builder productName ile aynı olmalı.
+      FLUXER_DESKTOP_MAC_BUNDLE_ID: com.sanalyer.desktop
       FLUXER_DESKTOP_PACK_ID: sanalyer_desktop
       FLUXER_DESKTOP_PACK_TITLE: sanalyer
       FLUXER_DESKTOP_PACK_AUTHORS: sanalyer
