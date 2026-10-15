@@ -128,10 +128,7 @@ export const UserInfo: React.FC<UserInfoProps> = observer((props) => {
 							data-flx="user.user-profile-modal.user-info.custom-status-display"
 						/>
 					</div>
-					<GameActivityDisplay
-						userId={user.id}
-						fullProfile={!!profile && !profile.profileLimited && !showProfileDataWarning}
-					/>
+					<GameActivityDisplay userId={user.id} />
 				</div>
 			</div>
 		</div>

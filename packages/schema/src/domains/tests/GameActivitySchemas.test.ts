@@ -60,6 +60,28 @@ describe('game activity schemas', () => {
 		expect(UserSettingsUpdateRequest.parse({})).toEqual({});
 	});
 
+	test('everyone_and_default_acknowledgement_are_accepted', () => {
+		expect(UserSettingsUpdateRequest.parse({game_activity_visibility: 'everyone'})).toEqual({
+			game_activity_visibility: 'everyone',
+		});
+		expect(UserSettingsUpdateRequest.parse({game_activity_default_acknowledged: true})).toEqual({
+			game_activity_default_acknowledged: true,
+		});
+		expect(UserSettingsUpdateRequest.safeParse({game_activity_default_acknowledged: false}).success).toBe(false);
+		expect(
+			UserSettingsResponse.partial().parse({
+				game_activity_visibility: 'everyone',
+				game_activity_eligible: true,
+				game_activity_default_pending: false,
+			}),
+		).toEqual({
+			game_activity_visibility: 'everyone',
+			game_activity_policy_revision: '0',
+			game_activity_eligible: true,
+			game_activity_default_pending: false,
+		});
+	});
+
 	test('policy_revision_is_bounded_canonical_decimal', () => {
 		for (const revision of ['-1', '01', '1.0', '', '9223372036854775808', '1'.repeat(20)]) {
 			expect(GameActivityPolicyRevisionSchema.safeParse(revision).success).toBe(false);

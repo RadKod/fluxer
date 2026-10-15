@@ -53316,26 +53316,6 @@ msgstr "Oyun bitti"
 msgid "Game Room"
 msgstr "Oyun Odası"
 
-#. Name of a 3D voice room theme: a neon-lit lounge. A proper name, keep it as is.
-#: src/features/voice_scene/utils/RoomThemeOptions.ts
-msgid "Neon Salon"
-msgstr "Neon Salon"
-
-#. Name of a 3D voice room theme: a lounge over a purple night city. A proper name, keep it as is.
-#: src/features/voice_scene/utils/RoomThemeOptions.ts
-msgid "Mor Şehir"
-msgstr "Mor Şehir"
-
-#. Name of a 3D voice room theme: an old neighbourhood coffeehouse. A proper name, keep it as is.
-#: src/features/voice_scene/utils/RoomThemeOptions.ts
-msgid "Mahalle Kahvesi"
-msgstr "Mahalle Kahvesi"
-
-#. Name of a 3D voice room theme: an executive office. A proper name, keep it as is.
-#: src/features/voice_scene/utils/RoomThemeOptions.ts
-msgid "Yönetim Ofisi"
-msgstr "Yönetim Ofisi"
-
 #. Table games: backgammon, the winner finished before the loser bore off any
 #. checker (Mars).
 #: src/features/table_game/components/TableGameResult.tsx
@@ -56977,3 +56957,88 @@ msgid ""
 msgstr ""
 "Profilin \"Yalnız ben\" olarak ayarlı. Arkadaşlar ya da Herkes seçili olsa "
 "bile oyun etkinliğin paylaşılmaz."
+
+#. Game sharing requires the account to be 15 or older with a known date of
+#. birth; unknown age is disabled.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx
+msgid "Available from age 15."
+msgstr "15 yaşından itibaren kullanılabilir."
+
+#. Link under the game activity default notice to the privacy policy. Legal-
+#. effect text: approved before release.
+#: src/features/app/components/layout/app_layout/nagbars/GameActivityDefaultNagbar.tsx
+msgid "Details: Privacy Policy"
+msgstr "Ayrıntılar: Gizlilik Politikası"
+
+#. One-time notice title for existing accounts: game activity sharing starts
+#. on by default after this notice. Legal-effect text: approved before
+#. release.
+#: src/features/app/components/layout/app_layout/nagbars/GameActivityDefaultNagbar.tsx
+msgid "Game activity is now on by default"
+msgstr "“Şu anda oynuyor” artık varsayılan olarak açık"
+
+#. Accessible label for the current game shown under a name in the member and
+#. direct message lists.
+#: src/features/game_activity/components/GameActivityRowStatus.tsx
+msgid "Playing {name}"
+msgstr "{name} oynuyor"
+
+#. Game activity disclosure; describes recipients of each option, blocking,
+#. transient storage and local process data. Legal-effect text: approved
+#. before release.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx
+msgid ""
+"Sharing sends your game name or ID and start time to the people you choose. "
+"Everyone means your friends and members of servers you share; Friends means "
+"only your friends. People you’ve blocked can’t see it. Activity is temporary"
+" and expires when it is no longer renewed. The process list stays on this "
+"device. Off stops game detection on this device. You can remove local game "
+"rules at any time."
+msgstr ""
+"Paylaşım, oyununun adını ya da kimliğini ve başlangıç zamanını seçtiğin "
+"kişilere gönderir. Herkes: arkadaşların ve seninle ortak sunuculardaki "
+"üyeler; Arkadaşlar: yalnız arkadaşların. Engellediğin kişiler göremez. "
+"Etkinlik geçicidir; yenilenmediğinde sona erer. Program listesi bu cihazda "
+"kalır. Kapalı, bu cihazda oyun algılamayı durdurur. Yerel oyun kurallarını "
+"istediğin an silebilirsin."
+
+#. One-time notice body. "Friends" and "Off" are option labels and "Settings ›
+#. Privacy › Show my game activity" is the settings path; keep them identical
+#. to those labels. Legal-effect text: approved before release.
+#: src/features/app/components/layout/app_layout/nagbars/GameActivityDefaultNagbar.tsx
+msgid ""
+"The sanalyer desktop app will detect the game running on your computer and "
+"show its name and icon to your friends and to members of servers you share. "
+"Your list of programs never leaves your computer, no game history is kept, "
+"and people you’ve blocked can’t see it. You can switch to Friends or Off at "
+"any time in Settings › Privacy › Show my game activity."
+msgstr ""
+"sanalyer masaüstü uygulaması bilgisayarında çalışan oyunu algılayacak; "
+"oyunun adı ve ikonu arkadaşlarına ve ortak sunuculardaki üyelere görünecek. "
+"Program listen bilgisayarından çıkmaz, oyun geçmişi tutulmaz ve engellediğin"
+" kişiler göremez. İstediğin an Ayarlar › Gizlilik › Oyun etkinliğimi göster "
+"bölümünden Arkadaşlar ya da Kapalı seçebilirsin."
+
+#. Name of a 3D voice room theme: a neon-lit lounge. A proper name, keep it as
+#. is.
+#: src/features/voice_scene/utils/RoomThemeOptions.ts
+msgid "Neon Salon"
+msgstr "Neon Salon"
+
+#. Name of a 3D voice room theme: a lounge over a purple night city. A proper
+#. name, keep it as is.
+#: src/features/voice_scene/utils/RoomThemeOptions.ts
+msgid "Mor Şehir"
+msgstr "Mor Şehir"
+
+#. Name of a 3D voice room theme: an old neighbourhood coffeehouse. A proper
+#. name, keep it as is.
+#: src/features/voice_scene/utils/RoomThemeOptions.ts
+msgid "Mahalle Kahvesi"
+msgstr "Mahalle Kahvesi"
+
+#. Name of a 3D voice room theme: an executive office. A proper name, keep it
+#. as is.
+#: src/features/voice_scene/utils/RoomThemeOptions.ts
+msgid "Yönetim Ofisi"
+msgstr "Yönetim Ofisi"

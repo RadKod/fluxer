@@ -11,6 +11,7 @@ import bulkDeleteMessagesForUsers from '@app/api/worker/tasks/admin_bulk/BulkDel
 import bulkScheduleUserDeletion from '@app/api/worker/tasks/admin_bulk/BulkScheduleUserDeletion';
 import bulkUpdateGuildFeatures from '@app/api/worker/tasks/admin_bulk/BulkUpdateGuildFeatures';
 import bulkUpdateUserFlags from '@app/api/worker/tasks/admin_bulk/BulkUpdateUserFlags';
+import backfillEarlyPlusBadges from '@app/api/worker/tasks/BackfillEarlyPlusBadges';
 import backfillFeedSuggestionRanking from '@app/api/worker/tasks/BackfillFeedSuggestionRanking';
 import backfillPioneerBadges from '@app/api/worker/tasks/BackfillPioneerBadges';
 import backfillReferralTier from '@app/api/worker/tasks/BackfillReferralTier';
@@ -131,6 +132,7 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	applicationProcessDeletion,
 	assignPioneerBadge,
 	backfillPioneerBadges,
+	backfillEarlyPlusBadges,
 	archiveInactiveThreads,
 	deleteChannelThreads,
 	removeThreadMembershipsForGuildMember,

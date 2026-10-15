@@ -65,11 +65,29 @@ handle_call(_Req, _From, State) ->
     {reply, {error, unknown_call}, State}.
 
 -spec handle_cast(term(), map()) -> {noreply, map()}.
+handle_cast({game_activity_broadcast, Payload, SessionPids, From}, State) ->
+    dispatch_game(Payload, SessionPids),
+    gen_server:reply(From, ok),
+    {noreply, maybe_schedule_gc(State)};
+handle_cast(
+    {event_broadcast, presence_update, #{<<"game_activity">> := _} = Payload, SessionPids},
+    State
+) ->
+    dispatch_game(Payload, SessionPids),
+    {noreply, maybe_schedule_gc(State)};
 handle_cast({event_broadcast, Event, EncodedPayload, FilteredSessionPids}, State) ->
     maybe_dispatch_event_from_terms(Event, EncodedPayload, FilteredSessionPids, State),
     {noreply, maybe_schedule_gc(State)};
 handle_cast(_Other, State) ->
     {noreply, State}.
+
+%% Native pid casts preserve the sender order across nodes and do not stop at a relay queue.
+-spec dispatch_game(map(), [pid()]) -> ok.
+dispatch_game(Payload, SessionPids) ->
+    lists:foreach(
+        fun(Pid) -> gen_server:cast(Pid, {dispatch, presence_update, Payload}) end,
+        SessionPids
+    ).
 
 -spec handle_info(term(), map()) ->
     {noreply, map()} | {noreply, map(), hibernate} | {stop, normal, map()}.

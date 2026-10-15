@@ -82,8 +82,8 @@ describe('Game activity display', () => {
 		act(() => root.unmount());
 		container.remove();
 	});
-	const render = async (fullProfile = true, visible = true, userId = 'friend') =>
-		act(async () => root.render(createElement(GameActivityDisplay, {userId, fullProfile, visible})));
+	const render = async (visible = true, userId = 'friend') =>
+		act(async () => root.render(createElement(GameActivityDisplay, {userId, visible})));
 	it('closed rollout does not show remote activity or subscribe to the clock', async () => {
 		state.rolloutEnabled = false;
 		await render();
@@ -91,20 +91,18 @@ describe('Game activity display', () => {
 		expect(mocks.subscribe).not.toHaveBeenCalled();
 		expect(mocks.icon).not.toHaveBeenCalled();
 	});
-	it('full_friend_only hides limited/public, stranger, blocked and remote self data', async () => {
+	it('shows the store game without a friend or full profile condition; hides blocked and remote self data', async () => {
 		await render();
 		expect(container.textContent).toContain('Playing now');
-		await render(false);
-		expect(container.textContent).toBe('');
 		state.friend = false;
 		await render();
-		expect(container.textContent).toBe('');
+		expect(container.textContent).toContain('Playing now');
 		state.friend = true;
 		state.blocked = true;
 		await render();
 		expect(container.textContent).toBe('');
 		state.blocked = false;
-		await render(true, true, 'self');
+		await render(true, 'self');
 		expect(container.textContent).toBe('');
 	});
 	it('manual_text_escaped and duration is shown', async () => {
@@ -121,7 +119,7 @@ describe('Game activity display', () => {
 	});
 	it('lazy_icons_only_when_visible', async () => {
 		state.activity = {game_id: 'known-game', started_at: 0};
-		await render(true, false);
+		await render(false);
 		expect(mocks.icon).not.toHaveBeenCalled();
 		expect(mocks.subscribe).not.toHaveBeenCalled();
 		await render();
@@ -137,6 +135,7 @@ describe('Game activity display', () => {
 			'modals/UserProfileMobileSheet.tsx',
 		]) {
 			expect(read(path).match(/<GameActivityDisplay\b/g)).toHaveLength(1);
+			expect(read(path)).not.toMatch(/fullProfile|gameActivityProfileFull/);
 		}
 		const page = read('pages/UserProfilePage.tsx');
 		expect(page.match(/<UserInfo\b/g)).toHaveLength(1);

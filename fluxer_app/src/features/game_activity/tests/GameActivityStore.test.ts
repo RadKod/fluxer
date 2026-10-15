@@ -75,13 +75,86 @@ describe('GameActivityStore', () => {
 		expect(store.get('friend')).toEqual(game);
 	});
 
-	it('guild_field_never_grants_game', () => {
-		store.update(record('guild-only', {guild_id: 'guild', game_activity: game}));
-		expect(store.get('guild-only')).toBeNull();
+	it('guild_scope_grants_game_and_friend_scope_wins', () => {
+		const manual: GameActivity = {manual_name: 'Guild game', started_at: 2000};
+		store.update(record('member', {guild_id: 'g1', game_activity: manual}));
+		expect(store.get('member')).toEqual(manual);
+		store.update(record('member', {game_activity: game}));
+		expect(store.get('member')).toEqual(game);
+		store.update(record('member', {game_activity: null}));
+		expect(store.get('member')).toEqual(manual);
+	});
+
+	it('null_clears_only_its_scope', () => {
+		store.update(record('member', {game_activity: game}));
+		store.update(record('member', {guild_id: 'g1', game_activity: game}));
+		store.update(record('member', {guild_id: 'g2', game_activity: game}));
+		store.update(record('member', {guild_id: 'g1', game_activity: null}));
+		store.update(record('member', {game_activity: null}));
+		expect(store.get('member')).toEqual(game);
+		store.update(record('member', {guild_id: 'g2', game_activity: null}));
+		expect(store.get('member')).toBeNull();
+	});
+
+	it('display_falls_back_to_first_guild_scope', () => {
+		const second: GameActivity = {game_id: 'second-game', started_at: 3000};
+		store.update(record('member', {guild_id: 'g1', game_activity: game}));
+		store.update(record('member', {guild_id: 'g2', game_activity: second}));
+		expect(store.get('member')).toEqual(game);
+		store.update(record('member', {guild_id: 'g1', game_activity: null}));
+		expect(store.get('member')).toEqual(second);
+	});
+
+	it('unchanged_display_does_not_notify', () => {
+		const listener = vi.fn();
+		store.subscribe('member', listener);
+		store.update(record('member', {game_activity: game}));
+		expect(listener).toHaveBeenCalledOnce();
+		store.update(record('member', {guild_id: 'g1', game_activity: {...game}}));
+		store.update(record('member', {guild_id: 'g1', game_activity: {...game}}));
+		store.update(record('member', {game_activity: null}));
+		store.update(record('member', {guild_id: 'g2', game_activity: null}));
+		expect(listener).toHaveBeenCalledOnce();
+		store.update(record('member', {guild_id: 'g1', game_activity: null}));
+		expect(listener).toHaveBeenCalledTimes(2);
+	});
+
+	it('t8_guild_delete_clears_scope', () => {
+		const listener = vi.fn();
+		store.subscribe('member', listener);
+		store.update(record('member', {guild_id: 'g1', game_activity: game}));
 		store.update(record('friend', {game_activity: game}));
-		store.update(record('friend', {guild_id: 'guild', game_activity: {manual_name: 'Wrong', started_at: 2000}}));
-		store.update(record('friend', {guild_id: 'guild', game_activity: null}));
+		store.update(record('friend', {guild_id: 'g1', game_activity: game}));
+		store.update(record('other', {guild_id: 'g2', game_activity: game}));
+		store.clearGuild('g1');
+		expect(store.get('member')).toBeNull();
 		expect(store.get('friend')).toEqual(game);
+		expect(store.get('other')).toEqual(game);
+		expect(listener).toHaveBeenCalledTimes(2);
+		store.update(record('friend', {game_activity: null}));
+		expect(store.get('friend')).toBeNull();
+	});
+
+	it('t8_ready_clears_guild_scopes', () => {
+		store.update(record('member', {guild_id: 'g1', game_activity: game}));
+		store.update(record('friend', {guild_id: 'g1', game_activity: {manual_name: 'Guild', started_at: 1}}));
+		store.replaceReady([record('friend', {game_activity: game})]);
+		expect(store.get('member')).toBeNull();
+		expect(store.get('friend')).toEqual(game);
+		store.update(record('friend', {game_activity: null}));
+		expect(store.get('friend')).toBeNull();
+	});
+
+	it('rollout_reset_clears_every_scope', () => {
+		store.update(record('member', {guild_id: 'g1', game_activity: game}));
+		store.update(record('friend', {game_activity: game}));
+		store.resetRollout();
+		expect(store.get('member')).toBeNull();
+		expect(store.get('friend')).toBeNull();
+		store.handleRollout({game_activity_enabled: true, game_activity_epoch: 1});
+		store.update(record('member', {guild_id: 'g1', game_activity: game}));
+		store.handleRollout({game_activity_enabled: false, game_activity_epoch: 2});
+		expect(store.get('member')).toBeNull();
 	});
 
 	it('guild_absent_preserves_friend_game', () => {
@@ -174,6 +247,31 @@ describe('GameActivityStore', () => {
 			handler(payload, context);
 			expect(GameActivityStoreSingleton.get('friend')).toBeNull();
 		}
+	});
+
+	it('relationship_events_clear_only_friend_scope', () => {
+		const guildGame: GameActivity = {manual_name: 'Shared server game', started_at: 5};
+		for (const [handler, payload] of [
+			[handleRelationshipUpdate, {id: 'member', type: RelationshipTypes.INCOMING_REQUEST}],
+			[handleRelationshipRemove, {id: 'member', type: RelationshipTypes.FRIEND}],
+			[handleRelationshipAdd, {id: 'member', type: RelationshipTypes.OUTGOING_REQUEST}],
+		] as const) {
+			GameActivityStoreSingleton.update(record('member', {game_activity: game}));
+			GameActivityStoreSingleton.update(record('member', {guild_id: 'g1', game_activity: guildGame}));
+			handler(payload, context);
+			expect(GameActivityStoreSingleton.get('member')).toEqual(guildGame);
+			GameActivityStoreSingleton.update(record('member', {guild_id: 'g1', game_activity: null}));
+		}
+	});
+
+	it('block_clears_every_scope', () => {
+		GameActivityStoreSingleton.update(record('member', {game_activity: game}));
+		GameActivityStoreSingleton.update(record('member', {guild_id: 'g1', game_activity: game}));
+		handleRelationshipAdd({id: 'member', type: RelationshipTypes.BLOCKED}, context);
+		expect(GameActivityStoreSingleton.get('member')).toBeNull();
+		GameActivityStoreSingleton.update(record('member', {guild_id: 'g2', game_activity: game}));
+		handleRelationshipUpdate({id: 'member', type: RelationshipTypes.BLOCKED}, context);
+		expect(GameActivityStoreSingleton.get('member')).toBeNull();
 	});
 
 	it('friend_relationship_update_preserves_game', () => {

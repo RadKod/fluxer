@@ -83,6 +83,12 @@ async fn shop_page(
     } else {
         None
     };
+    // The Early Plus badge picker needs BADGES_MANAGE; without it the card names the badge by ID.
+    let badges = if acl::has_permission(admin_acls, acl::BADGES_MANAGE) {
+        client.list_badges().await.log_error("list badges")
+    } else {
+        None
+    };
     let markup = templates::pages::shop::shop_page(
         config,
         &auth.0,
@@ -95,6 +101,7 @@ async fn shop_page(
             order_query: query.order.as_deref().unwrap_or(""),
             order: order.as_ref(),
             visionary: visionary.as_ref(),
+            badges: badges.as_deref(),
         },
     );
     Html(markup.into_string()).into_response()
@@ -137,6 +144,8 @@ async fn shop_post(
                 "visionary_sale" => save_visionary_sale(&client, &form).await,
                 "visionary_slots" => save_visionary_slots(&client, &form).await,
                 "visionary_rewards" => save_visionary_rewards(&client, &form).await,
+                "early_plus_badge" => save_early_plus_badge(&client, &form).await,
+                "early_plus_open" => save_early_plus_open(&client, &form).await,
                 "bundle_create" => create_bundle(&client, &form).await,
                 "bundle_update" => update_bundle(&client, &form).await,
                 "bundle_delete" => delete_bundle(&client, &form).await,
@@ -312,6 +321,42 @@ async fn save_visionary_rewards(client: &AdminApiClient, form: &MultiValueForm) 
             count_of(ids.len(), "decoration")
         )),
         Err(error) => api_failure("save the Visionary rewards", &error),
+    }
+}
+
+// Micup (Early Plus): blank clears the badge. The API refuses a numbered badge and any change while open.
+async fn save_early_plus_badge(client: &AdminApiClient, form: &MultiValueForm) -> FlashData {
+    let raw = form.first("early_plus_badge_id").unwrap_or("").trim();
+    let badge_id = if raw.is_empty() {
+        None
+    } else {
+        match raw.parse::<i64>().ok().filter(|id| *id > 0) {
+            Some(id) => Some(id.to_string()),
+            None => return FlashData::error("Pick the Early Plus badge from the list."),
+        }
+    };
+    let chosen = badge_id.is_some();
+    match client
+        .update_shop_settings(&json!({ "early_plus_badge_id": badge_id }))
+        .await
+    {
+        Ok(()) if chosen => FlashData::success("Early Plus badge saved."),
+        Ok(()) => FlashData::success("Early Plus has no badge now."),
+        Err(error) => api_failure("save the Early Plus badge", &error),
+    }
+}
+
+async fn save_early_plus_open(client: &AdminApiClient, form: &MultiValueForm) -> FlashData {
+    let open = form.bool_value("early_plus_open");
+    match client
+        .update_shop_settings(&json!({ "early_plus_open": open }))
+        .await
+    {
+        Ok(()) if open => FlashData::success(
+            "Early Plus is open. A job on the Jobs page gives the badge to earlier paid buyers.",
+        ),
+        Ok(()) => FlashData::success("Early Plus is closed. Badges already given stay."),
+        Err(error) => api_failure("open or close Early Plus", &error),
     }
 }
 

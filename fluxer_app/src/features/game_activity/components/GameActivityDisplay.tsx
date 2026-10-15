@@ -10,7 +10,6 @@ import {getGameIconUrl} from '@app/features/game_activity/utils/GameIconUrls';
 import type {GameActivity} from '@app/features/gateway/types/GatewayPresenceTypes';
 import Relationships from '@app/features/relationship/state/Relationships';
 import Users from '@app/features/user/state/Users';
-import {RelationshipTypes} from '@fluxer/constants/src/UserConstants';
 import {getGameById} from '@fluxer/game_catalog/src/GameCatalog';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
@@ -26,43 +25,37 @@ const LOCAL = msg({
 const GAME = msg({message: 'Game', comment: 'Fallback name for an unknown game ID.'});
 const MINUTES = msg({message: '{minutes} min', comment: 'Elapsed game duration in minutes.'});
 
-export const GameActivityDisplay = observer(
-	({userId, fullProfile, visible = true}: {userId: string; fullProfile: boolean; visible?: boolean}) => {
-		const ref = useRef<HTMLDivElement>(null);
-		const [intersecting, setIntersecting] = useState(typeof IntersectionObserver === 'undefined');
-		const [documentVisible, setDocumentVisible] = useState(document.visibilityState !== 'hidden');
-		const self = userId === Users.currentUser?.id;
-		const allowed =
-			GameActivityStore.enabled &&
-			fullProfile &&
-			(self ||
-				(Relationships.getRelationship(userId)?.type === RelationshipTypes.FRIEND && !Relationships.isBlocked(userId)));
-		const active = allowed && visible && intersecting && documentVisible;
-		const remoteActivity = useGameActivity({userId, enabled: active && !self});
-		const activity = self ? DesktopGameActivityBridge.activity : remoteActivity;
-		useEffect(() => {
-			if (!allowed || !visible) return;
-			const updateVisibility = () => setDocumentVisible(document.visibilityState !== 'hidden');
-			document.addEventListener('visibilitychange', updateVisibility);
-			const target = ref.current;
-			const intersection =
-				typeof IntersectionObserver === 'undefined'
-					? null
-					: new IntersectionObserver(([entry]) => setIntersecting(entry.isIntersecting));
-			if (target) intersection?.observe(target);
-			return () => {
-				document.removeEventListener('visibilitychange', updateVisibility);
-				intersection?.disconnect();
-			};
-		}, [allowed, visible]);
-		if (!allowed || !visible) return null;
-		return (
-			<div ref={ref} className={styles.container} data-flx="game-activity.display">
-				{active && activity && <VisibleGameActivity activity={activity} local={self} />}
-			</div>
-		);
-	},
-);
+export const GameActivityDisplay = observer(({userId, visible = true}: {userId: string; visible?: boolean}) => {
+	const ref = useRef<HTMLDivElement>(null);
+	const [intersecting, setIntersecting] = useState(typeof IntersectionObserver === 'undefined');
+	const [documentVisible, setDocumentVisible] = useState(document.visibilityState !== 'hidden');
+	const self = userId === Users.currentUser?.id;
+	const allowed = GameActivityStore.enabled && (self || !Relationships.isBlocked(userId));
+	const active = allowed && visible && intersecting && documentVisible;
+	const remoteActivity = useGameActivity({userId, enabled: active && !self});
+	const activity = self ? DesktopGameActivityBridge.activity : remoteActivity;
+	useEffect(() => {
+		if (!allowed || !visible) return;
+		const updateVisibility = () => setDocumentVisible(document.visibilityState !== 'hidden');
+		document.addEventListener('visibilitychange', updateVisibility);
+		const target = ref.current;
+		const intersection =
+			typeof IntersectionObserver === 'undefined'
+				? null
+				: new IntersectionObserver(([entry]) => setIntersecting(entry.isIntersecting));
+		if (target) intersection?.observe(target);
+		return () => {
+			document.removeEventListener('visibilitychange', updateVisibility);
+			intersection?.disconnect();
+		};
+	}, [allowed, visible]);
+	if (!allowed || !visible) return null;
+	return (
+		<div ref={ref} className={styles.container} data-flx="game-activity.display">
+			{active && activity && <VisibleGameActivity activity={activity} local={self} />}
+		</div>
+	);
+});
 
 function VisibleGameActivity({activity, local}: {activity: GameActivity; local: boolean}) {
 	const {i18n} = useLingui();

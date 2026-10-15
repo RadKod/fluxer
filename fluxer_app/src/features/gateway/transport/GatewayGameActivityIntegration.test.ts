@@ -19,11 +19,12 @@ const fixture = vi.hoisted(() => ({
 		presenceChanged: vi.fn(),
 	},
 	presence: {status: 'online', afk: false, mobile: false, custom_status: null},
+	sharing: true,
 }));
 
 vi.mock('@app/features/game_activity/utils/DesktopGameActivityBridge', () => ({default: fixture.bridge}));
 vi.mock('@app/features/game_activity/state/GameActivitySettings', () => ({
-	default: {getEffectiveSharing: () => true, getDetectionEnabled: () => true},
+	default: {getEffectiveSharing: () => fixture.sharing},
 }));
 vi.mock('@app/features/ui/utils/NativeUtils', async (importOriginal) => ({
 	...(await importOriginal<typeof import('@app/features/ui/utils/NativeUtils')>()),
@@ -173,6 +174,7 @@ async function startForegroundSocket() {
 }
 
 beforeEach(() => {
+	fixture.sharing = true;
 	vi.stubGlobal('WebSocket', FakeWebSocket);
 	GameActivityStore.resetRollout();
 });
@@ -185,6 +187,14 @@ afterEach(() => {
 });
 
 describe('gateway session pool desktop game activity wiring', () => {
+	it('producer_follows_sharing_choice_without_a_detection_preference', async () => {
+		GameActivityStore.handleRollout({game_activity_enabled: true, game_activity_epoch: 1});
+		const options = await startBridge();
+		expect(options.getEnabled()).toBe(true);
+		fixture.sharing = false;
+		expect(options.getEnabled()).toBe(false);
+	});
+
 	it('keeps scanning and game sends closed while the rollout is off', async () => {
 		const options = await startBridge();
 		const {socket} = await startForegroundSocket();

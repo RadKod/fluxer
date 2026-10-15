@@ -94,6 +94,8 @@ export interface GuildFolder {
 	guildIds: Array<string>;
 }
 
+export type GameActivityVisibility = 'off' | 'friends' | 'everyone';
+
 export interface UserSettings {
 	flags: number;
 	status: string;
@@ -121,7 +123,9 @@ export interface UserSettings {
 	groupDmAddPermissionFlags: number;
 	profilePrivacy: ProfilePrivacyLevel;
 	defaultShareVoiceActivity: boolean;
-	gameActivityVisibility: 'off' | 'friends';
+	gameActivityVisibility: GameActivityVisibility;
+	gameActivityEligible: boolean;
+	gameActivityDefaultPending: boolean;
 	privacySetupVersion: number | null;
 	guildFolders: Array<GuildFolder>;
 	customStatus: CustomStatus | null;
@@ -361,7 +365,9 @@ class UserSettingsState {
 	groupDmAddPermissionFlags: number = 0;
 	profilePrivacy: ProfilePrivacyLevel = ProfilePrivacyLevels.ALL_GUILDS;
 	defaultShareVoiceActivity: boolean = true;
-	gameActivityVisibility: 'off' | 'friends' = 'off';
+	gameActivityVisibility: GameActivityVisibility = 'off';
+	gameActivityEligible: boolean = false;
+	gameActivityDefaultPending: boolean = false;
 	privacySetupVersion: number | null = null;
 	guildFolders: Array<GuildFolder> = [];
 	customStatus: CustomStatus | null = null;
@@ -524,8 +530,16 @@ class UserSettingsState {
 		return this.accountReleased;
 	}
 
-	getGameActivityVisibility(): 'off' | 'friends' {
+	getGameActivityVisibility(): GameActivityVisibility {
 		return this.gameActivityVisibility;
+	}
+
+	getGameActivityEligible(): boolean {
+		return this.gameActivityEligible;
+	}
+
+	getGameActivityDefaultPending(): boolean {
+		return this.gameActivityDefaultPending;
 	}
 
 	isPrivacySetupPending(): boolean {
@@ -551,6 +565,8 @@ class UserSettingsState {
 	markSessionChanging(): void {
 		this.hydrated = false;
 		this.gameActivityVisibility = 'off';
+		this.gameActivityEligible = false;
+		this.gameActivityDefaultPending = false;
 	}
 
 	captureAccountTransitionCheckpoint(): UserSettingsAccountTransitionCheckpoint {
@@ -628,6 +644,8 @@ class UserSettingsState {
 		this.syncFlushGeneration += 1;
 		this.hydrated = false;
 		this.gameActivityVisibility = 'off';
+		this.gameActivityEligible = false;
+		this.gameActivityDefaultPending = false;
 		this.syncedPreferences = createEmptySyncedPreferences();
 		this.wireSyncedPreferences = createEmptySyncedPreferences();
 		this.dirtySyncedPreferenceFields.clear();
@@ -741,7 +759,12 @@ class UserSettingsState {
 		if (camelCaseSettings.defaultShareVoiceActivity !== undefined) {
 			this.defaultShareVoiceActivity = camelCaseSettings.defaultShareVoiceActivity;
 		}
-		this.gameActivityVisibility = camelCaseSettings.gameActivityVisibility === 'friends' ? 'friends' : 'off';
+		this.gameActivityVisibility =
+			camelCaseSettings.gameActivityVisibility === 'friends' || camelCaseSettings.gameActivityVisibility === 'everyone'
+				? camelCaseSettings.gameActivityVisibility
+				: 'off';
+		this.gameActivityEligible = camelCaseSettings.gameActivityEligible === true;
+		this.gameActivityDefaultPending = camelCaseSettings.gameActivityDefaultPending === true;
 		this.privacySetupVersion = camelCaseSettings.privacySetupVersion ?? null;
 		this.guildFolders = camelCaseSettings.guildFolders.map((folder) => ({
 			...folder,
@@ -834,6 +857,8 @@ class UserSettingsState {
 			defaultShareVoiceActivity: this.defaultShareVoiceActivity,
 			gameActivityVisibility: this.gameActivityVisibility,
 			privacySetupVersion: this.privacySetupVersion,
+			gameActivityEligible: this.gameActivityEligible,
+			gameActivityDefaultPending: this.gameActivityDefaultPending,
 			guildFolders: this.guildFolders.map((folder) => ({
 				...folder,
 				guildIds: [...folder.guildIds],

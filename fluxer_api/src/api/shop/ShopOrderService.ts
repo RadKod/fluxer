@@ -2,6 +2,7 @@
 
 import {randomUUID} from 'node:crypto';
 import type {UserID} from '@app/api/BrandedTypes';
+import type {EarlyPlusBadgeService} from '@app/api/badge/EarlyPlusBadgeService';
 import type {CosmeticService} from '@app/api/cosmetics/CosmeticService';
 import {
 	SHOP_ORDER_CHECK_SHARDS,
@@ -48,6 +49,7 @@ export interface ShopOrderServiceDeps {
 	cosmeticService: CosmeticService;
 	premiumLedgerService: PremiumLedgerService;
 	visionaryService: VisionaryService;
+	earlyPlusBadgeService: Pick<EarlyPlusBadgeService, 'grantIfOpen'>;
 	userRepository: Pick<UserRepository, 'findUnique'>;
 	kvClient: IKVProvider;
 	workerService: IWorkerService<WorkerTaskName>;
@@ -562,13 +564,19 @@ export class ShopOrderService {
 				const user = await this.deps.userRepository.findUnique(order.user_id);
 				if (user && this.deps.visionaryService.isVisionary(user)) {
 					Logger.warn({orderId}, 'Premium order paid by a Visionary account; refund by hand');
+					return;
 				}
+				await this.deps.earlyPlusBadgeService.grantIfOpen(order.user_id);
 				return;
 			}
 			case 'visionary': {
 				const delivery = await this.deps.visionaryService.deliverForOrder(order.user_id, order.order_id);
 				if (delivery.outcome === 'already_visionary') {
 					Logger.warn({orderId}, 'Visionary order paid by an account that already is a Visionary; refund by hand');
+				}
+				// Only a number this order gave: a refund-by-hand delivery or a taken-back number earns no badge.
+				if (delivery.outcome === 'granted' || delivery.outcome === 'already_granted') {
+					await this.deps.earlyPlusBadgeService.grantIfOpen(order.user_id);
 				}
 				return;
 			}

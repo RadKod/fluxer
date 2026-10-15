@@ -30791,6 +30791,11 @@
 						"anyOf": [{"$ref": "#/components/schemas/GameActivityVisibilitySchema"}, {"type": "null"}],
 						"description": "Who can see the current game; null disables sharing"
 					},
+					"game_activity_default_acknowledged": {
+						"type": "boolean",
+						"const": true,
+						"description": "Confirms the one-time notice about the default game sharing audience"
+					},
 					"flags": {
 						"type": "integer",
 						"minimum": -9007199254740991,
@@ -30966,6 +30971,14 @@
 						"default": "0",
 						"description": "Server-owned game sharing policy revision as a decimal string",
 						"$ref": "#/components/schemas/GameActivityPolicyRevisionSchema"
+					},
+					"game_activity_eligible": {
+						"description": "Whether the account may share its current game: 15 or older with a valid date of birth",
+						"type": "boolean"
+					},
+					"game_activity_default_pending": {
+						"description": "Whether the one-time notice about the default game sharing audience is still unconfirmed",
+						"type": "boolean"
 					},
 					"status": {"type": "string", "description": "The current online status of the user"},
 					"status_resets_at": {
@@ -48679,7 +48692,7 @@
 				]
 			},
 			"GameActivityPolicyRevisionSchema": {"type": "string", "pattern": "^(0|[1-9][0-9]{0,18})$"},
-			"GameActivityVisibilitySchema": {"type": "string", "enum": ["off", "friends"]},
+			"GameActivityVisibilitySchema": {"type": "string", "enum": ["off", "friends", "everyone"]},
 			"ProfilePrivacyLevelInput": {
 				"description": "Profile privacy visibility level",
 				"type": "integer",

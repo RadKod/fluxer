@@ -326,8 +326,9 @@ export interface UserSettingsRow {
 	staff_dm_access_user_ids: Set<UserID> | null;
 	synced_preferences: string | null;
 	profile_privacy: number | null;
-	game_activity_visibility?: 'off' | 'friends' | null;
+	game_activity_visibility?: 'off' | 'friends' | 'everyone' | null;
 	game_activity_policy_revision?: bigint | null;
+	game_activity_visibility_source?: 'default' | 'user' | null;
 	default_share_voice_activity: boolean | null;
 	privacy_setup_version: number | null;
 	privacy_setup_completed_at: Date | null;
@@ -571,6 +572,7 @@ export const USER_SETTINGS_COLUMNS = [
 	'profile_privacy',
 	'game_activity_visibility',
 	'game_activity_policy_revision',
+	'game_activity_visibility_source',
 	'default_share_voice_activity',
 	'privacy_setup_version',
 	'privacy_setup_completed_at',

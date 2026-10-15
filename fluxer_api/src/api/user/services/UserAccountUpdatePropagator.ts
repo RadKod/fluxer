@@ -4,21 +4,25 @@ import type {UserID} from '@app/api/BrandedTypes';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {UserGuildSettings} from '@app/api/models/UserGuildSettings';
 import type {UserSettings} from '@app/api/models/UserSettings';
+import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {dispatchUserGuildSettingsUpdate} from '@app/api/user/UserGuildSettingsThreadView';
 import {mapUserSettingsToResponse} from '@app/api/user/UserMappers';
 
 interface UserAccountUpdatePropagatorDeps {
 	gatewayService: IGatewayService;
+	// Micup: the settings response carries the effective game activity audience, which depends on the account.
+	userRepository: Pick<UserRepository, 'findUnique'>;
 }
 
 export class UserAccountUpdatePropagator {
 	constructor(private readonly deps: UserAccountUpdatePropagatorDeps) {}
 
 	async dispatchUserSettingsUpdate({userId, settings}: {userId: UserID; settings: UserSettings}): Promise<void> {
+		const user = await this.deps.userRepository.findUnique(userId);
 		await this.deps.gatewayService.dispatchPresence({
 			userId,
 			event: 'USER_SETTINGS_UPDATE',
-			data: mapUserSettingsToResponse({settings}),
+			data: mapUserSettingsToResponse({settings, user}),
 		});
 	}
 

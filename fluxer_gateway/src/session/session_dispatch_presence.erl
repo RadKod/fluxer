@@ -272,6 +272,7 @@ sync_presence_targets(FlushedIds, State) when is_map(State) ->
             GroupDmRecipients = presence_targets:group_dm_recipients_from_state(State),
             gen_server:cast(Pid, {sync_friends, FriendIds, FlushedIds}),
             gen_server:cast(Pid, {sync_group_dm_recipients, GroupDmRecipients}),
+            session_game_activity:sync_blocked(Pid, State),
             State
     end.
 

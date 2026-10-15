@@ -393,7 +393,8 @@ handle_update_member_subscriptions_local(_GuildId, SessionId, MemberIds, State) 
     ),
     State1 = State#{member_subscriptions => NewMemberSubs},
     State2 = handle_added_subscriptions(Added, SessionId, State1),
-    handle_removed_subscriptions(Removed, State2).
+    State3 = handle_removed_subscriptions(Removed, State2),
+    guild_game_activity:unsubscribed(SessionId, Removed, State3).
 
 -spec filter_member_ids_for_subscription(
     map(), user_id() | undefined, [user_id()], guild_state()

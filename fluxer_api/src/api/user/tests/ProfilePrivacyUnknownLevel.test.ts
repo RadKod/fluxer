@@ -22,9 +22,7 @@ describe('a profile privacy level this release does not know (Kapı 2 Ş9)', () 
 
 	// A level only a later release writes (100, 101) or anything else, straight into the settings row.
 	async function writeLevel(userId: string, level: number): Promise<void> {
-		const repository = getUserRepository();
-		const settings = await repository.findSettings(createUserID(BigInt(userId)));
-		await repository.upsertSettings({...settings!.toRow(), profile_privacy: level});
+		await getUserRepository().patchSettings(createUserID(BigInt(userId)), {profile_privacy: level});
 	}
 
 	// T0 knows 100 (everyone; ProfileAccessBonds.test.ts); 101 and an unknown value stay the owner's only.

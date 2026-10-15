@@ -324,12 +324,7 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 									/>
 								</div>
 							)}
-							{!isWebhook && (
-								<GameActivityDisplay
-									userId={user.id}
-									fullProfile={!!profile && !profile.profileLimited && !showProfileDataWarning}
-								/>
-							)}
+							{!isWebhook && <GameActivityDisplay userId={user.id} />}
 							{!isWebhook && (
 								<VoiceActivitySection
 									userId={user.id}

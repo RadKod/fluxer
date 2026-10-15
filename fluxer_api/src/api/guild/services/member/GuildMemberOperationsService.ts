@@ -559,6 +559,7 @@ export class GuildMemberOperationsService {
 		if (user && !user.isBot) {
 			await removeGuildFromUserFolders({
 				userId,
+				user,
 				guildId,
 				userRepository: this.userRepository,
 				gatewayService: this.gatewayService,
@@ -677,7 +678,7 @@ export class GuildMemberOperationsService {
 		}
 		if (needsUpdate) {
 			const updatedSettings = await this.userRepository.upsertSettings(settingsRow);
-			await this.dispatchUserSettingsUpdate({userId, settings: updatedSettings});
+			await this.dispatchUserSettingsUpdate({userId, settings: updatedSettings, user});
 		}
 		if (!user.isBot && userSettings.defaultHideMutedChannels) {
 			const existingGuildSettings = await this.userRepository.findGuildSettings(userId, guildId);
@@ -958,14 +959,16 @@ export class GuildMemberOperationsService {
 	private async dispatchUserSettingsUpdate({
 		userId,
 		settings,
+		user,
 	}: {
 		userId: UserID;
 		settings: UserSettings;
+		user: User;
 	}): Promise<void> {
 		await this.gatewayService.dispatchPresence({
 			userId,
 			event: 'USER_SETTINGS_UPDATE',
-			data: mapUserSettingsToResponse({settings}),
+			data: mapUserSettingsToResponse({settings, user}),
 		});
 	}
 

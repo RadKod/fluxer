@@ -497,7 +497,7 @@ export class GuildOperationsService {
 					await this.gatewayService.dispatchPresence({
 						userId: user.id,
 						event: 'USER_SETTINGS_UPDATE',
-						data: mapUserSettingsToResponse({settings: updatedSettings}),
+						data: mapUserSettingsToResponse({settings: updatedSettings, user}),
 					});
 				}
 			}
@@ -911,6 +911,7 @@ export class GuildOperationsService {
 			if (user && !user.isBot) {
 				await removeGuildFromUserFolders({
 					userId: member.userId,
+					user,
 					guildId,
 					userRepository: this.userRepository,
 					gatewayService: this.gatewayService,

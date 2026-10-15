@@ -23,7 +23,7 @@ export const GameActivitySchema = z
 	])
 	.refine((value) => textEncoder.encode(JSON.stringify(value)).length <= 512, 'Game activity exceeds 512 UTF-8 bytes');
 
-export const GameActivityVisibilitySchema = z.enum(['off', 'friends']);
+export const GameActivityVisibilitySchema = z.enum(['off', 'friends', 'everyone']);
 
 export const GameActivityPolicyRevisionSchema = z
 	.string()

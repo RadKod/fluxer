@@ -4,14 +4,12 @@ import {SettingsTabSection} from '@app/features/app/components/dialogs/shared/Se
 import {ExternalLink} from '@app/features/app/components/shared/ExternalLink';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import styles from '@app/features/game_activity/components/GameActivitySettingsTab.module.css';
-import GameActivitySettings from '@app/features/game_activity/state/GameActivitySettings';
 import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
 import DesktopGameActivityBridge from '@app/features/game_activity/utils/DesktopGameActivityBridge';
 import {Button} from '@app/features/ui/button/Button';
-import {Checkbox} from '@app/features/ui/checkbox/Checkbox';
 import {RadioGroup} from '@app/features/ui/radio_group/RadioGroup';
 import * as UserSettingsCommands from '@app/features/user/commands/UserSettingsCommands';
-import UserSettings from '@app/features/user/state/UserSettings';
+import UserSettings, {type GameActivityVisibility} from '@app/features/user/state/UserSettings';
 import Users from '@app/features/user/state/Users';
 import {getEffectiveProfilePrivacy} from '@app/features/user/utils/ProfilePrivacyUtils';
 import {ProfilePrivacyLevels} from '@fluxer/constants/src/UserConstants';
@@ -22,31 +20,36 @@ import {observer} from 'mobx-react-lite';
 import {useId, useState} from 'react';
 
 const TITLE = msg({message: 'Show my game activity', comment: 'Privacy settings heading for game sharing.'});
-const OFF = msg({message: 'Off', comment: 'Game sharing option; default.'});
-const FRIENDS = msg({message: 'Friends', comment: 'Game sharing option; only eligible friends receive it.'});
+const OFF = msg({
+	message: 'Off',
+	comment: 'Game sharing option; nobody sees the game and game detection on this device stops.',
+});
+const FRIENDS = msg({message: 'Friends', comment: 'Game sharing option; only friends see the game.'});
+const EVERYONE = msg({
+	message: 'Everyone',
+	comment:
+		'Game sharing option; friends and members of servers the user shares see the game. Not the public internet. Default for eligible accounts.',
+});
 const AGE = msg({
-	message: 'Available from age 16.',
-	comment: 'Game sharing requires the existing account age eligibility; unknown age is disabled.',
+	message: 'Available from age 15.',
+	comment: 'Game sharing requires the account to be 15 or older with a known date of birth; unknown age is disabled.',
 });
 const ONLY_ME = msg({
-	message: 'Your profile is set to Only me. Game activity is not shared, even when Friends is selected.',
-	comment: 'Explain that profile privacy also restricts game sharing.',
+	message: 'Your profile is set to Only me. Game activity is not shared, even when Friends or Everyone is selected.',
+	comment: 'Explain that the Only me profile privacy level hides game activity from everyone, friends included.',
 });
 const DISCLOSURE = msg({
 	message:
-		'Sharing sends your game name or ID and start time only to friends who can see your full profile. Activity is temporary and expires when it is no longer renewed. The process list stays on this device. You can turn sharing off and remove local game rules at any time.',
-	comment: 'Game activity disclosure before enabling; describes recipients, transient storage and local process data.',
+		'Sharing sends your game name or ID and start time to the people you choose. Everyone means your friends and members of servers you share; Friends means only your friends. People you’ve blocked can’t see it. Activity is temporary and expires when it is no longer renewed. The process list stays on this device. Off stops game detection on this device. You can remove local game rules at any time.',
+	comment:
+		'Game activity disclosure; describes recipients of each option, blocking, transient storage and local process data. Legal-effect text: approved before release.',
 });
 const RIGHTS = msg({
 	message: 'Read the Privacy Policy for your rights and how to exercise them.',
 	comment: 'Game activity link to the existing privacy policy.',
 });
-const DETECT = msg({
-	message: 'Detect games on this device',
-	comment: 'Account and device local game detection preference.',
-});
 const UNSUPPORTED = msg({
-	message: 'Game detection requires a supported desktop app. You can still see your friends’ game activity.',
+	message: 'Game detection requires a supported desktop app. You can still see other people’s game activity.',
 	comment: 'Web, legacy desktop and unsupported game detection explanation.',
 });
 const ERROR = msg({
@@ -83,10 +86,10 @@ export const GameActivitySettingsTab = observer(() => {
 	const candidateId = useId();
 	const account = Users.currentUser;
 	const accountId = account?.id;
-	const eligible = account?.publicProfileAllowed === true && !account.bot;
+	const eligible = UserSettings.getGameActivityEligible() && !!account && !account.bot;
 	const visibility = UserSettings.getGameActivityVisibility();
 	const [busy, setBusy] = useState(false);
-	const [failedVisibility, setFailedVisibility] = useState<'off' | 'friends' | null>(null);
+	const [failedVisibility, setFailedVisibility] = useState<GameActivityVisibility | null>(null);
 	const [localError, setLocalError] = useState(false);
 	const [rules, setRules] = useState<{accountId: string; values: Array<Rule>} | null>(null);
 	const [candidates, setCandidates] = useState<{accountId: string; values: Array<Candidate>; cursor?: string} | null>(
@@ -94,7 +97,7 @@ export const GameActivitySettingsTab = observer(() => {
 	);
 	const [token, setToken] = useState('');
 	const [name, setName] = useState('');
-	const updateVisibility = async (value: 'off' | 'friends') => {
+	const updateVisibility = async (value: GameActivityVisibility) => {
 		setBusy(true);
 		setFailedVisibility(null);
 		try {
@@ -148,6 +151,7 @@ export const GameActivitySettingsTab = observer(() => {
 					options={[
 						{value: 'off', name: i18n._(OFF), disabled: busy},
 						{value: 'friends', name: i18n._(FRIENDS), disabled: busy || !eligible},
+						{value: 'everyone', name: i18n._(EVERYONE), disabled: busy || !eligible},
 					]}
 				/>
 				{failedVisibility && (
@@ -161,22 +165,6 @@ export const GameActivitySettingsTab = observer(() => {
 				{localError && <p role="alert">{i18n._(LOCAL_ERROR)}</p>}
 				{DesktopGameActivityBridge.supported && accountId ? (
 					<>
-						<Checkbox
-							checked={GameActivitySettings.getDetectionEnabled(accountId)}
-							disabled={
-								busy ||
-								(!GameActivitySettings.getEffectiveSharing() && !GameActivitySettings.getDetectionEnabled(accountId))
-							}
-							onChange={(enabled) =>
-								void localAction(async () => {
-									if (!enabled) await DesktopGameActivityBridge.stopSharing();
-									GameActivitySettings.setDetectionEnabled(accountId, enabled);
-									await DesktopGameActivityBridge.refreshPolicy();
-								})
-							}
-						>
-							{i18n._(DETECT)}
-						</Checkbox>
 						<div className={styles.actions}>
 							<Button variant="secondary" disabled={busy} onClick={() => void localAction(() => listCandidates())}>
 								{i18n._(ADD)}

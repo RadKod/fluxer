@@ -16,6 +16,8 @@ import {useDMListItemHandlers} from '@app/features/channel/components/direct_mes
 import type {Channel} from '@app/features/channel/models/Channel';
 import * as ChannelUtils from '@app/features/channel/utils/ChannelUtils';
 import {NameplateBackground} from '@app/features/cosmetics/components/NameplateBackground';
+import {GameActivityRowStatus} from '@app/features/game_activity/components/GameActivityRowStatus';
+import {useGameActivity} from '@app/features/game_activity/hooks/useGameActivity';
 import {useLeaveGroup} from '@app/features/guild/hooks/useLeaveGroup';
 import Guilds from '@app/features/guild/state/Guilds';
 import {MENTION_COUNT_ARIA_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
@@ -130,6 +132,7 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 	const {i18n} = useLingui();
 	const recipientId = recipient?.id || '';
 	const isBotDM = Boolean(recipient?.bot || recipient?.system);
+	const gameActivity = useGameActivity({userId: recipientId, enabled: !isGroupDM && !isBotDM});
 	const isTyping = isGroupDM
 		? channel.recipientIds.some((groupRecipientId) => RollingTypingStore.isTyping(channel.id, groupRecipientId))
 		: RollingTypingStore.isTyping(channel.id, recipientId);
@@ -440,7 +443,14 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 											/>
 										)}
 									</span>
-									{!isGroupDM && recipient && !messagePreview && (
+									{gameActivity && (
+										<GameActivityRowStatus
+											activity={gameActivity}
+											className={styles.dmItemGameActivity}
+											data-flx="channel.direct-message.dm-list-item.dm-item-game-activity"
+										/>
+									)}
+									{!isGroupDM && recipient && !gameActivity && !messagePreview && (
 										<CustomStatusDisplay
 											userId={recipient.id}
 											className={styles.dmItemCustomStatus}
@@ -464,7 +474,7 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 											)}
 										</span>
 									)}
-									{!isGroupDM && messagePreview && (
+									{!isGroupDM && !gameActivity && messagePreview && (
 										<span
 											className={styles.dmItemSubtext}
 											data-flx="channel.direct-message.dm-list-item.dm-item-subtext"
@@ -602,7 +612,14 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 									/>
 								)}
 							</span>
-							{!isGroupDM && recipient && !messagePreview && (
+							{gameActivity && (
+								<GameActivityRowStatus
+									activity={gameActivity}
+									className={styles.dmItemGameActivity}
+									data-flx="channel.direct-message.dm-list-item.dm-item-game-activity--2"
+								/>
+							)}
+							{!isGroupDM && recipient && !gameActivity && !messagePreview && (
 								<CustomStatusDisplay
 									userId={recipient.id}
 									className={styles.dmItemCustomStatus}
@@ -626,7 +643,7 @@ const ResolvedDMListItem = observer(function ResolvedDMListItem({
 									)}
 								</span>
 							)}
-							{!isGroupDM && messagePreview && (
+							{!isGroupDM && !gameActivity && messagePreview && (
 								<span
 									className={styles.dmItemSubtext}
 									data-flx="channel.direct-message.dm-list-item.dm-item-subtext--2"

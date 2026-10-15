@@ -2,8 +2,8 @@
 
 use crate::{
     api::types::{
-        CosmeticItem, FlashMessage, ShopAdmin, ShopAdminBundle, ShopAdminHealth, ShopAdminOrder,
-        ShopAdminPriceRow, ShopAdminVisionary,
+        Badge, CosmeticItem, FlashMessage, ShopAdmin, ShopAdminBundle, ShopAdminHealth,
+        ShopAdminOrder, ShopAdminPriceRow, ShopAdminVisionary,
     },
     config::AdminConfig,
     middleware::auth::AuthContext,
@@ -76,6 +76,7 @@ pub struct ShopPageData<'a> {
     pub order_query: &'a str,
     pub order: Option<&'a ShopAdminOrder>,
     pub visionary: Option<&'a ShopAdminVisionary>,
+    pub badges: Option<&'a [Badge]>,
 }
 
 struct ProductRow<'a> {
@@ -114,6 +115,7 @@ pub fn shop_page(
                 Some(shop) => {
                     (card(sales_card(base, csrf_token, shop)))
                     (card(visionary_card(base, csrf_token, shop, data)))
+                    (card(early_plus_card(base, csrf_token, shop, data.badges)))
                     (card(bundles_card(base, csrf_token, shop, data.items)))
                     (card(prices_card(config, csrf_token, shop, data)))
                 }
@@ -418,6 +420,100 @@ fn visionary_rewards(
                         (form_actions(html! { (submit_button("Save rewards")) }))
                     }
                 }
+            }
+        }
+    }
+}
+
+const EARLY_PLUS_OPEN_CONFIRM: &str = "Open Early Plus? A job gives the badge to every earlier paid \
+     Plus and Visionary buyer that was not refunded, and the badge is fixed from now on.";
+const EARLY_PLUS_CLOSE_CONFIRM: &str =
+    "Close Early Plus? New buyers stop getting the badge; badges already given stay.";
+const EARLY_PLUS_BADGE_HINT: &str = "Choose a new badge made only for Early Plus. Revoke removes this \
+     badge from the user even if it was given by hand.";
+
+// Micup (Early Plus): paid Plus and Visionary orders give the chosen badge while open. The badge is
+// fixed after the first opening, and a numbered badge ({n}) is never offered. Choosing the badge and
+// opening need badges:manage (the badge list loads only with it); closing needs only shop:manage.
+fn early_plus_card(
+    base: &str,
+    csrf_token: &str,
+    shop: &ShopAdmin,
+    badges: Option<&[Badge]>,
+) -> Markup {
+    let open = shop.settings.early_plus_open;
+    let fixed = shop.settings.early_plus_opened_once;
+    let chosen = shop.settings.early_plus_badge_id.as_deref();
+    let chosen_label = chosen.map_or_else(
+        || "none".to_owned(),
+        |id| {
+            badges
+                .unwrap_or_default()
+                .iter()
+                .find(|badge| badge.id == id)
+                .map_or_else(|| id.to_owned(), |badge| badge.description.clone())
+        },
+    );
+    let options: Option<Vec<(&str, &str)>> = badges.map(|badges| {
+        std::iter::once(("", "None"))
+            .chain(
+                badges
+                    .iter()
+                    .filter(|badge| !badge.description.contains("{n}"))
+                    .map(|badge| (badge.id.as_str(), badge.description.as_str())),
+            )
+            .collect()
+    });
+    html! {
+        div class="flex flex-col gap-4" {
+            div class="flex flex-wrap items-center gap-2" {
+                h2 class="text-base font-semibold text-neutral-900" { "Early Plus" }
+                @if open {
+                    (badge("Open", BadgeVariant::Success))
+                } @else {
+                    (badge("Closed", BadgeVariant::Default))
+                }
+            }
+            p class="text-sm text-neutral-500" {
+                "While open, every paid Plus or Visionary order gives the badge below. Gift codes, admin \
+                 grants, referral rewards and trials do not. Ending Plus or taking Visionary back on a \
+                 user page takes it back; badges already given stay after closing."
+            }
+            p class="text-sm text-neutral-700" { "Badge: " (chosen_label) }
+            @if fixed {
+                p class="text-xs text-neutral-500" { "The badge is fixed: Early Plus has opened before." }
+            } @else {
+                @match &options {
+                    None => p class="text-sm text-neutral-500" {
+                        "Picking the badge and opening need the badges:manage permission."
+                    },
+                    Some(options) => {
+                        form method="post" action={(base) "/shop?action=early_plus_badge"}
+                            data-admin-result-form="true" class="flex flex-col gap-4" {
+                            (csrf_input(csrf_token))
+                            (select_input("early_plus_badge_id", "Badge", options, chosen.unwrap_or("")))
+                            p class="text-xs text-neutral-500" { (EARLY_PLUS_BADGE_HINT) }
+                            p class="text-xs text-neutral-500" {
+                                "Numbered badges ({n}) are left out."
+                            }
+                            (form_actions(html! { (submit_button("Save badge")) }))
+                        }
+                    }
+                }
+            }
+            @if open || options.is_some() {
+                form method="post" action={(base) "/shop?action=early_plus_open"}
+                    data-admin-result-form="true" class="flex flex-col gap-2"
+                    hx-confirm=(if open { EARLY_PLUS_CLOSE_CONFIRM } else { EARLY_PLUS_OPEN_CONFIRM }) {
+                    (csrf_input(csrf_token))
+                    input type="hidden" name="early_plus_open" value=(if open { "false" } else { "true" });
+                    (form_actions(html! { (submit_button(if open { "Close" } else { "Open" })) }))
+                    @if !open && chosen.is_none() {
+                        p class="text-xs text-neutral-500" { "Choose a badge before opening." }
+                    }
+                }
+            } @else if fixed {
+                p class="text-sm text-neutral-500" { "Opening needs the badges:manage permission." }
             }
         }
     }

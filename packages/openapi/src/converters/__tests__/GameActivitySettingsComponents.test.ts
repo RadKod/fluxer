@@ -11,7 +11,7 @@ describe('game activity settings response components', () => {
 
 		expect(schema.properties?.game_activity_visibility).toEqual({
 			type: 'string',
-			enum: ['off', 'friends'],
+			enum: ['off', 'friends', 'everyone'],
 			default: 'off',
 			description: 'Who can see the current game',
 		});

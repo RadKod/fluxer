@@ -17,7 +17,8 @@
     cleanup/2,
     prepare/3,
     down/2,
-    refresh/2
+    refresh/2,
+    sync_blocked/2
 ]).
 
 -spec expect(integer(), map(), map()) -> {reply, term(), map()}.
@@ -241,6 +242,8 @@ rollout_payload() ->
     session_game_activity_rollout:payload().
 
 -spec allowed(map(), map()) -> boolean().
+allowed(#{<<"guild_id">> := GuildId} = Data, State) ->
+    guild_allowed(snowflake_id:parse_maybe(GuildId), Data, State);
 allowed(Data, State) ->
     OwnerId = session_dispatch_presence:presence_user_id(Data),
     Grants = maps:get(game_activity_grants, State, #{}),
@@ -260,7 +263,46 @@ allowed(Data, State) ->
             false
     end.
 
+-spec guild_allowed(term(), map(), map()) -> boolean().
+guild_allowed(GuildId, #{game_activity_stamp := #{scope := guild} = Stamp} = Data, State) when
+    is_integer(GuildId)
+->
+    OwnerId = session_dispatch_presence:presence_user_id(Data),
+    is_integer(OwnerId) andalso is_map_key(GuildId, maps:get(guilds, State, #{})) andalso
+        OwnerId =/= maps:get(user_id, State, undefined) andalso human_receiver(State) andalso
+        maps:get(OwnerId, maps:get(relationships, State, #{}), undefined) =/= 2 andalso
+        rollout_allows(Stamp) andalso not older_guild_revision(OwnerId, Stamp, State);
+guild_allowed(_GuildId, _Data, _State) ->
+    false.
+
+-spec older_guild_revision(integer(), map(), map()) -> boolean().
+older_guild_revision(OwnerId, Stamp, State) ->
+    case maps:get(activity_revision, Stamp, undefined) of
+        Revision when is_integer(Revision) ->
+            revision_epoch(OwnerId, State) =:= maps:get(owner_epoch, Stamp, undefined) andalso
+                Revision < maps:get(OwnerId, maps:get(game_activity_revisions, State, #{}), 0);
+        _ ->
+            true
+    end.
+
+-spec revision_epoch(integer(), map()) -> term().
+revision_epoch(OwnerId, State) ->
+    case maps:find(OwnerId, maps:get(game_activity_grants, State, #{})) of
+        {ok, #{owner_epoch := Epoch}} -> Epoch;
+        _ -> maps:get(OwnerId, maps:get(game_activity_revision_epochs, State, #{}), undefined)
+    end.
+
 -spec prepare(atom() | binary(), term(), map()) -> {boolean(), map()}.
+prepare(Event, #{game_activity_stamp := #{scope := guild} = Stamp} = Data, State) when
+    Event =:= presence_update orelse Event =:= <<"PRESENCE_UPDATE">>
+->
+    case session_dispatch_presence:presence_user_id(Data) of
+        OwnerId when is_integer(OwnerId) ->
+            Activity = maps:get(<<"game_activity">>, Data, null),
+            {true, guild_revision(OwnerId, Activity, Stamp, State)};
+        _ ->
+            {true, State}
+    end;
 prepare(Event, #{game_activity_stamp := Stamp} = Data, State) when
     is_map(Stamp) andalso
         (Event =:= presence_update orelse Event =:= <<"PRESENCE_UPDATE">>)
@@ -276,6 +318,53 @@ prepare(Event, #{game_activity_stamp := Stamp} = Data, State) when
     end;
 prepare(Event, Data, State) ->
     {true, presence_transition(Event, Data, State)}.
+
+-spec guild_revision(integer(), term(), map(), map()) -> map().
+guild_revision(OwnerId, Activity, Stamp, State) ->
+    Granted = is_map_key(OwnerId, maps:get(game_activity_grants, State, #{})),
+    case {Activity, Granted, maps:get(activity_revision, Stamp, undefined)} of
+        {null, false, _} ->
+            %% Without a friend grant the entry only serves guild scopes, and a null ends them.
+            forget_revision(OwnerId, State);
+        {_, _, Revision} when is_integer(Revision) ->
+            record_guild_revision(OwnerId, Revision, Granted, Stamp, State);
+        _ ->
+            State
+    end.
+
+-spec record_guild_revision(integer(), integer(), boolean(), map(), map()) -> map().
+record_guild_revision(OwnerId, Revision, Granted, Stamp, State) ->
+    Epoch = maps:get(owner_epoch, Stamp, undefined),
+    Revisions = maps:get(game_activity_revisions, State, #{}),
+    Stored = maps:get(OwnerId, Revisions, 0),
+    case {revision_epoch(OwnerId, State) =:= Epoch, Granted} of
+        {true, _} when Revision < Stored ->
+            State;
+        {true, _} ->
+            State#{game_activity_revisions => Revisions#{OwnerId => Revision}};
+        {false, true} ->
+            State;
+        {false, false} ->
+            Epochs = maps:get(game_activity_revision_epochs, State, #{}),
+            State#{
+                game_activity_revisions => Revisions#{OwnerId => Revision},
+                game_activity_revision_epochs => Epochs#{OwnerId => Epoch}
+            }
+    end.
+
+-spec forget_revision(integer(), map()) -> map().
+forget_revision(OwnerId, State) ->
+    Revisions = maps:get(game_activity_revisions, State, #{}),
+    Epochs = maps:get(game_activity_revision_epochs, State, #{}),
+    State#{
+        game_activity_revisions => maps:remove(OwnerId, Revisions),
+        game_activity_revision_epochs => maps:remove(OwnerId, Epochs)
+    }.
+
+-spec sync_blocked(pid(), map()) -> ok.
+sync_blocked(PresencePid, State) ->
+    Blocked = [Id || {Id, 2} <- maps:to_list(maps:get(relationships, State, #{}))],
+    gen_server:cast(PresencePid, {game_activity_blocked, Blocked}).
 
 -spec presence_transition(atom() | binary(), term(), map()) -> map().
 presence_transition(Event, #{<<"status">> := Status} = Data, State) when
@@ -429,7 +518,37 @@ rollout_allows(Stamp) ->
 
 -spec replay([map()], map()) -> [map()].
 replay(Entries, State) ->
-    session_game_activity_rollout:replay(Entries, State).
+    {Latest, _Seen} = lists:foldr(fun replay_entry/2, {[], #{}}, Entries),
+    session_game_activity_rollout:replay(Latest, State).
+
+-spec replay_entry(map(), {[map()], map()}) -> {[map()], map()}.
+replay_entry(#{event := Event, data := {pre_encoded, Binary}} = Entry, Acc) when
+    Event =:= presence_update orelse Event =:= <<"PRESENCE_UPDATE">>
+->
+    replay_entry(Entry#{data => json:decode(Binary)}, Acc);
+replay_entry(
+    #{event := Event, data := #{<<"guild_id">> := GuildId, <<"game_activity">> := _} = Data} =
+        Entry,
+    {Entries, Seen}
+) when Event =:= presence_update orelse Event =:= <<"PRESENCE_UPDATE">> ->
+    case
+        {session_dispatch_presence:presence_user_id(Data), snowflake_id:parse_maybe(GuildId)}
+    of
+        {OwnerId, Guild} when is_integer(OwnerId), is_integer(Guild) ->
+            Key = {OwnerId, Guild},
+            case maps:is_key(Key, Seen) of
+                true ->
+                    %% Keep the sequence and ordinary presence fields without replaying old games.
+                    Clean = maps:without([<<"game_activity">>, game_activity_stamp], Data),
+                    {[Entry#{data => Clean} | Entries], Seen};
+                false ->
+                    {[Entry | Entries], Seen#{Key => true}}
+            end;
+        _ ->
+            {[Entry | Entries], Seen}
+    end;
+replay_entry(Entry, {Entries, Seen}) ->
+    {[Entry | Entries], Seen}.
 
 -spec subscribe(map()) -> map().
 subscribe(State) ->

@@ -93,7 +93,8 @@ update(SessionId, PartnerIds, State) ->
             error ->
                 {maps:remove(SessionId, Registrations), State}
         end,
-    State1#{dm_partners => maybe_prune(Next, State1)}.
+    Kept = maybe_prune(Next, State1),
+    commit(Registrations, Kept, [SessionId | pruned_keys(Next, Kept)], State1).
 
 -spec update_owned(session_id(), user_id(), pid(), [term()], registrations(), guild_state()) ->
     {registrations(), guild_state()}.
@@ -119,7 +120,7 @@ reevaluate(none, _Registrations, State) ->
     State;
 reevaluate(all, Registrations, State) ->
     {Evaluated, State1} = evaluate(live_registrations(Registrations, State), State),
-    State1#{dm_partners => Evaluated};
+    commit(Registrations, Evaluated, maps:keys(Registrations), State1);
 reevaluate({user, UserId}, Registrations, State) ->
     Affected = maps:fold(
         fun(SessionId, Entry, Acc) ->
@@ -140,8 +141,22 @@ reevaluate({user, UserId}, Registrations, State) ->
                 maps:keys(maps:without(maps:keys(Live), Affected)), Registrations
             ),
             {Evaluated, State1} = evaluate(Live, State),
-            State1#{dm_partners => maybe_prune(put_all(Evaluated, Kept), State1)}
+            Merged = put_all(Evaluated, Kept),
+            Final = maybe_prune(Merged, State1),
+            commit(
+                Registrations, Final, maps:keys(Affected) ++ pruned_keys(Merged, Final), State1
+            )
     end.
+
+-spec commit(registrations(), registrations(), [session_id()], guild_state()) -> guild_state().
+commit(Previous, Next, Touched, State) ->
+    (guild_game_activity:dm_eligibility(Previous, Next, Touched, State))#{dm_partners => Next}.
+
+-spec pruned_keys(registrations(), registrations()) -> [session_id()].
+pruned_keys(Same, Same) ->
+    [];
+pruned_keys(Before, After) ->
+    maps:keys(maps:without(maps:keys(After), Before)).
 
 -spec put_all(registrations(), registrations()) -> registrations().
 put_all(Entries, Registrations) ->

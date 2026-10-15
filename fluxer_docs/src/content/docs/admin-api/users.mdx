@@ -166,6 +166,7 @@ The `flags` field of the [Admin user object](#admin-user-object) is a 64-bit bit
 | 1 &lt;&lt; 6 | PURCHASE_DISABLED | Premium purchase is disabled |
 | 1 &lt;&lt; 7 | ENABLED_OVERRIDE | Premium status has an enabled override |
 | 1 &lt;&lt; 8 | PERKS_DISABLED | Premium perks are temporarily disabled |
+| 1 &lt;&lt; 30 | EARLY_PLUS_REFUNDED | Early Plus badge taken back on a refund; the Early Plus backfill skips the account |
 
 ## Premium types
 
@@ -1414,7 +1415,7 @@ Ends the premium time an account holds now, for example after a refund. Requires
 
 ### Side effects
 
-The end of the account's premium time becomes the time of the call, and the history of applied grants and the trial is kept, so premium bought later starts from then. Repeating the call changes nothing. Lifetime premium, including Visionary, is not ended. Use [Take Visionary from user](#take-visionary-from-user) for that.
+The end of the account's premium time becomes the time of the call, and the history of applied grants and the trial is kept, so premium bought later starts from then. The account loses the Early Plus badge, if one is chosen in the shop settings, and gets the `EARLY_PLUS_REFUNDED` [premium flag](#premium-flags). Repeating the call changes nothing. Lifetime premium, including Visionary, is not ended. Use [Take Visionary from user](#take-visionary-from-user) for that.
 
 When the account's premium end moved, [User Update](/gateway/events/#user-update) is emitted to the account's own sessions, and the premium expiration job later clears its premium-only perks.
 
@@ -1491,7 +1492,7 @@ Takes an account's Visionary number, its lifetime premium and its Visionary rewa
 
 ### Side effects
 
-The number is retired and never sold again. Its row keeps the account as owner and records when it was taken back, so a retried delivery of the shop order that bought it gives nothing. The lifetime premium and the premium lifetime sequence are cleared. Premium time the account still holds, such as purchased months, is written back in the same step. An account that wears the discriminator `0000` gets the `DISCRIMINATOR` [premium flag](#premium-flags), so its tag is reset at its next session start. The reward items are taken back as [Take cosmetic item back from user](/admin-api/cosmetics/#take-cosmetic-item-back-from-user) does, and a reward item that no longer exists is skipped. A reward item the account owned from another source before, such as a purchase, an item code or an admin gift, stays, and `rewards_taken_back` does not count it. The account's sessions receive [User Update](/gateway/events/#user-update).
+The number is retired and never sold again. Its row keeps the account as owner and records when it was taken back, so a retried delivery of the shop order that bought it gives nothing. The lifetime premium and the premium lifetime sequence are cleared. Premium time the account still holds, such as purchased months, is written back in the same step. An account that wears the discriminator `0000` gets the `DISCRIMINATOR` [premium flag](#premium-flags), so its tag is reset at its next session start. The reward items are taken back as [Take cosmetic item back from user](/admin-api/cosmetics/#take-cosmetic-item-back-from-user) does, and a reward item that no longer exists is skipped. A reward item the account owned from another source before, such as a purchase, an item code or an admin gift, stays, and `rewards_taken_back` does not count it. The account's sessions receive [User Update](/gateway/events/#user-update). The account loses the Early Plus badge, if one is chosen in the shop settings, and gets the `EARLY_PLUS_REFUNDED` [premium flag](#premium-flags).
 
 The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `revoke_visionary`, target type `user`, and the metadata keys `slot`, `changed` and `rewards_taken_back`.
 

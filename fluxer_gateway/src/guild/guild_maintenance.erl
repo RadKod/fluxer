@@ -156,7 +156,8 @@ prune_invalid_member_subscriptions(State) ->
         MemberSubs, Sessions, State
     ),
     State1 = State#{member_subscriptions => NewMemberSubs},
-    apply_presence_unsub_counts(PresenceUnsubs, State1).
+    State2 = apply_presence_unsub_counts(PresenceUnsubs, State1),
+    guild_game_activity:subscriptions_pruned(MemberSubs, State2).
 
 -spec member_subscriptions(guild_state()) -> subscription_state().
 member_subscriptions(State) ->

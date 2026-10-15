@@ -136,6 +136,7 @@ try_session_connect(
         {ok, Sessions} ->
             gen_server:cast(Pid, {sync_friends, FriendIds}),
             gen_server:cast(Pid, {sync_group_dm_recipients, GroupDmRecipients}),
+            session_game_activity:sync_blocked(Pid, State1),
             maybe_demonitor_presence(State1),
             MRef = monitor(process, Pid),
             NewState = State1#{

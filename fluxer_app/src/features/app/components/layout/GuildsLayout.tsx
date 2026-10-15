@@ -1307,6 +1307,7 @@ const SKELETON_NAGBAR_ROW_SHAPES: Record<NagbarType, SkeletonNagbarRowShape> = {
 	[NagbarType.PROFILE_PUBLIC_OFFER]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 	[NagbarType.DOMAIN_MOVED]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 	[NagbarType.WINDOWS_FONT]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
+	[NagbarType.GAME_ACTIVITY_DEFAULT]: {tone: SkeletonNagbarTone.BRAND, hasActions: true},
 };
 
 const CONNECTION_SKELETON_NAGBAR_TONES: Record<ConnectionNoticeTone, SkeletonNagbarTone> = {

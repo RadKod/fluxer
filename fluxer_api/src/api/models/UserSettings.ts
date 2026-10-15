@@ -67,8 +67,9 @@ export class UserSettings {
 	readonly staffDmAccessUserIds: Set<UserID>;
 	readonly syncedPreferences: string;
 	readonly profilePrivacy: ProfilePrivacyLevel;
-	readonly gameActivityVisibility: 'off' | 'friends';
+	readonly gameActivityVisibility: 'off' | 'friends' | 'everyone' | null;
 	readonly gameActivityPolicyRevision: bigint;
+	readonly gameActivityVisibilitySource: 'default' | 'user' | null;
 	private readonly storedGameActivityPolicyRevision: bigint | null;
 	readonly defaultShareVoiceActivity: boolean;
 	readonly privacySetupVersion: number;
@@ -119,9 +120,18 @@ export class UserSettings {
 		this.staffDmAccessUserIds = row.staff_dm_access_user_ids ?? new Set<UserID>();
 		this.syncedPreferences = normalizeStoredSyncedPreferences(row.synced_preferences);
 		this.profilePrivacy = (row.profile_privacy ?? ProfilePrivacyLevels.ALL_GUILDS) as ProfilePrivacyLevel;
-		this.gameActivityVisibility = row.game_activity_visibility === 'friends' ? 'friends' : 'off';
+		this.gameActivityVisibility =
+			row.game_activity_visibility == null ||
+			row.game_activity_visibility === 'friends' ||
+			row.game_activity_visibility === 'everyone'
+				? (row.game_activity_visibility ?? null)
+				: 'off';
 		this.storedGameActivityPolicyRevision = row.game_activity_policy_revision ?? null;
 		this.gameActivityPolicyRevision = this.storedGameActivityPolicyRevision ?? 0n;
+		this.gameActivityVisibilitySource =
+			row.game_activity_visibility_source === 'default' || row.game_activity_visibility_source === 'user'
+				? row.game_activity_visibility_source
+				: null;
 		this.defaultShareVoiceActivity = row.default_share_voice_activity ?? true;
 		this.privacySetupVersion = row.privacy_setup_version ?? 0;
 		this.privacySetupCompletedAt = row.privacy_setup_completed_at ?? null;
@@ -174,6 +184,7 @@ export class UserSettings {
 			profile_privacy: this.profilePrivacy,
 			game_activity_visibility: this.gameActivityVisibility,
 			game_activity_policy_revision: this.storedGameActivityPolicyRevision,
+			game_activity_visibility_source: this.gameActivityVisibilitySource,
 			default_share_voice_activity: this.defaultShareVoiceActivity,
 			privacy_setup_version: this.privacySetupVersion,
 			privacy_setup_completed_at: this.privacySetupCompletedAt,
@@ -251,8 +262,9 @@ export class UserSettings {
 			staff_dm_access_user_ids: null,
 			synced_preferences: null,
 			profile_privacy: publicProfile ? ProfilePrivacyLevels.EVERYONE : ProfilePrivacyLevels.ALL_GUILDS,
-			game_activity_visibility: 'off',
+			game_activity_visibility: null,
 			game_activity_policy_revision: null,
+			game_activity_visibility_source: 'default',
 			default_share_voice_activity: true,
 			privacy_setup_version: 0,
 			privacy_setup_completed_at: null,

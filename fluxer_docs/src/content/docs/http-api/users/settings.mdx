@@ -241,7 +241,8 @@ Further members are accepted and ignored. Nothing reads `guild_positions`, and o
 | staff_dm_access_user_ids?<sup>12</sup> | ?array[snowflake] | The users granted staff direct message access |
 | profile_privacy?<sup>13</sup> | integer | [Profile privacy level](/http-api/users/#profile-privacy-levels) |
 | privacy_setup_version?<sup>16</sup> | integer | The privacy setup version the user just reviewed (1-1000) |
-| game_activity_visibility?<sup>15</sup> | ?string | `off` disables game sharing; `friends` shares the current game with friends; null disables sharing |
+| game_activity_visibility?<sup>15</sup> | ?string | `off`, `friends` (friends only), `everyone` (friends and members of shared guilds), or null to disable sharing |
+| game_activity_default_acknowledged?<sup>17</sup> | boolean | `true` records that the account has seen the one-time notice about the default game sharing audience |
 | synced_preferences?<sup>14</sup> | ?string | The base64-encoded `fluxer.user.preferences.v1.SyncedPreferences` snapshot, or null to clear it |
 | guild_positions? | array[snowflake] | Accepted and ignored (max 200) |
 | default_share_voice_activity? | boolean | Accepted and ignored |
@@ -274,11 +275,13 @@ Further members are accepted and ignored. Nothing reads `guild_positions`, and o
 
 <sup>14</sup> The value runs to at most 699052 characters of base64 and decodes to at most 524288 bytes, the 512 KiB ceiling. A longer string returns 400 `INVALID_FORM_BODY`, an oversized decode fails with `TOO_LARGE`, and an undecodable value fails with `INVALID_FORMAT`
 
-<sup>15</sup> Enabling `friends` needs a recorded date of birth of 16 years or older; otherwise the field fails with `MUST_BE_MINIMUM_AGE`. Sharing also depends on the instance rollout and the account's profile privacy
+<sup>15</sup> Enabling `friends` or `everyone` needs a valid recorded date of birth of 15 years or older; otherwise the field fails with `MUST_BE_MINIMUM_AGE`. A written value becomes the account's own choice and replaces the default. Sharing also depends on the instance rollout and the account's profile privacy, and the `ONLY_ME` level shares with nobody
 
 <sup>16</sup> Fluxer stores the value as given and sets `privacy_setup_completed_at` to the time of the update
 
-Both [Get current user settings](#get-current-user-settings) and [Modify current user settings](#modify-current-user-settings) return `game_activity_visibility` as `off` or `friends`, with `off` as the default. They also return `game_activity_policy_revision`, a server-owned decimal string starting at `"0"`. The revision advances when the game sharing policy changes. The server checks it during conditional writes and revocation so an older concurrent write cannot overwrite a newer policy. It is read-only and is not a PATCH input.
+<sup>17</sup> Only `true` is accepted. It takes effect once, for an eligible account that has never chosen a value, and switches that account to the default `everyone` audience. For any other account the field is accepted and changes nothing
+
+Both [Get current user settings](#get-current-user-settings) and [Modify current user settings](#modify-current-user-settings) return `game_activity_visibility` as the effective audience: `off`, `friends` or `everyone`. Eligible new accounts default to `everyone`; ineligible accounts use `off`. Older eligible accounts awaiting the default notice acknowledgement keep their earlier setting, and switch to `everyone` after acknowledging the notice unless they have chosen their own value. They also return `game_activity_eligible`, which is true for a human account with a valid date of birth of 15 years or older, and `game_activity_default_pending`, which is true while an eligible account has neither chosen a value nor acknowledged the default notice. They also return `game_activity_policy_revision`, a server-owned decimal string starting at `"0"`. The revision advances when the game sharing policy changes. The server checks it during conditional writes and revocation so an older concurrent write cannot overwrite a newer policy. It is read-only and is not a PATCH input.
 
 The first-party client stops local game detection before changing sharing or profile privacy. It confirms the requested value in the PATCH response before restarting under the returned policy, and rejects a response superseded by a later local change or account switch. It does not send or compare `game_activity_policy_revision`. After an uncertain sharing save, it reads settings again and keeps detection stopped until a later confirmed save.
 

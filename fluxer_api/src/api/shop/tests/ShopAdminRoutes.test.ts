@@ -106,6 +106,9 @@ describe('shop admin', () => {
 			payment_provider_configured: true,
 			visionary_on_sale: false,
 			visionary_reward_item_ids: [],
+			early_plus_badge_id: null,
+			early_plus_open: false,
+			early_plus_opened_once: false,
 		});
 		const row = await fetchOne<InstanceConfigurationRow>(
 			InstanceConfiguration.selectCql({where: InstanceConfiguration.where.eq('key'), limit: 1}),
@@ -117,6 +120,9 @@ describe('shop admin', () => {
 			premium_discount_percent: 25,
 			visionary_on_sale: false,
 			visionary_reward_item_ids: [],
+			early_plus_badge_id: null,
+			early_plus_open: false,
+			early_plus_opened_once: false,
 		});
 		expect((await view()).settings).toEqual(settings);
 	});

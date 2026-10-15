@@ -1,0 +1,21 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.root {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	min-width: 0;
+	max-width: 100%;
+}
+.icon {
+	flex-shrink: 0;
+	width: 0.875rem;
+	height: 0.875rem;
+	border-radius: var(--radius-sm);
+	object-fit: cover;
+}
+.name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}

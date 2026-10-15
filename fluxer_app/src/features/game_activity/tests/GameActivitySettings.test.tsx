@@ -12,6 +12,7 @@ const state = await vi.hoisted(async () => {
 		accountId: 'account',
 		visibility: 'off',
 		eligible: true as boolean | undefined,
+		publicProfileAllowed: true,
 		privacy: 0,
 		supported: true,
 		rolloutEnabled: true,
@@ -46,6 +47,7 @@ vi.mock('@lingui/react/macro', () => ({
 vi.mock('@app/features/user/state/UserSettings', () => ({
 	default: {
 		getGameActivityVisibility: () => state.visibility,
+		getGameActivityEligible: () => state.eligible === true,
 		getProfilePrivacy: () => state.privacy,
 		getAccountEpoch: () => 0,
 		isHydrated: () => true,
@@ -56,7 +58,7 @@ vi.mock('@app/features/user/state/UserSettings', () => ({
 vi.mock('@app/features/user/state/Users', () => ({
 	default: {
 		get currentUser() {
-			return {id: state.accountId, publicProfileAllowed: state.eligible, bot: false};
+			return {id: state.accountId, publicProfileAllowed: state.publicProfileAllowed, bot: false};
 		},
 	},
 }));
@@ -90,24 +92,6 @@ vi.mock('@app/features/app/components/dialogs/shared/SettingsTabLayout', () => (
 vi.mock('@app/features/ui/button/Button', () => ({
 	Button: ({children, submitting, ...props}: {children: ReactNode; submitting?: boolean}) =>
 		createElement('button', {type: 'button', ...props}, children),
-}));
-vi.mock('@app/features/ui/checkbox/Checkbox', () => ({
-	Checkbox: ({
-		children,
-		checked,
-		onChange,
-		disabled,
-	}: {
-		children: ReactNode;
-		checked: boolean;
-		disabled?: boolean;
-		onChange: (value: boolean) => void;
-	}) =>
-		createElement(
-			'button',
-			{type: 'button', role: 'checkbox', 'aria-checked': checked, disabled, onClick: () => onChange(!checked)},
-			children,
-		),
 }));
 vi.mock('@app/features/ui/radio_group/RadioGroup', () => ({
 	RadioGroup: ({
@@ -168,11 +152,11 @@ describe('Game activity settings', () => {
 		state.visibility = 'off';
 		state.accountId = 'account';
 		state.eligible = true;
+		state.publicProfileAllowed = true;
 		state.privacy = 0;
 		state.supported = true;
 		state.rolloutEnabled = true;
 		GameActivitySettings.setSharingUnconfirmed('account', false);
-		GameActivitySettings.setDetectionEnabled('account', false);
 		mocks.listRules.mockResolvedValue({state: 'ok', rules: [{rule_id: 'r', manual_name: 'My game'}]});
 		mocks.remove.mockResolvedValue({state: 'ok'});
 		mocks.refresh.mockResolvedValue(undefined);
@@ -191,7 +175,7 @@ describe('Game activity settings', () => {
 	const render = async () => act(async () => root.render(createElement(GameActivitySettingsTab)));
 	it('hides every game control while rollout is disabled even with saved preferences', async () => {
 		state.visibility = 'friends';
-		GameActivitySettings.setDetectionEnabled('account', true);
+		mocks.storage.set('GameActivity:detection:account', 'true');
 		state.rolloutEnabled = false;
 		await render();
 		expect(container.textContent).toBe('');
@@ -199,34 +183,69 @@ describe('Game activity settings', () => {
 		expect(mocks.listRules).not.toHaveBeenCalled();
 		expect(mocks.candidates).not.toHaveBeenCalled();
 	});
-	it('default_off and device preference is account scoped and never stores activity', () => {
-		const settings = new GameActivitySettingsState();
-		expect(settings.getDetectionEnabled('one')).toBe(false);
-		settings.setDetectionEnabled('one', true);
-		expect(settings.getDetectionEnabled('one')).toBe(true);
-		expect(settings.getDetectionEnabled('two')).toBe(false);
-		expect([...mocks.storage.values()]).toEqual(['true']);
+	it('three_options_and_no_detection_checkbox', async () => {
+		state.visibility = 'everyone';
+		mocks.storage.set('GameActivity:detection:account', 'false');
+		await render();
+		const radios = [...container.querySelectorAll('[role="radio"]')].map((item) => item.textContent);
+		expect(radios).toEqual(['Off', 'Friends', 'Everyone']);
+		expect(button('Everyone').getAttribute('aria-checked')).toBe('true');
+		expect(container.querySelector('[role="checkbox"]')).toBeNull();
+		expect(container.textContent).not.toContain('Detect games on this device');
+		await act(async () => button('Friends').click());
+		expect(mocks.update).toHaveBeenCalledWith('friends');
+		await act(async () => button('Everyone').click());
+		expect(mocks.update).toHaveBeenLastCalledWith('everyone');
+		expect(mocks.storage.get('GameActivity:detection:account')).toBe('false');
 	});
-	it('under16_unknown_cannot_enable', async () => {
+	it('detection preference no longer exists and old local keys are neither read nor removed', () => {
+		const settings = new GameActivitySettingsState() as unknown as Record<string, unknown>;
+		expect(settings.getDetectionEnabled).toBeUndefined();
+		expect(settings.setDetectionEnabled).toBeUndefined();
+		mocks.storage.set('GameActivity:detection:account', 'false');
+		state.visibility = 'friends';
+		expect(new GameActivitySettingsState().getEffectiveSharing()).toBe(true);
+		expect(mocks.storage.get('GameActivity:detection:account')).toBe('false');
+	});
+	it('under15_unknown_cannot_enable', async () => {
 		state.eligible = false;
 		await render();
 		expect(button('Friends').disabled).toBe(true);
+		expect(button('Everyone').disabled).toBe(true);
+		expect(button('Off').disabled).toBe(false);
 		act(() => {
 			state.eligible = undefined;
 		});
-		expect(button('Friends').disabled).toBe(true);
-		expect(container.textContent).toContain('Available from age 16.');
+		expect(button('Everyone').disabled).toBe(true);
+		expect(container.textContent).toContain('Available from age 15.');
+		expect(container.textContent).not.toContain('16');
 	});
-	it('effective sharing requires known age and an eligible profile', () => {
+	it('eligibility_comes_from_game_activity_eligible_not_public_profile', async () => {
+		state.publicProfileAllowed = false;
+		state.visibility = 'everyone';
+		await render();
+		expect(button('Everyone').disabled).toBe(false);
+		expect(container.textContent).not.toContain('Available from age');
+		expect(new GameActivitySettingsState().getEffectiveSharing()).toBe(true);
+		state.publicProfileAllowed = true;
+		state.eligible = false;
+		expect(new GameActivitySettingsState().getEffectiveSharing()).toBe(false);
+	});
+	it('effective sharing requires known age and friends or everyone', () => {
 		const settings = new GameActivitySettingsState();
 		expect(settings.getEffectiveSharing()).toBe(false);
 		state.visibility = 'friends';
 		expect(settings.getEffectiveSharing()).toBe(true);
+		state.visibility = 'everyone';
+		expect(settings.getEffectiveSharing()).toBe(true);
+		state.visibility = 'unknown';
+		expect(settings.getEffectiveSharing()).toBe(false);
+		state.visibility = 'everyone';
 		state.eligible = undefined;
 		expect(settings.getEffectiveSharing()).toBe(false);
 	});
 	it('only_me_explained_and_stops_producer through effective policy', async () => {
-		state.visibility = 'friends';
+		state.visibility = 'everyone';
 		state.privacy = ProfilePrivacyLevels.ONLY_ME;
 		await render();
 		expect(new GameActivitySettingsState().getEffectiveSharing()).toBe(false);
@@ -268,7 +287,7 @@ describe('Game activity settings', () => {
 		expect(mocks.refresh).not.toHaveBeenCalled();
 		expect(mocks.apply).toHaveBeenCalledWith(
 			{game_activity_visibility: 'friends'},
-			{hydrate: false, fields: ['gameActivityVisibility']},
+			{hydrate: false, fields: ['gameActivityVisibility', 'gameActivityEligible', 'gameActivityDefaultPending']},
 		);
 		state.visibility = 'friends';
 		expect(GameActivitySettings.getEffectiveSharing()).toBe(false);
@@ -313,17 +332,6 @@ describe('Game activity settings', () => {
 		expect(mocks.apply).not.toHaveBeenCalled();
 		resolveSecond({body: {game_activity_visibility: 'off'}});
 		await second;
-	});
-	it('explicit device disable then enable refreshes the stopped producer', async () => {
-		state.visibility = 'friends';
-		await render();
-		const toggle = () => container.querySelector<HTMLButtonElement>('[role="checkbox"]')!;
-		await act(async () => toggle().click());
-		expect(mocks.refresh).toHaveBeenCalledOnce();
-		await act(async () => toggle().click());
-		expect(mocks.stop).toHaveBeenCalledOnce();
-		await act(async () => toggle().click());
-		expect(mocks.refresh).toHaveBeenCalledTimes(3);
 	});
 	for (const mode of ['game', 'only_me'] as const) {
 		it(`${mode} pending stop cannot write using a changed account`, async () => {

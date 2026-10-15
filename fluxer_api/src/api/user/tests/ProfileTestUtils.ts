@@ -34,9 +34,7 @@ export async function sharedGroupDm(harness: ApiTestHarness, owner: TestAccount,
 
 /** The level an older client or an earlier date of birth left in the row; no route check, no cache forget. */
 export async function storeLevel(owner: TestAccount, level: number): Promise<void> {
-	const repository = getUserRepository();
-	const settings = await repository.findSettings(createUserID(BigInt(owner.userId)));
-	await repository.upsertSettings({...settings!.toRow(), profile_privacy: level});
+	await getUserRepository().patchSettings(createUserID(BigInt(owner.userId)), {profile_privacy: level});
 }
 
 export function getProfile(harness: ApiTestHarness, token: string, owner: TestAccount) {

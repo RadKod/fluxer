@@ -64,7 +64,7 @@ handle_join_guild(GuildId, State) ->
         false ->
             NewState = State#{guild_ids := Guilds#{GuildId => true}},
             presence_session:notify_sessions_guild_join(GuildId, NewState),
-            {reply, ok, NewState}
+            {reply, ok, presence_game_activity:join_guild(GuildId, NewState)}
     end.
 
 -spec handle_leave_guild(integer(), state()) -> {reply, ok, state()}.
@@ -80,7 +80,7 @@ handle_leave_guild(GuildId, State) ->
                 temporary_guild_ids := maps:remove(GuildId, TemporaryGuildIds)
             },
             presence_session:notify_sessions_guild_leave(GuildId, NewState),
-            {reply, ok, NewState}
+            {reply, ok, presence_game_activity:leave_guild(GuildId, NewState)}
     end.
 
 -spec handle_add_temporary_guild(integer(), state()) -> {reply, ok, state()}.

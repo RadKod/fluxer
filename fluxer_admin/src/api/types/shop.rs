@@ -36,6 +36,14 @@ pub struct ShopAdminSettings {
     /// Unpriced owned-only items given and worn with every Visionary number.
     #[serde(default)]
     pub visionary_reward_item_ids: Vec<String>,
+    /// Micup (Early Plus): the catalog badge paid Plus and Visionary orders give while open.
+    #[serde(default)]
+    pub early_plus_badge_id: Option<String>,
+    #[serde(default)]
+    pub early_plus_open: bool,
+    /// Set by the first opening; the badge can no longer change.
+    #[serde(default)]
+    pub early_plus_opened_once: bool,
 }
 
 #[derive(Debug, Deserialize)]

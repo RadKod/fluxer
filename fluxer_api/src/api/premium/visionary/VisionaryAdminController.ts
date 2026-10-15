@@ -6,6 +6,7 @@ import {createUserID} from '@app/api/BrandedTypes';
 import {requireAdminACL} from '@app/api/middleware/AdminMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
+import {getEarlyPlusBadgeService} from '@app/api/middleware/ServiceSingletons';
 import type {VisionaryStock} from '@app/api/premium/visionary/VisionaryService';
 import {ShopRateLimitConfigs} from '@app/api/rate_limit_configs/ShopRateLimitConfig';
 import type {HonoApp} from '@app/api/types/HonoEnv';
@@ -135,6 +136,8 @@ export function VisionaryAdminController(app: HonoApp) {
 				action: 'revoke_visionary',
 				metadata: {slot: result.slot, changed: result.changed, rewards_taken_back: result.rewardsTakenBack},
 			});
+			// After the audit entry, like the premium end: a failed take-back answers 500, and repeating the call takes it back.
+			await getEarlyPlusBadgeService().revoke(createUserID(userId));
 			return ctx.json({user_id: userId.toString(), slot: result.slot, lifetime: false, changed: result.changed});
 		},
 	);

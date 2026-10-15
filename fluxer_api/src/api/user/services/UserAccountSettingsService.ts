@@ -26,7 +26,11 @@ import type {ProfileAccessCache} from '@app/api/user/profile/ProfileAccessCache'
 import {canHavePublicProfile, PUBLIC_PROFILE_MIN_AGE} from '@app/api/user/profile/ProfilePrivacy';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {CustomStatusValidator} from '@app/api/user/services/CustomStatusValidator';
-import {type GameActivityPolicyService, isGameActivityEligible} from '@app/api/user/services/GameActivityPolicyService';
+import {
+	GAME_ACTIVITY_MIN_AGE,
+	type GameActivityPolicyService,
+	isGameActivityEligible,
+} from '@app/api/user/services/GameActivityPolicyService';
 import type {UserAccountUpdatePropagator} from '@app/api/user/services/UserAccountUpdatePropagator';
 import {controlUserGuildSettingsView} from '@app/api/user/UserGuildSettingsThreadView';
 import {dispatchUserUpdate, mapRelationshipToResponse} from '@app/api/user/UserMappers';
@@ -100,24 +104,36 @@ export class UserAccountSettingsService {
 		if (!currentSettings) {
 			throw new UnknownUserError();
 		}
-		const hasPolicyIntent = data.game_activity_visibility !== undefined || data.profile_privacy !== undefined;
+		const acknowledgesDefault =
+			data.game_activity_default_acknowledged === true && currentSettings.gameActivityVisibilitySource === null;
+		const hasPolicyIntent =
+			data.game_activity_visibility !== undefined || data.profile_privacy !== undefined || acknowledgesDefault;
 		if (
 			data.game_activity_visibility != null &&
 			data.game_activity_visibility !== 'off' &&
-			data.game_activity_visibility !== 'friends'
+			data.game_activity_visibility !== 'friends' &&
+			data.game_activity_visibility !== 'everyone'
 		) {
-			throw ValidationError.fromPath('game_activity_visibility', 'INVALID_VALUE', 'Expected off or friends');
+			throw ValidationError.fromPath('game_activity_visibility', 'INVALID_VALUE', 'Expected off, friends or everyone');
 		}
 		const policyAccount = hasPolicyIntent ? await this.deps.userAccountRepository.findUnique(userId) : null;
 		if (hasPolicyIntent && !policyAccount) throw new UnknownUserError();
-		if (data.game_activity_visibility === 'friends' && (!policyAccount || !isGameActivityEligible(policyAccount))) {
+		if (
+			(data.game_activity_visibility === 'friends' || data.game_activity_visibility === 'everyone') &&
+			(!policyAccount || !isGameActivityEligible(policyAccount))
+		) {
 			throw InputValidationError.fromCode('game_activity_visibility', ValidationErrorCodes.MUST_BE_MINIMUM_AGE, {
-				minAge: 16,
+				minAge: GAME_ACTIVITY_MIN_AGE,
 			});
 		}
 		const updatedRowData = {...currentSettings.toRow(), user_id: userId};
 		if (data.game_activity_visibility !== undefined)
 			updatedRowData.game_activity_visibility = data.game_activity_visibility ?? 'off';
+		if (data.game_activity_visibility !== undefined) updatedRowData.game_activity_visibility_source = 'user';
+		else if (acknowledgesDefault && policyAccount && isGameActivityEligible(policyAccount)) {
+			updatedRowData.game_activity_visibility = null;
+			updatedRowData.game_activity_visibility_source = 'default';
+		}
 		const localeChanged = data.locale !== undefined && data.locale !== currentSettings.locale;
 		const isStaffUser = (flags & UserFlags.STAFF) === UserFlags.STAFF;
 		if (data.status !== undefined) updatedRowData.status = data.status;
