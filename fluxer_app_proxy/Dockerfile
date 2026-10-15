@@ -38,6 +38,8 @@ COPY packages/constants/package.json ./packages/constants/
 COPY packages/date_utils/package.json ./packages/date_utils/
 COPY packages/desktop_ipc/package.json ./packages/desktop_ipc/
 COPY packages/errors/package.json ./packages/errors/
+COPY packages/i18n/package.json ./packages/i18n/
+COPY packages/logger/package.json ./packages/logger/
 COPY packages/geo_utils/package.json ./packages/geo_utils/
 COPY packages/instance_bootstrap/package.json ./packages/instance_bootstrap/
 COPY packages/limits/package.json ./packages/limits/
@@ -76,6 +78,8 @@ COPY packages/constants/ ./packages/constants/
 COPY packages/date_utils/ ./packages/date_utils/
 COPY packages/desktop_ipc/ ./packages/desktop_ipc/
 COPY packages/errors/ ./packages/errors/
+COPY packages/i18n/ ./packages/i18n/
+COPY packages/logger/ ./packages/logger/
 COPY packages/geo_utils/ ./packages/geo_utils/
 COPY packages/game_catalog/ ./packages/game_catalog/
 COPY packages/instance_bootstrap/ ./packages/instance_bootstrap/
