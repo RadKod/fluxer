@@ -6,7 +6,8 @@ import {Button} from '@app/features/ui/button/Button';
 import {useLingui} from '@lingui/react/macro';
 import {BookOpenIcon} from '@phosphor-icons/react';
 
-export const BOT_DOCUMENTATION_URL = 'https://docs.fluxer.app';
+// sanalyer: served from our own domain (nginx forwards it to Fluxer's API docs until we host our own).
+export const BOT_DOCUMENTATION_URL = 'https://sanalyer.com/docs';
 
 export function DeveloperDocumentationButton() {
 	const {i18n} = useLingui();
