@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import camOrmaniCss from '@app/features/discovery/themes/catalog/cam-ormani.css?raw';
-import derinDenizCss from '@app/features/discovery/themes/catalog/derin-deniz.css?raw';
-import kagitCss from '@app/features/discovery/themes/catalog/kagit.css?raw';
-import kehribarCss from '@app/features/discovery/themes/catalog/kehribar.css?raw';
-import morGeceCss from '@app/features/discovery/themes/catalog/mor-gece.css?raw';
+import {
+	CAM_ORMANI_CSS,
+	DERIN_DENIZ_CSS,
+	KAGIT_CSS,
+	KEHRIBAR_CSS,
+	MOR_GECE_CSS,
+} from '@app/features/discovery/themes/catalog/ThemeCatalogCss';
 import {parseThemeMetadata} from '@app/features/theme/utils/ThemeCssUtils';
 
 // Library ids of catalog themes carry this prefix, so the page can tell its own entries from the user's files and
@@ -55,11 +57,11 @@ function entry(slug: string, css: string): ThemeCatalogEntry {
 
 // Hand-made palettes shipped with the app; the order is the order on the page.
 export const THEME_CATALOG: ReadonlyArray<ThemeCatalogEntry> = [
-	entry('mor-gece', morGeceCss),
-	entry('derin-deniz', derinDenizCss),
-	entry('cam-ormani', camOrmaniCss),
-	entry('kehribar', kehribarCss),
-	entry('kagit', kagitCss),
+	entry('mor-gece', MOR_GECE_CSS),
+	entry('derin-deniz', DERIN_DENIZ_CSS),
+	entry('cam-ormani', CAM_ORMANI_CSS),
+	entry('kehribar', KEHRIBAR_CSS),
+	entry('kagit', KAGIT_CSS),
 ];
 
 export function isThemeCatalogId(id: string): boolean {
