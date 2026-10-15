@@ -53233,6 +53233,26 @@ msgstr "Game over"
 msgid "Game Room"
 msgstr "Oyun Odası"
 
+#. Name of a 3D voice room theme: a neon-lit lounge. A proper name, keep it as is.
+#: src/features/voice_scene/utils/RoomThemeOptions.ts
+msgid "Neon Salon"
+msgstr "Neon Salon"
+
+#. Name of a 3D voice room theme: a lounge over a purple night city. A proper name, keep it as is.
+#: src/features/voice_scene/utils/RoomThemeOptions.ts
+msgid "Mor Şehir"
+msgstr "Mor Şehir"
+
+#. Name of a 3D voice room theme: an old neighbourhood coffeehouse. A proper name, keep it as is.
+#: src/features/voice_scene/utils/RoomThemeOptions.ts
+msgid "Mahalle Kahvesi"
+msgstr "Mahalle Kahvesi"
+
+#. Name of a 3D voice room theme: an executive office. A proper name, keep it as is.
+#: src/features/voice_scene/utils/RoomThemeOptions.ts
+msgid "Yönetim Ofisi"
+msgstr "Yönetim Ofisi"
+
 #. Table games: backgammon, the winner finished before the loser bore off any
 #. checker (Mars).
 #: src/features/table_game/components/TableGameResult.tsx

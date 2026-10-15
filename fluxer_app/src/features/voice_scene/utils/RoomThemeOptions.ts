@@ -25,6 +25,22 @@ const ROOM_THEME_NAME_DESCRIPTORS: Readonly<Record<string, MessageDescriptor>> =
 	'gece-lounge': msg({message: 'Night Lounge', comment: 'Name of a 3D voice room theme: a lounge at night.'}),
 	kahvehane: msg({message: 'Coffeehouse', comment: 'Name of a 3D voice room theme: a Turkish coffeehouse.'}),
 	'oyun-odasi': msg({message: 'Game Room', comment: 'Name of a 3D voice room theme: a game room.'}),
+	'neon-salon': msg({
+		message: 'Neon Salon',
+		comment: 'Name of a 3D voice room theme: a neon-lit lounge. A proper name, keep it as is.',
+	}),
+	'mor-sehir': msg({
+		message: 'Mor Şehir',
+		comment: 'Name of a 3D voice room theme: a lounge over a purple night city. A proper name, keep it as is.',
+	}),
+	'mahalle-kahvesi': msg({
+		message: 'Mahalle Kahvesi',
+		comment: 'Name of a 3D voice room theme: an old neighbourhood coffeehouse. A proper name, keep it as is.',
+	}),
+	'yonetim-ofisi': msg({
+		message: 'Yönetim Ofisi',
+		comment: 'Name of a 3D voice room theme: an executive office. A proper name, keep it as is.',
+	}),
 };
 
 export function roomThemeOptions(i18n: I18n, defaultTheme: string | null | undefined) {

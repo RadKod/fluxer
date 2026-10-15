@@ -22622,7 +22622,19 @@
 					"rooms_enabled": {"type": "boolean"},
 					"games_enabled": {"type": "boolean"},
 					"room_cameras_enabled": {"type": "boolean"},
-					"default_room_theme": {"nullable": true, "type": "string", "enum": ["gece-lounge", "kahvehane", "oyun-odasi"]}
+					"default_room_theme": {
+						"nullable": true,
+						"type": "string",
+						"enum": [
+							"gece-lounge",
+							"kahvehane",
+							"mahalle-kahvesi",
+							"mor-sehir",
+							"neon-salon",
+							"oyun-odasi",
+							"yonetim-ofisi"
+						]
+					}
 				}
 			},
 			"VoiceNoiseSuppressionConfigUpdateRequest": {
@@ -23008,7 +23020,15 @@
 						"description": "Default room theme for voice channels that inherit it; null disables the default",
 						"nullable": true,
 						"type": "string",
-						"enum": ["gece-lounge", "kahvehane", "oyun-odasi"]
+						"enum": [
+							"gece-lounge",
+							"kahvehane",
+							"mahalle-kahvesi",
+							"mor-sehir",
+							"neon-salon",
+							"oyun-odasi",
+							"yonetim-ofisi"
+						]
 					}
 				},
 				"required": ["rooms_enabled", "games_enabled", "room_cameras_enabled", "default_room_theme"],

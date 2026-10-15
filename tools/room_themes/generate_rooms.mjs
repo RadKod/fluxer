@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Builds the 3D voice room GLB files procedurally (no Blender): three rooms and the shared table parts.
-//   node tools/room_themes/generate_rooms.mjs [--out <dir>] [--only gece-lounge,kahvehane,oyun-odasi,masa-parcalari]
+// Builds the 3D voice room GLB files procedurally (no Blender): the rooms and the shared table parts.
+//   node tools/room_themes/generate_rooms.mjs [--out <dir>] [--only gece-lounge,kahvehane,neon-salon,masa-parcalari]
 // Writes <out>/<id>/<id>.glb per room and <out>/masa-parcalari.glb (default out: tools/room_themes/build, git-ignored),
 // the layout tools/room_themes/build_manifest.mjs reads:
 //   node tools/room_themes/build_manifest.mjs --rooms tools/room_themes/build --out fluxer_static/rooms \
@@ -17,13 +17,21 @@ import {writeGlb} from './lib/glb.mjs';
 import {buildParts} from './parts.mjs';
 import {buildGeceLounge} from './rooms/gece_lounge.mjs';
 import {buildKahvehane} from './rooms/kahvehane.mjs';
+import {buildMahalleKahvesi} from './rooms/mahalle_kahvesi.mjs';
+import {buildMorSehir} from './rooms/mor_sehir.mjs';
+import {buildNeonSalon} from './rooms/neon_salon.mjs';
 import {buildOyunOdasi} from './rooms/oyun_odasi.mjs';
+import {buildYonetimOfisi} from './rooms/yonetim_ofisi.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOMS = {
 	'gece-lounge': buildGeceLounge,
 	kahvehane: buildKahvehane,
 	'oyun-odasi': buildOyunOdasi,
+	'neon-salon': buildNeonSalon,
+	'mor-sehir': buildMorSehir,
+	'mahalle-kahvesi': buildMahalleKahvesi,
+	'yonetim-ofisi': buildYonetimOfisi,
 };
 
 function main() {

@@ -39310,7 +39310,19 @@
 							"room_theme": {
 								"description": "Room theme for a voice channel; null inherits the default, none disables it. Ignored on other channel types",
 								"anyOf": [
-									{"type": "string", "enum": ["none", "gece-lounge", "kahvehane", "oyun-odasi"]},
+									{
+										"type": "string",
+										"enum": [
+											"none",
+											"gece-lounge",
+											"kahvehane",
+											"mahalle-kahvesi",
+											"mor-sehir",
+											"neon-salon",
+											"oyun-odasi",
+											"yonetim-ofisi"
+										]
+									},
 									{"type": "null"}
 								]
 							},
@@ -39413,7 +39425,19 @@
 							"room_theme": {
 								"description": "Room theme for a voice channel; null inherits the default, none disables it. Ignored on other channel types",
 								"anyOf": [
-									{"type": "string", "enum": ["none", "gece-lounge", "kahvehane", "oyun-odasi"]},
+									{
+										"type": "string",
+										"enum": [
+											"none",
+											"gece-lounge",
+											"kahvehane",
+											"mahalle-kahvesi",
+											"mor-sehir",
+											"neon-salon",
+											"oyun-odasi",
+											"yonetim-ofisi"
+										]
+									},
 									{"type": "null"}
 								]
 							},
@@ -39516,7 +39540,19 @@
 							"room_theme": {
 								"description": "Room theme for a voice channel; null inherits the default, none disables it. Ignored on other channel types",
 								"anyOf": [
-									{"type": "string", "enum": ["none", "gece-lounge", "kahvehane", "oyun-odasi"]},
+									{
+										"type": "string",
+										"enum": [
+											"none",
+											"gece-lounge",
+											"kahvehane",
+											"mahalle-kahvesi",
+											"mor-sehir",
+											"neon-salon",
+											"oyun-odasi",
+											"yonetim-ofisi"
+										]
+									},
 									{"type": "null"}
 								]
 							},
@@ -39615,7 +39651,19 @@
 							"room_theme": {
 								"description": "Room theme for a voice channel; null inherits the default, none disables it. Ignored on other channel types",
 								"anyOf": [
-									{"type": "string", "enum": ["none", "gece-lounge", "kahvehane", "oyun-odasi"]},
+									{
+										"type": "string",
+										"enum": [
+											"none",
+											"gece-lounge",
+											"kahvehane",
+											"mahalle-kahvesi",
+											"mor-sehir",
+											"neon-salon",
+											"oyun-odasi",
+											"yonetim-ofisi"
+										]
+									},
 									{"type": "null"}
 								]
 							},
@@ -39714,7 +39762,19 @@
 							"room_theme": {
 								"description": "Room theme for a voice channel; null inherits the default, none disables it. Ignored on other channel types",
 								"anyOf": [
-									{"type": "string", "enum": ["none", "gece-lounge", "kahvehane", "oyun-odasi"]},
+									{
+										"type": "string",
+										"enum": [
+											"none",
+											"gece-lounge",
+											"kahvehane",
+											"mahalle-kahvesi",
+											"mor-sehir",
+											"neon-salon",
+											"oyun-odasi",
+											"yonetim-ofisi"
+										]
+									},
 									{"type": "null"}
 								]
 							},
@@ -41638,7 +41698,22 @@
 					},
 					"room_theme": {
 						"description": "Room theme for a voice channel; null inherits the default, none disables it. Ignored on other channel types",
-						"anyOf": [{"type": "string", "enum": ["none", "gece-lounge", "kahvehane", "oyun-odasi"]}, {"type": "null"}]
+						"anyOf": [
+							{
+								"type": "string",
+								"enum": [
+									"none",
+									"gece-lounge",
+									"kahvehane",
+									"mahalle-kahvesi",
+									"mor-sehir",
+									"neon-salon",
+									"oyun-odasi",
+									"yonetim-ofisi"
+								]
+							},
+							{"type": "null"}
+						]
 					},
 					"rtc_p2p": {
 						"description": "Whether calls in the voice channel connect participants directly instead of through a voice server",
@@ -41755,7 +41830,22 @@
 					},
 					"room_theme": {
 						"description": "Room theme for a voice channel; null inherits the default, none disables it. Ignored on other channel types",
-						"anyOf": [{"type": "string", "enum": ["none", "gece-lounge", "kahvehane", "oyun-odasi"]}, {"type": "null"}]
+						"anyOf": [
+							{
+								"type": "string",
+								"enum": [
+									"none",
+									"gece-lounge",
+									"kahvehane",
+									"mahalle-kahvesi",
+									"mor-sehir",
+									"neon-salon",
+									"oyun-odasi",
+									"yonetim-ofisi"
+								]
+							},
+							{"type": "null"}
+						]
 					},
 					"rtc_p2p": {
 						"description": "Whether calls in the voice channel connect participants directly instead of through a voice server",
