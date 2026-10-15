@@ -45,36 +45,6 @@ fn format_percent(value: f64) -> String {
     }
 }
 
-fn username_configuration_link(base: &str, admin_acls: &[String]) -> Markup {
-    html! {
-        @if crate::acl::has_permission(admin_acls, crate::acl::INSTANCE_CONFIG_VIEW) {
-            (section_card_with_description(
-                "Username policy and migration",
-                "Save all three short-name tiers and the admission budget together. Review migration prerequisites before starting selection.",
-                secondary_button_link("Manage usernames", &format!("{base}/username-migration")),
-            ))
-        }
-    }
-}
-
-#[cfg(test)]
-mod username_config_tests {
-    use super::*;
-
-    #[test]
-    fn username_config_link_is_hidden_without_read_permission() {
-        assert!(
-            username_configuration_link("/admin", &[])
-                .into_string()
-                .is_empty()
-        );
-        let markup =
-            username_configuration_link("/admin", &[crate::acl::INSTANCE_CONFIG_VIEW.to_owned()])
-                .into_string();
-        assert!(markup.contains("href=\"/admin/username-migration\""));
-    }
-}
-
 fn format_decimal(value: f64) -> String {
     if value.fract() == 0.0 {
         format!("{}", value as u64)
@@ -165,10 +135,8 @@ pub fn instance_config_page(
     let base = &config.base_path;
     let content = html! {
         (page_header("Instance Configuration", Some("Manage instance-wide settings")))
-        (username_configuration_link(
-            base,
-            auth.admin_user.as_ref().map(|user| user.acls.as_slice()).unwrap_or(&[]),
-        ))
+        // sanalyer: no "Manage usernames" card; username migration is unused here and hidden
+        // from the menu (the /username-migration route itself still works).
         div class="space-y-10" {
             @if let Some(instance_config) = instance_config {
                 @if instance_config.self_hosted {
