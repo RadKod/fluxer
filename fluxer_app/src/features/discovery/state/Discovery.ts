@@ -8,7 +8,7 @@ import {makeAutoObservable, runInAction} from 'mobx';
 const DEFAULT_DISCOVERY_PAGE_SIZE = 36;
 
 class Discovery {
-	view: 'communities' | 'apps' = 'communities';
+	view: 'communities' | 'apps' | 'themes' = 'communities';
 	guilds: Array<DiscoveryGuild> = [];
 	loadedCount = 0;
 	total = 0;
@@ -34,7 +34,7 @@ class Discovery {
 		makeAutoObservable(this, {}, {autoBind: true});
 	}
 
-	setView(view: 'communities' | 'apps'): void {
+	setView(view: 'communities' | 'apps' | 'themes'): void {
 		this.view = view;
 	}
 

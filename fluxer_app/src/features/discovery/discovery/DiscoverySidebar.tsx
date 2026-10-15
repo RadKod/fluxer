@@ -51,7 +51,15 @@ export const DiscoverySidebar = observer(function DiscoverySidebar() {
 				Navigation.navigateToDiscover('replace');
 			},
 		},
-		{label: i18n._(THEMES_DESCRIPTOR), icon: PaletteIcon, disabled: true},
+		{
+			label: i18n._(THEMES_DESCRIPTOR),
+			icon: PaletteIcon,
+			active: Discovery.view === 'themes',
+			onClick: () => {
+				Discovery.setView('themes');
+				Navigation.navigateToDiscover('replace');
+			},
+		},
 	];
 	return (
 		<div className={styles.container} data-flx="discovery.discovery.discovery-sidebar.container">

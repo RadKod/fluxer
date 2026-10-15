@@ -19,6 +19,7 @@ import styles from '@app/features/discovery/discovery/DiscoveryPage.module.css';
 import {DiscoverySearchFilters} from '@app/features/discovery/discovery/DiscoverySearchFilters';
 import {DiscoveryMotionKind, DiscoveryTransition} from '@app/features/discovery/discovery/DiscoveryTransition';
 import Discovery from '@app/features/discovery/state/Discovery';
+import {DiscoveryThemesPage} from '@app/features/discovery/themes/DiscoveryThemesPage';
 import * as RouterUtils from '@app/features/navigation/utils/RouterUtils';
 import {Scroller, type ScrollerHandle} from '@app/features/ui/components/Scroller';
 import {Spinner} from '@app/features/ui/components/Spinner';
@@ -83,11 +84,13 @@ function resolveScrollOffsetTop(element: HTMLElement, scrollerNode: HTMLElement 
 }
 
 export const DiscoveryPage = observer(function DiscoveryPage() {
-	return Discovery.view === 'apps' ? (
-		<LegacyAppsRedirect data-flx="discovery.discovery.discovery-page.legacy-apps" />
-	) : (
-		<DiscoveryCommunitiesPage data-flx="discovery.discovery.discovery-page.communities" />
-	);
+	if (Discovery.view === 'apps') {
+		return <LegacyAppsRedirect data-flx="discovery.discovery.discovery-page.legacy-apps" />;
+	}
+	if (Discovery.view === 'themes') {
+		return <DiscoveryThemesPage data-flx="discovery.discovery.discovery-page.themes" />;
+	}
+	return <DiscoveryCommunitiesPage data-flx="discovery.discovery.discovery-page.communities" />;
 });
 
 function LegacyAppsRedirect() {

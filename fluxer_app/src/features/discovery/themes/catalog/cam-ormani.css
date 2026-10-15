@@ -1,0 +1,68 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+ * @name Çam Ormanı
+ * @description Yosun yeşili zeminler, açık yeşil vurgu; gözü yormayan serin bir gece.
+ * @author sanalyer
+ * @version 1.0.0
+ * @tags koyu, yeşil
+ */
+
+/* The palette applies over every built-in theme: :root[class] outranks the theme classes of color-system.css. */
+:root,
+:root[class] {
+	--background-secondary: #0b1410;
+	--background-secondary-lighter: #0f1a15;
+	--background-channel-header: #0f1a15;
+	--side-panel-background: #122019;
+	--guild-list-foreground: #152419;
+	--background-primary: #172a21;
+	--background-secondary-alt: #172a21;
+	--background-textarea: #1b3027;
+	--background-tertiary: #1a2d24;
+	--background-header-secondary: #22392e;
+	--background-header-primary: #22392e;
+	--background-header-primary-hover: #2c4a3b;
+	--bg-primary: #172a21;
+	--bg-secondary: #0b1410;
+	--bg-tertiary: #1a2d24;
+	--bg-hover: #2c4a3b;
+	--bg-active: #355846;
+	--text-primary: #eef5f1;
+	--text-chat: #dde9e2;
+	--text-secondary: #c0d3c8;
+	--text-primary-muted: #93a89c;
+	--text-chat-muted: #8aa093;
+	--text-tertiary: #8aa093;
+	--text-tertiary-secondary: #728a7b;
+	--text-tertiary-muted: #647c6d;
+	--interactive-muted: #728a7b;
+	--interactive-active: #eef5f1;
+	--brand-primary: #3fb47a;
+	--brand-secondary: #33985f;
+	--brand-primary-light: #a8e6c5;
+	--brand-primary-fill: #06130b;
+	--text-on-brand-primary: #06130b;
+	--plutonium: #3fb47a;
+	--plutonium-hover: #33985f;
+	--focus-primary: #ffc83d;
+	--border-color: #22392e;
+	--border-color-hover: #2c4a3b;
+	--border-color-focus: #3fb47a;
+	--background-modifier-hover: rgb(255 255 255 / 0.05);
+	--background-modifier-selected: rgb(255 255 255 / 0.1);
+	--background-modifier-accent: rgb(63 180 122 / 0.18);
+	--background-modifier-accent-focus: rgb(63 180 122 / 0.26);
+	--control-button-hover-bg: #2c4a3b;
+	--control-button-active-bg: #355846;
+	--scrollbar-thumb-bg: #2c4a3b;
+	--scrollbar-thumb-bg-hover: #3a5e4b;
+	--scrollbar-track-bg: transparent;
+	--code-inline-bg: #1f3a2c;
+	--bg-code: #1f3a2c;
+	--code-block-bg: #0e1a13;
+	--bg-code-block: #0e1a13;
+	--code-block-border: #22392e;
+	--text-link: #7fd7ff;
+	--button-secondary-fill: #25402f;
+	--button-secondary-active-fill: #30503c;
+	--button-secondary-text: #eef5f1;
+}

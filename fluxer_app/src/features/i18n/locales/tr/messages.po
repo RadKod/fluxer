@@ -44817,3 +44817,16 @@ msgstr "Benimkiler"
 #: src/features/cosmetics/utils/CosmeticLabels.ts
 msgid "Search by name or series…"
 msgstr "Ada ya da seriye göre ara…"
+
+#. Accessible label of the colour preview on a Discovery theme card. {themeName} is the theme name.
+#: src/features/discovery/themes/DiscoveryThemesPage.tsx
+msgid "Preview of the {themeName} theme"
+msgstr "{themeName} temasının önizlemesi"
+
+#: src/features/discovery/themes/DiscoveryThemesPage.tsx
+msgid "Ready-made colour palettes for the app. Apply one here; it lands in your theme library under Appearance, where you can switch it off or edit it in Theme Studio."
+msgstr "Uygulama için hazır renk paletleri. Birini buradan uygula; Görünüm altındaki tema kitaplığına eklenir, orada kapatabilir ya da Tema Stüdyosu'nda düzenleyebilirsin."
+
+#: src/features/discovery/themes/DiscoveryThemesPage.tsx
+msgid "Remove from library"
+msgstr "Kitaplıktan kaldır"
