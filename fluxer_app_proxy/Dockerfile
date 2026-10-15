@@ -56,7 +56,7 @@ FROM app-deps AS app-wasm
 COPY tools/ci/ ./tools/ci/
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
 	--mount=type=cache,target=/usr/local/cargo/git \
-	cargo build --release --locked --manifest-path tools/ci/Cargo.toml --target-dir /tmp/fluxer-ci-target \
+	cargo build --release --manifest-path tools/ci/Cargo.toml --target-dir /tmp/fluxer-ci-target \
 	&& cp /tmp/fluxer-ci-target/release/fluxer-ci /usr/local/bin/fluxer-ci \
 	&& rm -rf /tmp/fluxer-ci-target
 COPY packages/markdown_parser/rust/Cargo.toml ./packages/markdown_parser/rust/
