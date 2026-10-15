@@ -32,7 +32,12 @@ export function shouldShowPremiumFeatures(): boolean {
 	);
 }
 
+// sanalyer: on a direct page load the route guard runs before the instance snapshot is active. Reading
+// RuntimeConfig.features then throws inside a MobX computed; with disableErrorBoundaries (index.tsx) the computed
+// stays marked as computing and every later read crashes the app with "cycle detected". Without a snapshot the page
+// is let through; it decides again once the runtime is active.
 export function isPremiumPageAvailable(): boolean {
+	if (RuntimeConfig.getSnapshotOrNull() === null) return true;
 	return RuntimeConfig.isSelfHosted() && shouldShowPremiumFeatures();
 }
 
