@@ -26,6 +26,15 @@ on:
         required: false
         type: boolean
         default: false
+      shell_contract:
+        description: Kabuk sözleşmesi (preload/electron.d.ts) son kabuktan beri değişti mi? unchanged değiştiyse reddeder; compatible eski kabuklara da bu modülleri verir; raise eski kabuklara modül göndermeyi keser.
+        required: false
+        type: choice
+        options:
+          - unchanged
+          - compatible
+          - raise
+        default: unchanged
 permissions:
   contents: write
   id-token: write
@@ -751,6 +760,15 @@ jobs:
         with:
           name: desktop-modules-${{ needs.meta.outputs.build_channel }}-${{ needs.meta.outputs.version }}-${{ needs.meta.outputs.source_sha }}
           path: desktop-modules
+
+      - name: Check which shells run these modules
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHELL_CONTRACT: ${{ inputs.shell_contract || 'unchanged' }}
+          DESKTOP_MODULES_ONLY_RELEASE: "false"
+        run: >-
+          cargo run --locked --quiet --manifest-path tools/ci/Cargo.toml -- build-desktop
+          --step check_shell_contract
 
       - name: Build desktop module manifest
         run: >-
