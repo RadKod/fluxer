@@ -758,6 +758,11 @@ class RuntimeConfig {
 	}
 
 	isSelfHosted(): boolean {
+		// sanalyer: Routes.help() and other hosted-only links ask this during boot, before any snapshot is readable
+		// (the desktop shell renders its layout first). Reading `features` then throws inside a MobX computed and,
+		// with disableErrorBoundaries, poisons it ("cycle detected" on every later read). Until a snapshot arrives the
+		// instance counts as self-hosted, which hides the hosted-only links; the answer is recomputed once it lands.
+		if ((this.activeRuntime?.snapshot ?? this.retainedSnapshot) === null) return true;
 		return DeveloperOptions.selfHostedModeOverride || this.features.self_hosted;
 	}
 
