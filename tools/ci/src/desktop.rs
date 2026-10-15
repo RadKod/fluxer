@@ -188,7 +188,8 @@ const PLATFORMS: &[Platform] = &[
     Platform {
         platform: "macos",
         arch: MACOS_UNIVERSAL_ARCH,
-        os: "fluxer-desktop-macos-arm64",
+        // sanalyer: GitHub-hosted Apple Silicon runner; the universal build is published as x64 + arm64.
+        os: "macos-15",
         electron_arch: MACOS_UNIVERSAL_ARCH,
     },
     Platform {
