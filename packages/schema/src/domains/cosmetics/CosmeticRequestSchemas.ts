@@ -10,8 +10,8 @@ import {base64LengthForBytes, createBase64StringType} from '@fluxer/schema/src/p
 import {createStringType, SnowflakeType} from '@fluxer/schema/src/primitives/SchemaPrimitives';
 import {z} from 'zod';
 
-// Micup: the outer cap is the largest per-type limit (ultra decorations, 1,228,800 bytes); updates carry no type, so
-// each type's own limit (COSMETIC_ASSET_POLICY) is enforced where the image is stored, in EntityAssetService.
+// Micup: the outer cap is the largest per-type limit (ultraMaxBytes); updates carry no type, so each type's own
+// limit (COSMETIC_ASSET_POLICY) is enforced where the image is stored, in EntityAssetService.
 const COSMETIC_ASSET_MAX_BYTES = COSMETIC_ASSET_POLICY.ultraMaxBytes;
 
 export const CosmeticCatalogQuery = z.object({
@@ -41,7 +41,7 @@ export const CosmeticItemCreateRequest = z.object({
 	description: createStringType(1, 256).nullish().describe('A short description (1-256 characters)'),
 	availability: CosmeticAvailability,
 	asset: createBase64StringType(1, base64LengthForBytes(COSMETIC_ASSET_MAX_BYTES)).describe(
-		'Base64 PNG, APNG or WebP image: 1,228,800 bytes at most for ultra decorations, 512 KB for everything else; SVG is refused',
+		'Base64 PNG, APNG or WebP image, 8 MiB at most, 32-2048 px on each side; SVG is refused',
 	),
 });
 

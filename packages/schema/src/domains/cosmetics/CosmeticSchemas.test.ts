@@ -17,7 +17,7 @@ import {base64LengthForBytes} from '@fluxer/schema/src/primitives/FileValidators
 import {describe, expect, it} from 'vitest';
 
 // The largest per-type limit (ultra decorations); EntityAssetService holds every type to its own limit.
-const OUTER_CAP_BYTES = 1_228_800;
+const OUTER_CAP_BYTES = 8_388_608;
 const base64Of = (bytes: number) => 'A'.repeat(4 * Math.ceil(bytes / 3));
 const item = (asset: string) => ({type: 'avatar_ultra', name: 'Yitik Melek', availability: 'premium', asset});
 
@@ -52,8 +52,8 @@ describe('cosmetic schemas', () => {
 		expect(partial.avatar_ultra_data).toEqual({asset: 'a_7c8d9e0f', item_id: '3003'});
 	});
 
-	it('lets an image through up to the 1,638,400-character outer cap and no further', () => {
-		expect(base64Of(OUTER_CAP_BYTES)).toHaveLength(1_638_400);
+	it('lets an image through up to the 11,184,812-character outer cap and no further', () => {
+		expect(base64Of(OUTER_CAP_BYTES)).toHaveLength(11_184_812);
 		expect(CosmeticItemCreateRequest.safeParse(item(base64Of(OUTER_CAP_BYTES))).success).toBe(true);
 		expect(CosmeticItemCreateRequest.safeParse(item(base64Of(OUTER_CAP_BYTES + 3))).success).toBe(false);
 	});

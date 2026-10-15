@@ -4,9 +4,9 @@ import {COSMETIC_ASSET_POLICY, ULTRA_FRONT_POLICY} from '@fluxer/constants/src/A
 import {describe, expect, it} from 'vitest';
 
 describe('AssetFormatPolicy', () => {
-	it('holds ultra decorations to 1,228,800 bytes and every other cosmetic to 512 KB', () => {
-		expect(COSMETIC_ASSET_POLICY.maxBytes).toBe(524_288);
-		expect(COSMETIC_ASSET_POLICY.ultraMaxBytes).toBe(1_228_800);
+	it('holds every cosmetic, ultra decorations included, to 8 MiB', () => {
+		expect(COSMETIC_ASSET_POLICY.maxBytes).toBe(8_388_608);
+		expect(COSMETIC_ASSET_POLICY.ultraMaxBytes).toBe(8_388_608);
 	});
 
 	it('keeps the in-front ultra part limits of the angel-wings gate', () => {
@@ -19,6 +19,6 @@ describe('AssetFormatPolicy', () => {
 			maxFrames: 30,
 			height: {min: 96, max: 576},
 		});
-		expect(COSMETIC_ASSET_POLICY.dims).toEqual({min: 96, max: 480}); // fallback rules unchanged
+		expect(COSMETIC_ASSET_POLICY.dims).toEqual({min: 32, max: 2048});
 	});
 });

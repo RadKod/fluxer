@@ -335,7 +335,7 @@ fn create_form(base: &str, csrf_token: &str) -> Markup {
                         Some("Optional, up to 256 characters."),
                         text_field("cosmetic-create-description", "description", "", 256, false)))
                     (image_field("cosmetic-create-image", "asset", "Image", true,
-                        "PNG, APNG or WebP, 96-480 px on each side, at most 512 KB; ultra decorations up to 1,228,800 bytes."))
+                        "PNG, APNG or WebP, 32-2048 px on each side, at most 8 MiB."))
                     (form_actions(html! { (submit_button("Add item")) }))
                 }
             }
@@ -368,7 +368,7 @@ fn edit_form(base: &str, csrf_token: &str, item_id: &str) -> Markup {
                     (form_field_group("Description", "cosmetic-edit-description", false, None, None,
                         text_field("cosmetic-edit-description", "description", "", 256, false)))
                     (image_field("cosmetic-edit-image", "asset", "New image", false,
-                        "PNG, APNG or WebP, 96-480 px on each side, at most 512 KB; ultra decorations up to 1,228,800 bytes."))
+                        "PNG, APNG or WebP, 32-2048 px on each side, at most 8 MiB."))
                     (form_actions(html! { (submit_button("Save changes")) }))
                 }
             }

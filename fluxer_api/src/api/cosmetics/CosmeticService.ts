@@ -194,7 +194,7 @@ function ownerKey(item: Pick<CosmeticItemRow, 'item_type' | 'item_id'>) {
 	return `cosmetic-${item.item_type}-${item.item_id}` as const;
 }
 
-// Ultra decorations can use 1,228,800 bytes; the other cosmetic types keep their 512 KB limit.
+// Ultra decorations and the other cosmetic types each take their own cap from COSMETIC_ASSET_POLICY.
 function assetMaxBytes(type: string): number {
 	return type === 'avatar_ultra' ? COSMETIC_ASSET_POLICY.ultraMaxBytes : COSMETIC_ASSET_POLICY.maxBytes;
 }

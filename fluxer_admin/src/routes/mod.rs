@@ -99,12 +99,48 @@ pub(crate) fn form_snowflake(form: &MultiValueForm, key: &str) -> Option<String>
 pub(crate) fn api_failure(action: &str, error: &ApiError) -> FlashData {
     tracing::warn!(%error, action, "admin API request failed");
     let detail = match error {
-        ApiError::Http { status, .. } => format!("HTTP {status}"),
+        ApiError::Http { status, message } => match api_error_detail(message) {
+            Some(reason) => format!("HTTP {status}: {reason}"),
+            None => format!("HTTP {status}"),
+        },
         ApiError::Network(_) => "network error".to_owned(),
         ApiError::Parse(_) => "unexpected API response".to_owned(),
     };
     FlashData::error(format!("Failed to {action} ({detail})"))
 }
+
+// sanalyer: the API answers a refused form with a message and, for INVALID_FORM_BODY, one entry per field; the toast
+// used to show only the status code, so an oversized cosmetic image read as a bare "HTTP 400".
+fn api_error_detail(message: &str) -> Option<String> {
+    let value: serde_json::Value = serde_json::from_str(message).ok()?;
+    let mut parts: Vec<String> = value
+        .get("errors")
+        .and_then(|errors| errors.as_array())
+        .map(|errors| {
+            errors
+                .iter()
+                .filter_map(|entry| {
+                    let text = entry.get("message")?.as_str()?;
+                    Some(match entry.get("path").and_then(|path| path.as_str()) {
+                        Some(path) if !path.is_empty() => format!("{path}: {text}"),
+                        _ => text.to_owned(),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    if parts.is_empty() {
+        parts.extend(value.get("message").and_then(|m| m.as_str()).map(str::to_owned));
+    }
+    if parts.is_empty() {
+        None
+    } else {
+        Some(parts.join("; "))
+    }
+}
+
+// 8 MiB of image is about 11.2 MiB of base64; leave room for the rest of the form.
+const ADMIN_MAX_BODY_BYTES: usize = 16 * 1024 * 1024;
 
 pub fn build_router(config: AdminConfig) -> Router {
     let state = AppState::new(config);
@@ -160,6 +196,8 @@ pub fn build_router(config: AdminConfig) -> Router {
             security_headers_middleware,
         ))
         .layer(from_fn(cache_headers_middleware))
+        // sanalyer: cosmetic images arrive base64-encoded in the form body; axum's 2 MiB default refused them.
+        .layer(axum::extract::DefaultBodyLimit::max(ADMIN_MAX_BODY_BYTES))
         .layer(
             CompressionLayer::new()
                 .compress_when(DefaultPredicate::new().and(NotForContentType::const_new("font/"))),
