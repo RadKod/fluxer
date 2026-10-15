@@ -130,6 +130,10 @@ const THEME_LABELS: Record<string, string> = {
 	'gece-lounge': 'Night Lounge',
 	kahvehane: 'Coffeehouse',
 	'oyun-odasi': 'Game Room',
+	'neon-salon': 'Neon Salon',
+	'mor-sehir': 'Mor Şehir',
+	'mahalle-kahvesi': 'Mahalle Kahvesi',
+	'yonetim-ofisi': 'Yönetim Ofisi',
 };
 const THEME = VOICE_ROOM_THEME_IDS[0];
 

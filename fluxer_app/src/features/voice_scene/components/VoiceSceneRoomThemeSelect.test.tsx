@@ -48,8 +48,9 @@ it('opens selectable room options in the call portal host for fullscreen and pop
 	await act(async () =>
 		container.querySelector<HTMLButtonElement>('[data-flx="ui.form.combobox.trigger-button"]')?.click(),
 	);
-	expect(document.querySelectorAll('[role="option"]')).toHaveLength(5);
-	expect(host.querySelectorAll('[role="option"]')).toHaveLength(5);
+	// Default, None and the seven rooms in the manifest.
+	expect(document.querySelectorAll('[role="option"]')).toHaveLength(9);
+	expect(host.querySelectorAll('[role="option"]')).toHaveLength(9);
 	const coffeehouse = Array.from(host.querySelectorAll<HTMLElement>('[role="option"]')).find(
 		(node) => node.textContent === 'Coffeehouse',
 	);

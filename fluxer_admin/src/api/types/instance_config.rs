@@ -838,7 +838,11 @@ pub struct VoiceRoomConfigResponse {
 pub const VOICE_ROOM_THEME_OPTIONS: &[(&str, &str)] = &[
     ("gece-lounge", "Night Lounge"),
     ("kahvehane", "Coffeehouse"),
+    ("mahalle-kahvesi", "Mahalle Kahvesi"),
+    ("mor-sehir", "Mor Şehir"),
+    ("neon-salon", "Neon Salon"),
     ("oyun-odasi", "Game Room"),
+    ("yonetim-ofisi", "Yönetim Ofisi"),
 ];
 
 #[derive(Clone, Debug, Default, Serialize)]
