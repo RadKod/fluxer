@@ -22,6 +22,9 @@ const SPLASH_SRC_DIR = path.join(SRC_DIR, 'splash');
 const SPLASH_DIST_DIR = path.join(DIST_DIR, 'splash');
 const SPLASH_PRELOAD_FILE_NAME = 'splash.cjs';
 const REQUIRED_RENDERER_ENTRIES = Object.freeze(['index.html', 'assets']);
+// sanalyer: as upstream, the shell bundles the renderer (index.html, assets, version.json); the prune step removes
+// only on-demand module assets. The shell falls back to this bundled copy until a renderer module is installed.
+const BUNDLED_RENDERER_ENTRIES = Object.freeze([...REQUIRED_RENDERER_ENTRIES, 'version.json']);
 const FORBIDDEN_RENDERER_ENTRIES = Object.freeze(['sw.js', 'sw.js.map']);
 const SUPPORTED_BUILD_ARGUMENTS = Object.freeze(['--shared-assets', '--use-shared-renderer']);
 const MAIN_BOOTSTRAP_ENTRY_NAME = 'index';
@@ -91,10 +94,10 @@ class RendererOutputIncompleteError extends Error {
 	}
 }
 
-class PackedRendererNotPrunedError extends Error {
-	constructor(location) {
-		super(`The renderer is a required module, so ${location} must be empty after the prune step.`);
-		this.name = 'PackedRendererNotPrunedError';
+class BundledRendererMissingError extends Error {
+	constructor(location, missing) {
+		super(`The bundled renderer in ${location} is missing ${missing.join(', ')} after the prune step.`);
+		this.name = 'BundledRendererMissingError';
 	}
 }
 
@@ -851,15 +854,15 @@ function ensureBuildChannelFile() {
 }
 
 function prunePackedRendererModules() {
-	console.log('Pruning module-owned assets from the packed renderer...');
+	console.log('Pruning on-demand module assets from the bundled renderer...');
 	const startedAt = Date.now();
 	// sanalyer: upstream's CI helper names the step prune_shell_renderer.
 	runDesktopBuildStep('prune_shell_renderer');
-	const survivors = findMissingEntries(REQUIRED_RENDERER_ENTRIES, RENDERER_DIST_DIR);
-	if (survivors.length !== REQUIRED_RENDERER_ENTRIES.length) {
-		throw new PackedRendererNotPrunedError(RENDERER_DIST_DIR);
+	const missing = findMissingEntries(BUNDLED_RENDERER_ENTRIES, RENDERER_DIST_DIR);
+	if (missing.length > 0) {
+		throw new BundledRendererMissingError(RENDERER_DIST_DIR, missing);
 	}
-	console.log(`  Packed renderer pruned in ${Date.now() - startedAt}ms`);
+	console.log(`  Bundled renderer pruned in ${Date.now() - startedAt}ms`);
 }
 
 async function build() {
