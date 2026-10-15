@@ -1,6 +1,6 @@
 # Developer documentation
 
-The existing Fluxer Astro/Starlight documentation can be built with a product profile. `micup.env` contains only public build and runtime settings. sanalyer uses `https://micup.gg/docs`; example API, Gateway, media and static bases are derived from the same single-domain profile using the shared endpoint derivation code. These examples are not a verified live discovery response: clients should read `/.well-known/fluxer` and use its published endpoints.
+The existing Fluxer Astro/Starlight documentation can be built with a product profile. `micup.env` contains only public build and runtime settings. sanalyer uses `https://sanalyer.com/docs`; example API, Gateway, media and static bases are derived from the same single-domain profile using the shared endpoint derivation code. These examples are not a verified live discovery response: clients should read `/.well-known/fluxer` and use its published endpoints.
 
 From the repository root, PowerShell can load the profile before building:
 
