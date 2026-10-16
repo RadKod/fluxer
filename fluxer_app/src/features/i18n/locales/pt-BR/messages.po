@@ -56562,3 +56562,190 @@ msgstr "seunome"
 #: src/features/user/components/modals/tabs/keybinds_tab/MacInputMonitoringShortcutsAlert.tsx
 msgid "Global shortcuts only work while {productName} is focused until {permissionName} is enabled."
 msgstr "Global shortcuts only work while {productName} is focused until {permissionName} is enabled."
+
+#. Soundboard slot usage; existing sounds remain usable above capacity.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "{count} / {capacity} sounds"
+msgstr "{count} / {capacity} sounds"
+
+#. Soundboard section header listing every sound of the community; {guild} is the community name.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "{guild} sounds"
+msgstr "{guild} sounds"
+
+#. Accessible label of the star button on a soundboard sound.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Add {name} to favorites"
+msgstr "Add {name} to favorites"
+
+#. Soundboard action to upload a community sound.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Add sound"
+msgstr "Add sound"
+
+#. Soundboard form action to return to the sound list.
+#: src/features/voice/components/SoundboardManagePanel.tsx
+msgid "Back to sounds"
+msgstr "Back to sounds"
+
+#. Soundboard upload error for unsupported format or file size.
+#: src/features/voice/components/SoundboardManagePanel.tsx
+msgid "Choose an MP3 or Ogg file up to 512,000 bytes."
+msgstr "Choose an MP3 or Ogg file up to 512,000 bytes."
+
+#. Soundboard action to choose an MP3 or Ogg file.
+#: src/features/voice/components/SoundboardManagePanel.tsx
+msgid "Choose audio"
+msgstr "Choose audio"
+
+#. Button inside the soundboard search box that empties it.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Clear sound search"
+msgstr "Clear sound search"
+
+#. Soundboard section header used when the community name is not known.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Community sounds"
+msgstr "Community sounds"
+
+#. Soundboard sound deletion failure.
+#: src/features/voice/components/SoundboardManagePanel.tsx
+msgid "Could not delete this sound. Try again."
+msgstr "Could not delete this sound. Try again."
+
+#. Soundboard metadata loading error.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Could not load sounds. Try again."
+msgstr "Could not load sounds. Try again."
+
+#. Error after a soundboard play request fails.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Could not play this sound. Try again."
+msgstr "Could not play this sound. Try again."
+
+#. Soundboard upload or metadata update failure.
+#: src/features/voice/components/SoundboardManagePanel.tsx
+msgid "Could not save this sound. Try again."
+msgstr "Could not save this sound. Try again."
+
+#. Soundboard delete confirmation description.
+#: src/features/voice/components/SoundboardManagePanel.tsx
+msgid "Delete {name}? This sound will be removed from the community."
+msgstr "Delete {name}? This sound will be removed from the community."
+
+#. Soundboard action and confirmation title for deleting a sound.
+#: src/features/voice/components/SoundboardManagePanel.tsx
+msgid "Delete sound"
+msgstr "Delete sound"
+
+#. Account-local switch to stop hearing incoming soundboard sounds.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Disable soundboard sounds"
+msgstr "Disable soundboard sounds"
+
+#. Accessible label of a soundboard sound management button.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Edit {name}"
+msgstr "Edit {name}"
+
+#. Soundboard section listing the sounds the user starred.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Favorite sounds"
+msgstr "Favorite sounds"
+
+#. Soundboard metadata loading status.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Loading sounds…"
+msgstr "Loading sounds…"
+
+#. Community sound upload requirements; server validates duration and audio format.
+#: src/features/voice/components/SoundboardManagePanel.tsx
+msgid "MP3 or Ogg, up to 512,000 bytes and 5.2 seconds."
+msgstr "MP3 or Ogg, up to 512,000 bytes and 5.2 seconds."
+
+#. Action to show the next soundboard page.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Next sounds"
+msgstr "Next sounds"
+
+#. Soundboard search result when no sound name matches.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "No sounds match your search."
+msgstr "No sounds match your search."
+
+#. Empty community soundboard guidance.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "No sounds yet. Add an MP3 or Ogg clip to use it in this voice channel."
+msgstr "No sounds yet. Add an MP3 or Ogg clip to use it in this voice channel."
+
+#. Current soundboard page status.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Page {page} of {pages}"
+msgstr "Page {page} of {pages}"
+
+#. Accessible label of a soundboard sound playback button.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Play {name}"
+msgstr "Play {name}"
+
+#. Action to show the previous soundboard page.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Previous sounds"
+msgstr "Previous sounds"
+
+#. Soundboard section listing the last sounds the user played in this community.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Recently played"
+msgstr "Recently played"
+
+#. Accessible label of the filled star button on a favorite soundboard sound.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Remove {name} from favorites"
+msgstr "Remove {name} from favorites"
+
+#. Soundboard form save action.
+#: src/features/voice/components/SoundboardManagePanel.tsx
+msgid "Save sound"
+msgstr "Save sound"
+
+#. Placeholder and label of the soundboard search box.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Search sounds"
+msgstr "Search sounds"
+
+#. Soundboard play error when the user played too many sounds in a short time; counts down to zero.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Slow down. Try again in {seconds} s."
+msgstr "Slow down. Try again in {seconds} s."
+
+#. Label for the community soundboard sound name field.
+#: src/features/voice/components/SoundboardManagePanel.tsx
+msgid "Sound name"
+msgstr "Sound name"
+
+#. Soundboard upload lock directing the user to a higher community boost level.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Sound slots are full. Boost to a higher level for more slots."
+msgstr "Sound slots are full. Boost to a higher level for more slots."
+
+#. Accessible name of the voice control that opens the community soundboard.
+#. Title of the community soundboard and voice control label.
+#: src/features/voice/components/SoundboardPanel.tsx
+#: src/features/voice/components/voice_connection_status/LocalParticipantControls.tsx
+msgid "Soundboard"
+msgstr "Soundboard"
+
+#. Button next to the soundboard search that shows the listening volume and mute switch.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Soundboard listening settings"
+msgstr "Soundboard listening settings"
+
+#. Accessible label for the soundboard listening volume slider.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Soundboard volume"
+msgstr "Soundboard volume"
+
+#. Soundboard play error when the server refuses because the user is not in the channel or is deafened.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "To play sounds, join this voice channel and undeafen yourself."
+msgstr "To play sounds, join this voice channel and undeafen yourself."

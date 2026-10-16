@@ -54,14 +54,32 @@ const popouts = vi.hoisted(() => ({open: false, closing: false, openPopout: vi.f
 const layout = vi.hoisted(() => ({enabled: false}));
 
 vi.mock('@lingui/core/macro', () => ({msg: (value: unknown) => value}));
-vi.mock('@lingui/react/macro', () => ({
-	useLingui: () => ({
-		i18n: {
-			_: (d: {message: string}, values?: Record<string, unknown>) =>
-				d.message.replace(/\{(\w+)\}/g, (_, key) => String(values?.[key] ?? key)),
-		},
-	}),
-}));
+// By default messages are interpolated from their source text. With `lingui.catalog` on, a descriptor is reduced to the
+// hashed id a production build keeps and resolved through the real compiled catalog, so a msgid missing from a locale
+// catalog shows up as a raw id instead of passing silently.
+const lingui = vi.hoisted(() => ({catalog: false}));
+vi.mock('@lingui/react/macro', async () => {
+	const {i18n: real} = await vi.importActual<typeof import('@lingui/core')>('@lingui/core');
+	const {createHash} = await import('node:crypto');
+	const messageId = (message: string, context = '') =>
+		createHash('sha256')
+			.update(`${message}\u001F${context}`)
+			.digest('base64')
+			.replace(/\+/g, '-')
+			.replace(/\//g, '_')
+			.replace(/=+$/, '')
+			.slice(0, 6);
+	return {
+		useLingui: () => ({
+			i18n: {
+				_: (d: {message: string; context?: string}, values?: Record<string, unknown>) =>
+					lingui.catalog
+						? real._({id: messageId(d.message, d.context)}, values)
+						: d.message.replace(/\{(\w+)\}/g, (_, key) => String(values?.[key] ?? key)),
+			},
+		}),
+	};
+});
 vi.mock('@app/features/app/utils/LimitResolverAdapter', () => ({
 	LimitResolver: {resolve: vi.fn(() => controls.capacity)},
 }));
@@ -261,6 +279,7 @@ beforeEach(() => {
 	Object.assign(controls, {capacity: 8, create: true, manage: false});
 	Object.assign(popouts, {open: false, closing: false});
 	layout.enabled = false;
+	lingui.catalog = false;
 	runInAction(() => {
 		library.sounds = [];
 		library.error = null;
@@ -653,4 +672,42 @@ describe('soundboard popout', () => {
 		});
 		expect(onClose).toHaveBeenCalled();
 	});
+});
+
+describe('soundboard copy from the compiled catalogs', () => {
+	async function activate(locale: string): Promise<void> {
+		const {i18n} = await import('@lingui/core');
+		const {messages} = (await import(`../../i18n/locales/${locale}/messages.mjs`)) as {
+			messages: Record<string, unknown>;
+		};
+		i18n.load(locale, messages as never);
+		i18n.activate(locale);
+		lingui.catalog = true;
+	}
+	it.each([
+		['en-US', 'Kanka sounds', '5 / 8 sounds', 'Slow down. Try again in 3 s.', 'Add Sound 0 to favorites'],
+		['tr', 'Kanka sunucusunun sesleri', '5 / 8 ses', 'Yavaşla, 3 sn sonra tekrar dene.', 'Favorilere ekle: Sound 0'],
+	])(
+		'interpolates the header, capacity, favorite and rate limit copy in %s',
+		async (locale, header, footer, rate, star) => {
+			await activate(locale);
+			runInAction(() => {
+				library.sounds = Array.from({length: 5}, (_, id) => sound(String(id)));
+			});
+			commands.playSound.mockRejectedValueOnce(
+				new HttpError({method: 'POST', path: '/play', status: 429, body: {retry_after: 2.5}}),
+			);
+			await open();
+			const headerButton = [...host.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')].find((element) =>
+				element.textContent?.startsWith(header),
+			);
+			expect(headerButton?.textContent).toBe(`${header}5`);
+			expect(host.textContent).toContain(footer);
+			expect(button(star)).toBeDefined();
+			const play = host.querySelector<HTMLButtonElement>('[data-flx="voice.soundboard-panel.play-sound"]')!;
+			await act(async () => play.click());
+			expect(host.textContent).toContain(rate);
+			expect(host.innerHTML).not.toMatch(/\{\w+\}/);
+		},
+	);
 });
