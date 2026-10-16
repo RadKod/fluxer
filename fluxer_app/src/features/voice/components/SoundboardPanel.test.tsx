@@ -50,6 +50,8 @@ const modals = vi.hoisted(() => ({
 	modal: (render: unknown) => render,
 }));
 const passThrough = ({children}: {children?: ReactNode}) => children;
+const popouts = vi.hoisted(() => ({open: false, closing: false, openPopout: vi.fn(), close: vi.fn()}));
+const layout = vi.hoisted(() => ({enabled: false}));
 
 vi.mock('@lingui/core/macro', () => ({msg: (value: unknown) => value}));
 vi.mock('@lingui/react/macro', () => ({
@@ -114,6 +116,14 @@ vi.mock('@app/features/messaging/utils/FilePickerUtils', () => ({openFilePicker:
 vi.mock('@app/features/platform/utils/ComponentBus', () => ({ComponentBus: bus}));
 vi.mock('@app/features/voice/engine/MediaEngineFacade', () => ({default: media, useMediaEngineVersion: () => 0}));
 vi.mock('@app/features/ui/commands/ModalCommands', () => modals);
+vi.mock('@app/features/ui/popover/PopoverPopout', () => ({openPopout: popouts.openPopout}));
+vi.mock('@app/features/ui/commands/PopoutCommands', () => ({close: popouts.close}));
+vi.mock('@app/features/ui/state/Popout', () => ({
+	default: {isOpen: () => popouts.open, isClosing: () => popouts.closing},
+}));
+vi.mock('@app/features/ui/state/MobileLayout', () => ({
+	default: Object.assign(layout, {isMobileLayout: () => layout.enabled}),
+}));
 vi.mock('@app/features/ui/state/Modal', async () => ({
 	...(await vi.importActual<object>('@app/features/ui/state/Modal')),
 	default: {hasModal: () => false},
@@ -185,7 +195,8 @@ vi.mock('@app/features/ui/components/Slider', () => ({
 	},
 }));
 
-const {SoundboardPanel, SoundboardRoot} = await import('./SoundboardPanel');
+const {SoundboardPanel, SoundboardPopout, SoundboardRoot} = await import('./SoundboardPanel');
+const {registerSoundboardAnchor} = await import('@app/features/voice/state/SoundboardAnchor');
 const {SoundboardManagePanel} = await import('./SoundboardManagePanel');
 const {LimitResolver} = await import('@app/features/app/utils/LimitResolverAdapter');
 const {HttpError} = await import('@app/features/platform/types/EndpointError');
@@ -248,6 +259,8 @@ beforeEach(() => {
 	(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
 	vi.clearAllMocks();
 	Object.assign(controls, {capacity: 8, create: true, manage: false});
+	Object.assign(popouts, {open: false, closing: false});
+	layout.enabled = false;
 	runInAction(() => {
 		library.sounds = [];
 		library.error = null;
@@ -555,5 +568,89 @@ describe('soundboard management', () => {
 		await click('Save sound');
 		expect(commands.updateSound).not.toHaveBeenCalled();
 		expect(commands.deleteSound).not.toHaveBeenCalled();
+	});
+});
+
+describe('soundboard popout', () => {
+	type PopoutOptions = {
+		position: string;
+		render: (props: {popoutKey: string; onClose: () => void}) => ReactElement;
+		returnFocusRef: {current: HTMLElement | null};
+	};
+	let anchor: HTMLButtonElement;
+	let unregister: () => void;
+	beforeEach(() => {
+		anchor = document.createElement('button');
+		document.body.append(anchor);
+		unregister = registerSoundboardAnchor(anchor);
+		bus.subscribe.mockReturnValue(vi.fn());
+	});
+	afterEach(() => {
+		unregister();
+		anchor.remove();
+	});
+	async function toggle(): Promise<void> {
+		await act(async () => root.render(createElement(SoundboardRoot)));
+		act(() => bus.subscribe.mock.calls.at(-1)![1]());
+	}
+	it('opens anchored above the voice panel button instead of a modal and closes on the next toggle', async () => {
+		await toggle();
+		expect(modals.pushWithKey).not.toHaveBeenCalled();
+		expect(popouts.openPopout).toHaveBeenCalledOnce();
+		const [target, options, key] = popouts.openPopout.mock.calls[0] as [HTMLElement, PopoutOptions, string];
+		expect(target).toBe(anchor);
+		expect(key).toBe('soundboard-popout');
+		expect(options.position).toBe('top-start');
+		expect(options.returnFocusRef.current).toBe(anchor);
+		popouts.open = true;
+		act(() => bus.subscribe.mock.calls.at(-1)![1]());
+		expect(popouts.close).toHaveBeenCalledExactlyOnceWith('soundboard-popout');
+		expect(popouts.openPopout).toHaveBeenCalledOnce();
+	});
+	it('falls back to the modal on the mobile layout or without a mounted button', async () => {
+		layout.enabled = true;
+		await toggle();
+		expect(popouts.openPopout).not.toHaveBeenCalled();
+		expect(modals.pushWithKey).toHaveBeenCalledWith(expect.any(Function), 'soundboard');
+		layout.enabled = false;
+		unregister();
+		modals.pushWithKey.mockClear();
+		act(() => bus.subscribe.mock.calls.at(-1)![1]());
+		expect(popouts.openPopout).not.toHaveBeenCalled();
+		expect(modals.pushWithKey).toHaveBeenCalledWith(expect.any(Function), 'soundboard');
+	});
+	it('renders the same picker with the search box marked for initial focus', async () => {
+		runInAction(() => {
+			library.sounds = [sound('one')];
+		});
+		const onClose = vi.fn();
+		await act(async () => root.render(createElement(SoundboardPopout, {guildId: 'g', channelId: 'c', onClose})));
+		expect(host.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Soundboard');
+		const input = host.querySelector<HTMLInputElement>('input[aria-label="Search sounds"]')!;
+		expect(input.hasAttribute('data-autofocus')).toBe(true);
+		await click('Play Sound one');
+		expect(commands.playSound).toHaveBeenCalledWith('c', 'one');
+		expect(onClose).not.toHaveBeenCalled();
+	});
+	it('closes itself and opens the manage form as a modal', async () => {
+		runInAction(() => {
+			library.sounds = [sound('one')];
+		});
+		const onClose = vi.fn();
+		await act(async () => root.render(createElement(SoundboardPopout, {guildId: 'g', channelId: 'c', onClose})));
+		await click('Edit Sound one');
+		expect(onClose).toHaveBeenCalledOnce();
+		expect(modals.pushWithKey).toHaveBeenCalledWith(expect.any(Function), 'soundboard-manage');
+	});
+	it('closes when the voice session leaves the channel it was opened for', async () => {
+		const onClose = vi.fn();
+		await act(async () => root.render(createElement(SoundboardPopout, {guildId: 'g', channelId: 'c', onClose})));
+		expect(onClose).not.toHaveBeenCalled();
+		await act(async () => {
+			runInAction(() => {
+				media.channelId = 'other';
+			});
+		});
+		expect(onClose).toHaveBeenCalled();
 	});
 });

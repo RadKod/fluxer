@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 
 .panel,
+.content,
 .form {
 	display: flex;
 	flex-direction: column;
@@ -55,6 +56,53 @@
 	padding: var(--spacing-3);
 	border-radius: var(--radius-md);
 	background-color: var(--background-secondary);
+}
+
+/* The scroll region holds the sound list and paging; in the modal it simply flows with the page. */
+.scroll {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-4);
+	min-width: 0;
+}
+
+/* Popout above the voice panel's soundboard button: fixed width, at most 70% of the viewport tall, list scrolls. */
+.popout {
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+	width: min(33rem, calc(100vw - 1rem));
+	max-height: min(70vh, calc(100dvh - 2rem));
+	overflow: hidden;
+	border: 0.0625rem solid var(--background-modifier-accent);
+	border-radius: 0.5rem;
+	background-color: var(--form-surface-background);
+	box-shadow: var(--shadow-lg);
+}
+
+.popoutTitle {
+	margin: 0;
+	padding: var(--spacing-3) var(--spacing-4) 0;
+	color: var(--text-primary);
+	font-size: 1rem;
+	font-weight: 700;
+}
+
+.contentPopout {
+	flex: 1;
+	gap: var(--spacing-3);
+	min-height: 0;
+	padding: var(--spacing-3) var(--spacing-4) var(--spacing-4);
+}
+
+.contentPopout .scroll {
+	flex: 1;
+	gap: var(--spacing-3);
+	min-height: 0;
+	margin-right: calc(var(--spacing-2) * -1);
+	padding-right: var(--spacing-2);
+	overflow-y: auto;
+	overscroll-behavior: contain;
 }
 
 .hint {

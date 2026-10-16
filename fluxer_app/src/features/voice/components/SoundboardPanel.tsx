@@ -12,16 +12,21 @@ import {stripCombiningMarks} from '@app/features/search/utils/SearchTextMatching
 import {Button} from '@app/features/ui/button/Button';
 import {Checkbox} from '@app/features/ui/checkbox/Checkbox';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
+import * as PopoutCommands from '@app/features/ui/commands/PopoutCommands';
 import {Input} from '@app/features/ui/components/form/FormInput';
 import {Slider} from '@app/features/ui/components/Slider';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
+import {openPopout} from '@app/features/ui/popover/PopoverPopout';
+import MobileLayout from '@app/features/ui/state/MobileLayout';
 import ModalState from '@app/features/ui/state/Modal';
+import PopoutState from '@app/features/ui/state/Popout';
 import Users from '@app/features/user/state/Users';
 import * as SoundboardCommands from '@app/features/voice/commands/SoundboardCommands';
 import {SoundboardManagePanel} from '@app/features/voice/components/SoundboardManagePanel';
 import styles from '@app/features/voice/components/SoundboardPanel.module.css';
 import MediaEngine, {useMediaEngineVersion} from '@app/features/voice/engine/MediaEngineFacade';
 import {initSoundboardRuntime} from '@app/features/voice/events/SoundboardPlay';
+import {getSoundboardAnchor, SOUNDBOARD_POPOUT_KEY as POPOUT_KEY} from '@app/features/voice/state/SoundboardAnchor';
 import SoundboardLibrary from '@app/features/voice/state/SoundboardLibrary';
 import SoundboardSettings from '@app/features/voice/state/SoundboardSettings';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
@@ -122,6 +127,7 @@ const FAVORITE_REMOVE = msg({
 });
 const PAGE_SIZE = 48;
 const MODAL_KEY = 'soundboard';
+const MANAGE_MODAL_KEY = 'soundboard-manage';
 // Upper bound on how long the panel waits on a server-provided retry_after before letting the user try again.
 const MAX_RATE_LIMIT_MS = 60_000;
 
@@ -249,14 +255,20 @@ function SoundSection({
 	);
 }
 
-export const SoundboardPanel = observer(({guildId, channelId}: {guildId: string; channelId: string}) => {
+interface SoundboardContentProps {
+	guildId: string;
+	channelId: string;
+	onManage: (sound: GuildSoundboardSoundResponse | null, uploadAllowed: boolean) => void;
+	inPopout?: boolean;
+}
+
+const SoundboardContent = observer(({guildId, channelId, onManage, inPopout = false}: SoundboardContentProps) => {
 	const {i18n} = useLingui();
 	useMediaEngineVersion();
 	const [page, setPage] = useState(0);
 	const [query, setQuery] = useState('');
 	const [collapsed, setCollapsed] = useState<ReadonlySet<SectionKey>>(() => new Set());
 	const [settingsOpen, setSettingsOpen] = useState(false);
-	const [editing, setEditing] = useState<GuildSoundboardSoundResponse | null | undefined>(undefined);
 	const [playing, setPlaying] = useState(false);
 	const [playError, setPlayError] = useState<PlayFailure | null>(null);
 	const [now, setNow] = useState(() => Date.now());
@@ -346,7 +358,7 @@ export const SoundboardPanel = observer(({guildId, channelId}: {guildId: string;
 				onPlay={(target) => {
 					void play(target);
 				}}
-				onEdit={setEditing}
+				onEdit={(sound) => onManage(sound, uploadAllowed)}
 			/>
 		));
 	const pageOf = (list: ReadonlyArray<GuildSoundboardSoundResponse>) =>
@@ -362,6 +374,183 @@ export const SoundboardPanel = observer(({guildId, channelId}: {guildId: string;
 					? i18n._(FORBIDDEN)
 					: i18n._(PLAY_ERROR);
 	return (
+		<div className={clsx(styles.content, inPopout && styles.contentPopout)}>
+			<div className={styles.searchRow} role="search">
+				<div className={styles.search}>
+					<Input
+						type="text"
+						value={query}
+						onChange={(event) => {
+							setQuery(event.target.value);
+							setPage(0);
+						}}
+						onKeyDown={(event) => {
+							if (event.key === 'Escape' && query) {
+								event.stopPropagation();
+								setQuery('');
+								setPage(0);
+							}
+						}}
+						placeholder={i18n._(SEARCH)}
+						aria-label={i18n._(SEARCH)}
+						leftIcon={<MagnifyingGlassIcon aria-hidden size={16} weight="bold" />}
+						rightElement={
+							query ? (
+								<FocusRing offset={-2}>
+									<button
+										type="button"
+										className={styles.clear}
+										aria-label={i18n._(CLEAR_SEARCH)}
+										onClick={() => {
+											setQuery('');
+											setPage(0);
+										}}
+										data-flx="voice.soundboard-panel.clear-search"
+									>
+										<XIcon aria-hidden size={14} weight="bold" />
+									</button>
+								</FocusRing>
+							) : undefined
+						}
+						data-autofocus={inPopout ? true : undefined}
+						data-flx="voice.soundboard-panel.search"
+					/>
+				</div>
+				<Button
+					small
+					square
+					variant={settingsOpen ? 'secondary' : 'ghost'}
+					aria-label={i18n._(SETTINGS)}
+					aria-expanded={settingsOpen}
+					icon={<SpeakerHighIcon aria-hidden size={18} />}
+					onClick={() => setSettingsOpen((open) => !open)}
+				/>
+			</div>
+			{settingsOpen && (
+				<div className={styles.settings}>
+					<Checkbox checked={SoundboardSettings.disabled} onChange={(value) => SoundboardSettings.setDisabled(value)}>
+						{i18n._(DISABLE)}
+					</Checkbox>
+					<div className={styles.volume}>
+						<span className={styles.hint}>{i18n._(VOLUME)}</span>
+						<Slider
+							value={SoundboardSettings.volume}
+							defaultValue={SoundboardSettings.volume}
+							factoryDefaultValue={1}
+							minValue={0}
+							maxValue={1}
+							step={0.01}
+							ariaLabel={i18n._(VOLUME)}
+							asValueChanges={(value) => SoundboardSettings.setVolume(value)}
+							onValueChange={(value) => SoundboardSettings.commitVolume(value)}
+							showResetButton={false}
+						/>
+					</div>
+				</div>
+			)}
+			{errorText !== null && (
+				<p role="alert" className={styles.error}>
+					{errorText}
+				</p>
+			)}
+			<div className={styles.scroll}>
+				{SoundboardLibrary.loading ? (
+					<p role="status" className={styles.hint}>
+						{i18n._(LOADING)}
+					</p>
+				) : SoundboardLibrary.error ? (
+					<div role="alert" className={styles.status}>
+						<p>{i18n._(LOAD_ERROR)}</p>
+						<Button
+							small
+							variant="secondary"
+							onClick={() => {
+								void SoundboardLibrary.load(guildId, true);
+							}}
+						>
+							{i18n._(RETRY)}
+						</Button>
+					</div>
+				) : sounds.length === 0 ? (
+					<p className={styles.hint}>{i18n._(EMPTY)}</p>
+				) : needle.length > 0 ? (
+					matches.length === 0 ? (
+						<p className={styles.hint} role="status">
+							{i18n._(NO_MATCHES)}
+						</p>
+					) : (
+						<div className={styles.grid} role="group" aria-label={i18n._(SEARCH)}>
+							{tiles(pageOf(matches))}
+						</div>
+					)
+				) : (
+					<div className={styles.sections}>
+						{recentSounds.length > 0 && (
+							<SoundSection
+								title={i18n._(RECENT)}
+								count={recentSounds.length}
+								collapsed={collapsed.has('recent')}
+								onToggle={() => toggleSection('recent')}
+							>
+								{tiles(recentSounds)}
+							</SoundSection>
+						)}
+						{favoriteSounds.length > 0 && (
+							<SoundSection
+								title={i18n._(FAVORITES)}
+								count={favoriteSounds.length}
+								collapsed={collapsed.has('favorites')}
+								onToggle={() => toggleSection('favorites')}
+							>
+								{tiles(favoriteSounds)}
+							</SoundSection>
+						)}
+						<SoundSection
+							title={guildName ? i18n._(GUILD_SOUNDS, {guild: guildName}) : i18n._(COMMUNITY_SOUNDS)}
+							count={sounds.length}
+							collapsed={collapsed.has('guild')}
+							onToggle={() => toggleSection('guild')}
+						>
+							{tiles(pageOf(sounds))}
+						</SoundSection>
+					</div>
+				)}
+				{pages > 1 && !(needle.length === 0 && collapsed.has('guild')) && (
+					<div className={styles.pagination}>
+						<Button small variant="secondary" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>
+							{i18n._(PREVIOUS)}
+						</Button>
+						<span className={styles.hint} aria-live="polite">
+							{i18n._(PAGE, {page: currentPage + 1, pages})}
+						</span>
+						<Button
+							small
+							variant="secondary"
+							disabled={currentPage + 1 === pages}
+							onClick={() => setPage(currentPage + 1)}
+						>
+							{i18n._(NEXT)}
+						</Button>
+					</div>
+				)}
+			</div>
+			<div className={styles.toolbar}>
+				<p className={styles.hint}>{i18n._(CAPACITY, {count: sounds.length, capacity})}</p>
+				<Button small disabled={!uploadAllowed} onClick={() => onManage(null, uploadAllowed)}>
+					{i18n._(ADD)}
+				</Button>
+			</div>
+			{sounds.length >= capacity && <p className={styles.hint}>{i18n._(UPGRADE)}</p>}
+		</div>
+	);
+});
+
+export const SoundboardPanel = observer(({guildId, channelId}: {guildId: string; channelId: string}) => {
+	const {i18n} = useLingui();
+	const [editing, setEditing] = useState<
+		{sound: GuildSoundboardSoundResponse | undefined; uploadAllowed: boolean} | undefined
+	>(undefined);
+	return (
 		<Modal.Root size="medium" transitionPreset="instant">
 			<Modal.Header title={i18n._(TITLE)} />
 			<Modal.Content>
@@ -369,190 +558,117 @@ export const SoundboardPanel = observer(({guildId, channelId}: {guildId: string;
 					{editing !== undefined ? (
 						<SoundboardManagePanel
 							guildId={guildId}
-							sound={editing ?? undefined}
-							uploadAllowed={uploadAllowed}
+							sound={editing.sound}
+							uploadAllowed={editing.uploadAllowed}
 							onClose={() => setEditing(undefined)}
 						/>
 					) : (
-						<>
-							<div className={styles.searchRow} role="search">
-								<div className={styles.search}>
-									<Input
-										type="text"
-										value={query}
-										onChange={(event) => {
-											setQuery(event.target.value);
-											setPage(0);
-										}}
-										onKeyDown={(event) => {
-											if (event.key === 'Escape' && query) {
-												event.stopPropagation();
-												setQuery('');
-												setPage(0);
-											}
-										}}
-										placeholder={i18n._(SEARCH)}
-										aria-label={i18n._(SEARCH)}
-										leftIcon={<MagnifyingGlassIcon aria-hidden size={16} weight="bold" />}
-										rightElement={
-											query ? (
-												<FocusRing offset={-2}>
-													<button
-														type="button"
-														className={styles.clear}
-														aria-label={i18n._(CLEAR_SEARCH)}
-														onClick={() => {
-															setQuery('');
-															setPage(0);
-														}}
-														data-flx="voice.soundboard-panel.clear-search"
-													>
-														<XIcon aria-hidden size={14} weight="bold" />
-													</button>
-												</FocusRing>
-											) : undefined
-										}
-										data-flx="voice.soundboard-panel.search"
-									/>
-								</div>
-								<Button
-									small
-									square
-									variant={settingsOpen ? 'secondary' : 'ghost'}
-									aria-label={i18n._(SETTINGS)}
-									aria-expanded={settingsOpen}
-									icon={<SpeakerHighIcon aria-hidden size={18} />}
-									onClick={() => setSettingsOpen((open) => !open)}
-								/>
-							</div>
-							{settingsOpen && (
-								<div className={styles.settings}>
-									<Checkbox
-										checked={SoundboardSettings.disabled}
-										onChange={(value) => SoundboardSettings.setDisabled(value)}
-									>
-										{i18n._(DISABLE)}
-									</Checkbox>
-									<div className={styles.volume}>
-										<span className={styles.hint}>{i18n._(VOLUME)}</span>
-										<Slider
-											value={SoundboardSettings.volume}
-											defaultValue={SoundboardSettings.volume}
-											factoryDefaultValue={1}
-											minValue={0}
-											maxValue={1}
-											step={0.01}
-											ariaLabel={i18n._(VOLUME)}
-											asValueChanges={(value) => SoundboardSettings.setVolume(value)}
-											onValueChange={(value) => SoundboardSettings.commitVolume(value)}
-											showResetButton={false}
-										/>
-									</div>
-								</div>
-							)}
-							{errorText !== null && (
-								<p role="alert" className={styles.error}>
-									{errorText}
-								</p>
-							)}
-							{SoundboardLibrary.loading ? (
-								<p role="status" className={styles.hint}>
-									{i18n._(LOADING)}
-								</p>
-							) : SoundboardLibrary.error ? (
-								<div role="alert" className={styles.status}>
-									<p>{i18n._(LOAD_ERROR)}</p>
-									<Button
-										small
-										variant="secondary"
-										onClick={() => {
-											void SoundboardLibrary.load(guildId, true);
-										}}
-									>
-										{i18n._(RETRY)}
-									</Button>
-								</div>
-							) : sounds.length === 0 ? (
-								<p className={styles.hint}>{i18n._(EMPTY)}</p>
-							) : needle.length > 0 ? (
-								matches.length === 0 ? (
-									<p className={styles.hint} role="status">
-										{i18n._(NO_MATCHES)}
-									</p>
-								) : (
-									<div className={styles.grid} role="group" aria-label={i18n._(SEARCH)}>
-										{tiles(pageOf(matches))}
-									</div>
-								)
-							) : (
-								<div className={styles.sections}>
-									{recentSounds.length > 0 && (
-										<SoundSection
-											title={i18n._(RECENT)}
-											count={recentSounds.length}
-											collapsed={collapsed.has('recent')}
-											onToggle={() => toggleSection('recent')}
-										>
-											{tiles(recentSounds)}
-										</SoundSection>
-									)}
-									{favoriteSounds.length > 0 && (
-										<SoundSection
-											title={i18n._(FAVORITES)}
-											count={favoriteSounds.length}
-											collapsed={collapsed.has('favorites')}
-											onToggle={() => toggleSection('favorites')}
-										>
-											{tiles(favoriteSounds)}
-										</SoundSection>
-									)}
-									<SoundSection
-										title={guildName ? i18n._(GUILD_SOUNDS, {guild: guildName}) : i18n._(COMMUNITY_SOUNDS)}
-										count={sounds.length}
-										collapsed={collapsed.has('guild')}
-										onToggle={() => toggleSection('guild')}
-									>
-										{tiles(pageOf(sounds))}
-									</SoundSection>
-								</div>
-							)}
-							{pages > 1 && !(needle.length === 0 && collapsed.has('guild')) && (
-								<div className={styles.pagination}>
-									<Button
-										small
-										variant="secondary"
-										disabled={currentPage === 0}
-										onClick={() => setPage(currentPage - 1)}
-									>
-										{i18n._(PREVIOUS)}
-									</Button>
-									<span className={styles.hint} aria-live="polite">
-										{i18n._(PAGE, {page: currentPage + 1, pages})}
-									</span>
-									<Button
-										small
-										variant="secondary"
-										disabled={currentPage + 1 === pages}
-										onClick={() => setPage(currentPage + 1)}
-									>
-										{i18n._(NEXT)}
-									</Button>
-								</div>
-							)}
-							<div className={styles.toolbar}>
-								<p className={styles.hint}>{i18n._(CAPACITY, {count: sounds.length, capacity})}</p>
-								<Button small disabled={!uploadAllowed} onClick={() => setEditing(null)}>
-									{i18n._(ADD)}
-								</Button>
-							</div>
-							{sounds.length >= capacity && <p className={styles.hint}>{i18n._(UPGRADE)}</p>}
-						</>
+						<SoundboardContent
+							guildId={guildId}
+							channelId={channelId}
+							onManage={(sound, uploadAllowed) => setEditing({sound: sound ?? undefined, uploadAllowed})}
+						/>
 					)}
 				</div>
 			</Modal.Content>
 		</Modal.Root>
 	);
 });
+
+const SoundboardManageModal = observer(
+	({
+		guildId,
+		sound,
+		uploadAllowed,
+	}: {
+		guildId: string;
+		sound: GuildSoundboardSoundResponse | undefined;
+		uploadAllowed: boolean;
+	}) => {
+		const {i18n} = useLingui();
+		return (
+			<Modal.Root size="small" transitionPreset="instant">
+				<Modal.Header title={i18n._(TITLE)} />
+				<Modal.Content>
+					<SoundboardManagePanel
+						guildId={guildId}
+						sound={sound}
+						uploadAllowed={uploadAllowed}
+						onClose={() => ModalCommands.popWithKey(MANAGE_MODAL_KEY)}
+					/>
+				</Modal.Content>
+			</Modal.Root>
+		);
+	},
+);
+
+// sanalyer: on desktop the soundboard opens as a popout above the voice panel's soundboard button, like the
+// expression picker; the manage form still opens as a modal. The popout closes itself when the voice session moves.
+export const SoundboardPopout = observer(
+	({guildId, channelId, onClose}: {guildId: string; channelId: string; onClose: () => void}) => {
+		const {i18n} = useLingui();
+		useMediaEngineVersion();
+		const stale = !MediaEngine.connected || MediaEngine.guildId !== guildId || MediaEngine.channelId !== channelId;
+		useEffect(() => {
+			if (stale) onClose();
+		}, [stale, onClose]);
+		return (
+			<div className={styles.popout} role="dialog" aria-label={i18n._(TITLE)} data-flx="voice.soundboard-panel.popout">
+				<h2 className={styles.popoutTitle}>{i18n._(TITLE)}</h2>
+				<SoundboardContent
+					guildId={guildId}
+					channelId={channelId}
+					inPopout
+					onManage={(sound, uploadAllowed) => {
+						onClose();
+						ModalCommands.pushWithKey(
+							ModalCommands.modal(() => (
+								<SoundboardManageModal guildId={guildId} sound={sound ?? undefined} uploadAllowed={uploadAllowed} />
+							)),
+							MANAGE_MODAL_KEY,
+						);
+					}}
+				/>
+			</div>
+		);
+	},
+);
+
+function closeSoundboardSurfaces(): void {
+	ModalCommands.popWithKey(MODAL_KEY);
+	if (PopoutState.isOpen(POPOUT_KEY)) PopoutCommands.close(POPOUT_KEY);
+}
+
+export function toggleSoundboard(guildId: string, channelId: string): void {
+	const anchor = MobileLayout.enabled ? null : getSoundboardAnchor();
+	if (anchor) {
+		if (ModalState.hasModal(MODAL_KEY)) ModalCommands.popWithKey(MODAL_KEY);
+		if (PopoutState.isOpen(POPOUT_KEY) && !PopoutState.isClosing(POPOUT_KEY)) {
+			PopoutCommands.close(POPOUT_KEY);
+			return;
+		}
+		openPopout(
+			anchor,
+			{
+				position: 'top-start',
+				offsetMainAxis: 8,
+				returnFocusRef: {current: anchor},
+				render: ({onClose}) => <SoundboardPopout guildId={guildId} channelId={channelId} onClose={onClose} />,
+			},
+			POPOUT_KEY,
+		);
+		return;
+	}
+	if (PopoutState.isOpen(POPOUT_KEY)) PopoutCommands.close(POPOUT_KEY);
+	if (ModalState.hasModal(MODAL_KEY)) {
+		ModalCommands.popWithKey(MODAL_KEY);
+		return;
+	}
+	ModalCommands.pushWithKey(
+		ModalCommands.modal(() => <SoundboardPanel guildId={guildId} channelId={channelId} />),
+		MODAL_KEY,
+	);
+}
 
 export const SoundboardRoot = observer(() => {
 	useMediaEngineVersion();
@@ -566,18 +682,11 @@ export const SoundboardRoot = observer(() => {
 	useEffect(() => {
 		const unsubscribe = ComponentBus.subscribe('SOUNDBOARD_TOGGLE', () => {
 			if (!guildId || !channelId || !connected) return;
-			if (ModalState.hasModal(MODAL_KEY)) {
-				ModalCommands.popWithKey(MODAL_KEY);
-				return;
-			}
-			ModalCommands.pushWithKey(
-				ModalCommands.modal(() => <SoundboardPanel guildId={guildId} channelId={channelId} />),
-				MODAL_KEY,
-			);
+			toggleSoundboard(guildId, channelId);
 		});
 		return () => {
 			unsubscribe();
-			ModalCommands.popWithKey(MODAL_KEY);
+			closeSoundboardSurfaces();
 		};
 	}, [guildId, channelId, connected, accountKey, connectionId, sessionId]);
 	return null;

@@ -394,6 +394,9 @@ describe('voice panel soundboard entry', () => {
 		const buttons = host.querySelectorAll<HTMLButtonElement>('button[aria-label="Soundboard"]');
 		expect(buttons).toHaveLength(1);
 		expect(buttons[0].disabled).toBe(false);
+		expect(buttons[0].getAttribute('aria-haspopup')).toBe('dialog');
+		const {getSoundboardAnchor} = await import('@app/features/voice/state/SoundboardAnchor');
+		expect(getSoundboardAnchor()).toBe(buttons[0]);
 		act(() => buttons[0].click());
 		expect(dispatch).toHaveBeenCalledExactlyOnceWith('SOUNDBOARD_TOGGLE');
 	});
