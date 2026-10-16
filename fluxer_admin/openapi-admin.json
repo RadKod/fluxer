@@ -2,13 +2,13 @@
 	"openapi": "3.0.3",
 	"security": [],
 	"info": {
-		"title": "Fluxer API",
+		"title": "sanalyer API",
 		"version": "1.0.0",
-		"description": "API for Fluxer, a free and open source instant messaging and VoIP chat app built for friends, groups, and communities.",
-		"contact": {"name": "Fluxer Platform AB", "email": "support@fluxer.com"},
+		"description": "API of sanalyer, a free and open source instant messaging and VoIP chat app for friends, groups and communities.",
+		"contact": {"name": "sanalyer", "email": "info@sanalyer.com"},
 		"license": {"name": "AGPL-3.0", "url": "https://www.gnu.org/licenses/agpl-3.0.html"}
 	},
-	"servers": [{"url": "https://api.fluxer.app/v1", "description": "Production API"}],
+	"servers": [{"url": "https://sanalyer.com/api/v1", "description": "Production API"}],
 	"paths": {
 		"/admin/acls": {
 			"get": {

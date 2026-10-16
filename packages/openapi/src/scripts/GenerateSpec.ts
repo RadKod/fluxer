@@ -25,7 +25,7 @@ interface GeneratedTargetSpec {
 	spec: WritableOpenAPISpec;
 }
 const API_DESCRIPTION =
-	'API for Fluxer, a free and open source instant messaging and VoIP chat app built for friends, groups, and communities.';
+	'API of sanalyer, a free and open source instant messaging and VoIP chat app for friends, groups and communities.';
 function parseArgs(): GenerateOptions {
 	const args = process.argv.slice(2);
 	let validateOnly = false;
@@ -92,10 +92,10 @@ function reportRoutesLeftOut(target: GenerateTarget, stats: OpenAPIGenerationSta
 async function buildTargetSpec(basePath: string, target: GenerateTarget): Promise<WritableOpenAPISpec> {
 	const generator = new OpenAPIGenerator({
 		basePath,
-		title: 'Fluxer API',
+		title: 'sanalyer API',
 		version: '1.0.0',
 		description: API_DESCRIPTION,
-		serverUrl: 'https://api.fluxer.app/v1',
+		serverUrl: 'https://sanalyer.com/api/v1',
 		routeScope: target,
 		schemaTarget: target === 'admin' ? 'openapi-3.0' : 'draft-2020-12',
 	});

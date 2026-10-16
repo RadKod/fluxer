@@ -89,8 +89,8 @@ export class OpenAPIGenerator {
 				version: this.settings.version,
 				description: this.settings.description,
 				contact: {
-					name: 'Fluxer Platform AB',
-					email: 'support@fluxer.com',
+					name: 'sanalyer',
+					email: 'info@sanalyer.com',
 				},
 				license: {
 					name: 'AGPL-3.0',
