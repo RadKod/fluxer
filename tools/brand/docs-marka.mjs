@@ -110,7 +110,7 @@ Use \`/v1\` paths and send credentials in the \`Authorization\` header as descri
 
 ## Source code
 
-sanalyer runs on open-source software licensed under the AGPLv3. The upstream source is on [GitHub](https://github.com/fluxerapp/fluxer).
+sanalyer runs on open-source software licensed under the AGPLv3. Our modified source is on [GitHub](https://github.com/RadKod/fluxer); the upstream project is [fluxerapp/fluxer](https://github.com/fluxerapp/fluxer).
 `,
 	'downloads/overview.md': `---
 # SPDX-License-Identifier: AGPL-3.0-or-later
