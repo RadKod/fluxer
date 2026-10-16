@@ -680,7 +680,8 @@ a_dm_acked_on_the_desktop_inside_the_unread_grace_is_not_pushed_test() ->
         ?assertEqual([], push_buffer(PresencePid)),
         timer:sleep(?UNREAD_GRACE_MS * 3),
         sync(PresencePid),
-        {fetched_channels(), collect_published(0)}
+        Published = collect_published(0),
+        {fetched_channels(), Published}
     end),
     ?assertEqual([], Fetches),
     ?assertEqual(0, Published).
@@ -691,7 +692,9 @@ a_dm_read_elsewhere_inside_the_unread_grace_is_not_pushed_test() ->
     ) ->
         dispatch(PresencePid, message_create, dm_message(?PARTNER_MSG, ?PARTNER)),
         ok = wait_for_empty_buffer(PresencePid, 100),
-        {fetched_channels(), collect_published(0)}
+        %% The read-state check runs in its own process after the release.
+        Published = collect_published(0),
+        {fetched_channels(), Published}
     end),
     ?assertEqual([integer_to_binary(?DM)], Fetches),
     ?assertEqual(0, Published).

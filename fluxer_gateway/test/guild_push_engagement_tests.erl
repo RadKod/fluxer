@@ -597,6 +597,8 @@ guild_message_read_on_the_desktop_inside_the_unread_grace_is_dropped_test() ->
 guild_unread_grace_holds_past_the_cap_fall_back_to_dropping_test() ->
     Desktop = idle_session(),
     State0 = guild_state(#{<<"desktop">> => Desktop}),
+    %% The counter table must outlive the short-lived hold process.
+    Owner = ensure_ets_owner(),
     try
         with_unread_grace(0, #{guild_push_unread_grace_max_holds => 0}, fun() ->
             State = apply_session_presence(#{<<"desktop">> => desktop_active()}, State0),
@@ -610,8 +612,28 @@ guild_unread_grace_holds_past_the_cap_fall_back_to_dropping_test() ->
         end)
     after
         Desktop ! stop,
+        stop_ets_owner(Owner),
         ets:delete(maps:get(member_presence, State0))
     end.
+
+ensure_ets_owner() ->
+    case whereis(guild_ets_owner) of
+        undefined ->
+            {ok, Pid} = guild_ets_owner:start_link(),
+            unlink(Pid),
+            {started, Pid};
+        _ ->
+            existing
+    end.
+
+stop_ets_owner({started, Pid}) ->
+    try gen_server:stop(Pid) of
+        ok -> ok
+    catch
+        exit:_ -> ok
+    end;
+stop_ets_owner(existing) ->
+    ok.
 
 dm_path_pushes_right_away_when_every_desktop_session_is_afk_test() ->
     with_unread_grace(0, fun() ->
