@@ -7,19 +7,25 @@ interface ScreenSharePickerDisplayPermissionContext {
 	settingsOpened: boolean;
 }
 
+// 'restart-required': macOS already holds the grant but this app process started before it, so the
+// source list stays empty until the app is relaunched.
+export type ScreenSharePickerScreenRecordingPermission = NativePermissionResult | 'restart-required';
+
 export type ScreenSharePickerDisplayPermissionEvent =
 	| {type: 'permission.check'}
-	| {type: 'permission.result'; permission: NativePermissionResult}
+	| {type: 'permission.result'; permission: ScreenSharePickerScreenRecordingPermission}
 	| {type: 'permission.settingsOpened'}
 	| {type: 'permission.clear'};
 
 export type ScreenSharePickerDisplayPermissionPrompt = 'none' | 'checking' | 'needs-permission' | 'restart-required';
 
-function permissionAllowsDisplaySources(permission: NativePermissionResult): boolean {
+function permissionAllowsDisplaySources(permission: ScreenSharePickerScreenRecordingPermission): boolean {
 	return permission === 'granted' || permission === 'unsupported';
 }
 
-export function screenRecordingPermissionAllowsPickerSources(permission: NativePermissionResult): boolean {
+export function screenRecordingPermissionAllowsPickerSources(
+	permission: ScreenSharePickerScreenRecordingPermission,
+): boolean {
 	return permissionAllowsDisplaySources(permission);
 }
 
@@ -31,6 +37,7 @@ const screenSharePickerDisplayPermissionStateMachine = setup({
 	guards: {
 		permissionAllowsDisplaySources: ({event}) =>
 			event.type === 'permission.result' && permissionAllowsDisplaySources(event.permission),
+		permissionNeedsRestart: ({event}) => event.type === 'permission.result' && event.permission === 'restart-required',
 		settingsAlreadyOpened: ({context}) => context.settingsOpened,
 	},
 	actions: {
@@ -62,6 +69,10 @@ const screenSharePickerDisplayPermissionStateMachine = setup({
 						target: 'ready',
 					},
 					{
+						guard: 'permissionNeedsRestart',
+						target: 'restartRequired',
+					},
+					{
 						guard: 'settingsAlreadyOpened',
 						target: 'restartRequired',
 					},
@@ -84,6 +95,10 @@ const screenSharePickerDisplayPermissionStateMachine = setup({
 					{
 						guard: 'permissionAllowsDisplaySources',
 						target: 'ready',
+					},
+					{
+						guard: 'permissionNeedsRestart',
+						target: 'restartRequired',
 					},
 					{target: 'blocked'},
 				],

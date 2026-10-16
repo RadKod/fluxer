@@ -265,6 +265,8 @@ export interface DownloadFileResult {
 export type MediaAccessType = 'microphone' | 'camera' | 'screen' | 'audio-capture';
 export type MediaAccessStatus = 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown';
 export type InputMonitoringPermissionStatus = 'granted' | 'denied' | 'not-determined' | 'unsupported';
+// 'restart-required': macOS holds the grant but it only takes effect after the app is relaunched.
+export type ScreenRecordingPermissionStatus = InputMonitoringPermissionStatus | 'restart-required';
 
 export interface DesktopSource {
 	id: string;
@@ -730,8 +732,8 @@ export interface ElectronAPI extends GameActivityAPI {
 	openInputMonitoringSettings: () => Promise<void>;
 	getInputMonitoringPermissionStatus: () => Promise<InputMonitoringPermissionStatus>;
 	requestInputMonitoringPermission: () => Promise<InputMonitoringPermissionStatus>;
-	getScreenRecordingPermissionStatus: () => Promise<InputMonitoringPermissionStatus>;
-	requestScreenRecordingPermission: () => Promise<InputMonitoringPermissionStatus>;
+	getScreenRecordingPermissionStatus: () => Promise<ScreenRecordingPermissionStatus>;
+	requestScreenRecordingPermission: () => Promise<ScreenRecordingPermissionStatus>;
 	downloadFile: (url: string, defaultPath: string, sha256?: string | null) => Promise<DownloadFileResult>;
 	toggleDevTools: () => void;
 	showNotification: (options: NotificationOptions) => Promise<NotificationResult>;

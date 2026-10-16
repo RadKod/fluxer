@@ -4,13 +4,14 @@ import MacPermissions from '@app/features/permissions/system/state/MacPermission
 import MediaPermission from '@app/features/permissions/system/state/MediaPermission';
 import {
 	checkNativePermission,
-	type NativePermissionResult,
+	normalizeNativePermissionResult,
 } from '@app/features/permissions/system/utils/NativePermissions';
-import {getElectronAPI} from '@app/features/ui/utils/NativeUtils';
+import {getElectronAPI, isNativeMacOS} from '@app/features/ui/utils/NativeUtils';
 import {
 	createScreenSharePickerDisplayPermissionSnapshot,
 	type ScreenSharePickerDisplayPermissionEvent,
 	type ScreenSharePickerDisplayPermissionPrompt,
+	type ScreenSharePickerScreenRecordingPermission,
 	screenRecordingPermissionAllowsPickerSources,
 	selectScreenSharePickerDisplayPermissionPrompt,
 	transitionScreenSharePickerDisplayPermissionSnapshot,
@@ -35,7 +36,7 @@ function shouldCheckScreenRecordingPermissionForPicker(
 	return activeTab !== 'devices' && shouldCheckDesktopSourceScreenRecordingPermission(displayShareEnvironment);
 }
 
-function updateScreenRecordingPermissionStore(permission: NativePermissionResult): void {
+function updateScreenRecordingPermissionStore(permission: ScreenSharePickerScreenRecordingPermission): void {
 	if (screenRecordingPermissionAllowsPickerSources(permission)) {
 		MediaPermission.updateScreenRecordingPermissionGranted();
 	} else if (permission === 'denied') {
@@ -43,9 +44,20 @@ function updateScreenRecordingPermissionStore(permission: NativePermissionResult
 	}
 }
 
-export async function readScreenSharePickerScreenRecordingPermission(reason: string): Promise<NativePermissionResult> {
+async function checkPickerScreenRecordingPermission(): Promise<ScreenSharePickerScreenRecordingPermission> {
+	const electronApi = getElectronAPI();
+	if (electronApi && isNativeMacOS() && typeof electronApi.getScreenRecordingPermissionStatus === 'function') {
+		const status = await electronApi.getScreenRecordingPermissionStatus();
+		return status === 'restart-required' ? status : normalizeNativePermissionResult(status);
+	}
+	return checkNativePermission('screen');
+}
+
+export async function readScreenSharePickerScreenRecordingPermission(
+	reason: string,
+): Promise<ScreenSharePickerScreenRecordingPermission> {
 	try {
-		const permission = await checkNativePermission('screen');
+		const permission = await checkPickerScreenRecordingPermission();
 		updateScreenRecordingPermissionStore(permission);
 		return permission;
 	} catch (error) {

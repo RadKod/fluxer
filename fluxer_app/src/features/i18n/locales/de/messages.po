@@ -57904,3 +57904,23 @@ msgstr ""
 "Your list of programs never leaves your computer, no game history is kept, "
 "and people you’ve blocked can’t see it. You can switch to Friends or Off at "
 "any time in Settings › Privacy › Show my game activity."
+
+#. Heading in the screen-share picker when macOS screen recording permission is
+#. missing. Keep "Screen Recording" as macOS shows it in this language.
+#: src/features/voice/components/modals/screen_share_picker_modal/ScreenSharePickerDisplayPermissionPrompt.tsx
+msgid "Screen sharing needs Screen Recording permission on macOS"
+msgstr "Screen sharing needs Screen Recording permission on macOS"
+
+#. Body in the screen-share picker when macOS screen recording permission is
+#. missing. {productName} and {productName2} are the app name. Keep "System
+#. Settings", "Privacy & Security" and the permission name as macOS shows them
+#. in this language.
+#: src/features/voice/components/modals/screen_share_picker_modal/ScreenSharePickerDisplayPermissionPrompt.tsx
+msgid ""
+"Open System Settings → Privacy & Security → Screen Recording and allow "
+"{productName}. Then restart {productName2}: macOS only applies the permission "
+"after a restart."
+msgstr ""
+"Open System Settings → Privacy & Security → Screen Recording and allow "
+"{productName}. Then restart {productName2}: macOS only applies the permission "
+"after a restart."

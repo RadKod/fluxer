@@ -51,6 +51,7 @@ import type {
 	NativeScreenCaptureStartResult,
 	NotificationOptions,
 	NotificationResult,
+	ScreenRecordingPermissionStatus,
 	SetDesktopTroubleshootingDisableHardwareAccelerationOptions,
 	SpellcheckBundledDictionary,
 	SpellcheckResolvedEngineInfo,
@@ -652,9 +653,9 @@ const api: ElectronAPI = {
 		ipcRenderer.invoke('mac-tcc:status', 'input-monitoring'),
 	requestInputMonitoringPermission: (): Promise<InputMonitoringPermissionStatus> =>
 		ipcRenderer.invoke('mac-tcc:request', 'input-monitoring'),
-	getScreenRecordingPermissionStatus: (): Promise<InputMonitoringPermissionStatus> =>
+	getScreenRecordingPermissionStatus: (): Promise<ScreenRecordingPermissionStatus> =>
 		ipcRenderer.invoke('mac-tcc:status', 'screen-recording'),
-	requestScreenRecordingPermission: (): Promise<InputMonitoringPermissionStatus> =>
+	requestScreenRecordingPermission: (): Promise<ScreenRecordingPermissionStatus> =>
 		ipcRenderer.invoke('mac-tcc:request', 'screen-recording'),
 	downloadFile: (url: string, defaultPath: string, sha256?: string | null): Promise<DownloadFileResult> =>
 		ipcRenderer.invoke('download-file', {url, defaultPath, sha256}),

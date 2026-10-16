@@ -57335,3 +57335,23 @@ msgstr "Favorilere ekle: {name}"
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "Remove {name} from favorites"
 msgstr "Favorilerden çıkar: {name}"
+
+#. Heading in the screen-share picker when macOS screen recording permission is
+#. missing. Keep "Screen Recording" as macOS shows it in this language.
+#: src/features/voice/components/modals/screen_share_picker_modal/ScreenSharePickerDisplayPermissionPrompt.tsx
+msgid "Screen sharing needs Screen Recording permission on macOS"
+msgstr "Ekran paylaşımı için macOS'ta Ekran Kaydı izni gerekli"
+
+#. Body in the screen-share picker when macOS screen recording permission is
+#. missing. {productName} and {productName2} are the app name. Keep "System
+#. Settings", "Privacy & Security" and the permission name as macOS shows them
+#. in this language.
+#: src/features/voice/components/modals/screen_share_picker_modal/ScreenSharePickerDisplayPermissionPrompt.tsx
+msgid ""
+"Open System Settings → Privacy & Security → Screen Recording and allow "
+"{productName}. Then restart {productName2}: macOS only applies the permission "
+"after a restart."
+msgstr ""
+"Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı'nı açıp {productName} "
+"için izin verin. Sonra {productName2} uygulamasını yeniden başlatın; macOS "
+"izni ancak yeniden başlatınca uygular."
