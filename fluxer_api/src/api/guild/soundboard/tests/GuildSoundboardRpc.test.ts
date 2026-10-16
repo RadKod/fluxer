@@ -26,8 +26,7 @@ describe('Soundboard distributed rate limit internal RPC', () => {
 			.execute();
 	it('authenticates the reverse RPC before charging a bucket', async () => {
 		await createBuilder(harness, '').post('/internal/rpc').body(body).expect(401).execute();
-		expect(await request()).toEqual({type: body.type, data: {allowed: true}});
-		expect(await request()).toEqual({type: body.type, data: {allowed: true}});
+		for (let i = 0; i < 4; i++) expect(await request()).toEqual({type: body.type, data: {allowed: true}});
 		expect(await request()).toEqual({type: body.type, data: {allowed: false}});
 	});
 });
