@@ -111,6 +111,13 @@ describe('Game activity display', () => {
 		expect(container.querySelector('img')).toBeNull();
 		expect(container.textContent).toContain('2 min');
 	});
+	it('shows a Spotify listening activity with its own label and no duration', async () => {
+		state.activity = {manual_name: '\u266B Sezen Aksu \u2013 Firuze', started_at: 0};
+		await render();
+		expect(container.textContent).toBe('Listening to SpotifySezen Aksu \u2013 Firuze');
+		expect(container.querySelector('[data-kind="listening"]')).not.toBeNull();
+		expect(mocks.icon).not.toHaveBeenCalled();
+	});
 	it('unknown_id_no_external_fetch', async () => {
 		state.activity = {game_id: 'unknown-game', started_at: 0};
 		await render();

@@ -254,11 +254,13 @@ interface DesktopLegacyHarvestAPI {
 }
 
 export interface ElectronAPI {
-	gameActivityGetCapabilities?(): Promise<{version: 1; supported: boolean}>;
+	// `spotify` is absent on shells older than Spotify support; only then may `spotify` be sent to configure.
+	gameActivityGetCapabilities?(): Promise<{version: 1; supported: boolean; spotify?: boolean}>;
 	gameActivityConfigure?(request: {
 		account_id: string | null;
 		generation: number;
 		enabled: boolean;
+		spotify?: boolean;
 	}): Promise<{state: 'ok' | 'unsupported'}>;
 	gameActivityGetState?(request: {generation: number}): Promise<DesktopGameActivityState>;
 	gameActivityListCandidates?(request: {generation: number; cursor?: string}): Promise<DesktopGameActivityCandidates>;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Initialization from '@app/features/app/state/Initialization';
+import GameActivityLocalSettings from '@app/features/game_activity/state/GameActivityLocalSettings';
 import GameActivitySettings from '@app/features/game_activity/state/GameActivitySettings';
 import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
 import DesktopGameActivityBridge from '@app/features/game_activity/utils/DesktopGameActivityBridge';
@@ -309,11 +310,15 @@ class GatewaySessionPool {
 				) ??
 					false),
 			getEnabled: isGameActivitySharingEnabled,
+			getSpotifyEnabled: () => GameActivityLocalSettings.showSpotify,
 			clearReceived: () => GameActivityStore.reset(),
 		});
-		return reaction(isGameActivitySharingEnabled, () => {
-			void DesktopGameActivityBridge.syncPolicy();
-		});
+		return reaction(
+			() => `${isGameActivitySharingEnabled()}:${GameActivityLocalSettings.showSpotify}`,
+			() => {
+				void DesktopGameActivityBridge.syncPolicy();
+			},
+		);
 	}
 
 	private syncForegroundPresence(): void {

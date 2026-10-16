@@ -128,6 +128,9 @@ function harness({
 		'@electron/main/GameActivityProbes': {
 			listDarwinProcesses: () => Promise.reject(new Error('Unexpected process listing')),
 			listLinuxProcesses: () => Promise.reject(new Error('Unexpected process listing')),
+			readSpotifyNowPlaying: () => Promise.reject(new Error('Unexpected Spotify query')),
+			formatListeningName: () => null,
+			spotifyProcessName: () => null,
 		},
 		'@electron/main/LinuxLaunchPath': {getStableLinuxLaunchPath: () => processStub.execPath},
 		'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},

@@ -1570,7 +1570,8 @@ module.exports = {
 		extendInfo: {
 			NSMicrophoneUsageDescription: 'sanalyer needs access to your microphone to enable voice chat features.',
 			NSCameraUsageDescription: 'sanalyer needs access to your camera to enable video chat features.',
-			NSAppleEventsUsageDescription: 'sanalyer needs access to Apple Events for automation features.',
+			NSAppleEventsUsageDescription:
+				'sanalyer reads the song playing in Spotify to show it on your profile. You can turn this off in sanalyer settings.',
 			NSAudioCaptureUsageDescription: 'sanalyer captures audio from the screen or window you choose to share.',
 			NSScreenCaptureUsageDescription: 'sanalyer captures the screen or window you choose to share.',
 			NSLocalNetworkUsageDescription:

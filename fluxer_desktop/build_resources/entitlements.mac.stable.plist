@@ -21,6 +21,8 @@
     <true/>
     <key>com.apple.security.network.server</key>
     <true/>
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
     <key>com.apple.application-identifier</key>
     <string>3G5837T29K.app.fluxer</string>
     <key>com.apple.developer.associated-domains</key>

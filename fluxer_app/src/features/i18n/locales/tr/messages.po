@@ -57335,3 +57335,28 @@ msgstr "Favorilere ekle: {name}"
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "Remove {name} from favorites"
 msgstr "Favorilerden çıkar: {name}"
+
+#. Shown under a name in the member and direct message lists while the user
+#. plays music in the Spotify app. {track} is "Artist – Song".
+#: src/features/game_activity/components/GameActivityRowStatus.tsx
+msgid "Listening to Spotify · {track}"
+msgstr "Spotify dinliyor · {track}"
+
+#. Profile label above the song the user is playing in the Spotify app (shown
+#. instead of Playing now).
+#: src/features/game_activity/components/GameActivityDisplay.tsx
+msgid "Listening to Spotify"
+msgstr "Spotify dinliyor"
+
+#. Switch in game activity settings; shares the song playing in the local
+#. Spotify app like a game.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx
+msgid "Show what I’m listening to on Spotify"
+msgstr "Spotify'da dinlediğini göster"
+
+#. Description under the Spotify switch. The song is read from the desktop
+#. Spotify app, never from a Spotify account. The macOS sentence refers to the
+#. system Automation permission prompt.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx
+msgid "Shows the song playing in the Spotify app on this device to the same people who see your game activity. No Spotify account link is needed. macOS may ask once whether this app can control Spotify."
+msgstr "Bu cihazdaki Spotify uygulamasında çalan şarkıyı oyun etkinliğini görenlere gösterir. Spotify hesabı bağlamak gerekmez. macOS bir kereliğine bu uygulamanın Spotify'ı kontrol etmesine izin vermeni isteyebilir."

@@ -4,9 +4,11 @@ import {SettingsTabSection} from '@app/features/app/components/dialogs/shared/Se
 import {ExternalLink} from '@app/features/app/components/shared/ExternalLink';
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import styles from '@app/features/game_activity/components/GameActivitySettingsTab.module.css';
+import GameActivityLocalSettings from '@app/features/game_activity/state/GameActivityLocalSettings';
 import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
 import DesktopGameActivityBridge from '@app/features/game_activity/utils/DesktopGameActivityBridge';
 import {Button} from '@app/features/ui/button/Button';
+import {Switch} from '@app/features/ui/components/form/FormSwitch';
 import {RadioGroup} from '@app/features/ui/radio_group/RadioGroup';
 import * as UserSettingsCommands from '@app/features/user/commands/UserSettingsCommands';
 import UserSettings, {type GameActivityVisibility} from '@app/features/user/state/UserSettings';
@@ -76,6 +78,16 @@ const MORE = msg({
 });
 const EMPTY = msg({message: 'No local game rules.', comment: 'Empty local game rule list.'});
 const GAME = msg({message: 'Game', comment: 'Fallback for unknown local catalog rule ID.'});
+const SPOTIFY = msg({
+	message: 'Show what I’m listening to on Spotify',
+	comment: 'Switch in game activity settings; shares the song playing in the local Spotify app like a game.',
+});
+const SPOTIFY_DESCRIPTION = msg({
+	message:
+		'Shows the song playing in the Spotify app on this device to the same people who see your game activity. No Spotify account link is needed. macOS may ask once whether this app can control Spotify.',
+	comment:
+		'Description under the Spotify switch. The song is read from the desktop Spotify app, never from a Spotify account. The macOS sentence refers to the system Automation permission prompt.',
+});
 
 type Rule = {rule_id: string; game_id?: string; manual_name?: string};
 type Candidate = {token: string; label: string};
@@ -165,6 +177,15 @@ export const GameActivitySettingsTab = observer(() => {
 				{localError && <p role="alert">{i18n._(LOCAL_ERROR)}</p>}
 				{DesktopGameActivityBridge.supported && accountId ? (
 					<>
+						{DesktopGameActivityBridge.spotifySupported && (
+							<Switch
+								label={i18n._(SPOTIFY)}
+								description={i18n._(SPOTIFY_DESCRIPTION)}
+								value={visibility !== 'off' && GameActivityLocalSettings.showSpotify}
+								disabled={busy || visibility === 'off'}
+								onChange={GameActivityLocalSettings.setShowSpotify}
+							/>
+						)}
 						<div className={styles.actions}>
 							<Button variant="secondary" disabled={busy} onClick={() => void localAction(() => listCandidates())}>
 								{i18n._(ADD)}

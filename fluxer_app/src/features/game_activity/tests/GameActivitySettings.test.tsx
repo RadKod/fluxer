@@ -15,6 +15,8 @@ const state = await vi.hoisted(async () => {
 		publicProfileAllowed: true,
 		privacy: 0,
 		supported: true,
+		spotifySupported: false,
+		showSpotify: true,
 		rolloutEnabled: true,
 	});
 });
@@ -32,6 +34,7 @@ const mocks = vi.hoisted(() => ({
 	get: vi.fn(),
 	apply: vi.fn(),
 	persist: vi.fn(),
+	setShowSpotify: vi.fn(),
 }));
 vi.mock('@app/features/game_activity/state/GameActivityStore', () => ({
 	default: {
@@ -76,6 +79,9 @@ vi.mock('@app/features/game_activity/utils/DesktopGameActivityBridge', () => ({
 		get supported() {
 			return state.supported;
 		},
+		get spotifySupported() {
+			return state.spotifySupported;
+		},
 		stopSharing: mocks.stop,
 		refreshPolicy: mocks.refresh,
 		syncPolicy: mocks.sync,
@@ -88,6 +94,32 @@ vi.mock('@app/features/game_activity/utils/DesktopGameActivityBridge', () => ({
 vi.mock('@app/features/app/components/dialogs/shared/SettingsTabLayout', () => ({
 	SettingsTabSection: ({title, children}: {title: ReactNode; children: ReactNode}) =>
 		createElement('section', null, title, children),
+}));
+vi.mock('@app/features/game_activity/state/GameActivityLocalSettings', () => ({
+	default: {
+		get showSpotify() {
+			return state.showSpotify;
+		},
+		setShowSpotify: mocks.setShowSpotify,
+	},
+}));
+vi.mock('@app/features/ui/components/form/FormSwitch', () => ({
+	Switch: ({
+		label,
+		value,
+		disabled,
+		onChange,
+	}: {
+		label: string;
+		value: boolean;
+		disabled?: boolean;
+		onChange: (value: boolean) => void;
+	}) =>
+		createElement(
+			'button',
+			{type: 'button', role: 'switch', 'aria-checked': value, disabled, onClick: () => onChange(!value)},
+			label,
+		),
 }));
 vi.mock('@app/features/ui/button/Button', () => ({
 	Button: ({children, submitting, ...props}: {children: ReactNode; submitting?: boolean}) =>
@@ -155,6 +187,8 @@ describe('Game activity settings', () => {
 		state.publicProfileAllowed = true;
 		state.privacy = 0;
 		state.supported = true;
+		state.spotifySupported = false;
+		state.showSpotify = true;
 		state.rolloutEnabled = true;
 		GameActivitySettings.setSharingUnconfirmed('account', false);
 		mocks.listRules.mockResolvedValue({state: 'ok', rules: [{rule_id: 'r', manual_name: 'My game'}]});
@@ -182,6 +216,26 @@ describe('Game activity settings', () => {
 		expect(container.querySelector('button')).toBeNull();
 		expect(mocks.listRules).not.toHaveBeenCalled();
 		expect(mocks.candidates).not.toHaveBeenCalled();
+	});
+	it('shows the Spotify switch only on shells that can read Spotify and ties it to sharing', async () => {
+		const spotifySwitch = () => container.querySelector<HTMLButtonElement>('[role="switch"]');
+		state.visibility = 'friends';
+		await render();
+		expect(spotifySwitch()).toBeNull();
+		state.spotifySupported = true;
+		await render();
+		expect(spotifySwitch()?.textContent).toBe('Show what I’m listening to on Spotify');
+		expect(spotifySwitch()?.getAttribute('aria-checked')).toBe('true');
+		expect(spotifySwitch()?.disabled).toBe(false);
+		await act(async () => spotifySwitch()!.click());
+		expect(mocks.setShowSpotify).toHaveBeenCalledWith(false);
+		state.visibility = 'off';
+		await render();
+		expect(spotifySwitch()?.getAttribute('aria-checked')).toBe('false');
+		expect(spotifySwitch()?.disabled).toBe(true);
+		state.supported = false;
+		await render();
+		expect(spotifySwitch()).toBeNull();
 	});
 	it('three_options_and_no_detection_checkbox', async () => {
 		state.visibility = 'everyone';
