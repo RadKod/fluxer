@@ -64,7 +64,7 @@ Deletes a thread with its messages, attachments, and memberships. Requires `mess
 
 ### Side effects
 
-Emits a [Thread Delete](/gateway/threads/#thread-delete) Gateway event. The source message of a thread started from a message loses `HAS_THREAD`, and Fluxer emits [Message Update](/gateway/events/#message-update) for it. Fluxer removes the thread and its messages from search.
+Emits a [Thread Delete](/gateway/threads/#thread-delete) Gateway event. The source message of a thread started from a message loses `HAS_THREAD`, and sanalyer emits [Message Update](/gateway/events/#message-update) for it. sanalyer removes the thread and its messages from search.
 
 One [Admin audit entry](/admin-api/#admin-audit-entry-object) is recorded with the action `delete_thread`, the target type `channel`, and the thread ID as the target. Its metadata keys are `guild_id`, `parent_id`, and `type`. `type` is the channel type as a decimal string. The guild's own audit log records nothing.
 

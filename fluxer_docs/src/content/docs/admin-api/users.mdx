@@ -22,7 +22,7 @@ A caller without `user:view:email` receives a null `email`. A caller without `us
 
 The complete administrative view of one account. It has every stored flag, the private lifecycle fields, and the contact and network fields that the public [user object](/http-api/users/#user-object) never exposes.
 
-When the caller lacks `user:view:email`, `user:view:dob`, or `user:view:ip`, Fluxer redacts the fields that the missing ACL protects and still returns every key, so the object shape is identical for every caller.
+When the caller lacks `user:view:email`, `user:view:dob`, or `user:view:ip`, sanalyer redacts the fields that the missing ACL protects and still returns every key, so the object shape is identical for every caller.
 
 ### Structure
 
@@ -431,7 +431,7 @@ One recorded change to the account's email address or its username and discrimin
 
 ## Admin store purchase object
 
-One [in-app purchase](/http-api/in-app-purchases/) with the store state behind it. It has more fields than the public [store purchase](/http-api/in-app-purchases/#store-purchase-object) object, and still never exposes a purchase token or the account token.
+One in-app purchase with the store state behind it. It has more fields than the public store purchase object, and still never exposes a purchase token or the account token.
 
 ### Structure
 
@@ -441,14 +441,14 @@ One [in-app purchase](/http-api/in-app-purchases/) with the store state behind i
 | user_id | ?snowflake | The ID of the linked account, or null when unlinked |
 | provider | string | Either `app_store` or `google_play` |
 | kind | string | Either `subscription` or `gift` |
-| slot | string | [Store slot](/http-api/in-app-purchases/#store-slots) |
+| slot | string | Store slot |
 | environment | string | Either `production` or `sandbox` |
 | app_id | string | Bundle ID or package name of the purchasing app |
 | product_id | string | Store product ID |
 | base_plan_id | ?string | Google Play base plan ID, or null |
 | latest_transaction_id<sup>1</sup> | ?string | Latest store transaction or order ID |
 | ownership_type<sup>2</sup> | ?string | Store ownership type, or null |
-| state | string | [Store purchase state](/http-api/in-app-purchases/#store-purchase-states) |
+| state | string | Store purchase state |
 | store_state<sup>3</sup> | ?string | Raw state the store reported, or null |
 | entitled | boolean | Whether the purchase grants premium now |
 | expires_at | ?ISO8601 timestamp | End of the paid period |
@@ -459,12 +459,12 @@ One [in-app purchase](/http-api/in-app-purchases/) with the store state behind i
 | revoked_at | ?ISO8601 timestamp | The time the store refunded or revoked it |
 | revocation_reason | ?string | Reason recorded for the revocation, or null |
 | superseded | boolean | Whether a newer Google Play purchase replaced it |
-| acknowledged<sup>4</sup> | boolean | Whether Fluxer acknowledged it with the store |
+| acknowledged<sup>4</sup> | boolean | Whether sanalyer acknowledged it with the store |
 | gift_code | ?string | Gift code minted by a gift purchase, or null |
 | bound_at | ?ISO8601 timestamp | The time the purchase was linked to its account |
 | last_event_at | ?ISO8601 timestamp | Time of the latest store event applied |
-| synced_at | ?ISO8601 timestamp | The time Fluxer last read it from the store |
-| created_at | ISO8601 timestamp | The time Fluxer first saw the purchase |
+| synced_at | ?ISO8601 timestamp | The time sanalyer last read it from the store |
+| created_at | ISO8601 timestamp | The time sanalyer first saw the purchase |
 | updated_at | ISO8601 timestamp | The time the record last changed |
 
 <sup>1</sup> The App Store transaction ID, or the Google Play order ID
@@ -535,7 +535,7 @@ One [in-app purchase](/http-api/in-app-purchases/) with the store state behind i
 
 Lists and searches accounts. Requires `user:lookup`, and `user:view:email` or `user:view:ip` for the selectors marked below. The response has an array of [Admin user](#admin-user-object) objects and a total.
 
-Fluxer honours exactly one selector, in this precedence order: `user_id`, `resolve`, `email`, `last_active_ip`, then the indexed `q` search. A lower-precedence parameter sent alongside a higher-precedence one is ignored, and the request still succeeds. A request with no selector runs the indexed search with an empty query.
+sanalyer honours exactly one selector, in this precedence order: `user_id`, `resolve`, `email`, `last_active_ip`, then the indexed `q` search. A lower-precedence parameter sent alongside a higher-precedence one is ignored, and the request still succeeds. A request with no selector runs the indexed search with an empty query.
 
 ### Query parameters
 
@@ -561,7 +561,7 @@ Fluxer honours exactly one selector, in this precedence order: `user_id`, `resol
 
 <sup>6</sup> Honoured by the `last_active_ip` and `q` selectors. The `user_id`, `resolve`, and `email` selectors ignore both
 
-Fluxer chooses the `resolve` lookup from the shape of the value. A `username#discriminator` value resolves the tag, a value that is entirely digits resolves the account ID, and a value containing `@` resolves the email address. Every other value resolves a Stripe subscription ID.
+sanalyer chooses the `resolve` lookup from the shape of the value. A `username#discriminator` value resolves the tag, a value that is entirely digits resolves the account ID, and a value containing `@` resolves the email address. Every other value resolves a Stripe subscription ID.
 
 A `q` value that is entirely digits also resolves that exact account ID and places it first, even when the search index did not match it, provided `offset` is zero. That direct hit raises `total` by one when the index did not already return it.
 
@@ -687,7 +687,7 @@ A target account may hold a custom discriminator on a self-hosted instance in th
 
 <sup>1</sup> Trimmed before validation, restricted to letters, digits, and underscores, and rejected when it lowercases to `everyone` or `here` or contains `fluxer` or `system message`
 
-<sup>2</sup> Honoured only when the target account may hold a custom discriminator. In every other case, including an omitted field, Fluxer allocates a free discriminator for the submitted username. On an instance with the `none` tag style an account that is not a bot always gets `0`, any other value returns the field code `DISCRIMINATOR_NOT_SUPPORTED_ON_INSTANCE`, and a username another account holds in any letter case returns `USERNAME_ALREADY_TAKEN`
+<sup>2</sup> Honoured only when the target account may hold a custom discriminator. In every other case, including an omitted field, sanalyer allocates a free discriminator for the submitted username. On an instance with the `none` tag style an account that is not a bot always gets `0`, any other value returns the field code `DISCRIMINATOR_NOT_SUPPORTED_ON_INSTANCE`, and a username another account holds in any letter case returns `USERNAME_ALREADY_TAKEN`
 
 ### Response body
 
@@ -707,7 +707,7 @@ A target account may hold a custom discriminator on a self-hosted instance in th
 
 ### Side effects
 
-[User Update](/gateway/events/#user-update) is emitted to the account's own sessions, and each guild the account is a member of receives [Guild Member Update](/gateway/events/#guild-member-update). Fluxer reindexes the member in each indexed guild in the background, so a member search result can briefly report the previous tag.
+[User Update](/gateway/events/#user-update) is emitted to the account's own sessions, and each guild the account is a member of receives [Guild Member Update](/gateway/events/#guild-member-update). sanalyer reindexes the member in each indexed guild in the background, so a member search result can briefly report the previous tag.
 
 The change is recorded in the contact change log and is returned by [List user change log](#list-user-change-log) with `reason` set to `admin_action` and `actor_user_id` set to the acting Admin.
 
@@ -814,7 +814,7 @@ The operation accepts no request body and never clears verification, so the one 
 Requests a new verification email for the account. Requires `user:update:email`. Returns an empty 204 response.
 
 :::caution[An already verified account gets no email]
-When the account's email is already verified, Fluxer returns 204 without storing a token or sending anything.
+When the account's email is already verified, sanalyer returns 204 without storing a token or sending anything.
 :::
 
 :::note[Delivery is dropped silently]
@@ -1344,7 +1344,7 @@ Adds and removes [premium flags](#premium-flags) and returns the resulting accou
 
 Premium flags control badge display, the premium override, the purchase block, and perk sanitisation. They do not grant or revoke a subscription.
 
-Adding `PURCHASE_DISABLED` is refused, because a purchase block is recorded through [Limit user features](#limit-user-features). Removing it while an active feature limit holds it is refused with the decision ID. A purchase block Fluxer set after repeated refunds has no decision and can be removed.
+Adding `PURCHASE_DISABLED` is refused, because a purchase block is recorded through [Limit user features](#limit-user-features). Removing it while an active feature limit holds it is refused with the decision ID. A purchase block sanalyer set after repeated refunds has no decision and can be removed.
 
 ### Path parameters
 
@@ -1504,7 +1504,7 @@ The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-obje
 
 <RouteHeader method="GET" path="/v1/admin/users/{user_id}/store-purchases" auditReason />
 
-Lists the [in-app purchases](/http-api/in-app-purchases/) linked to an account, newest first. Requires `user:lookup`. A self-hosted instance never serves this route.
+Lists the in-app purchases linked to an account, newest first. Requires `user:lookup`. A self-hosted instance never serves this route.
 
 ### Path parameters
 
@@ -1635,7 +1635,7 @@ Every authentication session of the account is deleted. Ending the decision rest
 
 The decision is stored first. `DISABLED` is then added to the account flags, and `temp_banned_until` and `enforcement_decision_id` are set in the same write. Every authentication session is deleted, the requested networks are blocked, linked reports are resolved, and the notice is emailed. A suspension of an account that is already suspended replaces it, and the earlier decision reads as `replaced`.
 
-An authentication attempt while the suspension stands fails with 403 `ACCOUNT_SUSPENDED_TEMPORARILY`, or `ACCOUNT_SUSPENDED_PERMANENTLY` for a suspension with no end date, and shows the notice. The notice of an account with no email address counts as received at its first such attempt. After the expiry, Fluxer clears `DISABLED`, `temp_banned_until` and `enforcement_decision_id` and ends the decision as `expired`. This happens at the next authentication attempt or in a scheduled task that runs every six hours, whichever comes first, and sends no email.
+An authentication attempt while the suspension stands fails with 403 `ACCOUNT_SUSPENDED_TEMPORARILY`, or `ACCOUNT_SUSPENDED_PERMANENTLY` for a suspension with no end date, and shows the notice. The notice of an account with no email address counts as received at its first such attempt. After the expiry, sanalyer clears `DISABLED`, `temp_banned_until` and `enforcement_decision_id` and ends the decision as `expired`. This happens at the next authentication attempt or in a scheduled task that runs every six hours, whichever comes first, and sends no email.
 
 [User Update](/gateway/events/#user-update) is emitted after the sessions are deleted, so no connection of the account remains to receive it.
 
@@ -1663,7 +1663,7 @@ Lists the addresses the account used in the last 30 days, most recent first, whi
 | --- | --- | --- |
 | networks | array[object] | One entry per address, each with `ip`, `last_seen_at`, `skip_reason` and `other_unrestricted_accounts` |
 
-`last_seen_at` comes from the account's last activity and its current and ended sessions. `skip_reason` is `exempt` or `special_purpose` for an address Fluxer never blocks, and null otherwise. `other_unrestricted_accounts` counts the other accounts that are not suspended or closed and were last active on the address, matching IPv6 by its /64. An address with a count above zero cannot be blocked.
+`last_seen_at` comes from the account's last activity and its current and ended sessions. `skip_reason` is `exempt` or `special_purpose` for an address sanalyer never blocks, and null otherwise. `other_unrestricted_accounts` counts the other accounts that are not suspended or closed and were last active on the address, matching IPv6 by its /64. An address with a count above zero cannot be blocked.
 
 ### Response
 
@@ -1867,13 +1867,13 @@ The 74 days of an enforcement closure outlast the 60-day appeal window, so an ap
 
 The account can no longer authenticate, and its existing authentication sessions and OAuth2 access and refresh tokens are deleted. The acting Admin and the time are stored as `deletion_scheduled_by` and `deletion_scheduled_at`. Erasure is scheduled for the resulting deadline. The `X-Audit-Log-Reason` value is not stored on the account.
 
-With the `enforcement` basis, the decision is recorded first and `enforcement_decision_id` is written in the same account write as the deadline. A suspension on the account is replaced and lifted in that write. When the rule of the reason code bars new accounts, which is every rule except the minimum age, Fluxer blocks the account's email address. For the reasons `SPAM`, `CHEATING_OR_EXPLOITATION`, `COORDINATED_RAIDING`, `AUTOMATION_OR_SELFBOT`, `SCAM_OR_SOCIAL_ENGINEERING`, `HARASSMENT_OR_BULLYING`, `BAN_EVASION`, `TOKEN_OR_CREDENTIAL_SCAM`, `HATE_SPEECH_OR_EXTREMIST_CONTENT`, `MALICIOUS_LINKS_OR_MALWARE`, and `IMPERSONATION_OR_FAKE_IDENTITY`, Fluxer also resolves the pending reports against the account. A pending report in the `child_safety`, `underage_user`, or `self_harm` category is left for a moderator and stays pending. These steps are best-effort and can fail without cancelling the deletion schedule. Restricted reasons cannot close an account.
+With the `enforcement` basis, the decision is recorded first and `enforcement_decision_id` is written in the same account write as the deadline. A suspension on the account is replaced and lifted in that write. When the rule of the reason code bars new accounts, which is every rule except the minimum age, sanalyer blocks the account's email address. For the reasons `SPAM`, `CHEATING_OR_EXPLOITATION`, `COORDINATED_RAIDING`, `AUTOMATION_OR_SELFBOT`, `SCAM_OR_SOCIAL_ENGINEERING`, `HARASSMENT_OR_BULLYING`, `BAN_EVASION`, `TOKEN_OR_CREDENTIAL_SCAM`, `HATE_SPEECH_OR_EXTREMIST_CONTENT`, `MALICIOUS_LINKS_OR_MALWARE`, and `IMPERSONATION_OR_FAKE_IDENTITY`, sanalyer also resolves the pending reports against the account. A pending report in the `child_safety`, `underage_user`, or `self_harm` category is left for a moderator and stays pending. These steps are best-effort and can fail without cancelling the deletion schedule. Restricted reasons cannot close an account.
 
 A holder request or housekeeping deletion blocks nothing and resolves no reports.
 
-Fluxer cancels a Stripe subscription on the account without proration and refunds the charge behind its latest invoice as fraudulent. When the cancellation or refund fails, Fluxer logs the failure and still keeps the deletion schedule.
+sanalyer cancels a Stripe subscription on the account without proration and refunds the charge behind its latest invoice as fraudulent. When the cancellation or refund fails, sanalyer logs the failure and still keeps the deletion schedule.
 
-[User Update](/gateway/events/#user-update) is emitted after the sessions have already been deleted. The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `schedule_deletion`, target type `user`, and the metadata keys `basis`, `days`, `reason_code` and `pending_deletion_at`. The enforcement basis adds `decision_id`, `kind` and `notice_status`, plus `blocked_ips` and `network_blocks_until` when networks were blocked, and the other bases add `notification_sent`. A replacement adds `replaced_pending_deletion_at`, `replaced_scheduled_by`, `replaced_scheduled_at`, and `replaced_reason_code` for the schedule it replaced. The email block records its own blocklist entry. For each reason that resolves reports, Fluxer also records a second entry with action `auto_resolve_reports_on_deletion`, target type `user`, and the metadata keys `outcome`, `found_count`, `resolved_count`, `failed_count`, and `notified_count`. `found_count` leaves out the reports in the three categories that stay pending. `outcome` is `completed`, `search_unavailable` when the instance has no report search backend and every report stays pending, or `enumeration_failed` when listing the pending reports failed part way and only those already found were resolved. Each resolved report tells its reporter the `restricted` outcome [Update report](/admin-api/reports/#update-report) describes, with no public comment.
+[User Update](/gateway/events/#user-update) is emitted after the sessions have already been deleted. The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `schedule_deletion`, target type `user`, and the metadata keys `basis`, `days`, `reason_code` and `pending_deletion_at`. The enforcement basis adds `decision_id`, `kind` and `notice_status`, plus `blocked_ips` and `network_blocks_until` when networks were blocked, and the other bases add `notification_sent`. A replacement adds `replaced_pending_deletion_at`, `replaced_scheduled_by`, `replaced_scheduled_at`, and `replaced_reason_code` for the schedule it replaced. The email block records its own blocklist entry. For each reason that resolves reports, sanalyer also records a second entry with action `auto_resolve_reports_on_deletion`, target type `user`, and the metadata keys `outcome`, `found_count`, `resolved_count`, `failed_count`, and `notified_count`. `found_count` leaves out the reports in the three categories that stay pending. `outcome` is `completed`, `search_unavailable` when the instance has no report search backend and every report stays pending, or `enumeration_failed` when listing the pending reports failed part way and only those already found were resolved. Each resolved report tells its reporter the `restricted` outcome [Update report](/admin-api/reports/#update-report) describes, with no public comment.
 
 ### Rate limit
 
@@ -1923,7 +1923,7 @@ Clearing the deadline permits the account to authenticate again, but it does not
 
 The deletion schedule, its reasons, and the recorded scheduler are cleared, allowing the account to authenticate again unless another restriction applies.
 
-When the account has an email address, Fluxer always emails the holder. A deletion with an enforcement reason code, which only a closure from before decisions can have here, sends the notice that the restriction ended. Every other deletion sends the notice that the deletion was cancelled. The email never includes the `X-Audit-Log-Reason` value.
+When the account has an email address, sanalyer always emails the holder. A deletion with an enforcement reason code, which only a closure from before decisions can have here, sends the notice that the restriction ended. Every other deletion sends the notice that the deletion was cancelled. The email never includes the `X-Audit-Log-Reason` value.
 
 [User Update](/gateway/events/#user-update) is emitted to the account's own sessions. The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `cancel_deletion`, target type `user`, the metadata keys `cancelled_pending_deletion_at`, `cancelled_scheduled_by`, `cancelled_scheduled_at`, and `cancelled_reason_code` for the cancelled schedule, and `notice` naming the email that was sent.
 
@@ -2353,7 +2353,7 @@ The passkey or security key stops authenticating immediately and cannot be resto
 
 ### Side effects
 
-The credential record is deleted, together with the [replaced passkeys](/http-api/users/mfa/#replaced-passkeys) it took over from, and every replaced passkey goes once no listed credential remains. When it was the account's final WebAuthn credential and the account had enabled passkeys as a second factor, Fluxer removes the `WEBAUTHN` [authenticator type](/http-api/users/#authenticator-types) from the account, emits [User Update](/gateway/events/#user-update) to the account's own sessions, and copies the account's authenticator types onto the bot user of every application the account owns. An account that never enabled passkeys as a second factor holds no `WEBAUTHN` type to remove.
+The credential record is deleted, together with the [replaced passkeys](/http-api/users/mfa/#replaced-passkeys) it took over from, and every replaced passkey goes once no listed credential remains. When it was the account's final WebAuthn credential and the account had enabled passkeys as a second factor, sanalyer removes the `WEBAUTHN` [authenticator type](/http-api/users/#authenticator-types) from the account, emits [User Update](/gateway/events/#user-update) to the account's own sessions, and copies the account's authenticator types onto the bot user of every application the account owns. An account that never enabled passkeys as a second factor holds no `WEBAUTHN` type to remove.
 
 [WebAuthn Credentials Update](/gateway/events/#webauthn-credentials-update) is emitted to the target account with its remaining credentials.
 
@@ -2388,7 +2388,7 @@ Clearing the authenticator type set turns passkeys off as a second factor, but t
 
 ### Side effects
 
-The account's TOTP secret, authenticator type set, and every multi-factor backup code are deleted. Fluxer clears the authenticator types of the bot user of every application the account owns. Sessions and credentials are not revoked.
+The account's TOTP secret, authenticator type set, and every multi-factor backup code are deleted. sanalyer clears the authenticator types of the bot user of every application the account owns. Sessions and credentials are not revoked.
 
 [User Update](/gateway/events/#user-update) is emitted to the account's own sessions. The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `disable_mfa`, target type `user`, and no metadata.
 
@@ -2603,7 +2603,7 @@ Archive progress, download, and expiry are documented under [Archives](/admin-ap
 
 ### Side effects
 
-Fluxer creates the archive record and queues a build job, so the response returns before any data is collected. Generating the archive reads the account's data without changing it.
+sanalyer creates the archive record and queues a build job, so the response returns before any data is collected. Generating the archive reads the account's data without changing it.
 
 No Gateway Dispatch is emitted.
 

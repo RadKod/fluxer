@@ -283,7 +283,7 @@ The invite code can be allocated again later, and every outstanding link with th
 
 ### Side effects
 
-A guild invite records an [INVITE_DELETE audit action](/http-api/guild-audit-logs/#audit-actions) targeting the invite code, with the channel, creator, maximum uses, lifetime, and temporary flag as metadata, the removed record as the change set, and the supplied reason. Fluxer logs a failure to write that entry and still completes the request. The `X-Audit-Log-Reason` header is read but never recorded for a group direct message invite.
+A guild invite records an [INVITE_DELETE audit action](/http-api/guild-audit-logs/#audit-actions) targeting the invite code, with the channel, creator, maximum uses, lifetime, and temporary flag as metadata, the removed record as the change set, and the supplied reason. sanalyer logs a failure to write that entry and still completes the request. The `X-Audit-Log-Reason` header is read but never recorded for a group direct message invite.
 
 Sessions holding `VIEW_AUDIT_LOG` receive [Guild Audit Log Entry Create](/gateway/events/#guild-audit-log-entry-create). [Invite Delete](/gateway/events/#invite-delete) has only `code`, `channel_id`, and `guild_id`. The guild delivers it to the sessions holding `MANAGE_CHANNELS` on the channel named by `channel_id`, as [event filtering](/gateway/event-filtering/) states. A passive session in a guild with more than 250 members is suppressed after that filter. A group direct message invite creates no audit entry and delivers Invite Delete to every current recipient's sessions, where no passive gate applies.
 
@@ -353,7 +353,7 @@ Every field is optional and nullable, and an omitted or null value takes the sta
 
 Returning an existing equivalent invite changes nothing, records no audit entry, and emits no Dispatch.
 
-Creating an invite allocates a random eight-character code drawn from the mixed-case alphanumeric alphabet. A guild invite records an [INVITE_CREATE audit action](/http-api/guild-audit-logs/#audit-actions) targeting the invite code, with the channel, creator, maximum uses, lifetime, and temporary flag as metadata and the supplied reason, then delivers [Guild Audit Log Entry Create](/gateway/events/#guild-audit-log-entry-create) to sessions holding `VIEW_AUDIT_LOG`. Fluxer logs a failure to write that entry and still completes the request. The `X-Audit-Log-Reason` header is read but never recorded for a private channel.
+Creating an invite allocates a random eight-character code drawn from the mixed-case alphanumeric alphabet. A guild invite records an [INVITE_CREATE audit action](/http-api/guild-audit-logs/#audit-actions) targeting the invite code, with the channel, creator, maximum uses, lifetime, and temporary flag as metadata and the supplied reason, then delivers [Guild Audit Log Entry Create](/gateway/events/#guild-audit-log-entry-create) to sessions holding `VIEW_AUDIT_LOG`. sanalyer logs a failure to write that entry and still completes the request. The `X-Audit-Log-Reason` header is read but never recorded for a private channel.
 
 The guild delivers [Invite Create](/gateway/events/#invite-create) to sessions holding `MANAGE_CHANNELS` on the invite's channel, subject to [event filtering](/gateway/event-filtering/). A private channel invite records no audit entry and delivers the event to every current recipient's sessions.
 

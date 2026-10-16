@@ -171,10 +171,6 @@ export function brandDocsFrontmatter<T extends Record<string, unknown>>(data: T,
 	}
 	if (docsSection(file) === 'operator') {
 		Object.assign(branded, {description: `Upstream Fluxer operator reference. ${data.description ?? ''}`});
-	} else if (docsSection(file) === 'downloads') {
-		Object.assign(branded, {
-			description: `${docsProductName()} downloads are unavailable: no verified package origin is configured.`,
-		});
 	}
 	return branded;
 }
@@ -187,14 +183,8 @@ export function transformDocsContent(tree: Root, file: string): void {
 	if (docsProductName() === 'Fluxer') return;
 	hideClosedFeatures(tree, docsPage(file));
 	const section = docsSection(file);
-	if (section === 'downloads') {
-		tree.children = [
-			paragraph(
-				`Downloads are unavailable: no verified ${docsProductName()} download origin is configured. Upstream Fluxer packages are not ${docsProductName()} releases.`,
-			),
-		];
-		return;
-	}
+	// sanalyer: downloads/overview is rewritten for dl.sanalyer.com by tools/brand/docs-marka.mjs; the upstream
+	// package pages are drafts there, so this transform no longer replaces the section.
 	const containsPromotion = (node: RootContent): boolean => {
 		if ('url' in node && /^(https:\/\/fluxer\.app\/(plutonium|donate)|https:\/\/discord\.gg\/)/u.test(node.url))
 			return true;
@@ -262,39 +252,18 @@ export function transformDocsContent(tree: Root, file: string): void {
 		if (!quotedRegistry) visit(child);
 		children.push(child);
 		if (quotedRegistry && child.type === 'heading' && child.depth === 2) {
-			children.push(
-				paragraph(
-					`These are quoted upstream messages. Fluxer names and support addresses reproduce the source contract; they are not ${docsProductName()} support contact details.`,
-				),
-			);
+			children.push(paragraph('These are quoted upstream messages, reproduced exactly.'));
 		}
 	}
 	tree.children = children;
 	if (JSON.stringify(tree).includes('https://web.fluxer.app')) {
 		tree.children.unshift(
 			paragraph(
-				'The Fluxer origins quoted on this page are upstream compatibility constants. They remain exact protocol/reference values, not this deployment’s public endpoint.',
+				'The upstream origins quoted on this page are compatibility constants. They remain exact protocol/reference values, not this deployment’s public endpoint.',
 			),
 		);
 	}
-	if (section === 'index.md' || section === 'index.mdx' || section === '') {
-		tree.children.unshift({
-			type: 'paragraph',
-			children: [
-				{type: 'text', value: `${docsProductName()} developer documentation is based on the `},
-				{
-					type: 'link',
-					url: 'https://github.com/fluxerapp/fluxer',
-					children: [{type: 'text', value: 'upstream Fluxer source (AGPLv3)'}],
-				},
-				{
-					type: 'text',
-					value:
-						'. Endpoint examples use the single-domain documentation profile, not a live discovery response. Discover the deployment endpoints using /.well-known/fluxer; feature availability depends on instance configuration.',
-				},
-			],
-		});
-	}
+	// sanalyer: the homepage and its source attribution live in tools/brand/docs-marka.mjs (rewritten index.md).
 }
 
 export const remarkDocsBranding: RemarkPlugin = () => (tree, file) => {

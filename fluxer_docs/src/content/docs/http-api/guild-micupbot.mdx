@@ -6,7 +6,7 @@ description: Community bot settings, reaction roles, moderation commands, automo
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-MicupBOT is the instance's official community bot. It provides welcome and goodbye messages, automatic roles, reaction role panels, message and voice XP, level rewards, moderation commands, and automod. Configure it in **Server Settings → Community bot**. The displayed bot name comes from its application.
+The community bot is the instance's official community bot. It provides welcome and goodbye messages, automatic roles, reaction role panels, message and voice XP, level rewards, moderation commands, and automod. Configure it in **Server Settings → Community bot**. The displayed bot name comes from its application.
 
 All 13 routes below require a signed-in user and guild membership. Bot and OAuth2 bearer credentials return 403 `ACCESS_DENIED`. IDs are decimal snowflake strings. The permissions below belong to the caller; the bot needs its own permissions when sending messages or changing roles.
 
@@ -52,7 +52,7 @@ The inviter needs the normal guild management and permission-granting rights. Th
 
 The bot runs through the instance's services without its own Gateway session and can appear offline. Its token is refused for bot-token authentication.
 
-**Discover → Applications** reads `features.official_apps` from [instance discovery](/http-api/instance/). Each entry has `application_id` and `invite_permissions`, both strings. Applications appear in order: MicupBOT, then sanalyer Roster, each only when its own instance feature is enabled and its application ID is configured. Disabled or unconfigured entries are omitted. A listed application does not prove it has joined a guild. Cards fetch application details from `GET /oauth2/applications/{application_id}/public` and use the same `scope=bot` invitation, without a preselected guild.
+**Discover → Applications** reads `features.official_apps` from [instance discovery](/http-api/instance/). Each entry has `application_id` and `invite_permissions`, both strings. Applications appear in order: the community bot, then sanalyer Roster, each only when its own instance feature is enabled and its application ID is configured. Disabled or unconfigured entries are omitted. A listed application does not prove it has joined a guild. Cards fetch application details from `GET /oauth2/applications/{application_id}/public` and use the same `scope=bot` invitation, without a preselected guild.
 
 ## Permission and safety rules
 
@@ -84,7 +84,7 @@ Templates are limited to 1,000 characters before expansion. Welcome and level-up
 
 ### MFA
 
-The normal Fluxer MFA checks apply to elevated caller permissions. A non-owner without an enrolled authenticator in an MFA-required guild can receive 400 `TWO_FACTOR_REQUIRED`. Commands use the author's normal service checks; channel overwrite commands use Fluxer's overwrite path, which does not add a separate MFA check.
+The normal sanalyer MFA checks apply to elevated caller permissions. A non-owner without an enrolled authenticator in an MFA-required guild can receive 400 `TWO_FACTOR_REQUIRED`. Commands use the author's normal service checks; channel overwrite commands use sanalyer's overwrite path, which does not add a separate MFA check.
 
 `bot.mfa_blocked` is true when the guild requires elevated MFA. There is no official-bot MFA exemption: bot role changes can be skipped, and the message hook does not queue automod actions in these guilds. Saving settings does not establish that the bot can execute them.
 
@@ -448,7 +448,7 @@ The separate module-change cooldown is guild-wide, one change per 60 seconds. Co
 
 The fixed prefix is `#`, at the beginning of the message. Command names are case-insensitive. Only ordinary user messages and replies in guilds with commands enabled are considered. Bot and webhook messages are ignored. The original message must still exist with unchanged content when the job runs.
 
-Moderation runs as the author through the normal Fluxer services: permissions, applicable hierarchy, MFA, and audit identity are the author's. The bot only sends the reply. All commands require access to the source channel. Additional permissions are listed below; `none` means no additional management permission.
+Moderation runs as the author through the normal sanalyer services: permissions, applicable hierarchy, MFA, and audit identity are the author's. The bot only sends the reply. All commands require access to the source channel. Additional permissions are listed below; `none` means no additional management permission.
 
 | Command | Arguments | Required permission |
 | --- | --- | --- |
@@ -474,7 +474,7 @@ Moderation runs as the author through the normal Fluxer services: permissions, a
 | #top | none | none |
 | #help | none | none |
 
-User arguments accept a mention or numeric ID; channel arguments accept a channel mention or ID. Roles accept a role mention, ID, or full name matched case-insensitively using Turkish casing. Optional user arguments default to the author. Durations accept `s`/`sn`, `m`/`dk`, `h`/`sa`, and `d`/`g`, such as `10dk`. A ban duration is `0` (permanent), omitted (permanent), or 60 seconds to two years. A timeout must be positive and at most 28 days. Reasons are limited to 512 characters; nicknames to 1-32 characters, and slowmode to 0-21,600 seconds, through Fluxer's request schemas.
+User arguments accept a mention or numeric ID; channel arguments accept a channel mention or ID. Roles accept a role mention, ID, or full name matched case-insensitively using Turkish casing. Optional user arguments default to the author. Durations accept `s`/`sn`, `m`/`dk`, `h`/`sa`, and `d`/`g`, such as `10dk`. A ban duration is `0` (permanent), omitted (permanent), or 60 seconds to two years. A timeout must be positive and at most 28 days. Reasons are limited to 512 characters; nicknames to 1-32 characters, and slowmode to 0-21,600 seconds, through sanalyer's request schemas.
 
 `#rank` and `#top` require levels to be enabled. Changing your own nickname with `#nick` requires `CHANGE_NICKNAME` instead of `MANAGE_NICKNAMES`.
 

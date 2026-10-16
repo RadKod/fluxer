@@ -86,11 +86,11 @@ A bulk ignore result reports how many incoming friend requests one call removed.
 
 ## Relationship limit
 
-The `max_relationships` limit controls the combined number of friendship, block, and pending request records one account holds. Fluxer resolves it from the account's traits and premium state, so the value can be higher for a premium account. The fallback is 1000 when the deployment resolves no rule. The registry entry is listed under [limit keys](/http-api/instance/#limit-keys).
+The `max_relationships` limit controls the combined number of friendship, block, and pending request records one account holds. sanalyer resolves it from the account's traits and premium state, so the value can be higher for a premium account. The fallback is 1000 when the deployment resolves no rule. The registry entry is listed under [limit keys](/http-api/instance/#limit-keys).
 
-Fluxer refuses the write once the stored record count reaches the resolved value. It checks the caller and the target independently, and a request fails when either has reached that value.
+sanalyer refuses the write once the stored record count reaches the resolved value. It checks the caller and the target independently, and a request fails when either has reached that value.
 
-A refusal returns 400 `MAX_FRIENDS` with the applied value in a top-level `max_relationships` member. Fluxer skips the limit for a bot account on either side, for a block, and under [staff forced acceptance](#send-friend-request-by-user-id).
+A refusal returns 400 `MAX_FRIENDS` with the applied value in a top-level `max_relationships` member. sanalyer skips the limit for a bot account on either side, for a block, and under [staff forced acceptance](#send-friend-request-by-user-id).
 
 ## List relationships
 
@@ -122,7 +122,7 @@ Sends a friend request to the account identified by username and discriminator. 
 - A resolved deleted account returns 400 `FRIEND_REQUEST_BLOCKED`.
 - An existing friendship returns 400 `ALREADY_FRIENDS`.
 
-Fluxer resolves the tag to exactly one account before any relationship rule runs. Every remaining admission rule is the one described under [Send friend request by user ID](#send-friend-request-by-user-id).
+sanalyer resolves the tag to exactly one account before any relationship rule runs. Every remaining admission rule is the one described under [Send friend request by user ID](#send-friend-request-by-user-id).
 
 ### JSON body
 
@@ -162,22 +162,22 @@ Admission is ordered. The deployment direct message policy runs first, so an ord
 
 The caller's own ID returns 400 `CANNOT_SEND_FRIEND_REQUEST_TO_SELF`. An unresolved target returns 404 `UNKNOWN_USER`. A deleted target returns 400 `FRIEND_REQUEST_BLOCKED`.
 
-Fluxer checks the current relationship state next. A pending request from the target is accepted. An existing friendship or outgoing request is returned unchanged. The rules that follow apply to a genuinely new request alone, so they never refuse an existing friend.
+sanalyer checks the current relationship state next. A pending request from the target is accepted. An existing friendship or outgoing request is returned unchanged. The rules that follow apply to a genuinely new request alone, so they never refuse an existing friend.
 
 The remaining rules reject an unclaimed caller with 400 `UNCLAIMED_ACCOUNT_CANNOT_SEND_FRIEND_REQUESTS` and an unverified email with 403 `FRIEND_REQUEST_EMAIL_VERIFICATION_REQUIRED`. A bot target is rejected with 400 `FRIEND_REQUEST_BLOCKED` unless it has `FRIENDLY_BOT`. A target with the internal app store reviewer flag is rejected with the same code.
 
-A target the caller has blocked returns 400 `CANNOT_SEND_FRIEND_REQUEST_TO_BLOCKED_USER`. A target that has blocked the caller returns 400 `FRIEND_REQUEST_BLOCKED`. Fluxer reads the target's [friend source flags](/http-api/users/#friend-source-flags) next<sup>1</sup>, and a target accepting requests only from mutual friends or mutual guild members rejects an unrelated caller with 400 `FRIEND_REQUEST_BLOCKED`. An account under a [new conversation limit](/http-api/users/private-channels/#new-conversation-limit) then returns 403 `NEW_CONVERSATIONS_LIMITED`, unless the target is a bot or has already written in a direct message with it. The [relationship limit](#relationship-limit) applies last, independently for both accounts.
+A target the caller has blocked returns 400 `CANNOT_SEND_FRIEND_REQUEST_TO_BLOCKED_USER`. A target that has blocked the caller returns 400 `FRIEND_REQUEST_BLOCKED`. sanalyer reads the target's [friend source flags](/http-api/users/#friend-source-flags) next<sup>1</sup>, and a target accepting requests only from mutual friends or mutual guild members rejects an unrelated caller with 400 `FRIEND_REQUEST_BLOCKED`. An account under a [new conversation limit](/http-api/users/private-channels/#new-conversation-limit) then returns 403 `NEW_CONVERSATIONS_LIMITED`, unless the target is a bot or has already written in a direct message with it. The [relationship limit](#relationship-limit) applies last, independently for both accounts.
 
 <sup>1</sup> The friend source evaluation is skipped when the target has no stored settings, which admits the request as though the target permitted requests from anyone
 
 :::caution[A flagged caller receives an indistinguishable success]
-A caller with the `SPAMMER` [public user flag](/http-api/users/#public-user-flags) gets a one-sided request. Fluxer writes only the caller's `OUTGOING_REQUEST` record. [Relationship Add](/gateway/events/#relationship-add) reaches the caller alone. The response is an ordinary `OUTGOING_REQUEST` object.
+A caller with the `SPAMMER` [public user flag](/http-api/users/#public-user-flags) gets a one-sided request. sanalyer writes only the caller's `OUTGOING_REQUEST` record. [Relationship Add](/gateway/events/#relationship-add) reaches the caller alone. The response is an ordinary `OUTGOING_REQUEST` object.
 :::
 
 The one-sided request path also skips the rules that follow it: the target's block of the caller, the target's [friend source flags](/http-api/users/#friend-source-flags), the app store reviewer rule, the [relationship limit](#relationship-limit), and friendly bot auto-acceptance. The caller's own block of the target is still enforced and still returns 400 `CANNOT_SEND_FRIEND_REQUEST_TO_BLOCKED_USER`.
 
 :::note[The suppression entries enter at different points]
-Fluxer checks for the `SPAMMER` flag before it looks for a pending request from the target. A caller that already has the flag gets a one-sided request even when the target has a pending request, so it can hold both an `INCOMING_REQUEST` and an `OUTGOING_REQUEST` record for one account. A caller without the flag accepts a pending request from the target normally.
+sanalyer checks for the `SPAMMER` flag before it looks for a pending request from the target. A caller that already has the flag gets a one-sided request even when the target has a pending request, so it can hold both an `INCOMING_REQUEST` and an `OUTGOING_REQUEST` record for one account. A caller without the flag accepts a pending request from the target normally.
 :::
 
 ### Path parameters
@@ -194,7 +194,7 @@ The body can be omitted, in which case it is treated as an empty object.
 | --- | --- | --- |
 | staff_force_accept?<sup>1</sup> | boolean | Whether the friendship is created immediately without a pending request |
 
-<sup>1</sup> Honoured only when the caller has the `STAFF` flag, and a caller without it is treated as though the member were absent. Fluxer reads the stored flag, so hidden staff status still qualifies
+<sup>1</sup> Honoured only when the caller has the `STAFF` flag, and a caller without it is treated as though the member were absent. sanalyer reads the stored flag, so hidden staff status still qualifies
 
 ### Response
 
@@ -227,7 +227,7 @@ Accepts a pending incoming friend request, or blocks the selected account when t
 
 Acceptance evaluates the deployment direct message policy first and returns 400 `DIRECT_MESSAGES_DISABLED` while that policy disables direct messages, with no staff exemption. An unresolved caller or requester returns 404 `UNKNOWN_USER`. A deleted account on either side returns 400 `FRIEND_REQUEST_BLOCKED`. An unclaimed caller returns 400 `UNCLAIMED_ACCOUNT_CANNOT_ACCEPT_FRIEND_REQUESTS`. A missing pending incoming request returns 404 `UNKNOWN_USER`, and the [relationship limit](#relationship-limit) then applies to both accounts. Acceptance has no email verification requirement.
 
-Blocking returns 404 `UNKNOWN_USER` for an unresolved target and 400 `CANNOT_BLOCK_SYSTEM_USER` for the Fluxer system account. Those are its only admission rules, so blocking runs regardless of the deployment direct message policy, the unclaimed account rule, the email verification rule, and the [relationship limit](#relationship-limit). It applies no self-target rule.
+Blocking returns 404 `UNKNOWN_USER` for an unresolved target and 400 `CANNOT_BLOCK_SYSTEM_USER` for the sanalyer system account. Those are its only admission rules, so blocking runs regardless of the deployment direct message policy, the unclaimed account rule, the email verification rule, and the [relationship limit](#relationship-limit). It applies no self-target rule.
 
 :::caution[The type member selects the operation]
 Only the exact value BLOCKED selects blocking. Every other accepted [relationship type](#relationship-types), an omitted `type`, and an omitted body all select acceptance of a pending incoming request. Sending FRIEND does not force a friendship where no request exists.
@@ -311,7 +311,7 @@ Sets or clears the caller's private nickname for a friend. Returns the updated [
 Only a FRIEND record accepts a nickname, and every other relationship state returns 404 `UNKNOWN_USER`.
 
 :::note[The nickname is private to the caller]
-Fluxer writes it only to the caller's record. The friend never reads it in a response and never receives it in a Dispatch.
+sanalyer writes it only to the caller's record. The friend never reads it in a response and never receives it in a Dispatch.
 :::
 
 ### Path parameters
@@ -351,7 +351,7 @@ The record changes only for the caller, and the sharing preference keeps its sto
 
 Removes matching incoming friend requests. Returns a [bulk ignore result](#bulk-ignore-result-object) object on success.
 
-Matching applies only to the caller's `INCOMING_REQUEST` records. Fluxer derives a sender's account age from the timestamp embedded in its [snowflake](/snowflakes/) and compares it against `max_account_age_seconds` as an exclusive upper bound, so a sender exactly that old is not matched. One call removes every matching request.
+Matching applies only to the caller's `INCOMING_REQUEST` records. sanalyer derives a sender's account age from the timestamp embedded in its [snowflake](/snowflakes/) and compares it against `max_account_age_seconds` as an exclusive upper bound, so a sender exactly that old is not matched. One call removes every matching request.
 
 :::caution[An unbounded new_accounts filter removes everything]
 The age comparison applies only when `max_account_age_seconds` is supplied. Selecting `new_accounts` without it removes every incoming friend request, exactly as `all` does.

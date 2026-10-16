@@ -53,7 +53,7 @@ A sticker is always a guild sticker, and `animated` alone describes its format. 
 
 ## Sticker tags
 
-Tags are an array of strings. A create or modify request accepts at most 10 entries. Fluxer trims each entry. The 1 to 30 character bound applies to the trimmed value. Entries are stored and returned in the submitted order.
+Tags are an array of strings. A create or modify request accepts at most 10 entries. sanalyer trims each entry. The 1 to 30 character bound applies to the trimmed value. Entries are stored and returned in the submitted order.
 
 The array is optional on every request that accepts it and defaults to an empty array, so omitting it on [Modify guild sticker](#modify-guild-sticker) clears the stored tags.
 
@@ -80,7 +80,7 @@ The remaining encoded part is bounded to 139810136 characters, which encodes a 1
 
 Decoded bytes are at most the operator-configured `sticker_max_size` [limit key](/http-api/instance/#limit-keys) value, resolved against the guild's complete feature set and defaulting to 524288. A larger image is rejected on the `image` path with `IMAGE_SIZE_EXCEEDS_LIMIT`, whose message names the resolved ceiling. The character bound does not move with the limit key, so a configured value above 104857600 admits no more than 104857602 decoded bytes.
 
-Accepted upload formats are PNG, JPEG, APNG, GIF, WebP, AVIF, and SVG. Fluxer takes the format from the decoded image. An animated AVIF is rejected. Fluxer detects animation state from the image, so this object has no animation field.
+Accepted upload formats are PNG, JPEG, APNG, GIF, WebP, AVIF, and SVG. sanalyer takes the format from the decoded image. An animated AVIF is rejected. sanalyer detects animation state from the image, so this object has no animation field.
 
 Pixel dimensions and animation length are not enforced. An accepted image is stored at its original dimensions. The [Media Proxy image asset contract](/media-proxy/routes/#image-asset-contract) selects the delivered size.
 
@@ -207,7 +207,7 @@ Creating a sticker consumes one guild sticker slot, emits [Guild Stickers Update
 
 Attempts to create between 1 and 50 stickers in one request and returns a [sticker bulk create response](#sticker-bulk-create-response-object) object. Emits one [Guild Stickers Update](/gateway/events/#guild-stickers-update) Gateway event for the whole batch.
 
-The caller needs membership of the guild and [CREATE_EXPRESSIONS](/http-api/permissions/). Fluxer processes the items strictly in the submitted order and treats each one independently. An item fails when no guild sticker slot remains. A later item can still succeed after an earlier item failed for another reason.
+The caller needs membership of the guild and [CREATE_EXPRESSIONS](/http-api/permissions/). sanalyer processes the items strictly in the submitted order and treats each one independently. An item fails when no guild sticker slot remains. A later item can still succeed after an earlier item failed for another reason.
 
 :::caution[A 200 does not mean every item succeeded]
 The operation returns 200 whenever the top-level request was valid, including when every item failed. Read `success` and `failed` for the per-item outcome. The stickers in `success` are durable and are not rolled back when a later item fails.
@@ -248,7 +248,7 @@ A blocked name, description or tag of at least 3 characters rejects the whole re
 
 Each successful item consumes one guild sticker slot and records a [`STICKER_CREATE`](/http-api/guild-audit-logs/#audit-actions) audit entry with the supplied reason.
 
-Fluxer emits one [Guild Stickers Update](/gateway/events/#guild-stickers-update) after the batch when at least one item succeeded, with the guild's complete sticker collection. A batch in which no item succeeded emits nothing.
+sanalyer emits one [Guild Stickers Update](/gateway/events/#guild-stickers-update) after the batch when at least one item succeeded, with the guild's complete sticker collection. A batch in which no item succeeded emits nothing.
 
 ### Rate limit
 

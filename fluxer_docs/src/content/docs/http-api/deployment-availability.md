@@ -4,7 +4,7 @@ title: Deployment availability
 description: The routes a self-hosted deployment may not serve and the instance flags that decide them.
 ---
 
-The routes listed under [Conditional routes](#conditional-routes) depend on the deployment. The deployment Fluxer hosts serves all of them. A self-hosted deployment serves some of them only while its operator runs a premium tier or sells it, and never serves the rest. Both deployments run the same release, and most of the HTTP API is identical on both.
+The routes listed under [Conditional routes](#conditional-routes) depend on the deployment. The upstream project’s hosted deployment serves all of them. A self-hosted deployment serves some of them only while its operator runs a premium tier or sells it, and never serves the rest. Both deployments run the same release, and most of the HTTP API is identical on both.
 
 When a self-hosted deployment does not serve one of these routes, a request to it returns 404 `NOT_FOUND` with no feature-specific code, so a caller cannot tell an unavailable route from an unrecognised path.
 
@@ -21,15 +21,15 @@ On a self-hosted deployment, three flags on the same object decide which routes 
 - `stripe_serviceable` is true while a Stripe secret key is set and `premium_enabled` is true. The routes under [Served while Stripe is serviceable](#served-while-stripe-is-serviceable) are served only then, so existing subscriptions can still be managed after the operator stops sales.
 - The routes under [Never served on a self-hosted deployment](#never-served-on-a-self-hosted-deployment) are never served.
 
-[Receive Stripe webhook](/http-api/billing/#receive-stripe-webhook) also needs a Stripe webhook secret.
+Receive Stripe webhook also needs a Stripe webhook secret.
 
 :::caution[Read `self_hosted` for the deployment kind]
 `stripe_enabled`, `stripe_serviceable` and `premium_enabled` do not promise that a provider-dependent operation succeeds.
 :::
 
-When billing is switched off or no Stripe secret key is configured on a hosted deployment, the answer depends on the operation. An operation that has to reach the provider fails with 400 `STRIPE_PAYMENT_NOT_AVAILABLE`, and [Receive Stripe webhook](/http-api/billing/#receive-stripe-webhook) fails with 400 `STRIPE_WEBHOOK_NOT_AVAILABLE`. These read operations report the absence in a 200 body instead:
+When billing is switched off or no Stripe secret key is configured on a hosted deployment, the answer depends on the operation. An operation that has to reach the provider fails with 400 `STRIPE_PAYMENT_NOT_AVAILABLE`, and Receive Stripe webhook fails with 400 `STRIPE_WEBHOOK_NOT_AVAILABLE`. These read operations report the absence in a 200 body instead:
 
-- [Get refund eligibility](/http-api/billing/#get-refund-eligibility) reports `eligible` false with the reason `feature_unavailable`.
+- Get refund eligibility reports `eligible` false with the reason `feature_unavailable`.
 - [Get current subscription price](/http-api/premium/#get-current-subscription-price) reports null.
 - [Get price IDs](/http-api/premium/#get-price-ids) reports the configured price IDs with every amount null.
 
@@ -47,15 +47,15 @@ When billing is switched off or no Stripe secret key is configured on a hosted d
 
 | Method | Route | Operation |
 | --- | --- | --- |
-| POST | /v1/stripe/checkout/subscription | [Create subscription checkout](/http-api/billing/#create-subscription-checkout) |
-| POST | /v1/stripe/checkout/gift | [Create gift checkout](/http-api/billing/#create-gift-checkout) |
+| POST | /v1/stripe/checkout/subscription | Create subscription checkout |
+| POST | /v1/stripe/checkout/gift | Create gift checkout |
 | GET | /v1/premium/price-ids | [Get price IDs](/http-api/premium/#get-price-ids) |
 
 ### Served while Stripe is serviceable
 
 | Method | Route | Operation |
 | --- | --- | --- |
-| POST | /v1/stripe/webhook<sup>2</sup> | [Receive Stripe webhook](/http-api/billing/#receive-stripe-webhook) |
+| POST | /v1/stripe/webhook<sup>2</sup> | Receive Stripe webhook |
 | GET | /v1/premium/current-subscription-price<sup>3</sup> | [Get current subscription price](/http-api/premium/#get-current-subscription-price) |
 | POST | /v1/premium/customer-portal | [Create customer portal](/http-api/premium/#create-customer-portal) |
 | POST | /v1/premium/grace/end | [End premium grace period](/http-api/premium/#end-premium-grace-period) |
@@ -68,19 +68,19 @@ When billing is switched off or no Stripe secret key is configured on a hosted d
 
 | Method | Route | Operation |
 | --- | --- | --- |
-| POST | /v1/donations/request-link | [Request donation management link](/http-api/donations/#request-donation-management-link) |
-| GET | /v1/donations/manage | [Manage donation](/http-api/donations/#manage-donation) |
-| POST | /v1/donations/checkout | [Create donation checkout](/http-api/donations/#create-donation-checkout) |
-| POST | /v1/users/@me/age-verification<sup>1</sup> | [Create age verification session](/http-api/billing/#create-age-verification-session) |
-| GET | /v1/premium/refund-eligibility<sup>4</sup> | [Get refund eligibility](/http-api/billing/#get-refund-eligibility) |
-| POST | /v1/premium/refund-latest | [Refund latest purchase](/http-api/billing/#refund-latest-purchase) |
+| POST | /v1/donations/request-link | Request donation management link |
+| GET | /v1/donations/manage | Manage donation |
+| POST | /v1/donations/checkout | Create donation checkout |
+| POST | /v1/users/@me/age-verification<sup>1</sup> | Create age verification session |
+| GET | /v1/premium/refund-eligibility<sup>4</sup> | Get refund eligibility |
+| POST | /v1/premium/refund-latest | Refund latest purchase |
 | POST | /v1/premium/switch-to-list-price | [Switch subscription to the list price](/http-api/premium/#switch-subscription-to-the-list-price) |
 | POST | /v1/premium/visionary/rejoin | [Rejoin Visionary guild](/http-api/premium/#rejoin-visionary-guild) |
-| GET | /v1/premium/store | [Get in-app purchase context](/http-api/in-app-purchases/#get-in-app-purchase-context) |
-| POST | /v1/premium/store/app-store/transactions | [Claim App Store transaction](/http-api/in-app-purchases/#claim-app-store-transaction) |
-| POST | /v1/premium/store/google-play/purchases | [Claim Google Play purchase](/http-api/in-app-purchases/#claim-google-play-purchase) |
-| GET | /v1/premium/store/purchases | [List in-app purchases](/http-api/in-app-purchases/#list-in-app-purchases) |
-| DELETE | /v1/premium/store/purchases/{purchase_id} | [Release in-app subscription](/http-api/in-app-purchases/#release-in-app-subscription) |
+| GET | /v1/premium/store | Get in-app purchase context |
+| POST | /v1/premium/store/app-store/transactions | Claim App Store transaction |
+| POST | /v1/premium/store/google-play/purchases | Claim Google Play purchase |
+| GET | /v1/premium/store/purchases | List in-app purchases |
+| DELETE | /v1/premium/store/purchases/{purchase_id} | Release in-app subscription |
 
 <sup>1</sup> These are the only `/users/@me` routes a self-hosted deployment may not serve
 
@@ -90,7 +90,7 @@ When billing is switched off or no Stripe secret key is configured on a hosted d
 
 <sup>4</sup> The same object appears as `billing.refund_eligibility` on [Get premium state](/http-api/premium/#get-premium-state), which every deployment serves, and there a self-hosted deployment reports `eligible` false with the reason `feature_unavailable`
 
-The two [store notification webhooks](/http-api/in-app-purchases/#store-notification-webhooks) are never served on a self-hosted deployment either.
+The two store notification webhooks are never served on a self-hosted deployment either.
 
 ## Registered routes that resolve differently
 

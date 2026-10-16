@@ -29,13 +29,13 @@ An opcode is the number that names a [Gateway payload](/gateway/overview/#gatewa
 | 16 | Request Channel Member Counts | Client to server |
 | 28 | Request Forum Unreads | Client to server |
 
-<sup>1</sup> Fluxer never sends Opcode 9 with `d: true`, so an Invalid Session is never an instruction to resume
+<sup>1</sup> sanalyer never sends Opcode 9 with `d: true`, so an Invalid Session is never an instruction to resume
 
 ### Payload and when it is sent
 
 | Op | Payload | When sent |
 | --- | --- | --- |
-| 0 | Event-specific data | Fluxer sends a named event with `t` and a session sequence with `s`<sup>1</sup> |
+| 0 | Event-specific data | sanalyer sends a named event with `t` and a session sequence with `s`<sup>1</sup> |
 | 1 | The last processed sequence or `null` from the client, and `null` from the server | The client sends on the advertised schedule. The server requests an immediate heartbeat once 90 per cent of the advertised interval has elapsed since the last acknowledgement<sup>2</sup> |
 | 2 | [Identify object](/gateway/commands/#identify) | The client starts one authenticated session |
 | 3 | [Presence Update object](/gateway/commands/#presence-update) | The client replaces its session presence |
@@ -47,7 +47,7 @@ An opcode is the number that names a [Gateway payload](/gateway/overview/#gatewa
 | 9 | Literal `false` | The session named by Resume could not be reached, the supplied `seq` is below the replay floor, or an established session ended<sup>6</sup> |
 | 10 | Object with `heartbeat_interval` | Sent as the WebSocket is accepted, before any client payload is read |
 | 11 | No `d` field | Acknowledges an accepted client heartbeat |
-| 12 | [Gateway Error object](#gateway-error) | Fluxer reports a refused voice join that the client is expected to act on |
+| 12 | [Gateway Error object](#gateway-error) | sanalyer reports a refused voice join that the client is expected to act on |
 | 13 | [Voice Signal object](/gateway/commands/#voice-signal) | The client sends peer-to-peer signalling to one other voice connection |
 | 14 | [Lazy Request object](/gateway/commands/#lazy-request) | The client replaces bounded guild subscriptions |
 | 15 | [Request Guild Counts object](/gateway/commands/#request-guild-counts) | The client requests current guild count records |
@@ -58,7 +58,7 @@ An opcode is the number that names a [Gateway payload](/gateway/overview/#gatewa
 
 <sup>2</sup> Answer a server heartbeat request immediately, in addition to the regular schedule
 
-<sup>3</sup> A client that sends Opcode 5 or 12 gets the same close as a client that sent an undefined opcode. Fluxer never sends Opcode 5
+<sup>3</sup> A client that sends Opcode 5 or 12 gets the same close as a client that sent an undefined opcode. sanalyer never sends Opcode 5
 
 <sup>4</sup> Resume is accepted whether or not a session is already attached to the connection
 
@@ -68,7 +68,7 @@ An opcode is the number that names a [Gateway payload](/gateway/overview/#gatewa
 
 The registry is complete. The values 17 through 27 and every value above 28 are undefined.
 
-Fluxer resolves an inbound payload in this order.
+sanalyer resolves an inbound payload in this order.
 
 1. A payload that has no `d` reaches no command handler. Identify closes with `4005`. Every other opcode, defined or not, closes with `4001`.
 2. Heartbeat and Resume are handled whether or not a session is attached.
@@ -101,10 +101,10 @@ Opcode `12` reports a refused [Voice State Update](/gateway/commands/#voice-stat
 }
 ```
 
-Fluxer sends three codes.
+sanalyer sends three codes.
 
 - `VOICE_P2P_CONSENT_REQUIRED` means the channel or call is peer-to-peer and the join did not send `p2p: true`. Ask the user, then send the join again with `p2p: true`.
-- `VOICE_P2P_UNAVAILABLE` means Fluxer declined peer-to-peer for a join into a peer-to-peer channel or call. Abort the join and tell the user.
+- `VOICE_P2P_UNAVAILABLE` means sanalyer declined peer-to-peer for a join into a peer-to-peer channel or call. Abort the join and tell the user.
 - `VOICE_CHANNEL_FULL` means the channel is at its `user_limit`, or the peer-to-peer mesh is at its participant cap. Abort the join and tell the user.
 
 Every other voice refusal sends no payload. [Peer-to-peer voice](/gateway/events/#peer-to-peer-voice) states when each of the first two codes is produced.
@@ -222,4 +222,4 @@ A held or discarded Identify, an over-budget Presence Update, an over-budget [Re
 
 ## Ordinary WebSocket closes
 
-A transport can end with no Fluxer application close code, as happens on a network failure, an intermediary reset, and an ordinary `1000` or `1001` close. An established session remains available for 60,000 ms after the transport ends, and a later transport end starts a new 60,000 ms window. Neither the window length nor the bounded replay history grows.
+A transport can end with no sanalyer application close code, as happens on a network failure, an intermediary reset, and an ordinary `1000` or `1001` close. An established session remains available for 60,000 ms after the transport ends, and a later transport end starts a new 60,000 ms window. Neither the window length nor the bounded replay history grows.

@@ -63,7 +63,14 @@ for (const match of block.matchAll(QUOTED_ENTRY)) {
 const files = await listMarkdownFiles(DOCS_ROOT);
 const actual = new Set(files.map((file) => pageSlug(path.relative(DOCS_ROOT, file).split(path.sep).join('/'))));
 
-const missingPages = [...referenced].filter((slug) => !actual.has(slug)).sort();
+// sanalyer: tools/brand/docs-marka.mjs marks upstream-only pages as drafts; astro.config.ts keeps their sidebar
+// entries for the unbranded build, so a draft referenced by the sidebar is not missing.
+const drafts = new Set(
+	(await listDraftMarkdownFiles(DOCS_ROOT)).map((file) =>
+		pageSlug(path.relative(DOCS_ROOT, file).split(path.sep).join('/')),
+	),
+);
+const missingPages = [...referenced].filter((slug) => !actual.has(slug) && !drafts.has(slug)).sort();
 const orphanPages = [...actual].filter((slug) => !referenced.has(slug)).sort();
 
 console.log(`sidebar entries: ${referenced.size.toString()}`);

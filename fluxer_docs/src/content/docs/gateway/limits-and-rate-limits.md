@@ -4,7 +4,7 @@ title: Limits and rate limits
 description: Main Gateway session, command, replay, backpressure, and admission limits.
 ---
 
-Every main Gateway connection has limits on what it sends, how long its session lives, how many commands it runs at once, and how much Fluxer replays to it. Exceeding one closes the connection with a [close code](/gateway/opcodes-and-close-codes/#close-codes), discards the payload, or coerces the value. The [close reason registry](/gateway/opcodes-and-close-codes/#close-reasons) defines each exact reason.
+Every main Gateway connection has limits on what it sends, how long its session lives, how many commands it runs at once, and how much sanalyer replays to it. Exceeding one closes the connection with a [close code](/gateway/opcodes-and-close-codes/#close-codes), discards the payload, or coerces the value. The [close reason registry](/gateway/opcodes-and-close-codes/#close-reasons) defines each exact reason.
 
 ## Transport and encoding
 
@@ -94,7 +94,7 @@ Lazy Request accepts at most 10 member list ranges per channel, each with `end` 
 
 Request Guild Counts accepts at most 100 guild IDs after deduplication. Request Channel Member Counts accepts at most 25 channel IDs after deduplication. Both nonces run from 1 through 64 bytes, and a nonce outside that bound is omitted from the result. [Request Forum Unreads](/gateway/threads/#request-forum-unreads) accepts at most 40 posts after deduplication.
 
-Identify accepts at most 256 `ignored_events` entries. A longer array closes with `4002` and reason `Invalid identify payload`. Fluxer coerces or drops a value outside any other command payload bound. [Client commands](/gateway/commands/) states the exact coercion or drop rule for each field.
+Identify accepts at most 256 `ignored_events` entries. A longer array closes with `4002` and reason `Invalid identify payload`. sanalyer coerces or drops a value outside any other command payload bound. [Client commands](/gateway/commands/) states the exact coercion or drop rule for each field.
 
 ## Voice admission
 

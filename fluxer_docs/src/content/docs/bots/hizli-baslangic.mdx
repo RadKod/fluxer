@@ -19,14 +19,14 @@ Uygulamanın **OAuth2 URL oluşturucu** bölümünde yalnız `bot` kapsamını s
 Bu basit davet için OAuth2 kod izni gerektiren seçeneği kapalı tut; yönlendirme adresi gerekmez. Oluşan yetkilendirme bağlantısını kopyala, tarayıcıda aç ve botu eklemeye yetkili olduğun sunucuyu seç. Bağlantı şu biçimdedir; `UYGULAMA_ID` yerine uygulamanın kimliğini koy:
 
 ```text
-https://micup.gg/oauth2/authorize?client_id=UYGULAMA_ID&scope=bot&permissions=3072
+https://sanalyer.com/oauth2/authorize?client_id=UYGULAMA_ID&scope=bot&permissions=3072
 ```
 
 `3072`, bu iki iznin toplamıdır. Davet bağlantısına token ekleme. Başkalarının da botu eklemesini istiyorsan uygulamanın herkese açık bot ayarını kullan. [Bot daveti ve OAuth2](/http-api/oauth2/).
 
 ## 3. İlk mesajını gönder
 
-Hedef metin kanalının bağlantısındaki son kimliği al: `https://micup.gg/channels/SUNUCU_ID/KANAL_ID`. Aşağıdaki kodu `bot.py` olarak kaydet ve terminalde `python bot.py` çalıştır. Token gizli girişle sorulur; kaynak dosyaya yazılmaz.
+Hedef metin kanalının bağlantısındaki son kimliği al: `https://sanalyer.com/channels/SUNUCU_ID/KANAL_ID`. Aşağıdaki kodu `bot.py` olarak kaydet ve terminalde `python bot.py` çalıştır. Token gizli girişle sorulur; kaynak dosyaya yazılmaz.
 
 Örnek, [Mesaj oluşturma](/http-api/messages/#create-message) sözleşmesini kullanır. Önce sanalyer'in [keşif yanıtını](/http-api/instance/#get-instance-discovery) okur ve `endpoints.api_public` değerini kullanır; API adresini sabitlemez. İsteklerde [bot kimlik doğrulaması](/authentication/#authorization-schemes) için `Authorization: Bot <token>` gönderir.
 
@@ -43,7 +43,7 @@ if not token or not channel_id.isascii() or not channel_id.isdigit():
 
 try:
     with urllib.request.urlopen(
-        "https://micup.gg/.well-known/fluxer", timeout=15
+        "https://sanalyer.com/.well-known/fluxer", timeout=15
     ) as response:
         api = json.load(response)["endpoints"]["api_public"].rstrip("/")
 

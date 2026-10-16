@@ -4,15 +4,15 @@ title: Rate limits
 description: The route and global buckets, the denial body, and the rate limit headers.
 ---
 
-Fluxer bounds HTTP API traffic with a per-route bucket and one global bucket. A bucket is one allowance counted over one window. Fluxer denies an over-allowance request with 429, `code` set to `RATE_LIMITED`, a [rate limit response object](#rate-limit-response-object), and the [rate limit headers](#rate-limit-headers).
+sanalyer bounds HTTP API traffic with a per-route bucket and one global bucket. A bucket is one allowance counted over one window. sanalyer denies an over-allowance request with 429, `code` set to `RATE_LIMITED`, a [rate limit response object](#rate-limit-response-object), and the [rate limit headers](#rate-limit-headers).
 
 ## Buckets and scope
 
-Nearly every route declares its own bucket. A bucket name can have a path parameter placeholder written as a colon followed by the parameter name, as in `guild:emojis:list::guild_id`. Fluxer substitutes the request value before keying the bucket, so one route holds a separate allowance for each path resource.
+Nearly every route declares its own bucket. A bucket name can have a path parameter placeholder written as a colon followed by the parameter name, as in `guild:emojis:list::guild_id`. sanalyer substitutes the request value before keying the bucket, so one route holds a separate allowance for each path resource.
 
 Every bucket is also keyed by the caller's identity. An authenticated request is keyed by the account and its credential kind, and an OAuth2 bearer credential is keyed by the owning application as well. A session, a bot token, an Admin API key, and each bearer application therefore draw on separate allowances for the same account.
 
-A request that resolves no account is keyed by the client IP address, exactly for IPv4 and by the `/64` for IPv6, so clients in the same `/64` share an allowance. Where the deployment is configured to read the address from a header the request does not have, Fluxer refuses the request with 403 `FORBIDDEN` before evaluating any bucket.
+A request that resolves no account is keyed by the client IP address, exactly for IPv4 and by the `/64` for IPv6, so clients in the same `/64` share an allowance. Where the deployment is configured to read the address from a header the request does not have, sanalyer refuses the request with 403 `FORBIDDEN` before evaluating any bucket.
 
 A request also counts against the global bucket, unless its route bucket is declared exempt. The global bucket is keyed by the same identity, so a request that resolves no account consumes the global allowance of its client IP address.
 
@@ -36,10 +36,10 @@ Every bucket is a leaky bucket. It admits at most the declared limit at once and
 A rate-limited request can return 429 even if its credentials would otherwise be rejected with 401 or 403.
 :::
 
-Some routes declare a second route bucket, including group direct message creation, adding group recipients, and deleting guild emoji or stickers. Each operation lists its limits. Fluxer counts a request against its route buckets before the handler runs, so a request the handler rejects still uses up allowance.
+Some routes declare a second route bucket, including group direct message creation, adding group recipients, and deleting guild emoji or stickers. Each operation lists its limits. sanalyer counts a request against its route buckets before the handler runs, so a request the handler rejects still uses up allowance.
 
 :::caution[A global denial revokes a user session]
-When the global bucket denies a request authenticated by a non-bot account's user session token, Fluxer revokes that token before writing the 429. The client must authenticate again. A bot token, an OAuth2 access token, and an Admin API key are never revoked this way, and a route bucket denial never revokes a credential.
+When the global bucket denies a request authenticated by a non-bot account's user session token, sanalyer revokes that token before writing the 429. The client must authenticate again. A bot token, an OAuth2 access token, and an Admin API key are never revoked this way, and a route bucket denial never revokes a credential.
 :::
 
 A deployment can disable both buckets through instance configuration. While they are disabled, no response has an `X-RateLimit-*` header and no request is refused with 429 `RATE_LIMITED`. That switch also turns off the login allowances. Every other [limit enforced inside a handler](#limits-enforced-inside-a-handler) stays in force.
@@ -172,7 +172,7 @@ These allowances answer 429 the same way as the ones above, with `X-RateLimit-Sc
 | Publishes from one announcement channel through [Crosspost message](/http-api/messages/#crosspost-message), 10 in a row, then one every 6 minutes | `MESSAGE_CROSSPOST_RATE_LIMITED` |
 | Edits of one published message through [Modify message](/http-api/messages/#modify-message) and the other edit routes, 3 in a row, then one every 20 minutes | `PUBLISHED_MESSAGE_EDIT_RATE_LIMITED` |
 
-Each is a leaky bucket like the route buckets. It admits a burst of its full size and then refills one slot at the stated interval, so a caller that waits one interval can act once more. A moderator edit of another member's published message draws on no allowance. [Announcement channels](/topics/announcement-channels/#limits) lists them with the other announcement channel limits.
+Each is a leaky bucket like the route buckets. It admits a burst of its full size and then refills one slot at the stated interval, so a caller that waits one interval can act once more. A moderator edit of another member's published message draws on no allowance. Announcement channels lists them with the other announcement channel limits.
 
 ### Allowances answering 400
 
@@ -199,21 +199,21 @@ Each is a leaky bucket like the route buckets. It admits a burst of its full siz
 
 Every Modify current user allowance is keyed by the authenticated account, and the bot tag allowance by the bot account, so an owner changing a bot's tag draws on the bot's allowance. The guild member allowances are keyed by the guild and the member together, and one account holds a separate allowance in each guild. The login allowances are keyed by the account and by the MFA ticket respectively, and the sudo allowance by the account.
 
-Fluxer consumes every multi-factor allowance before it checks the code, so a correct code drawn against an exhausted allowance is reported exactly like a wrong one. A correct code clears the counter. A completed passkey bridge ceremony clears nothing, and redeeming a `login_mfa` ceremony clears the login counters. The ticket allowance also destroys the MFA ticket as it denies, and the client restarts from [Log in with a password](/http-api/authentication/#log-in-with-a-password).
+sanalyer consumes every multi-factor allowance before it checks the code, so a correct code drawn against an exhausted allowance is reported exactly like a wrong one. A correct code clears the counter. A completed passkey bridge ceremony clears nothing, and redeeming a `login_mfa` ceremony clears the login counters. The ticket allowance also destroys the MFA ticket as it denies, and the client restarts from [Log in with a password](/http-api/authentication/#log-in-with-a-password).
 
 ### Allowances answering neither shape
 
 [Get desktop handoff information](/http-api/authentication/#get-desktop-handoff-information) and [Complete desktop handoff](/http-api/authentication/#complete-desktop-handoff) share one failed-attempt counter keyed by the client IP address. Five failures block both operations for 15 minutes from the most recent failure, and a blocked request returns 400 `INVALID_HANDOFF_CODE` as a top-level code with no validation entry. Get desktop handoff information separately permits three successful lookups for each handoff code and reports a fourth with the same top-level code.
 
-[Refund latest purchase](/http-api/billing/#refund-latest-purchase) permits one self-serve refund every 30 days for each account and reports a request inside that window as 403 `STRIPE_REFUND_COOLDOWN_ACTIVE`.
+Refund latest purchase permits one self-serve refund every 30 days for each account and reports a request inside that window as 403 `STRIPE_REFUND_COOLDOWN_ACTIVE`.
 
 [Slowmode](#slowmode) is enforced inside the handler as well.
 
 ## Slowmode
 
-Slowmode limits how often one account sends a message in one channel. Fluxer reports a denial as an ordinary request failure. A denied send returns 400 `SLOWMODE_RATE_LIMITED` with a top-level `retry_after` in fractional seconds and a `Retry-After` header in whole seconds. The response has no `X-RateLimit-*` header, so a client tells it apart from a bucket denial by the status and the code.
+Slowmode limits how often one account sends a message in one channel. sanalyer reports a denial as an ordinary request failure. A denied send returns 400 `SLOWMODE_RATE_LIMITED` with a top-level `retry_after` in fractional seconds and a `Retry-After` header in whole seconds. The response has no `X-RateLimit-*` header, so a client tells it apart from a bucket denial by the status and the code.
 
-The allowance is one message for each interval the channel configures in `rate_limit_per_user`, counted separately for each account and channel pair. Fluxer counts it for a non-bot account in a guild channel whose configured interval is above zero. A caller holding [BYPASS_SLOWMODE](/http-api/permissions/) is exempt. [Get channel slowmode state](/http-api/channels/#get-channel-slowmode-state) reports the caller's remaining delay before a send is attempted.
+The allowance is one message for each interval the channel configures in `rate_limit_per_user`, counted separately for each account and channel pair. sanalyer counts it for a non-bot account in a guild channel whose configured interval is above zero. A caller holding [BYPASS_SLOWMODE](/http-api/permissions/) is exempt. [Get channel slowmode state](/http-api/channels/#get-channel-slowmode-state) reports the caller's remaining delay before a send is attempted.
 
 Starting a thread uses the parent slowmode on its own counter, as [Start thread from message](/http-api/threads/#start-thread-from-message) states. The same applies to a post in a forum or media channel, as [Forum channel fields](/http-api/forums/#forum-channel-fields) states. For a guild text or announcement channel, [Get channel slowmode state](/http-api/channels/#get-channel-slowmode-state) reports the message counter alone. [Indicate typing](/http-api/messages/#indicate-typing) returns the remaining delay of both counters to a user session that declares the [`channel_threads` client capability](/http-api/threads/#client-capability).
 

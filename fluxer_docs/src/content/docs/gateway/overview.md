@@ -27,7 +27,7 @@ A client opens the socket, waits for Hello, sends Identify, and then heartbeats 
     "token": "flx_ZDb1GURItsMuYl1zvrgxv2qLBxyNmgNSEaWT",
     "properties": {
       "os": "Linux",
-      "browser": "Fluxer Client",
+      "browser": "my-bot",
       "device": "desktop"
     }
   }
@@ -203,7 +203,7 @@ The server sends Opcode 10 Hello while accepting the WebSocket.
 
 The interval is in milliseconds and is authoritative for the connection.
 
-Opcode 2 Identify creates a session. A successful Identify sends [Ready](/gateway/events/#ready), whose `session_id` identifies the retained session. Fluxer publishes no separate resume URL, so a Resume reconnects to the same Gateway endpoint the client discovered.
+Opcode 2 Identify creates a session. A successful Identify sends [Ready](/gateway/events/#ready), whose `session_id` identifies the retained session. sanalyer publishes no separate resume URL, so a Resume reconnects to the same Gateway endpoint the client discovered.
 
 An invalid token closes with `4004` and reason `Invalid token`. A user account that already holds 100 live sessions closes with `4008` and reason `Too many sessions`, and a bot credential is not bounded by that maximum. A malformed shard pair closes with `4010` and reason `Invalid shard`. A bot shard assignment that resolves more than 2,500 guilds closes with `4011` and reason `Sharding required`.
 
@@ -212,7 +212,7 @@ A draining node, a node at capacity, paused session starts, and an account outsi
 :::
 
 :::caution[An over-budget Identify is dropped and the client resends]
-Once the source IP Identify budget is exhausted, Fluxer keeps no copy of the payload. The client sends its next Identify itself, at a rate well below that budget.
+Once the source IP Identify budget is exhausted, sanalyer keeps no copy of the payload. The client sends its next Identify itself, at a rate well below that budget.
 :::
 
 ## Heartbeats
@@ -288,7 +288,7 @@ Opcode 9 with `d: false` means the named session cannot be resumed. The Gateway 
 }
 ```
 
-The socket returns to the unauthenticated state, so it stays open and can Identify again. Fluxer never sends `d: true`.
+The socket returns to the unauthenticated state, so it stays open and can Identify again. sanalyer never sends `d: true`.
 
 ## Sharding
 
@@ -296,17 +296,17 @@ In Identify, a client MAY supply `shard` as a `[shard_id, shard_count]` pair. `s
 
 A guild belongs to `((guild_id >> 22) % shard_count)`, computed on the integer value of the guild's decimal snowflake string.
 
-The pair selects the session's guild membership. At Identify, Fluxer filters the account's guild list to the guilds the shard owns, and the session connects only to those.
+The pair selects the session's guild membership. At Identify, sanalyer filters the account's guild list to the guilds the shard owns, and the session connects only to those.
 
 On every session, the filtered set is also the [Ready](/gateway/events/#ready) `guilds` array. A bot session has each of those guilds as an unavailable guild, and one [Guild Create](/gateway/events/#guild-create) or [Guild Delete](/gateway/events/#guild-delete) per guild follows Ready. Ready echoes the accepted pair back as `shard`.
 
-Fluxer checks only a bot session against the guild ceiling. A bot whose shard owns more than 2,500 guilds closes with `4011` and reason `Sharding required`. A bot that supplies no pair is checked against its whole guild list. A user session is bounded by the 100-session-per-user limit alone, whatever its guild count.
+sanalyer checks only a bot session against the guild ceiling. A bot whose shard owns more than 2,500 guilds closes with `4011` and reason `Sharding required`. A bot that supplies no pair is checked against its whole guild list. A user session is bounded by the 100-session-per-user limit alone, whatever its guild count.
 
 :::note[Shard 0 also receives account-level traffic]
 The per-Dispatch shard filter in [Dispatch delivery](/gateway/events/#dispatch-delivery) runs only when `shard_id` is not 0. A session with a non-zero `shard_id` drops every Dispatch that names no guild, apart from Rate Limited, Guild Counts Update, and Channel Member Counts Update. Account-level Dispatches name no guild, so handle them on shard 0.
 :::
 
-Fluxer has no large bot tier, no shard-count alignment requirement, and no Identify concurrency buckets. `GET /v1/gateway/bot` returns a fixed recommendation.
+sanalyer has no large bot tier, no shard-count alignment requirement, and no Identify concurrency buckets. `GET /v1/gateway/bot` returns a fixed recommendation.
 
 ## Ordering
 

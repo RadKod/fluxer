@@ -40,13 +40,13 @@ Each API process caches the catalog for up to one minute, so a new badge, icon, 
 
 An icon is a base64 string of at most 256 KB, sent with or without a `data:` URL prefix. The media type in the prefix is ignored. The decoded bytes have to start with a PNG signature or a RIFF WebP header, and the media proxy has to read them as PNG, APNG, or WebP. Any other image, SVG included, returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_IMAGE_FORMAT` at path `icon`, and nothing is stored.
 
-Fluxer removes the metadata chunks of the image before it stores the icon. A new icon gets a new hash, and the previous icon file stays in storage so that URLs already cached keep resolving.
+sanalyer removes the metadata chunks of the image before it stores the icon. A new icon gets a new hash, and the previous icon file stays in storage so that URLs already cached keep resolving.
 
 ## Numbered badges
 
 A badge whose text contains `{n}` is numbered. Profiles and the data export show its text with `{n}` replaced by the number stored for the account, so the text `Pioneer #{n}` reads `Pioneer #1234`. A renamed badge keeps the numbers, and the catalog operations return the text with `{n}` in place.
 
-Fluxer numbers one badge, the pioneer badge, which [Start pioneer numbering](#start-pioneer-numbering) selects. Numbers run from 1 to 10000 in the order accounts qualify: number 1 goes to the account the request names, the accounts that already qualify follow in ascending ID order, and after that each account gets the next number when it qualifies. A number is never given twice or reused, and no account gets a pioneer badge once number 10000 is given.
+sanalyer numbers one badge, the pioneer badge, which [Start pioneer numbering](#start-pioneer-numbering) selects. Numbers run from 1 to 10000 in the order accounts qualify: number 1 goes to the account the request names, the accounts that already qualify follow in ascending ID order, and after that each account gets the next number when it qualifies. A number is never given twice or reused, and no account gets a pioneer badge once number 10000 is given.
 
 An account qualifies when its e-mail address is verified and it is not a bot or the system user, not deleted or waiting for deletion, not permanently banned, not disabled for suspicious activity or marked as a spammer, and is not under an [account limitation](/http-api/users/#account-limitation). A timed ban and a user disabling their own account do not stop it. An account held back by a limitation gets the next number when the limitation ends.
 

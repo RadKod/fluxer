@@ -13,7 +13,7 @@ Except for [Heartbeat](#heartbeat), [Identify](#identify), and [Resume](#resume)
 | Opcode | Command | Result |
 | --- | --- | --- |
 | 1 | Heartbeat | Opcode `11` Heartbeat ACK |
-| 2 | Identify | [Ready](/gateway/events/#ready), a close frame, or no response when Fluxer discards a rate-limited Identify or holds it to retry the session start |
+| 2 | Identify | [Ready](/gateway/events/#ready), a close frame, or no response when it discards a rate-limited Identify or holds it to retry the session start |
 | 3 | Presence Update | No direct response |
 | 4 | Voice State Update | [Voice State Update](/gateway/events/#voice-state-update) and [Voice Server Update](/gateway/events/#voice-server-update) when state changes, or [Gateway Error](/gateway/opcodes-and-close-codes/#gateway-error) for a reported refusal |
 | 6 | Resume | Replayed Dispatches followed by [Resumed](/gateway/events/#resumed), Invalid Session, or a close frame |
@@ -28,7 +28,7 @@ Except for [Heartbeat](#heartbeat), [Identify](#identify), and [Resume](#resume)
 
 A frame that fails the size, decompression, or decoding checks closes the connection without consuming any budget. A frame that decodes to something other than an object closes with `4002` and reason `Decode failed`, and an object with no `op` closes with `4002` and reason `Invalid payload`.
 
-Fluxer charges every command that gets past those checks against the [source IP, session, and connection payload budgets](/gateway/limits-and-rate-limits/#connection-and-command-rate-limits) before it handles the opcode. Each session has its own session budget, so two sessions of one account never share one, and Fluxer skips that budget while the connection is unauthenticated.
+sanalyer charges every command that gets past those checks against the [source IP, session, and connection payload budgets](/gateway/limits-and-rate-limits/#connection-and-command-rate-limits) before it handles the opcode. Each session has its own session budget, so two sessions of one account never share one, and sanalyer skips that budget while the connection is unauthenticated.
 
 An opcode outside the registry closes with `4001` and reason `Unknown opcode` once a session is attached, and with `4003` while the connection is unauthenticated. A payload that has `op` but no `d` also closes with `4001`, except for Identify, which closes with `4005`. [Request Forum Unreads](/gateway/threads/#request-forum-unreads) closes with `4001` for a `d` that is not an object and for a user session without `CHANNEL_THREADS`.
 
@@ -57,7 +57,7 @@ Before authentication the Gateway accepts any `d` value and sends Opcode `11`. A
 
 Once authenticated, a `d` that is neither `null` nor an integer closes with `4007` and reason `Invalid sequence`. Every integer is accepted, but acknowledgements never move backwards. Dispatches at or below the highest acknowledged sequence are no longer available for Resume.
 
-When the session ends, Fluxer sends Opcode `9` with `d: false`, after which heartbeats are acknowledged again. A heartbeat that arrives in the short window between the session ending and that frame closes with `4007`.
+When the session ends, sanalyer sends Opcode `9` with `d: false`, after which heartbeats are acknowledged again. A heartbeat that arrives in the short window between the session ending and that frame closes with `4007`.
 
 See [Gateway overview](/gateway/overview/#heartbeats) for the timing contract.
 
@@ -90,7 +90,7 @@ Opcode `2` authenticates and creates a new session.
     "token": "...",
     "properties": {
       "os": "Linux",
-      "browser": "Fluxer Client",
+      "browser": "my-bot",
       "device": "desktop"
     },
     "presence": {
@@ -105,7 +105,7 @@ Opcode `2` authenticates and creates a new session.
 }
 ```
 
-`token` and `properties` are required. Fluxer ignores unknown fields. There is no `intents` field and no intent system.
+`token` and `properties` are required. sanalyer ignores unknown fields. There is no `intents` field and no intent system.
 
 The following faults close with `4002` and reason `Invalid identify payload`:
 
@@ -117,7 +117,7 @@ The following faults close with `4002` and reason `Invalid identify payload`:
 
 A malformed `shard` closes with `4010` and reason `Invalid shard`.
 
-Fluxer refuses a bot session that resolves to more than 2,500 guilds after any `shard` filter is applied. The connection closes with `4011` and reason `Sharding required`. A user session is never refused for its guild count.
+sanalyer refuses a bot session that resolves to more than 2,500 guilds after any `shard` filter is applied. The connection closes with `4011` and reason `Sharding required`. A user session is never refused for its guild count.
 
 A token the backend rejects closes with `4004` and reason `Invalid token`. A non-bot account that already holds 100 live sessions closes with `4008` and reason `Too many sessions`. A bot credential is not bounded by that count. An Identify sent on a socket that already has a session attached closes with `4005` and reason `Already authenticated`, whether or not it has `d`.
 
@@ -152,7 +152,7 @@ Bit `0` and every bit above `2` are undefined. An undefined bit is accepted and 
 
 <sup>3</sup> Used to order the Ready `rtc_regions` array by distance
 
-`os`, `browser`, and `device` are required strings. The remaining fields are optional hints. Fluxer accepts and ignores unrecognised properties.
+`os`, `browser`, and `device` are required strings. The remaining fields are optional hints. sanalyer accepts and ignores unrecognised properties.
 
 `latitude` and `longitude` are accepted here only as strings. A number fails validation and the whole session start fails, so send `"52.52"`. Both must be sent together to have any effect, and a string that does not parse as a number counts as absent. A client with no location omits them, and Ready orders `rtc_regions` by region ID instead.
 
@@ -186,9 +186,9 @@ Identify accepts `offline` as a distinct initial status, and [Presence Update](#
 
 <sup>1</sup> The timestamp is in the future
 
-<sup>2</sup> The Snowflake names an emoji that exists. Fluxer drops the field from the published object, without failing the rest of it, when the account has no global expressions entitlement
+<sup>2</sup> The Snowflake names an emoji that exists. sanalyer drops the field from the published object, without failing the rest of it, when the account has no global expressions entitlement
 
-<sup>3</sup> A single Unicode emoji. Fluxer strips the field before validation when `emoji_id` is supplied
+<sup>3</sup> A single Unicode emoji. sanalyer strips the field before validation when `emoji_id` is supplied
 
 Only these fields are read. [Presence Update](#presence-update) validates the object against the account before publishing it.
 
@@ -241,7 +241,7 @@ Opcode `3` replaces the current session presence.
 
 `status` is required. A payload that is not an object, an object with no `status` key, and a `status` string outside the accepted set all close with `4002` and reason `Invalid presence payload`. The empty string resolves to `online`.
 
-Fluxer accepts a non-string `status`. Null and a Boolean publish the session as offline, and every other non-string value resolves to `online`.
+sanalyer accepts a non-string `status`. Null and a Boolean publish the session as offline, and every other non-string value resolves to `online`.
 
 `offline` is normalised to `invisible`, so a Presence Update cannot publish a session as offline while it is connected.
 
@@ -276,7 +276,7 @@ Opcode `4` joins, moves, updates, or leaves the voice membership associated with
 
 <sup>3</sup> Every entry is a stream key whose scope, guild, and channel match this update. An entry that fails that check, or a value that is not an array, refuses the update with `VOICE_INVALID_STATE`, and an entry naming a connection that does not exist refuses it with `VOICE_CONNECTION_NOT_FOUND`
 
-<sup>4</sup> Only `true` and the string `"true"` set it, and Fluxer publishes `false` when the member lacks `STREAM` in the channel. The screenshare track uses this same connection, so setting the flag issues no grant and sends no [Voice Server Update](/gateway/events/#voice-server-update)
+<sup>4</sup> Only `true` and the string `"true"` set it, and sanalyer publishes `false` when the member lacks `STREAM` in the channel. The screenshare track uses this same connection, so setting the flag issues no grant and sends no [Voice Server Update](/gateway/events/#voice-server-update)
 
 <sup>5</sup> Only the JSON Boolean `true` agrees and only the JSON Boolean `false` switches. On a new connection `true` states that the client supports peer-to-peer media and accepts it for this join. A bot session never agrees, whatever it sends. On an existing connection an explicit `false` converts the whole channel or call to LiveKit, and an omitted key or `true` changes nothing. [Peer-to-peer voice](/gateway/events/#peer-to-peer-voice) states when a join is peer-to-peer and when it is refused
 
@@ -294,13 +294,13 @@ Opcode `4` joins, moves, updates, or leaves the voice membership associated with
 }
 ```
 
-Every field is optional. A non-null `guild_id` or `channel_id` is a canonical decimal [snowflake](/snowflakes/) string, and a positive integer is also accepted. Every other value fails validation, and Fluxer drops the update with no close code and no event.
+Every field is optional. A non-null `guild_id` or `channel_id` is a canonical decimal [snowflake](/snowflakes/) string, and a positive integer is also accepted. Every other value fails validation, and sanalyer drops the update with no close code and no event.
 
 `guild_id: null` with `channel_id: null` and a `connection_id` leaves the DM or group DM call connection with that identifier. The same shape without a `connection_id` disconnects the session from every voice membership it holds. `guild_id: null` with a `channel_id` selects the DM or group DM call context.
 
-`latitude` and `longitude` accept a number or a string here, and Fluxer coerces both to a string.
+`latitude` and `longitude` accept a number or a string here, and sanalyer coerces both to a string.
 
-The command has no `session_id` field. Fluxer identifies the voice membership by the Gateway session that sends the command.
+The command has no `session_id` field. sanalyer identifies the voice membership by the Gateway session that sends the command.
 
 Joining or replacing a grant produces [Voice Server Update](/gateway/events/#voice-server-update) with the token and endpoint for the media connection, or with the ICE servers of a peer-to-peer grant, and [Voice State Update](/gateway/events/#voice-state-update) for every session that can see the channel.
 
@@ -317,7 +317,7 @@ Opcode `13` sends one signalling message to one other connection of a [peer-to-p
 | guild_id? | ?snowflake | The guild containing the voice channel, where null or an omitted key selects the DM and group DM call context |
 | channel_id | snowflake | The voice channel or call channel both connections are in |
 | to | string | The `connection_id` of the voice state the signal is for |
-| data | object | The signalling message, which Fluxer relays unread |
+| data | object | The signalling message, which sanalyer relays unread |
 
 ```json
 {
@@ -334,11 +334,11 @@ Opcode `13` sends one signalling message to one other connection of a [peer-to-p
 }
 ```
 
-Fluxer relays the signal when the sending session owns a voice state with `p2p: true` in that channel and `to` names another voice state with `p2p: true` in the same channel. The target connection's session alone receives [Voice Signal](/gateway/events/#voice-signal).
+sanalyer relays the signal when the sending session owns a voice state with `p2p: true` in that channel and `to` names another voice state with `p2p: true` in the same channel. The target connection's session alone receives [Voice Signal](/gateway/events/#voice-signal).
 
 Every other signal is dropped with no event and no close. That covers a channel or call that is not peer-to-peer, a `to` that names no connection there, a `to` that names the sender's own connection, a `data` that is not an object, and a session with no voice state in the channel.
 
-`data` is opaque to Fluxer. Clients agree on its contents among themselves, typically a session description or an ICE candidate. The whole frame stays within the [inbound payload bound](/gateway/overview/#framing).
+`data` is opaque to sanalyer. Clients agree on its contents among themselves, typically a session description or an ICE candidate. The whole frame stays within the [inbound payload bound](/gateway/overview/#framing).
 
 A client sends this command only after it has received a [Voice Server Update](/gateway/events/#voice-server-update) with `p2p: true` for the connection. [Command rate limits](/gateway/limits-and-rate-limits/#connection-and-command-rate-limits) states the Voice Signal budget.
 
@@ -390,7 +390,7 @@ The command never closes the connection. Invalid input is coerced or discarded:
 
 The nonce is echoed only when the request named exactly one guild.
 
-Fluxer skips a guild this session is not connected to. A request that resolves to no connected guild produces no chunk.
+sanalyer skips a guild this session is not connected to. A request that resolves to no connected guild produces no chunk.
 
 A bot requests one guild at a time, and a bot request naming two or more guilds is abandoned.
 
@@ -410,7 +410,7 @@ Opcode `14` sets the per-guild subscriptions that decide member list, typing, sy
 | --- | --- | --- |
 | subscriptions<sup>1</sup> | map[snowflake, [guild subscription](#guild-subscription-object) object] | The subscription options for each guild, keyed by guild ID |
 
-<sup>1</sup> Fluxer keeps each guild's options for the session and applies them again when the session connects to that guild later
+<sup>1</sup> sanalyer keeps each guild's options for the session and applies them again when the session connects to that guild later
 
 ```json
 {
@@ -443,11 +443,11 @@ Opcode `14` sets the per-guild subscriptions that decide member list, typing, sy
 | member_list_channels?<sup>2</sup> | map[snowflake, array[array[integer]]] | The member list windows to subscribe to, keyed by channel ID |
 | members? | array[snowflake] | The explicit member IDs to subscribe to, at most 1,000 |
 
-<sup>1</sup> Both are Booleans when present. Any other value stops Fluxer from applying the remaining options for that guild and every guild it has not yet processed, without a close and without a result
+<sup>1</sup> Both are Booleans when present. Any other value stops sanalyer from applying the remaining options for that guild and every guild it has not yet processed, without a close and without a result
 
 <sup>2</sup> Subscriptions may be combined over a 100 ms window. Ranges sent during that window are merged for the same channel, and an empty range list clears its pending ranges
 
-Fluxer applies each option only when its key is present, in the order `active`, `sync`, `member_list_channels`, `members`, `typing`. The [thread options](/gateway/threads/#lazy-request-thread-options) `threads` and `thread_member_lists` follow `typing`.
+sanalyer applies each option only when its key is present, in the order `active`, `sync`, `member_list_channels`, `members`, `typing`. The [thread options](/gateway/threads/#lazy-request-thread-options) `threads` and `thread_member_lists` follow `typing`.
 
 Marking a guild active changes how much traffic it produces, and [Event filtering](/gateway/event-filtering/) specifies the difference. A transition from passive to active, and a transition from active to passive, both imply a sync even when `sync` is absent. Every sync request, implied or explicit, is dropped when the guild is already marked synced for that session. Going passive clears that mark, so the next sync request produces a fresh Guild Sync. Going passive also clears the [`threads`](/gateway/threads/#lazy-request-thread-options) subscription.
 
@@ -459,7 +459,7 @@ Subscribing a channel to at least one range drops the session's other member lis
 
 `members` entries that are not Snowflakes are dropped, and the first 1,000 that pass are kept. A member the session shares no viewable channel with is dropped as well.
 
-`typing` is a Boolean, and Fluxer ignores any other value. It decides [Typing Start](/gateway/events/#typing-start) delivery for the guild independently of the active flag.
+`typing` is a Boolean, and sanalyer ignores any other value. It decides [Typing Start](/gateway/events/#typing-start) delivery for the guild independently of the active flag.
 
 ## Request Guild Counts
 

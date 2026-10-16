@@ -26,11 +26,11 @@ Every bound below is a fixed constant of the instance, and none is resolved from
 
 <sup>2</sup> Only [Upload entrance sound](#upload-entrance-sound) applies the lower bound
 
-The [instance discovery](/http-api/instance/#limit-keys) document publishes a `feature_voice_entrance_sounds` limit key. The Fluxer client reads that key to decide whether it opens the clip upload dialog and whether it calls [Play entrance sound](#play-entrance-sound) after it connects to a voice channel. Upload, assigning a sound to a scope, and playback require the caller's resolved feature value to be greater than zero; otherwise they return 400 `INVALID_FORM_BODY` with the validation code `ENTRANCE_SOUNDS_REQUIRE_PREMIUM`. Listing, renaming, deleting saved sounds, and clearing a selection (`sound_id: null`) remain available when the feature is unavailable, and losing access does not delete saved sounds or selections.
+The [instance discovery](/http-api/instance/#limit-keys) document publishes a `feature_voice_entrance_sounds` limit key. The sanalyer client reads that key to decide whether it opens the clip upload dialog and whether it calls [Play entrance sound](#play-entrance-sound) after it connects to a voice channel. Upload, assigning a sound to a scope, and playback require the caller's resolved feature value to be greater than zero; otherwise they return 400 `INVALID_FORM_BODY` with the validation code `ENTRANCE_SOUNDS_REQUIRE_PREMIUM`. Listing, renaming, deleting saved sounds, and clearing a selection (`sound_id: null`) remain available when the feature is unavailable, and losing access does not delete saved sounds or selections.
 
 ## Supported containers
 
-Fluxer detects the container from the decoded bytes, so a filename, a `data:` media type, or any other declared type has no effect on the result. The detected container resolves to a stored extension, and every other input fails with `ENTRANCE_SOUND_INVALID_FORMAT`.
+sanalyer detects the container from the decoded bytes, so a filename, a `data:` media type, or any other declared type has no effect on the result. The detected container resolves to a stored extension, and every other input fails with `ENTRANCE_SOUND_INVALID_FORMAT`.
 
 | Detected container | Stored extension | Stored content type |
 | --- | --- | --- |
@@ -48,7 +48,7 @@ Fluxer detects the container from the decoded bytes, so a filename, a `data:` me
 FLAC, WebM, Matroska, AIFF, 3GPP, AVI, FLV, WMV, MPEG-TS, and every image type resolve to no extension and are rejected.
 
 :::caution[The uploaded bytes are stored verbatim]
-The decoded bytes are written exactly as they arrived, under the extension and content type the table assigns. A QuickTime upload stays a QuickTime file, and Fluxer serves it as `audio/mp4` under an `m4a` extension.
+The decoded bytes are written exactly as they arrived, under the extension and content type the table assigns. A QuickTime upload stays a QuickTime file, and sanalyer serves it as `audio/mp4` under an `m4a` extension.
 :::
 
 ## Entrance sound object
@@ -193,7 +193,7 @@ Every failure below returns 400 `INVALID_FORM_BODY`. A response can contain more
 
 <sup>2</sup> Measured after any `data:` prefix is discarded, so a value that is whitespace only, or that ends at its first comma, has zero payload characters and fails here
 
-Fluxer checks the first four rows before the quota, so an account already holding 8 clips receives `BASE64_LENGTH_INVALID` or `INVALID_BASE64_FORMAT` for a malformed or too-long payload.
+sanalyer checks the first four rows before the quota, so an account already holding 8 clips receives `BASE64_LENGTH_INVALID` or `INVALID_BASE64_FORMAT` for a malformed or too-long payload.
 
 The validation entry has no member naming which duration bound the clip crossed.
 
@@ -245,12 +245,12 @@ Changes the display label of one clip and returns the updated [entrance sound ob
 | 400 | [error response](/http-api/#error-response) | Name normalises to the empty string or exceeds 32 characters and the request returns `STRING_LENGTH_INVALID` at the `name` path, or the account owns no such clip and the request returns `ENTRANCE_SOUND_NOT_FOUND` at the `sound_id` path |
 
 :::note[An unknown clip returns 400, not 404]
-Fluxer reports a clip owned by another account exactly like one that never existed, so a caller cannot tell ownership from existence. [Set entrance sound selection](#set-entrance-sound-selection) and [Play entrance sound](#play-entrance-sound) report an unknown clip the same way.
+sanalyer reports a clip owned by another account exactly like one that never existed, so a caller cannot tell ownership from existence. [Set entrance sound selection](#set-entrance-sound-selection) and [Play entrance sound](#play-entrance-sound) report an unknown clip the same way.
 :::
 
 ### Side effects
 
-Only the label changes. The stored audio is untouched, and every selection pointing at the clip keeps pointing at it. Fluxer emits no Gateway Dispatch.
+Only the label changes. The stored audio is untouched, and every selection pointing at the clip keeps pointing at it. sanalyer emits no Gateway Dispatch.
 
 ### Rate limit
 
@@ -310,7 +310,7 @@ A `guild:{guild_id}` scope does not require current guild membership. A non-null
 
 ### Side effects
 
-Fluxer writes or removes the scope's selection. One clip can be selected in any number of scopes at once. The operation emits no Gateway Dispatch, so the caller's other sessions learn about the change only by listing the library again.
+sanalyer writes or removes the scope's selection. One clip can be selected in any number of scopes at once. The operation emits no Gateway Dispatch, so the caller's other sessions learn about the change only by listing the library again.
 
 ### Rate limit
 
@@ -340,20 +340,20 @@ Recipients fetch and play the clip locally from the URL in the event.
 
 | Status | Body | Condition |
 | --- | --- | --- |
-| 204 | empty | Fluxer attempted a Dispatch to every other connected account |
+| 204 | empty | sanalyer attempted a Dispatch to every other connected account |
 | 400 | [error response](/http-api/#error-response) | Caller holds no voice state in the channel, including when the channel does not exist, and the request returns `ENTRANCE_SOUND_INVALID_SCOPE` at the `channel_id` path, the caller does not have the `feature_voice_entrance_sounds` entitlement and the request returns `ENTRANCE_SOUNDS_REQUIRE_PREMIUM` at the `sound_id` path, or the account owns no such clip and the request returns `ENTRANCE_SOUND_NOT_FOUND` at the `sound_id` path |
 
 :::caution[Connection and entitlement are required]
-The caller must hold a voice state in the channel and have the `feature_voice_entrance_sounds` entitlement. Fluxer evaluates no channel permission and checks no guild membership.
+The caller must hold a voice state in the channel and have the `feature_voice_entrance_sounds` entitlement. sanalyer evaluates no channel permission and checks no guild membership.
 :::
 
 An ID naming no channel is refused exactly like a channel the caller is not connected to. The connection check runs before the clip is looked up, so a caller who is not connected never learns whether the named clip exists.
 
 ### Side effects
 
-Fluxer sends one [ENTRANCE_SOUND_PLAY](/gateway/events/#entrance-sound-play) Dispatch to every other account holding a voice state in the channel, at most once for each account, and never to the caller. A recipient whose Dispatch fails is skipped, and the request still returns 204.
+sanalyer sends one [ENTRANCE_SOUND_PLAY](/gateway/events/#entrance-sound-play) Dispatch to every other account holding a voice state in the channel, at most once for each account, and never to the caller. A recipient whose Dispatch fails is skipped, and the request still returns 204.
 
-Fluxer addresses the Dispatch to the account, so every session that account holds receives it, including sessions that are not in the channel. A client filters on `channel_id`.
+sanalyer addresses the Dispatch to the account, so every session that account holds receives it, including sessions that are not in the channel. A client filters on `channel_id`.
 
 ### Rate limit
 

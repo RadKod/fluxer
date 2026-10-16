@@ -6,7 +6,7 @@ description: Registering a device for push delivery and decrypting what arrives.
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-Fluxer delivers a notification to a registered device as [RFC 8291](https://datatracker.ietf.org/doc/html/rfc8291) Web Push. The client generates a P-256 key pair and an auth secret, registers the public half of the pair, and decrypts each delivery with the private half.
+sanalyer delivers a notification to a registered device as [RFC 8291](https://datatracker.ietf.org/doc/html/rfc8291) Web Push. The client generates a P-256 key pair and an auth secret, registers the public half of the pair, and decrypts each delivery with the private half.
 
 Every route here requires a user session. A bot or OAuth2 bearer credential is refused with 403 `ACCESS_DENIED`.
 
@@ -19,7 +19,7 @@ On every platform a registration takes one of two forms.
 | Web Push | A publicly routable endpoint URL | Both `encryption_key` and `auth_secret` |
 | Legacy | A raw vendor device token | Neither key is sent |
 
-Fluxer works out which form you sent from the body rather than from `platform`. A `token` that parses as a URL without both keys is refused, and so is a pair of keys sent with a raw vendor token.
+sanalyer works out which form you sent from the body rather than from `platform`. A `token` that parses as a URL without both keys is refused, and so is a pair of keys sent with a raw vendor token.
 
 `platform` names the transport the device was reached on.
 
@@ -38,7 +38,7 @@ Android registers once. One `android_fcm` Web Push registration receives notific
 
 ## Device registration object
 
-The identifier Fluxer assigns to one registration.
+The identifier sanalyer assigns to one registration.
 
 ### Structure
 
@@ -46,7 +46,7 @@ The identifier Fluxer assigns to one registration.
 | --- | --- | --- |
 | device_id | string | The registration identifier, 32 lowercase hexadecimal characters |
 
-Fluxer derives the identifier from `platform`, `app_id`, `provider_environment`, and `token`. The same four values always produce the same identifier, and registering them twice replaces the stored entry.
+sanalyer derives the identifier from `platform`, `app_id`, `provider_environment`, and `token`. The same four values always produce the same identifier, and registering them twice replaces the stored entry.
 
 ## Register mobile push device
 
@@ -123,7 +123,7 @@ The four values below identify the registration the same way [Register mobile pu
 
 ## Handling an incoming push
 
-Fluxer posts one encrypted record to the registered endpoint for each notification. The push service that owns the endpoint hands that record to the client. [Register mobile push device](#register-mobile-push-device) states which registrations receive thread and new post notifications.
+sanalyer posts one encrypted record to the registered endpoint for each notification. The push service that owns the endpoint hands that record to the client. [Register mobile push device](#register-mobile-push-device) states which registrations receive thread and new post notifications.
 
 | Header | Value |
 | --- | --- |
@@ -133,7 +133,7 @@ Fluxer posts one encrypted record to the registered endpoint for each notificati
 | Urgency | `high` on a notification and on a call ring, `low` on a clear |
 | Authorization | A VAPID token and the instance public key |
 
-The body is one `aes128gcm` record encrypted to the `encryption_key` and `auth_secret` the client registered. The client decrypts it locally with the private half of its key pair and its auth secret. Fluxer holds no key that opens the record after it is sealed.
+The body is one `aes128gcm` record encrypted to the `encryption_key` and `auth_secret` the client registered. The client decrypts it locally with the private half of its key pair and its auth secret. sanalyer holds no key that opens the record after it is sealed.
 
 A record is 2816 bytes and its plaintext is at most 2713 bytes of JSON. A notification too large for that is shrunk before it is encrypted, one step at a time, until it fits.
 
@@ -148,7 +148,7 @@ A client has to tolerate a missing field.
 
 Three kinds of payload arrive. A notification payload describes something to show. A clear payload sets `type` to `notification_clear` and `action` to `clear_channel`, and asks the client to dismiss what it already showed for one channel. A [call ring](#call-ring) payload sets `type` to `call_ring` and announces an incoming call.
 
-An endpoint that answers 404 or 410 removes the registration. Fluxer retries a transient failure and keeps the registration.
+An endpoint that answers 404 or 410 removes the registration. sanalyer retries a transient failure and keeps the registration.
 
 ### Call ring
 
@@ -172,7 +172,7 @@ Stop ringing at `expires_at_ms` rather than after a fixed number of seconds. The
 
 `caller_name` is the caller's nickname in that channel if they have one, otherwise their display name, otherwise their username. Display it as sent. If you look the name up yourself from `caller_id` you can get a different answer in a group DM.
 
-The three caller fields are sent together or not at all. An older server, or an account Fluxer could not read, omits all three.
+The three caller fields are sent together or not at all. An older server, or an account sanalyer could not read, omits all three.
 
 | What arrived | What to show |
 | --- | --- |
@@ -184,7 +184,7 @@ Ring in all three cases. Showing a call without a name is better than not showin
 
 A call ring is not stored for later delivery. A device that cannot be reached while the call rings does not get the ring afterwards.
 
-Fluxer never sends a second push to cancel a ring. It ends the call over the gateway connection that the woken client opens.
+sanalyer never sends a second push to cancel a ring. It ends the call over the gateway connection that the woken client opens.
 
 A call also produces an ordinary notification for its call message, under the same `message_id` as the ring. Collapse the two into one rather than showing both.
 
@@ -197,7 +197,7 @@ Report a call for every PushKit push, before decrypting. Then end that call at o
 | Case | What it means |
 | --- | --- |
 | The record does not decrypt | The registered keys no longer match the pair the client holds |
-| `type` is not `call_ring` | The push did not come from Fluxer |
+| `type` is not `call_ring` | The push did not come from sanalyer |
 | The gateway names no live call for `channel_id` | The call ended before the ring arrived |
 
 Anyone who obtains a PushKit token can send to it. These three checks are what stop a forged push from showing a caller.
@@ -220,7 +220,7 @@ Google lowers an app's message priority if its high priority messages stop produ
 4. Let the system play the ringtone through the notification channel. A ringtone the app starts itself out of a push stops working on newer Android releases and reports no error.
 5. Stop registering the device once notification permission is denied. An app that cannot show anything is spending its delivery priority for no reason.
 
-Answering the call needs a foreground service. Ringing does not. Start a `phoneCall` service once the user answers. From Android 12 a backgrounded app may only start that service because the message arrived at high priority. Read the delivered priority rather than the priority Fluxer sent, and skip the service start when it came down as normal.
+Answering the call needs a foreground service. Ringing does not. Start a `phoneCall` service once the user answers. From Android 12 a backgrounded app may only start that service because the message arrived at high priority. Read the delivered priority rather than the priority sanalyer sent, and skip the service start when it came down as normal.
 
 | Permission | Granted by default | Without it |
 | --- | --- | --- |
@@ -242,6 +242,6 @@ In three situations nothing is delivered at all. These are worth documenting for
 
 A record that does not decrypt cannot be recovered. Discard it and show nothing.
 
-Decryption fails when the registered keys no longer match the pair the client holds. Regenerating the key pair without registering again does that. Fluxer sees none of it. The push service already answered 2xx and the registration stays live.
+Decryption fails when the registered keys no longer match the pair the client holds. Regenerating the key pair without registering again does that. sanalyer sees none of it. The push service already answered 2xx and the registration stays live.
 
 The client is the only party that can repair it. Unregister the stale entry, then register again with the current public key and auth secret.

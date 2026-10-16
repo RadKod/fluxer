@@ -6,7 +6,7 @@ description: Premium gift codes the current account created, and their redemptio
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-The gift inventory lists the premium gift codes the current account created, with the redemption state of each. The [Gifts resource](/http-api/gifts/) has public gift lookup and redemption, and the [Billing resource](/http-api/billing/) has gift purchase.
+The gift inventory lists the premium gift codes the current account created, with the redemption state of each. The [Gifts resource](/http-api/gifts/) has public gift lookup and redemption, and the Billing resource has gift purchase.
 
 A self-hosted deployment returns 404 `NOT_FOUND` here unless its [premium mode](/admin-api/instance/#premium-modes) is `mirror`, as [deployment availability](/http-api/deployment-availability/) describes.
 
@@ -48,14 +48,14 @@ One gift code created by the current account, with its redemption state. A compl
 
 <sup>6</sup> Declared optional by the response schema and always emitted, so an unredeemed code has an explicit null in each
 
-<sup>7</sup> Fluxer substitutes a placeholder partial named `DeletedUser` for a redeemer whose account no longer resolves, so null here always means the code is unredeemed
+<sup>7</sup> sanalyer substitutes a placeholder partial named `DeletedUser` for a redeemer whose account no longer resolves, so null here always means the code is unredeemed
 
 The object adds the creation time and the redemption identity to what the public [gift object](/http-api/gifts/#gift-object) reports, and has no `redeemed` boolean.
 
 Redeeming a lifetime-quantity code converts the account to lifetime premium and cancels any active recurring subscription.
 
 :::danger[A code is a bearer credential]
-Fluxer records no recipient at issue time, so [redemption](/http-api/gifts/#redeem-gift) binds a code to whichever eligible account presents it first. The inventory returns the full code, and no operation unredeems it. Treat every unredeemed code as a secret.
+sanalyer records no recipient at issue time, so [redemption](/http-api/gifts/#redeem-gift) binds a code to whichever eligible account presents it first. The inventory returns the full code, and no operation unredeems it. Treat every unredeemed code as a secret.
 :::
 
 ### Example
@@ -82,7 +82,7 @@ The listing is not paginated, so it accepts no query parameter and returns no cu
 
 An unredeemed code is listed indefinitely. A redeemed code is listed only while its redemption is less than seven days old, so an account whose codes were all redeemed longer ago receives an empty array.
 
-A revoked code is omitted at every age. Fluxer revokes a code when a dispute or refund reaches the purchase while the code is still unredeemed, and no route reports the reversal to the buyer. A code already redeemed when the reversal arrived is not revoked, so it stays listed under the seven-day rule while Fluxer recomputes the redeemer's entitlement from their remaining redeemed gifts.
+A revoked code is omitted at every age. sanalyer revokes a code when a dispute or refund reaches the purchase while the code is still unredeemed, and no route reports the reversal to the buyer. A code already redeemed when the reversal arrived is not revoked, so it stays listed under the seven-day rule while sanalyer recomputes the redeemer's entitlement from their remaining redeemed gifts.
 
 A redeemed code that has dropped out of the listing still exists, still resolves through the [Gifts resource](/http-api/gifts/), and is still permanently spent. A revoked code stops resolving through that resource with 404 `UNKNOWN_GIFT_CODE`.
 

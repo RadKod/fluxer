@@ -154,7 +154,7 @@ Only `viewer` differs between accounts. The rest is the same for every account.
 | item_deleted | The item of a cosmetic order was deleted before delivery |
 | provider_error | The payment provider did not open the order |
 
-Fluxer sends no refund through the payment provider. An admin refunds a failed payment by hand in the provider's panel.
+sanalyer sends no refund through the payment provider. An admin refunds a failed payment by hand in the provider's panel.
 
 ## Shop order object
 
@@ -444,13 +444,13 @@ A matching token queues a check of the order with the provider, as [Payment and 
 
 <RouteHeader method="POST" path="/v1/payriff/callback/{order_id}/{token}" unauthenticated />
 
-Payriff calls this when a payment changes. Payriff signs nothing, so the body is never read. Only the order ID and the token in the path count, with the same [path parameters](#return-from-payriff) and side effects as [Return from Payriff](#return-from-payriff). Returns a [webhook received](/http-api/billing/#webhook-received-object) object.
+Payriff calls this when a payment changes. Payriff signs nothing, so the body is never read. Only the order ID and the token in the path count, with the same [path parameters](#return-from-payriff) and side effects as [Return from Payriff](#return-from-payriff). Returns a webhook received object.
 
 ### Response
 
 | Status | Body | Condition |
 | --- | --- | --- |
-| 200 | [webhook received](/http-api/billing/#webhook-received-object) object | Always, unless the caller accepts `text/html` |
+| 200 | webhook received object | Always, unless the caller accepts `text/html` |
 | 303 | empty | The caller accepts `text/html`, and is sent where [Return from Payriff](#return-from-payriff) would send it |
 
 ### Rate limit

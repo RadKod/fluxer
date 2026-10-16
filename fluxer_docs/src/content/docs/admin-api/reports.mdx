@@ -17,7 +17,7 @@ The captured fields are the guild name, icon hash, invite code, channel name, sa
 :::
 
 :::note[Reporter and reported identity are current values]
-Fluxer reads the tag, username, display name, and discriminator of both accounts when it produces the response. The author identity on each captured message stays as it was captured.
+sanalyer reads the tag, username, display name, and discriminator of both accounts when it produces the response. The author identity on each captured message stays as it was captured.
 :::
 
 ## Admin report object
@@ -94,7 +94,7 @@ A report is written once, when the reporter files it. [Update report](#update-re
 | resolved_by_admin_id<sup>9</sup> | ?snowflake | The Admin account that resolved the report |
 | public_comment<sup>9</sup> | ?string | The comment shown to the reporter (at most 512 characters) |
 
-<sup>1</sup> Null for an anonymous Digital Services Act notice, which is filed without a Fluxer account, so every reporter identity field is null exactly when `reporter_id` is null
+<sup>1</sup> Null for an anonymous Digital Services Act notice, which is filed without a sanalyer account, so every reporter identity field is null exactly when `reporter_id` is null
 
 <sup>2</sup> Resolved from the account when the response is produced, and null when the account can no longer be read
 
@@ -217,7 +217,7 @@ The detail object extends the [Admin report object](#admin-report-object) with t
 <sup>5</sup> Always emitted. Null when the report has no hold. [Set report legal hold](#set-report-legal-hold) places and clears the hold, and [Report retention](#report-retention) describes its effect
 
 :::note[The live array can be shorter than the capture]
-Fluxer skips an entry when neither the capture nor the report records its channel. It also omits a message that no longer exists, or whose channel can no longer be read.
+sanalyer skips an entry when neither the capture nor the report records its channel. It also omits a message that no longer exists, or whose channel can no longer be read.
 :::
 
 ## Report message context object
@@ -264,7 +264,7 @@ A message report captures the reported message together with at most 25 messages
 
 <sup>6</sup> Derived from the message ID
 
-<sup>7</sup> Fluxer drops an evidence copy that records no file name, resolves to no channel, or receives no download URL, so this array can be shorter than the original
+<sup>7</sup> sanalyer drops an evidence copy that records no file name, resolves to no channel, or receives no download URL, so this array can be shorter than the original
 
 <sup>8</sup> For a message a webhook sent, the webhook ID, the name and avatar hash the message was sent with, and the discriminator `0000`, as the [message object](/http-api/messages/#message-object) shows the author of a webhook message
 
@@ -293,7 +293,7 @@ A message report captures the reported message together with at most 25 messages
 
 ### Report missing attachment object
 
-An attachment of a captured message that Fluxer could not copy into the report. It has the captured metadata and no download URL.
+An attachment of a captured message that sanalyer could not copy into the report. It has the captured metadata and no download URL.
 
 #### Structure
 
@@ -311,7 +311,7 @@ An attachment of a captured message that Fluxer could not copy into the report. 
 
 ## Report profile snapshot object
 
-The reported profile as it was when the report was filed. A user report keeps the account, a guild report keeps the guild, and a message report keeps the author account. Each image is a copy Fluxer made when the report was filed, so a later profile change or deletion does not affect it.
+The reported profile as it was when the report was filed. A user report keeps the account, a guild report keeps the guild, and a message report keeps the author account. Each image is a copy sanalyer made when the report was filed, so a later profile change or deletion does not affect it.
 
 ### Structure
 
@@ -413,7 +413,7 @@ The reported profile as it was when the report was filed. A user report keeps th
 
 ## Report flow answers object
 
-The answers a reporter gave in a [report flow](/http-api/reports/#report-flows), described in English whatever locale the reporter saw. Fluxer builds the description from the stored IDs when it produces the response, so the labels follow the current catalogue.
+The answers a reporter gave in a [report flow](/http-api/reports/#report-flows), described in English whatever locale the reporter saw. sanalyer builds the description from the stored IDs when it produces the response, so the labels follow the current catalogue.
 
 ### Structure
 
@@ -525,7 +525,7 @@ A report resolution is the reduced view [Update report](#update-report) returns.
 
 ## Report retention
 
-A pending report is kept until it is resolved. Once a report is resolved, Fluxer deletes it when its retention period ends, together with its stored evidence: the captured message context, the profile snapshot and its images, the attachment copies, and its search index entry. The reporter's duplicate-report reservation for it goes too, so the reporter can report the same message, account or guild again.
+A pending report is kept until it is resolved. Once a report is resolved, sanalyer deletes it when its retention period ends, together with its stored evidence: the captured message context, the profile snapshot and its images, the attachment copies, and its search index entry. The reporter's duplicate-report reservation for it goes too, so the reporter can report the same message, account or guild again.
 
 The retention period ends 365 days after `resolved_at`, or the number of days in `FLUXER_REPORT_RETENTION_DAYS`. Some reports are kept longer, whatever that setting says:
 
@@ -533,14 +533,14 @@ The retention period ends 365 days after `resolved_at`, or the number of days in
 - A report listed in the `report_ids` of an [enforcement decision](/admin-api/enforcement/#enforcement-decision-object) is kept for at least 365 days after the newest such decision was recorded, as long as the decision's evidence.
 - A report with a [legal hold](#set-report-legal-hold) that ends later is kept until the next run after the hold ends.
 
-A report resolved with the outcome `no_violation` loses its copied context 184 days after it was resolved, which covers the six months the Digital Services Act gives a reporter to contest the outcome. Fluxer then removes the captured message context, the profile snapshot, the reporter's additional information, and the stored evidence copies, and keeps the rest of the record and its search index entry until the end of the retention period. This does not apply to a `child_safety` report, to a report linked to an enforcement decision, or while a legal hold has not ended.
+A report resolved with the outcome `no_violation` loses its copied context 184 days after it was resolved, which covers the six months the Digital Services Act gives a reporter to contest the outcome. sanalyer then removes the captured message context, the profile snapshot, the reporter's additional information, and the stored evidence copies, and keeps the rest of the record and its search index entry until the end of the retention period. This does not apply to a `child_safety` report, to a report linked to an enforcement decision, or while a legal hold has not ended.
 
 An evidence copy that a retained report also uses is kept for that report.
 
 The job runs once a day in `worker`. Each run logs one `Processed report retention` line with the counts it found, deleted and cleared and the periods it used. A report that fails to delete or clear keeps its record and is retried on the next run. [Delete report](#delete-report) deletes one report straight away.
 
 :::caution[Deleted evidence cannot be restored]
-Retention deletes for real unless `FLUXER_REPORT_RETENTION_DRY_RUN` is `true` on `worker`. In a dry run each run only counts what it would delete or clear and changes nothing. The [operator configuration](/operator/configuration/#moderation-and-abuse) describes the two settings.
+Retention deletes for real unless `FLUXER_REPORT_RETENTION_DRY_RUN` is `true` on `worker`. In a dry run each run only counts what it would delete or clear and changes nothing. The operator configuration describes the two settings.
 :::
 
 ## List reports
@@ -591,7 +591,7 @@ An instance with no search backend returns 403 `FEATURE_TEMPORARILY_DISABLED` on
 | offset | integer | The offset this page was read from |
 | limit | integer | The limit this page was read with |
 
-<sup>1</sup> An index hit whose report record no longer exists is dropped and the request still succeeds, so a full page can hold fewer entries than `limit`. Fluxer logs the dropped IDs, and a [Refresh search index](/admin-api/search-indexes/#refresh-search-index) of `reports` removes them from the index
+<sup>1</sup> An index hit whose report record no longer exists is dropped and the request still succeeds, so a full page can hold fewer entries than `limit`. sanalyer logs the dropped IDs, and a [Refresh search index](/admin-api/search-indexes/#refresh-search-index) of `reports` removes them from the index
 
 <sup>2</sup> The index count, which still includes hits whose report record no longer exists
 
@@ -698,7 +698,7 @@ Resolves one report and returns a [report resolution](#report-resolution-object)
 
 <sup>3</sup> Not stored on the report and not returned by any report route. It is recorded in the audit entry
 
-<sup>4</sup> Required for `actioned`, which refuses `no_violation`. Optional for `no_violation`, which sets `no_violation` and refuses any other value. Refused for `duplicate`. A mistake fails with `REPORT_OUTCOME_INVALID`. `removed` means the reported content, profile field or community was removed. `restricted` means the reported account was restricted and the item was left up. `action_taken` means Fluxer acted under its rules in another way, such as a warning, and the reporter is not told how. `no_violation` means the item breaks no rule and was left as it is. The outcome is stored on the report and the reporter is told it
+<sup>4</sup> Required for `actioned`, which refuses `no_violation`. Optional for `no_violation`, which sets `no_violation` and refuses any other value. Refused for `duplicate`. A mistake fails with `REPORT_OUTCOME_INVALID`. `removed` means the reported content, profile field or community was removed. `restricted` means the reported account was restricted and the item was left up. `action_taken` means sanalyer acted under its rules in another way, such as a warning, and the reporter is not told how. `no_violation` means the item breaks no rule and was left as it is. The outcome is stored on the report and the reporter is told it
 
 <sup>5</sup> Required for `duplicate` and refused otherwise, as is a report naming itself, with `REPORT_OUTCOME_INVALID`. The duplicate takes the outcome stored on that report and the reporter is told it. While that report has no outcome, because it is still pending or was resolved before outcomes were stored, the duplicate is resolved without a notice to its reporter. An unknown report returns 404 `UNKNOWN_REPORT`
 
@@ -723,11 +723,11 @@ Resolving a report notifies the reporter whatever `notify_reporter` says, as the
 
 The report moves to RESOLVED and records `resolved_at`, `resolved_by_admin_id`, the public comment and the outcome.
 
-Fluxer records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with target type `report`, target ID equal to the report ID, and action `resolve_report`. The metadata is `report_id`, `report_type`, `notify_reporter`, `reporter_dm_sent`, `reporter_email_sent`, `reporter_dsa_email_sent`, `resolution`, `duplicate_of` for a duplicate, and `outcome`, which a duplicate of a report with no outcome leaves out. When Fluxer does not attempt a notice, `reporter_notice_skipped` names the reason: `reporter_account_deleted`, `reporter_report_banned`, `reporter_lookup_failed`, `no_reporter_email`, or `duplicate_outcome_unknown`.
+sanalyer records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with target type `report`, target ID equal to the report ID, and action `resolve_report`. The metadata is `report_id`, `report_type`, `notify_reporter`, `reporter_dm_sent`, `reporter_email_sent`, `reporter_dsa_email_sent`, `resolution`, `duplicate_of` for a duplicate, and `outcome`, which a duplicate of a report with no outcome leaves out. When sanalyer does not attempt a notice, `reporter_notice_skipped` names the reason: `reporter_account_deleted`, `reporter_report_banned`, `reporter_lookup_failed`, `no_reporter_email`, or `duplicate_outcome_unknown`.
 
-Fluxer tells the reporter the decision about the item they reported: that the content was removed, that the account was restricted without saying how, that action was taken without saying what, or that it broke no rule and was left as it is. A reporter with an account receives a system direct message, and an email when the account has an address. A Digital Services Act notice has no reporter account, so its verified address receives the same decision by email. Each notice gives the report ID, the comment when one is shared, and on hosted instances how to appeal within 60 days and the EU redress routes. It never names a decision, a sanction or the other account's history. Nothing is sent when the reporter account is deleted, or was barred from reporting when the report was filed.
+sanalyer tells the reporter the decision about the item they reported: that the content was removed, that the account was restricted without saying how, that action was taken without saying what, or that it broke no rule and was left as it is. A reporter with an account receives a system direct message, and an email when the account has an address. A Digital Services Act notice has no reporter account, so its verified address receives the same decision by email. Each notice gives the report ID, the comment when one is shared, and on hosted instances how to appeal within 60 days and the EU redress routes. It never names a decision, a sanction or the other account's history. Nothing is sent when the reporter account is deleted, or was barred from reporting when the report was filed.
 
-A reporter who does not already have the system channel open receives [Channel Create](/gateway/events/#channel-create), and every session of the reporter receives [Message Create](/gateway/events/#message-create). Fluxer logs a delivery failure, and the request still succeeds.
+A reporter who does not already have the system channel open receives [Channel Create](/gateway/events/#channel-create), and every session of the reporter receives [Message Create](/gateway/events/#message-create). sanalyer logs a delivery failure, and the request still succeeds.
 
 ### Rate limit
 
@@ -768,7 +768,7 @@ A held report is kept past the end of its [retention period](#report-retention) 
 
 ### Side effects
 
-Fluxer records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with target type `report` and the report ID as target ID. Placing a hold records action `set_report_legal_hold` with the metadata keys `report_id`, `report_type`, `legal_hold_until`, and `legal_hold_reason`. Clearing a hold records action `clear_report_legal_hold` with `report_id` and `report_type`. Either adds `previous_legal_hold_until` when the report already had a hold end time stored, including one that has passed. A rejected request records nothing.
+sanalyer records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with target type `report` and the report ID as target ID. Placing a hold records action `set_report_legal_hold` with the metadata keys `report_id`, `report_type`, `legal_hold_until`, and `legal_hold_reason`. Clearing a hold records action `clear_report_legal_hold` with `report_id` and `report_type`. Either adds `previous_legal_hold_until` when the report already had a hold end time stored, including one that has passed. A rejected request records nothing.
 
 ### Rate limit
 
@@ -802,7 +802,7 @@ Deleted evidence cannot be restored. A report with a legal hold that has not end
 
 ### Side effects
 
-Fluxer records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `delete_report`, target type `report`, and the report ID as target ID. The metadata keys are `report_id`, `report_type`, `status`, `objects_deleted` for the evidence copies removed, and `shared_objects_kept` for the copies kept because another report uses them. A refused request records nothing.
+sanalyer records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `delete_report`, target type `report`, and the report ID as target ID. The metadata keys are `report_id`, `report_type`, `status`, `objects_deleted` for the evidence copies removed, and `shared_objects_kept` for the copies kept because another report uses them. A refused request records nothing.
 
 ### Rate limit
 

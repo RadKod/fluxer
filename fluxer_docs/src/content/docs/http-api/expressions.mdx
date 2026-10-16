@@ -16,7 +16,7 @@ An expression is a custom emoji or a sticker that one guild owns. The metadata r
 
 Every route here is read-only, and none writes an audit entry or emits a [Gateway Dispatch](/gateway/events/). The metadata routes return the metadata even when the owning guild has [UNAVAILABLE_FOR_EVERYONE](/http-api/guilds/#guild-features).
 
-When an identifier names no stored expression, Fluxer returns 404 `UNKNOWN_EMOJI` or 404 `UNKNOWN_STICKER`. A stored expression whose guild no longer exists returns 404 `UNKNOWN_GUILD`.
+When an identifier names no stored expression, sanalyer returns 404 `UNKNOWN_EMOJI` or 404 `UNKNOWN_STICKER`. A stored expression whose guild no longer exists returns 404 `UNKNOWN_GUILD`.
 
 :::note[Tags and the uploader need a guild-scoped operation]
 Tags, the uploader, and the adult content classification come from the guild-scoped operations, which require membership of the owning guild.
@@ -42,7 +42,7 @@ One custom emoji, readable from outside its guild. It adds the owning guild to t
 
 <sup>3</sup> [Create guild emoji](/http-api/guild-emojis/#create-guild-emoji) restricts the value to ASCII letters, digits, and underscore, and cloning copies it unchanged
 
-<sup>4</sup> Fluxer detects this from the submitted image at creation, and the value never changes
+<sup>4</sup> sanalyer detects this from the submitted image at creation, and the value never changes
 
 <sup>5</sup> True exactly when the owning guild has [CLONE_EMOJI_ENABLED](/http-api/guilds/#guild-features), and false for every other guild
 
@@ -80,7 +80,7 @@ One sticker, readable from outside its guild. It adds the owning guild to the [g
 
 <sup>3</sup> The value accepts any character
 
-<sup>4</sup> Fluxer detects this from the submitted image at creation, and the value never changes
+<sup>4</sup> sanalyer detects this from the submitted image at creation, and the value never changes
 
 <sup>5</sup> True exactly when the owning guild has [CLONE_STICKER_ENABLED](/http-api/guilds/#guild-features), and false for every other guild
 
@@ -190,7 +190,7 @@ Returns the [sticker metadata object](#sticker-metadata-object) of any guild sti
 
 <RouteHeader method="GET" path="/v1/emojis/{emoji_id}/source" bot />
 
-Returns the [expression source guild object](#expression-source-guild-object) of the guild that owns a emoji. Fluxer reads the guild from the gateway, not from storage. The guild is returned when it is discoverable, or when the caller is a member of it.
+Returns the [expression source guild object](#expression-source-guild-object) of the guild that owns a emoji. sanalyer reads the guild from the gateway, not from storage. The guild is returned when it is discoverable, or when the caller is a member of it.
 
 ### Path parameters
 
@@ -215,7 +215,7 @@ Returns the [expression source guild object](#expression-source-guild-object) of
 
 <RouteHeader method="GET" path="/v1/stickers/{sticker_id}/source" bot />
 
-Returns the [expression source guild object](#expression-source-guild-object) of the guild that owns a sticker. Fluxer reads the guild from the gateway, not from storage. The guild is returned when it is discoverable, or when the caller is a member of it.
+Returns the [expression source guild object](#expression-source-guild-object) of the guild that owns a sticker. sanalyer reads the guild from the gateway, not from storage. The guild is returned when it is discoverable, or when the caller is a member of it.
 
 ### Path parameters
 

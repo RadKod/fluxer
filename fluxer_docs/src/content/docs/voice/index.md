@@ -4,7 +4,7 @@ title: Voice
 description: Voice placement, guild voice channels, calls, Go Live, and entrance sounds.
 ---
 
-Fluxer runs voice over LiveKit. The [main Gateway](/gateway/overview/) places a session into a voice channel and hands it one credential. The client presents that credential to a media server, and every track goes over the connection it opens there. Microphone, camera, and screen share are track sources on that one connection, so going live opens nothing new.
+sanalyer runs voice over LiveKit. The [main Gateway](/gateway/overview/) places a session into a voice channel and hands it one credential. The client presents that credential to a media server, and every track goes over the connection it opens there. Microphone, camera, and screen share are track sources on that one connection, so going live opens nothing new.
 
 [Client commands](/gateway/commands/) and [Gateway events](/gateway/events/) define the placement protocol.
 
@@ -26,7 +26,7 @@ Fluxer runs voice over LiveKit. The [main Gateway](/gateway/overview/) places a 
 
 Media never crosses the HTTP API. No route returns an audio or video track, the credential a media connection presents, or the key material an end-to-end encrypted channel uses.
 
-Fluxer runs media over LiveKit and publishes no signalling protocol of its own. There is no voice websocket, no voice opcode set, no UDP discovery step, and no separate encryption handshake. A client connects to the `endpoint` the [Voice Server Update](/gateway/events/#voice-server-update) grant names, presents the grant `token`, and speaks the LiveKit protocol from there.
+sanalyer runs media over LiveKit and publishes no signalling protocol of its own. There is no voice websocket, no voice opcode set, no UDP discovery step, and no separate encryption handshake. A client connects to the `endpoint` the [Voice Server Update](/gateway/events/#voice-server-update) grant names, presents the grant `token`, and speaks the LiveKit protocol from there.
 
 A peer-to-peer grant is the one exception. It has ICE servers and no `endpoint` or `token`, and the peers signal through the Gateway as [Peer-to-peer voice](/gateway/events/#peer-to-peer-voice) describes.
 
@@ -46,7 +46,7 @@ The grant also names the track sources the connection may publish. SPEAK allows 
 
 A deployment can be configured without voice. The [instance discovery document](/http-api/instance/#instance-features-object) reports that state as `features.voice_enabled`. No other surface warns a client in advance.
 
-Where `features.voice_enabled` is false, Fluxer issues no media credential, so a placement request is refused with `VOICE_TOKEN_FAILED`. [List RTC regions](/http-api/channels/#list-rtc-regions) answers 200 with an empty array before it resolves the channel, and [Modify call region](/http-api/calls/#modify-call-region) accepts any region string.
+Where `features.voice_enabled` is false, sanalyer issues no media credential, so a placement request is refused with `VOICE_TOKEN_FAILED`. [List RTC regions](/http-api/channels/#list-rtc-regions) answers 200 with an empty array before it resolves the channel, and [Modify call region](/http-api/calls/#modify-call-region) accepts any region string.
 
 ## Placement
 
@@ -69,7 +69,7 @@ A grant is issued when a connection opens, when it moves to another channel, and
 
 The grant `token` is issued for the media server and consumed by the media connection alone. No route on this API accepts it.
 
-Fluxer reports a refusal by sending no Dispatch. A client observes most refused placements only as the absence of a grant. A refusal with `VOICE_CHANNEL_FULL`, `VOICE_P2P_CONSENT_REQUIRED`, or `VOICE_P2P_UNAVAILABLE` also sends the requesting session a [Gateway Error](/gateway/opcodes-and-close-codes/#gateway-error) payload.
+sanalyer reports a refusal by sending no Dispatch. A client observes most refused placements only as the absence of a grant. A refusal with `VOICE_CHANNEL_FULL`, `VOICE_P2P_CONSENT_REQUIRED`, or `VOICE_P2P_UNAVAILABLE` also sends the requesting session a [Gateway Error](/gateway/opcodes-and-close-codes/#gateway-error) payload.
 
 ## Guild voice channels
 
@@ -99,7 +99,7 @@ A new voice channel stores a `bitrate` of 64000. The ceiling is 96000, and the `
 
 [ADMINISTRATOR](/http-api/permissions/) resolves to the complete mask before any channel overwrite is applied, so it satisfies every row of that table. Two cases skip the VIEW_CHANNEL and CONNECT check. A member the guild is already moving is admitted. So is a member holding virtual access to the channel. The guild grants virtual access to a connected member that loses VIEW_CHANNEL or that a moderator moves into a channel it cannot see. Virtual access also grants SPEAK and STREAM in that channel on its own.
 
-Fluxer checks the permissions in the table above when it issues a grant, and the guild checks them again for a connection that is already open. Joining, moving, a region change, a role edit, an overwrite edit, and a member role change each recompute SPEAK and STREAM.
+sanalyer checks the permissions in the table above when it issues a grant, and the guild checks them again for a connection that is already open. Joining, moving, a region change, a role edit, an overwrite edit, and a member role change each recompute SPEAK and STREAM.
 
 The guild applies the new result to a live connection and issues no new [Voice Server Update](/gateway/events/#voice-server-update). The media server mutes a published microphone, camera, or screen share track the member may no longer publish, and drops a connection that fails the VIEW_CHANNEL and CONNECT check.
 
@@ -164,7 +164,7 @@ That connection's `connection_id` is the last segment of the [stream key](/http-
 The [Streams resource](/http-api/streams/) owns the operations addressed by that key, which record a region preference and read, upload, and delete a JPEG preview image. Reading a preview takes the same access that lets a member join the channel, so any member holding CONNECT there MAY read it without owning the connection. Mutating one also requires STREAM on a guild channel and a voice state matching exactly the channel and the connection the key names.
 
 :::caution[An oversized track loses only its own source]
-On an instance that is not self-hosted, Fluxer mutes a camera or screen share track above 1280x720 from a member without the higher video quality entitlement, and removes that source from the connection's grant. The voice connection stays up.
+On an instance that is not self-hosted, sanalyer mutes a camera or screen share track above 1280x720 from a member without the higher video quality entitlement, and removes that source from the connection's grant. The voice connection stays up.
 :::
 
 Losing screen share permission also stops its audio. Other permitted track sources remain available.
@@ -173,7 +173,7 @@ Losing screen share permission also stops its audio. Other permitted track sourc
 
 An entrance sound is a short clip an account plays for everyone already connected to a voice channel. An account keeps a personal library of at most eight clips, each 100 through 5200 milliseconds and at most 1048576 decoded bytes, stored as `mp3`, `ogg`, `m4a`, or `wav`. It then assigns one clip per [scope](/http-api/entrance-sounds/#entrance-sound-scopes): `global`, `guilds`, `dms`, and `guild:{guild_id}`.
 
-Fluxer records which clip belongs to which scope and nothing more. [Play entrance sound](/http-api/entrance-sounds/#play-entrance-sound) names the clip explicitly, so the client decides which selection applies to a given channel.
+sanalyer records which clip belongs to which scope and nothing more. [Play entrance sound](/http-api/entrance-sounds/#play-entrance-sound) names the clip explicitly, so the client decides which selection applies to a given channel.
 
 Playback requires a voice state in the target channel and the `feature_voice_entrance_sounds` entitlement; it requires no channel permission. A caller that holds no voice state is refused at the `channel_id` path with the validation code `ENTRANCE_SOUND_INVALID_SCOPE`, and a channel ID naming no channel is refused the same way. A successful call sends one [ENTRANCE_SOUND_PLAY](/gateway/events/#entrance-sound-play) Dispatch to every other account with a voice state in the channel, at most once per account and never back to the caller. That Dispatch has the clip's CDN URL, and each recipient fetches and plays it locally, so no audio track is published for it.
 

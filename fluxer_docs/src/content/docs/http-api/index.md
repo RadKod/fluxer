@@ -60,7 +60,7 @@ The `attachments` array inside `payload_json` maps attachment metadata to files 
 [Messages](/http-api/messages/) defines the attachment metadata and pre-uploaded attachment form, and [Attachment uploads](/topics/uploads/) defines the separate relay upload flow.
 
 :::caution[Multipart indices are attachment IDs]
-Each direct file's `files[n]` index is also the `id` in its attachment metadata entry. Fluxer reads `n` from the field name, so part order sets no identity. The indices need not begin at zero and need not be consecutive.
+Each direct file's `files[n]` index is also the `id` in its attachment metadata entry. sanalyer reads `n` from the field name, so part order sets no identity. The indices need not begin at zero and need not be consecutive.
 :::
 
 ## Input normalisation
@@ -108,7 +108,7 @@ These headers are accepted across resources. An operation-specific header is doc
 
 <sup>3</sup> The value is read verbatim with no percent-decoding, then stripped of form feed and right-to-left override characters and trimmed. A blank or too-long value is treated as absent
 
-<sup>4</sup> Read only for a native Fluxer `User-Agent`, at most 4096 characters, and only the `os` member is used
+<sup>4</sup> Read only for a native sanalyer `User-Agent`, at most 4096 characters, and only the `os` member is used
 
 <sup>5</sup> A valid token replaces the sudo proof fields in the operation body and is echoed in the response header without extending its lifetime.
 
@@ -118,7 +118,7 @@ These headers are accepted across resources. An operation-specific header is doc
 
 <sup>8</sup> The exact use is defined in [cross-origin requests](#cross-origin-requests)
 
-A client MUST NOT send an `X-Request-ID` it is not willing to see in logs, because Fluxer echoes and records the value without validating it.
+A client MUST NOT send an `X-Request-ID` it is not willing to see in logs, because sanalyer echoes and records the value without validating it.
 
 An `X-Audit-Log-Reason` normalised to more than 512 characters is discarded, and the request still succeeds. Every request is normalised this way, but only an operation that supports an audit reason records the result.
 
@@ -183,10 +183,10 @@ The paths below are readable from any origin. `/v1/webhooks/{webhook_id}/{token}
 
 [Get instance discovery](/http-api/instance/#get-instance-discovery) on `/.well-known/fluxer`, [Get OpenAPI document](/http-api/instance/#get-openapi-document) on `/v1/openapi.json`, and [Get client geolocation](/http-api/instance/#get-client-geolocation) on `/v1/ip` set `Access-Control-Allow-Origin: *` in the operation itself. A request whose `Origin` is absent or outside the allow-list receives `*`. For an allowed origin, the policy replaces `*` with that exact origin and sends `Vary: Origin`.
 
-`Access-Control-Expose-Headers` is the value `X-Fluxer-Version, ETag`. Every other Fluxer response header, the rate limit headers and `X-Request-ID` included, is hidden from cross-origin script. `Access-Control-Allow-Headers` is `Content-Type, Authorization, X-Requested-With, Accept-Language, X-Request-ID, If-None-Match`, so a cross-origin client revalidates an [ETag](/http-api/experiments/#get-experiment-assignments) it was served.
+`Access-Control-Expose-Headers` is the value `X-Fluxer-Version, ETag`. Every other sanalyer response header, the rate limit headers and `X-Request-ID` included, is hidden from cross-origin script. `Access-Control-Allow-Headers` is `Content-Type, Authorization, X-Requested-With, Accept-Language, X-Request-ID, If-None-Match`, so a cross-origin client revalidates an [ETag](/http-api/experiments/#get-experiment-assignments) it was served.
 
 :::caution[Same-host mutations require a matching origin]
-A production deployment rejects a non-`GET` request whose `Host` is `web.fluxer.app` or `web.canary.fluxer.app` unless its `Origin` is exactly `https://` followed by that same host, returning 403 `INVALID_API_ORIGIN`. A request sent to the API host is unaffected.
+A production deployment rejects a non-`GET` request whose `Host` is the upstream legacy web host or the upstream legacy canary host unless its `Origin` is exactly `https://` followed by that same host, returning 403 `INVALID_API_ORIGIN`. A request sent to the API host is unaffected.
 :::
 
 <a id="error-response"></a>
@@ -256,7 +256,7 @@ Each entry identifies one failed input field. A 400 response whose top-level cod
 }
 ```
 
-Fluxer produces at most one entry for each distinct pair of `path` and `code`, so a field that fails several constraints with the same `code` appears once.
+sanalyer produces at most one entry for each distinct pair of `path` and `code`, so a field that fails several constraints with the same `code` appears once.
 
 ## Resource pages
 
@@ -308,8 +308,8 @@ Fluxer produces at most one entry for each distinct pair of `path` and `code`, s
 | [Webhooks](/http-api/webhooks/) | Webhook management, message execution, GitHub, Slack, Instatus, and Libredesk callbacks |
 | [Search](/http-api/search/) | Authenticated global message search |
 | [Unfurl](/http-api/unfurl/) | Authenticated external URL metadata resolution |
-| [Billing](/http-api/billing/) | Stripe checkout, gift purchase, age verification, refunds, the Stripe webhook |
+| Billing | Stripe checkout, gift purchase, age verification, refunds, the Stripe webhook |
 | [Premium](/http-api/premium/) | Premium pricing, entitlement state, subscription self-service, billing portal handoff |
 | [Gifts](/http-api/gifts/) | Public gift code lookup and authenticated redemption |
-| [Donations](/http-api/donations/) | Donation currencies and intervals, checkout sessions, the donor management link |
+| Donations | Donation currencies and intervals, checkout sessions, the donor management link |
 | [Reports](/http-api/reports/) | Authenticated safety reports and email-verified Digital Services Act notices |

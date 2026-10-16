@@ -11,7 +11,7 @@ The shop sells owned cosmetic items, bundles of them, premium packages and Visio
 A value the shop cannot accept returns 400 `INVALID_FORM_BODY`, with one element in `errors` that names the field and carries an English message. [Make user a Visionary](/admin-api/users/#make-user-a-visionary) and [Take Visionary from user](/admin-api/users/#take-visionary-from-user) are on the Admin users page.
 
 :::caution[Refunds are made by hand]
-Fluxer sends no refund through the payment provider. Refund the payment in the provider's panel, then take back what the order delivered: an item, or each item of a bundle order, with [Take cosmetic item back from user](/admin-api/cosmetics/#take-cosmetic-item-back-from-user), premium time with [End user premium now](/admin-api/users/#end-user-premium-now), or Visionary with Take Visionary from user.
+sanalyer sends no refund through the payment provider. Refund the payment in the provider's panel, then take back what the order delivered: an item, or each item of a bundle order, with [Take cosmetic item back from user](/admin-api/cosmetics/#take-cosmetic-item-back-from-user), premium time with [End user premium now](/admin-api/users/#end-user-premium-now), or Visionary with Take Visionary from user.
 :::
 
 ## Minimum price
@@ -32,7 +32,7 @@ Every write that changes a price, a campaign or the member discount is checked a
 | early_plus_open | boolean | Whether paid premium and Visionary orders get the Early Plus badge |
 | early_plus_opened_once | boolean | Whether Early Plus has opened at least once, after which its badge can no longer change |
 
-<sup>1</sup> False keeps every sale closed whatever the switches say. It comes from the deployment configuration, and no route changes it. The one integration today is Payriff, which stays off unless the deployment enables it. A Fluxer process refuses to start while `FLUXER_PAYRIFF_BASE_URL` is not an https URL, even with Payriff switched off
+<sup>1</sup> False keeps every sale closed whatever the switches say. It comes from the deployment configuration, and no route changes it. The one integration today is Payriff, which stays off unless the deployment enables it. A sanalyer process refuses to start while `FLUXER_PAYRIFF_BASE_URL` is not an https URL, even with Payriff switched off
 
 Both sales switches, `visionary_on_sale`, `early_plus_open` and `early_plus_opened_once` start off, `early_plus_badge_id` starts null, and the member discount starts at 0. The settings live in the instance configuration under the `shop_config` key.
 
@@ -129,7 +129,7 @@ The first step is a higher provider quota, with the three buckets grown together
 | remaining<sup>1</sup> | integer | The numbers with no owner and no live hold |
 | over_cap_grants | integer | The numbers given above `total` because a payment arrived after its hold ended |
 
-<sup>1</sup> Read fresh on every request. A number row without a version, which only upstream Fluxer code writes, is never handed out and never counts here
+<sup>1</sup> Read fresh on every request. A number row without a version, which only upstream code writes, is never handed out and never counts here
 
 ## Shop audit changes
 

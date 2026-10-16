@@ -1,14 +1,14 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Locales
-description: The supported locale registry and how Fluxer resolves a response locale.
+description: The supported locale registry and how sanalyer resolves a response locale.
 ---
 
-A locale tells Fluxer which language to write human-readable text in. Each one is a BCP 47 tag from the registry below, either a bare language subtag such as `de`, or one joined to a region or numeric subtag by a hyphen, such as `en-GB`, `pt-BR`, and `es-419`.
+A locale tells sanalyer which language to write human-readable text in. Each one is a BCP 47 tag from the registry below, either a bare language subtag such as `de`, or one joined to a region or numeric subtag by a hyphen, such as `en-GB`, `pt-BR`, and `es-419`.
 
 ## Supported locales
 
-The registry below is the complete set for every Fluxer surface. Wherever Fluxer stores a locale, such as in [user settings](/http-api/users/settings/), it requires an exact value from this table.
+The registry below is the complete set for every sanalyer surface. Wherever sanalyer stores a locale, such as in [user settings](/http-api/users/settings/), it requires an exact value from this table.
 
 | Value | Description |
 | --- | --- |
@@ -53,11 +53,11 @@ The registry below is the complete set for every Fluxer surface. Wherever Fluxer
 
 ## Negotiation
 
-An authenticated user's saved locale takes precedence over `Accept-Language`. Otherwise, Fluxer negotiates that header against the [supported locales](#supported-locales), falling back to `en-US` when none matches.
+An authenticated user's saved locale takes precedence over `Accept-Language`. Otherwise, sanalyer negotiates that header against the [supported locales](#supported-locales), falling back to `en-US` when none matches.
 
 Set the account locale through [user settings](/http-api/users/settings/) to make the choice persistent.
 
-Matching ignores case and accepts underscores in place of hyphens. Fluxer first looks for an exact supported tag, or the alias `en` or `sv`, anywhere in the header. It uses a regional fallback only when the header has none. In each of those two passes, Fluxer takes the tag with the highest quality weight, and header order breaks ties.
+Matching ignores case and accepts underscores in place of hyphens. sanalyer first looks for an exact supported tag, or the alias `en` or `sv`, anywhere in the header. It uses a regional fallback only when the header has none. In each of those two passes, sanalyer takes the tag with the highest quality weight, and header order breaks ties.
 
 An unsupported tag such as `fr-CA` or `de-AT` matches no locale. An unsupported tag whose language subtag is in this table selects the locale beside it:
 

@@ -6,9 +6,9 @@ description: Compiling the account's data into a downloadable ZIP archive.
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A data harvest is a ZIP archive of the current account's data. Fluxer compiles it in the background, reports progress while it runs, and issues a temporary download URL once the archive is written.
+A data harvest is a ZIP archive of the current account's data. sanalyer compiles it in the background, reports progress while it runs, and issues a temporary download URL once the archive is written.
 
-Every route except [Download data harvest archive](#download-data-harvest-archive) is user-only. Fluxer rejects a bot or OAuth2 bearer credential with 403 `ACCESS_DENIED`. No route here requires [sudo mode](/http-api/users/mfa/#sudo-mode). [Delete current user's messages](/http-api/users/content/#delete-current-users-messages) takes the same filter shape, destroys the messages, and requires it.
+Every route except [Download data harvest archive](#download-data-harvest-archive) is user-only. sanalyer rejects a bot or OAuth2 bearer credential with 403 `ACCESS_DENIED`. No route here requires [sudo mode](/http-api/users/mfa/#sudo-mode). [Delete current user's messages](/http-api/users/content/#delete-current-users-messages) takes the same filter shape, destroys the messages, and requires it.
 
 :::caution[A completed archive has a seven day download deadline]
 A completed harvest records a deadline exactly seven days after the archive was written. After it, [Get data harvest download URL](#get-data-harvest-download-url) returns 400 `HARVEST_EXPIRED` and [Download data harvest archive](#download-data-harvest-archive) returns 404, while the record keeps reporting `completed`. Nothing extends or restores it.
@@ -25,7 +25,7 @@ Use `status` to track preparation of the archive.
 | completed | The archive was written and is ready for download |
 | failed | The latest attempt recorded a failure |
 
-Fluxer retries the underlying job. A retry clears `failed_at` and `error_message`, sets `started_at` again, resets the reported progress to 0, and reports `processing` while it runs. On success it records `completed_at`, `file_size`, and a download deadline, and reports `completed`.
+sanalyer retries the underlying job. A retry clears `failed_at` and `error_message`, sets `started_at` again, resets the reported progress to 0, and reports `processing` while it runs. On success it records `completed_at`, `file_size`, and a download deadline, and reports `completed`.
 
 ## Harvest creation object
 
@@ -76,7 +76,7 @@ The full state of one harvest. It extends the [harvest creation](#harvest-creati
 
 <sup>6</sup> The string form of the underlying failure. It is diagnostic and is not stable for programmatic matching
 
-<sup>7</sup> Recorded when the archive is written, exactly seven days after that moment. Past it Fluxer issues no new download URL
+<sup>7</sup> Recorded when the archive is written, exactly seven days after that moment. Past it sanalyer issues no new download URL
 
 <sup>8</sup> A second name for `download_url_expires_at`. The stored value is the same
 
@@ -180,7 +180,7 @@ The operation takes no request body and always returns before the archive exists
 
 A harvest record is created with a new [snowflake](/snowflakes/), the request time as `created_at`, progress 0, the step `Queued`, and every other timestamp null. Creating a harvest removes no earlier record and enforces no ceiling on how many an account holds, so the route bucket is the only bound.
 
-Fluxer prepares the archive in the background. It contains:
+sanalyer prepares the archive in the background. It contains:
 
 - `user.json`, the account document, including connections with their identifiers, visibility settings and verification dates but no credentials. It lists the [thread memberships](/http-api/thread-members/#thread-member-object) of the account in its current guilds, with the thread, guild, and parent IDs, `join_timestamp`, `flags`, and `muted`
 - one `channels/{channel_id}/messages.json` file for each channel that contributed a message, with its messages ordered oldest first
@@ -191,7 +191,7 @@ Fluxer prepares the archive in the background. It contains:
 
 Attachment metadata appears with its message and has the attachment ID, filename, size, content type, CDN URL, and pixel dimensions. The CDN URL is a [data package URL](/http-api/messages/#data-package-attachment-urls), so it does not expire and still reads its attachment after the archive's own seven day deadline passes. Removing the secret that signed it is the only thing that ends it. The attachment files themselves are never included.
 
-Every authored message is collected, with no ceiling on the count. Messages that no longer exist are omitted. Other read failures fail the attempt. After completion, Fluxer attempts to email a download URL if the account has an email address and the instance has email delivery enabled. That URL expires seven days after it was issued. Email failure does not prevent downloading a completed archive.
+Every authored message is collected, with no ceiling on the count. Messages that no longer exist are omitted. Other read failures fail the attempt. After completion, sanalyer attempts to email a download URL if the account has an email address and the instance has email delivery enabled. That URL expires seven days after it was issued. Email failure does not prevent downloading a completed archive.
 
 ### Rate limit
 
@@ -258,7 +258,7 @@ Returns one [harvest status](#harvest-status-object) object owned by the current
 
 A harvest belonging to another account returns 404 `UNKNOWN_HARVEST`.
 
-Fluxer removes no harvest record, so an ID that once resolved keeps resolving. A 404 means the ID was never issued to this account, and another account's harvest is never distinguishable from one that never existed.
+sanalyer removes no harvest record, so an ID that once resolved keeps resolving. A 404 means the ID was never issued to this account, and another account's harvest is never distinguishable from one that never existed.
 
 ### Path parameters
 
@@ -283,7 +283,7 @@ Fluxer removes no harvest record, so an ID that once resolved keeps resolving. A
 
 Issues a temporary download URL for one completed harvest. Returns a [harvest download](#harvest-download-object) object on success.
 
-Fluxer evaluates the rejection cases in a fixed order, each with its own code. An unknown or foreign harvest is 404 `UNKNOWN_HARVEST`. A harvest whose latest attempt failed is 400 `HARVEST_FAILED`. A harvest with no recorded completion or no stored archive is 400 `HARVEST_NOT_READY`. A harvest past its download deadline is 400 `HARVEST_EXPIRED`.
+sanalyer evaluates the rejection cases in a fixed order, each with its own code. An unknown or foreign harvest is 404 `UNKNOWN_HARVEST`. A harvest whose latest attempt failed is 400 `HARVEST_FAILED`. A harvest with no recorded completion or no stored archive is 400 `HARVEST_NOT_READY`. A harvest past its download deadline is 400 `HARVEST_EXPIRED`.
 
 :::danger[Each request issues a new bearer URL]
 A URL is created for each call, its stated expiry is seven days later, and a later call revokes nothing. Treat every issued URL as a secret.

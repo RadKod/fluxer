@@ -8,11 +8,11 @@ import RouteHeader from '@/components/RouteHeader.astro';
 
 A Go Live stream is a screen share on a member's existing voice connection. A stream key names one stream. The operations here record a region preference and manage the stream's JPEG preview image.
 
-Every route on this page is user-only. Fluxer rejects a bot token and an OAuth2 bearer credential with 403 `ACCESS_DENIED`.
+Every route on this page is user-only. sanalyer rejects a bot token and an OAuth2 bearer credential with 403 `ACCESS_DENIED`.
 
 ## Stream lifecycle
 
-Starting and stopping a stream is a main Gateway operation. Going live publishes a screen share track on the LiveKit participant the member already holds, and the publisher advertises it by setting `self_stream` on that connection with [Voice State Update](/gateway/commands/#voice-state-update). Fluxer opens no second connection and issues no new grant. The [Voice overview](/voice/) states the full model.
+Starting and stopping a stream is a main Gateway operation. Going live publishes a screen share track on the LiveKit participant the member already holds, and the publisher advertises it by setting `self_stream` on that connection with [Voice State Update](/gateway/commands/#voice-state-update). sanalyer opens no second connection and issues no new grant. The [Voice overview](/voice/) states the full model.
 
 ## Stream key
 
@@ -34,11 +34,11 @@ A key with a different segment count, a non-numeric channel segment, an empty co
 
 [Modify stream region](#modify-stream-region), [Get stream preview](#get-stream-preview), and [Delete stream preview](#delete-stream-preview) resolve the channel from the channel segment of the key. [Upload stream preview](#upload-stream-preview) and [Create stream preview upload URL](#create-stream-preview-upload-url) instead resolve it from the `channel_id` in their request body and compare that value against the key afterwards.
 
-Fluxer checks the scope segment against the resolved channel. A guild-scoped key whose resolved channel is private returns 400 `STREAM_KEY_SCOPE_MISMATCH`, and so does a `dm` key whose resolved channel belongs to a guild. A guild-scoped key whose guild segment is not the resolved channel's guild returns the same code.
+sanalyer checks the scope segment against the resolved channel. A guild-scoped key whose resolved channel is private returns 400 `STREAM_KEY_SCOPE_MISMATCH`, and so does a `dm` key whose resolved channel belongs to a guild. A guild-scoped key whose guild segment is not the resolved channel's guild returns the same code.
 
 The route then compares the channel segment against the resolved channel ID, and a mismatch returns 400 `STREAM_KEY_CHANNEL_MISMATCH`. On the routes that have a body `channel_id`, a caller MUST send the same value in the body and in the key.
 
-Fluxer runs that comparison after every other [read access](#access-rules) check. Channel lookup, the scope check, the channel type check, and the `CONNECT` check all run first, so a body `channel_id` naming a channel the caller cannot see returns 404 `UNKNOWN_CHANNEL` or one of the 403 codes listed under [Access rules](#access-rules).
+sanalyer runs that comparison after every other [read access](#access-rules) check. Channel lookup, the scope check, the channel type check, and the `CONNECT` check all run first, so a body `channel_id` naming a channel the caller cannot see returns 404 `UNKNOWN_CHANNEL` or one of the 403 codes listed under [Access rules](#access-rules).
 
 ## Access rules
 
@@ -46,13 +46,13 @@ Fluxer runs that comparison after every other [read access](#access-rules) check
 
 Read access matches [Get channel](/http-api/channels/#get-channel) for the [resolved channel](#stream-key). A guild channel also requires the [CONNECT](/http-api/permissions/) permission. The caller does not have to own the stream, so any member who can join the channel can read its preview.
 
-Mutation access requires everything read access does. A guild channel also requires the [STREAM](/http-api/permissions/) permission. The caller must hold a voice state whose channel is the resolved channel and whose `connection_id` is the connection segment of the key. Fluxer rejects a caller that holds no such voice state with 403 `ACCESS_DENIED`, even when it owns the channel.
+Mutation access requires everything read access does. A guild channel also requires the [STREAM](/http-api/permissions/) permission. The caller must hold a voice state whose channel is the resolved channel and whose `connection_id` is the connection segment of the key. sanalyer rejects a caller that holds no such voice state with 403 `ACCESS_DENIED`, even when it owns the channel.
 
 :::caution[A preview can exist with no live stream]
 A caller can record a region and upload a preview for any voice connection it holds, whether or not it is streaming.
 :::
 
-Fluxer resolves a guild channel before its guild. A channel row that outlives its guild returns 404 `UNKNOWN_GUILD`. Where the guild record exists and Fluxer cannot resolve the membership state, the route returns 403 `ACCESS_DENIED`, and a caller that is not a member or that lacks [VIEW_CHANNEL](/http-api/permissions/) returns 403 `MISSING_PERMISSIONS`. A caller who lacks `VIEW_CHANNEL` in the parent of a thread, or cannot view a private thread, receives 403 `MISSING_ACCESS`. A thread, a forum channel, or a media channel returns 404 `UNKNOWN_CHANNEL` to a user session that does not declare the [`channel_threads` client capability](/http-api/threads/#client-capability). An unsatisfied age restriction on a resolved guild channel other than a category returns 403 `NSFW_CONTENT_AGE_RESTRICTED`.
+sanalyer resolves a guild channel before its guild. A channel row that outlives its guild returns 404 `UNKNOWN_GUILD`. Where the guild record exists and sanalyer cannot resolve the membership state, the route returns 403 `ACCESS_DENIED`, and a caller that is not a member or that lacks [VIEW_CHANNEL](/http-api/permissions/) returns 403 `MISSING_PERMISSIONS`. A caller who lacks `VIEW_CHANNEL` in the parent of a thread, or cannot view a private thread, receives 403 `MISSING_ACCESS`. A thread, a forum channel, or a media channel returns 404 `UNKNOWN_CHANNEL` to a user session that does not declare the [`channel_threads` client capability](/http-api/threads/#client-capability). An unsatisfied age restriction on a resolved guild channel other than a category returns 403 `NSFW_CONTENT_AGE_RESTRICTED`.
 
 A private channel whose recipient set does not contain the caller returns 404 `UNKNOWN_CHANNEL`. An absent channel returns the same code, so recipient membership is never distinguishable from private channel existence.
 
@@ -135,7 +135,7 @@ A region identifier is the `id` of an [RTC region object](/http-api/channels/#rt
 
 ### Side effects
 
-The call has no effect on where the stream is placed. Fluxer does not validate the region against the caller's accessible region list. The operation emits no Gateway Dispatch.
+The call has no effect on where the stream is placed. sanalyer does not validate the region against the caller's accessible region list. The operation emits no Gateway Dispatch.
 
 ### Rate limit
 
@@ -202,13 +202,13 @@ To upload the image bytes with a separate `PUT` request, use [Create stream prev
 
 <sup>1</sup> The channel the route resolves and permission-checks. A value that is not the channel segment of the [stream key](#stream-key) returns 400 `STREAM_KEY_CHANNEL_MISMATCH`
 
-<sup>2</sup> Decoded bytes are at most 1000000. Fluxer trims the value before checking its length
+<sup>2</sup> Decoded bytes are at most 1000000. sanalyer trims the value before checking its length
 
 <sup>3</sup> A value containing `jpeg` or `jpg` in any case is accepted without inspecting the bytes. Any other value, and an absent field, is accepted only when the decoded bytes begin with `FF D8` and end with `FF D9`
 
-Fluxer stores the accepted `content_type` verbatim and returns it from [Get stream preview](#get-stream-preview). When the field is absent, the stored media type is `image/jpeg`.
+sanalyer stores the accepted `content_type` verbatim and returns it from [Get stream preview](#get-stream-preview). When the field is absent, the stored media type is `image/jpeg`.
 
-A `thumbnail` that is not [canonical base64](/topics/uploads/#stream-previews) returns 400 `INVALID_STREAM_THUMBNAIL_PAYLOAD`. Fluxer re-encodes the decoded bytes and rejects the value when the result is not what the client sent. The 2000000 character ceiling admits 1500000 decoded bytes, so an oversized JPEG reaches the byte check and returns `FILE_SIZE_TOO_LARGE`. The format check runs before the size check. An oversized payload that is not a JPEG returns `PREVIEW_MUST_BE_JPEG`.
+A `thumbnail` that is not [canonical base64](/topics/uploads/#stream-previews) returns 400 `INVALID_STREAM_THUMBNAIL_PAYLOAD`. sanalyer re-encodes the decoded bytes and rejects the value when the result is not what the client sent. The 2000000 character ceiling admits 1500000 decoded bytes, so an oversized JPEG reaches the byte check and returns `FILE_SIZE_TOO_LARGE`. The format check runs before the size check. An oversized payload that is not a JPEG returns `PREVIEW_MUST_BE_JPEG`.
 
 ### Response
 
@@ -230,7 +230,7 @@ A `thumbnail` that is not [canonical base64](/topics/uploads/#stream-previews) r
 
 ### Side effects
 
-The decoded bytes replace whatever preview the stream key already had, and the preview metadata expires one day after the write. Fluxer emits no Gateway Dispatch, so a viewer observes the new image on its next [Get stream preview](#get-stream-preview) read.
+The decoded bytes replace whatever preview the stream key already had, and the preview metadata expires one day after the write. sanalyer emits no Gateway Dispatch, so a viewer observes the new image on its next [Get stream preview](#get-stream-preview) read.
 
 A 204 does not guarantee that the new preview is readable. A temporary failure can leave the previous image, content type, or expiry in place, or leave no readable preview. Publishers should continue uploading on their normal interval.
 
@@ -281,7 +281,7 @@ Returns a [stream preview upload object](#stream-preview-upload-object) granting
 
 There is no separate completion call. After the `PUT` succeeds, [Get stream preview](#get-stream-preview) returns the uploaded image. Until then it returns an empty 404 or the previous image.
 
-A client MUST send the returned `content_type` with the `PUT` and MUST NOT exceed `max_bytes`. The preview metadata expires one day after this call, so a capability used later than that writes an object no read can find. Fluxer emits no Gateway Dispatch.
+A client MUST send the returned `content_type` with the `PUT` and MUST NOT exceed `max_bytes`. The preview metadata expires one day after this call, so a capability used later than that writes an object no read can find. sanalyer emits no Gateway Dispatch.
 
 :::note[Neither URL shape inspects the bytes]
 A relay URL refuses a declared length above `max_bytes` with 413, and a presigned object storage URL enforces nothing beyond the signed media type. An object above `max_bytes` still stores, and [Get stream preview](#get-stream-preview) then answers an empty 404.

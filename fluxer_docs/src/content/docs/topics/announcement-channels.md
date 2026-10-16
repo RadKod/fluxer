@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Announcement channels
 description: Publishing messages from an announcement channel into the channels that follow it.
+draft: true
 ---
 
 An announcement channel is a guild text channel, [type](/http-api/channels/#channel-types) `5`, whose messages can be published. Other channels follow it, and each published message is copied into every following channel. The copy is posted by a channel follower [webhook](/http-api/webhooks/#webhook-types) that is in the following channel.

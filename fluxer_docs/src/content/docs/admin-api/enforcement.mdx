@@ -6,7 +6,7 @@ description: The record behind every restriction staff apply, the notice it send
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-An enforcement decision records why staff restricted an account. The route that applies the restriction records it in the same request, so a restriction never exists without its statement of reasons. [Suspend user](/admin-api/users/#suspend-user), [Warn user](/admin-api/users/#warn-user), [Limit user features](/admin-api/users/#limit-user-features) and [Schedule user deletion](/admin-api/users/#schedule-user-deletion) with a broken rule as its basis record decisions today, and so does Fluxer itself when a payment fraud signal arrives.
+An enforcement decision records why staff restricted an account. The route that applies the restriction records it in the same request, so a restriction never exists without its statement of reasons. [Suspend user](/admin-api/users/#suspend-user), [Warn user](/admin-api/users/#warn-user), [Limit user features](/admin-api/users/#limit-user-features) and [Schedule user deletion](/admin-api/users/#schedule-user-deletion) with a broken rule as its basis record decisions today, and so does sanalyer itself when a payment fraud signal arrives.
 
 The decision holds the explanation. The restriction itself stays where it always was, so a suspension is still `temp_banned_until` and the `DISABLED` flag on the account, a closure is still `pending_deletion_at` and the `DELETED` flag, and a feature limit is still its account flag. The account's `enforcement_decision_id` names the suspension or closure decision behind the current state.
 
@@ -36,11 +36,11 @@ A restricted reason allows only a permanent suspension and content removal, need
 
 ### Lifecycle
 
-A decision is `active` until staff end it as `lifted` or `reversed`. A temporary suspension that runs out is ended by Fluxer as `expired`, with the system user (ID 0) as `ended_by` and its end as `ended_at`. That happens when the holder next signs in or in a scheduled task that runs every six hours, whichever comes first, and sends no notice. A suspension that ended as `expired` can still be ended as `reversed`, which sends the ended notice.
+A decision is `active` until staff end it as `lifted` or `reversed`. A temporary suspension that runs out is ended by sanalyer as `expired`, with the system user (ID 0) as `ended_by` and its end as `ended_at`. That happens when the holder next signs in or in a scheduled task that runs every six hours, whichever comes first, and sends no notice. A suspension that ended as `expired` can still be ended as `reversed`, which sends the ended notice.
 
 Two states are derived when it is read and never stored:
 
-- `expired`: an active suspension or feature limit whose `ends_at` has passed, before Fluxer ends it
+- `expired`: an active suspension or feature limit whose `ends_at` has passed, before sanalyer ends it
 - `replaced`: an active suspension or closure that the account's `enforcement_decision_id` no longer names, because a later decision replaced it
 
 A replacing suspension or closure sends its own notice and no ended email for the one it replaces. A closure replaces a suspension and lifts it in the same write.
@@ -93,19 +93,19 @@ Removed content cannot be restored, so these decisions end only as `reversed`.
 
 ### Reporter outcomes
 
-A decision that resolves linked reports tells each reporter what happened to the item. `removed` covers a reported message the decision removed, a profile report met by a profile reset, and a community removal. `restricted` covers a suspension, closure or feature limit. `action_taken` covers a warning and tells the reporter that Fluxer acted on what they reported, without naming the action or saying the account was restricted. A content removal or profile reset that leaves the reported item in place leaves the report pending. A manual resolution through [Update report](/admin-api/reports/#update-report) names the outcome itself, and a duplicate takes the outcome stored on the report it repeats.
+A decision that resolves linked reports tells each reporter what happened to the item. `removed` covers a reported message the decision removed, a profile report met by a profile reset, and a community removal. `restricted` covers a suspension, closure or feature limit. `action_taken` covers a warning and tells the reporter that sanalyer acted on what they reported, without naming the action or saying the account was restricted. A content removal or profile reset that leaves the reported item in place leaves the report pending. A manual resolution through [Update report](/admin-api/reports/#update-report) names the outcome itself, and a duplicate takes the outcome stored on the report it repeats.
 
 ### Network blocks
 
 A permanent suspension or a closure for a broken rule can also block networks the account used in the last 30 days, through `block_networks` on [Suspend user](/admin-api/users/#suspend-user) and [Schedule user deletion](/admin-api/users/#schedule-user-deletion). [List network block candidates](/admin-api/users/#list-network-block-candidates) shows which addresses qualify. The blocks last 90 days unless the request sets another length, belong to the decision, and are removed when it ends or the account's deletion runs. [Blocklists](/admin-api/blocklists/#network-blocks-from-decisions) explains how these rows relate to plain IP blocks.
 
-Fluxer never blocks an exempt address or a special-purpose range, such as a private, shared carrier, loopback, link-local or documentation range, and lists those in `skipped_ips`. It refuses an address on which another account that is not itself suspended or closed was last active, matching IPv6 addresses by their /64, so a block never shuts out people who share a network with the account.
+sanalyer never blocks an exempt address or a special-purpose range, such as a private, shared carrier, loopback, link-local or documentation range, and lists those in `skipped_ips`. It refuses an address on which another account that is not itself suspended or closed was last active, matching IPv6 addresses by their /64, so a block never shuts out people who share a network with the account.
 
 The notice says the account's networks were blocked and until when, and never names an address. The block screen shows the rule only for rules that read safely to a bystander on the same network: spam, service abuse, disruptive automation, raids, impersonation, adult content outside 18+ spaces, graphic violence, misuse of reporting and copyright. Every other block looks exactly like a plain one.
 
 ### Automated decisions and the review queue
 
-A Stripe early fraud warning or chargeback records a `purchases` limit with reason code 12, `automation` `automated`, `payment_at` set to the time of the payment, and the system user (ID 0) as `decided_by`. Fluxer never suspends or closes an account, or blocks its email, because of a payment signal. The decision is placed in the review queue until a person ends it or records a warning, suspension or closure on the same account. A won dispute ends the decision as `reversed`, with the system user as `ended_by`.
+A Stripe early fraud warning or chargeback records a `purchases` limit with reason code 12, `automation` `automated`, `payment_at` set to the time of the payment, and the system user (ID 0) as `decided_by`. sanalyer never suspends or closes an account, or blocks its email, because of a payment signal. The decision is placed in the review queue until a person ends it or records a warning, suspension or closure on the same account. A won dispute ends the decision as `reversed`, with the system user as `ended_by`.
 
 ## Enforcement decision input
 
@@ -136,7 +136,7 @@ The `X-Audit-Log-Reason` header is required on every route that takes a decision
 
 ### Validation
 
-Fluxer checks ACLs before it looks anything up, so a caller without the ACL learns nothing about the messages or reports it names. Evidence needs `message:lookup`, reports need `report:view` and `report:resolve`, and `block_networks` needs `ban:ip:add` and `user:view:ip`. Each other failure is a 400 `INVALID_FORM_BODY` whose error has one of these codes.
+sanalyer checks ACLs before it looks anything up, so a caller without the ACL learns nothing about the messages or reports it names. Evidence needs `message:lookup`, reports need `report:view` and `report:resolve`, and `block_networks` needs `ban:ip:add` and `user:view:ip`. Each other failure is a 400 `INVALID_FORM_BODY` whose error has one of these codes.
 
 - `ENFORCEMENT_INTERNAL_NOTE_REQUIRED`: the `X-Audit-Log-Reason` header is missing
 - `ENFORCEMENT_KIND_NOT_ALLOWED`: the reason code does not allow this kind, a bot is given anything other than a suspension or closure, or a restricted reason is used to delete all of an account's messages
@@ -161,7 +161,7 @@ Fluxer checks ACLs before it looks anything up, so a caller without the ACL lear
 
 ### Order of effects
 
-1. Fluxer validates the input and snapshots the evidence.
+1. sanalyer validates the input and snapshots the evidence.
 2. It stores the decision with `notice_status` `pending`, together with its evidence and first note.
 3. It applies the restriction. A suspension writes `enforcement_decision_id` in the same account write as `temp_banned_until`, and a closure in the same write as `pending_deletion_at`. A content removal queues its shred job only now, after the evidence is stored. When this step fails, the decision is deleted and nothing is sent.
 4. It resolves the linked reports.

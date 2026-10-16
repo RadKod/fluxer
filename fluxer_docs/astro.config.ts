@@ -158,9 +158,24 @@ export default defineConfig({
 				},
 				themes: [fluxerDarkCodeTheme, fluxerLightCodeTheme],
 			},
-			favicon: branded ? '/micup-docs-icon.svg' : '/favicon-32x32.png',
+			favicon: branded ? '/sanalyer-docs-icon.svg' : '/favicon-32x32.png',
+			head: branded
+				? [
+						{
+							tag: 'meta',
+							attrs: {
+								property: 'og:image',
+								content: new URL('og-image-default.png', `${docsEndpoint.href.replace(/\/?$/u, '')}/`).href,
+							},
+						},
+					]
+				: [],
 			logo: branded
-				? undefined
+				? {
+						dark: './src/assets/sanalyer/logo-beyaz.svg',
+						light: './src/assets/sanalyer/logo.svg',
+						replacesTitle: true,
+					}
 				: {
 						replacesTitle: true,
 						src: path.join(staticDirectory, 'marketing/branding/logo-color.svg'),
@@ -170,17 +185,22 @@ export default defineConfig({
 					label: 'Reference',
 					items: [{label: 'Introduction', link: '/'}, 'authentication', 'snowflakes'],
 				},
-				{
-					label: branded ? 'Upstream self-hosting' : 'Self-hosting',
-					items: [
-						'operator/get-started',
-						'operator/sign-in',
-						'operator/configuration',
-						'operator/reverse-proxy',
-						'operator/upgrading',
-						'operator/kubernetes',
-					],
-				},
+				// sanalyer: the upstream self-hosting guide is withheld (tools/brand/docs-marka.mjs marks it draft).
+				...(branded
+					? []
+					: [
+							{
+								label: 'Self-hosting',
+								items: [
+									'operator/get-started',
+									'operator/sign-in',
+									'operator/configuration',
+									'operator/reverse-proxy',
+									'operator/upgrading',
+									'operator/kubernetes',
+								],
+							},
+						]),
 				...(branded ? [{label: 'Bots', items: ['bots/hizli-baslangic']}] : []),
 				{
 					label: 'Topics',
@@ -263,12 +283,13 @@ export default defineConfig({
 				},
 				{
 					label: 'Commerce',
+					// sanalyer: upstream payment pages (billing, in-app purchases, donations) are withheld.
 					items: [
-						'http-api/billing',
+						...(branded ? [] : ['http-api/billing']),
 						'http-api/premium',
-						'http-api/in-app-purchases',
+						...(branded ? [] : ['http-api/in-app-purchases']),
 						'http-api/gifts',
-						'http-api/donations',
+						...(branded ? [] : ['http-api/donations']),
 						'http-api/cosmetics',
 						'http-api/shop',
 						'http-api/referral',
@@ -296,7 +317,9 @@ export default defineConfig({
 				},
 				{
 					label: 'Downloads',
-					items: ['downloads/overview', 'downloads/desktop', 'downloads/linux-repositories'],
+					items: branded
+						? ['downloads/overview']
+						: ['downloads/overview', 'downloads/desktop', 'downloads/linux-repositories'],
 				},
 				{
 					label: 'Media proxy',

@@ -10,9 +10,9 @@ OAuth2 is how a user grants an application access to their account. The same con
 
 ## Authorisation code grant
 
-The grant begins at [Authorise application](#authorise-application). That route redirects the browser to the Fluxer consent interface, unless the request sets `prompt=none`. [Grant OAuth2 consent](#grant-oauth2-consent) records the decision, issues one authorisation code, and returns the callback URL that has it. The client presents that code to [Exchange OAuth2 token](#exchange-oauth2-token) with its client credentials and receives an access and refresh token pair.
+The grant begins at [Authorise application](#authorise-application). That route redirects the browser to the sanalyer consent interface, unless the request sets `prompt=none`. [Grant OAuth2 consent](#grant-oauth2-consent) records the decision, issues one authorisation code, and returns the callback URL that has it. The client presents that code to [Exchange OAuth2 token](#exchange-oauth2-token) with its client credentials and receives an access and refresh token pair.
 
-Proof Key for Code Exchange, or PKCE, supports the `S256` and `plain` challenge methods, and Fluxer binds the challenge to the code when it issues the code. A `code_challenge` supplied without a `code_challenge_method` is treated as `plain`. An exchange for a code that has a challenge supplies a matching `code_verifier`, and an exchange for a code that has none ignores any verifier it is given.
+Proof Key for Code Exchange, or PKCE, supports the `S256` and `plain` challenge methods, and sanalyer binds the challenge to the code when it issues the code. A `code_challenge` supplied without a `code_challenge_method` is treated as `plain`. An exchange for a code that has a challenge supplies a matching `code_verifier`, and an exchange for a code that has none ignores any verifier it is given.
 
 ## Credentials and lifetimes
 
@@ -22,13 +22,13 @@ An authorisation code expires 10 minutes after it is issued, an access token aft
 
 ## Route authentication
 
-Every route on this page that authenticates a user is user-only unless the operation says otherwise. Fluxer rejects a bot token and an OAuth2 bearer with 403 `ACCESS_DENIED`. The token, introspection, and revocation routes authenticate the client application instead, so their [rate limit](/topics/rate-limits/) is keyed by client IP address.
+Every route on this page that authenticates a user is user-only unless the operation says otherwise. sanalyer rejects a bot token and an OAuth2 bearer with 403 `ACCESS_DENIED`. The token, introspection, and revocation routes authenticate the client application instead, so their [rate limit](/topics/rate-limits/) is keyed by client IP address.
 
 ## OAuth2 string normalisation
 
-Fluxer trims every bounded OAuth2 string field before it checks its length. Each such field accepts 1 to 256 UTF-16 code units, `redirect_uri` included.
+sanalyer trims every bounded OAuth2 string field before it checks its length. Each such field accepts 1 to 256 UTF-16 code units, `redirect_uri` included.
 
-Fluxer validates, stores, compares, forwards, and returns the normalised value. The `permissions` field and the [Grant OAuth2 consent](#grant-oauth2-consent) `response_type` field are read verbatim and have no length bound of their own. HTTP Basic client credentials do not pass through this request field normalisation. The PKCE `code_challenge` and `code_verifier` are normalised too, so a client MUST NOT rely on surrounding whitespace surviving.
+sanalyer validates, stores, compares, forwards, and returns the normalised value. The `permissions` field and the [Grant OAuth2 consent](#grant-oauth2-consent) `response_type` field are read verbatim and have no length bound of their own. HTTP Basic client credentials do not pass through this request field normalisation. The PKCE `code_challenge` and `code_verifier` are normalised too, so a client MUST NOT rely on surrounding whitespace surviving.
 
 ## OAuth2 scopes
 
@@ -52,13 +52,13 @@ A scope names one thing the application may read or do on the user's behalf.
 
 <sup>5</sup> Installs a bot account and grants no bearer access of its own, so an application whose grants are bot alone is never presented as an authorisation by [List OAuth2 authorisations](#list-oauth2-authorisations)
 
-An unrecognised scope value is rejected when the authorisation request is completed. Fluxer splits a scope string on runs of whitespace and `+` characters, and discards empty segments. A repeated scope value is granted once.
+An unrecognised scope value is rejected when the authorisation request is completed. sanalyer splits a scope string on runs of whitespace and `+` characters, and discards empty segments. A repeated scope value is granted once.
 
 :::note[Scope ordering differs by response]
 Scope order has no semantic meaning, so a client MUST compare scopes as a set.
 :::
 
-Fluxer sorts the `scope` string of an [OAuth2 token](#oauth2-token-object) and of an [OAuth2 introspection](#oauth2-introspection-object) into the registry order above. The `scopes` array of a [current OAuth2 authorisation](#current-oauth2-authorisation-object) has the stored scopes in no defined order, with unrecognised values removed. The `scopes` array of an [OAuth2 authorisation](#oauth2-authorisation-object) is in no defined order, and it can hold `bot` or an unrecognised value when the user holds more than one live refresh token for the application.
+sanalyer sorts the `scope` string of an [OAuth2 token](#oauth2-token-object) and of an [OAuth2 introspection](#oauth2-introspection-object) into the registry order above. The `scopes` array of a [current OAuth2 authorisation](#current-oauth2-authorisation-object) has the stored scopes in no defined order, with unrecognised values removed. The `scopes` array of an [OAuth2 authorisation](#oauth2-authorisation-object) is in no defined order, and it can hold `bot` or an unrecognised value when the user holds more than one live refresh token for the application.
 
 ## OAuth2 error response object
 
@@ -73,7 +73,7 @@ The failure envelope the OAuth2 routes return.
 
 <sup>1</sup> Always present, and some descriptions are a bare API error code identifier
 
-These members are the whole body, so the body has none of the `code` and `message` members of the ordinary [error response](/http-api/#error-response). Fluxer returns every OAuth2 failure with status 400. A client MUST key on `error` and never on `error_description`.
+These members are the whole body, so the body has none of the `code` and `message` members of the ordinary [error response](/http-api/#error-response). sanalyer returns every OAuth2 failure with status 400. A client MUST key on `error` and never on `error_description`.
 
 The consent, token, introspection, and revocation routes return this object for a grant, client authentication, scope, redirect, response type, or permission mask failure. Every other failure, including request validation, authentication, authorisation, and rate limiting, uses the ordinary [error response](/http-api/#error-response) with an [API error code](/http-api/errors/).
 
@@ -121,7 +121,7 @@ The access and refresh token pair a successful token exchange returns.
 
 <sup>1</sup> The configured access token lifetime, repeated in every successful response
 
-<sup>2</sup> Every grant Fluxer issues is bound to a user, so a successful exchange always returns a refresh token
+<sup>2</sup> Every grant sanalyer issues is bound to a user, so a successful exchange always returns a refresh token
 
 ### Example
 
@@ -169,7 +169,7 @@ The account identity an application reads with the `identify` scope.
 
 ## OAuth2 introspection object
 
-The liveness and scope report Fluxer returns for one presented token.
+The liveness and scope report sanalyer returns for one presented token.
 
 ### Structure
 
@@ -178,7 +178,7 @@ The liveness and scope report Fluxer returns for one presented token.
 | active | boolean | Whether the presented token is live and belongs to the authenticated client |
 | scope? | string | The granted scopes, space separated in registry order |
 | client_id? | snowflake | The ID of the application the token was issued to |
-| username?<sup>1</sup> | string | A reserved member that Fluxer never sets |
+| username?<sup>1</sup> | string | A reserved member that sanalyer never sets |
 | token_type? | string | The kind of token presented, `Bearer` for an access token and `refresh_token` for a refresh token |
 | exp?<sup>2</sup> | integer | The access token expiry time in Unix seconds |
 | iat? | integer | The issue time in Unix seconds |
@@ -188,11 +188,11 @@ The liveness and scope report Fluxer returns for one presented token.
 
 <sup>2</sup> Absent for a refresh token, which still expires 30 days after it is issued
 
-<sup>3</sup> Every token Fluxer issues is bound to a user, so an active result always has a subject
+<sup>3</sup> Every token sanalyer issues is bound to a user, so an active result always has a subject
 
 Apart from `username` and `exp`, every optional field above is present when `active` is true and absent when it is false. An active access token has `exp` and an active refresh token does not.
 
-Fluxer reports an unknown token, an expired token, and a token issued to another application as inactive. An inactive body has only `active` set to false, and names no reason. Fluxer does not look up the user account during introspection, so an active result describes the token only and says nothing about the state of that account.
+sanalyer reports an unknown token, an expired token, and a token issued to another application as inactive. An inactive body has only `active` set to false, and names no reason. sanalyer does not look up the user account during introspection, so an active result describes the token only and says nothing about the state of that account.
 
 ## Current OAuth2 authorisation object
 
@@ -310,13 +310,13 @@ The callback URL [Grant OAuth2 consent](#grant-oauth2-consent) returns after it 
 
 <sup>1</sup> The URL has the `code` query parameter, and the normalised caller `state` when one was supplied
 
-Fluxer builds the URL from the registered redirect URI the request resolved to, which is the configured Fluxer web app URL when a bot-only authorisation supplied none. The code records the URL serialisation of that resolved URI, and the client later presents that exact serialisation to [Exchange OAuth2 token](#exchange-oauth2-token).
+sanalyer builds the URL from the registered redirect URI the request resolved to, which is the configured sanalyer web app URL when a bot-only authorisation supplied none. The code records the URL serialisation of that resolved URI, and the client later presents that exact serialisation to [Exchange OAuth2 token](#exchange-oauth2-token).
 
 ## Authorise application
 
 <RouteHeader method="GET" path="/v1/oauth2/authorize" unauthenticated />
 
-Starts an authorisation request. Fluxer returns a redirect for every query that passes request validation. Authentication is optional.
+Starts an authorisation request. sanalyer returns a redirect for every query that passes request validation. Authentication is optional.
 
 ### Query parameters
 
@@ -351,7 +351,7 @@ Starts an authorisation request. Fluxer returns a redirect for every query that 
 
 The 302 `Location` header is the selected redirect.
 
-Without `prompt=none`, the redirect targets the Fluxer consent interface and forwards every supplied parameter, so no application, scope, or redirect validation happens yet.
+Without `prompt=none`, the redirect targets the sanalyer consent interface and forwards every supplied parameter, so no application, scope, or redirect validation happens yet.
 
 With `prompt=none`, a request that resolves no user redirects with `error=login_required`. Every other silent failure redirects with `error=consent_required`. That covers every failure to issue a code, including an unknown application, an unrecognised scope, a missing or unregistered redirect URI, and a private bot the caller does not own. It also covers a requested non-bot scope the user has not already granted to this application. A silent request that asks only for `bot` skips the prior-grant test.
 
@@ -361,7 +361,7 @@ An error redirect has `error` and the normalised `state` when the caller supplie
 The error redirect targets the supplied `redirect_uri` only when the named application has registered that exact string, so this route cannot bounce a browser to an arbitrary origin.
 :::
 
-Fluxer compares the two strings byte for byte, so a differing scheme, port, trailing slash, query, or fragment does not match. Every other case redirects to the configured Fluxer web app URL. That covers an omitted redirect URI, an unknown application, and an application with no registered URI at all.
+sanalyer compares the two strings byte for byte, so a differing scheme, port, trailing slash, query, or fragment does not match. Every other case redirects to the configured sanalyer web app URL. That covers an omitted redirect URI, an unknown application, and an application with no registered URI at all.
 
 ### Side effects
 
@@ -410,7 +410,7 @@ A guild installation emits [Guild Create](/gateway/events/#guild-create), [Guild
 
 <sup>4</sup> The fields are mutually exclusive
 
-Fluxer clears the four thread permission bits from `permissions` unless the request declares the [`channel_threads` client capability](/http-api/threads/#client-capability). [Feature-gated permission bits](/http-api/permissions/#feature-gated-permission-bits) lists them.
+sanalyer clears the four thread permission bits from `permissions` unless the request declares the [`channel_threads` client capability](/http-api/threads/#client-capability). [Feature-gated permission bits](/http-api/permissions/#feature-gated-permission-bits) lists them.
 
 ### Response
 
@@ -438,7 +438,7 @@ That role is created at position 1 with no colour and is neither hoisted nor men
 
 With the `bot` scope and a group direct message target, consent adds the bot as a recipient and stores the recipient-add system message.
 
-When any part of the installation fails, Fluxer cancels the newly issued authorisation code, so the caller never receives a usable code.
+When any part of the installation fails, sanalyer cancels the newly issued authorisation code, so the caller never receives a usable code.
 
 ### Rate limit
 
@@ -509,12 +509,12 @@ When the code is PKCE-bound, an omitted or incorrect verifier is rejected as `in
 
 <sup>2</sup> Client authentication, the authorisation code, the refresh token, the redirect URI, or a required PKCE verifier is missing or does not match the grant
 
-An authorisation code is single-use. Fluxer consumes it before it issues the token pair. A replayed code is rejected as an invalid grant. Deleting an account purges every OAuth2 access and refresh token it holds, so a refresh exchange for a deleted account is rejected as an invalid grant as well. An authorisation code issued before the deletion still exchanges until it expires.
+An authorisation code is single-use. sanalyer consumes it before it issues the token pair. A replayed code is rejected as an invalid grant. Deleting an account purges every OAuth2 access and refresh token it holds, so a refresh exchange for a deleted account is rejected as an invalid grant as well. An authorisation code issued before the deletion still exchanges until it expires.
 
-Fluxer verifies client authentication before it checks the grant, so an unknown application, an absent client secret, and a wrong client secret are all reported as `invalid_client`.
+sanalyer verifies client authentication before it checks the grant, so an unknown application, an absent client secret, and a wrong client secret are all reported as `invalid_client`.
 
 :::note[No client credentials grant]
-Only `authorization_code` and `refresh_token` exist, and Fluxer issues no token that is unbound to a user.
+Only `authorization_code` and `refresh_token` exist, and sanalyer issues no token that is unbound to a user.
 :::
 
 Any other `grant_type`, `client_credentials` included, fails request validation with the ordinary [error response](/http-api/#error-response).
@@ -592,7 +592,7 @@ The request body is `application/x-www-form-urlencoded` or `multipart/form-data`
 
 <sup>2</sup> Client credentials are supplied in both the header and the form (`invalid_request`), no client secret is supplied, the client is unknown, or the client secret is wrong (`invalid_client`)
 
-Fluxer ignores an `Authorization` header that is not well-formed HTTP Basic and reads the client credentials from the form.
+sanalyer ignores an `Authorization` header that is not well-formed HTTP Basic and reads the client credentials from the form.
 
 Only a token issued to the authenticated client is reported as active.
 
@@ -628,11 +628,11 @@ Revoking a token deletes every access token and every refresh token its user hol
 | client_id?<sup>2</sup> | snowflake | The client ID, supplied when HTTP Basic is not used |
 | client_secret?<sup>2</sup> | string | The client secret, supplied when HTTP Basic is not used (1-256 UTF-16 code units after [normalisation](#oauth2-string-normalisation)) |
 
-<sup>1</sup> A `refresh_token` hint makes Fluxer look for a matching refresh token first, then for a matching access token when no refresh token matches. An absent hint and an `access_token` hint make Fluxer look for a matching access token only
+<sup>1</sup> A `refresh_token` hint makes sanalyer look for a matching refresh token first, then for a matching access token when no refresh token matches. An absent hint and an `access_token` hint make sanalyer look for a matching access token only
 
 <sup>2</sup> Supplying either field together with a well-formed HTTP Basic `Authorization` header is rejected as `invalid_request`
 
-A client that presents a refresh token MUST send `token_type_hint=refresh_token`, or Fluxer matches no token and deletes nothing.
+A client that presents a refresh token MUST send `token_type_hint=refresh_token`, or sanalyer matches no token and deletes nothing.
 
 ### Response
 
@@ -644,13 +644,13 @@ A client that presents a refresh token MUST send `token_type_hint=refresh_token`
 
 <sup>3</sup> Client credentials are supplied in both the header and the form (`invalid_request`), no client secret is supplied, the client is unknown, or the client secret is wrong (`invalid_client`)
 
-Fluxer ignores an `Authorization` header that is not well-formed HTTP Basic and reads the client credentials from the form.
+sanalyer ignores an `Authorization` header that is not well-formed HTTP Basic and reads the client credentials from the form.
 
 An unknown token and a token issued to another application both return 200, so the response never shows whether a token exists.
 
 ### Side effects
 
-On a match, Fluxer deletes the user's complete token set for the authenticated application. Those tokens stop authenticating requests at once. A token that matched nothing changes no state.
+On a match, sanalyer deletes the user's complete token set for the authenticated application. Those tokens stop authenticating requests at once. A token that matched nothing changes no state.
 
 No Gateway Dispatch is emitted, so a client holding a revoked token learns of the revocation from its next rejected request.
 
@@ -726,7 +726,7 @@ Revokes the current user's authorisation for one application.
 | 403 | [error response](/http-api/#error-response) | The credential is a bot token or an OAuth2 bearer (`ACCESS_DENIED`) |
 | 404 | [error response](/http-api/#error-response) | The application does not exist (`UNKNOWN_APPLICATION`) |
 
-Fluxer resolves the application before it deletes any token, so a 404 leaves the grant untouched.
+sanalyer resolves the application before it deletes any token, so a 404 leaves the grant untouched.
 
 :::caution[Revocation cannot be undone]
 The user completes the [authorisation code grant](#authorise-application) again before the application can act on the account, and the application receives no notice that its access has ended.
@@ -765,7 +765,7 @@ Revokes the current user's authorisations for several applications.
 | 403 | [error response](/http-api/#error-response) | The credential is a bot token or an OAuth2 bearer (`ACCESS_DENIED`) |
 | 404 | [error response](/http-api/#error-response) | One of the named applications does not exist (`UNKNOWN_APPLICATION`) |
 
-Fluxer resolves every named application before it deletes any token. One unknown application leaves every named application untouched.
+sanalyer resolves every named application before it deletes any token. One unknown application leaves every named application untouched.
 
 ### Side effects
 

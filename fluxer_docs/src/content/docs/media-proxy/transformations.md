@@ -126,9 +126,9 @@ Quality names are matched exactly and are case-sensitive. An unrecognised value 
 
 <sup>3</sup> Lossless applies to WebP alone, and JPEG at quality 100 is still a lossy encode
 
-An image asset defaults to `high`. An attachment or signed external image defaults to `lossless`, except that a JPEG, HEIC, or HEIF source defaults to `high`. Animated WebP output defaults to `auto` on every route that reads `quality`. Fluxer extracts a video thumbnail at `high`, and `quality` then applies only to the resize step that `width` or `height` requests. A non-transforming SVG rasterisation always uses `lossless`.
+An image asset defaults to `high`. An attachment or signed external image defaults to `lossless`, except that a JPEG, HEIC, or HEIF source defaults to `high`. Animated WebP output defaults to `auto` on every route that reads `quality`. sanalyer extracts a video thumbnail at `high`, and `quality` then applies only to the resize step that `width` or `height` requests. A non-transforming SVG rasterisation always uses `lossless`.
 
-The attachment-only `effort` parameter controls WebP encoding effort. Fluxer clamps a value above 9 to 9. Only lossless animated WebP output uses a value above 6. Other output formats ignore it.
+The attachment-only `effort` parameter controls WebP encoding effort. sanalyer clamps a value above 9 to 9. Only lossless animated WebP output uses a value above 6. Other output formats ignore it.
 
 ## Animation
 
@@ -136,7 +136,7 @@ An owner-and-hash asset whose hash begins with `a_` requests animated output by 
 
 The `animated` parameter overrides that default in both directions. It is read whenever the name is present, so `animated=false` forces static output even for an `a_` hash. Omitting the name keeps the route default.
 
-Fluxer issues emoji and sticker paths without an `a_` prefix, so those requests default to static output and need `animated=true` for animation. An attachment or signed external request also defaults to static output.
+sanalyer issues emoji and sticker paths without an `a_` prefix, so those requests default to static output and need `animated=true` for animation. An attachment or signed external request also defaults to static output.
 
 For transformed output, animation requires an animated request and WebP, GIF or APNG output. Static output contains one frame. A read that selects no transformation preserves the source animation.
 

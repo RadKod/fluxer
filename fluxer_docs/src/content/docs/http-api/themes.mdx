@@ -43,11 +43,11 @@ An account holds no theme quota. The `theme:share:create` rate limit bucket is t
 
 The instance-wide content filter screens the submitted document before the route runs. It checks a `css` value of at least 3 characters against the instance phrase blocklist and the instance URL blocklist. A match on either returns 403 `CONTENT_BLOCKED`. A shorter value is never screened.
 
-Fluxer scans a body under every content type except `multipart/form-data` and `application/x-www-form-urlencoded`. The filter also skips a body that does not parse as JSON. The route parses the body from the raw request text and reads no content type, so a JSON document sent under either [form content type](/http-api/#request-body-formats) is stored without passing the blocklists.
+sanalyer scans a body under every content type except `multipart/form-data` and `application/x-www-form-urlencoded`. The filter also skips a body that does not parse as JSON. The route parses the body from the raw request text and reads no content type, so a JSON document sent under either [form content type](/http-api/#request-body-formats) is stored without passing the blocklists.
 
 The screen precedes the rate limit bucket, the credential check, and the request schema, so a blocked document returns `CONTENT_BLOCKED` even when the request has no credential.
 
-Nothing else inspects the document. Fluxer stores the CSS verbatim and never parses, validates, minifies, or rewrites it.
+Nothing else inspects the document. sanalyer stores the CSS verbatim and never parses, validates, minifies, or rewrites it.
 
 ## Create theme
 
@@ -90,7 +90,7 @@ The object has the identifier and nothing else.
 
 ### Side effects
 
-Fluxer stores the UTF-8 encoding of the submitted document with the content type `text/css; charset=utf-8`. Fluxer finishes storing the document before it returns the identifier.
+sanalyer stores the UTF-8 encoding of the submitted document with the content type `text/css; charset=utf-8`. sanalyer finishes storing the document before it returns the identifier.
 
 The [Media Proxy](/media-proxy/overview/) serves the document from `/themes/{id}.css`.
 

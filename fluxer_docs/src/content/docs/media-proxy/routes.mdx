@@ -26,7 +26,7 @@ Every media read route can produce these statuses in addition to the ones in its
 | 413 | Payload too large | The stored object exceeds the 500 MiB media bound and the route neither streams it unchanged nor spools it |
 | 502 | Bad gateway | The object store could not be read |
 
-The 500 MiB media bound applies where a route holds an object in memory. A read that streams the stored object unchanged, such as an attachment read without a transformation parameter, has no size bound. An attachment read that asks for a frame of a video above the bound copies the video to the [spool directory](/operator/configuration/#media-proxy-settings) first, one video at a time, and returns 413 when the video exceeds the spool ceiling. Any other transformation of an object above the bound returns 413.
+The 500 MiB media bound applies where a route holds an object in memory. A read that streams the stored object unchanged, such as an attachment read without a transformation parameter, has no size bound. An attachment read that asks for a frame of a video above the bound copies the video to the spool directory first, one video at a time, and returns 413 when the video exceeds the spool ceiling. Any other transformation of an object above the bound returns 413.
 
 ## Get attachment
 
@@ -44,7 +44,7 @@ Anyone holding the URL reads the object from any origin the [cross-origin read p
 | --- | --- | --- |
 | path<sup>1</sup> | string | The attachment object path from a [message attachment object](/http-api/messages/#message-attachment-object) |
 
-<sup>1</sup> Fluxer issues `{channel_id}/{attachment_id}/{filename}`. After percent-decoding, the storage key must be non-empty, must not begin with `/`, and must not contain an empty, `.`, or `..` segment, or the route returns 400
+<sup>1</sup> sanalyer issues `{channel_id}/{attachment_id}/{filename}`. After percent-decoding, the storage key must be non-empty, must not begin with `/`, and must not contain an empty, `.`, or `..` segment, or the route returns 400
 
 ### Query parameters
 
@@ -72,7 +72,7 @@ A response with transformed bytes ignores `Range` and is always complete, as [Tr
 
 An SVG attachment with a transformation parameter is rasterised, and `format` and `quality` select the output as they do for any other source, defaulting to WebP. Without a transformation parameter, only a Media Proxy in [`mp` deployment mode](/media-proxy/overview/#deployment-modes) rasterises it, always as lossless WebP. A Media Proxy in `upload` mode returns the stored SVG bytes.
 
-A video source requires an explicit image `format`. A video request with `width`, `height`, `quality`, or `animated=true` and no `format` returns 400. A source that is neither an image nor a video returns 400 when `format` is present. Without `format`, Fluxer returns it unchanged.
+A video source requires an explicit image `format`. A video request with `width`, `height`, `quality`, or `animated=true` and no `format` returns 400. A source that is neither an image nor a video returns 400 when `format` is present. Without `format`, sanalyer returns it unchanged.
 
 ### Response
 
@@ -92,9 +92,9 @@ A video source requires an explicit image `format`. A video request with `width`
 
 <RouteHeader method="GET" path="/external/{signature}/{target}" />
 
-Returns external media through Fluxer, optionally transformed. Use the signed URL supplied by the HTTP API.
+Returns external media through sanalyer, optionally transformed. Use the signed URL supplied by the HTTP API.
 
-Fluxer constructs the signed path and exposes it on these fields:
+sanalyer constructs the signed path and exposes it on these fields:
 
 - `proxy_url` of an [embed media object](/http-api/messages/#embed-media-object)
 - `proxy_icon_url` of an [embed author object](/http-api/messages/#embed-author-object)
@@ -114,12 +114,12 @@ A field holds a signed external path only when its source URL is external. A URL
 A client MUST preserve both components exactly as issued and MUST NOT decode or reconstruct either one. The signature covers the target component alone, so adding or changing a query parameter does not invalidate it. A path with no `/` after `/external/` returns 400.
 
 :::caution[The signed path is the only authorisation]
-Anyone holding a signed path fetches that external target through Fluxer for as long as the deployment secret is unchanged, with no expiry, user binding, or individual revocation.
+Anyone holding a signed path fetches that external target through sanalyer for as long as the deployment secret is unchanged, with no expiry, user binding, or individual revocation.
 :::
 
 ### Target validation
 
-Fluxer validates the decoded target before every request and again for every redirect hop. It must be at most 8,192 bytes, must use `http` or `https`, must have a non-zero port when it names one, and must not contain credentials or a control character. A fragment is dropped before the fetch.
+sanalyer validates the decoded target before every request and again for every redirect hop. It must be at most 8,192 bytes, must use `http` or `https`, must have a non-zero port when it names one, and must not contain credentials or a control character. A fragment is dropped before the fetch.
 
 The target must resolve to a public internet address. Private, local and reserved addresses are rejected, including through redirects.
 
@@ -144,9 +144,9 @@ A transformation begins when `width`, `height`, `format`, or `quality` is presen
 
 A non-transforming request can forward the range to the origin. Handle both 200 and 206 responses and use their range headers, as described in [Byte ranges](/media-proxy/overview/#byte-ranges).
 
-Fluxer returns 503 when it cannot reserve or allocate a buffer for the origin body. A `HEAD` with no transformation and no forwarded range can build `Content-Type` and `Content-Length` from the origin's own `HEAD` response, so those headers can differ from a `GET` response.
+sanalyer returns 503 when it cannot reserve or allocate a buffer for the origin body. A `HEAD` with no transformation and no forwarded range can build `Content-Type` and `Content-Length` from the origin's own `HEAD` response, so those headers can differ from a `GET` response.
 
-A video target requires an explicit image `format` to produce a thumbnail. Without one, Fluxer returns the original bytes unchanged, and it does the same for a target that is neither an image nor a video.
+A video target requires an explicit image `format` to produce a thumbnail. Without one, sanalyer returns the original bytes unchanged, and it does the same for a target that is neither an image nor a video.
 
 ### Response
 
@@ -159,7 +159,7 @@ A video target requires an explicit image `format` to produce a thumbnail. Witho
 | 413 | Payload too large | The origin declared or delivered more than 500 MiB |
 | 416 | empty | A local range is unsatisfiable |
 | 502 | Bad gateway | The origin could not be reached, exceeded the redirect bound, or returned an unsuccessful status that the paragraph below this table does not list |
-| 503 | Service unavailable | Fluxer could not reserve or allocate a buffer for the origin body |
+| 503 | Service unavailable | sanalyer could not reserve or allocate a buffer for the origin body |
 | 504 | Gateway timeout | Transformation capacity was unavailable or the transformation exceeded its deadline |
 
 <sup>1</sup> A forwarded range relays the origin `Content-Range` and `Content-Length` unchanged and omits either header the origin did not send, so a chunked origin 206 produces a 206 with no `Content-Length`. A local range over buffered origin bytes always has both
@@ -168,7 +168,7 @@ An origin status of 400, 401, 403, 404, 405, 406, 408, 409, 410, 411, 412, 413, 
 
 ### Side effects
 
-The route requests the target from the validated third-party origin using the user agent `Mozilla/5.0 (compatible; Fluxerbot/1.0; +https://fluxer.app)`, which is visible to that origin.
+The route requests the target from the validated third-party origin using the user agent `Mozilla/5.0 (compatible; sanalyerbot/1.0; +https://sanalyer.com)`, which is visible to that origin.
 
 ## Get theme CSS
 
@@ -228,7 +228,7 @@ The route selects no representation, accepts a `Range`, and sends no `Content-Di
 
 ## Image asset contract
 
-An image asset is a stored picture Fluxer serves at a requested size and format, such as an avatar, a guild icon, or an emoji. The asset hash comes from the resource object, and the path combines the owning resource, that hash, and a file extension. On an emoji or sticker path the filename is the identifier itself. The grammar, query parameters, and responses below apply to every image asset route. [Asset size selection](/media-proxy/transformations/#asset-size-selection) defines every size class.
+An image asset is a stored picture sanalyer serves at a requested size and format, such as an avatar, a guild icon, or an emoji. The asset hash comes from the resource object, and the path combines the owning resource, that hash, and a file extension. On an emoji or sticker path the filename is the identifier itself. The grammar, query parameters, and responses below apply to every image asset route. [Asset size selection](/media-proxy/transformations/#asset-size-selection) defines every size class.
 
 A client builds the complete URL from the Media Proxy [base URL](/media-proxy/overview/#base-urls), the path template for the asset class, the hash, and a file extension.
 
@@ -236,7 +236,7 @@ A client builds the complete URL from the Media Proxy [base URL](/media-proxy/ov
 An attachment has its own `url` and `proxy_url`, a signed external media path has its own signature, and endpoint discovery publishes the instance branding images as complete URLs.
 :::
 
-Fluxer matches an asset path by its shape alone. A path with the wrong number of segments, an empty owner segment, or a filename without exactly one dot is not an asset path and returns 404. A hash containing anything but ASCII letters, digits, and `_` returns 404 as well, as does an extension outside the known image set. The known set is `png`, `jpg`, `jpeg`, `webp`, `gif`, `apng`, `avif`, `heic`, `heif`, `jxl`, and `svg`, matched case-insensitively.
+sanalyer matches an asset path by its shape alone. A path with the wrong number of segments, an empty owner segment, or a filename without exactly one dot is not an asset path and returns 404. A hash containing anything but ASCII letters, digits, and `_` returns 404 as well, as does an extension outside the known image set. The known set is `png`, `jpg`, `jpeg`, `webp`, `gif`, `apng`, `avif`, `heic`, `heif`, `jxl`, and `svg`, matched case-insensitively.
 
 Use the hash returned by the API. Do not calculate one from the image yourself.
 
@@ -437,7 +437,7 @@ Returns the emoji image under the emoji size class with a square cover crop.
 | emoji_id<sup>1</sup> | string | The emoji [snowflake](/snowflakes/), which is also the storage key |
 | ext<sup>2</sup> | string | The path extension, which selects the output format |
 
-<sup>1</sup> Any non-empty run of ASCII letters, digits, and `_`. Fluxer clients request `{emoji_id}.webp`
+<sup>1</sup> Any non-empty run of ASCII letters, digits, and `_`. sanalyer clients request `{emoji_id}.webp`
 
 <sup>2</sup> An extension whose encoder is not enabled for output selects WebP instead
 
@@ -460,7 +460,7 @@ Returns the sticker image under the sticker size class with a square cover crop.
 | sticker_id<sup>1</sup> | string | The sticker [snowflake](/snowflakes/), which is also the storage key |
 | ext | string | The path extension, used only as the source hint |
 
-<sup>1</sup> Any non-empty run of ASCII letters, digits, and `_`. Fluxer clients request `{sticker_id}.webp`
+<sup>1</sup> Any non-empty run of ASCII letters, digits, and `_`. sanalyer clients request `{sticker_id}.webp`
 
 Sticker requests default to static output. Use `animated=true` for animation, without adding an `a_` prefix to the identifier.
 

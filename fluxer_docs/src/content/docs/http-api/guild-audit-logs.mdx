@@ -10,9 +10,9 @@ An audit log entry records one change made to a guild and the account that made 
 
 ## Audit log reason
 
-A route marked Audit reason accepts the `X-Audit-Log-Reason` request header, listed with the other [standard request headers](/http-api/#standard-request-headers). Fluxer reads the value verbatim and never percent-decodes it, so a caller that percent-encodes the reason stores and reads back the percent-encoded form.
+A route marked Audit reason accepts the `X-Audit-Log-Reason` request header, listed with the other [standard request headers](/http-api/#standard-request-headers). sanalyer reads the value verbatim and never percent-decodes it, so a caller that percent-encodes the reason stores and reads back the percent-encoded form.
 
-Fluxer trims the value. A value that is blank before trimming, empty after it, or longer than 512 characters after it counts as no reason at all. None of those values fails the request, so a reason that misses the bound is dropped and the operation still succeeds.
+sanalyer trims the value. A value that is blank before trimming, empty after it, or longer than 512 characters after it counts as no reason at all. None of those values fails the request, so a reason that misses the bound is dropped and the operation still succeeds.
 
 [Modify channel](/http-api/channels/#modify-channel), [Delete or leave channel](/http-api/channels/#delete-or-leave-channel), [Set channel permission overwrite](/http-api/channels/#set-channel-permission-overwrite), [Delete channel permission overwrite](/http-api/channels/#delete-channel-permission-overwrite), [Delete message](/http-api/messages/#delete-message), [Bulk delete messages](/http-api/messages/#bulk-delete-messages), [Pin message](/http-api/messages/#pin-message), and [Unpin message](/http-api/messages/#unpin-message) record the header as well. [Start thread from message](/http-api/threads/#start-thread-from-message) and [Start thread](/http-api/threads/#start-thread) record it on their thread entries. [Create forum tag](/http-api/forums/#create-forum-tag), [Modify forum tag](/http-api/forums/#modify-forum-tag), and [Delete forum tag](/http-api/forums/#delete-forum-tag) record it on their channel update entries.
 
@@ -21,12 +21,12 @@ Two operations use a reason from the request body when the header supplies none:
 - [Create or replace guild ban](/http-api/guild-moderation/#create-or-replace-guild-ban) uses the body `reason`.
 - [Modify guild member](/http-api/guild-members/#modify-guild-member) uses the trimmed `timeout_reason` when the body also has `communication_disabled_until`.
 
-Fluxer never percent-decodes a body reason either. The operation writes the accepted reason onto its entry, returns it as the entry `reason` field, and sends it in the [Guild Audit Log Entry Create](/gateway/events/#guild-audit-log-entry-create) Dispatch.
+sanalyer never percent-decodes a body reason either. The operation writes the accepted reason onto its entry, returns it as the entry `reason` field, and sends it in the [Guild Audit Log Entry Create](/gateway/events/#guild-audit-log-entry-create) Dispatch.
 
-Fluxer resolves the reason again when it reads an entry. A [MEMBER_BAN_ADD](#audit-actions) entry with a blank stored reason returns the ban `reason` from its change list, and a [MEMBER_UPDATE](#audit-actions) entry with a blank stored reason returns the timeout reason stored with it, when it has one. The result is trimmed, and a blank result is omitted.
+sanalyer resolves the reason again when it reads an entry. A [MEMBER_BAN_ADD](#audit-actions) entry with a blank stored reason returns the ban `reason` from its change list, and a [MEMBER_UPDATE](#audit-actions) entry with a blank stored reason returns the timeout reason stored with it, when it has one. The result is trimmed, and a blank result is omitted.
 
 :::note[Some operations record no reason at all]
-Bot addition, the role Fluxer creates and assigns to a bot it adds with permissions, a Visionary role grant, a message deletion made by [Delete message attachment](/http-api/messages/#delete-message-attachment), and a consolidated bulk deletion entry never have one.
+Bot addition, the role sanalyer creates and assigns to a bot it adds with permissions, a Visionary role grant, a message deletion made by [Delete message attachment](/http-api/messages/#delete-message-attachment), and a consolidated bulk deletion entry never have one.
 :::
 
 ## Guild audit log response object
@@ -169,9 +169,9 @@ The Value column is the numeric `action_type`, which is also the value the `acti
 
 <sup>10</sup> Recorded for an overwrite whose target is a role other than `@everyone`, when that role exists at the write
 
-<sup>11</sup> [Follow announcement channel](/http-api/channels/#follow-announcement-channel) records `WEBHOOK_CREATE` in the following guild with `type` `2`, and deleting that webhook records `WEBHOOK_DELETE` the same way. Follower webhooks that Fluxer removes because the announcement channel was deleted or converted record no entry
+<sup>11</sup> [Follow announcement channel](/http-api/channels/#follow-announcement-channel) records `WEBHOOK_CREATE` in the following guild with `type` `2`, and deleting that webhook records `WEBHOOK_DELETE` the same way. Follower webhooks that sanalyer removes because the announcement channel was deleted or converted record no entry
 
-Deleting a text, announcement, forum, or media channel deletes its threads and records only [CHANNEL_DELETE](#audit-actions). [Delete thread](/http-api/threads/#delete-thread) records `THREAD_DELETE`. Fluxer records [THREAD_UPDATE](#audit-actions) only when a [thread change field](#thread-change-fields) differs.
+Deleting a text, announcement, forum, or media channel deletes its threads and records only [CHANNEL_DELETE](#audit-actions). [Delete thread](/http-api/threads/#delete-thread) records `THREAD_DELETE`. sanalyer records [THREAD_UPDATE](#audit-actions) only when a [thread change field](#thread-change-fields) differs.
 
 :::note[An update that changes nothing records no entry]
 GUILD_UPDATE, CHANNEL_UPDATE, CHANNEL_OVERWRITE_UPDATE, MEMBER_UPDATE, MEMBER_ROLE_UPDATE, MEMBER_MOVE, ROLE_UPDATE, WEBHOOK_UPDATE, EMOJI_UPDATE, and STICKER_UPDATE need a change other than `ip`. GUILD_UPDATE also ignores `guild_id`, `member_count`, and the image width and height fields. A reason alone records nothing.
@@ -232,7 +232,7 @@ One field a mutation changed, with the value on each side of the change.
 A change value is a string, a JSON number, a boolean, `null`, an array of strings, an array of numbers, or an object with `added` and `removed` string arrays. The last shape comes only from the [permissions_diff](#guild-role-change-fields) key of a role modification. The `available_tags` and `default_reaction_emoji` [channel change fields](#channel-change-fields) record an array of objects and an object.
 
 :::note[A 64-bit domain value is a decimal string]
-Fluxer serialises a permission mask or a snowflake as a decimal string. A bounded number such as a position or a colour remains a JSON number.
+sanalyer serialises a permission mask or a snowflake as a decimal string. A bounded number such as a position or a colour remains a JSON number.
 :::
 
 :::caution[A change list holds only the differing fields]
@@ -428,7 +428,7 @@ Recorded by [ROLE_CREATE](#audit-actions), [ROLE_UPDATE](#audit-actions), and [R
 
 `permissions_diff` arrives as `new_value` with no `old_value`, and the same change list still has the `permissions` change.
 
-[Modify guild role positions](/http-api/permissions/#modify-guild-role-positions) records one [ROLE_UPDATE](#audit-actions) entry for each role that moved, with only the `position` change. Fluxer orders the roles other than `@everyone` by `position` descending, then by ID ascending, before and after the write. The largest set of roles that keep their relative order counts as unmoved, and where several sets qualify, the set whose roles come earliest in the new order is used. A request that only renumbers positions records no entry.
+[Modify guild role positions](/http-api/permissions/#modify-guild-role-positions) records one [ROLE_UPDATE](#audit-actions) entry for each role that moved, with only the `position` change. sanalyer orders the roles other than `@everyone` by `position` descending, then by ID ascending, before and after the write. The largest set of roles that keep their relative order counts as unmoved, and where several sets qualify, the set whose roles come earliest in the new order is used. A request that only renumbers positions records no entry.
 
 [Modify role hoist positions](/http-api/permissions/#modify-role-hoist-positions) and [Reset role hoist positions](/http-api/permissions/#reset-role-hoist-positions) apply the same rule to the member list order, with only the `hoist_position` change in each entry. That order is the hoisted roles other than `@everyone`, by `hoist_position` descending with `position` used when a role has no hoist position, then by ID ascending. A role that is not hoisted has an entry whenever its `hoist_position` changed.
 

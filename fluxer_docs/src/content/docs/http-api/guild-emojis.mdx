@@ -8,9 +8,9 @@ import RouteHeader from '@/components/RouteHeader.astro';
 
 An emoji is a custom image that one guild owns. Members use it in messages and reactions, and a forum channel can use it on a tag or as its default reaction. Its ID is a [snowflake](/snowflakes/) that is unique across every guild. [List guild emojis](#list-guild-emojis) is the only guild-scoped read, and [Get emoji metadata](/http-api/expressions/#get-emoji-metadata) resolves a single emoji without membership of its guild.
 
-Every route names a guild in its path. When that guild has [UNAVAILABLE_FOR_EVERYONE](/http-api/guilds/#guild-features), Fluxer rejects the request with 403 `MISSING_ACCESS` before the operation runs. Fluxer does the same for a guild with [UNAVAILABLE_FOR_EVERYONE_BUT_STAFF](/http-api/guilds/#guild-features) when the account has no instance staff flag.
+Every route names a guild in its path. When that guild has [UNAVAILABLE_FOR_EVERYONE](/http-api/guilds/#guild-features), sanalyer rejects the request with 403 `MISSING_ACCESS` before the operation runs. sanalyer does the same for a guild with [UNAVAILABLE_FOR_EVERYONE_BUT_STAFF](/http-api/guilds/#guild-features) when the account has no instance staff flag.
 
-A guild that does not exist returns 404 `UNKNOWN_GUILD`. Fluxer returns 403 `MISSING_PERMISSIONS` to a caller who is not a current member of an existing guild, so guild existence is distinguishable from guild membership. On [Modify guild emoji](#modify-guild-emoji) a non-member receives the same 403 `MISSING_PERMISSIONS`, and a guild that does not exist returns 404 `UNKNOWN_EMOJI`.
+A guild that does not exist returns 404 `UNKNOWN_GUILD`. sanalyer returns 403 `MISSING_PERMISSIONS` to a caller who is not a current member of an existing guild, so guild existence is distinguishable from guild membership. On [Modify guild emoji](#modify-guild-emoji) a non-member receives the same 403 `MISSING_PERMISSIONS`, and a guild that does not exist returns 404 `UNKNOWN_EMOJI`.
 
 Names and uploaded images must pass the instance's content policy. Blocked content returns 403 `CONTENT_BLOCKED`.
 
@@ -62,7 +62,7 @@ The remaining encoded part is bounded to 139810136 characters, the base64 expans
 
 The character bound does not move with the limit key, so a resolved ceiling above 104857600 bytes admits no more than 104857602 decoded bytes.
 
-Accepted upload formats are PNG, JPEG, WebP, GIF, APNG, AVIF, HEIC, HEIF, JXL, and SVG. Fluxer takes the format and the animation state from the decoded image. An animated AVIF is rejected.
+Accepted upload formats are PNG, JPEG, WebP, GIF, APNG, AVIF, HEIC, HEIF, JXL, and SVG. sanalyer takes the format and the animation state from the decoded image. An animated AVIF is rejected.
 
 Pixel dimensions are not enforced. An accepted image is stored at its original dimensions and the [Media Proxy image asset contract](/media-proxy/routes/#image-asset-contract) selects the delivered size.
 
@@ -120,7 +120,7 @@ The failure contains display text, not a machine-readable code. Retry an item th
 
 Returns every [guild emoji object](#guild-emoji-object) of the guild, each with `user`. Requires membership of the guild and no permission.
 
-Fluxer returns the complete collection in one response, and the operation has no pagination parameters. An emoji whose uploader cannot be resolved is omitted, so the array can be shorter than the number of stored emojis.
+sanalyer returns the complete collection in one response, and the operation has no pagination parameters. An emoji whose uploader cannot be resolved is omitted, so the array can be shorter than the number of stored emojis.
 
 ### Path parameters
 
@@ -187,7 +187,7 @@ Creating an emoji consumes one guild emoji slot, emits [Guild Emojis Update](/ga
 
 Attempts to create between 1 and 50 emojis in one request and returns an [emoji bulk create response object](#emoji-bulk-create-response-object). Requires membership of the guild and [CREATE_EXPRESSIONS](/http-api/permissions/). Emits one [Guild Emojis Update](/gateway/events/#guild-emojis-update) Gateway event for the whole batch.
 
-Fluxer processes the items strictly in the submitted order and treats each one independently. Once the guild is full, every remaining item fails with the limit. A later item can still succeed after an earlier item failed for any other reason.
+sanalyer processes the items strictly in the submitted order and treats each one independently. Once the guild is full, every remaining item fails with the limit. A later item can still succeed after an earlier item failed for any other reason.
 
 An undecodable image, an unaccepted format, and a banned hash each fail one item and leave the rest of the batch to run.
 

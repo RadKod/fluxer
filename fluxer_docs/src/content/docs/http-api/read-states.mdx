@@ -8,7 +8,7 @@ import RouteHeader from '@/components/RouteHeader.astro';
 
 A read state records how far the current account has read in one channel. It holds the highest message read through, the mention count, and the last acknowledged pin timestamp. The [Messages resource](/http-api/messages/) defines single-channel acknowledgement and pin acknowledgement.
 
-Both routes on this page are user-only. Fluxer rejects a bot or OAuth2 credential with 403 `ACCESS_DENIED`.
+Both routes on this page are user-only. sanalyer rejects a bot or OAuth2 credential with 403 `ACCESS_DENIED`.
 
 ## Read state object
 
@@ -31,7 +31,7 @@ An account holds at most one read state per channel, keyed by the account and th
 
 <sup>3</sup> Present on every entry the API returns. The value is always `0`
 
-<sup>4</sup> Present only on the entry of a thread, a forum channel, or a media channel, and set by Fluxer
+<sup>4</sup> Present only on the entry of a thread, a forum channel, or a media channel, and set by sanalyer
 
 An acknowledgement creates an entry. So does [Acknowledge pins](/http-api/messages/#acknowledge-pins), and so does the server when a mention arrives in a channel the account has no entry for. Creating a post in a forum or media channel acknowledges that channel through the post ID for a user caller, as [Start thread](/http-api/threads/#start-thread) describes. A pin acknowledgement writes `last_pin_timestamp` and the flags that [Read state flags](#read-state-flags) describes, and the entry it creates reports `last_message_id` as null. The entry the server creates for a mention starts from the channel's own baseline watermark, the snowflake of the channel ID itself, or one below it for a thread. Every message already in the channel stays unread.
 
@@ -62,7 +62,7 @@ Only an acknowledgement produces a later Dispatch. A message acknowledgement emi
 | 1 &lt;&lt; 0 | IS_GUILD_CHANNEL | The entry belongs to a guild channel |
 | 1 &lt;&lt; 1 | IS_THREAD | The entry belongs to a thread |
 
-Fluxer sets the flags on an entry written by a user session that declares the [`channel_threads` client capability](/http-api/threads/#client-capability). The entry Fluxer creates for a mention in a thread also has both flags. A session that does not declare it never receives an entry that has flags.
+sanalyer sets the flags on an entry written by a user session that declares the [`channel_threads` client capability](/http-api/threads/#client-capability). The entry sanalyer creates for a mention in a thread also has both flags. A session that does not declare it never receives an entry that has flags.
 
 ## Read state acknowledgement object
 
@@ -77,16 +77,16 @@ One entry in the body of [Acknowledge read states](#acknowledge-read-states). It
 | mention_count?<sup>3</sup> | integer | The number of mentions to store for the channel (0-2,147,483,647, default `0`) |
 | manual?<sup>4</sup> | boolean | Whether the stored watermark becomes exactly `message_id` |
 
-<sup>1</sup> Fluxer stores the value as the read state key with no check that the channel exists or that the account can see it
+<sup>1</sup> sanalyer stores the value as the read state key with no check that the channel exists or that the account can see it
 
-<sup>2</sup> Fluxer does not resolve the message either. An entry equal to the stored watermark still produces a write, so it resets the stored mention count
+<sup>2</sup> sanalyer does not resolve the message either. An entry equal to the stored watermark still produces a write, so it resets the stored mention count
 
-<sup>3</sup> Fluxer stores the submitted value verbatim, so a client that leaves unread mentions after `message_id` must send the number of those mentions
+<sup>3</sup> sanalyer stores the submitted value verbatim, so a client that leaves unread mentions after `message_id` must send the number of those mentions
 
 <sup>4</sup> With `manual` false an entry strictly below the stored watermark is discarded whole
 
 :::caution[A manual acknowledgement can rewind the watermark]
-A lower `message_id` marks later messages unread again. Fluxer replaces the stored mention count at the same time, so a rewinding acknowledgement that omits `mention_count` clears it.
+A lower `message_id` marks later messages unread again. sanalyer replaces the stored mention count at the same time, so a rewinding acknowledgement that omits `mention_count` clears it.
 :::
 
 ### Example
@@ -147,15 +147,15 @@ When any entry is manual or has a positive mention count, entries for the same c
 
 ### Side effects
 
-With `manual` true, an entry sets the channel watermark to `message_id`. With `manual` false, Fluxer discards an entry strictly below the stored watermark and leaves the stored entry unchanged. Every entry that is not discarded sets the watermark to `message_id` and stores the submitted mention count.
+With `manual` true, an entry sets the channel watermark to `message_id`. With `manual` false, sanalyer discards an entry strictly below the stored watermark and leaves the stored entry unchanged. Every entry that is not discarded sets the watermark to `message_id` and stores the submitted mention count.
 
 One [Message ACK](/gateway/events/#message-ack) goes to the caller's sessions for every submitted entry, including an unchanged one. It reports the resulting `message_id`, `mention_count`, and `version`. It also includes the submitted `manual` value when any entry is manual or has a positive mention count.
 
 A session without [thread access](/gateway/threads/#session-flag) receives no Message ACK for an entry that has `flags`.
 
-When Fluxer fails to send a Message ACK, the request still succeeds and no Dispatch arrives for that entry. A client reconciles from the entries this route returns or from a new Ready.
+When sanalyer fails to send a Message ACK, the request still succeeds and no Dispatch arrives for that entry. A client reconciles from the entries this route returns or from a new Ready.
 
-Every entry also clears delivered push notifications for its channel through the submitted `message_id`. Fluxer uses the submitted value even when it discards the entry and keeps a higher stored watermark.
+Every entry also clears delivered push notifications for its channel through the submitted `message_id`. sanalyer uses the submitted value even when it discards the entry and keeps a higher stored watermark.
 
 ### Rate limit
 

@@ -20,7 +20,7 @@ A secret is reported by a companion boolean such as `client_secret_set`. Except 
 
 The complete runtime configuration of the deployment. Every configuration operation here except the limit configuration returns it.
 
-Missing settings use the defaults documented below. Invalid stored configuration causes an error rather than silently resetting a policy. Operators can find recovery guidance under [stored instance policy](/operator/configuration/#stored-instance-policy).
+Missing settings use the defaults documented below. Invalid stored configuration causes an error rather than silently resetting a policy. Operators can find recovery guidance under stored instance policy.
 
 ### Structure
 
@@ -29,7 +29,7 @@ Missing settings use the defaults documented below. Invalid stored configuration
 | sso | [SSO configuration](#sso-configuration-object) object | Single sign-on settings |
 | gateway_rollout | [Gateway rollout configuration](#gateway-rollout-configuration-object) object | Gateway admission and dispatch tuning |
 | voice_room | [voice room configuration](#voice-room-configuration-object) object | 3D voice room, table game, and room camera switches |
-| push_relay | [push relay configuration](#push-relay-configuration-object) object | Operator consent to the Fluxer-run push relay |
+| push_relay | [push relay configuration](#push-relay-configuration-object) object | Operator consent to the push relay run by the upstream project |
 | domain_migration | [domain migration configuration](#domain-migration-configuration-object) object | Web domain migration rollout |
 | voice_p2p | [peer-to-peer voice configuration](#peer-to-peer-voice-configuration-object) object | Peer-to-peer voice rollout |
 | captcha | [captcha configuration](#captcha-configuration-object) object | ALTCHA proof-of-work captcha settings |
@@ -45,7 +45,7 @@ Missing settings use the defaults documented below. Invalid stored configuration
 
 ## Account identity configuration object
 
-How members of the deployment sign in. It is read-only here. The setup wizard chooses it through [set the setup sign-in method](/http-api/instance/#set-the-setup-sign-in-method), and [Sign-in methods](/operator/sign-in/) explains the rules.
+How members of the deployment sign in. It is read-only here. The setup wizard chooses it through [set the setup sign-in method](/http-api/instance/#set-the-setup-sign-in-method), and Sign-in methods explains the rules.
 
 ### Structure
 
@@ -111,9 +111,9 @@ Every field is present on read. An absent document or missing field uses the def
 
 `max_connections` overrides `FLUXER_GATEWAY_MAX_CONNECTIONS` on each Gateway node without a restart. Set it to `0` to restore the environment value. The hard limit uses the same 5% headroom as the environment setting. Lowering the limit leaves existing connections open. Monitor `fluxer_gateway_websocket_connection_limit` and node memory before raising it.
 
-Fluxer raises `game_activity_epoch` by one when `game_activity_enabled` changes. Clients use the epoch to discard older rollout updates. An update cannot set `game_activity_epoch`.
+sanalyer raises `game_activity_epoch` by one when `game_activity_enabled` changes. Clients use the epoch to discard older rollout updates. An update cannot set `game_activity_epoch`.
 
-Admin reads and writes name this field `rpc_request_timeout_ms`. The legacy stored name is covered in the [operator configuration reference](/operator/configuration/#stored-instance-policy).
+Admin reads and writes name this field `rpc_request_timeout_ms`. The legacy stored name is covered in the operator configuration reference.
 
 ## Push relay configuration object
 
@@ -129,7 +129,7 @@ The operator's consent to the push relay supplemental privacy notice.
 
 Every field is present on read. An absent document or missing field uses the defaults above.
 
-The notice covers only the Fluxer-run relay that reaches Apple and Google for the official mobile apps. A subscription whose endpoint points at another distributor, such as a self-hosted UnifiedPush server or ntfy, never reaches that relay and needs no acceptance.
+The notice covers only the relay run by the upstream project that reaches Apple and Google for the upstream mobile apps. A subscription whose endpoint points at another distributor, such as a self-hosted UnifiedPush server or ntfy, never reaches that relay and needs no acceptance.
 
 ## Voice room configuration object
 
@@ -160,7 +160,7 @@ The instance rollout that moves the official web client from its legacy origin t
 | Field | Type | Description |
 | --- | --- | --- |
 | enabled | boolean | Whether the rollout runs at all (default false) |
-| config_version | integer | Revision counter, raised by Fluxer and never accepted from a request |
+| config_version | integer | Revision counter, raised by sanalyer and never accepted from a request |
 | rollout_basis_points | integer | Share of accounts the rollout selects, in basis points (0-10000, default 0) |
 | rollout_country_codes | array[string] | Countries the sampled share is limited to, as unique uppercase ISO 3166-1 alpha-2 codes, up to 250 (default empty) |
 | rollout_salt | string | Salt of the sampling hash (1-64 printable ASCII characters, default `domain-migration-v1`) |
@@ -194,7 +194,7 @@ The instance rollout that lets small voice calls connect their participants dire
 | Field | Type | Description |
 | --- | --- | --- |
 | enabled | boolean | Whether the rollout runs at all (default false) |
-| config_version | integer | Revision counter, raised by Fluxer and never accepted from a request |
+| config_version | integer | Revision counter, raised by sanalyer and never accepted from a request |
 | rollout_basis_points | integer | Share of accounts the rollout selects, in basis points (0-10000, default 0) |
 | rollout_country_codes | array[string] | Countries the sampled share is limited to, as unique uppercase ISO 3166-1 alpha-2 codes, up to 250 (default empty) |
 | rollout_salt | string | Salt of the sampling hash (1-64 printable ASCII characters, default `voice-p2p-v1`) |
@@ -215,7 +215,7 @@ The rules above select who may start a peer-to-peer call. Joining a call that al
 `max_participants` applies to every account, selected or not. A join that would take a peer-to-peer call past it is refused as full, as [Peer-to-peer voice](/gateway/events/#peer-to-peer-voice) describes. Lowering it removes nobody from a running call.
 
 :::caution[`enabled` is the kill switch]
-Setting `enabled` to false makes every new call use the voice servers. A call that already runs peer-to-peer keeps running and refuses new joins until it ends or a participant switches it to the voice servers. Fluxer never moves a running call on its own.
+Setting `enabled` to false makes every new call use the voice servers. A call that already runs peer-to-peer keeps running and refuses new joins until it ends or a participant switches it to the voice servers. sanalyer never moves a running call on its own.
 :::
 
 ## Captcha configuration object
@@ -232,7 +232,7 @@ The ALTCHA proof-of-work check that the API issues and verifies itself on gated 
 
 Every field is present on read. An absent document or missing field uses the defaults above, so the check is on until an administrator sets `enabled` to false. Setting `enabled` to false turns the check off for the whole instance.
 
-Each challenge hides its counter between half of `max_counter` and `max_counter`, and a client tries counters from 0 upward. Solve time grows with `cost` times `max_counter`. Fluxer spends one attempt at `cost` to issue each challenge.
+Each challenge hides its counter between half of `max_counter` and `max_counter`, and a client tries counters from 0 upward. Solve time grows with `cost` times `max_counter`. sanalyer spends one attempt at `cost` to issue each challenge.
 
 ## Experiment delivery configuration object
 
@@ -281,7 +281,7 @@ A valid registration URL is accepted in every mode, including `closed`, and its 
 
 A registration URL is an invitation an Admin can issue while the registration mode is `closed` or `approval`. It has its own expiry, use budget, and approval requirement.
 
-Fluxer accepts a URL while it has no revocation time, has not passed its expiry, and has a use count below `max_uses`. A URL failing any of those tests is still reported here.
+sanalyer accepts a URL while it has no revocation time, has not passed its expiry, and has a use count below `max_uses`. A URL failing any of those tests is still reported here.
 
 ### Structure
 
@@ -467,7 +467,7 @@ Signing keys are write-only and must have unique identifiers.
 
 ## Instance billing object
 
-Stripe billing for the premium tier. Each stored field is nullable, and null falls back to the [deployment configuration](/operator/configuration/#payments).
+Stripe billing for the premium tier. Each stored field is nullable, and null falls back to the deployment configuration.
 
 ### Structure
 
@@ -494,7 +494,7 @@ Stripe billing for the premium tier. Each stored field is nullable, and null fal
 | catalog_mode | string | `operator` while `prices` is stored, otherwise `env` |
 | webhook_url | string | The URL to register as the Stripe webhook endpoint |
 
-<sup>1</sup> Stored prices replace the deployment catalogue entirely and take any three-letter currency code. A buyer gets the currency mapped to their country, then `default_currency`, then the first configured currency. Fluxer's country checks for localised currencies do not apply to them
+<sup>1</sup> Stored prices replace the deployment catalogue entirely and take any three-letter currency code. A buyer gets the currency mapped to their country, then `default_currency`, then the first configured currency. sanalyer's country checks for localised currencies do not apply to them
 
 <sup>2</sup> A slot is `monthly`, `yearly`, `gift_1_month`, or `gift_1_year`, an underscore, and a currency, such as `monthly_GBP`. Existing subscriptions on a listed price keep renewing
 
@@ -529,7 +529,7 @@ Attachment retention overrides the operator has set, and the values in force.
 
 <sup>1</sup> The override keys are `enabled`, `min_size_mb`, `max_size_mb`, `max_eligible_size_mb`, `min_lifetime_days`, `max_lifetime_days`, `curve`, `renew_threshold_days`, and `renew_window_days`. Each is null when the deployment default applies, and `effective` reports the value in force. `enabled` is a boolean, `curve` is a number from 0 to 1, the `_mb` keys are positive numbers, and the `_days` keys are positive safe integers
 
-Fluxer clears `max_size_mb` when it is not above `min_size_mb`, clears `max_eligible_size_mb` when it is below `max_size_mb`, and clears `max_lifetime_days` when it is below `min_lifetime_days`. A cleared key uses the deployment default. The effective size range must have a finite maximum above its minimum, and retention must produce a valid expiry date. Check the returned `effective` values after an update.
+sanalyer clears `max_size_mb` when it is not above `min_size_mb`, clears `max_eligible_size_mb` when it is below `max_size_mb`, and clears `max_lifetime_days` when it is below `min_lifetime_days`. A cleared key uses the deployment default. The effective size range must have a finite maximum above its minimum, and retention must produce a valid expiry date. Check the returned `effective` values after an update.
 
 ## Branding asset kinds
 
@@ -552,7 +552,7 @@ How the connection to the SMTP server is encrypted.
 | opportunistic | A plain connection that upgrades with STARTTLS when the server offers it |
 | none | No TLS, even when the server offers STARTTLS |
 
-With no mode saved, Fluxer follows `FLUXER_EMAIL_SMTP_TLS_MODE`, then the older `FLUXER_EMAIL_SMTP_SECURE`. With neither set it uses `implicit` on port 465 and `starttls` on every other port.
+With no mode saved, sanalyer follows `FLUXER_EMAIL_SMTP_TLS_MODE`, then the older `FLUXER_EMAIL_SMTP_SECURE`. With neither set it uses `implicit` on port 465 and `starttls` on every other port.
 
 ## SMTP test result object
 
@@ -741,7 +741,7 @@ The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-obje
 Applies a merge patch to the stored configuration and returns the resulting [instance configuration](#instance-configuration-object) object. Requires `instance:config:update`.
 
 :::note[Every section is optional and merged independently]
-The body has one optional object for each section. Fluxer leaves an absent section alone. Within a section, an absent key keeps its stored value, and a key sent as null clears the stored value where the schema permits null.
+The body has one optional object for each section. sanalyer leaves an absent section alone. Within a section, an absent key keeps its stored value, and a key sent as null clears the stored value where the schema permits null.
 :::
 
 ### JSON body
@@ -768,13 +768,13 @@ The body has one optional object for each section. Fluxer leaves an absent secti
 
 <sup>2</sup> `branding.product_name` is 1 to 80 characters, every branding and legal URL is at most 2048 characters and nullable, `branding.theme_color` is a hex colour (`#rgb` or `#rrggbb`, the `#` is optional) and nullable, and `setup.configured` and `registration.collect_date_of_birth` are booleans. The theme colour is returned as lowercase `#rrggbb`, and pure black is treated as unset and returned as null. `localization.default_locale` is a supported locale or null, and `localization.default_locale_time_zones` is at most 32 IANA time zone names of at most 64 characters each. To clear `default_locale`, send it together with `default_locale_time_zones`; an object whose supplied values are all null is ignored. `branding.premium_product_name` is 1 to 40 characters, and null restores the default. `branding.premium_info_url`, `legal.guidelines_url`, and `legal.source_url` are absolute `http` or `https` URLs. Every string is trimmed before it is stored, and null or an empty string clears a legal URL
 
-`push_relay` takes only `relay_consent_accepted`. Fluxer sets `relay_consent_accepted_at` and `relay_consent_accepted_by` itself on the request that changes that flag, and accepts neither from a request. Turning the flag on stamps the current time and the acting account, and turning it off clears both to null. A request that repeats the flag it already holds leaves the stamp alone.
+`push_relay` takes only `relay_consent_accepted`. sanalyer sets `relay_consent_accepted_at` and `relay_consent_accepted_by` itself on the request that changes that flag, and accepts neither from a request. Turning the flag on stamps the current time and the acting account, and turning it off clears both to null. A request that repeats the flag it already holds leaves the stamp alone.
 
-`domain_migration` takes every [domain migration configuration](#domain-migration-configuration-object) field except `config_version`, each bound as documented there. Fluxer raises `config_version` by one on each request that supplies at least one of them. A section that is absent, or present with no field set, writes nothing and leaves `config_version` alone.
+`domain_migration` takes every [domain migration configuration](#domain-migration-configuration-object) field except `config_version`, each bound as documented there. sanalyer raises `config_version` by one on each request that supplies at least one of them. A section that is absent, or present with no field set, writes nothing and leaves `config_version` alone.
 
 `voice_p2p` works the same way, over the [peer-to-peer voice configuration](#peer-to-peer-voice-configuration-object) fields and its own `config_version`.
 
-`captcha` takes any subset of the [captcha configuration](#captcha-configuration-object) fields, each bound as documented there. Fluxer merges the supplied fields over the stored ones. The section has no `config_version`.
+`captcha` takes any subset of the [captcha configuration](#captcha-configuration-object) fields, each bound as documented there. sanalyer merges the supplied fields over the stored ones. The section has no `config_version`.
 
 `voice_room` takes `rooms_enabled`, `games_enabled`, and `room_cameras_enabled`, each a boolean. It has no `config_version`, and a section with none of them writes nothing.
 
@@ -785,7 +785,7 @@ The body has one optional object for each section. Fluxer leaves an absent secti
 <sup>4</sup> Accepted only on a self-hosted deployment. A hosted deployment rejects the section, and `app_public.branding.premium_product_name` and `premium_info_url`, with 400 `INVALID_FORM_BODY`. A Stripe secret, `enabled`, `automatic_tax`, `tax_id_collection` and `terms_consent_required` are written when supplied, cleared by null, and left alone when absent. A null `enabled` follows `FLUXER_STRIPE_ENABLED`. `prices`, `country_currencies`, and `legacy_prices` replace the stored value outright, a price slot left out is stored as null, and an empty `prices` object restores the deployment catalogue. A price ID is `price_` followed by letters and digits. A currency is three upper-case letters and a country code is two
 
 :::note[Single sign-on URL validation is conditional]
-Fluxer skips URL validation while the merged configuration leaves single sign-on disabled. A configuration both enabled and enforced fails validation against `sso` with `SSO_MISCONFIGURED` unless it resolves an authorisation endpoint, a token endpoint, a client identifier, and a claims source, which is `jwks_url` or `userinfo_url`. A set `issuer` meets the endpoint and claims source requirements, because Fluxer can discover them from the issuer.
+sanalyer skips URL validation while the merged configuration leaves single sign-on disabled. A configuration both enabled and enforced fails validation against `sso` with `SSO_MISCONFIGURED` unless it resolves an authorisation endpoint, a token endpoint, a client identifier, and a claims source, which is `jwks_url` or `userinfo_url`. A set `issuer` meets the endpoint and claims source requirements, because sanalyer can discover them from the issuer.
 :::
 
 #### Instance policy update structure
@@ -801,7 +801,7 @@ Fluxer skips URL validation while the merged configuration leaves single sign-on
 | premium_trial_days? | integer | Length in days of the one-time premium trial (0-30), where 0 turns the trial off |
 | services? | object | Nullable `gif_enabled`, `youtube_enabled`, and `bluesky_enabled` overrides |
 
-<sup>1</sup> Setting `single_community_enabled` to true adopts the already designated guild when one still exists. When none is designated or the designated guild was deleted, it creates a community using `single_community_name` or the configured product name. When the stored guild ID is not a valid ID, or the guild lookup fails for a reason other than an unknown guild, the operation fails and Fluxer creates no community. On a deployment whose setup is already complete, enabling it while no guild is designated fails with 400 `INSTANCE_POLICY_TRANSITION_NOT_ALLOWED`, as does enabling it when the acting Admin account cannot be resolved. Setting it to false only clears the flag and leaves the guild in place
+<sup>1</sup> Setting `single_community_enabled` to true adopts the already designated guild when one still exists. When none is designated or the designated guild was deleted, it creates a community using `single_community_name` or the configured product name. When the stored guild ID is not a valid ID, or the guild lookup fails for a reason other than an unknown guild, the operation fails and sanalyer creates no community. On a deployment whose setup is already complete, enabling it while no guild is designated fails with 400 `INSTANCE_POLICY_TRANSITION_NOT_ALLOWED`, as does enabling it when the acting Admin account cannot be resolved. Setting it to false only clears the flag and leaves the guild in place
 
 <sup>2</sup> The setting can be changed only while `direct_messages_locked` is false, and a change attempted after the lock is set fails with 400 `INSTANCE_POLICY_TRANSITION_NOT_ALLOWED` unless the same request sets `direct_messages_locked` to false. Re-enabling direct messages sets the lock again
 
@@ -822,7 +822,7 @@ The order is `gateway_rollout`, `voice_room`, `push_relay`, `domain_migration`, 
 
 ### Side effects
 
-Fluxer publishes a `gateway_rollout` change to the Gateway cluster. A `push_relay` change reaches the push service without a restart. A `billing` change applies without a restart. Premium mode changes affect the limits in force without replacing the saved limit configuration. On self-hosted deployments, `everyone` hides premium-filtered rules. Switching back to `mirror` restores them unless an Admin has replaced the limit configuration in the meantime. Enabling single community mode creates the community when none is designated, with the acting Admin as owner.
+sanalyer publishes a `gateway_rollout` change to the Gateway cluster. A `push_relay` change reaches the push service without a restart. A `billing` change applies without a restart. Premium mode changes affect the limits in force without replacing the saved limit configuration. On self-hosted deployments, `everyone` hides premium-filtered rules. Switching back to `mirror` restores them unless an Admin has replaced the limit configuration in the meantime. Enabling single community mode creates the community when none is designated, with the acting Admin as owner.
 
 An update that sets `app_public.setup.configured` to true also marks the deployment as bootstrapped, so no later registration receives the wildcard Admin ACL.
 
@@ -1035,7 +1035,7 @@ Both decisions remove the pending registration, but the endpoint does not requir
 
 Approval removes both the `registration_pending_approval` trait and the `registration_rejected` trait. When the account still had the `registration_pending_approval` trait, approval then accepts the stored `invite_code` when there is one and joins the account to the single community when that mode is enabled and a guild is designated. A join that fails, such as one through an invite that was deleted, has expired or needs the account to be online, is logged and does not fail the request. Rejection removes the `registration_pending_approval` trait and adds the `registration_rejected` trait, which blocks login and every later session creation. A session issued before the decision stays valid. The pending registration is removed either way.
 
-When the stored pending registration list fails validation, the request fails before Fluxer changes the account. A failure after Fluxer writes the account traits leaves those traits written and can leave the entry in the pending list. Check the account traits and the pending list before retrying.
+When the stored pending registration list fails validation, the request fails before sanalyer changes the account. A failure after sanalyer writes the account traits leaves those traits written and can leave the entry in the pending list. Check the account traits and the pending list before retrying.
 
 One Admin audit entry with the action `approve_registration` or `reject_registration` targets the account and records the audit reason. It has no metadata, except for an account that no longer exists, whose entry has the metadata key `account_found` set to `false`.
 
@@ -1072,7 +1072,7 @@ The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-obje
 Replaces the stored limit configuration with the supplied document and returns the resulting [limit configuration response](#limit-configuration-response-object) object. Requires `instance:limit_config:update`.
 
 :::caution[An absent custom rule is removed]
-A default rule that the body omits is restored from the deployment defaults. Fluxer re-merges the write with the current defaults immediately.
+A default rule that the body omits is restored from the deployment defaults. sanalyer re-merges the write with the current defaults immediately.
 :::
 
 :::note[The stored document can differ from the body]
@@ -1096,7 +1096,7 @@ The re-merge restores every default rule and back-fills every default limit key 
 
 ### Side effects
 
-On a self-hosted deployment whose premium mode is `everyone`, Fluxer drops the `premium` trait definition and every rule filtered on the `premium` trait before storing the document.
+On a self-hosted deployment whose premium mode is `everyone`, sanalyer drops the `premium` trait definition and every rule filtered on the `premium` trait before storing the document.
 
 Each rule's `modifiedFields` is then recomputed and the merged document replaces the stored one. Every API node adopts the new configuration. Clients observe it through the published [limit configuration](/http-api/instance/#limit-configuration-object).
 

@@ -116,7 +116,7 @@ The `task` discriminator selects one of these structures. Every ID array has an 
 | days_until_deletion<sup>1</sup> | integer | The delay before deletion in whole days (1-365) |
 | basis<sup>2</sup> | [basis](/admin-api/enforcement/#basis) object | Why the accounts are closed |
 
-<sup>1</sup> Fluxer raises the value to the minimum of the basis, 74 days for a broken rule and 14 days otherwise. A self-hosted instance has no appeal route and raises every basis to 14 days
+<sup>1</sup> sanalyer raises the value to the minimum of the basis, 74 days for a broken rule and 14 days otherwise. A self-hosted instance has no appeal route and raises every basis to 14 days
 
 <sup>2</sup> The `enforcement` basis takes a bulk decision with `reason_code`, `source` (always `own_review`), `automation` and a required `statement`. Reports, evidence messages and any other field are refused, because per-account facts cannot be given in bulk. The `X-Audit-Log-Reason` header is required with this basis, or the request fails with `ENFORCEMENT_INTERNAL_NOTE_REQUIRED`, and becomes the first note on every decision
 
@@ -153,7 +153,7 @@ Every task writes one summary Admin audit entry when it finishes, with the actio
 
 `update_user_flags` refuses the same restriction flag changes as [Update user flags](/admin-api/users/#update-user-flags). Adding one fails the request with `FLAG_REQUIRES_ENFORCEMENT_ROUTE`, and a removal an account refuses counts that account as failed. It writes one `update_flags` entry for each account and dispatches [User Update](/gateway/events/#user-update) to the account's sessions. A change to a publicly visible flag also dispatches [Guild Member Update](/gateway/events/#guild-member-update) to every guild the account is in.
 
-`update_guild_features` writes one `update_features` entry for each guild, dispatches [Guild Update](/gateway/events/#guild-update), and reindexes the guild for search. Fluxer reconciles a guild that already has a discovery application record against the new feature set, so gaining `DISCOVERABLE` approves the record and losing it marks the record removed. A guild with no discovery record is left alone.
+`update_guild_features` writes one `update_features` entry for each guild, dispatches [Guild Update](/gateway/events/#guild-update), and reindexes the guild for search. sanalyer reconciles a guild that already has a discovery application record against the new feature set, so gaining `DISCOVERABLE` approves the record and losing it marks the record removed. A guild with no discovery record is left alone.
 
 `add_guild_members` bypasses the ban check that a normal join runs. The task suppresses the join system message, records the join source as an Admin force add, and dispatches [Guild Member Add](/gateway/events/#guild-member-add) to the guild and [Guild Create](/gateway/events/#guild-create) to the added account's sessions. The task still enforces the per-account guild cap and the guild member cap, so an account at either ceiling is counted as failed. An account that is already a member is left unchanged and counted as successful, with no second membership and no Dispatch. Adding a bot account also records a `BOT_ADD` guild audit log entry attributed to the acting Admin.
 

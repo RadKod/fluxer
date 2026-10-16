@@ -80,10 +80,10 @@ The Admin view of one application. An application and its bot account share one 
 
 ## The built-in Admin application
 
-Fluxer serves one synthetic application for its own Admin OAuth2 client. The application has no bot, so every `bot_` field is null or false and `has_bot_token` is false. It also reports these values:
+sanalyer serves one synthetic application for its own Admin OAuth2 client. The application has no bot, so every `bot_` field is null or false and `has_bot_token` is false. It also reports these values:
 
 - `id` is the fixed constant `1234567890123456789`.
-- `name` is `Fluxer Admin`, and `owner_user_id` is the system account `0`.
+- `name` is `sanalyer Admin`, and `owner_user_id` is the system account `0`.
 - `oauth2_redirect_uris` has one entry, the configured Admin endpoint followed by `/oauth2_callback`.
 - `has_client_secret` is true in every response that returns this application, and `client_secret_created_at` is null.
 - `version` is always 1.
@@ -144,7 +144,7 @@ The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-obje
 
 Returns one [Admin application](#admin-application-object) object wrapped in a single-member object. Requires `application:lookup`.
 
-Fluxer answers 200 with `application` set to null when the ID names no application.
+sanalyer answers 200 with `application` set to null when the ID names no application.
 
 ### Path parameters
 
@@ -180,7 +180,7 @@ The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-obje
 
 Moves the application to another account and returns the stored [Admin application](#admin-application-object) object. Requires `application:transfer_ownership`.
 
-Ownership is the only field this operation writes. The new owner can be any existing account, and Fluxer does not notify the previous owner.
+Ownership is the only field this operation writes. The new owner can be any existing account, and sanalyer does not notify the previous owner.
 
 ### Path parameters
 
@@ -194,7 +194,7 @@ Ownership is the only field this operation writes. The new owner can be any exis
 | --- | --- | --- |
 | new_owner_id<sup>1</sup> | snowflake | The account to transfer the application to |
 
-<sup>1</sup> An unknown application fails with 404 `UNKNOWN_APPLICATION`, and an unknown replacement owner fails with 404 `UNKNOWN_USER`. Fluxer looks up the application first, so a request where both are unknown fails with `UNKNOWN_APPLICATION`
+<sup>1</sup> An unknown application fails with 404 `UNKNOWN_APPLICATION`, and an unknown replacement owner fails with 404 `UNKNOWN_USER`. sanalyer looks up the application first, so a request where both are unknown fails with `UNKNOWN_APPLICATION`
 
 ### Response body
 
@@ -214,7 +214,7 @@ Ownership is the only field this operation writes. The new owner can be any exis
 
 The transfer changes `owner_user_id`, increments `version`, and updates the results of [List applications](#list-applications) and [List user applications](/admin-api/users/#list-user-applications). It emits no Gateway Dispatch.
 
-Fluxer records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with the target type `application`, the target ID equal to the application ID, and the action `transfer_ownership`. Its metadata is `old_owner_id` and `new_owner_id`. Neither owner is resolved into `related_users`.
+sanalyer records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with the target type `application`, the target ID equal to the application ID, and the action `transfer_ownership`. Its metadata is `old_owner_id` and `new_owner_id`. Neither owner is resolved into `related_users`.
 
 ### Rate limit
 

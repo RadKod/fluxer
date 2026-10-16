@@ -19,7 +19,7 @@ When [instance features](/http-api/instance/#instance-features-object) reports `
 
 [Request attachment upload URLs](/http-api/messages/#request-attachment-upload-urls) accepts up to 10 files. Declare each file's ID, name, exact byte count and content type. The endpoint reference defines the fields, permissions and file size limits.
 
-Keep the returned plan, including its `upload_filename`. Use the returned `content_type`, which Fluxer derives from the file name and which can therefore differ from the declared value. The `upload_mode` determines the next steps.
+Keep the returned plan, including its `upload_filename`. Use the returned `content_type`, which sanalyer derives from the file name and which can therefore differ from the declared value. The `upload_mode` determines the next steps.
 
 ### Upload modes
 

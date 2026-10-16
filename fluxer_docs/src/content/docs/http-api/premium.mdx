@@ -6,7 +6,7 @@ description: Premium pricing, entitlement state, billing data, and subscription 
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-Premium is the paid tier of a Fluxer account. A recurring subscription, a redeemed gift, or a lifetime Visionary purchase pays for it. The routes here read that entitlement and run the subscription self-service operations, while [Billing](/http-api/billing/) owns purchase creation, refunds and the payment provider webhook.
+Premium is the paid tier of a sanalyer account. A recurring subscription, a redeemed gift, or a lifetime Visionary purchase pays for it. The routes here read that entitlement and run the subscription self-service operations, while Billing owns purchase creation, refunds and the payment provider webhook.
 
 Every route except [get price IDs](#get-price-ids) is user-only. A [self-hosted deployment](/http-api/deployment-availability/) always serves [get premium state](#get-premium-state) and [set premium perks disabled](#set-premium-perks-disabled). It never serves [switch subscription to the list price](#switch-subscription-to-the-list-price) or [rejoin Visionary guild](#rejoin-visionary-guild), serves [get price IDs](#get-price-ids) only while billing is active, and serves the subscription management routes while Stripe is serviceable. It also serves [get premium trial eligibility](#get-premium-trial-eligibility) and [start premium trial](#start-premium-trial).
 
@@ -24,7 +24,7 @@ Every route except [get price IDs](#get-price-ids) is user-only. A [self-hosted 
 | [Billing payment method](#billing-payment-method-object) | One mirrored payment method |
 | [Premium pricing state](#premium-pricing-state-object) | The resolved checkout catalogue |
 | [Premium trial eligibility](#premium-trial-eligibility-object) | Whether the account can start the one-time free trial |
-| [Store subscription](#store-subscription-object) | The active [in-app purchase](/http-api/in-app-purchases/) subscription |
+| [Store subscription](#store-subscription-object) | The active in-app purchase subscription |
 
 :::note[Manage billing through the customer portal]
 [Get premium state](#get-premium-state) returns invoices, payment methods and subscription details. Use [Create customer portal](#create-customer-portal) to open the billing interface.
@@ -85,7 +85,7 @@ The checkout prices resolved for one country: monthly and yearly recurring, and 
 | currency | string | [Display currency](#display-currencies) of the recurring prices |
 | gift_currency<sup>3</sup> | ?string | [Display currency](#display-currencies) of the gift prices |
 
-<sup>1</sup> Fluxer resolves the recurring pair and the gift pair separately. Each pair takes the first currency for which both of its prices are configured, so the pairs can resolve to different currencies
+<sup>1</sup> sanalyer resolves the recurring pair and the gift pair separately. Each pair takes the first currency for which both of its prices are configured, so the pairs can resolve to different currencies
 
 <sup>2</sup> Null when the amount is unavailable. Price changes can take up to one hour to appear
 
@@ -440,11 +440,11 @@ Billing details can lag behind changes made through the payment provider.
 | current_subscription_price | ?[current subscription price](#current-subscription-price-object) object | The price the account is billed against |
 | pending_subscription_change | ?[pending subscription change](#pending-subscription-change-object) object | The scheduled billing cycle change |
 | list_price_switch | [list price switch](#list-price-switch-object) object | Whether the subscription can move to the current list price |
-| subscription | ?[billing subscription](#billing-subscription-object) object | The mirrored subscription Fluxer selects by the rule below this table |
+| subscription | ?[billing subscription](#billing-subscription-object) object | The mirrored subscription sanalyer selects by the rule below this table |
 | invoices<sup>1</sup> | array[[billing invoice](#billing-invoice-object)] | The most recent invoices, newest first |
 | invoices_has_more<sup>2</sup> | boolean | Whether the account has invoices beyond the returned page |
 | payment_methods<sup>3</sup> | array[[billing payment method](#billing-payment-method-object)] | The stored payment methods |
-| refund_eligibility<sup>4</sup> | [refund eligibility](/http-api/billing/#refund-eligibility-object) object | The self-service refund state for the account |
+| refund_eligibility<sup>4</sup> | refund eligibility object | The self-service refund state for the account |
 
 <sup>1</sup> At most 12 distinct invoices across the account's billing history, newest first
 
@@ -452,13 +452,13 @@ Billing details can lag behind changes made through the payment provider.
 
 <sup>3</sup> The default payment method sorts first, then the rest by provider creation time descending
 
-<sup>4</sup> Computed from the mirrored invoices, and it skips an invoice that already has a pending, succeeded or action-required refund. It can therefore differ from [get refund eligibility](/http-api/billing/#get-refund-eligibility)
+<sup>4</sup> Computed from the mirrored invoices, and it skips an invoice that already has a pending, succeeded or action-required refund. It can therefore differ from get refund eligibility
 
-Fluxer selects the subscription by preferring an `active` or `trialing` mirror, then a `past_due`, `unpaid` or `incomplete` one, then anything else. Ties break on the latest current period end.
+sanalyer selects the subscription by preferring an `active` or `trialing` mirror, then a `past_due`, `unpaid` or `incomplete` one, then anything else. Ties break on the latest current period end.
 
 ## Billing subscription object
 
-One mirrored payment provider subscription. Fluxer passes every member through, so `status`, `plan_interval` and `plan_currency` are the provider's own values.
+One mirrored payment provider subscription. sanalyer passes every member through, so `status`, `plan_interval` and `plan_currency` are the provider's own values.
 
 ### Structure
 
@@ -574,7 +574,7 @@ One mirrored stored payment method. A non-card method reports every card member 
 
 ## Premium pricing state object
 
-The checkout catalogue resolved for the request. A client can render prices without a second call to [get price IDs](#get-price-ids). Fluxer resolves one catalogue on every request, and a country with its own localised currency always resolves to that currency.
+The checkout catalogue resolved for the request. A client can render prices without a second call to [get price IDs](#get-price-ids). sanalyer resolves one catalogue on every request, and a country with its own localised currency always resolves to that currency.
 
 ### Structure
 
@@ -587,7 +587,7 @@ The checkout catalogue resolved for the request. A client can render prices with
 
 <sup>2</sup> Null unless the deployment configures a complete recurring pair and a complete gift pair for a currency in the currency preference order of `country_code`, which is the default order when `country_code` is null, so one missing gift price nulls the whole catalogue. The amounts come from the mirrored price rows
 
-Fluxer reports an unresolvable catalogue as null here, and the request still succeeds. [Get price IDs](#get-price-ids) answers 400 `STRIPE_ERROR` for the same condition.
+sanalyer reports an unresolvable catalogue as null here, and the request still succeeds. [Get price IDs](#get-price-ids) answers 400 `STRIPE_ERROR` for the same condition.
 
 ## Premium trial eligibility object
 
@@ -613,7 +613,7 @@ Whether the authenticated account can start the one-time free premium trial, whi
 
 <sup>3</sup> A bot or system account, an account with no verified email, one that has ever purchased premium or holds premium now, and one whose email address is on a disposable domain
 
-Fluxer normalises an email address by lowercasing it and dropping a `+` suffix from its local part. For `gmail.com` and `googlemail.com` it also drops the dots from the local part and treats both domains as one.
+sanalyer normalises an email address by lowercasing it and dropping a `+` suffix from its local part. For `gmail.com` and `googlemail.com` it also drops the dots from the local part and treats both domains as one.
 
 ### Example
 
@@ -627,7 +627,7 @@ Fluxer normalises an email address by lowercasing it and dropping a `+` suffix f
 
 ## Store subscription object
 
-The App Store or Google Play subscription that grants the account premium. The [store purchase](/http-api/in-app-purchases/#store-purchase-object) it comes from is listed by [list in-app purchases](/http-api/in-app-purchases/#list-in-app-purchases).
+The App Store or Google Play subscription that grants the account premium. The store purchase it comes from is listed by list in-app purchases.
 
 While no Stripe subscription is active, a store subscription leaves `actual.premium_billing_cycle` null. A client reads the cycle here and sends the subscriber to `manage_url`, since [create customer portal](#create-customer-portal) cannot manage a store subscription.
 
@@ -639,7 +639,7 @@ While no Stripe subscription is active, a store subscription leaves `actual.prem
 | purchase_id | snowflake | The ID of the store purchase |
 | slot | string | Either `monthly` or `yearly` |
 | billing_cycle | string | [Billing cycle](#billing-cycles) |
-| state<sup>1</sup> | string | [Store purchase state](/http-api/in-app-purchases/#store-purchase-states) |
+| state<sup>1</sup> | string | Store purchase state |
 | expires_at | ISO8601 timestamp | End of the paid period |
 | grace_ends_at | ?ISO8601 timestamp | End of the store grace period, or null outside grace |
 | will_renew | boolean | Whether the subscription renews |
@@ -671,9 +671,9 @@ While no Stripe subscription is active, a store subscription leaves `actual.prem
 
 <RouteHeader method="GET" path="/v1/premium/price-ids" unauthenticated />
 
-Returns the [price IDs](#price-ids-object) object for a country. Fluxer uses a supplied credential only to count the request against that user's rate limit, so an unrecognised credential falls back to the client IP address.
+Returns the [price IDs](#price-ids-object) object for a country. sanalyer uses a supplied credential only to count the request against that user's rate limit, so an unrecognised credential falls back to the client IP address.
 
-The deployment must configure a complete recurring pair and a complete gift pair for at least one currency that the requested country prefers. Fluxer answers 400 `STRIPE_ERROR` when it does not.
+The deployment must configure a complete recurring pair and a complete gift pair for at least one currency that the requested country prefers. sanalyer answers 400 `STRIPE_ERROR` when it does not.
 
 ### Query parameters
 
@@ -681,7 +681,7 @@ The deployment must configure a complete recurring pair and a complete gift pair
 | --- | --- | --- |
 | country_code?<sup>1</sup> | string | The two-letter country used to select the regional price catalogue |
 
-<sup>1</sup> Fluxer trims surrounding whitespace and requires exactly two characters, and any other length fails validation with `STRING_LENGTH_EXACT`. The request-time geolocation country wins, so this value is read only when Fluxer cannot geolocate the request, and the default currency preference order applies when neither resolves
+<sup>1</sup> sanalyer trims surrounding whitespace and requires exactly two characters, and any other length fails validation with `STRING_LENGTH_EXACT`. The request-time geolocation country wins, so this value is read only when sanalyer cannot geolocate the request, and the default currency preference order applies when neither resolves
 
 ### Response
 
@@ -703,7 +703,7 @@ Returns the [premium state](#premium-state-object) object for the authenticated 
 The route is available even when no payment provider is configured.
 
 :::note[One read serves the whole billing screen]
-`billing.current_subscription_price` and `billing.refund_eligibility` are the same objects returned by [get current subscription price](#get-current-subscription-price) and [get refund eligibility](/http-api/billing/#get-refund-eligibility), and `billing.pending_subscription_change` has no route of its own.
+`billing.current_subscription_price` and `billing.refund_eligibility` are the same objects returned by [get current subscription price](#get-current-subscription-price) and get refund eligibility, and `billing.pending_subscription_change` has no route of its own.
 :::
 
 :::note[Billing details may take time to update]
@@ -716,7 +716,7 @@ The route is available even when no payment provider is configured.
 | --- | --- | --- |
 | country_code?<sup>1</sup> | string | The two-letter country used to resolve `pricing` |
 
-<sup>1</sup> Fluxer trims surrounding whitespace and requires exactly two characters. The request-time geolocation country wins, so this value is read only when Fluxer cannot geolocate the request. When neither resolves, `pricing` falls back to the default currency preference order and `pricing.country_code` is null
+<sup>1</sup> sanalyer trims surrounding whitespace and requires exactly two characters. The request-time geolocation country wins, so this value is read only when sanalyer cannot geolocate the request. When neither resolves, `pricing` falls back to the default currency preference order and `pricing.country_code` is null
 
 ### Response
 
@@ -727,7 +727,7 @@ The route is available even when no payment provider is configured.
 
 ### Side effects
 
-The read can change a default payment method. When the customer has a default that differs from the subscription's, Fluxer sets the subscription's default to the customer's. When only the subscription has a default, Fluxer sets it as the customer's default. It does not change entitlement.
+The read can change a default payment method. When the customer has a default that differs from the subscription's, sanalyer sets the subscription's default to the customer's. When only the subscription has a default, sanalyer sets it as the customer's default. It does not change entitlement.
 
 ### Rate limit
 
@@ -787,7 +787,7 @@ When the requested value changes, every account session receives [User Update](/
 
 <RouteHeader method="POST" path="/v1/premium/customer-portal" />
 
-Creates a billing portal session for the authenticated account and returns a [redirect URL](/http-api/billing/#redirect-url-object) object. The object has no session identifier, so the returned URL is the only way to open the session.
+Creates a billing portal session for the authenticated account and returns a redirect URL object. The object has no session identifier, so the returned URL is the only way to open the session.
 
 An account that never had a payment provider customer receives 400 `STRIPE_NO_PURCHASE_HISTORY`. A deployment that configures no payment provider receives 400 `STRIPE_PAYMENT_NOT_AVAILABLE`, and a provider call that fails or answers without a URL receives 400 `STRIPE_ERROR`.
 
@@ -795,13 +795,13 @@ An account that never had a payment provider customer receives 400 `STRIPE_NO_PU
 
 | Status | Body | Condition |
 | --- | --- | --- |
-| 200 | [redirect URL](/http-api/billing/#redirect-url-object) object | The portal session was created |
+| 200 | redirect URL object | The portal session was created |
 | 400 | [error response](/http-api/#error-response) | The account has no payment provider customer, or the provider is not configured or rejected the request |
 | 404 | [error response](/http-api/#error-response) | The authenticated account record no longer exists and the request returns `UNKNOWN_USER` |
 
 ### Side effects
 
-The operation creates an externally hosted billing portal session that returns to the Fluxer premium callback when the user closes it. Nothing is written to Fluxer state, and any change the user makes in the portal reaches Fluxer through [receive Stripe webhook](/http-api/billing/#receive-stripe-webhook).
+The operation creates an externally hosted billing portal session that returns to the sanalyer premium callback when the user closes it. Nothing is written to sanalyer state, and any change the user makes in the portal reaches sanalyer through receive Stripe webhook.
 
 ### Rate limit
 
@@ -815,7 +815,7 @@ Ends an active grace period immediately. Emits a [User Update](/gateway/events/#
 
 The operation is idempotent and reports success without changing anything when no grace deadline is recorded, when the account holds a lifetime entitlement, and when the account's premium end has not yet passed.
 
-The window this operation ends runs to `premium_grace_ends_at`. [Receive Stripe webhook](/http-api/billing/#receive-stripe-webhook) records that deadline when a renewal payment fails and when a subscription is deleted, for an account whose stored premium type is subscription.
+The window this operation ends runs to `premium_grace_ends_at`. Receive Stripe webhook records that deadline when a renewal payment fails and when a subscription is deleted, for an account whose stored premium type is subscription.
 
 | Condition | Recorded deadline |
 | --- | --- |
@@ -845,7 +845,7 @@ Premium features become unavailable before the recorded grace deadline arrives. 
 
 ### Side effects
 
-For an active grace period on a non-lifetime account, the operation clears the premium type, premium start, premium end, gift extension end, cancellation flag, billing cycle and grace deadline together. Every account session receives [User Update](/gateway/events/#user-update). A call with no applicable grace state changes nothing. Fluxer contacts no payment provider.
+For an active grace period on a non-lifetime account, the operation clears the premium type, premium start, premium end, gift extension end, cancellation flag, billing cycle and grace deadline together. Every account session receives [User Update](/gateway/events/#user-update). A call with no applicable grace state changes nothing. sanalyer contacts no payment provider.
 
 ### Rate limit
 
@@ -871,9 +871,9 @@ A deployment that configures no payment provider receives 400 `STRIPE_PAYMENT_NO
 
 ### Side effects
 
-Fluxer sets the subscription to cancel at the current period end, sets the account's cancellation flag, and refreshes the mirrored subscription row. Every account session receives [User Update](/gateway/events/#user-update). For a subscription with no schedule, Fluxer writes no premium end, so the recorded end is whatever the account already has.
+sanalyer sets the subscription to cancel at the current period end, sets the account's cancellation flag, and refreshes the mirrored subscription row. Every account session receives [User Update](/gateway/events/#user-update). For a subscription with no schedule, sanalyer writes no premium end, so the recorded end is whatever the account already has.
 
-A subscription that has a schedule discards its pending billing cycle change and ends in cancellation at the current period end. Fluxer then rewrites the premium end from the refreshed subscription. Premium access continues through the recorded end, and [receive Stripe webhook](/http-api/billing/#receive-stripe-webhook) later applies the final downgrade.
+A subscription that has a schedule discards its pending billing cycle change and ends in cancellation at the current period end. sanalyer then rewrites the premium end from the refreshed subscription. Premium access continues through the recorded end, and receive Stripe webhook later applies the final downgrade.
 
 ### Rate limit
 
@@ -899,7 +899,7 @@ A deployment that configures no payment provider receives 400 `STRIPE_PAYMENT_NO
 
 ### Side effects
 
-Fluxer releases any subscription schedule, which discards a pending billing cycle change, then clears period end cancellation. The account's cancellation flag becomes false. Every account session receives [User Update](/gateway/events/#user-update).
+sanalyer releases any subscription schedule, which discards a pending billing cycle change, then clears period end cancellation. The account's cancellation flag becomes false. Every account session receives [User Update](/gateway/events/#user-update).
 
 ### Rate limit
 
@@ -1035,7 +1035,7 @@ The operation is idempotent and reports success without changing anything when t
 
 ### Side effects
 
-Fluxer releases the subscription schedule, which removes the scheduled cycle change. The account's cancellation flag becomes false, and Fluxer refreshes its premium end. Every account session receives [User Update](/gateway/events/#user-update). Afterwards `billing.pending_subscription_change` in [get premium state](#get-premium-state) is null.
+sanalyer releases the subscription schedule, which removes the scheduled cycle change. The account's cancellation flag becomes false, and sanalyer refreshes its premium end. Every account session receives [User Update](/gateway/events/#user-update). Afterwards `billing.pending_subscription_change` in [get premium state](#get-premium-state) is null.
 
 ### Rate limit
 
@@ -1051,7 +1051,7 @@ The route requires a lifetime entitlement, so an account whose premium type is n
 
 A join emits [Guild Create](/gateway/events/#guild-create), [Guild Member Add](/gateway/events/#guild-member-add) and, when the guild has a system channel and does not suppress join notifications, [Message Create](/gateway/events/#message-create). The role grant that follows emits [Guild Member Update](/gateway/events/#guild-member-update). An account that already belongs to the guild produces that Dispatch alone.
 
-The operation is idempotent. For an account that already belongs to the guild, Fluxer grants the Visionary role again and changes nothing else. The join bypasses the guild ban check, so a banned account is added anyway.
+The operation is idempotent. For an account that already belongs to the guild, sanalyer grants the Visionary role again and changes nothing else. The join bypasses the guild ban check, so a banned account is added anyway.
 
 Both size ceilings still apply. An account already at its maximum number of guilds receives 400 `MAX_GUILDS`, and a Visionary guild at its member ceiling receives 400 `MAX_GUILD_MEMBERS`. Neither check runs for an account that already belongs to the guild.
 
@@ -1128,7 +1128,7 @@ Each account can start the trial once, and so can each normalised email address,
 
 ### Side effects
 
-The account gains premium for the trial length, counted from the moment the trial starts. Every account session receives [User Update](/gateway/events/#user-update). Fluxer records the claim against a keyed hash of the normalised email address, never the address itself, so the same address cannot start another trial on a different account.
+The account gains premium for the trial length, counted from the moment the trial starts. Every account session receives [User Update](/gateway/events/#user-update). sanalyer records the claim against a keyed hash of the normalised email address, never the address itself, so the same address cannot start another trial on a different account.
 
 A request that the instance, the eligibility checks or the email address refuses changes nothing and spends no network quota. A request that only the network quota refuses keeps the address reserved for the same account, so a later retry from that account can still start the trial.
 

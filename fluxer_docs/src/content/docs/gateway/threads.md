@@ -67,7 +67,7 @@ A user added to an existing thread receives a Thread Create with `member` and no
 
 A thread changed. The payload is the [thread object](/http-api/threads/#thread-object).
 
-Recipients are the sessions that can view the thread and are a bot session, a member, or a session that set `threads`. Fluxer checks them before and after the change and sends to both sets. A passive session in a guild with more than 250 members receives it only for a thread it joined.
+Recipients are the sessions that can view the thread and are a bot session, a member, or a session that set `threads`. sanalyer checks them before and after the change and sends to both sets. A passive session in a guild with more than 250 members receives it only for a thread it joined.
 
 A message sent to an archived thread unarchives it and emits Thread Update. A message sent to an active thread emits none. When a thread is unarchived, each session of a member that can view it also receives a [Thread Member Update](#thread-member-update).
 
@@ -82,7 +82,7 @@ A thread was deleted.
 | parent_id | snowflake | The ID of the parent channel |
 | type | integer | The [thread type](/http-api/threads/#thread-types) |
 
-Recipients are the sessions that can view the thread as it stood before the deletion and are a bot session, a member, or a session that set `threads`. A member is a user the guild holds as a member of the thread, or one of up to 1,000 thread members Fluxer reads at deletion. A passive session in a guild with more than 250 members receives it only when its user is a member.
+Recipients are the sessions that can view the thread as it stood before the deletion and are a bot session, a member, or a session that set `threads`. A member is a user the guild holds as a member of the thread, or one of up to 1,000 thread members sanalyer reads at deletion. A passive session in a guild with more than 250 members receives it only when its user is a member.
 
 ### <span id="thread-list-sync"></span>THREAD_LIST_SYNC
 
@@ -101,9 +101,9 @@ The session's active threads were replaced for a guild or for some of its channe
 
 Without `channel_ids`, a user session that did not set `threads` receives the active threads it joined.
 
-- Fluxer sends it when [Lazy Request](#lazy-request-thread-options) sets `threads` to true for a session that had not set it. The event follows after a random delay below 5,000 ms.
-- Fluxer sends it when the guild reloads its thread state. A bot session, a session that set `threads`, and a user session that joined an active thread each receive one.
-- Fluxer sends it when the session gains view access to channels that have active threads. `channel_ids` lists those channels.
+- sanalyer sends it when [Lazy Request](#lazy-request-thread-options) sets `threads` to true for a session that had not set it. The event follows after a random delay below 5,000 ms.
+- sanalyer sends it when the guild reloads its thread state. A bot session, a session that set `threads`, and a user session that joined an active thread each receive one.
+- sanalyer sends it when the session gains view access to channels that have active threads. `channel_ids` lists those channels.
 
 A guild sends a burst of up to 20 full syncs, then 20 more each second, and queues the rest. Thread List Sync is delivered live and never retained for Resume.
 
@@ -161,16 +161,16 @@ Each forum unread object is `thread_id` with either `count` or `missing`. `count
 
 ## <span id="lazy-request-thread-options"></span>Lazy Request thread options
 
-The [guild subscription object](/gateway/commands/#guild-subscription-object) of [Lazy Request](/gateway/commands/#lazy-request) takes two more options. Fluxer applies them after `typing`.
+The [guild subscription object](/gateway/commands/#guild-subscription-object) of [Lazy Request](/gateway/commands/#lazy-request) takes two more options. sanalyer applies them after `typing`.
 
 | Field | Type | Description |
 | --- | --- | --- |
 | threads? | boolean | Whether the session receives events and messages for every thread it can view in the guild |
 | thread_member_lists? | array[snowflake] | The threads whose member lists the session subscribes to, at most 10 |
 
-Fluxer ignores both options for a user session that did not set `CHANNEL_THREADS`. `threads` set to false clears the subscription, and any value that is not a Boolean is ignored. Fluxer also clears it when the session marks the guild passive.
+sanalyer ignores both options for a user session that did not set `CHANNEL_THREADS`. `threads` set to false clears the subscription, and any value that is not a Boolean is ignored. sanalyer also clears it when the session marks the guild passive.
 
-`thread_member_lists` replaces the previous list, and an empty array clears it. Fluxer keeps the first 10 entries that are Snowflakes and removes duplicates. It then drops each thread the session cannot view or that is not active. A value that is not an array is ignored.
+`thread_member_lists` replaces the previous list, and an empty array clears it. sanalyer keeps the first 10 entries that are Snowflakes and removes duplicates. It then drops each thread the session cannot view or that is not active. A value that is not an array is ignored.
 
 Each newly listed thread produces a [Thread Member List Update](#thread-member-list-update) at once. A membership change in the thread, or a presence change of one of its listed members, produces another after a 250 ms batching delay.
 
@@ -197,7 +197,7 @@ Each forum unread request object is `thread_id` and an optional `ack_message_id`
 }
 ```
 
-Results arrive in one [Forum Unreads](#forum-unreads). A post that does not exist or is outside the channel has no entry. An archived post, and an active post that has a message after the sent `ack_message_id`, has no entry when Fluxer fails to count its messages.
+Results arrive in one [Forum Unreads](#forum-unreads). A post that does not exist or is outside the channel has no entry. An archived post, and an active post that has a message after the sent `ack_message_id`, has no entry when sanalyer fails to count its messages.
 
 No Dispatch follows in these cases.
 

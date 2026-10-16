@@ -6,17 +6,17 @@ description: Saved favourite media and batch GIF URL resolution.
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A meme is an image, video, or audio asset saved as a favourite. Fluxer stores a copy of the media with the meme. The copy remains available after the source URL or the source message is gone.
+A meme is an image, video, or audio asset saved as a favourite. sanalyer stores a copy of the media with the meme. The copy remains available after the source URL or the source message is gone.
 
-The routes here are user-only and operate on the caller's own collection. Fluxer rejects a bot token with 403 `ACCESS_DENIED`. [Create message](/http-api/messages/#create-message) sends a stored meme through its `favorite_meme_id` field, and the [GIF provider API](/http-api/gifs/) searches the configured provider for a GIF to save.
+The routes here are user-only and operate on the caller's own collection. sanalyer rejects a bot token with 403 `ACCESS_DENIED`. [Create message](/http-api/messages/#create-message) sends a stored meme through its `favorite_meme_id` field, and the [GIF provider API](/http-api/gifs/) searches the configured provider for a GIF to save.
 
 ## Collection limits
 
-Fluxer caps a collection at the instance-configured `max_favorite_memes` [limit](/http-api/instance/#limit-keys), with a fallback of 50. Both creation operations check the count before they look up the channel or the message and before they fetch the source URL, so an account at its limit is refused with 400 `MAX_FAVORITE_MEMES` even when the rest of the request would have failed. The error body has `max_favorite_memes` reporting the ceiling reached.
+sanalyer caps a collection at the instance-configured `max_favorite_memes` [limit](/http-api/instance/#limit-keys), with a fallback of 50. Both creation operations check the count before they look up the channel or the message and before they fetch the source URL, so an account at its limit is refused with 400 `MAX_FAVORITE_MEMES` even when the rest of the request would have failed. The error body has `max_favorite_memes` reporting the ceiling reached.
 
-A meme has at most `max_favorite_meme_tags` tags, with a fallback of 10. Fluxer rejects a longer list with 400 `INVALID_FORM_BODY` and the validation code `MAX_FAVORITE_MEME_TAGS_EXCEEDED` at the `tags` path.
+A meme has at most `max_favorite_meme_tags` tags, with a fallback of 10. sanalyer rejects a longer list with 400 `INVALID_FORM_BODY` and the validation code `MAX_FAVORITE_MEME_TAGS_EXCEEDED` at the `tags` path.
 
-Fluxer normalises and trims a tag before counting it, and the result must be 1 through 30 characters. A tag that normalises to the empty string fails with 400 `INVALID_FORM_BODY` and `STRING_LENGTH_INVALID`.
+sanalyer normalises and trims a tag before counting it, and the result must be 1 through 30 characters. A tag that normalises to the empty string fails with 400 `INVALID_FORM_BODY` and `STRING_LENGTH_INVALID`.
 
 ## Deduplication
 
@@ -24,7 +24,7 @@ A meme is identified by the content hash of its stored bytes. The same bytes rea
 
 ## Meme object
 
-One media asset owned by one account. Fluxer resolves every media field at creation, and only the name, alt text, and tags change afterwards.
+One media asset owned by one account. sanalyer resolves every media field at creation, and only the name, alt text, and tags change afterwards.
 
 ### Structure
 
@@ -35,7 +35,7 @@ One media asset owned by one account. Fluxer resolves every media field at creat
 | name<sup>1</sup> | string | The display name of the meme (1-100 characters) |
 | alt_text<sup>2</sup> | ?string | The accessibility description of the media, or null when none is set |
 | tags | array[string] | The search tags stored on the meme, each 1-30 characters |
-| attachment_id<sup>3</sup> | snowflake | The ID of the attachment holding the durable Fluxer copy |
+| attachment_id<sup>3</sup> | snowflake | The ID of the attachment holding the durable sanalyer copy |
 | filename | string | The filename of the stored copy |
 | content_type | string | The MIME type of the stored copy |
 | content_hash | ?string | The content hash used for [deduplication](#deduplication), or null when it is unavailable |
@@ -43,7 +43,7 @@ One media asset owned by one account. Fluxer resolves every media field at creat
 | width | ?integer | The width of the media in pixels, or null when not applicable or unknown |
 | height | ?integer | The height of the media in pixels, or null when not applicable or unknown |
 | duration | ?number | The duration of the media in seconds, or null when not applicable or unknown |
-| url<sup>3</sup> | string | The Fluxer attachment URL of the stored copy |
+| url<sup>3</sup> | string | The sanalyer attachment URL of the stored copy |
 | is_gifv<sup>4</sup> | boolean | Whether the stored media is animated or a video converted from a GIF |
 | gif_slug<sup>5</sup> | ?string | The provider-issued slug this meme was sourced from, or null |
 | gif_provider<sup>5</sup> | ?string | The name of the GIF provider that issued `gif_slug`, or null |
@@ -54,7 +54,7 @@ One media asset owned by one account. Fluxer resolves every media field at creat
 
 <sup>2</sup> [Save meme from message](#save-meme-from-message) falls back to the selected attachment's own description when the body supplies no non-empty alt text
 
-<sup>3</sup> `url` is the media endpoint followed by `attachments/{user_id}/{attachment_id}/{filename}`, and Fluxer signs it on every read as a [signed attachment URL](/http-api/messages/#signed-attachment-urls)
+<sup>3</sup> `url` is the media endpoint followed by `attachments/{user_id}/{attachment_id}/{filename}`, and sanalyer signs it on every read as a [signed attachment URL](/http-api/messages/#signed-attachment-urls)
 
 <sup>4</sup> Set when the source attachment or embed was already animated, and when the Media Proxy reports the stored copy as animated
 
@@ -101,7 +101,7 @@ One descriptor describes one encoding of one provider GIF. A provider returns se
 | width<sup>1</sup> | integer | The width of this format in pixels |
 | height<sup>1</sup> | integer | The height of this format in pixels |
 
-<sup>1</sup> A non-negative value of at most 2147483647. A descriptor with an empty `src` or `proxy_src`, or a zero dimension, is skipped when Fluxer picks the [preview format](#resolved-gif-entry-object) for Resolve GIF URLs
+<sup>1</sup> A non-negative value of at most 2147483647. A descriptor with an empty `src` or `proxy_src`, or a zero dimension, is skipped when sanalyer picks the [preview format](#resolved-gif-entry-object) for Resolve GIF URLs
 
 A client submitting a format map to [Save meme from URL](#save-meme-from-url) supplies all members of every descriptor, and a descriptor missing one fails validation with 400 `INVALID_FORM_BODY`.
 
@@ -155,7 +155,7 @@ One entry describes one URL submitted to [Resolve GIF URLs](#resolve-gif-urls).
 
 A direct format is derived only for `video/webm`, `video/mp4`, `image/webp`, and `image/gif`, and only when both dimensions are positive.
 
-The preview format is the first usable descriptor in the order `tinywebm`, `tinymp4`, `mediumwebm`, `mediummp4`, `webm`, `mp4`, `loopedmp4`, `nanowebm`, `nanomp4`, `tinywebp`, `tinygif`, `mediumwebp`, `webp`, `mediumgif`, `gif`, `nanowebp`, `nanogif`. When no key in that list is usable, Fluxer takes the first usable descriptor in map order. When the map holds nothing usable, it takes the provider's own top-level media.
+The preview format is the first usable descriptor in the order `tinywebm`, `tinymp4`, `mediumwebm`, `mediummp4`, `webm`, `mp4`, `loopedmp4`, `nanowebm`, `nanomp4`, `tinywebp`, `tinygif`, `mediumwebp`, `webp`, `mediumgif`, `gif`, `nanowebp`, `nanogif`. When no key in that list is usable, sanalyer takes the first usable descriptor in map order. When the map holds nothing usable, it takes the provider's own top-level media.
 
 ## List memes
 
@@ -180,7 +180,7 @@ The account's [collection limit](#collection-limits) bounds how many entries the
 
 <RouteHeader method="POST" path="/v1/users/@me/memes" />
 
-Fetches an absolute media URL, stores a durable Fluxer copy, and returns the created [meme object](#meme-object). Emits a [Favorite Meme Create](/gateway/events/#favorite-meme-create) Gateway event.
+Fetches an absolute media URL, stores a durable sanalyer copy, and returns the created [meme object](#meme-object). Emits a [Favorite Meme Create](/gateway/events/#favorite-meme-create) Gateway event.
 
 ### JSON body
 
@@ -198,7 +198,7 @@ Fetches an absolute media URL, stores a durable Fluxer copy, and returns the cre
 
 <sup>2</sup> An omitted or null value is an empty tag list
 
-<sup>3</sup> Fluxer uses the supplied pair only when both are present and `gif_provider` names the configured provider. Otherwise Fluxer extracts a slug from `url` with the configured provider
+<sup>3</sup> sanalyer uses the supplied pair only when both are present and `gif_provider` names the configured provider. Otherwise sanalyer extracts a slug from `url` with the configured provider
 
 <sup>4</sup> Stored only when the request resolved to a provider GIF and the map is non-empty, and discarded otherwise
 
@@ -259,9 +259,9 @@ A guild caller without [READ_MESSAGE_HISTORY](/http-api/permissions/) can select
 
 <sup>3</sup> Taken from the selected attachment's own description whenever the supplied value is omitted, null, empty, or whitespace only
 
-When neither key selects anything, Fluxer takes the message's first attachment. It takes the first usable embed when the message has no attachment, or when that attachment has no supported media type. An embed selection has no alt text of its own.
+When neither key selects anything, sanalyer takes the message's first attachment. It takes the first usable embed when the message has no attachment, or when that attachment has no supported media type. An embed selection has no alt text of its own.
 
-Only an `image/*`, `video/*`, or `audio/*` asset can be saved. `attachment_id` is matched only when the message or one of its snapshots has at least one attachment. An ID matching none of them fails with `ATTACHMENT_ID_NOT_FOUND_IN_MESSAGE` at the `attachment_id` path. When the message has no attachment at all, Fluxer ignores the ID and takes the first usable embed. Only the selected attachment is tried, so a message whose chosen attachment has an unsupported type falls through to its embeds. A selection that resolves to no supported media fails with `NO_VALID_MEDIA_IN_MESSAGE` at the `media` path.
+Only an `image/*`, `video/*`, or `audio/*` asset can be saved. `attachment_id` is matched only when the message or one of its snapshots has at least one attachment. An ID matching none of them fails with `ATTACHMENT_ID_NOT_FOUND_IN_MESSAGE` at the `attachment_id` path. When the message has no attachment at all, sanalyer ignores the ID and takes the first usable embed. Only the selected attachment is tried, so a message whose chosen attachment has an unsupported type falls through to its embeds. A selection that resolves to no supported media fails with `NO_VALID_MEDIA_IN_MESSAGE` at the `media` path.
 
 An embed selection uses its image, video, or thumbnail, in that order. Media whose metadata cannot be resolved fails with 400 `MEDIA_METADATA_ERROR`.
 
@@ -348,7 +348,7 @@ Changes the name, alt text, or tags of one meme owned by the current account and
 An empty array clears every tag. Omit the field, or send null, to leave the stored tags untouched.
 :::
 
-Fluxer checks the tag allowance against the resulting list, so a request omitting `tags` re-checks the tags already stored. A meme that exceeds a since-lowered allowance therefore fails with 400 `INVALID_FORM_BODY` and `MAX_FAVORITE_MEME_TAGS_EXCEEDED` until the caller supplies a shorter list.
+sanalyer checks the tag allowance against the resulting list, so a request omitting `tags` re-checks the tags already stored. A meme that exceeds a since-lowered allowance therefore fails with 400 `INVALID_FORM_BODY` and `MAX_FAVORITE_MEME_TAGS_EXCEEDED` until the caller supplies a shorter list.
 
 ### Response
 
@@ -418,9 +418,9 @@ A client uses it to turn stored URL-only favourite GIFs into renderable picker e
 | --- | --- | --- |
 | Accept-Language?<sup>1</sup> | string | The preferred locale used for a GIF provider lookup |
 
-<sup>1</sup> Fluxer uses the account's stored locale when it has one. Otherwise it matches this header against the [supported locale registry](/topics/locales/#supported-locales), and it falls back to `en-US`
+<sup>1</sup> sanalyer uses the account's stored locale when it has one. Otherwise it matches this header against the [supported locale registry](/topics/locales/#supported-locales), and it falls back to `en-US`
 
-Fluxer derives a two-letter country from the requesting address by geolocation, with `US` as the fallback.
+sanalyer derives a two-letter country from the requesting address by geolocation, with `US` as the fallback.
 
 ### JSON body
 

@@ -187,7 +187,7 @@ A partial guild object is the smaller shape that appears inside invite payloads.
 
 ## Guild creation template object
 
-A creation template describes the roles and channels that [Create guild](#create-guild) creates. Fluxer remaps its template-local identifiers to newly allocated guild snowflakes during creation. Every template-local identifier is compared as its decimal string form, so the integer `1` and the string `"1"` name the same entity.
+A creation template describes the roles and channels that [Create guild](#create-guild) creates. sanalyer remaps its template-local identifiers to newly allocated guild snowflakes during creation. Every template-local identifier is compared as its decimal string form, so the integer `1` and the string `"1"` name the same entity.
 
 ### Structure
 
@@ -235,7 +235,7 @@ A creation template describes the roles and channels that [Create guild](#create
 
 <sup>2</sup> The role whose name is exactly `@everyone` supplies the permissions of the new guild's everyone role, and when no role has that name the role whose identifier is `0` supplies them. Every remaining role is created in array order at positions 1 upward
 
-<sup>3</sup> `permissions_new` takes precedence over `permissions`, the value is masked to the permission bits Fluxer defines, and a value that is not a valid integer rejects creation with 400 `GUILD_TEMPLATE_INVALID`. An everyone role whose resolved mask is 0 receives the default permission set
+<sup>3</sup> `permissions_new` takes precedence over `permissions`, the value is masked to the permission bits sanalyer defines, and a value that is not a valid integer rejects creation with 400 `GUILD_TEMPLATE_INVALID`. An everyone role whose resolved mask is 0 receives the default permission set
 
 <sup>4</sup> The value is stored on the created role. The everyone role is always created with no Unicode emoji
 
@@ -270,17 +270,17 @@ A resolved everyone mask that has `SEND_MESSAGES` and no [thread permission bit]
 
 <sup>1</sup> A duplicate identifier in the same template rejects creation with 400 `GUILD_TEMPLATE_INVALID`
 
-<sup>2</sup> The value 0 creates a text channel, 2 a voice channel, 4 a category, 5 an announcement channel, 15 a forum channel, and 16 a media channel. The value 13, the stage channel type of another platform, creates a voice channel. Fluxer skips every other value and creates no channel for it
+<sup>2</sup> The value 0 creates a text channel, 2 a voice channel, 4 a category, 5 an announcement channel, 15 a forum channel, and 16 a media channel. The value 13, the stage channel type of another platform, creates a voice channel. sanalyer skips every other value and creates no channel for it
 
 <sup>3</sup> The identifier is applied only when it resolves to a category in the same template and the channel is not itself a category, and every other value leaves the channel at the guild root
 
 <sup>4</sup> These voice fields are stored only on a voice channel and are null on every other channel type
 
-<sup>5</sup> An entry is applied only when its resolved `type` is 0 and its `id` resolves to a role in the same template, and the identifier `0` resolves to the everyone role. Fluxer skips every other entry, and a channel whose entries are all skipped is created with no overwrites
+<sup>5</sup> An entry is applied only when its resolved `type` is 0 and its `id` resolves to a role in the same template, and the identifier `0` resolves to the everyone role. sanalyer skips every other entry, and a channel whose entries are all skipped is created with no overwrites
 
 <sup>6</sup> A topic longer than 4096 characters on a forum or media channel, or 1024 characters on any other channel, is shortened to that limit
 
-<sup>7</sup> Applied only to a forum or media channel. Each tag gets a new ID, its name is trimmed and shortened to 50 characters, a tag with an empty or repeated name is skipped, and Fluxer keeps at most 20 tags
+<sup>7</sup> Applied only to a forum or media channel. Each tag gets a new ID, its name is trimmed and shortened to 50 characters, a tag with an empty or repeated name is skipped, and sanalyer keeps at most 20 tags
 
 <sup>8</sup> Applied only to a forum or media channel, and only when `emoji_name` is a single unicode emoji
 
@@ -331,11 +331,11 @@ A resolved everyone mask that has `SEND_MESSAGES` and no [thread permission bit]
 
 <sup>1</sup> The string `role` resolves to 0 and the string `member` resolves to 1, and every other string is read as a number. Only a resolved value of 0 is applied
 
-<sup>2</sup> The value is masked to the permission bits Fluxer defines, and a value that is not a valid integer rejects creation with 400 `GUILD_TEMPLATE_INVALID`
+<sup>2</sup> The value is masked to the permission bits sanalyer defines, and a value that is not a valid integer rejects creation with 400 `GUILD_TEMPLATE_INVALID`
 
 ## Verification levels
 
-A verification level gates member participation. Fluxer evaluates it when a member sends a message in the guild.
+A verification level gates member participation. sanalyer evaluates it when a member sends a message in the guild.
 
 | Value | Name | Description |
 | --- | --- | --- |
@@ -395,7 +395,7 @@ A guild explicit content filter level is the guild-wide filter a moderator selec
 | 0 | SAFE | Guild is not age restricted |
 | 3 | AGE_RESTRICTED | Guild is age restricted |
 
-The registry has no other value. Fluxer derives the level from the guild's `nsfw` field and never writes it directly.
+The registry has no other value. sanalyer derives the level from the guild's `nsfw` field and never writes it directly.
 
 ## Guild content warning levels
 
@@ -481,7 +481,7 @@ Each value in the guild's `features` array is a capability or availability flag.
 
 <sup>6</sup> A guild holding none of the three caps a voice channel `bitrate` at 96000. The highest feature the guild holds wins, and a write above the cap is stored at the cap rather than rejected. A guild that loses the feature keeps the stored value, and the next write to `bitrate` lowers it to the cap
 
-<sup>7</sup> The feature is deprecated and changes no behaviour. Fluxer still returns it for a guild that already holds it, and [Modify guild](#modify-guild) can neither add nor remove it
+<sup>7</sup> The feature is deprecated and changes no behaviour. sanalyer still returns it for a guild that already holds it, and [Modify guild](#modify-guild) can neither add nor remove it
 
 <sup>8</sup> The stock [limit configuration](/http-api/instance/#limit-keys) has a `more_emoji` rule that raises `max_guild_emojis` to 1000 for a guild holding `MORE_EMOJI`, and a `more_stickers` rule that raises `max_guild_stickers` to 1000 for a guild holding `MORE_STICKERS`. An operator can change both values. [Guild boost levels](#guild-boost-levels) grant these features
 
@@ -545,7 +545,7 @@ These fields prove [sudo mode](/http-api/users/mfa/#sudo-mode) when an operation
 
 A bot credential satisfies sudo mode without any proof, and so does an account with no password, no TOTP secret, and no registered WebAuthn credential. Every other account that supplies no usable proof receives 403 `SUDO_MODE_REQUIRED`, whose error object has `has_mfa` and a `methods` object reporting whether `totp`, `webauthn`, and `backup_codes` are available.
 
-Fluxer issues a newly generated proof in the `X-Fluxer-Sudo-Mode-JWT` header of the success response, and only for an account holding a TOTP secret or a registered WebAuthn credential. A proof supplied on the request is echoed back in that same header.
+sanalyer issues a newly generated proof in the `X-Fluxer-Sudo-Mode-JWT` header of the success response, and only for an account holding a TOTP secret or a registered WebAuthn credential. A proof supplied on the request is echoed back in that same header.
 
 ## Create guild
 
@@ -570,7 +570,7 @@ Creates a guild owned by the caller. Requires a user session credential. Returns
 | empty_features?<sup>3</sup> | boolean | Whether to create the guild with no features (default false) |
 | template? | [guild creation template object](#guild-creation-template-object) | Roles and channels to create for the new guild |
 
-<sup>1</sup> Fluxer trims the value before it measures the length bound
+<sup>1</sup> sanalyer trims the value before it measures the length bound
 
 <sup>2</sup> The field accepts raw base64, or a data URL whose payload is everything after the first comma
 
@@ -601,7 +601,7 @@ The creation response has no roles, channels, emojis, stickers, or member counts
 
 ### Side effects
 
-The operation creates the guild, its everyone role, its template or default channels, and the owner's membership. A supplied icon becomes the guild icon. Fluxer adds the guild to the owner's guild folder layout. The owner receives [Guild Create](/gateway/events/#guild-create) for the new guild and [User Settings Update](/gateway/events/#user-settings-update) with the changed folder layout. No audit log entry is recorded, and an `X-Audit-Log-Reason` header on this request is read and discarded.
+The operation creates the guild, its everyone role, its template or default channels, and the owner's membership. A supplied icon becomes the guild icon. sanalyer adds the guild to the owner's guild folder layout. The owner receives [Guild Create](/gateway/events/#guild-create) for the new guild and [User Settings Update](/gateway/events/#user-settings-update) with the changed folder layout. No audit log entry is recorded, and an `X-Audit-Log-Reason` header on this request is read and discarded.
 
 ### Rate limit
 
@@ -783,7 +783,7 @@ Every successful request emits [Guild Update](/gateway/events/#guild-update) to 
 
 A request that changes the stored value of at least one body field records a [`GUILD_UPDATE`](/http-api/guild-audit-logs/#audit-actions) audit entry with the previous and new values. That entry emits [Guild Audit Log Entry Create](/gateway/events/#guild-audit-log-entry-create) to sessions that can read the audit log.
 
-Removing `TEXT_CHANNEL_FLEXIBLE_NAMES` renames every guild text and announcement channel whose stored name changes when Fluxer trims it, lowercases it, replaces each whitespace run with a hyphen, and removes disallowed punctuation. A forum or media channel keeps its stored name until [Modify channel](/http-api/channels/#modify-channel) next sets `name`. When at least one channel is renamed, the removal emits one [Channel Update Bulk](/gateway/events/#channel-update-bulk) Dispatch with every channel in the guild.
+Removing `TEXT_CHANNEL_FLEXIBLE_NAMES` renames every guild text and announcement channel whose stored name changes when sanalyer trims it, lowercases it, replaces each whitespace run with a hyphen, and removes disallowed punctuation. A forum or media channel keeps its stored name until [Modify channel](/http-api/channels/#modify-channel) next sets `name`. When at least one channel is renamed, the removal emits one [Channel Update Bulk](/gateway/events/#channel-update-bulk) Dispatch with every channel in the guild.
 
 Replacing an image removes the previous asset. A failed replacement leaves the previous image unchanged.
 
@@ -797,7 +797,7 @@ Replacing an image removes the previous asset. A failed replacement leaves the p
 
 Permanently deletes the guild and returns 204 with an empty body. Requires the guild owner and sudo mode. Emits a [Guild Delete](/gateway/events/#guild-delete) Gateway event to every member session. The guild is unavailable from that point, and its channels, messages and other records are removed in the background shortly after.
 
-Fluxer refuses a non-owner with 403 `MISSING_PERMISSIONS`. A bot can never own a guild, so a bot credential never satisfies the requirement.
+sanalyer refuses a non-owner with 403 `MISSING_PERMISSIONS`. A bot can never own a guild, so a bot credential never satisfies the requirement.
 
 While `single_community_enabled` is true in the [instance policy](/admin-api/instance/#instance-policy-object), the guild named by `single_community_guild_id` cannot be deleted and returns 400 `SINGLE_COMMUNITY_CANNOT_DELETE`.
 
@@ -838,7 +838,7 @@ Deletion removes the guild, memberships, roles, channels, threads, messages, att
 
 ### Side effects
 
-Every member receives [Guild Delete](/gateway/events/#guild-delete). Fluxer deletes every member's [user guild settings](/http-api/users/settings/#user-guild-settings-object) for the guild. Non-bot members also receive [User Settings Update](/gateway/events/#user-settings-update) with the guild removed from their folder layout.
+Every member receives [Guild Delete](/gateway/events/#guild-delete). sanalyer deletes every member's [user guild settings](/http-api/users/settings/#user-guild-settings-object) for the guild. Non-bot members also receive [User Settings Update](/gateway/events/#user-settings-update) with the guild removed from their folder layout.
 
 No audit log entry is recorded, because the audit log is destroyed with the guild. An `X-Audit-Log-Reason` header on this request is read and discarded.
 
@@ -903,7 +903,7 @@ Remaining guild sessions receive [Guild Member Remove](/gateway/events/#guild-me
 
 Guild read states and settings are unchanged, but the guild profile and roles are lost. Rejoining within one year resumes any unexpired communication timeout. Leaving records no audit entry, and `X-Audit-Log-Reason` has no effect.
 
-Removal from the guild removes every membership in its threads. Fluxer emits a [Thread Members Update](/gateway/threads/#thread-members-update) for each of them, as [Thread member flags](/http-api/thread-members/#thread-member-flags) states.
+Removal from the guild removes every membership in its threads. sanalyer emits a [Thread Members Update](/gateway/threads/#thread-members-update) for each of them, as [Thread member flags](/http-api/thread-members/#thread-member-flags) states.
 
 ### Rate limit
 
@@ -915,7 +915,7 @@ Removal from the guild removes every membership in its threads. Fluxer emits a [
 
 Deletes every message the authenticated account has authored in the guild and returns 202 with an empty body. Requires membership and sudo mode, which a bot credential satisfies implicitly. The membership survives the request.
 
-The deletion runs inside this request. Fluxer sends the 202 only after it has removed every matching message in every channel and thread of the guild. Each processed batch emits [Message Delete Bulk](/gateway/events/#message-delete-bulk) in its channel or thread.
+The deletion runs inside this request. sanalyer sends the 202 only after it has removed every matching message in every channel and thread of the guild. Each processed batch emits [Message Delete Bulk](/gateway/events/#message-delete-bulk) in its channel or thread.
 
 ### Path parameters
 
@@ -1011,7 +1011,7 @@ A non-null code also requires the `VANITY_URL` guild feature and is otherwise re
 | --- | --- | --- |
 | code?<sup>1</sup> | ?string | Custom invite code to claim, or null to remove the current code |
 
-<sup>1</sup> Fluxer lowercases the value, turns each whitespace run into one hyphen, and collapses repeated hyphens. The result must match `^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$` and be 2 to 32 characters
+<sup>1</sup> sanalyer lowercases the value, turns each whitespace run into one hyphen, and collapses repeated hyphens. The result must match `^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$` and be 2 to 32 characters
 
 A result that fails the pattern returns `VANITY_URL_INVALID_CHARACTERS`, and one outside the length bound returns `VANITY_URL_CODE_LENGTH_INVALID`. A code containing `fluxer` returns `VANITY_URL_CODE_CANNOT_CONTAIN_FLUXER`. A reserved code returns `VANITY_URL_CODE_RESERVED`: one containing the instance brand, one that is or has a hyphen-separated part naming staff or support, or one equal to an app path segment. An unchanged valid code succeeds. A code claimed by another invite returns `VANITY_URL_CODE_ALREADY_TAKEN`.
 
@@ -1052,7 +1052,7 @@ Members with premium spend boost slots on a guild, and the number of boosts sets
 | 2 | 7 | `AUDIO_BITRATE_256_KBPS`, `MORE_STICKERS` |
 | 3 | 14 | `AUDIO_BITRATE_384_KBPS`, `VANITY_URL` |
 
-Fluxer recounts the level in the background within about five seconds of a boost change, writes `premium_tier` and the features, and emits [Guild Update](/gateway/events/#guild-update) only when the level or a feature changes. A guild whose boosts fall below its level keeps the level for 3 days and loses it only if the count is still below the threshold then.
+sanalyer recounts the level in the background within about five seconds of a boost change, writes `premium_tier` and the features, and emits [Guild Update](/gateway/events/#guild-update) only when the level or a feature changes. A guild whose boosts fall below its level keeps the level for 3 days and loses it only if the count is still below the threshold then.
 
 Boosting only ever adds and removes the six features in the table. A feature the guild already held before boosting added it stays when the level drops. A feature that boosting added and that is then taken away through the [Admin API](/admin-api/guilds/) is not added back by boosting until the Admin API adds it again.
 

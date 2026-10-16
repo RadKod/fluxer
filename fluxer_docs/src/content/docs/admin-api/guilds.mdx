@@ -215,7 +215,7 @@ One entry of the `errors` array returned by [Purge guild assets](#purge-guild-as
 | id | string | The asset that could not be purged, as supplied |
 | error<sup>1</sup> | string | The reason the asset could not be purged (1-4000 characters) |
 
-<sup>1</sup> The operation produces `Invalid numeric ID`, `Asset belongs to another guild`, and `Failed to purge asset`. Any other value is the message of the error Fluxer hit while purging that ID
+<sup>1</sup> The operation produces `Invalid numeric ID`, `Asset belongs to another guild`, and `Failed to purge asset`. Any other value is the message of the error sanalyer hit while purging that ID
 
 ## Asset types
 
@@ -223,7 +223,7 @@ One entry of the `errors` array returned by [Purge guild assets](#purge-guild-as
 | --- | --- |
 | emoji | The ID resolved to a custom emoji owned by the requested guild |
 | sticker | The ID resolved to a sticker owned by the requested guild |
-| unknown | The ID matched no emoji or sticker, and Fluxer queued removal of any emoji and sticker media stored under that ID |
+| unknown | The ID matched no emoji or sticker, and sanalyer queued removal of any emoji and sticker media stored under that ID |
 
 An ID owned by a different guild appears in `errors` with no asset type.
 
@@ -243,7 +243,7 @@ The index matches `q` against the guild name, the discovery tags, the custom inv
 | limit? | integer | Maximum guilds to return (1-200, default 50) |
 | offset? | integer | Guilds to skip before returning results (0-10000, default 0) |
 
-<sup>1</sup> A `q` of all decimal digits also resolves that value as an exact guild ID, but only while `offset` is 0. When the index did not return the guild with that ID, Fluxer prepends it to `guilds` and adds one to `total`
+<sup>1</sup> A `q` of all decimal digits also resolves that value as an exact guild ID, but only while `offset` is 0. When the index did not return the guild with that ID, sanalyer prepends it to `guilds` and adds one to `total`
 
 ### Response body
 
@@ -311,7 +311,7 @@ Applies one or more field groups to a guild and returns the [Admin guild update]
 
 This is the only way to change the owner of a guild without acting as its current owner. The public [Transfer guild ownership](/http-api/guild-members/#transfer-guild-ownership) operation requires the caller to be the owner.
 
-Fluxer evaluates authorisation in two stages and reads the body between them. The account first needs at least one of `guild:update:name`, `guild:update:settings`, `guild:update:features`, `guild:update:vanity`, and `guild:transfer_ownership`. The validated body then selects a set of ACLs and every one of them is required, so a body with `name` and `nsfw` needs both `guild:update:name` and `guild:update:settings`. The wildcard satisfies both stages.
+sanalyer evaluates authorisation in two stages and reads the body between them. The account first needs at least one of `guild:update:name`, `guild:update:settings`, `guild:update:features`, `guild:update:vanity`, and `guild:transfer_ownership`. The validated body then selects a set of ACLs and every one of them is required, so a body with `name` and `nsfw` needs both `guild:update:name` and `guild:update:settings`. The wildcard satisfies both stages.
 
 - `name` selects `guild:update:name`.
 - `fields`, `verification_level`, `mfa_level`, `nsfw_level`, `nsfw`, `content_warning_level`, `content_warning_text`, `explicit_content_filter`, `default_message_notifications`, and `disabled_operations` select `guild:update:settings`.
@@ -507,7 +507,7 @@ One [Admin audit entry](/admin-api/#admin-audit-entry-object) is recorded with t
 
 Adds a user to a guild without an invite. Requires `guild:force_add_member`. The operation takes no request body.
 
-Fluxer checks only the Admin ACL. The acting account needs no membership and no permission in the guild.
+sanalyer checks only the Admin ACL. The acting account needs no membership and no permission in the guild.
 
 ### Path parameters
 
@@ -532,9 +532,9 @@ Fluxer checks only the Admin ACL. The acting account needs no membership and no 
 
 ### Side effects
 
-Fluxer creates the membership with the Admin force-add join source and restores a communication timeout still in force from a previous membership. The guild ban list is not checked, so a banned user can be admitted. The per-user guild limit and the guild member limit are still enforced.
+sanalyer creates the membership with the Admin force-add join source and restores a communication timeout still in force from a previous membership. The guild ban list is not checked, so a banned user can be admitted. The per-user guild limit and the guild member limit are still enforced.
 
-[Guild Member Add](/gateway/events/#guild-member-add) fires to the guild, and the user's sessions are joined to the guild on the main Gateway. When the guild's members are already indexed for search, Fluxer adds the new member to guild member search. The ordinary join system message is created, and with it a [Message Create](/gateway/events/#message-create) Dispatch, unless the guild sets `SUPPRESS_JOIN_NOTIFICATIONS` or has no `system_channel_id`, or its `system_channel_id` names a channel that no longer exists. A bot target also records a `BOT_ADD` entry in the guild's own [audit log](/http-api/guild-audit-logs/#audit-actions).
+[Guild Member Add](/gateway/events/#guild-member-add) fires to the guild, and the user's sessions are joined to the guild on the main Gateway. When the guild's members are already indexed for search, sanalyer adds the new member to guild member search. The ordinary join system message is created, and with it a [Message Create](/gateway/events/#message-create) Dispatch, unless the guild sets `SUPPRESS_JOIN_NOTIFICATIONS` or has no `system_channel_id`, or its `system_channel_id` names a channel that no longer exists. A bot target also records a `BOT_ADD` entry in the guild's own [audit log](/http-api/guild-audit-logs/#audit-actions).
 
 A user who is already a member keeps their existing membership. No membership is created, `member_count` does not change, and no Dispatch is emitted. The Admin audit entry is still written.
 
@@ -574,7 +574,7 @@ The acting account must see the guild, hold [KICK_MEMBERS](/http-api/permissions
 
 ### Side effects
 
-The user loses membership and disappears from guild member search. Removal from the guild removes every membership in its threads. Fluxer emits a [Thread Members Update](/gateway/threads/#thread-members-update) for each of them, as [Thread member flags](/http-api/thread-members/#thread-member-flags) states. A later rejoin restores a communication timeout that is still in force. The rejoined member starts with no nickname and no roles.
+The user loses membership and disappears from guild member search. Removal from the guild removes every membership in its threads. sanalyer emits a [Thread Members Update](/gateway/threads/#thread-members-update) for each of them, as [Thread member flags](/http-api/thread-members/#thread-member-flags) states. A later rejoin restores a communication timeout that is still in force. The rejoined member starts with no nickname and no roles.
 
 [Guild Member Remove](/gateway/events/#guild-member-remove) fires to the guild. A `MEMBER_KICK` entry is written to the guild's own [audit log](/http-api/guild-audit-logs/#audit-actions). The entry names the acting Admin account and has the audit reason. The write fires [Guild Audit Log Entry Create](/gateway/events/#guild-audit-log-entry-create) to sessions holding [VIEW_AUDIT_LOG](/http-api/permissions/).
 
@@ -635,7 +635,7 @@ The ban record names the acting Admin account as moderator. It has the expiry, t
 
 A positive deletion window queues a background job that deletes the target's matching messages after the response, which fires [Message Delete Bulk](/gateway/events/#message-delete-bulk) as deletion progresses.
 
-[Guild Ban Add](/gateway/events/#guild-ban-add) fires to the guild. If the target was a member, they lose access, disappear from member search, and trigger [Guild Member Remove](/gateway/events/#guild-member-remove). Removal from the guild removes every membership in its threads. Fluxer emits a [Thread Members Update](/gateway/threads/#thread-members-update) for each of them, as [Thread member flags](/http-api/thread-members/#thread-member-flags) states. A communication timeout in force at the ban is not restored on a later rejoin. This operation writes no entry to the guild's own audit log and emits no [Guild Audit Log Entry Create](/gateway/events/#guild-audit-log-entry-create).
+[Guild Ban Add](/gateway/events/#guild-ban-add) fires to the guild. If the target was a member, they lose access, disappear from member search, and trigger [Guild Member Remove](/gateway/events/#guild-member-remove). Removal from the guild removes every membership in its threads. sanalyer emits a [Thread Members Update](/gateway/threads/#thread-members-update) for each of them, as [Thread member flags](/http-api/thread-members/#thread-member-flags) states. A communication timeout in force at the ban is not restored on a later rejoin. This operation writes no entry to the guild's own audit log and emits no [Guild Audit Log Entry Create](/gateway/events/#guild-audit-log-entry-create).
 
 One Admin audit entry is recorded with the action `ban_member`, the target type `guild_member`, and the banned user as the target. Its metadata has the guild ID, the user ID, the `delete_message_days` value, and any supplied reason and duration.
 
@@ -735,7 +735,7 @@ Deletes emoji and sticker records owned by a guild and queues their stored media
 | --- | --- | --- |
 | ids<sup>1</sup> | array[string] | Emoji and sticker IDs to delete with their media, each 1 to 64 characters (at most 100) |
 
-<sup>1</sup> Each entry is trimmed, and Fluxer skips one that is then empty and any repeat of an entry already seen, so neither appears in `processed` or `errors`. An empty array is accepted and purges nothing
+<sup>1</sup> Each entry is trimmed, and sanalyer skips one that is then empty and any repeat of an entry already seen, so neither appears in `processed` or `errors`. An empty array is accepted and purges nothing
 
 ### Response body
 

@@ -49,7 +49,7 @@ Every field except `user` describes state that belongs to the membership.
 
 <sup>6</sup> Omitted while the stored value is 0, so absence means no flag is set and, for `mention_flags`, that the account-level preference applies
 
-Fluxer marks a membership premium sanitised after its account loses premium, when the membership has a guild avatar, banner, bio, or accent colour. A premium sanitised membership reports `avatar` and `banner` as null.
+sanalyer marks a membership premium sanitised after its account loses premium, when the membership has a guild avatar, banner, bio, or accent colour. A premium sanitised membership reports `avatar` and `banner` as null.
 
 A client compares `communication_disabled_until` against the current time, because a non-null value can name a moment that has already passed. A [communication timeout](/http-api/permissions/#communication-timeout) does not reduce the member's computed permission mask.
 
@@ -127,7 +127,7 @@ The request body shared by [Modify current guild member](#modify-current-guild-m
 
 A `roles` entry that does not resolve to an existing role of the guild is dropped from the replacement, so a request naming only unknown roles clears the member's role set.
 
-An `avatar` or `banner` base64 payload longer than 139810136 characters returns `BASE64_LENGTH_INVALID`, and a malformed one returns `INVALID_BASE64_FORMAT`. Fluxer then checks the decoded bytes against the instance-configured `avatar_max_size` [limit](/http-api/instance/#limit-keys), whose stock value is 10485760. The same limit applies to both fields. The decoded image must also be in a format the field accepts, and an animated AVIF is rejected. Pixel dimensions are not enforced. A value that is too large returns `IMAGE_SIZE_EXCEEDS_LIMIT`, and one whose format or animation is not allowed returns `INVALID_IMAGE_FORMAT`.
+An `avatar` or `banner` base64 payload longer than 139810136 characters returns `BASE64_LENGTH_INVALID`, and a malformed one returns `INVALID_BASE64_FORMAT`. sanalyer then checks the decoded bytes against the instance-configured `avatar_max_size` [limit](/http-api/instance/#limit-keys), whose stock value is 10485760. The same limit applies to both fields. The decoded image must also be in a format the field accepts, and an animated AVIF is rejected. Pixel dimensions are not enforced. A value that is too large returns `IMAGE_SIZE_EXCEEDS_LIMIT`, and one whose format or animation is not allowed returns `INVALID_IMAGE_FORMAT`.
 
 Null and any `communication_disabled_until` that is not in the future both clear the timeout. A time more than 365.25 days ahead returns `TIMEOUT_CANNOT_EXCEED_365_DAYS`, and a value that passes the schema but is not a real instant returns `INVALID_TIMEOUT_VALUE`. `timeout_reason` has no effect unless `communication_disabled_until` is also supplied.
 
@@ -234,15 +234,15 @@ Modifies the authenticated account's own membership and returns the resulting [g
 - Supplying `mute` requires [MUTE_MEMBERS](/http-api/permissions/), and `deaf` requires [DEAFEN_MEMBERS](/http-api/permissions/).
 - Supplying `nick`, `avatar`, `banner`, `bio`, `pronouns`, `accent_color`, or `profile_flags` requires a verified email address, and a bot account is exempt. An unverified account is rejected with 403 `PROFILE_EMAIL_VERIFICATION_REQUIRED`.
 
-A caller without `CHANGE_NICKNAME` does not fail the request. Fluxer discards the nickname change and applies every other supplied field. A member who holds the permission but is timed out is rejected with 403 `COMMUNICATION_DISABLED`.
+A caller without `CHANGE_NICKNAME` does not fail the request. sanalyer discards the nickname change and applies every other supplied field. A member who holds the permission but is timed out is rejected with 403 `COMMUNICATION_DISABLED`.
 
 A blocked `nick`, `bio` or `pronouns` returns 403 `CONTENT_BLOCKED`.
 
-Guild avatar, banner, biography, and accent colour also require the instance-configured `feature_per_guild_profiles` [limit](/http-api/instance/#limit-keys) for the calling account. Fluxer discards any of those fields supplied without that capability and applies every other field. Pronouns, `profile_flags`, and `mention_flags` do not require it.
+Guild avatar, banner, biography, and accent colour also require the instance-configured `feature_per_guild_profiles` [limit](/http-api/instance/#limit-keys) for the calling account. sanalyer discards any of those fields supplied without that capability and applies every other field. Pronouns, `profile_flags`, and `mention_flags` do not require it.
 
 A `channel_id` destination must be a guild voice channel, and the caller must hold both [VIEW_CHANNEL](/http-api/permissions/) and [CONNECT](/http-api/permissions/) there. Supplying `channel_id` for a member with no live voice connection returns 400 `USER_NOT_IN_VOICE`. Supplying `mute` or `deaf` for such a member succeeds, stores the flags, and emits no voice Dispatch.
 
-Fluxer rejects a supplied `communication_disabled_until` with 403 `MISSING_PERMISSIONS` before any other timeout check. [Modify guild member](#modify-guild-member) addressed at the caller's own user ID is rejected the same way.
+sanalyer rejects a supplied `communication_disabled_until` with 403 `MISSING_PERMISSIONS` before any other timeout check. [Modify guild member](#modify-guild-member) addressed at the caller's own user ID is rejected the same way.
 
 :::caution[A profile change limit fails the whole request]
 Avatar, banner, biography, pronouns, and accent colour each have a limit of 25 changes per 30 minutes for each authenticated user and guild. Exhausting one returns 400 `INVALID_FORM_BODY` and applies no field at all.
@@ -282,7 +282,7 @@ The target's own sessions always receive the Dispatch. Other guild sessions rece
 
 Supplying `channel_id` moves or disconnects every voice connection the member holds, or only the one named by `connection_id`. It records one [`MEMBER_MOVE`](/http-api/guild-audit-logs/#audit-actions) or [`MEMBER_DISCONNECT`](/http-api/guild-audit-logs/#audit-actions) audit entry for the whole request, however many connections it touched. A move into the channel the member already occupies records no entry. It emits [Voice State Update](/gateway/events/#voice-state-update) to sessions that can view the affected channel. Supplying `mute` or `deaf` updates the membership, records no separate audit entry, and emits the same voice Dispatch once for each live connection.
 
-Fluxer emits [Guild Audit Log Entry Create](/gateway/events/#guild-audit-log-entry-create) for every audit entry. A request that fails after uploading a new avatar or banner leaves the previous asset in place.
+sanalyer emits [Guild Audit Log Entry Create](/gateway/events/#guild-audit-log-entry-create) for every audit entry. A request that fails after uploading a new avatar or banner leaves the previous asset in place.
 
 ### Rate limit
 
@@ -306,7 +306,7 @@ A blocked `nick` returns 403 `CONTENT_BLOCKED`.
 
 Hierarchy authority over the target is not checked for `roles`, so a caller who outranks every affected role can replace the role set of a member who outranks them. The everyone role in the array is rejected with the field code `INVALID_ROLE_ID`.
 
-Fluxer never checks the target's own permissions in the destination, so a member can be moved into a channel they could not join themselves. Disconnecting sets `channel_id` to null and requires the same permission.
+sanalyer never checks the target's own permissions in the destination, so a member can be moved into a channel they could not join themselves. Disconnecting sets `channel_id` to null and requires the same permission.
 
 Supplying `channel_id` for a target with no live voice connection, or a `connection_id` that is not one of the target's own, returns 400 `USER_NOT_IN_VOICE`. Supplying `mute` or `deaf` for such a target succeeds and stores the flags. A destination that does not exist returns the field code `CHANNEL_DOES_NOT_EXIST`, and one that is not a voice channel `CHANNEL_MUST_BE_VOICE`. A destination that is [peer-to-peer](/gateway/events/#peer-to-peer-voice) also returns 400 `USER_NOT_IN_VOICE`.
 
@@ -319,7 +319,7 @@ A caller addressing their own user ID here follows the self-targeted rules of [M
 :::
 
 :::caution[A blocklisted `bio` or `pronouns` returns 403]
-A request that supplies a blocked `bio` or `pronouns` for another member fails with `CONTENT_BLOCKED`, even though Fluxer never writes those fields for another member.
+A request that supplies a blocked `bio` or `pronouns` for another member fails with `CONTENT_BLOCKED`, even though sanalyer never writes those fields for another member.
 :::
 
 ### Path parameters
@@ -393,9 +393,9 @@ Rejoining within one year resumes any communication timeout that has not expired
 
 The member loses their guild profile and roles. Read states, guild settings and guild folders are unchanged.
 
-Removal from the guild removes every membership in its threads. Fluxer emits a [Thread Members Update](/gateway/threads/#thread-members-update) for each of them, as [Thread member flags](/http-api/thread-members/#thread-member-flags) states.
+Removal from the guild removes every membership in its threads. sanalyer emits a [Thread Members Update](/gateway/threads/#thread-members-update) for each of them, as [Thread member flags](/http-api/thread-members/#thread-member-flags) states.
 
-Fluxer records a [`MEMBER_KICK`](/http-api/guild-audit-logs/#audit-actions) audit entry with no change list and emits [Guild Audit Log Entry Create](/gateway/events/#guild-audit-log-entry-create). Remaining guild sessions receive [Guild Member Remove](/gateway/events/#guild-member-remove), subject to [event filtering](/gateway/event-filtering/). The removed account's sessions receive [Guild Delete](/gateway/events/#guild-delete).
+sanalyer records a [`MEMBER_KICK`](/http-api/guild-audit-logs/#audit-actions) audit entry with no change list and emits [Guild Audit Log Entry Create](/gateway/events/#guild-audit-log-entry-create). Remaining guild sessions receive [Guild Member Remove](/gateway/events/#guild-member-remove), subject to [event filtering](/gateway/event-filtering/). The removed account's sessions receive [Guild Delete](/gateway/events/#guild-delete).
 
 ### Rate limit
 

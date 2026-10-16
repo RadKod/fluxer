@@ -6,7 +6,7 @@ description: Report flows, safety report submission, the reason catalogue, and t
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A safety report tells moderators that a message, a user profile, or a [feed](/http-api/feed/) post or comment broke the rules, and any user account can file one. Before a message or user report is filed, the reporter answers a short series of questions. Fluxer serves those questions as a [report flow](#report-flows), and the answers decide the [reason](#report-reasons) the report is filed under. Digital Services Act notices need no account, only a verified email address, and they can also name a guild. The [Admin Reports API](/admin-api/reports/) covers reading, triaging, and closing a stored report.
+A safety report tells moderators that a message, a user profile, or a [feed](/http-api/feed/) post or comment broke the rules, and any user account can file one. Before a message or user report is filed, the reporter answers a short series of questions. sanalyer serves those questions as a [report flow](#report-flows), and the answers decide the [reason](#report-reasons) the report is filed under. Digital Services Act notices need no account, only a verified email address, and they can also name a guild. The [Admin Reports API](/admin-api/reports/) covers reading, triaging, and closing a stored report.
 
 | Operation | Credential | Target |
 | --- | --- | --- |
@@ -19,17 +19,17 @@ A safety report tells moderators that a message, a user profile, or a [feed](/ht
 | [Verify DSA report email](#verify-dsa-report-email) | None | A verification code, exchanged for a ticket |
 | [Create DSA report](#create-dsa-report) | A ticket | A message, user, or guild |
 
-Fluxer discards a body member that no schema here defines, so a misspelt member is dropped without an error. A body that is not parseable JSON returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_FORMAT` at the `body` path.
+sanalyer discards a body member that no schema here defines, so a misspelt member is dropped without an error. A body that is not parseable JSON returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_FORMAT` at the `body` path.
 
 :::caution[A submitted report is durable evidence]
-Fluxer copies the reported content when the report is submitted. A message report also copies the surrounding conversation and the bytes of every attachment in it, and every report copies the reported profile with its images. Deleting the message, editing the profile, or leaving the guild afterwards does not remove that snapshot. The snapshot is kept until [report retention](/admin-api/reports/#report-retention) removes it, which happens no sooner than 184 days after the report is resolved.
+sanalyer copies the reported content when the report is submitted. A message report also copies the surrounding conversation and the bytes of every attachment in it, and every report copies the reported profile with its images. Deleting the message, editing the profile, or leaving the guild afterwards does not remove that snapshot. The snapshot is kept until [report retention](/admin-api/reports/#report-retention) removes it, which happens no sooner than 184 days after the report is resolved.
 :::
 
 ## Access rules
 
 [Submit message report flow](#submit-message-report-flow), [Submit user report flow](#submit-user-report-flow), [Report feed post](#report-feed-post), and [Report feed comment](#report-feed-comment) accept a user session token only. A bot token and an OAuth2 bearer credential are both rejected with 403 `ACCESS_DENIED`. The account must also be claimed and email-verified. An account holding no password and no SSO identity is rejected with 400 `UNCLAIMED_ACCOUNT_CANNOT_SUBMIT_REPORTS`, and one whose address is unverified with 403 `REPORT_EMAIL_VERIFICATION_REQUIRED`. An account with the report ban flag is rejected with 403 `REPORT_BANNED`.
 
-[Get report flow](#get-report-flow) and the Digital Services Act routes require no credential. Fluxer still resolves a valid credential presented anyway, so the request draws on that account's rate limit allowance, and Get report flow renders the copy in that account's saved locale unless the request names one.
+[Get report flow](#get-report-flow) and the Digital Services Act routes require no credential. sanalyer still resolves a valid credential presented anyway, so the request draws on that account's rate limit allowance, and Get report flow renders the copy in that account's saved locale unless the request names one.
 
 Every route bucket is keyed by the authenticated user ID when a credential resolves and by client IP address otherwise. Report creation also limits how many reports one reporter creates each hour. The rate limit section of each route that creates a report lists those limits.
 
@@ -37,7 +37,7 @@ Every route bucket is keyed by the authenticated user ID when a credential resol
 
 The instance-wide content filter screens the JSON body of [Submit message report flow](#submit-message-report-flow) and [Submit user report flow](#submit-user-report-flow) before the route runs. A string of at least 3 characters matching the instance phrase blocklist, or a URL matching the instance URL blocklist, is rejected with 403 `CONTENT_BLOCKED`. Every string those two bodies define is an ID, a hash, or a locale, and the filter exempts all of them, so only a member the schema does not define can be blocked.
 
-Every route under `/reports/dsa` is exempt by path, so Fluxer never screens a Digital Services Act notice. A notice about hate speech or a phishing link has to quote the slur or the URL it reports.
+Every route under `/reports/dsa` is exempt by path, so sanalyer never screens a Digital Services Act notice. A notice about hate speech or a phishing link has to quote the slur or the URL it reports.
 
 :::note[Screening precedes bucket and credential checks]
 A blocked body returns `CONTENT_BLOCKED`, not `RATE_LIMITED` or `UNAUTHORIZED`.
@@ -55,7 +55,7 @@ Two kinds of repeat are refused with 409 `CONFLICT`:
 
 Nothing deduplicates a Digital Services Act notice.
 
-Fluxer tells the reporter when a moderator resolves the report. A reporter with an account receives a system direct message, and an email when the account has an address. A Digital Services Act notice gets a receipt email at its verified address as soon as it is filed, and a decision email at the same address when it is resolved. [Update report](/admin-api/reports/#update-report) describes when no notice is sent.
+sanalyer tells the reporter when a moderator resolves the report. A reporter with an account receives a system direct message, and an email when the account has an address. A Digital Services Act notice gets a receipt email at its verified address as soon as it is filed, and a decision email at the same address when it is resolved. [Update report](/admin-api/reports/#update-report) describes when no notice is sent.
 
 ### Profile snapshot
 
@@ -65,11 +65,11 @@ Every report about a user, a guild, or a message an account sent also keeps a co
 - The account's guild nickname, bio, pronouns, join time, avatar, and banner, when the report names a guild the account is a member of.
 - The guild's name, vanity URL code, icon, banner, and splash, for a report about a guild.
 
-Fluxer copies each image into report storage. An image whose copy fails keeps only its hash, and the report is still filed. An account whose deletion has started is recorded by ID alone. Moderators read the snapshot as the [report profile snapshot object](/admin-api/reports/#report-profile-snapshot-object).
+sanalyer copies each image into report storage. An image whose copy fails keeps only its hash, and the report is still filed. An account whose deletion has started is recorded by ID alone. Moderators read the snapshot as the [report profile snapshot object](/admin-api/reports/#report-profile-snapshot-object).
 
 ## Report flows
 
-A report flow is the set of screens a reporter moves through before a report is filed. Fluxer serves one flow for each [target type](#report-flow-target-types). [Get report flow](#get-report-flow) returns every screen of it in one response, already translated, so a client renders the whole flow from that response and hard-codes no question.
+A report flow is the set of screens a reporter moves through before a report is filed. sanalyer serves one flow for each [target type](#report-flow-target-types). [Get report flow](#get-report-flow) returns every screen of it in one response, already translated, so a client renders the whole flow from that response and hard-codes no question.
 
 ### Screens
 
@@ -101,11 +101,11 @@ A walk starts at `start_screen_id`. Each screen the reporter passes through adds
 
 The walk follows `screen` outcomes and `next_screen_id` until an option or a checklist reaches a `submit` outcome. The client then shows a summary and submits every step in order. A `link` outcome opens its `url` and adds no step.
 
-An `end` outcome finishes the walk without a report. The client shows the [notice](#report-flow-notice-object) it names, or a thank-you screen when it names none. Such a walk is never submitted, and Fluxer rejects a submission that contains one.
+An `end` outcome finishes the walk without a report. The client shows the [notice](#report-flow-notice-object) it names, or a thank-you screen when it names none. Such a walk is never submitted, and sanalyer rejects a submission that contains one.
 
 The report is filed under the `reason` of the final `submit` outcome. A few checklist items name a more specific reason of their own, which takes precedence, and the flow object does not expose it.
 
-Fluxer checks a submitted walk against the current variant. The first step must be the start screen, each later step must be the screen the previous answer led to, every answer must exist on its screen, and the last answer must reach a `submit` outcome.
+sanalyer checks a submitted walk against the current variant. The first step must be the start screen, each later step must be the screen the previous answer led to, every answer must exist on its screen, and the last answer must reach a `submit` outcome.
 
 ### Revision hash
 
@@ -122,7 +122,7 @@ An option or item ID never changes meaning once it ships, so a valid walk from a
 
 ### Locale
 
-Fluxer renders the copy in one [supported locale](/topics/locales/#supported-locales). [Get report flow](#get-report-flow) uses its `locale` query parameter when one is sent, and the [negotiated](/topics/locales/#negotiation) request locale otherwise. The response `locale` names the locale used, and the copy names the instance's own product name.
+sanalyer renders the copy in one [supported locale](/topics/locales/#supported-locales). [Get report flow](#get-report-flow) uses its `locale` query parameter when one is sent, and the [negotiated](/topics/locales/#negotiation) request locale otherwise. The response `locale` names the locale used, and the copy names the instance's own product name.
 
 Resolving a tag never fails. Matching ignores case and accepts underscores in place of hyphens, `nb` and `nn` resolve to `no`, and a bare language resolves to its preferred regional locale, so `pt` becomes `pt-BR`. A tag that matches nothing resolves to `en-US`.
 
@@ -160,7 +160,7 @@ An abridged user flow:
   "revision_hash": "9c41d2a07e5b18f3",
   "locale": "en-US",
   "start_screen_id": "profile_intro",
-  "guidelines_url": "https://fluxer.app/guidelines",
+  "guidelines_url": "https://sanalyer.com/kullanim-kosullari",
   "screens": [
     {
       "id": "profile_intro",
@@ -170,8 +170,8 @@ An abridged user flow:
       "options": [
         {
           "id": "learn_more",
-          "label": "Read the Fluxer Community Guidelines",
-          "outcome": {"type": "link", "screen_id": null, "reason": null, "notice_id": null, "url": "https://fluxer.app/guidelines"}
+          "label": "Read the sanalyer Community Guidelines",
+          "outcome": {"type": "link", "screen_id": null, "reason": null, "notice_id": null, "url": "https://sanalyer.com/kullanim-kosullari"}
         }
       ],
       "options_heading": "Learn more",
@@ -201,7 +201,7 @@ An abridged user flow:
     {
       "id": "need_more_info_profile",
       "title": "We can't act on this yet",
-      "body": "To review this, we need to see where they say how old they are or make it clear they're under Fluxer's minimum age. Report that message or profile instead."
+      "body": "To review this, we need to see where they say how old they are or make it clear they're under sanalyer's minimum age. Report that message or profile instead."
     }
   ]
 }
@@ -311,7 +311,7 @@ One answered screen in a submission. A submission lists its steps in walk order.
 
 ## Report object
 
-Fluxer returns this receipt when it records a submission.
+sanalyer returns this receipt when it records a submission.
 
 ### Structure
 
@@ -355,7 +355,7 @@ The fixed acknowledgement returned by [Send DSA report email](#send-dsa-report-e
 
 ## Ticket object
 
-The single credential [Create DSA report](#create-dsa-report) accepts. Fluxer binds the ticket to the verified address it was issued for, and that address becomes the reporter identity on the resulting notice.
+The single credential [Create DSA report](#create-dsa-report) accepts. sanalyer binds the ticket to the verified address it was issued for, and that address becomes the reporter identity on the resulting notice.
 
 ### Structure
 
@@ -541,7 +541,7 @@ No instance configuration changes this registry. A value outside it returns 400 
 
 Returns the [report flow object](#report-flow-object) for one target type and surface, with its copy rendered in one locale.
 
-The response has `Cache-Control: private, no-cache` and `Vary: Accept-Language`. A client can keep the flow for a session, and `no-cache` makes the refetch after 409 `REPORT_FLOW_OUTDATED` reach Fluxer instead of a stored copy.
+The response has `Cache-Control: private, no-cache` and `Vary: Accept-Language`. A client can keep the flow for a session, and `no-cache` makes the refetch after 409 `REPORT_FLOW_OUTDATED` reach sanalyer instead of a stored copy.
 
 ### Path parameters
 
@@ -591,7 +591,7 @@ A message a bot sent is reported as the bot account, like any other account. A m
 - A message not stored under `channel_id`, a message with neither an author account nor a webhook, and any message a reporter without [READ_MESSAGE_HISTORY](/http-api/permissions/) cannot reach all return 404 `UNKNOWN_MESSAGE`.
 - An author whose account no longer exists returns 404 `UNKNOWN_USER`.
 
-Fluxer checks the answers right after the claimed account and verified email checks, before the report ban check and before it reads the channel. An invalid walk still counts against the `report:create` bucket but uses none of the further allowances below.
+sanalyer checks the answers right after the claimed account and verified email checks, before the report ban check and before it reads the channel. An invalid walk still counts against the `report:create` bucket but uses none of the further allowances below.
 
 :::note[Reporting without Read Message History]
 A reporter without `READ_MESSAGE_HISTORY` can report a message sent at or after the earlier of two points: the guild's message history cutoff and the time the reporter joined the guild. Every message since the join reached the reporter live, so a guild that sets no cutoff still leaves those messages reportable. This window applies to reports only, and message history reads keep their own rules.
@@ -666,7 +666,7 @@ Files a report about another user's profile from the reporter's answers to the `
 - A `user_id` that resolves to no account returns 404 `UNKNOWN_USER`.
 - A `guild_id` that resolves to no guild, or to a guild the reporter is not a member of, returns 404 `UNKNOWN_GUILD`.
 
-Fluxer checks the answers right after the claimed account and verified email checks, before the report ban check and before it looks up the user. An invalid walk still counts against the `report:create` bucket but not against the per-reporter allowance below.
+sanalyer checks the answers right after the claimed account and verified email checks, before the report ban check and before it looks up the user. An invalid walk still counts against the `report:create` bucket but not against the per-reporter allowance below.
 
 ### JSON body
 
@@ -707,7 +707,7 @@ The operation writes one report. It records the reporter's account ID, and the r
 
 10 requests per hour, on the `report:create` bucket, which is shared with [Submit message report flow](#submit-message-report-flow).
 
-One reporter creates at most 5 reports each hour across all report types. Fluxer checks that allowance right after the report ban check and before it looks up the user, so a reporter who has used it up receives 429 even for a duplicate. Otherwise a duplicate submission returns 409 `CONFLICT` without consuming it.
+One reporter creates at most 5 reports each hour across all report types. sanalyer checks that allowance right after the report ban check and before it looks up the user, so a reporter who has used it up receives 429 even for a duplicate. Otherwise a duplicate submission returns 409 `CONFLICT` without consuming it.
 
 ## Report feed post
 
@@ -840,7 +840,7 @@ The code expires after 10 minutes. Codes use uppercase letters and digits in `XX
 
 A new code can go to the same address once a minute has passed since the last one, or once that code has expired. It replaces the previous code and restarts the 10 minute window. A request within the minute returns 429 with `retry_after` and leaves the code already sent usable.
 
-When the provider refuses the message, or the address is recorded as a hard bounce, Fluxer keeps no code for the address, so a code sent to it earlier stops working too, and returns 503 `SERVICE_UNAVAILABLE`. That attempt still counts towards the 3 sends an address gets each hour.
+When the provider refuses the message, or the address is recorded as a hard bounce, sanalyer keeps no code for the address, so a code sent to it earlier stops working too, and returns 503 `SERVICE_UNAVAILABLE`. That attempt still counts towards the 3 sends an address gets each hour.
 
 The operation creates no ticket and emits no Gateway Dispatch.
 
@@ -904,7 +904,7 @@ A ticket that is unknown or past its one hour expiry returns 400 `INVALID_DSA_TI
 | (c) The name and email address of the reporter | `reporter_full_legal_name`, `ticket` |
 | (d) A statement of good faith | `good_faith_confirmed` |
 
-A notice whose walk resolves to the `child_safety` [category](#report-categories) may omit the legal name, as Article 16(2)(c) allows for child sexual abuse material. Every other notice needs one, and Fluxer checks this after it resolves the walk.
+A notice whose walk resolves to the `child_safety` [category](#report-categories) may omit the legal name, as Article 16(2)(c) allows for child sexual abuse material. Every other notice needs one, and sanalyer checks this after it resolves the walk.
 
 ### JSON body
 
@@ -935,7 +935,7 @@ A notice whose walk resolves to the `child_safety` [category](#report-categories
 | message_link<sup>1</sup> | string | The link to the reported message (1-2048 characters) |
 | reported_user_tag?<sup>2</sup> | string | The message author's tag in `username#1234` form, or the bare username on an instance without user tags (1-37 characters) |
 
-<sup>1</sup> Parsed as an absolute URL whose path is `/channels/&lt;guild_id&gt;/&lt;channel_id&gt;/&lt;message_id&gt;`, with `@me` in place of the guild ID for a direct message or group DM. Fluxer ignores the origin
+<sup>1</sup> Parsed as an absolute URL whose path is `/channels/&lt;guild_id&gt;/&lt;channel_id&gt;/&lt;message_id&gt;`, with `@me` in place of the guild ID for a direct message or group DM. sanalyer ignores the origin
 
 <sup>2</sup> When supplied it must be the tag of the account that authored the linked message. A message a webhook sent has no author account, so no tag matches it
 
@@ -988,7 +988,7 @@ A user notice records the reported user's ID, avatar hash, and [profile snapshot
 
 Every notice also records `additional_info`, the reporter's legal name when one was supplied, the country of residence, the good faith confirmation, and the verified address behind the ticket. It stores the reason, its category, the steps, the revision hash, and the resolved locale like any flow report. A notice has no account ID even when the request presented a credential.
 
-Once the notice is stored, Fluxer emails a receipt with the report ID to the verified address. A receipt that cannot be sent is logged and does not fail the request. When a moderator resolves the notice, the same address receives the decision.
+Once the notice is stored, sanalyer emails a receipt with the report ID to the verified address. A receipt that cannot be sent is logged and does not fail the request. When a moderator resolves the notice, the same address receives the decision.
 
 ### Rate limit
 

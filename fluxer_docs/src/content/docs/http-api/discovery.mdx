@@ -10,7 +10,7 @@ Discovery is the public directory of guilds any account can browse and join. A g
 
 [Preview discovery channel](#preview-discovery-channel) and [Join discovery guild](#join-discovery-guild) are user-only and reject a bot token with 403 `ACCESS_DENIED`. Every other route accepts a user session token or a bot token. Besides that rejection, a bearer credential is the only credential that produces `ACCESS_DENIED` on any route here. Where a response table below pairs a revoked account with `ACCESS_DENIED`, a session, bot, or bearer token that no longer resolves to an account returns 401 `UNAUTHORIZED` instead.
 
-On a guild an operator has marked unavailable, Fluxer refuses [Apply for discovery](#apply-for-discovery), [Edit discovery application](#edit-discovery-application), [Withdraw discovery application](#withdraw-discovery-application), and [Get discovery status](#get-discovery-status) with 403 `MISSING_ACCESS` before the route runs. The gate does not cover [Preview discovery channel](#preview-discovery-channel) or [Join discovery guild](#join-discovery-guild).
+On a guild an operator has marked unavailable, sanalyer refuses [Apply for discovery](#apply-for-discovery), [Edit discovery application](#edit-discovery-application), [Withdraw discovery application](#withdraw-discovery-application), and [Get discovery status](#get-discovery-status) with 403 `MISSING_ACCESS` before the route runs. The gate does not cover [Preview discovery channel](#preview-discovery-channel) or [Join discovery guild](#join-discovery-guild).
 
 The routes under `/v1/guilds/{guild_id}/discovery` require [MANAGE_GUILD](/http-api/permissions/), which is an [elevated permission](/http-api/permissions/#elevated-permissions). While the guild [MFA level](/http-api/guilds/#mfa-levels) is elevated, a caller other than the owner also needs an enrolled authenticator, and receives 400 `TWO_FACTOR_REQUIRED` without one. A guild that does not exist returns 404 `UNKNOWN_GUILD`. Both a non-member and a member without the permission return 403 `MISSING_PERMISSIONS`. The routes answer 503 `SERVICE_UNAVAILABLE` when the check cannot be admitted, and 504 `GATEWAY_TIMEOUT` when it does not answer in time.
 
@@ -264,7 +264,7 @@ A guild holding a pending or approved application cannot submit another. A guild
 
 ## Supported primary languages
 
-Fluxer stores one primary language on each listing, drawn from the closed set below. The set is specific to discovery, and the client [locale registry](/topics/locales/#supported-locales) does not apply here. An application that supplies no language is stored as `en-US`.
+sanalyer stores one primary language on each listing, drawn from the closed set below. The set is specific to discovery, and the client [locale registry](/topics/locales/#supported-locales) does not apply here. An application that supplies no language is stored as `en-US`.
 
 | Value | Name | Native name |
 | --- | --- | --- |
@@ -304,7 +304,7 @@ Fluxer stores one primary language on each listing, drawn from the closed set be
 
 ## Custom tags
 
-A listing has up to ten custom tags. Fluxer normalises a tag by trimming it, lowercasing it, and collapsing each run of whitespace to one space. Both the submitted string and its normalised form must be 2 through 30 characters, so a submitted string longer than 30 characters is rejected even when trimming would bring it inside the bound. The normalised form must begin with a letter or digit and otherwise contain only letters, digits, spaces, hyphens, underscores, plus signs, and ampersands.
+A listing has up to ten custom tags. sanalyer normalises a tag by trimming it, lowercasing it, and collapsing each run of whitespace to one space. Both the submitted string and its normalised form must be 2 through 30 characters, so a submitted string longer than 30 characters is rejected even when trimming would bring it inside the bound. The normalised form must begin with a letter or digit and otherwise contain only letters, digits, spaces, hyphens, underscores, plus signs, and ampersands.
 
 Duplicate normalised values collapse to the first occurrence. A submitted array longer than ten entries fails body validation. An entry that fails these constraints is rejected against its own index.
 

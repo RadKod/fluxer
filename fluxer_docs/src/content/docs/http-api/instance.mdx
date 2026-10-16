@@ -8,7 +8,7 @@ import RouteHeader from '@/components/RouteHeader.astro';
 
 Discover a deployment's endpoints, available features, and [limits](#limit-keys), look up the client's approximate location, download its OpenAPI document, or choose how members of a new deployment sign in.
 
-[Get instance discovery](#get-instance-discovery) is the entry point of the API. A client that knows only a Fluxer origin reads `/.well-known/fluxer` first, and that one unauthenticated response has every field of the [instance discovery object](#instance-discovery-object). Those values include the API base URLs, the [main Gateway](/gateway/overview/) WebSocket URL, and the [Media Proxy](/media-proxy/overview/) base URL. They override the [endpoint path defaults](#instance-endpoints-object) a deployment would otherwise serve from its canonical public origin.
+[Get instance discovery](#get-instance-discovery) is the entry point of the API. A client that knows only a sanalyer origin reads `/.well-known/fluxer` first, and that one unauthenticated response has every field of the [instance discovery object](#instance-discovery-object). Those values include the API base URLs, the [main Gateway](/gateway/overview/) WebSocket URL, and the [Media Proxy](/media-proxy/overview/) base URL. They override the [endpoint path defaults](#instance-endpoints-object) a deployment would otherwise serve from its canonical public origin.
 
 Every route here is unauthenticated. A credential changes no response body. One that resolves to an account moves the [rate limit bucket](/topics/rate-limits/) from the client IP address onto that account.
 
@@ -64,7 +64,7 @@ Each value is an absolute URL supplied by the operator. A value can be a bare or
 | webapp | string | Web application base URL |
 | docs? | string | Documentation website base URL |
 
-<sup>1</sup> Both fields are the same configured client API endpoint, which the first-party web application reads. `api_public` is the separately configured public API endpoint, which a bot, a library, or any other third-party client reads. A deployment can serve the client API and the public API from one origin, and the instance Fluxer hosts serves them from different origins
+<sup>1</sup> Both fields are the same configured client API endpoint, which the first-party web application reads. `api_public` is the separately configured public API endpoint, which a bot, a library, or any other third-party client reads. A deployment can serve the client API and the public API from one origin, and the upstream project’s hosted instance serves them from different origins
 
 <sup>2</sup> The value is the configured Gateway endpoint and its scheme is `ws` or `wss` as the operator configured it
 
@@ -138,7 +138,7 @@ Deployment-wide switches a client reads before it offers a feature, plus whether
 | Field | Type | Description |
 | --- | --- | --- |
 | voice_enabled | boolean | Whether voice and video calling is enabled |
-| stripe_enabled<sup>2</sup> | boolean | Whether premium purchases through Stripe [billing](/http-api/billing/) are available |
+| stripe_enabled<sup>2</sup> | boolean | Whether premium purchases through Stripe billing are available |
 | premium_enabled<sup>3</sup> | boolean | Whether the deployment has a premium tier, so premium state, gifts and perks apply |
 | stripe_serviceable<sup>4</sup> | boolean | Whether existing Stripe subscriptions can be managed, cancelled and billed |
 | self_hosted | boolean | Whether this deployment identifies itself as self-hosted |
@@ -375,7 +375,7 @@ Each key names one limit. A key whose name begins with `feature_` is a feature g
 | feature_guild_create | Create communities while the instance restricts community creation, in user scope |
 | feature_higher_video_quality | Access to higher video streaming quality, in user scope |
 | feature_mature_content_settings | Offer mature content and content warning settings; 0 hides unset ones while stored values keep working, in user scope |
-| feature_micupbot | Instance-wide: enable [MicupBOT](/http-api/guild-micupbot/); 0 stops processing and settings writes, in user scope |
+| feature_micupbot | Instance-wide: enable the [community bot](/http-api/guild-micupbot/); 0 stops processing and settings writes, in user scope |
 | feature_name_style | Set a name font and colour; 0 refuses setting one while removing stays allowed, in user scope |
 | feature_per_guild_profiles | Different profile per guild, in user scope |
 | feature_profile_theme | Paint the profile card with a two-colour gradient; 0 refuses setting one, in user scope |
@@ -573,7 +573,7 @@ The regions where the deployment gates access behind an age check or blocks it.
 
 ## Geolocation object
 
-The approximate location Fluxer resolved for the request, together with the regions where mature content is gated behind an age check or is unavailable.
+The approximate location sanalyer resolved for the request, together with the regions where mature content is gated behind an age check or is unavailable.
 
 ### Structure
 

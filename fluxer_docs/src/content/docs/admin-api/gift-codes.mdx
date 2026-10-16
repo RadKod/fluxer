@@ -16,7 +16,7 @@ A self-hosted instance whose [premium mode](/admin-api/instance/#premium-modes) 
 
 ## Gift duration units
 
-The unit and the quantity together define the span a redeemed code grants. At redemption, Fluxer adds the span to the entitlement anchor, which is the latest of the current time, the end of the redeemer's premium, and the end of any earlier gift extension. Lifetime gifts are not supported.
+The unit and the quantity together define the span a redeemed code grants. At redemption, sanalyer adds the span to the entitlement anchor, which is the latest of the current time, the end of the redeemer's premium, and the end of any earlier gift extension. Lifetime gifts are not supported.
 
 | Value | Description |
 | --- | --- |
@@ -73,7 +73,7 @@ Reading a code back requires presenting it to [Get gift](/http-api/gifts/#get-gi
 
 ### Side effects
 
-Each code is 32 characters drawn from the uppercase letters, the lowercase letters, and the digits. Fluxer creates it unredeemed and records the system account with ID `0` as its creator, which is the creator the [gift object](/http-api/gifts/#gift-object) reports to the redeemer.
+Each code is 32 characters drawn from the uppercase letters, the lowercase letters, and the digits. sanalyer creates it unredeemed and records the system account with ID `0` as its creator, which is the creator the [gift object](/http-api/gifts/#gift-object) reports to the redeemer.
 
 A failed request can leave some codes redeemable without returning them. Retrying can therefore create additional codes.
 

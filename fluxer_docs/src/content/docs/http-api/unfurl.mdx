@@ -8,7 +8,7 @@ import RouteHeader from '@/components/RouteHeader.astro';
 
 Unfurl resolves one URL into the preview a message would show for it. That preview is an array of [embed](/http-api/messages/#embed-object) objects, the same objects the ordinary message path attaches.
 
-The route is user-only. Fluxer rejects a bot token and an OAuth2 bearer credential with 403 `ACCESS_DENIED`.
+The route is user-only. sanalyer rejects a bot token and an OAuth2 bearer credential with 403 `ACCESS_DENIED`.
 
 ## Site resolvers
 
@@ -46,7 +46,7 @@ A resolved embed has at most one nested embed in `children`, and a nested embed 
 
 ## Network policy
 
-Fluxer applies its network policy before every fetch and again to every redirect target. It refuses a URL on any of these grounds:
+sanalyer applies its network policy before every fetch and again to every redirect target. It refuses a URL on any of these grounds:
 
 - The URL is empty, exceeds 8192 characters, or contains a control character.
 - The scheme is neither HTTP nor HTTPS.
@@ -58,7 +58,7 @@ Fluxer applies its network policy before every fetch and again to every redirect
 
 Resolution has a 12-second deadline. A fetch fails on a redirect loop, more than five redirects, or a document larger than 8 MiB.
 
-A refused or failed fetch does not by itself fail the operation. When Fluxer produces no embed, the response is 200 with an empty array.
+A refused or failed fetch does not by itself fail the operation. When sanalyer produces no embed, the response is 200 with an empty array.
 
 ## Cache behaviour
 
@@ -82,9 +82,9 @@ No permission applies.
 
 <sup>2</sup> A normalised value outside 1 through 2048 characters has the validation code `URL_LENGTH_INVALID`, and every other rejection at this boundary has `INVALID_URL_FORMAT`
 
-<sup>3</sup> The value begins with `http://` or `https://`. Fluxer rejects a value that has embedded credentials, omits a host, uses a protocol-relative form, or ends its host with a trailing dot
+<sup>3</sup> The value begins with `http://` or `https://`. sanalyer rejects a value that has embedded credentials, omits a host, uses a protocol-relative form, or ends its host with a trailing dot
 
-Outside a development instance, Fluxer also rejects a URL that omits a top-level domain.
+Outside a development instance, sanalyer also rejects a URL that omits a top-level domain.
 
 Explicit media can have `CONTAINS_EXPLICIT_MEDIA` in its [flags](/http-api/messages/#attachment-flags). Klipy media is not classified. Message previews in channels that permit explicit media can have different flags.
 
@@ -108,4 +108,4 @@ Resolution can fetch the URL and its linked media. It creates no message.
 
 ### Rate limit
 
-10 requests per minute for each authenticated user, on the `unfurl:debug` bucket. Fluxer charges the bucket before it checks the credential, and keys it on the caller's address when no valid credential is present. An unauthenticated caller therefore consumes it and receives 429 `RATE_LIMITED` once it is exhausted, not 401.
+10 requests per minute for each authenticated user, on the `unfurl:debug` bucket. sanalyer charges the bucket before it checks the credential, and keys it on the caller's address when no valid credential is present. An unauthenticated caller therefore consumes it and receives 429 `RATE_LIMITED` once it is exhausted, not 401.

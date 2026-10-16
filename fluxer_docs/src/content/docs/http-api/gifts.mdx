@@ -6,17 +6,17 @@ description: Gift code objects, duration units, item codes, public lookup, and o
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A gift is a code that grants premium to the account that redeems it. Until then it belongs to no account. [Create gift checkout](/http-api/billing/#create-gift-checkout) defines how one is bought. An [item code](#item-codes) grants a cosmetic item instead.
+A gift is a code that grants premium to the account that redeems it. Until then it belongs to no account. Create gift checkout defines how one is bought. An [item code](#item-codes) grants a cosmetic item instead.
 
 Every deployment registers both routes. A self-hosted instance answers them only in the `mirror` [premium mode](/admin-api/instance/#premium-modes), and returns 403 `FEATURE_NOT_AVAILABLE_SELF_HOSTED` in any other mode, as [deployment availability](/http-api/deployment-availability/#registered-routes-that-resolve-differently) describes. [Redeem gift](#redeem-gift) is user-only.
 
 :::caution[A code is a bearer credential]
-A gift records no recipient, so Fluxer binds the code to whichever eligible account presents it first. [Get gift](#get-gift) takes no credential and returns the full public record for any code. Treat an unredeemed code as a secret.
+A gift records no recipient, so sanalyer binds the code to whichever eligible account presents it first. [Get gift](#get-gift) takes no credential and returns the full public record for any code. Treat an unredeemed code as a secret.
 :::
 
 ## Gift object
 
-A gift records a duration. Fluxer computes the entitlement window at redemption time. For a positive quantity, the entitlement anchor is the latest of the current time, the redeemer's current premium end and their existing gift extension end.
+A gift records a duration. sanalyer computes the entitlement window at redemption time. For a positive quantity, the entitlement anchor is the latest of the current time, the redeemer's current premium end and their existing gift extension end.
 
 Both creation paths record a creator. A completed gift checkout records the purchaser. An Admin API gift records the system account with ID `0`, and no field names the administrator that requested it. No operation unredeems a code.
 
@@ -92,7 +92,7 @@ Reads a gift by its code. Returns the [gift](#gift-object) object on success.
 
 A code that does not exist and one that has been revoked both return 404 `UNKNOWN_GIFT_CODE`, so a revoked code is never distinguishable from one that was never issued. An [item code](#item-codes) returns the same 404.
 
-A chargeback or a refund for the purchase revokes the gift when [Receive Stripe webhook](/http-api/billing/#receive-stripe-webhook) processes it and the gift is still unredeemed. The gift also leaves [List current user gifts](/http-api/users/gifts/#list-current-user-gifts), so the buyer has no route that reports the reversal. A gift that was already redeemed when the same event arrives stays readable, and Fluxer recomputes the redeemer's entitlement from their remaining redeemed gifts.
+A chargeback or a refund for the purchase revokes the gift when Receive Stripe webhook processes it and the gift is still unredeemed. The gift also leaves [List current user gifts](/http-api/users/gifts/#list-current-user-gifts), so the buyer has no route that reports the reversal. A gift that was already redeemed when the same event arrives stays readable, and sanalyer recomputes the redeemer's entitlement from their remaining redeemed gifts.
 
 ### Path parameters
 
@@ -127,7 +127,7 @@ Redeems a gift for the authenticated account and returns 204 with an empty body.
 A consumed code receives 400 `GIFT_CODE_ALREADY_REDEEMED`. A code another request is redeeming receives 400 `STRIPE_GIFT_REDEMPTION_IN_PROGRESS`. A code that does not exist or has been revoked receives 404 `UNKNOWN_GIFT_CODE`.
 
 :::note[The refusal order differs from checkout]
-The claimed account, verified email and purchase flag refusals are evaluated before the lifetime refusal here. [Create subscription checkout](/http-api/billing/#create-subscription-checkout) evaluates the same groups in the opposite order.
+The claimed account, verified email and purchase flag refusals are evaluated before the lifetime refusal here. Create subscription checkout evaluates the same groups in the opposite order.
 :::
 
 :::caution[Redemption is single-use per code]
@@ -163,7 +163,7 @@ One redemption can be in flight for a code across the whole deployment, and a se
 
 The gift becomes redeemed, so [Get gift](#get-gift) reports `redeemed` as true and [List current user gifts](/http-api/users/gifts/#list-current-user-gifts) shows the redemption time and the redeemer to the buyer.
 
-A positive quantity extends premium from the latest of the current time, the current premium end and the existing gift extension end. When the account has a subscription with the payment provider and its subscription premium has not ended, Fluxer also extends that subscription's trial or billing period without proration. A provider failure can return 400 `STRIPE_ERROR` and leave the code unredeemed.
+A positive quantity extends premium from the latest of the current time, the current premium end and the existing gift extension end. When the account has a subscription with the payment provider and its subscription premium has not ended, sanalyer also extends that subscription's trial or billing period without proration. A provider failure can return 400 `STRIPE_ERROR` and leave the code unredeemed.
 
 A quantity of `0` grants lifetime Visionary premium and immediately cancels an active subscription without proration or a final invoice. When the gift record has a Visionary sequence number, the redeemer receives that number as their lifetime Visionary sequence and joins the [Visionary guild](/http-api/premium/#rejoin-visionary-guild).
 
