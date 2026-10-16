@@ -3,7 +3,7 @@
 
 import type {Channel} from '@app/features/channel/models/Channel';
 import type {GuildEmoji} from '@app/features/expressions/models/GuildEmoji';
-import {RoleIcon} from '@app/features/guild/components/RoleAppearance';
+import {RoleIcon, roleColorOnDarkHex} from '@app/features/guild/components/RoleAppearance';
 import roleAppearanceClasses from '@app/features/guild/components/RoleAppearance.module.css';
 import type {Guild} from '@app/features/guild/models/Guild';
 import {GuildRole} from '@app/features/guild/models/GuildRole';
@@ -291,6 +291,34 @@ describe('role appearance in message usernames', () => {
 		expect(renderUsername()).not.toContain('<img');
 		state.emoji = {id: '800', guildId: '999', animated: false};
 		expect(renderUsername()).not.toContain('<img');
+	});
+	it('gives a role colour that fails the dark floor a lifted dark-theme colour and keeps the stored one', () => {
+		const html = renderUsername();
+		expect(html).toContain('--role-color:#112233');
+		expect(html).toMatch(/--role-color-on-dark:#[0-9a-f]{6}/);
+		expect(html).toMatch(/--role-color-secondary-on-dark:#[0-9a-f]{6}/);
+		expect(html).toContain(roleAppearanceClasses.colored);
+		expect(renderUsername('#ffc83d')).not.toContain('--role-color-on-dark');
+	});
+	it('draws the lifted colour only under a dark theme class', () => {
+		document.head.querySelectorAll('style').forEach((sheet) => sheet.remove());
+		mountCssModule('src/features/guild/components/RoleAppearance.module.css', roleAppearanceClasses);
+		const html = document.documentElement;
+		// happy-dom keeps a computed style across a class change on <html>, so each theme renders afresh.
+		const colorUnder = (theme: string) => {
+			html.className = theme;
+			document.body.innerHTML = renderUsername('#212121');
+			return getComputedStyle(document.body.querySelector(`.${roleAppearanceClasses.colored}`)!).color;
+		};
+		try {
+			expect(colorUnder('theme-light')).toBe('#212121');
+			for (const theme of ['theme-coal', 'theme-dark', 'theme-dark_legacy']) {
+				expect(colorUnder(theme)).toBe(roleColorOnDarkHex('#212121'));
+			}
+		} finally {
+			html.className = '';
+			document.body.innerHTML = '';
+		}
 	});
 	it('preserves the preview color override without the member gradient', () => {
 		const html = renderUsername('#abcdef');

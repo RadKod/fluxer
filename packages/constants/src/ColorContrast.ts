@@ -152,3 +152,47 @@ export function isNameColorsReadableOnDark(colors: ReadonlyArray<number>): boole
 export function isNameColorsReadableOnLight(colors: ReadonlyArray<number>): boolean {
 	return isNameColorsReadableOn(colors, [NAME_COLOR_LIGHT_BACKGROUND], NAME_COLOR_LIGHT_MIN_CONTRAST);
 }
+
+// sanalyer: role colours are drawn as stored on the light theme; on the dark themes a colour that fails the name
+// floor is lifted toward white until it passes. The chat and member-list surfaces of coal/dark and dark_legacy.
+export const ROLE_COLOR_DARK_BACKGROUNDS: ReadonlyArray<number> = [
+	...NAME_COLOR_DARK_BACKGROUNDS,
+	0x0c0c0f,
+	0x0e0e12,
+	0x1d2026,
+];
+export const ROLE_COLOR_DARK_MIN_CONTRAST = NAME_COLOR_MIN_CONTRAST;
+
+function mixTowardWhite(color: number, t: number): number {
+	const mix = (shift: number) => Math.round(channel(color, shift) + (255 - channel(color, shift)) * t);
+	return (mix(16) << 16) | (mix(8) << 8) | mix(0);
+}
+
+function meetsContrast(color: number, backgrounds: ReadonlyArray<number>, minimum: number): boolean {
+	return backgrounds.every((background) => contrastRatio(color, background) >= minimum);
+}
+
+// The least lift toward white (same hue, mixed in sRGB) that makes the colour reach `minimum` against every
+// background; a colour that already does comes back unchanged. Only for drawing, never for stored colours.
+export function liftColorForContrast(color: number, backgrounds: ReadonlyArray<number>, minimum: number): number {
+	const base = color & 0xffffff;
+	if (meetsContrast(base, backgrounds, minimum)) return base;
+	if (!meetsContrast(0xffffff, backgrounds, minimum)) return 0xffffff;
+	let low = 0;
+	let high = 1;
+	for (let step = 0; step < 20; step++) {
+		const mid = (low + high) / 2;
+		if (meetsContrast(mixTowardWhite(base, mid), backgrounds, minimum)) high = mid;
+		else low = mid;
+	}
+	let lifted = mixTowardWhite(base, high);
+	while (!meetsContrast(lifted, backgrounds, minimum) && lifted !== 0xffffff) {
+		high = Math.min(1, high + 1 / 255);
+		lifted = mixTowardWhite(base, high);
+	}
+	return lifted;
+}
+
+export function roleColorOnDark(color: number): number {
+	return liftColorForContrast(color, ROLE_COLOR_DARK_BACKGROUNDS, ROLE_COLOR_DARK_MIN_CONTRAST);
+}
