@@ -57276,15 +57276,18 @@ msgstr "Mahalle Kahvesi"
 msgid "Yönetim Ofisi"
 msgstr "Yönetim Ofisi"
 
-#. Soundboard play error when the user played too many sounds in a short time; counts down to zero.
+#. Soundboard play error when the user played too many sounds in a short time;
+#. counts down to zero.
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "Slow down. Try again in {seconds} s."
 msgstr "Yavaşla, {seconds} sn sonra tekrar dene."
 
-#. Soundboard play error when the server refuses because the user is not in the channel or is deafened.
+#. Soundboard play error when the server refuses because the user is not in
+#. the channel or is deafened.
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "To play sounds, join this voice channel and undeafen yourself."
-msgstr "Ses çalmak için bu ses kanalında olmalı ve sağırlaştırmayı kapatmalısın."
+msgstr ""
+"Ses çalmak için bu ses kanalında olmalı ve sağırlaştırmayı kapatmalısın."
 
 #. Placeholder and label of the soundboard search box.
 #: src/features/voice/components/SoundboardPanel.tsx
@@ -57301,12 +57304,14 @@ msgstr "Aramayı temizle"
 msgid "No sounds match your search."
 msgstr "Aramana uyan bir ses yok."
 
-#. Button next to the soundboard search that shows the listening volume and mute switch.
+#. Button next to the soundboard search that shows the listening volume and
+#. mute switch.
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "Soundboard listening settings"
 msgstr "Ses paneli dinleme ayarları"
 
-#. Soundboard section listing the last sounds the user played in this community.
+#. Soundboard section listing the last sounds the user played in this
+#. community.
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "Recently played"
 msgstr "Son çalınanlar"
@@ -57316,7 +57321,8 @@ msgstr "Son çalınanlar"
 msgid "Favorite sounds"
 msgstr "Favoriler"
 
-#. Soundboard section header listing every sound of the community; {guild} is the community name.
+#. Soundboard section header listing every sound of the community; {guild} is
+#. the community name.
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "{guild} sounds"
 msgstr "{guild} sunucusunun sesleri"
@@ -57336,7 +57342,39 @@ msgstr "Favorilere ekle: {name}"
 msgid "Remove {name} from favorites"
 msgstr "Favorilerden çıkar: {name}"
 
-#. Heading in the screen-share picker when macOS screen recording permission is
+#. Shown under a name in the member and direct message lists while the user
+#. plays music in the Spotify app. {track} is "Artist – Song".
+#: src/features/game_activity/components/GameActivityRowStatus.tsx
+msgid "Listening to Spotify · {track}"
+msgstr "Spotify dinliyor · {track}"
+
+#. Profile label above the song the user is playing in the Spotify app (shown
+#. instead of Playing now).
+#: src/features/game_activity/components/GameActivityDisplay.tsx
+msgid "Listening to Spotify"
+msgstr "Spotify dinliyor"
+
+#. Switch in game activity settings; shares the song playing in the local
+#. Spotify app like a game.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx
+msgid "Show what I’m listening to on Spotify"
+msgstr "Spotify'da dinlediğini göster"
+
+#. Description under the Spotify switch. The song is read from the desktop
+#. Spotify app, never from a Spotify account. The macOS sentence refers to the
+#. system Automation permission prompt.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx
+msgid ""
+"Shows the song playing in the Spotify app on this device to the same people "
+"who see your game activity. No Spotify account link is needed. macOS may ask"
+" once whether this app can control Spotify."
+msgstr ""
+"Bu cihazdaki Spotify uygulamasında çalan şarkıyı oyun etkinliğini görenlere "
+"gösterir. Spotify hesabı bağlamak gerekmez. macOS bir kereliğine bu "
+"uygulamanın Spotify'ı kontrol etmesine izin vermeni isteyebilir."
+
+#. Heading in the screen-share picker when macOS screen recording permission
+#. is
 #. missing. Keep "Screen Recording" as macOS shows it in this language.
 #: src/features/voice/components/modals/screen_share_picker_modal/ScreenSharePickerDisplayPermissionPrompt.tsx
 msgid "Screen sharing needs Screen Recording permission on macOS"
@@ -57349,8 +57387,8 @@ msgstr "Ekran paylaşımı için macOS'ta Ekran Kaydı izni gerekli"
 #: src/features/voice/components/modals/screen_share_picker_modal/ScreenSharePickerDisplayPermissionPrompt.tsx
 msgid ""
 "Open System Settings → Privacy & Security → Screen Recording and allow "
-"{productName}. Then restart {productName2}: macOS only applies the permission "
-"after a restart."
+"{productName}. Then restart {productName2}: macOS only applies the "
+"permission after a restart."
 msgstr ""
 "Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı'nı açıp {productName} "
 "için izin verin. Sonra {productName2} uygulamasını yeniden başlatın; macOS "

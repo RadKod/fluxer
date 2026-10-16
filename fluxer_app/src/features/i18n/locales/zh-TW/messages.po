@@ -55104,7 +55104,39 @@ msgstr ""
 "and people you’ve blocked can’t see it. You can switch to Friends or Off at "
 "any time in Settings › Privacy › Show my game activity."
 
-#. Heading in the screen-share picker when macOS screen recording permission is
+#. Shown under a name in the member and direct message lists while the user
+#. plays music in the Spotify app. {track} is "Artist – Song".
+#: src/features/game_activity/components/GameActivityRowStatus.tsx
+msgid "Listening to Spotify · {track}"
+msgstr "Listening to Spotify · {track}"
+
+#. Profile label above the song the user is playing in the Spotify app (shown
+#. instead of Playing now).
+#: src/features/game_activity/components/GameActivityDisplay.tsx
+msgid "Listening to Spotify"
+msgstr "Listening to Spotify"
+
+#. Switch in game activity settings; shares the song playing in the local
+#. Spotify app like a game.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx
+msgid "Show what I’m listening to on Spotify"
+msgstr "Show what I’m listening to on Spotify"
+
+#. Description under the Spotify switch. The song is read from the desktop
+#. Spotify app, never from a Spotify account. The macOS sentence refers to the
+#. system Automation permission prompt.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx
+msgid ""
+"Shows the song playing in the Spotify app on this device to the same people "
+"who see your game activity. No Spotify account link is needed. macOS may ask"
+" once whether this app can control Spotify."
+msgstr ""
+"Shows the song playing in the Spotify app on this device to the same people "
+"who see your game activity. No Spotify account link is needed. macOS may ask"
+" once whether this app can control Spotify."
+
+#. Heading in the screen-share picker when macOS screen recording permission
+#. is
 #. missing. Keep "Screen Recording" as macOS shows it in this language.
 #: src/features/voice/components/modals/screen_share_picker_modal/ScreenSharePickerDisplayPermissionPrompt.tsx
 msgid "Screen sharing needs Screen Recording permission on macOS"
@@ -55117,9 +55149,9 @@ msgstr "Screen sharing needs Screen Recording permission on macOS"
 #: src/features/voice/components/modals/screen_share_picker_modal/ScreenSharePickerDisplayPermissionPrompt.tsx
 msgid ""
 "Open System Settings → Privacy & Security → Screen Recording and allow "
-"{productName}. Then restart {productName2}: macOS only applies the permission "
-"after a restart."
+"{productName}. Then restart {productName2}: macOS only applies the "
+"permission after a restart."
 msgstr ""
 "Open System Settings → Privacy & Security → Screen Recording and allow "
-"{productName}. Then restart {productName2}: macOS only applies the permission "
-"after a restart."
+"{productName}. Then restart {productName2}: macOS only applies the "
+"permission after a restart."

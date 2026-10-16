@@ -419,7 +419,7 @@ test('real_catalog_detection_ipc_preload_preserve_fresh_tuple_and_reject_failed_
 		assert.equal(h.catalog.matchGameByExe(game.exe[0].toUpperCase()).id, game.id);
 		const received = [];
 		const unsubscribe = h.api.onGameActivityState((state) => received.push(plain(state)));
-		assert.deepEqual(plain(await h.api.gameActivityGetCapabilities()), {version: 1, supported: true});
+		assert.deepEqual(plain(await h.api.gameActivityGetCapabilities()), {version: 1, supported: true, spotify: true});
 		await configureIntegration(h);
 		assert.equal(h.scans.length, 1);
 		assert.equal(h.timers.size, 1);
@@ -652,9 +652,13 @@ test('real_pipeline_local_rules_are_redacted_account_scoped_and_runtime_free', a
 });
 
 test('real_pipeline_unsupported_never_starts_process_or_timer', async () => {
-	const h = loadIntegration({platform: 'linux'});
+	const h = loadIntegration({platform: 'freebsd'});
 	try {
-		assert.deepEqual(plain(await h.api.gameActivityGetCapabilities()), {version: 1, supported: false});
+		assert.deepEqual(plain(await h.api.gameActivityGetCapabilities()), {
+			version: 1,
+			supported: false,
+			spotify: false,
+		});
 		assert.deepEqual(plain(await configureIntegration(h)), {state: 'unsupported'});
 		assert.deepEqual(plain(await h.api.gameActivityGetState({generation: 1})), {
 			generation: 1,

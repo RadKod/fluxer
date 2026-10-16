@@ -11,6 +11,7 @@ import {loadMainModule} from './WinShellTestHarness.mjs';
 const require = createRequire(import.meta.url);
 const esbuild = require('esbuild');
 const sourcePath = fileURLToPath(new URL('./GameActivityDetection.ts', import.meta.url));
+const probesPath = fileURLToPath(new URL('./GameActivityProbes.ts', import.meta.url));
 const plain = (value) => JSON.parse(JSON.stringify(value));
 const processes = (exe, pid = 10) => [{exe, pid}];
 const entries = new Map([
@@ -19,7 +20,7 @@ const entries = new Map([
 	['ünicode.exe', {id: 'unicode', name: 'Unicode'}],
 ]);
 
-function load({nativeModule, nativeError, onNativeLoad = () => {}, onChildProcess = () => {}} = {}) {
+function load({nativeModule, nativeError, onNativeLoad = () => {}, onChildProcess = () => {}, execFile} = {}) {
 	if (!existsSync(sourcePath)) {
 		return class MissingDetection {
 			configure() {
@@ -59,6 +60,43 @@ function load({nativeModule, nativeError, onNativeLoad = () => {}, onChildProces
 		supported: {'dynamic-import': false},
 	}).code;
 	const module = {exports: {}};
+	const childProcess = Object.fromEntries(
+		['exec', 'execFile', 'spawn', 'fork'].map((name) => [
+			name,
+			() => {
+				onChildProcess(name);
+				throw new Error('Child process prohibited');
+			},
+		]),
+	);
+	if (execFile) childProcess.execFile = execFile;
+	const probesModule = {exports: {}};
+	vm.runInNewContext(
+		esbuild.transformSync(readFileSync(probesPath, 'utf8'), {loader: 'ts', format: 'cjs', target: 'node20'}).code,
+		{
+			module: probesModule,
+			exports: probesModule.exports,
+			Buffer,
+			TextEncoder,
+			process,
+			require: (specifier) => {
+				if (specifier === 'node:child_process') return childProcess;
+				if (specifier === 'node:fs/promises')
+					return {
+						readdir: async () => {
+							onChildProcess('readdir');
+							throw new Error('File system prohibited');
+						},
+						readFile: async () => {
+							throw new Error('File system prohibited');
+						},
+					};
+				if (specifier === '@electron/common/GameActivityTypes') return commonModule.exports;
+				return require(specifier);
+			},
+		},
+		{filename: probesPath},
+	);
 	const sharedWinShell = loadMainModule(
 		'WinShell',
 		{
@@ -85,16 +123,8 @@ function load({nativeModule, nativeError, onNativeLoad = () => {}, onChildProces
 			clearInterval,
 			require: (specifier) => {
 				if (specifier === '@electron/main/WinShell') return sharedWinShell;
-				if (specifier === 'node:child_process')
-					return Object.fromEntries(
-						['exec', 'execFile', 'spawn', 'fork'].map((name) => [
-							name,
-							() => {
-								onChildProcess(name);
-								throw new Error('Child process prohibited');
-							},
-						]),
-					);
+				if (specifier === 'node:child_process') return childProcess;
+				if (specifier === '@electron/main/GameActivityProbes') return probesModule.exports;
 				if (specifier === '@fluxer/win-shell') {
 					onNativeLoad();
 					if (nativeError) throw nativeError;
@@ -103,6 +133,7 @@ function load({nativeModule, nativeError, onNativeLoad = () => {}, onChildProces
 				if (specifier === '@fluxer/game_catalog/src/GameCatalog') {
 					return {
 						matchGameByExe: (exe) => entries.get(exe),
+						matchGameByProcess: (exe) => entries.get(exe) ?? entries.get(`${exe}.exe`),
 						getGameById: (id) => [...entries.values()].find((e) => e.id === id),
 					};
 				}
@@ -117,7 +148,9 @@ function load({nativeModule, nativeError, onNativeLoad = () => {}, onChildProces
 	return module.exports.GameActivityDetection;
 }
 
-function harness({platform = 'win32', rules = {}, matcher, provider} = {}) {
+const supportedPlatforms = new Set(['win32', 'darwin', 'linux']);
+
+function harness({platform = 'win32', rules = {}, matcher, provider, nowPlaying} = {}) {
 	const calls = [];
 	const timers = new Map();
 	const events = [];
@@ -125,6 +158,7 @@ function harness({platform = 'win32', rules = {}, matcher, provider} = {}) {
 	let wall = 1_700_000_000_000;
 	let token = 0;
 	const childProcesses = [];
+	const nowPlayingCalls = [];
 	const Detector = load({onChildProcess: (name) => childProcesses.push(name)});
 	const detector = new Detector({
 		platform,
@@ -139,6 +173,11 @@ function harness({platform = 'win32', rules = {}, matcher, provider} = {}) {
 		matchGameByExe: matcher ?? ((exe) => entries.get(exe)),
 		getGameById: (id) => [...entries.values()].find((entry) => entry.id === id),
 		createToken: () => `opaque-token-${++token}`,
+		readNowPlaying: async () => {
+			nowPlayingCalls.push(clock);
+			if (!nowPlaying) throw new Error('Unexpected Spotify query');
+			return nowPlaying();
+		},
 		setInterval: (callback, delay) => {
 			const id = timers.size + 1;
 			timers.set(id, {callback, delay});
@@ -155,13 +194,15 @@ function harness({platform = 'win32', rules = {}, matcher, provider} = {}) {
 	return {
 		detector,
 		childProcesses,
+		nowPlayingCalls,
 		calls,
 		timers,
 		events,
 		rules,
-		configure: (account = 'account-a', generation = 1, enabled = true) => {
-			const result = detector.configure({account_id: account, generation, enabled});
-			assert.equal(result.state, platform === 'win32' ? 'ok' : 'unsupported');
+		configure: (account = 'account-a', generation = 1, enabled = true, spotify = undefined) => {
+			const request = {account_id: account, generation, enabled, ...(spotify === undefined ? {} : {spotify})};
+			const result = detector.configure(request);
+			assert.equal(result.state, supportedPlatforms.has(platform) ? 'ok' : 'unsupported');
 			return result;
 		},
 		advance: (ms) => {
@@ -215,8 +256,8 @@ test('disabled_account_never_reads_processes_and_reopen_requires_a_new_snapshot'
 	h.detector.stop();
 });
 
-test('nonwindows_is_unsupported', async () => {
-	const h = harness({platform: 'linux'});
+test('unknown_platform_is_unsupported', async () => {
+	const h = harness({platform: 'freebsd'});
 	assert.deepEqual(plain(h.configure()), {state: 'unsupported'});
 	await h.detector.poll();
 	assert.equal(h.detector.getState().state, 'unsupported');
@@ -630,4 +671,145 @@ test('reconfigure_during_native_import_queries_only_the_current_epoch', async ()
 	assert.equal(detector.getState().generation, 2);
 	assert.equal(detector.getState().activity.game_id, 'alpha');
 	await detector.stop();
+});
+
+for (const platform of ['darwin', 'linux']) {
+	test(`${platform}_detects_games_with_the_same_polling`, async () => {
+		const h = harness({platform, matcher: (exe) => entries.get(exe) ?? entries.get(`${exe}.exe`)});
+		h.configure();
+		assert.equal(h.calls.length, 1);
+		assert.equal([...h.timers.values()][0].delay, 15000);
+		await h.finish(processes('alpha').concat(processes('finder', 11)));
+		assert.equal(h.detector.getState().activity?.game_id, 'alpha');
+		await h.finish(processes('finder', 11));
+		assert.deepEqual(plain(h.detector.getState()), {generation: 1, state: 'idle', activity: null, fresh: true});
+		const candidates = plain(h.detector.listCandidates());
+		assert.equal(candidates.state, 'ok');
+		assert.deepEqual(
+			candidates.candidates.map((candidate) => candidate.label),
+			['Application 1'],
+		);
+		assert.deepEqual(plain(h.detector.listRules()), {state: 'ok', rules: []});
+		h.configure('account-a', 2, false);
+		assert.equal(h.timers.size, 0);
+		await h.detector.poll();
+		assert.equal(h.calls.length, 2);
+		assert.equal(h.detector.getState().state, 'disabled');
+	});
+}
+
+test('default_darwin_provider_reads_ps_only_while_enabled', async () => {
+	const commands = [];
+	const execFile = (file, args, _options, callback) => {
+		commands.push([file, ...args]);
+		const output = args.includes('pid=,comm=')
+			? '  1 /sbin/launchd\n 77 /Applications/Alpha.app/Contents/MacOS/Alpha\n 78 /Applications/Wine.app/Contents/wine64-preloader\n'
+			: '  1 /sbin/launchd\n 77 /Applications/Alpha.app/Contents/MacOS/Alpha -psn\n 78 C:\\Games\\Zeta\\zeta.exe -windowed\n';
+		queueMicrotask(() => callback(null, output, ''));
+	};
+	const Detector = load({execFile});
+	const detector = new Detector({platform: 'darwin', setInterval: () => 1, clearInterval: () => {}});
+	detector.configure({account_id: 'a', generation: 1, enabled: false});
+	await detector.poll();
+	assert.equal(commands.length, 0);
+	detector.configure({account_id: 'a', generation: 2, enabled: true});
+	await detector.poll();
+	assert.deepEqual(
+		commands.map((command) => command.join(' ')),
+		['/bin/ps -axww -o pid=,comm=', '/bin/ps -axww -o pid=,args='],
+	);
+	assert.equal(detector.getState().state, 'playing');
+	assert.equal(detector.getState().activity.game_id, 'alpha');
+	await detector.stop();
+});
+
+test('spotify_is_off_unless_configured', async () => {
+	const h = harness({platform: 'darwin', nowPlaying: () => ({artist: 'Artist', title: 'Song'})});
+	h.configure();
+	await h.finish(processes('spotify'));
+	assert.equal(h.detector.getState().state, 'idle');
+	h.configure('account-a', 2, true, false);
+	await h.finish(processes('spotify'));
+	assert.equal(h.detector.getState().state, 'idle');
+	h.configure('account-a', 3, false, true);
+	await h.detector.poll();
+	assert.equal(h.detector.getState().state, 'disabled');
+	assert.deepEqual(h.nowPlayingCalls, []);
+});
+
+test('spotify_now_playing_becomes_a_prefixed_manual_name_and_publishes_only_on_track_change', async () => {
+	let track = {artist: 'Barış Manço', title: 'Gülpembe'};
+	const h = harness({platform: 'darwin', nowPlaying: () => track});
+	h.configure('account-a', 1, true, true);
+	await h.finish(processes('spotify'));
+	const first = plain(h.detector.getState());
+	assert.equal(first.state, 'playing');
+	assert.deepEqual(first.activity, {manual_name: '\u266B Barış Manço \u2013 Gülpembe', started_at: 1_700_000_000_000});
+	h.advance(15000);
+	await h.finish(processes('spotify'));
+	assert.deepEqual(plain(h.detector.getState().activity), first.activity);
+	h.advance(15000);
+	track = {artist: 'MFÖ', title: 'Ali Desidero'};
+	await h.finish(processes('spotify'));
+	assert.deepEqual(plain(h.detector.getState().activity), {
+		manual_name: '\u266B MFÖ \u2013 Ali Desidero',
+		started_at: 1_700_000_030_000,
+	});
+	track = null;
+	await h.finish(processes('spotify'));
+	assert.deepEqual(plain(h.detector.getState()), {generation: 1, state: 'idle', activity: null, fresh: true});
+	assert.equal(h.nowPlayingCalls.length, 4);
+});
+
+test('spotify_is_only_asked_while_its_process_runs_and_no_game_is_detected', async () => {
+	const h = harness({platform: 'win32', nowPlaying: () => ({artist: 'Artist', title: 'Song'})});
+	h.configure('account-a', 1, true, true);
+	await h.finish(processes('explorer.exe'));
+	assert.equal(h.detector.getState().state, 'idle');
+	await h.finish(processes('alpha.exe').concat(processes('spotify.exe', 11)));
+	assert.equal(h.detector.getState().activity.game_id, 'alpha');
+	assert.deepEqual(h.nowPlayingCalls, []);
+	await h.finish(processes('spotify.exe', 11));
+	assert.equal(h.detector.getState().activity.manual_name, '\u266B Artist \u2013 Song');
+	assert.equal(h.nowPlayingCalls.length, 1);
+});
+
+test('spotify_probe_failures_never_break_game_detection_and_denial_backs_off', async () => {
+	let failure = Object.assign(new Error('denied'), {name: 'SpotifyProbeUnavailable'});
+	const h = harness({
+		platform: 'darwin',
+		nowPlaying: () => {
+			if (failure) throw failure;
+			return {artist: '', title: 'Podcast episode'};
+		},
+	});
+	h.configure('account-a', 1, true, true);
+	await h.finish(processes('spotify'));
+	assert.equal(h.detector.getState().state, 'idle');
+	assert.equal(h.detector.getState().fresh, true);
+	h.advance(15000);
+	await h.finish(processes('spotify'));
+	assert.equal(h.nowPlayingCalls.length, 1);
+	h.advance(10 * 60_000);
+	failure = new Error('timeout');
+	await h.finish(processes('spotify'));
+	assert.equal(h.nowPlayingCalls.length, 2);
+	assert.equal(h.detector.getState().state, 'idle');
+	failure = null;
+	await h.finish(processes('spotify'));
+	assert.equal(h.nowPlayingCalls.length, 3);
+	assert.equal(h.detector.getState().activity.manual_name, '\u266B Podcast episode');
+});
+
+test('spotify_names_are_cleaned_and_cut_to_the_manual_name_limit', async () => {
+	const h = harness({
+		platform: 'linux',
+		nowPlaying: () => ({artist: 'A\u200bB\u0000C', title: `${'x'.repeat(80)}\ufe0f`}),
+	});
+	h.configure('account-a', 1, true, true);
+	await h.finish(processes('spotify'));
+	const name = h.detector.getState().activity.manual_name;
+	assert.equal(Array.from(name).length, 64);
+	assert.ok(name.startsWith('\u266B A B C \u2013 xxx'));
+	assert.ok(name.endsWith('\u2026'));
 });

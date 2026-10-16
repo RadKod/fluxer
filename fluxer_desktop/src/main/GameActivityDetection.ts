@@ -14,9 +14,18 @@ import {
 	type GameActivityState,
 	isGameActivityIdentity,
 	isGameActivityLocalRule,
+	isGameActivityPlatformSupported,
 } from '@electron/common/GameActivityTypes';
+import {
+	formatListeningName,
+	listDarwinProcesses,
+	listLinuxProcesses,
+	type NowPlaying,
+	readSpotifyNowPlaying,
+	spotifyProcessName,
+} from '@electron/main/GameActivityProbes';
 import {loadWinShell} from '@electron/main/WinShell';
-import {getGameById, matchGameByExe} from '@fluxer/game_catalog/src/GameCatalog';
+import {getGameById, matchGameByExe, matchGameByProcess} from '@fluxer/game_catalog/src/GameCatalog';
 
 const MAX_PROCESSES = 20_000;
 const POLL_INTERVAL_MS = 15_000;
@@ -24,6 +33,8 @@ const FRESHNESS_MS = 60_000;
 const TOKEN_LIFETIME_MS = 30_000;
 const PAGE_SIZE = 100;
 const MAX_RULES = 50;
+// After missing playerctl or a denied macOS Automation prompt, Spotify is asked again only this rarely.
+const SPOTIFY_RETRY_MS = 10 * 60_000;
 const UNSUITABLE_EXE =
 	/^(?:javaw?|python(?:w|\d+)?|node|electron|launcher|patcher|updater|easyanticheat(?:_eos)?|beservice)\.exe$|(?:launcher|patcher|anticheat)\.exe$/i;
 
@@ -50,6 +61,8 @@ export interface GameActivityDetectionDependencies {
 	matchGameByExe: (exe: string) => CatalogMatch | undefined;
 	getGameById: (id: string) => CatalogMatch | undefined;
 	createToken: () => string;
+	// Asked at most once per poll, only while a Spotify process runs and no game is detected.
+	readNowPlaying: () => Promise<NowPlaying | null>;
 }
 
 function validateSnapshot(value: unknown): Array<ProcessEntry> {
@@ -86,6 +99,8 @@ export class GameActivityDetection {
 	private generation = 0;
 	private epoch = 0;
 	private enabled = false;
+	private spotify = false;
+	private spotifyRetryAt: number | null = null;
 	private timer: ReturnType<typeof setInterval> | null = null;
 	private inFlight: {epoch: number; promise: Promise<void>} | null = null;
 	private snapshot: Array<ProcessEntry> | null = null;
@@ -97,11 +112,16 @@ export class GameActivityDetection {
 	private state: GameActivityState;
 
 	public constructor(dependencies: Partial<GameActivityDetectionDependencies> = {}) {
+		const platform = dependencies.platform ?? process.platform;
 		this.dependencies = {
-			platform: process.platform,
+			platform,
 			onState: () => {},
 			listProcesses: async () => {
 				const epoch = this.epoch;
+				if (platform === 'darwin' || platform === 'linux') {
+					if (!this.enabled || epoch !== this.epoch) throw new Error('Process query cancelled');
+					return platform === 'darwin' ? listDarwinProcesses() : listLinuxProcesses();
+				}
 				const binding = await Promise.resolve(loadWinShell());
 				if (!this.enabled || epoch !== this.epoch) throw new Error('Process query cancelled');
 				if (!binding?.listProcesses) throw new Error('Windows process query unavailable');
@@ -113,16 +133,17 @@ export class GameActivityDetection {
 			clearInterval,
 			getRules: () => [],
 			setRules: () => {},
-			matchGameByExe,
+			matchGameByExe: platform === 'win32' ? matchGameByExe : (exe) => matchGameByProcess(exe, platform),
 			getGameById,
 			createToken: () => randomBytes(24).toString('hex'),
+			readNowPlaying: () => readSpotifyNowPlaying(platform),
 			...dependencies,
 		};
 		this.state = {generation: 0, state: this.supported ? 'disabled' : 'unsupported', activity: null, fresh: false};
 	}
 
 	private get supported(): boolean {
-		return this.dependencies.platform === 'win32';
+		return isGameActivityPlatformSupported(this.dependencies.platform);
 	}
 
 	public configure(request: GameActivityConfigureRequest): GameActivityConfigureResult {
@@ -130,6 +151,7 @@ export class GameActivityDetection {
 		this.generation = request.generation;
 		this.accountId = request.account_id;
 		this.enabled = this.supported && request.enabled && request.account_id !== null;
+		this.spotify = this.enabled && request.spotify === true;
 		this.rules = this.accountId
 			? this.dependencies.getRules(this.accountId).filter(isGameActivityLocalRule).slice(0, MAX_RULES)
 			: [];
@@ -153,6 +175,7 @@ export class GameActivityDetection {
 		const completion = this.inFlight?.promise ?? Promise.resolve();
 		this.epoch++;
 		this.enabled = false;
+		this.spotify = false;
 		if (this.timer !== null) this.dependencies.clearInterval(this.timer);
 		this.timer = null;
 		this.accountId = null;
@@ -179,7 +202,7 @@ export class GameActivityDetection {
 			}),
 		};
 		this.inFlight = job;
-		const receive = (error: unknown, processes: unknown): void => {
+		const receive = (error: unknown, processes: unknown, listening: GameActivityIdentity | null): void => {
 			try {
 				if (epoch !== this.epoch || !this.enabled) return;
 				this.expireActivity();
@@ -189,7 +212,7 @@ export class GameActivityDetection {
 				const snapshot = validateSnapshot(processes);
 				this.snapshot = snapshot;
 				this.lastSuccess = this.dependencies.monotonicNow();
-				const selected = this.select(snapshot);
+				const selected = this.select(snapshot) ?? (this.spotify ? listening : null);
 				if (!selected) this.previousActivity = null;
 				else if (!this.previousActivity || identityKey(selected) !== identityKey(this.previousActivity)) {
 					const startedAt = this.dependencies.now();
@@ -208,11 +231,11 @@ export class GameActivityDetection {
 		};
 		try {
 			void this.dependencies.listProcesses().then(
-				(processes) => receive(null, processes),
-				(error) => receive(error, null),
+				(processes) => this.listening(processes, epoch).then((listening) => receive(null, processes, listening)),
+				(error) => receive(error, null, null),
 			);
 		} catch {
-			receive(new Error('Process query unavailable'), null);
+			receive(new Error('Process query unavailable'), null, null);
 		}
 		return job.promise;
 	}
@@ -278,6 +301,26 @@ export class GameActivityDetection {
 			if (this.enabled) void this.poll();
 		}
 		return {state: 'ok'};
+	}
+
+	// Spotify now playing as a manual_name, only when no game or local rule matches this snapshot.
+	private async listening(processes: unknown, epoch: number): Promise<GameActivityIdentity | null> {
+		const spotifyProcess = spotifyProcessName(this.dependencies.platform);
+		if (!this.spotify || !spotifyProcess || epoch !== this.epoch) return null;
+		if (this.spotifyRetryAt !== null && this.dependencies.monotonicNow() < this.spotifyRetryAt) return null;
+		try {
+			const snapshot = validateSnapshot(processes);
+			if (!snapshot.some((entry) => entry.exe === spotifyProcess) || this.select(snapshot)) return null;
+			const playing = await this.dependencies.readNowPlaying();
+			if (!playing || epoch !== this.epoch || !this.spotify) return null;
+			this.spotifyRetryAt = null;
+			const identity = {manual_name: formatListeningName(playing)};
+			return identity.manual_name && isGameActivityIdentity(identity) ? {manual_name: identity.manual_name} : null;
+		} catch (error) {
+			if ((error as Error | null)?.name === 'SpotifyProbeUnavailable')
+				this.spotifyRetryAt = this.dependencies.monotonicNow() + SPOTIFY_RETRY_MS;
+			return null;
+		}
 	}
 
 	private select(snapshot: Array<ProcessEntry>): GameActivityIdentity | null {

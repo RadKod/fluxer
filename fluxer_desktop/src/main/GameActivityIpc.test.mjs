@@ -55,7 +55,7 @@ function loadHarness({platform = 'win32'} = {}) {
 		configure(request) {
 			calls.push(['configure', plain(request)]);
 			this.generation = request.generation;
-			return {state: platform === 'win32' ? 'ok' : 'unsupported'};
+			return {state: ['win32', 'darwin', 'linux'].includes(platform) ? 'ok' : 'unsupported'};
 		}
 		getState() {
 			return {
@@ -360,9 +360,35 @@ test('shutdown_cleans_owned_work', async () => {
 });
 
 test('unsupported_is_explicit', async () => {
-	const h = loadHarness({platform: 'linux'});
-	assert.deepEqual(plain(await h.invoke('get-capabilities')), {version: 1, supported: false});
+	const h = loadHarness({platform: 'freebsd'});
+	assert.deepEqual(plain(await h.invoke('get-capabilities')), {version: 1, supported: false, spotify: false});
 	assert.deepEqual(plain(await configure(h)), {state: 'unsupported'});
+});
+
+for (const platform of ['win32', 'darwin', 'linux']) {
+	test(`${platform}_reports_detection_and_spotify_support`, async () => {
+		const h = loadHarness({platform});
+		assert.deepEqual(plain(await h.invoke('get-capabilities')), {version: 1, supported: true, spotify: true});
+		assert.deepEqual(plain(await configure(h)), {state: 'ok'});
+	});
+}
+
+test('configure_forwards_the_optional_spotify_flag_and_rejects_other_values', async () => {
+	const h = loadHarness({platform: 'darwin'});
+	await h.invoke('configure', {account_id: '123', generation: 1, enabled: true, spotify: true});
+	assert.deepEqual(h.calls.at(-1), ['configure', {account_id: '123', generation: 1, enabled: true, spotify: true}]);
+	await h.invoke('configure', {account_id: '123', generation: 2, enabled: true});
+	assert.deepEqual(h.calls.at(-1), ['configure', {account_id: '123', generation: 2, enabled: true}]);
+	for (const spotify of ['yes', 1, null]) {
+		await assert.rejects(
+			h.invoke('configure', {account_id: '123', generation: 3, enabled: true, spotify}),
+			/Invalid game activity payload/,
+		);
+	}
+	await assert.rejects(
+		h.invoke('configure', {account_id: '123', generation: 3, enabled: true, spotify: true, music: true}),
+		/Invalid game activity payload/,
+	);
 });
 
 function deferTeardown(h) {

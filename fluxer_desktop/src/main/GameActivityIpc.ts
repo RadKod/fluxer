@@ -9,6 +9,7 @@ import {
 	type GameActivityRulesResult,
 	type GameActivityState,
 	isGameActivityIdentity,
+	isGameActivityPlatformSupported,
 	isGameActivityState,
 } from '@electron/common/GameActivityTypes';
 import {GameActivityDetection} from '@electron/main/GameActivityDetection';
@@ -227,14 +228,17 @@ export function registerGameActivityIpcHandlers(mainWindowGetter: () => BrowserW
 			requireMainDocument(event, channel);
 			if (name === 'get-capabilities') {
 				if (request !== undefined) throw new Error('Invalid game activity payload');
-				return {version: 1, supported: process.platform === 'win32'};
+				const supported = isGameActivityPlatformSupported(process.platform);
+				// `spotify` tells the app this shell accepts the optional `spotify` flag on configure.
+				return {version: 1, supported, spotify: supported};
 			}
 			if (name === 'configure') {
-				const value = payload(request, ['account_id', 'generation', 'enabled']);
+				const value = payload(request, ['account_id', 'generation', 'enabled'], ['spotify']);
 				if (
 					(value.account_id !== null &&
 						(typeof value.account_id !== 'string' || !/^\d{1,32}$/.test(value.account_id))) ||
-					typeof value.enabled !== 'boolean'
+					typeof value.enabled !== 'boolean' ||
+					(value.spotify !== undefined && typeof value.spotify !== 'boolean')
 				)
 					throw new Error('Invalid game activity payload');
 				if (context && !isCurrentDocument(context)) stopContext();

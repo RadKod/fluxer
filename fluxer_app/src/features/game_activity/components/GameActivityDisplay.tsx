@@ -7,13 +7,14 @@ import GameActivityMinuteClock, {
 import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
 import DesktopGameActivityBridge from '@app/features/game_activity/utils/DesktopGameActivityBridge';
 import {getGameIconUrl} from '@app/features/game_activity/utils/GameIconUrls';
+import {getListeningTrack} from '@app/features/game_activity/utils/ListeningActivity';
 import type {GameActivity} from '@app/features/gateway/types/GatewayPresenceTypes';
 import Relationships from '@app/features/relationship/state/Relationships';
 import Users from '@app/features/user/state/Users';
 import {getGameById} from '@fluxer/game_catalog/src/GameCatalog';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
-import {GameControllerIcon} from '@phosphor-icons/react';
+import {GameControllerIcon, MusicNotesIcon} from '@phosphor-icons/react';
 import {observer} from 'mobx-react-lite';
 import {useEffect, useRef, useState, useSyncExternalStore} from 'react';
 
@@ -24,6 +25,10 @@ const LOCAL = msg({
 });
 const GAME = msg({message: 'Game', comment: 'Fallback name for an unknown game ID.'});
 const MINUTES = msg({message: '{minutes} min', comment: 'Elapsed game duration in minutes.'});
+const LISTENING = msg({
+	message: 'Listening to Spotify',
+	comment: 'Profile label above the song the user is playing in the Spotify app (shown instead of Playing now).',
+});
 
 export const GameActivityDisplay = observer(({userId, visible = true}: {userId: string; visible?: boolean}) => {
 	const ref = useRef<HTMLDivElement>(null);
@@ -83,6 +88,18 @@ function VisibleGameActivity({activity, local}: {activity: GameActivity; local: 
 		};
 	}, [gameId, game?.icon]);
 	const minutes = Math.floor(getGameActivityElapsed(activity.started_at, now) / 60_000);
+	const track = getListeningTrack(activity);
+	if (track) {
+		return (
+			<div className={styles.activity} data-kind="listening">
+				<MusicNotesIcon size={40} aria-hidden className={styles.icon} />
+				<div className={styles.details}>
+					<div className={styles.label}>{i18n._(local ? LOCAL : LISTENING)}</div>
+					<div className={styles.name}>{track}</div>
+				</div>
+			</div>
+		);
+	}
 	return (
 		<div className={styles.activity}>
 			{icon && icon.id === gameId ? (

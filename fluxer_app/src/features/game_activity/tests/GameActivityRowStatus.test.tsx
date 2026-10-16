@@ -57,6 +57,15 @@ describe('GameActivityRowStatus', () => {
 		expect(container.querySelector('img')?.getAttribute('src')).toBe('/assets/known.webp');
 	});
 
+	it('shows a Spotify listening activity as listening, not playing', async () => {
+		await render({manual_name: '\u266B Barış Manço \u2013 Gülpembe', started_at: 1});
+
+		expect(status()?.getAttribute('aria-label')).toBe('Listening to Spotify · Barış Manço \u2013 Gülpembe');
+		expect(status()?.textContent).toBe('Listening to Spotify · Barış Manço \u2013 Gülpembe');
+		expect(status()?.getAttribute('data-kind')).toBe('listening');
+		expect(mocks.icon).not.toHaveBeenCalled();
+	});
+
 	it('uses the generic controller icon and plain text for a manual name', async () => {
 		await render({manual_name: '<img src=x onerror=alert(1)>', started_at: 1});
 

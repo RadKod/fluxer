@@ -12,6 +12,8 @@ export interface GameActivityConfigureRequest {
 	account_id: string | null;
 	generation: number;
 	enabled: boolean;
+	// Spotify now playing; sent only when capabilities report `spotify: true`, absent means off.
+	spotify?: boolean;
 }
 export interface GameActivityGenerationRequest {
 	generation: number;
@@ -34,6 +36,7 @@ export type GameActivityRulesResult = {state: 'ok'; rules: Array<GameActivityRul
 export interface GameActivityCapabilities {
 	version: 1;
 	supported: boolean;
+	spotify?: boolean;
 }
 export interface GameActivityAPI {
 	gameActivityGetCapabilities: () => Promise<GameActivityCapabilities>;
@@ -45,6 +48,14 @@ export interface GameActivityAPI {
 	gameActivityRemoveRule: (request: GameActivityRemoveRuleRequest) => Promise<GameActivityConfigureResult>;
 	onGameActivityState: (callback: (state: GameActivityState) => void) => () => void;
 }
+
+// Platforms where the desktop shell can enumerate processes for game activity.
+export function isGameActivityPlatformSupported(platform: string): boolean {
+	return platform === 'win32' || platform === 'darwin' || platform === 'linux';
+}
+
+// Spotify now playing travels as a manual_name with this prefix; the app shows it as "Listening to Spotify".
+export const LISTENING_ACTIVITY_PREFIX = '\u266B ';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === 'object' && !Array.isArray(value);

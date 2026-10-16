@@ -119,6 +119,51 @@ describe('DesktopGameActivityBridge IPC fixture', () => {
 		vi.advanceTimersByTime(3000);
 		expect(sent).toHaveLength(beforeClose + 1);
 	});
+	it('sends the Spotify flag only to shells that advertise it and reconfigures when it changes', async () => {
+		let spotify = true;
+		bridge.initialize({
+			getApi: () => api,
+			getPresence: () => ({status: 'online', afk: false, mobile: false, custom_status: null}),
+			send: (value) => {
+				sent.push(value);
+				return true;
+			},
+			getEnabled: () => enabled,
+			getSpotifyEnabled: () => spotify,
+		});
+		await bridge.setAccount('account-a');
+		expect(bridge.spotifySupported).toBe(false);
+		expect(api.gameActivityConfigure).toHaveBeenLastCalledWith({account_id: 'account-a', generation: 1, enabled: true});
+		api.gameActivityGetCapabilities = vi.fn(async () => ({version: 1 as const, supported: true, spotify: true}));
+		await bridge.setAccount('account-b');
+		expect(bridge.spotifySupported).toBe(true);
+		expect(api.gameActivityConfigure).toHaveBeenLastCalledWith({
+			account_id: 'account-b',
+			generation: 2,
+			enabled: true,
+			spotify: true,
+		});
+		const calls = vi.mocked(api.gameActivityConfigure!).mock.calls.length;
+		await bridge.syncPolicy();
+		expect(vi.mocked(api.gameActivityConfigure!).mock.calls.length).toBe(calls);
+		spotify = false;
+		await bridge.syncPolicy();
+		expect(api.gameActivityConfigure).toHaveBeenLastCalledWith({
+			account_id: 'account-b',
+			generation: 3,
+			enabled: true,
+			spotify: false,
+		});
+		spotify = true;
+		enabled = false;
+		await bridge.syncPolicy();
+		expect(api.gameActivityConfigure).toHaveBeenLastCalledWith({
+			account_id: 'account-b',
+			generation: 4,
+			enabled: false,
+			spotify: false,
+		});
+	});
 	it('legacy_bridge_display_only', async () => {
 		api = {};
 		await bridge.setAccount('account-a');

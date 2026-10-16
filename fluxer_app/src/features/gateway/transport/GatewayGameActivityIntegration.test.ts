@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import GameActivityLocalSettings from '@app/features/game_activity/state/GameActivityLocalSettings';
 import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
 import {GatewayConnectionRole} from '@app/features/gateway/transport/GatewayConnectionRole';
 import GatewaySessions from '@app/features/gateway/transport/GatewaySessionPool';
@@ -155,6 +156,7 @@ class FakeWebSocket {
 type BridgeOptions = {
 	getPresence: () => unknown;
 	getEnabled: () => boolean;
+	getSpotifyEnabled: () => boolean;
 	send: (presence: typeof fixture.presence & {game_activity: unknown}) => boolean;
 	clearReceived: () => void;
 };
@@ -226,6 +228,18 @@ describe('gateway session pool desktop game activity wiring', () => {
 		expect(fixture.bridge.syncPolicy).not.toHaveBeenCalled();
 		GameActivityStore.handleRollout({game_activity_enabled: true, game_activity_epoch: 1});
 		expect(fixture.bridge.syncPolicy).toHaveBeenCalledOnce();
+	});
+
+	it('passes the local Spotify switch and resyncs when it changes', async () => {
+		GameActivityStore.handleRollout({game_activity_enabled: true, game_activity_epoch: 1});
+		const options = await startBridge();
+		expect(options.getSpotifyEnabled()).toBe(GameActivityLocalSettings.showSpotify);
+		fixture.bridge.syncPolicy.mockClear();
+		const previous = GameActivityLocalSettings.showSpotify;
+		GameActivityLocalSettings.setShowSpotify(!previous);
+		expect(options.getSpotifyEnabled()).toBe(!previous);
+		expect(fixture.bridge.syncPolicy).toHaveBeenCalledOnce();
+		GameActivityLocalSettings.setShowSpotify(previous);
 	});
 
 	it('tells the producer about local presence changes', async () => {

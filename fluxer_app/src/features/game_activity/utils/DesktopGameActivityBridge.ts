@@ -181,6 +181,8 @@ interface BridgeOptions {
 	getPresence?: ProducerOptions['getPresence'];
 	send?: ProducerOptions['send'];
 	getEnabled?: () => boolean;
+	// Local "show Spotify" choice; it only applies while game activity itself is enabled.
+	getSpotifyEnabled?: () => boolean;
 	clearReceived?: () => void;
 }
 
@@ -188,10 +190,13 @@ interface GameActivityConfiguration {
 	api: GameActivityApi;
 	generation: number;
 	enabled: boolean;
+	spotify: boolean;
 }
 
 export class DesktopGameActivityBridge {
 	supported = false;
+	// The desktop shell can read Spotify now playing (older shells reject the configure flag).
+	spotifySupported = false;
 	activity: GameActivity | null = null;
 	private options: BridgeOptions;
 	private producer: GameActivityProducer;
@@ -200,6 +205,7 @@ export class DesktopGameActivityBridge {
 	private accountId: string | null = null;
 	private generation = 0;
 	private enabled = false;
+	private spotify = false;
 	private stopped = false;
 	private unsubscribe: (() => void) | null = null;
 	private transition: Promise<void> = Promise.resolve();
@@ -207,7 +213,7 @@ export class DesktopGameActivityBridge {
 	constructor(options: BridgeOptions = {}) {
 		this.options = options;
 		this.producer = this.createProducer();
-		makeObservable(this, {supported: observable, activity: observableRef});
+		makeObservable(this, {supported: observable, spotifySupported: observable, activity: observableRef});
 	}
 
 	initialize(options: BridgeOptions): void {
@@ -230,7 +236,12 @@ export class DesktopGameActivityBridge {
 
 	syncPolicy(): Promise<void> {
 		const enabled = this.shouldEnable();
-		if (this.enabled === enabled && (!this.configuration || this.configuration.enabled === enabled))
+		const spotify = this.shouldShareSpotify(enabled);
+		if (
+			this.enabled === enabled &&
+			this.spotify === spotify &&
+			(!this.configuration || (this.configuration.enabled === enabled && this.configuration.spotify === spotify))
+		)
 			return this.transition;
 		return this.restart(false);
 	}
@@ -305,9 +316,14 @@ export class DesktopGameActivityBridge {
 		);
 	}
 
+	private shouldShareSpotify(enabled: boolean): boolean {
+		return enabled && this.spotifySupported && this.options.getSpotifyEnabled?.() === true;
+	}
+
 	private restart(probe: boolean, paused = false): Promise<void> {
 		this.producer.stop();
 		this.enabled = false;
+		this.spotify = false;
 		const oldApi = this.configuration?.api ?? this.api;
 		const oldGeneration = this.configuration?.generation ?? this.generation;
 		const generation = ++this.generation;
@@ -319,7 +335,10 @@ export class DesktopGameActivityBridge {
 		this.api = null;
 		runInAction(() => {
 			this.activity = null;
-			if (probe) this.supported = false;
+			if (probe) {
+				this.supported = false;
+				this.spotifySupported = false;
+			}
 		});
 		this.transition = this.transition.then(async () => {
 			let configuration: GameActivityConfiguration | null = null;
@@ -336,16 +355,27 @@ export class DesktopGameActivityBridge {
 				if (!api?.gameActivityGetCapabilities || !api.gameActivityConfigure || !api.onGameActivityState) return;
 				const capability = await api.gameActivityGetCapabilities();
 				if (generation !== this.generation || capability.version !== 1 || !capability.supported) return;
+				const spotifySupported = capability.spotify === true;
+				runInAction(() => {
+					this.spotifySupported = spotifySupported;
+				});
 				const enabled = this.shouldEnable();
-				configuration = {api, generation, enabled};
+				const spotify = this.shouldShareSpotify(enabled);
+				configuration = {api, generation, enabled, spotify};
 				this.configuration = configuration;
-				const result = await api.gameActivityConfigure({account_id: accountId, generation, enabled});
+				const result = await api.gameActivityConfigure({
+					account_id: accountId,
+					generation,
+					enabled,
+					...(spotifySupported ? {spotify} : {}),
+				});
 				if (generation !== this.generation || result.state !== 'ok') {
 					await this.releaseConfiguration(configuration);
 					return;
 				}
 				this.api = api;
 				this.enabled = enabled;
+				this.spotify = spotify;
 				runInAction(() => {
 					this.supported = true;
 				});
