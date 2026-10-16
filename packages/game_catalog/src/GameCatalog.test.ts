@@ -9,6 +9,8 @@ interface CatalogEntry {
 	id: string;
 	name: string;
 	exe: Array<string>;
+	mac?: Array<string>;
+	linux?: Array<string>;
 	icon: string | null;
 	icon_source: {url: string; date: string} | null;
 }
@@ -45,7 +47,8 @@ describe('game catalog schema', () => {
 		const ids = new Set<string>();
 		const executableOwners = new Map<string, string>();
 		for (const game of catalog.games) {
-			expect(Object.keys(game).sort()).toEqual(['exe', 'icon', 'icon_source', 'id', 'name']);
+			const keys = Object.keys(game).filter((key) => key !== 'mac' && key !== 'linux');
+			expect(keys.sort()).toEqual(['exe', 'icon', 'icon_source', 'id', 'name']);
 			expect(game.id).toMatch(/^[a-z0-9][a-z0-9-]{0,47}$/);
 			expect(ids.has(game.id), game.id).toBe(false);
 			ids.add(game.id);
@@ -62,6 +65,28 @@ describe('game catalog schema', () => {
 				expect(exe).not.toMatch(/javaw?\.exe|launcher|patcher|anticheat|anti-cheat|easyanticheat|battleye|beservice/);
 				expect(executableOwners.has(exe), `${exe}: ${game.id} / ${executableOwners.get(exe)}`).toBe(false);
 				executableOwners.set(exe, game.id);
+			}
+		}
+	});
+
+	test('uses lowercase native macOS and Linux process basenames owned by one game', () => {
+		for (const field of ['mac', 'linux'] as const) {
+			const owners = new Map<string, string>();
+			for (const game of catalog.games) {
+				if (game[field] === undefined) continue;
+				expect(Array.isArray(game[field]), game.id).toBe(true);
+				expect(game[field]!.length, game.id).toBeGreaterThan(0);
+				for (const name of game[field]!) {
+					expect(name).toBe(name.toLowerCase());
+					expect(name).toMatch(/^[^\\/:]{1,128}$/);
+					expect(name.endsWith('.exe'), name).toBe(false);
+					expect([...name].every((character) => character.charCodeAt(0) >= 32 && character.charCodeAt(0) !== 127)).toBe(
+						true,
+					);
+					expect(name).not.toMatch(/^(?:java|python\d*|node|electron|wine\d*|steam)$|launcher|patcher|anticheat/);
+					expect(owners.has(name), `${field} ${name}: ${game.id} / ${owners.get(name)}`).toBe(false);
+					owners.set(name, game.id);
+				}
 			}
 		}
 	});
@@ -114,6 +139,29 @@ describe('game catalog reader', () => {
 				expect(reader.matchGameByExe(`/games/${exe}`)).toBeUndefined();
 				expect(reader.matchGameByExe(`${exe}.bak`)).toBeUndefined();
 			}
+		}
+	});
+
+	test('matches processes per platform without changing Windows matching', () => {
+		const cs2 = reader.getGameById('counter-strike-2');
+		expect(reader.matchGameByProcess('CS2.EXE', 'win32')).toBe(cs2);
+		expect(reader.matchGameByProcess('cs2', 'win32')).toBeUndefined();
+		expect(reader.matchGameByProcess('cs2', 'linux')).toBe(cs2);
+		expect(reader.matchGameByProcess('cs2.exe', 'linux')).toBe(cs2);
+		expect(reader.matchGameByProcess('cs2.exe', 'darwin')).toBe(cs2);
+		expect(reader.matchGameByProcess('LeagueOfLegends', 'darwin')).toBe(reader.getGameById('league-of-legends'));
+		expect(reader.matchGameByProcess('leagueoflegends', 'linux')).toBeUndefined();
+		expect(reader.matchGameByProcess('factorio', 'linux')).toBe(reader.getGameById('factorio'));
+		expect(reader.matchGameByProcess('Factorio', 'darwin')).toBe(reader.getGameById('factorio'));
+		expect(reader.matchGameByProcess('repo', 'darwin')).toBeUndefined();
+		expect(reader.matchGameByProcess('fm', 'linux')).toBeUndefined();
+		expect(reader.matchGameByProcess('spotify', 'darwin')).toBeUndefined();
+		expect(reader.matchGameByProcess('cs2', 'freebsd')).toBeUndefined();
+		for (const game of catalog.games) {
+			for (const name of game.mac ?? [])
+				expect(reader.matchGameByProcess(name, 'darwin')).toBe(reader.getGameById(game.id));
+			for (const name of game.linux ?? [])
+				expect(reader.matchGameByProcess(name.toUpperCase(), 'linux')).toBe(reader.getGameById(game.id));
 		}
 	});
 

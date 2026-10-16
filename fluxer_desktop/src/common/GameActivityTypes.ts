@@ -46,6 +46,11 @@ export interface GameActivityAPI {
 	onGameActivityState: (callback: (state: GameActivityState) => void) => () => void;
 }
 
+// Platforms where the desktop shell can enumerate processes for game activity.
+export function isGameActivityPlatformSupported(platform: string): boolean {
+	return platform === 'win32' || platform === 'darwin' || platform === 'linux';
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

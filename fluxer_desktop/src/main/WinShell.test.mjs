@@ -124,7 +124,11 @@ function harness({
 		'@electron/main/GatewaySocketNativeBoundary': {GATEWAY_SOCKET_ADDON_PACKAGE: '@fluxer/gateway-socket'},
 		'@electron/common/Logger': {createChildLogger: () => ({warn: (...args) => warnings.push(args)})},
 		'@electron/common/GameActivityTypes': loadMainModule('../common/GameActivityTypes', {}, processStub),
-		'@fluxer/game_catalog/src/GameCatalog': {getGameById() {}, matchGameByExe() {}},
+		'@fluxer/game_catalog/src/GameCatalog': {getGameById() {}, matchGameByExe() {}, matchGameByProcess() {}},
+		'@electron/main/GameActivityProbes': {
+			listDarwinProcesses: () => Promise.reject(new Error('Unexpected process listing')),
+			listLinuxProcesses: () => Promise.reject(new Error('Unexpected process listing')),
+		},
 		'@electron/main/LinuxLaunchPath': {getStableLinuxLaunchPath: () => processStub.execPath},
 		'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},
 		'@electron/main/MainI18n': {t: (key) => key},

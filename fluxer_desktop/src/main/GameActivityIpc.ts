@@ -9,6 +9,7 @@ import {
 	type GameActivityRulesResult,
 	type GameActivityState,
 	isGameActivityIdentity,
+	isGameActivityPlatformSupported,
 	isGameActivityState,
 } from '@electron/common/GameActivityTypes';
 import {GameActivityDetection} from '@electron/main/GameActivityDetection';
@@ -227,7 +228,7 @@ export function registerGameActivityIpcHandlers(mainWindowGetter: () => BrowserW
 			requireMainDocument(event, channel);
 			if (name === 'get-capabilities') {
 				if (request !== undefined) throw new Error('Invalid game activity payload');
-				return {version: 1, supported: process.platform === 'win32'};
+				return {version: 1, supported: isGameActivityPlatformSupported(process.platform)};
 			}
 			if (name === 'configure') {
 				const value = payload(request, ['account_id', 'generation', 'enabled']);

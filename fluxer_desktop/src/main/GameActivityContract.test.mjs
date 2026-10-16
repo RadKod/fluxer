@@ -652,7 +652,7 @@ test('real_pipeline_local_rules_are_redacted_account_scoped_and_runtime_free', a
 });
 
 test('real_pipeline_unsupported_never_starts_process_or_timer', async () => {
-	const h = loadIntegration({platform: 'linux'});
+	const h = loadIntegration({platform: 'freebsd'});
 	try {
 		assert.deepEqual(plain(await h.api.gameActivityGetCapabilities()), {version: 1, supported: false});
 		assert.deepEqual(plain(await configureIntegration(h)), {state: 'unsupported'});

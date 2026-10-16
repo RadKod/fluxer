@@ -55,7 +55,7 @@ function loadHarness({platform = 'win32'} = {}) {
 		configure(request) {
 			calls.push(['configure', plain(request)]);
 			this.generation = request.generation;
-			return {state: platform === 'win32' ? 'ok' : 'unsupported'};
+			return {state: ['win32', 'darwin', 'linux'].includes(platform) ? 'ok' : 'unsupported'};
 		}
 		getState() {
 			return {
@@ -360,10 +360,18 @@ test('shutdown_cleans_owned_work', async () => {
 });
 
 test('unsupported_is_explicit', async () => {
-	const h = loadHarness({platform: 'linux'});
+	const h = loadHarness({platform: 'freebsd'});
 	assert.deepEqual(plain(await h.invoke('get-capabilities')), {version: 1, supported: false});
 	assert.deepEqual(plain(await configure(h)), {state: 'unsupported'});
 });
+
+for (const platform of ['win32', 'darwin', 'linux']) {
+	test(`${platform}_reports_detection_support`, async () => {
+		const h = loadHarness({platform});
+		assert.deepEqual(plain(await h.invoke('get-capabilities')), {version: 1, supported: true});
+		assert.deepEqual(plain(await configure(h)), {state: 'ok'});
+	});
+}
 
 function deferTeardown(h) {
 	let finish;

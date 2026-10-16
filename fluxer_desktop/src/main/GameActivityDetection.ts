@@ -14,9 +14,11 @@ import {
 	type GameActivityState,
 	isGameActivityIdentity,
 	isGameActivityLocalRule,
+	isGameActivityPlatformSupported,
 } from '@electron/common/GameActivityTypes';
+import {listDarwinProcesses, listLinuxProcesses} from '@electron/main/GameActivityProbes';
 import {loadWinShell} from '@electron/main/WinShell';
-import {getGameById, matchGameByExe} from '@fluxer/game_catalog/src/GameCatalog';
+import {getGameById, matchGameByExe, matchGameByProcess} from '@fluxer/game_catalog/src/GameCatalog';
 
 const MAX_PROCESSES = 20_000;
 const POLL_INTERVAL_MS = 15_000;
@@ -97,11 +99,16 @@ export class GameActivityDetection {
 	private state: GameActivityState;
 
 	public constructor(dependencies: Partial<GameActivityDetectionDependencies> = {}) {
+		const platform = dependencies.platform ?? process.platform;
 		this.dependencies = {
-			platform: process.platform,
+			platform,
 			onState: () => {},
 			listProcesses: async () => {
 				const epoch = this.epoch;
+				if (platform === 'darwin' || platform === 'linux') {
+					if (!this.enabled || epoch !== this.epoch) throw new Error('Process query cancelled');
+					return platform === 'darwin' ? listDarwinProcesses() : listLinuxProcesses();
+				}
 				const binding = await Promise.resolve(loadWinShell());
 				if (!this.enabled || epoch !== this.epoch) throw new Error('Process query cancelled');
 				if (!binding?.listProcesses) throw new Error('Windows process query unavailable');
@@ -113,7 +120,7 @@ export class GameActivityDetection {
 			clearInterval,
 			getRules: () => [],
 			setRules: () => {},
-			matchGameByExe,
+			matchGameByExe: platform === 'win32' ? matchGameByExe : (exe) => matchGameByProcess(exe, platform),
 			getGameById,
 			createToken: () => randomBytes(24).toString('hex'),
 			...dependencies,
@@ -122,7 +129,7 @@ export class GameActivityDetection {
 	}
 
 	private get supported(): boolean {
-		return this.dependencies.platform === 'win32';
+		return isGameActivityPlatformSupported(this.dependencies.platform);
 	}
 
 	public configure(request: GameActivityConfigureRequest): GameActivityConfigureResult {

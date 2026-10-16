@@ -5,6 +5,7 @@
 			"id": "league-of-legends",
 			"name": "League of Legends",
 			"exe": ["league of legends.exe"],
+			"mac": ["leagueoflegends"],
 			"icon": "league-of-legends",
 			"icon_source": {
 				"url": "https://www.riotgames.com/darkroom/original/9a50f5b3bdcfb815580ef103ec9b6ee2:d49b78b12cf185e10127cdf81b144a00/lol-logo-rendered-hi-res.png",
@@ -25,6 +26,7 @@
 			"id": "counter-strike-2",
 			"name": "Counter-Strike 2",
 			"exe": ["cs2.exe"],
+			"linux": ["cs2"],
 			"icon": "counter-strike-2",
 			"icon_source": {
 				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/730/324b323045b09bace182f928f4104dfcd93cb7f3.ico",
@@ -285,6 +287,7 @@
 			"id": "hearthstone",
 			"name": "Hearthstone",
 			"exe": [],
+			"mac": ["hearthstone"],
 			"icon": "hearthstone",
 			"icon_source": {
 				"url": "https://blz-contentstack-images.akamaized.net/v3/assets/blt9c12f249ac15c7ec/blt2cbf3f08528a78f9/6a4d481c515519530f5fad21/favicon.ico",
@@ -295,6 +298,7 @@
 			"id": "world-of-warcraft",
 			"name": "World of Warcraft",
 			"exe": [],
+			"mac": ["world of warcraft"],
 			"icon": "world-of-warcraft",
 			"icon_source": {
 				"url": "https://assets-bwa.worldofwarcraft.blizzard.com/static/wow-icon-32x32.1a38d7c1c3d8df560d53f5c2ad5442c0401edf83.png",
@@ -355,6 +359,8 @@
 			"id": "osu",
 			"name": "osu!",
 			"exe": ["osu!.exe"],
+			"mac": ["osu!"],
+			"linux": ["osu!"],
 			"icon": "osu",
 			"icon_source": {
 				"url": "https://osu.ppy.sh/images/favicon/apple-touch-icon.png",
@@ -365,6 +371,8 @@
 			"id": "stardew-valley",
 			"name": "Stardew Valley",
 			"exe": ["stardew valley.exe"],
+			"mac": ["stardewvalley"],
+			"linux": ["stardewvalley"],
 			"icon": "stardew-valley",
 			"icon_source": {
 				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/413150/35d1377200084a4034238c05b0c8930451e2fb40.jpg",
@@ -385,6 +393,7 @@
 			"id": "valheim",
 			"name": "Valheim",
 			"exe": ["valheim.exe"],
+			"linux": ["valheim.x86_64"],
 			"icon": "valheim",
 			"icon_source": {
 				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/892970/2f64c9a826e2c6cf3253fea4834c2e612db09143.jpg",
@@ -435,6 +444,7 @@
 			"id": "baldurs-gate-3",
 			"name": "Baldur's Gate 3",
 			"exe": ["bg3.exe", "bg3_dx11.exe"],
+			"mac": ["baldur's gate 3"],
 			"icon": "baldurs-gate-3",
 			"icon_source": {
 				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1086940/ea19a7ce2af83c0240e775d79d3b690751a062c1.ico",
@@ -615,6 +625,7 @@
 			"id": "team-fortress-2",
 			"name": "Team Fortress 2",
 			"exe": ["tf_win64.exe", "tf.exe"],
+			"linux": ["tf_linux64"],
 			"icon": "team-fortress-2",
 			"icon_source": {
 				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/440/f568912870a4684f9ec76277a1a404dda6bab213.ico",
@@ -1105,6 +1116,8 @@
 			"id": "hearts-of-iron-4",
 			"name": "Hearts of Iron IV",
 			"exe": ["hoi4.exe"],
+			"mac": ["hoi4"],
+			"linux": ["hoi4"],
 			"icon": "hearts-of-iron-4",
 			"icon_source": {
 				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/394360/1a13011c8363b5160781d9bb16bcb392b07b69be.ico",
@@ -1115,6 +1128,8 @@
 			"id": "europa-universalis-4",
 			"name": "Europa Universalis IV",
 			"exe": ["eu4.exe"],
+			"mac": ["eu4"],
+			"linux": ["eu4"],
 			"icon": "europa-universalis-4",
 			"icon_source": {
 				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/236850/aa46f5bf2697ce607ae95ec1be2bef119b63d0e6.ico",
@@ -1125,6 +1140,8 @@
 			"id": "crusader-kings-3",
 			"name": "Crusader Kings III",
 			"exe": [],
+			"mac": ["ck3"],
+			"linux": ["ck3"],
 			"icon": "crusader-kings-3",
 			"icon_source": {
 				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/1158310/3d31b9b8d7ffb8512e546fc4ffb987273066ef0a.ico",
@@ -1195,6 +1212,8 @@
 			"id": "rimworld",
 			"name": "RimWorld",
 			"exe": ["rimworldwin.exe", "rimworldwin64.exe", "rimworld.exe"],
+			"mac": ["rimworldmac"],
+			"linux": ["rimworldlinux"],
 			"icon": "rimworld",
 			"icon_source": {
 				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/294100/addbe3b704b267060b4d5d7649cfb292de61bd70.jpg",
@@ -1285,6 +1304,8 @@
 			"id": "hollow-knight",
 			"name": "Hollow Knight",
 			"exe": ["hollow_knight.exe"],
+			"mac": ["hollow knight"],
+			"linux": ["hollow_knight.x86_64"],
 			"icon": "hollow-knight",
 			"icon_source": {
 				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/367520/29492c0a65a3d03943a8f4ab786c93a95a150a56.ico",
@@ -1500,6 +1521,23 @@
 				"url": "https://shared.fastly.steamstatic.com/community_assets/images/apps/548430/e033e23c29a192a17c16a7645a2b423ac64ff447.jpg",
 				"date": "2026-10-06"
 			}
+		},
+		{
+			"id": "geometry-dash",
+			"name": "Geometry Dash",
+			"exe": ["geometrydash.exe"],
+			"mac": ["geometry dash"],
+			"icon": null,
+			"icon_source": null
+		},
+		{
+			"id": "celeste",
+			"name": "Celeste",
+			"exe": ["celeste.exe"],
+			"mac": ["celeste", "celeste.bin.osx"],
+			"linux": ["celeste.bin.x86_64"],
+			"icon": null,
+			"icon_source": null
 		}
 	]
 }
