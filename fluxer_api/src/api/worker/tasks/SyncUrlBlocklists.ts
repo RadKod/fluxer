@@ -64,6 +64,10 @@ async function fetchFeed(source: FeedSource): Promise<Array<string>> {
 }
 
 const MISSING_FEED_FILE_ERRORS = new Set(['NoSuchBucket', 'NoSuchKey', 'NotFound']);
+// The feed file lives in a fixed bucket (BlocklistS3). A self-hosted store whose credentials are scoped to the
+// instance's own buckets answers AccessDenied for it; with feeds off nothing was ever written there, so the purge
+// has nothing to remove and the job ends quietly instead of warning after every deploy.
+const UNREACHABLE_FEED_BUCKET_ERRORS = new Set(['AccessDenied']);
 
 const syncUrlBlocklists: WorkerTaskHandler = async (_payload, helpers) => {
 	helpers.logger.info('Starting URL blocklist sync');
@@ -73,7 +77,12 @@ const syncUrlBlocklists: WorkerTaskHandler = async (_payload, helpers) => {
 		try {
 			await deleteBlocklistS3Object(storageService, BLOCKLIST_S3_KEYS.feedUrls);
 		} catch (error) {
-			if (!(error instanceof Error && MISSING_FEED_FILE_ERRORS.has(error.name))) {
+			if (error instanceof Error && UNREACHABLE_FEED_BUCKET_ERRORS.has(error.name)) {
+				helpers.logger.info(
+					{error: error.name},
+					'URL blocklist feed bucket is not reachable with these credentials, nothing to delete',
+				);
+			} else if (!(error instanceof Error && MISSING_FEED_FILE_ERRORS.has(error.name))) {
 				helpers.logger.warn({error}, 'Failed to delete the URL blocklist feed file');
 			}
 		}

@@ -8,6 +8,8 @@ import type {GuildRole} from '@app/features/guild/models/GuildRole';
 import type {GuildMember} from '@app/features/member/models/GuildMember';
 import {ComponentBus} from '@app/features/platform/utils/ComponentBus';
 import {int2hex} from '@app/features/theme/utils/ColorUtils';
+import {roleColorOnDark} from '@fluxer/constants/src/ColorContrast';
+import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import {type CSSProperties, type ReactNode, useSyncExternalStore} from 'react';
 
@@ -72,6 +74,23 @@ export const RoleIcon = observer(({role}: {role?: GuildRole | null}) => {
 	) : null;
 });
 
+// sanalyer: the colour a role name is drawn in on the dark themes when its stored colour fails the contrast floor
+// there (a CSS rule on html.theme-dark/coal/dark_legacy picks it, so a theme switch re-renders nothing). Stored role
+// colours are never changed.
+const onDarkCache = new Map<number, string | undefined>();
+
+export function roleColorOnDarkHex(color: string | undefined): string | undefined {
+	const match = color ? /^#([0-9a-f]{6})$/i.exec(color) : null;
+	if (!match) return undefined;
+	const value = Number.parseInt(match[1]!, 16);
+	if (onDarkCache.has(value)) return onDarkCache.get(value);
+	const lifted = roleColorOnDark(value);
+	const hex = lifted === value ? undefined : int2hex(lifted);
+	if (onDarkCache.size >= 512) onDarkCache.clear();
+	onDarkCache.set(value, hex);
+	return hex;
+}
+
 export const RoleAppearance = observer(
 	({member, colorOverride, children}: {member?: GuildMember; colorOverride?: string; children: ReactNode}) => {
 		const colorRole = member?.getColorRole();
@@ -79,13 +98,14 @@ export const RoleAppearance = observer(
 		const secondary =
 			!colorOverride && colorRole?.colorSecondary != null ? int2hex(colorRole.colorSecondary) : undefined;
 		const style = {
-			color,
 			'--role-color': color,
 			'--role-color-secondary': secondary,
+			'--role-color-on-dark': roleColorOnDarkHex(color),
+			'--role-color-secondary-on-dark': roleColorOnDarkHex(secondary),
 		} as CSSProperties;
 		return (
 			<>
-				<span className={secondary ? styles.gradient : undefined} style={style}>
+				<span className={clsx(color && styles.colored, secondary && styles.gradient)} style={style}>
 					{children}
 				</span>
 				<RoleIcon role={member?.getIconRole()} />

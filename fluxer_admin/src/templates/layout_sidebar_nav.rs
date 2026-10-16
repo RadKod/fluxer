@@ -255,12 +255,8 @@ pub const NAV_SECTIONS: &[NavSection] = &[
     NavSection {
         title: "Configuration",
         items: &[
-            item!(
-                "Username Migration",
-                "/username-migration",
-                "username-migration",
-                [acl::INSTANCE_CONFIG_VIEW, acl::USERNAME_MIGRATION_START]
-            ),
+            // sanalyer: Username Migration is not used on this instance, so it is left out of the
+            // menu. The /username-migration route and its handlers stay, direct links still work.
             item!(
                 "Instance Config",
                 "/instance-config",
@@ -308,7 +304,6 @@ mod tests {
         for (key, required) in [
             ("usernames-reserve", acl::USERNAME_RESERVE),
             ("username-dictionary", acl::BAN_PROFILE_SUBSTRING_CHECK),
-            ("username-migration", acl::USERNAME_MIGRATION_START),
         ] {
             let item = NAV_SECTIONS
                 .iter()
@@ -318,6 +313,17 @@ mod tests {
             assert!(item.required_acls.contains(&required));
             assert!(!acl::has_any_permission(&[], item.required_acls));
         }
+    }
+
+    #[test]
+    fn username_migration_is_not_in_the_menu() {
+        assert!(
+            NAV_SECTIONS
+                .iter()
+                .flat_map(|section| section.items)
+                .all(|item| item.active_key != "username-migration"
+                    && item.path != "/username-migration")
+        );
     }
 
     #[test]

@@ -9,12 +9,16 @@ import {
 	isNameColorsReadableOnLight,
 	type Lab,
 	labDeltaE2000,
+	liftColorForContrast,
 	NAME_COLOR_DARK_BACKGROUNDS,
 	NAME_COLOR_LIGHT_BACKGROUND,
 	NAME_COLOR_LIGHT_MIN_CONTRAST,
 	NAME_COLOR_MIN_CONTRAST,
 	NAME_COLOR_ROLE_MIN_DELTA_E,
+	ROLE_COLOR_DARK_BACKGROUNDS,
+	ROLE_COLOR_DARK_MIN_CONTRAST,
 	relativeLuminance,
+	roleColorOnDark,
 	srgbToLab,
 } from '@fluxer/constants/src/ColorContrast';
 import {describe, expect, it} from 'vitest';
@@ -184,5 +188,47 @@ describe('isNameColorsReadableOnLight', () => {
 	it('rejects an empty or over-long colour list', () => {
 		expect(isNameColorsReadableOnLight([])).toBe(false);
 		expect(isNameColorsReadableOnLight([0, 0, 0])).toBe(false);
+	});
+});
+
+describe('role colour floor on the dark themes', () => {
+	const readable = (color: number) =>
+		ROLE_COLOR_DARK_BACKGROUNDS.every((background) => contrastRatio(color, background) >= ROLE_COLOR_DARK_MIN_CONTRAST);
+
+	it('lifts the two unreadable sanalyer roles until they pass on every dark surface', () => {
+		for (const stored of [0x506e74, 0x212121]) {
+			expect(readable(stored)).toBe(false);
+			const drawn = roleColorOnDark(stored);
+			expect(readable(drawn)).toBe(true);
+			expect(relativeLuminance(drawn)).toBeGreaterThan(relativeLuminance(stored));
+		}
+	});
+
+	it('keeps the hue: a grey stays grey and a blue-grey stays blue-grey', () => {
+		const grey = roleColorOnDark(0x212121);
+		expect((grey >> 16) & 0xff).toBe((grey >> 8) & 0xff);
+		expect((grey >> 8) & 0xff).toBe(grey & 0xff);
+		const blueGrey = roleColorOnDark(0x506e74);
+		const [r, g, b] = [(blueGrey >> 16) & 0xff, (blueGrey >> 8) & 0xff, blueGrey & 0xff];
+		expect(r).toBeLessThan(g);
+		expect(g).toBeLessThan(b);
+	});
+
+	it('lifts no further than needed', () => {
+		const drawn = roleColorOnDark(0x506e74);
+		const oneStepDarker =
+			((((drawn >> 16) & 0xff) - 2) << 16) | ((((drawn >> 8) & 0xff) - 2) << 8) | ((drawn & 0xff) - 2);
+		expect(readable(oneStepDarker)).toBe(false);
+	});
+
+	it('returns readable colours unchanged', () => {
+		for (const color of [0xffffff, 0xffc83d, 0x57f287, 0x99aab5, 0xf47fff]) {
+			if (readable(color)) expect(roleColorOnDark(color)).toBe(color);
+		}
+		expect(roleColorOnDark(0xffc83d)).toBe(0xffc83d);
+	});
+
+	it('falls back to white when nothing lighter can pass', () => {
+		expect(liftColorForContrast(0x000000, [0x000000], 21)).toBe(0xffffff);
 	});
 });
