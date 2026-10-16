@@ -29,6 +29,7 @@
     user_data := map(),
     sessions := sessions(),
     push_buffer := [push_buffer_entry()],
+    push_unread_grace_timer => reference(),
     custom_status := custom_status(),
     status := status(),
     guild_ids := #{integer() => true},
@@ -275,6 +276,9 @@ handle_info_message(game_activity_pending, State) ->
     {noreply, presence_game_activity:pending(State)};
 handle_info_message({game_activity_delivery, Revision, Iterator}, State) ->
     {noreply, presence_game_activity:delivery_batch(Revision, Iterator, State)};
+%% sanalyer: unread grace for DM pushes held behind an active desktop.
+handle_info_message(push_unread_grace, State) ->
+    {noreply, presence_update:release_unread_grace(State)};
 handle_info_message(game_activity_idle_expired, #{sessions := Sessions} = State) when
     map_size(Sessions) =:= 0
 ->

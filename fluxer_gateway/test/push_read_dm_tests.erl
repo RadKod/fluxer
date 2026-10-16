@@ -609,3 +609,127 @@ presence_data() ->
         status => online,
         custom_status => null
     }.
+
+%% sanalyer: unread grace on the DM path. The presence process keeps one timer
+%% for its buffer; when it fires, entries older than the grace go to the push
+%% service if the read state still shows them unread.
+
+-define(UNREAD_GRACE_MS, 400).
+
+with_unread_grace_presence(ReadMessageId, Fun) ->
+    Self = self(),
+    _ = fetched_channels(),
+    _ = collect_published(0),
+    Previous = application:get_env(fluxer_gateway, push_unread_grace_ms),
+    ok = application:set_env(fluxer_gateway, push_unread_grace_ms, ?UNREAD_GRACE_MS),
+    try
+        with_presence_node(fun() ->
+            ok = meck:expect(rpc_client, call, fun(Request, _Timeout) ->
+                Self ! {fetching, maps:get(<<"channel_id">>, Request)},
+                {ok, #{<<"last_message_id">> => integer_to_binary(ReadMessageId)}}
+            end),
+            with_desktop_presence(Fun)
+        end)
+    after
+        case Previous of
+            {ok, Value} -> application:set_env(fluxer_gateway, push_unread_grace_ms, Value);
+            undefined -> application:unset_env(fluxer_gateway, push_unread_grace_ms)
+        end
+    end.
+
+fetched_channels() ->
+    receive
+        {fetching, ChannelId} -> [ChannelId | fetched_channels()]
+    after 0 -> []
+    end.
+
+wait_for_empty_buffer(_PresencePid, 0) ->
+    erlang:error(buffer_not_released);
+wait_for_empty_buffer(PresencePid, Attempts) ->
+    case push_buffer(PresencePid) of
+        [] ->
+            ok;
+        _ ->
+            timer:sleep(20),
+            wait_for_empty_buffer(PresencePid, Attempts - 1)
+    end.
+
+an_unread_dm_behind_an_active_desktop_is_pushed_after_the_unread_grace_test() ->
+    {Fetches, Published, Pushed} = with_unread_grace_presence(?PARTNER_MSG - 1, fun(
+        PresencePid, _SessionPid
+    ) ->
+        dispatch(PresencePid, message_create, dm_message(?PARTNER_MSG, ?PARTNER)),
+        ?assertEqual([?PARTNER_MSG], buffered_message_ids(PresencePid)),
+        timer:sleep(?UNREAD_GRACE_MS div 2),
+        ?assertEqual([?PARTNER_MSG], buffered_message_ids(PresencePid)),
+        ?assertEqual([], fetched_channels()),
+        ok = wait_for_empty_buffer(PresencePid, 100),
+        Late = collect_published(0),
+        ?assertNot(maps:is_key(push_unread_grace_timer, sys:get_state(PresencePid))),
+        {fetched_channels(), Late, pushed_message_ids([])}
+    end),
+    ?assertEqual([integer_to_binary(?DM)], Fetches),
+    ?assertEqual(1, Published),
+    %% The desktop never went AFK, so nothing went through the old flush path.
+    ?assertEqual([], Pushed).
+
+a_dm_acked_on_the_desktop_inside_the_unread_grace_is_not_pushed_test() ->
+    {Fetches, Published} = with_unread_grace_presence(0, fun(PresencePid, _SessionPid) ->
+        dispatch(PresencePid, message_create, dm_message(?PARTNER_MSG, ?PARTNER)),
+        ack(PresencePid, ?DM, ?PARTNER_MSG),
+        ?assertEqual([], push_buffer(PresencePid)),
+        timer:sleep(?UNREAD_GRACE_MS * 3),
+        sync(PresencePid),
+        {fetched_channels(), collect_published(0)}
+    end),
+    ?assertEqual([], Fetches),
+    ?assertEqual(0, Published).
+
+a_dm_read_elsewhere_inside_the_unread_grace_is_not_pushed_test() ->
+    {Fetches, Published} = with_unread_grace_presence(?PARTNER_MSG, fun(
+        PresencePid, _SessionPid
+    ) ->
+        dispatch(PresencePid, message_create, dm_message(?PARTNER_MSG, ?PARTNER)),
+        ok = wait_for_empty_buffer(PresencePid, 100),
+        {fetched_channels(), collect_published(0)}
+    end),
+    ?assertEqual([integer_to_binary(?DM)], Fetches),
+    ?assertEqual(0, Published).
+
+a_dm_to_a_user_whose_desktop_is_afk_is_pushed_right_away_test() ->
+    Pushed = with_desktop_presence(fun(PresencePid, _SessionPid) ->
+        gen_server:cast(PresencePid, {presence_update, desktop_request(true)}),
+        sync(PresencePid),
+        dispatch(PresencePid, message_create, dm_message(?PARTNER_MSG, ?PARTNER)),
+        ?assertEqual([], push_buffer(PresencePid)),
+        pushed_message_ids([])
+    end),
+    ?assertEqual([?PARTNER_MSG], Pushed).
+
+a_dm_to_a_user_on_a_foreground_phone_only_is_pushed_right_away_test() ->
+    Pushed = with_desktop_presence(fun(PresencePid, _SessionPid) ->
+        gen_server:cast(
+            PresencePid,
+            {presence_update, #{
+                session_id => ?DESKTOP, status => online, afk => false, mobile => true
+            }}
+        ),
+        sync(PresencePid),
+        dispatch(PresencePid, message_create, dm_message(?PARTNER_MSG, ?PARTNER)),
+        ?assertEqual([], push_buffer(PresencePid)),
+        pushed_message_ids([])
+    end),
+    ?assertEqual([?PARTNER_MSG], Pushed).
+
+a_group_dm_behind_an_active_desktop_is_pushed_after_the_unread_grace_test() ->
+    Published = with_unread_grace_presence(0, fun(PresencePid, _SessionPid) ->
+        dispatch(
+            PresencePid,
+            message_create,
+            (dm_message(?PARTNER_MSG, ?PARTNER))#{<<"channel_type">> => 3}
+        ),
+        ?assertEqual([?PARTNER_MSG], buffered_message_ids(PresencePid)),
+        ok = wait_for_empty_buffer(PresencePid, 100),
+        collect_published(0)
+    end),
+    ?assertEqual(1, Published).

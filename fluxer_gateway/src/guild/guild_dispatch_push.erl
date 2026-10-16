@@ -22,6 +22,11 @@
 -define(GRACE_RECHECK_KEY, guild_push_offline_grace_recheck_ms).
 -define(DEFAULT_GRACE_RECHECK_MS, 7000).
 -define(GRACE_HOLD_CALL_TIMEOUT_MS, 5000).
+%% sanalyer: users still on an active desktop after the offline grace keep the
+%% push until this unread grace ends, then get it if they have not read it.
+-define(UNREAD_GRACE_MAX_HOLDS_KEY, guild_push_unread_grace_max_holds).
+-define(DEFAULT_UNREAD_GRACE_MAX_HOLDS, 1024).
+-define(UNREAD_GRACE_HOLDS, unread_grace_holds).
 -define(PUSH_COUNTERS, guild_push_counters).
 -define(PUSH_COUNTER_KEYS, [
     worker_started,
@@ -33,7 +38,9 @@
     slot_reclaimed,
     slot_deduped,
     members_table_missing,
-    scan_table_unavailable
+    scan_table_unavailable,
+    unread_grace_held,
+    unread_grace_overflow
 ]).
 
 -type event() :: atom().
@@ -1491,7 +1498,95 @@ deliver_after_grace(Params, Sessions, RecheckAt, {Presences, GuildPid}) ->
         await_grace_recheck(monitor_grace_sessions(Sessions), RecheckAt)
     ),
     Holding = still_holding(LiveSessions, released_push_holds(GuildPid, LiveSessions)),
-    send_push_now(grace_recipients(HeldUserIds, Holding, Presences, AlreadyOffline), Params).
+    Released = grace_recipients(HeldUserIds, Holding, Presences, AlreadyOffline),
+    ok = send_push_now(Released, Params),
+    hold_through_unread_grace(HeldUserIds -- Released, Params, RecheckAt).
+
+%% sanalyer: before this, a user still active on a desktop at the offline grace
+%% recheck lost the push for good. The same hold process now waits for the rest
+%% of the unread grace and pushes whoever has still not read the message. A user
+%% going AFK or offline inside this window is pushed at the deadline, not
+%% earlier: the offline grace already covers the quick close-the-app case and a
+%% second watch loop is not worth the extra guild calls. The number of processes
+%% in this phase is capped; above the cap the old drop behaviour applies.
+-spec hold_through_unread_grace([user_id()], map(), integer()) -> ok.
+hold_through_unread_grace([], _Params, _RecheckAt) ->
+    ok;
+hold_through_unread_grace(UserIds, Params, RecheckAt) ->
+    case push:unread_grace_ms() of
+        0 ->
+            ok;
+        Grace ->
+            Deadline = RecheckAt + max(0, Grace - grace_recheck_ms()),
+            with_unread_grace_slot(fun() ->
+                ok = sleep_until(Deadline),
+                push:publish_still_unread([unread_grace_params(UserIds, Params)])
+            end)
+    end.
+
+-spec unread_grace_params([user_id()], map()) -> map().
+unread_grace_params(UserIds, Params) ->
+    Params#{
+        user_ids => UserIds,
+        user_roles => maps:with(UserIds, maps:get(user_roles, Params, #{})),
+        connected_users => maps:with(UserIds, maps:get(connected_users, Params, #{}))
+    }.
+
+-spec sleep_until(integer()) -> ok.
+sleep_until(Deadline) ->
+    receive
+    after max(0, Deadline - erlang:monotonic_time(millisecond)) -> ok
+    end.
+
+-spec with_unread_grace_slot(fun(() -> ok)) -> ok.
+with_unread_grace_slot(Fun) ->
+    case acquire_unread_grace_slot() of
+        true ->
+            count_push_event(unread_grace_held),
+            try
+                Fun()
+            after
+                release_unread_grace_slot()
+            end;
+        false ->
+            count_push_event(unread_grace_overflow)
+    end.
+
+-spec acquire_unread_grace_slot() -> boolean().
+acquire_unread_grace_slot() ->
+    ok = ensure_push_counters(),
+    try
+        ets:update_counter(
+            ?PUSH_COUNTERS, ?UNREAD_GRACE_HOLDS, {2, 1}, {?UNREAD_GRACE_HOLDS, 0}
+        )
+    of
+        Holds when is_integer(Holds) ->
+            keep_unread_grace_slot(Holds =< unread_grace_max_holds())
+    catch
+        error:badarg -> false
+    end.
+
+-spec keep_unread_grace_slot(boolean()) -> boolean().
+keep_unread_grace_slot(true) ->
+    true;
+keep_unread_grace_slot(false) ->
+    ok = release_unread_grace_slot(),
+    false.
+
+-spec release_unread_grace_slot() -> ok.
+release_unread_grace_slot() ->
+    try ets:update_counter(?PUSH_COUNTERS, ?UNREAD_GRACE_HOLDS, {2, -1, 0, 0}) of
+        _ -> ok
+    catch
+        error:badarg -> ok
+    end.
+
+-spec unread_grace_max_holds() -> non_neg_integer().
+unread_grace_max_holds() ->
+    case application:get_env(fluxer_gateway, ?UNREAD_GRACE_MAX_HOLDS_KEY, undefined) of
+        Value when is_integer(Value), Value >= 0 -> Value;
+        _ -> ?DEFAULT_UNREAD_GRACE_MAX_HOLDS
+    end.
 
 -spec still_holding([{user_id(), binary()}], [binary()]) -> [user_id()].
 still_holding(LiveSessions, Released) ->

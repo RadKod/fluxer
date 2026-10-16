@@ -9,6 +9,9 @@
 -export([
     handle_message_create/1,
     handle_buffered_message_creates/1,
+    handle_unread_grace_message_creates/1,
+    publish_still_unread/1,
+    unread_grace_ms/0,
     sync_user_guild_settings_local/3,
     clear_channel_notifications/3,
     clear_notifications_enabled/0
@@ -29,6 +32,11 @@
 -define(CNT_READ_STATE_FAILURES, push_read_state_fetch_failures).
 -define(CNT_READ_STATE_SKIPPED, push_read_state_fetch_skipped).
 -define(MAX_FETCH_RPCS, 8).
+%% sanalyer: how long a push waits behind an active desktop before it is sent
+%% anyway if still unread. Shared by the DM (presence) and guild hold paths;
+%% 0 turns the unread grace off and restores the old hold-until-AFK behaviour.
+-define(UNREAD_GRACE_KEY, push_unread_grace_ms).
+-define(DEFAULT_UNREAD_GRACE_MS, 120000).
 -define(READ_STATE_FETCH_TIMEOUT_MS, 2000).
 -define(READ_STATE_TABLE, push_read_state_counters).
 -define(READ_STATE_FETCH_SLOTS, read_state_fetches_in_flight).
@@ -276,6 +284,91 @@ publish_unless_read(ReadMarks, {{UserId, ChannelId, MessageId}, Params}) ->
     case MessageId =< maps:get({UserId, ChannelId}, ReadMarks, 0) of
         true -> bump_read_state_counter(?CNT_READ_STATE_SUPPRESSED, 1);
         false -> handle_message_create(Params)
+    end.
+
+-spec unread_grace_ms() -> non_neg_integer().
+unread_grace_ms() ->
+    case application:get_env(fluxer_gateway, ?UNREAD_GRACE_KEY, undefined) of
+        Value when is_integer(Value), Value >= 0 -> Value;
+        _ -> ?DEFAULT_UNREAD_GRACE_MS
+    end.
+
+%% sanalyer: pushes held behind an active desktop for the unread grace window
+%% go out only if the recipient still has not read the message. The read state
+%% is fetched once per {user, channel} under the same in-flight slot limit as the
+%% stale-buffer check; when no slot is free or the fetch fails the push is sent,
+%% because a missed notification is the failure this hold exists to avoid.
+-spec handle_unread_grace_message_creates([map()]) -> ok.
+handle_unread_grace_message_creates([]) ->
+    ok;
+handle_unread_grace_message_creates(ParamsList) ->
+    case is_push_active() of
+        true ->
+            _ = spawn(fun() -> publish_still_unread(ParamsList) end),
+            ok;
+        false ->
+            ok
+    end.
+
+-spec publish_still_unread([map()]) -> ok.
+publish_still_unread(ParamsList) ->
+    case is_push_active() of
+        true -> publish_still_unread_entries(unread_grace_entries(ParamsList));
+        false -> ok
+    end.
+
+-spec unread_grace_entries([map()]) -> [{integer(), integer(), [integer()], map()}].
+unread_grace_entries(ParamsList) ->
+    lists:filtermap(fun unread_grace_entry/1, ParamsList).
+
+-spec unread_grace_entry(map()) -> {true, {integer(), integer(), [integer()], map()}} | false.
+unread_grace_entry(Params) ->
+    case push_message_params:context(maps:remove(buffered_at, Params)) of
+        {ok, #{user_ids := [_ | _] = UserIds, channel_id := ChannelId, message_id := MessageId}} ->
+            {true, {ChannelId, MessageId, UserIds, maps:remove(buffered_at, Params)}};
+        _ ->
+            false
+    end.
+
+-spec publish_still_unread_entries([{integer(), integer(), [integer()], map()}]) -> ok.
+publish_still_unread_entries([]) ->
+    ok;
+publish_still_unread_entries(Entries) ->
+    Channels = lists:usort([
+        {UserId, ChannelId}
+     || {ChannelId, _MessageId, UserIds, _Params} <- Entries, UserId <- UserIds
+    ]),
+    ReadMarks = unread_grace_read_marks(Channels),
+    lists:foreach(fun(Entry) -> publish_unread_users(ReadMarks, Entry) end, Entries).
+
+-spec unread_grace_read_marks([{integer(), integer()}]) -> read_marks().
+unread_grace_read_marks(Channels) ->
+    case read_state_fetch_allowed(length(Channels)) of
+        true ->
+            try
+                fetch_each_read_mark(Channels, #{})
+            catch
+                _:_ -> #{}
+            after
+                release_read_state_fetch_slot()
+            end;
+        false ->
+            #{}
+    end.
+
+-spec publish_unread_users(read_marks(), {integer(), integer(), [integer()], map()}) -> ok.
+publish_unread_users(ReadMarks, {ChannelId, MessageId, UserIds, Params}) ->
+    Unread = [
+        UserId
+     || UserId <- UserIds, MessageId > maps:get({UserId, ChannelId}, ReadMarks, 0)
+    ],
+    case length(UserIds) - length(Unread) of
+        0 -> ok;
+        Read -> bump_read_state_counter(?CNT_READ_STATE_SUPPRESSED, Read)
+    end,
+    case Unread of
+        [] -> ok;
+        _ -> handle_message_create(Params#{user_ids => Unread})
     end.
 
 -spec read_state_fetch_allowed(non_neg_integer()) -> boolean().

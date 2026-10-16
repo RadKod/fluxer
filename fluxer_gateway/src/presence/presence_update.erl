@@ -10,6 +10,7 @@
     handle_message_create_event/2,
     handle_message_ack_event/2,
     flush_push_buffer/1,
+    release_unread_grace/1,
     maybe_update_push_eligibility/1,
     push_buffer_counters/0
 ]).
@@ -29,6 +30,8 @@
 -define(PUSH_BUFFER_MAX_BYTES_CONFIG_KEY, presence_push_buffer_max_bytes).
 -define(PUSH_BUFFER_COUNTERS, presence_push_buffer_counters).
 -define(PUSH_BUFFER_OVERFLOW, push_buffer_overflow).
+-define(UNREAD_GRACE_TIMER, push_unread_grace_timer).
+-define(UNREAD_GRACE_MESSAGE, push_unread_grace).
 
 -spec maybe_handle_custom_status(map(), state()) -> {map(), state()}.
 maybe_handle_custom_status(Request, State) ->
@@ -261,7 +264,56 @@ route_push_notification(Params, State) ->
             push:handle_message_create(Params),
             FlushedState;
         false ->
-            buffer_push_notification(Params, State)
+            %% sanalyer: an active desktop no longer swallows the push until it
+            %% goes AFK; the buffered entry is released after the unread grace.
+            ensure_unread_grace_timer(buffer_push_notification(Params, State))
+    end.
+
+%% sanalyer: one timer per presence process, armed for the oldest buffered
+%% entry, so the number of timers never grows with the number of messages.
+-spec ensure_unread_grace_timer(state()) -> state().
+ensure_unread_grace_timer(State) ->
+    case {maps:is_key(?UNREAD_GRACE_TIMER, State), push:unread_grace_ms()} of
+        {true, _} -> State;
+        {false, 0} -> State;
+        {false, Grace} -> arm_unread_grace_timer(maps:get(push_buffer, State, []), Grace, State)
+    end.
+
+-spec arm_unread_grace_timer([push_buffer_entry()], pos_integer(), state()) -> state().
+arm_unread_grace_timer([], _Grace, State) ->
+    State;
+arm_unread_grace_timer(Buffer, Grace, State) ->
+    Oldest = lists:min([entry_grace_start(Entry) || Entry <- Buffer]),
+    Delay = max(0, Oldest + Grace - erlang:system_time(millisecond)),
+    Ref = erlang:send_after(Delay, self(), ?UNREAD_GRACE_MESSAGE),
+    State#{?UNREAD_GRACE_TIMER => Ref}.
+
+-spec entry_grace_start(push_buffer_entry()) -> integer().
+entry_grace_start(#{buffered_at := BufferedAt}) when is_integer(BufferedAt) ->
+    BufferedAt;
+entry_grace_start(_Entry) ->
+    erlang:system_time(millisecond).
+
+%% sanalyer: entries that outlived the unread grace while a desktop kept holding
+%% are pushed if the read state still shows them unread. Acks already dropped the
+%% entries this presence saw being read; the read-state fetch covers the rest.
+-spec release_unread_grace(state()) -> state().
+release_unread_grace(State0) ->
+    State = maps:remove(?UNREAD_GRACE_TIMER, State0),
+    case push:unread_grace_ms() of
+        0 ->
+            State;
+        Grace ->
+            Now = erlang:system_time(millisecond),
+            {Due, Rest} = lists:partition(
+                fun(Entry) -> entry_grace_start(Entry) + Grace =< Now end,
+                maps:get(push_buffer, State, [])
+            ),
+            ok = push:handle_unread_grace_message_creates([
+                maps:get(params, Entry)
+             || Entry <- lists:reverse(Due)
+            ]),
+            arm_unread_grace_timer(Rest, Grace, State#{push_buffer => Rest})
     end.
 
 -spec push_eligible(state()) -> boolean().
@@ -435,9 +487,13 @@ build_buffer_entry(_, _, _) ->
 no_session_holds_push(Sessions) ->
     not lists:any(fun session_holds_push/1, maps:values(Sessions)).
 
+%% sanalyer: same rule as session_lifecycle:guild_push_hold/1, so DMs, group DMs
+%% and guild channels agree: only a visible, non-AFK, non-mobile session holds a
+%% push. Mobile-only or all-AFK recipients are pushed right away.
 -spec session_holds_push(map()) -> boolean().
 session_holds_push(Session) ->
-    not maps:get(afk, Session, false) andalso maps:get(status, Session, online) =/= offline.
+    lists:member(maps:get(status, Session, online), [online, dnd, invisible]) andalso
+        not maps:get(afk, Session, false) andalso not maps:get(mobile, Session, false).
 
 -spec extract_snowflake(binary(), map()) -> integer() | undefined.
 extract_snowflake(FieldName, Data) ->
@@ -448,7 +504,11 @@ extract_snowflake(FieldName, Data) ->
 
 no_session_holds_push_test() ->
     ?assertEqual(true, no_session_holds_push(#{})),
-    ?assertEqual(false, no_session_holds_push(#{<<"s1">> => #{mobile => true, afk => false}})),
+    %% sanalyer: a mobile session no longer holds DM pushes (guild rule).
+    ?assertEqual(true, no_session_holds_push(#{<<"s1">> => #{mobile => true, afk => false}})),
+    ?assertEqual(
+        true, no_session_holds_push(#{<<"s1">> => #{afk => false, status => idle}})
+    ),
     ?assertEqual(true, no_session_holds_push(#{<<"s1">> => #{mobile => true, afk => true}})),
     ?assertEqual(true, no_session_holds_push(#{<<"s1">> => #{mobile => false, afk => true}})),
     ?assertEqual(false, no_session_holds_push(#{<<"s1">> => #{mobile => false, afk => false}})),
