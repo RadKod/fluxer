@@ -11,23 +11,23 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('Guild soundboard upload trust boundary', () => {
-	it('accepts exactly 512000 bytes and 5.2 seconds with no audio in metadata', async () => {
+	it('accepts exactly 1000000 bytes and 10 seconds with no audio in metadata', async () => {
 		const f = fixture();
-		vi.mocked(Probe.resolveGuildSoundboardDurationMs).mockResolvedValue(5200);
-		const result = await f.service.upload({...upload, audio: Buffer.alloc(512000).toString('base64')});
-		expect(result).toMatchObject({size_bytes: 512000, duration_ms: 5200, version: 1});
+		vi.mocked(Probe.resolveGuildSoundboardDurationMs).mockResolvedValue(10000);
+		const result = await f.service.upload({...upload, audio: Buffer.alloc(1000000).toString('base64')});
+		expect(result).toMatchObject({size_bytes: 1000000, duration_ms: 10000, version: 1});
 		expect(result.asset_hash).toMatch(/^[a-f0-9]{64}$/);
 		expect(result.url).toContain(`/soundboard-sounds/${GUILD_ID}/${result.asset_hash}.mp3`);
 		expect(result).not.toHaveProperty('audio');
 		expect((await f.repository.listSounds(GUILD_ID))[0].toRow()).not.toHaveProperty('audio');
 	});
-	it('rejects 512001 bytes before media or storage work', async () => {
+	it('rejects 1000001 bytes before media or storage work', async () => {
 		const f = fixture();
-		await expect(f.service.upload({...upload, audio: Buffer.alloc(512001).toString('base64')})).rejects.toThrow();
+		await expect(f.service.upload({...upload, audio: Buffer.alloc(1000001).toString('base64')})).rejects.toThrow();
 		expect(f.media.getMetadata).not.toHaveBeenCalled();
 		expect(f.storage.uploadObject).not.toHaveBeenCalled();
 	});
-	it.each([null, NaN, 0, 5200.1])('rejects invalid precise duration %s before storage', async (duration) => {
+	it.each([null, NaN, 0, 10000.1])('rejects invalid precise duration %s before storage', async (duration) => {
 		const f = fixture();
 		vi.mocked(Probe.resolveGuildSoundboardDurationMs).mockResolvedValue(duration);
 		await expect(f.service.upload(upload)).rejects.toThrow();

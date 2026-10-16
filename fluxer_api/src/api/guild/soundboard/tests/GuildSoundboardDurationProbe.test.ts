@@ -30,7 +30,7 @@ vi.mock('@app/api/Logger', () => ({Logger: {warn: vi.fn()}}));
 
 import {resolveGuildSoundboardDurationMs} from '../GuildSoundboardDurationProbe';
 
-function output(duration = '5.2') {
+function output(duration = '10.0') {
 	return {
 		frames: [{nb_samples: Math.ceil(Number(duration) * 48000)}],
 		streams: [
@@ -43,9 +43,9 @@ function emit(value: unknown) {
 	probe.script = `process.stdout.write(${JSON.stringify(JSON.stringify(value))})`;
 }
 function resolve(
-	bytes = Buffer.alloc(512_000),
+	bytes = Buffer.alloc(1_000_000),
 	extension: 'mp3' | 'ogg' = 'mp3',
-	metadataDurationSeconds: number | null = 6,
+	metadataDurationSeconds: number | null = 10,
 ) {
 	return resolveGuildSoundboardDurationMs({bytes, extension, metadataDurationSeconds});
 }
@@ -67,15 +67,15 @@ describe('GuildSoundboardDurationProbe', () => {
 			await expect(fs.stat(path)).rejects.toMatchObject({code: 'ENOENT'});
 		}
 	});
-	it('accepts 512000 bytes and exactly 5.2 seconds', async () => {
+	it('accepts 1000000 bytes and exactly 10 seconds', async () => {
 		const result = await resolve();
 		expect(probe.stderr).toBe('');
 		expect(vi.mocked(Logger.warn).mock.calls).toEqual([]);
-		expect(result).toBe(5200);
+		expect(result).toBe(10000);
 	});
 	it.skipIf(spawnSync('ffmpeg', ['-version'], {windowsHide: true}).status !== 0).each([
-		['5.2', 5200],
-		['5.2001', null],
+		['10', 10000],
+		['10.0001', null],
 	])('validates actual Ogg audio lasting %s seconds', async (duration, expected) => {
 		const bytes = execFileSync(
 			'ffmpeg',
@@ -122,16 +122,17 @@ describe('GuildSoundboardDurationProbe', () => {
 				{windowsHide: true, timeout: 5000},
 			);
 			probe.real = true;
-			const duration = await resolve(bytes);
+			const duration = await resolve(bytes, 'mp3', 6);
 			expect(duration).toBeGreaterThanOrEqual(5000);
 			expect(duration).toBeLessThanOrEqual(5200);
 		},
 	);
 	it.skipIf(spawnSync('ffmpeg', ['-version'], {windowsHide: true}).status !== 0).each([
-		['5', 5000],
-		['5.2', 5200],
-		['5.2001', null],
-	])('validates actual Opus audio lasting %s seconds with decoder pre-skip', async (duration, expected) => {
+		// The container duration includes the 6.5 ms Opus pre-skip, so the rounded metadata is one higher.
+		['5', 5000, 6],
+		['10', 10000, 11],
+		['10.0001', null, 11],
+	])('validates actual Opus audio lasting %s seconds with decoder pre-skip', async (duration, expected, metadata) => {
 		const bytes = execFileSync(
 			'ffmpeg',
 			[
@@ -152,7 +153,7 @@ describe('GuildSoundboardDurationProbe', () => {
 			{windowsHide: true, timeout: 5000},
 		);
 		probe.real = true;
-		await expect(resolve(bytes, 'ogg')).resolves.toBe(expected);
+		await expect(resolve(bytes, 'ogg', metadata)).resolves.toBe(expected);
 	});
 	it.each([-1, 1.5, 48000])('rejects invalid or unexplained Opus pre-skip %s', async (padding) => {
 		const value = output();
@@ -174,12 +175,12 @@ describe('GuildSoundboardDurationProbe', () => {
 		emit(value);
 		await expect(resolve()).resolves.toBeNull();
 	});
-	it('rejects 512001 bytes before spawning', async () => {
-		await expect(resolve(Buffer.alloc(512_001))).resolves.toBeNull();
+	it('rejects 1000001 bytes before spawning', async () => {
+		await expect(resolve(Buffer.alloc(1_000_001))).resolves.toBeNull();
 		expect(probe.paths).toHaveLength(0);
 	});
-	it('rejects 5.2001 seconds before rounding', async () => {
-		emit(output('5.2001'));
+	it('rejects 10.0001 seconds before rounding', async () => {
+		emit(output('10.0001'));
 		await expect(resolve()).resolves.toBeNull();
 	});
 	it('rounds accepted fractions upwards', async () => {
@@ -191,7 +192,7 @@ describe('GuildSoundboardDurationProbe', () => {
 		value.streams[0].codec_name = codec;
 		value.format.format_name = 'ogg';
 		emit(value);
-		await expect(resolve(Buffer.alloc(1), 'ogg')).resolves.toBe(5200);
+		await expect(resolve(Buffer.alloc(1), 'ogg')).resolves.toBe(10000);
 	});
 	it.each([
 		[
@@ -284,18 +285,18 @@ describe('GuildSoundboardDurationProbe', () => {
 		await expect(resolve(Buffer.alloc(1), 'mp3', 4)).resolves.toBeNull();
 	});
 	it('accepts authoritative duration when optional media metadata is absent', async () => {
-		await expect(resolve(Buffer.alloc(1), 'mp3', null)).resolves.toBe(5200);
+		await expect(resolve(Buffer.alloc(1), 'mp3', null)).resolves.toBe(10000);
 	});
 	it('caps concurrent probes process-wide with queue-free 503 and releases slots', async () => {
 		probe.script = `setTimeout(() => process.stdout.write(${JSON.stringify(JSON.stringify(output()))}), 150)`;
 		const first = resolve();
 		const second = resolve();
 		await expect(resolve()).rejects.toMatchObject({status: 503});
-		await expect(Promise.all([first, second])).resolves.toEqual([5200, 5200]);
-		await expect(resolve()).resolves.toBe(5200);
+		await expect(Promise.all([first, second])).resolves.toEqual([10000, 10000]);
+		await expect(resolve()).resolves.toBe(10000);
 	});
 	it('kills an overflowing child and removes its temporary input', async () => {
-		probe.script = 'process.stdout.write("x".repeat(524289));setInterval(() => {}, 1000)';
+		probe.script = 'process.stdout.write("x".repeat(1048577));setInterval(() => {}, 1000)';
 		await expect(resolve()).resolves.toBeNull();
 	});
 	it('kills a timed-out child and removes its temporary input', async () => {

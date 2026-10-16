@@ -14,6 +14,9 @@ describe('GUILD_BOOST_LEVELS', () => {
 	});
 
 	it('shares exact sound upload byte and millisecond bounds', () => {
-		expect(SoundboardConstants).toMatchObject({SOUNDBOARD_MAX_SIZE_BYTES: 512_000, SOUNDBOARD_MAX_DURATION_MS: 5200});
+		expect(SoundboardConstants).toMatchObject({
+			SOUNDBOARD_MAX_SIZE_BYTES: 1_000_000,
+			SOUNDBOARD_MAX_DURATION_MS: 10_000,
+		});
 	});
 });

@@ -36063,8 +36063,8 @@
 					"name": {"type": "string"},
 					"asset_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
 					"extension": {"type": "string", "enum": ["mp3", "ogg"]},
-					"size_bytes": {"type": "integer", "exclusiveMinimum": 0, "maximum": 512000},
-					"duration_ms": {"type": "integer", "exclusiveMinimum": 0, "maximum": 5200},
+					"size_bytes": {"type": "integer", "exclusiveMinimum": 0, "maximum": 1000000},
+					"duration_ms": {"type": "integer", "exclusiveMinimum": 0, "maximum": 10000},
 					"volume": {"type": "number", "minimum": 0, "maximum": 1},
 					"created_at": {
 						"type": "string",
@@ -36094,7 +36094,7 @@
 				"type": "object",
 				"properties": {
 					"name": {"type": "string"},
-					"audio": {"type": "string", "minLength": 1, "maxLength": 682668},
+					"audio": {"type": "string", "minLength": 1, "maxLength": 1333336},
 					"volume": {"type": "number", "minimum": 0, "maximum": 1}
 				},
 				"required": ["name", "audio"]

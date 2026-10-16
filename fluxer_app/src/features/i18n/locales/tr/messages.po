@@ -56387,8 +56387,8 @@ msgstr "Seslere dönün"
 
 #. Soundboard upload error for unsupported format or file size.
 #: src/features/voice/components/SoundboardManagePanel.tsx:27
-msgid "Choose an MP3 or Ogg file up to 512,000 bytes."
-msgstr "En fazla 512.000 baytlık bir MP3 veya Ogg dosyası seçin."
+msgid "Choose an MP3 or Ogg file up to 1,000,000 bytes."
+msgstr "En fazla 1.000.000 baytlık bir MP3 veya Ogg dosyası seçin."
 
 #. Soundboard action to choose an MP3 or Ogg file.
 #: src/features/voice/components/SoundboardManagePanel.tsx:22
@@ -56443,8 +56443,8 @@ msgstr "Sesler yükleniyor…"
 #. Community sound upload requirements; server validates duration and audio
 #. format.
 #: src/features/voice/components/SoundboardManagePanel.tsx:23
-msgid "MP3 or Ogg, up to 512,000 bytes and 5.2 seconds."
-msgstr "MP3 veya Ogg, en fazla 512.000 bayt ve 5,2 saniye."
+msgid "MP3 or Ogg, up to 1,000,000 bytes and 10 seconds."
+msgstr "MP3 veya Ogg, en fazla 1.000.000 bayt ve 10 saniye."
 
 #. Action to show the next soundboard page.
 #: src/features/voice/components/SoundboardPanel.tsx:61

@@ -56480,8 +56480,8 @@ msgstr "Back to sounds"
 
 #. Soundboard upload error for unsupported format or file size.
 #: src/features/voice/components/SoundboardManagePanel.tsx
-msgid "Choose an MP3 or Ogg file up to 512,000 bytes."
-msgstr "Choose an MP3 or Ogg file up to 512,000 bytes."
+msgid "Choose an MP3 or Ogg file up to 1,000,000 bytes."
+msgstr "Choose an MP3 or Ogg file up to 1,000,000 bytes."
 
 #. Soundboard action to choose an MP3 or Ogg file.
 #: src/features/voice/components/SoundboardManagePanel.tsx
@@ -56551,8 +56551,8 @@ msgstr "Loading sounds…"
 #. Community sound upload requirements; server validates duration and audio
 #. format.
 #: src/features/voice/components/SoundboardManagePanel.tsx
-msgid "MP3 or Ogg, up to 512,000 bytes and 5.2 seconds."
-msgstr "MP3 or Ogg, up to 512,000 bytes and 5.2 seconds."
+msgid "MP3 or Ogg, up to 1,000,000 bytes and 10 seconds."
+msgstr "MP3 or Ogg, up to 1,000,000 bytes and 10 seconds."
 
 #. Action to show the next soundboard page.
 #: src/features/voice/components/SoundboardPanel.tsx

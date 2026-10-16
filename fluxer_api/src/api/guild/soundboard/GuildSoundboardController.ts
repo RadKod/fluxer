@@ -3,12 +3,12 @@
 import {createChannelID, createGuildID, createGuildSoundID} from '@app/api/BrandedTypes';
 import {LoginRequired} from '@app/api/middleware/AuthMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
+import {RequestBodyLimit} from '@app/api/middleware/RequestBodyLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {GuildSoundboardRateLimitConfigs as Limits} from '@app/api/rate_limit_configs/GuildSoundboardRateLimitConfig';
 import type {HonoApp} from '@app/api/types/HonoEnv';
 import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
 import {Validator} from '@app/api/Validator';
-import {FileSizeTooLargeError} from '@fluxer/errors/src/domains/core/FileSizeTooLargeError';
 import {
 	GuildSoundboardGuildParam,
 	GuildSoundboardListResponse,
@@ -19,7 +19,9 @@ import {
 	GuildSoundboardUpdateRequest,
 	GuildSoundboardUploadRequest,
 } from '@fluxer/schema/src/domains/guild/GuildSoundboardSchemas';
-import {bodyLimit} from 'hono/body-limit';
+
+// Base64 of SOUNDBOARD_MAX_SIZE_BYTES (1,333,336 characters) plus the JSON envelope.
+const GUILD_SOUNDBOARD_UPLOAD_MAX_BODY_BYTES = 1_400_000;
 
 export function GuildSoundboardController(app: HonoApp) {
 	app.get(
@@ -47,12 +49,7 @@ export function GuildSoundboardController(app: HonoApp) {
 		'/guilds/:guild_id/soundboard-sounds',
 		RateLimitMiddleware(Limits.GUILD_SOUNDBOARD_UPLOAD),
 		LoginRequired,
-		bodyLimit({
-			maxSize: 684000,
-			onError: () => {
-				throw new FileSizeTooLargeError(684000);
-			},
-		}),
+		RequestBodyLimit(GUILD_SOUNDBOARD_UPLOAD_MAX_BODY_BYTES),
 		Validator('param', GuildSoundboardGuildParam),
 		Validator('json', GuildSoundboardUploadRequest),
 		OpenAPI({

@@ -2,15 +2,19 @@
 
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {acquireSharedVoiceAudioContext} from '@app/features/voice/engine/VoiceSharedAudioContext';
+import {SOUNDBOARD_MAX_DURATION_MS, SOUNDBOARD_MAX_SIZE_BYTES} from '@fluxer/constants/src/SoundboardConstants';
 
 const logger = new Logger('SoundboardPlaybackEngine');
 const MAX_SOURCES = 2;
 const MAX_JOBS = 2;
 const MAX_CACHE_ENTRIES = 16;
-const MAX_PCM_BYTES = 32 * 1024 * 1024;
+const MAX_PCM_BYTES = 64 * 1024 * 1024;
 const MAX_ENCODED_BYTES = 4 * 1024 * 1024;
-const MAX_FILE_BYTES = 512000;
-const MAX_DURATION_SECONDS = 5.2;
+const MAX_FILE_BYTES = SOUNDBOARD_MAX_SIZE_BYTES;
+const MAX_DURATION_SECONDS = SOUNDBOARD_MAX_DURATION_MS / 1000;
+// Browsers decode MP3 encoder delay and padding as extra samples, so a clip the server measured at
+// the limit can decode slightly longer.
+const MAX_DECODED_SECONDS = MAX_DURATION_SECONDS + 0.2;
 const MAX_EVENT_AGE_MS = 5000;
 const MAX_EVENT_IDS = 256;
 const JOB_TIMEOUT_MS = 10000;
@@ -155,7 +159,7 @@ export class SoundboardPlaybackEngine {
 		return (
 			Number.isFinite(buffer.duration) &&
 			buffer.duration > 0 &&
-			buffer.duration <= MAX_DURATION_SECONDS &&
+			buffer.duration <= MAX_DECODED_SECONDS &&
 			Number.isInteger(buffer.numberOfChannels) &&
 			buffer.numberOfChannels >= 1 &&
 			buffer.numberOfChannels <= 2 &&
@@ -164,7 +168,7 @@ export class SoundboardPlaybackEngine {
 			buffer.sampleRate <= sampleRate &&
 			Number.isInteger(buffer.length) &&
 			buffer.length > 0 &&
-			buffer.length <= Math.ceil(MAX_DURATION_SECONDS * buffer.sampleRate) &&
+			buffer.length <= Math.ceil(MAX_DECODED_SECONDS * buffer.sampleRate) &&
 			this.bufferBytes(buffer) <= maxDecodeBytes
 		);
 	}
@@ -275,7 +279,7 @@ export class SoundboardPlaybackEngine {
 				}
 				const encoded = await this.readEncoded(response, job);
 				const maxDecodeBytes =
-					Math.ceil(MAX_DURATION_SECONDS * lease.context.sampleRate) * 2 * Float32Array.BYTES_PER_ELEMENT;
+					Math.ceil(MAX_DECODED_SECONDS * lease.context.sampleRate) * 2 * Float32Array.BYTES_PER_ELEMENT;
 				if (
 					!encoded ||
 					!this.validJob(job) ||

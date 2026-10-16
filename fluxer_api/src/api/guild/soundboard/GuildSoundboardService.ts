@@ -91,7 +91,7 @@ export class GuildSoundboardService {
 		}
 		const bytes = Buffer.from(audio, 'base64');
 		if (bytes.length === 0 || bytes.length > SOUNDBOARD_MAX_SIZE_BYTES) {
-			throw InputValidationError.create('audio', 'Sound must contain at most 512000 bytes');
+			throw InputValidationError.create('audio', 'Sound must contain at most 1000000 bytes');
 		}
 		const metadata = await this.media.getMetadata({type: 'base64', base64: audio, version: 2, nsfw: 'allow'});
 		const extension = metadata?.format === 'mp3' ? 'mp3' : metadata?.format === 'ogg' ? 'ogg' : null;
@@ -107,7 +107,7 @@ export class GuildSoundboardService {
 			durationMs <= 0 ||
 			durationMs > SOUNDBOARD_MAX_DURATION_MS
 		) {
-			throw InputValidationError.create('audio', 'Sound duration must be greater than zero and at most 5.2 seconds');
+			throw InputValidationError.create('audio', 'Sound duration must be greater than zero and at most 10 seconds');
 		}
 		const sound = new GuildSound({
 			guild_id: params.guildId,

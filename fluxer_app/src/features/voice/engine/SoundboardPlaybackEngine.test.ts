@@ -258,7 +258,7 @@ describe('soundboard playback bounds', () => {
 		await f.engine.play(params());
 		f.setEligible(true);
 		await f.engine.play(params('nonfinite', {serverTime: NaN}));
-		await f.engine.play(params('invalid', {sizeBytes: 512001}));
+		await f.engine.play(params('invalid', {sizeBytes: 1000001}));
 		expect(f.fetcher).not.toHaveBeenCalled();
 		await f.engine.play(params());
 		await f.engine.play(params());
@@ -273,24 +273,38 @@ describe('soundboard playback bounds', () => {
 		f.engine.dispose();
 	});
 
-	it.each([88200, 96000, 192000])('accepts a 5.2 second decode at the device rate %i Hz', async (sampleRate) => {
+	it.each([88200, 96000, 192000])('accepts a 10 second decode at the device rate %i Hz', async (sampleRate) => {
 		const f = fixture(sampleRate);
-		f.decode.mockResolvedValueOnce(buffer({duration: 5.2, sampleRate, length: Math.ceil(5.2 * sampleRate)}));
-		await f.engine.play(params('1', {durationMs: 5200}));
+		f.decode.mockResolvedValueOnce(buffer({duration: 10, sampleRate, length: Math.ceil(10 * sampleRate)}));
+		await f.engine.play(params('1', {durationMs: 10000}));
 		expect(f.sources).toHaveLength(1);
 		expect(f.sources[0]?.start).toHaveBeenCalledOnce();
 		f.engine.dispose();
 	});
 
+	it('accepts MP3 padding that decodes up to 0.2 seconds past the limit', async () => {
+		const f = fixture();
+		f.decode.mockResolvedValueOnce(buffer({duration: 10.2, length: Math.ceil(10.2 * 48000)}));
+		await f.engine.play(params('1', {durationMs: 10000}));
+		expect(f.sources).toHaveLength(1);
+		f.engine.dispose();
+	});
+
+	it('rejects a server duration above the limit before fetching', async () => {
+		const f = fixture();
+		await f.engine.play(params('1', {durationMs: 10001}));
+		expect(f.fetcher).not.toHaveBeenCalled();
+	});
+
 	it('keeps high sample rate cache under the shared PCM budget', async () => {
 		const f = fixture(192000);
-		f.decode.mockImplementation(async () => buffer({duration: 5.2, sampleRate: 192000, length: 998400}));
+		f.decode.mockImplementation(async () => buffer({duration: 10, sampleRate: 192000, length: 1920000}));
 		for (let id = 1; id <= 5; id++) {
-			await f.engine.play(params(String(id), {durationMs: 5200}));
+			await f.engine.play(params(String(id), {durationMs: 10000}));
 			f.sources.at(-1)?.onended?.();
 		}
 		expect(f.sources).toHaveLength(5);
-		await f.engine.play(params('6', {assetVersion: params('1').assetVersion, durationMs: 5200}));
+		await f.engine.play(params('6', {assetVersion: params('1').assetVersion, durationMs: 10000}));
 		expect(f.fetcher).toHaveBeenCalledTimes(6);
 		f.engine.dispose();
 	});
@@ -334,7 +348,8 @@ describe('soundboard playback bounds', () => {
 	});
 
 	it.each([
-		{duration: 5.201},
+		{duration: 10.201},
+		{length: Math.ceil(10.2 * 48000) + 1},
 		{numberOfChannels: 3},
 		{sampleRate: 48001},
 		{sampleRate: 0},
@@ -356,7 +371,7 @@ describe('soundboard playback bounds', () => {
 		f.fetcher.mockResolvedValueOnce(
 			new Response(
 				new ReadableStream({
-					start: (controller) => controller.enqueue(new Uint8Array(512001)),
+					start: (controller) => controller.enqueue(new Uint8Array(1000001)),
 					cancel,
 				}),
 			),

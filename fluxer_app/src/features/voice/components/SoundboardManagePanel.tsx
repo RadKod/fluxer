@@ -21,11 +21,11 @@ import {useEffect, useRef, useState} from 'react';
 const NAME = msg({message: 'Sound name', comment: 'Label for the community soundboard sound name field.'});
 const CHOOSE = msg({message: 'Choose audio', comment: 'Soundboard action to choose an MP3 or Ogg file.'});
 const REQUIREMENTS = msg({
-	message: 'MP3 or Ogg, up to 512,000 bytes and 5.2 seconds.',
+	message: 'MP3 or Ogg, up to 1,000,000 bytes and 10 seconds.',
 	comment: 'Community sound upload requirements; server validates duration and audio format.',
 });
 const INVALID_FILE = msg({
-	message: 'Choose an MP3 or Ogg file up to 512,000 bytes.',
+	message: 'Choose an MP3 or Ogg file up to 1,000,000 bytes.',
 	comment: 'Soundboard upload error for unsupported format or file size.',
 });
 const SAVE = msg({message: 'Save sound', comment: 'Soundboard form save action.'});

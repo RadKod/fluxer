@@ -9,7 +9,7 @@ import {isJsonRecord} from '@app/api/utils/JsonBoundaryUtils';
 import {SOUNDBOARD_MAX_DURATION_MS, SOUNDBOARD_MAX_SIZE_BYTES} from '@fluxer/constants/src/SoundboardConstants';
 import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
 
-const MAX_OUTPUT_BYTES = 512 * 1024;
+const MAX_OUTPUT_BYTES = 1024 * 1024;
 const TIMEOUT_MS = 5000;
 let activeProbes = 0;
 

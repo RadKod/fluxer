@@ -536,12 +536,12 @@ describe('soundboard management', () => {
 	}
 	it.each([
 		{name: 'clip.wav', type: 'audio/wav', bytes: 3},
-		{name: 'clip.mp3', type: 'audio/mpeg', bytes: 512001},
+		{name: 'clip.mp3', type: 'audio/mpeg', bytes: 1000001},
 	])('rejects invalid upload $name with $bytes bytes before sending', async ({name, type, bytes}) => {
 		await manage();
 		picker.mockResolvedValue([new File([new Uint8Array(bytes)], name, {type})]);
 		await click('Choose audio');
-		expect(host.textContent).toContain('Choose an MP3 or Ogg file up to 512,000 bytes.');
+		expect(host.textContent).toContain('Choose an MP3 or Ogg file up to 1,000,000 bytes.');
 		expect(commands.uploadSound).not.toHaveBeenCalled();
 	});
 	it('uploads accepted MP3 as raw base64 with normalized volume', async () => {
@@ -555,7 +555,7 @@ describe('soundboard management', () => {
 		await manage();
 		picker.mockResolvedValue([new File([new Uint8Array([1, 2, 3])], 'clip.mp3', {type: 'audio/wav'})]);
 		await click('Choose audio');
-		expect(host.textContent).toContain('Choose an MP3 or Ogg file up to 512,000 bytes.');
+		expect(host.textContent).toContain('Choose an MP3 or Ogg file up to 1,000,000 bytes.');
 		expect(button('Save sound')?.disabled).toBe(true);
 	});
 	it('keeps a failed save in the form with an actionable error', async () => {

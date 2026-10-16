@@ -4,6 +4,7 @@ import {EMPTY_USER_ROW} from '@app/api/database/types/UserTypes';
 import {GuildSoundboardController} from '@app/api/guild/soundboard/GuildSoundboardController';
 import * as Probe from '@app/api/guild/soundboard/GuildSoundboardDurationProbe';
 import {fixture, savedSound, USER_ID} from '@app/api/guild/soundboard/tests/GuildSoundboardTestUtils';
+import ContentFilterMiddleware from '@app/api/middleware/ContentFilterMiddleware';
 import {User} from '@app/api/models/User';
 import type {HonoEnv} from '@app/api/types/HonoEnv';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
@@ -12,7 +13,7 @@ import {Hono} from 'hono';
 import {HTTPException} from 'hono/http-exception';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 
-function appFixture(flags = 0n) {
+function appFixture(flags = 0n, {contentFilter = false} = {}) {
 	const f = fixture();
 	const app = new Hono<HonoEnv>();
 	app.use(async (ctx, next) => {
@@ -20,15 +21,36 @@ function appFixture(flags = 0n) {
 		ctx.set('guildSoundboardService', f.service);
 		await next();
 	});
+	// Production runs the content filter app-wide, so it reads the JSON body before route middleware.
+	if (contentFilter) app.use(ContentFilterMiddleware);
 	app.onError((error) => (error instanceof HTTPException ? error.getResponse() : new Response(null, {status: 500})));
 	GuildSoundboardController(app);
-	const request = (method: string, path: string, body?: unknown) =>
+	const request = (method: string, path: string, body?: unknown, headers: Record<string, string> = {}) =>
 		app.request(path, {
 			method,
-			headers: {'content-type': 'application/json'},
+			headers: {'content-type': 'application/json', ...headers},
 			body: body === undefined ? undefined : JSON.stringify(body),
 		});
-	return {...f, request};
+	// A chunked request: no Content-Length header, body delivered as a stream.
+	const streamRequest = (path: string, text: string) => {
+		const bytes = new TextEncoder().encode(text);
+		const body = new ReadableStream<Uint8Array>({
+			start(controller) {
+				for (let offset = 0; offset < bytes.length; offset += 65536)
+					controller.enqueue(bytes.subarray(offset, offset + 65536));
+				controller.close();
+			},
+		});
+		const request = new Request(`http://localhost${path}`, {
+			method: 'POST',
+			headers: {'content-type': 'application/json', 'transfer-encoding': 'chunked'},
+			body,
+			duplex: 'half',
+		} as RequestInit);
+		expect(request.headers.has('content-length')).toBe(false);
+		return app.request(request);
+	};
+	return {...f, request, streamRequest};
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -61,12 +83,42 @@ describe('Guild soundboard HTTP routes', () => {
 		const f = appFixture();
 		const response = await f.request('POST', '/guilds/201/soundboard-sounds', {
 			name: 'Sound',
-			audio: 'a'.repeat(684001),
+			audio: 'a'.repeat(1_400_001),
 		});
 		expect(response.status).toBe(400);
 		expect(await response.json()).toMatchObject({code: 'FILE_SIZE_TOO_LARGE'});
 		expect(f.media.getMetadata).not.toHaveBeenCalled();
 	});
+	it('rejects an oversized Content-Length before reading the body', async () => {
+		const f = appFixture();
+		const response = await f.request('POST', '/guilds/201/soundboard-sounds', undefined, {'content-length': '1400001'});
+		expect(response.status).toBe(400);
+		expect(await response.json()).toMatchObject({code: 'FILE_SIZE_TOO_LARGE'});
+	});
+	it.each([false, true])(
+		'accepts a chunked upload without Content-Length (content filter first: %s)',
+		async (contentFilter) => {
+			vi.spyOn(Probe, 'resolveGuildSoundboardDurationMs').mockResolvedValue(10000);
+			const f = appFixture(0n, {contentFilter});
+			const audio = Buffer.alloc(1_000_000, 7).toString('base64');
+			const response = await f.streamRequest('/guilds/201/soundboard-sounds', JSON.stringify({name: 'Sound', audio}));
+			expect(response.status).toBe(201);
+			expect(await response.json()).toMatchObject({size_bytes: 1_000_000, duration_ms: 10000});
+		},
+	);
+	it.each([false, true])(
+		'caps a chunked upload without Content-Length with 400, not 500 (content filter first: %s)',
+		async (contentFilter) => {
+			const f = appFixture(0n, {contentFilter});
+			const response = await f.streamRequest(
+				'/guilds/201/soundboard-sounds',
+				JSON.stringify({name: 'Sound', audio: 'a'.repeat(1_400_001)}),
+			);
+			expect(response.status).toBe(400);
+			expect(await response.json()).toMatchObject({code: 'FILE_SIZE_TOO_LARGE'});
+			expect(f.media.getMetadata).not.toHaveBeenCalled();
+		},
+	);
 	it('accepts raw base64 only, rejecting data URIs before decoding', () => {
 		expect(
 			GuildSoundboardUploadRequest.safeParse({name: 'Sound', audio: 'data:audio/mpeg;base64,c291bmQ='}).success,

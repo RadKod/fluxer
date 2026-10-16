@@ -12,6 +12,8 @@ const SKIP_FIELDS = new Set([
 	'allow',
 	// Micup (cosmetics): base64 images of a catalog item, like image and icon.
 	'asset',
+	// sanalyer: base64 audio of a soundboard upload; random base64 can match a short banned phrase.
+	'audio',
 	'avatar',
 	'banner',
 	'challenge',

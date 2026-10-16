@@ -4,12 +4,12 @@ import {createOriginHandoff, redeemOriginHandoff} from '@app/api/auth/services/O
 import {Config} from '@app/api/Config';
 import {DefaultUserOnly, LoginRequired} from '@app/api/middleware/AuthMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
+import {RequestBodyLimit} from '@app/api/middleware/RequestBodyLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import type {HonoApp} from '@app/api/types/HonoEnv';
 import {Validator} from '@app/api/Validator';
 import {AccessDeniedError} from '@fluxer/errors/src/domains/core/AccessDeniedError';
-import {FileSizeTooLargeError} from '@fluxer/errors/src/domains/core/FileSizeTooLargeError';
 import {InvalidApiOriginError} from '@fluxer/errors/src/domains/core/InvalidApiOriginError';
 import {
 	ORIGIN_HANDOFF_MAX_PAYLOAD_LENGTH,
@@ -18,7 +18,6 @@ import {
 	OriginHandoffRedeemRequest,
 	OriginHandoffRedeemResponse,
 } from '@fluxer/schema/src/domains/auth/OriginHandoffSchemas';
-import {bodyLimit} from 'hono/body-limit';
 
 const ORIGIN_HANDOFF_CREATE_MAX_BODY_BYTES = ORIGIN_HANDOFF_MAX_PAYLOAD_LENGTH + 1024;
 
@@ -28,12 +27,7 @@ export function OriginHandoffController(app: HonoApp) {
 		RateLimitMiddleware(RateLimitConfigs.AUTH_ORIGIN_HANDOFF_CREATE),
 		LoginRequired,
 		DefaultUserOnly,
-		bodyLimit({
-			maxSize: ORIGIN_HANDOFF_CREATE_MAX_BODY_BYTES,
-			onError: () => {
-				throw new FileSizeTooLargeError(ORIGIN_HANDOFF_CREATE_MAX_BODY_BYTES);
-			},
-		}),
+		RequestBodyLimit(ORIGIN_HANDOFF_CREATE_MAX_BODY_BYTES),
 		Validator('json', OriginHandoffCreateRequest),
 		OpenAPI({
 			operationId: 'create_origin_handoff',

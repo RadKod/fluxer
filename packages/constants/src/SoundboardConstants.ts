@@ -2,5 +2,5 @@
 
 export const SOUNDBOARD_SOUND_PATH_PREFIX = 'soundboard-sounds';
 
-export const SOUNDBOARD_MAX_SIZE_BYTES = 512_000;
-export const SOUNDBOARD_MAX_DURATION_MS = 5200;
+export const SOUNDBOARD_MAX_SIZE_BYTES = 1_000_000;
+export const SOUNDBOARD_MAX_DURATION_MS = 10_000;
