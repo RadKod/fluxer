@@ -109,7 +109,7 @@ vi.mock('@app/features/channel/components/direct_message/DMPageFrame', () => ({
 }));
 vi.mock('@app/features/user/components/modals/user_profile_modal/ProfileMediaHeader', () => ({
 	ProfileMediaHeader: ({renderActionButtons, identity}: {renderActionButtons: () => ReactNode; identity?: ReactNode}) =>
-		createElement('header', null, identity ?? renderActionButtons()),
+		createElement('header', null, identity, renderActionButtons()),
 }));
 vi.mock('@app/features/user/components/modals/user_profile_modal/UserProfileModalUserInfo', () => ({
 	UserInfo: (props: Record<string, unknown>) => {
@@ -406,6 +406,8 @@ describe('UserProfilePage', () => {
 		profileAnswer = wireProfile('1', {is_following: undefined});
 		await open('1');
 		expect(button('Edit profile')).not.toBeNull();
+		expect(button('Edit profile')?.closest('[data-flx="user.user-profile-page.header.card"]')).not.toBeNull();
+		expect(container.querySelector('[data-flx="user.user-profile-page.content.actions-row"]')).toBeNull();
 		expect(button('Message')).toBeNull();
 		expect(container.querySelector('[data-part="follow-button"]')).toBeNull();
 		act(() => button('Edit profile')!.click());
@@ -416,6 +418,8 @@ describe('UserProfilePage', () => {
 	it("on someone else's profile shows Message, Follow, Add friend and more", async () => {
 		await open();
 		expect(button('Message')).not.toBeNull();
+		expect(button('Message')?.closest('[data-flx="user.user-profile-page.header.card"]')).not.toBeNull();
+		expect(container.querySelector('[data-flx="user.user-profile-page.content.actions-row"]')).toBeNull();
 		expect(container.querySelector('[data-part="follow-button"]')).not.toBeNull();
 		expect(button('Add friend')).not.toBeNull();
 		expect(button('More options')).not.toBeNull();

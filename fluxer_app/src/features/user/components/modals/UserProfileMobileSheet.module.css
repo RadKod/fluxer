@@ -64,7 +64,7 @@
 
 .profileContent {
 	position: relative;
-	background-color: var(--background-primary);
+	background-color: var(--profile-panel-background, var(--background-primary));
 }
 
 .avatarContainer {
@@ -75,8 +75,8 @@
 }
 
 .avatarBorder {
-	border: 0.25rem solid var(--background-primary);
-	background-color: var(--background-primary);
+	border: 0.25rem solid var(--profile-card-avatar-ring, var(--background-primary));
+	background-color: var(--profile-card-avatar-ring, var(--background-primary));
 	width: fit-content;
 }
 

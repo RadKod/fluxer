@@ -7,6 +7,10 @@
 	padding-top: 0.5rem;
 	padding-left: 1rem;
 	padding-right: 1rem;
+	margin: var(--profile-card-panel-margin, 0);
+	padding-bottom: var(--profile-card-panel-padding-bottom, 0);
+	border-radius: var(--profile-card-panel-radius, 0);
+	background: var(--profile-card-panel-background, none);
 }
 
 .contentSectionWebhook {

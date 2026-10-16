@@ -21,3 +21,11 @@
 	background-color: var(--background-primary);
 	padding-bottom: 0.75rem;
 }
+
+/* Micup: in the coal and dark themes the profile card is a raised card: the raised surface, a 12px corner and the faint
+   top light. The popout around it draws the shadow. Its edge keeps the profile's own colour. */
+:global(html:is(.theme-coal, .theme-dark)) .profileCard {
+	border-radius: var(--radius-xl);
+	background-color: var(--background-secondary-alt);
+	box-shadow: inset 0 0.0625rem 0 var(--surface-highlight);
+}

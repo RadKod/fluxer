@@ -104,7 +104,7 @@ export const ProfileCardBanner: React.FC<ProfileCardBannerProps> = observer(
 		const bannerStyle = useMemo<React.CSSProperties>(
 			() => ({
 				height: '100%',
-				backgroundColor: bannerColor,
+				backgroundColor: `var(--profile-gradient-banner, ${bannerColor})`,
 				...(activeBannerUrl ? {backgroundImage: `url(${activeBannerUrl})`} : {}),
 			}),
 			[activeBannerUrl, bannerColor],

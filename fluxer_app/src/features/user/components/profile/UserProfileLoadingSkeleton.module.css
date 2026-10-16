@@ -58,6 +58,14 @@
 	box-sizing: content-box;
 }
 
+/* Micup: the popout skeleton matches the raised profile card in the coal and dark themes. */
+:global(html:is(.theme-coal, .theme-dark)) .popout {
+	--profile-skeleton-bg: var(--background-secondary-alt);
+	--profile-skeleton-fill: var(--background-header-primary);
+	--profile-skeleton-fill-strong: var(--background-modifier-accent);
+	--profile-skeleton-radius: var(--radius-xl);
+}
+
 .modal {
 	--profile-skeleton-radius: var(--profile-modal-inner-radius, 0.25rem);
 	--profile-skeleton-banner-aspect: 20 / 7;

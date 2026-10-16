@@ -38,7 +38,7 @@ export const ProfileCardLayout: React.FC<ProfileCardLayoutProps> = observer(
 				)}
 				<div
 					ref={hoverRef}
-					className={clsx(styles.profileCard, className)}
+					className={clsx(styles.profileCard, gradient?.className, className)}
 					style={cardStyle}
 					data-flx="user.profile.profile-card.profile-card-layout.profile-card"
 				>

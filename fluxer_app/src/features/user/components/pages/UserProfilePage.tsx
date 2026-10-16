@@ -75,7 +75,7 @@ import {reaction} from 'mobx';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
-import {type RefObject, useEffect, useMemo, useRef, useState} from 'react';
+import {type RefObject, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 
 const PROFILE_DESCRIPTOR = msg({
 	message: 'Profile',
@@ -234,9 +234,6 @@ const ProfilePageContent = observer(
 					showFollowStats={showContent}
 					data-flx="user.user-profile-page.content.header"
 				/>
-				<div className={styles.actionsRow} data-flx="user.user-profile-page.content.actions-row">
-					<ProfilePageActions user={user} data-flx="user.user-profile-page.content.actions" />
-				</div>
 				{profile.profileLimited && (
 					<ProfilePageMessage kind="limited" data-flx="user.user-profile-page.content.limited" />
 				)}
@@ -267,6 +264,10 @@ const ProfilePageHeader = observer(
 		showFollowStats: boolean;
 	}) => {
 		const membership = resolveProfileGuildMembership(profile);
+		const renderActions = useCallback(
+			() => <ProfilePageActions user={user} data-flx="user.user-profile-page.content.actions" />,
+			[user],
+		);
 		const profileContext = useMemo(
 			() => toProfileDisplayContext({user, profile, membership, guildMemberProfile: profile.guildMemberProfile}),
 			[user, profile, membership],
@@ -297,7 +298,7 @@ const ProfilePageHeader = observer(
 					hoverBannerUrl={hoverBannerUrl}
 					avatarUrl={avatarUrl}
 					hoverAvatarUrl={hoverAvatarUrl}
-					renderActionButtons={renderNoActions}
+					renderActionButtons={renderActions}
 					identity={
 						<div className={styles.identity} data-flx="user.user-profile-page.header.identity">
 							<UserInfo
@@ -320,9 +321,6 @@ const ProfilePageHeader = observer(
 		);
 	},
 );
-
-// The page's actions sit in a row under the name, where they can wrap on a phone; the banner keeps the avatar alone.
-const renderNoActions = () => null;
 
 // Fluxer's own commands; the modal's handlers are not copied.
 const ProfilePageActions = observer(({user}: {user: User}) => {
