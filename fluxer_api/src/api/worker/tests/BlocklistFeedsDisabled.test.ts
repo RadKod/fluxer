@@ -138,6 +138,21 @@ describe('blocklist feeds turned off', () => {
 		).resolves.toBeUndefined();
 		expect(quietWarn).not.toHaveBeenCalled();
 
+		const deniedLogger = new NoopLogger();
+		const deniedWarn = vi.spyOn(deniedLogger, 'warn');
+		const deniedInfo = vi.spyOn(deniedLogger, 'info');
+		vi.spyOn(harness.storageService, 'deleteObject').mockRejectedValueOnce(
+			Object.assign(new Error('Access Denied'), {name: 'AccessDenied'}),
+		);
+		await expect(
+			syncUrlBlocklists({}, createTestWorkerHelpers({jobId: 4242n, ...{logger: deniedLogger}})),
+		).resolves.toBeUndefined();
+		expect(deniedWarn).not.toHaveBeenCalled();
+		expect(deniedInfo).toHaveBeenCalledWith(
+			{error: 'AccessDenied'},
+			'URL blocklist feed bucket is not reachable with these credentials, nothing to delete',
+		);
+
 		const loudLogger = new NoopLogger();
 		const loudWarn = vi.spyOn(loudLogger, 'warn');
 		harness.storageService.configure({shouldFailDelete: true});
