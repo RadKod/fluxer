@@ -26,6 +26,7 @@ const h = vi.hoisted(() => ({
 	selfMute: false,
 	pushToTalk: false,
 	browserNoiseSuppression: undefined as boolean | undefined,
+	speakingMeters: new Set<{readTrack: () => unknown}>(),
 	muteCalls: 0,
 	permissionGranted: vi.fn(),
 	syncVoiceState: vi.fn(),
@@ -202,10 +203,21 @@ vi.mock('@app/features/voice/utils/VideoBackgroundProcessor', () => ({
 	applyBackgroundProcessor: async () => {},
 	clearCameraVideoProcessor: async () => {},
 }));
+vi.mock('@app/features/voice/engine/VoiceSpeakingDetection', () => ({
+	VoiceSpeakingMeter: class {
+		speaking = false;
+		constructor(readonly readTrack: () => unknown) {
+			h.speakingMeters.add(this);
+		}
+		tick(): void {}
+		dispose(): void {
+			h.speakingMeters.delete(this);
+		}
+	},
+}));
 vi.mock('@app/features/voice/utils/VoiceInputProcessor', () => {
 	class VoiceInputTrackProcessor {
 		processedTrack?: FakeMediaTrack;
-		listening = false;
 		async init(): Promise<void> {
 			await step('processorInit');
 			this.processedTrack = createMediaTrack('MediaStreamAudioDestinationNode', h.processed);
@@ -215,12 +227,6 @@ vi.mock('@app/features/voice/utils/VoiceInputProcessor', () => {
 		}
 		async configure(): Promise<void> {
 			await step('configure');
-		}
-		onLevel(): () => void {
-			this.listening = true;
-			return () => {
-				this.listening = false;
-			};
 		}
 		reportRuntime(): void {}
 	}
@@ -526,6 +532,10 @@ function settleState(promise: Promise<unknown>): {settled: boolean} {
 	return state;
 }
 
+function isSpeakingMetered(track: {mediaStreamTrack: unknown}): boolean {
+	return [...h.speakingMeters].some((meter) => meter.readTrack() === track.mediaStreamTrack);
+}
+
 describe('local capture lifecycle reset', () => {
 	it('removes both ended listeners and bridge registrations on reset, then permits fresh room bindings', async () => {
 		const adapter = await createAdapter();
@@ -739,13 +749,13 @@ describe('microphone enable when the user hangs up while voice is connecting', (
 		connect(nextRoom);
 		h.browserNoiseSuppression = undefined;
 		await adapter.enableMicrophone(nextRoom as never, 'channel-2');
-		const nextProcessor = microphoneTrackOf(nextRoom).processor as unknown as {listening: boolean};
-		expect(nextProcessor.listening).toBe(true);
+		const nextCapture = microphoneTrackOf(nextRoom);
+		expect(isSpeakingMetered(nextCapture)).toBe(true);
 		releaseQueue();
 		await vi.advanceTimersByTimeAsync(1_000);
 		await republished;
 
-		expect(nextProcessor.listening).toBe(true);
+		expect(isSpeakingMetered(nextCapture)).toBe(true);
 		expect(nextRoom.localParticipant.audioTrackPublications.size).toBe(1);
 		expect(liveTracks()).toEqual(LIVE_MICROPHONE);
 	});
@@ -843,7 +853,7 @@ describe('microphone enable keeps working across legitimate room changes', () =>
 		releaseUnmute();
 		await pending;
 
-		expect((capture.processor as unknown as {listening: boolean}).listening).toBe(true);
+		expect(isSpeakingMetered(capture)).toBe(true);
 		const captureId = `voice-mic:${capture.mediaStreamTrack.id}`;
 		expect(lifecycle.bind).toHaveBeenCalledWith({captureId, sourceId: captureId});
 		expect(microphoneState(adapter)).toBe('enabled');

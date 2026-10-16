@@ -90,7 +90,7 @@ export const FeedButton = observer(() => {
 							transition={{duration: Accessibility.useReducedMotion ? 0 : 0.07, ease: 'easeOut'}}
 							style={
 								isSelected && !iconUrl
-									? {backgroundColor: 'var(--brand-primary)', color: 'var(--text-on-brand-primary)'}
+									? {backgroundColor: 'var(--brand-primary)', color: 'var(--brand-primary-fill)'}
 									: undefined
 							}
 							data-flx="app.sidebar-nav.feed-button.div--2"

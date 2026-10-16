@@ -77,7 +77,7 @@
 }
 
 :global(.theme-light) .sequenceBadge {
-	color: var(--brand-primary);
+	color: var(--brand-primary-foreground);
 }
 
 .sequenceBadgeMobile {

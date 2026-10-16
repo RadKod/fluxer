@@ -18,7 +18,13 @@ import {
 	getSharedVoiceAudioContext,
 	resolveAudioContextConstructor,
 } from '@app/features/voice/engine/VoiceSharedAudioContext';
-import {getRemoteSpeakingThresholdRms} from '@app/features/voice/engine/VoiceSpeakingThreshold';
+import {
+	computeTimeDomainRms,
+	createSpeakingAnalyser,
+	createSpeakingSamples,
+	readSpeakingThresholdRms,
+	SPEAKING_ANALYSER_INTERVAL_MS,
+} from '@app/features/voice/engine/VoiceSpeakingDetection';
 import {VoiceTrackKind, VoiceTrackSource} from '@app/features/voice/engine/VoiceTrackSource';
 import {
 	assertNonEmptyString,
@@ -30,23 +36,11 @@ import {
 	clearRemoteVoicePlaybackBoost,
 	setRemoteVoicePlaybackBoost,
 } from '@app/features/voice/state/RemoteVoicePlaybackBoost';
-import VoiceSettings from '@app/features/voice/state/VoiceSettings';
 import {readVoicePipelineV2Enabled} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime';
 import type {Participant, RemoteAudioTrack, RemoteTrack, RemoteTrackPublication, Room} from 'livekit-client';
 
 const logger = new Logger('VoiceEngineV2AppRemoteSpeakingAdapter');
-const REMOTE_SPEAKING_ANALYSER_INTERVAL_MS = 50;
 const REMOTE_SPEAKING_ANALYSER_HANDLES_CAP = 256;
-
-export function computeTimeDomainRms(samples: Float32Array): number {
-	if (samples.length === 0) return 0;
-	let sumSquares = 0;
-	for (let i = 0; i < samples.length; i++) {
-		const sample = samples[i]!;
-		sumSquares += sample * sample;
-	}
-	return Math.sqrt(sumSquares / samples.length);
-}
 
 interface TrackAnalyserNodes {
 	source: MediaStreamAudioSourceNode;
@@ -184,8 +178,8 @@ export class VoiceEngineV2AppRemoteSpeakingAdapter {
 				track: mediaStreamTrack,
 				source,
 				analyser,
-				samples: new Float32Array(new ArrayBuffer(analyser.fftSize * Float32Array.BYTES_PER_ELEMENT)),
-				nextTickAtMs: this.nowMs() + REMOTE_SPEAKING_ANALYSER_INTERVAL_MS,
+				samples: createSpeakingSamples(),
+				nextTickAtMs: this.nowMs() + SPEAKING_ANALYSER_INTERVAL_MS,
 			};
 			this.analysers.set(identity, handle);
 			this.applyCommands(
@@ -313,7 +307,7 @@ export class VoiceEngineV2AppRemoteSpeakingAdapter {
 		}
 		handle.analyser.getFloatTimeDomainData(handle.samples);
 		const rms = computeTimeDomainRms(handle.samples);
-		const threshold = getRemoteSpeakingThresholdRms(VoiceSettings.getVadThreshold());
+		const threshold = readSpeakingThresholdRms();
 		this.applyCommands(
 			this.transition({
 				type: 'remote.tick',
@@ -324,7 +318,7 @@ export class VoiceEngineV2AppRemoteSpeakingAdapter {
 				pipelineV2Enabled,
 			}),
 		);
-		handle.nextTickAtMs = nowMs + REMOTE_SPEAKING_ANALYSER_INTERVAL_MS;
+		handle.nextTickAtMs = nowMs + SPEAKING_ANALYSER_INTERVAL_MS;
 	}
 
 	private connectTrackNodes(ctx: AudioContext, track: MediaStreamTrack): TrackAnalyserNodes {
@@ -334,9 +328,7 @@ export class VoiceEngineV2AppRemoteSpeakingAdapter {
 			return cached;
 		}
 		const source = ctx.createMediaStreamSource(new MediaStream([track]));
-		const analyser = ctx.createAnalyser();
-		analyser.fftSize = 512;
-		analyser.smoothingTimeConstant = 0.2;
+		const analyser = createSpeakingAnalyser(ctx);
 		source.connect(analyser);
 		const nodes: TrackAnalyserNodes = {source, analyser};
 		this.trackNodes.set(track, nodes);
@@ -369,7 +361,7 @@ export class VoiceEngineV2AppRemoteSpeakingAdapter {
 		if (typeof window === 'undefined') return;
 		this.autoScheduleTimerId = window.setInterval(() => {
 			this.tickHost(this.nowMs());
-		}, REMOTE_SPEAKING_ANALYSER_INTERVAL_MS);
+		}, SPEAKING_ANALYSER_INTERVAL_MS);
 	}
 
 	get analyserCount(): number {

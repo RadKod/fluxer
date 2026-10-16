@@ -14,5 +14,5 @@
 	font-weight: 600;
 	font-size: 0.875rem;
 	line-height: 1;
-	color: hsl(0, 0%, 98%);
+	color: var(--text-on-dark);
 }

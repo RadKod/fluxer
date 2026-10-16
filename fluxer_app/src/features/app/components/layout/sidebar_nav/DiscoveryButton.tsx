@@ -67,9 +67,7 @@ export const DiscoveryButton = observer(() => {
 							initial={{borderRadius: '30%'}}
 							transition={{duration: Accessibility.useReducedMotion ? 0 : 0.07, ease: 'easeOut'}}
 							style={
-								isSelected
-									? {backgroundColor: 'var(--brand-primary)', color: 'var(--text-on-brand-primary)'}
-									: undefined
+								isSelected ? {backgroundColor: 'var(--brand-primary)', color: 'var(--brand-primary-fill)'} : undefined
 							}
 							data-flx="app.sidebar-nav.discovery-button.div--2"
 						>
