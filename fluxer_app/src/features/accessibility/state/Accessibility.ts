@@ -738,6 +738,7 @@ export interface AccessibilitySettings {
 	preserveEditDraft: boolean;
 	stayInteractiveWhenUnfocused: boolean;
 	scrollToBottomOnMessageSend: boolean;
+	doubleClickMessageActions: boolean;
 	sequentialFileSend: boolean;
 	showNeko: boolean;
 	keepNekoStill: boolean;
@@ -845,6 +846,7 @@ class Accessibility {
 	preserveEditDraft = false;
 	stayInteractiveWhenUnfocused = false;
 	scrollToBottomOnMessageSend = true;
+	doubleClickMessageActions = true;
 	sequentialFileSend = false;
 	showNeko = false;
 	keepNekoStill = false;
@@ -959,6 +961,7 @@ class Accessibility {
 				'preserveEditDraft',
 				'stayInteractiveWhenUnfocused',
 				'scrollToBottomOnMessageSend',
+				'doubleClickMessageActions',
 				'sequentialFileSend',
 			],
 			toMessage: (s) => ({
@@ -1021,6 +1024,7 @@ class Accessibility {
 				preserveEditDraft: s.preserveEditDraft,
 				stayInteractiveWhenUnfocused: s.stayInteractiveWhenUnfocused,
 				scrollToBottomOnMessageSend: s.scrollToBottomOnMessageSend,
+				doubleClickMessageActions: s.doubleClickMessageActions,
 				sequentialFileSend: s.sequentialFileSend,
 			}),
 			applyMessage: (s, m) => {
@@ -1113,6 +1117,7 @@ class Accessibility {
 				if (m.stayInteractiveWhenUnfocused !== undefined)
 					s.stayInteractiveWhenUnfocused = m.stayInteractiveWhenUnfocused;
 				if (m.scrollToBottomOnMessageSend !== undefined) s.scrollToBottomOnMessageSend = m.scrollToBottomOnMessageSend;
+				if (m.doubleClickMessageActions !== undefined) s.doubleClickMessageActions = m.doubleClickMessageActions;
 				if (m.sequentialFileSend !== undefined) s.sequentialFileSend = m.sequentialFileSend;
 			},
 		});
@@ -1498,6 +1503,8 @@ class Accessibility {
 			this.stayInteractiveWhenUnfocused = validated.stayInteractiveWhenUnfocused;
 		if (validated.scrollToBottomOnMessageSend !== undefined)
 			this.scrollToBottomOnMessageSend = validated.scrollToBottomOnMessageSend;
+		if (validated.doubleClickMessageActions !== undefined)
+			this.doubleClickMessageActions = validated.doubleClickMessageActions;
 		if (validated.sequentialFileSend !== undefined) this.sequentialFileSend = validated.sequentialFileSend;
 		if (validated.showNeko !== undefined && validated.showNeko !== this.showNeko) {
 			this.showNeko = validated.showNeko;
@@ -1605,6 +1612,7 @@ class Accessibility {
 			preserveEditDraft: data.preserveEditDraft ?? this.preserveEditDraft,
 			stayInteractiveWhenUnfocused: data.stayInteractiveWhenUnfocused ?? this.stayInteractiveWhenUnfocused,
 			scrollToBottomOnMessageSend: data.scrollToBottomOnMessageSend ?? this.scrollToBottomOnMessageSend,
+			doubleClickMessageActions: data.doubleClickMessageActions ?? this.doubleClickMessageActions,
 			sequentialFileSend: data.sequentialFileSend ?? this.sequentialFileSend,
 			showNeko: data.showNeko ?? this.showNeko,
 			keepNekoStill: data.keepNekoStill ?? this.keepNekoStill,
