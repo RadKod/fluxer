@@ -71,7 +71,12 @@ export class FakeNativeImage {
 	}
 }
 
+export const loadedImagePaths = [];
+
 export const fakeNativeImageModule = {
 	createEmpty: () => new FakeNativeImage(),
-	createFromPath: () => FakeNativeImage.fromBitmap(16),
+	createFromPath: (file) => {
+		loadedImagePaths.push(file);
+		return FakeNativeImage.fromBitmap(16);
+	},
 };

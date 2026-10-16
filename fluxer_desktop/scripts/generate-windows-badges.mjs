@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+// sanalyer: generate-brand-icons.py writes these badges now (same geometry, brand fill); keep the fills in sync.
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as zlib from 'node:zlib';
@@ -19,7 +20,7 @@ const WIDE_LABEL_MAX_WIDTH_RATIO = 0.7;
 const DOT_DIAMETER_RATIO = 0.375;
 const GLYPH_COLOR = '#ffffff';
 const VARIANTS = Object.freeze([
-	{prefix: 'badge', fill: '#f35a5a'},
+	{prefix: 'badge', fill: '#b5179e'},
 	{prefix: 'badge-dark', fill: '#26252d'},
 ]);
 
