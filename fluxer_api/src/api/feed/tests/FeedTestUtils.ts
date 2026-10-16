@@ -98,8 +98,7 @@ export async function followDirectly(userId: string, targetId: string): Promise<
  */
 export async function setProfileLevel(account: TestAccount, level: number): Promise<void> {
 	const userId = createUserID(BigInt(account.userId));
-	const settings = (await getUserRepository().findSettings(userId))!;
-	await getUserRepository().upsertSettings({...settings.toRow(), profile_privacy: level});
+	await getUserRepository().patchSettings(userId, {profile_privacy: level});
 	await getProfileAccessCache().forgetSide(userId);
 }
 

@@ -13,6 +13,7 @@ use crate::{
         cors::{self, OriginCheck},
         external::serve_external,
         response::error::{text, text_with_source},
+        soundboard_path::parse_soundboard_path,
         state::AppState,
         stored,
     },
@@ -172,6 +173,10 @@ async fn serve_public_read(app: &Arc<AppState>, read: PublicRead<'_>) -> Respons
         return stored::serve_stored_raw(app, method, &app.cfg.storage.bucket_cdn, &key, headers)
             .await;
     }
+    if let Some(key) = parse_soundboard_path(path) {
+        return stored::serve_stored_raw(app, method, &app.cfg.storage.bucket_cdn, &key, headers)
+            .await;
+    }
     if let Some(asset) = parse_guild_member_asset_path(path) {
         return stored::serve_asset_image(app, method, asset, params, headers).await;
     }
@@ -227,6 +232,68 @@ mod tests {
     };
 
     const STORED_BYTES: &[u8] = b"raw-stored-bytes";
+
+    #[tokio::test]
+    async fn soundboard_raw_preserves_ranges_cache_and_content_type() {
+        let tmp = tempfile::tempdir().expect("storage root");
+        let root = tmp.path().canonicalize().expect("canonical storage root");
+        let app = dispatch_app("mp", &root, &[]);
+        for (ext, mime) in [("mp3", "audio/mpeg"), ("ogg", "audio/ogg")] {
+            let key = format!("soundboard-sounds/42/{}.{ext}", "a".repeat(64));
+            let path = format!("/{key}");
+            write_object(&root, "cdn", &key, STORED_BYTES);
+            let response = dispatch(&app, Method::GET, &path).await;
+            assert_eq!(response.status(), StatusCode::OK);
+            assert_eq!(response.headers()[header::CONTENT_TYPE], mime);
+            assert_eq!(
+                response.headers()[header::CACHE_CONTROL],
+                "public, max-age=31536000, no-transform"
+            );
+            assert_eq!(body_of(response).await, STORED_BYTES);
+            let response = dispatch_request(
+                &app,
+                read_request(Method::GET, &path, &[], Some("bytes=1-3")),
+            )
+            .await;
+            assert_eq!(response.status(), StatusCode::PARTIAL_CONTENT);
+            assert_eq!(response.headers()[header::CONTENT_RANGE], "bytes 1-3/16");
+            assert_eq!(response.headers()[header::CONTENT_TYPE], mime);
+            assert_eq!(body_of(response).await, &STORED_BYTES[1..4]);
+            let response = dispatch(&app, Method::HEAD, &path).await;
+            assert_eq!(response.status(), StatusCode::OK);
+            assert_eq!(response.headers()[header::CONTENT_TYPE], mime);
+            assert_eq!(response.headers()[header::CONTENT_LENGTH], "16");
+            assert!(body_of(response).await.is_empty());
+            let response = dispatch_request(
+                &app,
+                read_request(Method::GET, &path, &[], Some("bytes=100-200")),
+            )
+            .await;
+            assert_eq!(response.status(), StatusCode::RANGE_NOT_SATISFIABLE);
+        }
+    }
+
+    #[tokio::test]
+    async fn soundboard_raw_rejects_invalid_paths() {
+        let tmp = tempfile::tempdir().expect("storage root");
+        let root = tmp.path().canonicalize().expect("canonical storage root");
+        let app = dispatch_app("mp", &root, &[]);
+        for key in [
+            format!("soundboard-sounds/01/{}.mp3", "a".repeat(64)),
+            format!("soundboard-sounds/42/{}.wav", "a".repeat(64)),
+            format!("soundboard-sounds/42/{}.mp3", "g".repeat(64)),
+            "soundboard-sounds/42/short.mp3".to_owned(),
+            "soundboard-sounds/42/%2e%2e/secret.mp3".to_owned(),
+        ] {
+            write_object(&root, "cdn", &key, STORED_BYTES);
+            assert_eq!(
+                dispatch(&app, Method::GET, &format!("/{key}"))
+                    .await
+                    .status(),
+                StatusCode::NOT_FOUND
+            );
+        }
+    }
     const THEME_BYTES: &[u8] = b"body{color:#fff}";
     const WEB: &str = "https://web.fluxer.app";
     const EVIL: &str = "https://evil.example";

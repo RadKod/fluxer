@@ -22,6 +22,7 @@ export const GuildSoundboardRateLimitConfigs = {
 	} as RouteRateLimitConfig,
 } as const;
 
-export const SOUNDBOARD_USER_PLAY_BUCKET = {limit: 2, windowMs: 5000};
+// sanalyer: four plays per five seconds per user; the gateway bucket in guild_voice_soundboard.erl matches.
+export const SOUNDBOARD_USER_PLAY_BUCKET = {limit: 4, windowMs: 5000};
 // Four tokens draining over 2.5 seconds give eight plays per five seconds with a burst of four.
 export const SOUNDBOARD_CHANNEL_PLAY_BUCKET = {limit: 4, windowMs: 2500};

@@ -42,7 +42,8 @@ eligible(VS) ->
     is_binary(maps:get(<<"session_id">>, VS, undefined)) andalso
         lists:all(
             fun(Key) -> maps:get(Key, VS, false) =:= false end,
-            [<<"mute">>, <<"deaf">>, <<"self_mute">>, <<"self_deaf">>, <<"suppress">>]
+            %% sanalyer: kendi mikrofonunu kapatan da ses çalabilir ve duyabilir; sesler dinleyicide karışır.
+            [<<"mute">>, <<"deaf">>, <<"self_deaf">>, <<"suppress">>]
         ).
 
 -spec reject(binary(), map()) -> {reply, map(), map()}.
@@ -209,7 +210,7 @@ take_rate(User, Channel, Now, State) ->
     Rates = maps:get(soundboard_rates, State, #{}),
     UserKey = {user, User},
     ChannelKey = {channel, Channel},
-    UserTokens = refill(maps:get(UserKey, Rates, {2.0, Now}), Now, 2, 2),
+    UserTokens = refill(maps:get(UserKey, Rates, {4.0, Now}), Now, 4, 4),
     ChannelTokens = refill(maps:get(ChannelKey, Rates, {4.0, Now}), Now, 8, 4),
     case UserTokens >= 1 andalso ChannelTokens >= 1 of
         false ->

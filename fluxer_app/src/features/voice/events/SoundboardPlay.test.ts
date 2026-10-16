@@ -202,7 +202,8 @@ describe('soundboard event admission', () => {
 		expect(state.load).not.toHaveBeenCalled();
 	});
 
-	it.each(['disabled', 'localMute', 'effectiveMute', 'effectiveDeaf'] as const)(
+	// sanalyer: a muted listener still hears sounds; only disabled, local mute of the actor and deafen block.
+	it.each(['disabled', 'localMute', 'effectiveDeaf'] as const)(
 		'applies %s before metadata fetch',
 		async (flag) => {
 			if (flag === 'disabled') state.settings.disabled = true;

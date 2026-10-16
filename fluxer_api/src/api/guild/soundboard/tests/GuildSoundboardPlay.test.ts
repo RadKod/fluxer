@@ -55,8 +55,10 @@ describe('Guild soundboard play trust boundary', () => {
 		await f.repository.upsertSound(savedSound());
 		await f.service.play(play);
 		await f.makeService().play({...play, sessionId: 'reconnected', connectionId: 'new-connection'});
+		await f.makeService().play(play);
+		await f.makeService().play(play);
 		await expect(f.makeService().play(play)).rejects.toThrow(RateLimitError);
-		expect(f.gateway.playGuildSoundboardSound).toHaveBeenCalledTimes(2);
+		expect(f.gateway.playGuildSoundboardSound).toHaveBeenCalledTimes(4);
 	});
 	it('rejects a sound absent from the channel guild', async () => {
 		const f = playFixture();
@@ -100,8 +102,7 @@ describe('Guild soundboard play trust boundary', () => {
 	});
 	it('shares user rate limits across API instances and reconnects', async () => {
 		const f = playFixture();
-		expect(await f.rate()).toEqual({allowed: true});
-		expect(await f.rate()).toEqual({allowed: true});
+		for (let i = 0; i < 4; i++) expect(await f.rate()).toEqual({allowed: true});
 		expect(await f.rate()).toEqual({allowed: false});
 	});
 	it('shares channel burst four with eight-per-five-second drain across instances', async () => {

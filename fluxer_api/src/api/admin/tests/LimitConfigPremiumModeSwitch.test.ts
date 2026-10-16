@@ -148,6 +148,9 @@ describe('limit config across premium model switches on a self-hosted instance',
 			// Micup: the boost tiers add their emoji and sticker rules.
 			{id: 'more_emoji', filters: {guildFeatures: ['MORE_EMOJI']}, limits: {}},
 			{id: 'more_stickers', filters: {guildFeatures: ['MORE_STICKERS']}, limits: {}},
+			{id: 'boost_level_1', filters: {guildFeatures: ['BOOST_LEVEL_1']}, limits: {}},
+			{id: 'boost_level_2', filters: {guildFeatures: ['BOOST_LEVEL_2']}, limits: {}},
+			{id: 'boost_level_3', filters: {guildFeatures: ['BOOST_LEVEL_3']}, limits: {}},
 		]);
 	});
 
@@ -259,6 +262,9 @@ describe('limit config across premium model switches on a self-hosted instance',
 			'very_large_guild',
 			'more_emoji',
 			'more_stickers',
+			'boost_level_1',
+			'boost_level_2',
+			'boost_level_3',
 		]);
 		expect(hidden.limit_config.traitDefinitions).toEqual([]);
 		await saveDefaultRule(admin, {max_bio_length: 300});

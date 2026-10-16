@@ -104,8 +104,12 @@ local_rate_precedes_actor_validation() ->
     S = fixture(self()),
     {reply, #{success := false, error := <<"invalid_voice_state">>}, S1} =
         play((request())#{session_id => <<"stale">>}, S),
-    {reply, #{success := false, error := <<"invalid_voice_state">>}, S2} =
+    {reply, #{success := false, error := <<"invalid_voice_state">>}, S1b} =
         play((request())#{session_id => <<"stale">>}, S1),
+    {reply, #{success := false, error := <<"invalid_voice_state">>}, S1c} =
+        play((request())#{session_id => <<"stale">>}, S1b),
+    {reply, #{success := false, error := <<"invalid_voice_state">>}, S2} =
+        play((request())#{session_id => <<"stale">>}, S1c),
     {reply, Reply, _} = play(request(), S2),
     ?assertEqual(#{success => false, error => <<"rate_limited">>}, Reply),
     ?assertEqual([], drain(lookup)),
@@ -158,7 +162,7 @@ invalid_actor() ->
                 {reply, Reply, _} = play(request(), Muted),
                 ?assertEqual(false, maps:get(success, Reply))
             end,
-            [<<"mute">>, <<"deaf">>, <<"self_mute">>, <<"self_deaf">>, <<"suppress">>]
+            [<<"mute">>, <<"deaf">>, <<"self_deaf">>, <<"suppress">>]
         ),
         ?assertEqual([], drain(dispatch)),
         ?assertEqual([], drain(shared_limit))
@@ -167,7 +171,9 @@ invalid_actor() ->
 owner_rate_limit() ->
     with_guild(all_permissions(), fun(Guild) ->
         {reply, #{success := true}, S1} = play(request(), fixture(Guild)),
-        {reply, #{success := true}, S2} = play(request(), S1),
+        {reply, #{success := true}, S1b} = play(request(), S1),
+        {reply, #{success := true}, S1c} = play(request(), S1b),
+        {reply, #{success := true}, S2} = play(request(), S1c),
         {reply, Reply, _} = play(request(), S2),
         ?assertEqual(#{success => false, error => <<"rate_limited">>}, Reply),
         Replaced = guild_voice_server_state:merge_guild_state(
@@ -246,13 +252,15 @@ lifecycle_and_epoch() ->
 
 rate_refill_and_cleanup() ->
     S = fixture(self()),
+    %% sanalyer: kullanıcı başına 4 patlama (5 sn'de 4 dolar), kanal başına 4 patlama (5 sn'de 8 dolar).
     {ok, S1} = guild_voice_soundboard:take_rate(20, <<"10">>, 10000, S),
     {ok, S2} = guild_voice_soundboard:take_rate(20, <<"10">>, 10000, S1),
-    {error, _} = guild_voice_soundboard:take_rate(20, <<"10">>, 10000, S2),
-    {ok, _} = guild_voice_soundboard:take_rate(20, <<"10">>, 12500, S2),
-    {ok, S3} = guild_voice_soundboard:take_rate(21, <<"10">>, 10000, S2),
-    {ok, S4} = guild_voice_soundboard:take_rate(22, <<"10">>, 10000, S3),
-    {error, _} = guild_voice_soundboard:take_rate(23, <<"10">>, 10000, S4),
+    {ok, S3} = guild_voice_soundboard:take_rate(20, <<"10">>, 10000, S2),
+    {ok, S4} = guild_voice_soundboard:take_rate(20, <<"10">>, 10000, S3),
+    {error, _} = guild_voice_soundboard:take_rate(20, <<"10">>, 10000, S4),
+    {ok, _} = guild_voice_soundboard:take_rate(20, <<"10">>, 12500, S4),
+    {error, _} = guild_voice_soundboard:take_rate(21, <<"10">>, 10000, S4),
+    {ok, _} = guild_voice_soundboard:take_rate(21, <<"10">>, 12500, S4),
     Clean = guild_voice_soundboard:sweep(16000, S4),
     ?assertEqual(#{}, maps:get(soundboard_rates, Clean)).
 

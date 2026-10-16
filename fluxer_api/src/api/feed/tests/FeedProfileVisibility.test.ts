@@ -71,8 +71,7 @@ describe('feed posts and the author profile level (Kapı 2 Ş2, Ş4)', () => {
 			const user = (await repository.findUnique(id))!;
 			await repository.patchUpsert(id, {date_of_birth: null}, user.toRow());
 		}
-		const settings = await repository.findSettings(id);
-		await repository.upsertSettings({...settings!.toRow(), profile_privacy: level});
+		await repository.patchSettings(id, {profile_privacy: level});
 	}
 	// Through the settings route, so a level change reaches what caches the owner's side.
 	const setLevel = (account: TestAccount, level: number) =>

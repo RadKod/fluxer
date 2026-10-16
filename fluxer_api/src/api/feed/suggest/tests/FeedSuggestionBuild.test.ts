@@ -184,10 +184,7 @@ describe('feed suggestion build', () => {
 
 	// Shared communities, the level most existing accounts read as.
 	async function narrowProfile(user: User): Promise<void> {
-		await getUserRepository().upsertSettings({
-			...UserSettings.getDefaultUserSettings({userId: user.id, locale: 'en-US', isAdult: true}),
-			profile_privacy: ProfilePrivacyLevels.ALL_GUILDS,
-		});
+		await getUserRepository().patchSettings(user.id, {profile_privacy: ProfilePrivacyLevels.ALL_GUILDS});
 	}
 
 	beforeAll(async () => {

@@ -80,7 +80,7 @@ export function isSoundboardPlaybackEligible(params: SoundboardPlaybackParams): 
 	)
 		return false;
 	if (
-		getEffectiveAudioState().effectiveMute ||
+		// sanalyer: a muted listener still hears sounds (they mix on this client); only deafened drops them.
 		getEffectiveAudioState().effectiveDeaf ||
 		ParticipantVolume.isLocalMuted(params.actorId)
 	)
@@ -93,7 +93,6 @@ export function isSoundboardPlaybackEligible(params: SoundboardPlaybackParams): 
 		actor.channel_id === params.channelId &&
 		!actor.mute &&
 		!actor.deaf &&
-		!actor.self_mute &&
 		!actor.self_deaf &&
 		!actor.suppress
 	);
