@@ -57275,3 +57275,63 @@ msgstr "Mahalle Kahvesi"
 #: src/features/voice_scene/utils/RoomThemeOptions.ts
 msgid "Yönetim Ofisi"
 msgstr "Yönetim Ofisi"
+
+#. Soundboard play error when the user played too many sounds in a short time; counts down to zero.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Slow down. Try again in {seconds} s."
+msgstr "Yavaşla, {seconds} sn sonra tekrar dene."
+
+#. Soundboard play error when the server refuses because the user is not in the channel or is deafened.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "To play sounds, join this voice channel and undeafen yourself."
+msgstr "Ses çalmak için bu ses kanalında olmalı ve sağırlaştırmayı kapatmalısın."
+
+#. Placeholder and label of the soundboard search box.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Search sounds"
+msgstr "Ses ara"
+
+#. Button inside the soundboard search box that empties it.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Clear sound search"
+msgstr "Aramayı temizle"
+
+#. Soundboard search result when no sound name matches.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "No sounds match your search."
+msgstr "Aramana uyan bir ses yok."
+
+#. Button next to the soundboard search that shows the listening volume and mute switch.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Soundboard listening settings"
+msgstr "Ses paneli dinleme ayarları"
+
+#. Soundboard section listing the last sounds the user played in this community.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Recently played"
+msgstr "Son çalınanlar"
+
+#. Soundboard section listing the sounds the user starred.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Favorite sounds"
+msgstr "Favoriler"
+
+#. Soundboard section header listing every sound of the community; {guild} is the community name.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "{guild} sounds"
+msgstr "{guild} sunucusunun sesleri"
+
+#. Soundboard section header used when the community name is not known.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Community sounds"
+msgstr "Sunucunun sesleri"
+
+#. Accessible label of the star button on a soundboard sound.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Add {name} to favorites"
+msgstr "Favorilere ekle: {name}"
+
+#. Accessible label of the filled star button on a favorite soundboard sound.
+#: src/features/voice/components/SoundboardPanel.tsx
+msgid "Remove {name} from favorites"
+msgstr "Favorilerden çıkar: {name}"

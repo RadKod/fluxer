@@ -72,7 +72,8 @@ export async function deleteSound(guildId: string, soundId: string): Promise<voi
 	}
 }
 
-export async function playSound(channelId: string, soundId: string): Promise<void> {
+// Resolves false when the request was not sent because the voice session is not ready.
+export async function playSound(channelId: string, soundId: string): Promise<boolean> {
 	const sessionId = GatewaySessions.foregroundConnection.sessionId;
 	const connectionId = MediaEngine.connectionId;
 	if (
@@ -82,8 +83,9 @@ export async function playSound(channelId: string, soundId: string): Promise<voi
 		!sessionId ||
 		!connectionId
 	)
-		return;
+		return false;
 	await http.post(Endpoints.SOUNDBOARD_CHANNEL_PLAY(channelId, soundId), {
 		body: {session_id: sessionId, connection_id: connectionId},
 	});
+	return true;
 }

@@ -11,7 +11,7 @@
 .toolbar,
 .pagination,
 .actions,
-.sound {
+.searchRow {
 	display: flex;
 	align-items: center;
 	gap: var(--spacing-2);
@@ -24,6 +24,39 @@
 	flex-wrap: wrap;
 }
 
+.search {
+	flex: 1;
+	min-width: 0;
+}
+
+.clear {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	padding: 0;
+	border: none;
+	border-radius: var(--radius-md);
+	background: none;
+	color: var(--text-tertiary);
+	cursor: pointer;
+}
+
+.clear:hover {
+	color: var(--text-primary);
+	background-color: var(--background-modifier-hover);
+}
+
+.settings {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-3);
+	padding: var(--spacing-3);
+	border-radius: var(--radius-md);
+	background-color: var(--background-secondary);
+}
+
 .hint {
 	margin: 0;
 	color: var(--text-secondary);
@@ -31,16 +64,120 @@
 	line-height: 1.5;
 }
 
+.sections {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-3);
+	min-width: 0;
+}
+
+.section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-2);
+	min-width: 0;
+}
+
+.sectionHead {
+	display: flex;
+	align-items: center;
+	gap: 0.375rem;
+	width: 100%;
+	padding: 0.25rem 0.375rem;
+	border: none;
+	border-radius: var(--radius-md);
+	background: none;
+	color: var(--text-secondary);
+	font: inherit;
+	font-size: 0.75rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	text-align: start;
+	text-transform: uppercase;
+	cursor: pointer;
+}
+
+.sectionHead:hover {
+	color: var(--text-primary);
+	background-color: var(--background-modifier-hover);
+}
+
+.sectionCaret {
+	flex-shrink: 0;
+	width: 0.75rem;
+	height: 0.75rem;
+}
+
+.sectionTitle {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.sectionCount {
+	flex-shrink: 0;
+	color: var(--text-muted);
+	font-weight: 600;
+}
+
 .grid {
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
+	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: var(--spacing-2);
 }
 
-.play {
-	flex: 1;
+.tile {
+	position: relative;
 	min-width: 0;
-	justify-content: flex-start;
+}
+
+.play {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-2);
+	width: 100%;
+	min-width: 0;
+	height: 2.5rem;
+	padding: 0 0.5rem;
+	border: 0.0625rem solid transparent;
+	border-radius: var(--radius-lg, 0.75rem);
+	background-color: var(--background-tertiary);
+	color: var(--text-primary);
+	font: inherit;
+	font-size: 0.875rem;
+	font-weight: 500;
+	text-align: start;
+	cursor: pointer;
+	transition:
+		background-color 0.12s ease,
+		border-color 0.12s ease;
+}
+
+.play:hover:not(:disabled) {
+	border-color: var(--brand-primary);
+	background-color: var(--background-secondary-alt);
+}
+
+.play:active:not(:disabled) {
+	transform: scale(0.98);
+}
+
+.play:disabled {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+
+.glyph {
+	display: flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	border-radius: 999px;
+	background-color: var(--background-secondary);
+	color: var(--brand-primary-light);
 }
 
 .name {
@@ -48,6 +185,56 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+/* Star and manage buttons sit over the tile's right edge; shown on hover or keyboard focus, a starred sound keeps its star. */
+.tileActions {
+	position: absolute;
+	top: 50%;
+	right: 0.25rem;
+	display: flex;
+	gap: 0.125rem;
+	transform: translateY(-50%);
+}
+
+.tileAction {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	padding: 0;
+	border: none;
+	border-radius: var(--radius-md);
+	background-color: var(--background-secondary);
+	color: var(--text-secondary);
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.12s ease;
+}
+
+.tileAction:hover {
+	color: var(--text-primary);
+}
+
+.tile:hover .tileAction,
+.tile:focus-within .tileAction,
+.tileAction.favorite {
+	opacity: 1;
+}
+
+.favorite {
+	color: var(--status-warning);
+}
+
+/* Leave room for the overlaid buttons so a long name is cut before it, not under it. */
+.tile .play {
+	padding-right: 2rem;
+}
+
+.editable:hover .play,
+.editable:focus-within .play {
+	padding-right: 3.75rem;
 }
 
 .volume,
@@ -63,8 +250,31 @@
 	font-size: 0.875rem;
 }
 
-@media (max-width: 360px) {
+@media (hover: none) {
+	.tileAction {
+		opacity: 1;
+	}
+}
+
+@media (max-width: 480px) {
+	.grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 320px) {
 	.grid {
 		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.play,
+	.tileAction {
+		transition: none;
+	}
+
+	.play:active:not(:disabled) {
+		transform: none;
 	}
 }
