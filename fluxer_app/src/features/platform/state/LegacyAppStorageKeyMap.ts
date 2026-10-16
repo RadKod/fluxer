@@ -39,6 +39,7 @@ const MOBX_PERSIST_ROWS: ReadonlyArray<LegacyAppStorageKeyRow> = [
 	{kind: 'exact', key: 'VoiceSettings', scope: 'global', fanout: 'preference'},
 	{kind: 'exact', key: 'LocalVoiceState', scope: 'global', fanout: 'preference'},
 	{kind: 'exact', key: 'VoiceSessionRestore', scope: 'global', fanout: 'preference'},
+	{kind: 'exact', key: 'GameActivityLocalSettings', scope: 'global', fanout: 'preference'},
 	{kind: 'exact', key: 'Notification', scope: 'account', fanout: 'preference'},
 	{kind: 'exact', key: 'FeedNotifications', scope: 'account', fanout: 'content'},
 	{kind: 'exact', key: 'FeedTabs', scope: 'global', fanout: 'preference'},
