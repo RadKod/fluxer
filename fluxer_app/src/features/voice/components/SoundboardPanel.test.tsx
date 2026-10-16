@@ -28,7 +28,12 @@ const library = observable({
 	loading: false,
 	error: null as Error | null,
 });
-const settings = observable({disabled: false, volume: 1});
+const settings = observable({
+	disabled: false,
+	volume: 1,
+	favorites: [] as Array<string>,
+	recent: {} as Record<string, Array<string>>,
+});
 const media = observable({
 	guildId: 'g' as string | null,
 	channelId: 'c' as string | null,
@@ -82,8 +87,24 @@ vi.mock('@app/features/voice/state/SoundboardSettings', () => ({
 				settings.volume = value;
 			}),
 		commitVolume: volumeCommit,
+		isFavorite: (id: string) => settings.favorites.includes(id),
+		toggleFavorite: (id: string) =>
+			runInAction(() => {
+				settings.favorites = settings.favorites.includes(id)
+					? settings.favorites.filter((entry) => entry !== id)
+					: [id, ...settings.favorites];
+			}),
+		recentFor: (guildId: string) => settings.recent[guildId] ?? [],
+		recordPlay: (guildId: string, id: string) =>
+			runInAction(() => {
+				settings.recent = {
+					...settings.recent,
+					[guildId]: [id, ...(settings.recent[guildId] ?? []).filter((entry) => entry !== id)].slice(0, 6),
+				};
+			}),
 	}),
 }));
+vi.mock('@app/features/guild/state/Guilds', () => ({default: {getGuild: () => ({name: 'Kanka'})}}));
 vi.mock('@app/features/voice/commands/SoundboardCommands', () => commands);
 vi.mock('@app/features/voice/events/SoundboardPlay', async () => ({
 	...(await vi.importActual<object>('@app/features/voice/events/SoundboardPlay')),
@@ -109,8 +130,8 @@ vi.mock('@app/features/ui/button/Button', () => ({
 		createElement('button', {type: 'button', ...props, disabled: props.disabled || submitting}, children as ReactNode),
 }));
 vi.mock('@app/features/ui/components/form/FormInput', () => ({
-	Input: ({label, ...props}: Record<string, unknown>) =>
-		createElement('label', null, label as ReactNode, createElement('input', props)),
+	Input: ({label, leftIcon, rightElement, ...props}: Record<string, unknown>) =>
+		createElement('label', null, label as ReactNode, createElement('input', props), rightElement as ReactNode),
 }));
 vi.mock('@app/features/ui/checkbox/Checkbox', () => ({
 	Checkbox: ({
@@ -167,6 +188,7 @@ vi.mock('@app/features/ui/components/Slider', () => ({
 const {SoundboardPanel, SoundboardRoot} = await import('./SoundboardPanel');
 const {SoundboardManagePanel} = await import('./SoundboardManagePanel');
 const {LimitResolver} = await import('@app/features/app/utils/LimitResolverAdapter');
+const {HttpError} = await import('@app/features/platform/types/EndpointError');
 let host: HTMLDivElement;
 let root: Root;
 
@@ -194,6 +216,25 @@ function button(label: string): HTMLButtonElement | undefined {
 async function open(): Promise<void> {
 	await act(async () => root.render(createElement(SoundboardPanel, {guildId: 'g', channelId: 'c'})));
 }
+async function openSettings(): Promise<void> {
+	await click('Soundboard listening settings');
+}
+async function search(value: string): Promise<void> {
+	const input = host.querySelector<HTMLInputElement>('input[aria-label="Search sounds"]')!;
+	await act(async () => {
+		const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+		setter.call(input, value);
+		input.dispatchEvent(new Event('input', {bubbles: true}));
+	});
+}
+function playable(): Array<string> {
+	return [...host.querySelectorAll('[data-flx="voice.soundboard-panel.play-sound"]')].map(
+		(element) => element.getAttribute('aria-label') ?? '',
+	);
+}
+function named(id: string, name: string): GuildSoundboardSoundResponse {
+	return {...sound(id), name};
+}
 async function click(label: string): Promise<void> {
 	expect(button(label), label).toBeDefined();
 	await act(async () => {
@@ -213,6 +254,8 @@ beforeEach(() => {
 		library.loading = false;
 		settings.disabled = false;
 		settings.volume = 1;
+		settings.favorites = [];
+		settings.recent = {};
 		Object.assign(media, {guildId: 'g', channelId: 'c', connected: true, connectionId: 'connection'});
 		Object.assign(users, {currentUserId: 'me', viewAccountKey: 'main:me'});
 		gateway.sessionId = 'session';
@@ -279,6 +322,7 @@ describe('soundboard panel', () => {
 	});
 	it('keeps the account soundboard switch local and normalizes the listening volume', async () => {
 		await open();
+		await openSettings();
 		const checkbox = host.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
 		await act(async () => checkbox.click());
 		expect(settings.disabled).toBe(true);
@@ -305,6 +349,7 @@ describe('soundboard panel', () => {
 	});
 	it('changes listening volume live and commits only when the slider finishes', async () => {
 		await open();
+		await openSettings();
 		await act(async () => {
 			slider.props.asValueChanges?.(0.6);
 			slider.props.asValueChanges?.(0.4);
@@ -313,6 +358,109 @@ describe('soundboard panel', () => {
 		expect(volumeCommit).not.toHaveBeenCalled();
 		await act(async () => slider.props.onValueChange?.(0.4));
 		expect(volumeCommit).toHaveBeenCalledExactlyOnceWith(0.4);
+	});
+	it('filters sounds by name ignoring case and Turkish diacritics, and clears the search', async () => {
+		runInAction(() => {
+			library.sounds = [named('1', 'Işık Yandı'), named('2', 'Gülüş'), named('3', 'Alkış')];
+		});
+		await open();
+		expect(playable()).toHaveLength(3);
+		await search('ISIK');
+		expect(playable()).toEqual(['Play Işık Yandı']);
+		await search('gulus');
+		expect(playable()).toEqual(['Play Gülüş']);
+		await search('kis');
+		expect(playable()).toEqual(['Play Alkış']);
+		await search('yok böyle');
+		expect(playable()).toHaveLength(0);
+		expect(host.textContent).toContain('No sounds match your search.');
+		await click('Clear sound search');
+		expect(host.querySelector<HTMLInputElement>('input[aria-label="Search sounds"]')!.value).toBe('');
+		expect(playable()).toHaveLength(3);
+		expect(button('Clear sound search')).toBeUndefined();
+	});
+	it('stars a sound into the favorites section and unstars it again', async () => {
+		runInAction(() => {
+			library.sounds = [sound('one'), sound('two')];
+		});
+		await open();
+		expect(host.textContent).not.toContain('Favorite sounds');
+		expect(host.textContent).toContain('Kanka sounds');
+		await click('Add Sound two to favorites');
+		expect(settings.favorites).toEqual(['two']);
+		expect(host.textContent).toContain('Favorite sounds');
+		expect(button('Remove Sound two from favorites')?.getAttribute('aria-pressed')).toBe('true');
+		// The starred sound shows in favorites and in the community list.
+		expect(playable()).toEqual(['Play Sound two', 'Play Sound one', 'Play Sound two']);
+		await click('Remove Sound two from favorites');
+		expect(settings.favorites).toEqual([]);
+		expect(host.textContent).not.toContain('Favorite sounds');
+	});
+	it('collapses and expands a section from its header', async () => {
+		runInAction(() => {
+			library.sounds = [sound('one')];
+		});
+		await open();
+		const header = [...host.querySelectorAll<HTMLButtonElement>('button[aria-expanded]')].find((element) =>
+			element.textContent?.startsWith('Kanka sounds'),
+		)!;
+		expect(header.getAttribute('aria-expanded')).toBe('true');
+		await act(async () => header.click());
+		expect(header.getAttribute('aria-expanded')).toBe('false');
+		expect(playable()).toHaveLength(0);
+		await act(async () => header.click());
+		expect(playable()).toHaveLength(1);
+	});
+	it('lists recently played sounds after a successful play', async () => {
+		runInAction(() => {
+			library.sounds = [sound('one'), sound('two')];
+		});
+		await open();
+		expect(host.textContent).not.toContain('Recently played');
+		await click('Play Sound two');
+		expect(host.textContent).toContain('Recently played');
+		expect(playable()[0]).toBe('Play Sound two');
+	});
+	it('shows a rate limit countdown that clears itself after retry_after', async () => {
+		vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date']});
+		try {
+			runInAction(() => {
+				library.sounds = [sound('one')];
+			});
+			commands.playSound.mockRejectedValueOnce(
+				new HttpError({method: 'POST', path: '/play', status: 429, body: {retry_after: 2.5}}),
+			);
+			await open();
+			await click('Play Sound one');
+			expect(host.textContent).toContain('Slow down. Try again in 3 s.');
+			// Presses during the cooldown do not hit the server again.
+			await click('Play Sound one');
+			expect(commands.playSound).toHaveBeenCalledOnce();
+			await act(async () => {
+				vi.advanceTimersByTime(1000);
+			});
+			expect(host.textContent).toContain('Slow down. Try again in 2 s.');
+			await act(async () => {
+				vi.advanceTimersByTime(1600);
+			});
+			expect(host.textContent).not.toContain('Slow down');
+			expect(host.querySelector('[role="alert"]')).toBeNull();
+			await click('Play Sound one');
+			expect(commands.playSound).toHaveBeenCalledTimes(2);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+	it('explains a refused play and clears the message on the next successful play', async () => {
+		runInAction(() => {
+			library.sounds = [sound('one')];
+		});
+		commands.playSound.mockRejectedValueOnce(new HttpError({method: 'POST', path: '/play', status: 403}));
+		await open();
+		await click('Play Sound one');
+		expect(host.textContent).toContain('To play sounds, join this voice channel and undeafen yourself.');
+		await click('Play Sound one');
+		expect(host.textContent).not.toContain('join this voice channel');
 	});
 	it('registers one toggle listener and removes it on unmount', async () => {
 		const remove = vi.fn();
