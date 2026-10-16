@@ -19,10 +19,11 @@
 }
 
 /* fit-content (and no flex growth in a row) keeps the gradient on the name, not on the whole row; the ellipsis is
-   painted with the text, so it takes the gradient too. */
+   painted with the text, so it takes the gradient too. The basis goes back to auto with the growth: a row name set to
+   flex: 1 has a zero basis, and with overflow hidden it would shrink to nothing (the voice channel participant row). */
 :global(html:not(.hide-name-styles)) .gradient.gradient:not(.defaultOnLight),
 :global(html:not(.hide-name-styles):not(.theme-light)) .gradient.gradient {
-	flex-grow: 0;
+	flex: 0 1 auto;
 	width: fit-content;
 	max-width: 100%;
 	color: var(--name-style-1);

@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import styles from '@app/features/channel/components/MemberListItem.module.css';
+import roleStyles from '@app/features/guild/components/RoleAppearance.module.css';
 import type {GuildMember} from '@app/features/member/models/GuildMember';
+import nameStyles from '@app/features/name_style/components/NameStyleText.module.css';
 import {mountCssModule} from '@app/features/name_style/testing/CssModuleSheet';
 import {PublicUserFlags} from '@fluxer/constants/src/UserConstants';
 import {act, createElement, forwardRef, type ReactNode} from 'react';
@@ -257,5 +259,72 @@ describe('MemberListItem offline name on the coal and dark themes', () => {
 		document.documentElement.className = 'theme-light';
 		render({role: true, plus: true});
 		expect(opacity()).not.toBe('0.6');
+	});
+});
+
+describe('MemberListItem styled name font', () => {
+	let container: HTMLDivElement;
+	let root: ReturnType<typeof createRoot>;
+	const sheets: Array<HTMLStyleElement> = [];
+
+	beforeAll(() => {
+		sheets.push(
+			mountCssModule('src/features/channel/components/MemberListItem.module.css', styles),
+			mountCssModule('src/features/name_style/components/NameStyleText.module.css', nameStyles),
+			mountCssModule('src/features/guild/components/RoleAppearance.module.css', roleStyles),
+		);
+		const fonts = document.createElement('style');
+		fonts.textContent = ':root { --font-sans: "Fluxer Sans", sans-serif; }';
+		document.head.append(fonts);
+		sheets.push(fonts);
+	});
+	afterAll(() => {
+		for (const sheet of sheets) sheet.remove();
+		document.documentElement.className = '';
+	});
+	beforeEach(() => {
+		(globalThis as {IS_REACT_ACT_ENVIRONMENT?: boolean}).IS_REACT_ACT_ENVIRONMENT = true;
+		container = document.createElement('div');
+		document.body.append(container);
+		root = createRoot(container);
+	});
+	afterEach(() => {
+		act(() => root.unmount());
+		container.remove();
+	});
+
+	it.each([
+		['solid', [0x8b5cf6]],
+		['gradient', [0x8b5cf6, 0xec4899]],
+	])('draws a %s name in its font, role colour or not', (_kind, colors) => {
+		document.documentElement.className = 'theme-dark';
+		for (const role of [false, true]) {
+			const user = new User({
+				id: '42',
+				username: 'ayse',
+				discriminator: '0001',
+				global_name: 'Ayse',
+				avatar: null,
+				avatar_color: null,
+				flags: 0,
+				name_style: {font_id: 6, colors},
+			});
+			const guildMember = {
+				avatar: null,
+				isAvatarUnset: () => true,
+				getColorRole: () => (role ? {color: 0x2ecc71, colorSecondary: null} : undefined),
+				getIconRole: () => undefined,
+			} as unknown as GuildMember;
+			act(() =>
+				root.render(createElement(MemberListItem, {user, channelId: '7', guildId: '9', guildMember, status: 'online'})),
+			);
+			const name = container.querySelector<HTMLElement>('[data-flx="channel.member-list-item.name"]')!;
+			expect(name.textContent).toBe('Ayse');
+			expect(name.dataset.nameStyle).toBe('pressstart');
+			expect(name.style.getPropertyValue('--name-style-font')).toContain("'sanalyer Name pressstart'");
+			expect(getComputedStyle(name).fontFamily).toContain('sanalyer Name pressstart');
+			expect(getComputedStyle(name.firstElementChild!).fontFamily).toContain('sanalyer Name pressstart');
+			expect(getComputedStyle(name).display).not.toBe('none');
+		}
 	});
 });
