@@ -26,6 +26,9 @@ allowBuilds:
 
 blockExoticSubdeps: true
 
+# sanalyer: imaj build'inde pnpm 12'nin script öncesi bağımlılık kontrolü, filtreli kurulumu eksik sanıp tam install'a kalkışıyor.
+verifyDepsBeforeRun: false
+
 catalog:
   '@arborium/arborium': 2.18.2
   '@astrojs/check': 0.9.10
