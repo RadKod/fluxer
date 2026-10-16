@@ -18,8 +18,10 @@ export function settledPermissionKinds(
 	return MAC_PERMISSION_KINDS.filter((kind) => statuses[kind] === 'granted' || statuses[kind] === 'unsupported');
 }
 
-const normalizeNativePermissionResult = (value: unknown): NativePermissionResult => {
+export const normalizeNativePermissionResult = (value: unknown): NativePermissionResult => {
 	switch (value) {
+		case 'restart-required':
+			return 'denied';
 		case 'granted':
 		case 'denied':
 		case 'not-determined':

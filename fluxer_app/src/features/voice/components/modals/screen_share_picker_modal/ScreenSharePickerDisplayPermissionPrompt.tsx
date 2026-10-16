@@ -17,17 +17,19 @@ import {useLingui} from '@lingui/react/macro';
 import {MonitorIcon} from '@phosphor-icons/react';
 
 const SCREEN_RECORDING_PERMISSION_REQUIRED_DESCRIPTOR = msg({
-	message: 'Screen recording permission required',
-	comment: 'Heading in the screen-share picker when macOS screen recording permission is missing.',
+	message: 'Screen sharing needs Screen Recording permission on macOS',
+	comment:
+		'Heading in the screen-share picker when macOS screen recording permission is missing. Keep "Screen Recording" as macOS shows it in this language.',
 });
 const CHECKING_SCREEN_RECORDING_PERMISSION_DESCRIPTOR = msg({
 	message: 'Checking screen recording permission...',
 	comment: 'Loading state in the screen-share picker while checking macOS screen recording permission.',
 });
 const SCREEN_RECORDING_PERMISSION_PROMPT_DESCRIPTOR = msg({
-	message: 'Open System Settings → Privacy & Security → Screen Recording, then allow {productName}.',
+	message:
+		'Open System Settings → Privacy & Security → Screen Recording and allow {productName}. Then restart {productName2}: macOS only applies the permission after a restart.',
 	comment:
-		'Body in the screen-share picker when macOS screen recording permission is missing. {productName} is the app name. Keep "System Settings", "Privacy & Security" and the permission name as macOS shows them in this language.',
+		'Body in the screen-share picker when macOS screen recording permission is missing. {productName} and {productName2} are the app name. Keep "System Settings", "Privacy & Security" and the permission name as macOS shows them in this language.',
 });
 const SCREEN_RECORDING_PERMISSION_STILL_WAITING_DESCRIPTOR = msg({
 	message: 'Still waiting for screen recording access',
@@ -86,6 +88,7 @@ export function ScreenSharePickerDisplayPermissionPrompt({
 						})
 					: i18n._(SCREEN_RECORDING_PERMISSION_PROMPT_DESCRIPTOR, {
 							productName: RuntimeConfig.productName,
+							productName2: RuntimeConfig.productName,
 						})}
 			</div>
 			<div

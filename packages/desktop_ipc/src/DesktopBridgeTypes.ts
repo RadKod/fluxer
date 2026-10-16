@@ -168,6 +168,8 @@ export type MediaAccessType = 'microphone' | 'camera' | 'screen' | 'audio-captur
 export type MediaAccessStatus = 'granted' | 'denied' | 'not-determined' | 'restricted' | 'unknown';
 
 export type InputMonitoringPermissionStatus = 'granted' | 'denied' | 'not-determined' | 'unsupported';
+// 'restart-required': macOS holds the grant but it only takes effect after the app is relaunched.
+export type ScreenRecordingPermissionStatus = InputMonitoringPermissionStatus | 'restart-required';
 
 export type VirtmicBackend = 'pipewire';
 

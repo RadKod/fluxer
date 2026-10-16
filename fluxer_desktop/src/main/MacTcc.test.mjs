@@ -208,9 +208,26 @@ describe('MacTcc', () => {
 		const status = handlers.get('mac-tcc:status');
 		assert.equal(await status(null, 'screen-recording'), 'denied');
 		assert.equal(module.getTccStatus('screen-recording'), 'denied');
-		assert.equal(await status(null, 'screen-recording'), 'granted');
+		assert.equal(await status(null, 'screen-recording'), 'restart-required');
 		assert.equal(module.getTccStatus('screen-recording'), 'granted');
 		assert.equal(probe.calls, 2);
+	});
+
+	test('the renderer is told to relaunch while only the live probe sees the grant', async () => {
+		const preflight = {status: 'denied'};
+		const seen = [];
+		const {handlers, module} = loadMacTcc({
+			addon: makeAddon({screenRecordingStatus: () => preflight.status}),
+			probe: makeProbe(['granted']),
+			screenRecordingRequested: true,
+		});
+		module.registerMacTccIpcHandlers({onStatus: (surface, status) => seen.push(`${surface}:${status}`)});
+		const status = handlers.get('mac-tcc:status');
+		assert.equal(await status(null, 'screen-recording'), 'restart-required');
+		assert.equal(await module.refreshTccStatus('screen-recording'), 'granted');
+		preflight.status = 'granted';
+		assert.equal(await status(null, 'screen-recording'), 'granted');
+		assert.deepEqual(seen, ['screen-recording:restart-required', 'screen-recording:granted']);
 	});
 
 	test('a live grant that is taken away again reads as denied', async () => {

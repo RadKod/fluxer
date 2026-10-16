@@ -10,7 +10,6 @@ import {
 	TRY_AGAIN_DESCRIPTOR,
 } from '@app/features/i18n/utils/CommonMessageDescriptors';
 import {handleMediaPermissionBlocked} from '@app/features/permissions/system/commands/MacPermissionsModalCommands';
-import type {NativePermissionResult} from '@app/features/permissions/system/utils/NativePermissions';
 import {Button} from '@app/features/ui/button/Button';
 import * as ContextMenuCommands from '@app/features/ui/commands/ContextMenuCommands';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
@@ -32,7 +31,10 @@ import {
 	type PickerGridHandle,
 } from '@app/features/voice/components/modals/screen_share_picker_modal/PickerGrid';
 import {ScreenSharePickerDisplayPermissionPrompt} from '@app/features/voice/components/modals/screen_share_picker_modal/ScreenSharePickerDisplayPermissionPrompt';
-import {screenRecordingPermissionAllowsPickerSources} from '@app/features/voice/components/modals/screen_share_picker_modal/ScreenSharePickerDisplayPermissionStateMachine';
+import {
+	type ScreenSharePickerScreenRecordingPermission,
+	screenRecordingPermissionAllowsPickerSources,
+} from '@app/features/voice/components/modals/screen_share_picker_modal/ScreenSharePickerDisplayPermissionStateMachine';
 import {SoftwareEncodeNotice} from '@app/features/voice/components/modals/screen_share_picker_modal/SoftwareEncodeNotice';
 import {
 	DESKTOP_SOURCE_LIST_POLL_INTERVAL_MS,
@@ -334,7 +336,7 @@ async function loadScreenSharePickerPreload(): Promise<ScreenSharePickerPreload>
 		return {desktopSources: [], displayShareEnvironment};
 	}
 	if (shouldCheckDesktopSourceScreenRecordingPermission(displayShareEnvironment)) {
-		let screenRecordingPermission: NativePermissionResult;
+		let screenRecordingPermission: ScreenSharePickerScreenRecordingPermission;
 		try {
 			screenRecordingPermission = await readScreenSharePickerScreenRecordingPermission('preload');
 		} catch {

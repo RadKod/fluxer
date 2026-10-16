@@ -35,6 +35,7 @@ import type {
 	NativeAudioStartOptions,
 	NativeAudioStartResult,
 	NativeScreenCaptureLifecycleMessage,
+	ScreenRecordingPermissionStatus,
 	SetDesktopTroubleshootingDisableHardwareAccelerationOptions,
 	SetDesktopTroubleshootingDisableModuleUpdatesOptions,
 	SpellcheckBundledDictionary,
@@ -357,8 +358,8 @@ export interface ElectronAPI {
 	checkInputMonitoringAccess(): Promise<boolean>;
 	getInputMonitoringPermissionStatus?(): Promise<InputMonitoringPermissionStatus>;
 	requestInputMonitoringPermission?(): Promise<InputMonitoringPermissionStatus>;
-	getScreenRecordingPermissionStatus?(): Promise<InputMonitoringPermissionStatus>;
-	requestScreenRecordingPermission?(): Promise<InputMonitoringPermissionStatus>;
+	getScreenRecordingPermissionStatus?(): Promise<ScreenRecordingPermissionStatus>;
+	requestScreenRecordingPermission?(): Promise<ScreenRecordingPermissionStatus>;
 	checkMediaAccess(type: MediaAccessType): Promise<Exclude<MediaAccessStatus, 'unknown'>>;
 	requestMediaAccess(type: MediaAccessType): Promise<boolean>;
 	openInputMonitoringSettings(): Promise<void>;

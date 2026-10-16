@@ -9,6 +9,10 @@ const logger = createChildLogger('MacTcc');
 const requireModule = createRequire(import.meta.url);
 
 type TccStatus = 'granted' | 'denied' | 'not-determined';
+// What the renderer sees for screen recording. 'restart-required' means macOS has the grant
+// (the live probe sees it) but this process started before it, so Chromium's desktopCapturer
+// still refuses to list sources until the app is relaunched.
+type RendererTccStatus = TccStatus | 'restart-required';
 type TccSurface = 'screen-recording' | 'input-monitoring';
 
 interface MacTccModule {
@@ -26,7 +30,7 @@ interface ScreenRecordingProbeModule {
 }
 
 interface MacTccIpcOptions {
-	onStatus?: (surface: TccSurface, status: TccStatus) => void;
+	onStatus?: (surface: TccSurface, status: RendererTccStatus) => void;
 }
 
 let cached: MacTccModule | null | undefined;
@@ -156,6 +160,17 @@ function requestOf(surface: TccSurface): TccStatus {
 	}
 }
 
+function screenRecordingPreflightGranted(): boolean {
+	const mod = loadAddon();
+	if (mod) return mod.screenRecordingStatus() === 'granted';
+	return statusWithoutAddon('screen-recording') === 'granted';
+}
+
+function rendererStatusOf(surface: TccSurface, status: TccStatus): RendererTccStatus {
+	if (surface !== 'screen-recording' || status !== 'granted' || process.platform !== 'darwin') return status;
+	return screenRecordingPreflightGranted() ? 'granted' : 'restart-required';
+}
+
 export function getTccStatus(surface: TccSurface): TccStatus {
 	return statusOf(surface);
 }
@@ -170,13 +185,13 @@ let registered = false;
 export function registerMacTccIpcHandlers(options: MacTccIpcOptions = {}): void {
 	if (registered) return;
 	registered = true;
-	ipcMain.handle('mac-tcc:status', async (_event, surface: TccSurface): Promise<TccStatus> => {
-		const status = await refreshTccStatus(surface);
+	ipcMain.handle('mac-tcc:status', async (_event, surface: TccSurface): Promise<RendererTccStatus> => {
+		const status = rendererStatusOf(surface, await refreshTccStatus(surface));
 		options.onStatus?.(surface, status);
 		return status;
 	});
-	ipcMain.handle('mac-tcc:request', (_event, surface: TccSurface): TccStatus => {
-		const status = requestOf(surface);
+	ipcMain.handle('mac-tcc:request', (_event, surface: TccSurface): RendererTccStatus => {
+		const status = rendererStatusOf(surface, requestOf(surface));
 		options.onStatus?.(surface, status);
 		return status;
 	});
