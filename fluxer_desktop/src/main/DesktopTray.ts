@@ -13,7 +13,7 @@ import type {
 } from '@electron/common/Types';
 import {relaunchStableLaunchPath} from '@electron/main/LinuxLaunchPath';
 import {onLocaleChange, t} from '@electron/main/MainI18n';
-import {renderTrayIcon, resolveTrayIconAppearance} from '@electron/main/TrayIconImage';
+import {renderTrayIcon, resolveTrayIconAppearance, type TrayIconAppearance} from '@electron/main/TrayIconImage';
 import {describeUnreadBadge} from '@electron/main/UnreadBadge';
 import {app, type BrowserWindow, clipboard, Menu, nativeImage, nativeTheme, Tray} from 'electron';
 
@@ -52,7 +52,7 @@ let trayActionBridgeWebContentsId: number | null = null;
 let trayForcedExitTimer: NodeJS.Timeout | null = null;
 let pendingTrayActions: Array<TrayActionPayload> = [];
 let trayUnreadBadge = 0;
-let trayBaseIcon: Electron.NativeImage | null = null;
+const trayBaseIcons = new Map<TrayIconBase, Electron.NativeImage>();
 let appliedTrayIconKey: string | null = null;
 const trayIconCache = new Map<string, Electron.NativeImage>();
 
@@ -216,7 +216,23 @@ function createTrayImage(
 	return null;
 }
 
-function createTrayIcon(): Electron.NativeImage | null {
+// 'glyph' is the bare white sanalyer mark that monochrome tray appearances repaint; painting the full app icon
+// instead fills the tile and only cuts the mark out, which reads as a plain white square at 16px.
+type TrayIconBase = 'glyph' | 'artwork';
+
+function trayIconBaseFor(appearance: TrayIconAppearance): TrayIconBase {
+	return appearance === 'white' || appearance === 'black' ? 'glyph' : 'artwork';
+}
+
+function createTrayIcon(base: TrayIconBase): Electron.NativeImage | null {
+	if (base === 'glyph' && process.platform === 'win32') {
+		// No resize: nativeImage loads the @1.25x/@1.5x/@2x siblings for high-DPI taskbars.
+		const glyph = createTrayImage(['tray-glyph.png']);
+		if (glyph) return glyph;
+	} else if (base === 'glyph' && process.platform !== 'darwin') {
+		const glyph = createTrayImage(['tray-glyph-256x256.png']);
+		if (glyph) return glyph;
+	}
 	if (process.platform === 'win32') {
 		return (
 			createTrayImage(['16x16.png'], {resize: {width: 16, height: 16}}) ??
@@ -240,13 +256,18 @@ function createTrayIcon(): Electron.NativeImage | null {
 }
 
 function resolveTrayIcon(): {key: string; image: Electron.NativeImage} | null {
-	trayBaseIcon ??= createTrayIcon();
-	if (!trayBaseIcon) return null;
 	const appearance = resolveTrayIconAppearance({
 		platform: process.platform,
 		coloredTrayIcon: getDesktopWindowBehaviorSettings().coloredTrayIcon,
 		darkSystemUI: nativeTheme.shouldUseDarkColorsForSystemIntegratedUI,
 	});
+	const baseKind = trayIconBaseFor(appearance);
+	let trayBaseIcon = trayBaseIcons.get(baseKind) ?? null;
+	if (!trayBaseIcon) {
+		trayBaseIcon = createTrayIcon(baseKind);
+		if (!trayBaseIcon) return null;
+		trayBaseIcons.set(baseKind, trayBaseIcon);
+	}
 	const indicator = trayUnreadBadge !== 0;
 	const key = `${appearance}:${indicator}`;
 	let image = trayIconCache.get(key);
