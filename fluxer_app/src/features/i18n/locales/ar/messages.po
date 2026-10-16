@@ -52936,22 +52936,26 @@ msgstr "Game over"
 msgid "Game Room"
 msgstr "Oyun Odası"
 
-#. Name of a 3D voice room theme: a neon-lit lounge. A proper name, keep it as is.
+#. Name of a 3D voice room theme: a neon-lit lounge. A proper name, keep it as
+#. is.
 #: src/features/voice_scene/utils/RoomThemeOptions.ts
 msgid "Neon Salon"
 msgstr "Neon Salon"
 
-#. Name of a 3D voice room theme: a lounge over a purple night city. A proper name, keep it as is.
+#. Name of a 3D voice room theme: a lounge over a purple night city. A proper
+#. name, keep it as is.
 #: src/features/voice_scene/utils/RoomThemeOptions.ts
 msgid "Mor Şehir"
 msgstr "Mor Şehir"
 
-#. Name of a 3D voice room theme: an old neighbourhood coffeehouse. A proper name, keep it as is.
+#. Name of a 3D voice room theme: an old neighbourhood coffeehouse. A proper
+#. name, keep it as is.
 #: src/features/voice_scene/utils/RoomThemeOptions.ts
 msgid "Mahalle Kahvesi"
 msgstr "Mahalle Kahvesi"
 
-#. Name of a 3D voice room theme: an executive office. A proper name, keep it as is.
+#. Name of a 3D voice room theme: an executive office. A proper name, keep it
+#. as is.
 #: src/features/voice_scene/utils/RoomThemeOptions.ts
 msgid "Yönetim Ofisi"
 msgstr "Yönetim Ofisi"
@@ -55963,15 +55967,20 @@ msgstr "اسمك"
 #. app is in the background. {productName} is the app name and
 #. {permissionName} is the macOS permission name.
 #: src/features/user/components/modals/tabs/keybinds_tab/MacInputMonitoringShortcutsAlert.tsx
-msgid "Global shortcuts only work while {productName} is focused until {permissionName} is enabled."
-msgstr "Global shortcuts only work while {productName} is focused until {permissionName} is enabled."
+msgid ""
+"Global shortcuts only work while {productName} is focused until "
+"{permissionName} is enabled."
+msgstr ""
+"Global shortcuts only work while {productName} is focused until "
+"{permissionName} is enabled."
 
 #. Soundboard slot usage; existing sounds remain usable above capacity.
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "{count} / {capacity} sounds"
 msgstr "{count} / {capacity} sounds"
 
-#. Soundboard section header listing every sound of the community; {guild} is the community name.
+#. Soundboard section header listing every sound of the community; {guild} is
+#. the community name.
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "{guild} sounds"
 msgstr "{guild} sounds"
@@ -56061,7 +56070,8 @@ msgstr "Favorite sounds"
 msgid "Loading sounds…"
 msgstr "Loading sounds…"
 
-#. Community sound upload requirements; server validates duration and audio format.
+#. Community sound upload requirements; server validates duration and audio
+#. format.
 #: src/features/voice/components/SoundboardManagePanel.tsx
 msgid "MP3 or Ogg, up to 512,000 bytes and 5.2 seconds."
 msgstr "MP3 or Ogg, up to 512,000 bytes and 5.2 seconds."
@@ -56079,7 +56089,8 @@ msgstr "No sounds match your search."
 #. Empty community soundboard guidance.
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "No sounds yet. Add an MP3 or Ogg clip to use it in this voice channel."
-msgstr "No sounds yet. Add an MP3 or Ogg clip to use it in this voice channel."
+msgstr ""
+"No sounds yet. Add an MP3 or Ogg clip to use it in this voice channel."
 
 #. Current soundboard page status.
 #: src/features/voice/components/SoundboardPanel.tsx
@@ -56096,7 +56107,8 @@ msgstr "Play {name}"
 msgid "Previous sounds"
 msgstr "Previous sounds"
 
-#. Soundboard section listing the last sounds the user played in this community.
+#. Soundboard section listing the last sounds the user played in this
+#. community.
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "Recently played"
 msgstr "Recently played"
@@ -56116,7 +56128,8 @@ msgstr "Save sound"
 msgid "Search sounds"
 msgstr "Search sounds"
 
-#. Soundboard play error when the user played too many sounds in a short time; counts down to zero.
+#. Soundboard play error when the user played too many sounds in a short time;
+#. counts down to zero.
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "Slow down. Try again in {seconds} s."
 msgstr "Slow down. Try again in {seconds} s."
@@ -56126,7 +56139,8 @@ msgstr "Slow down. Try again in {seconds} s."
 msgid "Sound name"
 msgstr "Sound name"
 
-#. Soundboard upload lock directing the user to a higher community boost level.
+#. Soundboard upload lock directing the user to a higher community boost
+#. level.
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "Sound slots are full. Boost to a higher level for more slots."
 msgstr "Sound slots are full. Boost to a higher level for more slots."
@@ -56138,7 +56152,8 @@ msgstr "Sound slots are full. Boost to a higher level for more slots."
 msgid "Soundboard"
 msgstr "Soundboard"
 
-#. Button next to the soundboard search that shows the listening volume and mute switch.
+#. Button next to the soundboard search that shows the listening volume and
+#. mute switch.
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "Soundboard listening settings"
 msgstr "Soundboard listening settings"
@@ -56148,7 +56163,783 @@ msgstr "Soundboard listening settings"
 msgid "Soundboard volume"
 msgstr "Soundboard volume"
 
-#. Soundboard play error when the server refuses because the user is not in the channel or is deafened.
+#. Soundboard play error when the server refuses because the user is not in
+#. the channel or is deafened.
 #: src/features/voice/components/SoundboardPanel.tsx
 msgid "To play sounds, join this voice channel and undeafen yourself."
 msgstr "To play sounds, join this voice channel and undeafen yourself."
+
+#. Profile decorations settings: the group of items the user wears or owns,
+#. shown first.
+#: src/features/cosmetics/utils/CosmeticLabels.ts
+msgid "Mine"
+msgstr "Mine"
+
+#. Profile decorations settings: placeholder of the search box over the
+#. catalog.
+#: src/features/cosmetics/utils/CosmeticLabels.ts
+msgid "Search by name or series…"
+msgstr "Search by name or series…"
+
+#. Accessible label of the colour preview on a Discovery theme card.
+#. {themeName} is the theme name.
+#: src/features/discovery/themes/DiscoveryThemesPage.tsx
+msgid "Preview of the {themeName} theme"
+msgstr "Preview of the {themeName} theme"
+
+#: src/features/discovery/themes/DiscoveryThemesPage.tsx
+msgid ""
+"Ready-made colour palettes for the app. Apply one here; it lands in your "
+"theme library under Appearance, where you can switch it off or edit it in "
+"Theme Studio."
+msgstr ""
+"Ready-made colour palettes for the app. Apply one here; it lands in your "
+"theme library under Appearance, where you can switch it off or edit it in "
+"Theme Studio."
+
+#: src/features/discovery/themes/DiscoveryThemesPage.tsx
+msgid "Remove from library"
+msgstr "Remove from library"
+
+#. Hint shown in the favorites sidebar while the list is empty.
+#: src/features/app/components/layout/FavoritesChannelListContent.tsx
+msgid "No favorites yet. Press the star on any channel and it shows up here."
+msgstr "No favorites yet. Press the star on any channel and it shows up here."
+
+#. Profile settings section title for the name style and profile theme.
+#. Preserve {premiumProductName}.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:40
+msgid "{premiumProductName} appearance"
+msgstr "{premiumProductName} appearance"
+
+#. Plus perk tile text under the name style title. At most two short lines.
+#: src/features/premium/components/PremiumPerkTiles.tsx:85
+msgid ""
+"A font and a gradient for your name in chat, the member list and your "
+"profile."
+msgstr ""
+"A font and a gradient for your name in chat, the member list and your "
+"profile."
+
+#. Security settings section for third-party app access and signed-in devices.
+#: src/features/user/components/modals/tabs/account_security_tab/SecurityTab.tsx:88
+msgid "Account access"
+msgstr "Account access"
+
+#. Submenu label that groups further actions.
+#: src/features/ui/action_menu/items/ActionsSubmenu.tsx:37
+msgid "Actions"
+msgstr "Actions"
+
+#. Error message in the use channel search hook.
+#: src/features/channel/hooks/useChannelSearch.ts:33
+msgid "An error occurred while searching"
+msgstr "An error occurred while searching"
+
+#. Boost perk: animated community banner.
+#: src/features/boost/utils/GuildBoostMessages.ts:75
+msgid "Animated banner"
+msgstr "Animated banner"
+
+#: src/features/auth/flow/HandoffApprovalFlow.tsx:206
+msgid "Approve"
+msgstr "Approve"
+
+#. Accessible name of a name font option: a wide pixel typeface from arcade
+#. games. The option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:85
+msgid "Arcade pixel"
+msgstr "Arcade pixel"
+
+#: src/features/ui/action_menu/items/CategoryMenuItems.tsx:352
+msgid ""
+"Are you sure you want to delete the category \"{categoryName}\"? All "
+"{channelCount, plural, one {# channel} other {# channels}} inside will be "
+"moved to the top of the channel list."
+msgstr ""
+"Are you sure you want to delete the category \"{categoryName}\"? All "
+"{channelCount, plural, one {# channel} other {# channels}} inside will be "
+"moved to the top of the channel list."
+
+#. Confirm dialog body before deleting an empty channel category.
+#: src/features/ui/action_menu/items/CategoryMenuItems.tsx:66
+msgid ""
+"Are you sure you want to delete the category \"{categoryName}\"? This cannot"
+" be undone."
+msgstr ""
+"Are you sure you want to delete the category \"{categoryName}\"? This cannot"
+" be undone."
+
+#. IAR modal: disabled-state label on the ban card after the user is banned
+#. from this community.
+#: src/features/moderation/components/report_modal/IARModalCopy.ts:138
+msgid "Banned"
+msgstr "Banned"
+
+#. Accessible name of a name font option: a heavy, blocky display typeface.
+#. The option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:110
+msgid "Bold block"
+msgstr "Bold block"
+
+#. Label for the bottom color of the profile card theme. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:178
+msgid "Bottom color"
+msgstr "Bottom color"
+
+#. IAR modal: quick-action card title for deleting the reported message
+#. (moderator-only).
+#: src/features/moderation/components/report_modal/IARModalCopy.ts:106
+msgid "Delete this message"
+msgstr "Delete this message"
+
+#. IAR modal: disabled-state label on the delete card after the message has
+#. been deleted.
+#: src/features/moderation/components/report_modal/IARModalCopy.ts:118
+msgid "Deleted"
+msgstr "Deleted"
+
+#. Plus perk tile title: the badge given to members who joined Plus early.
+#: src/features/premium/components/PremiumPerkTiles.tsx:65
+msgid "Early Access badge"
+msgstr "Early Access badge"
+
+#. Contrast check result under the display name colors when they pass.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:158
+msgid "Easy to read on dark backgrounds."
+msgstr "Easy to read on dark backgrounds."
+
+#. Label for the second color of a gradient display name. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:150
+msgid "End color"
+msgstr "End color"
+
+#. Generic radio / dropdown option label for an "enhanced" tier.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts:798
+msgid "Enhanced"
+msgstr "Enhanced"
+
+#: src/features/auth/flow/HandoffApprovalFlow.tsx:108
+msgid "Enter the code"
+msgstr "Enter the code"
+
+#. Purchase mode option for buying a subscription for the current user.
+#: src/features/app/components/dialogs/components/plutonium/PricingSection.tsx:26
+msgid "For me"
+msgstr "For me"
+
+#. Plus perk tile text under the Early Access badge title. At most two short
+#. lines.
+#: src/features/premium/components/PremiumPerkTiles.tsx:69
+msgid ""
+"For members who join {premiumProductName} early. It stays on your profile."
+msgstr ""
+"For members who join {premiumProductName} early. It stays on your profile."
+
+#. Field label on the details step of the DSA report form. Required legal name
+#. of the reporter for the formal declaration. Sensitive PII; keep tone
+#. neutral.
+#: src/features/moderation/components/report/ReportStepDetails.tsx:53
+msgid "Full legal name"
+msgstr "Full legal name"
+
+#. Web, legacy desktop and unsupported game detection explanation.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx:51
+msgid ""
+"Game detection requires a supported desktop app. You can still see other "
+"people’s game activity."
+msgstr ""
+"Game detection requires a supported desktop app. You can still see other "
+"people’s game activity."
+
+#. Profile settings section description for the name style and profile theme.
+#. Keep the tone plain.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:44
+msgid ""
+"Give your name a font and color, and your profile card a two-color theme."
+msgstr ""
+"Give your name a font and color, and your profile card a two-color theme."
+
+#. Short label in the whats new modal.
+#: src/features/app/components/whats_new/WhatsNewModal.tsx:37
+msgid "Got it"
+msgstr "Got it"
+
+#. Accessible name of a name font option: a blackletter, gothic typeface. The
+#. option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:100
+msgid "Gothic"
+msgstr "Gothic"
+
+#. Option for a two-color gradient display name. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:142
+msgid "Gradient"
+msgstr "Gradient"
+
+#. Accessible name of a name font option: a natural handwritten typeface. The
+#. option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:75
+msgid "Handwriting"
+msgstr "Handwriting"
+
+#. Report category label, community variant. Keep tone plain.
+#: src/features/moderation/components/report/OptionDescriptors.ts:86
+msgid "Harassment"
+msgstr "Harassment"
+
+#. IAR modal: rule label.
+#. Report category label for a user impersonating another person or brand.
+#: src/features/moderation/components/report_modal/IARModalCopy.ts:306
+#: src/features/moderation/components/report/OptionDescriptors.ts:66
+msgid "Impersonation"
+msgstr "Impersonation"
+
+#. Label for the installed desktop version in the Linux update modal.
+#: src/features/updater/commands/UpdaterModalCommands.tsx:136
+msgid "Installed"
+msgstr "Installed"
+
+#. IAR modal: quick-action card button label.
+#: src/features/moderation/components/report_modal/IARModalCopy.ts:422
+msgid "Leave"
+msgstr "Leave"
+
+#. Helper text describing the maximum file size for an asset upload.
+#: src/features/expressions/utils/AssetFormatCopy.ts:15
+msgid "Max {maxSize}."
+msgstr "Max {maxSize}."
+
+#. Column header for saved billing payment methods.
+#: src/features/app/components/dialogs/components/plutonium/PaymentMethodList.tsx:65
+msgid "Method"
+msgstr "Method"
+
+#. Label for the display name color controls. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:134
+msgid "Name color"
+msgstr "Name color"
+
+#. Settings search synonym. Used to match this term when the user types it in
+#. the settings search bar.
+#: src/features/user/components/settings_utils/section_registry/AccessibilitySections.ts:331
+msgid "Name colors"
+msgstr "Name colors"
+
+#. Label above the list of fonts for the display name. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:56
+msgid "Name font"
+msgstr "Name font"
+
+#. Settings search synonym. Used to match this term when the user types it in
+#. the settings search bar.
+#: src/features/user/components/settings_utils/section_registry/AccessibilitySections.ts:327
+msgid "Name fonts"
+msgstr "Name fonts"
+
+#. Plus perk tile title: a font and colours for the display name.
+#: src/features/premium/components/PremiumPerkTiles.tsx:81
+msgid "Name style"
+msgstr "Name style"
+
+#. Settings search synonym. Used to match this term when the user types it in
+#. the settings search bar.
+#: src/features/user/components/settings_utils/section_registry/AccessibilitySections.ts:323
+msgid "Name styles"
+msgstr "Name styles"
+
+#. Upsell shown in the profile settings to accounts without Plus. Preserve
+#. {premiumProductName}.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:48
+msgid "Name styles and profile themes are part of {premiumProductName}."
+msgstr "Name styles and profile themes are part of {premiumProductName}."
+
+#. Billing cadence label for a monthly subscription price.
+#: src/features/app/components/dialogs/components/plutonium/PricingSection.tsx:38
+msgid "per month"
+msgstr "per month"
+
+#. Hint under the name color controls before a font is chosen. Keep the tone
+#. plain.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:154
+msgid "Pick a font first, then choose the colors."
+msgstr "Pick a font first, then choose the colors."
+
+#. Accessible name of a name font option: a pixel-art typeface. The option
+#. shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:80
+msgid "Pixel"
+msgstr "Pixel"
+
+#. Short label in the attachment preview utils helper. Keep it concise.
+#: src/features/messaging/utils/AttachmentPreviewUtils.ts:11
+msgid "Plain text"
+msgstr "Plain text"
+
+#. Accessible name of a name font option: a casual, playful handwritten
+#. typeface. The option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:65
+msgid "Playful handwriting"
+msgstr "Playful handwriting"
+
+#. Plus perk tile title: a two-colour gradient across the profile card.
+#: src/features/premium/components/PremiumPerkTiles.tsx:73
+msgid "Profile gradient"
+msgstr "Profile gradient"
+
+#. Label for the two-color profile card theme controls. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:166
+msgid "Profile theme"
+msgstr "Profile theme"
+
+#. Sort mode label in the mobile channel search bottom sheet. Sorts by
+#. relevance.
+#: src/features/channel/components/bottomsheets/ChannelSearchBottomSheet.tsx:83
+msgid "Relevant"
+msgstr "Relevant"
+
+#. Button that clears the name style and the profile theme; the change is
+#. saved with the save bar.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:182
+msgid "Reset name style and theme"
+msgstr "Reset name style and theme"
+
+#. Button label that restarts the app to apply a desktop update. productName
+#. is the app name.
+#: src/features/updater/commands/UpdaterModalCommands.tsx:100
+msgid "Restart {productName}"
+msgstr "Restart {productName}"
+
+#. Accessible name of a name font option: a rounded retro-modern display
+#. typeface. The option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:115
+msgid "Retro modern"
+msgstr "Retro modern"
+
+#. Accessible name of a name font option: a retro, flowing script typeface.
+#. The option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:70
+msgid "Retro script"
+msgstr "Retro script"
+
+#. Accessible name of a name font option: a heavy rock-poster typeface. The
+#. option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:105
+msgid "Rock"
+msgstr "Rock"
+
+#. Accessible name of a name font option: a soft, rounded typeface. The option
+#. shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:60
+msgid "Rounded"
+msgstr "Rounded"
+
+#. Price badge comparing a one-year gift to monthly gifts.
+#. Price badge comparing yearly billing to monthly billing.
+#. Short label in the Plutonium gift section. Keep the tone plain and
+#. specific.
+#: src/features/app/components/dialogs/components/plutonium/GiftSection.tsx:28
+#: src/features/app/components/dialogs/components/plutonium/PricingSection.tsx:50
+#: src/features/app/components/dialogs/components/plutonium/PricingSection.tsx:62
+msgid "Save 17%"
+msgstr "Save 17%"
+
+#. Badge for a saved non-default payment method.
+#: src/features/app/components/dialogs/components/plutonium/PaymentMethodList.tsx:90
+msgid "Saved"
+msgstr "Saved"
+
+#. Toggle label in the visual accessibility tab. Name styles are the fonts and
+#. colours Plus members pick for their names.
+#: src/features/user/components/modals/tabs/accessibility_tab/VisualTab.tsx:49
+msgid "Show name styles"
+msgstr "Show name styles"
+
+#. Description of the show name styles toggle in the visual accessibility tab.
+#. Applies to this device only.
+#: src/features/user/components/modals/tabs/accessibility_tab/VisualTab.tsx:54
+msgid ""
+"Show the fonts and colors people pick for their names. Turn off to see every"
+" name in the app font."
+msgstr ""
+"Show the fonts and colors people pick for their names. Turn off to see every"
+" name in the app font."
+
+#. Short label in the new account guild limit modal. Keep it concise.
+#: src/features/guild/components/alerts/NewAccountGuildLimitModal.tsx:8
+msgid "Slow down"
+msgstr "Slow down"
+
+#. Option for a single-color display name. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:138
+msgid "Solid"
+msgstr "Solid"
+
+#. Label for the first color of the display name. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:146
+msgid "Start color"
+msgstr "Start color"
+
+#. Accessible name of a name font option: a wide, futuristic techno typeface.
+#. The option shows the user’s own name in that font. Keep it short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:95
+msgid "Techno"
+msgstr "Techno"
+
+#. Accessible name of a name font option: a typeface from old computer
+#. terminals. The option shows the user’s own name in that font. Keep it
+#. short.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:90
+msgid "Terminal"
+msgstr "Terminal"
+
+#. Contrast check result under the display name colors when they fail; saving
+#. is blocked. Keep it specific.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:162
+msgid ""
+"These colors are hard to read on dark backgrounds. Pick lighter colors to "
+"save."
+msgstr ""
+"These colors are hard to read on dark backgrounds. Pick lighter colors to "
+"save."
+
+#. Lowercase phrase used mid-sentence in IAR copy when referring to the
+#. reported user without a name.
+#: src/features/moderation/components/report_modal/IARModalContext.ts:26
+msgid "this user"
+msgstr "this user"
+
+#. Label for the top color of the profile card theme. Keep it concise.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:174
+msgid "Top color"
+msgstr "Top color"
+
+#. Plus perk tile text under the profile gradient title. At most two short
+#. lines.
+#: src/features/premium/components/PremiumPerkTiles.tsx:77
+msgid "Two colours across your profile card."
+msgstr "Two colours across your profile card."
+
+#. Checkout button for starting a paid subscription.
+#: src/features/app/components/dialogs/components/plutonium/PricingSection.tsx:54
+msgid "Upgrade now"
+msgstr "Upgrade now"
+
+#. Accessible name of a preset profile theme swatch. {top} and {bottom} are
+#. hex colors inserted by code.
+#: src/features/user/components/modals/tabs/my_profile_tab/PlusAppearanceSettings.tsx:170
+msgid "Use {top} to {bottom}"
+msgstr "Use {top} to {bottom}"
+
+#. Audit log target-type filter label. Filters entries that target a webhook.
+#: src/features/app/config/AuditLogConstants.ts:177
+msgid "Webhook"
+msgstr "Webhook"
+
+#. Short label in the settings dialog mobile settings view.
+#. Short label in the whats new modal.
+#. Sidebar item in settings that opens the app update notes modal.
+#: src/features/app/components/dialogs/components/DesktopSettingsView.tsx:103
+#: src/features/app/components/dialogs/components/MobileSettingsView.tsx:61
+#: src/features/app/components/whats_new/WhatsNewModal.tsx:25
+msgid "What's new"
+msgstr "What's new"
+
+#. Save bar text in the my profile tab while the chosen name colors fail the
+#. contrast check.
+#: src/features/user/components/modals/tabs/MyProfileTab.tsx:159
+msgid ""
+"Your name colors are hard to read on dark backgrounds. Pick lighter colors "
+"to save."
+msgstr ""
+"Your name colors are hard to read on dark backgrounds. Pick lighter colors "
+"to save."
+
+#. Explain that the Only me profile privacy level hides game activity from
+#. everyone, friends included.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx:37
+msgid ""
+"Your profile is set to Only me. Game activity is not shared, even when "
+"Friends or Everyone is selected."
+msgstr ""
+"Your profile is set to Only me. Game activity is not shared, even when "
+"Friends or Everyone is selected."
+
+#. Combined total community channel and role capacities from the effective
+#. limits.
+#: src/features/boost/utils/GuildBoostMessages.ts:132
+msgid "{channels} channels / {roles} roles in total"
+msgstr "{channels} channels / {roles} roles in total"
+
+#. Remaining boosts, calculated by subtracting current count from the next
+#. total threshold.
+#: src/features/boost/utils/GuildBoostMessages.ts:16
+msgid ""
+"{count, plural, one {# more boost to Level {level}} other {# more boosts to "
+"Level {level}}}"
+msgstr ""
+"{count, plural, one {# more boost to Level {level}} other {# more boosts to "
+"Level {level}}}"
+
+#. Total community soundboard slots from the effective instance limits.
+#: src/features/boost/utils/GuildBoostMessages.ts:100
+msgid "{count, plural, one {# soundboard slot} other {# soundboard slots}}"
+msgstr "{count, plural, one {# soundboard slot} other {# soundboard slots}}"
+
+#. Availability of a community perk on a level card.
+#: src/features/boost/utils/GuildBoostMessages.ts:88
+msgid "{perk}: Available"
+msgstr "{perk}: Available"
+
+#. Community perk that is not included at the displayed level.
+#: src/features/boost/utils/GuildBoostMessages.ts:92
+msgid "{perk}: Not included"
+msgstr "{perk}: Not included"
+
+#. Boost perk: animated community logo.
+#: src/features/boost/utils/GuildBoostMessages.ts:74
+msgid "Animated community icon"
+msgstr "Animated community icon"
+
+#. Community perks included without boosts at level 0.
+#: src/features/boost/utils/GuildBoostMessages.ts:8
+msgid "Base perks"
+msgstr "Base perks"
+
+#. Upgrade hint and upload error for a community without the animated icon
+#. feature. Static uploads remain available.
+#: src/features/guild/components/modals/guild_tabs/guild_overview_tab/fields/GuildIconUploadField.tsx:34
+msgid "Boost to Level 1 to upload animated icons."
+msgstr "Boost to Level 1 to upload animated icons."
+
+#. Upgrade hint and upload error for a community without the animated banner
+#. feature. Static uploads remain available.
+#: src/features/guild/components/modals/guild_tabs/guild_overview_tab/fields/GuildBannerUploadField.tsx:37
+msgid "Boost to Level 3 to upload animated banners."
+msgstr "Boost to Level 3 to upload animated banners."
+
+#. Explains the two mutually exclusive role icon choices.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:47
+msgid "Enter one emoji, or choose an emoji from this server."
+msgstr "Enter one emoji, or choose an emoji from this server."
+
+#. Explanation of the static two-color role gradient perk.
+#: src/features/boost/components/GuildBoostPerks.tsx:65
+msgid "Give roles a static gradient with two colors."
+msgstr "Give roles a static gradient with two colors."
+
+#. Community video profile does not reduce personal streaming or camera
+#. rights.
+#: src/features/boost/components/GuildBoostPerks.tsx:44
+msgid ""
+"In this community’s voice channels. Your personal video allowance still "
+"applies."
+msgstr ""
+"In this community’s voice channels. Your personal video allowance still "
+"applies."
+
+#. Level 0 card has no boost threshold or purchase requirement.
+#: src/features/boost/utils/GuildBoostMessages.ts:12
+msgid "Included without boosts"
+msgstr "Included without boosts"
+
+#. Custom emoji capacity is disabled in the effective instance limits.
+#: src/features/boost/utils/GuildBoostMessages.ts:108
+msgid "No custom emoji slots"
+msgstr "No custom emoji slots"
+
+#. Custom sticker capacity is disabled in the effective instance limits.
+#: src/features/boost/utils/GuildBoostMessages.ts:112
+msgid "No custom sticker slots"
+msgstr "No custom sticker slots"
+
+#. Empty option in the role icon server emoji selector.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:55
+msgid "No server emoji"
+msgstr "No server emoji"
+
+#. Soundboard capacity is disabled in the effective instance limits.
+#: src/features/boost/utils/GuildBoostMessages.ts:104
+msgid "No soundboard slots"
+msgstr "No soundboard slots"
+
+#. Button that clears the second role color, including after boost downgrade.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:63
+msgid "Remove role gradient"
+msgstr "Remove role gradient"
+
+#. Button that clears both role icon fields, including after boost downgrade.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:59
+msgid "Remove role icon"
+msgstr "Remove role icon"
+
+#. Role editor hint when new gradient assignments are locked.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:35
+msgid ""
+"Role gradients require Server Boost Level 2. You can still remove an "
+"existing gradient."
+msgstr ""
+"Role gradients require Server Boost Level 2. You can still remove an "
+"existing gradient."
+
+#. Role editor hint when new icon assignments are locked.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:39
+msgid ""
+"Role icons require Server Boost Level 1. You can still remove an existing "
+"icon."
+msgstr ""
+"Role icons require Server Boost Level 1. You can still remove an existing "
+"icon."
+
+#. Boost perk: role icons use Unicode or an emoji from this community.
+#: src/features/boost/utils/GuildBoostMessages.ts:80
+msgid "Role icons: Unicode or community emoji"
+msgstr "Role icons: Unicode or community emoji"
+
+#. Label for the static two-color role gradient picker.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:31
+msgid "Second role color"
+msgstr "Second role color"
+
+#. Role editor selector restricted to emojis belonging to this server.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:51
+msgid "Server emoji role icon"
+msgstr "Server emoji role icon"
+
+#. Community file uploads have no extra allowance above the personal allowance
+#. at this level.
+#: src/features/boost/utils/GuildBoostMessages.ts:124
+msgid "Server file uploads: your personal limit"
+msgstr "Server file uploads: your personal limit"
+
+#. The higher of personal and community file allowance; MB is decimal, one
+#. million bytes.
+#: src/features/boost/utils/GuildBoostMessages.ts:128
+msgid "Server file uploads: your personal limit, or {megabytes} MB if higher"
+msgstr "Server file uploads: your personal limit, or {megabytes} MB if higher"
+
+#. Base community perk: static banner and invite splash.
+#: src/features/boost/utils/GuildBoostMessages.ts:76
+msgid "Static banner and invite background"
+msgstr "Static banner and invite background"
+
+#. Explanation of free static community banner and invite background.
+#: src/features/boost/components/GuildBoostPerks.tsx:37
+msgid "Static images are included without boosts."
+msgstr "Static images are included without boosts."
+
+#. Boost perk: static role gradients with two colors.
+#: src/features/boost/utils/GuildBoostMessages.ts:84
+msgid "Static two-color role gradients"
+msgstr "Static two-color role gradients"
+
+#. Community voice-channel video profile; personal video allowances remain
+#. separate.
+#: src/features/boost/utils/GuildBoostMessages.ts:96
+msgid "Streaming and camera up to {height}p / {fps} fps"
+msgstr "Streaming and camera up to {height}p / {fps} fps"
+
+#. Explanation of total community channel and role capacities.
+#: src/features/boost/components/GuildBoostPerks.tsx:79
+msgid "Total channels and roles available to this community."
+msgstr "Total channels and roles available to this community."
+
+#. Explanation of total community soundboard capacity.
+#: src/features/boost/components/GuildBoostPerks.tsx:51
+msgid "Total sounds in the community soundboard."
+msgstr "Total sounds in the community soundboard."
+
+#. Role editor input for a single standard emoji.
+#: src/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleEditor.tsx:43
+msgid "Unicode role icon"
+msgstr "Unicode role icon"
+
+#. Independent community unlimited-emoji feature.
+#: src/features/boost/utils/GuildBoostMessages.ts:116
+msgid "Unlimited custom emoji"
+msgstr "Unlimited custom emoji"
+
+#. Independent community unlimited-sticker feature.
+#: src/features/boost/utils/GuildBoostMessages.ts:120
+msgid "Unlimited custom stickers"
+msgstr "Unlimited custom stickers"
+
+#. Explanation of the animated community banner perk.
+#: src/features/boost/components/GuildBoostPerks.tsx:30
+msgid "Use an animated community banner."
+msgstr "Use an animated community banner."
+
+#. Explanation of the animated community icon perk.
+#: src/features/boost/components/GuildBoostPerks.tsx:23
+msgid "Use an animated logo for your community."
+msgstr "Use an animated logo for your community."
+
+#. Role icon perk accepts Unicode or same-community emoji only.
+#: src/features/boost/components/GuildBoostPerks.tsx:58
+msgid "Use Unicode or an emoji from this community as a role icon."
+msgstr "Use Unicode or an emoji from this community as a role icon."
+
+#. Community file rights never reduce personal upload rights.
+#: src/features/boost/components/GuildBoostPerks.tsx:72
+msgid "Your personal upload allowance always applies."
+msgstr "Your personal upload allowance always applies."
+
+#. Game sharing requires the account to be 15 or older with a known date of
+#. birth; unknown age is disabled.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx
+msgid "Available from age 15."
+msgstr "Available from age 15."
+
+#. Link under the game activity default notice to the privacy policy. Legal-
+#. effect text: approved before release.
+#: src/features/app/components/layout/app_layout/nagbars/GameActivityDefaultNagbar.tsx
+msgid "Details: Privacy Policy"
+msgstr "Details: Privacy Policy"
+
+#. One-time notice title for existing accounts: game activity sharing starts
+#. on by default after this notice. Legal-effect text: approved before
+#. release.
+#: src/features/app/components/layout/app_layout/nagbars/GameActivityDefaultNagbar.tsx
+msgid "Game activity is now on by default"
+msgstr "Game activity is now on by default"
+
+#. Accessible label for the current game shown under a name in the member and
+#. direct message lists.
+#: src/features/game_activity/components/GameActivityRowStatus.tsx
+msgid "Playing {name}"
+msgstr "Playing {name}"
+
+#. Game activity disclosure; describes recipients of each option, blocking,
+#. transient storage and local process data. Legal-effect text: approved
+#. before release.
+#: src/features/game_activity/components/GameActivitySettingsTab.tsx
+msgid ""
+"Sharing sends your game name or ID and start time to the people you choose. "
+"Everyone means your friends and members of servers you share; Friends means "
+"only your friends. People you’ve blocked can’t see it. Activity is temporary"
+" and expires when it is no longer renewed. The process list stays on this "
+"device. Off stops game detection on this device. You can remove local game "
+"rules at any time."
+msgstr ""
+"Sharing sends your game name or ID and start time to the people you choose. "
+"Everyone means your friends and members of servers you share; Friends means "
+"only your friends. People you’ve blocked can’t see it. Activity is temporary"
+" and expires when it is no longer renewed. The process list stays on this "
+"device. Off stops game detection on this device. You can remove local game "
+"rules at any time."
+
+#. One-time notice body. "Friends" and "Off" are option labels and "Settings ›
+#. Privacy › Show my game activity" is the settings path; keep them identical
+#. to those labels. Legal-effect text: approved before release.
+#: src/features/app/components/layout/app_layout/nagbars/GameActivityDefaultNagbar.tsx
+msgid ""
+"The sanalyer desktop app will detect the game running on your computer and "
+"show its name and icon to your friends and to members of servers you share. "
+"Your list of programs never leaves your computer, no game history is kept, "
+"and people you’ve blocked can’t see it. You can switch to Friends or Off at "
+"any time in Settings › Privacy › Show my game activity."
+msgstr ""
+"The sanalyer desktop app will detect the game running on your computer and "
+"show its name and icon to your friends and to members of servers you share. "
+"Your list of programs never leaves your computer, no game history is kept, "
+"and people you’ve blocked can’t see it. You can switch to Friends or Off at "
+"any time in Settings › Privacy › Show my game activity."
