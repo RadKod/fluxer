@@ -244,7 +244,7 @@ The first entry always has `session_id: "all"` and the account's combined status
 | name | string | Human-readable region name |
 | emoji | string | Region emoji |
 
-The array always begins with a synthetic entry whose `id` is `automatic`, `name` is `Automatic`, and `emoji` is the globe. Choosing that entry leaves the region to the server. Every other entry is a region the account can select, ordered by distance from the `latitude` and `longitude` in the [Identify properties](/gateway/commands/#identify-properties-object). Fluxer orders by distance only when both values parse as finite numbers, and otherwise orders by region ID.
+The array always begins with a synthetic entry whose `id` is `automatic`, `name` is `Automatic`, and `emoji` is the globe. Choosing that entry leaves the region to the server. Every other entry is a region the account can select, ordered by distance from the `latitude` and `longitude` in the [Identify properties](/gateway/commands/#identify-properties-object). sanalyer orders by distance only when both values parse as finite numbers, and otherwise orders by region ID.
 
 ### RESUMED
 
@@ -295,7 +295,7 @@ Presence subscribers receive the updated `user` in a [Presence Update](#presence
 
 The current user's account-wide settings changed. The payload is the complete [user settings object](/http-api/users/#user-settings-object).
 
-Fluxer republishes the account's presence on every settings update, whether or not `status` or `custom_status` changed. A `status` of `offline` in the payload is treated as `invisible`, and it forces every live session of the account to that status.
+sanalyer republishes the account's presence on every settings update, whether or not `status` or `custom_status` changed. A `status` of `offline` in the payload is treated as `invisible`, and it forces every live session of the account to that status.
 
 ### <span id="user-guild-settings-update"></span>USER_GUILD_SETTINGS_UPDATE
 
@@ -444,7 +444,7 @@ A bot session's Guild Create has `unavailable: false` unless it is the first Gui
 
 A session that asked for a sync through [Lazy Request](/gateway/commands/#lazy-request) receives the guild's full current state again. The payload is a [guild ready object](#guild-ready-object), and a client handles it the same way as [Guild Create](#guild-create).
 
-Fluxer sends a sync when a Lazy Request switches the guild between [active and passive](/gateway/event-filtering/#active-and-passive-guilds), and when `sync: true` names a guild the session has not already synced. A second `sync: true` for an already-synced guild sends nothing.
+sanalyer sends a sync when a Lazy Request switches the guild between [active and passive](/gateway/event-filtering/#active-and-passive-guilds), and when `sync: true` names a guild the session has not already synced. A second `sync: true` for an already-synced guild sends nothing.
 
 ### <span id="guild-update"></span>GUILD_UPDATE
 
@@ -512,7 +512,7 @@ A guild's emojis changed.
 | guild_id | snowflake | Guild the emojis belong to |
 | emojis | array[[guild emoji](/http-api/guild-emojis/#guild-emoji-object) object] | Every emoji in the guild |
 
-A client that stores the guild's emojis replaces them with this array. Fluxer does not send per-emoji create, update, or delete events.
+A client that stores the guild's emojis replaces them with this array. sanalyer does not send per-emoji create, update, or delete events.
 
 ### <span id="guild-stickers-update"></span>GUILD_STICKERS_UPDATE
 
@@ -523,7 +523,7 @@ A guild's stickers changed.
 | guild_id | snowflake | Guild the stickers belong to |
 | stickers | array[[guild sticker](/http-api/guild-stickers/#guild-sticker-object) object] | Every sticker in the guild |
 
-A client that stores the guild's stickers replaces them with this array. Fluxer does not send per-sticker create, update, or delete events.
+A client that stores the guild's stickers replaces them with this array. sanalyer does not send per-sticker create, update, or delete events.
 
 ### <span id="channel-create"></span>CHANNEL_CREATE
 
@@ -552,7 +552,7 @@ A channel left the session's visibility, whether deleted or newly hidden. The pa
 
 Recipients are the sessions that could see the channel before it was deleted.
 
-Deleting a channel deletes its threads, and Fluxer emits no [Thread Delete](/gateway/threads/#thread-delete) for them. A client removes every thread whose `parent_id` is the channel.
+Deleting a channel deletes its threads, and sanalyer emits no [Thread Delete](/gateway/threads/#thread-delete) for them. A client removes every thread whose `parent_id` is the channel.
 
 ### <span id="channel-recipient-add"></span>CHANNEL_RECIPIENT_ADD
 
@@ -628,7 +628,7 @@ A user stopped being a member of a guild the session is connected to.
 
 In a guild with more than 250 members, a [passive](/gateway/event-filtering/#active-and-passive-guilds) session receives this event only when the subject is its own user.
 
-Removal from the guild removes every membership in its threads. Fluxer emits a [Thread Members Update](/gateway/threads/#thread-members-update) for each of them, as [Thread member flags](/http-api/thread-members/#thread-member-flags) states.
+Removal from the guild removes every membership in its threads. sanalyer emits a [Thread Members Update](/gateway/threads/#thread-members-update) for each of them, as [Thread member flags](/http-api/thread-members/#thread-member-flags) states.
 
 ### <span id="guild-members-chunk"></span>GUILD_MEMBERS_CHUNK
 
@@ -680,7 +680,7 @@ A group whose count is `0` is omitted. The `offline` group is also omitted once 
 | range | array[integer] | Inclusive `[start, end]` range this operation replaces |
 | items | array[[member list item object](#member-list-item-object)] | Replacement items for the range |
 
-`SYNC` is the only operation Fluxer sends. A client MUST ignore an operation whose `op` it does not recognise or whose range fails the bounds in [Lazy Request](/gateway/commands/#lazy-request).
+`SYNC` is the only operation sanalyer sends. A client MUST ignore an operation whose `op` it does not recognise or whose range fails the bounds in [Lazy Request](/gateway/commands/#lazy-request).
 
 #### Member list item object
 
@@ -828,7 +828,7 @@ Recipients must hold `READ_MESSAGE_HISTORY` on the channel, or the message must 
 
 In a guild with more than 250 members, a [passive](/gateway/event-filtering/#active-and-passive-guilds) session receives this event only for a direct mention of its user, a mention of one of its roles, an everyone mention, or a here mention.
 
-[Publishing](/http-api/messages/#crosspost-message) a message emits it in the announcement channel with the `CROSSPOSTED` flag set. An edit of a published message emits it for each copy once Fluxer has copied the change, and deleting the published message emits it for each copy with the `SOURCE_MESSAGE_DELETED` flag and the content removed.
+[Publishing](/http-api/messages/#crosspost-message) a message emits it in the announcement channel with the `CROSSPOSTED` flag set. An edit of a published message emits it for each copy once sanalyer has copied the change, and deleting the published message emits it for each copy with the `SOURCE_MESSAGE_DELETED` flag and the content removed.
 
 [Start thread from message](/http-api/threads/#start-thread-from-message) emits it for the source message with `HAS_THREAD` and `thread`, and [Delete thread](/http-api/threads/#delete-thread) emits it with `HAS_THREAD` cleared. A session without [thread access](/gateway/threads/#session-flag) receives neither.
 
@@ -845,7 +845,7 @@ One visible message was deleted.
 | guild_id? | snowflake | Guild the channel belongs to |
 | member?<sup>2</sup> | [guild member](/http-api/guild-members/#guild-member-object) object | The author's guild member object, present in a guild channel |
 
-<sup>1</sup> Both fields are omitted when an instance administrator deleted the message through the Admin API, when Fluxer deleted it because content moderation blocked a link preview in it, or when Fluxer removed a published message and its copies together, and `author_id` is also omitted for a message with no author
+<sup>1</sup> Both fields are omitted when an instance administrator deleted the message through the Admin API, when sanalyer deleted it because content moderation blocked a link preview in it, or when sanalyer removed a published message and its copies together, and `author_id` is also omitted for a message with no author
 
 <sup>2</sup> The `user` field is removed from it, and the whole field is absent when `author_id` is absent or the author is no longer a member
 
@@ -916,7 +916,7 @@ With the `DEBOUNCE_MESSAGE_REACTIONS` [session flag](/gateway/commands/#session-
 
 <sup>1</sup> Every addition in `reactions` belongs to this message. A window covering several messages produces a separate Dispatch for each
 
-When the window closes holding exactly one addition, Fluxer sends [Message Reaction Add](#message-reaction-add) to the session. A session without the flag receives one Message Reaction Add per addition.
+When the window closes holding exactly one addition, sanalyer sends [Message Reaction Add](#message-reaction-add) to the session. A session without the flag receives one Message Reaction Add per addition.
 
 #### Reaction addition object
 
@@ -1032,7 +1032,7 @@ A `channel_id` of null means the participant left.
 | p2p | boolean | Whether this connection exchanges media peer-to-peer and not through LiveKit |
 | version | integer | Monotonic version of this participant's voice state |
 
-<sup>1</sup> The participant's client reports this value. In a guild voice channel Fluxer sets it to false when the participant lacks `STREAM`
+<sup>1</sup> The participant's client reports this value. In a guild voice channel sanalyer sets it to false when the participant lacks `STREAM`
 
 The broadcast form has no `region_id`, `server_id`, `latitude`, or `longitude`.
 
@@ -1067,7 +1067,7 @@ A grant has one of two structures. A LiveKit grant has `token` and `endpoint`. A
 | --- | --- | --- |
 | urls | array[string] | The `stun:` URLs of one server |
 
-Fluxer never hands out a TURN server, so a peer-to-peer connection never relays media. Peers that cannot reach each other directly fail to connect, and [Peer-to-peer voice](#peer-to-peer-voice) states what a client does then.
+sanalyer never hands out a TURN server, so a peer-to-peer connection never relays media. Peers that cannot reach each other directly fail to connect, and [Peer-to-peer voice](#peer-to-peer-voice) states what a client does then.
 
 ```json
 {
@@ -1081,7 +1081,7 @@ Fluxer never hands out a TURN server, so a peer-to-peer connection never relays 
 }
 ```
 
-Fluxer uses LiveKit for voice media unless the grant is peer-to-peer. There is no second voice websocket and no UDP discovery step. With a LiveKit grant a client opens a LiveKit connection to `endpoint`, presents `token` there, and speaks the LiveKit protocol from that point on. With a peer-to-peer grant a client follows [Peer-to-peer voice](#peer-to-peer-voice). [Voice](/voice/) states the room naming, the participant identity, and the track sources a grant admits.
+sanalyer uses LiveKit for voice media unless the grant is peer-to-peer. There is no second voice websocket and no UDP discovery step. With a LiveKit grant a client opens a LiveKit connection to `endpoint`, presents `token` there, and speaks the LiveKit protocol from that point on. With a peer-to-peer grant a client follows [Peer-to-peer voice](#peer-to-peer-voice). [Voice](/voice/) states the room naming, the participant identity, and the track sources a grant admits.
 
 A grant is issued when a connection opens, when it moves to another channel, and when its region changes. Toggling `self_mute`, `self_video`, or `self_stream` produces no new grant. A call region change reissues one grant to each participant of the call.
 
@@ -1091,16 +1091,16 @@ A LiveKit grant for a `connection_id` that holds a peer-to-peer grant means a pa
 
 A voice channel or call is peer-to-peer when it has at least one voice state and every voice state in it has `p2p: true`. The participants then form a full mesh of WebRTC peer connections, one for each pair of connections, and no media passes through LiveKit. The mesh roster is the set of voice states of the channel or call.
 
-Fluxer decides each new connection as follows.
+sanalyer decides each new connection as follows.
 
 | Channel or call | The command sent `p2p: true` | Any other `p2p` value |
 | --- | --- | --- |
 | Peer-to-peer below the participant cap | Peer-to-peer join<sup>1</sup> | Refused with `VOICE_P2P_CONSENT_REQUIRED` |
 | Peer-to-peer at the participant cap | Refused with `VOICE_CHANNEL_FULL` | Refused with `VOICE_P2P_CONSENT_REQUIRED` |
-| Empty, with no join awaiting LiveKit confirmation | Peer-to-peer join, or a LiveKit join when Fluxer declines<sup>2</sup> | LiveKit join |
+| Empty, with no join awaiting LiveKit confirmation | Peer-to-peer join, or a LiveKit join when sanalyer declines<sup>2</sup> | LiveKit join |
 | Every other state | LiveKit join | LiveKit join |
 
-<sup>1</sup> Refused with `VOICE_P2P_UNAVAILABLE` when Fluxer declines peer-to-peer for this join
+<sup>1</sup> Refused with `VOICE_P2P_UNAVAILABLE` when sanalyer declines peer-to-peer for this join
 
 <sup>2</sup> The session then receives a LiveKit grant and the channel or call is not peer-to-peer
 
@@ -1108,18 +1108,18 @@ Participants are counted as connections in a guild voice channel and as users in
 
 Each refusal reaches the requesting session as a [Gateway Error](/gateway/opcodes-and-close-codes/#gateway-error) payload, changes no voice state, and leaves the existing participants untouched. A client that receives `VOICE_P2P_CONSENT_REQUIRED` asks its user and, on agreement, sends the join again with `p2p: true`.
 
-Two joins can reach an empty call at the same moment with different `p2p` values. Fluxer admits the first and refuses the other with `VOICE_P2P_CONSENT_REQUIRED`. The refused session receives a [Voice State Update](#voice-state-update) with a null `channel_id` for the connection it had been granted.
+Two joins can reach an empty call at the same moment with different `p2p` values. sanalyer admits the first and refuses the other with `VOICE_P2P_CONSENT_REQUIRED`. The refused session receives a [Voice State Update](#voice-state-update) with a null `channel_id` for the connection it had been granted.
 
 The voice state of a peer-to-peer join is published at once, with no LiveKit confirmation step. Peers exchange session descriptions and ICE candidates with the [Voice Signal](/gateway/commands/#voice-signal) command, which arrives as [Voice Signal](#voice-signal).
 
-Fluxer never converts a peer-to-peer channel or call to LiveKit by itself. Only two actions convert one.
+sanalyer never converts a peer-to-peer channel or call to LiveKit by itself. Only two actions convert one.
 
 - A participant sends a Voice State Update command for its own connection with an explicit `p2p: false`.
 - The voice region changes. [Modify call region](/http-api/calls/#modify-call-region) converts a call whenever it supplies `region`, even with the current value. [Modify channel](/http-api/channels/#modify-channel) converts a guild voice channel when it stores a different `rtc_region`.
 
 A conversion sets `p2p` to false on every voice state of the channel or call, publishes each as a [Voice State Update](#voice-state-update), and sends each connected session a LiveKit grant for its existing `connection_id`. The conversion is one way. The channel or call can be peer-to-peer again only after it has emptied.
 
-A guild voice channel whose `rtc_p2p` is true stays peer-to-peer. Neither action converts it, and a change to `rtc_p2p` takes effect for the next call, after the channel has emptied. Fluxer does not ask for agreement before the first join of such a channel. A client whose [peer-to-peer voice assignment](/http-api/experiments/#peer-to-peer-voice-assignment-object) is enabled asks its user and sends `p2p: true` on agreement. Any other first join starts a LiveKit call.
+A guild voice channel whose `rtc_p2p` is true stays peer-to-peer. Neither action converts it, and a change to `rtc_p2p` takes effect for the next call, after the channel has emptied. sanalyer does not ask for agreement before the first join of such a channel. A client whose [peer-to-peer voice assignment](/http-api/experiments/#peer-to-peer-voice-assignment-object) is enabled asks its user and sends `p2p: true` on agreement. Any other first join starts a LiveKit call.
 
 A failed peer connection converts nothing. The affected client reports the problem to its user, who can leave or send the explicit `p2p: false`. Each client reports how its peer connections settled with [Report connection outcomes](/http-api/peer-to-peer-voice/#report-connection-outcomes).
 
@@ -1154,7 +1154,7 @@ Another connection of a [peer-to-peer](#peer-to-peer-voice) voice channel or cal
 }
 ```
 
-Fluxer authorises every signal against the current voice states, so `from` always names a connection with `p2p: true` in `channel_id`. A client discards a signal whose `from` it no longer has in its roster.
+sanalyer authorises every signal against the current voice states, so `from` always names a connection with `p2p: true` in `channel_id`. A client discards a signal whose `from` it no longer has in its roster.
 
 ### <span id="entrance-sound-play"></span>ENTRANCE_SOUND_PLAY
 
@@ -1186,7 +1186,7 @@ A [game table](/http-api/table-games/) in a guild voice channel changed. Each re
 
 Recipients are the players at the table, its subscribed spectators, and a player who has just left it, one Dispatch each after every change to the table. A player's `view` carries that player's own rack, and every other `view` has `rack` null. No Dispatch carries another player's rack or the order of the pile.
 
-Fluxer addresses the Dispatch to the account, so every session that account holds receives it. A recipient whose Dispatch fails is skipped. A client that missed one reads the table again with [Get a table game](/http-api/table-games/#get-a-table-game). A change of the spectators alone sends no Dispatch.
+sanalyer addresses the Dispatch to the account, so every session that account holds receives it. A recipient whose Dispatch fails is skipped. A client that missed one reads the table again with [Get a table game](/http-api/table-games/#get-a-table-game). A change of the spectators alone sends no Dispatch.
 
 ### <span id="call-create"></span>CALL_CREATE
 

@@ -6,24 +6,24 @@ description: TOTP, backup codes, WebAuthn credentials, passkey updates, and sudo
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-Multi-factor authentication asks for a second proof of identity after the account password. Fluxer accepts a TOTP authenticator app and WebAuthn credentials such as a passkey. A one-use backup code works instead of a TOTP code, and [sudo mode](#sudo-mode) reuses these factors to protect every security-sensitive operation in the API.
+Multi-factor authentication asks for a second proof of identity after the account password. sanalyer accepts a TOTP authenticator app and WebAuthn credentials such as a passkey. A one-use backup code works instead of a TOTP code, and [sudo mode](#sudo-mode) reuses these factors to protect every security-sensitive operation in the API.
 
 Registering a WebAuthn credential does not make passkeys a second factor. A registered credential answers a [sudo mode](#sudo-mode) challenge and a passwordless login on its own, and only [Set WebAuthn two-factor authentication](#set-webauthn-two-factor-authentication) adds the WebAuthn [authenticator type](/http-api/users/#authenticator-types) that makes a passkey a required second factor at password login.
 
 Every route here requires a non-bot user session.
 
 :::caution[A challenge is one-use and context-bound]
-Fluxer consumes a backup code, a WebAuthn registration challenge, and a WebAuthn sudo challenge on first use. A challenge is bound to the user it was issued to and to the operation it was issued for. The operations are registration, sudo, MFA login, discoverable login, the passkey bridge, and the passkey update. It expires after five minutes, so a registration challenge cannot be redeemed as a sudo assertion.
+sanalyer consumes a backup code, a WebAuthn registration challenge, and a WebAuthn sudo challenge on first use. A challenge is bound to the user it was issued to and to the operation it was issued for. The operations are registration, sudo, MFA login, discoverable login, the passkey bridge, and the passkey update. It expires after five minutes, so a registration challenge cannot be redeemed as a sudo assertion.
 :::
 
 ## TOTP parameters
 
-Fluxer validates a TOTP code as a six-digit HMAC-SHA-1 one-time password over a 30-second time step counted from the Unix epoch. It accepts one time step of clock skew on either side. A submitted code is exactly six decimal digits, and Fluxer rejects any other value. The shared secret is Base32, and Fluxer ignores whitespace, hyphens, and trailing padding when it decodes one.
+sanalyer validates a TOTP code as a six-digit HMAC-SHA-1 one-time password over a 30-second time step counted from the Unix epoch. It accepts one time step of clock skew on either side. A submitted code is exactly six decimal digits, and sanalyer rejects any other value. The shared secret is Base32, and sanalyer ignores whitespace, hyphens, and trailing padding when it decodes one.
 
-The client generates the secret, presents it to the user, and submits it with a code derived from it when calling [Enable TOTP MFA](#enable-totp-mfa). Fluxer never generates or returns a TOTP secret.
+The client generates the secret, presents it to the user, and submits it with a code derived from it when calling [Enable TOTP MFA](#enable-totp-mfa). sanalyer never generates or returns a TOTP secret.
 
 :::caution[A TOTP code can pass twice]
-Fluxer rejects an accepted code for 30 seconds if it is sent again. The skew keeps a code valid up to 90 seconds, so it passes again once those 30 seconds lapse. Wait for the next time step.
+sanalyer rejects an accepted code for 30 seconds if it is sent again. The skew keeps a code valid up to 90 seconds, so it passes again once those 30 seconds lapse. Wait for the next time step.
 :::
 
 ## Backup code contract
@@ -41,7 +41,7 @@ Only the `code` field of [Disable TOTP MFA](#disable-totp-mfa) requires the acco
 [Set WebAuthn two-factor authentication](#set-webauthn-two-factor-authentication) mints 10 codes when it turns the toggle on for an account holding none, so an account whose only second factor is passkeys always has a set to fall back on.
 
 :::caution[An uppercase backup code with spaces still matches]
-Fluxer lowercases the submitted value and each stored code, then removes every character outside `a-z` and `0-9`. `abcdefgh` and `AbCd EfGh` both match the issued code `abcd-efgh`.
+sanalyer lowercases the submitted value and each stored code, then removes every character outside `a-z` and `0-9`. `abcdefgh` and `AbCd EfGh` both match the issued code `abcd-efgh`.
 :::
 
 :::danger[Authenticator secrets are credentials]
@@ -61,7 +61,7 @@ A ticket is a version 4 UUID valid for 30 minutes after the challenge starts, th
 A verification code is eight characters drawn from the uppercase Latin alphabet and the decimal digits, written as two four-character groups separated by a hyphen. A code is valid for 10 minutes from the moment it is sent, and each send replaces the code the previous send issued.
 
 :::note[A lowercase code with no hyphen still matches]
-Fluxer trims the submitted value, uppercases it, and removes every hyphen before it compares. A wrong value fails with `INVALID_VERIFICATION_CODE` on the path `code`.
+sanalyer trims the submitted value, uppercases it, and removes every hyphen before it compares. A wrong value fails with `INVALID_VERIFICATION_CODE` on the path `code`.
 :::
 
 Verification consumes the code and issues a proof as a version 4 UUID. An incorrect proof fails with `INVALID_PROOF_TOKEN`. A ticket with no proof fails with `INVALID_OR_EXPIRED_TICKET` on `verification_proof`.
@@ -77,7 +77,7 @@ Each operation passes through its own route bucket and, separately, through one 
 | Code verification | 5 attempts per 15 minutes for each ticket | [Verify MFA backup codes challenge code](#verify-mfa-backup-codes-challenge-code) |
 | Regeneration | 5 attempts per 15 minutes for each ticket | [Regenerate MFA backup codes](#regenerate-mfa-backup-codes) |
 
-Fluxer refuses a resend for 30 seconds after the previous send on the same ticket. That refusal is HTTP 429 with a `Retry-After` computed from the moment the next send becomes available. It is independent of the route bucket and of the 15-minute send controls.
+sanalyer refuses a resend for 30 seconds after the previous send on the same ticket. That refusal is HTTP 429 with a `Retry-After` computed from the moment the next send becomes available. It is independent of the route bucket and of the 15-minute send controls.
 
 ## Sudo mode
 
@@ -86,7 +86,7 @@ Sudo mode is a short-lived proof that the human in front of the session is still
 A sudo token lasts five minutes and works only for the account that obtained it, across that account's sessions. Treat it as opaque. A new token is issued only after an MFA proof from an account holding a TOTP secret or a registered WebAuthn credential.
 
 :::caution[The echoed header repeats the request value]
-When Fluxer issues no fresh token it echoes the request's `X-Fluxer-Sudo-Mode-JWT` value back unchanged and never re-signs it, so the five-minute window never slides. Fluxer echoes the value even when it fails verification.
+When sanalyer issues no fresh token it echoes the request's `X-Fluxer-Sudo-Mode-JWT` value back unchanged and never re-signs it, so the five-minute window never slides. sanalyer echoes the value even when it fails verification.
 :::
 
 The accepted proof depends on what the account can present, which is a stored TOTP secret or a registered WebAuthn credential. The [authenticator types](/http-api/users/#authenticator-types) the account advertises do not enter into it, so a passkey proves sudo mode whether or not passkeys are enabled as a second factor.
@@ -102,9 +102,9 @@ The `totp` method reads `mfa_code` as a current authenticator code or an unconsu
 
 A request that has no accepted proof fails with 403 `SUDO_MODE_REQUIRED`. Its body has the [sudo mode methods object](#sudo-mode-methods-object) members, so a client can tell which proof to ask the user for. A proof that is present but wrong fails instead with 400 `INVALID_FORM_BODY` and a [validation error](/http-api/#validation-error-object) entry. A mismatched password produces path `password` with code `INVALID_PASSWORD`. A rejected TOTP code, backup code, or WebAuthn assertion produces path `mfa_code` with code `INVALID_MFA_CODE`, so a client cannot tell which of the three was rejected.
 
-The `totp` method also consumes a per-account allowance of 10 multi-factor attempts in 15 minutes, shared by every sudo-gated operation on every resource. Fluxer charges the allowance before it checks the code, so a wrong code and a correct code both draw on it. A correct code resets the counter to zero. While it is exhausted, a correct code returns the same `INVALID_MFA_CODE` entry as a wrong one. The `webauthn` method draws on no allowance. The login MFA allowances on [HTTP authentication](/http-api/authentication/) are counted separately.
+The `totp` method also consumes a per-account allowance of 10 multi-factor attempts in 15 minutes, shared by every sudo-gated operation on every resource. sanalyer charges the allowance before it checks the code, so a wrong code and a correct code both draw on it. A correct code resets the counter to zero. While it is exhausted, a correct code returns the same `INVALID_MFA_CODE` entry as a wrong one. The `webauthn` method draws on no allowance. The login MFA allowances on [HTTP authentication](/http-api/authentication/) are counted separately.
 
-Fluxer returns an issued or echoed token in the `X-Fluxer-Sudo-Mode-JWT` response header. A client keeps it and sends it in the same header on every later sudo-gated operation.
+sanalyer returns an issued or echoed token in the `X-Fluxer-Sudo-Mode-JWT` response header. A client keeps it and sends it in the same header on every later sudo-gated operation.
 
 ## Sudo mode methods object
 
@@ -149,7 +149,7 @@ Operations that require sudo mode merge these fields into their own JSON body. E
 
 <sup>2</sup> Required when the account holds a TOTP secret or a registered WebAuthn credential, unless a valid sudo token is already present
 
-<sup>3</sup> Required when `mfa_method` is `totp`, with a current authenticator code or an unconsumed backup code. Fluxer reads it as a backup code alone while the account holds no TOTP secret
+<sup>3</sup> Required when `mfa_method` is `totp`, with a current authenticator code or an unconsumed backup code. sanalyer reads it as a backup code alone while the account holds no TOTP secret
 
 <sup>4</sup> Both fields are required together when `mfa_method` is `webauthn`
 
@@ -212,7 +212,7 @@ The backup codes and the proof a verified challenge returns.
 
 An account holds at most 10 WebAuthn credentials, not counting [replaced passkeys](#replaced-passkeys). Both [Create WebAuthn registration options](#create-webauthn-registration-options) and [Register WebAuthn credential](#register-webauthn-credential) enforce this limit.
 
-Fluxer verifies every assertion against the domain its challenge was issued for, chosen by [passkey domain selection](#passkey-domain-selection), and against the allowed origins configured for the instance. A passkey bridge assertion and a passkey update registration accept only the origin the ceremony runs on. Fluxer rejects an assertion whose reported signature counter is not greater than the stored counter. The exception is a stored and a reported counter of zero, which is how an authenticator without a counter appears.
+sanalyer verifies every assertion against the domain its challenge was issued for, chosen by [passkey domain selection](#passkey-domain-selection), and against the allowed origins configured for the instance. A passkey bridge assertion and a passkey update registration accept only the origin the ceremony runs on. sanalyer rejects an assertion whose reported signature counter is not greater than the stored counter. The exception is a stored and a reported counter of zero, which is how an authenticator without a counter appears.
 
 ### Structure
 
@@ -226,36 +226,36 @@ Fluxer verifies every assertion against the domain its challenge was issued for,
 
 <sup>1</sup> Null until the credential completes a login, MFA, or sudo assertion for the first time
 
-<sup>2</sup> The instance's `FLUXER_PASSKEY_RP_ID` for every passkey except one created on a new origin of the official instance, which reports `fluxer.com`. See [passkey domain selection](#passkey-domain-selection)
+<sup>2</sup> The instance's `FLUXER_PASSKEY_RP_ID` for every passkey except one created on a new origin of the upstream official instance, which reports the new domain. See [passkey domain selection](#passkey-domain-selection)
 
-Fluxer never returns the credential's public key, signature counter, or reported transports.
+sanalyer never returns the credential's public key, signature counter, or reported transports.
 
 ## Passkey domain selection
 
-A passkey works only under the domain it was created for, its relying party identifier. Most instances have one, `FLUXER_PASSKEY_RP_ID`, and every passkey uses it. The official instance has two while its web client moves from `web.fluxer.app` to `fluxer.com`, as the [passkey bridge](/http-api/authentication/#passkey-bridge) describes. There, a request whose `Origin` is `https://fluxer.com` or `https://canary.fluxer.com` is a new-origin request, and the domain follows the table below. A request with any other `Origin`, or with none as from the mobile apps, keeps `fluxer.app` wherever the account can use it.
+A passkey works only under the domain it was created for, its relying party identifier. Most instances have one, `FLUXER_PASSKEY_RP_ID`, and every passkey uses it. The upstream official instance has two while its web client moves from the upstream legacy web host to the new domain, as the [passkey bridge](/http-api/authentication/#passkey-bridge) describes. There, a request whose `Origin` is the upstream new web origin or the upstream new canary origin is a new-origin request, and the domain follows the table below. A request with any other `Origin`, or with none as from the mobile apps, keeps the legacy domain wherever the account can use it.
 
 | Operation | New-origin request | Any other request |
 | --- | --- | --- |
-| [Create WebAuthn registration options](#create-webauthn-registration-options) | A new `fluxer.com` passkey | A new `fluxer.app` passkey |
-| [Get discoverable WebAuthn options](/http-api/authentication/#get-discoverable-webauthn-options) | Any `fluxer.com` passkey | Any `fluxer.app` passkey, replaced ones included |
-| [Get WebAuthn MFA options](/http-api/authentication/#get-webauthn-mfa-options) | The `fluxer.com` passkeys, else the `fluxer.app` ones | The `fluxer.app` passkeys with replaced ones, else the `fluxer.com` ones |
-| [Create sudo WebAuthn authentication options](#create-sudo-webauthn-authentication-options) | The `fluxer.com` passkeys, else the `fluxer.app` ones | The `fluxer.app` passkeys with replaced ones, else the `fluxer.com` ones |
+| [Create WebAuthn registration options](#create-webauthn-registration-options) | A new new-domain passkey | A new legacy-domain passkey |
+| [Get discoverable WebAuthn options](/http-api/authentication/#get-discoverable-webauthn-options) | Any new-domain passkey | Any legacy-domain passkey, replaced ones included |
+| [Get WebAuthn MFA options](/http-api/authentication/#get-webauthn-mfa-options) | The new-domain passkeys, else the legacy-domain ones | The legacy-domain passkeys with replaced ones, else the new-domain ones |
+| [Create sudo WebAuthn authentication options](#create-sudo-webauthn-authentication-options) | The new-domain passkeys, else the legacy-domain ones | The legacy-domain passkeys with replaced ones, else the new-domain ones |
 
-The options name the chosen domain in `rpId` and list only the chosen passkeys. An assertion from any other credential returns 401 `PASSKEY_AUTHENTICATION_FAILED`. A page on a new origin cannot run options for `fluxer.app` itself, so the official web client runs them through the passkey bridge.
+The options name the chosen domain in `rpId` and list only the chosen passkeys. An assertion from any other credential returns 401 `PASSKEY_AUTHENTICATION_FAILED`. A page on a new origin cannot run options for the legacy domain itself, so the upstream official web client runs them through the passkey bridge.
 
 ## Replaced passkeys
 
-A [passkey update](#passkey-updates) keeps the old `fluxer.app` credential as a replaced passkey, so the mobile apps and `web.fluxer.app` still accept it. A replaced passkey appears in no list, no [Ready](/gateway/events/#ready) payload, and no [WebAuthn Credentials Update](/gateway/events/#webauthn-credentials-update), and it does not count towards the 10-credential limit.
+A [passkey update](#passkey-updates) keeps the old legacy-domain credential as a replaced passkey, so the mobile apps and the upstream legacy web host still accept it. A replaced passkey appears in no list, no [Ready](/gateway/events/#ready) payload, and no [WebAuthn Credentials Update](/gateway/events/#webauthn-credentials-update), and it does not count towards the 10-credential limit.
 
 A replaced passkey works only on requests that are not new-origin requests. It never works on a new origin or through the passkey bridge. Renaming or deleting it by ID returns 404 `UNKNOWN_WEBAUTHN_CREDENTIAL`. Deleting the passkey that replaced it deletes it too, and deleting the account's last listed passkey deletes every replaced one.
 
 ## Passkey updates
 
-A passkey update swaps one `fluxer.app` passkey for a `fluxer.com` passkey with the same name. Fluxer opens one only when a [passkey bridge](/http-api/authentication/#passkey-bridge) redemption completes from a new origin while the instance-wide [domain migration switch](/http-api/instance/#domain-migration-object) is on. Nothing else opens one.
+A passkey update swaps one legacy-domain passkey for a new-domain passkey with the same name. sanalyer opens one only when a [passkey bridge](/http-api/authentication/#passkey-bridge) redemption completes from a new origin while the instance-wide [domain migration switch](/http-api/instance/#domain-migration-object) is on. Nothing else opens one.
 
 An open update belongs to one session and names the passkey the ceremony used. It lasts five minutes, and a later redemption on the same session replaces it.
 
-The open update stands in for sudo mode on the update routes, because it exists only after this session used the old passkey within the last five minutes. It allows one action. [Complete passkey update](#complete-passkey-update) registers the new passkey. When the authenticator already holds a `fluxer.com` passkey for the account, registration fails on `excludeCredentials` and the old passkey stays listed, so the person can remove it themselves.
+The open update stands in for sudo mode on the update routes, because it exists only after this session used the old passkey within the last five minutes. It allows one action. [Complete passkey update](#complete-passkey-update) registers the new passkey. When the authenticator already holds a new-domain passkey for the account, registration fails on `excludeCredentials` and the old passkey stays listed, so the person can remove it themselves.
 
 ## Passkey update object
 
@@ -316,7 +316,7 @@ The result of one redeemed `sudo` [passkey bridge](/http-api/authentication/#pas
 
 ## WebAuthn assertion object
 
-The browser WebAuthn `PublicKeyCredential` serialisation. Its field names are camelCase, because Fluxer accepts the exact structure the WebAuthn client API produces.
+The browser WebAuthn `PublicKeyCredential` serialisation. Its field names are camelCase, because sanalyer accepts the exact structure the WebAuthn client API produces.
 
 ### Structure
 
@@ -384,7 +384,7 @@ Malformed fields return `INVALID_FORM_BODY`. An attestation that fails verificat
 | credProps? | [WebAuthn credential properties](#webauthn-credential-properties-object) object | Credential properties output |
 | hmacCreateSecret? | boolean | Whether the authenticator created an HMAC secret |
 
-Fluxer accepts additional extension result fields.
+sanalyer accepts additional extension result fields.
 
 ## WebAuthn credential properties object
 
@@ -394,7 +394,7 @@ Fluxer accepts additional extension result fields.
 | --- | --- | --- |
 | rk? | boolean | Whether the created credential is discoverable |
 
-Fluxer accepts additional credential property fields.
+sanalyer accepts additional credential property fields.
 
 ## WebAuthn authentication options object
 
@@ -414,11 +414,11 @@ Every operation that issues a WebAuthn authentication challenge returns this obj
 
 <sup>2</sup> Every operation emits the fixed value `60000`, a standard PublicKeyCredential request option
 
-<sup>3</sup> Sudo and MFA login options list the passkeys [passkey domain selection](#passkey-domain-selection) chooses, and passkey bridge options list the account's `fluxer.app` passkeys. The field is absent on the discoverable login route and on passkey bridge options for sign-in
+<sup>3</sup> Sudo and MFA login options list the passkeys [passkey domain selection](#passkey-domain-selection) chooses, and passkey bridge options list the account's legacy-domain passkeys. The field is absent on the discoverable login route and on passkey bridge options for sign-in
 
 <sup>4</sup> Sudo options, MFA login completion, and passkey bridge options for two-factor sign-in and sudo request `discouraged`. Discoverable login and passkey bridge options for sign-in request and verify `required`
 
-Fluxer emits no other PublicKeyCredential request options member, so `hints` and `extensions` never appear on this object.
+sanalyer emits no other PublicKeyCredential request options member, so `hints` and `extensions` never appear on this object.
 
 ## WebAuthn registration options object
 
@@ -441,13 +441,13 @@ Fluxer emits no other PublicKeyCredential request options member, so `hints` and
 
 <sup>2</sup> Every registration emits the fixed value `60000`
 
-<sup>3</sup> Holds every credential already stored for the account, replaced passkeys included, so an authenticator cannot enrol the same credential twice. It is an empty array when the account holds none. Passkey update options hold only the account's listed `fluxer.com` passkeys
+<sup>3</sup> Holds every credential already stored for the account, replaced passkeys included, so an authenticator cannot enrol the same credential twice. It is an empty array when the account holds none. Passkey update options hold only the account's listed new-domain passkeys
 
-<sup>4</sup> Fluxer requests a preferred discoverable credential and preferred user verification, and requires neither, so `requireResidentKey` is `false`
+<sup>4</sup> sanalyer requests a preferred discoverable credential and preferred user verification, and requires neither, so `requireResidentKey` is `false`
 
-<sup>5</sup> Fluxer requests `none`, so no attestation statement is retained
+<sup>5</sup> sanalyer requests `none`, so no attestation statement is retained
 
-<sup>6</sup> Always present with `credProps` set to `true`, the only extension Fluxer requests
+<sup>6</sup> Always present with `credProps` set to `true`, the only extension sanalyer requests
 
 <sup>7</sup> An empty array, except on [passkey update](#passkey-updates) options for a passkey last used from a phone or security key, where it is `hybrid` then `security-key`
 
@@ -470,7 +470,7 @@ Fluxer emits no other PublicKeyCredential request options member, so `hints` and
 | name | string | Account username |
 | displayName<sup>1</sup> | string | Account display label |
 
-<sup>1</sup> Fluxer supplies the account username in both `name` and `displayName`
+<sup>1</sup> sanalyer supplies the account username in both `name` and `displayName`
 
 ## WebAuthn public key parameter object
 
@@ -503,7 +503,7 @@ Fluxer emits no other PublicKeyCredential request options member, so `hints` and
 | hmacCreateSecret? | boolean | Whether HMAC secret creation is requested |
 | minPinLength? | boolean | Whether minimum PIN length is requested |
 
-<sup>1</sup> The only member Fluxer ever sets, always `true` on [WebAuthn registration options](#webauthn-registration-options-object)
+<sup>1</sup> The only member sanalyer ever sets, always `true` on [WebAuthn registration options](#webauthn-registration-options-object)
 
 ## Sudo MFA methods object
 
@@ -535,7 +535,7 @@ The account as it stands after [Set WebAuthn two-factor authentication](#set-web
 
 Enables TOTP for the current account and returns an [MFA backup codes](#mfa-backup-codes-object) object holding 10 new codes. [Sudo mode](#sudo-mode) is required. Emits a [User Update](/gateway/events/#user-update) Gateway event.
 
-Fluxer checks sudo mode first, so an account that already holds a WebAuthn credential proves it with that credential.
+sanalyer checks sudo mode first, so an account that already holds a WebAuthn credential proves it with that credential.
 
 ### Limitations
 
@@ -565,7 +565,7 @@ The body extends the [sudo verification object](#sudo-verification-object) with 
 
 ### Side effects
 
-TOTP is enabled and 10 backup codes are issued. Any backup code the account already held stays in place, so the response has only the 10 new codes. Fluxer also copies the account's authenticator types to every bot account the user owns. [User Update](/gateway/events/#user-update) reaches the user's sessions and each owned bot whose authenticator types changed.
+TOTP is enabled and 10 backup codes are issued. Any backup code the account already held stays in place, so the response has only the 10 new codes. sanalyer also copies the account's authenticator types to every bot account the user owns. [User Update](/gateway/events/#user-update) reaches the user's sessions and each owned bot whose authenticator types changed.
 
 ### Rate limit
 
@@ -577,7 +577,7 @@ TOTP is enabled and 10 backup codes are issued. Any backup code the account alre
 
 Disables TOTP for the current account and returns 204 with an empty body. [Sudo mode](#sudo-mode) is required. Emits a [User Update](/gateway/events/#user-update) Gateway event.
 
-Fluxer checks one authenticator code or backup code for each request. With a valid sudo token, it checks `code`. Without one, the sudo verification fields prove sudo mode when `mfa_method` is set, and Fluxer does not check `code`. Otherwise `code` proves sudo mode as if it were `mfa_code` with `mfa_method` set to `totp`, so the attempt draws on the TOTP allowance described under [sudo mode](#sudo-mode).
+sanalyer checks one authenticator code or backup code for each request. With a valid sudo token, it checks `code`. Without one, the sudo verification fields prove sudo mode when `mfa_method` is set, and sanalyer does not check `code`. Otherwise `code` proves sudo mode as if it were `mfa_code` with `mfa_method` set to `totp`, so the attempt draws on the TOTP allowance described under [sudo mode](#sudo-mode).
 
 TOTP must already be enabled, or the request is refused with 400 `TWO_FACTOR_REQUIRED`. A verified email is not required, so an account whose address later became unverified can still remove its authenticator.
 
@@ -605,7 +605,7 @@ Disabling TOTP invalidates every backup code on the account, including the code 
 
 ### Side effects
 
-TOTP is disabled. Every backup code stops working unless the account keeps passkeys enabled as a second factor, in which case the whole set survives. Fluxer removes the TOTP authenticator type, along with the unassigned legacy authenticator value `1` when the account still held it. Fluxer also copies the account's authenticator types to every bot account the user owns. [User Update](/gateway/events/#user-update) goes to the user's sessions and each owned bot whose authenticator types changed.
+TOTP is disabled. Every backup code stops working unless the account keeps passkeys enabled as a second factor, in which case the whole set survives. sanalyer removes the TOTP authenticator type, along with the unassigned legacy authenticator value `1` when the account still held it. sanalyer also copies the account's authenticator types to every bot account the user owns. [User Update](/gateway/events/#user-update) goes to the user's sessions and each owned bot whose authenticator types changed.
 
 ### Rate limit
 
@@ -664,7 +664,7 @@ The send consumes the challenge start control.
 
 ### JSON body
 
-The body can be omitted, and any supplied body is an object with no fields. Fluxer strips unknown keys before it handles the request.
+The body can be omitted, and any supplied body is an object with no fields. sanalyer strips unknown keys before it handles the request.
 
 ### Response
 
@@ -676,7 +676,7 @@ The body can be omitted, and any supplied body is an object with no fields. Flux
 
 ### Side effects
 
-Fluxer stores a ticket holding the code and its expiry, and one verification email goes to the account address. No account field changes and no backup code is issued.
+sanalyer stores a ticket holding the code and its expiry, and one verification email goes to the account address. No account field changes and no backup code is issued.
 
 ### Rate limit
 
@@ -693,7 +693,7 @@ The route reads the ticket and the account address only. An account holding no e
 The send consumes the challenge resend control, and the ticket enforces its own 30-second cooldown.
 
 :::caution[A resend undoes a completed verification]
-Fluxer clears the ticket's stored proof on every resend. A client that already holds a proof needs [Verify MFA backup codes challenge code](#verify-mfa-backup-codes-challenge-code) again before [Regenerate MFA backup codes](#regenerate-mfa-backup-codes) accepts it.
+sanalyer clears the ticket's stored proof on every resend. A client that already holds a proof needs [Verify MFA backup codes challenge code](#verify-mfa-backup-codes-challenge-code) again before [Regenerate MFA backup codes](#regenerate-mfa-backup-codes) accepts it.
 :::
 
 ### JSON body
@@ -711,7 +711,7 @@ Fluxer clears the ticket's stored proof on every resend. A client that already h
 
 ### Side effects
 
-Fluxer replaces the ticket's code, send time, and code expiry, which invalidates the previous code. The stored proof is cleared and one verification email goes to the account address.
+sanalyer replaces the ticket's code, send time, and code expiry, which invalidates the previous code. The stored proof is cleared and one verification email goes to the account address.
 
 ### Rate limit
 
@@ -725,7 +725,7 @@ Verifies the emailed code and returns an [MFA backup codes verification](#mfa-ba
 
 Verification consumes the code. A ticket holding no code fails with `VERIFICATION_CODE_NOT_ISSUED`, which is what a second verification of the same ticket returns. A code past its 10-minute lifetime fails with `VERIFICATION_CODE_EXPIRED`. A mismatch fails with `INVALID_VERIFICATION_CODE`.
 
-Fluxer charges the per-ticket verification allowance before it reads the code, so a wrong code and a correct code both draw on it.
+sanalyer charges the per-ticket verification allowance before it reads the code, so a wrong code and a correct code both draw on it.
 
 ### JSON body
 
@@ -828,7 +828,7 @@ The body is a [sudo verification object](#sudo-verification-object). An existing
 
 ### Side effects
 
-Fluxer issues a registration challenge for the current user. It expires after five minutes and can be redeemed once.
+sanalyer issues a registration challenge for the current user. It expires after five minutes and can be redeemed once.
 
 ### Rate limit
 
@@ -842,7 +842,7 @@ Consumes a registration challenge, adds one WebAuthn credential to the current a
 
 Registration changes no [authenticator type](/http-api/users/#authenticator-types). The credential answers a sudo mode challenge and a passwordless login straight away, and passkeys become a second factor at password login only through [Set WebAuthn two-factor authentication](#set-webauthn-two-factor-authentication).
 
-The account needs a verified email and fewer than 10 registered credentials. This route accepts no sudo verification fields of its own. Fluxer verifies the attestation against the domain the challenge was issued for and the instance's allowed origins, and does not require user verification. The credential keeps that domain.
+The account needs a verified email and fewer than 10 registered credentials. This route accepts no sudo verification fields of its own. sanalyer verifies the attestation against the domain the challenge was issued for and the instance's allowed origins, and does not require user verification. The credential keeps that domain.
 
 ### JSON body
 
@@ -853,7 +853,7 @@ The account needs a verified email and fewer than 10 registered credentials. Thi
 | name | string | User-assigned credential name (1-100 characters) |
 
 :::caution[A failed registration cannot reuse its challenge]
-Fluxer consumes the registration challenge before it re-checks the credential limit and before it verifies the attestation. Request fresh registration options after any failure.
+sanalyer consumes the registration challenge before it re-checks the credential limit and before it verifies the attestation. Request fresh registration options after any failure.
 :::
 
 ### Response
@@ -976,11 +976,11 @@ An open update whose passkey was deleted or replaced since is discarded. No Gate
 
 <RouteHeader method="POST" path="/v1/users/@me/mfa/webauthn/migration/registration-options" />
 
-Creates a one-use registration challenge for the `fluxer.com` passkey that replaces the session's open [passkey update](#passkey-updates). Returns a [WebAuthn registration options](#webauthn-registration-options-object) object.
+Creates a one-use registration challenge for the new-domain passkey that replaces the session's open [passkey update](#passkey-updates). Returns a [WebAuthn registration options](#webauthn-registration-options-object) object.
 
 The request has no body. It needs a new-origin request and an open update on this session, and otherwise returns 404 `UNKNOWN_PASSKEY_MIGRATION`. Sudo mode, a verified email, and room under the credential limit are not required.
 
-`excludeCredentials` lists the account's `fluxer.com` passkeys. When the update's `cross_device` is true, `hints` is `hybrid` then `security-key`, so the browser offers the phone or key used a moment ago.
+`excludeCredentials` lists the account's new-domain passkeys. When the update's `cross_device` is true, `hints` is `hybrid` then `security-key`, so the browser offers the phone or key used a moment ago.
 
 ### Response
 
@@ -991,7 +991,7 @@ The request has no body. It needs a new-origin request and an open update on thi
 
 ### Side effects
 
-Fluxer issues a registration challenge for the current user, bound to the passkey update. It expires after five minutes, can be redeemed once, and no other WebAuthn route accepts it. The update stays open.
+sanalyer issues a registration challenge for the current user, bound to the passkey update. It expires after five minutes, can be redeemed once, and no other WebAuthn route accepts it. The update stays open.
 
 ### Rate limit
 
@@ -1001,7 +1001,7 @@ Fluxer issues a registration challenge for the current user, bound to the passke
 
 <RouteHeader method="POST" path="/v1/users/@me/mfa/webauthn/migration" />
 
-Registers the `fluxer.com` passkey that replaces the session's open [passkey update](#passkey-updates) and returns 204 with an empty body. Emits a [WebAuthn Credentials Update](/gateway/events/#webauthn-credentials-update) Gateway event.
+Registers the new-domain passkey that replaces the session's open [passkey update](#passkey-updates) and returns 204 with an empty body. Emits a [WebAuthn Credentials Update](/gateway/events/#webauthn-credentials-update) Gateway event.
 
 ### JSON body
 
@@ -1010,7 +1010,7 @@ Registers the `fluxer.com` passkey that replaces the session's open [passkey upd
 | response | [WebAuthn registration response](#webauthn-registration-response-object) object | Authenticator response for the update challenge |
 | challenge | string | The challenge from [create passkey update registration options](#create-passkey-update-registration-options) (1-1024 characters) |
 
-The request needs a new-origin request and an open update on this session, and otherwise returns 404 `UNKNOWN_PASSKEY_MIGRATION`. Fluxer verifies the attestation for `fluxer.com` and accepts only the request's own `Origin` in its client data.
+The request needs a new-origin request and an open update on this session, and otherwise returns 404 `UNKNOWN_PASSKEY_MIGRATION`. sanalyer verifies the attestation for the new domain and accepts only the request's own `Origin` in its client data.
 
 A failed verification returns the codes of [register WebAuthn credential](#register-webauthn-credential) and leaves the update open. It consumes the challenge, so fetch new options before trying again. An update that another request settled first, and a passkey that was deleted or replaced since, return 404 `UNKNOWN_PASSKEY_MIGRATION`.
 
@@ -1024,7 +1024,7 @@ A failed verification returns the codes of [register WebAuthn credential](#regis
 
 ### Side effects
 
-Fluxer closes the update, adds the new passkey under the old one's name, and makes the old one a [replaced passkey](#replaced-passkeys). No authenticator type changes.
+sanalyer closes the update, adds the new passkey under the old one's name, and makes the old one a [replaced passkey](#replaced-passkeys). No authenticator type changes.
 
 [WebAuthn Credentials Update](/gateway/events/#webauthn-credentials-update) reaches the user's sessions with the complete current credential summaries.
 
@@ -1061,7 +1061,7 @@ The body extends the [sudo verification object](#sudo-verification-object) with 
 
 <sup>2</sup> Required when the account holds a TOTP secret or a registered WebAuthn credential, unless a valid sudo token is already present
 
-<sup>3</sup> Required when `mfa_method` is `totp`, with a current authenticator code or an unconsumed backup code. Fluxer reads it as a backup code alone while the account holds no TOTP secret
+<sup>3</sup> Required when `mfa_method` is `totp`, with a current authenticator code or an unconsumed backup code. sanalyer reads it as a backup code alone while the account holds no TOTP secret
 
 <sup>4</sup> Both fields are required together when `mfa_method` is `webauthn`
 
@@ -1075,7 +1075,7 @@ The body extends the [sudo verification object](#sudo-verification-object) with 
 
 ### Side effects
 
-The WebAuthn authenticator type is added or removed, and Fluxer copies the account's authenticator types to every bot account the user owns. [User Update](/gateway/events/#user-update) reaches the user's sessions and each owned bot whose authenticator types changed.
+The WebAuthn authenticator type is added or removed, and sanalyer copies the account's authenticator types to every bot account the user owns. [User Update](/gateway/events/#user-update) reaches the user's sessions and each owned bot whose authenticator types changed.
 
 Enabling on an account that holds no backup code issues 10, which the response returns. They are the recovery path for an account whose only second factor is passkeys, and [complete login with TOTP](/http-api/authentication/#complete-login-with-totp) redeems one. An account that already holds a set keeps it and the response reports null. A request that asks for the state the account already has changes nothing and issues no code.
 
@@ -1116,7 +1116,7 @@ The account needs at least one credential in the chosen group. Sudo mode is not 
 
 ### Side effects
 
-Fluxer issues a sudo challenge for the current user. It expires after five minutes and can be redeemed once by submitting it as `webauthn_challenge` alongside `webauthn_response` in a [sudo verification object](#sudo-verification-object).
+sanalyer issues a sudo challenge for the current user. It expires after five minutes and can be redeemed once by submitting it as `webauthn_challenge` alongside `webauthn_response` in a [sudo verification object](#sudo-verification-object).
 
 ### Rate limit
 
@@ -1135,19 +1135,19 @@ Starts a `sudo` [passkey bridge](/http-api/authentication/#passkey-bridge) cerem
 | runner | string | Where the ceremony runs, either `page` or `native` |
 | nonce_hash | string | The SHA-256 digest of the nonce the new origin keeps, as 64 lowercase hex characters |
 
-The request MUST send an `Origin` header of `https://fluxer.com` or `https://canary.fluxer.com`. Any other `Origin`, none, or a self-hosted instance returns 403 `INVALID_API_ORIGIN`. An account with no passkey listed for `fluxer.app` returns 400 `NO_PASSKEYS_REGISTERED`.
+The request MUST send an `Origin` header of the upstream new web origin or the upstream new canary origin. Any other `Origin`, none, or a self-hosted instance returns 403 `INVALID_API_ORIGIN`. An account with no passkey listed for the legacy domain returns 400 `NO_PASSKEYS_REGISTERED`.
 
 ### Response
 
 | Status | Body | Condition |
 | --- | --- | --- |
 | 200 | [passkey bridge start](/http-api/authentication/#passkey-bridge-start-object) object | The ceremony was started |
-| 400 | [error response](/http-api/#error-response) | The body is invalid, or the account has no passkey for `fluxer.app` |
+| 400 | [error response](/http-api/#error-response) | The body is invalid, or the account has no passkey for the legacy domain |
 | 403 | [error response](/http-api/#error-response) | The `Origin` is refused, returning `INVALID_API_ORIGIN` |
 
 ### Side effects
 
-Fluxer stores the ceremony for 10 minutes. It changes no account state. No Gateway Dispatch is emitted.
+sanalyer stores the ceremony for 10 minutes. It changes no account state. No Gateway Dispatch is emitted.
 
 ### Rate limit
 
@@ -1187,7 +1187,7 @@ A cancelled ceremony returns `cancelled`. A completed one returns a token that w
 
 ### Side effects
 
-A redemption that gets past the secret check deletes the ceremony. When the request comes from a new origin and the domain migration switch is on, Fluxer opens a [passkey update](#passkey-updates) for the calling session. No Gateway Dispatch is emitted.
+A redemption that gets past the secret check deletes the ceremony. When the request comes from a new origin and the domain migration switch is on, sanalyer opens a [passkey update](#passkey-updates) for the calling session. No Gateway Dispatch is emitted.
 
 ### Rate limit
 

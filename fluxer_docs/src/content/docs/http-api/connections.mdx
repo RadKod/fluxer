@@ -6,7 +6,7 @@ description: External account connections, domain ownership proof, Bluesky autho
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A connection links a Fluxer account to a verified domain or Bluesky account. Visible connections appear in `connected_accounts` on the [full user profile object](/http-api/users/#full-user-profile-object).
+A connection links a sanalyer account to a verified domain or Bluesky account. Visible connections appear in `connected_accounts` on the [full user profile object](/http-api/users/#full-user-profile-object).
 
 Connection routes require a user token. Bot tokens and OAuth2 bearers receive 403 `ACCESS_DENIED`, except that [List connections](#list-connections) accepts a bearer with the `connections` [scope](/http-api/oauth2/#oauth2-scopes). Connection IDs are not snowflakes.
 
@@ -37,7 +37,7 @@ The pair of [type](#connection-types) and `id` identifies a connection. Both val
 
 <sup>2</sup> For a `domain` connection the name is the submitted domain. For a `bsky` connection it is the Bluesky handle, refreshed by completing the [authorisation flow](#start-bluesky-authorisation)
 
-<sup>3</sup> Fluxer sets it to true when the proof succeeds and again each time a Bluesky authorisation completes. No later check sets it to false
+<sup>3</sup> sanalyer sets it to true when the proof succeeds and again each time a Bluesky authorisation completes. No later check sets it to false
 
 <sup>4</sup> The stored value is the integer the client supplied and is not masked against the defined bits
 
@@ -54,7 +54,7 @@ The pair of [type](#connection-types) and `id` identifies a connection. Both val
 
 ## Connection visibility flags
 
-A connection's flags decide which viewers of the owner's profile see it. Fluxer evaluates them against a viewer with the same rule as the [profile field privacy flags](/http-api/users/#profile-field-privacy-flags).
+A connection's flags decide which viewers of the owner's profile see it. sanalyer evaluates them against a viewer with the same rule as the [profile field privacy flags](/http-api/users/#profile-field-privacy-flags).
 
 | Value | Name | Description |
 | --- | --- | --- |
@@ -102,7 +102,7 @@ Alternatively, serve the token at `https://<domain>/.well-known/fluxer-verificat
 
 The HTTPS URL and every redirect must use a valid fully qualified domain name or public IP address. All resolved addresses must be publicly reachable and permitted by the instance's outbound URL policy. Private and reserved networks cannot be verified this way.
 
-Fluxer checks the proof once, when the connection is created. There is no later recheck.
+sanalyer checks the proof once, when the connection is created. There is no later recheck.
 
 :::note[Only the DNS record has the prefix]
 The DNS record value has the `fluxer-verification=` prefix and the well-known document does not. A document that contains the prefixed form fails the HTTPS proof.
@@ -282,7 +282,7 @@ Permanently removes one connection and returns 204 with an empty body.
 
 Sends the remaining list to the caller's sessions in [User Connections Update](/gateway/events/#user-connections-update). Other connections keep their `sort_order` values.
 
-Deleting a `bsky` connection removes it from Fluxer but does not revoke authorisation on Bluesky.
+Deleting a `bsky` connection removes it from sanalyer but does not revoke authorisation on Bluesky.
 
 :::caution[Deletion is immediate]
 There is no grace period or restore operation. To recreate a `domain` connection, [initiate a new connection](#initiate-connection) and verify the ownership proof. To recreate a `bsky` connection, complete the OAuth flow again.
@@ -319,7 +319,7 @@ Assigns the display order of the listed connections from their position in the a
 
 Each named connection receives its zero-based array index as `sort_order`. The complete list is sent to the caller's sessions in [User Connections Update](/gateway/events/#user-connections-update), even if the order did not change.
 
-The reorder is atomic. A request that returns 409 `CONFLICT` changes no order and emits no event. When Fluxer saves the order and then fails to send [User Connections Update](/gateway/events/#user-connections-update), the request returns an error and the new order stays saved.
+The reorder is atomic. A request that returns 409 `CONFLICT` changes no order and emits no event. When sanalyer saves the order and then fails to send [User Connections Update](/gateway/events/#user-connections-update), the request returns an error and the new order stays saved.
 
 A partial array can leave two connections sharing a `sort_order`, which [List connections](#list-connections) resolves by stored order.
 

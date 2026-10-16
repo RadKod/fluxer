@@ -54,7 +54,7 @@ A thread is a [channel object](/http-api/channels/#channel-object) with the thre
 
 <sup>6</sup> Present only when the caller is a member, on [Get channel](/http-api/channels/#get-channel), on [Modify channel](/http-api/channels/#modify-channel), on `thread` of a message, on [Thread Create](/gateway/threads/#thread-create), and on the `threads` list of a guild in [Ready](/gateway/events/#ready), [Guild Create](/gateway/events/#guild-create), and [Guild Sync](/gateway/events/#guild-sync)
 
-The schema also declares `topic`, `url`, `icon`, `position`, `bitrate`, `user_limit`, `voice_connection_limit`, `rtc_region`, `rtc_p2p`, `permission_overwrites`, `recipients`, `nsfw`, `nsfw_override`, `content_warning_level`, `content_warning_text`, `nicks`, `default_auto_archive_duration`, `default_thread_rate_limit_per_user`, `available_tags`, `default_reaction_emoji`, `default_sort_order`, `default_forum_layout`, and `default_tag_setting`. Fluxer never sends them on a thread. A thread uses the permissions of its parent as [Thread permissions](#thread-permissions) describes. An age restriction and a content warning resolve through the parent, then the parent category, and finally the guild.
+The schema also declares `topic`, `url`, `icon`, `position`, `bitrate`, `user_limit`, `voice_connection_limit`, `rtc_region`, `rtc_p2p`, `permission_overwrites`, `recipients`, `nsfw`, `nsfw_override`, `content_warning_level`, `content_warning_text`, `nicks`, `default_auto_archive_duration`, `default_thread_rate_limit_per_user`, `available_tags`, `default_reaction_emoji`, `default_sort_order`, `default_forum_layout`, and `default_tag_setting`. sanalyer never sends them on a thread. A thread uses the permissions of its parent as [Thread permissions](#thread-permissions) describes. An age restriction and a content warning resolve through the parent, then the parent category, and finally the guild.
 
 ### Example
 
@@ -112,7 +112,7 @@ The archive and lock state of a thread.
 
 A forum or media post is always `PUBLIC_THREAD`. Every thread in an announcement channel is `ANNOUNCEMENT_THREAD`, and an announcement channel holds no private threads.
 
-Converting a guild text channel into an announcement channel turns each of its public threads into an announcement thread. Converting it back turns them into public threads again. Fluxer emits [Thread Update](/gateway/threads/#thread-update) with the new `type` for each active thread. A guild text channel with a private thread cannot become an announcement channel, and the request returns 400 `CHANNEL_HAS_THREADS`.
+Converting a guild text channel into an announcement channel turns each of its public threads into an announcement thread. Converting it back turns them into public threads again. sanalyer emits [Thread Update](/gateway/threads/#thread-update) with the new `type` for each active thread. A guild text channel with a private thread cannot become an announcement channel, and the request returns 400 `CHANNEL_HAS_THREADS`.
 
 A message in an announcement thread cannot be published to following channels. Publishing returns 400 `ANNOUNCEMENT_CHANNEL_REQUIRED`. Publishing the message a thread started from works as for any other announcement. A copy delivered to a following channel starts with neither `HAS_THREAD` nor `thread`.
 
@@ -125,15 +125,15 @@ A message in an announcement thread cannot be published to following channels. P
 | 4320 | Three days, the default |
 | 10080 | One week |
 
-A create request that omits `auto_archive_duration` gets 4320. Fluxer does not apply the `default_auto_archive_duration` of the parent.
+A create request that omits `auto_archive_duration` gets 4320. sanalyer does not apply the `default_auto_archive_duration` of the parent.
 
 ## Thread lifecycle
 
-Fluxer archives an active thread once `auto_archive_duration` minutes pass after the later of its last message and its `archive_timestamp`. It then emits [Thread Update](/gateway/threads/#thread-update). A pinned forum post is never archived automatically. Archiving a pinned post clears its `PINNED` flag.
+sanalyer archives an active thread once `auto_archive_duration` minutes pass after the later of its last message and its `archive_timestamp`. It then emits [Thread Update](/gateway/threads/#thread-update). A pinned forum post is never archived automatically. Archiving a pinned post clears its `PINNED` flag.
 
 A guild holds at most 1,000 active threads. Creating or unarchiving a thread past that count returns 400 `MAX_ACTIVE_THREADS`.
 
-Sending a message to an archived thread unarchives it. Fluxer emits [Thread Update](/gateway/threads/#thread-update) before the message. A locked thread returns 400 `THREAD_LOCKED` to a caller who is not a thread moderator for a message, a reaction, a pin, an edit, a join, or an added member.
+Sending a message to an archived thread unarchives it. sanalyer emits [Thread Update](/gateway/threads/#thread-update) before the message. A locked thread returns 400 `THREAD_LOCKED` to a caller who is not a thread moderator for a message, a reaction, a pin, an edit, a join, or an added member.
 
 An archived thread accepts no reaction, pin, edit, join, leave, or member change, and each returns 400 `THREAD_ARCHIVED`. Deleting a message in an archived thread is allowed.
 
@@ -143,7 +143,7 @@ A thread moderator is the guild owner, a member with `ADMINISTRATOR`, or a membe
 
 ## Thread permissions
 
-A thread has no permission overwrites of its own. Fluxer computes permissions in the parent channel and then replaces `SEND_MESSAGES` with `SEND_MESSAGES_IN_THREADS`. Posting in a forum or media channel itself uses the unreplaced `SEND_MESSAGES` of that channel.
+A thread has no permission overwrites of its own. sanalyer computes permissions in the parent channel and then replaces `SEND_MESSAGES` with `SEND_MESSAGES_IN_THREADS`. Posting in a forum or media channel itself uses the unreplaced `SEND_MESSAGES` of that channel.
 
 [Permissions](/http-api/permissions/#permissions) lists the four thread bits, `MANAGE_THREADS`, `CREATE_PUBLIC_THREADS`, `CREATE_PRIVATE_THREADS`, and `SEND_MESSAGES_IN_THREADS`. `MANAGE_THREADS` is an [elevated permission](/http-api/permissions/#elevated-permissions). `ADMINISTRATOR` grants all four bits. The four bits are [feature-gated](/http-api/permissions/#feature-gated-permission-bits).
 
@@ -206,8 +206,8 @@ Starts a public thread from a message in a guild text channel, or an announcemen
 
 ### Side effects
 
-- Fluxer sets `HAS_THREAD` on the message and emits [Message Update](/gateway/events/#message-update) with `thread`.
-- Fluxer emits [Message Create](/gateway/events/#message-create) for the `THREAD_STARTER_MESSAGE` of the thread.
+- sanalyer sets `HAS_THREAD` on the message and emits [Message Update](/gateway/events/#message-update) with `thread`.
+- sanalyer emits [Message Create](/gateway/events/#message-create) for the `THREAD_STARTER_MESSAGE` of the thread.
 - A source message outside the five most recent messages of the parent also produces a `THREAD_CREATED` message in the parent.
 - The caller becomes the first thread member.
 
@@ -370,8 +370,8 @@ Shared with [Modify channel](/http-api/channels/#modify-channel).
 
 ### Side effects
 
-- The source message of a thread started from a message loses `HAS_THREAD`, and Fluxer emits [Message Update](/gateway/events/#message-update) for it.
-- Fluxer removes the thread and its messages from search.
+- The source message of a thread started from a message loses `HAS_THREAD`, and sanalyer emits [Message Update](/gateway/events/#message-update) for it.
+- sanalyer removes the thread and its messages from search.
 - The guild audit log records action type 112.
 
 ### Rate limit
@@ -534,9 +534,9 @@ A caller who is not a thread moderator finds public threads and the private thre
 | offset? | integer | The number of threads to skip (0-9,975, default 0) |
 | max_id? | snowflake | Return threads with an ID below this ID |
 | min_id? | snowflake | Return threads with an ID above this ID |
-| slop? | integer | A value Fluxer accepts and ignores (0-100, default 2) |
+| slop? | integer | A value sanalyer accepts and ignores (0-100, default 2) |
 
-<sup>1</sup> Fluxer drops a tag the channel does not have. Under `match_all` a dropped tag empties the result, and under `match_some` the result is empty when every tag is dropped
+<sup>1</sup> sanalyer drops a tag the channel does not have. Under `match_all` a dropped tag empties the result, and under `match_some` the result is empty when every tag is dropped
 
 ### Response body
 
@@ -584,9 +584,9 @@ A 202 response has the body below. A search in a guild whose index is not built 
 
 `message_reference.channel_id` of a `THREAD_CREATED` message is the thread, and the reference names no message.
 
-Fluxer builds a `THREAD_STARTER_MESSAGE` when it reads the thread and stores none. It has the ID of its thread and references the source message. Deleting it returns 403 `MISSING_PERMISSIONS`. When the source message is deleted, the thread stays and its `referenced_message` becomes null.
+sanalyer builds a `THREAD_STARTER_MESSAGE` when it reads the thread and stores none. It has the ID of its thread and references the source message. Deleting it returns 403 `MISSING_PERMISSIONS`. When the source message is deleted, the thread stays and its `referenced_message` becomes null.
 
-A message that started a thread has `thread`, the [thread object](#thread-object), and the message flag `HAS_THREAD` (1 &lt;&lt; 5). A role mention in a public or announcement thread adds the members of the role, up to 250 per message. A message gets `FAILED_TO_MENTION_SOME_ROLES_IN_THREAD` (1 &lt;&lt; 8) when that limit or the [thread member limit](/http-api/thread-members/) stops a role member from being added. Only Fluxer sets either flag.
+A message that started a thread has `thread`, the [thread object](#thread-object), and the message flag `HAS_THREAD` (1 &lt;&lt; 5). A role mention in a public or announcement thread adds the members of the role, up to 250 per message. A message gets `FAILED_TO_MENTION_SOME_ROLES_IN_THREAD` (1 &lt;&lt; 8) when that limit or the [thread member limit](/http-api/thread-members/) stops a role member from being added. Only sanalyer sets either flag.
 
 Sending a message in a thread adds a user sender who has not joined it. A mentioned user who can view the parent is added too. A private thread that is not `invitable` adds mentioned users only when the sender is a thread moderator.
 
@@ -594,7 +594,7 @@ Sending a message in a thread adds a user sender who has not joined it. A mentio
 
 | Object | Field | Description |
 | --- | --- | --- |
-| [Text or announcement channel](/http-api/channels/#channel-object) | default_auto_archive_duration | The stored default [auto archive duration](/http-api/threads/#auto-archive-durations), which Fluxer does not apply to a new thread |
+| [Text or announcement channel](/http-api/channels/#channel-object) | default_auto_archive_duration | The stored default [auto archive duration](/http-api/threads/#auto-archive-durations), which sanalyer does not apply to a new thread |
 | [Text or announcement channel](/http-api/channels/#channel-object) | default_thread_rate_limit_per_user | The slowmode interval in seconds new threads inherit |
 | [Read state](/http-api/read-states/#read-state-object) | flags | The [read state flags](/http-api/read-states/#read-state-flags) |
 | [Message search result](/http-api/search/#message-search-result-object) | threads | The threads that contain a returned message |
@@ -605,7 +605,7 @@ The guild audit log records thread creation, update, and deletion as action type
 
 ## Client capability
 
-A user request reaches a route with a route header on this page only with a session token and `channel_threads` in the `X-Fluxer-Features` header. Without both, Fluxer returns 404 `NOT_FOUND` before the rate limit and before the login check. An OAuth2 bearer token never has the capability. A request with no token gets the same 404. A bot token needs no declaration.
+A user request reaches a route with a route header on this page only with a session token and `channel_threads` in the `X-Fluxer-Features` header. Without both, sanalyer returns 404 `NOT_FOUND` before the rate limit and before the login check. An OAuth2 bearer token never has the capability. A request with no token gets the same 404. A bot token needs no declaration.
 
 A `channel_id` that does not exist or names a channel outside a guild returns the same 404.
 

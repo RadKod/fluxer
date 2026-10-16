@@ -12,7 +12,7 @@ A text-bearing channel is a [channel type](/http-api/channels/#channel-types) th
 
 ## Channel resolution
 
-Fluxer resolves the channel before it applies any per-route authorisation. A private channel returns 404 `UNKNOWN_CHANNEL` to a caller who is not a recipient. A guild channel returns 403 `MISSING_PERMISSIONS` to a non-member and to a member without [VIEW_CHANNEL](/http-api/permissions/). A thread returns 403 `MISSING_ACCESS` to a member who lacks `VIEW_CHANNEL` in its parent or cannot view a private thread. A guild an operator has marked unavailable returns 403 `MISSING_ACCESS` before the route runs. A guild that no Gateway process serves returns 404 `UNKNOWN_GUILD`, or 403 `ACCESS_DENIED` when its stored record survives.
+sanalyer resolves the channel before it applies any per-route authorisation. A private channel returns 404 `UNKNOWN_CHANNEL` to a caller who is not a recipient. A guild channel returns 403 `MISSING_PERMISSIONS` to a non-member and to a member without [VIEW_CHANNEL](/http-api/permissions/). A thread returns 403 `MISSING_ACCESS` to a member who lacks `VIEW_CHANNEL` in its parent or cannot view a private thread. A guild an operator has marked unavailable returns 403 `MISSING_ACCESS` before the route runs. A guild that no Gateway process serves returns 404 `UNKNOWN_GUILD`, or 403 `ACCESS_DENIED` when its stored record survives.
 
 [Thread permissions](/http-api/threads/#thread-permissions) and [Thread lifecycle](/http-api/threads/#thread-lifecycle) state the permission, lock, and archive rules of every operation on this page in a thread. In a thread, each Gateway event an operation on this page emits reaches the sessions that [Dispatch events](/gateway/threads/#dispatch-events) lists.
 
@@ -74,12 +74,12 @@ A message object is the full stored form of one post in a channel.
 
 A `THREAD_STARTER_MESSAGE` also has `referenced_message`. It is the message the thread started from, or null once that message is deleted, as [Thread messages](/http-api/threads/#thread-messages) describes.
 
-A webhook-authored message has no stored author user. Fluxer builds its author from the webhook, with the webhook ID as `id`, the stored webhook name as `username`, the discriminator `0000`, the stored webhook avatar hash as `avatar`, and `bot` true. A message whose stored author ID no longer resolves to an account is served with a deleted-user placeholder. The placeholder has that ID, the discriminator `0000`, and no avatar.
+A webhook-authored message has no stored author user. sanalyer builds its author from the webhook, with the webhook ID as `id`, the stored webhook name as `username`, the discriminator `0000`, the stored webhook avatar hash as `avatar`, and `bot` true. A message whose stored author ID no longer resolves to an account is served with a deleted-user placeholder. The placeholder has that ID, the discriminator `0000`, and no avatar.
 
 `mentions`, `mention_roles`, `embeds`, `attachments`, and `stickers` are always present and can be empty. A field marked `?` above is omitted from the object when it has no value. `referenced_message` is the one optional field that can also be present and null. A message whose author user and webhook are both absent is omitted from every read.
 
 :::note[A forward has immutable copies in `message_snapshots`]
-A reply reference resolves into `referenced_message`, and a forward has none. Fluxer captures the snapshots at forward time, and they never follow later edits to the source. [Message reference types](#message-reference-types) tells the two apart.
+A reply reference resolves into `referenced_message`, and a forward has none. sanalyer captures the snapshots at forward time, and they never follow later edits to the source. [Message reference types](#message-reference-types) tells the two apart.
 :::
 
 ### Example
@@ -154,7 +154,7 @@ A caller other than a bot or a user session that declares the [`channel_threads`
 
 <sup>2</sup> A message with this flag has the voice message restrictions listed under [Create message](#create-message)
 
-<sup>3</sup> Set by the server. [Announcement channels](/topics/announcement-channels/) describes when each is set
+<sup>3</sup> Set by the server. Announcement channels describes when each is set
 
 <sup>4</sup> Set by the server. [Thread messages](/http-api/threads/#thread-messages) describes when each is set
 
@@ -197,11 +197,11 @@ An attachment is one file stored against a message and served from media deliver
 
 <sup>5</sup> Present and true only when the attachment has already expired, so an absent key must be read as false
 
-A new attachment starts with the media type derived from the filename given when its upload was requested. For a pre-uploaded attachment that is the `filename` of its [attachment upload request item](#attachment-upload-request-item-object), which can differ from the `filename` the message sends. When the starting type is not a supported image, video, or audio type, Fluxer checks the first 8 KiB of the file for one. For an image, video, or audio file the Media Proxy can read, `content_type` is then the type detected from its bytes. When the starting type is not a media type, SVG bytes keep it. So does a file Fluxer cannot check or the Media Proxy cannot read.
+A new attachment starts with the media type derived from the filename given when its upload was requested. For a pre-uploaded attachment that is the `filename` of its [attachment upload request item](#attachment-upload-request-item-object), which can differ from the `filename` the message sends. When the starting type is not a supported image, video, or audio type, sanalyer checks the first 8 KiB of the file for one. For an image, video, or audio file the Media Proxy can read, `content_type` is then the type detected from its bytes. When the starting type is not a media type, SVG bytes keep it. So does a file sanalyer cannot check or the Media Proxy cannot read.
 
 ### Signed attachment URLs
 
-An instance configured with attachment URL secrets signs `url` and `proxy_url`. Fluxer adds the signature parameters to the attachment path, before any other parameter. An instance without those secrets returns the URL with none of them.
+An instance configured with attachment URL secrets signs `url` and `proxy_url`. sanalyer adds the signature parameters to the attachment path, before any other parameter. An instance without those secrets returns the URL with none of them.
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -210,11 +210,11 @@ An instance configured with attachment URL secrets signs `url` and `proxy_url`. 
 | hm | string | The signature over `ex`, `is`, `uc`, and the attachment path, as 64 lowercase hexadecimal digits |
 | uc | string | Present only on a data package URL, where the value is always `dp` |
 
-An ordinary URL has `ex`, `is`, and `hm`, and no `uc`. It is valid for 24 hours from `is`. `is` starts at the attachment's creation time and moves forward in steps of 12 hours, so a URL Fluxer returns has more than 12 and at most 24 hours left. Fluxer signs the URL each time it returns the attachment, so a later read of the message returns a URL for the current step. [Refresh attachment URLs](#refresh-attachment-urls) signs a URL again without reading the message.
+An ordinary URL has `ex`, `is`, and `hm`, and no `uc`. It is valid for 24 hours from `is`. `is` starts at the attachment's creation time and moves forward in steps of 12 hours, so a URL sanalyer returns has more than 12 and at most 24 hours left. sanalyer signs the URL each time it returns the attachment, so a later read of the message returns a URL for the current step. [Refresh attachment URLs](#refresh-attachment-urls) signs a URL again without reading the message.
 
 A client MUST keep `ex`, `is`, `hm`, and `uc` exactly as issued. It MAY add any other query parameter, such as a [transformation](/media-proxy/transformations/), because the signature covers no other parameter. A client SHOULD refresh a URL whose `ex` is absent or less than one hour away. Once the operator enforces signatures, a read with a missing, altered, or expired signature returns 404 from the Media Proxy, as [Signed attachment URLs](/media-proxy/overview/#signed-attachment-urls) defines.
 
-Fluxer never rewrites message `content` or embed text. An attachment URL pasted into either keeps the parameters it was sent with, and it stops working when its own `ex` passes.
+sanalyer never rewrites message `content` or embed text. An attachment URL pasted into either keeps the parameters it was sent with, and it stops working when its own `ex` passes.
 
 ### Data package attachment URLs
 
@@ -274,7 +274,7 @@ An emoji is either a custom guild emoji identified by ID or a standard Unicode e
 
 ## Reaction object
 
-A reaction object summarises one emoji group on a message. Fluxer has ordinary reactions only.
+A reaction object summarises one emoji group on a message. sanalyer has ordinary reactions only.
 
 ### Structure
 
@@ -501,9 +501,9 @@ Every optional field above is omitted entirely.
 
 <sup>1</sup> Always derived from `url`, so every serialised media object has it
 
-When `url` is an attachment URL of this instance, Fluxer signs both fields, so `url` and `proxy_url` are the same URL with the same fresh [signature](#signed-attachment-urls). A rich embed can name such a URL with or without `ex`, `is`, `hm`, and `uc`. Fluxer removes them before it stores the URL, and signs both fields again each time it returns the embed.
+When `url` is an attachment URL of this instance, sanalyer signs both fields, so `url` and `proxy_url` are the same URL with the same fresh [signature](#signed-attachment-urls). A rich embed can name such a URL with or without `ex`, `is`, `hm`, and `uc`. sanalyer removes them before it stores the URL, and signs both fields again each time it returns the embed.
 
-Fluxer signs every other embed field that can hold an attachment URL of this instance the same way. That is `url` on the embed itself, `url`, `icon_url`, and `proxy_icon_url` on an [embed author](#embed-author-object), `icon_url` and `proxy_icon_url` on an [embed footer](#embed-footer-object), and `url` on an [embed provider](#embed-provider-object). An icon URL and its proxy twin are then the same signed URL. A field whose URL is not an attachment URL of this instance is returned as it was stored, and a proxy field of an external URL is the [signed external media](/media-proxy/routes/#get-signed-external-media) path instead.
+sanalyer signs every other embed field that can hold an attachment URL of this instance the same way. That is `url` on the embed itself, `url`, `icon_url`, and `proxy_icon_url` on an [embed author](#embed-author-object), `icon_url` and `proxy_icon_url` on an [embed footer](#embed-footer-object), and `url` on an [embed provider](#embed-provider-object). An icon URL and its proxy twin are then the same signed URL. A field whose URL is not an attachment URL of this instance is returned as it was stored, and a proxy field of an external URL is the [signed external media](/media-proxy/routes/#get-signed-external-media) path instead.
 
 ## Embed footer object
 
@@ -617,7 +617,7 @@ Only `IS_SPOILER` and `CONTAINS_EXPLICIT_MEDIA` survive from a caller-supplied `
 
 <sup>2</sup> Both are required when the message has the `VOICE_MESSAGE` flag
 
-Fluxer discards a key outside the table above and accepts the rest of the entry.
+sanalyer discards a key outside the table above and accepts the rest of the entry.
 
 ### Existing attachment reference object
 
@@ -639,7 +639,7 @@ Fluxer discards a key outside the table above and accepts the rest of the entry.
 
 ## Rich embed input objects
 
-A rich embed input is an embed a client supplies on a message, and Fluxer always stores it with the `rich` [embed type](#embed-types). The number of embeds on one message is bounded by the resolved `max_embeds_per_message` limit, which defaults to 10. Exceeding it fails with the field code `TOO_MANY_EMBEDS`.
+A rich embed input is an embed a client supplies on a message, and sanalyer always stores it with the `rich` [embed type](#embed-types). The number of embeds on one message is bounded by the resolved `max_embeds_per_message` limit, which defaults to 10. Exceeding it fails with the field code `TOO_MANY_EMBEDS`.
 
 ### Rich embed object
 
@@ -704,9 +704,9 @@ An `attachment://` reference on a request that has no attachment fails with the 
 
 ## Attachment upload objects
 
-Fluxer issues an upload URL for an attachment before any message can reference it. [Request attachment upload URLs](#request-attachment-upload-urls) plans the upload. A plan whose declared size exceeds 10 MiB is a multipart plan, and [Complete attachment upload](#complete-attachment-upload) finishes it.
+sanalyer issues an upload URL for an attachment before any message can reference it. [Request attachment upload URLs](#request-attachment-upload-urls) plans the upload. A plan whose declared size exceeds 10 MiB is a multipart plan, and [Complete attachment upload](#complete-attachment-upload) finishes it.
 
-An `upload_url` can point to object storage or the Fluxer [upload relay](/media-proxy/upload-relay/). Send it exactly as issued without assuming its shape.
+An `upload_url` can point to object storage or the sanalyer [upload relay](/media-proxy/upload-relay/). Send it exactly as issued without assuming its shape.
 
 An upload key can be referenced only by a message that the same identity creates in the same channel. An upload key planned for a forum or media channel is referenced by the first message of a post that [Start thread](/http-api/threads/#start-thread) creates in that channel.
 
@@ -811,7 +811,7 @@ A URL is an attachment URL of this instance when all of these hold:
 - The rest of the path, percent-decoded, is valid UTF-8 and a safe storage key with no empty, `.`, or `..` segment.
 - That key is `attachments/{channel_id}/{attachment_id}/{filename}`, where both IDs are decimal digits and the filename is not empty.
 
-To sign a URL, Fluxer removes every `ex`, `is`, `hm`, and `uc` parameter and every empty pair, then places the fresh `ex`, `is`, and `hm` first. Every other parameter follows in its original order and bytes, and a fragment is kept. A [data package URL](#data-package-attachment-urls) loses its `uc` this way, so the result is an ordinary URL valid for 24 hours.
+To sign a URL, sanalyer removes every `ex`, `is`, `hm`, and `uc` parameter and every empty pair, then places the fresh `ex`, `is`, and `hm` first. Every other parameter follows in its original order and bytes, and a fragment is kept. A [data package URL](#data-package-attachment-urls) loses its `uc` this way, so the result is an ordinary URL valid for 24 hours.
 
 ## Channel pin object
 
@@ -1005,7 +1005,7 @@ Returns a reverse-chronological array of [message](#message-object) objects. Req
 <sup>1</sup> Combining the two selects the page before `before`, then discards entries at or below `after`
 
 :::caution[A page can hold fewer than `limit` items]
-Fluxer selects the page first, then removes messages outside the caller's message history cutoff and messages with neither a stored author nor a stored webhook.
+sanalyer selects the page first, then removes messages outside the caller's message history cutoff and messages with neither a stored author nor a stored webhook.
 :::
 
 :::note[Missing history is an empty page]
@@ -1034,7 +1034,7 @@ Returns a bulk message response object holding bounded message windows from seve
 ### Limitations
 
 - This is a user-only operation, and a bot credential is refused with 403 `ACCESS_DENIED`.
-- Fluxer resolves and authorises each requested channel independently, with exactly the same channel checks as [List channel messages](#list-channel-messages).
+- sanalyer resolves and authorises each requested channel independently, with exactly the same channel checks as [List channel messages](#list-channel-messages).
 - An inaccessible channel fails the whole request, so the response has no window for any channel.
 
 ### JSON body
@@ -1107,7 +1107,7 @@ Plans from 1 through 10 attachment uploads. Returns a [singlepart](#singlepart-a
 - The channel must be a text-bearing type, a forum channel, or a media channel. Any other channel fails with 400 `CANNOT_SEND_MESSAGES_IN_NON_TEXT_CHANNEL`.
 - A guild channel requires [SEND_MESSAGES](/http-api/permissions/) and [ATTACH_FILES](/http-api/permissions/), and a timed-out member is refused with 403 `COMMUNICATION_DISABLED`.
 
-Fluxer checks each declared `file_size` separately against the attachment size limit it resolves for the caller and the guild context. A declaration above that limit returns 400 `FILE_SIZE_TOO_LARGE` with the resolved ceiling. By default the resolved ceiling is 26214400 bytes (25 MiB) for a caller without premium and 524288000 bytes (500 MiB) for a caller with premium. A bot credential is clamped to 52428800 bytes, the 50 MiB bot ceiling, even when the resolved limit is higher.
+sanalyer checks each declared `file_size` separately against the attachment size limit it resolves for the caller and the guild context. A declaration above that limit returns 400 `FILE_SIZE_TOO_LARGE` with the resolved ceiling. By default the resolved ceiling is 26214400 bytes (25 MiB) for a caller without premium and 524288000 bytes (500 MiB) for a caller with premium. A bot credential is clamped to 52428800 bytes, the 50 MiB bot ceiling, even when the resolved limit is higher.
 
 ### Path parameters
 
@@ -1196,11 +1196,11 @@ The request has no part list and no entity tags.
 | 404 | [error response](/http-api/#error-response) | Channel does not exist or is unavailable and the request returns `UNKNOWN_CHANNEL`, or the authenticated account does not exist and the request returns `UNKNOWN_USER` |
 
 :::caution[A failed completion aborts the upload]
-Fluxer aborts the multipart upload and discards its parts when no part was uploaded, when the uploaded bytes exceed the resolved limit, or when the storage completion fails. Plan the upload again rather than retrying the completion.
+sanalyer aborts the multipart upload and discards its parts when no part was uploaded, when the uploaded bytes exceed the resolved limit, or when the storage completion fails. Plan the upload again rather than retrying the completion.
 :::
 
 :::caution[An unowned upload is reported as invalid input]
-Fluxer reports the field code `UPLOADED_ATTACHMENT_NOT_FOUND` for an upload key the identity does not own, one that belongs to another channel, one planned as singlepart, and one a message already consumed. A caller cannot tell them apart, so it cannot probe another identity's upload state.
+sanalyer reports the field code `UPLOADED_ATTACHMENT_NOT_FOUND` for an upload key the identity does not own, one that belongs to another channel, one planned as singlepart, and one a message already consumed. A caller cannot tell them apart, so it cannot probe another identity's upload state.
 :::
 
 ### Side effects
@@ -1220,7 +1220,7 @@ Signs from 1 through 50 attachment URLs again. Returns one [refreshed attachment
 ### Limitations
 
 - An OAuth2 bearer token is refused with 403 `ACCESS_DENIED`.
-- Fluxer checks no channel membership, no permission, and no attachment existence, and reads no stored data. A URL is signed whether or not its object exists or the caller can see it.
+- sanalyer checks no channel membership, no permission, and no attachment existence, and reads no stored data. A URL is signed whether or not its object exists or the caller can see it.
 
 ### JSON body
 
@@ -1301,11 +1301,11 @@ The request body is read as a multipart form when `Content-Type` contains `multi
 
 <sup>2</sup> The schema sets no length bound. Exceeding the effective `max_message_length` described below returns 400 `INVALID_FORM_BODY` with `CONTENT_EXCEEDS_MAX_LENGTH` on the path `content`
 
-<sup>3</sup> Fluxer keeps only the bits in [message flags](#message-flags) and silently drops every other bit
+<sup>3</sup> sanalyer keeps only the bits in [message flags](#message-flags) and silently drops every other bit
 
 <sup>4</sup> The stored meme object is copied into a new attachment on the message, so the message has its own independent copy. A meme the caller does not own returns 400 `INVALID_FORM_BODY` with the code `FAVORITE_MEME_NOT_FOUND`
 
-<sup>5</sup> Fluxer forces the value to false when the caller lacks [SEND_TTS_MESSAGES](/http-api/permissions/) in a guild, and the request still succeeds
+<sup>5</sup> sanalyer forces the value to false when the caller lacks [SEND_TTS_MESSAGES](/http-api/permissions/) in a guild, and the request still succeeds
 
 <sup>6</sup> Bounded by the resolved `max_embeds_per_message` limit, which defaults to 10. Exceeding it fails with the field code `TOO_MANY_EMBEDS` on the path `embeds`
 
@@ -1319,7 +1319,7 @@ The smallest body that works is one line of text:
 }
 ```
 
-Fluxer resolves the effective `max_message_length` for the author and guild context, and it defaults to 2,000 characters. A bot or webhook author takes whichever is larger, the resolved value or 4,000 characters.
+sanalyer resolves the effective `max_message_length` for the author and guild context, and it defaults to 2,000 characters. A bot or webhook author takes whichever is larger, the resolved value or 4,000 characters.
 
 A message must have at least one of content with visible characters, an embed, an attachment, a favourite meme, or a sticker. An otherwise empty request fails with 400 `CANNOT_SEND_EMPTY_MESSAGE`. `SUPPRESS_NOTIFICATIONS` changes notification generation, and the message still has its mention data.
 
@@ -1369,7 +1369,7 @@ Each is a field code inside a 400 `INVALID_FORM_BODY` body. A `FILE_INDEX_EXCEED
 
 The `attachments` array inside `payload_json` uses [direct multipart attachment metadata](#direct-multipart-attachment-metadata-object), and an entry with `upload_filename` is instead read as a [pre-uploaded attachment](#pre-uploaded-attachment-object). An entry whose `id` matches a supplied file index supplies that file's metadata, and two entries claiming the same file fail with the field code `DUPLICATE_ATTACHMENT_IDS_NOT_ALLOWED`.
 
-Fluxer permits index gaps and attaches the files in ascending index order. A supplied file that no metadata entry claims is attached with its own multipart filename and no title or description, so omitting `attachments` entirely attaches every supplied file that way.
+sanalyer permits index gaps and attaches the files in ascending index order. A supplied file that no metadata entry claims is attached with its own multipart filename and no title or description, so omitting `attachments` entirely attaches every supplied file that way.
 
 A message with `VOICE_MESSAGE` set has exactly one attachment and nothing else.
 
@@ -1507,7 +1507,7 @@ The operation updates the message, advances its edit timestamp when `content` ch
 
 It emits [Message Update](/gateway/events/#message-update) to every session that can see the channel. It writes no audit log entry, even for a moderator edit.
 
-An edit of a published message, including a moderator edit, reaches every copy of it in the background. Fluxer batches the edits of one message into 10-second windows and copies the latest state once per window. A moderator in a following channel can set `SUPPRESS_EMBEDS` on a copy, and the next copied edit of the published message overwrites it.
+An edit of a published message, including a moderator edit, reaches every copy of it in the background. sanalyer batches the edits of one message into 10-second windows and copies the latest state once per window. A moderator in a following channel can set `SUPPRESS_EMBEDS` on a copy, and the next copied edit of the published message overwrites it.
 
 ### Rate limit
 
@@ -1517,7 +1517,7 @@ An edit of a published message, including a moderator edit, reaches every copy o
 
 <RouteHeader method="POST" path="/v1/channels/{channel_id}/messages/{message_id}/crosspost" bot />
 
-Publishes a message in an announcement channel to every channel that follows it, and returns the updated [message](#message-object) object with the `CROSSPOSTED` [flag](#message-flags). Emits a [Message Update](/gateway/events/#message-update) Gateway event. The copies are delivered in the background after the response. [Announcement channels](/topics/announcement-channels/) describes what is copied.
+Publishes a message in an announcement channel to every channel that follows it, and returns the updated [message](#message-object) object with the `CROSSPOSTED` [flag](#message-flags). Emits a [Message Update](/gateway/events/#message-update) Gateway event. The copies are delivered in the background after the response. Announcement channels describes what is copied.
 
 ### Limitations
 
@@ -1531,7 +1531,7 @@ Publishes a message in an announcement channel to every channel that follows it,
 
 `MANAGE_MESSAGES` is an [elevated permission](/http-api/permissions/#elevated-permissions), so a caller who holds it with no enrolled authenticator receives 400 [`TWO_FACTOR_REQUIRED`](/http-api/errors/) in a guild whose [MFA level](/http-api/guilds/#mfa-levels) is elevated, unless they own the guild.
 
-Each announcement channel can publish 10 messages in a row, then one every 6 minutes. The allowance is shared by every member, and Fluxer counts a publish only after every other check passes. A denial returns 429 `MESSAGE_CROSSPOST_RATE_LIMITED` with `X-RateLimit-Scope: shared`.
+Each announcement channel can publish 10 messages in a row, then one every 6 minutes. The allowance is shared by every member, and sanalyer counts a publish only after every other check passes. A denial returns 429 `MESSAGE_CROSSPOST_RATE_LIMITED` with `X-RateLimit-Scope: shared`.
 
 ### Path parameters
 
@@ -1566,7 +1566,7 @@ A 503 leaves the message unpublished, and the publish it counted stays counted.
 
 ### Side effects
 
-The operation sets `CROSSPOSTED` on the message without changing its `edited_timestamp`, and emits [Message Update](/gateway/events/#message-update) in the announcement channel. Fluxer then creates one copy in each following channel through its [channel follower webhook](/http-api/webhooks/#webhook-types), each announced by [Message Create](/gateway/events/#message-create) in that channel. A copy has the `IS_CROSSPOST` flag, a `DEFAULT` `message_reference` to the published message, and no mentions.
+The operation sets `CROSSPOSTED` on the message without changing its `edited_timestamp`, and emits [Message Update](/gateway/events/#message-update) in the announcement channel. sanalyer then creates one copy in each following channel through its [channel follower webhook](/http-api/webhooks/#webhook-types), each announced by [Message Create](/gateway/events/#message-create) in that channel. A copy has the `IS_CROSSPOST` flag, a `DEFAULT` `message_reference` to the published message, and no mentions.
 
 Publishing writes no audit log entry.
 
@@ -1609,8 +1609,8 @@ Returns the public profile of the guild a copy of a published message came from,
 | banner | ?string | The hash of the source guild banner |
 | description | ?string | The discovery description of the source guild, or null when the guild is not listed in discovery |
 | features | array of strings | The badge [features](/http-api/guilds/#guild-features) of the source guild, limited to `VERIFIED`, `PARTNERED`, and `DISCOVERABLE` |
-| approximate_member_count | ?integer | Approximate member count, or null when Fluxer cannot count the guild right now |
-| approximate_presence_count | ?integer | Approximate online member count, or null when Fluxer cannot count the guild right now |
+| approximate_member_count | ?integer | Approximate member count, or null when sanalyer cannot count the guild right now |
+| approximate_presence_count | ?integer | Approximate online member count, or null when sanalyer cannot count the guild right now |
 | discoverable | boolean | Whether the caller can join the guild through [Join discovery guild](/http-api/discovery/#join-discovery-guild) |
 
 `discoverable` is true when discovery is on for the instance, the guild is listed in discovery, and its invites are not disabled. The counts are cached for 60 seconds per guild.
@@ -1638,7 +1638,7 @@ The operation is deprecated and changes no read state. Returns 204 with an empty
 
 ### Limitations
 
-- Fluxer never checks that the channel exists. An unknown channel ID returns 204.
+- sanalyer never checks that the channel exists. An unknown channel ID returns 204.
 - The read state entry of the channel stays as it was.
 
 ### Path parameters
@@ -1722,7 +1722,7 @@ Deletes one attachment from the caller's own message. Returns 204 with an empty 
 
 - Only the message author can use this operation, and a guild moderator must use [Modify message](#modify-message) instead.
 - This route cannot address an attachment that a resolved embed owns.
-- When the attachment is the message's only attachment and the message has no content, embeds, or stickers, Fluxer deletes the whole message with the [Delete message](#delete-message) effects.
+- When the attachment is the message's only attachment and the message has no content, embeds, or stickers, sanalyer deletes the whole message with the [Delete message](#delete-message) effects.
 
 ### Path parameters
 
@@ -1746,7 +1746,7 @@ The response is 204 whether the message survives or is deleted, so the emitted G
 
 ### Side effects
 
-The operation permanently deletes the stored attachment object, purges it from media delivery, removes it from the message, and advances the message's edit timestamp. On a [published](#crosspost-message) message it counts towards the published message edit allowance described under [Modify message](#modify-message), and a denial returns 429 `PUBLISHED_MESSAGE_EDIT_RATE_LIMITED`. It then emits [Message Update](/gateway/events/#message-update) to every session that can see the channel. When the removed attachment was the message's only attachment and the message has no content, embeds, or stickers, Fluxer deletes the whole message instead, with the complete [Delete message](#delete-message) effect set, including its Dispatches and guild audit log entry.
+The operation permanently deletes the stored attachment object, purges it from media delivery, removes it from the message, and advances the message's edit timestamp. On a [published](#crosspost-message) message it counts towards the published message edit allowance described under [Modify message](#modify-message), and a denial returns 429 `PUBLISHED_MESSAGE_EDIT_RATE_LIMITED`. It then emits [Message Update](/gateway/events/#message-update) to every session that can see the channel. When the removed attachment was the message's only attachment and the message has no content, embeds, or stickers, sanalyer deletes the whole message instead, with the complete [Delete message](#delete-message) effect set, including its Dispatches and guild audit log entry.
 
 ### Rate limit
 
@@ -1915,7 +1915,7 @@ The deletion has no age boundary and no selection. There is no cancellation and 
 
 ### Side effects
 
-Each matching message, with its attachments and reactions, is permanently deleted and removed from search. Fluxer emits one [Message Delete Bulk](/gateway/events/#message-delete-bulk) Dispatch for each batch of at most 100 deleted messages.
+Each matching message, with its attachments and reactions, is permanently deleted and removed from search. sanalyer emits one [Message Delete Bulk](/gateway/events/#message-delete-bulk) Dispatch for each batch of at most 100 deleted messages.
 
 The operation emits no [Channel Pins Update](/gateway/events/#channel-pins-update) and no individual [Message Delete](/gateway/events/#message-delete), and it writes no guild audit log entry.
 
@@ -2067,7 +2067,7 @@ It creates no system message. The `CHANNEL_PINNED_MESSAGE` system message the or
 
 Records the channel's current pin timestamp in the authenticated identity's read state. Returns 204 with an empty body. Emits a [Channel Pins ACK](/gateway/events/#channel-pins-ack) Gateway event.
 
-The request has no body. Fluxer acknowledges the channel's own stored last-pin timestamp.
+The request has no body. sanalyer acknowledges the channel's own stored last-pin timestamp.
 
 ### Path parameters
 
@@ -2079,7 +2079,7 @@ The request has no body. Fluxer acknowledges the channel's own stored last-pin t
 A channel the caller cannot see is acknowledged like any other whenever it stores a last-pin timestamp.
 :::
 
-A thread is the exception. Fluxer checks that the caller can view it, as [Channel resolution](#channel-resolution) describes. A forum or media channel returns 400 `INVALID_CHANNEL_TYPE`. A user request without the [`channel_threads` client capability](/http-api/threads/#client-capability) returns 204 for a thread, a forum channel, or a media channel and writes nothing.
+A thread is the exception. sanalyer checks that the caller can view it, as [Channel resolution](#channel-resolution) describes. A forum or media channel returns 400 `INVALID_CHANNEL_TYPE`. A user request without the [`channel_threads` client capability](/http-api/threads/#client-capability) returns 204 for a thread, a forum channel, or a media channel and writes nothing.
 
 ### Response
 
@@ -2092,7 +2092,7 @@ A thread is the exception. Fluxer checks that the caller can view it, as [Channe
 
 ### Side effects
 
-When the channel stores a last-pin timestamp, Fluxer writes that exact instant to the caller's read state. It then emits one [Channel Pins ACK](/gateway/events/#channel-pins-ack) with the channel ID and that timestamp to the caller's own sessions. The write replaces the stored value. Fluxer writes nothing and emits nothing when the channel does not exist or has never held a pin.
+When the channel stores a last-pin timestamp, sanalyer writes that exact instant to the caller's read state. It then emits one [Channel Pins ACK](/gateway/events/#channel-pins-ack) with the channel ID and that timestamp to the caller's own sessions. The write replaces the stored value. sanalyer writes nothing and emits nothing when the channel does not exist or has never held a pin.
 
 When the Dispatch fails, the request returns 502, 503, or 504 after the read-state write has landed. A client treats those statuses as unknown and reconciles from a later read.
 
@@ -2104,7 +2104,7 @@ When the Dispatch fails, the request returns 502, 503, or 504 after the read-sta
 
 The `emoji` path value is URI-encoded and is 1 through 64 characters. A custom emoji uses `name:id`, where `id` is the trailing decimal custom emoji snowflake and `name` is everything before the final colon. Any other decoded value is read as a Unicode emoji.
 
-Fluxer validates the emoji in full only when a request would create a new reaction group on the message. At that point a Unicode value must be exactly one valid emoji, and one that is not fails with the field code `NOT_A_VALID_UNICODE_EMOJI`. A custom emoji must exist, and one that does not fails with the field code `CUSTOM_EMOJI_NOT_FOUND`. Every other reaction operation parses the value without validating it, so removing a reaction with an invalid emoji succeeds silently.
+sanalyer validates the emoji in full only when a request would create a new reaction group on the message. At that point a Unicode value must be exactly one valid emoji, and one that is not fails with the field code `NOT_A_VALID_UNICODE_EMOJI`. A custom emoji must exist, and one that does not fails with the field code `CUSTOM_EMOJI_NOT_FOUND`. Every other reaction operation parses the value without validating it, so removing a reaction with an invalid emoji succeeds silently.
 
 Every reaction operation is idempotent and writes no audit log entry. Every removal route emits its Dispatch whether or not the message held the reaction, group, or reactions the request names. [Add own reaction](#add-own-reaction), [Remove own reaction](#remove-own-reaction), and [Remove another user's reaction](#remove-another-users-reaction) each accept a `session_id` query parameter, which is echoed in that route's Dispatch so the originating session can match its own optimistic update, and it never affects authorisation or the stored reaction.
 
@@ -2302,7 +2302,7 @@ A message that does not exist returns 204 rather than 404.
 
 ### Side effects
 
-Fluxer deletes the reaction and emits [Message Reaction Remove](/gateway/events/#message-reaction-remove) to every session that can see the channel, with `session_id` for originating session correlation.
+sanalyer deletes the reaction and emits [Message Reaction Remove](/gateway/events/#message-reaction-remove) to every session that can see the channel, with `session_id` for originating session correlation.
 
 ### Rate limit
 
@@ -2354,7 +2354,7 @@ A message that does not exist returns 204 before the `MANAGE_MESSAGES` check. A 
 
 ### Side effects
 
-Fluxer deletes the target user's reaction and emits [Message Reaction Remove](/gateway/events/#message-reaction-remove) with the target user ID to every session that can see the channel, plus `session_id` when the request supplied one.
+sanalyer deletes the target user's reaction and emits [Message Reaction Remove](/gateway/events/#message-reaction-remove) with the target user ID to every session that can see the channel, plus `session_id` when the request supplied one.
 
 ### Rate limit
 
@@ -2393,7 +2393,7 @@ Removes every reaction for one emoji. Returns 204 with an empty body. Emits a [M
 
 ### Side effects
 
-Fluxer deletes every reaction for the emoji and emits one [Message Reaction Remove Emoji](/gateway/events/#message-reaction-remove-emoji) to every session that can see the channel. Fluxer emits no [Message Reaction Remove](/gateway/events/#message-reaction-remove) for the individual users.
+sanalyer deletes every reaction for the emoji and emits one [Message Reaction Remove Emoji](/gateway/events/#message-reaction-remove-emoji) to every session that can see the channel. sanalyer emits no [Message Reaction Remove](/gateway/events/#message-reaction-remove) for the individual users.
 
 ### Rate limit
 
@@ -2431,7 +2431,7 @@ Removes every reaction from a message. Returns 204 with an empty body. Emits a [
 
 ### Side effects
 
-Fluxer deletes every reaction on the message and emits one [Message Reaction Remove All](/gateway/events/#message-reaction-remove-all) to every session that can see the channel. Fluxer emits no event for the individual groups or users.
+sanalyer deletes every reaction on the message and emits one [Message Reaction Remove All](/gateway/events/#message-reaction-remove-all) to every session that can see the channel. sanalyer emits no event for the individual groups or users.
 
 ### Rate limit
 
@@ -2528,7 +2528,7 @@ Publishes typing activity in a text-bearing channel. Returns 204 with an empty b
 
 `thread_create_cooldown_ms` is present only for a guild text or announcement channel.
 
-Fluxer returns 200 only to a user session that declares the [`channel_threads` client capability](/http-api/threads/#client-capability), in a guild channel with slowmode, while a cooldown is running and the caller lacks `BYPASS_SLOWMODE`.
+sanalyer returns 200 only to a user session that declares the [`channel_threads` client capability](/http-api/threads/#client-capability), in a guild channel with slowmode, while a cooldown is running and the caller lacks `BYPASS_SLOWMODE`.
 
 ### Response
 
@@ -2559,7 +2559,7 @@ Advances the authenticated user's read state through one message. Returns 204 wi
 ### Limitations
 
 - This is a user-only operation, and a bot credential is refused with 403 `ACCESS_DENIED`.
-- Fluxer never checks that the channel or the message exists. The operation writes the supplied identifiers into the caller's own read state and changes nothing else.
+- sanalyer never checks that the channel or the message exists. The operation writes the supplied identifiers into the caller's own read state and changes nothing else.
 
 ### Path parameters
 
@@ -2579,12 +2579,12 @@ An empty body is read as `{}`, and `{}` is the minimal valid form.
 | mention_count?<sup>1</sup> | integer | Mention count to store for the channel (0-2,147,483,647, default `0`) |
 | manual?<sup>2</sup> | boolean | Whether the acknowledgement was explicitly started by the user (default false) |
 
-<sup>1</sup> Fluxer stores the value verbatim. A client that acknowledges partway through a channel must send the number of mentions that remain above the watermark, and one that omits the field resets the stored count to `0`
+<sup>1</sup> sanalyer stores the value verbatim. A client that acknowledges partway through a channel must send the number of mentions that remain above the watermark, and one that omits the field resets the stored count to `0`
 
 <sup>2</sup> Selects the watermark rule described below
 
 :::note[Manual acknowledgement can move the marker backwards]
-Without `manual`, the marker advances to the larger of its current value and `message_id`. With `manual` true, Fluxer sets it to exactly `message_id`, which is how a user marks a channel unread from an earlier point.
+Without `manual`, the marker advances to the larger of its current value and `message_id`. With `manual` true, sanalyer sets it to exactly `message_id`, which is how a user marks a channel unread from an earlier point.
 :::
 
 ### Response

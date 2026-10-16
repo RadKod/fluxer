@@ -6,9 +6,9 @@ description: Connection outcome reports for the peer connections of a peer-to-pe
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A peer-to-peer voice call connects its participants directly, as [Peer-to-peer voice](/gateway/events/#peer-to-peer-voice) describes. Fluxer hands out STUN servers only and never relays media, so whether two participants connect depends on their networks. Clients report how each peer connection settled, so an operator can see which networks connect directly.
+A peer-to-peer voice call connects its participants directly, as [Peer-to-peer voice](/gateway/events/#peer-to-peer-voice) describes. sanalyer hands out STUN servers only and never relays media, so whether two participants connect depends on their networks. Clients report how each peer connection settled, so an operator can see which networks connect directly.
 
-The route on this page is user-only. Fluxer rejects a bot or OAuth2 credential with 403 `ACCESS_DENIED`.
+The route on this page is user-only. sanalyer rejects a bot or OAuth2 credential with 403 `ACCESS_DENIED`.
 
 ## Connection report object
 
@@ -29,7 +29,7 @@ The outcome of one peer connection, as seen from the reporting client. A client 
 | setup_ms<sup>4</sup> | ?integer | Milliseconds from creating the connection to its first connected state (0-2,147,483,647) |
 | ice_restarted | boolean | Whether the connection ran an ICE restart |
 
-<sup>1</sup> Fluxer stores the value with no check that the channel exists or that the caller was in its call
+<sup>1</sup> sanalyer stores the value with no check that the channel exists or that the caller was in its call
 
 <sup>2</sup> One of `host`, `srflx`, `prflx`, or `relay`, and null when the connection has no selected candidate pair
 
@@ -80,9 +80,9 @@ A client batches its reports and sends them best effort. A failed or rate-limite
 
 ### Side effects
 
-Fluxer stores each report with the caller's user ID, the time of the request, the request address and its country, and the client platform and operating system of the caller's session. The country is null when the address resolves to none. Reports expire after 180 days.
+sanalyer stores each report with the caller's user ID, the time of the request, the request address and its country, and the client platform and operating system of the caller's session. The country is null when the address resolves to none. Reports expire after 180 days.
 
-Fluxer keeps each report for 180 days. No route reads reports back.
+sanalyer keeps each report for 180 days. No route reads reports back.
 
 ### Rate limit
 

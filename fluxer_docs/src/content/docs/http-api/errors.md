@@ -29,8 +29,8 @@ The error code determines which supplementary members a failure has, and most co
 - `appeals_supported` is `true` on the hosted service and `false` on a self-hosted instance.
 - `ban_kind` is `permanent` or `temporary_24h`. `temporary_24h` covers every ban that records an expiry, whatever its length.
 - `expires_at` is an ISO 8601 timestamp when the ban records an expiry, and `null` otherwise, including on every permanent ban.
-- `reason` is the rule behind the block, as `title` and `url`, or `null`. It is present only when an account decision placed the block and its rule is one Fluxer names on this screen, such as spam or service abuse. Every other block, including a decision whose rule is withheld, returns a response identical to a plain block of the same kind, so `null` says nothing about why the network was blocked. `url` is `null` when the instance has no policy page for the rule.
-- `product_name` is the instance name the server uses in `message`. On a self-hosted instance with no name, or one still named Fluxer, it is the web app host name.
+- `reason` is the rule behind the block, as `title` and `url`, or `null`. It is present only when an account decision placed the block and its rule is one sanalyer names on this screen, such as spam or service abuse. Every other block, including a decision whose rule is withheld, returns a response identical to a plain block of the same kind, so `null` says nothing about why the network was blocked. `url` is `null` when the instance has no policy page for the rule.
+- `product_name` is the instance name the server uses in `message`. On a self-hosted instance with no name, or one still named with the upstream default, it is the web app host name.
 
 `message` starts with the block and its end date, then tells someone on a shared network, such as a school, a workplace, public Wi-Fi, a mobile carrier or a VPN, that the block may have nothing to do with them and that switching networks is the quickest fix. `GET /.well-known/fluxer` is never blocked, so a client can still discover the instance and show this screen.
 
@@ -56,13 +56,13 @@ An account with no email address receives its notice here. The first sign-in tha
 
 ## Validation failure codes
 
-Fluxer answers a field-level failure with 400 and a top-level `errors` array. Each element identifies one failed input field. The [validation error object](/http-api/#validation-error-object) documents the element shape.
+sanalyer answers a field-level failure with 400 and a top-level `errors` array. Each element identifies one failed input field. The [validation error object](/http-api/#validation-error-object) documents the element shape.
 
 Invalid JSON bodies, form bodies, query strings and path parameters return `INVALID_FORM_BODY`. Each entry in `errors` identifies a field and its message. An entry can also include a stable `code` from the [validation error code registry](#validation-error-code-registry). Entries without a code have an English message.
 
 [Modify current user settings](/http-api/users/settings/#modify-current-user-settings) is the one operation that answers such a failure with the top-level code `VALIDATION_ERROR` instead of `INVALID_FORM_BODY`. Its trusted domain, age restriction, and synced preferences decisions each report one element with a registry `code` and a fixed English `message`.
 
-The `path` of an element is the dot-joined position of the failed value, so a nested field appears as `embeds.0.title`. A failure with no field position uses the literal path `root`. Fluxer produces at most one element for each distinct pair of `path` and `code`.
+The `path` of an element is the dot-joined position of the failed value, so a nested field appears as `embeds.0.title`. A failure with no field position uses the literal path `root`. sanalyer produces at most one element for each distinct pair of `path` and `code`.
 
 ### Example
 
@@ -84,7 +84,7 @@ The `path` of an element is the dot-joined position of the failed value, so a ne
 An empty or whitespace-only body becomes `{}`, so the response reports the fields the schema then finds missing. A body that does not parse as JSON returns 400 `INVALID_FORM_BODY` with one element at path `body` and code `INVALID_FORMAT`.
 :::
 
-Fluxer normalises empty values on all targets before validation runs. An empty string becomes `null` wherever it appears, including inside an array element. A nested object becomes `null` when it holds no members. It also becomes `null` when every one of its members is `null` after Fluxer has applied the same rule to each of them. The top-level object itself is never replaced, so a request that sends nothing still reaches the schema as an object and fails on the fields the schema requires.
+sanalyer normalises empty values on all targets before validation runs. An empty string becomes `null` wherever it appears, including inside an array element. A nested object becomes `null` when it holds no members. It also becomes `null` when every one of its members is `null` after sanalyer has applied the same rule to each of them. The top-level object itself is never replaced, so a request that sends nothing still reaches the schema as an object and fails on the fields the schema requires.
 
 :::caution[An enumerated validation failure answers 400 alone]
 A validation failure whose elements have enumerated codes answers 400 with its elements in `errors`. Its top-level code is `INVALID_FORM_BODY` everywhere except [Modify current user settings](/http-api/users/settings/#modify-current-user-settings). Any other status, retry guidance, or response header from the original failure is dropped.
@@ -92,7 +92,7 @@ A validation failure whose elements have enumerated codes answers 400 with its e
 
 ### Default schema failure codes
 
-A constraint in a route's request schema can name its own [validation code](#validation-error-code-registry). When it names none, Fluxer maps the failure to one of the codes below by the kind of constraint that failed.
+A constraint in a route's request schema can name its own [validation code](#validation-error-code-registry). When it names none, sanalyer maps the failure to one of the codes below by the kind of constraint that failed.
 
 | Constraint | Code | Description |
 | --- | --- | --- |
@@ -107,9 +107,9 @@ A constraint in a route's request schema can name its own [validation code](#val
 
 ## HTTP status fallback codes
 
-A failure that has an HTTP status and no recognised Fluxer error code takes the fallback `code` its status selects below. Where an operation or one of the registries below names the error, Fluxer keeps that more specific code. An unclassified 401, 413, 422, or 429 falls back to `GENERAL_ERROR`.
+A failure that has an HTTP status and no recognised sanalyer error code takes the fallback `code` its status selects below. Where an operation or one of the registries below names the error, sanalyer keeps that more specific code. An unclassified 401, 413, 422, or 429 falls back to `GENERAL_ERROR`.
 
-Fluxer answers an unrecognised failure with 500 `INTERNAL_SERVER_ERROR` and a generic message that names no detail. A failure that has a registered API code but no status returns 400, except `GENERAL_ERROR`, which returns 500.
+sanalyer answers an unrecognised failure with 500 `INTERNAL_SERVER_ERROR` and a generic message that names no detail. A failure that has a registered API code but no status returns 400, except `GENERAL_ERROR`, which returns 500.
 
 | Status | Code | Description |
 | --- | --- | --- |

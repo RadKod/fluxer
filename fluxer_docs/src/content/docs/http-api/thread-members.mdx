@@ -56,11 +56,11 @@ A route on this page returns 403 `MISSING_PERMISSIONS` when the caller is not a 
 | 1 &lt;&lt; 2 | ONLY_MENTIONS | Notify the user only of mentions in the thread |
 | 1 &lt;&lt; 3 | NO_MESSAGES | Notify the user of nothing in the thread |
 
-<sup>1</sup> Set only by Fluxer. A bot that creates a thread starts without it
+<sup>1</sup> Set only by sanalyer. A bot that creates a thread starts without it
 
 At most one of the three notification flags is set. With none set, the thread follows the notification level of its parent.
 
-A member keeps the membership after losing access to the parent. Removal from the guild removes every membership in its threads. Fluxer emits a [Thread Members Update](/gateway/threads/#thread-members-update) for each of them.
+A member keeps the membership after losing access to the parent. Removal from the guild removes every membership in its threads. sanalyer emits a [Thread Members Update](/gateway/threads/#thread-members-update) for each of them.
 
 ## Join thread
 
@@ -114,7 +114,7 @@ Adds another guild member to a thread. Requires `SEND_MESSAGES_IN_THREADS`. Retu
 - A private thread with `invitable` false requires the caller or the target to be a thread moderator.
 - The target must be a guild member who can view the parent.
 
-`user_id` of `@me` behaves as [Join thread](#join-thread). A request that names the caller's own ID runs the checks above, and Fluxer posts no message for it. Adding a user who is already a member runs the checks above, then returns 204 and changes nothing. Each session of a newly added user receives [Thread Create](/gateway/threads/#thread-create) when it has [thread access](/gateway/threads/#session-flag) and can view the thread. A session still connecting to the guild receives none.
+`user_id` of `@me` behaves as [Join thread](#join-thread). A request that names the caller's own ID runs the checks above, and sanalyer posts no message for it. Adding a user who is already a member runs the checks above, then returns 204 and changes nothing. Each session of a newly added user receives [Thread Create](/gateway/threads/#thread-create) when it has [thread access](/gateway/threads/#session-flag) and can view the thread. A session still connecting to the guild receives none.
 
 Adding to a locked thread needs an enrolled authenticator while the guild [MFA level](/http-api/guilds/#mfa-levels) is elevated, unless the caller owns the guild. Adding a target who is not a thread moderator to a private thread with `invitable` false needs one too.
 
@@ -144,7 +144,7 @@ Adding to a locked thread needs an enrolled authenticator while the guild [MFA l
 
 ### Side effects
 
-Adding another user posts a `RECIPIENT_ADD` message in the thread that mentions the target. Fluxer emits [Message Create](/gateway/events/#message-create) for it.
+Adding another user posts a `RECIPIENT_ADD` message in the thread that mentions the target. sanalyer emits [Message Create](/gateway/events/#message-create) for it.
 
 ### Rate limit
 
@@ -216,7 +216,7 @@ Removing a member needs an enrolled authenticator while the guild [MFA level](/h
 
 ### Side effects
 
-Removing another user posts a `RECIPIENT_REMOVE` message in the thread that mentions the target. Fluxer emits [Message Create](/gateway/events/#message-create) for it.
+Removing another user posts a `RECIPIENT_REMOVE` message in the thread that mentions the target. sanalyer emits [Message Create](/gateway/events/#message-create) for it.
 
 ### Rate limit
 

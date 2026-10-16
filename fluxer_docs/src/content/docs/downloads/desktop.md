@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Desktop builds
 description: Paths for desktop installers, checksums and the update feeds each platform reads.
+draft: true
 ---
 
 Every desktop path below is served from `https://pkgs.fluxer.com` and is built from four coordinates.

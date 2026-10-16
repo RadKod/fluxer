@@ -4,7 +4,7 @@ title: User settings Protobuf
 description: The client preference snapshot in the user settings object.
 ---
 
-A synced preferences snapshot holds the client settings an account shares between its devices. It is one base64-encoded `fluxer.user.preferences.v1.SyncedPreferences` message in the `synced_preferences` field of the [user settings object](/http-api/users/#user-settings-object). Fluxer stores it and interprets no field on this page.
+A synced preferences snapshot holds the client settings an account shares between its devices. It is one base64-encoded `fluxer.user.preferences.v1.SyncedPreferences` message in the `synced_preferences` field of the [user settings object](/http-api/users/#user-settings-object). sanalyer stores it and interprets no field on this page.
 
 ## Reading and writing the snapshot
 
@@ -14,7 +14,7 @@ The empty string in a response means nothing is stored. Sending null or the empt
 
 A returned snapshot can have a different encoding from the submitted one. Unknown fields and enum values survive the round trip. A snapshot containing only default values is returned as the empty string.
 
-A submission may use either the standard or the URL-safe base64 alphabet, with or without padding. Fluxer always returns the standard alphabet with padding.
+A submission may use either the standard or the URL-safe base64 alphabet, with or without padding. sanalyer always returns the standard alphabet with padding.
 
 ## How to read the type column
 
@@ -22,11 +22,11 @@ Types here are the declared Protobuf types. A field whose declared type is an en
 
 A field without the optional marker always decodes and holds its Protobuf zero value. That is false for a bool, 0 for a numeric type, the empty string, an empty repeated field, or an empty map. A field with the optional marker tracks presence and is absent until a value is stored. Every singular message field tracks presence the same way, so a preference group is absent from the snapshot until a client writes to it.
 
-Fluxer applies no bound to any individual field of the message, so every length, range, and enumeration membership below describes what the first-party client writes and reads.
+sanalyer applies no bound to any individual field of the message, so every length, range, and enumeration membership below describes what the first-party client writes and reads.
 
 ## Rejection grounds
 
-Fluxer reports every entry in the resulting `errors` array against the path `synced_preferences`. It checks the encoded string first.
+sanalyer reports every entry in the resulting `errors` array against the path `synced_preferences`. It checks the encoded string first.
 
 | Condition | Status and code | Element codes |
 | --- | --- | --- |
@@ -408,7 +408,7 @@ One entry marks one channel as a favourite. Channel and guild identifiers here a
 
 ## Favourite category object
 
-One entry names one grouping in the favourites view. The client chooses the identifier, so it is not a [snowflake](/snowflakes/) and Fluxer never resolves it.
+One entry names one grouping in the favourites view. The client chooses the identifier, so it is not a [snowflake](/snowflakes/) and sanalyer never resolves it.
 
 ### Structure
 
@@ -567,7 +567,7 @@ The `whats_new` field stores the most recently dismissed update entry.
 
 ## Privacy preferences object
 
-The `privacy` field stores client privacy behaviour. Fluxer reads none of it, and none of it changes the privacy fields of the [user settings object](/http-api/users/#user-settings-object), which control what Fluxer itself discloses about the account.
+The `privacy` field stores client privacy behaviour. sanalyer reads none of it, and none of it changes the privacy fields of the [user settings object](/http-api/users/#user-settings-object), which control what sanalyer itself discloses about the account.
 
 ### Structure
 
@@ -581,7 +581,7 @@ The `privacy` field stores client privacy behaviour. Fluxer reads none of it, an
 
 ## Local user spam overrides object
 
-The `local_spam_overrides` field stores client-local classifications that override the [SPAMMER public user flag](/http-api/users/#public-user-flags) in display only. Fluxer neither reads these lists nor changes any flag because of them.
+The `local_spam_overrides` field stores client-local classifications that override the [SPAMMER public user flag](/http-api/users/#public-user-flags) in display only. sanalyer neither reads these lists nor changes any flag because of them.
 
 ### Structure
 
@@ -611,7 +611,7 @@ The `sound` field controls sound playback, master volume, and per-sound override
 
 ### Sound identifiers
 
-Both maps are keyed by an arbitrary string, and Fluxer stores and returns any key unchanged. The first-party client uses the identifiers below, and the first-party client ignores a key outside this set.
+Both maps are keyed by an arbitrary string, and sanalyer stores and returns any key unchanged. The first-party client uses the identifiers below, and the first-party client ignores a key outside this set.
 
 | Value | Description |
 | --- | --- |
@@ -654,7 +654,7 @@ The `spellcheck` field controls spellchecking, the selected languages, and the p
 
 ## Search engine settings object
 
-The `search_engines` field stores the selected external providers. Every identifier names a provider the client defines, and Fluxer neither validates nor resolves one.
+The `search_engines` field stores the selected external providers. Every identifier names a provider the client defines, and sanalyer neither validates nor resolves one.
 
 ### Structure
 
@@ -771,7 +771,7 @@ The `announcement_prompts` field stores which announcement channel prompts the a
 
 | Field | Type | Description |
 | --- | --- | --- |
-| hide_publish_nudge | bool | Whether the prompt to publish a new message in an [announcement channel](/topics/announcement-channels/) is hidden |
+| hide_publish_nudge | bool | Whether the prompt to publish a new message in an announcement channel is hidden |
 
 ## Sudo prompt state object
 
@@ -875,7 +875,7 @@ The `double_tap_reaction` field stores the emoji that a double tap on a message 
 | id?<sup>1</sup> | string | Custom emoji ID, absent for a Unicode emoji |
 | name | string | Unicode emoji, or the custom emoji's name |
 
-<sup>1</sup> The decimal form of a [snowflake](/snowflakes/). Fluxer never resolves it, so it can name a custom emoji the account can no longer use
+<sup>1</sup> The decimal form of a [snowflake](/snowflakes/). sanalyer never resolves it, so it can name a custom emoji the account can no longer use
 
 ## Double tap actions
 

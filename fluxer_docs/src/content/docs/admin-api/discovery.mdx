@@ -18,7 +18,7 @@ An operator can disable discovery for the whole instance. Only the public [Disco
 
 ## Admin pending application object
 
-A guild's submitted application, together with the guild details Fluxer resolves at request time.
+A guild's submitted application, together with the guild details sanalyer resolves at request time.
 
 ### Structure
 
@@ -40,7 +40,7 @@ A guild's submitted application, together with the guild details Fluxer resolves
 | custom_tags<sup>6</sup> <sup>8</sup> | array[string] | Normalised [custom tags](/http-api/discovery/#custom-tags) of the listing |
 | applied_at | ISO8601 timestamp | Time at which the guild applied |
 
-<sup>1</sup> Resolved from the guild at request time. A guild Fluxer fails to load yields the literal name `(unknown guild)`, a null icon, the owner ID `0`, a member count of 0, a null NSFW level, an empty feature array, and null for all owner name fields
+<sup>1</sup> Resolved from the guild at request time. A guild sanalyer fails to load yields the literal name `(unknown guild)`, a null icon, the owner ID `0`, a member count of 0, a null NSFW level, an empty feature array, and null for all owner name fields
 
 <sup>2</sup> Read from the owner account, so it is null when the guild resolved but the owner account did not
 
@@ -212,7 +212,7 @@ An approval moves the application to `approved` and records the review time, the
 
 A rejection moves the application to `rejected` and records the review time, the reviewing Admin, and the required reason. It leaves every guild field as it is and emits no Gateway Dispatch.
 
-An approval whose guild can no longer be resolved still succeeds. Fluxer skips the feature grant and the Dispatch.
+An approval whose guild can no longer be resolved still succeeds. sanalyer skips the feature grant and the Dispatch.
 
 The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `approve_discovery_application` or `reject_discovery_application`, target type `guild`, the guild ID as target ID, and metadata key `status`.
 
@@ -332,7 +332,7 @@ Files every named guild under one [discovery category](/http-api/discovery/#disc
 | 200 | response body | The batch ran, whether or not every guild moved |
 
 :::caution[Some named guilds can fail inside a 200]
-Fluxer attempts the guilds one at a time and in order, and a failure does not stop the ones after it. Read `failed_guild_ids` for the guilds that did not move. The operation never returns 404.
+sanalyer attempts the guilds one at a time and in order, and a failure does not stop the ones after it. Read `failed_guild_ids` for the guilds that did not move. The operation never returns 404.
 :::
 
 Repeating the request is safe. The operation moves a pending application the same way it moves an approved one, so this operation can refile a guild that is still awaiting review.
@@ -439,7 +439,7 @@ The application moves to `removed`, and the guild can be listed again only throu
 
 The application moves to `removed` and records the removal time, the removing Admin, and the required reason. The discoverable feature is removed from the guild, the guild stops appearing in [Search discovery guilds](/http-api/discovery/#search-discovery-guilds), and [Guild Update](/gateway/events/#guild-update) fires to every session that can observe the guild.
 
-A removal whose guild can no longer be resolved still succeeds. Fluxer skips the feature strip and the Dispatch.
+A removal whose guild can no longer be resolved still succeeds. sanalyer skips the feature strip and the Dispatch.
 
 The operation records one [Admin audit entry](/admin-api/#admin-audit-entry-object) with action `remove_discovery_listing`, target type `guild`, the guild ID as target ID, and no metadata.
 

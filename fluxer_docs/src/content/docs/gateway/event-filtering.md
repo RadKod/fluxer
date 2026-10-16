@@ -6,11 +6,11 @@ description: Event visibility, guild subscriptions, ignored events, and sharding
 
 A client controls [Dispatch](/gateway/events/) traffic with [Lazy Request](/gateway/commands/#lazy-request) subscriptions, the [Identify](/gateway/commands/#identify) `ignored_events` list, and the Identify `CHANNEL_THREADS` [session flag](/gateway/threads/#session-flag). Guild availability, permissions and sharding also restrict delivery.
 
-Fluxer has no `intents` field, no intent close code, and no privileged-intent approval. A client ported from a protocol that uses intents replaces its intent mask with those mechanisms.
+sanalyer has no `intents` field, no intent close code, and no privileged-intent approval. A client ported from a protocol that uses intents replaces its intent mask with those mechanisms.
 
 ## The gates
 
-Fluxer evaluates a guild-scoped Dispatch against these gates in order.
+sanalyer evaluates a guild-scoped Dispatch against these gates in order.
 
 | Gate | Name | What it decides |
 | --- | --- | --- |
@@ -56,7 +56,7 @@ Message access is `READ_MESSAGE_HISTORY` on the channel. Without that permission
 
 ### Excluding the acting session
 
-[Message Reaction Add](/gateway/events/#message-reaction-add) and [Message Reaction Remove](/gateway/events/#message-reaction-remove) accept a `session_id` on the originating HTTP request. Fluxer excludes that session from the resulting Dispatch and strips the field before it sends the payload. Every other mutation delivers its Dispatch to the acting session like any other eligible session.
+[Message Reaction Add](/gateway/events/#message-reaction-add) and [Message Reaction Remove](/gateway/events/#message-reaction-remove) accept a `session_id` on the originating HTTP request. sanalyer excludes that session from the resulting Dispatch and strips the field before it sends the payload. Every other mutation delivers its Dispatch to the acting session like any other eligible session.
 
 ## Active and passive guilds
 
@@ -118,7 +118,7 @@ A bot session holds no friend or group direct message presence subscriptions, so
 
 ## Ignored events
 
-Identify accepts `ignored_events`, an array of up to 256 Dispatch event names. Fluxer upper-cases and deduplicates the names at Identify. An absent field and a JSON `null` both mean the empty list. Fluxer closes the connection with `4002` and reason `Invalid identify payload` for any other value that is not an array of strings, and for any array of more than 256 entries. A Dispatch whose `t` appears in the list is dropped and never enters the replay buffer.
+Identify accepts `ignored_events`, an array of up to 256 Dispatch event names. sanalyer upper-cases and deduplicates the names at Identify. An absent field and a JSON `null` both mean the empty list. sanalyer closes the connection with `4002` and reason `Invalid identify payload` for any other value that is not an array of strings, and for any array of more than 256 entries. A Dispatch whose `t` appears in the list is dropped and never enters the replay buffer.
 
 ```json
 {
@@ -131,7 +131,7 @@ Identify accepts `ignored_events`, an array of up to 256 Dispatch event names. F
 }
 ```
 
-[Message Create](/gateway/events/#message-create) is the one exception. Fluxer delivers it even when `MESSAGE_CREATE` is ignored, if the message names the session's user in `mentions`, sets `mention_here`, or sets `mention_everyone`. A role mention does not defeat the list.
+[Message Create](/gateway/events/#message-create) is the one exception. sanalyer delivers it even when `MESSAGE_CREATE` is ignored, if the message names the session's user in `mentions`, sets `mention_here`, or sets `mention_everyone`. A role mention does not defeat the list.
 
 A suppressed Dispatch consumes no sequence number, so a client MUST NOT expect a gap in the sequence where the list dropped one.
 
@@ -143,7 +143,7 @@ A session that identified with a `shard` pair whose `shard_id` is not 0 drops ev
 
 Account-level traffic, direct message traffic, relationship changes, and calls therefore never reach a session on a shard other than 0.
 
-Sessions on shard 0, and sessions that identified without a `shard` pair, filter nothing at this gate. Fluxer still filters guilds by shard at Identify, as [Sharding](/gateway/overview/#sharding) describes, so a shard 0 session is only ever connected to the guilds its shard owns.
+Sessions on shard 0, and sessions that identified without a `shard` pair, filter nothing at this gate. sanalyer still filters guilds by shard at Identify, as [Sharding](/gateway/overview/#sharding) describes, so a shard 0 session is only ever connected to the guilds its shard owns.
 
 ## What a bot should send
 

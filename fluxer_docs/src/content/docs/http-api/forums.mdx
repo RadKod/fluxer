@@ -37,7 +37,7 @@ A forum or media channel is a [channel object](/http-api/channels/#channel-objec
 
 <sup>3</sup> A channel that stores no value reports `match_some`
 
-<sup>4</sup> Fluxer does not apply it to a new post. A create request that omits `auto_archive_duration` gets 4320, as [Auto archive durations](/http-api/threads/#auto-archive-durations) states
+<sup>4</sup> sanalyer does not apply it to a new post. A create request that omits `auto_archive_duration` gets 4320, as [Auto archive durations](/http-api/threads/#auto-archive-durations) states
 
 <sup>5</sup> Applies when the request sets no `rate_limit_per_user`. A channel that stores no value reports `0`
 
@@ -167,7 +167,7 @@ A member who is not a thread moderator and adds or removes a moderated tag on a 
 | default_sort_order? | ?integer | The [sort order](#forum-sort-orders), or null to clear it |
 | default_forum_layout?<sup>2</sup> | ?integer | The [layout](#forum-layouts), or null to reset it to `0` |
 | default_tag_setting? | ?string | The [tag matching](#forum-tag-settings) default, or null to reset it to `match_some` |
-| default_auto_archive_duration? | ?integer | The stored default [auto archive duration](/http-api/threads/#auto-archive-durations), which Fluxer does not apply to a new thread, or null to clear it |
+| default_auto_archive_duration? | ?integer | The stored default [auto archive duration](/http-api/threads/#auto-archive-durations), which sanalyer does not apply to a new thread, or null to clear it |
 | default_thread_rate_limit_per_user? | ?integer | The slowmode interval in seconds new threads inherit (0-21,600), or null to clear it |
 | flags? | integer | The [channel flags](#channel-flags) of the channel |
 
@@ -179,7 +179,7 @@ A guild text or announcement channel accepts `default_auto_archive_duration` and
 
 `available_tags` with more than 20 entries returns 400 `MAX_FORUM_TAGS`, and a repeated name returns 400 `FORUM_TAG_NAMES_MUST_BE_UNIQUE`. An `id` the channel does not hold returns 404 `UNKNOWN_FORUM_TAG`. An `emoji_id` that is not an emoji of this guild returns 404 `UNKNOWN_EMOJI`, except on a kept tag whose `emoji_id` is unchanged. A tag or default reaction with both `emoji_id` and `emoji_name`, or with an `emoji_name` that is not a single Unicode emoji, returns 400 `INVALID_FORM_BODY`. While another tag change holds the channel, a request with `available_tags` returns 429 `RESOURCE_LOCKED`.
 
-Fluxer rejects a change that leaves `REQUIRE_TAG` set with no unmoderated tag with 400 `NO_TAGS_AVAILABLE_TO_NON_MODERATORS`. Two concurrent [Modify channel](/http-api/channels/#modify-channel) requests, one setting `REQUIRE_TAG` and one replacing `available_tags`, can each pass that check and together store that state. A post that names no tag then returns the same code to a caller who is not a thread moderator.
+sanalyer rejects a change that leaves `REQUIRE_TAG` set with no unmoderated tag with 400 `NO_TAGS_AVAILABLE_TO_NON_MODERATORS`. Two concurrent [Modify channel](/http-api/channels/#modify-channel) requests, one setting `REQUIRE_TAG` and one replacing `available_tags`, can each pass that check and together store that state. A post that names no tag then returns the same code to a caller who is not a thread moderator.
 
 For a user request without the [`channel_threads` client capability](/http-api/threads/#client-capability), [Modify channel](/http-api/channels/#modify-channel) on a forum or media channel returns 404 `UNKNOWN_CHANNEL`. [Create guild channel](/http-api/guild-channels/#create-guild-channel) with `type` `15` or `16` returns 400 `INVALID_FORM_BODY`.
 
@@ -363,7 +363,7 @@ Returns the owner and first message of each requested post in a forum or media c
 
 A webhook whose channel is a forum or media channel creates a post, or posts into an existing one. [Execute webhook](/http-api/webhooks/#execute-webhook) lists the `thread_id`, `thread_name`, and `applied_tags` fields and their error codes.
 
-A locked thread refuses a webhook message with 400 `THREAD_LOCKED`. An archived thread that is not locked is unarchived by it, and Fluxer emits a [Thread Update](/gateway/threads/#thread-update) Gateway event. When the guild already has 1,000 active threads, the message returns 400 `MAX_ACTIVE_THREADS` and the thread stays archived. Editing a webhook message in an archived thread returns 400 `THREAD_ARCHIVED`, and in a locked thread 400 `THREAD_LOCKED`.
+A locked thread refuses a webhook message with 400 `THREAD_LOCKED`. An archived thread that is not locked is unarchived by it, and sanalyer emits a [Thread Update](/gateway/threads/#thread-update) Gateway event. When the guild already has 1,000 active threads, the message returns 400 `MAX_ACTIVE_THREADS` and the thread stays archived. Editing a webhook message in an archived thread returns 400 `THREAD_ARCHIVED`, and in a locked thread 400 `THREAD_LOCKED`.
 
 ## New post notifications
 
@@ -372,6 +372,6 @@ A [channel notification override](/http-api/users/settings/#channel-notification
 | Value | Name | Description |
 | --- | --- | --- |
 | 1 &lt;&lt; 13 | NEW_FORUM_THREADS_OFF | No push notification for a new post in the channel |
-| 1 &lt;&lt; 14 | NEW_FORUM_THREADS_ON | A value Fluxer stores and does not read |
+| 1 &lt;&lt; 14 | NEW_FORUM_THREADS_ON | A value sanalyer stores and does not read |
 
-A new post sends a push notification to a member when the channel resolves to the all messages notification level. A mute on the guild, on the parent category, or on the channel suppresses it, and so does `NEW_FORUM_THREADS_OFF`. Fluxer ignores `flags` in a user request without the [`channel_threads` client capability](/http-api/threads/#client-capability), and the stored value stays.
+A new post sends a push notification to a member when the channel resolves to the all messages notification level. A mute on the guild, on the parent category, or on the channel suppresses it, and so does `NEW_FORUM_THREADS_OFF`. sanalyer ignores `flags` in a user request without the [`channel_threads` client capability](/http-api/threads/#client-capability), and the stored value stays.

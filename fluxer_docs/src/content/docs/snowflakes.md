@@ -1,12 +1,12 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Snowflakes
-description: Fluxer's 64-bit identifiers, their bit layout, wire grammar, and pagination behaviour.
+description: sanalyer's 64-bit identifiers, their bit layout, wire grammar, and pagination behaviour.
 ---
 
-A snowflake is a 64-bit identifier for a Fluxer resource such as a user, guild, channel, message, role, or attachment. It is the type written as `snowflake` in every wire table of this reference, and the HTTP API, the Admin API, and the Gateway all share this identifier space.
+A snowflake is a 64-bit identifier for a sanalyer resource such as a user, guild, channel, message, role, or attachment. It is the type written as `snowflake` in every wire table of this reference, and the HTTP API, the Admin API, and the Gateway all share this identifier space.
 
-A snowflake is unique within the deployment that issued it. The value stays stable, and Fluxer does not reuse it after the resource is deleted. Separate deployments can issue the same numeric value, so a client MUST scope every snowflake to its deployment.
+A snowflake is unique within the deployment that issued it. The value stays stable, and sanalyer does not reuse it after the resource is deleted. Separate deployments can issue the same numeric value, so a client MUST scope every snowflake to its deployment.
 
 :::caution[Never parse a snowflake as a JSON number]
 Snowflake values exceed a JSON double's exact integer range, so parsing one as a number can silently change it. A client MUST parse the string into a 64-bit integer and MUST compare snowflakes as integers, because unequal-length decimal strings do not sort as text.
@@ -26,7 +26,7 @@ A snowflake packs a timestamp, a worker ID, and a sequence into 64 bits. The wor
 
 <sup>2</sup> A higher sequence value means a later identifier only when both identifiers come from one worker in one millisecond
 
-The epoch is 1420070400000 milliseconds after the Unix epoch. Every Fluxer instance uses the same value. The lower 22 bits expose allocator details, so a client MUST NOT use them for routing or resource semantics.
+The epoch is 1420070400000 milliseconds after the Unix epoch. Every sanalyer instance uses the same value. The lower 22 bits expose allocator details, so a client MUST NOT use them for routing or resource semantics.
 
 Treat the embedded timestamp as an approximate issue time, not proof that the resource already exists.
 
@@ -50,7 +50,7 @@ The representable range runs from `2015-01-01T00:00:00.000Z` through `2084-09-06
 
 ## Wire representation
 
-Fluxer emits a snowflake as an unsigned decimal string in every JSON body, path parameter, query string parameter, and Gateway payload. An emitted value contains only ASCII digits. Inbound traffic is more permissive, and a client SHOULD send the emitted form everywhere.
+sanalyer emits a snowflake as an unsigned decimal string in every JSON body, path parameter, query string parameter, and Gateway payload. An emitted value contains only ASCII digits. Inbound traffic is more permissive, and a client SHOULD send the emitted form everywhere.
 
 ### Accepted input
 
@@ -59,13 +59,13 @@ Fluxer emits a snowflake as an unsigned decimal string in every JSON body, path 
 | HTTP request<sup>1</sup> | `0`, or a non-zero digit followed by further digits, sent as a JSON string or as a JSON integer |
 | Gateway command<sup>2</sup> | A non-zero digit followed by further digits, sent as a string of ASCII digits or as a positive JSON integer |
 
-<sup>1</sup> Fluxer removes leading and trailing whitespace before it reads the text. In that text a leading zero, a sign, a decimal point, and any other non-digit character are rejected with the validation code [`INVALID_SNOWFLAKE_FORMAT`](/http-api/errors/#validation-error-code-registry), and a well-formed value above 9223372036854775807 is rejected with [`SNOWFLAKE_OUT_OF_RANGE`](/http-api/errors/#validation-error-code-registry)
+<sup>1</sup> sanalyer removes leading and trailing whitespace before it reads the text. In that text a leading zero, a sign, a decimal point, and any other non-digit character are rejected with the validation code [`INVALID_SNOWFLAKE_FORMAT`](/http-api/errors/#validation-error-code-registry), and a well-formed value above 9223372036854775807 is rejected with [`SNOWFLAKE_OUT_OF_RANGE`](/http-api/errors/#validation-error-code-registry)
 
 <sup>2</sup> The Gateway rejects `0`, a leading zero, a signed value, a negative integer, and a value above 9223372036854775807
 
 Both HTTP validation codes are element codes inside a 400 [`INVALID_FORM_BODY`](/http-api/errors/#api-error-code-registry) response. Each Gateway [command](/gateway/commands/) states what its own rejection does, from discarding the field to abandoning the whole command.
 
-A snowflake sent as a JSON number keeps its exact value at any size. A fractional JSON number is an ordinary type failure and reports [`INVALID_FORMAT`](/http-api/errors/#validation-error-code-registry). Fluxer reads an exponent form as the number it means, and one above 9007199254740991 reports [`INVALID_SNOWFLAKE_FORMAT`](/http-api/errors/#validation-error-code-registry). Path parameters and query string parameters always arrive as text.
+A snowflake sent as a JSON number keeps its exact value at any size. A fractional JSON number is an ordinary type failure and reports [`INVALID_FORMAT`](/http-api/errors/#validation-error-code-registry). sanalyer reads an exponent form as the number it means, and one above 9007199254740991 reports [`INVALID_SNOWFLAKE_FORMAT`](/http-api/errors/#validation-error-code-registry). Path parameters and query string parameters always arrive as text.
 
 :::note[`0` is the beginning of snowflake time]
 An HTTP pagination cursor accepts `0`. An HTTP path parameter or field that identifies a real resource also accepts `0`, and the request then receives the ordinary not-found result for that resource.

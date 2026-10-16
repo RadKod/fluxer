@@ -81,7 +81,7 @@ A target with no stored note returns 404 `UNKNOWN_USER`. The same status covers 
 | --- | --- | --- |
 | target_id<sup>1</sup> | snowflake | The ID of the account the note describes |
 
-<sup>1</sup> Fluxer removes leading and trailing whitespace before it reads the value. A leading zero, a sign, a decimal point, or any other non-digit returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_SNOWFLAKE_FORMAT`, and a value above 9223372036854775807 returns `SNOWFLAKE_OUT_OF_RANGE`
+<sup>1</sup> sanalyer removes leading and trailing whitespace before it reads the value. A leading zero, a sign, a decimal point, or any other non-digit returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_SNOWFLAKE_FORMAT`, and a value above 9223372036854775807 returns `SNOWFLAKE_OUT_OF_RANGE`
 
 ### Response
 
@@ -114,17 +114,17 @@ A `note` of at least 3 characters matching the instance phrase blocklist, or wit
 | --- | --- | --- |
 | target_id<sup>1</sup> | snowflake | The ID of the account the note describes |
 
-<sup>1</sup> Fluxer removes leading and trailing whitespace before it reads the value. A leading zero, a sign, a decimal point, or any other non-digit returns `INVALID_SNOWFLAKE_FORMAT`, and a value above 9223372036854775807 returns `SNOWFLAKE_OUT_OF_RANGE`
+<sup>1</sup> sanalyer removes leading and trailing whitespace before it reads the value. A leading zero, a sign, a decimal point, or any other non-digit returns `INVALID_SNOWFLAKE_FORMAT`, and a value above 9223372036854775807 returns `SNOWFLAKE_OUT_OF_RANGE`
 
 ### JSON body
 
-Fluxer reads an omitted body as an empty object and deletes the stored note.
+sanalyer reads an omitted body as an empty object and deletes the stored note.
 
 | Field | Type | Description |
 | --- | --- | --- |
 | note?<sup>1</sup> | ?string | The complete replacement note text, or null to delete the stored note (1-256 characters) |
 
-<sup>1</sup> Fluxer trims the value and the bound applies to the result, so a value that trims to empty returns `STRING_LENGTH_INVALID` at the `note` path
+<sup>1</sup> sanalyer trims the value and the bound applies to the result, so a value that trims to empty returns `STRING_LENGTH_INVALID` at the `note` path
 
 ### Response
 

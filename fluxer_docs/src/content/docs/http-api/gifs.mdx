@@ -20,7 +20,7 @@ A provider outage, a request past its deadline, and an unreadable provider paylo
 
 Every route takes an optional `locale` drawn from the [supported locale registry](/topics/locales/#supported-locales), in the query string on the GET routes and in the body of [Register a GIF share](#register-a-gif-share). It defaults to `en-US`. A tag outside the registry fails with 400 `INVALID_FORM_BODY`.
 
-Fluxer also derives a two-letter country from the requesting address by geolocation, and uses `US` when geolocation resolves none. No route accepts the country as a parameter, so a client cannot override it. [Get GIF search suggestions](#get-gif-search-suggestions) is the one route that ignores it.
+sanalyer also derives a two-letter country from the requesting address by geolocation, and uses `US` when geolocation resolves none. No route accepts the country as a parameter, so a client cannot override it. [Get GIF search suggestions](#get-gif-search-suggestions) is the one route that ignores it.
 
 ## Provider headers
 
@@ -36,7 +36,7 @@ Every response under `/gifs`, `/tenor`, and `/klipy` has these headers, includin
 
 ## Result freshness
 
-Fluxer caches results, so a result can lag behind the provider. Repeating a request does not force a refresh.
+sanalyer caches results, so a result can lag behind the provider. Repeating a request does not force a refresh.
 
 ## GIF object
 
@@ -66,7 +66,7 @@ A GIF object is one media item the active provider owns. Every URL in it resolve
 
 <sup>4</sup> The active provider emits none, so the field is absent from every GIF these routes return. [Resolve GIF URLs](/http-api/memes/#resolve-gif-urls) is the operation that produces one
 
-A GIF has no snowflake and no creation timestamp. `id` is the provider's own identifier, so it does not sort by time, and no other Fluxer route resolves it.
+A GIF has no snowflake and no creation timestamp. `id` is the provider's own identifier, so it does not sort by time, and no other sanalyer route resolves it.
 
 ### Example
 
@@ -161,7 +161,7 @@ Searches the active provider for GIFs matching a query. Returns at most 50 [GIF 
 | q | string | The search term (1-256 characters) |
 | locale? | string | A [supported locale](/topics/locales/#supported-locales), default `en-US` |
 
-Fluxer does not stem, expand, or spell-correct the term. A term that matches nothing returns 200 with an empty array.
+sanalyer does not stem, expand, or spell-correct the term. A term that matches nothing returns 200 with an empty array.
 
 ### Response
 
@@ -200,7 +200,7 @@ Returns the provider's featured GIFs and the category terms offered alongside th
 
 <sup>2</sup> At most 50 entries, deduplicated by search term and kept in the order the provider returned them
 
-Fluxer resolves the category list against the country `US` for every request, whatever country geolocation produced, so two callers in different countries receive the same `categories` and different `gifs`. A category whose preview lookup returned nothing is still listed, with `gif` null and both URLs empty.
+sanalyer resolves the category list against the country `US` for every request, whatever country geolocation produced, so two callers in different countries receive the same `categories` and different `gifs`. A category whose preview lookup returned nothing is still listed, with `gif` null and both URLs empty.
 
 ### Response
 
@@ -212,7 +212,7 @@ Fluxer resolves the category list against the country `US` for every request, wh
 | 403 | [error response](/http-api/#error-response) | The instance has bound no provider key and the request returns `FEATURE_TEMPORARILY_DISABLED` |
 | 503 | [error response](/http-api/#error-response) | The provider failed, the request outlived its deadline, or the `gifs` service answered with a payload the API could not read, each returning `SERVICE_UNAVAILABLE` |
 
-Fluxer fetches both halves in one operation. A failure on either `gifs` or `categories` fails the whole request and returns no partial body.
+sanalyer fetches both halves in one operation. A failure on either `gifs` or `categories` fails the whole request and returns no partial body.
 
 ### Rate limit
 
@@ -291,7 +291,7 @@ Tells the active provider that the caller is sharing one of its GIFs, and return
 | q?<sup>2</sup> | ?string | The search term that produced the GIF (0-256 characters) |
 | locale? | string | A [supported locale](/topics/locales/#supported-locales), default `en-US` |
 
-<sup>1</sup> The provider reads it as a slug or a slug-id token. Fluxer does not check it against a GIF it has returned, so an identifier the provider does not recognise fails at the provider
+<sup>1</sup> The provider reads it as a slug or a slug-id token. sanalyer does not check it against a GIF it has returned, so an identifier the provider does not recognise fails at the provider
 
 <sup>2</sup> An omitted or null value is sent to the provider as the empty string
 
@@ -309,7 +309,7 @@ The deadline on this route is 3 seconds.
 
 ### Side effects
 
-The registration reaches the provider and changes no Fluxer state, so it emits no Gateway Dispatch and does not add the GIF to the account's [memes](/http-api/memes/).
+The registration reaches the provider and changes no sanalyer state, so it emits no Gateway Dispatch and does not add the GIF to the account's [memes](/http-api/memes/).
 
 Each request registers a separate share, including repeated requests for the same `id`.
 

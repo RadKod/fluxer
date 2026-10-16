@@ -52,7 +52,7 @@ A channel object always has its identity and type. Every other field is present 
 | applied_tags?<sup>15</sup> | array[snowflake] | The IDs of the [forum tags](/http-api/forums/#forum-tag-object) applied to a post (max 5) |
 | member_ids_preview?<sup>15</sup> | array[snowflake] | The IDs of the most recently joined members of a post, newest first (max 8) |
 | member?<sup>16</sup> | [thread member](/http-api/thread-members/#thread-member-object) object | The thread member object of the caller |
-| default_auto_archive_duration?<sup>17</sup> | ?integer | The stored default [auto archive duration](/http-api/threads/#auto-archive-durations), which Fluxer does not apply to a new thread, or null when none is set |
+| default_auto_archive_duration?<sup>17</sup> | ?integer | The stored default [auto archive duration](/http-api/threads/#auto-archive-durations), which sanalyer does not apply to a new thread, or null when none is set |
 | default_thread_rate_limit_per_user?<sup>17</sup> | integer | The slowmode interval in seconds new threads inherit |
 | available_tags? | array[[forum tag](/http-api/forums/#forum-tag-object) object] | The tags a post can apply (max 20), present only for a forum or media channel |
 | default_reaction_emoji? | ?[default reaction](/http-api/forums/#default-reaction-object) object | The reaction clients show on each post, or null when none is set, present only for a forum or media channel |
@@ -148,9 +148,9 @@ An age restriction and a content warning both resolve through this channel first
 | 998 | GUILD_LINK | Guild link channel, which has a destination URL and no messages |
 | 999 | DM_PERSONAL_NOTES<sup>1</sup> | Personal notes channel |
 
-<sup>1</sup> Its channel ID is exactly the owning user ID, and it has no recipient and no name. Fluxer creates it on first authenticated access
+<sup>1</sup> Its channel ID is exactly the owning user ID, and it has no recipient and no name. sanalyer creates it on first authenticated access
 
-<sup>2</sup> It has the fields and the slowmode of a guild text channel. [Announcement channels](/topics/announcement-channels/) describes publishing and following
+<sup>2</sup> It has the fields and the slowmode of a guild text channel. Announcement channels describes publishing and following
 
 <sup>3</sup> [Thread types](/http-api/threads/#thread-types) describes each type
 
@@ -307,7 +307,7 @@ Returns the [channel object](#channel-object) visible to the authenticated user.
 - A private channel requires current recipient access.
 - The personal notes channel requires ownership.
 
-Fluxer enforces age verification only for a guild text, announcement, voice, link, forum, or media channel, and for a thread through its parent. Fluxer never requires age verification for a guild category, even when the category has the override its children inherit.
+sanalyer enforces age verification only for a guild text, announcement, voice, link, forum, or media channel, and for a thread through its parent. sanalyer never requires age verification for a guild category, even when the category has the override its children inherit.
 
 ### Path parameters
 
@@ -444,7 +444,7 @@ The submitted array becomes the complete overwrite collection of the channel.
 
 ### JSON body
 
-The stored channel type selects the body variant. A direct message and the personal notes channel match no variant, and Fluxer rejects both with 400 `INVALID_FORM_BODY`. A thread accepts every field of the [Modify thread body](/http-api/threads/#thread-body).
+The stored channel type selects the body variant. A direct message and the personal notes channel match no variant, and sanalyer rejects both with 400 `INVALID_FORM_BODY`. A thread accepts every field of the [Modify thread body](/http-api/threads/#thread-body).
 
 #### Guild channel body
 
@@ -469,7 +469,7 @@ Every field is optional, and an omitted field preserves its current value. Every
 | rtc_p2p? | boolean | Whether to pin a guild voice channel to [peer-to-peer voice](/gateway/events/#peer-to-peer-voice). Ignored on every other channel type |
 | room_theme?<sup>15</sup> | ?string | The [room theme](/http-api/voice-seats/#room-themes) of the 3D room view, where null removes it |
 
-<sup>1</sup> An explicit null preserves the current name. In a guild without flexible channel names, Fluxer lowercases a guild text, announcement, forum, or media channel name, replaces its whitespace with hyphens, and removes disallowed punctuation
+<sup>1</sup> An explicit null preserves the current name. In a guild without flexible channel names, sanalyer lowercases a guild text, announcement, forum, or media channel name, replaces its whitespace with hyphens, and removes disallowed punctuation
 
 <sup>2</sup> An explicit null clears the stored topic. A forum or media channel accepts 1-4,096 characters
 
@@ -505,16 +505,16 @@ A guild text or announcement channel also accepts `type`, which converts a text 
 
 <sup>14</sup> Absent, null, or equal to the stored type keeps the type. A value other than `0` or `5` returns 400 `CHANNEL_TYPE_CONVERSION_NOT_SUPPORTED`. Every other stored type ignores `type`
 
-Converting a text channel into an announcement channel fails with 400 `CHANNEL_HAS_FOLLOWED_CHANNELS` while the text channel receives messages from any followed announcement channel. Delete its [channel follower webhooks](/http-api/webhooks/#webhook-types) first. The conversion also fails with 400 `CHANNEL_HAS_THREADS` while the text channel holds a private thread. A conversion changes the type of the public threads of the channel as [Thread types](/http-api/threads/#thread-types) describes. Converting an announcement channel back into a text channel needs no preparation, and Fluxer removes every follow of it afterwards.
+Converting a text channel into an announcement channel fails with 400 `CHANNEL_HAS_FOLLOWED_CHANNELS` while the text channel receives messages from any followed announcement channel. Delete its [channel follower webhooks](/http-api/webhooks/#webhook-types) first. The conversion also fails with 400 `CHANNEL_HAS_THREADS` while the text channel holds a private thread. A conversion changes the type of the public threads of the channel as [Thread types](/http-api/threads/#thread-types) describes. Converting an announcement channel back into a text channel needs no preparation, and sanalyer removes every follow of it afterwards.
 
 A guild text, announcement, forum, or media channel also accepts these fields.
 
 | Field | Type | Description |
 | --- | --- | --- |
-| default_auto_archive_duration?<sup>15</sup> | ?integer | The stored default [auto archive duration](/http-api/threads/#auto-archive-durations), which Fluxer does not apply to a new thread, or null to clear it |
+| default_auto_archive_duration?<sup>15</sup> | ?integer | The stored default [auto archive duration](/http-api/threads/#auto-archive-durations), which sanalyer does not apply to a new thread, or null to clear it |
 | default_thread_rate_limit_per_user?<sup>15</sup> | ?integer | The slowmode interval in seconds new threads inherit (0-21,600), or null to clear it |
 
-<sup>15</sup> Fluxer discards both fields from a caller other than a bot or a user session that declares `channel_threads`
+<sup>15</sup> sanalyer discards both fields from a caller other than a bot or a user session that declares `channel_threads`
 
 A forum channel also accepts every field of the [forum field table](/http-api/forums/#creating-and-modifying-a-forum). A media channel accepts every field of the [forum field table](/http-api/forums/#creating-and-modifying-a-forum) except `default_forum_layout`.
 
@@ -524,7 +524,7 @@ A parent that does not exist in the same guild returns 400 `INVALID_FORM_BODY` w
 
 Naming a category other than the current parent also checks capacity. A full category returns 400 `MAX_CATEGORY_CHANNELS` with the ceiling it reached, which is the deployment's [`max_channels_per_category`](/http-api/instance/#limit-keys) limit and defaults to 50.
 
-Fluxer accepts an overwrite mask as a decimal string or as a JSON integer. The decimal string holds at most 9223372036854775807, and a larger one returns 400 `INVALID_FORM_BODY` with the code `INTEGER_OUT_OF_INT64_RANGE`. The JSON integer holds at most 9007199254740991, and a number outside the safe integer range returns `INVALID_INTEGER_FORMAT`. Every bit outside the defined permission set is discarded.
+sanalyer accepts an overwrite mask as a decimal string or as a JSON integer. The decimal string holds at most 9223372036854775807, and a larger one returns 400 `INVALID_FORM_BODY` with the code `INTEGER_OUT_OF_INT64_RANGE`. The JSON integer holds at most 9007199254740991, and a number outside the safe integer range returns `INVALID_INTEGER_FORMAT`. Every bit outside the defined permission set is discarded.
 
 A non-null `rtc_region` names a region [List RTC regions](#list-rtc-regions) returns for this guild. Any other value returns 400 `INVALID_FORM_BODY` with the code `INVALID_OR_RESTRICTED_RTC_REGION` on the path `rtc_region`. A deployment that configures no voice topology validates no region and stores any accepted string.
 
@@ -552,7 +552,7 @@ Decoded icon bytes are at most the instance-configured `avatar_max_size` [limit]
 
 An `owner_id` naming an account that is not a current recipient returns 404 `UNKNOWN_USER`. A bot target returns 400 `CANNOT_TRANSFER_OWNERSHIP_TO_BOT`.
 
-Fluxer trims a stored nickname, and a value that is null or empty after trimming clears that one nickname. A `nicks` key that is neither a current recipient nor the caller returns 404 `UNKNOWN_USER`.
+sanalyer trims a stored nickname, and a value that is null or empty after trimming clears that one nickname. A `nicks` key that is neither a current recipient nor the caller returns 404 `UNKNOWN_USER`.
 
 A group marked for mature content accepts media the scanner flags as sensitive, like an age-restricted guild channel. Turning `nsfw` on while any recipient fails the age check returns 400 `GROUP_DM_MATURE_CONTENT_INELIGIBLE`, which does not say which recipient. A user who fails the age check cannot be added to a marked group, and the add returns the same 403 `MISSING_ACCESS` as a rejecting admission policy.
 
@@ -636,7 +636,7 @@ Deleting a guild channel destroys the channel record, every message in it, every
 
 ### JSON body
 
-The body is optional. Fluxer reads it only when `delete_messages` is set and no existing sudo proof satisfies the requirement.
+The body is optional. sanalyer reads it only when `delete_messages` is set and no existing sudo proof satisfies the requirement.
 
 <a id="sudo-verification-fields"></a>
 
@@ -673,9 +673,9 @@ Deleting a guild category first clears the `parent_id` of every child channel an
 
 Deleting a guild channel permanently removes its messages, attachments, invites and webhooks.
 
-Deleting a guild text, announcement, forum, or media channel also deletes every thread in it with its messages, attachments, and memberships. The deletion runs in the background after the response. Fluxer emits no [Thread Delete](/gateway/threads/#thread-delete) for those threads and writes no audit log entry for them. A client removes every thread whose `parent_id` is the channel when it receives [Channel Delete](/gateway/events/#channel-delete).
+Deleting a guild text, announcement, forum, or media channel also deletes every thread in it with its messages, attachments, and memberships. The deletion runs in the background after the response. sanalyer emits no [Thread Delete](/gateway/threads/#thread-delete) for those threads and writes no audit log entry for them. A client removes every thread whose `parent_id` is the channel when it receives [Channel Delete](/gateway/events/#channel-delete).
 
-Deleting an announcement channel also deletes every [channel follower webhook](/http-api/webhooks/#webhook-types) that follows it and turns each copy of its published messages into a deleted-source placeholder, both in the background after the response. Guild subscribers receive [Channel Delete](/gateway/events/#channel-delete), and the deletion appears in the audit log. When the deleted channel is the guild's system, rules or AFK channel, Fluxer clears that guild setting and emits [Guild Update](/gateway/events/#guild-update).
+Deleting an announcement channel also deletes every [channel follower webhook](/http-api/webhooks/#webhook-types) that follows it and turns each copy of its published messages into a deleted-source placeholder, both in the background after the response. Guild subscribers receive [Channel Delete](/gateway/events/#channel-delete), and the deletion appears in the audit log. When the deleted channel is the guild's system, rules or AFK channel, sanalyer clears that guild setting and emits [Guild Update](/gateway/events/#guild-update).
 
 Closing a direct message marks the channel closed for the caller alone and emits [Channel Delete](/gateway/events/#channel-delete) to that caller. The channel, its messages, and the other recipient's view are untouched.
 
@@ -703,12 +703,12 @@ Adds a user to a group direct message and returns 204 with an empty body. Emits 
 - The target's group direct message admission policy must allow the caller.
 - A solved [CAPTCHA](/topics/captcha/) challenge is required while the instance check is on.
 
-Fluxer evaluates the target's admission policy in this order.
+sanalyer evaluates the target's admission policy in this order.
 
 1. A target that has never stored settings admits every caller.
 2. The nobody setting rejects every caller, and the everyone setting admits every caller.
 3. The friends-only setting admits only a caller the target has as a friend.
-4. Otherwise Fluxer admits the caller through an existing friendship, then through a mutual friend when the friends-of-friends setting is enabled, and then through a mutual guild when the guild-members setting is enabled.
+4. Otherwise sanalyer admits the caller through an existing friendship, then through a mutual friend when the friends-of-friends setting is enabled, and then through a mutual guild when the guild-members setting is enabled.
 
 ### Path parameters
 
@@ -786,7 +786,7 @@ Removes a user from a group direct message and returns 204 with an empty body. E
 
 ### JSON body
 
-The optional body has the same [sudo verification fields](#sudo-verification-fields) as [Delete or leave channel](#delete-or-leave-channel). Fluxer reads it only when a self-removal sets `delete_messages` and the request has no existing sudo proof.
+The optional body has the same [sudo verification fields](#sudo-verification-fields) as [Delete or leave channel](#delete-or-leave-channel). sanalyer reads it only when a self-removal sets `delete_messages` and the request has no existing sudo proof.
 
 ### Response
 
@@ -869,7 +869,7 @@ A larger decimal string returns 400 `INVALID_FORM_BODY` with the code `INTEGER_O
 
 ### Side effects
 
-Fluxer emits [Channel Update](/gateway/events/#channel-update) to every session subscribed to the guild, including when the submitted overwrite exactly matches the stored one. When the channel is a category, every child whose overwrites exactly matched the category's previous values receives a copy of the category's new overwrites and its own Channel Update.
+sanalyer emits [Channel Update](/gateway/events/#channel-update) to every session subscribed to the guild, including when the submitted overwrite exactly matches the stored one. When the channel is a category, every child whose overwrites exactly matched the category's previous values receives a copy of the category's new overwrites and its own Channel Update.
 
 The operation records an overwrite create or update audit entry with the supplied reason. An unchanged overwrite records no audit entry.
 
@@ -910,7 +910,7 @@ The operation is idempotent, does not require `VIEW_CHANNEL`, and never returns 
 
 ### Side effects
 
-Fluxer emits [Channel Update](/gateway/events/#channel-update) to every session subscribed to the guild, including when the identifier names no existing overwrite. Removing an overwrite that exists also records an overwrite delete audit entry with the previous overwrite state and the supplied reason. An identifier that names no existing overwrite records no audit entry. When the target channel is a category, each child whose overwrites exactly matched the category's previous overwrites receives a copy of the category's new overwrites and its own Channel Update.
+sanalyer emits [Channel Update](/gateway/events/#channel-update) to every session subscribed to the guild, including when the identifier names no existing overwrite. Removing an overwrite that exists also records an overwrite delete audit entry with the previous overwrite state and the supplied reason. An identifier that names no existing overwrite records no audit entry. When the target channel is a category, each child whose overwrites exactly matched the category's previous overwrites receives a copy of the category's new overwrites and its own Channel Update.
 
 ### Rate limit
 
@@ -920,7 +920,7 @@ Fluxer emits [Channel Update](/gateway/events/#channel-update) to every session 
 
 <RouteHeader method="POST" path="/v1/channels/{channel_id}/followers" bot auditReason />
 
-Follows an announcement channel into a guild text channel and returns a [followed channel object](#followed-channel-object). Fluxer creates a [channel follower webhook](/http-api/webhooks/#webhook-types) in the target channel, and every message later [published](/http-api/messages/#crosspost-message) in the announcement channel is copied into the target through it. [Announcement channels](/topics/announcement-channels/) describes delivery.
+Follows an announcement channel into a guild text channel and returns a [followed channel object](#followed-channel-object). sanalyer creates a [channel follower webhook](/http-api/webhooks/#webhook-types) in the target channel, and every message later [published](/http-api/messages/#crosspost-message) in the announcement channel is copied into the target through it. Announcement channels describes delivery.
 
 ### Limitations
 
@@ -932,7 +932,7 @@ Follows an announcement channel into a guild text channel and returns a [followe
 
 `MANAGE_WEBHOOKS` is an [elevated permission](/http-api/permissions/#elevated-permissions). In a target guild whose [MFA level](/http-api/guilds/#mfa-levels) is elevated, a caller who is neither its owner nor enrolled in multi-factor authentication receives 400 [`TWO_FACTOR_REQUIRED`](/http-api/errors/).
 
-Fluxer resolves the age restriction and the content warning of both channels through the channel, then its parent category, and then its guild. An age-restricted announcement channel can only be followed into an age-restricted target. An announcement channel with a content warning can only be followed into a target that has a content warning or an age restriction.
+sanalyer resolves the age restriction and the content warning of both channels through the channel, then its parent category, and then its guild. An age-restricted announcement channel can only be followed into an age-restricted target. An announcement channel with a content warning can only be followed into a target that has a content warning or an age restriction.
 
 An announcement channel has no cap on its follows. The follower webhook takes one slot of the target's [`max_webhooks_per_channel`](/http-api/instance/#limit-keys) and `max_webhooks_per_guild` allowances, which default to 15 and 1000.
 
@@ -972,7 +972,7 @@ An announcement channel has no cap on its follows. The follower webhook takes on
 
 ### Side effects
 
-The follow creates a channel follower webhook in the target channel. Its name is the source guild name and the announcement channel name, as in `Fluxer #updates`, cut to 80 characters. When that name fails validation or the blocklist scan, Fluxer uses the channel name alone. The webhook avatar is a copy of the source guild icon at the time of the follow, or null when the source guild has no icon. It does not change when the source guild icon changes, and [Update webhook](/http-api/webhooks/#update-webhook) cannot replace it. A member who manages the target channel's webhooks can rename it later. Each copy uses the source guild icon at the time of delivery as its author avatar.
+The follow creates a channel follower webhook in the target channel. Its name is the source guild name and the announcement channel name, as in `sanalyer #updates`, cut to 80 characters. When that name fails validation or the blocklist scan, sanalyer uses the channel name alone. The webhook avatar is a copy of the source guild icon at the time of the follow, or null when the source guild has no icon. It does not change when the source guild icon changes, and [Update webhook](/http-api/webhooks/#update-webhook) cannot replace it. A member who manages the target channel's webhooks can rename it later. Each copy uses the source guild icon at the time of delivery as its author avatar.
 
 It emits [Webhooks Update](/gateway/events/#webhooks-update) for the target channel, records a `WEBHOOK_CREATE` audit log entry in the target guild with the supplied reason, and posts a `CHANNEL_FOLLOW_ADD` [system message](/http-api/messages/#message-types) in the target channel through [Message Create](/gateway/events/#message-create). The follow takes effect for messages published after it, and earlier messages are never copied.
 

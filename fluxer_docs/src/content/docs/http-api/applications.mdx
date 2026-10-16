@@ -12,7 +12,7 @@ An application is an OAuth2 client owned by one user account, and every bot acco
 
 Every route except [Get public application](#get-public-application) requires a credential. A user-only route rejects a bot token and an OAuth2 bearer with 403 `ACCESS_DENIED`.
 
-The sudo-gated routes read `X-Fluxer-Sudo-Mode-JWT`. A valid sudo token in that header, issued to the authenticated account, satisfies [sudo mode](/http-api/users/mfa/#sudo-mode) with no body proof. Fluxer returns the same token in the `X-Fluxer-Sudo-Mode-JWT` response header. Fluxer issues no token to an account holding neither a TOTP secret nor a registered WebAuthn credential, so that account proves sudo mode with `password` in the body.
+The sudo-gated routes read `X-Fluxer-Sudo-Mode-JWT`. A valid sudo token in that header, issued to the authenticated account, satisfies [sudo mode](/http-api/users/mfa/#sudo-mode) with no body proof. sanalyer returns the same token in the `X-Fluxer-Sudo-Mode-JWT` response header. sanalyer issues no token to an account holding neither a TOTP secret nor a registered WebAuthn credential, so that account proves sudo mode with `password` in the body.
 
 :::caution[Credentials are shown once]
 A client secret is returned only by [Create application](#create-application) and [Reset client secret](#reset-client-secret), and a [bot token](/authentication/#token-formats) only by [Create application](#create-application) and [Reset bot token](#reset-bot-token).
@@ -201,7 +201,7 @@ Returns every [application](#application-object) object the current user owns.
 | 200 | array[[application](#application-object) object] | The applications were returned |
 | 403 | [error response](/http-api/#error-response) | The credential is a bot or bearer token (`ACCESS_DENIED`) |
 
-The listing is unpaginated because one user can own at most 25 applications. No entry has a client secret or bot token. The built-in `Fluxer Admin` application belongs to the system account and never appears here.
+The listing is unpaginated because one user can own at most 25 applications. No entry has a client secret or bot token. The built-in `sanalyer Admin` application belongs to the system account and never appears here.
 
 ### Rate limit
 
@@ -293,7 +293,7 @@ An unclaimed account cannot create an application. An account is unclaimed while
 | --- | --- | --- |
 | X-Captcha-Token?<sup>1</sup> | string | The solved ALTCHA challenge, see [CAPTCHA handling](/topics/captcha/) |
 
-<sup>1</sup> A missing token returns 400 `CAPTCHA_REQUIRED` and a rejected token returns 400 `INVALID_CAPTCHA`, each with a new challenge. Fluxer skips verification when the check is off for the instance, when the account has the CAPTCHA exemption flag, or when the caller's email address is on an exempt domain
+<sup>1</sup> A missing token returns 400 `CAPTCHA_REQUIRED` and a rejected token returns 400 `INVALID_CAPTCHA`, each with a new challenge. sanalyer skips verification when the check is off for the instance, when the account has the CAPTCHA exemption flag, or when the caller's email address is on an exempt domain
 
 ### JSON body
 
@@ -325,11 +325,11 @@ An unclaimed account cannot create an application. An account is unclaimed while
 
 <sup>4</sup> `UNCLAIMED_ACCOUNT_CANNOT_CREATE_APPLICATIONS`
 
-Fluxer derives the bot username from the application name when that name yields an available tag, and otherwise assigns a random username. The resulting username and discriminator can both differ from the application name.
+sanalyer derives the bot username from the application name when that name yields an available tag, and otherwise assigns a random username. The resulting username and discriminator can both differ from the application name.
 
 ### Side effects
 
-Fluxer creates the application and the bot account together. The bot starts with no avatar, banner, biography, or global display name. No Gateway Dispatch is emitted.
+sanalyer creates the application and the bot account together. The bot starts with no avatar, banner, biography, or global display name. No Gateway Dispatch is emitted.
 
 ### Rate limit
 
@@ -435,13 +435,13 @@ Updates the bot account an application owns and returns the resulting [bot profi
 
 <sup>2</sup> Accepted only when it equals the bot's current discriminator. Any other value returns the field code `BOT_DISCRIMINATOR_CANNOT_BE_CHANGED`
 
-<sup>3</sup> The value can include a `data:...;base64,` prefix, which Fluxer strips before it measures the payload. The remaining base64 payload is bounded at 139810136 characters for both fields, the encoded length of a 104857600-byte image, and a longer value is rejected with the field code `BASE64_LENGTH_INVALID`. The decoded image must fit the resolved `avatar_max_size` [limit](/http-api/instance/#limit-keys), 10485760 bytes by default, or it is rejected with `IMAGE_SIZE_EXCEEDS_LIMIT`
+<sup>3</sup> The value can include a `data:...;base64,` prefix, which sanalyer strips before it measures the payload. The remaining base64 payload is bounded at 139810136 characters for both fields, the encoded length of a 104857600-byte image, and a longer value is rejected with the field code `BASE64_LENGTH_INVALID`. The decoded image must fit the resolved `avatar_max_size` [limit](/http-api/instance/#limit-keys), 10485760 bytes by default, or it is rejected with `IMAGE_SIZE_EXCEEDS_LIMIT`
 
 <sup>4</sup> Rejected with 403 `CONTENT_BLOCKED` when content moderation or the profile substring blocklist blocks the value
 
-<sup>5</sup> Fluxer reads only the [bot flags](#bot-flags) from the supplied bitfield and sets or clears each to match. It ignores every other bit
+<sup>5</sup> sanalyer reads only the [bot flags](#bot-flags) from the supplied bitfield and sets or clears each to match. It ignores every other bit
 
-Fluxer checks the decoded bytes of `avatar` and `banner` against the instance's avatar byte ceiling, which applies to both fields and defaults to 10 MiB. An image in a format the field does not accept, an animated image on a field that accepts no animation, and any animated AVIF return the field code `INVALID_IMAGE_FORMAT`. Pixel dimensions are never checked.
+sanalyer checks the decoded bytes of `avatar` and `banner` against the instance's avatar byte ceiling, which applies to both fields and defaults to 10 MiB. An image in a format the field does not accept, an animated image on a field that accepts no animation, and any animated AVIF return the field code `INVALID_IMAGE_FORMAT`. Pixel dimensions are never checked.
 
 ### Response
 
@@ -457,7 +457,7 @@ Fluxer checks the decoded bytes of `avatar` and `banner` against the instance's 
 | 403 | [error response](/http-api/#error-response) | The username or biography is blocked (`CONTENT_BLOCKED`) |
 | 404 | [error response](/http-api/#error-response) | The application does not exist (`UNKNOWN_APPLICATION`), or it has no bot account (`BOT_USER_NOT_FOUND`) |
 
-This operation always clears the bot's global display name, so a bot is always presented by its username. The write consumes the tag change allowance only when it changes the username or the discriminator. Fluxer reports an exhausted allowance as a body validation entry on `username` with the code `USERNAME_CHANGED_TOO_MANY_TIMES`, never as 429.
+This operation always clears the bot's global display name, so a bot is always presented by its username. The write consumes the tag change allowance only when it changes the username or the discriminator. sanalyer reports an exhausted allowance as a body validation entry on `username` with the code `USERNAME_CHANGED_TOO_MANY_TIMES`, never as 429.
 
 :::note[Only null clears a stored value]
 An omitted `avatar`, `banner`, or `bio` leaves the stored value untouched. Sending `{"bio": null}` clears the biography, and sending `{}` changes nothing except the global display name.
@@ -465,7 +465,7 @@ An omitted `avatar`, `banner`, or `bio` leaves the stored value untouched. Sendi
 
 ### Side effects
 
-Fluxer applies the supplied profile fields to the bot account. Replaced avatar and banner assets stop appearing after the update. A username change that alters more than letter case also replaces the discriminator with a random free one for the new username. The operation emits a [User Update](/gateway/events/#user-update) Gateway Dispatch to the bot account's own sessions.
+sanalyer applies the supplied profile fields to the bot account. Replaced avatar and banner assets stop appearing after the update. A username change that alters more than letter case also replaces the discriminator with a random free one for the new username. The operation emits a [User Update](/gateway/events/#user-update) Gateway Dispatch to the bot account's own sessions.
 
 ### Rate limit
 
@@ -505,7 +505,7 @@ A running bot reconnects only after its operator installs the returned token.
 
 ### Side effects
 
-Fluxer stores the new token and ends every live main Gateway session the bot account holds. The bot's guild memberships, group direct message memberships, and OAuth2 grants are unchanged, and no resource Dispatch is emitted.
+sanalyer stores the new token and ends every live main Gateway session the bot account holds. The bot's guild memberships, group direct message memberships, and OAuth2 grants are unchanged, and no resource Dispatch is emitted.
 
 ### Rate limit
 

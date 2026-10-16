@@ -8,7 +8,7 @@ import RouteHeader from '@/components/RouteHeader.astro';
 
 Recent mentions and saved messages are private lists that only the account owning them can read. Further routes delete the messages the caller authored, one filtered and immediate, the other unfiltered and delayed by a day. Data harvests are on [Data harvests](/http-api/users/data-harvest/).
 
-These routes are user-only. Fluxer rejects a bot or OAuth2 bearer credential with 403 `ACCESS_DENIED`.
+These routes are user-only. sanalyer rejects a bot or OAuth2 bearer credential with 403 `ACCESS_DENIED`.
 
 Every route except [Delete current user's messages](#delete-current-users-messages) reaches the main Gateway, and a Gateway failure returns 502 `BAD_GATEWAY`, 503 `SERVICE_UNAVAILABLE`, or 504 `GATEWAY_TIMEOUT`. [Save message](#save-message) resolves the channel before it writes, so a failure there stores nothing. The request still returns 204 when a [Saved Message Create](/gateway/events/#saved-message-create), [Saved Message Delete](/gateway/events/#saved-message-delete), or [Recent Mention Delete](/gateway/events/#recent-mention-delete) Dispatch fails to publish after the write.
 
@@ -20,7 +20,7 @@ Every route except [Delete current user's messages](#delete-current-users-messag
 
 A saved entry is a private bookmark pairing one message with the channel it was saved from. Saving a message notifies nobody, including its author.
 
-The entry stores no copy of the message. Fluxer resolves the message against current permissions on every read, so one entry can have a message on one read and none on the next.
+The entry stores no copy of the message. sanalyer resolves the message against current permissions on every read, so one entry can have a message on one read and none on the next.
 
 ### Structure
 
@@ -47,7 +47,7 @@ The entry stores no copy of the message. Fluxer resolves the message against cur
 
 <sup>1</sup> Reported when resolving the channel fails with `MISSING_PERMISSIONS`, `UNKNOWN_CHANNEL`, `UNKNOWN_GUILD`, `ACCESS_DENIED`, or `NSFW_CONTENT_AGE_RESTRICTED`. Also reported when the channel resolves and a stored message needs `READ_MESSAGE_HISTORY` the caller does not hold.
 
-An entry saved from a thread, a forum channel, or a media channel is omitted for a user session that does not declare the [`channel_threads` client capability](/http-api/threads/#client-capability). Fluxer reads up to three further batches of entries to replace it.
+An entry saved from a thread, a forum channel, or a media channel is omitted for a user session that does not declare the [`channel_threads` client capability](/http-api/threads/#client-capability). sanalyer reads up to three further batches of entries to replace it.
 
 ## Bulk message deletion scopes
 
@@ -71,9 +71,9 @@ An entry saved from a thread, a forum channel, or a media channel is omitted for
 
 Lists the caller's recent mention history. Returns an array of [message](/http-api/messages/#message-object) objects the caller can still read, in descending message ID order.
 
-Fluxer resolves each retained entry against current permissions. A message that has been deleted, or whose channel the caller can no longer reach, other than a thread the caller cannot view, is omitted without being removed from history. The filters and `limit` apply before that resolution, so a full page can return fewer messages than `limit`.
+sanalyer resolves each retained entry against current permissions. A message that has been deleted, or whose channel the caller can no longer reach, other than a thread the caller cannot view, is omitted without being removed from history. The filters and `limit` apply before that resolution, so a full page can return fewer messages than `limit`.
 
-An entry in a thread, a forum channel, or a media channel is omitted for a user session that does not declare `channel_threads`. Fluxer reads up to three further batches of history to replace it.
+An entry in a thread, a forum channel, or a media channel is omitted for a user session that does not declare `channel_threads`. sanalyer reads up to three further batches of history to replace it.
 
 ### Query parameters
 
@@ -96,18 +96,18 @@ An entry in a thread, a forum channel, or a media channel is omitted for a user 
 <sup>5</sup> Every recorded entry has a guild, so setting this to false always returns an empty array
 
 :::note[Only guild channel mentions are recorded]
-A direct message never produces an entry. Fluxer records nothing for the message author, for a bot account, or for a member who cannot view the channel. In a thread, an `@everyone` or `@here` mention counts only for a [thread member](/http-api/thread-members/).
+A direct message never produces an entry. sanalyer records nothing for the message author, for a bot account, or for a member who cannot view the channel. In a thread, an `@everyone` or `@here` mention counts only for a [thread member](/http-api/thread-members/).
 :::
 
 The response has no cursor metadata, so `before` and `limit` are the only pagination controls.
 
-Fluxer drops a direct mention at message creation when the mentioned account has blocked the author, so it never reaches the history. An `@everyone` or `@here` mention is not recorded while `suppress_everyone` is enabled for the guild, and a role mention is not recorded while `suppress_roles` is enabled. A message that also has a direct mention is still recorded. Changing those [guild notification settings](/http-api/users/settings/#user-guild-settings-object) later does not retroactively add or remove history.
+sanalyer drops a direct mention at message creation when the mentioned account has blocked the author, so it never reaches the history. An `@everyone` or `@here` mention is not recorded while `suppress_everyone` is enabled for the guild, and a role mention is not recorded while `suppress_roles` is enabled. A message that also has a direct mention is still recorded. Changing those [guild notification settings](/http-api/users/settings/#user-guild-settings-object) later does not retroactively add or remove history.
 
 :::caution[One bad entry can fail the whole listing]
-Fluxer omits an entry whose channel the caller cannot reach. An entry in a thread the caller can no longer view returns 403 `MISSING_ACCESS` for the whole request. Narrow the window with `before` to page around it.
+sanalyer omits an entry whose channel the caller cannot reach. An entry in a thread the caller can no longer view returns 403 `MISSING_ACCESS` for the whole request. Narrow the window with `before` to page around it.
 :::
 
-Fluxer also omits an entry that needs age verification and one whose membership state does not resolve. [Thread permissions](/http-api/threads/#thread-permissions) states when a thread stops being viewable.
+sanalyer also omits an entry that needs age verification and one whose membership state does not resolve. [Thread permissions](/http-api/threads/#thread-permissions) states when a thread stops being viewable.
 
 ### Response
 
@@ -146,7 +146,7 @@ The mention count on the entry's channel does not change. [Read states](/http-ap
 
 ### Side effects
 
-Fluxer looks up every supplied ID first and deletes only the entries that exist. [Recent Mention Delete](/gateway/events/#recent-mention-delete) reaches the caller's own sessions once for every entry found, so a request naming only unknown IDs writes nothing.
+sanalyer looks up every supplied ID first and deletes only the entries that exist. [Recent Mention Delete](/gateway/events/#recent-mention-delete) reaches the caller's own sessions once for every entry found, so a request naming only unknown IDs writes nothing.
 
 ### Rate limit
 
@@ -198,7 +198,7 @@ The response is a bare array with no cursor metadata, so `before` and `limit` ar
 <sup>2</sup> Applied to the stored entries before each one is resolved
 
 :::caution[Reading the collection deletes entries]
-Fluxer permanently deletes an entry whenever its message no longer exists. An entry whose message the caller cannot read is kept and reported as `missing_permissions`.
+sanalyer permanently deletes an entry whenever its message no longer exists. An entry whose message the caller cannot read is kept and reported as `missing_permissions`.
 :::
 
 A guild configuring [message_history_cutoff](/http-api/guilds/#guild-object) still serves a message posted at or after the cutoff to a member without `READ_MESSAGE_HISTORY`, so the entry stays `available`. A message posted before the cutoff is reported as `missing_permissions`.
@@ -212,7 +212,7 @@ A guild configuring [message_history_cutoff](/http-api/guilds/#guild-object) sti
 
 ### Side effects
 
-When this read deletes an entry whose message no longer exists, Fluxer emits no [Saved Message Delete](/gateway/events/#saved-message-delete).
+When this read deletes an entry whose message no longer exists, sanalyer emits no [Saved Message Delete](/gateway/events/#saved-message-delete).
 
 ### Rate limit
 
@@ -237,9 +237,9 @@ The caller needs access to the channel and to the message.
 
 ### Collection limit
 
-An account holds at most the instance-configured `max_bookmarks` [limit](/http-api/instance/#limit-keys) entries. Fluxer resolves the account's effective value on every save, and the default is 50. Reaching the ceiling fails with 400 `MAX_BOOKMARKS`, whose body has `max_bookmarks` reporting the ceiling.
+An account holds at most the instance-configured `max_bookmarks` [limit](/http-api/instance/#limit-keys) entries. sanalyer resolves the account's effective value on every save, and the default is 50. Reaching the ceiling fails with 400 `MAX_BOOKMARKS`, whose body has `max_bookmarks` reporting the ceiling.
 
-The check runs before Fluxer touches the channel or the message, so re-saving an already stored message is refused at the ceiling too.
+The check runs before sanalyer touches the channel or the message, so re-saving an already stored message is refused at the ceiling too.
 
 ### Response
 
@@ -281,7 +281,7 @@ No current access to the channel is required.
 
 ### Side effects
 
-Fluxer always issues the delete, and [Saved Message Delete](/gateway/events/#saved-message-delete) reaches the caller's own sessions on every accepted request, including one naming a message the account never saved. The saved entry is removed and the message stays in its channel.
+sanalyer always issues the delete, and [Saved Message Delete](/gateway/events/#saved-message-delete) reaches the caller's own sessions on every accepted request, including one naming a message the account never saved. The saved entry is removed and the message stays in its channel.
 
 ### Rate limit
 

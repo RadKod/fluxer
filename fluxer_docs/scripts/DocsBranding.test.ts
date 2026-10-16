@@ -18,7 +18,7 @@ const names = ['FLUXER_DOCS_PRODUCT_NAME', 'FLUXER_BASE_DOMAIN', 'FLUXER_PUBLIC_
 const previous = names.map((name) => process.env[name]);
 before(() => {
 	process.env.FLUXER_DOCS_PRODUCT_NAME = 'sanalyer';
-	process.env.FLUXER_BASE_DOMAIN = 'micup.gg';
+	process.env.FLUXER_BASE_DOMAIN = 'sanalyer.com';
 	process.env.FLUXER_PUBLIC_SCHEME = 'https';
 	process.env.FLUXER_PUBLIC_PORT = '443';
 });
@@ -64,7 +64,7 @@ test('prose and endpoint examples change without changing wire names or quoted e
 	assert.equal((tree.children[0] as {children: Array<{value: string}>}).children[1].value, 'Fluxer error');
 	assert.equal(
 		(tree.children[1] as {value: string}).value,
-		'{"api":"https://micup.gg/api/v1","public":"https://micup.gg/api","gateway":"wss://micup.gg/gateway","media":"https://micup.gg/media/a","cdn":"https://micup.gg/a","browser":"Fluxer Client","error":"Fluxer error"}',
+		'{"api":"https://sanalyer.com/api/v1","public":"https://sanalyer.com/api","gateway":"wss://sanalyer.com/gateway","media":"https://sanalyer.com/media/a","cdn":"https://sanalyer.com/a","browser":"Fluxer Client","error":"Fluxer error"}',
 	);
 });
 
@@ -89,23 +89,14 @@ test('upstream operator defaults, origins and instructions remain attributed to 
 	assert.match(JSON.stringify(tree), /https:\/\/fluxer.dev/);
 });
 
-test('downloads become unavailable rather than an invented sanalyer mirror', () => {
-	const tree: Root = {
-		type: 'root',
-		children: [{type: 'code', value: 'curl https://pkgs.fluxer.com/deb/fluxer.sources'}],
-	};
-	transformDocsContent(tree, 'downloads/linux-repositories.md');
-	assert.match(JSON.stringify(tree), /no verified sanalyer download origin/i);
-	assert.doesNotMatch(JSON.stringify(tree), /pkgs.fluxer|curl|pkgs.micup/);
-	assert.match(
-		String(
-			brandDocsFrontmatter(
-				{title: 'Linux repositories', description: 'Fluxer publishes repos.'},
-				'downloads/linux-repositories.md',
-			).description,
-		),
-		/unavailable/i,
-	);
+test('sanalyer leaves the rewritten downloads page to the content and points at the sanalyer download page', async () => {
+	const tree: Root = {type: 'root', children: [{type: 'paragraph', children: [{type: 'text', value: 'Packages'}]}]};
+	transformDocsContent(tree, 'downloads/overview.md');
+	assert.match(JSON.stringify(tree), /Packages/);
+	const rendered = await renderDocsPage('downloads/overview');
+	assert.match(rendered, /https:\/\/sanalyer\.com\/indir/);
+	assert.match(rendered, /https:\/\/dl\.sanalyer\.com/);
+	assert.doesNotMatch(rendered, /pkgs\.fluxer|unavailable/);
 });
 
 test('default Fluxer content and metadata remain unchanged', () => {
@@ -166,9 +157,10 @@ test('the real Markdown homepage renders sanalyer discovery with upstream attrib
 	const source = (await readFile(fileURL, 'utf8')).replace(/^---[\s\S]*?---\r?\n/u, '');
 	const processor = await createMarkdownProcessor({remarkPlugins: [remarkDocsBranding], syntaxHighlight: false});
 	const rendered = await processor.render(source, {fileURL});
-	assert.match(rendered.code, /sanalyer is a self-hostable chat platform/);
-	assert.match(rendered.code, /https:\/\/micup.gg\/\.well-known\/fluxer/);
-	assert.match(rendered.code, /upstream Fluxer source/);
+	assert.match(rendered.code, /sanalyer is the chat service/);
+	assert.match(rendered.code, /https:\/\/sanalyer.com\/\.well-known\/fluxer/);
+	assert.match(rendered.code, /github\.com\/fluxerapp\/fluxer/);
+	assert.doesNotMatch(rendered.code, /Fluxer/);
 	assert.doesNotMatch(rendered.code, /https:\/\/fluxer.app/);
 });
 
@@ -177,11 +169,11 @@ test('the real MDX instance endpoint example compiles with the single-domain pro
 	const source = (await readFile(file, 'utf8')).replace(/^---[\s\S]*?---\r?\n/u, '');
 	const rendered = String(await compile({value: source, path: file}, {remarkPlugins: [remarkDocsBranding]}));
 	for (const endpoint of [
-		'https://micup.gg/api',
-		'wss://micup.gg/gateway',
-		'https://micup.gg/media',
-		'https://micup.gg/marketing',
-		'https://micup.gg/admin',
+		'https://sanalyer.com/api',
+		'wss://sanalyer.com/gateway',
+		'https://sanalyer.com/media',
+		'https://sanalyer.com/marketing',
+		'https://sanalyer.com/admin',
 	]) {
 		assert.ok(rendered.includes(endpoint), endpoint);
 	}

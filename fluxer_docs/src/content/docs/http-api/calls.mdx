@@ -32,7 +32,7 @@ The operations below name another recipient. [Ring call recipients](#ring-call-r
 
 ## Call eligibility object
 
-Fluxer computes eligibility for one caller against one private channel at the moment of the read. No Gateway event has the result, and neither field reports whether a call is already running in the channel.
+sanalyer computes eligibility for one caller against one private channel at the moment of the read. No Gateway event has the result, and neither field reports whether a call is already running in the channel.
 
 ### Structure
 
@@ -68,11 +68,11 @@ Returns the [call eligibility object](#call-eligibility-object) for a direct mes
 
 <sup>1</sup> A guild channel ID is rejected with 400 `INVALID_CHANNEL_TYPE_FOR_CALL`
 
-A direct message reports `ringable` as false when the other recipient's incoming call policy excludes the caller. That policy is the `incoming_call_flags` bitfield of the recipient's [user settings](/http-api/users/settings/). Fluxer checks the policy in this order. The nobody flag rejects every caller. The friends-only flag admits only a friend. Under any other policy a friend is always admitted. A caller who shares a friend with the recipient is admitted when the friends-of-friends flag is set. A caller who shares a guild with the recipient is admitted when the guild-members flag is set. The everyone flag admits every remaining caller. Any other caller is rejected. The silent-everyone flag reports `silent` as true for a caller admitted by the mutual friend, mutual guild, or everyone branch.
+A direct message reports `ringable` as false when the other recipient's incoming call policy excludes the caller. That policy is the `incoming_call_flags` bitfield of the recipient's [user settings](/http-api/users/settings/). sanalyer checks the policy in this order. The nobody flag rejects every caller. The friends-only flag admits only a friend. Under any other policy a friend is always admitted. A caller who shares a friend with the recipient is admitted when the friends-of-friends flag is set. A caller who shares a guild with the recipient is admitted when the guild-members flag is set. The everyone flag admits every remaining caller. Any other caller is rejected. The silent-everyone flag reports `silent` as true for a caller admitted by the mutual friend, mutual guild, or everyone branch.
 
 For a recipient who has never stored settings, `ringable` is true and `silent` is false. A direct message that has lost its other recipient reports the same pair. In a group direct message `ringable` is true unless the caller is already connected to its call, and `silent` is always false.
 
-Fluxer evaluates the same policy again on a later [Ring call recipients](#ring-call-recipients) request.
+sanalyer evaluates the same policy again on a later [Ring call recipients](#ring-call-recipients) request.
 
 ### Response
 
@@ -122,7 +122,7 @@ Supplying `region` on a [peer-to-peer](/gateway/events/#peer-to-peer-voice) call
 
 Any other unknown or inaccessible `region` returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_OR_RESTRICTED_RTC_REGION` on the `region` field.
 
-The body can be omitted. Fluxer treats a missing, empty, or whitespace-only body as an empty object, which requests no change. A body that is not valid JSON returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_FORMAT` at the `body` path.
+The body can be omitted. sanalyer treats a missing, empty, or whitespace-only body as an empty object, which requests no change. A body that is not valid JSON returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_FORMAT` at the `body` path.
 
 A region identifier is the `id` of an [RTC region object](/http-api/channels/#rtc-region-object). No route returns the regions a call accepts, and [List RTC regions](/http-api/channels/#list-rtc-regions) answers only for a guild voice channel.
 
@@ -143,7 +143,7 @@ A region whose servers are all inactive or all closed to the caller is unselecta
 
 ### Side effects
 
-Supplying `region` records the new region. When the published call state changes, Fluxer emits [Call Update](/gateway/events/#call-update) to every recipient the call was created with, then issues each connected participant a fresh [Voice Server Update](/gateway/events/#voice-server-update) for the newly selected region. Selecting the region the call already holds emits neither. Omitting `region` changes nothing and emits no Dispatch.
+Supplying `region` records the new region. When the published call state changes, sanalyer emits [Call Update](/gateway/events/#call-update) to every recipient the call was created with, then issues each connected participant a fresh [Voice Server Update](/gateway/events/#voice-server-update) for the newly selected region. Selecting the region the call already holds emits neither. Omitting `region` changes nothing and emits no Dispatch.
 
 ### Rate limit
 
@@ -179,11 +179,11 @@ Starts a direct message or group direct message call, or adds ringing recipients
 
 <sup>2</sup> Validated for length and then discarded, so a new call is always created with automatic routing
 
-The body can be omitted. Fluxer treats a missing, empty, or whitespace-only body as an empty object, which is the same as omitting `recipients`. A body that is not valid JSON returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_FORMAT` at the `body` path.
+The body can be omitted. sanalyer treats a missing, empty, or whitespace-only body as an empty object, which is the same as omitting `recipients`. A body that is not valid JSON returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_FORMAT` at the `body` path.
 
 An identifier that names a non-recipient or the caller itself returns 400 `INVALID_FORM_BODY` with the validation code `USER_NOT_IN_CHANNEL`. A repeated identifier is accepted and rings that recipient once.
 
-A named recipient is only rung when the incoming call policy described by [Get call eligibility](#get-call-eligibility) admits the caller audibly. A recipient admitted only under the silent-everyone flag is notified without being rung. In a direct message Fluxer ignores the named set when choosing whom to ring and always evaluates the policy against the other recipient.
+A named recipient is only rung when the incoming call policy described by [Get call eligibility](#get-call-eligibility) admits the caller audibly. A recipient admitted only under the silent-everyone flag is notified without being rung. In a direct message sanalyer ignores the named set when choosing whom to ring and always evaluates the policy against the other recipient.
 
 ### Response
 
@@ -204,7 +204,7 @@ The private channel reopens for the caller and notified recipients. An account w
 
 A new call emits [Call Create](/gateway/events/#call-create) with its ringing set and automatic region, followed by a call system message through [Message Create](/gateway/events/#message-create). The message is read for the caller and increments the unread mention count for other non-bot recipients who have not blocked the caller.
 
-When a call already exists, Fluxer instead extends the ringing set and emits [Call Update](/gateway/events/#call-update) when the set grows. A recipient who is already connected to the call is never added to the ringing set.
+When a call already exists, sanalyer instead extends the ringing set and emits [Call Update](/gateway/events/#call-update) when the set grows. A recipient who is already connected to the call is never added to the ringing set.
 
 Ringing lasts 30 seconds. Its expiry emits [Call Update](/gateway/events/#call-update). If nobody has joined and no recipient remains ringing, the call ends with [Call Delete](/gateway/events/#call-delete).
 
@@ -247,7 +247,7 @@ Removes recipients from the ringing set of an active direct message or group dir
 
 <sup>2</sup> Validated for length and then discarded by this operation
 
-The body can be omitted. Fluxer treats a missing, empty, or whitespace-only body as an empty object, which stops ringing the caller alone. A body that is not valid JSON returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_FORMAT` at the `body` path. An identifier that is not currently ringing is accepted and changes nothing.
+The body can be omitted. sanalyer treats a missing, empty, or whitespace-only body as an empty object, which stops ringing the caller alone. A body that is not valid JSON returns 400 `INVALID_FORM_BODY` with the validation code `INVALID_FORMAT` at the `body` path. An identifier that is not currently ringing is accepted and changes nothing.
 
 ### Response
 
@@ -289,7 +289,7 @@ A participant leaves by sending [Voice State Update](/gateway/commands/#voice-st
 | --- | --- | --- |
 | 204 | empty | Request was accepted |
 
-A call ends the moment its last connected participant leaves, whether or not a recipient is still ringing. Fluxer publishes [Call Delete](/gateway/events/#call-delete) at that moment. A call that no participant ever joined ends instead when its last ringing entry expires. A call whose ringing set was emptied by [Stop ringing call recipients](#stop-ringing-call-recipients) ends on the Gateway's 120 second idle timer.
+A call ends the moment its last connected participant leaves, whether or not a recipient is still ringing. sanalyer publishes [Call Delete](/gateway/events/#call-delete) at that moment. A call that no participant ever joined ends instead when its last ringing entry expires. A call whose ringing set was emptied by [Stop ringing call recipients](#stop-ringing-call-recipients) ends on the Gateway's 120 second idle timer.
 
 ### Rate limit
 

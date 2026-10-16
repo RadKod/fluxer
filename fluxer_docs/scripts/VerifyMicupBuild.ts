@@ -27,7 +27,7 @@ const attributes = (html: string, name: string): Array<string> =>
 	[...html.matchAll(new RegExp(`\\s${name}=["']([^"']*)["']`, 'gi'))].map((match) => decode(match[1]));
 function localUrl(value: string, parent: string): URL | null {
 	const url = new URL(value, parent);
-	if (url.origin === 'https://micup.gg' && url.pathname.startsWith('/docs/')) {
+	if (url.origin === 'https://sanalyer.com' && url.pathname.startsWith('/docs/')) {
 		url.protocol = base.protocol;
 		url.host = base.host;
 	}
@@ -120,7 +120,7 @@ for (let start = 0; start < assetList.length; start += 8) {
 for (const path of ['', 'bots/hizli-baslangic/']) {
 	const html = pages.get(new URL(path, base).href) ?? '';
 	if (!/<title>[^<]*sanalyer[^<]*<\/title>/i.test(html)) errors.push(`Missing sanalyer title: ${path || 'homepage'}`);
-	if (!html.includes('https://micup.gg/.well-known/fluxer'))
+	if (!html.includes('https://sanalyer.com/.well-known/fluxer'))
 		errors.push(`Missing sanalyer discovery: ${path || 'homepage'}`);
 }
 const example = pages.get(new URL('bots/hizli-baslangic/', base).href) ?? '';
@@ -128,7 +128,7 @@ for (const expected of ['api_public', '/v1/channels/', 'Authorization', 'Bot']) 
 	if (!example.includes(expected)) errors.push(`Missing bot example detail: ${expected}`);
 }
 const discovery = pages.get(new URL('http-api/instance/', base).href) ?? '';
-for (const endpoint of ['https://micup.gg/api', 'wss://micup.gg/gateway', 'https://micup.gg/media']) {
+for (const endpoint of ['https://sanalyer.com/api', 'wss://sanalyer.com/gateway', 'https://sanalyer.com/media']) {
 	if (!discovery.includes(endpoint)) errors.push(`Missing sanalyer endpoint mapping: ${endpoint}`);
 }
 console.log(

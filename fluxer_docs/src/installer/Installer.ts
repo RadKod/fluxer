@@ -3,6 +3,7 @@
 import {installerChecksumLine, installerDigest} from '@/installer/InstallerDigest';
 import powershellInstallerSource from '@/installer/install.ps1?raw';
 import shellInstallerSource from '@/installer/install.sh?raw';
+import {docsProductName} from '@/server/DocsConfig';
 
 const CONTENT_TYPE = 'text/plain; charset=utf-8';
 const CACHE_CONTROL = 'no-store';
@@ -30,12 +31,17 @@ function installerScript(name: string, source: string): InstallerScript {
 	return {name, source, digest: installerDigest(source), checksumLine: installerChecksumLine(name, source)};
 }
 
+// sanalyer: the upstream self-hosting installer is not offered under a branded build (the operator guide is a draft).
+function withheld(): Response | null {
+	return docsProductName() === 'Fluxer' ? null : new Response(null, {status: 404});
+}
+
 export function installerScriptResponse(script: InstallerScript): Response {
-	return plainTextResponse(script.source, script.digest);
+	return withheld() ?? plainTextResponse(script.source, script.digest);
 }
 
 export function installerChecksumResponse(script: InstallerScript): Response {
-	return plainTextResponse(script.checksumLine, installerDigest(script.checksumLine));
+	return withheld() ?? plainTextResponse(script.checksumLine, installerDigest(script.checksumLine));
 }
 
 export const shellInstaller = installerScript('install.sh', shellInstallerSource);

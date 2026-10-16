@@ -22,7 +22,7 @@ A 500 response can arrive after the configuration has changed. Read it back befo
 
 [LiveKit](https://livekit.io) is the media transport. Each voice server record names one LiveKit deployment and the API key pair the instance authenticates to it with.
 
-`endpoint` is that deployment's signalling URL, a `ws://` or `wss://` address. Fluxer hands it to the placed session verbatim as the `endpoint` of [Voice Server Update](/gateway/events/#voice-server-update), and the client opens its media connection there. The API rewrites the same value to `http://` or `https://` for its own room service calls, and it keeps any path prefix.
+`endpoint` is that deployment's signalling URL, a `ws://` or `wss://` address. sanalyer hands it to the placed session verbatim as the `endpoint` of [Voice Server Update](/gateway/events/#voice-server-update), and the client opens its media connection there. The API rewrites the same value to `http://` or `https://` for its own room service calls, and it keeps any path prefix.
 
 `api_key` and `api_secret` mint the 600-second grant the placed session presents, as [Voice](/voice/#media-transport) describes. The grant admits the session to exactly one room and has the track sources the member's permissions allow.
 
@@ -32,7 +32,7 @@ A participant is one voice connection, identified as `user_{user_id}_{connection
 
 ## Placement eligibility
 
-The stored fields below decide whether a region or a server can be chosen for one placement. Fluxer evaluates them identically on both records, and it also skips a server whenever `is_active` is false. It resolves a region first, then a server inside it, so a caller admitted to a region whose servers all refuse it cannot use that region.
+The stored fields below decide whether a region or a server can be chosen for one placement. sanalyer evaluates them identically on both records, and it also skips a server whenever `is_active` is false. It resolves a region first, then a server inside it, so a caller admitted to a region whose servers all refuse it cannot use that region.
 
 `allowed_user_ids` is evaluated first and on its own. A non-empty list admits only the accounts it names and refuses every other caller whatever the remaining fields say. An empty list gates nothing.
 
@@ -123,7 +123,7 @@ A server can also have a soft connection limit, described under [soft connection
 
 <sup>2</sup> The two coordinates are set and cleared together, and a server with only one of them cannot be stored
 
-<sup>3</sup> Fluxer skips an inactive server when it resolves a new placement. Fluxer can still mute, deafen, change the permissions of, or disconnect a participant already on it
+<sup>3</sup> sanalyer skips an inactive server when it resolves a new placement. sanalyer can still mute, deafen, change the permissions of, or disconnect a participant already on it
 
 <sup>4</sup> Duplicate entries collapse and the returned order is not the submitted order
 
@@ -378,7 +378,7 @@ There is no confirmation step or recovery operation. Save the server configurati
 
 ### Side effects
 
-After each API node reloads its topology, Fluxer can no longer mute, deafen, change the permissions of, or remove a participant on a deleted server. Existing sessions are not disconnected by the deletion itself.
+After each API node reloads its topology, sanalyer can no longer mute, deafen, change the permissions of, or remove a participant on a deleted server. Existing sessions are not disconnected by the deletion itself.
 
 One [Admin audit entry](/admin-api/#admin-audit-entry-object) with the action `delete_voice_region` and the target type `voice_region` records the region identifier and its name in metadata. No `delete_voice_server` entry is written for the servers deleted with the region.
 
@@ -612,7 +612,7 @@ Deletes a voice server. Requires `voice:server:delete`.
 
 ### Side effects
 
-Each node reloads its topology after the removal, and Fluxer can then no longer mute, deafen, change the permissions of, or remove a participant still on that server. Sessions already placed on the server are not disconnected by the deletion itself. The stored credentials are removed with the record and are not recoverable.
+Each node reloads its topology after the removal, and sanalyer can then no longer mute, deafen, change the permissions of, or remove a participant still on that server. Sessions already placed on the server are not disconnected by the deletion itself. The stored credentials are removed with the record and are not recoverable.
 
 One [Admin audit entry](/admin-api/#admin-audit-entry-object) with the action `delete_voice_server` and the target type `voice_server` records the region identifier, the server identifier, and the endpoint the server held in metadata.
 

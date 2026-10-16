@@ -6,7 +6,7 @@ description: User objects, public profiles, account tags, and the settings recor
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A user is a Fluxer account. Another account sees the [partial user object](#partial-user-object), and the owner sees the [user object](#user-object). Account mutation is on [Current user](/http-api/users/current-user/).
+A user is a sanalyer account. Another account sees the [partial user object](#partial-user-object), and the owner sees the [user object](#user-object). Account mutation is on [Current user](/http-api/users/current-user/).
 
 Every route on this page takes a user session token or a bot token. An OAuth2 bearer credential is rejected with 403 `ACCESS_DENIED`.
 
@@ -34,7 +34,7 @@ The public account representation embedded by messages, relationships, guild mem
 | avatar<sup>1</sup> | ?string | The image hash of the account avatar, or null when none is set |
 | avatar_color | ?integer | The packed 24-bit RGB colour derived from the stored avatar, or null |
 | bot? | boolean | Whether the account is a bot, omitted when false |
-| system? | boolean | Whether the account is a Fluxer system account, omitted when false |
+| system? | boolean | Whether the account is a sanalyer system account, omitted when false |
 | flags | integer | [Public user flags](#public-user-flags) |
 | mention_flags? | integer | [Reply mention preference](#reply-mention-preferences), omitted when the account has no preference |
 | avatar_decoration_data | ?[cosmetic asset data](/http-api/cosmetics/#cosmetic-asset-data-object) object | The avatar decoration the account wears, or null when none |
@@ -153,7 +153,7 @@ The private representation of the current account, returned by [Get current user
 | avatar<sup>1</sup> | ?string | The image hash of the account avatar, or null when none is set |
 | avatar_color | ?integer | The packed 24-bit RGB colour derived from the stored avatar, or null |
 | bot? | boolean | Whether the account is a bot, omitted when false |
-| system? | boolean | Whether the account is a Fluxer system account, omitted when false |
+| system? | boolean | Whether the account is a sanalyer system account, omitted when false |
 | flags | integer | [Public user flags](#public-user-flags) |
 | mention_flags? | integer | [Reply mention preference](#reply-mention-preferences), omitted when the account has no preference |
 | avatar_decoration_data | ?[cosmetic asset data](/http-api/cosmetics/#cosmetic-asset-data-object) object | The avatar decoration the account wears, or null when none |
@@ -225,11 +225,11 @@ The private representation of the current account, returned by [Get current user
 
 <sup>9</sup> The value is forced to `0` and `premium_since` is forced to `null` while premium entitlements are not active
 
-<sup>10</sup> `premium_until` is the later of the subscription end and any stacked gift extension. Fluxer reports it even when premium entitlements are no longer active
+<sup>10</sup> `premium_until` is the later of the subscription end and any stacked gift extension. sanalyer reports it even when premium entitlements are no longer active
 
 <sup>11</sup> After `premium_until` passes, premium entitlements stay active until this time. While the value is null, they stay active for 3 days after `premium_until`
 
-<sup>12</sup> The flag is set when the account changes its username or discriminator while holding non-lifetime premium, and after that premium access ends, Fluxer replaces the discriminator with a newly generated one the next time the account starts a Gateway session. An instance with the `none` tag style skips the replacement and keeps `0000`
+<sup>12</sup> The flag is set when the account changes its username or discriminator while holding non-lifetime premium, and after that premium access ends, sanalyer replaces the discriminator with a newly generated one the next time the account starts a Gateway session. An instance with the `none` tag style skips the replacement and keeps `0000`
 
 <sup>13</sup> The value drives the 24-hour cooldown on changing the default voice activity sharing state
 
@@ -307,7 +307,7 @@ A field whose flags value is `0` is visible to nobody, including on the owner's 
 
 ## User settings object
 
-The complete account-wide settings record, with one field per setting. `synced_preferences` holds a base64-encoded Protobuf snapshot defined by the [user settings Protobuf reference](/http-api/users/settings-protobuf/). Fluxer stores that snapshot for clients and never interprets it.
+The complete account-wide settings record, with one field per setting. `synced_preferences` holds a base64-encoded Protobuf snapshot defined by the [user settings Protobuf reference](/http-api/users/settings-protobuf/). sanalyer stores that snapshot for clients and never interprets it.
 
 The [user settings update object](/http-api/users/settings/#user-settings-update-object) lists the fields an update accepts and what each supplied or omitted field does to the stored value. Both settings operations return this object, and so do [Ready](/gateway/events/#ready-object) and [User Settings Update](/gateway/events/#user-settings-update). Every field below is always present.
 
@@ -373,7 +373,7 @@ The [user settings update object](/http-api/users/settings/#user-settings-update
 
 <sup>7</sup> The field is read-only here and is changed by [Modify voice activity sharing](/http-api/users/settings/#modify-voice-activity-sharing)
 
-<sup>8</sup> Fluxer only stores this number. The first-party client compares it with the privacy setup version it ships and asks the user to review their direct message settings while the stored number is lower
+<sup>8</sup> sanalyer only stores this number. The first-party client compares it with the privacy setup version it ships and asks the user to review their direct message settings while the stored number is lower
 
 <sup>9</sup> Eligible new accounts default to `everyone`; ineligible accounts use `off`. Older eligible accounts awaiting the default notice acknowledgement keep their earlier setting.
 
@@ -583,7 +583,7 @@ A guild member profile is the per-guild profile customisation of the target acco
 
 <sup>1</sup> The value is forced to `null` when profile privacy restricts the viewer
 
-<sup>2</sup> Fluxer sets the value to `null` when the account no longer has premium and the membership has a guild avatar, banner, biography, or accent colour. It stays `null` until the account joins the guild again. An animated banner hash has the `a_` prefix
+<sup>2</sup> sanalyer sets the value to `null` when the account no longer has premium and the membership has a guild avatar, banner, biography, or accent colour. It stays `null` until the account joins the guild again. An animated banner hash has the `a_` prefix
 
 ## Mutual guild object
 

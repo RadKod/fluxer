@@ -79,7 +79,7 @@ The response body has this member alongside `code` and `message`.
 
 An Admin API key authenticates as its creator on routes below `/v1/admin`. Permissions are limited by both the key and its creator.
 
-Fluxer also accepts a user session token or an OAuth2 bearer token on an Admin operation, and it accepts the bearer token only when it belongs to the built-in Admin OAuth2 application. A bearer token from any other application returns 403 `ACCESS_DENIED`. A request with a bot token returns 401 `UNAUTHORIZED`.
+sanalyer also accepts a user session token or an OAuth2 bearer token on an Admin operation, and it accepts the bearer token only when it belongs to the built-in Admin OAuth2 application. A bearer token from any other application returns 403 `ACCESS_DENIED`. A request with a bot token returns 401 `UNAUTHORIZED`.
 
 Every Admin request requires the user's `admin:authenticate` ACL or wildcard, otherwise it returns 403 `MISSING_PERMISSIONS`. Key-authenticated requests also require the operation's ACLs on both the key and its owner, otherwise they return 403 `MISSING_ACL`. The [Admin API](/admin-api/) defines the ACLs and audit contract.
 
@@ -142,7 +142,7 @@ Sudo mode is a short-lived proof that the account holder recently re-verified a 
 
 A sudo proof lasts five minutes. Present it in the `X-Fluxer-Sudo-Mode-JWT` request header. An invalid, expired, or account-mismatched token produces the same response as a missing one.
 
-Fluxer issues a token only for an account holding a TOTP secret or a registered WebAuthn credential, so a password-only account re-verifies for each operation that requires sudo mode. A passkey counts here whether or not the account enabled passkeys as a second factor. The `methods` object reports `totp`, `webauthn`, and `backup_codes`, and an account holding no TOTP secret presents an unconsumed backup code under `mfa_method` of `totp`. [Create WebAuthn registration options](/http-api/users/mfa/#create-webauthn-registration-options) and [Disable current account](/http-api/users/current-user/#disable-current-account) issue no sudo token and return no `X-Fluxer-Sudo-Mode-JWT` response header, even for an account that can prove a credential. A bot account satisfies sudo mode immediately. So does an account that has no password, no TOTP secret, and no registered WebAuthn credential.
+sanalyer issues a token only for an account holding a TOTP secret or a registered WebAuthn credential, so a password-only account re-verifies for each operation that requires sudo mode. A passkey counts here whether or not the account enabled passkeys as a second factor. The `methods` object reports `totp`, `webauthn`, and `backup_codes`, and an account holding no TOTP secret presents an unconsumed backup code under `mfa_method` of `totp`. [Create WebAuthn registration options](/http-api/users/mfa/#create-webauthn-registration-options) and [Disable current account](/http-api/users/current-user/#disable-current-account) issue no sudo token and return no `X-Fluxer-Sudo-Mode-JWT` response header, even for an account that can prove a credential. A bot account satisfies sudo mode immediately. So does an account that has no password, no TOTP secret, and no registered WebAuthn credential.
 
 :::note[A sudo proof covers every account session]
 Revoking the session that obtained a proof leaves that proof valid until it expires.

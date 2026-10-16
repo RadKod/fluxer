@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Linux repositories
 description: The apt, dnf, pacman and Flatpak repositories Fluxer publishes, and how a client adds them.
+draft: true
 ---
 
 Fluxer publishes four Linux repositories. In every one the package is `fluxer` for stable and `fluxer-canary` for canary. The apt and dnf entrypoints each subscribe to one channel, so the file you install decides which of the two you track. pacman and Flatpak work the other way. One repository serves both channels, and the package name or application id selects it.

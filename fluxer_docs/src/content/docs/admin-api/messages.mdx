@@ -272,7 +272,7 @@ The message and its attachments are permanently removed, including from search r
 
 [Message Delete](/gateway/events/#message-delete) is sent to the guild when the channel belongs to one, and to each recipient when the channel is private. No other Dispatch is emitted, and deleting a pinned message here emits no [Channel Pins Update](/gateway/events/#channel-pins-update).
 
-A deleted message in a thread no longer counts towards `message_count` of the [thread object](/http-api/threads/#thread-object). Fluxer emits no [Thread Update](/gateway/threads/#thread-update) for the change.
+A deleted message in a thread no longer counts towards `message_count` of the [thread object](/http-api/threads/#thread-object). sanalyer emits no [Thread Update](/gateway/threads/#thread-update) for the change.
 
 One [Admin audit entry](/admin-api/#admin-audit-entry-object) is recorded with the action `delete_message` and the target type `message`, targeting the message ID. Its metadata is `channel_id`, `message_id` and `basis`. The entry is written whether or not a message was found.
 

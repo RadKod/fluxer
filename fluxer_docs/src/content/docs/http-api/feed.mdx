@@ -20,7 +20,7 @@ A post is marked public when its author's [profile privacy level](/http-api/user
 
 ## Video posts
 
-A video post is uploaded to Bunny Stream rather than through [Upload post media](#upload-post-media). It needs a `feature_feed_video` limit other than `0` for the caller and the instance's [Bunny Stream settings](/operator/configuration/#feature-flags-and-development-switches); without either, [Start video post](#start-video-post) and [Re-sign video upload](#re-sign-video-upload) return 403 `FEATURE_TEMPORARILY_DISABLED`.
+A video post is uploaded to Bunny Stream rather than through [Upload post media](#upload-post-media). It needs a `feature_feed_video` limit other than `0` for the caller and the instance's Bunny Stream settings; without either, [Start video post](#start-video-post) and [Re-sign video upload](#re-sign-video-upload) return 403 `FEATURE_TEMPORARILY_DISABLED`.
 
 1. [Start video post](#start-video-post) returns a [video upload ticket](#video-upload-ticket-object). It takes one post of the day at once, and an account has at most 3 videos on their way.
 2. Upload the file with TUS to `upload.endpoint`, sending `upload.signature` as `AuthorizationSignature`, `upload.expires` as `AuthorizationExpire`, `id` as `VideoId` and `library_id` as `LibraryId`. The signature lasts 2 hours; [Re-sign video upload](#re-sign-video-upload) signs the same upload again within 6 hours of its start.
@@ -416,7 +416,7 @@ Returns up to 20 of the caller's [pending video objects](#pending-video-object),
 
 <RouteHeader method="POST" path="/v1/feed/videos/webhook" unauthenticated />
 
-Accepts a Bunny Stream video status change and returns 200 with a [webhook received](/http-api/billing/#webhook-received-object) object. The instance's Bunny Stream library sends it; clients never call it. The signature headers are the credential, and the status is read again from Bunny before anything changes.
+Accepts a Bunny Stream video status change and returns 200 with a webhook received object. The instance's Bunny Stream library sends it; clients never call it. The signature headers are the credential, and the status is read again from Bunny before anything changes.
 
 ### Limitations
 
@@ -449,7 +449,7 @@ A proxy that re-encodes, reorders or pretty-prints the body invalidates the sign
 
 | Status | Body | Condition |
 | --- | --- | --- |
-| 200 | [webhook received](/http-api/billing/#webhook-received-object) object | The event was authenticated and queued, or acknowledged and ignored |
+| 200 | webhook received object | The event was authenticated and queued, or acknowledged and ignored |
 | 400 | [error response](/http-api/#error-response) | The body is too large or malformed and the request returns `INVALID_REQUEST` |
 | 401 | [error response](/http-api/#error-response) | The signature did not verify and the request returns `UNAUTHORIZED` |
 | 503 | [error response](/http-api/#error-response) | The instance has no Bunny Stream settings and the request returns `SERVICE_UNAVAILABLE` |

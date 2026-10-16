@@ -4,7 +4,7 @@ title: CAPTCHA handling
 description: How a client answers the ALTCHA proof-of-work check.
 ---
 
-Fluxer asks for a CAPTCHA on a small set of abuse-sensitive operations. The CAPTCHA is an [ALTCHA](https://altcha.org) proof-of-work challenge that the API issues and verifies itself. No third-party service or widget is involved, and a client solves the challenge without user input.
+sanalyer asks for a CAPTCHA on a small set of abuse-sensitive operations. The CAPTCHA is an [ALTCHA](https://altcha.org) proof-of-work challenge that the API issues and verifies itself. No third-party service or widget is involved, and a client solves the challenge without user input.
 
 ## Overview
 
@@ -55,7 +55,7 @@ Create private channel is gated only on the group direct message path, where the
 
 ## Exemption
 
-Fluxer skips the check in three cases, and the operation then proceeds with no CAPTCHA header. The authenticated account's email address is on an exempt domain. The authenticated account holds the [`APP_STORE_REVIEWER`](/admin-api/users/#account-flags) flag. The request body has an `email` that belongs to an account holding that flag. Discovery does not report exemptions, so clients must handle a challenge on every gated operation.
+sanalyer skips the check in three cases, and the operation then proceeds with no CAPTCHA header. The authenticated account's email address is on an exempt domain. The authenticated account holds the [`APP_STORE_REVIEWER`](/admin-api/users/#account-flags) flag. The request body has an `email` that belongs to an account holding that flag. Discovery does not report exemptions, so clients must handle a challenge on every gated operation.
 
 ## Error codes
 

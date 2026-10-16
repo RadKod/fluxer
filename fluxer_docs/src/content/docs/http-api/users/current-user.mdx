@@ -208,7 +208,7 @@ Each control is separate from the route bucket. A denial returns 400 `INVALID_FO
 | Any non-null avatar | 25 per 30 minutes | `AVATAR_CHANGED_TOO_MANY_TIMES` |
 | Any banner value past the entitlement check | 25 per 30 minutes | `BANNER_CHANGED_TOO_MANY_TIMES` |
 
-Fluxer consumes the avatar control before it detects identical content, and clearing the avatar consumes nothing. A clearing request consumes the banner control, and so does a request whose value is unchanged.
+sanalyer consumes the avatar control before it detects identical content, and clearing the avatar consumes nothing. A clearing request consumes the banner control, and so does a request whose value is unchanged.
 
 :::caution[A password change rotates the session]
 Supplying `new_password` on a claimed account deletes every other authentication session and every outstanding password reset token, then replaces the session that issued the request. The user object in the response then also has the fields of the [password change completion object](/http-api/users/email-and-password/#password-change-completion-object), and the client sends every later request with that token. [Auth Session Change](/gateway/events/#auth-session-change) never includes it.
@@ -281,7 +281,7 @@ Disabling deletes every authentication session the account owns, including the o
 
 ### Side effects
 
-Fluxer marks the account disabled and deletes every authentication session it owns. [User Update](/gateway/events/#user-update) is published only after that deletion, so no client of the account is left to receive it. The disabled flag is not part of the public flag bitfield, so other accounts observe no change.
+sanalyer marks the account disabled and deletes every authentication session it owns. [User Update](/gateway/events/#user-update) is published only after that deletion, so no client of the account is left to receive it. The disabled flag is not part of the public flag bitfield, so other accounts observe no change.
 
 ### Rate limit
 
@@ -306,7 +306,7 @@ The deletion deadline is 14 days ahead by default. Once erasure starts, signing 
 :::
 
 :::note[Transfer guild ownership first]
-Fluxer checks guild ownership before it accepts the deletion, so an owner of any guild transfers or deletes each guild first.
+sanalyer checks guild ownership before it accepts the deletion, so an owner of any guild transfers or deletes each guild first.
 :::
 
 ### Response
@@ -319,7 +319,7 @@ Fluxer checks guild ownership before it accepts the deletion, so an owner of any
 
 ### Side effects
 
-Fluxer marks the account for deletion at the configured deadline and queues it for erasure at that time. When the account has an email address, Fluxer sends a scheduled deletion email in the account locale. Every authentication session is deleted, and [User Update](/gateway/events/#user-update) is published only after that deletion. The self-deleted flag is not part of the public flag bitfield, so other accounts observe no change until erasure runs.
+sanalyer marks the account for deletion at the configured deadline and queues it for erasure at that time. When the account has an email address, sanalyer sends a scheduled deletion email in the account locale. Every authentication session is deleted, and [User Update](/gateway/events/#user-update) is published only after that deletion. The self-deleted flag is not part of the public flag bitfield, so other accounts observe no change until erasure runs.
 
 ### Rate limit
 
@@ -344,7 +344,7 @@ The body is an empty object, and an absent or empty body is read as one. Any sup
 
 ### Side effects
 
-Fluxer sets both `terms_agreed_at` and `privacy_agreed_at` to the request time and emits [User Update](/gateway/events/#user-update) to the account. Neither timestamp belongs to the [partial user object](/http-api/users/#partial-user-object), so no other account observes the change. Repeating the operation replaces both timestamps.
+sanalyer sets both `terms_agreed_at` and `privacy_agreed_at` to the request time and emits [User Update](/gateway/events/#user-update) to the account. Neither timestamp belongs to the [partial user object](/http-api/users/#partial-user-object), so no other account observes the change. Repeating the operation replaces both timestamps.
 
 ### Rate limit
 
