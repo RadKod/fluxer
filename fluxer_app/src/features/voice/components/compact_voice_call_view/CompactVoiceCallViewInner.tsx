@@ -193,7 +193,10 @@ export const CompactVoiceCallViewInner: React.FC<CompactVoiceCallViewProps> = ob
 		const controlBarContent = hideControlBar
 			? null
 			: (controlBar ?? (
-					<VoiceControlBar data-flx="voice.compact-voice-call-view.compact-voice-call-view-inner.voice-control-bar" />
+					<VoiceControlBar
+						showActivities={!isPoppedOut}
+						data-flx="voice.compact-voice-call-view.compact-voice-call-view-inner.voice-control-bar"
+					/>
 				));
 		const hasControlBar = controlBarContent != null;
 		const handleToggleVoiceCallAppFullscreen = useCallback(() => {

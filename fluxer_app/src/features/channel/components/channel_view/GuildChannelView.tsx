@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {isActivityPanelShown} from '@app/features/activities/components/ActivityPanel';
 import {
 	AccountLimitedBarrier,
 	AccountTooNewBarrier,
@@ -212,6 +213,12 @@ export const GuildChannelView = observer(({channelId, guildId}: GuildChannelView
 		active: isConnectedToThisChannel,
 		scopeKey: `guild-voice:${channelId}`,
 	});
+	// An activity needs the room the full call view gives it: opening its panel from the compact call (the button sits
+	// in both control bars, a new session opens the panel on every client) switches this channel to the full view.
+	const activityPanelShown = channel ? isActivityPanelShown(channel) : false;
+	useEffect(() => {
+		if (activityPanelShown && !showVoiceCallFullscreenView) handleOpenVoiceCallFullscreenView();
+	}, [activityPanelShown, showVoiceCallFullscreenView, handleOpenVoiceCallFullscreenView]);
 	const {isPending: isVoiceConnectionPending, startConnection: startVoiceConnection} = usePendingVoiceConnection({
 		guildId: channel?.guildId ?? guildId,
 		channelId,
