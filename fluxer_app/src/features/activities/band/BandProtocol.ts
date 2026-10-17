@@ -25,7 +25,7 @@ export const BAND_VOTE_CANDIDATES = 3;
 export const BAND_RATING_MIN = 1;
 export const BAND_RATING_MAX = 5;
 
-// One entry of the song library index (dl.sanalyer.com/sarkilar/index.json). The .sng package carries everything else.
+// One entry of the song library index (sanalyer.com/sarkilar/<önek>/index.json). The .sng package carries everything else.
 export interface BandSongSummary {
 	readonly id: string;
 	readonly name: string;

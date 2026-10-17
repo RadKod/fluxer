@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// The song library on dl.sanalyer.com: the index, the .sng downloads with progress, and a Cache Storage copy of each
+// The song library on sanalyer.com: the index, the .sng downloads with progress, and a Cache Storage copy of each
 // package so a song is fetched once per device. Prefetching follows the vote, so the winner is usually on disk by the
 // time the band sits down.
 
@@ -11,7 +11,9 @@ import {BAND_PARTS} from '@app/features/activities/band/flow/BandRoomMachine';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {action, makeObservable, observable, observableRef, runInAction} from 'mobx';
 
-export const BAND_SONG_LIBRARY_BASE_URL = 'https://dl.sanalyer.com/sarkilar/';
+// Served by sanalyer.com's own nginx (sanalyer.com repo: deploy/nginx, scripts/sarkilar/); the prefix keeps the
+// copyrighted packages off guessable URLs and directory listing is off.
+export const BAND_SONG_LIBRARY_BASE_URL = 'https://sanalyer.com/sarkilar/5ae6f2db11cb77d8354e12ef/';
 const INDEX_FILE = 'index.json';
 const CACHE_NAME = 'band-songs-v1';
 // Parsed packages kept in memory: the song being played and the next one.
