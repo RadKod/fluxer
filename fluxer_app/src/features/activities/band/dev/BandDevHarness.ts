@@ -14,7 +14,7 @@ import {action, makeObservable, observableRef, reaction} from 'mobx';
 
 export const MY_USER_ID = '900000000000000001';
 const MY_NAME = 'Sen';
-export const MAX_BOTS = 3;
+export const MAX_BOTS = 6;
 const LOG_LIMIT = 40;
 
 export interface BandDevLogEntry {

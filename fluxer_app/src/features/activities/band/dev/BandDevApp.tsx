@@ -73,7 +73,7 @@ const BotRow = observer(function BotRow({bot, harness}: {bot: BandBot; harness: 
 						<option value="" data-flx="activities.band.dev.band-dev-app.bot-row.option--3">
 							boş olan
 						</option>
-						{BAND_PARTS.map((part) => (
+						{BAND_PARTS.filter((part) => part !== 'vocals').map((part) => (
 							<option key={part} value={part} data-flx="activities.band.dev.band-dev-app.bot-row.option--4">
 								{part}
 							</option>
