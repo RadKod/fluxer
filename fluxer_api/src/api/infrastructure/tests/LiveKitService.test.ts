@@ -284,3 +284,52 @@ describe('LiveKitService updateParticipant mute', () => {
 		expect(mutePublishedTrack).toHaveBeenCalledExactlyOnceWith('guild_1_channel_2', 'user_3_conn-1', 'TR_mic', mute);
 	});
 });
+
+describe('LiveKitService room metadata', () => {
+	const roomParams = {
+		guildId: createGuildID(1n),
+		channelId: createChannelID(2n),
+		regionId: 'region-1',
+		serverId: 'region-1-server-1',
+	};
+
+	it('merges the entries into the existing JSON object and drops null keys', async () => {
+		const listRooms = vi.fn(async () => [{metadata: JSON.stringify({other: 1, stale: 'x'})}]);
+		const updateRoomMetadata = vi.fn(async () => ({}));
+		const service = createServiceWithRoomServiceClient({listRooms, updateRoomMetadata});
+		const result = await service.updateRoomMetadata({...roomParams, entries: {mine: {a: 1}, stale: null}});
+		expect(result).toBe('ok');
+		expect(listRooms).toHaveBeenCalledWith(['guild_1_channel_2']);
+		expect(updateRoomMetadata).toHaveBeenCalledWith('guild_1_channel_2', JSON.stringify({other: 1, mine: {a: 1}}));
+	});
+
+	it('starts from {} when the metadata is empty or not a JSON object', async () => {
+		for (const metadata of ['', 'not json', '[1]', '"text"']) {
+			const updateRoomMetadata = vi.fn(async () => ({}));
+			const service = createServiceWithRoomServiceClient({listRooms: async () => [{metadata}], updateRoomMetadata});
+			expect(await service.updateRoomMetadata({...roomParams, entries: {mine: 1}})).toBe('ok');
+			expect(updateRoomMetadata).toHaveBeenCalledWith('guild_1_channel_2', '{"mine":1}');
+		}
+	});
+
+	it('no room, a 404 or a server gone from the topology → not_found; other failures → error', async () => {
+		const updateRoomMetadata = vi.fn(async () => ({}));
+		const empty = createServiceWithRoomServiceClient({listRooms: async () => [], updateRoomMetadata});
+		expect(await empty.updateRoomMetadata({...roomParams, entries: {mine: 1}})).toBe('not_found');
+		expect(await empty.updateRoomMetadata({...roomParams, serverId: 'gone', entries: {mine: 1}})).toBe('not_found');
+		expect(updateRoomMetadata).not.toHaveBeenCalled();
+		const gone = createServiceWithRoomServiceClient({
+			listRooms: async () => [{metadata: ''}],
+			updateRoomMetadata: async () => {
+				throw new FakeTwirpError('room not found', 404, 'not_found');
+			},
+		});
+		expect(await gone.updateRoomMetadata({...roomParams, entries: {mine: 1}})).toBe('not_found');
+		const down = createServiceWithRoomServiceClient({
+			listRooms: async () => {
+				throw new FakeTwirpError('unavailable', 503);
+			},
+		});
+		expect(await down.updateRoomMetadata({...roomParams, entries: {mine: 1}})).toBe('error');
+	});
+});

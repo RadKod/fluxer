@@ -2,7 +2,11 @@
 
 import type {ChannelID, GuildID, UserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
-import type {ListParticipantsResult, SetParticipantAttributesParams} from '@app/api/infrastructure/ILiveKitService';
+import type {
+	ListParticipantsResult,
+	SetParticipantAttributesParams,
+	UpdateRoomMetadataParams,
+} from '@app/api/infrastructure/ILiveKitService';
 import {ILiveKitService} from '@app/api/infrastructure/ILiveKitService';
 import {Logger} from '@app/api/Logger';
 import type {VoiceRegionMetadata, VoiceServerRecord} from '@app/api/voice/VoiceModel';
@@ -372,6 +376,38 @@ export class LiveKitService extends ILiveKitService {
 		}
 	}
 
+	// LiveKit replaces the whole metadata string, so the current object is read and merged; not atomic, which holds while
+	// the API is the only metadata writer and each key has one owner. Non-JSON metadata starts over from {}.
+	async updateRoomMetadata(params: UpdateRoomMetadataParams): Promise<'ok' | 'not_found' | 'error'> {
+		const roomName = this.getRoomName(params.guildId, params.channelId);
+		const server = this.tryResolveServerClient(params.regionId, params.serverId);
+		if (server === null) {
+			return 'not_found';
+		}
+		try {
+			const [room] = await server.roomServiceClient.listRooms([roomName]);
+			if (room === undefined) {
+				return 'not_found';
+			}
+			const metadata = LiveKitService.parseRoomMetadata(room.metadata);
+			for (const [key, value] of Object.entries(params.entries)) {
+				if (value === null) {
+					delete metadata[key];
+				} else {
+					metadata[key] = value;
+				}
+			}
+			await server.roomServiceClient.updateRoomMetadata(roomName, JSON.stringify(metadata));
+			return 'ok';
+		} catch (error) {
+			if (LiveKitService.isHttp404(error)) {
+				return 'not_found';
+			}
+			Logger.warn({error, roomName}, 'LiveKit room metadata update failed');
+			return 'error';
+		}
+	}
+
 	async listParticipants(params: {
 		guildId?: GuildID;
 		channelId: ChannelID;
@@ -404,6 +440,17 @@ export class LiveKitService extends ILiveKitService {
 				errorCode: error instanceof Error ? error.message : 'unknown',
 				retryable: isRetryable,
 			};
+		}
+	}
+
+	private static parseRoomMetadata(metadata: string): Record<string, unknown> {
+		try {
+			const parsed: unknown = JSON.parse(metadata);
+			return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+				? (parsed as Record<string, unknown>)
+				: {};
+		} catch {
+			return {};
 		}
 	}
 

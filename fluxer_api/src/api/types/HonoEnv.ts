@@ -98,6 +98,7 @@ import type {UserContentRequestService} from '@app/api/user/services/UserContent
 import type {UserRelationshipRequestService} from '@app/api/user/services/UserRelationshipRequestService';
 import type {UserService} from '@app/api/user/services/UserService';
 import type {ClientIpResolution} from '@app/api/utils/RequestClientIp';
+import type {VoiceActivityService} from '@app/api/voice_activity/VoiceActivityService';
 import type {VoiceSeatService} from '@app/api/voice_seat/VoiceSeatService';
 import type {ChannelFollowService} from '@app/api/webhook/ChannelFollowService';
 import type {WebhookRequestService} from '@app/api/webhook/WebhookRequestService';
@@ -184,6 +185,7 @@ export interface HonoEnv {
 		referralAdminService: ReferralAdminService;
 		voiceSeatService: VoiceSeatService;
 		tableGameService: TableGameService;
+		voiceActivityService: VoiceActivityService;
 		kvActivityTracker: KVActivityTracker;
 		kvCounterService: KVCounterService;
 		premiumLedgerService: PremiumLedgerService;

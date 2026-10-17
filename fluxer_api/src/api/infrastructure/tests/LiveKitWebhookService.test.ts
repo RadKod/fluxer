@@ -282,6 +282,7 @@ describe('LiveKitWebhookService voice membership hooks', () => {
 				onVoiceLeft: async () => {},
 				tableSeatFor: async () => null,
 			}),
+			voiceActivityService: () => ({onRoomFinished: async () => {}}),
 			channelRepository: () => ({
 				findUnique: async () => ({roomTheme: VOICE_ROOM_THEME_IDS[0], type: ChannelTypes.GUILD_VOICE}),
 			}),

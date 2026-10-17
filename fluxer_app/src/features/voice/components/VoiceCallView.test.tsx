@@ -27,6 +27,10 @@ vi.mock('@app/features/channel/utils/ChannelUtils', () => ({getIcon: () => null}
 vi.mock('@app/features/messaging/state/Favorites', () => ({default: {getChannel: () => null}}));
 vi.mock('@app/features/platform/components/router/NavigationAdapter', () => ({goBackOr: vi.fn()}));
 vi.mock('@app/features/table_game/components/TableGamesEntry', () => ({TableGamesEntry: () => null}));
+vi.mock('@app/features/activities/components/ActivityPanel', () => ({
+	ActivityPanel: () => null,
+	isActivityPanelShown: () => false,
+}));
 vi.mock('@app/features/ui/action_menu/items/voice_participant_menu_data/shared', () => ({
 	STREAM_VOLUME_DESCRIPTOR: {message: 'Stream Volume'},
 }));

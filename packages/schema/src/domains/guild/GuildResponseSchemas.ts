@@ -99,6 +99,7 @@ export const GuildFeatureSchema = withOpenApiType(
 			[GuildFeatures.VERIFIED, 'VERIFIED', 'Guild is verified'],
 			[GuildFeatures.VIP_VOICE, 'VIP_VOICE', 'Guild has VIP voice features'],
 			[GuildFeatures.VOICE_E2EE, 'VOICE_E2EE', 'Guild has end-to-end encryption for voice channel calls'],
+			[GuildFeatures.VOICE_ACTIVITIES, 'VOICE_ACTIVITIES', 'Guild can start activities in voice channels'],
 			[GuildFeatures.UNAVAILABLE_FOR_EVERYONE, 'UNAVAILABLE_FOR_EVERYONE', 'Guild is unavailable for everyone'],
 			[
 				GuildFeatures.UNAVAILABLE_FOR_EVERYONE_BUT_STAFF,

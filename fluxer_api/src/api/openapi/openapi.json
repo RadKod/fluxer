@@ -2408,6 +2408,213 @@
 				}
 			}
 		},
+		"/channels/{channel_id}/activity": {
+			"get": {
+				"operationId": "get_voice_activity",
+				"summary": "Get the activity of a voice channel",
+				"tags": ["Channels"],
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/VoiceActivitySessionNullable"}}}
+					},
+					"400": {
+						"description": "Bad Request - The request was malformed or contained invalid data",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+					},
+					"401": {
+						"description": "Unauthorized - Authentication is required or the token is invalid",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+					},
+					"403": {
+						"description": "Forbidden - You do not have permission to perform this action",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+					},
+					"429": {
+						"description": "Too Many Requests - You are being rate limited",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ThrottledError"}}},
+						"headers": {
+							"Retry-After": {
+								"description": "Number of seconds to wait before retrying (only on 429)",
+								"schema": {"type": "integer"}
+							},
+							"X-RateLimit-Limit": {
+								"description": "The number of requests that can be made in the current window",
+								"schema": {"type": "integer"}
+							},
+							"X-RateLimit-Remaining": {
+								"description": "The number of remaining requests that can be made",
+								"schema": {"type": "integer"}
+							},
+							"X-RateLimit-Reset": {
+								"description": "Unix timestamp when the rate limit resets",
+								"schema": {"type": "integer"}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal Server Error - An unexpected error occurred",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+					}
+				},
+				"description": "Returns the activity session running in the voice channel, or null. The caller must be in this voice channel (connection_id) with view and connect permission. Clients normally read the same session from the LiveKit room metadata. Returns 403 while table games are switched off.",
+				"security": [{"sessionToken": []}],
+				"parameters": [
+					{
+						"name": "channel_id",
+						"in": "path",
+						"required": true,
+						"schema": {"description": "The ID of the channel", "$ref": "#/components/schemas/SnowflakeType"},
+						"description": "The ID of the channel"
+					},
+					{
+						"name": "connection_id",
+						"in": "query",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 64,
+							"description": "The caller's voice connection ID in this channel"
+						},
+						"description": "The caller's voice connection ID in this channel"
+					}
+				]
+			},
+			"post": {
+				"operationId": "start_voice_activity",
+				"summary": "Start an activity in a voice channel",
+				"tags": ["Channels"],
+				"responses": {
+					"201": {
+						"description": "Success",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/VoiceActivitySession"}}}
+					},
+					"400": {
+						"description": "Bad Request - The request was malformed or contained invalid data",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+					},
+					"401": {
+						"description": "Unauthorized - Authentication is required or the token is invalid",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+					},
+					"403": {
+						"description": "Forbidden - You do not have permission to perform this action",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+					},
+					"429": {
+						"description": "Too Many Requests - You are being rate limited",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ThrottledError"}}},
+						"headers": {
+							"Retry-After": {
+								"description": "Number of seconds to wait before retrying (only on 429)",
+								"schema": {"type": "integer"}
+							},
+							"X-RateLimit-Limit": {
+								"description": "The number of requests that can be made in the current window",
+								"schema": {"type": "integer"}
+							},
+							"X-RateLimit-Remaining": {
+								"description": "The number of remaining requests that can be made",
+								"schema": {"type": "integer"}
+							},
+							"X-RateLimit-Reset": {
+								"description": "Unix timestamp when the rate limit resets",
+								"schema": {"type": "integer"}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal Server Error - An unexpected error occurred",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+					}
+				},
+				"description": "Starts an activity session and writes it into the LiveKit room metadata. One activity runs per voice channel; while another session is running this answers 409 VOICE_ACTIVITY_CONFLICT. A session nobody ends expires after 12 hours. The caller must be in this voice channel (connection_id). Returns 403 while table games are switched off.",
+				"security": [{"sessionToken": []}],
+				"parameters": [
+					{
+						"name": "channel_id",
+						"in": "path",
+						"required": true,
+						"schema": {"description": "The ID of the channel", "$ref": "#/components/schemas/SnowflakeType"},
+						"description": "The ID of the channel"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {"application/json": {"schema": {"$ref": "#/components/schemas/StartVoiceActivityRequest"}}}
+				}
+			},
+			"delete": {
+				"operationId": "end_voice_activity",
+				"summary": "End the activity of a voice channel",
+				"tags": ["Channels"],
+				"responses": {
+					"204": {"description": "No Content"},
+					"400": {
+						"description": "Bad Request - The request was malformed or contained invalid data",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+					},
+					"401": {
+						"description": "Unauthorized - Authentication is required or the token is invalid",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+					},
+					"403": {
+						"description": "Forbidden - You do not have permission to perform this action",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+					},
+					"429": {
+						"description": "Too Many Requests - You are being rate limited",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ThrottledError"}}},
+						"headers": {
+							"Retry-After": {
+								"description": "Number of seconds to wait before retrying (only on 429)",
+								"schema": {"type": "integer"}
+							},
+							"X-RateLimit-Limit": {
+								"description": "The number of requests that can be made in the current window",
+								"schema": {"type": "integer"}
+							},
+							"X-RateLimit-Remaining": {
+								"description": "The number of remaining requests that can be made",
+								"schema": {"type": "integer"}
+							},
+							"X-RateLimit-Reset": {
+								"description": "Unix timestamp when the rate limit resets",
+								"schema": {"type": "integer"}
+							}
+						}
+					},
+					"500": {
+						"description": "Internal Server Error - An unexpected error occurred",
+						"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
+					}
+				},
+				"description": "Ends the running activity session, whoever started it, and removes it from the LiveKit room metadata; with no session running it still clears the metadata. The caller must be in this voice channel (connection_id). Returns 403 while table games are switched off.",
+				"security": [{"sessionToken": []}],
+				"parameters": [
+					{
+						"name": "channel_id",
+						"in": "path",
+						"required": true,
+						"schema": {"description": "The ID of the channel", "$ref": "#/components/schemas/SnowflakeType"},
+						"description": "The ID of the channel"
+					},
+					{
+						"name": "connection_id",
+						"in": "query",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 64,
+							"description": "The caller's voice connection ID in this channel"
+						},
+						"description": "The caller's voice connection ID in this channel"
+					}
+				]
+			}
+		},
 		"/channels/{channel_id}/attachments": {
 			"post": {
 				"operationId": "request_presigned_message_attachment_uploads",
@@ -39259,6 +39466,56 @@
 				},
 				"required": ["attachments"]
 			},
+			"StartVoiceActivityRequest": {
+				"type": "object",
+				"properties": {
+					"activity_id": {"$ref": "#/components/schemas/VoiceActivityId"},
+					"connection_id": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 64,
+						"description": "The caller's voice connection ID in this channel"
+					}
+				},
+				"required": ["activity_id", "connection_id"]
+			},
+			"VoiceActivitySession": {
+				"type": "object",
+				"properties": {
+					"activity_id": {"$ref": "#/components/schemas/VoiceActivityId"},
+					"session_id": {"$ref": "#/components/schemas/SnowflakeStringType"},
+					"started_by": {"$ref": "#/components/schemas/SnowflakeStringType"},
+					"started_at": {
+						"type": "integer",
+						"minimum": 0,
+						"maximum": 9007199254740991,
+						"description": "Start time in ms since the epoch"
+					}
+				},
+				"required": ["activity_id", "session_id", "started_by", "started_at"],
+				"additionalProperties": false
+			},
+			"VoiceActivitySessionNullable": {
+				"anyOf": [
+					{
+						"type": "object",
+						"properties": {
+							"activity_id": {"$ref": "#/components/schemas/VoiceActivityId"},
+							"session_id": {"$ref": "#/components/schemas/SnowflakeStringType"},
+							"started_by": {"$ref": "#/components/schemas/SnowflakeStringType"},
+							"started_at": {
+								"type": "integer",
+								"minimum": 0,
+								"maximum": 9007199254740991,
+								"description": "Start time in ms since the epoch"
+							}
+						},
+						"required": ["activity_id", "session_id", "started_by", "started_at"],
+						"additionalProperties": false
+					},
+					{"type": "null"}
+				]
+			},
 			"ChannelUpdateRequestBody": {
 				"anyOf": [
 					{
@@ -42053,6 +42310,7 @@
 				"required": ["name"],
 				"x-fluxer-experiment": "channel_threads"
 			},
+			"VoiceActivityId": {"type": "string", "enum": ["band"]},
 			"PresignedAttachmentUploadRequestItem": {
 				"type": "object",
 				"properties": {
@@ -49237,6 +49495,7 @@
 					"USER_NOT_IN_VOICE",
 					"USER_OWNS_GUILDS",
 					"VALIDATION_ERROR",
+					"VOICE_ACTIVITY_CONFLICT",
 					"VOICE_CHANNEL_FULL",
 					"VOICE_SEAT_TAKEN",
 					"VOICE_SEAT_UNKNOWN",
@@ -49587,6 +49846,7 @@
 					"This user isn't in voice.",
 					"This user owns communities.",
 					"Validation failed.",
+					"Another activity is already running in this channel.",
 					"Voice channel is full.",
 					"Someone is already sitting there.",
 					"That seat isn't in this room.",

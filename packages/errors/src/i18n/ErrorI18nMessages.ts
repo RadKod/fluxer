@@ -205,6 +205,7 @@ export const ERROR_I18N_MESSAGES = {
 	'calls_and_voice.unknown_table_game': "There's no game at this table.",
 	'calls_and_voice.unknown_voice_region': 'Unknown voice region.',
 	'calls_and_voice.unknown_voice_server': 'Unknown voice server.',
+	'calls_and_voice.voice_activity_conflict': 'Another activity is already running in this channel.',
 	'calls_and_voice.voice_message_duration_exceeds_limit':
 		"Voice message duration can't exceed {maxDuration, plural, one {# second} other {# seconds}}.",
 	'calls_and_voice.voice_message_duration_required': 'Voice message attachments must specify a duration.',

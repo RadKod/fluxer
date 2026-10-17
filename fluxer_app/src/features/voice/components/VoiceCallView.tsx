@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Accessibility from '@app/features/accessibility/state/Accessibility';
+import {ActivityPanel, isActivityPanelShown} from '@app/features/activities/components/ActivityPanel';
 import {NativeDragRegion} from '@app/features/app/components/layout/NativeDragRegion';
 import channelHeaderStyles from '@app/features/channel/components/ChannelHeader.module.css';
 import {ChannelHeaderIcon} from '@app/features/channel/components/channel_header_components/ChannelHeaderIcon';
@@ -232,7 +233,8 @@ const VoiceCallViewInner = observer(
 			channelId: channel.id,
 		});
 		const hasRenderableTiles = hasScreenShare || filteredCameraTracks.length > 0;
-		const showRoom = !inPopout && !tvFullscreen && roomViewFor(channel).show;
+		const showActivity = !inPopout && isActivityPanelShown(channel);
+		const showRoom = !showActivity && !inPopout && !tvFullscreen && roomViewFor(channel).show;
 		const [gridOverflow, setGridOverflow] = useState(false);
 		const handleGridCapacityChange = useCallback(
 			(info: {visibleTileCount: number; totalTileCount: number; overflow: boolean}) => {
@@ -262,7 +264,7 @@ const VoiceCallViewInner = observer(
 		const isFocusFullscreenLayout = effectiveLayoutMode === 'focus';
 		const mainContentClassName = clsx(
 			styles.mainContent,
-			effectiveLayoutMode === 'grid' && styles.mainContentGrid,
+			(showActivity || effectiveLayoutMode === 'grid') && styles.mainContentGrid,
 			isFocusFullscreenLayout && styles.mainContentFocusFullscreen,
 		);
 		const isFocusedOnScreenShare =
@@ -636,7 +638,9 @@ const VoiceCallViewInner = observer(
 						</div>
 					</NativeDragRegion>
 					<div className={mainContentClassName} data-flx="voice.voice-call-view.voice-call-view-inner.div--5">
-						{showRoom ? (
+						{showActivity ? (
+							<ActivityPanel channel={channel} data-flx="voice.voice-call-view.voice-call-view-inner.activity-panel" />
+						) : showRoom ? (
 							<VoiceSceneView
 								channel={channel}
 								data-flx="voice.voice-call-view.voice-call-view-inner.voice-scene-view"
@@ -675,7 +679,10 @@ const VoiceCallViewInner = observer(
 						className={clsx(styles.controlBarContainer, styles.voiceChrome, styles.voiceEdgeFadeBottom)}
 						data-flx="voice.voice-call-view.voice-call-view-inner.control-bar-container"
 					>
-						<VoiceControlBar data-flx="voice.voice-call-view.voice-call-view-inner.voice-control-bar" />
+						<VoiceControlBar
+							showActivities={!inPopout}
+							data-flx="voice.voice-call-view.voice-call-view-inner.voice-control-bar"
+						/>
 					</div>
 					<VoiceCallCornerControls
 						wrapClassName={clsx(styles.fullscreenButtonWrap, styles.voiceChrome)}

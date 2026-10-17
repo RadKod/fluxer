@@ -170,6 +170,8 @@ import {awaitAll} from '@app/api/utils/ConcurrencyUtils';
 import {UserPermissionUtils} from '@app/api/utils/UserPermissionUtils';
 import {VoiceP2pConnectionReportRepository} from '@app/api/voice/VoiceP2pConnectionReportRepository';
 import {VoiceRepository} from '@app/api/voice/VoiceRepository';
+import {VoiceActivityRepository} from '@app/api/voice_activity/VoiceActivityRepository';
+import {VoiceActivityService} from '@app/api/voice_activity/VoiceActivityService';
 import {VoiceSeatRepository} from '@app/api/voice_seat/VoiceSeatRepository';
 import {VoiceSeatService} from '@app/api/voice_seat/VoiceSeatService';
 import {SweegoWebhookService} from '@app/api/webhook/SweegoWebhookService';
@@ -821,6 +823,18 @@ export const getTableGameService = singleton(
 			gatewayService: getGatewayService(),
 			voiceSeatService: getVoiceSeatService(),
 			channelRepository: getChannelRepository().channelData,
+		}),
+);
+export const getVoiceActivityRepository = singleton(() => new VoiceActivityRepository(getKVClient()));
+export const getVoiceActivityService = singleton(
+	() =>
+		new VoiceActivityService({
+			repository: getVoiceActivityRepository(),
+			instanceConfigRepository: getInstanceConfigRepository(),
+			channelAuthService: getVoiceRoomChannelAuthService(),
+			voiceSeatService: getVoiceSeatService(),
+			liveKitService: getLiveKitServiceInstance() ?? new DisabledLiveKitService(),
+			snowflakeService: getSnowflakeService(),
 		}),
 );
 export const getBadgeRepository = singleton(() => new BadgeRepository());

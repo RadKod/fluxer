@@ -37,6 +37,7 @@ function fakeServices(overrides: Partial<{games: boolean}> = {}) {
 		onVoiceLeft: vi.fn(async () => {}),
 		tableSeatFor: vi.fn(async () => null),
 	};
+	const activity = {onRoomFinished: vi.fn(async () => {})};
 	const config = {
 		rooms_enabled: true,
 		games_enabled: overrides.games ?? true,
@@ -46,12 +47,13 @@ function fakeServices(overrides: Partial<{games: boolean}> = {}) {
 	const services: VoiceMembershipHookServices = {
 		voiceSeatService: () => seat as unknown as VoiceSeatService,
 		tableGameService: () => table as unknown as ReturnType<VoiceMembershipHookServices['tableGameService']>,
+		voiceActivityService: () => activity,
 		channelRepository: () => ({
 			findUnique: async () => ({roomTheme: VOICE_ROOM_THEME_IDS[0], type: ChannelTypes.GUILD_VOICE}),
 		}),
 		instanceConfigRepository: () => ({getVoiceRoomConfig: async () => config}),
 	};
-	return {seat, table, services};
+	return {seat, table, activity, services};
 }
 
 beforeAll(() => {
@@ -142,6 +144,13 @@ describe('VoiceMembershipHooks', () => {
 		const {seat, services} = fakeServices();
 		await createVoiceMembershipHooks(services).onRoomFinished(CTX.channelId);
 		await vi.waitFor(() => expect(seat.onRoomFinished).toHaveBeenCalledWith(CTX.channelId));
+	});
+
+	it('onRoomFinished clears the voice activity even when the seat cleanup fails', async () => {
+		const {seat, activity, services} = fakeServices();
+		seat.onRoomFinished.mockRejectedValueOnce(new Error('kv down'));
+		await createVoiceMembershipHooks(services).onRoomFinished(CTX.channelId);
+		await vi.waitFor(() => expect(activity.onRoomFinished).toHaveBeenCalledWith(CTX.channelId));
 	});
 
 	it('65th concurrent hook is dropped with a warning and no payload', async () => {

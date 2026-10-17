@@ -5,6 +5,7 @@ import type {
 	ILiveKitService,
 	ListParticipantsResult,
 	SetParticipantAttributesParams,
+	UpdateRoomMetadataParams,
 } from '@app/api/infrastructure/ILiveKitService';
 import type {VoiceRegionMetadata, VoiceServerRecord} from '@app/api/voice/VoiceModel';
 
@@ -82,6 +83,10 @@ export class DisabledLiveKitService implements ILiveKitService {
 	async disconnectParticipant(_params: DisconnectParticipantParams): Promise<void> {}
 
 	async setParticipantAttributes(_params: SetParticipantAttributesParams): Promise<'ok'> {
+		return 'ok';
+	}
+
+	async updateRoomMetadata(_params: UpdateRoomMetadataParams): Promise<'ok'> {
 		return 'ok';
 	}
 

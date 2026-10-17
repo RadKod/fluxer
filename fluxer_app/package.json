@@ -221,6 +221,7 @@
 		"luxon": "catalog:",
 		"match-sorter": "catalog:",
 		"mespeak": "2.0.2",
+		"midi-file": "1.2.4",
 		"mobx": "catalog:",
 		"mobx-persist-store": "catalog:",
 		"mobx-react-lite": "catalog:",

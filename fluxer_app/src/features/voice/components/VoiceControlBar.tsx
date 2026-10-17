@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {VoiceActivitiesButton} from '@app/features/activities/components/VoiceActivitiesButton';
 import * as VoiceStateCommands from '@app/features/devtools/commands/VoiceStateCommands';
 import {MORE_OPTIONS_DESCRIPTOR, TURN_OFF_CAMERA_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import Keybind from '@app/features/input/state/InputKeybind';
@@ -209,7 +210,7 @@ function useVoiceControlLocalMediaState(): VoiceControlLocalMediaState {
 	};
 }
 
-const VoiceControlBarInner = observer(function VoiceControlBarInner() {
+const VoiceControlBarInner = observer(function VoiceControlBarInner({showActivities}: {showActivities: boolean}) {
 	const {i18n} = useLingui();
 	useMediaEngineVersion();
 	const {localParticipant, isCameraEnabled, isScreenShareEnabled, isConnected} = useVoiceControlLocalMediaState();
@@ -885,6 +886,15 @@ const VoiceControlBarInner = observer(function VoiceControlBarInner() {
 					</FocusRing>
 				</Tooltip>
 			</div>
+			{showActivities && (
+				<VoiceActivitiesButton
+					buttonClassName={styles.button}
+					idleClassName={styles.buttonScreenShareOff}
+					activeClassName={styles.buttonScreenShareOn}
+					iconClassName={styles.icon}
+					data-flx="voice.voice-control-bar.voice-control-bar-inner.voice-activities-button"
+				/>
+			)}
 			<Tooltip
 				text={i18n._(MORE_OPTIONS_DESCRIPTOR)}
 				data-flx="voice.voice-control-bar.voice-control-bar-inner.tooltip--7"
@@ -972,9 +982,12 @@ const VoiceControlBarInner = observer(function VoiceControlBarInner() {
 		</div>
 	);
 });
-export const VoiceControlBar = observer(() => {
+// The activities button lives in the full call view only, the one place its panel opens.
+export const VoiceControlBar = observer(({showActivities = false}: {showActivities?: boolean}) => {
 	const room = MediaEngine.room;
 	const hasNativeVoiceSession = !room && MediaEngine.connected;
 	if (!room && !hasNativeVoiceSession) return null;
-	return <VoiceControlBarInner data-flx="voice.voice-control-bar.voice-control-bar-inner" />;
+	return (
+		<VoiceControlBarInner showActivities={showActivities} data-flx="voice.voice-control-bar.voice-control-bar-inner" />
+	);
 });

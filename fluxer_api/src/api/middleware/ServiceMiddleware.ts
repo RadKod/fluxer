@@ -136,6 +136,7 @@ import {
 	getUserRepository,
 	getVirusScanServiceInstance,
 	getVisionaryService,
+	getVoiceActivityService,
 	getVoiceRepository,
 	getVoiceSeatService,
 	getWebhookRepository,
@@ -570,6 +571,10 @@ class RequestServices implements RequestScopedServices {
 
 	get tableGameService() {
 		return getTableGameService();
+	}
+
+	get voiceActivityService() {
+		return getVoiceActivityService();
 	}
 
 	get reportService() {

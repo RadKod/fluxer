@@ -6,6 +6,7 @@ import * as AccessibilityCommands from '@app/features/accessibility/commands/Acc
 import {NekoSprite} from '@app/features/accessibility/components/NekoSprite';
 import Accessibility from '@app/features/accessibility/state/Accessibility';
 import ScreenReader from '@app/features/accessibility/state/ScreenReader';
+import {VoiceActivitiesRoot} from '@app/features/activities/components/VoiceActivitiesRoot';
 import {AnalyticsConsentBanner} from '@app/features/analytics/components/AnalyticsConsentBanner';
 import {DndContext} from '@app/features/app/components/layout/DndContext';
 import GlobalOverlays from '@app/features/app/components/layout/GlobalOverlays';
@@ -217,6 +218,7 @@ export const AppWrapper = observer(({children}: AppWrapperProps) => {
 			<SVGMasks data-flx="app.app.app-wrapper.svg-masks" />
 			<VoiceLiveKitRoot room={room} data-flx="app.app.app-wrapper.voice-live-kit-root">
 				<SoundboardRoot />
+				<VoiceActivitiesRoot />
 				<div ref={ringsContainerRef} className={styles.appContainer} data-flx="app.app.app-wrapper.app-container">
 					<FocusRingScope containerRef={ringsContainerRef} data-flx="app.app.app-wrapper.focus-ring-scope">
 						<a

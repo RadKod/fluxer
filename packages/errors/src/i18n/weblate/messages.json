@@ -156,6 +156,7 @@
 	"calls_and_voice.stream_key_scope_mismatch": "Stream key scope mismatch.",
 	"calls_and_voice.unknown_voice_region": "Unknown voice region.",
 	"calls_and_voice.unknown_voice_server": "Unknown voice server.",
+	"calls_and_voice.voice_activity_conflict": "Another activity is already running in this channel.",
 	"calls_and_voice.voice_message_duration_exceeds_limit": "Voice message duration can't exceed {maxDuration, plural, one {# second} other {# seconds}}.",
 	"calls_and_voice.voice_message_duration_required": "Voice message attachments must specify a duration.",
 	"calls_and_voice.voice_message_waveform_required": "Voice message attachments must include waveform data.",

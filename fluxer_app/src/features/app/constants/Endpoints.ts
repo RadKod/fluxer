@@ -101,6 +101,7 @@ export const Endpoints = {
 	CHANNEL_CALL_RING: (channelId: string) => `/channels/${channelId}/call/ring`,
 	CHANNEL_CALL_STOP_RINGING: (channelId: string) => `/channels/${channelId}/call/stop-ringing`,
 	CHANNEL_VOICE_SEAT: (channelId: string) => `/channels/${channelId}/voice-seat`,
+	CHANNEL_ACTIVITY: (channelId: string) => `/channels/${channelId}/activity`,
 	CHANNEL_TABLE_GAMES: (channelId: string) => `/channels/${channelId}/table-games`,
 	CHANNEL_TABLE_GAME: (channelId: string, slot: string) => `/channels/${channelId}/table-games/${slot}`,
 	CHANNEL_TABLE_GAME_PLAYERS_ME: (channelId: string, slot: string) =>

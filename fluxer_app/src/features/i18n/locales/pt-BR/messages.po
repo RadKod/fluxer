@@ -57617,3 +57617,112 @@ msgstr ""
 "Open System Settings → Privacy & Security → Screen Recording and allow "
 "{productName}. Then restart {productName2}: macOS only applies the "
 "permission after a restart."
+
+#. Voice activities: name of the band game (play songs together, Rock Band
+#. style). A Turkish proper name; keep it as is in every language.
+#: src/features/activities/band/BandActivity.ts
+msgid "Bir Daha Baştan"
+msgstr "Bir Daha Baştan"
+
+#. Voice activities: tooltip on the button that hides the activity panel. The
+#. activity and the call go on; the Activities button brings it back.
+#: src/features/activities/components/ActivityPanel.tsx
+msgid "Close (the activity keeps running)"
+msgstr "Close (the activity keeps running)"
+
+#. Voice activities: button in the activity panel that ends the activity for
+#. everyone in the channel.
+#: src/features/activities/components/ActivityPanel.tsx
+msgid "End activity"
+msgstr "End activity"
+
+#. Voice control bar: button that opens the list of activities (games played
+#. together in the voice channel).
+#: src/features/activities/components/VoiceActivitiesButton.tsx
+msgctxt "voice-activities"
+msgid "Activities"
+msgstr "Activities"
+
+#. Voice control bar: tooltip on the activities button while an activity runs
+#. and its panel is hidden. {activity} is its name.
+#: src/features/activities/components/VoiceActivitiesButton.tsx
+msgid "Show {activity}"
+msgstr "Show {activity}"
+
+#. Voice control bar: tooltip on the activities button while the running
+#. activity is shown; hiding keeps the activity and the call going. {activity}
+#. is its name.
+#: src/features/activities/components/VoiceActivitiesButton.tsx
+msgid "Hide {activity}"
+msgstr "Hide {activity}"
+
+#. Voice activities: tooltip on a disabled entry of the activity list. A
+#. channel runs one activity at a time.
+#: src/features/activities/components/VoiceActivitiesButton.tsx
+msgid "An activity is already running. End it before starting another."
+msgstr "An activity is already running. End it before starting another."
+
+#. Voice activities: tooltip on a disabled entry of the activity list. {count}
+#. is a number above 1.
+#: src/features/activities/components/VoiceActivitiesButton.tsx
+msgid "Needs at least {count} people in the channel"
+msgstr "Needs at least {count} people in the channel"
+
+#. Voice activities: toast when someone else started an activity a moment
+#. before mine. One runs at a time.
+#: src/features/activities/commands/VoiceActivityCommands.ts
+msgid "An activity is already running in this channel."
+msgstr "An activity is already running in this channel."
+
+#. Voice activities: toast when the server refused or failed to start the
+#. picked activity.
+#: src/features/activities/commands/VoiceActivityCommands.ts
+msgid "Couldn't start the activity. Try again in a moment."
+msgstr "Couldn't start the activity. Try again in a moment."
+
+#. Voice activities: toast when ending the running activity failed.
+#: src/features/activities/commands/VoiceActivityCommands.ts
+msgid "Couldn't end the activity. Try again in a moment."
+msgstr "Couldn't end the activity. Try again in a moment."
+
+#. Band game test screen: heading over the list of people in the voice channel
+#. taking part.
+#: src/features/activities/band/components/BandPlaceholderView.tsx
+msgid "In this session"
+msgstr "In this session"
+
+#. Band game test screen: tag next to the person whose game state everyone
+#. follows.
+#: src/features/activities/band/components/BandPlaceholderView.tsx
+msgid "Leader"
+msgstr "Leader"
+
+#. Band game test screen: tag next to my own entry in the participant list.
+#: src/features/activities/band/components/BandPlaceholderView.tsx
+msgctxt "activity-participant-self"
+msgid "You"
+msgstr "You"
+
+#. Band game test screen: how far my clock is from the leader clock, in
+#. milliseconds. {offset} and {rtt} are numbers.
+#: src/features/activities/band/components/BandPlaceholderView.tsx
+msgid "Clock offset to the leader: {offset} ms (round trip {rtt} ms)"
+msgstr "Clock offset to the leader: {offset} ms (round trip {rtt} ms)"
+
+#. Band game test screen: shown until the first clock measurement against the
+#. leader finishes.
+#: src/features/activities/band/components/BandPlaceholderView.tsx
+msgid "Measuring the clock offset to the leader..."
+msgstr "Measuring the clock offset to the leader..."
+
+#. Band game test screen: button that sends a test message to everyone in the
+#. session.
+#: src/features/activities/band/components/BandPlaceholderView.tsx
+msgid "Ping everyone"
+msgstr "Ping everyone"
+
+#. Band game test screen: one received test message. {name} is the sender,
+#. {delay} the travel time in milliseconds measured on the shared clock.
+#: src/features/activities/band/components/BandPlaceholderView.tsx
+msgid "{name} pinged ({delay} ms on the way)"
+msgstr "{name} pinged ({delay} ms on the way)"

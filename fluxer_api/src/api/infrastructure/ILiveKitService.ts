@@ -74,6 +74,14 @@ export interface SetParticipantAttributesParams {
 	attributes: Record<string, string>;
 }
 
+export interface UpdateRoomMetadataParams {
+	guildId?: GuildID;
+	channelId: ChannelID;
+	regionId: string;
+	serverId: string;
+	entries: Record<string, unknown>; // merged into the room metadata JSON object; null removes the key
+}
+
 interface ListParticipantsParams {
 	guildId?: GuildID;
 	channelId: ChannelID;
@@ -113,6 +121,9 @@ export abstract class ILiveKitService {
 
 	// Server-written participant attributes (the voice seat). An empty value removes the attribute.
 	abstract setParticipantAttributes(params: SetParticipantAttributesParams): Promise<'ok' | 'not_found' | 'error'>;
+
+	// Server-written room metadata (voice activities). Other keys in the JSON object are kept.
+	abstract updateRoomMetadata(params: UpdateRoomMetadataParams): Promise<'ok' | 'not_found' | 'error'>;
 
 	abstract listParticipants(params: ListParticipantsParams): Promise<ListParticipantsResult>;
 

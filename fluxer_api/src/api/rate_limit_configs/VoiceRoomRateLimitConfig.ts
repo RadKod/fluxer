@@ -29,4 +29,12 @@ export const VoiceRoomRateLimitConfigs = {
 		bucket: 'table_game:spectate::channel_id',
 		config: {limit: 10, windowMs: ms('1 minute')},
 	} as RouteRateLimitConfig,
+	VOICE_ACTIVITY_READ: {
+		bucket: 'voice_activity:read::channel_id',
+		config: {limit: 30, windowMs: ms('10 seconds')},
+	} as RouteRateLimitConfig,
+	VOICE_ACTIVITY_WRITE: {
+		bucket: 'voice_activity:write::channel_id',
+		config: {limit: 10, windowMs: ms('1 minute')},
+	} as RouteRateLimitConfig,
 } as const;

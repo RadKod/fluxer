@@ -96,6 +96,7 @@ const REQUEST_SERVICE_VARIABLES: ReadonlyArray<keyof HonoEnv['Variables']> = [
 	'userRepository',
 	'userService',
 	'visionaryService',
+	'voiceActivityService',
 	'voiceSeatService',
 	'webhookRequestService',
 	'webhookService',

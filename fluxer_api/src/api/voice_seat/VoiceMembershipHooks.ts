@@ -7,9 +7,11 @@ import {
 	getChannelRepository,
 	getInstanceConfigRepository,
 	getTableGameService,
+	getVoiceActivityService,
 	getVoiceSeatService,
 } from '@app/api/middleware/ServiceSingletons';
 import type {TableGameService} from '@app/api/table_game/TableGameService';
+import type {VoiceActivityService} from '@app/api/voice_activity/VoiceActivityService';
 import {VOICE_MEMBERSHIP_HOOK_CONCURRENCY, VOICE_MEMBERSHIP_HOOK_TIMEOUT_MS} from '@app/api/voice_seat/VoiceSeatLimits';
 import type {VoiceParticipantContext, VoiceSeatService} from '@app/api/voice_seat/VoiceSeatService';
 import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
@@ -21,6 +23,7 @@ export interface VoiceMembershipHookServices {
 		'onParticipantJoined' | 'onParticipantLeft' | 'onVoiceStateRemoved' | 'onRoomFinished'
 	>;
 	tableGameService(): Pick<TableGameService, 'onVoiceJoined' | 'onVoiceLeft' | 'tableSeatFor'>;
+	voiceActivityService(): Pick<VoiceActivityService, 'onRoomFinished'>;
 	channelRepository(): {findUnique(channelId: ChannelID): Promise<{roomTheme: string | null; type: number} | null>};
 	instanceConfigRepository(): Pick<InstanceConfigRepository, 'getVoiceRoomConfig'>;
 }
@@ -119,8 +122,17 @@ export function createVoiceMembershipHooks(
 			);
 		},
 
+		// The seat state and the activity key are independent: one failing never skips the other.
 		async onRoomFinished(channelId: ChannelID): Promise<void> {
-			runDetached('room_finished', () => services.voiceSeatService().onRoomFinished(channelId));
+			runDetached('room_finished', async () => {
+				const results = await Promise.allSettled([
+					services.voiceSeatService().onRoomFinished(channelId),
+					services.voiceActivityService().onRoomFinished(channelId),
+				]);
+				for (const result of results) {
+					if (result.status === 'rejected') throw result.reason;
+				}
+			});
 		},
 	};
 }
@@ -129,6 +141,7 @@ export function createVoiceMembershipHooks(
 export const VoiceMembershipHooks = createVoiceMembershipHooks({
 	voiceSeatService: () => getVoiceSeatService(),
 	tableGameService: () => getTableGameService(),
+	voiceActivityService: () => getVoiceActivityService(),
 	channelRepository: () => getChannelRepository().channelData,
 	instanceConfigRepository: () => getInstanceConfigRepository(),
 });

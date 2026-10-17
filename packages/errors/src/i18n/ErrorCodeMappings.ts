@@ -391,6 +391,7 @@ export const ErrorCodeToI18nKey = {
 	[APIErrorCodes.USER_NOT_IN_VOICE]: 'permissions.user_not_in_voice',
 	[APIErrorCodes.USER_OWNS_GUILDS]: 'permissions.user_owns_guilds',
 	[APIErrorCodes.VOICE_CHANNEL_FULL]: 'channels_and_guilds.voice_channel_full',
+	[APIErrorCodes.VOICE_ACTIVITY_CONFLICT]: 'calls_and_voice.voice_activity_conflict',
 	[APIErrorCodes.VOICE_SEAT_TAKEN]: 'calls_and_voice.voice_seat_taken',
 	[APIErrorCodes.VOICE_SEAT_UNKNOWN]: 'calls_and_voice.voice_seat_unknown',
 	[APIErrorCodes.WEBAUTHN_CREDENTIAL_LIMIT_REACHED]: 'mfa_and_passkeys.webauthn_credential_limit_reached',

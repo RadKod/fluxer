@@ -59,6 +59,7 @@ import {UnfurlController} from '@app/api/unfurl/UnfurlController';
 import {UserController} from '@app/api/user/controllers/UserController';
 import {registerMicupUserLifecycleHooks} from '@app/api/user/lifecycle/MicupUserLifecycleHooks';
 import {VoiceP2pConnectionReportController} from '@app/api/voice/VoiceP2pConnectionReportController';
+import {VoiceActivityController} from '@app/api/voice_activity/VoiceActivityController';
 import {VoiceSeatController} from '@app/api/voice_seat/VoiceSeatController';
 import {WebhookController} from '@app/api/webhook/WebhookController';
 
@@ -130,6 +131,7 @@ function registerMicupControllers(routes: HonoApp): void {
 	ReferralController(routes);
 	VoiceSeatController(routes);
 	TableGameController(routes);
+	VoiceActivityController(routes);
 	registerCosmeticProfileExtension();
 	registerBadgeProfileExtension();
 	registerFollowProfileExtension();

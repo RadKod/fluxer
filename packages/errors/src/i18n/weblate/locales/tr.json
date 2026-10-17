@@ -539,6 +539,7 @@
 	"application_command.outcome_unknown": "Etkileşimin sonucu bilinmiyor. Aynı nonce ile durumunu kontrol edin.",
 	"account.username_selection_required": "Kullanıcı adınızı seçmek için uygulamayı güncelleyin ya da web/masaüstünden seçin.",
 	"calls_and_voice.table_game_conflict": "Masa bu arada değişti. Yenileyip tekrar deneyin.",
+	"calls_and_voice.voice_activity_conflict": "Bu kanalda zaten bir aktivite açık.",
 	"calls_and_voice.table_game_rule_violation": "Bu hamleye izin verilmiyor.",
 	"calls_and_voice.unknown_table_game": "Bu masada oyun yok.",
 	"calls_and_voice.voice_seat_taken": "Bu koltukta zaten biri oturuyor.",
