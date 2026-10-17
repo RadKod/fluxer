@@ -1,0 +1,221 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.laneGreen {
+	--lane: var(--band-lane-green);
+}
+
+.laneRed {
+	--lane: var(--band-lane-red);
+}
+
+.laneYellow {
+	--lane: var(--band-lane-yellow);
+}
+
+.laneBlue {
+	--lane: var(--band-lane-blue);
+}
+
+.laneOrange {
+	--lane: var(--band-lane-orange);
+}
+
+/* Sits in the quiet band above the part cards, over the far end of the highways. */
+.guide {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	max-width: 100%;
+	padding: 0.625rem 0.875rem 0.75rem;
+	border-radius: 0.75rem;
+	background-color: rgba(18, 19, 24, 0.94);
+	box-shadow: inset 0 0 0 1px var(--band-line);
+}
+
+.head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 1.5rem;
+	color: var(--band-t3);
+	font-size: 0.75rem;
+}
+
+.head b {
+	color: var(--band-t1);
+	font-weight: 600;
+	font-size: 0.8125rem;
+}
+
+.status {
+	font-variant-numeric: tabular-nums;
+}
+
+.statusChord {
+	color: var(--band-t1);
+	font-weight: 600;
+}
+
+.board {
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	gap: 0.875rem;
+}
+
+.pads {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
+.row {
+	display: flex;
+	gap: 0.375rem;
+}
+
+.key {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.3125rem;
+}
+
+/* The lane the key plays, as a strip on the highway; it flashes while the key is down. */
+.lane {
+	width: 0.25rem;
+	height: 1.125rem;
+	border-radius: 999px;
+	background-color: var(--lane, var(--band-paper));
+	opacity: 0.2;
+}
+
+.kickKey {
+	align-items: stretch;
+}
+
+.kickKey .lane {
+	width: auto;
+	height: 0.25rem;
+}
+
+.cap {
+	display: inline-grid;
+	place-items: center;
+	min-width: 2rem;
+	height: 2rem;
+	padding: 0 0.5rem;
+	border-radius: 0.375rem;
+	background-color: var(--lane, var(--band-g4));
+	box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.28);
+	color: var(--band-night);
+	font: inherit;
+	font-weight: 700;
+	font-size: 0.8125rem;
+	line-height: 1;
+}
+
+.capPlain {
+	box-shadow:
+		inset 0 0 0 1px var(--band-line-2),
+		inset 0 -3px 0 rgba(0, 0, 0, 0.35);
+	color: var(--band-t1);
+}
+
+.kickKey .cap {
+	width: 100%;
+}
+
+.starKey .cap {
+	min-width: 3.25rem;
+}
+
+.lit .cap {
+	box-shadow:
+		inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+		0 0 0.75rem var(--lane, var(--band-paper));
+	transform: translateY(2px);
+}
+
+.lit .capPlain {
+	background-color: var(--band-paper);
+	color: var(--band-night);
+}
+
+.lit .lane {
+	opacity: 1;
+	box-shadow: 0 0 0.5rem var(--lane, var(--band-paper));
+	animation: flash 180ms ease-out;
+}
+
+@keyframes flash {
+	from {
+		box-shadow: 0 0 1rem var(--lane, var(--band-paper));
+		filter: brightness(1.6);
+	}
+}
+
+.tips {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	margin: 0;
+	padding: 0;
+	color: var(--band-t2);
+	font-size: 0.75rem;
+	list-style: none;
+}
+
+/* After "I'm ready": one line of small keys. */
+.compact {
+	flex-direction: row;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.375rem 0.5rem;
+}
+
+.compact .cap {
+	min-width: 1.375rem;
+	height: 1.375rem;
+	padding: 0 0.3125rem;
+	border-radius: 0.25rem;
+	font-size: 0.6875rem;
+}
+
+.compact .starKey {
+	margin-left: 0.375rem;
+}
+
+.compact .starKey .cap {
+	min-width: 0;
+}
+
+.compact .kickKey .cap {
+	padding: 0 0.75rem;
+}
+
+.mic {
+	flex-direction: row;
+	align-items: center;
+	gap: 0.625rem;
+	color: var(--band-t2);
+	font-size: 0.8125rem;
+}
+
+.micIcon {
+	flex: 0 0 auto;
+	width: 1.25rem;
+	height: 1.25rem;
+	color: var(--band-t1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.lit .cap {
+		transform: none;
+	}
+
+	.lit .lane {
+		animation: none;
+	}
+}

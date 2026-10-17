@@ -256,7 +256,7 @@ const CrowdColumn = observer(function CrowdColumn({room, state, playerId}: Crowd
 										onClick={() => room.send({t: 'band.rate', playerId, stars: value})}
 										data-flx="activities.band.flow.results-screen.crowd-column.star-button.send"
 									>
-										<StarIcon weight="fill" data-flx="activities.band.flow.results-screen.crowd-column.star-icon" />
+										<StarIcon size={16} weight="fill" data-flx="activities.band.flow.results-screen.crowd-column.star-icon" />
 									</button>
 								))}
 							</span>

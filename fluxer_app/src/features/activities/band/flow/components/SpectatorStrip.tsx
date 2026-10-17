@@ -172,7 +172,7 @@ export const SpectatorStrip = observer(function SpectatorStrip({room, phase}: Sp
 					onClick={() => room.send({t: 'band.claimSeat', part: null})}
 					data-flx="activities.band.flow.spectator-strip.watch"
 				>
-					<EyeIcon weight="bold" data-flx="activities.band.flow.spectator-strip.watch-icon" />
+					<EyeIcon size={16} weight="bold" data-flx="activities.band.flow.spectator-strip.watch-icon" />
 					<span data-flx="activities.band.flow.spectator-strip.watch-label">{i18n._(WATCH_DESCRIPTOR)}</span>
 				</button>
 			)}

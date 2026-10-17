@@ -58307,3 +58307,38 @@ msgstr "Your offset: {offset} ms"
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "Your rating"
 msgstr "Your rating"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "Your keys"
+msgstr "Your keys"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "Press them to try"
+msgstr "Press them to try"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "Hold the key through long notes."
+msgstr "Hold the key through long notes."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "Enter turns on star power."
+msgstr "Enter turns on star power."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "The orange bar across the lane is the kick: Space."
+msgstr "The orange bar across the lane is the kick: Space."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "Sing into your mic; pitch is scored."
+msgstr "Sing into your mic; pitch is scored."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "{count} keys at once"
+msgstr "{count} keys at once"

@@ -8,8 +8,15 @@ function isTextEntry(target: EventTarget | null): boolean {
 	return target.isContentEditable || target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
 }
 
-// Plain key presses while focus is anywhere in the activity panel around `rootRef`, except in a text field. The panel
-// stops keys from bubbling past itself, so the listener runs in the capture phase.
+// A plain key press (no modifier, not typed into a text field) with focus anywhere in the activity panel around `root`.
+export function isBandPanelKey(root: HTMLElement | null, event: KeyboardEvent): boolean {
+	if (event.altKey || event.ctrlKey || event.metaKey || isTextEntry(event.target)) return false;
+	const panel = root?.closest('section') ?? root;
+	return !!panel && event.target instanceof Node && panel.contains(event.target);
+}
+
+// Plain key presses while focus is anywhere in the activity panel around `rootRef`. The panel stops keys from bubbling
+// past itself, so the listener runs in the capture phase.
 export function useBandKeys(
 	rootRef: React.RefObject<HTMLElement | null>,
 	onKey: (key: string, event: KeyboardEvent) => void,
@@ -18,10 +25,7 @@ export function useBandKeys(
 	handler.current = onKey;
 	useEffect(() => {
 		const listener = (event: KeyboardEvent) => {
-			if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || isTextEntry(event.target)) return;
-			const root = rootRef.current;
-			const panel = root?.closest('section') ?? root;
-			if (!panel || !(event.target instanceof Node) || !panel.contains(event.target)) return;
+			if (event.repeat || !isBandPanelKey(rootRef.current, event)) return;
 			handler.current(event.key.toLowerCase(), event);
 		};
 		document.addEventListener('keydown', listener, true);

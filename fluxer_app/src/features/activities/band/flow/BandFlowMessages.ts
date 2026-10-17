@@ -229,6 +229,42 @@ export const VOCALS_HINT_DESCRIPTOR = msg({
 	message: 'Optional, pitch is measured from your mic',
 	comment: 'Band game: note on the vocals card; singing is optional and scored by pitch from the microphone.',
 });
+export const KEY_GUIDE_TITLE_DESCRIPTOR = msg({
+	message: 'Your keys',
+	context: 'band-key-guide',
+	comment: 'Band game: title of the small keyboard drawing that shows which keys play my part.',
+});
+export const KEY_GUIDE_TRY_DESCRIPTOR = msg({
+	message: 'Press them to try',
+	context: 'band-key-guide',
+	comment: 'Band game: invites me to press the shown keys before the song; pressing lights them up, nothing is sent.',
+});
+export const KEY_GUIDE_HOLD_TIP_DESCRIPTOR = msg({
+	message: 'Hold the key through long notes.',
+	context: 'band-key-guide',
+	comment: 'Band game: tip for guitar, bass and keys; a long note is scored while its key stays pressed.',
+});
+export const KEY_GUIDE_STAR_POWER_TIP_DESCRIPTOR = msg({
+	message: 'Enter turns on star power.',
+	context: 'band-key-guide',
+	comment: 'Band game: tip; the Enter key deploys star power, the saved-up bonus that doubles the score for a while.',
+});
+export const KEY_GUIDE_KICK_TIP_DESCRIPTOR = msg({
+	message: 'The orange bar across the lane is the kick: Space.',
+	context: 'band-key-guide',
+	comment: 'Band game: drums tip; kick drum notes are drawn as an orange bar across the whole lane, played with Space.',
+});
+export const KEY_GUIDE_VOCALS_TIP_DESCRIPTOR = msg({
+	message: 'Sing into your mic; pitch is scored.',
+	context: 'band-key-guide',
+	comment: 'Band game: vocals tip; there are no keys, the score comes from the pitch of my voice on the microphone.',
+});
+export const KEY_GUIDE_CHORD_DESCRIPTOR = msg({
+	message: '{count} keys at once',
+	context: 'band-key-guide',
+	comment:
+		'Band game: shown while I hold two or more of my keys together, so I can check chords register. {count} is 2 or more.',
+});
 export const MULTIPLIER_DESCRIPTOR = msg({
 	message: '×{multiplier}',
 	comment: 'Band game: score multiplier of a difficulty, for example ×1.5. {multiplier} is a formatted number.',

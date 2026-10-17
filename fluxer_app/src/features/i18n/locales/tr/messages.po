@@ -58105,3 +58105,38 @@ msgstr "Gecikmen: {offset} ms"
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "Your rating"
 msgstr "Senin puanın"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "Your keys"
+msgstr "Tuşların"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "Press them to try"
+msgstr "Basıp dene"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "Hold the key through long notes."
+msgstr "Uzun notada tuşu basılı tut."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "Enter turns on star power."
+msgstr "Enter star power'ı açar."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "The orange bar across the lane is the kick: Space."
+msgstr "Şeridi boydan boya kesen turuncu çubuk bas pedalı: Boşluk."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "Sing into your mic; pitch is scored."
+msgstr "Mikrofonuna söyle, perden puanlanır."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "{count} keys at once"
+msgstr "{count} tuş birden"

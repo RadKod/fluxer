@@ -171,13 +171,16 @@
 	white-space: nowrap;
 }
 
-/* Highways in perspective behind the part cards, like the stage they are about to play on. */
+/* Highways in perspective behind the part cards, like the stage they are about to play on. The free space above the
+   cards holds my key guide. */
 .stage {
 	position: relative;
 	display: flex;
 	flex: 1 0 auto;
-	align-items: flex-end;
-	justify-content: center;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 1rem;
 	min-height: 19rem;
 	perspective: 1400px;
 	perspective-origin: 50% 0;

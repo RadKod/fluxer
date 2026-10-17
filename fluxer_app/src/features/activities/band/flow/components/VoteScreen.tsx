@@ -218,7 +218,7 @@ const SongCard = observer(function SongCard({room, song, index, voters, leading,
 						title={i18n._(LEADING_DESCRIPTOR)}
 						data-flx="activities.band.flow.vote-screen.song-card.leading"
 					>
-						<CheckIcon weight="bold" data-flx="activities.band.flow.vote-screen.song-card.check-icon" />
+						<CheckIcon size={16} weight="bold" data-flx="activities.band.flow.vote-screen.song-card.check-icon" />
 					</span>
 				)}
 				{mine && (

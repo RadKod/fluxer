@@ -7,7 +7,12 @@ import {
 	type BandSongSummary,
 	type BandState,
 } from '@app/features/activities/band/BandProtocol';
-import {BAND_DIFFICULTIES, type BandDifficulty, type BandPart} from '@app/features/activities/band/engine/ChartModel';
+import {
+	BAND_DIFFICULTIES,
+	type BandDifficulty,
+	type BandPart,
+	type InstrumentPart,
+} from '@app/features/activities/band/engine/ChartModel';
 import {
 	DIFFICULTY_DESCRIPTORS,
 	FREE_PART_DESCRIPTOR,
@@ -29,12 +34,14 @@ import {
 	WATCH_DESCRIPTOR,
 	YOU_TAG_DESCRIPTOR,
 } from '@app/features/activities/band/flow/BandFlowMessages';
+import {type BandLaneColour, bandPartKeys} from '@app/features/activities/band/flow/BandKeyGuide';
 import type {BandRoom} from '@app/features/activities/band/flow/BandRoom';
 import {songPartDifficulties} from '@app/features/activities/band/flow/BandRoomMachine';
 import {BandPartIcon} from '@app/features/activities/band/flow/components/BandPartIcon';
 import {BandAvatar, bandDisplayName} from '@app/features/activities/band/flow/components/BandPeople';
 import {BandSongCover} from '@app/features/activities/band/flow/components/BandSongCover';
 import {BandTimer} from '@app/features/activities/band/flow/components/BandTimer';
+import {KeyGuide} from '@app/features/activities/band/flow/components/KeyGuide';
 import styles from '@app/features/activities/band/flow/components/SelectScreen.module.css';
 import {SpectatorStrip} from '@app/features/activities/band/flow/components/SpectatorStrip';
 import {formatSongLength, useBandNow} from '@app/features/activities/band/flow/components/useBandNow';
@@ -43,43 +50,41 @@ import {useLingui} from '@lingui/react/macro';
 import {CheckIcon, EyeIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
+import {useRef} from 'react';
 
 type SelectState = Extract<BandState, {phase: 'select'}>;
 
 // Highway order, drums in the middle as on a stage; vocals have their own card above.
-const HIGHWAY_PARTS: ReadonlyArray<BandPart> = ['guitar', 'drums', 'bass', 'keys'];
-const FRET_KEY_CLASSES = [styles.laneGreen, styles.laneRed, styles.laneYellow, styles.laneBlue, styles.laneOrange];
-const DRUM_KEY_CLASSES = [styles.laneRed, styles.laneYellow, styles.laneBlue, styles.laneGreen];
+const HIGHWAY_PARTS: ReadonlyArray<InstrumentPart> = ['guitar', 'drums', 'bass', 'keys'];
+const LANE_CLASSES: Readonly<Record<BandLaneColour, string>> = {
+	green: styles.laneGreen,
+	red: styles.laneRed,
+	yellow: styles.laneYellow,
+	blue: styles.laneBlue,
+	orange: styles.laneOrange,
+};
 
-function keyLabel(code: string): string {
-	return code.startsWith('Key') ? code.slice(3) : code;
-}
-
-function PartKeys({part}: {readonly part: BandPart}) {
-	const drums = part === 'drums';
-	const codes = drums ? DEFAULT_BAND_KEY_MAP.drumPads : DEFAULT_BAND_KEY_MAP.frets;
-	const classes = drums ? DRUM_KEY_CLASSES : FRET_KEY_CLASSES;
+function PartKeys({part}: {readonly part: InstrumentPart}) {
+	const {lanes, kick} = bandPartKeys(DEFAULT_BAND_KEY_MAP, part);
 	return (
 		<span className={styles.keys} aria-hidden="true" data-flx="activities.band.flow.select-screen.part-keys.keys">
-			{codes.map((code, index) => (
+			{lanes.map((key) => (
 				<span
-					key={code}
-					className={clsx(styles.keyCap, classes[index])}
+					key={key.code}
+					className={clsx(styles.keyCap, key.colour && LANE_CLASSES[key.colour])}
 					data-flx="activities.band.flow.select-screen.part-keys.key-cap"
 				>
-					{keyLabel(code)}
+					{key.label}
 				</span>
 			))}
-			{drums &&
-				DEFAULT_BAND_KEY_MAP.kick.map((code) => (
-					<span
-						key={code}
-						className={clsx(styles.keyCap, styles.keyWide, styles.laneOrange)}
-						data-flx="activities.band.flow.select-screen.part-keys.key-cap--2"
-					>
-						{keyLabel(code)}
-					</span>
-				))}
+			{kick && (
+				<span
+					className={clsx(styles.keyCap, styles.keyWide, kick.colour && LANE_CLASSES[kick.colour])}
+					data-flx="activities.band.flow.select-screen.part-keys.key-cap--2"
+				>
+					{kick.label}
+				</span>
+			)}
 		</span>
 	);
 }
@@ -205,7 +210,7 @@ const SeatActions = observer(function SeatActions({room, part, seat, className}:
 					data-flx="activities.band.flow.select-screen.seat-actions.ready-button"
 				>
 					{seat.ready && (
-						<CheckIcon weight="bold" data-flx="activities.band.flow.select-screen.seat-actions.check-icon" />
+						<CheckIcon size={16} weight="bold" data-flx="activities.band.flow.select-screen.seat-actions.check-icon" />
 					)}
 					<span data-flx="activities.band.flow.select-screen.seat-actions.span">
 						{i18n._(seat.ready ? READY_DESCRIPTOR : NOT_READY_DESCRIPTOR)}
@@ -224,7 +229,7 @@ const SeatActions = observer(function SeatActions({room, part, seat, className}:
 				data-flx="activities.band.flow.select-screen.seat-actions.ready-button.send--2"
 			>
 				{seat.ready && (
-					<CheckIcon weight="bold" data-flx="activities.band.flow.select-screen.seat-actions.check-icon--2" />
+					<CheckIcon size={16} weight="bold" data-flx="activities.band.flow.select-screen.seat-actions.check-icon--2" />
 				)}
 				<span data-flx="activities.band.flow.select-screen.seat-actions.span--2">{i18n._(I_AM_READY_DESCRIPTOR)}</span>
 			</button>
@@ -234,7 +239,7 @@ const SeatActions = observer(function SeatActions({room, part, seat, className}:
 				onClick={() => room.send({t: 'band.claimSeat', part: null})}
 				data-flx="activities.band.flow.select-screen.seat-actions.watch.send.button"
 			>
-				<EyeIcon weight="bold" data-flx="activities.band.flow.select-screen.seat-actions.eye-icon" />
+				<EyeIcon size={16} weight="bold" data-flx="activities.band.flow.select-screen.seat-actions.eye-icon" />
 				{i18n._(WATCH_DESCRIPTOR)}
 			</button>
 		</div>
@@ -244,7 +249,7 @@ const SeatActions = observer(function SeatActions({room, part, seat, className}:
 interface PartCardProps {
 	readonly room: BandRoom;
 	readonly song: BandSongSummary;
-	readonly part: BandPart;
+	readonly part: InstrumentPart;
 	readonly seat: BandSeat | undefined;
 }
 
@@ -412,17 +417,19 @@ interface SelectScreenProps {
 
 export const SelectScreen = observer(function SelectScreen({room, state, song}: SelectScreenProps) {
 	const {i18n} = useLingui();
+	const rootRef = useRef<HTMLDivElement>(null);
 	const now = useBandNow(room.session);
 	const seatFor = (part: BandPart) => state.seats.find((seat) => seat.part === part);
 	const highwayParts = HIGHWAY_PARTS.filter((part) => songPartDifficulties(song, part).length > 0);
 	const hasVocals = songPartDifficulties(song, 'vocals').length > 0;
+	const mySeat = state.seats.find((seat) => seat.userId === room.myUserId);
 	// The early start waits for everyone in the room, so the count does too: a ready seat or a choice to watch.
 	const present = new Set(room.session.participants.map((participant) => participant.userId));
 	const decided = new Set([...state.watching, ...state.seats.filter((seat) => seat.ready).map((seat) => seat.userId)]);
 	const decidedCount = [...present].filter((userId) => decided.has(userId)).length;
 
 	return (
-		<div className={styles.screen} data-flx="activities.band.flow.select-screen.screen">
+		<div ref={rootRef} className={styles.screen} data-flx="activities.band.flow.select-screen.screen">
 			<div className={styles.game} data-flx="activities.band.flow.select-screen.game">
 				{hasVocals && (
 					<VocalsCard
@@ -471,6 +478,15 @@ export const SelectScreen = observer(function SelectScreen({room, state, song}: 
 							/>
 						))}
 					</div>
+					{mySeat && (
+						<KeyGuide
+							scopeRef={rootRef}
+							part={mySeat.part}
+							keyboardCaptured={room.session.keyboardCaptured}
+							compact={mySeat.ready}
+							data-flx="activities.band.flow.select-screen.key-guide"
+						/>
+					)}
 					<div className={styles.partCards} data-flx="activities.band.flow.select-screen.part-cards">
 						{highwayParts.map((part) => (
 							<PartCard
