@@ -185,6 +185,10 @@ export const DOWNLOAD_QUEUED_DESCRIPTOR = msg({
 	context: 'band-download',
 	comment: 'Band game: the song file will download after the ones before it.',
 });
+export const SONG_PLAYERS_DESCRIPTOR = msg({
+	message: '{count, plural, one {# player} other {# players}}',
+	comment: 'Band game vote card: how many people can play this song at once (one per charted part).',
+});
 export const DOWNLOAD_FAILED_DESCRIPTOR = msg({
 	message: 'Download failed',
 	comment: 'Band game: the song file did not download; it is tried again when the song is chosen.',

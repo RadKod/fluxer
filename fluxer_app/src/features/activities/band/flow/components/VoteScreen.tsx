@@ -5,6 +5,7 @@ import type {BandPart} from '@app/features/activities/band/engine/ChartModel';
 import {
 	ADD_TO_QUEUE_DESCRIPTOR,
 	DOWNLOAD_FAILED_DESCRIPTOR,
+	SONG_PLAYERS_DESCRIPTOR,
 	DOWNLOAD_QUEUED_DESCRIPTOR,
 	DOWNLOADED_DESCRIPTOR,
 	DOWNLOADING_DESCRIPTOR,
@@ -116,6 +117,11 @@ const DownloadStatus = observer(function DownloadStatus({download}: {readonly do
 			);
 	}
 });
+
+// One player per charted part: lead, rhythm, bass, drums, keys and vocals each take a seat.
+function songPlayerCount(song: BandSongSummary): number {
+	return Object.values(song.parts).filter((difficulties) => (difficulties?.length ?? 0) > 0).length;
+}
 
 const PartsRow = observer(function PartsRow({room, song}: {readonly room: BandRoom; readonly song: BandSongSummary}) {
 	const {i18n} = useLingui();
@@ -262,7 +268,7 @@ const SongCard = observer(function SongCard({room, song, index, voters, leading,
 						className={clsx(styles.length, styles.num)}
 						data-flx="activities.band.flow.vote-screen.song-card.length"
 					>
-						{formatSongLength(song.lengthMs)}
+						{i18n._(SONG_PLAYERS_DESCRIPTOR, {count: songPlayerCount(song)})}, {formatSongLength(song.lengthMs)}
 					</span>
 				</div>
 				<div className={styles.metaRow} data-flx="activities.band.flow.vote-screen.song-card.meta-row--2">

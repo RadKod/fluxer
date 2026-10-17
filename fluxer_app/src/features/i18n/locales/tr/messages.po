@@ -58158,3 +58158,9 @@ msgstr "Ritim gitar"
 msgctxt "band-part"
 msgid "Lead guitar"
 msgstr "Solo gitar"
+
+#. Band game vote card: how many people can play this song at once (one per
+#. charted part).
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{count, plural, one {# player} other {# players}}"
+msgstr "{count, plural, one {# kişilik} other {# kişilik}}"
