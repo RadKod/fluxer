@@ -39,6 +39,7 @@ vi.mock('@app/features/platform/utils/ClientInfo', () => ({
 }));
 vi.mock('@app/features/platform/utils/LazyModuleLoader', () => ({loadLazyModule: (load: () => unknown) => load()}));
 vi.mock('@app/features/theme/fonts/ScriptFontLoader', () => ({scheduleNonLatinScriptFaces: vi.fn()}));
+vi.mock('@app/features/activities/utils/VoiceActivityDebug', () => ({installVoiceActivitiesDebugApi: vi.fn()}));
 vi.mock('@app/features/voice/diagnostics/VoiceSubscriptionDebugApi', () => ({
 	installVoiceSubscriptionDebugApi: vi.fn(),
 }));

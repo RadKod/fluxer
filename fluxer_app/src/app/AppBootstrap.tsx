@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {installVoiceActivitiesDebugApi} from '@app/features/activities/utils/VoiceActivityDebug';
 import 'urlpattern-polyfill';
 import {bootstrapSyntheticHistory} from '@app/app/HistoryBootstrap';
 import reactiveI18n, {applyInstanceDefaultLocale, initI18n} from '@app/app/I18n';
@@ -44,6 +45,7 @@ if (typeof window !== 'undefined' && window.history) {
 
 installFluxerConfigDebugApi();
 installVoiceSubscriptionDebugApi();
+installVoiceActivitiesDebugApi();
 
 function createRoot(): ReactDOM.Root {
 	const container = document.getElementById('root');
