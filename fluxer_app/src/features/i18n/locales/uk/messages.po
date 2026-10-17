@@ -57922,3 +57922,584 @@ msgstr "Ping everyone"
 #: src/features/activities/band/components/BandPlaceholderView.tsx
 msgid "{name} pinged ({delay} ms on the way)"
 msgstr "{name} pinged ({delay} ms on the way)"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{artist}, {length}"
+msgstr "{artist}, {length}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{artist}, added by {name}"
+msgstr "{artist}, added by {name}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{count, plural, one {# rating} other {# ratings}}"
+msgstr "{count, plural, one {# rating} other {# ratings}}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{count, plural, one {# time} other {# times}}"
+msgstr "{count, plural, one {# time} other {# times}}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"{count, plural, one {Watching now, # person} other {Watching now, # people}}"
+msgstr ""
+"{count, plural, one {Watching now, # person} other {Watching now, # people}}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{count, plural, one {Watching, # person} other {Watching, # people}}"
+msgstr "{count, plural, one {Watching, # person} other {Watching, # people}}"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "{count} of {total} taps"
+msgstr "{count} of {total} taps"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{name} sets it. You can change your own card."
+msgstr "{name} sets it. You can change your own card."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{part} intensity {level}/5"
+msgstr "{part} intensity {level}/5"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/BandGameLabels.ts
+msgid "{part}, {difficulty}"
+msgstr "{part}, {difficulty}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{ready} of {seated} ready"
+msgstr "{ready} of {seated} ready"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{seconds} s"
+msgstr "{seconds} s"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "{stars} of 5 stars"
+msgstr "{stars} of 5 stars"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"{voted, plural, one {# person voted} other {# people voted}}, {total, "
+"plural, one {# of us} other {# of us}}"
+msgstr ""
+"{voted, plural, one {# person voted} other {# people voted}}, {total, "
+"plural, one {# of us} other {# of us}}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "×{multiplier}"
+msgstr "×{multiplier}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "accuracy"
+msgstr "accuracy"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-queue-add"
+msgid "Add"
+msgstr "Add"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Add a song"
+msgstr "Add a song"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Add a song to the queue"
+msgstr "Add a song to the queue"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"Anyone without a part watches. They cheer during the song and rate the "
+"players 1 to 5 at the end."
+msgstr ""
+"Anyone without a part watches. They cheer during the song and rate the "
+"players 1 to 5 at the end."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Bass"
+msgstr "Bass"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-part"
+msgid "Bass"
+msgstr "Bass"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Big finale"
+msgstr "Big finale"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Cheer the band"
+msgstr "Cheer the band"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "cheering"
+msgstr "cheering"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Clap"
+msgstr "Clap"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-picker"
+msgid "Close"
+msgstr "Close"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-rhythm-test"
+msgid "Close"
+msgstr "Close"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Could not get the song"
+msgstr "Could not get the song"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Could not reach the song library"
+msgstr "Could not reach the song library"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Crowd ratings"
+msgstr "Crowd ratings"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Current offset: {offset} ms"
+msgstr "Current offset: {offset} ms"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Difficulty does not count here. Everyone can see who gave what."
+msgstr "Difficulty does not count here. Everyone can see who gave what."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Download failed"
+msgstr "Download failed"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Downloaded"
+msgstr "Downloaded"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Downloading {percent}%"
+msgstr "Downloading {percent}%"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Downloading the song: {percent}%"
+msgstr "Downloading the song: {percent}%"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Drums"
+msgstr "Drums"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-part"
+msgid "Drums"
+msgstr "Drums"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-difficulty"
+msgid "Easy"
+msgstr "Easy"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Every key plays. Hit the last note all together."
+msgstr "Every key plays. Hit the last note all together."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-difficulty"
+msgid "Expert"
+msgstr "Expert"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Final hit in {seconds} s"
+msgstr "Final hit in {seconds} s"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Finale bonus"
+msgstr "Finale bonus"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-part-free"
+msgid "Free"
+msgstr "Free"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/PlayScreen.tsx
+msgid "Getting the song ready..."
+msgstr "Getting the song ready..."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Give {name} {stars, plural, one {# star} other {# stars}}"
+msgstr "Give {name} {stars, plural, one {# star} other {# stars}}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Go to the vote"
+msgstr "Go to the vote"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-hit"
+msgid "Good"
+msgstr "Good"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgctxt "band-meter"
+msgid "Group"
+msgstr "Group"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Group difficulty"
+msgstr "Group difficulty"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"Group difficulty {difficulty}. {players, plural, one {# person played} other"
+" {# people played}}, {spectators, plural, one {# watched} other {# "
+"watched}}."
+msgstr ""
+"Group difficulty {difficulty}. {players, plural, one {# person played} other"
+" {# people played}}, {spectators, plural, one {# watched} other {# "
+"watched}}."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Guitar"
+msgstr "Guitar"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-part"
+msgid "Guitar"
+msgstr "Guitar"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-difficulty"
+msgid "Hard"
+msgstr "Hard"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "How the band is doing"
+msgstr "How the band is doing"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Hype"
+msgstr "Hype"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "I’m ready"
+msgstr "I’m ready"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "In the queue"
+msgstr "In the queue"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-part"
+msgid "Keys"
+msgstr "Keys"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-leader"
+msgid "Leader"
+msgstr "Leader"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Leading"
+msgstr "Leading"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Loading songs..."
+msgstr "Loading songs..."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Longest streak"
+msgstr "Longest streak"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-difficulty"
+msgid "Medium"
+msgstr "Medium"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-hit"
+msgid "Missed"
+msgstr "Missed"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "No {part} part"
+msgstr "No {part} part"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "No songs match."
+msgstr "No songs match."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-part-missing"
+msgid "none"
+msgstr "none"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Not measured on this device yet."
+msgstr "Not measured on this device yet."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Not ready yet"
+msgstr "Not ready yet"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Notes missed"
+msgstr "Notes missed"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-hit"
+msgid "OK"
+msgstr "OK"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "On fire"
+msgstr "On fire"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Optional, pitch is measured from your mic"
+msgstr "Optional, pitch is measured from your mic"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-hit"
+msgid "Perfect"
+msgstr "Perfect"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-step"
+msgid "Pick"
+msgstr "Pick"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Pick a part to play"
+msgstr "Pick a part to play"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Picking"
+msgstr "Picking"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-step"
+msgid "Play"
+msgstr "Play"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Play this part"
+msgstr "Play this part"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "rating"
+msgstr "rating"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-ready"
+msgid "Ready"
+msgstr "Ready"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-step"
+msgid "Results"
+msgstr "Results"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Rhythm test"
+msgstr "Rhythm test"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Rock on"
+msgstr "Rock on"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-rhythm-test"
+msgid "Save"
+msgstr "Save"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Search songs or artists"
+msgstr "Search songs or artists"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Setting up the room..."
+msgstr "Setting up the room..."
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Song volume"
+msgstr "Song volume"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Star power"
+msgstr "Star power"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Star power on"
+msgstr "Star power on"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-rhythm-test"
+msgid "Start"
+msgstr "Start"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-rhythm-test"
+msgid "Tap"
+msgstr "Tap"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Tap any key on every click. The first {count} clicks count you in."
+msgstr "Tap any key on every click. The first {count} clicks count you in."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "The next song vote opens in {seconds} s"
+msgstr "The next song vote opens in {seconds} s"
+
+#: src/features/activities/band/game/PlayScreen.tsx
+msgid "The song could not be loaded on this device."
+msgstr "The song could not be loaded on this device."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "The song file is damaged. Try again to download it fresh."
+msgstr "The song file is damaged. Try again to download it fresh."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "The song list could not be read."
+msgstr "The song list could not be read."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "The song server did not answer. Check your connection and try again."
+msgstr "The song server did not answer. Check your connection and try again."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "The song server returned an error. Try again in a bit."
+msgstr "The song server returned an error. Try again in a bit."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"The song with the most votes plays. You can change your vote until time runs"
+" out."
+msgstr ""
+"The song with the most votes plays. You can change your vote until time runs"
+" out."
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "The taps were too uneven to measure. Try again."
+msgstr "The taps were too uneven to measure. Try again."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "There are no songs to vote on yet."
+msgstr "There are no songs to vote on yet."
+
+#: src/features/activities/band/game/PlayScreen.tsx
+msgid "This device cannot play the song audio."
+msgstr "This device cannot play the song audio."
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "This device cannot play the test clicks."
+msgstr "This device cannot play the test clicks."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "This song is no longer in the library."
+msgstr "This song is no longer in the library."
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Too few taps landed on the clicks. Try again."
+msgstr "Too few taps landed on the clicks. Try again."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-retry"
+msgid "Try again"
+msgstr "Try again"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-rhythm-test"
+msgid "Try again"
+msgstr "Try again"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Up next"
+msgstr "Up next"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Vocals"
+msgstr "Vocals"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-part"
+msgid "Vocals"
+msgstr "Vocals"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-step"
+msgid "Vote"
+msgstr "Vote"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Vote for {song}"
+msgstr "Vote for {song}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Vote with"
+msgstr "Vote with"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-download"
+msgid "Waiting"
+msgstr "Waiting"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Waiting for the score"
+msgstr "Waiting for the score"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-watch"
+msgid "Watch"
+msgstr "Watch"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "watching"
+msgstr "watching"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "What should we play next?"
+msgstr "What should we play next?"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "While you play, your mic is muted and comes back when the song ends."
+msgstr "While you play, your mic is muted and comes back when the song ends."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"While you play, your mic switches to push-to-talk and goes back when the "
+"song ends."
+msgstr ""
+"While you play, your mic switches to push-to-talk and goes back when the "
+"song ends."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Wow"
+msgstr "Wow"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgctxt "band-player-self"
+msgid "You"
+msgstr "You"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-self"
+msgid "You"
+msgstr "You"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "You are the leader. Everyone can still change their own card."
+msgstr "You are the leader. Everyone can still change their own card."
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Your offset: {offset} ms"
+msgstr "Your offset: {offset} ms"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Your rating"
+msgstr "Your rating"

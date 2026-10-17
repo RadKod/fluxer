@@ -1,0 +1,15 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.stage {
+	display: flex;
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
+.game {
+	position: relative;
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+}

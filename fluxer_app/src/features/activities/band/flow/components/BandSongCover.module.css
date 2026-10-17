@@ -1,0 +1,58 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.cover {
+	display: block;
+	flex: 0 0 auto;
+	box-sizing: border-box;
+	border-radius: 0.375rem;
+	object-fit: cover;
+	container-type: inline-size;
+}
+
+/* A song without album art still gets its own look: big lettering on a tint, with a dot grid fading out. */
+.typeCover {
+	position: relative;
+	overflow: hidden;
+	color: var(--band-paper);
+}
+
+.lettering {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	box-sizing: border-box;
+	height: 100%;
+	padding: 8cqi;
+}
+
+.typeCover::before {
+	position: absolute;
+	inset: 0;
+	background-image: radial-gradient(rgba(247, 245, 240, 0.1) 1px, transparent 1.5px);
+	background-position: 7px 7px;
+	background-size: 14px 14px;
+	content: '';
+	mask-image: linear-gradient(160deg, #000 0%, transparent 62%);
+}
+
+.title {
+	display: -webkit-box;
+	overflow: hidden;
+	font-weight: 800;
+	font-size: 16cqi;
+	line-height: 0.92;
+	letter-spacing: -0.03em;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 4;
+}
+
+.artist {
+	margin-top: 5cqi;
+	overflow: hidden;
+	color: rgba(247, 245, 240, 0.7);
+	font-weight: 500;
+	font-size: 6cqi;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}

@@ -1,0 +1,397 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.screen {
+	position: relative;
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 1.25rem;
+	min-height: 0;
+	padding: 0.5rem 1.75rem 1.375rem;
+}
+
+.num {
+	font-variant-numeric: tabular-nums;
+}
+
+.heading {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 1.5rem;
+}
+
+.title {
+	margin: 0;
+	font-weight: 700;
+	font-size: 1.875rem;
+	line-height: 1.1;
+	letter-spacing: -0.015em;
+}
+
+.hint {
+	margin: 0.375rem 0 0;
+	color: var(--band-t2);
+}
+
+.tally {
+	color: var(--band-t2);
+	text-align: right;
+	white-space: nowrap;
+}
+
+.cards {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 1.5rem;
+}
+
+.card {
+	position: relative;
+	padding: 0.875rem;
+	border-radius: 1rem;
+	background-color: var(--band-card);
+	box-shadow: inset 0 0 0 1px var(--band-line);
+}
+
+.cardMine {
+	box-shadow: inset 0 0 0 2px rgba(247, 245, 240, 0.85);
+}
+
+/* The whole card votes; its content lets clicks through to this button underneath. */
+.cardButton {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	padding: 0;
+	border: 0;
+	border-radius: inherit;
+	background: none;
+	cursor: pointer;
+}
+
+.cardButton:hover {
+	background-color: rgba(247, 245, 240, 0.03);
+}
+
+.coverWrap,
+.meta {
+	position: relative;
+	z-index: 1;
+	pointer-events: none;
+}
+
+.coverWrap {
+	aspect-ratio: 1;
+}
+
+.cover {
+	width: 100%;
+	height: 100%;
+	border-radius: 0.625rem;
+}
+
+.keyCap {
+	display: inline-grid;
+	flex: 0 0 auto;
+	place-items: center;
+	width: 1.625rem;
+	height: 1.625rem;
+	border-radius: 0.26rem;
+	background-color: var(--band-g4);
+	box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.28);
+	color: var(--band-night);
+	font-weight: 700;
+	font-size: 0.8125rem;
+}
+
+.keyGreen {
+	background-color: var(--band-lane-green);
+}
+
+.keyRed {
+	background-color: var(--band-lane-red);
+}
+
+.keyYellow {
+	background-color: var(--band-lane-yellow);
+}
+
+.coverKey {
+	position: absolute;
+	top: 0.75rem;
+	left: 0.75rem;
+	width: 2.125rem;
+	height: 2.125rem;
+	border-radius: 0.34rem;
+	font-size: 1.0625rem;
+}
+
+.leading {
+	position: absolute;
+	top: 0.75rem;
+	right: 0.75rem;
+	display: grid;
+	place-items: center;
+	width: 2.125rem;
+	height: 2.125rem;
+	border-radius: 50%;
+	background-color: var(--band-beer);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+	color: var(--band-night);
+	font-size: 1.25rem;
+}
+
+.mineTag {
+	position: absolute;
+	top: 1.125rem;
+	right: 0.75rem;
+	padding: 0.1875rem 0.5625rem;
+	border-radius: 999px;
+	background-color: var(--band-paper);
+	color: var(--band-night);
+	font-weight: 600;
+	font-size: 0.75rem;
+}
+
+.mineTagShifted {
+	right: 3.375rem;
+}
+
+.voters {
+	position: absolute;
+	bottom: 0.75rem;
+	left: 0.75rem;
+	display: flex;
+	align-items: flex-end;
+}
+
+.voter {
+	margin-right: -0.375rem;
+	box-shadow: 0 0 0 3px var(--band-card);
+	animation: voterDrop 0.7s cubic-bezier(0.34, 1.5, 0.64, 1) both;
+}
+
+@keyframes voterDrop {
+	from {
+		opacity: 0;
+		transform: translateY(-2rem) rotate(-12deg);
+	}
+
+	30% {
+		opacity: 1;
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.voteCount {
+	position: absolute;
+	right: 0.75rem;
+	bottom: 0.75rem;
+	padding: 0.3125rem 0.625rem;
+	border-radius: 999px;
+	background-color: rgba(12, 13, 15, 0.78);
+	font-weight: 600;
+	font-size: 0.8125rem;
+}
+
+.meta {
+	display: block;
+	padding: 0.75rem 0.125rem 0;
+}
+
+.metaRow {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.625rem;
+	min-width: 0;
+}
+
+.songName {
+	overflow: hidden;
+	font-weight: 600;
+	font-size: 1.1875rem;
+	letter-spacing: -0.01em;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.length {
+	color: var(--band-t3);
+	font-size: 0.8125rem;
+}
+
+.artist {
+	overflow: hidden;
+	color: var(--band-t2);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.download {
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 0.25rem;
+	color: var(--band-t3);
+	font-size: 0.75rem;
+	white-space: nowrap;
+}
+
+.downloadIcon {
+	width: 0.8125rem;
+	height: 0.8125rem;
+}
+
+.downloadFailed {
+	color: var(--band-lane-red);
+}
+
+.parts {
+	display: flex;
+	margin-top: 0.75rem;
+	padding-top: 0.75rem;
+	border-top: 1px solid var(--band-line);
+}
+
+.part {
+	display: flex;
+	flex: 1 1 0;
+	align-items: center;
+	gap: 0.4375rem;
+	color: var(--band-t2);
+}
+
+.partMissing {
+	color: var(--band-t4);
+	font-size: 0.75rem;
+}
+
+.partIcon {
+	flex: 0 0 auto;
+	width: 1.0625rem;
+	height: 1.0625rem;
+}
+
+.cells {
+	display: flex;
+	gap: 2px;
+}
+
+.cell {
+	width: 6px;
+	height: 6px;
+	border-radius: 1px;
+	background-color: rgba(247, 245, 240, 0.14);
+}
+
+.cellFilled {
+	background-color: var(--band-paper);
+}
+
+.timer {
+	padding-top: 0.25rem;
+}
+
+.keys {
+	display: flex;
+	align-items: center;
+	gap: 0.3125rem;
+	white-space: nowrap;
+}
+
+.smallKey {
+	width: 1.25rem;
+	height: 1.25rem;
+	font-size: 0.625rem;
+}
+
+.queue {
+	display: flex;
+	align-items: center;
+	gap: 1.25rem;
+	margin-top: auto;
+	padding-top: 1rem;
+	border-top: 1px solid var(--band-line);
+}
+
+.queueLabel {
+	width: 4.625rem;
+	color: var(--band-t3);
+	font-size: 0.8125rem;
+	line-height: 1.25;
+}
+
+.queueItem {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	min-width: 0;
+}
+
+.queueText {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.queueText b {
+	overflow: hidden;
+	font-weight: 600;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.queueText span {
+	color: var(--band-t3);
+	font-size: 0.75rem;
+}
+
+.addButton {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	height: 2.5rem;
+	margin-left: auto;
+	padding: 0 1rem;
+	border: 0;
+	border-radius: 0.625rem;
+	background: transparent;
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+	color: var(--band-t2);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.addButton:hover {
+	color: var(--band-t1);
+}
+
+.addIcon {
+	width: 1rem;
+	height: 1rem;
+}
+
+@media (max-width: 56rem) {
+	.cards {
+		grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+		gap: 1rem;
+	}
+
+	.queueLabel,
+	.queueItem {
+		display: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.voter {
+		animation: none;
+	}
+}

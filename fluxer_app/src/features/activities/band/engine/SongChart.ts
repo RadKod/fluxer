@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {type BigRockEnding, findBigRockEnding} from '@app/features/activities/band/engine/BigRockEnding';
 import {
 	BAND_DIFFICULTIES,
 	type BandDifficulty,
@@ -39,6 +40,19 @@ export interface ChartSection {
 
 type ParsedTrack = ParsedChart['trackData'][number];
 
+function drumsBigRockEnding(
+	byDifficulty: ReadonlyMap<BandDifficulty, ParsedTrack> | undefined,
+	sections: ReadonlyArray<ChartSection>,
+): BigRockEnding | null {
+	// Fills are instrument-wide in .mid but per difficulty in .chart; the hardest charted one is the reference.
+	const track = BAND_DIFFICULTIES.map((difficulty) => byDifficulty?.get(difficulty))
+		.filter((candidate) => candidate !== undefined)
+		.at(-1);
+	if (!track) return null;
+	const lastNoteMs = track.noteEventGroups.at(-1)?.[0]?.msTime ?? 0;
+	return findBigRockEnding(track.drumFreestyleSections, sections, lastNoteMs);
+}
+
 export class SongChart {
 	private readonly chartCache = new Map<string, PartChart>();
 
@@ -46,6 +60,8 @@ export class SongChart {
 		readonly tempoMap: TempoMap,
 		readonly sections: ReadonlyArray<ChartSection>,
 		readonly vocals: VocalsChart | null,
+		// Null when the drums have no coda fill; every part plays it as free play.
+		readonly bigRockEnding: BigRockEnding | null,
 		private readonly tracks: ReadonlyMap<InstrumentPart, ReadonlyMap<BandDifficulty, ParsedTrack>>,
 	) {}
 
@@ -67,7 +83,7 @@ export class SongChart {
 
 		const sections = parsed.sections.map(({name, msTime}) => ({name, msTime}));
 		const vocals = format === 'mid' ? parseVocalsFromMidi(data, tempoMap) : null;
-		return new SongChart(tempoMap, sections, vocals, tracks);
+		return new SongChart(tempoMap, sections, vocals, drumsBigRockEnding(tracks.get('drums'), sections), tracks);
 	}
 
 	get durationMs(): number {

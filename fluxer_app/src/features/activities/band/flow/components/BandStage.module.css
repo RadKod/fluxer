@@ -1,0 +1,119 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* The game keeps its own night palette in every app theme: it is a stage, lit like one. */
+.stage {
+	--band-night: #0c0d0f;
+	--band-plum: #b5179e;
+	--band-plum-light: #d64bbf;
+	--band-plum-dark: #4a0a41;
+	--band-beer: #ffc83d;
+	--band-paper: #f7f5f0;
+	--band-card: #141519;
+	--band-g2: #17181c;
+	--band-g3: #1f2026;
+	--band-g4: #2a2b32;
+	--band-t1: #f7f5f0;
+	--band-t2: rgba(247, 245, 240, 0.66);
+	--band-t3: rgba(247, 245, 240, 0.42);
+	--band-t4: rgba(247, 245, 240, 0.22);
+	--band-line: rgba(247, 245, 240, 0.08);
+	--band-line-2: rgba(247, 245, 240, 0.14);
+	--band-lane-green: #36c25f;
+	--band-lane-red: #e8484f;
+	--band-lane-yellow: #f4cf1c;
+	--band-lane-blue: #3d8bff;
+	--band-lane-orange: #ff8a2a;
+
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-height: 0;
+	background-color: var(--band-night);
+	color: var(--band-t1);
+	font-size: 0.875rem;
+	line-height: 1.4;
+}
+
+.stage button:focus-visible {
+	outline: 2px solid var(--band-paper);
+	outline-offset: 2px;
+}
+
+.steps {
+	display: flex;
+	flex: 0 0 auto;
+	gap: 1.125rem;
+	margin: 0;
+	padding: 0.875rem 1.5rem 0.5rem;
+	color: var(--band-t3);
+	font-size: 0.8125rem;
+	list-style: none;
+}
+
+.step {
+	position: relative;
+	padding: 0.25rem 0;
+}
+
+.done {
+	color: var(--band-t2);
+}
+
+.current {
+	color: var(--band-t1);
+	font-weight: 500;
+}
+
+.current::after {
+	position: absolute;
+	right: 0;
+	bottom: -0.125rem;
+	left: 0;
+	height: 2px;
+	border-radius: 1px;
+	background-color: var(--band-plum);
+	content: '';
+}
+
+.body {
+	position: relative;
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.notice {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	padding: 2rem;
+	text-align: center;
+}
+
+.noticeTitle {
+	margin: 0;
+	font-weight: 600;
+	font-size: 1.125rem;
+}
+
+.noticeText {
+	max-width: 28rem;
+	margin: 0;
+	color: var(--band-t2);
+}
+
+.retry {
+	height: 2.5rem;
+	padding: 0 1rem;
+	border: 0;
+	border-radius: 0.625rem;
+	background-color: var(--band-plum);
+	color: #fff;
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}

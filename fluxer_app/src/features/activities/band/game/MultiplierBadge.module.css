@@ -1,0 +1,72 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.badge {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 9px 4px 7px;
+	border-radius: 10px;
+	background: rgba(12, 13, 15, 0.82);
+	box-shadow: 0 0 0 1px rgba(247, 245, 240, 0.08);
+	color: #f7f5f0;
+}
+
+.starPower {
+	background: rgba(74, 10, 65, 0.9);
+	box-shadow:
+		0 0 0 1px rgba(247, 245, 240, 0.4),
+		0 0 18px rgba(247, 245, 240, 0.25);
+}
+
+.piece {
+	display: block;
+	width: 34px;
+	height: 22px;
+	overflow: visible;
+}
+
+.block {
+	fill: transparent;
+	stroke: rgba(247, 245, 240, 0.28);
+	stroke-width: 7;
+}
+
+.lit {
+	fill: #f7f5f0;
+	stroke: none;
+}
+
+.yellow {
+	transform-box: view-box;
+	transition:
+		transform 0.35s cubic-bezier(0.3, 1.4, 0.5, 1),
+		opacity 0.2s;
+}
+
+.yellow.lit {
+	fill: #ffc83d;
+}
+
+.energy {
+	position: absolute;
+	left: 0;
+	bottom: -5px;
+	height: 3px;
+	border-radius: 2px;
+	background: #d64bbf;
+}
+
+.value {
+	min-width: 22px;
+	font-weight: 800;
+	font-size: 17px;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.yellow {
+		transition: none;
+	}
+}

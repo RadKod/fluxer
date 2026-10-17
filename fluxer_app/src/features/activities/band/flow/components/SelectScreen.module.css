@@ -1,0 +1,497 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.screen {
+	display: flex;
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
+.game {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 1rem;
+	min-width: 0;
+	padding: 0.5rem 1.5rem 1rem;
+	overflow-y: auto;
+}
+
+.laneGreen {
+	--lane: var(--band-lane-green);
+}
+
+.laneRed {
+	--lane: var(--band-lane-red);
+}
+
+.laneYellow {
+	--lane: var(--band-lane-yellow);
+}
+
+.laneBlue {
+	--lane: var(--band-lane-blue);
+}
+
+.laneOrange {
+	--lane: var(--band-lane-orange);
+}
+
+/* Vocals: one wide card above the highways. */
+.vocals {
+	display: flex;
+	align-items: center;
+	gap: 1.5rem;
+	min-height: 5.25rem;
+	padding: 0.625rem 1rem 0.625rem 1.125rem;
+	border-radius: 0.75rem;
+	background-color: #121318;
+	box-shadow: inset 0 0 0 1px var(--band-line);
+}
+
+.vocalsTitle {
+	display: flex;
+	flex: 0 1 18rem;
+	align-items: center;
+	gap: 0.75rem;
+	min-width: 0;
+}
+
+.vocalsTitle b {
+	display: block;
+	font-weight: 600;
+	font-size: 0.9375rem;
+}
+
+.vocalsTitle span {
+	color: var(--band-t3);
+	font-size: 0.75rem;
+}
+
+.vocalsIcon {
+	flex: 0 0 auto;
+	width: 1.625rem;
+	height: 1.625rem;
+	color: var(--band-t2);
+}
+
+.vocalsPerson {
+	flex: 0 0 9.5rem;
+	min-width: 0;
+}
+
+.vocalsDifficulties {
+	display: flex;
+	gap: 0.25rem;
+}
+
+.vocalsDifficulty {
+	height: 2.25rem;
+	padding: 0 0.75rem;
+}
+
+.vocalsActions {
+	display: flex;
+	gap: 0.375rem;
+	margin-left: auto;
+}
+
+.songRow {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1.5rem;
+}
+
+.song {
+	display: flex;
+	align-items: center;
+	gap: 0.875rem;
+	min-width: 0;
+}
+
+.song b {
+	display: block;
+	font-weight: 700;
+	font-size: 1.25rem;
+	letter-spacing: -0.01em;
+}
+
+.song span {
+	color: var(--band-t2);
+	font-size: 0.8125rem;
+}
+
+.group {
+	text-align: right;
+}
+
+.groupLabel {
+	margin-bottom: 0.375rem;
+	color: var(--band-t3);
+	font-size: 0.75rem;
+}
+
+.segmented {
+	display: inline-flex;
+	padding: 3px;
+	border-radius: 0.6875rem;
+	background-color: var(--band-g2);
+	box-shadow: inset 0 0 0 1px var(--band-line);
+}
+
+.segment {
+	height: 2rem;
+	padding: 0 0.875rem;
+	border: 0;
+	border-radius: 0.5rem;
+	background: none;
+	color: var(--band-t2);
+	font: inherit;
+	font-weight: 500;
+	font-size: 0.8125rem;
+	cursor: pointer;
+}
+
+.segment:disabled {
+	cursor: default;
+}
+
+.segmentOn {
+	background-color: var(--band-plum);
+	color: #fff;
+}
+
+.groupHint {
+	margin: 0.375rem 0 0;
+	color: var(--band-t3);
+	font-size: 0.75rem;
+}
+
+.readyTally {
+	white-space: nowrap;
+}
+
+/* Highways in perspective behind the part cards, like the stage they are about to play on. */
+.stage {
+	position: relative;
+	display: flex;
+	flex: 1 0 auto;
+	align-items: flex-end;
+	justify-content: center;
+	min-height: 19rem;
+	perspective: 1400px;
+	perspective-origin: 50% 0;
+}
+
+.highways {
+	position: absolute;
+	inset: 0 0 4rem;
+	display: flex;
+	justify-content: center;
+	gap: 2rem;
+	pointer-events: none;
+}
+
+.highway {
+	align-self: flex-end;
+	width: 12.75rem;
+	height: 40rem;
+	border-right: 3px solid rgba(181, 23, 158, 0.7);
+	border-left: 3px solid rgba(181, 23, 158, 0.7);
+	background-color: rgba(22, 23, 29, 0.96);
+	background-image: repeating-linear-gradient(
+		90deg,
+		transparent 0,
+		transparent calc(20% - 1px),
+		rgba(247, 245, 240, 0.06) calc(20% - 1px),
+		rgba(247, 245, 240, 0.06) 20%
+	);
+	opacity: 0.6;
+	transform: rotateX(44deg);
+	transform-origin: 50% 100%;
+	mask-image: linear-gradient(to top, #000 68%, transparent 100%);
+}
+
+.highwayDrums {
+	width: 14.75rem;
+	background-image: repeating-linear-gradient(
+		90deg,
+		transparent 0,
+		transparent calc(25% - 1px),
+		rgba(247, 245, 240, 0.06) calc(25% - 1px),
+		rgba(247, 245, 240, 0.06) 25%
+	);
+}
+
+.partCards {
+	position: relative;
+	display: flex;
+	justify-content: center;
+	gap: 1rem;
+	width: 100%;
+}
+
+.partCard {
+	display: flex;
+	flex: 0 1 15.5rem;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 17rem;
+	padding: 0.75rem;
+	border-radius: 0.875rem;
+	background-color: #15161b;
+	box-shadow:
+		inset 0 0 0 1px var(--band-line),
+		0 -1.125rem 1.875rem rgba(12, 13, 15, 0.85);
+}
+
+.partCardMine {
+	box-shadow:
+		inset 0 0 0 2px var(--band-plum),
+		0 -1.125rem 1.875rem rgba(12, 13, 15, 0.85);
+}
+
+.partHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	min-height: 1.5rem;
+}
+
+.partName {
+	display: flex;
+	align-items: center;
+	gap: 0.4375rem;
+	font-weight: 600;
+	font-size: 0.9375rem;
+}
+
+.partIcon {
+	width: 1.1875rem;
+	height: 1.1875rem;
+	color: var(--band-t2);
+}
+
+.keys {
+	display: flex;
+	gap: 3px;
+}
+
+.keyCap {
+	display: inline-grid;
+	place-items: center;
+	min-width: 1.0625rem;
+	height: 1.0625rem;
+	border-radius: 0.17rem;
+	background-color: var(--lane, var(--band-g4));
+	box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.28);
+	color: var(--band-night);
+	font-weight: 700;
+	font-size: 0.5625rem;
+}
+
+.keyWide {
+	padding: 0 0.375rem;
+}
+
+.person {
+	display: flex;
+	align-items: center;
+	gap: 0.5625rem;
+	min-height: 2.875rem;
+	margin: 0.5rem 0 0.375rem;
+	padding-top: 0.5rem;
+	border-top: 1px solid var(--band-line);
+}
+
+.vocalsPerson .person {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.personFree {
+	color: var(--band-t3);
+}
+
+.personText {
+	min-width: 0;
+}
+
+.personText b {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	font-weight: 600;
+	line-height: 1.15;
+}
+
+.personText b > span:first-child {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.personText > span {
+	color: var(--band-t3);
+	font-size: 0.75rem;
+}
+
+.youTag {
+	padding: 1px 7px;
+	border-radius: 999px;
+	background-color: var(--band-paper);
+	color: var(--band-night);
+	font-weight: 600;
+	font-size: 0.6875rem;
+}
+
+.picking {
+	color: var(--band-t2);
+}
+
+.picking::before {
+	display: inline-block;
+	width: 6px;
+	height: 6px;
+	margin-right: 6px;
+	border-radius: 50%;
+	background-color: var(--band-t2);
+	content: '';
+	vertical-align: 1px;
+	animation: blink 1.2s ease-in-out infinite;
+}
+
+@keyframes blink {
+	50% {
+		opacity: 0.25;
+	}
+}
+
+.difficulties {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.difficulty {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	height: 1.875rem;
+	padding: 0 0.5rem;
+	border: 0;
+	border-radius: 0.4375rem;
+	background: none;
+	color: var(--band-t2);
+	font: inherit;
+	font-size: 0.8125rem;
+	text-align: left;
+	cursor: pointer;
+}
+
+.difficulty:disabled {
+	cursor: default;
+}
+
+.difficulty:not(:disabled):hover {
+	background-color: rgba(247, 245, 240, 0.05);
+}
+
+.difficultyOn,
+.difficultyOn:not(:disabled):hover {
+	background-color: rgba(247, 245, 240, 0.09);
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+	color: var(--band-t1);
+}
+
+.difficultyName {
+	flex: 1 1 auto;
+}
+
+.multiplier {
+	color: var(--band-t3);
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.difficultyOn .multiplier {
+	color: var(--band-t1);
+}
+
+.actions {
+	display: flex;
+	gap: 0.375rem;
+	margin-top: auto;
+	padding-top: 0.75rem;
+}
+
+.readyButton {
+	display: inline-flex;
+	flex: 1 1 auto;
+	align-items: center;
+	justify-content: center;
+	gap: 0.375rem;
+	height: 2.25rem;
+	padding: 0 0.75rem;
+	border: 0;
+	border-radius: 0.5625rem;
+	background: none;
+	color: inherit;
+	font: inherit;
+	font-weight: 600;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+span.readyButton {
+	cursor: default;
+}
+
+.readyYes {
+	background-color: var(--band-paper);
+	color: var(--band-night);
+}
+
+.readyNo {
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+	color: var(--band-t2);
+	font-weight: 500;
+}
+
+.watch {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	height: 2.25rem;
+	padding: 0 0.6875rem;
+	border: 0;
+	border-radius: 0.5625rem;
+	background: none;
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+	color: var(--band-t2);
+	font: inherit;
+	font-size: 0.8125rem;
+	cursor: pointer;
+}
+
+@media (max-width: 60rem) {
+	.vocals {
+		flex-wrap: wrap;
+	}
+
+	.highways {
+		display: none;
+	}
+
+	.partCards {
+		flex-wrap: wrap;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.picking::before {
+		animation: none;
+	}
+}

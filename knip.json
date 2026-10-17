@@ -26,7 +26,9 @@
 			"entry": [
 				"tools/ci/*.test.mjs",
 				"tests/game_activity_integration/run.mjs",
-				"tests/game_activity_integration/vitest.config.mts"
+				"tests/game_activity_integration/vitest.config.mts",
+				"fluxer_app/src/features/activities/band/dev/rspack.band-dev.config.mjs",
+				"fluxer_app/src/features/activities/band/dev/BandDevEntry.tsx"
 			],
 			"paths": {
 				"@app/api/*": ["fluxer_api/src/api/*"],

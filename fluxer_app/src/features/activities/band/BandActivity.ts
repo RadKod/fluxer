@@ -16,8 +16,8 @@ export const BAND_ACTIVITY: ActivityDefinition = {
 	minPlayers: 1,
 	// The game brings its own heavy code; it loads when the panel first opens.
 	View: lazy(() =>
-		import('@app/features/activities/band/components/BandPlaceholderView').then((module) => ({
-			default: module.BandPlaceholderView,
+		import('@app/features/activities/band/BandView').then((module) => ({
+			default: module.BandView,
 		})),
 	),
 };

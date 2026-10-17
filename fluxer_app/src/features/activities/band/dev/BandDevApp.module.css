@@ -1,0 +1,161 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.root {
+	display: flex;
+	gap: var(--spacing-3);
+	box-sizing: border-box;
+	height: 100vh;
+	padding: var(--spacing-3);
+	background-color: var(--background-primary);
+	color: var(--text-primary);
+	font-family: var(--font-primary);
+}
+
+/* The call stage's box: the panel body the View normally fills. */
+.stage {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+	overflow: auto;
+	border: 0.0625rem solid var(--background-modifier-accent);
+	border-radius: 0.75rem;
+	background-color: var(--background-secondary);
+}
+
+.panel {
+	display: flex;
+	flex: 0 0 22rem;
+	flex-direction: column;
+	gap: var(--spacing-3);
+	min-height: 0;
+	overflow: auto;
+	font-size: 0.8125rem;
+}
+
+.section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-2);
+	padding: var(--spacing-2) var(--spacing-3);
+	border-radius: 0.5rem;
+	background-color: var(--background-secondary);
+}
+
+.section p {
+	margin: 0;
+}
+
+.heading {
+	margin: 0;
+	font-weight: 600;
+	font-size: 0.875rem;
+}
+
+.row {
+	display: flex;
+	gap: var(--spacing-2);
+}
+
+.button {
+	align-self: flex-start;
+	padding: 0.25rem 0.625rem;
+	border: 0.0625rem solid var(--background-modifier-accent);
+	border-radius: 0.375rem;
+	background-color: var(--background-tertiary);
+	color: var(--text-primary);
+	font: inherit;
+	cursor: pointer;
+}
+
+.button:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.bots {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-2);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.bot {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-1);
+	padding: var(--spacing-2);
+	border-radius: 0.375rem;
+	background-color: var(--background-tertiary);
+}
+
+.botHeader {
+	display: flex;
+	gap: var(--spacing-2);
+}
+
+.nameInput {
+	flex: 1 1 auto;
+	min-width: 0;
+	font: inherit;
+}
+
+.botFields {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--spacing-1) var(--spacing-2);
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	color: var(--text-primary-muted);
+}
+
+.field select,
+.field input {
+	font: inherit;
+}
+
+.muted {
+	margin: 0;
+	color: var(--text-primary-muted);
+}
+
+.error {
+	color: var(--status-danger);
+}
+
+.log {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	max-height: 16rem;
+	margin: 0;
+	padding: 0;
+	overflow: auto;
+	font-family: var(--font-code);
+	font-size: 0.6875rem;
+	list-style: none;
+	word-break: break-all;
+}
+
+@media (max-width: 60rem) {
+	.root {
+		flex-direction: column;
+		height: auto;
+		min-height: 100vh;
+	}
+
+	.stage {
+		min-height: 32rem;
+	}
+
+	.panel {
+		flex-basis: auto;
+	}
+}

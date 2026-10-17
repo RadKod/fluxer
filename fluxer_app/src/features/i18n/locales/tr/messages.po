@@ -57527,3 +57527,581 @@ msgstr "Herkese ping at"
 #: src/features/activities/band/components/BandPlaceholderView.tsx
 msgid "{name} pinged ({delay} ms on the way)"
 msgstr "{name} ping attı (yolda {delay} ms)"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{artist}, {length}"
+msgstr "{artist}, {length}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{artist}, added by {name}"
+msgstr "{artist}, {name} ekledi"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{count, plural, one {# rating} other {# ratings}}"
+msgstr "{count, plural, one {# puan} other {# puan}}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{count, plural, one {# time} other {# times}}"
+msgstr "{count, plural, one {# kez} other {# kez}}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"{count, plural, one {Watching now, # person} other {Watching now, # people}}"
+msgstr "{count, plural, one {İzleyenler, # kişi} other {İzleyenler, # kişi}}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{count, plural, one {Watching, # person} other {Watching, # people}}"
+msgstr ""
+"{count, plural, one {İzleyecekler, # kişi} other {İzleyecekler, # kişi}}"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "{count} of {total} taps"
+msgstr "{total} vuruştan {count}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{name} sets it. You can change your own card."
+msgstr "Bunu {name} seçer. Kendi kartını değiştirebilirsin."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{part} intensity {level}/5"
+msgstr "{part} zorluğu {level}/5"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/BandGameLabels.ts
+msgid "{part}, {difficulty}"
+msgstr "{part}, {difficulty}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{ready} of {seated} ready"
+msgstr "{seated} kişiden {ready} kişi hazır"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{seconds} s"
+msgstr "{seconds} sn"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "{stars} of 5 stars"
+msgstr "5 yıldızdan {stars}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"{voted, plural, one {# person voted} other {# people voted}}, {total, "
+"plural, one {# of us} other {# of us}}"
+msgstr ""
+"{voted, plural, one {# kişi oy verdi} other {# kişi oy verdi}}, {total, "
+"plural, one {# kişiyiz} other {# kişiyiz}}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "×{multiplier}"
+msgstr "×{multiplier}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "accuracy"
+msgstr "isabet"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-queue-add"
+msgid "Add"
+msgstr "Ekle"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Add a song"
+msgstr "Şarkı ekle"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Add a song to the queue"
+msgstr "Sıraya şarkı ekle"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"Anyone without a part watches. They cheer during the song and rate the "
+"players 1 to 5 at the end."
+msgstr ""
+"Enstrüman seçmeyen izler. Şarkı boyunca alkış atar, bitince çalanlara 1-5 "
+"puan verir."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Bass"
+msgstr "Bas"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-part"
+msgid "Bass"
+msgstr "Bas"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Big finale"
+msgstr "Büyük final"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Cheer the band"
+msgstr "Gruba alkış at"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "cheering"
+msgstr "alkışlıyor"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Clap"
+msgstr "Alkış"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-picker"
+msgid "Close"
+msgstr "Kapat"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-rhythm-test"
+msgid "Close"
+msgstr "Kapat"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Could not get the song"
+msgstr "Şarkı alınamadı"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Could not reach the song library"
+msgstr "Şarkı listesine ulaşılamadı"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Crowd ratings"
+msgstr "İzleyenlerin puanı"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Current offset: {offset} ms"
+msgstr "Şu anki gecikme: {offset} ms"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Difficulty does not count here. Everyone can see who gave what."
+msgstr "Zorluktan bağımsız. Kimin kaç verdiği herkese açık."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Download failed"
+msgstr "İnmedi"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Downloaded"
+msgstr "İndi"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Downloading {percent}%"
+msgstr "İniyor %{percent}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Downloading the song: {percent}%"
+msgstr "Şarkı iniyor: %{percent}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Drums"
+msgstr "Davul"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-part"
+msgid "Drums"
+msgstr "Davul"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-difficulty"
+msgid "Easy"
+msgstr "Kolay"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Every key plays. Hit the last note all together."
+msgstr "Her tuş çalar. Son vuruşta hep birlikte bas."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-difficulty"
+msgid "Expert"
+msgstr "Uzman"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Final hit in {seconds} s"
+msgstr "Son vuruşa {seconds} sn"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Finale bonus"
+msgstr "Final bonusu"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-part-free"
+msgid "Free"
+msgstr "Boş"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/PlayScreen.tsx
+msgid "Getting the song ready..."
+msgstr "Şarkı hazırlanıyor..."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Give {name} {stars, plural, one {# star} other {# stars}}"
+msgstr "{name} için {stars, plural, one {# yıldız} other {# yıldız}}"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Go to the vote"
+msgstr "Oylamaya geç"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-hit"
+msgid "Good"
+msgstr "İyi"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgctxt "band-meter"
+msgid "Group"
+msgstr "Grup"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Group difficulty"
+msgstr "Grubun zorluğu"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"Group difficulty {difficulty}. {players, plural, one {# person played} other"
+" {# people played}}, {spectators, plural, one {# watched} other {# "
+"watched}}."
+msgstr ""
+"Grubun zorluğu {difficulty}. {players, plural, one {# kişi çaldı} other {# "
+"kişi çaldı}}, {spectators, plural, one {# kişi izledi} other {# kişi "
+"izledi}}."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Guitar"
+msgstr "Gitar"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-part"
+msgid "Guitar"
+msgstr "Gitar"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-difficulty"
+msgid "Hard"
+msgstr "Zor"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "How the band is doing"
+msgstr "Grubun durumu"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Hype"
+msgstr "Coşku"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "I’m ready"
+msgstr "Hazırım"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "In the queue"
+msgstr "Sırada"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-part"
+msgid "Keys"
+msgstr "Klavye"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-leader"
+msgid "Leader"
+msgstr "Lider"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Leading"
+msgstr "Önde"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Loading songs..."
+msgstr "Şarkılar yükleniyor..."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Longest streak"
+msgstr "En uzun seri"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-difficulty"
+msgid "Medium"
+msgstr "Orta"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-hit"
+msgid "Missed"
+msgstr "Kaçtı"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "No {part} part"
+msgstr "{part} partisi yok"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "No songs match."
+msgstr "Eşleşen şarkı yok."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-part-missing"
+msgid "none"
+msgstr "yok"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Not measured on this device yet."
+msgstr "Bu cihazda henüz ölçülmedi."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Not ready yet"
+msgstr "Henüz hazır değil"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Notes missed"
+msgstr "Kaçırdığı nota"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-hit"
+msgid "OK"
+msgstr "İdare eder"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "On fire"
+msgstr "Yaktınız"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Optional, pitch is measured from your mic"
+msgstr "İsteğe bağlı, perde mikrofondan ölçülür"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-hit"
+msgid "Perfect"
+msgstr "Mükemmel"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-step"
+msgid "Pick"
+msgstr "Seçim"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Pick a part to play"
+msgstr "Çalmak için bir parti seç"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Picking"
+msgstr "Seçiyor"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-step"
+msgid "Play"
+msgstr "Çalma"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Play this part"
+msgstr "Bu partiyi al"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "rating"
+msgstr "veriyor"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-ready"
+msgid "Ready"
+msgstr "Hazır"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-step"
+msgid "Results"
+msgstr "Sonuç"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Rhythm test"
+msgstr "Ritim testi"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Rock on"
+msgstr "Rock"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-rhythm-test"
+msgid "Save"
+msgstr "Kaydet"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Search songs or artists"
+msgstr "Şarkı ya da sanatçı ara"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Setting up the room..."
+msgstr "Oda hazırlanıyor..."
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Song volume"
+msgstr "Şarkı sesi"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Star power"
+msgstr "Star power"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Star power on"
+msgstr "Star power açık"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-rhythm-test"
+msgid "Start"
+msgstr "Başla"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-rhythm-test"
+msgid "Tap"
+msgstr "Bas"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Tap any key on every click. The first {count} clicks count you in."
+msgstr "Her tıkta bir tuşa bas. İlk {count} tık seni ritme sokar, sayılmaz."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "The next song vote opens in {seconds} s"
+msgstr "Sıradaki şarkı oylaması {seconds} sn sonra açılıyor"
+
+#: src/features/activities/band/game/PlayScreen.tsx
+msgid "The song could not be loaded on this device."
+msgstr "Şarkı bu cihazda yüklenemedi."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "The song file is damaged. Try again to download it fresh."
+msgstr "Şarkı dosyası bozuk. Tekrar dene, baştan indirelim."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "The song list could not be read."
+msgstr "Şarkı listesi okunamadı."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "The song server did not answer. Check your connection and try again."
+msgstr "Şarkı sunucusu cevap vermedi. Bağlantını kontrol edip tekrar dene."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "The song server returned an error. Try again in a bit."
+msgstr "Şarkı sunucusu hata verdi. Biraz sonra tekrar dene."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"The song with the most votes plays. You can change your vote until time runs"
+" out."
+msgstr "En çok oy alan çalınır. Süre bitene kadar oyunu değiştirebilirsin."
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "The taps were too uneven to measure. Try again."
+msgstr "Vuruşlar ölçülemeyecek kadar düzensizdi. Bir daha dene."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "There are no songs to vote on yet."
+msgstr "Oylanacak şarkı yok."
+
+#: src/features/activities/band/game/PlayScreen.tsx
+msgid "This device cannot play the song audio."
+msgstr "Bu cihaz şarkının sesini çalamıyor."
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "This device cannot play the test clicks."
+msgstr "Bu cihaz test tıklarını çalamıyor."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "This song is no longer in the library."
+msgstr "Bu şarkı artık listede yok."
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Too few taps landed on the clicks. Try again."
+msgstr "Tıklara denk gelen vuruş çok az. Bir daha dene."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-retry"
+msgid "Try again"
+msgstr "Tekrar dene"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-rhythm-test"
+msgid "Try again"
+msgstr "Bir daha dene"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Up next"
+msgstr "Sırada sonra"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Vocals"
+msgstr "Vokal"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-part"
+msgid "Vocals"
+msgstr "Vokal"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-step"
+msgid "Vote"
+msgstr "Oylama"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Vote for {song}"
+msgstr "{song} için oy ver"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Vote with"
+msgstr "Oy için"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-download"
+msgid "Waiting"
+msgstr "Sırada"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Waiting for the score"
+msgstr "Puanı bekleniyor"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-watch"
+msgid "Watch"
+msgstr "İzle"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "watching"
+msgstr "izliyor"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "What should we play next?"
+msgstr "Sıradaki şarkı ne olsun?"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "While you play, your mic is muted and comes back when the song ends."
+msgstr "Çalarken mikrofonun kapanır, şarkı bitince eski hâline döner."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"While you play, your mic switches to push-to-talk and goes back when the "
+"song ends."
+msgstr ""
+"Çalarken mikrofonun bas-konuşa geçer, şarkı bitince eski hâline döner."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Wow"
+msgstr "Vay"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgctxt "band-player-self"
+msgid "You"
+msgstr "Sen"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-self"
+msgid "You"
+msgstr "Sen"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "You are the leader. Everyone can still change their own card."
+msgstr "Lider sensin. Herkes kendi kartından değiştirebilir."
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Your offset: {offset} ms"
+msgstr "Gecikmen: {offset} ms"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Your rating"
+msgstr "Senin puanın"
