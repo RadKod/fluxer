@@ -16,6 +16,9 @@ const TILT_DEG = 44;
 const HIGHWAY_GAP = 32;
 const FRET_HIGHWAY_WIDTH = 205;
 const DRUM_HIGHWAY_WIDTH = 235;
+// Gems keep their design size down to this fret lane width (four highways land just above it); in narrower lanes,
+// with five highways, they shrink along so neighbours do not touch.
+const FULL_SIZE_FRET_LANE = 36;
 // Plane distance of the strikeline from the near edge, and where judgement text sits.
 export const STRIKE_DISTANCE = 40;
 export const FEEDBACK_DISTANCE = 96;
@@ -35,6 +38,8 @@ export interface HighwayLayout {
 	// Near edge, canvas px.
 	readonly left: number;
 	readonly width: number;
+	// Size factor for gems, pads and tails on top of the stage scale; 1 unless the lanes got too narrow.
+	readonly noteScale: number;
 }
 
 export interface StageLayout {
@@ -68,8 +73,9 @@ export function layoutStage(width: number, height: number, kinds: ReadonlyArray<
 	const offsetY = height - DESIGN_HEIGHT * scale;
 	const widths = kinds.map((kind) => (kind === 'drums' ? DRUM_HIGHWAY_WIDTH : FRET_HIGHWAY_WIDTH));
 	const natural = widths.reduce((sum, w) => sum + w, 0) + HIGHWAY_GAP * Math.max(0, kinds.length - 1);
-	// Four highways do not fit the design width; they shrink together, gaps included.
+	// Four or five highways do not fit the design width; they shrink together, gaps included.
 	const fit = Math.min(1, (DESIGN_WIDTH * 0.92) / Math.max(natural, 1));
+	const noteScale = Math.min(1, ((FRET_HIGHWAY_WIDTH / 5) * fit) / FULL_SIZE_FRET_LANE);
 	let cursor = (DESIGN_WIDTH - natural * fit) / 2;
 	const highways = kinds.map((kind, index) => {
 		const highway: HighwayLayout = {
@@ -77,6 +83,7 @@ export function layoutStage(width: number, height: number, kinds: ReadonlyArray<
 			lanes: kind === 'drums' ? 4 : 5,
 			left: offsetX + cursor * scale,
 			width: widths[index] * fit * scale,
+			noteScale,
 		};
 		cursor += (widths[index] + HIGHWAY_GAP) * fit;
 		return highway;

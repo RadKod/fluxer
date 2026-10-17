@@ -53,6 +53,8 @@ function context(overrides: Partial<BandRoomContext> = {}): BandRoomContext {
 }
 
 const CTX = context();
+const TWO_GUITARS = song('two-guitars', {parts: {guitar: ALL, rhythm: ['hard', 'expert'], bass: ALL, drums: ALL}});
+const TWO_GUITARS_CTX = context({songs: new Map([...SONGS, TWO_GUITARS].map((entry) => [entry.id, entry]))});
 const T0 = 1_000_000;
 
 type Vote = Extract<BandState, {phase: 'vote'}>;
@@ -351,6 +353,28 @@ describe('seats', () => {
 		expect(apply(state, {t: 'band.claimSeat', part: 'keys'}, 'u1')).toBe(state);
 	});
 
+	it('seats lead and rhythm guitar as separate parts, in band order', () => {
+		const state = applyAll(
+			select({songId: TWO_GUITARS.id}),
+			[
+				[{t: 'band.claimSeat', part: 'bass'}, 'u3'],
+				[{t: 'band.claimSeat', part: 'rhythm'}, 'u1'],
+				[{t: 'band.claimSeat', part: 'guitar'}, 'u2'],
+			],
+			TWO_GUITARS_CTX,
+		);
+		expect(state.phase === 'select' && state.seats.map((seat) => [seat.part, seat.userId, seat.difficulty])).toEqual([
+			['guitar', 'u2', 'medium'],
+			['rhythm', 'u1', 'hard'],
+			['bass', 'u3', 'medium'],
+		]);
+	});
+
+	it('has no rhythm guitar seat in a song without one', () => {
+		const state = select();
+		expect(apply(state, {t: 'band.claimSeat', part: 'rhythm'}, 'u1')).toBe(state);
+	});
+
 	it('clamps the group difficulty to what the part offers', () => {
 		const state = apply(select({songId: 'c', groupDifficulty: 'easy'}), {t: 'band.claimSeat', part: 'guitar'}, 'u1');
 		expect(state.phase === 'select' && state.seats[0].difficulty).toBe('hard');
@@ -544,6 +568,27 @@ describe('play', () => {
 		]);
 	});
 
+	it('orders results by part with rhythm guitar after the lead', () => {
+		const seats = [
+			{part: 'guitar', userId: 'u1', difficulty: 'hard', ready: true},
+			{part: 'rhythm', userId: 'u2', difficulty: 'expert', ready: true},
+		] as const;
+		const state = applyAll(
+			play({songId: TWO_GUITARS.id, seats}),
+			[
+				[{t: 'band.result', result: RESULT}, 'u2'],
+				[{t: 'band.result', result: RESULT}, 'u1'],
+			],
+			TWO_GUITARS_CTX,
+		);
+		expect(
+			state.phase === 'results' && state.results.map((result) => [result.part, result.userId, result.score]),
+		).toEqual([
+			['guitar', 'u1', 1500],
+			['rhythm', 'u2', 2000],
+		]);
+	});
+
 	it('ignores results from spectators and second reports', () => {
 		const state = play();
 		expect(apply(state, {t: 'band.result', result: RESULT}, 'u3')).toBe(state);
@@ -702,6 +747,7 @@ describe('parseBandIntent', () => {
 			{t: 'band.queueAdd', songId: 'a'},
 			{t: 'band.vote', songId: 'a'},
 			{t: 'band.claimSeat', part: 'drums'},
+			{t: 'band.claimSeat', part: 'rhythm'},
 			{t: 'band.claimSeat', part: null},
 			{t: 'band.difficulty', difficulty: 'expert'},
 			{t: 'band.groupDifficulty', difficulty: 'easy'},

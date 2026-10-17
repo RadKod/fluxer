@@ -34,6 +34,7 @@ describe('BandInput', () => {
 				lane,
 			})),
 		);
+		expect(actionForKey(DEFAULT_BAND_KEY_MAP, 'rhythm', 'KeyG')).toEqual({kind: 'lane', lane: FretLane.Orange});
 		expect(
 			['Space', 'KeyH', 'KeyJ', 'KeyK', 'KeyL'].map((code) => actionForKey(DEFAULT_BAND_KEY_MAP, 'drums', code)),
 		).toEqual(

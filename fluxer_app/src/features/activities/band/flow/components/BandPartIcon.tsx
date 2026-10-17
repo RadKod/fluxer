@@ -2,12 +2,18 @@
 
 import type {BandPart} from '@app/features/activities/band/engine/ChartModel';
 
-// Line icons drawn for the band game; the icon set has no drum kit and only one guitar shape.
+// Line icons drawn for the band game; the icon set has no drum kit and only one guitar shape. Rhythm guitar is the
+// guitar mirrored, so the two guitars face each other on the cards.
 const PART_PATHS: Readonly<Record<BandPart, ReadonlyArray<string>>> = {
 	guitar: [
 		'M13.2 10.8L20 4M18.6 2.6l2.8 2.8',
 		'M10.6 9.2c-1.4-.6-3-.1-3.8 1.1-.5.8-1.4 1.1-2.3 1.4-1.7.6-2.4 2.4-1.8 4.2.7 2 2.6 3.9 4.6 4.6 1.8.6 3.6-.1 4.2-1.8.3-.9.6-1.8 1.4-2.3 1.2-.8 1.7-2.4 1.1-3.8',
 		'M8.2 15.8l2-2',
+	],
+	rhythm: [
+		'M10.8 10.8L4 4M5.4 2.6l-2.8 2.8',
+		'M13.4 9.2c1.4-.6 3-.1 3.8 1.1.5.8 1.4 1.1 2.3 1.4 1.7.6 2.4 2.4 1.8 4.2-.7 2-2.6 3.9-4.6 4.6-1.8.6-3.6-.1-4.2-1.8-.3-.9-.6-1.8-1.4-2.3-1.2-.8-1.7-2.4-1.1-3.8',
+		'M15.8 15.8l-2-2',
 	],
 	bass: [
 		'M12.6 11.4L21.5 2.5',

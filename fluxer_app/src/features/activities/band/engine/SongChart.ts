@@ -17,13 +17,15 @@ import {type ParsedChart, parseChartFile} from '@app/features/activities/band/en
 
 export type ChartFormat = 'mid' | 'chart';
 
-// Chart tracks that can feed each part, in order of preference.
-const PART_TRACKS: Readonly<Record<InstrumentPart, ReadonlyArray<Instrument>>> = {
-	guitar: ['guitar'],
-	bass: ['bass', 'rhythm'],
-	drums: ['drums'],
-	keys: ['keys'],
-};
+// Chart tracks that can feed each part, in order of preference; a track feeds only the first part that claims it.
+// PART RHYTHM is the bass in charts without PART BASS (the Guitar Hero co-op convention), rhythm guitar otherwise.
+const PART_TRACKS: ReadonlyArray<readonly [InstrumentPart, ReadonlyArray<Instrument>]> = [
+	['guitar', ['guitar']],
+	['bass', ['bass', 'rhythm']],
+	['rhythm', ['rhythm']],
+	['drums', ['drums']],
+	['keys', ['keys']],
+];
 
 export interface PartAvailability {
 	readonly part: InstrumentPart;
@@ -69,16 +71,26 @@ export class SongChart {
 		const parsed = parseChartFile(data, format, modifiers);
 		const tempoMap = new TempoMap(parsed.resolution, parsed.tempos, parsed.timeSignatures);
 
-		const tracks = new Map<InstrumentPart, Map<BandDifficulty, ParsedTrack>>();
-		for (const [part, instruments] of Object.entries(PART_TRACKS) as Array<[InstrumentPart, Array<Instrument>]>) {
-			const instrument = instruments.find((name) => parsed.trackData.some((track) => track.instrument === name));
-			if (!instrument) continue;
-			const byDifficulty = new Map<BandDifficulty, ParsedTrack>();
-			for (const track of parsed.trackData) {
-				if (track.instrument === instrument && track.noteEventGroups.length > 0)
-					byDifficulty.set(track.difficulty, track);
+		const byInstrument = new Map<Instrument, Map<BandDifficulty, ParsedTrack>>();
+		for (const track of parsed.trackData) {
+			if (track.noteEventGroups.length === 0) continue;
+			let byDifficulty = byInstrument.get(track.instrument);
+			if (!byDifficulty) {
+				byDifficulty = new Map();
+				byInstrument.set(track.instrument, byDifficulty);
 			}
-			if (byDifficulty.size > 0) tracks.set(part, byDifficulty);
+			byDifficulty.set(track.difficulty, track);
+		}
+		const tracks = new Map<InstrumentPart, ReadonlyMap<BandDifficulty, ParsedTrack>>();
+		const claimed = new Set<Instrument>();
+		for (const [part, instruments] of PART_TRACKS) {
+			for (const instrument of instruments) {
+				const byDifficulty = byInstrument.get(instrument);
+				if (!byDifficulty || claimed.has(instrument)) continue;
+				claimed.add(instrument);
+				tracks.set(part, byDifficulty);
+				break;
+			}
 		}
 
 		const sections = parsed.sections.map(({name, msTime}) => ({name, msTime}));
@@ -93,6 +105,10 @@ export class SongChart {
 			end = Math.max(end, chart?.durationMs ?? 0);
 		}
 		return end;
+	}
+
+	hasPart(part: InstrumentPart): boolean {
+		return this.tracks.has(part);
 	}
 
 	availableParts(): Array<PartAvailability> {

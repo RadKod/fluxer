@@ -6,7 +6,12 @@ import {DrumLane, type InstrumentPart} from '@app/features/activities/band/engin
 // pieces for drums. Song keys are not in the chart metadata, so frets play an E minor pentatonic, the safest rock key.
 const E2_HZ = 82.41;
 const PENTATONIC_SEMITONES = [0, 3, 5, 7, 10, 12];
-const OCTAVE_BY_PART: Readonly<Record<Exclude<InstrumentPart, 'drums'>, number>> = {guitar: 2, bass: 0, keys: 2};
+const OCTAVE_BY_PART: Readonly<Record<Exclude<InstrumentPart, 'drums'>, number>> = {
+	guitar: 2,
+	rhythm: 1,
+	bass: 0,
+	keys: 2,
+};
 const NOISE_SECONDS = 0.5;
 
 export function fretFrequency(part: Exclude<InstrumentPart, 'drums'>, lane: number): number {

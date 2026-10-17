@@ -51,6 +51,14 @@ describe('mapAudioStems', () => {
 		expect(mapAudioStems([file('rhythm.opus'), file('drums.ogg')]).map((stem) => stem.role)).toEqual(['drums', 'bass']);
 	});
 
+	it('gives rhythm to the rhythm guitar part when the chart has one', () => {
+		expect(mapAudioStems([file('bass.opus'), file('rhythm.opus')], true).map((stem) => stem.role)).toEqual([
+			'bass',
+			'rhythm',
+		]);
+		expect(mapAudioStems([file('rhythm.opus')], true).map((stem) => stem.role)).toEqual(['rhythm']);
+	});
+
 	it('prefers opus when a stem exists in both formats, regardless of order', () => {
 		expect(mapAudioStems([file('Guitar.OPUS'), file('guitar.ogg')])).toMatchObject([{fileName: 'Guitar.OPUS'}]);
 		expect(mapAudioStems([file('guitar.ogg'), file('guitar.opus')])).toMatchObject([{fileName: 'guitar.opus'}]);
@@ -87,6 +95,24 @@ describe('SongPackage', () => {
 		expect(song.metadata.ratings).toEqual({drums: 3});
 		expect(song.stemsFor('drums').map((stem) => stem.fileName)).toEqual(['drums_1.opus']);
 		expect(song.chart().partChart('guitar', 'expert')?.groups).toHaveLength(1);
+	});
+
+	it('maps rhythm.* by what the chart charts', () => {
+		const twoGuitars = buildMidi({
+			tracks: [
+				{name: 'PART GUITAR', notes: [{tick: 0, note: EXPERT_NOTE_BASE}]},
+				{name: 'PART BASS', notes: [{tick: 0, note: EXPERT_NOTE_BASE}]},
+				{name: 'PART RHYTHM', notes: [{tick: 0, note: EXPERT_NOTE_BASE}]},
+			],
+		});
+		const withRhythm = SongPackage.fromFolder([file('notes.mid', twoGuitars), file('bass.opus'), file('rhythm.opus')]);
+		expect(withRhythm.stemsFor('rhythm').map((stem) => stem.fileName)).toEqual(['rhythm.opus']);
+		expect(withRhythm.stemsFor('bass').map((stem) => stem.fileName)).toEqual(['bass.opus']);
+
+		// Harmonix packages: no rhythm part, no bass.*; rhythm.* is the bass.
+		const bassAsRhythm = SongPackage.fromFolder([file('notes.mid', NOTES_MID), file('rhythm.opus')]);
+		expect(bassAsRhythm.stemsFor('bass').map((stem) => stem.fileName)).toEqual(['rhythm.opus']);
+		expect(bassAsRhythm.stemsFor('rhythm')).toEqual([]);
 	});
 
 	it('requires a chart file', () => {

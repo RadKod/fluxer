@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {BandCheerKind} from '@app/features/activities/band/BandProtocol';
-import type {BandDifficulty, BandPart} from '@app/features/activities/band/engine/ChartModel';
+import type {BandCheerKind, BandSongSummary} from '@app/features/activities/band/BandProtocol';
+import {type BandDifficulty, type BandPart, isLeadPart} from '@app/features/activities/band/engine/ChartModel';
 import type {BandLibraryFailure} from '@app/features/activities/band/flow/BandSongLibrary';
 import type {MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
@@ -31,11 +31,28 @@ export const STEP_DESCRIPTORS = {
 
 export const PART_DESCRIPTORS: Readonly<Record<BandPart, MessageDescriptor>> = {
 	guitar: msg({message: 'Guitar', comment: 'Band game: the guitar part of a song.'}),
+	rhythm: msg({
+		message: 'Rhythm guitar',
+		comment: 'Band game: the second guitar part of a song, the one playing chords and riffs under the lead.',
+	}),
 	bass: msg({message: 'Bass', comment: 'Band game: the bass guitar part of a song.'}),
 	drums: msg({message: 'Drums', comment: 'Band game: the drums part of a song.'}),
 	keys: msg({message: 'Keys', comment: 'Band game: the keyboard (piano, synth) part of a song.'}),
 	vocals: msg({message: 'Vocals', comment: 'Band game: the singing part of a song, scored from the microphone.'}),
 };
+
+const LEAD_PART_DESCRIPTORS: Readonly<Partial<Record<BandPart, MessageDescriptor>>> = {
+	guitar: msg({
+		message: 'Lead guitar',
+		comment: 'Band game: the guitar part of a song that also has a rhythm guitar part; the melodies and solos.',
+	}),
+};
+
+// "Lead guitar" only when the song also has a rhythm guitar to tell it from; plain "Guitar" otherwise.
+export function partDescriptor(part: BandPart, song: BandSongSummary | undefined): MessageDescriptor {
+	const lead = LEAD_PART_DESCRIPTORS[part];
+	return lead && song && isLeadPart(part, song.parts) ? lead : PART_DESCRIPTORS[part];
+}
 
 export const DIFFICULTY_DESCRIPTORS: Readonly<Record<BandDifficulty, MessageDescriptor>> = {
 	easy: msg({message: 'Easy', context: 'band-difficulty', comment: 'Band game: the easiest chart difficulty.'}),

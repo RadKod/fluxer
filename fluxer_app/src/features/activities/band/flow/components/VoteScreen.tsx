@@ -10,10 +10,10 @@ import {
 	DOWNLOADING_DESCRIPTOR,
 	LEADING_DESCRIPTOR,
 	MY_VOTE_DESCRIPTOR,
-	PART_DESCRIPTORS,
 	PART_INTENSITY_DESCRIPTOR,
 	PART_MISSING_DESCRIPTOR,
 	PART_MISSING_SHORT_DESCRIPTOR,
+	partDescriptor,
 	QUEUE_ENTRY_DESCRIPTOR,
 	UP_NEXT_DESCRIPTOR,
 	VOTE_COUNT_DESCRIPTOR,
@@ -46,8 +46,10 @@ type VoteState = Extract<BandState, {phase: 'vote'}>;
 
 const VOTE_KEYS = ['a', 's', 'd'] as const;
 const KEY_CAP_CLASSES = [styles.keyGreen, styles.keyRed, styles.keyYellow];
-// Keys only shows up on the card when the song has it; the other four always do, so a missing part reads as missing.
-const CARD_PARTS: ReadonlyArray<BandPart> = ['guitar', 'bass', 'drums', 'keys', 'vocals'];
+const CARD_PARTS: ReadonlyArray<BandPart> = ['guitar', 'rhythm', 'bass', 'drums', 'keys', 'vocals'];
+// Rhythm guitar and keys only show up on the card when the song has them; the others always do, so a missing part
+// reads as missing.
+const OPTIONAL_CARD_PARTS: ReadonlySet<BandPart> = new Set(['rhythm', 'keys']);
 const QUEUE_PREVIEW = 2;
 const INTENSITY_CELLS = 5;
 
@@ -117,11 +119,13 @@ const DownloadStatus = observer(function DownloadStatus({download}: {readonly do
 
 const PartsRow = observer(function PartsRow({room, song}: {readonly room: BandRoom; readonly song: BandSongSummary}) {
 	const {i18n} = useLingui();
-	const parts = CARD_PARTS.filter((part) => part !== 'keys' || songPartDifficulties(song, part).length > 0);
+	const parts = CARD_PARTS.filter(
+		(part) => !OPTIONAL_CARD_PARTS.has(part) || songPartDifficulties(song, part).length > 0,
+	);
 	return (
 		<div className={styles.parts} data-flx="activities.band.flow.vote-screen.parts-row.parts">
 			{parts.map((part) => {
-				const partName = i18n._(PART_DESCRIPTORS[part]);
+				const partName = i18n._(partDescriptor(part, song));
 				if (songPartDifficulties(song, part).length === 0) {
 					return (
 						<span

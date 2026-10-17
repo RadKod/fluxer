@@ -17,7 +17,16 @@ const CLICK_LENGTH_S = 0.05;
 // Audio cannot be scheduled into the past; this is the least lead given on top of the output latency.
 const MIN_START_LEAD_S = 0.25;
 
-const PLAYABLE_ROLES: ReadonlyArray<StemRole> = ['guitar', 'bass', 'drums', 'keys', 'vocals', 'backing', 'crowd'];
+const PLAYABLE_ROLES: ReadonlyArray<StemRole> = [
+	'guitar',
+	'rhythm',
+	'bass',
+	'drums',
+	'keys',
+	'vocals',
+	'backing',
+	'crowd',
+];
 
 export interface GainPoint {
 	readonly time: number;

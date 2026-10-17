@@ -12,6 +12,7 @@ import {
 	type BandDifficulty,
 	type BandPart,
 	type InstrumentPart,
+	STAGE_ORDER,
 } from '@app/features/activities/band/engine/ChartModel';
 import {
 	DIFFICULTY_DESCRIPTORS,
@@ -26,6 +27,7 @@ import {
 	PART_DESCRIPTORS,
 	PICK_A_PART_DESCRIPTOR,
 	PICKING_DESCRIPTOR,
+	partDescriptor,
 	READY_DESCRIPTOR,
 	READY_TALLY_DESCRIPTOR,
 	SONG_SUBTITLE_DESCRIPTOR,
@@ -54,8 +56,6 @@ import {useRef} from 'react';
 
 type SelectState = Extract<BandState, {phase: 'select'}>;
 
-// Highway order, drums in the middle as on a stage; vocals have their own card above.
-const HIGHWAY_PARTS: ReadonlyArray<InstrumentPart> = ['guitar', 'drums', 'bass', 'keys'];
 const LANE_CLASSES: Readonly<Record<BandLaneColour, string>> = {
 	green: styles.laneGreen,
 	red: styles.laneRed,
@@ -256,10 +256,11 @@ interface PartCardProps {
 const PartCard = observer(function PartCard({room, song, part, seat}: PartCardProps) {
 	const {i18n} = useLingui();
 	const mine = seat?.userId === room.myUserId;
+	const name = i18n._(partDescriptor(part, song));
 	return (
 		<section
 			className={clsx(styles.partCard, mine && styles.partCardMine)}
-			aria-label={i18n._(PART_DESCRIPTORS[part])}
+			aria-label={name}
 			data-flx="activities.band.flow.select-screen.part-card.part-card"
 		>
 			<header className={styles.partHeader} data-flx="activities.band.flow.select-screen.part-card.part-header">
@@ -269,7 +270,7 @@ const PartCard = observer(function PartCard({room, song, part, seat}: PartCardPr
 						className={styles.partIcon}
 						data-flx="activities.band.flow.select-screen.part-card.part-icon"
 					/>
-					{i18n._(PART_DESCRIPTORS[part])}
+					{name}
 				</span>
 				<PartKeys part={part} data-flx="activities.band.flow.select-screen.part-card.part-keys" />
 			</header>
@@ -420,7 +421,8 @@ export const SelectScreen = observer(function SelectScreen({room, state, song}: 
 	const rootRef = useRef<HTMLDivElement>(null);
 	const now = useBandNow(room.session);
 	const seatFor = (part: BandPart) => state.seats.find((seat) => seat.part === part);
-	const highwayParts = HIGHWAY_PARTS.filter((part) => songPartDifficulties(song, part).length > 0);
+	// Highways in stage order; vocals have their own card above.
+	const highwayParts = STAGE_ORDER.filter((part) => songPartDifficulties(song, part).length > 0);
 	const hasVocals = songPartDifficulties(song, 'vocals').length > 0;
 	const mySeat = state.seats.find((seat) => seat.userId === room.myUserId);
 	// The early start waits for everyone in the room, so the count does too: a ready seat or a choice to watch.

@@ -58822,3 +58822,21 @@ msgstr "Sing into your mic; pitch is scored."
 msgctxt "band-key-guide"
 msgid "{count} keys at once"
 msgstr "{count} keys at once"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Rhythm guitar"
+msgstr "Rhythm guitar"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Lead guitar"
+msgstr "Lead guitar"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-part"
+msgid "Rhythm guitar"
+msgstr "Rhythm guitar"
+
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-part"
+msgid "Lead guitar"
+msgstr "Lead guitar"

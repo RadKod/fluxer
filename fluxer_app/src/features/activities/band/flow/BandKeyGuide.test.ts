@@ -11,7 +11,7 @@ const summary = (keys: ReturnType<typeof bandPartKeys>) => ({
 });
 
 describe('BandKeyGuide', () => {
-	it('shows A S D F G in fret colours and Enter for star power on guitar, bass and keys', () => {
+	it('shows A S D F G in fret colours and Enter for star power on both guitars, bass and keys', () => {
 		const expected = {
 			lanes: [
 				['A', 'green'],
@@ -24,6 +24,7 @@ describe('BandKeyGuide', () => {
 			starPower: ['Enter', null],
 		};
 		expect(summary(bandPartKeys(DEFAULT_BAND_KEY_MAP, 'guitar'))).toEqual(expected);
+		expect(summary(bandPartKeys(DEFAULT_BAND_KEY_MAP, 'rhythm'))).toEqual(expected);
 		expect(summary(bandPartKeys(DEFAULT_BAND_KEY_MAP, 'bass'))).toEqual(expected);
 		expect(summary(bandPartKeys(DEFAULT_BAND_KEY_MAP, 'keys'))).toEqual(expected);
 	});

@@ -22,10 +22,10 @@ describe('HighwayGeometry', () => {
 		const layout = layoutStage(DESIGN_WIDTH, DESIGN_HEIGHT, ['frets', 'drums', 'frets']);
 		expect(layout.scale).toBe(1);
 		// The mock-up rounded the centred block to whole pixels: 110, 347, 614.
-		expect(layout.highways.map(({left, width, lanes}) => [left, width, lanes])).toEqual([
-			[110.5, 205, 5],
-			[347.5, 235, 4],
-			[614.5, 205, 5],
+		expect(layout.highways.map(({left, width, lanes, noteScale}) => [left, width, lanes, noteScale])).toEqual([
+			[110.5, 205, 5, 1],
+			[347.5, 235, 4, 1],
+			[614.5, 205, 5, 1],
 		]);
 		expect(layout.regionTop).toBe(196);
 	});
@@ -57,6 +57,20 @@ describe('HighwayGeometry', () => {
 		expect(layout.highways[0].left).toBeGreaterThanOrEqual(0);
 		expect(last.left + last.width).toBeLessThanOrEqual(DESIGN_WIDTH);
 		expect(last.width).toBeLessThan(205);
+		expect(layout.highways.every((highway) => highway.noteScale === 1)).toBe(true);
+	});
+
+	it('fits five highways centred, with smaller gems in the narrower lanes', () => {
+		const layout = layoutStage(DESIGN_WIDTH, DESIGN_HEIGHT, ['frets', 'frets', 'drums', 'frets', 'frets']);
+		const first = layout.highways[0];
+		const last = layout.highways[4];
+		expect(first.left).toBeGreaterThan(0);
+		expect(first.left).toBeCloseTo(DESIGN_WIDTH - (last.left + last.width));
+		expect(first.width).toBeLessThan(155);
+		const fretLane = first.width / first.lanes;
+		// A gem is 32 design px across at noteScale 1.
+		expect(32 * first.noteScale).toBeLessThan(fretLane);
+		expect(first.noteScale).toBeGreaterThan(0.75);
 	});
 
 	it('places notes on the strikeline at their time and one look-ahead further up', () => {

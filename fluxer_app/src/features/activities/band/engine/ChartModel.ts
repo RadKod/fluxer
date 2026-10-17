@@ -3,8 +3,20 @@
 import {noteFlags, noteTypes} from '@app/features/activities/band/engine/vendor/scan-chart/note-parsing-interfaces';
 import type {ParsedChart} from '@app/features/activities/band/engine/vendor/scan-chart/notes-parser';
 
-export type BandPart = 'guitar' | 'bass' | 'drums' | 'keys' | 'vocals';
+export type BandPart = 'guitar' | 'rhythm' | 'bass' | 'drums' | 'keys' | 'vocals';
 export type InstrumentPart = Exclude<BandPart, 'vocals'>;
+
+// Left to right on the stage: the guitars, drums in the middle, bass, then keys.
+export const STAGE_ORDER: ReadonlyArray<InstrumentPart> = ['guitar', 'rhythm', 'drums', 'bass', 'keys'];
+
+// Parts that some songs split in two, mapped to the second part. With both charted the first one goes by its lead name
+// ("Lead guitar"); harmony vocals or a second keys part would be added here the same way.
+export const SECOND_PARTS: Readonly<Partial<Record<BandPart, BandPart>>> = {guitar: 'rhythm'};
+
+export function isLeadPart(part: BandPart, parts: Partial<Record<BandPart, ReadonlyArray<unknown>>>): boolean {
+	const second = SECOND_PARTS[part];
+	return second !== undefined && (parts[second]?.length ?? 0) > 0;
+}
 
 export const BAND_DIFFICULTIES = ['easy', 'medium', 'hard', 'expert'] as const;
 export type BandDifficulty = (typeof BAND_DIFFICULTIES)[number];

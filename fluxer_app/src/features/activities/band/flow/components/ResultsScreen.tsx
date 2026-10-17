@@ -22,7 +22,7 @@ import {
 	NEXT_VOTE_DESCRIPTOR,
 	NOTES_MISSED_DESCRIPTOR,
 	PART_AND_DIFFICULTY_DESCRIPTOR,
-	PART_DESCRIPTORS,
+	partDescriptor,
 	RATE_PLAYER_DESCRIPTOR,
 	RATING_PENDING_DESCRIPTOR,
 	RATINGS_COUNT_DESCRIPTOR,
@@ -107,11 +107,12 @@ function Stars({count, className}: {readonly count: number; readonly className?:
 
 interface PlayerColumnProps {
 	readonly room: BandRoom;
+	readonly song: BandSongSummary;
 	readonly seat: BandSeat;
 	readonly result: BandPlayerResult | undefined;
 }
 
-const PlayerColumn = observer(function PlayerColumn({room, seat, result}: PlayerColumnProps) {
+const PlayerColumn = observer(function PlayerColumn({room, song, seat, result}: PlayerColumnProps) {
 	const {i18n} = useLingui();
 	return (
 		<div className={styles.column} data-flx="activities.band.flow.results-screen.player-column.column">
@@ -140,7 +141,7 @@ const PlayerColumn = observer(function PlayerColumn({room, seat, result}: Player
 						/>
 						<span data-flx="activities.band.flow.results-screen.player-column.span--2">
 							{i18n._(PART_AND_DIFFICULTY_DESCRIPTOR, {
-								part: i18n._(PART_DESCRIPTORS[seat.part]),
+								part: i18n._(partDescriptor(seat.part, song)),
 								difficulty: i18n._(DIFFICULTY_DESCRIPTORS[seat.difficulty]),
 							})}
 						</span>
@@ -256,7 +257,11 @@ const CrowdColumn = observer(function CrowdColumn({room, state, playerId}: Crowd
 										onClick={() => room.send({t: 'band.rate', playerId, stars: value})}
 										data-flx="activities.band.flow.results-screen.crowd-column.star-button.send"
 									>
-										<StarIcon size={16} weight="fill" data-flx="activities.band.flow.results-screen.crowd-column.star-icon" />
+										<StarIcon
+											size={16}
+											weight="fill"
+											data-flx="activities.band.flow.results-screen.crowd-column.star-icon"
+										/>
 									</button>
 								))}
 							</span>
@@ -349,6 +354,7 @@ export const ResultsScreen = observer(function ResultsScreen({room, state, song}
 					<PlayerColumn
 						key={seat.userId}
 						room={room}
+						song={song}
 						seat={seat}
 						result={resultFor(seat.userId)}
 						data-flx="activities.band.flow.results-screen.player-column"

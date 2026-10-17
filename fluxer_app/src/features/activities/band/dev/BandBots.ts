@@ -18,6 +18,7 @@ import {
 import type {FakeActivityPeer, FakeActivitySession} from '@app/features/activities/band/dev/FakeActivitySession';
 import type {BandDifficulty, BandPart} from '@app/features/activities/band/engine/ChartModel';
 import {multiplierForStreak, NOTE_POINTS} from '@app/features/activities/band/engine/Judge';
+import {BAND_PARTS} from '@app/features/activities/band/flow/BandRoomMachine';
 import {type BandFinaleMessage, FINALE_PRESS_POINTS} from '@app/features/activities/band/game/PlayController';
 import {action, makeObservable, observable, observableRef} from 'mobx';
 
@@ -69,7 +70,6 @@ const DEFAULT_SETTINGS: BandBotSettings = {
 	reactionMs: 3_000,
 };
 
-const PART_ORDER: ReadonlyArray<BandPart> = ['guitar', 'bass', 'drums', 'keys', 'vocals'];
 const CHEER_KINDS: ReadonlyArray<BandCheerKind> = ['clap', 'fire', 'horns', 'wow'];
 const PLAY_TICK_MS = 40;
 // Used when the chart cannot be read: one note this often across the song's length.
@@ -275,10 +275,10 @@ export class BandBot {
 	private pickPart(songId: string, seats: ReadonlyArray<BandSeat>): BandPart | null {
 		const song = this.bots.songs().find((candidate) => candidate.id === songId);
 		const available = song
-			? PART_ORDER.filter((part) => (song.parts[part]?.length ?? 0) > 0)
-			: PART_ORDER.filter((part) => part !== 'vocals');
+			? BAND_PARTS.filter((part) => (song.parts[part]?.length ?? 0) > 0)
+			: BAND_PARTS.filter((part) => part !== 'vocals');
 		const taken = new Set(seats.map((seat) => seat.part));
-		const order = [...this.settings.preferredParts, ...PART_ORDER];
+		const order = [...this.settings.preferredParts, ...BAND_PARTS];
 		return order.find((part) => available.includes(part) && !taken.has(part)) ?? null;
 	}
 

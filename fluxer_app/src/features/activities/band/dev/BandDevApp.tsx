@@ -8,10 +8,10 @@ import type {BandBot, BandBotRole, BandBotSettings} from '@app/features/activiti
 import styles from '@app/features/activities/band/dev/BandDevApp.module.css';
 import {type BandDevHarness, MAX_BOTS} from '@app/features/activities/band/dev/BandDevHarness';
 import {BAND_DIFFICULTIES, type BandDifficulty, type BandPart} from '@app/features/activities/band/engine/ChartModel';
+import {BAND_PARTS} from '@app/features/activities/band/flow/BandRoomMachine';
 import {observer} from 'mobx-react-lite';
 import {Suspense} from 'react';
 
-const PARTS: ReadonlyArray<BandPart> = ['guitar', 'bass', 'drums', 'keys', 'vocals'];
 const CHEER_CHOICES: ReadonlyArray<readonly [number, string]> = [
 	[0, 'hiç'],
 	[2_000, '2 sn'],
@@ -73,7 +73,7 @@ const BotRow = observer(function BotRow({bot, harness}: {bot: BandBot; harness: 
 						<option value="" data-flx="activities.band.dev.band-dev-app.bot-row.option--3">
 							boş olan
 						</option>
-						{PARTS.map((part) => (
+						{BAND_PARTS.map((part) => (
 							<option key={part} value={part} data-flx="activities.band.dev.band-dev-app.bot-row.option--4">
 								{part}
 							</option>

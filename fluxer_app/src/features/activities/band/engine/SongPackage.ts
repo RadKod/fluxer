@@ -68,8 +68,14 @@ function splitExtension(fileName: string): [stem: string, extension: string] {
 	return dot <= 0 ? [fileName, ''] : [fileName.slice(0, dot), fileName.slice(dot + 1)];
 }
 
-// rhythm.* is the bass stem when there is no bass.*; otherwise it is rhythm guitar and plays as backing.
-export function mapAudioStems(files: ReadonlyArray<SongFile>): Array<AudioStem> {
+// rhythm.* belongs to the rhythm guitar part when the chart has one. Otherwise it is the bass stem when there is no
+// bass.* (Harmonix packages file the bass that way), and an uncharted rhythm guitar that plays as backing when there is.
+function rhythmStemRole(rhythmCharted: boolean, hasBassStem: boolean): StemRole {
+	if (rhythmCharted) return 'rhythm';
+	return hasBassStem ? 'backing' : 'bass';
+}
+
+export function mapAudioStems(files: ReadonlyArray<SongFile>, rhythmCharted = false): Array<AudioStem> {
 	const byStem = new Map<string, {file: SongFile; format: AudioFormat}>();
 	for (const file of files) {
 		const [stem, extension] = splitExtension(baseName(file.fileName));
@@ -82,7 +88,7 @@ export function mapAudioStems(files: ReadonlyArray<SongFile>): Array<AudioStem> 
 
 	const stems: Array<AudioStem> = [];
 	for (const [stem, {file, format}] of [...byStem].sort(([a], [b]) => a.localeCompare(b))) {
-		const role = stem === 'rhythm' ? (byStem.has('bass') ? 'backing' : 'bass') : FIXED_STEM_ROLES[stem];
+		const role = stem === 'rhythm' ? rhythmStemRole(rhythmCharted, byStem.has('bass')) : FIXED_STEM_ROLES[stem];
 		if (role) stems.push({role, fileName: file.fileName, format, data: file.data});
 	}
 	return stems;
@@ -90,12 +96,13 @@ export function mapAudioStems(files: ReadonlyArray<SongFile>): Array<AudioStem> 
 
 export class SongPackage {
 	private parsedChart: SongChart | null = null;
+	private mappedStems: ReadonlyArray<AudioStem> | null = null;
 
 	private constructor(
 		readonly ini: SongIniValues,
 		readonly metadata: SongMetadata,
 		readonly chartFile: ChartFile,
-		readonly stems: ReadonlyArray<AudioStem>,
+		private readonly files: ReadonlyArray<SongFile>,
 		readonly albumArt: SongFile | null,
 	) {}
 
@@ -124,7 +131,13 @@ export class SongPackage {
 		if (!chartFile) throw new SongPackageError('Song has no notes.mid or notes.chart');
 
 		const albumArt = ALBUM_ART_FILES.map(findFile).find((file) => file !== undefined) ?? null;
-		return new SongPackage(ini, songMetadataFromIni(ini), chartFile, mapAudioStems(files), albumArt);
+		return new SongPackage(ini, songMetadataFromIni(ini), chartFile, files, albumArt);
+	}
+
+	// Mapped on first use, because what rhythm.* is depends on the chart; throws SongPackageError like chart().
+	get stems(): ReadonlyArray<AudioStem> {
+		if (!this.mappedStems) this.mappedStems = mapAudioStems(this.files, this.chart().hasPart('rhythm'));
+		return this.mappedStems;
 	}
 
 	stemsFor(role: StemRole): Array<AudioStem> {

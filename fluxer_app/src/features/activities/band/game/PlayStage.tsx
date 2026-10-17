@@ -6,7 +6,7 @@ import type {VocalsChart} from '@app/features/activities/band/engine/VocalsParse
 import {
 	DIFFICULTY_LABELS,
 	FEEDBACK_LABELS,
-	PART_LABELS,
+	partLabel,
 	SEAT_DESCRIPTOR,
 } from '@app/features/activities/band/game/BandGameLabels';
 import BandSettings from '@app/features/activities/band/game/BandSettings';
@@ -375,11 +375,13 @@ function useSpeakingUsers(channelId: string): ReadonlySet<string> {
 }
 
 const PlayerIdentity = observer(function PlayerIdentity({
+	entry,
 	seat,
 	isMine,
 	speaking,
 	starPower,
 }: {
+	entry: BandSongSummary;
 	seat: BandSeat;
 	isMine: boolean;
 	speaking: boolean;
@@ -413,7 +415,7 @@ const PlayerIdentity = observer(function PlayerIdentity({
 				) : (
 					<span data-flx="activities.band.game.play-stage.player-identity.span">
 						{i18n._(SEAT_DESCRIPTOR, {
-							part: i18n._(PART_LABELS[seat.part]),
+							part: i18n._(partLabel(seat.part, entry)),
 							difficulty: i18n._(DIFFICULTY_LABELS[seat.difficulty]),
 						})}
 					</span>
@@ -424,12 +426,14 @@ const PlayerIdentity = observer(function PlayerIdentity({
 });
 
 const HighwayHud = observer(function HighwayHud({
+	entry,
 	track,
 	layout,
 	index,
 	speaking,
 	finaleOn,
 }: {
+	entry: BandSongSummary;
 	track: SeatTrack;
 	layout: StageLayout;
 	index: number;
@@ -464,6 +468,7 @@ const HighwayHud = observer(function HighwayHud({
 				data-flx="activities.band.game.play-stage.highway-hud.player"
 			>
 				<PlayerIdentity
+					entry={entry}
 					seat={track.seat}
 					isMine={track.isMine}
 					speaking={speaking}
@@ -476,10 +481,12 @@ const HighwayHud = observer(function HighwayHud({
 });
 
 const VocalsStrip = observer(function VocalsStrip({
+	entry,
 	seat,
 	speaking,
 	canvasRef,
 }: {
+	entry: BandSongSummary;
 	seat: BandSeat;
 	speaking: boolean;
 	canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -488,6 +495,7 @@ const VocalsStrip = observer(function VocalsStrip({
 		<div className={styles.vocals} data-flx="activities.band.game.play-stage.vocals-strip.vocals">
 			<div className={styles.vocalsId} data-flx="activities.band.game.play-stage.vocals-strip.vocals-id">
 				<PlayerIdentity
+					entry={entry}
 					seat={seat}
 					isMine={false}
 					speaking={speaking}
@@ -557,6 +565,7 @@ export const PlayStage = observer(function PlayStage({runtime, entry, channelId,
 				>
 					{vocalsSeat && (
 						<VocalsStrip
+							entry={entry}
 							seat={vocalsSeat}
 							speaking={speaking.has(vocalsSeat.userId)}
 							canvasRef={vocalsCanvasRef}
@@ -577,6 +586,7 @@ export const PlayStage = observer(function PlayStage({runtime, entry, channelId,
 					{controller.tracks.map((track, index) => (
 						<HighwayHud
 							key={`${track.part}:${track.seat.userId}`}
+							entry={entry}
 							track={track}
 							layout={layout}
 							index={index}

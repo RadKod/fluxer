@@ -122,6 +122,16 @@ describe('BandAudio', () => {
 		expect(backingGain.gain.calls).toEqual([]);
 	});
 
+	it('ducks the rhythm guitar stem on its own, apart from the lead', async () => {
+		const {context, gains} = fakeContext({gtr: 100, rhy: 100});
+		const audio = new BandAudio(context);
+		await audio.loadStems([stem('guitar', 'gtr'), stem('rhythm', 'rhy')], true);
+		const [, guitarGain, rhythmGain] = gains;
+		audio.duck('rhythm');
+		expect(rhythmGain.gain.calls[2]).toEqual(['ramp', DUCK_LEVEL, 5.03]);
+		expect(guitarGain.gain.calls).toEqual([]);
+	});
+
 	it('mutes the vocals stem for a live singer and leaves it silent through misses', async () => {
 		const {context, gains} = fakeContext({vox: 100});
 		const audio = new BandAudio(context);

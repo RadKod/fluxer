@@ -18,7 +18,7 @@ import {
 } from '@app/features/activities/band/BandProtocol';
 import {BAND_DIFFICULTIES, type BandDifficulty, type BandPart} from '@app/features/activities/band/engine/ChartModel';
 
-export const BAND_PARTS: ReadonlyArray<BandPart> = ['guitar', 'bass', 'drums', 'keys', 'vocals'];
+export const BAND_PARTS: ReadonlyArray<BandPart> = ['guitar', 'rhythm', 'bass', 'drums', 'keys', 'vocals'];
 export const BAND_DEFAULT_GROUP_DIFFICULTY: BandDifficulty = 'medium';
 export const BAND_QUEUE_MAX = 40;
 // The song ends this long after its last audio frame, so the slowest client can report its result.

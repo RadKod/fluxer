@@ -75,6 +75,53 @@ describe('SongChart', () => {
 
 	it('uses the rhythm track for bass when the chart has no bass track', () => {
 		expect(chart.partChart('bass', 'expert')?.groups.map((group) => group.lanes)).toEqual([[FretLane.Blue]]);
+		expect(chart.hasPart('rhythm')).toBe(false);
+	});
+
+	it('plays the rhythm track as rhythm guitar when the chart also has bass, deriving lower difficulties', () => {
+		const twoGuitars = SongChart.parse(
+			buildMidi({
+				tracks: [
+					{name: 'PART GUITAR', notes: [{tick: 0, note: GREEN}]},
+					{name: 'PART BASS', notes: [{tick: 0, note: GREEN + FretLane.Red}]},
+					{
+						name: 'PART RHYTHM',
+						notes: [
+							{tick: 0, note: GREEN + FretLane.Yellow},
+							{tick: 480, note: GREEN + FretLane.Blue},
+						],
+					},
+				],
+			}),
+			'mid',
+		);
+		expect(twoGuitars.availableParts()).toEqual([
+			{part: 'guitar', charted: ['expert'], playable: ['easy', 'medium', 'hard', 'expert']},
+			{part: 'bass', charted: ['expert'], playable: ['easy', 'medium', 'hard', 'expert']},
+			{part: 'rhythm', charted: ['expert'], playable: ['easy', 'medium', 'hard', 'expert']},
+		]);
+		expect(twoGuitars.partChart('bass', 'expert')?.groups.map((group) => group.lanes)).toEqual([[FretLane.Red]]);
+		expect(twoGuitars.partChart('rhythm', 'expert')?.groups.map((group) => group.lanes)).toEqual([
+			[FretLane.Yellow],
+			[FretLane.Blue],
+		]);
+		expect(twoGuitars.partChart('rhythm', 'easy')).toMatchObject({part: 'rhythm', difficulty: 'easy', derived: true});
+	});
+
+	it('reads rhythm guitar from a .chart file', () => {
+		const text = [
+			'[Song]\n{\n  Resolution = 192\n}',
+			'[SyncTrack]\n{\n  0 = TS 4\n  0 = B 120000\n}',
+			'[ExpertSingle]\n{\n  0 = N 0 0\n}',
+			'[ExpertDoubleBass]\n{\n  0 = N 1 0\n}',
+			'[ExpertDoubleRhythm]\n{\n  0 = N 2 0\n  192 = N 3 0\n}',
+		].join('\n');
+		const fromChart = SongChart.parse(new TextEncoder().encode(text), 'chart');
+		expect(fromChart.availableParts().map((availability) => availability.part)).toEqual(['guitar', 'bass', 'rhythm']);
+		expect(fromChart.partChart('rhythm', 'expert')?.groups.map((group) => [group.msTime, group.lanes])).toEqual([
+			[0, [FretLane.Yellow]],
+			[500, [FretLane.Blue]],
+		]);
 	});
 
 	it('maps drums to kick plus four pads with pro cymbal flags', () => {

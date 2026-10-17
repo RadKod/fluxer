@@ -2,7 +2,13 @@
 
 import type {BandHitMessage, BandIntent, BandPlayerResult, BandSeat} from '@app/features/activities/band/BandProtocol';
 import type {BigRockEnding} from '@app/features/activities/band/engine/BigRockEnding';
-import type {BandPart, InstrumentPart, NoteGroup, PartChart} from '@app/features/activities/band/engine/ChartModel';
+import {
+	type BandPart,
+	type InstrumentPart,
+	type NoteGroup,
+	type PartChart,
+	STAGE_ORDER,
+} from '@app/features/activities/band/engine/ChartModel';
 import {
 	DIFFICULTY_SCORE_MULTIPLIER,
 	type HitRating,
@@ -45,9 +51,6 @@ export const FINALE_FINAL_WINDOW_MS = 150;
 const PERFORMANCE_START = 0.6;
 const PERFORMANCE_HIT = 0.015;
 const PERFORMANCE_MISS = 0.05;
-
-// Left to right on the stage, as in the design: guitar, drums in the middle, bass, then keys.
-const HIGHWAY_ORDER: ReadonlyArray<InstrumentPart> = ['guitar', 'drums', 'bass', 'keys'];
 
 // Late joiners skip notes this close to the moment they joined; nobody could have played them.
 const JOIN_GRACE_MS = 300;
@@ -234,7 +237,7 @@ export class PlayController {
 				missAtMs: Number.NEGATIVE_INFINITY,
 			});
 		}
-		tracks.sort((a, b) => HIGHWAY_ORDER.indexOf(a.part) - HIGHWAY_ORDER.indexOf(b.part));
+		tracks.sort((a, b) => STAGE_ORDER.indexOf(a.part) - STAGE_ORDER.indexOf(b.part));
 		this.tracks = tracks;
 		this.myTrack = tracks.find((track) => track.isMine) ?? null;
 		this.baseScore = tracks.reduce((sum, track) => sum + baseScore(track.chart), 0);

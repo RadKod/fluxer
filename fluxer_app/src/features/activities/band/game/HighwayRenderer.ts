@@ -331,7 +331,7 @@ export class HighwayRenderer {
 			const lane = highway.kind === 'drums' ? slot + 1 : slot;
 			const color = surfaceLaneColor(highway, slot);
 			const point = project(layout, laneCenterX(highway, slot), distance);
-			const s = layout.scale * point.scale;
+			const s = layout.scale * point.scale * highway.noteScale;
 			const flash = fadeAfter(nowMs, track.laneFlashMs[lane], TARGET_FLASH_MS);
 			ctx.save();
 			ctx.lineWidth = 3 * s;
@@ -399,7 +399,7 @@ export class HighwayRenderer {
 		const slot = surfaceLane(highway.kind, lane);
 		if (slot === null) return;
 		const x = lane === FretLane.Open ? highway.left + highway.width / 2 : laneCenterX(highway, slot);
-		const half = (TAIL_WIDTH / 2) * layout.scale;
+		const half = (TAIL_WIDTH / 2) * layout.scale * highway.noteScale;
 		const far = Math.min(end, layout.planeLength);
 		this.trapezoid(layout, highway, start, far, x - half, x + half);
 		const {ctx} = this;
@@ -427,7 +427,7 @@ export class HighwayRenderer {
 		if (highway.kind === 'drums' && lane === DrumLane.Kick) {
 			const inset = 6 * layout.scale;
 			const point = project(layout, highway.left, distance);
-			const s = layout.scale * point.scale;
+			const s = layout.scale * point.scale * highway.noteScale;
 			const a = project(layout, highway.left + inset, distance);
 			const b = project(layout, highway.left + highway.width - inset, distance);
 			ctx.fillStyle = star ? COLOR.paper : color;
@@ -443,7 +443,7 @@ export class HighwayRenderer {
 		if (highway.kind === 'frets' && lane === FretLane.Open) {
 			const a = project(layout, highway.left + 4 * layout.scale, distance);
 			const b = project(layout, highway.left + highway.width - 4 * layout.scale, distance);
-			const s = layout.scale * a.scale;
+			const s = layout.scale * a.scale * highway.noteScale;
 			ctx.fillStyle = star ? COLOR.paper : color;
 			ctx.beginPath();
 			ctx.roundRect(a.x, a.y - 5 * s, b.x - a.x, 10 * s, 5 * s);
@@ -453,7 +453,7 @@ export class HighwayRenderer {
 		}
 		const slot = surfaceLane(highway.kind, lane) ?? 0;
 		const point = project(layout, laneCenterX(highway, slot), distance);
-		const s = layout.scale * point.scale;
+		const s = layout.scale * point.scale * highway.noteScale;
 		if (star && !reducedMotion) {
 			ctx.shadowColor = 'rgba(247, 245, 240, 0.55)';
 			ctx.shadowBlur = 16 * s;

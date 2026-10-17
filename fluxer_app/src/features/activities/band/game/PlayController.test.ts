@@ -98,6 +98,24 @@ describe('PlayController', () => {
 		expect(controller.vocalsSeat?.userId).toBe('u3');
 	});
 
+	it('puts rhythm guitar next to the lead and drums in the middle of five highways', () => {
+		const lane = (name: string) => ({name, notes: [{tick: 0, note: GREEN}]});
+		const chart = SongChart.parse(
+			buildMidi({
+				tracks: ['PART KEYS', 'PART BASS', 'PART DRUMS', 'PART RHYTHM', 'PART GUITAR'].map(lane),
+			}),
+			'mid',
+		);
+		const seats: ReadonlyArray<BandSeat> = (['keys', 'bass', 'drums', 'rhythm', 'guitar'] as const).map((part) => ({
+			part,
+			userId: part,
+			difficulty: 'expert',
+			ready: true,
+		}));
+		const {controller} = setup({chart, seats});
+		expect(controller.tracks.map((track) => track.part)).toEqual(['guitar', 'rhythm', 'drums', 'bass', 'keys']);
+	});
+
 	it('broadcasts each judged note of my seat, lossy, with its index in the full chart', () => {
 		const {controller, send, duck, hits} = setup();
 		controller.press(FretLane.Green, 10);
