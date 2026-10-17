@@ -1,180 +1,75 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./fluxer_static/marketing/branding/logo-white.svg">
-    <img src="./fluxer_static/marketing/branding/logo-color.svg" alt="Fluxer logo" width="400">
-  </picture>
-</p>
+# sanalyer
 
-<p align="center">
-  <a href="https://fluxer.app/download">
-    <img src="https://img.shields.io/badge/Download-fluxer.app-4641D9" alt="Download" /></a>
-  <a href="https://docs.fluxer.app">
-    <img src="https://img.shields.io/badge/Docs-docs.fluxer.app-blue" alt="Documentation" /></a>
-  <a href="https://fluxer.app/donate">
-    <img src="https://img.shields.io/badge/Donate-fluxer.app%2Fdonate-brightgreen" alt="Donate" /></a>
-  <a href="./LICENSE">
-    <img src="https://img.shields.io/badge/License-AGPLv3-purple" alt="AGPLv3 License" /></a>
-</p>
+[sanalyer.com](https://sanalyer.com)'un web uygulaması, sunucusu ve masaüstü uygulaması. Bir arkadaş grubunun kendi
+sohbet ve ses sunucusu; davetle girilen, reklamı yapılmayan bir yer.
 
-<p align="center">
-  <a href="https://flathub.org/apps/app.fluxer.Fluxer">
-    <img src="https://dl.flathub.org/assets/badges/flathub-badge-en.svg" alt="Get it on Flathub" height="60" /></a>
-</p>
+Kod [Fluxer](https://github.com/fluxerapp/fluxer)'ın fork'u. Fluxer açık kaynak, Discord'a benzer bir uygulama;
+biz üstüne kendi markamızı, birkaç özelliği ve [Micup](./NOTICE-MICUP.md)'tan taşınan parçaları ekledik. Bu repo
+public, çünkü AGPL değiştirilmiş sürümün kaynağını kullanıcılarına açmayı şart koşuyor.
 
-# Fluxer
+- **Uygulama:** [sanalyer.com](https://sanalyer.com) (tarayıcıdan), masaüstü için [sanalyer.com/indir](https://sanalyer.com/indir)
+- **Mobil:** ayrı repo, [RadKod/sanalyer.com-mobile](https://github.com/RadKod/sanalyer.com-mobile). iOS şimdilik TestFlight'ta, davetle.
+- **Altyapı, marka ve araçlar:** [RadKod/sanalyer.com](https://github.com/RadKod/sanalyer.com)
+- **Geliştirici belgeleri:** [sanalyer.com/docs](https://sanalyer.com/docs/)
 
-> [!IMPORTANT]
-> Bug reports and feature requests have moved to [feedback.fluxer.com](https://feedback.fluxer.com). Sign in with your Fluxer account to post, vote and follow updates. GitHub Issues and Discussions are closed. Report security vulnerabilities privately through [fluxer.app/security](https://fluxer.app/security).
+## Branch'ler
 
-Fluxer is a free and open source instant messaging and VoIP chat app built for friends, groups, and communities.
+| Branch | Ne |
+| --- | --- |
+| `sanalyer` | Canlıdaki kod. Image'lar ve masaüstü sürümleri buradan çıkar. |
+| `main` | Upstream'in (fluxerapp/fluxer) kopyası, bizim değişikliğimiz yok. |
+| `upstream-merge` | Upstream'i almak için geçici branch; merge kontrolleri geçince `sanalyer`'e girer. |
 
-<p align="center">
-  <img src="https://fluxer.app/static/img/screenshots-desktop-readme-1920w.70cb6ce340007e0a.png" alt="Fluxer running side by side on a desktop monitor and a phone" width="640">
-</p>
+Upstream'i `upstream` remote'u olarak tutup düzenli merge ediyoruz:
 
-## Download
-
-| Windows | macOS | Linux | Android | iOS |
-| --- | --- | --- | --- | --- |
-| [Installer (x64)][win-setup-x64] | [Disk image][mac-dmg] | [Flathub][flathub] | [Google Play (beta)][android-play] | [TestFlight][ios-testflight] |
-| [Installer (ARM64)][win-setup-arm64] | | [deb (x64)][linux-deb-x64] | [APK (beta)][android-apk] | |
-| [Portable (x64)][win-portable-x64] | | [deb (ARM64)][linux-deb-arm64] | [Obtainium (beta)][obtainium] | |
-| [Portable (ARM64)][win-portable-arm64] | | [rpm (x64)][linux-rpm-x64] | | |
-| | | [rpm (ARM64)][linux-rpm-arm64] | | |
-| | | [AppImage (x64)][linux-appimage-x64] | | |
-| | | [AppImage (ARM64)][linux-appimage-arm64] | | |
-| | | [tar.gz (x64)][linux-targz-x64] | | |
-| | | [tar.gz (ARM64)][linux-targz-arm64] | | |
-
-The macOS disk image runs on both Apple silicon and Intel. Windows and Linux need the build matching your processor.
-
-On Linux, prefer a repository over a single file so Fluxer updates with the rest of your system.
-
-## Linux package repositories
-
-The package is `fluxer` for stable and `fluxer-canary` for canary. apt and dnf subscribe to one channel per entry file. pacman and Flatpak serve both from one repository.
-
-### Flatpak
-
-Stable is on [Flathub][flathub], the easiest route on most desktops:
-
-```sh
-flatpak install flathub app.fluxer.Fluxer
+```bash
+git remote add upstream https://github.com/fluxerapp/fluxer.git
+git fetch upstream
+git checkout -B upstream-merge sanalyer
+git merge upstream/main
 ```
 
-Flathub has stable only. To use Fluxer's own repository, open [the stable][flatpak-ref] or [the canary][flatpak-canary-ref] reference file and your software manager takes over. Some desktops also accept `flatpak+https://pkgs.fluxer.com/flatpak/fluxer.flatpakref` in the address bar.
+Çevirilerde ve JSON dosyalarında çıkan conflict'ler için yardımcı script'ler sanalyer.com reposunda,
+`scripts/merge/` altında. Her merge'den sonra kullanıcıya görünen metinlerde "Fluxer" taraması yapılır; belgeler için
+`node tools/brand/docs-marka.mjs --check`.
 
-From a terminal:
+## Upstream'den farkımız
 
-```sh
-flatpak install https://pkgs.fluxer.com/flatpak/fluxer.flatpakref
+- **Marka:** kullanıcının gördüğü her ad, link ve simge sanalyer. Fluxer adı yalnız kod içinde, env adlarında ve iç
+  tanımlayıcılarda kalıyor.
+- **Micup'tan taşınanlar:** profil kartı, soundboard, isim stilleri, odalar ve masaüstü kabuğunun bir kısmı. Ayrıntısı ve
+  lisans bildirimi [NOTICE-MICUP.md](./NOTICE-MICUP.md)'de.
+- **Kozmetikler:** avatar dekorasyonları, profil efektleri ve nameplate'ler seri seri gruplanıyor; mağaza ve admin
+  kataloğu buna göre.
+- **Keşfet > Temalar:** hazır renk paletleri (`fluxer_app/src/features/discovery/themes/`).
+- **Mobil bildirim kuralı:** masaüstü açıkken de telefona bildirim gidiyor. Masaüstü uzaktaysa hemen, kullanılıyorsa
+  mesaj 2 dakika okunmazsa (`push_unread_grace_ms`, gateway).
+- **Masaüstü:** `fluxer_desktop`, `com.sanalyer.desktop` kimliğiyle; güncellemeler dl.sanalyer.com'dan geliyor.
+
+## Image ve sürüm
+
+Sunucu `ghcr.io/radkod/` altındaki image'ları çalıştırıyor, tag commit sha'sı.
+
+```bash
+# Sunucu image'ları (15-20 dk)
+gh workflow run sanalyer-imaj.yml -R RadKod/fluxer --ref sanalyer -f ref=sanalyer
+
+# Masaüstü (macOS imzalı ve notarize, Windows, Linux); publish_release=true paketleri dl.sanalyer.com'a yükler
+gh workflow run sanalyer-masaustu.yml -R RadKod/fluxer --ref sanalyer -f channel=stable -f publish_release=false
 ```
 
-### Debian and Ubuntu
+Deploy, yedek ve sunucu düzeni sanalyer.com reposunun README'sinde ve `docs/durum.md`'sinde anlatılıyor.
 
-```sh
-sudo install -d -m 0755 /etc/apt/keyrings
-sudo curl -fsSL -o /etc/apt/keyrings/fluxer-archive-keyring.gpg https://pkgs.fluxer.com/keys/fluxer-archive-keyring.gpg
-sudo curl -fsSL -o /etc/apt/sources.list.d/fluxer.sources https://pkgs.fluxer.com/deb/fluxer.sources
-sudo apt update && sudo apt install fluxer
-```
+## Yerelde çalıştırmak
 
-For canary, use the canary entry file and package.
+Geliştirme ortamı upstream'inkiyle aynı; yol `fluxer_docs/` içindeki belgelerde. Bu Mac'e özgü tuzaklar (pnpm sürümü,
+Rust toolchain) sanalyer.com reposunun `docs/durum.md` dosyasında, "Tuzaklar" altında.
 
-```sh
-sudo curl -fsSL -o /etc/apt/sources.list.d/fluxer-canary.sources https://pkgs.fluxer.com/deb/fluxer-canary.sources
-sudo apt update && sudo apt install fluxer-canary
-```
+## Lisans
 
-A `.deb` installed from a download only updates once its channel's entry is added.
-
-### Fedora and RHEL
-
-```sh
-sudo curl -fsSL -o /etc/yum.repos.d/fluxer.repo https://pkgs.fluxer.com/rpm/fluxer.repo
-sudo dnf install fluxer
-```
-
-For canary, use the canary entry file and package.
-
-```sh
-sudo curl -fsSL -o /etc/yum.repos.d/fluxer-canary.repo https://pkgs.fluxer.com/rpm/fluxer-canary.repo
-sudo dnf install fluxer-canary
-```
-
-RHEL, Rocky, Alma and CentOS Stream need `sudo dnf install epel-release` first, because their base repositories lack `libXScrnSaver`. Fedora does not.
-
-### Arch Linux
-
-The repository is signed, so pacman needs the key once:
-
-```sh
-sudo pacman-key --init
-curl -fsSL -o /tmp/fluxer-archive-keyring.asc https://pkgs.fluxer.com/keys/fluxer-archive-keyring.asc
-sudo pacman-key --add /tmp/fluxer-archive-keyring.asc
-sudo pacman-key --lsign-key 09D01339EE128925F75E675C855C5BDE34D205D2
-```
-
-`--lsign-key` is what makes pacman trust it. Then add the repository:
-
-```sh
-sudo tee -a /etc/pacman.conf >/dev/null <<'REPO'
-
-[fluxer]
-SigLevel = Required TrustedOnly
-Server = https://pkgs.fluxer.com/arch/$repo/os/$arch
-REPO
-sudo pacman -Syu fluxer
-```
-
-Write `$repo` and `$arch` literally. Both are pacman variables, not shell ones, hence the quoted heredoc.
-
-Full setup notes, including canary, are in the [Linux repositories documentation][docs-linux].
-
-## Other ways to run it
-
-- [Open Fluxer in a browser](https://web.fluxer.app), no install needed.
-- [Host your own instance][docs-selfhost] from this repository.
-
-## Documentation
-
-- [Documentation home][docs]
-- [Downloads][docs-downloads]
-- [Self-hosting][docs-selfhost]
-
-## License
-
-The source is licensed under the [AGPL-3.0-or-later](./LICENSE) license.
-
-Fluxer artwork, such as the logo, icons, badges and default avatars, is
-licensed under [CC BY-SA 4.0](./fluxer_static/LICENSE). Third-party material
-keeps its own terms, listed in
+Kod [AGPL-3.0-or-later](./LICENSE). Fluxer'ın görselleri (logo, ikonlar, rozetler, varsayılan avatarlar)
+[CC BY-SA 4.0](./fluxer_static/LICENSE); üçüncü taraf malzeme kendi koşullarını taşıyor,
 [fluxer_static/THIRD_PARTY_LICENSES.md](./fluxer_static/THIRD_PARTY_LICENSES.md).
 
-Use of the Fluxer name and logo is covered by the
-[name and marks policy](./.github/GOVERNANCE.md#name-and-marks).
-
-[win-setup-x64]: https://pkgs.fluxer.com/desktop/stable/win32/x64/latest/setup
-[win-setup-arm64]: https://pkgs.fluxer.com/desktop/stable/win32/arm64/latest/setup
-[win-portable-x64]: https://pkgs.fluxer.com/desktop/stable/win32/x64/latest/portable
-[win-portable-arm64]: https://pkgs.fluxer.com/desktop/stable/win32/arm64/latest/portable
-[mac-dmg]: https://pkgs.fluxer.com/desktop/stable/darwin/arm64/latest/dmg
-[linux-deb-x64]: https://pkgs.fluxer.com/desktop/stable/linux/x64/latest/deb
-[linux-deb-arm64]: https://pkgs.fluxer.com/desktop/stable/linux/arm64/latest/deb
-[linux-rpm-x64]: https://pkgs.fluxer.com/desktop/stable/linux/x64/latest/rpm
-[linux-rpm-arm64]: https://pkgs.fluxer.com/desktop/stable/linux/arm64/latest/rpm
-[linux-appimage-x64]: https://pkgs.fluxer.com/desktop/stable/linux/x64/latest/appimage
-[linux-appimage-arm64]: https://pkgs.fluxer.com/desktop/stable/linux/arm64/latest/appimage
-[linux-targz-x64]: https://pkgs.fluxer.com/desktop/stable/linux/x64/latest/tar_gz
-[linux-targz-arm64]: https://pkgs.fluxer.com/desktop/stable/linux/arm64/latest/tar_gz
-[flatpak-ref]: https://pkgs.fluxer.com/flatpak/fluxer.flatpakref
-[flatpak-canary-ref]: https://pkgs.fluxer.com/flatpak/fluxer-canary.flatpakref
-[flathub]: https://flathub.org/apps/app.fluxer.Fluxer
-[android-play]: https://play.google.com/store/apps/details?id=com.fluxer
-[android-apk]: https://github.com/fluxerapp/flutter_client/releases
-[obtainium]: https://obtainium.imranr.dev/
-[ios-testflight]: https://testflight.apple.com/join/PKZR6pK9
-[docs]: https://docs.fluxer.app
-[docs-downloads]: https://docs.fluxer.app/downloads/overview/
-[docs-linux]: https://docs.fluxer.app/downloads/linux-repositories/
-[docs-selfhost]: https://docs.fluxer.app/operator/get-started/
+"Fluxer" ve "Micup" adları ve logoları lisansın kapsamında değil ([name and marks](./.github/GOVERNANCE.md#name-and-marks)).
+Upstream'in marka kuralı gereği bu fork kendi adını ve logosunu kullanıyor.
