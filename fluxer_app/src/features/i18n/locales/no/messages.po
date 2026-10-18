@@ -13705,7 +13705,7 @@ msgstr "Kunne ikke sende venneforespørselen. Prøv igjen."
 
 #. Title of the error modal shown when sending the verification email fails
 #. unexpectedly.
-#: src/features/app/components/dialogs/components/EmailVerificationAlert.tsx
+#: src/features/auth/hooks/useVerifyEmailAction.tsx
 msgid "Couldn't send the verification email"
 msgstr "Kunne ikke sende bekreftelseseposten"
 
@@ -30207,6 +30207,12 @@ msgstr "Åpnet tråden igjen"
 msgid "Opens in a new tab"
 msgstr "Åpnes i en ny fane"
 
+#. Screen-reader-only hint on a settings menu entry that opens a web page in
+#. the browser instead of a settings page.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid "Opens in your browser"
+msgstr "Åpnes i nettleseren din"
+
 #. Screen-reader-only hint for the Members entry in community settings. The
 #. entry receives keyboard focus without automatically opening.
 #: src/features/app/components/dialogs/components/DesktopGuildSettingsView.tsx
@@ -34490,8 +34496,11 @@ msgstr "Send på nytt ({secondsRemaining} s)"
 msgid "Resend code"
 msgstr "Send kode på nytt"
 
+#. Button label that sends another verification email after one was already
+#. sent. Keep it concise.
 #: src/features/app/components/dialogs/components/EmailVerificationAlert.tsx
 #: src/features/auth/flow/IpAuthorizationScreen.tsx
+#: src/features/auth/hooks/useVerifyEmailAction.tsx
 msgid "Resend email"
 msgstr "Send e-post på nytt"
 
@@ -36879,6 +36888,13 @@ msgstr "Send tekst-til-tale-meldinger"
 msgid "Send verification code"
 msgstr "Send bekreftelseskode"
 
+#. Button label on prompts that ask the user to verify their email, such as
+#. the add friend form. Sends a verification email right away. Keep it
+#. concise.
+#: src/features/auth/hooks/useVerifyEmailAction.tsx
+msgid "Send verification email"
+msgstr "Send bekreftelsesepost"
+
 #. Accessible label and tooltip for the send button after recording a voice
 #. message.
 #. Keyboard shortcut action label that opens the desktop voice message
@@ -39122,7 +39138,7 @@ msgstr ""
 
 #. Body of the error modal shown when sending the verification email fails
 #. unexpectedly.
-#: src/features/app/components/dialogs/components/EmailVerificationAlert.tsx
+#: src/features/auth/hooks/useVerifyEmailAction.tsx
 msgid ""
 "Something went wrong while sending your verification email. Please try again"
 " in a moment."
@@ -40383,6 +40399,12 @@ msgstr "Undermeny"
 #: src/features/guild/components/modals/guild_tabs/GuildDiscoveryTab.tsx
 msgid "Submit application"
 msgstr "Send søknad"
+
+#. Settings menu entry that opens the feedback website, where people suggest
+#. features and report problems.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid "Submit feedback"
+msgstr "Send tilbakemelding"
 
 #: src/features/user/components/modals/tabs/component_gallery_tab/ComponentGalleryTabButtonsTab.tsx
 msgid "Submitting"
@@ -46770,9 +46792,8 @@ msgstr "Bekreftelseskode"
 msgid "Verification code sent"
 msgstr "Bekreftelseskode sendt"
 
-#. Toast confirmation in the email verification alert after a verification
-#. email has been sent.
-#: src/features/app/components/dialogs/components/EmailVerificationAlert.tsx
+#. Toast confirmation shown after a verification email has been sent.
+#: src/features/auth/hooks/useVerifyEmailAction.tsx
 msgid "Verification email sent. Check your inbox."
 msgstr "E-post for bekreftelse er sendt. Sjekk innboksen din."
 
@@ -48522,6 +48543,15 @@ msgstr "Det du deler oppdateres ikke"
 msgid "What's happening?"
 msgstr "Hva skjer?"
 
+#. Short label in the settings dialog mobile settings view.
+#. Short label in the whats new modal.
+#. Sidebar item in settings that opens the app update notes modal.
+#: src/features/app/components/dialogs/components/DesktopSettingsView.tsx:103
+#: src/features/app/components/dialogs/components/MobileSettingsView.tsx:61
+#: src/features/app/components/whats_new/WhatsNewModal.tsx:25
+msgid "What's new"
+msgstr "What's new"
+
 #. DSA report page: title of the reason step while its questions load or when
 #. they could not be loaded.
 #: src/features/moderation/components/report/ReportStepReason.tsx
@@ -50071,7 +50101,7 @@ msgstr "Du redigerer meldinger for raskt"
 #. Title of the error modal shown when sharing or sending a theme link is rate
 #. limited.
 #: src/features/app/components/alerts/CommonErrorModalDescriptors.ts
-#: src/features/app/components/dialogs/components/EmailVerificationAlert.tsx
+#: src/features/auth/hooks/useVerifyEmailAction.tsx
 #: src/features/discovery/commands/DiscoveryJoinCommands.tsx
 #: src/features/emoji/components/emojis/EmojiListItem.tsx
 #: src/features/theme/components/modals/ShareThemeModal.tsx
@@ -50287,7 +50317,7 @@ msgstr "Du har mottatt en gave"
 
 #. Body of the error modal shown when resending a verification email is rate-
 #. limited.
-#: src/features/app/components/dialogs/components/EmailVerificationAlert.tsx
+#: src/features/auth/hooks/useVerifyEmailAction.tsx
 msgid ""
 "You've requested too many verification emails. Please wait a moment and try "
 "again."
@@ -56925,15 +56955,6 @@ msgstr "Use {top} to {bottom}"
 #: src/features/app/config/AuditLogConstants.ts:177
 msgid "Webhook"
 msgstr "Webhook"
-
-#. Short label in the settings dialog mobile settings view.
-#. Short label in the whats new modal.
-#. Sidebar item in settings that opens the app update notes modal.
-#: src/features/app/components/dialogs/components/DesktopSettingsView.tsx:103
-#: src/features/app/components/dialogs/components/MobileSettingsView.tsx:61
-#: src/features/app/components/whats_new/WhatsNewModal.tsx:25
-msgid "What's new"
-msgstr "What's new"
 
 #. Save bar text in the my profile tab while the chosen name colors fail the
 #. contrast check.
