@@ -16,7 +16,7 @@ import {BandCrowd, isBandCheerKind} from '@app/features/activities/band/flow/Ban
 import {BandLeaderController} from '@app/features/activities/band/flow/BandLeaderController';
 import {BandMicGuard, type BandMicPort} from '@app/features/activities/band/flow/BandMicGuard';
 import {VOICE_MIC_PORT} from '@app/features/activities/band/flow/BandMicPort';
-import {type BandRoomContext, isBandState, rankCandidates} from '@app/features/activities/band/flow/BandRoomMachine';
+import {type BandRoomContext, isBandState} from '@app/features/activities/band/flow/BandRoomMachine';
 import {
 	type BandLibraryFailure,
 	BandSongLibrary,
@@ -79,14 +79,14 @@ export class BandRoom {
 
 	get mySeat(): BandSeat | undefined {
 		const state = this.state;
-		if (!state || state.phase === 'vote') return undefined;
+		if (!state || state.phase === 'pick') return undefined;
 		return state.seats.find((seat) => seat.userId === this.myUserId);
 	}
 
 	// Everyone in the room without a seat, one entry per person.
 	get spectatorIds(): ReadonlyArray<string> {
 		const state = this.state;
-		const seated = new Set(state && state.phase !== 'vote' ? state.seats.map((seat) => seat.userId) : []);
+		const seated = new Set(state && state.phase !== 'pick' ? state.seats.map((seat) => seat.userId) : []);
 		const ids = this.session.participants.map((participant) => participant.userId).filter((id) => !seated.has(id));
 		return [...new Set(ids)];
 	}
@@ -123,26 +123,25 @@ export class BandRoom {
 					this.crowd.receive(from.userId, cheer.kind, this.session.clock.now());
 				}
 			}),
-			// The likely winner downloads first while people are still voting.
 			reaction(
 				() => {
 					const state = this.state;
-					return state?.phase === 'vote' && this.library.status.status === 'ready' ? rankCandidates(state) : null;
-				},
-				(ranked) => {
-					if (ranked) this.library.prefetch(ranked);
-				},
-				{fireImmediately: true, equals: (a, b) => a?.join() === b?.join()},
-			),
-			reaction(
-				() => {
-					const state = this.state;
-					return state && state.phase !== 'vote' && this.library.status.status === 'ready' ? state.songId : null;
+					return state && state.phase !== 'pick' && this.library.status.status === 'ready' ? state.songId : null;
 				},
 				(songId) => {
 					if (songId && this.songPackage?.songId !== songId) this.loadSongPackage(songId);
 				},
 				{fireImmediately: true},
+			),
+			// Voted songs start downloading during the 6 s countdown, so the winner is usually on disk by part picking.
+			reaction(
+				() => {
+					const state = this.state;
+					return state?.phase === 'pick' ? [...new Set(state.votes.map((vote) => vote.songId))].join(',') : '';
+				},
+				(voted) => {
+					if (voted) this.library.prefetch(voted.split(','));
+				},
 			),
 			reaction(
 				() => (this.state?.phase === 'play' ? (this.mySeat?.part ?? null) : null),

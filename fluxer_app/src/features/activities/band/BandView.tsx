@@ -13,9 +13,9 @@ import {
 import {type BandRoom, getBandRoom} from '@app/features/activities/band/flow/BandRoom';
 import {BandPlayStage} from '@app/features/activities/band/flow/components/BandPlayStage';
 import {BandNotice, BandStage} from '@app/features/activities/band/flow/components/BandStage';
+import {PickScreen} from '@app/features/activities/band/flow/components/PickScreen';
 import {ResultsScreen} from '@app/features/activities/band/flow/components/ResultsScreen';
 import {SelectScreen} from '@app/features/activities/band/flow/components/SelectScreen';
-import {VoteScreen} from '@app/features/activities/band/flow/components/VoteScreen';
 import type {ActivityViewProps} from '@app/features/activities/registry/ActivityDefinition';
 import {useLingui} from '@lingui/react/macro';
 import {observer} from 'mobx-react-lite';
@@ -95,8 +95,8 @@ const BandPhaseView = observer(function BandPhaseView({room}: {readonly room: Ba
 				data-flx="activities.band.band-view.band-phase-view.band-notice--3"
 			/>
 		);
-	if (state.phase === 'vote')
-		return <VoteScreen room={room} state={state} data-flx="activities.band.band-view.band-phase-view.vote-screen" />;
+	if (state.phase === 'pick')
+		return <PickScreen room={room} state={state} data-flx="activities.band.band-view.band-phase-view.pick-screen" />;
 
 	const song = library.song(state.songId);
 	if (!song)

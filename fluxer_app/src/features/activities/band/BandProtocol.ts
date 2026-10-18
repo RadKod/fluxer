@@ -7,8 +7,8 @@
 import type {BandDifficulty, BandPart} from '@app/features/activities/band/engine/ChartModel';
 
 export const BAND_PHASE_MS = {
-	// Counted from the first vote; a round nobody has voted in waits.
-	vote: 15_000,
+	// Counted from the first vote; with no votes the room waits.
+	pick: 6_000,
 	select: 20_000,
 	// Time between "everyone ready" and the first audio frame; covers the slowest client's clock sync and decode.
 	countdown: 4_000,
@@ -25,7 +25,8 @@ export const BAND_DIFFICULTY_MULTIPLIER: Readonly<Record<BandDifficulty, number>
 	expert: 2,
 };
 
-export const BAND_VOTE_CANDIDATES = 3;
+// Random library songs offered while the search box is empty.
+export const BAND_SUGGESTIONS = 4;
 export const BAND_RATING_MIN = 1;
 export const BAND_RATING_MAX = 5;
 
@@ -45,9 +46,9 @@ export interface BandSongSummary {
 	readonly addedBy: string | null;
 }
 
-export interface BandQueueEntry {
+export interface BandVote {
+	readonly userId: string;
 	readonly songId: string;
-	readonly addedBy: string;
 }
 
 export interface BandSeat {
@@ -73,19 +74,18 @@ export interface BandPlayerResult {
 
 export type BandState =
 	| {
-			readonly phase: 'vote';
-			readonly queue: ReadonlyArray<BandQueueEntry>;
-			readonly candidates: ReadonlyArray<string>;
-			// voter userId -> songId
-			readonly votes: Readonly<Record<string, string>>;
-			// Leader clock when the round opened; it names the round.
+			// Anyone searches the library and votes; once a vote is in, the most voted song goes on after a countdown.
+			readonly phase: 'pick';
+			readonly suggestions: ReadonlyArray<string>;
+			// One vote per person, in the order they were cast; a changed vote moves to the end.
+			readonly votes: ReadonlyArray<BandVote>;
+			// Leader clock when the step opened; it names the round.
 			readonly openedAt: number;
-			// Null until the first vote starts the countdown.
+			// Null while nobody has voted.
 			readonly endsAt: number | null;
 	  }
 	| {
 			readonly phase: 'select';
-			readonly queue: ReadonlyArray<BandQueueEntry>;
 			readonly songId: string;
 			readonly groupDifficulty: BandDifficulty;
 			readonly seats: ReadonlyArray<BandSeat>;
@@ -96,7 +96,6 @@ export type BandState =
 	  }
 	| {
 			readonly phase: 'play';
-			readonly queue: ReadonlyArray<BandQueueEntry>;
 			readonly songId: string;
 			readonly seats: ReadonlyArray<BandSeat>;
 			// Leader clock (session.clock.now()) of song position zero.
@@ -104,7 +103,6 @@ export type BandState =
 	  }
 	| {
 			readonly phase: 'results';
-			readonly queue: ReadonlyArray<BandQueueEntry>;
 			readonly songId: string;
 			readonly seats: ReadonlyArray<BandSeat>;
 			readonly results: ReadonlyArray<BandPlayerResult>;
@@ -117,12 +115,12 @@ export type BandPhase = BandState['phase'];
 
 // Non-leader -> leader. The leader trusts `from` of the envelope, never a user id inside the payload.
 export type BandIntent =
-	| {readonly t: 'band.queueAdd'; readonly songId: string}
+	// My vote for this song; voting for my current song again takes the vote back.
 	| {readonly t: 'band.vote'; readonly songId: string}
-	// Leader only: skips the vote and takes this song to seat selection.
+	// Leader only: skips the countdown and takes this song to part picking.
 	| {readonly t: 'band.playNow'; readonly songId: string}
-	// Leader only: from seat selection back to a new vote.
-	| {readonly t: 'band.backToVote'}
+	// Leader only: from seat selection back to picking another song.
+	| {readonly t: 'band.pickAnother'}
 	| {readonly t: 'band.claimSeat'; readonly part: BandPart | null}
 	| {readonly t: 'band.difficulty'; readonly difficulty: BandDifficulty}
 	| {readonly t: 'band.groupDifficulty'; readonly difficulty: BandDifficulty}

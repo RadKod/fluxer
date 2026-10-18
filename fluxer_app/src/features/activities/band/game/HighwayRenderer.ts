@@ -55,6 +55,12 @@ const GLOW_MS = 260;
 const TARGET_FLASH_MS = 180;
 const ZONE_FLASH_MS = 420;
 const MISS_DIM_MS = 650;
+// Sparkles out of a target box: a burst on every hit and a steady stream while a sustain is held.
+const SPARK_BURST_MS = 460;
+const SPARK_BURST_COUNT = 11;
+const SPARK_STREAM_EVERY_MS = 40;
+const SPARK_STREAM_LIFE_MS = 380;
+const SPARK_GRAVITY = 520;
 const FEEDBACK_MS = 700;
 // Sustains are drawn from their start; longer ones than this are rare enough to clip.
 const LONGEST_SUSTAIN_MS = 8_000;
@@ -86,6 +92,12 @@ export function firstVisibleGroup(groups: ReadonlyArray<NoteGroup>, fromMs: numb
 		else high = middle;
 	}
 	return low;
+}
+
+// Deterministic 0..1 from an integer, so a sparkle looks the same on every frame of its life.
+export function hash(n: number): number {
+	const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453;
+	return x - Math.floor(x);
 }
 
 // Linear 1 -> 0 over `durationMs` after `atMs`; 0 outside.
@@ -144,6 +156,7 @@ export class HighwayRenderer {
 		this.strikeline(layout, highway);
 		this.targets(layout, highway, track, nowMs, finaleOn);
 		this.notes(layout, highway, track, frame);
+		if (!frame.reducedMotion) this.sparkles(layout, highway, track, nowMs);
 		if (finale) this.finalBar(layout, highway, finale, nowMs);
 		const dim = fadeAfter(nowMs, track.missAtMs, MISS_DIM_MS);
 		if (dim > 0) {
@@ -361,6 +374,99 @@ export class HighwayRenderer {
 		}
 	}
 
+	// Lane slots whose note is being held right now (a hit sustain that has not run out).
+	private heldSlots(highway: HighwayLayout, track: SeatTrack, nowMs: number): Set<number> {
+		const held = new Set<number>();
+		const {groups} = track.chart;
+		for (let index = firstVisibleGroup(groups, nowMs); index < groups.length; index++) {
+			const group = groups[index];
+			if (group.msTime > nowMs) break;
+			if (track.noteStates[index] !== NoteState.Hit || track.heldUntilMs[index] <= nowMs) continue;
+			for (const lane of group.lanes) {
+				const slot = highway.kind === 'drums' ? lane - 1 : lane;
+				if (slot >= 0 && slot < highway.lanes) held.add(slot);
+			}
+		}
+		return held;
+	}
+
+	private sparkles(layout: StageLayout, highway: HighwayLayout, track: SeatTrack, nowMs: number): void {
+		const {ctx} = this;
+		const distance = strikeDistance(layout);
+		const held = this.heldSlots(highway, track, nowMs);
+		ctx.save();
+		ctx.globalCompositeOperation = 'lighter';
+		for (let slot = 0; slot < highway.lanes; slot++) {
+			const lane = highway.kind === 'drums' ? slot + 1 : slot;
+			const color = surfaceLaneColor(highway, slot);
+			const point = project(layout, laneCenterX(highway, slot), distance);
+			const s = layout.scale * point.scale * highway.noteScale;
+			const hitAt = track.laneFlashMs[lane];
+			const sinceHit = nowMs - hitAt;
+			if (sinceHit >= 0 && sinceHit < SPARK_BURST_MS) {
+				for (let k = 0; k < SPARK_BURST_COUNT; k++) {
+					this.spark(
+						point.x,
+						point.y,
+						s,
+						sinceHit / 1000,
+						SPARK_BURST_MS,
+						color,
+						hash(slot * 977 + Math.floor(hitAt) * 13 + k),
+						1,
+					);
+				}
+			}
+			if (!held.has(slot)) continue;
+			const newest = Math.floor(nowMs / SPARK_STREAM_EVERY_MS);
+			const count = Math.ceil(SPARK_STREAM_LIFE_MS / SPARK_STREAM_EVERY_MS);
+			for (let bucket = newest; bucket > newest - count; bucket--) {
+				const age = nowMs - bucket * SPARK_STREAM_EVERY_MS;
+				if (age < 0 || age >= SPARK_STREAM_LIFE_MS) continue;
+				this.spark(point.x, point.y, s, age / 1000, SPARK_STREAM_LIFE_MS, color, hash(slot * 31 + bucket * 7919), 0.65);
+			}
+		}
+		ctx.restore();
+	}
+
+	// One four-point twinkle thrown up out of the box: position from launch speed and gravity, so no state is kept.
+	private spark(
+		x: number,
+		y: number,
+		s: number,
+		t: number,
+		lifeMs: number,
+		color: string,
+		seed: number,
+		power: number,
+	) {
+		const {ctx} = this;
+		const angle = -Math.PI / 2 + (seed - 0.5) * 2.2;
+		const speed = (110 + 190 * hash(seed * 7 + 1)) * power * s;
+		const px = x + Math.cos(angle) * speed * t;
+		const py = y + Math.sin(angle) * speed * t + 0.5 * SPARK_GRAVITY * s * t * t;
+		const life = 1 - (t * 1000) / lifeMs;
+		const size = (2 + 3 * hash(seed * 13 + 2)) * s * (0.5 + 0.5 * life);
+		ctx.globalAlpha = Math.max(0, life);
+		ctx.fillStyle = color;
+		ctx.beginPath();
+		ctx.moveTo(px, py - size * 1.8);
+		ctx.lineTo(px + size * 0.45, py);
+		ctx.lineTo(px, py + size * 1.8);
+		ctx.lineTo(px - size * 0.45, py);
+		ctx.closePath();
+		ctx.moveTo(px - size * 1.8, py);
+		ctx.lineTo(px, py + size * 0.45);
+		ctx.lineTo(px + size * 1.8, py);
+		ctx.lineTo(px, py - size * 0.45);
+		ctx.closePath();
+		ctx.fill();
+		ctx.fillStyle = COLOR.paper;
+		ctx.beginPath();
+		ctx.arc(px, py, size * 0.35, 0, Math.PI * 2);
+		ctx.fill();
+	}
+
 	private notes(layout: StageLayout, highway: HighwayLayout, track: SeatTrack, frame: HighwayFrame): void {
 		const {groups} = track.chart;
 		const {nowMs, finale} = frame;
@@ -519,11 +625,14 @@ export class HighwayRenderer {
 		const bottom = project(layout, layout.originX, layout.planeLength * (1 - FADE_SHARE)).y;
 		const gradient = ctx.createLinearGradient(0, top, 0, bottom);
 		gradient.addColorStop(0, 'rgba(0, 0, 0, 1)');
+		gradient.addColorStop(0.4, 'rgba(0, 0, 0, 0.72)');
 		gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 		ctx.save();
 		ctx.globalCompositeOperation = 'destination-out';
 		ctx.fillStyle = gradient;
-		ctx.fillRect(0, top - 4, layout.width, bottom - top + 4);
+		// From the canvas top down: a gem drawn at the far edge pokes above `top`, and the gradient clamps there to
+		// fully erased, so nothing shows above the highway's end and notes rise out of the dark.
+		ctx.fillRect(0, 0, layout.width, bottom);
 		ctx.restore();
 	}
 

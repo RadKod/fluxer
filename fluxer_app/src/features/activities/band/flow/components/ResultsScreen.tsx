@@ -16,10 +16,10 @@ import {
 	CROWD_HINT_DESCRIPTOR,
 	CROWD_TITLE_DESCRIPTOR,
 	DIFFICULTY_DESCRIPTORS,
-	GO_TO_VOTE_DESCRIPTOR,
+	GO_TO_PICK_DESCRIPTOR,
 	LONGEST_STREAK_DESCRIPTOR,
 	MY_RATING_DESCRIPTOR,
-	NEXT_VOTE_DESCRIPTOR,
+	NEXT_PICK_DESCRIPTOR,
 	NO_RESULT_DESCRIPTOR,
 	NOTES_MISSED_DESCRIPTOR,
 	PART_AND_DIFFICULTY_DESCRIPTOR,
@@ -387,7 +387,7 @@ export const ResultsScreen = observer(function ResultsScreen({room, state, song}
 			</section>
 			<footer className={styles.next} data-flx="activities.band.flow.results-screen.next">
 				<span className={styles.nextText} data-flx="activities.band.flow.results-screen.next-text">
-					{i18n._(NEXT_VOTE_DESCRIPTOR, {seconds: secondsUntil(state.endsAt, now)})}
+					{i18n._(NEXT_PICK_DESCRIPTOR, {seconds: secondsUntil(state.endsAt, now)})}
 				</span>
 				<BandTimer
 					endsAt={state.endsAt}
@@ -404,7 +404,7 @@ export const ResultsScreen = observer(function ResultsScreen({room, state, song}
 						onClick={() => room.send({t: 'band.skip'})}
 						data-flx="activities.band.flow.results-screen.go-button.send"
 					>
-						{i18n._(GO_TO_VOTE_DESCRIPTOR)}
+						{i18n._(GO_TO_PICK_DESCRIPTOR)}
 					</button>
 				)}
 			</footer>

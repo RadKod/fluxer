@@ -33,7 +33,6 @@ class BandSettingsState {
 		this.volume = Math.min(1, Math.max(0, volume));
 	}
 
-
 	setDuckDepth(depth: DuckDepth): void {
 		this.duckDepth = depth;
 	}

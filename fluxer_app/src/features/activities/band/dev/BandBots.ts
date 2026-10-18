@@ -35,7 +35,7 @@ export interface BandBotSettings {
 	readonly accuracy: number;
 	// Mean gap between a spectator's cheers; 0 never cheers.
 	readonly cheerEveryMs: number;
-	// Upper bound of the random wait before each vote, claim, ready and rating.
+	// Upper bound of the random wait before each pick, claim, ready and rating.
 	readonly reactionMs: number;
 }
 
@@ -81,6 +81,7 @@ const FINALE_LANES = 5;
 const RATING_STARS_MIN = 3;
 // A seated bot readies on its own this long before the select phase ends.
 const READY_LEAD_MS = 5_000;
+const PICK_DELAY_MS = 4_000;
 
 interface PlayRun {
 	readonly part: BandPart;
@@ -103,8 +104,8 @@ interface PlayRun {
 
 function roundKey(state: BandState): string {
 	switch (state.phase) {
-		case 'vote':
-			return `vote:${state.openedAt}`;
+		case 'pick':
+			return `pick:${state.openedAt}`;
 		case 'select':
 			return `select:${state.songId}:${state.endsAt}`;
 		case 'play':
@@ -177,8 +178,8 @@ export class BandBot {
 			this.round = key;
 		}
 		switch (value.phase) {
-			case 'vote':
-				this.reactToVote(value);
+			case 'pick':
+				this.reactToPick();
 				return;
 			case 'select':
 				this.reactToSelect(value);
@@ -192,12 +193,14 @@ export class BandBot {
 		}
 	}
 
-	private reactToVote(state: Extract<BandState, {phase: 'vote'}>): void {
+	// A person gets a few seconds to search before a bot votes for a random song.
+	private reactToPick(): void {
 		this.setActivity('voting');
-		if (this.voted || state.candidates.length === 0) return;
+		const songs = this.bots.songs();
+		if (this.voted || songs.length === 0) return;
 		this.voted = true;
-		const songId = state.candidates[Math.floor(this.bots.random() * state.candidates.length)];
-		this.later(() => this.send({t: 'band.vote', songId}));
+		const songId = songs[Math.floor(this.bots.random() * songs.length)].id;
+		this.later(() => this.send({t: 'band.vote', songId}), PICK_DELAY_MS);
 	}
 
 	private reactToSelect(state: Extract<BandState, {phase: 'select'}>): void {

@@ -15,7 +15,6 @@ import {
 	STAGE_ORDER,
 } from '@app/features/activities/band/engine/ChartModel';
 import {
-	BACK_TO_VOTE_DESCRIPTOR,
 	DIFFICULTY_DESCRIPTORS,
 	FREE_PART_DESCRIPTOR,
 	GROUP_DIFFICULTY_DESCRIPTOR,
@@ -27,6 +26,7 @@ import {
 	NOT_READY_DESCRIPTOR,
 	PART_DESCRIPTORS,
 	PICK_A_PART_DESCRIPTOR,
+	PICK_ANOTHER_DESCRIPTOR,
 	PICKING_DESCRIPTOR,
 	partDescriptor,
 	READY_DESCRIPTOR,
@@ -474,10 +474,10 @@ export const SelectScreen = observer(function SelectScreen({room, state, song}: 
 						<button
 							type="button"
 							className={styles.backButton}
-							onClick={() => room.send({t: 'band.backToVote'})}
+							onClick={() => room.send({t: 'band.pickAnother'})}
 							data-flx="activities.band.flow.select-screen.back-button.send"
 						>
-							{i18n._(BACK_TO_VOTE_DESCRIPTOR)}
+							{i18n._(PICK_ANOTHER_DESCRIPTOR)}
 						</button>
 					)}
 				</BandTimer>

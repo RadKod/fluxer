@@ -47,7 +47,6 @@ function setup(
 function selectState(seats: Extract<BandState, {phase: 'select'}>['seats']): BandState {
 	return {
 		phase: 'select',
-		queue: [],
 		songId: SONG.id,
 		groupDifficulty: 'hard',
 		seats,
@@ -65,12 +64,14 @@ describe('BandBots', () => {
 		vi.useRealTimers();
 	});
 
-	it('votes for one of the candidates', () => {
+	it('votes for a library song after giving people a few seconds', () => {
 		const {session, bots, received} = setup();
 		const bot = bots.add({reactionMs: REACTION_MS});
-		session.setState({phase: 'vote', queue: [], candidates: ['a', 'b'], votes: {}, openedAt: Date.now(), endsAt: null});
-		vi.advanceTimersByTime(LATENCY_MS * 2 + REACTION_MS);
-		expect(received.map((message) => message.payload)).toEqual([{t: 'band.vote', songId: 'b'}]);
+		session.setState({phase: 'pick', suggestions: [], votes: [], openedAt: Date.now(), endsAt: null});
+		vi.advanceTimersByTime(LATENCY_MS * 2 + 3_000);
+		expect(received).toEqual([]);
+		vi.advanceTimersByTime(1_000 + REACTION_MS);
+		expect(received.map((message) => message.payload)).toEqual([{t: 'band.vote', songId: SONG.id}]);
 		expect(received[0].from.userId).toBe(bot.userId);
 	});
 
@@ -134,7 +135,6 @@ describe('BandBots', () => {
 		const bot = bots.add({reactionMs: REACTION_MS, accuracy: 1});
 		session.setState({
 			phase: 'play',
-			queue: [],
 			songId: SONG.id,
 			seats: [{part: 'bass', userId: bot.userId, difficulty: 'expert', ready: true}],
 			startAt: Date.now() + 1_000,
@@ -169,7 +169,6 @@ describe('BandBots', () => {
 		const bot = bots.add({accuracy: 0});
 		session.setState({
 			phase: 'play',
-			queue: [],
 			songId: SONG.id,
 			seats: [{part: 'guitar', userId: bot.userId, difficulty: 'easy', ready: true}],
 			startAt: Date.now(),
@@ -187,7 +186,6 @@ describe('BandBots', () => {
 		const bot = bots.add({accuracy: 1, reactionMs: 0});
 		session.setState({
 			phase: 'play',
-			queue: [],
 			songId: SONG.id,
 			seats: [{part: 'drums', userId: bot.userId, difficulty: 'expert', ready: true}],
 			startAt: Date.now(),
@@ -206,7 +204,7 @@ describe('BandBots', () => {
 	it('cheers as a spectator during the song', async () => {
 		const {session, bots, payloads} = setup();
 		bots.add({role: 'spectator', cheerEveryMs: 1_000});
-		session.setState({phase: 'play', queue: [], songId: SONG.id, seats: [], startAt: Date.now()});
+		session.setState({phase: 'play', songId: SONG.id, seats: [], startAt: Date.now()});
 		await vi.advanceTimersByTimeAsync(LATENCY_MS * 2 + 3_000);
 		expect(payloads().filter((payload) => payload.t === 'band.cheer').length).toBeGreaterThanOrEqual(2);
 	});
@@ -216,7 +214,6 @@ describe('BandBots', () => {
 		const bot = bots.add({reactionMs: REACTION_MS});
 		const results: BandState = {
 			phase: 'results',
-			queue: [],
 			songId: SONG.id,
 			seats: [
 				{part: 'guitar', userId: '100', difficulty: 'hard', ready: true},

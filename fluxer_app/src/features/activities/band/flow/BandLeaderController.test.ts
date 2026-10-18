@@ -182,10 +182,10 @@ function phaseOf(state: unknown): string | undefined {
 }
 
 describe('BandLeaderController', () => {
-	it('opens the first vote on the leader as soon as it starts', () => {
+	it('opens song picking on the leader as soon as it starts', () => {
 		const {leader, player, playerController} = setup();
-		expect(phaseOf(leader.state)).toBe('vote');
-		expect(playerController.state).toMatchObject({phase: 'vote', candidates: ['a']});
+		expect(phaseOf(leader.state)).toBe('pick');
+		expect(playerController.state).toMatchObject({phase: 'pick', suggestions: ['a']});
 		expect(player.stateVersion).toBe(1);
 	});
 
@@ -193,14 +193,14 @@ describe('BandLeaderController', () => {
 		const {player, playerController} = setup();
 		playerController.sendIntent({t: 'band.vote', songId: 'a'});
 		expect(player.sent).toEqual([{payload: {t: 'band.vote', songId: 'a'}, options: {to: ['lead-conn']}}]);
-		expect(playerController.state).toMatchObject({votes: {p1: 'a'}});
+		expect(playerController.state).toMatchObject({phase: 'pick', votes: [{userId: 'p1', songId: 'a'}]});
 	});
 
 	it('applies the leader’s own intents locally', () => {
 		const {leader, leaderController} = setup();
 		leaderController.sendIntent({t: 'band.vote', songId: 'a'});
 		expect(leader.sent).toEqual([]);
-		expect(leaderController.state).toMatchObject({votes: {lead: 'a'}});
+		expect(leaderController.state).toMatchObject({votes: [{userId: 'lead', songId: 'a'}]});
 	});
 
 	it('ignores malformed payloads and other band messages', async () => {
@@ -216,7 +216,7 @@ describe('BandLeaderController', () => {
 		const {leader, timers, playerController} = setup();
 		playerController.sendIntent({t: 'band.vote', songId: 'a'});
 		const version = leader.stateVersion;
-		playerController.sendIntent({t: 'band.vote', songId: 'a'});
+		playerController.sendIntent({t: 'band.vote', songId: 'nope'});
 		timers.fire();
 		expect(leader.stateVersion).toBe(version);
 	});
@@ -225,9 +225,9 @@ describe('BandLeaderController', () => {
 		const {room, timers, leaderController, playerController} = setup();
 		room.now += 60_000;
 		timers.fire();
-		expect(leaderController.state?.phase).toBe('vote');
+		expect(leaderController.state?.phase).toBe('pick');
 		playerController.sendIntent({t: 'band.vote', songId: 'a'});
-		room.now += BAND_PHASE_MS.vote;
+		room.now += BAND_PHASE_MS.pick;
 		timers.fire();
 		expect(leaderController.state).toMatchObject({phase: 'select', songId: 'a'});
 		leaderController.sendIntent({t: 'band.claimSeat', part: null});
@@ -270,7 +270,7 @@ describe('BandLeaderController', () => {
 		const otherController = new BandLeaderController(other.asSession(), contextFor(room), timers);
 		otherController.start();
 		playerController.sendIntent({t: 'band.vote', songId: 'a'});
-		room.now += BAND_PHASE_MS.vote;
+		room.now += BAND_PHASE_MS.pick;
 		timers.fire();
 		playerController.sendIntent({t: 'band.claimSeat', part: 'guitar'});
 		expect(phaseOf(player.state)).toBe('select');
@@ -299,7 +299,7 @@ describe('BandLeaderController', () => {
 		const otherController = new BandLeaderController(other.asSession(), contextFor(room), timers);
 		otherController.start();
 		playerController.sendIntent({t: 'band.vote', songId: 'a'});
-		room.now += BAND_PHASE_MS.vote;
+		room.now += BAND_PHASE_MS.pick;
 		timers.fire();
 		leaderController.sendIntent({t: 'band.claimSeat', part: null});
 		playerController.sendIntent({t: 'band.claimSeat', part: 'guitar'});
@@ -328,7 +328,7 @@ describe('BandLeaderController', () => {
 		session.state = {phase: 'lobby'};
 		const controller = new BandLeaderController(session.asSession(), contextFor(room), new ManualTimers());
 		controller.start();
-		expect(controller.state?.phase).toBe('vote');
+		expect(controller.state?.phase).toBe('pick');
 	});
 
 	it('drops my intent when there is no leader to send it to', () => {

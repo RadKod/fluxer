@@ -8,7 +8,7 @@ import {useLingui} from '@lingui/react/macro';
 import {clsx} from 'clsx';
 import type React from 'react';
 
-const STEPS: ReadonlyArray<BandPhase> = ['vote', 'select', 'play', 'results'];
+const STEPS: ReadonlyArray<BandPhase> = ['pick', 'select', 'play', 'results'];
 
 interface BandStageProps {
 	readonly phase: BandPhase | null;

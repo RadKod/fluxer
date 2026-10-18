@@ -58217,3 +58217,63 @@ msgid ""
 msgstr ""
 "Enstrüman çalarken mikrofonun kapanır, şarkı bitince eski hâline döner. "
 "Vokalde mikrofonun açık kalır."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-step"
+msgid "Song"
+msgstr "Şarkı"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"Pick a song and everyone moves on to choosing parts. Whoever picks first "
+"decides."
+msgstr "Bir şarkı seç, herkes parti seçimine geçer. İlk seçen belirler."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Random picks"
+msgstr "Rastgele öneriler"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "All songs"
+msgstr "Tüm şarkılar"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "↑↓ to move, Enter to pick"
+msgstr "↑↓ ile gez, Enter ile seç"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "The song library is empty."
+msgstr "Şarkı kütüphanesi boş."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Song picking opens in {seconds} s"
+msgstr "Şarkı seçimi {seconds} sn sonra açılıyor"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Pick another song"
+msgstr "Başka şarkı seç"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Pick a song"
+msgstr "Şarkı seç"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"Click a song to vote for it. Once someone votes, the most voted song opens "
+"after a short countdown."
+msgstr ""
+"Oy vermek için şarkıya tıkla. İlk oydan kısa süre sonra en çok oy alan "
+"açılır."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "↑↓ to move, Enter to vote"
+msgstr "↑↓ ile gez, Enter ile oy ver"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-pick"
+msgid "Voted"
+msgstr "Oy alanlar"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{seconds} s until the most voted song opens"
+msgstr "{seconds} sn sonra en çok oy alan açılıyor"

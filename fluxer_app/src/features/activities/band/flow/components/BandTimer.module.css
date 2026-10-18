@@ -15,12 +15,6 @@
 	font-variant-numeric: tabular-nums;
 }
 
-.waiting {
-	color: var(--band-t2);
-	font-weight: 500;
-	white-space: nowrap;
-}
-
 .track {
 	flex: 1 1 auto;
 	height: 0.1875rem;
@@ -36,10 +30,6 @@
 	background-color: var(--band-plum);
 	transform-origin: left;
 	transition: transform 0.25s linear;
-}
-
-.fillIdle {
-	opacity: 0.35;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -58547,3 +58547,65 @@ msgid ""
 msgstr ""
 "While you play an instrument, your mic is muted and comes back when the song"
 " ends. On vocals it stays open."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-step"
+msgid "Song"
+msgstr "Song"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"Pick a song and everyone moves on to choosing parts. Whoever picks first "
+"decides."
+msgstr ""
+"Pick a song and everyone moves on to choosing parts. Whoever picks first "
+"decides."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Random picks"
+msgstr "Random picks"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "All songs"
+msgstr "All songs"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "↑↓ to move, Enter to pick"
+msgstr "↑↓ to move, Enter to pick"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "The song library is empty."
+msgstr "The song library is empty."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Song picking opens in {seconds} s"
+msgstr "Song picking opens in {seconds} s"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Pick another song"
+msgstr "Pick another song"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Pick a song"
+msgstr "Pick a song"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"Click a song to vote for it. Once someone votes, the most voted song opens "
+"after a short countdown."
+msgstr ""
+"Click a song to vote for it. Once someone votes, the most voted song opens "
+"after a short countdown."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "↑↓ to move, Enter to vote"
+msgstr "↑↓ to move, Enter to vote"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-pick"
+msgid "Voted"
+msgstr "Voted"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{seconds} s until the most voted song opens"
+msgstr "{seconds} s until the most voted song opens"

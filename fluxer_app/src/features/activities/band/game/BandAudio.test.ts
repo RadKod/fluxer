@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {AudioStem} from '@app/features/activities/band/engine/SongPackage';
-import {BandAudio, DUCK_SHAPES, duckEnvelope, restoreEnvelope, stemRoleForPlayback} from '@app/features/activities/band/game/BandAudio';
+import {
+	BandAudio,
+	DUCK_SHAPES,
+	duckEnvelope,
+	restoreEnvelope,
+	stemRoleForPlayback,
+} from '@app/features/activities/band/game/BandAudio';
 import {describe, expect, it, vi} from 'vitest';
 
 const STRONG = DUCK_SHAPES.strong.level;

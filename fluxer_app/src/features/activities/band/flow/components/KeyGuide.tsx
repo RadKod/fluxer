@@ -17,9 +17,9 @@ import {
 	bandPartKeys,
 	heldLaneCount,
 } from '@app/features/activities/band/flow/BandKeyGuide';
+import {isBandPanelKey} from '@app/features/activities/band/flow/components/BandPanelKeys';
 import {BandPartIcon} from '@app/features/activities/band/flow/components/BandPartIcon';
 import styles from '@app/features/activities/band/flow/components/KeyGuide.module.css';
-import {isBandPanelKey} from '@app/features/activities/band/flow/components/useBandKeys';
 import {actionForKey, type BandKeyMap, DEFAULT_BAND_KEY_MAP} from '@app/features/activities/band/game/BandInput';
 import type {MessageDescriptor} from '@lingui/core';
 import {useLingui} from '@lingui/react/macro';

@@ -7,10 +7,10 @@ import type {MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
 
 export const STEP_DESCRIPTORS = {
-	vote: msg({
-		message: 'Vote',
+	pick: msg({
+		message: 'Song',
 		context: 'band-step',
-		comment: 'Band game: step indicator over the game, the first step where everyone votes for the next song.',
+		comment: 'Band game: step indicator over the game, the first step where someone picks the next song.',
 	}),
 	select: msg({
 		message: 'Pick',
@@ -135,124 +135,64 @@ export const SONG_FAILED_DESCRIPTOR = msg({
 	comment: 'Band game: heading of the error shown when the song file did not download or open.',
 });
 
-export const VOTE_TITLE_DESCRIPTOR = msg({
+export const PICK_TITLE_DESCRIPTOR = msg({
 	message: 'What should we play next?',
-	comment: 'Band game: heading of the vote screen where everyone picks the next song.',
+	comment: 'Band game: heading of the screen where anyone in the room searches the library and picks the next song.',
 });
-export const VOTE_HINT_DESCRIPTOR = msg({
-	message:
-		'The song with the most votes plays. The first vote starts the countdown; you can change yours until it ends.',
-	comment: 'Band game: explanation under the vote heading.',
+export const PICK_HINT_DESCRIPTOR = msg({
+	message: 'Click a song to vote for it. Once someone votes, the most voted song opens after a short countdown.',
+	comment: 'Band game: explanation under the song picking heading. Clicking the same song again takes the vote back.',
 });
-export const VOTE_WAITING_DESCRIPTOR = msg({
-	message: 'Waiting for the first vote',
-	comment: 'Band game: shown in place of the vote countdown until somebody votes; the countdown starts with that vote.',
+export const PICK_SUGGESTIONS_DESCRIPTOR = msg({
+	message: 'Random picks',
+	comment: 'Band game: heading of a few random songs offered while the search box is empty.',
 });
-export const VOTE_TALLY_DESCRIPTOR = msg({
-	message:
-		'{voted, plural, one {# person voted} other {# people voted}}, {total, plural, one {# of us} other {# of us}}',
-	comment: 'Band game: how many people in the room voted so far, out of everyone in the room.',
+export const PICK_VOTED_DESCRIPTOR = msg({
+	message: 'Voted',
+	context: 'band-pick',
+	comment: 'Band game: heading of the songs that have votes, listed above everything else on the song picking screen.',
+});
+export const PICK_COUNTDOWN_DESCRIPTOR = msg({
+	message: '{seconds} s until the most voted song opens',
+	comment:
+		'Band game: countdown on the song picking screen; it starts with the first vote. {seconds} is a whole number.',
 });
 export const VOTE_COUNT_DESCRIPTOR = msg({
 	message: '{count, plural, one {# vote} other {# votes}}',
-	comment: 'Band game: number of votes on a song card.',
+	comment: 'Band game: number of votes on a song.',
 });
-export const MY_VOTE_DESCRIPTOR = msg({
-	message: 'Your vote',
-	comment: 'Band game: tag on the song card I voted for.',
+export const PLAY_NOW_DESCRIPTOR = msg({
+	message: 'Play this now',
+	comment: 'Band game: leader-only button on a voted song that skips the countdown and plays that song next.',
 });
-export const LEADING_DESCRIPTOR = msg({
-	message: 'Leading',
-	comment: 'Band game: tooltip of the mark on the song card that currently has the most votes.',
+export const PICK_ALL_SONGS_DESCRIPTOR = msg({
+	message: 'All songs',
+	comment: 'Band game: heading of the whole song library, below the random picks, while the search box is empty.',
 });
-export const VOTE_KEYS_DESCRIPTOR = msg({
-	message: 'Vote with',
-	comment: 'Band game: label before the keyboard keys that cast a vote (A, S, D).',
+export const PICK_KEYS_DESCRIPTOR = msg({
+	message: '↑↓ to move, Enter to vote',
+	comment: 'Band game: keyboard hint on the song picking screen; the arrow keys move through the list.',
 });
-export const VOTE_EMPTY_DESCRIPTOR = msg({
-	message: 'There are no songs to vote on yet.',
-	comment: 'Band game: the song library is empty.',
-});
-export const VOTE_FOR_DESCRIPTOR = msg({
-	message: 'Vote for {song}',
-	comment: 'Band game: accessible name of a song card button on the vote screen. {song} is the song name.',
-});
-export const DOWNLOADED_DESCRIPTOR = msg({
-	message: 'Downloaded',
-	comment: 'Band game: the song file is already on this device.',
-});
-export const DOWNLOADING_DESCRIPTOR = msg({
-	message: 'Downloading {percent}%',
-	comment: 'Band game: the song file is downloading. {percent} is 0 to 100.',
-});
-export const DOWNLOAD_QUEUED_DESCRIPTOR = msg({
-	message: 'Waiting',
-	context: 'band-download',
-	comment: 'Band game: the song file will download after the ones before it.',
+export const PICK_LIBRARY_EMPTY_DESCRIPTOR = msg({
+	message: 'The song library is empty.',
+	comment: 'Band game: shown on the song picking screen when the library has no songs.',
 });
 export const SONG_PLAYERS_DESCRIPTOR = msg({
 	message: '{count, plural, one {# player} other {# players}}',
-	comment: 'Band game vote card: how many people can play this song at once (one per charted part).',
-});
-export const DOWNLOAD_FAILED_DESCRIPTOR = msg({
-	message: 'Download failed',
-	comment: 'Band game: the song file did not download; it is tried again when the song is chosen.',
+	comment: 'Band game song list: how many people can play this song at once (one per charted part).',
 });
 export const PART_INTENSITY_DESCRIPTOR = msg({
 	message: '{part} intensity {level}/5',
 	comment: 'Band game: tooltip of the bar showing how demanding a part of the song is. {part} is Guitar, Drums...',
 });
-export const PART_MISSING_DESCRIPTOR = msg({
-	message: 'No {part} part',
-	comment: 'Band game: tooltip when a song has no chart for that instrument. {part} is Guitar, Drums...',
-});
-export const PART_MISSING_SHORT_DESCRIPTOR = msg({
-	message: 'none',
-	context: 'band-part-missing',
-	comment: 'Band game: short label in place of the intensity bar when a song has no chart for that instrument.',
-});
-export const UP_NEXT_DESCRIPTOR = msg({
-	message: 'Up next',
-	comment: 'Band game: label before the songs waiting in the queue.',
-});
-export const QUEUE_ENTRY_DESCRIPTOR = msg({
-	message: '{artist}, added by {name}',
-	comment: 'Band game: second line of a queued song. {artist} is the performer, {name} the person who queued it.',
-});
-export const ADD_TO_QUEUE_DESCRIPTOR = msg({
-	message: 'Add a song to the queue',
-	comment: 'Band game: button that opens the song list to queue a song for a later vote.',
-});
 
-export const PICKER_TITLE_DESCRIPTOR = msg({
-	message: 'Add a song',
-	comment: 'Band game: heading of the song list where anyone can queue a song.',
-});
-export const PICKER_SEARCH_DESCRIPTOR = msg({
+export const PICK_SEARCH_DESCRIPTOR = msg({
 	message: 'Search songs or artists',
 	comment: 'Band game: placeholder of the search field in the song list.',
 });
-export const PICKER_PLAY_NOW_DESCRIPTOR = msg({
-	message: 'Play this now',
-	comment: 'Band game: leader-only button on a song in the song list that skips the vote and plays that song next.',
-});
-export const PICKER_ADD_DESCRIPTOR = msg({
-	message: 'Add',
-	context: 'band-queue-add',
-	comment: 'Band game: button on a song in the song list that adds it to the queue.',
-});
-export const PICKER_QUEUED_DESCRIPTOR = msg({
-	message: 'In the queue',
-	comment: 'Band game: shown instead of the add button for a song already queued.',
-});
-export const PICKER_EMPTY_DESCRIPTOR = msg({
+export const PICK_NO_MATCH_DESCRIPTOR = msg({
 	message: 'No songs match.',
 	comment: 'Band game: the song list search found nothing.',
-});
-export const PICKER_CLOSE_DESCRIPTOR = msg({
-	message: 'Close',
-	context: 'band-picker',
-	comment: 'Band game: closes the song list.',
 });
 
 export const VOCALS_HINT_DESCRIPTOR = msg({
@@ -460,23 +400,24 @@ export const RATE_PLAYER_DESCRIPTOR = msg({
 	message: 'Give {name} {stars, plural, one {# star} other {# stars}}',
 	comment: 'Band game: accessible name of one star button. {name} is the player.',
 });
-export const NEXT_VOTE_DESCRIPTOR = msg({
-	message: 'The next song vote opens in {seconds} s',
+export const NEXT_PICK_DESCRIPTOR = msg({
+	message: 'Song picking opens in {seconds} s',
 	comment: 'Band game: countdown at the bottom of the results screen. {seconds} is a whole number.',
 });
 export const STOP_SONG_DESCRIPTOR = msg({
 	message: 'End the song',
 	comment: 'Band game: leader-only button during the song that stops it and shows the results with the scores so far.',
 });
+export const PICK_ANOTHER_DESCRIPTOR = msg({
+	message: 'Pick another song',
+	comment:
+		'Band game: leader-only button on the part picking screen that drops this song and goes back to song picking.',
+});
+export const GO_TO_PICK_DESCRIPTOR = msg({
+	message: 'Pick a song',
+	comment: 'Band game: leader-only button that ends the results screen and opens song picking.',
+});
 export const STOP_SONG_HINT_DESCRIPTOR = msg({
 	message: 'The leader can end the song',
 	comment: 'Band game: shown during the song to everyone but the leader, in place of the leader’s end-the-song button.',
-});
-export const BACK_TO_VOTE_DESCRIPTOR = msg({
-	message: 'Back to the vote',
-	comment: 'Band game: leader-only button on the part picking screen that drops this song and opens a new vote.',
-});
-export const GO_TO_VOTE_DESCRIPTOR = msg({
-	message: 'Go to the vote',
-	comment: 'Band game: leader-only button that ends the results screen and opens the next vote.',
 });

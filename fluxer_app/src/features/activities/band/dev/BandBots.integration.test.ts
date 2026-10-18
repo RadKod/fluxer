@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 // The bots against the real leader: BandLeaderController and BandRoomMachine on the fake session, through a whole
-// round from the vote to the next vote.
+// round from picking a song to the next pick.
 
 import type {BandSongSummary, BandState} from '@app/features/activities/band/BandProtocol';
 import {BandBots} from '@app/features/activities/band/dev/BandBots';
@@ -41,7 +41,7 @@ describe('BandBots with the real leader', () => {
 		vi.useRealTimers();
 	});
 
-	it('plays a full round: vote, seats, song, results, ratings, next vote', async () => {
+	it('plays a full round: pick, seats, song, results, ratings, next pick', async () => {
 		const session = new FakeActivitySession({
 			activityId: 'band',
 			myUserId: '100',
@@ -80,10 +80,7 @@ describe('BandBots with the real leader', () => {
 			}
 			expect(state().phase).toBe(phase);
 		};
-		expect(state().phase).toBe('vote');
-
-		await vi.advanceTimersByTimeAsync(3_000);
-		expect(Object.keys((state() as Extract<BandState, {phase: 'vote'}>).votes)).toHaveLength(3);
+		expect(state().phase).toBe('pick');
 
 		// Both players claim early, then wait for each other until five seconds are left.
 		await advanceUntil('select', 20_000);
@@ -112,8 +109,8 @@ describe('BandBots with the real leader', () => {
 		expect(rated.ratings[guitarist.userId]?.[drummer.userId]).toBeGreaterThanOrEqual(1);
 		expect(rated.ratings[drummer.userId]?.[guitarist.userId]).toBeGreaterThanOrEqual(1);
 
-		await advanceUntil('vote', 25_000);
-		expect(phases).toEqual(['vote', 'select', 'play', 'results', 'vote']);
+		await advanceUntil('pick', 25_000);
+		expect(phases).toEqual(['pick', 'select', 'play', 'results', 'pick']);
 
 		controller.stop();
 		bots.clear();
