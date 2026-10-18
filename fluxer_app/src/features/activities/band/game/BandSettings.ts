@@ -14,12 +14,11 @@ class BandSettingsState {
 	inputLatencyMs: number | null = null;
 	volume = 0.8;
 	// A short muted-string or dull-drum sound on my own misses.
-	missSound = true;
 	duckDepth: DuckDepth = 'strong';
 
 	constructor() {
 		makeAutoObservable(this, {}, {autoBind: true});
-		void makePersistent(this, 'BandSettings', ['inputLatencyMs', 'volume', 'missSound', 'duckDepth']);
+		void makePersistent(this, 'BandSettings', ['inputLatencyMs', 'volume', 'duckDepth']);
 	}
 
 	get effectiveInputLatencyMs(): number {
@@ -34,9 +33,6 @@ class BandSettingsState {
 		this.volume = Math.min(1, Math.max(0, volume));
 	}
 
-	setMissSound(enabled: boolean): void {
-		this.missSound = enabled;
-	}
 
 	setDuckDepth(depth: DuckDepth): void {
 		this.duckDepth = depth;

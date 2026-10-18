@@ -73,7 +73,7 @@ function setup(overrides: Partial<PlayControllerOptions> = {}) {
 	const send = vi.fn();
 	const submitIntent = vi.fn<(intent: BandIntent) => void>();
 	const duck = vi.fn();
-	const playMissSound = vi.fn();
+	const restore = vi.fn();
 	const playFinaleNote = vi.fn();
 	const controller = new PlayController({
 		chart: SONG,
@@ -84,12 +84,12 @@ function setup(overrides: Partial<PlayControllerOptions> = {}) {
 		send,
 		submitIntent,
 		duck,
-		playMissSound,
+		restore,
 		playFinaleNote,
 		...overrides,
 	});
 	const hits = () => send.mock.calls.map(([payload]) => payload).filter((payload) => payload.t === 'band.hit');
-	return {controller, send, submitIntent, duck, playMissSound, playFinaleNote, hits};
+	return {controller, send, submitIntent, duck, restore, playFinaleNote, hits};
 }
 
 describe('PlayController', () => {
@@ -161,7 +161,7 @@ describe('PlayController', () => {
 	});
 
 	it('mirrors another player from their broadcasts and ducks their stem on a miss', () => {
-		const {controller, duck, playMissSound} = setup();
+		const {controller, duck, restore} = setup();
 		const bass = controller.tracks[1];
 		controller.tick(1_000);
 		controller.receive(
@@ -192,8 +192,8 @@ describe('PlayController', () => {
 				score: 300,
 			}),
 		);
+		expect(restore).toHaveBeenCalledWith('bass');
 		expect(duck).toHaveBeenCalledWith('bass');
-		expect(playMissSound).not.toHaveBeenCalledWith('bass');
 		expect(bass.missAtMs).toBe(1_000);
 		expect(controller.groupScore).toBe(300);
 	});
@@ -252,15 +252,18 @@ describe('PlayController', () => {
 		expect(hits()).toEqual([expect.objectContaining({noteIndex: 5, hit: true})]);
 	});
 
-	it('plays the miss sound and ducks my stem on my own miss', () => {
-		const {controller, duck, playMissSound} = setup();
+	it('drops my stem on my own miss and brings it back with my next hit', () => {
+		const {controller, duck, restore} = setup();
 		controller.tick(700);
-		expect(playMissSound).toHaveBeenCalledWith('guitar');
 		expect(duck).toHaveBeenCalledWith('guitar');
+		restore.mockClear();
+		controller.press(FretLane.Green, 1_000);
+		controller.tick(1_020);
+		expect(restore).toHaveBeenCalledWith('guitar');
 	});
 
-	it('treats a stray press as a miss: combo gone, miss feedback, sound and duck, no note used up', () => {
-		const {controller, duck, playMissSound, hits} = setup();
+	it('treats a stray press as a miss: combo gone, miss feedback and duck, no note used up', () => {
+		const {controller, duck, hits} = setup();
 		controller.press(FretLane.Green, 0);
 		controller.release(FretLane.Green, 20);
 		expect(controller.myTrack!.hud.combo).toBe(1);
@@ -268,7 +271,6 @@ describe('PlayController', () => {
 		const track = controller.myTrack!;
 		expect(track.hud.combo).toBe(0);
 		expect(track.feedback).toEqual({kind: 'miss', atMs: 250});
-		expect(playMissSound).toHaveBeenCalledTimes(1);
 		expect(duck).toHaveBeenCalledWith('guitar');
 		expect(hits()).toHaveLength(1);
 	});

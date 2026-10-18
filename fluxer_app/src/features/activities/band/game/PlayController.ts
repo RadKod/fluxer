@@ -183,9 +183,9 @@ export interface PlayControllerOptions {
 	readonly joinedAtMs: number;
 	readonly send: (payload: unknown, options?: ActivitySendOptions) => void;
 	readonly submitIntent: (intent: BandIntent) => void;
+	// A miss drops the part's stem until the next hit restores it, for every player in the band.
 	readonly duck: (part: BandPart) => void;
-	// My own misses and overhits only; everyone hears their own mistakes, not the band's.
-	readonly playMissSound: (part: InstrumentPart) => void;
+	readonly restore: (part: BandPart) => void;
 	readonly playFinaleNote: (part: InstrumentPart, lane: number, mine: boolean) => void;
 }
 
@@ -406,6 +406,7 @@ export class PlayController {
 		hud.starPowerActive = message.starPower;
 		hud.score = message.score;
 		if (message.hit) {
+			this.options.restore(track.part);
 			track.noteStates[message.noteIndex] = NoteState.Hit;
 			if (group.msLength > 0) track.heldUntilMs[message.noteIndex] = group.msTime + group.msLength;
 			for (const lane of group.lanes) track.laneFlashMs[laneSlot(lane)] = this.nowMs;
@@ -437,6 +438,7 @@ export class PlayController {
 				continue;
 			}
 			if (event.kind === 'hit') {
+				this.options.restore(track.part);
 				track.noteStates[index] = NoteState.Hit;
 				if (group.msLength > 0) track.heldUntilMs[index] = group.msTime + group.msLength;
 				track.feedback = {kind: event.rating, atMs: event.timeMs};
@@ -470,7 +472,6 @@ export class PlayController {
 
 	private signalMiss(track: SeatTrack): void {
 		this.options.duck(track.part);
-		this.options.playMissSound(track.part);
 	}
 
 	private addPoints(hud: SeatHud, points: number): void {

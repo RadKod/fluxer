@@ -11,7 +11,6 @@ import {BandAudio} from '@app/features/activities/band/game/BandAudio';
 import {inputSongTimeMs} from '@app/features/activities/band/game/BandInput';
 import type {DuckDepth} from '@app/features/activities/band/game/BandSettings';
 import {FinaleSynth} from '@app/features/activities/band/game/FinaleSynth';
-import {MissSound} from '@app/features/activities/band/game/MissSound';
 import {PlayController} from '@app/features/activities/band/game/PlayController';
 import type {ActivitySession} from '@app/features/activities/session/ActivitySessionTypes';
 
@@ -33,7 +32,6 @@ export interface PlayRuntimeOptions {
 	readonly entry: BandSongSummary;
 	readonly songPackage: SongPackage;
 	readonly inputLatencyMs: () => number;
-	readonly missSound: () => boolean;
 	readonly duckDepth: () => DuckDepth;
 	readonly submitIntent: (intent: BandIntent) => void;
 }
@@ -76,7 +74,6 @@ export class PlayRuntime {
 			audio.start(schedule);
 
 			const synth = new FinaleSynth(audio.context, audio.output);
-			const missSound = new MissSound(audio.context, audio.output);
 			const chartEndMs = Math.max(chart.durationMs, chart.bigRockEnding?.endMs ?? 0);
 			const controller = new PlayController({
 				chart,
@@ -87,9 +84,7 @@ export class PlayRuntime {
 				send: (payload, sendOptions) => void session.send(payload, sendOptions),
 				submitIntent: options.submitIntent,
 				duck: (part) => audio.duck(part, options.duckDepth()),
-				playMissSound: (part) => {
-					if (options.missSound()) missSound.play(part);
-				},
+				restore: (part) => audio.restore(part),
 				playFinaleNote: (part, lane, mine) => synth.play(part, lane, mine),
 			});
 			return new PlayRuntime(controller, audio, schedule.songZeroContextTime, options);

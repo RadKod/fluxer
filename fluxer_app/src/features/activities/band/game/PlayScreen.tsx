@@ -63,7 +63,6 @@ function usePlayRuntime({session, state, entry, songPackage, onOwnIntent}: PlayS
 			entry,
 			songPackage,
 			inputLatencyMs: () => BandSettings.effectiveInputLatencyMs,
-			missSound: () => BandSettings.missSound,
 			duckDepth: () => BandSettings.duckDepth,
 			submitIntent: (intent) => {
 				if (session.isLeader) {

@@ -9,15 +9,14 @@ import {acquireSharedVoiceAudioContext} from '@app/features/voice/engine/VoiceSh
 
 const logger = new Logger('BandAudio');
 
-// A missed note drops that part's stem to a share of its level, holds it there and brings it back quickly, Rock
-// Band style. Strong is near silence for about 0.6 s, so a miss is heard; light is the gentler first version.
-export const DUCK_SHAPES: Readonly<
-	Record<DuckDepth, {readonly level: number; readonly holdS: number; readonly releaseS: number}>
-> = {
-	strong: {level: 0.05, holdS: 0.48, releaseS: 0.12},
-	light: {level: 0.15, holdS: 0.4, releaseS: 0.15},
+// Rock Band style: a missed note drops that part's stem and it stays down until the player hits again, so the whole
+// band hears the part drop out and come back. Strong is near silence; light only thins it.
+export const DUCK_SHAPES: Readonly<Record<DuckDepth, {readonly level: number}>> = {
+	strong: {level: 0.05},
+	light: {level: 0.3},
 };
 const DUCK_ATTACK_S = 0.03;
+const RESTORE_S = 0.08;
 const CLICK_LENGTH_S = 0.05;
 // Audio cannot be scheduled into the past; this is the least lead given on top of the output latency.
 const MIN_START_LEAD_S = 0.25;
@@ -39,22 +38,24 @@ export interface GainPoint {
 	readonly ramp: boolean;
 }
 
-// Gain automation for one duck starting at `now`: quick dip, hold, ease back. A duck during a duck restarts the
-// hold from the current (already low) value, so a run of misses keeps the stem down.
+// Gain automation for a miss at `now`: a quick dip that holds until restoreEnvelope() runs on the next hit.
 export function duckEnvelope(
 	now: number,
 	level: number,
 	current: number,
 	depth: DuckDepth = 'strong',
 ): ReadonlyArray<GainPoint> {
-	const shape = DUCK_SHAPES[depth];
-	const low = level * shape.level;
-	const dipEnd = now + DUCK_ATTACK_S;
 	return [
 		{time: now, value: current, ramp: false},
-		{time: dipEnd, value: low, ramp: true},
-		{time: dipEnd + shape.holdS, value: low, ramp: false},
-		{time: dipEnd + shape.holdS + shape.releaseS, value: level, ramp: true},
+		{time: now + DUCK_ATTACK_S, value: level * DUCK_SHAPES[depth].level, ramp: true},
+	];
+}
+
+// Gain automation for the hit that ends a drop-out: back to the part's level over a short fade.
+export function restoreEnvelope(now: number, level: number, current: number): ReadonlyArray<GainPoint> {
+	return [
+		{time: now, value: current, ramp: false},
+		{time: now + RESTORE_S, value: level, ramp: true},
 	];
 }
 
@@ -101,6 +102,7 @@ interface RoleChannel {
 export class BandAudio {
 	private readonly master: GainNode;
 	private readonly channels = new Map<StemRole, RoleChannel>();
+	private readonly ducked = new Set<BandPart>();
 	private sources: Array<AudioBufferSourceNode> = [];
 	private disposed = false;
 
@@ -180,6 +182,15 @@ export class BandAudio {
 		if (!channel || channel.level === 0) return;
 		const param = channel.gain.gain;
 		applyGainPoints(param, duckEnvelope(this.context.currentTime, channel.level, param.value, depth));
+		this.ducked.add(part);
+	}
+
+	// The next hit after a miss brings the part back.
+	restore(part: BandPart): void {
+		const channel = this.channels.get(part);
+		if (!channel || !this.ducked.delete(part) || channel.level === 0) return;
+		const param = channel.gain.gain;
+		applyGainPoints(param, restoreEnvelope(this.context.currentTime, channel.level, param.value));
 	}
 
 	// Silences a part outright; the vocals stem while someone sings live.

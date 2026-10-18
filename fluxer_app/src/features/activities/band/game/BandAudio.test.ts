@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {AudioStem} from '@app/features/activities/band/engine/SongPackage';
-import {BandAudio, DUCK_SHAPES, duckEnvelope, stemRoleForPlayback} from '@app/features/activities/band/game/BandAudio';
+import {BandAudio, DUCK_SHAPES, duckEnvelope, restoreEnvelope, stemRoleForPlayback} from '@app/features/activities/band/game/BandAudio';
 import {describe, expect, it, vi} from 'vitest';
 
 const STRONG = DUCK_SHAPES.strong.level;
@@ -79,21 +79,20 @@ function stem(role: AudioStem['role'], name: string): AudioStem {
 }
 
 describe('BandAudio', () => {
-	it('dips a part to near silence for about 0.6 s on a miss and brings it back quickly', () => {
+	it('drops a part to near silence on a miss and keeps it there until a hit restores it', () => {
 		const points = duckEnvelope(10, 1, 1);
-		expect(points[0]).toEqual({time: 10, value: 1, ramp: false});
-		expect(points[1]).toEqual({time: 10.03, value: 0.05, ramp: true});
-		const [, , holdEnd, last] = points;
-		expect(holdEnd.value).toBe(0.05);
-		expect(last.value).toBe(1);
-		expect(holdEnd.time - 10).toBeCloseTo(0.51);
-		expect(last.time - holdEnd.time).toBeCloseTo(0.12);
+		expect(points).toEqual([
+			{time: 10, value: 1, ramp: false},
+			{time: 10.03, value: 0.05, ramp: true},
+		]);
+		expect(restoreEnvelope(12, 1, 0.05)).toEqual([
+			{time: 12, value: 0.05, ramp: false},
+			{time: 12.08, value: 1, ramp: true},
+		]);
 	});
 
-	it('dips less and for less time when the light duck is chosen', () => {
-		const points = duckEnvelope(10, 1, 1, 'light');
-		expect(points[1].value).toBe(0.15);
-		expect(points.at(-1)!.time - 10).toBeCloseTo(0.58);
+	it('only thins the part when the light duck is chosen', () => {
+		expect(duckEnvelope(10, 1, 1, 'light')[1].value).toBe(0.3);
 	});
 
 	it('plays single-mix songs as backing so nothing ducks them', () => {
@@ -125,7 +124,10 @@ describe('BandAudio', () => {
 		const [, guitarGain, backingGain] = gains;
 		audio.duck('guitar', 'strong');
 		audio.duck('drums', 'strong');
-		expect(guitarGain.gain.calls.map(([method]) => method)).toEqual(['cancel', 'set', 'ramp', 'set', 'ramp']);
+		expect(guitarGain.gain.calls.map(([method]) => method)).toEqual(['cancel', 'set', 'ramp']);
+		audio.restore('guitar');
+		audio.restore('guitar');
+		expect(guitarGain.gain.calls.map(([method]) => method)).toEqual(['cancel', 'set', 'ramp', 'cancel', 'set', 'ramp']);
 		expect(guitarGain.gain.calls[2]).toEqual(['ramp', STRONG, 5.03]);
 		expect(backingGain.gain.calls).toEqual([]);
 	});
