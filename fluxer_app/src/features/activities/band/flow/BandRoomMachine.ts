@@ -8,6 +8,7 @@ import {
 	BAND_PHASE_MS,
 	BAND_RATING_MAX,
 	BAND_RATING_MIN,
+	BAND_RESULT_WAIT_MS,
 	BAND_VOTE_CANDIDATES,
 	type BandIntent,
 	type BandPlayerResult,
@@ -21,8 +22,11 @@ import {BAND_DIFFICULTIES, type BandDifficulty, type BandPart} from '@app/featur
 export const BAND_PARTS: ReadonlyArray<BandPart> = ['guitar', 'rhythm', 'bass', 'drums', 'keys', 'vocals'];
 export const BAND_DEFAULT_GROUP_DIFFICULTY: BandDifficulty = 'medium';
 export const BAND_QUEUE_MAX = 40;
-// The song ends this long after its last audio frame, so the slowest client can report its result.
-export const BAND_PLAY_GRACE_MS = 2_000;
+// The song ends once every present player has reported, or this long after the index length at the latest. Every client
+// reports on its own clock: the chart can run past the index length (a final chord held over the fade, a Big Rock
+// Ending) and audio output and input latency push it later still, so the margin is generous; it only matters when
+// someone never reports.
+export const BAND_PLAY_GRACE_MS = 10_000;
 
 export interface BandRoomContext {
 	// User id of the session leader; only it may skip a phase or pick the group difficulty.
@@ -139,22 +143,55 @@ function startVote(
 		queue,
 		candidates: pickCandidates(queue, ctx.songs, excludeSongId, now),
 		votes: {},
-		endsAt: now + BAND_PHASE_MS.vote,
+		openedAt: now,
+		endsAt: null,
 	};
 }
 
-function resolveVote(state: VoteState, now: number): BandState {
-	const [winner] = rankCandidates(state);
-	if (!winner) return state;
+function startSelect(queue: ReadonlyArray<BandQueueEntry>, songId: string, now: number): SelectState {
 	return {
 		phase: 'select',
-		queue: state.queue.filter((entry) => entry.songId !== winner),
-		songId: winner,
+		queue: queue.filter((entry) => entry.songId !== songId),
+		songId,
 		groupDifficulty: BAND_DEFAULT_GROUP_DIFFICULTY,
 		seats: [],
 		watching: [],
 		endsAt: now + BAND_PHASE_MS.select,
 	};
+}
+
+function resolveVote(state: VoteState, now: number): BandState {
+	const [winner] = rankCandidates(state);
+	return winner ? startSelect(state.queue, winner, now) : state;
+}
+
+// The first vote starts the countdown; nobody voting keeps the round open.
+function castVote(state: VoteState, songId: string, fromUserId: string, now: number): VoteState {
+	if (!state.candidates.includes(songId) || state.votes[fromUserId] === songId) return state;
+	return {
+		...state,
+		votes: {...state.votes, [fromUserId]: songId},
+		endsAt: state.endsAt ?? now + BAND_PHASE_MS.vote,
+	};
+}
+
+// A song queued during the vote takes the place of a library pick nobody voted for, so the cards keep their keys and
+// no vote is lost. With every library pick voted for, it waits in the queue for the next round.
+function promoteQueued(state: VoteState, ctx: BandRoomContext): VoteState {
+	const queued = new Set(state.queue.map((entry) => entry.songId));
+	const voted = new Set(Object.values(state.votes));
+	const candidates = [...state.candidates];
+	for (const entry of state.queue) {
+		if (!ctx.songs.has(entry.songId) || candidates.includes(entry.songId)) continue;
+		const slot = candidates.findLastIndex((songId) => !queued.has(songId) && !voted.has(songId));
+		if (slot === -1) break;
+		candidates[slot] = entry.songId;
+	}
+	return candidates.every((songId, index) => songId === state.candidates[index]) ? state : {...state, candidates};
+}
+
+function playNow(state: VoteState, songId: string, now: number, ctx: BandRoomContext): BandState {
+	return ctx.songs.has(songId) ? startSelect(state.queue, songId, now) : state;
 }
 
 function presentSeats(seats: ReadonlyArray<BandSeat>, ctx: BandRoomContext): Array<BandSeat> {
@@ -184,6 +221,11 @@ function startPlayWhenAllDecided(state: SelectState, now: number, ctx: BandRoomC
 
 export function playResults(state: BandPlayState): ReadonlyArray<BandPlayerResult> {
 	return state.results ?? [];
+}
+
+// The results screen waits this long for a missing score, then shows that player without one.
+export function resultsWaitEndsAt(state: ResultsState): number {
+	return state.endsAt - BAND_PHASE_MS.results + BAND_RESULT_WAIT_MS;
 }
 
 function endPlay(state: BandPlayState, now: number): ResultsState {
@@ -330,13 +372,16 @@ export function reduceBandIntent(
 ): BandState {
 	const fromLeader = ctx.leaderId !== null && fromUserId === ctx.leaderId;
 	switch (intent.t) {
-		case 'band.queueAdd':
-			return addToQueue(state, intent.songId, fromUserId, ctx);
-		case 'band.vote': {
-			if (state.phase !== 'vote' || !state.candidates.includes(intent.songId)) return state;
-			if (state.votes[fromUserId] === intent.songId) return state;
-			return {...state, votes: {...state.votes, [fromUserId]: intent.songId}};
+		case 'band.queueAdd': {
+			const next = addToQueue(state, intent.songId, fromUserId, ctx);
+			return next.phase === 'vote' && next !== state ? promoteQueued(next, ctx) : next;
 		}
+		case 'band.vote':
+			return state.phase === 'vote' ? castVote(state, intent.songId, fromUserId, now) : state;
+		case 'band.playNow':
+			return state.phase === 'vote' && fromLeader ? playNow(state, intent.songId, now, ctx) : state;
+		case 'band.backToVote':
+			return state.phase === 'select' && fromLeader ? startVote(state.queue, state.songId, now, ctx) : state;
 		case 'band.claimSeat':
 			return state.phase === 'select'
 				? startPlayWhenAllDecided(claimSeat(state, intent.part, fromUserId, ctx), now, ctx)
@@ -373,12 +418,13 @@ export function reduceBandIntent(
 	}
 }
 
+// When the last voter leaves, the countdown stops again.
 function dropAbsentVotes(state: VoteState, ctx: BandRoomContext): VoteState {
 	const voters = Object.keys(state.votes);
 	if (voters.every((userId) => ctx.presentUserIds.has(userId))) return state;
 	const votes: Record<string, string> = {};
 	for (const userId of voters) if (ctx.presentUserIds.has(userId)) votes[userId] = state.votes[userId];
-	return {...state, votes};
+	return {...state, votes, endsAt: Object.keys(votes).length === 0 ? null : state.endsAt};
 }
 
 function dropAbsent(state: SelectState, ctx: BandRoomContext): SelectState {
@@ -393,10 +439,10 @@ export function tickBandRoom(state: BandState, now: number, ctx: BandRoomContext
 		case 'vote': {
 			// An empty round (the library was still loading) starts over as soon as there is something to vote on.
 			if (state.candidates.length === 0) {
-				return ctx.songs.size > 0 || now >= state.endsAt ? startVote(state.queue, null, now, ctx) : state;
+				return ctx.songs.size > 0 ? startVote(state.queue, null, now, ctx) : state;
 			}
 			const next = dropAbsentVotes(state, ctx);
-			return now >= next.endsAt ? resolveVote(next, now) : next;
+			return next.endsAt !== null && now >= next.endsAt ? resolveVote(next, now) : next;
 		}
 		case 'select': {
 			const next = dropAbsent(state, ctx);
@@ -465,7 +511,10 @@ export function parseBandIntent(payload: unknown): BandIntent | null {
 	switch (record.t) {
 		case 'band.queueAdd':
 		case 'band.vote':
+		case 'band.playNow':
 			return isId(record.songId) ? {t: record.t, songId: record.songId} : null;
+		case 'band.backToVote':
+			return {t: 'band.backToVote'};
 		case 'band.claimSeat':
 			return record.part === null || isPart(record.part) ? {t: 'band.claimSeat', part: record.part} : null;
 		case 'band.difficulty':

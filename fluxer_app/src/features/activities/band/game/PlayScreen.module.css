@@ -81,6 +81,22 @@
 	height: 100%;
 }
 
+.singHint {
+	position: absolute;
+	top: 8px;
+	right: 10px;
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 2px 9px 2px 7px;
+	border-radius: 999px;
+	background: rgba(31, 174, 107, 0.16);
+	color: #7fe0b0;
+	font-weight: 600;
+	font-size: 11px;
+	pointer-events: none;
+}
+
 .who {
 	min-width: 0;
 	line-height: 1.15;

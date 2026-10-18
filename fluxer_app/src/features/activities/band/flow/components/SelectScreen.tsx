@@ -15,6 +15,7 @@ import {
 	STAGE_ORDER,
 } from '@app/features/activities/band/engine/ChartModel';
 import {
+	BACK_TO_VOTE_DESCRIPTOR,
 	DIFFICULTY_DESCRIPTORS,
 	FREE_PART_DESCRIPTOR,
 	GROUP_DIFFICULTY_DESCRIPTOR,
@@ -156,7 +157,7 @@ const SeatPerson = observer(function SeatPerson({room, seat}: SeatPersonProps) {
 		<div className={styles.person} data-flx="activities.band.flow.select-screen.seat-person.person">
 			<BandAvatar
 				userId={seat.userId}
-				size={32}
+				size={28}
 				data-flx="activities.band.flow.select-screen.seat-person.band-avatar"
 			/>
 			<div className={styles.personText} data-flx="activities.band.flow.select-screen.seat-person.person-text">
@@ -445,7 +446,7 @@ export const SelectScreen = observer(function SelectScreen({room, state, song}: 
 					<div className={styles.song} data-flx="activities.band.flow.select-screen.song">
 						<BandSongCover
 							song={song}
-							sizeRem={3.75}
+							sizeRem={3}
 							showArtist={false}
 							data-flx="activities.band.flow.select-screen.band-song-cover"
 						/>
@@ -469,6 +470,16 @@ export const SelectScreen = observer(function SelectScreen({room, state, song}: 
 							? i18n._(PICK_A_PART_DESCRIPTOR)
 							: i18n._(READY_TALLY_DESCRIPTOR, {ready: decidedCount, seated: present.size})}
 					</span>
+					{room.session.isLeader && (
+						<button
+							type="button"
+							className={styles.backButton}
+							onClick={() => room.send({t: 'band.backToVote'})}
+							data-flx="activities.band.flow.select-screen.back-button.send"
+						>
+							{i18n._(BACK_TO_VOTE_DESCRIPTOR)}
+						</button>
+					)}
 				</BandTimer>
 				<div className={styles.stage} data-flx="activities.band.flow.select-screen.stage">
 					<div className={styles.highways} aria-hidden="true" data-flx="activities.band.flow.select-screen.highways">

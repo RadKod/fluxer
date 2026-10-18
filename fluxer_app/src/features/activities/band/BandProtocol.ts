@@ -7,12 +7,16 @@
 import type {BandDifficulty, BandPart} from '@app/features/activities/band/engine/ChartModel';
 
 export const BAND_PHASE_MS = {
-	vote: 20_000,
+	// Counted from the first vote; a round nobody has voted in waits.
+	vote: 15_000,
 	select: 20_000,
 	// Time between "everyone ready" and the first audio frame; covers the slowest client's clock sync and decode.
 	countdown: 4_000,
 	results: 25_000,
 } as const;
+
+// How long the results screen waits for a player's score before it shows them without one.
+export const BAND_RESULT_WAIT_MS = 6_000;
 
 export const BAND_DIFFICULTY_MULTIPLIER: Readonly<Record<BandDifficulty, number>> = {
 	easy: 1,
@@ -74,7 +78,10 @@ export type BandState =
 			readonly candidates: ReadonlyArray<string>;
 			// voter userId -> songId
 			readonly votes: Readonly<Record<string, string>>;
-			readonly endsAt: number;
+			// Leader clock when the round opened; it names the round.
+			readonly openedAt: number;
+			// Null until the first vote starts the countdown.
+			readonly endsAt: number | null;
 	  }
 	| {
 			readonly phase: 'select';
@@ -112,12 +119,18 @@ export type BandPhase = BandState['phase'];
 export type BandIntent =
 	| {readonly t: 'band.queueAdd'; readonly songId: string}
 	| {readonly t: 'band.vote'; readonly songId: string}
+	// Leader only: skips the vote and takes this song to seat selection.
+	| {readonly t: 'band.playNow'; readonly songId: string}
+	// Leader only: from seat selection back to a new vote.
+	| {readonly t: 'band.backToVote'}
 	| {readonly t: 'band.claimSeat'; readonly part: BandPart | null}
 	| {readonly t: 'band.difficulty'; readonly difficulty: BandDifficulty}
 	| {readonly t: 'band.groupDifficulty'; readonly difficulty: BandDifficulty}
 	| {readonly t: 'band.ready'; readonly ready: boolean}
 	| {readonly t: 'band.result'; readonly result: Omit<BandPlayerResult, 'userId'>}
 	| {readonly t: 'band.rate'; readonly playerId: string; readonly stars: number}
+	// Leader only: ends the current phase early. During the song it stops it; every player's client sends what it has
+	// scored so far as soon as it sees the results state.
 	| {readonly t: 'band.skip'};
 
 // Broadcast by each player during the song, lossy. Remote clients duck that part's stem on a miss and show the combo.

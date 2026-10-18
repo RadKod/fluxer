@@ -108,7 +108,7 @@ export class BandRoom {
 	dispose(): void {
 		if (this.disposed) return;
 		this.disposed = true;
-		this.micGuard.update(false);
+		this.micGuard.update(null);
 		this.controller.stop();
 		for (const dispose of this.disposers.splice(0)) dispose();
 	}
@@ -145,8 +145,8 @@ export class BandRoom {
 				{fireImmediately: true},
 			),
 			reaction(
-				() => this.state?.phase === 'play' && this.mySeat !== undefined,
-				(playing) => this.micGuard.update(playing),
+				() => (this.state?.phase === 'play' ? (this.mySeat?.part ?? null) : null),
+				(part) => this.micGuard.update(part),
 				{fireImmediately: true},
 			),
 			reaction(

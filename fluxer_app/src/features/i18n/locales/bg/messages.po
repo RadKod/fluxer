@@ -58061,14 +58061,6 @@ msgstr "The song server did not answer. Check your connection and try again."
 msgid "The song server returned an error. Try again in a bit."
 msgstr "The song server returned an error. Try again in a bit."
 
-#: src/features/activities/band/flow/BandFlowMessages.ts
-msgid ""
-"The song with the most votes plays. You can change your vote until time runs"
-" out."
-msgstr ""
-"The song with the most votes plays. You can change your vote until time runs"
-" out."
-
 #: src/features/activities/band/game/LatencyCalibrationScreen.tsx
 msgid "The taps were too uneven to measure. Try again."
 msgstr "The taps were too uneven to measure. Try again."
@@ -58150,18 +58142,6 @@ msgstr "watching"
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "What should we play next?"
 msgstr "What should we play next?"
-
-#: src/features/activities/band/flow/BandFlowMessages.ts
-msgid "While you play, your mic is muted and comes back when the song ends."
-msgstr "While you play, your mic is muted and comes back when the song ends."
-
-#: src/features/activities/band/flow/BandFlowMessages.ts
-msgid ""
-"While you play, your mic switches to push-to-talk and goes back when the "
-"song ends."
-msgstr ""
-"While you play, your mic switches to push-to-talk and goes back when the "
-"song ends."
 
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "Wow"
@@ -58247,3 +58227,73 @@ msgstr "Lead guitar"
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "{count, plural, one {# player} other {# players}}"
 msgstr "{count, plural, one {# player} other {# players}}"
+
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Your mic is open, sing!"
+msgstr "Your mic is open, sing!"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Sound effect on a miss"
+msgstr "Sound effect on a miss"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Song dip on a miss"
+msgstr "Song dip on a miss"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-miss-dip"
+msgid "Light"
+msgstr "Light"
+
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-miss-dip"
+msgid "Strong"
+msgstr "Strong"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"The song with the most votes plays. The first vote starts the countdown; you"
+" can change yours until it ends."
+msgstr ""
+"The song with the most votes plays. The first vote starts the countdown; you"
+" can change yours until it ends."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Waiting for the first vote"
+msgstr "Waiting for the first vote"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Play this now"
+msgstr "Play this now"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "No score"
+msgstr "No score"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "End the song"
+msgstr "End the song"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "The leader can end the song"
+msgstr "The leader can end the song"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Back to the vote"
+msgstr "Back to the vote"
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"While you play an instrument, your mic switches to push-to-talk and goes "
+"back when the song ends. On vocals it stays open."
+msgstr ""
+"While you play an instrument, your mic switches to push-to-talk and goes "
+"back when the song ends. On vocals it stays open."
+
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid ""
+"While you play an instrument, your mic is muted and comes back when the song"
+" ends. On vocals it stays open."
+msgstr ""
+"While you play an instrument, your mic is muted and comes back when the song"
+" ends. On vocals it stays open."

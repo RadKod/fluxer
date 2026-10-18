@@ -184,6 +184,8 @@ export interface PlayControllerOptions {
 	readonly send: (payload: unknown, options?: ActivitySendOptions) => void;
 	readonly submitIntent: (intent: BandIntent) => void;
 	readonly duck: (part: BandPart) => void;
+	// My own misses and overhits only; everyone hears their own mistakes, not the band's.
+	readonly playMissSound: (part: InstrumentPart) => void;
 	readonly playFinaleNote: (part: InstrumentPart, lane: number, mine: boolean) => void;
 }
 
@@ -352,16 +354,17 @@ export class PlayController {
 		}
 	}
 
-	// Settles what is left and sends my result to the leader; runs once.
-	finish(): void {
+	// Settles what is left and sends my result to the leader; runs once. A song stopped early (the leader ended it, or
+	// the screen closed) counts only the notes that already passed, so the rest do not read as misses.
+	finish({stopped = false}: {stopped?: boolean} = {}): void {
 		if (this.finished) return;
 		this.finished = true;
 		const seat = this.mySeat;
 		if (!seat) return;
 		const track = this.myTrack;
 		if (track && this.judge) {
-			this.handleEvents(track, this.judge.finish(), false);
-			if (this.finale && !this.finaleResolved) this.resolveFinale(track, false);
+			this.handleEvents(track, stopped ? this.judge.advance(this.nowMs) : this.judge.finish(), false);
+			if (!stopped && this.finale && !this.finaleResolved) this.resolveFinale(track, false);
 		}
 		this.options.submitIntent({t: 'band.result', result: this.result(seat)});
 	}
@@ -420,7 +423,10 @@ export class PlayController {
 		const {hud} = track;
 		for (const event of events) {
 			if (event.kind === 'overhit') {
-				if (event.comboBroken) hud.combo = 0;
+				hud.combo = 0;
+				hud.multiplier = 1;
+				track.feedback = {kind: 'miss', atMs: event.timeMs};
+				this.signalMiss(track);
 				continue;
 			}
 			const index = this.fullIndex[event.groupIndex];
@@ -442,7 +448,7 @@ export class PlayController {
 				track.feedback = {kind: 'miss', atMs: event.timeMs};
 				hud.performance = Math.max(0, hud.performance - PERFORMANCE_MISS);
 				this.advancePhrase(track, index, false);
-				this.options.duck(track.part);
+				this.signalMiss(track);
 			}
 			hud.combo = event.kind === 'hit' ? event.combo : 0;
 			hud.multiplier = multiplierForStreak(hud.combo);
@@ -460,6 +466,11 @@ export class PlayController {
 				this.options.send(message, {reliable: false});
 			}
 		}
+	}
+
+	private signalMiss(track: SeatTrack): void {
+		this.options.duck(track.part);
+		this.options.playMissSound(track.part);
 	}
 
 	private addPoints(hud: SeatHud, points: number): void {

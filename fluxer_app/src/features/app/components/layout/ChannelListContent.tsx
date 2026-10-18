@@ -2,6 +2,7 @@
 
 import {Routes} from '@app/app/Routes';
 import Accessibility from '@app/features/accessibility/state/Accessibility';
+import {VoiceChannelActivityLine} from '@app/features/activities/components/VoiceChannelActivityLine';
 import {GenericErrorModal} from '@app/features/app/components/alerts/GenericErrorModal';
 import {ChannelItem} from '@app/features/app/components/layout/ChannelItem';
 import channelItemStyles from '@app/features/app/components/layout/ChannelItem.module.css';
@@ -686,6 +687,10 @@ export const ChannelListContent = observer(({guild, scrollY, banner}: ChannelLis
 											return (
 												<React.Fragment key={ch.id}>
 													{channelRow}
+													<VoiceChannelActivityLine
+														channelId={ch.id}
+														data-flx="app.channel-list-content.voice-channel-activity-line"
+													/>
 													<CollapsedChannelAvatarStack
 														guild={guild}
 														channel={ch}
@@ -697,6 +702,10 @@ export const ChannelListContent = observer(({guild, scrollY, banner}: ChannelLis
 										return (
 											<React.Fragment key={ch.id}>
 												{channelRow}
+												<VoiceChannelActivityLine
+													channelId={ch.id}
+													data-flx="app.channel-list-content.voice-channel-activity-line--2"
+												/>
 												{!group.isCollapsed && (
 													<VoiceParticipantsList
 														guild={guild}

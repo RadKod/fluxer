@@ -15,6 +15,9 @@ function shouldMoveToGuildAfkChannel(state: GuildAfkChannelMoveState): boolean {
 
 type AfkTickState = Readonly<{
 	hasRecentVoiceActivity: boolean;
+	// An activity in my channel holds the keyboard inside its panel, so the window never sees those keys; playing
+	// it is not being away.
+	inActivitySession: boolean;
 	channelId: string;
 	afkChannelId: string | null | undefined;
 	afkTimeoutSeconds: number | null | undefined;
@@ -22,7 +25,7 @@ type AfkTickState = Readonly<{
 }>;
 
 export function shouldMoveToAfkOnTick(state: AfkTickState): boolean {
-	if (state.hasRecentVoiceActivity) return false;
+	if (state.hasRecentVoiceActivity || state.inActivitySession) return false;
 	return shouldMoveToGuildAfkChannel({
 		channelId: state.channelId,
 		afkChannelId: state.afkChannelId,

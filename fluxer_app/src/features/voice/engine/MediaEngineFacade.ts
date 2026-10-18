@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import assert from 'node:assert/strict';
+import VoiceActivities from '@app/features/activities/state/VoiceActivities';
 import * as AnalyticsCommands from '@app/features/analytics/commands/AnalyticsCommands';
 import {showGenericErrorModal} from '@app/features/app/components/alerts/GenericErrorModalCommands';
 import Authentication from '@app/features/auth/state/Authentication';
@@ -2427,6 +2428,7 @@ class MediaEngineFacade extends Store {
 			if (
 				shouldMoveToAfkOnTick({
 					hasRecentVoiceActivity: this.noteCurrentLocalVoiceActivity(),
+					inActivitySession: VoiceActivities.getLive(voiceEngineV2AppConnectionHostAdapter.channelId) !== null,
 					channelId: voiceEngineV2AppConnectionHostAdapter.channelId,
 					afkChannelId: guild?.afkChannelId,
 					afkTimeoutSeconds: guild?.afkTimeout,

@@ -5,7 +5,6 @@ import type {BandPart} from '@app/features/activities/band/engine/ChartModel';
 import {
 	ADD_TO_QUEUE_DESCRIPTOR,
 	DOWNLOAD_FAILED_DESCRIPTOR,
-	SONG_PLAYERS_DESCRIPTOR,
 	DOWNLOAD_QUEUED_DESCRIPTOR,
 	DOWNLOADED_DESCRIPTOR,
 	DOWNLOADING_DESCRIPTOR,
@@ -16,6 +15,7 @@ import {
 	PART_MISSING_SHORT_DESCRIPTOR,
 	partDescriptor,
 	QUEUE_ENTRY_DESCRIPTOR,
+	SONG_PLAYERS_DESCRIPTOR,
 	UP_NEXT_DESCRIPTOR,
 	VOTE_COUNT_DESCRIPTOR,
 	VOTE_EMPTY_DESCRIPTOR,
@@ -24,6 +24,7 @@ import {
 	VOTE_KEYS_DESCRIPTOR,
 	VOTE_TALLY_DESCRIPTOR,
 	VOTE_TITLE_DESCRIPTOR,
+	VOTE_WAITING_DESCRIPTOR,
 } from '@app/features/activities/band/flow/BandFlowMessages';
 import type {BandRoom} from '@app/features/activities/band/flow/BandRoom';
 import {rankCandidates, songPartDifficulties, voteCounts} from '@app/features/activities/band/flow/BandRoomMachine';
@@ -244,7 +245,7 @@ const SongCard = observer(function SongCard({room, song, index, voters, leading,
 						<BandAvatar
 							key={userId}
 							userId={userId}
-							size={34}
+							size={28}
 							className={styles.voter}
 							data-flx="activities.band.flow.vote-screen.song-card.voter"
 						/>
@@ -313,7 +314,7 @@ const QueuePreview = observer(function QueuePreview({
 					>
 						<BandSongCover
 							song={song}
-							sizeRem={2.75}
+							sizeRem={2.25}
 							showArtist={false}
 							data-flx="activities.band.flow.vote-screen.queue-preview.band-song-cover"
 						/>
@@ -395,6 +396,7 @@ export const VoteScreen = observer(function VoteScreen({room, state}: VoteScreen
 			)}
 			<BandTimer
 				endsAt={state.endsAt}
+				waitingLabel={i18n._(VOTE_WAITING_DESCRIPTOR)}
 				durationMs={BAND_PHASE_MS.vote}
 				now={now}
 				className={styles.timer}
@@ -431,6 +433,7 @@ export const VoteScreen = observer(function VoteScreen({room, state}: VoteScreen
 					room={room}
 					queue={state.queue}
 					onClose={() => setPickerOpen(false)}
+					onPlayNow={room.session.isLeader ? (songId) => room.send({t: 'band.playNow', songId}) : undefined}
 					data-flx="activities.band.flow.vote-screen.song-picker"
 				/>
 			)}

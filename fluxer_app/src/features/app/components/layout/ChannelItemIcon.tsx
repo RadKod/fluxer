@@ -7,11 +7,12 @@ import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
 import type {Icon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
+import type React from 'react';
 
 interface ChannelItemIconProps {
 	icon: Icon;
 	label: string;
-	onClick?: () => void;
+	onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
 	className?: string;
 	selected?: boolean;
 	tabIndex?: number;
@@ -33,7 +34,7 @@ export const ChannelItemIcon = observer(
 						aria-label={label}
 						onClick={(e) => {
 							e.stopPropagation();
-							onClick?.();
+							onClick?.(e);
 						}}
 						onKeyDown={stopPropagationOnEnterSpace}
 						data-flx="app.channel-item-icon.icon-button.stop-propagation"

@@ -2,6 +2,7 @@
 
 import {
 	BAND_PHASE_MS,
+	BAND_RESULT_WAIT_MS,
 	type BandIntent,
 	type BandPlayerResult,
 	type BandSongSummary,
@@ -19,6 +20,7 @@ import {
 	pickCandidates,
 	rankCandidates,
 	reduceBandIntent,
+	resultsWaitEndsAt,
 	tickBandRoom,
 } from '@app/features/activities/band/flow/BandRoomMachine';
 import {describe, expect, it} from 'vitest';
@@ -57,12 +59,23 @@ const TWO_GUITARS = song('two-guitars', {parts: {guitar: ALL, rhythm: ['hard', '
 const TWO_GUITARS_CTX = context({songs: new Map([...SONGS, TWO_GUITARS].map((entry) => [entry.id, entry]))});
 const T0 = 1_000_000;
 
+// The default vote fixture already has a vote in, so its countdown runs.
+const VOTE_ENDS_AT = T0 + BAND_PHASE_MS.vote;
+
 type Vote = Extract<BandState, {phase: 'vote'}>;
 type Select = Extract<BandState, {phase: 'select'}>;
 type Results = Extract<BandState, {phase: 'results'}>;
 
 function vote(overrides: Partial<Vote> = {}): Vote {
-	return {phase: 'vote', queue: [], candidates: ['a', 'b', 'c'], votes: {}, endsAt: T0 + 20_000, ...overrides};
+	return {
+		phase: 'vote',
+		queue: [],
+		candidates: ['a', 'b', 'c'],
+		votes: {},
+		openedAt: T0 - 5000,
+		endsAt: VOTE_ENDS_AT,
+		...overrides,
+	};
 }
 
 function select(overrides: Partial<Select> = {}): Select {
@@ -183,7 +196,7 @@ describe('pickCandidates', () => {
 describe('createBandRoomState', () => {
 	it('opens a vote with an empty queue', () => {
 		const state = createBandRoomState(T0, CTX);
-		expect(state).toMatchObject({phase: 'vote', queue: [], votes: {}, endsAt: T0 + BAND_PHASE_MS.vote});
+		expect(state).toMatchObject({phase: 'vote', queue: [], votes: {}, openedAt: T0, endsAt: null});
 		expect(state.phase === 'vote' && state.candidates).toHaveLength(3);
 	});
 
@@ -230,7 +243,7 @@ describe('queue', () => {
 			candidates: ['b', 'd', 'a'],
 			votes: {u1: 'b'},
 		});
-		const next = tickBandRoom(state, state.endsAt, CTX);
+		const next = tickBandRoom(state, VOTE_ENDS_AT, CTX);
 		expect(next).toMatchObject({phase: 'select', songId: 'b', queue: [{songId: 'd', addedBy: 'u2'}]});
 	});
 });
@@ -252,13 +265,13 @@ describe('vote', () => {
 
 	it('picks the most voted song when time runs out', () => {
 		const state = vote({votes: {u1: 'c', u2: 'c', u3: 'a'}});
-		expect(tickBandRoom(state, state.endsAt - 1, CTX)).toBe(state);
-		expect(tickBandRoom(state, state.endsAt, CTX)).toMatchObject({
+		expect(tickBandRoom(state, VOTE_ENDS_AT - 1, CTX)).toBe(state);
+		expect(tickBandRoom(state, VOTE_ENDS_AT, CTX)).toMatchObject({
 			phase: 'select',
 			songId: 'c',
 			seats: [],
 			groupDifficulty: 'medium',
-			endsAt: state.endsAt + BAND_PHASE_MS.select,
+			endsAt: VOTE_ENDS_AT + BAND_PHASE_MS.select,
 		});
 	});
 
@@ -279,8 +292,45 @@ describe('vote', () => {
 		expect(rankCandidates(state)[0]).toBe('c');
 	});
 
-	it('takes the first candidate when nobody voted', () => {
-		expect(tickBandRoom(vote(), T0 + 20_000, CTX)).toMatchObject({phase: 'select', songId: 'a'});
+	it('waits without a countdown until the first vote', () => {
+		const open = vote({endsAt: null});
+		expect(tickBandRoom(open, T0 + 10 * 60_000, CTX)).toBe(open);
+		const voted = apply(open, {t: 'band.vote', songId: 'b'}, 'u1', CTX, T0 + 60_000);
+		expect(voted).toMatchObject({votes: {u1: 'b'}, endsAt: T0 + 60_000 + BAND_PHASE_MS.vote});
+		const second = apply(voted, {t: 'band.vote', songId: 'c'}, 'u2', CTX, T0 + 65_000);
+		expect(second.phase === 'vote' && second.endsAt).toBe(T0 + 60_000 + BAND_PHASE_MS.vote);
+		expect(tickBandRoom(second, T0 + 60_000 + BAND_PHASE_MS.vote, CTX).phase).toBe('select');
+	});
+
+	it('stops the countdown when the only voter leaves', () => {
+		const state = vote({votes: {gone: 'c'}});
+		const next = tickBandRoom(state, T0, CTX);
+		expect(next).toMatchObject({phase: 'vote', votes: {}, endsAt: null});
+		expect(tickBandRoom(next, T0 + BAND_PHASE_MS.vote, CTX)).toBe(next);
+	});
+
+	it('puts a song queued during the vote in place of a library pick nobody voted for', () => {
+		const state = vote({votes: {u1: 'b'}});
+		const queued = apply(state, {t: 'band.queueAdd', songId: 'e'}, 'u2');
+		expect(queued).toMatchObject({candidates: ['a', 'b', 'e'], votes: {u1: 'b'}, queue: [{songId: 'e'}]});
+		const again = apply(queued, {t: 'band.queueAdd', songId: 'd'}, 'u3');
+		expect(again.phase === 'vote' && again.candidates).toEqual(['d', 'b', 'e']);
+		const full = apply(again, {t: 'band.queueAdd', songId: 'two-guitars'}, 'u3', TWO_GUITARS_CTX);
+		expect(full.phase === 'vote' && full.candidates).toEqual(['d', 'b', 'e']);
+		expect(full.queue.map((entry) => entry.songId)).toEqual(['e', 'd', 'two-guitars']);
+	});
+
+	it('lets the leader play a song now, skipping the vote', () => {
+		const state = vote({queue: [{songId: 'e', addedBy: 'u1'}], votes: {u1: 'a'}});
+		expect(apply(state, {t: 'band.playNow', songId: 'e'}, 'u1')).toBe(state);
+		expect(apply(state, {t: 'band.playNow', songId: 'nope'}, 'lead')).toBe(state);
+		expect(apply(select(), {t: 'band.playNow', songId: 'e'}, 'lead').phase).toBe('select');
+		expect(apply(state, {t: 'band.playNow', songId: 'e'}, 'lead')).toMatchObject({
+			phase: 'select',
+			songId: 'e',
+			queue: [],
+			endsAt: T0 + BAND_PHASE_MS.select,
+		});
 	});
 
 	it('drops the votes of people who left', () => {
@@ -295,14 +345,13 @@ describe('vote', () => {
 		expect(tickBandRoom(empty, T0 + 100, context({songs: new Map()}))).toBe(empty);
 		const filled = tickBandRoom(empty, T0 + 5000, CTX);
 		expect(filled.phase === 'vote' && filled.candidates).toHaveLength(3);
-		expect(filled.phase === 'vote' && filled.endsAt).toBe(T0 + 5000 + BAND_PHASE_MS.vote);
+		expect(filled).toMatchObject({openedAt: T0 + 5000, endsAt: null});
 	});
 
 	it('keeps waiting on an empty library instead of resolving', () => {
 		const ctx = context({songs: new Map()});
 		const empty = createBandRoomState(T0, ctx);
-		const later = tickBandRoom(empty, T0 + BAND_PHASE_MS.vote, ctx);
-		expect(later).toMatchObject({phase: 'vote', candidates: [], endsAt: T0 + 2 * BAND_PHASE_MS.vote});
+		expect(tickBandRoom(empty, T0 + 10 * 60_000, ctx)).toBe(empty);
 	});
 });
 
@@ -635,12 +684,38 @@ describe('play', () => {
 		const state = play();
 		expect(tickBandRoom(state, T0 + 10_000_000, context({songs: new Map()}))).toBe(state);
 	});
+
+	// The playtest bug: the chart ran past the index length, so every client reported after the leader had already
+	// closed the song on length + 2 s, and their play screens were gone by then.
+	it('waits for a result that comes in well after the index length', () => {
+		const late = play().startAt + 180_000 + 4_500;
+		const waiting = tickBandRoom(play(), late, CTX);
+		expect(waiting.phase).toBe('play');
+		const state = applyAll(waiting, [
+			[{t: 'band.result', result: RESULT}, 'u1'],
+			[{t: 'band.result', result: RESULT}, 'u2'],
+		]);
+		expect(state.phase === 'results' && state.results.map((result) => result.userId)).toEqual(['u1', 'u2']);
+	});
+
+	it('stops on the leader’s word with whatever arrived', () => {
+		const once = apply(play(), {t: 'band.result', result: RESULT}, 'u1');
+		expect(apply(once, {t: 'band.skip'}, 'u2')).toBe(once);
+		const stopped = apply(once, {t: 'band.skip'}, 'lead');
+		expect(stopped.phase === 'results' && stopped.results.map((result) => result.userId)).toEqual(['u1']);
+		const late = apply(stopped, {t: 'band.result', result: RESULT}, 'u2');
+		expect(late.phase === 'results' && late.results.map((result) => result.userId)).toEqual(['u1', 'u2']);
+	});
 });
 
 describe('results', () => {
 	it('takes late results from players', () => {
 		const state = apply(results(), {t: 'band.result', result: RESULT}, 'u2');
 		expect(state.phase === 'results' && state.results[0]).toMatchObject({userId: 'u2', score: 2000});
+	});
+
+	it('waits a few seconds for a missing score before giving up on it', () => {
+		expect(resultsWaitEndsAt(results())).toBe(T0 + BAND_RESULT_WAIT_MS);
 	});
 
 	it('records public ratings from anyone but the player rated', () => {
@@ -677,7 +752,7 @@ describe('results', () => {
 		const state = results({queue: [{songId: 'a', addedBy: 'u1'}]});
 		expect(tickBandRoom(state, state.endsAt - 1, CTX)).toBe(state);
 		const next = tickBandRoom(state, state.endsAt, CTX);
-		expect(next).toMatchObject({phase: 'vote', votes: {}, endsAt: state.endsAt + BAND_PHASE_MS.vote});
+		expect(next).toMatchObject({phase: 'vote', votes: {}, openedAt: state.endsAt, endsAt: null});
 		// A queued copy of the same song still counts: someone asked for it again.
 		expect(next.phase === 'vote' && next.candidates[0]).toBe('a');
 		const fresh = tickBandRoom(results(), T0 + 25_000, CTX);
@@ -689,6 +764,16 @@ describe('skip', () => {
 	it('is the leader’s only', () => {
 		const state = vote();
 		expect(apply(state, {t: 'band.skip'}, 'u1')).toBe(state);
+	});
+
+	it('goes back from the selection to a new vote on the leader’s word', () => {
+		const state = select({queue: [{songId: 'b', addedBy: 'u1'}]});
+		expect(apply(state, {t: 'band.backToVote'}, 'u1')).toBe(state);
+		expect(apply(vote(), {t: 'band.backToVote'}, 'lead').phase).toBe('vote');
+		const back = apply(state, {t: 'band.backToVote'}, 'lead');
+		expect(back).toMatchObject({phase: 'vote', votes: {}, endsAt: null, queue: [{songId: 'b'}]});
+		expect(back.phase === 'vote' && back.candidates[0]).toBe('b');
+		expect(back.phase === 'vote' && back.candidates).not.toContain('a');
 	});
 
 	it('ends each phase early', () => {
@@ -746,6 +831,8 @@ describe('parseBandIntent', () => {
 		const intents: Array<BandIntent> = [
 			{t: 'band.queueAdd', songId: 'a'},
 			{t: 'band.vote', songId: 'a'},
+			{t: 'band.playNow', songId: 'a'},
+			{t: 'band.backToVote'},
 			{t: 'band.claimSeat', part: 'drums'},
 			{t: 'band.claimSeat', part: 'rhythm'},
 			{t: 'band.claimSeat', part: null},

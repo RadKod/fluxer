@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {BandIntent, BandSongSummary, BandState} from '@app/features/activities/band/BandProtocol';
-import {scheduleSongStart, songTimeMs} from '@app/features/activities/band/engine/SessionClock';
+import {
+	performanceToContextTime,
+	scheduleSongStart,
+	songTimeMs,
+} from '@app/features/activities/band/engine/SessionClock';
 import type {SongPackage} from '@app/features/activities/band/engine/SongPackage';
 import {BandAudio} from '@app/features/activities/band/game/BandAudio';
 import {inputSongTimeMs} from '@app/features/activities/band/game/BandInput';
+import type {DuckDepth} from '@app/features/activities/band/game/BandSettings';
 import {FinaleSynth} from '@app/features/activities/band/game/FinaleSynth';
+import {MissSound} from '@app/features/activities/band/game/MissSound';
 import {PlayController} from '@app/features/activities/band/game/PlayController';
 import type {ActivitySession} from '@app/features/activities/session/ActivitySessionTypes';
 
@@ -27,6 +33,8 @@ export interface PlayRuntimeOptions {
 	readonly entry: BandSongSummary;
 	readonly songPackage: SongPackage;
 	readonly inputLatencyMs: () => number;
+	readonly missSound: () => boolean;
+	readonly duckDepth: () => DuckDepth;
 	readonly submitIntent: (intent: BandIntent) => void;
 }
 
@@ -68,6 +76,7 @@ export class PlayRuntime {
 			audio.start(schedule);
 
 			const synth = new FinaleSynth(audio.context, audio.output);
+			const missSound = new MissSound(audio.context, audio.output);
 			const chartEndMs = Math.max(chart.durationMs, chart.bigRockEnding?.endMs ?? 0);
 			const controller = new PlayController({
 				chart,
@@ -77,7 +86,10 @@ export class PlayRuntime {
 				joinedAtMs: schedule.offsetSeconds * 1000,
 				send: (payload, sendOptions) => void session.send(payload, sendOptions),
 				submitIntent: options.submitIntent,
-				duck: (part) => audio.duck(part),
+				duck: (part) => audio.duck(part, options.duckDepth()),
+				playMissSound: (part) => {
+					if (options.missSound()) missSound.play(part);
+				},
 				playFinaleNote: (part, lane, mine) => synth.play(part, lane, mine),
 			});
 			return new PlayRuntime(controller, audio, schedule.songZeroContextTime, options);
@@ -89,9 +101,14 @@ export class PlayRuntime {
 
 	// Song position of the audio coming out of the speakers right now.
 	heardMs(): number {
+		return this.heardMsAt(performance.now());
+	}
+
+	// Song position coming out of the speakers at a performance.now() time; for a frame, the time it reaches the
+	// screen, so the highway shows what is heard while it is on screen.
+	heardMsAt(performanceTime: number): number {
 		const anchor = this.audio.readAnchor();
-		const contextNow = anchor.contextTime + (performance.now() - anchor.performanceTime) / 1000;
-		return songTimeMs(contextNow, this.songZeroContextTime, 0);
+		return songTimeMs(performanceToContextTime(performanceTime, anchor), this.songZeroContextTime, 0);
 	}
 
 	// The judge's clock: what was heard, shifted by this device's input latency.

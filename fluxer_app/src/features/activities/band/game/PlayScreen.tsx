@@ -63,6 +63,8 @@ function usePlayRuntime({session, state, entry, songPackage, onOwnIntent}: PlayS
 			entry,
 			songPackage,
 			inputLatencyMs: () => BandSettings.effectiveInputLatencyMs,
+			missSound: () => BandSettings.missSound,
+			duckDepth: () => BandSettings.duckDepth,
 			submitIntent: (intent) => {
 				if (session.isLeader) {
 					ownIntentRef.current?.(intent);
@@ -89,6 +91,9 @@ function usePlayRuntime({session, state, entry, songPackage, onOwnIntent}: PlayS
 		);
 		return () => {
 			cancelled = true;
+			// The screen goes when the phase leaves play (the song ended or was stopped) or the panel closes; either
+			// way the leader gets what I scored. A result already sent is not sent again.
+			started?.controller.finish({stopped: true});
 			started?.dispose();
 		};
 		// A new play state for the same song (a seat change) must not restart the audio; startAt identifies the run.

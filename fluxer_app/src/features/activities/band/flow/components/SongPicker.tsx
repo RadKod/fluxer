@@ -5,6 +5,7 @@ import {
 	PICKER_ADD_DESCRIPTOR,
 	PICKER_CLOSE_DESCRIPTOR,
 	PICKER_EMPTY_DESCRIPTOR,
+	PICKER_PLAY_NOW_DESCRIPTOR,
 	PICKER_QUEUED_DESCRIPTOR,
 	PICKER_SEARCH_DESCRIPTOR,
 	PICKER_TITLE_DESCRIPTOR,
@@ -13,6 +14,7 @@ import type {BandRoom} from '@app/features/activities/band/flow/BandRoom';
 import {BandSongCover} from '@app/features/activities/band/flow/components/BandSongCover';
 import styles from '@app/features/activities/band/flow/components/SongPicker.module.css';
 import {formatSongLength} from '@app/features/activities/band/flow/components/useBandNow';
+import {Scroller} from '@app/features/ui/components/Scroller';
 import {useLingui} from '@lingui/react/macro';
 import {XIcon} from '@phosphor-icons/react';
 import {observer} from 'mobx-react-lite';
@@ -23,13 +25,15 @@ interface SongPickerProps {
 	readonly room: BandRoom;
 	readonly queue: ReadonlyArray<BandQueueEntry>;
 	readonly onClose: () => void;
+	// Set for the leader during the vote: a song can skip the vote and go straight to seat picking.
+	readonly onPlayNow?: (songId: string) => void;
 }
 
 function matches(text: string, query: string, locale: string): boolean {
 	return text.toLocaleLowerCase(locale).includes(query);
 }
 
-export const SongPicker = observer(function SongPicker({room, queue, onClose}: SongPickerProps) {
+export const SongPicker = observer(function SongPicker({room, queue, onClose, onPlayNow}: SongPickerProps) {
 	const {i18n} = useLingui();
 	const titleId = useId();
 	const searchRef = useRef<HTMLInputElement>(null);
@@ -67,7 +71,7 @@ export const SongPicker = observer(function SongPicker({room, queue, onClose}: S
 					aria-label={i18n._(PICKER_CLOSE_DESCRIPTOR)}
 					data-flx="activities.band.flow.song-picker.close.button"
 				>
-					<XIcon weight="bold" data-flx="activities.band.flow.song-picker.x-icon" />
+					<XIcon size={16} weight="bold" data-flx="activities.band.flow.song-picker.x-icon" />
 				</button>
 			</header>
 			<input
@@ -85,39 +89,51 @@ export const SongPicker = observer(function SongPicker({room, queue, onClose}: S
 					{i18n._(PICKER_EMPTY_DESCRIPTOR)}
 				</p>
 			) : (
-				<ul className={styles.list} data-flx="activities.band.flow.song-picker.list">
-					{songs.map((song) => (
-						<li key={song.id} className={styles.row} data-flx="activities.band.flow.song-picker.row">
-							<BandSongCover
-								song={song}
-								sizeRem={2.75}
-								showArtist={false}
-								data-flx="activities.band.flow.song-picker.band-song-cover"
-							/>
-							<span className={styles.text} data-flx="activities.band.flow.song-picker.text">
-								<b data-flx="activities.band.flow.song-picker.b">{song.name}</b>
-								<span data-flx="activities.band.flow.song-picker.span">{song.artist}</span>
-							</span>
-							<span className={styles.length} data-flx="activities.band.flow.song-picker.length">
-								{formatSongLength(song.lengthMs)}
-							</span>
-							{queued.has(song.id) ? (
-								<span className={styles.queued} data-flx="activities.band.flow.song-picker.queued">
-									{i18n._(PICKER_QUEUED_DESCRIPTOR)}
+				<Scroller className={styles.scroller} fade={false} data-flx="activities.band.flow.song-picker.scroller">
+					<ul className={styles.list} data-flx="activities.band.flow.song-picker.list">
+						{songs.map((song) => (
+							<li key={song.id} className={styles.row} data-flx="activities.band.flow.song-picker.row">
+								<BandSongCover
+									song={song}
+									sizeRem={2.25}
+									showArtist={false}
+									data-flx="activities.band.flow.song-picker.band-song-cover"
+								/>
+								<span className={styles.text} data-flx="activities.band.flow.song-picker.text">
+									<b data-flx="activities.band.flow.song-picker.b">{song.name}</b>
+									<span data-flx="activities.band.flow.song-picker.span">{song.artist}</span>
 								</span>
-							) : (
-								<button
-									type="button"
-									className={styles.add}
-									onClick={() => room.send({t: 'band.queueAdd', songId: song.id})}
-									data-flx="activities.band.flow.song-picker.add.send.button"
-								>
-									{i18n._(PICKER_ADD_DESCRIPTOR)}
-								</button>
-							)}
-						</li>
-					))}
-				</ul>
+								<span className={styles.length} data-flx="activities.band.flow.song-picker.length">
+									{formatSongLength(song.lengthMs)}
+								</span>
+								{onPlayNow && (
+									<button
+										type="button"
+										className={styles.playNow}
+										onClick={() => onPlayNow(song.id)}
+										data-flx="activities.band.flow.song-picker.play-now.button"
+									>
+										{i18n._(PICKER_PLAY_NOW_DESCRIPTOR)}
+									</button>
+								)}
+								{queued.has(song.id) ? (
+									<span className={styles.queued} data-flx="activities.band.flow.song-picker.queued">
+										{i18n._(PICKER_QUEUED_DESCRIPTOR)}
+									</span>
+								) : (
+									<button
+										type="button"
+										className={styles.add}
+										onClick={() => room.send({t: 'band.queueAdd', songId: song.id})}
+										data-flx="activities.band.flow.song-picker.add.send.button"
+									>
+										{i18n._(PICKER_ADD_DESCRIPTOR)}
+									</button>
+								)}
+							</li>
+						))}
+					</ul>
+				</Scroller>
 			)}
 		</div>
 	);

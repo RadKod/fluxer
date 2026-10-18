@@ -12,6 +12,8 @@ import {
 	PICKING_DESCRIPTOR,
 	SPECTATOR_NOTE_DESCRIPTOR,
 	SPECTATORS_DESCRIPTOR,
+	STOP_SONG_DESCRIPTOR,
+	STOP_SONG_HINT_DESCRIPTOR,
 	WATCH_DESCRIPTOR,
 	WATCHING_DESCRIPTOR,
 	WILL_WATCH_DESCRIPTOR,
@@ -22,7 +24,7 @@ import {BandAvatar, bandDisplayName} from '@app/features/activities/band/flow/co
 import styles from '@app/features/activities/band/flow/components/SpectatorStrip.module.css';
 import {useBandNow} from '@app/features/activities/band/flow/components/useBandNow';
 import {useLingui} from '@lingui/react/macro';
-import {EyeIcon, MicrophoneIcon} from '@phosphor-icons/react';
+import {EyeIcon, MicrophoneIcon, StopIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import {useId} from 'react';
@@ -138,7 +140,7 @@ export const SpectatorStrip = observer(function SpectatorStrip({room, phase}: Sp
 					const latest = room.crowd.latestByUser.get(userId);
 					return (
 						<li key={userId} className={styles.person} data-flx="activities.band.flow.spectator-strip.person">
-							<BandAvatar userId={userId} size={30} data-flx="activities.band.flow.spectator-strip.band-avatar" />
+							<BandAvatar userId={userId} size={26} data-flx="activities.band.flow.spectator-strip.band-avatar" />
 							<div className={styles.personText} data-flx="activities.band.flow.spectator-strip.person-text">
 								<span data-flx="activities.band.flow.spectator-strip.span">{bandDisplayName(userId)}</span>
 								{playing && (
@@ -181,12 +183,31 @@ export const SpectatorStrip = observer(function SpectatorStrip({room, phase}: Sp
 					<CrowdFeed room={room} data-flx="activities.band.flow.spectator-strip.crowd-feed" />
 					{amSpectator && <CheerButtons room={room} data-flx="activities.band.flow.spectator-strip.cheer-buttons" />}
 					<HypeMeter room={room} data-flx="activities.band.flow.spectator-strip.hype-meter" />
+					{room.session.isLeader ? (
+						<button
+							type="button"
+							className={styles.stop}
+							onClick={() => room.send({t: 'band.skip'})}
+							data-flx="activities.band.flow.spectator-strip.stop.send"
+						>
+							<StopIcon size={14} weight="fill" data-flx="activities.band.flow.spectator-strip.stop-icon" />
+							<span data-flx="activities.band.flow.spectator-strip.stop-label">{i18n._(STOP_SONG_DESCRIPTOR)}</span>
+						</button>
+					) : (
+						<p className={styles.stopHint} data-flx="activities.band.flow.spectator-strip.stop-hint">
+							{i18n._(STOP_SONG_HINT_DESCRIPTOR)}
+						</p>
+					)}
 				</>
 			) : (
 				<div className={styles.note} data-flx="activities.band.flow.spectator-strip.note">
 					<p data-flx="activities.band.flow.spectator-strip.p">{i18n._(SPECTATOR_NOTE_DESCRIPTOR)}</p>
 					<div className={styles.mic} data-flx="activities.band.flow.spectator-strip.mic">
-						<MicrophoneIcon className={styles.micIcon} data-flx="activities.band.flow.spectator-strip.mic-icon" />
+						<MicrophoneIcon
+							size={16}
+							className={styles.micIcon}
+							data-flx="activities.band.flow.spectator-strip.mic-icon"
+						/>
 						<span data-flx="activities.band.flow.spectator-strip.span--2">
 							{i18n._(VOICE_MIC_PORT.hasPushToTalkKey() ? MIC_PUSH_TO_TALK_NOTE_DESCRIPTOR : MIC_MUTE_NOTE_DESCRIPTOR)}
 						</span>

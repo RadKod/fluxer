@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Accessibility, {ChannelTypingIndicatorMode} from '@app/features/accessibility/state/Accessibility';
+import {toggleVoiceActivities, voiceActivitiesLabel} from '@app/features/activities/components/VoiceActivitiesButton';
+import {voiceActivitiesEnabled} from '@app/features/activities/utils/VoiceActivityAvailability';
 import {ChannelSettingsModal} from '@app/features/app/components/dialogs/LoadableSettingsModals';
 import styles from '@app/features/app/components/layout/ChannelItem.module.css';
 import {ChannelItemContent} from '@app/features/app/components/layout/ChannelItemContent';
@@ -70,7 +72,14 @@ import CompactVoiceCallHeight, {getGuildVoiceCallExpansionKey} from '@app/featur
 import {ChannelTypes, Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
-import {CaretDownIcon, ChatTeardropIcon, GearIcon, PlusIcon, UserPlusIcon} from '@phosphor-icons/react';
+import {
+	CaretDownIcon,
+	ChatTeardropIcon,
+	GearIcon,
+	PlusIcon,
+	RocketLaunchIcon,
+	UserPlusIcon,
+} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
@@ -500,11 +509,13 @@ export const ChannelItem = observer(
 		const hasVoiceUserLimit = channelIsVoice && channel.userLimit != null && channel.userLimit > 0;
 		const showChatAffordance =
 			allowHoverAffordances && channelIsVoice && !Accessibility.voiceChannelJoinRequiresDoubleClick;
+		// Activities run in the call, so the rocket is there only for the channel I am connected to.
+		const showActivitiesAffordance = allowHoverAffordances && isVoiceSelected && voiceActivitiesEnabled(guild.id);
 		const hasVoiceHoverAffordances =
 			allowHoverAffordances &&
 			!isDraggingAnything &&
 			!channelIsCategory &&
-			(canInvite || canEditChannel || showChatAffordance);
+			(canInvite || canEditChannel || showChatAffordance || showActivitiesAffordance);
 		const shouldShowVoiceUserCount = hasVoiceUserLimit && !(hasVoiceHoverAffordances && hoverAffordancesActive);
 		const showMentionBadge = !isSelected && hasMentions && !hoverAffordancesActive;
 		const channelItemClassName = clsx(
@@ -567,6 +578,10 @@ export const ChannelItem = observer(
 				)),
 			);
 		}, [channel.id, armActionModalReturn]);
+		const handleActivitiesClick = useCallback(
+			(event: React.MouseEvent<HTMLButtonElement>) => toggleVoiceActivities(event.currentTarget, channel.id, 'right'),
+			[channel.id],
+		);
 		const handleOpenChatClick = useCallback(() => {
 			collapseVoiceCallView();
 			navigateToChannel();
@@ -678,6 +693,18 @@ export const ChannelItem = observer(
 									currentUserCount={currentUserCount}
 									userLimit={channel.userLimit}
 									data-flx="app.channel-item.voice-channel-user-count"
+								/>
+							</div>
+						)}
+						{showActivitiesAffordance && (
+							<div className={styles.hoverAffordance} data-flx="app.channel-item.hover-affordance--activities">
+								<ChannelItemIcon
+									icon={RocketLaunchIcon}
+									label={voiceActivitiesLabel(i18n, channel.id)}
+									selected={shouldShowSelectedState}
+									onClick={handleActivitiesClick}
+									tabIndex={actionButtonTabIndex}
+									data-flx="app.channel-item.channel-item-icon.activities-click"
 								/>
 							</div>
 						)}

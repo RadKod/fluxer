@@ -3,16 +3,21 @@
 import type {BandPart} from '@app/features/activities/band/engine/ChartModel';
 import type {AudioClockAnchor, SongStartSchedule} from '@app/features/activities/band/engine/SessionClock';
 import type {AudioStem, StemRole} from '@app/features/activities/band/engine/SongPackage';
+import type {DuckDepth} from '@app/features/activities/band/game/BandSettings';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {acquireSharedVoiceAudioContext} from '@app/features/voice/engine/VoiceSharedAudioContext';
 
 const logger = new Logger('BandAudio');
 
-// A missed note drops that part's stem to this share of its level, Rock Band style.
-export const DUCK_LEVEL = 0.15;
+// A missed note drops that part's stem to a share of its level, holds it there and brings it back quickly, Rock
+// Band style. Strong is near silence for about 0.6 s, so a miss is heard; light is the gentler first version.
+export const DUCK_SHAPES: Readonly<
+	Record<DuckDepth, {readonly level: number; readonly holdS: number; readonly releaseS: number}>
+> = {
+	strong: {level: 0.05, holdS: 0.48, releaseS: 0.12},
+	light: {level: 0.15, holdS: 0.4, releaseS: 0.15},
+};
 const DUCK_ATTACK_S = 0.03;
-const DUCK_HOLD_S = 0.4;
-const DUCK_RELEASE_S = 0.15;
 const CLICK_LENGTH_S = 0.05;
 // Audio cannot be scheduled into the past; this is the least lead given on top of the output latency.
 const MIN_START_LEAD_S = 0.25;
@@ -36,14 +41,20 @@ export interface GainPoint {
 
 // Gain automation for one duck starting at `now`: quick dip, hold, ease back. A duck during a duck restarts the
 // hold from the current (already low) value, so a run of misses keeps the stem down.
-export function duckEnvelope(now: number, level: number, current: number): ReadonlyArray<GainPoint> {
-	const low = level * DUCK_LEVEL;
+export function duckEnvelope(
+	now: number,
+	level: number,
+	current: number,
+	depth: DuckDepth = 'strong',
+): ReadonlyArray<GainPoint> {
+	const shape = DUCK_SHAPES[depth];
+	const low = level * shape.level;
 	const dipEnd = now + DUCK_ATTACK_S;
 	return [
 		{time: now, value: current, ramp: false},
 		{time: dipEnd, value: low, ramp: true},
-		{time: dipEnd + DUCK_HOLD_S, value: low, ramp: false},
-		{time: dipEnd + DUCK_HOLD_S + DUCK_RELEASE_S, value: level, ramp: true},
+		{time: dipEnd + shape.holdS, value: low, ramp: false},
+		{time: dipEnd + shape.holdS + shape.releaseS, value: level, ramp: true},
 	];
 }
 
@@ -57,8 +68,9 @@ export function applyGainPoints(param: AudioParam, points: ReadonlyArray<GainPoi
 	}
 }
 
-// The context time being heard right now, tied to performance.now(); folds the output latency in when the browser
-// reports an output timestamp.
+// The context time being heard right now, tied to performance.now(). An output timestamp already has the output
+// latency in it; without one, both the context's own processing latency and the device's output latency are taken
+// off the render clock.
 export function readAudioAnchor(context: AudioContext): AudioClockAnchor {
 	const timeOrigin = performance.timeOrigin;
 	const stamp = typeof context.getOutputTimestamp === 'function' ? context.getOutputTimestamp() : null;
@@ -66,7 +78,7 @@ export function readAudioAnchor(context: AudioContext): AudioClockAnchor {
 		return {contextTime: stamp.contextTime, performanceTime: stamp.performanceTime, timeOrigin};
 	}
 	return {
-		contextTime: context.currentTime - (context.outputLatency ?? 0),
+		contextTime: context.currentTime - (context.baseLatency ?? 0) - (context.outputLatency ?? 0),
 		performanceTime: performance.now(),
 		timeOrigin,
 	};
@@ -163,11 +175,11 @@ export class BandAudio {
 		}
 	}
 
-	duck(part: BandPart): void {
+	duck(part: BandPart, depth: DuckDepth): void {
 		const channel = this.channels.get(part);
 		if (!channel || channel.level === 0) return;
 		const param = channel.gain.gain;
-		applyGainPoints(param, duckEnvelope(this.context.currentTime, channel.level, param.value));
+		applyGainPoints(param, duckEnvelope(this.context.currentTime, channel.level, param.value, depth));
 	}
 
 	// Silences a part outright; the vocals stem while someone sings live.

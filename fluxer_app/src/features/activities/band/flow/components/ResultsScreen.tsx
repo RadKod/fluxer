@@ -20,6 +20,7 @@ import {
 	LONGEST_STREAK_DESCRIPTOR,
 	MY_RATING_DESCRIPTOR,
 	NEXT_VOTE_DESCRIPTOR,
+	NO_RESULT_DESCRIPTOR,
 	NOTES_MISSED_DESCRIPTOR,
 	PART_AND_DIFFICULTY_DESCRIPTOR,
 	partDescriptor,
@@ -34,6 +35,7 @@ import {
 	YOU_TAG_DESCRIPTOR,
 } from '@app/features/activities/band/flow/BandFlowMessages';
 import type {BandRoom} from '@app/features/activities/band/flow/BandRoom';
+import {resultsWaitEndsAt} from '@app/features/activities/band/flow/BandRoomMachine';
 import {BandPartIcon} from '@app/features/activities/band/flow/components/BandPartIcon';
 import {BandAvatar, bandDisplayName} from '@app/features/activities/band/flow/components/BandPeople';
 import {BandSongCover} from '@app/features/activities/band/flow/components/BandSongCover';
@@ -96,6 +98,7 @@ function Stars({count, className}: {readonly count: number; readonly className?:
 			{STAR_VALUES.map((value) => (
 				<StarIcon
 					key={value}
+					size="1em"
 					weight="fill"
 					className={clsx(value > count && styles.starEmpty)}
 					data-flx="activities.band.flow.results-screen.stars.star-empty"
@@ -110,16 +113,18 @@ interface PlayerColumnProps {
 	readonly song: BandSongSummary;
 	readonly seat: BandSeat;
 	readonly result: BandPlayerResult | undefined;
+	// Past the wait, a missing score is shown as missing rather than on its way.
+	readonly gaveUp: boolean;
 }
 
-const PlayerColumn = observer(function PlayerColumn({room, song, seat, result}: PlayerColumnProps) {
+const PlayerColumn = observer(function PlayerColumn({room, song, seat, result, gaveUp}: PlayerColumnProps) {
 	const {i18n} = useLingui();
 	return (
 		<div className={styles.column} data-flx="activities.band.flow.results-screen.player-column.column">
 			<div className={styles.who} data-flx="activities.band.flow.results-screen.player-column.who">
 				<BandAvatar
 					userId={seat.userId}
-					size={36}
+					size={30}
 					data-flx="activities.band.flow.results-screen.player-column.band-avatar"
 				/>
 				<div data-flx="activities.band.flow.results-screen.player-column.div">
@@ -184,7 +189,7 @@ const PlayerColumn = observer(function PlayerColumn({room, song, seat, result}: 
 				</>
 			) : (
 				<p className={styles.awaiting} data-flx="activities.band.flow.results-screen.player-column.awaiting">
-					{i18n._(AWAITING_RESULT_DESCRIPTOR)}
+					{i18n._(gaveUp ? NO_RESULT_DESCRIPTOR : AWAITING_RESULT_DESCRIPTOR)}
 				</p>
 			)}
 		</div>
@@ -211,6 +216,7 @@ const CrowdColumn = observer(function CrowdColumn({room, state, playerId}: Crowd
 		<div className={styles.column} data-flx="activities.band.flow.results-screen.crowd-column.column">
 			<div className={styles.average} data-flx="activities.band.flow.results-screen.crowd-column.average">
 				<StarIcon
+					size="1em"
 					weight="fill"
 					className={styles.averageStar}
 					data-flx="activities.band.flow.results-screen.crowd-column.average-star"
@@ -233,7 +239,7 @@ const CrowdColumn = observer(function CrowdColumn({room, state, playerId}: Crowd
 					>
 						<BandAvatar
 							userId={raterId}
-							size={20}
+							size={18}
 							data-flx="activities.band.flow.results-screen.crowd-column.band-avatar"
 						/>
 						<span className={styles.raterName} data-flx="activities.band.flow.results-screen.crowd-column.rater-name">
@@ -258,7 +264,7 @@ const CrowdColumn = observer(function CrowdColumn({room, state, playerId}: Crowd
 										data-flx="activities.band.flow.results-screen.crowd-column.star-button.send"
 									>
 										<StarIcon
-											size={16}
+											size={14}
 											weight="fill"
 											data-flx="activities.band.flow.results-screen.crowd-column.star-icon"
 										/>
@@ -310,7 +316,7 @@ export const ResultsScreen = observer(function ResultsScreen({room, state, song}
 	return (
 		<div className={styles.screen} data-flx="activities.band.flow.results-screen.screen">
 			<header className={styles.group} data-flx="activities.band.flow.results-screen.group">
-				<BandSongCover song={song} sizeRem={6.5} data-flx="activities.band.flow.results-screen.band-song-cover" />
+				<BandSongCover song={song} sizeRem={5.25} data-flx="activities.band.flow.results-screen.band-song-cover" />
 				<div className={styles.song} data-flx="activities.band.flow.results-screen.song">
 					<b data-flx="activities.band.flow.results-screen.b">{song.name}</b>
 					<span data-flx="activities.band.flow.results-screen.span">
@@ -357,6 +363,7 @@ export const ResultsScreen = observer(function ResultsScreen({room, state, song}
 						song={song}
 						seat={seat}
 						result={resultFor(seat.userId)}
+						gaveUp={now >= resultsWaitEndsAt(state)}
 						data-flx="activities.band.flow.results-screen.player-column"
 					/>
 				))}

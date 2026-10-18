@@ -140,8 +140,13 @@ export const VOTE_TITLE_DESCRIPTOR = msg({
 	comment: 'Band game: heading of the vote screen where everyone picks the next song.',
 });
 export const VOTE_HINT_DESCRIPTOR = msg({
-	message: 'The song with the most votes plays. You can change your vote until time runs out.',
+	message:
+		'The song with the most votes plays. The first vote starts the countdown; you can change yours until it ends.',
 	comment: 'Band game: explanation under the vote heading.',
+});
+export const VOTE_WAITING_DESCRIPTOR = msg({
+	message: 'Waiting for the first vote',
+	comment: 'Band game: shown in place of the vote countdown until somebody votes; the countdown starts with that vote.',
 });
 export const VOTE_TALLY_DESCRIPTOR = msg({
 	message:
@@ -226,6 +231,10 @@ export const PICKER_TITLE_DESCRIPTOR = msg({
 export const PICKER_SEARCH_DESCRIPTOR = msg({
 	message: 'Search songs or artists',
 	comment: 'Band game: placeholder of the search field in the song list.',
+});
+export const PICKER_PLAY_NOW_DESCRIPTOR = msg({
+	message: 'Play this now',
+	comment: 'Band game: leader-only button on a song in the song list that skips the vote and plays that song next.',
 });
 export const PICKER_ADD_DESCRIPTOR = msg({
 	message: 'Add',
@@ -355,11 +364,13 @@ export const SPECTATOR_NOTE_DESCRIPTOR = msg({
 	comment: 'Band game: explanation in the spectator column.',
 });
 export const MIC_PUSH_TO_TALK_NOTE_DESCRIPTOR = msg({
-	message: 'While you play, your mic switches to push-to-talk and goes back when the song ends.',
+	message:
+		'While you play an instrument, your mic switches to push-to-talk and goes back when the song ends. On vocals it stays open.',
 	comment: 'Band game: note about what happens to my microphone while I play, when I have a push-to-talk key.',
 });
 export const MIC_MUTE_NOTE_DESCRIPTOR = msg({
-	message: 'While you play, your mic is muted and comes back when the song ends.',
+	message:
+		'While you play an instrument, your mic is muted and comes back when the song ends. On vocals it stays open.',
 	comment: 'Band game: note about what happens to my microphone while I play, when I have no push-to-talk key.',
 });
 
@@ -421,6 +432,10 @@ export const AWAITING_RESULT_DESCRIPTOR = msg({
 	message: 'Waiting for the score',
 	comment: 'Band game: a player whose score has not arrived yet.',
 });
+export const NO_RESULT_DESCRIPTOR = msg({
+	message: 'No score',
+	comment: 'Band game: a player whose score never arrived (they closed the game or the song did not load for them).',
+});
 export const CROWD_TITLE_DESCRIPTOR = msg({
 	message: 'Crowd ratings',
 	comment: 'Band game: heading of the section where everyone rates the players 1 to 5.',
@@ -448,6 +463,18 @@ export const RATE_PLAYER_DESCRIPTOR = msg({
 export const NEXT_VOTE_DESCRIPTOR = msg({
 	message: 'The next song vote opens in {seconds} s',
 	comment: 'Band game: countdown at the bottom of the results screen. {seconds} is a whole number.',
+});
+export const STOP_SONG_DESCRIPTOR = msg({
+	message: 'End the song',
+	comment: 'Band game: leader-only button during the song that stops it and shows the results with the scores so far.',
+});
+export const STOP_SONG_HINT_DESCRIPTOR = msg({
+	message: 'The leader can end the song',
+	comment: 'Band game: shown during the song to everyone but the leader, in place of the leader’s end-the-song button.',
+});
+export const BACK_TO_VOTE_DESCRIPTOR = msg({
+	message: 'Back to the vote',
+	comment: 'Band game: leader-only button on the part picking screen that drops this song and opens a new vote.',
 });
 export const GO_TO_VOTE_DESCRIPTOR = msg({
 	message: 'Go to the vote',

@@ -45,7 +45,15 @@ function setup(
 }
 
 function selectState(seats: Extract<BandState, {phase: 'select'}>['seats']): BandState {
-	return {phase: 'select', queue: [], songId: SONG.id, groupDifficulty: 'hard', seats, watching: [], endsAt: Date.now() + 20_000};
+	return {
+		phase: 'select',
+		queue: [],
+		songId: SONG.id,
+		groupDifficulty: 'hard',
+		seats,
+		watching: [],
+		endsAt: Date.now() + 20_000,
+	};
 }
 
 describe('BandBots', () => {
@@ -60,7 +68,7 @@ describe('BandBots', () => {
 	it('votes for one of the candidates', () => {
 		const {session, bots, received} = setup();
 		const bot = bots.add({reactionMs: REACTION_MS});
-		session.setState({phase: 'vote', queue: [], candidates: ['a', 'b'], votes: {}, endsAt: Date.now() + 20_000});
+		session.setState({phase: 'vote', queue: [], candidates: ['a', 'b'], votes: {}, openedAt: Date.now(), endsAt: null});
 		vi.advanceTimersByTime(LATENCY_MS * 2 + REACTION_MS);
 		expect(received.map((message) => message.payload)).toEqual([{t: 'band.vote', songId: 'b'}]);
 		expect(received[0].from.userId).toBe(bot.userId);

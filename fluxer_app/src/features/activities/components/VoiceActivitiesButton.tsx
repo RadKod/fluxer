@@ -13,6 +13,7 @@ import MobileLayout from '@app/features/ui/state/MobileLayout';
 import PopoutState from '@app/features/ui/state/Popout';
 import {Tooltip} from '@app/features/ui/tooltip/Tooltip';
 import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
+import type {I18n} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {RocketLaunchIcon} from '@phosphor-icons/react';
@@ -126,7 +127,7 @@ const ActivityPicker = observer(function ActivityPicker({
 	);
 });
 
-function togglePicker(target: HTMLElement, channelId: string): void {
+function togglePicker(target: HTMLElement, channelId: string, position: 'top' | 'right'): void {
 	if (PopoutState.isOpen(PICKER_POPOUT_KEY) && !PopoutState.isClosing(PICKER_POPOUT_KEY)) {
 		PopoutCommands.close(PICKER_POPOUT_KEY);
 		return;
@@ -134,7 +135,7 @@ function togglePicker(target: HTMLElement, channelId: string): void {
 	openPopout(
 		target,
 		{
-			position: 'top',
+			position,
 			offsetMainAxis: 8,
 			returnFocusRef: {current: target},
 			render: ({onClose}) => (
@@ -149,7 +150,21 @@ function togglePicker(target: HTMLElement, channelId: string): void {
 	);
 }
 
-// In the voice control bar. With no activity it opens the list; while one runs it shows or hides its panel.
+// With no activity it opens the list next to `target`; while one runs it shows or hides its panel. The control bar
+// opens the list above, the channel list beside the row.
+export function toggleVoiceActivities(target: HTMLElement, channelId: string, position: 'top' | 'right' = 'top'): void {
+	if (VoiceActivities.getSession(channelId)) VoiceActivities.togglePanel();
+	else togglePicker(target, channelId, position);
+}
+
+export function voiceActivitiesLabel(i18n: I18n, channelId: string): string {
+	const session = VoiceActivities.getSession(channelId);
+	if (!session) return i18n._(ACTIVITIES_DESCRIPTOR);
+	const activity = i18n._(getActivityDefinition(session.activity_id).name);
+	return i18n._(VoiceActivities.panelOpen ? HIDE_ACTIVITY_DESCRIPTOR : SHOW_ACTIVITY_DESCRIPTOR, {activity});
+}
+
+// In the voice control bar.
 export const VoiceActivitiesButton = observer(function VoiceActivitiesButton({
 	buttonClassName,
 	idleClassName,
@@ -166,15 +181,9 @@ export const VoiceActivitiesButton = observer(function VoiceActivitiesButton({
 	if (!channelId || MobileLayout.isMobileLayout() || !voiceActivitiesEnabled(MediaEngine.guildId)) return null;
 	const session = VoiceActivities.getSession(channelId);
 	const open = session !== null && VoiceActivities.panelOpen;
-	const activity = session ? i18n._(getActivityDefinition(session.activity_id).name) : null;
-	const label =
-		activity === null
-			? i18n._(ACTIVITIES_DESCRIPTOR)
-			: i18n._(open ? HIDE_ACTIVITY_DESCRIPTOR : SHOW_ACTIVITY_DESCRIPTOR, {activity});
-	const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-		if (session) VoiceActivities.togglePanel();
-		else togglePicker(event.currentTarget, channelId);
-	};
+	const label = voiceActivitiesLabel(i18n, channelId);
+	const handleClick = (event: React.MouseEvent<HTMLButtonElement>) =>
+		toggleVoiceActivities(event.currentTarget, channelId);
 	return (
 		<Tooltip text={label} data-flx="activities.voice-activities-button.tooltip">
 			<FocusRing offset={-2} data-flx="activities.voice-activities-button.focus-ring">

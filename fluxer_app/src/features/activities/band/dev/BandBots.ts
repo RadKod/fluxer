@@ -98,12 +98,13 @@ interface PlayRun {
 	hit: number;
 	missed: number;
 	finished: boolean;
+	reported: boolean;
 }
 
 function roundKey(state: BandState): string {
 	switch (state.phase) {
 		case 'vote':
-			return `vote:${state.endsAt}`;
+			return `vote:${state.openedAt}`;
 		case 'select':
 			return `select:${state.songId}:${state.endsAt}`;
 		case 'play':
@@ -170,6 +171,8 @@ export class BandBot {
 		if (!isBandState(value)) return;
 		const key = roundKey(value);
 		if (key !== this.round) {
+			// Like the real play screen: a song that ends or is stopped before my report went out reports what I have.
+			if (this.play && !this.play.reported) this.reportPlay(this.play);
 			this.stopRound();
 			this.round = key;
 		}
@@ -275,9 +278,7 @@ export class BandBot {
 	private pickPart(songId: string, seats: ReadonlyArray<BandSeat>): BandPart | null {
 		const song = this.bots.songs().find((candidate) => candidate.id === songId);
 		// Bots never sing: vocals stay free for a person to test the mic part.
-		const available = BAND_PARTS.filter(
-			(part) => part !== 'vocals' && (!song || (song.parts[part]?.length ?? 0) > 0),
-		);
+		const available = BAND_PARTS.filter((part) => part !== 'vocals' && (!song || (song.parts[part]?.length ?? 0) > 0));
 		const taken = new Set(seats.map((seat) => seat.part));
 		const order = [...this.settings.preferredParts, ...BAND_PARTS];
 		return order.find((part) => available.includes(part) && !taken.has(part)) ?? null;
@@ -305,6 +306,7 @@ export class BandBot {
 			hit: 0,
 			missed: 0,
 			finished: false,
+			reported: false,
 		};
 		this.playTimer = setInterval(() => this.tickPlay(), PLAY_TICK_MS);
 	}
@@ -381,6 +383,12 @@ export class BandBot {
 		if (this.playTimer) clearInterval(this.playTimer);
 		this.playTimer = null;
 		this.setActivity(`done ${play.part}`);
+		this.later(() => this.reportPlay(play), RESULT_DELAY_MS);
+	}
+
+	private reportPlay(play: PlayRun): void {
+		play.finished = true;
+		play.reported = true;
 		const judged = play.hit + play.missed;
 		const result: Omit<BandPlayerResult, 'userId'> = {
 			part: play.part,
@@ -393,7 +401,7 @@ export class BandBot {
 			notesMissed: play.missed,
 			starPowerUses: 0,
 		};
-		this.later(() => this.sendToLeader({t: 'band.result', result}), RESULT_DELAY_MS);
+		this.sendToLeader({t: 'band.result', result});
 	}
 
 	private scheduleCheer(): void {

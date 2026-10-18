@@ -3,6 +3,7 @@
 import Accessibility from '@app/features/accessibility/state/Accessibility';
 import type {BandSeat, BandSongSummary} from '@app/features/activities/band/BandProtocol';
 import type {VocalsChart} from '@app/features/activities/band/engine/VocalsParser';
+import {VOICE_MIC_PORT} from '@app/features/activities/band/flow/BandMicPort';
 import {
 	DIFFICULTY_LABELS,
 	FEEDBACK_LABELS,
@@ -10,6 +11,7 @@ import {
 	SEAT_DESCRIPTOR,
 } from '@app/features/activities/band/game/BandGameLabels';
 import BandSettings from '@app/features/activities/band/game/BandSettings';
+import {FramePacer} from '@app/features/activities/band/game/FramePacer';
 import {
 	DESIGN_HEIGHT,
 	DESIGN_WIDTH,
@@ -36,6 +38,7 @@ import {useVoiceParticipantAvatarEntries} from '@app/features/voice/components/V
 import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
+import {MicrophoneIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import {type RefObject, useEffect, useMemo, useRef, useState} from 'react';
@@ -77,6 +80,11 @@ const FINALE_COUNTDOWN_DESCRIPTOR = msg({
 const FINALE_BONUS_DESCRIPTOR = msg({
 	message: 'Finale bonus',
 	comment: 'Band game: label for the points collected during the Big Rock Ending, shown under the band score.',
+});
+const SING_HINT_DESCRIPTOR = msg({
+	message: 'Your mic is open, sing!',
+	comment:
+		'Band game: small hint on the lyrics strip for the singer; their mic stays open in the call during the song.',
 });
 const VOLUME_DESCRIPTOR = msg({
 	message: 'Song volume',
@@ -161,10 +169,11 @@ function useStageLoop(
 		const {controller} = runtime;
 		const fontFamily = getComputedStyle(canvas).fontFamily || 'sans-serif';
 
+		const pacer = new FramePacer();
 		let frameId = 0;
-		const draw = () => {
+		const draw = (frameTimestamp: number) => {
 			controller.tick(runtime.judgeMs());
-			const nowMs = runtime.heardMs();
+			const nowMs = runtime.heardMsAt(pacer.presentAt(frameTimestamp));
 			const frame: HighwayFrame = {
 				nowMs,
 				tracks: controller.tracks,
@@ -483,21 +492,24 @@ const HighwayHud = observer(function HighwayHud({
 const VocalsStrip = observer(function VocalsStrip({
 	entry,
 	seat,
+	isMine,
 	speaking,
 	canvasRef,
 }: {
 	entry: BandSongSummary;
 	seat: BandSeat;
+	isMine: boolean;
 	speaking: boolean;
 	canvasRef: RefObject<HTMLCanvasElement | null>;
 }) {
+	const {i18n} = useLingui();
 	return (
 		<div className={styles.vocals} data-flx="activities.band.game.play-stage.vocals-strip.vocals">
 			<div className={styles.vocalsId} data-flx="activities.band.game.play-stage.vocals-strip.vocals-id">
 				<PlayerIdentity
 					entry={entry}
 					seat={seat}
-					isMine={false}
+					isMine={isMine}
 					speaking={speaking}
 					starPower={false}
 					data-flx="activities.band.game.play-stage.vocals-strip.player-identity"
@@ -509,6 +521,16 @@ const VocalsStrip = observer(function VocalsStrip({
 					className={styles.vocalsCanvas}
 					data-flx="activities.band.game.play-stage.vocals-strip.vocals-canvas"
 				/>
+				{isMine && !VOICE_MIC_PORT.isMuted() && (
+					<span className={styles.singHint} data-flx="activities.band.game.play-stage.vocals-strip.sing-hint">
+						<MicrophoneIcon
+							weight="fill"
+							aria-hidden="true"
+							data-flx="activities.band.game.play-stage.vocals-strip.icon"
+						/>
+						{i18n._(SING_HINT_DESCRIPTOR)}
+					</span>
+				)}
 			</div>
 		</div>
 	);
@@ -567,6 +589,7 @@ export const PlayStage = observer(function PlayStage({runtime, entry, channelId,
 						<VocalsStrip
 							entry={entry}
 							seat={vocalsSeat}
+							isMine={vocalsSeat.userId === controller.mySeat?.userId}
 							speaking={speaking.has(vocalsSeat.userId)}
 							canvasRef={vocalsCanvasRef}
 							data-flx="activities.band.game.play-stage.vocals-strip"

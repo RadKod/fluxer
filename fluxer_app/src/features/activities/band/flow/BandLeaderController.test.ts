@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {BandSongSummary, BandState} from '@app/features/activities/band/BandProtocol';
+import {
+	BAND_PHASE_MS,
+	type BandPlayerResult,
+	type BandSongSummary,
+	type BandState,
+} from '@app/features/activities/band/BandProtocol';
 import {
 	BAND_TICK_MS,
 	type BandControllerTimers,
 	BandLeaderController,
 } from '@app/features/activities/band/flow/BandLeaderController';
-import type {BandRoomContext} from '@app/features/activities/band/flow/BandRoomMachine';
+import {BAND_PLAY_GRACE_MS, type BandRoomContext} from '@app/features/activities/band/flow/BandRoomMachine';
 import type {
 	ActivityMessage,
 	ActivityParticipant,
@@ -35,6 +40,18 @@ const SONG: BandSongSummary = {
 	packageUrl: 'https://dl.example/a.sng',
 	packageBytes: 10,
 	addedBy: null,
+};
+
+const RESULT: Omit<BandPlayerResult, 'userId'> = {
+	part: 'guitar',
+	difficulty: 'easy',
+	score: 100,
+	rawScore: 100,
+	accuracy: 0.5,
+	bestStreak: 3,
+	notesHit: 5,
+	notesMissed: 5,
+	starPowerUses: 0,
 };
 
 function participant(userId: string): ActivityParticipant {
@@ -206,14 +223,18 @@ describe('BandLeaderController', () => {
 
 	it('moves through the phases on its ticks', () => {
 		const {room, timers, leaderController, playerController} = setup();
-		room.now += 20_000;
+		room.now += 60_000;
+		timers.fire();
+		expect(leaderController.state?.phase).toBe('vote');
+		playerController.sendIntent({t: 'band.vote', songId: 'a'});
+		room.now += BAND_PHASE_MS.vote;
 		timers.fire();
 		expect(leaderController.state).toMatchObject({phase: 'select', songId: 'a'});
 		leaderController.sendIntent({t: 'band.claimSeat', part: null});
 		playerController.sendIntent({t: 'band.claimSeat', part: 'guitar'});
 		playerController.sendIntent({t: 'band.ready', ready: true});
 		expect(leaderController.state).toMatchObject({phase: 'play', startAt: room.now + 4000});
-		room.now += 4000 + 60_000 + 2000;
+		room.now += BAND_PHASE_MS.countdown + SONG.lengthMs + BAND_PLAY_GRACE_MS;
 		timers.fire();
 		expect(leaderController.state?.phase).toBe('results');
 	});
@@ -248,7 +269,8 @@ describe('BandLeaderController', () => {
 		const other = room.join('p2');
 		const otherController = new BandLeaderController(other.asSession(), contextFor(room), timers);
 		otherController.start();
-		room.now += 20_000;
+		playerController.sendIntent({t: 'band.vote', songId: 'a'});
+		room.now += BAND_PHASE_MS.vote;
 		timers.fire();
 		playerController.sendIntent({t: 'band.claimSeat', part: 'guitar'});
 		expect(phaseOf(player.state)).toBe('select');
@@ -269,6 +291,35 @@ describe('BandLeaderController', () => {
 		});
 		playerController.sendIntent({t: 'band.skip'});
 		expect(phaseOf(other.state)).toBe('play');
+	});
+
+	it('hands over mid-song: results sent to the old leader survive and later ones reach the new leader', () => {
+		const {room, leader, player, timers, leaderController, playerController} = setup();
+		const other = room.join('p2');
+		const otherController = new BandLeaderController(other.asSession(), contextFor(room), timers);
+		otherController.start();
+		playerController.sendIntent({t: 'band.vote', songId: 'a'});
+		room.now += BAND_PHASE_MS.vote;
+		timers.fire();
+		leaderController.sendIntent({t: 'band.claimSeat', part: null});
+		playerController.sendIntent({t: 'band.claimSeat', part: 'guitar'});
+		otherController.sendIntent({t: 'band.claimSeat', part: 'drums'});
+		playerController.sendIntent({t: 'band.ready', ready: true});
+		otherController.sendIntent({t: 'band.ready', ready: true});
+		expect(phaseOf(player.state)).toBe('play');
+		room.now += BAND_PHASE_MS.countdown + SONG.lengthMs;
+		playerController.sendIntent({t: 'band.result', result: RESULT});
+		expect(phaseOf(player.state)).toBe('play');
+
+		leaderController.stop();
+		room.leave(leader);
+		room.leaderUserId = 'p1';
+		timers.fire();
+		expect(phaseOf(player.state)).toBe('play');
+		otherController.sendIntent({t: 'band.result', result: RESULT});
+		expect(other.sent.at(-1)?.options).toEqual({to: ['p1-conn']});
+		const results = playerController.state;
+		expect(results?.phase === 'results' && results.results.map((result) => result.userId)).toEqual(['p1', 'p2']);
 	});
 
 	it('starts a fresh room when the new leader finds no usable state', () => {

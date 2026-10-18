@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {AudioStem} from '@app/features/activities/band/engine/SongPackage';
-import {BandAudio, DUCK_LEVEL, duckEnvelope, stemRoleForPlayback} from '@app/features/activities/band/game/BandAudio';
+import {BandAudio, DUCK_SHAPES, duckEnvelope, stemRoleForPlayback} from '@app/features/activities/band/game/BandAudio';
 import {describe, expect, it, vi} from 'vitest';
+
+const STRONG = DUCK_SHAPES.strong.level;
 
 type ParamCall = readonly [method: string, value: number, time: number];
 
@@ -77,15 +79,21 @@ function stem(role: AudioStem['role'], name: string): AudioStem {
 }
 
 describe('BandAudio', () => {
-	it('dips, holds and restores a part for one miss', () => {
+	it('dips a part to near silence for about 0.6 s on a miss and brings it back quickly', () => {
 		const points = duckEnvelope(10, 1, 1);
 		expect(points[0]).toEqual({time: 10, value: 1, ramp: false});
-		expect(points[1].value).toBe(DUCK_LEVEL);
-		expect(points[1].ramp).toBe(true);
-		const last = points.at(-1)!;
+		expect(points[1]).toEqual({time: 10.03, value: 0.05, ramp: true});
+		const [, , holdEnd, last] = points;
+		expect(holdEnd.value).toBe(0.05);
 		expect(last.value).toBe(1);
-		expect(last.time - 10).toBeGreaterThan(0.4);
-		expect(last.time - 10).toBeLessThan(0.7);
+		expect(holdEnd.time - 10).toBeCloseTo(0.51);
+		expect(last.time - holdEnd.time).toBeCloseTo(0.12);
+	});
+
+	it('dips less and for less time when the light duck is chosen', () => {
+		const points = duckEnvelope(10, 1, 1, 'light');
+		expect(points[1].value).toBe(0.15);
+		expect(points.at(-1)!.time - 10).toBeCloseTo(0.58);
 	});
 
 	it('plays single-mix songs as backing so nothing ducks them', () => {
@@ -115,10 +123,10 @@ describe('BandAudio', () => {
 		const audio = new BandAudio(context);
 		await audio.loadStems([stem('guitar', 'gtr'), stem('backing', 'song')], true);
 		const [, guitarGain, backingGain] = gains;
-		audio.duck('guitar');
-		audio.duck('drums');
+		audio.duck('guitar', 'strong');
+		audio.duck('drums', 'strong');
 		expect(guitarGain.gain.calls.map(([method]) => method)).toEqual(['cancel', 'set', 'ramp', 'set', 'ramp']);
-		expect(guitarGain.gain.calls[2]).toEqual(['ramp', DUCK_LEVEL, 5.03]);
+		expect(guitarGain.gain.calls[2]).toEqual(['ramp', STRONG, 5.03]);
 		expect(backingGain.gain.calls).toEqual([]);
 	});
 
@@ -127,8 +135,8 @@ describe('BandAudio', () => {
 		const audio = new BandAudio(context);
 		await audio.loadStems([stem('guitar', 'gtr'), stem('rhythm', 'rhy')], true);
 		const [, guitarGain, rhythmGain] = gains;
-		audio.duck('rhythm');
-		expect(rhythmGain.gain.calls[2]).toEqual(['ramp', DUCK_LEVEL, 5.03]);
+		audio.duck('rhythm', 'strong');
+		expect(rhythmGain.gain.calls[2]).toEqual(['ramp', STRONG, 5.03]);
 		expect(guitarGain.gain.calls).toEqual([]);
 	});
 
@@ -140,7 +148,7 @@ describe('BandAudio', () => {
 		const vocalsGain = gains[1];
 		expect(vocalsGain.gain.value).toBe(0);
 		vocalsGain.gain.calls.length = 0;
-		audio.duck('vocals');
+		audio.duck('vocals', 'strong');
 		expect(vocalsGain.gain.calls).toEqual([]);
 	});
 

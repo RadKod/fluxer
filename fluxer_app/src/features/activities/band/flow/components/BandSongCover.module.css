@@ -4,7 +4,7 @@
 	display: block;
 	flex: 0 0 auto;
 	box-sizing: border-box;
-	border-radius: 0.375rem;
+	border-radius: 0.3125rem;
 	object-fit: cover;
 	container-type: inline-size;
 }

@@ -2,7 +2,7 @@
 
 import {performanceToContextTime} from '@app/features/activities/band/engine/SessionClock';
 import {BandAudio} from '@app/features/activities/band/game/BandAudio';
-import BandSettings from '@app/features/activities/band/game/BandSettings';
+import BandSettings, {type DuckDepth} from '@app/features/activities/band/game/BandSettings';
 import {
 	CALIBRATION_LEAD_IN_CLICKS,
 	CALIBRATION_TAPS,
@@ -13,6 +13,8 @@ import {
 } from '@app/features/activities/band/game/LatencyCalibration';
 import styles from '@app/features/activities/band/game/LatencyCalibrationScreen.module.css';
 import {Button} from '@app/features/ui/button/Button';
+import {Switch} from '@app/features/ui/components/form/FormSwitch';
+import {RadioGroup} from '@app/features/ui/radio_group/RadioGroup';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {observer} from 'mobx-react-lite';
@@ -74,6 +76,24 @@ const CLOSE_DESCRIPTOR = msg({
 	message: 'Close',
 	context: 'band-rhythm-test',
 	comment: 'Band game rhythm test: leaves the test without changing anything.',
+});
+const MISS_SOUND_DESCRIPTOR = msg({
+	message: 'Sound effect on a miss',
+	comment: 'Band game settings: switch for a short muted-string or drum thud sound when I miss a note.',
+});
+const DUCK_DEPTH_DESCRIPTOR = msg({
+	message: 'Song dip on a miss',
+	comment: 'Band game settings: how much a missed part of the song drops in volume. Options are Light and Strong.',
+});
+const DUCK_LIGHT_DESCRIPTOR = msg({
+	message: 'Light',
+	context: 'band-miss-dip',
+	comment: 'Band game settings: the missed part gets a little quieter for a moment.',
+});
+const DUCK_STRONG_DESCRIPTOR = msg({
+	message: 'Strong',
+	context: 'band-miss-dip',
+	comment: 'Band game settings: the missed part goes almost silent for a moment.',
 });
 const NO_AUDIO_DESCRIPTOR = msg({
 	message: 'This device cannot play the test clicks.',
@@ -214,6 +234,7 @@ export const LatencyCalibrationScreen = observer(function LatencyCalibrationScre
 					{i18n._(NO_AUDIO_DESCRIPTOR)}
 				</p>
 			)}
+			<MissFeedbackSettings data-flx="activities.band.game.latency-calibration-screen.miss-feedback-settings" />
 			<div className={styles.actions} data-flx="activities.band.game.latency-calibration-screen.actions">
 				{phase.kind === 'idle' && (
 					<Button small onClick={start} data-flx="activities.band.game.latency-calibration-screen.button.start">
@@ -249,5 +270,41 @@ export const LatencyCalibrationScreen = observer(function LatencyCalibrationScre
 				</Button>
 			</div>
 		</section>
+	);
+});
+
+// How a miss sounds on this device; per device like the offset, since it is about these speakers.
+const MissFeedbackSettings = observer(function MissFeedbackSettings() {
+	const {i18n} = useLingui();
+	const depthLabel = i18n._(DUCK_DEPTH_DESCRIPTOR);
+	return (
+		<div
+			className={styles.settings}
+			data-flx="activities.band.game.latency-calibration-screen.miss-feedback-settings.settings"
+		>
+			<Switch
+				compact
+				label={i18n._(MISS_SOUND_DESCRIPTOR)}
+				value={BandSettings.missSound}
+				onChange={BandSettings.setMissSound}
+				data-flx="activities.band.game.latency-calibration-screen.miss-feedback-settings.switch"
+			/>
+			<p
+				className={styles.settingLabel}
+				data-flx="activities.band.game.latency-calibration-screen.miss-feedback-settings.setting-label"
+			>
+				{depthLabel}
+			</p>
+			<RadioGroup<DuckDepth>
+				aria-label={depthLabel}
+				value={BandSettings.duckDepth}
+				onChange={BandSettings.setDuckDepth}
+				options={[
+					{value: 'light', name: i18n._(DUCK_LIGHT_DESCRIPTOR)},
+					{value: 'strong', name: i18n._(DUCK_STRONG_DESCRIPTOR)},
+				]}
+				data-flx="activities.band.game.latency-calibration-screen.miss-feedback-settings.radio-group"
+			/>
+		</div>
 	);
 });

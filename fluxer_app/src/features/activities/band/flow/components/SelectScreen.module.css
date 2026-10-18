@@ -10,9 +10,9 @@
 	display: flex;
 	flex: 1 1 auto;
 	flex-direction: column;
-	gap: 1rem;
+	gap: 0.8125rem;
 	min-width: 0;
-	padding: 0.5rem 1.5rem 1rem;
+	padding: 0.4375rem 1.25rem 0.8125rem;
 	overflow-y: auto;
 }
 
@@ -40,58 +40,58 @@
 .vocals {
 	display: flex;
 	align-items: center;
-	gap: 1.5rem;
-	min-height: 5.25rem;
-	padding: 0.625rem 1rem 0.625rem 1.125rem;
-	border-radius: 0.75rem;
+	gap: 1.25rem;
+	min-height: 4.3125rem;
+	padding: 0.5rem 0.8125rem 0.5rem 0.9375rem;
+	border-radius: 0.625rem;
 	background-color: #121318;
 	box-shadow: inset 0 0 0 1px var(--band-line);
 }
 
 .vocalsTitle {
 	display: flex;
-	flex: 0 1 18rem;
+	flex: 0 1 14.75rem;
 	align-items: center;
-	gap: 0.75rem;
+	gap: 0.625rem;
 	min-width: 0;
 }
 
 .vocalsTitle b {
 	display: block;
 	font-weight: 600;
-	font-size: 0.9375rem;
+	font-size: 0.875rem;
 }
 
 .vocalsTitle span {
 	color: var(--band-t3);
-	font-size: 0.75rem;
+	font-size: 0.6875rem;
 }
 
 .vocalsIcon {
 	flex: 0 0 auto;
-	width: 1.625rem;
-	height: 1.625rem;
+	width: 1.3125rem;
+	height: 1.3125rem;
 	color: var(--band-t2);
 }
 
 .vocalsPerson {
-	flex: 0 0 9.5rem;
+	flex: 0 0 7.8125rem;
 	min-width: 0;
 }
 
 .vocalsDifficulties {
 	display: flex;
-	gap: 0.25rem;
+	gap: 0.1875rem;
 }
 
 .vocalsDifficulty {
-	height: 2.25rem;
-	padding: 0 0.75rem;
+	height: 1.875rem;
+	padding: 0 0.625rem;
 }
 
 .vocalsActions {
 	display: flex;
-	gap: 0.375rem;
+	gap: 0.3125rem;
 	margin-left: auto;
 }
 
@@ -99,26 +99,26 @@
 	display: flex;
 	align-items: flex-start;
 	justify-content: space-between;
-	gap: 1.5rem;
+	gap: 1.25rem;
 }
 
 .song {
 	display: flex;
 	align-items: center;
-	gap: 0.875rem;
+	gap: 0.6875rem;
 	min-width: 0;
 }
 
 .song b {
 	display: block;
 	font-weight: 700;
-	font-size: 1.25rem;
+	font-size: 1rem;
 	letter-spacing: -0.01em;
 }
 
 .song span {
 	color: var(--band-t2);
-	font-size: 0.8125rem;
+	font-size: 0.75rem;
 }
 
 .group {
@@ -126,29 +126,29 @@
 }
 
 .groupLabel {
-	margin-bottom: 0.375rem;
+	margin-bottom: 0.3125rem;
 	color: var(--band-t3);
-	font-size: 0.75rem;
+	font-size: 0.6875rem;
 }
 
 .segmented {
 	display: inline-flex;
 	padding: 3px;
-	border-radius: 0.6875rem;
+	border-radius: 0.5625rem;
 	background-color: var(--band-g2);
 	box-shadow: inset 0 0 0 1px var(--band-line);
 }
 
 .segment {
-	height: 2rem;
-	padding: 0 0.875rem;
+	height: 1.625rem;
+	padding: 0 0.6875rem;
 	border: 0;
-	border-radius: 0.5rem;
+	border-radius: 0.4375rem;
 	background: none;
 	color: var(--band-t2);
 	font: inherit;
 	font-weight: 500;
-	font-size: 0.8125rem;
+	font-size: 0.75rem;
 	cursor: pointer;
 }
 
@@ -162,13 +162,31 @@
 }
 
 .groupHint {
-	margin: 0.375rem 0 0;
+	margin: 0.3125rem 0 0;
 	color: var(--band-t3);
-	font-size: 0.75rem;
+	font-size: 0.6875rem;
 }
 
 .readyTally {
 	white-space: nowrap;
+}
+
+.backButton {
+	height: 1.4375rem;
+	padding: 0 0.625rem;
+	border: 0;
+	border-radius: 0.4375rem;
+	background: none;
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+	color: var(--band-t2);
+	font: inherit;
+	font-weight: 600;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.backButton:hover {
+	color: var(--band-t1);
 }
 
 /* Highways in perspective behind the part cards, like the stage they are about to play on. The free space above the
@@ -180,26 +198,26 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: flex-end;
-	gap: 1rem;
-	min-height: 19rem;
+	gap: 0.8125rem;
+	min-height: 15.5625rem;
 	perspective: 1400px;
 	perspective-origin: 50% 0;
 }
 
 .highways {
 	position: absolute;
-	inset: 0 0 4rem;
+	inset: 0 0 3.25rem;
 	display: flex;
 	justify-content: center;
-	gap: 2rem;
+	gap: 1.625rem;
 	pointer-events: none;
 }
 
 .highway {
-	flex: 0 1 12.75rem;
+	flex: 0 1 10.4375rem;
 	align-self: flex-end;
 	min-width: 0;
-	height: 40rem;
+	height: 32.8125rem;
 	border-right: 3px solid rgba(181, 23, 158, 0.7);
 	border-left: 3px solid rgba(181, 23, 158, 0.7);
 	background-color: rgba(22, 23, 29, 0.96);
@@ -217,7 +235,7 @@
 }
 
 .highwayDrums {
-	flex-basis: 14.75rem;
+	flex-basis: 12.125rem;
 	background-image: repeating-linear-gradient(
 		90deg,
 		transparent 0,
@@ -231,49 +249,49 @@
 	position: relative;
 	display: flex;
 	justify-content: center;
-	gap: 1rem;
+	gap: 0.8125rem;
 	width: 100%;
 }
 
 .partCard {
 	display: flex;
-	flex: 0 1 15.5rem;
+	flex: 0 1 12.6875rem;
 	flex-direction: column;
 	min-width: 0;
-	min-height: 17rem;
-	padding: 0.75rem;
-	border-radius: 0.875rem;
+	min-height: 13.9375rem;
+	padding: 0.625rem;
+	border-radius: 0.6875rem;
 	background-color: #15161b;
 	box-shadow:
 		inset 0 0 0 1px var(--band-line),
-		0 -1.125rem 1.875rem rgba(12, 13, 15, 0.85);
+		0 -0.9375rem 1.5625rem rgba(12, 13, 15, 0.85);
 }
 
 .partCardMine {
 	box-shadow:
 		inset 0 0 0 2px var(--band-plum),
-		0 -1.125rem 1.875rem rgba(12, 13, 15, 0.85);
+		0 -0.9375rem 1.5625rem rgba(12, 13, 15, 0.85);
 }
 
 .partHeader {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 0.375rem;
-	min-height: 1.5rem;
+	gap: 0.3125rem;
+	min-height: 1.25rem;
 }
 
 .partName {
 	display: flex;
 	align-items: center;
-	gap: 0.375rem;
+	gap: 0.3125rem;
 	font-weight: 600;
-	font-size: 0.9375rem;
+	font-size: 0.875rem;
 }
 
 .partIcon {
-	width: 1.1875rem;
-	height: 1.1875rem;
+	width: 1rem;
+	height: 1rem;
 	color: var(--band-t2);
 }
 
@@ -285,27 +303,27 @@
 .keyCap {
 	display: inline-grid;
 	place-items: center;
-	min-width: 1.0625rem;
-	height: 1.0625rem;
-	border-radius: 0.17rem;
+	min-width: 0.875rem;
+	height: 0.875rem;
+	border-radius: 0.125rem;
 	background-color: var(--lane, var(--band-g4));
 	box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.28);
 	color: var(--band-night);
 	font-weight: 700;
-	font-size: 0.5625rem;
+	font-size: 0.6875rem;
 }
 
 .keyWide {
-	padding: 0 0.375rem;
+	padding: 0 0.3125rem;
 }
 
 .person {
 	display: flex;
 	align-items: center;
-	gap: 0.5625rem;
-	min-height: 2.875rem;
-	margin: 0.5rem 0 0.375rem;
-	padding-top: 0.5rem;
+	gap: 0.4375rem;
+	min-height: 2.375rem;
+	margin: 0.4375rem 0 0.3125rem;
+	padding-top: 0.4375rem;
 	border-top: 1px solid var(--band-line);
 }
 
@@ -326,7 +344,7 @@
 .personText b {
 	display: flex;
 	align-items: center;
-	gap: 0.25rem;
+	gap: 0.1875rem;
 	font-weight: 600;
 	line-height: 1.15;
 }
@@ -339,7 +357,7 @@
 
 .personText > span {
 	color: var(--band-t3);
-	font-size: 0.75rem;
+	font-size: 0.6875rem;
 }
 
 .youTag {
@@ -382,15 +400,15 @@
 .difficulty {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
-	height: 1.875rem;
-	padding: 0 0.5rem;
+	gap: 0.4375rem;
+	height: 1.5625rem;
+	padding: 0 0.4375rem;
 	border: 0;
-	border-radius: 0.4375rem;
+	border-radius: 0.375rem;
 	background: none;
 	color: var(--band-t2);
 	font: inherit;
-	font-size: 0.8125rem;
+	font-size: 0.75rem;
 	text-align: left;
 	cursor: pointer;
 }
@@ -416,7 +434,7 @@
 
 .multiplier {
 	color: var(--band-t3);
-	font-size: 0.75rem;
+	font-size: 0.6875rem;
 	font-variant-numeric: tabular-nums;
 }
 
@@ -426,9 +444,9 @@
 
 .actions {
 	display: flex;
-	gap: 0.375rem;
+	gap: 0.3125rem;
 	margin-top: auto;
-	padding-top: 0.75rem;
+	padding-top: 0.625rem;
 }
 
 .readyButton {
@@ -436,11 +454,11 @@
 	flex: 1 1 auto;
 	align-items: center;
 	justify-content: center;
-	gap: 0.375rem;
-	height: 2.25rem;
-	padding: 0 0.75rem;
+	gap: 0.3125rem;
+	height: 1.875rem;
+	padding: 0 0.625rem;
 	border: 0;
-	border-radius: 0.5625rem;
+	border-radius: 0.4375rem;
 	background: none;
 	color: inherit;
 	font: inherit;
@@ -467,16 +485,16 @@ span.readyButton {
 .watch {
 	display: inline-flex;
 	align-items: center;
-	gap: 0.375rem;
-	height: 2.25rem;
-	padding: 0 0.6875rem;
+	gap: 0.3125rem;
+	height: 1.875rem;
+	padding: 0 0.5625rem;
 	border: 0;
-	border-radius: 0.5625rem;
+	border-radius: 0.4375rem;
 	background: none;
 	box-shadow: inset 0 0 0 1px var(--band-line-2);
 	color: var(--band-t2);
 	font: inherit;
-	font-size: 0.8125rem;
+	font-size: 0.75rem;
 	cursor: pointer;
 }
 
