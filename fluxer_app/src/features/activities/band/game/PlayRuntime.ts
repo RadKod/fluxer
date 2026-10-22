@@ -11,6 +11,7 @@ import {BandAudio, GUIDE_VOCAL_GAIN} from '@app/features/activities/band/game/Ba
 import {inputSongTimeMs} from '@app/features/activities/band/game/BandInput';
 import type {DuckDepth} from '@app/features/activities/band/game/BandSettings';
 import {FinaleSynth} from '@app/features/activities/band/game/FinaleSynth';
+import {MissSound} from '@app/features/activities/band/game/MissSound';
 import {PlayController} from '@app/features/activities/band/game/PlayController';
 import type {ActivitySession} from '@app/features/activities/session/ActivitySessionTypes';
 
@@ -32,6 +33,7 @@ export interface PlayRuntimeOptions {
 	readonly entry: BandSongSummary;
 	readonly songPackage: SongPackage;
 	readonly inputLatencyMs: () => number;
+	readonly missSound: () => boolean;
 	readonly duckDepth: () => DuckDepth;
 	readonly submitIntent: (intent: BandIntent) => void;
 }
@@ -55,8 +57,13 @@ export class PlayRuntime {
 		const audio = BandAudio.create();
 		if (!audio) throw new BandAudioUnavailableError();
 		try {
+			const missSound = new MissSound(audio.context, audio.output, options.missSound);
 			// Joining the call was a user gesture, but the shared context can still be suspended (autoplay policy).
-			await Promise.all([audio.loadStems(songPackage.stems, entry.stems), audio.context.resume().catch(() => {})]);
+			await Promise.all([
+				audio.loadStems(songPackage.stems, entry.stems),
+				missSound.load(),
+				audio.context.resume().catch(() => {}),
+			]);
 			const chart = songPackage.chart();
 			// A seated singer sings live in voice chat; their recorded vocals drop to a guide underneath them.
 			audio.setPartLevel('vocals', state.seats.some((seat) => seat.part === 'vocals') ? GUIDE_VOCAL_GAIN : 1);
@@ -82,6 +89,7 @@ export class PlayRuntime {
 				submitIntent: options.submitIntent,
 				duck: (part) => audio.duck(part, options.duckDepth()),
 				restore: (part) => audio.restore(part),
+				playMissSound: (part) => missSound.play(part),
 				playFinaleNote: (part, lane, mine) => synth.play(part, lane, mine),
 			});
 			return new PlayRuntime(controller, audio, schedule.songZeroContextTime, options);

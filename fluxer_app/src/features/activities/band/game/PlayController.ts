@@ -186,6 +186,8 @@ export interface PlayControllerOptions {
 	// A miss drops the part's stem until the next hit restores it, for every player in the band.
 	readonly duck: (part: BandPart) => void;
 	readonly restore: (part: BandPart) => void;
+	// My own misses and overhits as they are judged; everyone hears their own mistakes, not the band's.
+	readonly playMissSound: (part: InstrumentPart) => void;
 	readonly playFinaleNote: (part: InstrumentPart, lane: number, mine: boolean) => void;
 }
 
@@ -420,14 +422,15 @@ export class PlayController {
 		}
 	}
 
-	private handleEvents(track: SeatTrack, events: ReadonlyArray<JudgeEvent>, broadcast = true): void {
+	// Live judging broadcasts; settling what is left when the song ends or stops does not, and makes no sound either.
+	private handleEvents(track: SeatTrack, events: ReadonlyArray<JudgeEvent>, live = true): void {
 		const {hud} = track;
 		for (const event of events) {
 			if (event.kind === 'overhit') {
 				hud.combo = 0;
 				hud.multiplier = 1;
 				track.feedback = {kind: 'miss', atMs: event.timeMs};
-				this.signalMiss(track);
+				this.signalMiss(track, live);
 				continue;
 			}
 			const index = this.fullIndex[event.groupIndex];
@@ -450,11 +453,11 @@ export class PlayController {
 				track.feedback = {kind: 'miss', atMs: event.timeMs};
 				hud.performance = Math.max(0, hud.performance - PERFORMANCE_MISS);
 				this.advancePhrase(track, index, false);
-				this.signalMiss(track);
+				this.signalMiss(track, live);
 			}
 			hud.combo = event.kind === 'hit' ? event.combo : 0;
 			hud.multiplier = multiplierForStreak(hud.combo);
-			if (broadcast) {
+			if (live) {
 				const message: BandHitMessage = {
 					t: 'band.hit',
 					part: track.part,
@@ -470,8 +473,9 @@ export class PlayController {
 		}
 	}
 
-	private signalMiss(track: SeatTrack): void {
+	private signalMiss(track: SeatTrack, live: boolean): void {
 		this.options.duck(track.part);
+		if (live) this.options.playMissSound(track.part);
 	}
 
 	private addPoints(hud: SeatHud, points: number): void {

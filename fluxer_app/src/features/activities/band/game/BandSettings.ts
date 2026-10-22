@@ -13,12 +13,13 @@ class BandSettingsState {
 	// Positive when presses register late; null until the rhythm test has run on this device.
 	inputLatencyMs: number | null = null;
 	volume = 0.8;
-	// A short muted-string or dull-drum sound on my own misses.
+	// A pick scrape, muted chug or stick click on my own misses, heard only here.
+	missSound = true;
 	duckDepth: DuckDepth = 'strong';
 
 	constructor() {
 		makeAutoObservable(this, {}, {autoBind: true});
-		void makePersistent(this, 'BandSettings', ['inputLatencyMs', 'volume', 'duckDepth']);
+		void makePersistent(this, 'BandSettings', ['inputLatencyMs', 'volume', 'missSound', 'duckDepth']);
 	}
 
 	get effectiveInputLatencyMs(): number {
@@ -31,6 +32,10 @@ class BandSettingsState {
 
 	setVolume(volume: number): void {
 		this.volume = Math.min(1, Math.max(0, volume));
+	}
+
+	setMissSound(enabled: boolean): void {
+		this.missSound = enabled;
 	}
 
 	setDuckDepth(depth: DuckDepth): void {

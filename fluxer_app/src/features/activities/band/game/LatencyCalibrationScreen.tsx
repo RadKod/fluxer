@@ -13,6 +13,7 @@ import {
 } from '@app/features/activities/band/game/LatencyCalibration';
 import styles from '@app/features/activities/band/game/LatencyCalibrationScreen.module.css';
 import {Button} from '@app/features/ui/button/Button';
+import {Switch} from '@app/features/ui/components/form/FormSwitch';
 import {RadioGroup} from '@app/features/ui/radio_group/RadioGroup';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
@@ -75,6 +76,11 @@ const CLOSE_DESCRIPTOR = msg({
 	message: 'Close',
 	context: 'band-rhythm-test',
 	comment: 'Band game rhythm test: leaves the test without changing anything.',
+});
+const MISS_SOUND_DESCRIPTOR = msg({
+	message: 'Miss sound',
+	comment:
+		'Band game settings: switch for the short pick scrape, muted string or drumstick click I hear when I miss a note or press a wrong key. Only I hear it.',
 });
 const DUCK_DEPTH_DESCRIPTOR = msg({
 	message: 'Song dip on a miss',
@@ -277,6 +283,13 @@ const MissFeedbackSettings = observer(function MissFeedbackSettings() {
 			className={styles.settings}
 			data-flx="activities.band.game.latency-calibration-screen.miss-feedback-settings.settings"
 		>
+			<Switch
+				compact
+				label={i18n._(MISS_SOUND_DESCRIPTOR)}
+				value={BandSettings.missSound}
+				onChange={BandSettings.setMissSound}
+				data-flx="activities.band.game.latency-calibration-screen.miss-feedback-settings.switch"
+			/>
 			<p
 				className={styles.settingLabel}
 				data-flx="activities.band.game.latency-calibration-screen.miss-feedback-settings.setting-label"

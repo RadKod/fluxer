@@ -58170,9 +58170,11 @@ msgstr "{count, plural, one {# kişilik} other {# kişilik}}"
 msgid "Your mic is open, sing!"
 msgstr "Mikrofonun açık, söyle!"
 
+#. Band game settings: switch for the short pick scrape, muted string or drumstick
+#. click I hear when I miss a note or press a wrong key. Only I hear it.
 #: src/features/activities/band/game/LatencyCalibrationScreen.tsx
-msgid "Sound effect on a miss"
-msgstr "Kaçırınca ses efekti"
+msgid "Miss sound"
+msgstr "Kaçırma sesi"
 
 #: src/features/activities/band/game/LatencyCalibrationScreen.tsx
 msgid "Song dip on a miss"

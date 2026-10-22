@@ -1,0 +1,18 @@
+sanalyer band game ("Bir Daha Baştan") miss sounds: played only to the player who missed.
+
+file                 part              source
+kacirma-gitar.wav    guitar, rhythm    "Dist_Pick_Cherp5.wav" by SpeedY, Freesound #11811
+                                       https://freesound.org/people/SpeedY/sounds/11811/
+                                       License: Creative Commons 0 (http://creativecommons.org/publicdomain/zero/1.0/)
+kacirma-davul.wav    drums             "found woodstick 2.wav" by apinasaundi, Freesound #405723
+                                       https://freesound.org/people/apinasaundi/sounds/405723/
+                                       License: Creative Commons 0 (http://creativecommons.org/publicdomain/zero/1.0/)
+kacirma-bas.wav      bass, keys        Synthesized by us (palm-muted Karplus-Strong string cluster), no outside source.
+
+CC0 asks for no attribution; it is kept here for the record. The two recordings were cut from Freesound's public
+HQ preview (128 kbit/s MP3) of each sound.
+Processing: trimmed to the onset, 70 Hz high-pass, fade-out, peak normalised to -6 dBFS, mono 48 kHz,
+16-bit PCM WAV with triangular dither (ffmpeg). WAV rather than MP3 so decodeAudioData adds no encoder delay
+in front of the hit and the already lossy source is not encoded a second time.
+Working files, candidates and the synthesis script: sanalyer-sarki-arsiv/kacirma-sesi (adaylar/gitar-A1-pena-surtme,
+adaylar/davul-A2-tahta-baget, adaylar/bas-B1-chug; arac/sentez.py).
