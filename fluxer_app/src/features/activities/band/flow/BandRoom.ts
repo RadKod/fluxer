@@ -116,7 +116,14 @@ export class BandRoom {
 	private start(): void {
 		void this.library.load();
 		this.controller.start();
+		// A reload or a closed window never reaches dispose. Capture runs this before the stores flush their pending
+		// saves on the same event, so the mode put back here is among them.
+		const releaseMic = (event: PageTransitionEvent) => {
+			if (!event.persisted) this.micGuard.releaseForUnload();
+		};
+		window.addEventListener('pagehide', releaseMic, {capture: true});
 		this.disposers.push(
+			() => window.removeEventListener('pagehide', releaseMic, {capture: true}),
 			this.session.onMessage(({from, payload}) => {
 				const cheer = payload as Partial<Record<keyof BandCheerMessage, unknown>> | null;
 				if (cheer?.t === 'band.cheer' && isBandCheerKind(cheer.kind)) {

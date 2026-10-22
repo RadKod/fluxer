@@ -131,7 +131,7 @@ import {KeybindSettingsSchema} from '@fluxer/schema/src/gen/fluxer/user/preferen
 import type {I18n} from '@lingui/core';
 import {computed, makeAutoObservable, runInAction} from 'mobx';
 
-const KEYBIND_STORE_NAME = 'Keybind';
+export const KEYBIND_STORE_NAME = 'Keybind';
 
 export type {KeybindCommand};
 export {isKeybindCommand};
