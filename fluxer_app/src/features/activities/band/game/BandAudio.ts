@@ -20,6 +20,12 @@ const RESTORE_S = 0.08;
 const CLICK_LENGTH_S = 0.05;
 // Audio cannot be scheduled into the past; this is the least lead given on top of the output latency.
 const MIN_START_LEAD_S = 0.25;
+// Rock Band style guide vocal: with someone singing live, the recorded vocals stay underneath at -12 dB, so the
+// band keeps the melody and the singer has something to follow without being doubled.
+export const GUIDE_VOCAL_GAIN = 0.25;
+// The shared voice context soft-clips everything it plays above 0.8. A mastered song peaks near full scale, so at
+// -3 dB it stays under that knee at any volume setting and the call's voices have room on top of it.
+export const SONG_HEADROOM_GAIN = 0.7;
 
 const PLAYABLE_ROLES: ReadonlyArray<StemRole> = [
 	'guitar',
@@ -111,6 +117,7 @@ export class BandAudio {
 		private readonly release: () => void = () => {},
 	) {
 		this.master = context.createGain();
+		this.master.gain.value = SONG_HEADROOM_GAIN;
 		this.master.connect(context.destination);
 	}
 
@@ -193,17 +200,17 @@ export class BandAudio {
 		applyGainPoints(param, restoreEnvelope(this.context.currentTime, channel.level, param.value));
 	}
 
-	// Silences a part outright; the vocals stem while someone sings live.
-	setPartMuted(part: BandPart, muted: boolean): void {
+	// A part's resting level; misses duck from it and hits restore to it. Zero silences the part, misses included.
+	setPartLevel(part: BandPart, level: number): void {
 		const channel = this.channel(part);
-		channel.level = muted ? 0 : 1;
+		channel.level = Math.min(1, Math.max(0, level));
 		const param = channel.gain.gain;
 		param.cancelScheduledValues(this.context.currentTime);
 		param.setValueAtTime(channel.level, this.context.currentTime);
 	}
 
 	setVolume(volume: number): void {
-		const value = Math.min(1, Math.max(0, volume));
+		const value = Math.min(1, Math.max(0, volume)) * SONG_HEADROOM_GAIN;
 		this.master.gain.setTargetAtTime(value, this.context.currentTime, 0.02);
 	}
 

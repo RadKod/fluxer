@@ -53,6 +53,8 @@ export type VoiceRemoteSpeakingEvent =
 			nowMs: number;
 			trackEnded?: boolean;
 			pipelineV2Enabled?: boolean;
+			// This voice plays as sent: any boost goes back to unity and none builds up.
+			boostExempt?: boolean;
 	  }
 	| {type: 'remote.clear'}
 	| {type: 'remote.clearCommands'};
@@ -155,9 +157,9 @@ function updateRemotePlaybackBoost(
 	rms: number,
 	threshold: number,
 	nowMs: number,
-	pipelineV2Enabled = false,
+	levellingOff = false,
 ): {entry: RemoteSpeakingAnalyserState; command: VoiceRemoteSpeakingCommand | null} {
-	if (pipelineV2Enabled) {
+	if (levellingOff) {
 		return entry.playbackBoost !== 1 || entry.appliedBoost !== 1
 			? snapRemotePlaybackBoost(entry)
 			: {entry, command: null};
@@ -199,7 +201,7 @@ function tickRemoteAnalyser(
 		event.rms,
 		event.threshold,
 		event.nowMs,
-		event.pipelineV2Enabled,
+		event.pipelineV2Enabled === true || event.boostExempt === true,
 	);
 	entry = boostUpdate.entry;
 	if (boostUpdate.command) commands.push(boostUpdate.command);

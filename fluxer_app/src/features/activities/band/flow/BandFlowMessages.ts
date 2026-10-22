@@ -2,6 +2,7 @@
 
 import type {BandCheerKind, BandSongSummary} from '@app/features/activities/band/BandProtocol';
 import {type BandDifficulty, type BandPart, isLeadPart} from '@app/features/activities/band/engine/ChartModel';
+import type {BandSingerOutput} from '@app/features/activities/band/flow/BandSingerVoice';
 import type {BandLibraryFailure} from '@app/features/activities/band/flow/BandSongLibrary';
 import type {MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
@@ -198,6 +199,29 @@ export const PICK_NO_MATCH_DESCRIPTOR = msg({
 export const VOCALS_HINT_DESCRIPTOR = msg({
 	message: 'Optional, pitch is measured from your mic',
 	comment: 'Band game: note on the vocals card; singing is optional and scored by pitch from the microphone.',
+});
+export const SINGER_OUTPUT_LABEL_DESCRIPTOR = msg({
+	message: 'What you hear the song on',
+	context: 'band-singer-output',
+	comment:
+		'Band game: accessible name of the Headphones / Speakers choice on my vocals card; it sets how my mic is processed while I sing.',
+});
+export const SINGER_OUTPUT_DESCRIPTORS: Readonly<Record<BandSingerOutput, MessageDescriptor>> = {
+	headphones: msg({
+		message: 'Headphones',
+		context: 'band-singer-output',
+		comment: 'Band game: option on my vocals card; I hear the song on headphones, so my mic picks up only my voice.',
+	}),
+	speakers: msg({
+		message: 'Speakers',
+		context: 'band-singer-output',
+		comment: 'Band game: option on my vocals card; I hear the song on speakers, so my mic keeps echo cancellation.',
+	}),
+};
+export const SINGER_OUTPUT_HINT_DESCRIPTOR = msg({
+	message: 'Headphones give the cleanest voice',
+	context: 'band-singer-output',
+	comment: 'Band game: short tip under the Headphones / Speakers choice on my vocals card.',
 });
 export const KEY_GUIDE_TITLE_DESCRIPTOR = msg({
 	message: 'Your keys',

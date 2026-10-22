@@ -94,4 +94,31 @@ describe('voiceRemoteSpeakingStateMachine playback boost', () => {
 		expect(entry.appliedBoost).toBe(1);
 		expect(silent.commands.at(-1)).toEqual({type: 'clearPlaybackBoost', identity: IDENTITY});
 	});
+
+	it('puts a boosted singer straight back to unity and builds no boost while they are exempt', () => {
+		const boosted = run(attachedSnapshot(), ticks(0, 100, 0.003));
+		expect(boosted.snapshot.context.analysers.get(IDENTITY)!.appliedBoost).toBeGreaterThan(1);
+		const singing = run(
+			boosted.snapshot,
+			ticks(2000, 200, 0.003).map((event) => ({...event, boostExempt: true})),
+		);
+		expect(singing.commands.filter((command) => command.type !== 'setAudioLevelSpeaking')).toEqual([
+			{type: 'clearPlaybackBoost', identity: IDENTITY},
+		]);
+		expect(singing.snapshot.context.analysers.get(IDENTITY)).toMatchObject({
+			speaking: true,
+			appliedBoost: 1,
+			playbackBoost: 1,
+		});
+	});
+
+	it('levels the voice again once the exemption ends', () => {
+		const singing = run(
+			attachedSnapshot(),
+			ticks(0, 100, 0.003).map((event) => ({...event, boostExempt: true})),
+		);
+		expect(boosts(singing.commands)).toEqual([]);
+		const talking = run(singing.snapshot, ticks(100 * TICK_MS, 100, 0.003));
+		expect(Math.max(...boosts(talking.commands))).toBeGreaterThan(1);
+	});
 });

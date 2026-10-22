@@ -5,7 +5,9 @@ import {
 	BandAudio,
 	DUCK_SHAPES,
 	duckEnvelope,
+	GUIDE_VOCAL_GAIN,
 	restoreEnvelope,
+	SONG_HEADROOM_GAIN,
 	stemRoleForPlayback,
 } from '@app/features/activities/band/game/BandAudio';
 import {describe, expect, it, vi} from 'vitest';
@@ -148,16 +150,39 @@ describe('BandAudio', () => {
 		expect(guitarGain.gain.calls).toEqual([]);
 	});
 
-	it('mutes the vocals stem for a live singer and leaves it silent through misses', async () => {
+	it('keeps the vocals stem as a guide under a live singer, at -12 dB', async () => {
 		const {context, gains} = fakeContext({vox: 100});
 		const audio = new BandAudio(context);
 		await audio.loadStems([stem('vocals', 'vox')], true);
-		audio.setPartMuted('vocals', true);
+		audio.setPartLevel('vocals', GUIDE_VOCAL_GAIN);
+		const vocalsGain = gains[1];
+		expect(GUIDE_VOCAL_GAIN).toBe(0.25);
+		expect(20 * Math.log10(GUIDE_VOCAL_GAIN)).toBeCloseTo(-12, 0);
+		expect(vocalsGain.gain.value).toBe(GUIDE_VOCAL_GAIN);
+	});
+
+	it('silences a part set to level zero, misses included', async () => {
+		const {context, gains} = fakeContext({vox: 100});
+		const audio = new BandAudio(context);
+		await audio.loadStems([stem('vocals', 'vox')], true);
+		audio.setPartLevel('vocals', 0);
 		const vocalsGain = gains[1];
 		expect(vocalsGain.gain.value).toBe(0);
 		vocalsGain.gain.calls.length = 0;
 		audio.duck('vocals', 'strong');
 		expect(vocalsGain.gain.calls).toEqual([]);
+	});
+
+	it('plays the song 3 dB down so a full-scale song stays under the voice soft-clip knee', () => {
+		const {context, gains} = fakeContext({});
+		const audio = new BandAudio(context);
+		const master = gains[0];
+		expect(master.gain.value).toBe(SONG_HEADROOM_GAIN);
+		audio.setVolume(1);
+		expect(master.gain.calls.at(-1)).toEqual(['target', SONG_HEADROOM_GAIN, 5]);
+		audio.setVolume(0.5);
+		expect(master.gain.calls.at(-1)).toEqual(['target', 0.5 * SONG_HEADROOM_GAIN, 5]);
+		expect(SONG_HEADROOM_GAIN).toBeLessThan(0.8);
 	});
 
 	it('releases the shared context lease once on dispose', async () => {

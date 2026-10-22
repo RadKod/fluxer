@@ -122,6 +122,31 @@ function resolveBaseVoiceProcessing(
 	}
 }
 
+// How someone singing over music hears it. With headphones the mic picks up only the voice; on speakers it also
+// picks up the music and needs echo cancellation.
+export type VoiceMusicProcessing = 'headphones' | 'speakers';
+
+// A voice over music: noise suppression treats held notes as noise, gain control and the leveller pump against the
+// music, and the gate cuts soft passages, so all of them stay off; the input takes the direct path like studio. On
+// speakers echo cancellation stays on. Stereo capture is left as it was: changing it re-publishes the mic.
+export function applyMusicProcessing(
+	profile: ResolvedVoiceProcessing,
+	music: VoiceMusicProcessing,
+): ResolvedVoiceProcessing {
+	return {
+		...profile,
+		pipelineV2Enabled: false,
+		mode: 'studio',
+		echoCancellation: music === 'speakers',
+		browserNoiseSuppression: false,
+		autoGainControl: false,
+		deepFilter: false,
+		deepFilterNoiseReductionLevel: DEEP_FILTER_NOISE_REDUCTION_LEVEL_MIN,
+		contentHint: 'music',
+		noiseSuppressionBackend: 'none',
+	};
+}
+
 export function resolveVoiceProcessingFromStateForDeviceLabel(
 	store: typeof VoiceSettings,
 	label: string | null | undefined,

@@ -758,7 +758,7 @@ export class VoiceEngineV2AppMediaExecutionAdapter extends Store {
 	}
 
 	private applyMicrophoneContentHint(audioTrack: LocalAudioTrack): void {
-		const profile = resolveVoiceProcessingFromStateForDeviceLabel(VoiceSettings, this.resolveActiveInputDeviceLabel());
+		const profile = this.resolveActiveMicrophoneProfile();
 		if (audioTrack.mediaStreamTrack) {
 			applyContentHintToTrack(audioTrack.mediaStreamTrack, profile.contentHint);
 		}
@@ -1120,7 +1120,7 @@ export class VoiceEngineV2AppMediaExecutionAdapter extends Store {
 	private attachLocalSpeakingDetectorForPublish(ctx: MicrophoneEnableContext, state: MicrophoneEnableState): void {
 		assertObjectLike<MicrophoneEnableContext>(ctx, 'attachLocalSpeakingDetectorForPublish.ctx');
 		assertObjectLike<MicrophoneEnableState>(state, 'attachLocalSpeakingDetectorForPublish.state');
-		const profile = resolveVoiceProcessingFromStateForDeviceLabel(VoiceSettings, this.resolveActiveInputDeviceLabel());
+		const profile = this.resolveActiveMicrophoneProfile();
 		if (state.audioTrack?.mediaStreamTrack) {
 			applyContentHintToTrack(state.audioTrack.mediaStreamTrack, profile.contentHint);
 		}

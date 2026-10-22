@@ -34,6 +34,7 @@ import {
 import ParticipantVolume from '@app/features/voice/state/ParticipantVolume';
 import {
 	clearRemoteVoicePlaybackBoost,
+	isRemoteVoicePlaybackBoostExempt,
 	setRemoteVoicePlaybackBoost,
 } from '@app/features/voice/state/RemoteVoicePlaybackBoost';
 import {readVoicePipelineV2Enabled} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime';
@@ -316,6 +317,7 @@ export class VoiceEngineV2AppRemoteSpeakingAdapter {
 				threshold,
 				nowMs,
 				pipelineV2Enabled,
+				boostExempt: isRemoteVoicePlaybackBoostExempt(handle.identity),
 			}),
 		);
 		handle.nextTickAtMs = nowMs + SPEAKING_ANALYSER_INTERVAL_MS;

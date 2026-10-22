@@ -2,6 +2,7 @@
 
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import VoiceNoiseSuppressionRollout from '@app/features/voice/state/VoiceNoiseSuppressionRollout';
+import VoiceProcessingOverride from '@app/features/voice/state/VoiceProcessingOverride';
 import VoiceSettings from '@app/features/voice/state/VoiceSettings';
 import NoiseSuppressionAvailability from '@app/features/voice/utils/noise_suppression/NoiseSuppressionAvailability';
 import type {VoiceNoiseSuppressionBackend} from '@app/features/voice/utils/noise_suppression/NoiseSuppressionBackends';
@@ -13,6 +14,7 @@ import {
 	resolveNoiseSuppressionBackend,
 } from '@app/features/voice/utils/noise_suppression/NoiseSuppressionSelection';
 import {
+	applyMusicProcessing,
 	getActiveInputDeviceLabel,
 	type ResolvedVoiceProcessing,
 	resolveVoiceProcessing,
@@ -30,12 +32,15 @@ export function resolveRuntimeVoiceProcessing(profile: ResolvedVoiceProcessing):
 		requested.noiseSuppressionBackend,
 		requested.pipelineV2Enabled,
 	);
-	return {
+	const runtime = {
 		...requested,
 		noiseSuppressionBackend: backend,
 		deepFilter: backend === 'deep_filter',
 		browserNoiseSuppression: backend === 'standard',
 	};
+	// Laid over last so the noise suppression rollout cannot bring the suppressor or the leveller back mid-song.
+	const music = VoiceProcessingOverride.music;
+	return music ? applyMusicProcessing(runtime, music) : runtime;
 }
 
 export function readVoicePipelineV2Enabled(): boolean {

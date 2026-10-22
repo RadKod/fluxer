@@ -35,6 +35,9 @@ import {
 	RETRY_DESCRIPTOR,
 	SEAT_DOWNLOAD_PROGRESS_DESCRIPTOR,
 	SEAT_DOWNLOADING_DESCRIPTOR,
+	SINGER_OUTPUT_DESCRIPTORS,
+	SINGER_OUTPUT_HINT_DESCRIPTOR,
+	SINGER_OUTPUT_LABEL_DESCRIPTOR,
 	SONG_FAILED_DESCRIPTOR,
 	SONG_SUBTITLE_DESCRIPTOR,
 	TAKE_PART_DESCRIPTOR,
@@ -46,6 +49,7 @@ import {
 import {type BandLaneColour, bandPartKeys} from '@app/features/activities/band/flow/BandKeyGuide';
 import type {BandRoom} from '@app/features/activities/band/flow/BandRoom';
 import {songPartDifficulties} from '@app/features/activities/band/flow/BandRoomMachine';
+import type {BandSingerOutput} from '@app/features/activities/band/flow/BandSingerVoice';
 import {BandPartIcon} from '@app/features/activities/band/flow/components/BandPartIcon';
 import {BandAvatar, bandDisplayName} from '@app/features/activities/band/flow/components/BandPeople';
 import {BandSongCover} from '@app/features/activities/band/flow/components/BandSongCover';
@@ -355,6 +359,46 @@ const PartCard = observer(function PartCard({room, song, part, seat}: PartCardPr
 	);
 });
 
+const SINGER_OUTPUTS: ReadonlyArray<BandSingerOutput> = ['headphones', 'speakers'];
+
+// Sets how my mic is processed while I sing; it takes effect at the next song's countdown.
+const SingerOutputChoice = observer(function SingerOutputChoice({room}: {readonly room: BandRoom}) {
+	const {i18n} = useLingui();
+	return (
+		<div
+			className={styles.singerOutput}
+			data-flx="activities.band.flow.select-screen.singer-output-choice.singer-output"
+		>
+			<div
+				className={styles.segmented}
+				role="radiogroup"
+				aria-label={i18n._(SINGER_OUTPUT_LABEL_DESCRIPTOR)}
+				data-flx="activities.band.flow.select-screen.singer-output-choice.segmented"
+			>
+				{SINGER_OUTPUTS.map((output) => (
+					<button
+						key={output}
+						type="button"
+						role="radio"
+						aria-checked={output === room.singerOutput}
+						className={clsx(styles.segment, output === room.singerOutput && styles.segmentOn)}
+						onClick={() => room.setSingerOutput(output)}
+						data-flx="activities.band.flow.select-screen.singer-output-choice.segment.set-singer-output.button"
+					>
+						{i18n._(SINGER_OUTPUT_DESCRIPTORS[output])}
+					</button>
+				))}
+			</div>
+			<span
+				className={styles.singerOutputHint}
+				data-flx="activities.band.flow.select-screen.singer-output-choice.singer-output-hint"
+			>
+				{i18n._(SINGER_OUTPUT_HINT_DESCRIPTOR)}
+			</span>
+		</div>
+	);
+});
+
 const VocalsCard = observer(function VocalsCard({
 	room,
 	song,
@@ -401,6 +445,12 @@ const VocalsCard = observer(function VocalsCard({
 				optionClassName={styles.vocalsDifficulty}
 				data-flx="activities.band.flow.select-screen.vocals-card.vocals-difficulties"
 			/>
+			{mine && (
+				<SingerOutputChoice
+					room={room}
+					data-flx="activities.band.flow.select-screen.vocals-card.singer-output-choice"
+				/>
+			)}
 			<SeatActions
 				room={room}
 				part="vocals"

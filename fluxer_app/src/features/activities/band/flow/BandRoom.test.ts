@@ -6,10 +6,11 @@ import type {SongPackage} from '@app/features/activities/band/engine/SongPackage
 import {BandLeaderController} from '@app/features/activities/band/flow/BandLeaderController';
 import type {BandMicPort} from '@app/features/activities/band/flow/BandMicGuard';
 import {BandRoom} from '@app/features/activities/band/flow/BandRoom';
+import type {BandSingerOutputStorage, BandVoicePort} from '@app/features/activities/band/flow/BandSingerVoice';
 import {BandSongLibrary} from '@app/features/activities/band/flow/BandSongLibrary';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
-vi.mock('@app/features/activities/band/flow/BandMicPort', () => ({VOICE_MIC_PORT: null}));
+vi.mock('@app/features/activities/band/flow/BandMicPort', () => ({VOICE_MIC_PORT: null, VOICE_SINGER_PORT: null}));
 vi.mock('@app/features/activities/state/VoiceActivities', () => ({default: {live: null}}));
 
 const SONG: BandSongSummary = {
@@ -24,6 +25,8 @@ const SONG: BandSongSummary = {
 	packageBytes: 1,
 	addedBy: null,
 };
+
+const VOICE_PORT: BandVoicePort = {setSingerMic: () => {}, setUnlevelledVoices: () => {}};
 
 const MIC_PORT: BandMicPort = {
 	hasPushToTalkKey: () => false,
@@ -73,7 +76,7 @@ describe('BandRoom', () => {
 		};
 		session.setState(select);
 		library = new StubLibrary();
-		room = new BandRoom(session, {library, micPort: MIC_PORT});
+		room = new BandRoom(session, {library, micPort: MIC_PORT, voicePort: VOICE_PORT});
 		await vi.advanceTimersByTimeAsync(0);
 	});
 
@@ -103,5 +106,138 @@ describe('BandRoom', () => {
 		expect(room.mySeat).toMatchObject({loaded: true, ready: false});
 		room.send({t: 'band.ready', ready: true});
 		expect(room.state?.phase).toBe('play');
+	});
+});
+
+describe('BandRoom singer voice', () => {
+	const COUNTDOWN_MS = 4_000;
+	let session: FakeActivitySession;
+	let voicePort: {setSingerMic: ReturnType<typeof vi.fn>; setUnlevelledVoices: ReturnType<typeof vi.fn>};
+	let stored: Map<string, string>;
+	let room: BandRoom | null;
+
+	const storage = (): BandSingerOutputStorage => ({
+		getItem: (key) => stored.get(key) ?? null,
+		setItem: (key, value) => void stored.set(key, value),
+	});
+
+	function playState(vocalsUserId: string, startAt = Date.now() + COUNTDOWN_MS): BandState {
+		return {
+			phase: 'play',
+			songId: SONG.id,
+			startAt,
+			seats: [
+				{part: 'vocals', userId: vocalsUserId, difficulty: 'expert', ready: true, loaded: true},
+				{part: 'guitar', userId: vocalsUserId === 'me' ? 'friend' : 'me', difficulty: 'expert', ready: true},
+			],
+		};
+	}
+
+	function resultsState(): BandState {
+		return {phase: 'results', songId: SONG.id, seats: [], results: [], ratings: {}, endsAt: Date.now() + 25_000};
+	}
+
+	function openRoom(): BandRoom {
+		room = new BandRoom(session, {
+			library: new StubLibrary(),
+			micPort: MIC_PORT,
+			voicePort: voicePort as unknown as BandVoicePort,
+			singerOutputStorage: storage,
+		});
+		return room;
+	}
+
+	beforeEach(() => {
+		vi.useFakeTimers({now: 1_700_000_000_000});
+		vi.stubGlobal('window', new EventTarget());
+		session = new FakeActivitySession({activityId: 'band', myUserId: 'me', localNow: () => Date.now()});
+		voicePort = {setSingerMic: vi.fn(), setUnlevelledVoices: vi.fn()};
+		stored = new Map();
+		room = null;
+	});
+
+	afterEach(() => {
+		room?.dispose();
+		session.dispose();
+		vi.restoreAllMocks();
+		vi.unstubAllGlobals();
+		vi.useRealTimers();
+	});
+
+	it('switches my mic to music processing in the countdown and back when the song ends', () => {
+		openRoom();
+		session.setState(playState('me'));
+		expect(voicePort.setSingerMic.mock.calls).toEqual([['speakers']]);
+		vi.advanceTimersByTime(COUNTDOWN_MS + 1_000);
+		expect(voicePort.setSingerMic).toHaveBeenCalledTimes(1);
+		session.setState(resultsState());
+		expect(voicePort.setSingerMic.mock.calls).toEqual([['speakers'], [null]]);
+	});
+
+	it('defaults to speakers and remembers headphones per user', () => {
+		const first = openRoom();
+		expect(first.singerOutput).toBe('speakers');
+		first.setSingerOutput('headphones');
+		expect(stored.get('sanalyer:band-singer-output:me')).toBe('headphones');
+		first.dispose();
+		const second = openRoom();
+		expect(second.singerOutput).toBe('headphones');
+		session.setState(playState('me'));
+		expect(voicePort.setSingerMic).toHaveBeenLastCalledWith('headphones');
+	});
+
+	it('keeps the default when storage refuses', () => {
+		room = new BandRoom(session, {
+			library: new StubLibrary(),
+			micPort: MIC_PORT,
+			voicePort: voicePort as unknown as BandVoicePort,
+			singerOutputStorage: () => {
+				throw new Error('denied');
+			},
+		});
+		expect(room.singerOutput).toBe('speakers');
+		room.setSingerOutput('headphones');
+		expect(room.singerOutput).toBe('headphones');
+	});
+
+	it('does not switch mid-song: a choice changed during the song waits for the next one', () => {
+		const current = openRoom();
+		session.setState(playState('me'));
+		current.setSingerOutput('headphones');
+		expect(voicePort.setSingerMic.mock.calls).toEqual([['speakers']]);
+	});
+
+	it('leaves the mic alone when the song was already playing when I first saw it', () => {
+		openRoom();
+		session.setState(playState('me', Date.now() - 1_000));
+		expect(voicePort.setSingerMic).not.toHaveBeenCalled();
+		session.setState(resultsState());
+		expect(voicePort.setSingerMic).not.toHaveBeenCalled();
+	});
+
+	it('puts my mic back when I lose the vocals seat', () => {
+		openRoom();
+		session.setState(playState('me'));
+		session.setState(playState('friend'));
+		expect(voicePort.setSingerMic.mock.calls).toEqual([['speakers'], [null]]);
+	});
+
+	it('puts my mic back and levels everyone again when the room goes away', () => {
+		const current = openRoom();
+		session.setState(playState('me'));
+		current.dispose();
+		expect(voicePort.setSingerMic.mock.calls).toEqual([['speakers'], [null]]);
+		expect(voicePort.setUnlevelledVoices).toHaveBeenLastCalledWith([]);
+	});
+
+	it('stops levelling whoever sings while the song plays, and only then', () => {
+		openRoom();
+		expect(voicePort.setUnlevelledVoices.mock.calls).toEqual([[[]]]);
+		session.setState(playState('friend'));
+		expect(voicePort.setUnlevelledVoices).toHaveBeenLastCalledWith(['friend']);
+		expect(voicePort.setSingerMic).not.toHaveBeenCalled();
+		session.setState(resultsState());
+		expect(voicePort.setUnlevelledVoices).toHaveBeenLastCalledWith([]);
+		expect(voicePort.setUnlevelledVoices).toHaveBeenCalledTimes(3);
 	});
 });

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Everything the band game keeps per session on this client: the leader controller, the song library, the crowd and
-// the mic guard. It outlives the View on purpose: closing the panel must not stop the leader from running the room,
-// nor drop a download in progress. One room exists at a time; it ends with its session.
+// Everything the band game keeps per session on this client: the leader controller, the song library, the crowd, the
+// mic guard and the singer's voice processing. It outlives the View on purpose: closing the panel must not stop the
+// leader from running the room, nor drop a download in progress. One room exists at a time; it ends with its session.
 
 import type {
 	BandCheerKind,
@@ -15,8 +15,17 @@ import type {SongPackage} from '@app/features/activities/band/engine/SongPackage
 import {BandCrowd, isBandCheerKind} from '@app/features/activities/band/flow/BandCrowd';
 import {BandLeaderController} from '@app/features/activities/band/flow/BandLeaderController';
 import {BandMicGuard, type BandMicPort} from '@app/features/activities/band/flow/BandMicGuard';
-import {VOICE_MIC_PORT} from '@app/features/activities/band/flow/BandMicPort';
+import {VOICE_MIC_PORT, VOICE_SINGER_PORT} from '@app/features/activities/band/flow/BandMicPort';
 import {type BandRoomContext, isBandState} from '@app/features/activities/band/flow/BandRoomMachine';
+import {
+	BandSingerMic,
+	type BandSingerOutput,
+	type BandSingerOutputStorage,
+	type BandVoicePort,
+	browserSingerOutputStorage,
+	readSingerOutput,
+	writeSingerOutput,
+} from '@app/features/activities/band/flow/BandSingerVoice';
 import {
 	type BandLibraryFailure,
 	BandSongLibrary,
@@ -24,7 +33,7 @@ import {
 } from '@app/features/activities/band/flow/BandSongLibrary';
 import type {ActivitySession} from '@app/features/activities/session/ActivitySessionTypes';
 import VoiceActivities from '@app/features/activities/state/VoiceActivities';
-import {action, computed, makeObservable, observableRef, reaction} from 'mobx';
+import {action, compareStructural, computed, makeObservable, observable, observableRef, reaction} from 'mobx';
 
 export type BandSongPackageState =
 	| {readonly songId: string; readonly status: 'loading'}
@@ -35,8 +44,13 @@ export class BandRoom {
 	readonly library: BandSongLibrary;
 	readonly crowd = new BandCrowd();
 	songPackage: BandSongPackageState | null = null;
+	// What I hear the song on when I sing; remembered per user on this device.
+	singerOutput: BandSingerOutput;
 	private readonly controller: BandLeaderController;
 	private readonly micGuard: BandMicGuard;
+	private readonly singerMic: BandSingerMic;
+	private readonly voicePort: BandVoicePort;
+	private readonly singerOutputStorage: () => BandSingerOutputStorage;
 	private readonly disposers: Array<() => void> = [];
 	private disposed = false;
 
@@ -45,13 +59,30 @@ export class BandRoom {
 		{
 			library = new BandSongLibrary(),
 			micPort = VOICE_MIC_PORT,
-		}: {library?: BandSongLibrary; micPort?: BandMicPort} = {},
+			voicePort = VOICE_SINGER_PORT,
+			singerOutputStorage = browserSingerOutputStorage,
+		}: {
+			library?: BandSongLibrary;
+			micPort?: BandMicPort;
+			voicePort?: BandVoicePort;
+			singerOutputStorage?: () => BandSingerOutputStorage;
+		} = {},
 	) {
 		this.library = library;
 		this.micGuard = new BandMicGuard(micPort);
+		this.voicePort = voicePort;
+		this.singerOutputStorage = singerOutputStorage;
+		this.singerOutput = readSingerOutput(singerOutputStorage, session.me.userId);
+		this.singerMic = new BandSingerMic(
+			voicePort,
+			() => session.clock.now(),
+			() => this.singerOutput,
+		);
 		this.controller = new BandLeaderController(session, () => this.context);
 		makeObservable<BandRoom, 'setSongPackage'>(this, {
 			songPackage: observableRef,
+			singerOutput: observable,
+			setSingerOutput: action,
 			state: computed,
 			context: computed,
 			mySeat: computed,
@@ -109,6 +140,11 @@ export class BandRoom {
 		void this.session.send({t: 'band.cheer', kind}, {reliable: false});
 	}
 
+	setSingerOutput(output: BandSingerOutput): void {
+		this.singerOutput = output;
+		writeSingerOutput(this.singerOutputStorage, this.myUserId, output);
+	}
+
 	retrySongPackage(): void {
 		const current = this.songPackage;
 		if (current?.status === 'failed') this.loadSongPackage(current.songId);
@@ -118,6 +154,8 @@ export class BandRoom {
 		if (this.disposed) return;
 		this.disposed = true;
 		this.micGuard.update(null);
+		this.singerMic.release();
+		this.voicePort.setUnlevelledVoices([]);
 		this.controller.stop();
 		for (const dispose of this.disposers.splice(0)) dispose();
 	}
@@ -175,6 +213,25 @@ export class BandRoom {
 				() => (this.state?.phase === 'play' ? (this.mySeat?.part ?? null) : null),
 				(part) => this.micGuard.update(part),
 				{fireImmediately: true},
+			),
+			// Switched during the countdown and back at the song's end; never in between.
+			reaction(
+				() => {
+					const state = this.state;
+					return state?.phase === 'play' && this.mySeat?.part === 'vocals' ? state.startAt : null;
+				},
+				(startAt) => this.singerMic.update(startAt),
+				{fireImmediately: true},
+			),
+			// Every client knows the seats, so each one stops levelling the singer for the song.
+			reaction(
+				() => {
+					const state = this.state;
+					if (state?.phase !== 'play') return [];
+					return state.seats.filter((seat) => seat.part === 'vocals').map((seat) => seat.userId);
+				},
+				(userIds) => this.voicePort.setUnlevelledVoices(userIds),
+				{fireImmediately: true, equals: compareStructural},
 			),
 			reaction(
 				() => {

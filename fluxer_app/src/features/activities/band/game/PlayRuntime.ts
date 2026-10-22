@@ -7,7 +7,7 @@ import {
 	songTimeMs,
 } from '@app/features/activities/band/engine/SessionClock';
 import type {SongPackage} from '@app/features/activities/band/engine/SongPackage';
-import {BandAudio} from '@app/features/activities/band/game/BandAudio';
+import {BandAudio, GUIDE_VOCAL_GAIN} from '@app/features/activities/band/game/BandAudio';
 import {inputSongTimeMs} from '@app/features/activities/band/game/BandInput';
 import type {DuckDepth} from '@app/features/activities/band/game/BandSettings';
 import {FinaleSynth} from '@app/features/activities/band/game/FinaleSynth';
@@ -58,11 +58,8 @@ export class PlayRuntime {
 			// Joining the call was a user gesture, but the shared context can still be suspended (autoplay policy).
 			await Promise.all([audio.loadStems(songPackage.stems, entry.stems), audio.context.resume().catch(() => {})]);
 			const chart = songPackage.chart();
-			// A seated singer sings live in voice chat; their recorded vocals would double them.
-			audio.setPartMuted(
-				'vocals',
-				state.seats.some((seat) => seat.part === 'vocals'),
-			);
+			// A seated singer sings live in voice chat; their recorded vocals drop to a guide underneath them.
+			audio.setPartLevel('vocals', state.seats.some((seat) => seat.part === 'vocals') ? GUIDE_VOCAL_GAIN : 1);
 
 			const anchor = audio.readAnchor();
 			const schedule = scheduleSongStart(

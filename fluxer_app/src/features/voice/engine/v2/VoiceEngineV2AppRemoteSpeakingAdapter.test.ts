@@ -15,9 +15,15 @@ vi.mock('@app/features/voice/engine/VoiceMediaEngineBridge', () => ({
 	setVoiceEngineV2ParticipantAudioLevelSpeaking: vi.fn(),
 }));
 vi.mock('@app/features/voice/state/ParticipantVolume', () => ({default: {applySettingsToParticipant: vi.fn()}}));
+const boost = vi.hoisted(() => ({
+	exempt: false,
+	clear: vi.fn(),
+	set: vi.fn(),
+}));
 vi.mock('@app/features/voice/state/RemoteVoicePlaybackBoost', () => ({
-	clearRemoteVoicePlaybackBoost: vi.fn(),
-	setRemoteVoicePlaybackBoost: vi.fn(),
+	clearRemoteVoicePlaybackBoost: boost.clear,
+	setRemoteVoicePlaybackBoost: boost.set,
+	isRemoteVoicePlaybackBoostExempt: () => boost.exempt,
 }));
 vi.mock('@app/features/voice/state/VoiceSettings', () => ({default: {getVadThreshold: () => -60}}));
 vi.mock('@app/features/voice/utils/noise_suppression/NoiseSuppressionRuntime', () => ({
@@ -30,8 +36,12 @@ class FakeNode {
 	readonly disconnect = vi.fn();
 	fftSize = 2048;
 	smoothingTimeConstant = 0.8;
-	getFloatTimeDomainData(): void {}
+	getFloatTimeDomainData(samples: Float32Array): void {
+		samples.fill(signalLevel);
+	}
 }
+
+let signalLevel = 0;
 
 class FakeAudioContext {
 	state = 'running';
@@ -95,6 +105,10 @@ beforeEach(() => {
 
 afterEach(() => {
 	vi.unstubAllGlobals();
+	boost.exempt = false;
+	boost.clear.mockClear();
+	boost.set.mockClear();
+	signalLevel = 0;
 });
 
 describe('remote speaking analyser source nodes', () => {
@@ -161,5 +175,27 @@ describe('remote speaking analyser source nodes', () => {
 		attach(adapter, publication);
 		expect(previous.createMediaStreamSource).toHaveBeenCalledTimes(1);
 		expect(context.createMediaStreamSource).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('remote playback boost for an exempt voice', () => {
+	function tickFor(adapter: Adapter, fromMs: number, durationMs: number): number {
+		let nowMs = fromMs;
+		for (; nowMs < fromMs + durationMs; nowMs += 50) adapter.tickHost(nowMs);
+		return nowMs;
+	}
+
+	it('drops a built-up boost back to unity as soon as the voice is exempt, and keeps it there', () => {
+		const adapter = new VoiceEngineV2AppRemoteSpeakingAdapter({autoSchedule: false});
+		attach(adapter, fakePublication(fakeTrack()));
+		signalLevel = 0.003;
+		const nowMs = tickFor(adapter, 100, 5_000);
+		expect(Math.max(...boost.set.mock.calls.map(([, value]) => value as number))).toBeGreaterThan(1);
+		boost.clear.mockClear();
+		boost.set.mockClear();
+		boost.exempt = true;
+		tickFor(adapter, nowMs, 5_000);
+		expect(boost.clear.mock.calls).toEqual([[participant.identity]]);
+		expect(boost.set).not.toHaveBeenCalled();
 	});
 });

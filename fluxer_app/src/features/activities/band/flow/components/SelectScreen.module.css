@@ -89,6 +89,20 @@
 	padding: 0 0.625rem;
 }
 
+/* My Headphones / Speakers choice while I hold the vocals seat. */
+.singerOutput {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.25rem;
+}
+
+.singerOutputHint {
+	color: var(--band-t3);
+	font-size: 0.6875rem;
+	white-space: nowrap;
+}
+
 .vocalsActions {
 	display: flex;
 	gap: 0.3125rem;

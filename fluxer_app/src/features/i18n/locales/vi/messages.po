@@ -58091,3 +58091,30 @@ msgstr "Downloading"
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "Waiting for the song to download"
 msgstr "Waiting for the song to download"
+
+#. Band game: accessible name of the Headphones / Speakers choice on my vocals card;
+#. it sets how my mic is processed while I sing.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-singer-output"
+msgid "What you hear the song on"
+msgstr "What you hear the song on"
+
+#. Band game: option on my vocals card; I hear the song on headphones, so my mic
+#. picks up only my voice.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-singer-output"
+msgid "Headphones"
+msgstr "Headphones"
+
+#. Band game: option on my vocals card; I hear the song on speakers, so my mic keeps
+#. echo cancellation.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-singer-output"
+msgid "Speakers"
+msgstr "Speakers"
+
+#. Band game: short tip under the Headphones / Speakers choice on my vocals card.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-singer-output"
+msgid "Headphones give the cleanest voice"
+msgstr "Headphones give the cleanest voice"

@@ -13,6 +13,7 @@ import {
 } from '@app/features/voice/engine/v2/VoiceEngineV2AppAudioSettingsSync';
 import ParticipantVolume from '@app/features/voice/state/ParticipantVolume';
 import StreamAudioPrefs from '@app/features/voice/state/StreamAudioPrefs';
+import VoiceProcessingOverride from '@app/features/voice/state/VoiceProcessingOverride';
 import VoiceSettings from '@app/features/voice/state/VoiceSettings';
 import NoiseSuppressionAvailability from '@app/features/voice/utils/noise_suppression/NoiseSuppressionAvailability';
 import type {Room} from 'livekit-client';
@@ -58,6 +59,7 @@ function createVoiceEngineV2AppAudioPreferencesSyncSources(): VoiceEngineV2AppAu
 	return {
 		stores: [
 			VoiceSettings,
+			VoiceProcessingOverride,
 			{subscribe: (listener) => reaction(() => ExperimentAssignments.response, listener)},
 			VoiceDevicePermissionState,
 			ParticipantVolume,
