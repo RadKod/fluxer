@@ -40,6 +40,8 @@ export type BandSongPackageState =
 	| {readonly songId: string; readonly status: 'ready'; readonly songPackage: SongPackage}
 	| {readonly songId: string; readonly status: 'failed'; readonly reason: BandLibraryFailure};
 
+const LOADED_RESEND_MS = 3_000;
+
 export class BandRoom {
 	readonly library: BandSongLibrary;
 	readonly crowd = new BandCrowd();
@@ -169,7 +171,17 @@ export class BandRoom {
 			if (!event.persisted) this.micGuard.releaseForUnload();
 		};
 		window.addEventListener('pagehide', releaseMic, {capture: true});
+		// Until the leader shows my seat loaded, the report goes again every few seconds: a lost message or a new leader
+		// would otherwise leave me 'downloading' with the song on disk.
+		const resendLoaded = setInterval(() => {
+			const state = this.state;
+			const seat = this.mySeat;
+			if (state?.phase === 'select' && seat && seat.loaded !== true && this.songLoaded) {
+				this.send({t: 'band.loaded', songId: state.songId});
+			}
+		}, LOADED_RESEND_MS);
 		this.disposers.push(
+			() => clearInterval(resendLoaded),
 			() => window.removeEventListener('pagehide', releaseMic, {capture: true}),
 			this.session.onMessage(({from, payload}) => {
 				const cheer = payload as Partial<Record<keyof BandCheerMessage, unknown>> | null;

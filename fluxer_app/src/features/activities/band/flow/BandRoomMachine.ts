@@ -364,9 +364,12 @@ export function reduceBandIntent(
 			return state.phase === 'select' && fromLeader ? setGroupDifficulty(state, intent.difficulty, ctx) : state;
 		case 'band.ready': {
 			if (state.phase !== 'select') return state;
-			// Ready before the package has loaded would start the song on a client that cannot play it yet.
+			// A client only says ready once its package is open, so ready also counts as loaded. A client from before
+			// the loaded report never sends one; refusing its ready would hold the song until the timer drops it.
 			return settleSelect(
-				updateSeat(state, fromUserId, (seat) => ({...seat, ready: intent.ready && seat.loaded === true})),
+				updateSeat(state, fromUserId, (seat) =>
+					intent.ready ? {...seat, ready: true, loaded: true} : {...seat, ready: false},
+				),
 				now,
 				ctx,
 			);

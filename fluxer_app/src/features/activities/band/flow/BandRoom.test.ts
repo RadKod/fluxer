@@ -108,6 +108,16 @@ describe('BandRoom', () => {
 		expect(room.state?.phase).toBe('play');
 	});
 
+	it('reports the package again when the first report is lost', async () => {
+		const lost = vi.spyOn(BandLeaderController.prototype, 'sendIntent').mockImplementation(() => {});
+		library.finishDownload({} as SongPackage);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(room.mySeat).toMatchObject({loaded: false});
+		lost.mockRestore();
+		await vi.advanceTimersByTimeAsync(3_000);
+		expect(room.mySeat).toMatchObject({loaded: true});
+	});
+
 	it('reports a package already on disk when I take a seat afterwards', async () => {
 		session.setState({
 			phase: 'select',

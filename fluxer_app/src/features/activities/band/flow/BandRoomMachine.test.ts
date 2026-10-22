@@ -533,9 +533,14 @@ describe('song package loading', () => {
 		) as Select;
 	}
 
-	it('refuses ready before the package has loaded, and takes it once it has', () => {
+	it('takes ready from a client that never reports loading (an older version) as loaded', () => {
 		const state = downloading();
-		expect(apply(state, {t: 'band.ready', ready: true}, 'u2', ROOM)).toBe(state);
+		const ready = apply(state, {t: 'band.ready', ready: true}, 'u2', ROOM);
+		expect(ready.phase).toBe('play');
+	});
+
+	it('marks the seat loaded on its report, then starts on ready', () => {
+		const state = downloading();
 		const loaded = apply(state, {t: 'band.loaded', songId: 'a'}, 'u2', ROOM);
 		expect(loaded.phase === 'select' && loaded.seats.find((seat) => seat.userId === 'u2')).toMatchObject({
 			loaded: true,
