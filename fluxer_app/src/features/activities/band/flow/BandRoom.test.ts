@@ -107,6 +107,28 @@ describe('BandRoom', () => {
 		room.send({t: 'band.ready', ready: true});
 		expect(room.state?.phase).toBe('play');
 	});
+
+	it('reports a package already on disk when I take a seat afterwards', async () => {
+		session.setState({
+			phase: 'select',
+			songId: SONG.id,
+			groupDifficulty: 'expert',
+			seats: [],
+			watching: [],
+			endsAt: Date.now() + 20_000,
+			loadWaitUntil: null,
+		});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(room.mySeat).toBeUndefined();
+		library.finishDownload({} as SongPackage);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(room.songLoaded).toBe(true);
+		room.send({t: 'band.claimSeat', part: 'guitar'});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(room.mySeat).toMatchObject({part: 'guitar', loaded: true});
+		room.send({t: 'band.ready', ready: true});
+		expect(room.state?.phase).toBe('play');
+	});
 });
 
 describe('BandRoom singer voice', () => {

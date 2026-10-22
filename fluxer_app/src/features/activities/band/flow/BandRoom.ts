@@ -188,14 +188,18 @@ export class BandRoom {
 				{fireImmediately: true},
 			),
 			// The leader holds the song until every seat has its package. Sent whenever my seat does not show it yet, so a
-			// seat taken after watching, or one under a new leader, reports again.
+			// seat taken after watching, or one under a new leader, reports again. Only with a seat: the leader drops it
+			// otherwise, and a package already on disk would never report again once I sit down.
 			reaction(
 				() => {
 					const state = this.state;
-					return state?.phase === 'select' && this.mySeat?.loaded !== true && this.songLoaded ? state.songId : null;
+					const seat = this.mySeat;
+					if (state?.phase !== 'select' || !seat || seat.loaded === true || !this.songLoaded) return null;
+					return `${state.songId}:${seat.part}`;
 				},
-				(songId) => {
-					if (songId) this.send({t: 'band.loaded', songId});
+				(key) => {
+					const state = this.state;
+					if (key && state?.phase === 'select') this.send({t: 'band.loaded', songId: state.songId});
 				},
 				{fireImmediately: true},
 			),
