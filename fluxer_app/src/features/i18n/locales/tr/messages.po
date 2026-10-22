@@ -58295,3 +58295,16 @@ msgstr "Oy alanlar"
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "{seconds} s until the most voted song opens"
 msgstr "{seconds} sn sonra en çok oy alan açılıyor"
+
+#. Band game: a seated player is still downloading the song file and cannot be ready
+#. yet.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-seat-download"
+msgid "Downloading"
+msgstr "İniyor"
+
+#. Band game: the pick timer ran out but some players are still downloading the
+#. song; it starts when they finish, or without them when this extra wait runs out.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Waiting for the song to download"
+msgstr "Şarkı iniyor, bekleniyor"

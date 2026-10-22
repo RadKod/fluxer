@@ -136,11 +136,15 @@ function setupRoom({secondPeerLoads = true}: {secondPeerLoads?: boolean} = {}) {
 		await vi.advanceTimersByTimeAsync(LATENCY_MS * 2);
 		controller.sendIntent({t: 'band.playNow', songId: SONG.id});
 		await vi.advanceTimersByTimeAsync(LATENCY_MS * 2);
+		const loaded: BandIntent = {t: 'band.loaded', songId: SONG.id};
 		controller.sendIntent({t: 'band.claimSeat', part: 'guitar'});
+		controller.sendIntent(loaded);
 		controller.sendIntent({t: 'band.ready', ready: true});
 		ayse.send({t: 'band.claimSeat', part: 'bass'}, toLeader);
+		ayse.send(loaded, toLeader);
 		ayse.send({t: 'band.ready', ready: true}, toLeader);
 		mert.send({t: 'band.claimSeat', part: 'drums'}, toLeader);
+		mert.send(loaded, toLeader);
 		mert.send({t: 'band.ready', ready: true}, toLeader);
 		await advanceUntil('play', 1_000);
 		return (state() as PlayState).startAt;

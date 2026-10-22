@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {
+	BAND_LOAD_WAIT_MS,
 	BAND_PHASE_MS,
 	BAND_RESULT_WAIT_MS,
 	BAND_SUGGESTIONS,
@@ -9,6 +10,7 @@ import {
 	type BandSongSummary,
 	type BandState,
 } from '@app/features/activities/band/BandProtocol';
+import type {BandPart} from '@app/features/activities/band/engine/ChartModel';
 import {
 	BAND_PLAY_GRACE_MS,
 	type BandPlayState,
@@ -127,6 +129,14 @@ function applyAll(state: BandState, steps: ReadonlyArray<[BandIntent, string]>, 
 	return steps.reduce((current, [intent, from]) => apply(current, intent, from, ctx), state);
 }
 
+// Takes the part and reports the package of song 'a' as loaded, like a client that already has it.
+function sit(part: BandPart, userId: string, songId = 'a'): Array<[BandIntent, string]> {
+	return [
+		[{t: 'band.claimSeat', part}, userId],
+		[{t: 'band.loaded', songId}, userId],
+	];
+}
+
 describe('clampDifficulty', () => {
 	it('keeps a charted difficulty', () => {
 		expect(clampDifficulty('hard', ALL)).toBe('hard');
@@ -217,6 +227,7 @@ describe('pick', () => {
 			seats: [],
 			watching: [],
 			endsAt: PICK_ENDS_AT + BAND_PHASE_MS.select,
+			loadWaitUntil: null,
 		});
 	});
 
@@ -265,7 +276,7 @@ describe('seats', () => {
 	it('gives a free part to the first claimer at the group difficulty', () => {
 		const state = apply(select({groupDifficulty: 'hard'}), {t: 'band.claimSeat', part: 'guitar'}, 'u1');
 		expect(state.phase === 'select' && state.seats).toEqual([
-			{part: 'guitar', userId: 'u1', difficulty: 'hard', ready: false},
+			{part: 'guitar', userId: 'u1', difficulty: 'hard', ready: false, loaded: false},
 		]);
 	});
 
@@ -340,7 +351,7 @@ describe('seats', () => {
 			[{t: 'band.claimSeat', part: null}, 'lead'],
 			[{t: 'band.claimSeat', part: null}, 'u2'],
 			[{t: 'band.claimSeat', part: null}, 'u3'],
-			[{t: 'band.claimSeat', part: 'guitar'}, 'u1'],
+			...sit('guitar', 'u1'),
 			[{t: 'band.ready', ready: true}, 'u1'],
 		]);
 		expect(state.phase).toBe('play');
@@ -410,8 +421,8 @@ describe('select to play', () => {
 		const half = applyAll(select(), [
 			[{t: 'band.claimSeat', part: null}, 'lead'],
 			[{t: 'band.claimSeat', part: null}, 'u3'],
-			[{t: 'band.claimSeat', part: 'guitar'}, 'u1'],
-			[{t: 'band.claimSeat', part: 'drums'}, 'u2'],
+			...sit('guitar', 'u1'),
+			...sit('drums', 'u2'),
 			[{t: 'band.ready', ready: true}, 'u1'],
 		]);
 		expect(half.phase).toBe('select');
@@ -436,7 +447,7 @@ describe('select to play', () => {
 		const state = applyAll(select(), [
 			[{t: 'band.claimSeat', part: null}, 'lead'],
 			[{t: 'band.claimSeat', part: null}, 'u2'],
-			[{t: 'band.claimSeat', part: 'guitar'}, 'u1'],
+			...sit('guitar', 'u1'),
 		]);
 		const joined = context({presentUserIds: new Set(['lead', 'u1', 'u2', 'u3'])});
 		const ready = apply(state, {t: 'band.ready', ready: true}, 'u1', joined);
@@ -447,7 +458,7 @@ describe('select to play', () => {
 	it('starts once the last undecided person leaves', () => {
 		const state = applyAll(select(), [
 			[{t: 'band.claimSeat', part: null}, 'lead'],
-			[{t: 'band.claimSeat', part: 'guitar'}, 'u1'],
+			...sit('guitar', 'u1'),
 			[{t: 'band.ready', ready: true}, 'u1'],
 		]);
 		expect(tickBandRoom(state, T0 + 10, context({presentUserIds: new Set(['lead', 'u1'])})).phase).toBe('play');
@@ -473,7 +484,7 @@ describe('select to play', () => {
 	});
 
 	it('starts with whoever is seated when time runs out', () => {
-		const state = applyAll(select(), [[{t: 'band.claimSeat', part: 'bass'}, 'u1']]) as Select;
+		const state = applyAll(select(), sit('bass', 'u1')) as Select;
 		const next = tickBandRoom(state, state.endsAt, CTX);
 		expect(next).toMatchObject({phase: 'play', startAt: state.endsAt + BAND_PHASE_MS.countdown});
 	});
@@ -488,7 +499,7 @@ describe('select to play', () => {
 	it('frees the seats of people who left, and starts if the rest are ready', () => {
 		const state = applyAll(select(), [
 			[{t: 'band.claimSeat', part: null}, 'lead'],
-			[{t: 'band.claimSeat', part: 'guitar'}, 'u1'],
+			...sit('guitar', 'u1'),
 			[{t: 'band.claimSeat', part: 'drums'}, 'u2'],
 			[{t: 'band.ready', ready: true}, 'u1'],
 		]);
@@ -500,6 +511,101 @@ describe('select to play', () => {
 	it('leaves the selection alone when nothing changed', () => {
 		const state = select();
 		expect(tickBandRoom(state, T0, CTX)).toBe(state);
+	});
+});
+
+describe('song package loading', () => {
+	const ROOM = context({presentUserIds: new Set(['lead', 'u1', 'u2'])});
+	const ENDS_AT = T0 + BAND_PHASE_MS.select;
+	const CAP = ENDS_AT + BAND_LOAD_WAIT_MS;
+
+	// The leader watches, u1 has the song and is ready, u2 has taken drums and is still downloading.
+	function downloading(): Select {
+		return applyAll(
+			select(),
+			[
+				[{t: 'band.claimSeat', part: null}, 'lead'],
+				...sit('guitar', 'u1'),
+				[{t: 'band.ready', ready: true}, 'u1'],
+				[{t: 'band.claimSeat', part: 'drums'}, 'u2'],
+			],
+			ROOM,
+		) as Select;
+	}
+
+	it('refuses ready before the package has loaded, and takes it once it has', () => {
+		const state = downloading();
+		expect(apply(state, {t: 'band.ready', ready: true}, 'u2', ROOM)).toBe(state);
+		const loaded = apply(state, {t: 'band.loaded', songId: 'a'}, 'u2', ROOM);
+		expect(loaded.phase === 'select' && loaded.seats.find((seat) => seat.userId === 'u2')).toMatchObject({
+			loaded: true,
+			ready: false,
+		});
+		expect(apply(loaded, {t: 'band.ready', ready: true}, 'u2', ROOM).phase).toBe('play');
+	});
+
+	it('does not start early while a ready seat is still downloading', () => {
+		// A seat that is ready in the shared state (from an older leader) without the package still holds the start.
+		const state = select({
+			seats: [
+				{part: 'guitar', userId: 'u1', difficulty: 'medium', ready: true, loaded: true},
+				{part: 'drums', userId: 'u2', difficulty: 'medium', ready: true, loaded: false},
+			],
+			watching: ['lead'],
+		});
+		expect(tickBandRoom(state, T0 + 10, ROOM)).toBe(state);
+		expect(apply(state, {t: 'band.loaded', songId: 'a'}, 'u2', ROOM, T0 + 20).phase).toBe('play');
+	});
+
+	it('ignores a loaded report for another song or from someone without a seat', () => {
+		const state = downloading();
+		expect(apply(state, {t: 'band.loaded', songId: 'b'}, 'u2', ROOM)).toBe(state);
+		expect(apply(state, {t: 'band.loaded', songId: 'a'}, 'lead', ROOM)).toBe(state);
+		for (const other of [pick(), play(), results()]) {
+			expect(apply(other, {t: 'band.loaded', songId: 'a'}, 'u1')).toBe(other);
+		}
+	});
+
+	it('keeps the package across a part change but not after watching', () => {
+		const moved = applyAll(select(), [...sit('guitar', 'u1'), [{t: 'band.claimSeat', part: 'bass'}, 'u1']]);
+		expect(moved.phase === 'select' && moved.seats[0]).toMatchObject({part: 'bass', loaded: true});
+		const back = applyAll(moved, [
+			[{t: 'band.claimSeat', part: null}, 'u1'],
+			[{t: 'band.claimSeat', part: 'drums'}, 'u1'],
+		]);
+		expect(back.phase === 'select' && back.seats[0]).toMatchObject({part: 'drums', loaded: false});
+	});
+
+	it('waits past the timer for a seat still downloading, and says until when', () => {
+		const state = downloading();
+		const waiting = tickBandRoom(state, ENDS_AT, ROOM);
+		expect(waiting).toMatchObject({phase: 'select', endsAt: ENDS_AT, loadWaitUntil: CAP});
+		expect(tickBandRoom(waiting, ENDS_AT + 1000, ROOM)).toBe(waiting);
+		const started = apply(waiting, {t: 'band.loaded', songId: 'a'}, 'u2', ROOM, ENDS_AT + 2000);
+		expect(started).toMatchObject({phase: 'play', startAt: ENDS_AT + 2000 + BAND_PHASE_MS.countdown});
+		expect(started.phase === 'play' && started.seats.map((seat) => seat.userId)).toEqual(['u1', 'u2']);
+	});
+
+	it('starts without the seats still downloading once the wait runs out', () => {
+		const waiting = tickBandRoom(downloading(), ENDS_AT, ROOM);
+		expect(tickBandRoom(waiting, CAP - 1, ROOM)).toBe(waiting);
+		const started = tickBandRoom(waiting, CAP, ROOM);
+		expect(started).toMatchObject({phase: 'play', seats: [{userId: 'u1', part: 'guitar'}]});
+		expect(started.phase === 'play' && started.seats).toHaveLength(1);
+	});
+
+	it('goes back to song picking when nobody has the song by then', () => {
+		const state = applyAll(select(), [[{t: 'band.claimSeat', part: 'guitar'}, 'u1']], ROOM) as Select;
+		const waiting = tickBandRoom(state, ENDS_AT, ROOM);
+		expect(waiting.phase).toBe('select');
+		expect(tickBandRoom(waiting, CAP, ROOM)).toMatchObject({phase: 'pick', openedAt: CAP});
+	});
+
+	it('starts the leader’s skip without the seats still downloading', () => {
+		expect(apply(downloading(), {t: 'band.skip'}, 'lead', ROOM)).toMatchObject({
+			phase: 'play',
+			seats: [{userId: 'u1'}],
+		});
 	});
 });
 
@@ -680,7 +786,7 @@ describe('skip', () => {
 	});
 
 	it('ends each phase early', () => {
-		const seated = apply(select(), {t: 'band.claimSeat', part: 'guitar'}, 'u1');
+		const seated = applyAll(select(), sit('guitar', 'u1'));
 		expect(apply(seated, {t: 'band.skip'}, 'lead').phase).toBe('play');
 		expect(apply(select(), {t: 'band.skip'}, 'lead').phase).toBe('pick');
 		expect(apply(play(), {t: 'band.skip'}, 'lead').phase).toBe('results');
@@ -690,7 +796,7 @@ describe('skip', () => {
 
 describe('leader handoff', () => {
 	it('continues from the shared state on a new leader', () => {
-		const shared = applyAll(select(), [[{t: 'band.claimSeat', part: 'guitar'}, 'u1']]);
+		const shared = applyAll(select(), sit('guitar', 'u1'));
 		const handedOver = JSON.parse(JSON.stringify(shared)) as BandState;
 		const newLeader = context({leaderId: 'u1', presentUserIds: new Set(['u1', 'u2'])});
 		expect(apply(handedOver, {t: 'band.skip'}, 'lead', newLeader)).toBe(handedOver);
@@ -711,9 +817,22 @@ describe('leader handoff', () => {
 	it('picks up an expired timer on the first tick', () => {
 		const handedOver = select({
 			endsAt: T0 - 5000,
-			seats: [{part: 'guitar', userId: 'u2', difficulty: 'easy', ready: false}],
+			seats: [{part: 'guitar', userId: 'u2', difficulty: 'easy', ready: false, loaded: true}],
 		});
 		expect(tickBandRoom(handedOver, T0, context({leaderId: 'u1'}))).toMatchObject({phase: 'play', songId: 'a'});
+	});
+
+	it('waits for a seat from an older leader’s state until its client reports the package', () => {
+		const handedOver = select({
+			endsAt: T0 - 5000,
+			seats: [{part: 'guitar', userId: 'u2', difficulty: 'easy', ready: false}],
+		});
+		const waiting = tickBandRoom(handedOver, T0, context({leaderId: 'u1'}));
+		expect(waiting).toMatchObject({phase: 'select', loadWaitUntil: T0 - 5000 + BAND_LOAD_WAIT_MS});
+		expect(apply(waiting, {t: 'band.loaded', songId: 'a'}, 'u2', context({leaderId: 'u1'}))).toMatchObject({
+			phase: 'play',
+			seats: [{userId: 'u2', loaded: true}],
+		});
 	});
 
 	it('starts afresh from a state an older client wrote', () => {
@@ -742,6 +861,7 @@ describe('parseBandIntent', () => {
 			{t: 'band.difficulty', difficulty: 'expert'},
 			{t: 'band.groupDifficulty', difficulty: 'easy'},
 			{t: 'band.ready', ready: false},
+			{t: 'band.loaded', songId: 'a'},
 			{t: 'band.result', result: RESULT},
 			{t: 'band.rate', playerId: 'u1', stars: 4},
 			{t: 'band.skip'},
@@ -769,6 +889,8 @@ describe('parseBandIntent', () => {
 			{t: 'band.claimSeat'},
 			{t: 'band.difficulty', difficulty: 'insane'},
 			{t: 'band.ready', ready: 'yes'},
+			{t: 'band.loaded'},
+			{t: 'band.loaded', songId: 42},
 			{t: 'band.result', result: {...RESULT, score: 'lots'}},
 			{t: 'band.result', result: {...RESULT, part: 'kazoo'}},
 			{t: 'band.rate', playerId: 'u1', stars: Number.POSITIVE_INFINITY},

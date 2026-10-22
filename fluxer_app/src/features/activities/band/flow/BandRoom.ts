@@ -55,6 +55,7 @@ export class BandRoom {
 			state: computed,
 			context: computed,
 			mySeat: computed,
+			songLoaded: computed,
 			spectatorIds: computed,
 			setSongPackage: action,
 		});
@@ -83,6 +84,13 @@ export class BandRoom {
 		return state.seats.find((seat) => seat.userId === this.myUserId);
 	}
 
+	// The package of the room's current song is open on this client.
+	get songLoaded(): boolean {
+		const state = this.state;
+		if (!state || state.phase === 'pick') return false;
+		return this.songPackage?.songId === state.songId && this.songPackage.status === 'ready';
+	}
+
 	// Everyone in the room without a seat, one entry per person.
 	get spectatorIds(): ReadonlyArray<string> {
 		const state = this.state;
@@ -92,6 +100,7 @@ export class BandRoom {
 	}
 
 	send(intent: BandIntent): void {
+		if (intent.t === 'band.ready' && intent.ready && !this.songLoaded) return;
 		this.controller.sendIntent(intent);
 	}
 
@@ -137,6 +146,18 @@ export class BandRoom {
 				},
 				(songId) => {
 					if (songId && this.songPackage?.songId !== songId) this.loadSongPackage(songId);
+				},
+				{fireImmediately: true},
+			),
+			// The leader holds the song until every seat has its package. Sent whenever my seat does not show it yet, so a
+			// seat taken after watching, or one under a new leader, reports again.
+			reaction(
+				() => {
+					const state = this.state;
+					return state?.phase === 'select' && this.mySeat?.loaded !== true && this.songLoaded ? state.songId : null;
+				},
+				(songId) => {
+					if (songId) this.send({t: 'band.loaded', songId});
 				},
 				{fireImmediately: true},
 			),

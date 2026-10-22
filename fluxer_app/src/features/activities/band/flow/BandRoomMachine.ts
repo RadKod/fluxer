@@ -5,6 +5,7 @@
 
 import {
 	BAND_DIFFICULTY_MULTIPLIER,
+	BAND_LOAD_WAIT_MS,
 	BAND_PHASE_MS,
 	BAND_RATING_MAX,
 	BAND_RATING_MIN,
@@ -154,6 +155,7 @@ function startSelect(songId: string, now: number): SelectState {
 		seats: [],
 		watching: [],
 		endsAt: now + BAND_PHASE_MS.select,
+		loadWaitUntil: null,
 	};
 }
 
@@ -161,8 +163,9 @@ function presentSeats(seats: ReadonlyArray<BandSeat>, ctx: BandRoomContext): Arr
 	return seats.filter((seat) => ctx.presentUserIds.has(seat.userId));
 }
 
+// Seats still downloading watch this song instead: started without the package, they would join mid-song.
 function startPlay(state: SelectState, now: number, ctx: BandRoomContext): BandState {
-	const seats = presentSeats(state.seats, ctx);
+	const seats = presentSeats(state.seats, ctx).filter((seat) => seat.loaded === true);
 	if (seats.length === 0) return startPick(state.songId, now, ctx);
 	return {
 		phase: 'play',
@@ -172,13 +175,29 @@ function startPlay(state: SelectState, now: number, ctx: BandRoomContext): BandS
 	};
 }
 
+function allSeatsLoaded(state: SelectState, ctx: BandRoomContext): boolean {
+	return presentSeats(state.seats, ctx).every((seat) => seat.loaded === true);
+}
+
 // Early start: everyone in the room has said so, either from a ready seat or by choosing to watch. Someone who has
-// done neither (a late joiner too) holds the start until the timer runs out.
+// done neither (a late joiner too) holds the start until the timer runs out. A seat is ready only once its package has
+// loaded, so a ready room has the song everywhere it is played.
 function startPlayWhenAllDecided(state: SelectState, now: number, ctx: BandRoomContext): BandState {
 	const watching = new Set(state.watching);
-	const readySeats = new Set(state.seats.filter((seat) => seat.ready).map((seat) => seat.userId));
+	const readySeats = new Set(
+		state.seats.filter((seat) => seat.ready && seat.loaded === true).map((seat) => seat.userId),
+	);
 	for (const userId of ctx.presentUserIds) if (!watching.has(userId) && !readySeats.has(userId)) return state;
 	return startPlay(state, now, ctx);
+}
+
+// Once the timer runs out the song starts as soon as every seat has the package, and at loadWaitUntil without the
+// seats that still do not.
+function settleSelect(state: SelectState, now: number, ctx: BandRoomContext): BandState {
+	if (now < state.endsAt) return startPlayWhenAllDecided(state, now, ctx);
+	const loadWaitUntil = state.loadWaitUntil ?? state.endsAt + BAND_LOAD_WAIT_MS;
+	if (allSeatsLoaded(state, ctx) || now >= loadWaitUntil) return startPlay(state, now, ctx);
+	return state.loadWaitUntil === loadWaitUntil ? state : {...state, loadWaitUntil};
 }
 
 export function playResults(state: BandPlayState): ReadonlyArray<BandPlayerResult> {
@@ -221,7 +240,7 @@ function claimSeat(state: SelectState, part: BandPart | null, fromUserId: string
 	const difficulty = clampDifficulty(state.groupDifficulty, songPartDifficulties(ctx.songs.get(state.songId), part));
 	if (!difficulty) return state;
 	const seats = state.seats.filter((seat) => seat !== current);
-	seats.push({part, userId: fromUserId, difficulty, ready: false});
+	seats.push({part, userId: fromUserId, difficulty, ready: false, loaded: current?.loaded === true});
 	seats.sort((a, b) => BAND_PARTS.indexOf(a.part) - BAND_PARTS.indexOf(b.part));
 	return {...state, seats, watching: state.watching.filter((userId) => userId !== fromUserId)};
 }
@@ -230,7 +249,9 @@ function updateSeat(state: SelectState, fromUserId: string, update: (seat: BandS
 	const current = state.seats.find((seat) => seat.userId === fromUserId);
 	if (!current) return state;
 	const next = update(current);
-	if (next.difficulty === current.difficulty && next.ready === current.ready) return state;
+	if (next.difficulty === current.difficulty && next.ready === current.ready && next.loaded === current.loaded) {
+		return state;
+	}
 	return {...state, seats: state.seats.map((seat) => (seat === current ? next : seat))};
 }
 
@@ -336,17 +357,24 @@ export function reduceBandIntent(
 		case 'band.pickAnother':
 			return state.phase === 'select' && fromLeader ? startPick(state.songId, now, ctx) : state;
 		case 'band.claimSeat':
-			return state.phase === 'select'
-				? startPlayWhenAllDecided(claimSeat(state, intent.part, fromUserId, ctx), now, ctx)
-				: state;
+			return state.phase === 'select' ? settleSelect(claimSeat(state, intent.part, fromUserId, ctx), now, ctx) : state;
 		case 'band.difficulty':
 			return state.phase === 'select' ? setSeatDifficulty(state, intent.difficulty, fromUserId, ctx) : state;
 		case 'band.groupDifficulty':
 			return state.phase === 'select' && fromLeader ? setGroupDifficulty(state, intent.difficulty, ctx) : state;
 		case 'band.ready': {
 			if (state.phase !== 'select') return state;
-			return startPlayWhenAllDecided(
-				updateSeat(state, fromUserId, (seat) => ({...seat, ready: intent.ready})),
+			// Ready before the package has loaded would start the song on a client that cannot play it yet.
+			return settleSelect(
+				updateSeat(state, fromUserId, (seat) => ({...seat, ready: intent.ready && seat.loaded === true})),
+				now,
+				ctx,
+			);
+		}
+		case 'band.loaded': {
+			if (state.phase !== 'select' || intent.songId !== state.songId) return state;
+			return settleSelect(
+				updateSeat(state, fromUserId, (seat) => ({...seat, loaded: true})),
 				now,
 				ctx,
 			);
@@ -389,9 +417,7 @@ export function tickBandRoom(state: BandState, now: number, ctx: BandRoomContext
 			return next.endsAt !== null && now >= next.endsAt ? resolvePick(next, now) : next;
 		}
 		case 'select': {
-			const next = dropAbsent(state, ctx);
-			if (now >= next.endsAt) return startPlay(next, now, ctx);
-			return startPlayWhenAllDecided(next, now, ctx);
+			return settleSelect(dropAbsent(state, ctx), now, ctx);
 		}
 		case 'play': {
 			if (everyPresentPlayerReported(state, ctx)) return endPlay(state, now);
@@ -466,6 +492,8 @@ export function parseBandIntent(payload: unknown): BandIntent | null {
 			return isDifficulty(record.difficulty) ? {t: record.t, difficulty: record.difficulty} : null;
 		case 'band.ready':
 			return typeof record.ready === 'boolean' ? {t: 'band.ready', ready: record.ready} : null;
+		case 'band.loaded':
+			return isId(record.songId) ? {t: 'band.loaded', songId: record.songId} : null;
 		case 'band.result': {
 			const result = parseResult(record.result);
 			return result ? {t: 'band.result', result} : null;

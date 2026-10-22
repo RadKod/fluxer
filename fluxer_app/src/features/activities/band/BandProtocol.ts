@@ -15,6 +15,10 @@ export const BAND_PHASE_MS = {
 	results: 25_000,
 } as const;
 
+// After the select timer runs out, the song still waits this long for seated players whose package has not loaded;
+// whoever is still downloading then watches this song instead of dropping into the middle of it.
+export const BAND_LOAD_WAIT_MS = 30_000;
+
 // How long the results screen waits for a player's score before it shows them without one.
 export const BAND_RESULT_WAIT_MS = 6_000;
 
@@ -56,6 +60,8 @@ export interface BandSeat {
 	readonly userId: string;
 	readonly difficulty: BandDifficulty;
 	readonly ready: boolean;
+	// The player's client has the song package open. Missing in states from older leaders, which never wait for it.
+	readonly loaded?: boolean;
 }
 
 export interface BandPlayerResult {
@@ -93,6 +99,9 @@ export type BandState =
 			// room has either a ready seat or is in here; anyone else, late joiners included, is still deciding.
 			readonly watching: ReadonlyArray<string>;
 			readonly endsAt: number;
+			// Set once endsAt has passed with a seat still downloading: the song starts when every seat has loaded, or at
+			// this time without the ones that have not. Missing in states from older leaders.
+			readonly loadWaitUntil?: number | null;
 	  }
 	| {
 			readonly phase: 'play';
@@ -125,6 +134,8 @@ export type BandIntent =
 	| {readonly t: 'band.difficulty'; readonly difficulty: BandDifficulty}
 	| {readonly t: 'band.groupDifficulty'; readonly difficulty: BandDifficulty}
 	| {readonly t: 'band.ready'; readonly ready: boolean}
+	// My client has the package for this song open. Sent again whenever my seat shows it has not, so it is idempotent.
+	| {readonly t: 'band.loaded'; readonly songId: string}
 	| {readonly t: 'band.result'; readonly result: Omit<BandPlayerResult, 'userId'>}
 	| {readonly t: 'band.rate'; readonly playerId: string; readonly stars: number}
 	// Leader only: ends the current phase early. During the song it stops it; every player's client sends what it has

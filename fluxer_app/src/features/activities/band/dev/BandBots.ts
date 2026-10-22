@@ -131,6 +131,7 @@ export class BandBot {
 	private voted = false;
 	private claimedPart: BandPart | null = null;
 	private readySent = false;
+	private loadedSent = false;
 	private rated = false;
 	private play: PlayRun | null = null;
 	private playTimer: ReturnType<typeof setInterval> | null = null;
@@ -224,6 +225,16 @@ export class BandBot {
 			});
 			return;
 		}
+		// Bots play from the chart alone, so their package is loaded as soon as they sit; the leader refuses ready before.
+		if (mySeat.loaded === false) {
+			this.setActivity(`${mySeat.part} ${mySeat.difficulty}, loading`);
+			if (!this.loadedSent) {
+				this.loadedSent = true;
+				this.later(() => this.send({t: 'band.loaded', songId: state.songId}));
+			}
+			return;
+		}
+		this.loadedSent = false;
 		this.setActivity(`${mySeat.part} ${mySeat.difficulty}${mySeat.ready ? ', ready' : ''}`);
 		// Cleared once the leader shows me ready, so a seat the leader unreadies (a difficulty change) readies again.
 		if (mySeat.ready) {
@@ -451,6 +462,7 @@ export class BandBot {
 		this.voted = false;
 		this.claimedPart = null;
 		this.readySent = false;
+		this.loadedSent = false;
 		this.rated = false;
 	}
 

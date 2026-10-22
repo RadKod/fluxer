@@ -2,6 +2,7 @@
 
 import {
 	BAND_DIFFICULTY_MULTIPLIER,
+	BAND_LOAD_WAIT_MS,
 	BAND_PHASE_MS,
 	type BandSeat,
 	type BandSongSummary,
@@ -31,9 +32,14 @@ import {
 	partDescriptor,
 	READY_DESCRIPTOR,
 	READY_TALLY_DESCRIPTOR,
+	RETRY_DESCRIPTOR,
+	SEAT_DOWNLOAD_PROGRESS_DESCRIPTOR,
+	SEAT_DOWNLOADING_DESCRIPTOR,
+	SONG_FAILED_DESCRIPTOR,
 	SONG_SUBTITLE_DESCRIPTOR,
 	TAKE_PART_DESCRIPTOR,
 	VOCALS_HINT_DESCRIPTOR,
+	WAITING_FOR_DOWNLOADS_DESCRIPTOR,
 	WATCH_DESCRIPTOR,
 	YOU_TAG_DESCRIPTOR,
 } from '@app/features/activities/band/flow/BandFlowMessages';
@@ -49,8 +55,9 @@ import styles from '@app/features/activities/band/flow/components/SelectScreen.m
 import {SpectatorStrip} from '@app/features/activities/band/flow/components/SpectatorStrip';
 import {formatSongLength, useBandNow} from '@app/features/activities/band/flow/components/useBandNow';
 import {DEFAULT_BAND_KEY_MAP} from '@app/features/activities/band/game/BandInput';
+import type {I18n} from '@lingui/core';
 import {useLingui} from '@lingui/react/macro';
-import {CheckIcon, EyeIcon} from '@phosphor-icons/react';
+import {ArrowClockwiseIcon, CheckIcon, EyeIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import {useRef} from 'react';
@@ -64,6 +71,20 @@ const LANE_CLASSES: Readonly<Record<BandLaneColour, string>> = {
 	blue: styles.laneBlue,
 	orange: styles.laneOrange,
 };
+
+// Older leaders leave `loaded` out and never wait for it, so only an explicit false means still downloading.
+function seatDownloading(seat: BandSeat): boolean {
+	return seat.loaded === false;
+}
+
+// My own download with its percentage when the size is known; other players' progress is not shared.
+function myDownloadLabel(i18n: I18n, room: BandRoom): string {
+	const songId = room.songPackage?.songId;
+	const download = songId ? room.library.download(songId) : undefined;
+	if (download?.status !== 'downloading' || download.totalBytes <= 0) return i18n._(SEAT_DOWNLOADING_DESCRIPTOR);
+	const percent = Math.min(100, Math.floor((download.receivedBytes / download.totalBytes) * 100));
+	return i18n._(SEAT_DOWNLOAD_PROGRESS_DESCRIPTOR, {percent});
+}
 
 function PartKeys({part}: {readonly part: InstrumentPart}) {
 	const {lanes, kick} = bandPartKeys(DEFAULT_BAND_KEY_MAP, part);
@@ -149,8 +170,11 @@ const SeatPerson = observer(function SeatPerson({room, seat}: SeatPersonProps) {
 	const {i18n} = useLingui();
 	const mine = seat.userId === room.myUserId;
 	const leader = room.session.leader?.userId === seat.userId;
+	const downloading = seatDownloading(seat);
 	let status: string;
-	if (mine && leader) status = i18n._(LEADER_TAG_DESCRIPTOR);
+	if (mine && room.songPackage?.status === 'failed') status = i18n._(SONG_FAILED_DESCRIPTOR);
+	else if (downloading) status = i18n._(SEAT_DOWNLOADING_DESCRIPTOR);
+	else if (mine && leader) status = i18n._(LEADER_TAG_DESCRIPTOR);
 	else if (seat.ready) status = i18n._(READY_DESCRIPTOR);
 	else status = i18n._(PICKING_DESCRIPTOR);
 	return (
@@ -170,7 +194,7 @@ const SeatPerson = observer(function SeatPerson({room, seat}: SeatPersonProps) {
 					)}
 				</b>
 				<span
-					className={clsx(!seat.ready && !mine && styles.picking)}
+					className={clsx(!seat.ready && (downloading || !mine) && styles.picking)}
 					data-flx="activities.band.flow.select-screen.seat-person.picking"
 				>
 					{status}
@@ -214,26 +238,53 @@ const SeatActions = observer(function SeatActions({room, part, seat, className}:
 						<CheckIcon size={16} weight="bold" data-flx="activities.band.flow.select-screen.seat-actions.check-icon" />
 					)}
 					<span data-flx="activities.band.flow.select-screen.seat-actions.span">
-						{i18n._(seat.ready ? READY_DESCRIPTOR : NOT_READY_DESCRIPTOR)}
+						{seat.ready
+							? i18n._(READY_DESCRIPTOR)
+							: i18n._(seatDownloading(seat) ? SEAT_DOWNLOADING_DESCRIPTOR : NOT_READY_DESCRIPTOR)}
 					</span>
 				</span>
 			</div>
 		);
 	}
+	const failed = room.songPackage?.status === 'failed';
 	return (
 		<div className={className} data-flx="activities.band.flow.select-screen.seat-actions.div--3">
-			<button
-				type="button"
-				aria-pressed={seat.ready}
-				className={clsx(styles.readyButton, seat.ready ? styles.readyYes : styles.readyNo)}
-				onClick={() => room.send({t: 'band.ready', ready: !seat.ready})}
-				data-flx="activities.band.flow.select-screen.seat-actions.ready-button.send--2"
-			>
-				{seat.ready && (
-					<CheckIcon size={16} weight="bold" data-flx="activities.band.flow.select-screen.seat-actions.check-icon--2" />
-				)}
-				<span data-flx="activities.band.flow.select-screen.seat-actions.span--2">{i18n._(I_AM_READY_DESCRIPTOR)}</span>
-			</button>
+			{failed ? (
+				<button
+					type="button"
+					title={i18n._(SONG_FAILED_DESCRIPTOR)}
+					className={clsx(styles.readyButton, styles.readyNo)}
+					onClick={() => room.retrySongPackage()}
+					data-flx="activities.band.flow.select-screen.seat-actions.ready-button.retry"
+				>
+					<ArrowClockwiseIcon
+						size={16}
+						weight="bold"
+						data-flx="activities.band.flow.select-screen.seat-actions.arrow-clockwise-icon"
+					/>
+					<span data-flx="activities.band.flow.select-screen.seat-actions.span--3">{i18n._(RETRY_DESCRIPTOR)}</span>
+				</button>
+			) : (
+				<button
+					type="button"
+					aria-pressed={seat.ready}
+					disabled={!room.songLoaded}
+					className={clsx(styles.readyButton, seat.ready ? styles.readyYes : styles.readyNo)}
+					onClick={() => room.send({t: 'band.ready', ready: !seat.ready})}
+					data-flx="activities.band.flow.select-screen.seat-actions.ready-button.send--2"
+				>
+					{seat.ready && (
+						<CheckIcon
+							size={16}
+							weight="bold"
+							data-flx="activities.band.flow.select-screen.seat-actions.check-icon--2"
+						/>
+					)}
+					<span data-flx="activities.band.flow.select-screen.seat-actions.span--2">
+						{room.songLoaded ? i18n._(I_AM_READY_DESCRIPTOR) : myDownloadLabel(i18n, room)}
+					</span>
+				</button>
+			)}
 			<button
 				type="button"
 				className={styles.watch}
@@ -430,6 +481,12 @@ export const SelectScreen = observer(function SelectScreen({room, state, song}: 
 	const present = new Set(room.session.participants.map((participant) => participant.userId));
 	const decided = new Set([...state.watching, ...state.seats.filter((seat) => seat.ready).map((seat) => seat.userId)]);
 	const decidedCount = [...present].filter((userId) => decided.has(userId)).length;
+	// Past the timer the leader holds the song for seats still downloading, up to loadWaitUntil.
+	const loadWaitUntil = now >= state.endsAt ? (state.loadWaitUntil ?? null) : null;
+	let tally: string;
+	if (loadWaitUntil !== null) tally = i18n._(WAITING_FOR_DOWNLOADS_DESCRIPTOR);
+	else if (state.seats.length === 0) tally = i18n._(PICK_A_PART_DESCRIPTOR);
+	else tally = i18n._(READY_TALLY_DESCRIPTOR, {ready: decidedCount, seated: present.size});
 
 	return (
 		<div ref={rootRef} className={styles.screen} data-flx="activities.band.flow.select-screen.screen">
@@ -460,15 +517,13 @@ export const SelectScreen = observer(function SelectScreen({room, state, song}: 
 					<GroupDifficulty room={room} state={state} data-flx="activities.band.flow.select-screen.group-difficulty" />
 				</div>
 				<BandTimer
-					endsAt={state.endsAt}
-					durationMs={BAND_PHASE_MS.select}
+					endsAt={loadWaitUntil ?? state.endsAt}
+					durationMs={loadWaitUntil !== null ? BAND_LOAD_WAIT_MS : BAND_PHASE_MS.select}
 					now={now}
 					data-flx="activities.band.flow.select-screen.band-timer"
 				>
 					<span className={styles.readyTally} data-flx="activities.band.flow.select-screen.ready-tally">
-						{state.seats.length === 0
-							? i18n._(PICK_A_PART_DESCRIPTOR)
-							: i18n._(READY_TALLY_DESCRIPTOR, {ready: decidedCount, seated: present.size})}
+						{tally}
 					</span>
 					{room.session.isLeader && (
 						<button

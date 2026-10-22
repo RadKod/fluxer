@@ -261,6 +261,20 @@ export const PICKING_DESCRIPTOR = msg({
 	message: 'Picking',
 	comment: 'Band game: the player is still choosing a difficulty.',
 });
+export const SEAT_DOWNLOADING_DESCRIPTOR = msg({
+	message: 'Downloading',
+	context: 'band-seat-download',
+	comment: 'Band game: a seated player is still downloading the song file and cannot be ready yet.',
+});
+export const SEAT_DOWNLOAD_PROGRESS_DESCRIPTOR = msg({
+	message: 'Downloading {percent}%',
+	comment: 'Band game: my own song file download on my part card, before I can say I am ready. {percent} is 0 to 100.',
+});
+export const WAITING_FOR_DOWNLOADS_DESCRIPTOR = msg({
+	message: 'Waiting for the song to download',
+	comment:
+		'Band game: the pick timer ran out but some players are still downloading the song; it starts when they finish, or without them when this extra wait runs out.',
+});
 export const TAKE_PART_DESCRIPTOR = msg({
 	message: 'Play this part',
 	comment: 'Band game: button on a free part card that seats me on that part.',

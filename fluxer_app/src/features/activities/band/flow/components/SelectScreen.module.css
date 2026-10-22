@@ -467,8 +467,13 @@
 	cursor: pointer;
 }
 
-span.readyButton {
+span.readyButton,
+.readyButton:disabled {
 	cursor: default;
+}
+
+.readyButton:disabled {
+	font-variant-numeric: tabular-nums;
 }
 
 .readyYes {

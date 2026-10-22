@@ -232,6 +232,7 @@ describe('BandLeaderController', () => {
 		expect(leaderController.state).toMatchObject({phase: 'select', songId: 'a'});
 		leaderController.sendIntent({t: 'band.claimSeat', part: null});
 		playerController.sendIntent({t: 'band.claimSeat', part: 'guitar'});
+		playerController.sendIntent({t: 'band.loaded', songId: 'a'});
 		playerController.sendIntent({t: 'band.ready', ready: true});
 		expect(leaderController.state).toMatchObject({phase: 'play', startAt: room.now + 4000});
 		room.now += BAND_PHASE_MS.countdown + SONG.lengthMs + BAND_PLAY_GRACE_MS;
@@ -273,6 +274,7 @@ describe('BandLeaderController', () => {
 		room.now += BAND_PHASE_MS.pick;
 		timers.fire();
 		playerController.sendIntent({t: 'band.claimSeat', part: 'guitar'});
+		playerController.sendIntent({t: 'band.loaded', songId: 'a'});
 		expect(phaseOf(player.state)).toBe('select');
 
 		leaderController.stop();
@@ -282,6 +284,7 @@ describe('BandLeaderController', () => {
 		expect(playerController.state).toMatchObject({phase: 'select', seats: [{userId: 'p1', part: 'guitar'}]});
 
 		otherController.sendIntent({t: 'band.claimSeat', part: 'drums'});
+		otherController.sendIntent({t: 'band.loaded', songId: 'a'});
 		expect(other.sent.at(-1)?.options).toEqual({to: ['p1-conn']});
 		expect(otherController.state).toMatchObject({
 			seats: [
@@ -304,6 +307,8 @@ describe('BandLeaderController', () => {
 		leaderController.sendIntent({t: 'band.claimSeat', part: null});
 		playerController.sendIntent({t: 'band.claimSeat', part: 'guitar'});
 		otherController.sendIntent({t: 'band.claimSeat', part: 'drums'});
+		playerController.sendIntent({t: 'band.loaded', songId: 'a'});
+		otherController.sendIntent({t: 'band.loaded', songId: 'a'});
 		playerController.sendIntent({t: 'band.ready', ready: true});
 		otherController.sendIntent({t: 'band.ready', ready: true});
 		expect(phaseOf(player.state)).toBe('play');

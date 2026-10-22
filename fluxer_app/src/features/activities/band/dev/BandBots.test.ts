@@ -93,6 +93,25 @@ describe('BandBots', () => {
 		expect(payloads().at(-1)).toEqual({t: 'band.ready', ready: true});
 	});
 
+	it('reports its package before it readies', () => {
+		const {session, bots, payloads} = setup();
+		const bot = bots.add({reactionMs: REACTION_MS});
+		const seats = (loaded: boolean) =>
+			selectState([
+				{part: 'guitar', userId: '100', difficulty: 'hard', ready: true, loaded: true},
+				{part: 'bass', userId: bot.userId, difficulty: 'hard', ready: false, loaded},
+			]);
+		session.setState(seats(false));
+		vi.advanceTimersByTime(LATENCY_MS * 2 + REACTION_MS);
+		expect(payloads()).toEqual([{t: 'band.loaded', songId: SONG.id}]);
+		session.setState(seats(true));
+		vi.advanceTimersByTime(LATENCY_MS * 2 + REACTION_MS);
+		expect(payloads()).toEqual([
+			{t: 'band.loaded', songId: SONG.id},
+			{t: 'band.ready', ready: true},
+		]);
+	});
+
 	it('readies as soon as the seated people are ready', () => {
 		const {session, bots, payloads} = setup();
 		const bot = bots.add({reactionMs: REACTION_MS});
