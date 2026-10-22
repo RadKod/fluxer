@@ -4,6 +4,7 @@ import type {BandIntent, BandSongSummary} from '@app/features/activities/band/Ba
 import type {SongPackage} from '@app/features/activities/band/engine/SongPackage';
 import {BandKeyboard, type BandKeyMap, DEFAULT_BAND_KEY_MAP} from '@app/features/activities/band/game/BandInput';
 import BandSettings from '@app/features/activities/band/game/BandSettings';
+import {FocusStage} from '@app/features/activities/band/game/FocusStage';
 import {
 	BandAudioUnavailableError,
 	type BandPlayState,
@@ -11,6 +12,7 @@ import {
 } from '@app/features/activities/band/game/PlayRuntime';
 import styles from '@app/features/activities/band/game/PlayScreen.module.css';
 import {PlayStage} from '@app/features/activities/band/game/PlayStage';
+import {hasFocusPart} from '@app/features/activities/band/game/PlayStageParts';
 import type {ActivitySession} from '@app/features/activities/session/ActivitySessionTypes';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {msg} from '@lingui/core/macro';
@@ -151,13 +153,16 @@ function useBandKeyboard(
 	}, [rootRef, runtime, session, keyMap]);
 }
 
-// The play phase: every seated highway, my input and audio. Spectators get the same stage without input.
+// The play phase: the highways, my input and audio. Players see the focus view unless they chose the band view;
+// spectators, who have no part of their own to focus on, always watch the band view.
 export const PlayScreen = observer(function PlayScreen(props: PlayScreenProps) {
 	const {i18n} = useLingui();
 	const rootRef = useRef<HTMLDivElement>(null);
 	const {runtime, status} = usePlayRuntime(props);
 	useBandKeyboard(rootRef, runtime, props.session, props.keyMap ?? DEFAULT_BAND_KEY_MAP);
 	const vocals = runtime ? props.songPackage.chart().vocals : null;
+	const focus = runtime !== null && hasFocusPart(runtime.controller, vocals) && BandSettings.highwayView === 'focus';
+	const Stage = focus ? FocusStage : PlayStage;
 	return (
 		<div
 			ref={rootRef}
@@ -168,7 +173,7 @@ export const PlayScreen = observer(function PlayScreen(props: PlayScreenProps) {
 			data-flx="activities.band.game.play-screen.root"
 		>
 			{runtime && status === 'ready' ? (
-				<PlayStage
+				<Stage
 					runtime={runtime}
 					entry={props.entry}
 					channelId={props.session.channelId}

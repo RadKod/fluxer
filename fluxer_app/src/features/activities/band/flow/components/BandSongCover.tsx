@@ -5,14 +5,7 @@ import styles from '@app/features/activities/band/flow/components/BandSongCover.
 import {clsx} from 'clsx';
 import {useState} from 'react';
 
-// Deep tints for songs without album art; the song id picks one, so a song always looks the same.
-const FALLBACK_TINTS = ['#173230', '#3A1F18', '#1B2A2C', '#2A1B33', '#33291A', '#1A2438', '#2E1A22'];
-
-function tintFor(songId: string): string {
-	let hash = 0;
-	for (let i = 0; i < songId.length; i++) hash = (hash * 31 + songId.charCodeAt(i)) | 0;
-	return FALLBACK_TINTS[Math.abs(hash) % FALLBACK_TINTS.length];
-}
+const LANES = ['green', 'red', 'yellow', 'blue', 'orange'] as const;
 
 interface BandSongCoverProps {
 	readonly song: BandSongSummary;
@@ -41,7 +34,7 @@ export function BandSongCover({song, sizeRem, showArtist = true, className}: Ban
 	return (
 		<div
 			className={clsx(styles.cover, styles.typeCover, className)}
-			style={{width: size, height: size, backgroundColor: tintFor(song.id)}}
+			style={{width: size, height: size}}
 			aria-hidden="true"
 			data-flx="activities.band.flow.band-song-cover.cover--2"
 		>
@@ -54,6 +47,11 @@ export function BandSongCover({song, sizeRem, showArtist = true, className}: Ban
 						{song.artist}
 					</span>
 				)}
+			</span>
+			<span className={styles.lanes} data-flx="activities.band.flow.band-song-cover.lanes">
+				{LANES.map((lane) => (
+					<i key={lane} className={styles[lane]} data-flx="activities.band.flow.band-song-cover.lane" />
+				))}
 			</span>
 		</div>
 	);

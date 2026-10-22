@@ -4,8 +4,9 @@ import {buildMidi, buildSng, EXPERT_NOTE_BASE} from '@app/features/activities/ba
 import {
 	BandSongLibrary,
 	BandSongLibraryError,
-	intensityCells,
 	parseSongIndex,
+	ratingTier,
+	readYear,
 } from '@app/features/activities/band/flow/BandSongLibrary';
 import {describe, expect, it, vi} from 'vitest';
 
@@ -55,6 +56,7 @@ class MemoryCache {
 		return bytes ? new Response(bytes.slice()) : undefined;
 	});
 	readonly delete = vi.fn(async (url: string) => this.entries.delete(url));
+	readonly keys = vi.fn(async () => [...this.entries.keys()].map((url) => new Request(url)));
 }
 
 function cacheStorage(cache = new MemoryCache()): {storage: CacheStorage; cache: MemoryCache} {
@@ -113,7 +115,32 @@ describe('parseSongIndex', () => {
 				packageUrl: `${BASE}a.sng`,
 				packageBytes: SNG.length,
 				addedBy: null,
+				groups: [],
+				genre: null,
+				year: null,
+				previewStartMs: null,
 			},
+		]);
+	});
+
+	it('reads the genre shelves, genre, year and preview start of newer indexes', () => {
+		const {songs} = parseSongIndex(
+			{
+				songs: [
+					entry('a', {
+						groups: ['metal', 'turkce', 'polka', 7],
+						genre: 'Heavy Metal',
+						year: '1969 (October 6)',
+						previewStartMs: 151_996,
+					}),
+					entry('b', {groups: 'rock', genre: '', year: null, previewStartMs: -5}),
+				],
+			},
+			INDEX_URL,
+		);
+		expect(songs.map(({groups, genre, year, previewStartMs}) => ({groups, genre, year, previewStartMs}))).toEqual([
+			{groups: ['turkce', 'metal'], genre: 'Heavy Metal', year: 1969, previewStartMs: 151_996},
+			{groups: [], genre: null, year: null, previewStartMs: null},
 		]);
 	});
 
@@ -142,13 +169,26 @@ describe('parseSongIndex', () => {
 	});
 });
 
-describe('intensityCells', () => {
-	it('maps charter ratings 0..6 onto 1..5 cells', () => {
-		expect(intensityCells(undefined)).toBeNull();
-		expect(intensityCells(0)).toBe(1);
-		expect(intensityCells(3)).toBe(3);
-		expect(intensityCells(6)).toBe(5);
-		expect(intensityCells(9)).toBe(5);
+describe('ratingTier', () => {
+	it('keeps charter ratings on the seven 0..6 tiers', () => {
+		expect(ratingTier(undefined)).toBeNull();
+		expect(ratingTier(0)).toBe(0);
+		expect(ratingTier(2.6)).toBe(3);
+		expect(ratingTier(6)).toBe(6);
+		expect(ratingTier(9)).toBe(6);
+	});
+});
+
+describe('readYear', () => {
+	it('reads the leading four digit year of the index text', () => {
+		expect(readYear('1986')).toBe(1986);
+		expect(readYear('1969 (October 6)')).toBe(1969);
+		expect(readYear('1969-10-06')).toBe(1969);
+		expect(readYear(2004)).toBe(2004);
+		expect(readYear('19690')).toBeNull();
+		expect(readYear('Unknown')).toBeNull();
+		expect(readYear(null)).toBeNull();
+		expect(readYear(undefined)).toBeNull();
 	});
 });
 
@@ -161,8 +201,8 @@ describe('BandSongLibrary.load', () => {
 		expect(songs.status).toEqual({status: 'ready'});
 		expect(songs.songs.map((song) => song.id)).toEqual(['a', 'b', 'c']);
 		expect(songs.song('b')?.packageUrl).toBe(`${BASE}b.sng`);
-		expect(songs.partIntensity('a', 'guitar')).toBe(5);
-		expect(songs.partIntensity('b', 'guitar')).toBeNull();
+		expect(songs.partTier('a', 'guitar')).toBe(6);
+		expect(songs.partTier('b', 'guitar')).toBeNull();
 		await songs.load();
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
@@ -289,15 +329,52 @@ describe('BandSongLibrary.ensure', () => {
 
 	it('fills intensity from the package when the index has none', async () => {
 		const {songs} = await loaded();
-		expect(songs.partIntensity('b', 'guitar')).toBeNull();
+		expect(songs.partTier('b', 'guitar')).toBeNull();
 		await songs.ensure('b');
-		expect(songs.partIntensity('b', 'guitar')).toBe(5);
+		expect(songs.partTier('b', 'guitar')).toBe(6);
 	});
 
 	it('still plays when Cache Storage cannot open', async () => {
 		const storage = {open: vi.fn(async () => Promise.reject(new Error('SecurityError')))} as unknown as CacheStorage;
 		const {songs} = await loaded(storage);
 		await expect(songs.ensure('a')).resolves.toBeDefined();
+	});
+});
+
+describe('BandSongLibrary previews', () => {
+	async function loadedWith(cache: MemoryCache) {
+		const fetchMock = server({[INDEX_URL]: () => Response.json(INDEX), ...SNG_ROUTES});
+		const songs = library(fetchMock, cacheStorage(cache).storage);
+		await songs.load();
+		await vi.waitFor(() => expect(cache.keys).toHaveBeenCalled());
+		return {songs, fetchMock};
+	}
+
+	it('knows which songs an earlier day left on this device', async () => {
+		const cache = new MemoryCache();
+		cache.entries.set(`${BASE}b.sng`, SNG);
+		const {songs} = await loadedWith(cache);
+		await vi.waitFor(() => expect(songs.isOnDevice('b')).toBe(true));
+		expect(songs.isOnDevice('a')).toBe(false);
+		expect(songs.isOnDevice('missing')).toBe(false);
+	});
+
+	it('opens a stored package without the network and never downloads one', async () => {
+		const cache = new MemoryCache();
+		cache.entries.set(`${BASE}b.sng`, SNG);
+		const {songs, fetchMock} = await loadedWith(cache);
+		await expect(songs.openStored('b')).resolves.not.toBeNull();
+		await expect(songs.openStored('a')).resolves.toBeNull();
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(songs.download('a')).toBeUndefined();
+	});
+
+	it('counts a song downloaded in this session as on the device', async () => {
+		const cache = new MemoryCache();
+		const {songs} = await loadedWith(cache);
+		expect(songs.isOnDevice('a')).toBe(false);
+		await songs.ensure('a');
+		expect(songs.isOnDevice('a')).toBe(true);
 	});
 });
 

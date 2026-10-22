@@ -5,7 +5,7 @@
 // time the band sits down.
 
 import BandCatalog from '@app/features/activities/band/BandCatalog';
-import type {BandSongSummary} from '@app/features/activities/band/BandProtocol';
+import {BAND_GENRE_GROUPS, type BandGenreGroup, type BandSongSummary} from '@app/features/activities/band/BandProtocol';
 import {BAND_DIFFICULTIES, type BandDifficulty, type BandPart} from '@app/features/activities/band/engine/ChartModel';
 import {SongPackage} from '@app/features/activities/band/engine/SongPackage';
 import {BAND_PARTS} from '@app/features/activities/band/flow/BandRoomMachine';
@@ -19,9 +19,8 @@ const INDEX_FILE = 'index.json';
 const CACHE_NAME = 'band-songs-v1';
 // Parsed packages kept in memory: the song being played and the next one.
 const PARSED_PACKAGES_KEPT = 2;
-// Charter ratings run 0..6; the vote cards draw five cells.
-const INTENSITY_CELLS = 5;
-const CHARTER_RATING_MAX = 6;
+// Charter ratings (song.ini diff_*) run 0..6, the seven Rock Band tiers from warm-up to impossible.
+export const CHARTER_TIER_MAX = 6;
 
 const logger = new Logger('BandSongLibrary');
 
@@ -86,6 +85,18 @@ function resolveUrl(value: unknown, base: string): string | null {
 	}
 }
 
+function readGroups(value: unknown): Array<BandGenreGroup> {
+	if (!Array.isArray(value)) return [];
+	return BAND_GENRE_GROUPS.filter((group) => value.includes(group));
+}
+
+// "1986", "1969 (October 6)" and "1969-10-06" all start with the year; anything else is no year.
+export function readYear(value: unknown): number | null {
+	if (typeof value === 'number') return Number.isInteger(value) && value > 0 ? value : null;
+	const match = typeof value === 'string' ? /^\s*(\d{4})(?!\d)/.exec(value) : null;
+	return match ? Number(match[1]) : null;
+}
+
 function readParts(value: unknown): BandSongSummary['parts'] | null {
 	if (typeof value !== 'object' || value === null) return null;
 	const parts: Partial<Record<BandPart, ReadonlyArray<BandDifficulty>>> = {};
@@ -140,16 +151,25 @@ export function parseSongIndex(json: unknown, indexUrl: string): ParsedSongIndex
 			packageUrl,
 			packageBytes: typeof record.packageBytes === 'number' && record.packageBytes > 0 ? record.packageBytes : 0,
 			addedBy: readString(record.addedBy),
+			groups: readGroups(record.groups),
+			genre: readString(record.genre),
+			year: readYear(record.year),
+			previewStartMs:
+				typeof record.previewStartMs === 'number' &&
+				Number.isFinite(record.previewStartMs) &&
+				record.previewStartMs >= 0
+					? record.previewStartMs
+					: null,
 		});
 		intensity.set(id, readIntensity(record.ratings));
 	}
 	return {songs, intensity};
 }
 
-// 0..5 filled cells for a charter rating; null when the part is not rated.
-export function intensityCells(rating: number | undefined): number | null {
+// The 0..6 tier of a charter rating; null when the part is not rated.
+export function ratingTier(rating: number | undefined): number | null {
 	if (rating === undefined) return null;
-	return Math.max(1, Math.min(INTENSITY_CELLS, Math.round((rating / CHARTER_RATING_MAX) * INTENSITY_CELLS)));
+	return Math.min(CHARTER_TIER_MAX, Math.round(rating));
 }
 
 export class BandSongLibrary {
@@ -157,6 +177,8 @@ export class BandSongLibrary {
 	songs: ReadonlyArray<BandSongSummary> = [];
 	songsById: ReadonlyMap<string, BandSongSummary> = new Map();
 	readonly downloads = observable.map<string, BandSongDownload>();
+	// Package URLs found in Cache Storage when the index loaded: songs downloaded on an earlier day.
+	private readonly storedUrls = observable.set<string>();
 	private intensity: ReadonlyMap<string, Partial<Record<BandPart, number>>> = new Map();
 
 	private readonly baseUrl: string;
@@ -195,8 +217,32 @@ export class BandSongLibrary {
 		return this.downloads.get(songId);
 	}
 
-	partIntensity(songId: string, part: BandPart): number | null {
-		return intensityCells(this.intensity.get(songId)?.[part]);
+	// The package is on this device, so it opens without a download.
+	isOnDevice(songId: string): boolean {
+		const song = this.song(songId);
+		if (!song) return false;
+		return this.download(songId)?.status === 'cached' || this.storedUrls.has(song.packageUrl);
+	}
+
+	// The parsed package only when it is already on this device; never downloads. For previews, which must not pull
+	// a whole package over the network, and kept out of the parsed packages so a preview never evicts the next song.
+	async openStored(songId: string): Promise<SongPackage | null> {
+		const parsed = this.packages.get(songId);
+		if (parsed) return parsed.catch(() => null);
+		const song = this.song(songId);
+		const cache = song ? await this.openCache() : null;
+		const stored = song && cache ? await cache.match(song.packageUrl).catch(() => undefined) : undefined;
+		if (!stored) return null;
+		try {
+			return SongPackage.fromSng(new Uint8Array(await stored.arrayBuffer()));
+		} catch (error) {
+			logger.warn('Stored song could not be read for a preview', {songId, error});
+			return null;
+		}
+	}
+
+	partTier(songId: string, part: BandPart): number | null {
+		return ratingTier(this.intensity.get(songId)?.[part]);
 	}
 
 	// Safe to call repeatedly; a failed load is retried, a finished one is kept.
@@ -215,6 +261,7 @@ export class BandSongLibrary {
 					this.status = {status: 'ready'};
 				});
 				BandCatalog.publish(songs);
+				void this.scanStored();
 			})
 			.catch((error: unknown) => {
 				const reason = error instanceof BandSongLibraryError ? error.reason : 'unreachable';
@@ -380,6 +427,19 @@ export class BandSongLibrary {
 			await cache?.delete(song.packageUrl).catch(() => false);
 			this.setDownload(song.id, {status: 'failed', reason: 'corrupt'});
 			throw new BandSongLibraryError('corrupt', `Song ${song.id} could not be read`, {cause: error});
+		}
+	}
+
+	private async scanStored(): Promise<void> {
+		const cache = await this.openCache();
+		if (!cache) return;
+		try {
+			const requests = await cache.keys();
+			runInAction(() => {
+				for (const request of requests) this.storedUrls.add(request.url);
+			});
+		} catch (error) {
+			logger.warn('Stored songs could not be listed', {error});
 		}
 	}
 

@@ -41,6 +41,10 @@ function song(id: string, overrides: Partial<BandSongSummary> = {}): BandSongSum
 		packageUrl: `https://dl.example/${id}.sng`,
 		packageBytes: 1000,
 		addedBy: null,
+		groups: [],
+		genre: null,
+		year: null,
+		previewStartMs: null,
 		...overrides,
 	};
 }

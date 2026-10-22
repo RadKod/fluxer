@@ -21,6 +21,10 @@ const SONG: BandSongSummary = {
 	packageUrl: 'http://127.0.0.1/duman-bir-daha.sng',
 	packageBytes: 1,
 	addedBy: null,
+	groups: [],
+	genre: null,
+	year: null,
+	previewStartMs: null,
 };
 
 function setup(

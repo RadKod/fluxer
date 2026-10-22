@@ -12,6 +12,13 @@ const REVIEW_MESSAGE = 'RAM kuralları 1–3: sahip + söküm göster, listeye g
 
 // Existing owners are a review baseline, not proof that their teardown follows the RAM rules.
 const APP_OWNERS = [
+	// Song previews on the band picker: one preview at a time, its elements, sources, blob URLs and context lease are
+	// released when it stops, is replaced or the pick screen unmounts.
+	'features/activities/band/flow/BandSongPreview.ts',
+	// Jam dev page only (never in the app bundle): its AudioContext is closed in dispose(); the offline render context is
+	// dropped after one technique render.
+	'features/activities/band/dev/JamDevHarness.ts',
+	'features/activities/band/dev/JamDevRender.ts',
 	'features/channel/components/VoiceMessageRecorder.tsx',
 	'features/devtools/commands/VoiceStateCommands.tsx',
 	'features/notification/utils/SoundUtils.ts',

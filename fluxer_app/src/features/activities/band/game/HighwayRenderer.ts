@@ -56,6 +56,10 @@ const SPARK_STREAM_EVERY_MS = 40;
 const SPARK_STREAM_LIFE_MS = 380;
 const SPARK_GRAVITY = 520;
 const FEEDBACK_MS = 700;
+// Side highways in the focus view are blurred and dimmed, so a miss there also jolts the highway sideways.
+const SHAKE_MS = 320;
+const SHAKE_PX = 7;
+const SHAKE_HZ = 22;
 // Sustains are drawn from their start; longer ones than this are rare enough to clip.
 const LONGEST_SUSTAIN_MS = 8_000;
 
@@ -109,11 +113,28 @@ function surfaceLaneColor(highway: HighwayLayout, slot: number): string {
 	return highway.kind === 'drums' ? PAD_COLORS[slot] : FRET_COLORS[slot];
 }
 
+// Sideways offset of a highway `sinceMissMs` after a miss: a fast decaying wobble, 0 once it settles.
+export function missShake(sinceMissMs: number): number {
+	if (sinceMissMs < 0 || sinceMissMs >= SHAKE_MS) return 0;
+	const decay = 1 - sinceMissMs / SHAKE_MS;
+	return Math.sin((sinceMissMs / 1000) * SHAKE_HZ * 2 * Math.PI) * SHAKE_PX * decay * decay;
+}
+
+export interface HighwayRendererOptions {
+	readonly shakeOnMiss?: boolean;
+}
+
 // Draws every highway of the stage onto one 2D canvas. Holds no game state; each frame is drawn from `HighwayFrame`.
 export class HighwayRenderer {
 	private layout: StageLayout | null = null;
+	private readonly shakeOnMiss: boolean;
 
-	constructor(private readonly ctx: CanvasRenderingContext2D) {}
+	constructor(
+		private readonly ctx: CanvasRenderingContext2D,
+		{shakeOnMiss = false}: HighwayRendererOptions = {},
+	) {
+		this.shakeOnMiss = shakeOnMiss;
+	}
 
 	setLayout(layout: StageLayout): void {
 		this.layout = layout;
@@ -125,13 +146,26 @@ export class HighwayRenderer {
 		ctx.clearRect(0, 0, layout.width, layout.height);
 		layout.highways.forEach((highway, index) => {
 			const track = frame.tracks[index];
-			if (track) this.drawHighway(layout, highway, track, frame);
+			if (track) this.shaken(layout, track, frame, () => this.drawHighway(layout, highway, track, frame));
 		});
 		this.fadeFarEnd(layout);
 		layout.highways.forEach((highway, index) => {
 			const track = frame.tracks[index];
-			if (track) this.drawFeedback(layout, highway, track, frame);
+			if (track) this.shaken(layout, track, frame, () => this.drawFeedback(layout, highway, track, frame));
 		});
+	}
+
+	private shaken(layout: StageLayout, track: SeatTrack, frame: HighwayFrame, draw: () => void): void {
+		const offset = this.shakeOnMiss && !frame.reducedMotion ? missShake(frame.nowMs - track.missAtMs) : 0;
+		if (offset === 0) {
+			draw();
+			return;
+		}
+		const {ctx} = this;
+		ctx.save();
+		ctx.translate(offset * layout.scale, 0);
+		draw();
+		ctx.restore();
 	}
 
 	private drawHighway(layout: StageLayout, highway: HighwayLayout, track: SeatTrack, frame: HighwayFrame): void {
@@ -697,7 +731,8 @@ export class HighwayRenderer {
 	private drawFeedback(layout: StageLayout, highway: HighwayLayout, track: SeatTrack, frame: HighwayFrame): void {
 		const {ctx} = this;
 		const point = project(layout, highway.left + highway.width / 2, FEEDBACK_DISTANCE * layout.scale);
-		const s = layout.scale;
+		// Wide focus-view lanes carry bigger gems; the combo and judgement grow along, more slowly.
+		const s = layout.scale * Math.max(1, highway.noteScale * 0.75);
 		ctx.save();
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'alphabetic';

@@ -34,6 +34,10 @@ export const BAND_SUGGESTIONS = 4;
 export const BAND_RATING_MIN = 1;
 export const BAND_RATING_MAX = 5;
 
+// Genre shelves of the song picker, in the order the picker lists them; the index files each song under one or more.
+export const BAND_GENRE_GROUPS = ['turkce', 'rock', 'metal', 'alternatif', 'pop', 'country', 'klasik'] as const;
+export type BandGenreGroup = (typeof BAND_GENRE_GROUPS)[number];
+
 // One entry of the song library index (sanalyer.com/sarkilar/<önek>/index.json). The .sng package carries everything else.
 export interface BandSongSummary {
 	readonly id: string;
@@ -48,6 +52,14 @@ export interface BandSongSummary {
 	readonly packageUrl: string;
 	readonly packageBytes: number;
 	readonly addedBy: string | null;
+	// The genre fields below are empty or null for entries of older indexes, which do not carry them.
+	readonly groups: ReadonlyArray<BandGenreGroup>;
+	// The charter's own genre text, e.g. "Heavy Metal".
+	readonly genre: string | null;
+	// Release year, read from the leading four digits of the index's year text ("1969 (October 6)").
+	readonly year: number | null;
+	// Where the song's preview starts, from song.ini preview_start_time.
+	readonly previewStartMs: number | null;
 }
 
 export interface BandVote {

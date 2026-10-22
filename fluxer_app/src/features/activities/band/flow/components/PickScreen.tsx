@@ -1,341 +1,223 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {BAND_PHASE_MS, type BandSongSummary, type BandState} from '@app/features/activities/band/BandProtocol';
+import type {BandSongSummary, BandState} from '@app/features/activities/band/BandProtocol';
 import {tallyVotes} from '@app/features/activities/band/BandVotes';
 import {
-	PART_INTENSITY_DESCRIPTOR,
-	PICK_ALL_SONGS_DESCRIPTOR,
-	PICK_COUNTDOWN_DESCRIPTOR,
-	PICK_HINT_DESCRIPTOR,
-	PICK_KEYS_DESCRIPTOR,
+	GENRE_GROUP_DESCRIPTORS,
 	PICK_LIBRARY_EMPTY_DESCRIPTOR,
 	PICK_NO_MATCH_DESCRIPTOR,
+	PICK_PREVIEW_HINT_DESCRIPTOR,
+	PICK_RANDOM_DESCRIPTOR,
+	PICK_RANDOM_HINT_DESCRIPTOR,
 	PICK_SEARCH_DESCRIPTOR,
-	PICK_SUGGESTIONS_DESCRIPTOR,
+	PICK_SONG_COUNT_DESCRIPTOR,
 	PICK_TITLE_DESCRIPTOR,
-	PICK_VOTED_DESCRIPTOR,
-	PLAY_NOW_DESCRIPTOR,
-	partDescriptor,
-	SONG_PLAYERS_DESCRIPTOR,
-	VOTE_COUNT_DESCRIPTOR,
 } from '@app/features/activities/band/flow/BandFlowMessages';
+import {myVoteSongId, votePanel} from '@app/features/activities/band/flow/BandPickModel';
 import type {BandRoom} from '@app/features/activities/band/flow/BandRoom';
-import {songPlayableParts} from '@app/features/activities/band/flow/BandRoomMachine';
-import {searchSongs} from '@app/features/activities/band/flow/BandSongSearch';
-import {BandPartIcon} from '@app/features/activities/band/flow/components/BandPartIcon';
-import {BandAvatar} from '@app/features/activities/band/flow/components/BandPeople';
-import {BandSongCover} from '@app/features/activities/band/flow/components/BandSongCover';
-import {BandTimer} from '@app/features/activities/band/flow/components/BandTimer';
+import {
+	type BandSongFilter,
+	filterSongs,
+	groupCounts,
+	NO_SONG_FILTER,
+	randomSong,
+} from '@app/features/activities/band/flow/BandSongFilters';
+import {BandSongPreview} from '@app/features/activities/band/flow/BandSongPreview';
+import {PickGenreRail} from '@app/features/activities/band/flow/components/PickGenreRail';
 import styles from '@app/features/activities/band/flow/components/PickScreen.module.css';
-import {formatSongLength, secondsUntil, useBandNow} from '@app/features/activities/band/flow/components/useBandNow';
+import {PickSongGrid} from '@app/features/activities/band/flow/components/PickSongGrid';
+import {type BandPreviewLabel, PickSongPanel} from '@app/features/activities/band/flow/components/PickSongPanel';
+import {useBandNow} from '@app/features/activities/band/flow/components/useBandNow';
+import BandSettings from '@app/features/activities/band/game/BandSettings';
+import ActivityViewDock from '@app/features/activities/components/ActivityViewDock';
 import {Scroller} from '@app/features/ui/components/Scroller';
 import {useLingui} from '@lingui/react/macro';
-import {MagnifyingGlassIcon} from '@phosphor-icons/react';
-import {clsx} from 'clsx';
+import {MagnifyingGlassIcon, ShuffleIcon} from '@phosphor-icons/react';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
-import {useEffect, useId, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 
 type PickState = Extract<BandState, {phase: 'pick'}>;
 
-const VOTERS_SHOWN = 4;
+// A pointer resting this long on a card starts its preview; sweeping across the grid starts none.
+const HOVER_PREVIEW_DELAY_MS = 350;
+// Arrow keys held down step through many cards; only the one they stop on plays.
+const SELECT_PREVIEW_DELAY_MS = 200;
 
-interface Section {
-	readonly key: string;
-	readonly title: string | null;
-	readonly songs: ReadonlyArray<BandSongSummary>;
-}
-
-interface SongRowProps {
-	readonly room: BandRoom;
-	readonly song: BandSongSummary;
-	readonly id: string;
-	readonly active: boolean;
-	readonly voterIds: ReadonlyArray<string>;
-	readonly onHover?: () => void;
-	readonly onVote: () => void;
-	// Set for the leader on a voted song: skips the countdown.
-	readonly onPlayNow?: () => void;
-}
-
-const SongRow = observer(function SongRow({
-	room,
-	song,
-	id,
-	active,
-	voterIds,
-	onHover,
-	onVote,
-	onPlayNow,
-}: SongRowProps) {
-	const {i18n} = useLingui();
-	const rowRef = useRef<HTMLDivElement>(null);
+// Plays the hovered card's preview, else the selected one's, only while the screen is on the expanded stage (the
+// tile and the mini window show the summary in this step, and the View may be parked out of sight). Stops with the
+// screen, so it never outlives the pick step.
+function usePickPreview(room: BandRoom, hovered: BandSongSummary | null, selected: BandSongSummary | null) {
+	const [preview] = useState(() => new BandSongPreview({library: room.library, volume: () => BandSettings.volume}));
+	useEffect(() => () => preview.stop(), [preview]);
+	const target = hovered ?? selected;
+	const onStage = ActivityViewDock.placement === 'stage';
+	const onDevice = target ? room.library.isOnDevice(target.id) : false;
 	useEffect(() => {
-		if (active) rowRef.current?.scrollIntoView({block: 'nearest'});
-	}, [active]);
-	const parts = songPlayableParts(song);
-	const mine = voterIds.includes(room.myUserId);
-	return (
-		<div
-			ref={rowRef}
-			className={clsx(styles.row, active && styles.rowActive, mine && styles.rowMine)}
-			data-flx="activities.band.flow.pick-screen.song-row.row"
-		>
-			<button
-				id={id}
-				type="button"
-				role="option"
-				tabIndex={-1}
-				aria-selected={active}
-				className={styles.rowButton}
-				onMouseMove={onHover}
-				// The search box keeps the focus, so typing and the arrow keys go on working after a click.
-				onMouseDown={(event) => event.preventDefault()}
-				onClick={onVote}
-				data-flx="activities.band.flow.pick-screen.song-row.row-button.vote"
-			>
-				<BandSongCover
-					song={song}
-					sizeRem={2.5}
-					showArtist={false}
-					data-flx="activities.band.flow.pick-screen.song-row.band-song-cover"
-				/>
-				<span className={styles.text} data-flx="activities.band.flow.pick-screen.song-row.text">
-					<b data-flx="activities.band.flow.pick-screen.song-row.b">{song.name}</b>
-					<span data-flx="activities.band.flow.pick-screen.song-row.span">{song.artist}</span>
-				</span>
-				<span className={styles.parts} data-flx="activities.band.flow.pick-screen.song-row.parts">
-					{parts.map((part) => {
-						const partName = i18n._(partDescriptor(part, song));
-						const level = room.library.partIntensity(song.id, part);
-						return (
-							<span
-								key={part}
-								title={level === null ? partName : i18n._(PART_INTENSITY_DESCRIPTOR, {part: partName, level})}
-								data-flx="activities.band.flow.pick-screen.song-row.part"
-							>
-								<BandPartIcon
-									part={part}
-									className={styles.partIcon}
-									data-flx="activities.band.flow.pick-screen.song-row.part-icon"
-								/>
-							</span>
-						);
-					})}
-				</span>
-				<span className={styles.voters} data-flx="activities.band.flow.pick-screen.song-row.voters">
-					{voterIds.slice(0, VOTERS_SHOWN).map((userId) => (
-						<BandAvatar
-							key={userId}
-							userId={userId}
-							size={20}
-							className={styles.voter}
-							data-flx="activities.band.flow.pick-screen.song-row.voter"
-						/>
-					))}
-					{voterIds.length > 0 && (
-						<span className={styles.voteCount} data-flx="activities.band.flow.pick-screen.song-row.vote-count">
-							{i18n._(VOTE_COUNT_DESCRIPTOR, {count: voterIds.length})}
-						</span>
-					)}
-				</span>
-				<span className={styles.players} data-flx="activities.band.flow.pick-screen.song-row.players">
-					{i18n._(SONG_PLAYERS_DESCRIPTOR, {count: parts.length})}
-				</span>
-				<span className={styles.length} data-flx="activities.band.flow.pick-screen.song-row.length">
-					{formatSongLength(song.lengthMs)}
-				</span>
-			</button>
-			{onPlayNow && (
-				<button
-					type="button"
-					className={styles.playNow}
-					onClick={onPlayNow}
-					data-flx="activities.band.flow.pick-screen.song-row.play-now.button"
-				>
-					{i18n._(PLAY_NOW_DESCRIPTOR)}
-				</button>
-			)}
-		</div>
-	);
-});
+		if (!target || !onStage || !onDevice) {
+			preview.stop();
+			return;
+		}
+		const timer = setTimeout(
+			() => preview.play(target),
+			target === hovered ? HOVER_PREVIEW_DELAY_MS : SELECT_PREVIEW_DELAY_MS,
+		);
+		return () => clearTimeout(timer);
+	}, [preview, target, hovered, onStage, onDevice]);
+	return preview;
+}
+
+function previewLabel(room: BandRoom, preview: BandSongPreview, song: BandSongSummary | null): BandPreviewLabel {
+	if (!song) return null;
+	if (preview.state.status === 'playing' && preview.state.songId === song.id) return 'playing';
+	return room.library.download(song.id)?.status === 'downloading' ? 'downloading' : null;
+}
 
 interface PickScreenProps {
 	readonly room: BandRoom;
 	readonly state: PickState;
 }
 
-// The first step of a round: anyone searches the library and votes; the first vote starts a short countdown, then the
-// most voted song goes to part picking.
+// The first step of a round: browse the library by genre and era, hear a preview, vote. The first vote starts a short
+// countdown, then the most voted song goes to part picking.
 export const PickScreen = observer(function PickScreen({room, state}: PickScreenProps) {
 	const {i18n} = useLingui();
-	const listId = useId();
 	const searchRef = useRef<HTMLInputElement>(null);
-	const [query, setQuery] = useState('');
-	const [activeIndex, setActiveIndex] = useState(0);
+	const gridRef = useRef<HTMLDivElement>(null);
+	const [filter, setFilter] = useState<BandSongFilter>(NO_SONG_FILTER);
+	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [hovered, setHovered] = useState<BandSongSummary | null>(null);
 	const now = useBandNow(room.session);
-	useEffect(() => searchRef.current?.focus(), []);
+	useEffect(() => gridRef.current?.focus({preventScroll: true}), []);
 
 	const library = room.library.songs;
-	const tally = tallyVotes(state.votes);
-	const votersOf = new Map(tally.map((entry) => [entry.songId, entry.voterIds]));
-	const songsOf = (songIds: ReadonlyArray<string>) =>
-		songIds.map((songId) => room.library.song(songId)).filter((song): song is BandSongSummary => song !== undefined);
-	const votedSongs = songsOf(tally.map((entry) => entry.songId));
-	const sections: ReadonlyArray<Section> = query.trim()
-		? [{key: 'results', title: null, songs: searchSongs(library, query)}]
-		: [
-				{key: 'suggestions', title: i18n._(PICK_SUGGESTIONS_DESCRIPTOR), songs: songsOf(state.suggestions)},
-				{key: 'all', title: i18n._(PICK_ALL_SONGS_DESCRIPTOR), songs: library},
-			];
-	const rows = sections.flatMap((section) => section.songs);
-	const sectionStarts = sections.map((_, index) =>
-		sections.slice(0, index).reduce((sum, section) => sum + section.songs.length, 0),
-	);
-	const active = Math.min(activeIndex, Math.max(0, rows.length - 1));
-	const rowId = (index: number) => `${listId}-${index}`;
-	const vote = (song: BandSongSummary) => room.send({t: 'band.vote', songId: song.id});
-	const playNow = (song: BandSongSummary) => room.send({t: 'band.playNow', songId: song.id});
+	const songs = useMemo(() => filterSongs(library, filter), [library, filter]);
+	const counts = useMemo(() => groupCounts(library, filter), [library, filter]);
+	// A song chosen from the vote list stays chosen even when the shelves do not show it.
+	const selected = (selectedId ? room.library.song(selectedId) : undefined) ?? songs[0] ?? null;
+	const preview = usePickPreview(room, hovered, selected);
+	const myVoteId = myVoteSongId(state.votes, room.myUserId);
+	const votersOf = new Map(tallyVotes(state.votes).map((entry) => [entry.songId, entry.voterIds]));
+	const panel = votePanel(state, room.myUserId, room.session.isLeader, now);
+	const anyPreviewable = songs.some((song) => room.library.isOnDevice(song.id));
 
-	const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+	const vote = (song: BandSongSummary) => room.send({t: 'band.vote', songId: song.id});
+	const select = (song: BandSongSummary) => setSelectedId(song.id);
+	const voteRandom = () => {
+		const song = randomSong(songs, myVoteId);
+		if (!song) return;
+		select(song);
+		if (song.id !== myVoteId) vote(song);
+	};
+	const changeFilter = (patch: Partial<BandSongFilter>) => setFilter((current) => ({...current, ...patch}));
+
+	const onSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+		if (event.key === 'ArrowDown') {
 			event.preventDefault();
-			const step = event.key === 'ArrowDown' ? 1 : -1;
-			setActiveIndex(Math.min(rows.length - 1, Math.max(0, active + step)));
-		} else if (event.key === 'Enter' && rows[active]) {
+			gridRef.current?.focus({preventScroll: true});
+		} else if (event.key === 'Enter' && selected) {
 			event.preventDefault();
-			vote(rows[active]);
+			vote(selected);
+		} else if (event.key === 'Escape' && filter.query) {
+			event.preventDefault();
+			changeFilter({query: ''});
 		}
 	};
 
 	return (
 		<div className={styles.screen} data-flx="activities.band.flow.pick-screen.screen">
-			<header data-flx="activities.band.flow.pick-screen.heading">
+			<header className={styles.header} data-flx="activities.band.flow.pick-screen.header">
 				<h2 className={styles.title} data-flx="activities.band.flow.pick-screen.title">
 					{i18n._(PICK_TITLE_DESCRIPTOR)}
 				</h2>
-				<p className={styles.hint} data-flx="activities.band.flow.pick-screen.hint">
-					{i18n._(PICK_HINT_DESCRIPTOR)}
-				</p>
+				<label className={styles.search} data-flx="activities.band.flow.pick-screen.search">
+					<MagnifyingGlassIcon
+						size={16}
+						weight="bold"
+						className={styles.searchIcon}
+						aria-hidden="true"
+						data-flx="activities.band.flow.pick-screen.search-icon"
+					/>
+					<input
+						ref={searchRef}
+						type="search"
+						aria-label={i18n._(PICK_SEARCH_DESCRIPTOR)}
+						placeholder={i18n._(PICK_SEARCH_DESCRIPTOR)}
+						value={filter.query}
+						onChange={(event) => changeFilter({query: event.target.value})}
+						onKeyDown={onSearchKeyDown}
+						data-flx="activities.band.flow.pick-screen.search-input.key-down"
+					/>
+				</label>
+				<button
+					type="button"
+					className={styles.random}
+					title={i18n._(PICK_RANDOM_HINT_DESCRIPTOR)}
+					disabled={songs.length === 0}
+					onClick={voteRandom}
+					data-flx="activities.band.flow.pick-screen.random.button"
+				>
+					<ShuffleIcon
+						size={16}
+						weight="bold"
+						aria-hidden="true"
+						data-flx="activities.band.flow.pick-screen.random-icon"
+					/>
+					{i18n._(PICK_RANDOM_DESCRIPTOR)}
+				</button>
 			</header>
-			<div className={styles.searchRow} data-flx="activities.band.flow.pick-screen.search-row">
-				<MagnifyingGlassIcon
-					size={18}
-					weight="bold"
-					className={styles.searchIcon}
-					data-flx="activities.band.flow.pick-screen.search-icon"
+			<div className={styles.body} data-flx="activities.band.flow.pick-screen.body">
+				<PickGenreRail
+					counts={counts}
+					group={filter.group}
+					decade={filter.decade}
+					onGroup={(group) => changeFilter({group})}
+					onDecade={(decade) => changeFilter({decade})}
+					data-flx="activities.band.flow.pick-screen.genre-rail"
 				/>
-				<input
-					ref={searchRef}
-					className={styles.search}
-					type="search"
-					role="combobox"
-					aria-expanded="true"
-					aria-controls={listId}
-					aria-activedescendant={rows.length > 0 ? rowId(active) : undefined}
-					aria-label={i18n._(PICK_SEARCH_DESCRIPTOR)}
-					placeholder={i18n._(PICK_SEARCH_DESCRIPTOR)}
-					value={query}
-					onChange={(event) => {
-						setQuery(event.target.value);
-						setActiveIndex(0);
-					}}
-					onKeyDown={onKeyDown}
-					data-flx="activities.band.flow.pick-screen.search.key-down"
-				/>
-				<span className={styles.keys} data-flx="activities.band.flow.pick-screen.keys">
-					{i18n._(PICK_KEYS_DESCRIPTOR)}
-				</span>
-			</div>
-			{state.endsAt !== null && (
-				<BandTimer
-					endsAt={state.endsAt}
-					durationMs={BAND_PHASE_MS.pick}
-					now={now}
-					showSeconds={false}
-					className={styles.countdown}
-					data-flx="activities.band.flow.pick-screen.countdown"
-				>
-					<span className={styles.countdownText} data-flx="activities.band.flow.pick-screen.countdown-text">
-						{i18n._(PICK_COUNTDOWN_DESCRIPTOR, {seconds: secondsUntil(state.endsAt, now)})}
-					</span>
-				</BandTimer>
-			)}
-			{votedSongs.length > 0 && (
-				<section
-					className={styles.votedSection}
-					aria-label={i18n._(PICK_VOTED_DESCRIPTOR)}
-					data-flx="activities.band.flow.pick-screen.voted-section"
-				>
-					<h3 className={styles.sectionTitle} data-flx="activities.band.flow.pick-screen.voted-title">
-						{i18n._(PICK_VOTED_DESCRIPTOR)}
-					</h3>
-					<div className={styles.rows} data-flx="activities.band.flow.pick-screen.voted-rows">
-						{votedSongs.map((song) => (
-							<SongRow
-								key={song.id}
-								room={room}
-								song={song}
-								id={`${listId}-voted-${song.id}`}
-								active={false}
-								voterIds={votersOf.get(song.id) ?? []}
-								onVote={() => vote(song)}
-								onPlayNow={room.session.isLeader ? () => playNow(song) : undefined}
-								data-flx="activities.band.flow.pick-screen.voted-row"
+				<main className={styles.main} data-flx="activities.band.flow.pick-screen.main">
+					<div className={styles.shelf} data-flx="activities.band.flow.pick-screen.shelf">
+						<h3 className={styles.shelfTitle} data-flx="activities.band.flow.pick-screen.shelf-title">
+							{i18n._(GENRE_GROUP_DESCRIPTORS[filter.group ?? 'all'])}
+						</h3>
+						<span className={styles.shelfNote} data-flx="activities.band.flow.pick-screen.shelf-note">
+							{i18n._(PICK_SONG_COUNT_DESCRIPTOR, {count: songs.length})}
+							{anyPreviewable && ` · ${i18n._(PICK_PREVIEW_HINT_DESCRIPTOR)}`}
+						</span>
+					</div>
+					{songs.length === 0 ? (
+						<p className={styles.empty} data-flx="activities.band.flow.pick-screen.empty">
+							{i18n._(library.length === 0 ? PICK_LIBRARY_EMPTY_DESCRIPTOR : PICK_NO_MATCH_DESCRIPTOR)}
+						</p>
+					) : (
+						<Scroller className={styles.scroller} fade={false} data-flx="activities.band.flow.pick-screen.scroller">
+							<PickSongGrid
+								songs={songs}
+								selectedId={selected?.id ?? null}
+								myVoteId={myVoteId}
+								previewId={preview.state.status === 'playing' ? preview.state.songId : null}
+								votersOf={votersOf}
+								listRef={gridRef}
+								onSelect={select}
+								onVote={vote}
+								onHover={setHovered}
+								onType={() => searchRef.current?.focus()}
+								data-flx="activities.band.flow.pick-screen.song-grid"
 							/>
-						))}
-					</div>
-				</section>
-			)}
-			{rows.length === 0 ? (
-				<p className={styles.empty} data-flx="activities.band.flow.pick-screen.empty">
-					{i18n._(library.length === 0 ? PICK_LIBRARY_EMPTY_DESCRIPTOR : PICK_NO_MATCH_DESCRIPTOR)}
-				</p>
-			) : (
-				<Scroller className={styles.scroller} fade={false} data-flx="activities.band.flow.pick-screen.scroller">
-					<div
-						id={listId}
-						role="listbox"
-						aria-label={i18n._(PICK_TITLE_DESCRIPTOR)}
-						className={styles.list}
-						data-flx="activities.band.flow.pick-screen.list"
-					>
-						{sections.map((section, sectionIndex) => {
-							const start = sectionStarts[sectionIndex];
-							if (section.songs.length === 0) return null;
-							return (
-								<div
-									key={section.key}
-									role="group"
-									aria-label={section.title ?? undefined}
-									data-flx="activities.band.flow.pick-screen.section"
-								>
-									{section.title && (
-										<h3 className={styles.sectionTitle} data-flx="activities.band.flow.pick-screen.section-title">
-											{section.title}
-										</h3>
-									)}
-									<div className={styles.rows} data-flx="activities.band.flow.pick-screen.rows">
-										{section.songs.map((song, index) => (
-											<SongRow
-												key={song.id}
-												room={room}
-												song={song}
-												id={rowId(start + index)}
-												active={start + index === active}
-												voterIds={votersOf.get(song.id) ?? []}
-												onHover={() => setActiveIndex(start + index)}
-												onVote={() => vote(song)}
-												data-flx="activities.band.flow.pick-screen.song-row"
-											/>
-										))}
-									</div>
-								</div>
-							);
-						})}
-					</div>
-				</Scroller>
-			)}
+						</Scroller>
+					)}
+				</main>
+				<PickSongPanel
+					room={room}
+					state={state}
+					song={selected}
+					panel={panel}
+					preview={previewLabel(room, preview, selected)}
+					onVote={vote}
+					onSelect={select}
+					data-flx="activities.band.flow.pick-screen.song-panel"
+				/>
+			</div>
 		</div>
 	);
 });

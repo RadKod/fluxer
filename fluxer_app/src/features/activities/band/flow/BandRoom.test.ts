@@ -24,6 +24,10 @@ const SONG: BandSongSummary = {
 	packageUrl: 'https://dl.example/duman-bir-daha.sng',
 	packageBytes: 1,
 	addedBy: null,
+	groups: [],
+	genre: null,
+	year: null,
+	previewStartMs: null,
 };
 
 const VOICE_PORT: BandVoicePort = {setSingerMic: () => {}, setUnlevelledVoices: () => {}};

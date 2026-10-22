@@ -1,0 +1,342 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Overlays live in the focus frame's design pixels (880 tall, as wide as the stage); the stage palette as in the band view. */
+
+.side {
+	position: absolute;
+	pointer-events: none;
+	filter: blur(2px);
+	opacity: 0.42;
+}
+
+/* The only other player: closer to readable, still clearly behind mine. */
+.sidePair {
+	filter: blur(1px);
+	opacity: 0.62;
+}
+
+.header {
+	position: absolute;
+	top: 0;
+	right: 28px;
+	left: 28px;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	height: 72px;
+}
+
+.cover {
+	border-radius: 8px;
+}
+
+.song {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	max-width: 280px;
+}
+
+.song b,
+.song span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.song b {
+	font-weight: 700;
+	font-size: 16px;
+}
+
+.song span {
+	font-size: 13px;
+	color: rgba(247, 245, 240, 0.6);
+}
+
+.progress {
+	flex: 0 1 280px;
+	min-width: 80px;
+	height: 4px;
+	margin-left: 12px;
+	overflow: hidden;
+	border-radius: 2px;
+	background: rgba(247, 245, 240, 0.12);
+}
+
+.progress i {
+	display: block;
+	height: 100%;
+	background: #f7f5f0;
+}
+
+.clock {
+	font-size: 13px;
+	color: rgba(247, 245, 240, 0.6);
+	white-space: nowrap;
+}
+
+.headerControls {
+	flex: none;
+	white-space: nowrap;
+	display: flex;
+	align-items: center;
+	gap: 18px;
+	margin-left: auto;
+	opacity: 0.8;
+}
+
+.headerControls:hover,
+.headerControls:focus-within {
+	opacity: 1;
+}
+
+.bandScore {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	margin-left: 12px;
+}
+
+.bandScore > span {
+	font-size: 12px;
+	color: rgba(247, 245, 240, 0.6);
+}
+
+.bandScore > b {
+	font-weight: 700;
+	font-size: 22px;
+	line-height: 1.15;
+}
+
+.bonus {
+	position: absolute;
+	top: 100%;
+	right: 0;
+	font-size: 12px;
+	color: rgba(247, 245, 240, 0.66);
+	white-space: nowrap;
+}
+
+.bonus b {
+	color: #f7f5f0;
+	font-weight: 700;
+}
+
+.vocals {
+	position: absolute;
+	display: flex;
+	overflow: hidden;
+	border-radius: 10px;
+	background: #121318;
+	box-shadow: inset 0 0 0 1px rgba(247, 245, 240, 0.08);
+}
+
+/* The singer's own view: the vocal lane is their highway. */
+.vocalLane {
+	border-radius: 14px;
+	box-shadow: inset 0 0 0 2px #b5179e;
+}
+
+.singer {
+	flex: none;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	max-width: 160px;
+	padding: 0 12px 0 14px;
+	overflow: hidden;
+	border-right: 1px solid rgba(247, 245, 240, 0.08);
+	font-weight: 600;
+	font-size: 13px;
+	white-space: nowrap;
+}
+
+.vocalsCanvas {
+	flex: 1;
+	min-width: 0;
+	height: 100%;
+}
+
+.hud {
+	position: absolute;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.avatar {
+	flex: none;
+	border-radius: 50%;
+}
+
+.identity {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.who {
+	overflow: hidden;
+	font-weight: 700;
+	font-size: 15px;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.line {
+	overflow: hidden;
+	font-size: 13px;
+	color: rgba(247, 245, 240, 0.6);
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.statusBright {
+	color: #f7f5f0;
+	font-weight: 600;
+}
+
+.statusBright b {
+	font-weight: 800;
+}
+
+.statusMuted {
+	color: rgba(247, 245, 240, 0.42);
+}
+
+.statusStar {
+	color: #ffc83d;
+	font-weight: 600;
+}
+
+.singHint {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	color: #7fe0b0;
+	font-weight: 600;
+}
+
+.energy {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 60px;
+	padding: 0 8px;
+}
+
+.energy span {
+	font-weight: 600;
+	font-size: 11px;
+	color: rgba(247, 245, 240, 0.6);
+}
+
+.energyTrack {
+	display: block;
+	height: 8px;
+	overflow: hidden;
+	border-radius: 4px;
+	background: rgba(247, 245, 240, 0.12);
+}
+
+.energyFill {
+	display: block;
+	height: 100%;
+	border-radius: 4px;
+	background: #ffc83d;
+	transition: width 0.2s linear;
+}
+
+.energyOn span {
+	color: #ffc83d;
+}
+
+.energyOn .energyFill {
+	box-shadow: 0 0 12px #ffc83d;
+}
+
+.multiplier {
+	font-weight: 700;
+	font-size: 30px;
+	line-height: 1;
+}
+
+.multiplierStar {
+	color: #ffc83d;
+}
+
+.score {
+	min-width: 96px;
+	font-weight: 700;
+	font-size: 22px;
+	text-align: right;
+}
+
+.sideLabel {
+	position: absolute;
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	opacity: 0.8;
+}
+
+.sideLabelRight {
+	flex-direction: row-reverse;
+	text-align: right;
+}
+
+.sideLabelRight .identity {
+	align-items: flex-end;
+}
+
+.sideLabelPair {
+	opacity: 0.92;
+}
+
+.sideLabel .who {
+	font-weight: 600;
+	font-size: 13px;
+}
+
+.sideLabel .line {
+	font-size: 12px;
+}
+
+.sideAvatar {
+	flex: none;
+	border-radius: 50%;
+}
+
+.sideAvatarStar {
+	box-shadow: 0 0 0 3px #ffc83d;
+}
+
+.compactScore {
+	position: absolute;
+	top: 8px;
+	right: 10px;
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	padding: 3px 10px;
+	border-radius: 999px;
+	background: rgba(12, 13, 15, 0.8);
+	font-weight: 600;
+	font-size: 13px;
+	pointer-events: none;
+}
+
+.compactScore b {
+	font-weight: 800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.energyFill {
+		transition: none;
+	}
+}

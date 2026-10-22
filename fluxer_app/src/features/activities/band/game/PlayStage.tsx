@@ -4,21 +4,20 @@ import Accessibility from '@app/features/accessibility/state/Accessibility';
 import type {BandSeat, BandSongSummary} from '@app/features/activities/band/BandProtocol';
 import type {VocalsChart} from '@app/features/activities/band/engine/VocalsParser';
 import {VOICE_MIC_PORT} from '@app/features/activities/band/flow/BandMicPort';
+import {bandDisplayName} from '@app/features/activities/band/flow/components/BandPeople';
+import {useElementSize} from '@app/features/activities/band/flow/components/useElementSize';
 import {
 	DIFFICULTY_LABELS,
 	FEEDBACK_LABELS,
 	partLabel,
 	SEAT_DESCRIPTOR,
 } from '@app/features/activities/band/game/BandGameLabels';
-import BandSettings from '@app/features/activities/band/game/BandSettings';
-import {FramePacer} from '@app/features/activities/band/game/FramePacer';
 import {
 	DESIGN_HEIGHT,
 	DESIGN_WIDTH,
 	type HighwayKind,
 	highwayAnchor,
 	layoutStage,
-	noteDistance,
 	type StageLayout,
 	strikeDistance,
 	toFrame,
@@ -28,29 +27,38 @@ import {MultiplierBadge} from '@app/features/activities/band/game/MultiplierBadg
 import type {FeedbackKind, PlayController, SeatHud, SeatTrack} from '@app/features/activities/band/game/PlayController';
 import type {PlayRuntime} from '@app/features/activities/band/game/PlayRuntime';
 import styles from '@app/features/activities/band/game/PlayScreen.module.css';
+import {
+	FINALE_BONUS_AT_STAKE_DESCRIPTOR,
+	FinaleBanner,
+	formatClock,
+	hasFocusPart,
+	type PlayerStatusKind,
+	PlayerStatusText,
+	playerStatusKind,
+	resizeCanvas,
+	runFrameLoop,
+	SING_HINT_DESCRIPTOR,
+	useSongTime,
+	useSpeakingUsers,
+	ViewSwitch,
+	VolumeControl,
+} from '@app/features/activities/band/game/PlayStageParts';
 import {VocalsRenderer} from '@app/features/activities/band/game/VocalsRenderer';
 import {formatNumber} from '@app/features/i18n/utils/IntlCache';
 import {Avatar} from '@app/features/ui/components/Avatar';
 import Users from '@app/features/user/state/Users';
 import {getCurrentLocale} from '@app/features/user/utils/LocaleUtils';
-import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
-import {useVoiceParticipantAvatarEntries} from '@app/features/voice/components/VoiceParticipantAvatarList';
-import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {MicrophoneIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
-import {type RefObject, useEffect, useMemo, useRef, useState} from 'react';
+import {type RefObject, useEffect, useMemo, useRef} from 'react';
 
 const YOU_DESCRIPTOR = msg({
 	message: 'You',
 	context: 'band-player-self',
 	comment: 'Band game: small tag next to my own name under my highway.',
-});
-const STAR_POWER_ON_DESCRIPTOR = msg({
-	message: 'Star power on',
-	comment: 'Band game: replaces part and difficulty under a player name while their star power doubles the score.',
 });
 const GROUP_METER_DESCRIPTOR = msg({
 	message: 'Group',
@@ -65,100 +73,17 @@ const STARS_DESCRIPTOR = msg({
 	message: '{stars} of 5 stars',
 	comment: 'Band game: accessible text for the star rating next to the band score. {stars} may have one decimal.',
 });
-const FINALE_TITLE_DESCRIPTOR = msg({
-	message: 'Big finale',
-	comment:
-		'Band game: title during the Big Rock Ending, the free-play section at the end of a song; big over the stage and small under each player name while they free-play.',
-});
-const FINALE_HINT_DESCRIPTOR = msg({
-	message: 'Every key plays. Hit the last note all together.',
-	comment: 'Band game: line under the Big finale title explaining the free play and the shared final hit.',
-});
-const FINALE_COUNTDOWN_DESCRIPTOR = msg({
-	message: 'Final hit in {seconds} s',
-	comment: 'Band game: chip above the final hit bar counting down whole seconds until everyone must hit it.',
-});
-const FINALE_BONUS_DESCRIPTOR = msg({
-	message: 'Finale bonus',
-	comment:
-		'Band game: under a player name after they landed the final hit of the Big Rock Ending, with the bonus now added to the score.',
-});
-const FINALE_BONUS_AT_STAKE_DESCRIPTOR = msg({
-	message: 'Finale bonus at stake',
-	comment:
-		'Band game: under the band score during the Big Rock Ending, the bonus the band has collected so far. It is not in the score yet; each player keeps their share only by landing the final hit.',
-});
-const FINALE_BONUS_LOST_DESCRIPTOR = msg({
-	message: 'Finale bonus lost',
-	comment:
-		'Band game: under a player name once they missed the final hit of the Big Rock Ending, so the points they collected in it do not count.',
-});
-const SING_HINT_DESCRIPTOR = msg({
-	message: 'Your mic is open, sing!',
-	comment:
-		'Band game: small hint on the lyrics strip for the singer; their mic stays open in the call during the song.',
-});
-const VOLUME_DESCRIPTOR = msg({
-	message: 'Song volume',
-	comment: 'Band game: label of the slider that sets how loud the song plays on this device.',
-});
 
 const BADGE_OFFSET = 12;
-const COUNTDOWN_MAX_SHARE = 0.8;
 
-function formatClock(ms: number): string {
-	const seconds = Math.max(0, Math.floor(ms / 1000));
-	return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-}
+const STATUS_CLASSES: Readonly<Record<PlayerStatusKind, string>> = {
+	finale: styles.finaleOn,
+	finaleBanked: styles.finaleOn,
+	finaleLost: styles.finaleLost,
+	starPower: styles.starPowerOn,
+};
 
-function displayName(userId: string): string {
-	const user = Users.getUser(userId);
-	if (!user) return userId;
-	return NicknameUtils.getNickname(user, MediaEngine.guildId, MediaEngine.channelId ?? undefined);
-}
-
-// Re-renders the caller every `intervalMs` with the heard song time; for the clock-driven parts of the HUD.
-function useSongTime(runtime: PlayRuntime, intervalMs: number): number {
-	const [songMs, setSongMs] = useState(() => runtime.heardMs());
-	useEffect(() => {
-		const timer = setInterval(() => setSongMs(runtime.heardMs()), intervalMs);
-		return () => clearInterval(timer);
-	}, [runtime, intervalMs]);
-	return songMs;
-}
-
-function useElementSize(ref: RefObject<HTMLElement | null>): {width: number; height: number} {
-	const [size, setSize] = useState({width: 0, height: 0});
-	useEffect(() => {
-		const element = ref.current;
-		if (!element) return;
-		const observer = new ResizeObserver(([entry]) => {
-			const {width, height} = entry.contentRect;
-			setSize((previous) => (previous.width === width && previous.height === height ? previous : {width, height}));
-		});
-		observer.observe(element);
-		return () => observer.disconnect();
-	}, [ref]);
-	return size;
-}
-
-// `zoom` is any CSS scale the canvas sits under, so its pixels match the screen.
-function resizeCanvas(
-	canvas: HTMLCanvasElement,
-	width: number,
-	height: number,
-	zoom = 1,
-): CanvasRenderingContext2D | null {
-	const ratio = (window.devicePixelRatio || 1) * zoom;
-	canvas.width = Math.max(1, Math.round(width * ratio));
-	canvas.height = Math.max(1, Math.round(height * ratio));
-	const ctx = canvas.getContext('2d');
-	ctx?.setTransform(ratio, 0, 0, ratio, 0, 0);
-	return ctx;
-}
-
-// One requestAnimationFrame loop per stage: ticks the controller and draws highways and vocals from song time.
-// While the page is hidden there are no frames, so a slow timer keeps judging and ends the song on time.
+// The band view's loop: every highway on one canvas, the vocals strip over them.
 function useStageLoop(
 	runtime: PlayRuntime,
 	layout: StageLayout | null,
@@ -181,12 +106,7 @@ function useStageLoop(
 		const vocalsRenderer = vocals && vocalsCtx ? new VocalsRenderer(vocalsCtx, vocals) : null;
 		const {controller} = runtime;
 		const fontFamily = getComputedStyle(canvas).fontFamily || 'sans-serif';
-
-		const pacer = new FramePacer();
-		let frameId = 0;
-		const draw = (frameTimestamp: number) => {
-			controller.tick(runtime.judgeMs());
-			const nowMs = runtime.heardMsAt(pacer.presentAt(frameTimestamp));
+		return runFrameLoop(runtime, (nowMs) => {
 			const frame: HighwayFrame = {
 				nowMs,
 				tracks: controller.tracks,
@@ -196,26 +116,7 @@ function useStageLoop(
 			};
 			renderer.draw(frame);
 			vocalsRenderer?.draw(vocalsWidth, vocalsHeight, nowMs, fontFamily);
-			frameId = requestAnimationFrame(draw);
-		};
-		let hiddenTimer: ReturnType<typeof setInterval> | null = null;
-		const onVisibility = () => {
-			cancelAnimationFrame(frameId);
-			if (hiddenTimer) clearInterval(hiddenTimer);
-			hiddenTimer = null;
-			if (document.visibilityState === 'hidden') {
-				hiddenTimer = setInterval(() => controller.tick(runtime.judgeMs()), 250);
-			} else {
-				frameId = requestAnimationFrame(draw);
-			}
-		};
-		document.addEventListener('visibilitychange', onVisibility);
-		onVisibility();
-		return () => {
-			document.removeEventListener('visibilitychange', onVisibility);
-			cancelAnimationFrame(frameId);
-			if (hiddenTimer) clearInterval(hiddenTimer);
-		};
+		});
 	}, [runtime, layout, canvasRef, vocalsCanvasRef, vocals, feedbackLabels]);
 }
 
@@ -292,8 +193,16 @@ const ScoreBox = observer(function ScoreBox({controller}: {controller: PlayContr
 	);
 });
 
-const SongInfo = observer(function SongInfo({runtime, entry}: {runtime: PlayRuntime; entry: BandSongSummary}) {
-	const {i18n} = useLingui();
+const SongInfo = observer(function SongInfo({
+	runtime,
+	entry,
+	canFocus,
+}: {
+	runtime: PlayRuntime;
+	entry: BandSongSummary;
+	// I play a part, so the focus view is open to me.
+	canFocus: boolean;
+}) {
 	const songMs = useSongTime(runtime, 500);
 	const share = entry.lengthMs > 0 ? Math.min(1, Math.max(0, songMs / entry.lengthMs)) : 0;
 	return (
@@ -319,18 +228,10 @@ const SongInfo = observer(function SongInfo({runtime, entry}: {runtime: PlayRunt
 					{formatClock(entry.lengthMs)}
 				</span>
 			</div>
-			<label className={styles.volume} data-flx="activities.band.game.play-stage.song-info.volume">
-				{i18n._(VOLUME_DESCRIPTOR)}
-				<input
-					type="range"
-					min={0}
-					max={1}
-					step={0.05}
-					value={BandSettings.volume}
-					onChange={(event) => BandSettings.setVolume(Number(event.currentTarget.value))}
-					data-flx="activities.band.game.play-stage.song-info.input.set-volume.range"
-				/>
-			</label>
+			<div className={styles.controls} data-flx="activities.band.game.play-stage.song-info.controls">
+				<VolumeControl data-flx="activities.band.game.play-stage.song-info.volume" />
+				{canFocus && <ViewSwitch data-flx="activities.band.game.play-stage.song-info.view-switch" />}
+			</div>
 		</div>
 	);
 });
@@ -362,40 +263,6 @@ const GroupMeter = observer(function GroupMeter({controller}: {controller: PlayC
 	);
 });
 
-const FinaleBanner = observer(function FinaleBanner({runtime, layout}: {runtime: PlayRuntime; layout: StageLayout}) {
-	const {i18n} = useLingui();
-	const songMs = useSongTime(runtime, 100);
-	const {finalHitMs} = runtime.controller;
-	if (finalHitMs === null) return null;
-	const leftMs = finalHitMs - songMs;
-	const distance = noteDistance(layout, leftMs);
-	// The far end of the highway sits under the banner's hint, so the chip waits until the bar is clear of it.
-	const showCountdown = leftMs > 0 && distance <= layout.planeLength * COUNTDOWN_MAX_SHARE;
-	const chip = toFrame(layout, layout.originX, highwayAnchor(layout, layout.highways[0], distance).y);
-	return (
-		<>
-			<div className={styles.finale} data-flx="activities.band.game.play-stage.finale-banner.finale">
-				<h2 data-flx="activities.band.game.play-stage.finale-banner.h2">{i18n._(FINALE_TITLE_DESCRIPTOR)}</h2>
-				<p data-flx="activities.band.game.play-stage.finale-banner.p">{i18n._(FINALE_HINT_DESCRIPTOR)}</p>
-			</div>
-			{showCountdown && (
-				<span
-					className={clsx(styles.countdown, styles.num)}
-					style={{left: chip.x, top: chip.y}}
-					data-flx="activities.band.game.play-stage.finale-banner.countdown"
-				>
-					{i18n._(FINALE_COUNTDOWN_DESCRIPTOR, {seconds: Math.ceil(leftMs / 1000)})}
-				</span>
-			)}
-		</>
-	);
-});
-
-function useSpeakingUsers(channelId: string): ReadonlySet<string> {
-	const entries = useVoiceParticipantAvatarEntries({guildId: MediaEngine.guildId, channelId});
-	return useMemo(() => new Set(entries.filter((entry) => entry.speaking).map((entry) => entry.userId)), [entries]);
-}
-
 const PlayerIdentity = observer(function PlayerIdentity({
 	entry,
 	seat,
@@ -412,7 +279,7 @@ const PlayerIdentity = observer(function PlayerIdentity({
 }) {
 	const {i18n} = useLingui();
 	const user = Users.getUser(seat.userId);
-	const locale = getCurrentLocale();
+	const status = playerStatusKind(hud);
 	return (
 		<>
 			{user && (
@@ -425,31 +292,20 @@ const PlayerIdentity = observer(function PlayerIdentity({
 			)}
 			<div className={styles.who} data-flx="activities.band.game.play-stage.player-identity.who">
 				<b data-flx="activities.band.game.play-stage.player-identity.b">
-					{displayName(seat.userId)}
+					{bandDisplayName(seat.userId)}
 					{isMine && (
 						<span className={styles.selfTag} data-flx="activities.band.game.play-stage.player-identity.self-tag">
 							{i18n._(YOU_DESCRIPTOR)}
 						</span>
 					)}
 				</b>
-				{hud?.finaleOn ? (
-					<span className={styles.finaleOn} data-flx="activities.band.game.play-stage.player-identity.finale-on">
-						{i18n._(FINALE_TITLE_DESCRIPTOR)}
-					</span>
-				) : hud?.finalHit === true && hud.bankedFinaleBonus > 0 ? (
-					<span className={styles.finaleOn} data-flx="activities.band.game.play-stage.player-identity.finale-banked">
-						{i18n._(FINALE_BONUS_DESCRIPTOR)}{' '}
-						<b className={styles.num} data-flx="activities.band.game.play-stage.player-identity.finale-banked-bonus">
-							+{formatNumber(hud.bankedFinaleBonus, locale)}
-						</b>
-					</span>
-				) : hud?.finalHit === false && hud.finaleBonus > 0 ? (
-					<span className={styles.finaleLost} data-flx="activities.band.game.play-stage.player-identity.finale-lost">
-						{i18n._(FINALE_BONUS_LOST_DESCRIPTOR)}
-					</span>
-				) : hud?.starPowerActive ? (
-					<span className={styles.starPowerOn} data-flx="activities.band.game.play-stage.player-identity.star-power-on">
-						{i18n._(STAR_POWER_ON_DESCRIPTOR)}
+				{status && hud ? (
+					<span className={STATUS_CLASSES[status]} data-flx="activities.band.game.play-stage.player-identity.status">
+						<PlayerStatusText
+							kind={status}
+							hud={hud}
+							data-flx="activities.band.game.play-stage.player-identity.status-text"
+						/>
 					</span>
 				) : (
 					<span data-flx="activities.band.game.play-stage.player-identity.span">
@@ -626,12 +482,22 @@ export const PlayStage = observer(function PlayStage({runtime, entry, channelId,
 						className={clsx(styles.info, !vocalsSeat && styles.infoNoVocals)}
 						data-flx="activities.band.game.play-stage.info"
 					>
-						<SongInfo runtime={runtime} entry={entry} data-flx="activities.band.game.play-stage.song-info" />
+						<SongInfo
+							runtime={runtime}
+							entry={entry}
+							canFocus={hasFocusPart(controller, vocals)}
+							data-flx="activities.band.game.play-stage.song-info"
+						/>
 						<ScoreBox controller={controller} data-flx="activities.band.game.play-stage.score-box" />
 					</div>
 					<GroupMeter controller={controller} data-flx="activities.band.game.play-stage.group-meter" />
 					{controller.finaleActive && (
-						<FinaleBanner runtime={runtime} layout={layout} data-flx="activities.band.game.play-stage.finale-banner" />
+						<FinaleBanner
+							runtime={runtime}
+							layout={layout}
+							toOverlay={(x, y) => toFrame(layout, x, y)}
+							data-flx="activities.band.game.play-stage.finale-banner"
+						/>
 					)}
 					{controller.tracks.map((track, index) => (
 						<HighwayHud

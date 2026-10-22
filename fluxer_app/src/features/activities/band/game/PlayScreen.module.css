@@ -214,13 +214,48 @@
 	background: rgba(247, 245, 240, 0.66);
 }
 
+.controls {
+	display: flex;
+	align-items: center;
+	gap: 18px;
+	margin-top: 10px;
+}
+
 .volume {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	margin-top: 10px;
 	font-size: 12px;
 	color: rgba(247, 245, 240, 0.42);
+}
+
+.viewSwitch {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	font-size: 12px;
+}
+
+.viewSwitchLabel {
+	margin-right: 6px;
+	color: rgba(247, 245, 240, 0.42);
+}
+
+.viewOption {
+	height: 22px;
+	padding: 0 9px;
+	border: 0;
+	border-radius: 999px;
+	background: rgba(247, 245, 240, 0.06);
+	color: rgba(247, 245, 240, 0.66);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.viewOption[aria-checked='true'] {
+	background: #f7f5f0;
+	color: #0c0d0f;
 }
 
 .volume input {

@@ -16,6 +16,10 @@ function song(id: string, name: string, artist: string): BandSongSummary {
 		packageUrl: '',
 		packageBytes: 0,
 		addedBy: null,
+		groups: [],
+		genre: null,
+		year: null,
+		previewStartMs: null,
 	};
 }
 

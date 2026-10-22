@@ -297,8 +297,11 @@ export class BandBot {
 
 	private pickPart(songId: string, seats: ReadonlyArray<BandSeat>): BandPart | null {
 		const song = this.bots.songs().find((candidate) => candidate.id === songId);
-		// Bots never sing: vocals stay free for a person to test the mic part.
-		const available = BAND_PARTS.filter((part) => part !== 'vocals' && (!song || (song.parts[part]?.length ?? 0) > 0));
+		// Bots sing only when told to: vocals otherwise stay free for a person to test the mic part.
+		const sings = this.settings.preferredParts.includes('vocals');
+		const available = BAND_PARTS.filter(
+			(part) => (part !== 'vocals' || sings) && (!song || (song.parts[part]?.length ?? 0) > 0),
+		);
 		const taken = new Set(seats.map((seat) => seat.part));
 		const order = [...this.settings.preferredParts, ...BAND_PARTS];
 		return order.find((part) => available.includes(part) && !taken.has(part)) ?? null;

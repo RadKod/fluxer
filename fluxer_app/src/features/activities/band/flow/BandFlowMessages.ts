@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {PART_DESCRIPTORS} from '@app/features/activities/band/BandPartNames';
-import type {BandCheerKind, BandSongSummary} from '@app/features/activities/band/BandProtocol';
+import type {BandCheerKind, BandGenreGroup, BandSongSummary} from '@app/features/activities/band/BandProtocol';
 import {type BandDifficulty, type BandPart, isLeadPart} from '@app/features/activities/band/engine/ChartModel';
 import type {BandSingerOutput} from '@app/features/activities/band/flow/BandSingerVoice';
+import type {BandDecade} from '@app/features/activities/band/flow/BandSongFilters';
 import type {BandLibraryFailure} from '@app/features/activities/band/flow/BandSongLibrary';
 import type {MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
@@ -126,64 +127,144 @@ export const SONG_FAILED_DESCRIPTOR = msg({
 });
 
 export const PICK_TITLE_DESCRIPTOR = msg({
-	message: 'What should we play next?',
-	comment: 'Band game: heading of the screen where anyone in the room searches the library and picks the next song.',
-});
-export const PICK_HINT_DESCRIPTOR = msg({
-	message: 'Click a song to vote for it. Once someone votes, the most voted song opens after a short countdown.',
-	comment: 'Band game: explanation under the song picking heading. Clicking the same song again takes the vote back.',
-});
-export const PICK_SUGGESTIONS_DESCRIPTOR = msg({
-	message: 'Random picks',
-	comment: 'Band game: heading of a few random songs offered while the search box is empty.',
-});
-export const PICK_VOTED_DESCRIPTOR = msg({
-	message: 'Voted',
+	message: 'Next song',
 	context: 'band-pick',
-	comment: 'Band game: heading of the songs that have votes, listed above everything else on the song picking screen.',
+	comment: 'Band game: heading of the screen where anyone in the room browses the library and votes for the next song.',
+});
+export const PICK_SEARCH_DESCRIPTOR = msg({
+	message: 'Search songs or artists',
+	comment: 'Band game: placeholder of the search field in the song list.',
+});
+export const PICK_RANDOM_DESCRIPTOR = msg({
+	message: 'Random',
+	context: 'band-pick',
+	comment: 'Band game: button on the song picking screen that votes for a random song from the songs shown.',
+});
+export const PICK_RANDOM_HINT_DESCRIPTOR = msg({
+	message: 'Vote for a random song from this list',
+	comment: 'Band game: tooltip of the Random button; the random song comes from the genre and era filters in use.',
+});
+export const PICK_GENRES_DESCRIPTOR = msg({
+	message: 'Genres',
+	context: 'band-pick',
+	comment: 'Band game: accessible name of the list of genre filters on the left of the song picking screen.',
+});
+export const PICK_ERA_DESCRIPTOR = msg({
+	message: 'Era',
+	context: 'band-pick',
+	comment: 'Band game: small heading over the decade filters (70s, 80s...) on the song picking screen.',
+});
+export const PICK_SONG_COUNT_DESCRIPTOR = msg({
+	message: '{count, plural, one {# song} other {# songs}}',
+	comment: 'Band game: how many songs the chosen genre and filters show, next to the genre heading.',
+});
+export const PICK_PREVIEW_HINT_DESCRIPTOR = msg({
+	message: 'hover to preview',
+	comment:
+		'Band game: lowercase hint after the song count on the song picking screen; pointing at a song plays a short preview for you only.',
+});
+export const PICK_SONGS_DESCRIPTOR = msg({
+	message: 'Songs',
+	context: 'band-pick',
+	comment: 'Band game: accessible name of the grid of song covers on the song picking screen.',
+});
+export const PICK_NO_MATCH_DESCRIPTOR = msg({
+	message: 'No songs match.',
+	comment: 'Band game: the song list search found nothing.',
+});
+export const PICK_LIBRARY_EMPTY_DESCRIPTOR = msg({
+	message: 'The song library is empty.',
+	comment: 'Band game: shown on the song picking screen when the library has no songs.',
+});
+export const PICK_SELECTED_DESCRIPTOR = msg({
+	message: 'Selected song',
+	comment:
+		'Band game: accessible name of the panel on the right of the song picking screen describing the chosen song.',
+});
+export const PREVIEW_PLAYING_DESCRIPTOR = msg({
+	message: 'Preview playing',
+	comment: 'Band game: small label under the chosen song while a short preview of it plays for you only.',
+});
+export const PREVIEW_DOWNLOADING_DESCRIPTOR = msg({
+	message: 'Downloading for preview',
+	comment:
+		'Band game: small label under the chosen song while its file downloads (someone voted for it); the preview plays once it is here.',
+});
+export const PART_TIER_DESCRIPTOR = msg({
+	message: '{part} difficulty: {tier} of 6',
+	comment:
+		'Band game: accessible text of the seven-step difficulty bar of one part of a song, from 0 (warm-up) to 6. {part} is Guitar, Drums...',
+});
+export const PART_UNRATED_DESCRIPTOR = msg({
+	message: '{part} difficulty: not rated',
+	comment: 'Band game: accessible text of the difficulty bar of a part the song file gives no difficulty for.',
+});
+export const VOTE_DESCRIPTOR = msg({
+	message: 'Vote',
+	context: 'band-pick',
+	comment: 'Band game: main button on the song picking screen that votes for the chosen song.',
+});
+export const UNVOTE_DESCRIPTOR = msg({
+	message: 'Take back my vote',
+	comment: 'Band game: replaces the Vote button when the chosen song already has my vote.',
+});
+export const VOTES_DESCRIPTOR = msg({
+	message: 'Votes',
+	context: 'band-pick',
+	comment: 'Band game: heading of the list of songs that have votes, with a countdown ring next to it.',
+});
+export const VOTE_COUNT_DESCRIPTOR = msg({
+	message: '{count, plural, one {# vote} other {# votes}}',
+	comment: 'Band game: number of votes on a song.',
 });
 export const PICK_COUNTDOWN_DESCRIPTOR = msg({
 	message: '{seconds} s until the most voted song opens',
 	comment:
 		'Band game: countdown on the song picking screen; it starts with the first vote. {seconds} is a whole number.',
 });
-export const VOTE_COUNT_DESCRIPTOR = msg({
-	message: '{count, plural, one {# vote} other {# votes}}',
-	comment: 'Band game: number of votes on a song.',
+export const PICK_WAITING_DESCRIPTOR = msg({
+	message: 'No votes yet. The first vote starts a {seconds} s countdown.',
+	comment: 'Band game: under the Votes heading before anyone voted. {seconds} is a whole number.',
 });
-export const PLAY_NOW_DESCRIPTOR = msg({
-	message: 'Play this now',
-	comment: 'Band game: leader-only button on a voted song that skips the countdown and plays that song next.',
-});
-export const PICK_ALL_SONGS_DESCRIPTOR = msg({
-	message: 'All songs',
-	comment: 'Band game: heading of the whole song library, below the random picks, while the search box is empty.',
-});
-export const PICK_KEYS_DESCRIPTOR = msg({
-	message: '↑↓ to move, Enter to vote',
-	comment: 'Band game: keyboard hint on the song picking screen; the arrow keys move through the list.',
-});
-export const PICK_LIBRARY_EMPTY_DESCRIPTOR = msg({
-	message: 'The song library is empty.',
-	comment: 'Band game: shown on the song picking screen when the library has no songs.',
-});
-export const SONG_PLAYERS_DESCRIPTOR = msg({
-	message: '{count, plural, one {# player} other {# players}}',
-	comment: 'Band game song list: how many people can play this song at once (one per charted part).',
-});
-export const PART_INTENSITY_DESCRIPTOR = msg({
-	message: '{part} intensity {level}/5',
-	comment: 'Band game: tooltip of the bar showing how demanding a part of the song is. {part} is Guitar, Drums...',
+export const PLAY_LEADING_NOW_DESCRIPTOR = msg({
+	message: 'Play the leading song now',
+	comment: 'Band game: leader-only button under the votes that skips the countdown and opens the most voted song.',
 });
 
-export const PICK_SEARCH_DESCRIPTOR = msg({
-	message: 'Search songs or artists',
-	comment: 'Band game: placeholder of the search field in the song list.',
-});
-export const PICK_NO_MATCH_DESCRIPTOR = msg({
-	message: 'No songs match.',
-	comment: 'Band game: the song list search found nothing.',
-});
+export const GENRE_GROUP_DESCRIPTORS: Readonly<Record<BandGenreGroup | 'all', MessageDescriptor>> = {
+	all: msg({
+		message: 'All',
+		context: 'band-genre',
+		comment: 'Band game: first genre filter on the song picking screen, showing every song.',
+	}),
+	turkce: msg({
+		message: 'Turkish',
+		context: 'band-genre',
+		comment: 'Band game: genre filter for songs in Turkish or by Turkish artists.',
+	}),
+	rock: msg({message: 'Rock', context: 'band-genre', comment: 'Band game: genre filter for rock songs.'}),
+	metal: msg({message: 'Metal', context: 'band-genre', comment: 'Band game: genre filter for metal songs.'}),
+	alternatif: msg({
+		message: 'Alternative',
+		context: 'band-genre',
+		comment: 'Band game: genre filter for alternative and indie rock songs.',
+	}),
+	pop: msg({message: 'Pop', context: 'band-genre', comment: 'Band game: genre filter for pop songs.'}),
+	country: msg({message: 'Country', context: 'band-genre', comment: 'Band game: genre filter for country songs.'}),
+	klasik: msg({
+		message: 'Classical',
+		context: 'band-genre',
+		comment: 'Band game: genre filter for classical pieces (Bach, Mozart, Beethoven), often played as rock covers.',
+	}),
+};
+
+export const DECADE_DESCRIPTORS: Readonly<Record<BandDecade, MessageDescriptor>> = {
+	1970: msg({message: '70s', context: 'band-era', comment: 'Band game: era filter for songs from 1970 to 1979.'}),
+	1980: msg({message: '80s', context: 'band-era', comment: 'Band game: era filter for songs from 1980 to 1989.'}),
+	1990: msg({message: '90s', context: 'band-era', comment: 'Band game: era filter for songs from 1990 to 1999.'}),
+	2000: msg({message: '2000s', context: 'band-era', comment: 'Band game: era filter for songs from 2000 to 2009.'}),
+	2010: msg({message: '2010+', context: 'band-era', comment: 'Band game: era filter for songs from 2010 on.'}),
+};
 
 export const VOCALS_HINT_DESCRIPTOR = msg({
 	message: 'Optional, pitch is measured from your mic',

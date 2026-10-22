@@ -8,6 +8,10 @@ export const INPUT_LATENCY_LIMIT_MS = 300;
 // How far a missed note drops that part's stem.
 export type DuckDepth = 'light' | 'strong';
 
+// What a player sees during a song: their own highway large with the band's beside it, or every highway alike.
+// Spectators always get the band view.
+export type BandHighwayView = 'focus' | 'group';
+
 // Per-device: the latency offset belongs to this keyboard, output device and machine, so it is never synced.
 class BandSettingsState {
 	// Positive when presses register late; null until the rhythm test has run on this device.
@@ -16,10 +20,11 @@ class BandSettingsState {
 	// A pick scrape, muted chug or stick click on my own misses, heard only here.
 	missSound = true;
 	duckDepth: DuckDepth = 'strong';
+	highwayView: BandHighwayView = 'focus';
 
 	constructor() {
 		makeAutoObservable(this, {}, {autoBind: true});
-		void makePersistent(this, 'BandSettings', ['inputLatencyMs', 'volume', 'missSound', 'duckDepth']);
+		void makePersistent(this, 'BandSettings', ['inputLatencyMs', 'volume', 'missSound', 'duckDepth', 'highwayView']);
 	}
 
 	get effectiveInputLatencyMs(): number {
@@ -40,6 +45,10 @@ class BandSettingsState {
 
 	setDuckDepth(depth: DuckDepth): void {
 		this.duckDepth = depth;
+	}
+
+	setHighwayView(view: BandHighwayView): void {
+		this.highwayView = view;
 	}
 }
 

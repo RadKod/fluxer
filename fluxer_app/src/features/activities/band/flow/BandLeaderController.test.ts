@@ -40,6 +40,10 @@ const SONG: BandSongSummary = {
 	packageUrl: 'https://dl.example/a.sng',
 	packageBytes: 10,
 	addedBy: null,
+	groups: [],
+	genre: null,
+	year: null,
+	previewStartMs: null,
 };
 
 const RESULT: Omit<BandPlayerResult, 'userId'> = {

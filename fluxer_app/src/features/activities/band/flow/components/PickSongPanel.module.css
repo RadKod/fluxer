@@ -1,0 +1,325 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.panel {
+	display: flex;
+	grid-area: panel;
+	flex-direction: column;
+	gap: 1rem;
+	min-width: 0;
+	min-height: 0;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	padding: 1.25rem;
+	border-left: 1px solid var(--band-line);
+	background-color: color-mix(in srgb, var(--band-paper) 2%, var(--band-night));
+}
+
+.selected {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid var(--band-line);
+}
+
+.song {
+	display: flex;
+	gap: 1rem;
+}
+
+.cover {
+	border-radius: 0.625rem;
+}
+
+.text {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+	min-width: 0;
+}
+
+.name {
+	margin: 0;
+	font-weight: 700;
+	font-size: 1.25rem;
+	line-height: 1.15;
+	overflow-wrap: anywhere;
+}
+
+.artist {
+	color: var(--band-t2);
+	font-size: 0.875rem;
+}
+
+.meta {
+	color: var(--band-t3);
+	font-size: 0.8125rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.preview {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	margin-top: 0.25rem;
+	color: var(--band-beer);
+	font-weight: 600;
+	font-size: 0.75rem;
+}
+
+.previewWaiting {
+	color: var(--band-t3);
+}
+
+.parts {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5625rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.part {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+}
+
+.partGuitar {
+	--part: var(--band-lane-green);
+}
+
+.partRhythm {
+	--part: var(--band-plum-light);
+}
+
+.partBass {
+	--part: var(--band-lane-blue);
+}
+
+.partDrums {
+	--part: var(--band-lane-red);
+}
+
+.partKeys {
+	--part: var(--band-lane-orange);
+}
+
+.partVocals {
+	--part: var(--band-beer);
+}
+
+.partName {
+	flex: 0 0 5.5rem;
+	overflow: hidden;
+	color: var(--band-t2);
+	font-size: 0.8125rem;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.bars {
+	display: flex;
+	flex: 1 1 auto;
+	gap: 0.25rem;
+}
+
+.bar {
+	flex: 1;
+	height: 0.625rem;
+	border-radius: 0.1875rem;
+	background-color: var(--band-g3);
+}
+
+.barOn {
+	background-color: var(--part);
+}
+
+.vote {
+	height: 3.125rem;
+	border: 0;
+	border-radius: 0.75rem;
+	background-color: var(--band-plum);
+	color: #fff;
+	font: inherit;
+	font-weight: 700;
+	font-size: 1rem;
+	cursor: pointer;
+}
+
+.vote:hover {
+	background-color: var(--band-plum-light);
+}
+
+.unvote,
+.unvote:hover {
+	background-color: transparent;
+	box-shadow: inset 0 0 0 2px var(--band-plum);
+	color: var(--band-t1);
+}
+
+.votes {
+	display: flex;
+	flex-direction: column;
+	gap: 0.625rem;
+}
+
+.votesHeader {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	min-height: 2.125rem;
+}
+
+.votesTitle {
+	flex: 1 1 auto;
+	margin: 0;
+	font-weight: 700;
+	font-size: 0.875rem;
+}
+
+.votesNote {
+	margin: 0;
+	color: var(--band-t2);
+	font-size: 0.8125rem;
+}
+
+.ring {
+	position: relative;
+	display: grid;
+	place-items: center;
+	width: 2.125rem;
+	height: 2.125rem;
+}
+
+.ring svg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	transform: rotate(-90deg);
+}
+
+.ring b {
+	font-weight: 700;
+	font-size: 0.8125rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.ringTrack,
+.ringFill {
+	fill: none;
+	stroke-width: 3;
+}
+
+.ringTrack {
+	stroke: var(--band-g3);
+}
+
+.ringFill {
+	stroke: var(--band-plum);
+	stroke-linecap: round;
+	transition: stroke-dashoffset 0.25s linear;
+}
+
+.voteRows {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.voteRow {
+	display: flex;
+	align-items: center;
+	gap: 0.625rem;
+	width: 100%;
+	padding: 0.625rem;
+	border: 0;
+	border-radius: 0.625rem;
+	background-color: var(--band-g2);
+	box-shadow: inset 0 0 0 1px var(--band-line);
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.voteRowLeading {
+	background-color: var(--band-g3);
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+}
+
+.voteText {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.voteText b,
+.voteText span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.voteText b {
+	font-weight: 600;
+	font-size: 0.875rem;
+}
+
+.voteText span {
+	color: var(--band-t2);
+	font-size: 0.75rem;
+}
+
+.voteCount {
+	color: var(--band-t2);
+	font-weight: 700;
+	font-size: 1rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.voteRowLeading .voteCount {
+	color: var(--band-t1);
+}
+
+.playNow {
+	height: 2.5rem;
+	border: 0;
+	border-radius: 0.625rem;
+	background: transparent;
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+	color: var(--band-t1);
+	font: inherit;
+	font-weight: 600;
+	font-size: 0.875rem;
+	cursor: pointer;
+}
+
+.playNow:hover {
+	background-color: var(--band-g2);
+}
+
+@container band-stage (max-width: 40rem) {
+	.panel {
+		max-height: 40%;
+		border-top: 1px solid var(--band-line);
+		border-left: 0;
+	}
+
+	.song,
+	.parts {
+		display: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ringFill {
+		transition: none;
+	}
+}

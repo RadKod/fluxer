@@ -57960,10 +57960,6 @@ msgid "{name} sets it. You can change your own card."
 msgstr "{name} sets it. You can change your own card."
 
 #: src/features/activities/band/flow/BandFlowMessages.ts
-msgid "{part} intensity {level}/5"
-msgstr "{part} intensity {level}/5"
-
-#: src/features/activities/band/flow/BandFlowMessages.ts
 #: src/features/activities/band/game/BandGameLabels.ts
 msgid "{part}, {difficulty}"
 msgstr "{part}, {difficulty}"
@@ -58027,7 +58023,7 @@ msgctxt "band-part"
 msgid "Bass"
 msgstr "Bass"
 
-#: src/features/activities/band/game/PlayStage.tsx
+#: src/features/activities/band/game/PlayStageParts.tsx
 msgid "Big finale"
 msgstr "Big finale"
 
@@ -58104,7 +58100,7 @@ msgctxt "band-difficulty"
 msgid "Easy"
 msgstr "Easy"
 
-#: src/features/activities/band/game/PlayStage.tsx
+#: src/features/activities/band/game/PlayStageParts.tsx
 msgid "Every key plays. Hit the last note all together."
 msgstr "Every key plays. Hit the last note all together."
 
@@ -58114,11 +58110,11 @@ msgctxt "band-difficulty"
 msgid "Expert"
 msgstr "Expert"
 
-#: src/features/activities/band/game/PlayStage.tsx
+#: src/features/activities/band/game/PlayStageParts.tsx
 msgid "Final hit in {seconds} s"
 msgstr "Final hit in {seconds} s"
 
-#: src/features/activities/band/game/PlayStage.tsx
+#: src/features/activities/band/game/PlayStageParts.tsx
 msgid "Finale bonus"
 msgstr "Finale bonus"
 
@@ -58328,7 +58324,7 @@ msgstr "Search songs or artists"
 msgid "Setting up the room..."
 msgstr "Setting up the room..."
 
-#: src/features/activities/band/game/PlayStage.tsx
+#: src/features/activities/band/game/PlayStageParts.tsx
 msgid "Song volume"
 msgstr "Song volume"
 
@@ -58336,7 +58332,7 @@ msgstr "Song volume"
 msgid "Star power"
 msgstr "Star power"
 
-#: src/features/activities/band/game/PlayStage.tsx
+#: src/features/activities/band/game/PlayStageParts.tsx
 msgid "Star power on"
 msgstr "Star power on"
 
@@ -58457,10 +58453,6 @@ msgid "watching"
 msgstr "watching"
 
 #: src/features/activities/band/flow/BandFlowMessages.ts
-msgid "What should we play next?"
-msgstr "What should we play next?"
-
-#: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "Wow"
 msgstr "Wow"
 
@@ -58539,13 +58531,7 @@ msgctxt "band-part"
 msgid "Lead guitar"
 msgstr "Lead guitar"
 
-#. Band game vote card: how many people can play this song at once (one per
-#. charted part).
-#: src/features/activities/band/flow/BandFlowMessages.ts
-msgid "{count, plural, one {# player} other {# players}}"
-msgstr "{count, plural, one {# player} other {# players}}"
-
-#: src/features/activities/band/game/PlayStage.tsx
+#: src/features/activities/band/game/PlayStageParts.tsx
 msgid "Your mic is open, sing!"
 msgstr "Your mic is open, sing!"
 
@@ -58580,10 +58566,6 @@ msgstr ""
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "Waiting for the first vote"
 msgstr "Waiting for the first vote"
-
-#: src/features/activities/band/flow/BandFlowMessages.ts
-msgid "Play this now"
-msgstr "Play this now"
 
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "No score"
@@ -58631,14 +58613,6 @@ msgstr ""
 "decides."
 
 #: src/features/activities/band/flow/BandFlowMessages.ts
-msgid "Random picks"
-msgstr "Random picks"
-
-#: src/features/activities/band/flow/BandFlowMessages.ts
-msgid "All songs"
-msgstr "All songs"
-
-#: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "↑↓ to move, Enter to pick"
 msgstr "↑↓ to move, Enter to pick"
 
@@ -58665,15 +58639,6 @@ msgid ""
 msgstr ""
 "Click a song to vote for it. Once someone votes, the most voted song opens "
 "after a short countdown."
-
-#: src/features/activities/band/flow/BandFlowMessages.ts
-msgid "↑↓ to move, Enter to vote"
-msgstr "↑↓ to move, Enter to vote"
-
-#: src/features/activities/band/flow/BandFlowMessages.ts
-msgctxt "band-pick"
-msgid "Voted"
-msgstr "Voted"
 
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "{seconds} s until the most voted song opens"
@@ -58721,7 +58686,7 @@ msgstr "Headphones give the cleanest voice"
 
 #. Band game: under a player name once they missed the final hit of the Big Rock
 #. Ending, so the points they collected in it do not count.
-#: src/features/activities/band/game/PlayStage.tsx
+#: src/features/activities/band/game/PlayStageParts.tsx
 msgid "Finale bonus lost"
 msgstr "Finale bonus lost"
 
@@ -58734,7 +58699,7 @@ msgstr "At the end of the song every key plays freely. Land the last hit togethe
 #. Band game: under the band score during the Big Rock Ending, the bonus the band has
 #. collected so far. It is not in the score yet; each player keeps their share only by
 #. landing the final hit.
-#: src/features/activities/band/game/PlayStage.tsx
+#: src/features/activities/band/game/PlayStageParts.tsx
 msgid "Finale bonus at stake"
 msgstr "Finale bonus at stake"
 
@@ -58845,6 +58810,7 @@ msgstr "{part} · {time}"
 #. Voice activities: chip on the band game card and detail page. {count} is how
 #. many songs the library has.
 #: src/features/activities/band/BandActivity.ts
+#: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "{count, plural, one {# song} other {# songs}}"
 msgstr "{count, plural, one {# song} other {# songs}}"
 
@@ -59054,3 +59020,236 @@ msgstr "Choosing parts · {ready}/{seated} ready"
 #: src/features/activities/components/ActivityPiPContent.tsx
 msgid "The game opens here when the song starts"
 msgstr "The game opens here when the song starts"
+
+#. Band game: heading of the screen where anyone in the room browses the library
+#. and votes for the next song.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-pick"
+msgid "Next song"
+msgstr "Next song"
+
+#. Band game: button on the song picking screen that votes for a random song from
+#. the songs shown.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-pick"
+msgid "Random"
+msgstr "Random"
+
+#. Band game: tooltip of the Random button; the random song comes from the genre
+#. and era filters in use.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Vote for a random song from this list"
+msgstr "Vote for a random song from this list"
+
+#. Band game: accessible name of the list of genre filters on the left of the song
+#. picking screen.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-pick"
+msgid "Genres"
+msgstr "Genres"
+
+#. Band game: small heading over the decade filters (70s, 80s...) on the song
+#. picking screen.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-pick"
+msgid "Era"
+msgstr "Era"
+
+#. Band game: lowercase hint after the song count on the song picking screen;
+#. pointing at a song plays a short preview for you only.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "hover to preview"
+msgstr "hover to preview"
+
+#. Band game: accessible name of the grid of song covers on the song picking
+#. screen.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-pick"
+msgid "Songs"
+msgstr "Songs"
+
+#. Band game: accessible name of the panel on the right of the song picking screen
+#. describing the chosen song.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Selected song"
+msgstr "Selected song"
+
+#. Band game: small label under the chosen song while a short preview of it plays
+#. for you only.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Preview playing"
+msgstr "Preview playing"
+
+#. Band game: small label under the chosen song while its file downloads (someone
+#. voted for it); the preview plays once it is here.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Downloading for preview"
+msgstr "Downloading for preview"
+
+#. Band game: accessible text of the seven-step difficulty bar of one part of a
+#. song, from 0 (warm-up) to 6. {part} is Guitar, Drums...
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{part} difficulty: {tier} of 6"
+msgstr "{part} difficulty: {tier} of 6"
+
+#. Band game: accessible text of the difficulty bar of a part the song file gives
+#. no difficulty for.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "{part} difficulty: not rated"
+msgstr "{part} difficulty: not rated"
+
+#. Band game: main button on the song picking screen that votes for the chosen
+#. song.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-pick"
+msgid "Vote"
+msgstr "Vote"
+
+#. Band game: replaces the Vote button when the chosen song already has my vote.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Take back my vote"
+msgstr "Take back my vote"
+
+#. Band game: heading of the list of songs that have votes, with a countdown ring
+#. next to it.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-pick"
+msgid "Votes"
+msgstr "Votes"
+
+#. Band game: under the Votes heading before anyone voted. {seconds} is a whole
+#. number.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "No votes yet. The first vote starts a {seconds} s countdown."
+msgstr "No votes yet. The first vote starts a {seconds} s countdown."
+
+#. Band game: leader-only button under the votes that skips the countdown and opens
+#. the most voted song.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Play the leading song now"
+msgstr "Play the leading song now"
+
+#. Band game: first genre filter on the song picking screen, showing every song.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-genre"
+msgid "All"
+msgstr "All"
+
+#. Band game: genre filter for songs in Turkish or by Turkish artists.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-genre"
+msgid "Turkish"
+msgstr "Turkish"
+
+#. Band game: genre filter for rock songs.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-genre"
+msgid "Rock"
+msgstr "Rock"
+
+#. Band game: genre filter for metal songs.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-genre"
+msgid "Metal"
+msgstr "Metal"
+
+#. Band game: genre filter for alternative and indie rock songs.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-genre"
+msgid "Alternative"
+msgstr "Alternative"
+
+#. Band game: genre filter for pop songs.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-genre"
+msgid "Pop"
+msgstr "Pop"
+
+#. Band game: genre filter for country songs.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-genre"
+msgid "Country"
+msgstr "Country"
+
+#. Band game: genre filter for classical pieces (Bach, Mozart, Beethoven), often
+#. played as rock covers.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-genre"
+msgid "Classical"
+msgstr "Classical"
+
+#. Band game: era filter for songs from 1970 to 1979.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-era"
+msgid "70s"
+msgstr "70s"
+
+#. Band game: era filter for songs from 1980 to 1989.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-era"
+msgid "80s"
+msgstr "80s"
+
+#. Band game: era filter for songs from 1990 to 1999.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-era"
+msgid "90s"
+msgstr "90s"
+
+#. Band game: era filter for songs from 2000 to 2009.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-era"
+msgid "2000s"
+msgstr "2000s"
+
+#. Band game: era filter for songs from 2010 on.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-era"
+msgid "2010+"
+msgstr "2010+"
+
+#. Band game: accessible name of the switch between the focus view and the band
+#. view during a song.
+#: src/features/activities/band/game/PlayStageParts.tsx
+msgctxt "band-highway-view"
+msgid "View"
+msgstr "View"
+
+#. Band game: view option during a song; my own highway large in the middle, the
+#. bandmates smaller and blurred at the sides.
+#: src/features/activities/band/game/PlayStageParts.tsx
+msgctxt "band-highway-view"
+msgid "Focus"
+msgstr "Focus"
+
+#. Band game: view option during a song; every highway the same size side by side.
+#: src/features/activities/band/game/PlayStageParts.tsx
+msgctxt "band-highway-view"
+msgid "Band"
+msgstr "Band"
+
+#. Band game focus view: under my name, my difficulty and how many notes in a row I
+#. hit, e.g. "Expert · 127 streak".
+#: src/features/activities/band/game/FocusStage.tsx
+msgid "{difficulty} · {streak} streak"
+msgstr "{difficulty} · {streak} streak"
+
+#. Band game focus view: under a bandmate name beside their small highway, their
+#. score multiplier and notes in a row, e.g. "×2 · 41 streak".
+#: src/features/activities/band/game/FocusStage.tsx
+msgid "×{multiplier} · {streak} streak"
+msgstr "×{multiplier} · {streak} streak"
+
+#. Band game focus view: label over my star power bar. Star power doubles the score
+#. once deployed.
+#: src/features/activities/band/game/FocusStage.tsx
+msgctxt "band-meter"
+msgid "Star power"
+msgstr "Star power"
+
+#. Band game focus view: small label over the whole band score in the top right
+#. corner.
+#: src/features/activities/band/game/FocusStage.tsx
+msgctxt "band-score"
+msgid "Band"
+msgstr "Band"

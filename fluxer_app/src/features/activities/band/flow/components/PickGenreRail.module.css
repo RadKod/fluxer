@@ -1,0 +1,158 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.rail {
+	display: flex;
+	grid-area: rail;
+	flex-direction: column;
+	gap: 0.875rem;
+	min-width: 0;
+	min-height: 0;
+	overflow-y: auto;
+	scrollbar-width: none;
+	padding: 1.25rem 0.875rem;
+	border-right: 1px solid var(--band-line);
+}
+
+.groups {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.group {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 0.5rem;
+	height: 2.625rem;
+	padding: 0 0.75rem;
+	border: 0;
+	border-radius: 0.625rem;
+	background: transparent;
+	color: var(--band-t2);
+	font: inherit;
+	font-weight: 500;
+	font-size: 0.9375rem;
+	text-align: left;
+	cursor: pointer;
+}
+
+.group:hover {
+	background-color: var(--band-g2);
+}
+
+.groupSelected,
+.groupSelected:hover {
+	background-color: color-mix(in srgb, var(--band-plum) 20%, var(--band-night));
+	box-shadow: inset 3px 0 0 var(--band-plum);
+	color: var(--band-t1);
+	font-weight: 700;
+}
+
+.groupName {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.count {
+	color: var(--band-t3);
+	font-weight: 500;
+	font-size: 0.8125rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.era {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+	padding-top: 0.875rem;
+	border-top: 1px solid var(--band-line);
+}
+
+.eraTitle {
+	padding: 0 0.75rem;
+	color: var(--band-t3);
+	font-weight: 600;
+	font-size: 0.75rem;
+}
+
+.chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	padding: 0 0.5rem;
+}
+
+.chip {
+	height: 1.875rem;
+	padding: 0 0.625rem;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+	color: var(--band-t2);
+	font: inherit;
+	font-size: 0.8125rem;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.chip:hover {
+	color: var(--band-t1);
+}
+
+.chipSelected,
+.chipSelected:hover {
+	background-color: var(--band-plum);
+	box-shadow: none;
+	color: #fff;
+	font-weight: 600;
+}
+
+/* One scrolling row of genres, then the era chips, over the covers. */
+@container band-stage (max-width: 62rem) {
+	.rail {
+		flex-direction: row;
+		align-items: center;
+		gap: 0.75rem;
+		overflow-x: auto;
+		overflow-y: hidden;
+		padding: 0.75rem var(--pick-gutter) 0;
+		border-right: 0;
+	}
+
+	.groups {
+		flex-direction: row;
+	}
+
+	.group {
+		height: 2rem;
+		border-radius: 999px;
+		font-size: 0.875rem;
+	}
+
+	.groupSelected,
+	.groupSelected:hover {
+		box-shadow: inset 0 0 0 1px var(--band-plum);
+	}
+
+	.era {
+		flex-direction: row;
+		align-items: center;
+		padding: 0 0 0 0.75rem;
+		border-top: 0;
+		border-left: 1px solid var(--band-line);
+	}
+
+	.eraTitle {
+		display: none;
+	}
+
+	.chips {
+		flex-wrap: nowrap;
+		padding: 0;
+	}
+}

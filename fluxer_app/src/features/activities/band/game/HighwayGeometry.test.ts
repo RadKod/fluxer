@@ -4,17 +4,22 @@ import {noteGroup} from '@app/features/activities/band/engine/BandTestFixtures';
 import {
 	DESIGN_HEIGHT,
 	DESIGN_WIDTH,
+	type FocusLayout,
+	type FocusRect,
+	type HighwayKind,
 	LOOK_AHEAD_MS,
 	laneCenterX,
+	layoutFocus,
 	layoutStage,
 	noteDistance,
 	project,
+	splitSides,
 	strikeDistance,
 	surfaceLane,
 	toFrame,
 	visibleWindow,
 } from '@app/features/activities/band/game/HighwayGeometry';
-import {fadeAfter, firstVisibleGroup} from '@app/features/activities/band/game/HighwayRenderer';
+import {fadeAfter, firstVisibleGroup, missShake} from '@app/features/activities/band/game/HighwayRenderer';
 import {describe, expect, it} from 'vitest';
 
 describe('HighwayGeometry', () => {
@@ -108,5 +113,119 @@ describe('HighwayRenderer helpers', () => {
 		expect(fadeAfter(1_100, 1_000, 200)).toBe(0.5);
 		expect(fadeAfter(1_200, 1_000, 200)).toBe(0);
 		expect(fadeAfter(900, 1_000, 200)).toBe(0);
+	});
+});
+
+describe('layoutFocus', () => {
+	const STAGE = {width: 1440, height: 880};
+	const focus = (others: ReadonlyArray<HighwayKind>, mine: HighwayKind | null = 'frets', lyrics = false) =>
+		layoutFocus(STAGE.width, STAGE.height, {mine, others, lyrics});
+	const right = (rect: FocusRect) => rect.left + rect.width;
+	const sideCounts = (layout: FocusLayout) =>
+		Object.fromEntries(layout.sides.map((side) => [side.side, side.others.length]));
+
+	it('splits the others between the sides, the extra one on the right (1 to 5 players)', () => {
+		expect(splitSides(0)).toEqual({left: 0, right: 0});
+		expect(splitSides(1)).toEqual({left: 0, right: 1});
+		expect(splitSides(2)).toEqual({left: 1, right: 1});
+		expect(splitSides(3)).toEqual({left: 1, right: 2});
+		expect(splitSides(4)).toEqual({left: 2, right: 2});
+		expect(focus([]).sides).toEqual([]);
+		expect(sideCounts(focus(['drums']))).toEqual({right: 1});
+		expect(sideCounts(focus(['drums', 'frets']))).toEqual({left: 1, right: 1});
+		expect(sideCounts(focus(['drums', 'frets', 'frets']))).toEqual({left: 1, right: 2});
+		expect(sideCounts(focus(['drums', 'frets', 'frets', 'frets']))).toEqual({left: 2, right: 2});
+		expect(focus(['drums', 'frets', 'frets', 'frets']).sides.flatMap((side) => side.others)).toEqual([0, 1, 2, 3]);
+	});
+
+	it('makes my highway about 42% of a 1440 px stage, centred, the HUD right under it', () => {
+		const layout = focus(['drums', 'frets']);
+		expect(layout.scale).toBe(1);
+		const mine = layout.main?.highways[0];
+		expect(mine?.width).toBeCloseTo(1440 * 0.42);
+		expect((mine?.left ?? 0) + (mine?.width ?? 0) / 2).toBeCloseTo(720);
+		expect(layout.main?.originX).toBeCloseTo(720);
+		expect(layout.hud?.left).toBeCloseTo(layout.mainRect.left);
+		expect(layout.hud?.top).toBeGreaterThan(layout.mainRect.top + layout.mainRect.height);
+		expect(mine?.noteScale).toBeGreaterThan(1);
+	});
+
+	it('moves my highway left with one other player, theirs on the right, bigger than in a full band', () => {
+		const pair = focus(['frets']);
+		const band = focus(['frets', 'drums', 'frets', 'frets']);
+		expect(pair.mainRect.left + pair.mainRect.width / 2).toBeLessThan(720);
+		expect(pair.sides).toHaveLength(1);
+		expect(pair.sides[0]).toMatchObject({side: 'right', pair: true});
+		const pairWidth = pair.sides[0].layout.highways[0].width;
+		const bandWidth = band.sides[0].layout.highways[0].width;
+		expect(pairWidth).toBeGreaterThan(bandWidth);
+		expect(band.sides.every((side) => !side.pair)).toBe(true);
+	});
+
+	it('keeps every side highway clear of mine and inside the stage', () => {
+		for (const others of [
+			['frets'],
+			['frets', 'drums'],
+			['frets', 'drums', 'frets'],
+			['frets', 'drums', 'frets', 'frets'],
+		] as Array<Array<HighwayKind>>) {
+			for (const width of [1100, 1440, 1920]) {
+				const layout = layoutFocus(width, 880, {mine: 'frets', others, lyrics: false});
+				const mainRight = right(layout.mainRect);
+				expect(layout.sides.flatMap((side) => side.others)).toHaveLength(others.length);
+				for (const side of layout.sides) {
+					expect(side.rect.left).toBeGreaterThanOrEqual(0);
+					expect(right(side.rect)).toBeLessThanOrEqual(layout.frameWidth);
+					if (side.side === 'left') expect(right(side.rect)).toBeLessThan(layout.mainRect.left);
+					else expect(side.rect.left).toBeGreaterThan(mainRight);
+					for (const highway of side.layout.highways) {
+						expect(highway.left).toBeGreaterThanOrEqual(0);
+						expect(highway.left + highway.width).toBeLessThanOrEqual(side.layout.width + 0.001);
+					}
+				}
+			}
+		}
+	});
+
+	it('makes room for the lyrics when someone else sings, and puts the vocal lane in the middle for the singer', () => {
+		const withLyrics = focus(['frets'], 'frets', true);
+		expect(withLyrics.lyrics).not.toBeNull();
+		expect(withLyrics.mainRect.top).toBeGreaterThan(focus(['frets']).mainRect.top);
+		const singer = focus(['frets', 'drums', 'frets'], null, true);
+		expect(singer.main).toBeNull();
+		expect(singer.lyrics).toBeNull();
+		expect(singer.vocalLane).not.toBeNull();
+		expect((singer.vocalLane?.left ?? 0) + (singer.vocalLane?.width ?? 0) / 2).toBeCloseTo(720);
+		expect(sideCounts(singer)).toEqual({left: 1, right: 2});
+	});
+
+	it('shows only my own highway in a tile or the mini window', () => {
+		const mini = layoutFocus(400, 225, {mine: 'frets', others: ['drums', 'frets'], lyrics: true});
+		expect(mini.compact).toBe(true);
+		expect(mini.sides).toEqual([]);
+		expect(mini.lyrics).toBeNull();
+		expect(mini.hud).toBeNull();
+		const mine = mini.main?.highways[0];
+		expect(mine?.left).toBeGreaterThanOrEqual(0);
+		expect((mine?.left ?? 0) + (mine?.width ?? 0)).toBeLessThanOrEqual(400);
+	});
+
+	it('scales a narrow stage down by width so the sides still fit', () => {
+		const layout = layoutFocus(900, 880, {mine: 'frets', others: ['frets', 'drums'], lyrics: false});
+		expect(layout.scale).toBeCloseTo(900 / 1100);
+		expect(layout.sides).toHaveLength(2);
+	});
+});
+
+describe('missShake', () => {
+	it('wobbles a side highway for a moment after a miss, then settles', () => {
+		expect(missShake(-1)).toBe(0);
+		expect(missShake(0)).toBe(0);
+		const wobble = [10, 30, 60, 100, 160].map(missShake);
+		expect(wobble.some((offset) => offset > 0)).toBe(true);
+		expect(wobble.some((offset) => offset < 0)).toBe(true);
+		expect(wobble.every((offset) => Math.abs(offset) <= 7)).toBe(true);
+		expect(Math.abs(missShake(300))).toBeLessThan(Math.abs(missShake(12)));
+		expect(missShake(320)).toBe(0);
 	});
 });
