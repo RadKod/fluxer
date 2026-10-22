@@ -173,6 +173,10 @@ const SCHEDULE_AHEAD_S = 0.12;
 const TICK_MS = 25;
 const CLICK_LENGTH_S = 0.03;
 const CLICK_GAIN = 0.25;
+// A synced loop is not moved for less drift than this; re-aligning would cut a step short or play it twice.
+const SYNC_TOLERANCE_S = 0.015;
+// The first step a synced loop schedules lies at least this far ahead.
+const SYNC_LEAD_S = 0.03;
 
 export interface JamBackingSettings {
 	readonly style: JamBackingStyle;
@@ -191,6 +195,8 @@ export class JamBacking {
 	private timer: ReturnType<typeof setInterval> | null = null;
 	private nextStep = 0;
 	private nextStepTime = 0;
+	// AudioContext time of step 0 while the loop follows a shared timeline (sync); null for a loop started here.
+	private origin: number | null = null;
 
 	constructor(
 		private readonly mixer: JamMixer,
@@ -212,15 +218,30 @@ export class JamBacking {
 
 	start(): void {
 		if (this.timer) return;
+		this.origin = null;
 		this.nextStep = 0;
 		this.nextStepTime = this.mixer.context.currentTime + 0.1;
 		this.timer = setInterval(() => this.schedule(), TICK_MS);
 		this.schedule();
 	}
 
+	// Runs the loop on a shared timeline with step 0 at `origin` (AudioContext seconds): every client that maps the same
+	// session time here plays the same step at the same moment, and a client joining later comes in mid-phrase. Called
+	// again with the same timeline, it only corrects drift beyond SYNC_TOLERANCE_S.
+	sync(origin: number): void {
+		const stepS = stepSeconds(JAM_BACKING_PATTERNS[this.settings.style], this.settings.bpm);
+		const drift = Math.abs(origin + this.nextStep * stepS - this.nextStepTime);
+		const sameTimeline = this.origin !== null && this.timer !== null && drift < SYNC_TOLERANCE_S;
+		this.origin = origin;
+		if (!sameTimeline) this.alignToOrigin(origin);
+		if (!this.timer) this.timer = setInterval(() => this.schedule(), TICK_MS);
+		this.schedule();
+	}
+
 	stop(): void {
 		if (this.timer) clearInterval(this.timer);
 		this.timer = null;
+		this.origin = null;
 		const now = this.mixer.context.currentTime;
 		this.drums.allNotesOff(now);
 		this.bass.allNotesOff(now);
@@ -237,13 +258,24 @@ export class JamBacking {
 		const {context} = this.mixer;
 		const pattern = JAM_BACKING_PATTERNS[this.settings.style];
 		const stepS = stepSeconds(pattern, this.settings.bpm);
-		// After a stall (a background tab) start again from now rather than rushing through the missed steps.
-		if (this.nextStepTime < context.currentTime) this.nextStepTime = context.currentTime + 0.05;
+		// After a stall (a background tab) start again from now rather than rushing through the missed steps; a shared
+		// loop picks up at the step the others are on.
+		if (this.nextStepTime < context.currentTime) {
+			if (this.origin === null) this.nextStepTime = context.currentTime + 0.05;
+			else this.alignToOrigin(this.origin);
+		}
 		while (this.nextStepTime < context.currentTime + SCHEDULE_AHEAD_S) {
 			this.playStep(pattern, this.nextStep, this.nextStepTime);
 			this.nextStep++;
 			this.nextStepTime += stepS;
 		}
+	}
+
+	private alignToOrigin(origin: number): void {
+		const stepS = stepSeconds(JAM_BACKING_PATTERNS[this.settings.style], this.settings.bpm);
+		const earliest = this.mixer.context.currentTime + SYNC_LEAD_S;
+		this.nextStep = Math.max(0, Math.ceil((earliest - origin) / stepS));
+		this.nextStepTime = origin + this.nextStep * stepS;
 	}
 
 	private playStep(pattern: JamBackingPattern, step: number, time: number): void {

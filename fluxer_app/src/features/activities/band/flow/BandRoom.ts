@@ -9,6 +9,7 @@ import type {
 	BandCheerKind,
 	BandCheerMessage,
 	BandIntent,
+	BandJamSeat,
 	BandSeat,
 	BandState,
 } from '@app/features/activities/band/BandProtocol';
@@ -89,6 +90,7 @@ export class BandRoom {
 			state: computed,
 			context: computed,
 			mySeat: computed,
+			myJamSeat: computed,
 			songLoaded: computed,
 			songHasBigRockEnding: computed,
 			spectatorIds: computed,
@@ -115,14 +117,19 @@ export class BandRoom {
 
 	get mySeat(): BandSeat | undefined {
 		const state = this.state;
-		if (!state || state.phase === 'pick') return undefined;
+		if (!state || state.phase === 'pick' || state.phase === 'jam') return undefined;
 		return state.seats.find((seat) => seat.userId === this.myUserId);
+	}
+
+	get myJamSeat(): BandJamSeat | undefined {
+		const state = this.state;
+		return state?.phase === 'jam' ? state.seats.find((seat) => seat.userId === this.myUserId) : undefined;
 	}
 
 	// The package of the room's current song is open on this client.
 	get songLoaded(): boolean {
 		const state = this.state;
-		if (!state || state.phase === 'pick') return false;
+		if (!state || state.phase === 'pick' || state.phase === 'jam') return false;
 		return this.songPackage?.songId === state.songId && this.songPackage.status === 'ready';
 	}
 
@@ -141,7 +148,8 @@ export class BandRoom {
 	// Everyone taking part without a seat, one entry per person. Someone in the call who has not joined is not watching.
 	get spectatorIds(): ReadonlyArray<string> {
 		const state = this.state;
-		const seated = new Set(state && state.phase !== 'pick' ? state.seats.map((seat) => seat.userId) : []);
+		const seats: ReadonlyArray<{readonly userId: string}> = state && state.phase !== 'pick' ? state.seats : [];
+		const seated = new Set(seats.map((seat) => seat.userId));
 		const ids = this.session.members.map((member) => member.userId).filter((id) => !seated.has(id));
 		return [...new Set(ids)];
 	}
@@ -206,7 +214,9 @@ export class BandRoom {
 			reaction(
 				() => {
 					const state = this.state;
-					return state && state.phase !== 'pick' && this.library.status.status === 'ready' ? state.songId : null;
+					return state && state.phase !== 'pick' && state.phase !== 'jam' && this.library.status.status === 'ready'
+						? state.songId
+						: null;
 				},
 				(songId) => {
 					if (songId && this.songPackage?.songId !== songId) this.loadSongPackage(songId);
@@ -239,8 +249,13 @@ export class BandRoom {
 					if (voted) this.library.prefetch(voted.split(','));
 				},
 			),
+			// A jam instrument holds the mic like a song part does; jam mode has no singer.
 			reaction(
-				() => (this.state?.phase === 'play' ? (this.mySeat?.part ?? null) : null),
+				() => {
+					const phase = this.state?.phase;
+					if (phase === 'play') return this.mySeat?.part ?? null;
+					return phase === 'jam' ? (this.myJamSeat?.instrument ?? null) : null;
+				},
 				(part) => this.micGuard.update(part),
 				{fireImmediately: true},
 			),

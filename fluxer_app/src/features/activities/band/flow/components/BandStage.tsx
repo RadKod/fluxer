@@ -8,31 +8,34 @@ import {useLingui} from '@lingui/react/macro';
 import {clsx} from 'clsx';
 import type React from 'react';
 
-const STEPS: ReadonlyArray<BandPhase> = ['pick', 'select', 'play', 'results'];
+const STEPS: ReadonlyArray<keyof typeof STEP_DESCRIPTORS> = ['pick', 'select', 'play', 'results'];
 
 interface BandStageProps {
 	readonly phase: BandPhase | null;
 	readonly children: React.ReactNode;
 }
 
-// The game's dark stage inside the activity panel, with the four steps the room goes through in order.
+// The game's dark stage inside the activity panel, with the four steps a song round goes through in order. Jam mode is
+// not a round, so it has none.
 export function BandStage({phase, children}: BandStageProps) {
 	const {i18n} = useLingui();
-	const current = phase ? STEPS.indexOf(phase) : -1;
+	const current = phase && phase !== 'jam' ? STEPS.indexOf(phase) : -1;
 	return (
 		<div className={styles.stage} data-flx="activities.band.flow.band-stage.stage">
-			<ol className={styles.steps} data-flx="activities.band.flow.band-stage.steps">
-				{STEPS.map((step, index) => (
-					<li
-						key={step}
-						className={clsx(styles.step, index === current && styles.current, index < current && styles.done)}
-						aria-current={index === current ? 'step' : undefined}
-						data-flx="activities.band.flow.band-stage.step"
-					>
-						{i18n._(STEP_DESCRIPTORS[step])}
-					</li>
-				))}
-			</ol>
+			{phase !== 'jam' && (
+				<ol className={styles.steps} data-flx="activities.band.flow.band-stage.steps">
+					{STEPS.map((step, index) => (
+						<li
+							key={step}
+							className={clsx(styles.step, index === current && styles.current, index < current && styles.done)}
+							aria-current={index === current ? 'step' : undefined}
+							data-flx="activities.band.flow.band-stage.step"
+						>
+							{i18n._(STEP_DESCRIPTORS[step])}
+						</li>
+					))}
+				</ol>
+			)}
 			<div className={styles.body} data-flx="activities.band.flow.band-stage.body">
 				{children}
 			</div>

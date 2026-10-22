@@ -1,0 +1,93 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.screen {
+	--jam-gutter: 1.75rem;
+	--jam-info-width: 19rem;
+
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-height: 0;
+	outline: none;
+}
+
+.body {
+	display: grid;
+	flex: 1 1 auto;
+	grid-template-columns: minmax(0, 1fr) var(--jam-info-width);
+	grid-template-rows: minmax(0, 1fr);
+	min-height: 0;
+}
+
+.infoCollapsed {
+	grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.main {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+	padding: 1.25rem var(--jam-gutter) 0;
+}
+
+.stage {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 0;
+	padding-bottom: 1.5rem;
+}
+
+.notice {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	margin: auto;
+	text-align: center;
+}
+
+.noticeText {
+	max-width: 24rem;
+	margin: 0;
+	color: var(--band-t2);
+	font-size: 0.875rem;
+}
+
+.retry {
+	height: 2.25rem;
+	padding: 0 1rem;
+	border: 0;
+	border-radius: 0.5rem;
+	background-color: var(--band-plum);
+	color: #fff;
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+@container band-stage (max-width: 78rem) {
+	.screen {
+		--jam-gutter: 1.25rem;
+		--jam-info-width: 16.5rem;
+	}
+}
+
+/* A call tile or the mini window: the lanes and my instrument, nothing else. */
+@container band-stage (max-width: 40rem) {
+	.body {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.main {
+		padding: 0.5rem 0.75rem 0;
+	}
+
+	.stage {
+		padding-bottom: 0.25rem;
+	}
+}

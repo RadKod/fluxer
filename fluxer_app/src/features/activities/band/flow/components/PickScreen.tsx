@@ -23,6 +23,7 @@ import {
 	randomSong,
 } from '@app/features/activities/band/flow/BandSongFilters';
 import {BandSongPreview} from '@app/features/activities/band/flow/BandSongPreview';
+import {BandModeSwitch} from '@app/features/activities/band/flow/components/BandModeSwitch';
 import {PickGenreRail} from '@app/features/activities/band/flow/components/PickGenreRail';
 import styles from '@app/features/activities/band/flow/components/PickScreen.module.css';
 import {PickSongGrid} from '@app/features/activities/band/flow/components/PickSongGrid';
@@ -127,6 +128,7 @@ export const PickScreen = observer(function PickScreen({room, state}: PickScreen
 	return (
 		<div className={styles.screen} data-flx="activities.band.flow.pick-screen.screen">
 			<header className={styles.header} data-flx="activities.band.flow.pick-screen.header">
+				<BandModeSwitch room={room} mode="songs" data-flx="activities.band.flow.pick-screen.band-mode-switch" />
 				<h2 className={styles.title} data-flx="activities.band.flow.pick-screen.title">
 					{i18n._(PICK_TITLE_DESCRIPTOR)}
 				</h2>

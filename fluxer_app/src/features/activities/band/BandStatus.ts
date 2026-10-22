@@ -54,6 +54,16 @@ const CHOOSING_PARTS_READY_DESCRIPTOR = msg({
 	comment:
 		'Voice activities: status line on the band game tile while the players pick their instruments. {ready} of the {seated} players who took a part are ready.',
 });
+const JAMMING_DESCRIPTOR = msg({
+	message: 'Jamming',
+	comment:
+		'Voice activities: status line on the band game tile in a call while the band plays freely in jam mode, without a song.',
+});
+const MY_JAM_PART_DESCRIPTOR = msg({
+	message: '{part} · jam',
+	comment:
+		'Voice activities: in the header of the mini window while I jam in the band game. {part} is my instrument (Guitar, Drums...).',
+});
 const RESULTS_DESCRIPTOR = msg({
 	message: 'Rating the last song',
 	comment:
@@ -75,10 +85,13 @@ function songTitle(value: unknown): string | null {
 	return typeof value === 'string' ? BandCatalog.title(value) : null;
 }
 
-// A song is on the highways; between songs the room shows lists and forms that need the whole stage.
+// A song is on the highways or the band jams; between songs the room shows lists and forms that need the whole stage.
+// The jam screen folds down to my lanes and instrument, so it stays playable in a tile and the mini window.
 export function bandSongPlaying(session: ActivitySession): boolean {
 	const state = session.state;
-	return typeof state === 'object' && state !== null && (state as {phase?: unknown}).phase === 'play';
+	if (typeof state !== 'object' || state === null) return false;
+	const {phase} = state as {phase?: unknown};
+	return phase === 'play' || phase === 'jam';
 }
 
 // Observable reads only (the session state and the catalog), so the tile follows the room.
@@ -109,6 +122,8 @@ export function describeBandState(session: ActivitySession, i18n: I18n): string 
 		}
 		case 'results':
 			return i18n._(RESULTS_DESCRIPTOR);
+		case 'jam':
+			return i18n._(JAMMING_DESCRIPTOR);
 		default:
 			return null;
 	}
@@ -130,6 +145,13 @@ export function describeMyBandPart(session: ActivitySession, i18n: I18n): string
 	const state = session.state;
 	if (typeof state !== 'object' || state === null) return null;
 	const {phase, seats, startAt} = state as Record<string, unknown>;
+	if (phase === 'jam' && Array.isArray(seats)) {
+		const instrument = seats.find(
+			(seat): seat is {instrument: unknown} =>
+				typeof seat === 'object' && seat !== null && (seat as {userId?: unknown}).userId === session.me.userId,
+		)?.instrument;
+		return isBandPart(instrument) ? i18n._(MY_JAM_PART_DESCRIPTOR, {part: i18n._(PART_DESCRIPTORS[instrument])}) : null;
+	}
 	if (phase !== 'play' || !Array.isArray(seats) || typeof startAt !== 'number') return null;
 	const mine = seats.find(
 		(seat): seat is {part: unknown} =>

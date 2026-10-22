@@ -5,6 +5,8 @@
 // next state. Hits are judged locally and only their outcome travels (BandHitMessage, lossy).
 
 import type {BandDifficulty, BandPart} from '@app/features/activities/band/engine/ChartModel';
+import type {JamBackingStyle} from '@app/features/activities/band/jam/JamBacking';
+import type {JamKey, JamScale} from '@app/features/activities/band/jam/JamScales';
 
 export const BAND_PHASE_MS = {
 	// Counted from the first vote; with no votes the room waits.
@@ -93,6 +95,29 @@ export interface BandPlayerResult {
 	readonly finaleBonus?: number;
 }
 
+// Jam mode's instruments, named after the song parts they match: guitar is the lead (bend, pinch, feedback), rhythm the
+// second guitar on power chords or the clean tone.
+export const BAND_JAM_INSTRUMENTS = ['guitar', 'rhythm', 'bass', 'keys', 'drums'] as const;
+export type BandJamInstrument = (typeof BAND_JAM_INSTRUMENTS)[number];
+
+// Tempo range the leader can set for the backing loop.
+export const BAND_JAM_BPM_MIN = 50;
+export const BAND_JAM_BPM_MAX = 220;
+
+export interface BandJamSeat {
+	readonly userId: string;
+	readonly instrument: BandJamInstrument;
+}
+
+export interface BandJamBacking {
+	readonly style: JamBackingStyle;
+	readonly bpm: number;
+	readonly on: boolean;
+	// Leader clock of the loop's first step. Every client schedules its own copy of the loop from it, so the loops
+	// line up; a new style or tempo starts the loop again.
+	readonly since: number;
+}
+
 export type BandState =
 	| {
 			// Anyone searches the library and votes; once a vote is in, the most voted song goes on after a countdown.
@@ -138,12 +163,24 @@ export type BandState =
 			// rater userId -> player userId -> 1..5; public by design.
 			readonly ratings: Readonly<Record<string, Readonly<Record<string, number>>>>;
 			readonly endsAt: number;
+	  }
+	| {
+			// Jam mode: no song and no score. Everyone who picked an instrument plays in the room's key over an optional
+			// backing loop; the others listen. Older clients do not know this phase and show the room as loading.
+			readonly phase: 'jam';
+			readonly key: JamKey;
+			readonly scale: JamScale;
+			readonly backing: BandJamBacking;
+			// One entry per player with an instrument; anyone may share an instrument with someone else.
+			readonly seats: ReadonlyArray<BandJamSeat>;
+			readonly openedAt: number;
 	  };
 
 export type BandPhase = BandState['phase'];
 
 // Non-leader -> leader. The leader trusts `from` of the envelope, never a user id inside the payload.
 export type BandIntent =
+	| BandJamIntent
 	// My vote for this song; voting for my current song again takes the vote back.
 	| {readonly t: 'band.vote'; readonly songId: string}
 	// Leader only: skips the countdown and takes this song to part picking.
@@ -163,6 +200,24 @@ export type BandIntent =
 	// Leader only: ends the current phase early. During the song it stops it; every player's client sends what it has
 	// scored so far as soon as it sees the results state.
 	| {readonly t: 'band.skip'};
+
+// Jam mode. Only the leader opens and ends it and changes the key, scale and backing; anyone picks their instrument.
+export interface BandJamSettingsPatch {
+	readonly key?: JamKey;
+	readonly scale?: JamScale;
+	readonly style?: JamBackingStyle;
+	readonly bpm?: number;
+	readonly backing?: boolean;
+}
+
+export type BandJamIntent =
+	// From the song picker into jam mode.
+	| {readonly t: 'band.jamStart'}
+	// Back to the song picker.
+	| {readonly t: 'band.jamEnd'}
+	| ({readonly t: 'band.jamSettings'} & BandJamSettingsPatch)
+	// Null puts my instrument down and I listen.
+	| {readonly t: 'band.jamInstrument'; readonly instrument: BandJamInstrument | null};
 
 // Broadcast by each player during the song, lossy. Remote clients duck that part's stem on a miss and show the combo.
 export interface BandHitMessage {

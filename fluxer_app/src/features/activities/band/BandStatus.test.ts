@@ -6,7 +6,9 @@ import {describe, expect, it, vi} from 'vitest';
 
 vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor}));
 
-const {bandSongPlaying, describeBandState} = await import('@app/features/activities/band/BandStatus');
+const {bandSongPlaying, describeBandState, describeMyBandPart} = await import(
+	'@app/features/activities/band/BandStatus'
+);
 
 const i18n = {
 	_: (descriptor: MessageDescriptor, values: Record<string, unknown> = {}) =>
@@ -18,8 +20,9 @@ function session(state: unknown): ActivitySession {
 }
 
 describe('band status', () => {
-	it('puts the game in the call tile only while a song plays', () => {
+	it('puts the game in the call tile only while a song plays or the band jams', () => {
 		expect(bandSongPlaying(session({phase: 'play', songId: 'a', seats: [], startAt: 0}))).toBe(true);
+		expect(bandSongPlaying(session({phase: 'jam', seats: []}))).toBe(true);
 		for (const phase of ['pick', 'select', 'results']) expect(bandSongPlaying(session({phase}))).toBe(false);
 		expect(bandSongPlaying(session(null))).toBe(false);
 	});
@@ -39,5 +42,16 @@ describe('band status', () => {
 		expect(describeBandState(session({phase: 'pick', votes: [{userId: '1', songId: 'x'}]}), i18n)).toBe(
 			'Voting on a song',
 		);
+	});
+
+	it('tells the call the band is jamming and names my jam instrument in the mini window', () => {
+		expect(describeBandState(session({phase: 'jam', seats: []}), i18n)).toBe('Jamming');
+		const mine = {
+			state: {phase: 'jam', seats: [{userId: 'me', instrument: 'drums'}]},
+			me: {userId: 'me'},
+		} as unknown as ActivitySession;
+		expect(describeMyBandPart(mine, i18n)).toBe('Drums · jam');
+		const listening = {state: {phase: 'jam', seats: []}, me: {userId: 'me'}} as unknown as ActivitySession;
+		expect(describeMyBandPart(listening, i18n)).toBeNull();
 	});
 });

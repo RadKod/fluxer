@@ -1,0 +1,55 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.switch {
+	display: inline-flex;
+	flex: 0 0 auto;
+	gap: 2px;
+	padding: 3px;
+	border-radius: 0.6875rem;
+	background-color: var(--band-g2);
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+}
+
+.option {
+	display: flex;
+	align-items: center;
+	gap: 0.4375rem;
+	height: 2.25rem;
+	padding: 0 0.875rem;
+	border: 0;
+	border-radius: 0.5rem;
+	background: none;
+	color: var(--band-t2);
+	font: inherit;
+	font-weight: 600;
+	font-size: 0.875rem;
+	white-space: nowrap;
+	cursor: pointer;
+	transition:
+		background-color 120ms ease,
+		color 120ms ease;
+}
+
+.option:hover:not(:disabled):not(.on) {
+	background-color: var(--band-g3);
+	color: var(--band-t1);
+}
+
+.option:disabled {
+	color: var(--band-t4);
+	cursor: default;
+}
+
+.on {
+	background-color: var(--band-plum);
+	color: #fff;
+	cursor: default;
+}
+
+@container band-stage (max-width: 40rem) {
+	.option {
+		height: 1.875rem;
+		padding: 0 0.625rem;
+		font-size: 0.75rem;
+	}
+}

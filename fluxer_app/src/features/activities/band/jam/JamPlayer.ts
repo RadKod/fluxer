@@ -2,7 +2,7 @@
 
 // Drives the jam instruments from events: my own play sounds at once and goes out as a message; each other
 // player's messages are scheduled on the shared session clock behind a fixed jitter buffer, on that player's own
-// instrument. Not wired to the band room yet; the room will feed receive() and pass a send function.
+// instrument. The jam screen's runtime (JamRuntime) feeds receive() and sends through the activity session.
 
 import type {AudioClockAnchor} from '@app/features/activities/band/engine/SessionClock';
 import {readAudioAnchor} from '@app/features/activities/band/game/BandAudio';
@@ -66,6 +66,8 @@ export interface JamPlayerOptions {
 	readonly readAnchor?: () => AudioClockAnchor;
 	// Remote events that arrived past their slot, for diagnostics.
 	readonly onLate?: (participantId: string, lateMs: number) => void;
+	// Every remote event with the AudioContext time it sounds at, so a view can light it up when it is heard.
+	readonly onScheduled?: (participantId: string, event: JamEvent, contextTime: number) => void;
 }
 
 export class JamPlayer {
@@ -149,6 +151,7 @@ export class JamPlayer {
 				state.held.delete(event.note);
 			}
 			apply(state.playable, event, time);
+			this.options.onScheduled?.(participantId, event, time);
 		}
 	}
 

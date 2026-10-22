@@ -20,6 +20,13 @@ import {
 } from '@app/features/activities/band/BandProtocol';
 import {tallyVotes} from '@app/features/activities/band/BandVotes';
 import {BAND_DIFFICULTIES, type BandDifficulty, type BandPart} from '@app/features/activities/band/engine/ChartModel';
+import {
+	applyJamSettings,
+	dropAbsentJamSeats,
+	parseJamIntent,
+	setJamInstrument,
+	startJam,
+} from '@app/features/activities/band/flow/BandJamMachine';
 
 export const BAND_PARTS: ReadonlyArray<BandPart> = ['guitar', 'rhythm', 'bass', 'drums', 'keys', 'vocals'];
 export const BAND_DEFAULT_GROUP_DIFFICULTY: BandDifficulty = 'medium';
@@ -328,6 +335,8 @@ function skip(state: BandState, now: number, ctx: BandRoomContext): BandState {
 			return endPlay(state, now);
 		case 'results':
 			return startPick(state.songId, now, ctx);
+		case 'jam':
+			return startPick(null, now, ctx);
 	}
 }
 
@@ -393,6 +402,19 @@ export function reduceBandIntent(
 			return state.phase === 'results' ? rate(state, intent.playerId, intent.stars, fromUserId) : state;
 		case 'band.skip':
 			return fromLeader ? skip(state, now, ctx) : state;
+		case 'band.jamStart':
+			return state.phase === 'pick' && fromLeader ? startJam(now) : state;
+		case 'band.jamEnd':
+			return state.phase === 'jam' && fromLeader ? startPick(null, now, ctx) : state;
+		case 'band.jamSettings': {
+			if (state.phase !== 'jam' || !fromLeader) return state;
+			const {t: _type, ...patch} = intent;
+			return applyJamSettings(state, patch, now);
+		}
+		case 'band.jamInstrument':
+			return state.phase === 'jam' && ctx.presentUserIds.has(fromUserId)
+				? setJamInstrument(state, intent.instrument, fromUserId)
+				: state;
 	}
 }
 
@@ -425,11 +447,15 @@ export function tickBandRoom(state: BandState, now: number, ctx: BandRoomContext
 		}
 		case 'results':
 			return now >= state.endsAt ? startPick(state.songId, now, ctx) : state;
+		case 'jam':
+			return dropAbsentJamSeats(state, ctx.presentUserIds);
 	}
 }
 
-// A state from an older client (its phase unknown here) is not a room state, so a new leader opens a fresh one.
-const PHASES = new Set<string>(['pick', 'select', 'play', 'results']);
+// A state from another client version (its phase unknown here) is not a room state, so a new leader opens a fresh one.
+// Clients from before jam mode treat 'jam' this way: they show the room as loading and, should one of them become the
+// leader, the room goes back to the song picker.
+const PHASES = new Set<string>(['pick', 'select', 'play', 'results', 'jam']);
 
 export function isBandState(value: unknown): value is BandState {
 	if (typeof value !== 'object' || value === null) return false;
@@ -506,6 +532,6 @@ export function parseBandIntent(payload: unknown): BandIntent | null {
 		case 'band.skip':
 			return {t: 'band.skip'};
 		default:
-			return null;
+			return parseJamIntent(record);
 	}
 }

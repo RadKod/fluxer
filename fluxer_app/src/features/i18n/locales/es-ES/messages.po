@@ -59249,3 +59249,440 @@ msgstr "Star power"
 msgctxt "band-score"
 msgid "Band"
 msgstr "Band"
+
+#. Band game: accessible name of the switch between playing songs and jamming, at
+#. the top of the song picker.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-mode"
+msgid "Mode"
+msgstr "Mode"
+
+#. Band game: first side of the mode switch on the song picker; the band votes on
+#. a song and plays it.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-mode"
+msgid "Songs"
+msgstr "Songs"
+
+#. Band game: second side of the mode switch; free play without a song or a
+#. score, every key in the room key. In Turkish "Doğaçlama".
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-mode"
+msgid "Jam"
+msgstr "Jam"
+
+#. Band game: tooltip on the mode switch for everyone but the room leader, who
+#. alone can change it. {name} is the leader.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "{name} switches between songs and jam"
+msgstr "{name} switches between songs and jam"
+
+#. Band game: tooltip on the Songs side of the mode switch while the room jams;
+#. only the leader sees it.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "End the jam and go back to picking a song"
+msgstr "End the jam and go back to picking a song"
+
+#. Band game jam mode: a scale, the five-note minor one most rock solos use.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Minor pentatonic"
+msgstr "Minor pentatonic"
+
+#. Band game jam mode: a scale, the five-note major one.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Major pentatonic"
+msgstr "Major pentatonic"
+
+#. Band game jam mode: the six-note blues scale.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Blues"
+msgstr "Blues"
+
+#. Band game jam mode: a scale, the seven-note natural minor (Aeolian).
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Natural minor"
+msgstr "Natural minor"
+
+#. Band game jam mode: the room key and scale, e.g. "A Minor pentatonic". {key}
+#. is a note letter (C, F#, A), {scale} a scale name.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "{key} {scale}"
+msgstr "{key} {scale}"
+
+#. Band game jam mode: label of the room key picker (the root note, C to B) in
+#. the top bar.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Key"
+msgstr "Key"
+
+#. Band game jam mode: label of the scale picker in the top bar.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Scale"
+msgstr "Scale"
+
+#. Band game jam mode: label of the backing loop tempo in the top bar.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Tempo"
+msgstr "Tempo"
+
+#. Band game jam mode: the backing loop tempo in beats per minute, e.g. "110
+#. BPM".
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "{bpm} BPM"
+msgstr "{bpm} BPM"
+
+#. Band game jam mode: button that lowers the backing loop tempo by five beats
+#. per minute.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Slower"
+msgstr "Slower"
+
+#. Band game jam mode: button that raises the backing loop tempo by five beats
+#. per minute.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Faster"
+msgstr "Faster"
+
+#. Band game jam mode: label of the backing loop (drums and bass the game plays)
+#. settings in the top bar.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Backing"
+msgstr "Backing"
+
+#. Band game jam mode: backing loop style, a rock beat.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Rock"
+msgstr "Rock"
+
+#. Band game jam mode: backing loop style, a slow 12/8 blues shuffle.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Slow blues"
+msgstr "Slow blues"
+
+#. Band game jam mode: backing loop style, a fast punk beat.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Punk"
+msgstr "Punk"
+
+#. Band game jam mode: toggle in the top bar; pressed while the backing loop
+#. plays.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Loop on"
+msgstr "Loop on"
+
+#. Band game jam mode: tooltip of the backing loop toggle while nobody in the
+#. room plays drums or bass.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "The loop plays drums and bass"
+msgstr "The loop plays drums and bass"
+
+#. Band game jam mode: tooltip of the backing loop toggle while someone plays
+#. bass, so the loop drops it.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "The loop plays drums; a bandmate has the bass"
+msgstr "The loop plays drums; a bandmate has the bass"
+
+#. Band game jam mode: tooltip of the backing loop toggle while someone plays
+#. drums, so the loop drops them.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "The loop plays bass; a bandmate has the drums"
+msgstr "The loop plays bass; a bandmate has the drums"
+
+#. Band game jam mode: tooltip of the backing loop toggle while people in the
+#. room play both drums and bass.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Bandmates play the drums and the bass, so the loop stays quiet"
+msgstr "Bandmates play the drums and the bass, so the loop stays quiet"
+
+#. Band game jam mode: tooltip over the room settings for everyone but the
+#. leader. {name} is the leader.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "{name} sets the key, scale and backing"
+msgstr "{name} sets the key, scale and backing"
+
+#. Band game jam mode: label of the volume slider for the jam (instruments and
+#. backing loop).
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Volume"
+msgstr "Volume"
+
+#. Band game jam mode: instrument choice, the distorted solo guitar with bends,
+#. pinch harmonics and feedback.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Lead guitar"
+msgstr "Lead guitar"
+
+#. Band game jam mode: instrument choice, the second guitar playing power chords
+#. or a clean tone.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Rhythm guitar"
+msgstr "Rhythm guitar"
+
+#. Band game jam mode: instrument choice, bass guitar.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Bass"
+msgstr "Bass"
+
+#. Band game jam mode: instrument choice, piano.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Keys"
+msgstr "Keys"
+
+#. Band game jam mode: instrument choice, drum kit.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Drums"
+msgstr "Drums"
+
+#. Band game jam mode: label before the row of instruments I can pick.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Your instrument"
+msgstr "Your instrument"
+
+#. Band game jam mode: the choice next to the instruments for not playing, only
+#. listening to the band.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Listen"
+msgstr "Listen"
+
+#. Band game jam mode: rhythm guitar sound, distorted two-note chords.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Power chords"
+msgstr "Power chords"
+
+#. Band game jam mode: rhythm guitar sound, the clean tone.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Clean"
+msgstr "Clean"
+
+#. Band game jam mode: heading in the middle of the jam screen while I have no
+#. instrument.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Pick an instrument to play"
+msgstr "Pick an instrument to play"
+
+#. Band game jam mode: text under the heading asking me to pick an instrument.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Whatever you play stays in key. Without an instrument you listen to the band."
+msgstr "Whatever you play stays in key. Without an instrument you listen to the band."
+
+#. Band game jam mode: which octave my lanes play, relative to home: "Octave 0",
+#. "Octave +1", "Octave -1".
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Octave {octave}"
+msgstr "Octave {octave}"
+
+#. Band game jam mode: tag over my lanes while I bend the note. Guitar term; keep
+#. it in English if usual.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Bend"
+msgstr "Bend"
+
+#. Band game jam mode: tag on a lane playing a pinch harmonic (the squealing
+#. guitar note). Guitar term.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Pinch"
+msgstr "Pinch"
+
+#. Band game jam mode: tag on a lead guitar lane held long enough to howl into
+#. amp feedback. Guitar term.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Feedback"
+msgstr "Feedback"
+
+#. Band game jam mode: drum pad, the bass drum.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Kick"
+msgstr "Kick"
+
+#. Band game jam mode: drum pad, the snare drum.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Snare"
+msgstr "Snare"
+
+#. Band game jam mode: drum pad, the closed hi-hat.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Hi-hat"
+msgstr "Hi-hat"
+
+#. Band game jam mode: under the hi-hat pad, what it plays with Shift held: the
+#. open hi-hat.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Open"
+msgstr "Open"
+
+#. Band game jam mode: drum pad, the high tom.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Tom"
+msgstr "Tom"
+
+#. Band game jam mode: under the tom pad, what it plays with Shift held.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Floor tom"
+msgstr "Floor tom"
+
+#. Band game jam mode: drum pad, the crash cymbal.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Crash"
+msgstr "Crash"
+
+#. Band game jam mode: under the crash pad, what it plays with Shift held: the
+#. ride cymbal.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Ride"
+msgstr "Ride"
+
+#. Band game jam mode: while the instrument samples load at the start of a jam.
+#. {percent} is 0 to 100.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Tuning the instruments… {percent}%"
+msgstr "Tuning the instruments… {percent}%"
+
+#. Band game jam mode: when the instrument samples could not be downloaded.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "The jam instruments did not load. Check your connection and try again."
+msgstr "The jam instruments did not load. Check your connection and try again."
+
+#. Band game jam mode: when this device has no audio output the jam could play
+#. through.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "There is no audio output here to play the jam on."
+msgstr "There is no audio output here to play the jam on."
+
+#. Band game jam mode: under the name of a bandmate who joined the jam without an
+#. instrument.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam"
+msgid "Listening"
+msgstr "Listening"
+
+#. Band game jam mode: in place of the bandmates while nobody else has joined.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Jamming alone. Whoever joins the activity shows up here."
+msgstr "Jamming alone. Whoever joins the activity shows up here."
+
+#. Band game jam mode: title of the small box on the right listing which keyboard
+#. key does what.
+#: src/features/activities/band/jam/JamLabels.ts
+msgctxt "band-jam-info"
+msgid "Keys"
+msgstr "Keys"
+
+#. Band game jam mode: button that folds the key box on the right down to its
+#. title.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Fold the key box"
+msgstr "Fold the key box"
+
+#. Band game jam mode: button that opens the folded key box on the right.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Open the key box"
+msgstr "Open the key box"
+
+#. Band game jam mode, key box: what the five lane keys play on guitar, bass and
+#. keys.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Five notes of the scale, low to high"
+msgstr "Five notes of the scale, low to high"
+
+#. Band game jam mode, key box: holding a lane key sustains the note.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Hold for a long note"
+msgstr "Hold for a long note"
+
+#. Band game jam mode, key box, lead guitar only: a note held for about two
+#. seconds howls into feedback.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Hold longer: the amp starts to feed back"
+msgstr "Hold longer: the amp starts to feed back"
+
+#. Band game jam mode, key box: what the bend key (Space by default) does while a
+#. note sounds.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Bend the note a whole step"
+msgstr "Bend the note a whole step"
+
+#. Band game jam mode, key box: Shift with the bend key bends further.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Bend a step and a half"
+msgstr "Bend a step and a half"
+
+#. Band game jam mode, key box, lead guitar only: striking two neighbouring lane
+#. keys together plays a squealing pinch harmonic of the lower note.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Two neighbouring keys at once: pinch harmonic"
+msgstr "Two neighbouring keys at once: pinch harmonic"
+
+#. Band game jam mode, key box: the two keys that move my lanes an octave down or
+#. up.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Octave down, octave up"
+msgstr "Octave down, octave up"
+
+#. Band game jam mode, key box, drums: what the five lane keys play, in order.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Kick, snare, hi-hat, tom, crash"
+msgstr "Kick, snare, hi-hat, tom, crash"
+
+#. Band game jam mode, key box, drums: holding Shift turns three of the pads into
+#. other pieces.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "With Shift: open hi-hat, floor tom, ride"
+msgstr "With Shift: open hi-hat, floor tom, ride"
+
+#. Band game jam mode, key box, drums: the kick key of the game (Space by
+#. default) also plays the kick.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Kick as well"
+msgstr "Kick as well"
+
+#. Band game jam mode, key box: while I have no instrument.
+#: src/features/activities/band/jam/JamLabels.ts
+msgid "Pick an instrument and its keys show here."
+msgstr "Pick an instrument and its keys show here."
+
+#. Voice activities: status line on the band game tile in a call while the band
+#. plays freely in jam mode, without a song.
+#: src/features/activities/band/BandStatus.ts
+msgid "Jamming"
+msgstr "Jamming"
+
+#. Voice activities: in the header of the mini window while I jam in the band
+#. game. {part} is my instrument (Guitar, Drums...).
+#: src/features/activities/band/BandStatus.ts
+msgid "{part} · jam"
+msgstr "{part} · jam"

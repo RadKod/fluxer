@@ -99,6 +99,36 @@ describe('BandRoom', () => {
 		expect(room.spectatorIds).toEqual(['player']);
 	});
 
+	it('holds my mic like an instrument player while I play in a jam, and gives it back when I listen', async () => {
+		let muted = false;
+		const micPort: BandMicPort = {
+			...MIC_PORT,
+			isMuted: () => muted,
+			toggleMute: vi.fn(async () => void (muted = !muted)),
+		};
+		room.dispose();
+		const jam = (instrument: 'drums' | null): BandState => ({
+			phase: 'jam',
+			key: 9,
+			scale: 'minorPentatonic',
+			backing: {style: 'rock', bpm: 110, on: true, since: 0},
+			seats: instrument ? [{userId: 'me', instrument}] : [],
+			openedAt: 0,
+		});
+		session.setState(jam(null));
+		room = new BandRoom(session, {library, micPort, voicePort: VOICE_PORT});
+		await vi.advanceTimersByTimeAsync(0);
+		expect(muted).toBe(false);
+		session.setState(jam('drums'));
+		await vi.advanceTimersByTimeAsync(0);
+		expect(muted).toBe(true);
+		expect(room.myJamSeat).toEqual({userId: 'me', instrument: 'drums'});
+		expect(room.mySeat).toBeUndefined();
+		session.setState(jam(null));
+		await vi.advanceTimersByTimeAsync(0);
+		expect(muted).toBe(false);
+	});
+
 	it('does not send ready while the song is still downloading', () => {
 		const sendIntent = vi.spyOn(BandLeaderController.prototype, 'sendIntent');
 		expect(room.songPackage).toMatchObject({songId: SONG.id, status: 'loading'});

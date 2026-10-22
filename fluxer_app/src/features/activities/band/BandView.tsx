@@ -16,6 +16,7 @@ import {BandNotice, BandStage} from '@app/features/activities/band/flow/componen
 import {PickScreen} from '@app/features/activities/band/flow/components/PickScreen';
 import {ResultsScreen} from '@app/features/activities/band/flow/components/ResultsScreen';
 import {SelectScreen} from '@app/features/activities/band/flow/components/SelectScreen';
+import {JamScreen} from '@app/features/activities/band/jam/components/JamScreen';
 import type {ActivityViewProps} from '@app/features/activities/registry/ActivityDefinition';
 import {useLingui} from '@lingui/react/macro';
 import {observer} from 'mobx-react-lite';
@@ -68,6 +69,9 @@ const SongPackageGate = observer(function SongPackageGate({
 const BandPhaseView = observer(function BandPhaseView({room}: {readonly room: BandRoom}) {
 	const {i18n} = useLingui();
 	const {state, library} = room;
+	// Jam mode needs no song, so the library's state does not hold it up.
+	if (state?.phase === 'jam')
+		return <JamScreen room={room} state={state} data-flx="activities.band.band-view.band-phase-view.jam-screen" />;
 	if (library.status.status === 'failed') {
 		const {reason} = library.status;
 		return (

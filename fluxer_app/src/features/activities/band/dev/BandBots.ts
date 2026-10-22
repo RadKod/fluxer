@@ -6,9 +6,11 @@
 
 import {
 	BAND_DIFFICULTY_MULTIPLIER,
+	BAND_JAM_INSTRUMENTS,
 	BAND_RATING_MAX,
 	type BandCheerKind,
 	type BandHitMessage,
+	type BandJamInstrument,
 	type BandMessage,
 	type BandPlayerResult,
 	type BandSeat,
@@ -21,6 +23,9 @@ import type {BandDifficulty, BandPart} from '@app/features/activities/band/engin
 import {multiplierForStreak, NOTE_POINTS} from '@app/features/activities/band/engine/Judge';
 import {BAND_PARTS} from '@app/features/activities/band/flow/BandRoomMachine';
 import {nextFinaleBonus} from '@app/features/activities/band/game/PlayController';
+import {encodeJamEvents} from '@app/features/activities/band/jam/JamMessages';
+import {jamEngineInstrument} from '@app/features/activities/band/jam/JamRemotes';
+import {drumNote, laneNotes} from '@app/features/activities/band/jam/JamScales';
 import {action, makeObservable, observable, observableRef} from 'mobx';
 
 export type BandBotRole = 'player' | 'spectator';
@@ -83,6 +88,12 @@ const RATING_STARS_MIN = 3;
 // A seated bot readies on its own this long before the select phase ends.
 const READY_LEAD_MS = 5_000;
 const PICK_DELAY_MS = 4_000;
+// A jamming bot plays on the eighths of the loop's tempo and rests on some of them.
+const JAM_REST_CHANCE = 0.35;
+const JAM_NOTE_LENGTH = 0.8;
+const ANY_RANGE = {low: 0, high: 127} as const;
+// Drum lanes on the eighths of one bar: kick, hat, snare, hat, kick, kick, snare, hat (lane 2 is the hi-hat).
+const JAM_DRUM_BAR = [0, 2, 1, 2, 0, 0, 1, 2] as const;
 
 interface PlayRun {
 	readonly part: BandPart;
@@ -113,6 +124,8 @@ function roundKey(state: BandState): string {
 			return `play:${state.songId}:${state.startAt}`;
 		case 'results':
 			return `results:${state.songId}:${state.endsAt}`;
+		case 'jam':
+			return `jam:${state.openedAt}`;
 	}
 }
 
@@ -138,6 +151,9 @@ export class BandBot {
 	private playTimer: ReturnType<typeof setInterval> | null = null;
 	private cheerTimer: ReturnType<typeof setTimeout> | null = null;
 	private readyTimer: ReturnType<typeof setTimeout> | null = null;
+	private jamTimer: ReturnType<typeof setInterval> | null = null;
+	private jamStep = 0;
+	private jamClaimed: BandJamInstrument | null = null;
 
 	constructor(
 		readonly id: number,
@@ -192,7 +208,76 @@ export class BandBot {
 			case 'results':
 				this.reactToResults(value);
 				return;
+			case 'jam':
+				this.reactToJam(value);
+				return;
 		}
+	}
+
+	// Jam mode: a player bot takes its preferred instrument (else one by its number) and noodles in the room's key.
+	private reactToJam(state: Extract<BandState, {phase: 'jam'}>): void {
+		if (this.settings.role === 'spectator') {
+			this.setActivity('listening');
+			return;
+		}
+		const wanted =
+			this.settings.preferredParts.find((part): part is BandJamInstrument =>
+				(BAND_JAM_INSTRUMENTS as ReadonlyArray<string>).includes(part),
+			) ?? BAND_JAM_INSTRUMENTS[this.id % BAND_JAM_INSTRUMENTS.length];
+		const seat = state.seats.find((candidate) => candidate.userId === this.userId);
+		if (seat?.instrument !== wanted) {
+			if (this.jamClaimed === wanted) return;
+			this.jamClaimed = wanted;
+			this.setActivity(`taking ${wanted}`);
+			this.later(() => this.send({t: 'band.jamInstrument', instrument: wanted}));
+			return;
+		}
+		this.setActivity(`jamming ${seat.instrument}`);
+		if (this.jamTimer) clearInterval(this.jamTimer);
+		const eighthMs = 30_000 / state.backing.bpm;
+		this.jamTimer = setInterval(() => this.playJamStep(state, seat.instrument, eighthMs), eighthMs);
+	}
+
+	private playJamStep(
+		state: Extract<BandState, {phase: 'jam'}>,
+		instrument: BandJamInstrument,
+		eighthMs: number,
+	): void {
+		const step = this.jamStep++;
+		const now = this.bots.session.clock.now();
+		if (instrument === 'drums') {
+			const note = drumNote(JAM_DRUM_BAR[step % JAM_DRUM_BAR.length], step % 16 === 0);
+			this.peer.send(
+				encodeJamEvents([
+					{kind: 'noteOn', time: now, note, velocity: 0.85, pinchHarmonic: 0, powerChord: false, clean: false},
+				]),
+			);
+			return;
+		}
+		if (this.bots.random() < JAM_REST_CHANCE) return;
+		const engine = jamEngineInstrument(instrument);
+		if (engine === 'drums') return;
+		const lanes = laneNotes(engine, {key: state.key, scale: state.scale, octave: 0}, ANY_RANGE);
+		const note = lanes[Math.floor(this.bots.random() * lanes.length)];
+		const lengthMs = eighthMs * JAM_NOTE_LENGTH * (1 + Math.floor(this.bots.random() * 3));
+		this.peer.send(
+			encodeJamEvents([
+				{
+					kind: 'noteOn',
+					time: now,
+					note,
+					velocity: 0.85,
+					pinchHarmonic: 0,
+					powerChord: instrument === 'rhythm',
+					clean: false,
+				},
+			]),
+		);
+		this.later(
+			() => this.peer.send(encodeJamEvents([{kind: 'noteOff', time: this.bots.session.clock.now(), note}])),
+			0,
+			lengthMs,
+		);
 	}
 
 	// A person gets a few seconds to search before a bot votes for a random song.
@@ -457,13 +542,13 @@ export class BandBot {
 		this.peer.send(message, leader ? {to: [leader.identity]} : undefined);
 	}
 
-	private later(run: () => void, minimumMs = 0): void {
+	private later(run: () => void, minimumMs = 0, exactMs: number | null = null): void {
 		const timer = setTimeout(
 			() => {
 				this.timers.delete(timer);
 				run();
 			},
-			minimumMs + this.bots.random() * this.settings.reactionMs,
+			exactMs ?? minimumMs + this.bots.random() * this.settings.reactionMs,
 		);
 		this.timers.add(timer);
 	}
@@ -474,6 +559,10 @@ export class BandBot {
 		if (this.playTimer) clearInterval(this.playTimer);
 		if (this.cheerTimer) clearTimeout(this.cheerTimer);
 		if (this.readyTimer) clearTimeout(this.readyTimer);
+		if (this.jamTimer) clearInterval(this.jamTimer);
+		this.jamTimer = null;
+		this.jamStep = 0;
+		this.jamClaimed = null;
 		this.playTimer = null;
 		this.cheerTimer = null;
 		this.readyTimer = null;

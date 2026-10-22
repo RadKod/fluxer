@@ -62,6 +62,7 @@ export const STORES_WITHOUT_DEPLOYED_DATA: ReadonlySet<string> = new Set([
 	'WindowsFont',
 	'GameActivityLocalSettings',
 	'BandSettings',
+	'BandJamSettings',
 ]);
 
 export function readPersistedStoreNames(): Array<string> {

@@ -1,0 +1,454 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* The room settings over the jam, laid out like the song picker's header. */
+.header {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 1.5rem;
+	min-height: 4.75rem;
+	padding: 0 var(--jam-gutter);
+	border-bottom: 1px solid var(--band-line);
+}
+
+.settings {
+	display: flex;
+	flex: 1 1 auto;
+	align-items: flex-end;
+	gap: 1.25rem;
+	min-width: 0;
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3125rem;
+}
+
+.fieldLabel {
+	color: var(--band-t3);
+	font-weight: 500;
+	font-size: 0.6875rem;
+	letter-spacing: 0.02em;
+}
+
+.fieldBody {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.picker {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+}
+
+.picker select {
+	appearance: none;
+	min-width: 4.25rem;
+	height: 2.125rem;
+	padding: 0 1.875rem 0 0.75rem;
+	border: 0;
+	border-radius: 0.5rem;
+	background-color: var(--band-g2);
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+	color: var(--band-t1);
+	font: inherit;
+	font-weight: 600;
+	font-size: 0.875rem;
+	cursor: pointer;
+}
+
+.pickerWide select {
+	min-width: 10.5rem;
+}
+
+.picker select:hover:not(:disabled) {
+	background-color: var(--band-g3);
+}
+
+.picker select:focus-visible {
+	outline: 2px solid var(--band-paper);
+	outline-offset: 2px;
+}
+
+.picker select:disabled {
+	box-shadow: inset 0 0 0 1px var(--band-line);
+	cursor: default;
+}
+
+.picker select option {
+	background-color: var(--band-card);
+	color: var(--band-t1);
+}
+
+.pickerCaret {
+	position: absolute;
+	right: 0.6875rem;
+	color: var(--band-t3);
+	pointer-events: none;
+}
+
+.picker select:disabled + .pickerCaret {
+	display: none;
+}
+
+.stepper {
+	display: inline-flex;
+	align-items: center;
+	height: 2.125rem;
+	padding: 0 3px;
+	border-radius: 0.5rem;
+	background-color: var(--band-g2);
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+}
+
+.stepButton {
+	display: grid;
+	place-items: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	border: 0;
+	border-radius: 0.375rem;
+	background: none;
+	color: var(--band-t2);
+	cursor: pointer;
+}
+
+.stepButton:hover:not(:disabled) {
+	background-color: var(--band-g3);
+	color: var(--band-t1);
+}
+
+.stepButton:disabled {
+	color: var(--band-t4);
+	cursor: default;
+}
+
+.bpm {
+	min-width: 4.5rem;
+	font-weight: 600;
+	font-size: 0.875rem;
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+}
+
+.segmented {
+	display: inline-flex;
+	padding: 3px;
+	border-radius: 0.5625rem;
+	background-color: var(--band-g2);
+	box-shadow: inset 0 0 0 1px var(--band-line);
+}
+
+.segment {
+	height: 1.75rem;
+	padding: 0 0.75rem;
+	border: 0;
+	border-radius: 0.4375rem;
+	background: none;
+	color: var(--band-t2);
+	font: inherit;
+	font-weight: 600;
+	font-size: 0.8125rem;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.segment:hover:not(:disabled):not(.segmentOn) {
+	color: var(--band-t1);
+}
+
+.segment:disabled {
+	cursor: default;
+}
+
+.segmentOn {
+	background-color: var(--band-g4);
+	color: var(--band-t1);
+}
+
+.loop {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4375rem;
+	height: 2.125rem;
+	padding: 0 0.875rem;
+	border: 0;
+	border-radius: 0.5rem;
+	background-color: var(--band-g2);
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+	color: var(--band-t3);
+	font: inherit;
+	font-weight: 600;
+	font-size: 0.8125rem;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.loopOn {
+	background-color: var(--band-plum-dark);
+	box-shadow: inset 0 0 0 1px var(--band-plum);
+	color: var(--band-t1);
+}
+
+.loop:disabled {
+	cursor: default;
+}
+
+/* The key and tempo in one line where the controls do not fit. */
+.summary {
+	display: none;
+	flex: 1 1 auto;
+	align-items: baseline;
+	gap: 0.5rem;
+	min-width: 0;
+	margin: 0;
+	overflow: hidden;
+	color: var(--band-t3);
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.summary b {
+	color: var(--band-t1);
+	font-weight: 600;
+}
+
+.volume {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 0.5rem;
+	margin-left: auto;
+	color: var(--band-t3);
+	font-size: 0.75rem;
+}
+
+.volume input {
+	width: 7.5rem;
+	accent-color: var(--band-plum);
+}
+
+/* My instrument, a slim row under the header. */
+.bar {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: 1rem;
+	height: 3.5rem;
+	padding: 0 var(--jam-gutter);
+	border-bottom: 1px solid var(--band-line);
+}
+
+.barLabel {
+	flex: 0 0 auto;
+	color: var(--band-t3);
+	font-weight: 500;
+	font-size: 0.75rem;
+}
+
+.instruments {
+	display: flex;
+	gap: 0.375rem;
+	min-width: 0;
+}
+
+.instrument {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	height: 2.25rem;
+	padding: 0 0.875rem 0 0.75rem;
+	border: 0;
+	border-radius: 999px;
+	background-color: transparent;
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+	color: var(--band-t2);
+	font: inherit;
+	font-weight: 600;
+	font-size: 0.8125rem;
+	white-space: nowrap;
+	cursor: pointer;
+	transition:
+		background-color 120ms ease,
+		color 120ms ease;
+}
+
+.instrument:hover:not(.instrumentOn) {
+	background-color: var(--band-g2);
+	color: var(--band-t1);
+}
+
+.instrumentOn {
+	background-color: var(--band-paper);
+	box-shadow: none;
+	color: var(--band-night);
+}
+
+.instrumentIcon {
+	flex: 0 0 auto;
+	font-size: 1.125rem;
+}
+
+.listen {
+	margin-left: 0.375rem;
+}
+
+.tone {
+	margin-left: 0.25rem;
+}
+
+/* In the middle of the stage while I have no instrument. */
+.prompt {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+	margin: auto;
+	padding: 1.5rem;
+	text-align: center;
+}
+
+.promptTitle {
+	margin: 0;
+	font-weight: 700;
+	font-size: 1.375rem;
+	letter-spacing: -0.01em;
+}
+
+.promptBody {
+	max-width: 26rem;
+	margin: 0 0 1rem;
+	color: var(--band-t2);
+	font-size: 0.875rem;
+}
+
+.promptChoices {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.75rem;
+}
+
+.promptChoice {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.625rem;
+	width: 8.25rem;
+	height: 7.5rem;
+	border: 0;
+	border-radius: 0.875rem;
+	background-color: var(--band-card);
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+	color: var(--band-t1);
+	font: inherit;
+	font-weight: 600;
+	font-size: 0.875rem;
+	cursor: pointer;
+	transition:
+		background-color 120ms ease,
+		box-shadow 120ms ease;
+}
+
+.promptChoice:hover {
+	background-color: var(--band-g3);
+	box-shadow: inset 0 0 0 2px var(--band-plum);
+}
+
+.promptIcon {
+	font-size: 2.25rem;
+	color: var(--band-plum-light);
+}
+
+@container band-stage (max-width: 96rem) {
+	.volumeLabel {
+		display: none;
+	}
+}
+
+/* The labels give their room to the controls; the instrument names to their icons. */
+@container band-stage (max-width: 78rem) {
+	.header {
+		gap: 1rem;
+	}
+
+	.settings {
+		gap: 0.75rem;
+	}
+
+	.instrumentName {
+		display: none;
+	}
+
+	.instrument {
+		padding: 0 0.6875rem;
+	}
+
+	.instrumentOn .instrumentName {
+		display: inline;
+	}
+}
+
+@container band-stage (max-width: 62rem) {
+	.settings {
+		display: none;
+	}
+
+	.summary {
+		display: flex;
+	}
+}
+
+@container band-stage (max-width: 40rem) {
+	.header {
+		gap: 0.625rem;
+		min-height: 2.75rem;
+		padding: 0 0.75rem;
+	}
+
+	.volume {
+		display: none;
+	}
+
+	.summary {
+		font-size: 0.75rem;
+	}
+
+	.bar {
+		gap: 0.5rem;
+		height: 2.75rem;
+		padding: 0 0.75rem;
+	}
+
+	.barLabel,
+	.instrumentOn .instrumentName {
+		display: none;
+	}
+
+	.instrument {
+		height: 2rem;
+		padding: 0 0.5625rem;
+	}
+
+	.promptTitle {
+		font-size: 1rem;
+	}
+
+	.promptBody {
+		display: none;
+	}
+
+	.promptChoice {
+		width: 4.75rem;
+		height: 4.5rem;
+		font-size: 0.6875rem;
+	}
+
+	.promptIcon {
+		font-size: 1.5rem;
+	}
+}

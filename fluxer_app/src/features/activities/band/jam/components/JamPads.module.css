@@ -1,0 +1,350 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.laneGreen {
+	--lane: var(--band-lane-green);
+}
+
+.laneRed {
+	--lane: var(--band-lane-red);
+}
+
+.laneYellow {
+	--lane: var(--band-lane-yellow);
+}
+
+.laneBlue {
+	--lane: var(--band-lane-blue);
+}
+
+.laneOrange {
+	--lane: var(--band-lane-orange);
+}
+
+.pads {
+	/* Under the ring: the key cap and the alternate line. */
+	--jam-ring: 6.25rem;
+	--jam-under: 3.875rem;
+	--jam-lane-gap: 1.5rem;
+
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	width: min(100%, 44rem);
+	max-height: 27rem;
+	min-height: 0;
+}
+
+.tags {
+	display: flex;
+	flex: 0 0 auto;
+	justify-content: center;
+	gap: 0.5rem;
+	height: 1.625rem;
+}
+
+.tag {
+	display: inline-flex;
+	align-items: center;
+	height: 1.5rem;
+	padding: 0 0.625rem;
+	border-radius: 999px;
+	background-color: var(--band-g2);
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+	color: var(--band-t2);
+	font-weight: 600;
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.tagHot {
+	background-color: var(--band-beer);
+	box-shadow: none;
+	color: var(--band-night);
+}
+
+.lanes {
+	position: relative;
+	display: grid;
+	flex: 1 1 auto;
+	grid-template-columns: repeat(5, minmax(0, 1fr));
+	gap: var(--jam-lane-gap);
+	min-height: 0;
+	margin-top: 0.75rem;
+}
+
+/* The strike line through the rings, as at the foot of a highway. */
+.lanes::after {
+	position: absolute;
+	right: calc(var(--jam-lane-gap) * -1);
+	bottom: calc(var(--jam-under) + var(--jam-ring) / 2 - 1px);
+	left: calc(var(--jam-lane-gap) * -1);
+	height: 2px;
+	border-radius: 1px;
+	background-color: rgba(247, 245, 240, 0.16);
+	content: '';
+}
+
+.lane {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	min-height: calc(var(--jam-ring) + var(--jam-under) + 3rem);
+}
+
+/* The lane itself, faint until a held note draws its sustain up it. */
+.lane::before {
+	position: absolute;
+	top: 0;
+	bottom: calc(var(--jam-under) + var(--jam-ring) / 2);
+	left: calc(50% - 1px);
+	width: 2px;
+	background-color: var(--band-line);
+	content: '';
+}
+
+/* Drum hits ring out on their own; their lanes have nothing to draw up. */
+.drums .lane::before {
+	display: none;
+}
+
+.tail {
+	position: absolute;
+	top: 0;
+	bottom: calc(var(--jam-under) + var(--jam-ring) / 2);
+	left: calc(50% - 3px);
+	width: 6px;
+	border-radius: 3px;
+	background-color: var(--lane);
+	transform: scaleY(0);
+	transform-origin: bottom;
+}
+
+.down .tail {
+	animation: sustain var(--jam-feedback-after) linear forwards;
+}
+
+/* The lead guitar's tail reaches the top as the amp starts to feed back, then flickers with it. */
+.lead .down .tail {
+	animation:
+		sustain var(--jam-feedback-after) linear forwards,
+		feedback 220ms var(--jam-feedback-after) ease-in-out infinite alternate;
+}
+
+.ring {
+	position: relative;
+	z-index: 1;
+	display: grid;
+	place-items: center;
+	width: var(--jam-ring);
+	height: var(--jam-ring);
+	border: 5px solid var(--lane);
+	border-radius: 50%;
+	background-color: var(--band-night);
+	transition:
+		transform 70ms ease-out,
+		background-color 40ms linear,
+		box-shadow 120ms ease-out;
+}
+
+.down .ring {
+	background-color: var(--lane);
+	box-shadow:
+		0 0 0 6px color-mix(in srgb, var(--lane) 26%, transparent),
+		0 0 2.5rem color-mix(in srgb, var(--lane) 55%, transparent);
+	transform: translateY(calc(var(--jam-bend) * -0.375rem)) scale(0.96);
+}
+
+.pinch .ring {
+	outline: 3px solid var(--band-paper);
+	outline-offset: 5px;
+}
+
+.note {
+	color: var(--band-t1);
+	font-weight: 800;
+	font-size: 1.875rem;
+	line-height: 1;
+	letter-spacing: -0.02em;
+}
+
+.piece {
+	font-weight: 700;
+	font-size: 0.9375rem;
+	letter-spacing: 0;
+}
+
+.octave {
+	margin-left: 1px;
+	color: var(--band-t3);
+	font-weight: 600;
+	font-size: 0.75rem;
+	vertical-align: baseline;
+}
+
+.down .note,
+.down .octave {
+	color: var(--band-night);
+}
+
+.cap {
+	display: grid;
+	place-items: center;
+	min-width: 1.875rem;
+	height: 1.875rem;
+	margin-top: 0.875rem;
+	padding: 0 0.375rem;
+	border-radius: 0.375rem;
+	background-color: var(--band-g2);
+	box-shadow:
+		inset 0 0 0 1px var(--band-line-2),
+		inset 0 -2px 0 rgba(0, 0, 0, 0.35);
+	color: var(--band-t2);
+	font: inherit;
+	font-weight: 700;
+	font-size: 0.8125rem;
+}
+
+.down .cap {
+	color: var(--lane);
+}
+
+.alternate {
+	height: 1rem;
+	margin-top: 0.375rem;
+	color: var(--band-t3);
+	font-size: 0.6875rem;
+	white-space: nowrap;
+}
+
+.flag {
+	position: absolute;
+	z-index: 2;
+	bottom: calc(var(--jam-under) + var(--jam-ring) + 0.875rem);
+	padding: 0.1875rem 0.5rem;
+	border-radius: 999px;
+	background-color: var(--band-paper);
+	color: var(--band-night);
+	font-weight: 700;
+	font-size: 0.6875rem;
+	white-space: nowrap;
+}
+
+.feedbackFlag {
+	opacity: 0;
+}
+
+.lead .down .feedbackFlag {
+	animation: flag-in 160ms var(--jam-feedback-after) ease-out forwards;
+}
+
+.drums .down .ring {
+	transform: scale(0.92);
+}
+
+@keyframes sustain {
+	from {
+		transform: scaleY(0.04);
+	}
+
+	to {
+		transform: scaleY(1);
+	}
+}
+
+@keyframes feedback {
+	from {
+		background-color: var(--lane);
+		box-shadow: 0 0 0.5rem var(--lane);
+	}
+
+	to {
+		background-color: var(--band-paper);
+		box-shadow: 0 0 1.25rem var(--lane);
+	}
+}
+
+@keyframes flag-in {
+	from {
+		opacity: 0;
+		transform: translateY(0.25rem);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.down .tail,
+	.lead .down .tail {
+		animation: none;
+		transform: scaleY(1);
+	}
+
+	.lead .down .feedbackFlag {
+		animation-duration: 0s;
+	}
+}
+
+@container band-stage (max-width: 62rem) {
+	.pads {
+		--jam-ring: 5rem;
+		--jam-lane-gap: 1rem;
+	}
+}
+
+@container band-stage (max-width: 40rem) {
+	.pads {
+		--jam-ring: 3.25rem;
+		--jam-under: 2.25rem;
+		--jam-lane-gap: 0.5rem;
+
+		padding-bottom: 0.625rem;
+	}
+
+	.tags {
+		height: 1.25rem;
+	}
+
+	.tag {
+		height: 1.25rem;
+		font-size: 0.6875rem;
+	}
+
+	.lanes {
+		margin-top: 0.25rem;
+	}
+
+	.lane {
+		min-height: calc(var(--jam-ring) + var(--jam-under) + 1rem);
+	}
+
+	.ring {
+		border-width: 3px;
+	}
+
+	.note {
+		font-size: 1.125rem;
+	}
+
+	.piece {
+		font-size: 0.625rem;
+	}
+
+	.octave,
+	.alternate,
+	.flag {
+		display: none;
+	}
+
+	.cap {
+		min-width: 1.5rem;
+		height: 1.5rem;
+		margin-top: 0.5rem;
+		font-size: 0.6875rem;
+	}
+}
