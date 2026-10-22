@@ -16,6 +16,8 @@ import {
 	STAGE_ORDER,
 } from '@app/features/activities/band/engine/ChartModel';
 import {
+	BIG_ROCK_ENDING_DESCRIPTOR,
+	BIG_ROCK_ENDING_HINT_DESCRIPTOR,
 	DIFFICULTY_DESCRIPTORS,
 	FREE_PART_DESCRIPTOR,
 	GROUP_DIFFICULTY_DESCRIPTOR,
@@ -35,6 +37,8 @@ import {
 	RETRY_DESCRIPTOR,
 	SEAT_DOWNLOAD_PROGRESS_DESCRIPTOR,
 	SEAT_DOWNLOADING_DESCRIPTOR,
+	SETTING_OFF_DESCRIPTOR,
+	SETTING_ON_DESCRIPTOR,
 	SINGER_OUTPUT_DESCRIPTORS,
 	SINGER_OUTPUT_HINT_DESCRIPTOR,
 	SINGER_OUTPUT_LABEL_DESCRIPTOR,
@@ -462,6 +466,56 @@ const VocalsCard = observer(function VocalsCard({
 	);
 });
 
+const BIG_ROCK_ENDING_OPTIONS: ReadonlyArray<boolean> = [true, false];
+
+// Only shown for songs that have one; the leader decides for the whole band, like the group difficulty.
+const BigRockEndingSetting = observer(function BigRockEndingSetting({
+	room,
+	state,
+}: {
+	readonly room: BandRoom;
+	readonly state: SelectState;
+}) {
+	const {i18n} = useLingui();
+	const enabled = state.bigRockEnding !== false;
+	const label = i18n._(BIG_ROCK_ENDING_DESCRIPTOR);
+	return (
+		<div
+			className={styles.groupSetting}
+			title={i18n._(BIG_ROCK_ENDING_HINT_DESCRIPTOR)}
+			data-flx="activities.band.flow.select-screen.big-rock-ending-setting.group-setting"
+		>
+			<span
+				className={styles.groupSettingLabel}
+				data-flx="activities.band.flow.select-screen.big-rock-ending-setting.group-setting-label"
+			>
+				{label}
+			</span>
+			<div
+				className={styles.segmented}
+				role="radiogroup"
+				aria-label={label}
+				data-flx="activities.band.flow.select-screen.big-rock-ending-setting.segmented"
+			>
+				{BIG_ROCK_ENDING_OPTIONS.map((option) => (
+					<button
+						key={String(option)}
+						type="button"
+						role="radio"
+						aria-checked={option === enabled}
+						disabled={!room.session.isLeader}
+						className={clsx(styles.segment, option === enabled && styles.segmentOn)}
+						onClick={() => room.send({t: 'band.bigRockEnding', enabled: option})}
+						data-flx="activities.band.flow.select-screen.big-rock-ending-setting.segment.send.button"
+					>
+						{i18n._(option ? SETTING_ON_DESCRIPTOR : SETTING_OFF_DESCRIPTOR)}
+					</button>
+				))}
+			</div>
+		</div>
+	);
+});
+
 const GroupDifficulty = observer(function GroupDifficulty({
 	room,
 	state,
@@ -498,6 +552,13 @@ const GroupDifficulty = observer(function GroupDifficulty({
 					</button>
 				))}
 			</div>
+			{room.songHasBigRockEnding && (
+				<BigRockEndingSetting
+					room={room}
+					state={state}
+					data-flx="activities.band.flow.select-screen.group-difficulty.big-rock-ending-setting"
+				/>
+			)}
 			{isLeader && (
 				<p className={styles.groupHint} data-flx="activities.band.flow.select-screen.group-difficulty.group-hint">
 					{i18n._(GROUP_DIFFICULTY_LEADER_HINT_DESCRIPTOR)}

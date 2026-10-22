@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {type BigRockEnding, findBigRockEnding} from '@app/features/activities/band/engine/BigRockEnding';
+import {type BigRockEnding, codaSpan} from '@app/features/activities/band/engine/BigRockEnding';
 import {
 	BAND_DIFFICULTIES,
 	type BandDifficulty,
@@ -42,17 +42,24 @@ export interface ChartSection {
 
 type ParsedTrack = ParsedChart['trackData'][number];
 
-function drumsBigRockEnding(
-	byDifficulty: ReadonlyMap<BandDifficulty, ParsedTrack> | undefined,
-	sections: ReadonlyArray<ChartSection>,
+// The song's ending across parts. Fills are instrument-wide in .mid but per difficulty in .chart; the hardest charted
+// difficulty of each part is the reference.
+function songBigRockEnding(
+	tracks: ReadonlyMap<InstrumentPart, ReadonlyMap<BandDifficulty, ParsedTrack>>,
 ): BigRockEnding | null {
-	// Fills are instrument-wide in .mid but per difficulty in .chart; the hardest charted one is the reference.
-	const track = BAND_DIFFICULTIES.map((difficulty) => byDifficulty?.get(difficulty))
-		.filter((candidate) => candidate !== undefined)
-		.at(-1);
-	if (!track) return null;
-	const lastNoteMs = track.noteEventGroups.at(-1)?.[0]?.msTime ?? 0;
-	return findBigRockEnding(track.drumFreestyleSections, sections, lastNoteMs);
+	let ending: BigRockEnding | null = null;
+	for (const byDifficulty of tracks.values()) {
+		const track = BAND_DIFFICULTIES.map((difficulty) => byDifficulty.get(difficulty))
+			.filter((candidate) => candidate !== undefined)
+			.at(-1);
+		const span = track ? codaSpan(track.drumFreestyleSections) : null;
+		if (!span) continue;
+		const endMs = span.msTime + span.msLength;
+		ending = ending
+			? {startMs: Math.min(ending.startMs, span.msTime), endMs: Math.max(ending.endMs, endMs)}
+			: {startMs: span.msTime, endMs};
+	}
+	return ending;
 }
 
 export class SongChart {
@@ -62,7 +69,8 @@ export class SongChart {
 		readonly tempoMap: TempoMap,
 		readonly sections: ReadonlyArray<ChartSection>,
 		readonly vocals: VocalsChart | null,
-		// Null when the drums have no coda fill; every part plays it as free play.
+		// From the earliest part's lanes to the latest one's end; null when no part has a coda fill. Each part's own
+		// lanes are on its PartChart.
 		readonly bigRockEnding: BigRockEnding | null,
 		private readonly tracks: ReadonlyMap<InstrumentPart, ReadonlyMap<BandDifficulty, ParsedTrack>>,
 	) {}
@@ -95,7 +103,7 @@ export class SongChart {
 
 		const sections = parsed.sections.map(({name, msTime}) => ({name, msTime}));
 		const vocals = format === 'mid' ? parseVocalsFromMidi(data, tempoMap) : null;
-		return new SongChart(tempoMap, sections, vocals, drumsBigRockEnding(tracks.get('drums'), sections), tracks);
+		return new SongChart(tempoMap, sections, vocals, songBigRockEnding(tracks), tracks);
 	}
 
 	get durationMs(): number {

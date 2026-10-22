@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {partFinale} from '@app/features/activities/band/engine/BigRockEnding';
 import {
 	type BandDifficulty,
 	chartDurationMs,
@@ -122,6 +123,7 @@ export function deriveDifficulty(expert: PartChart, target: DerivedDifficulty, t
 		groups,
 		starPower: expert.starPower,
 		solos: expert.solos,
+		bigRockEnding: expert.bigRockEnding,
 		durationMs: chartDurationMs(groups),
 	};
 }
@@ -175,6 +177,13 @@ function thin(
 		if (kept.some(inPhrase)) continue;
 		const strongest = candidates.filter(inPhrase).sort((a, b) => a.strength - b.strength)[0];
 		if (strongest) kept.push(strongest);
+	}
+
+	// The Big Rock Ending's final hit banks its bonus; thinning must not move it to another note.
+	const finalIndex = partFinale(expert.bigRockEnding, groups)?.finalIndex ?? null;
+	if (finalIndex !== null && !kept.some((candidate) => candidate.expertIndex === finalIndex)) {
+		const finalHit = candidates.find((candidate) => candidate.expertIndex === finalIndex);
+		if (finalHit) kept.push(finalHit);
 	}
 
 	return kept.sort((a, b) => a.expertIndex - b.expertIndex);

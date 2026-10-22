@@ -58120,3 +58120,22 @@ msgstr "Speakers"
 msgctxt "band-singer-output"
 msgid "Headphones give the cleanest voice"
 msgstr "Headphones give the cleanest voice"
+
+#. Band game: under a player name once they missed the final hit of the Big Rock
+#. Ending, so the points they collected in it do not count.
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Finale bonus lost"
+msgstr "Finale bonus lost"
+
+#. Band game: tooltip of the Big finale setting on the part picking screen. When it
+#. is off, the notes written for the ending are played instead.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "At the end of the song every key plays freely. Land the last hit together for a bonus."
+msgstr "At the end of the song every key plays freely. Land the last hit together for a bonus."
+
+#. Band game: under the band score during the Big Rock Ending, the bonus the band has
+#. collected so far. It is not in the score yet; each player keeps their share only by
+#. landing the final hit.
+#: src/features/activities/band/game/PlayStage.tsx
+msgid "Finale bonus at stake"
+msgstr "Finale bonus at stake"

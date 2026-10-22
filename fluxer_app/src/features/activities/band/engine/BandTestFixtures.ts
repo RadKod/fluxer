@@ -191,6 +191,7 @@ export function partChart(
 		groups,
 		starPower: [],
 		solos: [],
+		bigRockEnding: null,
 		durationMs: groups.reduce((end, group) => Math.max(end, group.msTime + group.msLength), 0),
 		...overrides,
 	};

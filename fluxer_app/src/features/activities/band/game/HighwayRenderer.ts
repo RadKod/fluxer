@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {BigRockEnding} from '@app/features/activities/band/engine/BigRockEnding';
+import {isFreePlayGroup, type PartFinale} from '@app/features/activities/band/engine/BigRockEnding';
 import {DrumLane, FretLane, type NoteGroup} from '@app/features/activities/band/engine/ChartModel';
 import {
 	FADE_SHARE,
@@ -15,12 +15,7 @@ import {
 	surfaceLane,
 	visibleWindow,
 } from '@app/features/activities/band/game/HighwayGeometry';
-import {
-	type FeedbackKind,
-	isInFinale,
-	NoteState,
-	type SeatTrack,
-} from '@app/features/activities/band/game/PlayController';
+import {type FeedbackKind, NoteState, type SeatTrack} from '@app/features/activities/band/game/PlayController';
 
 // Brand and lane colours from the approved design tokens.
 const COLOR = {
@@ -45,15 +40,14 @@ const STAR_SURFACE: ReadonlyArray<readonly [number, string]> = [
 	[0.62, '#3A0833'],
 	[1, '#1E0619'],
 ];
-const FINALE_SURFACE: ReadonlyArray<readonly [number, string]> = [
-	[0, '#4A0A41'],
-	[0.4, '#2A0726'],
-	[1, '#16060F'],
-];
 
 const GLOW_MS = 260;
 const TARGET_FLASH_MS = 180;
-const ZONE_FLASH_MS = 420;
+// Big Rock Ending lanes: a bar per lane in its colour, brightening on each press.
+const FINALE_FLASH_MS = 420;
+const FINALE_BAR_SHARE = 0.62;
+const FINALE_BAR_ALPHA = 0.34;
+const FINALE_FLASH_ALPHA = 0.56;
 const MISS_DIM_MS = 650;
 // Sparkles out of a target box: a burst on every hit and a steady stream while a sustain is held.
 const SPARK_BURST_MS = 460;
@@ -75,7 +69,6 @@ const GEM_SQUASH = 0.84;
 export interface HighwayFrame {
 	readonly nowMs: number;
 	readonly tracks: ReadonlyArray<SeatTrack>;
-	readonly finale: BigRockEnding | null;
 	readonly reducedMotion: boolean;
 	readonly feedbackLabels: Readonly<Record<FeedbackKind, string>>;
 	readonly fontFamily: string;
@@ -143,21 +136,22 @@ export class HighwayRenderer {
 
 	private drawHighway(layout: StageLayout, highway: HighwayLayout, track: SeatTrack, frame: HighwayFrame): void {
 		const {ctx} = this;
-		const {nowMs, finale} = frame;
-		const finaleOn = finale !== null && nowMs >= finale.startMs && nowMs <= finale.endMs + 600;
-		const starOn = track.hud.starPowerActive && !finaleOn;
-		this.surface(layout, highway, finaleOn ? FINALE_SURFACE : starOn ? STAR_SURFACE : null);
-		this.grid(layout, highway, nowMs, finaleOn ? 0.07 : starOn ? 0.09 : 0.045);
-		this.laneLines(layout, highway, finaleOn || starOn ? 0.12 : 0.06);
-		if (finaleOn) this.zones(layout, highway, track, nowMs);
-		else this.glows(layout, highway, track, nowMs);
+		const {nowMs} = frame;
+		const {finale} = track;
+		const finaleOn = track.hud.finaleOn;
+		const starOn = track.hud.starPowerActive;
+		this.surface(layout, highway, starOn ? STAR_SURFACE : null);
+		this.grid(layout, highway, nowMs, starOn ? 0.09 : 0.045);
+		this.laneLines(layout, highway, starOn ? 0.12 : 0.06);
+		if (finale) this.finaleLanes(layout, highway, track, finale, nowMs);
+		if (!finaleOn) this.glows(layout, highway, track, nowMs);
 		const railPulse = finaleOn && !frame.reducedMotion ? 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(nowMs / 80)) : 1;
 		this.rails(layout, highway, starOn ? COLOR.paper : COLOR.plum, railPulse);
 		this.strikeline(layout, highway);
 		this.targets(layout, highway, track, nowMs, finaleOn);
+		if (finale) this.finalBar(layout, highway, track, finale, nowMs, frame.reducedMotion);
 		this.notes(layout, highway, track, frame);
 		if (!frame.reducedMotion) this.sparkles(layout, highway, track, nowMs);
-		if (finale) this.finalBar(layout, highway, finale, nowMs);
 		const dim = fadeAfter(nowMs, track.missAtMs, MISS_DIM_MS);
 		if (dim > 0) {
 			ctx.save();
@@ -314,24 +308,44 @@ export class HighwayRenderer {
 		}
 	}
 
-	// Free play: every lane glows faintly in its colour and lights up on each press.
-	private zones(layout: StageLayout, highway: HighwayLayout, track: SeatTrack, nowMs: number): void {
+	// Free play: from the start of the lanes to their end, every lane is one solid bar in its colour, coming down the
+	// highway like a long note. A press lights its bar up; on drums the kick lights all four.
+	private finaleLanes(
+		layout: StageLayout,
+		highway: HighwayLayout,
+		track: SeatTrack,
+		finale: PartFinale,
+		nowMs: number,
+	): void {
+		const near = Math.max(0, noteDistance(layout, finale.startMs - nowMs));
+		const far = Math.min(layout.planeLength, noteDistance(layout, finale.endMs - nowMs));
+		if (far <= near) return;
 		const {ctx} = this;
 		const cell = highway.width / highway.lanes;
+		const half = (cell * FINALE_BAR_SHARE) / 2;
+		const kick = highway.kind === 'drums' ? fadeAfter(nowMs, track.laneFlashMs[DrumLane.Kick], FINALE_FLASH_MS) : 0;
 		for (let slot = 0; slot < highway.lanes; slot++) {
 			const lane = highway.kind === 'drums' ? slot + 1 : slot;
-			const flash = Math.max(
-				fadeAfter(nowMs, track.laneFlashMs[lane], ZONE_FLASH_MS),
-				highway.kind === 'drums' ? fadeAfter(nowMs, track.laneFlashMs[DrumLane.Kick], ZONE_FLASH_MS) * 0.5 : 0,
-			);
-			const x0 = highway.left + slot * cell;
-			const {near, far} = this.trapezoid(layout, highway, 0, layout.planeLength * 0.46, x0, x0 + cell);
-			const gradient = ctx.createLinearGradient(0, near, 0, far);
-			gradient.addColorStop(0, surfaceLaneColor(highway, slot));
-			gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+			const flash = Math.max(fadeAfter(nowMs, track.laneFlashMs[lane], FINALE_FLASH_MS), kick * 0.6);
+			const color = surfaceLaneColor(highway, slot);
+			const x = laneCenterX(highway, slot);
 			ctx.save();
-			ctx.globalAlpha = 0.07 + 0.48 * flash;
-			ctx.fillStyle = gradient;
+			this.trapezoid(layout, highway, near, far, x - half, x + half);
+			ctx.shadowColor = color;
+			ctx.shadowBlur = (10 + 14 * flash) * layout.scale;
+			ctx.globalAlpha = FINALE_BAR_ALPHA + FINALE_FLASH_ALPHA * flash;
+			ctx.fillStyle = color;
+			ctx.fill();
+			ctx.shadowBlur = 0;
+			ctx.globalAlpha = 0.9;
+			ctx.lineWidth = 1.5 * layout.scale;
+			ctx.strokeStyle = color;
+			ctx.stroke();
+			// A paper core down the middle reads as light inside the bar rather than paint on the highway.
+			const core = half * 0.22;
+			this.trapezoid(layout, highway, near, far, x - core, x + core);
+			ctx.globalAlpha = 0.18 + 0.5 * flash;
+			ctx.fillStyle = COLOR.paper;
 			ctx.fill();
 			ctx.restore();
 		}
@@ -469,7 +483,9 @@ export class HighwayRenderer {
 
 	private notes(layout: StageLayout, highway: HighwayLayout, track: SeatTrack, frame: HighwayFrame): void {
 		const {groups} = track.chart;
-		const {nowMs, finale} = frame;
+		const {finale} = track;
+		const {nowMs} = frame;
+		const finalIndex = finale?.finalIndex ?? null;
 		const {fromMs, toMs} = visibleWindow(nowMs);
 		const first = firstVisibleGroup(groups, fromMs);
 		let last = first;
@@ -478,7 +494,7 @@ export class HighwayRenderer {
 		// Tails under gems, far notes under near ones.
 		for (let index = last - 1; index >= first; index--) {
 			const group = groups[index];
-			if (group.msLength <= 0 || isInFinale(finale, group.msTime)) continue;
+			if (group.msLength <= 0 || isFreePlayGroup(finale, index)) continue;
 			const state = track.noteStates[index];
 			const held = state === NoteState.Hit && track.heldUntilMs[index] > nowMs;
 			if (state === NoteState.Hit && !held) continue;
@@ -489,15 +505,16 @@ export class HighwayRenderer {
 		}
 		for (let index = last - 1; index >= first; index--) {
 			const group = groups[index];
-			if (isInFinale(finale, group.msTime)) continue;
+			if (isFreePlayGroup(finale, index)) continue;
 			const state = track.noteStates[index];
 			if (state === NoteState.Hit) continue;
 			const distance = noteDistance(layout, group.msTime - nowMs);
 			if (distance < 0 || distance > layout.planeLength) continue;
 			const star = group.inStarPower && !track.brokenStarGroups.has(index);
 			const faded = state === NoteState.Missed;
+			const final = index === finalIndex;
 			for (const lane of group.lanes)
-				this.gem(layout, highway, group, lane, distance, star, faded, frame.reducedMotion);
+				this.gem(layout, highway, group, lane, distance, {star, faded, final}, frame.reducedMotion);
 		}
 	}
 
@@ -522,8 +539,7 @@ export class HighwayRenderer {
 		group: NoteGroup,
 		lane: number,
 		distance: number,
-		star: boolean,
-		faded: boolean,
+		{star, faded, final}: {readonly star: boolean; readonly faded: boolean; readonly final: boolean},
 		reducedMotion: boolean,
 	): void {
 		const {ctx} = this;
@@ -537,8 +553,8 @@ export class HighwayRenderer {
 			const a = project(layout, highway.left + inset, distance);
 			const b = project(layout, highway.left + highway.width - inset, distance);
 			ctx.fillStyle = star ? COLOR.paper : color;
-			ctx.strokeStyle = 'rgba(12, 13, 15, 0.9)';
-			ctx.lineWidth = 1.5 * s;
+			ctx.strokeStyle = final && !faded ? COLOR.paper : 'rgba(12, 13, 15, 0.9)';
+			ctx.lineWidth = (final ? 2.5 : 1.5) * s;
 			ctx.beginPath();
 			ctx.roundRect(a.x, a.y - (KICK_HEIGHT / 2) * s, b.x - a.x, KICK_HEIGHT * s, 4 * s);
 			ctx.fill();
@@ -560,6 +576,7 @@ export class HighwayRenderer {
 		const slot = surfaceLane(highway.kind, lane) ?? 0;
 		const point = project(layout, laneCenterX(highway, slot), distance);
 		const s = layout.scale * point.scale * highway.noteScale;
+		if (final && !faded) this.finalHalo(highway, point.x, point.y, s, reducedMotion);
 		if (star && !reducedMotion) {
 			ctx.shadowColor = 'rgba(247, 245, 240, 0.55)';
 			ctx.shadowBlur = 16 * s;
@@ -600,9 +617,20 @@ export class HighwayRenderer {
 		ctx.restore();
 	}
 
-	private finalBar(layout: StageLayout, highway: HighwayLayout, finale: BigRockEnding, nowMs: number): void {
-		if (nowMs < finale.startMs) return;
-		const distance = noteDistance(layout, finale.endMs - nowMs);
+	// The bar the band's final hit sits on: across the highway at the part's final hit, or where the lanes end when it
+	// has none. Drawn under the gems.
+	private finalBar(
+		layout: StageLayout,
+		highway: HighwayLayout,
+		track: SeatTrack,
+		finale: PartFinale,
+		nowMs: number,
+		reducedMotion: boolean,
+	): void {
+		const {finalIndex} = finale;
+		if (finalIndex !== null && track.noteStates[finalIndex] !== NoteState.Pending) return;
+		const atMs = finalIndex === null ? finale.endMs : track.chart.groups[finalIndex].msTime;
+		const distance = noteDistance(layout, atMs - nowMs);
 		if (distance < 0 || distance > layout.planeLength) return;
 		const {ctx} = this;
 		const a = project(layout, highway.left - 2 * layout.scale, distance);
@@ -610,11 +638,41 @@ export class HighwayRenderer {
 		const s = layout.scale * a.scale;
 		ctx.save();
 		ctx.fillStyle = COLOR.paper;
-		ctx.shadowColor = 'rgba(247, 245, 240, 0.45)';
-		ctx.shadowBlur = 22 * s;
+		if (!reducedMotion) {
+			ctx.shadowColor = 'rgba(247, 245, 240, 0.45)';
+			ctx.shadowBlur = 22 * s;
+		}
 		ctx.beginPath();
 		ctx.roundRect(a.x, a.y - 5 * s, b.x - a.x, 10 * s, 5 * s);
 		ctx.fill();
+		ctx.restore();
+	}
+
+	// A paper ring around a gem of the final hit, so it reads as the one that banks the bonus.
+	private finalHalo(highway: HighwayLayout, x: number, y: number, s: number, reducedMotion: boolean): void {
+		const {ctx} = this;
+		ctx.save();
+		ctx.strokeStyle = COLOR.paper;
+		ctx.lineWidth = 2.5 * s;
+		if (!reducedMotion) {
+			ctx.shadowColor = 'rgba(247, 245, 240, 0.7)';
+			ctx.shadowBlur = 14 * s;
+		}
+		ctx.beginPath();
+		if (highway.kind === 'drums') {
+			const pad = 5 * s;
+			ctx.roundRect(
+				x - (PAD_WIDTH / 2) * s - pad,
+				y - (PAD_HEIGHT / 2) * s - pad,
+				PAD_WIDTH * s + pad * 2,
+				PAD_HEIGHT * s + pad * 2,
+				10 * s,
+			);
+		} else {
+			const r = GEM_RADIUS * s * 1.32;
+			ctx.ellipse(x, y, r, r * GEM_SQUASH, 0, 0, Math.PI * 2);
+		}
+		ctx.stroke();
 		ctx.restore();
 	}
 

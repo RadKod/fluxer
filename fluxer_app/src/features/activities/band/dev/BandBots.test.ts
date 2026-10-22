@@ -3,6 +3,7 @@
 import type {BandSongSummary, BandState} from '@app/features/activities/band/BandProtocol';
 import {type BandBotChart, BandBots} from '@app/features/activities/band/dev/BandBots';
 import {FakeActivitySession} from '@app/features/activities/band/dev/FakeActivitySession';
+import {nextFinaleBonus} from '@app/features/activities/band/game/PlayController';
 import type {ActivityMessage} from '@app/features/activities/session/ActivitySessionTypes';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
@@ -201,23 +202,49 @@ describe('BandBots', () => {
 	});
 
 	it('free-plays the Big Rock Ending and banks it on the final hit', async () => {
-		const {session, bots, payloads} = setup([500, 1_000, 1_500, 1_700], {startMs: 1_400, endMs: 2_000});
+		const finale = {startMs: 1_400, endMs: 2_000, firstIndex: 2, finalIndex: 4, bonusCap: 1_200};
+		const {session, bots, payloads} = setup([500, 1_000, 1_500, 1_800, 2_200], finale);
 		const bot = bots.add({accuracy: 1, reactionMs: 0});
 		session.setState({
 			phase: 'play',
 			songId: SONG.id,
 			seats: [{part: 'drums', userId: bot.userId, difficulty: 'expert', ready: true}],
 			startAt: Date.now(),
+			bigRockEnding: true,
 		});
-		await vi.advanceTimersByTimeAsync(2_000 + 1_000 + 200);
+		await vi.advanceTimersByTimeAsync(2_200 + 1_000 + 200);
 		const sent = payloads() as Array<{t: string; kind?: string; noteIndex?: number; bonus?: number; hit?: boolean}>;
-		expect(sent.filter((payload) => payload.t === 'band.hit').map((payload) => payload.noteIndex)).toEqual([0, 1]);
+		expect(sent.filter((payload) => payload.t === 'band.hit').map((payload) => payload.noteIndex)).toEqual([0, 1, 4]);
 		const presses = sent.filter((payload) => payload.t === 'band.finale' && payload.kind === 'press');
 		expect(presses.length).toBeGreaterThanOrEqual(3);
-		expect(presses.at(-1)?.bonus).toBe(presses.length * 50);
+		let bonus = 0;
+		for (let i = 0; i < presses.length; i++) bonus = nextFinaleBonus(bonus, finale, finale.bonusCap);
+		expect(presses.at(-1)?.bonus).toBe(Math.round(bonus));
 		expect(sent.find((payload) => payload.kind === 'final')).toMatchObject({hit: true, part: 'drums'});
-		const result = sent.find((payload) => payload.t === 'band.result') as unknown as {result: {rawScore: number}};
-		expect(result.result.rawScore).toBe(100 + presses.length * 25);
+		const report = sent.find((payload) => payload.t === 'band.result') as unknown as {
+			result: {rawScore: number; finaleBonus: number};
+		};
+		expect(report.result.finaleBonus).toBe(Math.round(bonus));
+		expect(report.result.rawScore).toBe(Math.round(150 + Math.round(bonus) / 2));
+	});
+
+	it('plays the notes under the lanes when the room turned the ending off', async () => {
+		const finale = {startMs: 1_400, endMs: 2_000, firstIndex: 2, finalIndex: 4, bonusCap: 1_200};
+		const {session, bots, payloads} = setup([500, 1_000, 1_500, 1_800, 2_200], finale);
+		const bot = bots.add({accuracy: 1, reactionMs: 0});
+		session.setState({
+			phase: 'play',
+			songId: SONG.id,
+			seats: [{part: 'drums', userId: bot.userId, difficulty: 'expert', ready: true}],
+			startAt: Date.now(),
+			bigRockEnding: false,
+		});
+		await vi.advanceTimersByTimeAsync(2_200 + 1_000 + 200);
+		const sent = payloads() as Array<{t: string; noteIndex?: number}>;
+		expect(sent.filter((payload) => payload.t === 'band.hit').map((payload) => payload.noteIndex)).toEqual([
+			0, 1, 2, 3, 4,
+		]);
+		expect(sent.some((payload) => payload.t === 'band.finale')).toBe(false);
 	});
 
 	it('cheers as a spectator during the song', async () => {

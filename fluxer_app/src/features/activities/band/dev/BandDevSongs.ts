@@ -5,9 +5,11 @@
 
 import type {BandSongSummary} from '@app/features/activities/band/BandProtocol';
 import type {BandBotChartProvider} from '@app/features/activities/band/dev/BandBots';
+import {partFinale} from '@app/features/activities/band/engine/BigRockEnding';
 import type {BandDifficulty, BandPart} from '@app/features/activities/band/engine/ChartModel';
 import {SongPackage} from '@app/features/activities/band/engine/SongPackage';
 import {parseSongIndex} from '@app/features/activities/band/flow/BandSongLibrary';
+import {finaleBonusCap} from '@app/features/activities/band/game/PlayController';
 import {action, makeObservable, observable, observableRef} from 'mobx';
 
 export const DEFAULT_SONG_SERVER_URL = 'http://127.0.0.1:8787/';
@@ -56,7 +58,12 @@ export class BandDevSongs {
 			return notes ? {notes, finale: null} : null;
 		}
 		const partChart = chart.partChart(part, difficulty);
-		return partChart ? {notes: partChart.groups.map((group) => group.msTime), finale: chart.bigRockEnding} : null;
+		if (!partChart) return null;
+		const finale = partFinale(partChart.bigRockEnding, partChart.groups);
+		return {
+			notes: partChart.groups.map((group) => group.msTime),
+			finale: finale && {...finale, bonusCap: finaleBonusCap(partChart, finale)},
+		};
 	};
 
 	private packageOf(song: BandSongSummary): Promise<SongPackage> {

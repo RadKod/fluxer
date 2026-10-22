@@ -1,41 +1,48 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {ChartSection} from '@app/features/activities/band/engine/SongChart';
+import type {NoteGroup, TimeSpan} from '@app/features/activities/band/engine/ChartModel';
 
-// Rock Band marks drum fills with notes 120..124 on PART DRUMS; scan-chart reads them as freestyle sections and flags
-// the ones at or after the EVENTS "[coda]" text. A coda fill is the Big Rock Ending: free play, then one final hit.
+// Rock Band marks free play with notes 120..124 on each instrument track; scan-chart reads them as freestyle sections
+// and flags the ones at or after the EVENTS "[coda]" text. Earlier ones are drum fills; a coda one is the Big Rock
+// Ending: the part's notes under it give way to free play, and its first note after the lanes is the final hit.
+// Charts without "[coda]" get no ending: nothing else in a chart says where free play would start.
 export interface BigRockEnding {
 	readonly startMs: number;
-	// The final hit everyone plays together.
+	// Where the free-play lanes end; the final hit follows shortly after.
 	readonly endMs: number;
 }
 
-export interface FreestyleSpan {
-	readonly msTime: number;
-	readonly msLength: number;
+export interface FreestyleSpan extends TimeSpan {
 	readonly isCoda: boolean;
 }
 
-// Shorter fills are star power activation lanes, which charts also put near the end of a song.
-export const BIG_ROCK_ENDING_MIN_MS = 2_000;
-// Without a "[coda]" text, a long fill counts when at most this much charting follows it.
-export const BIG_ROCK_ENDING_TAIL_MS = 3_000;
+export function codaSpan(fills: ReadonlyArray<FreestyleSpan>): TimeSpan | null {
+	const coda = fills.find((fill) => fill.isCoda && fill.length > 0);
+	if (!coda) return null;
+	const {tick, length, msTime, msLength} = coda;
+	return {tick, length, msTime, msLength};
+}
 
-export function findBigRockEnding(
-	fills: ReadonlyArray<FreestyleSpan>,
-	sections: ReadonlyArray<ChartSection>,
-	lastNoteMs: number,
-): BigRockEnding | null {
-	const coda = fills.find((fill) => fill.isCoda && fill.msLength > 0);
-	if (coda) return {startMs: coda.msTime, endMs: coda.msTime + coda.msLength};
+// One part's ending, by index into its note groups.
+export interface PartFinale extends BigRockEnding {
+	// First group under the lanes; groups from here up to the final hit are free play.
+	readonly firstIndex: number;
+	// The part's first group after the lanes, else its last one when that is under them; null when the part plays
+	// nothing from the lanes on.
+	readonly finalIndex: number | null;
+}
 
-	const last = fills.reduce<FreestyleSpan | null>(
-		(latest, fill) => (latest === null || fill.msTime > latest.msTime ? fill : latest),
-		null,
-	);
-	if (!last || last.msLength < BIG_ROCK_ENDING_MIN_MS) return null;
-	const endMs = last.msTime + last.msLength;
-	const finalSectionMs = sections.at(-1)?.msTime ?? 0;
-	if (last.msTime < finalSectionMs || lastNoteMs > endMs + BIG_ROCK_ENDING_TAIL_MS) return null;
-	return {startMs: last.msTime, endMs};
+export function partFinale(span: TimeSpan | null, groups: ReadonlyArray<NoteGroup>): PartFinale | null {
+	if (!span) return null;
+	const endTick = span.tick + span.length;
+	let firstIndex = groups.findIndex((group) => group.tick >= span.tick);
+	if (firstIndex < 0) firstIndex = groups.length;
+	const after = groups.findIndex((group) => group.tick >= endTick);
+	const lastIndex = groups.length - 1;
+	const finalIndex = after >= 0 ? after : lastIndex >= firstIndex ? lastIndex : null;
+	return {startMs: span.msTime, endMs: span.msTime + span.msLength, firstIndex, finalIndex};
+}
+
+export function isFreePlayGroup(finale: PartFinale | null, index: number): boolean {
+	return finale !== null && index >= finale.firstIndex && (finale.finalIndex === null || index < finale.finalIndex);
 }

@@ -200,6 +200,11 @@
 	text-align: right;
 }
 
+.stats .finaleBonus {
+	color: var(--band-t1);
+	font-weight: 700;
+}
+
 .awaiting {
 	margin: 0.9375rem 0 0;
 	color: var(--band-t3);

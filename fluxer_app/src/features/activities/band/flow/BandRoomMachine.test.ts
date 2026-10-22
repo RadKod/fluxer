@@ -224,6 +224,7 @@ describe('pick', () => {
 			phase: 'select',
 			songId: 'c',
 			groupDifficulty: 'medium',
+			bigRockEnding: true,
 			seats: [],
 			watching: [],
 			endsAt: PICK_ENDS_AT + BAND_PHASE_MS.select,
@@ -413,6 +414,35 @@ describe('difficulty', () => {
 			[{t: 'band.groupDifficulty', difficulty: 'expert'}, 'lead'],
 		]);
 		expect(state.phase === 'select' && state.seats[0].difficulty).toBe('expert');
+	});
+});
+
+describe('Big Rock Ending setting', () => {
+	it('is on for every new song', () => {
+		expect(apply(pick(), {t: 'band.playNow', songId: 'e'}, 'lead')).toMatchObject({bigRockEnding: true});
+	});
+
+	it('takes the switch only from the leader, during seat selection', () => {
+		const state = select({bigRockEnding: true});
+		expect(apply(state, {t: 'band.bigRockEnding', enabled: false}, 'u1')).toBe(state);
+		expect(apply(state, {t: 'band.bigRockEnding', enabled: true}, 'lead')).toBe(state);
+		const off = apply(state, {t: 'band.bigRockEnding', enabled: false}, 'lead');
+		expect(off).toMatchObject({phase: 'select', bigRockEnding: false});
+		expect(apply(off, {t: 'band.bigRockEnding', enabled: true}, 'lead')).toMatchObject({bigRockEnding: true});
+		expect(apply(play(), {t: 'band.bigRockEnding', enabled: false}, 'lead')).toMatchObject({phase: 'play'});
+	});
+
+	it('reads a state from an older leader without the field as on', () => {
+		const old = select();
+		expect(apply(old, {t: 'band.bigRockEnding', enabled: true}, 'lead')).toBe(old);
+		expect(apply(old, {t: 'band.skip'}, 'lead', CTX)).toMatchObject({phase: 'pick'});
+		const seated = applyAll(old, [...sit('guitar', 'u1')]);
+		expect(apply(seated, {t: 'band.skip'}, 'lead')).toMatchObject({phase: 'play', bigRockEnding: true});
+	});
+
+	it('goes into the song with the seats', () => {
+		const seated = applyAll(select(), [...sit('guitar', 'u1'), [{t: 'band.bigRockEnding', enabled: false}, 'lead']]);
+		expect(apply(seated, {t: 'band.skip'}, 'lead')).toMatchObject({phase: 'play', bigRockEnding: false});
 	});
 });
 
@@ -662,6 +692,15 @@ describe('play', () => {
 		expect(apply(once, {t: 'band.result', result: {...RESULT, rawScore: 5}}, 'u1')).toBe(once);
 	});
 
+	it('keeps the banked finale bonus, never above the score', () => {
+		const banked = apply(play(), {t: 'band.result', result: {...RESULT, finaleBonus: 420.4}}, 'u1') as BandPlayState;
+		expect(banked.results?.[0]).toMatchObject({score: 1500, finaleBonus: 420});
+		const inflated = apply(play(), {t: 'band.result', result: {...RESULT, finaleBonus: 1e9}}, 'u1') as BandPlayState;
+		expect(inflated.results?.[0]).toMatchObject({score: 1500, finaleBonus: 1500});
+		const none = apply(play(), {t: 'band.result', result: {...RESULT, finaleBonus: -3}}, 'u1') as BandPlayState;
+		expect(none.results?.[0]).not.toHaveProperty('finaleBonus');
+	});
+
 	it('sanitizes the numbers', () => {
 		const state = apply(
 			play(),
@@ -865,9 +904,11 @@ describe('parseBandIntent', () => {
 			{t: 'band.claimSeat', part: null},
 			{t: 'band.difficulty', difficulty: 'expert'},
 			{t: 'band.groupDifficulty', difficulty: 'easy'},
+			{t: 'band.bigRockEnding', enabled: false},
 			{t: 'band.ready', ready: false},
 			{t: 'band.loaded', songId: 'a'},
 			{t: 'band.result', result: RESULT},
+			{t: 'band.result', result: {...RESULT, finaleBonus: 1200}},
 			{t: 'band.rate', playerId: 'u1', stars: 4},
 			{t: 'band.skip'},
 		];
@@ -894,6 +935,9 @@ describe('parseBandIntent', () => {
 			{t: 'band.claimSeat'},
 			{t: 'band.difficulty', difficulty: 'insane'},
 			{t: 'band.ready', ready: 'yes'},
+			{t: 'band.bigRockEnding'},
+			{t: 'band.bigRockEnding', enabled: 'no'},
+			{t: 'band.result', result: {...RESULT, finaleBonus: 'big'}},
 			{t: 'band.loaded'},
 			{t: 'band.loaded', songId: 42},
 			{t: 'band.result', result: {...RESULT, score: 'lots'}},

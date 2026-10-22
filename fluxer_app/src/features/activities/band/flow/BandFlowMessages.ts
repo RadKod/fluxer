@@ -320,6 +320,24 @@ export const GROUP_DIFFICULTY_HINT_DESCRIPTOR = msg({
 	message: '{name} sets it. You can change your own card.',
 	comment: 'Band game: note under the group difficulty for everyone but the leader. {name} is the leader.',
 });
+export const BIG_ROCK_ENDING_DESCRIPTOR = msg({
+	message: 'Big finale',
+	comment:
+		'Band game: the Big Rock Ending, free play at the end of a song closed by one final hit together. Label of the leader’s on/off setting on the part picking screen.',
+});
+export const BIG_ROCK_ENDING_HINT_DESCRIPTOR = msg({
+	message: 'At the end of the song every key plays freely. Land the last hit together for a bonus.',
+	comment:
+		'Band game: tooltip of the Big finale setting on the part picking screen. When it is off, the notes written for the ending are played instead.',
+});
+export const SETTING_ON_DESCRIPTOR = msg({
+	message: 'On',
+	comment: 'Band game: the Big finale setting is on.',
+});
+export const SETTING_OFF_DESCRIPTOR = msg({
+	message: 'Off',
+	comment: 'Band game: the Big finale setting is off.',
+});
 export const READY_TALLY_DESCRIPTOR = msg({
 	message: '{ready} of {seated} ready',
 	comment:
@@ -401,6 +419,11 @@ export const STAR_POWER_DESCRIPTOR = msg({
 export const TIMES_DESCRIPTOR = msg({
 	message: '{count, plural, one {# time} other {# times}}',
 	comment: 'Band game: how many times something happened, for the star power row.',
+});
+export const FINALE_BONUS_DESCRIPTOR = msg({
+	message: 'Finale bonus',
+	comment:
+		'Band game: results row, the bonus the player banked by landing the final hit of the Big Rock Ending, shown as +points.',
 });
 export const NOTES_MISSED_DESCRIPTOR = msg({
 	message: 'Notes missed',

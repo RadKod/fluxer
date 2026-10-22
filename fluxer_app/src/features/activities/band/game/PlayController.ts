@@ -1,7 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {BandHitMessage, BandIntent, BandPlayerResult, BandSeat} from '@app/features/activities/band/BandProtocol';
-import type {BigRockEnding} from '@app/features/activities/band/engine/BigRockEnding';
+import type {
+	BandFinaleMessage,
+	BandHitMessage,
+	BandIntent,
+	BandPlayerResult,
+	BandSeat,
+} from '@app/features/activities/band/BandProtocol';
+import {
+	type BigRockEnding,
+	isFreePlayGroup,
+	type PartFinale,
+	partFinale,
+} from '@app/features/activities/band/engine/BigRockEnding';
 import {
 	type BandPart,
 	type InstrumentPart,
@@ -11,6 +22,7 @@ import {
 } from '@app/features/activities/band/engine/ChartModel';
 import {
 	DIFFICULTY_SCORE_MULTIPLIER,
+	HIT_WINDOWS_MS,
 	type HitRating,
 	Judge,
 	type JudgeEvent,
@@ -22,18 +34,6 @@ import type {SongChart} from '@app/features/activities/band/engine/SongChart';
 import type {ActivityMessage, ActivitySendOptions} from '@app/features/activities/session/ActivitySessionTypes';
 import {makeAutoObservable} from 'mobx';
 
-// Free play during the Big Rock Ending. Not part of BandProtocol yet: lossy presses so others see and hear them, one
-// reliable final message saying whether the player landed the last hit.
-export type BandFinaleMessage =
-	| {
-			readonly t: 'band.finale';
-			readonly kind: 'press';
-			readonly part: BandPart;
-			readonly lane: number;
-			readonly bonus: number;
-	  }
-	| {readonly t: 'band.finale'; readonly kind: 'final'; readonly part: BandPart; readonly hit: boolean};
-
 export const NoteState = {Pending: 0, Hit: 1, Missed: 2} as const;
 
 // Star power: completing a phrase adds a quarter bar; from half a bar it can be deployed and doubles scoring.
@@ -42,10 +42,15 @@ export const STAR_POWER_MIN_ENERGY = 0.5;
 // A full bar lasts this long once deployed.
 export const STAR_POWER_FULL_BAR_MS = 16_000;
 
-// Big Rock Ending: points per free-play press, how often one lane may score, and the final hit's window.
-export const FINALE_PRESS_POINTS = 25;
+// Big Rock Ending bonus. Its cap is a share of the part's base score (every judged note once, difficulty included),
+// so it scales with the song rather than with the length of the ending. Measured on the six finale songs, a typical
+// full Expert run (92% hit, mixed ratings) scores 1.2 to 1.8 times the base, about 1.4; an energetic ending (eight
+// presses a second) reaches 86% of the cap, about 7% of such a run (6 to 9%). Each counted press closes a share of
+// what is left of the cap, sized so four presses a second through the whole ending reach about two thirds of it:
+// mashing faster earns less and less. One lane counts at most once per cooldown.
+export const FINALE_BONUS_SHARE = 0.12;
+export const FINALE_PRESSES_PER_SECOND = 4;
 export const FINALE_LANE_COOLDOWN_MS = 90;
-export const FINALE_FINAL_WINDOW_MS = 150;
 
 // Group meter per player, 0..1: hits lift it slowly, misses drop it fast.
 const PERFORMANCE_START = 0.6;
@@ -72,9 +77,22 @@ export function groupStars(score: number, baseScore: number): number {
 	return STAR_THRESHOLDS.length;
 }
 
-export function baseScore(chart: PartChart): number {
-	const lanes = chart.groups.reduce((sum, group) => sum + group.lanes.length, 0);
+// Free-play groups score through the finale bonus instead, so they are left out.
+export function baseScore(chart: PartChart, finale: PartFinale | null = null): number {
+	const lanes = chart.groups.reduce(
+		(sum, group, index) => (isFreePlayGroup(finale, index) ? sum : sum + group.lanes.length),
+		0,
+	);
 	return lanes * NOTE_POINTS * DIFFICULTY_SCORE_MULTIPLIER[chart.difficulty];
+}
+
+export function finaleBonusCap(chart: PartChart, finale: PartFinale): number {
+	return FINALE_BONUS_SHARE * baseScore(chart, finale);
+}
+
+export function nextFinaleBonus(bonus: number, finale: BigRockEnding, cap: number): number {
+	const seconds = Math.max(0, finale.endMs - finale.startMs) / 1000;
+	return bonus + (cap - bonus) / Math.max(1, FINALE_PRESSES_PER_SECOND * seconds);
 }
 
 // Index into SeatTrack.laneFlashMs; fret lanes 0..5 (open is 5), drum lanes 0..4.
@@ -82,21 +100,34 @@ function laneSlot(lane: number): number {
 	return Math.min(Math.max(lane, 0), 5);
 }
 
-export function isInFinale(finale: BigRockEnding | null, msTime: number): boolean {
-	return finale !== null && msTime >= finale.startMs && msTime <= finale.endMs + FINALE_FINAL_WINDOW_MS;
+// Song ms where a part's free play ends: the final hit's window opens there. Presses before it are free play.
+export function freePlayEndMs(finale: PartFinale, chart: PartChart): number {
+	if (finale.finalIndex === null) return finale.endMs;
+	return chart.groups[finale.finalIndex].msTime - HIT_WINDOWS_MS.ok;
 }
 
-// The groups a judge scores: the finale is free play, and a late joiner cannot play what already passed. Returns the
+// Song ms until which the HUD shows a part's ending: through the final hit's window.
+function finaleShownUntilMs(finale: PartFinale, chart: PartChart): number {
+	if (finale.finalIndex === null) return finale.endMs;
+	return chart.groups[finale.finalIndex].msTime + HIT_WINDOWS_MS.ok;
+}
+
+export function isInFreePlay(track: SeatTrack, songMs: number): boolean {
+	const {finale} = track;
+	return finale !== null && songMs >= finale.startMs && songMs < freePlayEndMs(finale, track.chart);
+}
+
+// The groups a judge scores: free play is not judged, and a late joiner cannot play what already passed. Returns the
 // judged chart and, per judged group, its index in the full chart (the index every client broadcasts).
 export function judgedChart(
 	chart: PartChart,
-	finale: BigRockEnding | null,
+	finale: PartFinale | null,
 	fromMs: number,
 ): {readonly chart: PartChart; readonly fullIndex: ReadonlyArray<number>} {
 	const groups: Array<NoteGroup> = [];
 	const fullIndex: Array<number> = [];
 	chart.groups.forEach((group, index) => {
-		if (group.msTime < fromMs || isInFinale(finale, group.msTime)) return;
+		if (group.msTime < fromMs || isFreePlayGroup(finale, index)) return;
 		groups.push(group);
 		fullIndex.push(index);
 	});
@@ -129,7 +160,14 @@ export function isBandFinaleMessage(payload: unknown): payload is BandFinaleMess
 		hit?: unknown;
 	};
 	if (message.t !== 'band.finale' || typeof message.part !== 'string') return false;
-	if (message.kind === 'press') return Number.isInteger(message.lane) && typeof message.bonus === 'number';
+	if (message.kind === 'press') {
+		return (
+			Number.isInteger(message.lane) &&
+			typeof message.bonus === 'number' &&
+			Number.isFinite(message.bonus) &&
+			message.bonus >= 0
+		);
+	}
 	return message.kind === 'final' && typeof message.hit === 'boolean';
 }
 
@@ -142,6 +180,9 @@ export class SeatHud {
 	starPowerEnergy = 0;
 	score = 0;
 	performance = PERFORMANCE_START;
+	// From the start of the part's Big Rock Ending until its final hit is decided or its window has passed.
+	finaleOn = false;
+	// Collected during free play; it counts only once the final hit lands.
 	finaleBonus = 0;
 	// Null until the final hit is decided.
 	finalHit: boolean | null = null;
@@ -153,6 +194,10 @@ export class SeatHud {
 	get shownMultiplier(): number {
 		return this.starPowerActive ? this.multiplier * 2 : this.multiplier;
 	}
+
+	get bankedFinaleBonus(): number {
+		return this.finalHit === true ? Math.round(this.finaleBonus) : 0;
+	}
 }
 
 // Per-seat drawing state, read by the renderer every frame. Plain arrays, not observables: they change per note.
@@ -160,6 +205,8 @@ export interface SeatTrack {
 	readonly seat: BandSeat;
 	readonly part: InstrumentPart;
 	readonly chart: PartChart;
+	// Null when the chart has no Big Rock Ending or the room turned it off.
+	readonly finale: PartFinale | null;
 	readonly isMine: boolean;
 	readonly hud: SeatHud;
 	readonly noteStates: Uint8Array;
@@ -181,14 +228,16 @@ export interface PlayControllerOptions {
 	readonly songEndMs: number;
 	// Song ms when this client started following; above zero for a late joiner.
 	readonly joinedAtMs: number;
+	// The room's Big Rock Ending setting; off plays the notes charted under the lanes.
+	readonly bigRockEnding: boolean;
 	readonly send: (payload: unknown, options?: ActivitySendOptions) => void;
 	readonly submitIntent: (intent: BandIntent) => void;
-	// A miss drops the part's stem until the next hit restores it, for every player in the band.
+	// A miss drops the part's stem until the next hit restores it, for every player in the band. Free play has no
+	// misses and brings the stem back.
 	readonly duck: (part: BandPart) => void;
 	readonly restore: (part: BandPart) => void;
 	// My own misses and overhits as they are judged; everyone hears their own mistakes, not the band's.
 	readonly playMissSound: (part: InstrumentPart) => void;
-	readonly playFinaleNote: (part: InstrumentPart, lane: number, mine: boolean) => void;
 }
 
 interface PhraseProgress {
@@ -199,28 +248,31 @@ interface PhraseProgress {
 
 // Runs one client's side of a song: judges my seat, broadcasts each judged note, mirrors everyone else's from their
 // broadcasts, plays the Big Rock Ending and sends my result to the leader once. Times are song ms.
+//
+// Big Rock Ending: each part's notes under its coda lanes are not judged. Presses there light the lanes and collect a
+// bonus without touching the combo, and the part's stem plays on. The final hit after the lanes is judged like any
+// note; landing it banks the bonus, missing it loses it.
 export class PlayController {
 	readonly tracks: ReadonlyArray<SeatTrack>;
+	// The song's ending across parts, for the banner; null when no highway has one or the room turned it off.
 	readonly finale: BigRockEnding | null;
 	readonly vocalsSeat: BandSeat | null;
 	readonly myTrack: SeatTrack | null;
 	readonly baseScore: number;
 	finished = false;
-	// Flips once when the Big Rock Ending begins, so the HUD can switch without watching the clock.
-	finaleActive = false;
 	nowMs = 0;
 
 	private readonly judge: Judge | null = null;
 	private readonly fullIndex: ReadonlyArray<number> = [];
 	private readonly phraseOfGroup = new Map<number, PhraseProgress>();
 	private readonly finaleLaneMs = new Float64Array(6).fill(Number.NEGATIVE_INFINITY);
+	private readonly finaleCap: number = 0;
 	private starPowerUses = 0;
 	private starPowerEndsMs = 0;
 	private finaleResolved = false;
 
 	constructor(private readonly options: PlayControllerOptions) {
 		const {chart, seats, myUserId} = options;
-		this.finale = chart.bigRockEnding;
 		this.vocalsSeat = seats.find((seat) => seat.part === 'vocals') ?? null;
 		const tracks: Array<SeatTrack> = [];
 		for (const seat of seats) {
@@ -231,6 +283,7 @@ export class PlayController {
 				seat,
 				part: seat.part,
 				chart: partChart,
+				finale: options.bigRockEnding ? partFinale(partChart.bigRockEnding, partChart.groups) : null,
 				isMine: seat.userId === myUserId,
 				hud: new SeatHud(),
 				noteStates: new Uint8Array(partChart.groups.length),
@@ -244,15 +297,21 @@ export class PlayController {
 		tracks.sort((a, b) => STAGE_ORDER.indexOf(a.part) - STAGE_ORDER.indexOf(b.part));
 		this.tracks = tracks;
 		this.myTrack = tracks.find((track) => track.isMine) ?? null;
-		this.baseScore = tracks.reduce((sum, track) => sum + baseScore(track.chart), 0);
+		this.finale = tracks.some((track) => track.finale !== null) ? chart.bigRockEnding : null;
+		this.baseScore = tracks.reduce((sum, track) => sum + baseScore(track.chart, track.finale), 0);
 		if (this.myTrack) {
 			const fromMs = options.joinedAtMs > 0 ? options.joinedAtMs + JOIN_GRACE_MS : Number.NEGATIVE_INFINITY;
-			const judged = judgedChart(this.myTrack.chart, this.finale, fromMs);
+			const judged = judgedChart(this.myTrack.chart, this.myTrack.finale, fromMs);
 			this.judge = new Judge(judged.chart);
 			this.fullIndex = judged.fullIndex;
-			this.indexPhrases(this.myTrack.chart);
+			this.indexPhrases(this.myTrack);
+			const {finale} = this.myTrack;
+			if (finale) this.finaleCap = finaleBonusCap(this.myTrack.chart, finale);
 		}
-		makeAutoObservable<PlayController, 'options' | 'judge' | 'fullIndex' | 'phraseOfGroup' | 'finaleLaneMs'>(
+		makeAutoObservable<
+			PlayController,
+			'options' | 'judge' | 'fullIndex' | 'phraseOfGroup' | 'finaleLaneMs' | 'finaleCap'
+		>(
 			this,
 			{
 				tracks: false,
@@ -266,6 +325,7 @@ export class PlayController {
 				fullIndex: false,
 				phraseOfGroup: false,
 				finaleLaneMs: false,
+				finaleCap: false,
 			},
 			{autoBind: true},
 		);
@@ -277,11 +337,29 @@ export class PlayController {
 	}
 
 	get groupScore(): number {
-		return this.tracks.reduce((sum, track) => sum + track.hud.score + this.bankedFinale(track), 0);
+		return this.tracks.reduce((sum, track) => sum + track.hud.score + track.hud.bankedFinaleBonus, 0);
 	}
 
+	// Collected and still at stake: a landed final hit moves a share into the score, a missed one drops it.
 	get groupFinaleBonus(): number {
-		return this.tracks.reduce((sum, track) => sum + track.hud.finaleBonus, 0);
+		return Math.round(
+			this.tracks.reduce((sum, track) => sum + (track.hud.finalHit === null ? track.hud.finaleBonus : 0), 0),
+		);
+	}
+
+	// True while any highway is in its Big Rock Ending.
+	get finaleActive(): boolean {
+		return this.tracks.some((track) => track.hud.finaleOn);
+	}
+
+	// When the final hit falls: mine when I play a part with one, else the latest of the band's.
+	get finalHitMs(): number | null {
+		const timeOf = (track: SeatTrack) =>
+			track.finale?.finalIndex == null ? null : track.chart.groups[track.finale.finalIndex].msTime;
+		const mine = this.myTrack ? timeOf(this.myTrack) : null;
+		if (mine !== null) return mine;
+		const times = this.tracks.map(timeOf).filter((time) => time !== null);
+		return times.length > 0 ? Math.max(...times) : (this.finale?.endMs ?? null);
 	}
 
 	get groupPerformance(): number {
@@ -298,8 +376,8 @@ export class PlayController {
 		if (!track || !this.judge || this.finished) return;
 		this.nowMs = Math.max(this.nowMs, songMs);
 		const slot = laneSlot(lane);
-		if (this.finale && songMs >= this.finale.startMs && !this.finaleResolved) {
-			this.pressFinale(track, lane, slot, songMs);
+		if (track.finale && !this.finaleResolved && isInFreePlay(track, songMs)) {
+			this.pressFinale(track, track.finale, lane, slot, songMs);
 			return;
 		}
 		track.laneFlashMs[slot] = songMs;
@@ -322,7 +400,7 @@ export class PlayController {
 	// Every frame with the song time the player is hearing.
 	tick(songMs: number): void {
 		this.nowMs = songMs;
-		if (this.finale && !this.finaleActive && songMs >= this.finale.startMs) this.finaleActive = true;
+		for (const seatTrack of this.tracks) this.followFinale(seatTrack, songMs);
 		const track = this.myTrack;
 		if (track && this.judge && !this.finished) {
 			this.handleEvents(track, this.judge.advance(songMs));
@@ -331,8 +409,9 @@ export class PlayController {
 				track.hud.starPowerEnergy = Math.max(0, remaining / STAR_POWER_FULL_BAR_MS);
 				if (remaining <= 0) track.hud.starPowerActive = false;
 			}
-			if (this.finale && !this.finaleResolved && songMs > this.finale.endMs + FINALE_FINAL_WINDOW_MS) {
-				this.resolveFinale(track, false);
+			// A part that plays nothing after its lanes has no final hit to land; the bonus is banked as they end.
+			if (track.finale?.finalIndex === null && !this.finaleResolved && songMs >= track.finale.endMs) {
+				this.resolveFinale(track, true);
 			}
 		}
 		if (!this.finished && songMs >= this.options.songEndMs) this.finish();
@@ -349,7 +428,6 @@ export class PlayController {
 			if (payload.kind === 'press') {
 				track.laneFlashMs[laneSlot(payload.lane)] = this.nowMs;
 				track.hud.finaleBonus = Math.max(track.hud.finaleBonus, payload.bonus);
-				this.options.playFinaleNote(track.part, payload.lane, false);
 			} else {
 				track.hud.finalHit = payload.hit;
 			}
@@ -366,7 +444,7 @@ export class PlayController {
 		const track = this.myTrack;
 		if (track && this.judge) {
 			this.handleEvents(track, stopped ? this.judge.advance(this.nowMs) : this.judge.finish(), false);
-			if (!stopped && this.finale && !this.finaleResolved) this.resolveFinale(track, false);
+			if (!stopped && track.finale && !this.finaleResolved) this.resolveFinale(track, false);
 		}
 		this.options.submitIntent({t: 'band.result', result: this.result(seat)});
 	}
@@ -374,7 +452,8 @@ export class PlayController {
 	private result(seat: BandSeat): Omit<BandPlayerResult, 'userId'> {
 		const track = this.myTrack;
 		const snapshot = this.judge?.snapshot;
-		const score = track ? track.hud.score + this.bankedFinale(track) : 0;
+		const finaleBonus = track?.hud.bankedFinaleBonus ?? 0;
+		const score = track ? track.hud.score + finaleBonus : 0;
 		const hit = snapshot ? snapshot.judgedGroups - snapshot.misses : 0;
 		const missed = snapshot?.misses ?? 0;
 		return {
@@ -387,12 +466,8 @@ export class PlayController {
 			notesHit: hit,
 			notesMissed: missed,
 			starPowerUses: this.starPowerUses,
+			...(finaleBonus > 0 && {finaleBonus}),
 		};
-	}
-
-	private bankedFinale(track: SeatTrack): number {
-		// The finale bonus only counts once the final hit lands, as in Rock Band.
-		return track.hud.finalHit === true ? track.hud.finaleBonus : 0;
 	}
 
 	private remoteTrack(part: string, userId: string): SeatTrack | null {
@@ -418,8 +493,19 @@ export class PlayController {
 			track.missAtMs = this.nowMs;
 			track.feedback = {kind: 'miss', atMs: this.nowMs};
 			hud.performance = Math.max(0, hud.performance - PERFORMANCE_MISS);
-			this.options.duck(track.part);
+			// A late miss from before the ending must not silence the free play.
+			if (!isInFreePlay(track, this.nowMs)) this.options.duck(track.part);
 		}
+	}
+
+	// Switches a highway's HUD to its ending and back, and brings back a stem a miss left ducked.
+	private followFinale(track: SeatTrack, songMs: number): void {
+		const {finale, hud} = track;
+		if (!finale) return;
+		const on = hud.finalHit === null && songMs >= finale.startMs && songMs < finaleShownUntilMs(finale, track.chart);
+		if (on === hud.finaleOn) return;
+		hud.finaleOn = on;
+		if (on) this.options.restore(track.part);
 	}
 
 	// Live judging broadcasts; settling what is left when the song ends or stops does not, and makes no sound either.
@@ -440,6 +526,7 @@ export class PlayController {
 				this.addPoints(hud, event.points);
 				continue;
 			}
+			const isFinalHit = index === track.finale?.finalIndex && !this.finaleResolved;
 			if (event.kind === 'hit') {
 				this.options.restore(track.part);
 				track.noteStates[index] = NoteState.Hit;
@@ -448,11 +535,13 @@ export class PlayController {
 				hud.performance = Math.min(1, hud.performance + PERFORMANCE_HIT);
 				this.addPoints(hud, event.points);
 				this.advancePhrase(track, index, true);
+				if (isFinalHit) this.resolveFinale(track, true);
 			} else {
 				track.noteStates[index] = NoteState.Missed;
 				track.feedback = {kind: 'miss', atMs: event.timeMs};
 				hud.performance = Math.max(0, hud.performance - PERFORMANCE_MISS);
 				this.advancePhrase(track, index, false);
+				if (isFinalHit) this.resolveFinale(track, false);
 				this.signalMiss(track, live);
 			}
 			hud.combo = event.kind === 'hit' ? event.combo : 0;
@@ -474,7 +563,7 @@ export class PlayController {
 	}
 
 	private signalMiss(track: SeatTrack, live: boolean): void {
-		this.options.duck(track.part);
+		if (!isInFreePlay(track, this.nowMs)) this.options.duck(track.part);
 		if (live) this.options.playMissSound(track.part);
 	}
 
@@ -482,11 +571,11 @@ export class PlayController {
 		hud.score += hud.starPowerActive ? points * 2 : points;
 	}
 
-	private indexPhrases(chart: PartChart): void {
+	private indexPhrases({chart, finale}: SeatTrack): void {
 		for (const span of chart.starPower) {
 			const groups: Array<number> = [];
 			chart.groups.forEach((group, index) => {
-				if (group.tick >= span.tick && group.tick < span.tick + span.length && !isInFinale(this.finale, group.msTime))
+				if (group.tick >= span.tick && group.tick < span.tick + span.length && !isFreePlayGroup(finale, index))
 					groups.push(index);
 			});
 			if (groups.length === 0) continue;
@@ -510,25 +599,20 @@ export class PlayController {
 		if (hud.starPowerActive) this.starPowerEndsMs += STAR_POWER_PHRASE_ENERGY * STAR_POWER_FULL_BAR_MS;
 	}
 
-	private pressFinale(track: SeatTrack, lane: number, slot: number, songMs: number): void {
-		const finale = this.finale;
-		if (!finale) return;
+	// Every press lights its lane; until the lanes end, each lane also adds to the bonus once per cooldown. Between the
+	// lanes' end and the final hit's window a press only lights up, and never counts as an overhit.
+	private pressFinale(track: SeatTrack, finale: PartFinale, lane: number, slot: number, songMs: number): void {
 		track.laneFlashMs[slot] = songMs;
-		if (Math.abs(songMs - finale.endMs) <= FINALE_FINAL_WINDOW_MS) {
-			this.options.playFinaleNote(track.part, lane, true);
-			this.resolveFinale(track, true);
-			return;
-		}
-		this.options.playFinaleNote(track.part, lane, true);
-		if (songMs - this.finaleLaneMs[slot] < FINALE_LANE_COOLDOWN_MS) return;
+		if (songMs >= finale.endMs || songMs - this.finaleLaneMs[slot] < FINALE_LANE_COOLDOWN_MS) return;
 		this.finaleLaneMs[slot] = songMs;
-		track.hud.finaleBonus += Math.round(FINALE_PRESS_POINTS * DIFFICULTY_SCORE_MULTIPLIER[track.seat.difficulty]);
+		const {hud} = track;
+		hud.finaleBonus = nextFinaleBonus(hud.finaleBonus, finale, this.finaleCap);
 		const message: BandFinaleMessage = {
 			t: 'band.finale',
 			kind: 'press',
 			part: track.part,
 			lane,
-			bonus: track.hud.finaleBonus,
+			bonus: Math.round(hud.finaleBonus),
 		};
 		this.options.send(message, {reliable: false});
 	}
@@ -536,6 +620,7 @@ export class PlayController {
 	private resolveFinale(track: SeatTrack, hit: boolean): void {
 		this.finaleResolved = true;
 		track.hud.finalHit = hit;
+		track.hud.finaleOn = false;
 		const message: BandFinaleMessage = {t: 'band.finale', kind: 'final', part: track.part, hit};
 		this.options.send(message);
 	}

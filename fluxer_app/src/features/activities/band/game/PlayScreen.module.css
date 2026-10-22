@@ -120,7 +120,22 @@
 	color: #f7f5f0;
 }
 
-.selfTag {
+.who .finaleOn {
+	color: #f7f5f0;
+	font-weight: 600;
+}
+
+.who .finaleOn b {
+	display: inline;
+	font-size: inherit;
+	font-weight: 800;
+}
+
+.who .finaleLost {
+	color: rgba(247, 245, 240, 0.42);
+}
+
+.who .selfTag {
 	margin-left: 4px;
 	padding: 1px 7px;
 	border-radius: 999px;

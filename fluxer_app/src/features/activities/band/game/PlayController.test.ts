@@ -5,9 +5,11 @@ import {buildMidi, EXPERT_NOTE_BASE} from '@app/features/activities/band/engine/
 import {DrumLane, FretLane} from '@app/features/activities/band/engine/ChartModel';
 import {SongChart} from '@app/features/activities/band/engine/SongChart';
 import {
-	FINALE_PRESS_POINTS,
+	FINALE_BONUS_SHARE,
+	finaleBonusCap,
 	groupStars,
 	NoteState,
+	nextFinaleBonus,
 	PlayController,
 	type PlayControllerOptions,
 	STAR_THRESHOLDS,
@@ -17,8 +19,9 @@ import {describe, expect, it, vi} from 'vitest';
 
 const BEAT = 480;
 const STAR_POWER = 116;
-const FILL = 120;
+const FREESTYLE_LANES = [120, 121, 122, 123, 124];
 const GREEN = EXPERT_NOTE_BASE + FretLane.Green;
+const YELLOW = EXPERT_NOTE_BASE + FretLane.Yellow;
 
 // 120 BPM: one note per beat, every 500 ms. Star power covers the first two guitar notes.
 const SONG = SongChart.parse(
@@ -37,16 +40,28 @@ const SONG = SongChart.parse(
 	'mid',
 );
 
-// Notes for 12 beats; the drum fill from beat 8 to 12 after "[coda]" is the Big Rock Ending (4 s to 6 s).
+// A Harmonix-style ending: guitar notes every beat up to beat 12, "[coda]" and the freestyle lanes from beat 8 to 12
+// (4 s to 6 s) on guitar and drums, the drums empty under them, and a final hit at beat 12.5 (a guitar chord).
+const FINALE_LANES = FREESTYLE_LANES.map((note) => ({tick: 8 * BEAT, note, length: 4 * BEAT}));
+const FINAL_HIT_MS = 6_250;
 const FINALE_SONG = SongChart.parse(
 	buildMidi({
 		tracks: [
-			{name: 'PART GUITAR', notes: Array.from({length: 13}, (_, i) => ({tick: i * BEAT, note: GREEN}))},
+			{
+				name: 'PART GUITAR',
+				notes: [
+					...Array.from({length: 12}, (_, i) => ({tick: i * BEAT, note: GREEN})),
+					...FINALE_LANES,
+					{tick: 12.5 * BEAT, note: GREEN},
+					{tick: 12.5 * BEAT, note: YELLOW},
+				],
+			},
 			{
 				name: 'PART DRUMS',
 				notes: [
-					...Array.from({length: 13}, (_, i) => ({tick: i * BEAT, note: EXPERT_NOTE_BASE + DrumLane.Red})),
-					{tick: 8 * BEAT, note: FILL, length: 4 * BEAT},
+					...Array.from({length: 8}, (_, i) => ({tick: i * BEAT, note: EXPERT_NOTE_BASE + DrumLane.Red})),
+					...FINALE_LANES,
+					{tick: 12.5 * BEAT, note: EXPERT_NOTE_BASE + DrumLane.Red},
 				],
 			},
 			{name: 'EVENTS', texts: [{tick: 8 * BEAT, text: '[coda]'}]},
@@ -75,23 +90,24 @@ function setup(overrides: Partial<PlayControllerOptions> = {}) {
 	const duck = vi.fn();
 	const restore = vi.fn();
 	const playMissSound = vi.fn();
-	const playFinaleNote = vi.fn();
 	const controller = new PlayController({
 		chart: SONG,
 		seats: SEATS,
 		myUserId: 'me',
 		songEndMs: 6_000,
 		joinedAtMs: 0,
+		bigRockEnding: true,
 		send,
 		submitIntent,
 		duck,
 		restore,
 		playMissSound,
-		playFinaleNote,
 		...overrides,
 	});
-	const hits = () => send.mock.calls.map(([payload]) => payload).filter((payload) => payload.t === 'band.hit');
-	return {controller, send, submitIntent, duck, restore, playMissSound, playFinaleNote, hits};
+	const sent = () => send.mock.calls.map(([payload]) => payload);
+	const hits = () => sent().filter((payload) => payload.t === 'band.hit');
+	const finalePresses = () => sent().filter((payload) => payload.t === 'band.finale' && payload.kind === 'press');
+	return {controller, send, submitIntent, duck, restore, playMissSound, hits, finalePresses};
 }
 
 describe('PlayController', () => {
@@ -321,59 +337,166 @@ describe('PlayController', () => {
 			{part: 'guitar', userId: 'me', difficulty: 'expert', ready: true},
 			{part: 'drums', userId: 'u2', difficulty: 'hard', ready: true},
 		];
+		const LANES = {startMs: 4_000, endMs: 6_000};
 
-		function playUpToFinale(controller: PlayController) {
-			for (let i = 0; i < 8; i++) {
+		function finaleSetup(overrides: Partial<PlayControllerOptions> = {}) {
+			return setup({chart: FINALE_SONG, seats: finaleSeats, songEndMs: 8_000, ...overrides});
+		}
+
+		function playBeats(controller: PlayController, beats: number) {
+			for (let i = 0; i < beats; i++) {
 				controller.press(FretLane.Green, i * 500);
 				controller.release(FretLane.Green, i * 500 + 20);
 			}
 		}
 
-		it('turns the coda into free play that collects a bonus, banked by the final hit', () => {
-			const {controller, hits, send, playFinaleNote} = setup({
-				chart: FINALE_SONG,
-				seats: finaleSeats,
-				songEndMs: 8_000,
-			});
-			expect(controller.finale).toEqual({startMs: 4_000, endMs: 6_000});
-			playUpToFinale(controller);
-			const judged = hits().length;
+		function playFinalChord(controller: PlayController, atMs = FINAL_HIT_MS) {
+			controller.press(FretLane.Green, atMs - 10);
+			controller.press(FretLane.Yellow, atMs - 5);
+			controller.tick(atMs + 40);
+		}
+
+		it('turns the notes under the lanes into free play that never touches the combo', () => {
+			const {controller, hits, finalePresses, restore} = finaleSetup();
+			expect(controller.finale).toEqual(LANES);
+			expect(controller.myTrack?.finale).toMatchObject({...LANES, firstIndex: 8, finalIndex: 12});
+			playBeats(controller, 8);
+			const {hud} = controller.myTrack!;
+			expect(hud.combo).toBe(8);
+
 			controller.tick(4_100);
 			expect(controller.finaleActive).toBe(true);
+			expect(hud.finaleOn).toBe(true);
+			expect(restore).toHaveBeenCalledWith('guitar');
 			controller.press(FretLane.Red, 4_200);
+			// The same lane again inside its cooldown lights up but does not count.
 			controller.press(FretLane.Red, 4_250);
 			controller.press(FretLane.Blue, 4_260);
-			controller.tick(5_900);
-			// Free play judges nothing: no hit or miss goes out for the notes under the fill.
-			expect(hits()).toHaveLength(judged);
-			expect(playFinaleNote).toHaveBeenCalledTimes(3);
-			const {hud} = controller.myTrack!;
-			expect(hud.finaleBonus).toBe(2 * FINALE_PRESS_POINTS * 2);
+			controller.tick(5_950);
+			// Past the lanes and before the final hit's window, a press still only lights its lane.
+			controller.press(FretLane.Orange, 6_100);
+			controller.tick(6_140);
 
-			controller.press(FretLane.Green, 6_040);
-			expect(hud.finalHit).toBe(true);
-			expect(send).toHaveBeenLastCalledWith({t: 'band.finale', kind: 'final', part: 'guitar', hit: true});
-			const scoreWithoutBonus = hud.score;
-			expect(controller.groupScore).toBe(scoreWithoutBonus + hud.finaleBonus);
+			expect(hits()).toHaveLength(8);
+			expect(hud.combo).toBe(8);
+			expect(controller.myTrack!.noteStates.slice(8, 12).every((state) => state === NoteState.Pending)).toBe(true);
+			const cap = finaleBonusCap(controller.myTrack!.chart, controller.myTrack!.finale!);
+			// A share of the judged lanes: eight notes before the lanes and the two-note final chord, 50 points each,
+			// doubled on Expert. The four notes under the lanes do not count.
+			expect(cap).toBeCloseTo(FINALE_BONUS_SHARE * 10 * 50 * 2);
+			const expected = nextFinaleBonus(nextFinaleBonus(0, LANES, cap), LANES, cap);
+			expect(hud.finaleBonus).toBeCloseTo(expected);
+			expect(finalePresses().map((payload) => payload.bonus)).toEqual([
+				Math.round(nextFinaleBonus(0, LANES, cap)),
+				Math.round(expected),
+			]);
 		});
 
-		it('drops the bonus when the final hit is missed and shows others landing theirs', () => {
-			const {controller, send} = setup({chart: FINALE_SONG, seats: finaleSeats, songEndMs: 8_000});
-			playUpToFinale(controller);
-			controller.press(FretLane.Red, 4_500);
-			controller.tick(6_400);
+		it('banks the bonus when the final hit lands', () => {
+			const {controller, send, submitIntent} = finaleSetup();
+			playBeats(controller, 8);
+			controller.tick(4_100);
+			for (let i = 0; i < 6; i++) controller.press(i % 5, 4_200 + i * 200);
 			const {hud} = controller.myTrack!;
+			const collected = Math.round(hud.finaleBonus);
+			playFinalChord(controller);
+
+			expect(hud.finalHit).toBe(true);
+			expect(hud.finaleOn).toBe(false);
+			expect(hud.combo).toBe(9);
+			expect(send).toHaveBeenCalledWith({t: 'band.finale', kind: 'final', part: 'guitar', hit: true});
+			expect(controller.groupScore).toBe(hud.score + collected);
+			controller.tick(8_000);
+			expect(submitIntent).toHaveBeenCalledWith({
+				t: 'band.result',
+				result: expect.objectContaining({finaleBonus: collected, score: Math.round(hud.score + collected)}),
+			});
+		});
+
+		it('loses the bonus when the final hit is missed', () => {
+			const {controller, send, submitIntent} = finaleSetup();
+			playBeats(controller, 8);
+			controller.tick(4_100);
+			controller.press(FretLane.Red, 4_500);
+			controller.tick(6_500);
+			const {hud} = controller.myTrack!;
+			expect(hud.finaleBonus).toBeGreaterThan(0);
 			expect(hud.finalHit).toBe(false);
+			expect(hud.combo).toBe(0);
 			expect(send).toHaveBeenCalledWith({t: 'band.finale', kind: 'final', part: 'guitar', hit: false});
 			expect(controller.groupScore).toBe(hud.score);
+			expect(controller.groupFinaleBonus).toBe(0);
+			controller.tick(8_000);
+			const [[report]] = submitIntent.mock.calls;
+			expect(report).toMatchObject({t: 'band.result'});
+			expect(report.t === 'band.result' && report.result).not.toHaveProperty('finaleBonus');
+		});
 
+		it('keeps the stem up through free play, even for a miss judged as it starts', () => {
+			const {controller, duck} = finaleSetup();
+			playBeats(controller, 7);
+			controller.tick(4_100);
+			expect(controller.myTrack!.noteStates[7]).toBe(NoteState.Missed);
+			expect(duck).not.toHaveBeenCalled();
+		});
+
+		it('plays the charted notes when the room turned the ending off', () => {
+			const {controller, hits, finalePresses} = finaleSetup({bigRockEnding: false});
+			expect(controller.finale).toBeNull();
+			expect(controller.myTrack?.finale).toBeNull();
+			playBeats(controller, 12);
+			controller.tick(5_900);
+			expect(controller.finaleActive).toBe(false);
+			expect(hits().map((payload) => payload.noteIndex)).toEqual([...Array(12).keys()]);
+			expect(controller.myTrack!.hud.combo).toBe(12);
+			expect(finalePresses()).toHaveLength(0);
+		});
+
+		it('mirrors other players’ free play and final hit', () => {
+			const {controller} = finaleSetup();
+			controller.tick(4_100);
 			controller.receive(
 				message('u2', {t: 'band.finale', kind: 'press', part: 'drums', lane: DrumLane.Kick, bonus: 90}),
 			);
-			controller.receive(message('u2', {t: 'band.finale', kind: 'final', part: 'drums', hit: true}));
 			const drums = controller.tracks[1];
-			expect(drums.hud).toMatchObject({finaleBonus: 90, finalHit: true});
+			expect(drums.laneFlashMs[DrumLane.Kick]).toBe(4_100);
+			expect(drums.hud).toMatchObject({finaleOn: true, finaleBonus: 90});
+			controller.receive(message('u2', {t: 'band.finale', kind: 'final', part: 'drums', hit: true}));
+			expect(drums.hud).toMatchObject({finaleBonus: 90, finalHit: true, bankedFinaleBonus: 90});
+			controller.tick(4_200);
+			expect(drums.hud.finaleOn).toBe(false);
+			controller.receive(
+				message('u2', {t: 'band.finale', kind: 'press', part: 'drums', lane: DrumLane.Red, bonus: Number.NaN}),
+			);
+			expect(drums.hud.finaleBonus).toBe(90);
 		});
+	});
+});
+
+describe('nextFinaleBonus', () => {
+	it('earns less per press as the bonus nears its cap', () => {
+		const short = {startMs: 0, endMs: 4_000};
+		const cap = 10_000;
+		let bonus = 0;
+		const gains: Array<number> = [];
+		for (let i = 0; i < 200; i++) {
+			const next = nextFinaleBonus(bonus, short, cap);
+			gains.push(next - bonus);
+			bonus = next;
+		}
+		expect(gains[1]).toBeLessThan(gains[0]);
+		expect(bonus).toBeLessThan(cap);
+		expect(bonus).toBeGreaterThan(cap * 0.99);
+		// Four presses a second through the ending reach about two thirds of the cap, eight about 86%.
+		const after = (presses: number) => {
+			let total = 0;
+			for (let i = 0; i < presses; i++) total = nextFinaleBonus(total, short, cap);
+			return total / cap;
+		};
+		expect(after(16)).toBeCloseTo(1 - (1 - 1 / 16) ** 16, 5);
+		expect(after(32)).toBeGreaterThan(0.86);
+		// A longer ending takes more presses to fill the same cap.
+		expect(nextFinaleBonus(0, {startMs: 0, endMs: 16_000}, cap)).toBe(nextFinaleBonus(0, short, cap) / 4);
 	});
 });
 

@@ -175,6 +175,19 @@
 	color: #fff;
 }
 
+.groupSetting {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	margin-top: 0.375rem;
+}
+
+.groupSettingLabel {
+	color: var(--band-t3);
+	font-size: 0.6875rem;
+}
+
 .groupHint {
 	margin: 0.3125rem 0 0;
 	color: var(--band-t3);

@@ -25,7 +25,7 @@ import {
 } from '@app/features/activities/band/game/HighwayGeometry';
 import {type HighwayFrame, HighwayRenderer} from '@app/features/activities/band/game/HighwayRenderer';
 import {MultiplierBadge} from '@app/features/activities/band/game/MultiplierBadge';
-import type {FeedbackKind, PlayController, SeatTrack} from '@app/features/activities/band/game/PlayController';
+import type {FeedbackKind, PlayController, SeatHud, SeatTrack} from '@app/features/activities/band/game/PlayController';
 import type {PlayRuntime} from '@app/features/activities/band/game/PlayRuntime';
 import styles from '@app/features/activities/band/game/PlayScreen.module.css';
 import {VocalsRenderer} from '@app/features/activities/band/game/VocalsRenderer';
@@ -67,7 +67,8 @@ const STARS_DESCRIPTOR = msg({
 });
 const FINALE_TITLE_DESCRIPTOR = msg({
 	message: 'Big finale',
-	comment: 'Band game: big title during the Big Rock Ending, the free-play section at the end of a song.',
+	comment:
+		'Band game: title during the Big Rock Ending, the free-play section at the end of a song; big over the stage and small under each player name while they free-play.',
 });
 const FINALE_HINT_DESCRIPTOR = msg({
 	message: 'Every key plays. Hit the last note all together.',
@@ -79,7 +80,18 @@ const FINALE_COUNTDOWN_DESCRIPTOR = msg({
 });
 const FINALE_BONUS_DESCRIPTOR = msg({
 	message: 'Finale bonus',
-	comment: 'Band game: label for the points collected during the Big Rock Ending, shown under the band score.',
+	comment:
+		'Band game: under a player name after they landed the final hit of the Big Rock Ending, with the bonus now added to the score.',
+});
+const FINALE_BONUS_AT_STAKE_DESCRIPTOR = msg({
+	message: 'Finale bonus at stake',
+	comment:
+		'Band game: under the band score during the Big Rock Ending, the bonus the band has collected so far. It is not in the score yet; each player keeps their share only by landing the final hit.',
+});
+const FINALE_BONUS_LOST_DESCRIPTOR = msg({
+	message: 'Finale bonus lost',
+	comment:
+		'Band game: under a player name once they missed the final hit of the Big Rock Ending, so the points they collected in it do not count.',
 });
 const SING_HINT_DESCRIPTOR = msg({
 	message: 'Your mic is open, sing!',
@@ -92,6 +104,7 @@ const VOLUME_DESCRIPTOR = msg({
 });
 
 const BADGE_OFFSET = 12;
+const COUNTDOWN_MAX_SHARE = 0.8;
 
 function formatClock(ms: number): string {
 	const seconds = Math.max(0, Math.floor(ms / 1000));
@@ -177,7 +190,6 @@ function useStageLoop(
 			const frame: HighwayFrame = {
 				nowMs,
 				tracks: controller.tracks,
-				finale: controller.finale,
 				reducedMotion: Accessibility.useReducedMotion,
 				feedbackLabels,
 				fontFamily,
@@ -268,9 +280,9 @@ const ScoreBox = observer(function ScoreBox({controller}: {controller: PlayContr
 				{formatNumber(Math.round(controller.groupScore), locale)}
 			</b>
 			<StarRating value={controller.stars} data-flx="activities.band.game.play-stage.score-box.star-rating" />
-			{controller.finale && bonus > 0 && (
+			{controller.finaleActive && bonus > 0 && (
 				<div className={styles.bonus} data-flx="activities.band.game.play-stage.score-box.bonus">
-					{i18n._(FINALE_BONUS_DESCRIPTOR)}{' '}
+					{i18n._(FINALE_BONUS_AT_STAKE_DESCRIPTOR)}{' '}
 					<b className={styles.num} data-flx="activities.band.game.play-stage.score-box.num">
 						+{formatNumber(bonus, locale)}
 					</b>
@@ -353,11 +365,12 @@ const GroupMeter = observer(function GroupMeter({controller}: {controller: PlayC
 const FinaleBanner = observer(function FinaleBanner({runtime, layout}: {runtime: PlayRuntime; layout: StageLayout}) {
 	const {i18n} = useLingui();
 	const songMs = useSongTime(runtime, 100);
-	const {finale} = runtime.controller;
-	if (!finale || songMs > finale.endMs + 1_000) return null;
-	const leftMs = finale.endMs - songMs;
+	const {finalHitMs} = runtime.controller;
+	if (finalHitMs === null) return null;
+	const leftMs = finalHitMs - songMs;
 	const distance = noteDistance(layout, leftMs);
-	const showCountdown = leftMs > 0 && distance <= layout.planeLength;
+	// The far end of the highway sits under the banner's hint, so the chip waits until the bar is clear of it.
+	const showCountdown = leftMs > 0 && distance <= layout.planeLength * COUNTDOWN_MAX_SHARE;
 	const chip = toFrame(layout, layout.originX, highwayAnchor(layout, layout.highways[0], distance).y);
 	return (
 		<>
@@ -388,16 +401,18 @@ const PlayerIdentity = observer(function PlayerIdentity({
 	seat,
 	isMine,
 	speaking,
-	starPower,
+	hud,
 }: {
 	entry: BandSongSummary;
 	seat: BandSeat;
 	isMine: boolean;
 	speaking: boolean;
-	starPower: boolean;
+	// Null for the singer, who has no highway.
+	hud: SeatHud | null;
 }) {
 	const {i18n} = useLingui();
 	const user = Users.getUser(seat.userId);
+	const locale = getCurrentLocale();
 	return (
 		<>
 			{user && (
@@ -417,7 +432,22 @@ const PlayerIdentity = observer(function PlayerIdentity({
 						</span>
 					)}
 				</b>
-				{starPower ? (
+				{hud?.finaleOn ? (
+					<span className={styles.finaleOn} data-flx="activities.band.game.play-stage.player-identity.finale-on">
+						{i18n._(FINALE_TITLE_DESCRIPTOR)}
+					</span>
+				) : hud?.finalHit === true && hud.bankedFinaleBonus > 0 ? (
+					<span className={styles.finaleOn} data-flx="activities.band.game.play-stage.player-identity.finale-banked">
+						{i18n._(FINALE_BONUS_DESCRIPTOR)}{' '}
+						<b className={styles.num} data-flx="activities.band.game.play-stage.player-identity.finale-banked-bonus">
+							+{formatNumber(hud.bankedFinaleBonus, locale)}
+						</b>
+					</span>
+				) : hud?.finalHit === false && hud.finaleBonus > 0 ? (
+					<span className={styles.finaleLost} data-flx="activities.band.game.play-stage.player-identity.finale-lost">
+						{i18n._(FINALE_BONUS_LOST_DESCRIPTOR)}
+					</span>
+				) : hud?.starPowerActive ? (
 					<span className={styles.starPowerOn} data-flx="activities.band.game.play-stage.player-identity.star-power-on">
 						{i18n._(STAR_POWER_ON_DESCRIPTOR)}
 					</span>
@@ -440,14 +470,12 @@ const HighwayHud = observer(function HighwayHud({
 	layout,
 	index,
 	speaking,
-	finaleOn,
 }: {
 	entry: BandSongSummary;
 	track: SeatTrack;
 	layout: StageLayout;
 	index: number;
 	speaking: boolean;
-	finaleOn: boolean;
 }) {
 	const highway = layout.highways[index];
 	if (!highway) return null;
@@ -466,7 +494,7 @@ const HighwayHud = observer(function HighwayHud({
 				<MultiplierBadge
 					multiplier={hud.multiplier}
 					starPower={hud.starPowerActive}
-					label={finaleOn ? `+${formatNumber(hud.finaleBonus, locale)}` : undefined}
+					label={hud.finaleOn ? `+${formatNumber(Math.round(hud.finaleBonus), locale)}` : undefined}
 					energy={track.isMine ? hud.starPowerEnergy : undefined}
 					data-flx="activities.band.game.play-stage.highway-hud.multiplier-badge"
 				/>
@@ -481,7 +509,7 @@ const HighwayHud = observer(function HighwayHud({
 					seat={track.seat}
 					isMine={track.isMine}
 					speaking={speaking}
-					starPower={hud.starPowerActive}
+					hud={hud}
 					data-flx="activities.band.game.play-stage.highway-hud.player-identity"
 				/>
 			</div>
@@ -511,7 +539,7 @@ const VocalsStrip = observer(function VocalsStrip({
 					seat={seat}
 					isMine={isMine}
 					speaking={speaking}
-					starPower={false}
+					hud={null}
 					data-flx="activities.band.game.play-stage.vocals-strip.player-identity"
 				/>
 			</div>
@@ -570,7 +598,6 @@ export const PlayStage = observer(function PlayStage({runtime, entry, channelId,
 	const vocalsSeat = vocals ? controller.vocalsSeat : null;
 	useStageLoop(runtime, layout, canvasRef, vocalsCanvasRef, vocalsSeat ? vocals : null, feedbackLabels);
 	const speaking = useSpeakingUsers(channelId);
-	const finaleOn = controller.finaleActive;
 
 	return (
 		<div ref={rootRef} className={styles.stage} data-flx="activities.band.game.play-stage.stage">
@@ -603,7 +630,7 @@ export const PlayStage = observer(function PlayStage({runtime, entry, channelId,
 						<ScoreBox controller={controller} data-flx="activities.band.game.play-stage.score-box" />
 					</div>
 					<GroupMeter controller={controller} data-flx="activities.band.game.play-stage.group-meter" />
-					{finaleOn && (
+					{controller.finaleActive && (
 						<FinaleBanner runtime={runtime} layout={layout} data-flx="activities.band.game.play-stage.finale-banner" />
 					)}
 					{controller.tracks.map((track, index) => (
@@ -614,7 +641,6 @@ export const PlayStage = observer(function PlayStage({runtime, entry, channelId,
 							layout={layout}
 							index={index}
 							speaking={speaking.has(track.seat.userId)}
-							finaleOn={finaleOn}
 							data-flx="activities.band.game.play-stage.highway-hud"
 						/>
 					))}

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {codaSpan} from '@app/features/activities/band/engine/BigRockEnding';
 import {noteFlags, noteTypes} from '@app/features/activities/band/engine/vendor/scan-chart/note-parsing-interfaces';
 import type {ParsedChart} from '@app/features/activities/band/engine/vendor/scan-chart/notes-parser';
 
@@ -59,6 +60,8 @@ export interface PartChart {
 	readonly groups: ReadonlyArray<NoteGroup>;
 	readonly starPower: ReadonlyArray<TimeSpan>;
 	readonly solos: ReadonlyArray<TimeSpan>;
+	// The part's Big Rock Ending lanes; null when the chart has none (see BigRockEnding).
+	readonly bigRockEnding: TimeSpan | null;
 	readonly durationMs: number;
 }
 
@@ -128,5 +131,14 @@ export function buildPartChart(part: InstrumentPart, difficulty: BandDifficulty,
 		});
 	}
 
-	return {part, difficulty, derived: false, groups, starPower, solos, durationMs: chartDurationMs(groups)};
+	return {
+		part,
+		difficulty,
+		derived: false,
+		groups,
+		starPower,
+		solos,
+		bigRockEnding: codaSpan(track.drumFreestyleSections),
+		durationMs: chartDurationMs(groups),
+	};
 }

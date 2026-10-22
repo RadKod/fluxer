@@ -16,10 +16,11 @@ import {
 	type BandState,
 } from '@app/features/activities/band/BandProtocol';
 import type {FakeActivityPeer, FakeActivitySession} from '@app/features/activities/band/dev/FakeActivitySession';
+import {isFreePlayGroup, type PartFinale} from '@app/features/activities/band/engine/BigRockEnding';
 import type {BandDifficulty, BandPart} from '@app/features/activities/band/engine/ChartModel';
 import {multiplierForStreak, NOTE_POINTS} from '@app/features/activities/band/engine/Judge';
 import {BAND_PARTS} from '@app/features/activities/band/flow/BandRoomMachine';
-import {type BandFinaleMessage, FINALE_PRESS_POINTS} from '@app/features/activities/band/game/PlayController';
+import {nextFinaleBonus} from '@app/features/activities/band/game/PlayController';
 import {action, makeObservable, observable, observableRef} from 'mobx';
 
 export type BandBotRole = 'player' | 'spectator';
@@ -40,10 +41,10 @@ export interface BandBotSettings {
 }
 
 // What a bot needs from a chart: the time (ms from song start) of each note group of its part, by group index, and
-// the Big Rock Ending, whose notes are free play instead of judged hits.
+// the part's Big Rock Ending, whose notes are free play up to the final hit, with the cap of its bonus.
 export interface BandBotChart {
 	readonly notes: ReadonlyArray<number>;
-	readonly finale: {readonly startMs: number; readonly endMs: number} | null;
+	readonly finale: (PartFinale & {readonly bonusCap: number}) | null;
 }
 
 // Null when the song cannot be read; the bot then plays an even beat across the song's length.
@@ -270,7 +271,12 @@ export class BandBot {
 		}
 		if (this.play) return;
 		this.setActivity(`playing ${seat.part}`);
-		const run = {part: seat.part, difficulty: seat.difficulty, startAt: state.startAt};
+		const run = {
+			part: seat.part,
+			difficulty: seat.difficulty,
+			startAt: state.startAt,
+			bigRockEnding: state.bigRockEnding !== false,
+		};
 		const round = this.round;
 		void this.bots.chart(state.songId, seat.part, seat.difficulty).then(
 			(chart) => this.round === round && this.startPlay(run, chart ?? this.fallbackChart(state.songId)),
@@ -305,15 +311,19 @@ export class BandBot {
 		return {notes, finale: null};
 	}
 
-	private startPlay(run: {part: BandPart; difficulty: BandDifficulty; startAt: number}, chart: BandBotChart): void {
+	private startPlay(
+		{bigRockEnding, ...run}: {part: BandPart; difficulty: BandDifficulty; startAt: number; bigRockEnding: boolean},
+		chart: BandBotChart,
+	): void {
+		const finale = bigRockEnding ? chart.finale : null;
 		this.play = {
 			...run,
 			notes: chart.notes,
-			finale: chart.finale,
+			finale,
 			next: 0,
 			finaleBonus: 0,
 			lastPressMs: Number.NEGATIVE_INFINITY,
-			finaleResolved: chart.finale === null,
+			finaleResolved: finale === null,
 			combo: 0,
 			bestStreak: 0,
 			rawScore: 0,
@@ -334,7 +344,7 @@ export class BandBot {
 			while (play.next < play.notes.length && play.notes[play.next] < songMs - 1_000) play.next += 1;
 		}
 		while (play.next < play.notes.length && play.notes[play.next] <= songMs) {
-			if (this.inFinale(play, play.notes[play.next])) {
+			if (isFreePlayGroup(play.finale, play.next)) {
 				play.next += 1;
 				continue;
 			}
@@ -360,35 +370,40 @@ export class BandBot {
 				score: Math.round(play.rawScore * BAND_DIFFICULTY_MULTIPLIER[play.difficulty]),
 			};
 			this.peer.send(message, {reliable: false});
+			if (play.next === play.finale?.finalIndex) this.resolveFinale(play, hit);
 			play.next += 1;
 		}
 		this.playFinale(play, songMs);
 		if (play.next >= play.notes.length && play.finaleResolved) this.finishPlay(play);
 	}
 
-	private inFinale(play: PlayRun, msTime: number): boolean {
-		return play.finale !== null && msTime >= play.finale.startMs && msTime <= play.finale.endMs;
-	}
-
-	// Free play: lossy presses on random lanes while the fill runs, then one reliable message for the final hit, which
-	// banks the bonus only when it lands.
+	// Free play: lossy presses on random lanes while the lanes run. The final hit is judged with the notes and banks the
+	// bonus when it lands; a part with no final hit banks it as the lanes end.
 	private playFinale(play: PlayRun, songMs: number): void {
 		const finale = play.finale;
 		if (!finale || play.finaleResolved || songMs < finale.startMs) return;
-		if (songMs < finale.endMs) {
-			if (songMs - play.lastPressMs < FINALE_PRESS_GAP_MS) return;
-			play.lastPressMs = songMs;
-			play.finaleBonus += Math.round(FINALE_PRESS_POINTS * BAND_DIFFICULTY_MULTIPLIER[play.difficulty]);
-			const lane = Math.floor(this.bots.random() * FINALE_LANES);
-			this.peer.send(
-				{t: 'band.finale', kind: 'press', part: play.part, lane, bonus: play.finaleBonus},
-				{reliable: false},
-			);
+		if (songMs >= finale.endMs) {
+			if (finale.finalIndex === null) this.resolveFinale(play, true);
 			return;
 		}
+		if (songMs - play.lastPressMs < FINALE_PRESS_GAP_MS) return;
+		play.lastPressMs = songMs;
+		play.finaleBonus = nextFinaleBonus(play.finaleBonus, finale, finale.bonusCap);
+		const lane = Math.floor(this.bots.random() * FINALE_LANES);
+		this.peer.send(
+			{t: 'band.finale', kind: 'press', part: play.part, lane, bonus: Math.round(play.finaleBonus)},
+			{reliable: false},
+		);
+	}
+
+	private resolveFinale(play: PlayRun, hit: boolean): void {
 		play.finaleResolved = true;
-		const hit = this.bots.random() < this.settings.accuracy;
-		if (hit) play.rawScore += Math.round(play.finaleBonus / BAND_DIFFICULTY_MULTIPLIER[play.difficulty]);
+		if (hit) {
+			play.finaleBonus = Math.round(play.finaleBonus);
+			play.rawScore += play.finaleBonus / BAND_DIFFICULTY_MULTIPLIER[play.difficulty];
+		} else {
+			play.finaleBonus = 0;
+		}
 		this.peer.send({t: 'band.finale', kind: 'final', part: play.part, hit});
 	}
 
@@ -408,12 +423,13 @@ export class BandBot {
 			part: play.part,
 			difficulty: play.difficulty,
 			score: Math.round(play.rawScore * BAND_DIFFICULTY_MULTIPLIER[play.difficulty]),
-			rawScore: play.rawScore,
+			rawScore: Math.round(play.rawScore),
 			accuracy: judged === 0 ? 0 : play.hit / judged,
 			bestStreak: play.bestStreak,
 			notesHit: play.hit,
 			notesMissed: play.missed,
 			starPowerUses: 0,
+			...(play.finaleResolved && play.finaleBonus > 0 && {finaleBonus: play.finaleBonus}),
 		};
 		this.sendToLeader({t: 'band.result', result});
 	}
@@ -429,7 +445,7 @@ export class BandBot {
 		}, wait);
 	}
 
-	private send(message: BandMessage | BandFinaleMessage): void {
+	private send(message: BandMessage): void {
 		this.peer.send(message);
 	}
 

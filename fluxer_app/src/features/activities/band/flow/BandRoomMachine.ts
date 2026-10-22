@@ -152,6 +152,7 @@ function startSelect(songId: string, now: number): SelectState {
 		phase: 'select',
 		songId,
 		groupDifficulty: BAND_DEFAULT_GROUP_DIFFICULTY,
+		bigRockEnding: true,
 		seats: [],
 		watching: [],
 		endsAt: now + BAND_PHASE_MS.select,
@@ -172,6 +173,7 @@ function startPlay(state: SelectState, now: number, ctx: BandRoomContext): BandS
 		songId: state.songId,
 		seats,
 		startAt: now + BAND_PHASE_MS.countdown,
+		bigRockEnding: state.bigRockEnding !== false,
 	};
 }
 
@@ -281,6 +283,10 @@ function setGroupDifficulty(state: SelectState, difficulty: BandDifficulty, ctx:
 	return {...state, groupDifficulty: difficulty, seats};
 }
 
+function setBigRockEnding(state: SelectState, enabled: boolean): SelectState {
+	return (state.bigRockEnding !== false) === enabled ? state : {...state, bigRockEnding: enabled};
+}
+
 function finite(value: number, min = 0): number {
 	return Number.isFinite(value) ? Math.max(min, value) : min;
 }
@@ -300,17 +306,20 @@ function acceptResult(
 	const seat = seats.find((candidate) => candidate.userId === fromUserId);
 	if (!seat || results.some((result) => result.userId === fromUserId)) return null;
 	const rawScore = count(payload.rawScore);
+	const score = Math.round(rawScore * BAND_DIFFICULTY_MULTIPLIER[seat.difficulty]);
+	const finaleBonus = Math.min(count(payload.finaleBonus ?? 0), score);
 	const result: BandPlayerResult = {
 		userId: fromUserId,
 		part: seat.part,
 		difficulty: seat.difficulty,
-		score: Math.round(rawScore * BAND_DIFFICULTY_MULTIPLIER[seat.difficulty]),
+		score,
 		rawScore,
 		accuracy: Math.min(1, finite(payload.accuracy)),
 		bestStreak: count(payload.bestStreak),
 		notesHit: count(payload.notesHit),
 		notesMissed: count(payload.notesMissed),
 		starPowerUses: count(payload.starPowerUses),
+		...(finaleBonus > 0 && {finaleBonus}),
 	};
 	const next = [...results, result];
 	next.sort((a, b) => BAND_PARTS.indexOf(a.part) - BAND_PARTS.indexOf(b.part));
@@ -362,6 +371,8 @@ export function reduceBandIntent(
 			return state.phase === 'select' ? setSeatDifficulty(state, intent.difficulty, fromUserId, ctx) : state;
 		case 'band.groupDifficulty':
 			return state.phase === 'select' && fromLeader ? setGroupDifficulty(state, intent.difficulty, ctx) : state;
+		case 'band.bigRockEnding':
+			return state.phase === 'select' && fromLeader ? setBigRockEnding(state, intent.enabled) : state;
 		case 'band.ready': {
 			if (state.phase !== 'select') return state;
 			// A client only says ready once its package is open, so ready also counts as loaded. A client from before
@@ -465,6 +476,7 @@ function parseResult(value: unknown): Omit<BandPlayerResult, 'userId'> | null {
 	const numbers = ['score', 'rawScore', 'accuracy', 'bestStreak', 'notesHit', 'notesMissed', 'starPowerUses'] as const;
 	if (!isPart(record.part) || !isDifficulty(record.difficulty)) return null;
 	if (!numbers.every((key) => isNumber(record[key]))) return null;
+	if (record.finaleBonus !== undefined && !isNumber(record.finaleBonus)) return null;
 	return {
 		part: record.part,
 		difficulty: record.difficulty,
@@ -475,6 +487,7 @@ function parseResult(value: unknown): Omit<BandPlayerResult, 'userId'> | null {
 		notesHit: record.notesHit as number,
 		notesMissed: record.notesMissed as number,
 		starPowerUses: record.starPowerUses as number,
+		...(record.finaleBonus !== undefined && {finaleBonus: record.finaleBonus as number}),
 	};
 }
 
@@ -493,6 +506,8 @@ export function parseBandIntent(payload: unknown): BandIntent | null {
 		case 'band.difficulty':
 		case 'band.groupDifficulty':
 			return isDifficulty(record.difficulty) ? {t: record.t, difficulty: record.difficulty} : null;
+		case 'band.bigRockEnding':
+			return typeof record.enabled === 'boolean' ? {t: 'band.bigRockEnding', enabled: record.enabled} : null;
 		case 'band.ready':
 			return typeof record.ready === 'boolean' ? {t: 'band.ready', ready: record.ready} : null;
 		case 'band.loaded':

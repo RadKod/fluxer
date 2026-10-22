@@ -76,6 +76,9 @@ export interface BandPlayerResult {
 	readonly notesHit: number;
 	readonly notesMissed: number;
 	readonly starPowerUses: number;
+	// Big Rock Ending bonus banked by the final hit, already part of score and rawScore. Missing when none was earned
+	// and in results from older clients.
+	readonly finaleBonus?: number;
 }
 
 export type BandState =
@@ -94,6 +97,9 @@ export type BandState =
 			readonly phase: 'select';
 			readonly songId: string;
 			readonly groupDifficulty: BandDifficulty;
+			// Leader's choice: songs with a Big Rock Ending end in free play. Off plays the notes charted under it.
+			// Missing in states from older leaders, which always play it.
+			readonly bigRockEnding?: boolean;
 			readonly seats: ReadonlyArray<BandSeat>;
 			// People who chose to watch (band.claimSeat with part null). The song starts early only once everyone in the
 			// room has either a ready seat or is in here; anyone else, late joiners included, is still deciding.
@@ -107,6 +113,8 @@ export type BandState =
 			readonly phase: 'play';
 			readonly songId: string;
 			readonly seats: ReadonlyArray<BandSeat>;
+			// From the select state; missing means on.
+			readonly bigRockEnding?: boolean;
 			// Leader clock (session.clock.now()) of song position zero.
 			readonly startAt: number;
 	  }
@@ -133,6 +141,8 @@ export type BandIntent =
 	| {readonly t: 'band.claimSeat'; readonly part: BandPart | null}
 	| {readonly t: 'band.difficulty'; readonly difficulty: BandDifficulty}
 	| {readonly t: 'band.groupDifficulty'; readonly difficulty: BandDifficulty}
+	// Leader only: turns the Big Rock Ending on or off for this song.
+	| {readonly t: 'band.bigRockEnding'; readonly enabled: boolean}
 	| {readonly t: 'band.ready'; readonly ready: boolean}
 	// My client has the package for this song open. Sent again whenever my seat shows it has not, so it is idempotent.
 	| {readonly t: 'band.loaded'; readonly songId: string}
@@ -154,6 +164,18 @@ export interface BandHitMessage {
 	readonly score: number;
 }
 
+// Broadcast by each player during the Big Rock Ending: lossy presses with the bonus collected so far, so others see
+// the lanes light up, then one reliable message saying whether the final hit landed and the bonus counts.
+export type BandFinaleMessage =
+	| {
+			readonly t: 'band.finale';
+			readonly kind: 'press';
+			readonly part: BandPart;
+			readonly lane: number;
+			readonly bonus: number;
+	  }
+	| {readonly t: 'band.finale'; readonly kind: 'final'; readonly part: BandPart; readonly hit: boolean};
+
 export type BandCheerKind = 'clap' | 'fire' | 'horns' | 'wow';
 
 export interface BandCheerMessage {
@@ -161,4 +183,4 @@ export interface BandCheerMessage {
 	readonly kind: BandCheerKind;
 }
 
-export type BandMessage = BandIntent | BandHitMessage | BandCheerMessage;
+export type BandMessage = BandIntent | BandHitMessage | BandFinaleMessage | BandCheerMessage;

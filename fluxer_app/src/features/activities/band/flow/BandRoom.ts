@@ -11,7 +11,7 @@ import type {
 	BandSeat,
 	BandState,
 } from '@app/features/activities/band/BandProtocol';
-import type {SongPackage} from '@app/features/activities/band/engine/SongPackage';
+import {type SongPackage, SongPackageError} from '@app/features/activities/band/engine/SongPackage';
 import {BandCrowd, isBandCheerKind} from '@app/features/activities/band/flow/BandCrowd';
 import {BandLeaderController} from '@app/features/activities/band/flow/BandLeaderController';
 import {BandMicGuard, type BandMicPort} from '@app/features/activities/band/flow/BandMicGuard';
@@ -89,6 +89,7 @@ export class BandRoom {
 			context: computed,
 			mySeat: computed,
 			songLoaded: computed,
+			songHasBigRockEnding: computed,
 			spectatorIds: computed,
 			setSongPackage: action,
 		});
@@ -122,6 +123,18 @@ export class BandRoom {
 		const state = this.state;
 		if (!state || state.phase === 'pick') return false;
 		return this.songPackage?.songId === state.songId && this.songPackage.status === 'ready';
+	}
+
+	// The current song ends in a Big Rock Ending; known once its package is open here.
+	get songHasBigRockEnding(): boolean {
+		const loaded = this.songPackage;
+		if (!this.songLoaded || loaded?.status !== 'ready') return false;
+		try {
+			return loaded.songPackage.chart().bigRockEnding !== null;
+		} catch (error) {
+			if (error instanceof SongPackageError) return false;
+			throw error;
+		}
 	}
 
 	// Everyone in the room without a seat, one entry per person.
