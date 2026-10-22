@@ -20,6 +20,7 @@ const CUSTOM_MAP: BandKeyMap = {
 	drumPads: ['KeyA', 'KeyS', 'KeyD', 'KeyF'],
 	kick: ['Enter'],
 	starPower: ['ShiftRight'],
+	whammy: ['Enter'],
 };
 
 const LANE_NOTES = [57, 60, 62, 64, 67];

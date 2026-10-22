@@ -57433,3 +57433,154 @@ msgstr "Jamming"
 #: src/features/activities/band/BandStatus.ts
 msgid "{part} · jam"
 msgstr "{part} · jam"
+||||||| c32d8a906
+
+
+#. Band game: tip for guitar and bass; pressing Space again and again while holding
+#. a long note bends its sound like a whammy bar, and on star power notes it also
+#. fills the star power bar.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgctxt "band-key-guide"
+msgid "Pump Space on a long note for whammy; on star notes it fills star power."
+msgstr "Pump Space on a long note for whammy; on star notes it fills star power."
+
+#. Band game: switch on the seat card of a guitar or keys player, the title of the
+#. info box during such a solo, and a results row with the points from it. In the
+#. song solo sections the player plays their own solo in the song key instead of
+#. the written notes, like Rock Band 4.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Freestyle solo"
+msgstr "Freestyle solo"
+
+#. Band game: explanation under the Freestyle solo switch on the seat card; instead
+#. of notes, the lane shows hints like high or low, long note, fast, tapping.
+#: src/features/activities/band/flow/BandFlowMessages.ts
+msgid "Where the song has a solo, play your own in its key. Cues on the lane show how."
+msgstr "Where the song has a solo, play your own in its key. Cues on the lane show how."
+
+#. Band game: small badge under a player name while they play a freestyle solo,
+#. their own solo in the song key instead of the written notes. Very short.
+#: src/features/activities/band/game/PlayStageParts.tsx
+msgctxt "band-player-status"
+msgid "Freestyle"
+msgstr "Freestyle"
+
+#. Band game freestyle solo info box: the key and scale my keys play, e.g. "A minor
+#. pentatonic". {tonic} is a note name like A, F# or Bb; {scale} is one of the
+#. scale names.
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-key"
+msgid "{tonic} {scale}"
+msgstr "{tonic} {scale}"
+
+#. Band game freestyle solo info box: scale name, shown after the key note, e.g. "A
+#. minor pentatonic".
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-key"
+msgid "minor pentatonic"
+msgstr "minor pentatonic"
+
+#. Band game freestyle solo info box: scale name, shown after the key note, e.g. "C
+#. major pentatonic".
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-key"
+msgid "major pentatonic"
+msgstr "major pentatonic"
+
+#. Band game freestyle solo info box: the blues scale, shown after the key note,
+#. e.g. "E blues".
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-key"
+msgid "blues"
+msgstr "blues"
+
+#. Band game freestyle solo info box: scale name, shown after the key note, e.g. "D
+#. natural minor".
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-key"
+msgid "natural minor"
+msgstr "natural minor"
+
+#. Band game freestyle solo info box: heading over what the shapes on the lane
+#. mean.
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-info"
+msgid "Cues"
+msgstr "Cues"
+
+#. Band game freestyle solo info box: heading over what each keyboard key does in
+#. the solo.
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-info"
+msgid "Keys"
+msgstr "Keys"
+
+#. Band game freestyle solo info box: a blue band on the lane means play high, on
+#. the right-hand keys.
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-info"
+msgid "Blue: high notes, the right-hand keys"
+msgstr "Blue: high notes, the right-hand keys"
+
+#. Band game freestyle solo info box: an orange band on the lane means play low, on
+#. the left-hand keys.
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-info"
+msgid "Orange: low notes, the left-hand keys"
+msgstr "Orange: low notes, the left-hand keys"
+
+#. Band game freestyle solo info box: a solid band means hold a single note.
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-info"
+msgid "Solid: one long note, held"
+msgstr "Solid: one long note, held"
+
+#. Band game freestyle solo info box: a striped band means play many notes quickly.
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-info"
+msgid "Striped: play fast"
+msgstr "Striped: play fast"
+
+#. Band game freestyle solo info box: a dotted band means tapping, two keys pressed
+#. one after the other quickly.
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-info"
+msgid "Dotted: tap two keys in turn"
+msgstr "Dotted: tap two keys in turn"
+
+#. Band game freestyle solo info box: a band of stars means free play, anything
+#. counts.
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-info"
+msgid "Stars: play anything"
+msgstr "Stars: play anything"
+
+#. Band game freestyle solo info box: the five lane keys, e.g. "A S D F G", each
+#. play one note of the scale.
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-info"
+msgid "{keys}: the notes of the scale"
+msgstr "{keys}: the notes of the scale"
+
+#. Band game freestyle solo info box: holding Space bends the ringing note up a
+#. whole step; with Shift held too, a step and a half. Use the local name of the
+#. Space key.
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-info"
+msgid "Space: bend, with Shift a step and a half"
+msgstr "Space: bend, with Shift a step and a half"
+
+#. Band game freestyle solo info box, guitar only: pressing two keys next to each
+#. other at once plays a pinch harmonic, the high squeal of rock solos. Keep "pinch
+#. harmonic" if there is no common local term.
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-info"
+msgid "Two neighbouring keys together: pinch harmonic"
+msgstr "Two neighbouring keys together: pinch harmonic"
+
+#. Band game freestyle solo info box: keeping a key down sustains the note, and on
+#. guitar it turns into amp feedback after a moment.
+#: src/features/activities/band/game/FreestyleInfo.tsx
+msgctxt "band-freestyle-info"
+msgid "Hold a key: the note rings on, then feeds back"
+msgstr "Hold a key: the note rings on, then feeds back"

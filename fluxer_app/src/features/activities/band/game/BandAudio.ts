@@ -4,6 +4,7 @@ import type {BandPart} from '@app/features/activities/band/engine/ChartModel';
 import type {AudioClockAnchor, SongStartSchedule} from '@app/features/activities/band/engine/SessionClock';
 import type {AudioStem, StemRole} from '@app/features/activities/band/engine/SongPackage';
 import type {DuckDepth} from '@app/features/activities/band/game/BandSettings';
+import {WHAMMY, type WhammyModulation, whammyDelaySwingS} from '@app/features/activities/band/game/Whammy';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {acquireSharedVoiceAudioContext} from '@app/features/voice/engine/VoiceSharedAudioContext';
 
@@ -26,6 +27,11 @@ export const GUIDE_VOCAL_GAIN = 0.25;
 // The shared voice context soft-clips everything it plays above 0.8. A mastered song peaks near full scale, so at
 // -3 dB it stays under that knee at any volume setting and the call's voices have room on top of it.
 export const SONG_HEADROOM_GAIN = 0.7;
+
+// During a freestyle solo the soloist's own recorded part drops to this, so the freestyle is not doubled by the record
+// but the part's place in the mix is still felt.
+export const FREESTYLE_STEM_LEVEL = 0.2;
+const FREESTYLE_FADE_S = 0.12;
 
 const PLAYABLE_ROLES: ReadonlyArray<StemRole> = [
 	'guitar',
@@ -65,6 +71,22 @@ export function restoreEnvelope(now: number, level: number, current: number): Re
 	];
 }
 
+export interface ContextSpan {
+	readonly startTime: number;
+	readonly endTime: number;
+}
+
+// Gain automation for a part's freestyle solo sections, in AudioContext time: down to FREESTYLE_STEM_LEVEL as each
+// section starts and back up as it ends.
+export function freestyleStemEnvelope(spans: ReadonlyArray<ContextSpan>): ReadonlyArray<GainPoint> {
+	return spans.flatMap(({startTime, endTime}) => [
+		{time: startTime, value: 1, ramp: false},
+		{time: startTime + FREESTYLE_FADE_S, value: FREESTYLE_STEM_LEVEL, ramp: true},
+		{time: endTime, value: FREESTYLE_STEM_LEVEL, ramp: false},
+		{time: endTime + FREESTYLE_FADE_S, value: 1, ramp: true},
+	]);
+}
+
 export function applyGainPoints(param: AudioParam, points: ReadonlyArray<GainPoint>): void {
 	const [first] = points;
 	if (!first) return;
@@ -97,10 +119,20 @@ export function stemRoleForPlayback(role: StemRole, separateStems: boolean): Ste
 	return separateStems ? role : 'backing';
 }
 
+interface WhammyChain {
+	readonly delay: DelayNode;
+	readonly lfo: OscillatorNode;
+	readonly swing: GainNode;
+}
+
 interface RoleChannel {
 	readonly gain: GainNode;
 	buffers: Array<AudioBuffer>;
 	level: number;
+	// The last node before the master; stages added later go between it and the master.
+	tail: AudioNode;
+	freestyleGain: GainNode | null;
+	whammy: WhammyChain | null;
 }
 
 // Song playback on the shared voice AudioContext, so it follows the user's output device. One gain per stem role
@@ -209,6 +241,48 @@ export class BandAudio {
 		param.setValueAtTime(channel.level, this.context.currentTime);
 	}
 
+	// Ducks the part under each freestyle solo section; scheduled once, before the song starts, on the shared timing
+	// every client computes alike. Separate from the miss ducking, which keeps working on top of it.
+	scheduleFreestyleSolos(part: BandPart, spans: ReadonlyArray<ContextSpan>): void {
+		const channel = this.channels.get(part);
+		if (!channel || spans.length === 0) return;
+		if (!channel.freestyleGain) {
+			channel.freestyleGain = this.context.createGain();
+			this.append(channel, channel.freestyleGain);
+		}
+		applyGainPoints(channel.freestyleGain.gain, freestyleStemEnvelope(spans));
+	}
+
+	// Puts the part's stem through the whammy's delay line; call before start() so the stem never jumps in time.
+	// False when the song has no stem for the part.
+	enableWhammy(part: BandPart): boolean {
+		const channel = this.channels.get(part);
+		if (!channel) return false;
+		if (channel.whammy) return true;
+		const delay = this.context.createDelay(WHAMMY.baseDelayS * 4);
+		delay.delayTime.value = WHAMMY.baseDelayS;
+		const lfo = this.context.createOscillator();
+		lfo.frequency.value = WHAMMY.defaultRateHz;
+		const swing = this.context.createGain();
+		swing.gain.value = 0;
+		lfo.connect(swing);
+		swing.connect(delay.delayTime);
+		lfo.start();
+		this.append(channel, delay);
+		channel.whammy = {delay, lfo, swing};
+		return true;
+	}
+
+	setWhammy(part: BandPart, modulation: WhammyModulation): void {
+		const chain = this.channels.get(part)?.whammy;
+		if (!chain) return;
+		const now = this.context.currentTime;
+		const easing = modulation.depthCents > 0 ? WHAMMY.attackS : WHAMMY.releaseS;
+		// setTargetAtTime gets within 5% of the target after three time constants.
+		chain.swing.gain.setTargetAtTime(whammyDelaySwingS(modulation), now, easing / 3);
+		chain.lfo.frequency.setTargetAtTime(modulation.rateHz, now, WHAMMY.attackS / 3);
+	}
+
 	setVolume(volume: number): void {
 		const value = Math.min(1, Math.max(0, volume)) * SONG_HEADROOM_GAIN;
 		this.master.gain.setTargetAtTime(value, this.context.currentTime, 0.02);
@@ -234,7 +308,16 @@ export class BandAudio {
 		if (this.disposed) return;
 		this.disposed = true;
 		this.stopSources();
-		for (const channel of this.channels.values()) channel.gain.disconnect();
+		for (const channel of this.channels.values()) {
+			channel.gain.disconnect();
+			channel.freestyleGain?.disconnect();
+			if (channel.whammy) {
+				channel.whammy.lfo.stop();
+				channel.whammy.lfo.disconnect();
+				channel.whammy.swing.disconnect();
+				channel.whammy.delay.disconnect();
+			}
+		}
 		this.channels.clear();
 		this.master.disconnect();
 		this.release();
@@ -245,10 +328,17 @@ export class BandAudio {
 		if (!channel) {
 			const gain = this.context.createGain();
 			gain.connect(this.master);
-			channel = {gain, buffers: [], level: 1};
+			channel = {gain, buffers: [], level: 1, tail: gain, freestyleGain: null, whammy: null};
 			this.channels.set(role, channel);
 		}
 		return channel;
+	}
+
+	private append(channel: RoleChannel, node: AudioNode): void {
+		channel.tail.disconnect(this.master);
+		channel.tail.connect(node);
+		node.connect(this.master);
+		channel.tail = node;
 	}
 
 	private stopSources(): void {

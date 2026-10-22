@@ -41,6 +41,7 @@ const SONG: BandSongSummary = {
 	genre: null,
 	year: null,
 	previewStartMs: null,
+	key: null,
 };
 const CHART_END_MS = 9_500;
 const NOTES = [1_000, 2_000, 3_000, 5_000, 7_000, 9_500];

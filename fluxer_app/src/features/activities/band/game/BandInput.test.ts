@@ -7,6 +7,7 @@ import {
 	DEFAULT_BAND_KEY_MAP,
 	inputSongTimeMs,
 	type LaneInput,
+	type WhammyKeyInput,
 } from '@app/features/activities/band/game/BandInput';
 import {describe, expect, it} from 'vitest';
 
@@ -17,11 +18,13 @@ function key(code: string, timeStamp: number, extra: Partial<KeyboardEvent> = {}
 function keyboard(part: 'guitar' | 'drums') {
 	const lanes: Array<LaneInput> = [];
 	const starPower: Array<number> = [];
+	const whammy: Array<WhammyKeyInput> = [];
 	const instance = new BandKeyboard(DEFAULT_BAND_KEY_MAP, part, {
 		onLane: (input) => lanes.push(input),
 		onStarPower: (timeStamp) => starPower.push(timeStamp),
+		onWhammy: (input) => whammy.push(input),
 	});
-	return {instance, lanes, starPower};
+	return {instance, lanes, starPower, whammy};
 }
 
 describe('BandInput', () => {
@@ -46,6 +49,27 @@ describe('BandInput', () => {
 		expect(actionForKey(DEFAULT_BAND_KEY_MAP, 'guitar', 'KeyH')).toEqual({kind: 'none'});
 		expect(actionForKey(DEFAULT_BAND_KEY_MAP, 'drums', 'KeyA')).toEqual({kind: 'none'});
 		expect(actionForKey(DEFAULT_BAND_KEY_MAP, 'drums', 'Enter')).toEqual({kind: 'starPower'});
+	});
+
+	it('gives Space to the whammy on fret parts and keeps it the kick on drums', () => {
+		expect(
+			['guitar', 'rhythm', 'bass', 'keys'].map((part) => actionForKey(DEFAULT_BAND_KEY_MAP, part as never, 'Space')),
+		).toEqual([{kind: 'whammy'}, {kind: 'whammy'}, {kind: 'whammy'}, {kind: 'whammy'}]);
+		const {instance, whammy, lanes} = keyboard('guitar');
+		expect(instance.keyDown(key('Space', 10, {shiftKey: true}))).toBe(true);
+		expect(instance.keyDown(key('Space', 30, {repeat: true}))).toBe(true);
+		instance.keyDown(key('KeyA', 40));
+		instance.releaseAll(60);
+		expect(whammy).toEqual([
+			{kind: 'press', timeStamp: 10, shift: true},
+			{kind: 'release', timeStamp: 60, shift: false},
+		]);
+		expect(lanes.map(({kind}) => kind)).toEqual(['press', 'release']);
+		const drums = keyboard('drums');
+		drums.instance.keyDown(key('Space', 10));
+		drums.instance.keyUp(key('Space', 20));
+		expect(drums.whammy).toEqual([]);
+		expect(drums.lanes).toHaveLength(2);
 	});
 
 	it('takes a custom map', () => {

@@ -93,9 +93,16 @@ export interface JamPlayable {
 
 export const JAM_DEFAULT_VELOCITY = 0.9;
 
+export interface JamMixerOptions {
+	// Every pitched instrument plays this many cents off concert pitch, to sit in tune with a recording (a freestyle
+	// solo over a song); the drums are unaffected.
+	readonly tuningCents?: number;
+}
+
 // Master bus and room, one per AudioContext; every instrument connects to `input`.
 export class JamMixer {
 	readonly input: GainNode;
+	readonly tuningCents: number;
 	private readonly master: GainNode;
 	private readonly compressor: DynamicsCompressorNode;
 	private readonly reverb: ConvolverNode;
@@ -105,7 +112,9 @@ export class JamMixer {
 		readonly context: BaseAudioContext,
 		readonly bank: JamSampleBank,
 		destination: AudioNode,
+		{tuningCents = 0}: JamMixerOptions = {},
 	) {
+		this.tuningCents = tuningCents;
 		this.input = context.createGain();
 		this.reverbSend = context.createGain();
 		this.reverbSend.gain.value = REVERB_WET;
@@ -242,6 +251,7 @@ class SampleSet {
 		policy: VoicePolicy,
 		private readonly releaseS: number,
 		private readonly level: number,
+		private readonly tuningCents: number,
 	) {
 		this.allocator = new VoiceAllocator(policy);
 		this.keys = [...buffers.keys()].filter((key): key is number => typeof key === 'number');
@@ -253,7 +263,8 @@ class SampleSet {
 		if (!buffer) return;
 		const {id, cut} = this.allocator.start(note, null, time);
 		for (const voice of cut) this.voices.get(voice.id)?.release(time, LEAD_CHOKE_S);
-		const voice = new SampleVoice(this.context, buffer, this.output, detune * 100, velocity * this.level, time, () => {
+		const cents = detune * 100 + this.tuningCents;
+		const voice = new SampleVoice(this.context, buffer, this.output, cents, velocity * this.level, time, () => {
 			this.voices.delete(id);
 			this.allocator.end(id);
 		});
@@ -299,6 +310,7 @@ class JamMelodicSampler implements JamPlayable {
 			policy,
 			releaseS,
 			level,
+			mixer.tuningCents,
 		);
 	}
 
@@ -621,6 +633,7 @@ class JamGuitar implements JamPlayable {
 			{maxVoices: 6, chokeSameNote: true},
 			0.08,
 			JAM_LEVELS.guitarClean,
+			mixer.tuningCents,
 		);
 		this.power = new SampleSet(
 			context,
@@ -629,6 +642,7 @@ class JamGuitar implements JamPlayable {
 			{maxVoices: 1, chokeSameNote: true},
 			0.08,
 			JAM_LEVELS.powerChord,
+			mixer.tuningCents,
 		);
 		this.leadKeys = [...bank.lead.keys()];
 	}
@@ -650,7 +664,8 @@ class JamGuitar implements JamPlayable {
 		if (!sample) return;
 		const harmonic = options.pinchHarmonic ?? 0;
 		const pinch = harmonic > 1 ? leadPinchBuffer(this.mixer.context, this.mixer.bank, key, harmonic) : null;
-		const voice = new LeadVoice(this.mixer.context, sample, key, detune * 100, time, velocity, pinch, this.amp.input);
+		const cents = detune * 100 + this.mixer.tuningCents;
+		const voice = new LeadVoice(this.mixer.context, sample, key, cents, time, velocity, pinch, this.amp.input);
 		this.lead = {voice, note};
 	}
 

@@ -5,11 +5,14 @@ import {
 	BandAudio,
 	DUCK_SHAPES,
 	duckEnvelope,
+	FREESTYLE_STEM_LEVEL,
+	freestyleStemEnvelope,
 	GUIDE_VOCAL_GAIN,
 	restoreEnvelope,
 	SONG_HEADROOM_GAIN,
 	stemRoleForPlayback,
 } from '@app/features/activities/band/game/BandAudio';
+import {WHAMMY, whammyDelaySwingS} from '@app/features/activities/band/game/Whammy';
 import {describe, expect, it, vi} from 'vitest';
 
 const STRONG = DUCK_SHAPES.strong.level;
@@ -38,12 +41,27 @@ class FakeParam {
 }
 
 class FakeNode {
-	readonly connections: Array<unknown> = [];
+	connections: Array<unknown> = [];
 	connect(target: unknown) {
 		this.connections.push(target);
 		return target;
 	}
-	disconnect() {}
+	disconnect(target?: unknown) {
+		this.connections = target === undefined ? [] : this.connections.filter((node) => node !== target);
+	}
+}
+
+class FakeDelay extends FakeNode {
+	readonly delayTime = new FakeParam();
+}
+
+class FakeOscillator extends FakeNode {
+	readonly frequency = new FakeParam();
+	started = false;
+	start() {
+		this.started = true;
+	}
+	stop() {}
 }
 
 class FakeGain extends FakeNode {
@@ -62,9 +80,21 @@ class FakeSource extends FakeNode {
 function fakeContext(durations: Record<string, number>) {
 	const gains: Array<FakeGain> = [];
 	const sources: Array<FakeSource> = [];
+	const delays: Array<FakeDelay> = [];
+	const oscillators: Array<FakeOscillator> = [];
 	const context = {
 		currentTime: 5,
 		destination: new FakeNode(),
+		createDelay: () => {
+			const delay = new FakeDelay();
+			delays.push(delay);
+			return delay;
+		},
+		createOscillator: () => {
+			const oscillator = new FakeOscillator();
+			oscillators.push(oscillator);
+			return oscillator;
+		},
 		createGain: () => {
 			const gain = new FakeGain();
 			gains.push(gain);
@@ -79,7 +109,7 @@ function fakeContext(durations: Record<string, number>) {
 			duration: durations[new TextDecoder().decode(data)] ?? 0,
 		})),
 	};
-	return {context: context as unknown as AudioContext, gains, sources};
+	return {context: context as unknown as AudioContext, gains, sources, delays, oscillators};
 }
 
 function stem(role: AudioStem['role'], name: string): AudioStem {
@@ -183,6 +213,61 @@ describe('BandAudio', () => {
 		audio.setVolume(0.5);
 		expect(master.gain.calls.at(-1)).toEqual(['target', 0.5 * SONG_HEADROOM_GAIN, 5]);
 		expect(SONG_HEADROOM_GAIN).toBeLessThan(0.8);
+	});
+
+	it('ducks the soloist stem to a fifth under each freestyle section and brings it back after', async () => {
+		const {context, gains} = fakeContext({gtr: 100, song: 100});
+		const audio = new BandAudio(context);
+		await audio.loadStems([stem('guitar', 'gtr'), stem('backing', 'song')], true);
+		const [master, guitarGain] = gains;
+		audio.scheduleFreestyleSolos('guitar', [
+			{startTime: 20, endTime: 30},
+			{startTime: 50, endTime: 55},
+		]);
+		const freestyleGain = gains[3];
+		expect(guitarGain.connections).toEqual([freestyleGain]);
+		expect(freestyleGain.connections).toEqual([master]);
+		expect(freestyleGain.gain.calls.filter(([method]) => method !== 'cancel')).toEqual([
+			['set', 1, 20],
+			['ramp', FREESTYLE_STEM_LEVEL, 20.12],
+			['set', FREESTYLE_STEM_LEVEL, 30],
+			['ramp', 1, 30.12],
+			['set', 1, 50],
+			['ramp', FREESTYLE_STEM_LEVEL, 50.12],
+			['set', FREESTYLE_STEM_LEVEL, 55],
+			['ramp', 1, 55.12],
+		]);
+		expect(FREESTYLE_STEM_LEVEL).toBe(0.2);
+		// A miss during the song still ducks the part on its own gain, on top of the freestyle level.
+		audio.duck('guitar', 'strong');
+		expect(guitarGain.gain.calls.at(-1)).toEqual(['ramp', STRONG, 5.03]);
+		expect(freestyleStemEnvelope([])).toEqual([]);
+	});
+
+	it('runs a whammy part through a delay line whose swing follows the whammy, and leaves the rest alone', async () => {
+		const {context, gains, delays, oscillators} = fakeContext({gtr: 100, drm: 100});
+		const audio = new BandAudio(context);
+		await audio.loadStems([stem('guitar', 'gtr'), stem('drums', 'drm')], true);
+		expect(audio.enableWhammy('guitar')).toBe(true);
+		expect(audio.enableWhammy('guitar')).toBe(true);
+		expect(audio.enableWhammy('bass')).toBe(false);
+		expect(delays).toHaveLength(1);
+		const [delay] = delays;
+		const [lfo] = oscillators;
+		const [master, guitarGain, drumsGain, swing] = gains;
+		expect(delay.delayTime.value).toBe(WHAMMY.baseDelayS);
+		expect(guitarGain.connections).toEqual([delay]);
+		expect(delay.connections).toEqual([master]);
+		expect(drumsGain.connections).toEqual([master]);
+		expect(lfo.started).toBe(true);
+		expect(swing.connections).toEqual([delay.delayTime]);
+
+		const modulation = {depthCents: 40, rateHz: 6};
+		audio.setWhammy('guitar', modulation);
+		expect(swing.gain.calls.at(-1)).toEqual(['target', whammyDelaySwingS(modulation), 5]);
+		expect(lfo.frequency.calls.at(-1)).toEqual(['target', 6, 5]);
+		audio.setWhammy('guitar', {depthCents: 0, rateHz: 6});
+		expect(swing.gain.calls.at(-1)).toEqual(['target', 0, 5]);
 	});
 
 	it('releases the shared context lease once on dispose', async () => {

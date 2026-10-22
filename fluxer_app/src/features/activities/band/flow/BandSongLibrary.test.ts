@@ -119,6 +119,7 @@ describe('parseSongIndex', () => {
 				genre: null,
 				year: null,
 				previewStartMs: null,
+				key: null,
 			},
 		]);
 	});
@@ -141,6 +142,48 @@ describe('parseSongIndex', () => {
 		expect(songs.map(({groups, genre, year, previewStartMs}) => ({groups, genre, year, previewStartMs}))).toEqual([
 			{groups: ['turkce', 'metal'], genre: 'Heavy Metal', year: 1969, previewStartMs: 151_996},
 			{groups: [], genre: null, year: null, previewStartMs: null},
+		]);
+	});
+
+	it('reads the song key for freestyle solos, tolerating older and malformed entries', () => {
+		const {songs} = parseSongIndex(
+			{
+				songs: [
+					entry('a', {
+						key: {
+							tonic: 'Ab',
+							mode: 'major',
+							scale: 'major-pentatonic',
+							tuningCents: 13,
+							lowConfidence: false,
+							solos: [
+								{startMs: 112_938, endMs: 133_825, tonic: 'F', mode: 'minor', scale: 'blues'},
+								{startMs: 5, endMs: 1, tonic: 'F', mode: 'minor', scale: 'blues'},
+								{startMs: 0, endMs: 10, tonic: 'H', mode: 'minor', scale: 'blues'},
+							],
+						},
+					}),
+					entry('b', {
+						key: {tonic: 'D', mode: 'minor', scale: 'minor-pentatonic', lowConfidence: true, tuningCents: 900},
+					}),
+					entry('c', {key: {tonic: 'D', mode: 'dorian', scale: 'minor-pentatonic'}}),
+					entry('d'),
+				],
+			},
+			INDEX_URL,
+		);
+		expect(songs.map((song) => song.key)).toEqual([
+			{
+				tonic: 'Ab',
+				mode: 'major',
+				scale: 'major-pentatonic',
+				tuningCents: 13,
+				lowConfidence: false,
+				solos: [{startMs: 112_938, endMs: 133_825, tonic: 'F', mode: 'minor', scale: 'blues'}],
+			},
+			{tonic: 'D', mode: 'minor', scale: 'minor-pentatonic', tuningCents: 100, lowConfidence: true, solos: []},
+			null,
+			null,
 		]);
 	});
 

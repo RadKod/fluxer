@@ -20,6 +20,7 @@ function song(id: string, name: string, artist: string): BandSongSummary {
 		genre: null,
 		year: null,
 		previewStartMs: null,
+		key: null,
 	};
 }
 

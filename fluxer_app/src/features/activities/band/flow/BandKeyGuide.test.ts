@@ -48,6 +48,7 @@ describe('BandKeyGuide', () => {
 			drumPads: ['KeyU', 'KeyI', 'KeyO', 'KeyP'],
 			kick: ['KeyB'],
 			starPower: ['ShiftLeft'],
+			whammy: ['KeyW'],
 		};
 		expect(bandPartKeys(map, 'guitar').lanes.map((key) => key.label)).toEqual(['1', '2', '3', '4', '5']);
 		expect(bandPartKeys(map, 'guitar').starPower?.label).toBe('Shift');

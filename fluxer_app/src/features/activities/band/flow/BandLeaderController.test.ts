@@ -44,6 +44,7 @@ const SONG: BandSongSummary = {
 	genre: null,
 	year: null,
 	previewStartMs: null,
+	key: null,
 };
 
 const RESULT: Omit<BandPlayerResult, 'userId'> = {

@@ -33,6 +33,7 @@ const SONG: BandSongSummary = {
 	genre: null,
 	year: null,
 	previewStartMs: null,
+	key: null,
 };
 const NOTES = [500, 1_000, 1_500, 2_000, 2_500, 3_000];
 

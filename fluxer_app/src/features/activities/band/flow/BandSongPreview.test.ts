@@ -34,6 +34,7 @@ function song(id: string, overrides: Partial<BandSongSummary> = {}): BandSongSum
 		genre: null,
 		year: null,
 		previewStartMs: 60_000,
+		key: null,
 		...overrides,
 	};
 }

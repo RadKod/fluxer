@@ -20,6 +20,7 @@ import {
 } from '@app/features/activities/band/BandProtocol';
 import {tallyVotes} from '@app/features/activities/band/BandVotes';
 import {BAND_DIFFICULTIES, type BandDifficulty, type BandPart} from '@app/features/activities/band/engine/ChartModel';
+import {isFreestylePart} from '@app/features/activities/band/engine/FreestyleSolo';
 import {
 	applyJamSettings,
 	dropAbsentJamSeats,
@@ -232,7 +233,15 @@ function claimSeat(state: SelectState, part: BandPart | null, fromUserId: string
 	const difficulty = clampDifficulty(state.groupDifficulty, songPartDifficulties(ctx.songs.get(state.songId), part));
 	if (!difficulty) return state;
 	const seats = state.seats.filter((seat) => seat !== current);
-	seats.push({part, userId: fromUserId, difficulty, ready: false, loaded: current?.loaded === true});
+	const freestyleSolo = current?.freestyleSolo === true && isFreestylePart(part);
+	seats.push({
+		part,
+		userId: fromUserId,
+		difficulty,
+		ready: false,
+		loaded: current?.loaded === true,
+		...(freestyleSolo && {freestyleSolo}),
+	});
 	seats.sort((a, b) => BAND_PARTS.indexOf(a.part) - BAND_PARTS.indexOf(b.part));
 	return {...state, seats, watching: state.watching.filter((userId) => userId !== fromUserId)};
 }
@@ -241,7 +250,12 @@ function updateSeat(state: SelectState, fromUserId: string, update: (seat: BandS
 	const current = state.seats.find((seat) => seat.userId === fromUserId);
 	if (!current) return state;
 	const next = update(current);
-	if (next.difficulty === current.difficulty && next.ready === current.ready && next.loaded === current.loaded) {
+	if (
+		next.difficulty === current.difficulty &&
+		next.ready === current.ready &&
+		next.loaded === current.loaded &&
+		next.freestyleSolo === current.freestyleSolo
+	) {
 		return state;
 	}
 	return {...state, seats: state.seats.map((seat) => (seat === current ? next : seat))};
@@ -273,6 +287,16 @@ function setGroupDifficulty(state: SelectState, difficulty: BandDifficulty, ctx:
 	return {...state, groupDifficulty: difficulty, seats};
 }
 
+// Only a part with solos to free-play takes it; switching it off drops the field, as an older client never sets it.
+function setFreestyleSolo(state: SelectState, enabled: boolean, fromUserId: string): SelectState {
+	return updateSeat(state, fromUserId, (seat) => {
+		if (!isFreestylePart(seat.part)) return seat;
+		if (enabled) return {...seat, freestyleSolo: true};
+		const {freestyleSolo: _dropped, ...rest} = seat;
+		return rest;
+	});
+}
+
 function setBigRockEnding(state: SelectState, enabled: boolean): SelectState {
 	return (state.bigRockEnding !== false) === enabled ? state : {...state, bigRockEnding: enabled};
 }
@@ -298,6 +322,7 @@ function acceptResult(
 	const rawScore = count(payload.rawScore);
 	const score = Math.round(rawScore * BAND_DIFFICULTY_MULTIPLIER[seat.difficulty]);
 	const finaleBonus = Math.min(count(payload.finaleBonus ?? 0), score);
+	const freestylePoints = Math.min(count(payload.freestylePoints ?? 0), score);
 	const result: BandPlayerResult = {
 		userId: fromUserId,
 		part: seat.part,
@@ -310,6 +335,7 @@ function acceptResult(
 		notesMissed: count(payload.notesMissed),
 		starPowerUses: count(payload.starPowerUses),
 		...(finaleBonus > 0 && {finaleBonus}),
+		...(freestylePoints > 0 && {freestylePoints}),
 	};
 	const next = [...results, result];
 	next.sort((a, b) => BAND_PARTS.indexOf(a.part) - BAND_PARTS.indexOf(b.part));
@@ -365,6 +391,8 @@ export function reduceBandIntent(
 			return state.phase === 'select' && fromLeader ? setGroupDifficulty(state, intent.difficulty, ctx) : state;
 		case 'band.bigRockEnding':
 			return state.phase === 'select' && fromLeader ? setBigRockEnding(state, intent.enabled) : state;
+		case 'band.freestyleSolo':
+			return state.phase === 'select' ? setFreestyleSolo(state, intent.enabled, fromUserId) : state;
 		case 'band.ready': {
 			if (state.phase !== 'select') return state;
 			// A client only says ready once its package is open, so ready also counts as loaded. A client from before
@@ -486,6 +514,7 @@ function parseResult(value: unknown): Omit<BandPlayerResult, 'userId'> | null {
 	if (!isPart(record.part) || !isDifficulty(record.difficulty)) return null;
 	if (!numbers.every((key) => isNumber(record[key]))) return null;
 	if (record.finaleBonus !== undefined && !isNumber(record.finaleBonus)) return null;
+	if (record.freestylePoints !== undefined && !isNumber(record.freestylePoints)) return null;
 	return {
 		part: record.part,
 		difficulty: record.difficulty,
@@ -497,6 +526,7 @@ function parseResult(value: unknown): Omit<BandPlayerResult, 'userId'> | null {
 		notesMissed: record.notesMissed as number,
 		starPowerUses: record.starPowerUses as number,
 		...(record.finaleBonus !== undefined && {finaleBonus: record.finaleBonus as number}),
+		...(record.freestylePoints !== undefined && {freestylePoints: record.freestylePoints as number}),
 	};
 }
 
@@ -517,6 +547,8 @@ export function parseBandIntent(payload: unknown): BandIntent | null {
 			return isDifficulty(record.difficulty) ? {t: record.t, difficulty: record.difficulty} : null;
 		case 'band.bigRockEnding':
 			return typeof record.enabled === 'boolean' ? {t: 'band.bigRockEnding', enabled: record.enabled} : null;
+		case 'band.freestyleSolo':
+			return typeof record.enabled === 'boolean' ? {t: 'band.freestyleSolo', enabled: record.enabled} : null;
 		case 'band.ready':
 			return typeof record.ready === 'boolean' ? {t: 'band.ready', ready: record.ready} : null;
 		case 'band.loaded':

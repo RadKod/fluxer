@@ -131,6 +131,16 @@
 	font-weight: 800;
 }
 
+/* The freestyle solo badge, in the cues' blue. */
+.who .freestyleOn {
+	padding: 1px 7px;
+	border-radius: 999px;
+	background-color: rgba(61, 139, 255, 0.2);
+	color: #a9c9ff;
+	font-size: 11px;
+	font-weight: 700;
+}
+
 .who .finaleLost {
 	color: rgba(247, 245, 240, 0.42);
 }
@@ -174,6 +184,11 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
+}
+
+.freestyleInfo {
+	top: 230px;
+	right: 24px;
 }
 
 .infoNoVocals {
