@@ -25,6 +25,7 @@ const SONG: BandSongSummary = {
 	genre: null,
 	year: null,
 	previewStartMs: null,
+	key: null,
 };
 
 function setup(

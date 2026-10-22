@@ -54,6 +54,12 @@ const FINALE_BONUS_LOST_DESCRIPTOR = msg({
 	comment:
 		'Band game: under a player name once they missed the final hit of the Big Rock Ending, so the points they collected in it do not count.',
 });
+const FREESTYLE_STATUS_DESCRIPTOR = msg({
+	message: 'Freestyle',
+	context: 'band-player-status',
+	comment:
+		'Band game: small badge under a player name while they play a freestyle solo, their own solo in the song key instead of the written notes. Very short.',
+});
 export const SING_HINT_DESCRIPTOR = msg({
 	message: 'Your mic is open, sing!',
 	comment:
@@ -206,12 +212,13 @@ export const FinaleBanner = observer(function FinaleBanner({
 	);
 });
 
-export type PlayerStatusKind = 'finale' | 'finaleBanked' | 'finaleLost' | 'starPower';
+export type PlayerStatusKind = 'finale' | 'freestyle' | 'finaleBanked' | 'finaleLost' | 'starPower';
 
 // What replaces a player's usual line under their name, most important first; null for the usual line.
 export function playerStatusKind(hud: SeatHud | null): PlayerStatusKind | null {
 	if (!hud) return null;
 	if (hud.finaleOn) return 'finale';
+	if (hud.freestyleOn) return 'freestyle';
 	if (hud.finalHit === true && hud.bankedFinaleBonus > 0) return 'finaleBanked';
 	if (hud.finalHit === false && hud.finaleBonus > 0) return 'finaleLost';
 	return hud.starPowerActive ? 'starPower' : null;
@@ -228,6 +235,8 @@ export const PlayerStatusText = observer(function PlayerStatusText({
 	switch (kind) {
 		case 'finale':
 			return <>{i18n._(FINALE_TITLE_DESCRIPTOR)}</>;
+		case 'freestyle':
+			return <>{i18n._(FREESTYLE_STATUS_DESCRIPTOR)}</>;
 		case 'finaleBanked':
 			return (
 				<>

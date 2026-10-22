@@ -31,6 +31,7 @@ function song(
 		genre: null,
 		year,
 		previewStartMs: null,
+		key: null,
 	};
 }
 

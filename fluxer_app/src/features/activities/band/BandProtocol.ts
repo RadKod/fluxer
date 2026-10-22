@@ -38,6 +38,32 @@ export const BAND_RATING_MAX = 5;
 export const BAND_GENRE_GROUPS = ['turkce', 'rock', 'metal', 'alternatif', 'pop', 'country', 'klasik'] as const;
 export type BandGenreGroup = (typeof BAND_GENRE_GROUPS)[number];
 
+export const BAND_KEY_SCALES = ['minor-pentatonic', 'major-pentatonic', 'blues'] as const;
+export type BandKeyScale = (typeof BAND_KEY_SCALES)[number];
+
+export interface BandKeyArea {
+	// Pitch class name as the analysis writes it: "A", "F#", "Bb".
+	readonly tonic: string;
+	readonly mode: 'major' | 'minor';
+	// The scale a solo over it should use.
+	readonly scale: BandKeyScale;
+}
+
+export interface BandSoloKey extends BandKeyArea {
+	readonly startMs: number;
+	readonly endMs: number;
+}
+
+// The song's key, measured from its audio by sanalyer.com's scripts/sarkilar/ton-bul.py, for freestyle solos.
+export interface BandSongKey extends BandKeyArea {
+	// How far the recording sits from A440 tuning; freestyle notes are shifted by it.
+	readonly tuningCents: number;
+	// The analysis was unsure (weak key, stems and mix disagree, or tuning far off); solos then stay on the pentatonic.
+	readonly lowConfidence: boolean;
+	// Keys measured over the chart's solo sections; a section without an entry uses the song's key.
+	readonly solos: ReadonlyArray<BandSoloKey>;
+}
+
 // One entry of the song library index (sanalyer.com/sarkilar/<önek>/index.json). The .sng package carries everything else.
 export interface BandSongSummary {
 	readonly id: string;
@@ -60,6 +86,8 @@ export interface BandSongSummary {
 	readonly year: number | null;
 	// Where the song's preview starts, from song.ini preview_start_time.
 	readonly previewStartMs: number | null;
+	// Null when the index has no key for the song; freestyle solos then play A minor pentatonic.
+	readonly key: BandSongKey | null;
 }
 
 export interface BandVote {
@@ -74,6 +102,9 @@ export interface BandSeat {
 	readonly ready: boolean;
 	// The player's client has the song package open. Missing in states from older leaders, which never wait for it.
 	readonly loaded?: boolean;
+	// Rock Band 4 style: the player's solo sections are free play in the song's key instead of charted notes. Only
+	// for FREESTYLE_PARTS; missing means off.
+	readonly freestyleSolo?: boolean;
 }
 
 export interface BandPlayerResult {
@@ -91,6 +122,8 @@ export interface BandPlayerResult {
 	// Big Rock Ending bonus banked by the final hit, already part of score and rawScore. Missing when none was earned
 	// and in results from older clients.
 	readonly finaleBonus?: number;
+	// Points from freestyle solo sections, already part of score and rawScore. Missing when the player played none.
+	readonly freestylePoints?: number;
 }
 
 export type BandState =
@@ -155,6 +188,8 @@ export type BandIntent =
 	| {readonly t: 'band.groupDifficulty'; readonly difficulty: BandDifficulty}
 	// Leader only: turns the Big Rock Ending on or off for this song.
 	| {readonly t: 'band.bigRockEnding'; readonly enabled: boolean}
+	// My seat plays its solo sections freestyle (see BandSeat.freestyleSolo).
+	| {readonly t: 'band.freestyleSolo'; readonly enabled: boolean}
 	| {readonly t: 'band.ready'; readonly ready: boolean}
 	// My client has the package for this song open. Sent again whenever my seat shows it has not, so it is idempotent.
 	| {readonly t: 'band.loaded'; readonly songId: string}
@@ -188,6 +223,25 @@ export type BandFinaleMessage =
 	  }
 	| {readonly t: 'band.finale'; readonly kind: 'final'; readonly part: BandPart; readonly hit: boolean};
 
+// Broadcast by a freestyle player while they score in a solo section, lossy and at most a few times a second, so the
+// others' HUD follows. Their notes travel as jam messages (JamMessages) and sound on every client.
+export interface BandFreestyleMessage {
+	readonly t: 'band.freestyle';
+	readonly part: BandPart;
+	readonly score: number;
+	readonly combo: number;
+	readonly multiplier: number;
+}
+
+// Broadcast by a player pumping the whammy on a sustain, lossy: on each press and release, and again every
+// WHAMMY_REFRESH_MS while held, so a lost release cannot leave others hearing the stem wobble. Depth 0 is let go.
+export interface BandWhammyMessage {
+	readonly t: 'band.whammy';
+	readonly part: BandPart;
+	readonly depthCents: number;
+	readonly rateHz: number;
+}
+
 export type BandCheerKind = 'clap' | 'fire' | 'horns' | 'wow';
 
 export interface BandCheerMessage {
@@ -195,4 +249,10 @@ export interface BandCheerMessage {
 	readonly kind: BandCheerKind;
 }
 
-export type BandMessage = BandIntent | BandHitMessage | BandFinaleMessage | BandCheerMessage;
+export type BandMessage =
+	| BandIntent
+	| BandHitMessage
+	| BandFinaleMessage
+	| BandFreestyleMessage
+	| BandWhammyMessage
+	| BandCheerMessage;

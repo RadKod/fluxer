@@ -13,6 +13,7 @@ import {BandSongCover} from '@app/features/activities/band/flow/components/BandS
 import {useElementSize} from '@app/features/activities/band/flow/components/useElementSize';
 import {DIFFICULTY_LABELS, FEEDBACK_LABELS, partLabel} from '@app/features/activities/band/game/BandGameLabels';
 import styles from '@app/features/activities/band/game/FocusStage.module.css';
+import {FreestyleInfo} from '@app/features/activities/band/game/FreestyleInfo';
 import {
 	FOCUS_HEIGHT,
 	type FocusLayout,
@@ -76,6 +77,7 @@ const SIDE_RESOLUTION = 0.5;
 
 const STATUS_CLASSES: Readonly<Record<PlayerStatusKind, string>> = {
 	finale: styles.statusBright,
+	freestyle: styles.statusFreestyle,
 	finaleBanked: styles.statusBright,
 	finaleLost: styles.statusMuted,
 	starPower: styles.statusStar,
@@ -512,6 +514,14 @@ export const FocusStage = observer(function FocusStage({runtime, entry, channelI
 							rect={layout.hud}
 							speaking={speaking.has(vocalsSeat.userId)}
 							data-flx="activities.band.game.focus-stage.singer-hud"
+						/>
+					)}
+					{!layout.compact && (
+						<FreestyleInfo
+							runtime={runtime}
+							entry={entry}
+							className={styles.freestyleInfo}
+							data-flx="activities.band.game.focus-stage.freestyle-info"
 						/>
 					)}
 					{controller.finaleActive && layout.main && (

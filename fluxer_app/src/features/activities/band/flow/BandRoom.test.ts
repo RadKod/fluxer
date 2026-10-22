@@ -28,6 +28,7 @@ const SONG: BandSongSummary = {
 	genre: null,
 	year: null,
 	previewStartMs: null,
+	key: null,
 };
 
 const VOICE_PORT: BandVoicePort = {setSingerMic: () => {}, setUnlevelledVoices: () => {}};
@@ -97,6 +98,48 @@ describe('BandRoom', () => {
 		session.connectPeer('player');
 		expect([...room.context.presentUserIds].sort()).toEqual(['me', 'player']);
 		expect(room.spectatorIds).toEqual(['player']);
+	});
+
+	it('remembers the freestyle solo choice per user and puts it on my seat in every song', () => {
+		const stored = new Map<string, string>();
+		const storage = () => ({
+			getItem: (key: string) => stored.get(key) ?? null,
+			setItem: (key: string, value: string) => void stored.set(key, value),
+		});
+		room.dispose();
+		room = new BandRoom(session, {library, micPort: MIC_PORT, voicePort: VOICE_PORT, freestyleStorage: storage});
+		expect(room.freestyleSolo).toBe(false);
+		expect(room.mySeat).not.toHaveProperty('freestyleSolo');
+		room.setFreestyleSolo(true);
+		expect(stored.get('sanalyer:band-freestyle-solo:me')).toBe('on');
+		expect(room.mySeat).toMatchObject({part: 'guitar', freestyleSolo: true});
+
+		room.dispose();
+		session.setState({
+			phase: 'select',
+			songId: SONG.id,
+			groupDifficulty: 'expert',
+			seats: [{part: 'guitar', userId: 'me', difficulty: 'expert', ready: false}],
+			watching: [],
+			endsAt: Date.now() + 20_000,
+		});
+		room = new BandRoom(session, {library, micPort: MIC_PORT, voicePort: VOICE_PORT, freestyleStorage: storage});
+		expect(room.freestyleSolo).toBe(true);
+		expect(room.mySeat).toMatchObject({freestyleSolo: true});
+		room.setFreestyleSolo(false);
+		expect(room.mySeat).not.toHaveProperty('freestyleSolo');
+		expect(stored.get('sanalyer:band-freestyle-solo:me')).toBe('off');
+	});
+
+	it('keeps freestyle off when storage refuses', () => {
+		room.dispose();
+		const refusing = () => {
+			throw new Error('denied');
+		};
+		room = new BandRoom(session, {library, micPort: MIC_PORT, voicePort: VOICE_PORT, freestyleStorage: refusing});
+		expect(room.freestyleSolo).toBe(false);
+		room.setFreestyleSolo(true);
+		expect(room.freestyleSolo).toBe(true);
 	});
 
 	it('does not send ready while the song is still downloading', () => {

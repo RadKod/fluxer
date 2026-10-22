@@ -318,6 +318,12 @@ export const KEY_GUIDE_KICK_TIP_DESCRIPTOR = msg({
 	context: 'band-key-guide',
 	comment: 'Band game: drums tip; kick drum notes are drawn as an orange bar across the whole lane, played with Space.',
 });
+export const KEY_GUIDE_WHAMMY_TIP_DESCRIPTOR = msg({
+	message: 'Pump Space on a long note for whammy; on star notes it fills star power.',
+	context: 'band-key-guide',
+	comment:
+		'Band game: tip for guitar and bass; pressing Space again and again while holding a long note bends its sound like a whammy bar, and on star power notes it also fills the star power bar.',
+});
 export const KEY_GUIDE_VOCALS_TIP_DESCRIPTOR = msg({
 	message: 'Sing into your mic; pitch is scored.',
 	context: 'band-key-guide',
@@ -494,6 +500,16 @@ export const FINALE_BONUS_DESCRIPTOR = msg({
 	message: 'Finale bonus',
 	comment:
 		'Band game: results row, the bonus the player banked by landing the final hit of the Big Rock Ending, shown as +points.',
+});
+export const FREESTYLE_SOLO_DESCRIPTOR = msg({
+	message: 'Freestyle solo',
+	comment:
+		'Band game: switch on the seat card of a guitar or keys player, the title of the info box during such a solo, and a results row with the points from it. In the song solo sections the player plays their own solo in the song key instead of the written notes, like Rock Band 4.',
+});
+export const FREESTYLE_SOLO_HINT_DESCRIPTOR = msg({
+	message: 'Where the song has a solo, play your own in its key. Cues on the lane show how.',
+	comment:
+		'Band game: explanation under the Freestyle solo switch on the seat card; instead of notes, the lane shows hints like high or low, long note, fast, tapping.',
 });
 export const NOTES_MISSED_DESCRIPTOR = msg({
 	message: 'Notes missed',

@@ -8,11 +8,17 @@ import {
 } from '@app/features/activities/band/engine/SessionClock';
 import type {SongPackage} from '@app/features/activities/band/engine/SongPackage';
 import {BandAudio, GUIDE_VOCAL_GAIN} from '@app/features/activities/band/game/BandAudio';
-import {inputSongTimeMs} from '@app/features/activities/band/game/BandInput';
+import {inputSongTimeMs, type LaneInput, type WhammyKeyInput} from '@app/features/activities/band/game/BandInput';
 import type {DuckDepth} from '@app/features/activities/band/game/BandSettings';
+import {FreestyleAudio} from '@app/features/activities/band/game/FreestyleAudio';
 import {MissSound} from '@app/features/activities/band/game/MissSound';
 import {PlayController} from '@app/features/activities/band/game/PlayController';
-import type {ActivitySession} from '@app/features/activities/session/ActivitySessionTypes';
+import {isWhammyPart} from '@app/features/activities/band/game/Whammy';
+import {isJamMessage} from '@app/features/activities/band/jam/JamMessages';
+import type {ActivityMessage, ActivitySession} from '@app/features/activities/session/ActivitySessionTypes';
+import {Logger} from '@app/features/platform/utils/AppLogger';
+
+const logger = new Logger('BandPlayRuntime');
 
 export type BandPlayState = Extract<BandState, {phase: 'play'}>;
 
@@ -37,10 +43,16 @@ export interface PlayRuntimeOptions {
 	readonly submitIntent: (intent: BandIntent) => void;
 }
 
-// Everything one song needs outside React: decoded audio started on the shared clock, the controller, and the
-// conversions from the audio clock to song time.
+// Everything one song needs outside React: decoded audio started on the shared clock, the controller, freestyle
+// solos and whammy on that audio, the conversions from the audio clock to song time, and routing my keys.
 export class PlayRuntime {
 	private readonly unsubscribe: () => void;
+	// Loads after the song has started (the samples are only needed once a solo comes), and stays null if they fail:
+	// the solo then scores without sound.
+	private freestyle: FreestyleAudio | null = null;
+	// The whammy key went down inside my solo, so its release ends a bend, wherever the song is by then.
+	private bending = false;
+	private disposed = false;
 
 	private constructor(
 		readonly controller: PlayController,
@@ -48,7 +60,7 @@ export class PlayRuntime {
 		private readonly songZeroContextTime: number,
 		private readonly options: PlayRuntimeOptions,
 	) {
-		this.unsubscribe = options.session.onMessage(controller.receive);
+		this.unsubscribe = options.session.onMessage((message) => this.receive(message));
 	}
 
 	static async start(options: PlayRuntimeOptions): Promise<PlayRuntime> {
@@ -74,8 +86,8 @@ export class PlayRuntime {
 				anchor,
 				audio.minStartLeadSeconds(anchor),
 			);
-			audio.start(schedule);
 
+			let runtime: PlayRuntime | null = null;
 			const chartEndMs = Math.max(chart.durationMs, chart.bigRockEnding?.endMs ?? 0);
 			const controller = new PlayController({
 				chart,
@@ -89,8 +101,25 @@ export class PlayRuntime {
 				duck: (part) => audio.duck(part, options.duckDepth()),
 				restore: (part) => audio.restore(part),
 				playMissSound: (part) => missSound.play(part),
+				whammy: (part, modulation) => audio.setWhammy(part, modulation),
+				freestyleEnded: () => runtime?.freestyle?.releaseAll(performance.now()),
 			});
-			return new PlayRuntime(controller, audio, schedule.songZeroContextTime, options);
+			// Both change how stems are routed, so they go in before the first sample plays.
+			for (const track of controller.tracks) {
+				if (isWhammyPart(track.part)) audio.enableWhammy(track.part);
+				const songZero = schedule.songZeroContextTime;
+				audio.scheduleFreestyleSolos(
+					track.part,
+					track.freestyle.map((section) => ({
+						startTime: songZero + section.startMs / 1000,
+						endTime: songZero + section.endMs / 1000,
+					})),
+				);
+			}
+			audio.start(schedule);
+			runtime = new PlayRuntime(controller, audio, schedule.songZeroContextTime, options);
+			runtime.loadFreestyle();
+			return runtime;
 		} catch (error) {
 			audio.dispose();
 			throw error;
@@ -123,8 +152,67 @@ export class PlayRuntime {
 		);
 	}
 
+	// A key of my highway: in my freestyle solo it plays the solo voice too; the controller scores either way.
+	lane({kind, lane, timeStamp}: LaneInput): void {
+		const songMs = this.inputMs(timeStamp);
+		if (kind === 'press') {
+			if (this.controller.mySoloSectionAt(songMs)) this.freestyle?.press(lane, songMs, timeStamp);
+			this.controller.press(lane, songMs);
+			return;
+		}
+		this.freestyle?.release(lane, timeStamp);
+		this.controller.release(lane, songMs);
+	}
+
+	// The whammy key bends in my freestyle solo (Shift: a step and a half) and is the whammy everywhere else.
+	whammyKey({kind, timeStamp, shift}: WhammyKeyInput): void {
+		const songMs = this.inputMs(timeStamp);
+		if (kind === 'press' && this.controller.mySoloSectionAt(songMs)) {
+			this.bending = true;
+			this.freestyle?.bend(true, shift ? 3 : 2, timeStamp);
+			return;
+		}
+		if (kind === 'release' && this.bending) {
+			this.bending = false;
+			this.freestyle?.bend(false, 2, timeStamp);
+			return;
+		}
+		this.controller.whammy(kind === 'press', songMs);
+	}
+
 	dispose(): void {
+		this.disposed = true;
 		this.unsubscribe();
+		this.freestyle?.dispose();
+		this.freestyle = null;
 		this.audio.dispose();
+	}
+
+	private loadFreestyle(): void {
+		const seats = this.controller.tracks
+			.filter((track) => track.freestyle.length > 0)
+			.map((track) => ({userId: track.seat.userId, part: track.part, sections: track.freestyle}));
+		if (seats.length === 0) return;
+		const {session, entry} = this.options;
+		FreestyleAudio.load(this.audio, session.clock, (message) => void session.send(message), {
+			songKey: entry.key,
+			seats,
+			myUserId: session.me.userId,
+		}).then(
+			(freestyle) => {
+				if (this.disposed) freestyle.dispose();
+				else this.freestyle = freestyle;
+			},
+			(error: unknown) => logger.warn('Freestyle solos play without sound', {error}),
+		);
+	}
+
+	private receive(message: ActivityMessage): void {
+		this.controller.receive(message);
+		const {freestyle} = this;
+		if (!freestyle || !isJamMessage(message.payload)) return;
+		const {userId} = message.from;
+		const lanes = freestyle.receive(userId, message.payload, this.heardMs(), this.options.session.clock.now());
+		this.controller.flashRemoteLanes(userId, lanes);
 	}
 }

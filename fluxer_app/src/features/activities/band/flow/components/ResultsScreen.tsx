@@ -17,6 +17,7 @@ import {
 	CROWD_TITLE_DESCRIPTOR,
 	DIFFICULTY_DESCRIPTORS,
 	FINALE_BONUS_DESCRIPTOR,
+	FREESTYLE_SOLO_DESCRIPTOR,
 	GO_TO_PICK_DESCRIPTOR,
 	LONGEST_STREAK_DESCRIPTOR,
 	MY_RATING_DESCRIPTOR,
@@ -193,6 +194,16 @@ const PlayerColumn = observer(function PlayerColumn({room, song, seat, result, g
 								</dt>
 								<dd className={styles.finaleBonus} data-flx="activities.band.flow.results-screen.player-column.dd--4">
 									+{i18n.number(result.finaleBonus)}
+								</dd>
+							</>
+						)}
+						{result.freestylePoints !== undefined && result.freestylePoints > 0 && (
+							<>
+								<dt data-flx="activities.band.flow.results-screen.player-column.dt--5">
+									{i18n._(FREESTYLE_SOLO_DESCRIPTOR)}
+								</dt>
+								<dd className={styles.finaleBonus} data-flx="activities.band.flow.results-screen.player-column.dd--5">
+									+{i18n.number(result.freestylePoints)}
 								</dd>
 							</>
 						)}

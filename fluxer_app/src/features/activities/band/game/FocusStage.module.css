@@ -26,6 +26,11 @@
 	height: 72px;
 }
 
+.freestyleInfo {
+	top: 96px;
+	right: 28px;
+}
+
 .cover {
 	border-radius: 8px;
 }
@@ -206,6 +211,15 @@
 
 .statusMuted {
 	color: rgba(247, 245, 240, 0.42);
+}
+
+.statusFreestyle {
+	align-self: flex-start;
+	padding: 1px 8px;
+	border-radius: 999px;
+	background-color: rgba(61, 139, 255, 0.2);
+	color: #a9c9ff;
+	font-weight: 700;
 }
 
 .statusStar {

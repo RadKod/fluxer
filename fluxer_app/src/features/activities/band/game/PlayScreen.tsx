@@ -120,14 +120,10 @@ function useBandKeyboard(
 		const root = rootRef.current;
 		const track = runtime?.controller.myTrack;
 		if (!root || !runtime || !track) return;
-		const {controller} = runtime;
 		const keyboard = new BandKeyboard(keyMap, track.part, {
-			onLane: ({kind, lane, timeStamp}) => {
-				const songMs = runtime.inputMs(timeStamp);
-				if (kind === 'press') controller.press(lane, songMs);
-				else controller.release(lane, songMs);
-			},
-			onStarPower: (timeStamp) => controller.deployStarPower(runtime.inputMs(timeStamp)),
+			onLane: (input) => runtime.lane(input),
+			onStarPower: (timeStamp) => runtime.controller.deployStarPower(runtime.inputMs(timeStamp)),
+			onWhammy: (input) => runtime.whammyKey(input),
 		});
 		const onKeyDown = (event: KeyboardEvent) => {
 			if (session.keyboardCaptured && keyboard.keyDown(event)) event.preventDefault();

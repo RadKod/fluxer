@@ -206,6 +206,14 @@ export class Judge {
 		return events;
 	}
 
+	// A freestyle solo press that followed its cue: the streak grows as if a note was hit, so the multiplier earned in
+	// the solo carries on into the notes after it. Returns the new streak.
+	addStreak(): number {
+		this.combo++;
+		this.maxCombo = Math.max(this.maxCombo, this.combo);
+		return this.combo;
+	}
+
 	// Call every frame with the current song time to settle notes nobody played.
 	advance(nowMs: number): Array<JudgeEvent> {
 		return this.settle(nowMs - MISS_SETTLE_MS, nowMs);

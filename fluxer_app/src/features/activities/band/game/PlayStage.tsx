@@ -12,6 +12,7 @@ import {
 	partLabel,
 	SEAT_DESCRIPTOR,
 } from '@app/features/activities/band/game/BandGameLabels';
+import {FreestyleInfo} from '@app/features/activities/band/game/FreestyleInfo';
 import {
 	DESIGN_HEIGHT,
 	DESIGN_WIDTH,
@@ -78,6 +79,7 @@ const BADGE_OFFSET = 12;
 
 const STATUS_CLASSES: Readonly<Record<PlayerStatusKind, string>> = {
 	finale: styles.finaleOn,
+	freestyle: styles.freestyleOn,
 	finaleBanked: styles.finaleOn,
 	finaleLost: styles.finaleLost,
 	starPower: styles.starPowerOn,
@@ -491,6 +493,12 @@ export const PlayStage = observer(function PlayStage({runtime, entry, channelId,
 						<ScoreBox controller={controller} data-flx="activities.band.game.play-stage.score-box" />
 					</div>
 					<GroupMeter controller={controller} data-flx="activities.band.game.play-stage.group-meter" />
+					<FreestyleInfo
+						runtime={runtime}
+						entry={entry}
+						className={styles.freestyleInfo}
+						data-flx="activities.band.game.play-stage.freestyle-info"
+					/>
 					{controller.finaleActive && (
 						<FinaleBanner
 							runtime={runtime}

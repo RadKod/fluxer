@@ -12,8 +12,16 @@ import type {
 	BandSeat,
 	BandState,
 } from '@app/features/activities/band/BandProtocol';
+import type {InstrumentPart} from '@app/features/activities/band/engine/ChartModel';
+import {FREESTYLE_PARTS, freestyleSections, isFreestylePart} from '@app/features/activities/band/engine/FreestyleSolo';
 import {type SongPackage, SongPackageError} from '@app/features/activities/band/engine/SongPackage';
 import {BandCrowd, isBandCheerKind} from '@app/features/activities/band/flow/BandCrowd';
+import {
+	type BandPreferenceStorage,
+	browserFreestyleStorage,
+	readFreestyleSolo,
+	writeFreestyleSolo,
+} from '@app/features/activities/band/flow/BandFreestylePreference';
 import {BandLeaderController} from '@app/features/activities/band/flow/BandLeaderController';
 import {BandMicGuard, type BandMicPort} from '@app/features/activities/band/flow/BandMicGuard';
 import {VOICE_MIC_PORT, VOICE_SINGER_PORT} from '@app/features/activities/band/flow/BandMicPort';
@@ -49,11 +57,14 @@ export class BandRoom {
 	songPackage: BandSongPackageState | null = null;
 	// What I hear the song on when I sing; remembered per user on this device.
 	singerOutput: BandSingerOutput;
+	// I play solo sections freestyle when my part has them; remembered per user on this device.
+	freestyleSolo: boolean;
 	private readonly controller: BandLeaderController;
 	private readonly micGuard: BandMicGuard;
 	private readonly singerMic: BandSingerMic;
 	private readonly voicePort: BandVoicePort;
 	private readonly singerOutputStorage: () => BandSingerOutputStorage;
+	private readonly freestyleStorage: () => BandPreferenceStorage;
 	private readonly disposers: Array<() => void> = [];
 	private disposed = false;
 
@@ -64,11 +75,13 @@ export class BandRoom {
 			micPort = VOICE_MIC_PORT,
 			voicePort = VOICE_SINGER_PORT,
 			singerOutputStorage = browserSingerOutputStorage,
+			freestyleStorage = browserFreestyleStorage,
 		}: {
 			library?: BandSongLibrary;
 			micPort?: BandMicPort;
 			voicePort?: BandVoicePort;
 			singerOutputStorage?: () => BandSingerOutputStorage;
+			freestyleStorage?: () => BandPreferenceStorage;
 		} = {},
 	) {
 		this.library = library;
@@ -76,6 +89,8 @@ export class BandRoom {
 		this.voicePort = voicePort;
 		this.singerOutputStorage = singerOutputStorage;
 		this.singerOutput = readSingerOutput(singerOutputStorage, session.me.userId);
+		this.freestyleStorage = freestyleStorage;
+		this.freestyleSolo = readFreestyleSolo(freestyleStorage, session.me.userId);
 		this.singerMic = new BandSingerMic(
 			voicePort,
 			() => session.clock.now(),
@@ -86,6 +101,9 @@ export class BandRoom {
 			songPackage: observableRef,
 			singerOutput: observable,
 			setSingerOutput: action,
+			freestyleSolo: observable,
+			setFreestyleSolo: action,
+			songFreestyleParts: computed,
 			state: computed,
 			context: computed,
 			mySeat: computed,
@@ -138,6 +156,24 @@ export class BandRoom {
 		}
 	}
 
+	// Parts of the current song with solo sections to play freestyle; known once its package is open here.
+	get songFreestyleParts(): ReadonlySet<InstrumentPart> {
+		const loaded = this.songPackage;
+		if (!this.songLoaded || loaded?.status !== 'ready') return new Set();
+		try {
+			const chart = loaded.songPackage.chart();
+			return new Set(
+				FREESTYLE_PARTS.filter((part) => {
+					const partChart = chart.partChart(part, 'expert');
+					return partChart !== null && freestyleSections(partChart, chart.sections).length > 0;
+				}),
+			);
+		} catch (error) {
+			if (error instanceof SongPackageError) return new Set();
+			throw error;
+		}
+	}
+
 	// Everyone taking part without a seat, one entry per person. Someone in the call who has not joined is not watching.
 	get spectatorIds(): ReadonlyArray<string> {
 		const state = this.state;
@@ -159,6 +195,11 @@ export class BandRoom {
 	setSingerOutput(output: BandSingerOutput): void {
 		this.singerOutput = output;
 		writeSingerOutput(this.singerOutputStorage, this.myUserId, output);
+	}
+
+	setFreestyleSolo(enabled: boolean): void {
+		this.freestyleSolo = enabled;
+		writeFreestyleSolo(this.freestyleStorage, this.myUserId, enabled);
 	}
 
 	retrySongPackage(): void {
@@ -226,6 +267,18 @@ export class BandRoom {
 				(key) => {
 					const state = this.state;
 					if (key && state?.phase === 'select') this.send({t: 'band.loaded', songId: state.songId});
+				},
+				{fireImmediately: true},
+			),
+			// My freestyle choice follows me onto every seat that can take it; the leader keeps it on the seat.
+			reaction(
+				() => {
+					const seat = this.mySeat;
+					if (this.state?.phase !== 'select' || !seat || !isFreestylePart(seat.part)) return null;
+					return (seat.freestyleSolo === true) === this.freestyleSolo ? null : this.freestyleSolo;
+				},
+				(enabled) => {
+					if (enabled !== null) this.send({t: 'band.freestyleSolo', enabled});
 				},
 				{fireImmediately: true},
 			),

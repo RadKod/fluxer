@@ -2,10 +2,12 @@
 
 import type {
 	BandFinaleMessage,
+	BandFreestyleMessage,
 	BandHitMessage,
 	BandIntent,
 	BandPlayerResult,
 	BandSeat,
+	BandWhammyMessage,
 } from '@app/features/activities/band/BandProtocol';
 import {
 	type BigRockEnding,
@@ -21,6 +23,13 @@ import {
 	STAGE_ORDER,
 } from '@app/features/activities/band/engine/ChartModel';
 import {
+	freestyleSections,
+	isFreestyleGroup,
+	isFreestylePart,
+	type SoloSection,
+	soloSectionAt,
+} from '@app/features/activities/band/engine/FreestyleSolo';
+import {
 	DIFFICULTY_SCORE_MULTIPLIER,
 	HIT_WINDOWS_MS,
 	type HitRating,
@@ -31,6 +40,14 @@ import {
 	NOTE_POINTS,
 } from '@app/features/activities/band/engine/Judge';
 import type {SongChart} from '@app/features/activities/band/engine/SongChart';
+import {FreestyleScorer} from '@app/features/activities/band/game/FreestyleScoring';
+import {
+	isWhammyPart,
+	WHAMMY,
+	WHAMMY_OFF,
+	WhammyInput,
+	type WhammyModulation,
+} from '@app/features/activities/band/game/Whammy';
 import type {ActivityMessage, ActivitySendOptions} from '@app/features/activities/session/ActivitySessionTypes';
 import {makeAutoObservable} from 'mobx';
 
@@ -41,6 +58,14 @@ export const STAR_POWER_PHRASE_ENERGY = 0.25;
 export const STAR_POWER_MIN_ENERGY = 0.5;
 // A full bar lasts this long once deployed.
 export const STAR_POWER_FULL_BAR_MS = 16_000;
+// Guitar Hero style: whammying a held star power sustain fills the bar on top of what the phrase gives. A four-second
+// sustain whammied all the way adds most of a phrase's quarter bar.
+export const STAR_POWER_WHAMMY_ENERGY_PER_SECOND = 0.05;
+
+// My freestyle score goes out at most this often; every note I play there travels as a jam message anyway.
+const FREESTYLE_BROADCAST_MS = 250;
+// Sustains are never longer than this; the search for the one I hold looks no further back.
+const LONGEST_SUSTAIN_MS = 8_000;
 
 // Big Rock Ending bonus. Its cap is a share of the part's base score (every judged note once, difficulty included),
 // so it scales with the song rather than with the length of the ending. Measured on the six finale songs, a typical
@@ -117,17 +142,19 @@ export function isInFreePlay(track: SeatTrack, songMs: number): boolean {
 	return finale !== null && songMs >= finale.startMs && songMs < freePlayEndMs(finale, track.chart);
 }
 
-// The groups a judge scores: free play is not judged, and a late joiner cannot play what already passed. Returns the
-// judged chart and, per judged group, its index in the full chart (the index every client broadcasts).
+// The groups a judge scores: free play and freestyle solos are not judged, and a late joiner cannot play what already
+// passed. Returns the judged chart and, per judged group, its index in the full chart (the index every client
+// broadcasts).
 export function judgedChart(
 	chart: PartChart,
 	finale: PartFinale | null,
 	fromMs: number,
+	freestyle: ReadonlyArray<SoloSection> = [],
 ): {readonly chart: PartChart; readonly fullIndex: ReadonlyArray<number>} {
 	const groups: Array<NoteGroup> = [];
 	const fullIndex: Array<number> = [];
 	chart.groups.forEach((group, index) => {
-		if (group.msTime < fromMs || isFreePlayGroup(finale, index)) return;
+		if (group.msTime < fromMs || isFreePlayGroup(finale, index) || isFreestyleGroup(freestyle, index)) return;
 		groups.push(group);
 		fullIndex.push(index);
 	});
@@ -171,6 +198,39 @@ export function isBandFinaleMessage(payload: unknown): payload is BandFinaleMess
 	return message.kind === 'final' && typeof message.hit === 'boolean';
 }
 
+export function isBandFreestyleMessage(payload: unknown): payload is BandFreestyleMessage {
+	if (typeof payload !== 'object' || payload === null) return false;
+	const message = payload as Partial<Record<keyof BandFreestyleMessage, unknown>>;
+	return (
+		message.t === 'band.freestyle' &&
+		typeof message.part === 'string' &&
+		[message.score, message.combo, message.multiplier].every(
+			(value) => typeof value === 'number' && Number.isFinite(value) && value >= 0,
+		)
+	);
+}
+
+export function isBandWhammyMessage(payload: unknown): payload is BandWhammyMessage {
+	if (typeof payload !== 'object' || payload === null) return false;
+	const message = payload as Partial<Record<keyof BandWhammyMessage, unknown>>;
+	return (
+		message.t === 'band.whammy' &&
+		typeof message.part === 'string' &&
+		typeof message.depthCents === 'number' &&
+		Number.isFinite(message.depthCents) &&
+		typeof message.rateHz === 'number' &&
+		Number.isFinite(message.rateHz)
+	);
+}
+
+// A bandmate's whammy, kept inside what a local one could do.
+function remoteWhammy(message: BandWhammyMessage): WhammyModulation {
+	return {
+		depthCents: Math.min(WHAMMY.maxDepthCents, Math.max(0, message.depthCents)),
+		rateHz: Math.min(WHAMMY.maxRateHz, Math.max(WHAMMY.minRateHz, message.rateHz)),
+	};
+}
+
 // What one seat shows: observable, so the HUD around a highway re-renders only when its numbers change.
 export class SeatHud {
 	combo = 0;
@@ -186,6 +246,8 @@ export class SeatHud {
 	finaleBonus = 0;
 	// Null until the final hit is decided.
 	finalHit: boolean | null = null;
+	// Inside one of the seat's freestyle solo sections.
+	freestyleOn = false;
 
 	constructor() {
 		makeAutoObservable(this);
@@ -200,6 +262,11 @@ export class SeatHud {
 	}
 }
 
+// The whammy on a seat's sustain as the renderer draws it; `atMs` is when it last changed, so a release can fade.
+export interface WhammyState extends WhammyModulation {
+	readonly atMs: number;
+}
+
 // Per-seat drawing state, read by the renderer every frame. Plain arrays, not observables: they change per note.
 export interface SeatTrack {
 	readonly seat: BandSeat;
@@ -207,6 +274,8 @@ export interface SeatTrack {
 	readonly chart: PartChart;
 	// Null when the chart has no Big Rock Ending or the room turned it off.
 	readonly finale: PartFinale | null;
+	// Solo sections the player plays freestyle; empty when they play the charted notes.
+	readonly freestyle: ReadonlyArray<SoloSection>;
 	readonly isMine: boolean;
 	readonly hud: SeatHud;
 	readonly noteStates: Uint8Array;
@@ -218,6 +287,7 @@ export interface SeatTrack {
 	readonly brokenStarGroups: Set<number>;
 	feedback: {readonly kind: FeedbackKind; readonly atMs: number} | null;
 	missAtMs: number;
+	whammy: WhammyState;
 }
 
 export interface PlayControllerOptions {
@@ -238,6 +308,10 @@ export interface PlayControllerOptions {
 	readonly restore: (part: BandPart) => void;
 	// My own misses and overhits as they are judged; everyone hears their own mistakes, not the band's.
 	readonly playMissSound: (part: InstrumentPart) => void;
+	// Wobbles a part's stem: mine as I whammy, a bandmate's as their whammy messages arrive.
+	readonly whammy: (part: BandPart, modulation: WhammyModulation) => void;
+	// One of my freestyle sections ended; nothing I still hold may keep sounding.
+	readonly freestyleEnded: () => void;
 }
 
 interface PhraseProgress {
@@ -252,6 +326,9 @@ interface PhraseProgress {
 // Big Rock Ending: each part's notes under its coda lanes are not judged. Presses there light the lanes and collect a
 // bonus without touching the combo, and the part's stem plays on. The final hit after the lanes is judged like any
 // note; landing it banks the bonus, missing it loses it.
+//
+// Freestyle solo: a seat that chose it plays its solo sections freely. Their notes are not judged, so nothing there
+// is missed; presses that follow the cue score (FreestyleScorer) and grow the streak, the others do nothing.
 export class PlayController {
 	readonly tracks: ReadonlyArray<SeatTrack>;
 	// The song's ending across parts, for the banner; null when no highway has one or the room turned it off.
@@ -270,6 +347,13 @@ export class PlayController {
 	private starPowerUses = 0;
 	private starPowerEndsMs = 0;
 	private finaleResolved = false;
+	private readonly freestyleScorer: FreestyleScorer | null = null;
+	private readonly freestyleHeld = new Set<number>();
+	private freestylePoints = 0;
+	private freestyleSentMs = Number.NEGATIVE_INFINITY;
+	private readonly whammyInput = new WhammyInput();
+	private whammySentMs = Number.NEGATIVE_INFINITY;
+	private lastTickMs: number | null = null;
 
 	constructor(private readonly options: PlayControllerOptions) {
 		const {chart, seats, myUserId} = options;
@@ -279,11 +363,17 @@ export class PlayController {
 			if (seat.part === 'vocals') continue;
 			const partChart = chart.partChart(seat.part, seat.difficulty);
 			if (!partChart) continue;
+			const finale = options.bigRockEnding ? partFinale(partChart.bigRockEnding, partChart.groups) : null;
+			const freestyle =
+				seat.freestyleSolo === true && isFreestylePart(seat.part)
+					? freestyleSections(partChart, chart.sections, finale)
+					: [];
 			tracks.push({
 				seat,
 				part: seat.part,
 				chart: partChart,
-				finale: options.bigRockEnding ? partFinale(partChart.bigRockEnding, partChart.groups) : null,
+				finale,
+				freestyle,
 				isMine: seat.userId === myUserId,
 				hud: new SeatHud(),
 				noteStates: new Uint8Array(partChart.groups.length),
@@ -292,6 +382,7 @@ export class PlayController {
 				brokenStarGroups: new Set(),
 				feedback: null,
 				missAtMs: Number.NEGATIVE_INFINITY,
+				whammy: {...WHAMMY_OFF, atMs: Number.NEGATIVE_INFINITY},
 			});
 		}
 		tracks.sort((a, b) => STAGE_ORDER.indexOf(a.part) - STAGE_ORDER.indexOf(b.part));
@@ -301,16 +392,25 @@ export class PlayController {
 		this.baseScore = tracks.reduce((sum, track) => sum + baseScore(track.chart, track.finale), 0);
 		if (this.myTrack) {
 			const fromMs = options.joinedAtMs > 0 ? options.joinedAtMs + JOIN_GRACE_MS : Number.NEGATIVE_INFINITY;
-			const judged = judgedChart(this.myTrack.chart, this.myTrack.finale, fromMs);
+			const judged = judgedChart(this.myTrack.chart, this.myTrack.finale, fromMs, this.myTrack.freestyle);
 			this.judge = new Judge(judged.chart);
 			this.fullIndex = judged.fullIndex;
 			this.indexPhrases(this.myTrack);
 			const {finale} = this.myTrack;
 			if (finale) this.finaleCap = finaleBonusCap(this.myTrack.chart, finale);
+			if (this.myTrack.freestyle.length > 0) this.freestyleScorer = new FreestyleScorer(this.myTrack.seat.difficulty);
 		}
 		makeAutoObservable<
 			PlayController,
-			'options' | 'judge' | 'fullIndex' | 'phraseOfGroup' | 'finaleLaneMs' | 'finaleCap'
+			| 'options'
+			| 'judge'
+			| 'fullIndex'
+			| 'phraseOfGroup'
+			| 'finaleLaneMs'
+			| 'finaleCap'
+			| 'freestyleScorer'
+			| 'freestyleHeld'
+			| 'whammyInput'
 		>(
 			this,
 			{
@@ -326,6 +426,9 @@ export class PlayController {
 				phraseOfGroup: false,
 				finaleLaneMs: false,
 				finaleCap: false,
+				freestyleScorer: false,
+				freestyleHeld: false,
+				whammyInput: false,
 			},
 			{autoBind: true},
 		);
@@ -362,6 +465,11 @@ export class PlayController {
 		return times.length > 0 ? Math.max(...times) : (this.finale?.endMs ?? null);
 	}
 
+	// My freestyle solo section at a song time; null outside one, or when I play the notes.
+	mySoloSectionAt(songMs: number): SoloSection | null {
+		return this.myTrack ? soloSectionAt(this.myTrack.freestyle, songMs) : null;
+	}
+
 	get groupPerformance(): number {
 		if (this.tracks.length === 0) return PERFORMANCE_START;
 		return this.tracks.reduce((sum, track) => sum + track.hud.performance, 0) / this.tracks.length;
@@ -380,13 +488,38 @@ export class PlayController {
 			this.pressFinale(track, track.finale, lane, slot, songMs);
 			return;
 		}
+		const solo = soloSectionAt(track.freestyle, songMs);
+		if (solo) {
+			this.pressFreestyle(track, solo, lane, slot, songMs);
+			return;
+		}
 		track.laneFlashMs[slot] = songMs;
 		this.handleEvents(track, this.judge.press(lane, songMs));
 	}
 
 	release(lane: number, songMs: number): void {
 		if (!this.myTrack || !this.judge || this.finished) return;
+		this.freestyleHeld.delete(lane);
 		this.handleEvents(this.myTrack, this.judge.release(lane, songMs));
+	}
+
+	// The whammy key, Guitar Hero style: it only bites while I hold a sustain I hit.
+	whammy(down: boolean, songMs: number): void {
+		const track = this.myTrack;
+		if (!track || this.finished || !isWhammyPart(track.part)) return;
+		if (down) {
+			if (this.heldSustain(track, songMs) === null) return;
+			this.applyWhammy(track, this.whammyInput.press(songMs), songMs);
+		} else if (this.whammyInput.pressed) {
+			this.applyWhammy(track, this.whammyInput.release(), songMs);
+		}
+	}
+
+	// A bandmate's freestyle notes, by lane, from their jam messages.
+	flashRemoteLanes(userId: string, lanes: ReadonlyArray<number>): void {
+		const track = this.tracks.find((candidate) => !candidate.isMine && candidate.seat.userId === userId);
+		if (!track?.hud.freestyleOn) return;
+		for (const lane of lanes) track.laneFlashMs[laneSlot(lane)] = this.nowMs;
 	}
 
 	deployStarPower(songMs: number): void {
@@ -400,10 +533,18 @@ export class PlayController {
 	// Every frame with the song time the player is hearing.
 	tick(songMs: number): void {
 		this.nowMs = songMs;
-		for (const seatTrack of this.tracks) this.followFinale(seatTrack, songMs);
+		const sinceMs = this.lastTickMs ?? songMs;
+		this.lastTickMs = songMs;
+		for (const seatTrack of this.tracks) {
+			this.followFinale(seatTrack, songMs);
+			this.followFreestyle(seatTrack, songMs);
+			if (!seatTrack.isMine) this.expireRemoteWhammy(seatTrack, songMs);
+		}
 		const track = this.myTrack;
 		if (track && this.judge && !this.finished) {
 			this.handleEvents(track, this.judge.advance(songMs));
+			this.holdFreestyle(track, sinceMs, songMs);
+			this.followWhammy(track, sinceMs, songMs);
 			if (track.hud.starPowerActive) {
 				const remaining = this.starPowerEndsMs - songMs;
 				track.hud.starPowerEnergy = Math.max(0, remaining / STAR_POWER_FULL_BAR_MS);
@@ -422,6 +563,18 @@ export class PlayController {
 		if (isBandHitMessage(payload)) {
 			const track = this.remoteTrack(payload.part, from.userId);
 			if (track) this.applyRemoteHit(track, payload);
+		} else if (isBandFreestyleMessage(payload)) {
+			const track = this.remoteTrack(payload.part, from.userId);
+			if (!track) return;
+			track.hud.score = payload.score;
+			track.hud.combo = payload.combo;
+			track.hud.multiplier = Math.min(MAX_MULTIPLIER, Math.max(1, payload.multiplier));
+		} else if (isBandWhammyMessage(payload)) {
+			const track = this.remoteTrack(payload.part, from.userId);
+			if (!track || !isWhammyPart(track.part)) return;
+			const modulation = remoteWhammy(payload);
+			track.whammy = {...modulation, atMs: this.nowMs};
+			this.options.whammy(track.part, modulation);
 		} else if (isBandFinaleMessage(payload)) {
 			const track = this.remoteTrack(payload.part, from.userId);
 			if (!track) return;
@@ -445,6 +598,7 @@ export class PlayController {
 		if (track && this.judge) {
 			this.handleEvents(track, stopped ? this.judge.advance(this.nowMs) : this.judge.finish(), false);
 			if (!stopped && track.finale && !this.finaleResolved) this.resolveFinale(track, false);
+			if (this.whammyInput.pressed) this.applyWhammy(track, this.whammyInput.release(), this.nowMs);
 		}
 		this.options.submitIntent({t: 'band.result', result: this.result(seat)});
 	}
@@ -454,6 +608,7 @@ export class PlayController {
 		const snapshot = this.judge?.snapshot;
 		const finaleBonus = track?.hud.bankedFinaleBonus ?? 0;
 		const score = track ? track.hud.score + finaleBonus : 0;
+		const freestylePoints = Math.round(this.freestylePoints);
 		const hit = snapshot ? snapshot.judgedGroups - snapshot.misses : 0;
 		const missed = snapshot?.misses ?? 0;
 		return {
@@ -467,6 +622,7 @@ export class PlayController {
 			notesMissed: missed,
 			starPowerUses: this.starPowerUses,
 			...(finaleBonus > 0 && {finaleBonus}),
+			...(freestylePoints > 0 && {freestylePoints}),
 		};
 	}
 
@@ -493,8 +649,8 @@ export class PlayController {
 			track.missAtMs = this.nowMs;
 			track.feedback = {kind: 'miss', atMs: this.nowMs};
 			hud.performance = Math.max(0, hud.performance - PERFORMANCE_MISS);
-			// A late miss from before the ending must not silence the free play.
-			if (!isInFreePlay(track, this.nowMs)) this.options.duck(track.part);
+			// A late miss from before the ending or a solo must not silence the free play.
+			if (!isInFreePlay(track, this.nowMs) && !hud.freestyleOn) this.options.duck(track.part);
 		}
 	}
 
@@ -506,6 +662,115 @@ export class PlayController {
 		if (on === hud.finaleOn) return;
 		hud.finaleOn = on;
 		if (on) this.options.restore(track.part);
+	}
+
+	// A freestyle section brings back a stem a miss left ducked (its notes are not judged, so no hit would), and its
+	// end lets go of everything I still hold there.
+	private followFreestyle(track: SeatTrack, songMs: number): void {
+		if (track.freestyle.length === 0) return;
+		const on = soloSectionAt(track.freestyle, songMs) !== null;
+		if (on === track.hud.freestyleOn) return;
+		track.hud.freestyleOn = on;
+		if (on) {
+			this.options.restore(track.part);
+			return;
+		}
+		if (!track.isMine) return;
+		this.freestyleHeld.clear();
+		this.broadcastFreestyle(track, songMs);
+		this.options.freestyleEnded();
+	}
+
+	private pressFreestyle(track: SeatTrack, section: SoloSection, lane: number, slot: number, songMs: number): void {
+		track.laneFlashMs[slot] = songMs;
+		this.freestyleHeld.add(lane);
+		const {judge, freestyleScorer} = this;
+		if (!judge || !freestyleScorer) return;
+		const {hud} = track;
+		const scored = freestyleScorer.press(section, lane, songMs, hud.multiplier);
+		if (!scored.counted) return;
+		this.freestylePoints += this.addPoints(hud, scored.points);
+		hud.combo = judge.addStreak();
+		hud.multiplier = multiplierForStreak(hud.combo);
+		hud.performance = Math.min(1, hud.performance + PERFORMANCE_HIT);
+		if (songMs - this.freestyleSentMs >= FREESTYLE_BROADCAST_MS) this.broadcastFreestyle(track, songMs);
+	}
+
+	// Holding a note through a sustain cue pays like a held sustain.
+	private holdFreestyle(track: SeatTrack, fromMs: number, toMs: number): void {
+		const section = this.freestyleScorer && soloSectionAt(track.freestyle, toMs);
+		if (!this.freestyleScorer || !section) return;
+		const points = this.freestyleScorer.sustainPoints(section, this.freestyleHeld, fromMs, toMs, track.hud.multiplier);
+		if (points > 0) this.freestylePoints += this.addPoints(track.hud, points);
+	}
+
+	private broadcastFreestyle(track: SeatTrack, songMs: number): void {
+		this.freestyleSentMs = songMs;
+		const {hud} = track;
+		const message: BandFreestyleMessage = {
+			t: 'band.freestyle',
+			part: track.part,
+			score: Math.round(hud.score),
+			combo: hud.combo,
+			multiplier: hud.multiplier,
+		};
+		this.options.send(message, {reliable: false});
+	}
+
+	// The sustain I am holding right now: its group index, or null.
+	private heldSustain(track: SeatTrack, songMs: number): number | null {
+		const {groups} = track.chart;
+		let low = 0;
+		let high = groups.length;
+		while (low < high) {
+			const middle = (low + high) >>> 1;
+			if (groups[middle].msTime <= songMs) low = middle + 1;
+			else high = middle;
+		}
+		for (let index = low - 1; index >= 0 && songMs - groups[index].msTime <= LONGEST_SUSTAIN_MS; index--) {
+			if (track.noteStates[index] === NoteState.Hit && track.heldUntilMs[index] > songMs) return index;
+		}
+		return null;
+	}
+
+	private applyWhammy(track: SeatTrack, modulation: WhammyModulation, songMs: number): void {
+		track.whammy = {...modulation, atMs: songMs};
+		this.options.whammy(track.part, modulation);
+		this.whammySentMs = songMs;
+		const message: BandWhammyMessage = {
+			t: 'band.whammy',
+			part: track.part,
+			depthCents: Math.round(modulation.depthCents),
+			rateHz: Math.round(modulation.rateHz * 10) / 10,
+		};
+		this.options.send(message, {reliable: false});
+	}
+
+	// While I whammy: the sustain ending lets go, a star power sustain fills the bar, and the state goes out again now
+	// and then for anyone who lost a message.
+	private followWhammy(track: SeatTrack, fromMs: number, toMs: number): void {
+		if (!this.whammyInput.pressed) return;
+		const held = this.heldSustain(track, toMs);
+		if (held === null) {
+			this.applyWhammy(track, this.whammyInput.release(), toMs);
+			return;
+		}
+		const phrase = this.phraseOfGroup.get(held);
+		if (track.chart.groups[held].inStarPower && phrase && !phrase.broken && toMs > fromMs) {
+			const energy = (STAR_POWER_WHAMMY_ENERGY_PER_SECOND * (toMs - fromMs)) / 1000;
+			const {hud} = track;
+			const added = Math.min(1, hud.starPowerEnergy + energy) - hud.starPowerEnergy;
+			hud.starPowerEnergy += added;
+			if (hud.starPowerActive) this.starPowerEndsMs += added * STAR_POWER_FULL_BAR_MS;
+		}
+		if (toMs - this.whammySentMs >= WHAMMY.refreshMs) this.applyWhammy(track, track.whammy, toMs);
+	}
+
+	// A bandmate's whammy with no news for a while has been let go; their release was probably lost.
+	private expireRemoteWhammy(track: SeatTrack, songMs: number): void {
+		if (track.whammy.depthCents <= 0 || songMs - track.whammy.atMs < WHAMMY.remoteTimeoutMs) return;
+		track.whammy = {...WHAMMY_OFF, atMs: songMs};
+		this.options.whammy(track.part, WHAMMY_OFF);
 	}
 
 	// Live judging broadcasts; settling what is left when the song ends or stops does not, and makes no sound either.
@@ -567,16 +832,20 @@ export class PlayController {
 		if (live) this.options.playMissSound(track.part);
 	}
 
-	private addPoints(hud: SeatHud, points: number): void {
-		hud.score += hud.starPowerActive ? points * 2 : points;
+	// Returns what was added, star power included.
+	private addPoints(hud: SeatHud, points: number): number {
+		const added = hud.starPowerActive ? points * 2 : points;
+		hud.score += added;
+		return added;
 	}
 
-	private indexPhrases({chart, finale}: SeatTrack): void {
+	// A phrase counts only its judged notes; one entirely under a freestyle solo or the ending gives nothing.
+	private indexPhrases({chart, finale, freestyle}: SeatTrack): void {
 		for (const span of chart.starPower) {
 			const groups: Array<number> = [];
 			chart.groups.forEach((group, index) => {
-				if (group.tick >= span.tick && group.tick < span.tick + span.length && !isFreePlayGroup(finale, index))
-					groups.push(index);
+				if (group.tick < span.tick || group.tick >= span.tick + span.length) return;
+				if (!isFreePlayGroup(finale, index) && !isFreestyleGroup(freestyle, index)) groups.push(index);
 			});
 			if (groups.length === 0) continue;
 			const phrase: PhraseProgress = {groups, hits: 0, broken: false};

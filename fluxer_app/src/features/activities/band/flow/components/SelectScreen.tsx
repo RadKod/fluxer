@@ -21,6 +21,8 @@ import {
 	BIG_ROCK_ENDING_HINT_DESCRIPTOR,
 	DIFFICULTY_DESCRIPTORS,
 	FREE_PART_DESCRIPTOR,
+	FREESTYLE_SOLO_DESCRIPTOR,
+	FREESTYLE_SOLO_HINT_DESCRIPTOR,
 	GROUP_DIFFICULTY_DESCRIPTOR,
 	GROUP_DIFFICULTY_HINT_DESCRIPTOR,
 	GROUP_DIFFICULTY_LEADER_HINT_DESCRIPTOR,
@@ -306,6 +308,55 @@ const SeatActions = observer(function SeatActions({room, part, seat, className}:
 	);
 });
 
+// My switch, remembered for the next songs; on someone else's card only a tag when they play freestyle.
+const FreestyleSoloSwitch = observer(function FreestyleSoloSwitch({
+	room,
+	seat,
+}: {
+	readonly room: BandRoom;
+	readonly seat: BandSeat | undefined;
+}) {
+	const {i18n} = useLingui();
+	const label = i18n._(FREESTYLE_SOLO_DESCRIPTOR);
+	if (seat?.userId !== room.myUserId) {
+		if (!seat?.freestyleSolo) return null;
+		return (
+			<span
+				className={clsx(styles.freestyle, styles.freestyleOn)}
+				data-flx="activities.band.flow.select-screen.freestyle-solo-switch.tag"
+			>
+				<span className={styles.freestyleName} data-flx="activities.band.flow.select-screen.freestyle-solo-switch.name">
+					{label}
+				</span>
+			</span>
+		);
+	}
+	const enabled = room.freestyleSolo;
+	return (
+		<button
+			type="button"
+			role="switch"
+			aria-checked={enabled}
+			title={i18n._(FREESTYLE_SOLO_HINT_DESCRIPTOR)}
+			className={clsx(styles.freestyle, enabled && styles.freestyleOn)}
+			onClick={() => room.setFreestyleSolo(!enabled)}
+			data-flx="activities.band.flow.select-screen.freestyle-solo-switch.set-freestyle-solo.button"
+		>
+			<span
+				className={styles.freestyleName}
+				data-flx="activities.band.flow.select-screen.freestyle-solo-switch.name--2"
+			>
+				{label}
+			</span>
+			<span
+				className={styles.freestyleSwitch}
+				aria-hidden="true"
+				data-flx="activities.band.flow.select-screen.freestyle-solo-switch.switch"
+			/>
+		</button>
+	);
+});
+
 interface PartCardProps {
 	readonly room: BandRoom;
 	readonly song: BandSongSummary;
@@ -352,6 +403,13 @@ const PartCard = observer(function PartCard({room, song, part, seat}: PartCardPr
 				className={styles.difficulties}
 				data-flx="activities.band.flow.select-screen.part-card.difficulties"
 			/>
+			{room.songFreestyleParts.has(part) && (
+				<FreestyleSoloSwitch
+					room={room}
+					seat={seat}
+					data-flx="activities.band.flow.select-screen.part-card.freestyle-solo-switch"
+				/>
+			)}
 			<SeatActions
 				room={room}
 				part={part}

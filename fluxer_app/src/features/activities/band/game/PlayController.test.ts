@@ -90,6 +90,8 @@ function setup(overrides: Partial<PlayControllerOptions> = {}) {
 	const duck = vi.fn();
 	const restore = vi.fn();
 	const playMissSound = vi.fn();
+	const whammy = vi.fn();
+	const freestyleEnded = vi.fn();
 	const controller = new PlayController({
 		chart: SONG,
 		seats: SEATS,
@@ -102,12 +104,26 @@ function setup(overrides: Partial<PlayControllerOptions> = {}) {
 		duck,
 		restore,
 		playMissSound,
+		whammy,
+		freestyleEnded,
 		...overrides,
 	});
 	const sent = () => send.mock.calls.map(([payload]) => payload);
 	const hits = () => sent().filter((payload) => payload.t === 'band.hit');
 	const finalePresses = () => sent().filter((payload) => payload.t === 'band.finale' && payload.kind === 'press');
-	return {controller, send, submitIntent, duck, restore, playMissSound, hits, finalePresses};
+	return {
+		controller,
+		send,
+		submitIntent,
+		duck,
+		restore,
+		playMissSound,
+		whammy,
+		freestyleEnded,
+		sent,
+		hits,
+		finalePresses,
+	};
 }
 
 describe('PlayController', () => {

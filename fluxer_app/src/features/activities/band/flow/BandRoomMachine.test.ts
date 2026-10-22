@@ -45,6 +45,7 @@ function song(id: string, overrides: Partial<BandSongSummary> = {}): BandSongSum
 		genre: null,
 		year: null,
 		previewStartMs: null,
+		key: null,
 		...overrides,
 	};
 }
@@ -418,6 +419,52 @@ describe('difficulty', () => {
 			[{t: 'band.groupDifficulty', difficulty: 'expert'}, 'lead'],
 		]);
 		expect(state.phase === 'select' && state.seats[0].difficulty).toBe('expert');
+	});
+});
+
+describe('freestyle solo choice', () => {
+	it('is the seated player own switch, for guitars and keys only, and goes into the song with the seat', () => {
+		const ctx = context({songs: new Map([['a', song('a', {parts: {guitar: ALL, keys: ALL, bass: ALL}})]])});
+		const seated = applyAll(select(), [...sit('guitar', 'u1'), ...sit('bass', 'u2')], ctx);
+		const on = apply(seated, {t: 'band.freestyleSolo', enabled: true}, 'u1', ctx) as Select;
+		expect(on.seats.find((seat) => seat.userId === 'u1')).toMatchObject({part: 'guitar', freestyleSolo: true});
+		expect(apply(on, {t: 'band.freestyleSolo', enabled: true}, 'u1', ctx)).toBe(on);
+		expect(apply(on, {t: 'band.freestyleSolo', enabled: true}, 'u2', ctx)).toBe(on);
+		expect(apply(on, {t: 'band.freestyleSolo', enabled: true}, 'u3', ctx)).toBe(on);
+		const moved = apply(on, {t: 'band.claimSeat', part: 'keys'}, 'u1', ctx) as Select;
+		expect(moved.seats.find((seat) => seat.userId === 'u1')).toMatchObject({part: 'keys', freestyleSolo: true});
+		const off = apply(moved, {t: 'band.freestyleSolo', enabled: false}, 'u1', ctx) as Select;
+		expect(off.seats.find((seat) => seat.userId === 'u1')).not.toHaveProperty('freestyleSolo');
+		expect(apply(on, {t: 'band.skip'}, 'lead', ctx)).toMatchObject({
+			phase: 'play',
+			seats: expect.arrayContaining([expect.objectContaining({userId: 'u1', freestyleSolo: true})]),
+		});
+		expect(apply(play(), {t: 'band.freestyleSolo', enabled: true}, 'u1')).toMatchObject({phase: 'play'});
+	});
+
+	it('is dropped when the player moves to a part without freestyle', () => {
+		const on = applyAll(select(), [...sit('guitar', 'u1'), [{t: 'band.freestyleSolo', enabled: true}, 'u1']]);
+		const bass = apply(on, {t: 'band.claimSeat', part: 'bass'}, 'u1') as Select;
+		expect(bass.seats[0]).not.toHaveProperty('freestyleSolo');
+	});
+
+	it('parses the switch and keeps the freestyle points of a result within its score', () => {
+		expect(parseBandIntent({t: 'band.freestyleSolo', enabled: true})).toEqual({t: 'band.freestyleSolo', enabled: true});
+		expect(parseBandIntent({t: 'band.freestyleSolo', enabled: 'yes'})).toBeNull();
+		const scored = apply(
+			play(),
+			{t: 'band.result', result: {...RESULT, freestylePoints: 310.6}},
+			'u1',
+		) as BandPlayState;
+		expect(scored.results?.[0]).toMatchObject({score: 1500, freestylePoints: 311});
+		const inflated = apply(
+			play(),
+			{t: 'band.result', result: {...RESULT, freestylePoints: 1e9}},
+			'u1',
+		) as BandPlayState;
+		expect(inflated.results?.[0]).toMatchObject({freestylePoints: 1500});
+		const parsed = parseBandIntent({t: 'band.result', result: {...RESULT, freestylePoints: 'many'}});
+		expect(parsed).toBeNull();
 	});
 });
 

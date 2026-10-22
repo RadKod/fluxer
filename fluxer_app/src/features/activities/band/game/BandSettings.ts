@@ -21,10 +21,19 @@ class BandSettingsState {
 	missSound = true;
 	duckDepth: DuckDepth = 'strong';
 	highwayView: BandHighwayView = 'focus';
+	// The freestyle solo info box beside my highway, open or folded to its title.
+	freestyleInfoOpen = true;
 
 	constructor() {
 		makeAutoObservable(this, {}, {autoBind: true});
-		void makePersistent(this, 'BandSettings', ['inputLatencyMs', 'volume', 'missSound', 'duckDepth', 'highwayView']);
+		void makePersistent(this, 'BandSettings', [
+			'inputLatencyMs',
+			'volume',
+			'missSound',
+			'duckDepth',
+			'highwayView',
+			'freestyleInfoOpen',
+		]);
 	}
 
 	get effectiveInputLatencyMs(): number {
@@ -49,6 +58,10 @@ class BandSettingsState {
 
 	setHighwayView(view: BandHighwayView): void {
 		this.highwayView = view;
+	}
+
+	setFreestyleInfoOpen(open: boolean): void {
+		this.freestyleInfoOpen = open;
 	}
 }
 

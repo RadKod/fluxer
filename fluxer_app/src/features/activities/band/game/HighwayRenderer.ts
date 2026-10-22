@@ -2,6 +2,7 @@
 
 import {isFreePlayGroup, type PartFinale} from '@app/features/activities/band/engine/BigRockEnding';
 import {DrumLane, FretLane, type NoteGroup} from '@app/features/activities/band/engine/ChartModel';
+import {isFreestyleGroup, type SoloCue, type SoloCueRegion} from '@app/features/activities/band/engine/FreestyleSolo';
 import {
 	FADE_SHARE,
 	FEEDBACK_DISTANCE,
@@ -16,6 +17,7 @@ import {
 	visibleWindow,
 } from '@app/features/activities/band/game/HighwayGeometry';
 import {type FeedbackKind, NoteState, type SeatTrack} from '@app/features/activities/band/game/PlayController';
+import {WHAMMY} from '@app/features/activities/band/game/Whammy';
 
 // Brand and lane colours from the approved design tokens.
 const COLOR = {
@@ -62,6 +64,22 @@ const SHAKE_PX = 7;
 const SHAKE_HZ = 22;
 // Sustains are drawn from their start; longer ones than this are rare enough to clip.
 const LONGEST_SUSTAIN_MS = 8_000;
+// Freestyle solo cues, Rock Band 4 style: a band over the right-hand lanes in blue or the left-hand ones in orange
+// (free play spans the highway in plum), filled solid for a held note, striped for fast playing, dotted for tapping
+// and starred for free play. Stripes, dots and stars sit at fixed song times, so they travel with the highway.
+const CUE_COLORS: Readonly<Record<SoloCueRegion, string>> = {high: COLOR.blue, low: COLOR.orange};
+const CUE_INSET_SHARE = 0.08;
+const CUE_FILL_ALPHA = 0.2;
+const CUE_SUSTAIN_ALPHA = 0.46;
+const CUE_STRIPE_MS = 120;
+const CUE_STRIPE_SHARE = 0.4;
+const CUE_DOT_MS = 120;
+const CUE_STAR_MS = 45;
+// A whammied tail sways side to side, this many design pixels at full depth, and glows; it settles over the
+// whammy's release.
+const WHAMMY_SWAY_PX = 7;
+const WHAMMY_WAVE_PX = 64;
+const WHAMMY_STEP_PX = 6;
 
 const GEM_RADIUS = 16;
 const PAD_WIDTH = 48;
@@ -69,6 +87,11 @@ const PAD_HEIGHT = 18;
 const KICK_HEIGHT = 12;
 const TAIL_WIDTH = 9;
 const GEM_SQUASH = 0.84;
+
+interface WhammySway {
+	readonly strength: number;
+	readonly phase: number;
+}
 
 export interface HighwayFrame {
 	readonly nowMs: number;
@@ -178,6 +201,7 @@ export class HighwayRenderer {
 		this.grid(layout, highway, nowMs, starOn ? 0.09 : 0.045);
 		this.laneLines(layout, highway, starOn ? 0.12 : 0.06);
 		if (finale) this.finaleLanes(layout, highway, track, finale, nowMs);
+		if (track.freestyle.length > 0) this.soloCues(layout, highway, track, nowMs, frame.reducedMotion);
 		if (!finaleOn) this.glows(layout, highway, track, nowMs);
 		const railPulse = finaleOn && !frame.reducedMotion ? 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(nowMs / 80)) : 1;
 		this.rails(layout, highway, starOn ? COLOR.paper : COLOR.plum, railPulse);
@@ -385,6 +409,120 @@ export class HighwayRenderer {
 		}
 	}
 
+	private soloCues(
+		layout: StageLayout,
+		highway: HighwayLayout,
+		track: SeatTrack,
+		nowMs: number,
+		reducedMotion: boolean,
+	): void {
+		const {fromMs, toMs} = visibleWindow(nowMs);
+		for (const section of track.freestyle) {
+			if (section.endMs < fromMs || section.startMs > toMs) continue;
+			for (const cue of section.cues) {
+				if (cue.endMs < fromMs || cue.startMs > toMs) continue;
+				this.soloCue(layout, highway, cue, nowMs, fromMs, reducedMotion);
+			}
+		}
+	}
+
+	private soloCue(
+		layout: StageLayout,
+		highway: HighwayLayout,
+		cue: SoloCue,
+		nowMs: number,
+		fromMs: number,
+		reducedMotion: boolean,
+	): void {
+		const near = Math.max(0, noteDistance(layout, cue.startMs - nowMs));
+		const far = Math.min(layout.planeLength, noteDistance(layout, cue.endMs - nowMs));
+		if (far <= near) return;
+		const {ctx} = this;
+		const cell = highway.width / highway.lanes;
+		const firstLane = cue.region === 'high' ? 2 : 0;
+		const lanes = cue.region === null ? highway.lanes : 3;
+		const inset = cell * CUE_INSET_SHARE;
+		const x0 = highway.left + firstLane * cell + inset;
+		const x1 = highway.left + (firstLane + lanes) * cell - inset;
+		const color = cue.region ? CUE_COLORS[cue.region] : COLOR.plum;
+		ctx.save();
+		this.trapezoid(layout, highway, near, far, x0, x1);
+		ctx.globalAlpha = cue.style === 'sustain' ? CUE_SUSTAIN_ALPHA : CUE_FILL_ALPHA;
+		ctx.fillStyle = color;
+		ctx.fill();
+		ctx.globalAlpha = 0.85;
+		ctx.lineWidth = 1.5 * layout.scale;
+		ctx.strokeStyle = color;
+		ctx.stroke();
+		const at = (stepMs: number, draw: (distance: number, timeMs: number) => void) => {
+			const first = cue.startMs + Math.max(0, Math.ceil((fromMs - cue.startMs) / stepMs)) * stepMs;
+			for (let timeMs = first; timeMs < cue.endMs; timeMs += stepMs) {
+				const distance = noteDistance(layout, timeMs - nowMs);
+				if (distance > far) break;
+				if (distance >= near) draw(distance, timeMs);
+			}
+		};
+		switch (cue.style) {
+			case 'sustain': {
+				const centre = (x0 + x1) / 2;
+				const core = (x1 - x0) * 0.08;
+				this.trapezoid(layout, highway, near, far, centre - core, centre + core);
+				ctx.globalAlpha = 0.6;
+				ctx.fillStyle = COLOR.paper;
+				ctx.fill();
+				break;
+			}
+			case 'strum': {
+				ctx.globalAlpha = 0.8;
+				ctx.fillStyle = color;
+				const stripe = noteDistance(layout, CUE_STRIPE_MS * CUE_STRIPE_SHARE) - noteDistance(layout, 0);
+				at(CUE_STRIPE_MS, (distance) => {
+					this.trapezoid(layout, highway, distance, Math.min(far, distance + stripe), x0, x1);
+					ctx.fill();
+				});
+				break;
+			}
+			case 'tap': {
+				ctx.globalAlpha = 0.9;
+				ctx.fillStyle = COLOR.paper;
+				at(CUE_DOT_MS, (distance) => {
+					for (let lane = firstLane; lane < firstLane + lanes; lane++) {
+						const point = project(layout, laneCenterX(highway, lane), distance);
+						const r = 3.2 * layout.scale * point.scale * highway.noteScale;
+						ctx.beginPath();
+						ctx.arc(point.x, point.y, r, 0, Math.PI * 2);
+						ctx.fill();
+					}
+				});
+				break;
+			}
+			case 'free': {
+				ctx.fillStyle = COLOR.paper;
+				at(CUE_STAR_MS, (distance, timeMs) => {
+					const seed = hash(timeMs);
+					const point = project(layout, x0 + (x1 - x0) * seed, distance);
+					const size = (1.6 + 2.6 * hash(timeMs * 3 + 1)) * layout.scale * point.scale * highway.noteScale;
+					const twinkle = reducedMotion ? 0.8 : 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(nowMs / 140 + seed * 12));
+					ctx.globalAlpha = twinkle;
+					ctx.beginPath();
+					ctx.moveTo(point.x, point.y - size * 1.8);
+					ctx.lineTo(point.x + size * 0.45, point.y);
+					ctx.lineTo(point.x, point.y + size * 1.8);
+					ctx.lineTo(point.x - size * 0.45, point.y);
+					ctx.closePath();
+					ctx.moveTo(point.x - size * 1.8, point.y);
+					ctx.lineTo(point.x, point.y + size * 0.45);
+					ctx.lineTo(point.x + size * 1.8, point.y);
+					ctx.lineTo(point.x, point.y - size * 0.45);
+					ctx.closePath();
+					ctx.fill();
+				});
+				break;
+			}
+		}
+		ctx.restore();
+	}
+
 	private targets(layout: StageLayout, highway: HighwayLayout, track: SeatTrack, nowMs: number, finaleOn: boolean) {
 		const {ctx} = this;
 		const distance = strikeDistance(layout);
@@ -525,21 +663,25 @@ export class HighwayRenderer {
 		let last = first;
 		while (last < groups.length && groups[last].msTime <= toMs) last++;
 		const strike = strikeDistance(layout);
+		const hidden = (index: number) => isFreePlayGroup(finale, index) || isFreestyleGroup(track.freestyle, index);
+		const sway = frame.reducedMotion ? null : this.whammySway(track, nowMs);
 		// Tails under gems, far notes under near ones.
 		for (let index = last - 1; index >= first; index--) {
 			const group = groups[index];
-			if (group.msLength <= 0 || isFreePlayGroup(finale, index)) continue;
+			if (group.msLength <= 0 || hidden(index)) continue;
 			const state = track.noteStates[index];
 			const held = state === NoteState.Hit && track.heldUntilMs[index] > nowMs;
 			if (state === NoteState.Hit && !held) continue;
 			const start = held ? strike : Math.max(0, noteDistance(layout, group.msTime - nowMs));
 			const end = noteDistance(layout, group.msTime + group.msLength - nowMs);
 			if (end <= start) continue;
-			for (const lane of group.lanes) this.tail(layout, highway, lane, start, end, state === NoteState.Missed);
+			for (const lane of group.lanes) {
+				this.tail(layout, highway, lane, start, end, state === NoteState.Missed, held ? sway : null);
+			}
 		}
 		for (let index = last - 1; index >= first; index--) {
 			const group = groups[index];
-			if (isFreePlayGroup(finale, index)) continue;
+			if (hidden(index)) continue;
 			const state = track.noteStates[index];
 			if (state === NoteState.Hit) continue;
 			const distance = noteDistance(layout, group.msTime - nowMs);
@@ -552,19 +694,77 @@ export class HighwayRenderer {
 		}
 	}
 
-	private tail(layout: StageLayout, highway: HighwayLayout, lane: number, start: number, end: number, faded: boolean) {
+	// How hard a held tail sways under the whammy (0..1) and where its wave is; null when it does not.
+	private whammySway(track: SeatTrack, nowMs: number): WhammySway | null {
+		const {whammy} = track;
+		const strength =
+			whammy.depthCents > 0
+				? 0.4 + (0.6 * whammy.depthCents) / WHAMMY.maxDepthCents
+				: 0.4 * fadeAfter(nowMs, whammy.atMs, WHAMMY.releaseS * 1000);
+		if (strength <= 0) return null;
+		return {strength, phase: (nowMs / 1000) * whammy.rateHz * 2 * Math.PI};
+	}
+
+	private tail(
+		layout: StageLayout,
+		highway: HighwayLayout,
+		lane: number,
+		start: number,
+		end: number,
+		faded: boolean,
+		sway: WhammySway | null,
+	) {
 		const slot = surfaceLane(highway.kind, lane);
 		if (slot === null) return;
 		const x = lane === FretLane.Open ? highway.left + highway.width / 2 : laneCenterX(highway, slot);
 		const half = (TAIL_WIDTH / 2) * layout.scale * highway.noteScale;
 		const far = Math.min(end, layout.planeLength);
-		this.trapezoid(layout, highway, start, far, x - half, x + half);
 		const {ctx} = this;
+		const color = laneColor(highway, lane);
 		ctx.save();
-		ctx.globalAlpha = faded ? 0.3 : 0.8;
-		ctx.fillStyle = laneColor(highway, lane);
+		if (sway) {
+			this.swayingTail(layout, highway, x, half, start, far, sway);
+			ctx.shadowColor = color;
+			ctx.shadowBlur = 16 * sway.strength * layout.scale;
+			ctx.globalAlpha = 0.95;
+		} else {
+			this.trapezoid(layout, highway, start, far, x - half, x + half);
+			ctx.globalAlpha = faded ? 0.3 : 0.8;
+		}
+		ctx.fillStyle = color;
 		ctx.fill();
 		ctx.restore();
+	}
+
+	// The tail as a wave travelling up the highway, its width kept.
+	private swayingTail(
+		layout: StageLayout,
+		highway: HighwayLayout,
+		x: number,
+		half: number,
+		start: number,
+		far: number,
+		sway: WhammySway,
+	): void {
+		const amplitude = WHAMMY_SWAY_PX * sway.strength * layout.scale * highway.noteScale;
+		const wavelength = WHAMMY_WAVE_PX * layout.scale;
+		const step = WHAMMY_STEP_PX * layout.scale;
+		const left: Array<{x: number; y: number}> = [];
+		const right: Array<{x: number; y: number}> = [];
+		for (let distance = start; ; distance = Math.min(far, distance + step)) {
+			// Pinned at the strike line, free further up, like a string held at the fret.
+			const reach = Math.min(1, (distance - start) / (wavelength * 0.75));
+			const offset = Math.sin(sway.phase - (distance / wavelength) * 2 * Math.PI) * amplitude * reach;
+			left.push(project(layout, x + offset - half, distance));
+			right.push(project(layout, x + offset + half, distance));
+			if (distance >= far) break;
+		}
+		const {ctx} = this;
+		ctx.beginPath();
+		ctx.moveTo(left[0].x, left[0].y);
+		for (const point of left.slice(1)) ctx.lineTo(point.x, point.y);
+		for (const point of right.reverse()) ctx.lineTo(point.x, point.y);
+		ctx.closePath();
 	}
 
 	private gem(

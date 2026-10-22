@@ -13,6 +13,9 @@ export interface BandKeyMap {
 	readonly drumPads: ReadonlyArray<string>;
 	readonly kick: ReadonlyArray<string>;
 	readonly starPower: ReadonlyArray<string>;
+	// Fret parts only, where it does not clash with the kick: the whammy on a held sustain, and in a freestyle solo
+	// the bend (Shift for a step and a half).
+	readonly whammy: ReadonlyArray<string>;
 }
 
 export const DEFAULT_BAND_KEY_MAP: BandKeyMap = {
@@ -20,11 +23,13 @@ export const DEFAULT_BAND_KEY_MAP: BandKeyMap = {
 	drumPads: ['KeyH', 'KeyJ', 'KeyK', 'KeyL'],
 	kick: ['Space'],
 	starPower: ['Enter', 'ShiftRight'],
+	whammy: ['Space'],
 };
 
 export type BandInputAction =
 	| {readonly kind: 'lane'; readonly lane: number}
 	| {readonly kind: 'starPower'}
+	| {readonly kind: 'whammy'}
 	| {readonly kind: 'none'};
 
 const NO_ACTION: BandInputAction = {kind: 'none'};
@@ -38,6 +43,7 @@ export function actionForKey(map: BandKeyMap, part: InstrumentPart, code: string
 		const pad = map.drumPads.indexOf(code);
 		return pad >= 0 ? {kind: 'lane', lane: DRUM_PAD_LANES[pad]} : NO_ACTION;
 	}
+	if (map.whammy.includes(code)) return {kind: 'whammy'};
 	const fret = map.frets.indexOf(code);
 	return fret >= 0 ? {kind: 'lane', lane: FRET_LANES[fret]} : NO_ACTION;
 }
@@ -59,10 +65,22 @@ export interface LaneInput {
 	readonly timeStamp: number;
 }
 
+export interface WhammyKeyInput {
+	readonly kind: 'press' | 'release';
+	readonly timeStamp: number;
+	// Shift was down with the press.
+	readonly shift: boolean;
+}
+
 export interface BandKeyboardHandlers {
 	readonly onLane: (input: LaneInput) => void;
 	readonly onStarPower: (timeStamp: number) => void;
+	readonly onWhammy: (input: WhammyKeyInput) => void;
 }
+
+// What `held` keeps for keys that are not lanes.
+const HELD_STAR_POWER = -1;
+const HELD_WHAMMY = -2;
 
 // Turns key events into lane presses and releases. Auto-repeat and modifier chords are ignored, and a key held while
 // the window loses focus is released so a sustain does not stay held forever.
@@ -76,14 +94,22 @@ export class BandKeyboard {
 	) {}
 
 	// Returns true when the key belongs to the game, so the caller can preventDefault.
-	keyDown(event: Pick<KeyboardEvent, 'code' | 'repeat' | 'timeStamp' | 'ctrlKey' | 'metaKey' | 'altKey'>): boolean {
+	keyDown(
+		event: Pick<KeyboardEvent, 'code' | 'repeat' | 'timeStamp' | 'ctrlKey' | 'metaKey' | 'altKey'> &
+			Partial<Pick<KeyboardEvent, 'shiftKey'>>,
+	): boolean {
 		if (event.ctrlKey || event.metaKey || event.altKey) return false;
 		const action = actionForKey(this.map, this.part, event.code);
 		if (action.kind === 'none') return false;
 		if (event.repeat || this.held.has(event.code)) return true;
 		if (action.kind === 'starPower') {
-			this.held.set(event.code, -1);
+			this.held.set(event.code, HELD_STAR_POWER);
 			this.handlers.onStarPower(event.timeStamp);
+			return true;
+		}
+		if (action.kind === 'whammy') {
+			this.held.set(event.code, HELD_WHAMMY);
+			this.handlers.onWhammy({kind: 'press', timeStamp: event.timeStamp, shift: event.shiftKey === true});
 			return true;
 		}
 		this.held.set(event.code, action.lane);
@@ -95,16 +121,20 @@ export class BandKeyboard {
 		const lane = this.held.get(event.code);
 		if (lane === undefined) return false;
 		this.held.delete(event.code);
-		if (lane >= 0 && !this.isLaneHeldElsewhere(lane)) {
+		if (lane === HELD_WHAMMY) {
+			this.handlers.onWhammy({kind: 'release', timeStamp: event.timeStamp, shift: false});
+		} else if (lane >= 0 && !this.isLaneHeldElsewhere(lane)) {
 			this.handlers.onLane({kind: 'release', lane, timeStamp: event.timeStamp});
 		}
 		return true;
 	}
 
 	releaseAll(timeStamp: number): void {
-		const lanes = new Set([...this.held.values()].filter((lane) => lane >= 0));
+		const held = [...this.held.values()];
+		const lanes = new Set(held.filter((lane) => lane >= 0));
 		this.held.clear();
 		for (const lane of lanes) this.handlers.onLane({kind: 'release', lane, timeStamp});
+		if (held.includes(HELD_WHAMMY)) this.handlers.onWhammy({kind: 'release', timeStamp, shift: false});
 	}
 
 	private isLaneHeldElsewhere(lane: number): boolean {

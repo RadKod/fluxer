@@ -5,7 +5,16 @@
 // time the band sits down.
 
 import BandCatalog from '@app/features/activities/band/BandCatalog';
-import {BAND_GENRE_GROUPS, type BandGenreGroup, type BandSongSummary} from '@app/features/activities/band/BandProtocol';
+import {
+	BAND_GENRE_GROUPS,
+	BAND_KEY_SCALES,
+	type BandGenreGroup,
+	type BandKeyArea,
+	type BandKeyScale,
+	type BandSoloKey,
+	type BandSongKey,
+	type BandSongSummary,
+} from '@app/features/activities/band/BandProtocol';
 import {BAND_DIFFICULTIES, type BandDifficulty, type BandPart} from '@app/features/activities/band/engine/ChartModel';
 import {SongPackage} from '@app/features/activities/band/engine/SongPackage';
 import {BAND_PARTS} from '@app/features/activities/band/flow/BandRoomMachine';
@@ -119,6 +128,44 @@ function readIntensity(value: unknown): Partial<Record<BandPart, number>> {
 	return intensity;
 }
 
+const TONIC = /^[A-G][#b]?$/;
+// A recording tuned further off than this is a different key, not a tuning; the analysis would have said so.
+const MAX_TUNING_CENTS = 100;
+
+function readKeyArea(value: unknown): BandKeyArea | null {
+	if (typeof value !== 'object' || value === null) return null;
+	const {tonic, mode, scale} = value as Record<string, unknown>;
+	if (typeof tonic !== 'string' || !TONIC.test(tonic)) return null;
+	if (mode !== 'major' && mode !== 'minor') return null;
+	if (!(BAND_KEY_SCALES as ReadonlyArray<unknown>).includes(scale)) return null;
+	return {tonic, mode, scale: scale as BandKeyScale};
+}
+
+function isTime(value: unknown): value is number {
+	return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
+
+// Older indexes have no key and a malformed one is no key: freestyle then falls back to its default. A bad solo
+// entry only drops that entry.
+export function readSongKey(value: unknown): BandSongKey | null {
+	const area = readKeyArea(value);
+	if (!area) return null;
+	const record = value as Record<string, unknown>;
+	const tuning = typeof record.tuningCents === 'number' && Number.isFinite(record.tuningCents) ? record.tuningCents : 0;
+	const solos: Array<BandSoloKey> = [];
+	for (const solo of Array.isArray(record.solos) ? record.solos : []) {
+		const soloArea = readKeyArea(solo);
+		const {startMs, endMs} = (solo ?? {}) as Record<string, unknown>;
+		if (soloArea && isTime(startMs) && isTime(endMs) && endMs > startMs) solos.push({...soloArea, startMs, endMs});
+	}
+	return {
+		...area,
+		tuningCents: Math.max(-MAX_TUNING_CENTS, Math.min(MAX_TUNING_CENTS, tuning)),
+		lowConfidence: record.lowConfidence === true,
+		solos,
+	};
+}
+
 export interface ParsedSongIndex {
 	readonly songs: ReadonlyArray<BandSongSummary>;
 	// Charter difficulty per part (song.ini diff_*, 0..6), from an optional `ratings` object on each entry.
@@ -160,6 +207,7 @@ export function parseSongIndex(json: unknown, indexUrl: string): ParsedSongIndex
 				record.previewStartMs >= 0
 					? record.previewStartMs
 					: null,
+			key: readSongKey(record.key),
 		});
 		intensity.set(id, readIntensity(record.ratings));
 	}
