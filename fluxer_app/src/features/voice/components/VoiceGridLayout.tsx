@@ -16,6 +16,8 @@ import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 interface VoiceGridLayoutProps {
 	entries: Array<VoiceGridEntry>;
 	children: React.ReactElement;
+	// A tile that is not a participant (the running voice activity), placed first and counted like the others.
+	leadingTile?: React.ReactNode;
 	edgeToEdge?: boolean;
 	compact?: boolean;
 	onCapacityChange?: (info: {visibleTileCount: number; totalTileCount: number; overflow: boolean}) => void;
@@ -55,6 +57,7 @@ function readElementSize(element: HTMLElement): VoiceGridViewportSize {
 export function VoiceGridLayout({
 	entries,
 	children,
+	leadingTile,
 	edgeToEdge = false,
 	compact = false,
 	onCapacityChange,
@@ -86,37 +89,43 @@ export function VoiceGridLayout({
 		resizeObserver.observe(viewportNode);
 		return () => resizeObserver.disconnect();
 	}, []);
+	const leadingTileCount = leadingTile ? 1 : 0;
+	const totalTileCount = entries.length + leadingTileCount;
 	const packedMetrics = useMemo(() => {
-		if (!viewportSize) return entries.length;
-		if (viewportSize.width === 0 || viewportSize.height === 0) return entries.length;
+		if (!viewportSize) return totalTileCount;
+		if (viewportSize.width === 0 || viewportSize.height === 0) return totalTileCount;
 		return resolveVoiceGridPackedLayoutMetrics({
-			tileCount: entries.length,
+			tileCount: totalTileCount,
 			containerWidth: viewportSize.width,
 			containerHeight: viewportSize.height,
 			compact,
 			edgeToEdge,
 		});
-	}, [compact, edgeToEdge, entries.length, viewportSize]);
+	}, [compact, edgeToEdge, totalTileCount, viewportSize]);
 	const visibleTileCount = typeof packedMetrics === 'number' ? packedMetrics : packedMetrics.visibleTileCount;
-	const visibleEntries = useMemo(() => entries.slice(0, visibleTileCount), [entries, visibleTileCount]);
-	const hiddenTileCount = Math.max(0, entries.length - visibleEntries.length);
+	const visibleEntries = useMemo(
+		() => entries.slice(0, Math.max(0, visibleTileCount - leadingTileCount)),
+		[entries, leadingTileCount, visibleTileCount],
+	);
+	const visibleCount = visibleEntries.length + leadingTileCount;
+	const hiddenTileCount = Math.max(0, totalTileCount - visibleCount);
 	useEffect(() => {
 		if (!onCapacityChange) return;
 		onCapacityChange({
 			visibleTileCount,
-			totalTileCount: entries.length,
+			totalTileCount,
 			overflow: hiddenTileCount > 0,
 		});
-	}, [hiddenTileCount, onCapacityChange, entries.length, visibleTileCount]);
+	}, [hiddenTileCount, onCapacityChange, totalTileCount, visibleTileCount]);
 	const gridStyle = useMemo<GridStyle>(() => {
-		const rowStyle = getVoiceGridRowStyle(visibleEntries.length);
+		const rowStyle = getVoiceGridRowStyle(visibleCount);
 		if (typeof packedMetrics === 'number') return rowStyle;
 		return {
 			...rowStyle,
 			'--voice-grid-columns': `${packedMetrics.columns}`,
 			'--voice-grid-rows': `${packedMetrics.rows}`,
 		};
-	}, [packedMetrics, visibleEntries.length]);
+	}, [packedMetrics, visibleCount]);
 	return (
 		<div
 			ref={viewportRef}
@@ -126,12 +135,17 @@ export function VoiceGridLayout({
 		>
 			<div
 				className={styles.grid}
-				data-tile-count={visibleEntries.length}
-				data-total-tile-count={entries.length}
+				data-tile-count={visibleCount}
+				data-total-tile-count={totalTileCount}
 				data-hidden-tile-count={hiddenTileCount > 0 ? hiddenTileCount : undefined}
 				style={gridStyle}
 				data-flx="voice.voice-grid-layout.grid"
 			>
+				{leadingTile && (
+					<div className={styles.gridItem} data-flx="voice.voice-grid-layout.grid-item--leading">
+						{leadingTile}
+					</div>
+				)}
 				{visibleEntries.map((entry) => {
 					const groupValue = {
 						hiddenConnectionCount: entry.hiddenConnectionCount,

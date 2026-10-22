@@ -109,12 +109,13 @@ class FakeNetwork {
 let network: FakeNetwork;
 const sessions: Array<InstanceType<typeof RoomActivitySession>> = [];
 
-function start(room: FakeRoom, clockSkewMs = 0) {
+function start(room: FakeRoom, {clockSkewMs = 0, joined = true}: {clockSkewMs?: number; joined?: boolean} = {}) {
 	const session = new RoomActivitySession({
 		room: room.asRoom(),
 		channelId: '500',
 		session: SESSION,
 		end: vi.fn(async () => true),
+		joined,
 		localNow: () => Date.now() + clockSkewMs,
 	});
 	sessions.push(session);
@@ -198,7 +199,7 @@ describe('RoomActivitySession', () => {
 	it('measures the offset to the leader clock', async () => {
 		start(network.join('user_1_a', 100));
 		// This client's clock runs 5 s behind the leader's.
-		const follower = start(network.join('user_2_b', 200), -5_000);
+		const follower = start(network.join('user_2_b', 200), {clockSkewMs: -5_000});
 		expect(follower.clock.synced).toBe(false);
 		await vi.advanceTimersByTimeAsync(6 * 2 * ONE_WAY_MS + 10);
 		expect(follower.clock.synced).toBe(true);
@@ -208,7 +209,7 @@ describe('RoomActivitySession', () => {
 	});
 
 	it('is the clock reference as leader', () => {
-		const starter = start(network.join('user_1_a', 100), 1_234);
+		const starter = start(network.join('user_1_a', 100), {clockSkewMs: 1_234});
 		expect(starter.clock).toMatchObject({synced: true, offsetMs: 0});
 		expect(starter.clock.now()).toBe(Date.now() + 1_234);
 	});
@@ -249,7 +250,7 @@ describe('RoomActivitySession', () => {
 			network.rooms
 				.get('user_2_b')!
 				.localParticipant.publishData.mock.calls.filter(([data]) =>
-					new TextDecoder().decode(data).includes('state_req'),
+					new TextDecoder().decode(data).includes('"state_req"'),
 				);
 		expect(requests()).toHaveLength(1);
 		await vi.advanceTimersByTimeAsync(2_000 + 2 * ONE_WAY_MS);
@@ -281,5 +282,105 @@ describe('RoomActivitySession', () => {
 		await other.send({late: true});
 		await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
 		expect(handler).not.toHaveBeenCalled();
+	});
+	describe('membership', () => {
+		it('counts only the connections that joined, and tells everyone when I join or leave', async () => {
+			const starter = start(network.join('user_1_a', 100));
+			const chatter = start(network.join('user_2_b', 50), {joined: false});
+			await vi.advanceTimersByTimeAsync(2 * ONE_WAY_MS);
+			expect(starter.members.map((member) => member.identity)).toEqual(['user_1_a']);
+			expect(chatter.members.map((member) => member.identity)).toEqual(['user_1_a']);
+			expect(chatter.joined).toBe(false);
+
+			const seen: Array<number> = [];
+			starter.onMembersChanged((members) => seen.push(members.length));
+			chatter.setJoined(true);
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			expect(starter.members.map((member) => member.identity)).toEqual(['user_1_a', 'user_2_b']);
+			chatter.setJoined(false);
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			expect(starter.members.map((member) => member.identity)).toEqual(['user_1_a']);
+			expect(seen).toEqual([2, 1]);
+		});
+
+		it('elects the leader among members only, so chatting in the channel never leads', async () => {
+			const chatter = start(network.join('user_2_b', 50), {joined: false});
+			const starter = start(network.join('user_1_a', 100), {joined: false});
+			const player = start(network.join('user_3_c', 200));
+			await vi.advanceTimersByTimeAsync(2 * ONE_WAY_MS);
+			for (const session of [chatter, starter, player]) expect(session.leader?.identity).toBe('user_3_c');
+			expect(player.isLeader).toBe(true);
+
+			starter.setJoined(true);
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			for (const session of [chatter, starter, player]) expect(session.leader?.identity).toBe('user_1_a');
+		});
+
+		it('passes leadership to the member who has been in the room longest when the leader leaves the activity', async () => {
+			const starter = start(network.join('user_1_a', 300));
+			const late = start(network.join('user_3_c', 200));
+			const early = start(network.join('user_2_b', 100));
+			const chatter = start(network.join('user_4_d', 50), {joined: false});
+			await vi.advanceTimersByTimeAsync(2 * ONE_WAY_MS);
+			expect(late.leader?.identity).toBe('user_1_a');
+
+			starter.setJoined(false);
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			for (const session of [starter, late, early, chatter]) expect(session.leader?.identity).toBe('user_2_b');
+			expect(early.isLeader).toBe(true);
+			expect(early.clock).toMatchObject({synced: true, offsetMs: 0});
+		});
+
+		it('has no leader while nobody takes part', async () => {
+			const starter = start(network.join('user_1_a', 100), {joined: false});
+			const other = start(network.join('user_2_b', 200), {joined: false});
+			await vi.advanceTimersByTimeAsync(2 * ONE_WAY_MS);
+			expect(starter.members).toEqual([]);
+			expect(other.leader).toBeNull();
+			expect(starter.setState({x: 1})).toBe(false);
+		});
+
+		it('learns the membership of a room it joins late', async () => {
+			start(network.join('user_1_a', 100));
+			start(network.join('user_2_b', 200), {joined: false});
+			await vi.advanceTimersByTimeAsync(2 * ONE_WAY_MS);
+			const late = start(network.join('user_3_c', 300), {joined: false});
+			await vi.advanceTimersByTimeAsync(2 * ONE_WAY_MS);
+			expect(late.members.map((member) => member.identity)).toEqual(['user_1_a']);
+			expect(late.leader?.identity).toBe('user_1_a');
+		});
+
+		it('hears from a newcomer whose session started before I saw it join', async () => {
+			const starter = start(network.join('user_1_a', 100));
+			const starterRoom = network.rooms.get('user_1_a')!;
+			const chatterRoom = network.join('user_2_b', 200);
+			starterRoom.remoteParticipants.delete('user_2_b');
+			start(chatterRoom, {joined: false});
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			// The announcement was dropped; the participant is counted in until it says otherwise.
+			starterRoom.remoteParticipants.set('user_2_b', chatterRoom.localParticipant);
+			starterRoom.emit(RoomEvent.ParticipantConnected, chatterRoom.localParticipant);
+			expect(starter.members.map((member) => member.identity)).toEqual(['user_1_a', 'user_2_b']);
+			await vi.advanceTimersByTimeAsync(2 * ONE_WAY_MS);
+			expect(starter.members.map((member) => member.identity)).toEqual(['user_1_a']);
+		});
+
+		it('counts a client from before the join step in, as it plays whenever it is in the room', async () => {
+			const starter = start(network.join('user_1_a', 100), {joined: false});
+			network.join('user_2_b', 50);
+			await vi.advanceTimersByTimeAsync(2 * ONE_WAY_MS);
+			expect(starter.members.map((member) => member.identity)).toEqual(['user_2_b']);
+			expect(starter.leader?.identity).toBe('user_2_b');
+		});
+
+		it('forgets what a participant said once it leaves the room', async () => {
+			const starter = start(network.join('user_1_a', 100));
+			start(network.join('user_2_b', 200), {joined: false});
+			await vi.advanceTimersByTimeAsync(2 * ONE_WAY_MS);
+			network.leave('user_2_b');
+			// The same identity back without a session is an unknown client again.
+			network.join('user_2_b', 400);
+			expect(starter.members.map((member) => member.identity)).toEqual(['user_1_a', 'user_2_b']);
+		});
 	});
 });

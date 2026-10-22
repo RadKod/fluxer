@@ -7,14 +7,19 @@ import {BAND_ACTIVITY} from '@app/features/activities/band/BandActivity';
 import {type BandBotSettings, BandBots} from '@app/features/activities/band/dev/BandBots';
 import {BandDevSongs} from '@app/features/activities/band/dev/BandDevSongs';
 import {FakeActivitySession} from '@app/features/activities/band/dev/FakeActivitySession';
-import {getBandRoom} from '@app/features/activities/band/flow/BandRoom';
+import {type BandRoom, getBandRoom} from '@app/features/activities/band/flow/BandRoom';
 import type {ActivityMessage} from '@app/features/activities/session/ActivitySessionTypes';
+import VoiceActivities from '@app/features/activities/state/VoiceActivities';
 import Users from '@app/features/user/state/Users';
-import {action, makeObservable, observableRef, reaction} from 'mobx';
+import {action, makeObservable, observable, observableRef, reaction} from 'mobx';
 
 export const MY_USER_ID = '900000000000000001';
 const MY_NAME = 'Sen';
 export const MAX_BOTS = 6;
+
+// Where the harness shows the View, and which of the call's surfaces around it: the expanded stage, a call grid with
+// the joined tile next to the tile someone who has not joined sees, the mini window over a chat, or the picker.
+export type BandDevLayout = 'stage' | 'grid' | 'mini' | 'picker';
 const LOG_LIMIT = 40;
 
 export interface BandDevLogEntry {
@@ -41,6 +46,7 @@ export class BandDevHarness {
 	bots: BandBots;
 	log: ReadonlyArray<BandDevLogEntry> = [];
 	hitCounts: Readonly<Record<string, number>> = {};
+	layout: BandDevLayout = 'stage';
 	readonly songs: BandDevSongs;
 	private detach: () => void = () => {};
 	private logSeq = 0;
@@ -55,12 +61,23 @@ export class BandDevHarness {
 			bots: observableRef,
 			log: observableRef,
 			hitCounts: observableRef,
+			layout: observable,
+			setLayout: action,
 			restart: action,
 			record: action,
 			countHit: action,
 		});
 		this.attach();
 		void this.songs.load();
+	}
+
+	// For driving the harness from the console or a script: window.bandDev.room.send({...}).
+	get room(): BandRoom {
+		return getBandRoom(this.session);
+	}
+
+	setLayout(layout: BandDevLayout): void {
+		this.layout = layout;
 	}
 
 	addBot(settings: Partial<BandBotSettings>): void {
@@ -99,6 +116,15 @@ export class BandDevHarness {
 	private createSession(): FakeActivitySession {
 		const session = new FakeActivitySession({activityId: BAND_ACTIVITY.id, myUserId: MY_USER_ID});
 		getBandRoom(session);
+		// The call's own pieces (tile card, mini window) read the session from the store, as they do in a call. Not
+		// joined there: the tile card then shows what someone who has not joined sees.
+		VoiceActivities.handleSession(session.channelId, {
+			activity_id: session.activityId,
+			session_id: session.sessionId,
+			started_by: session.startedBy,
+			started_at: session.startedAt,
+		});
+		VoiceActivities.setLive(session);
 		return session;
 	}
 

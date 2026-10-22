@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Accessibility from '@app/features/accessibility/state/Accessibility';
+import {ActivityPresenceBadge} from '@app/features/activities/components/ActivityPresenceBadge';
 import {LongPressable} from '@app/features/app/components/LongPressable';
 import Channels from '@app/features/channel/state/Channels';
 import {WATCH_STREAM_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
@@ -1512,6 +1513,13 @@ const VoiceParticipantTileInner = observer(function VoiceParticipantTileInner({
 								</div>
 							</div>
 						</div>
+					)}
+					{showParticipantMetadata && !isScreenShare && (
+						<ActivityPresenceBadge
+							channelId={channelId}
+							participantIdentity={identity}
+							data-flx="voice.voice-participant-tile.voice-participant-tile-inner.activity-presence-badge"
+						/>
 					)}
 					{shouldRenderPoppedOutOverlay(tilePopoutTransition.snapshot) && (
 						<PoppedOutOverlay

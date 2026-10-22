@@ -2428,7 +2428,7 @@ class MediaEngineFacade extends Store {
 			if (
 				shouldMoveToAfkOnTick({
 					hasRecentVoiceActivity: this.noteCurrentLocalVoiceActivity(),
-					inActivitySession: VoiceActivities.getLive(voiceEngineV2AppConnectionHostAdapter.channelId) !== null,
+					inActivitySession: VoiceActivities.isJoined(voiceEngineV2AppConnectionHostAdapter.channelId),
 					channelId: voiceEngineV2AppConnectionHostAdapter.channelId,
 					afkChannelId: guild?.afkChannelId,
 					afkTimeoutSeconds: guild?.afkTimeout,

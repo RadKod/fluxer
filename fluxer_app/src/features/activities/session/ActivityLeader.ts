@@ -15,12 +15,25 @@ function earliest(participants: ReadonlyArray<ActivityParticipant>): ActivityPar
 	return best;
 }
 
-// Every client runs this on the same room and gets the same answer: no election messages, no split leadership
-// once the participant lists agree.
-export function electLeader(
+// The connections taking part in the activity. Each client says for itself whether it joined; one that never said
+// anything is counted in, because a client from before the join step plays whenever it is in the room. My own entry
+// comes from `meJoined`, never from the room.
+export function selectActivityMembers(
 	participants: ReadonlyArray<ActivityParticipant>,
+	announced: ReadonlyMap<string, boolean>,
+	meJoined: boolean,
+): Array<ActivityParticipant> {
+	return participants.filter((participant) =>
+		participant.isLocal ? meJoined : (announced.get(participant.identity) ?? true),
+	);
+}
+
+// Every client runs this on the same members and gets the same answer: no election messages, no split leadership
+// once the member lists agree. Callers pass members only, so the leader always takes part.
+export function electLeader(
+	members: ReadonlyArray<ActivityParticipant>,
 	startedBy: string,
 ): ActivityParticipant | null {
-	const starter = earliest(participants.filter((participant) => participant.userId === startedBy));
-	return starter ?? earliest(participants);
+	const starter = earliest(members.filter((participant) => participant.userId === startedBy));
+	return starter ?? earliest(members);
 }

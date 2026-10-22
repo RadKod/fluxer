@@ -21,6 +21,7 @@ vi.mock('@app/features/accessibility/state/Accessibility', () => ({
 	setAccessibilityUserSettings: vi.fn(),
 }));
 vi.mock('@app/features/app/components/alerts/GenericErrorModal', () => ({GenericErrorModal: () => null}));
+vi.mock('@app/features/activities/components/VoiceChannelActivityLine', () => ({VoiceChannelActivityLine: () => null}));
 vi.mock('@app/features/app/components/layout/ChannelItem', () => ({ChannelItem: () => null}));
 vi.mock('@app/features/app/components/layout/ChannelItemContent', () => ({ChannelItemContent: () => null}));
 vi.mock('@app/features/app/components/layout/CollapsedCategoryVoiceParticipants', () => ({

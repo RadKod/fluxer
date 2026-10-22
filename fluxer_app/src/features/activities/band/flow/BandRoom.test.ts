@@ -88,6 +88,13 @@ describe('BandRoom', () => {
 		vi.useRealTimers();
 	});
 
+	it('counts only the people who joined, so someone chatting in the call holds nothing up', () => {
+		session.connectPeer('chatter', {joined: false});
+		session.connectPeer('player');
+		expect([...room.context.presentUserIds].sort()).toEqual(['me', 'player']);
+		expect(room.spectatorIds).toEqual(['player']);
+	});
+
 	it('does not send ready while the song is still downloading', () => {
 		const sendIntent = vi.spyOn(BandLeaderController.prototype, 'sendIntent');
 		expect(room.songPackage).toMatchObject({songId: SONG.id, status: 'loading'});

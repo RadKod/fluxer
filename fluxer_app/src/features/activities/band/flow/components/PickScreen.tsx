@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {BAND_PHASE_MS, type BandSongSummary, type BandState} from '@app/features/activities/band/BandProtocol';
+import {tallyVotes} from '@app/features/activities/band/BandVotes';
 import {
 	PART_INTENSITY_DESCRIPTOR,
 	PICK_ALL_SONGS_DESCRIPTOR,
@@ -19,7 +20,7 @@ import {
 	VOTE_COUNT_DESCRIPTOR,
 } from '@app/features/activities/band/flow/BandFlowMessages';
 import type {BandRoom} from '@app/features/activities/band/flow/BandRoom';
-import {songPlayableParts, tallyVotes} from '@app/features/activities/band/flow/BandRoomMachine';
+import {songPlayableParts} from '@app/features/activities/band/flow/BandRoomMachine';
 import {searchSongs} from '@app/features/activities/band/flow/BandSongSearch';
 import {BandPartIcon} from '@app/features/activities/band/flow/components/BandPartIcon';
 import {BandAvatar} from '@app/features/activities/band/flow/components/BandPeople';

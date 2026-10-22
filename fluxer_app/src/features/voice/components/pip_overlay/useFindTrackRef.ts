@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {PiPContent} from '@app/features/ui/state/PiP';
+import type {StreamPiPContent} from '@app/features/ui/state/PiP';
 import {pipOverlayLogger} from '@app/features/voice/components/pip_overlay/shared';
 import {parseStreamKey} from '@app/features/voice/components/StreamKeys';
 import ScreenSharePublicationMigration from '@app/features/voice/engine/ScreenSharePublicationMigration';
@@ -32,7 +32,7 @@ function summarizeTrackRef(trackRef: TrackReferenceOrPlaceholder): object {
 	};
 }
 
-export function useFindTrackRef(content: PiPContent | null, room: Room): TrackReferenceOrPlaceholder | null {
+export function useFindTrackRef(content: StreamPiPContent | null, room: Room): TrackReferenceOrPlaceholder | null {
 	useStoreVersion(ScreenSharePublicationMigration);
 	const tracks = useTracks(
 		[

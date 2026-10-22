@@ -57443,43 +57443,24 @@ msgstr ""
 msgid "Bir Daha Baştan"
 msgstr "Bir Daha Baştan"
 
-#. Voice activities: tooltip on the button that hides the activity panel. The
-#. activity and the call go on; the Activities button brings it back.
-#: src/features/activities/components/ActivityPanel.tsx
-msgid "Close (the activity keeps running)"
-msgstr "Kapat (aktivite sürüyor)"
-
 #. Voice activities: button in the activity panel that ends the activity for
 #. everyone in the channel.
 #: src/features/activities/components/ActivityPanel.tsx
 msgid "End activity"
-msgstr "Aktiviteyi bitir"
+msgstr "Etkinliği bitir"
 
 #. Voice control bar: button that opens the list of activities (games played
 #. together in the voice channel).
 #: src/features/activities/components/VoiceActivitiesButton.tsx
 msgctxt "voice-activities"
 msgid "Activities"
-msgstr "Aktiviteler"
-
-#. Voice control bar: tooltip on the activities button while an activity runs
-#. and its panel is hidden. {activity} is its name.
-#: src/features/activities/components/VoiceActivitiesButton.tsx
-msgid "Show {activity}"
-msgstr "Göster: {activity}"
-
-#. Voice control bar: tooltip on the activities button while the running
-#. activity is shown; hiding keeps the activity and the call going. {activity}
-#. is its name.
-#: src/features/activities/components/VoiceActivitiesButton.tsx
-msgid "Hide {activity}"
-msgstr "Gizle: {activity}"
+msgstr "Etkinlikler"
 
 #. Voice activities: tooltip on a disabled entry of the activity list. A
 #. channel runs one activity at a time.
 #: src/features/activities/components/VoiceActivitiesButton.tsx
 msgid "An activity is already running. End it before starting another."
-msgstr "Zaten bir aktivite açık. Yenisini başlatmadan önce onu bitir."
+msgstr "Zaten bir etkinlik açık. Yenisini başlatmadan önce onu bitir."
 
 #. Voice activities: tooltip on a disabled entry of the activity list. {count}
 #. is a number above 1.
@@ -57491,18 +57472,18 @@ msgstr "Kanalda en az {count} kişi gerekiyor"
 #. before mine. One runs at a time.
 #: src/features/activities/commands/VoiceActivityCommands.ts
 msgid "An activity is already running in this channel."
-msgstr "Bu kanalda zaten bir aktivite açık."
+msgstr "Bu kanalda zaten bir etkinlik açık."
 
 #. Voice activities: toast when the server refused or failed to start the
 #. picked activity.
 #: src/features/activities/commands/VoiceActivityCommands.ts
 msgid "Couldn't start the activity. Try again in a moment."
-msgstr "Aktivite başlatılamadı. Biraz sonra yeniden dene."
+msgstr "Etkinlik başlatılamadı. Biraz sonra yeniden dene."
 
 #. Voice activities: toast when ending the running activity failed.
 #: src/features/activities/commands/VoiceActivityCommands.ts
 msgid "Couldn't end the activity. Try again in a moment."
-msgstr "Aktivite bitirilemedi. Biraz sonra yeniden dene."
+msgstr "Etkinlik bitirilemedi. Biraz sonra yeniden dene."
 
 #. Band game test screen: heading over the list of people in the voice channel
 #. taking part.
@@ -58356,3 +58337,320 @@ msgstr "Şarkının sonunda her tuş serbest çalar. Son vuruşu birlikte tuttur
 #: src/features/activities/band/game/PlayStage.tsx
 msgid "Finale bonus at stake"
 msgstr "Son vuruşu bekleyen bonus"
+
+#. Voice activities: button on the activity tile in a call. Joining plays the
+#. activity and hears its sound; without it the call goes on as before.
+#: src/features/activities/components/ActivityMessages.ts
+msgctxt "voice-activity"
+msgid "Join"
+msgstr "Katıl"
+
+#. Voice activities: menu item and button that stop taking part in the running
+#. activity; the call goes on.
+#: src/features/activities/components/ActivityMessages.ts
+msgid "Leave activity"
+msgstr "Etkinlikten ayrıl"
+
+#. Voice activities: button on the activity tile in a call that makes the
+#. activity fill the call area.
+#: src/features/activities/components/ActivityMessages.ts
+msgctxt "voice-activity"
+msgid "Expand"
+msgstr "Büyüt"
+
+#. Voice activities: button on the expanded activity that shrinks it back to a
+#. tile among the people in the call.
+#: src/features/activities/components/ActivityMessages.ts
+msgctxt "voice-activity"
+msgid "Back to the grid"
+msgstr "Küçült"
+
+#. Voice activities: accessible label of the "more" button on the activity tile,
+#. which opens a small menu.
+#: src/features/activities/components/ActivityMessages.ts
+msgid "Activity options"
+msgstr "Etkinlik seçenekleri"
+
+#. Voice activities: accessible name of the activity tile in a call. {activity}
+#. is the activity name.
+#: src/features/activities/components/ActivityMessages.ts
+msgid "{activity} activity"
+msgstr "{activity} etkinliği"
+
+#. Voice activities: on the activity tile in a call, how many people in the
+#. channel take part.
+#: src/features/activities/components/ActivityMessages.ts
+msgid ""
+"{count, plural, =0 {Nobody has joined yet} one {# person joined} other {# "
+"people joined}}"
+msgstr ""
+"{count, plural, =0 {Henüz kimse katılmadı} one {# kişi katıldı} other {# kişi "
+"katıldı}}"
+
+#. Voice activities: status line on the band game tile in a call while nobody
+#. has voted for a song yet.
+#: src/features/activities/band/BandStatus.ts
+msgid "Picking a song"
+msgstr "Şarkı seçiliyor"
+
+#. Voice activities: status line on the band game tile in a call while the
+#. players vote for the next song.
+#: src/features/activities/band/BandStatus.ts
+msgid "Voting on a song"
+msgstr "Şarkı oylanıyor"
+
+#. Voice activities: status line on the band game tile in a call while the
+#. players vote. {song} is the title of the song with the most votes.
+#: src/features/activities/band/BandStatus.ts
+msgid "Voting on a song · {song} is ahead"
+msgstr "Şarkı oylanıyor · {song} önde"
+
+#. Voice activities: status line on the band game tile in a call while the
+#. players pick their instruments for the chosen song.
+#: src/features/activities/band/BandStatus.ts
+msgid "Choosing parts"
+msgstr "Partiler seçiliyor"
+
+#. Voice activities: status line on the band game tile in a call while the
+#. players pick their instruments. {song} is the song title.
+#: src/features/activities/band/BandStatus.ts
+msgid "Choosing parts · {song}"
+msgstr "Partiler seçiliyor · {song}"
+
+#. Voice activities: status line on the band game tile in a call while a song is
+#. being played.
+#: src/features/activities/band/BandStatus.ts
+msgid "Playing a song"
+msgstr "Şarkı çalınıyor"
+
+#. Voice activities: status line on the band game tile in a call while a song is
+#. played. {song} is its title.
+#: src/features/activities/band/BandStatus.ts
+msgid "Playing {song}"
+msgstr "{song} çalınıyor"
+
+#. Voice activities: status line on the band game tile in a call after a song,
+#. while the players see their scores and rate each other.
+#: src/features/activities/band/BandStatus.ts
+msgid "Rating the last song"
+msgstr "Son şarkı puanlanıyor"
+
+#. Voice activities: in the header of the mini window while I play the band
+#. game. {part} is my instrument (Guitar, Drums...), {time} how far the song is,
+#. like 2:14.
+#: src/features/activities/band/BandStatus.ts
+msgid "{part} · {time}"
+msgstr "{part} · {time}"
+
+#. Voice activities: chip on the band game card and detail page. {count} is how
+#. many songs the library has.
+#: src/features/activities/band/BandActivity.ts
+msgid "{count, plural, one {# song} other {# songs}}"
+msgstr "{count, plural, one {# şarkı} other {# şarkı}}"
+
+#. Voice activities: one-line description of the band game on its card in the
+#. activity picker.
+#: src/features/activities/band/BandActivity.ts
+msgid ""
+"Play as a band on guitar, bass, drums, keys and vocals. With your keyboard, "
+"with your friends in the channel."
+msgstr ""
+"Gitar, bas, davul, klavye ve vokalle grup halinde çalın. Klavyenizle, "
+"kanaldaki arkadaşlarınızla."
+
+#. Voice activities: label on the call tile of someone playing the band game.
+#. Bir Daha Baştan is its name; in Turkish "Bir Daha Baştan'da".
+#: src/features/activities/band/BandActivity.ts
+msgid "In Bir Daha Baştan"
+msgstr "Bir Daha Baştan'da"
+
+#. Voice activities: paragraph about the band game on its detail page in the
+#. activity picker.
+#: src/features/activities/band/BandActivity.ts
+msgid ""
+"Pick a song together and everyone takes an instrument. Miss and you go quiet, "
+"hit and you carry the band. Rock, metal, Turkish, pop; from Queen to Duman."
+msgstr ""
+"Şarkıyı birlikte seçin, herkes bir enstrüman alsın. Kaçıran susar, tutturan "
+"grubu taşır. Rock, metal, Türkçe, pop; Queen'den Duman'a."
+
+#. Voice activities: chip on the band game detail page. The game is played on
+#. the computer keyboard.
+#: src/features/activities/band/BandActivity.ts
+msgid "Played with the keyboard"
+msgstr "Klavyeyle oynanır"
+
+#. Voice activities: chip on the band game detail page. The game runs in the web
+#. app and the desktop app.
+#: src/features/activities/band/BandActivity.ts
+msgid "Web and desktop"
+msgstr "Web ve masaüstü"
+
+#. Voice activities: first step of how the band game goes, on its detail page.
+#: src/features/activities/band/BandActivity.ts
+msgid "Vote for a song"
+msgstr "Şarkıya oy ver"
+
+#. Voice activities: explanation under the first step (voting) on the band game
+#. detail page.
+#: src/features/activities/band/BandActivity.ts
+msgid "The most voted one plays"
+msgstr "En çok oyu alan çalar"
+
+#. Voice activities: second step of how the band game goes, on its detail page.
+#. Each player picks an instrument.
+#: src/features/activities/band/BandActivity.ts
+msgid "Take your part"
+msgstr "Partini al"
+
+#. Voice activities: explanation under the second step (taking a part) on the
+#. band game detail page.
+#: src/features/activities/band/BandActivity.ts
+msgid "Guitar, bass, drums, keys, vocals"
+msgstr "Gitar, bas, davul, klavye, vokal"
+
+#. Voice activities: third step of how the band game goes, on its detail page:
+#. play the song.
+#: src/features/activities/band/BandActivity.ts
+msgctxt "band-howto"
+msgid "Play"
+msgstr "Çal"
+
+#. Voice activities: explanation under the third step (playing) on the band game
+#. detail page. After the song, players give each other stars.
+#: src/features/activities/band/BandActivity.ts
+msgid "Then rate each other"
+msgstr "Sonunda birbirinizi puanlayın"
+
+#. Voice activities: note under the Start button on the band game detail page.
+#. Starting shows the game as a tile in the call; only those who join play and
+#. hear the music.
+#: src/features/activities/band/BandActivity.ts
+msgid ""
+"Everyone in the channel sees it as a tile. Whoever joins hears the song; the "
+"others carry on talking."
+msgstr ""
+"Kanalda herkese bir kutu olarak görünür. Katılan şarkıyı duyar, katılmayan "
+"sohbete devam eder."
+
+#. Voice activities: name of a coming activity where the people in the channel
+#. play freely together, without a song.
+#: src/features/activities/registry/ActivityRegistry.ts
+msgctxt "voice-activity"
+msgid "Jam"
+msgstr "Doğaçlama"
+
+#. Voice activities: one-line description of the coming jam activity in the
+#. activity picker.
+#: src/features/activities/registry/ActivityRegistry.ts
+msgid "Pick a key and play freely together"
+msgstr "Ton seç, birlikte serbest çal"
+
+#. Voice activities: next to the title of the activity picker. {channel} is the
+#. voice channel name, {count} how many people are in it.
+#: src/features/activities/components/ActivityPicker.tsx
+msgid "{channel} · {count, plural, one {# person} other {# people}}"
+msgstr "{channel} · {count, plural, one {# kişi} other {# kişi}}"
+
+#. Voice activities: placeholder and label of the search field in the activity
+#. picker.
+#: src/features/activities/components/ActivityPicker.tsx
+msgid "Search activities"
+msgstr "Etkinlik ara"
+
+#. Voice activities: shown in the activity picker when the search finds nothing.
+#. {query} is what was typed.
+#: src/features/activities/components/ActivityPicker.tsx
+msgid "No activity matches “{query}”"
+msgstr "“{query}” ile eşleşen etkinlik yok"
+
+#. Voice activities: heading over the activities in the picker that are
+#. announced but cannot be started yet.
+#: src/features/activities/components/ActivityPicker.tsx
+msgctxt "voice-activities"
+msgid "Coming soon"
+msgstr "Yakında"
+
+#. Voice activities: cue on an activity card in the picker; clicking the card
+#. opens its detail page.
+#: src/features/activities/components/ActivityPicker.tsx
+msgctxt "voice-activity-card"
+msgid "Open"
+msgstr "Aç"
+
+#. Voice activities: how many people can play an activity, on its card and
+#. detail page. For example "1–6 people".
+#: src/features/activities/components/ActivityPicker.tsx
+msgid "{min}–{max} people"
+msgstr "{min}–{max} kişi"
+
+#. Voice activities: how many people play an activity that needs an exact
+#. number, on its card and detail page.
+#: src/features/activities/components/ActivityPicker.tsx
+msgctxt "voice-activity-players"
+msgid "{count, plural, one {# person} other {# people}}"
+msgstr "{count, plural, one {# kişi} other {# kişi}}"
+
+#. Voice activities: back button on an activity detail page, returns to the list
+#. of activities.
+#: src/features/activities/components/ActivityPicker.tsx
+msgid "Back to activities"
+msgstr "Etkinliklere dön"
+
+#. Voice activities: accessible name of the numbered steps on an activity detail
+#. page.
+#: src/features/activities/components/ActivityPicker.tsx
+msgctxt "voice-activity"
+msgid "How it goes"
+msgstr "Nasıl oynanır"
+
+#. Voice activities: button on an activity detail page that starts the activity
+#. in the voice channel.
+#: src/features/activities/components/ActivityPicker.tsx
+msgctxt "voice-activity"
+msgid "Start"
+msgstr "Başlat"
+
+#. Voice activities: tooltip on the activities button while an activity runs; it
+#. makes the activity fill the call area. {activity} is its name.
+#: src/features/activities/components/VoiceActivitiesButton.tsx
+msgid "Expand {activity}"
+msgstr "Büyüt: {activity}"
+
+#. Voice activities: button in the header of the activity mini window; returns
+#. to the voice channel with the activity filling the call area.
+#: src/features/activities/components/ActivityPiPContent.tsx
+msgid "Back to the call, expanded"
+msgstr "Görüşmeye dön ve büyüt"
+
+#. Voice activities: button in the header of the activity mini window. The
+#. activity goes on (a song keeps playing); going back to the call shows it
+#. again.
+#: src/features/activities/components/ActivityPiPContent.tsx
+msgid "Hide the mini window"
+msgstr "Küçük pencereyi gizle"
+
+#. Voice activities: line under the game in the mini window while it has the
+#. keyboard. Clicking the chat box gives the keys back to typing.
+#: src/features/activities/components/ActivityPiPContent.tsx
+msgid "Keys go to the game · click the message box to type in chat"
+msgstr "Tuşlar oyunda · sohbete yazmak için mesaj kutusuna tıkla"
+
+#. Voice activities: line under the game in the mini window while the keyboard
+#. is elsewhere, for example in the chat.
+#: src/features/activities/components/ActivityPiPContent.tsx
+msgid "Click the game to play"
+msgstr "Oynamak için oyuna tıkla"
+
+#. Voice activities: status line on the band game tile while the players pick
+#. their instruments. {ready} of the {seated} players who took a part are ready.
+#: src/features/activities/band/BandStatus.ts
+msgid "Choosing parts · {ready}/{seated} ready"
+msgstr "Partiler seçiliyor · {ready}/{seated} hazır"
+
+#. Voice activities: line under the summary in the mini window while the band
+#. picks a song or parts; the playable game appears in the window once the song
+#. starts. Expand to take part in the picking.
+#: src/features/activities/components/ActivityPiPContent.tsx
+msgid "The game opens here when the song starts"
+msgstr "Şarkı başlayınca oyun burada açılır"

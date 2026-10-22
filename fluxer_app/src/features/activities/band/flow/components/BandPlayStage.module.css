@@ -13,3 +13,16 @@
 	flex-direction: column;
 	min-width: 0;
 }
+
+.crowd {
+	display: flex;
+	flex: 0 0 auto;
+	min-height: 0;
+}
+
+/* In a tile or the mini window the highways take the whole width; the crowd comes back on the expanded stage. */
+@container band-stage (max-width: 40rem) {
+	.crowd {
+		display: none;
+	}
+}

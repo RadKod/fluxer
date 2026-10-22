@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {PART_DESCRIPTORS} from '@app/features/activities/band/BandPartNames';
 import type {BandCheerKind, BandSongSummary} from '@app/features/activities/band/BandProtocol';
 import {type BandDifficulty, type BandPart, isLeadPart} from '@app/features/activities/band/engine/ChartModel';
 import type {BandSingerOutput} from '@app/features/activities/band/flow/BandSingerVoice';
@@ -29,18 +30,6 @@ export const STEP_DESCRIPTORS = {
 		comment: 'Band game: step indicator, the last step showing scores and crowd ratings.',
 	}),
 } as const;
-
-export const PART_DESCRIPTORS: Readonly<Record<BandPart, MessageDescriptor>> = {
-	guitar: msg({message: 'Guitar', comment: 'Band game: the guitar part of a song.'}),
-	rhythm: msg({
-		message: 'Rhythm guitar',
-		comment: 'Band game: the second guitar part of a song, the one playing chords and riffs under the lead.',
-	}),
-	bass: msg({message: 'Bass', comment: 'Band game: the bass guitar part of a song.'}),
-	drums: msg({message: 'Drums', comment: 'Band game: the drums part of a song.'}),
-	keys: msg({message: 'Keys', comment: 'Band game: the keyboard (piano, synth) part of a song.'}),
-	vocals: msg({message: 'Vocals', comment: 'Band game: the singing part of a song, scored from the microphone.'}),
-};
 
 const LEAD_PART_DESCRIPTORS: Readonly<Partial<Record<BandPart, MessageDescriptor>>> = {
 	guitar: msg({

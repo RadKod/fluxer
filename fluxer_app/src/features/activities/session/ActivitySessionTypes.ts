@@ -45,8 +45,14 @@ export interface ActivitySession {
 	readonly startedBy: string;
 	readonly startedAt: number;
 	readonly me: ActivityParticipant;
+	// Everyone in the voice channel, taking part or not.
 	readonly participants: ReadonlyArray<ActivityParticipant>;
-	// The starter while one of their connections is in the room, else whoever joined first. Same on every client.
+	// The participants who joined the activity: only they play, count for the activity's rules and lead it.
+	readonly members: ReadonlyArray<ActivityParticipant>;
+	// Whether this connection joined. Joining and leaving happen outside the activity, in the call's own controls.
+	readonly joined: boolean;
+	// The starter while one of their connections is a member, else the member who joined the room first. Same on every
+	// client; null while nobody takes part.
 	readonly leader: ActivityParticipant | null;
 	readonly isLeader: boolean;
 	readonly clock: ActivityClock;
@@ -55,12 +61,13 @@ export interface ActivitySession {
 	readonly stateVersion: number;
 	readonly keyboardCaptured: boolean;
 	onParticipantsChanged(listener: (participants: ReadonlyArray<ActivityParticipant>) => void): () => void;
+	onMembersChanged(listener: (members: ReadonlyArray<ActivityParticipant>) => void): () => void;
 	send(payload: unknown, options?: ActivitySendOptions): Promise<void>;
 	onMessage(handler: (message: ActivityMessage) => void): () => void;
 	// Leader only; returns false elsewhere. The state must be JSON and fit in one message.
 	setState(state: unknown): boolean;
 	onStateChanged(listener: (state: unknown) => void): () => void;
-	// On by default: while the panel has focus, push-to-talk and app shortcuts wait and keys stay in the panel.
+	// On by default: while the activity has focus, push-to-talk and app shortcuts wait and keys stay in the activity.
 	captureKeyboard(capture: boolean): void;
 	end(): Promise<boolean>;
 }

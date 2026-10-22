@@ -32,6 +32,8 @@
 	color: var(--band-t1);
 	font-size: 0.8125rem;
 	line-height: 1.4;
+	/* The stage is as big as its place in the call: the expanded stage, a grid tile or the mini window. */
+	container: band-stage / inline-size;
 }
 
 .stage button:focus-visible {
@@ -116,4 +118,11 @@
 	font: inherit;
 	font-weight: 600;
 	cursor: pointer;
+}
+
+/* A tile or the mini window: the steps give their room to the game. */
+@container band-stage (max-width: 40rem) {
+	.steps {
+		display: none;
+	}
 }

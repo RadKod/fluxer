@@ -3,14 +3,20 @@
 // The harness page: the band activity's real View on the left, in a box the size of the call stage, and the
 // controls for the fake room on the right. Dev-only text, so no lingui messages: nothing here reaches the catalogs.
 
-import {BAND_ACTIVITY} from '@app/features/activities/band/BandActivity';
 import type {BandBot, BandBotRole, BandBotSettings} from '@app/features/activities/band/dev/BandBots';
 import styles from '@app/features/activities/band/dev/BandDevApp.module.css';
-import {type BandDevHarness, MAX_BOTS} from '@app/features/activities/band/dev/BandDevHarness';
+import {type BandDevHarness, type BandDevLayout, MAX_BOTS} from '@app/features/activities/band/dev/BandDevHarness';
+import {BandDevLayouts} from '@app/features/activities/band/dev/BandDevLayouts';
 import {BAND_DIFFICULTIES, type BandDifficulty, type BandPart} from '@app/features/activities/band/engine/ChartModel';
 import {BAND_PARTS} from '@app/features/activities/band/flow/BandRoomMachine';
 import {observer} from 'mobx-react-lite';
-import {Suspense} from 'react';
+
+const LAYOUT_CHOICES: ReadonlyArray<readonly [BandDevLayout, string]> = [
+	['stage', 'Büyük sahne'],
+	['grid', 'Görüşme kutusu'],
+	['mini', 'Küçük pencere'],
+	['picker', 'Etkinlik seçici'],
+];
 
 const CHEER_CHOICES: ReadonlyArray<readonly [number, string]> = [
 	[0, 'hiç'],
@@ -161,6 +167,29 @@ const ControlPanel = observer(function ControlPanel({harness}: {harness: BandDev
 				</button>
 			</section>
 
+			<section className={styles.section} data-flx="activities.band.dev.band-dev-app.control-panel.section--layout">
+				<h2 className={styles.heading} data-flx="activities.band.dev.band-dev-app.control-panel.heading--layout">
+					Görünüm
+				</h2>
+				<div className={styles.row} data-flx="activities.band.dev.band-dev-app.control-panel.row--layout">
+					{LAYOUT_CHOICES.map(([layout, label]) => (
+						<button
+							key={layout}
+							type="button"
+							className={styles.button}
+							aria-pressed={harness.layout === layout}
+							onClick={() => harness.setLayout(layout)}
+							data-flx="activities.band.dev.band-dev-app.control-panel.button--layout"
+						>
+							{label}
+						</button>
+					))}
+				</div>
+				<p className={styles.muted} data-flx="activities.band.dev.band-dev-app.control-panel.muted--layout">
+					Oyun bir kez kurulur ve yerler arasında taşınır; şarkı sürerken değiştirmek sesi kesmemeli.
+				</p>
+			</section>
+
 			<section className={styles.section} data-flx="activities.band.dev.band-dev-app.control-panel.section--2">
 				<h2 className={styles.heading} data-flx="activities.band.dev.band-dev-app.control-panel.heading--2">
 					Oturum
@@ -255,23 +284,10 @@ const ControlPanel = observer(function ControlPanel({harness}: {harness: BandDev
 });
 
 export const BandDevApp = observer(function BandDevApp({harness}: {harness: BandDevHarness}) {
-	const {View} = BAND_ACTIVITY;
 	return (
 		<div className={styles.root} data-flx="activities.band.dev.band-dev-app.root">
 			<main className={styles.stage} data-flx="activities.band.dev.band-dev-app.stage">
-				<Suspense
-					fallback={
-						<p className={styles.muted} data-flx="activities.band.dev.band-dev-app.muted">
-							yükleniyor
-						</p>
-					}
-				>
-					<View
-						key={harness.session.sessionId}
-						session={harness.session}
-						data-flx="activities.band.dev.band-dev-app.view"
-					/>
-				</Suspense>
+				<BandDevLayouts harness={harness} data-flx="activities.band.dev.band-dev-app.layouts" />
 			</main>
 			<ControlPanel harness={harness} data-flx="activities.band.dev.band-dev-app.control-panel" />
 		</div>

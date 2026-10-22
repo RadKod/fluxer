@@ -1,0 +1,147 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* The game's own palette (BandStage.module.css, HighwayRenderer): the cover is the game seen from outside. */
+.cover {
+	--band-cover-night: #0c0d0f;
+	--band-cover-road: #17181c;
+	--band-cover-plum: #b5179e;
+	--band-cover-beer: #ffc83d;
+	--band-cover-paper: #f7f5f0;
+	--band-cover-divider: rgba(247, 245, 240, 0.06);
+	--band-cover-road-width: 68%;
+	--band-cover-wordmark-size: 2.75rem;
+	--band-cover-inset: 1.75rem;
+	position: relative;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	background-color: var(--band-cover-night);
+	isolation: isolate;
+	container-type: size;
+	/* The vanishing point sits above the cover, so the road runs from the bottom edge up out of the top. */
+	perspective: 225cqh;
+	perspective-origin: 50% -30%;
+}
+
+.hero {
+	--band-cover-wordmark-size: 3.25rem;
+}
+
+.tile {
+	--band-cover-road-width: 64%;
+}
+
+.thumb {
+	--band-cover-road-width: 80%;
+}
+
+/* Sized from the cover's height (cqh) so every size draws the same picture. */
+.highway {
+	position: absolute;
+	bottom: -25%;
+	left: 50%;
+	display: flex;
+	gap: 2cqh;
+	width: var(--band-cover-road-width);
+	height: 240%;
+	box-sizing: border-box;
+	padding: 0 2cqh;
+	border-right: 0.7cqh solid var(--band-cover-plum);
+	border-left: 0.7cqh solid var(--band-cover-plum);
+	background-color: var(--band-cover-road);
+	transform: translateX(-50%) rotateX(56deg);
+	transform-origin: 50% 100%;
+}
+
+.lane {
+	position: relative;
+	flex: 1 1 0;
+	border-right: 0.0625rem solid var(--band-cover-divider);
+}
+
+.lane:last-child {
+	border-right: none;
+}
+
+/* The string down the middle of each lane, darker than its notes. */
+.lane::before {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 50%;
+	width: 0.7cqh;
+	margin-left: -0.35cqh;
+	background-color: var(--band-cover-lane);
+	content: '';
+	opacity: 0.45;
+}
+
+.green {
+	--band-cover-lane: #36c25f;
+}
+
+.red {
+	--band-cover-lane: #e8484f;
+}
+
+.yellow {
+	--band-cover-lane: #f4cf1c;
+}
+
+.blue {
+	--band-cover-lane: #3d8bff;
+}
+
+.orange {
+	--band-cover-lane: #ff8a2a;
+}
+
+.note {
+	position: absolute;
+	right: 8%;
+	left: 8%;
+	height: 9cqh;
+	border-radius: 4.5cqh;
+	background-color: var(--band-cover-lane);
+}
+
+/* The far end of the road fades into the night where the wordmark sits. */
+.fade {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	height: 60%;
+	background: linear-gradient(to top, var(--band-cover-night) 40%, transparent);
+}
+
+.wordmark {
+	position: absolute;
+	bottom: calc(var(--band-cover-inset) * 0.9);
+	left: var(--band-cover-inset);
+	display: flex;
+	align-items: flex-end;
+	gap: calc(var(--band-cover-wordmark-size) * 0.3);
+}
+
+.wordmarkText {
+	color: var(--band-cover-paper);
+	font-weight: 700;
+	font-size: var(--band-cover-wordmark-size);
+	line-height: 0.95;
+	letter-spacing: -0.03em;
+}
+
+.wordmarkLine {
+	display: block;
+}
+
+/* The tilted beer-yellow block of the sanalyer logo. */
+.block {
+	width: calc(var(--band-cover-wordmark-size) * 0.75);
+	height: calc(var(--band-cover-wordmark-size) * 0.75);
+	margin-bottom: calc(var(--band-cover-wordmark-size) * 0.68);
+	border-radius: calc(var(--band-cover-wordmark-size) * 0.16);
+	background-color: var(--band-cover-beer);
+	transform: rotate(-12deg);
+}

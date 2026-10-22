@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Accessibility, {ChannelTypingIndicatorMode} from '@app/features/accessibility/state/Accessibility';
-import {toggleVoiceActivities, voiceActivitiesLabel} from '@app/features/activities/components/VoiceActivitiesButton';
+import {
+	openVoiceActivitiesFromChannelList,
+	voiceActivitiesLabel,
+} from '@app/features/activities/components/VoiceActivitiesButton';
 import {voiceActivitiesEnabled} from '@app/features/activities/utils/VoiceActivityAvailability';
 import {ChannelSettingsModal} from '@app/features/app/components/dialogs/LoadableSettingsModals';
 import styles from '@app/features/app/components/layout/ChannelItem.module.css';
@@ -579,8 +582,8 @@ export const ChannelItem = observer(
 			);
 		}, [channel.id, armActionModalReturn]);
 		const handleActivitiesClick = useCallback(
-			(event: React.MouseEvent<HTMLButtonElement>) => toggleVoiceActivities(event.currentTarget, channel.id, 'right'),
-			[channel.id],
+			() => openVoiceActivitiesFromChannelList(channel.guildId ?? null, channel.id),
+			[channel.guildId, channel.id],
 		);
 		const handleOpenChatClick = useCallback(() => {
 			collapseVoiceCallView();
@@ -700,7 +703,7 @@ export const ChannelItem = observer(
 							<div className={styles.hoverAffordance} data-flx="app.channel-item.hover-affordance--activities">
 								<ChannelItemIcon
 									icon={RocketLaunchIcon}
-									label={voiceActivitiesLabel(i18n, channel.id)}
+									label={voiceActivitiesLabel(i18n, channel.id, 'channel-list')}
 									selected={shouldShowSelectedState}
 									onClick={handleActivitiesClick}
 									tabIndex={actionButtonTabIndex}

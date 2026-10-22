@@ -2,7 +2,9 @@
 
 // Wire format of one data channel message: {t, seq, d}. There is no sender field; the receiver takes the sender
 // from LiveKit, so a payload cannot speak for someone else.
-export type ActivityEnvelopeType = 'app' | 'ping' | 'pong' | 'state' | 'state_req';
+// `member` says whether the sender takes part in the activity and `member_req` asks for it; clients from before the
+// join step drop both as unreadable.
+export type ActivityEnvelopeType = 'app' | 'ping' | 'pong' | 'state' | 'state_req' | 'member' | 'member_req';
 
 const ENVELOPE_TYPES: ReadonlySet<string> = new Set<ActivityEnvelopeType>([
 	'app',
@@ -10,6 +12,8 @@ const ENVELOPE_TYPES: ReadonlySet<string> = new Set<ActivityEnvelopeType>([
 	'pong',
 	'state',
 	'state_req',
+	'member',
+	'member_req',
 ]);
 
 // LiveKit splits nothing above this for a reliable packet; a bigger message would be dropped on the way.

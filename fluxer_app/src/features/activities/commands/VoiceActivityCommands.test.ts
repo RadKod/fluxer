@@ -20,6 +20,7 @@ vi.mock('@app/features/platform/transport/RestTransport', () => ({
 	http: {get: vi.fn(), post: vi.fn(), delete: vi.fn()},
 }));
 vi.mock('@app/features/ui/commands/ToastCommands', () => ({createToast: vi.fn()}));
+vi.mock('@app/features/navigation/commands/NavigationCommands', () => ({selectChannel: vi.fn()}));
 const voice = {channelId: '500' as string | null, connectionId: 'conn-a' as string | null};
 vi.mock('@app/features/voice/engine/MediaEngineFacade', () => ({
 	default: {
@@ -34,6 +35,7 @@ vi.mock('@app/features/voice/engine/MediaEngineFacade', () => ({
 
 const {http} = await import('@app/features/platform/transport/RestTransport');
 const ToastCommands = await import('@app/features/ui/commands/ToastCommands');
+const NavigationCommands = await import('@app/features/navigation/commands/NavigationCommands');
 const Commands = await import('@app/features/activities/commands/VoiceActivityCommands');
 const {default: VoiceActivities} = await import('@app/features/activities/state/VoiceActivities');
 
@@ -64,8 +66,45 @@ describe('VoiceActivityCommands', () => {
 		await expect(Commands.startVoiceActivity('500', 'band')).resolves.toEqual({ok: true});
 		expect(http.post).toHaveBeenCalledWith(PATH, {body: {activity_id: 'band', connection_id: 'conn-a'}});
 		expect(VoiceActivities.getSession('500')?.session_id).toBe('11');
-		expect(VoiceActivities.isPanelOpen('500')).toBe(true);
 		expect(VoiceActivities.request).toBeNull();
+	});
+
+	it('joins the session I start but leaves it a tile', async () => {
+		vi.mocked(http.post).mockResolvedValue(reply(SESSION));
+		await Commands.startVoiceActivity('500', 'band');
+		expect(VoiceActivities.isJoined('500')).toBe(true);
+		expect(VoiceActivities.isExpanded('500')).toBe(false);
+		// The room metadata then brings the same session; I stay joined.
+		VoiceActivities.handleSession('500', SESSION);
+		expect(VoiceActivities.isJoined('500')).toBe(true);
+	});
+
+	it('joins and leaves a running session without touching the call', () => {
+		VoiceActivities.handleSession('500', SESSION);
+		expect(VoiceActivities.isJoined('500')).toBe(false);
+		Commands.joinVoiceActivity('500');
+		expect(VoiceActivities.isJoined('500')).toBe(true);
+		VoiceActivities.expand();
+		Commands.leaveVoiceActivity('500');
+		expect(VoiceActivities.isJoined('500')).toBe(false);
+		expect(VoiceActivities.isExpanded('500')).toBe(false);
+		expect(VoiceActivities.getSession('500')?.session_id).toBe('11');
+	});
+
+	it('does not join from outside the voice channel', () => {
+		VoiceActivities.handleSession('500', SESSION);
+		voice.channelId = '600';
+		Commands.joinVoiceActivity('500');
+		expect(VoiceActivities.joinedSessionId).toBeNull();
+	});
+
+	it('shows a running activity expanded in its channel', () => {
+		VoiceActivities.handleSession('500', SESSION);
+		VoiceActivities.closeMiniWindow();
+		Commands.showVoiceActivity('7', '500');
+		expect(VoiceActivities.isExpanded('500')).toBe(true);
+		expect(VoiceActivities.miniWindowClosed).toBe(false);
+		expect(NavigationCommands.selectChannel).toHaveBeenCalledWith('7', '500');
 	});
 
 	it('tells me another activity won and reads the running one', async () => {

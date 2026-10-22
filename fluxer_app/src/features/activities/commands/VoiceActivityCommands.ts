@@ -3,12 +3,14 @@
 import VoiceActivities from '@app/features/activities/state/VoiceActivities';
 import {parseVoiceActivitySession} from '@app/features/activities/utils/VoiceActivityMetadata';
 import {Endpoints} from '@app/features/app/constants/Endpoints';
+import * as NavigationCommands from '@app/features/navigation/commands/NavigationCommands';
 import {http} from '@app/features/platform/transport/RestTransport';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {failureCode} from '@app/features/platform/utils/ResponseInspection';
 import * as ToastCommands from '@app/features/ui/commands/ToastCommands';
 import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
+import {ME} from '@fluxer/constants/src/AppConstants';
 import type {VoiceActivityId} from '@fluxer/constants/src/VoiceActivityConstants';
 import {i18n} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
@@ -70,9 +72,13 @@ export async function startVoiceActivity(
 		const {body} = await http.post<unknown>(Endpoints.CHANNEL_ACTIVITY(channelId), {
 			body: {activity_id: activityId, connection_id: connectionId},
 		});
-		// The room metadata brings the same session to everyone; the reply only gets here first.
+		// The room metadata brings the same session to everyone; the reply only gets here first. Starting joins: the
+		// starter plays, but the activity stays a tile until they expand it.
 		const session = parseVoiceActivitySession(body);
-		if (session && myConnectionId(channelId)) VoiceActivities.handleSession(channelId, session);
+		if (session && myConnectionId(channelId)) {
+			VoiceActivities.join(session.session_id);
+			VoiceActivities.handleSession(channelId, session);
+		}
 		return OK;
 	} catch (error) {
 		logger.warn('Starting the activity failed', error);
@@ -105,4 +111,23 @@ export async function endVoiceActivity(channelId: string, sessionId: string): Pr
 	} finally {
 		VoiceActivities.setRequest(null);
 	}
+}
+
+export function joinVoiceActivity(channelId: string): void {
+	const session = VoiceActivities.getSession(channelId);
+	if (session && myConnectionId(channelId)) VoiceActivities.join(session.session_id);
+}
+
+// Leaving the voice channel leaves the activity as well; this is leaving the activity and staying in the call.
+export function leaveVoiceActivity(channelId: string): void {
+	if (VoiceActivities.isJoined(channelId)) VoiceActivities.leave();
+}
+
+// Back to the voice channel with the activity filling the call's stage: the mini window's expand button and the
+// activities button of a channel I am not looking at.
+export function showVoiceActivity(guildId: string | null, channelId: string): void {
+	if (!VoiceActivities.getSession(channelId)) return;
+	VoiceActivities.expand();
+	VoiceActivities.reopenMiniWindow();
+	NavigationCommands.selectChannel(guildId ?? ME, channelId);
 }

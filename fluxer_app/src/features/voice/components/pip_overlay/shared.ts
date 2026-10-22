@@ -9,20 +9,33 @@ import {
 	type FloatingPaneGeometry,
 	getCornerPoint as getCornerOffset,
 	getDragBounds as getPaneDragBounds,
-	getPaneHeight,
 	type Point,
 	pickCornerForFling,
 	type ResizeEdge,
 	type ResizeStart,
 } from '@app/features/ui/floating_pane';
-import type {PiPContent} from '@app/features/ui/state/PiP';
+import type {PiPContent, PiPContentType} from '@app/features/ui/state/PiP';
 import type {SpringOptions} from 'framer-motion';
 import type {Room} from 'livekit-client';
 
-const PIP_ASPECT_RATIO = 16 / 9;
-const PIP_MAX_WIDTH = 720;
-const PIP_MIN_WIDTH = 240;
 const EDGE_PADDING = 20;
+
+// The window's proportions and width limits. A stream keeps its video's 16:9; the activity is played in the window,
+// so it is taller, for its header, the game and the line under it.
+export interface PiPShape {
+	readonly aspectRatio: number;
+	readonly minWidth: number;
+	readonly maxWidth: number;
+}
+
+const PIP_SHAPES: Readonly<Record<PiPContentType, PiPShape>> = {
+	stream: {aspectRatio: 16 / 9, minWidth: 240, maxWidth: 720},
+	activity: {aspectRatio: 5 / 4, minWidth: 360, maxWidth: 720},
+};
+
+export function getPiPShape(type: PiPContentType): PiPShape {
+	return PIP_SHAPES[type];
+}
 
 export type {Corner, ResizeEdge};
 
@@ -59,23 +72,24 @@ export const INTERACTION_SPRING: SpringOptions = {
 };
 export const pipOverlayLogger = new Logger('PiPOverlay');
 
-function buildGeometry(viewportWidth: number, viewportHeight: number, titlebarHeight: number): FloatingPaneGeometry {
+function buildGeometry(
+	shape: PiPShape,
+	viewportWidth: number,
+	viewportHeight: number,
+	titlebarHeight: number,
+): FloatingPaneGeometry {
 	return {
 		viewport: {width: viewportWidth, height: viewportHeight},
 		edgePadding: EDGE_PADDING,
 		topInset: titlebarHeight,
-		aspectRatio: PIP_ASPECT_RATIO,
-		minWidth: PIP_MIN_WIDTH,
-		maxWidth: PIP_MAX_WIDTH,
+		aspectRatio: shape.aspectRatio,
+		minWidth: shape.minWidth,
+		maxWidth: shape.maxWidth,
 	};
 }
 
-export function getPiPHeight(width: number): number {
-	return getPaneHeight(width, PIP_ASPECT_RATIO);
-}
-
-export function clampPiPWidth(value: number, viewportWidth: number, viewportHeight: number): number {
-	return clampPaneWidth(value, buildGeometry(viewportWidth, viewportHeight, getTitlebarHeight()));
+export function clampPiPWidth(shape: PiPShape, value: number, viewportWidth: number, viewportHeight: number): number {
+	return clampPaneWidth(value, buildGeometry(shape, viewportWidth, viewportHeight, getTitlebarHeight()));
 }
 
 export function getTitlebarHeight(): number {
@@ -86,23 +100,23 @@ export function getTitlebarHeight(): number {
 }
 
 export function getDragBounds(
+	shape: PiPShape,
 	viewportWidth: number,
 	viewportHeight: number,
 	pipWidth: number,
-	_pipHeight: number,
 	titlebarHeight = getTitlebarHeight(),
 ): DragBounds {
-	return getPaneDragBounds(buildGeometry(viewportWidth, viewportHeight, titlebarHeight), pipWidth);
+	return getPaneDragBounds(buildGeometry(shape, viewportWidth, viewportHeight, titlebarHeight), pipWidth);
 }
 
 export function getCornerPositions(
+	shape: PiPShape,
 	viewportWidth: number,
 	viewportHeight: number,
 	pipWidth: number,
-	_pipHeight: number,
 	titlebarHeight = getTitlebarHeight(),
 ): Record<Corner, CornerPosition> {
-	const bounds = getPaneDragBounds(buildGeometry(viewportWidth, viewportHeight, titlebarHeight), pipWidth);
+	const bounds = getPaneDragBounds(buildGeometry(shape, viewportWidth, viewportHeight, titlebarHeight), pipWidth);
 	return {
 		'top-left': getCornerOffset('top-left', bounds),
 		'top-right': getCornerOffset('top-right', bounds),
@@ -127,6 +141,7 @@ export function pickCornerOnRelease(
 }
 
 export function computePiPResize(
+	shape: PiPShape,
 	state: ResizeState,
 	pointerX: number,
 	pointerY: number,
@@ -142,7 +157,7 @@ export function computePiPResize(
 		paneStartX: state.startPosX,
 		paneStartY: state.startPosY,
 	};
-	return computeResize(start, pointerX, pointerY, buildGeometry(viewportWidth, viewportHeight, titlebarHeight));
+	return computeResize(start, pointerX, pointerY, buildGeometry(shape, viewportWidth, viewportHeight, titlebarHeight));
 }
 
 export interface PiPOverlayInnerProps {

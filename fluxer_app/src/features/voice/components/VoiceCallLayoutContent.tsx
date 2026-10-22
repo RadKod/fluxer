@@ -73,6 +73,8 @@ interface VoiceCallLayoutContentProps {
 	isVoiceCallAppFullscreen?: boolean;
 	onGridCapacityChange?: (info: {visibleTileCount: number; totalTileCount: number; overflow: boolean}) => void;
 	onExpandUser: (userId: string) => void;
+	// The running voice activity's tile, first in the grid. A focused stream or camera takes the stage without it.
+	activityTile?: React.ReactNode;
 }
 
 interface FocusLayoutStyle extends React.CSSProperties {
@@ -104,6 +106,7 @@ export const VoiceCallLayoutContent = observer(function VoiceCallLayoutContent({
 	isVoiceCallAppFullscreen = false,
 	onGridCapacityChange,
 	onExpandUser,
+	activityTile,
 }: VoiceCallLayoutContentProps) {
 	const {i18n} = useLingui();
 	const focusLayoutStyle = useMemo(() => (compact ? COMPACT_FOCUS_STYLE : undefined), [compact]);
@@ -246,6 +249,7 @@ export const VoiceCallLayoutContent = observer(function VoiceCallLayoutContent({
 				>
 					<VoiceGridLayout
 						entries={visibleCameraTracks.map(trackToEntry)}
+						leadingTile={activityTile}
 						compact={compact}
 						onExpandUser={onExpandUser}
 						data-flx="voice.voice-call-layout-content.focus-layout-node.voice-grid-layout"
@@ -542,6 +546,7 @@ export const VoiceCallLayoutContent = observer(function VoiceCallLayoutContent({
 			</div>
 		);
 	}, [
+		activityTile,
 		channel.guildId,
 		channel.id,
 		compact,
@@ -583,6 +588,7 @@ export const VoiceCallLayoutContent = observer(function VoiceCallLayoutContent({
 						>
 							<VoiceGridLayout
 								entries={gridEntries}
+								leadingTile={activityTile}
 								compact={compact}
 								onCapacityChange={onGridCapacityChange}
 								onExpandUser={onExpandUser}
@@ -598,6 +604,7 @@ export const VoiceCallLayoutContent = observer(function VoiceCallLayoutContent({
 					) : (
 						<VoiceGridLayout
 							entries={gridEntries}
+							leadingTile={activityTile}
 							compact={compact}
 							onCapacityChange={onGridCapacityChange}
 							onExpandUser={onExpandUser}
@@ -626,6 +633,7 @@ export const VoiceCallLayoutContent = observer(function VoiceCallLayoutContent({
 			</Scroller>
 		);
 	}, [
+		activityTile,
 		channel.guildId,
 		channel.id,
 		compact,

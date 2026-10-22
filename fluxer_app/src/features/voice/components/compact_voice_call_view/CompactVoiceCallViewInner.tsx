@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {
+	ActivityStage,
+	isActivityShownInCall,
+	isActivityStageShown,
+} from '@app/features/activities/components/ActivityStage';
+import {ActivityTile} from '@app/features/activities/components/ActivityTile';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import ContextMenu, {isContextMenuNodeTarget} from '@app/features/ui/state/ContextMenu';
 import KeyboardMode from '@app/features/ui/state/KeyboardMode';
@@ -139,13 +145,28 @@ export const CompactVoiceCallViewInner: React.FC<CompactVoiceCallViewProps> = ob
 			guildId: channel.guildId ?? null,
 			channelId: channel.id,
 		});
+		const hasActivity = !audioOnly && isActivityShownInCall(channel);
+		const showActivityStage = hasActivity && isActivityStageShown(channel);
+		const activityTile = useMemo(
+			() =>
+				hasActivity ? (
+					<ActivityTile
+						channel={channel}
+						playable
+						data-flx="voice.compact-voice-call-view.compact-voice-call-view-inner.activity-tile"
+					/>
+				) : null,
+			[channel, hasActivity],
+		);
+		// A running activity needs its tile, so an audio-only call shows the grid instead of the avatar row.
 		const hasRenderableCallMedia = useMemo(
 			() =>
+				hasActivity ||
 				screenShareTracks.length > 0 ||
 				cameraTracksAll.some(
 					(track) => isTrackReference(track) && track.publication != null && !track.publication.isMuted,
 				),
-			[cameraTracksAll, screenShareTracks],
+			[cameraTracksAll, hasActivity, screenShareTracks],
 		);
 		const {shouldRenderCallLayout, useFullHeightCallLayout, shouldShowAvatarFallback, shouldForceFloatingHudVisible} =
 			useMemo(
@@ -399,23 +420,29 @@ export const CompactVoiceCallViewInner: React.FC<CompactVoiceCallViewProps> = ob
 					)}
 					data-flx="voice.compact-voice-call-view.layout-node.layout-host"
 				>
-					<VoiceCallLayoutContent
-						channel={channel}
-						layoutMode={layoutMode}
-						focusMainTrack={focusMainTrack}
-						carouselTracks={carouselTracks}
-						filteredCameraTracks={filteredCameraTracks}
-						gridEntries={gridEntries}
-						hasScreenShare={hasScreenShare}
-						pinnedParticipantIdentity={pinnedParticipantIdentity}
-						compact={!useFullHeightCallLayout}
-						isVoiceCallAppFullscreen={isVoiceCallAppFullscreen}
-						onExpandUser={handleExpandUser}
-						data-flx="voice.compact-voice-call-view.layout-node.voice-call-layout-content"
-					/>
+					{showActivityStage ? (
+						<ActivityStage channel={channel} data-flx="voice.compact-voice-call-view.layout-node.activity-stage" />
+					) : (
+						<VoiceCallLayoutContent
+							channel={channel}
+							layoutMode={layoutMode}
+							focusMainTrack={focusMainTrack}
+							carouselTracks={carouselTracks}
+							filteredCameraTracks={filteredCameraTracks}
+							gridEntries={gridEntries}
+							hasScreenShare={hasScreenShare}
+							pinnedParticipantIdentity={pinnedParticipantIdentity}
+							compact={!useFullHeightCallLayout}
+							isVoiceCallAppFullscreen={isVoiceCallAppFullscreen}
+							onExpandUser={handleExpandUser}
+							activityTile={activityTile}
+							data-flx="voice.compact-voice-call-view.layout-node.voice-call-layout-content"
+						/>
+					)}
 				</div>
 			),
 			[
+				activityTile,
 				carouselTracks,
 				channel,
 				filteredCameraTracks,
@@ -427,6 +454,7 @@ export const CompactVoiceCallViewInner: React.FC<CompactVoiceCallViewProps> = ob
 				pinnedParticipantIdentity,
 				screenShareTracks,
 				isVoiceCallAppFullscreen,
+				showActivityStage,
 				useFullHeightCallLayout,
 			],
 		);

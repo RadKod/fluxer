@@ -18,6 +18,7 @@ import {
 	type BandState,
 	type BandVote,
 } from '@app/features/activities/band/BandProtocol';
+import {tallyVotes} from '@app/features/activities/band/BandVotes';
 import {BAND_DIFFICULTIES, type BandDifficulty, type BandPart} from '@app/features/activities/band/engine/ChartModel';
 
 export const BAND_PARTS: ReadonlyArray<BandPart> = ['guitar', 'rhythm', 'bass', 'drums', 'keys', 'vocals'];
@@ -31,7 +32,7 @@ export const BAND_PLAY_GRACE_MS = 10_000;
 export interface BandRoomContext {
 	// User id of the session leader; only it may skip a phase or pick the group difficulty.
 	readonly leaderId: string | null;
-	// User ids with at least one connection in the room.
+	// User ids with at least one connection taking part in the activity; someone only in the call does not count.
 	readonly presentUserIds: ReadonlySet<string>;
 	// The song library in index order; empty until the index has loaded.
 	readonly songs: ReadonlyMap<string, BandSongSummary>;
@@ -105,24 +106,6 @@ function startPick(excludeSongId: string | null, now: number, ctx: BandRoomConte
 		openedAt: now,
 		endsAt: null,
 	};
-}
-
-export interface BandVoteTally {
-	readonly songId: string;
-	readonly voterIds: ReadonlyArray<string>;
-}
-
-// Voted songs by vote count; on a tie, the song whose standing votes started first.
-export function tallyVotes(votes: ReadonlyArray<BandVote>): Array<BandVoteTally> {
-	const bySong = new Map<string, Array<string>>();
-	for (const vote of votes) {
-		const voters = bySong.get(vote.songId);
-		if (voters) voters.push(vote.userId);
-		else bySong.set(vote.songId, [vote.userId]);
-	}
-	return [...bySong]
-		.map(([songId, voterIds]) => ({songId, voterIds}))
-		.sort((a, b) => b.voterIds.length - a.voterIds.length);
 }
 
 // The first vote starts the countdown, the last one taken back stops it.

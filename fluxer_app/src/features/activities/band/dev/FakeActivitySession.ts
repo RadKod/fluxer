@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// An in-memory ActivitySession for the local band harness: no LiveKit, no gateway. I am always in the room and, as
-// the starter, the leader; simulated peers join through connectPeer and talk to me (and each other) over a loopback
-// that keeps the real wire rules: payloads are JSON-encoded through the real envelope, nothing echoes to its sender,
+// An in-memory ActivitySession for the local band harness: no LiveKit, no gateway. I am always in the room, joined
+// and, as the starter, the leader; simulated peers join through connectPeer (taking part unless told they only sit in
+// the call) and talk to me (and each other) over a loopback that keeps the real wire rules: payloads are JSON-encoded through the real envelope, nothing echoes to its sender,
 // `to` narrows delivery, and lossy messages can be dropped.
 
 import {encodeActivityEnvelope} from '@app/features/activities/session/ActivityEnvelope';
@@ -75,6 +75,8 @@ export class FakeActivitySession implements ActivitySession {
 	readonly clock: ActivityClock;
 	readonly me: ActivityParticipant;
 	participants: ReadonlyArray<ActivityParticipant> = [];
+	members: ReadonlyArray<ActivityParticipant> = [];
+	joined = true;
 	leader: ActivityParticipant | null = null;
 	state: unknown = null;
 	stateVersion = 0;
@@ -87,6 +89,9 @@ export class FakeActivitySession implements ActivitySession {
 	private readonly random: () => number;
 	private readonly messageHandlers = new Set<(message: ActivityMessage) => void>();
 	private readonly participantListeners = new Set<(participants: ReadonlyArray<ActivityParticipant>) => void>();
+	private readonly memberListeners = new Set<(members: ReadonlyArray<ActivityParticipant>) => void>();
+	// Peers in the call who have not joined the activity, by identity.
+	private readonly onlyInCall = new Set<string>();
 	private readonly stateListeners = new Set<(state: unknown) => void>();
 	private readonly peers = new Map<string, PeerEndpoint>();
 	private readonly timers = new Set<ReturnType<typeof setTimeout>>();
@@ -115,6 +120,9 @@ export class FakeActivitySession implements ActivitySession {
 		this.me = this.newParticipant(myUserId, true);
 		makeObservable<FakeActivitySession, 'refreshParticipants' | 'acceptState'>(this, {
 			participants: observableRef,
+			members: observableRef,
+			joined: observable,
+			setJoined: action,
 			leader: observableRef,
 			state: observableRef,
 			stateVersion: observable,
@@ -140,6 +148,11 @@ export class FakeActivitySession implements ActivitySession {
 	onParticipantsChanged(listener: (participants: ReadonlyArray<ActivityParticipant>) => void): () => void {
 		this.participantListeners.add(listener);
 		return () => this.participantListeners.delete(listener);
+	}
+
+	onMembersChanged(listener: (members: ReadonlyArray<ActivityParticipant>) => void): () => void {
+		this.memberListeners.add(listener);
+		return () => this.memberListeners.delete(listener);
 	}
 
 	onMessage(handler: (message: ActivityMessage) => void): () => void {
@@ -175,6 +188,11 @@ export class FakeActivitySession implements ActivitySession {
 		return true;
 	}
 
+	// Leaving the activity while staying in the call, as the call's own Leave does.
+	setJoined(joined: boolean): void {
+		this.joined = joined;
+	}
+
 	captureKeyboard(capture: boolean): void {
 		this.keyboardCaptured = capture;
 	}
@@ -190,9 +208,10 @@ export class FakeActivitySession implements ActivitySession {
 	}
 
 	// A new participant in the room. It sees the leader's current state after one latency, like a late joiner whose
-	// state request was answered.
-	connectPeer(userId: string): FakeActivityPeer {
+	// state request was answered. With `joined: false` it is only in the call: no seat, no say in the room's rules.
+	connectPeer(userId: string, {joined = true}: {joined?: boolean} = {}): FakeActivityPeer {
 		const participant = this.newParticipant(userId, false);
+		if (!joined) this.onlyInCall.add(participant.identity);
 		const endpoint: PeerEndpoint = {
 			participant,
 			messageHandlers: new Set(),
@@ -233,6 +252,7 @@ export class FakeActivitySession implements ActivitySession {
 		this.peers.clear();
 		this.messageHandlers.clear();
 		this.participantListeners.clear();
+		this.memberListeners.clear();
 		this.stateListeners.clear();
 	}
 
@@ -252,6 +272,7 @@ export class FakeActivitySession implements ActivitySession {
 
 	private disconnectPeer(identity: string): void {
 		if (!this.peers.delete(identity)) return;
+		this.onlyInCall.delete(identity);
 		this.refreshParticipants([this.me, ...[...this.peers.values()].map((peer) => peer.participant)]);
 	}
 
@@ -285,8 +306,10 @@ export class FakeActivitySession implements ActivitySession {
 
 	private refreshParticipants(next: ReadonlyArray<ActivityParticipant>): void {
 		this.participants = [...next].sort((a, b) => (a.identity < b.identity ? -1 : 1));
-		this.leader = electLeader(this.participants, this.startedBy);
+		this.members = this.participants.filter((participant) => !this.onlyInCall.has(participant.identity));
+		this.leader = electLeader(this.members, this.startedBy);
 		this.notifyAll(this.participantListeners, this.participants);
+		this.notifyAll(this.memberListeners, this.members);
 	}
 
 	private acceptState(version: number, state: unknown): void {

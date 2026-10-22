@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {PiPContent} from '@app/features/ui/state/PiP';
+import type {PiPContent, StreamPiPContent} from '@app/features/ui/state/PiP';
 import {assign, initialTransition, type SnapshotFrom, setup, transition} from 'xstate';
 
 export interface ScreenSharePiPScreenShare {
@@ -17,9 +17,19 @@ export type ScreenSharePiPScreenShareSource =
 	| 'voice-state'
 	| 'watched-stream';
 
+// The voice activity I take part in. It goes to the mini window ahead of any stream: the game is played there.
+export interface ScreenSharePiPActivity {
+	sessionId: string;
+}
+
+// One floating window for the connected call while I look elsewhere in the app: the activity I play, else the stream
+// I watch.
 export interface ScreenSharePiPConditions {
 	connectedChannelId: string | null;
 	connectedGuildId: string | null;
+	activity: ScreenSharePiPActivity | null;
+	// The user closed the activity's mini window; streams are governed by the two disabled flags instead.
+	activityMiniWindowClosed: boolean;
 	screenShare: ScreenSharePiPScreenShare | null;
 	selectedChannelId: string | null;
 	isMobile: boolean;
@@ -42,7 +52,7 @@ const INITIAL_MODE: ScreenSharePiPMode = {kind: 'closed'};
 
 function buildPiPContent(
 	conditions: ScreenSharePiPConditions & {connectedChannelId: string; screenShare: ScreenSharePiPScreenShare},
-): PiPContent {
+): StreamPiPContent {
 	return {
 		type: 'stream',
 		participantIdentity: conditions.screenShare.participantIdentity,
@@ -55,11 +65,22 @@ function buildPiPContent(
 
 function computeNextMode(conditions: ScreenSharePiPConditions): ScreenSharePiPMode {
 	if (!conditions.connectedChannelId) return {kind: 'closed'};
-	if (!conditions.screenShare) return {kind: 'closed'};
 	if (conditions.isMobile) return {kind: 'closed'};
+	if (conditions.selectedChannelId === conditions.connectedChannelId) return {kind: 'closed'};
+	if (conditions.activity && !conditions.activityMiniWindowClosed) {
+		return {
+			kind: 'open',
+			content: {
+				type: 'activity',
+				channelId: conditions.connectedChannelId,
+				guildId: conditions.connectedGuildId,
+				sessionId: conditions.activity.sessionId,
+			},
+		};
+	}
+	if (!conditions.screenShare) return {kind: 'closed'};
 	if (conditions.disabledBySetting) return {kind: 'closed'};
 	if (conditions.disabledBySession) return {kind: 'closed'};
-	if (conditions.selectedChannelId === conditions.connectedChannelId) return {kind: 'closed'};
 	return {
 		kind: 'open',
 		content: buildPiPContent({
@@ -71,8 +92,13 @@ function computeNextMode(conditions: ScreenSharePiPConditions): ScreenSharePiPMo
 }
 
 function isSamePiPContent(a: PiPContent, b: PiPContent): boolean {
+	if (a.type === 'activity') {
+		return (
+			b.type === 'activity' && a.channelId === b.channelId && a.guildId === b.guildId && a.sessionId === b.sessionId
+		);
+	}
 	return (
-		a.type === b.type &&
+		b.type === 'stream' &&
 		a.participantIdentity === b.participantIdentity &&
 		a.channelId === b.channelId &&
 		a.guildId === b.guildId &&

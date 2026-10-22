@@ -15,7 +15,7 @@ interface BandPlayStageProps {
 	readonly songPackage: SongPackage;
 }
 
-// The game on the left, the crowd on the right, for players and spectators alike.
+// The game on the left, the crowd on the right, for players and spectators alike; small places show the game only.
 export const BandPlayStage = observer(function BandPlayStage({room, state, song, songPackage}: BandPlayStageProps) {
 	return (
 		<div className={styles.stage} data-flx="activities.band.flow.band-play-stage.stage">
@@ -29,7 +29,9 @@ export const BandPlayStage = observer(function BandPlayStage({room, state, song,
 					data-flx="activities.band.flow.band-play-stage.play-screen"
 				/>
 			</div>
-			<SpectatorStrip room={room} phase="play" data-flx="activities.band.flow.band-play-stage.spectator-strip" />
+			<div className={styles.crowd} data-flx="activities.band.flow.band-play-stage.crowd">
+				<SpectatorStrip room={room} phase="play" data-flx="activities.band.flow.band-play-stage.spectator-strip" />
+			</div>
 		</div>
 	);
 });

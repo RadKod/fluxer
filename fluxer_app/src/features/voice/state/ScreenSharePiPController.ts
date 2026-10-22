@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import VoiceActivities from '@app/features/activities/state/VoiceActivities';
+import {joinedActivitySession} from '@app/features/activities/utils/JoinedActivitySession';
 import SelectedChannel from '@app/features/navigation/state/SelectedChannel';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {deferUntilModulesLoaded} from '@app/features/platform/utils/DeferUntilModulesLoaded';
@@ -14,6 +16,7 @@ import {voiceMediaGraphStore} from '@app/features/voice/engine/VoiceMediaGraphSt
 import LocalVoiceState from '@app/features/voice/state/LocalVoiceState';
 import {
 	createScreenSharePiPSnapshot,
+	type ScreenSharePiPActivity,
 	type ScreenSharePiPConditions,
 	type ScreenSharePiPScreenShare,
 	type ScreenSharePiPScreenShareSource,
@@ -170,13 +173,18 @@ function detectScreenSharePiPContent(
 	return detectActiveScreenShare(channelId, guildId) ?? pickWatchedScreenShareFromOpenPiP(channelId, guildId);
 }
 
+function detectActivity(): ScreenSharePiPActivity | null {
+	const session = joinedActivitySession();
+	return session ? {sessionId: session.sessionId} : null;
+}
+
 function getClosedReason(conditions: ScreenSharePiPConditions): string | null {
 	if (!conditions.connectedChannelId) return 'not-connected-to-voice';
-	if (!conditions.screenShare) return 'no-watched-screen-share';
 	if (conditions.isMobile) return 'mobile-layout';
+	if (conditions.selectedChannelId === conditions.connectedChannelId) return 'selected-channel-is-connected-channel';
+	if (!conditions.screenShare) return 'no-watched-screen-share';
 	if (conditions.disabledBySetting) return 'disabled-by-setting';
 	if (conditions.disabledBySession) return 'disabled-for-session';
-	if (conditions.selectedChannelId === conditions.connectedChannelId) return 'selected-channel-is-connected-channel';
 	return null;
 }
 
@@ -274,6 +282,14 @@ class ScreenSharePiPController {
 			(room) => this.handleRoomChange(room),
 			{fireImmediately: true, name: 'ScreenSharePiP.roomBinding'},
 		);
+		// Back in the call, a mini window closed earlier may come back the next time I leave it.
+		reaction(
+			() => MediaEngine.channelId !== null && SelectedChannel.currentChannelId === MediaEngine.channelId,
+			(onCall) => {
+				if (onCall) VoiceActivities.reopenMiniWindow();
+			},
+			{name: 'ScreenSharePiP.activityMiniWindowReset'},
+		);
 		reaction(
 			() => this.readReactiveInputs(),
 			() => this.recompute('reactive-inputs'),
@@ -292,6 +308,8 @@ class ScreenSharePiPController {
 		return {
 			connectedChannelId: MediaEngine.channelId,
 			connectedGuildId: MediaEngine.guildId,
+			activitySessionId: detectActivity()?.sessionId ?? null,
+			activityMiniWindowClosed: VoiceActivities.miniWindowClosed,
 			selectedChannelId: SelectedChannel.currentChannelId,
 			isMobile: MobileLayout.isMobileLayout(),
 			disabledBySetting: VoiceSettings.disablePictureInPicturePopoutScreenShare,
@@ -364,6 +382,8 @@ class ScreenSharePiPController {
 			connectedChannelId: conditions.connectedChannelId,
 			selectedChannelId: conditions.selectedChannelId,
 			connectedGuildId: conditions.connectedGuildId,
+			activity: conditions.activity,
+			activityMiniWindowClosed: conditions.activityMiniWindowClosed,
 			screenShare: conditions.screenShare,
 			isMobile: conditions.isMobile,
 			disabledBySetting: conditions.disabledBySetting,
@@ -394,6 +414,8 @@ class ScreenSharePiPController {
 		return {
 			connectedChannelId,
 			connectedGuildId,
+			activity: detectActivity(),
+			activityMiniWindowClosed: VoiceActivities.miniWindowClosed,
 			screenShare,
 			selectedChannelId: SelectedChannel.currentChannelId,
 			isMobile: MobileLayout.isMobileLayout(),
@@ -406,6 +428,8 @@ class ScreenSharePiPController {
 interface ReactiveInputs {
 	connectedChannelId: string | null;
 	connectedGuildId: string | null;
+	activitySessionId: string | null;
+	activityMiniWindowClosed: boolean;
 	selectedChannelId: string | null;
 	isMobile: boolean;
 	disabledBySetting: boolean;
@@ -416,6 +440,8 @@ function shallowReactiveInputsEqual(a: ReactiveInputs, b: ReactiveInputs): boole
 	return (
 		a.connectedChannelId === b.connectedChannelId &&
 		a.connectedGuildId === b.connectedGuildId &&
+		a.activitySessionId === b.activitySessionId &&
+		a.activityMiniWindowClosed === b.activityMiniWindowClosed &&
 		a.selectedChannelId === b.selectedChannelId &&
 		a.isMobile === b.isMobile &&
 		a.disabledBySetting === b.disabledBySetting &&

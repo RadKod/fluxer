@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {PART_DESCRIPTORS} from '@app/features/activities/band/BandPartNames';
 import type {BandPart, InstrumentPart} from '@app/features/activities/band/engine/ChartModel';
 import {
 	KEY_GUIDE_CHORD_DESCRIPTOR,
@@ -9,7 +10,6 @@ import {
 	KEY_GUIDE_TITLE_DESCRIPTOR,
 	KEY_GUIDE_TRY_DESCRIPTOR,
 	KEY_GUIDE_VOCALS_TIP_DESCRIPTOR,
-	PART_DESCRIPTORS,
 } from '@app/features/activities/band/flow/BandFlowMessages';
 import {
 	type BandGuideKey,

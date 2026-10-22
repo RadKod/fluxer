@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {PART_DESCRIPTORS} from '@app/features/activities/band/BandPartNames';
 import {
 	BAND_DIFFICULTY_MULTIPLIER,
 	BAND_LOAD_WAIT_MS,
@@ -27,7 +28,6 @@ import {
 	LEADER_TAG_DESCRIPTOR,
 	MULTIPLIER_DESCRIPTOR,
 	NOT_READY_DESCRIPTOR,
-	PART_DESCRIPTORS,
 	PICK_A_PART_DESCRIPTOR,
 	PICK_ANOTHER_DESCRIPTOR,
 	PICKING_DESCRIPTOR,
@@ -588,8 +588,8 @@ export const SelectScreen = observer(function SelectScreen({room, state, song}: 
 	const highwayParts = STAGE_ORDER.filter((part) => songPartDifficulties(song, part).length > 0);
 	const hasVocals = songPartDifficulties(song, 'vocals').length > 0;
 	const mySeat = state.seats.find((seat) => seat.userId === room.myUserId);
-	// The early start waits for everyone in the room, so the count does too: a ready seat or a choice to watch.
-	const present = new Set(room.session.participants.map((participant) => participant.userId));
+	// The early start waits for everyone taking part, so the count does too: a ready seat or a choice to watch.
+	const present = new Set(room.session.members.map((member) => member.userId));
 	const decided = new Set([...state.watching, ...state.seats.filter((seat) => seat.ready).map((seat) => seat.userId)]);
 	const decidedCount = [...present].filter((userId) => decided.has(userId)).length;
 	// Past the timer the leader holds the song for seats still downloading, up to loadWaitUntil.

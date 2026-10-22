@@ -1,0 +1,98 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+.grid {
+	display: grid;
+	flex: 1 1 auto;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	grid-template-rows: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
+	padding: 1.5rem;
+	background-color: var(--voice-surface-0);
+}
+
+.cell {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	min-width: 0;
+	min-height: 0;
+}
+
+.tile {
+	max-height: 100%;
+}
+
+.caption {
+	margin-bottom: 0.375rem;
+	color: var(--text-primary-muted);
+	font-size: 0.6875rem;
+}
+
+.standIn {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	aspect-ratio: 16 / 9;
+	border-radius: 0.75rem;
+	background-color: var(--voice-surface-2);
+	color: var(--voice-text-strong);
+	font-weight: 600;
+}
+
+.standInAvatar {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 4rem;
+	height: 4rem;
+	border-radius: 50%;
+	background-color: var(--voice-surface-5);
+	font-size: 1.5rem;
+}
+
+.chat {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	justify-content: flex-end;
+	gap: 1rem;
+	padding: 1.5rem 2rem;
+}
+
+.chat p {
+	margin: 0;
+	color: var(--text-primary);
+}
+
+.composer {
+	height: 3rem;
+	padding: 0 1rem;
+	border: 0.0625rem solid var(--background-modifier-accent);
+	border-radius: 0.75rem;
+	background-color: var(--background-tertiary);
+	color: var(--text-primary);
+	font: inherit;
+}
+
+.backdrop {
+	display: flex;
+	flex: 1 1 auto;
+	align-items: center;
+	justify-content: center;
+	padding: 1.5rem;
+	background-color: rgba(0, 0, 0, 0.6);
+}
+
+.modal {
+	display: flex;
+	flex-direction: column;
+	width: min(43.5rem, 100%);
+	max-height: 100%;
+	overflow: hidden;
+	border: 0.0625rem solid var(--background-header-secondary);
+	border-radius: 1rem;
+	background-color: var(--background-secondary);
+}

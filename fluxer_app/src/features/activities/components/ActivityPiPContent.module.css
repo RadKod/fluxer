@@ -1,0 +1,121 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+
+/* Dragged by its header and footer only: the game in between takes every click. */
+.window {
+	border: 0.0625rem solid var(--voice-hud-material-border);
+	background-color: var(--voice-surface-0);
+	cursor: default;
+}
+
+.window:active {
+	cursor: default;
+}
+
+.layout {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+}
+
+.header,
+.footer {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	gap: var(--spacing-2);
+	min-width: 0;
+	background-color: var(--voice-surface-1);
+	color: var(--voice-text-strong);
+	cursor: grab;
+}
+
+.header:active,
+.footer:active {
+	cursor: grabbing;
+}
+
+.header {
+	height: 2.5rem;
+	padding: 0 0.5rem 0 0.75rem;
+	border-bottom: 0.0625rem solid var(--voice-hud-material-border);
+}
+
+.name {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	font-weight: 700;
+	font-size: 0.8125rem;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.mine {
+	flex: 0 0 auto;
+	color: var(--voice-text-muted);
+	font-size: 0.75rem;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.headerButton {
+	display: flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	width: 1.875rem;
+	height: 1.875rem;
+	padding: 0;
+	border: none;
+	border-radius: 0.5rem;
+	background-color: var(--voice-surface-3);
+	color: var(--voice-text-strong);
+	cursor: pointer;
+}
+
+:global(:where(html.window-focused, html.unfocused-fully-interactive):not(.window-focus-activation-guard))
+	.headerButton:hover {
+	background-color: var(--voice-surface-5);
+}
+
+.headerIcon {
+	width: 0.875rem;
+	height: 0.875rem;
+}
+
+.body {
+	position: relative;
+	display: flex;
+	flex: 1 1 auto;
+	min-height: 0;
+	cursor: auto;
+}
+
+.footer {
+	height: 2.25rem;
+	padding: 0 0.75rem;
+	border-top: 0.0625rem solid var(--voice-hud-material-border);
+	color: var(--voice-text-muted);
+	font-size: 0.75rem;
+}
+
+.keysDot {
+	flex: 0 0 auto;
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 50%;
+	background-color: var(--voice-surface-5);
+}
+
+.keysDotActive {
+	background-color: var(--voice-status-success);
+}
+
+.keysText {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}

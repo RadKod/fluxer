@@ -8,22 +8,24 @@ export type VoiceActivityRequest = 'start' | 'end';
 
 // The activity of the voice channel I am connected to. The room metadata is the source; a REST reply only fills in
 // until the metadata says the same.
+//
+// A running session never takes over anyone's screen: it shows as a tile in the call for everyone, and only the
+// people who join play and hear it. Whether I joined is kept here by session id, so it survives the live session
+// being rebuilt after a reconnect, and it is what the live session announces to the room.
 class VoiceActivities {
 	channelId: string | null = null;
 	session: VoiceActivitySessionMetadata | null = null;
 	live: ActivitySession | null = null;
-	panelOpen = false;
 	request: VoiceActivityRequest | null = null;
-	// A session opens the panel by itself once: a reconnect or a re-read of the same session leaves a closed panel
-	// closed.
-	private autoOpenedSessionId: string | null = null;
+	joinedSessionId: string | null = null;
+	// The activity fills the call's stage instead of sitting in the grid. Only ever set by the user.
+	expanded = false;
+	// The user closed the mini window that follows a joined activity out of the call; it comes back when they return
+	// to the call or ask for the activity again.
+	miniWindowClosed = false;
 
 	constructor() {
-		makeAutoObservable<VoiceActivities, 'autoOpenedSessionId'>(
-			this,
-			{session: observableRef, live: observableRef, autoOpenedSessionId: false},
-			{autoBind: true},
-		);
+		makeAutoObservable(this, {session: observableRef, live: observableRef}, {autoBind: true});
 	}
 
 	getSession(channelId: string): VoiceActivitySessionMetadata | null {
@@ -35,8 +37,16 @@ class VoiceActivities {
 		return live && live.channelId === channelId && live.sessionId === this.session?.session_id ? live : null;
 	}
 
-	isPanelOpen(channelId: string): boolean {
-		return this.panelOpen && this.getSession(channelId) !== null;
+	get joined(): boolean {
+		return this.session !== null && this.joinedSessionId === this.session.session_id;
+	}
+
+	isJoined(channelId: string): boolean {
+		return this.getSession(channelId) !== null && this.joined;
+	}
+
+	isExpanded(channelId: string): boolean {
+		return this.expanded && this.getSession(channelId) !== null;
 	}
 
 	handleSession(channelId: string | null, session: VoiceActivitySessionMetadata | null): void {
@@ -47,14 +57,10 @@ class VoiceActivities {
 		const next = channelId ? session : null;
 		if (next?.session_id === this.session?.session_id) return;
 		this.session = next;
-		if (!next) {
-			this.panelOpen = false;
-			return;
-		}
-		if (next.session_id !== this.autoOpenedSessionId) {
-			this.autoOpenedSessionId = next.session_id;
-			this.panelOpen = true;
-		}
+		this.expanded = false;
+		this.miniWindowClosed = false;
+		// Starting a session joins it before the room metadata arrives; any other session starts unjoined.
+		if (next?.session_id !== this.joinedSessionId) this.joinedSessionId = null;
 	}
 
 	setLive(live: ActivitySession | null): void {
@@ -65,26 +71,41 @@ class VoiceActivities {
 		this.request = request;
 	}
 
-	openPanel(): void {
-		if (this.session) this.panelOpen = true;
+	// By session id, so the starter is joined by the time the session arrives from the room metadata.
+	join(sessionId: string): void {
+		this.joinedSessionId = sessionId;
+		this.miniWindowClosed = false;
 	}
 
-	closePanel(): void {
-		this.panelOpen = false;
+	leave(): void {
+		this.joinedSessionId = null;
+		this.expanded = false;
 	}
 
-	togglePanel(): void {
-		if (this.panelOpen) this.closePanel();
-		else this.openPanel();
+	expand(): void {
+		if (this.session) this.expanded = true;
+	}
+
+	collapse(): void {
+		this.expanded = false;
+	}
+
+	closeMiniWindow(): void {
+		this.miniWindowClosed = true;
+	}
+
+	reopenMiniWindow(): void {
+		this.miniWindowClosed = false;
 	}
 
 	reset(): void {
 		this.channelId = null;
 		this.session = null;
 		this.live = null;
-		this.panelOpen = false;
 		this.request = null;
-		this.autoOpenedSessionId = null;
+		this.joinedSessionId = null;
+		this.expanded = false;
+		this.miniWindowClosed = false;
 	}
 }
 

@@ -11,7 +11,7 @@ import {compareShallow, reaction} from 'mobx';
 const ROOM_METADATA_EVENTS = [RoomEvent.RoomMetadataChanged, RoomEvent.Connected, RoomEvent.Reconnected] as const;
 
 // Room metadata into the store, and one live session object while a session runs in my room. Mounted once at the
-// app root, so the session keeps answering (clock, state) while the call view is closed.
+// app root, so the session keeps answering (clock, state, membership) wherever I am in the app.
 export function startVoiceActivityBinding(): () => void {
 	let detachRoom: (() => void) | null = null;
 	let live: RoomActivitySession | null = null;
@@ -20,10 +20,12 @@ export function startVoiceActivityBinding(): () => void {
 		([room, channelId]) => {
 			detachRoom?.();
 			detachRoom = null;
-			if (!room || !channelId) {
+			if (!channelId) {
 				VoiceActivities.handleSession(null, null);
 				return;
 			}
+			// Between two rooms of the same channel (a full reconnect) the session and my membership stay as they were.
+			if (!room) return;
 			// The join answer's metadata is not announced as a change, so a connect is read as well.
 			const read = () => VoiceActivities.handleSession(channelId, parseRoomActivitySession(room.metadata));
 			for (const event of ROOM_METADATA_EVENTS) room.on(event, read);
@@ -41,15 +43,26 @@ export function startVoiceActivityBinding(): () => void {
 			live = null;
 			if (room && channelId && session) {
 				const sessionId = session.session_id;
-				live = new RoomActivitySession({room, channelId, session, end: () => endVoiceActivity(channelId, sessionId)});
+				live = new RoomActivitySession({
+					room,
+					channelId,
+					session,
+					joined: VoiceActivities.joinedSessionId === sessionId,
+					end: () => endVoiceActivity(channelId, sessionId),
+				});
 			}
 			VoiceActivities.setLive(live);
 		},
 		{fireImmediately: true, equals: compareShallow},
 	);
+	const disposeMembership = reaction(
+		() => VoiceActivities.joined,
+		(joined) => live?.setJoined(joined),
+	);
 	return () => {
 		disposeRoom();
 		disposeLive();
+		disposeMembership();
 		detachRoom?.();
 		live?.dispose();
 		VoiceActivities.reset();

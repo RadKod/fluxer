@@ -11,48 +11,71 @@ function session(sessionId: string): VoiceActivitySessionMetadata {
 beforeEach(() => VoiceActivities.reset());
 
 describe('VoiceActivities', () => {
-	it('opens the panel when a session starts', () => {
+	it('never expands a new session by itself, for anyone', () => {
 		VoiceActivities.handleSession('500', session('s1'));
 		expect(VoiceActivities.getSession('500')?.session_id).toBe('s1');
-		expect(VoiceActivities.isPanelOpen('500')).toBe(true);
-		expect(VoiceActivities.isPanelOpen('600')).toBe(false);
+		expect(VoiceActivities.isExpanded('500')).toBe(false);
+		expect(VoiceActivities.isJoined('500')).toBe(false);
 	});
 
-	it('leaves a closed panel closed when the same session is read again', () => {
+	it('keeps the starter joined and collapsed when the started session arrives', () => {
+		VoiceActivities.join('s1');
 		VoiceActivities.handleSession('500', session('s1'));
-		VoiceActivities.closePanel();
-		VoiceActivities.handleSession('500', session('s1'));
-		expect(VoiceActivities.isPanelOpen('500')).toBe(false);
-		VoiceActivities.togglePanel();
-		expect(VoiceActivities.isPanelOpen('500')).toBe(true);
+		expect(VoiceActivities.isJoined('500')).toBe(true);
+		expect(VoiceActivities.isExpanded('500')).toBe(false);
 	});
 
-	it('closes the panel when the session ends and opens it again for the next one', () => {
+	it('expands and collapses only on request, and not without a session', () => {
+		VoiceActivities.expand();
+		expect(VoiceActivities.expanded).toBe(false);
 		VoiceActivities.handleSession('500', session('s1'));
+		VoiceActivities.expand();
+		expect(VoiceActivities.isExpanded('500')).toBe(true);
+		expect(VoiceActivities.isExpanded('600')).toBe(false);
+		VoiceActivities.collapse();
+		expect(VoiceActivities.isExpanded('500')).toBe(false);
+	});
+
+	it('leaves the activity without leaving the session, and collapses it', () => {
+		VoiceActivities.handleSession('500', session('s1'));
+		VoiceActivities.join('s1');
+		VoiceActivities.expand();
+		VoiceActivities.leave();
+		expect(VoiceActivities.isJoined('500')).toBe(false);
+		expect(VoiceActivities.isExpanded('500')).toBe(false);
+		expect(VoiceActivities.getSession('500')?.session_id).toBe('s1');
+	});
+
+	it('keeps my membership when the same session is read again, and drops it for the next one', () => {
+		VoiceActivities.handleSession('500', session('s1'));
+		VoiceActivities.join('s1');
+		VoiceActivities.handleSession('500', session('s1'));
+		expect(VoiceActivities.isJoined('500')).toBe(true);
 		VoiceActivities.handleSession('500', null);
-		expect(VoiceActivities.getSession('500')).toBeNull();
-		expect(VoiceActivities.panelOpen).toBe(false);
-		VoiceActivities.openPanel();
-		expect(VoiceActivities.panelOpen).toBe(false);
+		expect(VoiceActivities.joinedSessionId).toBeNull();
 		VoiceActivities.handleSession('500', session('s2'));
-		expect(VoiceActivities.isPanelOpen('500')).toBe(true);
+		expect(VoiceActivities.isJoined('500')).toBe(false);
 	});
 
-	it('forgets the session and a pending request when I leave the channel', () => {
+	it('forgets the session, my membership and a pending request when I leave the channel', () => {
 		VoiceActivities.handleSession('500', session('s1'));
+		VoiceActivities.join('s1');
 		VoiceActivities.setRequest('end');
 		VoiceActivities.handleSession(null, null);
 		expect(VoiceActivities.session).toBeNull();
 		expect(VoiceActivities.request).toBeNull();
-		expect(VoiceActivities.isPanelOpen('500')).toBe(false);
+		expect(VoiceActivities.joined).toBe(false);
 	});
 
-	it('does not reopen a session seen before a reconnect to another channel and back', () => {
+	it('brings a closed mini window back when asked or for a new session', () => {
 		VoiceActivities.handleSession('500', session('s1'));
-		VoiceActivities.closePanel();
-		VoiceActivities.handleSession('600', null);
-		VoiceActivities.handleSession('500', session('s1'));
-		expect(VoiceActivities.isPanelOpen('500')).toBe(false);
+		VoiceActivities.closeMiniWindow();
+		expect(VoiceActivities.miniWindowClosed).toBe(true);
+		VoiceActivities.reopenMiniWindow();
+		expect(VoiceActivities.miniWindowClosed).toBe(false);
+		VoiceActivities.closeMiniWindow();
+		VoiceActivities.handleSession('500', session('s2'));
+		expect(VoiceActivities.miniWindowClosed).toBe(false);
 	});
 
 	it('hands out the live session only for the running one', () => {

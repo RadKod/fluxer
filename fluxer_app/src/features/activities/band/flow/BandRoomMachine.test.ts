@@ -10,6 +10,7 @@ import {
 	type BandSongSummary,
 	type BandState,
 } from '@app/features/activities/band/BandProtocol';
+import {tallyVotes} from '@app/features/activities/band/BandVotes';
 import type {BandPart} from '@app/features/activities/band/engine/ChartModel';
 import {
 	BAND_PLAY_GRACE_MS,
@@ -22,7 +23,6 @@ import {
 	pickSuggestions,
 	reduceBandIntent,
 	resultsWaitEndsAt,
-	tallyVotes,
 	tickBandRoom,
 } from '@app/features/activities/band/flow/BandRoomMachine';
 import {describe, expect, it} from 'vitest';

@@ -14,7 +14,7 @@ import {
 	decodeActivityEnvelope,
 	encodeActivityEnvelope,
 } from '@app/features/activities/session/ActivityEnvelope';
-import {electLeader} from '@app/features/activities/session/ActivityLeader';
+import {electLeader, selectActivityMembers} from '@app/features/activities/session/ActivityLeader';
 import type {
 	ActivityClock,
 	ActivityMessage,
@@ -49,6 +49,8 @@ export interface RoomActivitySessionOptions {
 	readonly channelId: string;
 	readonly session: VoiceActivitySessionMetadata;
 	readonly end: () => Promise<boolean>;
+	// Whether this connection takes part from the start (it started the session, or joined before a reconnect).
+	readonly joined?: boolean;
 	readonly localNow?: () => number;
 }
 
@@ -66,6 +68,12 @@ function toActivityParticipant(participant: Participant, isLocal: boolean): Acti
 		joinedAt: participant.joinedAt?.getTime() ?? 0,
 		isLocal,
 	};
+}
+
+function readBoolean(data: unknown, key: string): boolean | null {
+	if (typeof data !== 'object' || data === null) return null;
+	const value = (data as Record<string, unknown>)[key];
+	return typeof value === 'boolean' ? value : null;
 }
 
 function sameParticipants(a: ReadonlyArray<ActivityParticipant>, b: ReadonlyArray<ActivityParticipant>): boolean {
@@ -116,8 +124,10 @@ class RoomActivityClock implements ActivityClock {
 	}
 }
 
-// The live side of one session in one room. It runs while I am in the room, panel open or not, so a leader with
-// the panel closed still answers clock pings and state requests.
+// The live side of one session in one room. It runs while I am in the room, joined or not: everyone follows the
+// leader's state (the call shows it), and a leader whose activity is out of sight still answers pings and requests.
+// Membership travels peer to peer: each client announces its own, answers a newcomer and anyone who asks, and the
+// leader is elected among members only.
 export class RoomActivitySession implements ActivitySession {
 	readonly activityId: VoiceActivityId;
 	readonly sessionId: string;
@@ -127,6 +137,8 @@ export class RoomActivitySession implements ActivitySession {
 	readonly clock: RoomActivityClock;
 	me: ActivityParticipant;
 	participants: ReadonlyArray<ActivityParticipant> = [];
+	members: ReadonlyArray<ActivityParticipant> = [];
+	joined: boolean;
 	leader: ActivityParticipant | null = null;
 	state: unknown = null;
 	stateVersion = 0;
@@ -138,6 +150,9 @@ export class RoomActivitySession implements ActivitySession {
 	private readonly endSession: () => Promise<boolean>;
 	private readonly messageHandlers = new Set<(message: ActivityMessage) => void>();
 	private readonly participantListeners = new Set<(participants: ReadonlyArray<ActivityParticipant>) => void>();
+	private readonly memberListeners = new Set<(members: ReadonlyArray<ActivityParticipant>) => void>();
+	// What each remote connection last said about taking part, by identity.
+	private readonly announcedMembership = new Map<string, boolean>();
 	private readonly stateListeners = new Set<(state: unknown) => void>();
 	private readonly pendingPings = new Map<number, PendingPing>();
 	private seq = 0;
@@ -150,7 +165,7 @@ export class RoomActivitySession implements ActivitySession {
 	private stateAnsweredBy: string | null = null;
 	private disposed = false;
 
-	constructor({room, channelId, session, end, localNow = wallClockNow}: RoomActivitySessionOptions) {
+	constructor({room, channelId, session, end, joined = false, localNow = wallClockNow}: RoomActivitySessionOptions) {
 		this.room = room;
 		this.channelId = channelId;
 		this.activityId = session.activity_id;
@@ -161,10 +176,13 @@ export class RoomActivitySession implements ActivitySession {
 		this.localNow = localNow;
 		this.endSession = end;
 		this.clock = new RoomActivityClock(localNow);
+		this.joined = joined;
 		this.me = this.readMe();
-		makeObservable<RoomActivitySession, 'refreshParticipants' | 'acceptState'>(this, {
+		makeObservable<RoomActivitySession, 'refreshParticipants' | 'acceptState' | 'takeMembership'>(this, {
 			me: observableRef,
 			participants: observableRef,
+			members: observableRef,
+			joined: observable,
 			leader: observableRef,
 			state: observableRef,
 			stateVersion: observable,
@@ -172,15 +190,18 @@ export class RoomActivitySession implements ActivitySession {
 			isLeader: computed,
 			setState: action,
 			captureKeyboard: action,
+			setJoined: action,
 			refreshParticipants: action,
 			acceptState: action,
+			takeMembership: action,
 		});
 		room.on(RoomEvent.DataReceived, this.handleData);
-		room.on(RoomEvent.ParticipantConnected, this.handleRoster);
-		room.on(RoomEvent.ParticipantDisconnected, this.handleRoster);
-		room.on(RoomEvent.Connected, this.handleRoster);
+		room.on(RoomEvent.ParticipantConnected, this.handleParticipantConnected);
+		room.on(RoomEvent.ParticipantDisconnected, this.handleParticipantDisconnected);
+		room.on(RoomEvent.Connected, this.handleConnected);
 		room.on(RoomEvent.Reconnected, this.handleReconnected);
 		this.refreshParticipants();
+		this.announceMembership();
 	}
 
 	get isLeader(): boolean {
@@ -190,6 +211,11 @@ export class RoomActivitySession implements ActivitySession {
 	onParticipantsChanged(listener: (participants: ReadonlyArray<ActivityParticipant>) => void): () => void {
 		this.participantListeners.add(listener);
 		return () => this.participantListeners.delete(listener);
+	}
+
+	onMembersChanged(listener: (members: ReadonlyArray<ActivityParticipant>) => void): () => void {
+		this.memberListeners.add(listener);
+		return () => this.memberListeners.delete(listener);
 	}
 
 	onMessage(handler: (message: ActivityMessage) => void): () => void {
@@ -220,6 +246,13 @@ export class RoomActivitySession implements ActivitySession {
 		this.keyboardCaptured = capture;
 	}
 
+	setJoined(joined: boolean): void {
+		if (this.disposed || this.joined === joined) return;
+		this.joined = joined;
+		this.refreshParticipants();
+		void this.publishSystem('member', {joined}, undefined, true);
+	}
+
 	end(): Promise<boolean> {
 		return this.endSession();
 	}
@@ -228,14 +261,15 @@ export class RoomActivitySession implements ActivitySession {
 		if (this.disposed) return;
 		this.disposed = true;
 		this.room.off(RoomEvent.DataReceived, this.handleData);
-		this.room.off(RoomEvent.ParticipantConnected, this.handleRoster);
-		this.room.off(RoomEvent.ParticipantDisconnected, this.handleRoster);
-		this.room.off(RoomEvent.Connected, this.handleRoster);
+		this.room.off(RoomEvent.ParticipantConnected, this.handleParticipantConnected);
+		this.room.off(RoomEvent.ParticipantDisconnected, this.handleParticipantDisconnected);
+		this.room.off(RoomEvent.Connected, this.handleConnected);
 		this.room.off(RoomEvent.Reconnected, this.handleReconnected);
 		this.stopClockSync();
 		if (this.stateRetryTimer) clearTimeout(this.stateRetryTimer);
 		this.messageHandlers.clear();
 		this.participantListeners.clear();
+		this.memberListeners.clear();
 		this.stateListeners.clear();
 	}
 
@@ -252,12 +286,29 @@ export class RoomActivitySession implements ActivitySession {
 		);
 	}
 
-	private readonly handleRoster = (): void => {
+	// A session made while the room was still connecting could not send its first announcement.
+	private readonly handleConnected = (): void => {
+		this.refreshParticipants();
+		this.announceMembership();
+	};
+
+	// The newcomer may not have its session yet, or may not see me yet: I tell it mine and ask for its own. Its own
+	// announcement on start covers the opposite order.
+	private readonly handleParticipantConnected = (participant?: RemoteParticipant): void => {
+		this.refreshParticipants();
+		if (!participant || this.disposed) return;
+		void this.publishSystem('member', {joined: this.joined}, [participant.identity], true);
+		void this.publishSystem('member_req', undefined, [participant.identity], true);
+	};
+
+	private readonly handleParticipantDisconnected = (participant?: RemoteParticipant): void => {
+		if (participant) this.announcedMembership.delete(participant.identity);
 		this.refreshParticipants();
 	};
 
 	private readonly handleReconnected = (): void => {
 		this.refreshParticipants();
+		this.announceMembership();
 		// Whatever the leader sent while I was away is gone; ask again and remeasure.
 		if (this.isLeader) return;
 		this.requestState();
@@ -275,10 +326,27 @@ export class RoomActivitySession implements ActivitySession {
 		this.me = me;
 		const changed = !sameParticipants(this.participants, next);
 		if (changed) this.participants = next;
-		const leader = electLeader(next, this.startedBy);
+		const members = selectActivityMembers(next, this.announcedMembership, this.joined);
+		const membersChanged = !sameParticipants(this.members, members);
+		if (membersChanged) this.members = members;
+		const leader = electLeader(members, this.startedBy);
 		if (leader?.identity !== this.leader?.identity || leader?.joinedAt !== this.leader?.joinedAt) this.leader = leader;
 		if (changed) for (const listener of this.participantListeners) this.notify(listener, next);
+		if (membersChanged) for (const listener of this.memberListeners) this.notify(listener, members);
 		if ((leader?.identity ?? null) !== previousLeader) this.handleLeaderChange();
+	}
+
+	// Mine to everyone, and a request for theirs: on start and after a reconnect, when what I knew may be stale.
+	private announceMembership(): void {
+		if (this.disposed) return;
+		void this.publishSystem('member', {joined: this.joined}, undefined, true);
+		void this.publishSystem('member_req', undefined, undefined, true);
+	}
+
+	private takeMembership(identity: string, joined: boolean): void {
+		if (this.announcedMembership.get(identity) === joined) return;
+		this.announcedMembership.set(identity, joined);
+		this.refreshParticipants();
 	}
 
 	private handleLeaderChange(): void {
@@ -332,6 +400,14 @@ export class RoomActivitySession implements ActivitySession {
 				if (this.isLeader) {
 					void this.publishSystem('state', {v: this.stateVersion, s: this.state}, [envelope.from], true);
 				}
+				return;
+			case 'member': {
+				const joined = readBoolean(envelope.data, 'joined');
+				if (joined !== null) this.takeMembership(envelope.from, joined);
+				return;
+			}
+			case 'member_req':
+				void this.publishSystem('member', {joined: this.joined}, [envelope.from], true);
 				return;
 		}
 	}

@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Accessibility from '@app/features/accessibility/state/Accessibility';
-import {ActivityPanel, isActivityPanelShown} from '@app/features/activities/components/ActivityPanel';
+import {
+	ActivityStage,
+	isActivityShownInCall,
+	isActivityStageShown,
+} from '@app/features/activities/components/ActivityStage';
+import {ActivityTile} from '@app/features/activities/components/ActivityTile';
+import VoiceActivities from '@app/features/activities/state/VoiceActivities';
 import {NativeDragRegion} from '@app/features/app/components/layout/NativeDragRegion';
 import channelHeaderStyles from '@app/features/channel/components/ChannelHeader.module.css';
 import {ChannelHeaderIcon} from '@app/features/channel/components/channel_header_components/ChannelHeaderIcon';
@@ -232,9 +238,23 @@ const VoiceCallViewInner = observer(
 			guildId: channel.guildId ?? null,
 			channelId: channel.id,
 		});
-		const hasRenderableTiles = hasScreenShare || filteredCameraTracks.length > 0;
-		const showActivity = !inPopout && isActivityPanelShown(channel);
-		const showRoom = !showActivity && !inPopout && !tvFullscreen && roomViewFor(channel).show;
+		const hasActivity = isActivityShownInCall(channel);
+		const showActivityStage = !inPopout && isActivityStageShown(channel);
+		const activityTile = useMemo(
+			() =>
+				hasActivity ? (
+					<ActivityTile
+						channel={channel}
+						playable={!inPopout}
+						data-flx="voice.voice-call-view.voice-call-view-inner.activity-tile"
+					/>
+				) : null,
+			[channel, hasActivity, inPopout],
+		);
+		const hasRenderableTiles = hasScreenShare || filteredCameraTracks.length > 0 || hasActivity;
+		// The 3D room has no place for the game yet: taking part brings the grid with its tile back.
+		const playingActivity = hasActivity && VoiceActivities.isJoined(channel.id);
+		const showRoom = !showActivityStage && !playingActivity && !inPopout && !tvFullscreen && roomViewFor(channel).show;
 		const [gridOverflow, setGridOverflow] = useState(false);
 		const handleGridCapacityChange = useCallback(
 			(info: {visibleTileCount: number; totalTileCount: number; overflow: boolean}) => {
@@ -264,7 +284,7 @@ const VoiceCallViewInner = observer(
 		const isFocusFullscreenLayout = effectiveLayoutMode === 'focus';
 		const mainContentClassName = clsx(
 			styles.mainContent,
-			(showActivity || effectiveLayoutMode === 'grid') && styles.mainContentGrid,
+			(showActivityStage || effectiveLayoutMode === 'grid') && styles.mainContentGrid,
 			isFocusFullscreenLayout && styles.mainContentFocusFullscreen,
 		);
 		const isFocusedOnScreenShare =
@@ -638,8 +658,8 @@ const VoiceCallViewInner = observer(
 						</div>
 					</NativeDragRegion>
 					<div className={mainContentClassName} data-flx="voice.voice-call-view.voice-call-view-inner.div--5">
-						{showActivity ? (
-							<ActivityPanel channel={channel} data-flx="voice.voice-call-view.voice-call-view-inner.activity-panel" />
+						{showActivityStage ? (
+							<ActivityStage channel={channel} data-flx="voice.voice-call-view.voice-call-view-inner.activity-stage" />
 						) : showRoom ? (
 							<VoiceSceneView
 								channel={channel}
@@ -658,6 +678,7 @@ const VoiceCallViewInner = observer(
 								isVoiceCallAppFullscreen={isMobile || isVoiceCallAppFullscreen}
 								onGridCapacityChange={handleGridCapacityChange}
 								onExpandUser={handleExpandUser}
+								activityTile={activityTile}
 								data-flx="voice.voice-call-view.voice-call-view-inner.voice-call-layout-content"
 							/>
 						) : (

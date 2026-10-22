@@ -4,6 +4,7 @@
 // package so a song is fetched once per device. Prefetching follows the vote, so the winner is usually on disk by the
 // time the band sits down.
 
+import BandCatalog from '@app/features/activities/band/BandCatalog';
 import type {BandSongSummary} from '@app/features/activities/band/BandProtocol';
 import {BAND_DIFFICULTIES, type BandDifficulty, type BandPart} from '@app/features/activities/band/engine/ChartModel';
 import {SongPackage} from '@app/features/activities/band/engine/SongPackage';
@@ -213,6 +214,7 @@ export class BandSongLibrary {
 					this.intensity = intensity;
 					this.status = {status: 'ready'};
 				});
+				BandCatalog.publish(songs);
 			})
 			.catch((error: unknown) => {
 				const reason = error instanceof BandSongLibraryError ? error.reason : 'unreachable';

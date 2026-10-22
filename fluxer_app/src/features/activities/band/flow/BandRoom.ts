@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 // Everything the band game keeps per session on this client: the leader controller, the song library, the crowd, the
-// mic guard and the singer's voice processing. It outlives the View on purpose: closing the panel must not stop the
-// leader from running the room, nor drop a download in progress. One room exists at a time; it ends with its session.
+// mic guard and the singer's voice processing. It outlives the View on purpose: moving the View between the tile, the
+// stage and the mini window must not stop the leader from running the room, nor drop a download in progress. One room
+// exists at a time; it ends with its session or when I leave the activity.
 
 import type {
 	BandCheerKind,
@@ -107,7 +108,7 @@ export class BandRoom {
 	get context(): BandRoomContext {
 		return {
 			leaderId: this.session.leader?.userId ?? null,
-			presentUserIds: new Set(this.session.participants.map((participant) => participant.userId)),
+			presentUserIds: new Set(this.session.members.map((member) => member.userId)),
 			songs: this.library.songsById,
 		};
 	}
@@ -137,11 +138,11 @@ export class BandRoom {
 		}
 	}
 
-	// Everyone in the room without a seat, one entry per person.
+	// Everyone taking part without a seat, one entry per person. Someone in the call who has not joined is not watching.
 	get spectatorIds(): ReadonlyArray<string> {
 		const state = this.state;
 		const seated = new Set(state && state.phase !== 'pick' ? state.seats.map((seat) => seat.userId) : []);
-		const ids = this.session.participants.map((participant) => participant.userId).filter((id) => !seated.has(id));
+		const ids = this.session.members.map((member) => member.userId).filter((id) => !seated.has(id));
 		return [...new Set(ids)];
 	}
 
@@ -295,18 +296,20 @@ export class BandRoom {
 let current: BandRoom | null = null;
 let disposeLiveWatch: (() => void) | null = null;
 
-// The room for this session, created on first use. The real call session ends when the store lets go of it; a session
-// that never goes through the store (the local harness) lives until another session takes its place.
+// The room for this session, created on first use. The real call session ends when the store lets go of it, and my
+// room ends when I leave the activity (joining again starts a fresh one); a session that never goes through the store
+// (the local harness) lives until another session takes its place.
 export function getBandRoom(session: ActivitySession): BandRoom {
 	if (current?.session === session) return current;
 	current?.dispose();
 	disposeLiveWatch?.();
 	const room = new BandRoom(session);
 	current = room;
+	const wasLive = VoiceActivities.live === session;
 	disposeLiveWatch = reaction(
-		() => VoiceActivities.live,
-		(live, previous) => {
-			if (previous !== room.session || live === room.session) return;
+		() => (wasLive ? VoiceActivities.live === session && session.joined : true),
+		(stillMine) => {
+			if (stillMine) return;
 			room.dispose();
 			disposeLiveWatch?.();
 			disposeLiveWatch = null;

@@ -90,6 +90,8 @@ const RAW_ONLY_APP_STORAGE_KEYS: ReadonlySet<string> = new Set([
 const PRE_HYDRATION_APP_STORAGE_KEYS: ReadonlyArray<string> = [
 	'pip_corner',
 	'pip_width',
+	AppStorageKey.UI_PIP_ACTIVITY_CORNER,
+	AppStorageKey.UI_PIP_ACTIVITY_WIDTH,
 	'SoftwareEncoderWarning_neverShowAgain',
 ];
 

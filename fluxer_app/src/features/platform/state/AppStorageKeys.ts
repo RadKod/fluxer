@@ -27,6 +27,8 @@ export const AppStorageKey = Object.freeze({
 	UI_CHANNEL_PINS_POPOUT_SIZE: 'fluxer:ui:channel-pins-popout-size',
 	UI_EXPRESSION_PICKER_SIZE: 'fluxer:ui:expression-picker-size',
 	UI_INBOX_POPOUT_SIZE: 'fluxer:ui:inbox-popout-size',
+	UI_PIP_ACTIVITY_CORNER: 'fluxer:ui:pip-activity-corner',
+	UI_PIP_ACTIVITY_WIDTH: 'fluxer:ui:pip-activity-width',
 	UI_SIDEBAR_WIDTH: 'fluxer:ui:sidebar-width',
 	VOICE_SETTINGS: 'VoiceSettings',
 	WINDOWS_FONT: 'WindowsFont',
@@ -55,6 +57,8 @@ const GLOBAL_APP_STORAGE_KEY_LOOKUP: Readonly<Record<string, true>> = Object.fre
 	[AppStorageKey.THEME_LIBRARY_LOCAL_FILES]: true,
 	[AppStorageKey.THEME_LIBRARY_MIGRATED]: true,
 	[AppStorageKey.THEME_LIBRARY_THEMES]: true,
+	[AppStorageKey.UI_PIP_ACTIVITY_CORNER]: true,
+	[AppStorageKey.UI_PIP_ACTIVITY_WIDTH]: true,
 	[AppStorageKey.WINDOWS_FONT]: true,
 });
 
