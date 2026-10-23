@@ -58836,14 +58836,14 @@ msgstr ""
 "Pick a song together and everyone takes an instrument. Miss and you go quiet, "
 "hit and you carry the band. Rock, metal, Turkish, pop; from Queen to Duman."
 
-#. Voice activities: chip on the band game detail page. The game is played on
-#. the computer keyboard.
+#. Voice activities: chip on the band game and jam detail pages. The game is
+#. played on the computer keyboard.
 #: src/features/activities/band/BandActivity.ts
 msgid "Played with the keyboard"
 msgstr "Played with the keyboard"
 
-#. Voice activities: chip on the band game detail page. The game runs in the web
-#. app and the desktop app.
+#. Voice activities: chip on the band game and jam detail pages. The game runs
+#. in the web app and the desktop app.
 #: src/features/activities/band/BandActivity.ts
 msgid "Web and desktop"
 msgstr "Web and desktop"
@@ -58895,16 +58895,17 @@ msgstr ""
 "Everyone in the channel sees it as a tile. Whoever joins hears the song; the "
 "others carry on talking."
 
-#. Voice activities: name of a coming activity where the people in the channel
-#. play freely together, without a song.
-#: src/features/activities/registry/ActivityRegistry.ts
+#. Voice activities: name of the jam card in the activity picker, where the
+#. people in the channel play freely together without a song. In Turkish
+#. "Doğaçlama".
+#: src/features/activities/band/BandActivity.ts
 msgctxt "voice-activity"
 msgid "Jam"
 msgstr "Jam"
 
-#. Voice activities: one-line description of the coming jam activity in the
-#. activity picker.
-#: src/features/activities/registry/ActivityRegistry.ts
+#. Voice activities: one-line description of jam on its card in the activity
+#. picker.
+#: src/features/activities/band/BandActivity.ts
 msgid "Pick a key and play freely together"
 msgstr "Pick a key and play freely together"
 
@@ -58925,13 +58926,6 @@ msgstr "Search activities"
 #: src/features/activities/components/ActivityPicker.tsx
 msgid "No activity matches “{query}”"
 msgstr "No activity matches “{query}”"
-
-#. Voice activities: heading over the activities in the picker that are
-#. announced but cannot be started yet.
-#: src/features/activities/components/ActivityPicker.tsx
-msgctxt "voice-activities"
-msgid "Coming soon"
-msgstr "Coming soon"
 
 #. Voice activities: cue on an activity card in the picker; clicking the card
 #. opens its detail page.
@@ -59837,3 +59831,59 @@ msgstr "Two neighbouring keys together: pinch harmonic"
 msgctxt "band-freestyle-info"
 msgid "Hold a key: the note rings on, then feeds back"
 msgstr "Hold a key: the note rings on, then feeds back"
+
+#. Voice activities: paragraph about jam (free play without a song) on its
+#. detail page in the activity picker.
+#: src/features/activities/band/BandActivity.ts
+msgid ""
+"No song, no score. The leader picks a key and a backing loop, everyone takes "
+"an instrument, and whatever you play stays in key."
+msgstr ""
+"No song, no score. The leader picks a key and a backing loop, everyone takes "
+"an instrument, and whatever you play stays in key."
+
+#. Voice activities: first step of how a jam goes, on its detail page. The key
+#. is the musical key.
+#: src/features/activities/band/BandActivity.ts
+msgid "Pick a key"
+msgstr "Pick a key"
+
+#. Voice activities: explanation under the first step (picking a key) on the jam
+#. detail page. The backing is a drum and bass loop.
+#: src/features/activities/band/BandActivity.ts
+msgid "The leader sets the key, scale and backing"
+msgstr "The leader sets the key, scale and backing"
+
+#. Voice activities: second step of how a jam goes, on its detail page. Each
+#. player picks an instrument.
+#: src/features/activities/band/BandActivity.ts
+msgid "Take your instrument"
+msgstr "Take your instrument"
+
+#. Voice activities: explanation under the second step (taking an instrument) on
+#. the jam detail page.
+#: src/features/activities/band/BandActivity.ts
+msgid "Lead or rhythm guitar, bass, keys, drums"
+msgstr "Lead or rhythm guitar, bass, keys, drums"
+
+#. Voice activities: third step of how a jam goes, on its detail page.
+#: src/features/activities/band/BandActivity.ts
+msgid "Play together"
+msgstr "Play together"
+
+#. Voice activities: explanation under the third step (playing) on the jam
+#. detail page. The keys only play notes of the chosen scale.
+#: src/features/activities/band/BandActivity.ts
+msgid "Every note stays in key"
+msgstr "Every note stays in key"
+
+#. Voice activities: note under the Start button on the jam detail page.
+#. Starting shows the jam as a tile in the call; only those who join play and
+#. hear it.
+#: src/features/activities/band/BandActivity.ts
+msgid ""
+"Everyone in the channel sees it as a tile. Whoever joins hears the jam; the "
+"others carry on talking."
+msgstr ""
+"Everyone in the channel sees it as a tile. Whoever joins hears the jam; the "
+"others carry on talking."

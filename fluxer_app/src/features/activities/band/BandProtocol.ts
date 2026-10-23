@@ -133,6 +133,10 @@ export interface BandPlayerResult {
 export const BAND_JAM_INSTRUMENTS = ['guitar', 'rhythm', 'bass', 'keys', 'drums'] as const;
 export type BandJamInstrument = (typeof BAND_JAM_INSTRUMENTS)[number];
 
+// The picker's jam entry starts the band activity in this mode: the starter's client, once it leads the fresh room,
+// sends band.jamStart. Never on the wire; the others just see the room switch to jam.
+export const BAND_JAM_START_MODE = 'jam';
+
 // Tempo range the leader can set for the backing loop.
 export const BAND_JAM_BPM_MIN = 50;
 export const BAND_JAM_BPM_MAX = 220;

@@ -11,7 +11,7 @@ import {BandSongLibrary} from '@app/features/activities/band/flow/BandSongLibrar
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 vi.mock('@app/features/activities/band/flow/BandMicPort', () => ({VOICE_MIC_PORT: null, VOICE_SINGER_PORT: null}));
-vi.mock('@app/features/activities/state/VoiceActivities', () => ({default: {live: null}}));
+vi.mock('@app/features/activities/state/VoiceActivities', () => ({default: {live: null, takeStartMode: () => null}}));
 
 const SONG: BandSongSummary = {
 	id: 'duman-bir-daha',

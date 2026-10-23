@@ -23,6 +23,7 @@ vi.mock('@app/features/activities/state/VoiceActivities', () => ({
 		get live() {
 			return store.live;
 		},
+		takeStartMode: () => null,
 	},
 }));
 

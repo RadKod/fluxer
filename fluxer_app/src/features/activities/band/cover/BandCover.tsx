@@ -20,7 +20,6 @@ const SIZE_CLASS: Readonly<Record<ActivityCoverProps['size'], string | null>> = 
 	card: null,
 	hero: styles.hero,
 	tile: styles.tile,
-	thumb: styles.thumb,
 };
 
 // Bir Daha Baştan's cover, drawn in CSS: the note highway in the game's lane colours with the wordmark and the tilted

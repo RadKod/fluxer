@@ -79,6 +79,23 @@ describe('VoiceActivityCommands', () => {
 		expect(VoiceActivities.isJoined('500')).toBe(true);
 	});
 
+	it('keeps the mode of a picker entry for the session it started, and starts the same activity', async () => {
+		vi.mocked(http.post).mockResolvedValue(reply(SESSION));
+		await Commands.startVoiceActivity('500', 'band', 'jam');
+		expect(http.post).toHaveBeenCalledWith(PATH, {body: {activity_id: 'band', connection_id: 'conn-a'}});
+		expect(VoiceActivities.takeStartMode('11')).toBe('jam');
+	});
+
+	it('keeps no mode when the start fails or comes from the plain card', async () => {
+		vi.mocked(http.post).mockResolvedValue(reply(SESSION));
+		await Commands.startVoiceActivity('500', 'band');
+		expect(VoiceActivities.takeStartMode('11')).toBeNull();
+		VoiceActivities.reset();
+		vi.mocked(http.post).mockRejectedValue(new Error('down'));
+		await Commands.startVoiceActivity('500', 'band', 'jam');
+		expect(VoiceActivities.takeStartMode('11')).toBeNull();
+	});
+
 	it('joins and leaves a running session without touching the call', () => {
 		VoiceActivities.handleSession('500', SESSION);
 		expect(VoiceActivities.isJoined('500')).toBe(false);

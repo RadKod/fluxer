@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import VoiceActivities from '@app/features/activities/state/VoiceActivities';
+import VoiceActivities, {START_MODE_TTL_MS} from '@app/features/activities/state/VoiceActivities';
 import type {VoiceActivitySessionMetadata} from '@fluxer/constants/src/VoiceActivityConstants';
 import {beforeEach, describe, expect, it} from 'vitest';
 
@@ -85,5 +85,20 @@ describe('VoiceActivities', () => {
 		expect(VoiceActivities.getLive('500')).toBe(live);
 		VoiceActivities.handleSession('500', session('s2'));
 		expect(VoiceActivities.getLive('500')).toBeNull();
+	});
+
+	it('hands the start mode out once, only for its session', () => {
+		VoiceActivities.setStartMode('s1', 'jam', 1_000);
+		expect(VoiceActivities.takeStartMode('s2', 1_000)).toBeNull();
+		expect(VoiceActivities.takeStartMode('s1', 1_000)).toBe('jam');
+		expect(VoiceActivities.takeStartMode('s1', 1_000)).toBeNull();
+	});
+
+	it('drops a start mode the room took too long to use', () => {
+		VoiceActivities.setStartMode('s1', 'jam', 1_000);
+		expect(VoiceActivities.takeStartMode('s1', 1_000 + START_MODE_TTL_MS)).toBeNull();
+		VoiceActivities.setStartMode('s1', 'jam', 1_000);
+		VoiceActivities.reset();
+		expect(VoiceActivities.takeStartMode('s1', 1_000)).toBeNull();
 	});
 });

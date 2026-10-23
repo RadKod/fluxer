@@ -31,10 +31,6 @@
 	--band-cover-road-width: 64%;
 }
 
-.thumb {
-	--band-cover-road-width: 80%;
-}
-
 /* Sized from the cover's height (cqh) so every size draws the same picture. */
 .highway {
 	position: absolute;

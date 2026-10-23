@@ -3,8 +3,8 @@
 import {startVoiceActivity} from '@app/features/activities/commands/VoiceActivityCommands';
 import {ACTIVITIES_DESCRIPTOR} from '@app/features/activities/components/ActivityMessages';
 import styles from '@app/features/activities/components/ActivityPicker.module.css';
-import type {ActivityDefinition} from '@app/features/activities/registry/ActivityDefinition';
-import {ACTIVITY_LIST, UPCOMING_ACTIVITIES} from '@app/features/activities/registry/ActivityRegistry';
+import type {ActivityPresentation} from '@app/features/activities/registry/ActivityDefinition';
+import {ACTIVITY_PICKER_ITEMS, type ActivityPickerItem} from '@app/features/activities/registry/ActivityRegistry';
 import VoiceActivities from '@app/features/activities/state/VoiceActivities';
 import * as Modal from '@app/features/app/components/dialogs/Modal';
 import Channels from '@app/features/channel/state/Channels';
@@ -36,11 +36,6 @@ const SEARCH_ACTIVITIES_DESCRIPTOR = msg({
 const NO_MATCH_DESCRIPTOR = msg({
 	message: 'No activity matches “{query}”',
 	comment: 'Voice activities: shown in the activity picker when the search finds nothing. {query} is what was typed.',
-});
-const COMING_SOON_DESCRIPTOR = msg({
-	message: 'Coming soon',
-	context: 'voice-activities',
-	comment: 'Voice activities: heading over the activities in the picker that are announced but cannot be started yet.',
 });
 const OPEN_ACTIVITY_DESCRIPTOR = msg({
 	message: 'Open',
@@ -81,8 +76,8 @@ const NEEDS_PEOPLE_DESCRIPTOR = msg({
 	comment: 'Voice activities: tooltip on a disabled entry of the activity list. {count} is a number above 1.',
 });
 
-function playersLabel(i18n: I18n, definition: ActivityDefinition): string {
-	const {minPlayers: min, maxPlayers: max} = definition;
+function playersLabel(i18n: I18n, presentation: ActivityPresentation): string {
+	const {minPlayers: min, maxPlayers: max} = presentation;
 	return min === max ? i18n._(PLAYER_COUNT_DESCRIPTOR, {count: min}) : i18n._(PLAYER_RANGE_DESCRIPTOR, {min, max});
 }
 
@@ -96,15 +91,15 @@ function peopleInChannel(channelId: string): number {
 }
 
 const ActivityCard = observer(function ActivityCard({
-	definition,
+	presentation,
 	onOpen,
 }: {
-	readonly definition: ActivityDefinition;
+	readonly presentation: ActivityPresentation;
 	readonly onOpen: () => void;
 }) {
 	const {i18n} = useLingui();
-	const {Cover} = definition;
-	const contentCount = definition.contentCount?.(i18n) ?? null;
+	const {Cover} = presentation;
+	const contentCount = presentation.contentCount?.(i18n) ?? null;
 	return (
 		<FocusRing offset={-2} data-flx="activities.activity-picker.activity-card.focus-ring">
 			<button
@@ -124,15 +119,15 @@ const ActivityCard = observer(function ActivityCard({
 				<div className={styles.cardBody} data-flx="activities.activity-picker.activity-card.body">
 					<div className={styles.cardText} data-flx="activities.activity-picker.activity-card.text">
 						<span className={styles.cardName} data-flx="activities.activity-picker.activity-card.name">
-							{i18n._(definition.name)}
+							{i18n._(presentation.name)}
 						</span>
 						<span className={styles.cardTagline} data-flx="activities.activity-picker.activity-card.tagline">
-							{i18n._(definition.tagline)}
+							{i18n._(presentation.tagline)}
 						</span>
 					</div>
 					<div className={styles.cardMeta} data-flx="activities.activity-picker.activity-card.meta">
 						<span className={styles.cardPlayers} data-flx="activities.activity-picker.activity-card.players">
-							{playersLabel(i18n, definition)}
+							{playersLabel(i18n, presentation)}
 						</span>
 						<span className={styles.cardOpen} data-flx="activities.activity-picker.activity-card.open">
 							{i18n._(OPEN_ACTIVITY_DESCRIPTOR)}
@@ -147,31 +142,34 @@ const ActivityCard = observer(function ActivityCard({
 const ActivityDetail = observer(function ActivityDetail({
 	channelId,
 	peopleCount,
-	definition,
+	item,
 	onBack,
 	onStarted,
 }: {
 	readonly channelId: string;
 	readonly peopleCount: number;
-	readonly definition: ActivityDefinition;
+	readonly item: ActivityPickerItem;
 	readonly onBack: () => void;
 	readonly onStarted: () => void;
 }) {
 	const {i18n} = useLingui();
-	const {Cover} = definition;
-	const contentCount = definition.contentCount?.(i18n) ?? null;
-	const chips = [playersLabel(i18n, definition), contentCount, ...definition.facts.map((fact) => i18n._(fact))].filter(
-		(chip): chip is string => chip !== null,
-	);
+	const {presentation} = item;
+	const {Cover} = presentation;
+	const contentCount = presentation.contentCount?.(i18n) ?? null;
+	const chips = [
+		playersLabel(i18n, presentation),
+		contentCount,
+		...presentation.facts.map((fact) => i18n._(fact)),
+	].filter((chip): chip is string => chip !== null);
 	const running = VoiceActivities.getSession(channelId) !== null;
-	const tooFew = peopleCount < definition.minPlayers;
+	const tooFew = peopleCount < presentation.minPlayers;
 	const blockReason = running
 		? i18n._(ONE_AT_A_TIME_DESCRIPTOR)
 		: tooFew
-			? i18n._(NEEDS_PEOPLE_DESCRIPTOR, {count: definition.minPlayers})
+			? i18n._(NEEDS_PEOPLE_DESCRIPTOR, {count: presentation.minPlayers})
 			: null;
 	const handleStart = async () => {
-		const outcome = await startVoiceActivity(channelId, definition.id);
+		const outcome = await startVoiceActivity(channelId, item.activityId, item.startMode);
 		if (outcome.ok) onStarted();
 	};
 	const backLabel = i18n._(BACK_TO_ACTIVITIES_DESCRIPTOR);
@@ -197,7 +195,7 @@ const ActivityDetail = observer(function ActivityDetail({
 			</div>
 			<div className={styles.detailBody} data-flx="activities.activity-picker.activity-detail.body">
 				<h2 className={styles.srOnly} data-flx="activities.activity-picker.activity-detail.name">
-					{i18n._(definition.name)}
+					{i18n._(presentation.name)}
 				</h2>
 				<ul className={styles.chips} data-flx="activities.activity-picker.activity-detail.chips">
 					{chips.map((chip) => (
@@ -207,14 +205,14 @@ const ActivityDetail = observer(function ActivityDetail({
 					))}
 				</ul>
 				<p className={styles.description} data-flx="activities.activity-picker.activity-detail.description">
-					{i18n._(definition.description)}
+					{i18n._(presentation.description)}
 				</p>
 				<ol
 					className={styles.steps}
 					aria-label={i18n._(HOW_IT_GOES_DESCRIPTOR)}
 					data-flx="activities.activity-picker.activity-detail.steps"
 				>
-					{definition.steps.map((step, index) => (
+					{presentation.steps.map((step, index) => (
 						<li key={step.title.id} className={styles.step} data-flx="activities.activity-picker.activity-detail.step">
 							<span
 								className={styles.stepNumber}
@@ -243,7 +241,7 @@ const ActivityDetail = observer(function ActivityDetail({
 						{i18n._(START_ACTIVITY_DESCRIPTOR)}
 					</Button>
 					<p className={styles.startNote} data-flx="activities.activity-picker.activity-detail.start-note">
-						{blockReason ?? i18n._(definition.startNote)}
+						{blockReason ?? i18n._(presentation.startNote)}
 					</p>
 				</div>
 			</div>
@@ -270,12 +268,11 @@ export const ActivityPickerPanel = observer(function ActivityPickerPanel({
 }: ActivityPickerPanelProps) {
 	const {i18n} = useLingui();
 	const [query, setQuery] = useState('');
-	const [openId, setOpenId] = useState<ActivityDefinition['id'] | null>(null);
-	const open = ACTIVITY_LIST.find((definition) => definition.id === openId) ?? null;
+	const [openKey, setOpenKey] = useState<string | null>(null);
+	const open = ACTIVITY_PICKER_ITEMS.find((item) => item.key === openKey) ?? null;
 	const title = i18n._(ACTIVITIES_DESCRIPTOR);
-	const activities = ACTIVITY_LIST.filter((definition) => matches(i18n, query, [definition.name, definition.tagline]));
-	const upcoming = UPCOMING_ACTIVITIES.filter((definition) =>
-		matches(i18n, query, [definition.name, definition.tagline]),
+	const items = ACTIVITY_PICKER_ITEMS.filter(({presentation}) =>
+		matches(i18n, query, [presentation.name, presentation.tagline]),
 	);
 	const closeLabel = i18n._(CLOSE_DESCRIPTOR);
 	return (
@@ -285,8 +282,8 @@ export const ActivityPickerPanel = observer(function ActivityPickerPanel({
 					<ActivityDetail
 						channelId={channelId}
 						peopleCount={peopleCount}
-						definition={open}
-						onBack={() => setOpenId(null)}
+						item={open}
+						onBack={() => setOpenKey(null)}
 						onStarted={onClose}
 						data-flx="activities.activity-picker.activity-detail"
 					/>
@@ -332,54 +329,18 @@ export const ActivityPickerPanel = observer(function ActivityPickerPanel({
 						/>
 					</div>
 					<Modal.Content padding="none" contentClassName={styles.list} data-flx="activities.activity-picker.list">
-						{activities.map((definition) => (
+						{items.map((item) => (
 							<ActivityCard
-								key={definition.id}
-								definition={definition}
-								onOpen={() => setOpenId(definition.id)}
+								key={item.key}
+								presentation={item.presentation}
+								onOpen={() => setOpenKey(item.key)}
 								data-flx="activities.activity-picker.activity-card"
 							/>
 						))}
-						{activities.length === 0 && upcoming.length === 0 && (
+						{items.length === 0 && (
 							<p className={styles.empty} data-flx="activities.activity-picker.empty">
 								{i18n._(NO_MATCH_DESCRIPTOR, {query: query.trim()})}
 							</p>
-						)}
-						{upcoming.length > 0 && (
-							<section className={styles.upcoming} data-flx="activities.activity-picker.upcoming">
-								<h2 className={styles.upcomingTitle} data-flx="activities.activity-picker.upcoming-title">
-									{i18n._(COMING_SOON_DESCRIPTOR)}
-								</h2>
-								<ul className={styles.upcomingGrid} data-flx="activities.activity-picker.upcoming-grid">
-									{upcoming.map(({key, name, tagline, Cover}) => (
-										<li
-											key={key}
-											className={styles.upcomingCard}
-											aria-disabled="true"
-											data-flx="activities.activity-picker.upcoming-card"
-										>
-											<div className={styles.upcomingCover} data-flx="activities.activity-picker.upcoming-cover">
-												<Cover size="thumb" data-flx="activities.activity-picker.upcoming-activity-cover" />
-											</div>
-											<div className={styles.upcomingText} data-flx="activities.activity-picker.upcoming-text">
-												<span className={styles.upcomingName} data-flx="activities.activity-picker.upcoming-name">
-													{i18n._(name)}
-												</span>
-												<span className={styles.upcomingTagline} data-flx="activities.activity-picker.upcoming-tagline">
-													{i18n._(tagline)}
-												</span>
-											</div>
-										</li>
-									))}
-									{query.trim() === '' && upcoming.length % 2 === 1 && (
-										<li
-											className={styles.upcomingFiller}
-											aria-hidden="true"
-											data-flx="activities.activity-picker.upcoming-filler"
-										/>
-									)}
-								</ul>
-							</section>
 						)}
 					</Modal.Content>
 				</>

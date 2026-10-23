@@ -41,6 +41,7 @@ import {
 	BandSongLibrary,
 	BandSongLibraryError,
 } from '@app/features/activities/band/flow/BandSongLibrary';
+import {followBandStartMode} from '@app/features/activities/band/flow/BandStartMode';
 import type {ActivitySession} from '@app/features/activities/session/ActivitySessionTypes';
 import VoiceActivities from '@app/features/activities/state/VoiceActivities';
 import {action, compareStructural, computed, makeObservable, observable, observableRef, reaction} from 'mobx';
@@ -246,6 +247,12 @@ export class BandRoom {
 		this.disposers.push(
 			() => clearInterval(resendLoaded),
 			() => window.removeEventListener('pagehide', releaseMic, {capture: true}),
+			followBandStartMode(
+				this.session,
+				() => this.state?.phase ?? null,
+				(sessionId) => VoiceActivities.takeStartMode(sessionId),
+				(intent) => this.send(intent),
+			),
 			this.session.onMessage(({from, payload}) => {
 				const cheer = payload as Partial<Record<keyof BandCheerMessage, unknown>> | null;
 				if (cheer?.t === 'band.cheer' && isBandCheerKind(cheer.kind)) {

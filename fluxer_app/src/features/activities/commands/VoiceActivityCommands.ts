@@ -61,9 +61,11 @@ export async function fetchVoiceActivity(channelId: string): Promise<void> {
 	}
 }
 
+// startMode comes from a picker entry (ActivityEntry): the activity opens its room in it on my client.
 export async function startVoiceActivity(
 	channelId: string,
 	activityId: VoiceActivityId,
+	startMode: string | null = null,
 ): Promise<VoiceActivityOutcome> {
 	const connectionId = myConnectionId(channelId);
 	if (!connectionId) return {ok: false, error: 'not_in_voice'};
@@ -77,6 +79,7 @@ export async function startVoiceActivity(
 		const session = parseVoiceActivitySession(body);
 		if (session && myConnectionId(channelId)) {
 			VoiceActivities.join(session.session_id);
+			if (startMode) VoiceActivities.setStartMode(session.session_id, startMode);
 			VoiceActivities.handleSession(channelId, session);
 		}
 		return OK;

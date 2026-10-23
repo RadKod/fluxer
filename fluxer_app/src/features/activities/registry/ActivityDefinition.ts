@@ -10,8 +10,8 @@ export interface ActivityViewProps {
 	readonly session: ActivitySession;
 }
 
-// The cover sizes: the picker card, the detail page's header, the call tile, the small card of a coming activity.
-export type ActivityCoverSize = 'card' | 'hero' | 'tile' | 'thumb';
+// The cover sizes: the picker card, the detail page's header, the call tile.
+export type ActivityCoverSize = 'card' | 'hero' | 'tile';
 
 export interface ActivityCoverProps {
 	readonly size: ActivityCoverSize;
@@ -22,17 +22,11 @@ export interface ActivityStep {
 	readonly body: MessageDescriptor;
 }
 
-// One activity, written in this app by the team. Everything but the View is light and loads with the app: the picker,
-// the call tile and the channel list read it for every activity. The View is mounted once for as long as I take part
-// and moved between the call's tile, the expanded stage and the mini window; the session outlives it.
-export interface ActivityDefinition {
-	readonly id: VoiceActivityId;
+// What the picker shows for something to start: its card and its detail page.
+export interface ActivityPresentation {
 	readonly name: MessageDescriptor;
-	readonly icon: Icon;
 	// One line under the name in the picker.
 	readonly tagline: MessageDescriptor;
-	// On the call tile of someone taking part, written per activity so each language can inflect the name.
-	readonly presence: MessageDescriptor;
 	// A short paragraph on the detail page.
 	readonly description: MessageDescriptor;
 	readonly minPlayers: number;
@@ -45,6 +39,25 @@ export interface ActivityDefinition {
 	readonly Cover: React.ComponentType<ActivityCoverProps>;
 	// How much there is to play ("133 songs"), once this client knows; null until then. Observable reads only.
 	readonly contentCount?: (i18n: I18n) => string | null;
+}
+
+// A second way into an activity, with its own card in the picker. It starts the same activity on the server; only
+// the starter's client knows the mode and opens the room in it (VoiceActivities.takeStartMode), so the wire and the
+// other clients stay as they are.
+export interface ActivityEntry extends ActivityPresentation {
+	readonly startMode: string;
+}
+
+// One activity, written in this app by the team. Everything but the View is light and loads with the app: the picker,
+// the call tile and the channel list read it for every activity. The View is mounted once for as long as I take part
+// and moved between the call's tile, the expanded stage and the mini window; the session outlives it.
+export interface ActivityDefinition extends ActivityPresentation {
+	readonly id: VoiceActivityId;
+	readonly icon: Icon;
+	// On the call tile of someone taking part, written per activity so each language can inflect the name.
+	readonly presence: MessageDescriptor;
+	// Shown in the picker after the activity's own card.
+	readonly entries?: ReadonlyArray<ActivityEntry>;
 	// One line about what the session is doing, for the call tile of someone who has not joined. Observable reads only.
 	readonly describeState?: (session: ActivitySession, i18n: I18n) => string | null;
 	// What I am doing in it ("Guitar · 2:14"), for the mini window's header. May read the session clock, which is not
@@ -55,12 +68,4 @@ export interface ActivityDefinition {
 	// Without it the tile always shows the View. Observable reads only.
 	readonly showsInTile?: (session: ActivitySession) => boolean;
 	readonly View: React.ComponentType<ActivityViewProps>;
-}
-
-// An activity the picker announces before it exists: a disabled card under "Coming soon".
-export interface UpcomingActivityDefinition {
-	readonly key: string;
-	readonly name: MessageDescriptor;
-	readonly tagline: MessageDescriptor;
-	readonly Cover: React.ComponentType<ActivityCoverProps>;
 }

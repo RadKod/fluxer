@@ -6,6 +6,15 @@ import {makeAutoObservable, observableRef} from 'mobx';
 
 export type VoiceActivityRequest = 'start' | 'end';
 
+// How long the mode picked with a start waits for the room to open; past it the room stays as it opened.
+export const START_MODE_TTL_MS = 15_000;
+
+interface StartModeHint {
+	readonly sessionId: string;
+	readonly mode: string;
+	readonly expiresAt: number;
+}
+
 // The activity of the voice channel I am connected to. The room metadata is the source; a REST reply only fills in
 // until the metadata says the same.
 //
@@ -23,9 +32,15 @@ class VoiceActivities {
 	// The user closed the mini window that follows a joined activity out of the call; it comes back when they return
 	// to the call or ask for the activity again.
 	miniWindowClosed = false;
+	// The mode I started the session in from one of the picker's entries; only this client knows it.
+	private startMode: StartModeHint | null = null;
 
 	constructor() {
-		makeAutoObservable(this, {session: observableRef, live: observableRef}, {autoBind: true});
+		makeAutoObservable<VoiceActivities, 'startMode'>(
+			this,
+			{session: observableRef, live: observableRef, startMode: false},
+			{autoBind: true},
+		);
 	}
 
 	getSession(channelId: string): VoiceActivitySessionMetadata | null {
@@ -82,6 +97,18 @@ class VoiceActivities {
 		this.expanded = false;
 	}
 
+	setStartMode(sessionId: string, mode: string, now = Date.now()): void {
+		this.startMode = {sessionId, mode, expiresAt: now + START_MODE_TTL_MS};
+	}
+
+	// The mode once, for the session it was picked for and while it is fresh; spent either way.
+	takeStartMode(sessionId: string, now = Date.now()): string | null {
+		const hint = this.startMode;
+		if (hint?.sessionId !== sessionId) return null;
+		this.startMode = null;
+		return now < hint.expiresAt ? hint.mode : null;
+	}
+
 	expand(): void {
 		if (this.session) this.expanded = true;
 	}
@@ -106,6 +133,7 @@ class VoiceActivities {
 		this.joinedSessionId = null;
 		this.expanded = false;
 		this.miniWindowClosed = false;
+		this.startMode = null;
 	}
 }
 
