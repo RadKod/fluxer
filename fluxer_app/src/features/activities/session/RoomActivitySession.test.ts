@@ -591,6 +591,27 @@ describe('RoomActivitySession', () => {
 			expect(stateMessages('user_2_b').at(-1)).toMatchObject({d: {v: 9, s: {song: 'new'}, term: 1}});
 		});
 
+		it('does not let a request it sent as a follower settle it early once it leads', async () => {
+			const leader = start(network.join('user_1_a', 100));
+			await vi.advanceTimersByTimeAsync(100);
+			leader.setState({n: 1});
+			// A silent client in the call keeps the new leader's question open for the full wait.
+			network.join('user_9_z', 300);
+			network.offline.add('user_1_a');
+			const follower = start(network.join('user_3_c', 200));
+			expect(follower.leader?.identity).toBe('user_1_a');
+			// Four unanswered requests later the leader is dropped and the follower takes over.
+			await vi.advanceTimersByTimeAsync(8_500);
+			network.leave('user_1_a');
+			expect(follower.isLeader).toBe(true);
+			expect(follower.stateSettled).toBe(false);
+			// The fifth request's timer would have fired here; the new leader is still asking the room.
+			await vi.advanceTimersByTimeAsync(2_000);
+			expect(follower.stateSettled).toBe(false);
+			await vi.advanceTimersByTimeAsync(2_000);
+			expect(follower.stateSettled).toBe(true);
+		});
+
 		it('treats a newcomer as settled once the leader answers, or once nobody does', async () => {
 			start(network.join('user_1_a', 100));
 			const late = start(network.join('user_2_b', 200));

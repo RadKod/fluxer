@@ -34,6 +34,8 @@ const GLOBAL_TIMERS: BandControllerTimers = {
 export class BandLeaderController {
 	private unsubscribe: (() => void) | null = null;
 	private interval: unknown = null;
+	// Scores that arrived while I was still learning the room's state, one per player.
+	private readonly heldResults = new Map<string, BandIntent>();
 
 	constructor(
 		private readonly session: ActivitySession,
@@ -57,6 +59,7 @@ export class BandLeaderController {
 		this.unsubscribe = null;
 		if (this.interval !== null) this.timers.clearInterval(this.interval);
 		this.interval = null;
+		this.heldResults.clear();
 	}
 
 	sendIntent(intent: BandIntent): void {
@@ -73,6 +76,7 @@ export class BandLeaderController {
 
 	tick(): void {
 		if (!this.session.isLeader || !this.session.stateSettled) return;
+		this.replayHeldResults();
 		const now = this.session.clock.now();
 		const ctx = this.context();
 		const current = this.state;
@@ -85,13 +89,24 @@ export class BandLeaderController {
 		if (intent) this.apply(intent, from.userId);
 	}
 
-	// Dropped while the state is not settled: the click is lost, the room is not.
+	// Dropped while the state is not settled: the click is lost, the room is not. A score is sent once, so it is held
+	// and applied on the first settled tick instead.
 	private apply(intent: BandIntent, fromUserId: string): void {
-		if (!this.session.stateSettled) return;
+		if (!this.session.stateSettled) {
+			if (intent.t === 'band.result') this.heldResults.set(fromUserId, intent);
+			return;
+		}
 		const now = this.session.clock.now();
 		const ctx = this.context();
 		const current = this.state ?? createBandRoomState(now, ctx);
 		this.commit(this.state, reduceBandIntent(current, intent, fromUserId, now, ctx));
+	}
+
+	private replayHeldResults(): void {
+		if (this.heldResults.size === 0) return;
+		const held = [...this.heldResults];
+		this.heldResults.clear();
+		for (const [fromUserId, intent] of held) this.apply(intent, fromUserId);
 	}
 
 	private commit(previous: BandState | null, next: BandState): void {

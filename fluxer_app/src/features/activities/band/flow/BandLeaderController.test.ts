@@ -342,6 +342,38 @@ describe('BandLeaderController', () => {
 		expect(controller.state?.phase).toBe('pick');
 	});
 
+	it('holds a score that reaches a new leader still learning the room and applies it once settled', () => {
+		const {room, leader, player, timers, leaderController, playerController} = setup();
+		const other = room.join('p2');
+		const otherController = new BandLeaderController(other.asSession(), contextFor(room), timers);
+		otherController.start();
+		playerController.sendIntent({t: 'band.vote', songId: 'a'});
+		room.now += BAND_PHASE_MS.pick;
+		timers.fire();
+		leaderController.sendIntent({t: 'band.claimSeat', part: null});
+		playerController.sendIntent({t: 'band.claimSeat', part: 'guitar'});
+		otherController.sendIntent({t: 'band.claimSeat', part: 'drums'});
+		playerController.sendIntent({t: 'band.loaded', songId: 'a'});
+		otherController.sendIntent({t: 'band.loaded', songId: 'a'});
+		playerController.sendIntent({t: 'band.ready', ready: true});
+		otherController.sendIntent({t: 'band.ready', ready: true});
+		room.now += BAND_PHASE_MS.countdown + SONG.lengthMs;
+		playerController.sendIntent({t: 'band.result', result: RESULT});
+
+		leaderController.stop();
+		room.leave(leader);
+		room.leaderUserId = 'p1';
+		player.stateSettled = false;
+		otherController.sendIntent({t: 'band.result', result: RESULT});
+		timers.fire();
+		expect(phaseOf(player.state)).toBe('play');
+
+		player.stateSettled = true;
+		timers.fire();
+		const results = playerController.state;
+		expect(results?.phase === 'results' && results.results.map((result) => result.userId)).toEqual(['p1', 'p2']);
+	});
+
 	it('waits for the state to settle before a leader without one opens a fresh room', () => {
 		const room = new FakeRoom('p1');
 		const session = room.join('p1');

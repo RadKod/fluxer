@@ -401,6 +401,10 @@ export class RoomActivitySession implements ActivitySession {
 		this.stopLeaderSync();
 		if (!this.leader) return;
 		if (this.isLeader) {
+			// A request I sent as a follower must not settle me as leader while I am still asking the room.
+			if (this.stateRetryTimer) clearTimeout(this.stateRetryTimer);
+			this.stateRetryTimer = null;
+			this.stateAnsweredBy = null;
 			this.clock.becomeReference();
 			this.syncAsLeader();
 			return;
@@ -615,7 +619,7 @@ export class RoomActivitySession implements ActivitySession {
 		void this.publishSystem('state_req', undefined, [leader.identity], true);
 		this.stateRetryTimer = setTimeout(() => {
 			this.stateRetryTimer = null;
-			if (this.stateAnsweredBy === this.leader?.identity) return;
+			if (this.isLeader || this.stateAnsweredBy === this.leader?.identity) return;
 			// Nobody answers: what I hold is all there is to know.
 			if (attempt + 1 >= STATE_REQUEST_ATTEMPTS) this.markStateSettled(true);
 			else this.requestState(attempt + 1);
