@@ -80,6 +80,7 @@ export class FakeActivitySession implements ActivitySession {
 	leader: ActivityParticipant | null = null;
 	state: unknown = null;
 	stateVersion = 0;
+	readonly stateSettled = true;
 	keyboardCaptured = true;
 	ended = false;
 	latencyMs: number;

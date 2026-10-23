@@ -19,6 +19,7 @@ import {
 } from '@app/features/activities/band/jam/JamLabels';
 import {JamRuntime} from '@app/features/activities/band/jam/JamRuntime';
 import JamSettings from '@app/features/activities/band/jam/JamSettings';
+import ActivityViewDock from '@app/features/activities/components/ActivityViewDock';
 import type {ActivitySession} from '@app/features/activities/session/ActivitySessionTypes';
 import {Spinner} from '@app/features/ui/components/Spinner';
 import {useLingui} from '@lingui/react/macro';
@@ -79,7 +80,8 @@ function useJamKeyboard(
 		root.addEventListener('keyup', onKeyUp);
 		root.addEventListener('focusout', onFocusOut);
 		root.addEventListener('click', onClick);
-		if (!root.contains(document.activeElement)) root.focus({preventScroll: true});
+		if (!root.contains(document.activeElement) && ActivityViewDock.mayTakeFocus(root))
+			root.focus({preventScroll: true});
 		return () => {
 			root.removeEventListener('keydown', onKeyDown);
 			root.removeEventListener('keyup', onKeyUp);

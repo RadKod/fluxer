@@ -59,12 +59,16 @@ export interface ActivitySession {
 	// The leader's last state; only its broadcasts are taken. Late joiners ask the leader for it.
 	readonly state: unknown;
 	readonly stateVersion: number;
+	// False while this client does not know the room's newest state yet: a newcomer waiting for the leader's answer,
+	// or a leader that just took over and is still asking the room. setState refuses until it turns true; a leader
+	// alone in the room is settled at once.
+	readonly stateSettled: boolean;
 	readonly keyboardCaptured: boolean;
 	onParticipantsChanged(listener: (participants: ReadonlyArray<ActivityParticipant>) => void): () => void;
 	onMembersChanged(listener: (members: ReadonlyArray<ActivityParticipant>) => void): () => void;
 	send(payload: unknown, options?: ActivitySendOptions): Promise<void>;
 	onMessage(handler: (message: ActivityMessage) => void): () => void;
-	// Leader only; returns false elsewhere. The state must be JSON and fit in one message.
+	// Leader only, once settled; returns false elsewhere. The state must be JSON and fit in one message.
 	setState(state: unknown): boolean;
 	onStateChanged(listener: (state: unknown) => void): () => void;
 	// On by default: while the activity has focus, push-to-talk and app shortcuts wait and keys stay in the activity.

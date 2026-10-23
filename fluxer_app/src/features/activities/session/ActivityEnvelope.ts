@@ -3,7 +3,8 @@
 // Wire format of one data channel message: {t, seq, d}. There is no sender field; the receiver takes the sender
 // from LiveKit, so a payload cannot speak for someone else.
 // `member` says whether the sender takes part in the activity and `member_req` asks for it; clients from before the
-// join step drop both as unreadable.
+// join step drop both as unreadable. `state` carries {v, s, term}: from a leader to everyone, or as the answer to a
+// `state_req`; a follower's answer adds `copy: true`. Clients from before the term leave it out and ignore it.
 export type ActivityEnvelopeType = 'app' | 'ping' | 'pong' | 'state' | 'state_req' | 'member' | 'member_req';
 
 const ENVELOPE_TYPES: ReadonlySet<string> = new Set<ActivityEnvelopeType>([

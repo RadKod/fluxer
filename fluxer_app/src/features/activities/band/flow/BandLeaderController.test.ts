@@ -88,6 +88,7 @@ class FakeSession {
 	readonly me: ActivityParticipant;
 	state: unknown = null;
 	stateVersion = 0;
+	stateSettled = true;
 	readonly sent: Array<{payload: unknown; options?: ActivitySendOptions}> = [];
 	private readonly handlers = new Set<(message: ActivityMessage) => void>();
 	private seq = 0;
@@ -339,6 +340,60 @@ describe('BandLeaderController', () => {
 		const controller = new BandLeaderController(session.asSession(), contextFor(room), new ManualTimers());
 		controller.start();
 		expect(controller.state?.phase).toBe('pick');
+	});
+
+	it('waits for the state to settle before a leader without one opens a fresh room', () => {
+		const room = new FakeRoom('p1');
+		const session = room.join('p1');
+		session.stateSettled = false;
+		const timers = new ManualTimers();
+		const controller = new BandLeaderController(session.asSession(), contextFor(room), timers);
+		controller.start();
+		controller.sendIntent({t: 'band.vote', songId: 'a'});
+		timers.fire();
+		expect(session.state).toBeNull();
+		expect(session.stateVersion).toBe(0);
+
+		// Nobody held a state: once settled, the leader opens the room.
+		session.stateSettled = true;
+		timers.fire();
+		expect(controller.state?.phase).toBe('pick');
+	});
+
+	it('continues the song it learned while unsettled instead of replacing it with a fresh pick', () => {
+		const {room, leader, player, timers, leaderController, playerController} = setup();
+		playerController.sendIntent({t: 'band.vote', songId: 'a'});
+		room.now += BAND_PHASE_MS.pick;
+		timers.fire();
+		leaderController.sendIntent({t: 'band.claimSeat', part: null});
+		playerController.sendIntent({t: 'band.claimSeat', part: 'guitar'});
+		playerController.sendIntent({t: 'band.loaded', songId: 'a'});
+		playerController.sendIntent({t: 'band.ready', ready: true});
+		const playing = player.state as BandState;
+		expect(playing.phase).toBe('play');
+
+		// The starter comes back with nothing and is elected before the room's answer arrives; a click on Join (any
+		// intent) and the ticks must not open a new pick.
+		leaderController.stop();
+		room.leave(leader);
+		const back = room.join('lead');
+		back.state = null;
+		back.stateSettled = false;
+		const backController = new BandLeaderController(back.asSession(), contextFor(room), timers);
+		backController.start();
+		backController.sendIntent({t: 'band.claimSeat', part: 'drums'});
+		timers.fire();
+		expect(player.state).toBe(playing);
+		expect(back.state).toBeNull();
+
+		// The answer arrives: the leader carries on with the song.
+		back.state = player.state;
+		back.stateSettled = true;
+		timers.fire();
+		expect(phaseOf(player.state)).toBe('play');
+		expect((player.state as BandState & {phase: 'play'}).startAt).toBe(
+			(playing as BandState & {phase: 'play'}).startAt,
+		);
 	});
 
 	it('drops my intent when there is no leader to send it to', () => {

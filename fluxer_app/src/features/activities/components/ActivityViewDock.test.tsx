@@ -120,4 +120,38 @@ describe('ActivityViewDock', () => {
 		expect(hostPlace()).toBe('stage');
 		expect(document.activeElement).toBe(probe());
 	});
+
+	describe('mayTakeFocus', () => {
+		function chatBox(): HTMLTextAreaElement {
+			const textarea = document.createElement('textarea');
+			container.appendChild(textarea);
+			return textarea;
+		}
+
+		it('lets a screen take focus that nobody holds, or that is already in the View', () => {
+			render(['tile']);
+			(document.activeElement as HTMLElement | null)?.blur();
+			expect(ActivityViewDock.mayTakeFocus(probe())).toBe(true);
+			act(() => probe().focus());
+			expect(ActivityViewDock.mayTakeFocus(probe())).toBe(true);
+		});
+
+		it('leaves focus in the message box while the View sits in the tile or the mini window', () => {
+			for (const place of ['tile', 'mini'] as const) {
+				render([place]);
+				const textarea = chatBox();
+				textarea.focus();
+				expect(ActivityViewDock.mayTakeFocus(probe())).toBe(false);
+				textarea.remove();
+			}
+		});
+
+		it('takes focus on the expanded stage', () => {
+			render(['stage']);
+			const textarea = chatBox();
+			textarea.focus();
+			expect(ActivityViewDock.mayTakeFocus(probe())).toBe(true);
+			textarea.remove();
+		});
+	});
 });

@@ -36,6 +36,10 @@ const logger = new Logger('RoomActivitySession');
 
 const STATE_REQUEST_RETRY_MS = 2_000;
 const STATE_REQUEST_ATTEMPTS = 5;
+// A leader that takes over asks the whole room what it holds before it leads. Clients from before the leadership
+// term never answer, so it waits for them only this many rounds of this long.
+const LEADER_SYNC_RETRY_MS = 1_000;
+const LEADER_SYNC_ATTEMPTS = 3;
 
 interface PendingPing {
 	readonly identity: string;
@@ -84,6 +88,31 @@ function readNumber(data: unknown, key: string): number | null {
 	if (typeof data !== 'object' || data === null) return null;
 	const value = (data as Record<string, unknown>)[key];
 	return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function readCount(data: unknown, key: string): number | null {
+	const value = readNumber(data, key);
+	return value !== null && Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
+// A state message: {v, s, term} from a leader, plus {copy, by} when a follower tells what it holds and which leader
+// made it. The term counts leadership takeovers and outranks the version, which only grows within one term; it is
+// null in states from clients that predate it.
+interface HeldState {
+	readonly term: number | null;
+	readonly version: number;
+	readonly state: unknown;
+	readonly copy: boolean;
+	readonly by: string | null;
+}
+
+function readHeldState(data: unknown): HeldState | null {
+	const version = readCount(data, 'v');
+	if (version === null) return null;
+	const term = readCount(data, 'term');
+	if (term === null && typeof data === 'object' && data !== null && 'term' in data) return null;
+	const {s: state = null, by} = data as {s?: unknown; by?: unknown};
+	return {term, version, state, copy: readBoolean(data, 'copy') === true, by: typeof by === 'string' ? by : null};
 }
 
 class RoomActivityClock implements ActivityClock {
@@ -142,6 +171,7 @@ export class RoomActivitySession implements ActivitySession {
 	leader: ActivityParticipant | null = null;
 	state: unknown = null;
 	stateVersion = 0;
+	stateSettled = false;
 	keyboardCaptured = true;
 
 	private readonly room: Room;
@@ -160,9 +190,13 @@ export class RoomActivitySession implements ActivitySession {
 	private clockRun = 0;
 	private clockTimer: ReturnType<typeof setInterval> | null = null;
 	private stateRetryTimer: ReturnType<typeof setTimeout> | null = null;
-	// Whose state I hold, and which leader answered my last request.
+	// The leader that made the state I hold and under which term, and which leader answered my last request.
 	private stateFrom: string | null = null;
+	private stateTerm = 0;
 	private stateAnsweredBy: string | null = null;
+	// While I am a leader catching up with the room: who has not told me yet what they hold. Null otherwise.
+	private syncPending: Set<string> | null = null;
+	private syncTimer: ReturnType<typeof setTimeout> | null = null;
 	private disposed = false;
 
 	constructor({room, channelId, session, end, joined = false, localNow = wallClockNow}: RoomActivitySessionOptions) {
@@ -178,7 +212,10 @@ export class RoomActivitySession implements ActivitySession {
 		this.clock = new RoomActivityClock(localNow);
 		this.joined = joined;
 		this.me = this.readMe();
-		makeObservable<RoomActivitySession, 'refreshParticipants' | 'acceptState' | 'takeMembership'>(this, {
+		makeObservable<
+			RoomActivitySession,
+			'refreshParticipants' | 'acceptState' | 'takeMembership' | 'markStateSettled' | 'settleLeadership'
+		>(this, {
 			me: observableRef,
 			participants: observableRef,
 			members: observableRef,
@@ -186,6 +223,7 @@ export class RoomActivitySession implements ActivitySession {
 			leader: observableRef,
 			state: observableRef,
 			stateVersion: observable,
+			stateSettled: observable,
 			keyboardCaptured: observable,
 			isLeader: computed,
 			setState: action,
@@ -194,6 +232,8 @@ export class RoomActivitySession implements ActivitySession {
 			refreshParticipants: action,
 			acceptState: action,
 			takeMembership: action,
+			markStateSettled: action,
+			settleLeadership: action,
 		});
 		room.on(RoomEvent.DataReceived, this.handleData);
 		room.on(RoomEvent.ParticipantConnected, this.handleParticipantConnected);
@@ -234,11 +274,8 @@ export class RoomActivitySession implements ActivitySession {
 	}
 
 	setState(state: unknown): boolean {
-		if (this.disposed || !this.isLeader) return false;
-		const version = this.stateVersion + 1;
-		const bytes = this.envelope('state', {v: version, s: state});
-		this.acceptState(this.me.identity, version, state);
-		void this.publishQuietly(bytes, undefined, true);
+		if (this.disposed || !this.isLeader || !this.stateSettled) return false;
+		this.broadcastState(state);
 		return true;
 	}
 
@@ -266,6 +303,7 @@ export class RoomActivitySession implements ActivitySession {
 		this.room.off(RoomEvent.Connected, this.handleConnected);
 		this.room.off(RoomEvent.Reconnected, this.handleReconnected);
 		this.stopClockSync();
+		this.stopLeaderSync();
 		if (this.stateRetryTimer) clearTimeout(this.stateRetryTimer);
 		this.messageHandlers.clear();
 		this.participantListeners.clear();
@@ -286,10 +324,12 @@ export class RoomActivitySession implements ActivitySession {
 		);
 	}
 
-	// A session made while the room was still connecting could not send its first announcement.
+	// A session made while the room was still connecting could not send its first announcement, and a leader that saw
+	// nobody settled on nothing while the room may hold a state.
 	private readonly handleConnected = (): void => {
 		this.refreshParticipants();
 		this.announceMembership();
+		if (this.isLeader && !this.syncPending) this.syncAsLeader();
 	};
 
 	// The newcomer may not have its session yet, or may not see me yet: I tell it mine and ask for its own. Its own
@@ -304,13 +344,20 @@ export class RoomActivitySession implements ActivitySession {
 	private readonly handleParticipantDisconnected = (participant?: RemoteParticipant): void => {
 		if (participant) this.announcedMembership.delete(participant.identity);
 		this.refreshParticipants();
+		if (participant && this.syncPending?.delete(participant.identity) && this.syncPending.size === 0) {
+			this.settleLeadership();
+		}
 	};
 
 	private readonly handleReconnected = (): void => {
 		this.refreshParticipants();
 		this.announceMembership();
-		// Whatever the leader sent while I was away is gone; ask again and remeasure.
-		if (this.isLeader) return;
+		// While I was away the room may have elected someone else who moved on, and what I sent may be lost. As leader
+		// I catch up with the room and send my state again; as follower I ask again and remeasure.
+		if (this.isLeader) {
+			if (!this.syncPending) this.syncAsLeader();
+			return;
+		}
 		this.requestState();
 		void this.syncClock();
 	};
@@ -351,16 +398,88 @@ export class RoomActivitySession implements ActivitySession {
 
 	private handleLeaderChange(): void {
 		this.stopClockSync();
+		this.stopLeaderSync();
 		if (!this.leader) return;
 		if (this.isLeader) {
 			this.clock.becomeReference();
-			this.stateFrom = this.me.identity;
+			this.syncAsLeader();
 			return;
 		}
 		this.clock.unsync();
 		this.clockTimer = setInterval(() => void this.syncClock(), ACTIVITY_CLOCK_RESYNC_MS);
 		void this.syncClock();
 		if (this.stateAnsweredBy !== this.leader.identity) this.requestState();
+		// The new leader may know less than I do (it was away, or missed the last broadcasts); it weighs my copy.
+		this.offerState(this.leader.identity);
+	}
+
+	// Before leading, learn the newest state anyone in the room holds: a leader back from a dropped connection may
+	// have been replaced by one that moved the room on. Alone, there is nobody to ask.
+	private syncAsLeader(): void {
+		const peers = this.participants.filter((participant) => !participant.isLocal).map((p) => p.identity);
+		if (peers.length === 0) {
+			this.settleLeadership();
+			return;
+		}
+		this.markStateSettled(false);
+		this.syncPending = new Set(peers);
+		this.askRoomForState(0);
+	}
+
+	private askRoomForState(attempt: number): void {
+		const pending = this.syncPending;
+		if (this.disposed || !pending) return;
+		void this.publishSystem('state_req', undefined, [...pending], true);
+		this.syncTimer = setTimeout(() => {
+			this.syncTimer = null;
+			if (attempt + 1 >= LEADER_SYNC_ATTEMPTS) this.settleLeadership();
+			else this.askRoomForState(attempt + 1);
+		}, LEADER_SYNC_RETRY_MS);
+	}
+
+	private stopLeaderSync(): void {
+		if (this.syncTimer) clearTimeout(this.syncTimer);
+		this.syncTimer = null;
+		this.syncPending = null;
+	}
+
+	// Leadership starts a new term, above every term I have seen, and the state I continue from goes out under it:
+	// followers drop anything from an older term, so a leader that comes back with a stale copy cannot roll them back.
+	private settleLeadership(): void {
+		this.stopLeaderSync();
+		if (this.disposed || !this.isLeader) return;
+		this.stateTerm += 1;
+		this.stateFrom = this.me.identity;
+		this.markStateSettled(true);
+		if (this.state === null) return;
+		try {
+			this.broadcastState(this.state);
+		} catch (error) {
+			logger.warn('Could not send the state again under the new term', error);
+		}
+	}
+
+	private markStateSettled(settled: boolean): void {
+		this.stateSettled = settled;
+	}
+
+	// Throws for a state over the size limit, before anything is sent or changed.
+	private broadcastState(state: unknown): void {
+		const version = this.stateVersion + 1;
+		const bytes = this.envelope('state', {v: version, s: state, term: this.stateTerm});
+		this.acceptState(this.me.identity, version, state, this.stateTerm);
+		void this.publishQuietly(bytes, undefined, true);
+	}
+
+	private offerState(identity: string): void {
+		const held = {v: this.stateVersion, s: this.state, term: this.stateTerm};
+		const data = this.isLeader ? held : {...held, copy: true, ...(this.stateFrom && {by: this.stateFrom})};
+		void this.publishSystem('state', data, [identity], true);
+	}
+
+	// Above zero when the given state is newer than mine: by term, then by version.
+	private compareToMine(term: number, version: number): number {
+		return term !== this.stateTerm ? term - this.stateTerm : version - this.stateVersion;
 	}
 
 	private readonly handleData = (
@@ -394,12 +513,13 @@ export class RoomActivitySession implements ActivitySession {
 				this.takePong(envelope);
 				return;
 			case 'state':
-				this.takeState(envelope);
+				if (this.isLeader) this.takeOffer(envelope);
+				else this.takeState(envelope);
 				return;
 			case 'state_req':
-				if (this.isLeader) {
-					void this.publishSystem('state', {v: this.stateVersion, s: this.state}, [envelope.from], true);
-				}
+				// A follower asks its leader, a leader catching up asks everyone; either way I say what I hold. While I
+				// am catching up myself I have nothing reliable to say: my broadcast follows once I know.
+				if (!this.syncPending) this.offerState(envelope.from);
 				return;
 			case 'member': {
 				const joined = readBoolean(envelope.data, 'joined');
@@ -432,18 +552,54 @@ export class RoomActivitySession implements ActivitySession {
 
 	private takeState(envelope: ActivityEnvelope): void {
 		if (envelope.from !== this.leader?.identity) return;
-		const version = readNumber(envelope.data, 'v');
-		if (version === null || !Number.isSafeInteger(version) || version < 0) return;
+		const held = readHeldState(envelope.data);
+		if (!held) return;
 		this.stateAnsweredBy = envelope.from;
 		if (this.stateRetryTimer) clearTimeout(this.stateRetryTimer);
 		this.stateRetryTimer = null;
-		// Versions only grow under one leader; a new leader's first state replaces the old one's whatever its number.
-		if (version <= this.stateVersion && envelope.from === this.stateFrom) return;
-		this.acceptState(envelope.from, version, (envelope.data as {s?: unknown}).s ?? null);
+		this.markStateSettled(true);
+		// A state without a term comes from an older leader and is judged as that client would: anything from a
+		// different leader than the last, or a higher version from the same one.
+		if (held.term === null) {
+			if (envelope.from !== this.stateFrom || held.version > this.stateVersion) {
+				this.acceptState(envelope.from, held.version, held.state, this.stateTerm);
+			}
+			return;
+		}
+		const by = held.by ?? envelope.from;
+		// Two leaders took the same term (one could not hear the room when it took over): neither copy outranks the
+		// other, so I keep mine and the leader settles it, as for a leader that is behind.
+		const fork = held.term === this.stateTerm && this.stateFrom !== null && by !== this.stateFrom;
+		const order = this.compareToMine(held.term, held.version);
+		if (order > 0 && !fork) this.acceptState(by, held.version, held.state, held.term);
+		// My leader is behind what I hold (it led on a stale copy before it heard from me): it takes mine and moves on.
+		else if (order < 0 || fork) this.offerState(envelope.from);
 	}
 
-	private acceptState(from: string, version: number, state: unknown): void {
+	// As leader: any answer while I catch up, then a follower's copy newer than mine that I missed. Either way the
+	// newest wins and goes out again under a fresh term. Another leader's own broadcasts (two clients that disagree
+	// about the room for a moment) are not copies; taking those would have the two outbid each other forever.
+	private takeOffer(envelope: ActivityEnvelope): void {
+		const held = readHeldState(envelope.data);
+		if (!held || (!this.syncPending && !held.copy)) return;
+		const term = held.term ?? 0;
+		const by = held.by ?? envelope.from;
+		// Once I lead, a copy from another leader under my own term is a fork the room went on with; it wins.
+		const fork = !this.syncPending && term === this.stateTerm && by !== this.me.identity;
+		const newer = this.compareToMine(term, held.version) > 0 || fork;
+		if (newer) this.acceptState(by, held.version, held.state, term);
+		const pending = this.syncPending;
+		if (pending) {
+			pending.delete(envelope.from);
+			if (pending.size === 0) this.settleLeadership();
+			return;
+		}
+		if (newer) this.settleLeadership();
+	}
+
+	private acceptState(from: string, version: number, state: unknown, term: number): void {
 		this.stateFrom = from;
+		this.stateTerm = term;
 		this.stateVersion = version;
 		this.state = state;
 		for (const listener of this.stateListeners) this.notify(listener, state);
@@ -457,10 +613,12 @@ export class RoomActivitySession implements ActivitySession {
 		this.stateAnsweredBy = null;
 		// The leader drops data from someone it has not seen join yet, so a fresh joiner asks a few times.
 		void this.publishSystem('state_req', undefined, [leader.identity], true);
-		if (attempt + 1 >= STATE_REQUEST_ATTEMPTS) return;
 		this.stateRetryTimer = setTimeout(() => {
 			this.stateRetryTimer = null;
-			if (this.stateAnsweredBy !== this.leader?.identity) this.requestState(attempt + 1);
+			if (this.stateAnsweredBy === this.leader?.identity) return;
+			// Nobody answers: what I hold is all there is to know.
+			if (attempt + 1 >= STATE_REQUEST_ATTEMPTS) this.markStateSettled(true);
+			else this.requestState(attempt + 1);
 		}, STATE_REQUEST_RETRY_MS);
 	}
 

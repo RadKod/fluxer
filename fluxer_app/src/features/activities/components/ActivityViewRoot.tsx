@@ -4,7 +4,7 @@ import ActivityViewDock from '@app/features/activities/components/ActivityViewDo
 import styles from '@app/features/activities/components/ActivityViewRoot.module.css';
 import {getActivityDefinition} from '@app/features/activities/registry/ActivityRegistry';
 import type {ActivitySession} from '@app/features/activities/session/ActivitySessionTypes';
-import {joinedActivitySession} from '@app/features/activities/utils/JoinedActivitySession';
+import {mountedActivitySession} from '@app/features/activities/utils/JoinedActivitySession';
 import KeybindManager from '@app/features/app/keybindings/KeybindManager';
 import {Spinner} from '@app/features/ui/components/Spinner';
 import FocusRingScope from '@app/features/ui/focus_ring/FocusRingScope';
@@ -78,7 +78,9 @@ export const ActivityViewFrame = observer(function ActivityViewFrame({session}: 
 // Mounted once at the app root. The View renders here for as long as I take part, whether its place is the call's
 // tile, the expanded stage, the mini window or none (parked, still playing); the dock moves it between them.
 export const ActivityViewRoot = observer(function ActivityViewRoot() {
-	const session = joinedActivitySession();
+	const mountedRef = useRef<ActivitySession | null>(null);
+	const session = mountedActivitySession(mountedRef.current);
+	mountedRef.current = session;
 	if (!session) return null;
 	return createPortal(
 		<ActivityViewFrame key={session.sessionId} session={session} data-flx="activities.activity-view-root.view-frame" />,

@@ -736,11 +736,24 @@ describe('play', () => {
 		]);
 	});
 
-	it('ignores results from spectators and second reports', () => {
+	it('ignores results from spectators and second reports that judged no more of the song', () => {
 		const state = play();
 		expect(apply(state, {t: 'band.result', result: RESULT}, 'u3')).toBe(state);
 		const once = apply(state, {t: 'band.result', result: RESULT}, 'u1');
 		expect(apply(once, {t: 'band.result', result: {...RESULT, rawScore: 5}}, 'u1')).toBe(once);
+		const shorter = {...RESULT, rawScore: 5000, notesHit: 10, notesMissed: 0};
+		expect(apply(once, {t: 'band.result', result: shorter}, 'u1')).toBe(once);
+	});
+
+	it('replaces an early partial result with a fuller one while the song plays, and only then', () => {
+		const partial = {...RESULT, rawScore: 100, notesHit: 9, notesMissed: 1};
+		const early = apply(play(), {t: 'band.result', result: partial}, 'u1') as BandPlayState;
+		const full = apply(early, {t: 'band.result', result: RESULT}, 'u1') as BandPlayState;
+		expect(full.phase).toBe('play');
+		expect(full.results).toEqual([expect.objectContaining({userId: 'u1', rawScore: 1000, notesHit: 90})]);
+
+		const reported = results({results: early.results});
+		expect(apply(reported, {t: 'band.result', result: RESULT}, 'u1')).toBe(reported);
 	});
 
 	it('keeps the banked finale bonus, never above the score', () => {

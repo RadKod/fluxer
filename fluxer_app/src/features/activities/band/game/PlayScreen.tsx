@@ -13,6 +13,7 @@ import {
 import styles from '@app/features/activities/band/game/PlayScreen.module.css';
 import {PlayStage} from '@app/features/activities/band/game/PlayStage';
 import {hasFocusPart} from '@app/features/activities/band/game/PlayStageParts';
+import ActivityViewDock from '@app/features/activities/components/ActivityViewDock';
 import type {ActivitySession} from '@app/features/activities/session/ActivitySessionTypes';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {msg} from '@lingui/core/macro';
@@ -46,6 +47,12 @@ export interface PlayScreenProps {
 	// My own messages never come back to me, so while I lead, the flow applies my result through this.
 	readonly onOwnIntent?: (intent: BandIntent) => void;
 	readonly keyMap?: BandKeyMap;
+}
+
+// The room is still on this run of the song: what goes away is only this View (a window made narrow, the panel closed).
+function sameRunStillPlaying(session: ActivitySession, state: BandPlayState): boolean {
+	const current = session.state as Partial<BandPlayState> | null;
+	return current?.phase === 'play' && current.songId === state.songId && current.startAt === state.startAt;
 }
 
 function usePlayRuntime({session, state, entry, songPackage, onOwnIntent}: PlayScreenProps) {
@@ -93,9 +100,10 @@ function usePlayRuntime({session, state, entry, songPackage, onOwnIntent}: PlayS
 		);
 		return () => {
 			cancelled = true;
-			// The screen goes when the phase leaves play (the song ended or was stopped) or the panel closes; either
-			// way the leader gets what I scored. A result already sent is not sent again.
-			started?.controller.finish({stopped: true});
+			// Once the room has left this run (the song ended or the leader stopped it) the leader gets what I scored;
+			// a result already sent is not sent again. A View that goes while the song plays on reports nothing: a
+			// partial score would count as my result, and as the last one missing it would end the song for everyone.
+			if (started && !sameRunStillPlaying(session, state)) started.controller.finish({stopped: true});
 			started?.dispose();
 		};
 		// A new play state for the same song (a seat change) must not restart the audio; startAt identifies the run.
@@ -109,7 +117,8 @@ function usePlayRuntime({session, state, entry, songPackage, onOwnIntent}: PlayS
 	return {runtime, status};
 }
 
-// Keys go to the game only while the activity holds the keyboard; the root takes focus so they land here.
+// Keys go to the game only while the activity holds the keyboard. The root takes focus so they land here, unless
+// focus is somewhere else the player chose (the message box) and the View is not on the stage.
 function useBandKeyboard(
 	rootRef: RefObject<HTMLDivElement | null>,
 	runtime: PlayRuntime | null,
@@ -139,7 +148,7 @@ function useBandKeyboard(
 		root.addEventListener('keydown', onKeyDown);
 		root.addEventListener('keyup', onKeyUp);
 		root.addEventListener('focusout', onFocusOut);
-		root.focus({preventScroll: true});
+		if (ActivityViewDock.mayTakeFocus(root)) root.focus({preventScroll: true});
 		return () => {
 			root.removeEventListener('keydown', onKeyDown);
 			root.removeEventListener('keyup', onKeyUp);

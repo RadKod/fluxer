@@ -309,16 +309,24 @@ function count(value: number): number {
 	return Math.round(finite(value));
 }
 
+function judgedNotes(result: BandPlayerResult): number {
+	return result.notesHit + result.notesMissed;
+}
+
 // The seat, not the payload, says which part and difficulty the result belongs to, and the score is recomputed from
-// the raw score so the multiplier always matches the seat.
+// the raw score so the multiplier always matches the seat. One result per player; while the song still plays, a later
+// one that judged more notes replaces it: a View that closed mid-song on an older client reported early, and the
+// same player's View mounted again reports the rest of the song. A report covering less never wipes a fuller one.
 function acceptResult(
 	results: ReadonlyArray<BandPlayerResult>,
 	seats: ReadonlyArray<BandSeat>,
 	payload: Omit<BandPlayerResult, 'userId'>,
 	fromUserId: string,
+	{replace}: {readonly replace: boolean},
 ): ReadonlyArray<BandPlayerResult> | null {
 	const seat = seats.find((candidate) => candidate.userId === fromUserId);
-	if (!seat || results.some((result) => result.userId === fromUserId)) return null;
+	const earlier = results.find((result) => result.userId === fromUserId);
+	if (!seat || (earlier && !replace)) return null;
 	const rawScore = count(payload.rawScore);
 	const score = Math.round(rawScore * BAND_DIFFICULTY_MULTIPLIER[seat.difficulty]);
 	const finaleBonus = Math.min(count(payload.finaleBonus ?? 0), score);
@@ -337,7 +345,8 @@ function acceptResult(
 		...(finaleBonus > 0 && {finaleBonus}),
 		...(freestylePoints > 0 && {freestylePoints}),
 	};
-	const next = [...results, result];
+	if (earlier && judgedNotes(result) <= judgedNotes(earlier)) return null;
+	const next = [...results.filter((other) => other !== earlier), result];
 	next.sort((a, b) => BAND_PARTS.indexOf(a.part) - BAND_PARTS.indexOf(b.part));
 	return next;
 }
@@ -415,13 +424,13 @@ export function reduceBandIntent(
 		}
 		case 'band.result': {
 			if (state.phase === 'play') {
-				const results = acceptResult(playResults(state), state.seats, intent.result, fromUserId);
+				const results = acceptResult(playResults(state), state.seats, intent.result, fromUserId, {replace: true});
 				if (!results) return state;
 				const next: BandPlayState = {...state, results};
 				return everyPresentPlayerReported(next, ctx) ? endPlay(next, now) : next;
 			}
 			if (state.phase === 'results') {
-				const results = acceptResult(state.results, state.seats, intent.result, fromUserId);
+				const results = acceptResult(state.results, state.seats, intent.result, fromUserId, {replace: false});
 				return results ? {...state, results} : state;
 			}
 			return state;

@@ -72,6 +72,17 @@ export class ActivityViewDock {
 		this.keysCaptured = captured;
 	}
 
+	// Whether a screen inside the View may pull focus to itself as it starts (a song, jam mode): when nothing else
+	// holds focus, when focus is already in the View, or when the View fills the expanded stage. Someone typing in chat
+	// beside the tile or the mini window keeps the message box, and push-to-talk keeps working.
+	mayTakeFocus(element: HTMLElement): boolean {
+		if (this.placement === 'stage') return true;
+		const doc = element.ownerDocument;
+		const active = doc.activeElement;
+		if (!active || active === doc.body) return true;
+		return (element.closest('[data-activity-view-host]') ?? element).contains(active);
+	}
+
 	private bestSlot(): ActivityViewSlot | null {
 		let best: ActivityViewSlot | null = null;
 		for (const slot of this.slots) {

@@ -2,7 +2,8 @@
 
 // Runs BandRoomMachine wherever this client is the leader and routes my intents to whoever is. Leadership can move at
 // any time (the session elects); the controller checks on every message and tick, so the new leader simply continues
-// from the last broadcast state.
+// from the last broadcast state. Until the session has settled what that state is, the leader does nothing: a fresh
+// room made from a state still on its way would replace the song everyone is playing.
 
 import type {BandIntent, BandState} from '@app/features/activities/band/BandProtocol';
 import {
@@ -71,7 +72,7 @@ export class BandLeaderController {
 	}
 
 	tick(): void {
-		if (!this.session.isLeader) return;
+		if (!this.session.isLeader || !this.session.stateSettled) return;
 		const now = this.session.clock.now();
 		const ctx = this.context();
 		const current = this.state;
@@ -84,7 +85,9 @@ export class BandLeaderController {
 		if (intent) this.apply(intent, from.userId);
 	}
 
+	// Dropped while the state is not settled: the click is lost, the room is not.
 	private apply(intent: BandIntent, fromUserId: string): void {
+		if (!this.session.stateSettled) return;
 		const now = this.session.clock.now();
 		const ctx = this.context();
 		const current = this.state ?? createBandRoomState(now, ctx);

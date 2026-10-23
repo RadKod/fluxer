@@ -74,6 +74,8 @@ class FakeRoom {
 // Every message takes ONE_WAY_MS; a receiver gets it with its own view of the sender, as LiveKit does.
 class FakeNetwork {
 	readonly rooms = new Map<string, FakeRoom>();
+	// Connections whose link is down for a moment: what they send and what is sent to them is lost.
+	readonly offline = new Set<string>();
 
 	join(identity: string, joinedAtSeconds: number): FakeRoom {
 		const room = new FakeRoom(this, identity, new Date(joinedAtSeconds * 1000));
@@ -86,6 +88,18 @@ class FakeNetwork {
 		return room;
 	}
 
+	// Back after the server dropped it: everyone sees it join again, and it sees its connection come back.
+	rejoin(room: FakeRoom): void {
+		const identity = room.localParticipant.identity;
+		for (const other of this.rooms.values()) {
+			room.remoteParticipants.set(other.localParticipant.identity, other.localParticipant);
+			other.remoteParticipants.set(identity, room.localParticipant);
+			other.emit(RoomEvent.ParticipantConnected, room.localParticipant);
+		}
+		this.rooms.set(identity, room);
+		room.emit(RoomEvent.Reconnected);
+	}
+
 	leave(identity: string): void {
 		const room = this.rooms.get(identity);
 		this.rooms.delete(identity);
@@ -96,8 +110,9 @@ class FakeNetwork {
 	}
 
 	deliver(from: string, data: Uint8Array, topic: string | undefined, to: Array<string> | undefined): void {
+		if (this.offline.has(from)) return;
 		for (const [identity, room] of this.rooms) {
-			if (identity === from || (to && !to.includes(identity))) continue;
+			if (identity === from || (to && !to.includes(identity)) || this.offline.has(identity)) continue;
 			setTimeout(() => {
 				const sender = room.remoteParticipants.get(from);
 				room.emit(RoomEvent.DataReceived, data, sender, undefined, topic);
@@ -108,6 +123,13 @@ class FakeNetwork {
 
 let network: FakeNetwork;
 const sessions: Array<InstanceType<typeof RoomActivitySession>> = [];
+
+function stateMessages(identity: string): Array<Record<string, unknown>> {
+	return network.rooms
+		.get(identity)!
+		.localParticipant.publishData.mock.calls.map(([data]) => JSON.parse(new TextDecoder().decode(data)))
+		.filter((message) => message.t === 'state');
+}
 
 function start(room: FakeRoom, {clockSkewMs = 0, joined = true}: {clockSkewMs?: number; joined?: boolean} = {}) {
 	const session = new RoomActivitySession({
@@ -381,6 +403,212 @@ describe('RoomActivitySession', () => {
 			// The same identity back without a session is an unknown client again.
 			network.join('user_2_b', 400);
 			expect(starter.members.map((member) => member.identity)).toEqual(['user_1_a', 'user_2_b']);
+		});
+	});
+	describe('leadership terms', () => {
+		// Long enough for every request round, answer and broadcast to land.
+		const SETTLE_MS = 10_000;
+
+		it('settles at once alone, and refuses state while a new leader is still asking the room', async () => {
+			const starter = start(network.join('user_1_a', 100));
+			expect(starter.stateSettled).toBe(true);
+			const chatter = start(network.join('user_2_b', 50), {joined: false});
+			starter.setState({song: 'snow'});
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+
+			// The starter leaves the activity and comes back: it asks the chatter before it leads again.
+			starter.setJoined(false);
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			starter.setJoined(true);
+			expect(starter.isLeader).toBe(true);
+			expect(starter.stateSettled).toBe(false);
+			expect(starter.setState({song: 'too early'})).toBe(false);
+			await vi.advanceTimersByTimeAsync(2 * ONE_WAY_MS);
+			expect(starter.stateSettled).toBe(true);
+			expect(starter.setState({song: 'rain'})).toBe(true);
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			expect(chatter.state).toEqual({song: 'rain'});
+		});
+
+		it('continues from the newer state of the room when a leader comes back from a dropped connection', async () => {
+			const a = start(network.join('user_1_a', 100));
+			const b = start(network.join('user_2_b', 200));
+			const c = start(network.join('user_3_c', 300));
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			a.setState({phase: 'play'});
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			expect(c.state).toEqual({phase: 'play'});
+
+			// A drops for a while. The others elect B, which moves the room on to the results; A, still leading in its
+			// own eyes, moves its own copy elsewhere.
+			const aRoom = network.rooms.get('user_1_a')!;
+			network.leave('user_1_a');
+			expect(b.isLeader).toBe(true);
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			expect(b.setState({phase: 'results'})).toBe(true);
+			a.setState({phase: 'stale'});
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			expect(c.state).toEqual({phase: 'results'});
+
+			const seenByC: Array<unknown> = [];
+			c.onStateChanged((state) => seenByC.push(state));
+			network.rejoin(aRoom);
+			for (const session of [a, b, c]) expect(session.leader?.identity).toBe('user_1_a');
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			for (const session of [a, b, c]) expect(session.state).toEqual({phase: 'results'});
+			expect(seenByC).not.toContainEqual({phase: 'stale'});
+
+			expect(a.setState({phase: 'pick'})).toBe(true);
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			expect(b.state).toEqual({phase: 'pick'});
+			expect(c.state).toEqual({phase: 'pick'});
+		});
+
+		it('gets a stale leader back on track when it settled before hearing from the room', async () => {
+			const a = start(network.join('user_1_a', 100));
+			const b = start(network.join('user_2_b', 200));
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			a.setState({phase: 'play'});
+			const aRoom = network.rooms.get('user_1_a')!;
+			network.leave('user_1_a');
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			b.setState({phase: 'results'});
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+
+			// B cannot hear A at first: A's requests and B's copy are lost, and A leads on what it had.
+			network.offline.add('user_2_b');
+			network.rejoin(aRoom);
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			expect(a.stateSettled).toBe(true);
+			expect(a.state).toEqual({phase: 'play'});
+
+			// B hears A's stale state, keeps its own and hands it to A, which goes on from there.
+			network.offline.delete('user_2_b');
+			a.setState({phase: 'play', tick: 1});
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			expect(a.state).toEqual({phase: 'results'});
+			expect(b.state).toEqual({phase: 'results'});
+		});
+
+		it('catches up once connected when it led alone while the room was still connecting', async () => {
+			const b = start(network.join('user_2_b', 200));
+			b.setState({phase: 'play'});
+			const aRoom = network.join('user_1_a', 100);
+			aRoom.remoteParticipants.clear();
+			const a = start(aRoom);
+			expect(a.isLeader).toBe(true);
+			expect(a.stateSettled).toBe(true);
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+
+			aRoom.remoteParticipants.set('user_2_b', network.rooms.get('user_2_b')!.localParticipant);
+			aRoom.emit(RoomEvent.Connected);
+			expect(a.stateSettled).toBe(false);
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			expect(a.state).toEqual({phase: 'play'});
+			expect(b.state).toEqual({phase: 'play'});
+			expect(a.setState({phase: 'results'})).toBe(true);
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			expect(b.state).toEqual({phase: 'results'});
+		});
+
+		it('sends the state again after a short drop, so a follower does not miss a step', async () => {
+			const a = start(network.join('user_1_a', 100));
+			const b = start(network.join('user_2_b', 200));
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			a.setState({phase: 'play'});
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+
+			network.offline.add('user_1_a');
+			a.setState({phase: 'results'});
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			expect(b.state).toEqual({phase: 'play'});
+			network.offline.delete('user_1_a');
+			network.rooms.get('user_1_a')!.emit(RoomEvent.Reconnected);
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			expect(a.isLeader).toBe(true);
+			expect(b.state).toEqual({phase: 'results'});
+			expect(stateMessages('user_1_a').at(-1)).toMatchObject({d: {s: {phase: 'results'}, term: 2}});
+		});
+
+		it('settles two clients that both led for a moment on one leader and one state, without outbidding', async () => {
+			const a = start(network.join('user_1_a', 100));
+			const bRoom = network.join('user_2_b', 200);
+			// B does not see A yet, so it leads too; C sees both and follows A.
+			bRoom.remoteParticipants.delete('user_1_a');
+			const b = start(bRoom);
+			const c = start(network.join('user_3_c', 300));
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			expect(a.isLeader).toBe(true);
+			expect(b.isLeader).toBe(true);
+			a.setState({by: 'a'});
+			b.setState({by: 'b', step: 1});
+			b.setState({by: 'b', step: 2});
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			expect(c.state).toEqual({by: 'a'});
+			expect(a.state).toEqual({by: 'a'});
+
+			bRoom.remoteParticipants.set('user_1_a', network.rooms.get('user_1_a')!.localParticipant);
+			bRoom.emit(RoomEvent.ParticipantConnected, network.rooms.get('user_1_a')!.localParticipant);
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			for (const session of [a, b, c]) expect(session.leader?.identity).toBe('user_1_a');
+			const settled = a.state;
+			for (const session of [b, c]) expect(session.state).toEqual(settled);
+
+			const sent = stateMessages('user_1_a').length + stateMessages('user_2_b').length;
+			await vi.advanceTimersByTimeAsync(SETTLE_MS);
+			expect(stateMessages('user_1_a').length + stateMessages('user_2_b').length).toBe(sent);
+			expect(a.setState({next: true})).toBe(true);
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			for (const session of [b, c]) expect(session.state).toEqual({next: true});
+		});
+
+		it('follows a leader that sends no term as that client would, and waits only so long for its answer', async () => {
+			// user_1_a runs a client from before the term: it answers requests and broadcasts without one, and never
+			// answers a new leader's request.
+			const oldRoom = network.join('user_1_a', 100);
+			const follower = start(network.join('user_2_b', 200));
+			const fromOld = (seq: number, data: unknown) =>
+				oldRoom.localParticipant.publishData(encodeActivityEnvelope('state', seq, data), {topic: TOPIC});
+			await fromOld(1, {v: 7, s: {song: 'old'}});
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			expect(follower.state).toEqual({song: 'old'});
+			expect(follower.stateSettled).toBe(true);
+			await fromOld(2, {v: 6, s: {song: 'older'}});
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			expect(follower.state).toEqual({song: 'old'});
+			await fromOld(3, {v: 8, s: {song: 'new'}});
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			expect(follower.state).toEqual({song: 'new'});
+
+			// The old client leaves the activity; the new one takes over and asks it, in vain, for a few rounds.
+			const member = encodeActivityEnvelope('member', 4, {joined: false});
+			await oldRoom.localParticipant.publishData(member, {topic: TOPIC});
+			await vi.advanceTimersByTimeAsync(ONE_WAY_MS);
+			expect(follower.isLeader).toBe(true);
+			expect(follower.stateSettled).toBe(false);
+			await vi.advanceTimersByTimeAsync(3_000);
+			expect(follower.stateSettled).toBe(true);
+			expect(stateMessages('user_2_b').at(-1)).toMatchObject({d: {v: 9, s: {song: 'new'}, term: 1}});
+		});
+
+		it('treats a newcomer as settled once the leader answers, or once nobody does', async () => {
+			start(network.join('user_1_a', 100));
+			const late = start(network.join('user_2_b', 200));
+			expect(late.stateSettled).toBe(false);
+			await vi.advanceTimersByTimeAsync(2 * ONE_WAY_MS);
+			expect(late.stateSettled).toBe(true);
+		});
+
+		it('treats a newcomer as settled on nothing once a silent leader has been asked enough', async () => {
+			// The starter's client never answers.
+			network.join('user_1_a', 100);
+			const late = start(network.join('user_2_b', 200), {joined: false});
+			expect(late.leader?.identity).toBe('user_1_a');
+			await vi.advanceTimersByTimeAsync(4 * 2_000 + 2 * ONE_WAY_MS);
+			expect(late.stateSettled).toBe(false);
+			await vi.advanceTimersByTimeAsync(2_000);
+			expect(late.stateSettled).toBe(true);
+			expect(late.state).toBeNull();
 		});
 	});
 });
