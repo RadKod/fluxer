@@ -52,3 +52,26 @@ describe('BandSettings highway view', () => {
 		expect((await loadBandSettings()).settings.highwayView).toBe('focus');
 	});
 });
+
+describe('BandSettings timing', () => {
+	it('shifts the highway by what the visual test measured beyond the input latency, and keeps both', async () => {
+		const first = await loadBandSettings();
+		expect(first.settings.visualOffsetMs).toBe(0);
+		first.settings.setVisualLatencyMs(70);
+		expect(first.settings.visualOffsetMs).toBe(70);
+		first.settings.setInputLatencyMs(30);
+		expect(first.settings.visualOffsetMs).toBe(40);
+		first.settings.dismissLatencyHint();
+		first.flush();
+		const second = await loadBandSettings();
+		expect(second.settings.visualLatencyMs).toBe(70);
+		expect(second.settings.inputLatencyMs).toBe(30);
+		expect(second.settings.latencyHintDismissed).toBe(true);
+	});
+
+	it('clamps a measured offset to the supported range', async () => {
+		const {settings} = await loadBandSettings();
+		settings.setVisualLatencyMs(900);
+		expect(settings.visualLatencyMs).toBe(300);
+	});
+});

@@ -59,6 +59,16 @@ export function inputSongTimeMs(
 	return songTimeMs(performanceToContextTime(eventTimeStamp, anchor), songZeroContextTime, inputLatencyMs);
 }
 
+// An event's timeStamp is when the key reached the page, but a few browsers and remote desktops stamp it on another
+// clock or long before delivery. A stamp in the future or more than this old is not trusted.
+export const MAX_INPUT_DELAY_MS = 250;
+
+// The time to judge an input event by: its own timeStamp when believable, else the moment it is handled.
+export function trustedTimeStamp(eventTimeStamp: number, nowMs: number): number {
+	const delay = nowMs - eventTimeStamp;
+	return delay < 0 || delay > MAX_INPUT_DELAY_MS ? nowMs : eventTimeStamp;
+}
+
 export interface LaneInput {
 	readonly kind: 'press' | 'release';
 	readonly lane: number;

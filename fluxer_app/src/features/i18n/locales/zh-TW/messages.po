@@ -55668,10 +55668,6 @@ msgctxt "band-step"
 msgid "Results"
 msgstr "Results"
 
-#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
-msgid "Rhythm test"
-msgstr "Rhythm test"
-
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "Rock on"
 msgstr "Rock on"
@@ -55758,10 +55754,6 @@ msgstr "This device cannot play the test clicks."
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgid "This song is no longer in the library."
 msgstr "This song is no longer in the library."
-
-#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
-msgid "Too few taps landed on the clicks. Try again."
-msgstr "Too few taps landed on the clicks. Try again."
 
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgctxt "band-retry"
@@ -57256,3 +57248,79 @@ msgid ""
 msgstr ""
 "Everyone in the channel sees it as a tile. Whoever joins hears the jam; the "
 "others carry on talking."
+
+#. Band game: flashes at the strikeline for a key pressed too soon, before the
+#. note reached the line, so it did not count. Keep it one short word.
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-hit"
+msgid "Early"
+msgstr "Early"
+
+#. Band game: flashes at the strikeline for a key pressed too late, after the
+#. note had already passed the line. Keep it one short word.
+#: src/features/activities/band/game/BandGameLabels.ts
+msgctxt "band-hit"
+msgid "Late"
+msgstr "Late"
+
+#. Band game: title of the settings panel with the timing tests for this device
+#. and the miss sound options; also the label of the gear button that opens it.
+#: src/features/activities/band/game/BandGameLabels.ts
+msgid "Timing and sound"
+msgstr "Timing and sound"
+
+#. Band game visual timing test: instructions. A bright line moves down onto a
+#. ring again and again; the player taps as it crosses. {count} is a small
+#. number of lines before tapping starts.
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid ""
+"Tap any key each time the line crosses the ring. The first {count} lines "
+"count you in."
+msgstr ""
+"Tap any key each time the line crosses the ring. The first {count} lines "
+"count you in."
+
+#. Band game settings: heading of the test that measures how late keys and sound
+#. arrive on this device, by tapping along to clicks.
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-rhythm-test"
+msgid "Audio offset"
+msgstr "Audio offset"
+
+#. Band game settings: heading of the test that measures how late this screen
+#. shows the notes, by tapping when a line crosses a ring.
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgctxt "band-rhythm-test"
+msgid "Visual offset"
+msgstr "Visual offset"
+
+#. Band game timing tests: the player missed most clicks or lines, so nothing
+#. was measured. "The beat" is the clicks or the line crossing the ring.
+#: src/features/activities/band/game/LatencyCalibrationScreen.tsx
+msgid "Too few taps landed on the beat. Try again."
+msgstr "Too few taps landed on the beat. Try again."
+
+#. Band game: small hint at the top during a song when this device plays sound
+#. late, usually Bluetooth headphones. {latency} is a number of milliseconds.
+#. The timing test is in the Timing and sound settings.
+#: src/features/activities/band/game/PlayStageParts.tsx
+msgid ""
+"Sound arrives {latency} ms late on this device. Wired headphones or the "
+"timing test can fix that."
+msgstr ""
+"Sound arrives {latency} ms late on this device. Wired headphones or the "
+"timing test can fix that."
+
+#. Band game: button on the late sound hint that opens the Timing and sound
+#. settings with the timing tests.
+#: src/features/activities/band/game/PlayStageParts.tsx
+msgctxt "band-latency-hint"
+msgid "Timing test"
+msgstr "Timing test"
+
+#. Band game: accessible name of the close button on the late sound hint; it
+#. stays hidden on this device.
+#: src/features/activities/band/game/PlayStageParts.tsx
+msgctxt "band-latency-hint"
+msgid "Dismiss"
+msgstr "Dismiss"

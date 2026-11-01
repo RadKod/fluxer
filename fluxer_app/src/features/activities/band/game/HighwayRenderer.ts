@@ -7,7 +7,6 @@ import {
 	FADE_SHARE,
 	FEEDBACK_DISTANCE,
 	type HighwayLayout,
-	LOOK_AHEAD_MS,
 	laneCenterX,
 	noteDistance,
 	project,
@@ -58,6 +57,15 @@ const SPARK_STREAM_EVERY_MS = 40;
 const SPARK_STREAM_LIFE_MS = 380;
 const SPARK_GRAVITY = 520;
 const FEEDBACK_MS = 700;
+// Mistakes in the muted tone, a perfect hit in full paper.
+const FEEDBACK_COLORS: Readonly<Record<FeedbackKind, string>> = {
+	perfect: COLOR.paper,
+	good: 'rgba(247, 245, 240, 0.66)',
+	ok: 'rgba(247, 245, 240, 0.66)',
+	miss: 'rgba(247, 245, 240, 0.42)',
+	early: 'rgba(247, 245, 240, 0.42)',
+	late: 'rgba(247, 245, 240, 0.42)',
+};
 // Side highways in the focus view are blurred and dimmed, so a miss there also jolts the highway sideways.
 const SHAKE_MS = 320;
 const SHAKE_PX = 7;
@@ -81,12 +89,12 @@ const WHAMMY_SWAY_PX = 7;
 const WHAMMY_WAVE_PX = 64;
 const WHAMMY_STEP_PX = 6;
 
-const GEM_RADIUS = 16;
+export const GEM_RADIUS = 16;
 const PAD_WIDTH = 48;
-const PAD_HEIGHT = 18;
+export const PAD_HEIGHT = 18;
 const KICK_HEIGHT = 12;
 const TAIL_WIDTH = 9;
-const GEM_SQUASH = 0.84;
+export const GEM_SQUASH = 0.84;
 
 interface WhammySway {
 	readonly strength: number;
@@ -259,8 +267,8 @@ export class HighwayRenderer {
 	private grid(layout: StageLayout, highway: HighwayLayout, nowMs: number, opacity: number): void {
 		const {ctx} = this;
 		const cell = highway.width / highway.lanes;
-		const speed = noteDistance(layout, LOOK_AHEAD_MS) - strikeDistance(layout);
-		const scroll = ((((nowMs / LOOK_AHEAD_MS) * speed) % cell) + cell) % cell;
+		const speed = noteDistance(layout, layout.lookAheadMs) - strikeDistance(layout);
+		const scroll = ((((nowMs / layout.lookAheadMs) * speed) % cell) + cell) % cell;
 		const inset = cell * (12.5 / 41);
 		const size = cell * (16 / 41);
 		ctx.save();
@@ -416,7 +424,7 @@ export class HighwayRenderer {
 		nowMs: number,
 		reducedMotion: boolean,
 	): void {
-		const {fromMs, toMs} = visibleWindow(nowMs);
+		const {fromMs, toMs} = visibleWindow(layout, nowMs);
 		for (const section of track.freestyle) {
 			if (section.endMs < fromMs || section.startMs > toMs) continue;
 			for (const cue of section.cues) {
@@ -658,7 +666,7 @@ export class HighwayRenderer {
 		const {finale} = track;
 		const {nowMs} = frame;
 		const finalIndex = finale?.finalIndex ?? null;
-		const {fromMs, toMs} = visibleWindow(nowMs);
+		const {fromMs, toMs} = visibleWindow(layout, nowMs);
 		const first = firstVisibleGroup(groups, fromMs);
 		let last = first;
 		while (last < groups.length && groups[last].msTime <= toMs) last++;
@@ -943,12 +951,7 @@ export class HighwayRenderer {
 		if (feedback && strength > 0) {
 			ctx.globalAlpha = Math.min(1, strength * 1.6);
 			ctx.font = `600 ${12 * s}px ${frame.fontFamily}`;
-			ctx.fillStyle =
-				feedback.kind === 'miss'
-					? 'rgba(247, 245, 240, 0.42)'
-					: feedback.kind === 'perfect'
-						? COLOR.paper
-						: 'rgba(247, 245, 240, 0.66)';
+			ctx.fillStyle = FEEDBACK_COLORS[feedback.kind];
 			ctx.fillText(frame.feedbackLabels[feedback.kind], point.x, point.y - 22 * s);
 		}
 		if (track.hud.combo > 0) {

@@ -11,7 +11,7 @@ import {VOICE_MIC_PORT} from '@app/features/activities/band/flow/BandMicPort';
 import {BandAvatar, bandDisplayName} from '@app/features/activities/band/flow/components/BandPeople';
 import {BandSongCover} from '@app/features/activities/band/flow/components/BandSongCover';
 import {useElementSize} from '@app/features/activities/band/flow/components/useElementSize';
-import {DIFFICULTY_LABELS, FEEDBACK_LABELS, partLabel} from '@app/features/activities/band/game/BandGameLabels';
+import {DIFFICULTY_LABELS, feedbackLabels, partLabel} from '@app/features/activities/band/game/BandGameLabels';
 import styles from '@app/features/activities/band/game/FocusStage.module.css';
 import {FreestyleInfo} from '@app/features/activities/band/game/FreestyleInfo';
 import {
@@ -29,11 +29,13 @@ import {
 	FINALE_BONUS_AT_STAKE_DESCRIPTOR,
 	FinaleBanner,
 	formatClock,
+	OutputLatencyHint,
 	type PlayerStatusKind,
 	PlayerStatusText,
 	playerStatusKind,
 	resizeCanvas,
 	runFrameLoop,
+	SettingsButton,
 	SING_HINT_DESCRIPTOR,
 	useSongTime,
 	useSpeakingUsers,
@@ -167,10 +169,12 @@ const Header = observer(function Header({
 	runtime,
 	entry,
 	controller,
+	onOpenSettings,
 }: {
 	runtime: PlayRuntime;
 	entry: BandSongSummary;
 	controller: PlayController;
+	onOpenSettings: () => void;
 }) {
 	const {i18n} = useLingui();
 	const songMs = useSongTime(runtime, 500);
@@ -199,6 +203,7 @@ const Header = observer(function Header({
 			<div className={styles.headerControls} data-flx="activities.band.game.focus-stage.header.controls">
 				<ViewSwitch data-flx="activities.band.game.focus-stage.header.view-switch" />
 				<VolumeControl data-flx="activities.band.game.focus-stage.header.volume" />
+				<SettingsButton onClick={onOpenSettings} data-flx="activities.band.game.focus-stage.header.settings" />
 			</div>
 			<div className={styles.bandScore} data-flx="activities.band.game.focus-stage.header.band-score">
 				<span data-flx="activities.band.game.focus-stage.header.band-score-label">{i18n._(BAND_SCORE_DESCRIPTOR)}</span>
@@ -389,9 +394,16 @@ interface FocusStageProps {
 	readonly entry: BandSongSummary;
 	readonly channelId: string;
 	readonly vocals: VocalsChart | null;
+	readonly onOpenSettings: () => void;
 }
 
-export const FocusStage = observer(function FocusStage({runtime, entry, channelId, vocals}: FocusStageProps) {
+export const FocusStage = observer(function FocusStage({
+	runtime,
+	entry,
+	channelId,
+	vocals,
+	onOpenSettings,
+}: FocusStageProps) {
 	const {i18n} = useLingui();
 	const rootRef = useRef<HTMLDivElement>(null);
 	const mainRef = useRef<HTMLCanvasElement>(null);
@@ -414,17 +426,9 @@ export const FocusStage = observer(function FocusStage({runtime, entry, channelI
 				: null,
 		[width, height, mine, others, vocalsSeat, singing],
 	);
-	const feedbackLabels = useMemo(
-		() => ({
-			perfect: i18n._(FEEDBACK_LABELS.perfect),
-			good: i18n._(FEEDBACK_LABELS.good),
-			ok: i18n._(FEEDBACK_LABELS.ok),
-			miss: i18n._(FEEDBACK_LABELS.miss),
-		}),
-		[i18n],
-	);
+	const labels = useMemo(() => feedbackLabels(i18n), [i18n]);
 	const showsVocals = layout !== null && (layout.lyrics !== null || layout.vocalLane !== null);
-	useFocusLoop(runtime, layout, mainRef, sideRefs, vocalsRef, others, showsVocals ? vocals : null, feedbackLabels);
+	useFocusLoop(runtime, layout, mainRef, sideRefs, vocalsRef, others, showsVocals ? vocals : null, labels);
 	const speaking = useSpeakingUsers(channelId);
 	const vocalsRect = layout?.vocalLane ?? layout?.lyrics ?? null;
 
@@ -458,7 +462,16 @@ export const FocusStage = observer(function FocusStage({runtime, entry, channelI
 							runtime={runtime}
 							entry={entry}
 							controller={controller}
+							onOpenSettings={onOpenSettings}
 							data-flx="activities.band.game.focus-stage.header"
+						/>
+					)}
+					{!layout.compact && (
+						<OutputLatencyHint
+							runtime={runtime}
+							onOpenSettings={onOpenSettings}
+							className={styles.latencyHint}
+							data-flx="activities.band.game.focus-stage.latency-hint"
 						/>
 					)}
 					{vocalsRect && vocalsSeat && (

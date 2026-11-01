@@ -8,6 +8,7 @@ import {
 	FREESTYLE_STEM_LEVEL,
 	freestyleStemEnvelope,
 	GUIDE_VOCAL_GAIN,
+	outputDelayMs,
 	restoreEnvelope,
 	SONG_HEADROOM_GAIN,
 	stemRoleForPlayback,
@@ -277,5 +278,14 @@ describe('BandAudio', () => {
 		audio.dispose();
 		audio.dispose();
 		expect(release).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('outputDelayMs', () => {
+	it('measures how far the render clock runs ahead of what is heard now', () => {
+		// Heard context time 10.0 s at performance 5000 ms; 40 ms later the speakers play 10.04 s.
+		const anchor = {contextTime: 10, performanceTime: 5_000, timeOrigin: 0};
+		const context = {currentTime: 10.26} as BaseAudioContext;
+		expect(outputDelayMs(context, anchor, 5_040)).toBeCloseTo(220);
 	});
 });

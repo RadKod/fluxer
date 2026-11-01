@@ -88,7 +88,12 @@ const JOIN_GRACE_MS = 300;
 // Score per base score (every note hit once, no multiplier) at which each star fills, Rock Band style.
 export const STAR_THRESHOLDS: ReadonlyArray<number> = [0.21, 0.46, 0.77, 1.85, 3.08];
 
-export type FeedbackKind = HitRating | 'miss';
+// 'miss' is a note that went by unplayed. A press that played nothing reads 'early' just before a note of its lane
+// and 'late' just after one; a press near no note shows nothing.
+export type FeedbackKind = HitRating | 'miss' | 'early' | 'late';
+
+// How close a stray press must be to a note of its lane to read as early or late for it.
+export const STRAY_PRESS_NEAR_MS = 200;
 
 export function groupStars(score: number, baseScore: number): number {
 	if (baseScore <= 0) return 0;
@@ -159,6 +164,51 @@ export function judgedChart(
 		fullIndex.push(index);
 	});
 	return {chart: {...chart, groups}, fullIndex};
+}
+
+// The notes of `lane` on either side of `songMs`, at most `withinMs` away: the last one at or before it and the
+// first one after. Groups `skip` turns down are passed over.
+export function laneNeighbours(
+	groups: ReadonlyArray<NoteGroup>,
+	lane: number,
+	songMs: number,
+	withinMs: number,
+	skip: (index: number) => boolean = () => false,
+): {readonly before: number | null; readonly after: number | null} {
+	let low = 0;
+	let high = groups.length;
+	while (low < high) {
+		const middle = (low + high) >>> 1;
+		if (groups[middle].msTime <= songMs) low = middle + 1;
+		else high = middle;
+	}
+	let before: number | null = null;
+	for (let index = low - 1; index >= 0 && songMs - groups[index].msTime <= withinMs; index--) {
+		if (groups[index].lanes.includes(lane) && !skip(index)) {
+			before = index;
+			break;
+		}
+	}
+	let after: number | null = null;
+	for (let index = low; index < groups.length && groups[index].msTime - songMs <= withinMs; index++) {
+		if (groups[index].lanes.includes(lane) && !skip(index)) {
+			after = index;
+			break;
+		}
+	}
+	return {before, after};
+}
+
+// What a press that played no note shows: early for a note of its lane still to come, late for one that just went
+// by, whichever is closer; null when it was near none.
+export function strayPressFeedback(track: SeatTrack, lane: number, songMs: number): 'early' | 'late' | null {
+	const {groups} = track.chart;
+	const skip = (index: number) => isFreePlayGroup(track.finale, index) || isFreestyleGroup(track.freestyle, index);
+	const {before, after} = laneNeighbours(groups, lane, songMs, STRAY_PRESS_NEAR_MS, skip);
+	const ahead = after !== null && track.noteStates[after] === NoteState.Pending ? after : null;
+	if (ahead === null) return before === null ? null : 'late';
+	if (before === null) return 'early';
+	return groups[ahead].msTime - songMs < songMs - groups[before].msTime ? 'early' : 'late';
 }
 
 export function isBandHitMessage(payload: unknown): payload is BandHitMessage {
@@ -479,22 +529,25 @@ export class PlayController {
 		return groupStars(this.groupScore, this.baseScore);
 	}
 
-	press(lane: number, songMs: number): void {
+	// Returns what the judge made of the press; nothing in free play or a freestyle solo, which it does not judge.
+	press(lane: number, songMs: number): ReadonlyArray<JudgeEvent> {
 		const track = this.myTrack;
-		if (!track || !this.judge || this.finished) return;
+		if (!track || !this.judge || this.finished) return [];
 		this.nowMs = Math.max(this.nowMs, songMs);
 		const slot = laneSlot(lane);
 		if (track.finale && !this.finaleResolved && isInFreePlay(track, songMs)) {
 			this.pressFinale(track, track.finale, lane, slot, songMs);
-			return;
+			return [];
 		}
 		const solo = soloSectionAt(track.freestyle, songMs);
 		if (solo) {
 			this.pressFreestyle(track, solo, lane, slot, songMs);
-			return;
+			return [];
 		}
 		track.laneFlashMs[slot] = songMs;
-		this.handleEvents(track, this.judge.press(lane, songMs));
+		const events = this.judge.press(lane, songMs);
+		this.handleEvents(track, events);
+		return events;
 	}
 
 	release(lane: number, songMs: number): void {
@@ -780,7 +833,8 @@ export class PlayController {
 			if (event.kind === 'overhit') {
 				hud.combo = 0;
 				hud.multiplier = 1;
-				track.feedback = {kind: 'miss', atMs: event.timeMs};
+				const feedback = strayPressFeedback(track, event.lane, event.timeMs);
+				if (feedback) track.feedback = {kind: feedback, atMs: event.timeMs};
 				this.signalMiss(track, live);
 				continue;
 			}

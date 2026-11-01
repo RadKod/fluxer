@@ -298,7 +298,7 @@ describe('PlayController', () => {
 		expect(restore).toHaveBeenCalledWith('guitar');
 	});
 
-	it('treats a stray press as a miss: combo gone, miss feedback, sound and duck, no note used up', () => {
+	it('treats a stray press as a mistake: combo gone, sound and duck, no note used up', () => {
 		const {controller, duck, playMissSound, hits} = setup();
 		controller.press(FretLane.Green, 0);
 		controller.release(FretLane.Green, 20);
@@ -306,10 +306,31 @@ describe('PlayController', () => {
 		controller.press(FretLane.Blue, 250);
 		const track = controller.myTrack!;
 		expect(track.hud.combo).toBe(0);
-		expect(track.feedback).toEqual({kind: 'miss', atMs: 250});
+		// No blue note anywhere near: nothing to call it early or late for, and it is no missed note either.
+		expect(track.feedback).toEqual({kind: 'perfect', atMs: 0});
 		expect(duck).toHaveBeenCalledWith('guitar');
 		expect(playMissSound).toHaveBeenCalledExactlyOnceWith('guitar');
 		expect(hits()).toHaveLength(1);
+	});
+
+	it('calls a press that played nothing early before a note of its lane and late after one; missed is a note', () => {
+		const {controller} = setup();
+		const track = controller.myTrack!;
+		controller.press(FretLane.Green, 0);
+		controller.release(FretLane.Green, 20);
+		controller.press(FretLane.Green, 130);
+		controller.release(FretLane.Green, 140);
+		expect(track.feedback).toEqual({kind: 'late', atMs: 130});
+		controller.press(FretLane.Blue, 250);
+		controller.release(FretLane.Blue, 260);
+		expect(track.feedback).toEqual({kind: 'late', atMs: 130});
+		controller.press(FretLane.Green, 320);
+		controller.release(FretLane.Green, 330);
+		expect(track.feedback).toEqual({kind: 'early', atMs: 320});
+		expect(track.noteStates[1]).toBe(NoteState.Pending);
+		controller.tick(700);
+		expect(track.noteStates[1]).toBe(NoteState.Missed);
+		expect(track.feedback).toEqual({kind: 'miss', atMs: 500});
 	});
 
 	it('keeps the miss sound on this device: nothing about it goes out', () => {

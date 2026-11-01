@@ -4,6 +4,7 @@
 // the Big Rock Ending banner, player status lines, the volume slider and the switch between the two views.
 
 import type {VocalsChart} from '@app/features/activities/band/engine/VocalsParser';
+import {TIMING_TITLE_DESCRIPTOR} from '@app/features/activities/band/game/BandGameLabels';
 import BandSettings, {type BandHighwayView} from '@app/features/activities/band/game/BandSettings';
 import {FramePacer} from '@app/features/activities/band/game/FramePacer';
 import {highwayAnchor, noteDistance, type StageLayout} from '@app/features/activities/band/game/HighwayGeometry';
@@ -17,6 +18,7 @@ import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
 import type {MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
+import {GearSixIcon, XIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
@@ -88,6 +90,26 @@ const VIEW_DESCRIPTORS: Readonly<Record<BandHighwayView, MessageDescriptor>> = {
 	}),
 };
 
+const LATENCY_HINT_DESCRIPTOR = msg({
+	message: 'Sound arrives {latency} ms late on this device. Wired headphones or the timing test can fix that.',
+	comment:
+		'Band game: small hint at the top during a song when this device plays sound late, usually Bluetooth headphones. {latency} is a number of milliseconds. The timing test is in the Timing and sound settings.',
+});
+const LATENCY_HINT_ACTION_DESCRIPTOR = msg({
+	message: 'Timing test',
+	context: 'band-latency-hint',
+	comment: 'Band game: button on the late sound hint that opens the Timing and sound settings with the timing tests.',
+});
+const LATENCY_HINT_DISMISS_DESCRIPTOR = msg({
+	message: 'Dismiss',
+	context: 'band-latency-hint',
+	comment: 'Band game: accessible name of the close button on the late sound hint; it stays hidden on this device.',
+});
+
+// Sound later than this behind the render clock throws off timing enough to say so.
+export const HIGH_OUTPUT_DELAY_MS = 120;
+const OUTPUT_DELAY_POLL_MS = 1_000;
+
 // The far end of the highway sits under the banner's hint, so the countdown chip waits until the bar is clear of it.
 const COUNTDOWN_MAX_SHARE = 0.8;
 // Hidden pages get no animation frames; this keeps judging and ends the song on time.
@@ -103,6 +125,16 @@ export function useSongTime(runtime: PlayRuntime, intervalMs: number): number {
 	const [songMs, setSongMs] = useState(() => runtime.heardMs());
 	useEffect(() => {
 		const timer = setInterval(() => setSongMs(runtime.heardMs()), intervalMs);
+		return () => clearInterval(timer);
+	}, [runtime, intervalMs]);
+	return songMs;
+}
+
+// The same for what the highway shows, for parts that ride on it.
+function useShownSongTime(runtime: PlayRuntime, intervalMs: number): number {
+	const [songMs, setSongMs] = useState(() => runtime.shownMs());
+	useEffect(() => {
+		const timer = setInterval(() => setSongMs(runtime.shownMs()), intervalMs);
 		return () => clearInterval(timer);
 	}, [runtime, intervalMs]);
 	return songMs;
@@ -130,7 +162,8 @@ export function resizeCanvas(
 }
 
 // One requestAnimationFrame loop: ticks the controller, then hands the frame its song time (the time the frame will
-// be seen at) and its rAF timestamp. While the page is hidden a slow timer only judges. Returns the stop function.
+// be seen at, moved by the visual offset) and its rAF timestamp. While the page is hidden a slow timer only judges.
+// Returns the stop function.
 export function runFrameLoop(
 	runtime: PlayRuntime,
 	onFrame: (nowMs: number, frameTimestamp: number) => void,
@@ -140,7 +173,10 @@ export function runFrameLoop(
 	let frameId = 0;
 	const draw = (frameTimestamp: number) => {
 		controller.tick(runtime.judgeMs());
-		onFrame(runtime.heardMsAt(pacer.presentAt(frameTimestamp)), frameTimestamp);
+		const presentAt = pacer.presentAt(frameTimestamp);
+		runtime.probe.recordFrame(frameTimestamp, pacer.refreshIntervalMs);
+		runtime.probe.observe(controller.myTrack?.feedback ?? null);
+		onFrame(runtime.shownMsAt(presentAt), frameTimestamp);
 		frameId = requestAnimationFrame(draw);
 	};
 	let hiddenTimer: ReturnType<typeof setInterval> | null = null;
@@ -181,7 +217,7 @@ export const FinaleBanner = observer(function FinaleBanner({
 	style,
 }: FinaleBannerProps) {
 	const {i18n} = useLingui();
-	const songMs = useSongTime(runtime, 100);
+	const songMs = useShownSongTime(runtime, 100);
 	const {finalHitMs} = runtime.controller;
 	const [highway] = layout.highways;
 	if (finalHitMs === null || !highway) return null;
@@ -271,6 +307,89 @@ export const VolumeControl = observer(function VolumeControl({className}: {class
 				data-flx="activities.band.game.play-stage-parts.volume-control.input.set-volume.range"
 			/>
 		</label>
+	);
+});
+
+// The gear that opens the timing and sound settings.
+export function SettingsButton({onClick, className}: {onClick: () => void; className?: string}) {
+	const {i18n} = useLingui();
+	const label = i18n._(TIMING_TITLE_DESCRIPTOR);
+	return (
+		<button
+			type="button"
+			className={clsx(styles.settingsButton, className)}
+			aria-label={label}
+			title={label}
+			// The game keeps the keyboard: a click must not leave the focus on a button that Space would press.
+			onMouseDown={(event) => event.preventDefault()}
+			onClick={onClick}
+			data-flx="activities.band.game.play-stage-parts.settings-button.button"
+		>
+			<GearSixIcon
+				weight="bold"
+				aria-hidden="true"
+				data-flx="activities.band.game.play-stage-parts.settings-button.icon"
+			/>
+		</button>
+	);
+}
+
+// A quiet note when this device plays sound late (Bluetooth, mostly): wired headphones or the timing test help. It
+// measures once a second until it has something to say; closing it hides it on this device for good.
+export const OutputLatencyHint = observer(function OutputLatencyHint({
+	runtime,
+	onOpenSettings,
+	className,
+}: {
+	runtime: PlayRuntime;
+	onOpenSettings: () => void;
+	className?: string;
+}) {
+	const {i18n} = useLingui();
+	const [delayMs, setDelayMs] = useState<number | null>(null);
+	const dismissed = BandSettings.latencyHintDismissed;
+	useEffect(() => {
+		if (dismissed || delayMs !== null) return;
+		const timer = setInterval(() => {
+			const measured = runtime.audio.outputDelayMs();
+			if (measured > HIGH_OUTPUT_DELAY_MS) setDelayMs(Math.round(measured));
+		}, OUTPUT_DELAY_POLL_MS);
+		return () => clearInterval(timer);
+	}, [runtime, dismissed, delayMs]);
+	if (dismissed || delayMs === null) return null;
+	return (
+		<div
+			className={clsx(styles.latencyHint, className)}
+			role="status"
+			data-flx="activities.band.game.play-stage-parts.output-latency-hint.hint"
+		>
+			<span data-flx="activities.band.game.play-stage-parts.output-latency-hint.text">
+				{i18n._(LATENCY_HINT_DESCRIPTOR, {latency: delayMs})}
+			</span>
+			<button
+				type="button"
+				className={styles.latencyHintAction}
+				onMouseDown={(event) => event.preventDefault()}
+				onClick={onOpenSettings}
+				data-flx="activities.band.game.play-stage-parts.output-latency-hint.action.button"
+			>
+				{i18n._(LATENCY_HINT_ACTION_DESCRIPTOR)}
+			</button>
+			<button
+				type="button"
+				className={styles.latencyHintClose}
+				aria-label={i18n._(LATENCY_HINT_DISMISS_DESCRIPTOR)}
+				onMouseDown={(event) => event.preventDefault()}
+				onClick={BandSettings.dismissLatencyHint}
+				data-flx="activities.band.game.play-stage-parts.output-latency-hint.close.button"
+			>
+				<XIcon
+					weight="bold"
+					aria-hidden="true"
+					data-flx="activities.band.game.play-stage-parts.output-latency-hint.icon"
+				/>
+			</button>
+		</div>
 	);
 });
 

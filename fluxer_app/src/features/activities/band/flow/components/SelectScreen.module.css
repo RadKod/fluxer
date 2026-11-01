@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 
 .screen {
+	position: relative;
 	display: flex;
 	flex: 1 1 auto;
 	min-height: 0;
@@ -196,6 +197,32 @@
 
 .readyTally {
 	white-space: nowrap;
+}
+
+.settingsButton {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 1.4375rem;
+	height: 1.4375rem;
+	padding: 0;
+	border: 0;
+	border-radius: 0.4375rem;
+	background: none;
+	box-shadow: inset 0 0 0 1px var(--band-line-2);
+	color: var(--band-t2);
+	font-size: 0.8125rem;
+	cursor: pointer;
+}
+
+.settingsButton:hover {
+	color: var(--band-t1);
+}
+
+.settingsButton:focus-visible {
+	outline: 2px solid var(--band-t1);
+	outline-offset: 2px;
 }
 
 .backButton {

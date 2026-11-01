@@ -7,19 +7,28 @@ import {
 	type FocusLayout,
 	type FocusRect,
 	type HighwayKind,
+	type HighwayLayout,
 	LOOK_AHEAD_MS,
 	laneCenterX,
 	layoutFocus,
 	layoutStage,
 	noteDistance,
 	project,
+	type StageLayout,
 	splitSides,
 	strikeDistance,
 	surfaceLane,
 	toFrame,
 	visibleWindow,
 } from '@app/features/activities/band/game/HighwayGeometry';
-import {fadeAfter, firstVisibleGroup, missShake} from '@app/features/activities/band/game/HighwayRenderer';
+import {
+	fadeAfter,
+	firstVisibleGroup,
+	GEM_RADIUS,
+	GEM_SQUASH,
+	missShake,
+	PAD_HEIGHT,
+} from '@app/features/activities/band/game/HighwayRenderer';
 import {describe, expect, it} from 'vitest';
 
 describe('HighwayGeometry', () => {
@@ -83,9 +92,20 @@ describe('HighwayGeometry', () => {
 		expect(noteDistance(layout, 0)).toBe(strikeDistance(layout));
 		expect(noteDistance(layout, LOOK_AHEAD_MS)).toBeLessThan(layout.planeLength);
 		expect(noteDistance(layout, -100)).toBeLessThan(strikeDistance(layout));
-		const {fromMs, toMs} = visibleWindow(10_000);
+		const {fromMs, toMs} = visibleWindow(layout, 10_000);
 		expect(noteDistance(layout, fromMs - 10_000)).toBeCloseTo(0);
 		expect(noteDistance(layout, toMs - 10_000)).toBeCloseTo(layout.planeLength);
+	});
+
+	it('scrolls a plane faster by its largest gem, never slower than the design speed', () => {
+		expect(layoutStage(DESIGN_WIDTH, DESIGN_HEIGHT, ['frets', 'drums', 'frets']).lookAheadMs).toBe(LOOK_AHEAD_MS);
+		expect(layoutStage(DESIGN_WIDTH, DESIGN_HEIGHT, ['frets', 'frets', 'drums', 'frets', 'frets']).lookAheadMs).toBe(
+			LOOK_AHEAD_MS,
+		);
+		const main = layoutFocus(1440, 880, {mine: 'frets', others: [], lyrics: false}).main;
+		const noteScale = main?.highways[0].noteScale ?? 1;
+		expect(noteScale).toBeGreaterThan(1);
+		expect(main?.lookAheadMs).toBeCloseTo(LOOK_AHEAD_MS / noteScale);
 	});
 
 	it('maps lanes onto the surface', () => {
@@ -214,6 +234,76 @@ describe('layoutFocus', () => {
 		const layout = layoutFocus(900, 880, {mine: 'frets', others: ['frets', 'drums'], lyrics: false});
 		expect(layout.scale).toBeCloseTo(900 / 1100);
 		expect(layout.sides).toHaveLength(2);
+	});
+});
+
+// How much song time half a gem covers at the strikeline: its half-height on screen over the screen speed of a note
+// there. Past about 50 ms the gem's edge meets the target ring before the judge's widest window opens.
+function gemHalfHeightMs(layout: StageLayout, highway: HighwayLayout): number {
+	const strike = project(layout, highway.left + highway.width / 2, noteDistance(layout, 0));
+	const halfHeight = highway.kind === 'drums' ? PAD_HEIGHT / 2 : GEM_RADIUS * GEM_SQUASH;
+	const halfPx = halfHeight * layout.scale * strike.scale * highway.noteScale;
+	const y = (deltaMs: number) => project(layout, highway.left + highway.width / 2, noteDistance(layout, deltaMs)).y;
+	const pxPerMs = Math.abs(y(1) - y(-1)) / 2;
+	return halfPx / pxPerMs;
+}
+
+describe('gem height in time', () => {
+	const MAX_HALF_MS = 50;
+	const SIZES: ReadonlyArray<readonly [number, number]> = [
+		[400, 225],
+		[900, 600],
+		[1100, 880],
+		[1440, 880],
+		[1920, 1080],
+		[2560, 1440],
+	];
+	const BANDS: ReadonlyArray<ReadonlyArray<HighwayKind>> = [
+		['frets'],
+		['frets', 'drums', 'frets'],
+		['frets', 'frets', 'drums', 'frets', 'frets'],
+	];
+
+	it('keeps half a gem within 50 ms in the band view', () => {
+		for (const [width, height] of SIZES) {
+			for (const kinds of BANDS) {
+				const layout = layoutStage(width, height, kinds);
+				for (const highway of layout.highways) {
+					expect(gemHalfHeightMs(layout, highway)).toBeLessThanOrEqual(MAX_HALF_MS);
+				}
+			}
+		}
+	});
+
+	it('keeps half a gem within 50 ms on my focus highway and on the side highways', () => {
+		const othersCases: ReadonlyArray<ReadonlyArray<HighwayKind>> = [
+			[],
+			['drums'],
+			['frets', 'drums'],
+			['frets', 'drums', 'frets', 'frets'],
+		];
+		for (const [width, height] of SIZES) {
+			for (const mine of ['frets', 'drums'] as const) {
+				for (const others of othersCases) {
+					const layout = layoutFocus(width, height, {mine, others, lyrics: false});
+					const planes = [...(layout.main ? [layout.main] : []), ...layout.sides.map((side) => side.layout)];
+					for (const plane of planes) {
+						for (const highway of plane.highways) {
+							expect(gemHalfHeightMs(plane, highway)).toBeLessThanOrEqual(MAX_HALF_MS);
+						}
+					}
+				}
+			}
+		}
+	});
+
+	it('gives my focus gem the same time span as a design-size gem in the band view', () => {
+		const band = layoutStage(DESIGN_WIDTH, DESIGN_HEIGHT, ['frets', 'drums', 'frets']);
+		const focus = layoutFocus(1440, 880, {mine: 'frets', others: ['drums'], lyrics: false});
+		const main = focus.main;
+		expect(main).not.toBeNull();
+		if (!main) return;
+		expect(gemHalfHeightMs(main, main.highways[0])).toBeCloseTo(gemHalfHeightMs(band, band.highways[0]), 0);
 	});
 });
 

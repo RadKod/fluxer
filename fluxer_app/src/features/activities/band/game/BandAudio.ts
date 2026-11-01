@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {BandPart} from '@app/features/activities/band/engine/ChartModel';
-import type {AudioClockAnchor, SongStartSchedule} from '@app/features/activities/band/engine/SessionClock';
+import {
+	type AudioClockAnchor,
+	performanceToContextTime,
+	type SongStartSchedule,
+} from '@app/features/activities/band/engine/SessionClock';
 import type {AudioStem, StemRole} from '@app/features/activities/band/engine/SongPackage';
 import type {DuckDepth} from '@app/features/activities/band/game/BandSettings';
 import {WHAMMY, type WhammyModulation, whammyDelaySwingS} from '@app/features/activities/band/game/Whammy';
@@ -113,6 +117,12 @@ export function readAudioAnchor(context: AudioContext): AudioClockAnchor {
 	};
 }
 
+// How long audio takes from being rendered to being heard, in ms: the render clock ahead of what the speakers play
+// now. A few tens of ms on wired output, often 150 to 300 over Bluetooth.
+export function outputDelayMs(context: BaseAudioContext, anchor: AudioClockAnchor, nowPerformanceMs: number): number {
+	return (context.currentTime - performanceToContextTime(nowPerformanceMs, anchor)) * 1000;
+}
+
 export function stemRoleForPlayback(role: StemRole, separateStems: boolean): StemRole | null {
 	if (!PLAYABLE_ROLES.includes(role)) return null;
 	// A single-mix song files its mix under some part name; it must play as backing and never duck.
@@ -195,6 +205,10 @@ export class BandAudio {
 
 	readAnchor(): AudioClockAnchor {
 		return readAudioAnchor(this.context);
+	}
+
+	outputDelayMs(): number {
+		return outputDelayMs(this.context, this.readAnchor(), performance.now());
 	}
 
 	// Lead the song start needs so the first frame is not scheduled into the past.

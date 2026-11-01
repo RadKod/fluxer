@@ -26,6 +26,15 @@
 	height: 72px;
 }
 
+/* Under the header, centred over the far end of my highway where nothing is drawn yet. */
+.latencyHint {
+	position: absolute;
+	top: 76px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 2;
+}
+
 .freestyleInfo {
 	top: 96px;
 	right: 28px;

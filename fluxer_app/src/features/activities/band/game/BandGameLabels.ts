@@ -3,7 +3,7 @@
 import type {BandSongSummary} from '@app/features/activities/band/BandProtocol';
 import {type BandDifficulty, type BandPart, isLeadPart} from '@app/features/activities/band/engine/ChartModel';
 import type {FeedbackKind} from '@app/features/activities/band/game/PlayController';
-import type {MessageDescriptor} from '@lingui/core';
+import type {I18n, MessageDescriptor} from '@lingui/core';
 import {msg} from '@lingui/core/macro';
 
 const PART_LABELS: Readonly<Record<BandPart, MessageDescriptor>> = {
@@ -49,6 +49,12 @@ export const SEAT_DESCRIPTOR = msg({
 	comment: 'Band game: under a player name, their part and difficulty, e.g. "Guitar, Hard".',
 });
 
+export const TIMING_TITLE_DESCRIPTOR = msg({
+	message: 'Timing and sound',
+	comment:
+		'Band game: title of the settings panel with the timing tests for this device and the miss sound options; also the label of the gear button that opens it.',
+});
+
 export const FEEDBACK_LABELS: Readonly<Record<FeedbackKind, MessageDescriptor>> = {
 	perfect: msg({
 		message: 'Perfect',
@@ -70,4 +76,27 @@ export const FEEDBACK_LABELS: Readonly<Record<FeedbackKind, MessageDescriptor>> 
 		context: 'band-hit',
 		comment: 'Band game: flashes at the strikeline when a note was not played. Keep it one short word.',
 	}),
+	early: msg({
+		message: 'Early',
+		context: 'band-hit',
+		comment:
+			'Band game: flashes at the strikeline for a key pressed too soon, before the note reached the line, so it did not count. Keep it one short word.',
+	}),
+	late: msg({
+		message: 'Late',
+		context: 'band-hit',
+		comment:
+			'Band game: flashes at the strikeline for a key pressed too late, after the note had already passed the line. Keep it one short word.',
+	}),
 };
+
+export function feedbackLabels(i18n: I18n): Readonly<Record<FeedbackKind, string>> {
+	return {
+		perfect: i18n._(FEEDBACK_LABELS.perfect),
+		good: i18n._(FEEDBACK_LABELS.good),
+		ok: i18n._(FEEDBACK_LABELS.ok),
+		miss: i18n._(FEEDBACK_LABELS.miss),
+		early: i18n._(FEEDBACK_LABELS.early),
+		late: i18n._(FEEDBACK_LABELS.late),
+	};
+}

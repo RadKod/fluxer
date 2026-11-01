@@ -8,8 +8,14 @@ import {
 } from '@app/features/activities/band/engine/SessionClock';
 import type {SongPackage} from '@app/features/activities/band/engine/SongPackage';
 import {BandAudio, GUIDE_VOCAL_GAIN} from '@app/features/activities/band/game/BandAudio';
-import {inputSongTimeMs, type LaneInput, type WhammyKeyInput} from '@app/features/activities/band/game/BandInput';
+import {
+	inputSongTimeMs,
+	type LaneInput,
+	trustedTimeStamp,
+	type WhammyKeyInput,
+} from '@app/features/activities/band/game/BandInput';
 import type {DuckDepth} from '@app/features/activities/band/game/BandSettings';
+import {BandTimingProbe} from '@app/features/activities/band/game/BandTimingProbe';
 import {FreestyleAudio} from '@app/features/activities/band/game/FreestyleAudio';
 import {MissSound} from '@app/features/activities/band/game/MissSound';
 import {PlayController} from '@app/features/activities/band/game/PlayController';
@@ -38,6 +44,8 @@ export interface PlayRuntimeOptions {
 	readonly entry: BandSongSummary;
 	readonly songPackage: SongPackage;
 	readonly inputLatencyMs: () => number;
+	// How far ahead of the heard song the highway is drawn, for a screen that shows frames late.
+	readonly visualOffsetMs: () => number;
 	readonly missSound: () => boolean;
 	readonly duckDepth: () => DuckDepth;
 	readonly submitIntent: (intent: BandIntent) => void;
@@ -46,6 +54,7 @@ export interface PlayRuntimeOptions {
 // Everything one song needs outside React: decoded audio started on the shared clock, the controller, freestyle
 // solos and whammy on that audio, the conversions from the audio clock to song time, and routing my keys.
 export class PlayRuntime {
+	readonly probe = new BandTimingProbe();
 	private readonly unsubscribe: () => void;
 	// Loads after the song has started (the samples are only needed once a solo comes), and stays null if they fail:
 	// the solo then scores without sound.
@@ -138,43 +147,60 @@ export class PlayRuntime {
 		return songTimeMs(performanceToContextTime(performanceTime, anchor), this.songZeroContextTime, 0);
 	}
 
+	// Song position the highway shows for a frame on screen at a performance.now() time.
+	shownMsAt(performanceTime: number): number {
+		return this.heardMsAt(performanceTime) + this.options.visualOffsetMs();
+	}
+
+	shownMs(): number {
+		return this.shownMsAt(performance.now());
+	}
+
 	// The judge's clock: what was heard, shifted by this device's input latency.
 	judgeMs(): number {
 		return this.heardMs() - this.options.inputLatencyMs();
 	}
 
+	// The shared clock's offset from this machine's, ms.
+	get clockOffsetMs(): number {
+		return this.options.session.clock.offsetMs;
+	}
+
 	inputMs(eventTimeStamp: number): number {
-		return inputSongTimeMs(
-			eventTimeStamp,
-			this.audio.readAnchor(),
-			this.songZeroContextTime,
-			this.options.inputLatencyMs(),
-		);
+		return this.songMsOf(trustedTimeStamp(eventTimeStamp, performance.now()));
 	}
 
 	// A key of my highway: in my freestyle solo it plays the solo voice too; the controller scores either way.
 	lane({kind, lane, timeStamp}: LaneInput): void {
-		const songMs = this.inputMs(timeStamp);
+		const handledAt = performance.now();
+		const stamp = trustedTimeStamp(timeStamp, handledAt);
+		const songMs = this.songMsOf(stamp);
 		if (kind === 'press') {
-			if (this.controller.mySoloSectionAt(songMs)) this.freestyle?.press(lane, songMs, timeStamp);
-			this.controller.press(lane, songMs);
+			if (this.controller.mySoloSectionAt(songMs)) this.freestyle?.press(lane, songMs, stamp);
+			const events = this.controller.press(lane, songMs);
+			this.probe.recordPress(
+				this.controller.myTrack,
+				{lane, eventTimeStamp: timeStamp, handledAt, judgeMs: songMs},
+				events,
+			);
 			return;
 		}
-		this.freestyle?.release(lane, timeStamp);
+		this.freestyle?.release(lane, stamp);
 		this.controller.release(lane, songMs);
 	}
 
 	// The whammy key bends in my freestyle solo (Shift: a step and a half) and is the whammy everywhere else.
 	whammyKey({kind, timeStamp, shift}: WhammyKeyInput): void {
-		const songMs = this.inputMs(timeStamp);
+		const stamp = trustedTimeStamp(timeStamp, performance.now());
+		const songMs = this.songMsOf(stamp);
 		if (kind === 'press' && this.controller.mySoloSectionAt(songMs)) {
 			this.bending = true;
-			this.freestyle?.bend(true, shift ? 3 : 2, timeStamp);
+			this.freestyle?.bend(true, shift ? 3 : 2, stamp);
 			return;
 		}
 		if (kind === 'release' && this.bending) {
 			this.bending = false;
-			this.freestyle?.bend(false, 2, timeStamp);
+			this.freestyle?.bend(false, 2, stamp);
 			return;
 		}
 		this.controller.whammy(kind === 'press', songMs);
@@ -186,6 +212,10 @@ export class PlayRuntime {
 		this.freestyle?.dispose();
 		this.freestyle = null;
 		this.audio.dispose();
+	}
+
+	private songMsOf(timeStamp: number): number {
+		return inputSongTimeMs(timeStamp, this.audio.readAnchor(), this.songZeroContextTime, this.options.inputLatencyMs());
 	}
 
 	private loadFreestyle(): void {

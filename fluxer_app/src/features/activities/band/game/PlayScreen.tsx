@@ -2,8 +2,10 @@
 
 import type {BandIntent, BandSongSummary} from '@app/features/activities/band/BandProtocol';
 import type {SongPackage} from '@app/features/activities/band/engine/SongPackage';
+import {BandDebugOverlay, useBandDebug} from '@app/features/activities/band/game/BandDebugOverlay';
 import {BandKeyboard, type BandKeyMap, DEFAULT_BAND_KEY_MAP} from '@app/features/activities/band/game/BandInput';
 import BandSettings from '@app/features/activities/band/game/BandSettings';
+import {BandSettingsPanel} from '@app/features/activities/band/game/BandSettingsPanel';
 import {FocusStage} from '@app/features/activities/band/game/FocusStage';
 import {
 	BandAudioUnavailableError,
@@ -20,7 +22,7 @@ import {msg} from '@lingui/core/macro';
 import {useLingui} from '@lingui/react/macro';
 import {autorun} from 'mobx';
 import {observer} from 'mobx-react-lite';
-import {type RefObject, useEffect, useRef, useState} from 'react';
+import {type RefObject, useCallback, useEffect, useRef, useState} from 'react';
 
 const logger = new Logger('BandPlayScreen');
 
@@ -55,7 +57,8 @@ function sameRunStillPlaying(session: ActivitySession, state: BandPlayState): bo
 	return current?.phase === 'play' && current.songId === state.songId && current.startAt === state.startAt;
 }
 
-function usePlayRuntime({session, state, entry, songPackage, onOwnIntent}: PlayScreenProps) {
+// `quiet` holds the song silent on this device while a timing test listens for the player's taps.
+function usePlayRuntime({session, state, entry, songPackage, onOwnIntent}: PlayScreenProps, quiet: boolean) {
 	const [runtime, setRuntime] = useState<PlayRuntime | null>(null);
 	const [status, setStatus] = useState<LoadStatus>('loading');
 	const ownIntentRef = useRef(onOwnIntent);
@@ -72,6 +75,7 @@ function usePlayRuntime({session, state, entry, songPackage, onOwnIntent}: PlayS
 			entry,
 			songPackage,
 			inputLatencyMs: () => BandSettings.effectiveInputLatencyMs,
+			visualOffsetMs: () => BandSettings.visualOffsetMs,
 			missSound: () => BandSettings.missSound,
 			duckDepth: () => BandSettings.duckDepth,
 			submitIntent: (intent) => {
@@ -111,24 +115,26 @@ function usePlayRuntime({session, state, entry, songPackage, onOwnIntent}: PlayS
 
 	useEffect(() => {
 		if (!runtime) return;
-		return autorun(() => runtime.audio.setVolume(BandSettings.volume));
-	}, [runtime]);
+		return autorun(() => runtime.audio.setVolume(quiet ? 0 : BandSettings.volume));
+	}, [runtime, quiet]);
 
 	return {runtime, status};
 }
 
 // Keys go to the game only while the activity holds the keyboard. The root takes focus so they land here, unless
-// focus is somewhere else the player chose (the message box) and the View is not on the stage.
+// focus is somewhere else the player chose (the message box) and the View is not on the stage. While the settings
+// panel is open (`paused`) the keys are its own, and whatever the game held is let go.
 function useBandKeyboard(
 	rootRef: RefObject<HTMLDivElement | null>,
 	runtime: PlayRuntime | null,
 	session: ActivitySession,
 	keyMap: BandKeyMap,
+	paused: boolean,
 ): void {
 	useEffect(() => {
 		const root = rootRef.current;
 		const track = runtime?.controller.myTrack;
-		if (!root || !runtime || !track) return;
+		if (!root || !runtime || !track || paused) return;
 		const keyboard = new BandKeyboard(keyMap, track.part, {
 			onLane: (input) => runtime.lane(input),
 			onStarPower: (timeStamp) => runtime.controller.deployStarPower(runtime.inputMs(timeStamp)),
@@ -155,7 +161,7 @@ function useBandKeyboard(
 			root.removeEventListener('focusout', onFocusOut);
 			keyboard.releaseAll(performance.now());
 		};
-	}, [rootRef, runtime, session, keyMap]);
+	}, [rootRef, runtime, session, keyMap, paused]);
 }
 
 // The play phase: the highways, my input and audio. Players see the focus view unless they chose the band view;
@@ -163,8 +169,16 @@ function useBandKeyboard(
 export const PlayScreen = observer(function PlayScreen(props: PlayScreenProps) {
 	const {i18n} = useLingui();
 	const rootRef = useRef<HTMLDivElement>(null);
-	const {runtime, status} = usePlayRuntime(props);
-	useBandKeyboard(rootRef, runtime, props.session, props.keyMap ?? DEFAULT_BAND_KEY_MAP);
+	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [testing, setTesting] = useState(false);
+	const {runtime, status} = usePlayRuntime(props, testing);
+	useBandKeyboard(rootRef, runtime, props.session, props.keyMap ?? DEFAULT_BAND_KEY_MAP, settingsOpen);
+	const debug = useBandDebug(rootRef);
+	const openSettings = useCallback(() => setSettingsOpen(true), []);
+	const closeSettings = useCallback(() => {
+		setSettingsOpen(false);
+		setTesting(false);
+	}, []);
 	const vocals = runtime ? props.songPackage.chart().vocals : null;
 	const focus = runtime !== null && hasFocusPart(runtime.controller, vocals) && BandSettings.highwayView === 'focus';
 	const Stage = focus ? FocusStage : PlayStage;
@@ -183,6 +197,7 @@ export const PlayScreen = observer(function PlayScreen(props: PlayScreenProps) {
 					entry={props.entry}
 					channelId={props.session.channelId}
 					vocals={vocals}
+					onOpenSettings={openSettings}
 					data-flx="activities.band.game.play-screen.play-stage"
 				/>
 			) : (
@@ -195,6 +210,14 @@ export const PlayScreen = observer(function PlayScreen(props: PlayScreenProps) {
 								: LOADING_DESCRIPTOR,
 					)}
 				</div>
+			)}
+			{runtime && debug && <BandDebugOverlay runtime={runtime} data-flx="activities.band.game.play-screen.debug" />}
+			{settingsOpen && (
+				<BandSettingsPanel
+					onClose={closeSettings}
+					onRunningChange={setTesting}
+					data-flx="activities.band.game.play-screen.settings-panel"
+				/>
 			)}
 		</div>
 	);

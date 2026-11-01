@@ -64,13 +64,15 @@ import {KeyGuide} from '@app/features/activities/band/flow/components/KeyGuide';
 import styles from '@app/features/activities/band/flow/components/SelectScreen.module.css';
 import {SpectatorStrip} from '@app/features/activities/band/flow/components/SpectatorStrip';
 import {formatSongLength, useBandNow} from '@app/features/activities/band/flow/components/useBandNow';
+import {TIMING_TITLE_DESCRIPTOR} from '@app/features/activities/band/game/BandGameLabels';
 import {DEFAULT_BAND_KEY_MAP} from '@app/features/activities/band/game/BandInput';
+import {BandSettingsPanel} from '@app/features/activities/band/game/BandSettingsPanel';
 import type {I18n} from '@lingui/core';
 import {useLingui} from '@lingui/react/macro';
-import {ArrowClockwiseIcon, CheckIcon, EyeIcon} from '@phosphor-icons/react';
+import {ArrowClockwiseIcon, CheckIcon, EyeIcon, GearSixIcon} from '@phosphor-icons/react';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';
-import {useRef} from 'react';
+import {useRef, useState} from 'react';
 
 type SelectState = Extract<BandState, {phase: 'select'}>;
 
@@ -640,6 +642,7 @@ interface SelectScreenProps {
 export const SelectScreen = observer(function SelectScreen({room, state, song}: SelectScreenProps) {
 	const {i18n} = useLingui();
 	const rootRef = useRef<HTMLDivElement>(null);
+	const [settingsOpen, setSettingsOpen] = useState(false);
 	const now = useBandNow(room.session);
 	const seatFor = (part: BandPart) => state.seats.find((seat) => seat.part === part);
 	// Highways in stage order; vocals have their own card above.
@@ -704,6 +707,20 @@ export const SelectScreen = observer(function SelectScreen({room, state, song}: 
 							{i18n._(PICK_ANOTHER_DESCRIPTOR)}
 						</button>
 					)}
+					<button
+						type="button"
+						className={styles.settingsButton}
+						aria-label={i18n._(TIMING_TITLE_DESCRIPTOR)}
+						title={i18n._(TIMING_TITLE_DESCRIPTOR)}
+						onClick={() => setSettingsOpen(true)}
+						data-flx="activities.band.flow.select-screen.settings-button"
+					>
+						<GearSixIcon
+							weight="bold"
+							aria-hidden="true"
+							data-flx="activities.band.flow.select-screen.settings-button.icon"
+						/>
+					</button>
 				</BandTimer>
 				<div className={styles.stage} data-flx="activities.band.flow.select-screen.stage">
 					<div className={styles.highways} aria-hidden="true" data-flx="activities.band.flow.select-screen.highways">
@@ -739,6 +756,12 @@ export const SelectScreen = observer(function SelectScreen({room, state, song}: 
 				</div>
 			</div>
 			<SpectatorStrip room={room} phase="select" data-flx="activities.band.flow.select-screen.spectator-strip" />
+			{settingsOpen && (
+				<BandSettingsPanel
+					onClose={() => setSettingsOpen(false)}
+					data-flx="activities.band.flow.select-screen.settings-panel"
+				/>
+			)}
 		</div>
 	);
 });

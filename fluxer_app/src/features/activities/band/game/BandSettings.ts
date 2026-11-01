@@ -12,10 +12,19 @@ export type DuckDepth = 'light' | 'strong';
 // Spectators always get the band view.
 export type BandHighwayView = 'focus' | 'group';
 
+function clampLatency(latencyMs: number): number {
+	return Math.round(Math.min(INPUT_LATENCY_LIMIT_MS, Math.max(-INPUT_LATENCY_LIMIT_MS, latencyMs)));
+}
+
 // Per-device: the latency offset belongs to this keyboard, output device and machine, so it is never synced.
 class BandSettingsState {
 	// Positive when presses register late; null until the rhythm test has run on this device.
 	inputLatencyMs: number | null = null;
+	// How late taps land after the flashing line crosses the ring in the visual test; null until it has run. Taps
+	// carry the input latency too, so the screen's own delay is this minus inputLatencyMs.
+	visualLatencyMs: number | null = null;
+	// The hint about slow audio output (Bluetooth) was closed on this device.
+	latencyHintDismissed = false;
 	volume = 0.8;
 	// A pick scrape, muted chug or stick click on my own misses, heard only here.
 	missSound = true;
@@ -28,6 +37,8 @@ class BandSettingsState {
 		makeAutoObservable(this, {}, {autoBind: true});
 		void makePersistent(this, 'BandSettings', [
 			'inputLatencyMs',
+			'visualLatencyMs',
+			'latencyHintDismissed',
 			'volume',
 			'missSound',
 			'duckDepth',
@@ -40,8 +51,22 @@ class BandSettingsState {
 		return this.inputLatencyMs ?? 0;
 	}
 
+	// How far ahead the highway is drawn so a note reaches the strikeline when the screen shows it there, not when the
+	// frame was drawn. Zero until the visual test has run.
+	get visualOffsetMs(): number {
+		return this.visualLatencyMs === null ? 0 : this.visualLatencyMs - this.effectiveInputLatencyMs;
+	}
+
 	setInputLatencyMs(latencyMs: number): void {
-		this.inputLatencyMs = Math.round(Math.min(INPUT_LATENCY_LIMIT_MS, Math.max(-INPUT_LATENCY_LIMIT_MS, latencyMs)));
+		this.inputLatencyMs = clampLatency(latencyMs);
+	}
+
+	setVisualLatencyMs(latencyMs: number): void {
+		this.visualLatencyMs = clampLatency(latencyMs);
+	}
+
+	dismissLatencyHint(): void {
+		this.latencyHintDismissed = true;
 	}
 
 	setVolume(volume: number): void {

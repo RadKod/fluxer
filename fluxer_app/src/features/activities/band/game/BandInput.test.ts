@@ -7,6 +7,7 @@ import {
 	DEFAULT_BAND_KEY_MAP,
 	inputSongTimeMs,
 	type LaneInput,
+	trustedTimeStamp,
 	type WhammyKeyInput,
 } from '@app/features/activities/band/game/BandInput';
 import {describe, expect, it} from 'vitest';
@@ -113,5 +114,12 @@ describe('BandInput', () => {
 		// Pressed 250 ms after the anchor; the song started at context time 8 s; the player is 30 ms late.
 		expect(inputSongTimeMs(5_250, anchor, 8, 30)).toBeCloseTo(2_250 - 30);
 		expect(inputSongTimeMs(5_250, anchor, 8, -20)).toBeCloseTo(2_270);
+	});
+
+	it('trusts an event timestamp only when it is no later than now and at most 250 ms old', () => {
+		expect(trustedTimeStamp(1_000, 1_012)).toBe(1_000);
+		expect(trustedTimeStamp(1_000, 1_250)).toBe(1_000);
+		expect(trustedTimeStamp(1_000, 1_251)).toBe(1_251);
+		expect(trustedTimeStamp(1_020, 1_000)).toBe(1_000);
 	});
 });

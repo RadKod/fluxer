@@ -8,7 +8,7 @@ import {bandDisplayName} from '@app/features/activities/band/flow/components/Ban
 import {useElementSize} from '@app/features/activities/band/flow/components/useElementSize';
 import {
 	DIFFICULTY_LABELS,
-	FEEDBACK_LABELS,
+	feedbackLabels,
 	partLabel,
 	SEAT_DESCRIPTOR,
 } from '@app/features/activities/band/game/BandGameLabels';
@@ -33,11 +33,13 @@ import {
 	FinaleBanner,
 	formatClock,
 	hasFocusPart,
+	OutputLatencyHint,
 	type PlayerStatusKind,
 	PlayerStatusText,
 	playerStatusKind,
 	resizeCanvas,
 	runFrameLoop,
+	SettingsButton,
 	SING_HINT_DESCRIPTOR,
 	useSongTime,
 	useSpeakingUsers,
@@ -199,11 +201,13 @@ const SongInfo = observer(function SongInfo({
 	runtime,
 	entry,
 	canFocus,
+	onOpenSettings,
 }: {
 	runtime: PlayRuntime;
 	entry: BandSongSummary;
 	// I play a part, so the focus view is open to me.
 	canFocus: boolean;
+	onOpenSettings: () => void;
 }) {
 	const songMs = useSongTime(runtime, 500);
 	const share = entry.lengthMs > 0 ? Math.min(1, Math.max(0, songMs / entry.lengthMs)) : 0;
@@ -233,7 +237,14 @@ const SongInfo = observer(function SongInfo({
 			<div className={styles.controls} data-flx="activities.band.game.play-stage.song-info.controls">
 				<VolumeControl data-flx="activities.band.game.play-stage.song-info.volume" />
 				{canFocus && <ViewSwitch data-flx="activities.band.game.play-stage.song-info.view-switch" />}
+				<SettingsButton onClick={onOpenSettings} data-flx="activities.band.game.play-stage.song-info.settings" />
 			</div>
+			<OutputLatencyHint
+				runtime={runtime}
+				onOpenSettings={onOpenSettings}
+				className={styles.latencyHintBelow}
+				data-flx="activities.band.game.play-stage.song-info.latency-hint"
+			/>
 		</div>
 	);
 });
@@ -427,9 +438,16 @@ interface PlayStageProps {
 	readonly entry: BandSongSummary;
 	readonly channelId: string;
 	readonly vocals: VocalsChart | null;
+	readonly onOpenSettings: () => void;
 }
 
-export const PlayStage = observer(function PlayStage({runtime, entry, channelId, vocals}: PlayStageProps) {
+export const PlayStage = observer(function PlayStage({
+	runtime,
+	entry,
+	channelId,
+	vocals,
+	onOpenSettings,
+}: PlayStageProps) {
 	const {i18n} = useLingui();
 	const rootRef = useRef<HTMLDivElement>(null);
 	const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -444,17 +462,9 @@ export const PlayStage = observer(function PlayStage({runtime, entry, channelId,
 		() => (width > 0 && height > 0 ? layoutStage(width, height, kinds) : null),
 		[width, height, kinds],
 	);
-	const feedbackLabels = useMemo(
-		() => ({
-			perfect: i18n._(FEEDBACK_LABELS.perfect),
-			good: i18n._(FEEDBACK_LABELS.good),
-			ok: i18n._(FEEDBACK_LABELS.ok),
-			miss: i18n._(FEEDBACK_LABELS.miss),
-		}),
-		[i18n],
-	);
+	const labels = useMemo(() => feedbackLabels(i18n), [i18n]);
 	const vocalsSeat = vocals ? controller.vocalsSeat : null;
-	useStageLoop(runtime, layout, canvasRef, vocalsCanvasRef, vocalsSeat ? vocals : null, feedbackLabels);
+	useStageLoop(runtime, layout, canvasRef, vocalsCanvasRef, vocalsSeat ? vocals : null, labels);
 	const speaking = useSpeakingUsers(channelId);
 
 	return (
@@ -488,6 +498,7 @@ export const PlayStage = observer(function PlayStage({runtime, entry, channelId,
 							runtime={runtime}
 							entry={entry}
 							canFocus={hasFocusPart(controller, vocals)}
+							onOpenSettings={onOpenSettings}
 							data-flx="activities.band.game.play-stage.song-info"
 						/>
 						<ScoreBox controller={controller} data-flx="activities.band.game.play-stage.score-box" />

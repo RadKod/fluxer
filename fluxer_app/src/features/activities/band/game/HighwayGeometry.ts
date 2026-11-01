@@ -25,6 +25,9 @@ export const FEEDBACK_DISTANCE = 96;
 // The top of the plane fades out over this share of its length.
 export const FADE_SHARE = 0.32;
 
+// Time a note takes from the top of a highway to the strikeline at gem size 1. Bigger gems travel faster in
+// proportion (see lookAheadFor), so a gem's height stays the same stretch of time, about 45 ms either side of its
+// note, and its edge does not touch the target ring before the judge would take the press.
 export const LOOK_AHEAD_MS = 1_600;
 // The last part of the plane stays empty so notes fade in rather than pop.
 const TRAVEL_LENGTH = PLANE_LENGTH * (1 - FADE_SHARE / 2) - STRIKE_DISTANCE;
@@ -58,6 +61,8 @@ export interface StageLayout {
 	readonly cosTilt: number;
 	readonly sinTilt: number;
 	readonly highways: ReadonlyArray<HighwayLayout>;
+	// Time from the top of this plane to its strikeline; shared by every highway drawn on it.
+	readonly lookAheadMs: number;
 }
 
 export interface ProjectedPoint {
@@ -100,6 +105,13 @@ export function layoutStage(width: number, height: number, kinds: ReadonlyArray<
 	});
 }
 
+// A plane scrolls faster by its largest gem scale, so the biggest gem on it spans the same time as a design-size gem.
+// Gems smaller than design size keep the design speed rather than crawling.
+export function lookAheadFor(highways: ReadonlyArray<HighwayLayout>): number {
+	const largest = highways.reduce((max, highway) => Math.max(max, highway.noteScale), 1);
+	return LOOK_AHEAD_MS / largest;
+}
+
 // Every measure of the plane follows `scale`, as the design's 480 px region sets them; the near edge sits at `nearY`
 // and the vanishing point above `originX`.
 function planeLayout({
@@ -136,6 +148,7 @@ function planeLayout({
 		cosTilt: Math.cos(tilt),
 		sinTilt: Math.sin(tilt),
 		highways,
+		lookAheadMs: lookAheadFor(highways),
 	};
 }
 
@@ -396,17 +409,17 @@ export function project(layout: StageLayout, x: number, distance: number): Proje
 
 // Plane distance of a note `deltaMs` ahead of now; negative deltas fall past the strikeline.
 export function noteDistance(layout: StageLayout, deltaMs: number): number {
-	return (STRIKE_DISTANCE + (deltaMs / LOOK_AHEAD_MS) * TRAVEL_LENGTH) * layout.scale;
+	return (STRIKE_DISTANCE + (deltaMs / layout.lookAheadMs) * TRAVEL_LENGTH) * layout.scale;
 }
 
 export function strikeDistance(layout: StageLayout): number {
 	return STRIKE_DISTANCE * layout.scale;
 }
 
-// Song time window that is visible on the highway at `nowMs`.
-export function visibleWindow(nowMs: number): {readonly fromMs: number; readonly toMs: number} {
-	const pastMs = (STRIKE_DISTANCE / TRAVEL_LENGTH) * LOOK_AHEAD_MS;
-	const aheadMs = ((PLANE_LENGTH - STRIKE_DISTANCE) / TRAVEL_LENGTH) * LOOK_AHEAD_MS;
+// Song time window that is visible on the plane at `nowMs`.
+export function visibleWindow(layout: StageLayout, nowMs: number): {readonly fromMs: number; readonly toMs: number} {
+	const pastMs = (STRIKE_DISTANCE / TRAVEL_LENGTH) * layout.lookAheadMs;
+	const aheadMs = ((PLANE_LENGTH - STRIKE_DISTANCE) / TRAVEL_LENGTH) * layout.lookAheadMs;
 	return {fromMs: nowMs - pastMs, toMs: nowMs + aheadMs};
 }
 
