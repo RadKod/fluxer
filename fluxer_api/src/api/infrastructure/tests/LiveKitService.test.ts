@@ -227,6 +227,22 @@ describe('LiveKitService updateParticipant mute', () => {
 		return {client, calls};
 	}
 
+	it('keeps data publishing when a deafen change rewrites the permission', async () => {
+		const {client, calls} = roomServiceClient([], []);
+		const service = createServiceWithRoomServiceClient(client);
+		await service.updateParticipant({...params, deaf: false});
+		const permission = calls.find((call) => call[0] === 'updateParticipant' && call[4] !== undefined)?.[4];
+		expect(permission).toMatchObject({canPublishData: true, canSubscribe: true});
+	});
+
+	it('keeps data publishing when a role change rewrites the permission', async () => {
+		const {client, calls} = roomServiceClient([], []);
+		const service = createServiceWithRoomServiceClient(client);
+		await service.updateParticipantPermissions({...params, canSpeak: true, canStream: false, canVideo: true});
+		const permission = calls.find((call) => call[0] === 'updateParticipant')?.[4];
+		expect(permission).toMatchObject({canPublishData: true});
+	});
+
 	it('records the mute on the participant and mutes every current microphone track', async () => {
 		const {client, calls} = roomServiceClient(
 			[{sid: 'TR_old', source: TrackSource.MICROPHONE}],

@@ -237,6 +237,9 @@ export class LiveKitService extends ILiveKitService {
 					canPublish: !deaf && canPublishSources.length > 0,
 					canSubscribe: !deaf,
 					canPublishSources,
+					// sanalyer: LiveKit replaces the whole permission and reads a missing field as false, which would stop
+					// this participant's data messages (voice activities) after any permission update.
+					canPublishData: true,
 				});
 			}
 		} catch (error) {
@@ -260,6 +263,8 @@ export class LiveKitService extends ILiveKitService {
 			const participantPermission = {
 				canPublish: !deaf && canPublishSources.length > 0,
 				canPublishSources,
+				// sanalyer: see updateParticipant; the data channel must survive a permission update.
+				canPublishData: true,
 				...(deaf !== undefined ? {canSubscribe: !deaf} : {}),
 			};
 			await server.roomServiceClient.updateParticipant(roomName, participantIdentity, undefined, {
