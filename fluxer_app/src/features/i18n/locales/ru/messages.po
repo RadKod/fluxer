@@ -58561,14 +58561,6 @@ msgstr "Back to the vote"
 
 #: src/features/activities/band/flow/BandFlowMessages.ts
 msgid ""
-"While you play an instrument, your mic switches to push-to-talk and goes "
-"back when the song ends. On vocals it stays open."
-msgstr ""
-"While you play an instrument, your mic switches to push-to-talk and goes "
-"back when the song ends. On vocals it stays open."
-
-#: src/features/activities/band/flow/BandFlowMessages.ts
-msgid ""
 "While you play an instrument, your mic is muted and comes back when the song"
 " ends. On vocals it stays open."
 msgstr ""

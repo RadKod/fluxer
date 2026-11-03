@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// While I play an instrument, my open mic would put the song's own sound and my key clicks into the call. With a
-// push-to-talk key bound, the guard switches me to push-to-talk; without one, push-to-talk would not take effect, so
-// it mutes me instead. A singer is the opposite: they sing over the call, and the panel holds the keyboard so a
-// push-to-talk key cannot be pressed, so the guard opens their mic (voice activity, unmuted). Either way it puts back
-// exactly what it changed, and only if I did not change it myself meanwhile.
+// While I play an instrument, my open mic would put the song's own sound and my key clicks into the call, so the
+// guard mutes me, with or without a push-to-talk key: the mute shows on my button and the button lifts it. (It once
+// switched push-to-talk users to push-to-talk instead; the game holds the keyboard, so they looked open and could
+// not talk.) A singer is the opposite: they sing over the call, and the panel holds the keyboard so a push-to-talk
+// key cannot be pressed, so the guard opens their mic (voice activity, unmuted). Either way it puts back exactly what
+// it changed, and only if I did not change it myself meanwhile.
 //
 // The transmit mode and the mute are saved and the mode follows me to my other devices, so a reload, a crash or a
-// closed window in mid-song would leave me on push-to-talk everywhere. The hold is written down while it lasts, and
-// the next start puts back whatever the restore never got to.
+// closed window in mid-song would leave a singer on voice activity everywhere. The hold is written down while it
+// lasts, and the next start puts back whatever the restore never got to, holds from older runs included.
 
 import type {BandPart} from '@app/features/activities/band/engine/ChartModel';
 import {normalizeTransmitMode, type TransmitMode} from '@app/features/input/state/input_keybind/KeybindSyncCodec';
 
 export interface BandMicPort {
-	hasPushToTalkKey(): boolean;
 	transmitMode(): TransmitMode;
 	setTransmitMode(mode: TransmitMode): void;
 	isMuted(): boolean;
@@ -127,10 +127,6 @@ export class BandMicGuard {
 	}
 
 	private engagePlayer(): void {
-		if (this.port.hasPushToTalkKey()) {
-			this.switchMode('voice_push_to_talk', false);
-			return;
-		}
 		if (this.port.isMuted() || this.port.isDeafened()) return;
 		this.hold = {...NO_HOLD, toggledMute: true};
 		void this.port.toggleMute();

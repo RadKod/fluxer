@@ -22,22 +22,14 @@ class FakePort implements BandMicPort {
 	readonly setMuted = vi.fn((next: boolean) => {
 		this.muted = next;
 	});
-	private readonly pushToTalkKey: boolean;
-
 	constructor({
-		pushToTalkKey = false,
 		mode = 'voice_activity',
 		muted = false,
 		deafened = false,
-	}: {pushToTalkKey?: boolean; mode?: TransmitMode; muted?: boolean; deafened?: boolean}) {
-		this.pushToTalkKey = pushToTalkKey;
+	}: {mode?: TransmitMode; muted?: boolean; deafened?: boolean}) {
 		this.mode = mode;
 		this.muted = muted;
 		this.deafened = deafened;
-	}
-
-	hasPushToTalkKey(): boolean {
-		return this.pushToTalkKey;
 	}
 
 	transmitMode(): TransmitMode {
@@ -77,36 +69,20 @@ function guardWithMemory(port: FakePort): BandMicGuard {
 }
 
 describe('BandMicGuard', () => {
-	it('switches to push-to-talk while playing and back after', () => {
-		const port = new FakePort({pushToTalkKey: true});
+	it('mutes a push-to-talk user too, so the mute button can open the mic', () => {
+		const port = new FakePort({mode: 'voice_push_to_talk'});
 		const guard = guardWithMemory(port);
 		guard.update('guitar');
-		expect(port.mode).toBe('voice_push_to_talk');
-		guard.update('guitar');
-		expect(port.setTransmitMode).toHaveBeenCalledTimes(1);
-		guard.update(null);
-		expect(port.mode).toBe('voice_activity');
-	});
-
-	it('leaves push-to-talk users alone', () => {
-		const port = new FakePort({pushToTalkKey: true, mode: 'voice_push_to_talk'});
-		const guard = guardWithMemory(port);
+		expect(port).toMatchObject({mode: 'voice_push_to_talk', muted: true});
+		port.muted = false;
 		guard.update('guitar');
 		guard.update(null);
 		expect(port.setTransmitMode).not.toHaveBeenCalled();
-		expect(port.mode).toBe('voice_push_to_talk');
+		expect(port.toggleMute).toHaveBeenCalledTimes(1);
+		expect(port.muted).toBe(false);
 	});
 
-	it('keeps a mode I picked myself during the song', () => {
-		const port = new FakePort({pushToTalkKey: true});
-		const guard = guardWithMemory(port);
-		guard.update('guitar');
-		port.mode = 'voice_activity';
-		guard.update(null);
-		expect(port.setTransmitMode).toHaveBeenCalledTimes(1);
-	});
-
-	it('mutes while playing when no push-to-talk key is bound, and unmutes after', () => {
+	it('mutes while playing and unmutes after', () => {
 		const port = new FakePort({});
 		const guard = guardWithMemory(port);
 		guard.update('guitar');
@@ -148,7 +124,7 @@ describe('BandMicGuard', () => {
 
 	describe('singer', () => {
 		it('opens a muted push-to-talk mic for the song and puts both back after', () => {
-			const port = new FakePort({pushToTalkKey: true, mode: 'voice_push_to_talk', muted: true});
+			const port = new FakePort({mode: 'voice_push_to_talk', muted: true});
 			const guard = guardWithMemory(port);
 			guard.update('vocals');
 			expect(port).toMatchObject({mode: 'voice_activity', muted: false});
@@ -198,22 +174,22 @@ describe('BandMicGuard', () => {
 
 	describe('written hold', () => {
 		it('writes what it changed while a song plays and clears it after', () => {
-			const port = new FakePort({pushToTalkKey: true});
+			const port = new FakePort({mode: 'voice_push_to_talk', muted: true});
 			const storage = new MemoryStorage();
 			const guard = new BandMicGuard(port, () => storage);
-			guard.update('guitar');
+			guard.update('vocals');
 			expect(JSON.parse(storage.getItem(HOLD_KEY) ?? 'null')).toEqual({
-				previousMode: 'voice_activity',
-				changedMode: 'voice_push_to_talk',
-				toggledMute: false,
-				role: 'player',
+				previousMode: 'voice_push_to_talk',
+				changedMode: 'voice_activity',
+				toggledMute: true,
+				role: 'singer',
 			});
 			guard.update(null);
 			expect(storage.getItem(HOLD_KEY)).toBeNull();
 		});
 
 		it('writes nothing when it changed nothing', () => {
-			const port = new FakePort({pushToTalkKey: true, mode: 'voice_push_to_talk'});
+			const port = new FakePort({muted: true});
 			const storage = new MemoryStorage();
 			new BandMicGuard(port, () => storage).update('guitar');
 			expect(storage.items.size).toBe(0);
@@ -221,7 +197,7 @@ describe('BandMicGuard', () => {
 
 		it('leaves a hold from an earlier run for the start-up repair', () => {
 			const storage = new MemoryStorage();
-			new BandMicGuard(new FakePort({pushToTalkKey: true}), () => storage).update('guitar');
+			new BandMicGuard(new FakePort({}), () => storage).update('guitar');
 			const left = storage.getItem(HOLD_KEY);
 			const guard = new BandMicGuard(new FakePort({}), () => storage);
 			guard.update('vocals');
@@ -230,27 +206,27 @@ describe('BandMicGuard', () => {
 		});
 
 		it('puts the mic back on unload but keeps the hold for the next start', () => {
-			const port = new FakePort({pushToTalkKey: true});
+			const port = new FakePort({});
 			const storage = new MemoryStorage();
 			const guard = new BandMicGuard(port, () => storage);
 			guard.update('guitar');
 			guard.releaseForUnload();
-			expect(port.mode).toBe('voice_activity');
+			expect(port.muted).toBe(false);
 			expect(storage.getItem(HOLD_KEY)).not.toBeNull();
 			guard.update(null);
-			expect(port.setTransmitMode).toHaveBeenCalledTimes(2);
+			expect(port.toggleMute).toHaveBeenCalledTimes(2);
 		});
 
 		it('keeps working when storage throws', () => {
-			const port = new FakePort({pushToTalkKey: true});
+			const port = new FakePort({});
 			const broken = (): BandMicHoldStorage => {
 				throw new Error('storage disabled');
 			};
 			const guard = new BandMicGuard(port, broken);
 			guard.update('guitar');
-			expect(port.mode).toBe('voice_push_to_talk');
+			expect(port.muted).toBe(true);
 			guard.update(null);
-			expect(port.mode).toBe('voice_activity');
+			expect(port.muted).toBe(false);
 			expect(() => recoverBandMicHold(port, broken)).not.toThrow();
 		});
 	});
@@ -262,17 +238,32 @@ describe('BandMicGuard', () => {
 			return storage;
 		}
 
-		it('puts back the mode a crashed run left on', () => {
-			const storage = leftBehind(new FakePort({pushToTalkKey: true}), 'guitar');
-			const port = new FakePort({pushToTalkKey: true, mode: 'voice_push_to_talk'});
+		// What an older guard wrote when it switched a player to push-to-talk.
+		function olderPlayerHold(): MemoryStorage {
+			const storage = new MemoryStorage();
+			storage.setItem(
+				HOLD_KEY,
+				JSON.stringify({
+					previousMode: 'voice_activity',
+					changedMode: 'voice_push_to_talk',
+					toggledMute: false,
+					role: 'player',
+				}),
+			);
+			return storage;
+		}
+
+		it('puts back the mode a crashed older run left on', () => {
+			const storage = olderPlayerHold();
+			const port = new FakePort({mode: 'voice_push_to_talk'});
 			recoverBandMicHold(port, () => storage);
 			expect(port.mode).toBe('voice_activity');
 			expect(storage.items.size).toBe(0);
 		});
 
 		it('keeps a mode I changed since, and still clears the hold', () => {
-			const storage = leftBehind(new FakePort({pushToTalkKey: true}), 'guitar');
-			const port = new FakePort({pushToTalkKey: true, mode: 'voice_activity'});
+			const storage = olderPlayerHold();
+			const port = new FakePort({mode: 'voice_activity'});
 			recoverBandMicHold(port, () => storage);
 			expect(port.setTransmitMode).not.toHaveBeenCalled();
 			expect(storage.items.size).toBe(0);
@@ -291,7 +282,7 @@ describe('BandMicGuard', () => {
 		});
 
 		it('mutes again a singer the guard opened, unless they are deafened', () => {
-			const singer = () => new FakePort({pushToTalkKey: true, mode: 'voice_push_to_talk', muted: true});
+			const singer = () => new FakePort({mode: 'voice_push_to_talk', muted: true});
 			const port = new FakePort({});
 			recoverBandMicHold(port, () => leftBehind(singer(), 'vocals'));
 			expect(port).toMatchObject({mode: 'voice_push_to_talk', muted: true});

@@ -435,15 +435,10 @@ export const SPECTATOR_NOTE_DESCRIPTOR = msg({
 	message: 'Anyone without a part watches. They cheer during the song and rate the players 1 to 5 at the end.',
 	comment: 'Band game: explanation in the spectator column.',
 });
-export const MIC_PUSH_TO_TALK_NOTE_DESCRIPTOR = msg({
-	message:
-		'While you play an instrument, your mic switches to push-to-talk and goes back when the song ends. On vocals it stays open.',
-	comment: 'Band game: note about what happens to my microphone while I play, when I have a push-to-talk key.',
-});
 export const MIC_MUTE_NOTE_DESCRIPTOR = msg({
 	message:
 		'While you play an instrument, your mic is muted and comes back when the song ends. On vocals it stays open.',
-	comment: 'Band game: note about what happens to my microphone while I play, when I have no push-to-talk key.',
+	comment: 'Band game: note about what happens to my microphone while I play.',
 });
 
 export const SPECTATORS_DESCRIPTOR = msg({

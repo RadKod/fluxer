@@ -8,7 +8,6 @@ const store = observable({live: null as ActivitySession | null});
 
 vi.mock('@app/features/activities/band/flow/BandMicPort', () => ({
 	VOICE_MIC_PORT: {
-		hasPushToTalkKey: () => false,
 		transmitMode: () => 'voice_activity',
 		setTransmitMode: () => {},
 		isMuted: () => false,

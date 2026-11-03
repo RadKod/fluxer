@@ -34,7 +34,6 @@ const SONG: BandSongSummary = {
 const VOICE_PORT: BandVoicePort = {setSingerMic: () => {}, setUnlevelledVoices: () => {}};
 
 const MIC_PORT: BandMicPort = {
-	hasPushToTalkKey: () => false,
 	transmitMode: () => 'voice_activity',
 	setTransmitMode: () => {},
 	isMuted: () => false,

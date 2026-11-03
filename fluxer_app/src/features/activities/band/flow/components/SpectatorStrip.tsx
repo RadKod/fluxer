@@ -8,7 +8,6 @@ import {
 	CHEERING_DESCRIPTOR,
 	HYPE_DESCRIPTOR,
 	MIC_MUTE_NOTE_DESCRIPTOR,
-	MIC_PUSH_TO_TALK_NOTE_DESCRIPTOR,
 	PICKING_DESCRIPTOR,
 	SPECTATOR_NOTE_DESCRIPTOR,
 	SPECTATORS_DESCRIPTOR,
@@ -18,7 +17,6 @@ import {
 	WATCHING_DESCRIPTOR,
 	WILL_WATCH_DESCRIPTOR,
 } from '@app/features/activities/band/flow/BandFlowMessages';
-import {VOICE_MIC_PORT} from '@app/features/activities/band/flow/BandMicPort';
 import type {BandRoom} from '@app/features/activities/band/flow/BandRoom';
 import {BandAvatar, bandDisplayName} from '@app/features/activities/band/flow/components/BandPeople';
 import styles from '@app/features/activities/band/flow/components/SpectatorStrip.module.css';
@@ -208,9 +206,7 @@ export const SpectatorStrip = observer(function SpectatorStrip({room, phase}: Sp
 							className={styles.micIcon}
 							data-flx="activities.band.flow.spectator-strip.mic-icon"
 						/>
-						<span data-flx="activities.band.flow.spectator-strip.span--2">
-							{i18n._(VOICE_MIC_PORT.hasPushToTalkKey() ? MIC_PUSH_TO_TALK_NOTE_DESCRIPTOR : MIC_MUTE_NOTE_DESCRIPTOR)}
-						</span>
+						<span data-flx="activities.band.flow.spectator-strip.span--2">{i18n._(MIC_MUTE_NOTE_DESCRIPTOR)}</span>
 					</div>
 				</div>
 			)}

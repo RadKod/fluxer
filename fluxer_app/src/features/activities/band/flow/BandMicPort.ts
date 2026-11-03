@@ -14,7 +14,6 @@ import {when} from 'mobx';
 
 // The call's own controls, used the way the voice settings menu and the mute button use them.
 export const VOICE_MIC_PORT: BandMicPort = {
-	hasPushToTalkKey: () => Keybind.hasPushToTalkKeybind(),
 	transmitMode: () => Keybind.transmitMode,
 	setTransmitMode: (mode) => {
 		Keybind.setTransmitMode(mode);
