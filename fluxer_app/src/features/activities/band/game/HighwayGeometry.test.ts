@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {noteGroup} from '@app/features/activities/band/engine/BandTestFixtures';
+import {HIT_WINDOWS_MS} from '@app/features/activities/band/engine/Judge';
 import {
 	DESIGN_HEIGHT,
 	DESIGN_WIDTH,
@@ -293,6 +294,41 @@ describe('gem height in time', () => {
 						}
 					}
 				}
+			}
+		}
+	});
+
+	// Furthest song time from the note, on the given side, at which the gem's outline still overlaps the target
+	// ring's on screen (both drawn with a 1.5 design px half-stroke).
+	function touchMs(layout: StageLayout, highway: HighwayLayout, side: 1 | -1): number {
+		const x = highway.left + highway.width / 2;
+		const halfHeight = (highway.kind === 'drums' ? PAD_HEIGHT / 2 : GEM_RADIUS * GEM_SQUASH) + 1.5;
+		const target = project(layout, x, noteDistance(layout, 0));
+		let furthest = 0;
+		for (let deltaMs = 0; deltaMs <= 300; deltaMs += 0.25) {
+			const gem = project(layout, x, noteDistance(layout, side * deltaMs));
+			const reach = halfHeight * layout.scale * highway.noteScale * (gem.scale + target.scale);
+			if (Math.abs(gem.y - target.y) < reach) furthest = deltaMs;
+		}
+		return furthest;
+	}
+
+	it('takes a press whenever the gem touches its target ring, a frame of lag included', () => {
+		const FRAME_MS = 1000 / 60;
+		const planes: Array<StageLayout> = [];
+		for (const [width, height] of SIZES) {
+			for (const kinds of BANDS) planes.push(layoutStage(width, height, kinds));
+			for (const mine of ['frets', 'drums'] as const) {
+				const layout = layoutFocus(width, height, {mine, others: ['frets', 'drums'], lyrics: false});
+				if (layout.main) planes.push(layout.main);
+				planes.push(...layout.sides.map((side) => side.layout));
+			}
+		}
+		for (const plane of planes) {
+			for (const highway of plane.highways) {
+				const touch = Math.max(touchMs(plane, highway, 1), touchMs(plane, highway, -1));
+				expect(touch).toBeGreaterThan(40);
+				expect(touch + FRAME_MS).toBeLessThanOrEqual(HIT_WINDOWS_MS.ok);
 			}
 		}
 	});

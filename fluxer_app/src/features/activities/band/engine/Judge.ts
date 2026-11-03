@@ -2,8 +2,10 @@
 
 import type {BandDifficulty, PartChart} from '@app/features/activities/band/engine/ChartModel';
 
-// Half-widths around the note time; anything further than `ok` cannot hit the note.
-export const HIT_WINDOWS_MS = {perfect: 35, good: 70, ok: 100} as const;
+// Half-widths around the note time; anything further than `ok` cannot hit the note. A gem's rim meets its target
+// ring about 104 ms from the note (see HighwayGeometry.test), and the picture is up to a frame old, so `ok` reaches
+// past both: a press while the gem touches the ring at all is a hit.
+export const HIT_WINDOWS_MS = {perfect: 35, good: 70, ok: 125} as const;
 export type HitRating = keyof typeof HIT_WINDOWS_MS;
 
 export const RATING_SCORE_FACTOR: Readonly<Record<HitRating, number>> = {perfect: 1, good: 0.8, ok: 0.5};

@@ -38,8 +38,8 @@ describe('ratingForOffset', () => {
 		[-35, 'perfect'],
 		[36, 'good'],
 		[-70, 'good'],
-		[100, 'ok'],
-		[-101, null],
+		[125, 'ok'],
+		[-126, null],
 	] as const)('rates %d ms as %s', (offset, rating) => {
 		expect(ratingForOffset(offset)).toBe(rating);
 	});

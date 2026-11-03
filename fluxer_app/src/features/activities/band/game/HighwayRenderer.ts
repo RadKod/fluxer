@@ -206,7 +206,6 @@ export class HighwayRenderer {
 		const finaleOn = track.hud.finaleOn;
 		const starOn = track.hud.starPowerActive;
 		this.surface(layout, highway, starOn ? STAR_SURFACE : null);
-		this.grid(layout, highway, nowMs, starOn ? 0.09 : 0.045);
 		this.laneLines(layout, highway, starOn ? 0.12 : 0.06);
 		if (finale) this.finaleLanes(layout, highway, track, finale, nowMs);
 		if (track.freestyle.length > 0) this.soloCues(layout, highway, track, nowMs, frame.reducedMotion);
@@ -261,39 +260,6 @@ export class HighwayRenderer {
 			ctx.fillStyle = SURFACE;
 		}
 		ctx.fill();
-	}
-
-	// The brand's rounded-square texture, one square per lane width, scrolling with the notes.
-	private grid(layout: StageLayout, highway: HighwayLayout, nowMs: number, opacity: number): void {
-		const {ctx} = this;
-		const cell = highway.width / highway.lanes;
-		const speed = noteDistance(layout, layout.lookAheadMs) - strikeDistance(layout);
-		const scroll = ((((nowMs / layout.lookAheadMs) * speed) % cell) + cell) % cell;
-		const inset = cell * (12.5 / 41);
-		const size = cell * (16 / 41);
-		ctx.save();
-		ctx.strokeStyle = `rgba(247, 245, 240, ${opacity})`;
-		ctx.lineWidth = Math.max(0.75, 1.2 * layout.scale);
-		ctx.beginPath();
-		for (let row = -1; row * cell < layout.planeLength; row++) {
-			const near = row * cell - scroll + inset;
-			const far = near + size;
-			if (far < 0 || near > layout.planeLength) continue;
-			for (let lane = 0; lane < highway.lanes; lane++) {
-				const x0 = highway.left + lane * cell + inset;
-				const a = project(layout, x0, near);
-				const b = project(layout, x0 + size, near);
-				const c = project(layout, x0 + size, far);
-				const d = project(layout, x0, far);
-				ctx.moveTo(a.x, a.y);
-				ctx.lineTo(b.x, b.y);
-				ctx.lineTo(c.x, c.y);
-				ctx.lineTo(d.x, d.y);
-				ctx.closePath();
-			}
-		}
-		ctx.stroke();
-		ctx.restore();
 	}
 
 	private laneLines(layout: StageLayout, highway: HighwayLayout, opacity: number): void {
