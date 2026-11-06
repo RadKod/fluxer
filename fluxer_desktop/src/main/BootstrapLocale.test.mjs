@@ -40,7 +40,7 @@ delete process.env.FLUXER_PORTABLE;
 globalThis.__FLUXER_MAIN_APP_OUTPUT_FILE__ = 'main-entry-must-not-load.js';
 installTestModuleStub('@electron/common/BuildChannel', "export const BUILD_CHANNEL = 'stable';");
 const noops = (module, names) => installTestModuleStub(module, names.map(name => 'export const ' + name + ' = () => {};').join(';'));
-noops('@electron/main/ModuleBootHandoff', ['armOpenUrlForwarding', 'observeRendererLaunchConfirmed', 'armSecondInstanceForwarding', 'onMainWindowCreated', 'onMainWindowReady', 'setCommittedModuleFiles', 'setOnDemandModuleInstaller', 'setSecondInstanceSink']);
+noops('@electron/main/ModuleBootHandoff', ['armOpenUrlForwarding', 'hasQuitStarted', 'observeRendererLaunchConfirmed', 'armSecondInstanceForwarding', 'onMainWindowCreated', 'onMainWindowReady', 'setCommittedModuleFiles', 'setOnDemandModuleInstaller', 'setSecondInstanceSink']);
 noops('@electron/main/ModuleRendererReload', ['watchModuleRendererReload']);
 noops('@electron/main/ModuleUpdateGate', ['offerPendingModuleUpdate']);
 noops('@electron/main/WindowsShortcuts', ['repairWindowsShortcuts']);
@@ -99,7 +99,10 @@ test('the blocked bootstrap loads persisted native strings before importing the 
 	const result = runBootstrap('blocked');
 	assert.equal(result.userData, result.savedUserData);
 	assert.equal(result.state.action.label, 'Open Microsoft Store');
-	assert.equal(result.state.message, 'Install the required security update from Microsoft Store before sanalyer starts.');
+	assert.equal(
+		result.state.message,
+		'Install the required security update from Microsoft Store before sanalyer starts.',
+	);
 	assert.equal(result.nativeStringReads, 1);
 });
 

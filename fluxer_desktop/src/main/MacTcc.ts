@@ -185,11 +185,14 @@ let registered = false;
 export function registerMacTccIpcHandlers(options: MacTccIpcOptions = {}): void {
 	if (registered) return;
 	registered = true;
-	ipcMain.handle('mac-tcc:status', async (_event, surface: TccSurface, liveProbe?: unknown): Promise<RendererTccStatus> => {
-		const status = rendererStatusOf(surface, await refreshTccStatus(surface, liveProbe === true));
-		options.onStatus?.(surface, status);
-		return status;
-	});
+	ipcMain.handle(
+		'mac-tcc:status',
+		async (_event, surface: TccSurface, liveProbe?: unknown): Promise<RendererTccStatus> => {
+			const status = rendererStatusOf(surface, await refreshTccStatus(surface, liveProbe === true));
+			options.onStatus?.(surface, status);
+			return status;
+		},
+	);
 	ipcMain.handle('mac-tcc:request', (_event, surface: TccSurface): RendererTccStatus => {
 		const status = rendererStatusOf(surface, requestOf(surface));
 		options.onStatus?.(surface, status);

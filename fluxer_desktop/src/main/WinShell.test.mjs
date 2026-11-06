@@ -190,6 +190,7 @@ function runStartup(preflight, repairWindowsShortcuts = () => {}) {
 		runNativeModulePreflight: preflight,
 		repairWindowsShortcuts,
 		runStartupPhase: (_phase, fn) => fn(),
+		errorMessage: (error) => (error instanceof Error ? error.message : String(error)),
 		log: {error() {}},
 		console: {error() {}},
 		t: (key) => key,

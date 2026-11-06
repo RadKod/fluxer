@@ -212,7 +212,7 @@ function sanitizePersistedGlobalShortcutActions(value: unknown): Array<Persisted
 	return actions.length > 0 ? actions : undefined;
 }
 
-function sanitizePersistedGlobalShortcutsSettings(value: unknown): PersistedGlobalShortcutsSettings | undefined {
+export function sanitizePersistedGlobalShortcutsSettings(value: unknown): PersistedGlobalShortcutsSettings | undefined {
 	if (!isRecord(value)) {
 		return undefined;
 	}

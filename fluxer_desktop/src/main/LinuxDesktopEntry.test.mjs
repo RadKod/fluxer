@@ -51,7 +51,11 @@ const desktopStubs = {
 		LEGACY_LINUX_DESKTOP_ENTRY_ID: 'sanalyer-legacy',
 	},
 	'@electron/common/Logger': {createChildLogger: () => noopLogger},
-	'@electron/main/JumpList': {TASK_ARG_PREFIX: '--fluxer-task='},
+	'@electron/main/JumpList': {
+		TASK_ARG_PREFIX: '--fluxer-task=',
+		isDirectMessagesAvailable: () => true,
+		onDirectMessagesAvailabilityChange: () => {},
+	},
 	'@electron/main/LinuxLaunchPath': {getStableLinuxLaunchPath: () => EXEC_PATH},
 	'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},
 	'@electron/main/MainI18n': {getNativeLocale: () => 'en-US', t: (key) => englishStrings[key] ?? key},

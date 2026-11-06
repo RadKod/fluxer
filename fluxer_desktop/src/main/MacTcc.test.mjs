@@ -206,9 +206,9 @@ describe('MacTcc', () => {
 		const {handlers, module} = loadMacTcc({addon: makeAddon(), probe, screenRecordingRequested: true});
 		module.registerMacTccIpcHandlers();
 		const status = handlers.get('mac-tcc:status');
-		assert.equal(await status(null, 'screen-recording'), 'denied');
+		assert.equal(await status(null, 'screen-recording', true), 'denied');
 		assert.equal(module.getTccStatus('screen-recording'), 'denied');
-		assert.equal(await status(null, 'screen-recording'), 'restart-required');
+		assert.equal(await status(null, 'screen-recording', true), 'restart-required');
 		assert.equal(module.getTccStatus('screen-recording'), 'granted');
 		assert.equal(probe.calls, 2);
 	});
@@ -223,31 +223,31 @@ describe('MacTcc', () => {
 		});
 		module.registerMacTccIpcHandlers({onStatus: (surface, status) => seen.push(`${surface}:${status}`)});
 		const status = handlers.get('mac-tcc:status');
-		assert.equal(await status(null, 'screen-recording'), 'restart-required');
-		assert.equal(await module.refreshTccStatus('screen-recording'), 'granted');
+		assert.equal(await status(null, 'screen-recording', true), 'restart-required');
+		assert.equal(await module.refreshTccStatus('screen-recording', true), 'granted');
 		preflight.status = 'granted';
-		assert.equal(await status(null, 'screen-recording'), 'granted');
+		assert.equal(await status(null, 'screen-recording', true), 'granted');
 		assert.deepEqual(seen, ['screen-recording:restart-required', 'screen-recording:granted']);
 	});
 
 	test('a live grant that is taken away again reads as denied', async () => {
 		const probe = makeProbe(['granted', 'denied']);
 		const {module} = loadMacTcc({addon: makeAddon(), probe, screenRecordingRequested: true});
-		assert.equal(await module.refreshTccStatus('screen-recording'), 'granted');
-		assert.equal(await module.refreshTccStatus('screen-recording'), 'denied');
+		assert.equal(await module.refreshTccStatus('screen-recording', true), 'granted');
+		assert.equal(await module.refreshTccStatus('screen-recording', true), 'denied');
 	});
 
 	test('a probe that times out or throws keeps the last known answer', async () => {
 		const probe = makeProbe(['granted', 'timeout']);
 		const {module} = loadMacTcc({addon: makeAddon(), probe, screenRecordingRequested: true});
-		assert.equal(await module.refreshTccStatus('screen-recording'), 'granted');
-		assert.equal(await module.refreshTccStatus('screen-recording'), 'granted');
+		assert.equal(await module.refreshTccStatus('screen-recording', true), 'granted');
+		assert.equal(await module.refreshTccStatus('screen-recording', true), 'granted');
 		probe.probeScreenRecordingAccess = async () => {
 			throw new Error('probe crashed');
 		};
-		assert.equal(await module.refreshTccStatus('screen-recording'), 'granted');
+		assert.equal(await module.refreshTccStatus('screen-recording', true), 'granted');
 		const stuck = loadMacTcc({addon: makeAddon(), probe: makeProbe(['timeout']), screenRecordingRequested: true});
-		assert.equal(await stuck.module.refreshTccStatus('screen-recording'), 'denied');
+		assert.equal(await stuck.module.refreshTccStatus('screen-recording', true), 'denied');
 	});
 
 	test('the probe is skipped when the preflight already reports a grant', async () => {
@@ -257,7 +257,7 @@ describe('MacTcc', () => {
 			probe,
 			screenRecordingRequested: true,
 		});
-		assert.equal(await module.refreshTccStatus('screen-recording'), 'granted');
+		assert.equal(await module.refreshTccStatus('screen-recording', true), 'granted');
 		assert.equal(probe.calls, 0);
 	});
 
@@ -274,8 +274,8 @@ describe('MacTcc', () => {
 			},
 		};
 		const {module} = loadMacTcc({addon: makeAddon(), probe, screenRecordingRequested: true});
-		const first = module.refreshTccStatus('screen-recording');
-		const second = module.refreshTccStatus('screen-recording');
+		const first = module.refreshTccStatus('screen-recording', true);
+		const second = module.refreshTccStatus('screen-recording', true);
 		release();
 		assert.deepEqual(await Promise.all([first, second]), ['granted', 'granted']);
 		assert.equal(probe.calls, 1);
@@ -283,9 +283,9 @@ describe('MacTcc', () => {
 
 	test('a capture addon without the probe leaves the preflight answer in place', async () => {
 		const {module} = loadMacTcc({addon: makeAddon(), probe: {loadError: null}, screenRecordingRequested: true});
-		assert.equal(await module.refreshTccStatus('screen-recording'), 'denied');
+		assert.equal(await module.refreshTccStatus('screen-recording', true), 'denied');
 		const missing = loadMacTcc({addon: makeAddon(), screenRecordingRequested: true});
-		assert.equal(await missing.module.refreshTccStatus('screen-recording'), 'denied');
+		assert.equal(await missing.module.refreshTccStatus('screen-recording', true), 'denied');
 	});
 
 	test('status and request reads are reported to the listener', async () => {

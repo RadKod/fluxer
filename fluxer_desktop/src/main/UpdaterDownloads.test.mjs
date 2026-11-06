@@ -147,7 +147,10 @@ describe('UpdaterDownloads Linux manual update options', () => {
 					'https://dl.sanalyer.com/desktop/stable/linux/arm64/2026.910.101500/appimage',
 					'sanalyer-2026.910.101500-linux-arm64.AppImage',
 				],
-				['https://dl.sanalyer.com/desktop/stable/linux/arm64/2026.910.101500/deb', 'sanalyer-2026.910.101500-linux-arm64.deb'],
+				[
+					'https://dl.sanalyer.com/desktop/stable/linux/arm64/2026.910.101500/deb',
+					'sanalyer-2026.910.101500-linux-arm64.deb',
+				],
 				[
 					'https://dl.sanalyer.com/desktop/stable/linux/arm64/2026.910.101500/rpm',
 					'sanalyer-2026.910.101500-linux-aarch64.rpm',
@@ -196,7 +199,10 @@ describe('UpdaterDownloads Linux manual update options', () => {
 			assert.equal(version, '2026.908.173325');
 			assert.match(option.suggestedName, /^sanalyer-Canary-2026\.908\.173325-linux-/);
 		}
-		assert.equal(getManualDownloadUrl(info), 'https://dl.sanalyer.com/desktop/canary/linux/x64/2026.908.173325/appimage');
+		assert.equal(
+			getManualDownloadUrl(info),
+			'https://dl.sanalyer.com/desktop/canary/linux/x64/2026.908.173325/appimage',
+		);
 	});
 });
 
@@ -210,7 +216,10 @@ describe('UpdaterDownloads manual download url', () => {
 			},
 		});
 
-		assert.equal(getManualDownloadUrl(info), 'https://dl.sanalyer.com/desktop/stable/linux/x64/2026.910.101500/appimage');
+		assert.equal(
+			getManualDownloadUrl(info),
+			'https://dl.sanalyer.com/desktop/stable/linux/x64/2026.910.101500/appimage',
+		);
 	});
 
 	test('falls back to the response file urls in format order on macOS', () => {

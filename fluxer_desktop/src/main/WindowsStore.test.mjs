@@ -34,6 +34,7 @@ function load(relativePath, stubs, processOverrides) {
 		module,
 		exports: module.exports,
 		console,
+		Buffer,
 		URL,
 		Promise,
 		setTimeout,
@@ -47,7 +48,11 @@ function load(relativePath, stubs, processOverrides) {
 			if (specifier.startsWith('@electron/')) {
 				return load(`../${specifier.slice('@electron/'.length)}.ts`, stubs, processOverrides);
 			}
-			if (specifier.startsWith('@fluxer/desktop_ipc/') || specifier.startsWith('@fluxer/instance_bootstrap/')) {
+			if (
+				specifier.startsWith('@fluxer/desktop_ipc/') ||
+				specifier.startsWith('@fluxer/instance_bootstrap/') ||
+				specifier.startsWith('@fluxer/record_utils/')
+			) {
 				return load(`../../../packages/${specifier.slice('@fluxer/'.length)}.ts`, stubs, processOverrides);
 			}
 			return require(specifier);
@@ -135,7 +140,7 @@ function loadUpdater(windowsStore) {
 			'@electron/common/UserDataPath': {isPortableMode: () => false},
 			'@electron/main/AppImageUpdate': {isRunningFromAppImage: () => false},
 			'@electron/main/DesktopTray': {destroyDesktopTray() {}},
-			'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},
+			'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false, isFlatpakFromFluxerRepository: () => false},
 			'@electron/main/Troubleshooting': {relaunchAndExit() {}},
 			'@electron/main/UpdaterApplyState': {
 				readVelopackApplyAttempt: () => null,
@@ -240,7 +245,7 @@ function loadAutostart(
 			'@electron/common/DesktopIdentity': identityStub,
 			'@electron/common/UserDataPath': {isPortableMode: () => false},
 			'@electron/main/LinuxLaunchPath': {getStableLinuxLaunchPath: () => EXEC_PATH},
-			'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},
+			'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false, isFlatpakFromFluxerRepository: () => false},
 			'@electron/main/MainI18n': {t: (key) => key},
 			electron: electron.module,
 			'electron-log': logStub,

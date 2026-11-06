@@ -61,7 +61,7 @@ describe('Windows taskbar platform gates', () => {
 			assert.equal(tasks.length, platform === 'win32' ? 1 : 0);
 			assert.equal(localeListeners.length, platform === 'win32' ? 1 : 0);
 			if (platform === 'win32') {
-				assert.equal(tasks[0].length, 2);
+				assert.equal(tasks[0].length, 3);
 				localeListeners[0]();
 				assert.equal(tasks.length, 2);
 			}

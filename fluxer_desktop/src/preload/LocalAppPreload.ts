@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {
+	DESKTOP_MODULE_UPDATE_CHANNELS,
+	DESKTOP_MODULE_UPDATE_EVENTS,
+	type DesktopPendingModuleUpdate,
+} from '@electron/common/ModuleUpdateChannels';
 import type {DesktopLegacyHarvest} from '@fluxer/desktop_ipc/src/LegacyHarvestContract';
 import {DESKTOP_LEGACY_HARVEST_CHANNELS} from '@fluxer/desktop_ipc/src/LegacyHarvestContract';
 import type {DesktopLocalAppUploadProgress} from '@fluxer/desktop_ipc/src/LocalAppRouteContract';
@@ -22,12 +27,7 @@ import type {
 	DesktopRuntimeTransactionRequest,
 } from '@fluxer/desktop_ipc/src/LocalAppRuntimeContract';
 import {DESKTOP_RUNTIME_CONFIG_CHANNELS} from '@fluxer/desktop_ipc/src/LocalAppRuntimeContract';
-import type {
-	DesktopModuleAPI,
-	DesktopModuleEnsureResult,
-	DesktopPendingModuleUpdate,
-} from '@fluxer/desktop_ipc/src/ModuleContract';
-import {DESKTOP_MODULE_UPDATE_CHANNELS, DESKTOP_MODULE_UPDATE_EVENTS} from '@electron/common/ModuleUpdateChannels';
+import type {DesktopModuleAPI, DesktopModuleEnsureResult} from '@fluxer/desktop_ipc/src/ModuleContract';
 import {DESKTOP_MODULE_CHANNELS} from '@fluxer/desktop_ipc/src/ModuleContract';
 
 interface LocalAppPreloadRenderer {

@@ -674,7 +674,7 @@ function isLegacyGeneratedLinuxAutostartEntry(contents: string, entry: Map<strin
 	return contents.includes(GENERATED_MARKER) || entry.get('StartupWMClass')?.trim() === LEGACY_LINUX_DESKTOP_ENTRY_ID;
 }
 
-function rewriteLegacyLinuxAutostartContents(contents: string, execPath: string, execStale: boolean): string {
+export function rewriteLegacyLinuxAutostartContents(contents: string, execPath: string, execStale: boolean): string {
 	const replacements = new Map<string, string>([
 		['StartupWMClass', LINUX_STARTUP_WM_CLASS],
 		['Icon', LINUX_ICON_NAME],

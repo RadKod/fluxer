@@ -1,8 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
 import {describe, test} from 'node:test';
-import {createAppStoreBoundary, loadAppStoreBinding} from './AppStoreNativeBoundary.ts';
+import {loadTsModule} from './fixtures/TsModuleLoader.mjs';
+
+const nodeRequire = createRequire(import.meta.url);
+const {createAppStoreBoundary, loadAppStoreBinding} = loadTsModule('@electron/main/AppStoreNativeBoundary', {
+	stubs: {'node:module': {createRequire: () => nodeRequire}},
+});
 
 const OPTIONS = {path: '/userData/app-store.sqlite'};
 

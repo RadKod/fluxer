@@ -3,6 +3,7 @@
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import vm from 'node:vm';
+import {loadTsModule} from './fixtures/TsModuleLoader.mjs';
 
 const require = createRequire(import.meta.url);
 const esbuild = require('esbuild');
@@ -36,6 +37,9 @@ export function loadMainModule(name, stubs, processStub, globals = {}, cache = n
 			if (specifier in stubs) return stubs[specifier];
 			if (specifier === '@electron/main/WinShell') {
 				return loadMainModule('WinShell', stubs, processStub, globals, cache);
+			}
+			if (specifier === '@electron/common/ErrorMessage' || specifier.startsWith('@fluxer/record_utils/')) {
+				return loadTsModule(specifier);
 			}
 			if (!specifier.startsWith('node:')) throw new Error(`Unexpected module: ${specifier}`);
 			return require(specifier);

@@ -10,6 +10,7 @@ import {join} from 'node:path';
 import {after, before, describe, test} from 'node:test';
 import {fileURLToPath} from 'node:url';
 import vm from 'node:vm';
+import {loadTsModule} from './fixtures/TsModuleLoader.mjs';
 
 const require = createRequire(import.meta.url);
 const esbuild = require('esbuild');
@@ -140,7 +141,7 @@ function loadUpdater({
 			parseUnreadBadge: (value) => (typeof value === 'number' ? value : null),
 			describeUnreadBadge: (badge) => String(badge),
 		},
-		'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},
+		'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false, isFlatpakFromFluxerRepository: () => false},
 		'@electron/main/Troubleshooting': {
 			relaunchAndExit() {
 				state.relaunched = true;
@@ -205,6 +206,8 @@ function loadUpdater({
 					},
 				};
 			}
+			if (stubs[specifier] === undefined && specifier === '@electron/common/ErrorMessage')
+				return loadTsModule(specifier);
 			return stubs[specifier] ?? require(specifier);
 		},
 	};

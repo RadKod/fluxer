@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {
-	ThemeFolderChange,
-	ThemeFolderImportResult,
-	ThemeFolderStatus,
-} from '@fluxer/desktop_ipc/src/DesktopBridgeTypes';
 import type {BuildChannel} from '@electron/common/BuildChannel';
 import type {GameActivityAPI} from '@electron/common/GameActivityTypes';
 import type {DesktopAccountStorageAPI} from '@fluxer/desktop_ipc/src/AccountContract';
 import type {AccountEngineRendererAPI} from '@fluxer/desktop_ipc/src/AccountEngineContract';
 import type {DesktopHandoffAPI} from '@fluxer/desktop_ipc/src/BrowserHandoffContract';
 import type {DesktopCapabilityManifest} from '@fluxer/desktop_ipc/src/CapabilityManifest';
+import type {
+	ThemeFolderChange,
+	ThemeFolderImportResult,
+	ThemeFolderStatus,
+} from '@fluxer/desktop_ipc/src/DesktopBridgeTypes';
 import type {NativeGatewayTransportAPI} from '@fluxer/desktop_ipc/src/GatewayTransportContract';
 import type {DesktopKnownInstanceStorageAPI} from '@fluxer/desktop_ipc/src/KnownInstanceContract';
 import type {DesktopModuleAPI} from '@fluxer/desktop_ipc/src/ModuleContract';
@@ -22,7 +22,6 @@ import type {
 	PublicKeyCredentialRequestOptionsJSON,
 	RegistrationResponseJSON,
 } from '@simplewebauthn/browser';
-
 
 export type {ThemeFolderChange, ThemeFolderImportResult, ThemeFolderStatus};
 export interface LinuxAppearanceSnapshot {
@@ -637,6 +636,8 @@ export interface TrayRuntimeStatePayload {
 	selfDeaf: boolean;
 	presenceStatus: TrayPresenceStatus | null;
 	buildInfo: string | null;
+	hidePersonalInformation: boolean;
+	customCssOff: boolean | null;
 }
 
 export type TrayActionPayload =

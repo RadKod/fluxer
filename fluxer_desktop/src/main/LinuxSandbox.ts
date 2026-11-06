@@ -24,7 +24,7 @@ export function isFlatpakFromFluxerRepository(): boolean {
 	}
 }
 
-function parseFlatpakInfoAppId(contents: string): string | null {
+export function parseFlatpakInfoAppId(contents: string): string | null {
 	let inApplication = false;
 	for (const rawLine of contents.split('\n')) {
 		const line = rawLine.trim();

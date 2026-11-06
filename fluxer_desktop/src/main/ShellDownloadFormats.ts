@@ -8,7 +8,7 @@ function getDesktopDownloadArch(arch: NodeJS.Architecture): DesktopDownloadArch 
 	return arch === 'arm64' ? 'arm64' : 'x64';
 }
 
-const DESKTOP_DOWNLOAD_ARCH = getDesktopDownloadArch(process.arch);
+export const DESKTOP_DOWNLOAD_ARCH = getDesktopDownloadArch(process.arch);
 const PACKAGE_ORIGIN_ENV = 'FLUXER_DESKTOP_PACKAGE_ORIGIN';
 const CHANNEL_PACKAGE_ORIGINS: Record<BuildChannel, string> = {
 	stable: 'https://dl.sanalyer.com',

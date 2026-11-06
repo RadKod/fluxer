@@ -25,7 +25,7 @@ describe('main app entry point', () => {
 		);
 		assert.match(
 			source,
-			/\.catch\(\(error: unknown\) => \{\n\t+startupWindowsPending = false;\n\t+log\.error\('\[Startup\] whenReady chain rejected:', error\);/,
+			/\.catch\(\(error: unknown\) => \{\n\t+startupWindowsPending = false;\n[\s\S]*?log\.error\('\[Startup\] whenReady chain rejected:', error\);/,
 		);
 	});
 

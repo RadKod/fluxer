@@ -152,7 +152,11 @@ for (const channel of ['stable', 'canary']) {
 			'@electron/common/Constants': {APP_PROTOCOL: 'sanalyer'},
 			'@electron/common/DesktopIdentity': identityFor(channel),
 			'@electron/common/Logger': {createChildLogger: () => ({debug() {}, info() {}, warn() {}})},
-			'@electron/main/JumpList': {TASK_ARG_PREFIX: '--fluxer-task='},
+			'@electron/main/JumpList': {
+				TASK_ARG_PREFIX: '--fluxer-task=',
+				isDirectMessagesAvailable: () => true,
+				onDirectMessagesAvailabilityChange: () => {},
+			},
 			'@electron/main/LinuxLaunchPath': {getStableLinuxLaunchPath: () => '/apps/sanalyer.AppImage'},
 			'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},
 			'@electron/main/MainI18n': {getNativeLocale: () => 'en-US', t: (key) => key},

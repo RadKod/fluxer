@@ -169,7 +169,7 @@ function digestDesktopFileBody(body: string): string {
 	return crypto.createHash('sha256').update(body, 'utf8').digest('hex');
 }
 
-function buildDesktopFileContents(execPath: string, hidden: boolean): string {
+export function buildDesktopFileContents(execPath: string, hidden: boolean): string {
 	const body = buildDesktopFileBody(execPath, hidden);
 	return body.replace(
 		`${GENERATED_MARKER}\n`,
@@ -349,21 +349,23 @@ function desktopEntryResolves(): boolean {
 	return findSystemDesktopEntry() !== null || readExistingDesktopFile(getDesktopFilePath()) !== null;
 }
 
-export function ensureLinuxDesktopEntry(): void {
-	if (process.platform !== 'linux') return;
+// sanalyer: returns whether a desktop entry resolves, so the shell can hand the portal app id to native screen
+// capture (FLUXER_LINUX_PORTAL_APP_ID); upstream dropped that together with its screen-capture crate.
+export function ensureLinuxDesktopEntry(): boolean {
+	if (process.platform !== 'linux') return false;
 	if (!app.isPackaged) {
 		logger.debug('Skipping .desktop entry management for an unpackaged run');
-		return;
+		return false;
 	}
 	if (isFlatpakRuntime()) {
 		logger.debug('Skipping .desktop entry creation in Flatpak; package export owns launcher/protocol integration');
 		registerProtocolClient();
-		return;
+		return false;
 	}
 	if (process.env.FLUXER_DISABLE_DESKTOP_FILE === '1') {
 		logger.debug('Skipping .desktop entry management; FLUXER_DISABLE_DESKTOP_FILE=1');
 		if (findSystemDesktopEntry() !== null) registerProtocolClient();
-		return;
+		return desktopEntryResolves();
 	}
 	let changed = removeLegacyGeneratedDesktopEntry();
 	try {
@@ -379,5 +381,7 @@ export function ensureLinuxDesktopEntry(): void {
 		actionRefreshSubscribed = true;
 		onDirectMessagesAvailabilityChange(refreshDesktopEntryActions);
 	}
-	if (desktopEntryResolves()) registerProtocolClient();
+	const resolves = desktopEntryResolves();
+	if (resolves) registerProtocolClient();
+	return resolves;
 }

@@ -232,6 +232,7 @@ test('desktop_config_rules_are_account_scoped_bounded_and_runtime_free', () => {
 					return {InstanceEndpointKind: {API: 'api'}, normalizeInstanceEndpoint: () => null};
 				}
 				if (specifier === 'electron-log') return {warn() {}, info() {}, error() {}, debug() {}};
+				if (specifier.startsWith('@fluxer/')) return loadTsModule(specifier);
 				return require(specifier);
 			},
 		},
@@ -344,7 +345,8 @@ export function loadIntegration({platform = 'win32'} = {}) {
 				require: (name) => {
 					if (Object.hasOwn(stubs, name)) return stubs[name];
 					if (name.startsWith('@electron/')) return load(resolve(root, `${name.slice('@electron/'.length)}.ts`));
-					if (name.startsWith('@fluxer/')) return load(require.resolve(`${name}.ts`));
+					if (name.startsWith('@fluxer/'))
+						return load(resolve(root, '../../packages', `${name.slice('@fluxer/'.length)}.ts`));
 					if (name.startsWith('.')) return load(resolve(dirname(path), name.endsWith('.json') ? name : `${name}.ts`));
 					return require(name);
 				},

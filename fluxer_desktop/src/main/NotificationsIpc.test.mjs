@@ -7,6 +7,7 @@ import {createRequire} from 'node:module';
 import {describe, test} from 'node:test';
 import {fileURLToPath} from 'node:url';
 import vm from 'node:vm';
+import {loadTsModule} from './fixtures/TsModuleLoader.mjs';
 
 const require = createRequire(import.meta.url);
 const esbuild = require('esbuild');
@@ -57,8 +58,12 @@ function loadNotificationsIpc() {
 	const stubs = {
 		'node:module': {createRequire: () => () => ({})},
 		'@electron/common/DesktopIdentity': {DESKTOP_APP_NAME: 'sanalyer', LINUX_DESKTOP_ENTRY_ID: 'fluxer'},
+		'@electron/common/ErrorMessage': {
+			errorMessage: (error) => (error instanceof Error ? error.message : String(error)),
+		},
 		'@electron/common/Logger': {createChildLogger: () => ({warn() {}, info() {}, debug() {}})},
-		'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false},
+		'@electron/main/LinuxSandbox': {isFlatpakRuntime: () => false, getLinuxDesktopId: () => 'fluxer'},
+		'@electron/main/NotificationTargets': loadTsModule('@electron/main/NotificationTargets'),
 		'@electron/main/LaunchOptions': {getNativeNotificationsMode: () => 'auto'},
 		'@electron/main/MainI18n': {t: (key) => key},
 		'@electron/main/NotificationIcon': {resolveNotificationIcon: async () => null},

@@ -9,6 +9,7 @@ import {
 	setDesktopWindowBehaviorSettings,
 	setPrebootTheme,
 } from '@electron/common/DesktopConfig';
+import {DESKTOP_MODULE_UPDATE_CHANNELS, DESKTOP_MODULE_UPDATE_EVENTS} from '@electron/common/ModuleUpdateChannels';
 import type {
 	ClipboardWriteFileResult,
 	DownloadFileResult,
@@ -108,7 +109,6 @@ import {
 import {flashWindowForAttention, stopFlashingWindow} from '@electron/main/WindowFlash';
 import {setWindowsBadgeOverlay} from '@electron/main/WindowsBadge';
 import {registerWindowsToastIpcHandlers} from '@electron/main/WindowsToast';
-import {DESKTOP_MODULE_UPDATE_CHANNELS, DESKTOP_MODULE_UPDATE_EVENTS} from '@electron/common/ModuleUpdateChannels';
 import {DESKTOP_DIRECT_MESSAGES_AVAILABLE_CHANNEL} from '@fluxer/desktop_ipc/src/DirectMessagesContract';
 import {DESKTOP_INSTANCE_PRODUCT_NAME_CHANNEL} from '@fluxer/desktop_ipc/src/InstanceProductNameContract';
 import {DESKTOP_MODULE_CHANNELS} from '@fluxer/desktop_ipc/src/ModuleContract';

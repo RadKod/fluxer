@@ -52,7 +52,9 @@ function decideShellUpdatePlan(runtime: ShellUpdateRuntime): ShellUpdatePlan {
 		if (!runtime.portable && runtime.appImage != null) {
 			return {capability: ShellUpdateCapability.SELF_UPDATE, updater: 'appimage', target: runtime.appImage};
 		}
-		return {capability: ShellUpdateCapability.MANAGED_PACKAGE, releaseFeed: 'fluxer'};
+		// sanalyer: there is no sanalyer package repository, so deb/rpm/tar installs get the manual download offer
+		// instead of upstream's "your package manager updates this" answer.
+		return {capability: ShellUpdateCapability.MANUAL_DOWNLOAD, reason: 'platform'};
 	}
 	if (runtime.portable) {
 		return {capability: ShellUpdateCapability.MANUAL_DOWNLOAD, reason: 'platform'};
@@ -62,9 +64,6 @@ function decideShellUpdatePlan(runtime: ShellUpdateRuntime): ShellUpdatePlan {
 	}
 	if (runtime.platform === 'darwin') {
 		return {capability: ShellUpdateCapability.SELF_UPDATE, updater: 'electron'};
-	}
-	if (runtime.platform === 'linux' && runtime.appImage != null) {
-		return {capability: ShellUpdateCapability.SELF_UPDATE, updater: 'appimage', target: runtime.appImage};
 	}
 	return {capability: ShellUpdateCapability.MANUAL_DOWNLOAD, reason: 'platform'};
 }

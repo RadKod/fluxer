@@ -55,6 +55,7 @@ const HTTP_TIMEOUT_MS = 15_000;
 const HTTP_RESPONSE_MAX_BYTES = 4 * 1024 * 1024;
 const HTTP_RESPONSE_MAX_CHUNKS = 4096;
 const NET_POLL_INTERVAL_MS = 5_000;
+const ACCOUNT_ENGINE_HTTP_SERVICE_NAME = 'desktop_account_engine';
 
 let controller: AccountEngineHostController | null = null;
 let providedAccounts: ReadonlyArray<AccountEngineAccountEntry> = [];
@@ -151,6 +152,7 @@ async function engineHttp(
 		},
 		method,
 		originTrust: DesktopOriginTrust.REGISTERED,
+		serviceName: ACCOUNT_ENGINE_HTTP_SERVICE_NAME,
 		signal: null,
 		timeoutMs: HTTP_TIMEOUT_MS,
 		url: `${base}/v${entry.apiCodeVersion}${requestPath}`,

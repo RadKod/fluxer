@@ -5,7 +5,7 @@ import type {LinuxDesktopKind, LinuxSessionType} from '@electron/common/Types';
 
 type SessionEnv = Readonly<Record<string, string | undefined>>;
 
-function detectLinuxSessionType(env: SessionEnv, pathExists: (candidate: string) => boolean): LinuxSessionType {
+export function detectLinuxSessionType(env: SessionEnv, pathExists: (candidate: string) => boolean): LinuxSessionType {
 	const sessionType = (env.XDG_SESSION_TYPE ?? '').trim().toLowerCase();
 	if (sessionType === 'x11' || sessionType === 'wayland') return sessionType;
 	const waylandDisplay = (env.WAYLAND_DISPLAY ?? '').trim();
@@ -23,7 +23,7 @@ function detectLinuxSessionType(env: SessionEnv, pathExists: (candidate: string)
 	return 'unknown';
 }
 
-function detectLinuxDesktop(env: SessionEnv): LinuxDesktopKind {
+export function detectLinuxDesktop(env: SessionEnv): LinuxDesktopKind {
 	const tokens = new Set((env.XDG_CURRENT_DESKTOP ?? '').split(':').map((token) => token.trim().toLowerCase()));
 	if (tokens.has('kde')) return 'kde';
 	if (tokens.has('hyprland') || (env.HYPRLAND_INSTANCE_SIGNATURE ?? '').trim().length > 0) return 'hyprland';

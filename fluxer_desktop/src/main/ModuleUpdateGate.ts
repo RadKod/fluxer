@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createChildLogger} from '@electron/common/Logger';
-import type {DesktopPendingModuleUpdate} from '@fluxer/desktop_ipc/src/ModuleContract';
+import type {DesktopPendingModuleUpdate} from '@electron/common/ModuleUpdateChannels';
 
 const logger = createChildLogger('ModuleUpdateGate');
 

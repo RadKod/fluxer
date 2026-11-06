@@ -5,6 +5,7 @@ import path from 'node:path';
 import {getDesktopWindowBehaviorSettings, loadDesktopConfig} from '@electron/common/DesktopConfig';
 import {
 	DESKTOP_APP_NAME,
+	LINUX_DESKTOP_ENTRY_ID,
 	WINDOWS_APP_USER_MODEL_ID,
 	WINDOWS_TOAST_ACTIVATOR_CLSID,
 } from '@electron/common/DesktopIdentity';
@@ -416,7 +417,11 @@ if (launchConfigurationError) {
 				}
 				stopStartupIfQuitting();
 				try {
-					runStartupPhase('linux-desktop-entry', ensureLinuxDesktopEntry);
+					runStartupPhase('linux-desktop-entry', () => {
+						if (ensureLinuxDesktopEntry()) {
+							process.env.FLUXER_LINUX_PORTAL_APP_ID = LINUX_DESKTOP_ENTRY_ID;
+						}
+					});
 				} catch (error) {
 					log.error('[Init] Failed to ensure the Linux desktop entry:', error);
 				}
