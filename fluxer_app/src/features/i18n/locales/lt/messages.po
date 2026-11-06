@@ -6435,6 +6435,13 @@ msgstr ""
 "leidimas jau suteiktas, paleiskite iš naujo {productName2}, kad „macOS“ jį "
 "pritaikytų."
 
+#. Switch in the sensitive content settings. Turns on 18+ communities and
+#. channels and the "Show" sensitive media option in the Fluxer app for iPhone
+#. and iPad.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid "Allow 18+ content on iPhone and iPad"
+msgstr "Leisti 18+ turinį iPhone ir iPad įrenginiuose"
+
 #. Private thread setting that lets non-moderators add other members.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
 msgid "Allow anyone to invite"
@@ -9489,6 +9496,30 @@ msgstr ""
 "Naršyklės nerodo kamerų ekrano bendrinimo parinkiklyje. Vietoj to "
 "pasirinkite jas iš šio įrenginių skirtuko. Jei čia nieko nerodoma, leiskite "
 "prieigą prie kameros arba prijunkite įrenginį."
+
+#. Shown on a self-hosted instance opened over plain HTTP when someone tries
+#. to use the microphone, camera or screen sharing, which browsers block
+#. there. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow the microphone, camera and screen sharing on sites that "
+"use HTTPS, and this instance doesn't use HTTPS. You can still join voice "
+"channels and listen."
+msgstr ""
+"Naršyklės leidžia naudoti mikrofoną, kamerą ir ekrano bendrinimą tik "
+"svetainėse, kurios naudoja HTTPS, o ši instancija HTTPS nenaudoja. Vis tiek "
+"galite prisijungti prie balso kanalų ir klausytis."
+
+#. Short note next to a setting or button that browsers turn off on a self-
+#. hosted instance opened over plain HTTP, such as notifications or passkeys.
+#. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow this on sites that use HTTPS, and this instance doesn't "
+"use HTTPS."
+msgstr ""
+"Naršyklės tai leidžia tik svetainėse, kurios naudoja HTTPS, o ši instancija "
+"HTTPS nenaudoja."
 
 #. Where the dark mode favicon appears and the recommended format, in the
 #. setup wizard. size is a file size such as 10 MB.
@@ -14663,12 +14694,6 @@ msgstr "Nepavyko prisijungti prie {domain}. Pabandykite dar kartą."
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
 msgid "Couldn't connect to {names}"
 msgstr "Nepavyko prisijungti prie {names}"
-
-#. Instance selector error shown when no Fluxer instance answered at the
-#. address. Domain is interpolated.
-#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
-msgid "Couldn't connect to a sanalyer instance at {domain}. Check the address and that the instance is online."
-msgstr "Nepavyko susisiekti su sanalyer egzemplioriumi adresu {domain}. Patikrinkite adresą ir įsitikinkite, kad egzempliorius veikia."
 
 #. Toast shown when joining a voice channel fails because the connection timed
 #. out or the transport dropped.
@@ -20610,12 +20635,6 @@ msgstr ""
 msgid "Everyone"
 msgstr "Visi"
 
-#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
-#. subscription and must not be translated. 4K and fps are video terms.
-#: src/features/voice/utils/VoiceMessageDescriptors.ts
-msgid "Everyone in the call gets {premiumProductName} stream quality for free, with up to 4K source resolution and 60 fps."
-msgstr "Visi skambučio dalyviai nemokamai gauna „{premiumProductName}“ transliacijos kokybę: iki 4K raiškos ir 60 kadrų per sekundę."
-
 #. Description of the single community option in the setup wizard.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
 msgid ""
@@ -21865,8 +21884,8 @@ msgid ""
 "Fluxer couldn't apply this CSS. Check it for a broken comment, string or "
 "bracket."
 msgstr ""
-"sanalyer nepavyko pritaikyti šio CSS. Patikrink, ar nėra sugadinto komentaro, "
-"eilutės ar skliausto."
+"sanalyer nepavyko pritaikyti šio CSS. Patikrink, ar nėra sugadinto "
+"komentaro, eilutės ar skliausto."
 
 #. Alert when the SMTP check fails and the mail server sent no reply. host is
 #. the mail server address.
@@ -21906,8 +21925,8 @@ msgid ""
 "Fluxer won't load {count, plural, one {# file} other {# files}} that this "
 "theme links to on other sites."
 msgstr ""
-"sanalyer neįkels {count, plural, one {# failo} few {# failų} other {# failų}} "
-"iš kitų svetainių, į kurias nukreipia ši tema."
+"sanalyer neįkels {count, plural, one {# failo} few {# failų} other {# "
+"failų}} iš kitų svetainių, į kurias nukreipia ši tema."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -24753,8 +24772,8 @@ msgid ""
 "If you installed Fluxer with rexctl, it printed the token when it finished. "
 "Run this on your server to show it again."
 msgstr ""
-"Jei „sanalyer“ įdiegėte naudodami „rexctl“, žetonas buvo atspausdintas baigus "
-"diegimą. Paleiskite tai savo serveryje, kad jį vėl parodytumėte."
+"Jei „sanalyer“ įdiegėte naudodami „rexctl“, žetonas buvo atspausdintas "
+"baigus diegimą. Paleiskite tai savo serveryje, kad jį vėl parodytumėte."
 
 #. What the app shows when no symbol is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -24772,7 +24791,8 @@ msgid ""
 "Fluxer wordmark while the product name is Fluxer."
 msgstr ""
 "Jei paliksite tuščią, produkto pavadinimas rodomas kaip paprastas tekstas "
-"arba kaip „sanalyer“ žodinis logotipas, kol produkto pavadinimas yra „sanalyer“."
+"arba kaip „sanalyer“ žodinis logotipas, kol produkto pavadinimas yra "
+"„sanalyer“."
 
 #. What the app shows when no sign-in background is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -24824,9 +24844,9 @@ msgid ""
 "least 32 characters that you choose, restart Fluxer, and enter that value "
 "here."
 msgstr ""
-"Jei „sanalyer“ paleidžiate be „rexctl“, nustatykite „FLUXER_SETUP_TOKEN“ bent "
-"32 simbolių ilgio pasirinkta reikšme, paleiskite „sanalyer“ iš naujo ir "
-"įveskite tą reikšmę čia."
+"Jei „sanalyer“ paleidžiate be „rexctl“, nustatykite „FLUXER_SETUP_TOKEN“ "
+"bent 32 simbolių ilgio pasirinkta reikšme, paleiskite „sanalyer“ iš naujo ir"
+" įveskite tą reikšmę čia."
 
 #: src/features/user/components/modals/FluxerTagChangeModal.tsx
 msgid ""
@@ -26999,6 +27019,13 @@ msgstr "Sužinokite apie ekrano bendrinimo peržiūras"
 msgid "Learn more"
 msgstr "Sužinoti daugiau"
 
+#. Link under the Plutonium page hero buttons on self-hosted instances.
+#. premiumProductName is the paid tier name set by the instance. Opens a page
+#. about the tier that the instance admin chose.
+#: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
+msgid "Learn more about {premiumProductName}"
+msgstr "Sužinokite daugiau apie „{premiumProductName}“"
+
 #. Confirmation text before leaving a private thread. threadName is the thread
 #. name.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
@@ -27260,6 +27287,18 @@ msgstr "Leidžia kitiems matyti jus vaizdo įraše."
 msgid "Lets push-to-talk and keybinds work in other apps."
 msgstr ""
 "Leiskite „push-to-talk“ ir sparčiuosius klavišus veikti kitose programose."
+
+#. Helper text under the "Allow 18+ content on iPhone and iPad" switch. "Show"
+#. is the sensitive media option name and must match its translation.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid ""
+"Lets you open communities and channels marked 18+ in the Fluxer app for "
+"iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
+" change this on the web or on desktop."
+msgstr ""
+"Leidžia Fluxer programėlėje, skirtoje iPhone ir iPad, atidaryti 18+ "
+"pažymėtas bendruomenes ir kanalus bei pasirinkti „Rodyti“ jautriai medijai. "
+"Šį nustatymą galite pakeisti tik žiniatinklyje arba kompiuteryje."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx
 msgid "Lets you reset your password if you forget it."
@@ -32592,8 +32631,8 @@ msgid ""
 "you have Fluxer open and some of what's on your screen."
 msgstr ""
 "Pasitikėk tik svetainėmis, kurias žinai. Svetainė, kuria pasitiki, gali "
-"matyti tavo IP adresą, kada sanalyer atidarytas, ir dalį to, kas rodoma tavo "
-"ekrane."
+"matyti tavo IP adresą, kada sanalyer atidarytas, ir dalį to, kas rodoma tavo"
+" ekrane."
 
 #. Body of the error modal shown when a non-Visionary user tries to rejoin a
 #. gated Plutonium community.
@@ -33398,8 +33437,8 @@ msgid ""
 "Operators and the Fluxer Team talking about self-hosting in the #operators "
 "channel of Fluxer Labs"
 msgstr ""
-"Operators ir sanalyer komanda kalbasi apie savarankišką talpinimą sanalyer Labs "
-"kanale #operators"
+"Operators ir sanalyer komanda kalbasi apie savarankišką talpinimą sanalyer "
+"Labs kanale #operators"
 
 #. Heading of the Operators' wall section in the Operator Pass settings tab.
 #. Operators' wall is the name of a section of the homepage.
@@ -42336,8 +42375,8 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Rodyti tekstą „sanalyer Sans“ (ankstesnis numatytasis šriftas), o ne „Windows“"
-" sistemos šriftą"
+"Rodyti tekstą „sanalyer Sans“ (ankstesnis numatytasis šriftas), o ne "
+"„Windows“ sistemos šriftą"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
 #. and Linux.
@@ -46144,8 +46183,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"sanalyer programėlės iOS ir Android gauna pranešimus per sanalyer valdomą push "
-"tarpininką, kuris perduoda juos Apple ir Google. Norėdami jį naudoti, "
+"sanalyer programėlės iOS ir Android gauna pranešimus per sanalyer valdomą "
+"push tarpininką, kuris perduoda juos Apple ir Google. Norėdami jį naudoti, "
 "sutinkate su push tarpininko privatumo pranešimu."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -47072,8 +47111,8 @@ msgid ""
 "This browser can't save Fluxer's data. You'll need to sign in again after "
 "you close it."
 msgstr ""
-"Ši naršyklė negali išsaugoti sanalyer duomenų. Ją uždarius reikės prisijungti "
-"iš naujo."
+"Ši naršyklė negali išsaugoti sanalyer duomenų. Ją uždarius reikės "
+"prisijungti iš naujo."
 
 #. Console warning line explaining that the browser console is meant for
 #. developers.
@@ -47260,19 +47299,6 @@ msgstr "Šis kanalas sinchronizuotas su pagrindine kategorija <0>{0}</0>."
 #: src/features/app/components/alerts/ChannelDeleteFailedModal.tsx
 msgid "This channel no longer exists. It may have already been deleted."
 msgstr "Šis kanalas nebeegzistuoja. Gali būti, kad jis jau buvo ištrintas."
-
-#. Error shown when signing in or signing up on a self-hosted instance opened
-#. over plain HTTP or a bare IP address, where the browser blocks the
-#. automatic background check. HTTPS and localhost are technical terms, keep
-#. them as is.
-#: src/features/auth/altcha/CaptchaInterceptor.ts
-msgid ""
-"This check only runs when the app is opened over HTTPS or on localhost. Ask "
-"the instance owner to serve it over HTTPS, or open it from localhost."
-msgstr ""
-"Šis patikrinimas atliekamas tik tada, kai programa atidaroma naudojant HTTPS"
-" arba vietiniame kompiuteryje. Paprašykite instancijos savininko, kad jis "
-"pateiktų ją per HTTPS, arba atidarykite ją iš vietinio kompiuterio."
 
 #. Problem shown in the quick CSS editor on a generated class name. [data-flx]
 #. is CSS code and stays in English.
@@ -47776,6 +47802,13 @@ msgstr ""
 "formą. Praneškite apie turinį programėlėje arba susisiekite su šios "
 "instancijos administratoriais."
 
+#. Title of the dialog shown when someone tries to use the microphone, camera
+#. or screen sharing on a self-hosted instance opened over plain HTTP. HTTPS
+#. is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid "This instance doesn't use HTTPS"
+msgstr "Ši instancija nenaudoja HTTPS"
+
 #. Explanation shown in place of the single sign-on description when the
 #. instance offers no SSO provider.
 #: src/features/auth/flow/AuthSsoPanel.tsx
@@ -47793,8 +47826,8 @@ msgid ""
 "This instance was upgraded from a version of Fluxer that used email sign-in,"
 " so it stays on email."
 msgstr ""
-"Ši instancija atnaujinta iš sanalyer versijos, kuri naudojo prisijungimą el. "
-"paštu, todėl ji lieka prie el. pašto."
+"Ši instancija atnaujinta iš sanalyer versijos, kuri naudojo prisijungimą el."
+" paštu, todėl ji lieka prie el. pašto."
 
 #. Helper text shown on an invite embed while streaming privacy is active.
 #: src/features/channel/components/InviteEmbed.tsx
@@ -48520,6 +48553,28 @@ msgstr ""
 #: src/features/voice/engine/media_engine_facade/shared.ts
 msgid "This voice channel is no longer available."
 msgstr "Šis balso kanalas nebepasiekiamas."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel from a browser that cannot encrypt calls.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption, and this browser can't join "
+"encrypted calls."
+msgstr ""
+"Šis balso kanalas naudoja ištisinį šifravimą, o ši naršyklė negali "
+"prisijungti prie šifruotų skambučių."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel on a self-hosted instance opened over plain HTTP. HTTPS is a
+#. technical term, keep it as is.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption. Browsers only allow encrypted"
+" calls on sites that use HTTPS, and this instance doesn't use HTTPS."
+msgstr ""
+"Šis balso kanalas naudoja ištisinį šifravimą. Naršyklės leidžia šifruotus "
+"skambučius tik svetainėse, kurios naudoja HTTPS, o ši instancija HTTPS "
+"nenaudoja."
 
 #. Description text in the channel and chat user message. Preserve
 #. {silentMention}; it is inserted by code.
@@ -53191,9 +53246,9 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"Kai įjungiate savo leidimą, pridedame jus prie sanalyer Labs, nebent anksčiau "
-"iš sanalyer Labs išėjote arba buvote pašalinti. Kai tai įjungta, netrukus po "
-"to pasveikiname jus vardu #operators kanale."
+"Kai įjungiate savo leidimą, pridedame jus prie sanalyer Labs, nebent "
+"anksčiau iš sanalyer Labs išėjote arba buvote pašalinti. Kai tai įjungta, "
+"netrukus po to pasveikiname jus vardu #operators kanale."
 
 #. Hint under the checkbox or switch "Welcome me in #operators". Fluxer Labs
 #. is the name of a community on Fluxer, keep it as is. #operators is a
@@ -57584,6 +57639,26 @@ msgstr "Didinti"
 #: src/features/user/components/settings_utils/search_index/KeybindsIndex.ts
 msgid "Zoom out"
 msgstr "Mažinti"
+
+#. Instance selector error shown when no Fluxer instance answered at the
+#. address. Domain is interpolated.
+#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
+msgid ""
+"Couldn't connect to a sanalyer instance at {domain}. Check the address and "
+"that the instance is online."
+msgstr ""
+"Nepavyko susisiekti su sanalyer egzemplioriumi adresu {domain}. Patikrinkite"
+" adresą ir įsitikinkite, kad egzempliorius veikia."
+
+#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
+#. subscription and must not be translated. 4K and fps are video terms.
+#: src/features/voice/utils/VoiceMessageDescriptors.ts
+msgid ""
+"Everyone in the call gets {premiumProductName} stream quality for free, with"
+" up to 4K source resolution and 60 fps."
+msgstr ""
+"Visi skambučio dalyviai nemokamai gauna „{premiumProductName}“ transliacijos"
+" kokybę: iki 4K raiškos ir 60 kadrų per sekundę."
 
 #. Voice screen share menu preference that pauses the local stream preview
 #. while the app is unfocused. {productName} is the app name.

@@ -839,6 +839,7 @@ export class SsoService {
 			userId: user.id,
 			inviteCode: autoJoinInviteCode,
 			requestCache,
+			ip: clientIp,
 		});
 		return {user, secondFactorRequired: false};
 	}

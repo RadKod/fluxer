@@ -6,6 +6,7 @@
 -export([
     maybe_handle_custom_status/2,
     handle_user_settings_update/2,
+    settings_invisible/1,
     handle_user_update_event/2,
     handle_message_create_event/2,
     handle_message_ack_event/2,
@@ -63,9 +64,16 @@ maybe_update_custom_status(Data, State) ->
 
 -spec update_settings_invisible(map(), state()) -> state().
 update_settings_invisible(Data, State) ->
-    case user_settings_presence_status(Data) of
+    case settings_invisible(Data) of
         undefined -> State;
-        Status -> State#{settings_invisible => Status =:= invisible}
+        Invisible -> State#{settings_invisible => Invisible}
+    end.
+
+-spec settings_invisible(map()) -> boolean() | undefined.
+settings_invisible(Data) ->
+    case user_settings_presence_status(Data) of
+        undefined -> undefined;
+        Status -> Status =:= invisible
     end.
 
 -spec user_settings_presence_status(map()) -> online | idle | dnd | invisible | undefined.
@@ -92,15 +100,27 @@ normalize_user_settings_status(_) -> undefined.
 handle_user_update_event(Data, State) ->
     CurrentUserData = maps:get(user_data, State, #{}),
     MergedUserData = user_utils:merge_user(CurrentUserData, Data),
+    RestrictionChanged =
+        user_utils:profile_restricted(CurrentUserData) =/=
+            user_utils:profile_restricted(MergedUserData),
     case utils:check_user_data_differs(CurrentUserData, MergedUserData) of
         true ->
             UserId = maps:get(user_id, State),
-            presence_broadcast:publish_user_update_to_bus(UserId, MergedUserData, State);
+            presence_broadcast:publish_user_update_to_bus(UserId, MergedUserData, State),
+            apply_user_data(RestrictionChanged, MergedUserData, State);
+        false when RestrictionChanged ->
+            apply_user_data(true, MergedUserData, State);
         false ->
-            ok
-    end,
-    %% Micup: private-only fields (theme_colors) reach the user's own sessions even when nothing public changed.
-    State#{user_data := MergedUserData}.
+            %% Micup: private-only fields (theme_colors) reach the user's own sessions even when nothing public changed.
+            State#{user_data := MergedUserData}
+    end.
+
+-spec apply_user_data(boolean(), map(), state()) -> state().
+apply_user_data(false, Data, State) ->
+    State#{user_data := Data};
+apply_user_data(true, Data, State) ->
+    State1 = State#{user_data := Data},
+    presence_broadcast:publish_global_presence(maps:get(sessions, State1), State1).
 
 -spec handle_message_create_event(map(), state()) -> state().
 handle_message_create_event(Data, State) ->

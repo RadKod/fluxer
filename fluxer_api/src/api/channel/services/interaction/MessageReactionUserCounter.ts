@@ -10,7 +10,10 @@ import {
 	type UserID,
 } from '@app/api/BrandedTypes';
 import type {ChannelRepository} from '@app/api/channel/ChannelRepository';
-import type {MessageInteractionRepository} from '@app/api/channel/repositories/MessageInteractionRepository';
+import type {
+	MessageInteractionRepository,
+	ReactionEmojiKey,
+} from '@app/api/channel/repositories/MessageInteractionRepository';
 import {
 	type CounterFlusher,
 	counterDirtyKey,
@@ -127,19 +130,18 @@ export async function removeMessageReactionCounted(
 	channelId: ChannelID,
 	messageId: MessageID,
 	userId: UserID,
+	emoji: ReactionEmojiKey,
 	emojiName: string,
-	emojiId?: EmojiID,
 ): Promise<void> {
-	const id = messageReactionUserCounterId(channelId, messageId, emojiName, emojiId);
+	const id = messageReactionUserCounterId(channelId, messageId, emojiName, emoji.id);
 	let counterPresent = false;
 	try {
 		counterPresent = (await getKVClient().exists(counterKey(MESSAGE_REACTION_USERS_COUNTER, id))) > 0;
 	} catch (error) {
 		Logger.warn({error, id}, 'Failed to read a message reaction user counter');
 	}
-	const existed =
-		counterPresent && (await repository.checkUserReactionExists(channelId, messageId, userId, emojiName, emojiId));
-	await repository.removeReaction(channelId, messageId, userId, emojiName, emojiId);
+	const existed = counterPresent && (await repository.checkUserReactionExists(channelId, messageId, userId, emoji));
+	await repository.removeReaction(channelId, messageId, userId, emoji);
 	if (existed) await adjustExistingCounter(id, -1);
 	// TEMPORARY: bulk removals leave a high cached count for at most 24 hours. If messages approach the cap,
 	// rebuild on bulk removal; small reactions always use the exact bounded sample.

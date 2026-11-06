@@ -526,6 +526,8 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 			turnServers: master.integrations.voice.turn_servers ?? [],
 			joinAllowPrivateEndpoints: master.integrations.voice.join_allow_private_endpoints ?? false,
 			healthIntervalMs: master.integrations.voice.health_interval_ms ?? 15000,
+			participantSweepEnabled: master.integrations.voice.participant_sweep_enabled ?? true,
+			participantSweepDryRun: master.integrations.voice.participant_sweep_dry_run ?? true,
 		},
 		stripe: {
 			enabled: master.integrations.stripe.enabled,
@@ -737,6 +739,7 @@ export function buildAPIConfigFromMaster(master: MasterConfig): APIConfig {
 		storeBilling: {
 			sandboxUserIds: master.integrations.store_billing.sandbox_user_ids ?? [],
 			sandboxEntitlesAll: master.integrations.store_billing.sandbox_entitles_all,
+			sandboxSubscriptions: master.integrations.store_billing.sandbox_subscriptions,
 		},
 		worker: {
 			mode: apiWorkerConfig?.mode ?? 'all_lanes',

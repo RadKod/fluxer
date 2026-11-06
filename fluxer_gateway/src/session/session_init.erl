@@ -225,6 +225,7 @@ extract_core_fields(
         custom_status => maps:get(custom_status, D, null),
         game_activity_policy => maps:get(game_activity_policy, D, undefined),
         game_activity_request_nonce => maps:get(game_activity_request_nonce, D, undefined),
+        settings_invisible => maps:get(settings_invisible, D, false),
         version => Version,
         token_hash => TokenHash,
         auth_session_id_hash => AuthSessionIdHash,

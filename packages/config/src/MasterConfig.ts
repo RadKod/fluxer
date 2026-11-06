@@ -278,6 +278,8 @@ export interface MasterConfig {
 			turn_servers?: Array<VoiceTurnServerConfig>;
 			join_allow_private_endpoints?: boolean;
 			health_interval_ms?: number;
+			participant_sweep_enabled?: boolean;
+			participant_sweep_dry_run?: boolean;
 		};
 		search: {
 			engine: 'elasticsearch' | 'meilisearch' | 'none';
@@ -386,6 +388,7 @@ export interface MasterConfig {
 		store_billing: {
 			sandbox_user_ids?: Array<string>;
 			sandbox_entitles_all: boolean;
+			sandbox_subscriptions: boolean;
 		};
 	};
 	instance: {

@@ -203,6 +203,7 @@ export class MessageEditService {
 					locale: user?.locale,
 					components,
 					dmNsfwContext,
+					hasPermission,
 				}),
 			);
 		});

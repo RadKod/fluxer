@@ -171,7 +171,7 @@ Sending `new_password` on a claimed account deletes every other session and issu
 | 400 | [error response](/http-api/#error-response) | The body, image, tag, password, entitlement, change limit or sudo proof is invalid |
 | 403 | [error response](/http-api/#error-response) | Email verification, sudo verification or `STAFF` is needed, or content is blocked |
 
-sanalyer sends [User Update](/gateway/events/#user-update) to the account.
+Fluxer sends [User Update](/gateway/events/#user-update) to the account.
 
 The rate limit is 20 requests per minute, on the `user:update` bucket.
 
@@ -201,7 +201,7 @@ The minimum age follows the region of the client IP address, as in [register an 
 | 404 | [error response](/http-api/#error-response) | The instance doesn't [collect date of birth](/http-api/instance/#public-registration-fields-object) |
 | 409 | [error response](/http-api/#error-response) | The account already has a date of birth |
 
-sanalyer sends [User Update](/gateway/events/#user-update), and [User Settings Update](/gateway/events/#user-settings-update) when settings still on their defaults change to match the age.
+Fluxer sends [User Update](/gateway/events/#user-update), and [User Settings Update](/gateway/events/#user-settings-update) when settings still on their defaults change to match the age.
 
 The rate limit is 5 requests per hour, on the `user:date_of_birth` bucket.
 
@@ -231,7 +231,7 @@ On an instance that sends email, the address waits for [confirm the email addres
 | 200 | [claim result](#claim-result-object) object | The account was claimed or the address waits for its code |
 | 400 | [error response](/http-api/#error-response) | The input is invalid, or `ACCOUNT_ALREADY_CLAIMED` |
 
-sanalyer sends [User Update](/gateway/events/#user-update), and emails the code when `next_step` is `confirm_email`.
+Fluxer sends [User Update](/gateway/events/#user-update), and emails the code when `next_step` is `confirm_email`.
 
 The rate limit is 5 requests per hour, on the `user:claim` bucket.
 
@@ -271,7 +271,7 @@ Confirms the address with the emailed code and returns the updated [user](/http-
 | 200 | [user](/http-api/users/#user-object) object | The address was confirmed |
 | 400 | [error response](/http-api/#error-response) | `INVALID_SIGN_IN_CODE` for a wrong code, `SIGN_IN_CODE_EXPIRED` after 5 wrong tries, 10 minutes or an address change |
 
-sanalyer sends [User Update](/gateway/events/#user-update).
+Fluxer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 10 requests per minute, on the `user:email_verification:confirm` bucket.
 
@@ -325,21 +325,26 @@ Schedules deletion of the account and deletes every session. Needs [sudo verific
 
 ### JSON body
 
-The [sudo verification object](/http-api/users/mfa/#sudo-verification-object), which can be empty when you send a sudo token.
+The [sudo verification object](/http-api/users/mfa/#sudo-verification-object), which can be empty when you send a sudo token, and these fields.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| immediate? | boolean | Delete the account now instead of after the grace period |
+| delete_messages? | boolean | Delete every message the account sent along with the account. Otherwise the messages stay, with the author removed |
 
 :::caution[Signing in cancels the deletion]
-The deletion happens 14 days later by default. Signing in before then cancels it, and once erasure starts it can't be cancelled.
+The deletion happens 14 days later by default, or within about a minute with `immediate`. Signing in before then cancels it, together with the message deletion, and once erasure starts it can't be cancelled.
 :::
 
 ### Response
 
 | Status | Body | Condition |
 | --- | --- | --- |
-| 204 | empty | The deletion was scheduled |
+| 200 | object with `pending_deletion_at`, an ISO 8601 timestamp | The deletion was scheduled for that time |
 | 400 | [error response](/http-api/#error-response) | The account owns a guild, `USER_OWNS_GUILDS` |
 | 409 | [error response](/http-api/#error-response) | `CONFLICT` when erasure has started |
 
-sanalyer emails the account when it has an address.
+Fluxer emails the account when it has an address, once when the deletion is scheduled for later and once when the deletion is done.
 
 The rate limit is 5 requests per hour, on the `user:account:delete` bucket.
 
@@ -360,7 +365,7 @@ The body is an empty object.
 | 200 | [user](/http-api/users/#user-object) object | The acceptance was recorded |
 | 400 | [error response](/http-api/#error-response) | The body is not a JSON object |
 
-sanalyer sends [User Update](/gateway/events/#user-update).
+Fluxer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 20 requests per minute, on the `user:update` bucket.
 
@@ -430,6 +435,6 @@ Clears every premium field on the account. You need the [`STAFF`](/http-api/user
 | 204 | empty | The premium state was cleared |
 | 403 | [error response](/http-api/#error-response) | `MISSING_ACCESS` without the `STAFF` flag |
 
-sanalyer sends [User Update](/gateway/events/#user-update).
+Fluxer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 20 requests per minute, on the `user:update` bucket.

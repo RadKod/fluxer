@@ -6,7 +6,7 @@ description: Premium prices, entitlement state, billing data and subscription se
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-Premium is the paid tier of a sanalyer account. Use these routes to read an account's entitlement and to manage its Stripe subscription. To buy premium, use the Billing routes.
+Premium is the paid tier of a Fluxer account. Use these routes to read an account's entitlement and to manage its Stripe subscription. To buy premium, use the [Billing](/http-api/billing/) routes.
 
 Every route except [get price IDs](#get-price-ids) needs a user token. On a [self-hosted instance](/http-api/deployment-availability/), [get premium state](#get-premium-state) and [set premium perks disabled](#set-premium-perks-disabled) always work, and the other routes need Stripe billing to be set up.
 
@@ -47,8 +47,23 @@ The recurring and gift checkout prices for one country.
 | gift_1_year_amount_minor? | ?integer | The one-year gift amount, in the minor unit of `gift_currency` |
 | currency | string | [Display currency](#display-currencies) of the recurring prices |
 | gift_currency<sup>1</sup> | ?string | [Display currency](#display-currencies) of the gift prices |
+| distribution | ?[price distribution](#price-distribution-object) object | The distribution whose channel prices these are, or null for the standard prices |
 
 <sup>1</sup> Null when no currency has both gift prices set up, and gift checkout is unavailable then.
+
+## Distributions
+
+An app build sold through a store that keeps a share of each sale sends its distribution id, such as `ios_marketplace`, with [get price IDs](#get-price-ids), [get premium state](#get-premium-state) and the [checkout routes](/http-api/billing/#create-subscription-checkout). When the instance has an active rule for that id, the amounts and checkout use its channel price. The channel price is the standard price divided by one minus the rule's rate, rounded up to an amount Stripe accepts in that currency, so the amount left after the store's share is at least the standard price. An unknown, malformed or inactive id gets the standard price and never an error. Self-hosted instances have no rules until an admin adds one.
+
+## Price distribution object
+
+### Structure
+
+| Field | Type | Description |
+| --- | --- | --- |
+| id | string | The distribution id |
+| rate_bps | integer | The store's share in basis points, where 500 is 5% |
+| rule_version | integer | The version of the rule the prices come from |
 
 ## Current subscription price object
 
@@ -177,7 +192,7 @@ The account's Stripe customer, subscription and payment methods.
 | subscription | ?[billing subscription](#billing-subscription-object) object | The current subscription |
 | documents | array | Always empty. A self-hosted instance issues no invoices or receipts of its own, so Stripe's receipt settings apply |
 | payment_methods | array[[billing payment method](#billing-payment-method-object)] | The stored payment methods, default first |
-| refund_eligibility | refund eligibility object | Always ineligible, with `reason` set to `feature_unavailable` |
+| refund_eligibility | [refund eligibility](/http-api/billing/#refund-eligibility-object) object | Always ineligible, with `reason` set to `feature_unavailable` |
 
 ## Billing subscription object
 
@@ -236,7 +251,8 @@ Returns the [price IDs](#price-ids-object) object for the request's country.
 
 | Field | Type | Description |
 | --- | --- | --- |
-| country_code? | string | A two-letter country code, used when sanalyer can't locate the request |
+| country_code? | string | A two-letter country code, used when Fluxer can't locate the request |
+| distribution? | string | The [distribution](#distributions) the app build was sold through (up to 64 characters) |
 
 ### Response
 
@@ -257,7 +273,8 @@ Returns the [premium state](#premium-state-object) object for the current accoun
 
 | Field | Type | Description |
 | --- | --- | --- |
-| country_code? | string | A two-letter country code for `pricing`, used when sanalyer can't locate the request |
+| country_code? | string | A two-letter country code for `pricing`, used when Fluxer can't locate the request |
+| distribution? | string | The [distribution](#distributions) for `pricing` (up to 64 characters) |
 
 ### Response
 
@@ -271,7 +288,7 @@ The rate limit is 30 requests per 10 seconds, on the `stripe:premium:state` buck
 
 <RouteHeader method="GET" path="/v1/premium/current-subscription-price" />
 
-Returns the [current subscription price](#current-subscription-price-object) object, or null when the account has no subscription or sanalyer can't look up its price.
+Returns the [current subscription price](#current-subscription-price-object) object, or null when the account has no subscription or Fluxer can't look up its price.
 
 ### Response
 
@@ -285,7 +302,7 @@ The rate limit is 20 requests per 10 seconds, on the `stripe:subscription:curren
 
 <RouteHeader method="PATCH" path="/v1/premium/perks-disabled" />
 
-Turns the account's premium perks off or on without changing billing, and returns the [premium state](#premium-state-object) object. sanalyer sends [User Update](/gateway/events/#user-update) when the value changes.
+Turns the account's premium perks off or on without changing billing, and returns the [premium state](#premium-state-object) object. Fluxer sends [User Update](/gateway/events/#user-update) when the value changes.
 
 ### JSON body
 
@@ -305,13 +322,13 @@ The rate limit is 10 requests per minute, on the `stripe:premium:perks_disabled`
 
 <RouteHeader method="POST" path="/v1/premium/customer-portal" />
 
-Creates a Stripe billing portal session and returns a redirect URL object. Send the user to the URL to manage their payment methods, invoices and subscription.
+Creates a Stripe billing portal session and returns a [redirect URL](/http-api/billing/#redirect-url-object) object. Send the user to the URL to manage their payment methods, invoices and subscription.
 
 ### Response
 
 | Status | Body | Condition |
 | --- | --- | --- |
-| 200 | redirect URL object | The portal session was created |
+| 200 | [redirect URL](/http-api/billing/#redirect-url-object) object | The portal session was created |
 | 400 | [error response](/http-api/#error-response) | `STRIPE_NO_PURCHASE_HISTORY` when the account has no Stripe customer |
 
 The rate limit is 5 requests per minute, on the `stripe:customer_portal` bucket.
@@ -320,7 +337,7 @@ The rate limit is 5 requests per minute, on the `stripe:customer_portal` bucket.
 
 <RouteHeader method="POST" path="/v1/premium/grace/end" />
 
-Ends the grace period after a failed renewal, and premium features stop at once. It does nothing when the account isn't in a grace period. sanalyer sends [User Update](/gateway/events/#user-update) when the grace period ends.
+Ends the grace period after a failed renewal, and premium features stop at once. It does nothing when the account isn't in a grace period. Fluxer sends [User Update](/gateway/events/#user-update) when the grace period ends.
 
 ### Response body
 
@@ -340,7 +357,7 @@ The rate limit is 3 requests per minute, on the `stripe:premium:grace:end` bucke
 
 <RouteHeader method="POST" path="/v1/premium/cancel-subscription" />
 
-Sets the subscription to cancel at the end of the current period and discards any pending billing cycle change. Premium stays active until then. sanalyer sends [User Update](/gateway/events/#user-update).
+Sets the subscription to cancel at the end of the current period and discards any pending billing cycle change. Premium stays active until then. Fluxer sends [User Update](/gateway/events/#user-update).
 
 ### Response
 
@@ -355,7 +372,7 @@ The rate limit is 5 requests per minute, on the `stripe:subscription:cancel` buc
 
 <RouteHeader method="POST" path="/v1/premium/reactivate-subscription" />
 
-Undoes a pending cancellation and discards any pending billing cycle change. sanalyer sends [User Update](/gateway/events/#user-update).
+Undoes a pending cancellation and discards any pending billing cycle change. Fluxer sends [User Update](/gateway/events/#user-update).
 
 ### Response
 
@@ -370,7 +387,7 @@ The rate limit is 5 requests per minute, on the `stripe:subscription:reactivate`
 
 <RouteHeader method="POST" path="/v1/premium/change-subscription" />
 
-Moves the subscription between monthly and yearly and clears a pending cancellation. With `effective_at` set to `now`, sanalyer charges or credits the prorated difference at once, and a change at `period_end` shows up as `billing.pending_subscription_change` in [get premium state](#get-premium-state). Requesting the current cycle does nothing. sanalyer sends [User Update](/gateway/events/#user-update).
+Moves the subscription between monthly and yearly and clears a pending cancellation. With `effective_at` set to `now`, Fluxer charges or credits the prorated difference at once, and a change at `period_end` shows up as `billing.pending_subscription_change` in [get premium state](#get-premium-state). Requesting the current cycle does nothing. Fluxer sends [User Update](/gateway/events/#user-update).
 
 ### JSON body
 
@@ -394,7 +411,7 @@ The rate limit is 5 requests per minute, on the `stripe:subscription:change` buc
 
 <RouteHeader method="POST" path="/v1/premium/cancel-pending-subscription-change" />
 
-Cancels a scheduled billing cycle change. sanalyer sends [User Update](/gateway/events/#user-update) when it cancels one.
+Cancels a scheduled billing cycle change. Fluxer sends [User Update](/gateway/events/#user-update) when it cancels one.
 
 ### Response
 

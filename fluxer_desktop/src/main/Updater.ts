@@ -26,8 +26,8 @@ import {
 import {
 	buildManualVersionDownloadUrl,
 	DOWNLOAD_PAGE_URL,
+	getManualDownloadFile,
 	getManualDownloadOptions,
-	getManualDownloadUrl,
 	type ManualLatestFile,
 	type ManualLatestInfo,
 	UPDATE_BASE_URL,
@@ -52,6 +52,7 @@ type UpdaterEvent =
 			downloadStarted: boolean;
 			downloadUrl?: string;
 			downloadOptions?: Array<UpdaterDownloadOption>;
+			sha256?: string | null;
 	  }
 	| {
 			type: 'not-available';
@@ -610,13 +611,15 @@ function sendManualUpdateAvailable(
 	latest: ManualLatestInfo,
 ): void {
 	const downloadOptions = getManualDownloadOptions(latest);
+	const file = getManualDownloadFile(latest);
 	send(getMainWindow(), {
 		type: 'available',
 		context,
 		version: latest.version,
 		downloadSize: null,
 		downloadStarted: false,
-		downloadUrl: getManualDownloadUrl(latest),
+		downloadUrl: file.url,
+		sha256: file.sha256,
 		...(downloadOptions.length > 0 ? {downloadOptions} : {}),
 	});
 }

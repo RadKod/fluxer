@@ -54,7 +54,8 @@ do_disconnect_channel(ChannelId, ChannelVoiceStates, VoiceStates, Count, State) 
         ChannelId, NewVoiceStates, NewState1
     ),
     voice_state_utils:broadcast_disconnects(ChannelVoiceStates, NewState),
-    {reply, #{success => true, disconnected_count => Count}, NewState}.
+    FinalState = cleanup_virtual_access_for_removed(ChannelVoiceStates, NewState),
+    {reply, #{success => true, disconnected_count => Count}, FinalState}.
 
 -spec disconnect_user_from_expected_channel(
     integer(), integer(), voice_state_map(), guild_state()
@@ -87,7 +88,10 @@ disconnect_user_from_expected_channel(UserId, ExpectedChannelId, VoiceStates, St
                 UserVoiceStates, NewState1
             ),
             voice_state_utils:broadcast_disconnects(UserVoiceStates, NewState),
-            {reply, #{success => true}, NewState}
+            FinalState = guild_voice_disconnect_user:cleanup_virtual_channel_access_for_user(
+                UserId, NewState
+            ),
+            {reply, #{success => true}, FinalState}
     end.
 
 -spec disconnect_connection_from_expected_channel(
@@ -126,7 +130,7 @@ clear_pending_connection_in_expected_channel(
     case is_pending_of_left_connection(Pending, UserId, ExpectedChannelId, TokenNonce) of
         true ->
             State1 = guild_voice_disconnect_broadcast:clear_pending_voice_connection(
-                ConnId, State
+                ConnId, UserId, State
             ),
             guild_virtual_channel_access:clear_transition_flags(
                 UserId, ExpectedChannelId, State1
@@ -173,7 +177,10 @@ check_and_disconnect_connection(
                 #{ConnId => VoiceState}, NewState1
             ),
             voice_state_utils:broadcast_disconnects(#{ConnId => VoiceState}, NewState),
-            {reply, #{success => true}, NewState};
+            FinalState = guild_voice_disconnect_user:cleanup_virtual_channel_access_for_user(
+                UserId, NewState
+            ),
+            {reply, #{success => true}, FinalState};
         _ ->
             MismatchReply = #{
                 success => true,
@@ -182,6 +189,20 @@ check_and_disconnect_connection(
             },
             {reply, MismatchReply, State}
     end.
+
+-spec cleanup_virtual_access_for_removed(voice_state_map(), guild_state()) -> guild_state().
+cleanup_virtual_access_for_removed(RemovedVoiceStates, State) ->
+    UserIds = lists:usort([
+        UserId
+     || VoiceState <- maps:values(RemovedVoiceStates),
+        UserId <- [voice_state_utils:voice_state_user_id(VoiceState)],
+        is_integer(UserId)
+    ]),
+    lists:foldl(
+        fun guild_voice_disconnect_user:cleanup_virtual_channel_access_for_user/2,
+        State,
+        UserIds
+    ).
 
 -spec maybe_force_disconnect_voice_states(voice_state_map(), guild_state()) -> ok.
 maybe_force_disconnect_voice_states(VoiceStates, State) ->

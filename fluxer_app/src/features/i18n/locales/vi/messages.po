@@ -6214,6 +6214,13 @@ msgstr ""
 "Cho phép {productName} trong mục Ghi màn hình trên Cài đặt hệ thống. Nếu đã "
 "được phép, hãy khởi chạy lại {productName2} để macOS áp dụng."
 
+#. Switch in the sensitive content settings. Turns on 18+ communities and
+#. channels and the "Show" sensitive media option in the Fluxer app for iPhone
+#. and iPad.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid "Allow 18+ content on iPhone and iPad"
+msgstr "Cho phép nội dung 18+ trên iPhone và iPad"
+
 #. Private thread setting that lets non-moderators add other members.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
 msgid "Allow anyone to invite"
@@ -9243,6 +9250,30 @@ msgstr ""
 "Trình duyệt không liệt kê camera trong bộ chọn chia sẻ màn hình. Thay vào "
 "đó, hãy chọn camera trong tab Thiết bị. Nếu không có gì xuất hiện ở đây, hãy"
 " cho phép truy cập camera hoặc kết nối thiết bị."
+
+#. Shown on a self-hosted instance opened over plain HTTP when someone tries
+#. to use the microphone, camera or screen sharing, which browsers block
+#. there. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow the microphone, camera and screen sharing on sites that "
+"use HTTPS, and this instance doesn't use HTTPS. You can still join voice "
+"channels and listen."
+msgstr ""
+"Trình duyệt chỉ cho phép micrô, camera và chia sẻ màn hình trên các trang "
+"dùng HTTPS, và máy chủ này không dùng HTTPS. Bạn vẫn có thể tham gia kênh "
+"thoại và nghe."
+
+#. Short note next to a setting or button that browsers turn off on a self-
+#. hosted instance opened over plain HTTP, such as notifications or passkeys.
+#. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow this on sites that use HTTPS, and this instance doesn't "
+"use HTTPS."
+msgstr ""
+"Trình duyệt chỉ cho phép điều này trên các trang dùng HTTPS, và máy chủ này "
+"không dùng HTTPS."
 
 #. Where the dark mode favicon appears and the recommended format, in the
 #. setup wizard. size is a file size such as 10 MB.
@@ -14357,12 +14388,6 @@ msgstr "Không thể kết nối tới {domain}. Thử lại."
 msgid "Couldn't connect to {names}"
 msgstr "Không thể kết nối tới {names}"
 
-#. Instance selector error shown when no Fluxer instance answered at the
-#. address. Domain is interpolated.
-#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
-msgid "Couldn't connect to a sanalyer instance at {domain}. Check the address and that the instance is online."
-msgstr "Không thể kết nối tới một phiên bản sanalyer tại {domain}. Vui lòng kiểm tra địa chỉ và đảm bảo phiên bản đang trực tuyến."
-
 #. Toast shown when joining a voice channel fails because the connection timed
 #. out or the transport dropped.
 #: src/features/voice/engine/media_engine_facade/shared.ts
@@ -18622,11 +18647,11 @@ msgid ""
 "source code and copies others made can't be recalled."
 msgstr ""
 "Mỗi danh sách Operators hằng năm mà chúng tôi công bố được đưa vào ghi chú "
-"của một bản phát hành sanalyer và vào một tệp trong mã nguồn của bản đó. Tên "
-"trên bức tường của bạn chỉ có trong danh sách nếu bạn bật tùy chọn này. Nếu "
-"sau này bạn yêu cầu gỡ tên, chúng tôi sẽ bỏ tên khỏi các danh sách sau này, "
-"ghi chú phát hành và tệp đó, nhưng các phiên bản cũ của mã nguồn và bản sao "
-"do người khác tạo thì không thể thu hồi."
+"của một bản phát hành sanalyer và vào một tệp trong mã nguồn của bản đó. Tên"
+" trên bức tường của bạn chỉ có trong danh sách nếu bạn bật tùy chọn này. Nếu"
+" sau này bạn yêu cầu gỡ tên, chúng tôi sẽ bỏ tên khỏi các danh sách sau này,"
+" ghi chú phát hành và tệp đó, nhưng các phiên bản cũ của mã nguồn và bản sao"
+" do người khác tạo thì không thể thu hồi."
 
 #. Plutonium page comparison row label for early access.
 #: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
@@ -20275,12 +20300,6 @@ msgstr ""
 msgid "Everyone"
 msgstr "Mọi người"
 
-#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
-#. subscription and must not be translated. 4K and fps are video terms.
-#: src/features/voice/utils/VoiceMessageDescriptors.ts
-msgid "Everyone in the call gets {premiumProductName} stream quality for free, with up to 4K source resolution and 60 fps."
-msgstr "Mọi người trong cuộc gọi đều nhận được chất lượng luồng {premiumProductName} miễn phí: độ phân giải nguồn lên tới 4K và 60 fps."
-
 #. Description of the single community option in the setup wizard.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
 msgid ""
@@ -21528,8 +21547,8 @@ msgid ""
 "Fluxer couldn't apply this CSS. Check it for a broken comment, string or "
 "bracket."
 msgstr ""
-"sanalyer không thể áp dụng CSS này. Hãy kiểm tra xem có chú thích, chuỗi hoặc "
-"dấu ngoặc nào bị hỏng không."
+"sanalyer không thể áp dụng CSS này. Hãy kiểm tra xem có chú thích, chuỗi "
+"hoặc dấu ngoặc nào bị hỏng không."
 
 #. Alert when the SMTP check fails and the mail server sent no reply. host is
 #. the mail server address.
@@ -21552,9 +21571,9 @@ msgid ""
 "Fluxer couldn't connect to {instanceName} to check whether your browser "
 "approved this sign-in. Check your connection, then select \"Try again\"."
 msgstr ""
-"sanalyer không thể kết nối với {instanceName} để kiểm tra xem trình duyệt của "
-"bạn đã phê duyệt đăng nhập này chưa. Hãy kiểm tra kết nối rồi chọn \"Thử "
-"lại\"."
+"sanalyer không thể kết nối với {instanceName} để kiểm tra xem trình duyệt "
+"của bạn đã phê duyệt đăng nhập này chưa. Hãy kiểm tra kết nối rồi chọn \"Thử"
+" lại\"."
 
 #. Name of the section in the Operator Pass settings tab about the Fluxer Labs
 #. community. Fluxer Labs is the name of a community, keep it as is.
@@ -24307,8 +24326,8 @@ msgid ""
 "If the link opens a different Fluxer app, select \"Signing in on another "
 "device?\" and type the code in your browser instead."
 msgstr ""
-"Nếu liên kết mở một ứng dụng sanalyer khác, hãy chọn \"Đăng nhập trên thiết bị"
-" khác?\" và nhập mã trong trình duyệt."
+"Nếu liên kết mở một ứng dụng sanalyer khác, hãy chọn \"Đăng nhập trên thiết "
+"bị khác?\" và nhập mã trong trình duyệt."
 
 #. Helper text under the Explain the problem field on the details step of the
 #. DSA report form.
@@ -24393,8 +24412,8 @@ msgid ""
 "If you installed Fluxer with rexctl, it printed the token when it finished. "
 "Run this on your server to show it again."
 msgstr ""
-"Nếu bạn đã cài đặt sanalyer bằng rexctl, nó đã in mã thông báo khi hoàn tất. "
-"Chạy lệnh này trên máy chủ của bạn để hiển thị lại mã thông báo đó."
+"Nếu bạn đã cài đặt sanalyer bằng rexctl, nó đã in mã thông báo khi hoàn tất."
+" Chạy lệnh này trên máy chủ của bạn để hiển thị lại mã thông báo đó."
 
 #. What the app shows when no symbol is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -24428,8 +24447,8 @@ msgid ""
 "and no image for any other name."
 msgstr ""
 "Nếu để trống, trang đăng nhập sẽ dùng biểu tượng ứng dụng hoặc biểu tượng "
-"của bạn. Nếu không có cả hai, trang sẽ hiển thị logo sanalyer khi tên sản phẩm"
-" là sanalyer, và không hiển thị ảnh nào với tên khác."
+"của bạn. Nếu không có cả hai, trang sẽ hiển thị logo sanalyer khi tên sản "
+"phẩm là sanalyer, và không hiển thị ảnh nào với tên khác."
 
 #. What the app shows when no dark mode favicon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -24462,9 +24481,9 @@ msgid ""
 "least 32 characters that you choose, restart Fluxer, and enter that value "
 "here."
 msgstr ""
-"Nếu bạn chạy sanalyer mà không có rexctl, hãy đặt FLUXER_SETUP_TOKEN thành một"
-" giá trị có ít nhất 32 ký tự do bạn chọn, khởi động lại sanalyer và nhập giá "
-"trị đó vào đây."
+"Nếu bạn chạy sanalyer mà không có rexctl, hãy đặt FLUXER_SETUP_TOKEN thành "
+"một giá trị có ít nhất 32 ký tự do bạn chọn, khởi động lại sanalyer và nhập "
+"giá trị đó vào đây."
 
 #: src/features/user/components/modals/FluxerTagChangeModal.tsx
 msgid ""
@@ -26637,6 +26656,13 @@ msgstr "Tìm hiểu về bản xem trước chia sẻ màn hình"
 msgid "Learn more"
 msgstr "Tìm hiểu thêm"
 
+#. Link under the Plutonium page hero buttons on self-hosted instances.
+#. premiumProductName is the paid tier name set by the instance. Opens a page
+#. about the tier that the instance admin chose.
+#: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
+msgid "Learn more about {premiumProductName}"
+msgstr "Tìm hiểu thêm về {premiumProductName}"
+
 #. Confirmation text before leaving a private thread. threadName is the thread
 #. name.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
@@ -26898,6 +26924,18 @@ msgid "Lets push-to-talk and keybinds work in other apps."
 msgstr ""
 "Cho phép tính năng nhấn để nói và các phím tắt hoạt động trong các ứng dụng "
 "khác."
+
+#. Helper text under the "Allow 18+ content on iPhone and iPad" switch. "Show"
+#. is the sensitive media option name and must match its translation.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid ""
+"Lets you open communities and channels marked 18+ in the Fluxer app for "
+"iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
+" change this on the web or on desktop."
+msgstr ""
+"Cho phép bạn mở các cộng đồng và kênh được đánh dấu 18+ trong ứng dụng "
+"Fluxer dành cho iPhone và iPad, và chọn \"Hiển thị\" cho phương tiện nhạy "
+"cảm ở đó. Bạn chỉ có thể thay đổi cài đặt này trên web hoặc trên máy tính."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx
 msgid "Lets you reset your password if you forget it."
@@ -34048,8 +34086,8 @@ msgid ""
 "People using the Fluxer mobile apps won't get notifications from your "
 "instance. You can turn this on later in the admin panel."
 msgstr ""
-"Người dùng ứng dụng di động sanalyer sẽ không nhận được thông báo từ máy chủ "
-"của bạn. Bạn có thể bật lại sau trong bảng quản trị."
+"Người dùng ứng dụng di động sanalyer sẽ không nhận được thông báo từ máy chủ"
+" của bạn. Bạn có thể bật lại sau trong bảng quản trị."
 
 #. Description under the "Anyone in my communities" privacy setup option.
 #: src/features/user/components/modals/PrivacySetupModal.tsx
@@ -40042,8 +40080,8 @@ msgid ""
 "Sweden, {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 msgstr ""
-"Người bán: sanalyer Platform AB, 559537-3993, trụ sở đăng ký (säte) Haninge, "
-"Thụy Điển, {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
+"Người bán: sanalyer Platform AB, 559537-3993, trụ sở đăng ký (säte) Haninge,"
+" Thụy Điển, {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 
 #. Button or menu action label in the share theme modal. Keep it concise.
@@ -45285,8 +45323,8 @@ msgid ""
 "Text on Windows now uses the system font. You can switch back to Fluxer Sans"
 " in settings."
 msgstr ""
-"Chữ trên Windows giờ đã dùng font hệ thống. Bạn có thể chuyển lại về sanalyer "
-"Sans trong cài đặt."
+"Chữ trên Windows giờ đã dùng font hệ thống. Bạn có thể chuyển lại về "
+"sanalyer Sans trong cài đặt."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -45731,8 +45769,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Ứng dụng sanalyer cho iOS và Android nhận thông báo qua bộ chuyển tiếp thông "
-"báo đẩy do sanalyer vận hành, bộ này chuyển chúng đến Apple và Google. Để "
+"Ứng dụng sanalyer cho iOS và Android nhận thông báo qua bộ chuyển tiếp thông"
+" báo đẩy do sanalyer vận hành, bộ này chuyển chúng đến Apple và Google. Để "
 "dùng, bạn chấp nhận thông báo quyền riêng tư của bộ chuyển tiếp thông báo "
 "đẩy."
 
@@ -46654,8 +46692,8 @@ msgid ""
 "This browser can't save Fluxer's data. You'll need to sign in again after "
 "you close it."
 msgstr ""
-"Trình duyệt này không thể lưu dữ liệu của sanalyer. Bạn sẽ cần đăng nhập lại "
-"sau khi đóng trình duyệt."
+"Trình duyệt này không thể lưu dữ liệu của sanalyer. Bạn sẽ cần đăng nhập lại"
+" sau khi đóng trình duyệt."
 
 #. Console warning line explaining that the browser console is meant for
 #. developers.
@@ -46839,26 +46877,14 @@ msgstr "Kênh này được đồng bộ với danh mục mẹ <0>{0}</0>."
 msgid "This channel no longer exists. It may have already been deleted."
 msgstr "Kênh này không còn tồn tại. Kênh có thể đã bị xóa."
 
-#. Error shown when signing in or signing up on a self-hosted instance opened
-#. over plain HTTP or a bare IP address, where the browser blocks the
-#. automatic background check. HTTPS and localhost are technical terms, keep
-#. them as is.
-#: src/features/auth/altcha/CaptchaInterceptor.ts
-msgid ""
-"This check only runs when the app is opened over HTTPS or on localhost. Ask "
-"the instance owner to serve it over HTTPS, or open it from localhost."
-msgstr ""
-"Tính năng kiểm tra này chỉ chạy khi ứng dụng được mở qua HTTPS hoặc trên "
-"localhost. Hãy yêu cầu chủ sở hữu phiên bản cung cấp ứng dụng qua HTTPS hoặc"
-" mở ứng dụng từ localhost."
-
 #. Problem shown in the quick CSS editor on a generated class name. [data-flx]
 #. is CSS code and stays in English.
 #: src/features/theme_settings/editor/CssLint.ts
 msgid ""
 "This class name changes with every Fluxer update. Use a [data-flx] selector."
 msgstr ""
-"Tên class này thay đổi mỗi lần cập nhật sanalyer. Hãy dùng bộ chọn [data-flx]."
+"Tên class này thay đổi mỗi lần cập nhật sanalyer. Hãy dùng bộ chọn [data-"
+"flx]."
 
 #. Problem shown in the quick CSS editor on a closing curly brace that closes
 #. nothing.
@@ -47344,6 +47370,13 @@ msgstr ""
 " Hãy báo cáo nội dung từ bên trong ứng dụng hoặc liên hệ quản trị viên của "
 "máy chủ này."
 
+#. Title of the dialog shown when someone tries to use the microphone, camera
+#. or screen sharing on a self-hosted instance opened over plain HTTP. HTTPS
+#. is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid "This instance doesn't use HTTPS"
+msgstr "Máy chủ này không dùng HTTPS"
+
 #. Explanation shown in place of the single sign-on description when the
 #. instance offers no SSO provider.
 #: src/features/auth/flow/AuthSsoPanel.tsx
@@ -47361,8 +47394,8 @@ msgid ""
 "This instance was upgraded from a version of Fluxer that used email sign-in,"
 " so it stays on email."
 msgstr ""
-"Máy chủ này được nâng cấp từ một phiên bản sanalyer dùng đăng nhập bằng email,"
-" nên vẫn giữ đăng nhập bằng email."
+"Máy chủ này được nâng cấp từ một phiên bản sanalyer dùng đăng nhập bằng "
+"email, nên vẫn giữ đăng nhập bằng email."
 
 #. Helper text shown on an invite embed while streaming privacy is active.
 #: src/features/channel/components/InviteEmbed.tsx
@@ -47917,10 +47950,10 @@ msgid ""
 "your account on it. It takes about five minutes. You can change most choices"
 " later in the admin panel, and a screen tells you when you can't."
 msgstr ""
-"Trình hướng dẫn này thiết lập máy chủ của bạn, tức bản sanalyer bạn đã cài, và"
-" tạo tài khoản của bạn trên đó. Mất khoảng năm phút. Bạn có thể thay đổi hầu"
-" hết lựa chọn sau trong bảng quản trị, và sẽ có màn hình cho bạn biết khi "
-"nào không thể."
+"Trình hướng dẫn này thiết lập máy chủ của bạn, tức bản sanalyer bạn đã cài, "
+"và tạo tài khoản của bạn trên đó. Mất khoảng năm phút. Bạn có thể thay đổi "
+"hầu hết lựa chọn sau trong bảng quản trị, và sẽ có màn hình cho bạn biết khi"
+" nào không thể."
 
 #. Label in the accessibility tab. Preserve {linkPreviewExampleUrl}; it is
 #. inserted by code.
@@ -48084,6 +48117,27 @@ msgstr ""
 #: src/features/voice/engine/media_engine_facade/shared.ts
 msgid "This voice channel is no longer available."
 msgstr "Kênh thoại này không còn khả dụng."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel from a browser that cannot encrypt calls.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption, and this browser can't join "
+"encrypted calls."
+msgstr ""
+"Kênh thoại này dùng mã hóa đầu cuối, và trình duyệt này không thể tham gia "
+"cuộc gọi được mã hóa."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel on a self-hosted instance opened over plain HTTP. HTTPS is a
+#. technical term, keep it as is.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption. Browsers only allow encrypted"
+" calls on sites that use HTTPS, and this instance doesn't use HTTPS."
+msgstr ""
+"Kênh thoại này dùng mã hóa đầu cuối. Trình duyệt chỉ cho phép cuộc gọi được "
+"mã hóa trên các trang dùng HTTPS, và máy chủ này không dùng HTTPS."
 
 #. Description text in the channel and chat user message. Preserve
 #. {silentMention}; it is inserted by code.
@@ -52725,9 +52779,9 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"Chúng tôi thêm bạn vào sanalyer Labs khi bạn bật pass của mình, trừ khi trước "
-"đây bạn đã rời hoặc bị xóa khỏi sanalyer Labs. Khi bật tùy chọn này, chúng tôi"
-" sẽ chào đón bạn bằng tên trong #operators ngay sau đó."
+"Chúng tôi thêm bạn vào sanalyer Labs khi bạn bật pass của mình, trừ khi "
+"trước đây bạn đã rời hoặc bị xóa khỏi sanalyer Labs. Khi bật tùy chọn này, "
+"chúng tôi sẽ chào đón bạn bằng tên trong #operators ngay sau đó."
 
 #. Hint under the checkbox or switch "Welcome me in #operators". Fluxer Labs
 #. is the name of a community on Fluxer, keep it as is. #operators is a
@@ -52740,9 +52794,9 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"Chúng tôi thêm bạn vào sanalyer Labs khi pass của bạn được giao, trừ khi trước"
-" đây bạn đã rời hoặc bị xóa khỏi sanalyer Labs. Khi bật tùy chọn này, chúng "
-"tôi sẽ chào đón bạn bằng tên trong #operators ngay sau đó."
+"Chúng tôi thêm bạn vào sanalyer Labs khi pass của bạn được giao, trừ khi "
+"trước đây bạn đã rời hoặc bị xóa khỏi sanalyer Labs. Khi bật tùy chọn này, "
+"chúng tôi sẽ chào đón bạn bằng tên trong #operators ngay sau đó."
 
 #. Error under the certificate name fields when the server turned a name down,
 #. for example because it looks like it comes from Fluxer or another brand, or
@@ -54626,7 +54680,8 @@ msgstr ""
 #. friends with.
 #: src/features/premium/components/operator_pass/OperatorPassPassItOnModal.tsx
 msgid "You can only pass this on to one of your friends on Fluxer."
-msgstr "Bạn chỉ có thể chuyển cái này cho một người bạn của mình trên sanalyer."
+msgstr ""
+"Bạn chỉ có thể chuyển cái này cho một người bạn của mình trên sanalyer."
 
 #. Shown in Settings > Look and feel. "Themes" is a link to the Themes
 #. settings tab.
@@ -57122,6 +57177,26 @@ msgstr "Phóng to"
 #: src/features/user/components/settings_utils/search_index/KeybindsIndex.ts
 msgid "Zoom out"
 msgstr "Thu nhỏ"
+
+#. Instance selector error shown when no Fluxer instance answered at the
+#. address. Domain is interpolated.
+#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
+msgid ""
+"Couldn't connect to a sanalyer instance at {domain}. Check the address and "
+"that the instance is online."
+msgstr ""
+"Không thể kết nối tới một phiên bản sanalyer tại {domain}. Vui lòng kiểm tra"
+" địa chỉ và đảm bảo phiên bản đang trực tuyến."
+
+#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
+#. subscription and must not be translated. 4K and fps are video terms.
+#: src/features/voice/utils/VoiceMessageDescriptors.ts
+msgid ""
+"Everyone in the call gets {premiumProductName} stream quality for free, with"
+" up to 4K source resolution and 60 fps."
+msgstr ""
+"Mọi người trong cuộc gọi đều nhận được chất lượng luồng {premiumProductName}"
+" miễn phí: độ phân giải nguồn lên tới 4K và 60 fps."
 
 #. Voice screen share menu preference that pauses the local stream preview
 #. while the app is unfocused. {productName} is the app name.

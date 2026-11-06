@@ -177,13 +177,22 @@ export class UserRelationshipService {
 		if (this.isDeletedUser(targetUserForAttempt)) {
 			throw new FriendRequestBlockedError();
 		}
-		const pendingIncoming = await this.userRepository.getRelationship(
+		const pendingRequestFromTarget = await this.userRepository.getRelationship(
 			targetId,
 			userId,
 			RelationshipTypes.OUTGOING_REQUEST,
 		);
-		if (pendingIncoming) {
-			return this.acceptFriendRequest({userId, targetId, userCacheService, requestCache});
+		if (pendingRequestFromTarget) {
+			if (await this.userRepository.getRelationship(userId, targetId, RelationshipTypes.BLOCKED)) {
+				throw new CannotSendFriendRequestToBlockedUserError();
+			}
+			return this.acceptFriendRequest({
+				userId,
+				targetId,
+				userCacheService,
+				requestCache,
+				targetRequestConfirmed: true,
+			});
 		}
 		const existingFriendship = await this.userRepository.getRelationship(userId, targetId, RelationshipTypes.FRIEND);
 		const existingOutgoingRequest = await this.userRepository.getRelationship(
@@ -224,11 +233,13 @@ export class UserRelationshipService {
 		targetId,
 		userCacheService,
 		requestCache,
+		targetRequestConfirmed = false,
 	}: {
 		userId: UserID;
 		targetId: UserID;
 		userCacheService: UserCacheService;
 		requestCache: RequestCache;
+		targetRequestConfirmed?: boolean;
 	}): Promise<Relationship> {
 		if ((await getInstanceConfigRepository().getInstancePolicyConfig()).friends_disabled) {
 			throw new FriendsDisabledError();
@@ -248,11 +259,13 @@ export class UserRelationshipService {
 			targetId,
 			RelationshipTypes.INCOMING_REQUEST,
 		);
-		if (!incomingRequest) {
+		if (!incomingRequest && !targetRequestConfirmed) {
 			throw new UnknownUserError();
 		}
 		await this.validateRelationshipCounts({userId, targetId});
-		await this.userRepository.deleteRelationship(userId, targetId, RelationshipTypes.INCOMING_REQUEST);
+		if (incomingRequest) {
+			await this.userRepository.deleteRelationship(userId, targetId, RelationshipTypes.INCOMING_REQUEST);
+		}
 		await this.userRepository.deleteRelationship(targetId, userId, RelationshipTypes.OUTGOING_REQUEST);
 		const [userRelationship, targetRelationship] = await this.upsertMutualFriendship(userId, targetId);
 		await this.dispatchRelationshipUpdate({
@@ -592,9 +605,6 @@ export class UserRelationshipService {
 		const targetIsFriendlyBot =
 			targetUser.isBot && (targetUser.flags & UserFlags.FRIENDLY_BOT) === UserFlags.FRIENDLY_BOT;
 		if (targetUser.isBot && !targetIsFriendlyBot) {
-			throw new FriendRequestBlockedError();
-		}
-		if (targetUser.flags & UserFlags.APP_STORE_REVIEWER) {
 			throw new FriendRequestBlockedError();
 		}
 		const requesterBlockedTarget = await this.userRepository.getRelationship(

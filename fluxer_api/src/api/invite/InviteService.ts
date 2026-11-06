@@ -28,6 +28,7 @@ import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
 import {assertTierAllows, NO_TIER_CONTEXT, type TierContext} from '@app/api/user/AccountTier';
 import * as RandomUtils from '@app/api/utils/RandomUtils';
 import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
+import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {AuditLogActionType} from '@fluxer/constants/src/AuditLogActionType';
 import {ChannelTypes, InviteTypes, Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {GuildFeatures, GuildOperations, JoinSourceTypes} from '@fluxer/constants/src/GuildConstants';
@@ -35,6 +36,7 @@ import {MAX_GUILD_INVITES} from '@fluxer/constants/src/LimitConstants';
 import {InvalidChannelTypeError} from '@fluxer/errors/src/domains/channel/InvalidChannelTypeError';
 import {UnknownChannelError} from '@fluxer/errors/src/domains/channel/UnknownChannelError';
 import {FeatureTemporarilyDisabledError} from '@fluxer/errors/src/domains/core/FeatureTemporarilyDisabledError';
+import {InternalServerError} from '@fluxer/errors/src/domains/core/InternalServerError';
 import {MissingPermissionsError} from '@fluxer/errors/src/domains/core/MissingPermissionsError';
 import {MaxGuildInvitesError} from '@fluxer/errors/src/domains/guild/MaxGuildInvitesError';
 import {InvitesDisabledError} from '@fluxer/errors/src/domains/invite/InvitesDisabledError';
@@ -46,6 +48,7 @@ import type {
 } from '@fluxer/schema/src/domains/invite/InviteSchemas';
 
 const INVITE_USE_RESERVATION_EXTRA_ATTEMPTS = 8;
+const INVITE_CODE_ATTEMPTS = 5;
 
 interface GetChannelInvitesParams {
 	userId: UserID;
@@ -73,6 +76,7 @@ interface AcceptInviteParams {
 	inviteCode: InviteCode;
 	requestCache: RequestCache;
 	tierContext: TierContext;
+	ip?: string | null;
 }
 
 interface DeleteInviteParams {
@@ -191,8 +195,7 @@ export class InviteService {
 					return {invite: existingInvite, isNew: false};
 				}
 			}
-			const newInvite = await this.inviteRepository.create({
-				code: this.createRandomInviteCode(),
+			const newInvite = await this.createInviteWithRandomCode({
 				type: InviteTypes.GROUP_DM,
 				guild_id: null,
 				channel_id: channelId,
@@ -237,8 +240,7 @@ export class InviteService {
 		if (existingInvites.length >= inviteLimit) {
 			throw new MaxGuildInvitesError(inviteLimit);
 		}
-		const newInvite = await this.inviteRepository.create({
-			code: this.createRandomInviteCode(),
+		const newInvite = await this.createInviteWithRandomCode({
 			type: InviteTypes.GUILD,
 			guild_id: channel.guildId,
 			channel_id: channelId,
@@ -260,7 +262,7 @@ export class InviteService {
 		return {invite: newInvite, isNew: true};
 	}
 
-	async acceptInvite({userId, inviteCode, requestCache, tierContext}: AcceptInviteParams): Promise<Invite> {
+	async acceptInvite({userId, inviteCode, requestCache, tierContext, ip}: AcceptInviteParams): Promise<Invite> {
 		const invite = await this.findInviteWithLowercaseFallback(inviteCode);
 		if (!invite) throw new UnknownInviteError();
 		const user = await this.apiContext.services.users.findUnique(userId);
@@ -320,7 +322,7 @@ export class InviteService {
 		if (existingMember) {
 			return invite;
 		}
-		await this.guildService.moderation.checkUserBanStatus({userId, guildId: invite.guildId});
+		await this.guildService.moderation.checkUserBanStatus({userId, guildId: invite.guildId, ip});
 		if (invite.temporary) {
 			const hasPresence = await this.apiContext.services.gateway.hasActivePresence(userId);
 			if (!hasPresence) {
@@ -348,6 +350,7 @@ export class InviteService {
 				sourceInviteCode: isVanityInvite ? undefined : invite.code,
 				inviterId: isVanityInvite ? undefined : (invite.inviterId ?? undefined),
 				tierContext,
+				ip,
 			}),
 		);
 		if (invite.temporary) {
@@ -356,8 +359,17 @@ export class InviteService {
 		return this.completeInviteUse(reservedInvite, {deleteWhenExhausted: !isVanityInvite});
 	}
 
-	private createRandomInviteCode(): InviteCode {
-		return createInviteCode(RandomUtils.randomString(8));
+	private async createInviteWithRandomCode(
+		params: Omit<Parameters<InviteRepository['create']>[0], 'code'>,
+	): Promise<Invite> {
+		for (let attempt = 0; attempt < INVITE_CODE_ATTEMPTS; attempt++) {
+			const invite = await this.inviteRepository.create({
+				...params,
+				code: createInviteCode(RandomUtils.randomString(8)),
+			});
+			if (invite) return invite;
+		}
+		throw new InternalServerError({code: APIErrorCodes.INTERNAL_SERVER_ERROR});
 	}
 
 	private findReusableInvite(invites: Array<Invite>, criteria: ReusableInviteCriteria): Invite | undefined {

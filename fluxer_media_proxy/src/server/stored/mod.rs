@@ -186,7 +186,7 @@ pub(in crate::server) async fn serve_asset_image(
         }
         return generated_media_response(GeneratedMediaResponse {
             method,
-            data: hit.data.as_bytes().clone().into(),
+            data: hit.data,
             content_type: hit.format.mime(),
             disposition: Some(content_disposition_header(
                 hit.format.mime(),
@@ -226,7 +226,7 @@ pub(in crate::server) async fn serve_asset_image(
     })
     .await
     {
-        Ok(bytes) => bytes.as_bytes().clone(),
+        Ok(bytes) => bytes,
         Err(error) => {
             let detail = format!(
                 "asset key={} src_ct={} out={} size={:?} animated={}",
@@ -252,7 +252,7 @@ pub(in crate::server) async fn serve_asset_image(
     }
     generated_media_response(GeneratedMediaResponse {
         method,
-        data: transformed.into(),
+        data: transformed,
         content_type: out_ext.mime(),
         disposition: Some(content_disposition_header(
             out_ext.mime(),
@@ -326,16 +326,16 @@ async fn read_cdn_object_with_fallback(
 ) -> Result<CdnSourceObject, StorageError> {
     let bucket = &app.cfg.storage.bucket_cdn;
     let limit = constants::MAX_MEDIA_PROXY_BYTES;
-    let budget = storage::unversioned_read_budget(limit);
+    let budget = app.media.stored_buffer_bytes();
     let read = match app
         .store
-        .read_object_limited_with_digest(bucket, key, limit, &budget)
+        .read_object_limited_with_digest(bucket, key, limit, budget)
         .await
     {
         Err(StorageError::NotFound) => {
             let fallback_key = format!("{key}.{}", original_ext.name());
             app.store
-                .read_object_limited_with_digest(bucket, &fallback_key, limit, &budget)
+                .read_object_limited_with_digest(bucket, &fallback_key, limit, budget)
                 .await?
         }
         other => other?,
@@ -346,7 +346,7 @@ async fn read_cdn_object_with_fallback(
                 .expect("a digested read always reports its content digest"),
         ),
         object: storage::Object {
-            data: read.data.as_bytes().clone(),
+            data: Bytes::from_owner(read.data),
             content_type: read.content_type,
         },
     })
@@ -392,7 +392,11 @@ async fn read_attachment(
     }
     let object = match app
         .store
-        .read_object(&app.cfg.storage.bucket_cdn, key)
+        .read_object_within(
+            &app.cfg.storage.bucket_cdn,
+            key,
+            app.media.stored_buffer_bytes(),
+        )
         .await
     {
         Ok(object) => object,

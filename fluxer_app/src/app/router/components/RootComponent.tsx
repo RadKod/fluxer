@@ -172,6 +172,10 @@ export const RootComponent: React.FC<{children?: React.ReactNode}> = observer(({
 				}
 				return;
 			}
+			if (requiresSelfHostedSetup && pathname === Routes.LOGIN && pendingRedirectRef.current) {
+				RouterUtils.replaceWith(pendingRedirectRef.current);
+				pendingRedirectRef.current = null;
+			}
 			if (
 				GatewaySessions.foregroundConnection.isConnected ||
 				GatewaySessions.foregroundConnection.isConnecting ||
@@ -199,6 +203,7 @@ export const RootComponent: React.FC<{children?: React.ReactNode}> = observer(({
 		shouldBypassGateway,
 		shouldSkipAutoRedirect,
 		pendingRedirectRef,
+		requiresSelfHostedSetup,
 	]);
 	useEffect(() => {
 		if (!Authentication.isAuthenticated) return;

@@ -173,7 +173,6 @@ export class ThreadListService {
 			userId,
 			channelId,
 			viewer,
-			skipNsfwValidation: true,
 			access: privateThreads || textOnly ? 'member' : 'visitor_read',
 		});
 		const {channel} = auth;

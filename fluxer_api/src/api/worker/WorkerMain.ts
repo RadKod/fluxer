@@ -47,6 +47,7 @@ import {queueBlocklistFeedStartupJobs} from '@app/api/worker/BlocklistFeedStartu
 import {CronScheduler} from '@app/api/worker/CronScheduler';
 import {JetStreamWorkerQueue, JOBS_STREAM_MAX_AGE_MS} from '@app/api/worker/JetStreamWorkerQueue';
 import {queueDeletedUsersBackfill} from '@app/api/worker/tasks/BackfillDeletedUsers';
+import {queueFavoriteMemeNsfwBackfill} from '@app/api/worker/tasks/BackfillFavoriteMemeNsfw';
 import {queueHiddenProfileBadgesBackfill} from '@app/api/worker/tasks/BackfillHiddenProfileBadges';
 import {queuePasskeyTraitBackfill} from '@app/api/worker/tasks/BackfillPasskeyTrait';
 import {queueUserAclIndexBackfill} from '@app/api/worker/tasks/BackfillUserAclIndex';
@@ -155,6 +156,10 @@ export function registerCronJobs(cron: CronScheduler, jobsStreamMaxAgeMs: number
 		);
 	}
 	cron.upsert('prunePostgresKvTtl', 'prunePostgresKvTtl', {}, '0 */5 * * * *', {ledger: false});
+	cron.upsert('sweepVoiceParticipants', 'sweepVoiceParticipants', {}, '30 * * * * *', {
+		ledger: false,
+		enabled: () => Config.voice.enabled && Config.voice.participantSweepEnabled,
+	});
 	cron.upsert('syncDiscoveryIndex', 'syncDiscoveryIndex', {}, '0 */15 * * * *', {ledger: false});
 	if (Config.blocklistFeeds.enabled) {
 		cron.upsert('syncUrlBlocklists', 'syncUrlBlocklists', {}, '0 0 */6 * * *', {ledger: true});
@@ -307,6 +312,7 @@ export async function startWorkerRuntime(options: WorkerRuntimeOptions): Promise
 		await queueUserAclIndexBackfill(dependencies.kvClient, workerService);
 		await queueDeletedUsersBackfill(dependencies.kvClient, workerService);
 		await queueHiddenProfileBadgesBackfill(dependencies.kvClient, workerService);
+		await queueFavoriteMemeNsfwBackfill(dependencies.kvClient, workerService);
 		try {
 			const normalized = await getInstanceConfigRepository().normalizeStoredBrandingAssets(dependencies.storageService);
 			if (normalized > 0) {

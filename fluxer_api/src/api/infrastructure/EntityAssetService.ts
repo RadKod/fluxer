@@ -4,20 +4,22 @@ import crypto from 'node:crypto';
 import {setTimeout as delay} from 'node:timers/promises';
 import {Config} from '@app/api/Config';
 import {stripAnimationPrefix} from '@app/api/infrastructure/AssetEntitlementUtils';
+import {contentModerationService, type ModerationContext} from '@app/api/infrastructure/ContentModerationService';
 import type {IAssetDeletionQueue, QueuedAssetReference} from '@app/api/infrastructure/IAssetDeletionQueue';
 import type {IMediaService, MediaProxyMetadataResponse} from '@app/api/infrastructure/IMediaService';
 import {decodeValidatedImage, resolveAssetSizeLimit} from '@app/api/infrastructure/ImageUploadValidation';
 import type {IStorageService} from '@app/api/infrastructure/IStorageService';
 import {Logger} from '@app/api/Logger';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
+import {bannedAvatarHashCache} from '@app/api/middleware/BannedAvatarHashCache';
 import type {User} from '@app/api/models/User';
 import {awaitAll} from '@app/api/utils/ConcurrencyUtils';
 import {type AssetKind, COSMETIC_ASSET_POLICY, getPolicy} from '@fluxer/constants/src/AssetFormatPolicy';
 import {AVATAR_MAX_SIZE} from '@fluxer/constants/src/LimitConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
+import {ContentBlockedError} from '@fluxer/errors/src/domains/content/ContentBlockedError';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {ms} from 'itty-time';
-import sharp from 'sharp';
 
 type AssetType =
 	| 'avatar'
@@ -50,6 +52,18 @@ const ASSET_TYPE_TO_PREFIX: Record<AssetType, string> = {
 	branding_backdrop: 'branding-backdrops',
 	custom_badge: 'custom-badges',
 	role_icon: 'role-icons',
+};
+
+const ASSET_TYPE_TO_MODERATION_SURFACE: Record<AssetType, ModerationContext['surface']> = {
+	avatar: 'avatar',
+	banner: 'banner',
+	icon: 'guild_icon',
+	splash: 'guild_splash',
+	embed_splash: 'guild_splash',
+	branding: 'app_asset',
+	branding_backdrop: 'app_asset',
+	custom_badge: 'app_asset',
+	role_icon: 'app_asset',
 };
 
 function normalizeContentType(contentType: string | null | undefined): string {
@@ -104,6 +118,7 @@ interface PrepareAssetUploadOptions {
 	cosmeticMaxBytes?: number;
 	cosmeticShape?: CosmeticImageShape;
 	uploader?: User | null;
+	enforceDimensions?: boolean;
 }
 
 type LimitConfigSnapshotProvider = Pick<LimitConfigService, 'getConfigSnapshot'>;
@@ -160,7 +175,17 @@ export class EntityAssetService {
 	}
 
 	async prepareAssetUpload(options: PrepareAssetUploadOptions): Promise<PreparedAssetUpload> {
-		const {assetType, entityType, entityId, guildId, previousHash, base64Image, errorPath, uploader} = options;
+		const {
+			assetType,
+			entityType,
+			entityId,
+			guildId,
+			previousHash,
+			base64Image,
+			errorPath,
+			uploader,
+			enforceDimensions,
+		} = options;
 		const cosmetic = typeof entityId === 'string';
 		if (cosmetic && assetType !== 'branding') {
 			throw new Error('Only branding assets take a cosmetic owner key');
@@ -201,11 +226,23 @@ export class EntityAssetService {
 			assetType,
 			uploader ?? null,
 			cosmetic,
+			enforceDimensions ?? false,
 			options.cosmeticMaxBytes,
 			options.cosmeticShape,
 		);
 		const imageHash = crypto.createHash('md5').update(Buffer.from(imageBuffer)).digest('hex');
 		const imageHashShort = imageHash.slice(0, 8);
+		if (bannedAvatarHashCache.isBanned(imageHashShort)) {
+			throw new ContentBlockedError();
+		}
+		const moderationContext: ModerationContext = {
+			userId: uploader?.id ?? null,
+			guildId: guildId ?? null,
+			channelId: null,
+			messageId: null,
+			surface: ASSET_TYPE_TO_MODERATION_SURFACE[assetType],
+		};
+		contentModerationService.scanFileBuffer(imageBuffer, moderationContext);
 		const newHash = isAnimated ? `a_${imageHashShort}` : imageHashShort;
 		const newS3Key = `${s3KeyBase}/${imageHashShort}`;
 		const newCdnUrl = `${cdnUrlBase}/${newHash}.${format}`;
@@ -229,10 +266,7 @@ export class EntityAssetService {
 		if (newHash === previousHash) return prepared;
 		let uploadBuffer: Uint8Array = imageBuffer;
 		try {
-			const isJpeg = format === 'jpg' || format === 'jpeg';
-			const stripped = isJpeg
-				? await sharp(imageBuffer).jpeg({quality: 100}).toBuffer()
-				: await this.mediaService.stripImageMetadata(imageBuffer);
+			const stripped = await this.mediaService.stripImageMetadata(imageBuffer);
 			if (stripped) {
 				uploadBuffer = stripped;
 			} else {
@@ -240,6 +274,9 @@ export class EntityAssetService {
 			}
 		} catch (error) {
 			Logger.error({error, assetType, entityType}, 'Failed to strip metadata from entity asset, uploading original');
+		}
+		if (uploadBuffer !== imageBuffer) {
+			contentModerationService.scanFileBuffer(uploadBuffer, moderationContext);
 		}
 		await this.uploadToS3(assetType, entityType, newS3Key, uploadBuffer);
 		const exists = await this.verifyAssetExistsWithRetry(assetType, entityType, newS3Key);
@@ -265,6 +302,10 @@ export class EntityAssetService {
 	}): Promise<PreparedAssetUpload | null> {
 		const {assetType, entityType, sourceEntityId, entityId, guildId, hash, errorPath} = options;
 		const objectName = stripAnimationPrefix(hash);
+		if (bannedAvatarHashCache.isBanned(objectName)) {
+			Logger.warn({assetType, entityType}, 'Asset to copy is on the hash blocklist, leaving the copy without it');
+			return null;
+		}
 		const sourceS3Key = `${this.buildS3KeyBase(assetType, entityType, sourceEntityId, guildId)}/${objectName}`;
 		if ((await this.storageService.getObjectMetadata(Config.s3.buckets.cdn, sourceS3Key)) === null) {
 			Logger.warn({sourceS3Key, assetType, entityType}, 'Asset to copy does not exist, leaving the copy without it');
@@ -409,6 +450,7 @@ export class EntityAssetService {
 		assetType: AssetType,
 		uploader: User | null,
 		cosmetic: boolean,
+		enforceDimensions: boolean,
 		cosmeticMaxBytes?: number,
 		cosmeticShape?: CosmeticImageShape,
 	): Promise<{
@@ -436,7 +478,7 @@ export class EntityAssetService {
 							? getPolicy(kind).maxBytes
 							: resolveAssetSizeLimit(this.limitConfigService, 'avatar_max_size', AVATAR_MAX_SIZE, null, uploader),
 				});
-		if (!cosmetic && kind === 'role_icon') {
+		if (!cosmetic && (kind === 'role_icon' || enforceDimensions)) {
 			requireDimensionsWithinPolicy(metadata, kind, errorPath);
 		}
 		const isAnimatedImage = metadata.animated ?? false;

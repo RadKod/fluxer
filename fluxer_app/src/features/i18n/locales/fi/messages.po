@@ -6291,6 +6291,13 @@ msgstr ""
 " on jo sallittu, käynnistä {productName2} uudelleen, jotta macOS ottaa sen "
 "käyttöön."
 
+#. Switch in the sensitive content settings. Turns on 18+ communities and
+#. channels and the "Show" sensitive media option in the Fluxer app for iPhone
+#. and iPad.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid "Allow 18+ content on iPhone and iPad"
+msgstr "Salli 18+-sisältö iPhonessa ja iPadissa"
+
 #. Private thread setting that lets non-moderators add other members.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
 msgid "Allow anyone to invite"
@@ -9346,6 +9353,30 @@ msgstr ""
 "Selaimet eivät näytä kameroita näytönjakovalitsimessa. Valitse ne sen sijaan"
 " Laitteet-välilehdeltä. Jos mitään ei näy, salli kameran käyttö tai yhdistä "
 "laite."
+
+#. Shown on a self-hosted instance opened over plain HTTP when someone tries
+#. to use the microphone, camera or screen sharing, which browsers block
+#. there. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow the microphone, camera and screen sharing on sites that "
+"use HTTPS, and this instance doesn't use HTTPS. You can still join voice "
+"channels and listen."
+msgstr ""
+"Selaimet sallivat mikrofonin, kameran ja näytön jakamisen vain HTTPS:ää "
+"käyttävillä sivustoilla, eikä tämä instanssi käytä HTTPS:ää. Voit silti "
+"liittyä puhekanaville ja kuunnella."
+
+#. Short note next to a setting or button that browsers turn off on a self-
+#. hosted instance opened over plain HTTP, such as notifications or passkeys.
+#. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow this on sites that use HTTPS, and this instance doesn't "
+"use HTTPS."
+msgstr ""
+"Selaimet sallivat tämän vain HTTPS:ää käyttävillä sivustoilla, eikä tämä "
+"instanssi käytä HTTPS:ää."
 
 #. Where the dark mode favicon appears and the recommended format, in the
 #. setup wizard. size is a file size such as 10 MB.
@@ -14487,12 +14518,6 @@ msgstr "Yhteyttä kohteeseen {domain} ei voitu muodostaa. Yritä uudelleen."
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
 msgid "Couldn't connect to {names}"
 msgstr "Yhteyttä {names} ei voitu muodostaa"
-
-#. Instance selector error shown when no Fluxer instance answered at the
-#. address. Domain is interpolated.
-#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
-msgid "Couldn't connect to a sanalyer instance at {domain}. Check the address and that the instance is online."
-msgstr "sanalyer-instanssia ei tavoitettu osoitteesta {domain}. Tarkista osoite ja varmista, että instanssi on verkossa."
 
 #. Toast shown when joining a voice channel fails because the connection timed
 #. out or the transport dropped.
@@ -20409,12 +20434,6 @@ msgstr ""
 msgid "Everyone"
 msgstr "Kaikki"
 
-#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
-#. subscription and must not be translated. 4K and fps are video terms.
-#: src/features/voice/utils/VoiceMessageDescriptors.ts
-msgid "Everyone in the call gets {premiumProductName} stream quality for free, with up to 4K source resolution and 60 fps."
-msgstr "Kaikki puhelussa olevat saavat {premiumProductName}-striimin laadun ilmaiseksi: jopa 4K-lähderesoluutio ja 60 fps."
-
 #. Description of the single community option in the setup wizard.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
 msgid ""
@@ -21602,8 +21621,8 @@ msgid ""
 "Fluxer adds a random number to each username, like alex#4821, so many people"
 " can use the same name."
 msgstr ""
-"sanalyer lisää jokaiseen käyttäjänimeen satunnaisen numeron, kuten alex#4821, "
-"jotta moni voi käyttää samaa nimeä."
+"sanalyer lisää jokaiseen käyttäjänimeen satunnaisen numeron, kuten "
+"alex#4821, jotta moni voi käyttää samaa nimeä."
 
 #. Problem shown in the quick CSS editor on a web address that the app is not
 #. allowed to load. Assets are files uploaded under "Assets".
@@ -21641,15 +21660,16 @@ msgid ""
 "Fluxer can't find this folder. It will load the themes again when the folder"
 " is back."
 msgstr ""
-"sanalyer ei löydä tätä kansiota. Teemat ladataan uudelleen, kun kansio on taas"
-" saatavilla."
+"sanalyer ei löydä tätä kansiota. Teemat ladataan uudelleen, kun kansio on "
+"taas saatavilla."
 
 #. Shown for a watched theme folder in Settings > Themes when the desktop app
 #. no longer has permission to read it.
 #: src/features/theme_settings/components/YourThemesSection.tsx
 msgid "Fluxer can't open this folder. Import it again to keep watching it."
 msgstr ""
-"sanalyer ei voi avata tätä kansiota. Tuo se uudelleen, jotta seuranta jatkuu."
+"sanalyer ei voi avata tätä kansiota. Tuo se uudelleen, jotta seuranta "
+"jatkuu."
 
 #. Error toast in "Your themes" when the chosen theme folder cannot be opened.
 #: src/features/theme_settings/components/YourThemesSection.tsx
@@ -24461,8 +24481,8 @@ msgid ""
 "If the link opens a different Fluxer app, select \"Signing in on another "
 "device?\" and type the code in your browser instead."
 msgstr ""
-"Jos linkki avaa toisen sanalyer-sovelluksen, valitse \"Kirjautuminen toisella "
-"laitteella?\" ja kirjoita koodi selaimeesi."
+"Jos linkki avaa toisen sanalyer-sovelluksen, valitse \"Kirjautuminen "
+"toisella laitteella?\" ja kirjoita koodi selaimeesi."
 
 #. Helper text under the Explain the problem field on the details step of the
 #. DSA report form.
@@ -24600,8 +24620,8 @@ msgid ""
 "If you leave it empty, the tab uses your app icon, or the Fluxer icon if "
 "that is empty too."
 msgstr ""
-"Jos jätät tämän tyhjäksi, välilehti käyttää sovelluskuvaketta tai sanalyerin "
-"kuvaketta, jos sekin on tyhjä."
+"Jos jätät tämän tyhjäksi, välilehti käyttää sovelluskuvaketta tai sanalyerin"
+" kuvaketta, jos sekin on tyhjä."
 
 #. What the app shows when no app icon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -24616,8 +24636,8 @@ msgid ""
 "least 32 characters that you choose, restart Fluxer, and enter that value "
 "here."
 msgstr ""
-"Jos käytät sanalyeria ilman rexctl:ää, aseta FLUXER_SETUP_TOKEN arvoon, joka "
-"on vähintään 32 merkkiä pitkä ja jonka valitset itse, käynnistä sanalyer "
+"Jos käytät sanalyeria ilman rexctl:ää, aseta FLUXER_SETUP_TOKEN arvoon, joka"
+" on vähintään 32 merkkiä pitkä ja jonka valitset itse, käynnistä sanalyer "
 "uudelleen ja syötä tämä arvo tähän."
 
 #: src/features/user/components/modals/FluxerTagChangeModal.tsx
@@ -26796,6 +26816,13 @@ msgstr "Lue lisää näytönjakamisen esikatsauksista"
 msgid "Learn more"
 msgstr "Lue lisää"
 
+#. Link under the Plutonium page hero buttons on self-hosted instances.
+#. premiumProductName is the paid tier name set by the instance. Opens a page
+#. about the tier that the instance admin chose.
+#: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
+msgid "Learn more about {premiumProductName}"
+msgstr "Lue lisää: {premiumProductName}"
+
 #. Confirmation text before leaving a private thread. threadName is the thread
 #. name.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
@@ -27059,6 +27086,18 @@ msgid "Lets push-to-talk and keybinds work in other apps."
 msgstr ""
 "Mahdollistaa push-to-talkin ja pikakomentojen toimimisen muissa "
 "sovelluksissa."
+
+#. Helper text under the "Allow 18+ content on iPhone and iPad" switch. "Show"
+#. is the sensitive media option name and must match its translation.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid ""
+"Lets you open communities and channels marked 18+ in the Fluxer app for "
+"iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
+" change this on the web or on desktop."
+msgstr ""
+"Voit avata 18+-merkittyjä yhteisöjä ja kanavia Fluxerin iPhone- ja iPad-"
+"sovelluksessa ja valita siellä arkaluonteiselle medialle ”Näytä”. Voit "
+"muuttaa tätä vain verkossa tai työpöytäsovelluksessa."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx
 msgid "Lets you reset your password if you forget it."
@@ -34207,8 +34246,8 @@ msgid ""
 "People using the Fluxer mobile apps won't get notifications from your "
 "instance. You can turn this on later in the admin panel."
 msgstr ""
-"sanalyerin mobiilisovellusten käyttäjät eivät saa ilmoituksia instanssistasi. "
-"Voit ottaa tämän käyttöön myöhemmin hallintapaneelissa."
+"sanalyerin mobiilisovellusten käyttäjät eivät saa ilmoituksia "
+"instanssistasi. Voit ottaa tämän käyttöön myöhemmin hallintapaneelissa."
 
 #. Description under the "Anyone in my communities" privacy setup option.
 #: src/features/user/components/modals/PrivacySetupModal.tsx
@@ -40227,8 +40266,8 @@ msgid ""
 "Sweden, {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 msgstr ""
-"Myyjä: sanalyer Platform AB, 559537-3993, kotipaikka (säte) Haninge, Ruotsi, "
-"{OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
+"Myyjä: sanalyer Platform AB, 559537-3993, kotipaikka (säte) Haninge, Ruotsi,"
+" {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 
 #. Button or menu action label in the share theme modal. Keep it concise.
@@ -45933,8 +45972,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"sanalyerin iOS- ja Android-sovellukset saavat ilmoitukset sanalyerin ylläpitämän"
-" push-välityksen kautta, joka välittää ne Applelle ja Googlelle. "
+"sanalyerin iOS- ja Android-sovellukset saavat ilmoitukset sanalyerin "
+"ylläpitämän push-välityksen kautta, joka välittää ne Applelle ja Googlelle. "
 "Käyttääksesi sitä hyväksyt push-välityksen tietosuojailmoituksen."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -46053,8 +46092,8 @@ msgid ""
 "transparent background, at least 256 pixels tall and up to {size}."
 msgstr ""
 "Suuri kuva aina tumman kirjautumislomakkeen vieressä. Puhelimessa se näkyy "
-"vain nimen vieressä, kun sanamerkkiä ei ole eikä tuotteen nimi ole sanalyer. "
-"Käytä neliön muotoista tai leveää PNG- tai SVG-kuvaa vaaleissa väreissä "
+"vain nimen vieressä, kun sanamerkkiä ei ole eikä tuotteen nimi ole sanalyer."
+" Käytä neliön muotoista tai leveää PNG- tai SVG-kuvaa vaaleissa väreissä "
 "läpinäkyvällä taustalla, vähintään 256 pikseliä korkea ja enintään {size}."
 
 #. Error modal body shown when revoking an invite fails; warns the user that
@@ -47049,19 +47088,6 @@ msgstr "Tämä kanava on synkronoitu yläkategorian <0>{0}</0> kanssa."
 msgid "This channel no longer exists. It may have already been deleted."
 msgstr "Tätä kanavaa ei enää ole. Se on ehkä jo poistettu."
 
-#. Error shown when signing in or signing up on a self-hosted instance opened
-#. over plain HTTP or a bare IP address, where the browser blocks the
-#. automatic background check. HTTPS and localhost are technical terms, keep
-#. them as is.
-#: src/features/auth/altcha/CaptchaInterceptor.ts
-msgid ""
-"This check only runs when the app is opened over HTTPS or on localhost. Ask "
-"the instance owner to serve it over HTTPS, or open it from localhost."
-msgstr ""
-"Tämä tarkistus suoritetaan vain, kun sovellus avataan HTTPS:n kautta tai "
-"localhostista. Pyydä palvelimen omistajaa käyttämään HTTPS:ää tai avaa "
-"sovellus localhostista."
-
 #. Problem shown in the quick CSS editor on a generated class name. [data-flx]
 #. is CSS code and stays in English.
 #: src/features/theme_settings/editor/CssLint.ts
@@ -47559,6 +47585,13 @@ msgstr ""
 "Tämä instanssi ei käytä sähköpostia, joten se ei voi vastaanottaa "
 "ilmoituksia tämän lomakkeen kautta. Ilmoita sisällöstä sovelluksessa tai ota"
 " yhteyttä tämän instanssin ylläpitäjiin."
+
+#. Title of the dialog shown when someone tries to use the microphone, camera
+#. or screen sharing on a self-hosted instance opened over plain HTTP. HTTPS
+#. is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid "This instance doesn't use HTTPS"
+msgstr "Tämä instanssi ei käytä HTTPS:ää"
 
 #. Explanation shown in place of the single sign-on description when the
 #. instance offers no SSO provider.
@@ -48302,6 +48335,28 @@ msgstr ""
 #: src/features/voice/engine/media_engine_facade/shared.ts
 msgid "This voice channel is no longer available."
 msgstr "Tämä äänikanava ei ole enää käytettävissä."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel from a browser that cannot encrypt calls.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption, and this browser can't join "
+"encrypted calls."
+msgstr ""
+"Tämä puhekanava käyttää päästä päähän -salausta, eikä tämä selain voi "
+"liittyä salattuihin puheluihin."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel on a self-hosted instance opened over plain HTTP. HTTPS is a
+#. technical term, keep it as is.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption. Browsers only allow encrypted"
+" calls on sites that use HTTPS, and this instance doesn't use HTTPS."
+msgstr ""
+"Tämä puhekanava käyttää päästä päähän -salausta. Selaimet sallivat salatut "
+"puhelut vain HTTPS:ää käyttävillä sivustoilla, eikä tämä instanssi käytä "
+"HTTPS:ää."
 
 #. Description text in the channel and chat user message. Preserve
 #. {silentMention}; it is inserted by code.
@@ -52949,10 +53004,10 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"Lisäämme sinut sanalyer Labsiin, kun otat passisi käyttöön, ellet ole aiemmin "
-"poistunut sanalyer Labsista tai ellei sinua ole poistettu sieltä. Kun tämä on "
-"päällä, toivotamme sinut nimeltä tervetulleeksi kanavalle #operators pian "
-"sen jälkeen."
+"Lisäämme sinut sanalyer Labsiin, kun otat passisi käyttöön, ellet ole "
+"aiemmin poistunut sanalyer Labsista tai ellei sinua ole poistettu sieltä. "
+"Kun tämä on päällä, toivotamme sinut nimeltä tervetulleeksi kanavalle "
+"#operators pian sen jälkeen."
 
 #. Hint under the checkbox or switch "Welcome me in #operators". Fluxer Labs
 #. is the name of a community on Fluxer, keep it as is. #operators is a
@@ -52965,10 +53020,10 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"Lisäämme sinut sanalyer Labsiin, kun passisi on toimitettu, ellet ole aiemmin "
-"poistunut sanalyer Labsista tai ellei sinua ole poistettu sieltä. Kun tämä on "
-"päällä, toivotamme sinut nimeltä tervetulleeksi kanavalle #operators pian "
-"sen jälkeen."
+"Lisäämme sinut sanalyer Labsiin, kun passisi on toimitettu, ellet ole "
+"aiemmin poistunut sanalyer Labsista tai ellei sinua ole poistettu sieltä. "
+"Kun tämä on päällä, toivotamme sinut nimeltä tervetulleeksi kanavalle "
+"#operators pian sen jälkeen."
 
 #. Error under the certificate name fields when the server turned a name down,
 #. for example because it looks like it comes from Fluxer or another brand, or
@@ -57340,6 +57395,26 @@ msgstr "Lähennä"
 #: src/features/user/components/settings_utils/search_index/KeybindsIndex.ts
 msgid "Zoom out"
 msgstr "Loitonna"
+
+#. Instance selector error shown when no Fluxer instance answered at the
+#. address. Domain is interpolated.
+#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
+msgid ""
+"Couldn't connect to a sanalyer instance at {domain}. Check the address and "
+"that the instance is online."
+msgstr ""
+"sanalyer-instanssia ei tavoitettu osoitteesta {domain}. Tarkista osoite ja "
+"varmista, että instanssi on verkossa."
+
+#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
+#. subscription and must not be translated. 4K and fps are video terms.
+#: src/features/voice/utils/VoiceMessageDescriptors.ts
+msgid ""
+"Everyone in the call gets {premiumProductName} stream quality for free, with"
+" up to 4K source resolution and 60 fps."
+msgstr ""
+"Kaikki puhelussa olevat saavat {premiumProductName}-striimin laadun "
+"ilmaiseksi: jopa 4K-lähderesoluutio ja 60 fps."
 
 #. Under a feed post, at the end of its action row: the full text for the view
 #. count, read by screen readers and shown in the tooltip; the card shows only

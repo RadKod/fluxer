@@ -143,14 +143,14 @@ export class VoiceService {
 			guildId,
 			guildFeatures,
 		};
-		const availableRegions = this.voiceAvailabilityService.getAvailableRegions(context);
-		const accessibleRegions = availableRegions.filter((region) => region.isAccessible);
+		const accessibleRegions = this.voiceAvailabilityService
+			.getAvailableRegions(context)
+			.filter((region) => region.isAccessible);
 		const defaultRegionId = this.liveKitService.getDefaultRegionId();
 		const preferredRegionId = params.region ?? channel.rtcRegion ?? null;
 		const regionPreference = resolveVoiceRegionPreference({
 			preferredRegionId,
 			accessibleRegions,
-			availableRegions,
 			defaultRegionId,
 		});
 		const accessibleServers = this.getAccessibleServersForRegions(accessibleRegions, context);
@@ -161,6 +161,7 @@ export class VoiceService {
 			guildId,
 			channelId,
 			context,
+			accessibleRegions,
 			preferredRegionId: regionPreference.regionId,
 			mode: regionPreference.mode,
 		});
@@ -187,7 +188,6 @@ export class VoiceService {
 					preferredRegionId: regionPreference.regionId,
 					mode: regionPreference.mode,
 					accessibleRegions,
-					availableRegions,
 					latitude: params.latitude,
 					longitude: params.longitude,
 					selectionKey,
@@ -301,6 +301,7 @@ export class VoiceService {
 		guildId,
 		channelId,
 		context,
+		accessibleRegions,
 		preferredRegionId,
 		mode,
 	}: {
@@ -308,6 +309,7 @@ export class VoiceService {
 		guildId?: GuildID;
 		channelId: ChannelID;
 		context: VoiceAccessContext;
+		accessibleRegions: Array<VoiceRegionAvailability>;
 		preferredRegionId: string | null;
 		mode: 'explicit' | 'automatic';
 	}): Promise<{
@@ -325,6 +327,7 @@ export class VoiceService {
 		const serverRecord = this.liveKitService.getServer(pinnedServer.regionId, pinnedServer.serverId);
 		if (
 			serverRecord &&
+			accessibleRegions.some((region) => region.id === pinnedServer.regionId) &&
 			this.voiceAvailabilityService.isServerAccessible(serverRecord, context) &&
 			!this.voiceAvailabilityService.isServerDown(serverRecord)
 		) {
@@ -428,6 +431,18 @@ export class VoiceService {
 		const {guildId, channelId, userId, connectionId} = params;
 		const pinnedServer = await this.voiceRoomStore.getPinnedRoomServer(guildId, channelId);
 		if (!pinnedServer) {
+			await Promise.allSettled(
+				this.liveKitService.listServers().map((server) =>
+					this.liveKitService.disconnectParticipant({
+						userId,
+						guildId,
+						channelId,
+						connectionId,
+						regionId: server.regionId,
+						serverId: server.serverId,
+					}),
+				),
+			);
 			return;
 		}
 		await this.liveKitService.disconnectParticipant({

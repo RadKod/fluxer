@@ -5940,6 +5940,13 @@ msgid ""
 msgstr ""
 "在“系统设置”的“屏幕录制”下允许 {productName}。如果已允许，请重新启动 {productName2} 以便 macOS 应用设置。"
 
+#. Switch in the sensitive content settings. Turns on 18+ communities and
+#. channels and the "Show" sensitive media option in the Fluxer app for iPhone
+#. and iPad.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid "Allow 18+ content on iPhone and iPad"
+msgstr "允许在 iPhone 和 iPad 上显示 18+ 内容"
+
 #. Private thread setting that lets non-moderators add other members.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
 msgid "Allow anyone to invite"
@@ -8865,6 +8872,25 @@ msgid ""
 "the Devices tab instead. If nothing appears here, allow camera access or "
 "connect a device."
 msgstr "浏览器不会在屏幕共享选择器中列出摄像头。请改为在设备标签页中选择。如果此处未显示任何内容，请允许访问摄像头或连接设备。"
+
+#. Shown on a self-hosted instance opened over plain HTTP when someone tries
+#. to use the microphone, camera or screen sharing, which browsers block
+#. there. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow the microphone, camera and screen sharing on sites that "
+"use HTTPS, and this instance doesn't use HTTPS. You can still join voice "
+"channels and listen."
+msgstr "浏览器只允许在使用 HTTPS 的网站上使用麦克风、摄像头和屏幕共享，而此实例未使用 HTTPS。你仍然可以加入语音频道并收听。"
+
+#. Short note next to a setting or button that browsers turn off on a self-
+#. hosted instance opened over plain HTTP, such as notifications or passkeys.
+#. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow this on sites that use HTTPS, and this instance doesn't "
+"use HTTPS."
+msgstr "浏览器只允许在使用 HTTPS 的网站上使用此功能，而此实例未使用 HTTPS。"
 
 #. Where the dark mode favicon appears and the recommended format, in the
 #. setup wizard. size is a file size such as 10 MB.
@@ -13838,12 +13864,6 @@ msgstr "无法连接到 {domain}。请重试。"
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
 msgid "Couldn't connect to {names}"
 msgstr "无法连接到{names}"
-
-#. Instance selector error shown when no Fluxer instance answered at the
-#. address. Domain is interpolated.
-#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
-msgid "Couldn't connect to a sanalyer instance at {domain}. Check the address and that the instance is online."
-msgstr "无法在 {domain} 触达 sanalyer 实例。请检查地址并确保实例在线。"
 
 #. Toast shown when joining a voice channel fails because the connection timed
 #. out or the transport dropped.
@@ -19568,12 +19588,6 @@ msgstr "此订单中仍在你账户里的每张通行证现在终止，我们的
 msgid "Everyone"
 msgstr "所有人"
 
-#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
-#. subscription and must not be translated. 4K and fps are video terms.
-#: src/features/voice/utils/VoiceMessageDescriptors.ts
-msgid "Everyone in the call gets {premiumProductName} stream quality for free, with up to 4K source resolution and 60 fps."
-msgstr "通话中的每个人都可以免费获得 {premiumProductName} 流媒体质量：最高 4K 源分辨率和 60 fps。"
-
 #. Description of the single community option in the setup wizard.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
 msgid ""
@@ -23605,7 +23619,8 @@ msgid ""
 "If you leave it empty, the sign-in page uses your app icon or symbol. "
 "Without those, it shows the Fluxer logo while the product name is Fluxer, "
 "and no image for any other name."
-msgstr "留空时，登录页面会使用你的应用图标或符号。如果两者都没有，产品名称为 sanalyer 时显示 sanalyer Logo，其他名称则不显示图片。"
+msgstr ""
+"留空时，登录页面会使用你的应用图标或符号。如果两者都没有，产品名称为 sanalyer 时显示 sanalyer Logo，其他名称则不显示图片。"
 
 #. What the app shows when no dark mode favicon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -25739,6 +25754,13 @@ msgstr "了解屏幕共享预览"
 msgid "Learn more"
 msgstr "了解详情"
 
+#. Link under the Plutonium page hero buttons on self-hosted instances.
+#. premiumProductName is the paid tier name set by the instance. Opens a page
+#. about the tier that the instance admin chose.
+#: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
+msgid "Learn more about {premiumProductName}"
+msgstr "了解更多关于 {premiumProductName}"
+
 #. Confirmation text before leaving a private thread. threadName is the thread
 #. name.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
@@ -25979,6 +26001,17 @@ msgstr "让其他人看到你的视频。"
 #: src/features/permissions/system/components/MacPermissionPrompt.tsx
 msgid "Lets push-to-talk and keybinds work in other apps."
 msgstr "让按键通话和快捷方式在其他应用中正常工作。"
+
+#. Helper text under the "Allow 18+ content on iPhone and iPad" switch. "Show"
+#. is the sensitive media option name and must match its translation.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid ""
+"Lets you open communities and channels marked 18+ in the Fluxer app for "
+"iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
+" change this on the web or on desktop."
+msgstr ""
+"开启后，你可以在 iPhone 和 iPad 版 Fluxer 应用中打开标记为 18+ "
+"的社区和频道，并为敏感媒体选择“显示”。此设置只能在网页版或桌面版上更改。"
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx
 msgid "Lets you reset your password if you forget it."
@@ -45283,17 +45316,6 @@ msgstr "此频道与父类别 <0>{0}</0> 同步。"
 msgid "This channel no longer exists. It may have already been deleted."
 msgstr "此频道已不存在。它可能已被删除。"
 
-#. Error shown when signing in or signing up on a self-hosted instance opened
-#. over plain HTTP or a bare IP address, where the browser blocks the
-#. automatic background check. HTTPS and localhost are technical terms, keep
-#. them as is.
-#: src/features/auth/altcha/CaptchaInterceptor.ts
-msgid ""
-"This check only runs when the app is opened over HTTPS or on localhost. Ask "
-"the instance owner to serve it over HTTPS, or open it from localhost."
-msgstr ""
-"此检查仅在通过 HTTPS 或 localhost 打开应用时运行。请要求实例所有者通过 HTTPS 提供服务，或从 localhost 打开。"
-
 #. Problem shown in the quick CSS editor on a generated class name. [data-flx]
 #. is CSS code and stays in English.
 #: src/features/theme_settings/editor/CssLint.ts
@@ -45736,6 +45758,13 @@ msgid ""
 " Report content from inside the app, or contact the administrators of this "
 "instance."
 msgstr "此实例不使用电子邮件，因此无法通过此表单接收举报。请在应用内举报内容，或联系此实例的管理员。"
+
+#. Title of the dialog shown when someone tries to use the microphone, camera
+#. or screen sharing on a self-hosted instance opened over plain HTTP. HTTPS
+#. is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid "This instance doesn't use HTTPS"
+msgstr "此实例未使用 HTTPS"
 
 #. Explanation shown in place of the single sign-on description when the
 #. instance offers no SSO provider.
@@ -46401,6 +46430,23 @@ msgstr "此语音频道已标记为成人内容，可能含有不适合部分用
 #: src/features/voice/engine/media_engine_facade/shared.ts
 msgid "This voice channel is no longer available."
 msgstr "此语音频道已不可用。"
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel from a browser that cannot encrypt calls.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption, and this browser can't join "
+"encrypted calls."
+msgstr "此语音频道使用端到端加密，而此浏览器无法加入加密通话。"
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel on a self-hosted instance opened over plain HTTP. HTTPS is a
+#. technical term, keep it as is.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption. Browsers only allow encrypted"
+" calls on sites that use HTTPS, and this instance doesn't use HTTPS."
+msgstr "此语音频道使用端到端加密。浏览器只允许在使用 HTTPS 的网站上进行加密通话，而此实例未使用 HTTPS。"
 
 #. Description text in the channel and chat user message. Preserve
 #. {silentMention}; it is inserted by code.
@@ -54837,6 +54883,22 @@ msgstr "放大"
 #: src/features/user/components/settings_utils/search_index/KeybindsIndex.ts
 msgid "Zoom out"
 msgstr "缩小"
+
+#. Instance selector error shown when no Fluxer instance answered at the
+#. address. Domain is interpolated.
+#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
+msgid ""
+"Couldn't connect to a sanalyer instance at {domain}. Check the address and "
+"that the instance is online."
+msgstr "无法在 {domain} 触达 sanalyer 实例。请检查地址并确保实例在线。"
+
+#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
+#. subscription and must not be translated. 4K and fps are video terms.
+#: src/features/voice/utils/VoiceMessageDescriptors.ts
+msgid ""
+"Everyone in the call gets {premiumProductName} stream quality for free, with"
+" up to 4K source resolution and 60 fps."
+msgstr "通话中的每个人都可以免费获得 {premiumProductName} 流媒体质量：最高 4K 源分辨率和 60 fps。"
 
 #. Voice screen share menu preference that pauses the local stream preview
 #. while the app is unfocused. {productName} is the app name.

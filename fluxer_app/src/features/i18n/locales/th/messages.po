@@ -6193,6 +6193,13 @@ msgstr ""
 "ในการตั้งค่าระบบ (System Settings) หากได้รับอนุญาตแล้ว ให้เปิดใช้งาน "
 "{productName2} ใหม่เพื่อให้ macOS นำไปใช้"
 
+#. Switch in the sensitive content settings. Turns on 18+ communities and
+#. channels and the "Show" sensitive media option in the Fluxer app for iPhone
+#. and iPad.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid "Allow 18+ content on iPhone and iPad"
+msgstr "อนุญาตเนื้อหา 18+ บน iPhone และ iPad"
+
 #. Private thread setting that lets non-moderators add other members.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
 msgid "Allow anyone to invite"
@@ -9205,6 +9212,30 @@ msgid ""
 msgstr ""
 "เบราว์เซอร์ไม่แสดงกล้องในตัวเลือกการแชร์หน้าจอ ให้เลือกจากแท็บอุปกรณ์แทน "
 "หากไม่มีอะไรปรากฏที่นี่ ให้เปิดการเข้าถึงกล้องหรือเชื่อมต่ออุปกรณ์"
+
+#. Shown on a self-hosted instance opened over plain HTTP when someone tries
+#. to use the microphone, camera or screen sharing, which browsers block
+#. there. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow the microphone, camera and screen sharing on sites that "
+"use HTTPS, and this instance doesn't use HTTPS. You can still join voice "
+"channels and listen."
+msgstr ""
+"เบราว์เซอร์อนุญาตให้ใช้ไมโครโฟน กล้อง และการแชร์หน้าจอเฉพาะในเว็บไซต์ที่ใช้ "
+"HTTPS เท่านั้น และอินสแตนซ์นี้ไม่ได้ใช้ HTTPS "
+"คุณยังเข้าร่วมช่องเสียงและฟังได้"
+
+#. Short note next to a setting or button that browsers turn off on a self-
+#. hosted instance opened over plain HTTP, such as notifications or passkeys.
+#. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow this on sites that use HTTPS, and this instance doesn't "
+"use HTTPS."
+msgstr ""
+"เบราว์เซอร์อนุญาตสิ่งนี้เฉพาะในเว็บไซต์ที่ใช้ HTTPS เท่านั้น "
+"และอินสแตนซ์นี้ไม่ได้ใช้ HTTPS"
 
 #. Where the dark mode favicon appears and the recommended format, in the
 #. setup wizard. size is a file size such as 10 MB.
@@ -14282,12 +14313,6 @@ msgstr "ไม่สามารถเชื่อมต่อกับ {domain}
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
 msgid "Couldn't connect to {names}"
 msgstr "ไม่สามารถเชื่อมต่อกับ {names} ได้"
-
-#. Instance selector error shown when no Fluxer instance answered at the
-#. address. Domain is interpolated.
-#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
-msgid "Couldn't connect to a sanalyer instance at {domain}. Check the address and that the instance is online."
-msgstr "ไม่สามารถเชื่อมต่อกับอินสแตนซ์ sanalyer ที่ {domain} ได้ โปรดตรวจสอบที่อยู่และตรวจสอบว่าอินสแตนซ์กำลังทำงานอยู่"
 
 #. Toast shown when joining a voice channel fails because the connection timed
 #. out or the transport dropped.
@@ -20155,12 +20180,6 @@ msgstr ""
 #: src/features/user/components/modals/tabs/privacy_safety_tab/ConnectionsTab.tsx
 msgid "Everyone"
 msgstr "ทุกคน"
-
-#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
-#. subscription and must not be translated. 4K and fps are video terms.
-#: src/features/voice/utils/VoiceMessageDescriptors.ts
-msgid "Everyone in the call gets {premiumProductName} stream quality for free, with up to 4K source resolution and 60 fps."
-msgstr "ทุกคนในสายจะได้รับคุณภาพสตรีม {premiumProductName} ฟรี: ความละเอียดสูงสุด 4K และ 60 fps"
 
 #. Description of the single community option in the setup wizard.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
@@ -26489,6 +26508,13 @@ msgstr "ดูข้อมูลเพิ่มเติมเกี่ยวก
 msgid "Learn more"
 msgstr "ดูเพิ่มเติม"
 
+#. Link under the Plutonium page hero buttons on self-hosted instances.
+#. premiumProductName is the paid tier name set by the instance. Opens a page
+#. about the tier that the instance admin chose.
+#: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
+msgid "Learn more about {premiumProductName}"
+msgstr "เรียนรู้เพิ่มเติมเกี่ยวกับ {premiumProductName}"
+
 #. Confirmation text before leaving a private thread. threadName is the thread
 #. name.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
@@ -26741,6 +26767,18 @@ msgstr "ให้คนอื่นเห็นคุณผ่านวิดี
 #: src/features/permissions/system/components/MacPermissionPrompt.tsx
 msgid "Lets push-to-talk and keybinds work in other apps."
 msgstr "ให้การกดเพื่อพูดและปุ่มลัดทำงานในแอปอื่นได้"
+
+#. Helper text under the "Allow 18+ content on iPhone and iPad" switch. "Show"
+#. is the sensitive media option name and must match its translation.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid ""
+"Lets you open communities and channels marked 18+ in the Fluxer app for "
+"iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
+" change this on the web or on desktop."
+msgstr ""
+"ให้คุณเปิดคอมมูนิตี้และช่องที่ระบุว่าเป็น 18+ ในแอป Fluxer สำหรับ iPhone และ"
+" iPad และเลือก \"แสดง\" สำหรับสื่อที่ละเอียดอ่อนในแอปนั้นได้ "
+"คุณเปลี่ยนการตั้งค่านี้ได้บนเว็บหรือบนเดสก์ท็อปเท่านั้น"
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx
 msgid "Lets you reset your password if you forget it."
@@ -32818,8 +32856,8 @@ msgid ""
 "Operators and the Fluxer Team talking about self-hosting in the #operators "
 "channel of Fluxer Labs"
 msgstr ""
-"Operators และทีม sanalyer คุยกันเรื่องการโฮสต์เองในช่อง #operators ของ sanalyer "
-"Labs"
+"Operators และทีม sanalyer คุยกันเรื่องการโฮสต์เองในช่อง #operators ของ "
+"sanalyer Labs"
 
 #. Heading of the Operators' wall section in the Operator Pass settings tab.
 #. Operators' wall is the name of a section of the homepage.
@@ -45431,8 +45469,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"แอป sanalyer สำหรับ iOS และ Android รับการแจ้งเตือนผ่านรีเลย์การแจ้งเตือนที่ "
-"sanalyer ดูแล ซึ่งส่งต่อไปยัง Apple และ Google หากต้องการใช้ "
+"แอป sanalyer สำหรับ iOS และ Android รับการแจ้งเตือนผ่านรีเลย์การแจ้งเตือนที่"
+" sanalyer ดูแล ซึ่งส่งต่อไปยัง Apple และ Google หากต้องการใช้ "
 "คุณต้องยอมรับประกาศความเป็นส่วนตัวของรีเลย์การแจ้งเตือน"
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -45549,9 +45587,9 @@ msgid ""
 "transparent background, at least 256 pixels tall and up to {size}."
 msgstr ""
 "รูปภาพขนาดใหญ่ข้างแบบฟอร์มลงชื่อเข้าใช้ ซึ่งเป็นสีเข้มเสมอ บนโทรศัพท์ "
-"รูปนี้จะแสดงข้างชื่อเฉพาะเมื่อไม่มีเวิร์ดมาร์กและชื่อผลิตภัณฑ์ไม่ใช่ sanalyer "
-"ใช้ไฟล์ PNG หรือ SVG ทรงสี่เหลี่ยมจัตุรัสหรือแนวกว้าง สีอ่อน พื้นหลังโปร่งใส"
-" สูงอย่างน้อย 256 พิกเซล และขนาดไฟล์ไม่เกิน {size}"
+"รูปนี้จะแสดงข้างชื่อเฉพาะเมื่อไม่มีเวิร์ดมาร์กและชื่อผลิตภัณฑ์ไม่ใช่ "
+"sanalyer ใช้ไฟล์ PNG หรือ SVG ทรงสี่เหลี่ยมจัตุรัสหรือแนวกว้าง สีอ่อน "
+"พื้นหลังโปร่งใส สูงอย่างน้อย 256 พิกเซล และขนาดไฟล์ไม่เกิน {size}"
 
 #. Error modal body shown when revoking an invite fails; warns the user that
 #. the link may still be live.
@@ -46520,24 +46558,13 @@ msgstr "ช่องนี้ซิงค์กับหมวดหมู่ห
 msgid "This channel no longer exists. It may have already been deleted."
 msgstr "ช่องนี้ไม่มีอยู่อีกต่อไปแล้ว อาจถูกลบไปแล้ว"
 
-#. Error shown when signing in or signing up on a self-hosted instance opened
-#. over plain HTTP or a bare IP address, where the browser blocks the
-#. automatic background check. HTTPS and localhost are technical terms, keep
-#. them as is.
-#: src/features/auth/altcha/CaptchaInterceptor.ts
-msgid ""
-"This check only runs when the app is opened over HTTPS or on localhost. Ask "
-"the instance owner to serve it over HTTPS, or open it from localhost."
-msgstr ""
-"การตรวจสอบนี้จะทำงานเมื่อเปิดแอปผ่าน HTTPS หรือบน localhost เท่านั้น "
-"โปรดขอให้เจ้าของอินสแตนซ์ให้บริการผ่าน HTTPS หรือเปิดจาก localhost"
-
 #. Problem shown in the quick CSS editor on a generated class name. [data-flx]
 #. is CSS code and stays in English.
 #: src/features/theme_settings/editor/CssLint.ts
 msgid ""
 "This class name changes with every Fluxer update. Use a [data-flx] selector."
-msgstr "ชื่อคลาสนี้จะเปลี่ยนทุกครั้งที่ sanalyer อัปเดต ใช้ selector [data-flx]"
+msgstr ""
+"ชื่อคลาสนี้จะเปลี่ยนทุกครั้งที่ sanalyer อัปเดต ใช้ selector [data-flx]"
 
 #. Problem shown in the quick CSS editor on a closing curly brace that closes
 #. nothing.
@@ -47011,6 +47038,13 @@ msgid ""
 msgstr ""
 "อินสแตนซ์นี้ไม่ได้ใช้อีเมล จึงรับรายงานผ่านแบบฟอร์มนี้ไม่ได้ "
 "โปรดรายงานเนื้อหาจากภายในแอป หรือติดต่อผู้ดูแลระบบของอินสแตนซ์นี้"
+
+#. Title of the dialog shown when someone tries to use the microphone, camera
+#. or screen sharing on a self-hosted instance opened over plain HTTP. HTTPS
+#. is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid "This instance doesn't use HTTPS"
+msgstr "อินสแตนซ์นี้ไม่ได้ใช้ HTTPS"
 
 #. Explanation shown in place of the single sign-on description when the
 #. instance offers no SSO provider.
@@ -47735,6 +47769,28 @@ msgstr ""
 #: src/features/voice/engine/media_engine_facade/shared.ts
 msgid "This voice channel is no longer available."
 msgstr "ช่องเสียงนี้ไม่พร้อมใช้งานแล้ว"
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel from a browser that cannot encrypt calls.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption, and this browser can't join "
+"encrypted calls."
+msgstr ""
+"ช่องเสียงนี้ใช้การเข้ารหัสตั้งแต่ต้นทางถึงปลายทาง "
+"และเบราว์เซอร์นี้เข้าร่วมการโทรที่เข้ารหัสไม่ได้"
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel on a self-hosted instance opened over plain HTTP. HTTPS is a
+#. technical term, keep it as is.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption. Browsers only allow encrypted"
+" calls on sites that use HTTPS, and this instance doesn't use HTTPS."
+msgstr ""
+"ช่องเสียงนี้ใช้การเข้ารหัสตั้งแต่ต้นทางถึงปลายทาง "
+"เบราว์เซอร์อนุญาตการโทรที่เข้ารหัสเฉพาะในเว็บไซต์ที่ใช้ HTTPS เท่านั้น "
+"และอินสแตนซ์นี้ไม่ได้ใช้ HTTPS"
 
 #. Description text in the channel and chat user message. Preserve
 #. {silentMention}; it is inserted by code.
@@ -56646,6 +56702,26 @@ msgstr "ซูมเข้า"
 #: src/features/user/components/settings_utils/search_index/KeybindsIndex.ts
 msgid "Zoom out"
 msgstr "ซูมออก"
+
+#. Instance selector error shown when no Fluxer instance answered at the
+#. address. Domain is interpolated.
+#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
+msgid ""
+"Couldn't connect to a sanalyer instance at {domain}. Check the address and "
+"that the instance is online."
+msgstr ""
+"ไม่สามารถเชื่อมต่อกับอินสแตนซ์ sanalyer ที่ {domain} ได้ "
+"โปรดตรวจสอบที่อยู่และตรวจสอบว่าอินสแตนซ์กำลังทำงานอยู่"
+
+#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
+#. subscription and must not be translated. 4K and fps are video terms.
+#: src/features/voice/utils/VoiceMessageDescriptors.ts
+msgid ""
+"Everyone in the call gets {premiumProductName} stream quality for free, with"
+" up to 4K source resolution and 60 fps."
+msgstr ""
+"ทุกคนในสายจะได้รับคุณภาพสตรีม {premiumProductName} ฟรี: ความละเอียดสูงสุด 4K"
+" และ 60 fps"
 
 #. Voice screen share menu preference that pauses the local stream preview
 #. while the app is unfocused. {productName} is the app name.

@@ -130,6 +130,7 @@ interface ReporterMetadata {
 	fullLegalName: string | null;
 	countryOfResidence: string | null;
 	tier?: ReporterTier;
+	capExempt?: boolean;
 }
 
 export interface ReportFlowRecord {
@@ -333,8 +334,7 @@ export class ReportService {
 		flow: ReportFlowRecord | null = null,
 	): Promise<IARSubmission> {
 		await this.checkReportBan(reporter.id);
-		const reporterKey = this.getReporterRateLimitKey(reporter);
-		await this.ensureReportRateLimit(this.createReportRateLimitIdentifier(reporterKey), REPORT_RATE_LIMIT_MAX, false);
+		await this.ensureReporterAllowance(reporter, false);
 		const {authChannel, channel, message} = await this.getReportableMessageForReporter({
 			reporterId: reporter.id,
 			viewer,
@@ -432,8 +432,7 @@ export class ReportService {
 		flow: ReportFlowRecord | null = null,
 	): Promise<IARSubmission> {
 		await this.checkReportBan(reporter.id);
-		const rateLimitIdentifier = this.createReportRateLimitIdentifier(this.getReporterRateLimitKey(reporter));
-		await this.ensureReportRateLimit(rateLimitIdentifier, REPORT_RATE_LIMIT_MAX, false);
+		await this.ensureReporterAllowance(reporter, false);
 		if (reporter.id && reportedUserId === reporter.id) {
 			throw new CannotReportYourselfError();
 		}
@@ -489,7 +488,7 @@ export class ReportService {
 			}
 		}
 		try {
-			await this.ensureReportRateLimit(rateLimitIdentifier, REPORT_RATE_LIMIT_MAX, true);
+			await this.ensureReporterAllowance(reporter, true);
 			reportData.reported_profile_snapshot = await this.captureProfileSnapshot(reportId, {
 				user: reportedUser,
 				memberGuildId: guildId,
@@ -515,10 +514,10 @@ export class ReportService {
 		guildId: GuildID,
 		category: string,
 		inviteCode?: InviteCode,
+		flow: ReportFlowRecord | null = null,
 	): Promise<IARSubmission> {
 		await this.checkReportBan(reporter.id);
-		const rateLimitIdentifier = this.createReportRateLimitIdentifier(this.getReporterRateLimitKey(reporter));
-		await this.ensureReportRateLimit(rateLimitIdentifier, REPORT_RATE_LIMIT_MAX, false);
+		await this.ensureReporterAllowance(reporter, false);
 		const guild = await this.guildRepository.findUnique(guildId);
 		if (!guild) {
 			throw new UnknownGuildError();
@@ -557,7 +556,7 @@ export class ReportService {
 			audit_log_reason: null,
 			reported_guild_invite_code: reportedInviteCode,
 			...contentWarningSnapshot,
-			...buildReportFlowColumns(null),
+			...buildReportFlowColumns(flow),
 			...buildReportedWebhookColumns(null),
 		};
 		let reservation: GuildReportSubmissionByReporterRow | null = null;
@@ -573,7 +572,7 @@ export class ReportService {
 			}
 		}
 		try {
-			await this.ensureReportRateLimit(rateLimitIdentifier, REPORT_RATE_LIMIT_MAX, true);
+			await this.ensureReporterAllowance(reporter, true);
 			reportData.reported_profile_snapshot = await this.captureProfileSnapshot(reportId, {guild});
 			const report = await this.reportRepository.createReport(reportData);
 			await emitReportFiled(reportData, 'guild', reporter.tier);
@@ -916,8 +915,7 @@ export class ReportService {
 			fullLegalName: report.reporter_full_legal_name ?? null,
 			countryOfResidence: report.reporter_country_of_residence,
 		};
-		const reporterKey = this.getReporterRateLimitKey(reporterMeta);
-		await this.ensureReportRateLimit(this.createReportRateLimitIdentifier(reporterKey), REPORT_RATE_LIMIT_MAX, false);
+		await this.ensureReporterAllowance(reporterMeta, false);
 		const reportId = createReportID(await this.snowflakeService.generate());
 		const {row: reportRow, profileSubject} = await this.buildDsaReportRow(
 			reportId,
@@ -925,7 +923,7 @@ export class ReportService {
 			reporterMeta,
 			classification,
 		);
-		await this.ensureReportRateLimit(this.createReportRateLimitIdentifier(reporterKey), REPORT_RATE_LIMIT_MAX, true);
+		await this.ensureReporterAllowance(reporterMeta, true);
 		const claimed = await this.reportRepository.consumeDsaTicket(report.ticket, ticket.email_lower);
 		if (!claimed) {
 			throw new InvalidDsaTicketError();
@@ -1752,10 +1750,12 @@ export class ReportService {
 				global_name: null,
 				bio: null,
 				pronouns: null,
+				custom_status: null,
 				avatar: null,
 				banner: null,
 			};
 		}
+		const customStatus = (await this.userRepository.findSettings(user.id))?.customStatus ?? null;
 		return {
 			id,
 			username: user.username,
@@ -1763,6 +1763,7 @@ export class ReportService {
 			global_name: user.globalName,
 			bio: user.bio,
 			pronouns: user.pronouns,
+			custom_status: customStatus && !customStatus.isExpired() ? customStatus.text : null,
 			avatar: await this.cloneProfileAssetForReport(reportId, 'user_avatar', 'avatars', id, user.avatarHash),
 			banner: await this.cloneProfileAssetForReport(reportId, 'user_banner', 'banners', id, user.bannerHash),
 		};
@@ -1859,29 +1860,30 @@ export class ReportService {
 		channel: Channel;
 		message: Message;
 	}): Promise<void> {
-		const reporterKey = this.getReporterRateLimitKey(reporter);
 		const checks: Array<{
 			identifier: string;
 			maxAttempts: number;
 		}> = [
 			{
-				identifier: this.createReportRateLimitIdentifier(reporterKey),
-				maxAttempts: REPORT_RATE_LIMIT_MAX,
-			},
-			{
-				identifier: `report:message:channel:${reporterKey}:${channel.id.toString()}`,
-				maxAttempts: MESSAGE_REPORT_USER_CHANNEL_RATE_LIMIT_MAX,
-			},
-			{
 				identifier: `report:message:target:${message.id.toString()}`,
 				maxAttempts: MESSAGE_REPORT_TARGET_MESSAGE_RATE_LIMIT_MAX,
 			},
 		];
-		if (channel.guildId) {
-			checks.push({
-				identifier: `report:message:guild:${reporterKey}:${channel.guildId.toString()}`,
-				maxAttempts: MESSAGE_REPORT_USER_GUILD_RATE_LIMIT_MAX,
-			});
+		if (!reporter.capExempt) {
+			const reporterKey = this.getReporterRateLimitKey(reporter);
+			checks.push(
+				{identifier: this.createReportRateLimitIdentifier(reporterKey), maxAttempts: REPORT_RATE_LIMIT_MAX},
+				{
+					identifier: `report:message:channel:${reporterKey}:${channel.id.toString()}`,
+					maxAttempts: MESSAGE_REPORT_USER_CHANNEL_RATE_LIMIT_MAX,
+				},
+			);
+			if (channel.guildId) {
+				checks.push({
+					identifier: `report:message:guild:${reporterKey}:${channel.guildId.toString()}`,
+					maxAttempts: MESSAGE_REPORT_USER_GUILD_RATE_LIMIT_MAX,
+				});
+			}
 		}
 		for (const check of checks) {
 			await this.ensureReportRateLimit(check.identifier, check.maxAttempts, false);
@@ -1889,6 +1891,14 @@ export class ReportService {
 		for (const check of checks) {
 			await this.ensureReportRateLimit(check.identifier, check.maxAttempts, true);
 		}
+	}
+
+	private async ensureReporterAllowance(reporter: ReporterMetadata, consume: boolean): Promise<void> {
+		if (reporter.capExempt) {
+			return;
+		}
+		const identifier = this.createReportRateLimitIdentifier(this.getReporterRateLimitKey(reporter));
+		await this.ensureReportRateLimit(identifier, REPORT_RATE_LIMIT_MAX, consume);
 	}
 
 	private async ensureReportRateLimit(identifier: string, maxAttempts: number, consume: boolean): Promise<void> {

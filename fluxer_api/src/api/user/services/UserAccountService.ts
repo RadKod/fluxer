@@ -142,6 +142,7 @@ export class UserAccountService {
 			guildRepository,
 			limitConfigService,
 			profileAccessCache,
+			cacheService: this.apiContext.services.cache,
 		});
 		this.notesService = new UserAccountNotesService({
 			userAccountRepository,
@@ -160,7 +161,12 @@ export class UserAccountService {
 	async update(params: UpdateUserParams): Promise<UpdateUserResult> {
 		const {user, oldAuthSession, data, request, sudoContext, emailVerifiedViaToken = false} = params;
 		const profileResult = await this.profileService.processProfileUpdates({user, data});
-		const securityResult = await this.securityService.processSecurityUpdates({user, data, sudoContext});
+		const securityResult = await this.securityService
+			.processSecurityUpdates({user, data, sudoContext})
+			.catch(async (error: unknown) => {
+				await this.profileService.rollbackAssetUploads(profileResult);
+				throw error;
+			});
 		const updates = {
 			...securityResult.updates,
 			...profileResult.updates,

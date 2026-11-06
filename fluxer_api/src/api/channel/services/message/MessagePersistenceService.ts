@@ -95,6 +95,7 @@ interface CreateMessageParams {
 	attachmentUploadUserId?: UserID;
 	uploadChannelId?: ChannelID;
 	processedAttachments?: Array<MessageAttachment>;
+	favoriteMemeAttachment?: MessageAttachment;
 	stickerIds?: Array<StickerID>;
 	messageReference?: MessageReference;
 	messageSnapshots?: Array<MessageSnapshot>;
@@ -187,15 +188,23 @@ export class MessagePersistenceService {
 			dmNsfwContext: params.dmNsfwContext,
 		});
 		const isNSFWAllowed = attachmentNsfwMode !== 'block';
+		const screenedFavoriteMeme = params.favoriteMemeAttachment
+			? await this.attachmentService.screenStoredAttachment({
+					attachment: params.favoriteMemeAttachment,
+					message: {id: params.messageId, channelId: params.channelId, authorId} as Message,
+					nsfwMode: attachmentNsfwMode,
+				})
+			: null;
 		const [sanitizedContent, attachmentResult, processedStickers] = await Promise.all([
 			this.sanitizeContentIfNeeded(params, authorId),
 			this.processAttachments(params, attachmentNsfwMode),
 			this.processStickers(params, authorId),
 		]);
 		let messageContent = sanitizedContent;
-		let processedAttachments: Array<MessageAttachment> = params.processedAttachments
-			? [...params.processedAttachments]
-			: [];
+		let processedAttachments: Array<MessageAttachment> = [
+			...(params.processedAttachments ?? []),
+			...(screenedFavoriteMeme ? [screenedFavoriteMeme] : []),
+		];
 		if (attachmentResult) {
 			if (attachmentResult.hasVirusDetected) {
 				messageContent = getContentMessage('content.virus_detected', params.user?.locale);
@@ -410,6 +419,7 @@ export class MessagePersistenceService {
 		locale?: string | null;
 		components?: ReadonlyArray<MessageActionRowData>;
 		dmNsfwContext?: DmNsfwContext;
+		hasPermission?: (permission: bigint) => Promise<boolean>;
 	}): Promise<UpdateMessageResult> {
 		const {message, messageId, data, channel, guild, member} = params;
 		if (message.messageSnapshots && message.messageSnapshots.length > 0) {
@@ -435,6 +445,7 @@ export class MessagePersistenceService {
 					userId: message.authorId ?? null,
 					webhookId: message.webhookId ?? null,
 					guildId: channel.guildId,
+					hasPermission: channel.guildId ? params.hasPermission : undefined,
 				});
 				if (!hasVisibleContent(sanitizedContent)) {
 					sanitizedContent = '';

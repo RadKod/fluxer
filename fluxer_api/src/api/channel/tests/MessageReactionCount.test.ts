@@ -112,11 +112,11 @@ describe('Message reaction user counts (K10)', () => {
 		await harness.kvProvider.set(f.key, '101');
 		const get = vi.spyOn(harness.kvProvider, 'get');
 		const rows = vi.spyOn(f.interactions, 'countReactionUsersUpTo');
-		const unbounded = vi.spyOn(f.interactions, 'countReactionUsers');
+		const listed = vi.spyOn(f.interactions, 'listReactionUsers');
 		await f.add();
 		expect(get).toHaveBeenCalledWith(f.key);
 		expect(rows).toHaveBeenCalledExactlyOnceWith(f.channelId, f.messageId, emoji, undefined, 100);
-		expect(unbounded).not.toHaveBeenCalled();
+		for (const call of listed.mock.calls) expect(call[3]).toBe(1);
 	});
 
 	it('the counter follows adds and removes past 100', async () => {

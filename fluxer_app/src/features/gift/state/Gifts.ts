@@ -20,6 +20,8 @@ function giftResourceKey(code: string, target: InstanceHTTPTarget): string {
 	return `${instanceTargetIdentity(target)}\u0000${code}`;
 }
 
+const MAX_CACHED_GIFTS = 4096;
+
 class Gifts {
 	gifts: Map<string, GiftState> = observable.map();
 	pendingRequests: Map<string, Promise<AnyGift>> = observable.map();
@@ -57,12 +59,23 @@ class Gifts {
 	}
 
 	markAsInvalid(code: string, target: InstanceHTTPTarget): void {
-		this.gifts.set(giftResourceKey(code, target), {
+		this.storeGift(giftResourceKey(code, target), {
 			loading: false,
 			error: new Error('Gift code not found'),
 			data: null,
 			invalid: true,
 		});
+	}
+
+	private storeGift(resourceKey: string, state: GiftState): void {
+		this.gifts.delete(resourceKey);
+		this.gifts.set(resourceKey, state);
+		if (this.gifts.size <= MAX_CACHED_GIFTS) return;
+		for (const key of Array.from(this.gifts.keys())) {
+			if (this.gifts.size <= MAX_CACHED_GIFTS) break;
+			if (this.pendingRequests.has(key)) continue;
+			this.gifts.delete(key);
+		}
 	}
 
 	async fetchGift(code: string, target: InstanceHTTPTarget): Promise<AnyGift> {
@@ -79,7 +92,7 @@ class Gifts {
 		if (existingData) {
 			return existingData;
 		}
-		this.gifts.set(resourceKey, {loading: true, error: null, data: null});
+		this.storeGift(resourceKey, {loading: true, error: null, data: null});
 		const promise = GiftCommands.fetch(code, target);
 		this.pendingRequests.set(resourceKey, promise);
 		try {
@@ -87,7 +100,7 @@ class Gifts {
 			runInAction(() => {
 				if (this.pendingRequests.get(resourceKey) !== promise) return;
 				this.pendingRequests.delete(resourceKey);
-				this.gifts.set(
+				this.storeGift(
 					resourceKey,
 					gift.kind === 'cosmetic'
 						? {loading: false, error: null, data: null, item: gift}
@@ -99,7 +112,7 @@ class Gifts {
 			runInAction(() => {
 				if (this.pendingRequests.get(resourceKey) !== promise) return;
 				this.pendingRequests.delete(resourceKey);
-				this.gifts.set(resourceKey, {
+				this.storeGift(resourceKey, {
 					loading: false,
 					error: error as Error,
 					data: null,

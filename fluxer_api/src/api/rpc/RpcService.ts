@@ -430,6 +430,11 @@ export class RpcService {
 						userIds: request.user_ids.map(createUserID),
 					}),
 				};
+			case 'get_users_adult_content_allowed':
+				return {
+					type: 'get_users_adult_content_allowed',
+					data: {user_ids: await this.getUsersAdultContentAllowed(request.user_ids.map(createUserID))},
+				};
 			case 'voice_get_token': {
 				Logger.debug(
 					{type: 'voice_get_token', guildId: request.guild_id, channelId: request.channel_id, userId: request.user_id},
@@ -1722,7 +1727,11 @@ export class RpcService {
 			const needsIncomingCallRepair = settings.incomingCallFlags === 0;
 			const needsGroupDmRepair = settings.groupDmAddPermissionFlags === 0;
 			if (needsIncomingCallRepair || needsGroupDmRepair) {
-				const isAdult = canUserAccessNsfwContent({isBot: false, dateOfBirth: user.dateOfBirth});
+				const isAdult = canUserAccessNsfwContent({
+					isBot: false,
+					dateOfBirth: user.dateOfBirth,
+					attestedAgeFloor: user.attestedAgeFloor,
+				});
 				const baseRow = settings.toRow();
 				const updatedRow = {
 					...baseRow,
@@ -2045,6 +2054,11 @@ export class RpcService {
 			result[userIds[index]!.toString()] = settledBlockedIds.value.map((blockedUserId) => blockedUserId.toString());
 		}
 		return result;
+	}
+
+	private async getUsersAdultContentAllowed(userIds: Array<UserID>): Promise<Array<string>> {
+		const users = await this.userRepository.listUsers(userIds);
+		return users.filter((user) => canUserAccessNsfwContent(user)).map((user) => user.id.toString());
 	}
 
 	private async kickTemporaryMember(params: {userId: UserID; guildIds: Array<GuildID>}): Promise<boolean> {

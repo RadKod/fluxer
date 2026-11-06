@@ -1434,6 +1434,83 @@
 			"options": ""
 		},
 		{
+			"name": "app_attest_challenges",
+			"columns": [
+				{
+					"name": "challenge",
+					"type": "text"
+				},
+				{
+					"name": "user_id",
+					"type": "bigint"
+				},
+				{
+					"name": "purpose",
+					"type": "text"
+				},
+				{
+					"name": "expires_at",
+					"type": "timestamp"
+				}
+			],
+			"primary_key": "(challenge)",
+			"options": ""
+		},
+		{
+			"name": "app_attest_key_lookup",
+			"columns": [
+				{
+					"name": "key_id",
+					"type": "text"
+				},
+				{
+					"name": "user_id",
+					"type": "bigint"
+				}
+			],
+			"primary_key": "(key_id)",
+			"options": ""
+		},
+		{
+			"name": "app_attest_keys",
+			"columns": [
+				{
+					"name": "user_id",
+					"type": "bigint"
+				},
+				{
+					"name": "key_id",
+					"type": "text"
+				},
+				{
+					"name": "public_key",
+					"type": "blob"
+				},
+				{
+					"name": "environment",
+					"type": "text"
+				},
+				{
+					"name": "app_id",
+					"type": "text"
+				},
+				{
+					"name": "counter",
+					"type": "bigint"
+				},
+				{
+					"name": "created_at",
+					"type": "timestamp"
+				},
+				{
+					"name": "last_used_at",
+					"type": "timestamp"
+				}
+			],
+			"primary_key": "((user_id), key_id)",
+			"options": ""
+		},
+		{
 			"name": "applications",
 			"columns": [
 				{
@@ -5220,6 +5297,10 @@
 				{
 					"name": "placeholder",
 					"type": "text"
+				},
+				{
+					"name": "nsfw",
+					"type": "boolean"
 				}
 			],
 			"primary_key": "((user_id), meme_id)",
@@ -10263,6 +10344,34 @@
 				{
 					"name": "eu_withdrawal_waiver_text_version",
 					"type": "text"
+				},
+				{
+					"name": "distribution",
+					"type": "text"
+				},
+				{
+					"name": "distribution_rate_bps",
+					"type": "int"
+				},
+				{
+					"name": "distribution_rule_version",
+					"type": "int"
+				},
+				{
+					"name": "distribution_base_amount_minor",
+					"type": "int"
+				},
+				{
+					"name": "distribution_purchase_ref",
+					"type": "text"
+				},
+				{
+					"name": "tax_amount_minor",
+					"type": "int"
+				},
+				{
+					"name": "tax_country",
+					"type": "text"
 				}
 			],
 			"primary_key": "((checkout_session_id))",
@@ -13060,6 +13169,10 @@
 					"type": "int"
 				},
 				{
+					"name": "allow_mature_content_on_ios",
+					"type": "boolean"
+				},
+				{
 					"name": "version",
 					"type": "int"
 				},
@@ -13441,6 +13554,14 @@
 				{
 					"name": "theme_accent_color",
 					"type": "int"
+				},
+				{
+					"name": "attested_age_floor",
+					"type": "text"
+				},
+				{
+					"name": "age_attested_at",
+					"type": "timestamp"
 				}
 			],
 			"primary_key": "((user_id))",

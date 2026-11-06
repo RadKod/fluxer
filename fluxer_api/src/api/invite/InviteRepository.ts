@@ -94,15 +94,14 @@ export class InviteRepository {
 		return invites;
 	}
 
-	async create(data: CreateInviteParams): Promise<Invite> {
+	async create(data: CreateInviteParams): Promise<Invite | null> {
 		const inviteRow = toInviteRow(data);
-		const batch = new BatchBuilder();
 		const hasExpiry = inviteRow.max_age > 0;
-		if (hasExpiry) {
-			batch.addPrepared(Invites.insertWithTtlParam(inviteRow, 'max_age'));
-		} else {
-			batch.addPrepared(Invites.insert(inviteRow));
-		}
+		const applied = await executeConditional(
+			hasExpiry ? Invites.insertIfNotExistsWithTtl(inviteRow, inviteRow.max_age) : Invites.insertIfNotExists(inviteRow),
+		);
+		if (!applied) return null;
+		const batch = new BatchBuilder();
 		if (inviteRow.guild_id) {
 			batch.addPrepared(
 				hasExpiry
@@ -137,7 +136,6 @@ export class InviteRepository {
 		}
 		await batch.execute();
 		if (hasExpiry) {
-			await upsertOne(Invites.upsertAllWithTtl(inviteRow, inviteRow.max_age));
 			if (inviteRow.guild_id) {
 				await upsertOne(
 					InvitesByGuild.upsertAllWithTtl(
@@ -161,7 +159,6 @@ export class InviteRepository {
 				);
 			}
 		} else {
-			await upsertOne(Invites.upsertAll(inviteRow));
 			if (inviteRow.guild_id) {
 				await upsertOne(
 					InvitesByGuild.upsertAll({

@@ -6424,6 +6424,13 @@ msgstr ""
 " je již povoleno, restartujte {productName2}, aby se to projevilo v systému "
 "macOS."
 
+#. Switch in the sensitive content settings. Turns on 18+ communities and
+#. channels and the "Show" sensitive media option in the Fluxer app for iPhone
+#. and iPad.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid "Allow 18+ content on iPhone and iPad"
+msgstr "Povolit obsah 18+ na iPhonu a iPadu"
+
 #. Private thread setting that lets non-moderators add other members.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
 msgid "Allow anyone to invite"
@@ -9474,6 +9481,30 @@ msgstr ""
 "Prohlížeče nezobrazují kamery ve výběru sdílení obrazovky. Vyberte je na "
 "kartě Zařízení. Pokud se zde nic nezobrazuje, povolte přístup ke kameře nebo"
 " připojte zařízení."
+
+#. Shown on a self-hosted instance opened over plain HTTP when someone tries
+#. to use the microphone, camera or screen sharing, which browsers block
+#. there. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow the microphone, camera and screen sharing on sites that "
+"use HTTPS, and this instance doesn't use HTTPS. You can still join voice "
+"channels and listen."
+msgstr ""
+"Prohlížeče povolují mikrofon, kameru a sdílení obrazovky jen na webech s "
+"HTTPS a tato instance HTTPS nepoužívá. Do hlasových kanálů se ale můžete "
+"připojit a poslouchat."
+
+#. Short note next to a setting or button that browsers turn off on a self-
+#. hosted instance opened over plain HTTP, such as notifications or passkeys.
+#. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow this on sites that use HTTPS, and this instance doesn't "
+"use HTTPS."
+msgstr ""
+"Prohlížeče to povolují jen na webech s HTTPS a tato instance HTTPS "
+"nepoužívá."
 
 #. Where the dark mode favicon appears and the recommended format, in the
 #. setup wizard. size is a file size such as 10 MB.
@@ -14608,12 +14639,6 @@ msgstr "Nepodařilo se připojit k {domain}. Zkuste to znovu."
 msgid "Couldn't connect to {names}"
 msgstr "Nepodařilo se připojit k {names}"
 
-#. Instance selector error shown when no Fluxer instance answered at the
-#. address. Domain is interpolated.
-#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
-msgid "Couldn't connect to a sanalyer instance at {domain}. Check the address and that the instance is online."
-msgstr "Nepodařilo se navázat spojení s instancí sanalyeru na adrese {domain}. Zkontrolujte adresu a zda je instance online."
-
 #. Toast shown when joining a voice channel fails because the connection timed
 #. out or the transport dropped.
 #: src/features/voice/engine/media_engine_facade/shared.ts
@@ -18877,10 +18902,10 @@ msgid ""
 "source code and copies others made can't be recalled."
 msgstr ""
 "Každý roční seznam Operators, který zveřejníme, je v poznámkách k vydání "
-"sanalyeru a v souboru v jeho zdrojovém kódu. Vaše jméno ze zdi v něm bude, jen"
-" pokud tohle zapnete. Pokud nás později požádáte o odstranění, vyřadíme ho z"
-" budoucích seznamů, z poznámek k vydání a z toho souboru, ale dřívější verze"
-" zdrojového kódu a kopie, které si pořídili jiní, stáhnout nelze."
+"sanalyeru a v souboru v jeho zdrojovém kódu. Vaše jméno ze zdi v něm bude, "
+"jen pokud tohle zapnete. Pokud nás později požádáte o odstranění, vyřadíme "
+"ho z budoucích seznamů, z poznámek k vydání a z toho souboru, ale dřívější "
+"verze zdrojového kódu a kopie, které si pořídili jiní, stáhnout nelze."
 
 #. Plutonium page comparison row label for early access.
 #: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
@@ -20532,12 +20557,6 @@ msgstr ""
 msgid "Everyone"
 msgstr "Všichni"
 
-#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
-#. subscription and must not be translated. 4K and fps are video terms.
-#: src/features/voice/utils/VoiceMessageDescriptors.ts
-msgid "Everyone in the call gets {premiumProductName} stream quality for free, with up to 4K source resolution and 60 fps."
-msgstr "Všichni v hovoru získají kvalitu streamu {premiumProductName} zdarma: až 4K zdrojové rozlišení a 60 fps."
-
 #. Description of the single community option in the setup wizard.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
 msgid ""
@@ -21768,8 +21787,8 @@ msgstr ""
 #: src/features/theme_settings/components/YourThemesSection.tsx
 msgid "Fluxer can't open this folder. Import it again to keep watching it."
 msgstr ""
-"sanalyer nemůže tuto složku otevřít. Znovu ji importujte, abyste ji mohli dál "
-"sledovat."
+"sanalyer nemůže tuto složku otevřít. Znovu ji importujte, abyste ji mohli "
+"dál sledovat."
 
 #. Error toast in "Your themes" when the chosen theme folder cannot be opened.
 #: src/features/theme_settings/components/YourThemesSection.tsx
@@ -24574,8 +24593,8 @@ msgid ""
 "If the link opens a different Fluxer app, select \"Signing in on another "
 "device?\" and type the code in your browser instead."
 msgstr ""
-"Pokud odkaz otevře jinou aplikaci sanalyer, zvolte „Přihlašujete se na jiném "
-"zařízení?“ a zadejte kód v prohlížeči."
+"Pokud odkaz otevře jinou aplikaci sanalyer, zvolte „Přihlašujete se na jiném"
+" zařízení?“ a zadejte kód v prohlížeči."
 
 #. Helper text under the Explain the problem field on the details step of the
 #. DSA report form.
@@ -26913,6 +26932,13 @@ msgstr "Zjistěte více o náhledech sdílené obrazovky"
 msgid "Learn more"
 msgstr "Zjistit více"
 
+#. Link under the Plutonium page hero buttons on self-hosted instances.
+#. premiumProductName is the paid tier name set by the instance. Opens a page
+#. about the tier that the instance admin chose.
+#: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
+msgid "Learn more about {premiumProductName}"
+msgstr "Další informace o {premiumProductName}"
+
 #. Confirmation text before leaving a private thread. threadName is the thread
 #. name.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
@@ -27176,6 +27202,18 @@ msgstr "Umožňuje ostatním vás vidět na videu."
 msgid "Lets push-to-talk and keybinds work in other apps."
 msgstr ""
 "Umožňuje fungování push-to-talk a klávesových zkratek v jiných aplikacích."
+
+#. Helper text under the "Allow 18+ content on iPhone and iPad" switch. "Show"
+#. is the sensitive media option name and must match its translation.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid ""
+"Lets you open communities and channels marked 18+ in the Fluxer app for "
+"iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
+" change this on the web or on desktop."
+msgstr ""
+"Umožňuje otevírat komunity a kanály označené 18+ v aplikaci Fluxer pro "
+"iPhone a iPad a vybrat tam u citlivých médií možnost „Zobrazit“. Toto "
+"nastavení můžete změnit jen na webu nebo v aplikaci pro počítač."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx
 msgid "Lets you reset your password if you forget it."
@@ -33309,8 +33347,8 @@ msgid ""
 "Operators and the Fluxer Team talking about self-hosting in the #operators "
 "channel of Fluxer Labs"
 msgstr ""
-"Operators a tým sanalyeru se baví o vlastním hostingu v kanálu #operators ve "
-"sanalyer Labs"
+"Operators a tým sanalyeru se baví o vlastním hostingu v kanálu #operators ve"
+" sanalyer Labs"
 
 #. Heading of the Operators' wall section in the Operator Pass settings tab.
 #. Operators' wall is the name of a section of the homepage.
@@ -40334,8 +40372,8 @@ msgid ""
 "Sweden, {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 msgstr ""
-"Prodávající: sanalyer Platform AB, 559537-3993, sídlo (säte) Haninge, Švédsko,"
-" {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
+"Prodávající: sanalyer Platform AB, 559537-3993, sídlo (säte) Haninge, "
+"Švédsko, {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 
 #. Button or menu action label in the share theme modal. Keep it concise.
@@ -41027,7 +41065,8 @@ msgstr "Nastaveno na zprávách, které mohou zobrazit lištu akcí zprávy."
 #: src/features/theme_settings/editor/AppSelectors.ts
 msgid "Set on messages that Fluxer sends, such as when someone joins."
 msgstr ""
-"Nastaveno na zprávách, které posílá sanalyer, například když se někdo připojí."
+"Nastaveno na zprávách, které posílá sanalyer, například když se někdo "
+"připojí."
 
 #. Describes a CSS attribute in the "Reference" tab of the quick CSS editor.
 #: src/features/theme_settings/editor/AppSelectors.ts
@@ -46037,9 +46076,9 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Aplikace sanalyer pro iOS a Android dostávají oznámení přes push relay, který "
-"provozuje sanalyer a který je předává společnostem Apple a Google. Jeho "
-"používáním přijímáte oznámení o ochraně soukromí pro push relay."
+"Aplikace sanalyer pro iOS a Android dostávají oznámení přes push relay, "
+"který provozuje sanalyer a který je předává společnostem Apple a Google. "
+"Jeho používáním přijímáte oznámení o ochraně soukromí pro push relay."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
 msgid "The following people can't be added to this group DM:"
@@ -46158,8 +46197,8 @@ msgid ""
 msgstr ""
 "Velký obrázek vedle přihlašovacího formuláře, který je vždy tmavý. Na "
 "telefonu se zobrazuje jen vedle názvu, pokud není nastavené textové logo a "
-"název produktu není sanalyer. Použijte čtvercový nebo široký PNG nebo SVG ve "
-"světlých barvách s průhledným pozadím o výšce alespoň 256 pixelů. Soubor "
+"název produktu není sanalyer. Použijte čtvercový nebo široký PNG nebo SVG ve"
+" světlých barvách s průhledným pozadím o výšce alespoň 256 pixelů. Soubor "
 "může mít nejvýše {size}."
 
 #. Error modal body shown when revoking an invite fails; warns the user that
@@ -46964,8 +47003,8 @@ msgid ""
 "This browser can't save Fluxer's data. You'll need to sign in again after "
 "you close it."
 msgstr ""
-"Tento prohlížeč nemůže ukládat data sanalyeru. Po jeho zavření se budete muset"
-" znovu přihlásit."
+"Tento prohlížeč nemůže ukládat data sanalyeru. Po jeho zavření se budete "
+"muset znovu přihlásit."
 
 #. Console warning line explaining that the browser console is meant for
 #. developers.
@@ -47151,19 +47190,6 @@ msgstr "Tento kanál je synchronizován s nadřazenou kategorií <0>{0}</0>."
 #: src/features/app/components/alerts/ChannelDeleteFailedModal.tsx
 msgid "This channel no longer exists. It may have already been deleted."
 msgstr "Tento kanál již neexistuje. Je možné, že již byl smazán."
-
-#. Error shown when signing in or signing up on a self-hosted instance opened
-#. over plain HTTP or a bare IP address, where the browser blocks the
-#. automatic background check. HTTPS and localhost are technical terms, keep
-#. them as is.
-#: src/features/auth/altcha/CaptchaInterceptor.ts
-msgid ""
-"This check only runs when the app is opened over HTTPS or on localhost. Ask "
-"the instance owner to serve it over HTTPS, or open it from localhost."
-msgstr ""
-"Tato kontrola probíhá pouze při otevření aplikace přes HTTPS nebo na "
-"localhostu. Požádejte vlastníka instance, aby ji spustil přes HTTPS, nebo ji"
-" otevřete z localhostu."
 
 #. Problem shown in the quick CSS editor on a generated class name. [data-flx]
 #. is CSS code and stays in English.
@@ -47664,6 +47690,13 @@ msgstr ""
 "Tato instance nepoužívá e-mail, takže přes tento formulář nemůže přijímat "
 "nahlášení. Nahlaste obsah přímo v aplikaci, nebo kontaktujte správce této "
 "instance."
+
+#. Title of the dialog shown when someone tries to use the microphone, camera
+#. or screen sharing on a self-hosted instance opened over plain HTTP. HTTPS
+#. is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid "This instance doesn't use HTTPS"
+msgstr "Tato instance nepoužívá HTTPS"
 
 #. Explanation shown in place of the single sign-on description when the
 #. instance offers no SSO provider.
@@ -48225,10 +48258,10 @@ msgid ""
 "your account on it. It takes about five minutes. You can change most choices"
 " later in the admin panel, and a screen tells you when you can't."
 msgstr ""
-"Tady nastavíte svou instanci, tedy kopii sanalyeru, kterou jste nainstalovali,"
-" a vytvoříte si na ní účet. Zabere to asi pět minut. Většinu voleb můžete "
-"později změnit v administraci a u těch, které změnit nejdou, vám to "
-"obrazovka řekne."
+"Tady nastavíte svou instanci, tedy kopii sanalyeru, kterou jste "
+"nainstalovali, a vytvoříte si na ní účet. Zabere to asi pět minut. Většinu "
+"voleb můžete později změnit v administraci a u těch, které změnit nejdou, "
+"vám to obrazovka řekne."
 
 #. Label in the accessibility tab. Preserve {linkPreviewExampleUrl}; it is
 #. inserted by code.
@@ -48391,6 +48424,27 @@ msgstr ""
 #: src/features/voice/engine/media_engine_facade/shared.ts
 msgid "This voice channel is no longer available."
 msgstr "Tento hlasový kanál již není k dispozici."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel from a browser that cannot encrypt calls.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption, and this browser can't join "
+"encrypted calls."
+msgstr ""
+"Tento hlasový kanál používá koncové šifrování a tento prohlížeč se k "
+"šifrovaným hovorům připojit nemůže."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel on a self-hosted instance opened over plain HTTP. HTTPS is a
+#. technical term, keep it as is.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption. Browsers only allow encrypted"
+" calls on sites that use HTTPS, and this instance doesn't use HTTPS."
+msgstr ""
+"Tento hlasový kanál používá koncové šifrování. Prohlížeče povolují šifrované"
+" hovory jen na webech s HTTPS a tato instance HTTPS nepoužívá."
 
 #. Description text in the channel and chat user message. Preserve
 #. {silentMention}; it is inserted by code.
@@ -53038,9 +53092,9 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"Když svůj pass zapnete, přidáme vás do sanalyer Labs, pokud jste sanalyer Labs "
-"dříve neopustili a nebyli jste z něj odebráni. Když je tohle zapnuté, krátce"
-" potom vás v #operators přivítáme jménem."
+"Když svůj pass zapnete, přidáme vás do sanalyer Labs, pokud jste sanalyer "
+"Labs dříve neopustili a nebyli jste z něj odebráni. Když je tohle zapnuté, "
+"krátce potom vás v #operators přivítáme jménem."
 
 #. Hint under the checkbox or switch "Welcome me in #operators". Fluxer Labs
 #. is the name of a community on Fluxer, keep it as is. #operators is a
@@ -53053,9 +53107,9 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"Když vám doručíme pass, přidáme vás do sanalyer Labs, pokud jste sanalyer Labs "
-"dříve neopustili a nebyli jste z něj odebráni. Když je tohle zapnuté, krátce"
-" potom vás v #operators přivítáme jménem."
+"Když vám doručíme pass, přidáme vás do sanalyer Labs, pokud jste sanalyer "
+"Labs dříve neopustili a nebyli jste z něj odebráni. Když je tohle zapnuté, "
+"krátce potom vás v #operators přivítáme jménem."
 
 #. Error under the certificate name fields when the server turned a name down,
 #. for example because it looks like it comes from Fluxer or another brand, or
@@ -57404,6 +57458,26 @@ msgstr "Přiblížit"
 #: src/features/user/components/settings_utils/search_index/KeybindsIndex.ts
 msgid "Zoom out"
 msgstr "Oddálit"
+
+#. Instance selector error shown when no Fluxer instance answered at the
+#. address. Domain is interpolated.
+#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
+msgid ""
+"Couldn't connect to a sanalyer instance at {domain}. Check the address and "
+"that the instance is online."
+msgstr ""
+"Nepodařilo se navázat spojení s instancí sanalyeru na adrese {domain}. "
+"Zkontrolujte adresu a zda je instance online."
+
+#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
+#. subscription and must not be translated. 4K and fps are video terms.
+#: src/features/voice/utils/VoiceMessageDescriptors.ts
+msgid ""
+"Everyone in the call gets {premiumProductName} stream quality for free, with"
+" up to 4K source resolution and 60 fps."
+msgstr ""
+"Všichni v hovoru získají kvalitu streamu {premiumProductName} zdarma: až 4K "
+"zdrojové rozlišení a 60 fps."
 
 #. Voice screen share menu preference that pauses the local stream preview
 #. while the app is unfocused. {productName} is the app name.

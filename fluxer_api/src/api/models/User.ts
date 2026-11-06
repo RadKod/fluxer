@@ -4,6 +4,7 @@ import type {UserID} from '@app/api/BrandedTypes';
 import {LocalDate} from '@app/api/database/LocalDate';
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import {checkIsPremium, getEffectivePremiumUntil} from '@app/api/user/UserHelpers';
+import {type AttestedAgeFloor, isAttestedAgeFloor} from '@fluxer/constants/src/AgeAssuranceConstants';
 import {isProfileBadgeKey, type ProfileBadgeKey} from '@fluxer/constants/src/BadgeConstants';
 import {
 	extractPremiumFlagsFromLegacyUserFlags,
@@ -96,6 +97,8 @@ export class User {
 	readonly nameColor2: number | null;
 	readonly themePrimaryColor: number | null;
 	readonly themeAccentColor: number | null;
+	readonly attestedAgeFloor: AttestedAgeFloor | null;
+	readonly ageAttestedAt: Date | null;
 	readonly version: number;
 
 	constructor(row: UserRow) {
@@ -184,6 +187,8 @@ export class User {
 		this.nameColor2 = row.name_color_2 ?? null;
 		this.themePrimaryColor = row.theme_primary_color ?? null;
 		this.themeAccentColor = row.theme_accent_color ?? null;
+		this.attestedAgeFloor = isAttestedAgeFloor(row.attested_age_floor) ? row.attested_age_floor : null;
+		this.ageAttestedAt = row.age_attested_at ?? null;
 		this.version = row.version;
 	}
 
@@ -282,6 +287,8 @@ export class User {
 			name_color_2: this.nameColor2,
 			theme_primary_color: this.themePrimaryColor,
 			theme_accent_color: this.themeAccentColor,
+			attested_age_floor: this.attestedAgeFloor,
+			age_attested_at: this.ageAttestedAt,
 			version: this.version,
 		};
 	}

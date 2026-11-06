@@ -404,7 +404,9 @@ async function createAccountUnlocked(
 		[contactDomainAdminListed, contactDomainDisposable] = domain
 			? await Promise.all([deps.isEmailDomainSuspicious(domain), deps.isEmailDomainDisposable(domain)])
 			: [false, false];
-		if (!input.emailProven) {
+		if (input.emailProven) {
+			await assertRegistrationEmailNotBlocked(rawEmail);
+		} else {
 			await assertRegistrationEmailDeliverable(rawEmail, emailDnsValidation);
 		}
 		const emailTaken = await users.findByEmail(rawEmail);
@@ -655,14 +657,18 @@ function resolveRegistrationDateOfBirth(params: {
 	return {date, adult: AgeUtils.isUserAdult(dateOfBirthInput), deferred: false};
 }
 
-export async function assertRegistrationEmailDeliverable(
-	email: string,
-	emailDnsValidation: ApiContext['services']['emailDnsValidation'],
-): Promise<void> {
+async function assertRegistrationEmailNotBlocked(email: string): Promise<void> {
 	if (isBlockedEmailDomain(extractEmailDomain(email))) {
 		throw InputValidationError.fromCode('email', ValidationErrorCodes.INVALID_EMAIL_ADDRESS);
 	}
 	await assertEmailNotBlocklisted(email, 'email');
+}
+
+export async function assertRegistrationEmailDeliverable(
+	email: string,
+	emailDnsValidation: ApiContext['services']['emailDnsValidation'],
+): Promise<void> {
+	await assertRegistrationEmailNotBlocked(email);
 	if (!(await emailDnsValidation.hasValidDnsRecords(email))) {
 		throw InputValidationError.fromCode('email', ValidationErrorCodes.EMAIL_DOMAIN_CANNOT_RECEIVE_MAIL);
 	}
@@ -884,9 +890,10 @@ export async function maybeAutoJoinInvite(
 		userId: UserID;
 		inviteCode: string | null | undefined;
 		requestCache: RequestCache;
+		ip?: string | null;
 	},
 ): Promise<void> {
-	const {userId, inviteCode, requestCache} = params;
+	const {userId, inviteCode, requestCache, ip} = params;
 	for (const code of parseInviteCodeList(inviteCode)) {
 		try {
 			await inviteService.acceptInvite({
@@ -894,6 +901,7 @@ export async function maybeAutoJoinInvite(
 				inviteCode: createInviteCode(code),
 				requestCache,
 				tierContext: NO_TIER_CONTEXT,
+				ip,
 			});
 		} catch (error) {
 			Logger.warn({inviteCode: code, error}, 'Failed to auto-join invite');

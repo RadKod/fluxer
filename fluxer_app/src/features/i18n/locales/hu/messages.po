@@ -6352,6 +6352,13 @@ msgstr ""
 "Rendszerbeállításokban. Ha már engedélyezve van, indítsd újra a(z) "
 "{productName2} alkalmazást, hogy a macOS alkalmazza."
 
+#. Switch in the sensitive content settings. Turns on 18+ communities and
+#. channels and the "Show" sensitive media option in the Fluxer app for iPhone
+#. and iPad.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid "Allow 18+ content on iPhone and iPad"
+msgstr "18+ tartalom engedélyezése iPhone-on és iPaden"
+
 #. Private thread setting that lets non-moderators add other members.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
 msgid "Allow anyone to invite"
@@ -9419,6 +9426,30 @@ msgstr ""
 "A böngészők nem sorolják fel a kamerákat a képernyőmegosztás-választóban. "
 "Ehelyett válaszd ki őket az eszközök lapon. Ha itt semmi sem jelenik meg, "
 "engedélyezd a kamera hozzáférését, vagy csatlakoztass egy eszközt."
+
+#. Shown on a self-hosted instance opened over plain HTTP when someone tries
+#. to use the microphone, camera or screen sharing, which browsers block
+#. there. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow the microphone, camera and screen sharing on sites that "
+"use HTTPS, and this instance doesn't use HTTPS. You can still join voice "
+"channels and listen."
+msgstr ""
+"A böngészők csak HTTPS-t használó oldalakon engedik a mikrofont, a kamerát "
+"és a képernyőmegosztást, ez az instance pedig nem használ HTTPS-t. "
+"Hangcsatornákhoz így is csatlakozhatsz és hallgathatsz."
+
+#. Short note next to a setting or button that browsers turn off on a self-
+#. hosted instance opened over plain HTTP, such as notifications or passkeys.
+#. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow this on sites that use HTTPS, and this instance doesn't "
+"use HTTPS."
+msgstr ""
+"A böngészők ezt csak HTTPS-t használó oldalakon engedik, ez az instance "
+"pedig nem használ HTTPS-t."
 
 #. Where the dark mode favicon appears and the recommended format, in the
 #. setup wizard. size is a file size such as 10 MB.
@@ -14618,12 +14649,6 @@ msgstr "Nem sikerült csatlakozni a(z) {domain} szolgáltatáshoz. Próbáld új
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
 msgid "Couldn't connect to {names}"
 msgstr "Nem sikerült csatlakozni ide: {names}"
-
-#. Instance selector error shown when no Fluxer instance answered at the
-#. address. Domain is interpolated.
-#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
-msgid "Couldn't connect to a sanalyer instance at {domain}. Check the address and that the instance is online."
-msgstr "Nem sikerült elérni egy sanalyer példányt a következő címen: {domain}. Ellenőrizd a címet, és győződj meg róla, hogy az példány online van."
 
 #. Toast shown when joining a voice channel fails because the connection timed
 #. out or the transport dropped.
@@ -20583,12 +20608,6 @@ msgstr ""
 msgid "Everyone"
 msgstr "Mindenki"
 
-#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
-#. subscription and must not be translated. 4K and fps are video terms.
-#: src/features/voice/utils/VoiceMessageDescriptors.ts
-msgid "Everyone in the call gets {premiumProductName} stream quality for free, with up to 4K source resolution and 60 fps."
-msgstr "Mindenki számára ingyenes a {premiumProductName} stream minőség a hívásban: akár 4K felbontás és 60 fps."
-
 #. Description of the single community option in the setup wizard.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
 msgid ""
@@ -21799,8 +21818,8 @@ msgid ""
 "Fluxer blocked loading {url}. Upload the file as an asset, or trust the site"
 " it's on."
 msgstr ""
-"A sanalyer blokkolta a(z) {url} betöltését. Töltsd fel a fájlt erőforrásként, "
-"vagy bízz meg a webhelyben, ahol található."
+"A sanalyer blokkolta a(z) {url} betöltését. Töltsd fel a fájlt "
+"erőforrásként, vagy bízz meg a webhelyben, ahol található."
 
 #. Problem shown in the quick CSS editor on a reference to an uploaded theme
 #. asset that does not exist.
@@ -21829,8 +21848,8 @@ msgstr ""
 #: src/features/theme_settings/components/YourThemesSection.tsx
 msgid "Fluxer can't open this folder. Import it again to keep watching it."
 msgstr ""
-"A sanalyer nem tudja megnyitni ezt a mappát. Importáld újra, hogy továbbra is "
-"figyelhesse."
+"A sanalyer nem tudja megnyitni ezt a mappát. Importáld újra, hogy továbbra "
+"is figyelhesse."
 
 #. Error toast in "Your themes" when the chosen theme folder cannot be opened.
 #: src/features/theme_settings/components/YourThemesSection.tsx
@@ -21844,8 +21863,8 @@ msgid ""
 "Fluxer couldn't apply this CSS. Check it for a broken comment, string or "
 "bracket."
 msgstr ""
-"A sanalyer nem tudta alkalmazni ezt a CSS-t. Ellenőrizd, nincs-e benne hibás "
-"megjegyzés, karakterlánc vagy zárójel."
+"A sanalyer nem tudta alkalmazni ezt a CSS-t. Ellenőrizd, nincs-e benne hibás"
+" megjegyzés, karakterlánc vagy zárójel."
 
 #. Alert when the SMTP check fails and the mail server sent no reply. host is
 #. the mail server address.
@@ -21858,7 +21877,8 @@ msgstr "A sanalyer nem tudott csatlakozni ehhez: {host}."
 #: src/features/app/components/setup/SetupEmailSteps.tsx
 msgid "Fluxer couldn't connect to {host}. The server said: \"{error}\""
 msgstr ""
-"A sanalyer nem tudott csatlakozni ehhez: {host}. A szerver válasza: „{error}”"
+"A sanalyer nem tudott csatlakozni ehhez: {host}. A szerver válasza: "
+"„{error}”"
 
 #. Status shown in the desktop app when it stopped checking the browser sign-
 #. in because the instance could not be reached. instanceName is the server
@@ -24783,8 +24803,8 @@ msgid ""
 "and no image for any other name."
 msgstr ""
 "Ha üresen hagyod, a bejelentkezési oldal az alkalmazásikont vagy a "
-"szimbólumot használja. Ezek nélkül a sanalyer logóját mutatja, amíg a termék "
-"neve sanalyer, más név esetén pedig nem jelenít meg képet."
+"szimbólumot használja. Ezek nélkül a sanalyer logóját mutatja, amíg a termék"
+" neve sanalyer, más név esetén pedig nem jelenít meg képet."
 
 #. What the app shows when no dark mode favicon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -24801,8 +24821,8 @@ msgid ""
 "If you leave it empty, the tab uses your app icon, or the Fluxer icon if "
 "that is empty too."
 msgstr ""
-"Ha üresen hagyod, a lap az alkalmazásikont használja, vagy a sanalyer ikonját,"
-" ha az is üres."
+"Ha üresen hagyod, a lap az alkalmazásikont használja, vagy a sanalyer "
+"ikonját, ha az is üres."
 
 #. What the app shows when no app icon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -24817,9 +24837,9 @@ msgid ""
 "least 32 characters that you choose, restart Fluxer, and enter that value "
 "here."
 msgstr ""
-"Ha sanalyert rexctl nélkül futtatod, állítsd be a FLUXER_SETUP_TOKEN értékét "
-"legalább 32 karakter hosszúra, amit te választasz, indítsd újra a sanalyert, "
-"és írd be ide."
+"Ha sanalyert rexctl nélkül futtatod, állítsd be a FLUXER_SETUP_TOKEN értékét"
+" legalább 32 karakter hosszúra, amit te választasz, indítsd újra a "
+"sanalyert, és írd be ide."
 
 #: src/features/user/components/modals/FluxerTagChangeModal.tsx
 msgid ""
@@ -27002,6 +27022,13 @@ msgstr "További információ a képernyőmegosztás előnézeteiről"
 msgid "Learn more"
 msgstr "További információ"
 
+#. Link under the Plutonium page hero buttons on self-hosted instances.
+#. premiumProductName is the paid tier name set by the instance. Opens a page
+#. about the tier that the instance admin chose.
+#: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
+msgid "Learn more about {premiumProductName}"
+msgstr "Tudj meg többet: {premiumProductName}"
+
 #. Confirmation text before leaving a private thread. threadName is the thread
 #. name.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
@@ -27266,6 +27293,19 @@ msgstr "Lehetővé teszi, hogy lássanak videón."
 msgid "Lets push-to-talk and keybinds work in other apps."
 msgstr ""
 "Hogy a push-to-talk és a gyorsbillentyűk működjenek más alkalmazásokban."
+
+#. Helper text under the "Allow 18+ content on iPhone and iPad" switch. "Show"
+#. is the sensitive media option name and must match its translation.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid ""
+"Lets you open communities and channels marked 18+ in the Fluxer app for "
+"iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
+" change this on the web or on desktop."
+msgstr ""
+"Lehetővé teszi, hogy a Fluxer iPhone- és iPad-alkalmazásában megnyisd a 18+ "
+"jelölésű közösségeket és csatornákat, és ott az érzékeny médiánál a "
+"„Megjelenítés” lehetőséget válaszd. Ezt csak a weben vagy asztali gépen "
+"módosíthatod."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx
 msgid "Lets you reset your password if you forget it."
@@ -32635,8 +32675,8 @@ msgid ""
 "you have Fluxer open and some of what's on your screen."
 msgstr ""
 "Csak olyan webhelyekben bízz meg, amelyeket ismersz. Egy webhely, amelyben "
-"megbízol, láthatja az IP-címedet, azt, hogy mikor van megnyitva a sanalyer, és"
-" a képernyőd tartalmának egy részét."
+"megbízol, láthatja az IP-címedet, azt, hogy mikor van megnyitva a sanalyer, "
+"és a képernyőd tartalmának egy részét."
 
 #. Body of the error modal shown when a non-Visionary user tries to rejoin a
 #. gated Plutonium community.
@@ -33437,8 +33477,8 @@ msgid ""
 "Operators and the Fluxer Team talking about self-hosting in the #operators "
 "channel of Fluxer Labs"
 msgstr ""
-"Operatorok és a sanalyer csapata beszélgetnek a saját üzemeltetésről a sanalyer "
-"Labs #operators csatornájában"
+"Operatorok és a sanalyer csapata beszélgetnek a saját üzemeltetésről a "
+"sanalyer Labs #operators csatornájában"
 
 #. Heading of the Operators' wall section in the Operator Pass settings tab.
 #. Operators' wall is the name of a section of the homepage.
@@ -40512,8 +40552,8 @@ msgid ""
 "Sweden, {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 msgstr ""
-"Eladó: sanalyer Platform AB, 559537-3993, székhely (säte) Haninge, Svédország,"
-" {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
+"Eladó: sanalyer Platform AB, 559537-3993, székhely (säte) Haninge, "
+"Svédország, {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 
 #. Button or menu action label in the share theme modal. Keep it concise.
@@ -41213,8 +41253,8 @@ msgstr ""
 #: src/features/theme_settings/editor/AppSelectors.ts
 msgid "Set on messages that Fluxer sends, such as when someone joins."
 msgstr ""
-"Azokon az üzeneteken van beállítva, amelyeket a sanalyer küld, például amikor "
-"valaki csatlakozik."
+"Azokon az üzeneteken van beállítva, amelyeket a sanalyer küld, például "
+"amikor valaki csatlakozik."
 
 #. Describes a CSS attribute in the "Reference" tab of the quick CSS editor.
 #: src/features/theme_settings/editor/AppSelectors.ts
@@ -45815,8 +45855,8 @@ msgid ""
 "Text on Windows now uses the system font. You can switch back to Fluxer Sans"
 " in settings."
 msgstr ""
-"A szöveg a Windows rendszerbetűkészletét használja. Visszaválthatsz sanalyer "
-"Sans betűtípusra a Beállításokban."
+"A szöveg a Windows rendszerbetűkészletét használja. Visszaválthatsz sanalyer"
+" Sans betűtípusra a Beállításokban."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -46148,9 +46188,9 @@ msgid ""
 "\"Operator Pass since November 2026\". You can hide it, or just its date, in"
 " your settings at any time."
 msgstr ""
-"A sanalyer-profilodon lévő jelvény mutatja, mikor kaptad a passodat, például: "
-"„Operator Pass 2026 novembere óta”. A beállításaidban bármikor elrejtheted a"
-" jelvényt, vagy csak a dátumát."
+"A sanalyer-profilodon lévő jelvény mutatja, mikor kaptad a passodat, "
+"például: „Operator Pass 2026 novembere óta”. A beállításaidban bármikor "
+"elrejtheted a jelvényt, vagy csak a dátumát."
 
 #. Activity log detail line under a lifted ban, for a temporary ban that had
 #. already ended on its own before it was lifted. A ban is the community ban,
@@ -46267,10 +46307,10 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"A sanalyer iOS- és Android-alkalmazásai egy, a sanalyer által üzemeltetett push-"
-"relén keresztül kapják az értesítéseket, amely továbbítja őket az Apple-nek "
-"és a Google-nek. A használatával elfogadod a push-relé adatvédelmi "
-"tájékoztatóját."
+"A sanalyer iOS- és Android-alkalmazásai egy, a sanalyer által üzemeltetett "
+"push-relén keresztül kapják az értesítéseket, amely továbbítja őket az "
+"Apple-nek és a Google-nek. A használatával elfogadod a push-relé adatvédelmi"
+" tájékoztatóját."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
 msgid "The following people can't be added to this group DM:"
@@ -46390,8 +46430,9 @@ msgid ""
 msgstr ""
 "A nagy kép a bejelentkezési űrlap mellett, amely mindig sötét. Telefonon "
 "csak a név mellett jelenik meg, ha nincs szójel, és a termék neve nem "
-"sanalyer. Használj négyzetes vagy széles, világos színű, átlátszó hátterű PNG-"
-" vagy SVG-fájlt, legalább 256 képpont magasat és legfeljebb {size} méretűt."
+"sanalyer. Használj négyzetes vagy széles, világos színű, átlátszó hátterű "
+"PNG- vagy SVG-fájlt, legalább 256 képpont magasat és legfeljebb {size} "
+"méretűt."
 
 #. Error modal body shown when revoking an invite fails; warns the user that
 #. the link may still be live.
@@ -47198,8 +47239,8 @@ msgid ""
 "This browser can't save Fluxer's data. You'll need to sign in again after "
 "you close it."
 msgstr ""
-"Ez a böngésző nem tudja menteni a sanalyer adatait. Bezárása után újra be kell"
-" jelentkezned."
+"Ez a böngésző nem tudja menteni a sanalyer adatait. Bezárása után újra be "
+"kell jelentkezned."
 
 #. Console warning line explaining that the browser console is meant for
 #. developers.
@@ -47387,19 +47428,6 @@ msgstr "Ez a csatorna szinkronizálva van a(z) <0>{0}</0> szülőkategóriával.
 #: src/features/app/components/alerts/ChannelDeleteFailedModal.tsx
 msgid "This channel no longer exists. It may have already been deleted."
 msgstr "Ez a csatorna már nem létezik. Lehet, hogy már törölték."
-
-#. Error shown when signing in or signing up on a self-hosted instance opened
-#. over plain HTTP or a bare IP address, where the browser blocks the
-#. automatic background check. HTTPS and localhost are technical terms, keep
-#. them as is.
-#: src/features/auth/altcha/CaptchaInterceptor.ts
-msgid ""
-"This check only runs when the app is opened over HTTPS or on localhost. Ask "
-"the instance owner to serve it over HTTPS, or open it from localhost."
-msgstr ""
-"Ez az ellenőrzés csak akkor fut, ha az alkalmazás HTTPS-en vagy localhoston "
-"keresztül nyílik meg. Kérd meg az instance tulajdonosát, hogy HTTPS-en "
-"keresztül érhető el, vagy nyisd meg localhostról."
 
 #. Problem shown in the quick CSS editor on a generated class name. [data-flx]
 #. is CSS code and stays in English.
@@ -47904,6 +47932,13 @@ msgstr ""
 "bejelentéseket fogadni. Jelentsd a tartalmat az alkalmazásban, vagy fordulj "
 "ennek a példánynak az adminisztrátoraihoz."
 
+#. Title of the dialog shown when someone tries to use the microphone, camera
+#. or screen sharing on a self-hosted instance opened over plain HTTP. HTTPS
+#. is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid "This instance doesn't use HTTPS"
+msgstr "Ez az instance nem használ HTTPS-t"
+
 #. Explanation shown in place of the single sign-on description when the
 #. instance offers no SSO provider.
 #: src/features/auth/flow/AuthSsoPanel.tsx
@@ -47921,8 +47956,8 @@ msgid ""
 "This instance was upgraded from a version of Fluxer that used email sign-in,"
 " so it stays on email."
 msgstr ""
-"Ezt a példányt a sanalyer egy olyan verziójáról frissítették, amely e-mailes "
-"bejelentkezést használt, ezért marad az e-mailnél."
+"Ezt a példányt a sanalyer egy olyan verziójáról frissítették, amely e-mailes"
+" bejelentkezést használt, ezért marad az e-mailnél."
 
 #. Helper text shown on an invite embed while streaming privacy is active.
 #: src/features/channel/components/InviteEmbed.tsx
@@ -48479,8 +48514,8 @@ msgid ""
 "your account on it. It takes about five minutes. You can change most choices"
 " later in the admin panel, and a screen tells you when you can't."
 msgstr ""
-"Itt beállítod a példányodat, vagyis a sanalyer általad telepített példányát, "
-"és létrehozod rajta a fiókodat. Körülbelül öt percig tart. A legtöbb "
+"Itt beállítod a példányodat, vagyis a sanalyer általad telepített példányát,"
+" és létrehozod rajta a fiókodat. Körülbelül öt percig tart. A legtöbb "
 "választást később módosíthatod az adminisztrációs panelen, és ha valamit "
 "nem, azt a képernyő jelzi."
 
@@ -48652,6 +48687,28 @@ msgstr ""
 #: src/features/voice/engine/media_engine_facade/shared.ts
 msgid "This voice channel is no longer available."
 msgstr "Ez a hangcsatorna már nem elérhető."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel from a browser that cannot encrypt calls.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption, and this browser can't join "
+"encrypted calls."
+msgstr ""
+"Ez a hangcsatorna végpontok közötti titkosítást használ, és ez a böngésző "
+"nem tud titkosított hívásokhoz csatlakozni."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel on a self-hosted instance opened over plain HTTP. HTTPS is a
+#. technical term, keep it as is.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption. Browsers only allow encrypted"
+" calls on sites that use HTTPS, and this instance doesn't use HTTPS."
+msgstr ""
+"Ez a hangcsatorna végpontok közötti titkosítást használ. A böngészők csak "
+"HTTPS-t használó oldalakon engedik a titkosított hívásokat, ez az instance "
+"pedig nem használ HTTPS-t."
 
 #. Description text in the channel and chat user message. Preserve
 #. {silentMention}; it is inserted by code.
@@ -53341,8 +53398,8 @@ msgid ""
 "in #operators soon after."
 msgstr ""
 "Amikor bekapcsolod a passodat, hozzáadunk a sanalyer Labshoz, kivéve, ha "
-"korábban már kiléptél a sanalyer Labsből, vagy eltávolítottak onnan. Ha ez be "
-"van kapcsolva, nem sokkal később név szerint köszöntünk a #operators "
+"korábban már kiléptél a sanalyer Labsből, vagy eltávolítottak onnan. Ha ez "
+"be van kapcsolva, nem sokkal később név szerint köszöntünk a #operators "
 "csatornán."
 
 #. Hint under the checkbox or switch "Welcome me in #operators". Fluxer Labs
@@ -53357,8 +53414,8 @@ msgid ""
 "in #operators soon after."
 msgstr ""
 "Amikor kézbesítjük a passodat, hozzáadunk a sanalyer Labshoz, kivéve, ha "
-"korábban már kiléptél a sanalyer Labsből, vagy eltávolítottak onnan. Ha ez be "
-"van kapcsolva, nem sokkal később név szerint köszöntünk a #operators "
+"korábban már kiléptél a sanalyer Labsből, vagy eltávolítottak onnan. Ha ez "
+"be van kapcsolva, nem sokkal később név szerint köszöntünk a #operators "
 "csatornán."
 
 #. Error under the certificate name fields when the server turned a name down,
@@ -57751,6 +57808,26 @@ msgstr "Nagyítás"
 #: src/features/user/components/settings_utils/search_index/KeybindsIndex.ts
 msgid "Zoom out"
 msgstr "Kicsinyítés"
+
+#. Instance selector error shown when no Fluxer instance answered at the
+#. address. Domain is interpolated.
+#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
+msgid ""
+"Couldn't connect to a sanalyer instance at {domain}. Check the address and "
+"that the instance is online."
+msgstr ""
+"Nem sikerült elérni egy sanalyer példányt a következő címen: {domain}. "
+"Ellenőrizd a címet, és győződj meg róla, hogy az példány online van."
+
+#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
+#. subscription and must not be translated. 4K and fps are video terms.
+#: src/features/voice/utils/VoiceMessageDescriptors.ts
+msgid ""
+"Everyone in the call gets {premiumProductName} stream quality for free, with"
+" up to 4K source resolution and 60 fps."
+msgstr ""
+"Mindenki számára ingyenes a {premiumProductName} stream minőség a hívásban: "
+"akár 4K felbontás és 60 fps."
 
 #. Voice screen share menu preference that pauses the local stream preview
 #. while the app is unfocused. {productName} is the app name.

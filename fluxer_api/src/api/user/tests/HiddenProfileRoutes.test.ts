@@ -8,7 +8,7 @@ import {getGuildRepository, getUserCacheService, getUserRepository} from '@app/a
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {NoopWorkerService} from '@app/api/test/NoopWorkerService';
 import {SyncTaskWorkerService} from '@app/api/test/SyncTaskWorkerService';
-import {HTTP_STATUS} from '@app/api/test/TestConstants';
+import {HTTP_STATUS, wait} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {profilePseudonym} from '@app/api/user/ProfileVisibility';
 import {fetchUser, fetchUserMe, fetchUserProfile} from '@app/api/user/tests/UserTestUtils';
@@ -16,6 +16,7 @@ import propagatePartialUserChange from '@app/api/worker/tasks/PropagatePartialUs
 import {clearWorkerDependencies, setWorkerDependenciesForTest} from '@app/api/worker/WorkerContext';
 import {DeletionReasons} from '@fluxer/constants/src/Core';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
+import type {GuildMemberSearchResponse} from '@fluxer/schema/src/domains/guild/GuildMemberSearchSchemas';
 import {afterEach, beforeEach, describe, expect, test} from 'vitest';
 
 const PROFILE_HIDDEN_BIT = Number(UserFlags.PROFILE_HIDDEN);
@@ -39,7 +40,7 @@ describe('hidden profiles', () => {
 	let pseudonym: {username: string; discriminator: string};
 
 	beforeEach(async () => {
-		harness = await createApiTestHarness();
+		harness = await createApiTestHarness({search: 'enabled'});
 		setWorkerDependenciesForTest({
 			kvClient: getKVClient(),
 			userRepository: getUserRepository(),
@@ -62,7 +63,7 @@ describe('hidden profiles', () => {
 		guildId = setup.guild.id;
 		await createBuilder(harness, target.token)
 			.patch('/users/@me')
-			.body({global_name: 'Shown Name', bio: 'shown bio', pronouns: 'they/them'})
+			.body({global_name: 'Shown Name', bio: 'shown bio', pronouns: 'they/them', timezone: 'America/New_York'})
 			.expect(HTTP_STATUS.OK)
 			.execute();
 		await createBuilder(harness, target.token)
@@ -86,8 +87,11 @@ describe('hidden profiles', () => {
 		expect(json.flags & PROFILE_HIDDEN_BIT).toBe(0);
 		const profile = await fetchUserProfile(harness, target.userId, viewer.token);
 		expect(profile.json.user_profile).toMatchObject({bio: 'shown bio', pronouns: 'they/them'});
+		expect(profile.json.timezone_offset).toBeTypeOf('number');
 		const member = await getMember(harness, viewer.token, guildId, target.userId);
 		expect(member.nick).toBe('Shown Nick');
+		const searchHit = await searchMember();
+		expect(searchHit).toMatchObject({username: targetName, global_name: 'Shown Name', nickname: 'Shown Nick'});
 	}
 
 	async function expectHidden(): Promise<void> {
@@ -97,10 +101,24 @@ describe('hidden profiles', () => {
 		expect(json.flags & PROFILE_HIDDEN_BIT).toBe(0);
 		const profile = await fetchUserProfile(harness, target.userId, viewer.token);
 		expect(profile.json.user_profile).toMatchObject({bio: null, pronouns: null, banner: null, accent_color: null});
+		expect(profile.json.timezone_offset).toBeNull();
 		const member = await getMember(harness, viewer.token, guildId, target.userId);
 		expect(member).toMatchObject({nick: null, avatar: null, banner: null});
 		expect(member.user).toMatchObject(pseudonym);
 		expect(member.user.flags & PROFILE_HIDDEN_BIT).toBe(0);
+		const searchHit = await searchMember();
+		expect(searchHit).toMatchObject({...pseudonym, global_name: null, nickname: null});
+	}
+
+	async function searchMember() {
+		await createBuilder(harness, '').post(`/test/guilds/${guildId}/mark-members-indexed`).body({}).execute();
+		await wait(50);
+		const {members} = await createBuilder<GuildMemberSearchResponse>(harness, viewer.token)
+			.post(`/guilds/${guildId}/members-search`)
+			.body({})
+			.expect(HTTP_STATUS.OK)
+			.execute();
+		return members.find((hit) => hit.user_id === target.userId);
 	}
 
 	async function expectStaffSeeStoredProfile(): Promise<void> {

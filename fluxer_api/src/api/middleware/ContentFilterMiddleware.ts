@@ -2,10 +2,12 @@
 
 import {Logger} from '@app/api/Logger';
 import {phraseBlocklistCache} from '@app/api/middleware/PhraseBlocklistCache';
+import {binaryRequestBodyPaths} from '@app/api/middleware/RequestBodyBinaryFields';
 import {isMultipartUploadRequest} from '@app/api/middleware/RequestBodyLimitMiddleware';
 import {urlBlocklistCache} from '@app/api/middleware/UrlBlocklistCache';
 import {readRequestJsonBody} from '@app/api/utils/RequestJsonBody';
 import {ContentBlockedError} from '@fluxer/errors/src/domains/content/ContentBlockedError';
+import {arrayItemBodyFieldPath, childBodyFieldPath} from '@fluxer/schema/src/primitives/Base64BinaryFields';
 import {createMiddleware} from 'hono/factory';
 
 const SKIP_FIELDS = new Set([
@@ -15,8 +17,6 @@ const SKIP_FIELDS = new Set([
 	'asset',
 	// sanalyer: base64 audio of a soundboard upload; random base64 can match a short banned phrase.
 	'audio',
-	'avatar',
-	'banner',
 	'challenge',
 	'channels',
 	'content_type',
@@ -25,13 +25,10 @@ const SKIP_FIELDS = new Set([
 	'email_token',
 	'encryption_key',
 	'endpoint',
-	'embed_splash',
 	'flags',
 	'hashes',
-	'icon',
 	'id',
 	'ids',
-	'image',
 	'keys',
 	'locale',
 	'mfa_code',
@@ -46,10 +43,7 @@ const SKIP_FIELDS = new Set([
 	'response',
 	'roles',
 	'secret',
-	'splash',
 	'state',
-	'synced_preferences',
-	'thumbnail',
 	'ticket',
 	'token',
 	'traits',
@@ -59,7 +53,6 @@ const SKIP_FIELDS = new Set([
 	'upload_id',
 	'users',
 	'verification_proof',
-	'waveform',
 	'webauthn_challenge',
 	'webauthn_response',
 ]);
@@ -98,29 +91,31 @@ export function shouldSkipContentFilterPath(path: string): boolean {
 	return SKIP_CONTENT_FILTER_PATH_PARTS.some((part) => path.includes(part));
 }
 
-function shouldSkipField(key: string): boolean {
-	if (SKIP_FIELDS.has(key)) {
+function shouldSkipField(key: string, path: string): boolean {
+	if (binaryRequestBodyPaths.has(path) || SKIP_FIELDS.has(key)) {
 		return true;
 	}
 	return SKIP_FIELD_SUFFIXES.some((suffix) => key.endsWith(suffix));
 }
 
-export function extractStringValues(body: unknown, depth = 0): Array<string> {
+export function extractStringValues(body: unknown, path = '', depth = 0): Array<string> {
 	if (depth > 10) return [];
 	const strings: Array<string> = [];
 	if (typeof body === 'string') {
 		strings.push(body);
 	} else if (Array.isArray(body)) {
+		const itemPath = arrayItemBodyFieldPath(path);
 		for (const item of body) {
-			strings.push(...extractStringValues(item, depth + 1));
+			strings.push(...extractStringValues(item, itemPath, depth + 1));
 		}
 	} else if (body && typeof body === 'object') {
 		for (const [key, value] of Object.entries(body as Record<string, unknown>)) {
-			if (shouldSkipField(key)) continue;
+			const fieldPath = childBodyFieldPath(path, key);
+			if (shouldSkipField(key, fieldPath)) continue;
 			if (typeof value === 'string' && value.length > 0) {
 				strings.push(value);
 			} else if (typeof value === 'object' && value !== null) {
-				strings.push(...extractStringValues(value, depth + 1));
+				strings.push(...extractStringValues(value, fieldPath, depth + 1));
 			}
 		}
 	}

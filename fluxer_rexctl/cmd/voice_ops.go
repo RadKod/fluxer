@@ -95,6 +95,26 @@ func ownLiveKitImage() string {
 	return voice.DefaultImage
 }
 
+func ownEdgeImage() string {
+	images, err := stack.EmbeddedImages()
+	if err != nil {
+		return ""
+	}
+	ref, err := images.Image("edge")
+	if err != nil || ref == "" {
+		return ""
+	}
+	shipped, err := voice.ShippedFile(stack.Embedded(), voice.EdgeComposeFile)
+	if err != nil {
+		return ""
+	}
+	def, ok := stack.ImageDefault(stack.ComposeImages(shipped)["edge"])
+	if name, _, _ := strings.Cut(ref, "@"); !ok || name != def {
+		return ""
+	}
+	return ref
+}
+
 func instanceLiveKitImage(inst *instance.Instance) string {
 	name := settings.ImageVars["livekit"]
 	for _, ref := range []string{inst.State.Settings[settings.ImagesPrefix+"livekit"], inst.State.Settings[name], inst.State.Images.Refs["livekit"], inst.Setting(name)} {
@@ -361,7 +381,7 @@ func voiceProbeTarget(inst *instance.Instance, srv *instance.VoiceServer) (strin
 	case inst.State.IsVoice():
 		return voice.HTTPBase(srv.Endpoint), "127.0.0.1:443"
 	}
-	return voice.InstanceEdge(srv.Endpoint, inst.State.Settings[settings.EdgeMode], inst.Setting("FLUXER_HTTPS_PORT"), inst.Setting("FLUXER_EDGE_BIND"))
+	return voice.InstanceEdge(srv.Endpoint, inst.State.Settings[settings.EdgeMode], inst.Setting("FLUXER_HTTPS_PORT"), inst.Setting("FLUXER_EDGE_BIND"), inst.Setting(settings.EdgeListenVar))
 }
 
 func waitForEndpoint(ctx context.Context, base, edgeAddr string, insecure bool, limit time.Duration) error {

@@ -230,6 +230,7 @@ export type UpdaterEvent =
 			downloadStarted: boolean;
 			downloadUrl?: string;
 			downloadOptions?: Array<UpdaterDownloadOption>;
+			sha256?: string | null;
 	  }
 	| {
 			type: 'not-available';

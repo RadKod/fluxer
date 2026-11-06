@@ -272,6 +272,8 @@ export interface APIConfig {
 		turnServers: Array<VoiceTurnServerConfig>;
 		joinAllowPrivateEndpoints: boolean;
 		healthIntervalMs: number;
+		participantSweepEnabled: boolean;
+		participantSweepDryRun: boolean;
 	};
 	stripe: {
 		enabled: boolean;
@@ -435,6 +437,7 @@ export interface APIConfig {
 	storeBilling: {
 		sandboxUserIds: Array<string>;
 		sandboxEntitlesAll: boolean;
+		sandboxSubscriptions: boolean;
 	};
 	worker: {
 		mode: APIWorkerMode;

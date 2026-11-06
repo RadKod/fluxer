@@ -67,7 +67,8 @@ build_presence_request(State) when is_map(State) ->
         group_dm_recipients => GroupDmRecipients,
         custom_status => maps:get(custom_status, State, null),
         game_activity_policy => maps:get(game_activity_policy, State, undefined),
-        game_activity_request_nonce => maps:get(game_activity_request_nonce, State, undefined)
+        game_activity_request_nonce => maps:get(game_activity_request_nonce, State, undefined),
+        settings_invisible => maps:get(settings_invisible, State, false)
     }.
 
 -spec do_session_connect(pid(), attempt(), session_state()) ->

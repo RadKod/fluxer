@@ -53,6 +53,10 @@ import {
 	InstanceBillingResponse,
 	InstanceBillingUpdateRequest,
 } from '@fluxer/schema/src/domains/admin/InstanceBillingSchemas';
+import {
+	DistributionPricingConfigResponse,
+	DistributionPricingUpdateRequest,
+} from '@fluxer/schema/src/domains/admin/InstanceDistributionPricingSchemas';
 import {PushRelayConfigResponse, PushRelayConfigUpdateRequest} from '@fluxer/schema/src/domains/admin/PushRelaySchemas';
 import {
 	VoiceNoiseSuppressionConfigResponse,
@@ -77,6 +81,7 @@ import {
 } from '@fluxer/schema/src/domains/instance/InstanceSchemas';
 import {MessageEmbedResponse} from '@fluxer/schema/src/domains/message/EmbedSchemas';
 import {MessageResponseSchema} from '@fluxer/schema/src/domains/message/MessageResponseSchemas';
+import {withBase64Binary} from '@fluxer/schema/src/primitives/Base64BinaryFields';
 import {ChannelTypeSchema} from '@fluxer/schema/src/primitives/ChannelValidators';
 import {
 	ContentWarningLevelSchema,
@@ -647,6 +652,11 @@ const AppPublicConfigResponse = z.object({
 		premium_product_name: z.string(),
 		premium_info_url: z.string().nullable(),
 		sign_in_backdrop_url: z.string().nullable(),
+		premium_page_color: z.string().nullable(),
+		premium_showcase_expressions_url: z.string().nullable(),
+		premium_showcase_profile_url: z.string().nullable(),
+		premium_showcase_stream_url: z.string().nullable(),
+		premium_showcase_upload_url: z.string().nullable(),
 		custom_css: z.string().nullable(),
 		upload_limit_message: z.string().nullable(),
 		trusted_domains: z.array(z.string()),
@@ -702,6 +712,7 @@ const AppPublicConfigUpdateRequest = z.object({
 			premium_product_name: z.string().trim().min(1).max(40).nullable().optional(),
 			premium_info_url: z.string().trim().max(2048).refine(isAbsoluteHttpUrl).nullish(),
 			sign_in_backdrop_url: z.string().trim().max(2048).nullish(),
+			premium_page_color: z.string().trim().regex(HEX_THEME_COLOR_PATTERN).nullish(),
 			custom_css: z.string().trim().max(32_768).nullish(),
 			upload_limit_message: z.string().trim().max(UPLOAD_LIMIT_MESSAGE_MAX_LENGTH).nullish(),
 			trusted_domains: z.array(z.string().max(255)).max(TRUSTED_DOMAINS_MAX).nullish(),
@@ -928,6 +939,7 @@ export const InstanceConfigResponse = z.object({
 	integrations: InstanceIntegrationsResponse,
 	media: InstanceMediaResponse,
 	billing: InstanceBillingResponse,
+	distribution_pricing: DistributionPricingConfigResponse,
 	notice: InstanceNoticeSchema.nullable().describe('Notice shown to everyone on the instance, or null'),
 	warnings: z
 		.array(z.string())
@@ -1112,6 +1124,7 @@ export const InstanceConfigUpdateRequest = z.object({
 		.nullish(),
 	policy: InstancePolicyUpdateSchema.nullish(),
 	billing: InstanceBillingUpdateRequest.nullish(),
+	distribution_pricing: DistributionPricingUpdateRequest.nullish(),
 	notice: z
 		.object({
 			message: z
@@ -1143,8 +1156,20 @@ export const InstanceConfigUpdateRequest = z.object({
 export type InstanceConfigUpdateRequest = z.infer<typeof InstanceConfigUpdateRequest>;
 
 export const BrandingAssetUploadRequest = z.object({
-	kind: z.enum(['icon', 'symbol', 'logo', 'wordmark', 'favicon', 'favicon_dark', 'sign_in_backdrop']),
-	image: z.string().max(16_000_000).nullish(),
+	kind: z.enum([
+		'icon',
+		'symbol',
+		'logo',
+		'wordmark',
+		'favicon',
+		'favicon_dark',
+		'sign_in_backdrop',
+		'premium_showcase_expressions',
+		'premium_showcase_profile',
+		'premium_showcase_stream',
+		'premium_showcase_upload',
+	]),
+	image: withBase64Binary(z.string().max(16_000_000)).nullish(),
 });
 
 export type BrandingAssetUploadRequest = z.infer<typeof BrandingAssetUploadRequest>;
@@ -1639,7 +1664,7 @@ const AdminGuildResponseSchema = z.object({
 });
 const AdminGuildChannelSummarySchema = z.object({
 	id: SnowflakeStringType,
-	name: createStringType(1, 100).nullable(),
+	name: z.string().max(100).nullable(),
 	type: ChannelTypeSchema,
 	position: Int32Type,
 	parent_id: SnowflakeStringType.nullable(),
@@ -1651,7 +1676,7 @@ const AdminGuildChannelSummarySchema = z.object({
 });
 const AdminGuildRoleSummarySchema = z.object({
 	id: SnowflakeStringType,
-	name: createStringType(1, 100),
+	name: z.string().max(100),
 	color: Int32Type,
 	position: Int32Type,
 	permissions: PermissionStringType.describe('The role permissions bitfield'),
@@ -1666,7 +1691,7 @@ const AdminLookupGuildSchema = z.object({
 	owner_username: z.string().nullable(),
 	owner_global_name: z.string().nullable(),
 	owner_discriminator: z.string().nullable(),
-	name: createStringType(1, 100),
+	name: z.string().max(100),
 	vanity_url_code: createStringType(1, 256).nullable(),
 	icon: createStringType(1, 256).nullable(),
 	banner: createStringType(1, 256).nullable(),
@@ -1708,7 +1733,7 @@ export const ListGuildMembersResponse = z.object({
 });
 const GuildAssetItemSchema = z.object({
 	id: SnowflakeStringType,
-	name: createStringType(1, 100),
+	name: z.string().max(100),
 	animated: z.boolean(),
 	creator_id: SnowflakeStringType,
 	media_url: createStringType(1, 2048),
@@ -1853,6 +1878,7 @@ const ReportProfileSnapshotUserSchema = z.object({
 	global_name: z.string().nullable(),
 	bio: z.string().nullable(),
 	pronouns: z.string().nullable(),
+	custom_status: z.string().nullable(),
 	avatar: ReportProfileSnapshotAssetSchema.nullable(),
 	banner: ReportProfileSnapshotAssetSchema.nullable(),
 });

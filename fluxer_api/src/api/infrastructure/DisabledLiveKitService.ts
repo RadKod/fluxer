@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {
+	GetParticipantResult,
 	ILiveKitService,
 	ListParticipantsResult,
+	ListRoomsResult,
 	SetParticipantAttributesParams,
 	UpdateRoomMetadataParams,
 } from '@app/api/infrastructure/ILiveKitService';
@@ -32,8 +34,24 @@ export class DisabledLiveKitService implements ILiveKitService {
 		return 'ok';
 	}
 
+	async removeParticipant(): Promise<void> {}
+
+	async getParticipant(): Promise<GetParticipantResult> {
+		return {status: 'ok', participant: null};
+	}
+
+	async setParticipantPermission(): Promise<void> {}
+
+	async listRooms(): Promise<ListRoomsResult> {
+		return {status: 'ok', rooms: []};
+	}
+
 	async listParticipants(): Promise<ListParticipantsResult> {
 		return {status: 'ok', participants: []};
+	}
+
+	listServers(): Array<{regionId: string; serverId: string}> {
+		return [];
 	}
 
 	getDefaultRegionId(): string | null {

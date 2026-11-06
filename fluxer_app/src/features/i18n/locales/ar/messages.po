@@ -6421,6 +6421,13 @@ msgstr ""
 "اسمح لـ {productName} ضمن تسجيل الشاشة في إعدادات النظام. إذا كان مسموحًا به"
 " بالفعل، فأعد تشغيل {productName2} لتطبيق macOS ذلك."
 
+#. Switch in the sensitive content settings. Turns on 18+ communities and
+#. channels and the "Show" sensitive media option in the Fluxer app for iPhone
+#. and iPad.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid "Allow 18+ content on iPhone and iPad"
+msgstr "السماح بمحتوى 18+ على iPhone وiPad"
+
 #. Private thread setting that lets non-moderators add other members.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
 msgid "Allow anyone to invite"
@@ -9444,6 +9451,30 @@ msgstr ""
 "لا تعرض المتصفحات الكاميرات في منتقي مشاركة الشاشة. اخترها من علامة تبويب "
 "الأجهزة بدلاً من ذلك. إذا لم يظهر أي شيء هنا، فاسمح بالوصول إلى الكاميرا أو "
 "وصّل جهازًا."
+
+#. Shown on a self-hosted instance opened over plain HTTP when someone tries
+#. to use the microphone, camera or screen sharing, which browsers block
+#. there. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow the microphone, camera and screen sharing on sites that "
+"use HTTPS, and this instance doesn't use HTTPS. You can still join voice "
+"channels and listen."
+msgstr ""
+"لا تسمح المتصفحات باستخدام الميكروفون والكاميرا ومشاركة الشاشة إلا على "
+"المواقع التي تستخدم HTTPS، وهذا المثيل لا يستخدم HTTPS. لا يزال بإمكانك "
+"الانضمام إلى القنوات الصوتية والاستماع."
+
+#. Short note next to a setting or button that browsers turn off on a self-
+#. hosted instance opened over plain HTTP, such as notifications or passkeys.
+#. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow this on sites that use HTTPS, and this instance doesn't "
+"use HTTPS."
+msgstr ""
+"لا تسمح المتصفحات بهذا إلا على المواقع التي تستخدم HTTPS، وهذا المثيل لا "
+"يستخدم HTTPS."
 
 #. Where the dark mode favicon appears and the recommended format, in the
 #. setup wizard. size is a file size such as 10 MB.
@@ -14522,12 +14553,6 @@ msgstr "تعذر الاتصال بـ {domain}. حاول مرة أخرى."
 msgid "Couldn't connect to {names}"
 msgstr "تعذر الاتصال بـ {names}"
 
-#. Instance selector error shown when no Fluxer instance answered at the
-#. address. Domain is interpolated.
-#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
-msgid "Couldn't connect to a sanalyer instance at {domain}. Check the address and that the instance is online."
-msgstr "تعذر الوصول إلى مثيل sanalyer في {domain}. تحقق من العنوان وتأكد من أن المثيل متصل بالإنترنت."
-
 #. Toast shown when joining a voice channel fails because the connection timed
 #. out or the transport dropped.
 #: src/features/voice/engine/media_engine_facade/shared.ts
@@ -18755,11 +18780,11 @@ msgid ""
 "future lists, the release notes and that file, but earlier versions of the "
 "source code and copies others made can't be recalled."
 msgstr ""
-"كل قائمة سنوية بأسماء Operators ننشرها تُضاف إلى ملاحظات أحد إصدارات sanalyer "
-"وإلى ملف في شيفرته المصدرية. لا يظهر اسمك على الجدار فيها إلا إذا فعّلت هذا "
-"الخيار. وإذا طلبت منا لاحقًا إزالته، نحذفه من القوائم المستقبلية وملاحظات "
-"الإصدار وذلك الملف، لكن لا يمكن استرجاع الإصدارات السابقة من الشيفرة "
-"المصدرية ولا النسخ التي صنعها آخرون."
+"كل قائمة سنوية بأسماء Operators ننشرها تُضاف إلى ملاحظات أحد إصدارات "
+"sanalyer وإلى ملف في شيفرته المصدرية. لا يظهر اسمك على الجدار فيها إلا إذا "
+"فعّلت هذا الخيار. وإذا طلبت منا لاحقًا إزالته، نحذفه من القوائم المستقبلية "
+"وملاحظات الإصدار وذلك الملف، لكن لا يمكن استرجاع الإصدارات السابقة من "
+"الشيفرة المصدرية ولا النسخ التي صنعها آخرون."
 
 #. Plutonium page comparison row label for early access.
 #: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
@@ -20402,12 +20427,6 @@ msgstr ""
 msgid "Everyone"
 msgstr "الجميع"
 
-#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
-#. subscription and must not be translated. 4K and fps are video terms.
-#: src/features/voice/utils/VoiceMessageDescriptors.ts
-msgid "Everyone in the call gets {premiumProductName} stream quality for free, with up to 4K source resolution and 60 fps."
-msgstr "يحصل الجميع في المكالمة على جودة بث {premiumProductName} مجانًا: دقة مصدر تصل إلى 4K و 60 إطارًا في الثانية."
-
 #. Description of the single community option in the setup wizard.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
 msgid ""
@@ -21590,8 +21609,8 @@ msgid ""
 "Fluxer adds a random number to each username, like alex#4821, so many people"
 " can use the same name."
 msgstr ""
-"يضيف sanalyer رقمًا عشوائيًا إلى كل اسم مستخدم، مثل alex#4821، ليتمكن كثيرون "
-"من استخدام الاسم نفسه."
+"يضيف sanalyer رقمًا عشوائيًا إلى كل اسم مستخدم، مثل alex#4821، ليتمكن كثيرون"
+" من استخدام الاسم نفسه."
 
 #. Problem shown in the quick CSS editor on a web address that the app is not
 #. allowed to load. Assets are files uploaded under "Assets".
@@ -21606,7 +21625,8 @@ msgstr "sanalyer منع تحميل {url}. قم برفعه كأصل."
 msgid ""
 "Fluxer blocked loading {url}. Upload the file as an asset, or trust the site"
 " it's on."
-msgstr "حظر sanalyer تحميل {url}. ارفع الملف كأصل، أو ثق بالموقع الموجود عليه."
+msgstr ""
+"حظر sanalyer تحميل {url}. ارفع الملف كأصل، أو ثق بالموقع الموجود عليه."
 
 #. Problem shown in the quick CSS editor on a reference to an uploaded theme
 #. asset that does not exist.
@@ -21627,8 +21647,8 @@ msgid ""
 "Fluxer can't find this folder. It will load the themes again when the folder"
 " is back."
 msgstr ""
-"لا يمكن لـ sanalyer العثور على هذا المجلد. سيتم تحميل السمات مرة أخرى عند عودة"
-" المجلد."
+"لا يمكن لـ sanalyer العثور على هذا المجلد. سيتم تحميل السمات مرة أخرى عند "
+"عودة المجلد."
 
 #. Shown for a watched theme folder in Settings > Themes when the desktop app
 #. no longer has permission to read it.
@@ -21671,8 +21691,8 @@ msgid ""
 "Fluxer couldn't connect to {instanceName} to check whether your browser "
 "approved this sign-in. Check your connection, then select \"Try again\"."
 msgstr ""
-"تعذّر على sanalyer الوصول إلى {instanceName} للتحقق مما إذا كان متصفحك قد وافق"
-" على تسجيل الدخول هذا. تحقق من اتصالك، ثم اختر \"حاول مرة أخرى\"."
+"تعذّر على sanalyer الوصول إلى {instanceName} للتحقق مما إذا كان متصفحك قد "
+"وافق على تسجيل الدخول هذا. تحقق من اتصالك، ثم اختر \"حاول مرة أخرى\"."
 
 #. Name of the section in the Operator Pass settings tab about the Fluxer Labs
 #. community. Fluxer Labs is the name of a community, keep it as is.
@@ -21687,9 +21707,9 @@ msgid ""
 "Fluxer won't load {count, plural, one {# file} other {# files}} that this "
 "theme links to on other sites."
 msgstr ""
-"لن يحمّل sanalyer {count, plural, zero {# ملف} one {ملفًا واحدًا} two {ملفين} "
-"few {# ملفات} many {# ملفًا} other {# ملف}} تشير إليها هذه السمة على مواقع "
-"أخرى."
+"لن يحمّل sanalyer {count, plural, zero {# ملف} one {ملفًا واحدًا} two "
+"{ملفين} few {# ملفات} many {# ملفًا} other {# ملف}} تشير إليها هذه السمة على"
+" مواقع أخرى."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -24423,8 +24443,8 @@ msgid ""
 "If the link opens a different Fluxer app, select \"Signing in on another "
 "device?\" and type the code in your browser instead."
 msgstr ""
-"إذا فتح الرابط تطبيق sanalyer آخر، فاختر \"تسجيل الدخول على جهاز آخر؟\" واكتب "
-"الرمز في متصفحك بدلًا من ذلك."
+"إذا فتح الرابط تطبيق sanalyer آخر، فاختر \"تسجيل الدخول على جهاز آخر؟\" "
+"واكتب الرمز في متصفحك بدلًا من ذلك."
 
 #. Helper text under the Explain the problem field on the details step of the
 #. DSA report form.
@@ -24507,8 +24527,8 @@ msgid ""
 "If you installed Fluxer with rexctl, it printed the token when it finished. "
 "Run this on your server to show it again."
 msgstr ""
-"إذا قمت بتثبيت sanalyer باستخدام rexctl، فقد طبع الرمز المميز عند الانتهاء. قم"
-" بتشغيل هذا على الخادم الخاص بك لإظهاره مرة أخرى."
+"إذا قمت بتثبيت sanalyer باستخدام rexctl، فقد طبع الرمز المميز عند الانتهاء. "
+"قم بتشغيل هذا على الخادم الخاص بك لإظهاره مرة أخرى."
 
 #. What the app shows when no symbol is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -24543,8 +24563,8 @@ msgid ""
 "and no image for any other name."
 msgstr ""
 "إذا تركته فارغًا، تستخدم صفحة تسجيل الدخول أيقونة تطبيقك أو رمزك. وإذا لم "
-"يوجد أي منهما، تعرض شعار sanalyer ما دام اسم المنتج هو sanalyer، ولا تعرض أي "
-"صورة مع أي اسم آخر."
+"يوجد أي منهما، تعرض شعار sanalyer ما دام اسم المنتج هو sanalyer، ولا تعرض أي"
+" صورة مع أي اسم آخر."
 
 #. What the app shows when no dark mode favicon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -24561,8 +24581,8 @@ msgid ""
 "If you leave it empty, the tab uses your app icon, or the Fluxer icon if "
 "that is empty too."
 msgstr ""
-"إذا تركته فارغًا، تستخدم علامة التبويب أيقونة تطبيقك، أو أيقونة sanalyer إذا "
-"كانت أيقونة التطبيق فارغة أيضًا."
+"إذا تركته فارغًا، تستخدم علامة التبويب أيقونة تطبيقك، أو أيقونة sanalyer إذا"
+" كانت أيقونة التطبيق فارغة أيضًا."
 
 #. What the app shows when no app icon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -26740,6 +26760,13 @@ msgstr "معرفة المزيد عن معاينات مشاركة الشاشة"
 msgid "Learn more"
 msgstr "معرفة المزيد"
 
+#. Link under the Plutonium page hero buttons on self-hosted instances.
+#. premiumProductName is the paid tier name set by the instance. Opens a page
+#. about the tier that the instance admin chose.
+#: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
+msgid "Learn more about {premiumProductName}"
+msgstr "اعرف المزيد عن {premiumProductName}"
+
 #. Confirmation text before leaving a private thread. threadName is the thread
 #. name.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
@@ -26996,6 +27023,18 @@ msgstr "يتيح للآخرين رؤيتك عبر الفيديو."
 #: src/features/permissions/system/components/MacPermissionPrompt.tsx
 msgid "Lets push-to-talk and keybinds work in other apps."
 msgstr "لتمكين ميزة الضغط للتحدث والاختصارات للعمل في التطبيقات الأخرى."
+
+#. Helper text under the "Allow 18+ content on iPhone and iPad" switch. "Show"
+#. is the sensitive media option name and must match its translation.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid ""
+"Lets you open communities and channels marked 18+ in the Fluxer app for "
+"iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
+" change this on the web or on desktop."
+msgstr ""
+"يتيح لك فتح المجتمعات والقنوات المصنّفة 18+ في تطبيق Fluxer لـ iPhone وiPad،"
+" واختيار «إظهار» للوسائط الحساسة هناك. لا يمكنك تغيير هذا إلا على الويب أو "
+"على سطح المكتب."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx
 msgid "Lets you reset your password if you forget it."
@@ -45673,8 +45712,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"تتلقى تطبيقات sanalyer لنظامي iOS وAndroid الإشعارات عبر مرحّل إشعارات يديره "
-"sanalyer، ويمرّرها إلى Apple وGoogle. لاستخدامه، توافق على إشعار الخصوصية "
+"تتلقى تطبيقات sanalyer لنظامي iOS وAndroid الإشعارات عبر مرحّل إشعارات يديره"
+" sanalyer، ويمرّرها إلى Apple وGoogle. لاستخدامه، توافق على إشعار الخصوصية "
 "لمرحّل الإشعارات."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -46031,7 +46070,8 @@ msgstr ""
 #: src/features/app/components/setup/SetupBrandingPreview.tsx
 msgid ""
 "The sign-in page on a phone, in a mobile browser or the Fluxer mobile app."
-msgstr "صفحة تسجيل الدخول على الهاتف، في متصفح الجوال أو تطبيق sanalyer للجوال."
+msgstr ""
+"صفحة تسجيل الدخول على الهاتف، في متصفح الجوال أو تطبيق sanalyer للجوال."
 
 #. Error shown in the desktop app when a browser sign-in request expires
 #. before it is approved in the browser.
@@ -46770,18 +46810,6 @@ msgstr "هذه القناة متزامنة مع الفئة الرئيسية <0>{
 msgid "This channel no longer exists. It may have already been deleted."
 msgstr "لم تعد هذه القناة موجودة. ربما تكون قد حُذفت بالفعل."
 
-#. Error shown when signing in or signing up on a self-hosted instance opened
-#. over plain HTTP or a bare IP address, where the browser blocks the
-#. automatic background check. HTTPS and localhost are technical terms, keep
-#. them as is.
-#: src/features/auth/altcha/CaptchaInterceptor.ts
-msgid ""
-"This check only runs when the app is opened over HTTPS or on localhost. Ask "
-"the instance owner to serve it over HTTPS, or open it from localhost."
-msgstr ""
-"يعمل هذا التحقق فقط عند فتح التطبيق عبر HTTPS أو على localhost. اطلب من مالك"
-" المثيل تقديمه عبر HTTPS، أو افتحه من localhost."
-
 #. Problem shown in the quick CSS editor on a generated class name. [data-flx]
 #. is CSS code and stays in English.
 #: src/features/theme_settings/editor/CssLint.ts
@@ -47266,6 +47294,13 @@ msgstr ""
 "هذا المثيل لا يستخدم البريد الإلكتروني، لذا لا يمكنه استقبال البلاغات عبر "
 "هذا النموذج. أبلِغ عن المحتوى من داخل التطبيق، أو تواصل مع مسؤولي هذا "
 "المثيل."
+
+#. Title of the dialog shown when someone tries to use the microphone, camera
+#. or screen sharing on a self-hosted instance opened over plain HTTP. HTTPS
+#. is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid "This instance doesn't use HTTPS"
+msgstr "هذا المثيل لا يستخدم HTTPS"
 
 #. Explanation shown in place of the single sign-on description when the
 #. instance offers no SSO provider.
@@ -47981,6 +48016,28 @@ msgstr ""
 #: src/features/voice/engine/media_engine_facade/shared.ts
 msgid "This voice channel is no longer available."
 msgstr "هذه القناة الصوتية لم تعد متاحة."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel from a browser that cannot encrypt calls.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption, and this browser can't join "
+"encrypted calls."
+msgstr ""
+"تستخدم هذه القناة الصوتية التشفير من طرف إلى طرف، ولا يمكن لهذا المتصفح "
+"الانضمام إلى المكالمات المشفرة."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel on a self-hosted instance opened over plain HTTP. HTTPS is a
+#. technical term, keep it as is.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption. Browsers only allow encrypted"
+" calls on sites that use HTTPS, and this instance doesn't use HTTPS."
+msgstr ""
+"تستخدم هذه القناة الصوتية التشفير من طرف إلى طرف. لا تسمح المتصفحات "
+"بالمكالمات المشفرة إلا على المواقع التي تستخدم HTTPS، وهذا المثيل لا يستخدم "
+"HTTPS."
 
 #. Description text in the channel and chat user message. Preserve
 #. {silentMention}; it is inserted by code.
@@ -52607,9 +52664,9 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"نضيفك إلى sanalyer Labs عند تفعيل Operator Pass الخاص بك، إلا إذا كنت قد غادرت"
-" sanalyer Labs أو أُزلت منه من قبل. عند تفعيل هذا الخيار، نرحّب بك باسمك في "
-"#operators بعد ذلك بوقت قصير."
+"نضيفك إلى sanalyer Labs عند تفعيل Operator Pass الخاص بك، إلا إذا كنت قد "
+"غادرت sanalyer Labs أو أُزلت منه من قبل. عند تفعيل هذا الخيار، نرحّب بك "
+"باسمك في #operators بعد ذلك بوقت قصير."
 
 #. Hint under the checkbox or switch "Welcome me in #operators". Fluxer Labs
 #. is the name of a community on Fluxer, keep it as is. #operators is a
@@ -52622,9 +52679,9 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"نضيفك إلى sanalyer Labs عند تسليم Operator Pass الخاص بك، إلا إذا كنت قد غادرت"
-" sanalyer Labs أو أُزلت منه من قبل. عند تفعيل هذا الخيار، نرحّب بك باسمك في "
-"#operators بعد ذلك بوقت قصير."
+"نضيفك إلى sanalyer Labs عند تسليم Operator Pass الخاص بك، إلا إذا كنت قد "
+"غادرت sanalyer Labs أو أُزلت منه من قبل. عند تفعيل هذا الخيار، نرحّب بك "
+"باسمك في #operators بعد ذلك بوقت قصير."
 
 #. Error under the certificate name fields when the server turned a name down,
 #. for example because it looks like it comes from Fluxer or another brand, or
@@ -56875,6 +56932,26 @@ msgstr "تكبير"
 #: src/features/user/components/settings_utils/search_index/KeybindsIndex.ts
 msgid "Zoom out"
 msgstr "تصغير"
+
+#. Instance selector error shown when no Fluxer instance answered at the
+#. address. Domain is interpolated.
+#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
+msgid ""
+"Couldn't connect to a sanalyer instance at {domain}. Check the address and "
+"that the instance is online."
+msgstr ""
+"تعذر الوصول إلى مثيل sanalyer في {domain}. تحقق من العنوان وتأكد من أن "
+"المثيل متصل بالإنترنت."
+
+#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
+#. subscription and must not be translated. 4K and fps are video terms.
+#: src/features/voice/utils/VoiceMessageDescriptors.ts
+msgid ""
+"Everyone in the call gets {premiumProductName} stream quality for free, with"
+" up to 4K source resolution and 60 fps."
+msgstr ""
+"يحصل الجميع في المكالمة على جودة بث {premiumProductName} مجانًا: دقة مصدر "
+"تصل إلى 4K و 60 إطارًا في الثانية."
 
 #. Voice screen share menu preference that pauses the local stream preview
 #. while the app is unfocused. {productName} is the app name.

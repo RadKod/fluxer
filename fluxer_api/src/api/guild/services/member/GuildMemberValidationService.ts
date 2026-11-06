@@ -88,7 +88,7 @@ export class GuildMemberValidationService {
 		}
 	}
 
-	async checkUserBanStatus(params: {userId: UserID; guildId: GuildID}): Promise<void> {
+	async checkUserBanStatus(params: {userId: UserID; guildId: GuildID; ip?: string | null}): Promise<void> {
 		return assertNotBannedFromGuild(this.guildRepository, this.userRepository, this.ipInfoService, params);
 	}
 }

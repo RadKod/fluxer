@@ -6035,6 +6035,13 @@ msgstr ""
 "{productName}을(를) 시스템 설정의 '스크린 타임'에서 허용해 주세요. 이미 허용된 경우, macOS가 적용하도록 "
 "{productName2}을(를) 다시 시작하세요."
 
+#. Switch in the sensitive content settings. Turns on 18+ communities and
+#. channels and the "Show" sensitive media option in the Fluxer app for iPhone
+#. and iPad.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid "Allow 18+ content on iPhone and iPad"
+msgstr "iPhone 및 iPad에서 18+ 콘텐츠 허용"
+
 #. Private thread setting that lets non-moderators add other members.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
 msgid "Allow anyone to invite"
@@ -8978,6 +8985,27 @@ msgstr ""
 "브라우저에서는 화면 공유 선택기에 카메라가 표시되지 않습니다. 대신 기기 탭에서 선택해 주세요. 여기에 아무것도 표시되지 않으면 카메라 "
 "접근을 허용하거나 기기를 연결하세요."
 
+#. Shown on a self-hosted instance opened over plain HTTP when someone tries
+#. to use the microphone, camera or screen sharing, which browsers block
+#. there. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow the microphone, camera and screen sharing on sites that "
+"use HTTPS, and this instance doesn't use HTTPS. You can still join voice "
+"channels and listen."
+msgstr ""
+"브라우저는 HTTPS를 사용하는 사이트에서만 마이크, 카메라, 화면 공유를 허용하는데, 이 인스턴스는 HTTPS를 사용하지 않습니다. "
+"음성 채널에 참여해 듣는 것은 가능합니다."
+
+#. Short note next to a setting or button that browsers turn off on a self-
+#. hosted instance opened over plain HTTP, such as notifications or passkeys.
+#. HTTPS is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid ""
+"Browsers only allow this on sites that use HTTPS, and this instance doesn't "
+"use HTTPS."
+msgstr "브라우저는 HTTPS를 사용하는 사이트에서만 이를 허용하는데, 이 인스턴스는 HTTPS를 사용하지 않습니다."
+
 #. Where the dark mode favicon appears and the recommended format, in the
 #. setup wizard. size is a file size such as 10 MB.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -9088,8 +9116,8 @@ msgid ""
 "Buttons, links and highlights across the app use this color, and phone "
 "browsers use it for their toolbar. Reset it to keep Fluxer's indigo."
 msgstr ""
-"앱 전체의 버튼, 링크, 강조 표시에 이 색상이 사용되며, 휴대폰 브라우저에서는 툴바 색상으로도 사용됩니다. 초기화하면 sanalyer의 "
-"인디고 색상이 유지됩니다."
+"앱 전체의 버튼, 링크, 강조 표시에 이 색상이 사용되며, 휴대폰 브라우저에서는 툴바 색상으로도 사용됩니다. 초기화하면 sanalyer의"
+" 인디고 색상이 유지됩니다."
 
 #. Gift inventory empty-state description. premiumProductName is the premium
 #. tab name and product name.
@@ -13984,12 +14012,6 @@ msgstr "{domain}(으)로 연결할 수 없습니다. 다시 시도해 보세요.
 msgid "Couldn't connect to {names}"
 msgstr "{names}(님)에게 연결할 수 없습니다."
 
-#. Instance selector error shown when no Fluxer instance answered at the
-#. address. Domain is interpolated.
-#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
-msgid "Couldn't connect to a sanalyer instance at {domain}. Check the address and that the instance is online."
-msgstr "{domain}에서 sanalyer 인스턴스에 연결할 수 없습니다. 주소를 확인하고 인스턴스가 온라인 상태인지 확인하세요."
-
 #. Toast shown when joining a voice channel fails because the connection timed
 #. out or the transport dropped.
 #: src/features/voice/engine/media_engine_facade/shared.ts
@@ -18142,9 +18164,9 @@ msgid ""
 "future lists, the release notes and that file, but earlier versions of the "
 "source code and copies others made can't be recalled."
 msgstr ""
-"저희가 게시하는 연간 Operators 목록은 매번 sanalyer 릴리스 노트와 소스 코드의 파일에 들어갑니다. 이 옵션을 켜야만 벽에 "
-"표시된 이름이 목록에 포함됩니다. 나중에 삭제를 요청하시면 앞으로의 목록, 릴리스 노트, 해당 파일에서 이름을 빼지만, 소스 코드의 이전"
-" 버전과 다른 사람이 만든 사본은 회수할 수 없습니다."
+"저희가 게시하는 연간 Operators 목록은 매번 sanalyer 릴리스 노트와 소스 코드의 파일에 들어갑니다. 이 옵션을 켜야만 벽에"
+" 표시된 이름이 목록에 포함됩니다. 나중에 삭제를 요청하시면 앞으로의 목록, 릴리스 노트, 해당 파일에서 이름을 빼지만, 소스 코드의 "
+"이전 버전과 다른 사람이 만든 사본은 회수할 수 없습니다."
 
 #. Plutonium page comparison row label for early access.
 #: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
@@ -19747,12 +19769,6 @@ msgstr "이 주문의 패스 중 아직 계정에 있는 패스는 모두 지금
 msgid "Everyone"
 msgstr "모든 사람"
 
-#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
-#. subscription and must not be translated. 4K and fps are video terms.
-#: src/features/voice/utils/VoiceMessageDescriptors.ts
-msgid "Everyone in the call gets {premiumProductName} stream quality for free, with up to 4K source resolution and 60 fps."
-msgstr "통화에 참여한 모든 분께는 무료로 플루토늄 스트림 품질이 제공됩니다. 최대 4K 소스 해상도 및 60fps를 지원합니다."
-
 #. Description of the single community option in the setup wizard.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
 msgid ""
@@ -21002,8 +21018,8 @@ msgid ""
 "Fluxer couldn't connect to {instanceName} to check whether your browser "
 "approved this sign-in. Check your connection, then select \"Try again\"."
 msgstr ""
-"sanalyer가 브라우저에서 이 로그인을 승인했는지 확인하기 위해 {instanceName}에 연결하지 못했습니다. 연결을 확인한 다음 "
-"\"다시 시도\"를 선택하세요."
+"sanalyer가 브라우저에서 이 로그인을 승인했는지 확인하기 위해 {instanceName}에 연결하지 못했습니다. 연결을 확인한 다음"
+" \"다시 시도\"를 선택하세요."
 
 #. Name of the section in the Operator Pass settings tab about the Fluxer Labs
 #. community. Fluxer Labs is the name of a community, keep it as is.
@@ -23802,7 +23818,8 @@ msgstr "비워 두면 목록에 앱 아이콘이나 로고가 표시되고, 둘 
 msgid ""
 "If you leave it empty, the product name shows as plain text, or as the "
 "Fluxer wordmark while the product name is Fluxer."
-msgstr "비워 두면 제품 이름이 일반 텍스트로 표시되며, 제품 이름이 sanalyer인 동안에는 sanalyer 워드마크가 표시됩니다."
+msgstr ""
+"비워 두면 제품 이름이 일반 텍스트로 표시되며, 제품 이름이 sanalyer인 동안에는 sanalyer 워드마크가 표시됩니다."
 
 #. What the app shows when no sign-in background is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -23817,8 +23834,8 @@ msgid ""
 "Without those, it shows the Fluxer logo while the product name is Fluxer, "
 "and no image for any other name."
 msgstr ""
-"비워 두면 로그인 페이지에 앱 아이콘이나 심볼이 표시됩니다. 둘 다 없으면 제품 이름이 sanalyer일 때는 sanalyer 로고가 표시되고,"
-" 다른 이름일 때는 이미지가 표시되지 않습니다."
+"비워 두면 로그인 페이지에 앱 아이콘이나 심볼이 표시됩니다. 둘 다 없으면 제품 이름이 sanalyer일 때는 sanalyer 로고가 "
+"표시되고, 다른 이름일 때는 이미지가 표시되지 않습니다."
 
 #. What the app shows when no dark mode favicon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -25967,6 +25984,13 @@ msgstr "화면 공유 미리보기에 대해 자세히 알아보세요"
 msgid "Learn more"
 msgstr "자세히 알아보기"
 
+#. Link under the Plutonium page hero buttons on self-hosted instances.
+#. premiumProductName is the paid tier name set by the instance. Opens a page
+#. about the tier that the instance admin chose.
+#: src/features/premium/components/plutonium_page/PlutoniumPageMessages.ts
+msgid "Learn more about {premiumProductName}"
+msgstr "{premiumProductName}에 대해 자세히 알아보기"
+
 #. Confirmation text before leaving a private thread. threadName is the thread
 #. name.
 #: src/features/threads/utils/ThreadMessageDescriptors.ts
@@ -26207,6 +26231,17 @@ msgstr "동영상으로 사용자를 볼 수 있게 합니다."
 #: src/features/permissions/system/components/MacPermissionPrompt.tsx
 msgid "Lets push-to-talk and keybinds work in other apps."
 msgstr "다른 앱에서 푸시 투 토크 및 단축키가 작동하도록 합니다."
+
+#. Helper text under the "Allow 18+ content on iPhone and iPad" switch. "Show"
+#. is the sensitive media option name and must match its translation.
+#: src/features/user/components/modals/tabs/privacy_safety_tab/SensitiveContentTab.tsx
+msgid ""
+"Lets you open communities and channels marked 18+ in the Fluxer app for "
+"iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
+" change this on the web or on desktop."
+msgstr ""
+"iPhone 및 iPad용 Fluxer 앱에서 18+로 표시된 커뮤니티와 채널을 열 수 있고, 민감한 미디어에 \"표시\"를 선택할 수 "
+"있습니다. 이 설정은 웹이나 데스크톱에서만 변경할 수 있습니다."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx
 msgid "Lets you reset your password if you forget it."
@@ -32206,7 +32241,8 @@ msgstr "Operator Pass 약관"
 msgid ""
 "Operators and the Fluxer Team talking about self-hosting in the #operators "
 "channel of Fluxer Labs"
-msgstr "sanalyer Labs의 #operators 채널에서 Operators와 sanalyer 팀이 자체 호스팅에 관해 이야기하는 모습"
+msgstr ""
+"sanalyer Labs의 #operators 채널에서 Operators와 sanalyer 팀이 자체 호스팅에 관해 이야기하는 모습"
 
 #. Heading of the Operators' wall section in the Operator Pass settings tab.
 #. Operators' wall is the name of a section of the homepage.
@@ -44477,8 +44513,8 @@ msgid ""
 "\"Operator Pass since November 2026\". You can hide it, or just its date, in"
 " your settings at any time."
 msgstr ""
-"sanalyer 프로필의 배지에는 패스를 받은 시기가 \"2026년 11월부터 Operator Pass 보유\"처럼 표시됩니다. 설정에서 "
-"언제든지 배지 전체 또는 날짜만 숨길 수 있습니다."
+"sanalyer 프로필의 배지에는 패스를 받은 시기가 \"2026년 11월부터 Operator Pass 보유\"처럼 표시됩니다. 설정에서"
+" 언제든지 배지 전체 또는 날짜만 숨길 수 있습니다."
 
 #. Activity log detail line under a lifted ban, for a temporary ban that had
 #. already ended on its own before it was lifted. A ban is the community ban,
@@ -44585,8 +44621,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"iOS 및 Android용 sanalyer 앱은 sanalyer가 운영하는 푸시 릴레이를 통해 알림을 받으며, 릴레이가 이를 Apple과 "
-"Google에 전달합니다. 사용하려면 푸시 릴레이 개인정보 고지에 동의해야 합니다."
+"iOS 및 Android용 sanalyer 앱은 sanalyer가 운영하는 푸시 릴레이를 통해 알림을 받으며, 릴레이가 이를 Apple과"
+" Google에 전달합니다. 사용하려면 푸시 릴레이 개인정보 고지에 동의해야 합니다."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
 msgid "The following people can't be added to this group DM:"
@@ -44699,9 +44735,9 @@ msgid ""
 "name is not Fluxer. Use a square or wide PNG or SVG in light colors with a "
 "transparent background, at least 256 pixels tall and up to {size}."
 msgstr ""
-"항상 어두운 로그인 양식 옆에 표시되는 큰 이미지입니다. 휴대폰에서는 워드마크가 없고 제품 이름이 sanalyer가 아닐 때만 이름 옆에 "
-"표시됩니다. 배경이 투명하고 밝은 색상으로 된 정사각형 또는 가로로 긴 PNG 또는 SVG를 사용하세요. 높이는 256픽셀 이상, 크기는"
-" 최대 {size}까지 가능합니다."
+"항상 어두운 로그인 양식 옆에 표시되는 큰 이미지입니다. 휴대폰에서는 워드마크가 없고 제품 이름이 sanalyer가 아닐 때만 이름 옆에"
+" 표시됩니다. 배경이 투명하고 밝은 색상으로 된 정사각형 또는 가로로 긴 PNG 또는 SVG를 사용하세요. 높이는 256픽셀 이상, "
+"크기는 최대 {size}까지 가능합니다."
 
 #. Error modal body shown when revoking an invite fails; warns the user that
 #. the link may still be live.
@@ -45616,18 +45652,6 @@ msgstr "이 채널은 상위 카테고리 <0>{0}</0>과(와) 동기화되어 있
 msgid "This channel no longer exists. It may have already been deleted."
 msgstr "이 채널은 더 이상 존재하지 않습니다. 이미 삭제되었을 수 있습니다."
 
-#. Error shown when signing in or signing up on a self-hosted instance opened
-#. over plain HTTP or a bare IP address, where the browser blocks the
-#. automatic background check. HTTPS and localhost are technical terms, keep
-#. them as is.
-#: src/features/auth/altcha/CaptchaInterceptor.ts
-msgid ""
-"This check only runs when the app is opened over HTTPS or on localhost. Ask "
-"the instance owner to serve it over HTTPS, or open it from localhost."
-msgstr ""
-"이 확인은 앱이 HTTPS 또는 localhost를 통해 열릴 때만 실행됩니다. 인스턴스 소유자에게 HTTPS를 통해 제공하도록 "
-"요청하거나 localhost에서 열어주세요."
-
 #. Problem shown in the quick CSS editor on a generated class name. [data-flx]
 #. is CSS code and stays in English.
 #: src/features/theme_settings/editor/CssLint.ts
@@ -46083,6 +46107,13 @@ msgid ""
 msgstr ""
 "이 인스턴스는 이메일을 사용하지 않으므로 이 양식으로 신고를 받을 수 없습니다. 앱에서 콘텐츠를 신고하거나 이 인스턴스의 관리자에게 "
 "문의하세요."
+
+#. Title of the dialog shown when someone tries to use the microphone, camera
+#. or screen sharing on a self-hosted instance opened over plain HTTP. HTTPS
+#. is a technical term, keep it as is.
+#: src/features/i18n/utils/CommonMessageDescriptors.ts
+msgid "This instance doesn't use HTTPS"
+msgstr "이 인스턴스는 HTTPS를 사용하지 않습니다"
 
 #. Explanation shown in place of the single sign-on description when the
 #. instance offers no SSO provider.
@@ -46600,8 +46631,8 @@ msgid ""
 "your account on it. It takes about five minutes. You can change most choices"
 " later in the admin panel, and a screen tells you when you can't."
 msgstr ""
-"설치한 sanalyer 사본인 인스턴스를 설정하고 그 안에 내 계정을 만듭니다. 5분 정도 걸립니다. 대부분의 선택은 나중에 관리자 패널에서"
-" 바꿀 수 있으며, 바꿀 수 없는 항목은 화면에서 알려 드립니다."
+"설치한 sanalyer 사본인 인스턴스를 설정하고 그 안에 내 계정을 만듭니다. 5분 정도 걸립니다. 대부분의 선택은 나중에 관리자 "
+"패널에서 바꿀 수 있으며, 바꿀 수 없는 항목은 화면에서 알려 드립니다."
 
 #. Label in the accessibility tab. Preserve {linkPreviewExampleUrl}; it is
 #. inserted by code.
@@ -46754,6 +46785,25 @@ msgstr "이 음성 채널은 성인용 콘텐츠로 표시되어 있으며 일�
 #: src/features/voice/engine/media_engine_facade/shared.ts
 msgid "This voice channel is no longer available."
 msgstr "이 음성 채널을 더 이상 사용할 수 없습니다."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel from a browser that cannot encrypt calls.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption, and this browser can't join "
+"encrypted calls."
+msgstr "이 음성 채널은 종단 간 암호화를 사용하며, 이 브라우저는 암호화된 통화에 참여할 수 없습니다."
+
+#. Error shown when someone tries to join an end-to-end encrypted voice
+#. channel on a self-hosted instance opened over plain HTTP. HTTPS is a
+#. technical term, keep it as is.
+#: src/features/voice/engine/media_engine_facade/shared.ts
+msgid ""
+"This voice channel uses end-to-end encryption. Browsers only allow encrypted"
+" calls on sites that use HTTPS, and this instance doesn't use HTTPS."
+msgstr ""
+"이 음성 채널은 종단 간 암호화를 사용합니다. 브라우저는 HTTPS를 사용하는 사이트에서만 암호화된 통화를 허용하는데, 이 인스턴스는 "
+"HTTPS를 사용하지 않습니다."
 
 #. Description text in the channel and chat user message. Preserve
 #. {silentMention}; it is inserted by code.
@@ -51307,8 +51357,8 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"패스를 켜면 sanalyer Labs에 추가해 드려요. 단, 전에 sanalyer Labs에서 나갔거나 내보내진 적이 있다면 추가하지 않아요. "
-"이 옵션을 켜 두면 곧이어 #operators에서 이름을 불러 환영해 드려요."
+"패스를 켜면 sanalyer Labs에 추가해 드려요. 단, 전에 sanalyer Labs에서 나갔거나 내보내진 적이 있다면 추가하지 "
+"않아요. 이 옵션을 켜 두면 곧이어 #operators에서 이름을 불러 환영해 드려요."
 
 #. Hint under the checkbox or switch "Welcome me in #operators". Fluxer Labs
 #. is the name of a community on Fluxer, keep it as is. #operators is a
@@ -51321,8 +51371,8 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"패스가 전달되면 sanalyer Labs에 추가해 드려요. 단, 전에 sanalyer Labs에서 나갔거나 내보내진 적이 있다면 추가하지 "
-"않아요. 이 옵션을 켜 두면 곧이어 #operators에서 이름을 불러 환영해 드려요."
+"패스가 전달되면 sanalyer Labs에 추가해 드려요. 단, 전에 sanalyer Labs에서 나갔거나 내보내진 적이 있다면 추가하지"
+" 않아요. 이 옵션을 켜 두면 곧이어 #operators에서 이름을 불러 환영해 드려요."
 
 #. Error under the certificate name fields when the server turned a name down,
 #. for example because it looks like it comes from Fluxer or another brand, or
@@ -55325,6 +55375,22 @@ msgstr "확대"
 #: src/features/user/components/settings_utils/search_index/KeybindsIndex.ts
 msgid "Zoom out"
 msgstr "축소"
+
+#. Instance selector error shown when no Fluxer instance answered at the
+#. address. Domain is interpolated.
+#: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
+msgid ""
+"Couldn't connect to a sanalyer instance at {domain}. Check the address and "
+"that the instance is online."
+msgstr "{domain}에서 sanalyer 인스턴스에 연결할 수 없습니다. 주소를 확인하고 인스턴스가 온라인 상태인지 확인하세요."
+
+#. Bullet point in the P2P call dialog. Plutonium is the name of the paid
+#. subscription and must not be translated. 4K and fps are video terms.
+#: src/features/voice/utils/VoiceMessageDescriptors.ts
+msgid ""
+"Everyone in the call gets {premiumProductName} stream quality for free, with"
+" up to 4K source resolution and 60 fps."
+msgstr "통화에 참여한 모든 분께는 무료로 플루토늄 스트림 품질이 제공됩니다. 최대 4K 소스 해상도 및 60fps를 지원합니다."
 
 #. Voice screen share menu preference that pauses the local stream preview
 #. while the app is unfocused. {productName} is the app name.

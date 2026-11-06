@@ -17,6 +17,7 @@ import backfillFeedSuggestionRanking from '@app/api/worker/tasks/BackfillFeedSug
 import backfillPioneerBadges from '@app/api/worker/tasks/BackfillPioneerBadges';
 import backfillReferralTier from '@app/api/worker/tasks/BackfillReferralTier';
 import backfillDeletedUsers from '@app/api/worker/tasks/BackfillDeletedUsers';
+import backfillFavoriteMemeNsfw from '@app/api/worker/tasks/BackfillFavoriteMemeNsfw';
 import backfillHiddenProfileBadges from '@app/api/worker/tasks/BackfillHiddenProfileBadges';
 import backfillPasskeyTrait from '@app/api/worker/tasks/BackfillPasskeyTrait';
 import backfillUserAclIndex from '@app/api/worker/tasks/BackfillUserAclIndex';
@@ -25,6 +26,7 @@ import bulkDeleteSelfMessagesImmediate from '@app/api/worker/tasks/BulkDeleteSel
 import bulkDeleteUserMessages from '@app/api/worker/tasks/BulkDeleteUserMessages';
 import clearAuthenticatedReporterEmails from '@app/api/worker/tasks/ClearAuthenticatedReporterEmails';
 import closePaymentDisputeAccounts from '@app/api/worker/tasks/ClosePaymentDisputeAccounts';
+import countBulkMessageDeletionTargets from '@app/api/worker/tasks/CountBulkMessageDeletionTargets';
 import crosspostMessage from '@app/api/worker/tasks/CrosspostMessage';
 import crosspostMessageChunk from '@app/api/worker/tasks/CrosspostMessageChunk';
 import deleteFeedVideo from '@app/api/worker/tasks/DeleteFeedVideo';
@@ -125,6 +127,7 @@ import seedThreadPermissions from '@app/api/worker/tasks/SeedThreadPermissions';
 import sendBillingEmail from '@app/api/worker/tasks/SendBillingEmail';
 import sendOperatorPassWithdrawalReceipt from '@app/api/worker/tasks/SendOperatorPassWithdrawalReceipt';
 import {sendSystemDm} from '@app/api/worker/tasks/SendSystemDm';
+import sweepVoiceParticipants from '@app/api/worker/tasks/SweepVoiceParticipants';
 import syncCrosspostCopies from '@app/api/worker/tasks/SyncCrosspostCopies';
 import syncCrosspostedMessage from '@app/api/worker/tasks/SyncCrosspostedMessage';
 import syncDiscoveryIndex from '@app/api/worker/tasks/SyncDiscoveryIndex';
@@ -167,6 +170,7 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	syncThreadSearchDocument,
 	backfillThreadSearch,
 	backfillDeletedUsers,
+	backfillFavoriteMemeNsfw,
 	backfillHiddenProfileBadges,
 	backfillPasskeyTrait,
 	backfillUserAclIndex,
@@ -182,6 +186,7 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	bulkUpdateUserFlags: bulkUpdateUserFlags,
 	clearAuthenticatedReporterEmails,
 	closePaymentDisputeAccounts,
+	countBulkMessageDeletionTargets,
 	crosspostMessage,
 	crosspostMessageChunk,
 	deleteUserMessagesInGuildByTime,
@@ -239,6 +244,7 @@ export const workerTasks: Record<WorkerTaskName, WorkerTaskHandler> = {
 	pollGooglePlayVoidedPurchases,
 	pollAppStoreNotificationHistory,
 	prunePostgresKvTtl,
+	sweepVoiceParticipants,
 	pruneGuildVisits: pruneGuildVisitsTask,
 	refreshSearchIndex,
 	seedThreadPermissions,

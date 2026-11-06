@@ -220,6 +220,14 @@ const NAMED_FLUXER_ENV_OVERRIDES: Record<string, NamedEnvOverride> = {
 		parse: parseBoolean,
 	},
 	FLUXER_VOICE_HEALTH_INTERVAL_MS: {path: ['integrations', 'voice', 'health_interval_ms'], parse: parseInteger},
+	FLUXER_VOICE_PARTICIPANT_SWEEP_ENABLED: {
+		path: ['integrations', 'voice', 'participant_sweep_enabled'],
+		parse: parseBoolean,
+	},
+	FLUXER_VOICE_PARTICIPANT_SWEEP_DRY_RUN: {
+		path: ['integrations', 'voice', 'participant_sweep_dry_run'],
+		parse: parseBoolean,
+	},
 	FLUXER_SEARCH_ENGINE: {path: ['integrations', 'search', 'engine']},
 	FLUXER_SEARCH_URL: {path: ['integrations', 'search', 'url']},
 	FLUXER_SEARCH_API_KEY: {path: ['integrations', 'search', 'api_key']},
@@ -361,6 +369,10 @@ const NAMED_FLUXER_ENV_OVERRIDES: Record<string, NamedEnvOverride> = {
 	FLUXER_STORE_BILLING_SANDBOX_USER_IDS: {path: ['integrations', 'store_billing', 'sandbox_user_ids'], parse: parseCsv},
 	FLUXER_STORE_BILLING_SANDBOX_ENTITLES_ALL: {
 		path: ['integrations', 'store_billing', 'sandbox_entitles_all'],
+		parse: parseBoolean,
+	},
+	FLUXER_STORE_BILLING_SANDBOX_SUBSCRIPTIONS: {
+		path: ['integrations', 'store_billing', 'sandbox_subscriptions'],
 		parse: parseBoolean,
 	},
 	FLUXER_SELF_HOSTED: {path: ['instance', 'self_hosted'], parse: parseBoolean},

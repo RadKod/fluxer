@@ -11,6 +11,7 @@ import {
 	isGooglePlaySelfServiceRefundEnabled,
 } from '@app/api/store_billing/GooglePlayRefundTarget';
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
+import {distributionRefundMetadata} from '@app/api/stripe/DistributionStripeMetadata';
 import {mirrorBestEffort} from '@app/api/stripe/StripeMirror';
 import {getInvoicePaymentRef} from '@app/api/stripe/StripeSubscriptionPeriod';
 import {extractId} from '@app/api/stripe/StripeUtils';
@@ -56,9 +57,14 @@ import type Stripe from 'stripe';
 const PIX_EXACT_AMOUNT_REFUND_SHORTFALL_CENTS = 1;
 const WITHDRAWAL_RECORD_KEY_PREFIX = 'plutonium_withdrawal:';
 const WITHDRAWAL_RECORD_TTL_SECONDS = seconds('60 days');
+const WITHDRAWAL_QUOTE_KEY_PREFIX = 'plutonium_withdrawal_quote:';
 
 function withdrawalRecordKey(userId: UserID, purchaseId: string): string {
 	return `${WITHDRAWAL_RECORD_KEY_PREFIX}${userId.toString()}:${purchaseId}`;
+}
+
+function withdrawalQuoteKey(userId: UserID, purchaseId: string, quotedAt: string): string {
+	return `${WITHDRAWAL_QUOTE_KEY_PREFIX}${userId.toString()}:${purchaseId}:${quotedAt}`;
 }
 
 const WITHDRAWAL_STUCK_AFTER_MS = seconds('2 minutes') * 1000;
@@ -501,6 +507,10 @@ export class StripeRefundService {
 		if (issued.length === 0) {
 			throw lastError instanceof StripeError ? lastError : new StripeError('Failed to refund recent purchases');
 		}
+		const requested = issued.filter(({refund}) => refund.status !== 'failed' && refund.status !== 'canceled');
+		if (requested.length > 0) {
+			await this.startRefundCooldown(user, new Date(Math.max(...requested.map(({refund}) => refund.created)) * 1000));
+		}
 		for (const {target, error} of failed) {
 			await alertSupport({
 				dedupeKey: `self-serve-refund-payment:${target.invoiceId}`,
@@ -566,7 +576,14 @@ export class StripeRefundService {
 	async getWithdrawals(userId: UserID): Promise<Array<PlutoniumWithdrawalResponse>> {
 		if (Config.instance.selfHosted || !this.stripe) return [];
 		const user = await this.getRequiredUser(userId);
-		return (await this.listWithdrawablePurchases(user, new Date())).map((purchase) => purchase.response);
+		const purchases = await this.listWithdrawablePurchases(user, new Date());
+		const kv = getKVClient();
+		await Promise.all(
+			purchases.map(({response}) =>
+				kv.setex(withdrawalQuoteKey(user.id, response.id, response.quoted_at), WITHDRAWAL_QUOTE_MAX_AGE_MS / 1000, '1'),
+			),
+		);
+		return purchases.map((purchase) => purchase.response);
 	}
 
 	async withdraw({
@@ -616,9 +633,11 @@ export class StripeRefundService {
 		if (!(await kv.setnx(recordKey, record, WITHDRAWAL_RECORD_TTL_SECONDS))) {
 			return storedWithdrawal((await kv.get(recordKey)) ?? record, user.id.toString(), purchaseId);
 		}
-		const refunds = (await this.withdrawalRefunds(purchase, honouredQuoteTime(purchase, receivedAt, quotedAt))).filter(
-			({amountMinor}) => amountMinor > 0,
-		);
+		const issuedQuote =
+			quotedAt && (await kv.get(withdrawalQuoteKey(user.id, purchaseId, quotedAt.toISOString()))) ? quotedAt : null;
+		const refunds = (
+			await this.withdrawalRefunds(purchase, honouredQuoteTime(purchase, receivedAt, issuedQuote))
+		).filter(({amountMinor}) => amountMinor > 0);
 		const issued: Array<IssuedRefund> = [];
 		for (const {target, amountMinor} of refunds) {
 			try {
@@ -881,6 +900,10 @@ export class StripeRefundService {
 							? {withdrawal_received_at: withdrawalReceivedAt.toISOString()}
 							: {refund_window_days: String(SELF_SERVE_REFUND_WINDOW_DAYS)}),
 						...(target.subscriptionId ? {subscription_id: target.subscriptionId} : {}),
+						...(await distributionRefundMetadata(stripe, {
+							payment_intent: target.paymentIntentId,
+							charge: target.chargeId,
+						})),
 					},
 				},
 				{idempotencyKey},

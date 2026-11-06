@@ -84,16 +84,20 @@ export function getManualDownloadOptions(info: ManualLatestInfo): Array<UpdaterD
 		});
 }
 
-export function getManualDownloadUrl(info: ManualLatestInfo): string {
+export function getManualDownloadFile(info: ManualLatestInfo): ManualLatestFile {
 	const [preferredOption] = getManualDownloadOptions(info);
 	if (preferredOption) {
-		return preferredOption.url;
+		return {url: preferredOption.url, sha256: preferredOption.sha256 ?? null};
 	}
 	for (const format of getManualDownloadFormatPreference()) {
-		const url = info.files[format]?.url;
-		if (url) {
-			return url;
+		const file = info.files[format];
+		if (file?.url) {
+			return file;
 		}
 	}
-	return DOWNLOAD_PAGE_URL;
+	return {url: DOWNLOAD_PAGE_URL, sha256: null};
+}
+
+export function getManualDownloadUrl(info: ManualLatestInfo): string {
+	return getManualDownloadFile(info).url;
 }

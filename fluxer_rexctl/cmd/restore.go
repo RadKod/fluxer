@@ -317,12 +317,20 @@ func restoreBootUnit(ctx context.Context, app *App, inst *instance.Instance, e *
 		prev.Podman = old.Kind == string(engine.Podman)
 		prev.Rootless = strings.Contains(old.Host, "/run/user/")
 		if prev.Rootless != u.Rootless {
-			if err := host.RemoveBootUnit(ctx, prev); err != nil {
+			steps, err := prev.RemoveSteps(ctx)
+			if err == nil {
+				err = host.RunSteps(ctx, steps)
+			}
+			if err != nil {
 				app.UI.Detail("%v", err)
 			}
 		}
 	}
-	if err := host.InstallBootUnit(ctx, u); err != nil {
+	steps, err := u.InstallSteps(ctx)
+	if err == nil {
+		err = host.RunSteps(ctx, steps)
+	}
+	if err != nil {
 		app.UI.Warn("Fluxer won't start again after this machine restarts.", "Run rexctl doctor --fix to start it with the machine.")
 		app.UI.Detail("%v", err)
 	}
@@ -434,6 +442,7 @@ func restoreErr(path string, err error, logPath string) error {
 	var inUse *backup.ProjectInUseError
 	var part *backup.RestoreError
 	var pull *backup.PullError
+	var space *backup.RestoreSpaceError
 	partFix := "Run rexctl restore again with --verbose to see why."
 	if logPath != "" {
 		partFix = fmt.Sprintf("Read %s to see why, then run rexctl restore again.", logPath)
@@ -446,6 +455,11 @@ func restoreErr(path string, err error, logPath string) error {
 		return ui.Wrap(pull.Err, "Couldn't download Fluxer.", "Run rexctl restore again with --verbose to see why.")
 	case errors.Is(err, backup.ErrUploadsNotHere):
 		return uploadsNotHere(nil, "", "", err)
+	case errors.As(err, &space):
+		return ui.Refused(
+			fmt.Sprintf("Restoring %s needs about %s of free disk space in %s, and %s is free.", path, ui.Bytes(int64(space.Need)), space.Dir, ui.Bytes(int64(space.Available))),
+			"Free up space there, then run rexctl restore again.",
+		)
 	case errors.As(err, &inUse):
 		return ui.Refused(
 			fmt.Sprintf("Another Fluxer instance on this machine is in %s.", inUse.Dir),

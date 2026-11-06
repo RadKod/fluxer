@@ -151,7 +151,7 @@ export class AdminMessageService {
 				}
 			}
 			await deleteMessageSearchDocuments([messageId], {context: {source: 'admin_message_delete'}});
-			await enqueueCrosspostSourceRemoval(workerService, {messages: [message], mode: 'purge'});
+			await enqueueCrosspostSourceRemoval(workerService, {messages: [message], mode: 'purge', channel});
 			await enqueueCrosspostFamilyPurgeFromCopies(workerService, {messages: [message]});
 		}
 		await auditService.createAuditLog({

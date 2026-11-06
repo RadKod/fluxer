@@ -131,8 +131,9 @@ export class UserAccountLookupService {
 		// Micup the owner as the cached view sees it; a lapsed premium is mended from the real row by the caller.
 		const view = await this.loadProfileView(targetId);
 		const user = projectedUser(view);
-		const hidden = isProfileHidden(user);
-		const restrictProfile = access.restrictProfile || hidden;
+		// A hidden profile is restricted for everyone but its owner.
+		const hiddenFromViewer = userId !== targetId && isProfileHidden(user);
+		const restrictProfile = access.restrictProfile || hiddenFromViewer;
 		let guildMember: GuildMemberResponse | null = null;
 		let guildMemberDomain: GuildMember | null = null;
 		if (guildId != null) {
@@ -153,16 +154,17 @@ export class UserAccountLookupService {
 			premiumFlags: user.premiumFlags,
 			hidden: user.hiddenProfileBadges,
 			selfHosted: Config.instance.selfHosted,
-			restricted: restrictProfile,
+			restricted: restrictProfile || hiddenFromViewer,
 		});
 		// Micup: the field privacy context comes with the access decision, no more reads.
 		const profileFieldPrivacyContext: ProfileFieldPrivacyContext | null = restrictProfile
 			? null
 			: {isOwner: userId === targetId, isFriend: access.friend, hasMutualGuild: access.sharedGuild};
 		// the mutual lists only on the full view.
-		const withMutuals = !hidden && access.view === 'full' && userId !== targetId;
+		const withMutuals = !hiddenFromViewer && access.view === 'full' && userId !== targetId;
 		const timezoneVisible =
 			!restrictProfile &&
+			!hiddenFromViewer &&
 			user.timezone != null &&
 			profileFieldPrivacyContext != null &&
 			this.canViewProfileField(user.timezonePrivacyFlags, profileFieldPrivacyContext);
