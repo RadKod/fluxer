@@ -492,21 +492,14 @@ no_session_holds_push_test() ->
     ).
 
 handle_user_settings_update_forces_invisible_status_test() ->
-    State = #{
-        custom_status => null,
-        sessions => #{
-            <<"s1">> => #{status => online, afk => false, mobile => false},
-            <<"s2">> => #{status => idle, afk => false, mobile => false}
-        }
+    Sessions = #{
+        <<"s1">> => #{status => online, afk => false, mobile => false},
+        <<"s2">> => #{status => idle, afk => false, mobile => false}
     },
+    State = #{custom_status => null, sessions => Sessions},
     Updated = handle_user_settings_update(#{<<"status">> => <<"invisible">>}, State),
-    ?assertEqual(
-        #{
-            <<"s1">> => #{status => invisible, afk => false, mobile => false},
-            <<"s2">> => #{status => invisible, afk => false, mobile => false}
-        },
-        maps:get(sessions, Updated)
-    ).
+    ?assertEqual(true, maps:get(settings_invisible, Updated)),
+    ?assertEqual(Sessions, maps:get(sessions, Updated)).
 
 handle_user_settings_update_does_not_force_online_status_test() ->
     State = #{
@@ -519,21 +512,14 @@ handle_user_settings_update_does_not_force_online_status_test() ->
     ?assertEqual(maps:get(sessions, State), maps:get(sessions, Updated)).
 
 handle_user_settings_update_visible_status_clears_forced_invisible_test() ->
-    State = #{
-        custom_status => null,
-        sessions => #{
-            <<"s1">> => #{status => invisible, afk => true, mobile => false},
-            <<"s2">> => #{status => dnd, afk => false, mobile => false}
-        }
+    Sessions = #{
+        <<"s1">> => #{status => invisible, afk => true, mobile => false},
+        <<"s2">> => #{status => dnd, afk => false, mobile => false}
     },
+    State = #{custom_status => null, settings_invisible => true, sessions => Sessions},
     Updated = handle_user_settings_update(#{<<"status">> => <<"dnd">>}, State),
-    ?assertEqual(
-        #{
-            <<"s1">> => #{status => dnd, afk => true, mobile => false},
-            <<"s2">> => #{status => dnd, afk => false, mobile => false}
-        },
-        maps:get(sessions, Updated)
-    ).
+    ?assertEqual(false, maps:get(settings_invisible, Updated)),
+    ?assertEqual(Sessions, maps:get(sessions, Updated)).
 
 buffer_push_notification_caps_entries_test() ->
     with_gateway_config(

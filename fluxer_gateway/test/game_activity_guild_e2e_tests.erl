@@ -773,6 +773,7 @@ guild_state(GuildId, Members, Subscribers, Viewers) ->
         member_subscriptions => Subs,
         member_presence => ets:new(game_e2e_presence, [set, public]),
         member_list_subscriptions => guild_member_list_subs:new(),
+        visitors => guild_visitor_state:new(),
         dm_partners => #{}
     }.
 

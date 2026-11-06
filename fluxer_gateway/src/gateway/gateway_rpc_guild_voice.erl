@@ -279,4 +279,3 @@ call_disconnect_voice_user(VPid, Request) ->
         #{success := true} -> #{<<"success">> => true};
         #{error := E} -> raise_voice_error(E)
     end.
-

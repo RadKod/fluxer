@@ -101,18 +101,10 @@ is_loopback_request(Req) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
-cluster_rpc_gate_readiness_test() ->
-    Key = {fluxer_gateway, runtime_config},
-    Previous = persistent_term:get(Key, undefined),
-    persistent_term:put(Key, #{cluster_enabled => true}),
-    try
-        ?assertEqual({503, <<"DRAINING">>}, readiness_response(#{peer => {{127, 0, 0, 1}, 1}})),
-        ?assertEqual({403, <<"FORBIDDEN">>}, readiness_response(#{peer => {{10, 0, 0, 1}, 1}}))
-    after
-        case Previous of
-            undefined -> persistent_term:erase(Key);
-            _ -> persistent_term:put(Key, Previous)
-        end
-    end.
+readiness_test() ->
+    ?assertEqual({503, <<"DRAINING">>}, readiness_status(false, true)),
+    ?assertEqual({503, <<"NATS_UNAVAILABLE">>}, readiness_status(true, false)),
+    ?assertEqual({200, <<"OK">>}, readiness_status(true, true)),
+    ?assertEqual({403, <<"FORBIDDEN">>}, readiness_response(#{peer => {{10, 0, 0, 1}, 1}})).
 
 -endif.

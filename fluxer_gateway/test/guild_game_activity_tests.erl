@@ -687,6 +687,7 @@ state(#{pids := Pids}) ->
         member_subscriptions => Subs,
         member_presence => ets:new(game_member_presence, [set, public]),
         member_list_subscriptions => guild_member_list_subs:new(),
+        visitors => guild_visitor_state:new(),
         dm_partners => Registrations
     },
     guild_game_activity:dm_eligibility(#{}, Registrations, [sid(40)], Base).

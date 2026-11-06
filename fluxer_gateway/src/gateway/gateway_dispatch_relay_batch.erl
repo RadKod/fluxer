@@ -46,16 +46,18 @@ relay_or_direct_many(SessionPids, Event, Payload) ->
 
 -spec relay_game_activity_many([pid()], map()) -> ok | busy.
 relay_game_activity_many([Pid], Payload) when is_pid(Pid) ->
-    case select_worker_slot(Pid) of
-        undefined ->
+    Workers = current_workers_tuple(),
+    case tuple_size(Workers) of
+        0 ->
             gateway_dispatch_relay:dispatch_direct(Pid, presence_update, Payload);
-        {Slot, Worker} ->
+        Count ->
+            Generation = generation(erlang:phash2(Pid, Count) + 1, Workers),
             game_enqueue_result(
-                enqueue_async(Slot, Worker, {deliver_many, [Pid], presence_update, Payload})
+                enqueue_async(Generation, {deliver_many, [Pid], presence_update, Payload})
             )
     end;
 relay_game_activity_many(SessionPids, Payload) when length(SessionPids) =< 100 ->
-    Workers = current_workers_tuple_normalized(),
+    Workers = current_workers_tuple(),
     case tuple_size(Workers) of
         0 ->
             gateway_dispatch_relay:dispatch_grouped(

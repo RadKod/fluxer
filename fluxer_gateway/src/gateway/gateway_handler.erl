@@ -6,6 +6,10 @@
 
 -export([init/2, websocket_init/1, websocket_handle/2, websocket_info/2, terminate/3]).
 
+-ifdef(TEST).
+-export([new_state/0]).
+-endif.
+
 -type state() :: #{
     version := 1 | undefined,
     encoding := gateway_codec:encoding(),

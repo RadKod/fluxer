@@ -6,10 +6,12 @@
 
 -export([
     init_state/0,
+    subscribe/3,
     unsubscribe/3,
     unsubscribe_session/2,
     update_subscriptions_with_delta/3,
     get_subscribed_sessions/2,
+    is_subscribed/3,
     get_user_ids_for_session/2
 ]).
 
@@ -102,6 +104,14 @@ get_subscribed_sessions(UserId, State) ->
     case maps:get(UserId, State, undefined) of
         undefined -> [];
         Subscribers -> sets:to_list(Subscribers)
+    end.
+
+%% sanalyer: guild game activity asks whether a session still follows an owner before it sends a null.
+-spec is_subscribed(session_id(), user_id(), subscription_state()) -> boolean().
+is_subscribed(SessionId, UserId, State) ->
+    case maps:get(UserId, State, undefined) of
+        undefined -> false;
+        Subscribers -> sets:is_element(SessionId, Subscribers)
     end.
 
 -spec get_user_ids_for_session(session_id(), subscription_state()) -> sets:set(user_id()).

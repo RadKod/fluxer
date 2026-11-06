@@ -12,6 +12,7 @@
     check_start_response/4,
     abandon_start/1,
     start_timeout/1,
+    lookup/1,
     lookup_or_rehydrate/3,
     reconnect_drain/0,
     handoff_to_topology/1,
@@ -120,6 +121,17 @@ abandon_start({_Kind, ReqId}) ->
 -spec start_timeout(start_request()) -> pos_integer().
 start_timeout({shard, _ReqId}) -> ?START_TIMEOUT;
 start_timeout({_Kind, _ReqId}) -> ?START_TIMEOUT + 1000.
+
+%% sanalyer: the voice soundboard finds a listener's session by id.
+-spec lookup(session_id()) -> {ok, pid()} | {error, not_found}.
+lookup(SessionId) ->
+    Reply = session_manager_routing:call_owner_manager(
+        SessionId, {lookup, SessionId}, ?LOOKUP_TIMEOUT
+    ),
+    case Reply of
+        {ok, Pid} when is_pid(Pid) -> {ok, Pid};
+        _ -> {error, not_found}
+    end.
 
 -spec lookup_or_rehydrate(session_id(), binary(), pid()) ->
     {ok, pid()} | {error, not_found} | {error, invalid_token}.

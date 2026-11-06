@@ -700,7 +700,7 @@ cluster_disabled_metrics_match_upstream_golden_test() ->
     try
         persistent_term:put({fluxer_gateway, runtime_config}, #{cluster_enabled => false}),
         persistent_term:put({gateway_cluster_membership, members}, [node()]),
-        gateway_cluster_metrics:reset_for_tests(),
+        persistent_term:erase(gateway_cluster_metrics_counters),
         Expected = <<
             "# HELP fluxer_gateway_cluster_member_count Alive cluster members\n",
             "# TYPE fluxer_gateway_cluster_member_count gauge\n",
