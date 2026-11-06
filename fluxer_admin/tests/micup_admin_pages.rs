@@ -1394,6 +1394,7 @@ fn instance_config(premium_mode: &str) -> Value {
         },
         "self_hosted": true,
         "policy": {"premium_mode": premium_mode, "single_community_guild_id": null},
+        "distribution_pricing": {"rules": []},
         // Upstream made these sections required in the instance config response.
         "captcha": {
             "provider": "none",

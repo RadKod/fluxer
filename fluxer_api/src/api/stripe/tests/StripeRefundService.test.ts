@@ -871,10 +871,10 @@ describe('StripeRefundService self-serve refund', () => {
 			const {UserRepository} = await import('@app/api/user/repositories/UserRepository');
 			const updatedUser = await new UserRepository().findUnique(createUserID(BigInt(account.userId)));
 			expect(updatedUser!.lastRefundAt).not.toBeNull();
-			await createBuilder(harness, account.token)
-				.post('/premium/refund-latest')
-				.expect(403, APIErrorCodes.STRIPE_REFUND_COOLDOWN_ACTIVE)
-				.execute();
+			// sanalyer keeps the refund route closed, so the cooldown is checked on the service.
+			await expect(
+				createRefundService().refundRecentPurchases(createUserID(BigInt(account.userId))),
+			).rejects.toMatchObject({code: APIErrorCodes.STRIPE_REFUND_COOLDOWN_ACTIVE});
 		});
 		test('does not finalize cooldown or cancel the subscription when the refund fails at the provider', async () => {
 			server.use(...createStripeApiHandlers().handlers);

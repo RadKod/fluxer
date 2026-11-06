@@ -58,6 +58,7 @@ vi.mock('@app/features/relationship/state/Relationships', () => ({default: {}}))
 vi.mock('@app/features/ui/state/Notification', () => ({default: {}, TTSNotificationMode: {}}));
 vi.mock('@app/features/ui/utils/NativeUtils', () => ({
 	getNativePlatformSync: () => null,
+	isDesktop: () => false,
 	isChromiumBrowser: () => false,
 }));
 vi.mock('@app/features/user/state/UserGuildSettings', () => ({default: {}}));
@@ -116,7 +117,7 @@ describe('lazy TTS fallback', () => {
 		voiceTts.speak('Hello', {onEnd});
 		await vi.waitFor(() => expect(source.start).toHaveBeenCalledOnce());
 		expect(state.coreLoads).toBe(1);
-		expect(state.synthesize).toHaveBeenCalledWith('Hello', {rawdata: true, voice: 'en/en-us', speed: 175});
+		expect(state.synthesize).toHaveBeenCalledWith(' Hello', {rawdata: true, voice: 'en/en-us', speed: 175});
 		expect(voiceTts.isSpeaking()).toBe(true);
 		source.onended?.();
 		expect(onEnd).toHaveBeenCalledOnce();
@@ -129,7 +130,7 @@ describe('lazy TTS fallback', () => {
 		await vi.waitFor(() => expect(source.start).toHaveBeenCalledOnce());
 		expect(state.turkishLoads).toBe(1);
 		expect(state.frenchLoads).toBe(0);
-		expect(state.synthesize).toHaveBeenLastCalledWith('Merhaba', {rawdata: true, voice: 'tr', speed: 175});
+		expect(state.synthesize).toHaveBeenLastCalledWith(' Merhaba', {rawdata: true, voice: 'tr', speed: 175});
 		voiceTts.speak('Tekrar');
 		await vi.waitFor(() => expect(source.start).toHaveBeenCalledTimes(2));
 		expect(state.loadVoice).toHaveBeenCalledTimes(1);
@@ -137,14 +138,14 @@ describe('lazy TTS fallback', () => {
 		voiceTts.speak('Bonjour');
 		await vi.waitFor(() => expect(source.start).toHaveBeenCalledTimes(3));
 		expect(state.frenchLoads).toBe(1);
-		expect(state.synthesize).toHaveBeenLastCalledWith('Bonjour', {rawdata: true, voice: 'fr', speed: 175});
+		expect(state.synthesize).toHaveBeenLastCalledWith(' Bonjour', {rawdata: true, voice: 'fr', speed: 175});
 	});
 
 	it('uses the default voice for unsupported locales and applies the requested rate', async () => {
 		state.locale = 'unknown-ZZ';
 		voiceTts.speak('Hello', {rate: 2});
 		await vi.waitFor(() => expect(source.start).toHaveBeenCalledOnce());
-		expect(state.synthesize).toHaveBeenCalledWith('Hello', {rawdata: true, voice: 'en/en-us', speed: 350});
+		expect(state.synthesize).toHaveBeenCalledWith(' Hello', {rawdata: true, voice: 'en/en-us', speed: 350});
 		expect(state.turkishLoads + state.frenchLoads).toBe(0);
 	});
 

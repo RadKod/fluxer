@@ -718,6 +718,7 @@ impl From<PartialUserDbRow> for UserPartial {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     fn test_user(user_id: i64) -> PartialUserDbRow {
         PartialUserDbRow {

@@ -223,6 +223,7 @@ const SETTINGS_WITHOUT_SERVER_RECORD = {
 	sensitive_content_friend_dm_filter: SensitiveMediaFilterLevel.BLUR,
 	sensitive_content_non_friend_dm_filter: SensitiveMediaFilterLevel.BLOCK,
 	sensitive_content_guild_filter: SensitiveMediaFilterLevel.BLUR,
+	allow_mature_content_on_ios: false,
 	suppress_unprivileged_self_mentions: false,
 	suppress_unprivileged_self_mentions_bypass_user_ids: [],
 	staff_dm_access_user_ids: [],

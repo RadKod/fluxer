@@ -27211,7 +27211,7 @@ msgid ""
 "iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
 " change this on the web or on desktop."
 msgstr ""
-"Umožňuje otevírat komunity a kanály označené 18+ v aplikaci Fluxer pro "
+"Umožňuje otevírat komunity a kanály označené 18+ v aplikaci sanalyer pro "
 "iPhone a iPad a vybrat tam u citlivých médií možnost „Zobrazit“. Toto "
 "nastavení můžete změnit jen na webu nebo v aplikaci pro počítač."
 
@@ -57653,7 +57653,7 @@ msgid ""
 "{domain} runs a newer version of sanalyer than this app. Update sanalyer, "
 "then try again."
 msgstr ""
-"{domain} používá novější verzi Micupu než tato aplikace. Aktualizujte "
+"{domain} používá novější verzi sanalyeru než tato aplikace. Aktualizujte "
 "sanalyer a zkuste to znovu."
 
 #. Tooltip and accessible label of the button in the user profile card that
@@ -58926,7 +58926,7 @@ msgid ""
 "Couldn't reach a sanalyer instance at {domain}. Check the address and that "
 "the instance is online."
 msgstr ""
-"Nepodařilo se navázat spojení s instancí Micupu na adrese {domain}. "
+"Nepodařilo se navázat spojení s instancí sanalyeru na adrese {domain}. "
 "Zkontrolujte adresu a zda je instance online."
 
 #. Error toast in the IAR modal when the report submission fails. Keep tone
@@ -61977,7 +61977,7 @@ msgstr ""
 #. Accessible label for the official Fluxer instance option.
 #: src/features/auth/flow/instance_selector/InstancePickerRows.tsx
 msgid "Use the official sanalyer instance"
-msgstr "Použít oficiální instanci Micupu"
+msgstr "Použít oficiální instanci sanalyeru"
 
 #. Table games: 101 Okey, a tile taken from the discard must be used at once.
 #: src/features/table_game/utils/TableGameMessages.ts

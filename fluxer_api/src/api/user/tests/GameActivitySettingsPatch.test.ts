@@ -53,6 +53,7 @@ async function fixture(
 		userCacheService: {} as never,
 		guildRepository: {} as never,
 		limitConfigService: {} as never,
+		cacheService: {} as never,
 		gameActivityPolicyService: policy,
 	});
 	const read = async () => (await repository.findSettings(userId, {authoritative: true}))!;

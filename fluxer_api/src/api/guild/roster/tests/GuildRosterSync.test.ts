@@ -151,7 +151,9 @@ describe('GuildRosterSync', () => {
 		await f.runtime.syncReaction(payload);
 		expect(await f.roster.members(f.ref)).toEqual([f.userIds[0]]);
 		expect(await clickRoster(f, f.userIds[0]!, 'roster:leave')).toEqual({code: 'roster_left'});
-		expect(await reactions.checkUserReactionExists(state.channelId, state.messageId, f.userIds[0]!, '✅')).toBe(false);
+		expect(await reactions.checkUserReactionExists(state.channelId, state.messageId, f.userIds[0]!, {name: '✅'})).toBe(
+			false,
+		);
 		await f.runtime.syncReaction(payload);
 		expect(await f.roster.members(f.ref)).toEqual([]);
 	});
@@ -161,7 +163,7 @@ describe('GuildRosterSync', () => {
 		await reactions.addReaction(state.channelId, state.messageId, f.userIds[0]!, '✅');
 		await f.runtime.syncReaction(payload);
 		expect(await clickRoster(f, f.userIds[0]!, 'roster:join')).toEqual({code: 'roster_already_joined'});
-		await reactions.removeReaction(state.channelId, state.messageId, f.userIds[0]!, '✅');
+		await reactions.removeReaction(state.channelId, state.messageId, f.userIds[0]!, {name: '✅'});
 		await f.runtime.syncReaction({...payload, kind: 'remove'});
 		expect(await f.roster.members(f.ref)).toEqual([]);
 	});

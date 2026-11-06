@@ -36,6 +36,7 @@ async function fixture() {
 		userCacheService: {} as never,
 		guildRepository: {} as never,
 		limitConfigService: {} as never,
+		cacheService: {} as never,
 		gameActivityPolicyService: policy,
 	});
 	return {userId, repository, requests, service};

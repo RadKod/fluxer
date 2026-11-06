@@ -36,6 +36,7 @@ test.each(['moderation', 'membership'])(
 		);
 		const guildRepository = {
 			listBans: vi.fn().mockResolvedValue(bans),
+			getBan: vi.fn(async (_guildId: unknown, id: unknown) => bans.find((ban) => ban.userId === id) ?? null),
 			getBanByEmail: vi.fn().mockResolvedValue(null),
 		} as unknown as GuildRepository;
 		const userRepository = {

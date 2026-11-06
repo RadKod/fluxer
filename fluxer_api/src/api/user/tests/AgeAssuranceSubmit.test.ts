@@ -27,6 +27,7 @@ function acceptingClient(base: IUsersServiceClient, floor: AttestedAgeFloor, att
 	return {
 		getUserPartialResponses: (userIds) => base.getUserPartialResponses(userIds),
 		invalidateUserCache: (userId) => base.invalidateUserCache(userId),
+		getContentHiddenSince: (userIds) => base.getContentHiddenSince(userIds),
 		appAttestCreateChallenge: (userId, purpose) => base.appAttestCreateChallenge(userId, purpose),
 		appAttestRegisterKey: (params) => base.appAttestRegisterKey(params),
 		appAttestSubmitAge: async (): Promise<AppAttestOutcome<AppAttestAgeAccepted>> => ({

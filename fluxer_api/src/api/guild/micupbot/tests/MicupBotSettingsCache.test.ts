@@ -7,6 +7,11 @@ import {getCacheService, getMicupBotRepository} from '@app/api/middleware/Servic
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
+// The cache also reads its invalidation markers (cache-invalidation:*); only the settings entry reads count here.
+function settingsReads(shared: {mock: {calls: Array<Array<unknown>>}}): number {
+	return shared.mock.calls.filter(([key]) => String(key).startsWith('micupbot:settings:')).length;
+}
+
 describe('MicupBotSettingsCache', () => {
 	let harness: ApiTestHarness;
 	let ids: Array<GuildID>;
@@ -58,9 +63,9 @@ describe('MicupBotSettingsCache', () => {
 		expect(await Promise.all(Array.from({length: 20}, () => getMicupBotGuildConfig(id)))).toEqual(Array(20).fill(null));
 		expect(read).toHaveBeenCalledTimes(1);
 		expect(rules).not.toHaveBeenCalled();
-		expect(shared).toHaveBeenCalledTimes(1);
+		expect(settingsReads(shared)).toBe(1);
 		await getMicupBotGuildConfig(id);
-		expect(shared).toHaveBeenCalledTimes(1);
+		expect(settingsReads(shared)).toBe(1);
 	});
 	it('a stale shared snapshot expires within 30 seconds', async () => {
 		const {read, rules} = spies();
@@ -82,7 +87,7 @@ describe('MicupBotSettingsCache', () => {
 		await getCacheService().set(`micupbot:settings:${id}`, json, 30);
 		expect(await getMicupBotGuildConfig(id)).toEqual(first);
 		expect(read).toHaveBeenCalledTimes(1);
-		expect(shared).toHaveBeenCalledTimes(3);
+		expect(settingsReads(shared)).toBe(3);
 	});
 	it('invalidate drops the shared copy', async () => {
 		const {read} = spies();

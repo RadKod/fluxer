@@ -133,6 +133,7 @@ async function fixture(privacy: number = ProfilePrivacyLevels.FRIENDS_ONLY) {
 		userCacheService: {} as never,
 		guildRepository: {} as never,
 		limitConfigService: {} as never,
+		cacheService: {} as never,
 		gameActivityPolicyService: grants,
 	});
 	return {

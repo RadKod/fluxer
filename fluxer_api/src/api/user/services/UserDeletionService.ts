@@ -23,8 +23,10 @@ import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {ISnowflakeService} from '@app/api/infrastructure/ISnowflakeService';
 import type {IStorageService} from '@app/api/infrastructure/IStorageService';
 import type {UserCacheService} from '@app/api/infrastructure/UserCacheService';
-import {InstanceConfigRepository} from '@app/api/instance/InstanceConfigRepository';
-import {REGISTRATION_PENDING_APPROVAL_TRAIT} from '@app/api/instance/InstanceConfigRepository';
+import {
+	InstanceConfigRepository,
+	REGISTRATION_PENDING_APPROVAL_TRAIT,
+} from '@app/api/instance/InstanceConfigRepository';
 import {Logger} from '@app/api/Logger';
 import type {OperatorPassServices} from '@app/api/middleware/OperatorPassServiceFactory';
 import {createRequestCache} from '@app/api/middleware/RequestCacheMiddleware';
@@ -40,10 +42,10 @@ import type {ApplicationRepository} from '@app/api/oauth/repositories/Applicatio
 import type {OAuth2TokenRepository} from '@app/api/oauth/repositories/OAuth2TokenRepository';
 import {endOperatorPassesForDeletion} from '@app/api/operator_pass/OperatorPassHoldingService';
 import type {StoreEntitlementService} from '@app/api/store_billing/StoreEntitlementService';
+import {deleteAllAppAttestKeys} from '@app/api/user/AgeAssurance';
 import {scheduleUserDeletionHooks} from '@app/api/user/lifecycle/UserLifecycleHooks';
 import {UserDataRepository} from '@app/api/user/repositories/account/crud/UserDataRepository';
 import {UserIndexRepository} from '@app/api/user/repositories/account/crud/UserIndexRepository';
-import {deleteAllAppAttestKeys} from '@app/api/user/AgeAssurance';
 import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {isPendingDeletionBlocked} from '@app/api/user/services/PendingDeletionCoordinator';
 import {
@@ -54,8 +56,8 @@ import {
 } from '@app/api/user/UserHelpers';
 import type {WorkerTaskName} from '@app/api/worker/WorkerLaneConfig';
 import {ChannelTypes, MessageTypes} from '@fluxer/constants/src/ChannelConstants';
-import {DELETED_USER_DISCRIMINATOR, DELETED_USER_USERNAME} from '@fluxer/constants/src/UserConstants';
 import {DeletionReasons} from '@fluxer/constants/src/Core';
+import {DELETED_USER_DISCRIMINATOR, DELETED_USER_USERNAME} from '@fluxer/constants/src/UserConstants';
 import * as BucketUtils from '@fluxer/snowflake/src/SnowflakeBuckets';
 import type {ICacheService} from '@pkgs/cache/src/ICacheService';
 import type {IEmailService} from '@pkgs/email/src/IEmailService';

@@ -26240,7 +26240,7 @@ msgid ""
 "iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
 " change this on the web or on desktop."
 msgstr ""
-"iPhone 및 iPad용 Fluxer 앱에서 18+로 표시된 커뮤니티와 채널을 열 수 있고, 민감한 미디어에 \"표시\"를 선택할 수 "
+"iPhone 및 iPad용 sanalyer 앱에서 18+로 표시된 커뮤니티와 채널을 열 수 있고, 민감한 미디어에 \"표시\"를 선택할 수 "
 "있습니다. 이 설정은 웹이나 데스크톱에서만 변경할 수 있습니다."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx

@@ -64,6 +64,7 @@ const MODULE_REGISTRY_TEST_FILES = [
 	// Upstream billing suites that need the dormant Stripe paths (DormantStripeTestFixture mocks a module).
 	'src/api/stripe/tests/StripeWebhookBillingEmails.test.ts',
 	'src/api/stripe/tests/StripeCheckoutWithdrawalWaiver.test.ts',
+	'src/api/stripe/tests/StripeCheckoutDistribution.test.ts',
 	'src/api/billing_documents/LegacyStripeInvoiceImport.test.ts',
 	'src/api/admin/tests/AdminClosureStripeRefund.test.ts',
 	'src/api/user/tests/AccountTierGates.test.ts',

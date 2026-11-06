@@ -26934,7 +26934,7 @@ msgid ""
 " change this on the web or on desktop."
 msgstr ""
 "Cho phép bạn mở các cộng đồng và kênh được đánh dấu 18+ trong ứng dụng "
-"Fluxer dành cho iPhone và iPad, và chọn \"Hiển thị\" cho phương tiện nhạy "
+"sanalyer dành cho iPhone và iPad, và chọn \"Hiển thị\" cho phương tiện nhạy "
 "cảm ở đó. Bạn chỉ có thể thay đổi cài đặt này trên web hoặc trên máy tính."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx

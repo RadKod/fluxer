@@ -26994,7 +26994,7 @@ msgid ""
 "iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
 " change this on the web or on desktop."
 msgstr ""
-"Memungkinkanmu membuka komunitas dan saluran bertanda 18+ di aplikasi Fluxer"
+"Memungkinkanmu membuka komunitas dan saluran bertanda 18+ di aplikasi sanalyer"
 " untuk iPhone dan iPad, serta memilih \"Tampilkan\" untuk media sensitif di "
 "sana. Kamu hanya bisa mengubah ini di web atau desktop."
 

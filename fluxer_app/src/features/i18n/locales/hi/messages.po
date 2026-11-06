@@ -26989,7 +26989,7 @@ msgid ""
 "iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
 " change this on the web or on desktop."
 msgstr ""
-"इससे आप iPhone और iPad के Fluxer ऐप में 18+ के रूप में मार्क की गई कम्युनिटी"
+"इससे आप iPhone और iPad के sanalyer ऐप में 18+ के रूप में मार्क की गई कम्युनिटी"
 " और चैनल खोल सकते हैं, और वहाँ संवेदनशील मीडिया के लिए \"दिखाएँ\" चुन सकते "
 "हैं। आप इसे सिर्फ़ वेब या डेस्कटॉप पर बदल सकते हैं।"
 

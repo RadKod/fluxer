@@ -64,7 +64,7 @@ async function removeOwnCheckMark({viewer, channelService, channelId, message, u
 	const channels = getChannelRepository();
 	try {
 		for (const emoji of [ROSTER_JOIN_EMOJI, `${ROSTER_JOIN_EMOJI}\uFE0F`])
-			if (await channels.messageInteractions.checkUserReactionExists(channelId, message.id, user.id, emoji, undefined))
+			if (await channels.messageInteractions.checkUserReactionExists(channelId, message.id, user.id, {name: emoji}))
 				await channelService.interactions.removeOwnReaction({
 					viewer,
 					userId: user.id,

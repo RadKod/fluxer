@@ -27352,7 +27352,7 @@ msgid ""
 "iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
 " change this on the web or on desktop."
 msgstr ""
-"Дає змогу відкривати спільноти й канали з позначкою 18+ у застосунку Fluxer "
+"Дає змогу відкривати спільноти й канали з позначкою 18+ у застосунку sanalyer "
 "для iPhone та iPad і вибирати там «Показувати» для чутливих медіафайлів. "
 "Змінити це можна лише у вебверсії або на комп'ютері."
 

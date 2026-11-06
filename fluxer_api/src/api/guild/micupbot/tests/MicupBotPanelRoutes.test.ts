@@ -59,7 +59,7 @@ it('creating a panel posts the bot message with the emojis and stores it', async
 			f.channelId,
 			messageId,
 			createUserID(BigInt(bot.botUserId)),
-			'🔴',
+			{name: '🔴'},
 		),
 	).toBe(true);
 	expect(await f.repository.getPanel(f.guildId, messageId)).not.toBeNull();

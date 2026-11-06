@@ -44,6 +44,7 @@ async function settingsFixture(visibility: 'off' | 'friends' = 'off') {
 		userCacheService: {} as never,
 		guildRepository: {} as never,
 		limitConfigService: {} as never,
+		cacheService: {} as never,
 		gameActivityPolicyService: policy,
 	});
 	return {userId, repository, service, policy, account, dispatch};
@@ -119,7 +120,11 @@ describe('game activity settings persistence', () => {
 		const {userId, service, account, policy} = await settingsFixture();
 		account.dateOfBirth = '2015-01-01';
 		await expect(
-			service.updateSettings({userId, dateOfBirth: '2000-01-01', data: {game_activity_visibility: 'friends'}}),
+			service.updateSettings({
+				userId,
+				ageUser: {dateOfBirth: '2000-01-01', attestedAgeFloor: null},
+				data: {game_activity_visibility: 'friends'},
+			}),
 		).rejects.toThrow();
 		expect(policy.fenceUserPolicy).not.toHaveBeenCalled();
 	});
@@ -130,7 +135,7 @@ describe('game activity settings persistence', () => {
 		await expect(
 			service.updateSettings({
 				userId,
-				dateOfBirth: '2000-01-01',
+				ageUser: {dateOfBirth: '2000-01-01', attestedAgeFloor: null},
 				data: {profile_privacy: ProfilePrivacyLevels.EVERYONE},
 			}),
 		).rejects.toThrow();

@@ -26681,7 +26681,7 @@ msgid ""
 "iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
 " change this on the web or on desktop."
 msgstr ""
-"מאפשר לפתוח קהילות וערוצים שמסומנים 18+ באפליקציית Fluxer ל-iPhone ול-iPad, "
+"מאפשר לפתוח קהילות וערוצים שמסומנים 18+ באפליקציית sanalyer ל-iPhone ול-iPad, "
 "ולבחור שם \"הצגה\" עבור מדיה רגישה. אפשר לשנות את זה רק בדפדפן או במחשב."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx

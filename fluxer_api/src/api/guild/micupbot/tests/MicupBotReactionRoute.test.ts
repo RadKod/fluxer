@@ -51,7 +51,7 @@ const storedReaction = () =>
 		f.channelId,
 		createMessageID(BigInt(messageId)),
 		createUserID(BigInt(f.owner.userId)),
-		'🔴',
+		{name: '🔴'},
 	);
 
 const reactionCounterKey = () =>

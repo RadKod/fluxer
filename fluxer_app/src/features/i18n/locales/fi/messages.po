@@ -27095,7 +27095,7 @@ msgid ""
 "iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
 " change this on the web or on desktop."
 msgstr ""
-"Voit avata 18+-merkittyjä yhteisöjä ja kanavia Fluxerin iPhone- ja iPad-"
+"Voit avata 18+-merkittyjä yhteisöjä ja kanavia sanalyerin iPhone- ja iPad-"
 "sovelluksessa ja valita siellä arkaluonteiselle medialle ”Näytä”. Voit "
 "muuttaa tätä vain verkossa tai työpöytäsovelluksessa."
 
@@ -61356,7 +61356,7 @@ msgid ""
 "sanalyer."
 msgstr ""
 "Merkittyjä nimiä ei enää käytetä. Valitse yksilöllinen käyttäjätunnus "
-"jatkaaksesi Micupin käyttöä."
+"jatkaaksesi sanalyerin käyttöä."
 
 #: src/features/user/components/modals/UsernamePickerModal.tsx
 msgid "Tags are gone 🎉"

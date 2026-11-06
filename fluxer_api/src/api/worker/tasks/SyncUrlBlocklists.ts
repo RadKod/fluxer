@@ -86,7 +86,10 @@ async function deleteFeedFile(
 		await deleteBlocklistS3Object(storageService, key);
 	} catch (error) {
 		if (error instanceof Error && UNREACHABLE_FEED_BUCKET_ERRORS.has(error.name)) {
-			logger.info({error: error.name, key}, 'URL blocklist feed bucket is not reachable with these credentials, nothing to delete');
+			logger.info(
+				{error: error.name, key},
+				'URL blocklist feed bucket is not reachable with these credentials, nothing to delete',
+			);
 		} else if (!isMissingBlocklistObjectError(error)) {
 			logger.warn({error, key}, 'Failed to delete the URL blocklist feed file');
 		}

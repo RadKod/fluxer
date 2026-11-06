@@ -374,7 +374,11 @@ export class LiveKitService extends ILiveKitService {
 			return;
 		}
 		try {
-			await server.roomServiceClient.updateParticipant(roomName, identity, undefined, permission);
+			// sanalyer: voice activities talk over the data channel, so every permission update keeps it open.
+			await server.roomServiceClient.updateParticipant(roomName, identity, undefined, {
+				...permission,
+				canPublishData: true,
+			});
 		} catch (error) {
 			if (LiveKitService.isHttp404(error)) {
 				return;

@@ -26,11 +26,7 @@ import type {UserRepository} from '@app/api/user/repositories/UserRepository';
 import type {ProfileAccessService, ProfileSide} from '@app/api/user/services/ProfileAccessService';
 import {checkUsernameClaimAvailability, isUsernameTaken, readUsernameMigration} from '@app/api/user/UniqueUsernames';
 import {hasFixedDiscriminator} from '@app/api/user/UserTag';
-import {
-	ProfileFieldPrivacyFlags,
-	RelationshipTypes,
-	type UserPremiumType,
-} from '@fluxer/constants/src/UserConstants';
+import {ProfileFieldPrivacyFlags, RelationshipTypes, type UserPremiumType} from '@fluxer/constants/src/UserConstants';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {MissingAccessError} from '@fluxer/errors/src/domains/core/MissingAccessError';
 import {UnknownUserError} from '@fluxer/errors/src/domains/user/UnknownUserError';

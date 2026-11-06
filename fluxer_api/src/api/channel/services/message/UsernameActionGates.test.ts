@@ -432,7 +432,10 @@ describe('Username selection actor and escape routes', () => {
 		expect(await response.json()).toMatchObject({code: 'USERNAME_SELECTION_REQUIRED'});
 	});
 	it('voice disconnect remains available', async () => {
-		const service = subject(VoiceService.prototype, {voiceRoomStore: {getPinnedRoomServer: async () => null}});
+		const service = subject(VoiceService.prototype, {
+			voiceRoomStore: {getPinnedRoomServer: async () => null},
+			liveKitService: {listServers: () => []},
+		});
 		await expect(
 			service.disconnectParticipant({userId: USER, channelId: CHANNEL, connectionId: 'existing'}),
 		).resolves.toBeUndefined();

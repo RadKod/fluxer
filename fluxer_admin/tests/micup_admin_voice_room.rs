@@ -398,6 +398,7 @@ fn instance_config(voice_room: Option<Value>) -> Value {
             "voice_e2ee_scope": "guild_feature_only"
         },
         "self_hosted": false,
+        "distribution_pricing": {"rules": []},
         // Upstream made these sections required in the instance config response.
         "captcha": {
             "provider": "none",

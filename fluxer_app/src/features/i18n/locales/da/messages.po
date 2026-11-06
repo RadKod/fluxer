@@ -27016,7 +27016,7 @@ msgid ""
 " change this on the web or on desktop."
 msgstr ""
 "Giver dig mulighed for at åbne fællesskaber og kanaler markeret 18+ i "
-"Fluxer-appen til iPhone og iPad og vælge \"Vis\" for følsomme medier der. Du"
+"sanalyer-appen til iPhone og iPad og vælge \"Vis\" for følsomme medier der. Du"
 " kan kun ændre dette på nettet eller på computeren."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx

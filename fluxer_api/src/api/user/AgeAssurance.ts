@@ -168,7 +168,7 @@ async function applyAttestedAge(
 			await ctx.services.gateway.dispatchPresence({
 				userId: user.id,
 				event: 'USER_SETTINGS_UPDATE',
-				data: mapUserSettingsToResponse({settings: saved}),
+				data: mapUserSettingsToResponse({settings: saved, user: updated}),
 			});
 		}
 	}

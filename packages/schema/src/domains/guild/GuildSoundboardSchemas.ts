@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {SOUNDBOARD_MAX_DURATION_MS, SOUNDBOARD_MAX_SIZE_BYTES} from '@fluxer/constants/src/SoundboardConstants';
+import {withBase64Binary} from '@fluxer/schema/src/primitives/Base64BinaryFields';
 import {isValidBase64} from '@fluxer/schema/src/primitives/FileValidators';
 import {createStringType, SnowflakeStringType, SnowflakeType} from '@fluxer/schema/src/primitives/SchemaPrimitives';
 import {z} from 'zod';
@@ -9,11 +10,13 @@ const name = createStringType(1, 32);
 const volume = z.number().min(0).max(1);
 export const GuildSoundboardUploadRequest = z.object({
 	name,
-	audio: z
-		.string()
-		.min(1)
-		.max(4 * Math.ceil(SOUNDBOARD_MAX_SIZE_BYTES / 3))
-		.refine(isValidBase64, 'Invalid base64 audio'),
+	audio: withBase64Binary(
+		z
+			.string()
+			.min(1)
+			.max(4 * Math.ceil(SOUNDBOARD_MAX_SIZE_BYTES / 3))
+			.refine(isValidBase64, 'Invalid base64 audio'),
+	),
 	volume: volume.optional(),
 });
 export const GuildSoundboardUpdateRequest = z

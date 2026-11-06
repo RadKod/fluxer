@@ -36,6 +36,7 @@ async function settingsFixture(visibility: 'off' | 'friends' = 'off') {
 		userCacheService: {} as never,
 		guildRepository: {} as never,
 		limitConfigService: {} as never,
+		cacheService: {} as never,
 		gameActivityPolicyService: policy,
 	});
 	return {userId, repository, service, policy, account, dispatch};

@@ -18,6 +18,7 @@ import {setInjectedGatewayService} from '@app/api/middleware/ServiceRegistry';
 import {getGuildRepository} from '@app/api/middleware/ServiceSingletons';
 import {banUser} from '@app/api/moderation/tests/ModerationTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
+import {setLimitOverride} from '@app/api/test/LimitTestUtils';
 import {NoopGatewayService} from '@app/api/test/NoopGatewayService';
 import {createTestWorkerHelpers} from '@app/api/test/SyncTaskWorkerService';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
@@ -173,6 +174,7 @@ describe('Discovery Search and Join', () => {
 			expect([...paged].sort()).toEqual([...guildIds].sort());
 		});
 		test('an approved guild disappears from search after it is marked 18+', async () => {
+			await setLimitOverride(harness, {feature_mature_content_settings: 1});
 			const admin = await createTestAccount(harness);
 			await setUserACLs(harness, admin, ['admin:authenticate', 'discovery:review']);
 			const owner = await createTestAccount(harness);
@@ -383,6 +385,7 @@ describe('Discovery Search and Join', () => {
 				.execute();
 		});
 		test('should not preview a channel in an 18+ category', async () => {
+			await setLimitOverride(harness, {feature_mature_content_settings: 1});
 			const {ownerToken, guildId} = await createListedGuild('Restricted Category Guild');
 			const category = await createBuilder<{id: string}>(harness, ownerToken)
 				.post(`/guilds/${guildId}/channels`)

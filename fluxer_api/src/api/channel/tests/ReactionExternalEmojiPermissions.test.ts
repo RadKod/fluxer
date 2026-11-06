@@ -65,7 +65,10 @@ describe('Reactions without USE_EXTERNAL_EMOJIS', () => {
 		const {owner, members, systemChannel} = await setupTestGuildWithMembers(harness, 1);
 		const [reactor] = members;
 		const message = await sendChannelMessage(harness, owner.token, systemChannel.id, 'react to me');
-		const restore = await setLimitOverride(harness, {feature_global_expressions: 1});
+		const restore = await setLimitOverride(harness, {
+			feature_global_expressions: 1,
+			feature_mature_content_settings: 1,
+		});
 		try {
 			const matureGuild = await createTestGuild(harness, reactor.token);
 			const matureEmoji = await createEmoji(harness, reactor.token, matureGuild.id, {

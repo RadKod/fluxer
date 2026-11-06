@@ -4,8 +4,8 @@ import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import type {AppStoreBoundary, AppStoreBoundaryFactory} from '@electron/main/AppStoreNativeBoundary';
-import {writeFileAtomically} from '@electron/main/AtomicFile';
 import {desktopAppStoreStateFile} from '@electron/main/DesktopAppStoreHealth';
+import {writeFileAtomically} from '@electron/main/ModuleStore';
 import type {
 	DesktopAccountCompareAndSwapRequest,
 	DesktopAccountImportReport,

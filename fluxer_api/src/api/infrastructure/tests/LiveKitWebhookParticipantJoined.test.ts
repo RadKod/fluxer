@@ -5,6 +5,7 @@ import type {ILiveKitService, LiveKitParticipantRef} from '@app/api/infrastructu
 import type {IVoiceRoomStore} from '@app/api/infrastructure/IVoiceRoomStore';
 import {LiveKitWebhookService} from '@app/api/infrastructure/LiveKitWebhookService';
 import type {VoiceTopology} from '@app/api/voice/VoiceTopology';
+import type {VoiceMembershipHooks} from '@app/api/voice_seat/VoiceMembershipHooks';
 import type {WebhookEvent} from 'livekit-server-sdk';
 import {describe, expect, it} from 'vitest';
 
@@ -40,7 +41,12 @@ function createService(confirm: () => Promise<{success: boolean; error?: string}
 			removed.push(params);
 		},
 	} as unknown as ILiveKitService;
-	const service = new LiveKitWebhookService({} as IVoiceRoomStore, gatewayService, liveKitService, topology);
+	const hooks = {
+		onJoined: async () => {},
+		onLeft: async () => {},
+		onRoomFinished: async () => {},
+	} as unknown as typeof VoiceMembershipHooks;
+	const service = new LiveKitWebhookService({} as IVoiceRoomStore, gatewayService, liveKitService, topology, hooks);
 	const join = (metadata: string) =>
 		service.processEvent({
 			apiKey: 'key',

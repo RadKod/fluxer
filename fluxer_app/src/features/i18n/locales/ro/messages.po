@@ -27295,7 +27295,7 @@ msgid ""
 " change this on the web or on desktop."
 msgstr ""
 "Îți permite să deschizi comunitățile și canalele marcate 18+ în aplicația "
-"Fluxer pentru iPhone și iPad și să alegi „Afișare” pentru conținutul media "
+"sanalyer pentru iPhone și iPad și să alegi „Afișare” pentru conținutul media "
 "sensibil de acolo. Poți schimba această opțiune doar pe web sau pe desktop."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx

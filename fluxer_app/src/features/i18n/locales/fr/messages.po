@@ -27421,7 +27421,7 @@ msgid ""
 " change this on the web or on desktop."
 msgstr ""
 "Vous permet d'ouvrir les communautés et les salons marqués 18+ dans "
-"l'application Fluxer pour iPhone et iPad, et d'y choisir « Afficher » pour "
+"l'application sanalyer pour iPhone et iPad, et d'y choisir « Afficher » pour "
 "les médias sensibles. Vous ne pouvez modifier ce réglage que sur le web ou "
 "sur ordinateur."
 

@@ -62,7 +62,7 @@ it("add then remove processed out of order ends with the reaction's real state",
 	await f.interactions.addReaction(f.channelId, f.panel.message_id, f.userId, '🔵');
 	await f.runner.run(f.payload);
 	expect((await f.deps.guildRepository.getMember(f.guildId, f.userId))!.roleIds.has(f.roles[0]!)).toBe(true);
-	await f.interactions.removeReaction(f.channelId, f.panel.message_id, f.userId, '🔵');
+	await f.interactions.removeReaction(f.channelId, f.panel.message_id, f.userId, {name: '🔵'});
 	await f.runner.run({...f.payload, kind: 'remove'});
 	await f.runner.run(f.payload);
 	expect((await f.deps.guildRepository.getMember(f.guildId, f.userId))!.roleIds.size).toBe(0);
@@ -138,7 +138,7 @@ it('add_only never takes the role back', async () => {
 	const f = await panelFixture('add_only');
 	await f.interactions.addReaction(f.channelId, f.panel.message_id, f.userId, '🔵');
 	await f.runner.run(f.payload);
-	await f.interactions.removeReaction(f.channelId, f.panel.message_id, f.userId, '🔵');
+	await f.interactions.removeReaction(f.channelId, f.panel.message_id, f.userId, {name: '🔵'});
 	await f.runner.run({...f.payload, kind: 'remove'});
 	expect(f.revoke).not.toHaveBeenCalled();
 	expect((await f.deps.guildRepository.getMember(f.guildId, f.userId))!.roleIds.has(f.roles[0]!)).toBe(true);
@@ -194,7 +194,7 @@ it('custom emoji IDs must match and reactions use the user bucket', async () => 
 	const check = vi.spyOn(f.interactions, 'checkUserReactionExists');
 	await f.runner.run({...f.payload, emoji_name: 'blue', emoji_id: '555'});
 	expect(f.grant).toHaveBeenCalledOnce();
-	expect(check).toHaveBeenCalledWith(f.channelId, f.panel.message_id, f.userId, 'blue', createEmojiID(555n));
+	expect(check).toHaveBeenCalledWith(f.channelId, f.panel.message_id, f.userId, {id: createEmojiID(555n)});
 	expect(rate).toHaveBeenCalledWith(`micupbot:rr:${f.guildId}:${f.userId}`, 10, 10000, 1);
 	f.grant.mockClear();
 	rate.mockResolvedValue({
@@ -209,7 +209,7 @@ it('custom emoji IDs must match and reactions use the user bucket', async () => 
 	expect(f.grant).not.toHaveBeenCalled();
 });
 
-it('a mismatched custom emoji removal keeps the role while the stored reaction remains', async () => {
+it('a renamed custom emoji is matched by id and keeps the role while its reaction remains', async () => {
 	const f = await panelFixture();
 	await f.repository.putPanel({
 		...f.panel,
@@ -218,13 +218,15 @@ it('a mismatched custom emoji removal keeps the role while the stored reaction r
 	const emojiId = createEmojiID(555n);
 	await f.interactions.addReaction(f.channelId, f.panel.message_id, f.userId, 'old_blue', emojiId);
 	await f.runner.run({...f.payload, emoji_name: 'old_blue', emoji_id: '555'});
-	await f.interactions.removeReaction(f.channelId, f.panel.message_id, f.userId, 'new_blue', emojiId);
-	expect(
-		await f.interactions.checkUserReactionExists(f.channelId, f.panel.message_id, f.userId, 'old_blue', emojiId),
-	).toBe(true);
 	await f.runner.run({...f.payload, kind: 'remove', emoji_name: 'new_blue', emoji_id: '555'});
 	expect(f.revoke).not.toHaveBeenCalled();
 	expect((await f.deps.guildRepository.getMember(f.guildId, f.userId))!.roleIds).toEqual(new Set([f.roles[0]!]));
+	await f.interactions.removeReaction(f.channelId, f.panel.message_id, f.userId, {id: emojiId});
+	expect(await f.interactions.checkUserReactionExists(f.channelId, f.panel.message_id, f.userId, {id: emojiId})).toBe(
+		false,
+	);
+	await f.runner.run({...f.payload, kind: 'remove', emoji_name: 'new_blue', emoji_id: '555'});
+	expect((await f.deps.guildRepository.getMember(f.guildId, f.userId))!.roleIds.has(f.roles[0]!)).toBe(false);
 });
 
 it('disabled jobs and missing or mismatched panels cannot change roles', async () => {

@@ -104,10 +104,11 @@ export class UserAccountSettingsService {
 	async updateSettings(params: {
 		userId: UserID;
 		data: UserSettingsUpdateRequest;
-		ageUser: Pick<User, 'dateOfBirth' | 'attestedAgeFloor'>;
+		// Without it the NSFW gate treats the user as a minor.
+		ageUser?: Pick<User, 'dateOfBirth' | 'attestedAgeFloor'>;
 		flags?: bigint;
 	}): Promise<UserSettings> {
-		const {userId, data, ageUser, flags = 0n} = params;
+		const {userId, data, ageUser = {dateOfBirth: null, attestedAgeFloor: null}, flags = 0n} = params;
 		const currentSettings = await this.deps.userAccountRepository.findSettings(userId, {authoritative: true});
 		if (!currentSettings) {
 			throw new UnknownUserError();

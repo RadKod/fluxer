@@ -26042,7 +26042,7 @@ msgid ""
 "iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
 " change this on the web or on desktop."
 msgstr ""
-"讓您可以在 iPhone 和 iPad 版 Fluxer 應用程式中開啟標示為 18+ "
+"讓您可以在 iPhone 和 iPad 版 sanalyer 應用程式中開啟標示為 18+ "
 "的社群和頻道，並在那裡將敏感媒體設為「顯示」。此設定只能在網頁版或桌面版中變更。"
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx

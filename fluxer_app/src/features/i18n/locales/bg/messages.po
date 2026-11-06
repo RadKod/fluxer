@@ -27138,7 +27138,7 @@ msgid ""
 " change this on the web or on desktop."
 msgstr ""
 "Позволява ти да отваряш общности и канали, маркирани с 18+, в приложението "
-"Fluxer за iPhone и iPad, и да избираш „Показване“ за чувствителна медия там."
+"sanalyer за iPhone и iPad, и да избираш „Показване“ за чувствителна медия там."
 " Можеш да промениш това само в уеб версията или в настолното приложение."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx

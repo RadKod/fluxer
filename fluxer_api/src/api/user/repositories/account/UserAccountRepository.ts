@@ -168,6 +168,8 @@ export class UserAccountRepository {
 		if (!result) return null;
 		const updatedUser = new User(result.updatedData);
 		await this.searchRepo.updateUser(updatedUser);
+		// Micup: the lifted suspension reaches the cached profile view and access side at once.
+		await onUserAccountWritten({previous: result.previousData, updated: result.updatedData});
 		return updatedUser;
 	}
 

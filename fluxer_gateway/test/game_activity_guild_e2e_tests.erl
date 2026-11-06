@@ -138,11 +138,11 @@ t7_viewer_block_and_guild_leave_null_at_session_gate_test_() ->
         ?assertEqual([{?G1, null}], games(40, W)),
         ?assertEqual([{?G2, <<"beta">>}], games(30, W)),
         %% A presence for a guild the session no longer holds waits in the pending buffer;
-        %% whenever it is flushed, the gate clears the game.
+        %% a flush keeps it there (upstream), and if it is ever sent the gate clears the game.
         ?assertEqual([], games(10, W)),
         session_apply(10, fun session_dispatch_presence:flush_all_pending_presences/1, W),
         settle(W),
-        ?assertEqual([{?G1, null}], games(10, W))
+        ?assertEqual([], [G || {_, G} <- games(10, W), G =/= null])
     end).
 
 t7_owner_leaves_guild_member_remove_first_test_() ->

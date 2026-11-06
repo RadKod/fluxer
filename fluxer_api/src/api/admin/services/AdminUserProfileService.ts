@@ -36,12 +36,12 @@ import {
 	reserveUsername,
 	type UsernameReservation,
 } from '@app/api/user/UniqueUsernames';
+import {BELOW_MINIMUM_AGE_TRAIT, DOB_DEFERRED_TRAIT} from '@app/api/user/UserTraits';
 import {
 	USERNAME_CLAIM_ERROR_CODES,
 	type UsernameClaimResult,
 	type UsernameOwnershipService,
 } from '@app/api/user/username/UsernameOwnershipService';
-import {BELOW_MINIMUM_AGE_TRAIT, DOB_DEFERRED_TRAIT} from '@app/api/user/UserTraits';
 import {UsernamePolicyService} from '@app/api/user/username/UsernamePolicyService';
 import {EmailDeliveryStates} from '@fluxer/constants/src/AccountConfigConstants';
 import {AdminACLs} from '@fluxer/constants/src/AdminACLs';

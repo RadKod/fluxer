@@ -26776,7 +26776,7 @@ msgid ""
 "iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
 " change this on the web or on desktop."
 msgstr ""
-"ให้คุณเปิดคอมมูนิตี้และช่องที่ระบุว่าเป็น 18+ ในแอป Fluxer สำหรับ iPhone และ"
+"ให้คุณเปิดคอมมูนิตี้และช่องที่ระบุว่าเป็น 18+ ในแอป sanalyer สำหรับ iPhone และ"
 " iPad และเลือก \"แสดง\" สำหรับสื่อที่ละเอียดอ่อนในแอปนั้นได้ "
 "คุณเปลี่ยนการตั้งค่านี้ได้บนเว็บหรือบนเดสก์ท็อปเท่านั้น"
 

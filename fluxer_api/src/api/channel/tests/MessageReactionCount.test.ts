@@ -136,7 +136,7 @@ describe('Message reaction user counts (K10)', () => {
 		const f = await fixture(30);
 		overrideLimits({max_users_per_message_reaction: 30});
 		await expect(f.add()).rejects.toMatchObject({code: 'MAX_REACTIONS'});
-		expect(await f.interactions.checkUserReactionExists(f.channelId, f.messageId, f.userId, emoji)).toBe(false);
+		expect(await f.interactions.checkUserReactionExists(f.channelId, f.messageId, f.userId, {name: emoji})).toBe(false);
 	});
 
 	it('past 100 with no counter key the request reads at most 100 rows and seeds once in the background', async () => {

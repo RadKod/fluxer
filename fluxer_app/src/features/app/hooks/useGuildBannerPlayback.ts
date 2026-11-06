@@ -94,8 +94,9 @@ export function useGuildBannerPlayback({
 }: GuildBannerPlaybackOptions) {
 	const [hoverRef, isHovering] = useHover();
 	const isAnimated = Boolean(animatedUrl && animatedUrl !== staticUrl);
-	const policyAutoplay = useShouldAnimate({kind: 'gif', isAnimated});
-	const hoverAllowed = useShouldAnimate({kind: 'gif', isAnimated, isHovering: true});
+	// Window focus is handled below by playbackAllowed, which keeps an already played banner.
+	const policyAutoplay = useShouldAnimate({kind: 'gif', isAnimated, ignoreWindowFocus: true});
+	const hoverAllowed = useShouldAnimate({kind: 'gif', isAnimated, isHovering: true, ignoreWindowFocus: true});
 	// Banner entry autoplay is stricter than the shared keep-GIF reduced-motion exception.
 	const autoplay = policyAutoplay && !Accessibility.useReducedMotion;
 	const playbackAllowed = useAnimatedMediaPlaybackAllowed({isAnimated});

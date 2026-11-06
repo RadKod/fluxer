@@ -231,16 +231,11 @@ export class GuildRosterRuntime {
 						state.channelId,
 						messageId,
 						userId,
-						ROSTER_JOIN_EMOJI,
-						undefined,
+						{name: ROSTER_JOIN_EMOJI},
 					)) ||
-					this.deps.channelRepository.messageInteractions.checkUserReactionExists(
-						state.channelId,
-						messageId,
-						userId,
-						`${ROSTER_JOIN_EMOJI}\uFE0F`,
-						undefined,
-					);
+					this.deps.channelRepository.messageInteractions.checkUserReactionExists(state.channelId, messageId, userId, {
+						name: `${ROSTER_JOIN_EMOJI}\uFE0F`,
+					});
 				const reconcile = async (present: boolean) =>
 					present ? await this.roster.join(ref, userId, payload.at) : await this.roster.leave(ref, userId);
 				const before = await exists();

@@ -257,7 +257,7 @@ describe('Öncü badge', () => {
 		await createBuilder(harness, leaving.token)
 			.post('/users/@me/delete')
 			.body({password: leaving.password})
-			.expect(204)
+			.expect(200)
 			.execute();
 
 		await start(epha, [admin]).expect(HTTP_STATUS.NO_CONTENT).execute();

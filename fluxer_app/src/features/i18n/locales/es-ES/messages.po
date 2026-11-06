@@ -27310,7 +27310,7 @@ msgid ""
 " change this on the web or on desktop."
 msgstr ""
 "Te permite abrir comunidades y canales marcados como 18+ en la aplicación de"
-" Fluxer para iPhone y iPad, y elegir «Mostrar» para el contenido multimedia "
+" sanalyer para iPhone y iPad, y elegir «Mostrar» para el contenido multimedia "
 "sensible allí. Solo puedes cambiar esto en la web o en el escritorio."
 
 #: src/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings.tsx

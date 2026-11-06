@@ -27256,7 +27256,7 @@ msgid ""
 " change this on the web or on desktop."
 msgstr ""
 "Ti permette di aprire le community e i canali contrassegnati come 18+ "
-"nell'app Fluxer per iPhone e iPad e di scegliere \"Mostra\" per i contenuti "
+"nell'app sanalyer per iPhone e iPad e di scegliere \"Mostra\" per i contenuti "
 "multimediali sensibili. Puoi modificare questa opzione solo sul web o su "
 "desktop."
 

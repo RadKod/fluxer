@@ -38,8 +38,11 @@ export function createMicupBotReactionRoleRunner(deps: WorkerDependencies) {
 			const panel = await getMicupBotRepository().getPanel(guildId, messageId);
 			if (!panel || panel.channel_id !== channelId) return;
 			const entries = MicupBotReactionRolePanelCreateRequest.shape.entries.parse(JSON.parse(panel.panel_entries));
-			const entry = entries.find(
-				(item) => item.emoji.name === payload.emoji_name && (item.emoji.id?.toString() ?? null) === payload.emoji_id,
+			// A custom emoji is matched by id alone, so a renamed emoji keeps its role.
+			const entry = entries.find((item) =>
+				payload.emoji_id === null
+					? item.emoji.id == null && item.emoji.name === payload.emoji_name
+					: item.emoji.id?.toString() === payload.emoji_id,
 			);
 			if (!entry) return;
 			const [limit, windowMs] = MICUPBOT_RATES.reactionRole;
@@ -54,8 +57,7 @@ export function createMicupBotReactionRoleRunner(deps: WorkerDependencies) {
 					channelId,
 					messageId,
 					userId,
-					payload.emoji_name,
-					payload.emoji_id === null ? undefined : createEmojiID(BigInt(payload.emoji_id)),
+					payload.emoji_id === null ? {name: payload.emoji_name} : {id: createEmojiID(BigInt(payload.emoji_id))},
 				);
 				if (payload.kind === 'add' ? !exists : exists || panel.mode === 'add_only') return;
 				const member = await deps.guildRepository.getMember(guildId, userId);

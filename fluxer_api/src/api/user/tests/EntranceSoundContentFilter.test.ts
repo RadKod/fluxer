@@ -4,6 +4,7 @@ import {createTestAccount, type TestAccount} from '@app/api/auth/tests/AuthTestU
 import {ensureSessionStarted} from '@app/api/message/tests/MessageTestUtils';
 import {phraseBlocklistCache} from '@app/api/middleware/PhraseBlocklistCache';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
+import {setLimitOverride} from '@app/api/test/LimitTestUtils';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
@@ -40,6 +41,8 @@ describe('Entrance sound uploads and the content filter', () => {
 	});
 	beforeEach(async () => {
 		await harness.reset();
+		// sanalyer: entrance sounds are behind a limit flag that defaults to off.
+		await setLimitOverride(harness, {feature_voice_entrance_sounds: 1});
 		account = await createTestAccount(harness);
 		await ensureSessionStarted(harness, account.token);
 		phraseBlocklistCache.add(BANNED);

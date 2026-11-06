@@ -20,6 +20,8 @@ export interface UseShouldAnimateOptions {
 	isAnimated?: boolean;
 	isHovering?: boolean;
 	isFocused?: boolean;
+	// Micup: a caller that gates playback on window focus itself (the guild banner keeps its consumed frame).
+	ignoreWindowFocus?: boolean;
 }
 
 function isKeptUnderReducedMotion(kind: ShouldAnimateKind): boolean {
@@ -84,6 +86,7 @@ export function useShouldAnimate({
 	isAnimated = true,
 	isHovering = false,
 	isFocused = false,
+	ignoreWindowFocus = false,
 }: UseShouldAnimateOptions): boolean {
 	const saveData = useSaveData();
 	const windowActive = useAnimatedMediaPlaybackAllowed({isAnimated});
@@ -95,6 +98,6 @@ export function useShouldAnimate({
 		keptUnderReducedMotion: isKeptUnderReducedMotion(kind),
 		isInteracting: isHovering || isFocused,
 		saveData,
-		windowActive,
+		windowActive: ignoreWindowFocus || windowActive,
 	});
 }

@@ -27205,7 +27205,7 @@ msgid ""
 "iPhone and iPad, and choose \"Show\" for sensitive media there. You can only"
 " change this on the web or on desktop."
 msgstr ""
-"Omogućuje vam da u aplikaciji Fluxer za iPhone i iPad otvarate zajednice i "
+"Omogućuje vam da u aplikaciji sanalyer za iPhone i iPad otvarate zajednice i "
 "kanale označene kao 18+ te ondje za osjetljivi medijski sadržaj odaberete "
 "„Prikaži“. Ovo možete promijeniti samo na webu ili na računalu."
 
@@ -57710,7 +57710,7 @@ msgid ""
 "{domain} runs a newer version of sanalyer than this app. Update sanalyer, "
 "then try again."
 msgstr ""
-"{domain} pokreće noviju verziju Micupa od ove aplikacije. Ažurirajte "
+"{domain} pokreće noviju verziju sanalyera od ove aplikacije. Ažurirajte "
 "sanalyer, a zatim pokušajte ponovno."
 
 #. Tooltip and accessible label of the button in the user profile card that
@@ -61490,7 +61490,7 @@ msgid ""
 "sanalyer."
 msgstr ""
 "Označena imena se više ne koriste. Odaberite jedinstveno korisničko ime za "
-"nastavak korištenja Micupa."
+"nastavak korištenja sanalyera."
 
 #: src/features/user/components/modals/UsernamePickerModal.tsx
 msgid "Tags are gone 🎉"
