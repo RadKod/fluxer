@@ -827,6 +827,29 @@ jobs:
             key="desktop/${f#payload_tree/desktop/}"
             aws s3 cp "$f" "s3://$R2_BUCKET/$key" --endpoint-url "$R2_ENDPOINT" --no-progress --content-type application/json --cache-control no-store
           done
+          # Feed'ler yalnız en yeni sürümü gösteriyor; her platform klasöründe en yeni iki sürümün dosyaları kalır (biri elle
+          # geri dönüş için), daha eskiler silinir. Bu yayının sürümü her zaman tutulur.
+          current="$(find payload_tree/desktop -name latest.json -type f -exec python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' {} \; | head -1)"
+          [[ -n "$current" ]] || { echo "::error::yayın sürümü okunamadı, temizlik atlandı"; exit 1; }
+          aws s3api list-objects-v2 --bucket "$R2_BUCKET" --prefix desktop/ --endpoint-url "$R2_ENDPOINT" --query 'Contents[].Key' --output text \
+            | tr '\t' '\n' | KEEP=2 CURRENT="$current" python3 -c '
+          import os, re, sys
+          from collections import defaultdict
+          rx = re.compile(r"(?<![0-9])(20[0-9]{2}\.[0-9]{4}\.[0-9]+)(?![0-9])")
+          by_dir = defaultdict(lambda: defaultdict(list))
+          for key in sys.stdin.read().split():
+              m = rx.search(key.rsplit("/", 1)[-1])
+              if m: by_dir[key.rsplit("/", 1)[0]][m.group(1)].append(key)
+          for versions in by_dir.values():
+              order = sorted(versions, key=lambda v: tuple(int(x) for x in v.split(".")), reverse=True)
+              keep = set(order[: int(os.environ["KEEP"])]) | {os.environ["CURRENT"]}
+              for v in order:
+                  if v not in keep: print("\n".join(versions[v]))
+          ' > old-keys.txt
+          echo "silinecek eski dosya: $(grep -c . old-keys.txt || true)"
+          while read -r key; do
+            [[ -n "$key" ]] && aws s3 rm "s3://$R2_BUCKET/$key" --endpoint-url "$R2_ENDPOINT" --only-show-errors
+          done < old-keys.txt
       - name: Prepare GitHub release assets
         if: ${{ inputs.publish_release }}
         run: >-
