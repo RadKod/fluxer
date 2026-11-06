@@ -42396,7 +42396,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Mostrar texto en Fluxer Sans, la fuente predeterminada anterior, en lugar de"
+"Mostrar texto en sanalyer Sans, la fuente predeterminada anterior, en lugar de"
 " la fuente del sistema de Windows"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -45057,7 +45057,7 @@ msgstr "Cambiar de cuenta"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Volver a Fluxer Sans"
+msgstr "Volver a sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45784,7 +45784,7 @@ msgid ""
 "Text on Windows now uses the system font. You can switch back to Fluxer Sans"
 " in settings."
 msgstr ""
-"El texto en Windows ahora usa la fuente del sistema. Puedes volver a Fluxer "
+"El texto en Windows ahora usa la fuente del sistema. Puedes volver a sanalyer "
 "Sans en la configuración."
 
 #. Settings search synonym. Used to match this term when the user types it in
@@ -46236,8 +46236,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Las aplicaciones de Fluxer para iOS y Android reciben las notificaciones a "
-"través de un relé que gestiona Fluxer y que las pasa a Apple y Google. Para "
+"Las aplicaciones de sanalyer para iOS y Android reciben las notificaciones a "
+"través de un relé que gestiona sanalyer y que las pasa a Apple y Google. Para "
 "usarlo, aceptas el aviso de privacidad del relé de notificaciones."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -51721,7 +51721,7 @@ msgstr "Usa filtros o ingresa palabras clave para encontrar mensajes"
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Usar Fluxer Sans en Windows"
+msgstr "Usar sanalyer Sans en Windows"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

@@ -123,7 +123,7 @@ A response whose bytes come from a transformation ignores `Range`, returns the c
 | Vary | string | `Accept-Encoding`, or `Accept-Encoding, Origin` under `enforce` |
 | X-Content-Type-Options | string | The literal `nosniff` |
 | X-Robots-Tag? | string | A no-indexing policy in `mp` and `upload` mode |
-| X-Fluxer-Version | string | The Fluxer build, or `dev` when none is configured |
+| X-Fluxer-Version | string | The sanalyer build, or `dev` when none is configured |
 
 <sup>1</sup> Fixed at `text/css; charset=utf-8` on the theme route, and absent on a 416.
 

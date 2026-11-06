@@ -19,7 +19,7 @@ Which rule to edit depends on the instance's [premium mode](/admin-api/instance/
 | everyone | `default` | `default` |
 | mirror | `default` for people without premium and `premium` for people with it | `premium` or `default` |
 
-Bots always count as having premium, and when a rule with a filter matches, Fluxer uses the higher of its value and the value from `default`. Raising `max_bot_attachment_file_size` in either rule raises it for every bot.
+Bots always count as having premium, and when a rule with a filter matches, sanalyer uses the higher of its value and the value from `default`. Raising `max_bot_attachment_file_size` in either rule raises it for every bot.
 
 To raise the bot limit for one bot, give the bot a trait with [Set user traits](/admin-api/users/#set-user-traits) and add a rule for that trait that sets `max_bot_attachment_file_size`. To go above `max_attachment_file_size`, which is 500 MiB for bots by default, set `max_attachment_file_size` in the same rule too. A rule for a trait can raise a limit above the value in `default` but can't lower it.
 
@@ -33,4 +33,4 @@ Bots and other clients can also attach files in a multipart message. The API str
 
 `FLUXER_API_MAX_CONCURRENT_FORM_UPLOADS` sets how many files the API streams to storage at once, which is 16 by default. Plan for up to about 25 MiB of memory for each, so the default adds up to about 400 MiB to what the API uses. When all of them are busy, the next file waits up to 10 seconds and then fails with 503 and a `Retry-After` header.
 
-Your proxy's body size limit also applies to multipart messages. The Helm chart sets `nginx.ingress.kubernetes.io/proxy-body-size` to `512m` on its ingress, and the [nginx example](/operator/reverse-proxy/) uses `client_max_body_size 512m`. Uploading first sends each part in its own request, and these limits apply to one part at a time.
+Your proxy's body size limit also applies to multipart messages. The Helm chart sets `nginx.ingress.kubernetes.io/proxy-body-size` to `512m` on its ingress, and the nginx example uses `client_max_body_size 512m`. Uploading first sends each part in its own request, and these limits apply to one part at a time.

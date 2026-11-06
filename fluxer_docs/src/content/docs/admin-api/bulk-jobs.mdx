@@ -102,7 +102,7 @@ Queues one bulk operation and returns a [bulk job creation](#bulk-job-creation-o
 
 ### Side effects
 
-Fluxer works through the IDs in order. A failed ID doesn't stop the job, and the final `progress_message` gives the successful and failed counts. Cancelling stops the job between IDs and keeps the changes already made.
+sanalyer works through the IDs in order. A failed ID doesn't stop the job, and the final `progress_message` gives the successful and failed counts. Cancelling stops the job between IDs and keeps the changes already made.
 
 Queueing writes a `queue_bulk_job` audit entry, and each job writes one summary entry when it ends.
 

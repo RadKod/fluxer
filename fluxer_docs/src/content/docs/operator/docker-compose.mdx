@@ -1,7 +1,7 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
-title: Run Fluxer with Docker Compose
-description: Run Fluxer from plain compose files on a platform that can't run rexctl.
+title: Run sanalyer with Docker Compose
+description: Run sanalyer from plain compose files on a platform that can't run rexctl.
 sidebar:
   label: Docker Compose
 ---
@@ -13,12 +13,12 @@ Use this page if your platform runs compose stacks for you, such as Portainer, T
 Every release comes with a compose bundle. Download the latest one into an empty folder and unpack it.
 
 ```sh
-curl -fsSL https://fluxer.dev/compose/latest -o fluxer-compose.tar.gz
+curl -fsSL https://sanalyer.com/docs/compose/latest -o fluxer-compose.tar.gz
 tar -xzf fluxer-compose.tar.gz
 cp .env.example .env
 ```
 
-The bundle has `docker-compose.yml` with every Fluxer image pinned to the release, the `Caddyfile`, a few optional compose files and `.env.example`. The bundle for each version is also on its release on [GitHub](https://github.com/fluxerapp/fluxer/releases).
+The bundle has `docker-compose.yml` with every sanalyer image pinned to the release, the `Caddyfile`, a few optional compose files and `.env.example`. The bundle for each version is also on its release on [GitHub](https://github.com/fluxerapp/fluxer/releases).
 
 ## Fill in .env
 
@@ -40,19 +40,19 @@ sed -i "s|^FLUXER_VAPID_PRIVATE_KEY=.*|FLUXER_VAPID_PRIVATE_KEY=$(openssl ec -in
 rm vapid.pem
 ```
 
-You can put [every other setting](/operator/environment/) in `.env` too.
+You can put every other setting in `.env` too.
 
-Keep a copy of `.env` somewhere safe. The database, search and push keys can't change once Fluxer has started. Your data depends on them. If your platform has its own place for environment values, paste the lines from `.env` there.
+Keep a copy of `.env` somewhere safe. The database, search and push keys can't change once sanalyer has started. Your data depends on them. If your platform has its own place for environment values, paste the lines from `.env` there.
 
 ## Start it
 
-Open TCP ports 80, 443 and 7881 and UDP ports 443 and 7882, the same as for a [rexctl install](/operator/). Then start Fluxer.
+Open TCP ports 80, 443 and 7881 and UDP ports 443 and 7882, the same as for a [rexctl install](/operator/). Then start sanalyer.
 
 ```sh
 docker compose up -d
 ```
 
-Fluxer serves your domain over HTTPS and gets its own certificate. If another web server already uses ports 80 and 443, add these two lines to `.env` before you start, and point your proxy at `127.0.0.1:8080` as described in [Put Fluxer behind your own proxy](/operator/reverse-proxy/).
+sanalyer serves your domain over HTTPS and gets its own certificate. If another web server already uses ports 80 and 443, add these two lines to `.env` before you start, and point your proxy at `127.0.0.1:8080` as described in Put sanalyer behind your own proxy.
 
 ```sh
 COMPOSE_FILE=docker-compose.yml:docker-compose.proxy.yml

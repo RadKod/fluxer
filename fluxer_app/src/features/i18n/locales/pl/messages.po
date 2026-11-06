@@ -42393,7 +42393,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Wyświetlaj tekst czcionką Fluxer Sans, poprzednią domyślną czcionką, zamiast"
+"Wyświetlaj tekst czcionką sanalyer Sans, poprzednią domyślną czcionką, zamiast"
 " czcionki systemowej Windows"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -45048,7 +45048,7 @@ msgstr "Przełącz konta"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Wróć do Fluxer Sans"
+msgstr "Wróć do sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45774,7 +45774,7 @@ msgid ""
 " in settings."
 msgstr ""
 "Tekst w systemie Windows używa teraz czcionki systemowej. Możesz wrócić do "
-"Fluxer Sans w ustawieniach."
+"sanalyer Sans w ustawieniach."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -46225,8 +46225,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Aplikacje Fluxer na iOS i Androida dostają powiadomienia przez przekaźnik "
-"prowadzony przez Fluxer, który przekazuje je do Apple i Google. Korzystając "
+"Aplikacje sanalyer na iOS i Androida dostają powiadomienia przez przekaźnik "
+"prowadzony przez sanalyer, który przekazuje je do Apple i Google. Korzystając "
 "z niego, akceptujesz informację o prywatności przekaźnika powiadomień."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -51708,7 +51708,7 @@ msgstr "Użyj filtrów lub wpisz słowa kluczowe, aby znaleźć wiadomości"
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Używaj czcionki Fluxer Sans w systemie Windows"
+msgstr "Używaj czcionki sanalyer Sans w systemie Windows"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

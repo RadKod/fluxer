@@ -46,7 +46,7 @@ The body of [Create guild sticker](#create-guild-sticker) and each entry of [Bul
 | tags? | array[string] | The sticker tags (at most 10, 1-30 characters each) |
 | image | base64 string | The image data, up to the [`sticker_max_size`](/http-api/instance/#limit-keys) limit (524288 bytes by default) |
 
-Fluxer accepts PNG, JPEG, APNG, GIF, WebP, AVIF and SVG as base64 or a data URL, but not animated AVIF. A larger image returns `IMAGE_SIZE_EXCEEDS_LIMIT`, and an image in another format or one Fluxer can't decode returns `INVALID_IMAGE_FORMAT`.
+sanalyer accepts PNG, JPEG, APNG, GIF, WebP, AVIF and SVG as base64 or a data URL, but not animated AVIF. A larger image returns `IMAGE_SIZE_EXCEEDS_LIMIT`, and an image in another format or one sanalyer can't decode returns `INVALID_IMAGE_FORMAT`.
 
 ## Sticker bulk create response object
 
@@ -88,7 +88,7 @@ The rate limit is 60 requests per 10 seconds, on the `guild:sticker:list::guild_
 
 <RouteHeader method="POST" path="/v1/guilds/{guild_id}/stickers" bot auditReason />
 
-Creates a sticker and returns it. You need [CREATE_EXPRESSIONS](/http-api/permissions/). Fluxer sends a [Guild Stickers Update](/gateway/events/#guild-stickers-update) event.
+Creates a sticker and returns it. You need [CREATE_EXPRESSIONS](/http-api/permissions/). sanalyer sends a [Guild Stickers Update](/gateway/events/#guild-stickers-update) event.
 
 A guild can have 500 stickers by default, set by the `max_guild_stickers` [limit key](/http-api/instance/#limit-keys), and [UNLIMITED_STICKERS](/http-api/guilds/#guild-features) raises it to 999999.
 
@@ -109,9 +109,9 @@ The rate limit is 10 requests per 30 seconds, on the `guild:sticker:create::guil
 
 <RouteHeader method="POST" path="/v1/guilds/{guild_id}/stickers/bulk" bot auditReason />
 
-Creates several stickers in one request and returns a [sticker bulk create response](#sticker-bulk-create-response-object) object. You need [CREATE_EXPRESSIONS](/http-api/permissions/). Fluxer sends one [Guild Stickers Update](/gateway/events/#guild-stickers-update) event when at least one sticker was created.
+Creates several stickers in one request and returns a [sticker bulk create response](#sticker-bulk-create-response-object) object. You need [CREATE_EXPRESSIONS](/http-api/permissions/). sanalyer sends one [Guild Stickers Update](/gateway/events/#guild-stickers-update) event when at least one sticker was created.
 
-Fluxer creates the items in order, and each one succeeds or fails on its own. The request returns 200 even when every item fails, and `failed` lists the items that weren't created.
+sanalyer creates the items in order, and each one succeeds or fails on its own. The request returns 200 even when every item fails, and `failed` lists the items that weren't created.
 
 ### JSON body
 
@@ -132,7 +132,7 @@ The rate limit is 6 requests per minute, on the `guild:sticker:bulk_create::guil
 
 <RouteHeader method="POST" path="/v1/guilds/{guild_id}/stickers/clone" bot auditReason />
 
-Copies a sticker from any guild into this guild and returns it. You need [CREATE_EXPRESSIONS](/http-api/permissions/) in this guild, and you don't need to be a member of the source guild. The source guild needs [CLONE_STICKER_ENABLED](/http-api/guilds/#guild-features). Fluxer sends a [Guild Stickers Update](/gateway/events/#guild-stickers-update) event in the target guild.
+Copies a sticker from any guild into this guild and returns it. You need [CREATE_EXPRESSIONS](/http-api/permissions/) in this guild, and you don't need to be a member of the source guild. The source guild needs [CLONE_STICKER_ENABLED](/http-api/guilds/#guild-features). sanalyer sends a [Guild Stickers Update](/gateway/events/#guild-stickers-update) event in the target guild.
 
 ### JSON body
 
@@ -155,7 +155,7 @@ The rate limit is 10 requests per 30 seconds, on the `guild:sticker:clone::guild
 
 <RouteHeader method="PATCH" path="/v1/guilds/{guild_id}/stickers/{sticker_id}" bot auditReason />
 
-Updates the name, description and tags of a sticker and returns it. To replace the image, create a new sticker. The uploader needs [CREATE_EXPRESSIONS](/http-api/permissions/) and anyone else needs [MANAGE_EXPRESSIONS](/http-api/permissions/). Fluxer sends a [Guild Stickers Update](/gateway/events/#guild-stickers-update) event.
+Updates the name, description and tags of a sticker and returns it. To replace the image, create a new sticker. The uploader needs [CREATE_EXPRESSIONS](/http-api/permissions/) and anyone else needs [MANAGE_EXPRESSIONS](/http-api/permissions/). sanalyer sends a [Guild Stickers Update](/gateway/events/#guild-stickers-update) event.
 
 :::caution[Every request writes `description` and `tags`]
 Omitting `description` or `tags` clears the stored value. Send the current value of both when you change only one field.
@@ -182,10 +182,10 @@ The rate limit is 20 requests per 10 seconds, on the `guild:sticker:update::guil
 
 <RouteHeader method="DELETE" path="/v1/guilds/{guild_id}/stickers/{sticker_id}" bot auditReason />
 
-Deletes a sticker and returns 204. The uploader needs [CREATE_EXPRESSIONS](/http-api/permissions/) and anyone else needs [MANAGE_EXPRESSIONS](/http-api/permissions/). Fluxer sends a [Guild Stickers Update](/gateway/events/#guild-stickers-update) event.
+Deletes a sticker and returns 204. The uploader needs [CREATE_EXPRESSIONS](/http-api/permissions/) and anyone else needs [MANAGE_EXPRESSIONS](/http-api/permissions/). sanalyer sends a [Guild Stickers Update](/gateway/events/#guild-stickers-update) event.
 
 :::caution[Purging the image cannot be undone]
-Without `purge`, the image stays available through the [Media Proxy](/media-proxy/routes/#image-asset-contract). With `purge`, Fluxer schedules the image for permanent deletion, and the guild needs [EXPRESSION_PURGE_ALLOWED](/http-api/guilds/#guild-features).
+Without `purge`, the image stays available through the [Media Proxy](/media-proxy/routes/#image-asset-contract). With `purge`, sanalyer schedules the image for permanent deletion, and the guild needs [EXPRESSION_PURGE_ALLOWED](/http-api/guilds/#guild-features).
 :::
 
 ### Query parameters

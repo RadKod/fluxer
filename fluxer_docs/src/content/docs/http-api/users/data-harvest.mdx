@@ -6,7 +6,7 @@ description: Requesting a ZIP archive of the account's data and downloading it.
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A data harvest is a ZIP archive of the current account's data. Fluxer builds it in the background while you poll its status, then you download it.
+A data harvest is a ZIP archive of the current account's data. sanalyer builds it in the background while you poll its status, then you download it.
 
 Every route except [Download data harvest archive](#download-data-harvest-archive) needs a user token. Bot and OAuth2 tokens get 403.
 
@@ -23,7 +23,7 @@ The archive has these files.
 - `account/security.json`
 - the avatar and banner under `assets/user/`
 
-Each message lists its attachments with a [data package URL](/http-api/messages/#data-package-attachment-urls), and the archive doesn't include the files. When the harvest completes, Fluxer emails a download link if the account has an email address and the instance sends email.
+Each message lists its attachments with a [data package URL](/http-api/messages/#data-package-attachment-urls), and the archive doesn't include the files. When the harvest completes, sanalyer emails a download link if the account has an email address and the instance sends email.
 
 ## Harvest status values
 
@@ -34,7 +34,7 @@ Each message lists its attachments with a [data package URL](/http-api/messages/
 | completed | The archive is ready for download |
 | failed | The latest attempt failed |
 
-When an attempt fails, Fluxer retries it a limited number of times. The retry clears `failed_at` and `error_message`, resets progress to 0 and reports `processing`. After the last attempt fails, `progress_step` becomes `Failed` and the status stays `failed`.
+When an attempt fails, sanalyer retries it a limited number of times. The retry clears `failed_at` and `error_message`, resets progress to 0 and reports `processing`. After the last attempt fails, `progress_step` becomes `Failed` and the status stays `failed`.
 
 ## Harvest creation object
 
@@ -76,7 +76,7 @@ When an attempt fails, Fluxer retries it a limited number of times. The retry cl
 | Collecting user metadata | Account data is being collected, with progress 60 |
 | Downloading attachments and creating archive | The ZIP archive is being written, with progress 65 |
 | Completed | The archive is ready, with progress 100 |
-| Failed | The last attempt failed and Fluxer stopped retrying |
+| Failed | The last attempt failed and sanalyer stopped retrying |
 
 ## Harvest download object
 

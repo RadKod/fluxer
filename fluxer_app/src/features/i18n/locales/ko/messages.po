@@ -40916,7 +40916,7 @@ msgstr "시스템 트레이 아이콘 표시"
 msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
-msgstr "Windows 시스템 글꼴 대신 이전 기본 글꼴인 Fluxer Sans로 텍스트 표시"
+msgstr "Windows 시스템 글꼴 대신 이전 기본 글꼴인 sanalyer Sans로 텍스트 표시"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
 #. and Linux.
@@ -43481,7 +43481,7 @@ msgstr "계정 전환"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Fluxer Sans로 돌아가기"
+msgstr "sanalyer Sans로 돌아가기"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -44180,7 +44180,7 @@ msgstr "투명도가 활성화되면 ClearType 대신 회색조 안티앨리어�
 msgid ""
 "Text on Windows now uses the system font. You can switch back to Fluxer Sans"
 " in settings."
-msgstr "이제 Windows의 텍스트가 시스템 글꼴을 사용합니다. 설정에서 Fluxer Sans로 다시 전환할 수 있습니다."
+msgstr "이제 Windows의 텍스트가 시스템 글꼴을 사용합니다. 설정에서 sanalyer Sans로 다시 전환할 수 있습니다."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -44585,7 +44585,7 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"iOS 및 Android용 Fluxer 앱은 Fluxer가 운영하는 푸시 릴레이를 통해 알림을 받으며, 릴레이가 이를 Apple과 "
+"iOS 및 Android용 sanalyer 앱은 sanalyer가 운영하는 푸시 릴레이를 통해 알림을 받으며, 릴레이가 이를 Apple과 "
 "Google에 전달합니다. 사용하려면 푸시 릴레이 개인정보 고지에 동의해야 합니다."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -49762,7 +49762,7 @@ msgstr "필터를 사용하거나 키워드를 입력하여 메시지를 찾아�
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Windows에서 Fluxer Sans 사용"
+msgstr "Windows에서 sanalyer Sans 사용"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

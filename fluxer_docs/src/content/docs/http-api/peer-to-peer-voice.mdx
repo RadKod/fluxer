@@ -6,7 +6,7 @@ description: Reporting whether each connection in a peer-to-peer voice call conn
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-In a [peer-to-peer voice](/gateway/events/#peer-to-peer-voice) call, Fluxer gives clients STUN servers only and never relays media. Clients send a report for each peer connection once it connects or fails. Fluxer stores the reports, and no API returns them.
+In a [peer-to-peer voice](/gateway/events/#peer-to-peer-voice) call, sanalyer gives clients STUN servers only and never relays media. Clients send a report for each peer connection once it connects or fails. sanalyer stores the reports, and no API returns them.
 
 ## Connection report object
 
@@ -48,7 +48,7 @@ The outcome of one peer connection, as the reporting client saw it.
 
 <RouteHeader method="POST" path="/v1/voice/p2p/connection-reports" />
 
-Records [connection reports](#connection-report-object). Fluxer keeps each report for 180 days, together with your user ID, your IP address and its country, and your session's platform and operating system. When peer-to-peer voice is off on the instance, the request returns 204 and stores nothing.
+Records [connection reports](#connection-report-object). sanalyer keeps each report for 180 days, together with your user ID, your IP address and its country, and your session's platform and operating system. When peer-to-peer voice is off on the instance, the request returns 204 and stores nothing.
 
 ### JSON body
 

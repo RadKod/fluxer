@@ -6,7 +6,7 @@ description: Manage voice regions, voice servers and who can use them.
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A voice region is a group of LiveKit servers, and Fluxer places each new [voice](/voice/) session in a region and then on a server inside it. Each API node reloads the configuration shortly after a write, and a write never moves or disconnects a session that is already connected.
+A voice region is a group of LiveKit servers, and sanalyer places each new [voice](/voice/) session in a region and then on a server inside it. Each API node reloads the configuration shortly after a write, and a write never moves or disconnects a session that is already connected.
 
 ## Placement eligibility
 
@@ -237,7 +237,7 @@ The rate limit is 100 requests per minute, on the `admin:guild:modify` bucket.
 
 <RouteHeader method="DELETE" path="/v1/admin/voice/regions/{region_id}" auditReason />
 
-Deletes a region and every server in it. Sessions on those servers stay connected, but Fluxer can't mute or disconnect them. Requires `voice:region:delete`.
+Deletes a region and every server in it. Sessions on those servers stay connected, but sanalyer can't mute or disconnect them. Requires `voice:region:delete`.
 
 :::danger[Keep a copy of the server credentials]
 The LiveKit API keys and secrets are deleted with the servers, and no read returns them.
@@ -393,7 +393,7 @@ The rate limit is 100 requests per minute, on the `admin:guild:modify` bucket.
 
 <RouteHeader method="DELETE" path="/v1/admin/voice/regions/{region_id}/servers/{server_id}" auditReason />
 
-Deletes a server and its stored credentials. Sessions on it stay connected, but Fluxer can't mute or disconnect them. Requires `voice:server:delete`.
+Deletes a server and its stored credentials. Sessions on it stay connected, but sanalyer can't mute or disconnect them. Requires `voice:server:delete`.
 
 ### Response body
 
@@ -414,7 +414,7 @@ The rate limit is 100 requests per minute, on the `admin:guild:modify` bucket.
 
 <RouteHeader method="POST" path="/v1/admin/voice/regions/{region_id}/servers/{server_id}/test-token" auditReason />
 
-Signs a LiveKit token for a hidden, audio only participant in a throwaway room whose name starts with `rexctl-test-`. The token works for 60 seconds. `rexctl voice test` uses it to test a server from outside its network, and Fluxer ignores webhooks for these rooms. Requires `voice:server:update`.
+Signs a LiveKit token for a hidden, audio only participant in a throwaway room whose name starts with `rexctl-test-`. The token works for 60 seconds. `rexctl voice test` uses it to test a server from outside its network, and sanalyer ignores webhooks for these rooms. Requires `voice:server:update`.
 
 ### Response body
 
@@ -435,7 +435,7 @@ The rate limit is 100 requests per minute, on the `admin:guild:modify` bucket.
 
 ## Voice join tokens
 
-A join token lets one machine register one voice server with [Join a voice server](#join-a-voice-server). It looks like `fvj_` followed by its ID, an underscore and a 43 character secret. Fluxer stores only a hash of the secret. A token works once, for 60 seconds to 24 hours, and the list keeps it for 7 days after it expires. Whoever runs the server can record the calls placed on it. A token trusts that machine with calls, and it gives no other access.
+A join token lets one machine register one voice server with [Join a voice server](#join-a-voice-server). It looks like `fvj_` followed by its ID, an underscore and a 43 character secret. sanalyer stores only a hash of the secret. A token works once, for 60 seconds to 24 hours, and the list keeps it for 7 days after it expires. Whoever runs the server can record the calls placed on it. A token trusts that machine with calls, and it gives no other access.
 
 ### Voice join token object
 
@@ -448,7 +448,7 @@ A join token lets one machine register one voice server with [Join a voice serve
 | used_at | ?ISO8601 timestamp | When a server joined with it |
 | used_server_id | ?string | The server that joined with it |
 | revoked_at | ?ISO8601 timestamp | When it was revoked |
-| region_id | ?string | The region preset, or null to let Fluxer pick |
+| region_id | ?string | The region preset, or null to let sanalyer pick |
 | region_name | ?string | The name of the new region the join creates, or null |
 | server_id | ?string | The server ID preset, or null |
 | hostname | ?string | The hostname the endpoint must use, or null |
@@ -540,9 +540,9 @@ These routes are for the voice machine, not for admins. They take `Authorization
 
 <RouteHeader method="POST" path="/v1/voice/join/preview" unauthenticated />
 
-Shows what a join would choose, without using the token. The JSON body has `public_ipv4`, `public_ipv6`, `region_id`, `cpu_count`, `memory_bytes` and `rexctl_version`, all optional. Fluxer looks up one address in GeoIP, the first of `public_ipv4`, `public_ipv6` and the address the request comes from. The response has the suggested `server_id`, `server_id_pinned` set to true when the token sets the server ID, the `region` with its `id`, `name`, `distance_km`, whether it's `new` and its `source`, the `latitude` and `longitude` from GeoIP rounded to 0.1 degrees, the `hostname` preset, a `suggested_hostname`, the `soft_connection_limit` preset, the `webhook_url`, the `api_code_version`, the `release` of the API, `expires_at` and the instance's `turn_servers`.
+Shows what a join would choose, without using the token. The JSON body has `public_ipv4`, `public_ipv6`, `region_id`, `cpu_count`, `memory_bytes` and `rexctl_version`, all optional. sanalyer looks up one address in GeoIP, the first of `public_ipv4`, `public_ipv6` and the address the request comes from. The response has the suggested `server_id`, `server_id_pinned` set to true when the token sets the server ID, the `region` with its `id`, `name`, `distance_km`, whether it's `new` and its `source`, the `latitude` and `longitude` from GeoIP rounded to 0.1 degrees, the `hostname` preset, a `suggested_hostname`, the `soft_connection_limit` preset, the `webhook_url`, the `api_code_version`, the `release` of the API, `expires_at` and the instance's `turn_servers`.
 
-Fluxer picks the token's region first, then an existing region in `region_id`, then the existing region nearest to the machine when the instance has a GeoIP database, and the default region otherwise. It never creates a region unless the token has a new one. The `source` says which of these it used, as `token`, `requested`, `nearest` or `default`.
+sanalyer picks the token's region first, then an existing region in `region_id`, then the existing region nearest to the machine when the instance has a GeoIP database, and the default region otherwise. It never creates a region unless the token has a new one. The `source` says which of these it used, as `token`, `requested`, `nearest` or `default`.
 
 <RouteHeader method="POST" path="/v1/voice/join" unauthenticated />
 
@@ -563,7 +563,7 @@ Registers the server and uses the token.
 
 <sup>1</sup> Send both coordinates or neither
 
-Fluxer resolves the endpoint's host, refuses it when any address is private unless `FLUXER_VOICE_JOIN_ALLOW_PRIVATE_ENDPOINTS` is true, and connects to the addresses it checked, one after another until one responds. `GET` on the endpoint's path must return `OK` within 10 seconds with a certificate Fluxer trusts, and the room service must accept the key and secret. Then Fluxer saves the server, active and not draining, and the token stops working. The response has `server_id`, `region_id`, `endpoint`, `webhook_url`, `node_url` and `turn_servers`.
+sanalyer resolves the endpoint's host, refuses it when any address is private unless `FLUXER_VOICE_JOIN_ALLOW_PRIVATE_ENDPOINTS` is true, and connects to the addresses it checked, one after another until one responds. `GET` on the endpoint's path must return `OK` within 10 seconds with a certificate sanalyer trusts, and the room service must accept the key and secret. Then sanalyer saves the server, active and not draining, and the token stops working. The response has `server_id`, `region_id`, `endpoint`, `webhook_url`, `node_url` and `turn_servers`.
 
 `turn_servers` is the list in `FLUXER_LIVEKIT_TURN_SERVERS` on the instance, as objects with `host`, `port`, `protocol` and either `username` and `credential` or `secret` and `ttl`. It's empty when the setting is. rexctl puts it in the LiveKit configuration of the server.
 
@@ -587,10 +587,10 @@ A server that joined manages its own row with `GET`, `PATCH` and `DELETE` on `/v
 - `iss` set to the server's API key.
 - `aud` set to `fluxer-voice-node`.
 - `method` and `path` of the request, with `path` set to `/voice/node`.
-- `exp` in the future and at most 5 minutes ahead, and `iat` when present. Fluxer allows 60 seconds of clock difference either way.
+- `exp` in the future and at most 5 minutes ahead, and `iat` when present. sanalyer allows 60 seconds of clock difference either way.
 - `sha256` set to the base64 SHA-256 of the body, or an empty string for `GET` and `DELETE`.
 
-Fluxer refuses tokens with a `video` grant. LiveKit participant tokens and webhooks signed with the same secret don't work here.
+sanalyer refuses tokens with a `video` grant. LiveKit participant tokens and webhooks signed with the same secret don't work here.
 
 <RouteHeader method="GET" path="/v1/voice/node" unauthenticated />
 
@@ -598,7 +598,7 @@ Returns the server's `region_id`, `server_id`, `endpoint`, `latitude`, `longitud
 
 <RouteHeader method="PATCH" path="/v1/voice/node" unauthenticated />
 
-Takes `endpoint`, `draining`, `latitude`, `longitude`, `soft_connection_limit`, `public_ipv4` and `public_ipv6`, and returns the server like `GET`. An empty string for `public_ipv4` or `public_ipv6` clears it. Fluxer checks a new endpoint the same way as a join. When the server has an internal endpoint, Fluxer also tries the new public endpoint and logs a warning when it doesn't respond, without refusing the change. A new endpoint must keep the token's hostname, and a server can't change a soft connection limit the token set. A server can't change its region, its restrictions, `internal_endpoint` or `is_active`. A server an admin turned off stays off.
+Takes `endpoint`, `draining`, `latitude`, `longitude`, `soft_connection_limit`, `public_ipv4` and `public_ipv6`, and returns the server like `GET`. An empty string for `public_ipv4` or `public_ipv6` clears it. sanalyer checks a new endpoint the same way as a join. When the server has an internal endpoint, sanalyer also tries the new public endpoint and logs a warning when it doesn't respond, without refusing the change. A new endpoint must keep the token's hostname, and a server can't change a soft connection limit the token set. A server can't change its region, its restrictions, `internal_endpoint` or `is_active`. A server an admin turned off stays off.
 
 <RouteHeader method="DELETE" path="/v1/voice/node" unauthenticated />
 

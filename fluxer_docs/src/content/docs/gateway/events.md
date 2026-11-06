@@ -231,7 +231,7 @@ The first entry is always `all`, with the account's combined status.
 | name | string | Human-readable region name |
 | emoji | string | Region emoji |
 
-The first entry is always `automatic`, which lets Fluxer pick the region. The rest are sorted by distance from the `latitude` and `longitude` in the [Identify properties](/gateway/commands/#identify-properties-object), or by ID when those are missing.
+The first entry is always `automatic`, which lets sanalyer pick the region. The rest are sorted by distance from the `latitude` and `longitude` in the [Identify properties](/gateway/commands/#identify-properties-object), or by ID when those are missing.
 
 ### RESUMED
 
@@ -254,7 +254,7 @@ A password change replaced the account's authentication session.
 | old_auth_session_id_hash | string | Base64url hash of the replaced authentication session |
 | new_auth_session_id_hash | string | Base64url hash of the new authentication session |
 
-Fluxer closes the Gateway sessions of the old authentication session before it sends this event, and they never receive it.
+sanalyer closes the Gateway sessions of the old authentication session before it sends this event, and they never receive it.
 
 ### <span id="rate-limited"></span>RATE_LIMITED
 
@@ -473,7 +473,7 @@ Several channels changed at once, usually in a reorder. Each session gets only t
 
 ### <span id="channel-delete"></span>CHANNEL_DELETE
 
-A channel was deleted or the session can no longer see it. The payload is the [channel object](/http-api/channels/#channel-object) as it was before. Remove every thread whose `parent_id` is the channel yourself, because Fluxer sends no [Thread Delete](/gateway/threads/#thread-delete) for them.
+A channel was deleted or the session can no longer see it. The payload is the [channel object](/http-api/channels/#channel-object) as it was before. Remove every thread whose `parent_id` is the channel yourself, because sanalyer sends no [Thread Delete](/gateway/threads/#thread-delete) for them.
 
 ### <span id="channel-recipient-add"></span>CHANNEL_RECIPIENT_ADD
 
@@ -528,7 +528,7 @@ A member or their public profile changed. The payload is the [guild member objec
 
 ### <span id="guild-member-remove"></span>GUILD_MEMBER_REMOVE
 
-A user is no longer a member of a guild. Fluxer also sends a [Thread Members Update](/gateway/threads/#thread-members-update) for each thread they were in.
+A user is no longer a member of a guild. sanalyer also sends a [Thread Members Update](/gateway/threads/#thread-members-update) for each thread they were in.
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -650,7 +650,7 @@ The online presences of a guild that was unavailable, sent right after the [Guil
 
 ### <span id="passive-updates"></span>PASSIVE_UPDATES
 
-Fluxer sends this every 30 seconds, when something changed, for a guild with more than 250 members where the session is [passive](/gateway/event-filtering/#active-and-passive-guilds).
+sanalyer sends this every 30 seconds, when something changed, for a guild with more than 250 members where the session is [passive](/gateway/event-filtering/#active-and-passive-guilds).
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -691,7 +691,7 @@ A message was deleted.
 | guild_id? | snowflake | Guild the channel belongs to |
 | member? | [guild member](/http-api/guild-members/#guild-member-object) object | The author's member object without `user`, when the author is still a member |
 
-<sup>1</sup> Absent when an instance admin or Fluxer itself deleted the message
+<sup>1</sup> Absent when an instance admin or sanalyer itself deleted the message
 
 ### <span id="message-delete-bulk"></span>MESSAGE_DELETE_BULK
 
@@ -885,26 +885,26 @@ A new grant comes when the connection opens, moves to another channel or changes
 | --- | --- | --- |
 | urls | array[string] | The `stun:` URLs of one server |
 
-Fluxer never gives out a TURN server, and peers that can't connect to each other directly can't call.
+sanalyer never gives out a TURN server, and peers that can't connect to each other directly can't call.
 
 #### Peer-to-peer voice
 
 A voice channel or call is peer-to-peer when every voice state in it has `p2p: true`. Each pair of connections then has its own WebRTC peer connection and no media goes through LiveKit. Peers exchange session descriptions and ICE candidates with the [Voice Signal](/gateway/commands/#voice-signal) command.
 
-Fluxer decides each join from the channel's state and the `p2p` value in the [Voice State Update](/gateway/commands/#voice-state-update) command. A bot always counts as not sending `p2p: true`.
+sanalyer decides each join from the channel's state and the `p2p` value in the [Voice State Update](/gateway/commands/#voice-state-update) command. A bot always counts as not sending `p2p: true`.
 
 | Channel or call | The command sent `p2p: true` | Any other `p2p` value |
 | --- | --- | --- |
 | Peer-to-peer below the participant cap | Peer-to-peer join<sup>1</sup> | Refused with `VOICE_P2P_CONSENT_REQUIRED` |
 | Peer-to-peer at the participant cap | Refused with `VOICE_CHANNEL_FULL` | Refused with `VOICE_P2P_CONSENT_REQUIRED` |
-| Empty | Peer-to-peer join, or a LiveKit join when Fluxer declines | LiveKit join |
+| Empty | Peer-to-peer join, or a LiveKit join when sanalyer declines | LiveKit join |
 | Every other state | LiveKit join | LiveKit join |
 
-<sup>1</sup> Refused with `VOICE_P2P_UNAVAILABLE` when Fluxer declines peer-to-peer for this join
+<sup>1</sup> Refused with `VOICE_P2P_UNAVAILABLE` when sanalyer declines peer-to-peer for this join
 
 A refusal arrives as a [Gateway Error](/gateway/opcodes-and-close-codes/#gateway-error) and changes nothing. On `VOICE_P2P_CONSENT_REQUIRED`, ask the user and send the join again with `p2p: true` if they agree. The participant cap is `max_participants` from the [peer-to-peer voice configuration](/admin-api/instance/#peer-to-peer-voice-configuration-object), between 2 and 4.
 
-Fluxer never switches a call to LiveKit on its own. Only a participant sending `p2p: false` for its own connection, or a region change through [Modify call region](/http-api/calls/#modify-call-region) or [Modify channel](/http-api/channels/#modify-channel), switches it. The call stays on LiveKit until it empties. A guild voice channel with `rtc_p2p` set never switches.
+sanalyer never switches a call to LiveKit on its own. Only a participant sending `p2p: false` for its own connection, or a region change through [Modify call region](/http-api/calls/#modify-call-region) or [Modify channel](/http-api/channels/#modify-channel), switches it. The call stays on LiveKit until it empties. A guild voice channel with `rtc_p2p` set never switches.
 
 ### <span id="voice-signal"></span>VOICE_SIGNAL
 

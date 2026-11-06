@@ -206,7 +206,7 @@ Creates an incoming webhook in a guild text, voice, announcement, forum or media
 | 200 | [webhook](#webhook-object) object | The webhook was created |
 | 400 | [error response](/http-api/#error-response) | `MAX_WEBHOOKS_PER_GUILD` or `MAX_WEBHOOKS_PER_CHANNEL` when the limit is hit |
 
-Fluxer sends [Webhooks Update](/gateway/events/#webhooks-update) and records a `WEBHOOK_CREATE` audit log entry.
+sanalyer sends [Webhooks Update](/gateway/events/#webhooks-update) and records a `WEBHOOK_CREATE` audit log entry.
 
 The rate limit is 10 requests per minute, on the `webhook:create::channel_id` bucket.
 
@@ -252,7 +252,7 @@ Updates a webhook and returns the [webhook object](#webhook-object). To move it,
 | 400 | [error response](/http-api/#error-response) | `FOLLOW_TARGET_NOT_AGE_RESTRICTED` or `FOLLOW_TARGET_CONTENT_WARNING_REQUIRED` for a channel follower webhook |
 | 404 | [error response](/http-api/#error-response) | `UNKNOWN_CHANNEL` when the new channel is missing or in another guild |
 
-Fluxer sends [Webhooks Update](/gateway/events/#webhooks-update) for the old channel and, after a move, the new one. It records a `WEBHOOK_UPDATE` audit log entry.
+sanalyer sends [Webhooks Update](/gateway/events/#webhooks-update) for the old channel and, after a move, the new one. It records a `WEBHOOK_UPDATE` audit log entry.
 
 The rate limit is 20 requests per 10 seconds, on the `webhook:update::webhook_id` bucket.
 
@@ -268,7 +268,7 @@ Deletes a webhook for good. Messages it already posted stay in the channel, and 
 | --- | --- | --- |
 | 204 | empty | The webhook was deleted |
 
-Fluxer sends [Webhooks Update](/gateway/events/#webhooks-update) and records a `WEBHOOK_DELETE` audit log entry.
+sanalyer sends [Webhooks Update](/gateway/events/#webhooks-update) and records a `WEBHOOK_DELETE` audit log entry.
 
 The rate limit is 20 requests per 10 seconds, on the `webhook:delete::webhook_id` bucket.
 
@@ -306,7 +306,7 @@ Updates a webhook and returns the [token webhook object](#token-webhook-object).
 | --- | --- | --- |
 | 200 | [token webhook](#token-webhook-object) object | The webhook was updated |
 
-Fluxer sends [Webhooks Update](/gateway/events/#webhooks-update) and records no audit log entry.
+sanalyer sends [Webhooks Update](/gateway/events/#webhooks-update) and records no audit log entry.
 
 The rate limit is 20 requests per 10 seconds, on the `webhook:update::webhook_id` bucket.
 
@@ -322,7 +322,7 @@ Deletes a webhook for good, without an audit log entry.
 | --- | --- | --- |
 | 204 | empty | The webhook was deleted |
 
-Fluxer sends [Webhooks Update](/gateway/events/#webhooks-update).
+sanalyer sends [Webhooks Update](/gateway/events/#webhooks-update).
 
 The rate limit is 20 requests per 10 seconds, on the `webhook:delete::webhook_id` bucket.
 
@@ -373,7 +373,7 @@ The body is a [webhook message body](#webhook-message-body).
 | 404 | [error response](/http-api/#error-response) | `UNKNOWN_CHANNEL` when `thread_id` is not a thread in the webhook's channel |
 | 404 | [error response](/http-api/#error-response) | `UNKNOWN_FORUM_TAG` when `applied_tags` has a tag the forum doesn't have |
 
-Fluxer sends [Message Create](/gateway/events/#message-create).
+sanalyer sends [Message Create](/gateway/events/#message-create).
 
 The rate limit is 60 requests per minute, on the `webhook:execute::webhook_id` bucket.
 
@@ -425,7 +425,7 @@ The body is a [webhook message edit body](#webhook-message-edit-body).
 | 403 | [error response](/http-api/#error-response) | `MISSING_PERMISSIONS` when another author posted the message |
 | 404 | [error response](/http-api/#error-response) | `UNKNOWN_MESSAGE` when the message isn't in the webhook's channel or the `thread_id` thread |
 
-Fluxer sends [Message Update](/gateway/events/#message-update).
+sanalyer sends [Message Update](/gateway/events/#message-update).
 
 The rate limit is 30 requests per minute, on the `webhook:message_edit::webhook_id` bucket.
 
@@ -449,7 +449,7 @@ Deletes a message the webhook posted.
 | 403 | [error response](/http-api/#error-response) | `MISSING_PERMISSIONS` when another author posted the message |
 | 404 | [error response](/http-api/#error-response) | `UNKNOWN_MESSAGE` when the message isn't in the webhook's channel or the `thread_id` thread |
 
-Fluxer sends [Message Delete](/gateway/events/#message-delete).
+sanalyer sends [Message Delete](/gateway/events/#message-delete).
 
 The rate limit is 30 requests per minute, on the `webhook:message_delete::webhook_id` bucket.
 
@@ -489,7 +489,7 @@ The rate limit is 30 requests per minute, on the `webhook:message_delete::webhoo
 | image_url? | string | The embed image URL |
 | thumb_url? | string | The embed thumbnail URL |
 
-Fluxer drops a URL that isn't an absolute `http` or `https` URL of at most 2,048 characters.
+sanalyer drops a URL that isn't an absolute `http` or `https` URL of at most 2,048 characters.
 
 ### Slack attachment field object
 
@@ -691,7 +691,7 @@ A field with the wrong type returns 400 `INVALID_FORM_BODY`.
 
 ## GitHub event types
 
-The `X-GitHub-Event` header picks the event. Fluxer posts a message only for these events and actions, and accepts any other callback without posting.
+The `X-GitHub-Event` header picks the event. sanalyer posts a message only for these events and actions, and accepts any other callback without posting.
 
 | Value | Description |
 | --- | --- |
@@ -717,7 +717,7 @@ The `X-GitHub-Event` header picks the event. Fluxer posts a message only for the
 
 ## Instatus callback objects
 
-[Execute Instatus webhook](#execute-instatus-webhook) takes the body Instatus sends. A value that is too long returns 400 `INVALID_FORM_BODY`. Fluxer posts the incident if it has a name, then the maintenance if it has a name, and otherwise the component update.
+[Execute Instatus webhook](#execute-instatus-webhook) takes the body Instatus sends. A value that is too long returns 400 `INVALID_FORM_BODY`. sanalyer posts the incident if it has a name, then the maintenance if it has a name, and otherwise the component update.
 
 ### Instatus callback object
 
@@ -786,7 +786,7 @@ The `X-GitHub-Event` header picks the event. Fluxer posts a message only for the
 | created_at? | ?string | The creation time |
 | updated_at? | ?string | The update time |
 
-Fluxer posts the latest update as the embed description.
+sanalyer posts the latest update as the embed description.
 
 ### Instatus incident object
 
@@ -848,7 +848,7 @@ Fluxer posts the latest update as the embed description.
 
 ## Instatus status values
 
-Fluxer uppercases a status and drops everything except letters, which turns `degraded_performance` into `DEGRADEDPERFORMANCE`. Each value sets the label, and every value except `UP` and `HASISSUES` also sets the embed color. Any other status is shown as sent.
+sanalyer uppercases a status and drops everything except letters, which turns `degraded_performance` into `DEGRADEDPERFORMANCE`. Each value sets the label, and every value except `UP` and `HASISSUES` also sets the embed color. Any other status is shown as sent.
 
 | Value | Description |
 | --- | --- |
@@ -870,7 +870,7 @@ Fluxer uppercases a status and drops everything except letters, which turns `deg
 
 ## Libredesk callback objects
 
-[Execute Libredesk webhook](#execute-libredesk-webhook) takes the body Libredesk sends. Fields outside these tables are ignored, and Fluxer never posts contact email addresses, phone numbers or attachment URLs.
+[Execute Libredesk webhook](#execute-libredesk-webhook) takes the body Libredesk sends. Fields outside these tables are ignored, and sanalyer never posts contact email addresses, phone numbers or attachment URLs.
 
 ### Libredesk callback object
 

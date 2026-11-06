@@ -42429,7 +42429,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Відображати текст шрифтом Fluxer Sans (попередній стандартний шрифт) замість"
+"Відображати текст шрифтом sanalyer Sans (попередній стандартний шрифт) замість"
 " системного шрифту Windows"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -45083,7 +45083,7 @@ msgstr "Змінити обліковий запис"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Повернути Fluxer Sans"
+msgstr "Повернути sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45807,7 +45807,7 @@ msgid ""
 " in settings."
 msgstr ""
 "Текст у Windows тепер використовує системний шрифт. Ви можете повернутися до"
-" Fluxer Sans у налаштуваннях."
+" sanalyer Sans у налаштуваннях."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -46259,8 +46259,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Застосунки Fluxer для iOS і Android отримують сповіщення через push-"
-"ретранслятор, яким керує Fluxer і який передає їх Apple і Google. Щоб "
+"Застосунки sanalyer для iOS і Android отримують сповіщення через push-"
+"ретранслятор, яким керує sanalyer і який передає їх Apple і Google. Щоб "
 "користуватися ним, ви приймаєте повідомлення про конфіденційність push-"
 "ретранслятора."
 
@@ -51739,7 +51739,7 @@ msgstr ""
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Використовувати Fluxer Sans у Windows"
+msgstr "Використовувати sanalyer Sans у Windows"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

@@ -275,7 +275,7 @@ The rate limit is 30 requests per minute, on the `oauth_dev:clients:update::clie
 
 <RouteHeader method="PATCH" path="/v1/oauth2/applications/{id}/bot" />
 
-Updates the bot account of an application you own and returns the [bot profile](#bot-profile-object) object. An omitted field stays as it is, and null clears it. The update also clears the bot's display name, and Fluxer sends [User Update](/gateway/events/#user-update) to the bot's sessions.
+Updates the bot account of an application you own and returns the [bot profile](#bot-profile-object) object. An omitted field stays as it is, and null clears it. The update also clears the bot's display name, and sanalyer sends [User Update](/gateway/events/#user-update) to the bot's sessions.
 
 ### JSON body
 
@@ -294,7 +294,7 @@ Updates the bot account of an application you own and returns the [bot profile](
 
 <sup>3</sup> The image must fit the `avatar_max_size` [limit](/http-api/instance/#limit-keys)
 
-<sup>4</sup> Fluxer sets or clears only the bot flags and ignores other bits
+<sup>4</sup> sanalyer sets or clears only the bot flags and ignores other bits
 
 ### Response
 

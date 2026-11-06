@@ -103,9 +103,9 @@ Each value is an absolute URL. Use it exactly as published, including its scheme
 | Field | Type | Description |
 | --- | --- | --- |
 | api | string | Base URL of the client API, the same as `api_client` |
-| api_client | string | Base URL of the client API, used by the Fluxer apps |
+| api_client | string | Base URL of the client API, used by the sanalyer apps |
 | api_public | string | Base URL of the public API, used by bots and other clients |
-| api_transport? | string | Base URL the official desktop app sends API requests to instead of `api_client`. Only Fluxer.app lists it, and the app ignores any address other than the matching fluxer.com one |
+| api_transport? | string | Base URL the official desktop app sends API requests to instead of `api_client`. sanalyer does not list it; the desktop app only honours it for the upstream project's own instance |
 | gateway | string | The [Gateway](/gateway/overview/) WebSocket URL, with a `ws` or `wss` scheme |
 | media | string | [Media Proxy](/media-proxy/overview/) base URL |
 | upload_relay? | string | Attachment [upload relay](/media-proxy/upload-relay/) base URL |
@@ -143,7 +143,7 @@ Instance-wide switches to check before you offer a feature.
 | Field | Type | Description |
 | --- | --- | --- |
 | voice_enabled | boolean | Whether voice and video calls are enabled |
-| stripe_enabled | boolean | Whether premium purchases through Stripe [billing](/http-api/billing/) are available |
+| stripe_enabled | boolean | Whether premium purchases through Stripe billing are available |
 | premium_enabled | boolean | Whether the instance has a premium tier |
 | stripe_serviceable | boolean | Whether existing Stripe subscriptions can be managed and billed |
 | self_hosted | boolean | Whether the instance is self-hosted |

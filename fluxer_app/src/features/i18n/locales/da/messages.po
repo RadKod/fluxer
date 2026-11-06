@@ -42025,7 +42025,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Vis tekst i Fluxer Sans, den tidligere standardfont, i stedet for Windows' "
+"Vis tekst i sanalyer Sans, den tidligere standardfont, i stedet for Windows' "
 "systemskrifttype"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -44668,7 +44668,7 @@ msgstr "Skift konto"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Skift tilbage til Fluxer Sans"
+msgstr "Skift tilbage til sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45391,7 +45391,7 @@ msgid ""
 " in settings."
 msgstr ""
 "Tekst på Windows bruger nu systemskrifttypen. Du kan skifte tilbage til "
-"Fluxer Sans i indstillingerne."
+"sanalyer Sans i indstillingerne."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -45837,8 +45837,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Fluxers apps til iOS og Android får notifikationer gennem et push-relæ, som "
-"Fluxer driver, og som sender dem videre til Apple og Google. For at bruge "
+"sanalyers apps til iOS og Android får notifikationer gennem et push-relæ, som "
+"sanalyer driver, og som sender dem videre til Apple og Google. For at bruge "
 "det accepterer du fortrolighedserklæringen for push-relæet."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -51280,7 +51280,7 @@ msgstr "Brug filtre eller indtast søgeord for at finde beskeder"
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Brug Fluxer Sans på Windows"
+msgstr "Brug sanalyer Sans på Windows"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

@@ -42403,7 +42403,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Показывать текст шрифтом Fluxer Sans, предыдущим шрифтом по умолчанию, "
+"Показывать текст шрифтом sanalyer Sans, предыдущим шрифтом по умолчанию, "
 "вместо системного шрифта Windows"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -45062,7 +45062,7 @@ msgstr "Сменить аккаунт"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Вернуться к Fluxer Sans"
+msgstr "Вернуться к sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45788,7 +45788,7 @@ msgid ""
 " in settings."
 msgstr ""
 "Текст в Windows теперь использует системный шрифт. Вы можете вернуться к "
-"Fluxer Sans в настройках."
+"sanalyer Sans в настройках."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -46241,8 +46241,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Приложения Fluxer для iOS и Android получают уведомления через push-"
-"ретранслятор, которым управляет Fluxer и который передаёт их Apple и Google."
+"Приложения sanalyer для iOS и Android получают уведомления через push-"
+"ретранслятор, которым управляет sanalyer и который передаёт их Apple и Google."
 " Чтобы пользоваться им, вы принимаете уведомление о конфиденциальности push-"
 "ретранслятора."
 
@@ -51726,7 +51726,7 @@ msgstr "Используйте фильтры или введите ключев
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Использовать Fluxer Sans в Windows"
+msgstr "Использовать sanalyer Sans в Windows"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

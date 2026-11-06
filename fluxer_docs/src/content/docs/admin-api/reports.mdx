@@ -6,11 +6,11 @@ description: Admin API routes for reviewing, resolving and deleting reports.
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A report is one complaint against a message, an account or a guild, with the evidence Fluxer captured when it was filed. Use these routes to review reports, resolve them and delete them. People file reports through the public [Reports](/http-api/reports/) resource, which defines the [categories](/http-api/reports/#report-categories) and [reasons](/http-api/reports/#report-reasons).
+A report is one complaint against a message, an account or a guild, with the evidence sanalyer captured when it was filed. Use these routes to review reports, resolve them and delete them. People file reports through the public [Reports](/http-api/reports/) resource, which defines the [categories](/http-api/reports/#report-categories) and [reasons](/http-api/reports/#report-reasons).
 
 ## Admin report object
 
-[List reports](#list-reports) returns this object. [Get report](#get-report) returns the [Admin report detail object](#admin-report-detail-object), which extends it with message context. The guild, channel, webhook and message fields are copied when the report is filed. The account names are looked up when Fluxer builds the response. `reporter_email`, `reporter_full_legal_name` and `reporter_country_of_residence` are null unless you have `report:view:reporter_pii` as well as `report:view`.
+[List reports](#list-reports) returns this object. [Get report](#get-report) returns the [Admin report detail object](#admin-report-detail-object), which extends it with message context. The guild, channel, webhook and message fields are copied when the report is filed. The account names are looked up when sanalyer builds the response. `reporter_email`, `reporter_full_legal_name` and `reporter_country_of_residence` are null unless you have `report:view:reporter_pii` as well as `report:view`.
 
 ### Structure
 
@@ -182,7 +182,7 @@ A copy of a message as it was when the report was filed. A message report captur
 | author_avatar | ?string | The author avatar hash |
 | webhook_id? | ?snowflake | The [webhook](/http-api/webhooks/) that sent the message |
 | author_bot? | ?boolean | Whether the author account is a bot |
-| missing_attachments? | array[[report missing attachment](#report-missing-attachment-object) object] | Attachments Fluxer could not copy |
+| missing_attachments? | array[[report missing attachment](#report-missing-attachment-object) object] | Attachments sanalyer could not copy |
 
 When the author's account was already deleted, the copy has the username `DeletedUser` and the discriminator `0000`.
 
@@ -203,7 +203,7 @@ When the author's account was already deleted, the copy has the username `Delete
 
 ### Report missing attachment object
 
-An attachment Fluxer could not copy into the report. It has no download URL.
+An attachment sanalyer could not copy into the report. It has no download URL.
 
 #### Structure
 
@@ -357,7 +357,7 @@ An entry in the [report reason](/http-api/reports/#report-reasons) catalog, as [
 
 ## Report note object
 
-A note is for admins only, and Fluxer never shows it to the reporter or the reported account. A note can't be edited, and it's deleted with its report.
+A note is for admins only, and sanalyer never shows it to the reporter or the reported account. A note can't be edited, and it's deleted with its report.
 
 ### Structure
 
@@ -485,7 +485,7 @@ Resolves a pending report and returns a [report resolution](#report-resolution-o
 | outcome? | string | `removed`, `warned`, `restricted`, `action_taken` or `no_violation` |
 | duplicate_of? | snowflake | The report this one repeats |
 
-<sup>1</sup> The reporter gets a notice either way. False leaves the comment out of the notice and off the report, and Fluxer keeps it only in the audit entry as `internal_comment`
+<sup>1</sup> The reporter gets a notice either way. False leaves the comment out of the notice and off the report, and sanalyer keeps it only in the audit entry as `internal_comment`
 
 The `resolution` decides which of the other fields you send.
 
@@ -502,7 +502,7 @@ The `outcome` is one of these values.
 | removed | The reported content, profile field or guild was removed |
 | warned | The account responsible was warned, and the reporter is told action was taken |
 | restricted | The reported account was restricted |
-| action_taken | Fluxer acted another way and doesn't tell the reporter how |
+| action_taken | sanalyer acted another way and doesn't tell the reporter how |
 | no_violation | The reported content breaks no rule |
 
 [Schedule user deletion](/admin-api/users/#schedule-user-deletion) with [deletion reason](/admin-api/users/#deletion-reasons) 3, 4, 5, 6, 8, 11, 17, 18, 20, 21 or 22 also resolves the pending reports against that account with the outcome `restricted` and no comment, except reports in the `child_safety`, `underage_user` and `self_harm` categories. An [enforcement decision](/admin-api/enforcement/) resolves the pending reports it links.
@@ -518,7 +518,7 @@ The `outcome` is one of these values.
 
 ### Side effects
 
-The reporter gets a system DM with the outcome, which sends [Channel Create](/gateway/events/#channel-create) and [Message Create](/gateway/events/#message-create), and an email when the account has an email address. A Digital Services Act notice and an instance with direct messages turned off get the email only. Fluxer sends nothing when the reporter's account is deleted, when it was barred from reporting at the time of the report, or when the report is a duplicate of one with no outcome yet.
+The reporter gets a system DM with the outcome, which sends [Channel Create](/gateway/events/#channel-create) and [Message Create](/gateway/events/#message-create), and an email when the account has an email address. A Digital Services Act notice and an instance with direct messages turned off get the email only. sanalyer sends nothing when the reporter's account is deleted, when it was barred from reporting at the time of the report, or when the report is a duplicate of one with no outcome yet.
 
 The rate limit is 200 requests per minute, on the `admin:lookup` bucket.
 

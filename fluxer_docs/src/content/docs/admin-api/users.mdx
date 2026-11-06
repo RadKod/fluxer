@@ -512,7 +512,7 @@ Changes the username and returns the account. You need `user:update:username`.
 | username | string | The new username (1-32 characters) |
 | discriminator?<sup>1</sup> | string | A discriminator of one to four digits |
 
-<sup>1</sup> Used only when the account may have a custom discriminator. Otherwise Fluxer picks a free one
+<sup>1</sup> Used only when the account may have a custom discriminator. Otherwise sanalyer picks a free one
 
 ### Response body
 
@@ -527,7 +527,7 @@ Changes the username and returns the account. You need `user:update:username`.
 | 200 | response body | The username was changed |
 | 400 | [error response](/admin-api/#error-response) | `TAG_ALREADY_TAKEN` when the tag is taken or no discriminator is free |
 
-Fluxer sends [User Update](/gateway/events/#user-update) and [Guild Member Update](/gateway/events/#guild-member-update) to each guild the account is in.
+sanalyer sends [User Update](/gateway/events/#user-update) and [Guild Member Update](/gateway/events/#guild-member-update) to each guild the account is in.
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -556,7 +556,7 @@ Changes the email address and returns the account. You need `user:update:email`.
 | 200 | response body | The email address was changed |
 | 400 | [error response](/admin-api/#error-response) | `EMAIL_ALREADY_IN_USE` when another account has the address |
 
-Fluxer sends [User Update](/gateway/events/#user-update).
+sanalyer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -578,7 +578,7 @@ Marks the email address as verified, clears its bounce marker and returns the ac
 | --- | --- | --- |
 | 200 | response body | The email address was marked verified |
 
-Fluxer sends [User Update](/gateway/events/#user-update).
+sanalyer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -635,7 +635,7 @@ The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
 <RouteHeader method="POST" path="/v1/admin/users/{user_id}/sign-in-link" auditReason />
 
-Returns a [sign-in link](#sign-in-link-object) for an account that has `*`. Only [rexctl](/operator/rexctl/) on the server can call it. The link signs the admin in without a password, a second factor or an email.
+Returns a [sign-in link](#sign-in-link-object) for an account that has `*`. Only rexctl on the server can call it. The link signs the admin in without a password, a second factor or an email.
 
 ### Response
 
@@ -710,7 +710,7 @@ Changes the date of birth and returns the account. You need `user:update:dob`. A
 | --- | --- | --- |
 | 200 | response body | The date of birth was changed |
 
-Fluxer sends [User Update](/gateway/events/#user-update).
+sanalyer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -740,7 +740,7 @@ Clears [profile fields](#profile-fields) and returns the account. You need `user
 | 200 | response body | The fields were cleared |
 | 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` with a [decision validation code](/admin-api/enforcement/#validation) |
 
-Fluxer sends [User Update](/gateway/events/#user-update), and [Guild Member Update](/gateway/events/#guild-member-update) when `avatar` or `global_name` changed.
+sanalyer sends [User Update](/gateway/events/#user-update), and [Guild Member Update](/gateway/events/#guild-member-update) when `avatar` or `global_name` changed.
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -769,7 +769,7 @@ Marks the account as a bot or not and returns the account. You need `user:update
 | 200 | response body | The bot status was set |
 | 403 | [error response](/admin-api/#error-response) | `ACCESS_DENIED` when the account has Admin ACLs and `bot` is true |
 
-Fluxer sends [User Update](/gateway/events/#user-update), and [Guild Member Update](/gateway/events/#guild-member-update) when the status changed.
+sanalyer sends [User Update](/gateway/events/#user-update), and [Guild Member Update](/gateway/events/#guild-member-update) when the status changed.
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -798,7 +798,7 @@ Marks a bot as an official system account or not and returns the account. You ne
 | 200 | response body | The system status was set |
 | 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` when the account is not a bot |
 
-Fluxer sends [User Update](/gateway/events/#user-update), and [Guild Member Update](/gateway/events/#guild-member-update) when the status changed.
+sanalyer sends [User Update](/gateway/events/#user-update), and [Guild Member Update](/gateway/events/#guild-member-update) when the status changed.
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -827,7 +827,7 @@ Replaces the account's [Admin ACLs](/admin-api/#acl-registry) and returns the ac
 | 200 | response body | The ACLs were replaced |
 | 403 | [error response](/admin-api/#error-response) | `MISSING_ACL` for an ACL you lack, `ACCESS_DENIED` when the account is your own |
 
-Fluxer sends [User Update](/gateway/events/#user-update).
+sanalyer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -855,7 +855,7 @@ Replaces the account's traits and returns the account. You need `user:update:tra
 | --- | --- | --- |
 | 200 | response body | The traits were replaced |
 
-Fluxer sends [User Update](/gateway/events/#user-update).
+sanalyer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -887,7 +887,7 @@ Replaces the [custom badges](/admin-api/badges/) given to the account and return
 
 A list that only removes badges always works, even when the account still has more than the limit after a limit was lowered.
 
-The profile shows the change the next time someone loads it, and Fluxer sends no Gateway event.
+The profile shows the change the next time someone loads it, and sanalyer sends no Gateway event.
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -918,7 +918,7 @@ Adds and removes [account flags](#account-flags) and returns the account. You ne
 | 400 | [error response](/admin-api/#error-response) | `FLAG_REQUIRES_ENFORCEMENT_ROUTE` for a restriction flag |
 | 409 | [error response](/admin-api/#error-response) | `ENFORCEMENT_DECISION_OWNS_STATE` when a [feature limit](#limit-user-features) set the flag |
 
-Fluxer sends [User Update](/gateway/events/#user-update), and [Guild Member Update](/gateway/events/#guild-member-update) when a public flag changed.
+sanalyer sends [User Update](/gateway/events/#user-update), and [Guild Member Update](/gateway/events/#guild-member-update) when a public flag changed.
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -949,7 +949,7 @@ Adds and removes [premium flags](#premium-flags) and returns the account. You ne
 | 400 | [error response](/admin-api/#error-response) | `FLAG_REQUIRES_ENFORCEMENT_ROUTE` when adding `PURCHASE_DISABLED` |
 | 409 | [error response](/admin-api/#error-response) | `ENFORCEMENT_DECISION_OWNS_STATE` when a feature limit set the purchase block |
 
-Fluxer sends [User Update](/gateway/events/#user-update).
+sanalyer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -959,14 +959,14 @@ The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
 Ends the premium of an account right away and returns the account. You need `user:update:flags`, and the `X-Audit-Log-Reason` header is required. Use it to take back premium from a [gift code](/admin-api/gift-codes/) or from `ENABLED_OVERRIDE`.
 
-Fluxer ends premium the same way it does when premium expires. It clears the premium type, start, end, gift extension, grace period and billing cycle, and removes `ENABLED_OVERRIDE`. It then sanitizes the account's profile perks in each community, such as a community avatar and banner, and sets `PERKS_SANITIZED`. An animated avatar and banner stop showing at once. When the [tag style](/http-api/instance/#tag-styles) is `random`, a premium discriminator is replaced the next time the account starts a session, as it is when premium expires. Gift codes the account redeemed stay redeemed.
+sanalyer ends premium the same way it does when premium expires. It clears the premium type, start, end, gift extension, grace period and billing cycle, and removes `ENABLED_OVERRIDE`. It then sanitizes the account's profile perks in each community, such as a community avatar and banner, and sets `PERKS_SANITIZED`. An animated avatar and banner stop showing at once. When the [tag style](/http-api/instance/#tag-styles) is `random`, a premium discriminator is replaced the next time the account starts a session, as it is when premium expires. Gift codes the account redeemed stay redeemed.
 
-Fluxer refuses the request, and changes nothing, in these cases.
+sanalyer refuses the request, and changes nothing, in these cases.
 
 | Case | What to do |
 | --- | --- |
 | The account has a Stripe subscription | Cancel the subscription in Stripe first. Removing premium alone would leave the subscription charging the account. |
-| The account has an App Store or Google Play subscription | Wait until the store subscription ends. Fluxer can't cancel it for the account. |
+| The account has an App Store or Google Play subscription | Wait until the store subscription ends. sanalyer can't cancel it for the account. |
 | The account has Visionary lifetime premium on the hosted instance | Visionary is a paid purchase, so this route doesn't end it. On a self-hosted instance, lifetime premium from a gift code can be removed. |
 | The account is a bot or has no premium | There is nothing to remove. |
 | The [premium mode](/admin-api/instance/#premium-modes) is `everyone` | Every account has premium in this mode. Switch the premium mode to `mirror` to remove premium from one account. |
@@ -987,7 +987,7 @@ Fluxer refuses the request, and changes nothing, in these cases.
 
 The request records a `remove_premium` [audit entry](/admin-api/#admin-audit-entry-object) with the earlier premium type and end date, and whether `ENABLED_OVERRIDE` was removed.
 
-Fluxer sends [User Update](/gateway/events/#user-update), and [Guild Member Update](/gateway/events/#guild-member-update) for each community where perks were sanitized.
+sanalyer sends [User Update](/gateway/events/#user-update), and [Guild Member Update](/gateway/events/#guild-member-update) for each community where perks were sanitized.
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -1048,7 +1048,7 @@ Lists the addresses the account used in the last 30 days, newest first, which yo
 | --- | --- | --- |
 | networks | array[object] | One entry per address, with `ip`, `last_seen_at`, `skip_reason` and `other_unrestricted_accounts` |
 
-`skip_reason` is `exempt` or `special_purpose` for an address Fluxer never blocks. An address with `other_unrestricted_accounts` above zero is shared with an account in good standing and can't be blocked.
+`skip_reason` is `exempt` or `special_purpose` for an address sanalyer never blocks. An address with `other_unrestricted_accounts` above zero is shared with an account in good standing and can't be blocked.
 
 ### Response
 
@@ -1077,7 +1077,7 @@ Lifts a suspension that no enforcement decision owns and returns the account. Yo
 | 200 | response body | The suspension was lifted |
 | 409 | [error response](/admin-api/#error-response) | `ENFORCEMENT_DECISION_OWNS_STATE` when a decision owns the suspension |
 
-Fluxer sends [User Update](/gateway/events/#user-update).
+sanalyer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -1137,7 +1137,7 @@ Records a decision that limits one feature, sets its account flag and returns th
 | 200 | response body | The limit was recorded |
 | 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` with a [decision validation code](/admin-api/enforcement/#validation) |
 
-Fluxer sends [User Update](/gateway/events/#user-update).
+sanalyer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -1213,7 +1213,7 @@ Cancels a scheduled deletion that no enforcement decision owns, emails the accou
 | 409 | [error response](/admin-api/#error-response) | `ENFORCEMENT_DECISION_OWNS_STATE` when a decision owns the deletion |
 | 409 | [error response](/admin-api/#error-response) | `CONFLICT` when a different deletion is scheduled or erasure has started |
 
-Fluxer sends [User Update](/gateway/events/#user-update).
+sanalyer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -1502,7 +1502,7 @@ Removes the account's relationship with `target_user_id` in one category. You ne
 | --- | --- | --- |
 | 204 | empty | The relationship was removed |
 
-Fluxer sends [Relationship Remove](/gateway/events/#relationship-remove) as on [Clear user relationships](#clear-user-relationships).
+sanalyer sends [Relationship Remove](/gateway/events/#relationship-remove) as on [Clear user relationships](#clear-user-relationships).
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -1609,7 +1609,7 @@ Deletes one passkey or security key from the account. You need `user:update:mfa`
 | --- | --- | --- |
 | 204 | empty | The credential was deleted |
 
-Fluxer sends [WebAuthn Credentials Update](/gateway/events/#webauthn-credentials-update), and [User Update](/gateway/events/#user-update) when the account's last passkey is removed.
+sanalyer sends [WebAuthn Credentials Update](/gateway/events/#webauthn-credentials-update), and [User Update](/gateway/events/#user-update) when the account's last passkey is removed.
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 
@@ -1625,7 +1625,7 @@ Removes the account's TOTP authenticator, second-factor types and backup codes. 
 | --- | --- | --- |
 | 204 | empty | MFA was turned off |
 
-Fluxer sends [User Update](/gateway/events/#user-update).
+sanalyer sends [User Update](/gateway/events/#user-update).
 
 The rate limit is 100 requests per minute, on the `admin:user:modify` bucket.
 

@@ -158,7 +158,7 @@ Updates your own membership and returns the [guild member object](#guild-member-
 
 | Change | Permission |
 | --- | --- |
-| nick | [CHANGE_NICKNAME](/http-api/permissions/), and without it Fluxer ignores `nick` |
+| nick | [CHANGE_NICKNAME](/http-api/permissions/), and without it sanalyer ignores `nick` |
 | mute | [MUTE_MEMBERS](/http-api/permissions/) |
 | deaf | [DEAFEN_MEMBERS](/http-api/permissions/) |
 | channel_id | [MOVE_MEMBERS](/http-api/permissions/), and [VIEW_CHANNEL](/http-api/permissions/) and [CONNECT](/http-api/permissions/) in the destination |
@@ -169,7 +169,7 @@ You can change each of `avatar`, `banner`, `bio`, `pronouns` and `accent_color` 
 
 ### JSON body
 
-The body is a [guild member update object](#guild-member-update-object) without `roles`, which Fluxer ignores here.
+The body is a [guild member update object](#guild-member-update-object) without `roles`, which sanalyer ignores here.
 
 ### Response
 
@@ -180,7 +180,7 @@ The body is a [guild member update object](#guild-member-update-object) without 
 | 403 | [error response](/http-api/#error-response) | `MISSING_PERMISSIONS` for a missing voice permission or a timeout on yourself |
 | 403 | [error response](/http-api/#error-response) | `PROFILE_EMAIL_VERIFICATION_REQUIRED`, `COMMUNICATION_DISABLED`, `CONTENT_BLOCKED` or `ACCOUNT_LIMITED` |
 
-Fluxer sends [Guild Member Update](/gateway/events/#guild-member-update).
+sanalyer sends [Guild Member Update](/gateway/events/#guild-member-update).
 
 The rate limit is 20 requests per 10 seconds, on the `guild:member:update::guild_id` bucket.
 
@@ -199,7 +199,7 @@ Updates another member and returns the [guild member object](#guild-member-objec
 | deaf | [DEAFEN_MEMBERS](/http-api/permissions/) |
 | channel_id | [MOVE_MEMBERS](/http-api/permissions/), and [VIEW_CHANNEL](/http-api/permissions/) and [CONNECT](/http-api/permissions/) in the destination |
 
-Fluxer ignores `avatar`, `banner`, `bio`, `pronouns`, `accent_color`, `profile_flags` and `mention_flags` here, but a blocked `bio` or `pronouns` still returns 403 `CONTENT_BLOCKED`. `MANAGE_ROLES` and `MODERATE_MEMBERS` are [elevated permissions](/http-api/permissions/#elevated-permissions).
+sanalyer ignores `avatar`, `banner`, `bio`, `pronouns`, `accent_color`, `profile_flags` and `mention_flags` here, but a blocked `bio` or `pronouns` still returns 403 `CONTENT_BLOCKED`. `MANAGE_ROLES` and `MODERATE_MEMBERS` are [elevated permissions](/http-api/permissions/#elevated-permissions).
 
 If `user_id` is your own ID, profile fields follow [Modify current guild member](#modify-current-guild-member).
 
@@ -217,7 +217,7 @@ The body is a [guild member update object](#guild-member-update-object).
 | 403 | [error response](/http-api/#error-response) | `MISSING_PERMISSIONS` for a missing permission or role check, a target with ADMINISTRATOR, or a timeout on yourself |
 | 403 | [error response](/http-api/#error-response) | `CONTENT_BLOCKED` for blocked profile text |
 
-Fluxer sends [Guild Member Update](/gateway/events/#guild-member-update). If the member joined through an [invite](/http-api/invites/#invite-object) with `temporary` set, a non-empty `roles` makes their membership permanent.
+sanalyer sends [Guild Member Update](/gateway/events/#guild-member-update). If the member joined through an [invite](/http-api/invites/#invite-object) with `temporary` set, a non-empty `roles` makes their membership permanent.
 
 The rate limit is 20 requests per 10 seconds, on the `guild:member:update::guild_id` bucket.
 
@@ -234,7 +234,7 @@ Removes a member from the guild. You need [KICK_MEMBERS](/http-api/permissions/)
 | 204 | empty | The member was removed |
 | 400 | [error response](/http-api/#error-response) | `TWO_FACTOR_REQUIRED` in an elevated-MFA guild |
 
-Fluxer sends [Guild Member Remove](/gateway/events/#guild-member-remove) to the guild and [Guild Delete](/gateway/events/#guild-delete) to the removed account.
+sanalyer sends [Guild Member Remove](/gateway/events/#guild-member-remove) to the guild and [Guild Delete](/gateway/events/#guild-delete) to the removed account.
 
 The rate limit is 20 requests per 10 seconds, on the `guild:member:remove::guild_id` bucket.
 
@@ -272,7 +272,7 @@ Makes another member the owner and returns the [guild object](/http-api/guilds/#
 | 403 | [error response](/http-api/#error-response) | `SUDO_MODE_REQUIRED` with the available proofs in `methods`, or `MISSING_PERMISSIONS` when you aren't the owner |
 | 403 | [error response](/http-api/#error-response) | `ACCOUNT_VERIFICATION_REQUIRED` when `interaction_tier` is `enforced` and the new owner isn't [verified](/http-api/users/#account-tiers) |
 
-Fluxer sends [Guild Update](/gateway/events/#guild-update).
+sanalyer sends [Guild Update](/gateway/events/#guild-update).
 
 The rate limit is 20 requests per 10 seconds, on the `guild:update::guild_id` bucket.
 
@@ -291,7 +291,7 @@ Adds one role to a member. You need [MANAGE_ROLES](/http-api/permissions/), an [
 | 403 | [error response](/http-api/#error-response) | `MISSING_PERMISSIONS` without MANAGE_ROLES or a higher role than the role |
 | 404 | [error response](/http-api/#error-response) | `UNKNOWN_ROLE` when the role doesn't exist and you're the owner |
 
-Fluxer sends [Guild Member Update](/gateway/events/#guild-member-update), and a new role makes a temporary member permanent.
+sanalyer sends [Guild Member Update](/gateway/events/#guild-member-update), and a new role makes a temporary member permanent.
 
 The rate limit is 20 requests per 10 seconds, on the `guild:member:role:add::guild_id` bucket.
 
@@ -310,6 +310,6 @@ Removes one role from a member. The rules are the same as [Add guild member role
 | 403 | [error response](/http-api/#error-response) | `MISSING_PERMISSIONS` without MANAGE_ROLES or a higher role than the role |
 | 404 | [error response](/http-api/#error-response) | `UNKNOWN_ROLE` when the role doesn't exist and you're the owner |
 
-Fluxer sends [Guild Member Update](/gateway/events/#guild-member-update).
+sanalyer sends [Guild Member Update](/gateway/events/#guild-member-update).
 
 The rate limit is 20 requests per 10 seconds, on the `guild:member:role:remove::guild_id` bucket.

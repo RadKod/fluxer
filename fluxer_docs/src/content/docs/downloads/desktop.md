@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Desktop builds
 description: Download paths for Fluxer desktop builds, their SHA-256 checksums and the update feeds.
+draft: true
 ---
 
 Desktop builds are on `https://pkgs.fluxer.com`, and you can download them without signing in. Each path has a channel (`stable` or `canary`), a platform, an architecture (`x64` or `arm64`) and, for a file, a format from the table below.

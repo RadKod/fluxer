@@ -64,7 +64,7 @@ The result of a bulk create, with each submitted item in either `success` or `fa
 | Field | Type | Description |
 | --- | --- | --- |
 | success | array[[guild emoji](#guild-emoji-object) object] | The emojis this request created |
-| failed | array[[expression creation failure](#expression-creation-failure-object) object] | The items Fluxer rejected |
+| failed | array[[expression creation failure](#expression-creation-failure-object) object] | The items sanalyer rejected |
 
 ## Expression creation failure object
 
@@ -109,7 +109,7 @@ The body is an [emoji create object](#emoji-create-object).
 | 400 | [error response](/http-api/#error-response) | `MAX_EMOJIS` when the guild is full, or `INVALID_FORM_BODY` when the image is too large or in an unsupported format |
 | 403 | [error response](/http-api/#error-response) | `CONTENT_BLOCKED` when the name or image is blocked |
 
-Fluxer sends a [Guild Emojis Update](/gateway/events/#guild-emojis-update) event and records an [`EMOJI_CREATE`](/http-api/guild-audit-logs/#audit-actions) audit entry.
+sanalyer sends a [Guild Emojis Update](/gateway/events/#guild-emojis-update) event and records an [`EMOJI_CREATE`](/http-api/guild-audit-logs/#audit-actions) audit entry.
 
 The rate limit is 10 requests per 30 seconds, on the `guild:emoji:create::guild_id` bucket.
 
@@ -131,11 +131,11 @@ The response is 200 even when every item fails. An item goes into `failed` when 
 
 | Status | Body | Condition |
 | --- | --- | --- |
-| 200 | [emoji bulk create response](#emoji-bulk-create-response-object) object | Fluxer attempted every item |
+| 200 | [emoji bulk create response](#emoji-bulk-create-response-object) object | sanalyer attempted every item |
 | 400 | [error response](/http-api/#error-response) | `INVALID_FORM_BODY` when the list is empty or over 50 items, or an item has an invalid name |
 | 403 | [error response](/http-api/#error-response) | `CONTENT_BLOCKED` when any item name is blocked, and nothing is created |
 
-Fluxer sends one [Guild Emojis Update](/gateway/events/#guild-emojis-update) event and records an [`EMOJI_CREATE`](/http-api/guild-audit-logs/#audit-actions) audit entry for each created emoji.
+sanalyer sends one [Guild Emojis Update](/gateway/events/#guild-emojis-update) event and records an [`EMOJI_CREATE`](/http-api/guild-audit-logs/#audit-actions) audit entry for each created emoji.
 
 The rate limit is 6 requests per minute, on the `guild:emoji:bulk_create::guild_id` bucket.
 
@@ -160,7 +160,7 @@ Copies an emoji from any guild into the guild in the path and returns the new [g
 | 403 | [error response](/http-api/#error-response) | `MISSING_ACCESS` when the source guild does not allow cloning |
 | 404 | [error response](/http-api/#error-response) | `UNKNOWN_EMOJI` when the source emoji does not exist |
 
-Fluxer sends a [Guild Emojis Update](/gateway/events/#guild-emojis-update) event in the target guild and records an [`EMOJI_CREATE`](/http-api/guild-audit-logs/#audit-actions) audit entry.
+sanalyer sends a [Guild Emojis Update](/gateway/events/#guild-emojis-update) event in the target guild and records an [`EMOJI_CREATE`](/http-api/guild-audit-logs/#audit-actions) audit entry.
 
 The rate limit is 10 requests per 30 seconds, on the `guild:emoji:clone::guild_id` bucket.
 
@@ -184,7 +184,7 @@ Renames an emoji and returns its [guild emoji object](#guild-emoji-object). The 
 | 403 | [error response](/http-api/#error-response) | `CONTENT_BLOCKED` when the name is blocked |
 | 404 | [error response](/http-api/#error-response) | `UNKNOWN_EMOJI` when the emoji is not in this guild |
 
-Fluxer sends a [Guild Emojis Update](/gateway/events/#guild-emojis-update) event and records an [`EMOJI_UPDATE`](/http-api/guild-audit-logs/#audit-actions) audit entry.
+sanalyer sends a [Guild Emojis Update](/gateway/events/#guild-emojis-update) event and records an [`EMOJI_UPDATE`](/http-api/guild-audit-logs/#audit-actions) audit entry.
 
 The rate limit is 20 requests per 10 seconds, on the `guild:emoji:update::guild_id` bucket.
 
@@ -200,7 +200,7 @@ Deletes an emoji. The uploader needs [CREATE_EXPRESSIONS](/http-api/permissions/
 | purge? | boolean | Whether to delete the image file too (default false) |
 
 :::caution[Purging cannot be undone]
-With `purge`, Fluxer deletes the image file and you can't get it back. Without it, the image stays available through the [Media Proxy](/media-proxy/routes/#image-asset-contract).
+With `purge`, sanalyer deletes the image file and you can't get it back. Without it, the image stays available through the [Media Proxy](/media-proxy/routes/#image-asset-contract).
 :::
 
 ### Response
@@ -211,6 +211,6 @@ With `purge`, Fluxer deletes the image file and you can't get it back. Without i
 | 403 | [error response](/http-api/#error-response) | `MISSING_ACCESS` when `purge` is true and the guild lacks [EXPRESSION_PURGE_ALLOWED](/http-api/guilds/#guild-features) |
 | 404 | [error response](/http-api/#error-response) | `UNKNOWN_EMOJI` when the emoji is not in this guild |
 
-Fluxer sends a [Guild Emojis Update](/gateway/events/#guild-emojis-update) event and records an [`EMOJI_DELETE`](/http-api/guild-audit-logs/#audit-actions) audit entry.
+sanalyer sends a [Guild Emojis Update](/gateway/events/#guild-emojis-update) event and records an [`EMOJI_DELETE`](/http-api/guild-audit-logs/#audit-actions) audit entry.
 
 The rate limit is 10 requests per 30 seconds, on the `guild:emoji:delete::guild_id` bucket. The route also allows 300 requests per day, on the `guild:emoji:delete:daily::guild_id` bucket.

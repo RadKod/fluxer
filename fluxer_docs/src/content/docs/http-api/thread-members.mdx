@@ -125,7 +125,7 @@ Removes a member from a thread and sends a [Thread Members Update](/gateway/thre
 | 403 | [error response](/http-api/#error-response) | `COMMUNICATION_DISABLED` when the caller is timed out |
 | 404 | [error response](/http-api/#error-response) | `UNKNOWN_THREAD_MEMBER` when the target is not a member |
 
-Fluxer posts a `RECIPIENT_REMOVE` message that mentions the target and sends [Message Create](/gateway/events/#message-create) for it. The rate limit is 10 requests per 10 seconds, on the `channel:thread:member:delete::channel_id` bucket.
+sanalyer posts a `RECIPIENT_REMOVE` message that mentions the target and sends [Message Create](/gateway/events/#message-create) for it. The rate limit is 10 requests per 10 seconds, on the `channel:thread:member:delete::channel_id` bucket.
 
 ## Get thread member
 

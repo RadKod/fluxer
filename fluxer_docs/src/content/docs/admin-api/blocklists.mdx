@@ -6,11 +6,11 @@ description: The safety blocklists, their value forms, and the operations that m
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-Fluxer has eight blocklists, and each one blocks one kind of value, such as an IP address, a link or a file hash. Each list has three [Admin ACLs](/admin-api/#acl-registry) in the form `ban:<list>:<verb>`, with hyphens in the list name written as underscores. For example, `url-domain` uses `ban:url_domain:check`. You need `check` to read a list, `add` to add or update entries and `remove` to remove them.
+sanalyer has eight blocklists, and each one blocks one kind of value, such as an IP address, a link or a file hash. Each list has three [Admin ACLs](/admin-api/#acl-registry) in the form `ban:<list>:<verb>`, with hyphens in the list name written as underscores. For example, `url-domain` uses `ban:url_domain:check`. You need `check` to read a list, `add` to add or update entries and `remove` to remove them.
 
 ## Blocklist types
 
-Fluxer normalizes each value when you add or check it and stores the normalized form. The `url`, `url-domain`, `file-sha` and `avatar-hash` lists are content blocklists, and each of their entries has a category and a severity.
+sanalyer normalizes each value when you add or check it and stores the normalized form. The `url`, `url-domain`, `file-sha` and `avatar-hash` lists are content blocklists, and each of their entries has a category and a severity.
 
 | Value | Description |
 | --- | --- |
@@ -37,11 +37,11 @@ Ending the decision or executing the account's deletion removes its entries.
 
 A `url-domain` value whose leftmost label has `*` is a pattern. Each `*` matches any run of characters in that one label. For example `*shop*.example.com` matches `shop.example.com` and `my-shop-2.example.com` but not `example.com`. With `match_subdomains` true, a pattern or plain domain also matches every subdomain.
 
-Fluxer refuses a pattern with 400 `INVALID_FORM_BODY` when `*` is outside the leftmost label, when that label has characters other than `a-z`, `0-9`, `-` and `*`, or when it has more than 3 `*` or fewer than 3 other characters. It also refuses a pattern when the part after the leftmost label isn't a valid domain or is a public suffix such as `com` or `co.uk`.
+sanalyer refuses a pattern with 400 `INVALID_FORM_BODY` when `*` is outside the leftmost label, when that label has characters other than `a-z`, `0-9`, `-` and `*`, or when it has more than 3 `*` or fewer than 3 other characters. It also refuses a pattern when the part after the leftmost label isn't a valid domain or is a public suffix such as `com` or `co.uk`.
 
 ## Content blocklist categories
 
-A category says where an entry came from. The values below are the ones Fluxer uses, but `category` accepts any string.
+A category says where an entry came from. The values below are the ones sanalyer uses, but `category` accepts any string.
 
 | Value | Description |
 | --- | --- |
@@ -56,7 +56,7 @@ A category says where an entry came from. The values below are the ones Fluxer u
 
 ## Content blocklist severities
 
-Severity is only a label for moderators, and Fluxer blocks every matching entry, even one with severity 0.
+Severity is only a label for moderators, and sanalyer blocks every matching entry, even one with severity 0.
 
 | Value | Name | Description |
 | --- | --- | --- |

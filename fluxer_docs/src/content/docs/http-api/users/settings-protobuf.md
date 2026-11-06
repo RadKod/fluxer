@@ -203,7 +203,7 @@ How often and how recently one emoji, sticker or meme was used.
 
 ## Emoji picker state object
 
-Emoji usage, favorites and collapsed categories. Fluxer clients key emoji as `unicode:<name>` or `custom:<guild id>:<emoji id>`.
+Emoji usage, favorites and collapsed categories. sanalyer clients key emoji as `unicode:<name>` or `custom:<guild id>:<emoji id>`.
 
 ### Structure
 
@@ -272,7 +272,7 @@ Meme usage, favorites and collapsed categories. The memes are in the account's [
 
 ## Favorite GIF settings object
 
-Fluxer clients keep favorite GIFs here, or in the account's [memes](/http-api/memes/) when `save_as_saved_media` is true.
+sanalyer clients keep favorite GIFs here, or in the account's [memes](/http-api/memes/) when `save_as_saved_media` is true.
 
 ### Structure
 
@@ -524,7 +524,7 @@ Volumes are percentages from 0 to 200, where 100 is the default.
 
 ### Sound identifiers
 
-The API accepts any key. Fluxer clients use these.
+The API accepts any key. sanalyer clients use these.
 
 | Value | Description |
 | --- | --- |
@@ -667,7 +667,7 @@ Voice confirmations the account chose to skip.
 
 | Field | Type | Description |
 | --- | --- | --- |
-| hide_publish_nudge | bool | Whether the prompt to publish in an [announcement channel](/topics/announcement-channels/) is hidden |
+| hide_publish_nudge | bool | Whether the prompt to publish in an announcement channel is hidden |
 
 ## Sudo prompt state object
 
@@ -755,7 +755,7 @@ What a double tap on a message does on mobile.
 
 | Value | Name | Description |
 | --- | --- | --- |
-| 0 | DOUBLE_TAP_ACTION_UNSPECIFIED | No action is set, which Fluxer clients treat as react |
+| 0 | DOUBLE_TAP_ACTION_UNSPECIFIED | No action is set, which sanalyer clients treat as react |
 | 1 | DOUBLE_TAP_ACTION_REACT | React with `double_tap_reaction` |
 | 2 | DOUBLE_TAP_ACTION_EDIT | Edit the message if it's your own |
 | 3 | DOUBLE_TAP_ACTION_NONE | Do nothing |

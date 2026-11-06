@@ -99,9 +99,9 @@ The rate limit is 40 requests per minute, on the `user:push:unsubscribe` bucket.
 
 ## Handling an incoming push
 
-Fluxer posts one `aes128gcm` record to a Web Push endpoint for each notification. A raw registration gets an unencrypted APNs or FCM message instead. A record has at most 2713 bytes of JSON. When a notification is too large, Fluxer leaves out media and icons and shortens the body text, and your client has to handle those fields being missing.
+sanalyer posts one `aes128gcm` record to a Web Push endpoint for each notification. A raw registration gets an unencrypted APNs or FCM message instead. A record has at most 2713 bytes of JSON. When a notification is too large, sanalyer leaves out media and icons and shortens the body text, and your client has to handle those fields being missing.
 
-Fluxer sets these Web Push headers on each record.
+sanalyer sets these Web Push headers on each record.
 
 | Header | Value |
 | --- | --- |
@@ -116,7 +116,7 @@ Each payload is one of these kinds.
 | Clear | Top-level `type` is `notification_clear` and `action` is `clear_channel` | Dismiss what you showed for `data.channel_id` |
 | Call ring | Top-level `type` is `call_ring` | See [Call ring](#call-ring) |
 
-When an endpoint returns 404 or 410, Fluxer removes the registration. It retries a 429 or 5xx response and keeps the registration.
+When an endpoint returns 404 or 410, sanalyer removes the registration. It retries a 429 or 5xx response and keeps the registration.
 
 ### Call ring
 
@@ -134,7 +134,7 @@ Only `ios_apns_voip` registrations and Web Push `android_fcm` registrations get 
 | caller_name? | string | The name to show for the caller |
 | caller_avatar_url? | string | An image URL for the caller |
 
-`caller_id` and `caller_name` are sent together or not at all, and `caller_avatar_url` can be missing even when they are present. Ring until `expires_at_ms` even when they are missing. Fluxer sends no push when a call ends, and your client learns that from the Gateway connection.
+`caller_id` and `caller_name` are sent together or not at all, and `caller_avatar_url` can be missing even when they are present. Ring until `expires_at_ms` even when they are missing. sanalyer sends no push when a call ends, and your client learns that from the Gateway connection.
 
 ### Call rings on iOS
 
@@ -150,4 +150,4 @@ Use `message_id` to build the CallKit call UUID, so every push for the same call
 
 ### When decryption fails
 
-Discard the record and show nothing. Fluxer can't tell that decryption failed, and your client has to unregister and register again with its current keys.
+Discard the record and show nothing. sanalyer can't tell that decryption failed, and your client has to unregister and register again with its current keys.

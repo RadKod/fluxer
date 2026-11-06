@@ -41,6 +41,10 @@ const GIZLI_SAYFALAR = [
 	'operator/reverse-proxy',
 	'operator/upgrading',
 	'operator/kubernetes',
+	// Upstream'in kurulum aracı (rexctl), operatör giriş sayfası ve ortam değişkeni listesi: bizim kurulumumuz kendi compose'umuz.
+	'operator/index',
+	'operator/rexctl',
+	'operator/environment',
 	// pkgs.fluxer.com paket deposu ve Fluxer masaüstü yolları. Bizim karşılığımız downloads/overview'da.
 	'downloads/desktop',
 	'downloads/linux-repositories',

@@ -4,7 +4,7 @@ title: Gateway threads
 description: Thread events, thread subscriptions, forum unread counts and the thread session flag.
 ---
 
-Fluxer sends [thread](/http-api/threads/) changes, thread member lists and forum unread counts as the Dispatch events below. A user session needs the `CHANNEL_THREADS` [session flag](#session-flag), and a bot session always gets them.
+sanalyer sends [thread](/http-api/threads/) changes, thread member lists and forum unread counts as the Dispatch events below. A user session needs the `CHANNEL_THREADS` [session flag](#session-flag), and a bot session always gets them.
 
 ## Session flag
 
@@ -74,7 +74,7 @@ The session's active threads are replaced for a guild or for some of its channel
 | threads | array[[thread](/http-api/threads/#thread-object) object] | The active threads the session can view |
 | members | array[[thread member](/http-api/thread-members/#thread-member-object) object] | The session's memberships in those threads |
 
-A user session that did not set `threads` gets only the threads it joined unless `channel_ids` is present. Fluxer sends it after [Lazy Request](#lazy-request-thread-options) sets `threads` to true and when the session gets view access to channels with active threads. Resume does not replay it.
+A user session that did not set `threads` gets only the threads it joined unless `channel_ids` is present. sanalyer sends it after [Lazy Request](#lazy-request-thread-options) sets `threads` to true and when the session gets view access to channels with active threads. Resume does not replay it.
 
 ### <span id="thread-member-update"></span>THREAD_MEMBER_UPDATE
 
@@ -120,7 +120,7 @@ Each forum unread object has `thread_id` and either `count` or `missing`. `count
 
 ## <span id="lazy-request-thread-options"></span>Lazy Request thread options
 
-The [guild subscription object](/gateway/commands/#guild-subscription-object) of [Lazy Request](/gateway/commands/#lazy-request) takes two more options. Fluxer ignores them for a user session without `CHANNEL_THREADS`.
+The [guild subscription object](/gateway/commands/#guild-subscription-object) of [Lazy Request](/gateway/commands/#lazy-request) takes two more options. sanalyer ignores them for a user session without `CHANNEL_THREADS`.
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -129,11 +129,11 @@ The [guild subscription object](/gateway/commands/#guild-subscription-object) of
 
 `threads` set to false, or marking the guild passive, clears the subscription.
 
-`thread_member_lists` replaces the previous list, and an empty array clears it. Fluxer sends a [Thread Member List Update](#thread-member-list-update) right away for each newly listed thread, and sends another 250 ms after that thread's members change.
+`thread_member_lists` replaces the previous list, and an empty array clears it. sanalyer sends a [Thread Member List Update](#thread-member-list-update) right away for each newly listed thread, and sends another 250 ms after that thread's members change.
 
 ## Request Forum Unreads
 
-Opcode `28` requests unread counts for posts in one forum or media channel. Fluxer closes a user session without `CHANNEL_THREADS` with [`4001`](/gateway/opcodes-and-close-codes/#close-codes).
+Opcode `28` requests unread counts for posts in one forum or media channel. sanalyer closes a user session without `CHANNEL_THREADS` with [`4001`](/gateway/opcodes-and-close-codes/#close-codes).
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -154,4 +154,4 @@ Each forum unread request object has `thread_id` and an optional `ack_message_id
 }
 ```
 
-Fluxer responds with one [Forum Unreads](#forum-unreads) and sends nothing when the guild is unavailable to the session, the channel is not a forum or media channel or the session cannot view it. A connection can send five of these commands in any 5 seconds, and Fluxer drops the rest.
+sanalyer responds with one [Forum Unreads](#forum-unreads) and sends nothing when the guild is unavailable to the session, the channel is not a forum or media channel or the session cannot view it. A connection can send five of these commands in any 5 seconds, and sanalyer drops the rest.

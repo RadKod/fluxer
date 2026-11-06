@@ -42622,7 +42622,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Εμφάνιση κειμένου με γραμματοσειρά Fluxer Sans, την προηγούμενη "
+"Εμφάνιση κειμένου με γραμματοσειρά sanalyer Sans, την προηγούμενη "
 "προεπιλεγμένη γραμματοσειρά, αντί για τη γραμματοσειρά συστήματος των "
 "Windows"
 
@@ -45295,7 +45295,7 @@ msgstr "Εναλλαγή λογαριασμών"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Επιστροφή στη γραμματοσειρά Fluxer Sans"
+msgstr "Επιστροφή στη γραμματοσειρά sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -46021,7 +46021,7 @@ msgid ""
 " in settings."
 msgstr ""
 "Το κείμενο στα Windows χρησιμοποιεί πλέον τη γραμματοσειρά συστήματος. "
-"Μπορείτε να επιστρέψετε στη γραμματοσειρά Fluxer Sans από τις ρυθμίσεις."
+"Μπορείτε να επιστρέψετε στη γραμματοσειρά sanalyer Sans από τις ρυθμίσεις."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -46477,8 +46477,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Οι εφαρμογές Fluxer για iOS και Android λαμβάνουν ειδοποιήσεις μέσω ενός "
-"push relay που λειτουργεί το Fluxer, το οποίο τις προωθεί στην Apple και "
+"Οι εφαρμογές sanalyer για iOS και Android λαμβάνουν ειδοποιήσεις μέσω ενός "
+"push relay που λειτουργεί το sanalyer, το οποίο τις προωθεί στην Apple και "
 "στην Google. Για να το χρησιμοποιήσετε, αποδέχεστε τη σημείωση απορρήτου του"
 " push relay."
 
@@ -52028,7 +52028,7 @@ msgstr ""
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Χρήση Fluxer Sans στα Windows"
+msgstr "Χρήση sanalyer Sans στα Windows"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

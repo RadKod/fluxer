@@ -4,11 +4,11 @@ title: Event filtering
 description: Which sessions receive each Dispatch, and how to receive fewer of them.
 ---
 
-Fluxer has no gateway intents, and you limit [Dispatch](/gateway/events/) traffic with [Lazy Request](/gateway/commands/#lazy-request) subscriptions, the [Identify](/gateway/commands/#identify) `ignored_events` list and the `CHANNEL_THREADS` [session flag](/gateway/threads/#session-flag).
+sanalyer has no gateway intents, and you limit [Dispatch](/gateway/events/) traffic with [Lazy Request](/gateway/commands/#lazy-request) subscriptions, the [Identify](/gateway/commands/#identify) `ignored_events` list and the `CHANNEL_THREADS` [session flag](/gateway/threads/#session-flag).
 
 ## Permission and visibility
 
-Fluxer sends each guild event to the sessions in the Recipients column. A session that is still connecting to the guild gets none of them.
+sanalyer sends each guild event to the sessions in the Recipients column. A session that is still connecting to the guild gets none of them.
 
 | Event class | Recipients |
 | --- | --- |
@@ -48,7 +48,7 @@ A passive session in a larger guild gets only these events.
 
 A message mentions the user when `mentions` has the user, `mention_roles` has one of the user's roles, or `mention_here` or `mention_everyone` is set.
 
-[Passive Updates](/gateway/events/#passive-updates) comes every 30 seconds with the changed `last_message_id` values and voice states for channels the session can view, and Fluxer skips it when nothing changed.
+[Passive Updates](/gateway/events/#passive-updates) comes every 30 seconds with the changed `last_message_id` values and voice states for channels the session can view, and sanalyer skips it when nothing changed.
 
 ### Typing is decided separately
 
@@ -72,7 +72,7 @@ A session [visiting](/http-api/guilds/#visiting-guilds) a guild gets only these 
 - Message and reaction events for the channel set as `focused_channel_id` in [Lazy Request](/gateway/commands/#lazy-request)
 - [Thread create, update and delete events](/gateway/threads/#dispatch-events) for public threads in channels a visitor can read
 
-Visitors never appear in member lists, presences, typing, voice states or member counts. Fluxer ignores member list ranges, [Request Guild Members](/gateway/commands/#request-guild-members), read acknowledgments and typing from a session for a visited guild.
+Visitors never appear in member lists, presences, typing, voice states or member counts. sanalyer ignores member list ranges, [Request Guild Members](/gateway/commands/#request-guild-members), read acknowledgments and typing from a session for a visited guild.
 
 ## Presence subscriptions
 
@@ -80,9 +80,9 @@ A session gets a [Presence Update](/gateway/events/#presence-update) for a guild
 
 ## Ignored events
 
-`ignored_events` in Identify is an array of up to 256 Dispatch event names. Fluxer drops each listed event for the session, and the list can only change with a new Identify. An invalid value closes the connection with `4002`.
+`ignored_events` in Identify is an array of up to 256 Dispatch event names. sanalyer drops each listed event for the session, and the list can only change with a new Identify. An invalid value closes the connection with `4002`.
 
-Fluxer still sends [Message Create](/gateway/events/#message-create) when `MESSAGE_CREATE` is ignored if the message mentions the user directly or uses `@here` or `@everyone`, but not for a role mention. A dropped event uses no sequence number.
+sanalyer still sends [Message Create](/gateway/events/#message-create) when `MESSAGE_CREATE` is ignored if the message mentions the user directly or uses `@here` or `@everyone`, but not for a role mention. A dropped event uses no sequence number.
 
 ```json
 {

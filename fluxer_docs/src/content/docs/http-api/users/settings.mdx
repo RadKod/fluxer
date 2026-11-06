@@ -92,7 +92,7 @@ The input form of the [channel notification override object](#channel-notificati
 | unread_badges? | ?integer | [Notification level](#notification-levels) for unread badges, or null to inherit |
 | flags?<sup>1</sup> | integer | [New post notification](/http-api/forums/#new-post-notifications) flags |
 
-<sup>1</sup> Fluxer keeps only `NEW_FORUM_THREADS_OFF` and `NEW_FORUM_THREADS_ON`. It ignores `flags` in DM settings and when the session doesn't declare `channel_threads`. An omitted or ignored `flags` keeps the stored value
+<sup>1</sup> sanalyer keeps only `NEW_FORUM_THREADS_OFF` and `NEW_FORUM_THREADS_ON`. It ignores `flags` in DM settings and when the session doesn't declare `channel_threads`. An omitted or ignored `flags` keeps the stored value
 
 ## User guild settings object
 
@@ -210,13 +210,13 @@ The input form of the [user settings object](/http-api/users/#user-settings-obje
 
 <sup>1</sup> An ISO 8601 string or Unix milliseconds. Anything else fails with the field code `INVALID_ISO_TIMESTAMP`
 
-<sup>2</sup> Must match a supported locale exactly. It also sets the language of emails Fluxer sends you
+<sup>2</sup> Must match a supported locale exactly. It also sets the language of emails sanalyer sends you
 
 <sup>3</sup> Duplicates are removed
 
 <sup>4</sup> `flags` is a legacy alias for `friend_source_flags`, which wins when both are sent
 
-<sup>5</sup> When the value has `FRIENDS_ONLY`, Fluxer keeps only that flag. Otherwise, when it has `NOBODY`, Fluxer keeps only `NOBODY`. `incoming_call_flags` also keeps `SILENT_EVERYONE`
+<sup>5</sup> When the value has `FRIENDS_ONLY`, sanalyer keeps only that flag. Otherwise, when it has `NOBODY`, sanalyer keeps only `NOBODY`. `incoming_call_flags` also keeps `SILENT_EVERYONE`
 
 <sup>6</sup> The single entry `*` trusts every domain. Combining it with another entry fails with the field code `INVALID_TRUSTED_DOMAINS`
 
@@ -228,7 +228,7 @@ The input form of the [user settings object](/http-api/users/#user-settings-obje
 
 <sup>10</sup> At most 524288 bytes once decoded. A value that is too large fails with the field code `TOO_LARGE`, and one that doesn't decode fails with `INVALID_FORMAT`
 
-<sup>11</sup> Fluxer checks the hash only when `synced_preferences` is also sent. It hashes the stored snapshot exactly as the settings object returns it, and an empty snapshot hashes as zero bytes. When the hashes differ, Fluxer writes nothing and returns 409 `SYNCED_PREFERENCES_CONFLICT`. Without this field, the new snapshot replaces the stored one unchecked
+<sup>11</sup> sanalyer checks the hash only when `synced_preferences` is also sent. It hashes the stored snapshot exactly as the settings object returns it, and an empty snapshot hashes as zero bytes. When the hashes differ, sanalyer writes nothing and returns 409 `SYNCED_PREFERENCES_CONFLICT`. Without this field, the new snapshot replaces the stored one unchecked
 
 ## Guild folder input object
 
@@ -249,7 +249,7 @@ One folder of a submitted guild folder layout.
 
 <sup>2</sup> Out-of-range values fail with `COLOR_VALUE_TOO_LOW` or `COLOR_VALUE_TOO_HIGH`
 
-Fluxer adds an empty uncategorized folder when your layout has none. A guild ID in more than one folder stays in only one of them. A folder with a name wins over one without, then any folder wins over the uncategorized folder, then the earlier folder wins.
+sanalyer adds an empty uncategorized folder when your layout has none. A guild ID in more than one folder stays in only one of them. A folder with a name wins over one without, then any folder wins over the uncategorized folder, then the earlier folder wins.
 
 :::caution[Send back guild IDs you don't show]
 The array replaces the stored layout, including guild IDs your client can't resolve. Send those IDs back too, or the update deletes them from the layout.
@@ -274,7 +274,7 @@ A custom status in a settings update.
 
 <sup>2</sup> Must be in the future
 
-<sup>3</sup> `emoji_name` is ignored when `emoji_id` is set. An unknown `emoji_id` fails with `CUSTOM_EMOJI_NOT_FOUND`. Fluxer drops the emoji for an account whose `feature_global_expressions` [limit](/http-api/instance/#limit-keys) is 0
+<sup>3</sup> `emoji_name` is ignored when `emoji_id` is set. An unknown `emoji_id` fails with `CUSTOM_EMOJI_NOT_FOUND`. sanalyer drops the emoji for an account whose `feature_global_expressions` [limit](/http-api/instance/#limit-keys) is 0
 
 Settings can keep a custom status after it expires. Hide it once `expires_at` is in the past.
 

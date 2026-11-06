@@ -100,7 +100,7 @@ Queues a rebuild of the index and returns its `job_id`. You need the `guild:look
 | 400 | [error response](/admin-api/#error-response) | `INVALID_FORM_BODY` when the index needs `guild_id` and it is missing |
 | 403 | [error response](/admin-api/#error-response) | `FEATURE_TEMPORARILY_DISABLED` when `index_name` is `all` on an instance with no search backend |
 
-Fluxer records an Admin audit log entry with the action `queue_refresh_index` and the target type `search_index`.
+sanalyer records an Admin audit log entry with the action `queue_refresh_index` and the target type `search_index`.
 
 The rate limit is 200 requests per minute, on the `admin:lookup` bucket.
 

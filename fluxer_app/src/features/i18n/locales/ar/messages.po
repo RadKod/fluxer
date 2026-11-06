@@ -41935,7 +41935,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"عرض النص بخط Fluxer Sans، الخط الافتراضي السابق، بدلاً من خط نظام Windows"
+"عرض النص بخط sanalyer Sans، الخط الافتراضي السابق، بدلاً من خط نظام Windows"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
 #. and Linux.
@@ -44536,7 +44536,7 @@ msgstr "تبديل الحسابات"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "الرجوع إلى خط Fluxer Sans"
+msgstr "الرجوع إلى خط sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45249,7 +45249,7 @@ msgid ""
 "Text on Windows now uses the system font. You can switch back to Fluxer Sans"
 " in settings."
 msgstr ""
-"يستخدم النص الآن خط النظام على ويندوز. يمكنك العودة إلى خط Fluxer Sans في "
+"يستخدم النص الآن خط النظام على ويندوز. يمكنك العودة إلى خط sanalyer Sans في "
 "الإعدادات."
 
 #. Settings search synonym. Used to match this term when the user types it in
@@ -45673,8 +45673,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"تتلقى تطبيقات Fluxer لنظامي iOS وAndroid الإشعارات عبر مرحّل إشعارات يديره "
-"Fluxer، ويمرّرها إلى Apple وGoogle. لاستخدامه، توافق على إشعار الخصوصية "
+"تتلقى تطبيقات sanalyer لنظامي iOS وAndroid الإشعارات عبر مرحّل إشعارات يديره "
+"sanalyer، ويمرّرها إلى Apple وGoogle. لاستخدامه، توافق على إشعار الخصوصية "
 "لمرحّل الإشعارات."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -51041,7 +51041,7 @@ msgstr "استخدم الفلاتر أو أدخل كلمات مفتاحية لل
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "استخدام خط Fluxer Sans على ويندوز"
+msgstr "استخدام خط sanalyer Sans على ويندوز"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

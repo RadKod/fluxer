@@ -42364,7 +42364,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Afișează textul în Fluxer Sans, fontul implicit anterior, în loc de fontul "
+"Afișează textul în sanalyer Sans, fontul implicit anterior, în loc de fontul "
 "sistemului Windows"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -45023,7 +45023,7 @@ msgstr "Comută între conturi"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Revenire la Fluxer Sans"
+msgstr "Revenire la sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45749,7 +45749,7 @@ msgid ""
 "Text on Windows now uses the system font. You can switch back to Fluxer Sans"
 " in settings."
 msgstr ""
-"Textul de pe Windows folosește acum fontul de sistem. Poți reveni la Fluxer "
+"Textul de pe Windows folosește acum fontul de sistem. Poți reveni la sanalyer "
 "Sans în setări."
 
 #. Settings search synonym. Used to match this term when the user types it in
@@ -46204,8 +46204,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Aplicațiile Fluxer pentru iOS și Android primesc notificări printr-un releu "
-"administrat de Fluxer, care le transmite către Apple și Google. Pentru a-l "
+"Aplicațiile sanalyer pentru iOS și Android primesc notificări printr-un releu "
+"administrat de sanalyer, care le transmite către Apple și Google. Pentru a-l "
 "folosi, accepți nota de confidențialitate a releului de notificări."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -51695,7 +51695,7 @@ msgstr "Folosește filtre sau introdu cuvinte-cheie pentru a găsi mesaje"
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Folosește Fluxer Sans pe Windows"
+msgstr "Folosește sanalyer Sans pe Windows"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

@@ -6,7 +6,7 @@ description: How to search the guild directory, preview, visit or join a listed 
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-Discovery is the public directory of guilds that any account can browse and join, shown as "Explore" in the Fluxer apps. Someone with `MANAGE_GUILD` applies to list a guild, and an instance admin reviews the application through the [Admin Discovery API](/admin-api/discovery/).
+Discovery is the public directory of guilds that any account can browse and join, shown as "Explore" in the sanalyer apps. Someone with `MANAGE_GUILD` applies to list a guild, and an instance admin reviews the application through the [Admin Discovery API](/admin-api/discovery/).
 
 When discovery is turned off for the instance, every route except [List discovery categories](#list-discovery-categories) and [Get discovery status](#get-discovery-status) returns 400 `DISCOVERY_DISABLED`.
 
@@ -238,7 +238,7 @@ Discovery has its own set of languages, separate from the [client locales](/topi
 
 ## Custom tags
 
-A listing can have up to 10 custom tags of 2-30 characters each. A tag must start with a letter or digit and can only have letters, digits, spaces, hyphens, underscores, plus signs and ampersands. Fluxer lowercases and trims each tag and drops duplicates.
+A listing can have up to 10 custom tags of 2-30 characters each. A tag must start with a letter or digit and can only have letters, digits, spaces, hyphens, underscores, plus signs and ampersands. sanalyer lowercases and trims each tag and drops duplicates.
 
 ## Search discovery guilds
 
@@ -319,7 +319,7 @@ The rate limit is 10 requests per 60 seconds, on the `guild:visit:start` bucket.
 
 <RouteHeader method="POST" path="/v1/discovery/guilds/{guild_id}/join" />
 
-Adds you to a guild with an approved listing, without an invite, and returns 204. Fluxer sends [Guild Create](/gateway/events/#guild-create) to your sessions and [Guild Member Add](/gateway/events/#guild-member-add) to the guild.
+Adds you to a guild with an approved listing, without an invite, and returns 204. sanalyer sends [Guild Create](/gateway/events/#guild-create) to your sessions and [Guild Member Add](/gateway/events/#guild-member-add) to the guild.
 
 ### Response
 
@@ -339,7 +339,7 @@ The rate limit is 10 requests per minute, on the `discovery:join` bucket.
 
 <RouteHeader method="POST" path="/v1/guilds/{guild_id}/discovery" bot />
 
-Submits a discovery application and returns the [discovery application object](#discovery-application-object). You need [`MANAGE_GUILD`](/http-api/permissions/). Applications stay pending until an instance admin reviews them, but a verified or partnered guild is approved right away and Fluxer sends [Guild Update](/gateway/events/#guild-update).
+Submits a discovery application and returns the [discovery application object](#discovery-application-object). You need [`MANAGE_GUILD`](/http-api/permissions/). Applications stay pending until an instance admin reviews them, but a verified or partnered guild is approved right away and sanalyer sends [Guild Update](/gateway/events/#guild-update).
 
 ### JSON body
 

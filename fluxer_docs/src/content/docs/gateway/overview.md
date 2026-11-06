@@ -20,7 +20,7 @@ The Gateway is a WebSocket that sends you account and [guild](/http-api/guilds/)
     "token": "YOUR_TOKEN",
     "properties": {
       "os": "Linux",
-      "browser": "Fluxer Client",
+      "browser": "my-bot",
       "device": "desktop"
     }
   }
@@ -140,7 +140,7 @@ Opcode 7 asks you to open a new WebSocket and [resume](#resuming-a-session). The
 
 ## Invalid session
 
-Opcode 9 with `d: false` means the session cannot be resumed, after a failed [Resume](#resuming-a-session) or when the session ends while you are connected. The socket stays open, and you can send Identify on it. Fluxer never sends `d: true`.
+Opcode 9 with `d: false` means the session cannot be resumed, after a failed [Resume](#resuming-a-session) or when the session ends while you are connected. The socket stays open, and you can send Identify on it. sanalyer never sends `d: true`.
 
 ## Sharding
 

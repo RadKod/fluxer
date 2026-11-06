@@ -4,7 +4,7 @@ title: Limits and rate limits
 description: The heartbeat, session, rate, replay and payload limits on a Gateway connection.
 ---
 
-Every Gateway connection (not the voice connection) has limits on what it sends, how long its session lasts and how much Fluxer replays to it. Going over a limit closes the connection with a [close code](/gateway/opcodes-and-close-codes/#close-codes), drops the payload or clamps the value. Message size limits are in [Framing](/gateway/overview/#framing).
+Every Gateway connection (not the voice connection) has limits on what it sends, how long its session lasts and how much sanalyer replays to it. Going over a limit closes the connection with a [close code](/gateway/opcodes-and-close-codes/#close-codes), drops the payload or clamps the value. Message size limits are in [Framing](/gateway/overview/#framing).
 
 ## Session lifecycle
 
@@ -34,7 +34,7 @@ Every client payload counts toward the first three budgets.
 | Voice Signal | 240 per WebSocket per rolling 10 seconds | The command is dropped |
 | Request Guild Members | 12 per account and 40 per guild per rolling 10 seconds | The command is dropped |
 
-Fluxer applies the first two Voice State Updates per session in a rolling second. Later ones are applied one every 500 ms, and a newer update for the same `guild_id` and `connection_id` replaces one that is still waiting.
+sanalyer applies the first two Voice State Updates per session in a rolling second. Later ones are applied one every 500 ms, and a newer update for the same `guild_id` and `connection_id` replaces one that is still waiting.
 
 A bot can request a guild's complete member list (Request Guild Members with an empty `query`, `limit` 0 and no `user_ids`) once every 30 seconds per guild. An earlier request gets [Rate Limited](/gateway/events/#rate-limited), and reconnecting does not reset the timer.
 

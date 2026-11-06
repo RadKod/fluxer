@@ -41527,7 +41527,7 @@ msgstr "הצג סמל במגש המערכת"
 msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
-msgstr "הצג טקסט בגופן Fluxer Sans, הגופן הקודם, במקום גופן מערכת Windows"
+msgstr "הצג טקסט בגופן sanalyer Sans, הגופן הקודם, במקום גופן מערכת Windows"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
 #. and Linux.
@@ -44110,7 +44110,7 @@ msgstr "החלף חשבונות"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "חזור ל-Fluxer Sans"
+msgstr "חזור ל-sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -44820,7 +44820,7 @@ msgid ""
 "Text on Windows now uses the system font. You can switch back to Fluxer Sans"
 " in settings."
 msgstr ""
-"הטקסט ב-Windows משתמש כעת בגופן המערכת. ניתן להחליף בחזרה ל-Fluxer Sans "
+"הטקסט ב-Windows משתמש כעת בגופן המערכת. ניתן להחליף בחזרה ל-sanalyer Sans "
 "בהגדרות."
 
 #. Settings search synonym. Used to match this term when the user types it in
@@ -45246,7 +45246,7 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"אפליקציות Fluxer ל-iOS ול-Android מקבלות התראות דרך ממסר התראות ש-Fluxer "
+"אפליקציות sanalyer ל-iOS ול-Android מקבלות התראות דרך ממסר התראות ש-sanalyer "
 "מפעיל, שמעביר אותן ל-Apple ול-Google. כדי להשתמש בו, אתה מקבל את הודעת "
 "הפרטיות של ממסר ההתראות."
 
@@ -50561,7 +50561,7 @@ msgstr "השתמש במסננים או הזן מילות מפתח כדי למצ�
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "השתמש ב-Fluxer Sans ב-Windows"
+msgstr "השתמש ב-sanalyer Sans ב-Windows"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

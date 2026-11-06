@@ -8,11 +8,11 @@ import RouteHeader from '@/components/RouteHeader.astro';
 
 Recent mentions and saved messages are private lists that only the account that owns them can read. Two more routes delete the messages you wrote. For data archives see [Data harvests](/http-api/users/data-harvest/).
 
-Only user tokens can call these routes, and Fluxer rejects a bot or OAuth2 bearer token with 403 `ACCESS_DENIED`.
+Only user tokens can call these routes, and sanalyer rejects a bot or OAuth2 bearer token with 403 `ACCESS_DENIED`.
 
 ## Saved message object
 
-A saved message is a private bookmark that pairs a message with the channel it was saved from. It stores no copy of the message, and Fluxer checks your permissions each time you list saved messages.
+A saved message is a private bookmark that pairs a message with the channel it was saved from. It stores no copy of the message, and sanalyer checks your permissions each time you list saved messages.
 
 ### Structure
 
@@ -53,7 +53,7 @@ The `guild_filter_mode` field of the same endpoint.
 
 <RouteHeader method="GET" path="/v1/users/@me/mentions" />
 
-Returns [messages](/http-api/messages/#message-object) from your recent mention history that you can still read, newest first. Fluxer records only mentions in guild channels. A deleted message or a channel you can no longer view is left out, and a page can have fewer messages than `limit`.
+Returns [messages](/http-api/messages/#message-object) from your recent mention history that you can still read, newest first. sanalyer records only mentions in guild channels. A deleted message or a channel you can no longer view is left out, and a page can have fewer messages than `limit`.
 
 An entry in a thread, forum channel or media channel is left out unless the session declares the [`channel_threads` client capability](/http-api/threads/#client-capability).
 
@@ -167,10 +167,10 @@ The rate limit is 30 requests per 10 seconds, on the `user:saved_messages:write`
 
 <RouteHeader method="POST" path="/v1/users/@me/messages/bulk-delete-mine" mfa />
 
-Deletes the messages you wrote that the filter selects, and needs [sudo mode](/http-api/users/mfa/#sudo-mode). Returns 202 before deletion starts. Fluxer sends [Message Delete Bulk](/gateway/events/#message-delete-bulk) events as it works and then a direct message from the system account with the totals. Personal notes are never deleted.
+Deletes the messages you wrote that the filter selects, and needs [sudo mode](/http-api/users/mfa/#sudo-mode). Returns 202 before deletion starts. sanalyer sends [Message Delete Bulk](/gateway/events/#message-delete-bulk) events as it works and then a direct message from the system account with the totals. Personal notes are never deleted.
 
 :::danger[Deletion is permanent]
-Fluxer deletes every selected message for every recipient and removes its attachments. Nothing restores them.
+sanalyer deletes every selected message for every recipient and removes its attachments. Nothing restores them.
 :::
 
 ### JSON body

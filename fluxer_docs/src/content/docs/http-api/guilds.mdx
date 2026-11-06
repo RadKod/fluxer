@@ -126,7 +126,7 @@ Invites return this smaller guild object, and its asset fields follow the same f
 
 ## Guild creation template object
 
-A template lists the roles and channels that [Create guild](#create-guild) creates. Its IDs are local to the template, as integers or decimal strings, and Fluxer gives each role and channel a new snowflake.
+A template lists the roles and channels that [Create guild](#create-guild) creates. Its IDs are local to the template, as integers or decimal strings, and sanalyer gives each role and channel a new snowflake.
 
 ### Structure
 
@@ -143,7 +143,7 @@ A template lists the roles and channels that [Create guild](#create-guild) creat
 | roles | array[[guild template role](#guild-template-role-object) object] | Template roles (max 250) |
 | channels | array[[guild template channel](#guild-template-channel-object) object] | Template channels (max 500) |
 
-<sup>1</sup> Fluxer ignores this field and uses `name` from the [Create guild](#create-guild) body
+<sup>1</sup> sanalyer ignores this field and uses `name` from the [Create guild](#create-guild) body
 
 <sup>2</sup> A value out of range is clamped into it
 
@@ -193,9 +193,9 @@ A template lists the roles and channels that [Create guild](#create-guild) creat
 | default_auto_archive_duration? | ?integer | Default [auto archive duration](/http-api/threads/#auto-archive-durations) in minutes for new threads |
 | flags? | ?integer | [Channel flags](/http-api/forums/#channel-flags) of a forum or media channel |
 
-<sup>1</sup> 0 creates a text channel, 2 or 13 a voice channel, 4 a category, 5 an announcement channel, 15 a forum channel and 16 a media channel. Fluxer skips any other type
+<sup>1</sup> 0 creates a text channel, 2 or 13 a voice channel, 4 a category, 5 an announcement channel, 15 a forum channel and 16 a media channel. sanalyer skips any other type
 
-<sup>2</sup> Fluxer applies only role overwrites whose `id` is a role in the template, and ID `0` is the everyone role
+<sup>2</sup> sanalyer applies only role overwrites whose `id` is a role in the template, and ID `0` is the everyone role
 
 ### Guild template forum tag object
 
@@ -205,7 +205,7 @@ A template lists the roles and channels that [Create guild](#create-guild) creat
 | --- | --- | --- |
 | name | string | Tag name |
 | moderated? | ?boolean | Whether only moderators can apply the tag |
-| emoji_id? | ?string \| integer | Custom emoji of the tag, which Fluxer ignores |
+| emoji_id? | ?string \| integer | Custom emoji of the tag, which sanalyer ignores |
 | emoji_name? | ?string | Unicode emoji of the tag |
 
 ### Guild template default reaction object
@@ -214,7 +214,7 @@ A template lists the roles and channels that [Create guild](#create-guild) creat
 
 | Field | Type | Description |
 | --- | --- | --- |
-| emoji_id? | ?string \| integer | Custom emoji of the reaction, which Fluxer ignores |
+| emoji_id? | ?string \| integer | Custom emoji of the reaction, which sanalyer ignores |
 | emoji_name? | ?string | Unicode emoji of the reaction |
 
 ### Guild template role permission overwrite object
@@ -279,7 +279,7 @@ The account setting is on the [user settings object](/http-api/users/settings/).
 
 ## NSFW levels
 
-Fluxer sets the level from the guild's `nsfw` field.
+sanalyer sets the level from the guild's `nsfw` field.
 
 | Value | Name | Description |
 | --- | --- | --- |
@@ -569,7 +569,7 @@ Changes guild settings and returns the updated [guild object](#guild-object). Yo
 
 <sup>4</sup> Needs `INVITE_SPLASH`
 
-<sup>5</sup> You can only add or remove `INVITES_DISABLED`, `TEXT_CHANNEL_FLEXIBLE_NAMES`, `DETACHED_BANNER`, `CLONE_EMOJI_ENABLED`, `CLONE_STICKER_ENABLED`, `HIDE_OWNER_CROWN` and `VISITS_ENABLED`, and Fluxer keeps every other feature the guild has
+<sup>5</sup> You can only add or remove `INVITES_DISABLED`, `TEXT_CHANNEL_FLEXIBLE_NAMES`, `DETACHED_BANNER`, `CLONE_EMOJI_ENABLED`, `CLONE_STICKER_ENABLED`, `HIDE_OWNER_CROWN` and `VISITS_ENABLED`, and sanalyer keeps every other feature the guild has
 
 :::caution[Leaving out a feature you can change removes it]
 Send the current `features` array with your changes applied.
@@ -691,7 +691,7 @@ Sets or removes the custom invite code and returns the [custom invite URL select
 | --- | --- | --- |
 | code?<sup>1</sup> | ?string | Custom invite code, or null to remove it |
 
-<sup>1</sup> Fluxer lowercases the code and turns spaces into hyphens. It must be 2-32 characters of `a-z`, `0-9` and inner hyphens and can't contain `fluxer`
+<sup>1</sup> sanalyer lowercases the code and turns spaces into hyphens. It must be 2-32 characters of `a-z`, `0-9` and inner hyphens and can't contain `fluxer`
 
 ### Response
 

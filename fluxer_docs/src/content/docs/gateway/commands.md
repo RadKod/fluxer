@@ -9,7 +9,7 @@ Clients send commands over the [Gateway](/gateway/overview/) WebSocket as JSON w
 | Opcode | Command | Result |
 | --- | --- | --- |
 | 1 | [Heartbeat](#heartbeat) | Opcode `11` Heartbeat ACK |
-| 2 | [Identify](#identify) | [Ready](/gateway/events/#ready), a close frame, or no response while Fluxer holds a rate-limited Identify |
+| 2 | [Identify](#identify) | [Ready](/gateway/events/#ready), a close frame, or no response while sanalyer holds a rate-limited Identify |
 | 3 | [Presence Update](#presence-update) | None |
 | 4 | [Voice State Update](#voice-state-update) | [Voice State Update](/gateway/events/#voice-state-update) and [Voice Server Update](/gateway/events/#voice-server-update) |
 | 6 | [Resume](#resume) | Replayed Dispatches and [Resumed](/gateway/events/#resumed), Invalid Session, a close frame, or no response while rate limited |
@@ -70,7 +70,7 @@ Opcode `2` authenticates and creates a new session.
     "token": "...",
     "properties": {
       "os": "Linux",
-      "browser": "Fluxer Client",
+      "browser": "my-bot",
       "device": "desktop"
     },
     "presence": {
@@ -137,7 +137,7 @@ Undefined bits are ignored.
 | mobile? | boolean | Whether the presence is mobile (default false) |
 | custom_status?<sup>2</sup> | ?[custom status](#custom-status-object) object | The custom status this session publishes |
 
-<sup>1</sup> Fluxer uses the account's saved status when `status` is missing, not a string or `unknown`, and when it is `online` but the saved status is something else
+<sup>1</sup> sanalyer uses the account's saved status when `status` is missing, not a string or `unknown`, and when it is `online` but the saved status is something else
 
 <sup>2</sup> Used only when the account has no saved custom status, and stored as sent
 
@@ -156,7 +156,7 @@ A session whose status is `offline` or `invisible` shows as offline with no cust
 
 <sup>1</sup> Must be in the future
 
-<sup>2</sup> Must be an existing emoji. Fluxer drops the field when the account has no global expressions entitlement
+<sup>2</sup> Must be an existing emoji. sanalyer drops the field when the account has no global expressions entitlement
 
 <sup>3</sup> A single Unicode emoji, ignored when `emoji_id` is sent
 
@@ -172,7 +172,7 @@ Opcode `6` restores a retained session. All fields are required, and a missing o
 | session_id | string | The session ID from [Ready](/gateway/events/#ready) |
 | seq | integer | The last Dispatch sequence the client processed |
 
-Send Resume on a new socket. Fluxer replays every retained Dispatch above `seq` in order and then sends [Resumed](/gateway/events/#resumed). If another socket still has the session, that socket gets Opcode `7` and is closed.
+Send Resume on a new socket. sanalyer replays every retained Dispatch above `seq` in order and then sends [Resumed](/gateway/events/#resumed). If another socket still has the session, that socket gets Opcode `7` and is closed.
 
 | Condition | Result |
 | --- | --- |
@@ -270,7 +270,7 @@ Opcode `13` sends one signaling message to another connection in a [peer-to-peer
 | guild_id? | ?snowflake | The guild with the voice channel, where null or omitted selects the DM and group DM call context |
 | channel_id | snowflake | The voice channel or call channel both connections are in |
 | to | string | The `connection_id` of the voice state the signal is for |
-| data | object | The signaling message, which Fluxer relays unread |
+| data | object | The signaling message, which sanalyer relays unread |
 
 ```json
 {
@@ -287,7 +287,7 @@ Opcode `13` sends one signaling message to another connection in a [peer-to-peer
 }
 ```
 
-Fluxer relays the signal when both the sender and the `to` connection have a voice state with `p2p: true` in that channel. Only the target connection's session gets the [Voice Signal](/gateway/events/#voice-signal). Any other signal is dropped with no event and no close.
+sanalyer relays the signal when both the sender and the `to` connection have a voice state with `p2p: true` in that channel. Only the target connection's session gets the [Voice Signal](/gateway/events/#voice-signal). Any other signal is dropped with no event and no close.
 
 ## Request Guild Members
 
@@ -340,7 +340,7 @@ Opcode `14` sets the per-guild subscriptions that decide member list, typing, sy
 | --- | --- | --- |
 | subscriptions<sup>1</sup> | map[snowflake, [guild subscription](#guild-subscription-object) object] | The subscription options for each guild, keyed by guild ID |
 
-<sup>1</sup> Fluxer applies each guild's options again when the session connects to that guild later
+<sup>1</sup> sanalyer applies each guild's options again when the session connects to that guild later
 
 ```json
 {
@@ -372,7 +372,7 @@ Opcode `14` sets the per-guild subscriptions that decide member list, typing, sy
 | members? | array[snowflake] | The explicit member IDs to subscribe to (at most 1,000) |
 | focused_channel_id?<sup>3</sup> | ?snowflake | The channel or public thread a visiting session has open |
 
-<sup>1</sup> A non-Boolean value stops Fluxer applying the remaining options for that guild and the guilds after it
+<sup>1</sup> A non-Boolean value stops sanalyer applying the remaining options for that guild and the guilds after it
 
 <sup>2</sup> Each range is `[start, end]` with `start` at least 0, `end` at least `start` and at most 100,000, and `end - start` at most 99. Invalid ranges are dropped and each channel keeps its first 10
 

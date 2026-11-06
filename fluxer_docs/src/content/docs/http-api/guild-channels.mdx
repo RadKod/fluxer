@@ -17,7 +17,7 @@ A guild channel is a channel or category in a guild. These endpoints list, creat
 | 0 | GUILD_TEXT | Text channel with messages and slowmode |
 | 2 | GUILD_VOICE | Voice channel with messages, voice sessions and streams |
 | 4 | GUILD_CATEGORY | Category that groups channels and gives them inherited permission overwrites |
-| 5 | GUILD_ANNOUNCEMENT | Text channel whose messages can be [published](/topics/announcement-channels/) to following channels |
+| 5 | GUILD_ANNOUNCEMENT | Text channel whose messages can be published to following channels |
 | 15 | GUILD_FORUM<sup>1</sup> | Channel that has [posts](/http-api/forums/) and no messages of its own |
 | 16 | GUILD_MEDIA<sup>1</sup> | [Forum channel](/http-api/forums/) that can [hide media download options](/http-api/forums/#channel-flags) |
 | 998 | GUILD_LINK | Channel whose only content is an external URL |
@@ -90,7 +90,7 @@ The rate limit is 60 requests per 10 seconds, on the `guild:channels:list::guild
 
 <RouteHeader method="POST" path="/v1/guilds/{guild_id}/channels" bot auditReason mfa />
 
-Creates a channel and returns its [channel object](/http-api/channels/#channel-object). You need [MANAGE_CHANNELS](/http-api/permissions/) in the parent category when you send `parent_id`, and in the guild otherwise. To send `permission_overwrites` you also need [MANAGE_ROLES](/http-api/permissions/) there and every bit you allow. Fluxer sends [Channel Create](/gateway/events/#channel-create) to sessions that can view the channel.
+Creates a channel and returns its [channel object](/http-api/channels/#channel-object). You need [MANAGE_CHANNELS](/http-api/permissions/) in the parent category when you send `parent_id`, and in the guild otherwise. To send `permission_overwrites` you also need [MANAGE_ROLES](/http-api/permissions/) there and every bit you allow. sanalyer sends [Channel Create](/gateway/events/#channel-create) to sessions that can view the channel.
 
 ### JSON body
 
@@ -149,7 +149,7 @@ The rate limit is 10 requests per minute, on the `guild:channel:create::guild_id
 
 <RouteHeader method="PATCH" path="/v1/guilds/{guild_id}/channels" bot mfa />
 
-Moves channels and categories and returns 204. You need [MANAGE_CHANNELS](/http-api/permissions/) in the guild. When an entry sets `lock_permissions` and changes the parent, you also need [MANAGE_ROLES](/http-api/permissions/) in the moved channel and every bit the copy adds or removes. Fluxer sends [Channel Update Bulk](/gateway/events/#channel-update-bulk) for each entry that changes the order and writes no audit log entry.
+Moves channels and categories and returns 204. You need [MANAGE_CHANNELS](/http-api/permissions/) in the guild. When an entry sets `lock_permissions` and changes the parent, you also need [MANAGE_ROLES](/http-api/permissions/) in the moved channel and every bit the copy adds or removes. sanalyer sends [Channel Update Bulk](/gateway/events/#channel-update-bulk) for each entry that changes the order and writes no audit log entry.
 
 ### JSON body
 

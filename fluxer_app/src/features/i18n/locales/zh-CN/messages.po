@@ -40625,7 +40625,7 @@ msgstr "显示系统托盘图标"
 msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
-msgstr "以 Fluxer Sans（之前的默认字体）显示文本，而不是使用 Windows 系统字体"
+msgstr "以 sanalyer Sans（之前的默认字体）显示文本，而不是使用 Windows 系统字体"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
 #. and Linux.
@@ -43181,7 +43181,7 @@ msgstr "切换账号"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "切换回 Fluxer Sans"
+msgstr "切换回 sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -43874,7 +43874,7 @@ msgstr "启用透明度时，文本将使用灰度抗锯齿而非 ClearType 进�
 msgid ""
 "Text on Windows now uses the system font. You can switch back to Fluxer Sans"
 " in settings."
-msgstr "现在 Windows 上的文字将使用系统字体。你可以在设置中切换回 Fluxer Sans。"
+msgstr "现在 Windows 上的文字将使用系统字体。你可以在设置中切换回 sanalyer Sans。"
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -44269,7 +44269,7 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Fluxer 的 iOS 和 Android 应用通过 Fluxer 运营的推送中继接收通知，中继再把通知转给 Apple 和 "
+"sanalyer 的 iOS 和 Android 应用通过 sanalyer 运营的推送中继接收通知，中继再把通知转给 Apple 和 "
 "Google。要使用它，你需要接受推送中继隐私声明。"
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -49381,7 +49381,7 @@ msgstr "使用筛选条件或输入关键词查找消息"
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "在 Windows 上使用 Fluxer Sans"
+msgstr "在 Windows 上使用 sanalyer Sans"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

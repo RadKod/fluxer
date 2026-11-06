@@ -62,7 +62,7 @@ Limits such as attachment counts differ between instances, and [instance discove
 | [Webhooks](/http-api/webhooks/) | Webhook management, execution and provider callbacks |
 | [Search](/http-api/search/) | Global message search |
 | [Unfurl](/http-api/unfurl/) | External URL metadata |
-| [Billing](/http-api/billing/) | Stripe checkout, gift purchase, the Stripe webhook |
+| Billing | Stripe checkout, gift purchase, the Stripe webhook |
 | [Premium](/http-api/premium/) | Pricing, entitlement state, subscription self-service |
 | [Gifts](/http-api/gifts/) | Gift code lookup and redemption |
 | [Reports](/http-api/reports/) | Safety reports and Digital Services Act notices |

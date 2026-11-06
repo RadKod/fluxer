@@ -102,7 +102,7 @@ Registering an [instant account](/admin-api/instance/#auth-configuration-object)
 
 ### Announcement channel limits
 
-These return `X-RateLimit-Scope` set to `shared`, because every member who publishes or edits uses the same allowance. [Announcement channels](/topics/announcement-channels/#limits) has the other limits.
+These return `X-RateLimit-Scope` set to `shared`, because every member who publishes or edits uses the same allowance. Announcement channels has the other limits.
 
 | Limit | Code |
 | --- | --- |

@@ -49,7 +49,7 @@ Routes that need `MANAGE_MESSAGES` also follow the guild's [MFA level](/http-api
 | referenced_message?<sup>4</sup> | ?[message](#message-object) object | The message a reply points to |
 | thread? | [thread](/http-api/threads/#thread-object) object | The thread started from this message |
 
-<sup>1</sup> For a webhook message, Fluxer builds the author from the webhook, with `bot` set to true
+<sup>1</sup> For a webhook message, sanalyer builds the author from the webhook, with `bot` set to true
 
 <sup>2</sup> A user is in `mentions` or in `users`, never both. Resolve the IDs in a snapshot's `mentions` against this array
 
@@ -117,7 +117,7 @@ You can only edit, pin or reply to `DEFAULT` and `REPLY` messages. [Thread messa
 | 1 &lt;&lt; 12 | SUPPRESS_NOTIFICATIONS | The message sends no mention notifications |
 | 1 &lt;&lt; 13 | VOICE_MESSAGE | The message is a voice message |
 
-You can set `SUPPRESS_EMBEDS`, `SUPPRESS_NOTIFICATIONS` and `VOICE_MESSAGE`. Fluxer ignores any other bit you send and sets the rest itself.
+You can set `SUPPRESS_EMBEDS`, `SUPPRESS_NOTIFICATIONS` and `VOICE_MESSAGE`. sanalyer ignores any other bit you send and sets the rest itself.
 
 ## Message attachment object
 
@@ -129,7 +129,7 @@ You can set `SUPPRESS_EMBEDS`, `SUPPRESS_NOTIFICATIONS` and `VOICE_MESSAGE`. Flu
 | filename | string | The filename |
 | title | ?string | The display title |
 | description | ?string | The alt text |
-| content_type | string | The media type Fluxer detected |
+| content_type | string | The media type sanalyer detected |
 | content_hash | ?string | The hash of the file |
 | size | integer | The size in bytes |
 | url | ?string | The [signed](#signed-attachment-urls) URL, or null once the attachment has expired |
@@ -146,7 +146,7 @@ You can set `SUPPRESS_EMBEDS`, `SUPPRESS_NOTIFICATIONS` and `VOICE_MESSAGE`. Flu
 
 ### Signed attachment URLs
 
-When the instance has attachment URL secrets, Fluxer adds these query parameters to `url` and `proxy_url`.
+When the instance has attachment URL secrets, sanalyer adds these query parameters to `url` and `proxy_url`.
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -295,7 +295,7 @@ A snapshot is a copy of a forwarded message. It doesn't change when the source i
 
 ## Embed object
 
-An embed is a link preview Fluxer builds, or a rich embed you send.
+An embed is a link preview sanalyer builds, or a rich embed you send.
 
 ### Structure
 
@@ -377,7 +377,7 @@ An embed is a link preview Fluxer builds, or a rich embed you send.
 | placeholder? | string | An encoded placeholder image |
 | flags? | integer | `CONTAINS_EXPLICIT_MEDIA` and `IS_ANIMATED` from [attachment flags](#attachment-flags) |
 
-Fluxer signs every embed URL that points to an attachment on this instance, the same way as [attachment URLs](#signed-attachment-urls).
+sanalyer signs every embed URL that points to an attachment on this instance, the same way as [attachment URLs](#signed-attachment-urls).
 
 ## Embed footer object
 
@@ -585,7 +585,7 @@ Returned for a file of 10 MiB or less.
 | filename | string | The filename from the request |
 | upload_filename | string | The upload key to send with the message |
 | file_size | integer | The size from the request |
-| content_type | string | The media type Fluxer derived from `filename` |
+| content_type | string | The media type sanalyer derived from `filename` |
 | upload_mode | string | Always `singlepart` |
 | upload_url | string | The URL to `PUT` the whole file to |
 
@@ -601,7 +601,7 @@ Returned for a file over 10 MiB.
 | filename | string | The filename from the request |
 | upload_filename | string | The upload key to send with the message |
 | file_size | integer | The size from the request |
-| content_type | string | The media type Fluxer derived from `filename` |
+| content_type | string | The media type sanalyer derived from `filename` |
 | upload_mode | string | Always `multipart` |
 | upload_id | string | The ID of the multipart upload |
 | part_size | integer | The size of every part except the last, in bytes |
@@ -814,7 +814,7 @@ The rate limit is 10 requests per 10 seconds, on the `channel:attachment:upload:
 
 <RouteHeader method="POST" path="/v1/channels/{channel_id}/attachments/complete" bot />
 
-Finishes 1 to 10 multipart uploads after you've uploaded every part. If completion fails, Fluxer discards the upload and you have to start again.
+Finishes 1 to 10 multipart uploads after you've uploaded every part. If completion fails, sanalyer discards the upload and you have to start again.
 
 ### JSON body
 
@@ -869,7 +869,7 @@ The rate limit is 60 requests per 10 seconds, on the `attachment:refresh_urls` b
 
 <RouteHeader method="POST" path="/v1/channels/{channel_id}/messages" bot />
 
-Sends a message and returns it, and Fluxer sends [Message Create](/gateway/events/#message-create). In a guild channel you need `SEND_MESSAGES`, or `SEND_MESSAGES_IN_THREADS` in a thread. Embeds need `EMBED_LINKS`, files need `ATTACH_FILES` and `@everyone` needs `MENTION_EVERYONE`.
+Sends a message and returns it, and sanalyer sends [Message Create](/gateway/events/#message-create). In a guild channel you need `SEND_MESSAGES`, or `SEND_MESSAGES_IN_THREADS` in a thread. Embeds need `EMBED_LINKS`, files need `ATTACH_FILES` and `@everyone` needs `MENTION_EVERYONE`.
 
 A message needs text, an embed, an attachment, a meme or a sticker. Text can be up to the [`max_message_length`](/http-api/instance/#limit-keys) limit, and bots and webhooks always get at least 4,000 characters.
 
@@ -888,7 +888,7 @@ A message needs text, an embed, an attachment, a meme or a sticker. Text can be 
 | sticker_ids? | ?array[snowflake] | The stickers (at most 3) |
 | tts? | boolean | Whether to use text-to-speech, which needs `SEND_TTS_MESSAGES` |
 
-<sup>1</sup> Fluxer remembers a nonce for 5 minutes, and sending it again in the same channel returns the first message. Reuse the nonce when you retry a send. Reusing it in a different channel within that time returns 404 `UNKNOWN_MESSAGE`
+<sup>1</sup> sanalyer remembers a nonce for 5 minutes, and sending it again in the same channel returns the first message. Reuse the nonce when you retry a send. Reusing it in a different channel within that time returns 404 `UNKNOWN_MESSAGE`
 
 A forward has only `message_reference`, with `type` `1` and `channel_id`.
 
@@ -948,7 +948,7 @@ The rate limit is 20 requests per 10 seconds, on the `channel:message:create::ch
 
 <RouteHeader method="PATCH" path="/v1/channels/{channel_id}/messages/{message_id}" bot />
 
-Edits a message and returns it, and Fluxer sends [Message Update](/gateway/events/#message-update). The author can change any field. Someone else with `MANAGE_MESSAGES` can only change `SUPPRESS_EMBEDS` and the title and alt text of existing attachments. The author of a [published](#crosspost-message) message can edit it 3 times in a row, then once every 20 minutes.
+Edits a message and returns it, and sanalyer sends [Message Update](/gateway/events/#message-update). The author can change any field. Someone else with `MANAGE_MESSAGES` can only change `SUPPRESS_EMBEDS` and the title and alt text of existing attachments. The author of a [published](#crosspost-message) message can edit it 3 times in a row, then once every 20 minutes.
 
 The body works like [Create message](#create-message), including multipart. Fields you leave out stay the same.
 
@@ -982,7 +982,7 @@ The rate limit is 20 requests per 10 seconds, on the `channel:message:update::ch
 
 <RouteHeader method="POST" path="/v1/channels/{channel_id}/messages/{message_id}/crosspost" bot />
 
-Publishes a message in an announcement channel to every channel that follows it, and returns the message with the `CROSSPOSTED` flag. You need `SEND_MESSAGES`, and `MANAGE_MESSAGES` for someone else's message. Only a `DEFAULT` message that isn't a forward can be published, and only once. [Announcement channels](/topics/announcement-channels/) describes the copies.
+Publishes a message in an announcement channel to every channel that follows it, and returns the message with the `CROSSPOSTED` flag. You need `SEND_MESSAGES`, and `MANAGE_MESSAGES` for someone else's message. Only a `DEFAULT` message that isn't a forward can be published, and only once. Announcement channels describes the copies.
 
 Each announcement channel can publish 10 messages in a row, then one every 6 minutes.
 
@@ -1033,7 +1033,7 @@ The rate limit is 40 requests per 10 seconds, on the `channel:read_state:delete:
 
 <RouteHeader method="DELETE" path="/v1/channels/{channel_id}/messages/{message_id}" bot auditReason />
 
-Deletes a message and its attachments, and Fluxer sends [Message Delete](/gateway/events/#message-delete). You can delete your own messages, and someone else's message in a guild needs `MANAGE_MESSAGES`. Only `DEFAULT`, `REPLY`, `CHANNEL_PINNED_MESSAGE`, `USER_JOIN`, `CHANNEL_FOLLOW_ADD` and `THREAD_CREATED` messages can be deleted. In a guild, every delete adds a `MESSAGE_DELETE` audit log entry.
+Deletes a message and its attachments, and sanalyer sends [Message Delete](/gateway/events/#message-delete). You can delete your own messages, and someone else's message in a guild needs `MANAGE_MESSAGES`. Only `DEFAULT`, `REPLY`, `CHANNEL_PINNED_MESSAGE`, `USER_JOIN`, `CHANNEL_FOLLOW_ADD` and `THREAD_CREATED` messages can be deleted. In a guild, every delete adds a `MESSAGE_DELETE` audit log entry.
 
 Deleting a [published](#crosspost-message) message replaces each copy with `[Original message deleted]` and sets `SOURCE_MESSAGE_DELETED`.
 
@@ -1049,7 +1049,7 @@ The rate limit is 20 requests per 10 seconds, on the `channel:message:delete::ch
 
 <RouteHeader method="DELETE" path="/v1/channels/{channel_id}/messages/{message_id}/attachments/{attachment_id}" bot />
 
-Deletes one attachment from your own message, and Fluxer sends [Message Update](/gateway/events/#message-update). When it's the last thing in the message, Fluxer deletes the whole message and sends [Message Delete](/gateway/events/#message-delete) instead.
+Deletes one attachment from your own message, and sanalyer sends [Message Update](/gateway/events/#message-update). When it's the last thing in the message, sanalyer deletes the whole message and sends [Message Delete](/gateway/events/#message-delete) instead.
 
 ### Response
 
@@ -1063,7 +1063,7 @@ The rate limit is 20 requests per 10 seconds, on the `channel:message:delete::ch
 
 <RouteHeader method="POST" path="/v1/channels/{channel_id}/messages/bulk-delete" bot auditReason mfa />
 
-Deletes up to 100 messages of any age in a guild channel and skips IDs that match nothing. You need `MANAGE_MESSAGES`. Fluxer sends one [Message Delete Bulk](/gateway/events/#message-delete-bulk) and adds one `MESSAGE_BULK_DELETE` audit log entry.
+Deletes up to 100 messages of any age in a guild channel and skips IDs that match nothing. You need `MANAGE_MESSAGES`. sanalyer sends one [Message Delete Bulk](/gateway/events/#message-delete-bulk) and adds one `MESSAGE_BULK_DELETE` audit log entry.
 
 ### JSON body
 
@@ -1086,7 +1086,7 @@ The rate limit is 10 requests per 10 seconds, on the `channel:message:bulk_delet
 
 <RouteHeader method="POST" path="/v1/channels/{channel_id}/messages/purge" bot />
 
-Deletes every message in your personal notes channel and can't be undone. Fluxer sends [Message Delete Bulk](/gateway/events/#message-delete-bulk) for every 100 messages.
+Deletes every message in your personal notes channel and can't be undone. sanalyer sends [Message Delete Bulk](/gateway/events/#message-delete-bulk) for every 100 messages.
 
 ### Response body
 
@@ -1107,7 +1107,7 @@ The rate limit is 2 requests per minute, on the `channel:message:purge::channel_
 
 <RouteHeader method="POST" path="/v1/channels/{channel_id}/messages/bulk-delete-mine" bot mfa />
 
-Deletes every message you sent in a channel and its threads, and can't be undone. For a thread, only that thread is cleared. You need [sudo mode](/http-api/users/mfa/#sudo-mode), from the `X-Fluxer-Sudo-Mode-JWT` header or the fields in the JSON body. Fluxer sends [Message Delete Bulk](/gateway/events/#message-delete-bulk) for every 100 messages.
+Deletes every message you sent in a channel and its threads, and can't be undone. For a thread, only that thread is cleared. You need [sudo mode](/http-api/users/mfa/#sudo-mode), from the `X-Fluxer-Sudo-Mode-JWT` header or the fields in the JSON body. sanalyer sends [Message Delete Bulk](/gateway/events/#message-delete-bulk) for every 100 messages.
 
 ### JSON body
 
@@ -1156,7 +1156,7 @@ The rate limit is 20 requests per 10 seconds, on the `channel:pins::channel_id` 
 
 <RouteHeader method="PUT" path="/v1/channels/{channel_id}/pins/{message_id}" bot auditReason />
 
-Pins a `DEFAULT` or `REPLY` message. In a guild you need `PIN_MESSAGES`, and Fluxer adds a `MESSAGE_PIN` audit log entry. Fluxer posts a `CHANNEL_PINNED_MESSAGE` message and sends [Message Update](/gateway/events/#message-update), [Channel Pins Update](/gateway/events/#channel-pins-update) and [Message Create](/gateway/events/#message-create).
+Pins a `DEFAULT` or `REPLY` message. In a guild you need `PIN_MESSAGES`, and sanalyer adds a `MESSAGE_PIN` audit log entry. sanalyer posts a `CHANNEL_PINNED_MESSAGE` message and sends [Message Update](/gateway/events/#message-update), [Channel Pins Update](/gateway/events/#channel-pins-update) and [Message Create](/gateway/events/#message-create).
 
 ### Response
 
@@ -1172,7 +1172,7 @@ The rate limit is 20 requests per 10 seconds, on the `channel:pins::channel_id` 
 
 <RouteHeader method="DELETE" path="/v1/channels/{channel_id}/pins/{message_id}" bot auditReason />
 
-Unpins a message, with the same permissions as [Pin message](#pin-message). Fluxer sends [Message Update](/gateway/events/#message-update) and [Channel Pins Update](/gateway/events/#channel-pins-update), and in a guild adds a `MESSAGE_UNPIN` audit log entry.
+Unpins a message, with the same permissions as [Pin message](#pin-message). sanalyer sends [Message Update](/gateway/events/#message-update) and [Channel Pins Update](/gateway/events/#channel-pins-update), and in a guild adds a `MESSAGE_UNPIN` audit log entry.
 
 ### Response
 
@@ -1187,7 +1187,7 @@ The rate limit is 20 requests per 10 seconds, on the `channel:pins::channel_id` 
 
 <RouteHeader method="POST" path="/v1/channels/{channel_id}/pins/ack" bot />
 
-Marks the channel's pins as seen, and Fluxer sends [Channel Pins ACK](/gateway/events/#channel-pins-ack) to your sessions.
+Marks the channel's pins as seen, and sanalyer sends [Channel Pins ACK](/gateway/events/#channel-pins-ack) to your sessions.
 
 ### Response
 
@@ -1248,7 +1248,7 @@ The rate limit is 30 requests per 10 seconds, on the `channel:reactions::channel
 
 <RouteHeader method="PUT" path="/v1/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/@me" bot />
 
-Adds your reaction, and Fluxer sends [Message Reaction Add](/gateway/events/#message-reaction-add). In a guild, adding a new emoji needs `ADD_REACTIONS`, and a custom emoji also needs `USE_EXTERNAL_EMOJIS`. Using another guild's emoji needs the `feature_global_expressions` limit. Your account needs a verified email.
+Adds your reaction, and sanalyer sends [Message Reaction Add](/gateway/events/#message-reaction-add). In a guild, adding a new emoji needs `ADD_REACTIONS`, and a custom emoji also needs `USE_EXTERNAL_EMOJIS`. Using another guild's emoji needs the `feature_global_expressions` limit. Your account needs a verified email.
 
 ### Query parameters
 
@@ -1274,7 +1274,7 @@ The rate limit is 30 requests per 10 seconds, on the `channel:reactions::channel
 
 <RouteHeader method="DELETE" path="/v1/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/@me" bot />
 
-Removes your reaction, and Fluxer sends [Message Reaction Remove](/gateway/events/#message-reaction-remove).
+Removes your reaction, and sanalyer sends [Message Reaction Remove](/gateway/events/#message-reaction-remove).
 
 ### Query parameters
 
@@ -1294,7 +1294,7 @@ The rate limit is 30 requests per 10 seconds, on the `channel:reactions::channel
 
 <RouteHeader method="DELETE" path="/v1/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/{target_id}" bot />
 
-Removes the reaction of the user `target_id`, and Fluxer sends [Message Reaction Remove](/gateway/events/#message-reaction-remove). Unless `target_id` is you, this only works in a guild channel and needs `MANAGE_MESSAGES`.
+Removes the reaction of the user `target_id`, and sanalyer sends [Message Reaction Remove](/gateway/events/#message-reaction-remove). Unless `target_id` is you, this only works in a guild channel and needs `MANAGE_MESSAGES`.
 
 ### Query parameters
 
@@ -1314,7 +1314,7 @@ The rate limit is 30 requests per 10 seconds, on the `channel:reactions::channel
 
 <RouteHeader method="DELETE" path="/v1/channels/{channel_id}/messages/{message_id}/reactions/{emoji}" bot />
 
-Removes every reaction with one emoji, and Fluxer sends [Message Reaction Remove Emoji](/gateway/events/#message-reaction-remove-emoji). This only works in a guild channel, where you need `MANAGE_MESSAGES`. A private channel returns 403 `MISSING_PERMISSIONS`.
+Removes every reaction with one emoji, and sanalyer sends [Message Reaction Remove Emoji](/gateway/events/#message-reaction-remove-emoji). This only works in a guild channel, where you need `MANAGE_MESSAGES`. A private channel returns 403 `MISSING_PERMISSIONS`.
 
 ### Response
 
@@ -1328,7 +1328,7 @@ The rate limit is 30 requests per 10 seconds, on the `channel:reactions::channel
 
 <RouteHeader method="DELETE" path="/v1/channels/{channel_id}/messages/{message_id}/reactions" bot />
 
-Removes every reaction from a message, and Fluxer sends [Message Reaction Remove All](/gateway/events/#message-reaction-remove-all). This only works in a guild channel, where you need `MANAGE_MESSAGES`. A private channel returns 403 `MISSING_PERMISSIONS`.
+Removes every reaction from a message, and sanalyer sends [Message Reaction Remove All](/gateway/events/#message-reaction-remove-all). This only works in a guild channel, where you need `MANAGE_MESSAGES`. A private channel returns 403 `MISSING_PERMISSIONS`.
 
 ### Response
 
@@ -1342,7 +1342,7 @@ The rate limit is 30 requests per 10 seconds, on the `channel:reactions::channel
 
 <RouteHeader method="POST" path="/v1/channels/{channel_id}/typing" bot />
 
-Shows that you're typing, and Fluxer sends [Typing Start](/gateway/events/#typing-start). In a guild channel you need `SEND_MESSAGES`, or `SEND_MESSAGES_IN_THREADS` in a thread.
+Shows that you're typing, and sanalyer sends [Typing Start](/gateway/events/#typing-start). In a guild channel you need `SEND_MESSAGES`, or `SEND_MESSAGES_IN_THREADS` in a thread.
 
 ### Response body
 
@@ -1353,7 +1353,7 @@ Shows that you're typing, and Fluxer sends [Typing Start](/gateway/events/#typin
 
 <sup>1</sup> The schema does not declare this body
 
-Fluxer only returns this body during a slowmode cooldown, and only to a session with the [`channel_threads` client capability](/http-api/threads/#client-capability).
+sanalyer only returns this body during a slowmode cooldown, and only to a session with the [`channel_threads` client capability](/http-api/threads/#client-capability).
 
 ### Response
 
@@ -1369,7 +1369,7 @@ The rate limit is 20 requests per 10 seconds, on the `channel:typing::channel_id
 
 <RouteHeader method="POST" path="/v1/channels/{channel_id}/messages/{message_id}/ack" />
 
-Marks a channel as read up to a message, and Fluxer sends [Message ACK](/gateway/events/#message-ack) to your sessions. Bots can't use this route.
+Marks a channel as read up to a message, and sanalyer sends [Message ACK](/gateway/events/#message-ack) to your sessions. Bots can't use this route.
 
 ### JSON body
 

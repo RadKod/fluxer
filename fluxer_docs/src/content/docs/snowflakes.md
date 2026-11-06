@@ -1,13 +1,13 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Snowflakes
-description: The 64-bit IDs Fluxer gives every resource, how to get their creation time and how to send and page with them.
+description: The 64-bit IDs sanalyer gives every resource, how to get their creation time and how to send and page with them.
 ---
 
-A snowflake is the 64-bit ID of a Fluxer resource, such as a user, guild, channel, message or role. The HTTP API, the Admin API and the Gateway all use the same IDs, and an ID is unique within the instance that issued it.
+A snowflake is the 64-bit ID of a sanalyer resource, such as a user, guild, channel, message or role. The HTTP API, the Admin API and the Gateway all use the same IDs, and an ID is unique within the instance that issued it.
 
 :::caution[Never parse a snowflake as a JSON number]
-Fluxer sends every snowflake as a string of decimal digits, because a JSON number can't represent one exactly. Parse the string into a 64-bit integer and compare snowflakes as integers.
+sanalyer sends every snowflake as a string of decimal digits, because a JSON number can't represent one exactly. Parse the string into a 64-bit integer and compare snowflakes as integers.
 :::
 
 ## Format
@@ -16,7 +16,7 @@ A snowflake packs a timestamp, a worker ID and a sequence into 64 bits. Bit 63 i
 
 | Field | Bits | Description |
 | --- | --- | --- |
-| Timestamp | 62 to 22 | Milliseconds since the Fluxer epoch, `2015-01-01T00:00:00.000Z` |
+| Timestamp | 62 to 22 | Milliseconds since the sanalyer epoch, `2015-01-01T00:00:00.000Z` |
 | Worker ID | 21 to 12 | The worker that issued the ID, from `0` through `1023` |
 | Sequence | 11 to 0 | A per-worker counter, from `0` through `4095` |
 

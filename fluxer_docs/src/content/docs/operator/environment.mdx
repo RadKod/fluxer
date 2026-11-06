@@ -1,9 +1,10 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Environment variables
-description: Every environment variable Fluxer and the Docker Compose bundle use.
+description: Every environment variable sanalyer and the Docker Compose bundle use.
 sidebar:
   label: Environment variables
+draft: true
 ---
 
 rexctl generates this page and the `.env.example` in the compose bundle of each release. Use the `.env.example` that came with your release. An entry for a setting rexctl manages ends with the `rexctl config set` command that changes it.
@@ -18,7 +19,7 @@ Leave it set to `true`. Docker Compose won't start without it.
 
 ### `FLUXER_DOMAIN`
 
-The domain Fluxer runs on, such as `chat.example.com`. With rexctl, use `rexctl config set domain`.
+The domain sanalyer runs on, such as `chat.example.com`. With rexctl, use `rexctl config set domain`.
 
 ## First admin account
 
@@ -28,7 +29,7 @@ The token the setup wizard asks for before it creates the first admin account. U
 
 ## Secrets
 
-Fill these in before the first start, and keep a copy of `.env` somewhere safe. Only `FLUXER_ACTIVITYPUB_SIGNING_KEY_BASE64` may stay empty. rexctl generates these when it installs Fluxer. With Docker Compose, [these commands](/operator/docker-compose/#fill-in-env) fill them in.
+Fill these in before the first start, and keep a copy of `.env` somewhere safe. Only `FLUXER_ACTIVITYPUB_SIGNING_KEY_BASE64` may stay empty. rexctl generates these when it installs sanalyer. With Docker Compose, [these commands](/operator/docker-compose/#fill-in-env) fill them in.
 
 ### `FLUXER_S3_ACCESS_KEY`
 
@@ -36,15 +37,15 @@ The object store access key. Keep the default for the bundled object store, or s
 
 ### `LIVEKIT_API_KEY`
 
-The LiveKit API key. Docker Compose passes it to the bundled LiveKit as its API key and webhook key, and to Fluxer as `FLUXER_LIVEKIT_API_KEY`. The value is `fluxer`.
+The LiveKit API key. Docker Compose passes it to the bundled LiveKit as its API key and webhook key, and to sanalyer as `FLUXER_LIVEKIT_API_KEY`. The value is `fluxer`.
 
 ### `POSTGRES_PASSWORD`
 
-The Postgres password. Docker Compose passes it to Fluxer as `FLUXER_POSTGRES_PASSWORD` and to the bundled Postgres, which sets it only on its first start with an empty data directory. Set it once before the first start and never change it. Keep it secret.
+The Postgres password. Docker Compose passes it to sanalyer as `FLUXER_POSTGRES_PASSWORD` and to the bundled Postgres, which sets it only on its first start with an empty data directory. Set it once before the first start and never change it. Keep it secret.
 
 ### `MEILI_MASTER_KEY`
 
-The Meilisearch master key. Docker Compose passes it to the bundled Meilisearch and to Fluxer as `FLUXER_SEARCH_API_KEY`. Set it once before the first start and never change it. Keep it secret.
+The Meilisearch master key. Docker Compose passes it to the bundled Meilisearch and to sanalyer as `FLUXER_SEARCH_API_KEY`. Set it once before the first start and never change it. Keep it secret.
 
 ### `FLUXER_S3_SECRET_KEY`
 
@@ -52,11 +53,11 @@ The object store secret key. For your own object store, set its secret key, and 
 
 ### `LIVEKIT_API_SECRET`
 
-The LiveKit API secret that goes with `LIVEKIT_API_KEY`, at least 32 characters. Docker Compose passes it to the bundled LiveKit and to Fluxer as `FLUXER_LIVEKIT_API_SECRET`. With Docker Compose, a new value applies the next time it starts the services. Keep it secret.
+The LiveKit API secret that goes with `LIVEKIT_API_KEY`, at least 32 characters. Docker Compose passes it to the bundled LiveKit and to sanalyer as `FLUXER_LIVEKIT_API_SECRET`. With Docker Compose, a new value applies the next time it starts the services. Keep it secret.
 
 ### `FLUXER_SUDO_MODE_SECRET`
 
-The key Fluxer signs sudo mode tokens with and derives a few other internal signing keys from. Changing it ends every active sudo mode session, voids codes already emailed and makes every remembered device count as new. Keep it secret.
+The key sanalyer signs sudo mode tokens with and derives a few other internal signing keys from. Changing it ends every active sudo mode session, voids codes already emailed and makes every remembered device count as new. Keep it secret.
 
 ### `FLUXER_CONNECTION_INITIATION_SECRET`
 
@@ -64,7 +65,7 @@ The key that signs connection initiation tokens, data export links and admin dow
 
 ### `FLUXER_PROFILE_PSEUDONYM_SECRET`
 
-The key Fluxer uses to derive the placeholder name and tag that others see while an account's profile is hidden. The api, worker and users services must have the same value. Changing it gives every hidden profile a new placeholder. Keep it secret.
+The key sanalyer uses to derive the placeholder name and tag that others see while an account's profile is hidden. The api, worker and users services must have the same value. Changing it gives every hidden profile a new placeholder. Keep it secret.
 
 ### `FLUXER_GATEWAY_RPC_AUTH_TOKEN`
 
@@ -104,12 +105,12 @@ The private half of the VAPID key pair for browser push notifications, as unpadd
 
 ## Compose files
 
-The optional compose files change how Fluxer runs. To use one, list it after `docker-compose.yml` in `COMPOSE_FILE`, such as `COMPOSE_FILE=docker-compose.yml:docker-compose.proxy.yml`.
+The optional compose files change how sanalyer runs. To use one, list it after `docker-compose.yml` in `COMPOSE_FILE`, such as `COMPOSE_FILE=docker-compose.yml:docker-compose.proxy.yml`.
 
 - `docker-compose.proxy.yml` for your own reverse proxy
 - `tunnel.compose.yml` for a tunnel
 - `external-object-store.compose.yml` for your own object store
-- `ipv6.compose.yml` for IPv6 on Fluxer's network
+- `ipv6.compose.yml` for IPv6 on sanalyer's network
 - `external-voice.compose.yml` for voice servers of your own without the bundled LiveKit
 
 ### `COMPOSE_FILE`
@@ -126,11 +127,11 @@ The Docker Compose project name, which Docker Compose puts in front of every con
 
 ## Public address
 
-Fluxer works out every address from `FLUXER_DOMAIN`. Set these only when a part of Fluxer runs on another address.
+sanalyer works out every address from `FLUXER_DOMAIN`. Set these only when a part of sanalyer runs on another address.
 
 ### `FLUXER_PUBLIC_SCHEME`
 
-The scheme browsers use to open the instance. Use `https` or `http`. Fluxer builds public addresses from it and `FLUXER_DOMAIN` when `FLUXER_PUBLIC_ORIGIN` is empty. With `http`, also set `FLUXER_PUBLIC_PORT`, usually to `80`. Without rexctl, the edge also uses it for its default site address. The default is `https`. rexctl sets this from your domain and edge settings unless you set it. With rexctl, use `rexctl config set FLUXER_PUBLIC_SCHEME`.
+The scheme browsers use to open the instance. Use `https` or `http`. sanalyer builds public addresses from it and `FLUXER_DOMAIN` when `FLUXER_PUBLIC_ORIGIN` is empty. With `http`, also set `FLUXER_PUBLIC_PORT`, usually to `80`. Without rexctl, the edge also uses it for its default site address. The default is `https`. rexctl sets this from your domain and edge settings unless you set it. With rexctl, use `rexctl config set FLUXER_PUBLIC_SCHEME`.
 
 ### `FLUXER_PUBLIC_ORIGIN`
 
@@ -142,27 +143,27 @@ More web app origins, separated by commas, for an instance that serves the web a
 
 ### `FLUXER_API_ENDPOINT`
 
-The public base URL of the API. When it's empty, Fluxer uses the public origin followed by `/api`. With rexctl, use `rexctl config set FLUXER_API_ENDPOINT`.
+The public base URL of the API. When it's empty, sanalyer uses the public origin followed by `/api`. With rexctl, use `rexctl config set FLUXER_API_ENDPOINT`.
 
 ### `FLUXER_API_CLIENT_ENDPOINT`
 
-The API base URL Fluxer hands to clients. When it's empty, Fluxer uses the public origin followed by `/api`. With rexctl, use `rexctl config set FLUXER_API_CLIENT_ENDPOINT`.
+The API base URL sanalyer hands to clients. When it's empty, sanalyer uses the public origin followed by `/api`. With rexctl, use `rexctl config set FLUXER_API_CLIENT_ENDPOINT`.
 
 ### `FLUXER_API_DISCOVERY_PUBLIC_ENDPOINT`
 
-The public API base URL Fluxer lists in instance discovery as `api_public`. The ActivityPub actor and its key ID use the same address, so its host must serve `/.well-known/webfinger`, and changing it on an instance with a signing key gives remote servers a new actor. When it's empty, Fluxer uses `FLUXER_API_ENDPOINT`. Webhooks, signed links and Bluesky sign-in always use `FLUXER_API_ENDPOINT`. With rexctl, use `rexctl config set FLUXER_API_DISCOVERY_PUBLIC_ENDPOINT`.
+The public API base URL sanalyer lists in instance discovery as `api_public`. The ActivityPub actor and its key ID use the same address, so its host must serve `/.well-known/webfinger`, and changing it on an instance with a signing key gives remote servers a new actor. When it's empty, sanalyer uses `FLUXER_API_ENDPOINT`. Webhooks, signed links and Bluesky sign-in always use `FLUXER_API_ENDPOINT`. With rexctl, use `rexctl config set FLUXER_API_DISCOVERY_PUBLIC_ENDPOINT`.
 
 ### `FLUXER_APP_ENDPOINT`
 
-The address of the web app, which Fluxer allows through CORS and uses in links. When it's empty, Fluxer uses the public origin. With rexctl, use `rexctl config set FLUXER_APP_ENDPOINT`.
+The address of the web app, which sanalyer allows through CORS and uses in links. When it's empty, sanalyer uses the public origin. With rexctl, use `rexctl config set FLUXER_APP_ENDPOINT`.
 
 ### `FLUXER_GATEWAY_ENDPOINT`
 
-The public WebSocket URL of the gateway, starting with `ws` or `wss`. When it's empty, Fluxer uses `wss` on the public host followed by `/gateway`, or `ws` when the public scheme is `http`. With rexctl, use `rexctl config set FLUXER_GATEWAY_ENDPOINT`.
+The public WebSocket URL of the gateway, starting with `ws` or `wss`. When it's empty, sanalyer uses `wss` on the public host followed by `/gateway`, or `ws` when the public scheme is `http`. With rexctl, use `rexctl config set FLUXER_GATEWAY_ENDPOINT`.
 
 ### `FLUXER_MEDIA_ENDPOINT`
 
-The public address of the media proxy. When it's empty, Fluxer uses the public origin followed by `/media`. With rexctl, use `rexctl config set FLUXER_MEDIA_ENDPOINT`.
+The public address of the media proxy. When it's empty, sanalyer uses the public origin followed by `/media`. With rexctl, use `rexctl config set FLUXER_MEDIA_ENDPOINT`.
 
 ### `FLUXER_MEDIA_PROXY_PUBLIC_ENDPOINT`
 
@@ -170,23 +171,23 @@ The public media proxy address that the gifs, unfurl and media-proxy services us
 
 ### `FLUXER_STATIC_CDN_ENDPOINT`
 
-The origin Fluxer serves static assets such as the favicon and app icons from. When it's empty, the api and worker services derive it from `FLUXER_STATIC_CDN_DOMAIN` or the public origin, and the admin and gateway services use the public origin. The app-proxy service uses it only when it's set, and serves its own copies of the web app files otherwise. With rexctl, use `rexctl config set FLUXER_STATIC_CDN_ENDPOINT`.
+The origin sanalyer serves static assets such as the favicon and app icons from. When it's empty, the api and worker services derive it from `FLUXER_STATIC_CDN_DOMAIN` or the public origin, and the admin and gateway services use the public origin. The app-proxy service uses it only when it's set, and serves its own copies of the web app files otherwise. With rexctl, use `rexctl config set FLUXER_STATIC_CDN_ENDPOINT`.
 
 ### `FLUXER_ADMIN_ENDPOINT`
 
-The public address of the admin panel. When it's empty, Fluxer uses the public origin followed by `FLUXER_ADMIN_BASE_PATH`. The admin sign-in redirect is this address followed by `/oauth2_callback`, the single sign-on redirect is this address followed by `/sso/callback`, and the admin panel uses secure cookies when the address starts with `https`. With rexctl, use `rexctl config set FLUXER_ADMIN_ENDPOINT`.
+The public address of the admin panel. When it's empty, sanalyer uses the public origin followed by `FLUXER_ADMIN_BASE_PATH`. The admin sign-in redirect is this address followed by `/oauth2_callback`, the single sign-on redirect is this address followed by `/sso/callback`, and the admin panel uses secure cookies when the address starts with `https`. With rexctl, use `rexctl config set FLUXER_ADMIN_ENDPOINT`.
 
 ### `FLUXER_MARKETING_ENDPOINT`
 
-The address of the marketing site, which Fluxer allows through CORS and uses in some links. When it's empty, Fluxer uses the public origin. With rexctl, use `rexctl config set FLUXER_MARKETING_ENDPOINT`.
+The address of the marketing site, which sanalyer allows through CORS and uses in some links. When it's empty, sanalyer uses the public origin. With rexctl, use `rexctl config set FLUXER_MARKETING_ENDPOINT`.
 
 ### `FLUXER_INVITE_ENDPOINT`
 
-The base URL of invite links. When it's empty, Fluxer uses `FLUXER_INVITE_DOMAIN` or the public host, followed by `/invite`. With rexctl, use `rexctl config set FLUXER_INVITE_ENDPOINT`.
+The base URL of invite links. When it's empty, sanalyer uses `FLUXER_INVITE_DOMAIN` or the public host, followed by `/invite`. With rexctl, use `rexctl config set FLUXER_INVITE_ENDPOINT`.
 
 ### `FLUXER_GIFT_ENDPOINT`
 
-The base URL of gift links. When it's empty, Fluxer uses `FLUXER_GIFT_DOMAIN` or the public host, followed by `/gift`. With rexctl, use `rexctl config set FLUXER_GIFT_ENDPOINT`.
+The base URL of gift links. When it's empty, sanalyer uses `FLUXER_GIFT_DOMAIN` or the public host, followed by `/gift`. With rexctl, use `rexctl config set FLUXER_GIFT_ENDPOINT`.
 
 ### `FLUXER_STATIC_CDN_DOMAIN`
 
@@ -202,19 +203,19 @@ A separate hostname for gift links, with no scheme, port or path. When it's set,
 
 ## Edge and HTTPS
 
-By default Fluxer listens on ports 80 and 443 and gets its own HTTPS certificate for your domain.
+By default sanalyer listens on ports 80 and 443 and gets its own HTTPS certificate for your domain.
 
 ### `FLUXER_PUBLIC_PORT`
 
-The port people use in Fluxer's address, when it differs from the one Fluxer listens on. The default is `443`. rexctl sets this from your domain and edge settings unless you set it. With rexctl, use `rexctl config set edge.public_port`.
+The port people use in sanalyer's address, when it differs from the one sanalyer listens on. The default is `443`. rexctl sets this from your domain and edge settings unless you set it. With rexctl, use `rexctl config set edge.public_port`.
 
 ### `FLUXER_HTTP_PORT`
 
-The port Fluxer listens on for HTTP. `docker-compose.proxy.yml` and `tunnel.compose.yml` ignore it and use `FLUXER_EDGE_BIND`. The default is `80`. With rexctl, use `rexctl config set edge.http_port`.
+The port sanalyer listens on for HTTP. `docker-compose.proxy.yml` and `tunnel.compose.yml` ignore it and use `FLUXER_EDGE_BIND`. The default is `80`. With rexctl, use `rexctl config set edge.http_port`.
 
 ### `FLUXER_HTTPS_PORT`
 
-The port Fluxer listens on for HTTPS. If people connect to this port directly, set `FLUXER_PUBLIC_PORT` to the same port. `docker-compose.proxy.yml` and `tunnel.compose.yml` ignore it and use `FLUXER_EDGE_BIND`. The default is `443`. With rexctl, use `rexctl config set edge.https_port`.
+The port sanalyer listens on for HTTPS. If people connect to this port directly, set `FLUXER_PUBLIC_PORT` to the same port. `docker-compose.proxy.yml` and `tunnel.compose.yml` ignore it and use `FLUXER_EDGE_BIND`. The default is `443`. With rexctl, use `rexctl config set edge.https_port`.
 
 ### `FLUXER_EDGE_BIND`
 
@@ -234,7 +235,7 @@ The old name for `FLUXER_EDGE_SITE_ADDRESS`. Docker Compose uses it only without
 
 ### `FLUXER_EDGE_TRUSTED_PROXIES`
 
-Proxies whose client address headers Fluxer trusts, separated by spaces. The default is `127.0.0.1/32`, or `private_ranges` with `docker-compose.proxy.yml` or `tunnel.compose.yml`. With rexctl, use `rexctl config set edge.trusted_proxies`.
+Proxies whose client address headers sanalyer trusts, separated by spaces. The default is `127.0.0.1/32`, or `private_ranges` with `docker-compose.proxy.yml` or `tunnel.compose.yml`. With rexctl, use `rexctl config set edge.trusted_proxies`.
 
 ### `FLUXER_EDGE_ENCODE`
 
@@ -254,7 +255,7 @@ The arguments of a Caddy tls directive for the edge, such as `internal` for a ce
 
 ## Voice and video
 
-Calls connect directly to this machine on `FLUXER_LIVEKIT_TCP_PORT` and `FLUXER_LIVEKIT_UDP_PORT`, even when Fluxer is behind your own proxy. To run without the bundled LiveKit, add `external-voice.compose.yml` to `COMPOSE_FILE` and set `FLUXER_LIVEKIT_BUNDLED` to `false`.
+Calls connect directly to this machine on `FLUXER_LIVEKIT_TCP_PORT` and `FLUXER_LIVEKIT_UDP_PORT`, even when sanalyer is behind your own proxy. To run without the bundled LiveKit, add `external-voice.compose.yml` to `COMPOSE_FILE` and set `FLUXER_LIVEKIT_BUNDLED` to `false`.
 
 ### `FLUXER_LIVEKIT_ENABLED`
 
@@ -262,19 +263,19 @@ Whether voice and video calls are turned on. Use `true` or `false`. The default 
 
 ### `FLUXER_LIVEKIT_INTERNAL_URL`
 
-The URL the API uses for the LiveKit control API of the bundled LiveKit, the first server in the default voice region. Servers added in the admin panel use their own address. Fluxer ignores it when `FLUXER_LIVEKIT_BUNDLED` is `false`. The default is `http://livekit:7880`. With rexctl, use `rexctl config set FLUXER_LIVEKIT_INTERNAL_URL`.
+The URL the API uses for the LiveKit control API of the bundled LiveKit, the first server in the default voice region. Servers added in the admin panel use their own address. sanalyer ignores it when `FLUXER_LIVEKIT_BUNDLED` is `false`. The default is `http://livekit:7880`. With rexctl, use `rexctl config set FLUXER_LIVEKIT_INTERNAL_URL`.
 
 ### `FLUXER_LIVEKIT_BUNDLED`
 
-Whether Fluxer runs its own LiveKit voice server on this machine. Use `true` or `false`. The bundled LiveKit is the first server in the default voice region. With `false`, Fluxer creates the default region with no server in it, removes the server it made for the bundled LiveKit and keeps calls on the servers you add with `rexctl voice add`, `rexctl voice join` or the admin panel. With Docker Compose, also add `external-voice.compose.yml` to `COMPOSE_FILE`. The default is `true`. With rexctl, use `rexctl config set voice.bundled`.
+Whether sanalyer runs its own LiveKit voice server on this machine. Use `true` or `false`. The bundled LiveKit is the first server in the default voice region. With `false`, sanalyer creates the default region with no server in it, removes the server it made for the bundled LiveKit and keeps calls on the servers you add with `rexctl voice add`, `rexctl voice join` or the admin panel. With Docker Compose, also add `external-voice.compose.yml` to `COMPOSE_FILE`. The default is `true`. With rexctl, use `rexctl config set voice.bundled`.
 
 ### `FLUXER_LIVEKIT_DEFAULT_REGION`
 
-The voice region Fluxer creates when no voice regions exist yet, as a JSON object with `id`, `name`, `emoji`, `latitude` and `longitude`. The default is `{"id":"default","name":"Default","emoji":"🌍","latitude":0,"longitude":0}`. With rexctl, use `rexctl config set FLUXER_LIVEKIT_DEFAULT_REGION`.
+The voice region sanalyer creates when no voice regions exist yet, as a JSON object with `id`, `name`, `emoji`, `latitude` and `longitude`. The default is `{"id":"default","name":"Default","emoji":"🌍","latitude":0,"longitude":0}`. With rexctl, use `rexctl config set FLUXER_LIVEKIT_DEFAULT_REGION`.
 
 ### `FLUXER_LIVEKIT_URL`
 
-The URL browsers and apps use for voice signalling. When it's empty, Fluxer uses the public origin, or `FLUXER_PUBLIC_SCHEME`, `FLUXER_DOMAIN` and `FLUXER_PUBLIC_PORT`, followed by `/livekit`. Set it only when LiveKit runs on another host. With rexctl, use `rexctl config set FLUXER_LIVEKIT_URL`.
+The URL browsers and apps use for voice signalling. When it's empty, sanalyer uses the public origin, or `FLUXER_PUBLIC_SCHEME`, `FLUXER_DOMAIN` and `FLUXER_PUBLIC_PORT`, followed by `/livekit`. Set it only when LiveKit runs on another host. With rexctl, use `rexctl config set FLUXER_LIVEKIT_URL`.
 
 ### `FLUXER_VOICE_P2P_STUN_URLS`
 
@@ -298,7 +299,7 @@ The UDP port for voice and video. The default is `7882`. With rexctl, use `rexct
 
 ### `FLUXER_LIVEKIT_NODE_IP`
 
-The public IP address voice and video use, when Fluxer can't find it by itself. Set `FLUXER_LIVEKIT_USE_EXTERNAL_IP` to `false` with it. With rexctl, use `rexctl config set voice.public_ip`.
+The public IP address voice and video use, when sanalyer can't find it by itself. Set `FLUXER_LIVEKIT_USE_EXTERNAL_IP` to `false` with it. With rexctl, use `rexctl config set voice.public_ip`.
 
 ### `FLUXER_LIVEKIT_USE_EXTERNAL_IP`
 
@@ -318,7 +319,7 @@ TURN servers that browsers and apps get when they join a call, as a JSON array o
 
 ## Standalone voice servers
 
-These go in the settings file of a voice server from the voice folder of the compose bundle, such as `fra-server-1.env`, not in Fluxer's `.env`. `rexctl voice add` and `rexctl voice join` write them for you.
+These go in the settings file of a voice server from the voice folder of the compose bundle, such as `fra-server-1.env`, not in sanalyer's `.env`. `rexctl voice add` and `rexctl voice join` write them for you.
 
 ### `FLUXER_VOICE_ID`
 
@@ -334,7 +335,7 @@ The LiveKit API secret that goes with `FLUXER_VOICE_API_KEY`, at least 32 charac
 
 ### `FLUXER_VOICE_WEBHOOK_URL`
 
-The URL LiveKit sends its webhooks to. On the Fluxer machine it's `http://api:8080/webhooks/livekit`. On another machine it's the public API address followed by `/webhooks/livekit`.
+The URL LiveKit sends its webhooks to. On the sanalyer machine it's `http://api:8080/webhooks/livekit`. On another machine it's the public API address followed by `/webhooks/livekit`.
 
 ### `FLUXER_VOICE_TCP_PORT`
 
@@ -370,7 +371,7 @@ The host address that `voice-http.compose.yml` publishes `FLUXER_VOICE_HTTP_PORT
 
 ### `FLUXER_VOICE_NETWORK`
 
-The Docker network the server joins. On a voice machine it's the network of the voice edge. On the Fluxer machine it's the network of the instance, such as `fluxer_fluxer`, and Fluxer's own edge routes to the server.
+The Docker network the server joins. On a voice machine it's the network of the voice edge. On the sanalyer machine it's the network of the instance, such as `fluxer_fluxer`, and sanalyer's own edge routes to the server.
 
 ### `FLUXER_VOICE_MEMORY_LIMIT`
 
@@ -402,7 +403,7 @@ The email address the voice edge gives Let's Encrypt for notices about its certi
 
 ## Object storage
 
-By default Fluxer keeps files in the bundled object store. To use your own S3-compatible store, set its address and buckets, add `external-object-store.compose.yml` to `COMPOSE_FILE` and put its keys in `FLUXER_S3_ACCESS_KEY` and `FLUXER_S3_SECRET_KEY`.
+By default sanalyer keeps files in the bundled object store. To use your own S3-compatible store, set its address and buckets, add `external-object-store.compose.yml` to `COMPOSE_FILE` and put its keys in `FLUXER_S3_ACCESS_KEY` and `FLUXER_S3_SECRET_KEY`.
 
 ### `FLUXER_S3_ENDPOINT`
 
@@ -410,7 +411,7 @@ The address of the S3-compatible object store. The default is `http://seaweedfs:
 
 ### `FLUXER_S3_PUBLIC_ENDPOINT`
 
-The object store address browsers use, when it differs from the one Fluxer uses. When it's empty, the api and worker use `FLUXER_S3_ENDPOINT`, and the web app doesn't let browsers upload to the object store. With rexctl, use `rexctl config set storage.public_endpoint`.
+The object store address browsers use, when it differs from the one sanalyer uses. When it's empty, the api and worker use `FLUXER_S3_ENDPOINT`, and the web app doesn't let browsers upload to the object store. With rexctl, use `rexctl config set storage.public_endpoint`.
 
 ### `FLUXER_S3_REGION`
 
@@ -470,7 +471,7 @@ Whether the api and worker services publish a record of each object store write 
 
 ### `FLUXER_API_STORAGE_CHANGE_FEED_STREAM`
 
-The JetStream stream the storage change feed publishes to, in letters, digits, underscores or hyphens. When it's empty, Fluxer uses `STORAGE_CHANGES`. With rexctl, use `rexctl config set FLUXER_API_STORAGE_CHANGE_FEED_STREAM`.
+The JetStream stream the storage change feed publishes to, in letters, digits, underscores or hyphens. When it's empty, sanalyer uses `STORAGE_CHANGES`. With rexctl, use `rexctl config set FLUXER_API_STORAGE_CHANGE_FEED_STREAM`.
 
 ### `FLUXER_API_STORAGE_CHANGE_FEED_SKIP_BUCKETS`
 
@@ -494,35 +495,35 @@ The hostname or address of the Postgres database. Set it when Postgres runs outs
 
 ### `FLUXER_POSTGRES_PORT`
 
-The Postgres port, from 1 to 65535. When it's empty, Fluxer uses `5432`. With rexctl, use `rexctl config set FLUXER_POSTGRES_PORT`.
+The Postgres port, from 1 to 65535. When it's empty, sanalyer uses `5432`. With rexctl, use `rexctl config set FLUXER_POSTGRES_PORT`.
 
 ### `FLUXER_POSTGRES_DATABASE`
 
-The Postgres database name. When it's empty, Fluxer uses `fluxer`. The bundled Postgres creates this database only on its first start with an empty data directory. With rexctl, use `rexctl config set FLUXER_POSTGRES_DATABASE`.
+The Postgres database name. When it's empty, sanalyer uses `fluxer`. The bundled Postgres creates this database only on its first start with an empty data directory. With rexctl, use `rexctl config set FLUXER_POSTGRES_DATABASE`.
 
 ### `FLUXER_POSTGRES_USERNAME`
 
-The Postgres role Fluxer connects as. When it's empty, Fluxer uses `fluxer`. The bundled Postgres creates this role only on its first start with an empty data directory. With rexctl, use `rexctl config set FLUXER_POSTGRES_USERNAME`.
+The Postgres role sanalyer connects as. When it's empty, sanalyer uses `fluxer`. The bundled Postgres creates this role only on its first start with an empty data directory. With rexctl, use `rexctl config set FLUXER_POSTGRES_USERNAME`.
 
 ### `FLUXER_POSTGRES_URL`
 
-A full Postgres connection URL, such as `postgres://fluxer:secret@db.example.com:5432/fluxer`. When it's set, Fluxer connects with it and ignores the host, port, database, username and password settings. An `sslmode` in the URL can turn TLS on when `FLUXER_POSTGRES_SSL` isn't `true`. For the api and worker, it also wins over `FLUXER_POSTGRES_SSL`. Keep it secret. With rexctl, use `rexctl config set FLUXER_POSTGRES_URL`.
+A full Postgres connection URL, such as `postgres://fluxer:secret@db.example.com:5432/fluxer`. When it's set, sanalyer connects with it and ignores the host, port, database, username and password settings. An `sslmode` in the URL can turn TLS on when `FLUXER_POSTGRES_SSL` isn't `true`. For the api and worker, it also wins over `FLUXER_POSTGRES_SSL`. Keep it secret. With rexctl, use `rexctl config set FLUXER_POSTGRES_URL`.
 
 ### `FLUXER_POSTGRES_SSL`
 
-Whether Fluxer connects to Postgres over TLS. Use `true` or `false`. When it isn't `true` and `FLUXER_POSTGRES_URL` has no `sslmode`, the api and worker follow `PGSSLMODE` and the other services connect without TLS. With rexctl, use `rexctl config set FLUXER_POSTGRES_SSL`.
+Whether sanalyer connects to Postgres over TLS. Use `true` or `false`. When it isn't `true` and `FLUXER_POSTGRES_URL` has no `sslmode`, the api and worker follow `PGSSLMODE` and the other services connect without TLS. With rexctl, use `rexctl config set FLUXER_POSTGRES_SSL`.
 
 ### `FLUXER_POSTGRES_SSL_CA`
 
-A CA certificate in PEM form that Fluxer trusts for the Postgres TLS connection, with `\n` for line breaks. The Rust services use it whenever the connection uses TLS. The api and worker use it only when `FLUXER_POSTGRES_SSL` is `true` and `FLUXER_POSTGRES_URL` has no `sslmode`. With rexctl, use `rexctl config set FLUXER_POSTGRES_SSL_CA`.
+A CA certificate in PEM form that sanalyer trusts for the Postgres TLS connection, with `\n` for line breaks. The Rust services use it whenever the connection uses TLS. The api and worker use it only when `FLUXER_POSTGRES_SSL` is `true` and `FLUXER_POSTGRES_URL` has no `sslmode`. With rexctl, use `rexctl config set FLUXER_POSTGRES_SSL_CA`.
 
 ### `FLUXER_POSTGRES_PREPARED_STATEMENTS`
 
-Whether Fluxer uses Postgres prepared statements. Use `true` or `false`. When it's empty, Fluxer uses them. Set it to `false` behind a transaction-pooling pooler such as PgBouncer. With rexctl, use `rexctl config set FLUXER_POSTGRES_PREPARED_STATEMENTS`.
+Whether sanalyer uses Postgres prepared statements. Use `true` or `false`. When it's empty, sanalyer uses them. Set it to `false` behind a transaction-pooling pooler such as PgBouncer. With rexctl, use `rexctl config set FLUXER_POSTGRES_PREPARED_STATEMENTS`.
 
 ### `FLUXER_POSTGRES_KV_TABLE`
 
-The Postgres table for Fluxer's key-value data, a plain identifier of letters, digits and underscores that starts with a letter or an underscore. When it's empty, Fluxer uses `fluxer_kv`. With rexctl, use `rexctl config set FLUXER_POSTGRES_KV_TABLE`.
+The Postgres table for sanalyer's key-value data, a plain identifier of letters, digits and underscores that starts with a letter or an underscore. When it's empty, sanalyer uses `fluxer_kv`. With rexctl, use `rexctl config set FLUXER_POSTGRES_KV_TABLE`.
 
 ## Cache, queue and search
 
@@ -530,11 +531,11 @@ Leave these unset to use the bundled Valkey, NATS and Meilisearch.
 
 ### `FLUXER_KV_URL`
 
-The Valkey or Redis URL Fluxer uses for its cache, rate limits and other short-lived data. The default is `redis://valkey:6379/0`. With rexctl, use `rexctl config set FLUXER_KV_URL`.
+The Valkey or Redis URL sanalyer uses for its cache, rate limits and other short-lived data. The default is `redis://valkey:6379/0`. With rexctl, use `rexctl config set FLUXER_KV_URL`.
 
 ### `FLUXER_KV_MODE`
 
-How Fluxer connects to the key-value store. Use `standalone` for a single Valkey or Redis node or `cluster` for a Redis-compatible cluster. When it's empty, Fluxer uses `standalone`. With rexctl, use `rexctl config set FLUXER_KV_MODE`.
+How sanalyer connects to the key-value store. Use `standalone` for a single Valkey or Redis node or `cluster` for a Redis-compatible cluster. When it's empty, sanalyer uses `standalone`. With rexctl, use `rexctl config set FLUXER_KV_MODE`.
 
 ### `FLUXER_NATS_URL`
 
@@ -610,7 +611,7 @@ How long the API waits for the snowflakes service, in milliseconds from 1 to 600
 
 ### `FLUXER_SEARCH_ENGINE`
 
-Which search engine Fluxer uses. Use `meilisearch` or `elasticsearch`, or `none` to turn search off. With `elasticsearch`, set `MEILI_MASTER_KEY` to your Elasticsearch API key. Docker Compose passes it to Fluxer as `FLUXER_SEARCH_API_KEY`. The default is `meilisearch`. With rexctl, use `rexctl config set FLUXER_SEARCH_ENGINE`.
+Which search engine sanalyer uses. Use `meilisearch` or `elasticsearch`, or `none` to turn search off. With `elasticsearch`, set `MEILI_MASTER_KEY` to your Elasticsearch API key. Docker Compose passes it to sanalyer as `FLUXER_SEARCH_API_KEY`. The default is `meilisearch`. With rexctl, use `rexctl config set FLUXER_SEARCH_ENGINE`.
 
 ### `FLUXER_SEARCH_URL`
 
@@ -618,19 +619,19 @@ The address of the search engine. The default is `http://meilisearch:7700`. With
 
 ### `FLUXER_SEARCH_USERNAME`
 
-The basic auth username for Elasticsearch. Fluxer uses it only when `FLUXER_SEARCH_API_KEY` is empty. Docker Compose always sets that key from `MEILI_MASTER_KEY`. To use basic auth, set `FLUXER_SEARCH_API_KEY` to an empty value for the api and worker in a compose file of your own. With rexctl, use `rexctl config set FLUXER_SEARCH_USERNAME`.
+The basic auth username for Elasticsearch. sanalyer uses it only when `FLUXER_SEARCH_API_KEY` is empty. Docker Compose always sets that key from `MEILI_MASTER_KEY`. To use basic auth, set `FLUXER_SEARCH_API_KEY` to an empty value for the api and worker in a compose file of your own. With rexctl, use `rexctl config set FLUXER_SEARCH_USERNAME`.
 
 ### `FLUXER_SEARCH_PASSWORD`
 
-The basic auth password for Elasticsearch. Fluxer uses it only when `FLUXER_SEARCH_API_KEY` is empty, the same as `FLUXER_SEARCH_USERNAME`. Keep it secret. With rexctl, use `rexctl config set FLUXER_SEARCH_PASSWORD`.
+The basic auth password for Elasticsearch. sanalyer uses it only when `FLUXER_SEARCH_API_KEY` is empty, the same as `FLUXER_SEARCH_USERNAME`. Keep it secret. With rexctl, use `rexctl config set FLUXER_SEARCH_PASSWORD`.
 
 ### `FLUXER_SEARCH_TLS_REJECT_UNAUTHORIZED`
 
-Whether Fluxer checks the Elasticsearch TLS certificate. Use `true` or `false`. When it's empty, Fluxer checks it. Meilisearch connections don't use it. With rexctl, use `rexctl config set FLUXER_SEARCH_TLS_REJECT_UNAUTHORIZED`.
+Whether sanalyer checks the Elasticsearch TLS certificate. Use `true` or `false`. When it's empty, sanalyer checks it. Meilisearch connections don't use it. With rexctl, use `rexctl config set FLUXER_SEARCH_TLS_REJECT_UNAUTHORIZED`.
 
 ## Outgoing proxy
 
-These settings are for Fluxer's services. rexctl and the Linux and macOS install script take `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` from the shell you run them from.
+These settings are for sanalyer's services. rexctl and the Linux and macOS install script take `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` from the shell you run them from.
 
 ### `HTTP_PROXY`
 
@@ -652,15 +653,15 @@ The path of a PEM file of CA certificates that the api and worker trust for outg
 
 ### `FLUXER_SSO_ALLOW_PRIVATE_ADDRESSES`
 
-Whether single sign-on can use a provider on a private or local network address. Use `true` or `false`. When it's empty, Fluxer uses `false`. With rexctl, use `rexctl config set sso.allow_private_addresses`.
+Whether single sign-on can use a provider on a private or local network address. Use `true` or `false`. When it's empty, sanalyer uses `false`. With rexctl, use `rexctl config set sso.allow_private_addresses`.
 
 ### `FLUXER_PASSKEY_RP_ID`
 
-The relying party ID that passkeys are tied to, a domain such as `chat.example.com`. When it's empty, Fluxer uses `FLUXER_DOMAIN`. Changing it makes every passkey registered against the old value stop working. With rexctl, use `rexctl config set FLUXER_PASSKEY_RP_ID`.
+The relying party ID that passkeys are tied to, a domain such as `chat.example.com`. When it's empty, sanalyer uses `FLUXER_DOMAIN`. Changing it makes every passkey registered against the old value stop working. With rexctl, use `rexctl config set FLUXER_PASSKEY_RP_ID`.
 
 ### `FLUXER_PASSKEY_RP_NAME`
 
-The title browsers show for Fluxer when someone creates or uses a passkey. When it's empty, browsers show `Fluxer`. With rexctl, use `rexctl config set FLUXER_PASSKEY_RP_NAME`.
+The title browsers show for sanalyer when someone creates or uses a passkey. When it's empty, browsers show `sanalyer`. With rexctl, use `rexctl config set FLUXER_PASSKEY_RP_NAME`.
 
 ### `FLUXER_PASSKEY_ADDITIONAL_ALLOWED_ORIGINS`
 
@@ -668,7 +669,7 @@ Every origin where passkeys work, separated by commas. When it's empty, Docker C
 
 ### `FLUXER_ADMIN_SSO_ISSUER`
 
-The HTTPS issuer URL of an OpenID Connect provider that staff can also use to sign in to the admin panel. The issuer must not contain credentials, a query or a fragment. Discovery and token endpoints must serve responses directly without redirects. Admin single sign-on is on when `FLUXER_ADMIN_SSO_ISSUER`, `FLUXER_ADMIN_SSO_CLIENT_ID` and `FLUXER_ADMIN_SSO_CLIENT_SECRET` are all set. The admin service won't start when only some of them are set. The api and admin services must have the same issuer and client ID. The provider's ID token must have a `fluxer_id` claim with the ID of the Fluxer account, and access still comes from the admin ACLs of that account. Only trusted provider administrators may set this claim; users must not be able to change it. With rexctl, use `rexctl config set FLUXER_ADMIN_SSO_ISSUER`.
+The HTTPS issuer URL of an OpenID Connect provider that staff can also use to sign in to the admin panel. The issuer must not contain credentials, a query or a fragment. Discovery and token endpoints must serve responses directly without redirects. Admin single sign-on is on when `FLUXER_ADMIN_SSO_ISSUER`, `FLUXER_ADMIN_SSO_CLIENT_ID` and `FLUXER_ADMIN_SSO_CLIENT_SECRET` are all set. The admin service won't start when only some of them are set. The api and admin services must have the same issuer and client ID. The provider's ID token must have a `fluxer_id` claim with the ID of the sanalyer account, and access still comes from the admin ACLs of that account. Only trusted provider administrators may set this claim; users must not be able to change it. With rexctl, use `rexctl config set FLUXER_ADMIN_SSO_ISSUER`.
 
 ### `FLUXER_ADMIN_SSO_CLIENT_ID`
 
@@ -684,7 +685,7 @@ The provider name on the single sign-on button of the admin panel. With `Ferret`
 
 ### `FLUXER_ADMIN_SSO_ONLY`
 
-Whether staff can sign in to the admin panel only with single sign-on. Use `true` or `false`. With `true`, the login page hides the button for signing in with a Fluxer account, and the admin panel refuses new sign-ins that way. Staff who are already signed in stay signed in. It needs `FLUXER_ADMIN_SSO_ISSUER`, `FLUXER_ADMIN_SSO_CLIENT_ID` and `FLUXER_ADMIN_SSO_CLIENT_SECRET`, and the admin service won't start without them. When it's empty, it's `false`. With rexctl, use `rexctl config set FLUXER_ADMIN_SSO_ONLY`.
+Whether staff can sign in to the admin panel only with single sign-on. Use `true` or `false`. With `true`, the login page hides the button for signing in with a sanalyer account, and the admin panel refuses new sign-ins that way. Staff who are already signed in stay signed in. It needs `FLUXER_ADMIN_SSO_ISSUER`, `FLUXER_ADMIN_SSO_CLIENT_ID` and `FLUXER_ADMIN_SSO_CLIENT_SECRET`, and the admin service won't start without them. When it's empty, it's `false`. With rexctl, use `rexctl config set FLUXER_ADMIN_SSO_ONLY`.
 
 ## Email
 
@@ -700,27 +701,27 @@ The older way to pick the email transport, which takes `smtp` or `none`. Use `FL
 
 ### `FLUXER_EMAIL_DELIVERY`
 
-How Fluxer sends email. Use `smtp` or `off`. When it's empty, `FLUXER_EMAIL_ENABLED` and `FLUXER_EMAIL_PROVIDER` decide, and email is off when those are empty too. With rexctl, use `rexctl config set integrations.email.delivery`.
+How sanalyer sends email. Use `smtp` or `off`. When it's empty, `FLUXER_EMAIL_ENABLED` and `FLUXER_EMAIL_PROVIDER` decide, and email is off when those are empty too. With rexctl, use `rexctl config set integrations.email.delivery`.
 
 ### `FLUXER_EMAIL_FROM_EMAIL`
 
-The address Fluxer sends email from. When it's empty, Fluxer uses `noreply@` followed by `FLUXER_DOMAIN`. With rexctl, use `rexctl config set integrations.email.from_email`.
+The address sanalyer sends email from. When it's empty, sanalyer uses `noreply@` followed by `FLUXER_DOMAIN`. With rexctl, use `rexctl config set integrations.email.from_email`.
 
 ### `FLUXER_EMAIL_FROM_NAME`
 
-The sender name on email from Fluxer. When it's empty, Fluxer uses the product name of the instance. With rexctl, use `rexctl config set integrations.email.from_name`.
+The sender name on email from sanalyer. When it's empty, sanalyer uses the product name of the instance. With rexctl, use `rexctl config set integrations.email.from_name`.
 
 ### `FLUXER_EMAIL_REPLY_TO_EMAIL`
 
-The address replies go to, sent as the Reply-To header on every email, such as `support@example.com`. When it's empty, Fluxer sends no Reply-To header. With rexctl, use `rexctl config set FLUXER_EMAIL_REPLY_TO_EMAIL`.
+The address replies go to, sent as the Reply-To header on every email, such as `support@example.com`. When it's empty, sanalyer sends no Reply-To header. With rexctl, use `rexctl config set FLUXER_EMAIL_REPLY_TO_EMAIL`.
 
 ### `FLUXER_EMAIL_APP_BASE_URL`
 
-The base URL Fluxer uses for links in emails, an http or https URL with no credentials, query or fragment. When it's empty, Fluxer uses `FLUXER_APP_ENDPOINT`. With rexctl, use `rexctl config set FLUXER_EMAIL_APP_BASE_URL`.
+The base URL sanalyer uses for links in emails, an http or https URL with no credentials, query or fragment. When it's empty, sanalyer uses `FLUXER_APP_ENDPOINT`. With rexctl, use `rexctl config set FLUXER_EMAIL_APP_BASE_URL`.
 
 ### `FLUXER_EMAIL_WEBHOOK_SECRET`
 
-The base64 secret Fluxer uses to check the signature on bounce and complaint webhooks from the Sweego email service. When it's empty, Fluxer turns those webhooks away. Keep it secret. With rexctl, use `rexctl config set FLUXER_EMAIL_WEBHOOK_SECRET`.
+The base64 secret sanalyer uses to check the signature on bounce and complaint webhooks from the Sweego email service. When it's empty, sanalyer turns those webhooks away. Keep it secret. With rexctl, use `rexctl config set FLUXER_EMAIL_WEBHOOK_SECRET`.
 
 ### `FLUXER_EMAIL_SMTP_HOST`
 
@@ -728,19 +729,19 @@ The hostname of your SMTP server. With rexctl, use `rexctl config set integratio
 
 ### `FLUXER_EMAIL_SMTP_PORT`
 
-The port of your SMTP server. When it's empty, Fluxer uses `587`. With rexctl, use `rexctl config set integrations.email.smtp.port`.
+The port of your SMTP server. When it's empty, sanalyer uses `587`. With rexctl, use `rexctl config set integrations.email.smtp.port`.
 
 ### `FLUXER_EMAIL_SMTP_USERNAME`
 
-The username Fluxer signs in to your SMTP server with. With rexctl, use `rexctl config set integrations.email.smtp.username`.
+The username sanalyer signs in to your SMTP server with. With rexctl, use `rexctl config set integrations.email.smtp.username`.
 
 ### `FLUXER_EMAIL_SMTP_PASSWORD`
 
-The password Fluxer signs in to your SMTP server with. Keep it secret. With rexctl, use `rexctl config set integrations.email.smtp.password`.
+The password sanalyer signs in to your SMTP server with. Keep it secret. With rexctl, use `rexctl config set integrations.email.smtp.password`.
 
 ### `FLUXER_EMAIL_SMTP_TLS_MODE`
 
-How the SMTP connection is encrypted. Use `implicit` for TLS from the start, usually on port 465, `starttls` to upgrade before signing in, usually on port 587, `opportunistic` to upgrade when the server offers it, or `none`. When it's empty, `FLUXER_EMAIL_SMTP_SECURE` decides. When both are empty, Fluxer uses `implicit` on port 465 and `starttls` on any other port. With rexctl, use `rexctl config set integrations.email.smtp.tls_mode`.
+How the SMTP connection is encrypted. Use `implicit` for TLS from the start, usually on port 465, `starttls` to upgrade before signing in, usually on port 587, `opportunistic` to upgrade when the server offers it, or `none`. When it's empty, `FLUXER_EMAIL_SMTP_SECURE` decides. When both are empty, sanalyer uses `implicit` on port 465 and `starttls` on any other port. With rexctl, use `rexctl config set integrations.email.smtp.tls_mode`.
 
 ### `FLUXER_EMAIL_SMTP_SECURE`
 
@@ -756,19 +757,19 @@ The hostname of the fallback SMTP provider. With rexctl, use `rexctl config set 
 
 ### `FLUXER_EMAIL_FALLBACK_SMTP_PORT`
 
-The port of the fallback SMTP provider, from 1 to 65535. When it's empty, Fluxer uses `587`. With rexctl, use `rexctl config set FLUXER_EMAIL_FALLBACK_SMTP_PORT`.
+The port of the fallback SMTP provider, from 1 to 65535. When it's empty, sanalyer uses `587`. With rexctl, use `rexctl config set FLUXER_EMAIL_FALLBACK_SMTP_PORT`.
 
 ### `FLUXER_EMAIL_FALLBACK_SMTP_USERNAME`
 
-The username Fluxer signs in to the fallback SMTP provider with. Fluxer doesn't start when a fallback provider is set without it. With rexctl, use `rexctl config set FLUXER_EMAIL_FALLBACK_SMTP_USERNAME`.
+The username sanalyer signs in to the fallback SMTP provider with. sanalyer doesn't start when a fallback provider is set without it. With rexctl, use `rexctl config set FLUXER_EMAIL_FALLBACK_SMTP_USERNAME`.
 
 ### `FLUXER_EMAIL_FALLBACK_SMTP_PASSWORD`
 
-The password Fluxer signs in to the fallback SMTP provider with. Fluxer doesn't start when a fallback provider is set without it. Keep it secret. With rexctl, use `rexctl config set FLUXER_EMAIL_FALLBACK_SMTP_PASSWORD`.
+The password sanalyer signs in to the fallback SMTP provider with. sanalyer doesn't start when a fallback provider is set without it. Keep it secret. With rexctl, use `rexctl config set FLUXER_EMAIL_FALLBACK_SMTP_PASSWORD`.
 
 ### `FLUXER_EMAIL_FALLBACK_SMTP_TLS_MODE`
 
-How Fluxer encrypts the connection to the fallback provider. Use `implicit`, `starttls`, `opportunistic` or `none`. When it's empty, Fluxer uses `implicit` on port 465 and `starttls` on any other port. With rexctl, use `rexctl config set FLUXER_EMAIL_FALLBACK_SMTP_TLS_MODE`.
+How sanalyer encrypts the connection to the fallback provider. Use `implicit`, `starttls`, `opportunistic` or `none`. When it's empty, sanalyer uses `implicit` on port 465 and `starttls` on any other port. With rexctl, use `rexctl config set FLUXER_EMAIL_FALLBACK_SMTP_TLS_MODE`.
 
 ### `FLUXER_EMAIL_FALLBACK_SMTP_HEADERS`
 
@@ -838,7 +839,7 @@ The apps the push service sends to through FCM, as a JSON array of objects that 
 
 ### `FLUXER_VAPID_EMAIL`
 
-The contact email Fluxer sends to browser push services with its VAPID key. When it's empty, Fluxer uses `admin@` followed by `FLUXER_DOMAIN`. Set it if that mailbox doesn't exist. With rexctl, use `rexctl config set FLUXER_VAPID_EMAIL`.
+The contact email sanalyer sends to browser push services with its VAPID key. When it's empty, sanalyer uses `admin@` followed by `FLUXER_DOMAIN`. Set it if that mailbox doesn't exist. With rexctl, use `rexctl config set FLUXER_VAPID_EMAIL`.
 
 ### `FLUXER_PUSH_SERVICE_QUEUE_CAPACITY`
 
@@ -858,7 +859,7 @@ The FCM host the push service sends to. When it's empty, it uses `https://fcm.go
 
 ### `FLUXER_PUSH_SERVICE_MANAGED_RELAY_HOSTS`
 
-Hostnames, separated by commas, of the push relay that Fluxer runs. When it's empty, the push service uses `push.fluxer.com`. It sends to these hosts only once relay consent is accepted. With rexctl, use `rexctl config set FLUXER_PUSH_SERVICE_MANAGED_RELAY_HOSTS`.
+Hostnames, separated by commas, of the push relay that sanalyer runs. When it's empty, the push service uses `push.fluxer.com`. It sends to these hosts only once relay consent is accepted. With rexctl, use `rexctl config set FLUXER_PUSH_SERVICE_MANAGED_RELAY_HOSTS`.
 
 ### `FLUXER_PUSH_SERVICE_OWN_RELAY_HOSTS`
 
@@ -870,29 +871,29 @@ Hostnames, separated by commas, that push endpoints may use even when they resol
 
 ### `FLUXER_PUSH_SERVICE_RELAY_CONSENT_ACCEPTED`
 
-Whether this push service accepts the push relay privacy notice, which lets it send through the relay Fluxer runs. Use `true`, `1` or `yes` to accept. With `false`, `0`, `no` or an empty value, the push relay setting of the instance decides. With rexctl, use `rexctl config set FLUXER_PUSH_SERVICE_RELAY_CONSENT_ACCEPTED`.
+Whether this push service accepts the push relay privacy notice, which lets it send through the relay sanalyer runs. Use `true`, `1` or `yes` to accept. With `false`, `0`, `no` or an empty value, the push relay setting of the instance decides. With rexctl, use `rexctl config set FLUXER_PUSH_SERVICE_RELAY_CONSENT_ACCEPTED`.
 
 ## Media
 
 ### `FLUXER_CLAMAV_ENABLED`
 
-Whether Fluxer scans uploads for viruses with ClamAV. Use `true` or `false`. When it's empty, Fluxer uses `false`. No ClamAV container ships with the stack. Point `FLUXER_CLAMAV_HOST` at your own. With rexctl, use `rexctl config set FLUXER_CLAMAV_ENABLED`.
+Whether sanalyer scans uploads for viruses with ClamAV. Use `true` or `false`. When it's empty, sanalyer uses `false`. No ClamAV container ships with the stack. Point `FLUXER_CLAMAV_HOST` at your own. With rexctl, use `rexctl config set FLUXER_CLAMAV_ENABLED`.
 
 ### `FLUXER_CLAMAV_HOST`
 
-The hostname or address of your ClamAV scanner. When it's empty, Fluxer uses `127.0.0.1`. With rexctl, use `rexctl config set FLUXER_CLAMAV_HOST`.
+The hostname or address of your ClamAV scanner. When it's empty, sanalyer uses `127.0.0.1`. With rexctl, use `rexctl config set FLUXER_CLAMAV_HOST`.
 
 ### `FLUXER_CLAMAV_PORT`
 
-The port of your ClamAV scanner. When it's empty, Fluxer uses `3310`. With rexctl, use `rexctl config set FLUXER_CLAMAV_PORT`.
+The port of your ClamAV scanner. When it's empty, sanalyer uses `3310`. With rexctl, use `rexctl config set FLUXER_CLAMAV_PORT`.
 
 ### `FLUXER_CLAMAV_FAIL_OPEN`
 
-Whether uploads go through when a ClamAV scan fails, such as when Fluxer can't connect to the scanner or gets no usable answer. Use `true` or `false`. When it's empty, Fluxer rejects the upload. With rexctl, use `rexctl config set FLUXER_CLAMAV_FAIL_OPEN`.
+Whether uploads go through when a ClamAV scan fails, such as when sanalyer can't connect to the scanner or gets no usable answer. Use `true` or `false`. When it's empty, sanalyer rejects the upload. With rexctl, use `rexctl config set FLUXER_CLAMAV_FAIL_OPEN`.
 
 ### `FLUXER_MEDIA_PROXY_ATTACHMENT_URL_SECRETS_BASE64`
 
-Keys that sign attachment URLs, separated by commas. Each is standard base64 that decodes to at least 32 bytes. The first entry signs and every entry verifies. To rotate keys, add the new key last and restart the stack. Then move it first and restart again. Every process can then verify the new key before any process signs with it. Remove the old key 24 hours later. Removing a key ends the data package links it signed. When it's empty, Fluxer returns unsigned attachment URLs. Keep it secret. With rexctl, use `rexctl config set FLUXER_MEDIA_PROXY_ATTACHMENT_URL_SECRETS_BASE64`.
+Keys that sign attachment URLs, separated by commas. Each is standard base64 that decodes to at least 32 bytes. The first entry signs and every entry verifies. To rotate keys, add the new key last and restart the stack. Then move it first and restart again. Every process can then verify the new key before any process signs with it. Remove the old key 24 hours later. Removing a key ends the data package links it signed. When it's empty, sanalyer returns unsigned attachment URLs. Keep it secret. With rexctl, use `rexctl config set FLUXER_MEDIA_PROXY_ATTACHMENT_URL_SECRETS_BASE64`.
 
 ### `FLUXER_MEDIA_PROXY_UPLOAD_RELAY_ENDPOINT`
 
@@ -1000,7 +1001,7 @@ The most disk space the spool may use at once, in bytes from 0 to 256 GiB, share
 
 ### `FLUXER_CACHE_PURGE_ADAPTER`
 
-How Fluxer purges cached copies of deleted or replaced media from your CDN or caching proxy. Use `none`, `http` or `controller`. When it's empty, Fluxer uses `none` and sends no purges. With rexctl, use `rexctl config set FLUXER_CACHE_PURGE_ADAPTER`.
+How sanalyer purges cached copies of deleted or replaced media from your CDN or caching proxy. Use `none`, `http` or `controller`. When it's empty, sanalyer uses `none` and sends no purges. With rexctl, use `rexctl config set FLUXER_CACHE_PURGE_ADAPTER`.
 
 ### `FLUXER_CACHE_PURGE_HTTP_ENDPOINT`
 
@@ -1008,23 +1009,23 @@ The URL the worker posts purge requests to when `FLUXER_CACHE_PURGE_ADAPTER` is 
 
 ### `FLUXER_CACHE_PURGE_HTTP_TOKEN`
 
-The bearer token Fluxer sends in the Authorization header of each purge request to `FLUXER_CACHE_PURGE_HTTP_ENDPOINT`, in visible ASCII characters with no spaces. Keep it secret. With rexctl, use `rexctl config set FLUXER_CACHE_PURGE_HTTP_TOKEN`.
+The bearer token sanalyer sends in the Authorization header of each purge request to `FLUXER_CACHE_PURGE_HTTP_ENDPOINT`, in visible ASCII characters with no spaces. Keep it secret. With rexctl, use `rexctl config set FLUXER_CACHE_PURGE_HTTP_TOKEN`.
 
 ### `FLUXER_CACHE_PURGE_HTTP_TIMEOUT_MS`
 
-How long each purge request to `FLUXER_CACHE_PURGE_HTTP_ENDPOINT` may take, in milliseconds from 1000 to 10000. When it's empty, Fluxer uses `10000`. With rexctl, use `rexctl config set FLUXER_CACHE_PURGE_HTTP_TIMEOUT_MS`.
+How long each purge request to `FLUXER_CACHE_PURGE_HTTP_ENDPOINT` may take, in milliseconds from 1000 to 10000. When it's empty, sanalyer uses `10000`. With rexctl, use `rexctl config set FLUXER_CACHE_PURGE_HTTP_TIMEOUT_MS`.
 
 ### `FLUXER_CACHE_PURGE_CONTROLLER_ENDPOINT`
 
-The purge URL of the Controller edge site that serves your media, as an absolute https URL without credentials. Fluxer uses it when `FLUXER_CACHE_PURGE_ADAPTER` is `controller`. With rexctl, use `rexctl config set FLUXER_CACHE_PURGE_CONTROLLER_ENDPOINT`.
+The purge URL of the Controller edge site that serves your media, as an absolute https URL without credentials. sanalyer uses it when `FLUXER_CACHE_PURGE_ADAPTER` is `controller`. With rexctl, use `rexctl config set FLUXER_CACHE_PURGE_CONTROLLER_ENDPOINT`.
 
 ### `FLUXER_CACHE_PURGE_CONTROLLER_TOKEN`
 
-The Controller API key Fluxer sends as a bearer token with each purge request, in visible ASCII characters with no spaces. Keep it secret. With rexctl, use `rexctl config set FLUXER_CACHE_PURGE_CONTROLLER_TOKEN`.
+The Controller API key sanalyer sends as a bearer token with each purge request, in visible ASCII characters with no spaces. Keep it secret. With rexctl, use `rexctl config set FLUXER_CACHE_PURGE_CONTROLLER_TOKEN`.
 
 ### `FLUXER_CACHE_PURGE_CONTROLLER_TIMEOUT_MS`
 
-How long each Controller purge request may take, in milliseconds from 1000 to 10000. When it's empty, Fluxer uses `10000`. With rexctl, use `rexctl config set FLUXER_CACHE_PURGE_CONTROLLER_TIMEOUT_MS`.
+How long each Controller purge request may take, in milliseconds from 1000 to 10000. When it's empty, sanalyer uses `10000`. With rexctl, use `rexctl config set FLUXER_CACHE_PURGE_CONTROLLER_TIMEOUT_MS`.
 
 ## Gateway
 
@@ -1178,7 +1179,7 @@ How many attachment files sent as multipart form data the API streams to the obj
 
 ### `FLUXER_TRUST_CLIENT_IP_HEADER`
 
-Whether Fluxer trusts the client address in the `FLUXER_CLIENT_IP_HEADER_NAME` header. Use `true` or `false`. The api, worker, admin and gateway services and the push relay use it. With `false`, they use the address of the connection, which behind the edge is the edge itself. Outside Docker Compose, the services use `false` when it's empty. The default is `true`. With rexctl, use `rexctl config set FLUXER_TRUST_CLIENT_IP_HEADER`.
+Whether sanalyer trusts the client address in the `FLUXER_CLIENT_IP_HEADER_NAME` header. Use `true` or `false`. The api, worker, admin and gateway services and the push relay use it. With `false`, they use the address of the connection, which behind the edge is the edge itself. Outside Docker Compose, the services use `false` when it's empty. The default is `true`. With rexctl, use `rexctl config set FLUXER_TRUST_CLIENT_IP_HEADER`.
 
 ### `FLUXER_CLIENT_IP_HEADER_NAME`
 
@@ -1194,7 +1195,7 @@ How often the API reloads its IP ban list, in milliseconds. When it's empty, the
 
 ### `FLUXER_API_DONATION_PROXY_KEY`
 
-An older way to add one trusted caller that may pass the client address for the donation and purchase rate limits. Fluxer's marketing site uses it. It must be at least 32 characters. Your own instance can leave it empty. Keep it secret. With rexctl, use `rexctl config set FLUXER_API_DONATION_PROXY_KEY`.
+An older way to add one trusted caller that may pass the client address for the donation and purchase rate limits. sanalyer's marketing site uses it. It must be at least 32 characters. Your own instance can leave it empty. Keep it secret. With rexctl, use `rexctl config set FLUXER_API_DONATION_PROXY_KEY`.
 
 ### `FLUXER_API_TRUSTED_CALLERS`
 
@@ -1206,11 +1207,11 @@ How many jobs each worker lane runs at once, as a JSON object that maps each lan
 
 ## Instance and branding
 
-Fluxer uses the product name, images, theme colour and status page links set here only until the setup wizard finishes or someone saves branding in the admin panel. After that it uses the saved values and ignores these. Make later changes in the admin panel or with `rexctl config set`.
+sanalyer uses the product name, images, theme colour and status page links set here only until the setup wizard finishes or someone saves branding in the admin panel. After that it uses the saved values and ignores these. Make later changes in the admin panel or with `rexctl config set`.
 
 ### `FLUXER_APP_PRODUCT_NAME`
 
-The product name the apps show and Fluxer uses in emails and system messages. When it's empty or set to `Fluxer` on a self-hosted instance, Fluxer uses the hostname of the web app. With rexctl, use `rexctl config set app_public.branding.product_name`.
+The product name the apps show and sanalyer uses in emails and system messages. When it's empty or set to `sanalyer` on a self-hosted instance, sanalyer uses the hostname of the web app. With rexctl, use `rexctl config set app_public.branding.product_name`.
 
 ### `FLUXER_APP_ICON_URL`
 
@@ -1246,7 +1247,7 @@ The brand colour of the web app and the browser theme colour, as a hex value suc
 
 ### `FLUXER_APP_STATUS_PAGE_URL`
 
-The URL of your public status page. The web app links to it when loading takes a long time. Fluxer checks whether it is an Instatus page. If it is, the web app also reads its current incidents and maintenance automatically. With rexctl, use `rexctl config set app_public.branding.status_page_url`.
+The URL of your public status page. The web app links to it when loading takes a long time. sanalyer checks whether it is an Instatus page. If it is, the web app also reads its current incidents and maintenance automatically. With rexctl, use `rexctl config set app_public.branding.status_page_url`.
 
 ### `FLUXER_APP_STATUS_PAGE_INCIDENT_HISTORY_URL`
 
@@ -1254,15 +1255,15 @@ The URL of the incident history on your status page. The apps don't use it yet. 
 
 ### `FLUXER_INSTANCE_SETUP_CONFIGURED`
 
-Whether a new instance starts as already set up. Use `true` or `false`. With `true`, the setup wizard is skipped and registration opens without making the first account an admin. Once a setup state is saved, this has no effect. When it's empty, Fluxer uses `false`. With rexctl, use `rexctl config set FLUXER_INSTANCE_SETUP_CONFIGURED`.
+Whether a new instance starts as already set up. Use `true` or `false`. With `true`, the setup wizard is skipped and registration opens without making the first account an admin. Once a setup state is saved, this has no effect. When it's empty, sanalyer uses `false`. With rexctl, use `rexctl config set FLUXER_INSTANCE_SETUP_CONFIGURED`.
 
 ### `FLUXER_ACCOUNT_IDENTITY`
 
-How people sign in on a new instance. Use `username` or `email`. Fluxer uses it only on the first start with no saved sign-in method. When it's empty, Fluxer uses `email` if email delivery is set up and `username` otherwise. When `FLUXER_INSTANCE_SETUP_CONFIGURED` is `true` or any account exists, Fluxer uses email sign-in with random tags and ignores this. Otherwise the setup wizard asks again, and its answer replaces this value. With rexctl, use `rexctl config set FLUXER_ACCOUNT_IDENTITY`.
+How people sign in on a new instance. Use `username` or `email`. sanalyer uses it only on the first start with no saved sign-in method. When it's empty, sanalyer uses `email` if email delivery is set up and `username` otherwise. When `FLUXER_INSTANCE_SETUP_CONFIGURED` is `true` or any account exists, sanalyer uses email sign-in with random tags and ignores this. Otherwise the setup wizard asks again, and its answer replaces this value. With rexctl, use `rexctl config set FLUXER_ACCOUNT_IDENTITY`.
 
 ### `FLUXER_TAG_STYLE`
 
-How usernames are tagged on a new instance that signs in by email. Use `none` for unique usernames with no tag or `random` for a random tag on every account. Username sign-in always uses `none`. Fluxer reads this setting only on the first start. When it's empty, Fluxer uses `none`. When `FLUXER_INSTANCE_SETUP_CONFIGURED` is `true` or any account exists, Fluxer uses random tags and ignores this. Otherwise the setup wizard asks again, and its answer replaces this value. With rexctl, use `rexctl config set FLUXER_TAG_STYLE`.
+How usernames are tagged on a new instance that signs in by email. Use `none` for unique usernames with no tag or `random` for a random tag on every account. Username sign-in always uses `none`. sanalyer reads this setting only on the first start. When it's empty, sanalyer uses `none`. When `FLUXER_INSTANCE_SETUP_CONFIGURED` is `true` or any account exists, sanalyer uses random tags and ignores this. Otherwise the setup wizard asks again, and its answer replaces this value. With rexctl, use `rexctl config set FLUXER_TAG_STYLE`.
 
 ### `FLUXER_AUTO_JOIN_INVITE_CODE`
 
@@ -1270,15 +1271,15 @@ One or more invite codes, separated by commas or spaces. A new account that sign
 
 ### `FLUXER_DISCOVERY_ENABLED`
 
-Whether community discovery is on. Use `true` or `false`. With `false`, discovery search, joining from discovery and discovery applications are turned off. When it's empty, Fluxer uses `true`. With rexctl, use `rexctl config set FLUXER_DISCOVERY_ENABLED`.
+Whether community discovery is on. Use `true` or `false`. With `false`, discovery search, joining from discovery and discovery applications are turned off. When it's empty, sanalyer uses `true`. With rexctl, use `rexctl config set FLUXER_DISCOVERY_ENABLED`.
 
 ### `FLUXER_DISCOVERY_MIN_MEMBER_COUNT`
 
-How many members a community needs before it can be listed in discovery. When it's empty, Fluxer uses `1`. With rexctl, use `rexctl config set FLUXER_DISCOVERY_MIN_MEMBER_COUNT`.
+How many members a community needs before it can be listed in discovery. When it's empty, sanalyer uses `1`. With rexctl, use `rexctl config set FLUXER_DISCOVERY_MIN_MEMBER_COUNT`.
 
 ### `FLUXER_DELETION_GRACE_PERIOD_HOURS`
 
-How many hours a deleted account can still be recovered before Fluxer removes it. When it's empty, Fluxer uses `336`, which is 14 days. With rexctl, use `rexctl config set FLUXER_DELETION_GRACE_PERIOD_HOURS`.
+How many hours a deleted account can still be recovered before sanalyer removes it. When it's empty, sanalyer uses `336`, which is 14 days. With rexctl, use `rexctl config set FLUXER_DELETION_GRACE_PERIOD_HOURS`.
 
 ### `FLUXER_REPORT_RETENTION_DAYS`
 
@@ -1294,7 +1295,7 @@ Whether the apps need an age check before they show mature content to people in 
 
 ### `FLUXER_AGE_POLICY_RESTRICTED_REGIONS`
 
-The regions where the apps need an age check before they show mature content, separated by commas. Use a country code such as `GB` or a country and region code such as `US-MS`. When it's empty and `FLUXER_AGE_POLICY_ENABLED` is `true`, Fluxer uses `GB` and `BR`. With rexctl, use `rexctl config set FLUXER_AGE_POLICY_RESTRICTED_REGIONS`.
+The regions where the apps need an age check before they show mature content, separated by commas. Use a country code such as `GB` or a country and region code such as `US-MS`. When it's empty and `FLUXER_AGE_POLICY_ENABLED` is `true`, sanalyer uses `GB` and `BR`. With rexctl, use `rexctl config set FLUXER_AGE_POLICY_RESTRICTED_REGIONS`.
 
 ## Billing
 
@@ -1302,7 +1303,7 @@ The admin panel can also save whether billing is on, the Stripe keys and the pri
 
 ### `FLUXER_STRIPE_ENABLED`
 
-Whether Fluxer sells subscriptions through Stripe. Use `true` or `false`. When it's empty, Fluxer uses `false`. With rexctl, use `rexctl config set billing.enabled`.
+Whether sanalyer sells subscriptions through Stripe. Use `true` or `false`. When it's empty, sanalyer uses `false`. With rexctl, use `rexctl config set billing.enabled`.
 
 ### `FLUXER_STRIPE_SECRET_KEY`
 
@@ -1326,7 +1327,7 @@ The ID of the community that people who buy Visionary are added to. When it's em
 
 ### `FLUXER_VISIONARIES_GUILD_VISIONARY_ROLE_ID`
 
-The ID of the role Fluxer gives Visionary buyers in the community set by `FLUXER_VISIONARIES_GUILD_ID`. Set it whenever `FLUXER_VISIONARIES_GUILD_ID` is set. With rexctl, use `rexctl config set FLUXER_VISIONARIES_GUILD_VISIONARY_ROLE_ID`.
+The ID of the role sanalyer gives Visionary buyers in the community set by `FLUXER_VISIONARIES_GUILD_ID`. Set it whenever `FLUXER_VISIONARIES_GUILD_ID` is set. With rexctl, use `rexctl config set FLUXER_VISIONARIES_GUILD_VISIONARY_ROLE_ID`.
 
 ## Integrations
 
@@ -1334,7 +1335,7 @@ The admin panel can also save the Bluesky settings and keys. A value saved there
 
 ### `FLUXER_BREACHED_PASSWORD_CHECK_ENABLED`
 
-Whether Fluxer rejects passwords found in known data breaches, by sending the first five characters of the password's SHA-1 hash to `api.pwnedpasswords.com`. Use `true` or `false`. When it's empty, this is off on a self-hosted instance. With rexctl, use `rexctl config set FLUXER_BREACHED_PASSWORD_CHECK_ENABLED`.
+Whether sanalyer rejects passwords found in known data breaches, by sending the first five characters of the password's SHA-1 hash to `api.pwnedpasswords.com`. Use `true` or `false`. When it's empty, this is off on a self-hosted instance. With rexctl, use `rexctl config set FLUXER_BREACHED_PASSWORD_CHECK_ENABLED`.
 
 ### `FLUXER_BLOCKLIST_FEEDS_ENABLED`
 
@@ -1350,23 +1351,23 @@ The Klipy API key for GIF search and Klipy link previews. A key saved in the adm
 
 ### `FLUXER_YOUTUBE_API_KEY`
 
-The YouTube Data API key Fluxer uses for YouTube link previews. A key saved in the admin panel is used first. The unfurl service calls the API from your server. The key needs YouTube Data API v3 enabled, a daily quota above 0, and an application restriction of None or IP addresses. A key restricted to websites (HTTP referrers) always fails. When Google rejects the key, the unfurl logs show the reason it gives, such as `quotaExceeded` or `API_KEY_HTTP_REFERRER_BLOCKED`. Keep it secret. With rexctl, use `rexctl config set integrations.youtube.api_key`.
+The YouTube Data API key sanalyer uses for YouTube link previews. A key saved in the admin panel is used first. The unfurl service calls the API from your server. The key needs YouTube Data API v3 enabled, a daily quota above 0, and an application restriction of None or IP addresses. A key restricted to websites (HTTP referrers) always fails. When Google rejects the key, the unfurl logs show the reason it gives, such as `quotaExceeded` or `API_KEY_HTTP_REFERRER_BLOCKED`. Keep it secret. With rexctl, use `rexctl config set integrations.youtube.api_key`.
 
 ### `FLUXER_API_UNFURL_IGNORED_HOSTS`
 
-Hostnames, separated by commas, that Fluxer never makes link previews for. A link matches only when its host is exactly one of these. With rexctl, use `rexctl config set FLUXER_API_UNFURL_IGNORED_HOSTS`.
+Hostnames, separated by commas, that sanalyer never makes link previews for. A link matches only when its host is exactly one of these. With rexctl, use `rexctl config set FLUXER_API_UNFURL_IGNORED_HOSTS`.
 
 ### `FLUXER_AUTH_BLUESKY_ENABLED`
 
-Whether people can link a Bluesky account to their profile. Use `true` or `false`. It needs `FLUXER_AUTH_BLUESKY_KEYS`. When it's empty, Fluxer uses `false`. With rexctl, use `rexctl config set integrations.bluesky.enabled`.
+Whether people can link a Bluesky account to their profile. Use `true` or `false`. It needs `FLUXER_AUTH_BLUESKY_KEYS`. When it's empty, sanalyer uses `false`. With rexctl, use `rexctl config set integrations.bluesky.enabled`.
 
 ### `FLUXER_AUTH_BLUESKY_CLIENT_NAME`
 
-The app name Bluesky shows when someone links their account. When it's empty, Bluesky shows `Fluxer`, even when `FLUXER_APP_PRODUCT_NAME` is set. With rexctl, use `rexctl config set integrations.bluesky.client_name`.
+The app name Bluesky shows when someone links their account. When it's empty, Bluesky shows `sanalyer`, even when `FLUXER_APP_PRODUCT_NAME` is set. With rexctl, use `rexctl config set integrations.bluesky.client_name`.
 
 ### `FLUXER_AUTH_BLUESKY_CLIENT_URI`
 
-Fluxer doesn't use this value. Bluesky shows the API address as the home page of your instance.
+sanalyer doesn't use this value. Bluesky shows the API address as the home page of your instance.
 
 ### `FLUXER_AUTH_BLUESKY_LOGO_URI`
 
@@ -1382,7 +1383,7 @@ The privacy policy URL Bluesky shows for your instance. With rexctl, use `rexctl
 
 ### `FLUXER_AUTH_BLUESKY_KEYS`
 
-The keys Fluxer signs Bluesky account linking requests with, as a JSON array of objects with a `kid` and a `private_key` or a `private_key_path`, which is an absolute path inside the api and worker containers. Keys saved in the admin panel replace these. Keep it secret. With rexctl, use `rexctl config set integrations.bluesky.keys`.
+The keys sanalyer signs Bluesky account linking requests with, as a JSON array of objects with a `kid` and a `private_key` or a `private_key_path`, which is an absolute path inside the api and worker containers. Keys saved in the admin panel replace these. Keep it secret. With rexctl, use `rexctl config set integrations.bluesky.keys`.
 
 ## Memory and performance
 
@@ -1844,7 +1845,7 @@ How many failed health checks in a row mark a worker container as unhealthy. The
 
 ## Images
 
-Set one to use your own mirror or another version. Fluxer's own images are pinned to the release in `docker-compose.yml`.
+Set one to use your own mirror or another version. sanalyer's own images are pinned to the release in `docker-compose.yml`.
 
 ### `FLUXER_CADDY_IMAGE`
 
@@ -1876,15 +1877,15 @@ The image the livekit container runs. The default is `livekit/livekit-server:v1.
 
 ### `FLUXER_REGISTRY`
 
-The registry of Fluxer's own images in the `docker-compose.yml` of the Fluxer repository. When it's empty, that file uses `ghcr.io/` followed by `FLUXER_REGISTRY_OWNER`. The compose bundle pins every Fluxer image to the release.
+The registry of sanalyer's own images in the `docker-compose.yml` of the sanalyer repository. When it's empty, that file uses `ghcr.io/` followed by `FLUXER_REGISTRY_OWNER`. The compose bundle pins every sanalyer image to the release.
 
 ### `FLUXER_REGISTRY_OWNER`
 
-The owner of Fluxer's own images on `ghcr.io`, in the `docker-compose.yml` of the Fluxer repository. The compose bundle pins every Fluxer image to the release. The default is `fluxerapp`.
+The owner of sanalyer's own images on `ghcr.io`, in the `docker-compose.yml` of the sanalyer repository. The compose bundle pins every sanalyer image to the release. The default is `fluxerapp`.
 
 ### `FLUXER_IMAGE_TAG`
 
-The tag of Fluxer's own images in the `docker-compose.yml` of the Fluxer repository. The compose bundle pins every Fluxer image to the release. `rexctl upgrade --check` reads it to find the release a Docker Compose install runs, and uses `v1` when it's empty. The default is `v1`.
+The tag of sanalyer's own images in the `docker-compose.yml` of the sanalyer repository. The compose bundle pins every sanalyer image to the release. `rexctl upgrade --check` reads it to find the release a Docker Compose install runs, and uses `v1` when it's empty. The default is `v1`.
 
 ## Values from files
 
@@ -1923,7 +1924,7 @@ The join token for `rexctl voice join` when the command line doesn't have one. O
 
 ### `REXCTL_RELEASE_URL`
 
-The URL of the release index that rexctl and its install scripts download releases from. When it's empty, they use `https://fluxer.dev/rexctl/release.json`. Another server must respond to the same queries as that address, including `version` and `format=sh`.
+The URL of the release index that rexctl and its install scripts download releases from. When it's empty, they use `https://sanalyer.com/docs/rexctl/release.json`. Another server must respond to the same queries as that address, including `version` and `format=sh`.
 
 ### `REXCTL_IMAGE_SET`
 
@@ -2143,7 +2144,7 @@ How many volumes SeaweedFS creates at once, set from `FLUXER_SEAWEEDFS_VOLUME_GR
 
 ## Not passed by the compose stack
 
-Fluxer's services, their images, some of the libraries they use and the Fluxer Helm chart also use these variables, but `docker-compose.yml` doesn't pass them to any service. A value in `.env` has no effect.
+sanalyer's services, their images, some of the libraries they use and the sanalyer Helm chart also use these variables, but `docker-compose.yml` doesn't pass them to any service. A value in `.env` has no effect.
 
 ### `ALL_PROXY`
 
@@ -2255,7 +2256,7 @@ The NATS subject the API sends users service requests to. The users service alwa
 
 ### `FLUXER_VALKEY_PASSWORD`
 
-The password of the Valkey that the Fluxer Helm chart runs, at least 32 letters and digits. The chart builds `FLUXER_KV_URL` from it.
+The password of the Valkey that the sanalyer Helm chart runs, at least 32 letters and digits. The chart builds `FLUXER_KV_URL` from it.
 
 ### `G_MESSAGES_DEBUG`
 
@@ -2275,7 +2276,7 @@ Libraries the dynamic loader loads before any others. The media-proxy and app-pr
 
 ### `LIVEKIT_WEBHOOK_URL`
 
-The address the bundled LiveKit sends its webhooks to. The Fluxer Helm chart sets it on the LiveKit pod and adds it to the LiveKit config.
+The address the bundled LiveKit sends its webhooks to. The sanalyer Helm chart sets it on the LiveKit pod and adds it to the LiveKit config.
 
 ### `MALLOC_CONF`
 
@@ -2291,7 +2292,7 @@ With `0`, Node in the api and worker checks no certificates on outgoing TLS conn
 
 ### `PGDATA`
 
-The directory the bundled Postgres keeps its data in. The Fluxer Helm chart sets it on the Postgres pod.
+The directory the bundled Postgres keeps its data in. The sanalyer Helm chart sets it on the Postgres pod.
 
 ### `PGSSLMODE`
 
@@ -2299,15 +2300,15 @@ The libpq TLS mode the api and worker use when `FLUXER_POSTGRES_SSL` isn't `true
 
 ### `POD_IP`
 
-The IP address of a gateway pod. The Fluxer Helm chart sets it on the gateway pods and builds `FLUXER_ERLANG_NODE_NAME` from it.
+The IP address of a gateway pod. The sanalyer Helm chart sets it on the gateway pods and builds `FLUXER_ERLANG_NODE_NAME` from it.
 
 ### `POD_NAME`
 
-The name of the pod a service runs in. The api and gateway label their RPC timings with it, or with `HOSTNAME` when it's empty, and the gateway reports it in its node details. When `FLUXER_SVC_SHARD_ID` is empty, an internal service runs the shard numbered at the end of the pod name, such as `2` for `users-2`. The Fluxer Helm chart sets it on the shard pods of the internal services and on the NATS pods.
+The name of the pod a service runs in. The api and gateway label their RPC timings with it, or with `HOSTNAME` when it's empty, and the gateway reports it in its node details. When `FLUXER_SVC_SHARD_ID` is empty, an internal service runs the shard numbered at the end of the pod name, such as `2` for `users-2`. The sanalyer Helm chart sets it on the shard pods of the internal services and on the NATS pods.
 
 ### `REDISCLI_AUTH`
 
-The password of the bundled Valkey. The Fluxer Helm chart sets it on the Valkey pod from `FLUXER_VALKEY_PASSWORD` and starts Valkey with it.
+The password of the bundled Valkey. The sanalyer Helm chart sets it on the Valkey pod from `FLUXER_VALKEY_PASSWORD` and starts Valkey with it.
 
 ### `RELEASE_CHANNEL`
 
@@ -2339,7 +2340,7 @@ The older name for `FLUXER_YOUTUBE_API_KEY`, used only by the unfurl service. Do
 
 ### Hosted service only
 
-Only Fluxer's hosted service uses these.
+Only sanalyer's hosted service uses these.
 
 #### `FLUXER_API_AUTOMATED_MESSAGE_DELETION_DELAY_DAYS`
 
@@ -2347,7 +2348,7 @@ The delay before automated account actions delete messages, in days.
 
 #### `FLUXER_APP_STORE_APPS`
 
-The App Store apps Fluxer sells in.
+The App Store apps sanalyer sells in.
 
 #### `FLUXER_APP_STORE_ENABLED`
 
@@ -2383,7 +2384,7 @@ Whether Google Play purchases are on.
 
 #### `FLUXER_GOOGLE_PLAY_PACKAGES`
 
-The Android packages Fluxer sells in.
+The Android packages sanalyer sells in.
 
 #### `FLUXER_GOOGLE_PLAY_PRIVATE_KEY`
 
@@ -2651,7 +2652,7 @@ The role of a gateway node in a cluster.
 
 ### Push relay
 
-Only the push relay Fluxer runs for the mobile apps uses these.
+Only the push relay sanalyer runs for the mobile apps uses these.
 
 #### `FLUXER_PUSH_RELAY_MAX_BODY_BYTES`
 

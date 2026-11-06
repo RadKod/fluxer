@@ -42230,7 +42230,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Zobrazit text písmem Fluxer Sans, dřívějším výchozím písmem, místo "
+"Zobrazit text písmem sanalyer Sans, dřívějším výchozím písmem, místo "
 "systémového písma Windows"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -44874,7 +44874,7 @@ msgstr "Přepnout účty"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Zpět na Fluxer Sans"
+msgstr "Zpět na sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45594,7 +45594,7 @@ msgid ""
 " in settings."
 msgstr ""
 "Text ve Windows teď používá systémové písmo. V nastavení se můžete vrátit k "
-"Fluxer Sans."
+"sanalyer Sans."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -46037,8 +46037,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Aplikace Fluxer pro iOS a Android dostávají oznámení přes push relay, který "
-"provozuje Fluxer a který je předává společnostem Apple a Google. Jeho "
+"Aplikace sanalyer pro iOS a Android dostávají oznámení přes push relay, který "
+"provozuje sanalyer a který je předává společnostem Apple a Google. Jeho "
 "používáním přijímáte oznámení o ochraně soukromí pro push relay."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -51458,7 +51458,7 @@ msgstr "Použijte filtry nebo zadejte klíčová slova k nalezení zpráv"
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Použít Fluxer Sans ve Windows"
+msgstr "Použít sanalyer Sans ve Windows"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

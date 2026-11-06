@@ -92,7 +92,7 @@ Threads and forum channels have more fields, described under [thread object](/ht
 | 2 | GUILD_VOICE | Guild voice channel, which also has messages |
 | 3 | GROUP_DM | Group direct message |
 | 4 | GUILD_CATEGORY | Guild category |
-| 5 | GUILD_ANNOUNCEMENT | Text channel that other channels can [follow](/topics/announcement-channels/) |
+| 5 | GUILD_ANNOUNCEMENT | Text channel that other channels can follow |
 | 10 | ANNOUNCEMENT_THREAD | Thread in an announcement channel |
 | 11 | PUBLIC_THREAD | Thread anyone who can view the parent can see |
 | 12 | PRIVATE_THREAD | Thread only its members and thread moderators can see |
@@ -312,7 +312,7 @@ The decoded icon can't be larger than the [`avatar_max_size`](/http-api/instance
 
 Converting an announcement channel back to text removes every follow of it.
 
-Fluxer sends [Channel Update](/gateway/events/#channel-update) to the guild or the group. When you change the overwrites of a category, every child whose overwrites matched the old ones gets the new ones too. Changing `rate_limit_per_user` resets everyone's slowmode delay in the channel.
+sanalyer sends [Channel Update](/gateway/events/#channel-update) to the guild or the group. When you change the overwrites of a category, every child whose overwrites matched the old ones gets the new ones too. Changing `rate_limit_per_user` resets everyone's slowmode delay in the channel.
 
 The rate limit is 20 requests per 10 seconds, on the `channel:update::channel_id` bucket.
 
@@ -363,11 +363,11 @@ The body is optional. With `delete_messages` set, a user session needs [sudo mod
 | 400 | [error response](/http-api/#error-response) | `CANNOT_EXECUTE_ON_DM` for your personal notes channel |
 | 403 | [error response](/http-api/#error-response) | `SUDO_MODE_REQUIRED` when `delete_messages` is set without sudo mode |
 
-Deleting a guild channel sends [Channel Delete](/gateway/events/#channel-delete) to the guild. Fluxer sends no [Thread Delete](/gateway/threads/#thread-delete) for its threads, and you should remove every thread whose `parent_id` is the channel. Deleting a category moves its channels to the top level, with a [Channel Update](/gateway/events/#channel-update) for each.
+Deleting a guild channel sends [Channel Delete](/gateway/events/#channel-delete) to the guild. sanalyer sends no [Thread Delete](/gateway/threads/#thread-delete) for its threads, and you should remove every thread whose `parent_id` is the channel. Deleting a category moves its channels to the top level, with a [Channel Update](/gateway/events/#channel-update) for each.
 
 Closing a direct message only hides it for you.
 
-Leaving a group direct message sends [Channel Recipient Remove](/gateway/events/#channel-recipient-remove) to the others. If you owned the group, another recipient becomes the owner. To see the new `owner_id`, fetch the channel again, because Fluxer sends no Channel Update for the change. When the last recipient leaves, the group and its messages are deleted.
+Leaving a group direct message sends [Channel Recipient Remove](/gateway/events/#channel-recipient-remove) to the others. If you owned the group, another recipient becomes the owner. To see the new `owner_id`, fetch the channel again, because sanalyer sends no Channel Update for the change. When the last recipient leaves, the group and its messages are deleted.
 
 The rate limit is 20 requests per 10 seconds, on the `channel:delete::channel_id` bucket.
 
@@ -462,7 +462,7 @@ Creates or replaces the overwrite for one role or member and returns 204. You ne
 | 204 | empty | The overwrite was created or replaced |
 | 400 | [error response](/http-api/#error-response) | `INVALID_CHANNEL_TYPE` when the channel is a thread |
 
-Fluxer sends [Channel Update](/gateway/events/#channel-update) to the guild. On a category, children whose overwrites matched the old ones get the new ones too.
+sanalyer sends [Channel Update](/gateway/events/#channel-update) to the guild. On a category, children whose overwrites matched the old ones get the new ones too.
 
 The rate limit is 20 requests per 10 seconds, on the `channel:update::channel_id` bucket.
 
@@ -485,7 +485,7 @@ Deletes the overwrite for one role or member and returns 204, even if there was 
 | 204 | empty | The overwrite was deleted, or didn't exist |
 | 400 | [error response](/http-api/#error-response) | `INVALID_CHANNEL_TYPE` when the channel is a thread |
 
-Fluxer sends [Channel Update](/gateway/events/#channel-update) to the guild, and a category updates matching children as in [Set channel permission overwrite](#set-channel-permission-overwrite).
+sanalyer sends [Channel Update](/gateway/events/#channel-update) to the guild, and a category updates matching children as in [Set channel permission overwrite](#set-channel-permission-overwrite).
 
 The rate limit is 20 requests per 10 seconds, on the `channel:update::channel_id` bucket.
 
@@ -493,7 +493,7 @@ The rate limit is 20 requests per 10 seconds, on the `channel:update::channel_id
 
 <RouteHeader method="POST" path="/v1/channels/{channel_id}/followers" bot auditReason />
 
-Follows an announcement channel into a guild text channel and returns a [followed channel object](#followed-channel-object). Fluxer creates a [channel follower webhook](/http-api/webhooks/#webhook-types) in the target channel, and [published](/http-api/messages/#crosspost-message) messages are copied into it from then on, as described in [Announcement channels](/topics/announcement-channels/). You need `VIEW_CHANNEL` on the announcement channel and `VIEW_CHANNEL` and `MANAGE_WEBHOOKS` on the target channel.
+Follows an announcement channel into a guild text channel and returns a [followed channel object](#followed-channel-object). sanalyer creates a [channel follower webhook](/http-api/webhooks/#webhook-types) in the target channel, and [published](/http-api/messages/#crosspost-message) messages are copied into it from then on, as described in Announcement channels. You need `VIEW_CHANNEL` on the announcement channel and `VIEW_CHANNEL` and `MANAGE_WEBHOOKS` on the target channel.
 
 ### JSON body
 
@@ -514,7 +514,7 @@ Follows an announcement channel into a guild text channel and returns a [followe
 | 400 | [error response](/http-api/#error-response) | `MAX_WEBHOOKS_PER_CHANNEL` or `MAX_WEBHOOKS_PER_GUILD` when the target has no room for the webhook |
 | 403 | [error response](/http-api/#error-response) | `FEATURE_TEMPORARILY_DISABLED` when the guild has `ANNOUNCEMENT_CHANNELS_DISABLED` |
 
-An age-restricted target doesn't need its own content warning. Fluxer sends [Webhooks Update](/gateway/events/#webhooks-update) for the target channel and posts a `CHANNEL_FOLLOW_ADD` system message in it. [Delete webhook](/http-api/webhooks/#delete-webhook) on the follower webhook stops the follow.
+An age-restricted target doesn't need its own content warning. sanalyer sends [Webhooks Update](/gateway/events/#webhooks-update) for the target channel and posts a `CHANNEL_FOLLOW_ADD` system message in it. [Delete webhook](/http-api/webhooks/#delete-webhook) on the follower webhook stops the follow.
 
 The rate limit is 5 requests per 10 seconds, on the `channel:follow::channel_id` bucket.
 

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: rexctl commands
 description: Every rexctl command and flag, made from rexctl's own help.
+draft: true
 ---
 
 This page is made from the help that rexctl prints, and `rexctl <command> --help` shows the same text in the terminal.
@@ -54,7 +55,7 @@ rexctl admins sign-in-link <user>
 
 ## rexctl auto-upgrade
 
-Show whether rexctl upgrades Fluxer, or the voice servers on a voice machine, by itself, when it runs next and how the last run went. Each run is rexctl upgrade --yes and works like an upgrade you run yourself.
+Show whether rexctl upgrades sanalyer, or the voice servers on a voice machine, by itself, when it runs next and how the last run went. Each run is rexctl upgrade --yes and works like an upgrade you run yourself.
 
 ```sh
 rexctl auto-upgrade [flags]
@@ -66,7 +67,7 @@ rexctl auto-upgrade [flags]
 
 ### rexctl auto-upgrade off
 
-Stop upgrading Fluxer by itself. This also stops the monthly full backup that --full-backup turned on.
+Stop upgrading sanalyer by itself. This also stops the monthly full backup that --full-backup turned on.
 
 ```sh
 rexctl auto-upgrade off
@@ -112,7 +113,7 @@ rexctl auto-upgrade test-notify
 
 ## rexctl backup
 
-Back up your instance in one file that restores on this machine or a new one. It has the database, search data and uploads that Fluxer stores itself. Fluxer pauses while uploads are copied.
+Back up your instance in one file that restores on this machine or a new one. It has the database, search data and uploads that sanalyer stores itself. sanalyer pauses while uploads are copied.
 
 ```sh
 rexctl backup
@@ -192,7 +193,7 @@ rexctl branding set [flags]
 
 ## rexctl config
 
-Read and change Fluxer's settings.
+Read and change sanalyer's settings.
 
 ### rexctl config edit
 
@@ -272,7 +273,7 @@ rexctl doctor [flags]
 
 ## rexctl down
 
-Stop Fluxer and remove its containers and networks, like docker compose down. Your data, settings, backups and images stay. Fluxer stays stopped until you run rexctl start, which creates the containers again.
+Stop sanalyer and remove its containers and networks, like docker compose down. Your data, settings, backups and images stay. sanalyer stays stopped until you run rexctl start, which creates the containers again.
 
 ```sh
 rexctl down
@@ -280,7 +281,7 @@ rexctl down
 
 ## rexctl eject
 
-Writes every setting into the instance folder for docker compose and stops rexctl from changing the instance. Fluxer keeps running. Run rexctl takeover to hand it back.
+Writes every setting into the instance folder for docker compose and stops rexctl from changing the instance. sanalyer keeps running. Run rexctl takeover to hand it back.
 
 ```sh
 rexctl eject
@@ -340,7 +341,7 @@ rexctl email test [address]
 
 ## rexctl install
 
-Install Fluxer on this machine, or take over an existing install.
+Install sanalyer on this machine, or take over an existing install.
 
 ```sh
 rexctl install [flags]
@@ -372,7 +373,7 @@ rexctl install [flags]
 
 - `--delete-old-data`
 
-  Delete Fluxer data found on this machine and start fresh.
+  Delete sanalyer data found on this machine and start fresh.
 
 - `--domain string`
 
@@ -392,7 +393,7 @@ rexctl install [flags]
 
 - `--memory-profile string`
 
-  Pin small, medium or large instead of sizing Fluxer to this machine on every start.
+  Pin small, medium or large instead of sizing sanalyer to this machine on every start.
 
 - `--name string`
 
@@ -404,11 +405,11 @@ rexctl install [flags]
 
 - `--no-start`
 
-  Write the files without starting Fluxer.
+  Write the files without starting sanalyer.
 
 - `--open-firewall`
 
-  Open the ports Fluxer needs in ufw or firewalld. The default is `true`.
+  Open the ports sanalyer needs in ufw or firewalld. The default is `true`.
 
 - `--project string`
 
@@ -424,7 +425,7 @@ rexctl install [flags]
 
 - `--setup-podman`
 
-  Start Podman's API socket and start Fluxer with the machine. The default is `true`.
+  Start Podman's API socket and start sanalyer with the machine. The default is `true`.
 
 - `--sign-in string`
 
@@ -488,7 +489,7 @@ rexctl install [flags]
 
 - `--take-over`
 
-  Take over Fluxer data found on this machine.
+  Take over sanalyer data found on this machine.
 
 - `--voice-ip string`
 
@@ -567,7 +568,7 @@ rexctl logs [service] [flags]
 
 ## rexctl proxy
 
-Use your own reverse proxy in front of Fluxer.
+Use your own reverse proxy in front of sanalyer.
 
 ### rexctl proxy off
 
@@ -779,7 +780,7 @@ rexctl status [flags]
 
 ## rexctl stop
 
-Stop Fluxer and keep its containers. Fluxer stays stopped until you run rexctl start. To remove the containers too, run rexctl down.
+Stop sanalyer and keep its containers. sanalyer stays stopped until you run rexctl start. To remove the containers too, run rexctl down.
 
 ```sh
 rexctl stop
@@ -787,7 +788,7 @@ rexctl stop
 
 ## rexctl takeover
 
-Hands an instance made by the old installer, by hand with docker compose, or released with rexctl eject over to rexctl. Fluxer keeps running as it is.
+Hands an instance made by the old installer, by hand with docker compose, or released with rexctl eject over to rexctl. sanalyer keeps running as it is.
 
 ```sh
 rexctl takeover [flags]
@@ -799,7 +800,7 @@ rexctl takeover [flags]
 
 ## rexctl uninstall
 
-Remove Fluxer from this machine, with its data and backups unless you pass --keep-data. To stop Fluxer and keep everything, run rexctl stop or rexctl down.
+Remove sanalyer from this machine, with its data and backups unless you pass --keep-data. To stop sanalyer and keep everything, run rexctl stop or rexctl down.
 
 ```sh
 rexctl uninstall [flags]
@@ -815,7 +816,7 @@ rexctl uninstall [flags]
 
 ## rexctl upgrade
 
-Upgrade rexctl and Fluxer to the latest release.
+Upgrade rexctl and sanalyer to the latest release.
 
 ```sh
 rexctl upgrade [flags]
@@ -851,7 +852,7 @@ rexctl upgrade [flags]
 
 ## rexctl use
 
-Show which instance rexctl uses when you don't pass --dir and aren't in an instance folder, or pass a folder to use that instance from now on. rexctl remembers each instance it installs. You only need this with more than one instance or one installed by an older rexctl. Each account has its own choice. Root's choice also applies to accounts that have no instance of their own. The services rexctl sets up for starting and upgrading Fluxer always pass their own folder, and this choice doesn't change them.
+Show which instance rexctl uses when you don't pass --dir and aren't in an instance folder, or pass a folder to use that instance from now on. rexctl remembers each instance it installs. You only need this with more than one instance or one installed by an older rexctl. Each account has its own choice. Root's choice also applies to accounts that have no instance of their own. The services rexctl sets up for starting and upgrading sanalyer always pass their own folder, and this choice doesn't change them.
 
 ```sh
 rexctl use [folder]
@@ -971,7 +972,7 @@ rexctl users unban <user>
 
 ## rexctl version
 
-Show the rexctl and Fluxer versions.
+Show the rexctl and sanalyer versions.
 
 ```sh
 rexctl version [flags]
@@ -983,13 +984,13 @@ rexctl version [flags]
 
 ## rexctl voice
 
-Run standalone LiveKit voice servers next to Fluxer with rexctl voice add, or on other machines with rexctl voice token and rexctl voice join.
+Run standalone LiveKit voice servers next to sanalyer with rexctl voice add, or on other machines with rexctl voice token and rexctl voice join.
 
 To run without the bundled voice server, run rexctl config set voice.bundled false, or install with rexctl install --no-bundled-voice. Calls then go only to the servers you add. rexctl config set voice.bundled true brings the bundled server back.
 
 ### rexctl voice add
 
-Add standalone LiveKit voice servers next to your Fluxer instance on this machine. Each one gets its own ID, ports, keys and path on your domain, and rexctl registers it with your instance.
+Add standalone LiveKit voice servers next to your sanalyer instance on this machine. Each one gets its own ID, ports, keys and path on your domain, and rexctl registers it with your instance.
 
 ```sh
 rexctl voice add [flags]
@@ -1005,7 +1006,7 @@ rexctl voice add [flags]
 
 - `--force`
 
-  Add servers even when Fluxer runs through a tunnel.
+  Add servers even when sanalyer runs through a tunnel.
 
 - `--id string`
 
@@ -1077,7 +1078,7 @@ rexctl voice hostname <id> <host>
 
 ### rexctl voice join
 
-Install a standalone LiveKit voice server on this machine and register it with the Fluxer instance at \<domain>. Get the token with rexctl voice token on the Fluxer machine, or with Add a voice server in the admin panel. The token works once. rexctl also reads it from FLUXER_VOICE_JOIN_TOKEN or, with --token-stdin, from standard input. The server offers IPv4 and IPv6 when the machine has both. On a machine with only IPv6, pass --hostname with an AAAA record that points here.
+Install a standalone LiveKit voice server on this machine and register it with the sanalyer instance at \<domain>. Get the token with rexctl voice token on the sanalyer machine, or with Add a voice server in the admin panel. The token works once. rexctl also reads it from FLUXER_VOICE_JOIN_TOKEN or, with --token-stdin, from standard input. The server offers IPv4 and IPv6 when the machine has both. On a machine with only IPv6, pass --hostname with an AAAA record that points here.
 
 ```sh
 rexctl voice join <domain> [token] [flags]
@@ -1209,7 +1210,7 @@ rexctl voice status [id]
 
 ### rexctl voice test
 
-Join a throwaway room on a voice server and report which transports connect. On the Fluxer machine it can test any server of the instance, including servers on other machines.
+Join a throwaway room on a voice server and report which transports connect. On the sanalyer machine it can test any server of the instance, including servers on other machines.
 
 ```sh
 rexctl voice test [id]

@@ -42336,7 +42336,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Rodyti tekstą „Fluxer Sans“ (ankstesnis numatytasis šriftas), o ne „Windows“"
+"Rodyti tekstą „sanalyer Sans“ (ankstesnis numatytasis šriftas), o ne „Windows“"
 " sistemos šriftą"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -44974,7 +44974,7 @@ msgstr "Keisti paskyras"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Grįžti prie „Fluxer Sans“"
+msgstr "Grįžti prie „sanalyer Sans“"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45695,7 +45695,7 @@ msgid ""
 " in settings."
 msgstr ""
 "Tekstas „Windows“ dabar naudoja sistemos šriftą. Nustatymuose galite grįžti "
-"prie „Fluxer Sans“."
+"prie „sanalyer Sans“."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -46144,7 +46144,7 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Fluxer programėlės iOS ir Android gauna pranešimus per Fluxer valdomą push "
+"sanalyer programėlės iOS ir Android gauna pranešimus per sanalyer valdomą push "
 "tarpininką, kuris perduoda juos Apple ir Google. Norėdami jį naudoti, "
 "sutinkate su push tarpininko privatumo pranešimu."
 
@@ -51607,7 +51607,7 @@ msgstr ""
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Naudoti „Fluxer Sans“ sistemoje „Windows“"
+msgstr "Naudoti „sanalyer Sans“ sistemoje „Windows“"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

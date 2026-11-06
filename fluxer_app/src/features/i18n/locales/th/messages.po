@@ -41683,7 +41683,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"แสดงข้อความด้วยฟอนต์ Fluxer Sans ซึ่งเป็นฟอนต์เริ่มต้นก่อนหน้า "
+"แสดงข้อความด้วยฟอนต์ sanalyer Sans ซึ่งเป็นฟอนต์เริ่มต้นก่อนหน้า "
 "แทนฟอนต์ระบบของ Windows"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -44282,7 +44282,7 @@ msgstr "สลับบัญชี"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "กลับไปใช้ Fluxer Sans"
+msgstr "กลับไปใช้ sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45002,7 +45002,7 @@ msgid ""
 "Text on Windows now uses the system font. You can switch back to Fluxer Sans"
 " in settings."
 msgstr ""
-"ข้อความบน Windows ตอนนี้ใช้ฟอนต์ของระบบ คุณสามารถเปลี่ยนกลับไปใช้ Fluxer "
+"ข้อความบน Windows ตอนนี้ใช้ฟอนต์ของระบบ คุณสามารถเปลี่ยนกลับไปใช้ sanalyer "
 "Sans ได้ในการตั้งค่า"
 
 #. Settings search synonym. Used to match this term when the user types it in
@@ -45431,8 +45431,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"แอป Fluxer สำหรับ iOS และ Android รับการแจ้งเตือนผ่านรีเลย์การแจ้งเตือนที่ "
-"Fluxer ดูแล ซึ่งส่งต่อไปยัง Apple และ Google หากต้องการใช้ "
+"แอป sanalyer สำหรับ iOS และ Android รับการแจ้งเตือนผ่านรีเลย์การแจ้งเตือนที่ "
+"sanalyer ดูแล ซึ่งส่งต่อไปยัง Apple และ Google หากต้องการใช้ "
 "คุณต้องยอมรับประกาศความเป็นส่วนตัวของรีเลย์การแจ้งเตือน"
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -50782,7 +50782,7 @@ msgstr "ใช้ตัวกรองหรือป้อนคีย์เว
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "ใช้ Fluxer Sans บน Windows"
+msgstr "ใช้ sanalyer Sans บน Windows"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

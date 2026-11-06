@@ -17,7 +17,7 @@ Uploading first needs `presigned_attachment_uploads` set to true in [instance fe
 
 Each file can be up to the [`max_attachment_file_size`](/http-api/instance/#limit-keys) limit. A bot gets the lower of that limit and [`max_bot_attachment_file_size`](/http-api/instance/#limit-keys), which is 52428800 bytes (50 MiB) unless the instance admins change it.
 
-In a multipart message, Fluxer checks each file part while it arrives. When a part goes over the limit, the request fails with 400 `FILE_SIZE_TOO_LARGE`. When `Content-Length` is larger than every allowed file plus the rest of the message, the request fails with 413 `FILE_SIZE_TOO_LARGE` and Fluxer saves none of it. In both cases Fluxer reads up to 64 MiB of the rest of the body before it answers. If more is left, it answers right away and closes the connection, and some HTTP clients then report a connection reset instead of the response. Check file sizes against the limit before you send to avoid this.
+In a multipart message, sanalyer checks each file part while it arrives. When a part goes over the limit, the request fails with 400 `FILE_SIZE_TOO_LARGE`. When `Content-Length` is larger than every allowed file plus the rest of the message, the request fails with 413 `FILE_SIZE_TOO_LARGE` and sanalyer saves none of it. In both cases sanalyer reads up to 64 MiB of the rest of the body before it answers. If more is left, it answers right away and closes the connection, and some HTTP clients then report a connection reset instead of the response. Check file sizes against the limit before you send to avoid this.
 
 When the instance is already streaming many files, a file part can wait up to 10 seconds and then fail with 503 and a `Retry-After` header. A multipart request also has to finish within the instance's request timeout, which is 120 seconds by default.
 
@@ -36,7 +36,7 @@ Each `parts` entry has a `part_number` starting at 1 and its own `upload_url`.
 
 ## Upload the bytes
 
-Send a `PUT` to each `upload_url` exactly as returned, with no `Authorization` header. Fluxer picks `content_type` from the file name, and a singlepart upload must send the whole file with it as `Content-Type`. A multipart upload sends each part to its own URL, with exactly `part_size` bytes in every part except the last.
+Send a `PUT` to each `upload_url` exactly as returned, with no `Authorization` header. sanalyer picks `content_type` from the file name, and a singlepart upload must send the whole file with it as `Content-Type`. A multipart upload sends each part to its own URL, with exactly `part_size` bytes in every part except the last.
 
 An upload URL points to storage or to the [upload relay](/media-proxy/upload-relay/), and it expires after the time below.
 
@@ -50,7 +50,7 @@ Keep upload URLs out of logs, because anyone who has one can upload to it until 
 
 ## Complete a multipart upload
 
-After every part has uploaded, call [Complete attachment upload](/http-api/messages/#complete-attachment-upload) with the `upload_filename` and `upload_id` of up to 10 uploads. Fluxer checks permissions and the file size limit again. If completion fails because no parts arrived, the parts are too large or storage can't finish the upload, Fluxer cancels the upload and you need a new plan.
+After every part has uploaded, call [Complete attachment upload](/http-api/messages/#complete-attachment-upload) with the `upload_filename` and `upload_id` of up to 10 uploads. sanalyer checks permissions and the file size limit again. If completion fails because no parts arrived, the parts are too large or storage can't finish the upload, sanalyer cancels the upload and you need a new plan.
 
 ## Attach the upload
 

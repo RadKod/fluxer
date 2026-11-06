@@ -41937,7 +41937,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Hiển thị văn bản bằng Fluxer Sans, phông chữ mặc định trước đây, thay vì "
+"Hiển thị văn bản bằng sanalyer Sans, phông chữ mặc định trước đây, thay vì "
 "phông chữ hệ thống của Windows"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -44565,7 +44565,7 @@ msgstr "Chuyển tài khoản"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Chuyển về Fluxer Sans"
+msgstr "Chuyển về sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45285,7 +45285,7 @@ msgid ""
 "Text on Windows now uses the system font. You can switch back to Fluxer Sans"
 " in settings."
 msgstr ""
-"Chữ trên Windows giờ đã dùng font hệ thống. Bạn có thể chuyển lại về Fluxer "
+"Chữ trên Windows giờ đã dùng font hệ thống. Bạn có thể chuyển lại về sanalyer "
 "Sans trong cài đặt."
 
 #. Settings search synonym. Used to match this term when the user types it in
@@ -45731,8 +45731,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Ứng dụng Fluxer cho iOS và Android nhận thông báo qua bộ chuyển tiếp thông "
-"báo đẩy do Fluxer vận hành, bộ này chuyển chúng đến Apple và Google. Để "
+"Ứng dụng sanalyer cho iOS và Android nhận thông báo qua bộ chuyển tiếp thông "
+"báo đẩy do sanalyer vận hành, bộ này chuyển chúng đến Apple và Google. Để "
 "dùng, bạn chấp nhận thông báo quyền riêng tư của bộ chuyển tiếp thông báo "
 "đẩy."
 
@@ -51149,7 +51149,7 @@ msgstr "Dùng bộ lọc hoặc nhập từ khóa để tìm tin nhắn"
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Sử dụng Fluxer Sans trên Windows"
+msgstr "Sử dụng sanalyer Sans trên Windows"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

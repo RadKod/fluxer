@@ -498,7 +498,7 @@ If you lose the response, try to sign in before you retry, because registration 
 
 <sup>1</sup> An address already used by any account returns the field code `EMAIL_ALREADY_IN_USE`. On a `username` instance, older apps send the username here as `name@` followed by the instance host. Any other address returns the field code `INSTANCE_ADDRESS_REQUIRED`, and the address is never stored
 
-<sup>2</sup> Without it, Fluxer makes one from `global_name`. On a `none` [tag style](/http-api/instance/#tag-styles) instance a taken name returns the field code `USERNAME_ALREADY_TAKEN`
+<sup>2</sup> Without it, sanalyer makes one from `global_name`. On a `none` [tag style](/http-api/instance/#tag-styles) instance a taken name returns the field code `USERNAME_ALREADY_TAKEN`
 
 <sup>3</sup> A known breached password returns the field code `PASSWORD_IS_TOO_COMMON`
 
@@ -841,7 +841,7 @@ The rate limit is 20 requests per 10 seconds, on the `auth:logout` bucket.
 
 <RouteHeader method="POST" path="/v1/auth/verify" unauthenticated />
 
-Uses the token from a verification email to mark the account's email verified, and returns 204. Fluxer sends [User Update](/gateway/events/#user-update).
+Uses the token from a verification email to mark the account's email verified, and returns 204. sanalyer sends [User Update](/gateway/events/#user-update).
 
 ### JSON body
 
@@ -1311,7 +1311,7 @@ The rate limit is 10 requests per minute, on the `auth:handoff:cancel` bucket.
 
 <RouteHeader method="POST" path="/v1/auth/origin-handoff" />
 
-Stores encrypted app state for 2 minutes so another web origin of the same instance can take it once. Returns an [origin handoff](#origin-handoff-object) object. The sender keeps the encryption key, and Fluxer only stores the payload.
+Stores encrypted app state for 2 minutes so another web origin of the same instance can take it once. Returns an [origin handoff](#origin-handoff-object) object. The sender keeps the encryption key, and sanalyer only stores the payload.
 
 ### JSON body
 

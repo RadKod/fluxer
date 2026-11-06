@@ -1,7 +1,7 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Roles and permissions
-description: The permission bits, how Fluxer computes a member's permissions and the routes that manage guild roles.
+description: The permission bits, how sanalyer computes a member's permissions and the routes that manage guild roles.
 ---
 
 import RouteHeader from '@/components/RouteHeader.astro';
@@ -56,7 +56,7 @@ A permission lets a member do one thing in a guild, such as send a message or ba
 
 <sup>1</sup> The bit is [feature-gated](#feature-gated-permission-bits). [Thread permissions](/http-api/threads/#thread-permissions) explains how the thread bits apply.
 
-Responses send a permission mask as a decimal string. Requests accept a decimal string up to 9223372036854775807, or a JSON number that is a safe integer. Parse masks as unsigned 64-bit integers. Fluxer drops any bit it doesn't define.
+Responses send a permission mask as a decimal string. Requests accept a decimal string up to 9223372036854775807, or a JSON number that is a safe integer. Parse masks as unsigned 64-bit integers. sanalyer drops any bit it doesn't define.
 
 ### Feature-gated permission bits
 
@@ -67,7 +67,7 @@ You can only write a gated bit when your request declares the feature it needs, 
 | `VIEW_CHANNEL_MEMBERS` | A request that declares `view_channel_members_permission` |
 | The four thread bits | A bot, or a user session that declares the [`channel_threads`](/http-api/threads/#client-capability) feature |
 
-When you can't write a gated bit, Fluxer keeps that bit at its stored value and writes the rest of the mask. A new role created with `permissions` starts with the bit cleared. One created without `permissions` copies the everyone role's mask, gated bits included. Callers that can't write the thread bits also don't see them in role masks, overwrite masks or `permissions` values.
+When you can't write a gated bit, sanalyer keeps that bit at its stored value and writes the rest of the mask. A new role created with `permissions` starts with the bit cleared. One created without `permissions` copies the everyone role's mask, gated bits included. Callers that can't write the thread bits also don't see them in role masks, overwrite masks or `permissions` values.
 
 ## Elevated permissions
 
@@ -75,9 +75,9 @@ When you can't write a gated bit, Fluxer keeps that bit at its stored value and 
 
 ## Permission computation
 
-The guild owner has every permission, and a user who isn't a member has none. For anyone else, Fluxer starts with the everyone role, whose ID is the guild ID, and adds every role the member has. If the result has `ADMINISTRATOR`, the member has every permission and no overwrite applies.
+The guild owner has every permission, and a user who isn't a member has none. For anyone else, sanalyer starts with the everyone role, whose ID is the guild ID, and adds every role the member has. If the result has `ADMINISTRATOR`, the member has every permission and no overwrite applies.
 
-In a channel, Fluxer then applies the channel's overwrites in this order, removing denied bits before adding allowed bits at each step.
+In a channel, sanalyer then applies the channel's overwrites in this order, removing denied bits before adding allowed bits at each step.
 
 1. The everyone role overwrite.
 2. The overwrites for the member's roles, combined, where an allow on one role beats a deny on another.
@@ -184,7 +184,7 @@ The rate limit is 60 requests per 10 seconds, on the `guild:role:list::guild_id`
 
 <RouteHeader method="POST" path="/v1/guilds/{guild_id}/roles" bot auditReason />
 
-Creates a role at position 1 and returns its [guild role object](#guild-role-object). You need [MANAGE_ROLES](#elevated-permissions). Fluxer sends a [Guild Role Create](/gateway/events/#guild-role-create) event.
+Creates a role at position 1 and returns its [guild role object](#guild-role-object). You need [MANAGE_ROLES](#elevated-permissions). sanalyer sends a [Guild Role Create](/gateway/events/#guild-role-create) event.
 
 ### Request headers
 
@@ -204,7 +204,7 @@ Creates a role at position 1 and returns its [guild role object](#guild-role-obj
 | icon_source_role_id? | snowflake | A role in this guild whose icon the new role copies |
 
 
-With `icon_source_role_id`, Fluxer stores a separate copy of an image icon. Deleting either role leaves the other's icon in place.
+With `icon_source_role_id`, sanalyer stores a separate copy of an image icon. Deleting either role leaves the other's icon in place.
 
 ### Response
 
@@ -223,7 +223,7 @@ The rate limit is 10 requests per minute, on the `guild:role:create::guild_id` b
 
 <RouteHeader method="PATCH" path="/v1/guilds/{guild_id}/roles/{role_id}" bot auditReason />
 
-Modifies a role and returns its [guild role object](#guild-role-object). You need [MANAGE_ROLES](#elevated-permissions) and must [outrank](#role-hierarchy) the role. Fluxer sends a [Guild Role Update](/gateway/events/#guild-role-update) event.
+Modifies a role and returns its [guild role object](#guild-role-object). You need [MANAGE_ROLES](#elevated-permissions) and must [outrank](#role-hierarchy) the role. sanalyer sends a [Guild Role Update](/gateway/events/#guild-role-update) event.
 
 ### Request headers
 
@@ -233,7 +233,7 @@ Modifies a role and returns its [guild role object](#guild-role-object). You nee
 
 ### JSON body
 
-Fields you leave out keep their value. On the everyone role, Fluxer ignores every field except `color`, `permissions`, `icon` and `unicode_emoji`, and the last two can only be null.
+Fields you leave out keep their value. On the everyone role, sanalyer ignores every field except `color`, `permissions`, `icon` and `unicode_emoji`, and the last two can only be null.
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -270,15 +270,15 @@ Create guild role and Modify guild role take the same two icon fields.
 | both non-null | 400 with `ROLE_ICON_AND_EMOJI_EXCLUSIVE` on `icon` |
 | either non-null on the everyone role | 400 with `CANNOT_SET_ICON_ON_EVERYONE_ROLE` on that field |
 
-An image can't be animated, can be at most 256 KiB and each side must be between 32 and 1024 pixels. An image outside these limits returns 400 with `IMAGE_SIZE_EXCEEDS_LIMIT`, `INVALID_IMAGE_FORMAT` or `IMAGE_DIMENSIONS_OUT_OF_RANGE`, and an emoji that isn't a single Unicode emoji returns `NOT_A_VALID_UNICODE_EMOJI`. Role icons are free and need no guild feature. When an image is replaced or cleared, or the role is deleted, Fluxer deletes the old image later.
+An image can't be animated, can be at most 256 KiB and each side must be between 32 and 1024 pixels. An image outside these limits returns 400 with `IMAGE_SIZE_EXCEEDS_LIMIT`, `INVALID_IMAGE_FORMAT` or `IMAGE_DIMENSIONS_OUT_OF_RANGE`, and an emoji that isn't a single Unicode emoji returns `NOT_A_VALID_UNICODE_EMOJI`. Role icons are free and need no guild feature. When an image is replaced or cleared, or the role is deleted, sanalyer deletes the old image later.
 
 ## Modify guild role positions
 
 <RouteHeader method="PATCH" path="/v1/guilds/{guild_id}/roles" bot auditReason />
 
-Reorders roles and returns 204. You need [MANAGE_ROLES](#elevated-permissions) and must [outrank](#role-hierarchy) every role whose position you change. Fluxer sends a [Guild Role Update Bulk](/gateway/events/#guild-role-update-bulk) event with the stored positions.
+Reorders roles and returns 204. You need [MANAGE_ROLES](#elevated-permissions) and must [outrank](#role-hierarchy) every role whose position you change. sanalyer sends a [Guild Role Update Bulk](/gateway/events/#guild-role-update-bulk) event with the stored positions.
 
-Fluxer sorts the roles you can manage by the positions you send and keeps roles you can't manage at their rank. It then renumbers every role except the everyone role from 1, so the stored `position` can differ from the one you sent.
+sanalyer sorts the roles you can manage by the positions you send and keeps roles you can't manage at their rank. It then renumbers every role except the everyone role from 1, so the stored `position` can differ from the one you sent.
 
 ### JSON body
 
@@ -298,7 +298,7 @@ The rate limit is 20 requests per 10 seconds, on the `guild:role:positions::guil
 
 <RouteHeader method="PATCH" path="/v1/guilds/{guild_id}/roles/hoist-positions" bot auditReason />
 
-Sets the member list position of one or more roles and returns 204. You need [MANAGE_ROLES](#elevated-permissions) and must [outrank](#role-hierarchy) every role you name. Fluxer sends a [Guild Role Update Bulk](/gateway/events/#guild-role-update-bulk) event.
+Sets the member list position of one or more roles and returns 204. You need [MANAGE_ROLES](#elevated-permissions) and must [outrank](#role-hierarchy) every role you name. sanalyer sends a [Guild Role Update Bulk](/gateway/events/#guild-role-update-bulk) event.
 
 ### JSON body
 
@@ -318,7 +318,7 @@ The rate limit is 20 requests per 10 seconds, on the `guild:role:hoist_positions
 
 <RouteHeader method="DELETE" path="/v1/guilds/{guild_id}/roles/hoist-positions" bot auditReason />
 
-Clears the member list position of every role in the guild, including roles you don't outrank, and returns 204. You need [MANAGE_ROLES](#elevated-permissions). Fluxer sends a [Guild Role Update Bulk](/gateway/events/#guild-role-update-bulk) event.
+Clears the member list position of every role in the guild, including roles you don't outrank, and returns 204. You need [MANAGE_ROLES](#elevated-permissions). sanalyer sends a [Guild Role Update Bulk](/gateway/events/#guild-role-update-bulk) event.
 
 ### Response
 
@@ -333,7 +333,7 @@ The rate limit is 10 requests per minute, on the `guild:role:hoist_positions_res
 
 <RouteHeader method="DELETE" path="/v1/guilds/{guild_id}/roles/{role_id}" bot auditReason />
 
-Deletes a role, removes it from every member who has it and returns 204. You need [MANAGE_ROLES](#elevated-permissions) and must [outrank](#role-hierarchy) the role. You can't delete the everyone role. Fluxer sends a [Guild Role Delete](/gateway/events/#guild-role-delete) event.
+Deletes a role, removes it from every member who has it and returns 204. You need [MANAGE_ROLES](#elevated-permissions) and must [outrank](#role-hierarchy) the role. You can't delete the everyone role. sanalyer sends a [Guild Role Delete](/gateway/events/#guild-role-delete) event.
 
 ### Response
 

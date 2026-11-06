@@ -35,11 +35,11 @@ A restricted reason allows only a permanent suspension or a content removal, and
 
 ### Lifecycle
 
-A decision is `active` until staff end it as `lifted` or `reversed`. Fluxer ends a temporary suspension that ran out as `expired` when the holder next signs in, or in a task that runs every six hours. The system user (ID 0) is `ended_by`, no notice is sent, and staff can still end the decision as `reversed`.
+A decision is `active` until staff end it as `lifted` or `reversed`. sanalyer ends a temporary suspension that ran out as `expired` when the holder next signs in, or in a task that runs every six hours. The system user (ID 0) is `ended_by`, no notice is sent, and staff can still end the decision as `reversed`.
 
 The API computes two more states each time it returns a decision, and never stores them.
 
-- `expired`: an active suspension or feature limit whose `ends_at` has passed, before Fluxer ends it
+- `expired`: an active suspension or feature limit whose `ends_at` has passed, before sanalyer ends it
 - `replaced`: an active suspension or closure that a later decision replaced
 
 A closure replaces an active suspension and lifts it. A replaced decision gets no ended email.
@@ -102,7 +102,7 @@ A content removal or profile reset that leaves the reported item in place leaves
 
 A permanent suspension, or a closure for a broken rule, can block the networks the account used in the last 30 days. Set `block_networks` on [Suspend user](/admin-api/users/#suspend-user) or [Schedule user deletion](/admin-api/users/#schedule-user-deletion), and use [List network block candidates](/admin-api/users/#list-network-block-candidates) to see which addresses qualify. The blocks last 90 days unless the request sets another length, and they are removed when the decision ends. These are separate from [plain IP blocks](/admin-api/blocklists/#network-blocks-from-decisions).
 
-Fluxer never blocks an exempt address or a special-purpose range, such as a private, loopback or link-local range, and leaves an address that is already blocked as it is. It lists all of these in `skipped_ips`. It refuses an address where another account that is not suspended or closed was last active, matching IPv6 addresses by their /64.
+sanalyer never blocks an exempt address or a special-purpose range, such as a private, loopback or link-local range, and leaves an address that is already blocked as it is. It lists all of these in `skipped_ips`. It refuses an address where another account that is not suspended or closed was last active, matching IPv6 addresses by their /64.
 
 The notice says the networks were blocked and until when, and never shows an address.
 
@@ -139,7 +139,7 @@ The `X-Audit-Log-Reason` header is required on every route that takes a decision
 
 ### Validation
 
-Fluxer checks ACLs before it looks anything up. Evidence needs `message:lookup`, `remove_evidence` needs `message:shred`, reports need `report:view` and `report:resolve`, and `block_networks` needs `ban:ip:add` and `user:view:ip`. Every other failure is a 400 `INVALID_FORM_BODY` with one of these codes.
+sanalyer checks ACLs before it looks anything up. Evidence needs `message:lookup`, `remove_evidence` needs `message:shred`, reports need `report:view` and `report:resolve`, and `block_networks` needs `ban:ip:add` and `user:view:ip`. Every other failure is a 400 `INVALID_FORM_BODY` with one of these codes.
 
 - `ENFORCEMENT_INTERNAL_NOTE_REQUIRED` when the `X-Audit-Log-Reason` header is missing
 - `ENFORCEMENT_KIND_NOT_ALLOWED` when the reason code does not allow this kind or action, or a bot is given anything other than a suspension or closure

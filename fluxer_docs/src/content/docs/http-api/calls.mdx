@@ -78,7 +78,7 @@ The rate limit is 10 requests per 10 seconds, on the `channel:call:update::chann
 
 <RouteHeader method="POST" path="/v1/channels/{channel_id}/call/ring" />
 
-Starts a call, or adds recipients to the ringing set of an active call. Fluxer rings a recipient only when [Get call eligibility](#get-call-eligibility) would return `ringable` true and `silent` false for them, and it skips the others without an error. In a direct message you can ring only the other recipient.
+Starts a call, or adds recipients to the ringing set of an active call. sanalyer rings a recipient only when [Get call eligibility](#get-call-eligibility) would return `ringable` true and `silent` false for them, and it skips the others without an error. In a direct message you can ring only the other recipient.
 
 A new call sends [Call Create](/gateway/events/#call-create) and [Message Create](/gateway/events/#message-create) for its call message. Ringing into an active call sends [Call Update](/gateway/events/#call-update). Anyone whose channel was closed gets [Channel Create](/gateway/events/#channel-create).
 

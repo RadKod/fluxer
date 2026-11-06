@@ -206,7 +206,7 @@ An entry in the `errors` array of [Purge guild assets](#purge-guild-assets).
 | --- | --- |
 | emoji | A custom emoji of the guild |
 | sticker | A sticker of the guild |
-| unknown | No emoji or sticker has the ID, and Fluxer still deletes any stored image with that ID |
+| unknown | No emoji or sticker has the ID, and sanalyer still deletes any stored image with that ID |
 
 ## List guilds
 
@@ -298,9 +298,9 @@ To change `afk_channel_id`, `system_channel_id` or `afk_timeout`, use [Modify gu
 | default_message_notifications? | integer | The new [default message notification level](/http-api/guilds/#default-message-notification-levels) |
 | disabled_operations? | integer | The new [disabled guild operations](/http-api/guilds/#disabled-guild-operations) bitfield |
 
-<sup>1</sup> Fluxer lowercases the code and turns spaces into hyphens. The result must be 2-32 lowercase letters, digits and hyphens, and it can't start or end with a hyphen
+<sup>1</sup> sanalyer lowercases the code and turns spaces into hyphens. The result must be 2-32 lowercase letters, digits and hyphens, and it can't start or end with a hyphen
 
-<sup>2</sup> Fluxer doesn't check that the user exists
+<sup>2</sup> sanalyer doesn't check that the user exists
 
 <sup>3</sup> A feature in both lists ends up removed. Adding `DISCOVERABLE` approves the guild's [discovery](/admin-api/discovery/) application, and removing it takes the guild out of discovery
 
@@ -322,7 +322,7 @@ To change `afk_channel_id`, `system_channel_id` or `afk_timeout`, use [Modify gu
 | 403 | [error response](/admin-api/#error-response) | `MISSING_ACL` when you lack an ACL a field needs |
 | 404 | [error response](/admin-api/#error-response) | `UNKNOWN_GUILD` when the guild doesn't exist, or `UNKNOWN_BADGE` when an ID in `badge_ids` isn't a guild badge |
 
-Fluxer saves image clears, settings, features, badges, name, custom invite code and owner one at a time in that order, and each sends a [Guild Update](/gateway/events/#guild-update) event. If one fails, the ones before it stay saved.
+sanalyer saves image clears, settings, features, badges, name, custom invite code and owner one at a time in that order, and each sends a [Guild Update](/gateway/events/#guild-update) event. If one fails, the ones before it stay saved.
 
 The rate limit is 100 requests per minute, on the `admin:guild:modify` bucket.
 
@@ -419,7 +419,7 @@ The rate limit is 100 requests per minute, on the `admin:guild:modify` bucket.
 
 <RouteHeader method="DELETE" path="/v1/admin/guilds/{guild_id}/members/{user_id}" auditReason />
 
-Removes a member from a guild without banning them. You need `guild:kick_member`. The guild's [audit log](/http-api/guild-audit-logs/#audit-actions) shows the Fluxer system user (ID `0`) as the moderator.
+Removes a member from a guild without banning them. You need `guild:kick_member`. The guild's [audit log](/http-api/guild-audit-logs/#audit-actions) shows the sanalyer system user (ID `0`) as the moderator.
 
 ### Response
 
@@ -437,7 +437,7 @@ The rate limit is 100 requests per minute, on the `admin:guild:modify` bucket.
 
 <RouteHeader method="PUT" path="/v1/admin/guilds/{guild_id}/bans/{user_id}" auditReason />
 
-Bans a user from a guild, whether or not they're a member, and can delete their recent messages. You need `guild:ban_member`. The guild's [audit log](/http-api/guild-audit-logs/#audit-actions) shows the Fluxer system user (ID `0`) as the moderator.
+Bans a user from a guild, whether or not they're a member, and can delete their recent messages. You need `guild:ban_member`. The guild's [audit log](/http-api/guild-audit-logs/#audit-actions) shows the sanalyer system user (ID `0`) as the moderator.
 
 ### JSON body
 

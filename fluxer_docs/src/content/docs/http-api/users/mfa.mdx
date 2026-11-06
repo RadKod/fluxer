@@ -10,11 +10,11 @@ An account can use a TOTP authenticator app and WebAuthn credentials such as pas
 
 ## TOTP parameters
 
-Fluxer accepts six-digit HMAC-SHA-1 codes with a 30-second time step and one step of clock skew either way. Your client generates the Base32 secret, shows it to the user and sends it with a code to [Enable TOTP MFA](#enable-totp-mfa).
+sanalyer accepts six-digit HMAC-SHA-1 codes with a 30-second time step and one step of clock skew either way. Your client generates the Base32 secret, shows it to the user and sends it with a code to [Enable TOTP MFA](#enable-totp-mfa).
 
 ## Backup codes
 
-An account gets 10 backup codes when it enables TOTP, and when it turns on passkeys as a second factor while it has no unused codes. Each code works once, and Fluxer ignores case, spaces and hyphens when it compares them. You can send a backup code wherever a TOTP code is accepted, except in [Enable TOTP MFA](#enable-totp-mfa). Fluxer deletes every code when the account is left with no second factor.
+An account gets 10 backup codes when it enables TOTP, and when it turns on passkeys as a second factor while it has no unused codes. Each code works once, and sanalyer ignores case, spaces and hyphens when it compares them. You can send a backup code wherever a TOTP code is accepted, except in [Enable TOTP MFA](#enable-totp-mfa). sanalyer deletes every code when the account is left with no second factor.
 
 A user who lost their codes and their authenticator can get them back by email without sudo mode.
 
@@ -35,7 +35,7 @@ Each step also has a limit of its own, on top of its route bucket.
 
 ## Sudo mode
 
-Sudo mode is a recent proof that the account holder is present, and security-sensitive operations need it. Send the proof as [sudo verification object](#sudo-verification-object) fields in the JSON body, or send an earlier token in the `X-Fluxer-Sudo-Mode-JWT` header. After a TOTP, backup code, passkey or email code proof, Fluxer returns a token in the same response header, and it works for five minutes on any of the account's sessions. A password proof returns no token, and the account sends `password` on each call.
+Sudo mode is a recent proof that the account holder is present, and security-sensitive operations need it. Send the proof as [sudo verification object](#sudo-verification-object) fields in the JSON body, or send an earlier token in the `X-Fluxer-Sudo-Mode-JWT` header. After a TOTP, backup code, passkey or email code proof, sanalyer returns a token in the same response header, and it works for five minutes on any of the account's sessions. A password proof returns no token, and the account sends `password` on each call.
 
 The first row that matches the account says which proofs it can send.
 
@@ -241,7 +241,7 @@ The `PublicKeyCredential` JSON the browser WebAuthn API produces.
 
 ## WebAuthn client extension results object
 
-Fluxer accepts extension result fields beyond these.
+sanalyer accepts extension result fields beyond these.
 
 ### Structure
 

@@ -42431,7 +42431,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Szöveg megjelenítése Fluxer Sans, a korábbi alapértelmezett betűtípus, a "
+"Szöveg megjelenítése sanalyer Sans, a korábbi alapértelmezett betűtípus, a "
 "Windows rendszerbetűtípusa helyett"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -45087,7 +45087,7 @@ msgstr "Fiókváltás"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Vissza Fluxer Sans betűtípusra"
+msgstr "Vissza sanalyer Sans betűtípusra"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45815,7 +45815,7 @@ msgid ""
 "Text on Windows now uses the system font. You can switch back to Fluxer Sans"
 " in settings."
 msgstr ""
-"A szöveg a Windows rendszerbetűkészletét használja. Visszaválthatsz Fluxer "
+"A szöveg a Windows rendszerbetűkészletét használja. Visszaválthatsz sanalyer "
 "Sans betűtípusra a Beállításokban."
 
 #. Settings search synonym. Used to match this term when the user types it in
@@ -46267,7 +46267,7 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"A Fluxer iOS- és Android-alkalmazásai egy, a Fluxer által üzemeltetett push-"
+"A sanalyer iOS- és Android-alkalmazásai egy, a sanalyer által üzemeltetett push-"
 "relén keresztül kapják az értesítéseket, amely továbbítja őket az Apple-nek "
 "és a Google-nek. A használatával elfogadod a push-relé adatvédelmi "
 "tájékoztatóját."
@@ -51751,7 +51751,7 @@ msgstr "Használj szűrőket, vagy írj be kulcsszavakat az üzenetek keresésé
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Használja a Fluxer Sans betűtípust Windows rendszeren"
+msgstr "Használja a sanalyer Sans betűtípust Windows rendszeren"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

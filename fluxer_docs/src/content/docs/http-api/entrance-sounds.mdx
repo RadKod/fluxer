@@ -6,7 +6,7 @@ description: Upload entrance sounds, assign them to scopes and play them in voic
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-An entrance sound is a short audio clip that plays for everyone else in a voice channel when you join it. You upload clips into your own library, assign one to each scope, and ask Fluxer to [play](#play-entrance-sound) the chosen clip after you connect. Bot tokens can't call these routes.
+An entrance sound is a short audio clip that plays for everyone else in a voice channel when you join it. You upload clips into your own library, assign one to each scope, and ask sanalyer to [play](#play-entrance-sound) the chosen clip after you connect. Bot tokens can't call these routes.
 
 ## Clip limits
 
@@ -18,11 +18,11 @@ An entrance sound is a short audio clip that plays for everyone else in a voice 
 | Clip duration | 100 through 5200 milliseconds |
 | Display name | 1 through 32 characters |
 
-The `feature_voice_entrance_sounds` [limit key](/http-api/instance/#limit-keys) tells the Fluxer app whether to show entrance sounds, but these routes don't check it.
+The `feature_voice_entrance_sounds` [limit key](/http-api/instance/#limit-keys) tells the sanalyer app whether to show entrance sounds, but these routes don't check it.
 
 ## Supported containers
 
-Fluxer detects the container from the audio bytes and ignores the type in a `data:` URI prefix.
+sanalyer detects the container from the audio bytes and ignores the type in a `data:` URI prefix.
 
 | Detected container | Extension | Content type |
 | --- | --- | --- |
@@ -31,7 +31,7 @@ Fluxer detects the container from the audio bytes and ignores the type in a `dat
 | MP4, QuickTime, AAC in MP4 | m4a | audio/mp4 |
 | WAV | wav | audio/wav |
 
-Fluxer stores the bytes as uploaded and doesn't transcode them.
+sanalyer stores the bytes as uploaded and doesn't transcode them.
 
 ## Entrance sound object
 

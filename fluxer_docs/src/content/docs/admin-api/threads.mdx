@@ -44,6 +44,6 @@ Deletes a thread with its messages and memberships. You need `message:delete_all
 | 400 | [error response](/admin-api/#error-response) | `INVALID_CHANNEL_TYPE` when the channel is not a thread |
 | 404 | [error response](/admin-api/#error-response) | `UNKNOWN_CHANNEL` when no channel has this ID |
 
-Fluxer sends [Thread Delete](/gateway/threads/#thread-delete). If the thread started from a message, it also sends [Message Update](/gateway/events/#message-update) for that message. The deletion doesn't show up in the guild's audit log.
+sanalyer sends [Thread Delete](/gateway/threads/#thread-delete). If the thread started from a message, it also sends [Message Update](/gateway/events/#message-update) for that message. The deletion doesn't show up in the guild's audit log.
 
 The rate limit is 100 requests per minute, on the `admin:message:operation` bucket.

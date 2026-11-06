@@ -41991,7 +41991,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Tampilkan teks dalam Fluxer Sans, font default sebelumnya, alih-alih font "
+"Tampilkan teks dalam sanalyer Sans, font default sebelumnya, alih-alih font "
 "sistem Windows"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -44632,7 +44632,7 @@ msgstr "Ganti akun"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Kembali ke Fluxer Sans"
+msgstr "Kembali ke sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45352,7 +45352,7 @@ msgid ""
 " in settings."
 msgstr ""
 "Teks di Windows kini menggunakan font sistem. Anda dapat beralih kembali ke "
-"Fluxer Sans di pengaturan."
+"sanalyer Sans di pengaturan."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -45797,8 +45797,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Aplikasi Fluxer untuk iOS dan Android menerima notifikasi melalui relay push"
-" yang dijalankan Fluxer, yang meneruskannya ke Apple dan Google. Untuk "
+"Aplikasi sanalyer untuk iOS dan Android menerima notifikasi melalui relay push"
+" yang dijalankan sanalyer, yang meneruskannya ke Apple dan Google. Untuk "
 "memakainya, kamu menerima pemberitahuan privasi relay push."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -51214,7 +51214,7 @@ msgstr "Gunakan filter atau masukkan kata kunci untuk menemukan pesan"
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Gunakan Fluxer Sans di Windows"
+msgstr "Gunakan sanalyer Sans di Windows"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

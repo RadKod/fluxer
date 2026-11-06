@@ -208,7 +208,7 @@ The rate limit is 20 requests per 10 seconds, on the `discovery:admin:action` bu
 
 <RouteHeader method="DELETE" path="/v1/admin/discovery/listings/{guild_id}" auditReason />
 
-Removes an approved listing and returns the [discovery application](/http-api/discovery/#discovery-application-object). Fluxer removes the `DISCOVERABLE` feature from the guild, keeps `VISITS_ENABLED` and sends [Guild Update](/gateway/events/#guild-update). The guild has to apply again to be listed.
+Removes an approved listing and returns the [discovery application](/http-api/discovery/#discovery-application-object). sanalyer removes the `DISCOVERABLE` feature from the guild, keeps `VISITS_ENABLED` and sends [Guild Update](/gateway/events/#guild-update). The guild has to apply again to be listed.
 
 ### JSON body
 

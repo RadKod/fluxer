@@ -1,12 +1,12 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
 title: Add voice servers
-description: Run extra LiveKit voice servers next to Fluxer or on other machines, and connect them to your instance with rexctl.
+description: Run extra LiveKit voice servers next to sanalyer or on other machines, and connect them to your instance with rexctl.
 sidebar:
   label: Voice servers
 ---
 
-A Fluxer instance comes with one LiveKit voice server on the same machine, the bundled server. You can add more, or [run without it](#run-without-the-bundled-voice-server). rexctl installs each one, gives it its own keys and ports, sets up HTTPS, registers it with your instance and checks that calls can connect to it.
+A sanalyer instance comes with one LiveKit voice server on the same machine, the bundled server. You can add more, or [run without it](#run-without-the-bundled-voice-server). rexctl installs each one, gives it its own keys and ports, sets up HTTPS, registers it with your instance and checks that calls can connect to it.
 
 ## When to add one
 
@@ -17,9 +17,9 @@ Add a voice server to:
 - Give a server its own public IP address, or keep it for some communities with restrictions in the admin panel.
 - Keep large calls away from the rest.
 
-A call always stays on one server. Fluxer picks the server when the first person joins, and everyone who joins later goes to the same one. A voice server on the same machine as Fluxer shares its CPU and adds no capacity. It helps when the machine has more than one public address, or when you want to keep some calls apart.
+A call always stays on one server. sanalyer picks the server when the first person joins, and everyone who joins later goes to the same one. A voice server on the same machine as sanalyer shares its CPU and adds no capacity. It helps when the machine has more than one public address, or when you want to keep some calls apart.
 
-## On the Fluxer machine
+## On the sanalyer machine
 
 ```sh
 rexctl voice add
@@ -51,17 +51,17 @@ rexctl voice add --ip 198.51.100.8
 
 When `network.ipv6` is on and the machine runs Docker 27 or later, `rexctl voice add` also gives the server the machine's public IPv6 address. Pass `--ipv6` to give the address yourself, or `--no-ipv6` to offer only IPv4. On a machine with only IPv6, it stops until you run `rexctl config set network.ipv6 true`.
 
-A server added without `--ip` follows `voice.public_ip`. When you change that setting with `rexctl config set`, rexctl gives these servers the new address and restarts them one at a time, as an upgrade does. When Fluxer is stopped, they get it at the next `rexctl start`. A server added with `--ip` keeps its address.
+A server added without `--ip` follows `voice.public_ip`. When you change that setting with `rexctl config set`, rexctl gives these servers the new address and restarts them one at a time, as an upgrade does. When sanalyer is stopped, they get it at the next `rexctl start`. A server added with `--ip` keeps its address.
 
 After it adds a server, rexctl prints its TCP and UDP ports. Open them in your provider's firewall as well. The test at the end runs on the same machine and can't see that firewall.
 
-Adding a server writes a route to `caddy.d` and reloads the edge. People connected to Fluxer reconnect once, and calls keep going.
+Adding a server writes a route to `caddy.d` and reloads the edge. People connected to sanalyer reconnect once, and calls keep going.
 
-When you change the domain or the public HTTPS port with `rexctl config set`, rexctl moves these servers to the new address in your instance. When Fluxer was stopped at the time, it moves them at the next `rexctl start`.
+When you change the domain or the public HTTPS port with `rexctl config set`, rexctl moves these servers to the new address in your instance. When sanalyer was stopped at the time, it moves them at the next `rexctl start`.
 
 ## On another machine
 
-On the Fluxer machine, create a join token.
+On the sanalyer machine, create a join token.
 
 ```sh
 rexctl voice token
@@ -70,7 +70,7 @@ rexctl voice token
 It prints the command to run on the voice machine.
 
 ```sh
-curl -fsSL https://fluxer.dev/install.sh | sh -s -- voice chat.example.com fvj_...
+curl -fsSL https://sanalyer.com/docs/install.sh | sh -s -- voice chat.example.com fvj_...
 ```
 
 With rexctl already on the voice machine, this does the same.
@@ -84,7 +84,7 @@ The token works once and expires after an hour. Pass `--expires` to `rexctl voic
 The join command does this:
 
 1. Reads your instance's public settings from its domain and stops when voice is off there.
-2. Installs Docker when the machine has neither Docker nor Podman, as `rexctl install` does. On a machine with Podman older than 5.8.2 and no Fluxer instance, it stops. That Podman doesn't start voice servers again after a restart.
+2. Installs Docker when the machine has neither Docker nor Podman, as `rexctl install` does. On a machine with Podman older than 5.8.2 and no sanalyer instance, it stops. That Podman doesn't start voice servers again after a restart.
 3. Finds the machine's public IPv4 and IPv6 addresses, its CPU count, its memory and its firewall.
 4. Asks your instance for the server's ID, region and webhook address, without using the token.
 5. Picks free ports and a hostname or IP address for the endpoint.
@@ -154,14 +154,14 @@ LiveKit gives clients both addresses for media. Callers first open a WebSocket t
 
 `rexctl voice add` uses your instance's domain as the endpoint. Callers with only IPv6 need an `AAAA` record for that domain too.
 
-The bundled voice server gives clients the Fluxer machine's IPv6 address too when `network.ipv6` is on.
+The bundled voice server gives clients the sanalyer machine's IPv6 address too when `network.ipv6` is on.
 
-When `voice.public_ip` is empty, servers added without `--ip` give clients the machine's IPv4 address as rexctl last found it. When the machine gets a new IPv4 address, they get it the next time rexctl starts Fluxer, with `rexctl start` or when the machine starts on a system with systemd, and at the next `rexctl upgrade` to a new release. `rexctl doctor` warns when a server gives clients an old address.
+When `voice.public_ip` is empty, servers added without `--ip` give clients the machine's IPv4 address as rexctl last found it. When the machine gets a new IPv4 address, they get it the next time rexctl starts sanalyer, with `rexctl start` or when the machine starts on a system with systemd, and at the next `rexctl upgrade` to a new release. `rexctl doctor` warns when a server gives clients an old address.
 
 ### Machines with only IPv6
 
 - The server needs a hostname with an `AAAA` record that points at the machine. An endpoint can't be an IPv6 address, because browsers can't allow one in the content security policy of the web app.
-- The Fluxer machine needs IPv6 too. Your instance checks the server through its endpoint, and the server sends webhooks to your instance's public API address. Run `rexctl config set network.ipv6 true` on the Fluxer machine, and give the API address an `AAAA` record.
+- The sanalyer machine needs IPv6 too. Your instance checks the server through its endpoint, and the server sends webhooks to your instance's public API address. Run `rexctl config set network.ipv6 true` on the sanalyer machine, and give the API address an `AAAA` record.
 - Callers with IPv6 connect directly. Callers with only IPv4 need a TURN server you run and a machine that forwards ports 80 and 443, and `rexctl voice join` says so once the server has joined. See [Callers with only IPv4](#callers-with-only-ipv4).
 - `install.sh` and `rexctl upgrade` download rexctl from GitHub, which has no IPv6 address. Copy the Linux build of rexctl to the machine yourself, such as with `scp` from a machine with IPv4 and IPv6, and run `rexctl voice join` with it. Before you run `rexctl upgrade` for a new release, copy that release's rexctl there the same way.
 
@@ -174,7 +174,7 @@ Without a TURN server, a caller with only IPv4 can't join a call on a server wit
 
 With `allocation-default-address-family="ipv6"`, the TURN server gives no useful relay for a voice server with only IPv4. Callers who need the TURN server can't connect to such a server with that setting. Your instance gives every voice server the same list of TURN servers. Use the setting only when every voice server of your instance has IPv6.
 
-`rexctl voice test <id>` on a Fluxer machine with IPv4 tries **IPv4 through TURN** for a server with only IPv6, when your instance has TURN servers. It opens the WebSocket over IPv4, which goes to the machine the `A` record points at, and connects media only through the TURN servers the voice server gives clients over UDP and TCP, which it connects to over IPv4. Like a browser, it asks for no address family, and it passes only when the TURN server hands out IPv6 relay addresses. When the instance has no TURN servers, the test skips this.
+`rexctl voice test <id>` on a sanalyer machine with IPv4 tries **IPv4 through TURN** for a server with only IPv6, when your instance has TURN servers. It opens the WebSocket over IPv4, which goes to the machine the `A` record points at, and connects media only through the TURN servers the voice server gives clients over UDP and TCP, which it connects to over IPv4. Like a browser, it asks for no address family, and it passes only when the TURN server hands out IPv6 relay addresses. When the instance has no TURN servers, the test skips this.
 
 ### Machines that joined before
 
@@ -182,7 +182,7 @@ A voice machine that joined before rexctl supported IPv6 has a voice network wit
 
 ## TURN servers
 
-A TURN server relays call media for callers who can't connect to a voice server directly. rexctl doesn't install or run one. When you run your own, give it to your instance on the Fluxer machine.
+A TURN server relays call media for callers who can't connect to a voice server directly. rexctl doesn't install or run one. When you run your own, give it to your instance on the sanalyer machine.
 
 ```sh
 rexctl config set FLUXER_LIVEKIT_TURN_SERVERS '[{"host":"turn.example.com","port":3478,"protocol":"udp","secret":"a-long-random-secret"},{"host":"turn.example.com","port":3478,"protocol":"tcp","secret":"a-long-random-secret"}]'
@@ -192,11 +192,11 @@ With `secret`, LiveKit gives each participant short-lived credentials in the for
 
 Voice servers that rexctl manages give the list to clients that join a call on them.
 
-- The bundled server gets it when Fluxer restarts with the new setting.
+- The bundled server gets it when sanalyer restarts with the new setting.
 - Servers from `rexctl voice add` get it when you change the setting with `rexctl config set`. rexctl restarts them one at a time, as an upgrade does.
-- Servers from `rexctl voice join` get it when they join, and again on each `rexctl upgrade` in their voice folder. When the instance runs an older release than the rexctl in that folder, the upgrade leaves the servers as they are. A server that uses the edge of the Fluxer instance on the same machine also gets it when you change the setting, and when you upgrade that instance to a new release. A changed list restarts them the same way. The voice machine keeps the list, with the secret, in `voice/<id>/.env`.
+- Servers from `rexctl voice join` get it when they join, and again on each `rexctl upgrade` in their voice folder. When the instance runs an older release than the rexctl in that folder, the upgrade leaves the servers as they are. A server that uses the edge of the sanalyer instance on the same machine also gets it when you change the setting, and when you upgrade that instance to a new release. A changed list restarts them the same way. The voice machine keeps the list, with the secret, in `voice/<id>/.env`.
 
-On [Kubernetes](/operator/kubernetes/), the chart doesn't pass the setting to the API. Servers that join an instance there get the list only when you put `FLUXER_LIVEKIT_TURN_SERVERS` in `api.env` in your values.
+On Kubernetes, the chart doesn't pass the setting to the API. Servers that join an instance there get the list only when you put `FLUXER_LIVEKIT_TURN_SERVERS` in `api.env` in your values.
 
 For a server you run by hand or added in the admin panel, copy the same entries into `rtc.turn_servers` in its LiveKit configuration. With `voice.compose.yml`, set `FLUXER_LIVEKIT_TURN_SERVERS` in its settings file.
 
@@ -214,20 +214,20 @@ rexctl opens them in ufw or firewalld when one of them is on. Your provider's fi
 
 A provider firewall that follows connections, such as a Hetzner Cloud Firewall, can let call audio over UDP through with the UDP port closed. It lets replies in once the server has sent packets to a client. TCP still fails. Open both ports.
 
-After you change a firewall, run `rexctl voice test <id>` on the Fluxer machine for a server on another machine. It connects from outside that machine and reports UDP and TCP on their own. A server from `rexctl voice add` runs on the Fluxer machine, and its test can't see your provider's firewall. Check that firewall by hand, or join a call from another network.
+After you change a firewall, run `rexctl voice test <id>` on the sanalyer machine for a server on another machine. It connects from outside that machine and reports UDP and TCP on their own. A server from `rexctl voice add` runs on the sanalyer machine, and its test can't see your provider's firewall. Check that firewall by hand, or join a call from another network.
 
 Behind a router or another NAT, forward each port to the same port number on the machine. LiveKit tells clients the port it listens on, and a different outside port doesn't work.
 
 ## Networks a voice server can't serve
 
-- **Shared address NAT (CGNAT, 100.64.0.0/10).** A machine with an address from 100.64.0.0/10 on its main network usually can't take incoming calls, and rexctl stops. Some providers use that range for private networks behind 1:1 NAT. When the machine has a public IPv4 address of its own, pass it with `--ip`. CGNAT behind a home router doesn't show on the machine. Run `rexctl voice test <id>` on the Fluxer machine to find it.
+- **Shared address NAT (CGNAT, 100.64.0.0/10).** A machine with an address from 100.64.0.0/10 on its main network usually can't take incoming calls, and rexctl stops. Some providers use that range for private networks behind 1:1 NAT. When the machine has a public IPv4 address of its own, pass it with `--ip`. CGNAT behind a home router doesn't show on the machine. Run `rexctl voice test <id>` on the sanalyer machine to find it.
 - **Networks that allow only port 443.** Some office and school networks block everything but HTTPS. Calls from there need TURN over TLS on port 443, which rexctl doesn't set up. Run your own and add it as in [TURN servers](#turn-servers), with `"protocol":"tls"` and `"port":443`.
 
 ## Machines with something else on ports 80 and 443
 
-When another rexctl Fluxer instance uses ports 80 and 443 on the voice machine, the server uses that instance's domain and edge, such as `wss://other.example.com/livekit-fra-server-1`. You can't pass `--hostname` then.
+When another rexctl sanalyer instance uses ports 80 and 443 on the voice machine, the server uses that instance's domain and edge, such as `wss://other.example.com/livekit-fra-server-1`. You can't pass `--hostname` then.
 
-The server's files go in the voice folder, and the Fluxer instance stays the default folder. `rexctl voice status`, `rexctl voice test` and `rexctl voice remove` find the server by its ID. The server uses that instance's domain, and `rexctl voice hostname` doesn't apply to it. `rexctl upgrade` on the Fluxer instance upgrades it too. Other commands for it need `--dir` with the voice folder.
+The server's files go in the voice folder, and the sanalyer instance stays the default folder. `rexctl voice status`, `rexctl voice test` and `rexctl voice remove` find the server by its ID. The server uses that instance's domain, and `rexctl voice hostname` doesn't apply to it. `rexctl upgrade` on the sanalyer instance upgrades it too. Other commands for it need `--dir` with the voice folder.
 
 When nginx or another program uses them, rexctl stops. Pass `--no-edge` and the public address of your own proxy.
 
@@ -268,7 +268,7 @@ voice.example.com {
 
 ## Regions and placement
 
-On another machine, the server goes to the region in the token. Without one, it goes to the existing region nearest to the machine, when your instance has a GeoIP database, and to the default region otherwise. The summary shows the region and the distance. Pass `--region` to pick another existing region. Fluxer never creates a region by itself, because GeoIP data for cloud addresses is often wrong. Create a region with a token for it, or with `rexctl voice add` on the Fluxer machine. Give the region's location, because placement sends people to the nearest region.
+On another machine, the server goes to the region in the token. Without one, it goes to the existing region nearest to the machine, when your instance has a GeoIP database, and to the default region otherwise. The summary shows the region and the distance. Pass `--region` to pick another existing region. sanalyer never creates a region by itself, because GeoIP data for cloud addresses is often wrong. Create a region with a token for it, or with `rexctl voice add` on the sanalyer machine. Give the region's location, because placement sends people to the nearest region.
 
 ```sh
 rexctl voice token --new-region fra --region-name Frankfurt --lat 50.1 --long 8.7
@@ -277,24 +277,24 @@ rexctl voice add --new-region fra --region-name Frankfurt --lat 50.1 --long 8.7
 
 A token without `--lat` and `--long` puts the new region where your instance's GeoIP database places the voice machine, or at the place you pass to `rexctl voice join` with `--lat` and `--long`. Without either, the region gets latitude 0 and longitude 0. Fix that in the admin panel.
 
-A channel with a region set in its settings uses that region. Other calls go to the nearest region of the person who starts them. Within a region, Fluxer takes turns between the servers and prefers servers below their soft limit. Restrictions on a server or region in the admin panel apply to new calls on it.
+A channel with a region set in its settings uses that region. Other calls go to the nearest region of the person who starts them. Within a region, sanalyer takes turns between the servers and prefers servers below their soft limit. Restrictions on a server or region in the admin panel apply to new calls on it.
 
-Every API node checks every active server every 15 seconds. A server that fails two checks in a row gets no new calls, and calls that reconnect move to another server. When every server in a region is down or draining, new calls for that region go to a server in another region. When every server is down, Fluxer places calls as before.
+Every API node checks every active server every 15 seconds. A server that fails two checks in a row gets no new calls, and calls that reconnect move to another server. When every server in a region is down or draining, new calls for that region go to a server in another region. When every server is down, sanalyer places calls as before.
 
-Fluxer lists the address of every voice server in its discovery document, and the web app allows browsers to connect to them. Anyone can read that list, as anyone who joins a call already sees the address of its server.
+sanalyer lists the address of every voice server in its discovery document, and the web app allows browsers to connect to them. Anyone can read that list, as anyone who joins a call already sees the address of its server.
 
 The web app reads that list about once a minute. `rexctl voice join` and `rexctl voice hostname` wait until browsers can connect to a new address. A page opened before then can't join calls on that server until it's reloaded.
 
 ## Run without the bundled voice server
 
-Calls can go only to the servers you add, with no LiveKit next to Fluxer. Install that way from the start, or turn the bundled server off later.
+Calls can go only to the servers you add, with no LiveKit next to sanalyer. Install that way from the start, or turn the bundled server off later.
 
 ```sh
 rexctl install --no-bundled-voice
 rexctl config set voice.bundled false
 ```
 
-Fluxer then:
+sanalyer then:
 
 - Stops and removes the bundled LiveKit container, and no longer needs ports 7881 and 7882. `rexctl config set` offers to close them in the firewall.
 - Creates the default region with no server in it, or removes `default-server-1` from it when that server is the bundled one. Servers you added stay as they are.
@@ -313,27 +313,27 @@ rexctl voice test
 rexctl doctor
 ```
 
-`rexctl voice list` on the Fluxer machine shows every server of your instance with its health, and marks the ones that run on that machine. On a voice machine it shows the servers there.
+`rexctl voice list` on the sanalyer machine shows every server of your instance with its health, and marks the ones that run on that machine. On a voice machine it shows the servers there.
 
-`rexctl voice test` joins a throwaway room and reports whether UDP and TCP connect, over IPv4 and IPv6 when the server and the machine running the test both have them. When the test machine lacks a family the server has, it says so. A test on the machine that runs the server can't see your provider's firewall or your router. On the Fluxer machine, `rexctl voice test <id>` tests a server on another machine from outside its network, with a token your instance signs. When the server rejects that token, your instance has another secret for it than the server has.
+`rexctl voice test` joins a throwaway room and reports whether UDP and TCP connect, over IPv4 and IPv6 when the server and the machine running the test both have them. When the test machine lacks a family the server has, it says so. A test on the machine that runs the server can't see your provider's firewall or your router. On the sanalyer machine, `rexctl voice test <id>` tests a server on another machine from outside its network, with a token your instance signs. When the server rejects that token, your instance has another secret for it than the server has.
 
 ## Upgrade
 
-`rexctl upgrade` on the Fluxer machine upgrades Fluxer first. Then it moves each voice server on the machine to the new LiveKit release, one at a time. It marks the server as draining. New calls then go elsewhere, and calls on it keep going. Docker then replaces the container, and LiveKit waits until those calls end, for up to 15 minutes. The server then takes new calls again, also when the upgrade fails or you stop it. A server you turned off or marked as draining in the admin panel stays that way.
+`rexctl upgrade` on the sanalyer machine upgrades sanalyer first. Then it moves each voice server on the machine to the new LiveKit release, one at a time. It marks the server as draining. New calls then go elsewhere, and calls on it keep going. Docker then replaces the container, and LiveKit waits until those calls end, for up to 15 minutes. The server then takes new calls again, also when the upgrade fails or you stop it. A server you turned off or marked as draining in the admin panel stays that way.
 
 On a voice machine, `rexctl upgrade` updates rexctl to the release your instance runs, then upgrades the servers the same way. It never goes past your instance's release, and it refuses `--prefetch` and `--to`. It also updates the edge.
 
 rexctl upgrades a server when the release has a new LiveKit image, and also when the release changes the server's files or settings. A server added with `--image` keeps that image.
 
-A voice machine doesn't upgrade with the Fluxer machine. Run `rexctl upgrade` there after you upgrade Fluxer, or run `rexctl auto-upgrade on` on it to upgrade it every day.
+A voice machine doesn't upgrade with the sanalyer machine. Run `rexctl upgrade` there after you upgrade sanalyer, or run `rexctl auto-upgrade on` on it to upgrade it every day.
 
 ## Stop, restart and back up
 
-`rexctl stop` on the Fluxer machine stops the voice servers there too, and calls on them end. `rexctl down` removes their containers as well. `rexctl start` starts them again. `rexctl restart` restarts Fluxer and leaves running voice servers alone.
+`rexctl stop` on the sanalyer machine stops the voice servers there too, and calls on them end. `rexctl down` removes their containers as well. `rexctl start` starts them again. `rexctl restart` restarts sanalyer and leaves running voice servers alone.
 
 `rexctl backup` keeps the voice servers of the instance, with their keys. `rexctl restore` writes their files again, starts them and opens their ports in the firewall. A server added after the backup is removed by the restore.
 
-Changing `network.ipv6` with `rexctl config set` rebuilds Fluxer's network. rexctl stops the voice servers on the machine first and starts them again afterwards, and calls on them end.
+Changing `network.ipv6` with `rexctl config set` rebuilds sanalyer's network. rexctl stops the voice servers on the machine first and starts them again afterwards, and calls on them end.
 
 On a voice machine, `rexctl stop`, `rexctl down`, `rexctl restart`, `rexctl logs` and `rexctl backup` don't apply. Docker runs each server as `fluxer-voice-<id>-livekit-1`, and the edge as `fluxer-voice-edge-edge-1`.
 
@@ -355,7 +355,7 @@ rexctl voice remove fra-server-1
 
 rexctl marks the server as draining, waits up to 15 minutes for its calls to end, removes it from your instance, and deletes its container, files, route and the ports it opened. Pass `--now` to skip the wait.
 
-On a voice machine, `rexctl voice remove --all` or `rexctl uninstall` removes every server and the edge. `rexctl uninstall` on the Fluxer machine removes its voice servers too.
+On a voice machine, `rexctl voice remove --all` or `rexctl uninstall` removes every server and the edge. `rexctl uninstall` on the sanalyer machine removes its voice servers too.
 
 ## Troubleshooting
 
@@ -375,9 +375,9 @@ The secret of a server is `FLUXER_VOICE_API_SECRET` in `voice/<id>/.env` in the 
 | `voice-keys` | Two servers share an API key. | Give each server its own key. Remove the newer server and add it again. |
 | `voice-health` | The API can't connect to a server, or a server has been draining for more than an hour. | Run `rexctl voice status` on the machine that runs it. For a server stuck draining, clear Draining in the admin panel. |
 
-When `voice-node-ip` warns, set the address the server gives clients. On the Fluxer machine, run `rexctl config set voice.public_ip <address>`. A server added with `--ip` keeps its address. Remove it and add it again with the right `--ip`. On a voice machine, run `rexctl voice remove <id>`, then join again with a new token and the right `--ip`.
+When `voice-node-ip` warns, set the address the server gives clients. On the sanalyer machine, run `rexctl config set voice.public_ip <address>`. A server added with `--ip` keeps its address. Remove it and add it again with the right `--ip`. On a voice machine, run `rexctl voice remove <id>`, then join again with a new token and the right `--ip`.
 
-When `voice-registration` says the clock on a voice machine is off, turn on time sync there with `sudo timedatectl set-ntp true`. Fluxer allows a minute of difference.
+When `voice-registration` says the clock on a voice machine is off, turn on time sync there with `sudo timedatectl set-ntp true`. sanalyer allows a minute of difference.
 
 People on the same network as a voice machine at home may fail to connect while everyone else can. That happens when the router can't send traffic for its own public address back inside. The router needs NAT loopback, also called hairpin NAT, for those clients. A local DNS record isn't enough, because LiveKit gives clients the server's public address for audio and video. Turn on NAT loopback in the router, or run the server elsewhere.
 
@@ -386,8 +386,8 @@ When the instance is behind a firewall or bot protection, such as Cloudflare's, 
 - `/.well-known/fluxer` and `/` on your domain.
 - `voice/join`, `voice/join/preview`, `voice/node` and `webhooks/livekit` under your instance's public API address. With the API on your domain, these are `/api/voice/` and `/api/webhooks/livekit`. With the API on a host of its own, such as `api.example.com`, they have no `/api` in front.
 
-rexctl and LiveKit send them without a browser, and bot protection can block them. A voice machine that can't send them can't join, can't drain its servers for an upgrade and can't remove them cleanly. Webhooks tell Fluxer when people leave calls.
+rexctl and LiveKit send them without a browser, and bot protection can block them. A voice machine that can't send them can't join, can't drain its servers for an upgrade and can't remove them cleanly. Webhooks tell sanalyer when people leave calls.
 
 ## Without rexctl
 
-To run a voice server with Docker Compose by hand, see [Run a voice server with Docker Compose](/operator/voice-compose/). A join token also adds a voice server to an instance on [Kubernetes](/operator/kubernetes/), because joining talks only to the instance's public API.
+To run a voice server with Docker Compose by hand, see [Run a voice server with Docker Compose](/operator/voice-compose/). A join token also adds a voice server to an instance on Kubernetes, because joining talks only to the instance's public API.

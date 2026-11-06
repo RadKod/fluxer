@@ -391,7 +391,7 @@ These are the values of the top-level `code`, and the [OpenAPI document](/http-a
 | `VALIDATION_ERROR` | Validation failed |
 | `VOICE_CHANNEL_FULL` | Voice channel is full |
 | `VOICE_JOIN_ENDPOINT_INVALID` | The voice server endpoint isn't allowed |
-| `VOICE_JOIN_ENDPOINT_UNREACHABLE` | Fluxer couldn't connect to the voice server endpoint |
+| `VOICE_JOIN_ENDPOINT_UNREACHABLE` | sanalyer couldn't connect to the voice server endpoint |
 | `VOICE_JOIN_KEY_MISMATCH` | The voice server rejected its API key and secret |
 | `VOICE_JOIN_TOKEN_BUSY` | Another voice server is joining with this token right now |
 | `VOICE_JOIN_TOKEN_INVALID` | The voice join token is not valid |
@@ -635,7 +635,7 @@ These are the values of `code` inside `errors`.
 | `SSO_PROVIDER_DID_NOT_RETURN_EMAIL` | Your SSO provider didn't return an email address |
 | `SSO_TEST_CODE_MISSING_EMAIL` | SSO test code is missing the email payload |
 | `SSO_UNABLE_TO_ALLOCATE_DISCRIMINATOR` | We couldn't allocate a discriminator for your SSO account |
-| `SSO_USER_INFO_SIGNED_RESPONSE_UNSUPPORTED` | Your sign-in provider sent your profile in a signed format that Fluxer can't use |
+| `SSO_USER_INFO_SIGNED_RESPONSE_UNSUPPORTED` | Your sign-in provider sent your profile in a signed format that sanalyer can't use |
 | `STRING_LENGTH_EXACT` | String must be exactly {length} characters |
 | `STRING_LENGTH_INVALID` | String length must be between {min} and {max} characters |
 | `SYSTEM_CHANNEL_MUST_BE_IN_GUILD` | System channel must be in this community |
@@ -654,7 +654,7 @@ These are the values of `code` inside `errors`.
 | `UNCLAIMED_ACCOUNTS_CAN_ONLY_SET_EMAIL_VIA_TOKEN` | Claim your account before changing your profile |
 | `UNRESOLVED_ATTACHMENT_URL` | Unresolved `attachment://` URL detected |
 | `UPLOADED_ATTACHMENT_NOT_FOUND` | Uploaded attachment {filename} wasn't found |
-| `URL_HOSTNAME_NOT_RESOLVABLE` | Fluxer couldn't look up the hostname in this URL |
+| `URL_HOSTNAME_NOT_RESOLVABLE` | sanalyer couldn't look up the hostname in this URL |
 | `URL_LENGTH_INVALID` | URL must be between {min} and {max} characters |
 | `URL_MUST_USE_HTTPS` | URL must start with https:// |
 | `URL_NOT_PUBLICLY_ROUTABLE` | URL must resolve to a publicly routable address |

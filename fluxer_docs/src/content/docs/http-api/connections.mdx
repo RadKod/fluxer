@@ -60,10 +60,10 @@ The flags decide which viewers see the connection on the owner's profile, using 
 
 ## Domain ownership proof
 
-Fluxer checks the proof once, when the connection is created. Use either method.
+sanalyer checks the proof once, when the connection is created. Use either method.
 
 - Publish a TXT record at `_fluxer.<domain>` with the value `fluxer-verification=<token>`.
-- Serve the token alone, without the prefix, at `https://<domain>/.well-known/fluxer-verification` with a 2xx status. Fluxer follows up to three HTTPS redirects to the same path on the domain with or without `www.`.
+- Serve the token alone, without the prefix, at `https://<domain>/.well-known/fluxer-verification` with a 2xx status. sanalyer follows up to three HTTPS redirects to the same path on the domain with or without `www.`.
 
 ## Bluesky authorization object
 
@@ -119,7 +119,7 @@ The rate limit is 5 requests per minute, on the `connection:create` bucket.
 
 <RouteHeader method="POST" path="/v1/users/@me/connections/verify" />
 
-Checks the [domain ownership proof](#domain-ownership-proof) and creates the connection. Fluxer sends [User Connections Update](/gateway/events/#user-connections-update).
+Checks the [domain ownership proof](#domain-ownership-proof) and creates the connection. sanalyer sends [User Connections Update](/gateway/events/#user-connections-update).
 
 ### JSON body
 
@@ -143,7 +143,7 @@ The rate limit is 5 requests per minute, on the `connection:verify_and_create` b
 
 <RouteHeader method="PATCH" path="/v1/users/@me/connections/{type}/{connection_id}" />
 
-Updates the visibility or display order of a connection. Fluxer sends [User Connections Update](/gateway/events/#user-connections-update).
+Updates the visibility or display order of a connection. sanalyer sends [User Connections Update](/gateway/events/#user-connections-update).
 
 ### JSON body
 
@@ -166,7 +166,7 @@ The rate limit is 30 requests per minute, on the `connection:update` bucket.
 
 <RouteHeader method="DELETE" path="/v1/users/@me/connections/{type}/{connection_id}" />
 
-Deletes a connection and sends [User Connections Update](/gateway/events/#user-connections-update). Deleting a bsky connection does not revoke Fluxer's access on Bluesky.
+Deletes a connection and sends [User Connections Update](/gateway/events/#user-connections-update). Deleting a bsky connection does not revoke sanalyer's access on Bluesky.
 
 ### Response
 
@@ -182,7 +182,7 @@ The rate limit is 10 requests per minute, on the `connection:delete` bucket.
 
 <RouteHeader method="PATCH" path="/v1/users/@me/connections/reorder" />
 
-Sets each listed connection's `sort_order` to its position in the array. Unknown IDs are ignored and omitted connections keep their order. Fluxer sends [User Connections Update](/gateway/events/#user-connections-update).
+Sets each listed connection's `sort_order` to its position in the array. Unknown IDs are ignored and omitted connections keep their order. sanalyer sends [User Connections Update](/gateway/events/#user-connections-update).
 
 ### JSON body
 

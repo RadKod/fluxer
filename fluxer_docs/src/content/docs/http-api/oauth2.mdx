@@ -10,7 +10,7 @@ OAuth2 lets a user give an application access to their account, and the same con
 
 ## Authorization code grant
 
-1. Send the user's browser to [Authorize application](#authorize-application). When the user approves on the consent screen, Fluxer sends the browser to your `redirect_uri` with a `code` and your `state`.
+1. Send the user's browser to [Authorize application](#authorize-application). When the user approves on the consent screen, sanalyer sends the browser to your `redirect_uri` with a `code` and your `state`.
 2. Exchange the code at [Exchange OAuth2 token](#exchange-oauth2-token) with your client credentials to get an access token and a refresh token.
 3. Send the access token as `Authorization: Bearer <token>`. Before the access token expires, exchange the refresh token for a new pair.
 
@@ -42,7 +42,7 @@ String fields such as `state`, `redirect_uri` and `code` can be at most 256 char
 
 <sup>2</sup> The access token gets no access from this scope
 
-Separate scopes with spaces. Fluxer rejects an unknown scope with `invalid_scope`, and the order of scopes in a response isn't fixed.
+Separate scopes with spaces. sanalyer rejects an unknown scope with `invalid_scope`, and the order of scopes in a response isn't fixed.
 
 ## OAuth2 error response object
 
@@ -235,7 +235,7 @@ The callback URL from [Grant OAuth2 consent](#grant-oauth2-consent).
 
 <RouteHeader method="GET" path="/v1/oauth2/authorize" unauthenticated />
 
-Starts the grant and redirects the browser to the Fluxer consent screen with the same parameters.
+Starts the grant and redirects the browser to the sanalyer consent screen with the same parameters.
 
 ### Query parameters
 
@@ -245,7 +245,7 @@ Starts the grant and redirects the browser to the Fluxer consent screen with the
 | client_id | snowflake | The ID of the application |
 | redirect_uri? | string | A redirect URI registered on the application |
 | scope | string | The requested [scopes](#oauth2-scopes), separated by spaces |
-| state? | string | A value Fluxer returns unchanged on the redirect |
+| state? | string | A value sanalyer returns unchanged on the redirect |
 | prompt? | string | The prompt mode, `consent` or `none` |
 | guild_id? | snowflake | The guild to preselect for the `bot` scope |
 | channel_id? | snowflake | The group DM to preselect for the `bot` scope |
@@ -260,7 +260,7 @@ Starts the grant and redirects the browser to the Fluxer consent screen with the
 | --- | --- | --- |
 | 302 | empty | The `Location` header has the consent screen or your callback |
 
-With `prompt=none`, Fluxer skips the consent screen when the signed-in user has already granted every requested scope, and redirects to your `redirect_uri` with a `code`. Otherwise it redirects with `error=login_required` when nobody is signed in, or `error=consent_required`. If `redirect_uri` isn't registered on the application, the error goes to the Fluxer web app.
+With `prompt=none`, sanalyer skips the consent screen when the signed-in user has already granted every requested scope, and redirects to your `redirect_uri` with a `code`. Otherwise it redirects with `error=login_required` when nobody is signed in, or `error=consent_required`. If `redirect_uri` isn't registered on the application, the error goes to the sanalyer web app.
 
 The rate limit is 60 requests per minute, on the `oauth:authorize` bucket.
 
@@ -278,7 +278,7 @@ Records the user's consent and returns an [OAuth2 consent response](#oauth2-cons
 | client_id | snowflake | The ID of the application |
 | redirect_uri?<sup>1</sup> | string | A redirect URI registered on the application |
 | scope | string | The requested [scopes](#oauth2-scopes), separated by spaces |
-| state? | string | A value Fluxer adds to the callback URL |
+| state? | string | A value sanalyer adds to the callback URL |
 | permissions?<sup>2</sup> | string | The permissions to give the bot, as an integer string |
 | guild_id?<sup>3</sup> | snowflake | The guild to install the bot into |
 | channel_id?<sup>3</sup> | snowflake | The group DM to install the bot into |
@@ -303,7 +303,7 @@ Records the user's consent and returns an [OAuth2 consent response](#oauth2-cons
 | 403 | [error response](/http-api/#error-response) | `MISSING_PERMISSIONS` when you lack the guild permissions, or `MISSING_ACCESS` when you aren't in the group DM |
 | 404 | [error response](/http-api/#error-response) | `UNKNOWN_CHANNEL` when the group DM doesn't exist |
 
-When a guild install has a non-zero `permissions` value, Fluxer creates a role with the application's name with those permissions and gives it to the bot. A guild install sends [Guild Create](/gateway/events/#guild-create) and [Guild Member Add](/gateway/events/#guild-member-add), and a group DM install sends [Channel Recipient Add](/gateway/events/#channel-recipient-add). If the install fails, Fluxer deletes the code and returns the error.
+When a guild install has a non-zero `permissions` value, sanalyer creates a role with the application's name with those permissions and gives it to the bot. A guild install sends [Guild Create](/gateway/events/#guild-create) and [Guild Member Add](/gateway/events/#guild-member-add), and a group DM install sends [Channel Recipient Add](/gateway/events/#channel-recipient-add). If the install fails, sanalyer deletes the code and returns the error.
 
 The rate limit is 60 requests per minute, on the `oauth:authorize` bucket.
 
@@ -391,7 +391,7 @@ Deletes every access and refresh token the token's user has for your application
 | client_id? | snowflake | The ID of the application, if you don't use HTTP Basic |
 | client_secret? | string | The client secret, if you don't use HTTP Basic |
 
-<sup>1</sup> Send `refresh_token` when the token is a refresh token, or Fluxer won't find it
+<sup>1</sup> Send `refresh_token` when the token is a refresh token, or sanalyer won't find it
 
 ### Response
 

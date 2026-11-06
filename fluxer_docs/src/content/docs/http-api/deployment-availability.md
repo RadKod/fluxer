@@ -36,17 +36,17 @@ These routes need `stripe_enabled`.
 
 | Method | Route | Operation |
 | --- | --- | --- |
-| POST | /v1/stripe/checkout/subscription | [Create subscription checkout](/http-api/billing/#create-subscription-checkout) |
-| POST | /v1/stripe/checkout/gift | [Create gift checkout](/http-api/billing/#create-gift-checkout) |
+| POST | /v1/stripe/checkout/subscription | Create subscription checkout |
+| POST | /v1/stripe/checkout/gift | Create gift checkout |
 | GET | /v1/premium/price-ids | [Get price IDs](/http-api/premium/#get-price-ids) |
 
 ### Served while Stripe is serviceable
 
-These routes need `stripe_serviceable`. [Receive Stripe webhook](/http-api/billing/#receive-stripe-webhook) also needs a Stripe webhook secret.
+These routes need `stripe_serviceable`. Receive Stripe webhook also needs a Stripe webhook secret.
 
 | Method | Route | Operation |
 | --- | --- | --- |
-| POST | /v1/stripe/webhook | [Receive Stripe webhook](/http-api/billing/#receive-stripe-webhook) |
+| POST | /v1/stripe/webhook | Receive Stripe webhook |
 | GET | /v1/premium/current-subscription-price | [Get current subscription price](/http-api/premium/#get-current-subscription-price) |
 | POST | /v1/premium/customer-portal | [Create customer portal](/http-api/premium/#create-customer-portal) |
 | POST | /v1/premium/grace/end | [End premium grace period](/http-api/premium/#end-premium-grace-period) |

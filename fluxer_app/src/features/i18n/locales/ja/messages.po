@@ -40789,7 +40789,7 @@ msgstr "システムトレイにアイコンを表示"
 msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
-msgstr "Windowsのシステムフォントではなく、以前のデフォルトフォントであるFluxer Sansでテキストを表示する"
+msgstr "Windowsのシステムフォントではなく、以前のデフォルトフォントであるsanalyer Sansでテキストを表示する"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
 #. and Linux.
@@ -43348,7 +43348,7 @@ msgstr "アカウントを切り替える"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Fluxer Sans に戻す"
+msgstr "sanalyer Sans に戻す"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -44043,7 +44043,7 @@ msgstr ""
 msgid ""
 "Text on Windows now uses the system font. You can switch back to Fluxer Sans"
 " in settings."
-msgstr "Windows のテキストがシステムフォントを使用するようになりました。設定で Fluxer Sans に戻すことができます。"
+msgstr "Windows のテキストがシステムフォントを使用するようになりました。設定で sanalyer Sans に戻すことができます。"
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -44443,7 +44443,7 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"iOS版とAndroid版のFluxerアプリは、Fluxerが運営するプッシュリレーを通じて通知を受け取り、リレーがそれをAppleとGoogleに渡します。利用するには、プッシュリレーのプライバシー通知に同意します。"
+"iOS版とAndroid版のsanalyerアプリは、sanalyerが運営するプッシュリレーを通じて通知を受け取り、リレーがそれをAppleとGoogleに渡します。利用するには、プッシュリレーのプライバシー通知に同意します。"
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
 msgid "The following people can't be added to this group DM:"
@@ -49589,7 +49589,7 @@ msgstr "フィルターまたはキーワードでメッセージを検索"
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "WindowsでFluxer Sansを使用"
+msgstr "Windowsでsanalyer Sansを使用"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

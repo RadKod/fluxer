@@ -42125,7 +42125,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Näytä teksti Fluxer Sans -fontilla, aiemmalla oletusfontilla, Windowsin "
+"Näytä teksti sanalyer Sans -fontilla, aiemmalla oletusfontilla, Windowsin "
 "järjestelmäfontin sijaan"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -44762,7 +44762,7 @@ msgstr "Vaihda tiliä"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Vaihda takaisin Fluxer Sans -fonttiin"
+msgstr "Vaihda takaisin sanalyer Sans -fonttiin"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45490,7 +45490,7 @@ msgid ""
 " in settings."
 msgstr ""
 "Teksti Windowsissa käyttää nyt järjestelmäfonttia. Voit vaihtaa takaisin "
-"Fluxer Sansiin asetuksista."
+"sanalyer Sansiin asetuksista."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -45933,7 +45933,7 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Fluxerin iOS- ja Android-sovellukset saavat ilmoitukset Fluxerin ylläpitämän"
+"sanalyerin iOS- ja Android-sovellukset saavat ilmoitukset sanalyerin ylläpitämän"
 " push-välityksen kautta, joka välittää ne Applelle ja Googlelle. "
 "Käyttääksesi sitä hyväksyt push-välityksen tietosuojailmoituksen."
 
@@ -51371,7 +51371,7 @@ msgstr "Käytä suodattimia tai kirjoita hakusanoja löytääksesi viestejä"
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Käytä Fluxer Sans -fonttia Windowsissa"
+msgstr "Käytä sanalyer Sans -fonttia Windowsissa"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

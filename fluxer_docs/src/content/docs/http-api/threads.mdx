@@ -40,7 +40,7 @@ A thread is a [channel object](/http-api/channels/#channel-object) with the fiel
 
 <sup>1</sup> A thread started from a message has the ID of that message
 
-The schema also declares `topic`, `url`, `icon`, `position`, `bitrate`, `user_limit`, `voice_connection_limit`, `rtc_region`, `rtc_p2p`, `permission_overwrites`, `recipients`, `nsfw`, `nsfw_override`, `content_warning_level`, `content_warning_text`, `nicks`, `default_auto_archive_duration`, `default_thread_rate_limit_per_user`, `available_tags`, `default_reaction_emoji`, `default_sort_order`, `default_forum_layout` and `default_tag_setting`. Fluxer never sends them on a thread.
+The schema also declares `topic`, `url`, `icon`, `position`, `bitrate`, `user_limit`, `voice_connection_limit`, `rtc_region`, `rtc_p2p`, `permission_overwrites`, `recipients`, `nsfw`, `nsfw_override`, `content_warning_level`, `content_warning_text`, `nicks`, `default_auto_archive_duration`, `default_thread_rate_limit_per_user`, `available_tags`, `default_reaction_emoji`, `default_sort_order`, `default_forum_layout` and `default_tag_setting`. sanalyer never sends them on a thread.
 
 ### Example
 
@@ -105,13 +105,13 @@ A new thread ignores the parent's `default_auto_archive_duration`.
 
 ## Thread lifecycle
 
-Fluxer archives a thread `auto_archive_duration` minutes after its last message or its `archive_timestamp`, whichever is later, and sends [Thread Update](/gateway/threads/#thread-update). A pinned forum post is never archived automatically. A guild can have at most 1,000 active threads, and starting or unarchiving one past that returns 400 `MAX_ACTIVE_THREADS`.
+sanalyer archives a thread `auto_archive_duration` minutes after its last message or its `archive_timestamp`, whichever is later, and sends [Thread Update](/gateway/threads/#thread-update). A pinned forum post is never archived automatically. A guild can have at most 1,000 active threads, and starting or unarchiving one past that returns 400 `MAX_ACTIVE_THREADS`.
 
 Sending a message to an archived thread unarchives it. In an archived thread, reacting, pinning, editing, joining, leaving and changing members return 400 `THREAD_ARCHIVED`, and deleting a message still works. In a locked thread, sending, reacting, pinning, editing, joining and adding members return 400 `THREAD_LOCKED` to anyone who is not a thread moderator.
 
 ## Thread permissions
 
-A thread has no permission overwrites. Fluxer uses the permissions of the parent with `SEND_MESSAGES_IN_THREADS` in place of `SEND_MESSAGES`. The thread bits are in [Permissions](/http-api/permissions/#permissions).
+A thread has no permission overwrites. sanalyer uses the permissions of the parent with `SEND_MESSAGES_IN_THREADS` in place of `SEND_MESSAGES`. The thread bits are in [Permissions](/http-api/permissions/#permissions).
 
 ### Thread moderators
 
@@ -146,7 +146,7 @@ Starts a thread from a regular message or a reply in a guild text or announcemen
 | 400 | [error response](/http-api/#error-response) | `THREAD_ALREADY_CREATED_FOR_MESSAGE` when the message already started a thread |
 | 400 | [error response](/http-api/#error-response) | `SLOWMODE_RATE_LIMITED` when the parent slowmode applies |
 
-Fluxer sends [Thread Create](/gateway/threads/#thread-create), and [Message Update](/gateway/events/#message-update) for the source message.
+sanalyer sends [Thread Create](/gateway/threads/#thread-create), and [Message Update](/gateway/events/#message-update) for the source message.
 
 The rate limit is 10 requests per 10 seconds, on the `channel:thread:create::channel_id` bucket.
 
@@ -192,7 +192,7 @@ The body depends on the parent channel type, and you can send it as multipart fo
 | 400 | [error response](/http-api/#error-response) | `NO_TAGS_AVAILABLE_TO_NON_MODERATORS` when a non-moderator's post under `REQUIRE_TAG` has no tag and every tag is moderated |
 | 404 | [error response](/http-api/#error-response) | `UNKNOWN_FORUM_TAG` when a tag does not exist |
 
-Fluxer sends [Thread Create](/gateway/threads/#thread-create).
+sanalyer sends [Thread Create](/gateway/threads/#thread-create).
 
 The rate limit is 10 requests per 10 seconds, on the `channel:thread:create::channel_id` bucket.
 
@@ -220,11 +220,11 @@ The rate limit is 10 requests per 10 seconds, on the `channel:thread:create::cha
 | 200 | [thread](#thread-object) object | The thread was modified |
 | 400 | [error response](/http-api/#error-response) | `MAX_PINNED_THREADS_IN_FORUM` when the forum already has a pinned post |
 
-Fluxer sends [Thread Update](/gateway/threads/#thread-update) when a field changes. The rate limit is the one for [Modify channel](/http-api/channels/#modify-channel).
+sanalyer sends [Thread Update](/gateway/threads/#thread-update) when a field changes. The rate limit is the one for [Modify channel](/http-api/channels/#modify-channel).
 
 ## Delete thread
 
-[Delete or leave channel](/http-api/channels/#delete-or-leave-channel) on a thread deletes it with its messages. You need to be a [thread moderator](#thread-moderators). Fluxer sends [Thread Delete](/gateway/threads/#thread-delete).
+[Delete or leave channel](/http-api/channels/#delete-or-leave-channel) on a thread deletes it with its messages. You need to be a [thread moderator](#thread-moderators). sanalyer sends [Thread Delete](/gateway/threads/#thread-delete).
 
 ## List active guild threads
 

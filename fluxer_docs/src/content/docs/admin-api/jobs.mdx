@@ -6,7 +6,7 @@ description: List background jobs, follow their progress and request cancellatio
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-Admin requests such as [Queue bulk job](/admin-api/bulk-jobs/#queue-bulk-job), [Bulk add blocklist entries](/admin-api/blocklists/#bulk-add-blocklist-entries), [Create system DM broadcast](/admin-api/system-dms/#create-system-dm-broadcast), [Refresh search index](/admin-api/search-indexes/#refresh-search-index) and [archive](/admin-api/archives/) requests return a job ID that you follow here. Fluxer deletes a job record about 90 days after the job was queued.
+Admin requests such as [Queue bulk job](/admin-api/bulk-jobs/#queue-bulk-job), [Bulk add blocklist entries](/admin-api/blocklists/#bulk-add-blocklist-entries), [Create system DM broadcast](/admin-api/system-dms/#create-system-dm-broadcast), [Refresh search index](/admin-api/search-indexes/#refresh-search-index) and [archive](/admin-api/archives/) requests return a job ID that you follow here. sanalyer deletes a job record about 90 days after the job was queued.
 
 ## Admin job object
 
@@ -100,7 +100,7 @@ List jobs never returns `realtime` or `unfurl` work, because those tasks have no
 | unfurl | Link previews |
 | lifecycle | Account, guild, moderation, archive and bulk work |
 | batch | Scheduled maintenance, index work and thread maintenance |
-| crosspost | [Announcement channel](/topics/announcement-channels/) delivery, copy updates and follower cleanup |
+| crosspost | Announcement channel delivery, copy updates and follower cleanup |
 
 ## Background job task types
 

@@ -1,21 +1,25 @@
 ---
 # SPDX-License-Identifier: AGPL-3.0-or-later
-title: Fluxer API
-description: Where to start with the Fluxer API and how to read the reference pages.
+title: sanalyer API
+description: Build bots, tools and clients for sanalyer.
 ---
 
-Fluxer is a self-hostable chat platform. You can build clients and bots with its HTTP API and Gateway, or run your own instance.
+sanalyer is the chat service at [sanalyer.com](https://sanalyer.com). These pages describe its HTTP API, Gateway, media proxy and admin API.
 
-| Section | Description |
-| --- | --- |
-| [HTTP API](/http-api/) | Read and change users, guilds, channels and messages |
-| [Gateway](/gateway/overview/) | Receive [events](/gateway/events/) over a WebSocket connection |
-| [Voice](/voice/) | Join voice calls and share your screen |
-| [Media Proxy](/media-proxy/overview/) | Load media and upload files |
-| [Admin API](/admin-api/) | Manage an instance with admin access |
-| [Self-hosting](/operator/) | Install and run an instance |
+- To build a client or a bot, start with the [HTTP API](/http-api/) and the [Gateway](/gateway/overview/).
+- For a first bot in Python, read the Turkish [quick start](/bots/hizli-baslangic/).
+- For voice and screen sharing, read [Voice](/voice/).
+- The desktop app is on the [download page](https://sanalyer.com/indir).
 
-[Authentication](/authentication/), [Errors](/http-api/errors/), [Rate limits](/topics/rate-limits/) and [Locales](/topics/locales/) cover behavior the APIs share. Each page says where it differs. Most IDs are [snowflakes](/snowflakes/).
+Questions about the API go to [info@sanalyer.com](mailto:info@sanalyer.com).
+
+## Protocol surfaces
+
+Use the HTTP API to read and change resources, and Gateway [events](/gateway/events/) to receive updates. The [Media Proxy](/media-proxy/overview/) serves media and uploads. The [Admin API](/admin-api/) provides privileged instance management.
+
+## Shared contracts
+
+See [Authentication](/authentication/), [Errors](/http-api/errors/), [Rate limits](/topics/rate-limits/) and [Locales](/topics/locales/) for shared behaviour. Most resource identifiers are [snowflakes](/snowflakes/). Each resource page states where it differs from this shared behaviour.
 
 ## Field notation
 
@@ -26,21 +30,27 @@ In field tables, `?` after a field name means optional. Before a type, it means 
 | `name` | `string` | Required and cannot be `null` |
 | `name?` | `string` | Optional, but cannot be `null` when present |
 | `name` | `?string` | Required, but can be `null` |
-| `name?` | `?string` | Can be omitted or set to `null` |
+| `name?` | `?string` | Nullish, so it can be omitted or set to `null` |
 
-In a request body, leaving a field out and sending `null` can do different things, and the endpoint says which.
+An omitted field is different from a field set to `null`. Each operation explains how these values affect the resource.
 
-| Type | Meaning |
-| --- | --- |
-| `array[type]` | An array of that type |
-| `map[key, value]` | A JSON object with keys of the first type and values of the second |
+In the type column, `array[type]` is an array of the named type, and `map[key, value]` is a JSON object keyed by the first type with values of the second.
 
 ## Endpoint discovery
 
-Get `/.well-known/fluxer` on the instance origin to find its base URLs. It needs no authentication and allows cross-origin requests.
+Start with `GET /.well-known/fluxer` on the instance origin. It requires no authentication and allows cross-origin requests. The path keeps its upstream name; it is part of the protocol.
 
 ```text
-GET https://example.com/.well-known/fluxer
+GET https://sanalyer.com/.well-known/fluxer
 ```
 
-Bots, libraries and third-party clients send requests to `endpoints.api_public` from the [endpoints object](/http-api/instance/#instance-endpoints-object) followed by a `/v1` path, such as `/v1/users/@me`. Connect to the Gateway at `endpoints.gateway`. Don't build base URLs from the origin or hard-code Fluxer domains. Send credentials in the `Authorization` header as described in [Authentication](/authentication/).
+Read base URLs from the response's [endpoints](/http-api/instance/#instance-endpoints-object). Do not derive them from the origin or hard-code them.
+
+- Bots, libraries and third-party clients use `endpoints.api_public`.
+- The first-party web application uses `endpoints.api_client`. `endpoints.api` is an alias for it.
+
+Use `/v1` paths and send credentials in the `Authorization` header as described in [Authentication](/authentication/).
+
+## Source code
+
+sanalyer runs on open-source software licensed under the AGPLv3. Our modified source is on [GitHub](https://github.com/RadKod/fluxer); the upstream project is [fluxerapp/fluxer](https://github.com/fluxerapp/fluxer).

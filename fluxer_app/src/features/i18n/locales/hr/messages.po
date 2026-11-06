@@ -42233,7 +42233,7 @@ msgid ""
 "Show text in Fluxer Sans, the previous default font, instead of the Windows "
 "system font"
 msgstr ""
-"Prikaži tekst u Fluxer Sans, prethodnom zadanim fontu, umjesto fonta sustava"
+"Prikaži tekst u sanalyer Sans, prethodnom zadanim fontu, umjesto fonta sustava"
 " Windows"
 
 #. Desktop setting description under the colored tray icon toggle on Windows
@@ -44890,7 +44890,7 @@ msgstr "Promijeni račun"
 #. Fluxer Sans. Fluxer Sans is a font name and must not be translated.
 #: src/features/app/components/layout/app_layout/nagbars/WindowsFontNagbar.tsx
 msgid "Switch back to Fluxer Sans"
-msgstr "Vrati se na Fluxer Sans"
+msgstr "Vrati se na sanalyer Sans"
 
 #. Keyboard shortcut action label shown in the shortcuts list and keybind
 #. editor. Keep short, sentence case.
@@ -45611,7 +45611,7 @@ msgid ""
 "Text on Windows now uses the system font. You can switch back to Fluxer Sans"
 " in settings."
 msgstr ""
-"Tekst na Windowsima sada koristi sistemski font. Možete se vratiti na Fluxer"
+"Tekst na Windowsima sada koristi sistemski font. Možete se vratiti na sanalyer"
 " Sans u postavkama."
 
 #. Settings search synonym. Used to match this term when the user types it in
@@ -46060,8 +46060,8 @@ msgid ""
 "that Fluxer runs, which passes them to Apple and Google. To use it, you "
 "accept the push relay privacy notice."
 msgstr ""
-"Aplikacije Fluxer za iOS i Android primaju obavijesti putem push releja koji"
-" vodi Fluxer i koji ih prosljeđuje Appleu i Googleu. Njegovim korištenjem "
+"Aplikacije sanalyer za iOS i Android primaju obavijesti putem push releja koji"
+" vodi sanalyer i koji ih prosljeđuje Appleu i Googleu. Njegovim korištenjem "
 "prihvaćate obavijest o privatnosti za push relej."
 
 #: src/features/channel/components/modals/UnaddableRecipientsConfirmModal.tsx
@@ -51505,7 +51505,7 @@ msgstr "Upotrijebite filtre ili unesite ključne riječi za pronalazak poruka"
 #. and must not be translated.
 #: src/features/user/components/settings_utils/section_registry/SharedDescriptors.ts
 msgid "Use Fluxer Sans on Windows"
-msgstr "Koristi Fluxer Sans na Windowsima"
+msgstr "Koristi sanalyer Sans na Windowsima"
 
 #. Short label in the banner uploader. Keep it concise. Keep the tone plain
 #. and specific.

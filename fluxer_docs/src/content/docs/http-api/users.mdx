@@ -6,7 +6,7 @@ description: User objects, profiles, the user settings object and the routes tha
 
 import RouteHeader from '@/components/RouteHeader.astro';
 
-A user is a Fluxer account, which other accounts see as a [partial user object](#partial-user-object) and its owner sees as a [user object](#user-object). You change your own account through [Current user](/http-api/users/current-user/).
+A user is a sanalyer account, which other accounts see as a [partial user object](#partial-user-object) and its owner sees as a [user object](#user-object). You change your own account through [Current user](/http-api/users/current-user/).
 
 The routes on this page accept a user session token or a bot token, and an OAuth2 bearer token gets 403 `ACCESS_DENIED`.
 
@@ -25,7 +25,7 @@ The public account object inside messages, relationships, guild members and appl
 | avatar<sup>1</sup> | ?string | The avatar hash, or null |
 | avatar_color | ?integer | The 24-bit RGB color taken from the avatar, or null |
 | bot? | boolean | Whether the account is a bot, omitted when false |
-| system? | boolean | Whether the account is a Fluxer system account, omitted when false |
+| system? | boolean | Whether the account is a sanalyer system account, omitted when false |
 | flags | integer | [Public user flags](#public-user-flags) |
 | mention_flags? | integer | [Reply mention preference](#reply-mention-preferences), omitted when there is none |
 
@@ -311,7 +311,7 @@ The text and emoji set as the account's status.
 
 ## Guild folder object
 
-A folder in the guild sidebar. When you join a guild, Fluxer adds it to the start of the uncategorized folder, and when you leave one, Fluxer removes it and deletes any other folder it leaves empty.
+A folder in the guild sidebar. When you join a guild, sanalyer adds it to the start of the uncategorized folder, and when you leave one, sanalyer removes it and deletes any other folder it leaves empty.
 
 ### Structure
 

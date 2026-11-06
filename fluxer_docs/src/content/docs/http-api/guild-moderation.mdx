@@ -12,7 +12,7 @@ A guild ban keeps an account out of a guild until you remove the ban or it expir
 
 A guild ban object describes one ban.
 
-A ban also blocks joins from the account's email address and its last IP address. A join returns 403 `USER_BANNED_FROM_GUILD` for an account or email match and 403 `USER_IP_BANNED_FROM_GUILD` for an IP match. Fluxer skips the IP match for an address on the instance's IP ban exemption list. Removing the ban lifts both blocks, and permanently deleting the banned account removes all its guild bans.
+A ban also blocks joins from the account's email address and its last IP address. A join returns 403 `USER_BANNED_FROM_GUILD` for an account or email match and 403 `USER_IP_BANNED_FROM_GUILD` for an IP match. sanalyer skips the IP match for an address on the instance's IP ban exemption list. Removing the ban lifts both blocks, and permanently deleting the banned account removes all its guild bans.
 
 ### Structure
 
@@ -26,7 +26,7 @@ A ban also blocks joins from the account's email address and its last IP address
 
 <sup>1</sup> The body `reason`, or the `X-Audit-Log-Reason` value when the body has none
 
-<sup>2</sup> Fluxer removes an expired ban and never returns it
+<sup>2</sup> sanalyer removes an expired ban and never returns it
 
 ### Example
 
@@ -60,7 +60,7 @@ The rate limit is 40 requests per 10 seconds, on the shared `guild:members::guil
 
 Bans the account and returns 204. Banning an account that is already banned replaces the ban, which can make a permanent ban temporary or extend a temporary one. You can ban an account that isn't a member. To ban a member, your highest role must be above theirs. The owner can ban any member, and nobody can ban the owner.
 
-Fluxer removes a banned member from the guild and its threads and records a [`MEMBER_BAN_ADD`](/http-api/guild-audit-logs/#audit-actions) audit entry. Sends [Guild Ban Add](/gateway/events/#guild-ban-add). The guild gets [Guild Member Remove](/gateway/events/#guild-member-remove) and the banned account gets [Guild Delete](/gateway/events/#guild-delete).
+sanalyer removes a banned member from the guild and its threads and records a [`MEMBER_BAN_ADD`](/http-api/guild-audit-logs/#audit-actions) audit entry. Sends [Guild Ban Add](/gateway/events/#guild-ban-add). The guild gets [Guild Member Remove](/gateway/events/#guild-member-remove) and the banned account gets [Guild Delete](/gateway/events/#guild-delete).
 
 ### JSON body
 
