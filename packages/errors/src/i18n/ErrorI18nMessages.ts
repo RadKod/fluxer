@@ -224,7 +224,7 @@ export const ERROR_I18N_MESSAGES = {
 	'auth_and_oauth.sso_unable_to_allocate_discriminator':
 		"We couldn't allocate a discriminator for your SSO account. Please try again.",
 	'auth_and_oauth.sso_user_info_signed_response_unsupported':
-		"Your sign-in provider sent your profile in a signed format that Fluxer can't use. Ask an admin of this instance to turn off signed userinfo responses at the provider.",
+		"Your sign-in provider sent your profile in a signed format that sanalyer can't use. Ask an admin of this instance to turn off signed userinfo responses at the provider.",
 	'auth_and_oauth.sudo_mode_required': 'Sudo mode is required.',
 	'auth_and_oauth.unknown_application': 'Unknown application.',
 	'auth_and_oauth.unknown_origin_handoff': 'This sign-in transfer has expired or was already used.',
@@ -280,7 +280,7 @@ export const ERROR_I18N_MESSAGES = {
 	'calls_and_voice.voice_message_duration_required': 'Voice message attachments must specify a duration.',
 	'calls_and_voice.voice_message_waveform_required': 'Voice message attachments must include waveform data.',
 	'calls_and_voice.voice_join_endpoint_invalid': "The voice server endpoint isn't allowed.",
-	'calls_and_voice.voice_join_endpoint_unreachable': "Fluxer couldn't connect to the voice server endpoint.",
+	'calls_and_voice.voice_join_endpoint_unreachable': "sanalyer couldn't connect to the voice server endpoint.",
 	'calls_and_voice.voice_join_key_mismatch': 'The voice server rejected its API key and secret.',
 	'calls_and_voice.voice_join_token_busy': 'Another voice server is joining with this token right now.',
 	'calls_and_voice.voice_join_token_invalid': 'The voice join token is not valid.',
@@ -410,7 +410,7 @@ export const ERROR_I18N_MESSAGES = {
 	'donation.magic_link_used': 'Magic link has already been used.',
 	'operator_pass.offer_unavailable': 'This pass cannot be passed on to that account right now.',
 	'operator_pass.offer_busy': 'Another offer from your account is still being sent. Try again in a moment.',
-	'operator_pass.recipient_not_friend': 'You can only pass this on to one of your friends on Fluxer.',
+	'operator_pass.recipient_not_friend': 'You can only pass this on to one of your friends on sanalyer.',
 	'operator_pass.not_transferable':
 		'This pass cannot be passed on. A pass you received, or one that comes with Visionary, stays with you.',
 	'operator_pass.last_pass_confirmation_required':
@@ -779,7 +779,7 @@ export const ERROR_I18N_MESSAGES = {
 	'urls.invalid_url_format': 'Invalid URL format.',
 	'urls.invalid_url_or_attachment_reference': 'Invalid URL format or attachment reference.',
 	'urls.url_hostname_not_resolvable':
-		"Fluxer couldn't look up the hostname in this URL. Check it's spelled right and resolves from the Fluxer server.",
+		"sanalyer couldn't look up the hostname in this URL. Check it's spelled right and resolves from the sanalyer server.",
 	'urls.url_length_invalid': 'URL must be between {min} and {max} characters.',
 	'urls.url_must_use_https': 'URL must start with https://.',
 	'urls.url_not_publicly_routable': 'URL must resolve to a publicly routable address.',
