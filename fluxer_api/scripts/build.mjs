@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {cpSync, readdirSync, readFileSync, rmSync} from 'node:fs';
+import {cpSync, readdirSync, readFileSync, writeFileSync, rmSync} from 'node:fs';
 import {isBuiltin} from 'node:module';
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -73,7 +73,11 @@ for (const [catalog, directory] of Object.entries(LOCALE_CATALOGS)) {
 cpSync(CERTIFICATE_FONTS, join(OUT_DIR, BUNDLED_FONTS_DIR), {recursive: true});
 
 for (const file of readdirSync(OUT_DIR).filter((name) => name.endsWith('.js'))) {
-	const source = readFileSync(join(OUT_DIR, file), 'utf-8');
+	// sanalyer: charset 'ascii' escapes strings but esbuild keeps comments as written, and ours carry Turkish letters
+	// and dashes. A \u escape inside a comment is the same comment, so write them that way instead of failing.
+	const written = readFileSync(join(OUT_DIR, file), 'utf-8');
+	const source = written.replace(/[\u0080-\uFFFF]/g, (ch) => `\\u${ch.charCodeAt(0).toString(16).padStart(4, '0')}`);
+	if (source !== written) writeFileSync(join(OUT_DIR, file), source);
 	const index = source.search(/[\u0080-\uFFFF]/);
 	if (index !== -1) {
 		const line = source.slice(0, index).split('\n').length;

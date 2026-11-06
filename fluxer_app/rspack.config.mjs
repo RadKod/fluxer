@@ -847,7 +847,9 @@ export default () => {
 								reuseExistingChunk: true,
 								enforce: true,
 								maxAsyncSize: Number.POSITIVE_INFINITY,
-								chunks: (chunk) => !chunk.canBeInitial() && !isWorkerPath({chunk}),
+								// sanalyer: three also runs in the voice room worker, whose runtime isn't named *.worker; a chunk
+								// shared with that runtime breaks code generation, so only main-runtime chunks join (as voiceScene).
+								chunks: (chunk) => isMainRuntimeChunk(chunk) && !chunk.canBeInitial(),
 							},
 							editor: {
 								test: /[\\/]node_modules[\\/](@codemirror|@lezer|codemirror|style-mod|w3c-keyname|crelt|@marijn)[\\/]/,

@@ -417,6 +417,10 @@ mod tests {
         catch_all(State(Arc::clone(app)), Query(HashMap::new()), request).await
     }
 
+    async fn dispatch(app: &Arc<AppState>, method: Method, path: &str) -> Response {
+        dispatch_request(app, read_request(method, path, &[], None)).await
+    }
+
     async fn body_of(response: Response) -> Bytes {
         to_bytes(response.into_body(), usize::MAX)
             .await
