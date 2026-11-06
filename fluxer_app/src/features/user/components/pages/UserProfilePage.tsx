@@ -71,8 +71,8 @@ import {
 	UserCircleIcon,
 	UserPlusIcon,
 } from '@phosphor-icons/react';
-import {reaction} from 'mobx';
 import {clsx} from 'clsx';
+import {reaction} from 'mobx';
 import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {type RefObject, useCallback, useEffect, useMemo, useRef, useState} from 'react';

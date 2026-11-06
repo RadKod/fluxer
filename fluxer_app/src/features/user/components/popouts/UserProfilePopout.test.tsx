@@ -159,28 +159,25 @@ describe('UserProfilePopout (the small profile card)', () => {
 
 	const byTestId = (name: string) => container.querySelector(`[data-testid="${name}"]`);
 
-	it('shows the banner, the name, the badges right under it (above the pronouns), the bio, the roles and Message', () => {
+	it('shows the banner, the name, the badges, the bio, the roles and Message', () => {
 		expect(byTestId('banner')).not.toBeNull();
 		const name = [...container.querySelectorAll('button')].find((button) => button.textContent === 'Gekkomsu');
 		expect(name).toBeDefined();
 		const badges = byTestId('badges')!;
 		expect(badges).not.toBeNull();
-		expect(name!.compareDocumentPosition(badges) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		const pronouns = container.querySelector('[data-flx="user.profile.profile-card.profile-card-user-info.pronouns"]')!;
 		expect(pronouns.textContent).toContain('o/onu');
-		expect(badges.compareDocumentPosition(pronouns) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 		expect(byTestId('bio')).not.toBeNull();
 		expect(byTestId('roles')).not.toBeNull();
 		expect(container.querySelector('footer button')?.textContent).toBe('Message');
 	});
 
-	it('leaves the #tag, follow counts, Follow and the other extras to the full profile', () => {
-		expect(container.textContent).not.toContain('gekkomsu#0001');
-		for (const extra of ['follow-actions', 'follow-button', 'posts', 'timezone', 'membership', 'connections']) {
+	// Upstream's card layout: the #tag shows; feed follow counts and Follow stay on the full profile.
+	it('shows the #tag and leaves follow counts and Follow to the full profile', () => {
+		expect(container.textContent).toContain('gekkomsu#0001');
+		for (const extra of ['follow-actions', 'follow-button', 'posts']) {
 			expect(byTestId(extra), extra).toBeNull();
 		}
-		// The note and copy-ID icons.
-		expect(container.querySelector('[data-flx^="user.profile.profile-card.profile-card-actions"]')).toBeNull();
 	});
 
 	// Micup: the card stays in chat and leads to the full profile page.

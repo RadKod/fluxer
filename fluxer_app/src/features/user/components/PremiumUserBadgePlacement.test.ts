@@ -89,13 +89,6 @@ describe('PremiumUserBadge placement', () => {
 		expect(read(file)).toContain('isPreview={isPreview}');
 	});
 
-	it.each(['../../app/components/floating/UserAreaPopout.tsx', './profile/ProfilePreview.tsx'])(
-		'%s passes its badge row directly below the measured card name',
-		(file) => {
-			expect(read(file)).toMatch(/belowName=\{[\s\S]*?<UserProfileBadges[\s\S]*?isModal=\{true\}/);
-		},
-	);
-
 	it.each([
 		'./profile/profile_card/ProfileCardUserInfo.tsx',
 		'./modals/user_profile_modal/UserProfileModalUserInfo.tsx',

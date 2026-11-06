@@ -17,13 +17,13 @@ import {VerifiedUserBadge} from '@app/features/user/components/VerifiedUserBadge
 import {useAutoplayExpandedProfileAnimations} from '@app/features/user/hooks/useAutoplayExpandedProfileAnimations';
 import {useProfileBadgeMetrics} from '@app/features/user/hooks/useProfileBadgeMetrics';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
-import {nameReadsOnProfileTheme, profileThemeColors} from '@app/features/user/utils/ProfileGradient';
 import {canEditOwnProfileBadges} from '@app/features/user/utils/ProfileEditAccess';
-import {getProfileDisplayBadges} from '@app/features/user/utils/ProfileUtils';
+import {nameReadsOnProfileTheme, profileThemeColors} from '@app/features/user/utils/ProfileGradient';
 import {
 	getProfileMembershipDisplayName,
 	resolveProfileGuildMembership,
 } from '@app/features/user/utils/ProfileGuildMembership';
+import {getProfileDisplayBadges} from '@app/features/user/utils/ProfileUtils';
 import {Trans} from '@lingui/react/macro';
 import {clsx} from 'clsx';
 import {observer} from 'mobx-react-lite';

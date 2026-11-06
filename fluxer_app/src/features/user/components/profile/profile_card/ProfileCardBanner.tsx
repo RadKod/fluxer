@@ -8,9 +8,9 @@ import {StatusAwareAvatar} from '@app/features/ui/components/StatusAwareAvatar';
 import FocusRing from '@app/features/ui/focus_ring/FocusRing';
 import styles from '@app/features/user/components/profile/profile_card/ProfileCardBanner.module.css';
 import {
+	getBannerCutoutCx,
 	getProfileAvatarDecorationBounds,
 	getProfileAvatarLeft,
-	getBannerCutoutCx,
 	PROFILE_POPOUT_BANNER_AVATAR_CUTOUT,
 	PROFILE_POPOUT_GEOMETRY,
 } from '@app/features/user/constants/UserProfileSurfaceGeometry';

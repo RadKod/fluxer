@@ -19,9 +19,9 @@ import {
 	type ProfileMediaHeaderProps,
 } from '@app/features/user/components/modals/user_profile_modal/UserProfileModalShared';
 import {
+	getBannerCutoutCx,
 	getProfileAvatarDecorationBounds,
 	getProfileAvatarLeft,
-	getBannerCutoutCx,
 	PROFILE_MODAL_BANNER_AVATAR_CUTOUT,
 	PROFILE_MODAL_GEOMETRY,
 	PROFILE_MODAL_GEOMETRY_STYLE,

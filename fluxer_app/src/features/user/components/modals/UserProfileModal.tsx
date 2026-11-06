@@ -62,8 +62,8 @@ import {canPerform} from '@app/features/user/utils/AccountGates';
 import {blockedDmConfirmModal, openDMChannelOrShowError} from '@app/features/user/utils/DMActionUtils';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import type * as ProfileDisplayUtils from '@app/features/user/utils/ProfileDisplayUtils';
-import {profileThemeColors} from '@app/features/user/utils/ProfileGradient';
 import {canOpenProfileEditor} from '@app/features/user/utils/ProfileEditAccess';
+import {profileThemeColors} from '@app/features/user/utils/ProfileGradient';
 import {
 	getProfileMembershipDisplayName,
 	resolveProfileGuildMembership,
