@@ -345,7 +345,7 @@ pub fn get_hardware_encoder_capability() -> HardwareEncoderCapability {
 }
 
 pub fn require_publish_codec_runtime_support(canonical_codec: &str) -> Result<(), String> {
-    let capability = hardware_encoder_capability();
+    let capability = get_hardware_encoder_capability();
     require_publish_codec_runtime_support_for_capability(canonical_codec, &capability)
 }
 
