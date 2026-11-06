@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#![recursion_limit = "256"]
+
 use axum::{
     Json, Router,
     body::{Body, Bytes, to_bytes},
@@ -168,7 +170,7 @@ fn image_data_url(bytes: usize) -> String {
 
 fn create_form(asset: &str) -> String {
     format!(
-        "type=avatar_ultra&availability=premium&name=Yitik+Melek&asset={}",
+        "type=avatar_decoration&availability=premium&name=Yitik+Melek&asset={}",
         urlencoding::encode(asset)
     )
 }
@@ -176,13 +178,17 @@ fn create_form(asset: &str) -> String {
 #[tokio::test]
 async fn new_pages_are_forbidden_without_their_acl() {
     let app = setup(&["admin:authenticate", "report:view"], false, "everyone").await;
-    for page in ["/cosmetics", "/badges", "/feed-moderation", "/shop"] {
+    for page in ["/cosmetics", "/badge-catalog", "/feed-moderation", "/shop"] {
         let (status, _, body) = get(&app, page).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{page}: {body}");
     }
     let posts = [
         ("/cosmetics", "/cosmetics?action=retire", "item_id=1"),
-        ("/badges", "/badges?action=grant", "user_id=1&badge_id=2"),
+        (
+            "/badge-catalog",
+            "/badge-catalog?action=grant",
+            "user_id=1&badge_id=2",
+        ),
         (
             "/feed-moderation",
             "/feed-moderation?action=delete-post",
@@ -219,7 +225,7 @@ async fn new_pages_open_with_their_acl() {
         "everyone",
     )
     .await;
-    for page in ["/cosmetics", "/badges", "/feed-moderation", "/shop"] {
+    for page in ["/cosmetics", "/badge-catalog", "/feed-moderation", "/shop"] {
         let (status, _, body) = get(&app, page).await;
         assert_eq!(status, StatusCode::OK, "{page}: {body}");
         assert!(body.contains(r#"id="admin-sidebar""#), "{page}: {body}");
@@ -230,7 +236,7 @@ async fn new_pages_open_with_their_acl() {
 #[tokio::test]
 async fn catalog_pages_escape_api_text() {
     let app = setup(&["*"], false, "everyone").await;
-    for page in ["/cosmetics", "/badges"] {
+    for page in ["/cosmetics", "/badge-catalog"] {
         let (status, _, body) = get(&app, page).await;
         assert_eq!(status, StatusCode::OK, "{page}: {body}");
         assert!(
@@ -245,12 +251,12 @@ async fn catalog_pages_escape_api_text() {
 }
 
 #[tokio::test]
-async fn cosmetics_form_offers_avatar_ultra() {
+async fn cosmetics_form_no_longer_offers_avatar_ultra() {
+    // sanalyer: ultra decorations are not created any more; an existing ultra row keeps its size form.
     let app = setup(&["*"], false, "everyone").await;
     let (status, _, page) = get(&app, "/cosmetics").await;
     assert_eq!(status, StatusCode::OK, "{page}");
-    assert!(page.contains(r#"value="avatar_ultra""#), "{page}");
-    assert!(page.contains("1,228,800 bytes"), "{page}");
+    assert!(!page.contains(r#"value="avatar_ultra""#), "{page}");
 }
 
 #[tokio::test]
@@ -267,7 +273,7 @@ async fn cosmetics_form_takes_an_ultra_image_at_the_size_limit() {
     assert_eq!(status, StatusCode::SEE_OTHER, "{body}");
     let sent = app.api.lock().unwrap().cosmetic_creates.clone();
     assert_eq!(sent.len(), 1);
-    assert_eq!(sent[0]["type"], "avatar_ultra");
+    assert_eq!(sent[0]["type"], "avatar_decoration");
     assert_eq!(sent[0]["asset"].as_str().map(str::len), Some(asset.len()));
 }
 
@@ -1125,7 +1131,7 @@ async fn mock_api(State(api): State<Shared>, method: Method, uri: Uri, body: Byt
                 "availability": "owned"
             }))
         }
-        (Method::GET, "/admin/badges") => json_response(json!([{
+        (Method::GET, "/admin/badge-catalog") => json_response(json!([{
             "id": "1700000000000000020",
             "icon": "9f3c2b1a",
             "description": XSS
@@ -1351,6 +1357,16 @@ fn user(id: &str, acls: &[String]) -> Value {
         "phone_verification_deferred": false,
         "has_totp": false,
         "authenticator_types": [],
+        "account_tier": "verified",
+        "badge_ids": [],
+        "claimed": true,
+        "date_of_birth_required": false,
+        "deletion_audit_log_reason": null,
+        "deletion_scheduled_at": null,
+        "deletion_scheduled_by": null,
+        "enforcement_decision_id": null,
+        "has_password": true,
+        "profile_badges": [],
         "has_verified_phone": false,
         "temp_banned_until": null,
         "pending_deletion_at": null,
@@ -1377,7 +1393,83 @@ fn instance_config(premium_mode: &str) -> Value {
             "voice_e2ee_scope": "guild_feature_only"
         },
         "self_hosted": true,
-        "policy": {"premium_mode": premium_mode, "single_community_guild_id": null}
+        "policy": {"premium_mode": premium_mode, "single_community_guild_id": null},
+        // Upstream made these sections required in the instance config response.
+        "captcha": {
+            "provider": "none",
+            "cost": 1000,
+            "max_counter": 100,
+            "enabled": false
+        },
+        "integrations": {
+            "gif": {
+                "klipy_api_key_set": false,
+                "effective_available": false
+            },
+            "youtube": {
+                "api_key_set": false,
+                "effective_available": false
+            },
+            "email": {
+                "delivery": null,
+                "effective_delivery": "off",
+                "delivery_state": "on",
+                "enabled": null,
+                "effective_enabled": false,
+                "provider": null,
+                "effective_provider": "smtp",
+                "from_email": null,
+                "from_name": null,
+                "smtp": {
+                    "host": null,
+                    "port": null,
+                    "username": null,
+                    "password_set": false,
+                    "tls_mode": null,
+                    "effective_tls_mode": null
+                },
+                "disable_new_ip_authorization": false,
+                "effective_disable_new_ip_authorization": false
+            },
+            "bluesky": {
+                "enabled": null,
+                "effective_enabled": false,
+                "client_name": null,
+                "client_uri": null,
+                "logo_uri": null,
+                "tos_uri": null,
+                "policy_uri": null,
+                "key_count": 0
+            }
+        },
+        "auth": {
+            "identifier_first": "auto",
+            "instant_accounts": {
+                "enabled": false,
+                "pow_escalation_per_hour": 10
+            },
+            "instant_account_availability": "available"
+        },
+        "accounts": {
+            "date_of_birth": "off",
+            "interaction_tier": "legacy",
+            "verification_basis": "auto",
+            "guild_join_gate": "off",
+            "unclaimed_account_cleanup": {
+                "mode": "off",
+                "inactive_days": 1,
+                "on_last_session_end": "off"
+            },
+            "dob_missing_cleanup": {
+                "mode": "off",
+                "inactive_days": 1
+            },
+            "inactivity_deletion": {
+                "mode": "off",
+                "inactive_days": 1,
+                "warning_lead_days": 1
+            }
+        }
     })
 }
 
@@ -1387,7 +1479,9 @@ fn test_config(api_endpoint: String, self_hosted: bool) -> AdminConfig {
         port: 0,
         secret_key_base: SECRET_KEY.to_owned(),
         base_path: String::new(),
+        api_public_endpoint: api_endpoint.clone(),
         api_endpoint,
+        sso: None,
         media_endpoint: "https://media.example.test".to_owned(),
         static_cdn_endpoint: "https://static.example.test".to_owned(),
         reports_bucket_origin: "https://reports.example.test".to_owned(),

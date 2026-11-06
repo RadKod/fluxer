@@ -7,8 +7,8 @@ use serde_json::Value;
 
 use super::client::{AdminApiClient, ApiError, ApiResult};
 use super::types::{
-    AdminCustomBadge, AdminCustomBadgeList, Badge, AdminUser, BadgeAssignment, BadgeListQuery, BadgeMove,
-    BadgeSettings, CustomBadgeFields, CustomBadgeType, UserMutationResponse,
+    AdminCustomBadge, AdminCustomBadgeList, AdminUser, Badge, BadgeAssignment, BadgeListQuery,
+    BadgeMove, BadgeSettings, CustomBadgeFields, CustomBadgeType, UserMutationResponse,
 };
 
 const LOOKUP_CHUNK: usize = 100;
@@ -48,7 +48,10 @@ fn parse_error(error: impl std::fmt::Display) -> ApiError {
 }
 
 impl AdminApiClient {
-    pub async fn list_custom_badges(&self, query: &BadgeListQuery) -> ApiResult<AdminCustomBadgeList> {
+    pub async fn list_custom_badges(
+        &self,
+        query: &BadgeListQuery,
+    ) -> ApiResult<AdminCustomBadgeList> {
         let after = query
             .after
             .as_deref()

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#![recursion_limit = "256"]
+
 use axum::{
     Json, Router,
     body::{Body, to_bytes},
@@ -379,7 +381,9 @@ fn config(api_endpoint: String) -> AdminConfig {
         port: 0,
         secret_key_base: SECRET.to_owned(),
         base_path: String::new(),
+        api_public_endpoint: api_endpoint.clone(),
         api_endpoint,
+        sso: None,
         media_endpoint: "https://media.example.test".to_owned(),
         static_cdn_endpoint: "https://static.example.test".to_owned(),
         reports_bucket_origin: "https://reports.example.test".to_owned(),
@@ -433,6 +437,13 @@ fn lookup_user() -> Value {
         "deletion_scheduled_at": null,
         "traits": [],
         "has_totp": false,
+        "has_password": true,
+        "claimed": true,
+        "account_tier": "verified",
+        "date_of_birth_required": false,
+        "enforcement_decision_id": null,
+        "badge_ids": [],
+        "profile_badges": [],
         "authenticator_types": [],
         "last_active_at": null,
         "last_active_ip": null,

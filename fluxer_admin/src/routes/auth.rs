@@ -708,7 +708,9 @@ fn sso_only_redirect(config: &crate::config::AdminConfig) -> Option<Response> {
 
 fn login_error_message(code: &str) -> &'static str {
     match code {
-        "sso_only" => "Signing in with your sanalyer account is turned off here. Use single sign-on.",
+        "sso_only" => {
+            "Signing in with your sanalyer account is turned off here. Use single sign-on."
+        }
         "oauth_failed" => "Authentication failed. Please try again.",
         "sso_failed" => "Single sign-on failed. Try again.",
         "sso_unavailable" => "Could not reach the sign-on provider. Try again in a moment.",

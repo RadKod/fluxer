@@ -253,7 +253,12 @@ pub const NAV_SECTIONS: &[NavSection] = &[
                 "cosmetics",
                 [acl::COSMETICS_MANAGE]
             ),
-            item!("Badge Catalog", "/badge-catalog", "badge-catalog", [acl::BADGES_MANAGE]),
+            item!(
+                "Badge Catalog",
+                "/badge-catalog",
+                "badge-catalog",
+                [acl::BADGES_MANAGE]
+            ),
         ],
     },
     NavSection {

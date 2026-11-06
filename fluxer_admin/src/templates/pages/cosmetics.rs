@@ -320,7 +320,10 @@ fn catalog_by_series(
     search: Option<&str>,
 ) -> Markup {
     let shown: Vec<&CosmeticItem> = match search {
-        Some(needle) => items.iter().filter(|item| item_matches(item, needle)).collect(),
+        Some(needle) => items
+            .iter()
+            .filter(|item| item_matches(item, needle))
+            .collect(),
         None => items.iter().collect(),
     };
     if shown.is_empty() {

@@ -298,6 +298,18 @@ impl Checkbox<'_> {
     }
 }
 
+// sanalyer: the Micup admin pages (referral, shop, username migration, moderation) still call the positional helper.
+pub fn checkbox(name: &str, value: &str, label: &str, checked: bool, enabled: bool) -> Markup {
+    Checkbox {
+        name,
+        value,
+        label,
+        checked,
+        enabled,
+    }
+    .render()
+}
+
 pub fn opt_out_checkbox(name: &str, label: &str) -> Markup {
     html! {
         input type="hidden" name={(name) "_present"} value="1";

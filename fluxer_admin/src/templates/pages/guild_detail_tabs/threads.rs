@@ -133,6 +133,8 @@ mod tests {
             secret_key_base: "test".into(),
             base_path: "/admin".into(),
             api_endpoint: "http://api.test".into(),
+            api_public_endpoint: "http://api.test".into(),
+            sso: None,
             media_endpoint: "http://media.test".into(),
             static_cdn_endpoint: String::new(),
             reports_bucket_origin: String::new(),

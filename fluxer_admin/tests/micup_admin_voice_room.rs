@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+#![recursion_limit = "256"]
+
 use axum::{
     Json, Router,
     body::{Body, Bytes, to_bytes},
@@ -395,7 +397,83 @@ fn instance_config(voice_room: Option<Value>) -> Value {
             "max_concurrent_guild_starts": 16,
             "voice_e2ee_scope": "guild_feature_only"
         },
-        "self_hosted": false
+        "self_hosted": false,
+        // Upstream made these sections required in the instance config response.
+        "captcha": {
+            "provider": "none",
+            "cost": 1000,
+            "max_counter": 100,
+            "enabled": false
+        },
+        "integrations": {
+            "gif": {
+                "klipy_api_key_set": false,
+                "effective_available": false
+            },
+            "youtube": {
+                "api_key_set": false,
+                "effective_available": false
+            },
+            "email": {
+                "delivery": null,
+                "effective_delivery": "off",
+                "delivery_state": "on",
+                "enabled": null,
+                "effective_enabled": false,
+                "provider": null,
+                "effective_provider": "smtp",
+                "from_email": null,
+                "from_name": null,
+                "smtp": {
+                    "host": null,
+                    "port": null,
+                    "username": null,
+                    "password_set": false,
+                    "tls_mode": null,
+                    "effective_tls_mode": null
+                },
+                "disable_new_ip_authorization": false,
+                "effective_disable_new_ip_authorization": false
+            },
+            "bluesky": {
+                "enabled": null,
+                "effective_enabled": false,
+                "client_name": null,
+                "client_uri": null,
+                "logo_uri": null,
+                "tos_uri": null,
+                "policy_uri": null,
+                "key_count": 0
+            }
+        },
+        "auth": {
+            "identifier_first": "auto",
+            "instant_accounts": {
+                "enabled": false,
+                "pow_escalation_per_hour": 10
+            },
+            "instant_account_availability": "available"
+        },
+        "accounts": {
+            "date_of_birth": "off",
+            "interaction_tier": "legacy",
+            "verification_basis": "auto",
+            "guild_join_gate": "off",
+            "unclaimed_account_cleanup": {
+                "mode": "off",
+                "inactive_days": 1,
+                "on_last_session_end": "off"
+            },
+            "dob_missing_cleanup": {
+                "mode": "off",
+                "inactive_days": 1
+            },
+            "inactivity_deletion": {
+                "mode": "off",
+                "inactive_days": 1,
+                "warning_lead_days": 1
+            }
+        }
     });
     if let Some(voice_room) = voice_room {
         config["voice_room"] = voice_room;
@@ -434,6 +512,16 @@ fn admin_user() -> Value {
         "phone_verification_deferred": false,
         "has_totp": false,
         "authenticator_types": [],
+        "account_tier": "verified",
+        "badge_ids": [],
+        "claimed": true,
+        "date_of_birth_required": false,
+        "deletion_audit_log_reason": null,
+        "deletion_scheduled_at": null,
+        "deletion_scheduled_by": null,
+        "enforcement_decision_id": null,
+        "has_password": true,
+        "profile_badges": [],
         "has_verified_phone": false,
         "temp_banned_until": null,
         "pending_deletion_at": null,
@@ -453,7 +541,9 @@ fn test_config(api_endpoint: String) -> AdminConfig {
         port: 0,
         secret_key_base: SECRET_KEY.to_owned(),
         base_path: String::new(),
+        api_public_endpoint: api_endpoint.clone(),
         api_endpoint,
+        sso: None,
         media_endpoint: "https://media.example.test".to_owned(),
         static_cdn_endpoint: "https://static.example.test".to_owned(),
         reports_bucket_origin: "https://reports.example.test".to_owned(),

@@ -84,6 +84,7 @@ pub(super) fn build_app_legal_update(form: &MultiValueForm) -> InstanceConfigUpd
                 terms_url: optional("app_terms_url"),
                 privacy_url: optional("app_privacy_url"),
                 guidelines_url: optional("app_guidelines_url"),
+                source_url: optional("app_source_url"),
             }),
         }),
         ..Default::default()

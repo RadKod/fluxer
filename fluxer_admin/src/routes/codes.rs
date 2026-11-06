@@ -179,7 +179,12 @@ async fn gift_codes_post(
         let duration_type = form
             .duration_type
             .as_deref()
-            .and_then(|value| GIFT_DURATION_TYPES.iter().copied().find(|known| *known == value))
+            .and_then(|value| {
+                GIFT_DURATION_TYPES
+                    .iter()
+                    .copied()
+                    .find(|known| *known == value)
+            })
             .unwrap_or("months");
         CodeGrant::Premium(duration_type, form.duration_quantity.unwrap_or(1).max(1))
     };

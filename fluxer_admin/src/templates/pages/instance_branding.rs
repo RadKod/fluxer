@@ -40,28 +40,28 @@ struct AssetGuidance {
 fn asset_guidance(kind: BrandingAssetKind) -> AssetGuidance {
     match kind {
         BrandingAssetKind::Logo => AssetGuidance {
-            help: "The large image next to the sign-in form, which is always dark. On a phone it only shows next to the name, when there is no wordmark and the product name is not Fluxer. Use a square or wide PNG or SVG in light colors with a transparent background, at least 256 pixels tall and up to 10 MB.",
-            empty: "If you leave it empty, the sign-in page uses the app icon or symbol. Without those, it shows the Fluxer logo while the product name is Fluxer, and no image for any other name.",
+            help: "The large image next to the sign-in form, which is always dark. On a phone it only shows next to the name, when there is no wordmark and the product name is not sanalyer. Use a square or wide PNG or SVG in light colors with a transparent background, at least 256 pixels tall and up to 10 MB.",
+            empty: "If you leave it empty, the sign-in page uses the app icon or symbol. Without those, it shows the sanalyer logo while the product name is sanalyer, and no image for any other name.",
         },
         BrandingAssetKind::Wordmark => AssetGuidance {
             help: "The name in your own lettering. It shows under the logo on the sign-in page, at the top of the sign-in page on phones and in the desktop app title bar. Use a wide PNG or SVG with a transparent background, at least 64 pixels tall and up to 10 MB, in a color that works on both light and dark title bars.",
-            empty: "If you leave it empty, the product name shows as plain text, or as the Fluxer wordmark while the product name is Fluxer.",
+            empty: "If you leave it empty, the product name shows as plain text, or as the sanalyer wordmark while the product name is sanalyer.",
         },
         BrandingAssetKind::SignInBackdrop => AssetGuidance {
             help: "Fills the sign-in page behind the form, darkened so the form stays easy to read. Use a landscape JPEG, PNG, WebP or AVIF, at least 1920 by 1080 pixels and up to 4 MB.",
             empty: "If you leave it empty, the sign-in page has the dark starry background.",
         },
         BrandingAssetKind::Icon => AssetGuidance {
-            help: "Shows when someone adds the web app to their home screen and next to the join date on profiles. It also fills in for the logo, symbol and favicon when those are empty. With an app icon or a symbol set, people without a profile picture get a plain default avatar instead of the Fluxer one. Use a square PNG, at least 512 by 512 pixels and up to 10 MB.",
-            empty: "If you leave it empty, those places show the Fluxer icon.",
+            help: "Shows when someone adds the web app to their home screen and next to the join date on profiles. It also fills in for the logo, symbol and favicon when those are empty. With an app icon or a symbol set, people without a profile picture get a plain default avatar instead of the sanalyer one. Use a square PNG, at least 512 by 512 pixels and up to 10 MB.",
+            empty: "If you leave it empty, those places show the sanalyer icon.",
         },
         BrandingAssetKind::Symbol => AssetGuidance {
-            help: "A small mark next to the instance name in the account switcher and the instance list. With a symbol or an app icon set, people without a profile picture get a plain default avatar instead of the Fluxer one. Use a square PNG or SVG with a transparent background that is still clear at 16 pixels, up to 10 MB.",
+            help: "A small mark next to the instance name in the account switcher and the instance list. With a symbol or an app icon set, people without a profile picture get a plain default avatar instead of the sanalyer one. Use a square PNG or SVG with a transparent background that is still clear at 16 pixels, up to 10 MB.",
             empty: "If you leave it empty, the lists use the app icon or logo, and a globe if both are empty.",
         },
         BrandingAssetKind::Favicon => AssetGuidance {
             help: "The small image in the browser tab. Use a square PNG, at least 64 by 64 pixels and up to 10 MB.",
-            empty: "If you leave it empty, the tab uses the app icon, or the Fluxer icon if that is empty too.",
+            empty: "If you leave it empty, the tab uses the app icon, or the sanalyer icon if that is empty too.",
         },
         BrandingAssetKind::FaviconDark => AssetGuidance {
             help: "Browsers set to a dark theme show this instead of the favicon. Add one when your favicon is too dark to see on a dark tab. Use a square PNG, at least 64 by 64 pixels and up to 10 MB.",
@@ -90,7 +90,7 @@ pub(super) fn branding_section(
                             "app_product_name",
                             "Product Name",
                             &app_public.branding.product_name,
-                            "Fluxer",
+                            "sanalyer",
                         ))
                         p class="text-xs leading-5 text-neutral-500" {
                             "Shows in the browser tab, the instance list and across the app. Without a wordmark, it also shows on the sign-in page and in the desktop app title bar."
@@ -104,7 +104,7 @@ pub(super) fn branding_section(
                             "#4641d9",
                         ))
                         p class="text-xs leading-5 text-neutral-500" {
-                            "Buttons, links and highlights across the app use this color, and phone browsers use it for their toolbar. Leave it empty to keep Fluxer's indigo."
+                            "Buttons, links and highlights across the app use this color, and phone browsers use it for their toolbar. Leave it empty to keep the default color."
                         }
                     }
                     div class="space-y-4 border-t border-neutral-200 pt-6" {
@@ -161,7 +161,7 @@ pub(super) fn branding_section(
                             ))
                         }
                         p class="text-xs leading-5 text-neutral-500" {
-                            "The web app links to the status page when loading takes a long time. Fluxer checks whether it is an Instatus page. If it is, the web app also reads its current incidents and maintenance automatically. Pages from other providers are only linked."
+                            "The web app links to the status page when loading takes a long time. sanalyer checks whether it is an Instatus page. If it is, the web app also reads its current incidents and maintenance automatically. Pages from other providers are only linked."
                         }
                     }
                     div class="space-y-2" {
@@ -372,7 +372,7 @@ fn branding_preview(host: &str, image_origins: &[String]) -> Markup {
                             }
                         }
                     }
-                    p class="bp-caption" { "The sign-in page on a phone, in a mobile browser or the Fluxer mobile app." }
+                    p class="bp-caption" { "The sign-in page on a phone, in a mobile browser or the sanalyer mobile app." }
                 }
                 div role="tabpanel" data-bp-panel="desktop" hidden {
                     div class="bp-titlebar-groups" {
@@ -592,7 +592,7 @@ const CUSTOM_CSS_COUNT_SCRIPT: &str = r#"
 
 const BRANDING_PREVIEW_SCRIPT: &str = r#"
 (function () {
-	var DEFAULT_NAME = 'Fluxer';
+	var DEFAULT_NAME = 'sanalyer';
 	var PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="rgb(82,82,91)"/><path d="M18 44l10-13 8 9 5-6 7 10z" fill="rgb(161,161,170)"/><circle cx="41" cy="23" r="4" fill="rgb(161,161,170)"/></svg>');
 	var KINDS = ['logo', 'wordmark', 'sign_in_backdrop', 'icon', 'symbol', 'favicon', 'favicon_dark'];
 	var TAB_FOR_TARGET = {name: 'sign_in', theme_color: 'phone', logo: 'sign_in', wordmark: 'sign_in', sign_in_backdrop: 'sign_in', icon: 'sign_in', symbol: 'instances', favicon: 'sign_in', favicon_dark: 'sign_in'};

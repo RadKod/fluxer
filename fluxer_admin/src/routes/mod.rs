@@ -10,17 +10,17 @@ mod billing_actions;
 pub mod codes;
 pub mod cosmetics;
 pub mod discovery;
-pub mod feed_moderation;
 pub mod enforcement;
+pub mod feed_moderation;
 mod guild_tabs;
 pub mod guilds;
 pub mod jobs;
 mod limit_config_actions;
 mod message_actions;
 pub mod messages;
-pub mod referral;
 pub mod operator_pass;
 pub mod payment_disputes;
+pub mod referral;
 pub mod registrations;
 pub mod reports;
 pub mod shop;
@@ -103,7 +103,9 @@ pub(crate) fn form_snowflake(form: &MultiValueForm, key: &str) -> Option<String>
 pub(crate) fn api_failure(action: &str, error: &ApiError) -> FlashData {
     tracing::warn!(%error, action, "admin API request failed");
     let detail = match error {
-        ApiError::Http { status, message } => match api_error_detail(message) {
+        ApiError::Http {
+            status, message, ..
+        } => match api_error_detail(message) {
             Some(reason) => format!("HTTP {status}: {reason}"),
             None => format!("HTTP {status}"),
         },
@@ -134,7 +136,12 @@ fn api_error_detail(message: &str) -> Option<String> {
         })
         .unwrap_or_default();
     if parts.is_empty() {
-        parts.extend(value.get("message").and_then(|m| m.as_str()).map(str::to_owned));
+        parts.extend(
+            value
+                .get("message")
+                .and_then(|m| m.as_str())
+                .map(str::to_owned),
+        );
     }
     if parts.is_empty() {
         None

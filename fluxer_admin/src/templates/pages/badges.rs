@@ -710,7 +710,9 @@ fn custom_badge_list(badges: &[AdminCustomBadge]) -> Markup {
 
 // sanalyer (Micup) badge catalog page.
 pub mod catalog {
-    use crate::templates::pages::cosmetics::{IMAGE_UPLOAD_SCRIPT, image_field, select_field, text_field};
+    use crate::templates::pages::cosmetics::{
+        IMAGE_UPLOAD_SCRIPT, image_field, select_field, text_field,
+    };
     use crate::{
         api::types::{Badge, FlashMessage},
         config::AdminConfig,
@@ -768,7 +770,14 @@ pub mod catalog {
             }
             script defer { (PreEscaped(IMAGE_UPLOAD_SCRIPT)) }
         };
-        admin_layout(config, auth, "Badge catalog", "badge-catalog", flash, content)
+        admin_layout(
+            config,
+            auth,
+            "Badge catalog",
+            "badge-catalog",
+            flash,
+            content,
+        )
     }
 
     fn icon_url(config: &AdminConfig, badge: &Badge) -> String {

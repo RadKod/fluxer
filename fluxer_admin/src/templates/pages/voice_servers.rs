@@ -260,7 +260,7 @@ fn server_card(
         }
         @if server.duplicate_api_key {
             p class="mb-4 text-sm text-red-700" {
-                "Another server uses the same API key. Fluxer checks webhooks from only one of them. Give each server its own key."
+                "Another server uses the same API key. sanalyer checks webhooks from only one of them. Give each server its own key."
             }
         }
         @if let Some(notes) = server.notes.as_deref() {

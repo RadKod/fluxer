@@ -93,7 +93,7 @@ pub(super) fn sso_config_section(
                         }.render())
                         p class="text-xs text-neutral-500" {
                             @if identity.is_username() {
-                                "Every SSO sign-in sets the person's username from the provider, and people can't change it in Fluxer."
+                                "Every SSO sign-in sets the person's username from the provider, and people can't change it in sanalyer."
                             } @else {
                                 "Only for instances where people sign in with a username."
                             }

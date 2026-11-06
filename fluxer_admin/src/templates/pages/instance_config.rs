@@ -2,16 +2,34 @@
 
 use crate::{
     api::types::{
-        AccountIdentitySettings, AppPublicConfigResponse, CaptchaProvider, CleanupMode,
-        DateOfBirthPolicy, EXPERIMENT_MAX_ROLLOUT_COUNTRY_CODES, EXPERIMENT_MAX_TARGETED_USERS,
-        EmailDeliveryMode, EmailDeliveryState, ExperimentDeliveryConfigResponse,
-        GUILD_VISITS_DEFAULT_SALT, GatewayRolloutConfigResponse, GuildJoinGate,
-        GuildVisitsConfigResponse, IdentifierFirstMode, InstanceConfigResponse,
-        InstanceNoticeResponse, InteractionTierMode, LastSessionCleanupMode, LimitConfigResponse,
-        PushRelayConfigResponse, VerificationBasis,
+        AccountIdentitySettings,
+        AppPublicConfigResponse,
+        CaptchaProvider,
+        CleanupMode,
+        DateOfBirthPolicy,
+        EXPERIMENT_MAX_ROLLOUT_COUNTRY_CODES,
+        EXPERIMENT_MAX_TARGETED_USERS,
+        EmailDeliveryMode,
+        EmailDeliveryState,
+        ExperimentDeliveryConfigResponse,
+        GUILD_VISITS_DEFAULT_SALT,
+        GatewayRolloutConfigResponse,
+        GuildJoinGate,
+        GuildVisitsConfigResponse,
+        IdentifierFirstMode,
+        InstanceConfigResponse,
+        InstanceNoticeResponse,
+        InteractionTierMode,
+        LastSessionCleanupMode,
+        LimitConfigResponse,
         // sanalyer (Micup): voice noise suppression and 3D voice rooms.
-        NoiseSuppressionBackend, VOICE_NS_MAX_GUILD_OVERRIDES, VOICE_ROOM_THEME_OPTIONS,
-        VoiceNoiseSuppressionConfigResponse, VoiceRoomConfigResponse,
+        NoiseSuppressionBackend,
+        PushRelayConfigResponse,
+        VOICE_NS_MAX_GUILD_OVERRIDES,
+        VOICE_ROOM_THEME_OPTIONS,
+        VerificationBasis,
+        VoiceNoiseSuppressionConfigResponse,
+        VoiceRoomConfigResponse,
     },
     config::AdminConfig,
     middleware::auth::AuthContext,
@@ -611,11 +629,8 @@ fn push_relay_section(
                     p class="text-xs text-neutral-500" {
                         "Until this is accepted official mobile app notifications are dropped. \
                          Self-hosted UnifiedPush and ntfy endpoints never reach the relay and are \
-                         unaffected. "
-                        a href="https://fluxer.com/push-relay" target="_blank" rel="noreferrer"
-                            class="text-neutral-900 underline decoration-neutral-300 hover:text-neutral-600 hover:decoration-neutral-500" {
-                            "Read the notice"
-                        }
+                         unaffected."
+                        // sanalyer: the upstream notice lives on fluxer.com; no sanalyer copy exists yet, so no link.
                     }
                     div class="grid grid-cols-1 gap-4 sm:grid-cols-2" {
                         (form_field_group("Accepted at", "push_relay_consent_accepted_at", false, None, None,
@@ -1399,8 +1414,9 @@ mod tests {
     #[test]
     fn gateway_rollout_section_shows_connection_cap_value_and_bounds() {
         for value in [0, 18000, 200000] {
-            let markup = gateway_rollout_section("/admin", TEST_FORM, &connection_cap_rollout(value))
-                .into_string();
+            let markup =
+                gateway_rollout_section("/admin", TEST_FORM, &connection_cap_rollout(value))
+                    .into_string();
             let input = markup
                 .split("id=\"gateway_rollout_max_connections\"")
                 .nth(1)

@@ -868,16 +868,16 @@ fn withdrawal_form(base: &str, csrf_token: &str, user_id: &str, purchase_id: &st
         html! {
             form method="post" data-admin-refresh-on-success=(REFRESH_TARGET) action={(base) (WALL_PATH) "/users/" (user_id) "/withdraw"}
                 class="flex flex-col gap-2"
-                onsubmit="return confirm('Record this withdrawal? Fluxer refunds the passes, ends them and emails the receipt.')" {
+                onsubmit="return confirm('Record this withdrawal? sanalyer refunds the passes, ends them and emails the receipt.')" {
                 (csrf_input(csrf_token))
                 input type="hidden" name="back" value="user";
                 input type="hidden" name="purchase_id" value=(purchase_id);
                 p class="text-sm text-neutral-600" {
-                    "Use this when the buyer withdrew under section 7.1 of the Operator Pass terms by email or in another clear way. Fluxer refunds the passes in full unless the payment was already refunded, ends them and emails the receipt to the account email."
+                    "Use this when the buyer withdrew under section 7.1 of the Operator Pass terms by email or in another clear way. sanalyer refunds the passes in full unless the payment was already refunded, ends them and emails the receipt to the account email."
                 }
                 (text_field("name", "Name of the buyer", 200))
                 label class="flex flex-col gap-1" {
-                    span class=(LABEL_CLASS) { "When Fluxer received it, in UTC" }
+                    span class=(LABEL_CLASS) { "When sanalyer received it, in UTC" }
                     input type="datetime-local" name="received_at" required class=(FORM_INPUT_CLASS);
                 }
                 label class="flex flex-col gap-1" {
@@ -1407,7 +1407,7 @@ pub fn operator_pass_releases_page(
     let content = html! {
         (page_header(
             "Operators Release List",
-            Some("Each year's list goes into a tagged Fluxer release and the homepage feature. Passes delivered by the cut-off are in it."),
+            Some("Each year's list goes into a tagged sanalyer release and the homepage feature. Passes delivered by the cut-off are in it."),
         ))
         div class="flex flex-col gap-6" {
             form method="get" action={(base) (RELEASES_PATH)} class="flex flex-wrap items-end gap-2" {

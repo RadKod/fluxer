@@ -252,7 +252,7 @@ pub(super) fn integrations_config_section(
                                 "integration_bluesky_client_name",
                                 "Client name",
                                 integrations.bluesky.client_name.as_deref().unwrap_or(""),
-                                "Fluxer",
+                                "sanalyer",
                             ))
                             (text_input(
                                 "integration_bluesky_client_uri",

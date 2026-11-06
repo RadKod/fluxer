@@ -501,7 +501,8 @@ mod catalog {
     }
 
     async fn create_catalog_badge(client: &AdminApiClient, form: &MultiValueForm) -> FlashData {
-        let (Some(icon), Some(description)) = (form.clean("icon"), form.clean("description")) else {
+        let (Some(icon), Some(description)) = (form.clean("icon"), form.clean("description"))
+        else {
             return FlashData::error("Icon and text are required");
         };
         let body = json!({"icon": icon, "description": description});
@@ -524,13 +525,20 @@ mod catalog {
         if body.is_empty() {
             return FlashData::error("Fill in at least one field to change");
         }
-        match client.update_catalog_badge(&badge_id, &Value::Object(body)).await {
+        match client
+            .update_catalog_badge(&badge_id, &Value::Object(body))
+            .await
+        {
             Ok(_) => FlashData::success(format!("Badge {badge_id} updated")),
             Err(error) => api_failure("update the badge", &error),
         }
     }
 
-    async fn set_user_badge(client: &AdminApiClient, form: &MultiValueForm, grant: bool) -> FlashData {
+    async fn set_user_badge(
+        client: &AdminApiClient,
+        form: &MultiValueForm,
+        grant: bool,
+    ) -> FlashData {
         let (Some(user_id), Some(badge_id)) = (
             form_snowflake(form, "user_id"),
             form_snowflake(form, "badge_id"),

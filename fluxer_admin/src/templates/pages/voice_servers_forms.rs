@@ -229,7 +229,7 @@ pub fn create_server_form(config: &AdminConfig, region_id: &str, csrf_token: &st
     })
 }
 
-const PUBLIC_IP_HELPER: &str = "The address the LiveKit server gives to clients. Fluxer shows it here, and rexctl voice test uses it to choose which address families to test. Leave it empty if you don't know it.";
+const PUBLIC_IP_HELPER: &str = "The address the LiveKit server gives to clients. sanalyer shows it here, and rexctl voice test uses it to choose which address families to test. Leave it empty if you don't know it.";
 
 const INTERNAL_URL_HELPER: &str = "Fluxer uses this address for the LiveKit control API and health checks. Leave it empty to use the endpoint.";
 

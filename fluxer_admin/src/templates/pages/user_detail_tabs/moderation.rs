@@ -21,7 +21,7 @@ use crate::{
                 FIELD_LABEL_CLASS, basis_fields, deletion_days_field, enforcement_fields,
                 field_label, internal_note_field, network_block_fields, required_mark,
             },
-            form::{Checkbox, csrf_input, danger_button, form_actions, submit_button},
+            form::{Checkbox, checkbox, csrf_input, danger_button, form_actions, submit_button},
             page_container::card_with_header,
         },
         pages::enforcement_decision::{
