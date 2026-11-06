@@ -33,7 +33,8 @@ vi.mock('framer-motion', () => ({
 	},
 }));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {getSnapshotOrNull: () => null}}));
-vi.mock('@app/features/accessibility/state/Accessibility', () => ({
+vi.mock('@app/features/accessibility/state/Accessibility', async (importOriginal) => ({
+	...(await importOriginal<object>()),
 	default: {},
 	setAccessibilityUserSettings: vi.fn(),
 }));

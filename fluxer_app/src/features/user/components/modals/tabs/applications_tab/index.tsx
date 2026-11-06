@@ -22,7 +22,6 @@ import Users from '@app/features/user/state/Users';
 import {accountGateReason} from '@app/features/user/utils/AccountGatePresentation';
 import {canPerform} from '@app/features/user/utils/AccountGates';
 import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
-import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
 import {WarningCircleIcon} from '@phosphor-icons/react';
 import {observer} from 'mobx-react-lite';

@@ -62,7 +62,6 @@ export class GuildRole {
 				hoist: updates.hoist ?? this.hoist,
 				mentionable: updates.mentionable ?? this.mentionable,
 				icon: updates.icon !== undefined ? updates.icon : this.icon,
-				unicode_emoji: updates.unicode_emoji !== undefined ? updates.unicode_emoji : this.unicodeEmoji,
 			},
 			{instanceId: this.instanceId},
 		);
@@ -86,7 +85,6 @@ export class GuildRole {
 			hoist: this.hoist,
 			mentionable: this.mentionable,
 			icon: this.icon,
-			unicode_emoji: this.unicodeEmoji,
 		};
 	}
 }

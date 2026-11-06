@@ -105,6 +105,8 @@ describe('FollowListModal rows', () => {
 		const element = document.createElement('div');
 		Object.defineProperty(element, 'offsetHeight', {value: 600});
 		Object.defineProperty(element, 'offsetWidth', {value: 400});
+		Object.defineProperty(element, 'clientHeight', {value: 600});
+		Object.defineProperty(element, 'clientWidth', {value: 400});
 		viewport.current = element;
 		vi.mocked(http.get).mockImplementation(async (_url, options) => {
 			const query = options?.query as Record<string, unknown> | undefined;

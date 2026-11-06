@@ -38,7 +38,9 @@ const editor = vi.hoisted(() => ({
 }));
 vi.mock('@app/features/analytics/commands/AnalyticsCommands', () => ({}));
 vi.mock('@app/features/guild/state/Guilds', () => ({default: {getGuild: () => editor.guild}}));
-vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {localInstanceDomain: 'fluxer.test'}}));
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({
+	default: {getSnapshotOrNull: () => null, hiddenRoleIds: [], localInstanceDomain: 'fluxer.test'},
+}));
 vi.mock('@app/features/theme/fonts/ScriptFontLoader', () => ({noteText: () => {}}));
 vi.mock('@app/features/app/utils/LimitResolverAdapter', () => ({
 	LimitResolver: {resolve: () => (editor.entitled ? 1 : 0)},
@@ -89,21 +91,31 @@ vi.mock('@app/features/ui/state/SettingsSidebar', () => ({
 vi.mock('@app/features/invite/state/Invites', () => ({default: {}}));
 vi.mock('@app/features/platform/transport/InstanceHTTP', () => ({currentInstanceTarget: () => ({})}));
 vi.mock('@app/features/platform/transport/RestTransport', () => ({http: requests}));
-vi.mock('@app/features/platform/utils/AppLogger', () => ({
-	Logger: class {
+vi.mock('@app/features/platform/utils/AppLogger', () => {
+	class Logger {
+		static create() {
+			return new Logger();
+		}
+		static refreshGlobalLogLevel() {}
 		debug() {}
+		info() {}
+		log() {}
+		warn() {}
 		error() {}
-	},
-}));
+	}
+	return {Logger};
+});
 vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor}));
 vi.mock('@lingui/react', () => ({useLingui: () => ({i18n: {locale: 'en'}})}));
-vi.mock('@phosphor-icons/react', () => ({
+vi.mock('@phosphor-icons/react', async (importOriginal) => ({
+	...(await importOriginal<object>()),
 	GridFourIcon: () => null,
 	ListIcon: () => null,
 	MagnifyingGlassIcon: () => null,
 	RowsIcon: () => null,
 	TrashIcon: () => null,
 	CrownIcon: () => null,
+	SmileyIcon: () => null,
 }));
 vi.mock('@app/features/game_activity/hooks/useGameActivity', () => ({useGameActivity: () => null}));
 vi.mock('@app/features/game_activity/components/GameActivityRowStatus', () => ({GameActivityRowStatus: () => null}));
@@ -194,7 +206,18 @@ vi.mock('@app/features/ui/hooks/useTextOverflow', () => ({useTextOverflow: () =>
 vi.mock('@app/features/user/components/PremiumUserBadge', () => ({PremiumUserBadge: () => null}));
 vi.mock('@app/features/user/components/VerifiedUserBadge', () => ({VerifiedUserBadge: () => null}));
 vi.mock('@app/features/user/utils/AvatarUtils', () => ({getGuildMemberDisplayAvatarURL: () => null}));
-vi.mock('@app/features/accessibility/state/Accessibility', () => ({default: {zoomLevel: 1}}));
+vi.mock('@app/features/accessibility/state/Accessibility', () => ({
+	default: {zoomLevel: 1},
+	DEFAULT_ZOOM_LEVEL: 1,
+	ACCESSIBILITY_CUSTOM_THEME_STORAGE_KEY: 'Accessibility:customThemeCss',
+	ACCESSIBILITY_CUSTOM_THEME_SYNC_STORAGE_KEY: 'Accessibility:customThemeCssSyncAcrossDevices',
+	setAccessibilityUserSettings: () => {},
+	readLocalCustomThemeCss: () => null,
+	normalizeCustomThemeCss: (css: string | null | undefined) => css ?? null,
+	DMMessagePreviewMode: {},
+	ChannelTypingIndicatorMode: {},
+	HdrDisplayMode: {},
+}));
 vi.mock('@app/features/app/components/layout/OutlineFrame', () => ({
 	OutlineFrame: ({children}: {children: ReactNode}) => children,
 }));
@@ -243,7 +266,13 @@ vi.mock('@app/features/permissions/utils/PermissionUtils', () => ({
 vi.mock('@app/features/presence/state/Presence', () => ({default: {}}));
 vi.mock('@app/features/ui/action_menu/RoleContextMenu', () => ({}));
 vi.mock('@app/features/ui/utils/AppZoomUtils', () => ({getAppRemScale: () => 1}));
-vi.mock('@app/features/user/state/Users', () => ({default: {currentUser: {id: 'me'}}}));
+vi.mock('@app/features/user/state/Users', () => ({
+	default: {currentUser: {id: 'me'}, getCurrentUser: () => ({id: 'me'})},
+}));
+// Upstream's image role icon field is not under test here.
+vi.mock('@app/features/guild/components/modals/guild_tabs/guild_roles_tab/RoleIconField', () => ({
+	RoleIconField: () => null,
+}));
 
 import {createRole, updateRole} from '@app/features/guild/commands/GuildCommands';
 import GuildRolesTab from '@app/features/guild/components/modals/guild_tabs/GuildRolesTab';
@@ -560,6 +589,7 @@ describe('role settings save and duplicate flow', () => {
 			permissions: '0',
 			hoist: false,
 			mentionable: false,
+			icon: null,
 		});
 		editor.guild = {id: '100', roles: {'401': role}, isOwner: () => true, toJSON: () => ({})} as unknown as Guild;
 		const container = document.createElement('div');

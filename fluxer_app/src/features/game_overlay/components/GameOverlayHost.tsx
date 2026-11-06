@@ -12,16 +12,16 @@ import {isGameOverlaySupported} from '@app/features/game_overlay/utils/GameOverl
 import GuildMembers from '@app/features/member/state/GuildMembers';
 import {AccountScopedWork} from '@app/features/platform/state/AccountScopedWork';
 import {Logger} from '@app/features/platform/utils/AppLogger';
-import {getElectronAPI} from '@app/features/ui/utils/NativeUtils';
-import type {User} from '@app/features/user/models/User';
-import * as AvatarUtils from '@app/features/user/utils/AvatarUtils';
-import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import {
 	copyStylesheetsIntoDocument,
 	observeDocumentStylesheets,
 	observeDocumentThemeAttributes,
 	syncDocumentThemeAttributes,
-} from '@app/features/voice/components/popout/PopoutWindowDocument';
+} from '@app/features/ui/popout_window/PopoutWindowDocument';
+import {getElectronAPI} from '@app/features/ui/utils/NativeUtils';
+import type {User} from '@app/features/user/models/User';
+import * as AvatarUtils from '@app/features/user/utils/AvatarUtils';
+import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import {useVoiceParticipantAvatarEntries} from '@app/features/voice/components/VoiceParticipantAvatarList';
 import MediaEngine, {useMediaEngineVersion} from '@app/features/voice/engine/MediaEngineFacade';
 import {MicrophoneIcon, MicrophoneSlashIcon, SpeakerSlashIcon} from '@phosphor-icons/react';

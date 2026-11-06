@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {GatewayConnectionRole} from '@app/features/gateway/transport/GatewayConnectionRole';
 import {GatewaySocket} from '@app/features/gateway/transport/GatewaySocket';
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 
@@ -27,7 +26,6 @@ function createSocket(): GatewaySocket {
 		},
 		isMobileLayout: () => false,
 		geo: () => ({latitude: null, longitude: null}),
-		role: GatewayConnectionRole.FOREGROUND,
 	});
 }
 

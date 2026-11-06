@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {User} from '@app/features/user/models/User';
+import {AccountTiers, TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
 import type React from 'react';
 import {act, createElement} from 'react';
 import {createRoot, type Root} from 'react-dom/client';
@@ -15,12 +16,18 @@ const harness = vi.hoisted(() => ({
 	pop: vi.fn(),
 	toast: vi.fn(),
 }));
-const runtime = vi.hoisted(() => ({usernameMigration: {state: 'selecting'}, usesUniqueUsernames: false}));
+const runtime = vi.hoisted(() => ({
+	usernameMigration: {state: 'selecting'},
+	usesUniqueUsernames: false,
+	getSnapshotOrNull: () => null,
+	getSnapshot: () => ({sso: null}),
+}));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: runtime}));
 vi.mock('@app/features/user/state/Users', () => ({default: {handleUserUpdate: vi.fn()}}));
 vi.mock('@app/features/app/utils/LimitResolverAdapter', () => ({LimitResolver: {resolve: () => 0}}));
 vi.mock('@app/features/premium/utils/PremiumUtils', () => ({
 	getPremiumProductName: () => 'Plus',
+	getPremiumProductFullName: () => 'Plus',
 	shouldShowPremiumFeatures: () => false,
 }));
 vi.mock('@app/features/premium/commands/PremiumModalCommands', () => ({open: vi.fn()}));
@@ -32,7 +39,10 @@ vi.mock('@app/features/ui/plutonium_upsell/PlutoniumUpsell', () => ({PlutoniumUp
 vi.mock('@app/features/ui/tooltip/Tooltip', () => ({Tooltip: ({children}: {children: React.ReactNode}) => children}));
 vi.mock('@app/features/ui/warning_alert/WarningAlert', () => ({WarningAlert: () => null}));
 vi.mock('@app/features/user/utils/DateFormatting', () => ({getFormattedDateTime: () => ''}));
-vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({EXAMPLE_FLUXER_TAG: 'Alice#1234'}));
+vi.mock('@app/features/app/config/I18nDisplayConstants', async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	EXAMPLE_FLUXER_TAG: 'Alice#1234',
+}));
 vi.mock('@app/features/user/commands/UsernameCommands', () => ({
 	checkUsernameAvailability: harness.check,
 	getUsernameStatus: harness.status,
@@ -91,6 +101,8 @@ vi.mock('@app/features/app/hooks/useFormSubmit', () => ({
 	}) => ({handleSubmit: form.handleSubmit(onSubmit), isSubmitting: false}),
 }));
 
+// AccountTierPrompt reads AccountGatePresentation at load; loading it first keeps that import cycle in app order.
+import '@app/features/auth/utils/AccountTierPrompt';
 import {FluxerTagChangeModal} from './FluxerTagChangeModal';
 import {UsernameSection} from './tabs/my_profile_tab/MyProfileTabUsernameSection';
 import {UsernamePickerModal} from './UsernamePickerModal';
@@ -227,7 +239,18 @@ describe('username selection modal', () => {
 			changeAvailableAt: '2999-10-23T00:00:00Z',
 		});
 		await act(async () =>
-			root.render(createElement(UsernameSection, {user: legacyUser, isClaimed: true, isEmailVerified: true})),
+			root.render(
+				createElement(UsernameSection, {
+					user: legacyUser,
+					profileGate: {
+						allowed: true,
+						action: TierGatedActions.PROFILE_CUSTOMIZE,
+						tier: AccountTiers.VERIFIED,
+						need: null,
+						errorCode: null,
+					},
+				}),
+			),
 		);
 		expect(harness.status).toHaveBeenCalledOnce();
 		expect(container.querySelector('time')?.getAttribute('datetime')).toBe('2999-10-23T00:00:00Z');

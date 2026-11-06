@@ -53,8 +53,11 @@ function toHex(value: string): string {
 	return `#${f(0)}${f(8)}${f(4)}`;
 }
 
+// Upstream's root block also carries .theme-dark; the coal block after it still decides every token it sets.
+const ROOT_SELECTOR = ':root,\n.theme-dark';
+
 function theme(css: string, selector: string | null): Tokens {
-	const root = block(css, ':root');
+	const root = block(css, ROOT_SELECTOR);
 	return selector ? new Map([...root, ...block(css, selector)]) : root;
 }
 
@@ -66,7 +69,9 @@ function hexHsl(hex: string): [number, number] {
 	if (d === 0) return [0, 0];
 	const l = (max + min) / 2;
 	const s = d / (1 - Math.abs(2 * l - 1));
-	const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+	let h = (r - g) / d + 4;
+	if (max === r) h = ((g - b) / d) % 6;
+	else if (max === g) h = (b - r) / d + 2;
 	return [(h * 60 + 360) % 360, s * 100];
 }
 
@@ -88,7 +93,7 @@ describe('sanalyer v1 palette in the coal and dark themes', () => {
 	beforeAll(async () => {
 		await import('@app_scripts/GenerateColorSystem');
 		css = written.css;
-		expect(css).toContain(':root {');
+		expect(css).toContain(`${ROOT_SELECTOR} {`);
 	});
 
 	it('renders one block for coal and dark, so the two themes are identical', () => {

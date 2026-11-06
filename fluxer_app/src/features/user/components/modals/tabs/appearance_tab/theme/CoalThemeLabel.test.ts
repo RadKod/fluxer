@@ -16,10 +16,7 @@ function translation(locale: string): string | undefined {
 
 describe('coal theme tooltip', () => {
 	it('describes near-black surfaces in the source and every catalog', () => {
-		const source = readFileSync(
-			`${SRC_ROOT}features/user/components/modals/tabs/appearance_tab/theme/ThemeTabContent.tsx`,
-			'utf8',
-		);
+		const source = readFileSync(`${SRC_ROOT}features/theme_settings/components/ThemeSelector.tsx`, 'utf8');
 		expect(source).toContain(`message: '${MESSAGE}',`);
 		expect(source).not.toContain('pitch-black');
 		const locales = readdirSync(LOCALES, {withFileTypes: true}).filter((entry) => entry.isDirectory());

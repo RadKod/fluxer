@@ -47,8 +47,6 @@ vi.mock('@app/features/moderation/utils/MatureContentGeoUtils', () => ({
 }));
 
 const session = observable({userId: null as string | null});
-const {setSyncedFieldSessionManager} = await import('@app/features/user/state/SyncedField');
-setSyncedFieldSessionManager(session);
 // Idle and LocalPresence import each other; loading Idle first keeps its timer from calling a half-loaded store.
 await import('@app/features/ui/state/Idle');
 const {default: UserSettings} = await import('@app/features/user/state/UserSettings');

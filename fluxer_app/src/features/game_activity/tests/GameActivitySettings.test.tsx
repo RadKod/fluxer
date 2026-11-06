@@ -160,7 +160,7 @@ vi.mock('@app/features/app/components/shared/ExternalLink', () => ({
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({
 	default: {privacyUrl: 'https://micup.test/privacy', isSelfHosted: () => false},
 }));
-vi.mock('@app/app/Routes', () => ({Routes: {privacy: () => '/privacy'}}));
+vi.mock('@app/app/Routes', () => ({Routes: {privacy: () => 'https://micup.test/privacy'}}));
 vi.mock('@app/features/platform/utils/AppLogger', () => ({
 	Logger: class {
 		warn() {}

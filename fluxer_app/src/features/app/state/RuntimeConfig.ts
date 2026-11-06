@@ -927,6 +927,11 @@ class RuntimeConfig {
 		return this.appPublic.branding.product_name;
 	}
 
+	// Micup: the instance icon (branding icon_url) is the feed tile glyph on the guild rail.
+	get iconUrl(): string | null {
+		return this.appPublic.branding.icon_url;
+	}
+
 	get termsUrl(): string | null {
 		return this.appPublic.legal.terms_url;
 	}

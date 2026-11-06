@@ -13,12 +13,12 @@ vi.mock('@lingui/react/macro', () => ({
 	useLingui: () => ({i18n: {_: (descriptor: {message: string}) => descriptor.message}}),
 }));
 vi.mock('@app/app/Router', () => ({router: {name: 'router'}}));
-vi.mock('@app/app/Routes', () => ({Routes: {privacy: () => 'https://micup.gg/marketing/privacy'}}));
+// Routes.privacy() prefers the instance's own privacy URL over the marketing page.
+vi.mock('@app/app/Routes', () => ({Routes: {privacy: () => 'https://micup.gg/gizlilik'}}));
 vi.mock('@app/features/app/config/Config', () => ({
-	default: {PUBLIC_GA4_MEASUREMENT_ID: 'G-TEST1234', PUBLIC_BUILD_VERSION: '9.9.9'},
+	default: {PUBLIC_GA4_MEASUREMENT_ID: 'G-TEST1234', BUILD_VERSION: '9.9.9'},
 }));
 vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PRODUCT_NAME: 'sanalyer'}));
-vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {privacyUrl: 'https://micup.gg/gizlilik'}}));
 vi.mock('@app/features/ui/utils/NativeUtils', () => ({isDesktop: () => false}));
 vi.mock('@app/features/analytics/state/AnalyticsConsent', () => ({default: state}));
 vi.mock('@app/features/analytics/commands/AnalyticsCommands', () => commands);

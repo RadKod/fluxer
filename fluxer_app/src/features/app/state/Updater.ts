@@ -69,7 +69,6 @@ const WEB_CHECK_TIMEOUT_MS = 15 * 1000;
 const NATIVE_CHECK_TIMEOUT_MS = 30 * 1000;
 const VERSION_ENDPOINT = '/version.json';
 const CURRENT_BUILD_VERSION = Config.BUILD_VERSION ?? null;
-const ALLOWED_WEB_UPDATE_HOSTS = new Set<string>([...OFFICIAL_WEB_APP_HOSTS, 'sanalyer.com']);
 
 function loadUpdaterModals(): Promise<typeof UpdaterModalCommands> {
 	return import('@app/features/updater/commands/UpdaterModalCommands');

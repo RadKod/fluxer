@@ -53,8 +53,8 @@ import UserSettings from '@app/features/user/state/UserSettings';
 import Users from '@app/features/user/state/Users';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
 import * as ProfileDisplayUtils from '@app/features/user/utils/ProfileDisplayUtils';
-import {profileThemeColors} from '@app/features/user/utils/ProfileGradient';
 import {canEditOwnProfileBadges, canOpenProfileEditor} from '@app/features/user/utils/ProfileEditAccess';
+import {profileThemeColors} from '@app/features/user/utils/ProfileGradient';
 import {createMockProfile, getProfileDisplayBadges} from '@app/features/user/utils/ProfileUtils';
 import {copyVoiceDiagnostics} from '@app/features/voice/commands/VoiceDiagnosticsCommands';
 import MediaEngine from '@app/features/voice/engine/MediaEngineFacade';
@@ -445,15 +445,19 @@ export const UserAreaPopout = observer(() => {
 						onAvatarClick={openUserProfile}
 						data-flx="app.floating.user-area-popout.profile-card-banner"
 					/>
-					<UserProfileBadges
-						badges={getProfileDisplayBadges(profile)}
-						onEditBadges={canEditOwnProfileBadges(currentUser.id, profile) ? openBadgeSettings : undefined}
-						data-flx="app.floating.user-area-popout.user-profile-badges"
-					/>
 					<ProfileCardContent isWebhook={false} data-flx="app.floating.user-area-popout.profile-card-content">
 						<ProfileCardUserInfo
 							displayName={displayName}
 							user={currentUser}
+							// Micup: the badge row sits right under the name, in the modal's row layout.
+							belowName={
+								<UserProfileBadges
+									badges={getProfileDisplayBadges(profile)}
+									onEditBadges={canEditOwnProfileBadges(currentUser.id, profile) ? openBadgeSettings : undefined}
+									isModal={true}
+									data-flx="app.floating.user-area-popout.user-profile-badges"
+								/>
+							}
 							pronouns={profileData?.pronouns}
 							showUsername={true}
 							isClickable={false}

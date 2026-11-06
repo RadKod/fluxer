@@ -3,7 +3,7 @@
 import Accessibility from '@app/features/accessibility/state/Accessibility';
 import {clamp} from '@app/features/ui/components/slider/SliderMath';
 import {FloatingPaneResizeHandles} from '@app/features/ui/floating_pane';
-import PiP, {type PiPContentType} from '@app/features/ui/state/PiP';
+import PiP, {PIP_ACTIVITY_DEFAULT_WIDTH, PIP_DEFAULT_WIDTH, type PiPContentType} from '@app/features/ui/state/PiP';
 import {appZoomClientPoint, getAppZoomViewportSize} from '@app/features/ui/utils/AppZoomUtils';
 import {canUseWindowFocusedHoverControls} from '@app/features/ui/utils/WindowFocusInteractionGuard';
 import styles from '@app/features/voice/components/PiPOverlay.module.css';
@@ -36,6 +36,14 @@ const RESIZE_PICTURE_IN_PICTURE_DESCRIPTOR = msg({
 	comment: 'Aria label on the PiP resize handle.',
 });
 const PIP_DRAG_THRESHOLD_SQ = 9;
+const PIP_KEYBOARD_STEP = 16;
+const PIP_KEYBOARD_LARGE_STEP = 64;
+const OPPOSITE_CORNER: Record<Corner, Corner> = {
+	'top-left': 'bottom-right',
+	'top-right': 'bottom-left',
+	'bottom-right': 'top-left',
+	'bottom-left': 'top-right',
+};
 
 interface DragListeners {
 	move: (event: PointerEvent) => void;
@@ -83,7 +91,8 @@ export const PiPWindow = observer(function PiPWindow({
 		const viewport = getAppZoomViewportSize();
 		return clampPiPWidth(shape, PiP.getWidth(type), viewport.width, viewport.height);
 	});
-	const [isResizing, setIsResizing] = useState(false);
+	const [resizeEdge, setResizeEdge] = useState<ResizeEdge | null>(null);
+	const isResizing = resizeEdge !== null;
 	const [isDragging, setIsDragging] = useState(false);
 	const pipWidthRef = useRef(pipWidth);
 	const viewportSizeRef = useRef(viewportSize);
@@ -309,7 +318,7 @@ export const PiPWindow = observer(function PiPWindow({
 			cleanupResizeListeners();
 			resizeStateRef.current = null;
 			isResizingRef.current = false;
-			setIsResizing(false);
+			setResizeEdge(null);
 			setPipWidth(pipWidthRef.current);
 			PiP.setWidth(pipWidthRef.current, type);
 			snapToCornerForGeometry(cornerRef.current, pipWidthRef.current, viewportSizeRef.current);
@@ -317,14 +326,14 @@ export const PiPWindow = observer(function PiPWindow({
 		[cancelPendingResizeFrame, cleanupResizeListeners, flushResizePointerMove, snapToCornerForGeometry, type],
 	);
 	const createResizePointerDownHandler = useCallback(
-		(edge: ResizeEdge) => (event: React.PointerEvent<HTMLButtonElement>) => {
+		(edge: ResizeEdge) => (event: React.PointerEvent<HTMLElement>) => {
 			if (event.button !== 0) return;
 			if (!canUseWindowFocusedHoverControls()) return;
 			event.preventDefault();
 			event.stopPropagation();
 			stopSnapAnimations();
 			isResizingRef.current = true;
-			setIsResizing(true);
+			setResizeEdge(edge);
 			const pointer = appZoomClientPoint(event.clientX, event.clientY);
 			resizeStateRef.current = {
 				pointerId: event.pointerId,
@@ -347,6 +356,55 @@ export const PiPWindow = observer(function PiPWindow({
 		[handleResizePointerMove, handleResizePointerUp, stopSnapAnimations, x, y],
 	);
 	useEffect(() => cleanupResizeListeners, [cleanupResizeListeners]);
+	const applyWidth = useCallback(
+		(width: number) => {
+			if (isDraggingRef.current || isResizingRef.current) return;
+			const viewport = viewportSizeRef.current;
+			const nextWidth = clampPiPWidth(shape, width, viewport.width, viewport.height);
+			pipWidthRef.current = nextWidth;
+			widthMV.set(nextWidth);
+			setPipWidth(nextWidth);
+			PiP.setWidth(nextWidth, type);
+			snapToCornerForGeometry(cornerRef.current, nextWidth, viewport, {immediate: true});
+		},
+		[shape, snapToCornerForGeometry, type, widthMV],
+	);
+	const gripCorner = OPPOSITE_CORNER[corner];
+	const handleGripKeyDown = useCallback(
+		(event: React.KeyboardEvent<HTMLButtonElement>) => {
+			const step = event.shiftKey ? PIP_KEYBOARD_LARGE_STEP : PIP_KEYBOARD_STEP;
+			const growsRight = gripCorner.endsWith('right');
+			const growsDown = gripCorner.startsWith('bottom');
+			let delta: number;
+			switch (event.key) {
+				case 'ArrowRight':
+					delta = growsRight ? step : -step;
+					break;
+				case 'ArrowLeft':
+					delta = growsRight ? -step : step;
+					break;
+				case 'ArrowDown':
+					delta = growsDown ? step : -step;
+					break;
+				case 'ArrowUp':
+					delta = growsDown ? -step : step;
+					break;
+				default:
+					return;
+			}
+			event.preventDefault();
+			event.stopPropagation();
+			applyWidth(pipWidthRef.current + delta);
+		},
+		[applyWidth, gripCorner],
+	);
+	const handleGripDoubleClick = useCallback(
+		(event: React.MouseEvent<HTMLButtonElement>) => {
+			event.stopPropagation();
+			applyWidth(type === 'activity' ? PIP_ACTIVITY_DEFAULT_WIDTH : PIP_DEFAULT_WIDTH);
+		},
+		[applyWidth, type],
+	);
 	const cancelPendingDragFrame = useCallback(() => {
 		if (dragFrameRef.current !== null) {
 			cancelAnimationFrame(dragFrameRef.current);
@@ -492,12 +550,8 @@ export const PiPWindow = observer(function PiPWindow({
 	);
 	return (
 		<motion.div
-			className={clsx(
-				styles.container,
-				className,
-				isResizing && styles.containerResizing,
-				(isDragging || isResizing) && styles.containerInteractionActive,
-			)}
+			className={clsx(styles.container, className, (isDragging || isResizing) && styles.containerInteractionActive)}
+			data-resize-edge={resizeEdge ?? undefined}
 			style={{
 				x,
 				y,
@@ -515,6 +569,9 @@ export const PiPWindow = observer(function PiPWindow({
 			<FloatingPaneResizeHandles
 				label={i18n._(RESIZE_PICTURE_IN_PICTURE_DESCRIPTOR)}
 				createResizeHandler={createResizePointerDownHandler}
+				gripCorner={gripCorner}
+				onGripKeyDown={handleGripKeyDown}
+				onGripDoubleClick={handleGripDoubleClick}
 				data-flx="voice.pip-overlay.pi-p-window.floating-pane-resize-handles"
 			/>
 		</motion.div>

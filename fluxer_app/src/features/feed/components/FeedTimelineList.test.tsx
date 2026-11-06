@@ -154,6 +154,8 @@ describe('FeedTimelineList', () => {
 	const scrollerFor = (viewport: HTMLElement) => {
 		Object.defineProperty(viewport, 'offsetHeight', {value: 600});
 		Object.defineProperty(viewport, 'offsetWidth', {value: 600});
+		Object.defineProperty(viewport, 'clientHeight', {value: 600});
+		Object.defineProperty(viewport, 'clientWidth', {value: 600});
 		return {current: {getViewportElement: () => viewport}} as never;
 	};
 	const renderList = (timelineKey: string, viewport: HTMLElement, onOpenPost?: () => void) =>
@@ -222,6 +224,8 @@ describe('FeedTimelineList', () => {
 	const renderInScroller = (timelineKey: string, viewport: HTMLElement) => {
 		Object.defineProperty(viewport, 'offsetHeight', {value: 600});
 		Object.defineProperty(viewport, 'offsetWidth', {value: 600});
+		Object.defineProperty(viewport, 'clientHeight', {value: 600});
+		Object.defineProperty(viewport, 'clientWidth', {value: 600});
 		const scrollerRef: RefObject<ScrollerHandle | null> = {current: null};
 		const Scroller = ({children}: {children: ReactNode}) => {
 			useImperativeHandle(scrollerRef, () => ({getViewportElement: () => viewport}) as unknown as ScrollerHandle);

@@ -23,7 +23,9 @@ vi.mock('@lingui/react/macro', () => ({
 	useLingui: () => ({i18n: {_: (descriptor: {message: string}) => descriptor.message, locale: 'en'}}),
 	Trans: passThrough,
 }));
-vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {isSelfHosted: () => true}}));
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({
+	default: {personalNotesEnabled: true, getSnapshotOrNull: () => null, isSelfHosted: () => true},
+}));
 vi.mock('@app/features/platform/components/router/RouterReact', () => ({
 	useLocation: () => ({pathname: state.pathname}),
 }));
@@ -31,13 +33,18 @@ vi.mock('@app/features/navigation/utils/RouterUtils', () => routerUtils);
 vi.mock('@app/features/premium/commands/PremiumModalCommands', () => premiumModalCommands);
 vi.mock('@app/features/premium/utils/PremiumUtils', () => ({
 	getPremiumProductName: () => 'sanalyer Plus',
+	getPremiumProductFullName: () => 'sanalyer Plus',
 	shouldShowPremiumFeatures: () => state.premium,
 	isPremiumPageAvailable: () => state.premiumPage,
 }));
 vi.mock('@app/features/shop/utils/ShopAvailability', () => ({isShopPageAvailable: () => state.shop}));
 vi.mock('@app/features/ui/state/MobileLayout', () => ({default: {isMobileLayout: () => state.mobile}}));
-vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PREMIUM_PRODUCT_NAME: 'sanalyer Plus'}));
-vi.mock('@app/features/i18n/utils/CommonMessageDescriptors', () => ({
+vi.mock('@app/features/app/config/I18nDisplayConstants', async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	PREMIUM_PRODUCT_NAME: 'sanalyer Plus',
+}));
+vi.mock('@app/features/i18n/utils/CommonMessageDescriptors', async (importOriginal) => ({
+	...(await importOriginal<object>()),
 	PERSONAL_NOTES_DESCRIPTOR: {message: 'Personal notes'},
 }));
 vi.mock('@app/features/shop/utils/ShopMessageDescriptors', () => ({SHOP_DESCRIPTOR: {message: 'Shop'}}));
@@ -68,11 +75,20 @@ vi.mock('@app/features/navigation/commands/NavigationCommands', () => ({selectCh
 vi.mock('@app/features/navigation/state/SelectedChannel', () => ({
 	default: {selectedChannelIds: new Map(), recentChannelVisits: []},
 }));
-vi.mock('@app/features/platform/utils/AppLogger', () => ({
-	Logger: class {
+vi.mock('@app/features/platform/utils/AppLogger', () => {
+	class Logger {
+		static create() {
+			return new Logger();
+		}
+		static refreshGlobalLogLevel() {}
+		debug() {}
+		info() {}
+		log() {}
+		warn() {}
 		error() {}
-	},
-}));
+	}
+	return {Logger};
+});
 vi.mock('@app/features/relationship/components/modals/AddFriendSheet', () => ({AddFriendSheet: () => null}));
 vi.mock('@app/features/relationship/state/Relationships', () => ({default: {getRelationships: () => []}}));
 vi.mock('@app/features/search/state/QuickSwitcher', () => ({default: {show: vi.fn()}}));
@@ -92,6 +108,8 @@ vi.mock('@app/features/ui/tooltip/Tooltip', () => ({Tooltip: passThrough}));
 vi.mock('@app/features/user/commands/UserCommands', () => ({preloadDMMessages: vi.fn(async () => {})}));
 vi.mock('@app/features/user/state/Users', () => ({default: {currentUser: {id: '1'}}}));
 
+// AccountTierPrompt reads AccountGatePresentation at load; loading it first keeps that import cycle in app order.
+await import('@app/features/auth/utils/AccountTierPrompt');
 const {DMList} = await import('@app/features/channel/components/direct_message/DirectMessageList');
 const {default: pageItemStyles} = await import(
 	'@app/features/channel/components/direct_message/DMListPageItems.module.css'

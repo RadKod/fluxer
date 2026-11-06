@@ -23,7 +23,11 @@ vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor})
 vi.mock('@lingui/react/macro', () => ({useLingui: () => ({i18n}), Trans: Passthrough}));
 vi.mock('@app/features/platform/transport/RestTransport', () => ({http}));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({
-	default: {getSnapshotOrNull: () => runtime.snapshot, isSelfHosted: () => runtime.selfHosted},
+	default: {
+		interactionTier: 'legacy',
+		getSnapshotOrNull: () => runtime.snapshot,
+		isSelfHosted: () => runtime.selfHosted,
+	},
 }));
 vi.mock('@app/features/ui/commands/ModalCommands', () => ({
 	push: vi.fn(),
@@ -63,7 +67,12 @@ vi.mock('@app/features/auth/flow/AuthErrorState', () => ({
 vi.mock('@app/features/auth/flow/AuthLoadingState', () => ({AuthLoadingState: Nothing}));
 vi.mock('@app/features/auth/flow/AuthBottomLink', () => ({AuthBottomLink: Nothing}));
 vi.mock('@app/features/auth/flow/AuthRegisterFormCore', () => ({AuthRegisterFormCore: Nothing}));
-vi.mock('@app/features/auth/flow/AuthSsoPanel', () => ({AuthSsoPanel: Nothing, resolveAuthPanelSso: () => null}));
+vi.mock('@app/features/auth/flow/AuthSsoPanel', () => ({
+	AuthSsoPanel: Nothing,
+	resolveAuthPanelSso: () => null,
+	isSsoLoginEnforced: () => false,
+	isInstanceSsoAvailable: () => false,
+}));
 vi.mock('@app/features/auth/flow/DesktopDeepLinkPrompt', () => ({DesktopDeepLinkPrompt: Nothing}));
 vi.mock('@app/features/auth/flow/DesktopHandoffMfaStep', () => ({DesktopHandoffMfaStep: Nothing}));
 vi.mock('@app/features/auth/flow/AuthRouterLink', () => ({AuthRouterLink: Nothing}));
@@ -94,6 +103,7 @@ const {parseInstanceDiscoveryDocument} = await import('@fluxer/instance_bootstra
 
 const layout = {
 	setSplashUrl: vi.fn(),
+	setBrandSnapshot: vi.fn(),
 	setCardVariant: vi.fn(),
 	setContentMode: vi.fn(),
 	setSplashCardAlignment: vi.fn(),
@@ -145,7 +155,7 @@ describe('gift code pages', () => {
 		};
 		const snapshot = runtimeSnapshotFromDiscovery(parseInstanceDiscoveryDocument(discovery));
 		runtime.snapshot = snapshot;
-		const target = AuthRuntimeTarget.forBrowserDocument(snapshot);
+		const target = AuthRuntimeTarget.forFixedInstance(snapshot);
 		await act(async () =>
 			root.render(
 				createElement(AuthRuntimeTargetProvider, {

@@ -1,11 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {
-	ForegroundPromoteCoordinator,
-	type ForegroundPromoteHost,
-	type WarmForegroundCandidate,
-} from '@app/features/gateway/transport/ForegroundPromoteCoordinator';
-import type {GatewayDispatchDelivery, GatewaySocket} from '@app/features/gateway/transport/GatewaySocket';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const SOURCE_ACCOUNT = 'https://first.test/api::me';
@@ -48,78 +42,6 @@ describe('feed notification gateway events (2a.9b)', () => {
 		store.handleAck.mockReset();
 		store.lastReadAt = 0;
 		store.lastReadUserId = null;
-	});
-
-	it('replays a warm promotion CREATE and ACK after release without a READY', async () => {
-		const push = {
-			id: '1',
-			type: 'post_like' as const,
-			post_id: '2',
-			comment_id: null,
-			actors: [],
-			actor_count: 1,
-			updated_at: '2027-01-01T01:00:00.000Z',
-			unread_seq: 10,
-			unread_epoch: 0,
-		};
-		const ack = {last_read_at: push.updated_at, unread_seq: 10, unread_epoch: 0};
-		const order: Array<string> = [];
-		store.handleNotificationCreate.mockImplementation(() => order.push('push'));
-		store.handleAck.mockImplementation(() => order.push('ack'));
-		const handover = {deliver: (_item: GatewayDispatchDelivery) => {}};
-		const candidate: WarmForegroundCandidate = {
-			isBackgroundConnectionReady: true,
-			beginBackgroundDispatchHandover: (listener) => {
-				handover.deliver = listener;
-			},
-			endBackgroundDispatchHandover: vi.fn(),
-			detachBackgroundSocket: () => ({}) as GatewaySocket,
-			waitForBackgroundConnectionReady: async () => true,
-			waitForBackgroundDispatchIdle: async () => {},
-		};
-		const host: ForegroundPromoteHost = {
-			findWarmCandidate: () => candidate,
-			prepareForegroundSnapshot: async () => true,
-			hydrateForegroundSnapshot: async () => {
-				storageScope.value = TARGET_ACCOUNT;
-			},
-			commitForegroundSnapshot: () => true,
-			abortForegroundSnapshot: vi.fn(),
-			finalizeForegroundSnapshot: vi.fn(),
-			stopBackgroundConnection: vi.fn(),
-			prepareForegroundReplay: vi.fn(),
-			adoptForegroundSocket: vi.fn(),
-			finalizeForeground: vi.fn(),
-			removeBackgroundConnection: vi.fn(),
-			discardDetachedSocket: vi.fn(),
-			discardForegroundConnection: vi.fn(),
-			replayForegroundDispatch: (accountKey, item) => {
-				if (item.type === 'FEED_NOTIFICATION_CREATE')
-					handleFeedNotificationCreate(item.data as never, {accountKey} as never);
-				else handleFeedNotificationAck(item.data as never, {accountKey} as never);
-			},
-		};
-		const coordinator = new ForegroundPromoteCoordinator(host);
-		await AccountScopedWork.runSuspended(AccountScopedWorkTransitionReason.ACCOUNT_SWITCH, async () => {
-			await coordinator.begin(TARGET_ACCOUNT);
-			for (const [index, [type, data]] of [
-				['FEED_NOTIFICATION_CREATE', push],
-				['FEED_NOTIFICATION_ACK', ack],
-			].entries()) {
-				handover.deliver({
-					type,
-					data,
-					retainedByteSize: 8,
-					receipt: {sequence: index + 1, generation: 0},
-				} as unknown as GatewayDispatchDelivery);
-			}
-			expect(await coordinator.complete(TARGET_ACCOUNT)).toEqual({mode: 'warm'});
-			expect(order).toEqual([]);
-		});
-		expect(store.handleGatewayReady).not.toHaveBeenCalled();
-		expect(order).toEqual(['push', 'ack']);
-		expect(store.handleNotificationCreate).toHaveBeenCalledWith(push, 10, 0);
-		expect(store.handleAck).toHaveBeenCalledWith(ack);
 	});
 
 	it('releases source pushes on an early failed switch and discards READY-less target pushes on rollback', async () => {

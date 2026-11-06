@@ -7,12 +7,23 @@ import {fileURLToPath} from 'node:url';
 import {ThemeTypes} from '@fluxer/constants/src/UserConstants';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
+vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor}));
+
 // Micup: a visitor or account without a stored theme sees Coal; stored themes stay as they are.
 async function loadHydratedTheme() {
 	vi.resetModules();
 	const theme = (await import('@app/features/theme/state/Theme')).default;
-	await vi.waitFor(() => expect(theme.isHydrated).toBe(true));
-	return theme;
+	const accountTheme = (await import('@app/features/theme/state/AccountTheme')).default;
+	(await import('@app/features/theme/state/ThemeProfile')).default.markReady();
+	return {
+		get effectiveTheme() {
+			return theme.effectiveTheme;
+		},
+		set systemPrefersDark(value: boolean) {
+			theme.systemPrefersDark = value;
+		},
+		updateServerTheme: (value: string) => accountTheme.updateServerTheme(value),
+	};
 }
 
 describe('sanalyer default theme', () => {

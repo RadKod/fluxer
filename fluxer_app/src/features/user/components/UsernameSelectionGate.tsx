@@ -187,7 +187,7 @@ export const UsernameSelectionGate = observer(({children}: {children: ReactNode}
 								<Trans>Settings and account security</Trans>
 							</Button>
 							{!user.email && (
-								<Button onClick={() => openClaimAccountModal({force: true})}>
+								<Button onClick={() => openClaimAccountModal()}>
 									<Trans>Claim your account</Trans>
 								</Button>
 							)}

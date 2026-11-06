@@ -19,7 +19,7 @@ msgstr ""
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "--{name} isn't a Fluxer variable and isn't set anywhere in your CSS."
 msgstr ""
-"--{name} non è una variabile di Fluxer e non è impostata da nessuna parte "
+"--{name} non è una variabile di sanalyer e non è impostata da nessuna parte "
 "nel tuo CSS."
 
 #. Description text in the messages tab.
@@ -4130,7 +4130,7 @@ msgstr "#operators"
 #. trailing punctuation.
 #: src/features/premium/components/operator_pass/checkout/OperatorPassShowcaseSlides.ts
 msgid "#operators in Fluxer Labs"
-msgstr "#operators in Fluxer Labs"
+msgstr "#operators in sanalyer Labs"
 
 #. Badge on the forward modal preview thumbnail. count is the number of other
 #. attachments that the thumbnail does not show.
@@ -9539,7 +9539,7 @@ msgid ""
 msgstr ""
 "Pulsanti, link ed elementi evidenziati in tutta l'app usano questo colore, e"
 " i browser sui telefoni lo usano per la barra degli strumenti. Reimpostalo "
-"per mantenere l'indaco di Fluxer."
+"per mantenere l'indaco di sanalyer."
 
 #. Gift inventory empty-state description. premiumProductName is the premium
 #. tab name and product name.
@@ -10235,7 +10235,7 @@ msgstr "Cambia emoji"
 #. variables are set.
 #: src/features/theme_settings/editor/CssCompletions.ts
 msgid "Change Fluxer variables"
-msgstr "Cambia le variabili di Fluxer"
+msgstr "Cambia le variabili di sanalyer"
 
 #. Generic action label that opens the friend-nickname edit flow.
 #: src/features/i18n/utils/CommonMessageDescriptors.ts
@@ -14589,12 +14589,8 @@ msgstr "Impossibile connettersi a {names}"
 #. Instance selector error shown when no Fluxer instance answered at the
 #. address. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
-msgid ""
-"Couldn't connect to a Fluxer instance at {domain}. Check the address and "
-"that the instance is online."
-msgstr ""
-"Impossibile raggiungere un'istanza Fluxer all'indirizzo {domain}. Controlla "
-"l'indirizzo e assicurati che l'istanza sia online."
+msgid "Couldn't connect to a sanalyer instance at {domain}. Check the address and that the instance is online."
+msgstr "Impossibile raggiungere un'istanza sanalyer all'indirizzo {domain}. Controlla l'indirizzo e assicurati che l'istanza sia online."
 
 #. Toast shown when joining a voice channel fails because the connection timed
 #. out or the transport dropped.
@@ -18890,7 +18886,7 @@ msgid ""
 "source code and copies others made can't be recalled."
 msgstr ""
 "Ogni elenco annuale degli Operators che pubblichiamo finisce nelle note di "
-"una versione di Fluxer e in un file del suo codice sorgente. Il tuo nome "
+"una versione di sanalyer e in un file del suo codice sorgente. Il tuo nome "
 "nella bacheca vi compare solo se attivi questa opzione. Se in seguito ci "
 "chiedi di rimuoverlo, lo togliamo dagli elenchi futuri, dalle note di "
 "versione e da quel file, ma le versioni precedenti del codice sorgente e le "
@@ -20566,12 +20562,8 @@ msgstr "Tutti"
 #. Bullet point in the P2P call dialog. Plutonium is the name of the paid
 #. subscription and must not be translated. 4K and fps are video terms.
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
-msgid ""
-"Everyone in the call gets Plutonium stream quality for free, with up to 4K "
-"source resolution and 60 fps."
-msgstr ""
-"Tutti nella chiamata ottengono la qualità dello streaming Plutonium "
-"gratuitamente: risoluzione sorgente fino a 4K e 60 fps."
+msgid "Everyone in the call gets {premiumProductName} stream quality for free, with up to 4K source resolution and 60 fps."
+msgstr "Tutti nella chiamata ottengono la qualità dello streaming {premiumProductName} gratuitamente: risoluzione sorgente fino a 4K e 60 fps."
 
 #. Description of the single community option in the setup wizard.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
@@ -21761,14 +21753,14 @@ msgid ""
 "Fluxer adds a random number to each username, like alex#4821, so many people"
 " can use the same name."
 msgstr ""
-"Fluxer aggiunge un numero casuale a ogni nome utente, come alex#4821, così "
+"sanalyer aggiunge un numero casuale a ogni nome utente, come alex#4821, così "
 "più persone possono usare lo stesso nome."
 
 #. Problem shown in the quick CSS editor on a web address that the app is not
 #. allowed to load. Assets are files uploaded under "Assets".
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "Fluxer blocked loading {url}. Upload it as an asset."
-msgstr "Fluxer ha bloccato il caricamento di {url}. Caricalo come risorsa."
+msgstr "sanalyer ha bloccato il caricamento di {url}. Caricalo come risorsa."
 
 #. Problem shown in the quick CSS editor on an image address on a site the
 #. person has not trusted. Assets are files uploaded under "Assets". Trusting
@@ -21778,20 +21770,20 @@ msgid ""
 "Fluxer blocked loading {url}. Upload the file as an asset, or trust the site"
 " it's on."
 msgstr ""
-"Fluxer ha bloccato il caricamento di {url}. Carica il file come risorsa o "
+"sanalyer ha bloccato il caricamento di {url}. Carica il file come risorsa o "
 "considera attendibile il sito su cui si trova."
 
 #. Problem shown in the quick CSS editor on a reference to an uploaded theme
 #. asset that does not exist.
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "Fluxer can't find the asset \"{name}\"."
-msgstr "Fluxer non trova la risorsa \"{name}\"."
+msgstr "sanalyer non trova la risorsa \"{name}\"."
 
 #. Problem shown in the quick CSS editor on a reference to a file on the
 #. computer that Fluxer cannot read.
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "Fluxer can't find the file \"{path}\"."
-msgstr "Fluxer non trova il file \"{path}\"."
+msgstr "sanalyer non trova il file \"{path}\"."
 
 #. Shown for a watched theme folder in Settings > Themes when the folder was
 #. moved, deleted or disconnected.
@@ -21800,7 +21792,7 @@ msgid ""
 "Fluxer can't find this folder. It will load the themes again when the folder"
 " is back."
 msgstr ""
-"Fluxer non trova questa cartella. Caricherà di nuovo i temi quando la "
+"sanalyer non trova questa cartella. Caricherà di nuovo i temi quando la "
 "cartella sarà disponibile."
 
 #. Shown for a watched theme folder in Settings > Themes when the desktop app
@@ -21808,13 +21800,13 @@ msgstr ""
 #: src/features/theme_settings/components/YourThemesSection.tsx
 msgid "Fluxer can't open this folder. Import it again to keep watching it."
 msgstr ""
-"Fluxer non può aprire questa cartella. Importala di nuovo per continuare a "
+"sanalyer non può aprire questa cartella. Importala di nuovo per continuare a "
 "monitorarla."
 
 #. Error toast in "Your themes" when the chosen theme folder cannot be opened.
 #: src/features/theme_settings/components/YourThemesSection.tsx
 msgid "Fluxer can't read this folder."
-msgstr "Fluxer non può leggere questa cartella."
+msgstr "sanalyer non può leggere questa cartella."
 
 #. Problem shown at the top of the quick CSS editor when the whole sheet was
 #. left out.
@@ -21823,21 +21815,21 @@ msgid ""
 "Fluxer couldn't apply this CSS. Check it for a broken comment, string or "
 "bracket."
 msgstr ""
-"Fluxer non ha potuto applicare questo CSS. Controlla che non ci siano "
+"sanalyer non ha potuto applicare questo CSS. Controlla che non ci siano "
 "commenti, stringhe o parentesi danneggiati."
 
 #. Alert when the SMTP check fails and the mail server sent no reply. host is
 #. the mail server address.
 #: src/features/app/components/setup/SetupEmailSteps.tsx
 msgid "Fluxer couldn't connect to {host}."
-msgstr "Fluxer non è riuscito a connettersi a {host}."
+msgstr "sanalyer non è riuscito a connettersi a {host}."
 
 #. Alert when the SMTP check fails. host is the mail server address and error
 #. is its reply.
 #: src/features/app/components/setup/SetupEmailSteps.tsx
 msgid "Fluxer couldn't connect to {host}. The server said: \"{error}\""
 msgstr ""
-"Fluxer non è riuscito a connettersi a {host}. Il server ha risposto: "
+"sanalyer non è riuscito a connettersi a {host}. Il server ha risposto: "
 "\"{error}\""
 
 #. Status shown in the desktop app when it stopped checking the browser sign-
@@ -21849,7 +21841,7 @@ msgid ""
 "Fluxer couldn't connect to {instanceName} to check whether your browser "
 "approved this sign-in. Check your connection, then select \"Try again\"."
 msgstr ""
-"Fluxer non è riuscito a raggiungere {instanceName} per controllare se il "
+"sanalyer non è riuscito a raggiungere {instanceName} per controllare se il "
 "browser ha approvato questo accesso. Controlla la connessione, poi seleziona"
 " \"Riprova\"."
 
@@ -21857,7 +21849,7 @@ msgstr ""
 #. community. Fluxer Labs is the name of a community, keep it as is.
 #: src/features/premium/utils/PremiumMessageDescriptors.ts
 msgid "Fluxer Labs"
-msgstr "Fluxer Labs"
+msgstr "sanalyer Labs"
 
 #. Shown in the modal that applies a shared theme when the theme points at
 #. files the app will not load.
@@ -21866,7 +21858,7 @@ msgid ""
 "Fluxer won't load {count, plural, one {# file} other {# files}} that this "
 "theme links to on other sites."
 msgstr ""
-"Fluxer non caricherà {count, plural, one {# file} other {# file}} su altri "
+"sanalyer non caricherà {count, plural, one {# file} other {# file}} su altri "
 "siti a cui rimanda questo tema."
 
 #. Settings search synonym. Used to match this term when the user types it in
@@ -24625,7 +24617,7 @@ msgid ""
 "If the link opens a different Fluxer app, select \"Signing in on another "
 "device?\" and type the code in your browser instead."
 msgstr ""
-"Se il link apre un'altra app Fluxer, seleziona \"Accedi da un altro "
+"Se il link apre un'altra app sanalyer, seleziona \"Accedi da un altro "
 "dispositivo?\" e digita il codice nel browser."
 
 #. Helper text under the Explain the problem field on the details step of the
@@ -24710,7 +24702,7 @@ msgid ""
 "If you installed Fluxer with rexctl, it printed the token when it finished. "
 "Run this on your server to show it again."
 msgstr ""
-"Se hai installato Fluxer con rexctl, ha stampato il token al termine. Esegui"
+"Se hai installato sanalyer con rexctl, ha stampato il token al termine. Esegui"
 " questo comando sul tuo server per visualizzarlo di nuovo."
 
 #. What the app shows when no symbol is set, in the setup wizard.
@@ -24729,7 +24721,7 @@ msgid ""
 "Fluxer wordmark while the product name is Fluxer."
 msgstr ""
 "Se lo lasci vuoto, il nome prodotto appare come testo semplice, oppure come "
-"wordmark di Fluxer finché il nome prodotto è Fluxer."
+"wordmark di sanalyer finché il nome prodotto è sanalyer."
 
 #. What the app shows when no sign-in background is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -24745,7 +24737,7 @@ msgid ""
 "and no image for any other name."
 msgstr ""
 "Se lo lasci vuoto, la pagina di accesso usa l'icona dell'app o il simbolo. "
-"Senza questi, mostra il logo di Fluxer finché il nome prodotto è Fluxer, e "
+"Senza questi, mostra il logo di sanalyer finché il nome prodotto è sanalyer, e "
 "nessuna immagine con qualsiasi altro nome."
 
 #. What the app shows when no dark mode favicon is set, in the setup wizard.
@@ -24763,13 +24755,13 @@ msgid ""
 "If you leave it empty, the tab uses your app icon, or the Fluxer icon if "
 "that is empty too."
 msgstr ""
-"Se lo lasci vuoto, la scheda usa l'icona dell'app, oppure l'icona di Fluxer "
+"Se lo lasci vuoto, la scheda usa l'icona dell'app, oppure l'icona di sanalyer "
 "se anche quella è vuota."
 
 #. What the app shows when no app icon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
 msgid "If you leave it empty, those places show the Fluxer icon."
-msgstr "Se lo lasci vuoto, in quei punti appare l'icona di Fluxer."
+msgstr "Se lo lasci vuoto, in quei punti appare l'icona di sanalyer."
 
 #. Help on the setup token screen for someone who installed Fluxer without
 #. rexctl. FLUXER_SETUP_TOKEN and rexctl must not be translated.
@@ -24779,8 +24771,8 @@ msgid ""
 "least 32 characters that you choose, restart Fluxer, and enter that value "
 "here."
 msgstr ""
-"Se esegui Fluxer senza rexctl, imposta FLUXER_SETUP_TOKEN con un valore di "
-"almeno 32 caratteri a tua scelta, riavvia Fluxer e inserisci qui quel "
+"Se esegui sanalyer senza rexctl, imposta FLUXER_SETUP_TOKEN con un valore di "
+"almeno 32 caratteri a tua scelta, riavvia sanalyer e inserisci qui quel "
 "valore."
 
 #: src/features/user/components/modals/FluxerTagChangeModal.tsx
@@ -29774,7 +29766,7 @@ msgstr "Sposta tutti i dispositivi su…"
 #. panel inside the app.
 #: src/features/theme_settings/components/QuickCssWorkspace.tsx
 msgid "Move back into Fluxer"
-msgstr "Riporta in Fluxer"
+msgstr "Riporta in sanalyer"
 
 #. Label in the keybinds tab.
 #: src/features/user/components/modals/tabs/keybinds_tab/AssignableActionOptions.ts
@@ -32591,7 +32583,7 @@ msgid ""
 "you have Fluxer open and some of what's on your screen."
 msgstr ""
 "Considera attendibili solo i siti che conosci. Un sito attendibile può "
-"vedere il tuo indirizzo IP, quando hai Fluxer aperto e parte di ciò che è "
+"vedere il tuo indirizzo IP, quando hai sanalyer aperto e parte di ciò che è "
 "sul tuo schermo."
 
 #. Body of the error modal shown when a non-Visionary user tries to rejoin a
@@ -33392,8 +33384,8 @@ msgid ""
 "Operators and the Fluxer Team talking about self-hosting in the #operators "
 "channel of Fluxer Labs"
 msgstr ""
-"Operators e il team di Fluxer che parlano di self-hosting nel canale "
-"#operators di Fluxer Labs"
+"Operators e il team di sanalyer che parlano di self-hosting nel canale "
+"#operators di sanalyer Labs"
 
 #. Heading of the Operators' wall section in the Operator Pass settings tab.
 #. Operators' wall is the name of a section of the homepage.
@@ -34419,7 +34411,7 @@ msgid ""
 "People using the Fluxer mobile apps won't get notifications from your "
 "instance. You can turn this on later in the admin panel."
 msgstr ""
-"Chi usa le app mobile di Fluxer non riceverà notifiche dalla tua istanza. "
+"Chi usa le app mobile di sanalyer non riceverà notifiche dalla tua istanza. "
 "Puoi attivarle più tardi nel pannello di amministrazione."
 
 #. Description under the "Anyone in my communities" privacy setup option.
@@ -40456,7 +40448,7 @@ msgid ""
 "Sweden, {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 msgstr ""
-"Venditore: Fluxer Platform AB, 559537-3993, sede legale (säte) Haninge, "
+"Venditore: sanalyer Platform AB, 559537-3993, sede legale (säte) Haninge, "
 "Svezia, {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 
@@ -40655,7 +40647,7 @@ msgstr "Invia messaggi, immagini, GIF ed emoji"
 #. Setup wizard title for the push relay consent.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
 msgid "Send notifications to the Fluxer mobile apps?"
-msgstr "Inviare notifiche alle app mobile di Fluxer?"
+msgstr "Inviare notifiche alle app mobile di sanalyer?"
 
 #. Button that confirms offering an Operator Pass to someone. They can then
 #. accept or decline it.
@@ -41149,7 +41141,7 @@ msgstr "Impostato sui messaggi che possono mostrare la barra delle azioni."
 #: src/features/theme_settings/editor/AppSelectors.ts
 msgid "Set on messages that Fluxer sends, such as when someone joins."
 msgstr ""
-"Impostato sui messaggi inviati da Fluxer, ad esempio quando qualcuno si "
+"Impostato sui messaggi inviati da sanalyer, ad esempio quando qualcuno si "
 "unisce."
 
 #. Describes a CSS attribute in the "Reference" tab of the quick CSS editor.
@@ -46080,7 +46072,7 @@ msgid ""
 "\"Operator Pass since November 2026\". You can hide it, or just its date, in"
 " your settings at any time."
 msgstr ""
-"Il badge sul tuo profilo Fluxer mostra quando hai ottenuto il pass, ad "
+"Il badge sul tuo profilo sanalyer mostra quando hai ottenuto il pass, ad "
 "esempio «Operator Pass da novembre 2026». Puoi nasconderlo, o nasconderne "
 "solo la data, nelle impostazioni in qualsiasi momento."
 
@@ -46325,7 +46317,7 @@ msgid ""
 msgstr ""
 "L'immagine grande accanto al modulo di accesso, che è sempre scuro. Sul "
 "telefono appare solo accanto al nome, quando non c'è un wordmark e il nome "
-"prodotto non è Fluxer. Usa un PNG o SVG quadrato o largo, in colori chiari "
+"prodotto non è sanalyer. Usa un PNG o SVG quadrato o largo, in colori chiari "
 "con sfondo trasparente, alto almeno 256 pixel e fino a {size}."
 
 #. Error modal body shown when revoking an invite fails; warns the user that
@@ -46571,7 +46563,7 @@ msgid ""
 "The sign-in page on a phone, in a mobile browser or the Fluxer mobile app."
 msgstr ""
 "La pagina di accesso sul telefono, in un browser mobile o nell'app mobile di"
-" Fluxer."
+" sanalyer."
 
 #. Error shown in the desktop app when a browser sign-in request expires
 #. before it is approved in the browser.
@@ -46930,7 +46922,7 @@ msgstr ""
 #. CSS editor.
 #: src/features/theme_settings/components/QuickCssReference.tsx
 msgid "These attributes don't change between Fluxer updates."
-msgstr "Questi attributi non cambiano tra gli aggiornamenti di Fluxer."
+msgstr "Questi attributi non cambiano tra gli aggiornamenti di sanalyer."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -47143,7 +47135,7 @@ msgid ""
 "This browser can't save Fluxer's data. You'll need to sign in again after "
 "you close it."
 msgstr ""
-"Questo browser non può salvare i dati di Fluxer. Dovrai accedere di nuovo "
+"Questo browser non può salvare i dati di sanalyer. Dovrai accedere di nuovo "
 "dopo averlo chiuso."
 
 #. Console warning line explaining that the browser console is meant for
@@ -47353,7 +47345,7 @@ msgstr ""
 msgid ""
 "This class name changes with every Fluxer update. Use a [data-flx] selector."
 msgstr ""
-"Questo nome classe cambia a ogni aggiornamento di Fluxer. Usa un selettore "
+"Questo nome classe cambia a ogni aggiornamento di sanalyer. Usa un selettore "
 "[data-flx]."
 
 #. Problem shown in the quick CSS editor on a closing curly brace that closes
@@ -47871,7 +47863,7 @@ msgid ""
 "This instance was upgraded from a version of Fluxer that used email sign-in,"
 " so it stays on email."
 msgstr ""
-"Questa istanza è stata aggiornata da una versione di Fluxer che usava "
+"Questa istanza è stata aggiornata da una versione di sanalyer che usava "
 "l'accesso via email, quindi resta sull'email."
 
 #. Helper text shown on an invite embed while streaming privacy is active.
@@ -48431,7 +48423,7 @@ msgid ""
 "your account on it. It takes about five minutes. You can change most choices"
 " later in the admin panel, and a screen tells you when you can't."
 msgstr ""
-"Qui configuri la tua istanza, la copia di Fluxer che hai installato, e crei "
+"Qui configuri la tua istanza, la copia di sanalyer che hai installato, e crei "
 "il tuo account. Ci vogliono circa cinque minuti. Potrai cambiare la maggior "
 "parte delle scelte più tardi nel pannello di amministrazione, e la schermata"
 " ti avvisa quando non è possibile."
@@ -53268,8 +53260,8 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"Ti aggiungiamo a Fluxer Labs quando attivi il tuo pass, a meno che tu non "
-"abbia già lasciato Fluxer Labs o non ti abbiano rimosso. Con questa opzione "
+"Ti aggiungiamo a sanalyer Labs quando attivi il tuo pass, a meno che tu non "
+"abbia già lasciato sanalyer Labs o non ti abbiano rimosso. Con questa opzione "
 "attiva, poco dopo ti diamo il benvenuto per nome in #operators."
 
 #. Hint under the checkbox or switch "Welcome me in #operators". Fluxer Labs
@@ -53283,8 +53275,8 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"Ti aggiungiamo a Fluxer Labs quando il tuo pass viene consegnato, a meno che"
-" tu non abbia già lasciato Fluxer Labs o non ti abbiano rimosso. Con questa "
+"Ti aggiungiamo a sanalyer Labs quando il tuo pass viene consegnato, a meno che"
+" tu non abbia già lasciato sanalyer Labs o non ti abbiano rimosso. Con questa "
 "opzione attiva, poco dopo ti diamo il benvenuto per nome in #operators."
 
 #. Error under the certificate name fields when the server turned a name down,
@@ -55177,7 +55169,7 @@ msgstr ""
 #. friends with.
 #: src/features/premium/components/operator_pass/OperatorPassPassItOnModal.tsx
 msgid "You can only pass this on to one of your friends on Fluxer."
-msgstr "Puoi passarlo solo a un amico su Fluxer."
+msgstr "Puoi passarlo solo a un amico su sanalyer."
 
 #. Shown in Settings > Look and feel. "Themes" is a link to the Themes
 #. settings tab.

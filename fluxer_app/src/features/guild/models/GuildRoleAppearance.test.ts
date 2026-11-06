@@ -3,7 +3,9 @@
 import type {GuildRole as WireGuildRole} from '@fluxer/schema/src/domains/guild/GuildRoleSchemas';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
-vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {localInstanceDomain: 'fluxer.test'}}));
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({
+	default: {localInstanceDomain: 'fluxer.test', hiddenRoleIds: []},
+}));
 vi.mock('@app/features/theme/fonts/ScriptFontLoader', () => ({noteText: () => {}}));
 vi.mock('@app/features/auth/state/Authentication', () => ({default: {currentUserId: '1'}}));
 vi.mock('@app/features/user/state/Users', () => ({default: {getUser: () => ({id: '1'})}}));
@@ -23,8 +25,10 @@ function role(extra: Partial<WireGuildRole> = {}) {
 		permissions: '0',
 		hoist: false,
 		mentionable: false,
+		icon: null,
+		unicode_emoji: null,
 		...extra,
-	});
+	} as WireGuildRole);
 }
 
 function member(roles: Array<InstanceType<typeof GuildRole>>) {

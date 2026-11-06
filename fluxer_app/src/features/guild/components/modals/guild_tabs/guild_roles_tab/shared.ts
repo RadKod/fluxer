@@ -23,7 +23,6 @@ export interface RoleUpdate {
 	mentionable?: boolean;
 	permissions?: bigint;
 	icon?: string | null;
-	unicodeEmoji?: string | null;
 }
 
 export function applyRoleUpdate(role: GuildRole, updates: RoleUpdate | undefined): GuildRole {
@@ -39,6 +38,5 @@ export function applyRoleUpdate(role: GuildRole, updates: RoleUpdate | undefined
 		permissions: updates.permissions?.toString() ?? role.permissions.toString(),
 		position: role.position,
 		icon: updates.icon !== undefined ? updates.icon : role.icon,
-		unicode_emoji: updates.unicodeEmoji !== undefined ? updates.unicodeEmoji : role.unicodeEmoji,
 	});
 }

@@ -57,6 +57,7 @@ const community = (id: string) => ({
 	online_count: 40,
 	features: ['DISCOVERABLE'],
 	verification_level: 0,
+	badge_ids: [],
 });
 
 function reply(body: FeedSuggestionsResponse): RestResponse<FeedSuggestionsResponse> {

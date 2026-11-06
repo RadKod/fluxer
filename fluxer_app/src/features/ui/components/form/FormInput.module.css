@@ -175,6 +175,30 @@
 	border-color: var(--status-danger);
 }
 
+.textarea {
+	min-width: 0;
+	max-width: 100%;
+	width: 100%;
+	flex: 1 1 0%;
+	resize: none;
+	overflow-x: hidden;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+	appearance: none;
+	border: 0;
+	background-color: transparent;
+	padding: 0.625rem 1rem;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	color: var(--text-primary);
+	outline: none;
+}
+
+.textarea::placeholder {
+	color: var(--text-tertiary);
+}
+
 textarea.input {
 	min-width: 0;
 	max-width: 100%;

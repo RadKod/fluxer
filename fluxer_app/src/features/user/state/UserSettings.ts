@@ -597,10 +597,6 @@ class UserSettingsState {
 		return this.hydrated;
 	}
 
-	getAccountEpoch(): number {
-		return this.accountEpoch;
-	}
-
 	markSessionChanging(): void {
 		this.hydrated = false;
 		this.gameActivityVisibility = 'off';

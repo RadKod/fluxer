@@ -33,7 +33,7 @@ import type {MediaProxyImageSize} from '@fluxer/constants/src/MediaProxyImageSiz
 
 const DEFAULT_AVATAR_PRIMARY_COLORS = [0x4641d9, 0xf0b100, 0x00bba7, 0x2b7fff, 0xad46ff, 0x6a7282];
 const DEFAULT_AVATAR_COUNT = BigInt(DEFAULT_AVATAR_PRIMARY_COLORS.length);
-const normalizeEndpoint = (endpoint: string): string => endpoint.replace(/\/$/, '');
+export const normalizeEndpoint = (endpoint: string): string => endpoint.replace(/\/$/, '');
 export const parseAvatarHash = (value: string) => {
 	const animated = value.startsWith('a_');
 	const hash = animated ? value.slice(2) : value;
@@ -61,7 +61,12 @@ function brandingReplacesDefaultAvatars(snapshot: RuntimeConfigSnapshot): boolea
 	return icon_url !== null || symbol_url !== null;
 }
 
+// Micup: sanalyer keeps its own default avatars even though its instance branding sets an icon and a symbol (upstream
+// swaps in neutral ones on self-hosted instances with branding).
+const NEUTRAL_DEFAULT_AVATARS_ENABLED = false;
+
 function usesNeutralDefaultAvatars(): boolean {
+	if (!NEUTRAL_DEFAULT_AVATARS_ENABLED) return false;
 	const snapshot = RuntimeConfig.getSnapshotOrNull();
 	return snapshot !== null && RuntimeConfig.isSelfHosted() && brandingReplacesDefaultAvatars(snapshot);
 }
@@ -78,7 +83,7 @@ export function getDefaultAvatarURLForIndex(index: number): string {
 export function getDefaultAvatarURLForInstance(id: string, instance: RuntimeConfigSnapshot): string {
 	return pickDefaultAvatar(
 		getDefaultAvatarIndex(id),
-		instance.features.self_hosted && brandingReplacesDefaultAvatars(instance),
+		NEUTRAL_DEFAULT_AVATARS_ENABLED && instance.features.self_hosted && brandingReplacesDefaultAvatars(instance),
 	);
 }
 

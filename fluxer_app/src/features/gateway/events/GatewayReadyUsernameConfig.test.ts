@@ -108,6 +108,7 @@ function sessionData() {
 			premium_lifetime_sequence: null,
 			premium_grace_ends_at: null,
 			premium_discriminator: false,
+			hidden_profile_badges: [],
 			premium_badge_hidden: false,
 			premium_badge_masked: false,
 			premium_badge_timestamp_hidden: false,

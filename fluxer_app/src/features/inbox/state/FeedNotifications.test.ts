@@ -1,11 +1,6 @@
 // @vitest-environment happy-dom
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {
-	ForegroundPromoteCoordinator,
-	type ForegroundPromoteHost,
-} from '@app/features/gateway/transport/ForegroundPromoteCoordinator';
-import {AccountScopedWork, AccountScopedWorkTransitionReason} from '@app/features/platform/state/AccountScopedWork';
 import type {
 	FeedNotificationAckResponse,
 	FeedNotificationResponse,
@@ -145,57 +140,6 @@ describe('FeedNotifications', () => {
 		handleFeedNotificationCreate({...wireNotification(1), unread_seq: 1, unread_epoch: 0}, {} as never);
 		expect(FeedNotifications.unreadCount).toBe(1);
 		expect(ids()).toEqual(['1']);
-	});
-
-	it('keeps source rows, server count and failed read when begin promotion fails before changing scope', async () => {
-		const cursor = Date.parse(wireNotification(2).updated_at);
-		FeedNotifications.handleGatewayReady(
-			{last_read_at: new Date(cursor).toISOString(), unread_count: 3, unread_seq: 5, unread_epoch: 7},
-			'source',
-		);
-		FeedNotifications.handleNotificationCreate(wireNotification(1), 5, 7);
-		const retry = {readAt: cursor, seq: 5, epoch: 7};
-		FeedNotifications.handleReadFailure(retry);
-		const stalePage = FeedNotifications.handleFetchPending();
-		const failure = new Error('begin promotion failed');
-		const unexpectedStep = (): never => {
-			throw new Error('Unexpected promotion step after begin failure');
-		};
-		const host: ForegroundPromoteHost = {
-			findWarmCandidate: () => {
-				throw failure;
-			},
-			prepareForegroundSnapshot: unexpectedStep,
-			hydrateForegroundSnapshot: unexpectedStep,
-			commitForegroundSnapshot: unexpectedStep,
-			abortForegroundSnapshot: unexpectedStep,
-			finalizeForegroundSnapshot: unexpectedStep,
-			stopBackgroundConnection: unexpectedStep,
-			prepareForegroundReplay: unexpectedStep,
-			adoptForegroundSocket: unexpectedStep,
-			replayForegroundDispatch: unexpectedStep,
-			finalizeForeground: unexpectedStep,
-			removeBackgroundConnection: unexpectedStep,
-			discardDetachedSocket: unexpectedStep,
-			discardForegroundConnection: unexpectedStep,
-		};
-		const coordinator = new ForegroundPromoteCoordinator(host);
-		await expect(
-			AccountScopedWork.runSuspended(AccountScopedWorkTransitionReason.ACCOUNT_SWITCH, async () => {
-				await coordinator.begin('https://second.test/api::source');
-			}),
-		).rejects.toBe(failure);
-		expect(ids()).toEqual(['1']);
-		expect(FeedNotifications.serverUnread).toBe(3);
-		expect(FeedNotifications.unreadCount).toBe(3);
-		expect(FeedNotifications.lastReadAt).toBe(cursor);
-		expect(FeedNotifications.lastReadUserId).toBe('source');
-		expect(FeedNotifications.isLoading).toBe(false);
-		FeedNotifications.handleFetchSuccess(stalePage, page(99, 2), true);
-		expect(ids()).toEqual(['1']);
-		FeedNotifications.openView();
-		expect(FeedNotifications.closeView()).toEqual(retry);
-		FeedNotifications.reset();
 	});
 
 	it('updates a notification the server folded more actors into in place, without a second row', () => {

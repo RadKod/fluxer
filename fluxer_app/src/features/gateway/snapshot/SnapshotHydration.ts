@@ -104,7 +104,7 @@ class SnapshotHydrationUnavailableError extends Error {
 const logger = new Logger('SnapshotHydration');
 
 export function captureForegroundFeedSnapshot(storageKey: string): void {
-	if (!isDesktopSnapshotAvailable() || storageKey !== getAppStorageScope()) return;
+	if (!SnapshotSync.enabled || storageKey !== getAppStorageScope()) return;
 	const userId = parseAccountStorageKey(storageKey)?.userId;
 	if (userId == null || userId !== FeedNotifications.lastReadUserId) return;
 	SnapshotSync.setFeedNotificationState(

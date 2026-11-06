@@ -14,9 +14,18 @@ vi.mock('@app/features/platform/transport/RestTransport', () => ({http: {}}));
 vi.mock('@app/features/presence/state/LocalPresence', () => ({default: {}}));
 
 const ACCOUNT_SCOPE = 'https://micup.test/api::previous-account';
+// Without IndexedDB the app storage keeps its data in memory; one backend shared across module reloads stands in
+// for the browser's storage surviving a reload.
+const sharedBackend = (await import('./PersistentStorageBackend')).createPersistentStorageBackend(null);
 
-beforeEach(() => {
+async function installSharedBackend(): Promise<void> {
+	(await import('./PersistentStorageBackend')).installPersistentStorageBackend(sharedBackend);
+}
+
+beforeEach(async () => {
 	vi.resetModules();
+	await sharedBackend.clearAllExcept(new Set());
+	await installSharedBackend();
 	window.localStorage.clear();
 });
 afterEach(async () => {
@@ -27,7 +36,7 @@ afterEach(async () => {
 
 async function logoutAndReload(values: Map<string, string>): Promise<void> {
 	const storage = await import('./PersistentStorage');
-	await storage.initializeAppStorage({scoped: true});
+	await storage.initializeAppStorage();
 	await storage.activateAppStorageScope(ACCOUNT_SCOPE);
 	for (const [key, value] of values) storage.default.setItem(key, value);
 	storage.default.setItem('token', 'secret');
@@ -71,8 +80,9 @@ async function logoutAndReload(values: Map<string, string>): Promise<void> {
 	const {getPersistentStorageBackend} = await import('./PersistentStorageBackend');
 	expect(await getPersistentStorageBackend().load(ACCOUNT_SCOPE)).toEqual(new Map());
 	vi.resetModules();
+	await installSharedBackend();
 	const reloaded = await import('./PersistentStorage');
-	await reloaded.initializeAppStorage({scoped: true});
+	await reloaded.initializeAppStorage();
 	await reloaded.activateAppStorageScope(ACCOUNT_SCOPE);
 	for (const key of ['token', 'userId', 'UserSettings', 'Drafts'])
 		expect(reloaded.default.getItem(key), key).toBeNull();

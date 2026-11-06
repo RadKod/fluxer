@@ -43,6 +43,9 @@ vi.mock('@app/features/notification/utils/SoundUtils', () => ({
 vi.mock('@app/features/platform/utils/AppLogger', () => ({
 	Logger: class {
 		debug() {}
+		info() {}
+		warn() {}
+		error() {}
 	},
 }));
 vi.mock('@app/features/accessibility/state/Accessibility', () => ({default: {ttsRate: 1}}));

@@ -14,17 +14,32 @@ const commands = {
 };
 const http = {get: vi.fn()};
 vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor}));
-vi.mock('@lingui/core', () => ({i18n: {_: (descriptor: {message: string}) => descriptor.message}}));
+vi.mock('@lingui/core', () => ({
+	i18n: {_: (descriptor: {message: string}) => descriptor.message, on: () => () => {}, locale: 'en-US'},
+}));
 vi.mock('@lingui/react/macro', async () => {
 	const {i18n} = await import('@lingui/core');
 	return {useLingui: () => ({i18n})};
 });
 vi.mock('@app/features/navigation/utils/RouterUtils', () => router);
-vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {}}));
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({
+	default: {getSnapshotOrNull: () => null, discoveryAvailable: true},
+}));
 vi.mock('@app/features/platform/transport/RestTransport', () => ({http}));
 vi.mock('@app/features/discovery/commands/DiscoveryCommands', () => commands);
 vi.mock('@app/features/navigation/state/Navigation', () => ({default: {navigateToDiscover: vi.fn()}}));
-vi.mock('@app/features/accessibility/state/Accessibility', () => ({default: {zoomLevel: 1}}));
+vi.mock('@app/features/accessibility/state/Accessibility', () => ({
+	default: {zoomLevel: 1},
+	DEFAULT_ZOOM_LEVEL: 1,
+	ACCESSIBILITY_CUSTOM_THEME_STORAGE_KEY: 'Accessibility:customThemeCss',
+	ACCESSIBILITY_CUSTOM_THEME_SYNC_STORAGE_KEY: 'Accessibility:customThemeCssSyncAcrossDevices',
+	setAccessibilityUserSettings: () => {},
+	readLocalCustomThemeCss: () => null,
+	normalizeCustomThemeCss: (css: string | null | undefined) => css ?? null,
+	DMMessagePreviewMode: {},
+	ChannelTypingIndicatorMode: {},
+	HdrDisplayMode: {},
+}));
 vi.mock('@app/features/app/components/layout/DiscoveryGuildHeader', () => ({DiscoveryGuildHeader: () => null}));
 vi.mock('@app/features/app/components/layout/GuildSidebar', () => ({GuildSidebar: () => null}));
 vi.mock('@app/features/ui/state/MobileLayout', () => ({default: {enabled: true}}));

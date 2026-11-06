@@ -18,7 +18,7 @@ msgstr ""
 #. not exist. {name} is the variable name without its leading dashes.
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "--{name} isn't a Fluxer variable and isn't set anywhere in your CSS."
-msgstr "--{name} 不是 Fluxer 變數，也沒有在你的 CSS 中設定。"
+msgstr "--{name} 不是 sanalyer 變數，也沒有在你的 CSS 中設定。"
 
 #. Description text in the messages tab.
 #: src/features/user/components/modals/tabs/appearance_tab/MessagesTab.tsx
@@ -3820,7 +3820,7 @@ msgstr "#operators"
 #. trailing punctuation.
 #: src/features/premium/components/operator_pass/checkout/OperatorPassShowcaseSlides.ts
 msgid "#operators in Fluxer Labs"
-msgstr "Fluxer Labs 中的 #operators"
+msgstr "sanalyer Labs 中的 #operators"
 
 #. Badge on the forward modal preview thumbnail. count is the number of other
 #. attachments that the thumbnail does not show.
@@ -8998,7 +8998,7 @@ msgstr "含圖示的按鈕"
 msgid ""
 "Buttons, links and highlights across the app use this color, and phone "
 "browsers use it for their toolbar. Reset it to keep Fluxer's indigo."
-msgstr "應用程式中的按鈕、連結和醒目標示都會使用此顏色，手機瀏覽器也會將它用作工具列顏色。重設後將保留 Fluxer 的靛藍色。"
+msgstr "應用程式中的按鈕、連結和醒目標示都會使用此顏色，手機瀏覽器也會將它用作工具列顏色。重設後將保留 sanalyer 的靛藍色。"
 
 #. Gift inventory empty-state description. premiumProductName is the premium
 #. tab name and product name.
@@ -9674,7 +9674,7 @@ msgstr "變更表情符號"
 #. variables are set.
 #: src/features/theme_settings/editor/CssCompletions.ts
 msgid "Change Fluxer variables"
-msgstr "變更 Fluxer 變數"
+msgstr "變更 sanalyer 變數"
 
 #. Generic action label that opens the friend-nickname edit flow.
 #: src/features/i18n/utils/CommonMessageDescriptors.ts
@@ -13870,10 +13870,8 @@ msgstr "無法連線至 {names}"
 #. Instance selector error shown when no Fluxer instance answered at the
 #. address. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
-msgid ""
-"Couldn't connect to a Fluxer instance at {domain}. Check the address and "
-"that the instance is online."
-msgstr "無法連線到 {domain} 的 Fluxer 執行個體。請檢查位址並確認執行個體已上線。"
+msgid "Couldn't connect to a sanalyer instance at {domain}. Check the address and that the instance is online."
+msgstr "無法連線到 {domain} 的 sanalyer 執行個體。請檢查位址並確認執行個體已上線。"
 
 #. Toast shown when joining a voice channel fails because the connection timed
 #. out or the transport dropped.
@@ -18001,7 +17999,7 @@ msgid ""
 "future lists, the release notes and that file, but earlier versions of the "
 "source code and copies others made can't be recalled."
 msgstr ""
-"我們發布的每份年度 Operators 名單都會寫入 Fluxer "
+"我們發布的每份年度 Operators 名單都會寫入 sanalyer "
 "某個版本的發行說明及其原始碼中的一個檔案。只有開啟此選項，您在牆上的名字才會出現在名單中。如果您之後要求我們刪除，我們會將其從今後的名單、發行說明和該檔案中移除，但原始碼的早期版本和他人製作的副本無法收回。"
 
 #. Plutonium page comparison row label for early access.
@@ -19603,10 +19601,8 @@ msgstr "所有人"
 #. Bullet point in the P2P call dialog. Plutonium is the name of the paid
 #. subscription and must not be translated. 4K and fps are video terms.
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
-msgid ""
-"Everyone in the call gets Plutonium stream quality for free, with up to 4K "
-"source resolution and 60 fps."
-msgstr "通話中的每個人都能免費享有 Plutonium 串流品質：最高可達 4K 原始解析度和 60 fps。"
+msgid "Everyone in the call gets {premiumProductName} stream quality for free, with up to 4K source resolution and 60 fps."
+msgstr "通話中的每個人都能免費享有 {premiumProductName} 串流品質：最高可達 4K 原始解析度和 60 fps。"
 
 #. Description of the single community option in the setup wizard.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
@@ -20777,13 +20773,13 @@ msgstr "佛羅里達州"
 msgid ""
 "Fluxer adds a random number to each username, like alex#4821, so many people"
 " can use the same name."
-msgstr "Fluxer 會在每個使用者名稱後加上一組隨機編號，例如 alex#4821，讓許多人可以使用相同名稱。"
+msgstr "sanalyer 會在每個使用者名稱後加上一組隨機編號，例如 alex#4821，讓許多人可以使用相同名稱。"
 
 #. Problem shown in the quick CSS editor on a web address that the app is not
 #. allowed to load. Assets are files uploaded under "Assets".
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "Fluxer blocked loading {url}. Upload it as an asset."
-msgstr "Fluxer 已封鎖載入 {url}。請將其上傳為素材。"
+msgstr "sanalyer 已封鎖載入 {url}。請將其上傳為素材。"
 
 #. Problem shown in the quick CSS editor on an image address on a site the
 #. person has not trusted. Assets are files uploaded under "Assets". Trusting
@@ -20792,19 +20788,19 @@ msgstr "Fluxer 已封鎖載入 {url}。請將其上傳為素材。"
 msgid ""
 "Fluxer blocked loading {url}. Upload the file as an asset, or trust the site"
 " it's on."
-msgstr "Fluxer 已封鎖載入 {url}。請將檔案上傳為素材，或信任檔案所在的網站。"
+msgstr "sanalyer 已封鎖載入 {url}。請將檔案上傳為素材，或信任檔案所在的網站。"
 
 #. Problem shown in the quick CSS editor on a reference to an uploaded theme
 #. asset that does not exist.
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "Fluxer can't find the asset \"{name}\"."
-msgstr "Fluxer 找不到素材「{name}」。"
+msgstr "sanalyer 找不到素材「{name}」。"
 
 #. Problem shown in the quick CSS editor on a reference to a file on the
 #. computer that Fluxer cannot read.
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "Fluxer can't find the file \"{path}\"."
-msgstr "Fluxer 找不到檔案「{path}」。"
+msgstr "sanalyer 找不到檔案「{path}」。"
 
 #. Shown for a watched theme folder in Settings > Themes when the folder was
 #. moved, deleted or disconnected.
@@ -20812,18 +20808,18 @@ msgstr "Fluxer 找不到檔案「{path}」。"
 msgid ""
 "Fluxer can't find this folder. It will load the themes again when the folder"
 " is back."
-msgstr "Fluxer 找不到這個資料夾。當資料夾回來時會重新載入主題。"
+msgstr "sanalyer 找不到這個資料夾。當資料夾回來時會重新載入主題。"
 
 #. Shown for a watched theme folder in Settings > Themes when the desktop app
 #. no longer has permission to read it.
 #: src/features/theme_settings/components/YourThemesSection.tsx
 msgid "Fluxer can't open this folder. Import it again to keep watching it."
-msgstr "Fluxer 無法開啟這個資料夾。請重新匯入以繼續監控。"
+msgstr "sanalyer 無法開啟這個資料夾。請重新匯入以繼續監控。"
 
 #. Error toast in "Your themes" when the chosen theme folder cannot be opened.
 #: src/features/theme_settings/components/YourThemesSection.tsx
 msgid "Fluxer can't read this folder."
-msgstr "Fluxer 無法讀取這個資料夾。"
+msgstr "sanalyer 無法讀取這個資料夾。"
 
 #. Problem shown at the top of the quick CSS editor when the whole sheet was
 #. left out.
@@ -20831,19 +20827,19 @@ msgstr "Fluxer 無法讀取這個資料夾。"
 msgid ""
 "Fluxer couldn't apply this CSS. Check it for a broken comment, string or "
 "bracket."
-msgstr "Fluxer 無法套用此 CSS。請檢查是否有損壞的註解、字串或括號。"
+msgstr "sanalyer 無法套用此 CSS。請檢查是否有損壞的註解、字串或括號。"
 
 #. Alert when the SMTP check fails and the mail server sent no reply. host is
 #. the mail server address.
 #: src/features/app/components/setup/SetupEmailSteps.tsx
 msgid "Fluxer couldn't connect to {host}."
-msgstr "Fluxer 無法連線到 {host}。"
+msgstr "sanalyer 無法連線到 {host}。"
 
 #. Alert when the SMTP check fails. host is the mail server address and error
 #. is its reply.
 #: src/features/app/components/setup/SetupEmailSteps.tsx
 msgid "Fluxer couldn't connect to {host}. The server said: \"{error}\""
-msgstr "Fluxer 無法連線到 {host}。伺服器回應：「{error}」"
+msgstr "sanalyer 無法連線到 {host}。伺服器回應：「{error}」"
 
 #. Status shown in the desktop app when it stopped checking the browser sign-
 #. in because the instance could not be reached. instanceName is the server
@@ -20853,13 +20849,13 @@ msgstr "Fluxer 無法連線到 {host}。伺服器回應：「{error}」"
 msgid ""
 "Fluxer couldn't connect to {instanceName} to check whether your browser "
 "approved this sign-in. Check your connection, then select \"Try again\"."
-msgstr "Fluxer 無法連線到 {instanceName} 來檢查瀏覽器是否已核准此登入。請檢查網路連線，然後選取「再試一次」。"
+msgstr "sanalyer 無法連線到 {instanceName} 來檢查瀏覽器是否已核准此登入。請檢查網路連線，然後選取「再試一次」。"
 
 #. Name of the section in the Operator Pass settings tab about the Fluxer Labs
 #. community. Fluxer Labs is the name of a community, keep it as is.
 #: src/features/premium/utils/PremiumMessageDescriptors.ts
 msgid "Fluxer Labs"
-msgstr "Fluxer Labs"
+msgstr "sanalyer Labs"
 
 #. Shown in the modal that applies a shared theme when the theme points at
 #. files the app will not load.
@@ -20867,7 +20863,7 @@ msgstr "Fluxer Labs"
 msgid ""
 "Fluxer won't load {count, plural, one {# file} other {# files}} that this "
 "theme links to on other sites."
-msgstr "Fluxer 不會載入此主題連結到其他網站上的 {count, plural, other {# 個檔案}}。"
+msgstr "sanalyer 不會載入此主題連結到其他網站上的 {count, plural, other {# 個檔案}}。"
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -23536,7 +23532,7 @@ msgstr "如果有人要求您將某些內容貼到這裡，那就是詐騙，可
 msgid ""
 "If the link opens a different Fluxer app, select \"Signing in on another "
 "device?\" and type the code in your browser instead."
-msgstr "如果連結開啟了另一個 Fluxer 應用程式，請選取「在其他裝置上登入？」，然後在瀏覽器中輸入驗證碼。"
+msgstr "如果連結開啟了另一個 sanalyer 應用程式，請選取「在其他裝置上登入？」，然後在瀏覽器中輸入驗證碼。"
 
 #. Helper text under the Explain the problem field on the details step of the
 #. DSA report form.
@@ -23610,7 +23606,7 @@ msgstr ""
 msgid ""
 "If you installed Fluxer with rexctl, it printed the token when it finished. "
 "Run this on your server to show it again."
-msgstr "如果你是使用 rexctl 安裝 Fluxer，它會在完成時顯示 token。在你的伺服器上執行此指令以再次顯示它。"
+msgstr "如果你是使用 rexctl 安裝 sanalyer，它會在完成時顯示 token。在你的伺服器上執行此指令以再次顯示它。"
 
 #. What the app shows when no symbol is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -23624,7 +23620,7 @@ msgstr "留空時，清單會使用您的應用程式圖示或 Logo，如果兩�
 msgid ""
 "If you leave it empty, the product name shows as plain text, or as the "
 "Fluxer wordmark while the product name is Fluxer."
-msgstr "留空時，產品名稱會以純文字顯示。產品名稱為 Fluxer 時，則顯示 Fluxer 文字標誌。"
+msgstr "留空時，產品名稱會以純文字顯示。產品名稱為 sanalyer 時，則顯示 sanalyer 文字標誌。"
 
 #. What the app shows when no sign-in background is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -23639,7 +23635,7 @@ msgid ""
 "Without those, it shows the Fluxer logo while the product name is Fluxer, "
 "and no image for any other name."
 msgstr ""
-"留空時，登入頁面會使用您的應用程式圖示或符號。如果兩者都沒有，產品名稱為 Fluxer 時會顯示 Fluxer Logo，其他名稱則不顯示圖片。"
+"留空時，登入頁面會使用您的應用程式圖示或符號。如果兩者都沒有，產品名稱為 sanalyer 時會顯示 sanalyer Logo，其他名稱則不顯示圖片。"
 
 #. What the app shows when no dark mode favicon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -23653,12 +23649,12 @@ msgstr "留空時，分頁在淺色和深色主題下會顯示同一個網站圖
 msgid ""
 "If you leave it empty, the tab uses your app icon, or the Fluxer icon if "
 "that is empty too."
-msgstr "留空時，分頁會使用您的應用程式圖示，如果應用程式圖示也是空的，則使用 Fluxer 圖示。"
+msgstr "留空時，分頁會使用您的應用程式圖示，如果應用程式圖示也是空的，則使用 sanalyer 圖示。"
 
 #. What the app shows when no app icon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
 msgid "If you leave it empty, those places show the Fluxer icon."
-msgstr "留空時，這些位置會顯示 Fluxer 圖示。"
+msgstr "留空時，這些位置會顯示 sanalyer 圖示。"
 
 #. Help on the setup token screen for someone who installed Fluxer without
 #. rexctl. FLUXER_SETUP_TOKEN and rexctl must not be translated.
@@ -23668,8 +23664,8 @@ msgid ""
 "least 32 characters that you choose, restart Fluxer, and enter that value "
 "here."
 msgstr ""
-"如果你在沒有 rexctl 的情況下執行 Fluxer，請將 FLUXER_SETUP_TOKEN 設定為至少 32 個字元的值，然後重新啟動 "
-"Fluxer，並在此處輸入該值。"
+"如果你在沒有 rexctl 的情況下執行 sanalyer，請將 FLUXER_SETUP_TOKEN 設定為至少 32 個字元的值，然後重新啟動 "
+"sanalyer，並在此處輸入該值。"
 
 #: src/features/user/components/modals/FluxerTagChangeModal.tsx
 msgid ""
@@ -28478,7 +28474,7 @@ msgstr "將所有裝置移至…"
 #. panel inside the app.
 #: src/features/theme_settings/components/QuickCssWorkspace.tsx
 msgid "Move back into Fluxer"
-msgstr "移回 Fluxer"
+msgstr "移回 sanalyer"
 
 #. Label in the keybinds tab.
 #: src/features/user/components/modals/tabs/keybinds_tab/AssignableActionOptions.ts
@@ -31211,7 +31207,7 @@ msgstr "僅限選取的社群"
 msgid ""
 "Only trust sites you know. A site you trust can see your IP address, when "
 "you have Fluxer open and some of what's on your screen."
-msgstr "只信任你了解的網站。你信任的網站可以看到你的 IP 位址、你何時開啟 Fluxer，以及你螢幕上的部分內容。"
+msgstr "只信任你了解的網站。你信任的網站可以看到你的 IP 位址、你何時開啟 sanalyer，以及你螢幕上的部分內容。"
 
 #. Body of the error modal shown when a non-Visionary user tries to rejoin a
 #. gated Plutonium community.
@@ -31997,7 +31993,7 @@ msgstr "Operator Pass 條款"
 msgid ""
 "Operators and the Fluxer Team talking about self-hosting in the #operators "
 "channel of Fluxer Labs"
-msgstr "Operators 和 Fluxer 團隊在 Fluxer Labs 的 #operators 頻道裡聊自託管"
+msgstr "Operators 和 sanalyer 團隊在 sanalyer Labs 的 #operators 頻道裡聊自託管"
 
 #. Heading of the Operators' wall section in the Operator Pass settings tab.
 #. Operators' wall is the name of a section of the homepage.
@@ -32962,7 +32958,7 @@ msgstr ""
 msgid ""
 "People using the Fluxer mobile apps won't get notifications from your "
 "instance. You can turn this on later in the admin panel."
-msgstr "使用 Fluxer 行動應用程式的人將不會收到您的實例的通知。您之後可以在管理面板中開啟。"
+msgstr "使用 sanalyer 行動應用程式的人將不會收到您的實例的通知。您之後可以在管理面板中開啟。"
 
 #. Description under the "Anyone in my communities" privacy setup option.
 #: src/features/user/components/modals/PrivacySetupModal.tsx
@@ -38816,7 +38812,7 @@ msgid ""
 "Sweden, {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 msgstr ""
-"賣方：Fluxer Platform "
+"賣方：sanalyer Platform "
 "AB，559537-3993，登記所在地（säte）Haninge，瑞典，{OPERATOR_PASS_SELLER_ADDRESS}，{OPERATOR_PASS_SELLER_PHONE}，{SUPPORT_EMAIL}。"
 
 #. Button or menu action label in the share theme modal. Keep it concise.
@@ -39012,7 +39008,7 @@ msgstr "傳送訊息、圖片、GIF 和表情符號"
 #. Setup wizard title for the push relay consent.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
 msgid "Send notifications to the Fluxer mobile apps?"
-msgstr "要傳送通知到 Fluxer 行動應用程式嗎？"
+msgstr "要傳送通知到 sanalyer 行動應用程式嗎？"
 
 #. Button that confirms offering an Operator Pass to someone. They can then
 #. accept or decline it.
@@ -39488,7 +39484,7 @@ msgstr "可顯示訊息動作列的訊息會設定此屬性。"
 #. Describes a CSS attribute in the "Reference" tab of the quick CSS editor.
 #: src/features/theme_settings/editor/AppSelectors.ts
 msgid "Set on messages that Fluxer sends, such as when someone joins."
-msgstr "Fluxer 發送的訊息（如有人加入時）會設定此屬性。"
+msgstr "sanalyer 發送的訊息（如有人加入時）會設定此屬性。"
 
 #. Describes a CSS attribute in the "Reference" tab of the quick CSS editor.
 #: src/features/theme_settings/editor/AppSelectors.ts
@@ -44209,7 +44205,7 @@ msgid ""
 "\"Operator Pass since November 2026\". You can hide it, or just its date, in"
 " your settings at any time."
 msgstr ""
-"您 Fluxer 個人檔案上的徽章會顯示您取得通行證的時間，例如「自 2026 年 11 月起擁有 Operator "
+"您 sanalyer 個人檔案上的徽章會顯示您取得通行證的時間，例如「自 2026 年 11 月起擁有 Operator "
 "Pass」。您可以隨時在設定中隱藏徽章，或只隱藏其日期。"
 
 #. Activity log detail line under a lifted ban, for a temporary ban that had
@@ -44429,7 +44425,7 @@ msgid ""
 "name is not Fluxer. Use a square or wide PNG or SVG in light colors with a "
 "transparent background, at least 256 pixels tall and up to {size}."
 msgstr ""
-"顯示在一律為深色的登入表單旁邊的大圖。在手機上，只有在沒有文字標誌且產品名稱不是 Fluxer "
+"顯示在一律為深色的登入表單旁邊的大圖。在手機上，只有在沒有文字標誌且產品名稱不是 sanalyer "
 "時，才會顯示在名稱旁邊。請使用背景透明、顏色較淺的方形或橫向 PNG 或 SVG，高度至少 256 像素，最大 {size}。"
 
 #. Error modal body shown when revoking an invite fails; warns the user that
@@ -44656,7 +44652,7 @@ msgstr "電腦瀏覽器中的登入頁面。桌面應用程式顯示的也是同
 #: src/features/app/components/setup/SetupBrandingPreview.tsx
 msgid ""
 "The sign-in page on a phone, in a mobile browser or the Fluxer mobile app."
-msgstr "在手機的行動瀏覽器或 Fluxer 行動應用程式中顯示的登入頁面。"
+msgstr "在手機的行動瀏覽器或 sanalyer 行動應用程式中顯示的登入頁面。"
 
 #. Error shown in the desktop app when a browser sign-in request expires
 #. before it is approved in the browser.
@@ -44983,7 +44979,7 @@ msgstr "載入 Webhook 時發生錯誤。請再試一次。"
 #. CSS editor.
 #: src/features/theme_settings/components/QuickCssReference.tsx
 msgid "These attributes don't change between Fluxer updates."
-msgstr "這些屬性在 Fluxer 更新時不會改變。"
+msgstr "這些屬性在 sanalyer 更新時不會改變。"
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -45166,7 +45162,7 @@ msgstr "這個瀏覽器無法裁切動態的 {avifFormatLabel} 檔案。請改�
 msgid ""
 "This browser can't save Fluxer's data. You'll need to sign in again after "
 "you close it."
-msgstr "此瀏覽器無法儲存 Fluxer 的資料。關閉瀏覽器後，你需要重新登入。"
+msgstr "此瀏覽器無法儲存 sanalyer 的資料。關閉瀏覽器後，你需要重新登入。"
 
 #. Console warning line explaining that the browser console is meant for
 #. developers.
@@ -45345,7 +45341,7 @@ msgstr ""
 #: src/features/theme_settings/editor/CssLint.ts
 msgid ""
 "This class name changes with every Fluxer update. Use a [data-flx] selector."
-msgstr "此類別名稱每次 Fluxer 更新都會變。請使用 [data-flx] 選擇器。"
+msgstr "此類別名稱每次 sanalyer 更新都會變。請使用 [data-flx] 選擇器。"
 
 #. Problem shown in the quick CSS editor on a closing curly brace that closes
 #. nothing.
@@ -45795,7 +45791,7 @@ msgstr "此伺服器尚未完成單一登入設定。請詢問管理員啟用它
 msgid ""
 "This instance was upgraded from a version of Fluxer that used email sign-in,"
 " so it stays on email."
-msgstr "此實例是從使用電子郵件登入的 Fluxer 版本升級而來，因此仍使用電子郵件。"
+msgstr "此實例是從使用電子郵件登入的 sanalyer 版本升級而來，因此仍使用電子郵件。"
 
 #. Helper text shown on an invite embed while streaming privacy is active.
 #: src/features/channel/components/InviteEmbed.tsx
@@ -46292,7 +46288,7 @@ msgid ""
 " later in the admin panel, and a screen tells you when you can't."
 msgstr ""
 "這裡會設定您的實例，也就是您安裝的 "
-"Fluxer，並在其中建立您的帳號。大約需要五分鐘。大多數選項之後都可以在管理面板中變更，無法變更的會在對應頁面上說明。"
+"sanalyer，並在其中建立您的帳號。大約需要五分鐘。大多數選項之後都可以在管理面板中變更，無法變更的會在對應頁面上說明。"
 
 #. Label in the accessibility tab. Preserve {linkPreviewExampleUrl}; it is
 #. inserted by code.
@@ -50972,7 +50968,7 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"開啟通行證後，我們會將您加入 Fluxer Labs，除非您以前退出過或被移出過 Fluxer Labs。開啟此選項後，我們會隨後在 "
+"開啟通行證後，我們會將您加入 sanalyer Labs，除非您以前退出過或被移出過 sanalyer Labs。開啟此選項後，我們會隨後在 "
 "#operators 點名歡迎您。"
 
 #. Hint under the checkbox or switch "Welcome me in #operators". Fluxer Labs
@@ -50986,7 +50982,7 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"通行證送達後，我們會將您加入 Fluxer Labs，除非您以前退出過或被移出過 Fluxer Labs。開啟此選項後，我們會隨後在 "
+"通行證送達後，我們會將您加入 sanalyer Labs，除非您以前退出過或被移出過 sanalyer Labs。開啟此選項後，我們會隨後在 "
 "#operators 點名歡迎您。"
 
 #. Error under the certificate name fields when the server turned a name down,
@@ -52677,7 +52673,7 @@ msgstr "你只能將通行證贈送給朋友。請先將對方加為好友，然
 #. friends with.
 #: src/features/premium/components/operator_pass/OperatorPassPassItOnModal.tsx
 msgid "You can only pass this on to one of your friends on Fluxer."
-msgstr "只能將此傳送給您在 Fluxer 上的朋友。"
+msgstr "只能將此傳送給您在 sanalyer 上的朋友。"
 
 #. Shown in Settings > Look and feel. "Themes" is a link to the Themes
 #. settings tab.

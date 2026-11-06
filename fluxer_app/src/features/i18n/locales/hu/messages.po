@@ -18,7 +18,7 @@ msgstr ""
 #. not exist. {name} is the variable name without its leading dashes.
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "--{name} isn't a Fluxer variable and isn't set anywhere in your CSS."
-msgstr "--{name} nem Fluxer változó, és sehol sincs beállítva a CSS-ben."
+msgstr "--{name} nem sanalyer változó, és sehol sincs beállítva a CSS-ben."
 
 #. Description text in the messages tab.
 #: src/features/user/components/modals/tabs/appearance_tab/MessagesTab.tsx
@@ -4109,7 +4109,7 @@ msgstr "#operators"
 #. trailing punctuation.
 #: src/features/premium/components/operator_pass/checkout/OperatorPassShowcaseSlides.ts
 msgid "#operators in Fluxer Labs"
-msgstr "#operators a Fluxer Labs közösségben"
+msgstr "#operators a sanalyer Labs közösségben"
 
 #. Badge on the forward modal preview thumbnail. count is the number of other
 #. attachments that the thumbnail does not show.
@@ -9538,7 +9538,7 @@ msgid ""
 "browsers use it for their toolbar. Reset it to keep Fluxer's indigo."
 msgstr ""
 "Az alkalmazás gombjai, hivatkozásai és kiemelései ezt a színt használják, a "
-"telefonos böngészők pedig az eszköztárukhoz. Állítsd vissza, ha a Fluxer "
+"telefonos böngészők pedig az eszköztárukhoz. Állítsd vissza, ha a sanalyer "
 "indigó színét szeretnéd megtartani."
 
 #. Gift inventory empty-state description. premiumProductName is the premium
@@ -10238,7 +10238,7 @@ msgstr "Emoji módosítása"
 #. variables are set.
 #: src/features/theme_settings/editor/CssCompletions.ts
 msgid "Change Fluxer variables"
-msgstr "Fluxer változók módosítása"
+msgstr "sanalyer változók módosítása"
 
 #. Generic action label that opens the friend-nickname edit flow.
 #: src/features/i18n/utils/CommonMessageDescriptors.ts
@@ -14622,12 +14622,8 @@ msgstr "Nem sikerült csatlakozni ide: {names}"
 #. Instance selector error shown when no Fluxer instance answered at the
 #. address. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
-msgid ""
-"Couldn't connect to a Fluxer instance at {domain}. Check the address and "
-"that the instance is online."
-msgstr ""
-"Nem sikerült elérni egy Fluxer példányt a következő címen: {domain}. "
-"Ellenőrizd a címet, és győződj meg róla, hogy az példány online van."
+msgid "Couldn't connect to a sanalyer instance at {domain}. Check the address and that the instance is online."
+msgstr "Nem sikerült elérni egy sanalyer példányt a következő címen: {domain}. Ellenőrizd a címet, és győződj meg róla, hogy az példány online van."
 
 #. Toast shown when joining a voice channel fails because the connection timed
 #. out or the transport dropped.
@@ -18914,7 +18910,7 @@ msgid ""
 "future lists, the release notes and that file, but earlier versions of the "
 "source code and copies others made can't be recalled."
 msgstr ""
-"Minden általunk közzétett éves Operators-lista bekerül egy Fluxer-kiadás "
+"Minden általunk közzétett éves Operators-lista bekerül egy sanalyer-kiadás "
 "jegyzeteibe és a forráskódjának egy fájljába. A falon szereplő neved csak "
 "akkor kerül rá, ha ezt bekapcsolod. Ha később kéred az eltávolítását, "
 "kivesszük a jövőbeli listákból, a kiadási jegyzetekből és abból a fájlból, "
@@ -20590,12 +20586,8 @@ msgstr "Mindenki"
 #. Bullet point in the P2P call dialog. Plutonium is the name of the paid
 #. subscription and must not be translated. 4K and fps are video terms.
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
-msgid ""
-"Everyone in the call gets Plutonium stream quality for free, with up to 4K "
-"source resolution and 60 fps."
-msgstr ""
-"Mindenki számára ingyenes a Plutonium stream minőség a hívásban: akár 4K "
-"felbontás és 60 fps."
+msgid "Everyone in the call gets {premiumProductName} stream quality for free, with up to 4K source resolution and 60 fps."
+msgstr "Mindenki számára ingyenes a {premiumProductName} stream minőség a hívásban: akár 4K felbontás és 60 fps."
 
 #. Description of the single community option in the setup wizard.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
@@ -21790,14 +21782,14 @@ msgid ""
 "Fluxer adds a random number to each username, like alex#4821, so many people"
 " can use the same name."
 msgstr ""
-"A Fluxer minden felhasználónévhez véletlen számot fűz, például alex#4821, "
+"A sanalyer minden felhasználónévhez véletlen számot fűz, például alex#4821, "
 "így többen is használhatják ugyanazt a nevet."
 
 #. Problem shown in the quick CSS editor on a web address that the app is not
 #. allowed to load. Assets are files uploaded under "Assets".
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "Fluxer blocked loading {url}. Upload it as an asset."
-msgstr "A Fluxer blokkolta a(z) {url} betöltését. Töltsd fel erőforrásként."
+msgstr "A sanalyer blokkolta a(z) {url} betöltését. Töltsd fel erőforrásként."
 
 #. Problem shown in the quick CSS editor on an image address on a site the
 #. person has not trusted. Assets are files uploaded under "Assets". Trusting
@@ -21807,20 +21799,20 @@ msgid ""
 "Fluxer blocked loading {url}. Upload the file as an asset, or trust the site"
 " it's on."
 msgstr ""
-"A Fluxer blokkolta a(z) {url} betöltését. Töltsd fel a fájlt erőforrásként, "
+"A sanalyer blokkolta a(z) {url} betöltését. Töltsd fel a fájlt erőforrásként, "
 "vagy bízz meg a webhelyben, ahol található."
 
 #. Problem shown in the quick CSS editor on a reference to an uploaded theme
 #. asset that does not exist.
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "Fluxer can't find the asset \"{name}\"."
-msgstr "A Fluxer nem találja a(z) \"{name}\" erőforrást."
+msgstr "A sanalyer nem találja a(z) \"{name}\" erőforrást."
 
 #. Problem shown in the quick CSS editor on a reference to a file on the
 #. computer that Fluxer cannot read.
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "Fluxer can't find the file \"{path}\"."
-msgstr "A Fluxer nem találja a(z) \"{path}\" fájlt."
+msgstr "A sanalyer nem találja a(z) \"{path}\" fájlt."
 
 #. Shown for a watched theme folder in Settings > Themes when the folder was
 #. moved, deleted or disconnected.
@@ -21829,7 +21821,7 @@ msgid ""
 "Fluxer can't find this folder. It will load the themes again when the folder"
 " is back."
 msgstr ""
-"A Fluxer nem találja ezt a mappát. Újra betölti a témákat, ha a mappa "
+"A sanalyer nem találja ezt a mappát. Újra betölti a témákat, ha a mappa "
 "visszakerül."
 
 #. Shown for a watched theme folder in Settings > Themes when the desktop app
@@ -21837,13 +21829,13 @@ msgstr ""
 #: src/features/theme_settings/components/YourThemesSection.tsx
 msgid "Fluxer can't open this folder. Import it again to keep watching it."
 msgstr ""
-"A Fluxer nem tudja megnyitni ezt a mappát. Importáld újra, hogy továbbra is "
+"A sanalyer nem tudja megnyitni ezt a mappát. Importáld újra, hogy továbbra is "
 "figyelhesse."
 
 #. Error toast in "Your themes" when the chosen theme folder cannot be opened.
 #: src/features/theme_settings/components/YourThemesSection.tsx
 msgid "Fluxer can't read this folder."
-msgstr "A Fluxer nem tudja olvasni ezt a mappát."
+msgstr "A sanalyer nem tudja olvasni ezt a mappát."
 
 #. Problem shown at the top of the quick CSS editor when the whole sheet was
 #. left out.
@@ -21852,21 +21844,21 @@ msgid ""
 "Fluxer couldn't apply this CSS. Check it for a broken comment, string or "
 "bracket."
 msgstr ""
-"A Fluxer nem tudta alkalmazni ezt a CSS-t. Ellenőrizd, nincs-e benne hibás "
+"A sanalyer nem tudta alkalmazni ezt a CSS-t. Ellenőrizd, nincs-e benne hibás "
 "megjegyzés, karakterlánc vagy zárójel."
 
 #. Alert when the SMTP check fails and the mail server sent no reply. host is
 #. the mail server address.
 #: src/features/app/components/setup/SetupEmailSteps.tsx
 msgid "Fluxer couldn't connect to {host}."
-msgstr "A Fluxer nem tudott csatlakozni ehhez: {host}."
+msgstr "A sanalyer nem tudott csatlakozni ehhez: {host}."
 
 #. Alert when the SMTP check fails. host is the mail server address and error
 #. is its reply.
 #: src/features/app/components/setup/SetupEmailSteps.tsx
 msgid "Fluxer couldn't connect to {host}. The server said: \"{error}\""
 msgstr ""
-"A Fluxer nem tudott csatlakozni ehhez: {host}. A szerver válasza: „{error}”"
+"A sanalyer nem tudott csatlakozni ehhez: {host}. A szerver válasza: „{error}”"
 
 #. Status shown in the desktop app when it stopped checking the browser sign-
 #. in because the instance could not be reached. instanceName is the server
@@ -21877,7 +21869,7 @@ msgid ""
 "Fluxer couldn't connect to {instanceName} to check whether your browser "
 "approved this sign-in. Check your connection, then select \"Try again\"."
 msgstr ""
-"A Fluxer nem érte el a(z) {instanceName} szervert, hogy ellenőrizze, "
+"A sanalyer nem érte el a(z) {instanceName} szervert, hogy ellenőrizze, "
 "jóváhagyta-e a böngésződ ezt a bejelentkezést. Ellenőrizd a kapcsolatot, "
 "majd válaszd az „Újra” lehetőséget."
 
@@ -21885,7 +21877,7 @@ msgstr ""
 #. community. Fluxer Labs is the name of a community, keep it as is.
 #: src/features/premium/utils/PremiumMessageDescriptors.ts
 msgid "Fluxer Labs"
-msgstr "Fluxer Labs"
+msgstr "sanalyer Labs"
 
 #. Shown in the modal that applies a shared theme when the theme points at
 #. files the app will not load.
@@ -21894,7 +21886,7 @@ msgid ""
 "Fluxer won't load {count, plural, one {# file} other {# files}} that this "
 "theme links to on other sites."
 msgstr ""
-"A Fluxer nem tölt be {count, plural, one {# fájlt} other {# fájlt}} más "
+"A sanalyer nem tölt be {count, plural, one {# fájlt} other {# fájlt}} más "
 "webhelyekről, amelyekre ez a téma hivatkozik."
 
 #. Settings search synonym. Used to match this term when the user types it in
@@ -24668,7 +24660,7 @@ msgid ""
 "If the link opens a different Fluxer app, select \"Signing in on another "
 "device?\" and type the code in your browser instead."
 msgstr ""
-"Ha a link egy másik Fluxer alkalmazást nyit meg, válaszd a „Bejelentkezel "
+"Ha a link egy másik sanalyer alkalmazást nyit meg, válaszd a „Bejelentkezel "
 "egy másik eszközön?” lehetőséget, és írd be a kódot a böngészőben."
 
 #. Helper text under the Explain the problem field on the details step of the
@@ -24754,7 +24746,7 @@ msgid ""
 "If you installed Fluxer with rexctl, it printed the token when it finished. "
 "Run this on your server to show it again."
 msgstr ""
-"Ha a Fluxert a rexctl segítségével telepítetted, akkor a telepítés végén "
+"Ha a sanalyert a rexctl segítségével telepítetted, akkor a telepítés végén "
 "kiírta a tokent. Futtasd újra a szervereden, hogy ismét megjelenjen."
 
 #. What the app shows when no symbol is set, in the setup wizard.
@@ -24773,7 +24765,7 @@ msgid ""
 "Fluxer wordmark while the product name is Fluxer."
 msgstr ""
 "Ha üresen hagyod, a termék neve egyszerű szövegként jelenik meg, vagy a "
-"Fluxer szójeleként, amíg a termék neve Fluxer."
+"sanalyer szójeleként, amíg a termék neve sanalyer."
 
 #. What the app shows when no sign-in background is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -24791,8 +24783,8 @@ msgid ""
 "and no image for any other name."
 msgstr ""
 "Ha üresen hagyod, a bejelentkezési oldal az alkalmazásikont vagy a "
-"szimbólumot használja. Ezek nélkül a Fluxer logóját mutatja, amíg a termék "
-"neve Fluxer, más név esetén pedig nem jelenít meg képet."
+"szimbólumot használja. Ezek nélkül a sanalyer logóját mutatja, amíg a termék "
+"neve sanalyer, más név esetén pedig nem jelenít meg képet."
 
 #. What the app shows when no dark mode favicon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -24809,13 +24801,13 @@ msgid ""
 "If you leave it empty, the tab uses your app icon, or the Fluxer icon if "
 "that is empty too."
 msgstr ""
-"Ha üresen hagyod, a lap az alkalmazásikont használja, vagy a Fluxer ikonját,"
+"Ha üresen hagyod, a lap az alkalmazásikont használja, vagy a sanalyer ikonját,"
 " ha az is üres."
 
 #. What the app shows when no app icon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
 msgid "If you leave it empty, those places show the Fluxer icon."
-msgstr "Ha üresen hagyod, ezeken a helyeken a Fluxer ikonja jelenik meg."
+msgstr "Ha üresen hagyod, ezeken a helyeken a sanalyer ikonja jelenik meg."
 
 #. Help on the setup token screen for someone who installed Fluxer without
 #. rexctl. FLUXER_SETUP_TOKEN and rexctl must not be translated.
@@ -24825,8 +24817,8 @@ msgid ""
 "least 32 characters that you choose, restart Fluxer, and enter that value "
 "here."
 msgstr ""
-"Ha Fluxert rexctl nélkül futtatod, állítsd be a FLUXER_SETUP_TOKEN értékét "
-"legalább 32 karakter hosszúra, amit te választasz, indítsd újra a Fluxert, "
+"Ha sanalyert rexctl nélkül futtatod, állítsd be a FLUXER_SETUP_TOKEN értékét "
+"legalább 32 karakter hosszúra, amit te választasz, indítsd újra a sanalyert, "
 "és írd be ide."
 
 #: src/features/user/components/modals/FluxerTagChangeModal.tsx
@@ -29821,7 +29813,7 @@ msgstr "Összes eszköz áthelyezése ide…"
 #. panel inside the app.
 #: src/features/theme_settings/components/QuickCssWorkspace.tsx
 msgid "Move back into Fluxer"
-msgstr "Vissza a Fluxerbe"
+msgstr "Vissza a sanalyerbe"
 
 #. Label in the keybinds tab.
 #: src/features/user/components/modals/tabs/keybinds_tab/AssignableActionOptions.ts
@@ -32643,7 +32635,7 @@ msgid ""
 "you have Fluxer open and some of what's on your screen."
 msgstr ""
 "Csak olyan webhelyekben bízz meg, amelyeket ismersz. Egy webhely, amelyben "
-"megbízol, láthatja az IP-címedet, azt, hogy mikor van megnyitva a Fluxer, és"
+"megbízol, láthatja az IP-címedet, azt, hogy mikor van megnyitva a sanalyer, és"
 " a képernyőd tartalmának egy részét."
 
 #. Body of the error modal shown when a non-Visionary user tries to rejoin a
@@ -33445,7 +33437,7 @@ msgid ""
 "Operators and the Fluxer Team talking about self-hosting in the #operators "
 "channel of Fluxer Labs"
 msgstr ""
-"Operatorok és a Fluxer csapata beszélgetnek a saját üzemeltetésről a Fluxer "
+"Operatorok és a sanalyer csapata beszélgetnek a saját üzemeltetésről a sanalyer "
 "Labs #operators csatornájában"
 
 #. Heading of the Operators' wall section in the Operator Pass settings tab.
@@ -34470,7 +34462,7 @@ msgid ""
 "People using the Fluxer mobile apps won't get notifications from your "
 "instance. You can turn this on later in the admin panel."
 msgstr ""
-"Akik a Fluxer mobilalkalmazásait használják, nem kapnak értesítéseket a "
+"Akik a sanalyer mobilalkalmazásait használják, nem kapnak értesítéseket a "
 "példányodtól. Ezt később bekapcsolhatod az adminisztrációs panelen."
 
 #. Description under the "Anyone in my communities" privacy setup option.
@@ -40520,7 +40512,7 @@ msgid ""
 "Sweden, {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 msgstr ""
-"Eladó: Fluxer Platform AB, 559537-3993, székhely (säte) Haninge, Svédország,"
+"Eladó: sanalyer Platform AB, 559537-3993, székhely (säte) Haninge, Svédország,"
 " {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 
@@ -40719,7 +40711,7 @@ msgstr "Üzenetek, képek, GIF-ek és emojik küldése"
 #. Setup wizard title for the push relay consent.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
 msgid "Send notifications to the Fluxer mobile apps?"
-msgstr "Küldjünk értesítéseket a Fluxer mobilalkalmazásaiba?"
+msgstr "Küldjünk értesítéseket a sanalyer mobilalkalmazásaiba?"
 
 #. Button that confirms offering an Operator Pass to someone. They can then
 #. accept or decline it.
@@ -41221,7 +41213,7 @@ msgstr ""
 #: src/features/theme_settings/editor/AppSelectors.ts
 msgid "Set on messages that Fluxer sends, such as when someone joins."
 msgstr ""
-"Azokon az üzeneteken van beállítva, amelyeket a Fluxer küld, például amikor "
+"Azokon az üzeneteken van beállítva, amelyeket a sanalyer küld, például amikor "
 "valaki csatlakozik."
 
 #. Describes a CSS attribute in the "Reference" tab of the quick CSS editor.
@@ -46156,7 +46148,7 @@ msgid ""
 "\"Operator Pass since November 2026\". You can hide it, or just its date, in"
 " your settings at any time."
 msgstr ""
-"A Fluxer-profilodon lévő jelvény mutatja, mikor kaptad a passodat, például: "
+"A sanalyer-profilodon lévő jelvény mutatja, mikor kaptad a passodat, például: "
 "„Operator Pass 2026 novembere óta”. A beállításaidban bármikor elrejtheted a"
 " jelvényt, vagy csak a dátumát."
 
@@ -46398,7 +46390,7 @@ msgid ""
 msgstr ""
 "A nagy kép a bejelentkezési űrlap mellett, amely mindig sötét. Telefonon "
 "csak a név mellett jelenik meg, ha nincs szójel, és a termék neve nem "
-"Fluxer. Használj négyzetes vagy széles, világos színű, átlátszó hátterű PNG-"
+"sanalyer. Használj négyzetes vagy széles, világos színű, átlátszó hátterű PNG-"
 " vagy SVG-fájlt, legalább 256 képpont magasat és legfeljebb {size} méretűt."
 
 #. Error modal body shown when revoking an invite fails; warns the user that
@@ -46643,7 +46635,7 @@ msgstr ""
 msgid ""
 "The sign-in page on a phone, in a mobile browser or the Fluxer mobile app."
 msgstr ""
-"A bejelentkezési oldal telefonon, mobilböngészőben vagy a Fluxer "
+"A bejelentkezési oldal telefonon, mobilböngészőben vagy a sanalyer "
 "mobilalkalmazásban."
 
 #. Error shown in the desktop app when a browser sign-in request expires
@@ -46992,7 +46984,7 @@ msgstr "Hiba történt a webhookok betöltésekor. Próbáld újra."
 #. CSS editor.
 #: src/features/theme_settings/components/QuickCssReference.tsx
 msgid "These attributes don't change between Fluxer updates."
-msgstr "Ezek az attribútumok nem változnak Fluxer frissítések között."
+msgstr "Ezek az attribútumok nem változnak sanalyer frissítések között."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -47206,7 +47198,7 @@ msgid ""
 "This browser can't save Fluxer's data. You'll need to sign in again after "
 "you close it."
 msgstr ""
-"Ez a böngésző nem tudja menteni a Fluxer adatait. Bezárása után újra be kell"
+"Ez a böngésző nem tudja menteni a sanalyer adatait. Bezárása után újra be kell"
 " jelentkezned."
 
 #. Console warning line explaining that the browser console is meant for
@@ -47415,7 +47407,7 @@ msgstr ""
 msgid ""
 "This class name changes with every Fluxer update. Use a [data-flx] selector."
 msgstr ""
-"Ez az osztálynév minden Fluxer frissítésnél változik. Használj [data-flx] "
+"Ez az osztálynév minden sanalyer frissítésnél változik. Használj [data-flx] "
 "szelektort."
 
 #. Problem shown in the quick CSS editor on a closing curly brace that closes
@@ -47929,7 +47921,7 @@ msgid ""
 "This instance was upgraded from a version of Fluxer that used email sign-in,"
 " so it stays on email."
 msgstr ""
-"Ezt a példányt a Fluxer egy olyan verziójáról frissítették, amely e-mailes "
+"Ezt a példányt a sanalyer egy olyan verziójáról frissítették, amely e-mailes "
 "bejelentkezést használt, ezért marad az e-mailnél."
 
 #. Helper text shown on an invite embed while streaming privacy is active.
@@ -48487,7 +48479,7 @@ msgid ""
 "your account on it. It takes about five minutes. You can change most choices"
 " later in the admin panel, and a screen tells you when you can't."
 msgstr ""
-"Itt beállítod a példányodat, vagyis a Fluxer általad telepített példányát, "
+"Itt beállítod a példányodat, vagyis a sanalyer általad telepített példányát, "
 "és létrehozod rajta a fiókodat. Körülbelül öt percig tart. A legtöbb "
 "választást később módosíthatod az adminisztrációs panelen, és ha valamit "
 "nem, azt a képernyő jelzi."
@@ -53348,8 +53340,8 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"Amikor bekapcsolod a passodat, hozzáadunk a Fluxer Labshoz, kivéve, ha "
-"korábban már kiléptél a Fluxer Labsből, vagy eltávolítottak onnan. Ha ez be "
+"Amikor bekapcsolod a passodat, hozzáadunk a sanalyer Labshoz, kivéve, ha "
+"korábban már kiléptél a sanalyer Labsből, vagy eltávolítottak onnan. Ha ez be "
 "van kapcsolva, nem sokkal később név szerint köszöntünk a #operators "
 "csatornán."
 
@@ -53364,8 +53356,8 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"Amikor kézbesítjük a passodat, hozzáadunk a Fluxer Labshoz, kivéve, ha "
-"korábban már kiléptél a Fluxer Labsből, vagy eltávolítottak onnan. Ha ez be "
+"Amikor kézbesítjük a passodat, hozzáadunk a sanalyer Labshoz, kivéve, ha "
+"korábban már kiléptél a sanalyer Labsből, vagy eltávolítottak onnan. Ha ez be "
 "van kapcsolva, nem sokkal később név szerint köszöntünk a #operators "
 "csatornán."
 
@@ -55245,7 +55237,7 @@ msgstr ""
 #. friends with.
 #: src/features/premium/components/operator_pass/OperatorPassPassItOnModal.tsx
 msgid "You can only pass this on to one of your friends on Fluxer."
-msgstr "Ezt csak a Fluxer ismerőseidnek adhatod tovább."
+msgstr "Ezt csak a sanalyer ismerőseidnek adhatod tovább."
 
 #. Shown in Settings > Look and feel. "Themes" is a link to the Themes
 #. settings tab.

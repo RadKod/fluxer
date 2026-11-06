@@ -16,6 +16,7 @@ vi.mock('@lingui/react/macro', () => ({
 }));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({
 	default: {
+		getSnapshotOrNull: () => null,
 		isSelfHosted: () => runtimeConfig.selfHosted,
 		get giftCodesEnabled() {
 			return runtimeConfig.giftCodesEnabled;

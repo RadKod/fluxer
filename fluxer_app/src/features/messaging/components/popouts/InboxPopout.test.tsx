@@ -27,7 +27,10 @@ vi.mock('@app/features/inbox/state/Inbox', () => ({
 	},
 }));
 vi.mock('@app/features/inbox/commands/InboxCommands', () => ({setTab: vi.fn(), markAllInboxChannelsAsRead: vi.fn()}));
-vi.mock('@app/features/i18n/utils/CommonMessageDescriptors', () => ({MENTIONS_DESCRIPTOR: {message: 'Mentions'}}));
+vi.mock('@app/features/i18n/utils/CommonMessageDescriptors', async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	MENTIONS_DESCRIPTOR: {message: 'Mentions'},
+}));
 vi.mock('@app/features/app/components/floating/UnreadChannelsContent', () => ({
 	getMarkableUnreadChannels: () => [],
 	UnreadChannelsContent: () => createElement('p', null, 'unread channels'),

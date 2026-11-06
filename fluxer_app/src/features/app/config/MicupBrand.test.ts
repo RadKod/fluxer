@@ -41,6 +41,7 @@ vi.mock('@app/features/app/state/RuntimeConfig', () => ({
 		inviteUrlBase: '',
 		mediaEndpoint: 'https://sanalyer.com/media',
 		staticCdnEndpoint: '',
+		appPublic: {branding: {trusted_domains: []}},
 	},
 }));
 vi.mock('@app/features/user/state/UserSettings', () => ({
@@ -144,7 +145,7 @@ describe('sanalyer brand text', () => {
 	const UNRENDERED_MSGIDS = new Set(['Fluxer', 'Plutonium']);
 	// This consent notice attributes a third-party relay, linked to its provider's privacy notice.
 	const EXTERNAL_PUSH_RELAY_MSGID =
-		"The official Fluxer mobile apps receive notifications through Fluxer's push relay, which hands them to Apple and Google. Self-hosted UnifiedPush and ntfy endpoints never reach the relay and need no agreement.";
+		'The Fluxer apps for iOS and Android get notifications through a push relay that Fluxer runs, which passes them to Apple and Google. To use it, you accept the push relay privacy notice.';
 
 	it('keeps sanalyer product branding in all 34 languages', () => {
 		expect(catalogs).toHaveLength(34);
@@ -166,7 +167,7 @@ describe('sanalyer brand text', () => {
 				.find(({locale}) => locale === 'en-US')
 				?.entries.find(([msgid]) => msgid === EXTERNAL_PUSH_RELAY_MSGID)?.[1],
 		).toBe(EXTERNAL_PUSH_RELAY_MSGID);
-		const wizard = readFileSync(resolve(localesDir, '../../app/components/setup/SetupWizardSteps.tsx'), 'utf8');
+		const wizard = readFileSync(resolve(localesDir, '../../app/components/setup/SetupPolicySteps.tsx'), 'utf8');
 		expect(wizard).toContain("const PUSH_RELAY_NOTICE_URL = 'https://fluxer.com/push-relay'");
 		expect(wizard).toContain('href={PUSH_RELAY_NOTICE_URL}');
 	});

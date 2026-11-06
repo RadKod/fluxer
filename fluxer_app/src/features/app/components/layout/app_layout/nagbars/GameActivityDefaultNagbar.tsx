@@ -6,7 +6,6 @@ import {NagbarButton} from '@app/features/app/components/layout/NagbarButton';
 import {NagbarContent} from '@app/features/app/components/layout/NagbarContent';
 import {NAGBAR_TONES, NagbarToneKind} from '@app/features/app/components/layout/NagbarTones';
 import {ExternalLink} from '@app/features/app/components/shared/ExternalLink';
-import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import {OKAY_DESCRIPTOR, SETTINGS_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
 import {modal} from '@app/features/ui/commands/ModalCommands';
@@ -60,6 +59,7 @@ export const GameActivityDefaultNagbar = observer(({isMobile}: {isMobile: boolea
 		);
 		acknowledge();
 	};
+	const privacyUrl = Routes.privacy();
 	return (
 		<Nagbar
 			isMobile={isMobile}
@@ -75,9 +75,7 @@ export const GameActivityDefaultNagbar = observer(({isMobile}: {isMobile: boolea
 				message={
 					<>
 						<strong>{i18n._(TITLE_DESCRIPTOR)}</strong> {i18n._(BODY_DESCRIPTOR)}{' '}
-						<ExternalLink href={RuntimeConfig.privacyUrl ?? Routes.privacy()}>
-							{i18n._(DETAILS_DESCRIPTOR)}
-						</ExternalLink>
+						{privacyUrl && <ExternalLink href={privacyUrl}>{i18n._(DETAILS_DESCRIPTOR)}</ExternalLink>}
 					</>
 				}
 				actions={

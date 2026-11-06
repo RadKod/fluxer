@@ -370,11 +370,7 @@ class MessageReferences {
 	}
 
 	reset(): void {
-		this.deletedMessageIds = new Set();
-		this.cachedMessages = new Map();
-		this.referenceVersions.clear();
-		this.referenceCount.clear();
-		this.referencingMessages.clear();
+		this.handleGatewayReady();
 	}
 }
 

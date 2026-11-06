@@ -123,12 +123,14 @@ function load(id: string): void {
 }
 
 // gtag.js writes these through document.cookie; the Cookie Store API is missing in some browsers the app supports.
+// Max-Age=0 alone leaves an empty cookie behind in some cookie jars; a past expiry date removes it everywhere.
+const EXPIRED = 'expires=Thu, 01 Jan 1970 00:00:00 GMT';
 function clearCookies(id: string): void {
 	for (const name of ['_ga', `_ga_${id.slice(2)}`]) {
 		// biome-ignore lint/suspicious/noDocumentCookie: host-only cookies (cookie_domain 'none').
-		document.cookie = `${name}=; Max-Age=0; path=/`;
+		document.cookie = `${name}=; Max-Age=0; ${EXPIRED}; path=/`;
 		// biome-ignore lint/suspicious/noDocumentCookie: GA's default cookie_domain 'auto' used the parent domain.
-		document.cookie = `${name}=; Max-Age=0; path=/; domain=.${window.location.hostname}`;
+		document.cookie = `${name}=; Max-Age=0; ${EXPIRED}; path=/; domain=.${window.location.hostname}`;
 	}
 }
 

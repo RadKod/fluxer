@@ -7,6 +7,7 @@ import {
 	type ThemeCatalogEntry,
 	type ThemeCatalogSwatches,
 } from '@app/features/discovery/themes/ThemeCatalog';
+import ThemeEditTarget from '@app/features/theme/state/ThemeEditTarget';
 import ThemeLibrary from '@app/features/theme/state/ThemeLibrary';
 import {Button} from '@app/features/ui/button/Button';
 import {Scroller} from '@app/features/ui/components/Scroller';
@@ -38,12 +39,12 @@ export async function applyCatalogTheme(entry: ThemeCatalogEntry): Promise<void>
 		});
 		await ThemeLibrary.saveTheme(theme);
 	}
-	for (const enabledId of ThemeLibrary.enabledThemeIds) {
+	for (const enabledId of ThemeLibrary.enabledIdsFor(ThemeEditTarget.target)) {
 		if (enabledId !== entry.id && isThemeCatalogId(enabledId)) {
-			await ThemeLibrary.setThemeEnabled(enabledId, false);
+			await ThemeLibrary.setThemeEnabled(enabledId, false, ThemeEditTarget.target);
 		}
 	}
-	await ThemeLibrary.setThemeEnabled(entry.id, true);
+	await ThemeLibrary.setThemeEnabled(entry.id, true, ThemeEditTarget.target);
 }
 
 export async function removeCatalogTheme(entry: ThemeCatalogEntry): Promise<void> {
@@ -96,7 +97,7 @@ const ThemeCard = observer(function ThemeCard({entry}: {entry: ThemeCatalogEntry
 	const {i18n} = useLingui();
 	const [busy, setBusy] = useState(false);
 	const installed = ThemeLibrary.themes.some((theme) => theme.id === entry.id);
-	const active = installed && ThemeLibrary.enabledThemeIds.includes(entry.id);
+	const active = installed && ThemeLibrary.enabledIdsFor(ThemeEditTarget.target).includes(entry.id);
 	const run = useCallback(async (work: () => Promise<void>) => {
 		setBusy(true);
 		try {
@@ -136,7 +137,7 @@ const ThemeCard = observer(function ThemeCard({entry}: {entry: ThemeCatalogEntry
 							variant="secondary"
 							fitContent
 							submitting={busy}
-							onClick={() => void run(() => ThemeLibrary.setThemeEnabled(entry.id, false))}
+							onClick={() => void run(() => ThemeLibrary.setThemeEnabled(entry.id, false, ThemeEditTarget.target))}
 							data-flx="discovery.themes.discovery-themes-page.button.disable"
 						>
 							<Trans>Turn off</Trans>

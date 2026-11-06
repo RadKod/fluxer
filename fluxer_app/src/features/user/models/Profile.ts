@@ -155,9 +155,6 @@ export class Profile {
 			JSON.stringify(this.embeddedGuildMember?.toJSON() ?? null) ===
 				JSON.stringify(other.embeddedGuildMember?.toJSON() ?? null) &&
 			this.timezoneOffset === other.timezoneOffset &&
-			this.premiumType === other.premiumType &&
-			this.premiumSince === other.premiumSince &&
-			this.premiumLifetimeSequence === other.premiumLifetimeSequence &&
 			JSON.stringify(this.mutualFriends) === JSON.stringify(other.mutualFriends) &&
 			JSON.stringify(this.mutualGuilds) === JSON.stringify(other.mutualGuilds) &&
 			JSON.stringify(this.connectedAccounts) === JSON.stringify(other.connectedAccounts) &&

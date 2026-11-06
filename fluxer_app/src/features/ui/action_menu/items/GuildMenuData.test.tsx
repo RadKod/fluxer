@@ -21,6 +21,7 @@ vi.mock('@lingui/react/macro', () => ({
 }));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({
 	default: {
+		interactionTier: 'legacy',
 		getSnapshotOrNull: () => null,
 		localInstanceDomain: 'micup.test',
 		webAppEndpoint: 'https://micup.test',

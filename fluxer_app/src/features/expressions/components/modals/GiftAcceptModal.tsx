@@ -393,7 +393,9 @@ export const GiftAcceptModal = observer(function GiftAcceptModal({code, target}:
 		);
 	};
 	const isLoading = !giftState || giftState.loading || Users.currentUser == null;
-	const isUnavailable = !isLoading && !itemGift && (giftState.error || !gift || gift.redeemed);
+	// Micup: a used shop item code is unavailable too, so it gets the same Close footer as a used gift.
+	const isUnavailable =
+		!isLoading && (itemGift ? itemGift.redeemed && !isEquipped : giftState.error || !gift || gift.redeemed);
 	const header = <Modal.Header title={<Trans>Gift</Trans>} data-flx="expressions.gift-accept-modal.modal-header" />;
 	const contentClassName = styles.content;
 	let content: ReactNode;

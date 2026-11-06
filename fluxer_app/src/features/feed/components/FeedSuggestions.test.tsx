@@ -40,7 +40,7 @@ vi.mock('@lingui/react/macro', () => ({
 }));
 vi.mock('@app/app/I18n', () => ({default: i18n}));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({
-	default: {localInstanceDomain: 'micup.test', singleCommunityEnabled: false},
+	default: {getSnapshotOrNull: () => null, localInstanceDomain: 'micup.test', singleCommunityEnabled: false},
 }));
 vi.mock('@app/features/app/utils/LimitResolverAdapter', () => ({
 	LimitResolver: {resolve: ({key, fallback}: {key: string; fallback: number}) => state.limits[key] ?? fallback},
@@ -153,6 +153,7 @@ const community = (id: string, name: string, memberCount = 1200) => ({
 	online_count: 30,
 	features: [],
 	verification_level: 0,
+	badge_ids: [],
 });
 
 const PICKS: FeedSuggestionsResponse = {

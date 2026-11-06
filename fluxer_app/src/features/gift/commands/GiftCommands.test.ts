@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {HttpError} from '@app/features/platform/types/EndpointError';
@@ -29,7 +30,9 @@ vi.mock('@app/features/platform/transport/InstanceHTTP', () => ({
 	instanceRequest: ({method, path}: {method: 'GET' | 'POST'; path: string}) =>
 		method === 'GET' ? http.get(path) : http.post(path),
 }));
-vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {isSelfHosted: () => runtime.selfHosted}}));
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({
+	default: {getSnapshotOrNull: () => null, isSelfHosted: () => runtime.selfHosted},
+}));
 vi.mock('@app/features/ui/commands/ModalCommands', () => modalCommands);
 vi.mock('@app/features/ui/commands/ToastCommands', () => toast);
 vi.mock('@app/features/cosmetics/state/Cosmetics', () => ({default: cosmetics}));

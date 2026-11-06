@@ -18,19 +18,19 @@ import {
 	RecoveryKitReminderAlert,
 	RecoveryKitRow,
 } from '@app/features/user/components/modals/tabs/account_security_tab/RecoveryKitSettings';
-import {UsernameSection} from '@app/features/user/components/modals/tabs/my_profile_tab/MyProfileTabUsernameSection';
 import {
 	canConnectSso,
 	SsoConnectRow,
 } from '@app/features/user/components/modals/tabs/account_security_tab/SsoConnectRow';
+import {UsernameSection} from '@app/features/user/components/modals/tabs/my_profile_tab/MyProfileTabUsernameSection';
 import type {User} from '@app/features/user/models/User';
-import {needsEmailConfirmation} from '@app/features/user/utils/AccountGates';
+import {canPerform, needsEmailConfirmation} from '@app/features/user/utils/AccountGates';
 import * as DateUtils from '@app/features/user/utils/DateFormatting';
 import {
 	HIDE_EMAIL_TOGGLE_DESCRIPTOR,
 	REVEAL_DESCRIPTOR as REVEAL_EMAIL_TOGGLE_DESCRIPTOR,
 } from '@app/features/user/utils/UserMessageDescriptors';
-import {AccountTiers, AccountVerificationNeeds} from '@fluxer/constants/src/AccountTierConstants';
+import {AccountTiers, AccountVerificationNeeds, TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
 import {hasUserTrait, UserTraits} from '@fluxer/constants/src/UserTraitConstants';
 import {msg} from '@lingui/core/macro';
 import {Trans, useLingui} from '@lingui/react/macro';
@@ -255,7 +255,7 @@ export const AccountTabContent: React.FC<AccountTabProps> = observer(({user, sho
 					(RuntimeConfig.usernameMigration.state === 'selecting' ||
 						user.usernameState === 'selected' ||
 						user.usernameState === 'reselect_required') && (
-						<UsernameSection user={user} isClaimed={isClaimed} isEmailVerified={user.verified !== false} />
+						<UsernameSection user={user} profileGate={canPerform(user, TierGatedActions.PROFILE_CUSTOMIZE)} />
 					)}
 				{emailRow}
 				{passwordRow}

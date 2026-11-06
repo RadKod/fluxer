@@ -4,12 +4,23 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 let stopCurrentPersistence: (() => void) | undefined;
+let flushPreviousStorage: (() => Promise<void>) | undefined;
+// Without IndexedDB the app storage keeps its data in memory; one backend shared across module reloads stands in
+// for the browser's storage surviving a reload.
+const sharedBackend = (
+	await import('@app/features/platform/state/PersistentStorageBackend')
+).createPersistentStorageBackend(null);
 
 // A fresh module graph each time, as after a reload: the store hydrates from what the last one wrote.
 async function loadBandSettings() {
 	stopCurrentPersistence?.();
+	await flushPreviousStorage?.();
 	vi.resetModules();
+	(await import('@app/features/platform/state/PersistentStorageBackend')).installPersistentStorageBackend(
+		sharedBackend,
+	);
 	const storage = await import('@app/features/platform/state/PersistentStorage');
+	flushPreviousStorage = storage.flushAppStorageWrites;
 	await storage.initializeAppStorage();
 	await storage.activateAppStorageScope(null);
 	const settings = (await import('@app/features/activities/band/game/BandSettings')).default;
@@ -22,6 +33,8 @@ async function loadBandSettings() {
 }
 
 beforeEach(async () => {
+	flushPreviousStorage = undefined;
+	await sharedBackend.clearAllExcept(new Set());
 	const {resetAppStorage} = await import('@app/features/platform/state/PersistentStorage');
 	await resetAppStorage([]);
 	window.localStorage.clear();

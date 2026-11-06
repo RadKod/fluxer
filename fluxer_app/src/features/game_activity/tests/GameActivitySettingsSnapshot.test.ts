@@ -27,6 +27,8 @@ vi.mock('@app/features/platform/state/PersistentStorage', () => ({
 		removeItem: vi.fn(),
 		subscribe: vi.fn(),
 	},
+	onBeforeAppStorageScopeChange: () => () => {},
+	subscribeAppStorageScope: () => () => {},
 }));
 vi.mock('@app/features/platform/utils/AppLogger', () => ({
 	Logger: class {

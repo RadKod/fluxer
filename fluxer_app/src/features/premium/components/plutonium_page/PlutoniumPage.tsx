@@ -158,10 +158,6 @@ export const PlutoniumPage = observer(function PlutoniumPage() {
 		}
 		startCheckout(intendedPlan, forgetPurchaseIntent);
 	}, [priceIds, currentUser?.id, startCheckout, purchaseDisabled, giftPurchasesAvailable, purchasesAvailable, i18n]);
-	const scrollToId = useCallback((id: string, block: ScrollLogicalPosition = 'start') => {
-		const target = scrollerRef.current?.querySelector<HTMLElement>(`#${id}`);
-		target?.scrollIntoView({behavior: 'smooth', block});
-	}, []);
 	const handleBack = useCallback(() => {
 		const history = RouterUtils.getHistory();
 		if (history && window.history.length > 1) {

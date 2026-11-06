@@ -11,8 +11,9 @@ interface CacheGroup {
 	chunks?: (chunk: {canBeInitial: () => boolean; name?: string; runtime?: string}) => boolean;
 }
 
-const cacheGroups = (createConfig() as {optimization: {splitChunks: {cacheGroups: Record<string, CacheGroup>}}})
-	.optimization.splitChunks.cacheGroups;
+const cacheGroups = (
+	createConfig() as unknown as {optimization: {splitChunks: {cacheGroups: Record<string, CacheGroup>}}}
+).optimization.splitChunks.cacheGroups;
 const HLS_MODULE = '/app/node_modules/.pnpm/hls.js@1.7.3/node_modules/hls.js/dist/hls.light.mjs';
 const OTHER_MODULE = '/app/node_modules/.pnpm/luxon@3.7.2/node_modules/luxon/src/luxon.js';
 

@@ -25,7 +25,6 @@ for (const path of [
 	'@app/features/channel/state/Channels',
 	'@app/features/devtools/commands/VoiceStateCommands',
 	'@app/features/guild/components/modals/AddGuildModal',
-	'@app/features/i18n/utils/CommonMessageDescriptors',
 	'@app/features/inbox/commands/InboxCommands',
 	'@app/features/inbox/state/Inbox',
 	'@app/features/input/components/modals/KeyboardShortcutsCheatsheetModal',
@@ -57,10 +56,22 @@ for (const path of [
 	'@app/features/voice/engine/MediaEngineFacade',
 	'@app/features/voice/state/LocalVoiceState',
 	'@app/features/voice/utils/CallUtils',
-	'@app/features/voice/utils/VoiceMessageDescriptors',
 ]) {
-	vi.doMock(path, () => ({default: {}}));
+	// Any named export the handlers' import graph asks for is an empty stub; only the zoom handler runs here.
+	vi.doMock(
+		path,
+		() =>
+			new Proxy({default: {}} as Record<string | symbol, unknown>, {
+				has: () => true,
+				get: (target, key) => {
+					if (key in target) return target[key];
+					if (key === 'then' || typeof key === 'symbol') return undefined;
+					return {};
+				},
+			}),
+	);
 }
+vi.doMock('@app/features/app/state/RuntimeConfig', () => ({default: {getSnapshotOrNull: () => null}}));
 
 const {default: Accessibility} = await import('@app/features/accessibility/state/Accessibility');
 const {registerDefaultKeybindHandlers} = await import(

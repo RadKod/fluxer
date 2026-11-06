@@ -30,7 +30,7 @@ vi.mock('@app/features/platform/transport/InstanceHTTP', async (importOriginal) 
 		method === 'GET' ? http.get(path) : http.post(path),
 }));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({
-	default: {getSnapshotOrNull: () => null, isSelfHosted: () => runtime.selfHosted},
+	default: {interactionTier: 'legacy', getSnapshotOrNull: () => null, isSelfHosted: () => runtime.selfHosted},
 }));
 vi.mock('@app/features/ui/commands/ModalCommands', () => modalCommands);
 vi.mock('@app/features/ui/commands/ToastCommands', () => toast);
@@ -44,7 +44,7 @@ vi.mock('@app/features/expressions/components/modals/GiftSendToFriendModal', () 
 vi.mock('@app/features/devtools/state/DeveloperOptions', () => ({default: {}}));
 vi.mock('@app/features/auth/components/modals/ClaimAccountModal', () => ({openClaimAccountModal: vi.fn()}));
 vi.mock('@app/features/user/state/Users', () => ({
-	default: {currentUser: {isClaimed: () => true}, getCurrentUser: () => null},
+	default: {currentUser: {isClaimed: () => true, accountTier: 'verified'}, getCurrentUser: () => null},
 }));
 vi.mock('@app/features/user/models/User', () => ({User: class {}}));
 vi.mock('@app/features/user/utils/NicknameUtils', () => ({getDisplayName: () => 'Sender'}));
@@ -53,6 +53,11 @@ vi.mock('@app/features/app/components/dialogs/Modal', () => ({
 	Root: Passthrough,
 	Header: ({title}: {title: ReactNode}) => <h2 data-flx="expressions.gift-accept-modal-test.header.h2">{title}</h2>,
 	Content: Passthrough,
+	DismissFooter: () => (
+		<button type="button" data-flx="expressions.gift-accept-modal-test.dismiss-footer">
+			Close
+		</button>
+	),
 }));
 vi.mock('@app/features/ui/button/Button', () => ({
 	Button: ({children, onClick, disabled}: {children: ReactNode; onClick?: () => void; disabled?: boolean}) => (

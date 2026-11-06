@@ -292,14 +292,18 @@ export const ProfilePreview: React.FC<ProfilePreviewProps> = observer(
 							onAvatarClick={onAvatarClick ?? openMockProfile}
 							data-flx="user.profile.profile-preview.profile-card-banner"
 						/>
-						<UserProfileBadges
-							badges={getProfileDisplayBadges(mockProfile)}
-							data-flx="user.profile.profile-preview.user-profile-badges"
-						/>
 						<ProfileCardContent data-flx="user.profile.profile-preview.profile-card-content">
 							<ProfileCardUserInfo
 								displayName={displayName}
 								user={previewUser}
+								// Micup: the badge row sits right under the name, in the modal's row layout.
+								belowName={
+									<UserProfileBadges
+										badges={getProfileDisplayBadges(mockProfile)}
+										isModal={true}
+										data-flx="user.profile.profile-preview.user-profile-badges"
+									/>
+								}
 								pronouns={pronouns}
 								showUsername={true}
 								isClickable={true}

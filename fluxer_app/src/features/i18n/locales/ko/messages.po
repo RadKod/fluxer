@@ -18,7 +18,7 @@ msgstr ""
 #. not exist. {name} is the variable name without its leading dashes.
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "--{name} isn't a Fluxer variable and isn't set anywhere in your CSS."
-msgstr "--{name}은(는) Fluxer 변수도 아니고, CSS 어디에도 설정되어 있지 않아요."
+msgstr "--{name}은(는) sanalyer 변수도 아니고, CSS 어디에도 설정되어 있지 않아요."
 
 #. Description text in the messages tab.
 #: src/features/user/components/modals/tabs/appearance_tab/MessagesTab.tsx
@@ -3878,7 +3878,7 @@ msgstr "#operators"
 #. trailing punctuation.
 #: src/features/premium/components/operator_pass/checkout/OperatorPassShowcaseSlides.ts
 msgid "#operators in Fluxer Labs"
-msgstr "Fluxer Labs의 #operators"
+msgstr "sanalyer Labs의 #operators"
 
 #. Badge on the forward modal preview thumbnail. count is the number of other
 #. attachments that the thumbnail does not show.
@@ -9088,7 +9088,7 @@ msgid ""
 "Buttons, links and highlights across the app use this color, and phone "
 "browsers use it for their toolbar. Reset it to keep Fluxer's indigo."
 msgstr ""
-"앱 전체의 버튼, 링크, 강조 표시에 이 색상이 사용되며, 휴대폰 브라우저에서는 툴바 색상으로도 사용됩니다. 초기화하면 Fluxer의 "
+"앱 전체의 버튼, 링크, 강조 표시에 이 색상이 사용되며, 휴대폰 브라우저에서는 툴바 색상으로도 사용됩니다. 초기화하면 sanalyer의 "
 "인디고 색상이 유지됩니다."
 
 #. Gift inventory empty-state description. premiumProductName is the premium
@@ -9770,7 +9770,7 @@ msgstr "이모티콘 변경"
 #. variables are set.
 #: src/features/theme_settings/editor/CssCompletions.ts
 msgid "Change Fluxer variables"
-msgstr "Fluxer 변수 변경"
+msgstr "sanalyer 변수 변경"
 
 #. Generic action label that opens the friend-nickname edit flow.
 #: src/features/i18n/utils/CommonMessageDescriptors.ts
@@ -13987,10 +13987,8 @@ msgstr "{names}(님)에게 연결할 수 없습니다."
 #. Instance selector error shown when no Fluxer instance answered at the
 #. address. Domain is interpolated.
 #: src/features/auth/flow/instance_selector/InstanceDiscoveryFailure.ts
-msgid ""
-"Couldn't connect to a Fluxer instance at {domain}. Check the address and "
-"that the instance is online."
-msgstr "{domain}에서 Fluxer 인스턴스에 연결할 수 없습니다. 주소를 확인하고 인스턴스가 온라인 상태인지 확인하세요."
+msgid "Couldn't connect to a sanalyer instance at {domain}. Check the address and that the instance is online."
+msgstr "{domain}에서 sanalyer 인스턴스에 연결할 수 없습니다. 주소를 확인하고 인스턴스가 온라인 상태인지 확인하세요."
 
 #. Toast shown when joining a voice channel fails because the connection timed
 #. out or the transport dropped.
@@ -18144,7 +18142,7 @@ msgid ""
 "future lists, the release notes and that file, but earlier versions of the "
 "source code and copies others made can't be recalled."
 msgstr ""
-"저희가 게시하는 연간 Operators 목록은 매번 Fluxer 릴리스 노트와 소스 코드의 파일에 들어갑니다. 이 옵션을 켜야만 벽에 "
+"저희가 게시하는 연간 Operators 목록은 매번 sanalyer 릴리스 노트와 소스 코드의 파일에 들어갑니다. 이 옵션을 켜야만 벽에 "
 "표시된 이름이 목록에 포함됩니다. 나중에 삭제를 요청하시면 앞으로의 목록, 릴리스 노트, 해당 파일에서 이름을 빼지만, 소스 코드의 이전"
 " 버전과 다른 사람이 만든 사본은 회수할 수 없습니다."
 
@@ -19752,9 +19750,7 @@ msgstr "모든 사람"
 #. Bullet point in the P2P call dialog. Plutonium is the name of the paid
 #. subscription and must not be translated. 4K and fps are video terms.
 #: src/features/voice/utils/VoiceMessageDescriptors.ts
-msgid ""
-"Everyone in the call gets Plutonium stream quality for free, with up to 4K "
-"source resolution and 60 fps."
+msgid "Everyone in the call gets {premiumProductName} stream quality for free, with up to 4K source resolution and 60 fps."
 msgstr "통화에 참여한 모든 분께는 무료로 플루토늄 스트림 품질이 제공됩니다. 최대 4K 소스 해상도 및 60fps를 지원합니다."
 
 #. Description of the single community option in the setup wizard.
@@ -20929,13 +20925,13 @@ msgstr "플로리다"
 msgid ""
 "Fluxer adds a random number to each username, like alex#4821, so many people"
 " can use the same name."
-msgstr "Fluxer가 alex#4821처럼 사용자 이름마다 임의의 번호를 붙이므로 여러 사람이 같은 이름을 사용할 수 있습니다."
+msgstr "sanalyer가 alex#4821처럼 사용자 이름마다 임의의 번호를 붙이므로 여러 사람이 같은 이름을 사용할 수 있습니다."
 
 #. Problem shown in the quick CSS editor on a web address that the app is not
 #. allowed to load. Assets are files uploaded under "Assets".
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "Fluxer blocked loading {url}. Upload it as an asset."
-msgstr "Fluxer가 {url} 불러오기를 차단했어요. 에셋으로 업로드하세요."
+msgstr "sanalyer가 {url} 불러오기를 차단했어요. 에셋으로 업로드하세요."
 
 #. Problem shown in the quick CSS editor on an image address on a site the
 #. person has not trusted. Assets are files uploaded under "Assets". Trusting
@@ -20944,19 +20940,19 @@ msgstr "Fluxer가 {url} 불러오기를 차단했어요. 에셋으로 업로드�
 msgid ""
 "Fluxer blocked loading {url}. Upload the file as an asset, or trust the site"
 " it's on."
-msgstr "Fluxer가 {url} 불러오기를 차단했어요. 파일을 에셋으로 업로드하거나 파일이 있는 사이트를 신뢰하세요."
+msgstr "sanalyer가 {url} 불러오기를 차단했어요. 파일을 에셋으로 업로드하거나 파일이 있는 사이트를 신뢰하세요."
 
 #. Problem shown in the quick CSS editor on a reference to an uploaded theme
 #. asset that does not exist.
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "Fluxer can't find the asset \"{name}\"."
-msgstr "Fluxer가 에셋 \"{name}\"을(를) 찾을 수 없어요."
+msgstr "sanalyer가 에셋 \"{name}\"을(를) 찾을 수 없어요."
 
 #. Problem shown in the quick CSS editor on a reference to a file on the
 #. computer that Fluxer cannot read.
 #: src/features/theme_settings/editor/CssLint.ts
 msgid "Fluxer can't find the file \"{path}\"."
-msgstr "Fluxer가 파일 \"{path}\"을(를) 찾을 수 없어요."
+msgstr "sanalyer가 파일 \"{path}\"을(를) 찾을 수 없어요."
 
 #. Shown for a watched theme folder in Settings > Themes when the folder was
 #. moved, deleted or disconnected.
@@ -20964,18 +20960,18 @@ msgstr "Fluxer가 파일 \"{path}\"을(를) 찾을 수 없어요."
 msgid ""
 "Fluxer can't find this folder. It will load the themes again when the folder"
 " is back."
-msgstr "Fluxer에서 이 폴더를 찾을 수 없어요. 폴더가 돌아오면 테마를 다시 불러올 거예요."
+msgstr "sanalyer에서 이 폴더를 찾을 수 없어요. 폴더가 돌아오면 테마를 다시 불러올 거예요."
 
 #. Shown for a watched theme folder in Settings > Themes when the desktop app
 #. no longer has permission to read it.
 #: src/features/theme_settings/components/YourThemesSection.tsx
 msgid "Fluxer can't open this folder. Import it again to keep watching it."
-msgstr "Fluxer에서 이 폴더를 열 수 없습니다. 계속 감시하려면 다시 가져오세요."
+msgstr "sanalyer에서 이 폴더를 열 수 없습니다. 계속 감시하려면 다시 가져오세요."
 
 #. Error toast in "Your themes" when the chosen theme folder cannot be opened.
 #: src/features/theme_settings/components/YourThemesSection.tsx
 msgid "Fluxer can't read this folder."
-msgstr "Fluxer가 이 폴더를 읽을 수 없습니다."
+msgstr "sanalyer가 이 폴더를 읽을 수 없습니다."
 
 #. Problem shown at the top of the quick CSS editor when the whole sheet was
 #. left out.
@@ -20983,19 +20979,19 @@ msgstr "Fluxer가 이 폴더를 읽을 수 없습니다."
 msgid ""
 "Fluxer couldn't apply this CSS. Check it for a broken comment, string or "
 "bracket."
-msgstr "Fluxer가 이 CSS를 적용할 수 없었어요. 주석, 문자열, 괄호가 깨지지 않았는지 확인하세요."
+msgstr "sanalyer가 이 CSS를 적용할 수 없었어요. 주석, 문자열, 괄호가 깨지지 않았는지 확인하세요."
 
 #. Alert when the SMTP check fails and the mail server sent no reply. host is
 #. the mail server address.
 #: src/features/app/components/setup/SetupEmailSteps.tsx
 msgid "Fluxer couldn't connect to {host}."
-msgstr "Fluxer가 {host}에 연결하지 못했습니다."
+msgstr "sanalyer가 {host}에 연결하지 못했습니다."
 
 #. Alert when the SMTP check fails. host is the mail server address and error
 #. is its reply.
 #: src/features/app/components/setup/SetupEmailSteps.tsx
 msgid "Fluxer couldn't connect to {host}. The server said: \"{error}\""
-msgstr "Fluxer가 {host}에 연결하지 못했습니다. 서버 응답: \"{error}\""
+msgstr "sanalyer가 {host}에 연결하지 못했습니다. 서버 응답: \"{error}\""
 
 #. Status shown in the desktop app when it stopped checking the browser sign-
 #. in because the instance could not be reached. instanceName is the server
@@ -21006,14 +21002,14 @@ msgid ""
 "Fluxer couldn't connect to {instanceName} to check whether your browser "
 "approved this sign-in. Check your connection, then select \"Try again\"."
 msgstr ""
-"Fluxer가 브라우저에서 이 로그인을 승인했는지 확인하기 위해 {instanceName}에 연결하지 못했습니다. 연결을 확인한 다음 "
+"sanalyer가 브라우저에서 이 로그인을 승인했는지 확인하기 위해 {instanceName}에 연결하지 못했습니다. 연결을 확인한 다음 "
 "\"다시 시도\"를 선택하세요."
 
 #. Name of the section in the Operator Pass settings tab about the Fluxer Labs
 #. community. Fluxer Labs is the name of a community, keep it as is.
 #: src/features/premium/utils/PremiumMessageDescriptors.ts
 msgid "Fluxer Labs"
-msgstr "Fluxer Labs"
+msgstr "sanalyer Labs"
 
 #. Shown in the modal that applies a shared theme when the theme points at
 #. files the app will not load.
@@ -21021,7 +21017,7 @@ msgstr "Fluxer Labs"
 msgid ""
 "Fluxer won't load {count, plural, one {# file} other {# files}} that this "
 "theme links to on other sites."
-msgstr "Fluxer는 이 테마가 링크한 다른 사이트의 파일 {count, plural, other {#개}}를 불러오지 않아요."
+msgstr "sanalyer는 이 테마가 링크한 다른 사이트의 파일 {count, plural, other {#개}}를 불러오지 않아요."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -23715,7 +23711,7 @@ msgstr "누군가 여기에 무언가를 붙여넣으라고 했다면, 이는 {p
 msgid ""
 "If the link opens a different Fluxer app, select \"Signing in on another "
 "device?\" and type the code in your browser instead."
-msgstr "링크가 다른 Fluxer 앱을 열면 \"다른 기기에서 로그인 중이신가요?\"를 선택하고 브라우저에 코드를 입력하세요."
+msgstr "링크가 다른 sanalyer 앱을 열면 \"다른 기기에서 로그인 중이신가요?\"를 선택하고 브라우저에 코드를 입력하세요."
 
 #. Helper text under the Explain the problem field on the details step of the
 #. DSA report form.
@@ -23792,7 +23788,7 @@ msgid ""
 "If you installed Fluxer with rexctl, it printed the token when it finished. "
 "Run this on your server to show it again."
 msgstr ""
-"Fluxer를 rexctl로 설치했다면, 설치 완료 시 토큰이 출력되었습니다. 서버에서 다음 명령어를 실행하여 다시 표시하세요."
+"sanalyer를 rexctl로 설치했다면, 설치 완료 시 토큰이 출력되었습니다. 서버에서 다음 명령어를 실행하여 다시 표시하세요."
 
 #. What the app shows when no symbol is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -23806,7 +23802,7 @@ msgstr "비워 두면 목록에 앱 아이콘이나 로고가 표시되고, 둘 
 msgid ""
 "If you leave it empty, the product name shows as plain text, or as the "
 "Fluxer wordmark while the product name is Fluxer."
-msgstr "비워 두면 제품 이름이 일반 텍스트로 표시되며, 제품 이름이 Fluxer인 동안에는 Fluxer 워드마크가 표시됩니다."
+msgstr "비워 두면 제품 이름이 일반 텍스트로 표시되며, 제품 이름이 sanalyer인 동안에는 sanalyer 워드마크가 표시됩니다."
 
 #. What the app shows when no sign-in background is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
@@ -23821,7 +23817,7 @@ msgid ""
 "Without those, it shows the Fluxer logo while the product name is Fluxer, "
 "and no image for any other name."
 msgstr ""
-"비워 두면 로그인 페이지에 앱 아이콘이나 심볼이 표시됩니다. 둘 다 없으면 제품 이름이 Fluxer일 때는 Fluxer 로고가 표시되고,"
+"비워 두면 로그인 페이지에 앱 아이콘이나 심볼이 표시됩니다. 둘 다 없으면 제품 이름이 sanalyer일 때는 sanalyer 로고가 표시되고,"
 " 다른 이름일 때는 이미지가 표시되지 않습니다."
 
 #. What the app shows when no dark mode favicon is set, in the setup wizard.
@@ -23836,12 +23832,12 @@ msgstr "비워 두면 탭에 라이트 테마와 다크 테마 모두 같은 파
 msgid ""
 "If you leave it empty, the tab uses your app icon, or the Fluxer icon if "
 "that is empty too."
-msgstr "비워 두면 탭에 앱 아이콘이 표시되고, 앱 아이콘도 비어 있으면 Fluxer 아이콘이 표시됩니다."
+msgstr "비워 두면 탭에 앱 아이콘이 표시되고, 앱 아이콘도 비어 있으면 sanalyer 아이콘이 표시됩니다."
 
 #. What the app shows when no app icon is set, in the setup wizard.
 #: src/features/app/components/setup/SetupBrandingAssetField.tsx
 msgid "If you leave it empty, those places show the Fluxer icon."
-msgstr "비워 두면 해당 위치에 Fluxer 아이콘이 표시됩니다."
+msgstr "비워 두면 해당 위치에 sanalyer 아이콘이 표시됩니다."
 
 #. Help on the setup token screen for someone who installed Fluxer without
 #. rexctl. FLUXER_SETUP_TOKEN and rexctl must not be translated.
@@ -23851,8 +23847,8 @@ msgid ""
 "least 32 characters that you choose, restart Fluxer, and enter that value "
 "here."
 msgstr ""
-"rexctl 없이 Fluxer를 실행하는 경우, 직접 선택한 32자 이상의 값으로 FLUXER_SETUP_TOKEN을 설정하고 "
-"Fluxer를 다시 시작한 다음 여기에 해당 값을 입력하세요."
+"rexctl 없이 sanalyer를 실행하는 경우, 직접 선택한 32자 이상의 값으로 FLUXER_SETUP_TOKEN을 설정하고 "
+"sanalyer를 다시 시작한 다음 여기에 해당 값을 입력하세요."
 
 #: src/features/user/components/modals/FluxerTagChangeModal.tsx
 msgid ""
@@ -28683,7 +28679,7 @@ msgstr "모든 기기 이동 위치 선택…"
 #. panel inside the app.
 #: src/features/theme_settings/components/QuickCssWorkspace.tsx
 msgid "Move back into Fluxer"
-msgstr "Fluxer로 다시 옮기기"
+msgstr "sanalyer로 다시 옮기기"
 
 #. Label in the keybinds tab.
 #: src/features/user/components/modals/tabs/keybinds_tab/AssignableActionOptions.ts
@@ -31422,7 +31418,7 @@ msgid ""
 "Only trust sites you know. A site you trust can see your IP address, when "
 "you have Fluxer open and some of what's on your screen."
 msgstr ""
-"아는 사이트만 신뢰하세요. 신뢰한 사이트는 내 IP 주소, Fluxer를 열어 둔 시간, 화면에 보이는 내용 일부를 알 수 있어요."
+"아는 사이트만 신뢰하세요. 신뢰한 사이트는 내 IP 주소, sanalyer를 열어 둔 시간, 화면에 보이는 내용 일부를 알 수 있어요."
 
 #. Body of the error modal shown when a non-Visionary user tries to rejoin a
 #. gated Plutonium community.
@@ -32210,7 +32206,7 @@ msgstr "Operator Pass 약관"
 msgid ""
 "Operators and the Fluxer Team talking about self-hosting in the #operators "
 "channel of Fluxer Labs"
-msgstr "Fluxer Labs의 #operators 채널에서 Operators와 Fluxer 팀이 자체 호스팅에 관해 이야기하는 모습"
+msgstr "sanalyer Labs의 #operators 채널에서 Operators와 sanalyer 팀이 자체 호스팅에 관해 이야기하는 모습"
 
 #. Heading of the Operators' wall section in the Operator Pass settings tab.
 #. Operators' wall is the name of a section of the homepage.
@@ -33183,7 +33179,7 @@ msgstr ""
 msgid ""
 "People using the Fluxer mobile apps won't get notifications from your "
 "instance. You can turn this on later in the admin panel."
-msgstr "Fluxer 모바일 앱을 사용하는 사람은 이 인스턴스의 알림을 받지 못합니다. 나중에 관리자 패널에서 켤 수 있습니다."
+msgstr "sanalyer 모바일 앱을 사용하는 사람은 이 인스턴스의 알림을 받지 못합니다. 나중에 관리자 패널에서 켤 수 있습니다."
 
 #. Description under the "Anyone in my communities" privacy setup option.
 #: src/features/user/components/modals/PrivacySetupModal.tsx
@@ -39064,7 +39060,7 @@ msgid ""
 "Sweden, {OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 msgstr ""
-"판매자: Fluxer Platform AB, 559537-3993, 등기상 소재지(säte) Haninge, 스웨덴, "
+"판매자: sanalyer Platform AB, 559537-3993, 등기상 소재지(säte) Haninge, 스웨덴, "
 "{OPERATOR_PASS_SELLER_ADDRESS}, {OPERATOR_PASS_SELLER_PHONE}, "
 "{SUPPORT_EMAIL}."
 
@@ -39261,7 +39257,7 @@ msgstr "메시지, 이미지, GIF, 이모티콘을 보내세요"
 #. Setup wizard title for the push relay consent.
 #: src/features/app/components/setup/SetupPolicySteps.tsx
 msgid "Send notifications to the Fluxer mobile apps?"
-msgstr "Fluxer 모바일 앱으로 알림을 보낼까요?"
+msgstr "sanalyer 모바일 앱으로 알림을 보낼까요?"
 
 #. Button that confirms offering an Operator Pass to someone. They can then
 #. accept or decline it.
@@ -39737,7 +39733,7 @@ msgstr "메시지 액션 바를 표시할 수 있는 메시지에 설정됨."
 #. Describes a CSS attribute in the "Reference" tab of the quick CSS editor.
 #: src/features/theme_settings/editor/AppSelectors.ts
 msgid "Set on messages that Fluxer sends, such as when someone joins."
-msgstr "누군가가 참여할 때 등 Fluxer가 보내는 메시지에 설정됨."
+msgstr "누군가가 참여할 때 등 sanalyer가 보내는 메시지에 설정됨."
 
 #. Describes a CSS attribute in the "Reference" tab of the quick CSS editor.
 #: src/features/theme_settings/editor/AppSelectors.ts
@@ -44481,7 +44477,7 @@ msgid ""
 "\"Operator Pass since November 2026\". You can hide it, or just its date, in"
 " your settings at any time."
 msgstr ""
-"Fluxer 프로필의 배지에는 패스를 받은 시기가 \"2026년 11월부터 Operator Pass 보유\"처럼 표시됩니다. 설정에서 "
+"sanalyer 프로필의 배지에는 패스를 받은 시기가 \"2026년 11월부터 Operator Pass 보유\"처럼 표시됩니다. 설정에서 "
 "언제든지 배지 전체 또는 날짜만 숨길 수 있습니다."
 
 #. Activity log detail line under a lifted ban, for a temporary ban that had
@@ -44703,7 +44699,7 @@ msgid ""
 "name is not Fluxer. Use a square or wide PNG or SVG in light colors with a "
 "transparent background, at least 256 pixels tall and up to {size}."
 msgstr ""
-"항상 어두운 로그인 양식 옆에 표시되는 큰 이미지입니다. 휴대폰에서는 워드마크가 없고 제품 이름이 Fluxer가 아닐 때만 이름 옆에 "
+"항상 어두운 로그인 양식 옆에 표시되는 큰 이미지입니다. 휴대폰에서는 워드마크가 없고 제품 이름이 sanalyer가 아닐 때만 이름 옆에 "
 "표시됩니다. 배경이 투명하고 밝은 색상으로 된 정사각형 또는 가로로 긴 PNG 또는 SVG를 사용하세요. 높이는 256픽셀 이상, 크기는"
 " 최대 {size}까지 가능합니다."
 
@@ -44933,7 +44929,7 @@ msgstr "컴퓨터 브라우저에서 보이는 로그인 페이지입니다. 데
 #: src/features/app/components/setup/SetupBrandingPreview.tsx
 msgid ""
 "The sign-in page on a phone, in a mobile browser or the Fluxer mobile app."
-msgstr "휴대폰의 모바일 브라우저 또는 Fluxer 모바일 앱에서 보이는 로그인 페이지입니다."
+msgstr "휴대폰의 모바일 브라우저 또는 sanalyer 모바일 앱에서 보이는 로그인 페이지입니다."
 
 #. Error shown in the desktop app when a browser sign-in request expires
 #. before it is approved in the browser.
@@ -45264,7 +45260,7 @@ msgstr "웹훅을 불러오는 중 오류가 발생했습니다. 다시 시도�
 #. CSS editor.
 #: src/features/theme_settings/components/QuickCssReference.tsx
 msgid "These attributes don't change between Fluxer updates."
-msgstr "이 속성들은 Fluxer 업데이트에도 변하지 않아요."
+msgstr "이 속성들은 sanalyer 업데이트에도 변하지 않아요."
 
 #. Settings search synonym. Used to match this term when the user types it in
 #. the settings search bar.
@@ -45450,7 +45446,7 @@ msgstr ""
 msgid ""
 "This browser can't save Fluxer's data. You'll need to sign in again after "
 "you close it."
-msgstr "이 브라우저에서는 Fluxer 데이터를 저장할 수 없습니다. 브라우저를 닫은 후에는 다시 로그인해야 합니다."
+msgstr "이 브라우저에서는 sanalyer 데이터를 저장할 수 없습니다. 브라우저를 닫은 후에는 다시 로그인해야 합니다."
 
 #. Console warning line explaining that the browser console is meant for
 #. developers.
@@ -45637,7 +45633,7 @@ msgstr ""
 #: src/features/theme_settings/editor/CssLint.ts
 msgid ""
 "This class name changes with every Fluxer update. Use a [data-flx] selector."
-msgstr "이 클래스 이름은 Fluxer 업데이트마다 바뀌어요. [data-flx] 셀렉터를 사용하세요."
+msgstr "이 클래스 이름은 sanalyer 업데이트마다 바뀌어요. [data-flx] 셀렉터를 사용하세요."
 
 #. Problem shown in the quick CSS editor on a closing curly brace that closes
 #. nothing.
@@ -46102,7 +46098,7 @@ msgstr "이 인스턴스에서 싱글 사인온 설정을 완료하지 않았습
 msgid ""
 "This instance was upgraded from a version of Fluxer that used email sign-in,"
 " so it stays on email."
-msgstr "이 인스턴스는 이메일 로그인을 사용하던 Fluxer 버전에서 업그레이드되어 이메일 방식을 유지합니다."
+msgstr "이 인스턴스는 이메일 로그인을 사용하던 sanalyer 버전에서 업그레이드되어 이메일 방식을 유지합니다."
 
 #. Helper text shown on an invite embed while streaming privacy is active.
 #: src/features/channel/components/InviteEmbed.tsx
@@ -46604,7 +46600,7 @@ msgid ""
 "your account on it. It takes about five minutes. You can change most choices"
 " later in the admin panel, and a screen tells you when you can't."
 msgstr ""
-"설치한 Fluxer 사본인 인스턴스를 설정하고 그 안에 내 계정을 만듭니다. 5분 정도 걸립니다. 대부분의 선택은 나중에 관리자 패널에서"
+"설치한 sanalyer 사본인 인스턴스를 설정하고 그 안에 내 계정을 만듭니다. 5분 정도 걸립니다. 대부분의 선택은 나중에 관리자 패널에서"
 " 바꿀 수 있으며, 바꿀 수 없는 항목은 화면에서 알려 드립니다."
 
 #. Label in the accessibility tab. Preserve {linkPreviewExampleUrl}; it is
@@ -51311,7 +51307,7 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"패스를 켜면 Fluxer Labs에 추가해 드려요. 단, 전에 Fluxer Labs에서 나갔거나 내보내진 적이 있다면 추가하지 않아요. "
+"패스를 켜면 sanalyer Labs에 추가해 드려요. 단, 전에 sanalyer Labs에서 나갔거나 내보내진 적이 있다면 추가하지 않아요. "
 "이 옵션을 켜 두면 곧이어 #operators에서 이름을 불러 환영해 드려요."
 
 #. Hint under the checkbox or switch "Welcome me in #operators". Fluxer Labs
@@ -51325,7 +51321,7 @@ msgid ""
 "were removed from Fluxer Labs before. With this on, we welcome you by name "
 "in #operators soon after."
 msgstr ""
-"패스가 전달되면 Fluxer Labs에 추가해 드려요. 단, 전에 Fluxer Labs에서 나갔거나 내보내진 적이 있다면 추가하지 "
+"패스가 전달되면 sanalyer Labs에 추가해 드려요. 단, 전에 sanalyer Labs에서 나갔거나 내보내진 적이 있다면 추가하지 "
 "않아요. 이 옵션을 켜 두면 곧이어 #operators에서 이름을 불러 환영해 드려요."
 
 #. Error under the certificate name fields when the server turned a name down,
@@ -53060,7 +53056,7 @@ msgstr "패스는 친구에게만 보낼 수 있어요. 먼저 친구로 추가�
 #. friends with.
 #: src/features/premium/components/operator_pass/OperatorPassPassItOnModal.tsx
 msgid "You can only pass this on to one of your friends on Fluxer."
-msgstr "Fluxer 친구에게만 전달할 수 있습니다."
+msgstr "sanalyer 친구에게만 전달할 수 있습니다."
 
 #. Shown in Settings > Look and feel. "Themes" is a link to the Themes
 #. settings tab.

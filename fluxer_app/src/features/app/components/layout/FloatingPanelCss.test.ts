@@ -28,7 +28,7 @@ describe('flush desktop panels', () => {
 		const read = (file: string) => readFileSync(`${SRC_ROOT}features/app/components/layout/${file}`, 'utf8');
 		expect(read('GuildsLayout.module.css')).toMatch(/\.outlineFrame \{\s*--outline-radius: 0px;\s*\}/);
 		expect(read('OutlineFrame.module.css')).toMatch(
-			/\.frame \{[^}]*border-top-left-radius: var\(--outline-radius, 0px\);/,
+			/\.frame \{[^}]*border-start-start-radius: var\(--outline-radius, 0px\);/,
 		);
 		expect(read('OutlineFrame.module.css')).toMatch(/\.divider \{[^}]*width: 0\.0625rem;/);
 	});
@@ -71,7 +71,7 @@ describe('user area in the channel list column', () => {
 		// The offsets above are the frame's left line and the channel list column (the divider sits at its end).
 		const frame = readFileSync(`${SRC_ROOT}features/app/components/layout/OutlineFrame.module.css`, 'utf8');
 		expect(frame).toMatch(/\.frame \{[^}]*border: var\(--outline-frame-border-width, 0\.0625rem\) solid/);
-		expect(frame).toMatch(/\.divider \{[^}]*left: var\(--layout-sidebar-width\);/);
+		expect(frame).toMatch(/\.divider \{[^}]*inset-inline-start: var\(--layout-sidebar-width\);/);
 	});
 
 	it('mirrors it in the startup skeleton', () => {

@@ -116,7 +116,8 @@ class AccountTheme {
 	}
 
 	updateServerTheme(theme: string | null | undefined): void {
-		this.serverTheme = isThemeType(theme) ? theme : ThemeTypes.DARK;
+		// Micup: an unknown server theme falls back to Coal, the sanalyer default (upstream: Dark).
+		this.serverTheme = isThemeType(theme) ? theme : ThemeTypes.COAL;
 		this.persist();
 	}
 

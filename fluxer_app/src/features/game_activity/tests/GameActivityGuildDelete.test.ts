@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';

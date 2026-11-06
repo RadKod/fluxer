@@ -8,7 +8,6 @@ import AnalyticsConsent from '@app/features/analytics/state/AnalyticsConsent';
 import {ExternalLink} from '@app/features/app/components/shared/ExternalLink';
 import Config from '@app/features/app/config/Config';
 import {PRODUCT_NAME} from '@app/features/app/config/I18nDisplayConstants';
-import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import {Button} from '@app/features/ui/button/Button';
 import {isDesktop} from '@app/features/ui/utils/NativeUtils';
 import {msg} from '@lingui/core/macro';
@@ -55,6 +54,7 @@ export const AnalyticsConsentBanner = observer(() => {
 		[],
 	);
 	if (!AnalyticsConsent.shouldAsk) return null;
+	const privacyUrl = Routes.privacy();
 	return (
 		<section
 			className={styles.banner}
@@ -64,13 +64,15 @@ export const AnalyticsConsentBanner = observer(() => {
 			<p className={styles.text} data-flx="analytics.analytics-consent-banner.text">
 				{i18n._(BANNER_BODY_DESCRIPTOR, {productName: PRODUCT_NAME})}
 			</p>
-			<ExternalLink
-				href={RuntimeConfig.privacyUrl ?? Routes.privacy()}
-				className={styles.policyLink}
-				data-flx="analytics.analytics-consent-banner.policy-link"
-			>
-				{i18n._(POLICY_LINK_DESCRIPTOR)}
-			</ExternalLink>
+			{privacyUrl && (
+				<ExternalLink
+					href={privacyUrl}
+					className={styles.policyLink}
+					data-flx="analytics.analytics-consent-banner.policy-link"
+				>
+					{i18n._(POLICY_LINK_DESCRIPTOR)}
+				</ExternalLink>
+			)}
 			<div className={styles.actions} data-flx="analytics.analytics-consent-banner.actions">
 				<Button
 					variant="secondary"

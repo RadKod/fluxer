@@ -211,7 +211,7 @@ function createRoomConnectOptions(): RoomConnectOptions {
 	return connectOptions;
 }
 
-class VoiceEngineV2AppConnectionHostAdapter extends Store {
+export class VoiceEngineV2AppConnectionHostAdapter extends Store {
 	connectionState: VoiceConnectionState = initialConnectionState;
 	hotSwapState: RegionHotSwapState = initialHotSwapState;
 	private connectionSnapshot: VoiceConnectionSnapshot = createVoiceConnectionSnapshot();

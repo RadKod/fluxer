@@ -2,7 +2,6 @@
 import {Routes} from '@app/app/Routes';
 import {SettingsTabSection} from '@app/features/app/components/dialogs/shared/SettingsTabLayout';
 import {ExternalLink} from '@app/features/app/components/shared/ExternalLink';
-import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import styles from '@app/features/game_activity/components/GameActivitySettingsTab.module.css';
 import GameActivityLocalSettings from '@app/features/game_activity/state/GameActivityLocalSettings';
 import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
@@ -147,11 +146,12 @@ export const GameActivitySettingsTab = observer(() => {
 	const visibleRules = rules && rules.accountId === accountId ? rules.values : null;
 	const visibleCandidates = candidates && candidates.accountId === accountId ? candidates : null;
 	if (!GameActivityStore.enabled) return null;
+	const privacyUrl = Routes.privacy();
 	return (
 		<SettingsTabSection title={i18n._(TITLE)}>
 			<div className={styles.content}>
 				<p className={styles.description}>{i18n._(DISCLOSURE)}</p>
-				<ExternalLink href={RuntimeConfig.privacyUrl ?? Routes.privacy()}>{i18n._(RIGHTS)}</ExternalLink>
+				{privacyUrl && <ExternalLink href={privacyUrl}>{i18n._(RIGHTS)}</ExternalLink>}
 				{!eligible && <p className={styles.description}>{i18n._(AGE)}</p>}
 				{getEffectiveProfilePrivacy() === ProfilePrivacyLevels.ONLY_ME && (
 					<p className={styles.description}>{i18n._(ONLY_ME)}</p>

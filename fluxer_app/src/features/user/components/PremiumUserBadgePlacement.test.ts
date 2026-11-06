@@ -107,7 +107,7 @@ describe('PremiumUserBadge placement', () => {
 	});
 
 	it.each(NAME_ONLY_PLACEMENTS)('$file excludes premium from its badge row', ({file}) => {
-		expect(read(file)).toContain('showPremium={false}');
+		expect(read(file)).toContain('badges={withoutPremiumBadge(');
 	});
 
 	// Upstream folded the cozy message header into one place in UserMessage, so it holds one crown, not two.

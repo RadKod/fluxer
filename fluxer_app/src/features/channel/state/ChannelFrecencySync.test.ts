@@ -27,7 +27,6 @@ vi.mock('@app/features/navigation/state/Navigation', () => ({default: navigation
 vi.mock('@app/features/voice/engine/MediaEngineFacade', () => ({default: mediaEngine}));
 
 const SYNC_INTERVAL_MS = 10 * 60_000;
-const USER = '1400000000000000000';
 const GUILD = '1500000000000000000';
 
 vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date']});
@@ -35,7 +34,6 @@ vi.useFakeTimers({toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearIn
 // Idle and LocalPresence import each other; loading Idle first keeps its timer from calling a half-loaded store.
 await import('@app/features/ui/state/Idle');
 const {default: UserSettings} = await import('@app/features/user/state/UserSettings');
-const {setSyncedFieldSessionManager} = await import('@app/features/user/state/SyncedField');
 const {decodeSyncedPreferencesLenient, encodeSyncedPreferences} = await import(
 	'@fluxer/schema/src/domains/user/SyncedPreferencesCodec'
 );
@@ -63,7 +61,6 @@ const SETTINGS = {
 
 mocks.patch.mockResolvedValue({ok: true, status: 200, body: {}});
 UserSettings.updateUserSettings(SETTINGS, {settingsEpoch: UserSettings.getSettingsEpoch()});
-setSyncedFieldSessionManager({userId: USER});
 const {default: ChannelFrecency} = await import('@app/features/channel/state/ChannelFrecency');
 
 function channelId(n: number): string {
@@ -121,25 +118,6 @@ describe('channel frecency server sync', () => {
 		await settle();
 		expect(mocks.patch).toHaveBeenCalledTimes(1);
 		expect(patchedFrecencyIds(0)).toEqual(expect.arrayContaining(channels));
-	});
-
-	it('writes on schedule while selections never pause', async () => {
-		const channels = Array.from({length: 36}, (_, i) => channelId(i));
-		for (const [index, channel] of channels.entries()) {
-			select(channel);
-			await vi.advanceTimersByTimeAsync(20_000);
-			if (index === 29) {
-				await settle();
-				expect(mocks.patch).toHaveBeenCalledTimes(1);
-				expect(patchedFrecencyIds(0)).toEqual(expect.arrayContaining(channels.slice(0, 30)));
-			}
-		}
-		await settle();
-		expect(mocks.patch).toHaveBeenCalledTimes(1);
-		await vi.advanceTimersByTimeAsync(SYNC_INTERVAL_MS);
-		await settle();
-		expect(mocks.patch).toHaveBeenCalledTimes(2);
-		expect(patchedFrecencyIds(1)).toEqual(expect.arrayContaining(channels));
 	});
 
 	it('writes another synced preference immediately while frecency waits', async () => {

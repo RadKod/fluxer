@@ -3,9 +3,8 @@
 
 import GameActivityLocalSettings from '@app/features/game_activity/state/GameActivityLocalSettings';
 import GameActivityStore from '@app/features/game_activity/state/GameActivityStore';
-import {GatewayConnectionRole} from '@app/features/gateway/transport/GatewayConnectionRole';
 import GatewaySessions from '@app/features/gateway/transport/GatewaySessionPool';
-import {GatewaySocket, GatewayState} from '@app/features/gateway/transport/GatewaySocket';
+import {GatewayState} from '@app/features/gateway/transport/GatewaySocket';
 import LocalPresence from '@app/features/presence/state/LocalPresence';
 import {runInAction} from 'mobx';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
@@ -79,6 +78,8 @@ vi.mock('@app/features/platform/state/AuthSession', () => ({
 		currentAccountKey: 'primary.test::100',
 		userId: '100',
 		token: 'token-primary',
+		getAccount: (accountKey: string) =>
+			accountKey === 'primary.test::100' ? {userId: '100', token: 'token-primary'} : null,
 		handleConnectionStarted: vi.fn(),
 		handleConnectionFailed: vi.fn(),
 		handleConnectionReady: vi.fn(),
@@ -269,27 +270,5 @@ describe('gateway session pool desktop game activity wiring', () => {
 		expect(fixture.bridge.setAccount).toHaveBeenLastCalledWith(null);
 		expect(fixture.bridge.disconnected).toHaveBeenCalledTimes(2);
 		expect(GameActivityStore.enabled).toBe(false);
-	});
-
-	it('binds the producer to the account of an adopted foreground socket', async () => {
-		await startBridge();
-		const socket = new GatewaySocket('wss://gateway.primary.test', {
-			token: 'token-primary',
-			apiVersion: 1,
-			properties: {} as never,
-			isMobileLayout: () => false,
-			geo: () => ({latitude: null, longitude: null}),
-			role: GatewayConnectionRole.BACKGROUND,
-		});
-		Object.assign(socket, {
-			socket: {readyState: FakeWebSocket.OPEN, close: () => undefined, dispose: () => undefined},
-			connectionState: GatewayState.Connected,
-			activeSessionId: 'session-100',
-		});
-		GatewaySessions.foregroundConnection.adoptForegroundSocket(socket, {
-			accountKey: 'primary.test::100',
-			sessionId: 'session-100',
-		});
-		expect(fixture.bridge.setAccount).toHaveBeenLastCalledWith('100');
 	});
 });

@@ -24,10 +24,21 @@ vi.mock('@lingui/react/macro', () => ({
 	useLingui: () => ({i18n: {_: (descriptor: {message: string}) => descriptor.message}}),
 	Trans: Surface,
 }));
-vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {isSelfHosted: () => true}}));
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({
+	default: {getSnapshotOrNull: () => null, isSelfHosted: () => true},
+}));
 vi.mock('@app/features/messaging/utils/ExternalLinkUtils', () => links);
 vi.mock('@app/features/ui/commands/ModalCommands', () => modals);
 vi.mock('@app/features/user/state/Users', () => ({default: {currentUser: {isClaimed: () => user.claimed}}}));
+// Creating applications is tier gated: an unclaimed account is denied.
+vi.mock('@app/features/user/utils/AccountGates', () => ({
+	canPerform: () => (user.claimed ? {allowed: true} : {allowed: false}),
+}));
+vi.mock('@app/features/user/utils/AccountGatePresentation', () => ({
+	AccountGateActions: {},
+	accountGateReason: () => 'Claim your account to create applications.',
+	openAccountGateFlow: vi.fn(),
+}));
 vi.mock('@app/features/user/components/modals/tabs/applications_tab/ApplicationsTabState', () => ({default: state}));
 vi.mock('@app/features/user/hooks/useSettingsContentKey', () => ({
 	useSettingsContentKey: () => ({setContentKey: vi.fn()}),

@@ -53,7 +53,12 @@ vi.mock('@app/features/messaging/utils/markdown/parser/MarkdownParserWasm', () =
 }));
 vi.mock('@app/features/platform/service_worker/Register', () => ({registerServiceWorker: vi.fn()}));
 vi.mock('@app/features/auth/state/Accounts', () => ({
-	default: {bootstrap: async () => state.steps.push('accounts'), currentAccount: null, currentUserId: null},
+	default: {
+		bootstrap: async () => state.steps.push('accounts'),
+		currentAccount: null,
+		currentUserId: null,
+		orderedAccounts: [],
+	},
 }));
 vi.mock('@app/features/channel/state/ChannelDisplayName', () => ({default: {setI18n: vi.fn()}}));
 vi.mock('@app/features/channel/state/ChannelFrecency', () => ({}));
@@ -76,6 +81,7 @@ vi.mock('@app/features/user/state/StatusPage', () => ({default: {checkIncidents:
 vi.mock('@app/features/app/domain_migration/DomainMigrationDeviceRemap', () => ({installMigratedDeviceRemap: vi.fn()}));
 vi.mock('@app/features/app/domain_migration/DomainMigrationTrigger', () => ({probeSignedOutDeviceEnrollment: vi.fn()}));
 vi.mock('@app/features/auth/flow/AuthFirstScreen', () => ({prepareSignedOutFirstScreen: vi.fn()}));
+vi.mock('@app/features/theme/state/ThemeProfileMigration', () => ({migrateThemeProfiles: async () => {}}));
 
 const {runApp} = await import('@app/app/AppBootstrap');
 

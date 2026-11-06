@@ -6,6 +6,7 @@ import {resolve} from 'node:path';
 import {AuthRuntimeTargetBoundary} from '@app/features/auth/flow/AuthRuntimeTargetBoundary';
 import {shouldRenderInstanceStep} from '@app/features/auth/flow/auth_login_core/AuthLoginInstanceStep';
 import {useAuthLoginFlow} from '@app/features/auth/flow/auth_login_core/useAuthLoginFlow';
+import {AuthLayoutContext, type AuthLayoutContextType} from '@app/features/auth/state/AuthLayoutContext';
 import {useAuthRuntimeTarget} from '@app/features/auth/state/AuthRuntimeTarget';
 import {act, createElement} from 'react';
 import {createRoot} from 'react-dom/client';
@@ -63,7 +64,22 @@ it('carries the native cold-start sanalyer target through the auth boundary into
 	document.body.append(container);
 	const root = createRoot(container);
 	try {
-		await act(async () => root.render(createElement(AuthRuntimeTargetBoundary, null, createElement(LoginDecision))));
+		const layout = {
+			setSplashUrl: () => {},
+			setBrandSnapshot: () => {},
+			setCardVariant: () => {},
+			setContentMode: () => {},
+			setSplashCardAlignment: () => {},
+		} as unknown as AuthLayoutContextType;
+		await act(async () =>
+			root.render(
+				createElement(
+					AuthLayoutContext.Provider,
+					{value: layout},
+					createElement(AuthRuntimeTargetBoundary, null, createElement(LoginDecision)),
+				),
+			),
+		);
 		expect(discovery.resolve).toHaveBeenCalledWith({input: startup.expected, signal: expect.any(AbortSignal)});
 		expect(container.textContent).toBe('login-method');
 		expect(container.firstElementChild?.getAttribute('data-instance')).toBe(startup.expected);

@@ -1,7 +1,7 @@
+// @vitest-environment happy-dom
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {readFileSync} from 'node:fs';
-import {fileURLToPath} from 'node:url';
 import {parse} from '@babel/parser';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
@@ -16,7 +16,10 @@ vi.mock('@lingui/react/macro', () => ({Trans: ({children}: {children: unknown}) 
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({
 	default: {isSelfHosted: () => false, giftCodesEnabled: false, getSnapshotOrNull: () => null},
 }));
-vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({PREMIUM_PRODUCT_FULL_NAME: 'sanalyer Plus'}));
+vi.mock('@app/features/app/config/I18nDisplayConstants', () => ({
+	PREMIUM_PRODUCT_FULL_NAME: 'sanalyer Plus',
+	OPERATOR_PASS_NAME: 'Operator Pass',
+}));
 vi.mock('@app/features/ui/utils/NativeUtils', () => ({
 	getElectronAPI: () => native.electron,
 	guessPlatform: () => native.platform,
@@ -52,7 +55,7 @@ const bridge = {setGameOverlayLayout: () => undefined};
 
 // The search index, the deep links and the tab components import most of the app, so their registration lines are
 // read from the source instead of imported.
-const SETTINGS_UTILS = fileURLToPath(new URL('../user/components/settings_utils/', import.meta.url));
+const SETTINGS_UTILS = `${import.meta.dirname}/../user/components/settings_utils/`;
 
 function matchesInDeclaration(file: string, declaration: string, pattern: RegExp): Array<string> {
 	const source = readFileSync(`${SETTINGS_UTILS}${file}`, 'utf8');

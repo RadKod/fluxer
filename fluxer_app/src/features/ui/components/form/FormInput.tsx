@@ -373,6 +373,8 @@ type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
 	maxRows?: number;
 	showCharacterCount?: boolean;
 	actionButton?: React.ReactNode;
+	// sanalyer: tools (emoji, GIF) drawn inside the box under the text, used by the feed composers.
+	innerActionButton?: React.ReactNode;
 };
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
@@ -387,6 +389,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 			maxLength,
 			value,
 			actionButton,
+			innerActionButton,
 			disabled,
 			id,
 			...props
@@ -399,6 +402,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 		const currentValue = useMemo(() => value || '', [value]);
 		const currentLength = useMemo(() => String(currentValue).length, [currentValue]);
 		const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+		const textareaWrapperRef = useRef<HTMLDivElement | null>(null);
 		const generatedTextareaId = useId();
 		const textareaId = id ?? generatedTextareaId;
 		const errorId = error ? `${textareaId}-error` : undefined;
@@ -473,11 +477,11 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 		const labelRight = useMemo(
 			() => (
 				<div className={styles.labelContainerWithGap} data-flx="ui.form.input.label-right.label-container-with-gap">
-					{characterCounter}
+					{!innerActionButton && characterCounter}
 					{actionButton}
 				</div>
 			),
-			[characterCounter, actionButton],
+			[innerActionButton, characterCounter, actionButton],
 		);
 		return (
 			<FieldSet
@@ -491,17 +495,43 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 			>
 				<FocusRing
 					focusTarget={textareaRef}
-					ringTarget={textareaRef}
+					ringTarget={innerActionButton ? textareaWrapperRef : textareaRef}
 					offset={-2}
 					enabled={!disabled}
 					data-flx="ui.form.input.textarea.focus-ring"
 				>
-					<BaseTextarea
-						data-flx="ui.form.input.simple-textarea.error"
-						{...textareaProps}
-						className={clsx(error ? styles.error : styles.focusable)}
-						ref={setTextareaRefs}
-					/>
+					{innerActionButton ? (
+						<div
+							ref={textareaWrapperRef}
+							className={clsx(styles.textareaWrapper, surfaceStyles.surface, error ? styles.error : styles.focusable)}
+							data-flx="ui.form.input.textarea-with-actions.textarea-wrapper"
+						>
+							<TextareaAutosize
+								data-flx="ui.form.input.textarea-with-actions.textarea"
+								{...textareaProps}
+								className={clsx(scrollerStyles.scroller, scrollerStyles.scrollerTextarea, styles.textarea)}
+								ref={setTextareaRefs}
+							/>
+							<div className={styles.textareaActions} data-flx="ui.form.input.textarea-with-actions.textarea-actions">
+								{innerActionButton}
+								{characterCounter && (
+									<div
+										className={styles.characterCountContainer}
+										data-flx="ui.form.input.textarea-with-actions.character-count-container"
+									>
+										{characterCounter}
+									</div>
+								)}
+							</div>
+						</div>
+					) : (
+						<BaseTextarea
+							data-flx="ui.form.input.simple-textarea.error"
+							{...textareaProps}
+							className={clsx(error ? styles.error : styles.focusable)}
+							ref={setTextareaRefs}
+						/>
+					)}
 				</FocusRing>
 			</FieldSet>
 		);

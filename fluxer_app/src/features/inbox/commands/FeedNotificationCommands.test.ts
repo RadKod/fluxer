@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {Endpoints} from '@app/features/app/constants/Endpoints';
-import {
-	ForegroundPromoteCoordinator,
-	type ForegroundPromoteHost,
-} from '@app/features/gateway/transport/ForegroundPromoteCoordinator';
 import {HttpError} from '@app/features/platform/types/EndpointError';
 import type {RestResponse} from '@app/features/platform/types/TransportTypes';
 import type {
@@ -39,9 +35,6 @@ vi.mock('@app/features/platform/transport/RestTransport', () => ({
 	http: {get: vi.fn(), put: vi.fn(), post: vi.fn(), delete: vi.fn()},
 }));
 
-const {AccountScopedWork, AccountScopedWorkTransitionReason} = await import(
-	'@app/features/platform/state/AccountScopedWork'
-);
 const {http} = await import('@app/features/platform/transport/RestTransport');
 const FeedNotificationCommands = await import('@app/features/inbox/commands/FeedNotificationCommands');
 const {default: FeedNotifications, FEED_NOTIFICATION_PAGE_SIZE} = await import(
@@ -89,42 +82,6 @@ function reply<T>(body: T, status = 200): RestResponse<T> {
 }
 
 const ids = () => FeedNotifications.notifications.map((notification) => notification.id);
-
-function failedPromotion(error: Error): ForegroundPromoteCoordinator {
-	const unexpectedStep = (): never => {
-		throw new Error('Unexpected promotion step after begin failure');
-	};
-	const host: ForegroundPromoteHost = {
-		findWarmCandidate: () => {
-			throw error;
-		},
-		prepareForegroundSnapshot: unexpectedStep,
-		hydrateForegroundSnapshot: unexpectedStep,
-		commitForegroundSnapshot: unexpectedStep,
-		abortForegroundSnapshot: unexpectedStep,
-		finalizeForegroundSnapshot: unexpectedStep,
-		stopBackgroundConnection: unexpectedStep,
-		prepareForegroundReplay: unexpectedStep,
-		adoptForegroundSocket: unexpectedStep,
-		replayForegroundDispatch: unexpectedStep,
-		finalizeForeground: unexpectedStep,
-		removeBackgroundConnection: unexpectedStep,
-		discardDetachedSocket: unexpectedStep,
-		discardForegroundConnection: unexpectedStep,
-	};
-	return new ForegroundPromoteCoordinator(host);
-}
-
-function abortPendingRead(): void {
-	vi.mocked(http.post).mockImplementationOnce(
-		(_path, options) =>
-			new Promise((_resolve, reject) => {
-				const signal = options?.signal;
-				if (!signal) throw new Error('Pending read must carry its account cancellation signal');
-				signal.addEventListener('abort', () => reject(signal.reason), {once: true});
-			}) as never,
-	);
-}
 
 describe('FeedNotificationCommands', () => {
 	beforeEach(() => {
@@ -226,124 +183,6 @@ describe('FeedNotificationCommands', () => {
 				userId,
 			);
 			vi.mocked(http.post).mockReset();
-		});
-
-		it.each(['ack', 'failure'] as const)(
-			'drops a pending %s after switching instances of the same user',
-			async (result) => {
-				let settle = (_value: unknown) => {};
-				let fail = (_error: Error) => {};
-				vi.mocked(http.post).mockImplementationOnce(
-					() =>
-						new Promise((resolve, reject) => {
-							settle = resolve;
-							fail = reject;
-						}) as never,
-				);
-				const request = FeedNotificationCommands.sendReadCursor(1000, 1, 7);
-				const switching = AccountScopedWork.runSuspended(AccountScopedWorkTransitionReason.ACCOUNT_SWITCH, async () => {
-					storageScope.value = `https://second.test/api::${FeedNotifications.lastReadUserId}`;
-					FeedNotifications.reset();
-					FeedNotifications.lastReadAt = 0;
-				});
-				if (result === 'ack') settle(reply({last_read_at: '2030-01-01T00:00:00.000Z', unread_seq: 1, unread_epoch: 7}));
-				else fail(new Error('offline'));
-				await request;
-				await switching;
-				FeedNotifications.handleGatewayReady(undefined, FeedNotifications.lastReadUserId!);
-				expect(FeedNotifications.lastReadAt).toBe(0);
-				expect(FeedNotifications.closeView()).toBeNull();
-			},
-		);
-
-		it('retries a consumed pending read when cancellation precedes an early promotion failure', async () => {
-			FeedNotifications.handleNotificationCreate(wireNotification(1), 1);
-			FeedNotifications.openView();
-			abortPendingRead();
-			const request = FeedNotificationCommands.markRead();
-			const failure = new Error('begin promotion failed');
-			const coordinator = failedPromotion(failure);
-			await expect(
-				AccountScopedWork.runSuspended(AccountScopedWorkTransitionReason.ACCOUNT_SWITCH, async () => {
-					await coordinator.begin(`https://second.test/api::${FeedNotifications.lastReadUserId}`);
-				}),
-			).rejects.toBe(failure);
-			await expect(request).resolves.toBeUndefined();
-			vi.mocked(http.post).mockResolvedValueOnce(
-				reply({last_read_at: wireNotification(1).updated_at, unread_seq: 1, unread_epoch: 7}) as never,
-			);
-			FeedNotifications.openView();
-			await FeedNotificationCommands.markRead();
-			expect(http.post).toHaveBeenCalledTimes(2);
-			expect(vi.mocked(http.post).mock.calls[1]?.[1]?.body).toEqual({
-				read_at: wireNotification(1).updated_at,
-				unread_seq: 1,
-				unread_epoch: 7,
-			});
-		});
-
-		it('resolves a view cleanup during suspension and retries after an early failed switch', async () => {
-			FeedNotifications.handleNotificationCreate(wireNotification(1), 1);
-			FeedNotifications.openView();
-			const failure = new Error('begin promotion failed');
-			const coordinator = failedPromotion(failure);
-			await expect(
-				AccountScopedWork.runSuspended(AccountScopedWorkTransitionReason.ACCOUNT_SWITCH, async () => {
-					await expect(FeedNotificationCommands.markRead()).resolves.toBeUndefined();
-					expect(http.post).not.toHaveBeenCalled();
-					await coordinator.begin(`https://second.test/api::${FeedNotifications.lastReadUserId}`);
-				}),
-			).rejects.toBe(failure);
-			vi.mocked(http.post).mockResolvedValueOnce(
-				reply({last_read_at: wireNotification(1).updated_at, unread_seq: 1, unread_epoch: 7}) as never,
-			);
-			FeedNotifications.openView();
-			await FeedNotificationCommands.markRead();
-			expect(http.post).toHaveBeenCalledTimes(1);
-		});
-
-		it.each(['foreign-instance', 'logout'] as const)(
-			'clears a cancelled source read on successful %s rehydration',
-			async (destination) => {
-				FeedNotifications.handleNotificationCreate(wireNotification(1), 1);
-				FeedNotifications.openView();
-				const userId = FeedNotifications.lastReadUserId!;
-				abortPendingRead();
-				const request = FeedNotificationCommands.markRead();
-				await AccountScopedWork.runSuspended(
-					destination === 'logout'
-						? AccountScopedWorkTransitionReason.LOGOUT
-						: AccountScopedWorkTransitionReason.ACCOUNT_SWITCH,
-					async () => {
-						storageScope.value = destination === 'logout' ? '@global' : `https://second.test/api::${userId}`;
-						FeedNotifications.reset();
-						FeedNotifications.lastReadAt = 0;
-						FeedNotifications.lastReadUserId = destination === 'logout' ? null : userId;
-					},
-				);
-				await expect(request).resolves.toBeUndefined();
-				expect(FeedNotifications.closeView()).toBeNull();
-				expect(FeedNotifications.lastReadAt).toBe(0);
-				expect(http.post).toHaveBeenCalledTimes(1);
-			},
-		);
-
-		it('does not recreate an acknowledged retry when a later switch fails early', async () => {
-			FeedNotifications.handleNotificationCreate(wireNotification(1), 1);
-			FeedNotifications.openView();
-			vi.mocked(http.post).mockResolvedValueOnce(
-				reply({last_read_at: wireNotification(1).updated_at, unread_seq: 1, unread_epoch: 7}) as never,
-			);
-			await FeedNotificationCommands.markRead();
-			const failure = new Error('begin promotion failed');
-			await expect(
-				AccountScopedWork.runSuspended(AccountScopedWorkTransitionReason.ACCOUNT_SWITCH, async () => {
-					await failedPromotion(failure).begin(`https://second.test/api::${FeedNotifications.lastReadUserId}`);
-				}),
-			).rejects.toBe(failure);
-			FeedNotifications.openView();
-			await FeedNotificationCommands.markRead();
-			expect(http.post).toHaveBeenCalledTimes(1);
 		});
 
 		it('sends nothing when the view showed nothing (C2-T1)', async () => {

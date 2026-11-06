@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {parseSnapshotGatewayEvent} from '@app/features/gateway/snapshot/SnapshotDispatchEvent';
-import {GatewayConnectionRole} from '@app/features/gateway/transport/GatewayConnectionRole';
 import {type GatewayDispatchDelivery, GatewaySocket, GatewayState} from '@app/features/gateway/transport/GatewaySocket';
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
 
@@ -31,7 +30,6 @@ it('marks resumed sound events as replay while delivering live events normally',
 		},
 		isMobileLayout: () => false,
 		geo: () => ({latitude: null, longitude: null}),
-		role: GatewayConnectionRole.FOREGROUND,
 	});
 	const deliveries: Array<GatewayDispatchDelivery & {isReplay?: boolean}> = [];
 	socket.on('dispatch', (delivery) => deliveries.push(delivery));

@@ -31,6 +31,10 @@ export class ExponentialBackoff {
 		return Math.max(this.options.minDelay, Math.min(baseDelay + jitter, this.options.maxDelay));
 	}
 
+	getCurrentAttempts(): number {
+		return this.attempts;
+	}
+
 	reset(): void {
 		this.attempts = 0;
 	}

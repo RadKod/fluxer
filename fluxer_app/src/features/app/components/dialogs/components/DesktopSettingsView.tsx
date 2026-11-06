@@ -3,7 +3,6 @@
 import {msg} from '@lingui/core/macro';
 import '@app/features/app/components/dialogs/components/SettingsSearchHighlight.css';
 import {Routes} from '@app/app/Routes';
-import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import Accessibility from '@app/features/accessibility/state/Accessibility';
 import {AllSettingsRenderer} from '@app/features/app/components/dialogs/components/AllSettingsRenderer';
 import {ClientInfo} from '@app/features/app/components/dialogs/components/ClientInfo';

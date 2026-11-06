@@ -9,7 +9,7 @@ vi.mock('@app/features/app/state/ClientReadiness', () => ({isClientBooting: () =
 vi.mock('@app/features/auth/state/Authentication', () => ({default: {}}));
 vi.mock('@app/features/platform/utils/DesktopTrayBridge', () => ({initializeDesktopTrayBridge: () => undefined}));
 vi.mock('@app/features/theme/state/ThemeLibrary', () => ({
-	default: {init: async () => {}, startLinkedFileSync: () => () => {}},
+	default: {init: async () => {}, startLinkedFileSync: () => () => {}, startFolderSync: () => () => {}},
 }));
 vi.mock('@app/features/ui/commands/ModalCommands', () => ({}));
 

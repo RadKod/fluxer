@@ -126,7 +126,7 @@ function removeMirroredStylesheet(stylesheetMirror: DocumentStylesheetMirror, no
 	}
 }
 
-function copyStylesheetsIntoDocument(
+export function copyStylesheetsIntoDocument(
 	sourceDocument: Document,
 	targetDocument: Document,
 	{exclude}: StylesheetMirrorOptions = {},
@@ -148,7 +148,7 @@ function copyStylesheetsIntoDocument(
 	}
 }
 
-function observeDocumentStylesheets(
+export function observeDocumentStylesheets(
 	sourceDocument: Document,
 	targetDocument: Document,
 	{exclude}: StylesheetMirrorOptions = {},
@@ -194,7 +194,7 @@ function observeDocumentStylesheets(
 	return () => observer.disconnect();
 }
 
-function syncDocumentThemeAttributes(sourceDocument: Document, targetDocument: Document): void {
+export function syncDocumentThemeAttributes(sourceDocument: Document, targetDocument: Document): void {
 	const sourceRoot = sourceDocument.documentElement;
 	const targetRoot = targetDocument.documentElement;
 	if (!sourceRoot || !targetRoot) return;
@@ -221,7 +221,7 @@ function syncDocumentThemeAttributes(sourceDocument: Document, targetDocument: D
 	}
 }
 
-function observeDocumentThemeAttributes(sourceDocument: Document, targetDocument: Document): () => void {
+export function observeDocumentThemeAttributes(sourceDocument: Document, targetDocument: Document): () => void {
 	if (typeof MutationObserver === 'undefined') {
 		return () => undefined;
 	}

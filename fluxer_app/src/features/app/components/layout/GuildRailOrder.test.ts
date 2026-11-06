@@ -25,6 +25,8 @@ describe('guild rail order', () => {
 			'outage',
 			'organized-item',
 			'bottom-drop-zone',
+			'visiting-divider',
+			'visiting-guild',
 			'discovery',
 			'add-guild',
 			'download',

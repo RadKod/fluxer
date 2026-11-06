@@ -5,7 +5,9 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const socket = vi.hoisted(() => ({updateGuildSubscriptions: vi.fn()}));
 vi.mock('@app/features/gateway/transport/GatewaySessionPool', () => ({default: {foregroundConnection: {socket}}}));
-vi.mock('@app/features/platform/state/AccountScopedWork', () => ({AccountScopedWork: {registerCancellation: vi.fn()}}));
+vi.mock('@app/features/platform/state/AccountScopedWork', () => ({
+	AccountScopedWork: {registerCancellation: vi.fn(), registerTransition: vi.fn(() => () => {})},
+}));
 const {default: MemberPresenceSubscription} = await import('@app/features/presence/state/MemberPresenceSubscription');
 
 const membersSent = () =>
@@ -75,5 +77,4 @@ describe('MemberPresenceSubscription visible members', () => {
 
 		expect(MemberPresenceSubscription.getSubscribedMembers('g')).toEqual(['b']);
 	});
-
 });

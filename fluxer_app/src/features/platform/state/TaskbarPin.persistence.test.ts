@@ -21,12 +21,18 @@ vi.mock('@app/features/presence/state/LocalPresence', () => ({default: {}}));
 
 const ACCOUNT_SCOPE = 'https://micup.test/api::previous-account';
 
+// Without IndexedDB the app storage keeps its data in memory; one backend shared across module reloads stands in
+// for the browser's storage surviving a reload.
+const sharedBackend = (await import('./PersistentStorageBackend')).createPersistentStorageBackend(null);
+
 let stopCurrentPersistence: (() => void) | undefined;
 async function loadTaskbarPin() {
 	stopCurrentPersistence?.();
+	await (await import('./PersistentStorage')).flushAppStorageWrites();
 	vi.resetModules();
+	(await import('./PersistentStorageBackend')).installPersistentStorageBackend(sharedBackend);
 	const storage = await import('./PersistentStorage');
-	await storage.initializeAppStorage({scoped: true});
+	await storage.initializeAppStorage();
 	await storage.activateAppStorageScope(ACCOUNT_SCOPE);
 	const store = (await import('./TaskbarPin')).default;
 	const {awaitHydration, stopPersistent} = await import('@app/features/platform/utils/MobXPersistence');
@@ -37,6 +43,7 @@ async function loadTaskbarPin() {
 }
 
 beforeEach(async () => {
+	await sharedBackend.clearAllExcept(new Set());
 	const {resetAppStorage} = await import('./PersistentStorage');
 	await resetAppStorage([]);
 	window.localStorage.clear();

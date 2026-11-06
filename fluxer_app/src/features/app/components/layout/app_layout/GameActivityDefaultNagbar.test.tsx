@@ -22,7 +22,7 @@ vi.mock('@app/features/app/components/shared/ExternalLink', () => ({
 	ExternalLink: ({children, href}: {children: ReactNode; href: string}) => createElement('a', {href}, children),
 }));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {privacyUrl: 'https://micup.test/privacy'}}));
-vi.mock('@app/app/Routes', () => ({Routes: {privacy: () => '/privacy'}}));
+vi.mock('@app/app/Routes', () => ({Routes: {privacy: () => 'https://micup.test/privacy'}}));
 vi.mock('@app/features/app/components/layout/Nagbar', () => ({
 	Nagbar: ({children, onDismiss}: {children: ReactNode; onDismiss?: () => void}) =>
 		createElement('div', null, createElement('button', {type: 'button', onClick: onDismiss}, 'close'), children),

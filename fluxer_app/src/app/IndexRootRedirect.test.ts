@@ -8,7 +8,9 @@ import {describe, expect, it} from 'vitest';
 // Micup: index.html's inline boot scripts, read as shipped.
 const INDEX_HTML = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
 const INLINE_SCRIPTS = [
-	...INDEX_HTML.matchAll(/<script nonce="\{\{CSP_NONCE_PLACEHOLDER\}\}">([\s\S]*?)<\/script>/g),
+	...INDEX_HTML.matchAll(
+		/<script(?: data-cfasync="false")? nonce="\{\{CSP_NONCE_PLACEHOLDER\}\}">([\s\S]*?)<\/script>/g,
+	),
 ].map((match) => match[1]);
 const ROOT_REDIRECT = INLINE_SCRIPTS.find((script) => script.includes("'/channels/@me'")) ?? '';
 

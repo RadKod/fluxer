@@ -32,14 +32,7 @@ import {LimitedProfileNotice} from '@app/features/user/components/popouts/Limite
 import {UserProfileBadges} from '@app/features/user/components/popouts/UserProfileBadges';
 import {UserProfileDataWarning} from '@app/features/user/components/popouts/UserProfileDataWarning';
 import styles from '@app/features/user/components/popouts/UserProfilePopout.module.css';
-import {
-	UserProfileConnections,
-	UserProfileMembershipInfo,
-	UserProfilePreviewBio,
-	UserProfileRoles,
-	UserProfileTimezoneInfo,
-} from '@app/features/user/components/popouts/UserProfileShared';
-import {ProfileCardActions} from '@app/features/user/components/profile/profile_card/ProfileCardActions';
+import {UserProfilePreviewBio, UserProfileRoles} from '@app/features/user/components/popouts/UserProfileShared';
 import {ProfileCardBanner} from '@app/features/user/components/profile/profile_card/ProfileCardBanner';
 import {ProfileCardContent} from '@app/features/user/components/profile/profile_card/ProfileCardContent';
 import {ProfileCardFooter} from '@app/features/user/components/profile/profile_card/ProfileCardFooter';
@@ -54,8 +47,8 @@ import {useUserProfileSurfaceState} from '@app/features/user/hooks/useUserProfil
 import type {User} from '@app/features/user/models/User';
 import {blockedDmConfirmModal, openDMChannelOrShowError} from '@app/features/user/utils/DMActionUtils';
 import * as NicknameUtils from '@app/features/user/utils/NicknameUtils';
-import {profileThemeColors} from '@app/features/user/utils/ProfileGradient';
 import {canEditOwnProfileBadges, canOpenProfileEditor} from '@app/features/user/utils/ProfileEditAccess';
+import {profileThemeColors} from '@app/features/user/utils/ProfileGradient';
 import {resolveProfileGuildMembership} from '@app/features/user/utils/ProfileGuildMembership';
 import {createMockProfile, getProfileDisplayBadges} from '@app/features/user/utils/ProfileUtils';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
@@ -87,7 +80,7 @@ interface UserProfilePopoutProps {
 export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 	({popoutKey, user, isWebhook, guildId, guildMember: providedGuildMember, onClose}) => {
 		const {i18n} = useLingui();
-		const [hoverRef, isHovering] = useHover();
+		const [hoverRef] = useHover();
 		const storedGuildMember = guildId ? GuildMembers.getMember(guildId, user.id) : null;
 		const profileGuildId = isWebhook ? undefined : guildId;
 		const fallbackProfile = useMemo(() => createMockProfile(user), [user]);
@@ -142,9 +135,6 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 		);
 		const handleOpenFullProfile = useCallback(() => {
 			openFullProfile();
-		}, [openFullProfile]);
-		const handleOpenFullProfileNote = useCallback(() => {
-			openFullProfile(true);
 		}, [openFullProfile]);
 		// Micup: the full profile page; the card stays what a name in chat opens.
 		const handleOpenProfilePage = useCallback(() => {
@@ -296,6 +286,7 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 			<UserProfileBadges
 				badges={visibleProfileBadges}
 				onEditBadges={canEditOwnProfileBadges(user.id, profile) ? handleEditBadges : undefined}
+				isModal={true}
 				data-flx="user.user-profile-popout.user-profile-badges"
 			/>
 		);
@@ -316,22 +307,15 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 					displayNameClassName={styles.profileDisplayName}
 					user={user}
 					pronouns={profileData?.pronouns}
-					showUsername={!isWebhook}
+					// Micup: Discord's short card; the #tag lives in the full profile.
+					showUsername={false}
 					isClickable={!isWebhook}
 					isWebhook={isWebhook}
 					onDisplayNameClick={!isWebhook ? handleOpenFullProfile : undefined}
 					onUsernameClick={!isWebhook ? handleOpenFullProfile : undefined}
 					themeColors={themeColors}
-					actions={
-						!isWebhook && (
-							<ProfileCardActions
-								userId={user.id}
-								isHovering={isHovering}
-								onNoteClick={handleOpenFullProfileNote}
-								data-flx="user.user-profile-popout.profile-card-actions"
-							/>
-						)
-					}
+					// Micup: the badge row sits right under the name, in the modal's row layout.
+					belowName={profileBadges}
 					data-flx="user.user-profile-popout.profile-card-user-info"
 				/>
 				{!isWebhook && presenceCustomStatus && (
@@ -362,16 +346,7 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 						data-flx="user.user-profile-popout.user-profile-preview-bio"
 					/>
 				)}
-				{profile && (
-					<UserProfileTimezoneInfo profile={profile} data-flx="user.user-profile-popout.user-profile-timezone-info" />
-				)}
-				{profile && (
-					<UserProfileMembershipInfo
-						profile={profile}
-						user={user}
-						data-flx="user.user-profile-popout.user-profile-membership-info"
-					/>
-				)}
+				{/* Micup: the note, copy ID, timezone, member since and connections live in the full profile. */}
 				{!isWebhook && profile && (
 					<UserProfileRoles
 						profile={profile}
@@ -379,13 +354,6 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 						memberRoles={[...memberRoles]}
 						canManageRoles={canManageRoles}
 						data-flx="user.user-profile-popout.user-profile-roles"
-					/>
-				)}
-				{profile && (
-					<UserProfileConnections
-						profile={profile}
-						variant="compact"
-						data-flx="user.user-profile-popout.user-profile-connections"
 					/>
 				)}
 			</ProfileCardContent>
@@ -429,7 +397,6 @@ export const UserProfilePopout: React.FC<UserProfilePopoutProps> = observer(
 						data-flx="user.user-profile-popout.profile-card-layout"
 					>
 						{profileBanner}
-						{profileBadges}
 						{profileContent}
 						{showProfileFooter && (
 							<ProfileCardFooter data-flx="user.user-profile-popout.profile-card-footer">

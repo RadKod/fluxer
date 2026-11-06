@@ -15,13 +15,28 @@ const i18n = {_: (descriptor: {message: string}) => descriptor.message};
 
 vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor}));
 vi.mock('@lingui/react/macro', () => ({useLingui: () => ({i18n}), Trans: passThrough}));
-vi.mock('@app/features/platform/utils/AppLogger', () => ({Logger: class {}}));
+vi.mock('@app/features/platform/utils/AppLogger', () => {
+	class Logger {
+		static create() {
+			return new Logger();
+		}
+		static refreshGlobalLogLevel() {}
+		debug() {}
+		info() {}
+		log() {}
+		warn() {}
+		error() {}
+	}
+	return {Logger};
+});
 vi.mock('@app/features/app/components/alerts/DmActionErrorModal', () => ({showDmActionErrorModal: vi.fn()}));
 vi.mock('@app/features/app/components/dialogs/ConfirmModal', () => ({ConfirmModal: () => null}));
 vi.mock('@app/features/app/components/shared/custom_status_display/CustomStatusDisplay', () => ({
 	CustomStatusDisplay: () => null,
 }));
-vi.mock('@app/features/app/state/RuntimeConfig', () => ({default: {directMessagesDisabled: false}}));
+vi.mock('@app/features/app/state/RuntimeConfig', () => ({
+	default: {getSnapshotOrNull: () => null, directMessagesDisabled: false},
+}));
 vi.mock('@app/features/auth/state/Authentication', () => ({default: {currentUserId: 'me'}}));
 vi.mock('@app/features/channel/commands/PrivateChannelCommands', () => ({openDMChannel: vi.fn()}));
 vi.mock('@app/features/channel/components/ChannelUserTag', () => ({UserTag: () => null}));
@@ -101,7 +116,13 @@ vi.mock('@app/features/user/utils/NicknameUtils', () => ({
 vi.mock('@app/features/user/utils/ProfileGuildMembership', () => ({
 	resolveProfileGuildMembership: () => ({kind: 'global'}),
 }));
-vi.mock('@app/features/user/utils/ProfileUtils', () => ({createMockProfile: () => ({})}));
+vi.mock('@app/features/user/utils/ProfileUtils', () => ({
+	createMockProfile: () => ({}),
+	getProfileDisplayBadges: () => [],
+	profileBadgeImageUrl: () => null,
+	warmProfileBadgeImages: () => {},
+	withoutPremiumBadge: <T,>(badges: T) => badges,
+}));
 
 const {UserProfilePopout} = await import('@app/features/user/components/popouts/UserProfilePopout');
 const UserProfileCommands = await import('@app/features/user/commands/UserProfileCommands');

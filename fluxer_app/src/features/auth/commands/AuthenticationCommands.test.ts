@@ -62,7 +62,7 @@ describe('auth requests carry the language on screen (K1)', () => {
 	});
 
 	it('completes an SSO sign-up in the language the page shows', async () => {
-		await completeSso({code: 'code', state: 'state', target: TARGET});
+		await completeSso({code: 'code', state: 'state', clientBinding: null, target: TARGET});
 		expect(acceptLanguageSent()).toBe('tr');
 	});
 

@@ -42,8 +42,12 @@ vi.mock('@app/features/user/components/modals/tabs/privacy_safety_tab/SensitiveC
 	SensitiveContentTabContent: () => null,
 }));
 
+vi.mock('@app/features/app/state/GeoIP', () => ({default: {}}));
+
 describe('Privacy dashboard game activity integration', () => {
 	it('mounts the controls at the registered search section', async () => {
+		const {installRuntimeBootstrap} = await import('@app/features/platform/state/__fixtures__/RuntimeBootstrapFixture');
+		installRuntimeBootstrap();
 		const {PrivacyDashboardContent} = await import(
 			'@app/features/user/components/modals/tabs/privacy_safety_tab/PrivacySafetyTabInline'
 		);
@@ -64,5 +68,6 @@ describe('Privacy dashboard game activity integration', () => {
 		} finally {
 			act(() => root.unmount());
 		}
-	});
+		// The real privacy tab pulls in most of the app; importing it takes most of this budget.
+	}, 120_000);
 });

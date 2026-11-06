@@ -17,7 +17,7 @@ import {
 	getFeedReportSuccessCopy,
 } from '@app/features/feed/utils/FeedReportCopy';
 import {CANCEL_DESCRIPTOR, CONTINUE_DESCRIPTOR} from '@app/features/i18n/utils/CommonMessageDescriptors';
-import {canSubmitReport, showReportRestrictionDialog} from '@app/features/moderation/utils/ReportVerificationGate';
+import {reportGate, showReportRestrictionDialog} from '@app/features/moderation/utils/ReportVerificationGate';
 import {Logger} from '@app/features/platform/utils/AppLogger';
 import {Button} from '@app/features/ui/button/Button';
 import * as ModalCommands from '@app/features/ui/commands/ModalCommands';
@@ -63,7 +63,7 @@ export const FeedReportModal = observer(({title, onSubmit}: FeedReportModalProps
 	const [reason, setReason] = useState<FeedReportReasonId | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 	const handleContinue = () => {
-		if (!canSubmitReport()) {
+		if (!reportGate().allowed) {
 			showReportRestrictionDialog();
 			return;
 		}
@@ -72,7 +72,7 @@ export const FeedReportModal = observer(({title, onSubmit}: FeedReportModalProps
 	};
 	const handleSubmit = async () => {
 		if (reason === null) return;
-		if (!canSubmitReport()) {
+		if (!reportGate().allowed) {
 			showReportRestrictionDialog();
 			return;
 		}

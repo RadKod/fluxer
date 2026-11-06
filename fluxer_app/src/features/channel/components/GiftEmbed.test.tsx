@@ -25,7 +25,10 @@ const Passthrough = ({children}: {children?: ReactNode}) => children;
 vi.mock('@lingui/core/macro', () => ({msg: (descriptor: unknown) => descriptor}));
 vi.mock('@lingui/react/macro', () => ({useLingui: () => ({i18n}), Trans: Passthrough}));
 vi.mock('@app/features/platform/transport/RestTransport', () => ({http}));
-vi.mock('@app/features/app/state/InstanceSnapshotStore', () => ({default: {get: () => null}}));
+vi.mock('@app/features/app/state/InstanceSnapshotStore', () => ({
+	default: {get: () => null},
+	runtimeInstanceKey: () => null,
+}));
 vi.mock('@app/features/platform/transport/InstanceHTTP', () => ({
 	currentInstanceTarget: () => target,
 	instanceTargetIdentity: (value: typeof target) => JSON.stringify([value.instanceKey, value.apiVersion]),
@@ -44,10 +47,15 @@ vi.mock('@app/features/platform/transport/InstanceHTTP', () => ({
 }));
 vi.mock('@app/features/app/state/RuntimeConfig', () => ({
 	default: {
+		interactionTier: 'legacy',
 		isSelfHosted: () => runtime.selfHosted,
-		getSnapshotOrNull: () => ({appPublic: {branding: {product_name: 'sanalyer', premium_product_name: 'Plus'}}}),
+		getSnapshotOrNull: () => ({
+			features: {self_hosted: runtime.selfHosted},
+			appPublic: {branding: {product_name: 'sanalyer', premium_product_name: 'Plus'}},
+		}),
 	},
 }));
+vi.mock('@app/features/app/state/GeoIP', () => ({default: {}}));
 vi.mock('@app/features/ui/commands/ModalCommands', () => modalCommands);
 vi.mock('@app/features/ui/commands/ToastCommands', () => ({success: vi.fn()}));
 vi.mock('@app/features/cosmetics/state/Cosmetics', () => ({default: {load: vi.fn()}}));
@@ -61,7 +69,11 @@ vi.mock('@app/features/expressions/components/modals/GiftAcceptModal', () => ({G
 vi.mock('@app/features/devtools/state/DeveloperOptions', () => ({default: {}}));
 vi.mock('@app/features/auth/components/modals/ClaimAccountModal', () => ({openClaimAccountModal: vi.fn()}));
 vi.mock('@app/features/user/state/Users', () => ({
-	default: {currentUser: {isClaimed: () => true}, getCurrentUser: () => null, getUser: () => null},
+	default: {
+		currentUser: {isClaimed: () => true, accountTier: 'verified'},
+		getCurrentUser: () => null,
+		getUser: () => null,
+	},
 }));
 vi.mock('@app/features/user/utils/NicknameUtils', () => ({getDisplayName: () => 'Sender'}));
 vi.mock('@app/features/ui/button/Button', () => ({
