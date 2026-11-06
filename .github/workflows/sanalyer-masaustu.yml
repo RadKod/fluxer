@@ -816,7 +816,12 @@ jobs:
         run: |
           set -euo pipefail
           [[ -n "$AWS_ACCESS_KEY_ID" && -n "$AWS_SECRET_ACCESS_KEY" && -n "$R2_ENDPOINT" ]] || { echo "::error::R2 secret'ları eksik (R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT)"; exit 1; }
-          aws s3 sync payload_tree/desktop "s3://$R2_BUCKET/desktop" --endpoint-url "$R2_ENDPOINT" --no-progress --exclude "*/latest" --exclude "*/latest.json" --exclude "*/manifest.json" --exclude "*/RELEASES.json" --exclude "*/releases.json" --exclude "*/releases.win.json" --exclude "*/modules.json"
+          aws s3 sync payload_tree/desktop "s3://$R2_BUCKET/desktop" --endpoint-url "$R2_ENDPOINT" --no-progress --exclude "*/latest" --exclude "*/latest.json" --exclude "*/manifest.json" --exclude "*/RELEASES.json" --exclude "*/releases.json" --exclude "*/releases.win.json" --exclude "*/modules.json" --exclude "*.AppImage"
+          # aws s3 .AppImage uzantısına content-type bulamıyor; tipsiz dosyayı tarayıcı indirmek yerine açmaya çalışıyor.
+          find payload_tree/desktop -name '*.AppImage' -type f | while read -r f; do
+            key="desktop/${f#payload_tree/desktop/}"
+            aws s3 cp "$f" "s3://$R2_BUCKET/$key" --endpoint-url "$R2_ENDPOINT" --no-progress --content-type application/vnd.appimage --content-disposition "attachment; filename=\"$(basename "$f")\""
+          done
           # Feed belgeleri en son ve doğru content-type ile: istemciler önce dosyayı, sonra belgeyi görsün.
           find payload_tree/desktop \( -name latest -o -name latest.json -o -name manifest.json -o -name modules.json -o -name RELEASES.json -o -name releases.json -o -name releases.win.json \) -type f | while read -r f; do
             key="desktop/${f#payload_tree/desktop/}"
