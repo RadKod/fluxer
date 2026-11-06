@@ -5,6 +5,7 @@ import {GuildSoundboardController} from '@app/api/guild/soundboard/GuildSoundboa
 import * as Probe from '@app/api/guild/soundboard/GuildSoundboardDurationProbe';
 import {fixture, savedSound, USER_ID} from '@app/api/guild/soundboard/tests/GuildSoundboardTestUtils';
 import ContentFilterMiddleware from '@app/api/middleware/ContentFilterMiddleware';
+import {RequestBodyLimitMiddleware} from '@app/api/middleware/RequestBodyLimitMiddleware';
 import {User} from '@app/api/models/User';
 import type {HonoEnv} from '@app/api/types/HonoEnv';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
@@ -21,7 +22,9 @@ function appFixture(flags = 0n, {contentFilter = false} = {}) {
 		ctx.set('guildSoundboardService', f.service);
 		await next();
 	});
-	// Production runs the content filter app-wide, so it reads the JSON body before route middleware.
+	// Production runs the request body limit (upstream: a route only marks its limit) and the content filter app-wide,
+	// so they read the JSON body before route middleware.
+	app.use(RequestBodyLimitMiddleware);
 	if (contentFilter) app.use(ContentFilterMiddleware);
 	app.onError((error) => (error instanceof HTTPException ? error.getResponse() : new Response(null, {status: 500})));
 	GuildSoundboardController(app);
@@ -85,14 +88,19 @@ describe('Guild soundboard HTTP routes', () => {
 			name: 'Sound',
 			audio: 'a'.repeat(1_400_001),
 		});
-		expect(response.status).toBe(400);
+		expect(response.status).toBe(413);
 		expect(await response.json()).toMatchObject({code: 'FILE_SIZE_TOO_LARGE'});
 		expect(f.media.getMetadata).not.toHaveBeenCalled();
 	});
 	it('rejects an oversized Content-Length before reading the body', async () => {
 		const f = appFixture();
-		const response = await f.request('POST', '/guilds/201/soundboard-sounds', undefined, {'content-length': '1400001'});
-		expect(response.status).toBe(400);
+		const response = await f.request(
+			'POST',
+			'/guilds/201/soundboard-sounds',
+			{name: 'Sound'},
+			{'content-length': '1400001'},
+		);
+		expect(response.status).toBe(413);
 		expect(await response.json()).toMatchObject({code: 'FILE_SIZE_TOO_LARGE'});
 	});
 	it.each([false, true])(
@@ -107,14 +115,14 @@ describe('Guild soundboard HTTP routes', () => {
 		},
 	);
 	it.each([false, true])(
-		'caps a chunked upload without Content-Length with 400, not 500 (content filter first: %s)',
+		'caps a chunked upload without Content-Length with 413, not 500 (content filter first: %s)',
 		async (contentFilter) => {
 			const f = appFixture(0n, {contentFilter});
 			const response = await f.streamRequest(
 				'/guilds/201/soundboard-sounds',
 				JSON.stringify({name: 'Sound', audio: 'a'.repeat(1_400_001)}),
 			);
-			expect(response.status).toBe(400);
+			expect(response.status).toBe(413);
 			expect(await response.json()).toMatchObject({code: 'FILE_SIZE_TOO_LARGE'});
 			expect(f.media.getMetadata).not.toHaveBeenCalled();
 		},

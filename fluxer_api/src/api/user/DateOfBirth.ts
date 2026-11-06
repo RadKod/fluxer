@@ -168,7 +168,7 @@ export async function setDateOfBirth(
 		await ctx.services.gateway.dispatchPresence({
 			userId: user.id,
 			event: 'USER_SETTINGS_UPDATE',
-			data: mapUserSettingsToResponse({settings: saved}),
+			data: mapUserSettingsToResponse({settings: saved, user: updated}),
 		});
 	}
 	await ctx.services.gateway.dispatchPresence({

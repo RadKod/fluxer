@@ -187,7 +187,12 @@ async function setStripeIds(
 describe('StripeRefundService self-serve refund', () => {
 	let harness: ApiTestHarness;
 	function createRefundService(): StripeRefundService {
-		return new StripeRefundService(getStripeClient(), getUserRepository(), createDormantStripeSubscriptionService());
+		return new StripeRefundService(
+			getStripeClient(),
+			getUserRepository(),
+			createDormantStripeSubscriptionService(),
+			null,
+		);
 	}
 	beforeAll(async () => {
 		harness = await createApiTestHarness();
@@ -448,8 +453,7 @@ describe('StripeRefundService self-serve refund', () => {
 				stripe_customer_id: MOCK_CUSTOMER_ID,
 				stripe_subscription_id: MOCK_SUBSCRIPTION_ID,
 			});
-			const list = () =>
-				createRefundService().getWithdrawals(createUserID(BigInt(account.userId)));
+			const list = () => createRefundService().getWithdrawals(createUserID(BigInt(account.userId)));
 			server.use(renewal({...EU_CONSUMER, withdrawal_pro_rata: 'true'}));
 			expect(await list()).toEqual([]);
 			server.use(renewal(EU_CONSUMER));
@@ -709,7 +713,9 @@ describe('StripeRefundService self-serve refund', () => {
 				subscription_id: MOCK_SUBSCRIPTION_ID,
 				status: 'succeeded',
 			});
-			await expect(createRefundService().refundRecentPurchases(createUserID(BigInt(account.userId)))).rejects.toMatchObject({
+			await expect(
+				createRefundService().refundRecentPurchases(createUserID(BigInt(account.userId))),
+			).rejects.toMatchObject({
 				status: 403,
 				code: APIErrorCodes.STRIPE_REFUND_COOLDOWN_ACTIVE,
 			});
@@ -783,7 +789,9 @@ describe('StripeRefundService self-serve refund', () => {
 			server.use(invoiceListHandler([buildInvoice({id: 'in_edge', paidAtSecondsAgo: 3 * SECONDS_PER_DAY + 60})]));
 			const account = await createTestAccount(harness);
 			await setStripeIds(harness, account, {stripe_customer_id: MOCK_CUSTOMER_ID});
-			await expect(createRefundService().refundRecentPurchases(createUserID(BigInt(account.userId)))).rejects.toMatchObject({
+			await expect(
+				createRefundService().refundRecentPurchases(createUserID(BigInt(account.userId))),
+			).rejects.toMatchObject({
 				status: 403,
 				code: APIErrorCodes.STRIPE_REFUND_OUTSIDE_WINDOW,
 			});
@@ -803,7 +811,9 @@ describe('StripeRefundService self-serve refund', () => {
 			expect(eligibility.cooldown_expires_at).toBe(
 				new Date(lastRefundAt.getTime() + 30 * SECONDS_PER_DAY * 1000).toISOString(),
 			);
-			await expect(createRefundService().refundRecentPurchases(createUserID(BigInt(account.userId)))).rejects.toMatchObject({
+			await expect(
+				createRefundService().refundRecentPurchases(createUserID(BigInt(account.userId))),
+			).rejects.toMatchObject({
 				status: 403,
 				code: APIErrorCodes.STRIPE_REFUND_COOLDOWN_ACTIVE,
 			});
@@ -829,7 +839,9 @@ describe('StripeRefundService self-serve refund', () => {
 			const updatedUser = await new UserRepository().findUnique(userId);
 			expect(updatedUser!.premiumFlags & PremiumFlags.PURCHASE_DISABLED).toBe(0);
 			expect(updatedUser!.lastRefundAt!.getTime()).toBeGreaterThan(Date.now() - 60 * 1000);
-			await expect(createRefundService().refundRecentPurchases(createUserID(BigInt(account.userId)))).rejects.toMatchObject({
+			await expect(
+				createRefundService().refundRecentPurchases(createUserID(BigInt(account.userId))),
+			).rejects.toMatchObject({
 				status: 403,
 				code: APIErrorCodes.STRIPE_REFUND_COOLDOWN_ACTIVE,
 			});

@@ -3,7 +3,7 @@
 import {createTestAccount, setUserACLs, type TestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {createPermissionOverwrite, createRole, sendChannelMessage} from '@app/api/channel/tests/ChannelTestUtils';
 import {markChannelAsIndexed} from '@app/api/message/tests/MessageTestUtils';
-import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
+import {getInstanceConfigRepository, getLimitConfigService} from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {createBuilder, createBuilderWithoutAuth} from '@app/api/test/TestRequestBuilder';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
@@ -13,7 +13,7 @@ import type {LimitConfigSnapshot} from '@fluxer/limits/src/LimitTypes';
 import type {ChannelResponse} from '@fluxer/schema/src/domains/channel/ChannelSchemas';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import type {MessageResponse} from '@fluxer/schema/src/domains/message/MessageResponseSchemas';
-import {afterAll, assert, beforeAll, beforeEach, describe, expect, it} from 'vitest';
+import {afterAll, assert, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 interface Registered {
 	token: string;
@@ -33,6 +33,21 @@ function yearsAgo(years: number): string {
 	date.setUTCFullYear(date.getUTCFullYear() - years);
 	date.setUTCDate(date.getUTCDate() - 1);
 	return date.toISOString().slice(0, 10);
+}
+
+// sanalyer (Micup): turning content adults-only is a limit-gated feature, off by default.
+async function withMatureContentSettings<T>(run: () => Promise<T>): Promise<T> {
+	const limits = getLimitConfigService();
+	const snapshot = limits.getConfigSnapshot();
+	const spy = vi.spyOn(limits, 'getConfigSnapshot').mockReturnValue({
+		...snapshot,
+		rules: [...snapshot.rules, {id: 'test_mature_content', limits: {feature_mature_content_settings: 1}}],
+	});
+	try {
+		return await run();
+	} finally {
+		spy.mockRestore();
+	}
 }
 
 describe('Guild visitor reads', () => {
@@ -195,7 +210,9 @@ describe('Guild visitor reads', () => {
 
 	it('hides adult channels from younger visitors entirely', async () => {
 		const {owner, channelId, code} = await createScene();
-		await createBuilder(harness, owner.token).patch(`/channels/${channelId}`).body({nsfw: true}).execute();
+		await withMatureContentSettings(() =>
+			createBuilder(harness, owner.token).patch(`/channels/${channelId}`).body({nsfw: true}).execute(),
+		);
 		const teen = await createUnclaimed(yearsAgo(15));
 		await visit(teen.token, code);
 		await createBuilder(harness, teen.token)

@@ -15,7 +15,7 @@ import {
 } from '@app/api/feed/tests/FeedTestUtils';
 import {EmbedService} from '@app/api/infrastructure/EmbedService';
 import type {MediaProxyNsfwMode} from '@app/api/infrastructure/IMediaService';
-import {IUnfurlerService, type UnfurlOptions, type UnfurlResult} from '@app/api/infrastructure/IUnfurlerService';
+import type {UnfurlOptions, UnfurlResult} from '@app/api/infrastructure/IUnfurlerService';
 import {getKVClient, getMediaService, getSnowflakeService, getWorkerService} from '@app/api/middleware/ServiceRegistry';
 import {
 	getFeedDiscoverRepository,
@@ -27,6 +27,7 @@ import {
 import {urlBlocklistCache} from '@app/api/middleware/UrlBlocklistCache';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {NoopLogger} from '@app/api/test/mocks/NoopLogger';
+import {NoopUnfurlerService} from '@app/api/test/mocks/NoopUnfurlerService';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
 import {TestMediaService} from '@app/api/test/TestMediaService';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
@@ -65,7 +66,7 @@ const youtubeCard = (patch: Partial<MessageEmbedResponse> = {}): MessageEmbedRes
 });
 
 // The unfurler answers what the test sets; every call is recorded.
-class FakeUnfurler extends IUnfurlerService {
+class FakeUnfurler extends NoopUnfurlerService {
 	readonly calls: Array<{url: string; nsfwMode?: MediaProxyNsfwMode; options: UnfurlOptions}> = [];
 	answer: (url: string) => Promise<UnfurlResult> = async () => ({embeds: [], cacheTtlSeconds: null});
 

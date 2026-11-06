@@ -112,8 +112,16 @@ export class UserSettingsRepository {
 			game_activity_visibility: _visibility,
 			game_activity_policy_revision: _revision,
 			game_activity_visibility_source: _source,
-			...patch
+			...fullPatch
 		} = settings;
+		// With the caller's base snapshot only the columns it changed are written, so a concurrent edit to another
+		// column is not overwritten by the stale value the caller read.
+		const changedFromBase = base
+			? new Set(Object.keys(buildPatchFromData<UserSettingsRow>(settings, base, USER_SETTINGS_COLUMNS, ['user_id'])))
+			: null;
+		const patch = changedFromBase
+			? Object.fromEntries(Object.entries(fullPatch).filter(([key]) => changedFromBase.has(key)))
+			: fullPatch;
 		const profileChanged =
 			current && settings.version === current.version && settings.profile_privacy !== current.profilePrivacy;
 		return this.writeSettingsPatch(

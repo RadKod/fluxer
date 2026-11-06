@@ -11,7 +11,9 @@ import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
 import type {CosmeticItemResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
 import type {ShopAdminBundle} from '@fluxer/schema/src/domains/shop/ShopAdminSchemas';
 
-const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+// 128x128: the test media service reads real PNG dimensions, and cosmetics need 32 to 2048 px.
+const PNG =
+	'iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAAVklEQVR42u3BMQEAAADCoPVPbQwfoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOBvAI8AAYr5gj4AAAAASUVORK5CYII=';
 
 export async function createShopAdmin(harness: ApiTestHarness): Promise<TestAccount> {
 	return setUserACLs(harness, await createTestAccount(harness), [
@@ -28,10 +30,12 @@ export async function createShopAdmin(harness: ApiTestHarness): Promise<TestAcco
 // the result in afterAll.
 export function saveShopEnvironment(): () => void {
 	const selfHosted = Config.instance.selfHosted;
+	const setupConfigured = Config.instance.setup.configured;
 	const payriffEnabled = Config.payriff.enabled;
 	const premiumMode = getCachedInstancePremiumMode();
 	return () => {
 		Config.instance.selfHosted = selfHosted;
+		Config.instance.setup.configured = setupConfigured;
 		Config.payriff.enabled = payriffEnabled;
 		setCachedInstancePremiumMode(premiumMode);
 	};
@@ -57,6 +61,8 @@ export async function openShop(
 ): Promise<void> {
 	getShopCatalogService().clearCachesForTesting();
 	Config.instance.selfHosted = true;
+	// Self-hosted sign-ups after the first (admin) account need finished setup.
+	Config.instance.setup.configured = true;
 	Config.payriff.enabled = true;
 	await setPremiumMode(harness, admin, 'mirror');
 	await createBuilder(harness, admin.token)

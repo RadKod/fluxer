@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {requireEmailVerified} from '@app/api/auth/EmailVerificationUtils';
 import type {ChannelID, MessageID} from '@app/api/BrandedTypes';
 import type {ChannelRepository} from '@app/api/channel/ChannelRepository';
 import type {ChannelService} from '@app/api/channel/services/ChannelService';
@@ -10,10 +9,14 @@ import {assertThreadInteractionAllowed} from '@app/api/channel/services/thread/T
 import type {ThreadViewer} from '@app/api/experiment/ChannelThreadsGate';
 import {routeOfficialBotComponent} from '@app/api/guild/OfficialBotComponentRouter';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
+import {usesUsernameSignIn} from '@app/api/instance/AccountIdentityModeCache';
 import type {RequestCache} from '@app/api/middleware/RequestCacheMiddleware';
 import type {User} from '@app/api/models/User';
 import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
+import {assertTierAllows, NO_TIER_CONTEXT} from '@app/api/user/AccountTier';
 import {assertGuildMemberCanCommunicate} from '@app/api/utils/GuildCommunicationUtils';
+import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
+import {EmailVerificationRequiredError} from '@fluxer/errors/src/domains/auth/EmailVerificationRequiredError';
 import {UnknownMessageError} from '@fluxer/errors/src/domains/channel/UnknownMessageError';
 import type {MessageComponentClickResponse} from '@fluxer/schema/src/domains/message/MessageComponentSchemas';
 
@@ -59,7 +62,9 @@ export class MessageComponentService extends MessageInteractionBase {
 		assertAccountNotLimited(user);
 		assertGuildMemberCanCommunicate(member);
 		await this.assertMessageHistoryAccess({authChannel, messageId});
-		requireEmailVerified(user);
+		assertTierAllows(user, TierGatedActions.MESSAGE, NO_TIER_CONTEXT);
+		// Micup: a click also needs a verified email outside username sign-in, as before upstream's tier gates.
+		if (!user.isBot && !usesUsernameSignIn() && !user.emailVerified) throw new EmailVerificationRequiredError();
 		// TEMPORARY: every click reads the message row from Cassandra. Trigger: click p95 > 300 ms
 		// or a messages read p99 > 20 ms. Path: a 30 s cache keyed by message_id + version.
 		const message = await this.deps.channelRepository.messages.getMessage(channel.id, messageId);

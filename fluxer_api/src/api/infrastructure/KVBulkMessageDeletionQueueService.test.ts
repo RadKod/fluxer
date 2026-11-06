@@ -18,6 +18,7 @@ async function createHarness(users: Array<{userId: UserID; pendingAt: Date | nul
 			...EMPTY_USER_ROW,
 			user_id: userId,
 			username: `user${userId}`,
+			discriminator: 1,
 			pending_bulk_message_deletion_at: pendingAt,
 		});
 	}

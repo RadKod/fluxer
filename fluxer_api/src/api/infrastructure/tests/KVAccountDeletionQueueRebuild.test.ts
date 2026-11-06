@@ -14,6 +14,7 @@ function userRow(id: bigint, overrides: Partial<Pick<UserRow, 'bot' | 'flags'>> 
 	return {
 		...EMPTY_USER_ROW,
 		user_id: createUserID(id),
+		discriminator: 1,
 		bot: overrides.bot ?? false,
 		flags: overrides.flags ?? 0n,
 	};

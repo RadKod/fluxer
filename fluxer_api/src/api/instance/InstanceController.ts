@@ -43,7 +43,6 @@ import {
 	InstantAccountAvailability,
 } from '@fluxer/constants/src/AccountConfigConstants';
 import {
-	type AccountIdentity,
 	AccountIdentityDecisionSources,
 	AccountIdentityModes,
 	TagStyles,

@@ -26,7 +26,13 @@ async function setupQueue(users: Array<PendingUser>) {
 	const deletionQueueService = new KVAccountDeletionQueueService(getKVClient(), userRepository);
 	await getKVClient().set('deletion_queue:state_version', Date.now().toString());
 	for (const user of users) {
-		const row: UserRow = {...EMPTY_USER_ROW, user_id: user.userId, bot: user.bot ?? false, flags: user.flags ?? 0n};
+		const row: UserRow = {
+			...EMPTY_USER_ROW,
+			user_id: user.userId,
+			discriminator: 1,
+			bot: user.bot ?? false,
+			flags: user.flags ?? 0n,
+		};
 		const created = await userRepository.create(row);
 		await userRepository.updateDeletionSchedule(created, {
 			pending_deletion_at: user.pendingDeletionAt,

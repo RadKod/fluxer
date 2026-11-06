@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {createAuthHarness} from '@app/api/auth/tests/AuthTestUtils';
 import type {SsoService} from '@app/api/auth/services/SsoService';
+import {createAuthHarness} from '@app/api/auth/tests/AuthTestUtils';
 import {createApplicationID, createUserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
 import {setCassandraQueryExecutorForTesting} from '@app/api/database/CassandraQueryExecution';
@@ -157,7 +157,9 @@ describe('InstanceController discovery (sanalyer)', () => {
 				getPublicStatus: async () => ({
 					enabled: false,
 					enforced: false,
+					username_from_provider: false,
 					display_name: null,
+					button_label: null,
 					redirect_uri: '',
 				}),
 			} as unknown as SsoService);

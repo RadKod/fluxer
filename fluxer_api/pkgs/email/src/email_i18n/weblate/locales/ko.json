@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {결제할 때마다 영수증을 이메일로 보내 드려요.} year {결제할 때마다 영수증을 이메일로 보내 드려요.} other {이 이메일이 영수증이에요.}}",
 		"reference_label": "참조 번호",
 		"signoff": "{product_name} 팀 드림",
-		"subject": "{product_name} 후원에 감사드려요",
-		"button": "후원 관리"
+		"subject": "{product_name} 후원에 감사드려요"
 	},
 	"donation_magic_link": {
 		"cta": "후원 관리",
@@ -74,8 +73,7 @@
 		"intro": "이 링크에서 정기 후원을 관리하거나 취소하고 결제 수단을 업데이트할 수 있어요.",
 		"note": "이 링크를 요청하지 않으셨다면 이 이메일을 무시해도 돼요.",
 		"signoff": "{product_name} 팀 드림",
-		"subject": "{product_name} 후원 내역 관리",
-		"button": "후원 관리"
+		"subject": "{product_name} 후원 내역 관리"
 	},
 	"donation_payment_failed": {
 		"amount_label": "금액",
@@ -179,8 +177,7 @@
 		"new_email_label": "새 이메일 주소",
 		"note": "이전 이메일 주소로 되돌리고, 모든 기기에서 로그아웃하고, 2단계 인증을 끈 다음 새 비밀번호를 설정하도록 안내해요.",
 		"signoff": "{product_name} 안전팀 드림",
-		"subject": "{product_name} 이메일 주소가 변경되었어요",
-		"button": "변경 취소"
+		"subject": "{product_name} 이메일 주소가 변경되었어요"
 	},
 	"email_verification": {
 		"cta": "이메일 주소 확인",
@@ -189,9 +186,7 @@
 		"intro": "{product_name} 계정 설정을 마치려면 이 이메일 주소를 인증해 주세요.",
 		"note": "{product_name} 계정을 만들지 않으셨다면 이 이메일을 무시해도 돼요.",
 		"signoff": "{product_name} 팀 드림",
-		"subject": "{product_name} 이메일 주소 인증",
-		"body": "🎉 안녕하세요, {username}님.\n\n아래 링크를 클릭하여 {product_name} 계정의 이메일 주소를 인증해 주세요:\n\n{verifyUrl}\n\n{product_name} 계정을 생성하지 않으셨다면 이 이메일을 무시해도 괜찮아요.\n\n이 링크는 24시간 동안 유효해요.\n\n– {product_name} 팀",
-		"button": "이메일 인증"
+		"subject": "{product_name} 이메일 주소 인증"
 	},
 	"email_verification_code": {
 		"expiry": "이 코드는 {minutes, plural, other {#분}} 후에 만료돼요.",
@@ -246,8 +241,7 @@
 		"signoff": "{product_name} 팀 드림",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "파일 크기",
-		"subject": "{product_name} 데이터 내보내기가 준비되었어요",
-		"button": "내 데이터 다운로드"
+		"subject": "{product_name} 데이터 내보내기가 준비되었어요"
 	},
 	"inactivity_warning": {
 		"cta": "{product_name}에 로그인",
@@ -255,8 +249,7 @@
 		"intro": "{product_name} 계정을 {lastActiveDate, date, long}부터 사용하지 않으셨어요. {deletionDate, date, long} 전에 로그인하지 않으면 계정이 삭제돼요.",
 		"note": "{reply, select, yes {최근에 {product_name}에 접속하셨다면 이 이메일에 회신해 주세요.} other {최근에 {product_name}에 접속하셨다면 이 인스턴스의 관리자에게 문의해 주세요.}}",
 		"signoff": "{product_name} 팀 드림",
-		"subject": "{product_name} 계정을 유지하려면 로그인해 주세요",
-		"button": "로그인"
+		"subject": "{product_name} 계정을 유지하려면 로그인해 주세요"
 	},
 	"ip_authorization": {
 		"cta": "이 IP 주소 승인",
@@ -268,8 +261,7 @@
 		"location_label": "위치",
 		"note": "본인이 아니라면 지금 바로 비밀번호를 변경해 주세요.",
 		"signoff": "{product_name} 팀 드림",
-		"subject": "새 IP 주소에서의 {product_name} 로그인을 승인해 주세요",
-		"button": "이 로그인 승인"
+		"subject": "새 IP 주소에서의 {product_name} 로그인을 승인해 주세요"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "이 코드는 {minutes, plural, other {#분}} 후에 만료돼요.",
@@ -505,8 +497,7 @@
 		"location_label": "위치",
 		"note": "요청하지 않으셨다면 이 이메일을 무시해도 돼요.",
 		"signoff": "{product_name} 팀 드림",
-		"subject": "{product_name} 비밀번호 재설정",
-		"button": "비밀번호 재설정"
+		"subject": "{product_name} 비밀번호 재설정"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "분쟁 금액",
@@ -692,14 +683,19 @@
 		"signoff": "{product_name} 팀 드림",
 		"subject": "{product_name} 확인 코드"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "{product_name}에 로그인",
 		"footer_reason": "이 이메일은 {product_name} 계정에 이 주소가 사용되었기 때문에 발송되었어요.",
 		"intro": "{product_name} 가입이 승인되었습니다. 이제 로그인할 수 있습니다.",
 		"signoff": "{product_name} 팀 드림",
-		"subject": "{product_name} 가입이 승인되었어요",
-		"body": "🎉 안녕하세요, {username}님.\n\n좋은 소식이에요: {product_name} 가입이 승인되었어요.\n\n이제 여기에서 {product_name} 앱에 로그인할 수 있어요:\n{channelsUrl}\n\n{product_name} 커뮤니티에 오신 것을 환영해요.\n\n– {product_name} 팀",
-		"button": "{product_name} 열기"
+		"subject": "{product_name} 가입이 승인되었어요"
 	},
 	"registration_pending": {
 		"cta": "대기 중인 가입 신청 검토",
@@ -753,13 +749,5 @@
 		"note": "이 코드를 누구와도 공유하지 마세요. {product_name} 직원은 절대 이 코드를 요청하지 않아요. 계정을 만들려고 하지 않으셨다면 이 이메일을 무시해도 돼요.",
 		"signoff": "{product_name} 팀 드림",
 		"subject": "{product_name} 가입 코드"
-	},
-	"unban_notification": {
-		"subject": "{product_name} 계정 정지가 해제되었어요",
-		"body": "🎉 안녕하세요, {username}님.\n\n좋은 소식이에요: {product_name} 계정 정지가 해제되었어요.\n\n{reason, select,\n  null {}\n  other {사유: {reason}}\n}\n\n이제 다시 로그인하여 평소처럼 {product_name}를 계속 사용할 수 있어요.\n\n– {product_name} 안전팀"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

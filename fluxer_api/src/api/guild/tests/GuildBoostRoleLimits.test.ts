@@ -7,6 +7,7 @@ import {acceptInvite, createChannelInvite, createGuild, createRole} from '@app/a
 import {getGatewayService, getSnowflakeService} from '@app/api/middleware/ServiceRegistry';
 import {
 	getCacheService,
+	getEntityAssetService,
 	getGuildAuditLogService,
 	getGuildRepository,
 	getLimitConfigService,
@@ -52,6 +53,7 @@ describe('Guild role capacity scope', () => {
 			getGuildAuditLogService(),
 			limits,
 			getUserRepository(),
+			getEntityAssetService(),
 		);
 	});
 

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import '@app/api/stripe/tests/DormantStripeTestFixture';
 import type {TestAccount} from '@app/api/auth/tests/AuthTestUtils';
 import {close, closeRequest, createStaff} from '@app/api/enforcement/tests/EnforcementTestUtils';
 import {getBillingRepository} from '@app/api/middleware/ServiceRegistry';

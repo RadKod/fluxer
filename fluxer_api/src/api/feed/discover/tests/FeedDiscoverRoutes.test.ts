@@ -56,7 +56,9 @@ const oldAccount = (): TrendAccount => ({
 	suspiciousActivityFlags: 0,
 	isBot: false,
 	isSystem: false,
-	isUnclaimedAccount: () => false,
+	passwordHash: 'hash',
+	authenticatorTypes: new Set(),
+	traits: new Set(),
 });
 
 describe('Keşfet list, snapshot cache and GET /feed/discover', () => {

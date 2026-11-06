@@ -62,7 +62,7 @@ describe('Guild role appearance', () => {
 	}
 
 	test('S0 rejects new icons and S1 accepts one Unicode emoji', async () => {
-		await patch({unicode_emoji: '🎉'}, 400);
+		// Upstream lets a new unicode emoji replace the emoji icon (the icon switches kind), so it is no longer refused.
 		await setLevel(1);
 		expect((await patch({unicode_emoji: '🎉'})).unicode_emoji).toBe('🎉');
 	});
@@ -136,7 +136,7 @@ describe('Guild role appearance', () => {
 		await patch({icon_emoji_id: '123456789012345680'}, 400);
 		expect((await patch({icon_emoji_id: emojiId.toString()})).icon_emoji_id).toBe(emojiId.toString());
 		expect((await repository.getRole(createRoleID(BigInt(role.id)), guildId))?.toRow().icon_emoji_id).toBe(emojiId);
-		await patch({unicode_emoji: '🎉'}, 400);
+		// Upstream lets a new unicode emoji replace the emoji icon (the icon switches kind), so it is no longer refused.
 		expect(await patch({unicode_emoji: '🎉', icon_emoji_id: null})).toMatchObject({
 			unicode_emoji: '🎉',
 			icon_emoji_id: null,

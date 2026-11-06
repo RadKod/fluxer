@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Vi mejlar dig ett kvitto för varje betalning.} year {Vi mejlar dig ett kvitto för varje betalning.} other {Det här mejlet är ditt kvitto.}}",
 		"reference_label": "Referens",
 		"signoff": "{product_name}-teamet",
-		"subject": "Tack för din donation till {product_name}",
-		"button": "Hantera donationer"
+		"subject": "Tack för din donation till {product_name}"
 	},
 	"donation_magic_link": {
 		"cta": "Hantera donationer",
@@ -74,8 +73,7 @@
 		"intro": "Använd den här länken för att hantera eller avsluta en återkommande donation och uppdatera din betalningsmetod.",
 		"note": "Om du inte bad om den här länken kan du ignorera det här mejlet.",
 		"signoff": "{product_name}-teamet",
-		"subject": "Hantera dina donationer till {product_name}",
-		"button": "Hantera donationer"
+		"subject": "Hantera dina donationer till {product_name}"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Belopp",
@@ -179,8 +177,7 @@
 		"new_email_label": "Ny e-postadress",
 		"note": "Det här återställer din tidigare e-postadress, loggar ut dig överallt, stänger av tvåfaktorsautentisering och ber dig välja ett nytt lösenord.",
 		"signoff": "Säkerhetsteamet på {product_name}",
-		"subject": "E-postadressen för ditt {product_name}-konto har ändrats",
-		"button": "Ångra ändringen"
+		"subject": "E-postadressen för ditt {product_name}-konto har ändrats"
 	},
 	"email_verification": {
 		"cta": "Bekräfta e-postadress",
@@ -189,9 +186,7 @@
 		"intro": "Bekräfta den här e-postadressen för att göra klart ditt {product_name}-konto.",
 		"note": "Om du inte har skapat ett {product_name}-konto kan du ignorera det här mejlet.",
 		"signoff": "{product_name}-teamet",
-		"subject": "Bekräfta din e-postadress på {product_name}",
-		"body": "🎉 Hej {username},\n\nVerifiera e-postadressen för ditt {product_name}-konto genom att klicka på länken nedan:\n\n{verifyUrl}\n\nOm du inte skapade ett {product_name}-konto kan du tryggt ignorera det här mejlet.\n\nDen här länken är giltig i 24 timmar.\n\n– {product_name}-teamet",
-		"button": "Verifiera e-post"
+		"subject": "Bekräfta din e-postadress på {product_name}"
 	},
 	"email_verification_code": {
 		"expiry": "Koden går ut om {minutes, plural, one {# minut} other {# minuter}}.",
@@ -246,8 +241,7 @@
 		"signoff": "{product_name}-teamet",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Filstorlek",
-		"subject": "Din dataexport från {product_name} är klar",
-		"button": "Ladda ner min data"
+		"subject": "Din dataexport från {product_name} är klar"
 	},
 	"inactivity_warning": {
 		"cta": "Logga in på {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "Ditt {product_name}-konto har varit inaktivt sedan {lastActiveDate, date, long}. Logga in före {deletionDate, date, long}, annars raderar vi det.",
 		"note": "{reply, select, yes {Om du har använt {product_name} nyligen, svara på det här mejlet.} other {Om du har använt {product_name} nyligen, kontakta administratörerna för den här instansen.}}",
 		"signoff": "{product_name}-teamet",
-		"subject": "Logga in för att behålla ditt {product_name}-konto",
-		"button": "Logga in"
+		"subject": "Logga in för att behålla ditt {product_name}-konto"
 	},
 	"ip_authorization": {
 		"cta": "Godkänn IP-adressen",
@@ -268,8 +261,7 @@
 		"location_label": "Plats",
 		"note": "Om det inte var du, byt lösenord nu.",
 		"signoff": "{product_name}-teamet",
-		"subject": "Godkänn en inloggning på {product_name} från en ny IP-adress",
-		"button": "Godkänn den här inloggningen"
+		"subject": "Godkänn en inloggning på {product_name} från en ny IP-adress"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Koden går ut om {minutes, plural, one {# minut} other {# minuter}}.",
@@ -505,8 +497,7 @@
 		"location_label": "Plats",
 		"note": "Om du inte bad om det här kan du ignorera det här mejlet.",
 		"signoff": "{product_name}-teamet",
-		"subject": "Återställ ditt lösenord på {product_name}",
-		"button": "Återställ lösenord"
+		"subject": "Återställ ditt lösenord på {product_name}"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Bestridet belopp",
@@ -692,14 +683,19 @@
 		"signoff": "{product_name}-teamet",
 		"subject": "Din bekräftelsekod för {product_name}"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Logga in på {product_name}",
 		"footer_reason": "Du fick det här mejlet eftersom den här adressen användes för ett {product_name}-konto.",
 		"intro": "Din registrering på {product_name} har godkänts. Du kan logga in nu.",
 		"signoff": "{product_name}-teamet",
-		"subject": "Din registrering på {product_name} har godkänts",
-		"body": "🎉 Hej {username},\n\nGoda nyheter: din registrering på {product_name} har godkänts.\n\nDu kan nu logga in i {product_name}-appen här:\n{channelsUrl}\n\nVälkommen till {product_name}-communityn.\n\n– {product_name}-teamet",
-		"button": "Öppna {product_name}"
+		"subject": "Din registrering på {product_name} har godkänts"
 	},
 	"registration_pending": {
 		"cta": "Granska väntande registreringar",
@@ -753,13 +749,5 @@
 		"note": "Dela inte den här koden med någon. Personal på {product_name} kommer aldrig att be om den. Om du inte försökte skapa ett konto kan du ignorera det här mejlet.",
 		"signoff": "{product_name}-teamet",
 		"subject": "Din {product_name}-registreringskod"
-	},
-	"unban_notification": {
-		"subject": "Avstängningen av ditt {product_name}-konto har hävts",
-		"body": "🎉 Hej {username},\n\nGoda nyheter: avstängningen av ditt {product_name}-konto har hävts.\n\n{reason, select,\n  null {}\n  other {Anledning: {reason}}\n}\n\nDu kan nu logga in igen och fortsätta använda {product_name} som vanligt.\n\n– Säkerhetsteamet på {product_name}"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

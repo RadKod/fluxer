@@ -8,7 +8,9 @@ import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import type {CosmeticItemResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
 import {afterAll, beforeAll, beforeEach, describe, expect, it} from 'vitest';
 
-const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+// 128x128: the test media service reads real PNG dimensions, and cosmetics need 32 to 2048 px.
+const PNG =
+	'iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAAVklEQVR42u3BMQEAAADCoPVPbQwfoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOBvAI8AAYr5gj4AAAAASUVORK5CYII=';
 const LAYOUT = {
 	compact: {width: 2.3, height: 2.5, offset_x: 0, offset_y: 0.1},
 	voice: null,

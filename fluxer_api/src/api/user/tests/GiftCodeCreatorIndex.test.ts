@@ -3,6 +3,7 @@
 import {AdminCodeGenerationService} from '@app/api/admin/services/AdminCodeGenerationService';
 import {createUserID} from '@app/api/BrandedTypes';
 import {SYSTEM_USER_ID} from '@app/api/constants/Core';
+import {getCacheService} from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {UserRepository} from '@app/api/user/repositories/UserRepository';
 import {afterAll, beforeAll, beforeEach, describe, expect, it} from 'vitest';
@@ -26,7 +27,7 @@ describe('gift codes by creator', () => {
 	it('leaves codes the admin issues out of the creator index, so sold keys never pile into one partition', async () => {
 		const repository = new UserRepository();
 
-		const codes = await new AdminCodeGenerationService(repository).generateGiftCodes({
+		const codes = await new AdminCodeGenerationService(repository, getCacheService()).generateGiftCodes({
 			count: 3,
 			durationType: 'months',
 			durationQuantity: 1,

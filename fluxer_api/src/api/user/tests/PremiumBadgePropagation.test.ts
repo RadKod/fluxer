@@ -268,7 +268,7 @@ describe('premium badge propagation to guild member lists', () => {
 
 	it('a premium account with the badge hidden sends nothing when premium starts or ends', async () => {
 		const {userId, guildId} = await createGuildMember();
-		await getUserRepository().patchUpsert(userId, {premium_flags: PremiumFlags.BADGE_HIDDEN});
+		await getUserRepository().patchUpsert(userId, {hidden_profile_badges: new Set(['premium'])});
 		watchGuildDispatches();
 
 		await grantDays(userId, 'payriff', 1);
@@ -461,7 +461,7 @@ describe('premium badge propagation to guild member lists', () => {
 
 	it('a session start that strips premium with the badge hidden still refreshes the users service cache once', async () => {
 		const {userId, guildId} = await createGuildMember();
-		await getUserRepository().patchUpsert(userId, {premium_flags: PremiumFlags.BADGE_HIDDEN});
+		await getUserRepository().patchUpsert(userId, {hidden_profile_badges: new Set(['premium'])});
 		await grantOneDayAndLapse(userId);
 		watchGuildDispatches();
 		const invalidateUserCache = vi.spyOn(UserCacheService.prototype, 'invalidateUserCache');

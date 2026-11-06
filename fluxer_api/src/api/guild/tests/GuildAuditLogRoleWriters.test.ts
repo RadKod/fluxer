@@ -72,6 +72,11 @@ describe('Guild audit log role writers', () => {
 		harness = await createApiTestHarness();
 		owner = await createTestAccount(harness);
 		guild = await createGuild(harness, owner.token, 'Role Audit Guild');
+		// sanalyer (Micup): role icons need server boost level 1.
+		await createBuilder(harness, '')
+			.post(`/test/guilds/${guild.id}/features`)
+			.body({add_features: [GuildFeatures.BOOST_LEVEL_1]})
+			.execute();
 	});
 	afterEach(async () => {
 		await harness?.shutdown();

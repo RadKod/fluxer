@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Lähetämme sinulle jokaisesta maksusta kuitin sähköpostitse.} year {Lähetämme sinulle jokaisesta maksusta kuitin sähköpostitse.} other {Tämä sähköposti on kuittisi.}}",
 		"reference_label": "Viite",
 		"signoff": "{product_name}-tiimi",
-		"subject": "Kiitos {product_name}-lahjoituksestasi",
-		"button": "Hallitse lahjoituksia"
+		"subject": "Kiitos {product_name}-lahjoituksestasi"
 	},
 	"donation_magic_link": {
 		"cta": "Hallitse lahjoituksia",
@@ -74,8 +73,7 @@
 		"intro": "Tällä linkillä voit hallita toistuvaa lahjoitusta tai peruuttaa sen ja päivittää maksutapasi.",
 		"note": "Jos et pyytänyt tätä linkkiä, voit jättää tämän sähköpostin huomiotta.",
 		"signoff": "{product_name}-tiimi",
-		"subject": "Hallitse {product_name}-lahjoituksiasi",
-		"button": "Hallitse lahjoituksia"
+		"subject": "Hallitse {product_name}-lahjoituksiasi"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Summa",
@@ -179,8 +177,7 @@
 		"new_email_label": "Uusi sähköpostiosoite",
 		"note": "Tämä palauttaa aiemman sähköpostiosoitteesi, kirjaa sinut ulos kaikkialta, poistaa kaksivaiheisen todennuksen käytöstä ja pyytää sinua asettamaan uuden salasanan.",
 		"signoff": "{product_name}-turvallisuustiimi",
-		"subject": "{product_name}-tilisi sähköpostiosoite vaihdettiin",
-		"button": "Peru tämä muutos"
+		"subject": "{product_name}-tilisi sähköpostiosoite vaihdettiin"
 	},
 	"email_verification": {
 		"cta": "Vahvista sähköpostiosoite",
@@ -189,9 +186,7 @@
 		"intro": "Viimeistele {product_name}-tilisi luominen vahvistamalla tämä sähköpostiosoite.",
 		"note": "Jos et luonut {product_name}-tiliä, voit jättää tämän sähköpostin huomiotta.",
 		"signoff": "{product_name}-tiimi",
-		"subject": "Vahvista sähköpostiosoitteesi {product_name}-tilillä",
-		"body": "🎉 Hei {username},\n\nVahvista {product_name}-tilisi sähköpostiosoite napsauttamalla alla olevaa linkkiä:\n\n{verifyUrl}\n\nJos et luonut {product_name}-tiliä, voit jättää tämän sähköpostin turvallisesti huomiotta.\n\nTämä linkki on voimassa 24 tuntia.\n\n– {product_name}-tiimi",
-		"button": "Vahvista sähköposti"
+		"subject": "Vahvista sähköpostiosoitteesi {product_name}-tilillä"
 	},
 	"email_verification_code": {
 		"expiry": "Tämä koodi vanhenee {minutes, plural, one {# minuutin} other {# minuutin}} kuluttua.",
@@ -246,8 +241,7 @@
 		"signoff": "{product_name}-tiimi",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Tiedoston koko",
-		"subject": "{product_name}-tietojesi vienti on valmis",
-		"button": "Lataa tietoni"
+		"subject": "{product_name}-tietojesi vienti on valmis"
 	},
 	"inactivity_warning": {
 		"cta": "Kirjaudu {product_name}-palveluun",
@@ -255,8 +249,7 @@
 		"intro": "{product_name}-tilisi on ollut käyttämättä {lastActiveDate, date, long} lähtien. Kirjaudu sisään ennen {deletionDate, date, long}, muuten poistamme sen.",
 		"note": "{reply, select, yes {Jos olet käyttänyt {product_name}-palvelua äskettäin, vastaa tähän sähköpostiin.} other {Jos olet käyttänyt {product_name}-palvelua äskettäin, ota yhteyttä tämän instanssin ylläpitäjiin.}}",
 		"signoff": "{product_name}-tiimi",
-		"subject": "Kirjaudu sisään, niin {product_name}-tilisi säilyy",
-		"button": "Kirjaudu sisään"
+		"subject": "Kirjaudu sisään, niin {product_name}-tilisi säilyy"
 	},
 	"ip_authorization": {
 		"cta": "Hyväksy tämä IP-osoite",
@@ -268,8 +261,7 @@
 		"location_label": "Sijainti",
 		"note": "Jos se et ollut sinä, vaihda salasanasi heti.",
 		"signoff": "{product_name}-tiimi",
-		"subject": "Hyväksy {product_name}-kirjautuminen uudesta IP-osoitteesta",
-		"button": "Hyväksy tämä kirjautuminen"
+		"subject": "Hyväksy {product_name}-kirjautuminen uudesta IP-osoitteesta"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Tämä koodi vanhenee {minutes, plural, one {# minuutin} other {# minuutin}} kuluttua.",
@@ -505,8 +497,7 @@
 		"location_label": "Sijainti",
 		"note": "Jos et pyytänyt tätä, voit jättää tämän sähköpostin huomiotta.",
 		"signoff": "{product_name}-tiimi",
-		"subject": "Nollaa {product_name}-salasanasi",
-		"button": "Nollaa salasana"
+		"subject": "Nollaa {product_name}-salasanasi"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Kiistetty summa",
@@ -692,14 +683,19 @@
 		"signoff": "{product_name}-tiimi",
 		"subject": "{product_name}-vahvistuskoodisi"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Kirjaudu {product_name}-palveluun",
 		"footer_reason": "Sait tämän sähköpostin, koska tätä osoitetta käytettiin {product_name}-tilille.",
 		"intro": "Rekisteröitymisesi palveluun {product_name} on hyväksytty. Voit nyt kirjautua sisään.",
 		"signoff": "{product_name}-tiimi",
-		"subject": "{product_name}-rekisteröitymisesi on hyväksytty",
-		"body": "🎉 Hei {username},\n\nHyviä uutisia: {product_name}-rekisteröitymisesi on hyväksytty.\n\nVoit nyt kirjautua {product_name}-sovellukseen täältä:\n{channelsUrl}\n\nTervetuloa {product_name}-yhteisöön.\n\n– {product_name}-tiimi",
-		"button": "Avaa {product_name}"
+		"subject": "{product_name}-rekisteröitymisesi on hyväksytty"
 	},
 	"registration_pending": {
 		"cta": "Tarkista odottavat rekisteröinnit",
@@ -753,13 +749,5 @@
 		"note": "Älä jaa tätä koodia kenellekään. {product_name}-henkilöstö ei koskaan pyydä sitä. Jos et yrittänyt luoda tiliä, voit jättää tämän sähköpostin huomiotta.",
 		"signoff": "{product_name}-tiimi",
 		"subject": "{product_name}-rekisteröitymiskoodisi"
-	},
-	"unban_notification": {
-		"subject": "{product_name}-tilisi jäädytys on poistettu",
-		"body": "🎉 Hei {username},\n\nHyviä uutisia: {product_name}-tilisi jäädytys on poistettu.\n\n{reason, select,\n  null {}\n  other {Syy: {reason}}\n}\n\nVoit nyt kirjautua takaisin sisään ja jatkaa {product_name}-palvelun käyttöä normaalisti.\n\n– {product_name}-turvallisuustiimi"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

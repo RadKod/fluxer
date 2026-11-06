@@ -15,6 +15,8 @@ import {UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest';
 
+const SETUP_CONFIGURED = Config.instance.setup.configured;
+
 describe('#0000 on a self-hosted instance', () => {
 	let harness: ApiTestHarness;
 	let previousSelfHosted: boolean;
@@ -22,6 +24,8 @@ describe('#0000 on a self-hosted instance', () => {
 	beforeAll(async () => {
 		previousSelfHosted = Config.instance.selfHosted;
 		Config.instance.selfHosted = true;
+		// Self-hosted sign-ups after the first (admin) account need finished setup.
+		Config.instance.setup.configured = true;
 		harness = await createApiTestHarness();
 	});
 	beforeEach(async () => {
@@ -33,6 +37,7 @@ describe('#0000 on a self-hosted instance', () => {
 	afterAll(async () => {
 		await harness?.shutdown();
 		Config.instance.selfHosted = previousSelfHosted;
+		Config.instance.setup.configured = SETUP_CONFIGURED;
 	});
 
 	async function premiumMember(): Promise<TestAccount> {

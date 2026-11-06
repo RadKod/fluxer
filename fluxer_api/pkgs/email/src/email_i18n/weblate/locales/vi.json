@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Chúng tôi sẽ gửi biên lai qua email cho bạn sau mỗi lần thanh toán.} year {Chúng tôi sẽ gửi biên lai qua email cho bạn sau mỗi lần thanh toán.} other {Email này là biên lai của bạn.}}",
 		"reference_label": "Mã tham chiếu",
 		"signoff": "Đội ngũ {product_name}",
-		"subject": "Cảm ơn bạn đã ủng hộ {product_name}",
-		"button": "Quản lý khoản ủng hộ"
+		"subject": "Cảm ơn bạn đã ủng hộ {product_name}"
 	},
 	"donation_magic_link": {
 		"cta": "Quản lý khoản ủng hộ",
@@ -74,8 +73,7 @@
 		"intro": "Dùng liên kết này để quản lý hoặc hủy khoản ủng hộ định kỳ và cập nhật phương thức thanh toán của bạn.",
 		"note": "Nếu bạn không yêu cầu liên kết này, bạn có thể bỏ qua email này.",
 		"signoff": "Đội ngũ {product_name}",
-		"subject": "Quản lý các khoản ủng hộ {product_name} của bạn",
-		"button": "Quản lý khoản ủng hộ"
+		"subject": "Quản lý các khoản ủng hộ {product_name} của bạn"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Số tiền",
@@ -179,8 +177,7 @@
 		"new_email_label": "Địa chỉ email mới",
 		"note": "Thao tác này sẽ khôi phục địa chỉ email trước đây của bạn, đăng xuất bạn khỏi mọi nơi, tắt xác thực hai yếu tố và yêu cầu bạn đặt mật khẩu mới.",
 		"signoff": "Đội ngũ an toàn {product_name}",
-		"subject": "Địa chỉ email {product_name} của bạn đã được thay đổi",
-		"button": "Hoàn tác thay đổi này"
+		"subject": "Địa chỉ email {product_name} của bạn đã được thay đổi"
 	},
 	"email_verification": {
 		"cta": "Xác nhận địa chỉ email",
@@ -189,9 +186,7 @@
 		"intro": "Xác nhận địa chỉ email này để hoàn tất việc thiết lập tài khoản {product_name} của bạn.",
 		"note": "Nếu bạn không tạo tài khoản {product_name}, bạn có thể bỏ qua email này.",
 		"signoff": "Đội ngũ {product_name}",
-		"subject": "Xác nhận địa chỉ email của bạn trên {product_name}",
-		"body": "🎉 Xin chào {username},\n\nVui lòng xác minh địa chỉ email cho tài khoản {product_name} của bạn bằng cách nhấp vào liên kết bên dưới:\n\n{verifyUrl}\n\nNếu bạn không tạo tài khoản {product_name}, bạn có thể bỏ qua email này.\n\nLiên kết này có hiệu lực trong 24 giờ.\n\n– Đội ngũ {product_name}",
-		"button": "Xác minh email"
+		"subject": "Xác nhận địa chỉ email của bạn trên {product_name}"
 	},
 	"email_verification_code": {
 		"expiry": "Mã này sẽ hết hạn sau {minutes, plural, other {# phút}}.",
@@ -246,8 +241,7 @@
 		"signoff": "Đội ngũ {product_name}",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Kích thước tệp",
-		"subject": "Bản xuất dữ liệu {product_name} của bạn đã sẵn sàng",
-		"button": "Tải xuống dữ liệu của tôi"
+		"subject": "Bản xuất dữ liệu {product_name} của bạn đã sẵn sàng"
 	},
 	"inactivity_warning": {
 		"cta": "Đăng nhập vào {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "Tài khoản {product_name} của bạn không hoạt động từ {lastActiveDate, date, long}. Hãy đăng nhập trước {deletionDate, date, long}, nếu không chúng tôi sẽ xóa tài khoản.",
 		"note": "{reply, select, yes {Nếu gần đây bạn có dùng {product_name}, hãy trả lời email này.} other {Nếu gần đây bạn có dùng {product_name}, hãy liên hệ quản trị viên của máy chủ này.}}",
 		"signoff": "Đội ngũ {product_name}",
-		"subject": "Đăng nhập để giữ tài khoản {product_name} của bạn",
-		"button": "Đăng nhập"
+		"subject": "Đăng nhập để giữ tài khoản {product_name} của bạn"
 	},
 	"ip_authorization": {
 		"cta": "Cho phép địa chỉ IP này",
@@ -268,8 +261,7 @@
 		"location_label": "Vị trí",
 		"note": "Nếu không phải bạn, hãy đổi mật khẩu ngay.",
 		"signoff": "Đội ngũ {product_name}",
-		"subject": "Cho phép đăng nhập {product_name} từ một địa chỉ IP mới",
-		"button": "Cho phép lần đăng nhập này"
+		"subject": "Cho phép đăng nhập {product_name} từ một địa chỉ IP mới"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Mã này sẽ hết hạn sau {minutes, plural, other {# phút}}.",
@@ -505,8 +497,7 @@
 		"location_label": "Vị trí",
 		"note": "Nếu bạn không yêu cầu việc này, bạn có thể bỏ qua email này.",
 		"signoff": "Đội ngũ {product_name}",
-		"subject": "Đặt lại mật khẩu của bạn trên {product_name}",
-		"button": "Đặt lại mật khẩu"
+		"subject": "Đặt lại mật khẩu của bạn trên {product_name}"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Số tiền bị tranh chấp",
@@ -692,14 +683,19 @@
 		"signoff": "Đội ngũ {product_name}",
 		"subject": "Mã xác nhận {product_name} của bạn"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Đăng nhập vào {product_name}",
 		"footer_reason": "Bạn nhận được email này vì địa chỉ này đã được sử dụng cho một tài khoản {product_name}.",
 		"intro": "Đăng ký của bạn trên {product_name} đã được duyệt. Bạn có thể đăng nhập ngay.",
 		"signoff": "Đội ngũ {product_name}",
-		"subject": "Đăng ký {product_name} của bạn đã được chấp thuận",
-		"body": "🎉 Xin chào {username},\n\nTin tốt: đăng ký {product_name} của bạn đã được chấp thuận.\n\nBây giờ bạn có thể đăng nhập vào ứng dụng {product_name} tại đây:\n{channelsUrl}\n\nChào mừng bạn đến với cộng đồng {product_name}.\n\n– Đội ngũ {product_name}",
-		"button": "Mở {product_name}"
+		"subject": "Đăng ký {product_name} của bạn đã được chấp thuận"
 	},
 	"registration_pending": {
 		"cta": "Xem các đăng ký đang chờ",
@@ -753,13 +749,5 @@
 		"note": "Đừng chia sẻ mã này với bất kỳ ai. Nhân viên {product_name} sẽ không bao giờ yêu cầu mã này. Nếu bạn không thử tạo tài khoản, bạn có thể bỏ qua email này.",
 		"signoff": "Đội ngũ {product_name}",
 		"subject": "Mã đăng ký {product_name} của bạn"
-	},
-	"unban_notification": {
-		"subject": "Lệnh đình chỉ tài khoản {product_name} của bạn đã được gỡ bỏ",
-		"body": "🎉 Xin chào {username},\n\nTin tốt: lệnh đình chỉ tài khoản {product_name} của bạn đã được gỡ bỏ.\n\n{reason, select,\n  null {}\n  other {Lý do: {reason}}\n}\n\nBây giờ bạn có thể đăng nhập lại và tiếp tục sử dụng {product_name} như bình thường.\n\n– Đội ngũ An toàn {product_name}"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

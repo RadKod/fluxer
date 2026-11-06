@@ -220,7 +220,8 @@ export class StripeGiftService {
 						giftCode.visionarySequenceNumber,
 					);
 					await this.userRepository.reserveVisionarySlot(giftCode.visionarySequenceNumber, userId);
-				} else if (Config.instance.selfHosted) {
+				} else if (Config.instance.selfHosted && premiumType !== UserPremiumTypes.LIFETIME) {
+					// A lifetime code (upstream, self-hosted) carries no time for the ledger and takes the plain grant below.
 					// Micup: the premium ledger is the only writer of premium time on a self-hosted instance, so a key's
 					// time is added once per code and is not lost to a concurrent grant or an expiration cleanup.
 					const {newlyApplied} = await getPremiumLedgerService().grant({

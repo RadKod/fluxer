@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {हर भुगतान की रसीद हम आपको ईमेल से भेजेंगे।} year {हर भुगतान की रसीद हम आपको ईमेल से भेजेंगे।} other {यह ईमेल आपकी रसीद है।}}",
 		"reference_label": "रेफ़रेंस नंबर",
 		"signoff": "{product_name} टीम",
-		"subject": "आपके {product_name} डोनेशन के लिए धन्यवाद",
-		"button": "डोनेशन मैनेज करें"
+		"subject": "आपके {product_name} डोनेशन के लिए धन्यवाद"
 	},
 	"donation_magic_link": {
 		"cta": "डोनेशन मैनेज करें",
@@ -74,8 +73,7 @@
 		"intro": "किसी आवर्ती डोनेशन को मैनेज या रद्द करने और अपना पेमेंट तरीका अपडेट करने के लिए इस लिंक का इस्तेमाल करें।",
 		"note": "अगर आपने यह लिंक नहीं माँगा था, तो आप इस ईमेल को अनदेखा कर सकते हैं।",
 		"signoff": "{product_name} टीम",
-		"subject": "अपने {product_name} डोनेशन मैनेज करें",
-		"button": "डोनेशन मैनेज करें"
+		"subject": "अपने {product_name} डोनेशन मैनेज करें"
 	},
 	"donation_payment_failed": {
 		"amount_label": "राशि",
@@ -179,8 +177,7 @@
 		"new_email_label": "नया ईमेल पता",
 		"note": "इससे आपका पिछला ईमेल पता वापस आ जाता है, आप हर जगह से साइन आउट हो जाते हैं, दो-कारक प्रमाणीकरण बंद हो जाता है और आपसे नया पासवर्ड सेट करने को कहा जाता है।",
 		"signoff": "{product_name} सेफ्टी टीम",
-		"subject": "आपका {product_name} ईमेल पता बदल दिया गया",
-		"button": "यह बदलाव वापस लें"
+		"subject": "आपका {product_name} ईमेल पता बदल दिया गया"
 	},
 	"email_verification": {
 		"cta": "ईमेल पते की पुष्टि करें",
@@ -189,9 +186,7 @@
 		"intro": "अपना {product_name} अकाउंट सेट अप पूरा करने के लिए इस ईमेल पते की पुष्टि करें।",
 		"note": "अगर आपने {product_name} अकाउंट नहीं बनाया, तो आप इस ईमेल को अनदेखा कर सकते हैं।",
 		"signoff": "{product_name} टीम",
-		"subject": "अपने {product_name} ईमेल पते की पुष्टि करें",
-		"body": "🎉 नमस्ते {username},\n\nकृपया नीचे दिए गए लिंक पर क्लिक करके अपने {product_name} अकाउंट के लिए ईमेल पता वेरिफ़ाई करें:\n\n{verifyUrl}\n\nअगर आपने {product_name} अकाउंट नहीं बनाया है, तो आप इस ईमेल को बेझिझक अनदेखा कर सकते हैं।\n\nयह लिंक 24 घंटे तक मान्य है।\n\n– {product_name} टीम",
-		"button": "ईमेल वेरिफ़ाई करें"
+		"subject": "अपने {product_name} ईमेल पते की पुष्टि करें"
 	},
 	"email_verification_code": {
 		"expiry": "यह कोड {minutes, plural, one {# मिनट} other {# मिनट}} में समाप्त हो जाएगा।",
@@ -246,8 +241,7 @@
 		"signoff": "{product_name} टीम",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "फ़ाइल साइज़",
-		"subject": "आपका {product_name} डेटा एक्सपोर्ट तैयार है",
-		"button": "मेरा डेटा डाउनलोड करें"
+		"subject": "आपका {product_name} डेटा एक्सपोर्ट तैयार है"
 	},
 	"inactivity_warning": {
 		"cta": "{product_name} में साइन इन करें",
@@ -255,8 +249,7 @@
 		"intro": "आपका {product_name} अकाउंट {lastActiveDate, date, long} से इनएक्टिव है। {deletionDate, date, long} से पहले साइन इन करें, नहीं तो हम इसे डिलीट कर देंगे।",
 		"note": "{reply, select, yes {अगर आपने हाल ही में {product_name} इस्तेमाल किया है, तो इस ईमेल का जवाब दें।} other {अगर आपने हाल ही में {product_name} इस्तेमाल किया है, तो इस इंस्टेंस के एडमिन से संपर्क करें।}}",
 		"signoff": "{product_name} टीम",
-		"subject": "अपना {product_name} अकाउंट बनाए रखने के लिए साइन इन करें",
-		"button": "लॉग इन करें"
+		"subject": "अपना {product_name} अकाउंट बनाए रखने के लिए साइन इन करें"
 	},
 	"ip_authorization": {
 		"cta": "इस IP एड्रेस को ऑथराइज़ करें",
@@ -268,8 +261,7 @@
 		"location_label": "लोकेशन",
 		"note": "अगर वह आप नहीं थे, तो अभी अपना पासवर्ड बदलें।",
 		"signoff": "{product_name} टीम",
-		"subject": "नए IP एड्रेस से {product_name} साइन-इन को ऑथराइज़ करें",
-		"button": "इस लॉगिन को ऑथराइज़ करें"
+		"subject": "नए IP एड्रेस से {product_name} साइन-इन को ऑथराइज़ करें"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "यह कोड {minutes, plural, one {# मिनट} other {# मिनट}} में एक्सपायर हो जाएगा।",
@@ -505,8 +497,7 @@
 		"location_label": "लोकेशन",
 		"note": "अगर आपने यह नहीं माँगा था, तो आप इस ईमेल को अनदेखा कर सकते हैं।",
 		"signoff": "{product_name} टीम",
-		"subject": "अपना {product_name} पासवर्ड रीसेट करें",
-		"button": "पासवर्ड रीसेट करें"
+		"subject": "अपना {product_name} पासवर्ड रीसेट करें"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "विवादित राशि",
@@ -692,14 +683,19 @@
 		"signoff": "{product_name} टीम",
 		"subject": "आपका {product_name} पुष्टिकरण कोड"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "{product_name} में साइन इन करें",
 		"footer_reason": "आपको यह ईमेल इसलिए मिला है क्योंकि इस पते का उपयोग {product_name} अकाउंट के लिए किया गया था।",
 		"intro": "{product_name} पर आपका साइन-अप स्वीकृत हो गया है। अब आप साइन इन कर सकते हैं।",
 		"signoff": "{product_name} टीम",
-		"subject": "आपका {product_name} रजिस्ट्रेशन अप्रूव हो गया है",
-		"body": "🎉 नमस्ते {username},\n\nअच्छी खबर: आपका {product_name} रजिस्ट्रेशन अप्रूव हो गया है।\n\nअब आप {product_name} ऐप में यहाँ लॉगिन कर सकते हैं:\n{channelsUrl}\n\n{product_name} कम्युनिटी में आपका स्वागत है।\n\n– {product_name} टीम",
-		"button": "{product_name} खोलें"
+		"subject": "आपका {product_name} रजिस्ट्रेशन अप्रूव हो गया है"
 	},
 	"registration_pending": {
 		"cta": "लंबित रजिस्ट्रेशन देखें",
@@ -753,13 +749,5 @@
 		"note": "यह कोड किसी के साथ साझा न करें। {product_name} के कर्मचारी इसे कभी नहीं मांगेंगे। यदि आपने अकाउंट बनाने का प्रयास नहीं किया है, तो आप इस ईमेल को अनदेखा कर सकते हैं।",
 		"signoff": "{product_name} टीम",
 		"subject": "आपका {product_name} साइन-अप कोड"
-	},
-	"unban_notification": {
-		"subject": "आपके {product_name} अकाउंट का सस्पेंशन हटा दिया गया है",
-		"body": "🎉 नमस्ते {username},\n\nअच्छी खबर: आपके {product_name} अकाउंट का सस्पेंशन हटा दिया गया है।\n\n{reason, select,\n  null {}\n  other {वजह: {reason}}\n}\n\nअब आप फिर से लॉगिन कर सकते हैं और सामान्य रूप से {product_name} का उपयोग जारी रख सकते हैं।\n\n– {product_name} सेफ्टी टीम"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

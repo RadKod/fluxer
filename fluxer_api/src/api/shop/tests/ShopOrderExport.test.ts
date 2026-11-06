@@ -51,6 +51,8 @@ describe('shop orders in the data export and account deletion', () => {
 	beforeAll(async () => {
 		restoreEnvironment = saveShopEnvironment();
 		Config.instance.selfHosted = true;
+		// Self-hosted sign-ups after the first (admin) account need finished setup.
+		Config.instance.setup.configured = true;
 		harness = await createApiTestHarness();
 	});
 

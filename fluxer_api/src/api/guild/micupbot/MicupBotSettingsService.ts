@@ -568,14 +568,12 @@ export class MicupBotSettingsService {
 	): Promise<Array<RoleID>> {
 		if (roleIds.length === 0) return [];
 		const guildId = createGuildID(BigInt(guildData.id));
-		const [roles, callerRoles, botRoles] = await Promise.all([
+		const [roles, callerAssignable, botAssignable] = await Promise.all([
 			this.deps.guildRepository.listRoles(guildId),
-			guildData.owner_id === userId.toString() ? null : this.deps.gatewayService.getAssignableRoles({guildId, userId}),
-			botId === null ? null : this.deps.gatewayService.getAssignableRoles({guildId, userId: botId}),
+			guildData.owner_id === userId.toString() ? null : this.assignableAmong(guildId, userId, roleIds),
+			botId === null ? null : this.assignableAmong(guildId, botId, roleIds),
 		]);
 		const byId = new Map(roles.map((role) => [role.id, role]));
-		const callerAssignable = callerRoles === null ? null : new Set(callerRoles);
-		const botAssignable = botRoles === null ? null : new Set(botRoles);
 		return roleIds.filter((roleId) => {
 			const role = byId.get(roleId);
 			return (
@@ -586,6 +584,16 @@ export class MicupBotSettingsService {
 				(botAssignable !== null && !botAssignable.has(roleId))
 			);
 		});
+	}
+
+	// Upstream dropped the gateway's assignable role list; the per-role check answers the same question for the ones asked.
+	private async assignableAmong(guildId: GuildID, userId: UserID, roleIds: Array<RoleID>): Promise<Set<RoleID>> {
+		const checked = await Promise.all(
+			roleIds.map(async (roleId) =>
+				(await this.deps.gatewayService.canManageRole({guildId, userId, roleId})) ? roleId : null,
+			),
+		);
+		return new Set(checked.filter((roleId): roleId is RoleID => roleId !== null));
 	}
 
 	private async validateRoles(

@@ -16,7 +16,6 @@ import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {InvalidChannelTypeError} from '@fluxer/errors/src/domains/channel/InvalidChannelTypeError';
-import {UnclaimedAccountCannotSendMessagesError} from '@fluxer/errors/src/domains/channel/UnclaimedAccountCannotSendMessagesError';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';
 import {
 	ChannelIdMessageIdEmojiParam,
@@ -434,7 +433,8 @@ export function MessageInteractionController(app: HonoApp) {
 		async (ctx) => {
 			const {channel_id, message_id} = ctx.req.valid('param');
 			const user = ctx.get('user');
-			if (user.isUnclaimedAccount()) throw new UnclaimedAccountCannotSendMessagesError();
+			// A click talks in the channel like a message: the message tier gate (Micup refused unclaimed accounts here).
+			assertTierAllows(user, TierGatedActions.MESSAGE, NO_TIER_CONTEXT);
 			if (!(user.flags & UserFlags.HAS_SESSION_STARTED))
 				throw InputValidationError.fromCode('custom_id', ValidationErrorCodes.MUST_START_SESSION_BEFORE_SENDING);
 			return ctx.json(

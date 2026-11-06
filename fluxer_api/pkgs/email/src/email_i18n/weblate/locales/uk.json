@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Після кожного платежу ми надсилаємо квитанцію на пошту.} year {Після кожного платежу ми надсилаємо квитанцію на пошту.} other {Цей лист є твоєю квитанцією.}}",
 		"reference_label": "Номер операції",
 		"signoff": "Команда {product_name}",
-		"subject": "Дякуємо за твою пожертву для {product_name}",
-		"button": "Керувати пожертвами"
+		"subject": "Дякуємо за твою пожертву для {product_name}"
 	},
 	"donation_magic_link": {
 		"cta": "Керувати пожертвами",
@@ -74,8 +73,7 @@
 		"intro": "За цим посиланням можна керувати регулярною пожертвою або скасувати її та оновити спосіб оплати.",
 		"note": "Якщо запит на це посилання надійшов не від тебе, можеш проігнорувати цей лист.",
 		"signoff": "Команда {product_name}",
-		"subject": "Керуй своїми пожертвами для {product_name}",
-		"button": "Керувати пожертвами"
+		"subject": "Керуй своїми пожертвами для {product_name}"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Сума",
@@ -179,8 +177,7 @@
 		"new_email_label": "Нова електронна адреса",
 		"note": "Ми повернемо попередню електронну адресу, завершимо всі сеанси, вимкнемо двофакторну автентифікацію і попросимо тебе встановити новий пароль.",
 		"signoff": "Команда безпеки {product_name}",
-		"subject": "Електронну адресу твого акаунта {product_name} змінено",
-		"button": "Скасувати цю зміну"
+		"subject": "Електронну адресу твого акаунта {product_name} змінено"
 	},
 	"email_verification": {
 		"cta": "Підтвердити електронну адресу",
@@ -189,9 +186,7 @@
 		"intro": "Підтверди цю електронну адресу, щоб завершити налаштування акаунта {product_name}.",
 		"note": "Якщо акаунт {product_name} створено не тобою, можеш проігнорувати цей лист.",
 		"signoff": "Команда {product_name}",
-		"subject": "Підтвердь свою електронну адресу для {product_name}",
-		"body": "🎉 Привіт, {username},\n\nБудь ласка, підтвердь електронну адресу свого акаунта {product_name}, натиснувши посилання нижче:\n\n{verifyUrl}\n\nЯкщо акаунт {product_name} не твій, можеш сміливо проігнорувати цей лист.\n\nЦе посилання діє протягом 24 годин.\n\n– Команда {product_name}",
-		"button": "Підтвердити пошту"
+		"subject": "Підтвердь свою електронну адресу для {product_name}"
 	},
 	"email_verification_code": {
 		"expiry": "Цей код діє ще {minutes, plural, one {# хвилину} few {# хвилини} many {# хвилин} other {# хвилини}}.",
@@ -246,8 +241,7 @@
 		"signoff": "Команда {product_name}",
 		"size": "{fileSizeMB, number} МБ",
 		"size_label": "Розмір файлу",
-		"subject": "Твій експорт даних {product_name} готовий",
-		"button": "Завантажити мої дані"
+		"subject": "Твій експорт даних {product_name} готовий"
 	},
 	"inactivity_warning": {
 		"cta": "Увійти в {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "Твій акаунт {product_name} неактивний з {lastActiveDate, date, long}. Увійди до {deletionDate, date, long}, інакше ми його видалимо.",
 		"note": "{reply, select, yes {Якщо ти нещодавно користувався {product_name}, відповідай на цей лист.} other {Якщо ти нещодавно користувався {product_name}, звернися до адміністраторів цього екземпляра.}}",
 		"signoff": "Команда {product_name}",
-		"subject": "Увійди, щоб зберегти акаунт {product_name}",
-		"button": "Увійти"
+		"subject": "Увійди, щоб зберегти акаунт {product_name}"
 	},
 	"ip_authorization": {
 		"cta": "Дозволити цю IP-адресу",
@@ -268,8 +261,7 @@
 		"location_label": "Місцезнаходження",
 		"note": "Якщо це був не ти, негайно зміни пароль.",
 		"signoff": "Команда {product_name}",
-		"subject": "Підтверди вхід у {product_name} з нової IP-адреси",
-		"button": "Дозволити цей вхід"
+		"subject": "Підтверди вхід у {product_name} з нової IP-адреси"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Цей код діє ще {minutes, plural, one {# хвилину} few {# хвилини} many {# хвилин} other {# хвилини}}.",
@@ -505,8 +497,7 @@
 		"location_label": "Місцезнаходження",
 		"note": "Якщо ти цього не запитував, можеш проігнорувати цей лист.",
 		"signoff": "Команда {product_name}",
-		"subject": "Скинь свій пароль для {product_name}",
-		"button": "Скинути пароль"
+		"subject": "Скинь свій пароль для {product_name}"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Оскаржена сума",
@@ -692,14 +683,19 @@
 		"signoff": "Команда {product_name}",
 		"subject": "Твій код підтвердження {product_name}"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Увійти в {product_name}",
 		"footer_reason": "Ти отримав цей лист, оскільки цю адресу було використано для акаунта {product_name}.",
 		"intro": "Вашу реєстрацію в {product_name} схвалено. Тепер ви можете увійти.",
 		"signoff": "Команда {product_name}",
-		"subject": "Твою реєстрацію в {product_name} схвалено",
-		"body": "🎉 Привіт, {username},\n\nГарні новини: твою реєстрацію в {product_name} схвалено.\n\nТепер ти можеш увійти до застосунку {product_name} тут:\n{channelsUrl}\n\nЛаскаво просимо до спільноти {product_name}.\n\n– Команда {product_name}",
-		"button": "Відкрити {product_name}"
+		"subject": "Твою реєстрацію в {product_name} схвалено"
 	},
 	"registration_pending": {
 		"cta": "Переглянути заявки на реєстрацію",
@@ -753,13 +749,5 @@
 		"note": "Нікому не повідомляй цей код. Працівники {product_name} ніколи не проситимуть його. Якщо ти не намагався створити акаунт, можеш проігнорувати цей лист.",
 		"signoff": "Команда {product_name}",
 		"subject": "Твій код реєстрації {product_name}"
-	},
-	"unban_notification": {
-		"subject": "Призупинення твого акаунта {product_name} скасовано",
-		"body": "🎉 Привіт, {username},\n\nГарні новини: призупинення твого акаунта {product_name} скасовано.\n\n{reason, select,\n  null {}\n  other {Причина: {reason}}\n}\n\nТепер ти можеш знову увійти та продовжувати користуватися {product_name} як зазвичай.\n\n– Команда безпеки {product_name}"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

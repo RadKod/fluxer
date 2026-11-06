@@ -24,17 +24,47 @@ const VISIONARY_BOX_KEY = 'billing.operator_pass_visionary_terms_box';
 const VISIONARY_BOX_APP_SOURCE =
 	"I accept the <0>{OPERATOR_PASS_NAME} terms</0>. This pass is part of your Visionary, so it can't be passed on.";
 
-function poString(value: string): string {
-	return JSON.stringify(value).slice(1, -1);
+// Reads msgid/msgstr pairs, wrapped across lines or not (lingui may wrap long entries).
+function readPoCatalog(locale: string): Map<string, string> {
+	const lines = fs.readFileSync(path.join(APP_LOCALES, locale, 'messages.po'), 'utf8').split('\n');
+	const entries = new Map<string, string>();
+	let field: 'msgid' | 'msgstr' | null = null;
+	let msgid = '';
+	let msgstr = '';
+	const flush = () => {
+		if (field === 'msgstr') entries.set(msgid, msgstr);
+		field = null;
+		msgid = '';
+		msgstr = '';
+	};
+	for (const line of lines) {
+		const start = /^(msgid|msgstr) (".*")$/.exec(line);
+		if (start) {
+			if (start[1] === 'msgid') flush();
+			field = start[1] as 'msgid' | 'msgstr';
+			if (field === 'msgid') msgid = JSON.parse(start[2]!) as string;
+			else msgstr = JSON.parse(start[2]!) as string;
+		} else if (field !== null && line.startsWith('"')) {
+			const part = JSON.parse(line) as string;
+			if (field === 'msgid') msgid += part;
+			else msgstr += part;
+		} else if (field === 'msgstr') {
+			flush();
+		}
+	}
+	flush();
+	return entries;
 }
 
+const catalogs = new Map<string, Map<string, string>>();
+
 function appTranslation(locale: string, source: string): string | null {
-	const catalog = fs.readFileSync(path.join(APP_LOCALES, locale, 'messages.po'), 'utf8');
-	const marker = `\nmsgid "${poString(source)}"\nmsgstr "`;
-	const start = catalog.indexOf(marker);
-	if (start === -1) return null;
-	const rest = catalog.slice(start + marker.length);
-	return JSON.parse(`"${rest.slice(0, rest.indexOf('"\n'))}"`) as string;
+	let catalog = catalogs.get(locale);
+	if (!catalog) {
+		catalog = readPoCatalog(locale);
+		catalogs.set(locale, catalog);
+	}
+	return catalog.get(source) ?? null;
 }
 
 describe('Operator Pass checkout boxes', () => {

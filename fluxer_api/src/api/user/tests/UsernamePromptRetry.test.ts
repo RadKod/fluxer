@@ -27,7 +27,14 @@ test('server retry preserves the first-day right for the client/server delay cou
 		forced_at: '2026-10-08T00:00:00Z',
 	});
 	const set = vi.spyOn(getKVClient(), 'set').mockResolvedValueOnce('OK').mockResolvedValueOnce(null);
-	const service = new UserAccountRequestService({} as never, {} as never, {} as never, {} as never, {} as never);
+	const service = new UserAccountRequestService(
+		{} as never,
+		{} as never,
+		{} as never,
+		{} as never,
+		{} as never,
+		{} as never,
+	);
 	const user = new User({...EMPTY_USER_ROW, user_id: id, username: 'legacy_name', discriminator: 1234});
 	vi.setSystemTime(start + 13262526);
 	const early = await service.getUsernamePrompt(user);
@@ -53,7 +60,14 @@ test('server spreads the next Istanbul day and keeps a late first-day deadline a
 		forced_at: '2026-10-08T00:00:00Z',
 	});
 	const set = vi.spyOn(getKVClient(), 'set').mockResolvedValue('OK');
-	const service = new UserAccountRequestService({} as never, {} as never, {} as never, {} as never, {} as never);
+	const service = new UserAccountRequestService(
+		{} as never,
+		{} as never,
+		{} as never,
+		{} as never,
+		{} as never,
+		{} as never,
+	);
 	const user = new User({...EMPTY_USER_ROW, user_id: id, username: 'legacy_name', discriminator: 1234});
 	vi.setSystemTime(Date.parse('2026-10-01T21:00:00Z'));
 	expect(await service.getUsernamePrompt(user)).toEqual({show: false, retry_after_ms: start + delay - Date.now()});

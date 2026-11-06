@@ -35,6 +35,8 @@ import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import {ms} from 'itty-time';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
+const SETUP_CONFIGURED = Config.instance.setup.configured;
+
 const EMAIL_HASH_KEY = 'premium-trial-test-key-0123456789abcdef';
 const SEVEN_DAYS_MS = ms('7 days');
 
@@ -60,6 +62,8 @@ describe('premium trial', () => {
 			premiumMode: getCachedInstancePremiumMode(),
 		};
 		Config.instance.selfHosted = true;
+		// Self-hosted sign-ups after the first (admin) account need finished setup.
+		Config.instance.setup.configured = true;
 		Config.premiumTrial.emailHashKey = EMAIL_HASH_KEY;
 		await setPolicy({premium_mode: 'mirror', premium_trial_days: 7});
 		await setCaptcha(true);
@@ -79,6 +83,7 @@ describe('premium trial', () => {
 		vi.restoreAllMocks();
 		clearWorkerDependencies();
 		Config.instance.selfHosted = previous.selfHosted;
+		Config.instance.setup.configured = SETUP_CONFIGURED;
 		Config.premiumTrial.emailHashKey = previous.key;
 		Config.blocklistFeeds.enabled = previous.feeds;
 		setCachedInstancePremiumMode(previous.premiumMode);
@@ -117,7 +122,7 @@ describe('premium trial', () => {
 
 	async function claim(account: TestAccount) {
 		const builder = createBuilder(harness, account.token).post('/premium/trial').header(CAPTCHA_TEST_HEADER, 'true');
-		if ((await getInstanceConfigRepository().getCaptchaConfig()).enabled) {
+		if ((await getInstanceConfigRepository().getCaptchaConfig()).provider !== 'none') {
 			builder.header('x-captcha-token', await issueSolvedCaptchaToken(harness));
 		}
 		return builder;

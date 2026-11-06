@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {אנחנו שולחים לכם קבלה באימייל על כל תשלום.} year {אנחנו שולחים לכם קבלה באימייל על כל תשלום.} other {האימייל הזה הוא הקבלה שלכם.}}",
 		"reference_label": "מספר אסמכתה",
 		"signoff": "צוות {product_name}",
-		"subject": "תודה על תרומתכם ל-{product_name}",
-		"button": "ניהול התרומות"
+		"subject": "תודה על תרומתכם ל-{product_name}"
 	},
 	"donation_magic_link": {
 		"cta": "ניהול תרומות",
@@ -74,8 +73,7 @@
 		"intro": "השתמשו בקישור הזה כדי לנהל או לבטל תרומה חוזרת ולעדכן את אמצעי התשלום.",
 		"note": "אם לא ביקשתם את הקישור הזה, אפשר להתעלם מהאימייל הזה.",
 		"signoff": "צוות {product_name}",
-		"subject": "ניהול התרומות שלכם ל-{product_name}",
-		"button": "ניהול התרומות"
+		"subject": "ניהול התרומות שלכם ל-{product_name}"
 	},
 	"donation_payment_failed": {
 		"amount_label": "סכום",
@@ -179,8 +177,7 @@
 		"new_email_label": "כתובת אימייל חדשה",
 		"note": "הפעולה מחזירה את כתובת האימייל הקודמת שלכם, מנתקת אתכם מכל המכשירים, מכבה את האימות הדו-שלבי ומבקשת מכם להגדיר סיסמה חדשה.",
 		"signoff": "צוות הבטיחות של {product_name}",
-		"subject": "כתובת האימייל שלכם ב-{product_name} שונתה",
-		"button": "ביטול השינוי"
+		"subject": "כתובת האימייל שלכם ב-{product_name} שונתה"
 	},
 	"email_verification": {
 		"cta": "אישור כתובת האימייל",
@@ -189,9 +186,7 @@
 		"intro": "אשרו את כתובת האימייל הזו כדי לסיים את הגדרת חשבון ה-{product_name} שלכם.",
 		"note": "אם לא יצרתם חשבון {product_name}, אפשר להתעלם מהאימייל הזה.",
 		"signoff": "צוות {product_name}",
-		"subject": "אשרו את כתובת האימייל שלכם ב-{product_name}",
-		"body": "🎉 שלום {username},\n\nאנא אמתו את כתובת האימייל של חשבון ה-{product_name} שלכם באמצעות לחיצה על הקישור למטה:\n\n{verifyUrl}\n\nאם לא יצרתם חשבון {product_name}, אתם יכולים להתעלם בבטחה מאימייל זה.\n\nקישור זה תקף למשך 24 שעות.\n\nצוות {product_name}",
-		"button": "אימות האימייל"
+		"subject": "אשרו את כתובת האימייל שלכם ב-{product_name}"
 	},
 	"email_verification_code": {
 		"expiry": "קוד זה יפוג בעוד {minutes, plural, one {דקה אחת} two {שתי דקות} other {# דקות}}.",
@@ -246,8 +241,7 @@
 		"signoff": "צוות {product_name}",
 		"size": "{fileSizeMB, number} מגה-בייט",
 		"size_label": "גודל הקובץ",
-		"subject": "ייצוא הנתונים שלכם מ-{product_name} מוכן",
-		"button": "הורדת הנתונים שלי"
+		"subject": "ייצוא הנתונים שלכם מ-{product_name} מוכן"
 	},
 	"inactivity_warning": {
 		"cta": "התחברות ל-{product_name}",
@@ -255,8 +249,7 @@
 		"intro": "חשבון ה-{product_name} שלכם לא פעיל מאז {lastActiveDate, date, long}. התחברו לפני {deletionDate, date, long}, אחרת נמחק אותו.",
 		"note": "{reply, select, yes {אם השתמשתם ב-{product_name} לאחרונה, השיבו לאימייל הזה.} other {אם השתמשתם ב-{product_name} לאחרונה, פנו למנהלי המופע הזה.}}",
 		"signoff": "צוות {product_name}",
-		"subject": "התחברו כדי לשמור על חשבון ה-{product_name} שלכם",
-		"button": "התחברות"
+		"subject": "התחברו כדי לשמור על חשבון ה-{product_name} שלכם"
 	},
 	"ip_authorization": {
 		"cta": "אשרו כתובת IP זו",
@@ -268,8 +261,7 @@
 		"location_label": "מיקום",
 		"note": "אם זה לא הייתם אתם, שנו את הסיסמה שלכם עכשיו.",
 		"signoff": "צוות {product_name}",
-		"subject": "אשרו התחברות ל-{product_name} מכתובת IP חדשה",
-		"button": "אישור ההתחברות הזו"
+		"subject": "אשרו התחברות ל-{product_name} מכתובת IP חדשה"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "הקוד הזה יפוג בעוד {minutes, plural, one {דקה אחת} two {שתי דקות} other {# דקות}}.",
@@ -505,8 +497,7 @@
 		"location_label": "מיקום",
 		"note": "אם לא ביקשתם את זה, אפשר להתעלם מהאימייל הזה.",
 		"signoff": "צוות {product_name}",
-		"subject": "איפוס הסיסמה שלכם ב-{product_name}",
-		"button": "איפוס הסיסמה"
+		"subject": "איפוס הסיסמה שלכם ב-{product_name}"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "הסכום שבמחלוקת",
@@ -692,14 +683,19 @@
 		"signoff": "צוות {product_name}",
 		"subject": "קוד האישור שלכם ל-{product_name}"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "התחברות ל-{product_name}",
 		"footer_reason": "קיבלתם אימייל זה מכיוון שכתובת זו שימשה עבור חשבון {product_name}.",
 		"intro": "ההרשמה שלך ל-{product_name} אושרה. אפשר להתחבר עכשיו.",
 		"signoff": "צוות {product_name}",
-		"subject": "ההרשמה שלכם ל-{product_name} אושרה",
-		"body": "🎉 שלום {username},\n\nחדשות טובות: ההרשמה שלכם ל-{product_name} אושרה.\n\nכעת אתם יכולים להתחבר לאפליקציית {product_name} כאן:\n{channelsUrl}\n\nברוכים הבאים לקהילת {product_name}.\n\nצוות {product_name}",
-		"button": "פתיחת {product_name}"
+		"subject": "ההרשמה שלכם ל-{product_name} אושרה"
 	},
 	"registration_pending": {
 		"cta": "לבדיקת ההרשמות הממתינות",
@@ -753,13 +749,5 @@
 		"note": "אל תשתפו את הקוד הזה עם אף אחד. צוות {product_name} לעולם לא יבקש אותו. אם לא ניסיתם ליצור חשבון, אפשר להתעלם מהאימייל הזה.",
 		"signoff": "צוות {product_name}",
 		"subject": "קוד ההרשמה שלכם ל-{product_name}"
-	},
-	"unban_notification": {
-		"subject": "השעיית חשבון ה-{product_name} שלכם בוטלה",
-		"body": "🎉 שלום {username},\n\nחדשות טובות: השעיית חשבון ה-{product_name} שלכם בוטלה.\n\n{reason, select,\n  null {}\n  other {סיבה: {reason}}\n}\n\nכעת אתם יכולים להתחבר שוב ולהמשיך להשתמש ב-{product_name} כרגיל.\n\nצוות הבטיחות של {product_name}"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Îți trimitem pe e-mail o chitanță pentru fiecare plată.} year {Îți trimitem pe e-mail o chitanță pentru fiecare plată.} other {Acest e-mail este chitanța ta.}}",
 		"reference_label": "Referință",
 		"signoff": "Echipa {product_name}",
-		"subject": "Îți mulțumim pentru donația către {product_name}",
-		"button": "Gestionează donațiile"
+		"subject": "Îți mulțumim pentru donația către {product_name}"
 	},
 	"donation_magic_link": {
 		"cta": "Gestionează donațiile",
@@ -74,8 +73,7 @@
 		"intro": "Folosește acest link ca să gestionezi sau să anulezi o donație recurentă și să îți actualizezi metoda de plată.",
 		"note": "Dacă nu ai cerut acest link, poți ignora acest e-mail.",
 		"signoff": "Echipa {product_name}",
-		"subject": "Gestionează-ți donațiile către {product_name}",
-		"button": "Gestionează donațiile"
+		"subject": "Gestionează-ți donațiile către {product_name}"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Sumă",
@@ -179,8 +177,7 @@
 		"new_email_label": "Adresă de e-mail nouă",
 		"note": "Astfel revine adresa de e-mail anterioară, ești deconectat de peste tot, autentificarea în doi pași se dezactivează și ți se cere să setezi o parolă nouă.",
 		"signoff": "Echipa de siguranță {product_name}",
-		"subject": "Adresa de e-mail a contului tău {product_name} a fost schimbată",
-		"button": "Anulează această modificare"
+		"subject": "Adresa de e-mail a contului tău {product_name} a fost schimbată"
 	},
 	"email_verification": {
 		"cta": "Confirmă adresa de e-mail",
@@ -189,9 +186,7 @@
 		"intro": "Confirmă această adresă de e-mail ca să termini configurarea contului tău {product_name}.",
 		"note": "Dacă nu ai creat un cont {product_name}, poți ignora acest e-mail.",
 		"signoff": "Echipa {product_name}",
-		"subject": "Confirmă-ți adresa de e-mail pentru {product_name}",
-		"body": "🎉 Salut {username},\n\nTe rugăm să verifici adresa de e-mail a contului tău {product_name} apăsând pe linkul de mai jos:\n\n{verifyUrl}\n\nDacă nu ai creat un cont {product_name}, poți ignora în siguranță acest e-mail.\n\nAcest link este valabil 24 de ore.\n\n– Echipa {product_name}",
-		"button": "Verifică e-mailul"
+		"subject": "Confirmă-ți adresa de e-mail pentru {product_name}"
 	},
 	"email_verification_code": {
 		"expiry": "Acest cod expiră în {minutes, plural, one {# minut} few {# minute} other {# de minute}}.",
@@ -246,8 +241,7 @@
 		"signoff": "Echipa {product_name}",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Dimensiune fișier",
-		"subject": "Exportul datelor tale din {product_name} este gata",
-		"button": "Descarcă datele mele"
+		"subject": "Exportul datelor tale din {product_name} este gata"
 	},
 	"inactivity_warning": {
 		"cta": "Conectează-te la {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "Contul tău {product_name} este inactiv din {lastActiveDate, date, long}. Conectează-te înainte de {deletionDate, date, long}, altfel îl vom șterge.",
 		"note": "{reply, select, yes {Dacă ai folosit {product_name} recent, răspunde la acest e-mail.} other {Dacă ai folosit {product_name} recent, contactează administratorii acestei instanțe.}}",
 		"signoff": "Echipa {product_name}",
-		"subject": "Conectează-te ca să îți păstrezi contul {product_name}",
-		"button": "Conectează-te"
+		"subject": "Conectează-te ca să îți păstrezi contul {product_name}"
 	},
 	"ip_authorization": {
 		"cta": "Autorizează această adresă IP",
@@ -268,8 +261,7 @@
 		"location_label": "Locație",
 		"note": "Dacă nu ai fost tu, schimbă-ți parola acum.",
 		"signoff": "Echipa {product_name}",
-		"subject": "Autorizează o conectare la {product_name} de la o adresă IP nouă",
-		"button": "Autorizează această conectare"
+		"subject": "Autorizează o conectare la {product_name} de la o adresă IP nouă"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Acest cod expiră în {minutes, plural, one {# minut} few {# minute} other {# de minute}}.",
@@ -505,8 +497,7 @@
 		"location_label": "Locație",
 		"note": "Dacă nu ai cerut asta, poți ignora acest e-mail.",
 		"signoff": "Echipa {product_name}",
-		"subject": "Resetează-ți parola pentru {product_name}",
-		"button": "Resetează parola"
+		"subject": "Resetează-ți parola pentru {product_name}"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Suma contestată",
@@ -692,14 +683,19 @@
 		"signoff": "Echipa {product_name}",
 		"subject": "Codul tău de confirmare {product_name}"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Conectează-te la {product_name}",
 		"footer_reason": "Ai primit acest e-mail deoarece această adresă a fost utilizată pentru un cont {product_name}.",
 		"intro": "Înregistrarea ta pe {product_name} a fost aprobată. Te poți conecta acum.",
 		"signoff": "Echipa {product_name}",
-		"subject": "Înregistrarea ta pentru {product_name} a fost aprobată",
-		"body": "🎉 Salut {username},\n\nVești bune: înregistrarea ta pentru {product_name} a fost aprobată.\n\nAcum te poți conecta la aplicația {product_name} aici:\n{channelsUrl}\n\nBun venit în comunitatea {product_name}.\n\n– Echipa {product_name}",
-		"button": "Deschide {product_name}"
+		"subject": "Înregistrarea ta pentru {product_name} a fost aprobată"
 	},
 	"registration_pending": {
 		"cta": "Verifică înregistrările în așteptare",
@@ -753,13 +749,5 @@
 		"note": "Nu împărtăși acest cod cu nimeni. Personalul {product_name} nu ți-l va cere niciodată. Dacă nu ai încercat să creezi un cont, poți ignora acest e-mail.",
 		"signoff": "Echipa {product_name}",
 		"subject": "Codul tău de înregistrare {product_name}"
-	},
-	"unban_notification": {
-		"subject": "Suspendarea contului {product_name} a fost ridicată",
-		"body": "🎉 Salut {username},\n\nVești bune: suspendarea contului tău {product_name} a fost ridicată.\n\n{reason, select,\n  null {}\n  other {Motiv: {reason}}\n}\n\nAcum te poți conecta din nou și poți continua să folosești {product_name} în mod normal.\n\n– Echipa de siguranță {product_name}"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

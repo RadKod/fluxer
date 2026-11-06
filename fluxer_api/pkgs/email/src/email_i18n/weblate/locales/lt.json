@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Už kiekvieną mokėjimą el. paštu atsiųsime kvitą.} year {Už kiekvieną mokėjimą el. paštu atsiųsime kvitą.} other {Šis el. laiškas yra tavo kvitas.}}",
 		"reference_label": "Nuorodos numeris",
 		"signoff": "{product_name} komanda",
-		"subject": "Dėkojame už tavo {product_name} paramą",
-		"button": "Tvarkyti paramą"
+		"subject": "Dėkojame už tavo {product_name} paramą"
 	},
 	"donation_magic_link": {
 		"cta": "Tvarkyti paramą",
@@ -74,8 +73,7 @@
 		"intro": "Šia nuoroda gali tvarkyti arba atšaukti pasikartojančią paramą ir atnaujinti mokėjimo būdą.",
 		"note": "Jei šios nuorodos neprašei, gali ignoruoti šį el. laišką.",
 		"signoff": "{product_name} komanda",
-		"subject": "Tvarkyk savo {product_name} paramą",
-		"button": "Tvarkyti paramą"
+		"subject": "Tvarkyk savo {product_name} paramą"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Suma",
@@ -179,8 +177,7 @@
 		"new_email_label": "Naujas el. pašto adresas",
 		"note": "Bus grąžintas ankstesnis el. pašto adresas, būsi atjungtas visuose įrenginiuose, dviejų veiksnių autentifikavimas bus išjungtas ir turėsi nustatyti naują slaptažodį.",
 		"signoff": "{product_name} saugos komanda",
-		"subject": "Tavo {product_name} el. pašto adresas pakeistas",
-		"button": "Atšaukti šį pakeitimą"
+		"subject": "Tavo {product_name} el. pašto adresas pakeistas"
 	},
 	"email_verification": {
 		"cta": "Patvirtinti el. pašto adresą",
@@ -189,9 +186,7 @@
 		"intro": "Patvirtink šį el. pašto adresą, kad baigtum kurti savo {product_name} paskyrą.",
 		"note": "Jei nekūrei {product_name} paskyros, gali ignoruoti šį el. laišką.",
 		"signoff": "{product_name} komanda",
-		"subject": "Patvirtink savo {product_name} el. pašto adresą",
-		"body": "🎉 Sveiki, {username},\n\nSpustelėk žemiau esančią nuorodą ir patvirtink savo {product_name} paskyros el. pašto adresą:\n\n{verifyUrl}\n\nJei {product_name} paskyros nekūrei, gali saugiai ignoruoti šį el. laišką.\n\nŠi nuoroda galioja 24 valandas.\n\n– {product_name} komanda",
-		"button": "Patvirtinti el. paštą"
+		"subject": "Patvirtink savo {product_name} el. pašto adresą"
 	},
 	"email_verification_code": {
 		"expiry": "Šis kodas galioja {minutes, plural, one {# minutę} few {# minutes} many {# minutės} other {# minučių}}.",
@@ -246,8 +241,7 @@
 		"signoff": "{product_name} komanda",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Failo dydis",
-		"subject": "Tavo {product_name} duomenų eksportas paruoštas",
-		"button": "Atsisiųsti mano duomenis"
+		"subject": "Tavo {product_name} duomenų eksportas paruoštas"
 	},
 	"inactivity_warning": {
 		"cta": "Prisijungti prie {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "Tavo {product_name} paskyra neaktyvi nuo {lastActiveDate, date, long}. Prisijunk iki {deletionDate, date, long}, kitaip ją ištrinsime.",
 		"note": "{reply, select, yes {Jei neseniai naudojaisi {product_name}, atsakyk į šį el. laišką.} other {Jei neseniai naudojaisi {product_name}, susisiek su šios instancijos administratoriais.}}",
 		"signoff": "{product_name} komanda",
-		"subject": "Prisijunk, kad išsaugotum savo {product_name} paskyrą",
-		"button": "Prisijungti"
+		"subject": "Prisijunk, kad išsaugotum savo {product_name} paskyrą"
 	},
 	"ip_authorization": {
 		"cta": "Patvirtinti šį IP adresą",
@@ -268,8 +261,7 @@
 		"location_label": "Vieta",
 		"note": "Jei tai buvai ne tu, nedelsdamas pakeisk slaptažodį.",
 		"signoff": "{product_name} komanda",
-		"subject": "Patvirtink prisijungimą prie {product_name} iš naujo IP adreso",
-		"button": "Patvirtinti šį prisijungimą"
+		"subject": "Patvirtink prisijungimą prie {product_name} iš naujo IP adreso"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Šis kodas galioja {minutes, plural, one {# minutę} few {# minutes} many {# minutės} other {# minučių}}.",
@@ -505,8 +497,7 @@
 		"location_label": "Vieta",
 		"note": "Jei to neprašei, gali ignoruoti šį el. laišką.",
 		"signoff": "{product_name} komanda",
-		"subject": "Iš naujo nustatyk savo {product_name} slaptažodį",
-		"button": "Nustatyti slaptažodį iš naujo"
+		"subject": "Iš naujo nustatyk savo {product_name} slaptažodį"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Ginčijama suma",
@@ -692,14 +683,19 @@
 		"signoff": "{product_name} komanda",
 		"subject": "Tavo {product_name} patvirtinimo kodas"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Prisijungti prie {product_name}",
 		"footer_reason": "Šį el. laišką gavai, nes šis adresas buvo naudojamas {product_name} paskyrai.",
 		"intro": "Jūsų registracija {product_name} patvirtinta. Dabar galite prisijungti.",
 		"signoff": "{product_name} komanda",
-		"subject": "Tavo {product_name} registracija patvirtinta",
-		"body": "🎉 Sveiki, {username},\n\nGeros naujienos: tavo {product_name} registracija patvirtinta.\n\nDabar gali prisijungti prie {product_name} programėlės čia:\n{channelsUrl}\n\nSveiki atvykę į {product_name} bendruomenę.\n\n– {product_name} komanda",
-		"button": "Atidaryti {product_name}"
+		"subject": "Tavo {product_name} registracija patvirtinta"
 	},
 	"registration_pending": {
 		"cta": "Peržiūrėti laukiančias registracijas",
@@ -753,13 +749,5 @@
 		"note": "Niekam nesakyk šio kodo. {product_name} darbuotojai niekada jo neprašys. Jei nebandei kurti paskyros, gali ignoruoti šį el. laišką.",
 		"signoff": "{product_name} komanda",
 		"subject": "Tavo {product_name} registracijos kodas"
-	},
-	"unban_notification": {
-		"subject": "Tavo {product_name} paskyros sustabdymas panaikintas",
-		"body": "🎉 Sveiki, {username},\n\nGeros naujienos: tavo {product_name} paskyros sustabdymas panaikintas.\n\n{reason, select,\n  null {}\n  other {Priežastis: {reason}}\n}\n\nDabar gali vėl prisijungti ir toliau naudotis {product_name} kaip įprasta.\n\n– {product_name} saugos komanda"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

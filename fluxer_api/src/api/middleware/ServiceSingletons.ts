@@ -351,7 +351,7 @@ function createEmailServiceForConfig(
 	contactEmails: ContactEmails,
 	productName: string,
 	bouncedEmailChecker: UserBouncedEmailChecker,
-	branding: InstanceBranding | null,
+	branding: Pick<InstanceBranding, 'product_name' | 'icon_url' | 'logo_url' | 'theme_color'> | null,
 ): IEmailService {
 	const emailConfig: EmailConfig = {
 		enabled: emailConfigSource.enabled,

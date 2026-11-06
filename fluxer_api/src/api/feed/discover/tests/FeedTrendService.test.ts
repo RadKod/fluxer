@@ -41,7 +41,9 @@ const account = (ageMs: number, now: number, patch: Partial<TrendAccount> = {}):
 	suspiciousActivityFlags: 0,
 	isBot: false,
 	isSystem: false,
-	isUnclaimedAccount: () => false,
+	passwordHash: 'hash',
+	authenticatorTypes: new Set(),
+	traits: new Set(),
 	...patch,
 });
 

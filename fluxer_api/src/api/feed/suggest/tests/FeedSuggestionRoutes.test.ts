@@ -4,6 +4,7 @@ import {createTestAccount, type TestAccount} from '@app/api/auth/tests/AuthTestU
 import {createUserID, type UserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
 import {blockUser, createGuild} from '@app/api/channel/tests/ChannelTestUtils';
+import {LocalDate} from '@app/api/database/LocalDate';
 import {EMPTY_USER_ROW, type UserRow} from '@app/api/database/types/UserTypes';
 import {FeedDiscoverService} from '@app/api/feed/discover/FeedDiscoverService';
 import {feedSuggestionCache} from '@app/api/feed/suggest/FeedSuggestionCache';
@@ -26,15 +27,14 @@ import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import {FeedSuggestionsResponse} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import {createSnowflake} from '@fluxer/snowflake/src/Snowflake';
-import {types} from 'cassandra-driver';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 type SuggestedGuild = FeedSuggestionsResponse['guilds'][number];
 
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
-const ADULT = types.LocalDate.fromString('2000-01-01');
-const MINOR = types.LocalDate.fromString(`${new Date().getFullYear() - 15}-06-15`);
+const ADULT = LocalDate.fromString('2000-01-01');
+const MINOR = LocalDate.fromString(`${new Date().getFullYear() - 15}-06-15`);
 
 function guild(index: number): SuggestedGuild {
 	return {
@@ -49,6 +49,7 @@ function guild(index: number): SuggestedGuild {
 		member_count: 1000 - index,
 		online_count: 0,
 		features: [],
+		badge_ids: [],
 		verification_level: 0,
 	};
 }
@@ -275,8 +276,11 @@ describe('GET /feed/suggestions', () => {
 		const answer = await suggestions(viewer!).execute();
 		const partial = JSON.parse(JSON.stringify(mapUserToPartialResponse(await userOf(person!)))) as object;
 		expect(Object.keys(answer.users[0]!).sort()).toEqual(Object.keys(partial).sort());
+		// visits_enabled is optional: upstream leaves it out for callers outside the guild visits experiment.
 		expect(Object.keys(answer.guilds[0]!).sort()).toEqual(
-			Object.keys(FeedSuggestionsResponse.shape.guilds.element.shape).sort(),
+			Object.keys(FeedSuggestionsResponse.shape.guilds.element.shape)
+				.filter((key) => key !== 'visits_enabled')
+				.sort(),
 		);
 		for (const key of ['email', 'phone', 'date_of_birth', 'follower_count']) {
 			expect(answer.users[0]).not.toHaveProperty(key);

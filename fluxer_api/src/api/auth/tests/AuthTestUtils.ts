@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createHmac, randomBytes, randomUUID} from 'node:crypto';
+import {Config} from '@app/api/Config';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {TEST_CREDENTIALS, TEST_USER_DATA} from '@app/api/test/TestConstants';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
@@ -380,11 +381,14 @@ export async function enableSso(
 		redirect_uri: '',
 		...overrides,
 	};
-	// SSO auto-provisioning is refused while the instance collects a date of birth (see SsoAgeGate.test.ts),
-	// so SSO flow tests run against an instance that does not collect one.
+	// Upstream's self-hosted default collects no date of birth; sanalyer collects it (getLegacyDateOfBirthCollectionDefault),
+	// so self-hosted SSO tests turn it off to run the upstream flow.
 	await createBuilder(harness, token)
 		.patch('/admin/instance/config')
-		.body({sso: ssoConfig, app_public: {registration: {collect_date_of_birth: false}}})
+		.body({
+			sso: ssoConfig,
+			...(Config.instance.selfHosted ? {app_public: {registration: {collect_date_of_birth: false}}} : {}),
+		})
 		.execute();
 }
 

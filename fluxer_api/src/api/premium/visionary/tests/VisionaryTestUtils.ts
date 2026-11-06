@@ -13,7 +13,9 @@ import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
 import type {CosmeticItemResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
 
-const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+// 128x128: the test media service reads real PNG dimensions, and cosmetics need 32 to 2048 px.
+const PNG =
+	'iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAAVklEQVR42u3BMQEAAADCoPVPbQwfoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOBvAI8AAYr5gj4AAAAASUVORK5CYII=';
 
 // Callers put 'everyone' back in afterEach: the premium mode cache is process wide and outlives the harness reset.
 export async function premiumMode(mode: 'mirror' | 'everyone'): Promise<void> {

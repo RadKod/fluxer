@@ -43,7 +43,7 @@ describe('PATCH /users/@me/settings profile_privacy (Kapı 2 Ş6, Ş9)', () => {
 	const settingsOf = (token: string) => createBuilder<UserSettingsResponse>(harness, token).get('/users/@me/settings');
 
 	it('refuses the public profile under 16 or without a date of birth (400, MUST_BE_MINIMUM_AGE, min 16)', async () => {
-		const young = await createTestAccount(harness, {dateOfBirth: bornYearsAgo(15)});
+		const young = await createTestAccount(harness, {dateOfBirth: bornYearsAgo(15, 1)});
 		const undated = await createTestAccount(harness);
 		const repository = getUserRepository();
 		const row = (await repository.findUnique(createUserID(BigInt(undated.userId))))!.toRow();
@@ -77,7 +77,7 @@ describe('PATCH /users/@me/settings profile_privacy (Kapı 2 Ş6, Ş9)', () => {
 		expect((await settingsOf(sixteen.token).execute()).profile_privacy).toBe(ProfilePrivacyLevels.EVERYONE);
 
 		const [young, friend] = [
-			await createTestAccount(harness, {dateOfBirth: bornYearsAgo(15)}),
+			await createTestAccount(harness, {dateOfBirth: bornYearsAgo(15, 1)}),
 			await createTestAccount(harness),
 		];
 		await createFriendship(harness, young, friend);
@@ -103,9 +103,9 @@ describe('PATCH /users/@me/settings profile_privacy (Kapı 2 Ş6, Ş9)', () => {
 				.body({date_of_birth: dateOfBirth})
 				.execute();
 
-		await changeDob(bornYearsAgo(15));
+		await changeDob(bornYearsAgo(15, 1));
 		await getProfile(harness, stranger.token, owner).expect(HTTP_STATUS.FORBIDDEN).execute();
-		await changeDob(bornYearsAgo(17));
+		await changeDob(bornYearsAgo(17, 1));
 		await getProfile(harness, stranger.token, owner).expect(HTTP_STATUS.FORBIDDEN).execute();
 		expect((await settingsOf(owner.token).execute()).profile_privacy).toBe(ProfilePrivacyLevels.ALL_GUILDS);
 	});
@@ -131,7 +131,7 @@ describe('PATCH /users/@me/settings profile_privacy (Kapı 2 Ş6, Ş9)', () => {
 				.execute();
 
 		await changeDob(publicMinor, bornYearsAgo(14));
-		await changeDob(publicAdult, bornYearsAgo(17));
+		await changeDob(publicAdult, bornYearsAgo(17, 1));
 		await changeDob(friendsMinor, bornYearsAgo(14));
 		expect((await settingsOf(publicMinor.token).execute()).profile_privacy).toBe(ProfilePrivacyLevels.ALL_GUILDS);
 		expect((await settingsOf(publicAdult.token).execute()).profile_privacy).toBe(ProfilePrivacyLevels.EVERYONE);

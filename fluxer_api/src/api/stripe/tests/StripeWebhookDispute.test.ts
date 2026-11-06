@@ -423,7 +423,8 @@ describe('Plutonium payment disputes', () => {
 	}
 
 	describe('while a dispute is open', () => {
-		test('a subscription dispute opens a review and pauses purchases while Plutonium keeps working', async () => {
+		// sanalyer: hits a purchase route that stays closed here (COZ-API karar 10).
+		test.skip('a subscription dispute opens a review and pauses purchases while Plutonium keeps working', async () => {
 			const buyer = await subscriber('pi_open_subscription');
 			await openDispute('pi_open_subscription');
 			await expectAccountUntouched(buyer);
@@ -446,14 +447,15 @@ describe('Plutonium payment disputes', () => {
 			await subscriber('pi_open_alert');
 			await openDispute('pi_open_alert');
 			await sendDispute('charge.dispute.updated', 'pi_open_alert', {status: 'needs_response', dueInDays: 12});
-			const alerts = (await listTestEmails(harness, {recipient: 'support@fluxer.com'})).filter(
+			const alerts = (await listTestEmails(harness, {recipient: 'info@sanalyer.com'})).filter(
 				(email) => email.type === 'payment_dispute_review_alert' && email.metadata.dispute_id === 'dp_pi_open_alert',
 			);
 			expect(alerts).toHaveLength(1);
 			expect(alerts[0]?.metadata).toMatchObject({product: 'plutonium', reason: 'general'});
 		});
 
-		test('changing the billing cycle, reactivating and moving to the list price are refused too', async () => {
+		// sanalyer: hits a purchase route that stays closed here (COZ-API karar 10).
+		test.skip('changing the billing cycle, reactivating and moving to the list price are refused too', async () => {
 			const buyer = await subscriber('pi_open_changes');
 			const user = await userRepository.findUniqueAssert(idOf(buyer));
 			await userRepository.patchUpsert(user.id, {premium_will_cancel: true}, user.toRow());
@@ -474,7 +476,8 @@ describe('Plutonium payment disputes', () => {
 			expect(stripe.spies.updatedSubscriptions).toEqual([]);
 		});
 
-		test('an inquiry pauses purchases too', async () => {
+		// sanalyer: hits a purchase route that stays closed here (COZ-API karar 10).
+		test.skip('an inquiry pauses purchases too', async () => {
 			const buyer = await subscriber('pi_open_inquiry');
 			await sendDispute('charge.dispute.created', 'pi_open_inquiry', {status: 'warning_needs_response'});
 			await expectAccountUntouched(buyer);
@@ -524,7 +527,8 @@ describe('Plutonium payment disputes', () => {
 			expect(await refuseUnjustified(admin, 'dp_pi_open_fraud')).toEqual(['exempt_reason', 'during_withdrawal']);
 		});
 
-		test('a gift dispute leaves the recipient alone and pauses the buyer', async () => {
+		// sanalyer: hits a purchase route that stays closed here (COZ-API karar 10).
+		test.skip('a gift dispute leaves the recipient alone and pauses the buyer', async () => {
 			const buyer = await createTestAccount(harness);
 			const recipient = await createTestAccount(harness);
 			await gift(buyer, 'pi_open_gift', {redeemer: recipient});
@@ -636,7 +640,8 @@ describe('Plutonium payment disputes', () => {
 			await expectAccountUntouched(buyer);
 		});
 
-		test('purchases stay paused while another dispute is still open', async () => {
+		// sanalyer: hits a purchase route that stays closed here (COZ-API karar 10).
+		test.skip('purchases stay paused while another dispute is still open', async () => {
 			const buyer = await subscriber('pi_two_first');
 			await createTestPayment(harness, idOf(buyer), 'cs_pi_two_second', {
 				paymentIntentId: 'pi_two_second',
@@ -847,7 +852,8 @@ describe('Plutonium payment disputes', () => {
 	});
 
 	describe('warning and deletion', () => {
-		test('unjustified warns by email and system message with a date 3 days before the evidence deadline', async () => {
+		// sanalyer: hits a purchase route that stays closed here (COZ-API karar 10).
+		test.skip('unjustified warns by email and system message with a date 3 days before the evidence deadline', async () => {
 			const buyer = await subscriber('pi_warn');
 			await openDispute('pi_warn', {dueInDays: 10});
 			const review = await disputes.findReview('dp_pi_warn');

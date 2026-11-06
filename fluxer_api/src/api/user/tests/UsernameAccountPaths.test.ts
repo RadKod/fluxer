@@ -317,6 +317,7 @@ describe('username account writer and action boundaries', () => {
 			migration('selecting');
 			const users = {
 				findUnique: vi.fn().mockResolvedValue(person()),
+				findUniqueAssert: vi.fn().mockResolvedValue(person()),
 				getRelationship: vi.fn(),
 				deleteRelationship: vi.fn(),
 				upsertRelationship: vi.fn(),
@@ -324,7 +325,12 @@ describe('username account writer and action boundaries', () => {
 			vi.spyOn(getInstanceConfigRepository(), 'getInstancePolicyConfig').mockResolvedValue({
 				direct_messages_disabled: false,
 			} as never);
-			const service = new UserRelationshipService({services: {users, gateway: {}}} as never, {} as never, {} as never);
+			const service = new UserRelationshipService(
+				{services: {users, gateway: {}}} as never,
+				{} as never,
+				{} as never,
+				null,
+			);
 			await expect(
 				service[method]({
 					userId: id,
@@ -365,7 +371,11 @@ describe('username account writer and action boundaries', () => {
 		'createNewDmForBothUsers',
 	] as const)('gates alternate DM path %s', async (method) => {
 		migration('selecting');
-		const users = {findUnique: vi.fn().mockResolvedValue(person()), findExistingDmState: vi.fn()};
+		const users = {
+			findUnique: vi.fn().mockResolvedValue(person()),
+			findUniqueAssert: vi.fn().mockResolvedValue(person()),
+			findExistingDmState: vi.fn(),
+		};
 		const service = new UserChannelService(
 			{services: {users, gateway: {}, snowflake: {}}} as never,
 			{} as never,

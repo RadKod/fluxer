@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Ti inviamo una ricevuta via email per ogni pagamento.} year {Ti inviamo una ricevuta via email per ogni pagamento.} other {Questa email è la tua ricevuta.}}",
 		"reference_label": "Riferimento",
 		"signoff": "Il team di {product_name}",
-		"subject": "Grazie per la tua donazione a {product_name}",
-		"button": "Gestisci donazioni"
+		"subject": "Grazie per la tua donazione a {product_name}"
 	},
 	"donation_magic_link": {
 		"cta": "Gestisci le donazioni",
@@ -74,8 +73,7 @@
 		"intro": "Usa questo link per gestire o annullare una donazione ricorrente e aggiornare il metodo di pagamento.",
 		"note": "Se non hai chiesto questo link, puoi ignorare questa email.",
 		"signoff": "Il team di {product_name}",
-		"subject": "Gestisci le tue donazioni a {product_name}",
-		"button": "Gestisci donazioni"
+		"subject": "Gestisci le tue donazioni a {product_name}"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Importo",
@@ -179,8 +177,7 @@
 		"new_email_label": "Nuovo indirizzo email",
 		"note": "Così ripristini l'indirizzo email precedente, esci da tutti i dispositivi, disattivi l'autenticazione a due fattori e ti verrà chiesto di impostare una nuova password.",
 		"signoff": "Il team per la sicurezza di {product_name}",
-		"subject": "L'indirizzo email del tuo account {product_name} è stato cambiato",
-		"button": "Annulla questa modifica"
+		"subject": "L'indirizzo email del tuo account {product_name} è stato cambiato"
 	},
 	"email_verification": {
 		"cta": "Conferma indirizzo email",
@@ -189,9 +186,7 @@
 		"intro": "Conferma questo indirizzo email per completare la configurazione del tuo account {product_name}.",
 		"note": "Se non hai creato un account {product_name}, puoi ignorare questa email.",
 		"signoff": "Il team di {product_name}",
-		"subject": "Conferma il tuo indirizzo email di {product_name}",
-		"body": "🎉 Ciao {username},\n\nVerifica l'indirizzo email del tuo account {product_name} cliccando sul link qui sotto:\n\n{verifyUrl}\n\nSe non hai creato un account {product_name}, puoi ignorare tranquillamente questa email.\n\nQuesto link è valido per 24 ore.\n\n– Il team di {product_name}",
-		"button": "Verifica email"
+		"subject": "Conferma il tuo indirizzo email di {product_name}"
 	},
 	"email_verification_code": {
 		"expiry": "Questo codice scade tra {minutes, plural, one {# minuto} other {# minuti}}.",
@@ -246,8 +241,7 @@
 		"signoff": "Il team di {product_name}",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Dimensione file",
-		"subject": "La tua esportazione dati di {product_name} è pronta",
-		"button": "Scarica i miei dati"
+		"subject": "La tua esportazione dati di {product_name} è pronta"
 	},
 	"inactivity_warning": {
 		"cta": "Accedi a {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "Il tuo account {product_name} è inattivo dal {lastActiveDate, date, long}. Accedi entro il {deletionDate, date, long}, altrimenti lo elimineremo.",
 		"note": "{reply, select, yes {Se hai usato {product_name} di recente, rispondi a questa email.} other {Se hai usato {product_name} di recente, contatta gli amministratori di questa istanza.}}",
 		"signoff": "Il team di {product_name}",
-		"subject": "Accedi per tenere il tuo account {product_name}",
-		"button": "Accedi"
+		"subject": "Accedi per tenere il tuo account {product_name}"
 	},
 	"ip_authorization": {
 		"cta": "Autorizza questo indirizzo IP",
@@ -268,8 +261,7 @@
 		"location_label": "Posizione",
 		"note": "Se non eri tu, cambia subito la password.",
 		"signoff": "Il team di {product_name}",
-		"subject": "Autorizza un accesso a {product_name} da un nuovo indirizzo IP",
-		"button": "Autorizza questo accesso"
+		"subject": "Autorizza un accesso a {product_name} da un nuovo indirizzo IP"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Questo codice scade tra {minutes, plural, one {# minuto} other {# minuti}}.",
@@ -505,8 +497,7 @@
 		"location_label": "Posizione",
 		"note": "Se non l'hai chiesto tu, puoi ignorare questa email.",
 		"signoff": "Il team di {product_name}",
-		"subject": "Reimposta la password di {product_name}",
-		"button": "Reimposta password"
+		"subject": "Reimposta la password di {product_name}"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Importo contestato",
@@ -692,14 +683,19 @@
 		"signoff": "Il team di {product_name}",
 		"subject": "Il tuo codice di conferma {product_name}"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Accedi a {product_name}",
 		"footer_reason": "Hai ricevuto questa email perché questo indirizzo è stato usato per un account {product_name}.",
 		"intro": "La tua registrazione su {product_name} è stata approvata. Ora puoi accedere.",
 		"signoff": "Il team di {product_name}",
-		"subject": "La tua registrazione a {product_name} è stata approvata",
-		"body": "🎉 Ciao {username},\n\nBuone notizie: la tua registrazione a {product_name} è stata approvata.\n\nOra puoi accedere all'app {product_name} qui:\n{channelsUrl}\n\nBenvenuto nella community di {product_name}.\n\n– Il team di {product_name}",
-		"button": "Apri {product_name}"
+		"subject": "La tua registrazione a {product_name} è stata approvata"
 	},
 	"registration_pending": {
 		"cta": "Rivedi le registrazioni in attesa",
@@ -753,13 +749,5 @@
 		"note": "Non condividere questo codice con nessuno. Lo staff di {product_name} non te lo chiederà mai. Se non hai provato a creare un account, puoi ignorare questa email.",
 		"signoff": "Il team di {product_name}",
 		"subject": "Il tuo codice di iscrizione a {product_name}"
-	},
-	"unban_notification": {
-		"subject": "La sospensione del tuo account {product_name} è stata revocata",
-		"body": "🎉 Ciao {username},\n\nBuone notizie: la sospensione del tuo account {product_name} è stata revocata.\n\n{reason, select,\n  null {}\n  other {Motivo: {reason}}\n}\n\nOra puoi accedere di nuovo e continuare a usare {product_name} normalmente.\n\n– Il team per la sicurezza di {product_name}"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

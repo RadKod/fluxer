@@ -4,6 +4,7 @@ import {FeedEnabled} from '@app/api/feed/FeedPostController';
 import {opensPublicPostsToStrangers} from '@app/api/feed/FeedTimelineService';
 import {DefaultUserOnly, LoginRequired} from '@app/api/middleware/AuthMiddleware';
 import {RateLimitMiddleware} from '@app/api/middleware/RateLimitMiddleware';
+import {RequestBodyLimit} from '@app/api/middleware/RequestBodyLimitMiddleware';
 import {OpenAPI} from '@app/api/middleware/ResponseTypeMiddleware';
 import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import type {HonoApp} from '@app/api/types/HonoEnv';
@@ -113,6 +114,7 @@ export function FeedVideoController(app: HonoApp) {
 	);
 	app.post(
 		'/feed/videos/webhook',
+		RequestBodyLimit(WEBHOOK_MAX_BYTES),
 		RateLimitMiddleware(RateLimitConfigs.FEED_VIDEO_WEBHOOK),
 		OpenAPI({
 			operationId: 'process_bunny_stream_webhook',

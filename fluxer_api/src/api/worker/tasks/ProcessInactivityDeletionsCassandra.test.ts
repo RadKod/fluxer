@@ -11,6 +11,7 @@ import {scanByTokenRanges} from '@app/api/database/TokenRangeScan';
 import type {IGatewayService} from '@app/api/infrastructure/IGatewayService';
 import type {KVAccountDeletionQueueService} from '@app/api/infrastructure/KVAccountDeletionQueueService';
 import type {KVActivityTracker} from '@app/api/infrastructure/KVActivityTracker';
+import {fallbackAccountsDefaults} from '@app/api/instance/AccountsConfigCache';
 import {startDockerContainer} from '@app/api/test/DockerTestContainer';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
 import {UserRepository} from '@app/api/user/repositories/UserRepository';
@@ -155,6 +156,7 @@ describe.skipIf(!dockerAvailable)('token range user scans against Cassandra 5.0'
 		} as unknown as KVActivityTracker;
 		const kvClient = new MockKVProvider();
 		const result = await processInactivityDeletionsCore({
+			cleanup: fallbackAccountsDefaults().accounts,
 			kvClient,
 			userRepository: new UserRepository(kvClient),
 			deletionQueueService: {} as KVAccountDeletionQueueService,

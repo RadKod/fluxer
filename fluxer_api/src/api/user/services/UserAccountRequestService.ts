@@ -60,10 +60,9 @@ import {
 	mapUserToProfileResponse,
 } from '@app/api/user/UserMappers';
 import {extractEmailDomain} from '@app/api/utils/EmailDomainUtils';
-import {AccountIdentityModes} from '@fluxer/constants/src/AccountIdentityConstants';
+import {AccountTiers, TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
-import {AccountTiers, TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {getCurrentTimeZoneOffsetMinutes} from '@fluxer/date_utils/src/TimeZoneUtils';
 import {UseClaimRouteError} from '@fluxer/errors/src/domains/auth/UseClaimRouteError';

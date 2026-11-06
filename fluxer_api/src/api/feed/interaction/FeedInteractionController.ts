@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {requireEmailVerified} from '@app/api/auth/EmailVerificationUtils';
 import {createUserID} from '@app/api/BrandedTypes';
 import {type FeedPostRow, isPublicFeedPost} from '@app/api/database/types/FeedTypes';
-import {isPublicCommenterEligible} from '@app/api/feed/discover/FeedDiscoverRules';
+import {isPublicCommenterEligible, requireEmailVerifiedForStanding} from '@app/api/feed/discover/FeedDiscoverRules';
 import {
 	FeedEnabled,
 	requirePostAccess,
@@ -77,7 +76,7 @@ async function requireStrangerStanding(
 	try {
 		await requirePostAccess(ctx, post.author_id);
 	} catch (error) {
-		requireEmailVerified(user);
+		requireEmailVerifiedForStanding(user);
 		throw error;
 	}
 }

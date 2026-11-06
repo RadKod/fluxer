@@ -10,7 +10,9 @@ import {clearWorkerDependencies, setWorkerDependenciesForTest} from '@app/api/wo
 import {computeHashSlot} from '@pkgs/kv_client/src/KVHashSlots';
 import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
 import {HttpResponse, http} from 'msw';
-import {afterEach, beforeEach, describe, expect, it} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+
+const HELPERS = createTestWorkerHelpers();
 
 const ENDPOINT = 'https://cache-purge.test/__cache/purge';
 const MEDIA = 'https://media.test';
@@ -103,6 +105,7 @@ describe('processCachePurgeQueue', () => {
 		Config.cachePurge.bunny = previousCachePurge.bunny;
 		Config.endpoints.media = previousMedia;
 		clearWorkerDependencies();
+		vi.useRealTimers();
 	});
 
 	it('sends host qualified prefixes in one request and drains the queue', async () => {

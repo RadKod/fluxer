@@ -156,14 +156,18 @@ describe('published username policy on legacy human allocations', () => {
 		]);
 		await enableSso(harness, admin.token, {enforced: false});
 		vi.spyOn(UsernamePolicyService.prototype, 'readCached').mockResolvedValue(published);
-		const start = await createBuilderWithoutAuth<{state: string}>(harness)
+		const start = await createBuilderWithoutAuth<{state: string; client_binding: string}>(harness)
 			.post('/auth/sso/start')
 			.body({redirect_to: '/me'})
 			.execute();
 		const email = createUniqueEmail('policy-sso');
 		const response = await createBuilderWithoutAuth(harness)
 			.post('/auth/sso/complete')
-			.body({code: JSON.stringify({email, name: 'badpolicy'}), state: start.state})
+			.body({
+				code: JSON.stringify({email, name: 'badpolicy'}),
+				state: start.state,
+				client_binding: start.client_binding,
+			})
 			.executeRaw();
 		expect(response.response.status).toBe(400);
 		expect(response.json).toMatchObject({code: 'USERNAME_BLOCKED'});

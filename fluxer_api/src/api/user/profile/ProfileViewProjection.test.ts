@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {UserID} from '@app/api/BrandedTypes';
+import {LocalDate} from '@app/api/database/LocalDate';
 import type {UserConnectionRow} from '@app/api/database/types/ConnectionTypes';
 import {EMPTY_USER_ROW, type UserRow} from '@app/api/database/types/UserTypes';
 import {User} from '@app/api/models/User';
@@ -17,7 +18,6 @@ import {mapCosmeticAssetData, mapUserToPartialResponse, mapUserToProfileResponse
 import {ConnectionTypes, ConnectionVisibilityFlags} from '@fluxer/constants/src/ConnectionConstants';
 import {DeletionReasons} from '@fluxer/constants/src/Core';
 import {UserFlags, UserPremiumTypes} from '@fluxer/constants/src/UserConstants';
-import {types} from 'cassandra-driver';
 import {afterAll, beforeAll, describe, expect, it} from 'vitest';
 
 const DAY = 86_400_000;
@@ -49,7 +49,7 @@ function fullTestUser(overrides: Partial<UserRow> = {}): User {
 		accent_color: 0xabcdef,
 		timezone: 'Europe/Istanbul',
 		timezone_privacy_flags: 1,
-		date_of_birth: types.LocalDate.fromString('2000-01-02'),
+		date_of_birth: LocalDate.fromString('2000-01-02'),
 		locale: 'tr',
 		flags: UserFlags.STAFF,
 		premium_flags: 0,

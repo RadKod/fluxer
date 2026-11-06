@@ -155,7 +155,9 @@ describe('Date of birth step', () => {
 		const user = await getUserRepository().findUniqueAssert(createUserID(BigInt(account.user_id)));
 		expect(user.dateOfBirth).toBeNull();
 		expect(user.traits.has('below_minimum_age')).toBe(true);
-		expect(user.username).not.toBe('birthdayless');
+		// sanalyer (Micup): a username changes only through the legacy identity writer, so upstream's release of the
+		// name on an underage closure does not apply; the name stays until the account is deleted.
+		expect(user.username).toBe('birthdayless');
 		expect(user.deletionReasonCode).toBe(DeletionReasons.BELOW_MINIMUM_AGE);
 		const remainingMs = user.pendingDeletionAt!.getTime() - Date.now();
 		expect(remainingMs).toBeGreaterThan(71 * 3600 * 1000);

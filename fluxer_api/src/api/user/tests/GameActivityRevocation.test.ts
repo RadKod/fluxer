@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createChannelID, createUserID} from '@app/api/BrandedTypes';
+import type {ChannelRow} from '@app/api/database/types/ChannelTypes';
+import {Channel} from '@app/api/models/Channel';
 import {UserSettings} from '@app/api/models/UserSettings';
 import {NoopGatewayService} from '@app/api/test/NoopGatewayService';
 import {UserRepository} from '@app/api/user/repositories/UserRepository';
@@ -8,6 +10,7 @@ import {UserSettingsRepository} from '@app/api/user/repositories/UserSettingsRep
 import {GameActivityPolicyService} from '@app/api/user/services/GameActivityPolicyService';
 import {UserAccountSettingsService} from '@app/api/user/services/UserAccountSettingsService';
 import {UserRelationshipService} from '@app/api/user/services/UserRelationshipService';
+import {ChannelTypes} from '@fluxer/constants/src/ChannelConstants';
 import {ProfilePrivacyLevels, RelationshipTypes} from '@fluxer/constants/src/UserConstants';
 import {describe, expect, it, vi} from 'vitest';
 
@@ -61,6 +64,7 @@ async function relationshipFixture() {
 		{services: {users, gateway}, request: {clientIp: null}} as never,
 		{} as never,
 		{} as never,
+		null,
 	);
 	return {userId, targetId, users, gateway, service};
 }
@@ -69,6 +73,7 @@ describe('game activity settings revocation', () => {
 	it('persisted_block_retry_waits_for_receiver_barrier_without_rewriting', async () => {
 		const {userId, targetId, users, gateway, service} = await relationshipFixture();
 		vi.spyOn(users, 'findUnique').mockResolvedValue({id: targetId, isSystem: false} as never);
+		vi.spyOn(users, 'findUniqueAssert').mockResolvedValue({id: targetId, isSystem: false} as never);
 		await users.upsertRelationship({
 			source_user_id: userId,
 			target_user_id: targetId,
@@ -116,6 +121,7 @@ describe('game activity settings revocation', () => {
 	it('persisted_block_retry_ack_timeout_is_not_success', async () => {
 		const {userId, targetId, users, gateway, service} = await relationshipFixture();
 		vi.spyOn(users, 'findUnique').mockResolvedValue({id: targetId, isSystem: false} as never);
+		vi.spyOn(users, 'findUniqueAssert').mockResolvedValue({id: targetId, isSystem: false} as never);
 		await users.upsertRelationship({
 			source_user_id: userId,
 			target_user_id: targetId,
@@ -227,8 +233,14 @@ describe('game activity settings revocation', () => {
 	it('unfriend_with_gdm_revokes', async () => {
 		const {userId, targetId, users, gateway, service} = await relationshipFixture();
 		const channelId = createChannelID(953n);
-		await users.openDmForUser(userId, channelId, true);
-		await users.openDmForUser(targetId, channelId, true);
+		const groupDm = new Channel({
+			channel_id: channelId,
+			type: ChannelTypes.GROUP_DM,
+			owner_id: userId,
+			recipient_ids: new Set([userId, targetId]),
+		} as ChannelRow);
+		await users.openPrivateChannelForUser(userId, groupDm);
+		await users.openPrivateChannelForUser(targetId, groupDm);
 		const calls: Array<string> = [];
 		vi.spyOn(gateway, 'gameActivityPairPolicy').mockImplementation(async (request) => {
 			calls.push(`${request.owner_id}:${request.phase}`);

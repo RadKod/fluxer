@@ -153,10 +153,19 @@ describe('harvested messages', () => {
 
 	it('creates no channel files for an account without messages', async () => {
 		const archive = await harvestUserArchive(harness, deps, AUTHOR);
+		// The sanalyer (Micup) harvest extensions add their own files at the top level.
 		expect(Object.keys(archive.entries).sort()).toEqual([
 			'account/security.json',
+			'badges.json',
+			'boosts.json',
+			'cosmetics.json',
+			'feed.json',
+			'follow.json',
 			'integrations/oauth.json',
+			'micupbot.json',
 			'payments/payment_history.json',
+			'referral.json',
+			'shop.json',
 			'user.json',
 		]);
 	});
@@ -410,6 +419,9 @@ describe('harvested user settings', () => {
 			default_share_voice_activity: false,
 			privacy_setup_version: 3,
 			privacy_setup_completed_at: new Date('2026-10-01T12:00:00.000Z'),
+			game_activity_visibility: 'off',
+			game_activity_policy_revision: 0n,
+			game_activity_visibility_source: 'user',
 			version: 1,
 		});
 		const archive = await harvestUserArchive(harness, deps, AUTHOR);

@@ -12,6 +12,7 @@ import {
 	leaveGuild,
 	updateUserSettings,
 } from '@app/api/channel/tests/ChannelTestUtils';
+import {LocalDate} from '@app/api/database/LocalDate';
 import {followDirectly} from '@app/api/feed/tests/FeedTestUtils';
 import {getProfileAccessCache, getUserRepository} from '@app/api/middleware/ServiceSingletons';
 import type {User} from '@app/api/models/User';
@@ -26,7 +27,6 @@ import {getProfile, sharedGuild} from '@app/api/user/tests/ProfileTestUtils';
 import {sendFriendRequest} from '@app/api/user/tests/RelationshipTestUtils';
 import {ProfilePrivacyLevels, UserFlags} from '@fluxer/constants/src/UserConstants';
 import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
-import {types} from 'cassandra-driver';
 import {afterAll, afterEach, beforeAll, describe, expect, it, vi} from 'vitest';
 
 const HOUR = 3_600_000;
@@ -264,7 +264,7 @@ describe('profile access through the cache (Epha 3 Oct 10:52)', () => {
 			const id = await cachedSideOf(friend.token, owner);
 			await write({last_active_at: new Date(), bio: 'yeni'});
 			expect((await getProfileAccessCache().readSide(id)).state).toBe('hit');
-			await write({date_of_birth: types.LocalDate.fromString('2012-01-01')});
+			await write({date_of_birth: LocalDate.fromString('2012-01-01')});
 			expect((await getProfileAccessCache().readSide(id)).state).toBe('forgotten');
 			await cachedSideOf(friend.token, owner);
 			const user = await repository.findUnique(id);

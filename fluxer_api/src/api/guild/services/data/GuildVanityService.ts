@@ -17,7 +17,7 @@ import {getCacheService} from '@app/api/middleware/ServiceSingletons';
 import type {Guild} from '@app/api/models/Guild';
 import {serializeGuildForAudit} from '@app/api/utils/AuditSerializationUtils';
 import {AuditLogActionType} from '@fluxer/constants/src/AuditLogActionType';
-import {Permissions} from '@fluxer/constants/src/ChannelConstants';
+import {InviteTypes, Permissions} from '@fluxer/constants/src/ChannelConstants';
 import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {InputValidationError} from '@fluxer/errors/src/domains/core/InputValidationError';

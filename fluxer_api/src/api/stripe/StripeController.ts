@@ -19,6 +19,7 @@ import {assertTierAllows, NO_TIER_CONTEXT, tierContextFrom} from '@app/api/user/
 import {lookupGeoip} from '@app/api/utils/IpUtils';
 import {Validator} from '@app/api/Validator';
 import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
+import {AppNotFoundHandler} from '@fluxer/errors/src/domains/core/ErrorHandlers';
 import {StripeWebhookNotAvailableError} from '@fluxer/errors/src/domains/payment/StripeWebhookNotAvailableError';
 import {StripeWebhookSignatureInvalidError} from '@fluxer/errors/src/domains/payment/StripeWebhookSignatureInvalidError';
 import {StripeWebhookSignatureMissingError} from '@fluxer/errors/src/domains/payment/StripeWebhookSignatureMissingError';
@@ -443,6 +444,7 @@ export function StripeController(app: HonoApp) {
 		Validator('param', PlutoniumWithdrawalIdParam),
 		Validator('json', PlutoniumWithdrawRequest),
 		async (ctx) => {
+			assertAccountNotLimited(ctx.get('user'));
 			const {name, quoted_at} = ctx.req.valid('json');
 			const result = await ctx.get('stripeService').refunds.withdraw({
 				userId: ctx.get('user').id,

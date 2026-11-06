@@ -50,6 +50,14 @@ function resolve(
 	return resolveGuildSoundboardDurationMs({bytes, extension, metadataDurationSeconds});
 }
 
+// The fixtures are encoded locally; a build without the libvorbis encoder skips them like a missing ffmpeg.
+const FFMPEG_MISSING = spawnSync('ffmpeg', ['-version'], {windowsHide: true}).status !== 0;
+const LIBVORBIS_MISSING =
+	FFMPEG_MISSING ||
+	!spawnSync('ffmpeg', ['-hide_banner', '-encoders'], {windowsHide: true, encoding: 'utf8'}).stdout.includes(
+		'libvorbis',
+	);
+
 describe('GuildSoundboardDurationProbe', () => {
 	beforeEach(() => {
 		probe.real = false;
@@ -73,7 +81,7 @@ describe('GuildSoundboardDurationProbe', () => {
 		expect(vi.mocked(Logger.warn).mock.calls).toEqual([]);
 		expect(result).toBe(10000);
 	});
-	it.skipIf(spawnSync('ffmpeg', ['-version'], {windowsHide: true}).status !== 0).each([
+	it.skipIf(LIBVORBIS_MISSING).each([
 		['10', 10000],
 		['10.0001', null],
 	])('validates actual Ogg audio lasting %s seconds', async (duration, expected) => {
@@ -99,35 +107,32 @@ describe('GuildSoundboardDurationProbe', () => {
 		probe.real = true;
 		await expect(resolve(bytes, 'ogg')).resolves.toBe(expected);
 	});
-	it.skipIf(spawnSync('ffmpeg', ['-version'], {windowsHide: true}).status !== 0)(
-		'validates actual MP3 audio',
-		async () => {
-			const bytes = execFileSync(
-				'ffmpeg',
-				[
-					'-v',
-					'error',
-					'-f',
-					'lavfi',
-					'-i',
-					'anullsrc=r=48000:cl=stereo',
-					'-t',
-					'5',
-					'-c:a',
-					'libmp3lame',
-					'-f',
-					'mp3',
-					'pipe:1',
-				],
-				{windowsHide: true, timeout: 5000},
-			);
-			probe.real = true;
-			const duration = await resolve(bytes, 'mp3', 6);
-			expect(duration).toBeGreaterThanOrEqual(5000);
-			expect(duration).toBeLessThanOrEqual(5200);
-		},
-	);
-	it.skipIf(spawnSync('ffmpeg', ['-version'], {windowsHide: true}).status !== 0).each([
+	it.skipIf(FFMPEG_MISSING)('validates actual MP3 audio', async () => {
+		const bytes = execFileSync(
+			'ffmpeg',
+			[
+				'-v',
+				'error',
+				'-f',
+				'lavfi',
+				'-i',
+				'anullsrc=r=48000:cl=stereo',
+				'-t',
+				'5',
+				'-c:a',
+				'libmp3lame',
+				'-f',
+				'mp3',
+				'pipe:1',
+			],
+			{windowsHide: true, timeout: 5000},
+		);
+		probe.real = true;
+		const duration = await resolve(bytes, 'mp3', 6);
+		expect(duration).toBeGreaterThanOrEqual(5000);
+		expect(duration).toBeLessThanOrEqual(5200);
+	});
+	it.skipIf(FFMPEG_MISSING).each([
 		// The container duration includes the 6.5 ms Opus pre-skip, so the rounded metadata is one higher.
 		['5', 5000, 6],
 		['10', 10000, 11],

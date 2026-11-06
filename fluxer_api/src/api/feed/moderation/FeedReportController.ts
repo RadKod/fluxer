@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {requireEmailVerified} from '@app/api/auth/EmailVerificationUtils';
 import type {FeedPostRow} from '@app/api/database/types/FeedTypes';
 import {FeedEnabled, requirePostViewAccess} from '@app/api/feed/FeedPostController';
 import {DefaultUserOnly, LoginRequired} from '@app/api/middleware/AuthMiddleware';
@@ -11,10 +10,11 @@ import {RateLimitConfigs} from '@app/api/RateLimitConfig';
 import {type IARSubmission, reportStatusToString} from '@app/api/report/ReportModels';
 import type {HonoApp, HonoEnv} from '@app/api/types/HonoEnv';
 import {assertAccountNotLimited} from '@app/api/user/AccountLimit';
+import {assertTierAllows, NO_TIER_CONTEXT} from '@app/api/user/AccountTier';
 import {Validator} from '@app/api/Validator';
+import {TierGatedActions} from '@fluxer/constants/src/AccountTierConstants';
 import {UnknownFeedCommentError} from '@fluxer/errors/src/domains/content/UnknownFeedCommentError';
 import {UnknownFeedPostError} from '@fluxer/errors/src/domains/content/UnknownFeedPostError';
-import {UnclaimedAccountCannotSubmitReportsError} from '@fluxer/errors/src/domains/moderation/UnclaimedAccountCannotSubmitReportsError';
 import {ReportFeedCommentRequest, ReportFeedPostRequest} from '@fluxer/schema/src/domains/feed/FeedRequestSchemas';
 import {ReportResponse} from '@fluxer/schema/src/domains/report/ReportSchemas';
 import type {Context} from 'hono';
@@ -23,10 +23,7 @@ import type {Context} from 'hono';
 // (requirePostViewAccess; a block either way answers 404 like the post).
 async function loadReportablePost(ctx: Context<HonoEnv>, postId: bigint): Promise<{reporter: User; post: FeedPostRow}> {
 	const reporter = ctx.get('user');
-	if (reporter.isUnclaimedAccount()) {
-		throw new UnclaimedAccountCannotSubmitReportsError();
-	}
-	requireEmailVerified(reporter, 'report');
+	assertTierAllows(reporter, TierGatedActions.REPORT, NO_TIER_CONTEXT);
 	const post = await ctx.get('feedTimelineService').getPost(postId);
 	if (!post) {
 		throw new UnknownFeedPostError();

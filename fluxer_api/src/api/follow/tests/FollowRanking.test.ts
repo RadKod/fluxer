@@ -39,7 +39,7 @@ async function setFollowers(id: string, delta: number): Promise<void> {
 
 // The in-memory executor answers a paged read with its first page and no page state; the backfill scan needs real pages.
 class PagedInMemoryExecutor extends InMemoryCassandraQueryExecutor {
-	async executePagedQuery<T>(query: PreparedQuery, options: {pageSize: number; pageState?: string | null}) {
+	override async executePagedQuery<T>(query: PreparedQuery, options: {pageSize: number; pageState?: string | null}) {
 		const rows = await this.executeQuery<T>(query);
 		const offset = Number(options.pageState ?? 0);
 		const next = offset + options.pageSize;

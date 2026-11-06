@@ -196,7 +196,7 @@ export function CodesAdminController(app: HonoApp) {
 				metadata: {
 					code: giftCode.code,
 					duration_type: giftCode.durationType,
-					duration_quantity: giftCode.durationQuantity.toString(),
+					duration_quantity: giftCode.durationQuantity,
 				},
 			});
 			return ctx.body(null, 204);

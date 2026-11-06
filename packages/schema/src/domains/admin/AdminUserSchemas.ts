@@ -367,7 +367,7 @@ export const AdminSignInLinkResponse = z.object({
 export type AdminSignInLinkResponse = z.infer<typeof AdminSignInLinkResponse>;
 
 export const AdminUserCreateRequest = z.object({
-	username: UsernameType.describe('Username for the new account'),
+	username: UsernameLookupType.describe('Username for the new account'),
 	email: EmailType.optional().describe(
 		'Email address for the new account. Required on an instance where people sign in with email, and refused where they sign in with a username',
 	),

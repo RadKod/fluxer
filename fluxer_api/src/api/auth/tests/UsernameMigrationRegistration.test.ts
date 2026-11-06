@@ -160,18 +160,23 @@ describe('username selection registration', () => {
 		await enableSso(harness, admin.token, {enforced: false});
 		claimSelf.mockClear();
 		setInjectedUsernameOwnershipService(realOwnership());
-		const start = await createBuilderWithoutAuth<{state: string}>(harness)
+		const start = await createBuilderWithoutAuth<{state: string; client_binding: string}>(harness)
 			.post('/auth/sso/start')
 			.body({redirect_to: '/me'})
 			.execute();
-		const result = await createBuilderWithoutAuth<{user_id: string}>(harness)
+		const result = await createBuilderWithoutAuth<{user_id: string; token: string}>(harness)
 			.post('/auth/sso/complete')
-			.body({code: createUniqueEmail('sso-selection'), state: start.state})
+			.body({code: createUniqueEmail('sso-selection'), state: start.state, client_binding: start.client_binding})
 			.execute();
 		const user = await getUserRepository().findUniqueAssert(createUserID(BigInt(result.user_id)));
 		expect(user.discriminator).toBeGreaterThan(0);
 		expect(user.usernameState).toBeNull();
 		expect(claimSelf).not.toHaveBeenCalled();
+		// An SSO account gives its date of birth after the sign-in before anyone can reach it.
+		await createBuilder(harness, result.token)
+			.put('/users/@me/date-of-birth')
+			.body({date_of_birth: '1990-01-01'})
+			.execute();
 		await requestLegacyTag(admin.token, result.user_id);
 	});
 	it('uses claim availability for unauthenticated selection without exposing its owner', async () => {

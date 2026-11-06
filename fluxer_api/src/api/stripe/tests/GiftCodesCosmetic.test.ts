@@ -22,7 +22,11 @@ import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import type {CosmeticItemResponse} from '@fluxer/schema/src/domains/cosmetics/CosmeticResponseSchemas';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
-const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+const SETUP_CONFIGURED = Config.instance.setup.configured;
+
+// 128x128: the test media service reads real PNG dimensions, and cosmetics need 32 to 2048 px.
+const PNG =
+	'iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAAVklEQVR42u3BMQEAAADCoPVPbQwfoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOBvAI8AAYr5gj4AAAAASUVORK5CYII=';
 const ADMIN_ACLS = [
 	AdminACLs.AUTHENTICATE,
 	AdminACLs.INSTANCE_CONFIG_VIEW,
@@ -39,6 +43,8 @@ describe('gift codes that carry a cosmetic item', () => {
 	beforeAll(async () => {
 		previousSelfHosted = Config.instance.selfHosted;
 		Config.instance.selfHosted = true;
+		// Self-hosted sign-ups after the first (admin) account need finished setup.
+		Config.instance.setup.configured = true;
 		harness = await createApiTestHarness();
 	});
 	beforeEach(async () => {
@@ -55,6 +61,7 @@ describe('gift codes that carry a cosmetic item', () => {
 	afterAll(async () => {
 		await harness?.shutdown();
 		Config.instance.selfHosted = previousSelfHosted;
+		Config.instance.setup.configured = SETUP_CONFIGURED;
 	});
 
 	function createItem(type: string, availability: string): Promise<CosmeticItemResponse> {

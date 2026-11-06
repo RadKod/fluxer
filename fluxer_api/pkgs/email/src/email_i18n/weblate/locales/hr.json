@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Za svaku uplatu poslat ćemo ti potvrdu e-poštom.} year {Za svaku uplatu poslat ćemo ti potvrdu e-poštom.} other {Ova e-poruka je tvoja potvrda o plaćanju.}}",
 		"reference_label": "Referentni broj",
 		"signoff": "Tim {product_name}a",
-		"subject": "Hvala ti na donaciji za {product_name}",
-		"button": "Upravljaj donacijama"
+		"subject": "Hvala ti na donaciji za {product_name}"
 	},
 	"donation_magic_link": {
 		"cta": "Upravljaj donacijama",
@@ -74,8 +73,7 @@
 		"intro": "Ovom poveznicom možeš upravljati ponavljajućom donacijom ili je otkazati te ažurirati način plaćanja.",
 		"note": "Ako nisi zatražio ovu poveznicu, možeš zanemariti ovu e-poruku.",
 		"signoff": "Tim {product_name}a",
-		"subject": "Upravljanje donacijama za {product_name}",
-		"button": "Upravljaj donacijama"
+		"subject": "Upravljanje donacijama za {product_name}"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Iznos",
@@ -179,8 +177,7 @@
 		"new_email_label": "Nova adresa e-pošte",
 		"note": "Time se vraća tvoja prethodna adresa e-pošte, odjavljuješ se sa svih uređaja, isključuje se dvostruka provjera autentičnosti i tražimo da postaviš novu lozinku.",
 		"signoff": "Sigurnosni tim {product_name}a",
-		"subject": "Adresa e-pošte na tvom {product_name} računu je promijenjena",
-		"button": "Poništi ovu promjenu"
+		"subject": "Adresa e-pošte na tvom {product_name} računu je promijenjena"
 	},
 	"email_verification": {
 		"cta": "Potvrdi adresu e-pošte",
@@ -189,9 +186,7 @@
 		"intro": "Potvrdi ovu adresu e-pošte da dovršiš postavljanje svog {product_name} računa.",
 		"note": "Ako nisi izradio {product_name} račun, možeš zanemariti ovu e-poruku.",
 		"signoff": "Tim {product_name}a",
-		"subject": "Potvrdi svoju e-poštu za {product_name}",
-		"body": "🎉 Pozdrav {username},\n\nPotvrdi adresu e-pošte za svoj račun na {product_name}u klikom na poveznicu ispod:\n\n{verifyUrl}\n\nAko račun na {product_name}u nije tvoj, možeš zanemariti ovu e-poštu.\n\nOva poveznica vrijedi 24 sata.\n\n– Tim {product_name}a",
-		"button": "Potvrdi e-poštu"
+		"subject": "Potvrdi svoju e-poštu za {product_name}"
 	},
 	"email_verification_code": {
 		"expiry": "Ovaj kod istječe za {minutes, plural, one {# minutu} few {# minute} other {# minuta}}.",
@@ -246,8 +241,7 @@
 		"signoff": "Tim {product_name}a",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Veličina datoteke",
-		"subject": "Tvoj izvoz podataka za {product_name} je spreman",
-		"button": "Preuzmi moje podatke"
+		"subject": "Tvoj izvoz podataka za {product_name} je spreman"
 	},
 	"inactivity_warning": {
 		"cta": "Prijavi se na {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "Tvoj {product_name} račun neaktivan je od {lastActiveDate, date, long}. Prijavi se prije {deletionDate, date, long} ili ćemo ga izbrisati.",
 		"note": "{reply, select, yes {Ako si nedavno koristio {product_name}, odgovori na ovu e-poruku.} other {Ako si nedavno koristio {product_name}, javi se administratorima ove instance.}}",
 		"signoff": "Tim {product_name}a",
-		"subject": "Prijavi se da zadržiš svoj {product_name} račun",
-		"button": "Prijavi se"
+		"subject": "Prijavi se da zadržiš svoj {product_name} račun"
 	},
 	"ip_authorization": {
 		"cta": "Odobri ovu IP adresu",
@@ -268,8 +261,7 @@
 		"location_label": "Lokacija",
 		"note": "Ako to nisi bio ti, odmah promijeni lozinku.",
 		"signoff": "Tim {product_name}a",
-		"subject": "Odobri prijavu na {product_name} s nove IP adrese",
-		"button": "Odobri ovu prijavu"
+		"subject": "Odobri prijavu na {product_name} s nove IP adrese"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Ovaj kod istječe za {minutes, plural, one {# minutu} few {# minute} other {# minuta}}.",
@@ -505,8 +497,7 @@
 		"location_label": "Lokacija",
 		"note": "Ako to nisi zatražio, možeš zanemariti ovu e-poruku.",
 		"signoff": "Tim {product_name}a",
-		"subject": "Poništi svoju lozinku za {product_name}",
-		"button": "Poništi lozinku"
+		"subject": "Poništi svoju lozinku za {product_name}"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Osporeni iznos",
@@ -692,14 +683,19 @@
 		"signoff": "Tim {product_name}a",
 		"subject": "Tvoj {product_name} kod za potvrdu"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Prijavi se na {product_name}",
 		"footer_reason": "Ovu si e-poruku primio jer je ova adresa korištena za {product_name} račun.",
 		"intro": "Vaša registracija na {product_name} je odobrena. Sada se možete prijaviti.",
 		"signoff": "Tim {product_name}a",
-		"subject": "Tvoja registracija za {product_name} je odobrena",
-		"body": "🎉 Pozdrav {username},\n\nDobre vijesti: tvoja registracija za {product_name} je odobrena.\n\nSada se možeš prijaviti u aplikaciju {product_name} ovdje:\n{channelsUrl}\n\nDobro došli u zajednicu {product_name}a.\n\n– Tim {product_name}a",
-		"button": "Otvori {product_name}"
+		"subject": "Tvoja registracija za {product_name} je odobrena"
 	},
 	"registration_pending": {
 		"cta": "Pregledaj registracije na čekanju",
@@ -753,13 +749,5 @@
 		"note": "Ne dijeli ovaj kod ni s kim. Osoblje platforme {product_name} nikada ga neće tražiti. Ako nisi pokušao stvoriti račun, možeš zanemariti ovu e-poruku.",
 		"signoff": "Tim {product_name}a",
 		"subject": "Tvoj {product_name} kod za registraciju"
-	},
-	"unban_notification": {
-		"subject": "Suspenzija tvog računa na {product_name}u je ukinuta",
-		"body": "🎉 Pozdrav {username},\n\nDobre vijesti: suspenzija tvog računa na {product_name}u je ukinuta.\n\n{reason, select,\n  null {}\n  other {Razlog: {reason}}\n}\n\nSada se možeš ponovno prijaviti i nastaviti koristiti {product_name} kao i obično.\n\n– Sigurnosni tim {product_name}a"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

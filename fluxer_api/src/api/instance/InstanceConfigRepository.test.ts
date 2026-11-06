@@ -18,7 +18,7 @@ import {
 	type VoiceNoiseSuppressionConfig,
 } from '@fluxer/schema/src/domains/admin/VoiceNoiseSuppressionSchemas';
 import {MockKVProvider} from '@pkgs/kv_client/src/testing/MockKVProvider';
-import {afterEach, beforeEach, describe, expect, it} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const VOICE_NOISE_SUPPRESSION_CONFIG_KEY = 'voice_noise_suppression_config';
 const APP_PUBLIC_CONFIG_KEY = 'app_public_config';
@@ -145,7 +145,6 @@ describe('InstanceConfigRepository', () => {
 
 			await repository.setConfig(INSTANCE_INTEGRATIONS_CONFIG_KEY, JSON.stringify({captcha: storedTurnstile}));
 			await expect(repository.getEffectiveCaptchaConfig()).resolves.toEqual({
-				enabled: true,
 				cost: 5000,
 				max_counter: 1000,
 				provider: 'turnstile',
@@ -478,7 +477,12 @@ describe('InstanceConfigRepository', () => {
 					deferred_phone_gate_member_threshold: 50,
 				}),
 			);
-			const expected = {...micupFields, guild_create_access: true};
+			const expected = {
+				...micupFields,
+				guild_create_access: true,
+				friends_disabled: false,
+				personal_notes_enabled: true,
+			};
 
 			await expect(repository.getInstancePolicyConfig()).resolves.toEqual(expected);
 			await repository.updateInstancePolicyConfig((current) => ({premium_trial_days: current.premium_trial_days}));
@@ -538,7 +542,6 @@ describe('InstanceConfigRepository', () => {
 			expect(await reader.getVoiceNoiseSuppressionConfig()).toMatchObject({enabled: true, config_version: 1});
 		});
 	});
-
 });
 
 function describeConcurrentInstanceConfigWrites(prepareBase: () => Promise<CassandraQueryExecutorForTesting>): void {

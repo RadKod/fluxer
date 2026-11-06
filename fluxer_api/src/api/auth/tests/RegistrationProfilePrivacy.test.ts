@@ -163,11 +163,18 @@ describe('the profile visibility a new account starts with', () => {
 	it('SSO (no date of birth): shared communities', async () => {
 		await enableSso(harness, admin.token);
 		try {
-			const start = await createBuilderWithoutAuth<{state: string}>(harness).post('/auth/sso/start').body({}).execute();
+			const start = await createBuilderWithoutAuth<{state: string; client_binding: string}>(harness)
+				.post('/auth/sso/start')
+				.body({})
+				.execute();
 			const identity = {email: createUniqueEmail('sso-privacy'), sub: `itest-sso-privacy-${Date.now()}`};
 			const signedIn = await createBuilderWithoutAuth<{token: string}>(harness)
 				.post('/auth/sso/complete')
-				.body({code: JSON.stringify({...identity, email_verified: true}), state: start.state})
+				.body({
+					code: JSON.stringify({...identity, email_verified: true}),
+					state: start.state,
+					client_binding: start.client_binding,
+				})
 				.execute();
 			expect(await startOf(signedIn.token)).toEqual({level: ProfilePrivacyLevels.ALL_GUILDS, allowed: false});
 		} finally {

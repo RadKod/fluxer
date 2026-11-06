@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Voor elke betaling krijg je een betaalbewijs per e-mail.} year {Voor elke betaling krijg je een betaalbewijs per e-mail.} other {Deze e-mail is je betaalbewijs.}}",
 		"reference_label": "Referentie",
 		"signoff": "Het team van {product_name}",
-		"subject": "Bedankt voor je {product_name}-donatie",
-		"button": "Donaties beheren"
+		"subject": "Bedankt voor je {product_name}-donatie"
 	},
 	"donation_magic_link": {
 		"cta": "Donaties beheren",
@@ -74,8 +73,7 @@
 		"intro": "Met deze link beheer of stop je een terugkerende donatie en werk je je betaalmethode bij.",
 		"note": "Als je niet om deze link hebt gevraagd, kun je deze e-mail negeren.",
 		"signoff": "Het team van {product_name}",
-		"subject": "Beheer je {product_name}-donaties",
-		"button": "Donaties beheren"
+		"subject": "Beheer je {product_name}-donaties"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Bedrag",
@@ -179,8 +177,7 @@
 		"new_email_label": "Nieuw e-mailadres",
 		"note": "Hiermee krijg je je vorige e-mailadres terug, word je overal uitgelogd, gaat tweefactorauthenticatie uit en stel je een nieuw wachtwoord in.",
 		"signoff": "Het veiligheidsteam van {product_name}",
-		"subject": "Het e-mailadres van je {product_name}-account is gewijzigd",
-		"button": "Deze wijziging ongedaan maken"
+		"subject": "Het e-mailadres van je {product_name}-account is gewijzigd"
 	},
 	"email_verification": {
 		"cta": "E-mailadres bevestigen",
@@ -189,9 +186,7 @@
 		"intro": "Bevestig dit e-mailadres om het instellen van je {product_name}-account af te ronden.",
 		"note": "Als je geen {product_name}-account hebt aangemaakt, kun je deze e-mail negeren.",
 		"signoff": "Het team van {product_name}",
-		"subject": "Bevestig je e-mailadres op {product_name}",
-		"body": "🎉 Hallo {username},\n\nVerifieer het e-mailadres van je {product_name}-account door op de onderstaande link te klikken:\n\n{verifyUrl}\n\nAls je geen {product_name}-account hebt aangemaakt, kun je deze e-mail veilig negeren.\n\nDeze link is 24 uur geldig.\n\n– Het team van {product_name}",
-		"button": "E-mailadres verifiëren"
+		"subject": "Bevestig je e-mailadres op {product_name}"
 	},
 	"email_verification_code": {
 		"expiry": "Deze code verloopt over {minutes, plural, one {# minuut} other {# minuten}}.",
@@ -246,8 +241,7 @@
 		"signoff": "Het team van {product_name}",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Bestandsgrootte",
-		"subject": "Je {product_name}-data-export is klaar",
-		"button": "Mijn gegevens downloaden"
+		"subject": "Je {product_name}-data-export is klaar"
 	},
 	"inactivity_warning": {
 		"cta": "Inloggen bij {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "Je {product_name}-account is inactief sinds {lastActiveDate, date, long}. Log in vóór {deletionDate, date, long}, anders verwijderen we het.",
 		"note": "{reply, select, yes {Heb je {product_name} onlangs nog gebruikt? Beantwoord dan deze e-mail.} other {Heb je {product_name} onlangs nog gebruikt? Neem dan contact op met de beheerders van deze instantie.}}",
 		"signoff": "Het team van {product_name}",
-		"subject": "Log in om je {product_name}-account te houden",
-		"button": "Inloggen"
+		"subject": "Log in om je {product_name}-account te houden"
 	},
 	"ip_authorization": {
 		"cta": "Dit IP-adres toestaan",
@@ -268,8 +261,7 @@
 		"location_label": "Locatie",
 		"note": "Was jij het niet? Wijzig dan nu je wachtwoord.",
 		"signoff": "Het team van {product_name}",
-		"subject": "Sta inloggen bij {product_name} vanaf een nieuw IP-adres toe",
-		"button": "Deze inlog toestaan"
+		"subject": "Sta inloggen bij {product_name} vanaf een nieuw IP-adres toe"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Deze code verloopt over {minutes, plural, one {# minuut} other {# minuten}}.",
@@ -505,8 +497,7 @@
 		"location_label": "Locatie",
 		"note": "Als je hier niet om hebt gevraagd, kun je deze e-mail negeren.",
 		"signoff": "Het team van {product_name}",
-		"subject": "Stel je {product_name}-wachtwoord opnieuw in",
-		"button": "Wachtwoord opnieuw instellen"
+		"subject": "Stel je {product_name}-wachtwoord opnieuw in"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Betwist bedrag",
@@ -692,14 +683,19 @@
 		"signoff": "Het team van {product_name}",
 		"subject": "Je {product_name}-bevestigingscode"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Inloggen bij {product_name}",
 		"footer_reason": "Je hebt deze e-mail ontvangen omdat dit adres is gebruikt voor een {product_name}-account.",
 		"intro": "Je aanmelding bij {product_name} is goedgekeurd. Je kunt nu inloggen.",
 		"signoff": "Het team van {product_name}",
-		"subject": "Je {product_name}-registratie is goedgekeurd",
-		"body": "🎉 Hallo {username},\n\nGoed nieuws: je {product_name}-registratie is goedgekeurd.\n\nJe kunt nu inloggen op de {product_name}-app via:\n{channelsUrl}\n\nWelkom bij de {product_name}-community.\n\n– Het team van {product_name}",
-		"button": "{product_name} openen"
+		"subject": "Je {product_name}-registratie is goedgekeurd"
 	},
 	"registration_pending": {
 		"cta": "Aanmeldingen in afwachting bekijken",
@@ -753,13 +749,5 @@
 		"note": "Deel deze code met niemand. Medewerkers van {product_name} zullen er nooit om vragen. Als je niet hebt geprobeerd een account aan te maken, kun je deze e-mail negeren.",
 		"signoff": "Het team van {product_name}",
 		"subject": "Je {product_name}-registratiecode"
-	},
-	"unban_notification": {
-		"subject": "De schorsing van je {product_name}-account is opgeheven",
-		"body": "🎉 Hallo {username},\n\nGoed nieuws: de schorsing van je {product_name}-account is opgeheven.\n\n{reason, select,\n  null {}\n  other {Reden: {reason}}\n}\n\nJe kunt nu weer inloggen en {product_name} normaal blijven gebruiken.\n\n– Het veiligheidsteam van {product_name}"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

@@ -5,7 +5,11 @@ import {createGuildID, createUserID} from '@app/api/BrandedTypes';
 import {sendChannelMessage} from '@app/api/channel/tests/ChannelTestUtils';
 import {guildVisitRepository} from '@app/api/guild/visits/GuildVisitorAccess';
 import {getGatewayService} from '@app/api/middleware/ServiceRegistry';
-import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
+import {
+	getCacheService,
+	getInstanceConfigRepository,
+	getLimitConfigService,
+} from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import type {NoopGatewayService} from '@app/api/test/NoopGatewayService';
 import {HTTP_STATUS} from '@app/api/test/TestConstants';
@@ -17,7 +21,7 @@ import {GuildVisitSources} from '@fluxer/constants/src/GuildVisitConstants';
 import {Headers} from '@fluxer/constants/src/Headers';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import type {GuildVisitResponse, GuildVisitStartResponse} from '@fluxer/schema/src/domains/guild/GuildVisitSchemas';
-import {afterAll, beforeAll, beforeEach, describe, expect, it} from 'vitest';
+import {afterAll, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 interface Registered {
 	token: string;
@@ -37,6 +41,21 @@ function yearsAgo(years: number): string {
 	date.setUTCFullYear(date.getUTCFullYear() - years);
 	date.setUTCDate(date.getUTCDate() - 1);
 	return date.toISOString().slice(0, 10);
+}
+
+// sanalyer (Micup): turning content adults-only is a limit-gated feature, off by default.
+async function withMatureContentSettings<T>(run: () => Promise<T>): Promise<T> {
+	const limits = getLimitConfigService();
+	const snapshot = limits.getConfigSnapshot();
+	const spy = vi.spyOn(limits, 'getConfigSnapshot').mockReturnValue({
+		...snapshot,
+		rules: [...snapshot.rules, {id: 'test_mature_content', limits: {feature_mature_content_settings: 1}}],
+	});
+	try {
+		return await run();
+	} finally {
+		spy.mockRestore();
+	}
 }
 
 describe('Guild visits', () => {
@@ -143,7 +162,9 @@ describe('Guild visits', () => {
 
 	it('keeps adults-only guilds away from younger accounts', async () => {
 		const {owner, guildId, code} = await createVisitGuild();
-		await createBuilder(harness, owner.token).patch(`/guilds/${guildId}`).body({nsfw: true}).execute();
+		await withMatureContentSettings(() =>
+			createBuilder(harness, owner.token).patch(`/guilds/${guildId}`).body({nsfw: true}).execute(),
+		);
 		const teen = await createUnclaimed(yearsAgo(15));
 		await startVisit(teen.token, code)
 			.expect(HTTP_STATUS.FORBIDDEN, APIErrorCodes.GUILD_VISIT_AGE_RESTRICTED)
@@ -290,6 +311,8 @@ describe('Guild visits', () => {
 			.execute();
 		expect(seen.guild.visits_enabled).toBe(true);
 		await setFeatures(owner, guildId, []);
+		// sanalyer (Micup): invite responses are cached for 30 seconds; drop the cached one to read the change now.
+		await getCacheService().delete(`invite:response:${code}`);
 		const off = await createBuilder<{guild: {visits_enabled?: boolean}}>(harness, visitor.token)
 			.get(`/invites/${code}`)
 			.execute();

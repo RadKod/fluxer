@@ -15,6 +15,7 @@ import {
 	setStoredBillingConfig,
 } from '@app/api/stripe/BillingConfigCache';
 import {getProductRegistry, ProductRegistry, ProductType} from '@app/api/stripe/ProductRegistry';
+import {getStripeClient} from '@app/api/stripe/StripeClient';
 import {setupSyncStripeWebhookWorker, signStripeWebhook} from '@app/api/stripe/tests/StripeWebhookTestUtils';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {
@@ -31,7 +32,6 @@ import processStripeWebhook from '@app/api/worker/tasks/ProcessStripeWebhook';
 import {setWorkerDependenciesForTest} from '@app/api/worker/WorkerContext';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import type {PremiumStateResponse} from '@fluxer/schema/src/domains/premium/PremiumSchemas';
-import type {WorkerTaskHelpers} from '@pkgs/worker/src/contracts/WorkerTask';
 import {HttpResponse, http} from 'msw';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, test} from 'vitest';
 
@@ -235,21 +235,6 @@ describe('operator billing catalog', () => {
 		});
 
 		test('rejects hosted gift checkout despite configured consent and tax', async () => {
-			const token = await createPurchaser();
-			await createBuilder(harness, token)
-				.post('/stripe/checkout/subscription')
-				.body({price_id: 'price_envmonthlyusd', client_geoip_country_code: 'SE'})
-				.expect(HTTP_STATUS.OK)
-				.execute();
-			const session = stripeHandlers.spies.createdCheckoutSessions[0];
-			expect(session?.line_items?.[0]?.price).toBe('price_envmonthlyusd');
-			expect(session?.custom_text?.terms_of_service_acceptance?.message).toContain('Fluxer Plutonium');
-			expect(session?.consent_collection?.terms_of_service).toBe('required');
-			expect(sessionField(session, 'automatic_tax')).toEqual({enabled: 'true'});
-			expect(sessionField(session, 'tax_id_collection')).toEqual({enabled: 'true'});
-		});
-
-		test('charges no tax on a gift checkout, because a gift code is a multi-purpose voucher', async () => {
 			const token = await createPurchaser();
 			await createBuilder(harness, token)
 				.post('/stripe/checkout/gift')

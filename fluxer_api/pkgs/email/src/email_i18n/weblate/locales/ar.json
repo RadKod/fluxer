@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {نرسل إليك إيصالًا بالبريد الإلكتروني عن كل دفعة.} year {نرسل إليك إيصالًا بالبريد الإلكتروني عن كل دفعة.} other {هذه الرسالة هي إيصالك.}}",
 		"reference_label": "الرقم المرجعي",
 		"signoff": "فريق {product_name}",
-		"subject": "شكرًا لك على تبرعك لـ{product_name}",
-		"button": "إدارة التبرعات"
+		"subject": "شكرًا لك على تبرعك لـ{product_name}"
 	},
 	"donation_magic_link": {
 		"cta": "إدارة التبرعات",
@@ -74,8 +73,7 @@
 		"intro": "استخدم هذا الرابط لإدارة تبرعك المتكرر أو إلغائه وتحديث طريقة الدفع.",
 		"note": "إذا لم تطلب هذا الرابط، يمكنك تجاهل هذا البريد الإلكتروني.",
 		"signoff": "فريق {product_name}",
-		"subject": "إدارة تبرعاتك لـ{product_name}",
-		"button": "إدارة التبرعات"
+		"subject": "إدارة تبرعاتك لـ{product_name}"
 	},
 	"donation_payment_failed": {
 		"amount_label": "المبلغ",
@@ -179,8 +177,7 @@
 		"new_email_label": "عنوان البريد الإلكتروني الجديد",
 		"note": "يعيد هذا عنوان بريدك الإلكتروني السابق، ويسجّل خروجك من كل مكان، ويوقف المصادقة الثنائية، ويطلب منك تعيين كلمة مرور جديدة.",
 		"signoff": "فريق أمان {product_name}",
-		"subject": "تم تغيير عنوان بريدك الإلكتروني في {product_name}",
-		"button": "التراجع عن هذا التغيير"
+		"subject": "تم تغيير عنوان بريدك الإلكتروني في {product_name}"
 	},
 	"email_verification": {
 		"cta": "تأكيد عنوان البريد الإلكتروني",
@@ -189,9 +186,7 @@
 		"intro": "أكّد عنوان البريد الإلكتروني هذا لإكمال إعداد حسابك في {product_name}.",
 		"note": "إذا لم تنشئ حسابًا في {product_name}، يمكنك تجاهل هذا البريد الإلكتروني.",
 		"signoff": "فريق {product_name}",
-		"subject": "أكّد عنوان بريدك الإلكتروني في {product_name}",
-		"body": "🎉 مرحبًا {username}،\n\nيرجى التحقق من عنوان البريد الإلكتروني لحسابك في {product_name} بالنقر على الرابط أدناه:\n\n{verifyUrl}\n\nإذا لم تقم بإنشاء حساب {product_name}، يمكنك تجاهل هذا البريد الإلكتروني بأمان.\n\nهذا الرابط صالح لمدة 24 ساعة.\n\n– فريق {product_name}",
-		"button": "تأكيد البريد الإلكتروني"
+		"subject": "أكّد عنوان بريدك الإلكتروني في {product_name}"
 	},
 	"email_verification_code": {
 		"expiry": "تنتهي صلاحية هذا الرمز بعد {minutes, plural, zero {# دقيقة} one {دقيقة واحدة} two {دقيقتين} few {# دقائق} many {# دقيقة} other {# دقيقة}}.",
@@ -246,8 +241,7 @@
 		"signoff": "فريق {product_name}",
 		"size": "{fileSizeMB, number} ميجابايت",
 		"size_label": "حجم الملف",
-		"subject": "تصدير بياناتك من {product_name} جاهز",
-		"button": "تنزيل بياناتي"
+		"subject": "تصدير بياناتك من {product_name} جاهز"
 	},
 	"inactivity_warning": {
 		"cta": "سجّل الدخول إلى {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "لم يكن حسابك في {product_name} نشطًا منذ {lastActiveDate, date, long}. سجّل الدخول قبل {deletionDate, date, long}، وإلا فسنحذفه.",
 		"note": "{reply, select, yes {إذا كنت قد استخدمت {product_name} مؤخرًا، فردّ على هذه الرسالة.} other {إذا كنت قد استخدمت {product_name} مؤخرًا، فتواصل مع مسؤولي هذا المثيل.}}",
 		"signoff": "فريق {product_name}",
-		"subject": "سجّل الدخول للاحتفاظ بحسابك في {product_name}",
-		"button": "تسجيل الدخول"
+		"subject": "سجّل الدخول للاحتفاظ بحسابك في {product_name}"
 	},
 	"ip_authorization": {
 		"cta": "السماح بعنوان IP هذا",
@@ -268,8 +261,7 @@
 		"location_label": "الموقع",
 		"note": "إذا لم تكن أنت، فغيّر كلمة المرور الآن.",
 		"signoff": "فريق {product_name}",
-		"subject": "اسمح بتسجيل دخول إلى {product_name} من عنوان IP جديد",
-		"button": "السماح بتسجيل الدخول هذا"
+		"subject": "اسمح بتسجيل دخول إلى {product_name} من عنوان IP جديد"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "تنتهي صلاحية هذا الرمز بعد {minutes, plural, zero {# دقيقة} one {دقيقة واحدة} two {دقيقتين} few {# دقائق} many {# دقيقة} other {# دقيقة}}.",
@@ -505,8 +497,7 @@
 		"location_label": "الموقع",
 		"note": "إذا لم تطلب ذلك، يمكنك تجاهل هذا البريد الإلكتروني.",
 		"signoff": "فريق {product_name}",
-		"subject": "إعادة تعيين كلمة المرور في {product_name}",
-		"button": "إعادة تعيين كلمة المرور"
+		"subject": "إعادة تعيين كلمة المرور في {product_name}"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "المبلغ المتنازع عليه",
@@ -692,14 +683,19 @@
 		"signoff": "فريق {product_name}",
 		"subject": "رمز التأكيد الخاص بـ {product_name}"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "سجّل الدخول إلى {product_name}",
 		"footer_reason": "لقد تلقيت هذا البريد الإلكتروني لأن هذا العنوان استُخدم لحساب {product_name}.",
 		"intro": "تمت الموافقة على تسجيلك في {product_name}. يمكنك تسجيل الدخول الآن.",
 		"signoff": "فريق {product_name}",
-		"subject": "تمت الموافقة على تسجيلك في {product_name}",
-		"body": "🎉 مرحبًا {username}،\n\nأخبار سارة: تمت الموافقة على تسجيلك في {product_name}.\n\nيمكنك الآن تسجيل الدخول إلى تطبيق {product_name} من هنا:\n{channelsUrl}\n\nمرحبًا بك في مجتمع {product_name}.\n\n– فريق {product_name}",
-		"button": "فتح {product_name}"
+		"subject": "تمت الموافقة على تسجيلك في {product_name}"
 	},
 	"registration_pending": {
 		"cta": "مراجعة التسجيلات المعلّقة",
@@ -753,13 +749,5 @@
 		"note": "لا تشارك هذا الرمز مع أي شخص. لن يطلب منك فريق عمل {product_name} هذا الرمز أبدًا. إذا لم تحاول إنشاء حساب، يمكنك تجاهل هذا البريد الإلكتروني.",
 		"signoff": "فريق {product_name}",
 		"subject": "رمز التسجيل الخاص بك لـ {product_name}"
-	},
-	"unban_notification": {
-		"subject": "تم رفع تعليق حسابك في {product_name}",
-		"body": "🎉 مرحبًا {username}،\n\nأخبار سارة: تم رفع تعليق حسابك في {product_name}.\n\n{reason, select,\n  null {}\n  other {السبب: {reason}}\n}\n\nيمكنك الآن تسجيل الدخول مرة أخرى ومواصلة استخدام {product_name} كالمعتاد.\n\n– فريق أمان {product_name}"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

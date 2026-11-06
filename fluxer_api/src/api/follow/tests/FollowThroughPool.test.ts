@@ -4,6 +4,7 @@ import {createTestAccount, type TestAccount} from '@app/api/auth/tests/AuthTestU
 import {createUserID} from '@app/api/BrandedTypes';
 import {createTestBotAccount} from '@app/api/bot/tests/BotTestUtils';
 import {blockUser, createFriendship, updateUserSettings} from '@app/api/channel/tests/ChannelTestUtils';
+import {LocalDate} from '@app/api/database/LocalDate';
 import type {UserRow} from '@app/api/database/types/UserTypes';
 import {FeedDiscoverService} from '@app/api/feed/discover/FeedDiscoverService';
 import {feedSuggestionCache} from '@app/api/feed/suggest/FeedSuggestionCache';
@@ -27,13 +28,12 @@ import {ProfilePrivacyLevels, UserFlags} from '@fluxer/constants/src/UserConstan
 import type {LimitConfigSnapshot, LimitRule} from '@fluxer/limits/src/LimitTypes';
 import type {FeedNotificationListResponse} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import type {WorkerTaskHelpers} from '@pkgs/worker/src/contracts/WorkerTask';
-import {types} from 'cassandra-driver';
 import {afterAll, afterEach, beforeAll, describe, expect, it, vi} from 'vitest';
 
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
 const SUGGESTIONS_ON: LimitRule = {id: 'test_suggestions_on', limits: {feature_feed_suggestions: 1}};
-const minorBirthDate = () => types.LocalDate.fromString(`${new Date().getFullYear() - 10}-06-15`);
+const minorBirthDate = () => LocalDate.fromString(`${new Date().getFullYear() - 10}-06-15`);
 
 const helpers: WorkerTaskHelpers = {
 	logger: new NoopLogger(),

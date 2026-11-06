@@ -36,7 +36,7 @@ test('a billing alert emails support once in plain text and self-hosted instance
 
 	const sent = emails().listSentEmails();
 	expect(sent).toHaveLength(1);
-	expect(sent[0]).toMatchObject({to: 'support@fluxer.com', type: 'billing_support_alert'});
+	expect(sent[0]).toMatchObject({to: 'info@sanalyer.com', type: 'billing_support_alert'});
 	expect(sent[0].metadata.subject).toBe('[Billing alert] Self-serve refund re_alert_test failed');
 	expect(sent[0].metadata.text).toContain('Stripe refund: re_alert_test');
 	expect(sent[0].metadata.text).toContain('Amount: $4.99 (USD)');

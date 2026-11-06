@@ -8,6 +8,7 @@ import type {ApiTestHarness} from '@app/api/test/ApiTestHarness';
 import {createBuilder} from '@app/api/test/TestRequestBuilder';
 import {AuditLogActionType} from '@fluxer/constants/src/AuditLogActionType';
 import {DeletionReasons} from '@fluxer/constants/src/Core';
+import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
 import {expect} from 'vitest';
 
 const MISSING_GUILD_ID = '900000000000000001';
@@ -290,6 +291,11 @@ export const GuildAdminAuditCases: ReadonlyArray<AdminAuditCoverageCase> = [
 		route: '/admin/guilds/:guild_id/roles/:role_id/icon',
 		async prepare({harness, admin}) {
 			const guild = await createGuild(harness, admin.token, 'Audit Role Icon Guild');
+			// sanalyer (Micup): role icons need server boost level 1.
+			await createBuilder(harness, '')
+				.post(`/test/guilds/${guild.id}/features`)
+				.body({add_features: [GuildFeatures.BOOST_LEVEL_1]})
+				.execute();
 			const role = await createBuilder<{id: string}>(harness, admin.token)
 				.post(`/guilds/${guild.id}/roles`)
 				.body({name: 'Mods', unicode_emoji: '🛡️'})

@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Minden fizetésről e-mailben küldünk nyugtát.} year {Minden fizetésről e-mailben küldünk nyugtát.} other {Ez az e-mail a nyugtád.}}",
 		"reference_label": "Hivatkozási szám",
 		"signoff": "{product_name} csapata",
-		"subject": "Köszönjük, hogy adományoddal támogatod a {product_name} működését",
-		"button": "Adományok kezelése"
+		"subject": "Köszönjük, hogy adományoddal támogatod a {product_name} működését"
 	},
 	"donation_magic_link": {
 		"cta": "Adományok kezelése",
@@ -74,8 +73,7 @@
 		"intro": "Ezzel a linkkel kezelheted vagy lemondhatod az ismétlődő adományodat, és frissítheted a fizetési módodat.",
 		"note": "Ha nem te kérted ezt a linket, figyelmen kívül hagyhatod ezt az e-mailt.",
 		"signoff": "{product_name} csapata",
-		"subject": "A {product_name} működését támogató adományaid kezelése",
-		"button": "Adományok kezelése"
+		"subject": "A {product_name} működését támogató adományaid kezelése"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Összeg",
@@ -179,8 +177,7 @@
 		"new_email_label": "Új e-mail-cím",
 		"note": "Ezzel visszaáll a korábbi e-mail-címed, mindenhol kijelentkeztetünk, kikapcsoljuk a kétlépcsős azonosítást, és új jelszót kell beállítanod.",
 		"signoff": "{product_name} biztonsági csapata",
-		"subject": "{product_name}-fiókod e-mail-címe megváltozott",
-		"button": "Módosítás visszavonása"
+		"subject": "{product_name}-fiókod e-mail-címe megváltozott"
 	},
 	"email_verification": {
 		"cta": "E-mail-cím megerősítése",
@@ -189,9 +186,7 @@
 		"intro": "Erősítsd meg ezt az e-mail-címet, hogy befejezd {product_name}-fiókod beállítását.",
 		"note": "Ha nem hoztál létre {product_name}-fiókot, figyelmen kívül hagyhatod ezt az e-mailt.",
 		"signoff": "{product_name} csapata",
-		"subject": "Erősítsd meg {product_name}-fiókod e-mail-címét",
-		"body": "🎉 Szia, {username}!\n\nErősítsd meg a {product_name}-fiókod e-mail-címét az alábbi linkre kattintva:\n\n{verifyUrl}\n\nHa nem hoztál létre {product_name}-fiókot, nyugodtan figyelmen kívül hagyhatod ezt az e-mailt.\n\nEz a link 24 óráig érvényes.\n\n– {product_name} csapata",
-		"button": "E-mail-cím megerősítése"
+		"subject": "Erősítsd meg {product_name}-fiókod e-mail-címét"
 	},
 	"email_verification_code": {
 		"expiry": "Ez a kód {minutes, plural, one {# perc} other {# perc}} múlva lejár.",
@@ -246,8 +241,7 @@
 		"signoff": "{product_name} csapata",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Fájlméret",
-		"subject": "Elkészült a(z) {product_name} adatexportod",
-		"button": "Adataim letöltése"
+		"subject": "Elkészült a(z) {product_name} adatexportod"
 	},
 	"inactivity_warning": {
 		"cta": "Bejelentkezés: {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "{product_name}-fiókod {lastActiveDate, date, long} óta inaktív. Jelentkezz be {deletionDate, date, long} előtt, különben töröljük.",
 		"note": "{reply, select, yes {Ha nemrég használtad a(z) {product_name} szolgáltatást, válaszolj erre az e-mailre.} other {Ha nemrég használtad a(z) {product_name} szolgáltatást, fordulj ennek a példánynak az adminisztrátoraihoz.}}",
 		"signoff": "{product_name} csapata",
-		"subject": "Jelentkezz be, hogy megtartsd {product_name}-fiókodat",
-		"button": "Bejelentkezés"
+		"subject": "Jelentkezz be, hogy megtartsd {product_name}-fiókodat"
 	},
 	"ip_authorization": {
 		"cta": "IP-cím engedélyezése",
@@ -268,8 +261,7 @@
 		"location_label": "Helyszín",
 		"note": "Ha nem te voltál, most változtasd meg a jelszavadat.",
 		"signoff": "{product_name} csapata",
-		"subject": "Engedélyezz egy {product_name}-bejelentkezést új IP-címről",
-		"button": "Bejelentkezés engedélyezése"
+		"subject": "Engedélyezz egy {product_name}-bejelentkezést új IP-címről"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Ez a kód {minutes, plural, one {# perc} other {# perc}} múlva lejár.",
@@ -505,8 +497,7 @@
 		"location_label": "Helyszín",
 		"note": "Ha nem te kérted, figyelmen kívül hagyhatod ezt az e-mailt.",
 		"signoff": "{product_name} csapata",
-		"subject": "Állítsd vissza {product_name}-fiókod jelszavát",
-		"button": "Jelszó visszaállítása"
+		"subject": "Állítsd vissza {product_name}-fiókod jelszavát"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Vitatott összeg",
@@ -692,14 +683,19 @@
 		"signoff": "{product_name} csapata",
 		"subject": "A(z) {product_name} megerősítő kódod"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Bejelentkezés: {product_name}",
 		"footer_reason": "Azért kaptad ezt az e-mailt, mert ezt a címet egy {product_name}-fiókhoz használták.",
 		"intro": "A(z) {product_name} regisztrációdat jóváhagyták. Most már bejelentkezhetsz.",
 		"signoff": "{product_name} csapata",
-		"subject": "Jóváhagytuk a regisztrációdat a {product_name} felületén",
-		"body": "🎉 Szia, {username}!\n\nJó hír: jóváhagytuk a regisztrációdat a {product_name} felületén.\n\nMost már bejelentkezhetsz az alkalmazásba:\n{channelsUrl}\n\nÜdvözlünk a {product_name} közösségében!\n\n– {product_name} csapata",
-		"button": "{product_name} megnyitása"
+		"subject": "Jóváhagytuk a regisztrációdat a {product_name} felületén"
 	},
 	"registration_pending": {
 		"cta": "Függő regisztrációk áttekintése",
@@ -753,13 +749,5 @@
 		"note": "Ezt a kódot ne oszd meg senkivel. A(z) {product_name} munkatársai soha nem kérik el. Ha nem próbáltál meg fiókot létrehozni, figyelmen kívül hagyhatod ezt az e-mailt.",
 		"signoff": "{product_name} csapata",
 		"subject": "A(z) {product_name} regisztrációs kódod"
-	},
-	"unban_notification": {
-		"subject": "Feloldottuk {product_name}-fiókod felfüggesztését",
-		"body": "🎉 Szia, {username}!\n\nJó hír: feloldottuk {product_name}-fiókod felfüggesztését.\n\n{reason, select,\n  null {}\n  other {Indok: {reason}}\n}\n\nMost már újra bejelentkezhetsz, és a megszokott módon használhatod a {product_name} alkalmazást.\n\n– {product_name} biztonsági csapata"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

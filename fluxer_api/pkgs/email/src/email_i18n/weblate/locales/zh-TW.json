@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {每次付款後，我們都會以電子郵件寄送收據給您。} year {每次付款後，我們都會以電子郵件寄送收據給您。} other {此電子郵件就是您的收據。}}",
 		"reference_label": "參考編號",
 		"signoff": "{product_name} 團隊",
-		"subject": "感謝您對 {product_name} 的捐款",
-		"button": "管理捐款"
+		"subject": "感謝您對 {product_name} 的捐款"
 	},
 	"donation_magic_link": {
 		"cta": "管理捐款",
@@ -74,8 +73,7 @@
 		"intro": "使用這個連結管理或取消定期捐款，並更新您的付款方式。",
 		"note": "如果您沒有要求這個連結，可以忽略這封電子郵件。",
 		"signoff": "{product_name} 團隊",
-		"subject": "管理您的 {product_name} 捐款",
-		"button": "管理捐款"
+		"subject": "管理您的 {product_name} 捐款"
 	},
 	"donation_payment_failed": {
 		"amount_label": "金額",
@@ -179,8 +177,7 @@
 		"new_email_label": "新電子郵件地址",
 		"note": "這會恢復您先前的電子郵件地址，讓您在所有裝置上登出，關閉雙重驗證，並要求您設定新密碼。",
 		"signoff": "{product_name} 安全團隊",
-		"subject": "您的 {product_name} 電子郵件地址已變更",
-		"button": "復原此變更"
+		"subject": "您的 {product_name} 電子郵件地址已變更"
 	},
 	"email_verification": {
 		"cta": "確認電子郵件地址",
@@ -189,9 +186,7 @@
 		"intro": "確認這個電子郵件地址，完成您 {product_name} 帳號的設定。",
 		"note": "如果您沒有建立 {product_name} 帳號，可以忽略這封電子郵件。",
 		"signoff": "{product_name} 團隊",
-		"subject": "確認您的 {product_name} 電子郵件地址",
-		"body": "🎉 哈囉 {username}，\n\n請點擊下方連結以驗證您的 {product_name} 帳號電子郵件地址：\n\n{verifyUrl}\n\n如果您沒有建立 {product_name} 帳號，可以直接忽略這封電子郵件。\n\n此連結在 24 小時內有效。\n\n– {product_name} 團隊",
-		"button": "驗證電子郵件"
+		"subject": "確認您的 {product_name} 電子郵件地址"
 	},
 	"email_verification_code": {
 		"expiry": "此驗證碼將在 {minutes, plural, other {# 分鐘}}後到期。",
@@ -246,8 +241,7 @@
 		"signoff": "{product_name} 團隊",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "檔案大小",
-		"subject": "您的 {product_name} 資料匯出已準備就緒",
-		"button": "下載我的資料"
+		"subject": "您的 {product_name} 資料匯出已準備就緒"
 	},
 	"inactivity_warning": {
 		"cta": "登入 {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "您的 {product_name} 帳號自 {lastActiveDate, date, long} 起就沒有使用。請在 {deletionDate, date, long} 之前登入，否則我們會刪除它。",
 		"note": "{reply, select, yes {如果您最近使用過 {product_name}，請回覆這封電子郵件。} other {如果您最近使用過 {product_name}，請聯絡此實例的管理員。}}",
 		"signoff": "{product_name} 團隊",
-		"subject": "請登入以保留您的 {product_name} 帳號",
-		"button": "登入"
+		"subject": "請登入以保留您的 {product_name} 帳號"
 	},
 	"ip_authorization": {
 		"cta": "授權此 IP 位址",
@@ -268,8 +261,7 @@
 		"location_label": "位置",
 		"note": "如果不是您，請立即變更密碼。",
 		"signoff": "{product_name} 團隊",
-		"subject": "授權從新 IP 位址登入 {product_name}",
-		"button": "授權此次登入"
+		"subject": "授權從新 IP 位址登入 {product_name}"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "此驗證碼將在 {minutes, plural, other {# 分鐘}}後到期。",
@@ -505,8 +497,7 @@
 		"location_label": "位置",
 		"note": "如果您沒有提出這項要求，可以忽略這封電子郵件。",
 		"signoff": "{product_name} 團隊",
-		"subject": "重設您的 {product_name} 密碼",
-		"button": "重設密碼"
+		"subject": "重設您的 {product_name} 密碼"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "爭議金額",
@@ -692,14 +683,19 @@
 		"signoff": "{product_name} 團隊",
 		"subject": "您的 {product_name} 驗證碼"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "登入 {product_name}",
 		"footer_reason": "您收到此電子郵件，是因為此電子郵件地址用於 {product_name} 帳號。",
 		"intro": "你在 {product_name} 的註冊已獲核准。現在可以登入了。",
 		"signoff": "{product_name} 團隊",
-		"subject": "您的 {product_name} 註冊已獲核准",
-		"body": "🎉 哈囉 {username}，\n\n好消息：您的 {product_name} 註冊已獲核准。\n\n您現在可以從這裡登入 {product_name} 應用程式：\n{channelsUrl}\n\n歡迎加入 {product_name} 社群。\n\n– {product_name} 團隊",
-		"button": "開啟 {product_name}"
+		"subject": "您的 {product_name} 註冊已獲核准"
 	},
 	"registration_pending": {
 		"cta": "查看待審核的註冊",
@@ -753,13 +749,5 @@
 		"note": "請勿與任何人分享此驗證碼。{product_name} 工作人員絕不會向您索取此驗證碼。如果您並未嘗試建立帳號，可以忽略這封電子郵件。",
 		"signoff": "{product_name} 團隊",
 		"subject": "您的 {product_name} 註冊驗證碼"
-	},
-	"unban_notification": {
-		"subject": "您的 {product_name} 帳號停權已解除",
-		"body": "🎉 哈囉 {username}，\n\n好消息：您的 {product_name} 帳號停權已解除。\n\n{reason, select,\n  null {}\n  other {原因：{reason}}\n}\n\n您現在可以重新登入並繼續正常使用 {product_name}。\n\n– {product_name} 安全團隊"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

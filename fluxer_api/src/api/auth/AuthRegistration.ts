@@ -55,7 +55,6 @@ import {
 	reserveUsername,
 	type UsernameReservation,
 } from '@app/api/user/UniqueUsernames';
-import {USERNAME_MODE_DISCRIMINATOR} from '@app/api/user/UserTag';
 import {DOB_DEFERRED_TRAIT} from '@app/api/user/UserTraits';
 import {USERNAME_CLAIM_ERROR_CODES} from '@app/api/user/username/UsernameOwnershipService';
 import {UsernamePolicyService} from '@app/api/user/username/UsernamePolicyService';
@@ -437,7 +436,13 @@ async function createAccountUnlocked(
 		const snapshot = await policy.readCached().catch((cause) => {
 			throw new FluxerError({code: APIErrorCodes.USERNAME_UNAVAILABLE, status: 503, cause});
 		});
-		const rejection = policy.check(username.toLowerCase(), {kind: 'human', userId: createUserID(0n)}, false, snapshot, null);
+		const rejection = policy.check(
+			username.toLowerCase(),
+			{kind: 'human', userId: createUserID(0n)},
+			false,
+			snapshot,
+			null,
+		);
 		if (rejection)
 			throw new FluxerError({
 				code: USERNAME_CLAIM_ERROR_CODES[rejection],
@@ -704,15 +709,21 @@ export async function resolveRegistrationUsername(params: {
 		if (explicitlyRequested) throw new ContentBlockedError();
 		usernameCandidate = undefined;
 	}
+	// Micup: a human account always gets a nonzero legacy tag, unique usernames too (the username migration keeps it
+	// reachable), so the name is unique and the tag still comes from the discriminator service.
 	if (uniqueUsernames) {
 		if (usernameCandidate && explicitlyRequested) {
 			if (await isUsernameTaken(users, usernameCandidate)) {
 				throw InputValidationError.fromCode('username', ValidationErrorCodes.USERNAME_ALREADY_TAKEN);
 			}
-			return {username: usernameCandidate, discriminator: USERNAME_MODE_DISCRIMINATOR};
+			return {
+				username: usernameCandidate,
+				discriminator: await allocateDiscriminator(discriminatorService, usernameCandidate),
+			};
 		}
 		const base = usernameCandidate ?? usernameBaseFromGlobalName(globalName);
-		return {username: await deriveAvailableUsername(users, base), discriminator: USERNAME_MODE_DISCRIMINATOR};
+		const username = await deriveAvailableUsername(users, base);
+		return {username, discriminator: await allocateDiscriminator(discriminatorService, username)};
 	}
 	if (usernameCandidate) {
 		const discriminator = await tryAllocateDiscriminator(discriminatorService, usernameCandidate);

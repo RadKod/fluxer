@@ -64,9 +64,7 @@
 		"lead": "{interval, select, month {Her ödeme için size e-postayla makbuz göndeririz.} year {Her ödeme için size e-postayla makbuz göndeririz.} other {Bu e-posta makbuzunuzdur.}}",
 		"reference_label": "Referans numarası",
 		"signoff": "{product_name} ekibi",
-		"subject": "{product_name}'e yaptığın bağış için teşekkürler",
-		"body": "Merhaba,\n\n{product_name}'e yaptığın bağış için teşekkürler! {interval, select,\n  month {tekrarlayan bağışın}\n  year {tekrarlayan bağışın}\n  other {tek seferlik bağışın}\n} başarıyla {interval, select,\n  month {ayarlandı}\n  year {ayarlandı}\n  other {işlendi}\n}.\n\nBağış detayları:\nTutar: {amount} {interval, select,\n  month {aylık}\n  year {yıllık}\n  other {}\n}\n\nStripe, kısa süre içinde fatura PDF'ini içeren ayrı bir makbuzu sana e-posta ile gönderecektir. Bu, tüm ödeme detaylarını içerir ve vergi amaçlı kullanılabilir.\n\nBu bağlantıyı kullanarak istediğin zaman bağış geçmişini görüntüleyebilir, faturaları indirebilir, {interval, select,\n  month {ve aboneliğini yönetebilir veya iptal edebilirsin}\n  year {ve aboneliğini yönetebilir veya iptal edebilirsin}\n  other {ve gelecekteki bağışlarını yönetebilirsin}\n}:\n\n{manageUrl}\n\nDesteğin {product_name}'in çalışmaya devam etmesine yardımcı oluyor. Teşekkürler!\n\n– {product_name} Ekibi",
-		"button": "Bağışlarımı yönet"
+		"subject": "{product_name}'e yaptığın bağış için teşekkürler"
 	},
 	"donation_magic_link": {
 		"cta": "Bağışları yönet",
@@ -75,8 +73,7 @@
 		"intro": "Düzenli bağışınızı yönetmek veya iptal etmek ve ödeme yönteminizi güncellemek için bu bağlantıyı kullanın.",
 		"note": "Bu bağlantıyı siz istemediyseniz bu e-postayı yok sayabilirsiniz.",
 		"signoff": "{product_name} ekibi",
-		"subject": "{product_name} bağışlarınızı yönetin",
-		"button": "Bağışlarımı yönet"
+		"subject": "{product_name} bağışlarınızı yönetin"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Tutar",
@@ -154,8 +151,7 @@
 		"intro": "Dijital Hizmetler Yasası raporunuzu {product_name} ekibine göndermek için bu kodu kullanın.",
 		"note": "Bunu siz istemediyseniz bu e-postayı yok sayabilirsiniz.",
 		"signoff": "{product_name} güvenlik ekibi",
-		"subject": "DSA raporunuz için {product_name} kodunuz",
-		"body": "Merhaba,\n\n{product_name}'deki Dijital Hizmetler Yasası raporunu göndermek için aşağıdaki doğrulama kodunu kullan:\n\n{code}\n\nBu kod {expiresAt, date, full} {expiresAt, time, short} tarihinde sona erecektir.\n\nBunu sen talep etmediysen, bu e-postayı güvenle yok sayabilirsin.\n\n– {product_name} Güvenlik Ekibi"
+		"subject": "DSA raporunuz için {product_name} kodunuz"
 	},
 	"email_change_new": {
 		"expiry": "Bu kodun süresi {minutes, plural, one {# dakika} other {# dakika}} içinde dolacak.",
@@ -181,8 +177,7 @@
 		"new_email_label": "Yeni e-posta adresi",
 		"note": "Bu işlem önceki e-posta adresinizi geri getirir, sizi tüm cihazlardan çıkarır, iki faktörlü kimlik doğrulamayı kapatır ve yeni bir şifre belirlemenizi ister.",
 		"signoff": "{product_name} güvenlik ekibi",
-		"subject": "{product_name} e-posta adresiniz değiştirildi",
-		"button": "Değişikliği geri al"
+		"subject": "{product_name} e-posta adresiniz değiştirildi"
 	},
 	"email_verification": {
 		"cta": "E-posta adresini onayla",
@@ -191,9 +186,7 @@
 		"intro": "{product_name} hesabınızın kurulumunu tamamlamak için bu e-posta adresini onaylayın.",
 		"note": "Bir {product_name} hesabı oluşturmadıysanız bu e-postayı yok sayabilirsiniz.",
 		"signoff": "{product_name} ekibi",
-		"subject": "{product_name} e-posta adresinizi onaylayın",
-		"body": "🎉 Merhaba {username},\n\n{product_name} hesabının e-posta adresini aşağıdaki bağlantıya tıklayarak doğrula:\n\n{verifyUrl}\n\nBir {product_name} hesabı oluşturmadıysan, bu e-postayı güvenle yok sayabilirsin.\n\nBu bağlantı 24 saat geçerlidir.\n\n– {product_name} Ekibi",
-		"button": "E-postamı doğrula"
+		"subject": "{product_name} e-posta adresinizi onaylayın"
 	},
 	"email_verification_code": {
 		"expiry": "Bu kodun süresi {minutes, plural, one {# dakika} other {# dakika}} içinde dolacak.",
@@ -248,8 +241,7 @@
 		"signoff": "{product_name} ekibi",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Dosya boyutu",
-		"subject": "{product_name} veri dışa aktarımınız hazır",
-		"button": "Verilerimi indir"
+		"subject": "{product_name} veri dışa aktarımınız hazır"
 	},
 	"inactivity_warning": {
 		"cta": "{product_name} hesabınıza giriş yapın",
@@ -257,9 +249,7 @@
 		"intro": "{product_name} hesabınız {lastActiveDate, date, long} tarihinden beri kullanılmıyor. {deletionDate, date, long} tarihinden önce giriş yapın, yoksa hesabınızı sileceğiz.",
 		"note": "{reply, select, yes {{product_name} hizmetini yakın zamanda kullandıysanız bu e-postayı yanıtlayın.} other {{product_name} hizmetini yakın zamanda kullandıysanız bu kurulumun yöneticileriyle iletişime geçin.}}",
 		"signoff": "{product_name} ekibi",
-		"subject": "{product_name} hesabınızı tutmak için giriş yapın",
-		"body": "Merhaba {username},\n\n{lastActiveDate, date, full} tarihinden beri {product_name} hesabında herhangi bir etkinlik görmedik.\n\n{deletionDate, date, full} {deletionDate, time, short} tarihine kadar giriş yapmazsan, hesabın hareketsizlik nedeniyle kalıcı olarak silinecektir.\n\nBuradan giriş yap:\n{loginUrl}\n\n{support_email, select, null {{product_name}'i yakın zamanda kullandıysan, lütfen hemen bu kurulumun yöneticileriyle iletişime geç.} other {{product_name}'i yakın zamanda kullandıysan, lütfen hemen destek ekibimizle iletişime geç.}}\n\n– {product_name} Ekibi",
-		"button": "Giriş yap"
+		"subject": "{product_name} hesabınızı tutmak için giriş yapın"
 	},
 	"ip_authorization": {
 		"cta": "Bu IP adresini yetkilendirin",
@@ -271,8 +261,7 @@
 		"location_label": "Konum",
 		"note": "Siz değilseniz şifrenizi hemen değiştirin.",
 		"signoff": "{product_name} ekibi",
-		"subject": "Yeni bir IP adresinden yapılan {product_name} girişini yetkilendirin",
-		"button": "Bu girişi onayla"
+		"subject": "Yeni bir IP adresinden yapılan {product_name} girişini yetkilendirin"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Bu kodun süresi {minutes, plural, one {# dakika} other {# dakika}} içinde dolacak.",
@@ -508,8 +497,7 @@
 		"location_label": "Konum",
 		"note": "Bunu siz istemediyseniz bu e-postayı yok sayabilirsiniz.",
 		"signoff": "{product_name} ekibi",
-		"subject": "{product_name} şifrenizi sıfırlayın",
-		"button": "Şifremi sıfırla"
+		"subject": "{product_name} şifrenizi sıfırlayın"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "İtiraz edilen tutar",
@@ -695,14 +683,19 @@
 		"signoff": "{product_name} ekibi",
 		"subject": "{product_name} onay kodunuz"
 	},
+	"referral_reward_ready": {
+		"cta": "{product_name}'i aç",
+		"footer_reason": "Bu e-postayı, {product_name} referans programına katıldığınız için aldınız.",
+		"intro": "Referans ödülün hazır. {product_name}'de Ayarlar → Referans bölümünden görebilirsin.",
+		"signoff": "{product_name} ekibi",
+		"subject": "Referans ödülün hazır"
+	},
 	"registration_approved": {
 		"cta": "{product_name} hesabınıza giriş yapın",
 		"footer_reason": "Bu e-postayı, bu adres bir {product_name} hesabı için kullanıldığı için aldınız.",
 		"intro": "{product_name} kaydın onaylandı. Artık giriş yapabilirsin.",
 		"signoff": "{product_name} ekibi",
-		"subject": "{product_name} kaydın onaylandı",
-		"body": "🎉 Merhaba {username},\n\nİyi haber: {product_name} kaydın onaylandı.\n\nArtık {product_name} uygulamasına buradan giriş yapabilirsin:\n{channelsUrl}\n\n{product_name} topluluğuna hoş geldin.\n\n– {product_name} Ekibi",
-		"button": "{product_name}'i aç"
+		"subject": "{product_name} kaydın onaylandı"
 	},
 	"registration_pending": {
 		"cta": "Bekleyen kayıtları incele",
@@ -728,8 +721,7 @@
 		"report_label": "Rapor Kimliği",
 		"signoff": "{product_name} ekibi",
 		"subject": "{product_name} raporunuz incelendi",
-		"thanks": "{outcome, select, removed {Bildirdiğiniz için teşekkürler. Sizinki gibi raporlar {product_name} platformunu herkes için güvenli tutmaya yardımcı oluyor.} restricted {Bildirdiğiniz için teşekkürler. Sizinki gibi raporlar {product_name} platformunu herkes için güvenli tutmaya yardımcı oluyor.} action_taken {Bildirdiğiniz için teşekkürler. Sizinki gibi raporlar {product_name} platformunu herkes için güvenli tutmaya yardımcı oluyor.} other {Bize haber verdiğiniz için teşekkürler.}}",
-		"body": "Merhaba {username},\n\nRaporun (Kimlik: {reportId}) Güvenlik Ekibimiz tarafından incelendi.{hasComment, select, yes {\n\nGüvenlik Ekibinin yanıtı:\n{publicComment}} other {}}\n\n{product_name}'i herkes için güvenli tutmaya yardımcı olduğun için teşekkür ederiz. Tüm raporları ciddiye alıyoruz ve topluluğa katkını takdir ediyoruz.\n\n{safety_email, select, null {Bu sonuç hakkında herhangi bir sorun veya endişen varsa, lütfen bu kurulumun yöneticileriyle iletişime geç.} other {Bu sonuç hakkında herhangi bir sorun veya endişen varsa, lütfen {safety_email} adresine ulaş.}}\n\n– {product_name} Güvenlik Ekibi"
+		"thanks": "{outcome, select, removed {Bildirdiğiniz için teşekkürler. Sizinki gibi raporlar {product_name} platformunu herkes için güvenli tutmaya yardımcı oluyor.} restricted {Bildirdiğiniz için teşekkürler. Sizinki gibi raporlar {product_name} platformunu herkes için güvenli tutmaya yardımcı oluyor.} action_taken {Bildirdiğiniz için teşekkürler. Sizinki gibi raporlar {product_name} platformunu herkes için güvenli tutmaya yardımcı oluyor.} other {Bize haber verdiğiniz için teşekkürler.}}"
 	},
 	"self_deletion_scheduled": {
 		"footer_reason": "Bu e-postayı, {product_name} hesabınızın silinmesini istediğiniz için aldınız.",
@@ -757,13 +749,5 @@
 		"note": "Bu kodu kimseyle paylaşmayın. {product_name} çalışanları bu kodu asla istemez. Hesap oluşturmaya çalışmadıysanız bu e-postayı yok sayabilirsiniz.",
 		"signoff": "{product_name} ekibi",
 		"subject": "{product_name} kayıt kodunuz"
-	},
-	"unban_notification": {
-		"subject": "{product_name} hesabının askıya alınması kaldırıldı",
-		"body": "🎉 Merhaba {username},\n\nİyi haber: {product_name} hesabının askıya alınması kaldırıldı.\n\n{reason, select,\n  null {}\n  other {Sebep: {reason}}\n}\n\nArtık tekrar giriş yapabilir ve {product_name}'i normal şekilde kullanmaya devam edebilirsin.\n\n– {product_name} Güvenlik Ekibi"
-	},
-	"referral_reward_ready": {
-		"subject": "Referans ödülün hazır",
-		"body": "🎉 Merhaba {username},\n\nReferans ödülün hazır. {product_name}'de Ayarlar → Referans bölümünden görebilirsin.\n\n– {product_name} Ekibi"
 	}
 }

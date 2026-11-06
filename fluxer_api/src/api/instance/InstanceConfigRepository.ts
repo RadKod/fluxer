@@ -12,6 +12,7 @@ import {syncChannelThreadsConfig} from '@app/api/experiment/ChannelThreadsGate';
 import {setCachedGuildVisitsConfig} from '@app/api/experiment/GuildVisitsGate';
 import type {IStorageService} from '@app/api/infrastructure/IStorageService';
 import {
+	type AccountIdentity,
 	getCachedAccountIdentityFetchedAt,
 	invalidateCachedAccountIdentity,
 	resolveAccountIdentity,
@@ -91,13 +92,12 @@ import {
 	LegacyDateOfBirthEnforcements,
 } from '@fluxer/constants/src/AccountConfigConstants';
 import {
-	type AccountIdentity,
-	type AccountIdentityDecisionSource as BaseAccountIdentityDecisionSource,
 	AccountIdentityDecisionSources,
 	type AccountIdentityLockReason,
 	AccountIdentityLockReasons,
 	type AccountIdentityMode,
 	AccountIdentityModes,
+	type AccountIdentityDecisionSource as BaseAccountIdentityDecisionSource,
 	normalizeAccountIdentity,
 	type TagStyle,
 	TagStyles,
@@ -3360,7 +3360,7 @@ export class InstanceConfigRepository {
 				? identifierFirstFromLegacy(stored.identifier_first)
 				: IdentifierFirstModes.AUTO;
 		const cache = this.configCache;
-		const {written} = await this.compareAndSetStoredValue(cache, AUTH_CONFIG_KEY, (raw) =>
+		const {written} = await this.compareAndSetStoredValue<AuthConfig | undefined>(cache, AUTH_CONFIG_KEY, (raw) =>
 			raw === authRaw ? this.nextAuthValue(raw, {identifier_first: mode}) : {value: null, result: undefined},
 		);
 		if (!written) return;

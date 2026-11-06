@@ -13,6 +13,8 @@ import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
+const SETUP_CONFIGURED = Config.instance.setup.configured;
+
 interface RevokeResponse {
 	revoked: Array<string>;
 	already_redeemed: Array<string>;
@@ -28,6 +30,8 @@ describe('admin gift code revocation on a self-hosted instance', () => {
 	beforeAll(async () => {
 		previousSelfHosted = Config.instance.selfHosted;
 		Config.instance.selfHosted = true;
+		// Self-hosted sign-ups after the first (admin) account need finished setup.
+		Config.instance.setup.configured = true;
 		harness = await createApiTestHarness();
 	});
 	beforeEach(async () => {
@@ -39,6 +43,7 @@ describe('admin gift code revocation on a self-hosted instance', () => {
 	afterAll(async () => {
 		await harness?.shutdown();
 		Config.instance.selfHosted = previousSelfHosted;
+		Config.instance.setup.configured = SETUP_CONFIGURED;
 	});
 
 	async function createAdmin(acls: Array<string> = [AdminACLs.GIFT_CODES_REVOKE]): Promise<TestAccount> {

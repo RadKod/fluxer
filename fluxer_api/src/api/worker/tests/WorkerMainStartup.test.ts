@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {Config} from '@app/api/Config';
+import * as CassandraSchemaStartup from '@app/api/database/CassandraSchemaStartup';
 import * as ActivityEvents from '@app/api/infrastructure/activity/ActivityEvents';
 import * as SharedLists from '@app/api/infrastructure/activity/SharedLists';
 import * as ContentBlocklistCaches from '@app/api/middleware/ContentBlocklistCaches';
@@ -40,6 +41,9 @@ describe('worker startup', () => {
 		vi.spyOn(LifecycleHooks, 'registerMicupUserLifecycleHooks').mockImplementation(() => {});
 		vi.spyOn(Cassandra, 'initCassandra').mockResolvedValue(undefined);
 		vi.spyOn(Cassandra, 'shutdownCassandra').mockResolvedValue(undefined);
+		// Upstream creates the schema on self-hosted startup; the client is mocked away here.
+		vi.spyOn(Cassandra, 'getClient').mockReturnValue({} as ReturnType<typeof Cassandra.getClient>);
+		vi.spyOn(CassandraSchemaStartup, 'ensureCassandraSchema').mockResolvedValue(undefined);
 		vi.spyOn(ServiceRegistry, 'createSnowflakeService').mockReturnValue(
 			new MockSnowflakeService() as unknown as ReturnType<typeof ServiceRegistry.createSnowflakeService>,
 		);

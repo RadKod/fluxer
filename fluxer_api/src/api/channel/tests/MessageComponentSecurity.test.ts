@@ -115,7 +115,7 @@ it('an unclaimed account cannot click', async () => {
 	await unclaimAccount(harness, f.member.userId);
 	const router = spyRouter();
 	await clickButton(harness, f.member.token, f.channelId, messageId)
-		.expect(400, APIErrorCodes.UNCLAIMED_ACCOUNT_CANNOT_SEND_MESSAGES)
+		.expect(403, APIErrorCodes.UNCLAIMED_ACCOUNT_CANNOT_SEND_MESSAGES)
 		.execute();
 	expect(router).not.toHaveBeenCalled();
 });

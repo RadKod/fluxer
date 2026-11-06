@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+
 import {crc32} from 'node:zlib';
 import type {UserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
 import {executeConditional, executeQuery} from '@app/api/database/CassandraQueryExecution';
 import {Db, type DbOp, type PreparedQuery} from '@app/api/database/CassandraTypes';
+import {LocalDate} from '@app/api/database/LocalDate';
 import type {
 	UsernameClaimRow,
 	UsernameEntitlementRow,
@@ -22,7 +24,6 @@ import {
 	UsernameOwners,
 	Users,
 } from '@app/api/Tables';
-import cassandra, {types} from 'cassandra-driver';
 
 function patch<T extends object>(values: Partial<T>): Partial<{[K in keyof T]: DbOp<T[K]>}> {
 	return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, Db.set(value)])) as Partial<{
@@ -48,8 +49,8 @@ export function emptyOwner(user_id: UserID): UsernameOwnerRow {
 export function clearOperation(): Partial<UsernameOwnerRow> {
 	return Object.fromEntries(USERNAME_OWNER_COLUMNS.filter((key) => key.startsWith('op_')).map((key) => [key, null]));
 }
-export function intentDay(at: Date): types.LocalDate {
-	return types.LocalDate.fromString(at.toISOString().slice(0, 10));
+export function intentDay(at: Date): LocalDate {
+	return LocalDate.fromString(at.toISOString().slice(0, 10));
 }
 // Micup: a snowflake's low bits are its per-millisecond sequence (mostly 0), so the bucket hashes the whole id.
 export function intentBucket(userId: UserID): number {
@@ -57,6 +58,14 @@ export function intentBucket(userId: UserID): number {
 }
 export function holdBucket(name: string): number {
 	return crc32(name) % 1024;
+}
+
+// The driver loads only in Cassandra mode (upstream), so its error classes are matched by name rather than imported.
+const WRITE_TIMEOUT_RESPONSE_CODE = 0x1100;
+function isUncertainWriteTimeout(cause: unknown): boolean {
+	if (!(cause instanceof Error)) return false;
+	if (cause.name === 'OperationTimedOutError') return true;
+	return cause.name === 'ResponseError' && (cause as {code?: unknown}).code === WRITE_TIMEOUT_RESPONSE_CODE;
 }
 
 export class UsernameOwnershipRepository {
@@ -71,14 +80,7 @@ export class UsernameOwnershipRepository {
 		try {
 			await executeConditional(query);
 		} catch (cause) {
-			if (
-				!(cause instanceof cassandra.errors.OperationTimedOutError) &&
-				!(
-					cause instanceof cassandra.errors.ResponseError &&
-					cause.code === cassandra.types.responseErrorCodes.writeTimeout
-				)
-			)
-				throw cause;
+			if (!isUncertainWriteTimeout(cause)) throw cause;
 		}
 		return read();
 	}
@@ -181,7 +183,7 @@ export class UsernameOwnershipRepository {
 				limit,
 			}).bind({
 				bucket,
-				day: types.LocalDate.fromString(day),
+				day: LocalDate.fromString(day),
 				...(after ? {after_user_id: after.user_id, after_op_id: after.op_id} : {}),
 			}),
 		);

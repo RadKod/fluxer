@@ -167,7 +167,10 @@ function createApp(
 		}),
 	};
 	const storage = {uploadObject: vi.fn(async () => undefined), deleteObject: vi.fn(async () => undefined)};
-	const media = {getMetadata: vi.fn(async () => ({format: 'wav', content_type: 'audio/wav', duration: 0.5}))};
+	const media = {
+		getMetadata: vi.fn(async () => ({format: 'wav', content_type: 'audio/wav', duration: 0.5})),
+		getAudioDurationSeconds: vi.fn(async () => null),
+	};
 	const getConfigSnapshot = vi.fn(() => snapshot);
 	const service = new EntranceSoundService(
 		repository as unknown as EntranceSoundRepository,

@@ -19,6 +19,7 @@ import {contentModerationService} from '@app/api/infrastructure/ContentModeratio
 import type {IMediaService} from '@app/api/infrastructure/IMediaService';
 import type {ISnowflakeService} from '@app/api/infrastructure/ISnowflakeService';
 import type {IStorageService} from '@app/api/infrastructure/IStorageService';
+import {hashFileSha256} from '@app/api/infrastructure/StorageObjectHelpers';
 import {Logger} from '@app/api/Logger';
 import type {LimitConfigService} from '@app/api/limits/LimitConfigService';
 import {resolveLimitSafe} from '@app/api/limits/LimitConfigUtils';
@@ -296,13 +297,11 @@ export class FeedMediaService {
 			await this.scan({user, postId, uploadKey, contentHash: metadata.content_hash, localPath});
 			const attachmentId = createAttachmentID(await this.deps.snowflakeService.generate());
 			const cdnKey = makeAttachmentCdnKey(channelId, attachmentId, attachment.filename);
-			const stored = await storageService.copyObjectWithMetadataStripping({
+			const stored = await this.storeStripped({
 				sourceBucket: uploads,
 				sourceKey: uploadKey,
-				destinationBucket: Config.s3.buckets.cdn,
 				destinationKey: cdnKey,
 				contentType: metadata.content_type,
-				sourceLocalPath: localPath,
 			});
 			// Binding the trace consumes the upload, so a second post cannot reuse it.
 			if (!(await attachmentUploadTraceRepository.bindAttachment(uploadKey, attachmentId))) {
@@ -327,6 +326,52 @@ export class FeedMediaService {
 			};
 		} finally {
 			await fs.promises.unlink(localPath).catch(() => undefined);
+		}
+	}
+
+	// Copies the upload to the CDN with its metadata stripped by the media proxy; when stripping fails the original is
+	// kept, the same as message attachments.
+	private async storeStripped(params: {
+		sourceBucket: string;
+		sourceKey: string;
+		destinationKey: string;
+		contentType: string;
+	}): Promise<{contentLength: number; contentHash: string; width?: number; height?: number} | null> {
+		const {storageService, mediaService} = this.deps;
+		const {sourceBucket, sourceKey, destinationKey, contentType} = params;
+		const destinationBucket = Config.s3.buckets.cdn;
+		const strippedPath = temporaryFile();
+		try {
+			const stripped = await mediaService.stripObjectMetadata(
+				{bucket: sourceBucket, key: sourceKey},
+				contentType,
+				strippedPath,
+			);
+			if (!stripped) {
+				Logger.error({contentType, sourceBucket, sourceKey}, 'Failed to strip feed media metadata');
+				await storageService.copyObject({
+					sourceBucket,
+					sourceKey,
+					destinationBucket,
+					destinationKey,
+					newContentType: contentType,
+				});
+				return null;
+			}
+			const [contentHash, {size: contentLength}] = await Promise.all([
+				hashFileSha256(strippedPath),
+				fs.promises.stat(strippedPath),
+			]);
+			await storageService.uploadObjectFromFile({
+				bucket: destinationBucket,
+				key: destinationKey,
+				filePath: strippedPath,
+				contentType: stripped.contentType,
+				contentLength,
+			});
+			return {...stripped, contentLength, contentHash};
+		} finally {
+			await fs.promises.unlink(strippedPath).catch(() => undefined);
 		}
 	}
 

@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {We email you a receipt for each payment.} year {We email you a receipt for each payment.} other {This email is your receipt.}}",
 		"reference_label": "Reference",
 		"signoff": "The {product_name} team",
-		"subject": "Thank you for your {product_name} donation",
-		"button": "Manage donations"
+		"subject": "Thank you for your {product_name} donation"
 	},
 	"donation_magic_link": {
 		"cta": "Manage donations",
@@ -74,8 +73,7 @@
 		"intro": "Use this link to manage or cancel a recurring donation and update your payment method.",
 		"note": "If you didn't ask for this link, you can ignore this email.",
 		"signoff": "The {product_name} team",
-		"subject": "Manage your {product_name} donations",
-		"button": "Manage donations"
+		"subject": "Manage your {product_name} donations"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Amount",
@@ -179,8 +177,7 @@
 		"new_email_label": "New email address",
 		"note": "This brings back your previous email address, signs you out everywhere, turns off two-factor authentication and asks you to set a new password.",
 		"signoff": "The {product_name} safety team",
-		"subject": "Your {product_name} email address was changed",
-		"button": "Undo this change"
+		"subject": "Your {product_name} email address was changed"
 	},
 	"email_verification": {
 		"cta": "Confirm email address",
@@ -189,9 +186,7 @@
 		"intro": "Confirm this email address to finish setting up your {product_name} account.",
 		"note": "If you didn't create a {product_name} account, you can ignore this email.",
 		"signoff": "The {product_name} team",
-		"subject": "Confirm your {product_name} email address",
-		"body": "🎉 Hello {username},\n\nPlease verify the email address for your {product_name} account by clicking the link below:\n\n{verifyUrl}\n\nIf you didn't create a {product_name} account, you can safely ignore this email.\n\nThis link is valid for 24 hours.\n\n– {product_name} Team",
-		"button": "Verify email"
+		"subject": "Confirm your {product_name} email address"
 	},
 	"email_verification_code": {
 		"expiry": "This code expires in {minutes, plural, one {# minute} other {# minutes}}.",
@@ -246,8 +241,7 @@
 		"signoff": "The {product_name} team",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "File size",
-		"subject": "Your {product_name} data export is ready",
-		"button": "Download my data"
+		"subject": "Your {product_name} data export is ready"
 	},
 	"inactivity_warning": {
 		"cta": "Sign in to {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "Your {product_name} account has been inactive since {lastActiveDate, date, long}. Sign in before {deletionDate, date, long}, or we'll delete it.",
 		"note": "{reply, select, yes {If you used {product_name} recently, reply to this email.} other {If you used {product_name} recently, contact the admins of this instance.}}",
 		"signoff": "The {product_name} team",
-		"subject": "Sign in to keep your {product_name} account",
-		"button": "Log in"
+		"subject": "Sign in to keep your {product_name} account"
 	},
 	"ip_authorization": {
 		"cta": "Authorise this IP address",
@@ -268,8 +261,7 @@
 		"location_label": "Location",
 		"note": "If it wasn't you, change your password now.",
 		"signoff": "The {product_name} team",
-		"subject": "Authorise a {product_name} sign-in from a new IP address",
-		"button": "Authorise this login"
+		"subject": "Authorise a {product_name} sign-in from a new IP address"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "This code expires in {minutes, plural, one {# minute} other {# minutes}}.",
@@ -505,8 +497,7 @@
 		"location_label": "Location",
 		"note": "If you didn't ask for this, you can ignore this email.",
 		"signoff": "The {product_name} team",
-		"subject": "Reset your {product_name} password",
-		"button": "Reset password"
+		"subject": "Reset your {product_name} password"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Amount disputed",
@@ -692,14 +683,19 @@
 		"signoff": "The {product_name} team",
 		"subject": "Your {product_name} confirmation code"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Sign in to {product_name}",
 		"footer_reason": "You received this email because this address was used for a {product_name} account.",
 		"intro": "Your sign-up on {product_name} was approved. You can sign in now.",
 		"signoff": "The {product_name} team",
-		"subject": "Your {product_name} registration has been approved",
-		"body": "🎉 Hello {username},\n\nGood news: your {product_name} registration has been approved.\n\nYou can now log in to the {product_name} app here:\n{channelsUrl}\n\nWelcome to the {product_name} community.\n\n– {product_name} Team",
-		"button": "Open {product_name}"
+		"subject": "Your {product_name} registration has been approved"
 	},
 	"registration_pending": {
 		"cta": "Review pending registrations",
@@ -753,13 +749,5 @@
 		"note": "Don't share this code with anyone. {product_name} staff will never ask for it. If you didn't try to create an account, you can ignore this email.",
 		"signoff": "The {product_name} team",
 		"subject": "Your {product_name} sign-up code"
-	},
-	"unban_notification": {
-		"subject": "Your {product_name} account suspension has been lifted",
-		"body": "🎉 Hello {username},\n\nGood news: your {product_name} account suspension has been lifted.\n\n{reason, select,\n  null {}\n  other {Reason: {reason}}\n}\n\nYou can now log back in and continue using {product_name} as normal.\n\n– {product_name} Safety Team"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

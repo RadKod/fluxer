@@ -29,10 +29,17 @@ describe('SSO display name', () => {
 			.execute();
 
 	const provisionWithName = async (name: string) => {
-		const start = await createBuilderWithoutAuth<{state: string}>(harness).post('/auth/sso/start').body({}).execute();
+		const start = await createBuilderWithoutAuth<{state: string; client_binding: string}>(harness)
+			.post('/auth/sso/start')
+			.body({})
+			.execute();
 		const {token} = await createBuilderWithoutAuth<{token: string}>(harness)
 			.post('/auth/sso/complete')
-			.body({code: JSON.stringify({email: createUniqueEmail('sso-name'), name}), state: start.state})
+			.body({
+				code: JSON.stringify({email: createUniqueEmail('sso-name'), name}),
+				state: start.state,
+				client_binding: start.client_binding,
+			})
 			.execute();
 		return createBuilder<Me>(harness, token).get('/users/@me').execute();
 	};

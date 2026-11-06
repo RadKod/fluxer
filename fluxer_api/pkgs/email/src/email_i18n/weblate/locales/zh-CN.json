@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {每次付款后，我们都会通过邮件向你发送收据。} year {每次付款后，我们都会通过邮件向你发送收据。} other {此邮件就是你的收据。}}",
 		"reference_label": "参考编号",
 		"signoff": "{product_name} 团队",
-		"subject": "感谢你的 {product_name} 捐赠",
-		"button": "管理捐赠"
+		"subject": "感谢你的 {product_name} 捐赠"
 	},
 	"donation_magic_link": {
 		"cta": "管理捐赠",
@@ -74,8 +73,7 @@
 		"intro": "使用此链接管理或取消定期捐赠，并更新你的付款方式。",
 		"note": "如果你没有请求此链接，可以忽略此邮件。",
 		"signoff": "{product_name} 团队",
-		"subject": "管理你的 {product_name} 捐赠",
-		"button": "管理捐赠"
+		"subject": "管理你的 {product_name} 捐赠"
 	},
 	"donation_payment_failed": {
 		"amount_label": "金额",
@@ -179,8 +177,7 @@
 		"new_email_label": "新邮箱",
 		"note": "这会恢复你之前的邮箱地址，让你在所有设备上退出登录，关闭双重认证，并要求你设置新密码。",
 		"signoff": "{product_name} 安全团队",
-		"subject": "你的 {product_name} 邮箱地址已更改",
-		"button": "撤销此更改"
+		"subject": "你的 {product_name} 邮箱地址已更改"
 	},
 	"email_verification": {
 		"cta": "确认邮箱地址",
@@ -189,9 +186,7 @@
 		"intro": "确认此邮箱地址，完成你的 {product_name} 账号设置。",
 		"note": "如果你没有创建 {product_name} 账号，可以忽略此邮件。",
 		"signoff": "{product_name} 团队",
-		"subject": "确认你的 {product_name} 邮箱地址",
-		"body": "🎉 你好 {username}，\n\n请点击下方链接验证你的 {product_name} 账号邮箱地址：\n\n{verifyUrl}\n\n如果你未创建 {product_name} 账号，可以放心忽略此邮件。\n\n此链接 24 小时内有效。\n\n– {product_name} 团队",
-		"button": "验证邮箱"
+		"subject": "确认你的 {product_name} 邮箱地址"
 	},
 	"email_verification_code": {
 		"expiry": "此验证码将在 {minutes, plural, other {# 分钟}}后过期。",
@@ -246,8 +241,7 @@
 		"signoff": "{product_name} 团队",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "文件大小",
-		"subject": "你的 {product_name} 数据导出已准备好",
-		"button": "下载我的数据"
+		"subject": "你的 {product_name} 数据导出已准备好"
 	},
 	"inactivity_warning": {
 		"cta": "登录 {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "你的 {product_name} 账号自 {lastActiveDate, date, long} 起一直未使用。请在 {deletionDate, date, long} 之前登录，否则我们将删除它。",
 		"note": "{reply, select, yes {如果你最近使用过 {product_name}，请回复此邮件。} other {如果你最近使用过 {product_name}，请联系此实例的管理员。}}",
 		"signoff": "{product_name} 团队",
-		"subject": "登录以保留你的 {product_name} 账号",
-		"button": "登录"
+		"subject": "登录以保留你的 {product_name} 账号"
 	},
 	"ip_authorization": {
 		"cta": "授权此 IP 地址",
@@ -268,8 +261,7 @@
 		"location_label": "位置",
 		"note": "如果不是你，请立即更改密码。",
 		"signoff": "{product_name} 团队",
-		"subject": "授权从新 IP 地址登录 {product_name}",
-		"button": "授权此次登录"
+		"subject": "授权从新 IP 地址登录 {product_name}"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "此验证码将在 {minutes, plural, other {# 分钟}}后过期。",
@@ -505,8 +497,7 @@
 		"location_label": "位置",
 		"note": "如果你没有提出此请求，可以忽略此邮件。",
 		"signoff": "{product_name} 团队",
-		"subject": "重置你的 {product_name} 账号密码",
-		"button": "重置密码"
+		"subject": "重置你的 {product_name} 账号密码"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "争议金额",
@@ -692,14 +683,19 @@
 		"signoff": "{product_name} 团队",
 		"subject": "你的 {product_name} 验证码"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "登录 {product_name}",
 		"footer_reason": "你收到此邮件是因为此地址曾用于一个 {product_name} 账号。",
 		"intro": "你在 {product_name} 的注册已获批准。现在可以登录了。",
 		"signoff": "{product_name} 团队",
-		"subject": "你的 {product_name} 注册已通过",
-		"body": "🎉 你好 {username}，\n\n好消息：你的 {product_name} 注册已通过。\n\n你现在可以登录 {product_name} 应用：\n{channelsUrl}\n\n欢迎加入 {product_name} 社区。\n\n– {product_name} 团队",
-		"button": "打开 {product_name}"
+		"subject": "你的 {product_name} 注册已通过"
 	},
 	"registration_pending": {
 		"cta": "查看待审批的注册",
@@ -753,13 +749,5 @@
 		"note": "请勿与任何人分享此验证码。{product_name} 工作人员绝不会向你索要此验证码。如果你并未尝试创建账号，可以忽略此邮件。",
 		"signoff": "{product_name} 团队",
 		"subject": "你的 {product_name} 注册验证码"
-	},
-	"unban_notification": {
-		"subject": "你的 {product_name} 账号已解除封禁",
-		"body": "🎉 你好 {username}，\n\n好消息：你的 {product_name} 账号已解除封禁。\n\n{reason, select,\n  null {}\n  other {原因：{reason}}\n}\n\n你现在可以重新登录，继续正常使用 {product_name}。\n\n– {product_name} 安全团队"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

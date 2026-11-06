@@ -41,12 +41,21 @@ describe('SSO sign-up language', () => {
 	});
 
 	const signInWithSso = async (identity: Identity, acceptLanguage?: string): Promise<SignedIn> => {
-		const start = await createBuilderWithoutAuth<{state: string}>(harness).post('/auth/sso/start').body({}).execute();
+		const start = await createBuilderWithoutAuth<{state: string; client_binding: string}>(harness)
+			.post('/auth/sso/start')
+			.body({})
+			.execute();
 		const complete = createBuilderWithoutAuth<SignedIn>(harness).post('/auth/sso/complete');
 		if (acceptLanguage) {
 			complete.header('accept-language', acceptLanguage);
 		}
-		return complete.body({code: JSON.stringify({...identity, email_verified: true}), state: start.state}).execute();
+		return complete
+			.body({
+				code: JSON.stringify({...identity, email_verified: true}),
+				state: start.state,
+				client_binding: start.client_binding,
+			})
+			.execute();
 	};
 
 	const languagesOf = async ({token, user_id}: SignedIn) => {

@@ -3,6 +3,7 @@
 import {executeQuery, setCassandraQueryExecutorForTesting} from '@app/api/database/CassandraQueryExecution';
 import {defineTable} from '@app/api/database/CassandraTableDsl';
 import {Db, type PreparedQuery} from '@app/api/database/CassandraTypes';
+import {LocalDate} from '@app/api/database/LocalDate';
 import {PostgresKvQueryExecutor} from '@app/api/database/PostgresKvQueryExecutor';
 import {InMemoryCassandraQueryExecutor} from '@app/api/test/InMemoryCassandraQueryExecutor';
 import type {IPostgresClient} from '@pkgs/postgres/src/Client';
@@ -35,17 +36,16 @@ describe('executor read options and failures', () => {
 		expect(await db.executeQuery(Nullable.select().bind({}))).toEqual([{id: 'u', value: null}]);
 	});
 	it('matches and deletes intent partitions using equivalent LocalDate instances', async () => {
-		const Intents = defineTable<{day: cassandra.types.LocalDate; id: string; value: string}, 'day' | 'id', 'day'>({
+		const Intents = defineTable<{day: LocalDate; id: string; value: string}, 'day' | 'id', 'day'>({
 			name: 'driver_execution_intents',
 			columns: ['day', 'id', 'value'],
 			primaryKey: ['day', 'id'],
 			partitionKey: ['day'],
 		});
 		const db = new InMemoryCassandraQueryExecutor();
-		await db.executeQuery(
-			Intents.upsertAll({day: cassandra.types.LocalDate.fromString('2026-10-09'), id: 'u', value: 'intent'}),
-		);
-		const day = cassandra.types.LocalDate.fromString('2026-10-09');
+		await db.executeQuery(Intents.upsertAll({day: LocalDate.fromString('2026-10-09'), id: 'u', value: 'intent'}));
+		// Upstream's own LocalDate (the driver loads only in Cassandra mode); two equal instances match one partition.
+		const day = LocalDate.fromString('2026-10-09');
 		expect(await db.executeQuery(Intents.select({where: Intents.where.eq('day')}).bind({day}))).toHaveLength(1);
 		await db.executeQuery(Intents.deleteByPk({day, id: 'u'}));
 		expect(await db.executeQuery(Intents.select().bind({}))).toEqual([]);

@@ -150,7 +150,8 @@ describe('account config migrations', () => {
 			[true, 'off', true, DateOfBirthPolicies.ASK],
 			[true, 'new_accounts', true, DateOfBirthPolicies.REQUIRE_NEW_ACCOUNTS],
 			[true, 'all', true, DateOfBirthPolicies.REQUIRE_ALL],
-			[undefined, 'new_accounts', true, DateOfBirthPolicies.OFF],
+			// sanalyer (Micup): a self-hosted instance collects a birth date unless told otherwise (upstream: off).
+			[undefined, 'new_accounts', true, DateOfBirthPolicies.REQUIRE_NEW_ACCOUNTS],
 			[undefined, 'new_accounts', false, DateOfBirthPolicies.REQUIRE_NEW_ACCOUNTS],
 			[undefined, undefined, false, DateOfBirthPolicies.REQUIRE_NEW_ACCOUNTS],
 		];

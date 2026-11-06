@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {createUserID} from '@app/api/BrandedTypes';
+import {LocalDate} from '@app/api/database/LocalDate';
 import {EMPTY_USER_ROW, type UserRow} from '@app/api/database/types/UserTypes';
 import {FeedDiscoverRepository} from '@app/api/feed/discover/FeedDiscoverRepository';
 import {feedSuggestionCache} from '@app/api/feed/suggest/FeedSuggestionCache';
@@ -24,14 +25,13 @@ import {resetServiceStateForTesting} from '@app/api/test/ResetServiceState';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
 import type {FeedSuggestionsResponse} from '@fluxer/schema/src/domains/feed/FeedResponseSchemas';
 import {createSnowflake} from '@fluxer/snowflake/src/Snowflake';
-import {types} from 'cassandra-driver';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
 const NOW = Date.now();
-const ADULT = types.LocalDate.fromString('2000-01-01');
-const MINOR = types.LocalDate.fromString(`${new Date().getFullYear() - 10}-06-15`);
+const ADULT = LocalDate.fromString('2000-01-01');
+const MINOR = LocalDate.fromString(`${new Date().getFullYear() - 10}-06-15`);
 const GUILD: FeedSuggestionsResponse['guilds'][number] = {
 	id: '1300000000000000001',
 	name: 'Topluluk',
@@ -44,6 +44,7 @@ const GUILD: FeedSuggestionsResponse['guilds'][number] = {
 	member_count: 5000,
 	online_count: 120,
 	features: [],
+	badge_ids: [],
 	verification_level: 0,
 };
 

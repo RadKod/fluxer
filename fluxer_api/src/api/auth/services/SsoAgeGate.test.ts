@@ -18,11 +18,6 @@ interface SsoCompleteResponse {
 	user_id: string;
 }
 
-interface ValidationErrorResponse {
-	code: string;
-	errors?: Array<{path: string; code: string}>;
-}
-
 describe('SSO age gate', () => {
 	let harness: ApiTestHarness;
 	let admin: TestAccount;
@@ -35,10 +30,13 @@ describe('SSO age gate', () => {
 			.execute();
 
 	const completeSso = async <T>(email: string, expectedStatus = 200) => {
-		const start = await createBuilderWithoutAuth<{state: string}>(harness).post('/auth/sso/start').body({}).execute();
+		const start = await createBuilderWithoutAuth<{state: string; client_binding: string}>(harness)
+			.post('/auth/sso/start')
+			.body({})
+			.execute();
 		const builder = createBuilderWithoutAuth<T>(harness)
 			.post('/auth/sso/complete')
-			.body({code: email, state: start.state});
+			.body({code: email, state: start.state, client_binding: start.client_binding});
 		return expectedStatus === 200 ? builder.execute() : builder.expect(expectedStatus, 'INVALID_FORM_BODY').execute();
 	};
 
@@ -63,11 +61,19 @@ describe('SSO age gate', () => {
 		await harness?.shutdown();
 	});
 
-	it('refuses to auto-provision an account without a date of birth while the instance collects it', async () => {
+	// Upstream now creates the account and asks for the date of birth before it can be used (the deferred
+	// date-of-birth step), where Micup refused the sign-up outright.
+	it('asks an account auto-provisioned while the instance collects a date of birth for it before use', async () => {
 		await setCollectDateOfBirth(true);
-		const json = await completeSso<ValidationErrorResponse>(createUniqueEmail('sso-age-gate'), 400);
-		const dateOfBirthError = json.errors?.find((e) => e.path === 'date_of_birth');
-		expect(dateOfBirthError?.code).toBe('INVALID_DATE_OF_BIRTH_FORMAT');
+		const completed = await completeSso<SsoCompleteResponse>(createUniqueEmail('sso-age-gate'));
+		await createBuilder(harness, completed.token)
+			.get('/users/@me/guilds')
+			.expect(403, 'DATE_OF_BIRTH_REQUIRED')
+			.execute();
+		await createBuilder(harness, completed.token)
+			.put('/users/@me/date-of-birth')
+			.body({date_of_birth: '1990-01-01'})
+			.execute();
 	});
 
 	it('still signs existing accounts in through SSO while the instance collects a date of birth', async () => {

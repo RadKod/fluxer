@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Σου στέλνουμε απόδειξη με email για κάθε πληρωμή.} year {Σου στέλνουμε απόδειξη με email για κάθε πληρωμή.} other {Αυτό το email είναι η απόδειξή σου.}}",
 		"reference_label": "Αριθμός αναφοράς",
 		"signoff": "Η ομάδα του {product_name}",
-		"subject": "Ευχαριστούμε για τη δωρεά σου στο {product_name}",
-		"button": "Διαχείριση δωρεών"
+		"subject": "Ευχαριστούμε για τη δωρεά σου στο {product_name}"
 	},
 	"donation_magic_link": {
 		"cta": "Διαχείριση δωρεών",
@@ -74,8 +73,7 @@
 		"intro": "Χρησιμοποίησε αυτόν τον σύνδεσμο για να διαχειριστείς ή να ακυρώσεις μια επαναλαμβανόμενη δωρεά και να ενημερώσεις τον τρόπο πληρωμής σου.",
 		"note": "Αν δεν ζήτησες αυτόν τον σύνδεσμο, μπορείς να αγνοήσεις αυτό το email.",
 		"signoff": "Η ομάδα του {product_name}",
-		"subject": "Διαχειρίσου τις δωρεές σου στο {product_name}",
-		"button": "Διαχείριση δωρεών"
+		"subject": "Διαχειρίσου τις δωρεές σου στο {product_name}"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Ποσό",
@@ -179,8 +177,7 @@
 		"new_email_label": "Νέα διεύθυνση email",
 		"note": "Έτσι επανέρχεται η προηγούμενη διεύθυνση email σου, αποσυνδέεσαι από παντού, απενεργοποιείται ο έλεγχος ταυτότητας δύο παραγόντων και σου ζητάμε να ορίσεις νέο κωδικό πρόσβασης.",
 		"signoff": "Η ομάδα ασφαλείας του {product_name}",
-		"subject": "Η διεύθυνση email σου στο {product_name} άλλαξε",
-		"button": "Αναίρεση αλλαγής"
+		"subject": "Η διεύθυνση email σου στο {product_name} άλλαξε"
 	},
 	"email_verification": {
 		"cta": "Επιβεβαίωση διεύθυνσης email",
@@ -189,9 +186,7 @@
 		"intro": "Επιβεβαίωσε αυτή τη διεύθυνση email για να ολοκληρώσεις τη ρύθμιση του λογαριασμού σου στο {product_name}.",
 		"note": "Αν δεν δημιούργησες λογαριασμό στο {product_name}, μπορείς να αγνοήσεις αυτό το email.",
 		"signoff": "Η ομάδα του {product_name}",
-		"subject": "Επιβεβαίωσε τη διεύθυνση email σου στο {product_name}",
-		"body": "🎉 Γεια σου {username},\n\nΕπαλήθευσε τη διεύθυνση email για τον λογαριασμό σου στο {product_name} κάνοντας κλικ στον παρακάτω σύνδεσμο:\n\n{verifyUrl}\n\nΕάν δεν δημιούργησες λογαριασμό στο {product_name}, μπορείς να αγνοήσεις με ασφάλεια αυτό το email.\n\nΑυτός ο σύνδεσμος ισχύει για 24 ώρες.\n\n– Η ομάδα του {product_name}",
-		"button": "Επαλήθευση email"
+		"subject": "Επιβεβαίωσε τη διεύθυνση email σου στο {product_name}"
 	},
 	"email_verification_code": {
 		"expiry": "Αυτός ο κωδικός λήγει σε {minutes, plural, one {# λεπτό} other {# λεπτά}}.",
@@ -246,8 +241,7 @@
 		"signoff": "Η ομάδα του {product_name}",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Μέγεθος αρχείου",
-		"subject": "Η εξαγωγή δεδομένων σου από το {product_name} είναι έτοιμη",
-		"button": "Λήψη των δεδομένων μου"
+		"subject": "Η εξαγωγή δεδομένων σου από το {product_name} είναι έτοιμη"
 	},
 	"inactivity_warning": {
 		"cta": "Σύνδεση στο {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "Ο λογαριασμός σου στο {product_name} είναι ανενεργός από τις {lastActiveDate, date, long}. Συνδέσου πριν από τις {deletionDate, date, long}, αλλιώς θα τον διαγράψουμε.",
 		"note": "{reply, select, yes {Αν χρησιμοποίησες το {product_name} πρόσφατα, απάντησε σε αυτό το email.} other {Αν χρησιμοποίησες το {product_name} πρόσφατα, επικοινώνησε με τους διαχειριστές αυτής της παρουσίας.}}",
 		"signoff": "Η ομάδα του {product_name}",
-		"subject": "Συνδέσου για να κρατήσεις τον λογαριασμό σου στο {product_name}",
-		"button": "Σύνδεση"
+		"subject": "Συνδέσου για να κρατήσεις τον λογαριασμό σου στο {product_name}"
 	},
 	"ip_authorization": {
 		"cta": "Εξουσιοδότησε αυτήν τη διεύθυνση IP",
@@ -268,8 +261,7 @@
 		"location_label": "Τοποθεσία",
 		"note": "Αν δεν ήσουν εσύ, άλλαξε αμέσως τον κωδικό πρόσβασής σου.",
 		"signoff": "Η ομάδα του {product_name}",
-		"subject": "Εξουσιοδότησε μια σύνδεση στο {product_name} από νέα διεύθυνση IP",
-		"button": "Εξουσιοδότηση αυτής της σύνδεσης"
+		"subject": "Εξουσιοδότησε μια σύνδεση στο {product_name} από νέα διεύθυνση IP"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Αυτός ο κωδικός λήγει σε {minutes, plural, one {# λεπτό} other {# λεπτά}}.",
@@ -505,8 +497,7 @@
 		"location_label": "Τοποθεσία",
 		"note": "Αν δεν το ζήτησες, μπορείς να αγνοήσεις αυτό το email.",
 		"signoff": "Η ομάδα του {product_name}",
-		"subject": "Επανάφερε τον κωδικό πρόσβασής σου στο {product_name}",
-		"button": "Επαναφορά κωδικού πρόσβασης"
+		"subject": "Επανάφερε τον κωδικό πρόσβασής σου στο {product_name}"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Ποσό υπό αμφισβήτηση",
@@ -692,14 +683,19 @@
 		"signoff": "Η ομάδα του {product_name}",
 		"subject": "Ο κωδικός επιβεβαίωσής σου για το {product_name}"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Σύνδεση στο {product_name}",
 		"footer_reason": "Έλαβες αυτό το email επειδή αυτή η διεύθυνση χρησιμοποιήθηκε για έναν λογαριασμό {product_name}.",
 		"intro": "Η εγγραφή σας στο {product_name} εγκρίθηκε. Μπορείτε να συνδεθείτε τώρα.",
 		"signoff": "Η ομάδα του {product_name}",
-		"subject": "Η εγγραφή σου στο {product_name} έχει εγκριθεί",
-		"body": "🎉 Γεια σου {username},\n\nΚαλά νέα: η εγγραφή σου στο {product_name} έχει εγκριθεί.\n\nΜπορείς τώρα να συνδεθείς στην εφαρμογή του {product_name} εδώ:\n{channelsUrl}\n\nΚαλώς ήρθες στην κοινότητα του {product_name}.\n\n– Η ομάδα του {product_name}",
-		"button": "Άνοιγμα του {product_name}"
+		"subject": "Η εγγραφή σου στο {product_name} έχει εγκριθεί"
 	},
 	"registration_pending": {
 		"cta": "Έλεγχος εκκρεμών εγγραφών",
@@ -753,13 +749,5 @@
 		"note": "Μην μοιραστείς αυτόν τον κωδικό με κανέναν. Το προσωπικό του {product_name} δεν θα σου τον ζητήσει ποτέ. Αν δεν προσπάθησες να δημιουργήσεις λογαριασμό, μπορείς να αγνοήσεις αυτό το email.",
 		"signoff": "Η ομάδα του {product_name}",
 		"subject": "Ο κωδικός εγγραφής σου για το {product_name}"
-	},
-	"unban_notification": {
-		"subject": "Η αναστολή του λογαριασμού σου στο {product_name} έχει αρθεί",
-		"body": "🎉 Γεια σου {username},\n\nΚαλά νέα: η αναστολή του λογαριασμού σου στο {product_name} έχει αρθεί.\n\n{reason, select,\n  null {}\n  other {Λόγος: {reason}}\n}\n\nΜπορείς τώρα να συνδεθείς ξανά και να συνεχίσεις να χρησιμοποιείς το {product_name} κανονικά.\n\n– Η ομάδα ασφαλείας του {product_name}"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

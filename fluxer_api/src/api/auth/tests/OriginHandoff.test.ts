@@ -117,7 +117,8 @@ describe('Origin handoff', () => {
 		await createBuilder(harness, account.token)
 			.post(CREATE_PATH)
 			.body({nonce_hash: createNonce().nonceHash, payload: 'a'.repeat(ORIGIN_HANDOFF_MAX_PAYLOAD_LENGTH + 2048)})
-			.expect(HTTP_STATUS.BAD_REQUEST, APIErrorCodes.FILE_SIZE_TOO_LARGE)
+			// The route's RequestBodyLimit marker is enforced by upstream's app-wide limiter, which answers 413.
+			.expect(413, APIErrorCodes.FILE_SIZE_TOO_LARGE)
 			.execute();
 	});
 

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {requireEmailVerified} from '@app/api/auth/EmailVerificationUtils';
 import {createUserID, type UserID} from '@app/api/BrandedTypes';
-import {DISCOVER_HIDDEN_AUTHOR_FLAGS} from '@app/api/feed/discover/FeedDiscoverRules';
+import {DISCOVER_HIDDEN_AUTHOR_FLAGS, requireEmailVerifiedForStanding} from '@app/api/feed/discover/FeedDiscoverRules';
 import {opensPublicPostsToStrangers} from '@app/api/feed/FeedTimelineService';
 import {hasStrangerFollowStanding, isSuggestableAccount} from '@app/api/feed/suggest/FeedSuggestionService';
 import {DefaultUserOnly, LoginRequired} from '@app/api/middleware/AuthMiddleware';
@@ -77,7 +76,7 @@ function requireStrangerStanding(ctx: Context<HonoEnv>, user: User, now: number)
 	if (!ctx.get('feedPostService').isFeedEnabled(user)) throw new MissingAccessError();
 	if (hasStrangerFollowStanding(user, now)) return;
 	if ((user.flags & DISCOVER_HIDDEN_AUTHOR_FLAGS) === 0n && !isMicupAccountLimited(user)) {
-		requireEmailVerified(user);
+		requireEmailVerifiedForStanding(user);
 	}
 	throw new MissingAccessError();
 }

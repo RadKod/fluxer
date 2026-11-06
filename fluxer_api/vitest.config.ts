@@ -61,11 +61,26 @@ const MODULE_REGISTRY_TEST_FILES = [
 	'src/api/worker/tasks/HarvestThreadMembershipPaging.test.ts',
 	'src/api/voice/tests/VoiceAvailabilityService.test.ts',
 	'src/api/billing_documents/BillingDocuments.test.ts',
+	// Upstream billing suites that need the dormant Stripe paths (DormantStripeTestFixture mocks a module).
+	'src/api/stripe/tests/StripeWebhookBillingEmails.test.ts',
+	'src/api/stripe/tests/StripeCheckoutWithdrawalWaiver.test.ts',
+	'src/api/billing_documents/LegacyStripeInvoiceImport.test.ts',
+	'src/api/admin/tests/AdminClosureStripeRefund.test.ts',
+	'src/api/user/tests/AccountTierGates.test.ts',
+	'src/api/admin/tests/audit_coverage/BillingDocumentAdminAuditCoverage.test.ts',
+	'src/api/payment_disputes/tests/PaymentDisputeReviews.test.ts',
+	// vi.mock of the Logger takes hold only when this file loads the service first, which a shared worker cannot promise.
+	'src/api/operator_pass/OperatorPassFulfilmentService.test.ts',
 ];
 
 // Wall-clock budgets measured while other workers run fail on CPU contention, not on slow code; these files run
 // in their own project after every other project has finished, so their budgets stay strict.
-const TIMING_BUDGET_TEST_FILES = ['src/api/user/username/tests/UsernamePolicyDictionary.test.ts'];
+const TIMING_BUDGET_TEST_FILES = [
+	'src/api/user/username/tests/UsernamePolicyDictionary.test.ts',
+	// sanalyer table games: property runs with a wall-clock budget.
+	'src/api/table_game/engine/chess/tests/ChessGameProperty.test.ts',
+	'src/api/table_game/engine/okey/tests/ClassicOkeyProperty.test.ts',
+];
 
 const INSTANCE_POLICY_TEST_FILES = ['src/api/admin/tests/InstanceConfigPendingRegistrationApproval.test.ts'];
 
@@ -92,12 +107,20 @@ const CLOSED_ANNOUNCEMENT_TEST_FILES = [
 	'src/api/worker/tests/CrosspostTasks.test.ts',
 ];
 
+// sanalyer (Micup, COZ-API karar 10): these upstream suites only exercise purchase routes that stay closed here
+// (Google Play self-service refunds, Visionary rejoin); re-include them if those routes open.
+const CLOSED_BILLING_ROUTE_TEST_FILES = [
+	'src/api/store_billing/tests/GooglePlaySelfServeRefund.test.ts',
+	'src/api/stripe/tests/VisionaryRejoin.test.ts',
+];
+
 const sharedExclude = [
 	...configDefaults.exclude,
 	'pkgs/**',
 	'../fluxer_desktop/**',
 	'**/target/**',
 	...CLOSED_ANNOUNCEMENT_TEST_FILES,
+	...CLOSED_BILLING_ROUTE_TEST_FILES,
 ];
 
 const sharedTestConfig = {

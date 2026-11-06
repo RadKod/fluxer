@@ -906,6 +906,7 @@ function orderedRange(meta: KvQueryMeta, params: CassandraParams, plan: Candidat
 	if (meta.orderBy !== undefined && meta.orderBy.col !== column) return null;
 	const bounds: Array<KeyBound> = [];
 	for (const clause of whereClauses(meta)) {
+		if (clause.kind === 'tokenRange' || clause.kind === 'tupleGt') continue;
 		const op = KEY_BOUND_OPERATORS[clause.kind];
 		if (clause.col !== column || op === undefined) continue;
 		const value = integerKeyValue(getParam(params, clause.param));

@@ -12,7 +12,11 @@ import {AdminACLs} from '@fluxer/constants/src/AdminACLs';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {afterAll, afterEach, beforeAll, describe, expect, it, vi} from 'vitest';
 
-const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+const SETUP_CONFIGURED = Config.instance.setup.configured;
+
+// 128x128: the test media service reads real PNG dimensions, and cosmetics need 32 to 2048 px.
+const PNG =
+	'iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAAVklEQVR42u3BMQEAAADCoPVPbQwfoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOBvAI8AAYr5gj4AAAAASUVORK5CYII=';
 
 describe('gift code logging', () => {
 	let harness: ApiTestHarness;
@@ -21,6 +25,8 @@ describe('gift code logging', () => {
 	beforeAll(async () => {
 		previousSelfHosted = Config.instance.selfHosted;
 		Config.instance.selfHosted = true;
+		// Self-hosted sign-ups after the first (admin) account need finished setup.
+		Config.instance.setup.configured = true;
 		harness = await createApiTestHarness();
 	});
 	afterEach(() => {
@@ -29,6 +35,7 @@ describe('gift code logging', () => {
 	afterAll(async () => {
 		await harness?.shutdown();
 		Config.instance.selfHosted = previousSelfHosted;
+		Config.instance.setup.configured = SETUP_CONFIGURED;
 	});
 
 	async function codesFrom(admin: TestAccount, path: string, body: Record<string, unknown>): Promise<Array<string>> {

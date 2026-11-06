@@ -49,6 +49,8 @@ import type {WorkerJobOptions, WorkerJobPayload} from '@pkgs/worker/src/contract
 import {ms} from 'itty-time';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
+const SETUP_CONFIGURED = Config.instance.setup.configured;
+
 class RecordingWorkerService extends NoopWorkerService implements IWorkerService {
 	readonly jobs: Array<{taskType: string; payload: WorkerJobPayload}> = [];
 
@@ -75,6 +77,8 @@ describe('gift codes on a self-hosted instance', () => {
 	beforeAll(async () => {
 		previousSelfHosted = Config.instance.selfHosted;
 		Config.instance.selfHosted = true;
+		// Self-hosted sign-ups after the first (admin) account need finished setup.
+		Config.instance.setup.configured = true;
 		harness = await createApiTestHarness();
 	});
 	beforeEach(async () => {
@@ -99,6 +103,7 @@ describe('gift codes on a self-hosted instance', () => {
 	afterAll(async () => {
 		await harness?.shutdown();
 		Config.instance.selfHosted = previousSelfHosted;
+		Config.instance.setup.configured = SETUP_CONFIGURED;
 	});
 
 	async function createAdmin(): Promise<TestAccount> {

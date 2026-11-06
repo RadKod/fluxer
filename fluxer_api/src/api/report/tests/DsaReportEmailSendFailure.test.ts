@@ -78,7 +78,7 @@ describe('DSA email delivery through SMTP', () => {
 			.execute();
 		expect(smtp.attempts).toHaveLength(1);
 		expect(smtp.attempts[0]).toMatchObject({from: '<reports@example.com>', to: '<dsa-send-failure@example.com>'});
-		expect(smtp.attempts[0].body).toContain('Use this code to send your Digital Services Act report to Fluxer.');
+		expect(smtp.attempts[0].body).toContain('Use this code to send your Digital Services Act report to sanalyer.');
 		expect(smtp.delivered).toEqual([]);
 		expect(await new ReportRepository().getDsaEmailVerification(email)).toBeNull();
 		await createBuilderWithoutAuth(harness)
@@ -106,7 +106,7 @@ describe('DSA email delivery through SMTP', () => {
 	}>([
 		{
 			kind: 'message',
-			receipt: 'We received your Digital Services Act report about a message on Fluxer.',
+			receipt: 'We received your Digital Services Act report about a message on sanalyer.',
 			request: (target) => ({
 				message_link: `https://web.fluxer.app/channels/${target.guildId}/${target.channelId}/${target.messageId}`,
 				steps: [
@@ -120,7 +120,7 @@ describe('DSA email delivery through SMTP', () => {
 		},
 		{
 			kind: 'guild',
-			receipt: 'We received your Digital Services Act report about a community on Fluxer.',
+			receipt: 'We received your Digital Services Act report about a community on sanalyer.',
 			request: (target) => ({
 				guild_id: target.guildId,
 				steps: [

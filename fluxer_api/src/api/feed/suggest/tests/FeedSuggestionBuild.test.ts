@@ -2,6 +2,7 @@
 
 import {createUserID, type GuildID, type UserID} from '@app/api/BrandedTypes';
 import {Config} from '@app/api/Config';
+import {LocalDate} from '@app/api/database/LocalDate';
 import {EMPTY_USER_ROW, type UserRow} from '@app/api/database/types/UserTypes';
 import {FeedSuggestionRepository} from '@app/api/feed/suggest/FeedSuggestionRepository';
 import {captureJobs, followDirectly, overrideLimits} from '@app/api/feed/tests/FeedTestUtils';
@@ -38,15 +39,14 @@ import {ProfilePrivacyLevels, UserFlags} from '@fluxer/constants/src/UserConstan
 import type {SearchableGuild} from '@fluxer/schema/src/contracts/search/SearchDocumentTypes';
 import {createSnowflake, snowflakeToDate} from '@fluxer/snowflake/src/Snowflake';
 import type {WorkerTaskHelpers} from '@pkgs/worker/src/contracts/WorkerTask';
-import {types} from 'cassandra-driver';
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 // The build runs this far ahead, so planted accounts (and their followers) are 100 h old by default.
 const AHEAD = 100 * HOUR;
-const ADULT = types.LocalDate.fromString('2000-01-01');
-const MINOR = types.LocalDate.fromString(`${new Date().getFullYear() - 10}-06-15`);
+const ADULT = LocalDate.fromString('2000-01-01');
+const MINOR = LocalDate.fromString(`${new Date().getFullYear() - 10}-06-15`);
 const RANK_KEY = 'follow:rank:{rank}:followers';
 const FLOOR_KEY = 'follow:rank:{rank}:floor';
 const FILLED_KEY = 'follow:rank:{rank}:filled';
@@ -480,6 +480,7 @@ describe('feed suggestion build', () => {
 			member_count: 1000,
 			online_count: 42,
 			features: ['DISCOVERABLE'],
+			badge_ids: [],
 			verification_level: getEffectiveGuildVerificationLevel(1, true),
 		});
 		expect(guilds[1]!.online_count).toBe(0);

@@ -2,8 +2,14 @@
 
 import type {UserID} from '@app/api/BrandedTypes';
 import type {FeedPostRow} from '@app/api/database/types/FeedTypes';
+import {usesUsernameSignIn} from '@app/api/instance/AccountIdentityModeCache';
+import type {User} from '@app/api/models/User';
 import {isMicupAccountLimited} from '@app/api/user/AccountLimit';
+import {getLocalCredential} from '@app/api/user/AccountTier';
+import {UserTraits} from '@app/api/user/UserTraits';
+import {LocalCredentialKinds} from '@fluxer/constants/src/AccountTierConstants';
 import {UserFlags} from '@fluxer/constants/src/UserConstants';
+import {EmailVerificationRequiredError} from '@fluxer/errors/src/domains/auth/EmailVerificationRequiredError';
 import {snowflakeToDate} from '@fluxer/snowflake/src/Snowflake';
 
 // Accounts whose public posts nobody outside their own reach sees: banned or disabled, flagged for suspicious activity,
@@ -43,7 +49,23 @@ export interface TrendAccount {
 	readonly suspiciousActivityFlags: number;
 	readonly isBot: boolean;
 	readonly isSystem: boolean;
-	isUnclaimedAccount(): boolean;
+	readonly passwordHash: User['passwordHash'];
+	readonly authenticatorTypes: User['authenticatorTypes'];
+	readonly traits: ReadonlySet<string>;
+}
+
+// Upstream dropped User.isUnclaimedAccount(); Micup's meaning is kept here: no way to sign in of its own (no password
+// or passkey) and not a bot or an SSO account. An unclaimed account never counts on these paths.
+function isUnclaimedAccount(account: TrendAccount): boolean {
+	return (
+		!account.isBot && !account.traits.has(UserTraits.SSO) && getLocalCredential(account) === LocalCredentialKinds.NONE
+	);
+}
+
+// The refusal that says why a stranger path is closed: an unverified email, outside username sign-in.
+export function requireEmailVerifiedForStanding(user: Pick<TrendAccount, 'emailVerified' | 'isBot'>): void {
+	if (user.isBot || usesUsernameSignIn()) return;
+	if (!user.emailVerified) throw new EmailVerificationRequiredError();
 }
 
 export interface TrendState {
@@ -76,7 +98,7 @@ function isCleanAccount(account: TrendAccount): boolean {
 		account.emailVerified &&
 		(account.flags & DISCOVER_HIDDEN_AUTHOR_FLAGS) === 0n &&
 		!isMicupAccountLimited(account) &&
-		!account.isUnclaimedAccount()
+		!isUnclaimedAccount(account)
 	);
 }
 
@@ -92,7 +114,7 @@ export function isTrendActorEligible(actor: TrendAccount, nowMs: number): boolea
 export function isPublicCommenterEligible(account: TrendAccount, nowMs: number): boolean {
 	return (
 		account.emailVerified &&
-		!account.isUnclaimedAccount() &&
+		!isUnclaimedAccount(account) &&
 		accountAgeMs(account.id, nowMs) >= PUBLIC_COMMENTER_MIN_AGE_MS
 	);
 }

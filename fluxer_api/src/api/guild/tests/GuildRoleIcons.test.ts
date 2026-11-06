@@ -28,6 +28,7 @@ import processAssetDeletionQueue from '@app/api/worker/tasks/ProcessAssetDeletio
 import {clearWorkerDependencies, setWorkerDependenciesForTest} from '@app/api/worker/WorkerContext';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {Permissions} from '@fluxer/constants/src/ChannelConstants';
+import {GuildFeatures} from '@fluxer/constants/src/GuildConstants';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import type {GuildRoleResponse} from '@fluxer/schema/src/domains/guild/GuildRoleSchemas';
@@ -120,6 +121,11 @@ describe('Guild role icons', () => {
 		await harness.resetData();
 		owner = await createTestAccount(harness);
 		guild = await createGuild(harness, owner.token, 'Role Icon Guild');
+		// sanalyer (Micup): role icons need server boost level 1.
+		await createBuilder(harness, '')
+			.post(`/test/guilds/${guild.id}/features`)
+			.body({add_features: [GuildFeatures.BOOST_LEVEL_1]})
+			.execute();
 		harness.storageService.uploadObjectSpy.mockClear();
 	});
 
@@ -754,6 +760,10 @@ describe('Guild role icons', () => {
 
 		test('rejects a role from another community', async () => {
 			const otherGuild = await createGuild(harness, owner.token, 'Other Guild');
+			await createBuilder(harness, '')
+				.post(`/test/guilds/${otherGuild.id}/features`)
+				.body({add_features: [GuildFeatures.BOOST_LEVEL_1]})
+				.execute();
 			const foreign = await createRole(harness, owner.token, otherGuild.id, {name: 'Foreign', unicode_emoji: '🔥'});
 			await createBuilder(harness, owner.token)
 				.post(`/guilds/${guild.id}/roles`)
@@ -852,7 +862,8 @@ describe('Guild role icons', () => {
 			})
 			.execute();
 		const roles = await getRoles(harness, owner.token, imported.id);
-		expect(roles.find((role) => role.name === 'Valid')?.unicode_emoji).toBe('🔥');
+		// sanalyer (Micup): a new community has no boost level, so even a valid template icon is left off.
+		expect(roles.find((role) => role.name === 'Valid')?.unicode_emoji).toBeNull();
 		expect(roles.find((role) => role.name === 'Invalid')?.unicode_emoji).toBeNull();
 	});
 

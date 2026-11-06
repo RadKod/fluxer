@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Für jede Zahlung bekommst du einen Beleg per E-Mail.} year {Für jede Zahlung bekommst du einen Beleg per E-Mail.} other {Diese E-Mail ist dein Beleg.}}",
 		"reference_label": "Referenz",
 		"signoff": "Das {product_name}-Team",
-		"subject": "Vielen Dank für deine {product_name}-Spende",
-		"button": "Spenden verwalten"
+		"subject": "Vielen Dank für deine {product_name}-Spende"
 	},
 	"donation_magic_link": {
 		"cta": "Spenden verwalten",
@@ -74,8 +73,7 @@
 		"intro": "Mit diesem Link kannst du eine wiederkehrende Spende verwalten oder kündigen und deine Zahlungsmethode aktualisieren.",
 		"note": "Wenn du diesen Link nicht angefordert hast, kannst du diese E-Mail ignorieren.",
 		"signoff": "Das {product_name}-Team",
-		"subject": "Verwalte deine {product_name}-Spenden",
-		"button": "Spenden verwalten"
+		"subject": "Verwalte deine {product_name}-Spenden"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Betrag",
@@ -179,8 +177,7 @@
 		"new_email_label": "Neue E-Mail-Adresse",
 		"note": "Damit bekommst du deine vorherige E-Mail-Adresse zurück, wirst überall abgemeldet, die Zwei-Faktor-Authentifizierung wird ausgeschaltet und du legst ein neues Passwort fest.",
 		"signoff": "Das {product_name}-Sicherheitsteam",
-		"subject": "Die E-Mail-Adresse deines {product_name}-Accounts wurde geändert",
-		"button": "Änderung rückgängig machen"
+		"subject": "Die E-Mail-Adresse deines {product_name}-Accounts wurde geändert"
 	},
 	"email_verification": {
 		"cta": "E-Mail-Adresse bestätigen",
@@ -189,9 +186,7 @@
 		"intro": "Bestätige diese E-Mail-Adresse, um die Einrichtung deines {product_name}-Accounts abzuschließen.",
 		"note": "Wenn du keinen {product_name}-Account erstellt hast, kannst du diese E-Mail ignorieren.",
 		"signoff": "Das {product_name}-Team",
-		"subject": "Bestätige deine {product_name}-E-Mail-Adresse",
-		"body": "🎉 Hallo {username},\n\nbitte bestätige die E-Mail-Adresse für deinen {product_name}-Account, indem du auf den untenstehenden Link klickst:\n\n{verifyUrl}\n\nWenn du keinen {product_name}-Account erstellt hast, kannst du diese E-Mail ignorieren.\n\nDieser Link ist 24 Stunden gültig.\n\n– {product_name}-Team",
-		"button": "E-Mail bestätigen"
+		"subject": "Bestätige deine {product_name}-E-Mail-Adresse"
 	},
 	"email_verification_code": {
 		"expiry": "Dieser Code läuft in {minutes, plural, one {# Minute} other {# Minuten}} ab.",
@@ -246,8 +241,7 @@
 		"signoff": "Das {product_name}-Team",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Dateigröße",
-		"subject": "Dein {product_name}-Datenexport ist fertig",
-		"button": "Meine Daten herunterladen"
+		"subject": "Dein {product_name}-Datenexport ist fertig"
 	},
 	"inactivity_warning": {
 		"cta": "Bei {product_name} anmelden",
@@ -255,8 +249,7 @@
 		"intro": "Dein {product_name}-Account ist seit dem {lastActiveDate, date, long} inaktiv. Melde dich vor dem {deletionDate, date, long} an, sonst löschen wir ihn.",
 		"note": "{reply, select, yes {Wenn du {product_name} vor Kurzem genutzt hast, antworte auf diese E-Mail.} other {Wenn du {product_name} vor Kurzem genutzt hast, wende dich an die Admins dieser Instanz.}}",
 		"signoff": "Das {product_name}-Team",
-		"subject": "Melde dich an, um deinen {product_name}-Account zu behalten",
-		"button": "Anmelden"
+		"subject": "Melde dich an, um deinen {product_name}-Account zu behalten"
 	},
 	"ip_authorization": {
 		"cta": "Diese IP-Adresse bestätigen",
@@ -268,8 +261,7 @@
 		"location_label": "Standort",
 		"note": "Wenn du das nicht warst, ändere jetzt dein Passwort.",
 		"signoff": "Das {product_name}-Team",
-		"subject": "Bestätige eine {product_name}-Anmeldung von einer neuen IP-Adresse",
-		"button": "Diese Anmeldung bestätigen"
+		"subject": "Bestätige eine {product_name}-Anmeldung von einer neuen IP-Adresse"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Dieser Code läuft in {minutes, plural, one {# Minute} other {# Minuten}} ab.",
@@ -505,8 +497,7 @@
 		"location_label": "Standort",
 		"note": "Wenn du das nicht angefordert hast, kannst du diese E-Mail ignorieren.",
 		"signoff": "Das {product_name}-Team",
-		"subject": "Setze dein {product_name}-Passwort zurück",
-		"button": "Passwort zurücksetzen"
+		"subject": "Setze dein {product_name}-Passwort zurück"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Strittiger Betrag",
@@ -692,14 +683,19 @@
 		"signoff": "Das {product_name}-Team",
 		"subject": "Dein Bestätigungscode für {product_name}"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Bei {product_name} anmelden",
 		"footer_reason": "Du hast diese E-Mail erhalten, weil diese Adresse für einen {product_name}-Account verwendet wurde.",
 		"intro": "Deine Registrierung bei {product_name} wurde freigegeben. Du kannst dich jetzt anmelden.",
 		"signoff": "Das {product_name}-Team",
-		"subject": "Deine {product_name}-Registrierung wurde genehmigt",
-		"body": "🎉 Hallo {username},\n\ngute Nachrichten: Deine {product_name}-Registrierung wurde genehmigt.\n\nDu kannst dich jetzt hier in die {product_name}-App einloggen:\n{channelsUrl}\n\nWillkommen in der {product_name}-Community.\n\n– {product_name}-Team",
-		"button": "{product_name} öffnen"
+		"subject": "Deine {product_name}-Registrierung wurde genehmigt"
 	},
 	"registration_pending": {
 		"cta": "Ausstehende Registrierungen prüfen",
@@ -753,13 +749,5 @@
 		"note": "Gib diesen Code an niemanden weiter. Mitarbeitende von {product_name} werden niemals danach fragen. Wenn du nicht versucht hast, einen Account zu erstellen, kannst du diese E-Mail ignorieren.",
 		"signoff": "Das {product_name}-Team",
 		"subject": "Dein {product_name}-Registrierungscode"
-	},
-	"unban_notification": {
-		"subject": "Die Sperrung deines {product_name}-Accounts wurde aufgehoben",
-		"body": "🎉 Hallo {username},\n\ngute Nachrichten: Die Sperrung deines {product_name}-Accounts wurde aufgehoben.\n\n{reason, select,\n  null {}\n  other {Grund: {reason}}\n}\n\nDu kannst dich jetzt wieder anmelden und {product_name} wie gewohnt nutzen.\n\n– {product_name}-Sicherheitsteam"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

@@ -461,7 +461,7 @@ export class GuildMemberOperationsService {
 			assertTierAllows(user, TierGatedActions.GUILD_JOIN, params.tierContext);
 		}
 		if (!skipBanCheck) {
-			await assertNotBannedFromGuild(this.guildRepository, this.userRepository, {userId, guildId});
+			await this.validationService.checkUserBanStatus({userId, guildId});
 		}
 		const userGuildsCount = await this.guildRepository.countUserGuilds(userId);
 		if (!skipGuildLimitCheck) {

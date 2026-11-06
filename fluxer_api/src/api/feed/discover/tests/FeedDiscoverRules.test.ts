@@ -30,7 +30,9 @@ const account = (ageMs: number, patch: Partial<TrendAccount> = {}): TrendAccount
 	suspiciousActivityFlags: 0,
 	isBot: false,
 	isSystem: false,
-	isUnclaimedAccount: () => false,
+	passwordHash: 'hash',
+	authenticatorTypes: new Set(),
+	traits: new Set(),
 	...patch,
 });
 
@@ -60,13 +62,13 @@ describe('Keşfet trend rules', () => {
 			expect(isTrendActorEligible(account(100 * HOUR, {flags: UserFlags[flag]}), NOW)).toBe(false);
 		}
 		expect(isTrendActorEligible(account(100 * HOUR, {flags: UserFlags.ACCOUNT_LIMITED}), NOW)).toBe(false);
-		expect(isTrendActorEligible(account(100 * HOUR, {isUnclaimedAccount: () => true}), NOW)).toBe(false);
+		expect(isTrendActorEligible(account(100 * HOUR, {email: null, passwordHash: null}), NOW)).toBe(false);
 	});
 	it('lets a stranger comment on a public post from a verified, claimed account at least 24 hours old', () => {
 		expect(isPublicCommenterEligible(account(25 * HOUR), NOW)).toBe(true);
 		expect(isPublicCommenterEligible(account(23 * HOUR), NOW)).toBe(false);
 		expect(isPublicCommenterEligible(account(100 * HOUR, {emailVerified: false}), NOW)).toBe(false);
-		expect(isPublicCommenterEligible(account(100 * HOUR, {isUnclaimedAccount: () => true}), NOW)).toBe(false);
+		expect(isPublicCommenterEligible(account(100 * HOUR, {email: null, passwordHash: null}), NOW)).toBe(false);
 	});
 	it('lists authors from 24 hours, video authors from 7 days', () => {
 		expect(isDiscoverAuthorEligible(account(25 * HOUR), NOW, {hasVideo: false})).toBe(true);

@@ -66,8 +66,26 @@ function setup(isBot = false, ownership?: {adminAssign: ReturnType<typeof vi.fn>
 	return {service, users, discriminatorService, auditService, recordDiff, user};
 }
 
+let originalCheck: ((...args: Array<never>) => unknown) | undefined;
+
 describe('admin username migration writer guard', () => {
-	beforeEach(() => {
+	beforeEach(async () => {
+		// The setup file can load the real policy and registry modules before this file's mocks register; the copies
+		// already in the module graph get the same stand-ins.
+		const realPolicy = await vi.importActual<typeof import('@app/api/user/username/UsernamePolicyService')>(
+			'@app/api/user/username/UsernamePolicyService',
+		);
+		originalCheck ??= realPolicy.UsernamePolicyService.prototype.check;
+		vi.spyOn(realPolicy.UsernamePolicyService.prototype, 'readCached').mockImplementation(() => state.cached());
+		vi.spyOn(realPolicy.UsernamePolicyService.prototype, 'readAuthoritative').mockImplementation(() => state.policy());
+		vi.spyOn(realPolicy.UsernamePolicyService.prototype, 'check').mockImplementation((...args) => state.check(...args));
+		const realRegistry = await vi.importActual<typeof import('@app/api/middleware/ServiceRegistry')>(
+			'@app/api/middleware/ServiceRegistry',
+		);
+		vi.spyOn(realRegistry, 'getUsernameOwnershipService').mockReturnValue({
+			repository: {readEntitlement: state.entitlement},
+			readClaimForAvailability: state.claim,
+		} as never);
 		state.migration = 'preparing';
 		state.unique = false;
 		state.policy.mockReset().mockResolvedValue({dictionary: {gen: 0}});
@@ -102,7 +120,7 @@ describe('admin username migration writer guard', () => {
 			dictionary: actual.compileUsernameDictionary(1, {uname_exact: [], uname_contains: [], uname_allow: []}),
 			tiers: {1: 'locked', 2: 'locked', 3: 'locked'},
 		});
-		state.check.mockImplementation(actual.UsernamePolicyService.prototype.check);
+		state.check.mockImplementation(originalCheck as typeof actual.UsernamePolicyService.prototype.check);
 		const {service, users} = setup(true);
 		await expect(
 			service.changeUsername({user_id: 1n, username: 'abc'}, createUserID(2n), 'rename', new Set()),

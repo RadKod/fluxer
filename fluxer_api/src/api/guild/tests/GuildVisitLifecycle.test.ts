@@ -6,7 +6,7 @@ import {sendChannelMessage} from '@app/api/channel/tests/ChannelTestUtils';
 import {threadsRequest} from '@app/api/channel/tests/ThreadTestUtils';
 import {guildVisitRepository} from '@app/api/guild/visits/GuildVisitorAccess';
 import {getGatewayService, setInjectedWorkerService} from '@app/api/middleware/ServiceRegistry';
-import {getInstanceConfigRepository} from '@app/api/middleware/ServiceSingletons';
+import {getInstanceConfigRepository, getLimitConfigService} from '@app/api/middleware/ServiceSingletons';
 import {type ApiTestHarness, createApiTestHarness} from '@app/api/test/ApiTestHarness';
 import type {NoopGatewayService} from '@app/api/test/NoopGatewayService';
 import {NoopWorkerService} from '@app/api/test/NoopWorkerService';
@@ -24,7 +24,7 @@ import {DiscoveryCategories} from '@fluxer/constants/src/DiscoveryConstants';
 import {getSameIpDecisionKey} from '@fluxer/ip_utils/src/IpAddress';
 import type {GuildResponse} from '@fluxer/schema/src/domains/guild/GuildResponseSchemas';
 import type {GuildVisitStartResponse} from '@fluxer/schema/src/domains/guild/GuildVisitSchemas';
-import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest';
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from 'vitest';
 
 interface Registered {
 	token: string;
@@ -54,6 +54,21 @@ function yearsAgo(years: number): string {
 	date.setUTCFullYear(date.getUTCFullYear() - years);
 	date.setUTCDate(date.getUTCDate() - 1);
 	return date.toISOString().slice(0, 10);
+}
+
+// sanalyer (Micup): turning content adults-only is a limit-gated feature, off by default.
+async function withMatureContentSettings<T>(run: () => Promise<T>): Promise<T> {
+	const limits = getLimitConfigService();
+	const snapshot = limits.getConfigSnapshot();
+	const spy = vi.spyOn(limits, 'getConfigSnapshot').mockReturnValue({
+		...snapshot,
+		rules: [...snapshot.rules, {id: 'test_mature_content', limits: {feature_mature_content_settings: 1}}],
+	});
+	try {
+		return await run();
+	} finally {
+		spy.mockRestore();
+	}
 }
 
 describe('Guild visit lifecycle', () => {
@@ -162,7 +177,9 @@ describe('Guild visit lifecycle', () => {
 		for (const visitor of [teen, adult]) {
 			await createBuilder(harness, visitor.token).post(`/invites/${code}/visit`).body(null).execute();
 		}
-		await createBuilder(harness, owner.token).patch(`/guilds/${guildId}`).body({nsfw: true}).execute();
+		await withMatureContentSettings(() =>
+			createBuilder(harness, owner.token).patch(`/guilds/${guildId}`).body({nsfw: true}).execute(),
+		);
 		expect(await visitRow(teen.user_id, guildId)).toBeNull();
 		expect(await visitRow(adult.user_id, guildId)).not.toBeNull();
 		await createBuilder(harness, owner.token).patch(`/guilds/${guildId}`).body({features: []}).execute();

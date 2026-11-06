@@ -5,6 +5,7 @@ import {AdminUserProfileService} from '@app/api/admin/services/AdminUserProfileS
 import {AdminUserRelationshipService} from '@app/api/admin/services/AdminUserRelationshipService';
 import {createUserID} from '@app/api/BrandedTypes';
 import * as CassandraQueries from '@app/api/database/CassandraQueryExecution';
+import {LocalDate} from '@app/api/database/LocalDate';
 import {getUserRepository} from '@app/api/middleware/ServiceSingletons';
 import {User} from '@app/api/models/User';
 import {UserSettings} from '@app/api/models/UserSettings';
@@ -16,7 +17,6 @@ import {UserAccountSettingsService} from '@app/api/user/services/UserAccountSett
 import {ProfilePrivacyLevels, RelationshipTypes} from '@fluxer/constants/src/UserConstants';
 import {ServiceUnavailableError} from '@fluxer/errors/src/domains/core/ServiceUnavailableError';
 import type {GameActivityPolicyRequest} from '@fluxer/schema/src/domains/rpc/RpcSchemas';
-import {types} from 'cassandra-driver';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 
 afterEach(() => {
@@ -34,7 +34,7 @@ async function fixture(privacy: number = ProfilePrivacyLevels.FRIENDS_ONLY) {
 				user_id: id,
 				username: 'fixture',
 				discriminator: 1,
-				date_of_birth: types.LocalDate.fromString('2000-01-01'),
+				date_of_birth: LocalDate.fromString('2000-01-01'),
 				version: 1,
 			} as never).toRow(),
 		);
@@ -115,7 +115,16 @@ async function fixture(privacy: number = ProfilePrivacyLevels.FRIENDS_ONLY) {
 		entityAssetService: {} as never,
 		guildRepository: {} as never,
 	});
-	const relationships = new AdminUserRelationshipService({apiContext, auditService: auditService as never});
+	const relationships = new AdminUserRelationshipService({
+		apiContext,
+		auditService: auditService as never,
+		userRelationshipService: {
+			endFriendship: async (a, b) => {
+				await users.deleteRelationship(a, b, RelationshipTypes.FRIEND);
+				await users.deleteRelationship(b, a, RelationshipTypes.FRIEND);
+			},
+		},
+	});
 	const grants = new GameActivityPolicyService({users, gateway});
 	const accountSettings = new UserAccountSettingsService({
 		userAccountRepository: users,

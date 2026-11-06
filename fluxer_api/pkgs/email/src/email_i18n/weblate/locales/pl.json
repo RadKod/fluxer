@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Po każdej płatności wyślemy Ci e-mailem potwierdzenie.} year {Po każdej płatności wyślemy Ci e-mailem potwierdzenie.} other {Ten e-mail jest Twoim potwierdzeniem płatności.}}",
 		"reference_label": "Numer referencyjny",
 		"signoff": "Zespół {product_name}",
-		"subject": "Dziękujemy za darowiznę dla {product_name}",
-		"button": "Zarządzaj darowiznami"
+		"subject": "Dziękujemy za darowiznę dla {product_name}"
 	},
 	"donation_magic_link": {
 		"cta": "Zarządzaj darowiznami",
@@ -74,8 +73,7 @@
 		"intro": "Użyj tego linku, aby zarządzać cykliczną darowizną lub ją anulować oraz zaktualizować metodę płatności.",
 		"note": "Jeśli ta prośba nie pochodzi od Ciebie, możesz zignorować tę wiadomość.",
 		"signoff": "Zespół {product_name}",
-		"subject": "Zarządzaj darowiznami dla {product_name}",
-		"button": "Zarządzaj darowiznami"
+		"subject": "Zarządzaj darowiznami dla {product_name}"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Kwota",
@@ -179,8 +177,7 @@
 		"new_email_label": "Nowy adres e-mail",
 		"note": "Przywrócimy Twój poprzedni adres e-mail, wylogujemy Cię ze wszystkich urządzeń, wyłączymy uwierzytelnianie dwuskładnikowe i poprosimy o ustawienie nowego hasła.",
 		"signoff": "Zespół ds. bezpieczeństwa {product_name}",
-		"subject": "Adres e-mail Twojego konta {product_name} został zmieniony",
-		"button": "Cofnij tę zmianę"
+		"subject": "Adres e-mail Twojego konta {product_name} został zmieniony"
 	},
 	"email_verification": {
 		"cta": "Potwierdź adres e-mail",
@@ -189,9 +186,7 @@
 		"intro": "Potwierdź ten adres e-mail, aby dokończyć konfigurację konta {product_name}.",
 		"note": "Jeśli to nie Ty zakładasz konto {product_name}, możesz zignorować tę wiadomość.",
 		"signoff": "Zespół {product_name}",
-		"subject": "Potwierdź adres e-mail w {product_name}",
-		"body": "🎉 Witaj {username},\n\nZweryfikuj adres e-mail swojego konta {product_name}, klikając poniższy link:\n\n{verifyUrl}\n\nJeśli nie utworzyłeś konta {product_name}, możesz bezpiecznie zignorować tę wiadomość e-mail.\n\nTen link jest ważny przez 24 godziny.\n\n– Zespół {product_name}",
-		"button": "Zweryfikuj e-mail"
+		"subject": "Potwierdź adres e-mail w {product_name}"
 	},
 	"email_verification_code": {
 		"expiry": "Ten kod wygaśnie za {minutes, plural, one {# minutę} few {# minuty} many {# minut} other {# minuty}}.",
@@ -246,8 +241,7 @@
 		"signoff": "Zespół {product_name}",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Rozmiar pliku",
-		"subject": "Eksport danych z {product_name} jest gotowy",
-		"button": "Pobierz moje dane"
+		"subject": "Eksport danych z {product_name} jest gotowy"
 	},
 	"inactivity_warning": {
 		"cta": "Zaloguj się do {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "Twoje konto {product_name} jest nieaktywne od {lastActiveDate, date, long}. Zaloguj się przed {deletionDate, date, long}, bo inaczej je usuniemy.",
 		"note": "{reply, select, yes {Jeśli korzystasz z {product_name} i ostatnio się logowałeś(-aś), odpowiedz na tę wiadomość.} other {Jeśli korzystasz z {product_name} i ostatnio się logowałeś(-aś), skontaktuj się z administratorami tej instancji.}}",
 		"signoff": "Zespół {product_name}",
-		"subject": "Zaloguj się, aby zachować konto {product_name}",
-		"button": "Zaloguj się"
+		"subject": "Zaloguj się, aby zachować konto {product_name}"
 	},
 	"ip_authorization": {
 		"cta": "Autoryzuj ten adres IP",
@@ -268,8 +261,7 @@
 		"location_label": "Lokalizacja",
 		"note": "Jeśli to nie Ty, od razu zmień hasło.",
 		"signoff": "Zespół {product_name}",
-		"subject": "Autoryzuj logowanie do {product_name} z nowego adresu IP",
-		"button": "Autoryzuj to logowanie"
+		"subject": "Autoryzuj logowanie do {product_name} z nowego adresu IP"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Ten kod wygaśnie za {minutes, plural, one {# minutę} few {# minuty} many {# minut} other {# minuty}}.",
@@ -505,8 +497,7 @@
 		"location_label": "Lokalizacja",
 		"note": "Jeśli ta prośba nie pochodzi od Ciebie, możesz zignorować tę wiadomość.",
 		"signoff": "Zespół {product_name}",
-		"subject": "Zresetuj hasło w {product_name}",
-		"button": "Zresetuj hasło"
+		"subject": "Zresetuj hasło w {product_name}"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Kwota objęta sporem",
@@ -692,14 +683,19 @@
 		"signoff": "Zespół {product_name}",
 		"subject": "Twój kod potwierdzający {product_name}"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Zaloguj się do {product_name}",
 		"footer_reason": "Otrzymujesz tę wiadomość, ponieważ ten adres został użyty dla konta {product_name}.",
 		"intro": "Twoja rejestracja w {product_name} została zatwierdzona. Możesz się teraz zalogować.",
 		"signoff": "Zespół {product_name}",
-		"subject": "Twoja rejestracja w {product_name} została zatwierdzona",
-		"body": "🎉 Witaj {username},\n\nDobre wieści: Twoja rejestracja w {product_name} została zatwierdzona.\n\nMożesz teraz zalogować się do aplikacji {product_name} tutaj:\n{channelsUrl}\n\nWitaj w społeczności {product_name}.\n\n– Zespół {product_name}",
-		"button": "Otwórz {product_name}"
+		"subject": "Twoja rejestracja w {product_name} została zatwierdzona"
 	},
 	"registration_pending": {
 		"cta": "Przejrzyj oczekujące rejestracje",
@@ -753,13 +749,5 @@
 		"note": "Nie udostępniaj nikomu tego kodu. Pracownicy {product_name} nigdy o niego nie poproszą. Jeśli to nie Ty próbujesz utworzyć konto, możesz zignorować tę wiadomość.",
 		"signoff": "Zespół {product_name}",
 		"subject": "Twój kod rejestracyjny {product_name}"
-	},
-	"unban_notification": {
-		"subject": "Zawieszenie Twojego konta {product_name} zostało zniesione",
-		"body": "🎉 Witaj {username},\n\nDobre wieści: zawieszenie Twojego konta {product_name} zostało zniesione.\n\n{reason, select,\n  null {}\n  other {Powód: {reason}}\n}\n\nMożesz teraz ponownie się zalogować i kontynuować korzystanie z {product_name} jak zwykle.\n\n– Zespół ds. bezpieczeństwa {product_name}"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

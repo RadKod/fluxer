@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {お支払いのたびに領収書をメールでお送りします。} year {お支払いのたびに領収書をメールでお送りします。} other {このメールが領収書です。}}",
 		"reference_label": "参照番号",
 		"signoff": "{product_name}チーム",
-		"subject": "{product_name}へのご寄付ありがとうございます",
-		"button": "寄付を管理"
+		"subject": "{product_name}へのご寄付ありがとうございます"
 	},
 	"donation_magic_link": {
 		"cta": "寄付を管理",
@@ -74,8 +73,7 @@
 		"intro": "このリンクから、定期的な寄付の管理やキャンセル、お支払い方法の更新ができます。",
 		"note": "このリンクをリクエストしていない場合は、このメールを無視してかまいません。",
 		"signoff": "{product_name}チーム",
-		"subject": "{product_name}への寄付を管理",
-		"button": "寄付を管理"
+		"subject": "{product_name}への寄付を管理"
 	},
 	"donation_payment_failed": {
 		"amount_label": "金額",
@@ -179,8 +177,7 @@
 		"new_email_label": "新しいメールアドレス",
 		"note": "以前のメールアドレスに戻り、すべての場所からサインアウトされ、2段階認証がオフになり、新しいパスワードの設定を求められます。",
 		"signoff": "{product_name}安全チーム",
-		"subject": "{product_name}のメールアドレスが変更されました",
-		"button": "この変更を取り消す"
+		"subject": "{product_name}のメールアドレスが変更されました"
 	},
 	"email_verification": {
 		"cta": "メールアドレスを確認",
@@ -189,9 +186,7 @@
 		"intro": "{product_name}アカウントの設定を完了するには、このメールアドレスを確認してください。",
 		"note": "{product_name}アカウントを作成していない場合は、このメールを無視してかまいません。",
 		"signoff": "{product_name}チーム",
-		"subject": "{product_name}のメールアドレスを確認",
-		"body": "🎉 こんにちは、{username}さん\n\n以下のリンクをクリックして、{product_name}アカウントのメールアドレスを確認してください。\n\n{verifyUrl}\n\n{product_name}アカウントを作成していない場合は、このメールを無視して問題ありません。\n\nこのリンクは24時間有効です。\n\n– {product_name}チーム",
-		"button": "メールアドレスを確認"
+		"subject": "{product_name}のメールアドレスを確認"
 	},
 	"email_verification_code": {
 		"expiry": "このコードは{minutes, plural, other {#分}}後に期限切れになります。",
@@ -246,8 +241,7 @@
 		"signoff": "{product_name}チーム",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "ファイルサイズ",
-		"subject": "{product_name}のデータエクスポートの準備ができました",
-		"button": "データをダウンロード"
+		"subject": "{product_name}のデータエクスポートの準備ができました"
 	},
 	"inactivity_warning": {
 		"cta": "{product_name}にサインイン",
@@ -255,8 +249,7 @@
 		"intro": "{product_name}アカウントは{lastActiveDate, date, long}から利用されていません。{deletionDate, date, long}までにサインインしない場合、アカウントは削除されます。",
 		"note": "{reply, select, yes {最近{product_name}を利用した場合は、このメールに返信してください。} other {最近{product_name}を利用した場合は、このインスタンスの管理者に連絡してください。}}",
 		"signoff": "{product_name}チーム",
-		"subject": "{product_name}アカウントを残すにはサインインしてください",
-		"button": "ログイン"
+		"subject": "{product_name}アカウントを残すにはサインインしてください"
 	},
 	"ip_authorization": {
 		"cta": "このIPアドレスを承認",
@@ -268,8 +261,7 @@
 		"location_label": "場所",
 		"note": "心当たりがない場合は、今すぐパスワードを変更してください。",
 		"signoff": "{product_name}チーム",
-		"subject": "新しいIPアドレスからの{product_name}へのサインインを承認してください",
-		"button": "このログインを承認"
+		"subject": "新しいIPアドレスからの{product_name}へのサインインを承認してください"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "このコードは{minutes, plural, other {#分}}後に期限切れになります。",
@@ -505,8 +497,7 @@
 		"location_label": "場所",
 		"note": "リクエストしていない場合は、このメールを無視してかまいません。",
 		"signoff": "{product_name}チーム",
-		"subject": "{product_name}のパスワードをリセット",
-		"button": "パスワードをリセット"
+		"subject": "{product_name}のパスワードをリセット"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "チャージバックの対象金額",
@@ -692,14 +683,19 @@
 		"signoff": "{product_name}チーム",
 		"subject": "{product_name}の確認コード"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "{product_name}にサインイン",
 		"footer_reason": "このメールは、このアドレスが{product_name}アカウントに使用されたため送信されました。",
 		"intro": "{product_name}への登録が承認されました。今すぐサインインできます。",
 		"signoff": "{product_name}チーム",
-		"subject": "{product_name}の登録が承認されました",
-		"body": "🎉 こんにちは、{username}さん\n\n良いお知らせです。{product_name}の登録が承認されました。\n\nこちらから{product_name}アプリにログインできます。\n{channelsUrl}\n\n{product_name}コミュニティへようこそ。\n\n– {product_name}チーム",
-		"button": "{product_name}を開く"
+		"subject": "{product_name}の登録が承認されました"
 	},
 	"registration_pending": {
 		"cta": "保留中の登録を確認",
@@ -753,13 +749,5 @@
 		"note": "このコードは誰にも教えないでください。{product_name}のスタッフがこのコードを尋ねることはありません。アカウント作成を試みていない場合は、このメールを無視してかまいません。",
 		"signoff": "{product_name}チーム",
 		"subject": "{product_name}のサインアップコード"
-	},
-	"unban_notification": {
-		"subject": "{product_name}アカウントの停止が解除されました",
-		"body": "🎉 こんにちは、{username}さん\n\n良いお知らせです。{product_name}アカウントの停止が解除されました。\n\n{reason, select,\n  null {}\n  other {理由: {reason}}\n}\n\nこれで再度ログインして、通常通り{product_name}を利用できます。\n\n– {product_name}安全チーム"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

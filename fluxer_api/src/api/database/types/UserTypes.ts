@@ -871,7 +871,7 @@ export const USERNAME_ENTITLEMENT_COLUMNS = [
 
 export interface UsernameOpIntentRow {
 	bucket: number;
-	day: types.LocalDate;
+	day: LocalDate;
 	user_id: UserID;
 	op_id: string;
 	created_at: Date;

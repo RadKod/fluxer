@@ -52,13 +52,13 @@ describe('new account game activity default', () => {
 		admin = await setUserACLs(harness, admin, ['admin:authenticate', 'instance:config:update', 'instance:config:view']);
 		await enableSso(harness, admin.token, {enforced: false});
 		try {
-			const start = await createBuilderWithoutAuth<{state: string}>(harness)
+			const start = await createBuilderWithoutAuth<{state: string; client_binding: string}>(harness)
 				.post('/auth/sso/start')
 				.body({redirect_to: '/me'})
 				.execute();
 			const complete = await createBuilderWithoutAuth<{token: string; user_id: string}>(harness)
 				.post('/auth/sso/complete')
-				.body({code: `sso-game-${Date.now()}@example.com`, state: start.state})
+				.body({code: `sso-game-${Date.now()}@example.com`, state: start.state, client_binding: start.client_binding})
 				.execute();
 			const stored = await getUserRepository().findSettings(createUserID(BigInt(complete.user_id)), {
 				authoritative: true,

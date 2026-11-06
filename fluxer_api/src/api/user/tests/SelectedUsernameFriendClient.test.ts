@@ -90,6 +90,11 @@ test.each(['ayse', '@ayse', 'Ayse#1234'])(
 		);
 		const repository = {
 			findUnique: async (id: typeof requesterId) => users.get(id) ?? null,
+			findUniqueAssert: async (id: typeof requesterId) => {
+				const user = users.get(id);
+				if (!user) throw new Error(`unknown user ${id}`);
+				return user;
+			},
 			findByUsernameDiscriminator: lookup,
 			getRelationship: async () => null,
 			findSettings: async () => null,
@@ -149,6 +154,7 @@ test.each(['ayse', '@ayse', 'Ayse#1234'])(
 			{services: {users: repository, gateway}} as never,
 			new UserPermissionUtils(repository as never, {} as never),
 			{getConfigSnapshot: () => ({traitDefinitions: [], rules: []})} as never,
+			null,
 		);
 		const requestService = new UserRelationshipRequestService(service, {} as never, cache as never);
 		const app = new Hono();

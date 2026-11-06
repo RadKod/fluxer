@@ -60,14 +60,7 @@ export async function handleGuildRosterComponent(click: OfficialBotComponentClic
 
 // Leave also takes back the clicker's own ✅ through Fluxer's remove-own-reaction service (their own reaction, no bot
 // permission), so a redelivered reaction sync cannot add them again. Without a ✅ nothing is written or dispatched.
-async function removeOwnCheckMark({
-	viewer,
-	channelService,
-	channelId,
-	message,
-	user,
-	requestCache,
-}: OfficialBotComponentClick) {
+async function removeOwnCheckMark({viewer, channelService, channelId, message, user}: OfficialBotComponentClick) {
 	const channels = getChannelRepository();
 	try {
 		for (const emoji of [ROSTER_JOIN_EMOJI, `${ROSTER_JOIN_EMOJI}\uFE0F`])
@@ -78,7 +71,6 @@ async function removeOwnCheckMark({
 					channelId,
 					messageId: message.id,
 					emoji,
-					requestCache,
 				});
 	} catch (error) {
 		// The member already left; a ✅ that stays (e.g. reactions switched off in the community) is only logged.

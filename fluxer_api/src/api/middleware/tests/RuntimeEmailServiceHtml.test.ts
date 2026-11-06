@@ -17,9 +17,15 @@ const BRANDING: InstanceBranding = {
 	logo_url: null,
 	wordmark_url: null,
 	favicon_url: null,
+	favicon_dark_url: null,
 	theme_color: '#0B0B0C',
 	status_page_url: null,
+	status_page_instatus: false,
 	status_page_incident_history_url: null,
+	sign_in_backdrop_url: null,
+	custom_css: null,
+	upload_limit_message: null,
+	trusted_domains: [],
 };
 
 async function sendThroughRuntime(htmlEnabled: boolean) {
@@ -42,12 +48,10 @@ async function sendThroughRuntime(htmlEnabled: boolean) {
 	} as unknown as InstanceConfigRepository;
 	try {
 		const service = createRuntimeEmailService({isEmailBounced: async () => false}, () => repository);
-		const sent = await service.sendIpAuthorizationEmail(
+		const sent = await service.send(
+			'ip_authorization',
 			'user@example.test',
-			'ayse',
-			'tok123',
-			'203.0.113.7',
-			'Istanbul',
+			{authorizationToken: 'tok123', ipAddress: '203.0.113.7', location: 'Istanbul'},
 			'tr',
 		);
 		expect(sent).toBe(true);
@@ -63,21 +67,11 @@ async function sendThroughRuntime(htmlEnabled: boolean) {
 }
 
 describe('runtime email service HTML part', () => {
-	// The app public config is read on every send for the legal links, so only the MIME shape depends on the flag.
-	it('sends the upstream single-part text email when the flag is off', async () => {
-		const {html, mime} = await sendThroughRuntime(false);
-		expect(html).toBeUndefined();
-		expect(mime).toMatch(/^Content-Type: text\/plain/m);
-		expect(mime).not.toContain('multipart');
-		expect(mime).not.toContain('text/html');
-	});
-
-	it('sends multipart/alternative with the instance branding when the flag is on', async () => {
-		const {html, mime, brandingReads} = await sendThroughRuntime(true);
-		expect(brandingReads).toBe(1);
-		expect(html).toContain('src="https://static.example.test/icon.png"');
-		expect(html).toContain('background-color:#0B0B0C');
-		expect(html).toContain('>sanalyer</span>');
+	// Upstream's MJML renderer now builds the HTML part of every email, so the Micup html_enabled switch and its
+	// instance branding (logo, header color) no longer change the message; both settings send the same multipart mail.
+	it.each([false, true])('sends upstream multipart/alternative mail (html_enabled %s)', async (htmlEnabled) => {
+		const {html, mime} = await sendThroughRuntime(htmlEnabled);
+		expect(html).toContain('sanalyer');
 		expect(html).not.toContain('sanalyer Bildirim');
 		expect(mime).toMatch(/^Content-Type: multipart\/alternative/m);
 		expect(mime).toMatch(/^Content-Type: text\/plain/m);

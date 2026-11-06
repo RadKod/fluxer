@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {Kami akan mengirimkan tanda terima lewat email untuk setiap pembayaran.} year {Kami akan mengirimkan tanda terima lewat email untuk setiap pembayaran.} other {Email ini adalah tanda terimamu.}}",
 		"reference_label": "Nomor referensi",
 		"signoff": "Tim {product_name}",
-		"subject": "Terima kasih atas donasimu untuk {product_name}",
-		"button": "Kelola donasi"
+		"subject": "Terima kasih atas donasimu untuk {product_name}"
 	},
 	"donation_magic_link": {
 		"cta": "Kelola donasi",
@@ -74,8 +73,7 @@
 		"intro": "Gunakan tautan ini untuk mengelola atau membatalkan donasi berulang dan memperbarui metode pembayaranmu.",
 		"note": "Jika kamu tidak meminta tautan ini, kamu bisa mengabaikan email ini.",
 		"signoff": "Tim {product_name}",
-		"subject": "Kelola donasimu untuk {product_name}",
-		"button": "Kelola donasi"
+		"subject": "Kelola donasimu untuk {product_name}"
 	},
 	"donation_payment_failed": {
 		"amount_label": "Jumlah",
@@ -179,8 +177,7 @@
 		"new_email_label": "Alamat email baru",
 		"note": "Ini akan mengembalikan alamat email lamamu, mengeluarkanmu dari semua perangkat, menonaktifkan autentikasi dua faktor, dan memintamu membuat kata sandi baru.",
 		"signoff": "Tim keamanan {product_name}",
-		"subject": "Alamat email {product_name} kamu telah diubah",
-		"button": "Batalkan perubahan ini"
+		"subject": "Alamat email {product_name} kamu telah diubah"
 	},
 	"email_verification": {
 		"cta": "Konfirmasi alamat email",
@@ -189,9 +186,7 @@
 		"intro": "Konfirmasi alamat email ini untuk menyelesaikan pembuatan akun {product_name} kamu.",
 		"note": "Jika kamu tidak membuat akun {product_name}, kamu bisa mengabaikan email ini.",
 		"signoff": "Tim {product_name}",
-		"subject": "Konfirmasi alamat email {product_name} kamu",
-		"body": "🎉 Halo {username},\n\nSilakan verifikasi alamat email untuk akun {product_name} kamu dengan mengeklik tautan di bawah ini:\n\n{verifyUrl}\n\nJika kamu tidak membuat akun {product_name}, kamu bisa mengabaikan email ini dengan aman.\n\nTautan ini berlaku selama 24 jam.\n\n– Tim {product_name}",
-		"button": "Verifikasi email"
+		"subject": "Konfirmasi alamat email {product_name} kamu"
 	},
 	"email_verification_code": {
 		"expiry": "Kode ini akan kedaluwarsa dalam {minutes, plural, other {# menit}}.",
@@ -246,8 +241,7 @@
 		"signoff": "Tim {product_name}",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "Ukuran file",
-		"subject": "Ekspor data {product_name} kamu sudah siap",
-		"button": "Unduh dataku"
+		"subject": "Ekspor data {product_name} kamu sudah siap"
 	},
 	"inactivity_warning": {
 		"cta": "Masuk ke {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "Akun {product_name} kamu tidak aktif sejak {lastActiveDate, date, long}. Masuk sebelum {deletionDate, date, long}, atau kami akan menghapusnya.",
 		"note": "{reply, select, yes {Jika kamu baru-baru ini menggunakan {product_name}, balas email ini.} other {Jika kamu baru-baru ini menggunakan {product_name}, hubungi admin instance ini.}}",
 		"signoff": "Tim {product_name}",
-		"subject": "Masuk untuk mempertahankan akun {product_name} kamu",
-		"button": "Masuk"
+		"subject": "Masuk untuk mempertahankan akun {product_name} kamu"
 	},
 	"ip_authorization": {
 		"cta": "Otorisasi alamat IP ini",
@@ -268,8 +261,7 @@
 		"location_label": "Lokasi",
 		"note": "Jika itu bukan kamu, segera ubah kata sandimu.",
 		"signoff": "Tim {product_name}",
-		"subject": "Otorisasi upaya masuk ke {product_name} dari alamat IP baru",
-		"button": "Otorisasi masuk ini"
+		"subject": "Otorisasi upaya masuk ke {product_name} dari alamat IP baru"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "Kode ini kedaluwarsa dalam {minutes, plural, other {# menit}}.",
@@ -505,8 +497,7 @@
 		"location_label": "Lokasi",
 		"note": "Jika kamu tidak memintanya, kamu bisa mengabaikan email ini.",
 		"signoff": "Tim {product_name}",
-		"subject": "Atur ulang kata sandi {product_name} kamu",
-		"button": "Atur ulang kata sandi"
+		"subject": "Atur ulang kata sandi {product_name} kamu"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "Jumlah yang disengketakan",
@@ -692,14 +683,19 @@
 		"signoff": "Tim {product_name}",
 		"subject": "Kode konfirmasi {product_name} kamu"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "Masuk ke {product_name}",
 		"footer_reason": "Kamu menerima email ini karena alamat ini digunakan untuk akun {product_name}.",
 		"intro": "Pendaftaranmu di {product_name} sudah disetujui. Kamu bisa masuk sekarang.",
 		"signoff": "Tim {product_name}",
-		"subject": "Pendaftaranmu di {product_name} telah disetujui",
-		"body": "🎉 Halo {username},\n\nKabar baik: pendaftaranmu di {product_name} telah disetujui.\n\nKamu sekarang bisa masuk ke aplikasi {product_name} di sini:\n{channelsUrl}\n\nSelamat datang di komunitas {product_name}.\n\n– Tim {product_name}",
-		"button": "Buka {product_name}"
+		"subject": "Pendaftaranmu di {product_name} telah disetujui"
 	},
 	"registration_pending": {
 		"cta": "Tinjau pendaftaran yang tertunda",
@@ -753,13 +749,5 @@
 		"note": "Jangan bagikan kode ini kepada siapa pun. Staf {product_name} tidak akan pernah memintanya. Jika kamu tidak mencoba membuat akun, kamu bisa mengabaikan email ini.",
 		"signoff": "Tim {product_name}",
 		"subject": "Kode pendaftaran {product_name} kamu"
-	},
-	"unban_notification": {
-		"subject": "Penangguhan akun {product_name} kamu telah dicabut",
-		"body": "🎉 Halo {username},\n\nKabar baik: penangguhan akun {product_name} kamu telah dicabut.\n\n{reason, select,\n  null {}\n  other {Alasan: {reason}}\n}\n\nKamu sekarang bisa masuk lagi dan terus menggunakan {product_name} seperti biasa.\n\n– Tim Keamanan {product_name}"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

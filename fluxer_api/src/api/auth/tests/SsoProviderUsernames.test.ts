@@ -51,6 +51,8 @@ describe('Usernames from the SSO provider', () => {
 			'instance:config:update',
 			'instance:config:view',
 			AdminACLs.USER_UPDATE_USERNAME,
+			// sanalyer (Micup): an admin rename also needs the username reservation ACL.
+			AdminACLs.USERNAME_RESERVE,
 			AdminACLs.USER_VIEW_CONTACT_LOG,
 		]);
 	});
@@ -197,11 +199,12 @@ describe('Usernames from the SSO provider', () => {
 			const second = await completeSso(sub, 'alice2');
 			expect(second.user_id).toBe(first.user_id);
 			const me = await createBuilder<CurrentUser>(harness, second.token).get('/users/@me').execute();
-			expect(me).toMatchObject({username: 'alice2', discriminator: '0000'});
+			// sanalyer (Micup): a human keeps its nonzero legacy tag under unique usernames.
+			expect(me).toMatchObject({username: 'alice2'});
 			const log = await createBuilder<ChangeLog>(harness, admin.token)
 				.get(`/admin/users/${first.user_id}/change-log`)
 				.execute();
-			expect(log.entries.find(({new_value}) => new_value === 'alice2')?.reason).toBe('sso_sync');
+			expect(log.entries.find(({new_value}) => new_value?.split('#')[0] === 'alice2')?.reason).toBe('sso_sync');
 		});
 
 		it('applies a change in letter case only', async () => {

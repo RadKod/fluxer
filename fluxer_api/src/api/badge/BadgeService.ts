@@ -9,7 +9,6 @@ import type {BadgeCatalogRow, UserBadgeRow} from '@app/api/database/types/BadgeT
 import {type IMediaService, mediaProxyMetadataPolicy} from '@app/api/infrastructure/IMediaService';
 import type {ISnowflakeService} from '@app/api/infrastructure/ISnowflakeService';
 import type {IStorageService} from '@app/api/infrastructure/IStorageService';
-import {stripNonJpegImageMetadata} from '@app/api/infrastructure/StorageObjectHelpers';
 import {APIErrorCodes} from '@fluxer/constants/src/ApiErrorCodes';
 import {ValidationErrorCodes} from '@fluxer/constants/src/ValidationErrorCodes';
 import {ConflictError} from '@fluxer/errors/src/domains/core/ConflictError';
@@ -165,7 +164,7 @@ export class BadgeService {
 			...mediaProxyMetadataPolicy('allow'),
 		});
 		if (!metadata || !ICON_FORMATS.has(metadata.format.toLowerCase())) throw invalidIcon();
-		const body = await stripNonJpegImageMetadata(bytes);
+		const body = (await this.deps.mediaService.stripImageMetadata(bytes)) ?? bytes;
 		const hash = crypto.createHash('md5').update(body).digest('hex').slice(0, 8);
 		await this.deps.storageService.uploadObject({
 			bucket: Config.s3.buckets.cdn,

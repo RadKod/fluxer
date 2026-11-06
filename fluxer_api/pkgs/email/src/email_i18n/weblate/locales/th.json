@@ -64,8 +64,7 @@
 		"lead": "{interval, select, month {เราจะส่งใบเสร็จทางอีเมลให้คุณทุกครั้งที่มีการชำระเงิน} year {เราจะส่งใบเสร็จทางอีเมลให้คุณทุกครั้งที่มีการชำระเงิน} other {อีเมลนี้เป็นใบเสร็จของคุณ}}",
 		"reference_label": "เลขที่อ้างอิง",
 		"signoff": "ทีม {product_name}",
-		"subject": "ขอบคุณสำหรับการบริจาคให้ {product_name}",
-		"button": "จัดการการบริจาค"
+		"subject": "ขอบคุณสำหรับการบริจาคให้ {product_name}"
 	},
 	"donation_magic_link": {
 		"cta": "จัดการการบริจาค",
@@ -74,8 +73,7 @@
 		"intro": "ใช้ลิงก์นี้เพื่อจัดการหรือยกเลิกการบริจาคแบบประจำ และอัปเดตวิธีการชำระเงินของคุณ",
 		"note": "หากคุณไม่ได้ขอลิงก์นี้ คุณเพิกเฉยต่ออีเมลนี้ได้",
 		"signoff": "ทีม {product_name}",
-		"subject": "จัดการการบริจาคให้ {product_name}",
-		"button": "จัดการการบริจาค"
+		"subject": "จัดการการบริจาคให้ {product_name}"
 	},
 	"donation_payment_failed": {
 		"amount_label": "จำนวนเงิน",
@@ -179,8 +177,7 @@
 		"new_email_label": "ที่อยู่อีเมลใหม่",
 		"note": "การดำเนินการนี้จะคืนที่อยู่อีเมลเดิมของคุณ ออกจากระบบในทุกอุปกรณ์ ปิดการยืนยันตัวตนแบบสองชั้น และให้คุณตั้งรหัสผ่านใหม่",
 		"signoff": "ทีมความปลอดภัย {product_name}",
-		"subject": "ที่อยู่อีเมล {product_name} ของคุณถูกเปลี่ยนแล้ว",
-		"button": "ยกเลิกการเปลี่ยนแปลงนี้"
+		"subject": "ที่อยู่อีเมล {product_name} ของคุณถูกเปลี่ยนแล้ว"
 	},
 	"email_verification": {
 		"cta": "ยืนยันที่อยู่อีเมล",
@@ -189,9 +186,7 @@
 		"intro": "ยืนยันที่อยู่อีเมลนี้เพื่อตั้งค่าบัญชี {product_name} ของคุณให้เสร็จสมบูรณ์",
 		"note": "หากคุณไม่ได้สร้างบัญชี {product_name} คุณเพิกเฉยต่ออีเมลนี้ได้",
 		"signoff": "ทีม {product_name}",
-		"subject": "ยืนยันที่อยู่อีเมลสำหรับ {product_name}",
-		"body": "🎉 สวัสดี {username},\n\nโปรดยืนยันที่อยู่อีเมลสำหรับบัญชี {product_name} ของคุณโดยคลิกที่ลิงก์ด้านล่าง:\n\n{verifyUrl}\n\nหากคุณไม่ได้สร้างบัญชี {product_name} คุณสามารถเพิกเฉยต่ออีเมลนี้ได้เลย\n\nลิงก์นี้ใช้ได้เป็นเวลา 24 ชั่วโมง\n\n– ทีม {product_name}",
-		"button": "ยืนยันอีเมล"
+		"subject": "ยืนยันที่อยู่อีเมลสำหรับ {product_name}"
 	},
 	"email_verification_code": {
 		"expiry": "รหัสนี้จะหมดอายุใน {minutes, plural, other {# นาที}}",
@@ -246,8 +241,7 @@
 		"signoff": "ทีม {product_name}",
 		"size": "{fileSizeMB, number} MB",
 		"size_label": "ขนาดไฟล์",
-		"subject": "ข้อมูล {product_name} ที่คุณขอส่งออกพร้อมแล้ว",
-		"button": "ดาวน์โหลดข้อมูลของฉัน"
+		"subject": "ข้อมูล {product_name} ที่คุณขอส่งออกพร้อมแล้ว"
 	},
 	"inactivity_warning": {
 		"cta": "ลงชื่อเข้าใช้ {product_name}",
@@ -255,8 +249,7 @@
 		"intro": "บัญชี {product_name} ของคุณไม่มีการใช้งานตั้งแต่ {lastActiveDate, date, long} โปรดลงชื่อเข้าใช้ก่อน {deletionDate, date, long} มิฉะนั้นเราจะลบบัญชีนี้",
 		"note": "{reply, select, yes {หากคุณเพิ่งใช้ {product_name} เมื่อไม่นานมานี้ โปรดตอบกลับอีเมลนี้} other {หากคุณเพิ่งใช้ {product_name} เมื่อไม่นานมานี้ โปรดติดต่อผู้ดูแลของอินสแตนซ์นี้}}",
 		"signoff": "ทีม {product_name}",
-		"subject": "ลงชื่อเข้าใช้เพื่อเก็บบัญชี {product_name} ของคุณไว้",
-		"button": "เข้าสู่ระบบ"
+		"subject": "ลงชื่อเข้าใช้เพื่อเก็บบัญชี {product_name} ของคุณไว้"
 	},
 	"ip_authorization": {
 		"cta": "อนุญาตที่อยู่ IP นี้",
@@ -268,8 +261,7 @@
 		"location_label": "ตำแหน่งที่ตั้ง",
 		"note": "หากไม่ใช่คุณ โปรดเปลี่ยนรหัสผ่านทันที",
 		"signoff": "ทีม {product_name}",
-		"subject": "อนุญาตการลงชื่อเข้าใช้ {product_name} จากที่อยู่ IP ใหม่",
-		"button": "อนุญาตการเข้าสู่ระบบนี้"
+		"subject": "อนุญาตการลงชื่อเข้าใช้ {product_name} จากที่อยู่ IP ใหม่"
 	},
 	"mfa_backup_codes_view": {
 		"expiry": "รหัสนี้จะหมดอายุใน {minutes, plural, other {# นาที}}",
@@ -505,8 +497,7 @@
 		"location_label": "ตำแหน่งที่ตั้ง",
 		"note": "หากคุณไม่ได้ขอเรื่องนี้ คุณเพิกเฉยต่ออีเมลนี้ได้",
 		"signoff": "ทีม {product_name}",
-		"subject": "รีเซ็ตรหัสผ่านสำหรับ {product_name}",
-		"button": "รีเซ็ตรหัสผ่าน"
+		"subject": "รีเซ็ตรหัสผ่านสำหรับ {product_name}"
 	},
 	"payment_dispute_warning": {
 		"amount_label": "จำนวนเงินที่โต้แย้ง",
@@ -692,14 +683,19 @@
 		"signoff": "ทีม {product_name}",
 		"subject": "รหัสยืนยัน {product_name} ของคุณ"
 	},
+	"referral_reward_ready": {
+		"cta": "Open {product_name}",
+		"footer_reason": "You received this email because you take part in the {product_name} referral program.",
+		"intro": "Your referral reward is ready. You can see it in {product_name} under Settings → Referral.",
+		"signoff": "The {product_name} team",
+		"subject": "Your referral reward is ready"
+	},
 	"registration_approved": {
 		"cta": "ลงชื่อเข้าใช้ {product_name}",
 		"footer_reason": "คุณได้รับอีเมลนี้เนื่องจากที่อยู่นี้ถูกใช้สำหรับบัญชี {product_name}",
 		"intro": "การสมัครใช้งาน {product_name} ของคุณได้รับการอนุมัติแล้ว คุณลงชื่อเข้าใช้ได้เลย",
 		"signoff": "ทีม {product_name}",
-		"subject": "การลงทะเบียนสำหรับ {product_name} ได้รับการอนุมัติแล้ว",
-		"body": "🎉 สวัสดี {username},\n\nข่าวดี: การลงทะเบียน {product_name} ของคุณได้รับการอนุมัติแล้ว\n\nตอนนี้คุณสามารถเข้าสู่ระบบแอป {product_name} ได้ที่นี่:\n{channelsUrl}\n\nยินดีต้อนรับสู่คอมมูนิตี้ {product_name}\n\n– ทีม {product_name}",
-		"button": "เปิด {product_name}"
+		"subject": "การลงทะเบียนสำหรับ {product_name} ได้รับการอนุมัติแล้ว"
 	},
 	"registration_pending": {
 		"cta": "ตรวจสอบการลงทะเบียนที่รออนุมัติ",
@@ -753,13 +749,5 @@
 		"note": "อย่าแชร์รหัสนี้กับใคร เจ้าหน้าที่ของ {product_name} จะไม่ขอรหัสนี้จากคุณ หากคุณไม่ได้พยายามสร้างบัญชี คุณสามารถเพิกเฉยต่ออีเมลนี้ได้",
 		"signoff": "ทีม {product_name}",
 		"subject": "รหัสลงทะเบียน {product_name} ของคุณ"
-	},
-	"unban_notification": {
-		"subject": "การระงับบัญชี {product_name} ของคุณถูกยกเลิกแล้ว",
-		"body": "🎉 สวัสดี {username},\n\nข่าวดี: การระงับบัญชี {product_name} ของคุณถูกยกเลิกแล้ว\n\n{reason, select,\n  null {}\n  other {เหตุผล: {reason}}\n}\n\nตอนนี้คุณสามารถเข้าสู่ระบบอีกครั้งและใช้งาน {product_name} ได้ตามปกติ\n\n– ทีมความปลอดภัย {product_name}"
-	},
-	"referral_reward_ready": {
-		"subject": "Your referral reward is ready",
-		"body": "🎉 Hello {username},\n\nYour referral reward is ready. You can see it in {product_name} under Settings → Referral.\n\n– {product_name} Team"
 	}
 }

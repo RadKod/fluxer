@@ -64,7 +64,8 @@ function user(overrides: object = {}): User {
 		requiredActions: null,
 		suspiciousActivityFlags: 0,
 		traits: new Set(),
-		isUnclaimedAccount: () => false,
+		passwordHash: 'hash',
+		authenticatorTypes: new Set(),
 		...overrides,
 	} as unknown as User;
 }
@@ -80,6 +81,7 @@ beforeEach(() => {
 	vi.spyOn(ServiceRegistry, 'getUsernameSelectionGate').mockImplementation(() => state.gate!);
 	vi.spyOn(ServiceSingletons, 'getUserRepository').mockReturnValue({
 		findUnique: async () => state.user,
+		findUniqueAssert: async () => state.user,
 	} as unknown as ReturnType<typeof ServiceSingletons.getUserRepository>);
 });
 
@@ -116,7 +118,11 @@ function sendService(): MessageSendService {
 function groups(): GroupDmOperationsService {
 	return subject(GroupDmOperationsService.prototype, {
 		channelRepository: {channelData: {findUnique: async () => auth.channel, upsert: next}},
-		userRepository: {findUnique: async () => state.user, getRelationship: next},
+		userRepository: {
+			findUnique: async () => state.user,
+			findUniqueAssert: async () => state.user,
+			getRelationship: next,
+		},
 		resolveLimitForUser: next,
 	});
 }

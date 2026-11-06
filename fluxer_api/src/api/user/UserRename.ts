@@ -17,6 +17,8 @@ import {reserveUsername} from '@app/api/user/UniqueUsernames';
 import {USERNAME_MODE_DISCRIMINATOR} from '@app/api/user/UserTag';
 import {TagAlreadyTakenError} from '@fluxer/errors/src/domains/user/TagAlreadyTakenError';
 
+const LEGACY_IDENTITY_WRITE_WINDOW_MS = 30_000;
+
 export interface UserRenameDeps {
 	apiContext: ApiContext;
 	discriminatorService: DiscriminatorService;
@@ -40,7 +42,12 @@ async function chooseDiscriminator(
 	{username, discriminator}: {username: string; discriminator?: number},
 	adminOverride: boolean,
 ): Promise<number> {
-	if (uniqueUsernames) return USERNAME_MODE_DISCRIMINATOR;
+	// Micup: a human keeps its nonzero legacy tag under unique usernames (the username migration reaches it by it).
+	if (uniqueUsernames) {
+		if (user.isBot) return USERNAME_MODE_DISCRIMINATOR;
+		if (user.discriminator < 1) throw new TagAlreadyTakenError();
+		return user.discriminator;
+	}
 	const result = await deps.discriminatorService.generateDiscriminator({
 		username,
 		requestedDiscriminator: discriminator,
@@ -65,7 +72,13 @@ export async function renameUser(
 	let updatedUser: User;
 	try {
 		const discriminator = await chooseDiscriminator(deps, user, uniqueUsernames, tag, reason === 'admin_action');
-		updatedUser = await users.patchUpsert(user.id, {username: tag.username, discriminator}, user.toRow());
+		// Micup: a human's username and tag change only through the legacy identity writer (a deadline-bound patch).
+		updatedUser = await users.patchUpsert(
+			user.id,
+			{username: tag.username, discriminator},
+			user.toRow(),
+			user.isBot || user.isSystem ? undefined : Date.now() + LEGACY_IDENTITY_WRITE_WINDOW_MS,
+		);
 	} finally {
 		await reservation?.release();
 	}

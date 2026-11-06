@@ -23,15 +23,16 @@ import {
 import {isDateOfBirthMissing} from '@app/api/user/DateOfBirth';
 import {hiddenUserPartial, isProfileHidden} from '@app/api/user/ProfileVisibility';
 import {canHavePublicProfile} from '@app/api/user/profile/ProfilePrivacy';
+import {deprecatedBadgeHideFields} from '@app/api/user/profile_badges/HiddenProfileBadges';
 import {
 	effectiveGameActivityVisibility,
 	type GameActivityAccount,
 	isGameActivityDefaultPending,
 	isGameActivityEligible,
 } from '@app/api/user/services/GameActivityPolicyService';
-import {deprecatedBadgeHideFields} from '@app/api/user/profile_badges/HiddenProfileBadges';
 import {canUserAccessNsfwContent} from '@app/api/utils/AgeUtils';
 import {AccountTiers} from '@fluxer/constants/src/AccountTierConstants';
+import {PREMIUM_PROFILE_BADGE_KINDS} from '@fluxer/constants/src/BadgeConstants';
 import type {ChannelMessageNotifications} from '@fluxer/constants/src/NotificationConstants';
 import {
 	DEFAULT_GUILD_FOLDER_ICON,
@@ -74,11 +75,11 @@ export function showsPlusAppearance(user: User): boolean {
 	);
 }
 
-// Micup: premium badge next to the name; PERKS_DISABLED hides it like BADGE_HIDDEN (the private response then says
+// Micup: premium badge next to the name; PERKS_DISABLED hides it like hiding the premium profile badges (the private response then says
 // premium_type NONE). Derived on every read, never stored; the Rust twin is
 // fluxer_common user_flags::public_user_flags and fluxer_common/src/testdata/premium_badge_flag_vectors.json binds both.
 function showsPremiumBadge(user: User): boolean {
-	return showsPlusAppearance(user) && (user.premiumFlags & PremiumFlags.BADGE_HIDDEN) === 0;
+	return showsPlusAppearance(user) && !PREMIUM_PROFILE_BADGE_KINDS.some((kind) => user.hiddenProfileBadges.has(kind));
 }
 
 function mapNameStyle(user: User): NameStyle | null {
@@ -100,7 +101,9 @@ function isSameNameStyle(left?: NameStyle | null, right?: NameStyle | null): boo
 }
 
 function mapUserFlagsToPublicBitfield(user: User): number {
-	const publicFlags = Number(stripHiddenProfileBadgeFlags(user.flags ?? 0n, user.hiddenProfileBadges) & PUBLIC_USER_FLAGS);
+	const publicFlags = Number(
+		stripHiddenProfileBadgeFlags(user.flags ?? 0n, user.hiddenProfileBadges) & PUBLIC_USER_FLAGS,
+	);
 	return showsPremiumBadge(user) ? publicFlags | PublicUserFlags.PREMIUM_BADGE : publicFlags;
 }
 

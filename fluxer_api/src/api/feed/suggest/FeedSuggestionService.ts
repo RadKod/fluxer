@@ -456,6 +456,7 @@ function mapGuildHits({hits}: {hits: Array<SearchableGuild>}): Array<FeedSuggest
 			member_count: hit.memberCount,
 			online_count: 0,
 			features: hit.features,
+			badge_ids: hit.badgeIds ?? [],
 			verification_level: getEffectiveGuildVerificationLevel(hit.verificationLevel, hit.isDiscoverable),
 		}));
 }

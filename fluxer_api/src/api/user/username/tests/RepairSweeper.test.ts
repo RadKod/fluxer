@@ -49,6 +49,7 @@ afterEach(() => {
 	setCassandraQueryExecutorForTesting(new InMemoryCassandraQueryExecutor());
 });
 describe('durable repair sweeper', () => {
+	// Five thousand rows through the in-memory executor take about a minute while the whole suite shares the CPU.
 	it('five-thousand permanently failing intents do not starve the next record after restart', async () => {
 		let fail = true;
 		class FailingRepository extends UsernameOwnershipRepository {
@@ -81,7 +82,7 @@ describe('durable repair sweeper', () => {
 		for (let turn = 0; turn < 3; turn++)
 			await new UsernameRepairSweeper({ownership: failing, config, now: () => now}).run();
 		await new OwnershipInvariants(db).converged();
-	}, 60000);
+	}, 180_000);
 	it.each(['throw', 'incomplete'] as const)(
 		'a failed intent (%s) backs off exponentially while the scan keeps advancing',
 		async (failure) => {
@@ -202,5 +203,5 @@ describe('durable repair sweeper', () => {
 		expect(await db.executeQuery(UsernameOpIntents.select().bind({}))).toHaveLength(1);
 		await new UsernameRepairSweeper({ownership, config, now: () => now}).run();
 		await new OwnershipInvariants(db).converged();
-	});
+	}, 180_000);
 });

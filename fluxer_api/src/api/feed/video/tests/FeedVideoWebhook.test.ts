@@ -154,10 +154,10 @@ describe('feed video webhook', () => {
 			padding: 'x'.repeat(4096),
 		});
 
+		// Upstream's request body limit now refuses an oversized body before the route reads it (413).
 		const tooLarge = await send(padded);
-		expect(tooLarge.status).toBe(HTTP_STATUS.BAD_REQUEST);
-		expect(tooLarge.json.code).toBe(APIErrorCodes.INVALID_REQUEST);
-		expect((await send(event(guid, 3), {'content-length': '4097'})).status).toBe(HTTP_STATUS.BAD_REQUEST);
+		expect(tooLarge.status).toBe(413);
+		expect((await send(event(guid, 3), {'content-length': '4097'})).status).toBe(413);
 		expect(jobs).toEqual([]);
 	});
 
@@ -185,7 +185,7 @@ describe('feed video webhook', () => {
 				'x-bunnystream-signature-algorithm': 'hmac-sha256',
 			},
 		} as RequestInit);
-		expect(response.status).toBe(HTTP_STATUS.BAD_REQUEST);
+		expect(response.status).toBe(413);
 		expect(pulled).toBeLessThan(10);
 		expect(jobs).toEqual([]);
 	});

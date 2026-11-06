@@ -12,17 +12,24 @@ export const BACKGROUND_READ_TIMEOUT_MS = 12000;
 
 export type CassandraConsistencyName = 'local_one' | 'local_quorum' | 'quorum' | 'one';
 
-const DRIVER_CONSISTENCIES = {
-	local_one: cassandra.types.consistencies.localOne,
-	local_quorum: cassandra.types.consistencies.localQuorum,
-	quorum: cassandra.types.consistencies.quorum,
-	one: cassandra.types.consistencies.one,
-	all: cassandra.types.consistencies.all,
-	serial: cassandra.types.consistencies.serial,
-} as const;
+type DriverConsistencyName = 'local_one' | 'local_quorum' | 'quorum' | 'one' | 'all' | 'serial';
 
-export function toDriverConsistency(name: keyof typeof DRIVER_CONSISTENCIES): cassandra.types.consistencies {
-	return DRIVER_CONSISTENCIES[name];
+function getDriverConsistencies(driver: CassandraDriver): Record<DriverConsistencyName, cassandra.types.consistencies> {
+	return {
+		local_one: driver.types.consistencies.localOne,
+		local_quorum: driver.types.consistencies.localQuorum,
+		quorum: driver.types.consistencies.quorum,
+		one: driver.types.consistencies.one,
+		all: driver.types.consistencies.all,
+		serial: driver.types.consistencies.serial,
+	};
+}
+
+export function toDriverConsistency(name: DriverConsistencyName): cassandra.types.consistencies {
+	if (!loadedDriver) {
+		throw new Error('Cassandra driver is not loaded; connect the client before resolving consistency levels');
+	}
+	return getDriverConsistencies(loadedDriver)[name];
 }
 
 interface CassandraConfig {

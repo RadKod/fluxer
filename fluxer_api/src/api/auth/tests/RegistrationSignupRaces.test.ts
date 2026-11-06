@@ -80,7 +80,8 @@ describe('signups racing on registration URLs and pending approvals', () => {
 				const metadata = query.kvMeta ?? getKvMeta(query.cql);
 				if (
 					metadata?.table.name === 'users' &&
-					metadata.action === 'patch' &&
+					// sanalyer (Micup) creates the users row with an insert-if-absent upsert, upstream with a patch.
+					(metadata.action === 'patch' || metadata.action === 'upsert') &&
 					query.params.email === failureEmail &&
 					typeof query.params.user_id === 'bigint'
 				) {

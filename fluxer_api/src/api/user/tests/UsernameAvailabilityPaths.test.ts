@@ -157,9 +157,14 @@ describe('username availability and lookup boundaries', () => {
 			}),
 		).rejects.toMatchObject({status: 503, code: 'USERNAME_UNAVAILABLE'});
 		await expect(
-			new UserAccountRequestService({} as never, {} as never, {} as never, {} as never, {} as never).getUsernamePrompt(
-				user,
-			),
+			new UserAccountRequestService(
+				{} as never,
+				{} as never,
+				{} as never,
+				{} as never,
+				{} as never,
+				{} as never,
+			).getUsernamePrompt(user),
 		).rejects.toMatchObject({status: 503, code: 'USERNAME_UNAVAILABLE'});
 	});
 	it('caches an absent shared claim for five seconds without caching personal rights', async () => {
@@ -323,12 +328,26 @@ describe('username availability and lookup boundaries', () => {
 		expect(UniqueUsernames).toHaveProperty('assertBotUsernameAvailable', expect.any(Function));
 	});
 	it('provides private status and daily prompt methods', () => {
-		const service = new UserAccountRequestService({} as never, {} as never, {} as never, {} as never, {} as never);
+		const service = new UserAccountRequestService(
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+		);
 		expect(service).toHaveProperty('getUsernameStatus', expect.any(Function));
 		expect(service).toHaveProperty('getUsernamePrompt', expect.any(Function));
 	});
 	it('OAuth identify cannot receive the private username state through /users/@me', () => {
-		const service = new UserAccountRequestService({} as never, {} as never, {} as never, {} as never, {} as never);
+		const service = new UserAccountRequestService(
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+		);
 		const user = new User({
 			...EMPTY_USER_ROW,
 			user_id: id,
@@ -351,7 +370,14 @@ describe('username availability and lookup boundaries', () => {
 			freeChangeAvailable: false,
 			changeAvailableAt: date,
 		} as never);
-		const service = new UserAccountRequestService({} as never, {} as never, {} as never, {} as never, {} as never);
+		const service = new UserAccountRequestService(
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+		);
 		expect(await service.getUsernameStatus(id)).toEqual({
 			state: 'selected',
 			freeChangeAvailable: false,
@@ -373,7 +399,14 @@ describe('username availability and lookup boundaries', () => {
 			.mockResolvedValueOnce('OK')
 			.mockResolvedValueOnce(null)
 			.mockRejectedValueOnce(new Error('absent'));
-		const service = new UserAccountRequestService({} as never, {} as never, {} as never, {} as never, {} as never);
+		const service = new UserAccountRequestService(
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+		);
 		const user = new User({...EMPTY_USER_ROW, user_id: id, username: 'legacy_name', discriminator: 1234});
 		expect(await service.getUsernamePrompt(user)).toEqual({show: true});
 		expect(await service.getUsernamePrompt(user)).toEqual({show: false});
@@ -392,7 +425,14 @@ describe('username availability and lookup boundaries', () => {
 			forced_at: '2026-01-08T00:00:00Z',
 		});
 		const kvSet = vi.spyOn(getKVClient(), 'set').mockResolvedValue('OK');
-		const service = new UserAccountRequestService({} as never, {} as never, {} as never, {} as never, {} as never);
+		const service = new UserAccountRequestService(
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+			{} as never,
+		);
 		const user = new User({...EMPTY_USER_ROW, user_id: id, username: 'legacy_name', discriminator: 1234});
 		vi.setSystemTime(start.getTime() + jitter - 1);
 		expect(await service.getUsernamePrompt(user)).toEqual({show: false, retry_after_ms: 1});

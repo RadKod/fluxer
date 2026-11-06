@@ -97,7 +97,6 @@ export function mapGuildRoleToResponse(role: GuildRole): GuildRoleResponse {
 		hoist: role.isHoisted,
 		mentionable: role.isMentionable,
 		icon: role.iconHash,
-		unicode_emoji: role.unicodeEmoji,
 	};
 }
 

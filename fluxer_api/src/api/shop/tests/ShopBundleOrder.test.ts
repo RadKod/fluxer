@@ -46,7 +46,9 @@ function userUpdateCount(dispatch: {mock: {calls: Array<Array<{event: string}>>}
 	return dispatch.mock.calls.filter(([params]) => params?.event === 'USER_UPDATE').length;
 }
 
-const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+// 128x128: the test media service reads real PNG dimensions, and cosmetics need 32 to 2048 px.
+const PNG =
+	'iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAAVklEQVR42u3BMQEAAADCoPVPbQwfoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOBvAI8AAYr5gj4AAAAASUVORK5CYII=';
 const HELPERS: WorkerTaskHelpers = {
 	logger: new NoopLogger(),
 	jobId: 1n,
@@ -68,6 +70,8 @@ describe('bundle orders: delivery, frozen item list and visibility', () => {
 	beforeAll(async () => {
 		restoreEnvironment = saveShopEnvironment();
 		Config.instance.selfHosted = true;
+		// Self-hosted sign-ups after the first (admin) account need finished setup.
+		Config.instance.setup.configured = true;
 		harness = await createApiTestHarness();
 	});
 

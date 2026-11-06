@@ -107,6 +107,7 @@ export function notifyMicupBotMessage(p: {
 							inviteHosts: feedInviteBases().map((base) => base.origin + base.pathPrefix),
 							ownHosts: Object.values(Config.endpoints)
 								.flat()
+								.filter((endpoint): endpoint is string => typeof endpoint === 'string' && endpoint.length > 0)
 								.map((endpoint) => new URL(endpoint).hostname),
 						};
 						automodHosts.set(config, hosts);

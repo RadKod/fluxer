@@ -184,16 +184,7 @@ describe('feed video routes', () => {
 
 			// An image whose metadata could not be stripped is kept, as it always was.
 			const photo = await upload(alice);
-			vi.spyOn(harness.storageService, 'copyObjectWithMetadataStripping').mockImplementationOnce(async (params) => {
-				await harness.storageService.copyObject({
-					sourceBucket: params.sourceBucket,
-					sourceKey: params.sourceKey,
-					destinationBucket: params.destinationBucket,
-					destinationKey: params.destinationKey,
-					newContentType: params.contentType,
-				});
-				return null;
-			});
+			vi.spyOn(TestMediaService.prototype, 'stripObjectMetadata').mockResolvedValueOnce(null);
 			const post = await createPost(harness, alice, {attachments: [photo]}).execute();
 			expect(post.attachments[0]).toMatchObject({filename: 'photo.png', content_type: 'image/png', duration: null});
 			expect(post.video).toBeUndefined();
